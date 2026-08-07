@@ -1,0 +1,31 @@
+{
+  "css": [
+    "src/css/00-tokens.css",
+    "src/css/10-chrome.css",
+    "src/css/20-cards.css",
+    "src/css/30-sheet.css",
+    "src/css/40-spells-coins.css",
+    "src/css/50-modal.css"
+  ],
+  "js": [
+    "src/js/00-constants.js",
+    "src/js/10-compute.js",
+    "src/js/20-lists.js",
+    "src/js/25-origins-items.js",
+    "src/js/30-version.js",
+    "src/js/40-sheet.js",
+    "src/js/50-classrace.js",
+    "src/js/52-race.js",
+    "src/js/54-background.js",
+    "src/js/56-class.js",
+    "src/js/58-choices.js",
+    "src/js/60-attacks.js",
+    "src/js/65-resources.js",
+    "src/js/70-persistence.js",
+    "src/js/75-home-theme.js",
+    "src/js/80-modal-forms.js",
+    "src/js/85-browse.js",
+    "src/js/88-settings.js",
+    "src/js/90-boot.js"
+  ]
+}

@@ -1,0 +1,113 @@
+#!/usr/bin/env node
+/*
+ * Cut a release: fold the pending notes from src/docs/UNRELEASED.md into a new
+ * CHANGELOG entry in src/js/30-version.js and bump APP_VERSION.
+ *
+ * Invoked by `./build.sh --release <level>` BEFORE the build runs, so the built
+ * app carries the new version. Not meant to be run directly, but it is safe to:
+ *
+ *   node scripts/release.js patch|minor|major|X.Y.Z
+ *
+ * Deliberately does nothing else — no git commit, no tag, no push. Cutting the
+ * GitHub Release stays a human step (see CLAUDE.md "Publishing / updates").
+ */
+"use strict";
+const fs = require("fs");
+const path = require("path");
+
+const ROOT = path.resolve(__dirname, "..");
+const VERSION_JS = path.join(ROOT, "src/js/30-version.js");
+const NOTEBOOK = path.join(ROOT, "src/docs/UNRELEASED.md");
+
+function die(msg) {
+  console.error("release: " + msg);
+  process.exit(1);
+}
+
+const level = process.argv[2];
+if (!level) die("missing level — expected patch, minor, major, or an explicit X.Y.Z");
+
+/* ---------------- pending notes ---------------- */
+
+// Bullets live under the "## Pending" heading so the instructions above it can
+// use dashes freely without being mistaken for release notes.
+function readPendingNotes() {
+  let raw;
+  try {
+    raw = fs.readFileSync(NOTEBOOK, "utf8");
+  } catch (e) {
+    die(`cannot read src/docs/UNRELEASED.md: ${e.message}`);
+  }
+  const marker = raw.indexOf("\n## Pending");
+  if (marker < 0) die("src/docs/UNRELEASED.md has no '## Pending' heading");
+  const body = raw.slice(raw.indexOf("\n", marker + 1));
+
+  const notes = [];
+  for (const line of body.split("\n")) {
+    if (/^\s*-\s+/.test(line)) {
+      notes.push(line.replace(/^\s*-\s+/, "").trim());
+    } else if (/^\s+\S/.test(line) && notes.length) {
+      // continuation of the previous bullet (wrapped line)
+      notes[notes.length - 1] += " " + line.trim();
+    }
+  }
+  return { raw, marker, notes };
+}
+
+const { raw, notes } = readPendingNotes();
+if (!notes.length) {
+  die("nothing to release — src/docs/UNRELEASED.md has no pending notes under '## Pending'");
+}
+
+/* ---------------- version ---------------- */
+
+const src = fs.readFileSync(VERSION_JS, "utf8");
+const cur = (src.match(/APP_VERSION\s*=\s*"([^"]+)"/) || [])[1];
+if (!cur) die("could not find APP_VERSION in src/js/30-version.js");
+const parts = cur.split(".").map((n) => parseInt(n, 10));
+if (parts.length !== 3 || parts.some(isNaN)) die(`current APP_VERSION "${cur}" is not X.Y.Z`);
+
+let next;
+if (level === "patch") next = `${parts[0]}.${parts[1]}.${parts[2] + 1}`;
+else if (level === "minor") next = `${parts[0]}.${parts[1] + 1}.0`;
+else if (level === "major") next = `${parts[0] + 1}.0.0`;
+else if (/^\d+\.\d+\.\d+$/.test(level)) next = level;
+else die(`unknown level "${level}" — expected patch, minor, major, or X.Y.Z`);
+
+// An explicit version that goes backwards would break the in-app update check,
+// which compares the newest release tag against APP_VERSION.
+const cmp = (a, b) => {
+  const pa = a.split(".").map(Number), pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) { if (pa[i] !== pb[i]) return pa[i] - pb[i]; }
+  return 0;
+};
+if (cmp(next, cur) <= 0) die(`refusing to go from ${cur} to ${next} — the new version must be higher`);
+
+/* ---------------- write the CHANGELOG entry ---------------- */
+
+// Local date, not UTC: the entry should read as the day the owner cut it.
+const d = new Date();
+const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-` +
+             `${String(d.getDate()).padStart(2, "0")}`;
+
+const jsStr = (s) => JSON.stringify(s); // escapes quotes/backslashes correctly
+
+const entry = `  {v:${jsStr(next)}, date:${jsStr(date)}, notes:[\n` +
+  notes.map((n) => "    " + jsStr(n)).join(",\n") +
+  "\n  ]},\n";
+
+const anchor = "const CHANGELOG=[\n";
+const at = src.indexOf(anchor);
+if (at < 0) die("could not find `const CHANGELOG=[` in src/js/30-version.js");
+
+let out = src.slice(0, at + anchor.length) + entry + src.slice(at + anchor.length);
+out = out.replace(/APP_VERSION\s*=\s*"[^"]+"/, `APP_VERSION="${next}"`);
+fs.writeFileSync(VERSION_JS, out);
+
+/* ---------------- empty the notebook ---------------- */
+
+const keep = raw.slice(0, raw.indexOf("\n## Pending"));
+fs.writeFileSync(NOTEBOOK, keep + "\n## Pending\n\n_Nothing yet._\n");
+
+console.error(`    v${cur} -> v${next} (${date}), ${notes.length} note${notes.length === 1 ? "" : "s"}`);
+process.stdout.write(next);

@@ -279,12 +279,15 @@ Everything stays on your device. The app doesn't send your characters anywhere.
 
 ```
 fieldbook.html      ← the app — open this to run Fieldbook
+README.md           ← this guide
 data/               ← the rules data files (import the ones you want)
    • 2024 D&D: conditions, glossary, feats, backgrounds, classes, spells, items, magic items
    • Humblewood: races, backgrounds, feats, classes, subclasses, spells
 docs/               ← reference material (you can ignore these to just play)
-   • README (this file), rules schema, converter notes
-scripts/            ← a tool for advanced users who want to generate their own rules data
+   • CHANGELOG — what changed in each release
+   • rules schema — the format, if you want to write your own rules data
+   • converter notes — how the data-generation tool works
+scripts/            ← convert.py, for advanced users who want to generate their own rules data
 ```
 
 **To play, you only ever need `fieldbook.html`.** The `data` files make the pickers and

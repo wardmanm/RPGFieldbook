@@ -284,6 +284,163 @@ execute it later on request — no code split done, app/build unchanged:
 
 ---
 
+## Done — source split executed (ADR-001), no app change
+
+The split from the previous entry is now implemented. **`APP_VERSION` was deliberately NOT bumped:
+the shipped file is byte-for-byte unchanged.**
+
+- **Acceptance:** the first build reproduced the committed app exactly.
+  `sha256 adef1ec39ec6c08c7a2d6cf42d72d5f954bab21c28a25c29ca235dffaf2ad466`, 280,473 bytes, for both
+  `git show HEAD:fieldbook.html` and the freshly built `dist/fieldbook.html`. Git records the
+  relocation as a pure rename (`0 0 fieldbook.html => dist/fieldbook.html`). This clears a stronger
+  bar than ADR-001 asked for (it wanted whitespace-normalized equality), so there is **no functional
+  delta and nothing to smoke-test for this change**.
+- **Layout:** `src/` (template + manifest + 19 js + 6 css fragments) is the source; `dist/` holds the
+  built app (tracked) and the bundle zip (ignored). The zip's *internal* layout is unchanged, so the
+  player-facing download and README section 9 are untouched.
+- **Fragments are positional slices** cut at the file's own banner comments — rule 1 forbids
+  regrouping by concern. Consequence worth remembering: **`APP_VERSION`/`CHANGELOG` live in
+  `src/js/30-version.js`**, not `00-constants.js` as ADR-001 sketched.
+- **`src/manifest.json` is the authoritative order**, not filename prefixes and not a glob. The build
+  hard-fails on drift both ways. A glob would have silently swallowed a stray `*.OLD.js` — this repo
+  makes those.
+- **scripts/build-html.js** — Buffer-based splice builder with `--check` (stale gate for a hook/CI)
+  and `--force`. Guards, all tested: BOM, CR bytes, missing final newline, `boot();`-last invariant,
+  fragment-order drift, and a clobber guard that refuses to overwrite a hand-edited artifact.
+- **scripts/gen-changelog.js** — extracted from build.sh (see the bug below).
+- **Added** `.gitattributes` (`eol=lf`) and `.editorconfig`. These are load-bearing now: the build is
+  byte-exact, so a CRLF checkout on Windows would silently add ~3,100 bytes to the shipped app.
+
+### Bug found and fixed in passing: build.sh was zsh-only
+
+The committed pre-split `build.sh` parsed under **zsh** but not under **bash** — which is the
+interpreter its own `#!/usr/bin/env bash` shebang selects. The apostrophe in `app's`, inside a
+`<<'NODE'` heredoc nested in a `$(…)` command substitution, opens a quote that bash never closes;
+zsh parses the same text fine. Verified on this machine: `bash -n` (3.2.57) and `sh -n` both fail;
+`zsh -n` passes.
+
+Consequences, measured by running the pre-split script from a clean `git archive` of HEAD:
+
+- Run as `./build.sh` (bash, the documented way): the JS `node --check` and the `data/*.json`
+  validation **both ran and passed**, then it died at the changelog step with
+  `line 55: unexpected EOF`, exit 2. `docs/CHANGELOG.md` was never regenerated and
+  `fieldbook-bundle.zip` was never produced. Loud failure, not a silent one.
+- Run as `zsh build.sh`: full pipeline succeeds, exit 0, and the regenerated `docs/CHANGELOG.md` is
+  byte-identical to the committed one. So earlier "tested green" ledger entries were almost
+  certainly true — via zsh — and nothing in the repo is wrong as a result.
+
+Fixed by moving that block to `scripts/gen-changelog.js`; `build.sh` now passes `bash -n` and runs
+end to end under bash. This was a portability bug, not a correctness one.
+
+### Follow-up: docs split by audience, bundle trimmed to player-facing
+
+The zip had been shipping the whole repo — `CLAUDE.md`, `build.sh`, dotfiles, and (after the split)
+`src/`. Owner's call: the bundle is for players, so development material stays out of it.
+
+- **`src/docs/`** now holds the dev docs: this ledger and `ADR-001-source-split.md`. They live under
+  `src/` precisely because `src/` never goes in the zip. `docs/` is now player-facing only
+  (rules schema, converter notes, CHANGELOG).
+- **The zip is an allowlist**, not a snapshot: `fieldbook.html`, `README.md`, `data/`, `docs/`,
+  `scripts/convert.py`. Exactly what README section 9 advertises — which it hadn't matched before.
+  Dropped: `CLAUDE.md`, `build.sh`, the dotfiles, `src/`, `build-html.js`, `gen-changelog.js`.
+  384 KB → 357 KB, 22 files.
+- **`build.sh` verifies the bundle after zipping** and **deletes it** if anything development-shaped
+  got in (`src/`, `CLAUDE.md`, `build.sh`, dotfiles, the ledger, an ADR, or a build script). An
+  allowlist that is not enforced drifts; a bad bundle must not be publishable. Tested by planting a
+  copy of this ledger in `docs/` — build exits 1 and removes the zip.
+- **`docs/CHANGELOG.md`'s header was reworded for players.** It used to say "Bump `APP_VERSION` and
+  add an entry here" — maintainer instructions in a file that ships to players. That guidance lives
+  in CLAUDE.md; the generated file now just explains what the list is.
+- README section 9 updated to list what is actually in the download.
+
+**If you add a dev-only doc or tool, put it under `src/` or at the repo root — never in `docs/`.**
+
+### Follow-up: a second zip, `dist/fieldbook-source.zip`
+
+The player bundle deliberately drops the sources, so the build now also emits a full-repo zip for
+archiving and handoff. Two zips, two audiences.
+
+- **Membership is `git ls-files --cached --others --exclude-standard`** — tracked files *plus*
+  untracked-but-not-ignored ones. Chosen over `git archive HEAD` so uncommitted work in progress is
+  captured, and over a `find`-based copy so `.gitignore` keeps the artifacts out for free. `.git/`,
+  both zips, `.buildstamp` and `.DS_Store` are excluded; `dist/fieldbook.html` is tracked so it
+  rides along and can be checked against its own rebuild.
+- **The step skips (does not fail) when there is no `.git`.** That matters: someone who unzips the
+  source zip has no git checkout, and `./build.sh` must still work for them. Verified — a fresh
+  unzip elsewhere rebuilds `dist/fieldbook.html` **byte-identically**, printing
+  `skipped — not a git checkout` for the source-zip step.
+- `.gitignore` now uses `dist/*.zip` rather than naming each one, so a new zip can't accidentally
+  become a tracked file *or* get swept into the source zip by `--others`.
+- Sizes: player bundle 357 KB / 22 files, source 478 KB / 59 files.
+
+README is untouched — it documents the player download, and the source zip is not player-facing.
+
+### Follow-up: zips are named for the version
+
+`fieldbook-bundle.zip` → **`fieldbook-v<APP_VERSION>.zip`**, and the source zip likewise
+(`fieldbook-v1.2.1-source.zip`). The `v` prefix matches the `vX.Y.Z` release tag the in-app update
+check compares against, so a release asset needs no renaming.
+
+- `build.sh` **validates `$VER` against `X.Y.Z` before using it in a filename** — otherwise a failed
+  version parse would silently produce `fieldbook-v.zip` and ship an unidentifiable bundle.
+- **`rm -f dist/*.zip` runs before both zip steps**, so `dist/` never accumulates stale versions and
+  a failed build cannot leave the previous version's bundle sitting there looking current.
+- `.gitignore` uses `dist/*.zip` (not per-name entries) so this keeps working as versions change.
+
+## Done — versions are cut on release, not on every edit
+
+Owner's call: stop bumping `APP_VERSION` per change. Keep a running notebook instead and version it
+when a release is expressly kicked off. `./build.sh` is run constantly for validation, so it had to
+stop being the thing that bumps.
+
+- **`src/docs/UNRELEASED.md`** is the notebook — `- ` bullets under a `## Pending` heading, written
+  in player-facing language. It is a dev doc under `src/`, so it never ships.
+- **`./build.sh --release patch|minor|major|X.Y.Z`** cuts a version: `scripts/release.js` folds every
+  pending bullet into a new `CHANGELOG` entry in `src/js/30-version.js`, bumps `APP_VERSION`, empties
+  the notebook, and *then* the normal build runs so the artifact carries the new version. A bare
+  `./build.sh` never touches either file — verified by hashing them across repeated builds.
+- **`APP_VERSION` now means "last released version"**, not "version of the working tree".
+- Guards, all tested: empty notebook → exit 1 (nothing to release); unknown level → exit 1; an
+  explicit version that isn't higher than the current one → exit 1 (it would break the in-app update
+  check, which compares the newest release tag against `APP_VERSION`). A failed release leaves the
+  version untouched.
+- A plain build prints the pending-note count so work in progress can't be quietly forgotten.
+- `release.js` deliberately does **no** git work — no commit, no tag, no push. Cutting the GitHub
+  Release stays a human step.
+- The header comment in `src/js/30-version.js` now says both constants are machine-written.
+
+### First change through the new pipeline: character-card delete button
+
+`.icon` sets a fixed `height:30px`, so `.hcard`'s `align-items:stretch` left the delete button at the
+top of the row; `.hcard-star` looked right only because it already set `align-self:center`. Added
+`.hcard>.icon{align-self:center}` in `src/css/30-sheet.css`. **Unreleased** — it is the first bullet
+in the notebook. Confirmed the built `dist/fieldbook.html` diff contained exactly that one CSS rule
+and nothing else. **Not yet visually confirmed in a browser — owner QA.**
+
+### Import character from the home screen
+
+The home library header now carries an **Import** button beside **New character**
+(`#homeLoadChar` in `src/fieldbook.template.html`, wired in `src/js/90-boot.js`).
+
+Deliberately **no new import code**. The button just clicks the existing hidden `#fileLoad` input,
+whose change handler already routes to `importChar()` — so the parse guard, `migrate()`, the
+ID-clash Replace / Import-as-copy prompt, and skin-switching on load are shared with the top-bar
+**Load** button rather than duplicated. A hidden file input responds to a programmatic `.click()`
+regardless of the home overlay covering it, so no second input was needed. Landing on the sheet
+after import is `finishImport`'s existing `hideHome()`, unchanged, which also matches what **New
+character** does.
+
+Styling is one new modifier in `src/css/20-cards.css`: `.label .add.sub` recolours the existing
+low-key `.add` pill to `--ink-soft` so Import reads as secondary to New character. Note the id is
+`homeLoadChar`, **not** `homeImport` — `#homeImportBtn` is already the "Import rules files (bulk)"
+button in the home setup panel, and both live on the same screen.
+
+Verified: modal is `z-index:80` against `.home`'s `60`, so the clash prompt layers above the home
+screen. `--ink-soft` (not `--muted`, which does not exist) is defined in all four theme blocks.
+**Interactive behaviour is not confirmed here — owner QA.**
+
+---
+
 ## Deferred — needs the source book
 
 ### Cervan "Surge of Vigor" — frequency unknown

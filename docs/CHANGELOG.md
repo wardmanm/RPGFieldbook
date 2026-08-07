@@ -1,7 +1,7 @@
 # Fieldbook — Changelog
 
-Version shown in the app's top bar (tap it to view this in-app). Bump `APP_VERSION` and add an
-entry here whenever `fieldbook.html` changes.
+What changed in each release. The version you are running is shown in the app's top bar —
+tap it to read this same list in-app.
 
 ## v1.2.1 — 2026-08-07
 

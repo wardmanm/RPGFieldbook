@@ -1,0 +1,6 @@
+# The build is byte-exact (see docs/ADR-001-source-split.md): a src/ fragment
+# checked out with CRLF would silently add ~3,100 bytes to dist/fieldbook.html.
+# Pin line endings so a Windows clone with core.autocrlf=true cannot break it.
+* text=auto eol=lf
+
+*.zip binary

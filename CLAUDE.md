@@ -7,16 +7,18 @@ something irreversible.
 ## What this is
 
 **Fieldbook** is a standalone, single-file HTML character sheet app supporting **D&D 5e 2024 (XPHB)**
-and the **Humblewood** TTRPG. The whole app is `fieldbook.html` — HTML + CSS + JS in one file. A
-Python CLI (`scripts/convert.py`) turns source data (5e-tools exports, Humblewood playtest PDFs) into
-the app's JSON, which players load at runtime.
+and the **Humblewood** TTRPG. The app ships as one self-contained file, `dist/fieldbook.html`, built
+by concatenating the fragments in `src/` — HTML + CSS + JS, no runtime dependencies. A Python CLI
+(`scripts/convert.py`) turns source data (5e-tools exports, Humblewood playtest PDFs) into the app's
+JSON, which players load at runtime.
 
 ## Non-negotiable constraints
 
-1. **Single file.** All app functionality lives in `fieldbook.html`. No external runtime
-   dependencies, no build step to *run* the app, no network needed to use it. It must open from a
-   local file and work offline. Do not add `<script src>`/`<link href>` to third-party URLs or split
-   the app into modules.
+1. **Single shipped file.** All app functionality ends up in one `dist/fieldbook.html`. No external
+   runtime dependencies, no build step to *run* the app, no network needed to use it. It must open
+   from a local file and work offline. Do not add `<script src>`/`<link href>` to third-party URLs,
+   and do not split the *delivered* app into modules — the `src/` split is concatenation only, with
+   no `import`/`export` and no `type="module"` (see src/docs/ADR-001-source-split.md).
 2. **Offline-first.** localStorage for persistence. The only network calls are optional and must fail
    silently when offline: the rules-source fetch (user-configured URLs) and the GitHub update check.
 3. **Backward-compatible data.** Never break loading of existing saved characters. New character
@@ -24,32 +26,74 @@ the app's JSON, which players load at runtime.
 
 ## Repo layout
 
+The split is by AUDIENCE: anything under `src/` is development material and never reaches players;
+`docs/` is player-facing and ships in the bundle zip.
+
 ```
-fieldbook.html          the app (single file)
-README.md               player-facing guide
-CLAUDE.md               this file
-build.sh                validate + regenerate CHANGELOG.md + build the bundle zip
-data/*.json             rules data the app loads (D&D 2024 + Humblewood)
-docs/
+src/                    THE SOURCE OF TRUTH — edit here, never the built file
+  fieldbook.template.html  HTML shell + the whole <body>; two markers: /*@@CSS@@*/ and //@@JS@@
+  manifest.json         the authoritative concatenation ORDER for js/ and css/
+  js/*.js               19 fragments, concatenated into the single <script>
+  css/*.css             6 fragments, concatenated into the single <style>
+  docs/                 DEV DOCS — deliberately excluded from the zip
+    UNRELEASED.md       running notebook of changes since the last release — ADD TO THIS
+    ADR-001-source-split.md  why the source is split and how the build works
+    WIRING-LEDGER.md    running log of what's been done + what's deferred — READ THIS
+dist/
+  fieldbook.html        the app — a BUILD ARTIFACT. Never hand-edit. Tracked in git.
+  fieldbook-v1.2.1.zip  the player bundle — allowlisted, no dev material (gitignored)
+  fieldbook-v1.2.1-source.zip   the whole repo, for archiving/handoff (gitignored)
+README.md               player-facing guide                      → ships
+CLAUDE.md               this file (dev)
+build.sh                build + validate + both zips; --release <level> also cuts a version
+data/*.json             rules data the app loads                 → ships
+docs/                   PLAYER-FACING reference                  → ships
   rules-schema.md       schema for every data file — READ before changing data shape
   README-converter.md   how convert.py works
-  WIRING-LEDGER.md       running log of what's been done + what's deferred — READ THIS
   CHANGELOG.md          generated from the in-app CHANGELOG array (do not hand-edit)
-scripts/convert.py      the data converter
+scripts/
+  convert.py            the data converter (advanced players)    → ships
+  build-html.js         concatenates src/ → dist/fieldbook.html  (dev)
+  gen-changelog.js      regenerates docs/CHANGELOG.md            (dev)
+  release.js            bumps APP_VERSION + folds in UNRELEASED.md (dev)
 ```
 
-`docs/WIRING-LEDGER.md` is the memory of the project — what's been built, why, and what's still
+`./build.sh` emits **two** zips:
+
+- **`dist/fieldbook-v<version>.zip` — player-facing only.** Exactly what README section 9 advertises:
+  `fieldbook.html`, `README.md`, `data/`, `docs/`, `scripts/convert.py`. It is an allowlist, and the
+  build verifies it afterwards and **deletes the zip** if anything development-shaped got in. If you
+  add a dev-only doc or tool, put it under `src/` (or leave it at root) — never in `docs/`, or it
+  ships.
+- **`dist/fieldbook-v<version>-source.zip` — the whole repo.** Membership is `git ls-files --cached --others
+  --exclude-standard`, i.e. every tracked file plus anything untracked that isn't gitignored, so
+  work you haven't committed yet is still captured. It rebuilds standalone: unzip it anywhere and
+  `./build.sh` reproduces `dist/fieldbook.html` byte-for-byte (the source-zip step itself skips
+  when there's no `.git`).
+
+`src/docs/WIRING-LEDGER.md` is the memory of the project — what's been built, why, and what's still
 open. Read it at the start of any non-trivial task, and append a short entry when you finish one.
 
-## Build & validate — always do this before delivering
+## Build & validate — the owner runs the build
 
-There is no runtime build, but every change must pass these checks. `./build.sh` runs all of them:
+**Do not run `./build.sh` (or `node scripts/build-html.js`) unless Mike asks for it.** Builds are his
+call: the build rewrites the tracked artifact `dist/fieldbook.html` and regenerates
+`docs/CHANGELOG.md`, so an unrequested one creates diff churn he didn't ask for. Finish the `src/`
+edits, then stop and report — say plainly that the change is unbuilt, note that `dist/fieldbook.html`
+is now stale, and list what the build will check and what needs browser QA. Offer to run it; don't.
 
-1. **JS syntax:** extract the inline `<script>` blocks from `fieldbook.html` and run `node --check`.
+There is no runtime build *for players* either — the app is still one file they just open. But every
+change must eventually pass these checks, and `./build.sh` runs all of them:
+
+0. **Build:** `node scripts/build-html.js` concatenates `src/` into `dist/fieldbook.html`. This runs
+   first; every check below reads the built file.
+1. **JS syntax:** `node --check` on each `src/js` fragment, then on the `<script>` block extracted
+   from `dist/fieldbook.html`.
 2. **JSON:** every `data/*.json` must `JSON.parse` cleanly.
 3. **Logic tests:** for any pure function you touch (version compare, cost/duration parsing, AC math,
-   inventory sectioning, `migrate` round-trip, etc.), write a quick Node check and run it. This
-   project leans on these because the next check can't be automated:
+   inventory sectioning, `migrate` round-trip, etc.), write a quick Node check and run it. These are
+   the one part you *should* run unprompted — they are throwaway scripts in the scratchpad that touch
+   nothing tracked, and the next two checks can't be automated:
 4. **Browser smoke-test is the owner's job.** You cannot click the UI here. When a change affects
    interactive DOM behavior, say so plainly and list what to verify in a browser — don't claim it's
    fully tested.
@@ -57,22 +101,34 @@ There is no runtime build, but every change must pass these checks. `./build.sh`
 Do not ship partial patches. Diagnose the root cause fully and fix it completely; bugs caught in play
 (e.g. a spell missing from attacks, armor not equippable) are blocking.
 
-## Versioning & changelog — required on every fieldbook.html change
+## Versioning & changelog — the notebook, then a release
 
-- `const APP_VERSION` near the top of the script is the source of truth; it shows as a badge in the
-  top bar and opens the in-app changelog.
-- The `const CHANGELOG = [ … ]` array (also near the top) holds `{v, date, notes:[…]}` entries,
-  newest first.
-- **On every change to `fieldbook.html`:** bump `APP_VERSION` (semver — patch = fix, minor = feature,
-  major = breaking rework), add a CHANGELOG entry at the top of the array describing the change since
-  the last version, then run `./build.sh` (it regenerates `docs/CHANGELOG.md` from the array).
-- **Data-only or converter-only changes do NOT bump `APP_VERSION`** (the app didn't change). Note
+**Versions are cut deliberately, not on every edit.** `APP_VERSION` always names the last *released*
+version, so a plain `./build.sh` never changes it — only `--release` does.
+
+- **While you work:** add a `- ` bullet to **`src/docs/UNRELEASED.md`** under `## Pending`, written
+  the way it should read to a player. One bullet per player-visible change. That's the whole
+  obligation — do not touch `APP_VERSION` or `CHANGELOG`.
+- **When the owner asks for a release:** `./build.sh --release patch|minor|major` (or an explicit
+  `X.Y.Z`). That folds every pending bullet into a new `CHANGELOG` entry in `src/js/30-version.js`,
+  bumps `APP_VERSION`, empties the notebook, and then builds. Semver as usual: patch = fix,
+  minor = feature, major = breaking rework.
+- **Never hand-edit `APP_VERSION` or the `CHANGELOG` array.** `scripts/release.js` owns both. It
+  refuses to release with an empty notebook, and refuses a version that isn't higher than the
+  current one (that would break the in-app update check).
+- A plain build prints how many unreleased notes are pending, so work in progress can't be silently
+  forgotten.
+- **Data-only or converter-only changes need no note and no release** (the app didn't change). Put
   them in the ledger instead.
+- `docs/CHANGELOG.md` is regenerated from the array on every build — never hand-edit it either.
 
 ## Publishing / updates
 
 The app has a GitHub update check: set `const UPDATE_REPO = "owner/repo"` to enable it. To publish an
-update, cut a **GitHub Release** tagged `vX.Y.Z` (matching `APP_VERSION`) and attach `fieldbook.html`.
+update, cut a **GitHub Release** tagged `vX.Y.Z` (matching `APP_VERSION`) and attach
+`dist/fieldbook.html` — players who just want the app download that one file. Attach
+`dist/fieldbook-vX.Y.Z.zip` alongside it for the full bundle with the rules data. The zip filenames
+already carry the version, so they match the release tag with no renaming.
 The in-app badge compares the latest release tag to `APP_VERSION` and links players to the release.
 
 ## Architecture invariants (don't violate without discussing)
@@ -113,24 +169,35 @@ The in-app badge compares the latest release tag to `APP_VERSION` and links play
   no per-spell class data.
 - New Humblewood content is folded into the existing consolidated files, not new per-packet files.
 
-## Planned: source split (see docs/ADR-001-source-split.md)
+## Source split — IN EFFECT (see src/docs/ADR-001-source-split.md)
 
-The owner intends to split the source into modules (`src/js/*.js`, optional `src/css/*.css`) while
-still **shipping a single `fieldbook.html`** built by concatenation. This is decided but **not yet
-implemented** — until it is, `fieldbook.html` remains the source and everything above applies as
-written. Do not start the split unless the owner asks; ADR-001 is the full brief for when they do.
+The split is done. These rules are live:
 
-Once the split has been executed, these rules take effect:
-- **Source of truth is `src/`.** `fieldbook.html` becomes a build artifact — never hand-edit it;
-  edit the fragments and run `./build.sh`.
+- **Source of truth is `src/`. `dist/fieldbook.html` is a build artifact — never hand-edit it.**
+  Edit the fragments; the owner builds (see "Build & validate" above). Leaving `dist/` stale is the
+  expected state between an edit and his build. The builder refuses to overwrite an artifact that
+  looks hand-edited, and tells you to port the change into `src/`.
+- **Where to edit what:**
+  - JS → `src/js/*.js` (the fragment whose name matches the area; they are positional slices)
+  - CSS → `src/css/*.css`
+  - **HTML markup (the whole `<body>`) → `src/fieldbook.template.html`**, *not* `src/`'s js/css dirs.
+    This is the easy one to forget.
+  - `APP_VERSION` / `CHANGELOG` → `src/js/30-version.js`. (Not `00-constants.js` as ADR-001
+    originally sketched — they sit mid-file in the original and rule 1 forbids moving them.)
+- **Adding or removing a fragment means editing `src/manifest.json`.** It is the authoritative
+  order, not the filename prefixes and not a glob. The build hard-fails if a `.js`/`.css` file
+  exists in `src/` but is not listed, or is listed but missing.
 - **Concatenation only** — no ES modules, no `import`/`export`, no bundler. Ordered `.js` fragments
   are inlined into one `<script>`; ordered `.css` into one `<style>`. This is what keeps the app
   working from `file://` on every device with no server.
-- **Cut, don't reorder:** fragments concatenate in the same top-to-bottom order as the current file,
-  and `boot()` stays last. See ADR-001 for the ordering rationale (TDZ on top-level const/let).
-- **Prove it's a pure refactor:** the first build must produce a `fieldbook.html` whose JS/CSS is
-  identical (whitespace-only diffs) to the pre-split app. `APP_VERSION`/CHANGELOG live in
-  `src/js/00-constants.js` after the split; the version/changelog process is otherwise unchanged.
+- **Cut, don't reorder:** fragments concatenate in the same top-to-bottom order as the original file,
+  and `boot()` stays last — machine-checked by the builder. See ADR-001 for the ordering rationale
+  (TDZ on top-level const/let).
+- **Byte hygiene is load-bearing.** The build is byte-exact, so a stripped final newline, a CRLF, or
+  a BOM in a fragment changes the shipped app. `.editorconfig` and `.gitattributes` guard this, and
+  the builder rejects CR bytes and BOMs outright.
+- `node scripts/build-html.js --check` exits non-zero if `dist/fieldbook.html` is stale — useful as a
+  pre-commit or CI gate. Don't put it inside `build.sh`; that script's job is to *fix* staleness.
 
 ## Working style
 

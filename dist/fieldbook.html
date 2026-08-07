@@ -309,6 +309,8 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .sysbadge.dnd{color:var(--brick);border-color:color-mix(in srgb,var(--brick) 55%,var(--line))}
 .hcard-star{background:transparent;border:0;cursor:pointer;font-size:22px;line-height:1;color:var(--ink-soft);padding:0 8px;align-self:center}
 .hcard-star.on{color:var(--accent)}
+/* .icon has a fixed height, so the row's align-items:stretch leaves it at the top; center it like the star */
+.hcard>.icon{align-self:center}
 .hprow{display:flex;align-items:flex-end;justify-content:center;gap:8px}
 .hpcol{text-align:center}
 .hpcol .n{font-family:var(--head);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;margin-bottom:2px}

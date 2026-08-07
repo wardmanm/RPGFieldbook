@@ -1,0 +1,113 @@
+function buildToc(){
+  const fly=document.getElementById("tocFly");if(!fly)return;
+  const panel=document.querySelector(".tabpanel.active");
+  const tabBtn=document.querySelector(".tab.active");const tabName=tabBtn?tabBtn.textContent.trim():"Sections";
+  const items=[];
+  if(panel)panel.querySelectorAll(".card > .label, .inv-sec-head").forEach(node=>{
+    const target=node.classList.contains("inv-sec-head")?node:node.closest(".card");
+    const cl=node.cloneNode(true);cl.querySelectorAll("button,svg,input,select,.grow,.add,.cnt").forEach(x=>x.remove());
+    const t=cl.textContent.trim();if(t&&target)items.push({t,target,sub:node.classList.contains("inv-sec-head")});
+  });
+  fly.innerHTML=`<h4>${esc(tabName)}</h4>`+(items.length?"":`<p class="hint" style="padding:6px">No sections here.</p>`);
+  items.forEach(it=>{const a=document.createElement("a");a.textContent=it.t;if(it.sub)a.style.paddingLeft="20px";a.addEventListener("click",()=>{closeToc();const tb=document.querySelector(".tabbar");const off=(tb?tb.getBoundingClientRect().height:48)+10;const y=it.target.getBoundingClientRect().top+window.scrollY-off;window.scrollTo({top:Math.max(0,y),behavior:"smooth"});});fly.appendChild(a);});
+}
+function openToc(){buildToc();const tb=document.querySelector(".tabbar");const top=tb?Math.max(0,Math.round(tb.getBoundingClientRect().bottom)):0;const fly=document.getElementById("tocFly"),back=document.getElementById("tocBack");if(fly)fly.style.top=top+"px";if(back)back.style.top=top+"px";if(fly)fly.classList.add("open");if(back)back.classList.add("open");}
+function closeToc(){const f=document.getElementById("tocFly"),b=document.getElementById("tocBack");if(f)f.classList.remove("open");if(b)b.classList.remove("open");}
+function invSection(it){
+  const ov=String(it.sectionOverride||"").trim();
+  if(ov&&INV_ORDER.includes(ov))return ov;
+  const c=String(it.category||it.type||"").toLowerCase();
+  if(it.weapon||c.includes("weapon"))return "Weapons";
+  if(itemArmor(it)||c.includes("armor")||c.includes("shield"))return "Armor";
+  if(/potion|scroll|consumable|ammunition/.test(c))return "Consumables";
+  if(/wand|rod|staff|ring|wondrous|focus/.test(c))return "Magic Items";
+  if(/tool|kit|instrument|supplies|utensils/.test(c))return "Tools";
+  if(/gear/.test(c))return "Gear";
+  return "Loot";
+}
+const INV_ORDER=["Weapons","Armor","Consumables","Magic Items","Tools","Gear","Loot"];
+function invItemHTML(it){
+  const ic=!!invCol().items[it.id];
+  return `<div class="item fitem"><div class="top">
+        <button class="fitoggle" data-invitem="${it.id}" aria-label="Collapse item"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="fav ${it.fav?"on":""}" data-fav-item="${it.id}" aria-label="Favorite" title="Favorite">${it.fav?"★":"☆"}</button>
+        <span class="nm">${esc(it.name||"Item")}</span>
+        ${it.qty&&num(it.qty)!==1?`<span class="qty">×${num(it.qty)}</span>`:""}
+        ${originBadge(itemOrigin(it),"data-orig-item",it.id)}
+        ${num(it.cost)?`<span class="qty" title="Cost each">${esc(fmtGp(it.cost))}</span>`:""}
+        ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${it.id}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
+        <button class="icon" data-edit-item="${it.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-item="${it.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+      </div>
+      ${ic?"":`${it.description?`<div class="desc">${highlight(it.description)}</div>`:""}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
+}
+function renderInventory(){
+  const el=document.getElementById("inventoryList");if(!el)return;el.innerHTML="";
+  const caBtn=document.getElementById("invCollapseAll"), caLbl=document.getElementById("invCollapseLbl");
+  if(caBtn)caBtn.style.display=character.inventory.length?"inline-flex":"none";
+  if(!character.inventory.length){el.innerHTML=`<div class="empty">No items yet. Equip gear that grants effects (e.g. +1 AC) and your stats update automatically.</div>`;return;}
+  if(caLbl)caLbl.textContent=character.inventory.some(it=>!invCol().items[it.id])?"Collapse all":"Expand all";
+  const byName=(a,b)=>String(a.name||"").localeCompare(String(b.name||""));
+  const eqThenName=(a,b)=>((b.equipped?1:0)-(a.equipped?1:0))||byName(a,b);
+  const favs=character.inventory.filter(it=>it.fav).sort(byName);
+  const groups={};character.inventory.filter(it=>!it.fav).forEach(it=>{const s=invSection(it);(groups[s]=groups[s]||[]).push(it);});
+  const sc=invCol().sections;
+  const renderSec=(title,items,sorter)=>{
+    if(!items.length)return;
+    const collapsed=!!sc[title];
+    const head=document.createElement("div");head.className="inv-sec-head";head.dataset.invsec=title;
+    head.innerHTML=`<svg class="fcaret ${collapsed?"c":""}" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>${esc(title)} <span class="cnt">(${items.length})</span>`;
+    el.appendChild(head);
+    if(!collapsed)items.slice().sort(sorter).forEach(it=>{const w=document.createElement("div");w.innerHTML=invItemHTML(it);el.appendChild(w.firstElementChild);});
+  };
+  renderSec("★ Favorites",favs,byName);
+  INV_ORDER.forEach(s=>renderSec(s,groups[s]||[],eqThenName));
+  const total=inventoryTotal();
+  if(total>0){const t=document.createElement("div");t.className="item";t.innerHTML=`<div class="top"><span class="nm">Total value</span><span style="flex:1"></span><b>${esc(fmtGp(total))}</b></div>`;el.appendChild(t);}
+}
+function statusTitle(name){
+  const g=allGlossary().find(x=>x.term.toLowerCase()===(name||"").toLowerCase());
+  return g?`<span class="kw" data-gid="${g.id}" role="button" tabindex="0">${esc(name)}</span>`:esc(name||"Status");
+}
+function renderStatuses(){
+  const el=document.getElementById("statusList");el.innerHTML="";
+  if(!character.statuses.length){el.innerHTML=`<div class="empty">No active statuses. Add conditions like Poisoned or Grappled — active ones can adjust your stats and link to their rules.</div>`;return;}
+  character.statuses.forEach(s=>{
+    const on=s.active!==false;
+    const d=document.createElement("div");d.className="item"+(on?" on-status":"");
+    d.innerHTML=`<div class="top">
+        <span class="nm">${statusTitle(s.name)}</span>
+        <span class="equip ${on?"on":""}" data-toggle-status="${s.id}"><span class="box"></span>${on?"Active":"Cleared"}</span>
+        <button class="icon" data-edit-status="${s.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-status="${s.id}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+      </div>
+      ${s.description?`<div class="desc">${highlight(s.description)}</div>`:""}
+      ${on?fxChips(s.effects):fxChips(s.effects).replace(/class="chip"/g,'class="chip off"')}`;
+    el.appendChild(d);
+  });
+}
+function renderFamiliars(){
+  const card=document.getElementById("familiarCard");
+  const link=document.getElementById("addFamiliarLink");
+  const has=character.familiars.length>0;
+  card.style.display=has?"":"none";
+  link.style.display=has?"none":"";
+  if(!has)return;
+  const el=document.getElementById("familiarList");el.innerHTML="";
+  character.familiars.forEach(f=>{
+    const on=!!f.active;
+    const stats=[f.ac!==""&&f.ac!=null?`AC ${esc(f.ac)}`:"",(f.hp&&(f.hp.max!==""&&f.hp.max!=null))?`HP ${esc(f.hp.cur||0)}/${esc(f.hp.max)}`:"",f.speed?`Speed ${esc(f.speed)}`:""].filter(Boolean).join(" · ");
+    const d=document.createElement("div");d.className="item"+(on?" on-fam":"");
+    d.innerHTML=`<div class="top">
+        <span class="nm">${esc(f.name||"Familiar")}</span>
+        ${f.kind?`<span class="qty">${esc(f.kind)}</span>`:""}
+        <span class="fam-state ${on?"on":"off"}" data-toggle-familiar="${f.id}">${on?"● Summoned":"○ Dismissed"}</span>
+        <button class="icon" data-edit-familiar="${f.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-familiar="${f.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+      </div>
+      ${stats?`<div class="desc" style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em">${stats}</div>`:""}
+      ${f.description?`<div class="desc">${highlight(f.description)}</div>`:""}
+      ${(f.effects&&f.effects.length)?(on?fxChips(f.effects):fxChips(f.effects).replace(/class="chip"/g,'class="chip off"')):""}`;
+    el.appendChild(d);
+  });
+}

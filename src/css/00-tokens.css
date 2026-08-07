@@ -1,0 +1,68 @@
+/* ================= Theme tokens ================= */
+:root{
+  --display:"Grenze Gotisch", "Times New Roman", serif;
+  --head:"Cinzel", Georgia, serif;
+  --body:"EB Garamond", Georgia, "Times New Roman", serif;
+  --radius:7px;
+}
+html[data-theme="light"]{
+  --paper:#f4edda;      /* warm cream page */
+  --paper-2:#ece1c4;
+  --panel:#f8f2e2;
+  --ink:#181410;        /* near-black ink */
+  --ink-soft:#6c6350;
+  --line:#181410;
+  --hair:rgba(24,20,16,.22);
+  --accent:#a8701f;     /* honey/ochre */
+  --accent-2:#2f6f60;   /* verdigris */
+  --brick:#98351f;
+  --field:rgba(255,255,255,.55);
+  --field-focus:#fffdf6;
+  --shadow:0 10px 26px rgba(40,30,12,.20);
+  --ground:#cdbf9c;
+}
+html[data-theme="dark"]{
+  --paper:#211c16;      /* dark walnut */
+  --paper-2:#191510;
+  --panel:#24201a;
+  --ink:#efe6d0;        /* cream ink */
+  --ink-soft:#a99e85;
+  --line:#e7dcc2;
+  --hair:rgba(231,220,194,.22);
+  --accent:#d8a544;
+  --accent-2:#5eb7a3;
+  --brick:#d5765f;
+  --field:rgba(255,255,255,.05);
+  --field-focus:#2c2720;
+  --shadow:0 10px 30px rgba(0,0,0,.5);
+  --ground:#0e0b08;
+}
+/* ---- Classic D&D skin (parchment + red/gold, Roman-cap display) ---- */
+html[data-skin="classic"]{ --display:"Cinzel", Georgia, "Times New Roman", serif; }
+html[data-skin="classic"][data-theme="light"]{
+  --paper:#efe7d3; --paper-2:#e4d9be; --panel:#f5efdf;
+  --ink:#1c1710; --ink-soft:#6b6047; --line:#2a2018; --hair:rgba(42,32,24,.22);
+  --accent:#8f2318;      /* deep D&D red */
+  --accent-2:#2c5f97;    /* slate blue (links / affected) */
+  --brick:#8f2318;
+  --field:rgba(255,255,255,.5); --field-focus:#fffdf5;
+  --shadow:0 10px 26px rgba(40,25,10,.2); --ground:#c7b795;
+}
+html[data-skin="classic"][data-theme="dark"]{
+  --paper:#1c1813; --paper-2:#15110d; --panel:#211c15;
+  --ink:#efe7d4; --ink-soft:#a89d84; --line:#e8dcc0; --hair:rgba(232,220,192,.2);
+  --accent:#e2564a;      /* bright red on dark */
+  --accent-2:#78acdd;    /* light blue */
+  --brick:#e2564a;
+  --field:rgba(255,255,255,.05); --field-focus:#282218;
+  --shadow:0 10px 30px rgba(0,0,0,.55); --ground:#0c0a07;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:var(--body);color:var(--ink);background:var(--ground);
+  min-height:100dvh;font-size:17px;line-height:1.4;
+  -webkit-text-size-adjust:100%;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+

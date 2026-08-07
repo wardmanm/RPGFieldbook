@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-skin="humblewood" data-rough="on">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fieldbook — Humblewood Character Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@500;700;900&family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+/*@@CSS@@*/
+</style>
+</head>
+<body>
+<!-- rough-ink SVG filter -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute"><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.013 0.016" numOctaves="2" seed="7" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3.4" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+
+<div class="topbar">
+  <div class="wordmark"><span id="wmMain">Humblewood</span><small id="wmSub">The Fieldbook</small></div>
+  <button class="verbtn" id="btnVer" title="Version & changelog">v—</button>
+  <a class="updpill" id="updatePill" target="_blank" rel="noopener" style="display:none"></a>
+  <span id="savestate" class="savestate"></span>
+  <button class="tbtn" id="btnHome" title="Characters / home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 9v11a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9"/></svg></button>
+  <button class="tbtn" id="btnTheme" title="Toggle light / dark">
+    <svg viewBox="0 0 24 24" id="themeIcon"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+  </button>
+  <button class="tbtn" id="btnSettings" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 6.6 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 13.4H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 6.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 4.6V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8v.2a1.6 1.6 0 0 0 1.4 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></button>
+  <button class="tbtn" id="btnPrint" title="Print / save PDF of the sheet"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg></button>
+  <button class="tbtn" id="btnLoad"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Load</button>
+  <button class="tbtn primary" id="btnSave"><svg viewBox="0 0 24 24"><path d="M12 21V9m0 12 4-4m-4 4-4-4M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/></svg>Save</button>
+  <input type="file" id="fileLoad" accept="application/json,.json" class="hidefile">
+</div>
+
+<div class="tabbar">
+  <button class="tab active" data-tab="sheet">Sheet</button>
+  <button class="tab" data-tab="spells">Spells</button>
+  <button class="tab" data-tab="inventory">Inventory</button>
+  <button class="tab" data-tab="story">Story</button>
+  <button class="tab" data-tab="rules">Rules</button>
+  <button class="tab-toc" id="btnToc" title="Jump to a section" aria-label="Table of contents">☰</button>
+</div>
+<div class="toc-back" id="tocBack"></div>
+<nav class="toc-fly" id="tocFly" aria-label="Sections"></nav>
+
+<div class="page">
+  <!-- ============ SHEET TAB ============ -->
+  <section class="tabpanel active" id="tab-sheet">
+    <div class="cols">
+      <div class="stack">
+        <div class="card">
+          <div class="label">Portrait <span class="grow"></span></div>
+          <div class="portrait" id="portrait"><div class="ph">No portrait yet</div></div>
+          <div class="rowbtns">
+            <button class="mini" id="btnPortrait"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add image</button>
+            <button class="mini danger" id="btnPortraitDel">Remove</button>
+          </div>
+          <input type="file" id="filePortrait" accept="image/*" class="hidefile">
+          <div class="field"><label class="f">Character name</label><input data-path="character.name" placeholder="Pib Thornwhistle"></div>
+          <div class="g2">
+            <div class="field"><label class="f">Alignment</label><input data-path="character.alignment" placeholder="NG"></div>
+            <div class="field"><label class="f">Experience</label><input type="number" min="0" data-path="character.xp" placeholder="0"></div>
+          </div>
+          <div class="g2">
+            <div class="field"><label class="f">Level</label><div class="vbox" style="padding:6px"><div class="big" id="levelDisp">1</div></div></div>
+            <div class="field"><label class="f">Proficiency Bonus</label><div class="vbox" style="padding:6px"><div class="big" id="pbDisp">+2</div></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label"><span id="craceWord">Ancestry</span> &amp; Background <span class="grow"></span></div>
+          <div id="raceBgBox"></div>
+        </div>
+
+        <div class="card">
+          <div class="label">Class <span class="grow"></span><button class="add" id="btnLevelUp">▲ Level up</button><button class="add" id="btnLevelDown">▼ Level down</button></div>
+          <div id="classBox"></div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <div class="label">Ability Scores &amp; Saves <span class="grow"></span></div>
+          <div class="abilities" id="abilities"></div>
+        </div>
+
+        <div class="card">
+          <div class="label">Vitals <span class="grow"></span></div>
+          <div class="vitals" style="margin-bottom:11px">
+            <div class="vbox"><div class="n">Armor Class</div><div class="big" data-stat="ac" id="acDisp">10</div></div>
+            <div class="vbox"><div class="n">Initiative</div><div class="big" data-stat="init" id="initDisp">+0</div></div>
+            <div class="vbox"><div class="n">Speed</div><div class="big" data-stat="speed" id="speedDisp">0</div></div>
+            <div class="vbox"><div class="n">Passive Perc.</div><div class="big" id="passDisp">10</div></div>
+            <div class="vbox"><div class="n">Hit Dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">auto</button></div><input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly></div>
+            <div class="vbox inspire"><div class="n">Inspiration</div><button class="starbtn" id="starBtn" aria-label="Toggle inspiration">✦</button></div>
+          </div>
+          <div class="hpwrap">
+            <div class="hp-title">Hit Points</div>
+            <div class="hprow">
+              <div class="hpcol"><div class="n">Current</div><input type="number" data-path="character.hp.cur" placeholder="0" aria-label="Current HP"></div>
+              <div class="hpcol"><div class="n">Max</div><input type="number" data-path="character.hp.max" data-recompute placeholder="0" aria-label="Base max HP"></div>
+              <div class="hpcol"><div class="n">Temp</div><input type="number" data-path="character.hp.temp" placeholder="0" aria-label="Temp HP"></div>
+            </div>
+            <div class="hp-step">
+              <button id="hpMinus" aria-label="Lose HP">−</button>
+              <button id="hpPlus" aria-label="Gain HP">+</button>
+            </div>
+            <div class="death">Death Saves
+              <span class="set" id="deathSucc" data-kind="succ"></span>
+              <span style="opacity:.5">·</span>
+              <span class="set" id="deathFail" data-kind="fail"></span>
+            </div>
+            <div class="rest-row">
+              <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
+              <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
+            </div>
+            <div class="hd-wrap" id="hdWrap"></div>
+            <div id="maxNote" style="text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px">Item / feature bonuses to Max HP appear here</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">Statuses &amp; Conditions <button class="add" data-add="status"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="statusList"></div>
+        </div>
+
+        <div class="card">
+          <div class="label">Attacks &amp; Weapons <button class="add" data-add="attack"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="attackList"></div>
+        </div>
+
+        <div class="card">
+          <div class="label">Skills <span class="grow"></span></div>
+          <div class="skills" id="skills"></div>
+          <div class="legend">
+            <b><i></i>None</b><b><i class="p"></i>Proficient</b><b><i class="e"></i>Expertise</b>
+            <b style="color:var(--ink-soft)">Tap dot to cycle</b>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">Resources <button class="add" id="addResource"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Resource</button><span class="grow"></span></div>
+          <div id="resList"></div>
+        </div>
+
+        <div class="card">
+          <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="featureList"></div>
+        </div>
+
+        <div class="card" id="familiarCard" style="display:none">
+          <div class="label">Familiars &amp; Companions <button class="add" data-add="familiar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="familiarList"></div>
+        </div>
+        <button class="mini" id="addFamiliarLink" style="max-width:260px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a familiar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INVENTORY TAB ============ -->
+  <section class="tabpanel" id="tab-inventory">
+    <div class="stack" style="max-width:720px;margin:0 auto">
+      <div class="card">
+        <div class="label">Equipment &amp; Inventory <button class="add" data-add="item"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="invCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="invCollapseLbl">Collapse all</span></button></div>
+        <div id="inventoryList"></div>
+      </div>
+      <div class="card">
+        <div class="label">Coins <span class="grow"></span><button class="add" id="btnCoinConvert" title="Roll lower coins up into higher denominations"><svg viewBox="0 0 24 24"><path d="M7 4v13m0 0-3-3m3 3 3-3M17 20V7m0 0 3 3m-3-3-3 3"/></svg>Auto-convert</button></div>
+        <div class="coins" id="coins"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SPELLS TAB ============ -->
+  <section class="tabpanel" id="tab-spells">
+    <div class="stack">
+      <div class="card">
+        <div class="label">Spellcasting <span class="grow"></span></div>
+        <div class="g3">
+          <div class="field"><label class="f">Spellcasting ability</label>
+            <select data-path="character.spellAbility" data-recompute>
+              <option value="">—</option><option value="int">Intelligence</option><option value="wis">Wisdom</option><option value="cha">Charisma</option>
+            </select></div>
+          <div class="field"><label class="f">Spell save DC</label><div class="vbox" style="padding:6px"><div class="big" id="dcDisp">—</div></div></div>
+          <div class="field"><label class="f">Spell attack</label><div class="vbox" style="padding:6px"><div class="big" id="satkDisp">—</div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="label">Spell Slots <button class="add" id="restoreSlots">↻ Restore all</button><span class="grow"></span></div>
+        <div class="slotgrid" id="slotGrid"></div>
+        <p class="hint" id="slotAutoNote" style="margin-top:8px"></p>
+      </div>
+      <div class="card" id="activeSpellCard" style="display:none">
+        <div class="label">Active Spells <span class="grow"></span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-family:var(--head);font-size:12px">Round
+            <button class="add" data-round="-1" aria-label="Previous round">−</button>
+            <b id="roundNum" style="min-width:14px;text-align:center">0</b>
+            <button class="add" data-round="1" aria-label="Next round">+</button>
+          </span>
+        </div>
+        <div id="activeSpellList"></div>
+      </div>
+      <div class="card">
+        <div class="label">Spells &amp; Cantrips <button class="add" data-add="spell"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+        <div id="spellList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STORY TAB ============ -->
+  <section class="tabpanel" id="tab-story">
+    <div class="cols">
+      <div class="stack">
+        <div class="card">
+          <div class="label">Proficiencies &amp; Languages <span class="grow"></span></div>
+          <div id="rt-proficiencies"></div>
+          <div class="rt-head" style="margin-top:8px"><span></span><button class="editbtn" data-edit="proficiencies"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Edit</span></button></div>
+        </div>
+      </div>
+      <div class="stack" id="bioStack"></div>
+    </div>
+  </section>
+
+  <!-- ============ RULES TAB ============ -->
+  <section class="tabpanel" id="tab-rules">
+    <div class="stack">
+      <div class="card">
+        <div class="label">Glossary &amp; Rules <button class="add" id="btnAddGloss"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+        <p class="hint">Terms here (plus any from a loaded rules pack) become tappable ❧ wherever they appear in your notes, features, spells, and item descriptions. Manage rule sources in Settings.</p>
+        <input id="glossSearch" placeholder="Filter terms…" autocomplete="off" style="margin-bottom:10px">
+        <input type="file" id="glossRulesFiles" accept="application/json,.json" multiple class="hidefile">
+        <div id="glossList"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- generic modal -->
+<div class="home" id="home" style="display:none">
+  <div class="home-inner">
+    <div class="home-head">
+      <div class="wordmark"><span id="homeWmMain">Fieldbook</span><small id="homeWmSub">Character Library</small></div>
+      <button class="tbtn" id="homeBack" style="display:none"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Back to sheet</button>
+      <button class="tbtn" id="homeCog" title="Setup"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 6.6 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 13.4H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 6.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 4.6V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8v.2a1.6 1.6 0 0 0 1.4 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></button>
+    </div>
+
+    <div class="home-setup" id="homeSetup">
+      <div class="card">
+        <div class="label">Appearance</div>
+        <div class="g2">
+          <div class="field"><label class="f">Skin</label><div class="seg" id="homeSkin"><button type="button" data-skin="humblewood">Humblewood</button><button type="button" data-skin="classic">Classic D&amp;D</button></div></div>
+          <div class="field"><label class="f">Mode</label><div class="seg" id="homeMode"><button type="button" data-th="system">System</button><button type="button" data-th="light">Light</button><button type="button" data-th="dark">Dark</button></div></div>
+        </div>
+        <label class="equip" id="homeRough" style="margin-top:8px"><span class="box"></span>Hand-drawn borders</label>
+      </div>
+      <div class="card">
+        <div class="label">Rules data</div>
+        <p class="hint" id="homeRulesStatus" style="margin-bottom:8px"></p>
+        <button class="tbtn primary" id="homeImportBtn"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Import rules files (bulk)</button>
+        <input type="file" id="homeRulesFiles" accept="application/json,.json" multiple class="hidefile">
+        <p class="hint" style="margin-top:8px">Select multiple JSON files at once — races, classes, spells, feats, backgrounds, subclasses, and glossary all merge together.</p>
+        <div class="f" style="margin-top:10px">Loaded data</div>
+        <div id="homeRulesData"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="label">Your characters <span class="grow"></span><button class="add sub" id="homeLoadChar" title="Import a character from a Fieldbook .json file"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Import</button><button class="add" id="homeNew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New character</button></div>
+      <div id="homeChars"></div>
+    </div>
+  </div>
+</div>
+<div class="backdrop" id="modal"><div class="modal" role="dialog" aria-modal="true">
+  <div class="m-head"><div class="m-title" id="mTitle"></div><button class="close" id="mClose" aria-label="Close">×</button></div>
+  <div class="m-body" id="mBody"></div>
+</div></div>
+
+<script>
+//@@JS@@
+</script>
+<div id="printArea" aria-hidden="true"></div>
+</body>
+</html>

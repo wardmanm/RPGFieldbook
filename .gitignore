@@ -1,7 +1,10 @@
 # Build artifacts
-fieldbook-bundle.zip
+# NB: dist/fieldbook.html is deliberately TRACKED — it's the release artifact,
+# the file the in-app update badge points players at, and the reference the
+# builder's clobber guard compares against. Only the derived bits are ignored.
+dist/*.zip
+dist/.buildstamp
 .buildtmp/
-/tmp/_fieldbook.js
 
 # Node / tooling
 node_modules/
