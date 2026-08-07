@@ -1,0 +1,1129 @@
+{
+  "system": "XPHB",
+  "name": "D&D 2024 Items",
+  "items": [
+    {
+      "name": "Alchemist's Supplies",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 8,
+      "cost": "50 gp",
+      "description": "Ability:: Intelligence\nUtilize:: Identify a substance (DC 15), or start a fire (DC 15)\nCraft:: Acid, Alchemist's Fire, Component Pouch, Oil, Paper, Perfume",
+      "effects": []
+    },
+    {
+      "name": "Bagpipes",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Instrument",
+      "rarity": "Mundane",
+      "weight": 6,
+      "cost": "30 gp",
+      "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "Battleaxe",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 4,
+      "cost": "10 gp",
+      "description": "Damage 1d8 slashing (Versatile 1d10) · Properties: Versatile · Mastery: Topple",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d8",
+        "damageType": "slashing",
+        "ability": "str",
+        "notes": "Versatile 1d10 · Mastery: Topple"
+      }
+    },
+    {
+      "name": "Blowgun",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Ranged Weapon",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "10 gp",
+      "description": "Damage 1 piercing · Range 25/100 ft · Properties: Ammunition, Loading · Mastery: Vex",
+      "effects": [],
+      "weapon": {
+        "kind": "ranged",
+        "dice": "1",
+        "damageType": "piercing",
+        "ability": "dex",
+        "notes": "Range 25/100 · Ammunition, Loading · Mastery: Vex"
+      }
+    },
+    {
+      "name": "Breastplate",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Medium Armor",
+      "rarity": "Mundane",
+      "weight": 20,
+      "cost": "400 gp",
+      "description": "AC 14 + Dex modifier (max 2)",
+      "effects": []
+    },
+    {
+      "name": "Brewer's Supplies",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 9,
+      "cost": "20 gp",
+      "description": "Ability:: Intelligence\nUtilize:: Detect poisoned drink (DC 15), or identify alcohol (DC 10)\nCraft:: Antitoxin",
+      "effects": []
+    },
+    {
+      "name": "Calligrapher's Supplies",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 5,
+      "cost": "10 gp",
+      "description": "Ability:: Dexterity\nUtilize:: Write text with impressive flourishes that guard against forgery (DC 15)\nCraft:: Ink, Spell Scroll",
+      "effects": []
+    },
+    {
+      "name": "Carpenter's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 6,
+      "cost": "8 gp",
+      "description": "Ability:: Strength\nUtilize:: Seal or pry open a door or container (DC 20)\nCraft:: Club, Greatclub, Quarterstaff, Barrel, Chest, Ladder, Pole, Portable Ram, Torch",
+      "effects": []
+    },
+    {
+      "name": "Cartographer's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 6,
+      "cost": "15 gp",
+      "description": "Ability:: Wisdom\nUtilize:: Draft a map of a small area (DC 15)\nCraft:: Map",
+      "effects": []
+    },
+    {
+      "name": "Chain Mail",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Heavy Armor",
+      "rarity": "Mundane",
+      "weight": 55,
+      "cost": "75 gp",
+      "description": "AC 16 · Requires Strength 13 · Disadvantage on Stealth",
+      "effects": []
+    },
+    {
+      "name": "Chain Shirt",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Medium Armor",
+      "rarity": "Mundane",
+      "weight": 20,
+      "cost": "50 gp",
+      "description": "AC 13 + Dex modifier (max 2)",
+      "effects": []
+    },
+    {
+      "name": "Club",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "1 sp",
+      "description": "Damage 1d4 bludgeoning · Properties: Light · Mastery: Slow",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d4",
+        "damageType": "bludgeoning",
+        "ability": "str",
+        "notes": "Light · Mastery: Slow"
+      }
+    },
+    {
+      "name": "Cobbler's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 5,
+      "cost": "5 gp",
+      "description": "Ability:: Dexterity\nUtilize:: Modify footwear to give Advantage on the wearer's next Dexterity (Acrobatics) check (DC 10)\nCraft:: Climber's Kit",
+      "effects": []
+    },
+    {
+      "name": "Cook's Utensils",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 8,
+      "cost": "1 gp",
+      "description": "Ability:: Wisdom\nUtilize:: Improve food's flavor (DC 10), or detect spoiled or poisoned food (DC 15)\nCraft:: Rations",
+      "effects": []
+    },
+    {
+      "name": "Dagger",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "2 gp",
+      "description": "Damage 1d4 piercing · Range 20/60 ft · Properties: Finesse, Light, Thrown · Mastery: Nick",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d4",
+        "damageType": "piercing",
+        "ability": "finesse",
+        "notes": "Range 20/60 · Finesse, Light, Thrown · Mastery: Nick"
+      }
+    },
+    {
+      "name": "Dart",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Ranged Weapon",
+      "rarity": "Mundane",
+      "weight": 0.25,
+      "cost": "5 cp",
+      "description": "Damage 1d4 piercing · Range 20/60 ft · Properties: Finesse, Thrown · Mastery: Vex",
+      "effects": [],
+      "weapon": {
+        "kind": "ranged",
+        "dice": "1d4",
+        "damageType": "piercing",
+        "ability": "dex",
+        "notes": "Range 20/60 · Finesse, Thrown · Mastery: Vex"
+      }
+    },
+    {
+      "name": "Drum",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Instrument",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "6 gp",
+      "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "Dulcimer",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Instrument",
+      "rarity": "Mundane",
+      "weight": 10,
+      "cost": "25 gp",
+      "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "Flail",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "10 gp",
+      "description": "Damage 1d8 bludgeoning · Mastery: Sap",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d8",
+        "damageType": "bludgeoning",
+        "ability": "str",
+        "notes": "Mastery: Sap"
+      }
+    },
+    {
+      "name": "Flute",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Instrument",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "2 gp",
+      "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "Glaive",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 6,
+      "cost": "20 gp",
+      "description": "Damage 1d10 slashing · Properties: Heavy, Reach, Two-Handed · Mastery: Graze",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d10",
+        "damageType": "slashing",
+        "ability": "str",
+        "notes": "Heavy, Reach, Two-Handed · Mastery: Graze"
+      }
+    },
+    {
+      "name": "Glassblower's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 5,
+      "cost": "30 gp",
+      "description": "Ability:: Intelligence\nUtilize:: Discern what a glass object held in the past 24 hours (DC 15)\nCraft:: Glass Bottle, Magnifying Glass, Spyglass, Vial",
+      "effects": []
+    },
+    {
+      "name": "Greataxe",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 7,
+      "cost": "30 gp",
+      "description": "Damage 1d12 slashing · Properties: Heavy, Two-Handed · Mastery: Cleave",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d12",
+        "damageType": "slashing",
+        "ability": "str",
+        "notes": "Heavy, Two-Handed · Mastery: Cleave"
+      }
+    },
+    {
+      "name": "Greatclub",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 10,
+      "cost": "2 sp",
+      "description": "Damage 1d8 bludgeoning · Properties: Two-Handed · Mastery: Push",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d8",
+        "damageType": "bludgeoning",
+        "ability": "str",
+        "notes": "Two-Handed · Mastery: Push"
+      }
+    },
+    {
+      "name": "Greatsword",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 6,
+      "cost": "50 gp",
+      "description": "Damage 2d6 slashing · Properties: Heavy, Two-Handed · Mastery: Graze",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "2d6",
+        "damageType": "slashing",
+        "ability": "str",
+        "notes": "Heavy, Two-Handed · Mastery: Graze"
+      }
+    },
+    {
+      "name": "Halberd",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 6,
+      "cost": "20 gp",
+      "description": "Damage 1d10 slashing · Properties: Heavy, Reach, Two-Handed · Mastery: Cleave",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d10",
+        "damageType": "slashing",
+        "ability": "str",
+        "notes": "Heavy, Reach, Two-Handed · Mastery: Cleave"
+      }
+    },
+    {
+      "name": "Half Plate Armor",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Medium Armor",
+      "rarity": "Mundane",
+      "weight": 40,
+      "cost": "750 gp",
+      "description": "AC 15 + Dex modifier (max 2) · Disadvantage on Stealth",
+      "effects": []
+    },
+    {
+      "name": "Hand Crossbow",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Ranged Weapon",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "75 gp",
+      "description": "Damage 1d6 piercing · Range 30/120 ft · Properties: Ammunition, Light, Loading · Mastery: Vex",
+      "effects": [],
+      "weapon": {
+        "kind": "ranged",
+        "dice": "1d6",
+        "damageType": "piercing",
+        "ability": "dex",
+        "notes": "Range 30/120 · Ammunition, Light, Loading · Mastery: Vex"
+      }
+    },
+    {
+      "name": "Handaxe",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "5 gp",
+      "description": "Damage 1d6 slashing · Range 20/60 ft · Properties: Light, Thrown · Mastery: Vex",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d6",
+        "damageType": "slashing",
+        "ability": "str",
+        "notes": "Range 20/60 · Light, Thrown · Mastery: Vex"
+      }
+    },
+    {
+      "name": "Heavy Crossbow",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Ranged Weapon",
+      "rarity": "Mundane",
+      "weight": 18,
+      "cost": "50 gp",
+      "description": "Damage 1d10 piercing · Range 100/400 ft · Properties: Ammunition, Heavy, Loading, Two-Handed · Mastery: Push",
+      "effects": [],
+      "weapon": {
+        "kind": "ranged",
+        "dice": "1d10",
+        "damageType": "piercing",
+        "ability": "dex",
+        "notes": "Range 100/400 · Ammunition, Heavy, Loading, Two-Handed · Mastery: Push"
+      }
+    },
+    {
+      "name": "Hide Armor",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Medium Armor",
+      "rarity": "Mundane",
+      "weight": 12,
+      "cost": "10 gp",
+      "description": "AC 12 + Dex modifier (max 2)",
+      "effects": []
+    },
+    {
+      "name": "Horn",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Instrument",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "3 gp",
+      "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "Javelin",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "5 sp",
+      "description": "Damage 1d6 piercing · Range 30/120 ft · Properties: Thrown · Mastery: Slow",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d6",
+        "damageType": "piercing",
+        "ability": "str",
+        "notes": "Range 30/120 · Thrown · Mastery: Slow"
+      }
+    },
+    {
+      "name": "Jeweler's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "25 gp",
+      "description": "Ability:: Intelligence\nUtilize:: Discern a gem's value (DC 15)\nCraft:: Arcane Focus, Holy Symbol",
+      "effects": []
+    },
+    {
+      "name": "Lance",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 6,
+      "cost": "10 gp",
+      "description": "Damage 1d10 piercing · Properties: Heavy, Reach, {'uid': '2H · Mastery: Topple. A Lance requires two hands to wield when you aren't mounted",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d10",
+        "damageType": "piercing",
+        "ability": "str",
+        "notes": "Heavy, Reach, {'uid': '2H · Mastery: Topple"
+      }
+    },
+    {
+      "name": "Leather Armor",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Light Armor",
+      "rarity": "Mundane",
+      "weight": 10,
+      "cost": "10 gp",
+      "description": "AC 11 + Dex modifier",
+      "effects": []
+    },
+    {
+      "name": "Leatherworker's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 5,
+      "cost": "5 gp",
+      "description": "Ability:: Dexterity\nUtilize:: Add a design to a leather item (DC 10)\nCraft:: Sling, Whip, Hide Armor, Leather Armor, Studded Leather Armor, Backpack, Crossbow Bolt Case, Map or Scroll Case, Parchment, Pouch, Quiver, Waterskin",
+      "effects": []
+    },
+    {
+      "name": "Light Crossbow",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Ranged Weapon",
+      "rarity": "Mundane",
+      "weight": 5,
+      "cost": "25 gp",
+      "description": "Damage 1d8 piercing · Range 80/320 ft · Properties: Ammunition, Loading, Two-Handed · Mastery: Slow",
+      "effects": [],
+      "weapon": {
+        "kind": "ranged",
+        "dice": "1d8",
+        "damageType": "piercing",
+        "ability": "dex",
+        "notes": "Range 80/320 · Ammunition, Loading, Two-Handed · Mastery: Slow"
+      }
+    },
+    {
+      "name": "Light Hammer",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "2 gp",
+      "description": "Damage 1d4 bludgeoning · Range 20/60 ft · Properties: Light, Thrown · Mastery: Nick",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d4",
+        "damageType": "bludgeoning",
+        "ability": "str",
+        "notes": "Range 20/60 · Light, Thrown · Mastery: Nick"
+      }
+    },
+    {
+      "name": "Longbow",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Ranged Weapon",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "50 gp",
+      "description": "Damage 1d8 piercing · Range 150/600 ft · Properties: Ammunition, Heavy, Two-Handed · Mastery: Slow",
+      "effects": [],
+      "weapon": {
+        "kind": "ranged",
+        "dice": "1d8",
+        "damageType": "piercing",
+        "ability": "dex",
+        "notes": "Range 150/600 · Ammunition, Heavy, Two-Handed · Mastery: Slow"
+      }
+    },
+    {
+      "name": "Longsword",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "15 gp",
+      "description": "Damage 1d8 slashing (Versatile 1d10) · Properties: Versatile · Mastery: Sap",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d8",
+        "damageType": "slashing",
+        "ability": "str",
+        "notes": "Versatile 1d10 · Mastery: Sap"
+      }
+    },
+    {
+      "name": "Lute",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Instrument",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "35 gp",
+      "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "Lyre",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Instrument",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "30 gp",
+      "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "Mace",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 4,
+      "cost": "5 gp",
+      "description": "Damage 1d6 bludgeoning · Mastery: Sap",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d6",
+        "damageType": "bludgeoning",
+        "ability": "str",
+        "notes": "Mastery: Sap"
+      }
+    },
+    {
+      "name": "Mason's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 8,
+      "cost": "10 gp",
+      "description": "Ability:: Strength\nUtilize:: Chisel a symbol or hole in stone (DC 10)\nCraft:: Block and Tackle",
+      "effects": []
+    },
+    {
+      "name": "Maul",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 10,
+      "cost": "10 gp",
+      "description": "Damage 2d6 bludgeoning · Properties: Heavy, Two-Handed · Mastery: Topple",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "2d6",
+        "damageType": "bludgeoning",
+        "ability": "str",
+        "notes": "Heavy, Two-Handed · Mastery: Topple"
+      }
+    },
+    {
+      "name": "Morningstar",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 4,
+      "cost": "15 gp",
+      "description": "Damage 1d8 piercing · Mastery: Sap",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d8",
+        "damageType": "piercing",
+        "ability": "str",
+        "notes": "Mastery: Sap"
+      }
+    },
+    {
+      "name": "Musket",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Ranged Weapon",
+      "rarity": "Mundane",
+      "weight": 10,
+      "cost": "500 gp",
+      "description": "Damage 1d12 piercing · Range 40/120 ft · Properties: Ammunition, Loading, Two-Handed · Mastery: Slow",
+      "effects": [],
+      "weapon": {
+        "kind": "ranged",
+        "dice": "1d12",
+        "damageType": "piercing",
+        "ability": "dex",
+        "notes": "Range 40/120 · Ammunition, Loading, Two-Handed · Mastery: Slow"
+      }
+    },
+    {
+      "name": "Padded Armor",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Light Armor",
+      "rarity": "Mundane",
+      "weight": 8,
+      "cost": "5 gp",
+      "description": "AC 11 + Dex modifier · Disadvantage on Stealth",
+      "effects": []
+    },
+    {
+      "name": "Painter's Supplies",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 5,
+      "cost": "10 gp",
+      "description": "Ability:: Wisdom\nUtilize:: Paint a recognizable image of something you've seen (DC 10)\nCraft:: Druidic Focus, Holy Symbol",
+      "effects": []
+    },
+    {
+      "name": "Pan Flute",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Instrument",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "12 gp",
+      "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "Pike",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 18,
+      "cost": "5 gp",
+      "description": "Damage 1d10 piercing · Properties: Heavy, Reach, Two-Handed · Mastery: Push",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d10",
+        "damageType": "piercing",
+        "ability": "str",
+        "notes": "Heavy, Reach, Two-Handed · Mastery: Push"
+      }
+    },
+    {
+      "name": "Pistol",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Ranged Weapon",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "250 gp",
+      "description": "Damage 1d10 piercing · Range 30/90 ft · Properties: Ammunition, Loading · Mastery: Vex",
+      "effects": [],
+      "weapon": {
+        "kind": "ranged",
+        "dice": "1d10",
+        "damageType": "piercing",
+        "ability": "dex",
+        "notes": "Range 30/90 · Ammunition, Loading · Mastery: Vex"
+      }
+    },
+    {
+      "name": "Plate Armor",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Heavy Armor",
+      "rarity": "Mundane",
+      "weight": 65,
+      "cost": "1500 gp",
+      "description": "AC 18 · Requires Strength 15 · Disadvantage on Stealth",
+      "effects": []
+    },
+    {
+      "name": "Potter's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "10 gp",
+      "description": "Ability:: Intelligence\nUtilize:: Discern what a ceramic object held in the past 24 hours (DC 15)\nCraft:: Jug, Lamp",
+      "effects": []
+    },
+    {
+      "name": "Quarterstaff",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 4,
+      "cost": "2 sp",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d6",
+        "damageType": "bludgeoning",
+        "ability": "str",
+        "notes": "Versatile 1d8 · Mastery: Topple"
+      }
+    },
+    {
+      "name": "Rapier",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "25 gp",
+      "description": "Damage 1d8 piercing · Properties: Finesse · Mastery: Vex",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d8",
+        "damageType": "piercing",
+        "ability": "finesse",
+        "notes": "Finesse · Mastery: Vex"
+      }
+    },
+    {
+      "name": "Ring Mail",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Heavy Armor",
+      "rarity": "Mundane",
+      "weight": 40,
+      "cost": "30 gp",
+      "description": "AC 14 · Disadvantage on Stealth",
+      "effects": []
+    },
+    {
+      "name": "Scale Mail",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Medium Armor",
+      "rarity": "Mundane",
+      "weight": 45,
+      "cost": "50 gp",
+      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth",
+      "effects": []
+    },
+    {
+      "name": "Scimitar",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "25 gp",
+      "description": "Damage 1d6 slashing · Properties: Finesse, Light · Mastery: Nick",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d6",
+        "damageType": "slashing",
+        "ability": "finesse",
+        "notes": "Finesse, Light · Mastery: Nick"
+      }
+    },
+    {
+      "name": "Shawm",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Instrument",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "2 gp",
+      "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "Shield",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Shield",
+      "rarity": "Mundane",
+      "weight": 6,
+      "cost": "10 gp",
+      "description": "AC +2 (Shield)",
+      "effects": []
+    },
+    {
+      "name": "Shortbow",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Ranged Weapon",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "25 gp",
+      "description": "Damage 1d6 piercing · Range 80/320 ft · Properties: Ammunition, Two-Handed · Mastery: Vex",
+      "effects": [],
+      "weapon": {
+        "kind": "ranged",
+        "dice": "1d6",
+        "damageType": "piercing",
+        "ability": "dex",
+        "notes": "Range 80/320 · Ammunition, Two-Handed · Mastery: Vex"
+      }
+    },
+    {
+      "name": "Shortsword",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "10 gp",
+      "description": "Damage 1d6 piercing · Properties: Finesse, Light · Mastery: Vex",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d6",
+        "damageType": "piercing",
+        "ability": "finesse",
+        "notes": "Finesse, Light · Mastery: Vex"
+      }
+    },
+    {
+      "name": "Sickle",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "1 gp",
+      "description": "Damage 1d4 slashing · Properties: Light · Mastery: Nick",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d4",
+        "damageType": "slashing",
+        "ability": "str",
+        "notes": "Light · Mastery: Nick"
+      }
+    },
+    {
+      "name": "Sling",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Ranged Weapon",
+      "rarity": "Mundane",
+      "cost": "1 sp",
+      "description": "Damage 1d4 bludgeoning · Range 30/120 ft · Properties: Ammunition · Mastery: Slow",
+      "effects": [],
+      "weapon": {
+        "kind": "ranged",
+        "dice": "1d4",
+        "damageType": "bludgeoning",
+        "ability": "dex",
+        "notes": "Range 30/120 · Ammunition · Mastery: Slow"
+      }
+    },
+    {
+      "name": "Smith's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 8,
+      "cost": "20 gp",
+      "description": "Ability:: Strength\nUtilize:: Pry open a door or container (DC 20)\nCraft:: Any Melee weapon (except Club, Greatclub, Quarterstaff, and Whip), Medium armor (except Hide), Heavy armor, Ball Bearings, Bucket, Caltrops, Chain, Crowbar, Firearm Bullets, Grappling Hook, Iron Pot, Iron Spikes, Sling Bullets",
+      "effects": []
+    },
+    {
+      "name": "Spear",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "1 gp",
+      "description": "Damage 1d6 piercing (Versatile 1d8) · Range 20/60 ft · Properties: Thrown, Versatile · Mastery: Sap",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d6",
+        "damageType": "piercing",
+        "ability": "str",
+        "notes": "Range 20/60 · Versatile 1d8 · Thrown · Mastery: Sap"
+      }
+    },
+    {
+      "name": "Splint Armor",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Heavy Armor",
+      "rarity": "Mundane",
+      "weight": 60,
+      "cost": "200 gp",
+      "description": "AC 17 · Requires Strength 15 · Disadvantage on Stealth",
+      "effects": []
+    },
+    {
+      "name": "Studded Leather Armor",
+      "system": "XPHB",
+      "category": "Armor",
+      "type": "Light Armor",
+      "rarity": "Mundane",
+      "weight": 13,
+      "cost": "45 gp",
+      "description": "AC 12 + Dex modifier",
+      "effects": []
+    },
+    {
+      "name": "Tinker's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 10,
+      "cost": "50 gp",
+      "description": "Ability:: Dexterity\nUtilize:: Assemble a Tiny item composed of scrap, which falls apart in 1 minute (DC 20)\nCraft:: Musket, Pistol, Bell, Bullseye Lantern, Flask, Hooded Lantern, Hunting Trap, Lock, Manacles, Mirror, Shovel, Signal Whistle, Tinderbox",
+      "effects": []
+    },
+    {
+      "name": "Trident",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 4,
+      "cost": "5 gp",
+      "description": "Damage 1d8 piercing (Versatile 1d10) · Range 20/60 ft · Properties: Thrown, Versatile · Mastery: Topple",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d8",
+        "damageType": "piercing",
+        "ability": "str",
+        "notes": "Range 20/60 · Versatile 1d10 · Thrown · Mastery: Topple"
+      }
+    },
+    {
+      "name": "Viol",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Instrument",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "30 gp",
+      "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "War Pick",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "5 gp",
+      "description": "Damage 1d8 piercing (Versatile 1d10) · Properties: Versatile · Mastery: Sap",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d8",
+        "damageType": "piercing",
+        "ability": "str",
+        "notes": "Versatile 1d10 · Mastery: Sap"
+      }
+    },
+    {
+      "name": "Warhammer",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 5,
+      "cost": "15 gp",
+      "description": "Damage 1d8 bludgeoning (Versatile 1d10) · Properties: Versatile · Mastery: Push",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d8",
+        "damageType": "bludgeoning",
+        "ability": "str",
+        "notes": "Versatile 1d10 · Mastery: Push"
+      }
+    },
+    {
+      "name": "Weaver's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 5,
+      "cost": "1 gp",
+      "description": "Ability:: Dexterity\nUtilize:: Mend a tear in clothing (DC 10), or sew a Tiny design (DC 10)\nCraft:: Padded Armor, Basket, Bedroll, Blanket, Fine Clothes, Net, Robe, Rope, Sack, String, Tent, Traveler's Clothes",
+      "effects": []
+    },
+    {
+      "name": "Whip",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Melee Weapon",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "2 gp",
+      "description": "Damage 1d4 slashing · Properties: Finesse, Reach · Mastery: Slow",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d4",
+        "damageType": "slashing",
+        "ability": "finesse",
+        "notes": "Finesse, Reach · Mastery: Slow"
+      }
+    },
+    {
+      "name": "Woodcarver's Tools",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Artisan's Tools",
+      "rarity": "Mundane",
+      "weight": 5,
+      "cost": "1 gp",
+      "description": "Ability:: Dexterity\nUtilize:: Carve a pattern in wood (DC 10)\nCraft:: Club, Greatclub, Quarterstaff, Ranged weapons (except Pistol, Musket, and Sling), Arcane Focus, Arrows, Bolts, Druidic Focus, Ink Pen, Needles",
+      "effects": []
+    }
+  ]
+}

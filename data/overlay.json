@@ -1,0 +1,7 @@
+{
+  "_comment": "Effects the sheet applies automatically but 5e-tools stores only as prose. Keyed by entry name; applies to feats and to fighting-style options during conversion. Add your own. Effect targets: ac, init, speed, hp.max, profBonus, attack, attack.melee, attack.ranged, damage, damage.melee, damage.ranged, ability.<abbr>, save.<abbr>, skill.<key>. You can also grant proficiencies with \"skills\": [\"Perception\"] or \"saves\": [\"wis\"].",
+  "byName": {
+    "Archery": { "effects": [ { "target": "attack.ranged", "value": 2 } ] },
+    "Defense": { "effects": [ { "target": "ac", "value": 1 } ] }
+  }
+}

@@ -1,0 +1,27 @@
+# Build artifacts
+fieldbook-bundle.zip
+.buildtmp/
+/tmp/_fieldbook.js
+
+# Node / tooling
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Local scratch
+*.OLD.json
+*.PREV.json
+_classmap.json
+_app.js

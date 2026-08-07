@@ -1,0 +1,790 @@
+{
+  "system": "XPHB",
+  "name": "D&D 2024 Backgrounds",
+  "backgrounds": [
+    {
+      "name": "Acolyte",
+      "system": "XPHB",
+      "abilityScores": [
+        "int",
+        "wis",
+        "cha"
+      ],
+      "feat": "Magic Initiate (Cleric)",
+      "skills": [
+        "Insight",
+        "Religion"
+      ],
+      "tools": "Calligrapher's Supplies",
+      "equipment": "Choose A or B: (A) Calligrapher's Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Book (Prayers)"
+                },
+                {
+                  "name": "Calligrapher's Supplies"
+                },
+                {
+                  "name": "Holy Symbol"
+                },
+                {
+                  "name": "Parchment",
+                  "qty": 10
+                },
+                {
+                  "name": "Robe"
+                }
+              ],
+              "gold": 8,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Artisan",
+      "system": "XPHB",
+      "abilityScores": [
+        "str",
+        "dex",
+        "int"
+      ],
+      "feat": "Crafter",
+      "skills": [
+        "Investigation",
+        "Persuasion"
+      ],
+      "tools": "Choose one kind of Artisan's Tools",
+      "equipment": "Choose A or B: (A) Artisan's Tools (same as above), 2 Pouches, Traveler's Clothes, 32 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Artisan's Tools (your choice)"
+                },
+                {
+                  "name": "Pouch",
+                  "qty": 2
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 32,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Charlatan",
+      "system": "XPHB",
+      "abilityScores": [
+        "dex",
+        "con",
+        "cha"
+      ],
+      "feat": "Skilled",
+      "skills": [
+        "Deception",
+        "Sleight of Hand"
+      ],
+      "tools": "Forgery Kit",
+      "equipment": "Choose A or B: (A) Forgery Kit, Costume, Fine Clothes, 15 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Forgery Kit"
+                },
+                {
+                  "name": "Costume"
+                },
+                {
+                  "name": "Fine Clothes"
+                }
+              ],
+              "gold": 15,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Criminal",
+      "system": "XPHB",
+      "abilityScores": [
+        "dex",
+        "con",
+        "int"
+      ],
+      "feat": "Alert",
+      "skills": [
+        "Sleight of Hand",
+        "Stealth"
+      ],
+      "tools": "Thieves' Tools",
+      "equipment": "Choose A or B: (A) 2 Daggers, Thieves' Tools, Crowbar, 2 Pouches, Traveler's Clothes, 16 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Dagger",
+                  "qty": 2
+                },
+                {
+                  "name": "Thieves' Tools"
+                },
+                {
+                  "name": "Crowbar"
+                },
+                {
+                  "name": "Pouch",
+                  "qty": 2
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 16,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Entertainer",
+      "system": "XPHB",
+      "abilityScores": [
+        "str",
+        "dex",
+        "cha"
+      ],
+      "feat": "Musician",
+      "skills": [
+        "Acrobatics",
+        "Performance"
+      ],
+      "tools": "Choose one kind of Musical Instrument",
+      "equipment": "Choose A or B: (A) Musical Instrument (same as above), 2 Costumes, Mirror, Perfume, Traveler's Clothes, 11 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "a Musical Instrument (your choice)"
+                },
+                {
+                  "name": "Costume",
+                  "qty": 2
+                },
+                {
+                  "name": "Mirror"
+                },
+                {
+                  "name": "Perfume"
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 11,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Farmer",
+      "system": "XPHB",
+      "abilityScores": [
+        "str",
+        "con",
+        "wis"
+      ],
+      "feat": "Tough",
+      "skills": [
+        "Animal Handling",
+        "Nature"
+      ],
+      "tools": "Carpenter's Tools",
+      "equipment": "Choose A or B: (A) Sickle, Carpenter's Tools, Healer's Kit, Iron Pot, Shovel, Traveler's Clothes, 30 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Sickle"
+                },
+                {
+                  "name": "Carpenter's Tools"
+                },
+                {
+                  "name": "Healer's Kit"
+                },
+                {
+                  "name": "Iron Pot"
+                },
+                {
+                  "name": "Shovel"
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 30,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Guard",
+      "system": "XPHB",
+      "abilityScores": [
+        "str",
+        "int",
+        "wis"
+      ],
+      "feat": "Alert",
+      "skills": [
+        "Athletics",
+        "Perception"
+      ],
+      "tools": "Choose one kind of Gaming Set",
+      "equipment": "Choose A or B: (A) Spear, Light Crossbow, 20 Bolts, Gaming Set (same as above), Hooded Lantern, Manacles, Quiver, Traveler's Clothes, 12 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Spear"
+                },
+                {
+                  "name": "Light Crossbow"
+                },
+                {
+                  "name": "Bolts (20)"
+                },
+                {
+                  "name": "a Gaming Set (your choice)"
+                },
+                {
+                  "name": "Hooded Lantern"
+                },
+                {
+                  "name": "Manacles"
+                },
+                {
+                  "name": "Quiver"
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 12,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Guide",
+      "system": "XPHB",
+      "abilityScores": [
+        "dex",
+        "con",
+        "wis"
+      ],
+      "feat": "Magic Initiate (Druid)",
+      "skills": [
+        "Stealth",
+        "Survival"
+      ],
+      "tools": "Cartographer's Tools",
+      "equipment": "Choose A or B: (A) Shortbow, 20 Arrows, Cartographer's Tools, Bedroll, Quiver, Tent, Traveler's Clothes, 3 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Shortbow"
+                },
+                {
+                  "name": "Arrows (20)"
+                },
+                {
+                  "name": "Cartographer's Tools"
+                },
+                {
+                  "name": "Bedroll"
+                },
+                {
+                  "name": "Quiver"
+                },
+                {
+                  "name": "Tent"
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 3,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Hermit",
+      "system": "XPHB",
+      "abilityScores": [
+        "con",
+        "wis",
+        "cha"
+      ],
+      "feat": "Healer",
+      "skills": [
+        "Medicine",
+        "Religion"
+      ],
+      "tools": "Herbalism Kit",
+      "equipment": "Choose A or B: (A) Quarterstaff, Herbalism Kit, Bedroll, Book (philosophy), Lamp, Oil (3 flasks), Traveler's Clothes, 16 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Quarterstaff"
+                },
+                {
+                  "name": "Herbalism Kit"
+                },
+                {
+                  "name": "Bedroll"
+                },
+                {
+                  "name": "Book"
+                },
+                {
+                  "name": "Lamp"
+                },
+                {
+                  "name": "Oil",
+                  "qty": 3
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 16,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Merchant",
+      "system": "XPHB",
+      "abilityScores": [
+        "con",
+        "int",
+        "cha"
+      ],
+      "feat": "Lucky",
+      "skills": [
+        "Animal Handling",
+        "Persuasion"
+      ],
+      "tools": "Navigator's Tools",
+      "equipment": "Choose A or B: (A) Navigator's Tools, 2 Pouches, Traveler's Clothes, 22 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Navigator's Tools"
+                },
+                {
+                  "name": "Pouch",
+                  "qty": 2
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 22,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Noble",
+      "system": "XPHB",
+      "abilityScores": [
+        "str",
+        "int",
+        "cha"
+      ],
+      "feat": "Skilled",
+      "skills": [
+        "History",
+        "Persuasion"
+      ],
+      "tools": "Choose one kind of Gaming Set",
+      "equipment": "Choose A or B: (A) Gaming Set (same as above), Fine Clothes, Perfume, 29 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "a Gaming Set (your choice)"
+                },
+                {
+                  "name": "Fine Clothes"
+                },
+                {
+                  "name": "Perfume"
+                }
+              ],
+              "gold": 29,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Sage",
+      "system": "XPHB",
+      "abilityScores": [
+        "con",
+        "int",
+        "wis"
+      ],
+      "feat": "Magic Initiate (Wizard)",
+      "skills": [
+        "Arcana",
+        "History"
+      ],
+      "tools": "Calligrapher's Supplies",
+      "equipment": "Choose A or B: (A) Quarterstaff, Calligrapher's Supplies, Book (history), Parchment (8 sheets), Robe, 8 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Quarterstaff"
+                },
+                {
+                  "name": "Calligrapher's Supplies"
+                },
+                {
+                  "name": "Book"
+                },
+                {
+                  "name": "Parchment",
+                  "qty": 8
+                },
+                {
+                  "name": "Robe"
+                }
+              ],
+              "gold": 8,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Sailor",
+      "system": "XPHB",
+      "abilityScores": [
+        "str",
+        "dex",
+        "wis"
+      ],
+      "feat": "Tavern Brawler",
+      "skills": [
+        "Acrobatics",
+        "Perception"
+      ],
+      "tools": "Navigator's Tools",
+      "equipment": "Choose A or B: (A) Dagger, Navigator's Tools, Rope, Traveler's Clothes, 20 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Dagger"
+                },
+                {
+                  "name": "Navigator's Tools"
+                },
+                {
+                  "name": "Rope"
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 20,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Scribe",
+      "system": "XPHB",
+      "abilityScores": [
+        "dex",
+        "int",
+        "wis"
+      ],
+      "feat": "Skilled",
+      "skills": [
+        "Investigation",
+        "Perception"
+      ],
+      "tools": "Calligrapher's Supplies",
+      "equipment": "Choose A or B: (A) Calligrapher's Supplies, Fine Clothes, Lamp, Oil (3 flasks), Parchment (12 sheets), 23 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Calligrapher's Supplies"
+                },
+                {
+                  "name": "Fine Clothes"
+                },
+                {
+                  "name": "Lamp"
+                },
+                {
+                  "name": "Oil"
+                },
+                {
+                  "name": "Parchment"
+                }
+              ],
+              "gold": 23,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Soldier",
+      "system": "XPHB",
+      "abilityScores": [
+        "str",
+        "dex",
+        "con"
+      ],
+      "feat": "Savage Attacker",
+      "skills": [
+        "Athletics",
+        "Intimidation"
+      ],
+      "tools": "Choose one kind of Gaming Set",
+      "equipment": "Choose A or B: (A) Spear, Shortbow, 20 Arrows, Gaming Set (same as above), Healer's Kit, Quiver, Traveler's Clothes, 14 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Spear"
+                },
+                {
+                  "name": "Shortbow"
+                },
+                {
+                  "name": "Arrows (20)"
+                },
+                {
+                  "name": "a Gaming Set (your choice)"
+                },
+                {
+                  "name": "Healer's Kit"
+                },
+                {
+                  "name": "Quiver"
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 14,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Wayfarer",
+      "system": "XPHB",
+      "abilityScores": [
+        "dex",
+        "wis",
+        "cha"
+      ],
+      "feat": "Lucky",
+      "skills": [
+        "Insight",
+        "Stealth"
+      ],
+      "tools": "Thieves' Tools",
+      "equipment": "Choose A or B: (A) 2 Daggers, Thieves' Tools, Gaming Set (any), Bedroll, 2 Pouches, Traveler's Clothes, 16 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Dagger",
+                  "qty": 2
+                },
+                {
+                  "name": "Thieves' Tools"
+                },
+                {
+                  "name": "a Gaming Set (your choice)"
+                },
+                {
+                  "name": "Bedroll"
+                },
+                {
+                  "name": "Pouch",
+                  "qty": 2
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 16,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    }
+  ]
+}
