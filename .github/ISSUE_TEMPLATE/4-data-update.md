@@ -1,7 +1,7 @@
 ---
 name: Data Update
 about: Rules content — new or corrected entries in data/
-labels: data
+labels: data-update
 ---
 
 **System** — 5e2024 / humblewood
