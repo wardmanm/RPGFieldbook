@@ -11,36 +11,79 @@ what each guard refuses and why, and how to recover.
 
 ---
 
-## 1. The happy path
+## 1. The happy path — `./dev.sh`
 
-```bash
-# 0. NOTHING is untracked. The release workflow checks out the TAG into a clean
-#    runner, so an untracked file simply does not exist there. A new fragment
-#    stops the build dead; a new data file silently ships an emptier rules pack;
-#    and an untracked .github/ means the tag runs no workflow AT ALL — no
-#    release, no error, nothing. Check before anything else:
-git status --porcelain          # every line must be M/A/R, never ??
+`./dev.sh` is the entry point for all of this. Its status header is the fastest way to see where a
+release stands:
 
-# 1. Every player-visible change has a bullet in src/docs/UNRELEASED.md.
-
-./build.sh --release patch          # or: minor | major | 2.0.0
-
-# 2. Read the diff. This is the moment to catch bad changelog wording — after
-#    the tag, the notes are public.
-git diff
-
-# 3. Stage EVERYTHING, not just modifications. `git commit -am` stages tracked
-#    changes only, so it cannot pick up a new fragment, data file or workflow —
-#    which is exactly how a release ends up unbuildable at its own tag.
-git add -A
-git commit -m "Release v1.2.2"      # the version bump AND the rebuilt artifact
-git tag -a v1.2.2 -m "v1.2.2"
-git push && git push --tags         # the tag push publishes
+```
+  v1.3.1 · main · no pending notes · artifact fresh · v1.3.1 NOT TAGGED
 ```
 
-Then watch **Actions → Release**. It takes about a minute. When it's green,
-`https://github.com/wardmanm/RPGFieldbook/releases/latest` has the new version and the in-app
-update badge starts pointing at it.
+Every field is a release precondition: the version, the branch, how many bullets are waiting, whether
+`dist/fieldbook.html` needs rebuilding, and — if a release has been cut but never tagged — a warning,
+because that state publishes nothing and produces no error anywhere.
+
+### The steps
+
+**1. Write the notes as you work.** One `- ` bullet per player-visible change in
+`src/docs/UNRELEASED.md`. The header counts them; `--release` refuses if there are none.
+
+**2. `4` — Run all tests.** Safe any time; touches no tracked file.
+
+**3. Check nothing is untracked.** The menu can't do this one for you:
+
+```bash
+git status --porcelain          # every line must be M/A/R, never ??
+```
+
+The release workflow checks out the **tag** into a clean runner, so an untracked file is simply not
+there. A new fragment stops the build dead. A new data file silently ships an emptier rules pack. An
+untracked `.github/` means the tag runs **no workflow at all** — no release, no error, nothing.
+
+**4. `7` — Cut a release…** then pick patch / minor / major / explicit. This bumps `APP_VERSION`,
+folds the notebook into the changelog, and rebuilds. It publishes nothing.
+
+**5. Read the diff.** `git diff` — the last chance to fix changelog wording. After the tag, the notes
+are public.
+
+**6. Browser smoke-test** anything that touched the UI. No test here can do it for you.
+
+**7. Commit, tag, push.** `dev.sh` prints these with the real version filled in, right after the cut:
+
+```bash
+git add -A                          # NOT `commit -am` — see below
+git commit -m "Release v1.3.1"
+git tag -a v1.3.1 -m "v1.3.1"
+git push --follow-tags              # branch + the annotated tag together
+```
+
+Two things that have each bitten once:
+
+- **`git add -A`, never `git commit -am`.** `-a` stages tracked modifications only, so it cannot pick
+  up a new fragment, data file or workflow — which is exactly how a release ends up unbuildable at
+  its own tag.
+- **The tag is the publish button.** Cutting a release changes nothing public. Skip the `git tag`
+  line and `git push --tags` succeeds with nothing to push, Actions never runs, and no release
+  appears — with no error to go looking for. The `NOT TAGGED` warning in the header exists for this.
+
+**8. Watch Actions → Release.** About a minute. When it's green,
+`https://github.com/wardmanm/RPGFieldbook/releases/latest` has the new version and the in-app update
+badge starts pointing at it.
+
+### Doing it without the menu
+
+`dev.sh` only shells out to `build.sh` and `scripts/*`, so the manual path is the same thing:
+
+```bash
+./src/tests/run.sh
+git status --porcelain
+./build.sh --release patch          # or: minor | major | 2.0.0
+git diff
+git add -A && git commit -m "Release v1.3.1"
+git tag -a v1.3.1 -m "v1.3.1"
+git push --follow-tags
+```
 
 ### What `--release` does for you
 

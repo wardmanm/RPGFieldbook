@@ -39,6 +39,15 @@ pending_notes() {
   sed -n '/^## Pending/,$p' src/docs/UNRELEASED.md | grep -c '^- ' || true
 }
 git_branch() { git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "(no git)"; }
+# A cut release publishes nothing until its tag is pushed, and a missing tag is
+# invisible — Actions simply never runs. Surface it in the header instead.
+tag_missing() {
+  local v; v=$(app_version)
+  git rev-parse --git-dir >/dev/null 2>&1 || return 1
+  [ -n "$v" ] || return 1
+  git rev-parse -q --verify "refs/tags/v$v" >/dev/null 2>&1 && return 1
+  return 0
+}
 
 status_line() {
   local ver branch notes stale
@@ -54,7 +63,11 @@ status_line() {
   else
     printf '%sno pending notes%s %s·%s ' "$DIM" "$OFF" "$DIM" "$OFF"
   fi
-  printf '%s\n' "$stale"
+  printf '%s' "$stale"
+  if tag_missing; then
+    printf ' %s·%s %sv%s NOT TAGGED%s' "$DIM" "$OFF" "$YEL" "$ver" "$OFF"
+  fi
+  printf '\n'
 }
 
 # Run a command, showing it first. Never aborts the menu on failure.
@@ -115,11 +128,27 @@ release_menu() {
     return 0
   fi
   printf '\nThis folds %s note(s) into the changelog, bumps APP_VERSION and rebuilds.\n' "$notes"
-  printf 'It does NOT commit, tag or publish — you do that next:\n'
-  printf '  %sgit commit -am "Release vX.Y.Z" && git tag -a vX.Y.Z -m vX.Y.Z && git push --follow-tags%s\n' "$DIM" "$OFF"
+  printf 'It does NOT commit, tag or publish — the exact commands are printed afterwards.\n'
   printf '\nProceed with --release %s? [y/N] ' "$lvl"
   local ok; read -r ok
-  case "$ok" in y|Y) run ./build.sh --release "$lvl" ;; *) printf 'cancelled\n' ;; esac
+  case "$ok" in
+    y|Y)
+      run ./build.sh --release "$lvl" || return 0
+      # AFTER the build, so it is the last thing on screen rather than scrolled
+      # away by build output — and with the real version, not a placeholder.
+      # `git add -A`, never `commit -am`: -a stages tracked changes only, so it
+      # silently misses a new fragment, data file or workflow.
+      local new; new=$(app_version)
+      printf '\n%sPUBLISH v%s — nothing is public until you do this:%s\n\n' "$B" "$new" "$OFF"
+      printf '    git add -A\n'
+      printf '    git commit -m "Release v%s"\n' "$new"
+      printf '    git tag -a v%s -m "v%s"\n' "$new" "$new"
+      printf '    git push --follow-tags\n\n'
+      printf '  %sThe TAG is what triggers publishing. Without it Actions never runs\n' "$DIM"
+      printf '  and no release appears — with no error anywhere.%s\n' "$OFF"
+      ;;
+    *) printf 'cancelled\n' ;;
+  esac
 }
 
 convert_data() {
@@ -161,12 +190,15 @@ checklist() {
   ${B}Release checklist${OFF}
     1. Every player-visible change has a bullet in src/docs/UNRELEASED.md
     2. Menu 4 — tests pass
-    3. Menu 7 — cut the release, then READ the diff (last chance on wording)
-    4. Browser smoke-test the UI changes
-    5. git commit -am "Release vX.Y.Z"
-    6. git tag -a vX.Y.Z -m "vX.Y.Z"
-    7. git push --follow-tags        ← the tag push publishes
-    8. Watch Actions → Release
+    3. git status --porcelain — NOTHING untracked (??). The tag is built in a
+       clean checkout, so an untracked file is simply absent there.
+    4. Menu 7 — cut the release, then READ the diff (last chance on wording)
+    5. Browser smoke-test the UI changes
+    6. git add -A                    ← not commit -am; -a misses NEW files
+       git commit -m "Release vX.Y.Z"
+    7. git tag -a vX.Y.Z -m "vX.Y.Z" ← the tag IS the publish button
+    8. git push --follow-tags
+    9. Watch Actions → Release
 
   Full detail, including what each CI guard refuses and why:
     src/docs/RELEASING.md
