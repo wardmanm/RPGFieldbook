@@ -3,6 +3,7 @@
 # the file the in-app update badge points players at, and the reference the
 # builder's clobber guard compares against. Only the derived bits are ignored.
 dist/*.zip
+dist/*_full.json
 dist/.buildstamp
 .buildtmp/
 
@@ -17,6 +18,7 @@ __pycache__/
 venv/
 
 # Editor / OS
+.claude/
 .DS_Store
 Thumbs.db
 .vscode/
@@ -26,5 +28,8 @@ Thumbs.db
 # Local scratch
 *.OLD.json
 *.PREV.json
-_classmap.json
-_app.js
+/_classmap.json
+/_app.js
+
+# Data for conversion (large source PDFs and 5e-tools dumps)
+/_conversion-data/

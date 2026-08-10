@@ -1,0 +1,98 @@
+name: CI
+
+# The gate that keeps a release from ever being the moment you discover a
+# problem. Everything here is cheap and mechanical; the browser QA that this
+# cannot do stays a human job.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: JS syntax (every fragment)
+        run: |
+          for f in src/js/*.js scripts/*.js src/tests/*.js; do node --check "$f" || exit 1; done
+          echo "ok — $(ls src/js/*.js scripts/*.js src/tests/*.js | wc -l) files"
+
+      - name: Python syntax
+        run: python3 -m py_compile scripts/*.py src/tests/*.py
+
+      - name: Shell syntax (dev entry points)
+        run: bash -n dev.sh && bash -n src/tests/run.sh
+
+      - name: Shell syntax
+        run: bash -n build.sh
+
+      - name: manifest.json matches src/ on disk
+        run: |
+          node -e '
+            const fs=require("fs"),m=require("./src/manifest.json");let bad=0;
+            [...m.js,...m.css].forEach(p=>{if(!fs.existsSync(p)){console.error("listed but missing: "+p);bad=1}});
+            [...fs.readdirSync("src/js").map(f=>"src/js/"+f),
+             ...fs.readdirSync("src/css").map(f=>"src/css/"+f)]
+              .forEach(p=>{if(!m.js.includes(p)&&!m.css.includes(p)){console.error("on disk but unlisted: "+p);bad=1}});
+            process.exit(bad);'
+
+      - name: Every data/**/*.json parses
+        run: |
+          node -e '
+            const fs=require("fs"),p=require("path");let n=0;
+            (function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){
+              const f=p.join(d,e.name);
+              if(e.isDirectory())walk(f);
+              else if(e.name.endsWith(".json")){try{JSON.parse(fs.readFileSync(f,"utf8"))}
+                catch(err){console.error("INVALID "+f+": "+err.message);process.exit(1)}n++}
+            }})("data");
+            console.log(n+" data files parse");'
+
+      # CLAUDE.md: keep this OUT of build.sh (whose job is to FIX staleness) and
+      # use it as the CI gate instead. A stale committed artifact is what turns
+      # into an unreproducible release.
+      - name: dist/fieldbook.html is not stale
+        run: node scripts/build-html.js --check
+
+      - name: Rules packs bundle cleanly
+        run: node scripts/bundle-rules.js
+
+      # The logic coverage: converter/table extraction, the character-update
+      # diff and its regressions, the bundle round-trip, migrate, and the
+      # boot-order TDZ guard. Everything above this is syntax and shape.
+      - name: Tests
+        run: ./src/tests/run.sh
+
+      - name: Byte hygiene (no CR, no BOM, final newline)
+        run: |
+          bad=0
+          for f in src/js/*.js src/css/*.css src/manifest.json src/fieldbook.template.html; do
+            grep -q $'\r' "$f" && { echo "CR bytes: $f"; bad=1; }
+            [ "$(head -c3 "$f" | od -An -tx1 | tr -d ' \n')" = "efbbbf" ] && { echo "BOM: $f"; bad=1; }
+            [ -n "$(tail -c1 "$f")" ] && { echo "no trailing newline: $f"; bad=1; }
+          done
+          [ $bad -eq 0 ] && echo "clean"
+          exit $bad
+
+      - name: Full build + zip allowlist
+        run: ./build.sh
+
+      - name: The build changed no tracked file
+        run: |
+          if ! git diff --exit-code --stat; then
+            echo "::error::Building modified tracked files — commit the rebuilt artifact."
+            exit 1
+          fi

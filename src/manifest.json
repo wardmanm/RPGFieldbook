@@ -4,6 +4,7 @@
     "src/css/10-chrome.css",
     "src/css/20-cards.css",
     "src/css/30-sheet.css",
+    "src/css/35-tables.css",
     "src/css/40-spells-coins.css",
     "src/css/50-modal.css"
   ],
@@ -22,9 +23,11 @@
     "src/js/60-attacks.js",
     "src/js/65-resources.js",
     "src/js/70-persistence.js",
+    "src/js/72-char-update.js",
     "src/js/75-home-theme.js",
     "src/js/80-modal-forms.js",
     "src/js/85-browse.js",
+    "src/js/86-tables.js",
     "src/js/88-settings.js",
     "src/js/90-boot.js"
   ]

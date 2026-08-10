@@ -29,6 +29,28 @@ function applyClassLevel(entry,d,L){
   }
   return {choices,notes};
 }
+/* "d8" -> 8. Returns 0 for anything unparseable, so callers can just test it. */
+function hitDieMax(d){
+  const m=/^\s*d?(\d+)\s*$/i.exec(String((d&&d.hitDie)||""));
+  return m?parseInt(m[1],10):0;
+}
+/* Level 1 with a single class has no roll and no choice: max HP is the hit
+   die's maximum. Filled in on the player's behalf, but ONLY over a blank —
+   a number they typed is theirs, and this must never overwrite it. */
+function seedLevel1HP(d){
+  const die=hitDieMax(d);
+  if(!die||character.classes.length!==1||totalLevel()!==1)return;
+  if(num(character.hp.max))return;
+  character.hp.max=die;
+  if(!num(character.hp.cur))character.hp.cur=die;
+  syncHPInputs();
+}
+function syncHPInputs(){
+  const mx=document.querySelector('[data-path="character.hp.max"]');
+  if(mx)mx.value=character.hp.max;
+  const cu=document.querySelector('[data-path="character.hp.cur"]');
+  if(cu)cu.value=character.hp.cur;
+}
 function addClass(name,lvl){
   const d=findClassDef(name);
   const entry={name,level:0,subclass:null};
@@ -43,6 +65,7 @@ function addClass(name,lvl){
   for(let L=1;L<=lvl;L++){const res=applyClassLevel(entry,d,L);choices=choices.concat(res.choices);notes=notes.concat(res.notes);}
   entry.level=lvl;
   character.level=totalLevel();
+  seedLevel1HP(d);
   const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
@@ -51,6 +74,16 @@ function addClass(name,lvl){
 }
 function removeClass(idx){
   const c=character.classes[idx];if(!c)return;
+  /* Clean revert, same rule as the other class grants: if the only thing in
+     Max HP is the number seedLevel1HP() put there, take it back out so
+     swapping a d10 class for a d6 one doesn't silently keep 10. Anything else
+     in that box is the player's and is left alone. */
+  const seeded=hitDieMax(findClassDef(c.name));
+  if(seeded&&character.classes.length===1&&num(c.level)===1&&num(character.hp.max)===seeded){
+    character.hp.max="";
+    if(num(character.hp.cur)===seeded)character.hp.cur="";
+    syncHPInputs();
+  }
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="class"&&f.origin.class===c.name);
   removeGrants(g=>g.sid==="class:"+c.name||g.sid.indexOf("subclass:"+c.name+":")===0);
   revertEquipmentGrants("class:"+c.name);
@@ -129,6 +162,7 @@ function openSubclassInfo(className,subName){
   const entry=character.classes.find(c=>c.name===className);
   let b=`<p class="hint" style="margin-bottom:6px">${esc(className)} subclass</p><p>${esc(sc.description||"")}</p>`;
   if(sc.spellcasting)b+=`<p class="hint"><b>Grants spellcasting (${esc(sc.spellcasting.toUpperCase())})</b></p>`;
+  b+=tableChipsHTML(subName,"subclass");
   if(sc.levels)Object.keys(sc.levels).map(Number).sort((a,b)=>a-b).forEach(L=>{
     const lv=sc.levels[String(L)],here=entry&&num(entry.level)>=L;
     b+=`<div style="border-top:1px dotted var(--hair);padding-top:8px;margin-top:8px"><b style="${here?"color:var(--accent)":""}">Level ${L}${here?" — gained":""}</b>`;
@@ -144,6 +178,7 @@ function openClassInfo(name){
   let b=`<p>${esc(d.description||"")}</p>`;
   const meta=[d.hitDie?("Hit die "+d.hitDie):"",d.spellcasting?("Spellcasting "+d.spellcasting.toUpperCase()):"",d.savingThrows?("Saves "+d.savingThrows.map(x=>x.toUpperCase()).join("/")):""].filter(Boolean).join(" · ");
   if(meta)b+=`<p class="hint"><b>${esc(meta)}</b></p>`;
+  b+=tableChipsHTML(name,"class");
   const subMap=subclassesFor(d);
   if(Object.keys(subMap).length){
     b+=`<div style="border-top:1px dotted var(--hair);padding-top:8px;margin-top:8px">`;

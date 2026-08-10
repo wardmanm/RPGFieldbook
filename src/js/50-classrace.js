@@ -16,6 +16,7 @@ function addFeatureFromDef(t,origin){
   const feat={id:uid(),name:t.name||"Trait",source:t.source||(origin&&(origin.class||origin.name))||"",description:t.description||"",effects:Array.isArray(t.effects)?t.effects:[],enabled:true,origin:origin||null};
   if(t.uses&&t.uses.max!=null&&(typeof t.uses.max!=="number"||num(t.uses.max)>0))feat.uses={max:t.uses.max,per:t.uses.per||"long",used:0};
   if(t.cost&&num(t.cost.amount)>0)feat.cost={resource:t.cost.resource||"",amount:num(t.cost.amount)};
+  stampSrc(feat,t,"feature");
   character.features.push(feat);
   const sid=originSid(origin);
   if(sid){(t.skills||[]).forEach(nm=>{const k=skillKey(nm);if(k)grantProf(sid,"skill",k,1);});(t.saves||[]).forEach(ab=>{if(character.saves[String(ab).toLowerCase()]!==undefined)grantProf(sid,"save",String(ab).toLowerCase(),1);});}
@@ -31,6 +32,7 @@ function grantItemByName(name,qty,sid){
   if(ex){ex.qty=num(ex.qty)+qty;return;}
   const it={id:uid(),name:(def&&def.name)||name,qty,description:(def&&def.description)||"",effects:(def&&Array.isArray(def.effects))?def.effects:[],equipped:false,grant:sid,origin:originFromSid(sid)};
   if(def&&def.weapon)it.weapon=def.weapon;
+  if(def)stampSrc(it,def,"item","items");   /* no def = a named grant with no matching item entry */
   character.inventory.push(it);
   if(it.weapon)addAttackForItem(it);
 }
@@ -68,6 +70,10 @@ function revertEquipmentGrants(sid){
 function grantFeatDef(featName,origin,pending){
   const fd=findFeatDef(featName)||{name:featName,description:"",effects:[]};
   addFeatureFromDef({name:"Feat: "+fd.name,description:fd.description||"",effects:fd.effects||[],uses:fd.uses,cost:fd.cost},origin);
+  /* re-stamp against the real feat entry: addFeatureFromDef only saw the
+     "Feat: X" wrapper built above, which has no pack and the wrong name */
+  const added=character.features[character.features.length-1];
+  if(added)stampSrc(added,fd,"feature","feats");
   const sid=originSid(origin);
   if(pending&&sid)(fd.choices||[]).forEach(ch=>{if(ch&&ch.type==="skill")pending.push({ch:Object.assign({},ch,{_sid:sid}),sid,label:"Feat: "+fd.name});});
 }

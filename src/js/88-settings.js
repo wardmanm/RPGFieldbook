@@ -22,7 +22,7 @@ function openSettings(){
         <button class="tbtn" id="btnFetchRules">Fetch all</button>
         <button class="tbtn" id="btnImportRules">Import files</button>
         <button class="tbtn" id="btnRulesTemplate">Get templates</button>
-        <button class="tbtn" id="btnClearRules">Clear all</button>
+        <button class="tbtn danger" id="btnClearRules" style="margin-left:auto">Clear all</button>
       </div>
       <div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${rulesStatusText()}</div>
       <input type="file" id="fileRules" accept="application/json,.json" multiple class="hidefile">
@@ -31,6 +31,11 @@ function openSettings(){
       <p class="hint">Everything currently in your rules pool, grouped by file (or source). Remove any piece you no longer want loaded.</p>
       <div id="rulesData"></div>
     </div>
+    ${activeId?`<div style="border-top:1px dotted var(--hair);margin:14px 0 12px"></div>
+    <div class="field"><label class="f">This character</label>
+      <p class="hint">Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compare this sheet against your loaded rules and update what you choose. A backup is always saved first.</p>
+      <div class="m-actions" style="justify-content:flex-start"><button class="tbtn" id="btnCharUpdate">Check for rules updates</button></div>
+    </div>`:""}
     <div style="border-top:1px dotted var(--hair);margin:14px 0 12px"></div>
     <div class="m-actions" style="justify-content:flex-start">
       <button class="tbtn" id="btnExportSettings">Export settings</button>
@@ -48,7 +53,8 @@ function openSettings(){
   document.getElementById("srcList").addEventListener("click",e=>{const d=e.target.closest("[data-src-del]");if(!d)return;settings.rulesSources.splice(num(d.dataset.srcDel),1);saveSettings();renderSrcRows();});
   document.getElementById("addSrc").addEventListener("click",()=>{const i=document.getElementById("newSrc");const v=i.value.trim();if(!v)return;settings.rulesSources.push(v);i.value="";saveSettings();renderSrcRows();});
   document.getElementById("btnFetchRules").addEventListener("click",fetchAllRules);
-  document.getElementById("btnClearRules").addEventListener("click",()=>{resetRules();saveRulesCache();refreshRulesUI();updateRulesStatus("Rules cleared.","");});
+  document.getElementById("btnClearRules").addEventListener("click",clearAllRules);
+  {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());
   document.getElementById("fileRules").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
@@ -61,34 +67,71 @@ function openSettings(){
     }catch(err){alert("Not a valid settings file.")}};r.readAsText(f);e.target.value="";});
 }
 function rulesStatusText(){
-  const k=(rules.keywords||[]).length,f=(rules.features||[]).length,i=(rules.items||[]).length,s=(rules.spells||[]).length,r=(rules.races||[]).length,c=(rules.classes||[]).length;
-  return (k+f+i+s+r+c)?`Loaded${rules.name?" “"+rules.name+"”":""}: ${r} races · ${c} classes · ${k} keywords · ${f} traits · ${i} items · ${s} spells.`:"No rules loaded.";
+  const k=(rules.keywords||[]).length,f=(rules.features||[]).length,i=(rules.items||[]).length,s=(rules.spells||[]).length,r=(rules.races||[]).length,c=(rules.classes||[]).length,t=(rules.tables||[]).length;
+  return (k+f+i+s+r+c+t)?`Loaded${rules.name?" “"+rules.name+"”":""}: ${r} races · ${c} classes · ${k} keywords · ${f} traits · ${i} items · ${s} spells${t?" · "+t+" tables":""}.`:"No rules loaded.";
 }
 function updateRulesStatus(msg,cls){const el=document.getElementById("rulesStatus");if(el){el.textContent=msg||rulesStatusText();el.className="status "+(cls||"");}}
-function refreshRulesUI(){renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderAllRT();}
-const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses"];
+function refreshRulesUI(){renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderAllRT();}
+const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
+/* display names for a category — one map, used by both the group summary and
+   the headings in the loaded-data list */
+const CAT_NAMES={keywords:"Glossary",features:"Traits",items:"Items",spells:"Spells",races:"Species",classes:"Classes",feats:"Feats",backgrounds:"Backgrounds",subclasses:"Subclasses",tables:"Tables"};
+function catName(c){return CAT_NAMES[c]||c;}
 function loadedRulesGroups(){
   const groups={};
   RULE_CATS.forEach(cat=>(rules[cat]||[]).forEach(e=>{
     const isFile=!!e._file, label=e._file||(e._source||"Unknown");
     const key=(isFile?"f:":"s:")+label;
-    if(!groups[key])groups[key]={key,label,isFile,source:e._source||"",count:0,cats:{}};
+    if(!groups[key])groups[key]={key,label,isFile,source:e._source||"",rulebook:!!e._rulebook,count:0,cats:{}};
     groups[key].count++;groups[key].cats[cat]=(groups[key].cats[cat]||0)+1;
+    if(e._rulebook)groups[key].rulebook=true;
   }));
   return Object.values(groups).sort((a,b)=>a.label.localeCompare(b.label));
+}
+/* which heading a pack files under: a whole-system rulebook, its single
+   category, or Mixed when it spans several */
+function rulesBucket(g){
+  if(g.rulebook)return "rulebook";
+  const ks=Object.keys(g.cats);
+  return ks.length===1?ks[0]:"mixed";
 }
 function removeRulesGroup(key){
   const g=loadedRulesGroups().find(x=>x.key===key);if(!g)return;
   RULE_CATS.forEach(cat=>{if(!rules[cat])return;rules[cat]=rules[cat].filter(e=> g.isFile ? e._file!==g.label : (e._file?true:(e._source||"Unknown")!==g.label));});
   reindexRules();recomputeDups();saveRulesCache();refreshRulesUI();renderAll();renderRulesData();updateRulesStatus(rulesStatusText(),"ok");
 }
+/* Unload every rules pack. Destructive and irreversible without re-importing,
+   so it always confirms — and it says characters are safe, because "clear data"
+   reads like it might delete them. It doesn't: resetRules() only touches the
+   shared rules pool, never `character`. */
+function clearAllRules(){
+  const packs=loadedRulesGroups().length;
+  if(!packs){updateRulesStatus("Nothing loaded to clear.","");return false;}
+  const what=RULE_CATS.map(c=>{const n=(rules[c]||[]).length;return n?`${n} ${catName(c).toLowerCase()}`:null;}).filter(Boolean).join(", ");
+  if(!confirm(`Unload all rules data?\n\nThis removes ${packs} pack${packs===1?"":"s"} — ${what}.\n\nYour characters are NOT affected, but anything they reference from these packs will stop auto-filling until you import again.`))return false;
+  resetRules();saveRulesCache();refreshRulesUI();renderRulesData();renderAll();
+  updateRulesStatus("Rules cleared.","");
+  return true;
+}
 function rulesDataHTML(){
   const groups=loadedRulesGroups();
   if(!groups.length)return `<p class="hint" style="margin:4px 0">No rules data loaded.</p>`;
-  return groups.map(g=>{
-    const summary=Object.entries(g.cats).map(([c,n])=>`${n} ${c==="features"?"traits":c}`).join(" · ");
-    return `<div class="rd-row"><div class="rd-main"><div class="rd-name">${esc(g.label)}${g.isFile&&g.source?` <span class="rd-src">${esc(g.source)}</span>`:""}</div><div class="rd-sub">${esc(summary)}</div></div><button class="icon danger" data-rd-del="${esc(g.key)}" title="Remove this data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
-  }).join("");
+  const row=(g,withSummary)=>{
+    const summary=withSummary?Object.entries(g.cats).map(([c,n])=>`${n} ${catName(c).toLowerCase()}`).join(" · "):"";
+    return `<div class="rd-row"><div class="rd-main"><div class="rd-name">${esc(g.label)}${g.isFile&&g.source?` <span class="rd-src">${esc(g.source)}</span>`:""}</div>${summary?`<div class="rd-sub">${esc(summary)}</div>`:""}</div><button class="icon danger" data-rd-del="${esc(g.key)}" title="Remove this data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
+  };
+  /* whole-system packs first, then one heading per category, Mixed last */
+  const order=["rulebook"].concat(RULE_CATS,["mixed"]);
+  const label={rulebook:"Rulebook",mixed:"Mixed"};
+  let html="";
+  order.forEach(b=>{
+    const inB=groups.filter(g=>rulesBucket(g)===b);
+    if(!inB.length)return;
+    html+=`<div class="spell-h">${esc(label[b]||catName(b))} (${inB.length})</div>`;
+    /* the heading already names the category on single-category rows */
+    html+=inB.map(g=>row(g,b==="rulebook"||b==="mixed")).join("");
+  });
+  return html;
 }
 function renderRulesData(){
   const html=rulesDataHTML();
@@ -99,7 +142,7 @@ function renderSrcRows(){
   const srcs=settings.rulesSources||[];
   host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${i}"><button class="icon danger" data-src-del="${i}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
 }
-function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[]};}
+function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[]};}
 function keyOf(x,kind){return kind==="subclasses"?(String(x.class||"")+"|"+String(x.name||"")).trim().toLowerCase():String(kind==="keywords"?(x.term||""):(x.name||"")).trim().toLowerCase();}
 /* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules */
 function srcLabel(obj){return String(obj.system||obj.name||"Rules").trim();}
@@ -107,7 +150,7 @@ function mergeRules(obj,fileName){
   if(obj.name&&!rules.name)rules.name=obj.name;
   const src=srcLabel(obj);
   const traitArr=Array.isArray(obj.features)?obj.features:(Array.isArray(obj.traits)?obj.traits:null);
-  const cats={keywords:obj.keywords,features:traitArr,items:obj.items,spells:obj.spells,races:obj.races,classes:obj.classes,feats:obj.feats,backgrounds:obj.backgrounds,subclasses:obj.subclasses};
+  const cats={keywords:obj.keywords,features:traitArr,items:obj.items,spells:obj.spells,races:obj.races,classes:obj.classes,feats:obj.feats,backgrounds:obj.backgrounds,subclasses:obj.subclasses,tables:obj.tables};
   Object.keys(cats).forEach(kind=>{
     const arr=cats[kind];if(!Array.isArray(arr))return;
     /* key by SOURCE + name: re-loading the same source replaces its own entries,
@@ -115,7 +158,7 @@ function mergeRules(obj,fileName){
     const map=new Map((rules[kind]||[]).map(x=>[(x._source||"")+"\u0000"+keyOf(x,kind),x]));
     arr.forEach(raw=>{
       const base=(kind==="keywords")?{id:uid(),term:raw.term||"",type:raw.type==="image"?"image":"text",text:raw.text||"",image:raw.image||null,cond:!!raw.cond}:Object.assign({},raw);
-      base._source=src;if(fileName)base._file=fileName;
+      base._source=src;if(fileName)base._file=fileName;if(obj.rulebook)base._rulebook=1;
       const nm=keyOf(base,kind);if(!nm)return;
       map.set(src+"\u0000"+nm,base);
     });
@@ -130,14 +173,14 @@ function mergeRules(obj,fileName){
 let _ruleSeq=0;
 function reindexRules(){
   _ruleSeq=0;
-  ["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses"].forEach(kind=>{
+  RULE_CATS.forEach(kind=>{
     (rules[kind]||[]).forEach(x=>{x._id="r"+(_ruleSeq++);});
   });
 }
 /* names that appear in more than one source within a category → shown annotated */
 function recomputeDups(){
   rules._dups={};
-  ["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses"].forEach(kind=>{
+  RULE_CATS.forEach(kind=>{
     const seen={},dup=new Set();
     (rules[kind]||[]).forEach(x=>{const n=keyOf(x,kind);if(!n)return;if(seen[n])dup.add(n);seen[n]=1;});
     rules._dups[kind]=dup;

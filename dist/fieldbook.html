@@ -94,6 +94,9 @@ body{
 .tbtn:hover{background:var(--paper-2)}
 .tbtn.primary{background:var(--accent);color:#20160a;border-color:var(--ink)}
 html[data-theme="dark"] .tbtn.primary{color:#20160a}
+/* destructive action — reads as a warning before it is pressed, not after */
+.tbtn.danger{color:var(--brick);border-color:var(--brick)}
+.tbtn.danger:hover{background:color-mix(in srgb,var(--brick) 14%,transparent)}
 .tbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
 .savestate{font-family:var(--head);font-size:11px;letter-spacing:.06em;color:var(--ink-soft);min-width:70px;text-align:right}
 .savestate.on{color:var(--accent)}
@@ -146,6 +149,8 @@ html[data-rough="on"] .card::before{filter:url(#rough)}
 .label .add{font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.05em;color:var(--accent-2);
   background:none;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 6px;border-radius:6px}
 .label .add:hover{background:color-mix(in srgb,var(--accent-2) 16%,transparent)}
+.label .add.sub{color:var(--ink-soft)}
+.label .add.sub:hover{background:color-mix(in srgb,var(--ink-soft) 14%,transparent)}
 .label .add svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4}
 
 label.f{display:block;font-family:var(--head);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
@@ -307,6 +312,11 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .sysbadge{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line)}
 .sysbadge.hbw{color:var(--accent-2);border-color:color-mix(in srgb,var(--accent-2) 55%,var(--line))}
 .sysbadge.dnd{color:var(--brick);border-color:color-mix(in srgb,var(--brick) 55%,var(--line))}
+/* app version the character was last reconciled against — quiet when current,
+   accented when the update tool has something to offer */
+.verbadge{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--ink-soft)}
+.verbadge.old{color:var(--accent)}
+.verbadge.old::after{content:"↑";margin-left:1px}
 .hcard-star{background:transparent;border:0;cursor:pointer;font-size:22px;line-height:1;color:var(--ink-soft);padding:0 8px;align-self:center}
 .hcard-star.on{color:var(--accent)}
 /* .icon has a fixed height, so the row's align-items:stretch leaves it at the top; center it like the star */
@@ -396,6 +406,31 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .kw::after{content:"❧";font-size:.7em;vertical-align:super;margin-left:1px;opacity:.7}
 .kw:hover,.kw:focus{background:color-mix(in srgb,var(--accent-2) 16%,transparent);outline:none}
 
+/* ================= reference tables ================= */
+/* An inline "[Table: Name]" anchor. Deliberately not a .kw — a glossary term
+   pops a definition, this opens a table — so it takes the accent (honey) rather
+   than accent-2 (verdigris) and a grid glyph rather than the ❧. */
+.tblref{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;
+  text-decoration-style:dashed;text-underline-offset:3px;border-radius:3px;
+  background:none;border:0;font:inherit;padding:0}
+.tblref::after{content:"▦";font-size:.75em;vertical-align:super;margin-left:2px;opacity:.7}
+.tblref:hover,.tblref:focus{background:color-mix(in srgb,var(--accent) 18%,transparent);outline:none}
+.tblchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:7px}
+
+/* The table itself. A d100 table must scroll inside its own box — never let it
+   push the page body sideways on a phone. */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:2px 0 10px;
+  border:1.5px solid var(--line);border-radius:var(--radius);background:var(--field)}
+table.rtbl{border-collapse:collapse;width:100%;font-size:14px;line-height:1.45}
+table.rtbl th,table.rtbl td{padding:6px 10px;text-align:left;vertical-align:top;
+  border-bottom:1px solid var(--hair)}
+table.rtbl th{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-soft);white-space:nowrap;
+  border-bottom:1.5px solid var(--line);position:sticky;top:0;background:var(--panel)}
+table.rtbl tbody tr:nth-child(even){background:color-mix(in srgb,var(--ink) 4%,transparent)}
+table.rtbl tbody tr:last-child td{border-bottom:0}
+/* roll/level columns read as a fixed gutter, not a wrapping text column */
+table.rtbl td:first-child{white-space:nowrap;font-family:var(--head);font-weight:700}
 /* spell slots */
 .slotgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
 @media(max-width:600px){.slotgrid{grid-template-columns:repeat(2,1fr)}}
@@ -428,6 +463,7 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .coin label{font-family:var(--head);font-size:10px;letter-spacing:.05em;color:var(--ink-soft);display:block;margin-bottom:3px}
 .coin input{text-align:center;font-weight:700}
 
+.coin-hint{margin:8px 0 0;text-align:center}
 /* ================= Modal ================= */
 .backdrop{position:fixed;inset:0;background:rgba(10,8,5,.62);backdrop-filter:blur(3px);
   display:none;align-items:center;justify-content:center;padding:14px;z-index:80}
@@ -533,6 +569,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
   <button class="tab" data-tab="inventory">Inventory</button>
   <button class="tab" data-tab="story">Story</button>
   <button class="tab" data-tab="rules">Rules</button>
+  <button class="tab" data-tab="tables">Tables</button>
   <button class="tab-toc" id="btnToc" title="Jump to a section" aria-label="Table of contents">☰</button>
 </div>
 <div class="toc-back" id="tocBack"></div>
@@ -660,8 +697,9 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         <div id="inventoryList"></div>
       </div>
       <div class="card">
-        <div class="label">Coins <span class="grow"></span><button class="add" id="btnCoinConvert" title="Roll lower coins up into higher denominations"><svg viewBox="0 0 24 24"><path d="M7 4v13m0 0-3-3m3 3 3-3M17 20V7m0 0 3 3m-3-3-3 3"/></svg>Auto-convert</button></div>
+        <div class="label">Coins <span class="grow"></span><button class="add" id="btnCoinAdjust" title="Add or spend several denominations at once"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Adjust</button><button class="add" id="btnCoinConvert" title="Roll lower coins up into higher denominations"><svg viewBox="0 0 24 24"><path d="M7 4v13m0 0-3-3m3 3 3-3M17 20V7m0 0 3 3m-3-3-3 3"/></svg>Auto-convert</button></div>
         <div class="coins" id="coins"></div>
+        <p class="hint coin-hint">Type a number to set it, or <b>+10</b> / <b>-5</b> to add or spend.</p>
       </div>
     </div>
   </section>
@@ -728,6 +766,18 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
       </div>
     </div>
   </section>
+
+  <section class="tabpanel" id="tab-tables">
+    <div class="stack">
+      <div class="card">
+        <div class="label">Reference Tables<span class="grow"></span></div>
+        <p class="hint">Tables lifted out of your rules pack — roll tables, class progressions, and the lookup tables the rules text refers to. Where a description mentions one, tap the highlighted name to open it here.</p>
+        <input id="tablesSearch" placeholder="Filter tables…" autocomplete="off" style="margin-bottom:10px">
+        <input type="file" id="tablesRulesFiles" accept="application/json,.json" multiple class="hidefile">
+        <div id="tablesList"></div>
+      </div>
+    </div>
+  </section>
 </div>
 
 <!-- generic modal -->
@@ -756,11 +806,12 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         <p class="hint" style="margin-top:8px">Select multiple JSON files at once — races, classes, spells, feats, backgrounds, subclasses, and glossary all merge together.</p>
         <div class="f" style="margin-top:10px">Loaded data</div>
         <div id="homeRulesData"></div>
+        <div class="m-actions" style="justify-content:flex-end;margin-top:8px"><button class="tbtn danger" id="homeClearRules">Clear all</button></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="label">Your characters <span class="grow"></span><button class="add" id="homeNew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New character</button></div>
+      <div class="label">Your characters <span class="grow"></span><button class="add sub" id="homeLoadChar" title="Import a character from a Fieldbook .json file"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Import</button><button class="add" id="homeNew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New character</button></div>
       <div id="homeChars"></div>
     </div>
   </div>
@@ -792,8 +843,13 @@ const FX_LABEL={};fxTargets().forEach(([l,t])=>FX_LABEL[t]=l);
 
 /* ================= state ================= */
 function uid(){return Math.random().toString(36).slice(2,9)}
+/* appVersion is the app version this character was last RECONCILED against — not
+   "last saved with". It stays "" here on purpose: this function is called at top
+   level on the line below, before 30-version.js has run, so touching APP_VERSION
+   from here would be a TDZ ReferenceError and the app would never boot.
+   newCharacter() stamps the real version; "" means "never checked". */
 function blankChar(){
-  const c={id:uid(),system:"humblewood",name:"",class:"",ancestry:"",background:"",alignment:"",xp:"",level:1,
+  const c={id:uid(),appVersion:"",system:"humblewood",name:"",class:"",ancestry:"",background:"",alignment:"",xp:"",level:1,
     ac:"",init:"",speed:"",hitdice:"",hdManual:false,inspiration:false,
     hp:{cur:"",max:"",temp:""}, death:{succ:0,fail:0},
     coins:{cp:"",sp:"",ep:"",gp:"",pp:""},
@@ -811,7 +867,7 @@ function blankChar(){
 }
 let character=blankChar();
 let settings={skin:"humblewood",theme:"light",autoload:true,rough:true,rulesSources:[]};
-let rules={name:"",version:0,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[]};
+let rules={name:"",version:0,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[]};
 
 function seedGlossary(){return [];}
 
@@ -824,6 +880,28 @@ function escReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
 function get(o,p){return p.split(".").reduce((a,k)=>a&&a[k],o)}
 function setP(o,p,v){const ks=p.split(".");const last=ks.pop();let t=o;ks.forEach(k=>t=t[k]);t[last]=v}
 function allGlossary(){return [...(rules.keywords||[]).map(k=>({...k,_locked:true})), ...character.glossary]}
+
+/* ================= fingerprints =================
+   Value hashes used by the character/rules update tool (72-char-update.js) to
+   tell "the pack changed" from "the player edited this". Kept here because they
+   are generic; the field lists and the copy-shape projections live with the
+   diff, which is what defines them. */
+function fpNorm(v){
+  if(v===null||v===undefined||v==="")return null;
+  if(Array.isArray(v))return v.map(fpNorm);
+  if(typeof v==="object"){
+    const o={};Object.keys(v).sort().forEach(k=>{const n=fpNorm(v[k]);if(n!==null)o[k]=n;});
+    return Object.keys(o).length?o:null;
+  }
+  if(typeof v==="string"){const s=v.replace(/\s+/g," ").trim();return s||null;}
+  return v;
+}
+function fpHash(v){
+  const s=JSON.stringify(fpNorm(v));
+  let h=5381;
+  for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;   /* djb2-xor, 32-bit */
+  return h.toString(36);
+}
 
 /* ================= effects engine ================= */
 function contributions(){
@@ -986,15 +1064,34 @@ function recompute(){
 function mark(el,on){el.classList.toggle("fx-on",!!on);}
 
 /* ================= keyword highlight ================= */
+/* A private-use char used as a placeholder while "[Table: Name]" anchors are
+   held aside: it cannot occur in rules text, esc() leaves it alone, and being a
+   non-word char the glossary \b...\b pass cannot match across it. One per
+   anchor, restored in order - both passes scan left to right. */
+const TBL_MARK="\uE000";
 function highlight(text){
-  const escd=esc(text||"");
+  /* Lift the anchors out BEFORE escaping (so names stay raw for the lookup) and
+     before the glossary pass, which would otherwise chew through a table name
+     like "Damage Types" and corrupt the markup we build from it. */
+  const tbls=[];
+  const src=String(text||"").replace(/\[Table:\s*([^\]]+)\]/g,(m,nm)=>{tbls.push(nm.trim());return TBL_MARK;});
+  let escd=esc(src);
   const terms=allGlossary().map(g=>g.term).filter(Boolean).sort((a,b)=>b.length-a.length);
-  if(!terms.length)return escd;
-  const pat=terms.map(t=>escReg(esc(t))).join("|");
-  const re=new RegExp("\\b("+pat+")\\b","gi");
-  return escd.replace(re,m=>{
-    const g=allGlossary().find(x=>x.term.toLowerCase()===m.toLowerCase().replace(/&amp;/g,"&"));
-    return `<span class="kw" data-gid="${g?g.id:""}" role="button" tabindex="0">${m}</span>`;
+  if(terms.length){
+    const pat=terms.map(t=>escReg(esc(t))).join("|");
+    const re=new RegExp("\\b("+pat+")\\b","gi");
+    escd=escd.replace(re,m=>{
+      const g=allGlossary().find(x=>x.term.toLowerCase()===m.toLowerCase().replace(/&amp;/g,"&"));
+      return `<span class="kw" data-gid="${g?g.id:""}" role="button" tabindex="0">${m}</span>`;
+    });
+  }
+  if(!tbls.length)return escd;
+  let i=0;
+  return escd.replace(new RegExp(TBL_MARK,"g"),()=>{
+    const nm=tbls[i++];
+    /* no tables pack loaded -> read as plain prose, not a dead chip */
+    if(!findTable(nm))return esc("the "+nm+" table");
+    return `<span class="tblref" data-tbl="${esc(nm)}" role="button" tabindex="0">${esc(nm)}</span>`;
   });
 }
 
@@ -1125,6 +1222,15 @@ function spellOrigin(s){return s.origin||originFromGranted(s.granted);}
 function originBadge(o,attr,id){if(!o)return "";const t=esc(originLabel(o)+(o.at?" · added "+new Date(o.at).toLocaleDateString():""));return `<button class="orig-b" ${attr}="${id}" title="${t}" aria-label="Origin: ${t}">${esc(originLetter(o))}</button>`;}
 function openOriginInfo(o){if(!o){openModal("Origin",`<p class="hint">No origin recorded. Edit this to set where it came from.</p>`);return;}openModal("Origin",`<p><b>${esc(originLabel(o))}</b></p><p class="hint">Added: ${esc(o.at?new Date(o.at).toLocaleString():"—")}</p>`);}
 function originOptionsHTML(cur,includeClass){const none=`<option value=""${!cur?" selected":""}>— none —</option>`;return none+ORIGIN_KINDS.map(x=>`<option value="${x.k}"${cur&&cur.kind===x.k?" selected":""}>${esc(x.label)}</option>`).join("");}
+/* The presentation line browse folds into an added item's description. Shared,
+   not inlined, because the update diff must reproduce the SAME transform — an
+   item copy is not field-identical to its rules entry, and comparing a copy
+   against the raw entry reports every browse-added item as changed forever. */
+function itemMetaLine(x){
+  return [x.type,(x.rarity&&x.rarity!=="Mundane")?x.rarity:"",
+          x.attune?("Attunement"+(x.attuneNote?" ("+x.attuneNote+")":"")):"",
+          x.cost,(x.weight!=null?x.weight+" lb":"")].filter(Boolean).join(" · ");
+}
 function fmtGp(n){n=num(n);return (Number.isInteger(n)?n:Math.round(n*100)/100)+" gp";}
 function costToGp(str){if(str==null)return null;const s=String(str).toLowerCase().replace(/,/g,"");const mult={pp:10,gp:1,ep:0.5,sp:0.1,cp:0.01};let gp=0,found=false,m;const re=/(\d+(?:\.\d+)?)\s*(pp|gp|ep|sp|cp)\b/g;while((m=re.exec(s))){gp+=parseFloat(m[1])*mult[m[2]];found=true;}if(!found){const n=parseFloat(s);return isNaN(n)?null:n;}return Math.round(gp*100)/100;}
 function inventoryTotal(){return (character.inventory||[]).reduce((a,it)=>a+num(it.cost)*(num(it.qty)||1),0);}
@@ -1158,7 +1264,7 @@ const APP_VERSION="1.2.1";
 /* Set this to your GitHub "owner/repo" to enable the update badge. Leave "" to disable.
    The badge appears when a GitHub Release with a newer tag (e.g. v1.2.0) exists, and links
    to that release's page (attach fieldbook.html to the release so players can download it). */
-const UPDATE_REPO="";
+const UPDATE_REPO="wardmanm/RPGFieldbook";
 function cmpVer(a,b){const pa=String(a||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0),pb=String(b||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);for(let i=0;i<3;i++){if((pa[i]||0)>(pb[i]||0))return 1;if((pa[i]||0)<(pb[i]||0))return -1;}return 0;}
 function checkForUpdate(){
   if(!UPDATE_REPO||(navigator.onLine===false))return;
@@ -1334,6 +1440,7 @@ function addFeatureFromDef(t,origin){
   const feat={id:uid(),name:t.name||"Trait",source:t.source||(origin&&(origin.class||origin.name))||"",description:t.description||"",effects:Array.isArray(t.effects)?t.effects:[],enabled:true,origin:origin||null};
   if(t.uses&&t.uses.max!=null&&(typeof t.uses.max!=="number"||num(t.uses.max)>0))feat.uses={max:t.uses.max,per:t.uses.per||"long",used:0};
   if(t.cost&&num(t.cost.amount)>0)feat.cost={resource:t.cost.resource||"",amount:num(t.cost.amount)};
+  stampSrc(feat,t,"feature");
   character.features.push(feat);
   const sid=originSid(origin);
   if(sid){(t.skills||[]).forEach(nm=>{const k=skillKey(nm);if(k)grantProf(sid,"skill",k,1);});(t.saves||[]).forEach(ab=>{if(character.saves[String(ab).toLowerCase()]!==undefined)grantProf(sid,"save",String(ab).toLowerCase(),1);});}
@@ -1349,6 +1456,7 @@ function grantItemByName(name,qty,sid){
   if(ex){ex.qty=num(ex.qty)+qty;return;}
   const it={id:uid(),name:(def&&def.name)||name,qty,description:(def&&def.description)||"",effects:(def&&Array.isArray(def.effects))?def.effects:[],equipped:false,grant:sid,origin:originFromSid(sid)};
   if(def&&def.weapon)it.weapon=def.weapon;
+  if(def)stampSrc(it,def,"item","items");   /* no def = a named grant with no matching item entry */
   character.inventory.push(it);
   if(it.weapon)addAttackForItem(it);
 }
@@ -1386,6 +1494,10 @@ function revertEquipmentGrants(sid){
 function grantFeatDef(featName,origin,pending){
   const fd=findFeatDef(featName)||{name:featName,description:"",effects:[]};
   addFeatureFromDef({name:"Feat: "+fd.name,description:fd.description||"",effects:fd.effects||[],uses:fd.uses,cost:fd.cost},origin);
+  /* re-stamp against the real feat entry: addFeatureFromDef only saw the
+     "Feat: X" wrapper built above, which has no pack and the wrong name */
+  const added=character.features[character.features.length-1];
+  if(added)stampSrc(added,fd,"feature","feats");
   const sid=originSid(origin);
   if(pending&&sid)(fd.choices||[]).forEach(ch=>{if(ch&&ch.type==="skill")pending.push({ch:Object.assign({},ch,{_sid:sid}),sid,label:"Feat: "+fd.name});});
 }
@@ -1443,8 +1555,28 @@ function renderClassRace(){
 
 /* ---- ancestry / race ---- */
 function raceTerm(){return (settings.skin==="classic")?"Race":"Ancestry";}
+/* Which system a rules entry belongs to, or "" when we can't tell.
+   Species are the one category the two systems don't share — a Humblewood
+   character is never an elf — unlike classes/spells, where Humblewood content
+   supplements the D&D core rather than replacing it. */
+function systemOf(entry){
+  const s=String((entry&&entry._source)||"").trim().toLowerCase();
+  if(!s)return "";
+  if(s==="humblewood")return "humblewood";
+  if(s==="xphb"||s==="phb"||s==="dnd"||s.indexOf("d&d")>=0)return "dnd";
+  return "";
+}
+/* Species offered to THIS character. Filters the picker only — never
+   findRaceDef(). A character who already has a cross-system ancestry (an
+   imported sheet, a switched system) must keep resolving it, or their traits
+   silently vanish. Unknown sources (homebrew) show for both systems: never hide
+   someone's own content. */
+function racesForCharacter(){
+  const sys=(character&&character.system==="dnd")?"dnd":"humblewood";
+  return (rules.races||[]).filter(r=>{const s=systemOf(r);return !s||s===sys;});
+}
 function raceOptions(){
-  const list=rules.races||[];
+  const list=racesForCharacter();
   const cats={};const flat=[];
   list.forEach(r=>{ if(r.category){(cats[r.category]=cats[r.category]||[]).push(r);} else flat.push(r); });
   const opt=r=>`<option value="${esc(r._id||r.name)}">${esc(dispName(r,"races"))}</option>`;
@@ -1457,7 +1589,7 @@ function raceOptions(){
 }
 function raceSummary(d){const bits=[];if(d.abilityScores)bits.push(Object.entries(d.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", "));if(d.speed)bits.push("Speed "+d.speed);if((d.traits||[]).length)bits.push(d.traits.length+" trait(s)");if((d.subraces||[]).length)bits.push(d.subraces.length+" subraces");return bits.length?`<p class="hint"><b>${esc(bits.join(" · "))}</b></p>`:"";}
 function openAddRace(){
-  const term=raceTerm(), list=rules.races||[];
+  const term=raceTerm(), list=racesForCharacter();
   openModal("Add "+term.toLowerCase(),`
     ${list.length?`<div class="field"><label class="f">${esc(term)} from rules</label><select id="raceSel"><option value="">— choose —</option>${raceOptions()}</select></div>`:`<p class="hint">No ${term.toLowerCase()} entries in the loaded rules. Enter a custom name; no traits will be auto-applied.</p>`}
     <div class="field" id="subWrap" style="display:none"><label class="f">Subrace</label><select id="subSel"></select></div>
@@ -1554,6 +1686,8 @@ function openRaceInfo(name){
     return s;
   };
   let b=`<p>${esc(d.description||"")}</p>`+(d.category?`<p class="hint">${esc(d.category)}</p>`:"")+sect(d);
+  /* species-owned tables link from here; owner-based, so no prose anchor needed */
+  b+=tableChipsHTML(name,"race");
   (d.subraces||[]).forEach(sd=>{
     b+=`<div style="border-top:2px solid var(--line);margin-top:10px;padding-top:8px"><b style="${cur===sd.name?"color:var(--accent)":""}">${esc(sd.name)}${cur===sd.name?" — selected":""}</b>${sd.description?`<p class="hint" style="margin:4px 0">${esc(sd.description)}</p>`:""}${sect(sd)}</div>`;
   });
@@ -1654,6 +1788,9 @@ function openBackgroundInfo(name){
   if(d.languages)b+=`<p><b>Languages:</b> ${esc(d.languages)}</p>`;
   if(d.equipment)b+=`<p><b>Equipment:</b> ${esc(d.equipment)}</p>`;
   if(d.feature&&d.feature.name)b+=`<p style="border-top:1px dotted var(--hair);padding-top:8px"><b>${esc(d.feature.name)}.</b> ${highlight(d.feature.description||"")}</p>`;
+  /* Suggested-characteristic and specialty tables are owned by the background,
+     so they link from here rather than needing an anchor in the prose. */
+  b+=tableChipsHTML(d.name,"background");
   const cur=character.bg;
   if(cur&&cur.name===d.name){const bits=[];if(cur.feat)bits.push("Feat: "+cur.feat);if(cur.abils)bits.push(cur.abils.map(e=>e.target.split(".")[1].toUpperCase()+" "+fmt(e.value)).join(", "));if(bits.length)b+=`<p class="hint" style="border-top:2px solid var(--line);margin-top:8px;padding-top:8px">Your choices — ${esc(bits.join(" · "))}</p>`;}
   openModal(d.name,b);
@@ -1689,6 +1826,28 @@ function applyClassLevel(entry,d,L){
   }
   return {choices,notes};
 }
+/* "d8" -> 8. Returns 0 for anything unparseable, so callers can just test it. */
+function hitDieMax(d){
+  const m=/^\s*d?(\d+)\s*$/i.exec(String((d&&d.hitDie)||""));
+  return m?parseInt(m[1],10):0;
+}
+/* Level 1 with a single class has no roll and no choice: max HP is the hit
+   die's maximum. Filled in on the player's behalf, but ONLY over a blank —
+   a number they typed is theirs, and this must never overwrite it. */
+function seedLevel1HP(d){
+  const die=hitDieMax(d);
+  if(!die||character.classes.length!==1||totalLevel()!==1)return;
+  if(num(character.hp.max))return;
+  character.hp.max=die;
+  if(!num(character.hp.cur))character.hp.cur=die;
+  syncHPInputs();
+}
+function syncHPInputs(){
+  const mx=document.querySelector('[data-path="character.hp.max"]');
+  if(mx)mx.value=character.hp.max;
+  const cu=document.querySelector('[data-path="character.hp.cur"]');
+  if(cu)cu.value=character.hp.cur;
+}
 function addClass(name,lvl){
   const d=findClassDef(name);
   const entry={name,level:0,subclass:null};
@@ -1703,6 +1862,7 @@ function addClass(name,lvl){
   for(let L=1;L<=lvl;L++){const res=applyClassLevel(entry,d,L);choices=choices.concat(res.choices);notes=notes.concat(res.notes);}
   entry.level=lvl;
   character.level=totalLevel();
+  seedLevel1HP(d);
   const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
@@ -1711,6 +1871,16 @@ function addClass(name,lvl){
 }
 function removeClass(idx){
   const c=character.classes[idx];if(!c)return;
+  /* Clean revert, same rule as the other class grants: if the only thing in
+     Max HP is the number seedLevel1HP() put there, take it back out so
+     swapping a d10 class for a d6 one doesn't silently keep 10. Anything else
+     in that box is the player's and is left alone. */
+  const seeded=hitDieMax(findClassDef(c.name));
+  if(seeded&&character.classes.length===1&&num(c.level)===1&&num(character.hp.max)===seeded){
+    character.hp.max="";
+    if(num(character.hp.cur)===seeded)character.hp.cur="";
+    syncHPInputs();
+  }
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="class"&&f.origin.class===c.name);
   removeGrants(g=>g.sid==="class:"+c.name||g.sid.indexOf("subclass:"+c.name+":")===0);
   revertEquipmentGrants("class:"+c.name);
@@ -1789,6 +1959,7 @@ function openSubclassInfo(className,subName){
   const entry=character.classes.find(c=>c.name===className);
   let b=`<p class="hint" style="margin-bottom:6px">${esc(className)} subclass</p><p>${esc(sc.description||"")}</p>`;
   if(sc.spellcasting)b+=`<p class="hint"><b>Grants spellcasting (${esc(sc.spellcasting.toUpperCase())})</b></p>`;
+  b+=tableChipsHTML(subName,"subclass");
   if(sc.levels)Object.keys(sc.levels).map(Number).sort((a,b)=>a-b).forEach(L=>{
     const lv=sc.levels[String(L)],here=entry&&num(entry.level)>=L;
     b+=`<div style="border-top:1px dotted var(--hair);padding-top:8px;margin-top:8px"><b style="${here?"color:var(--accent)":""}">Level ${L}${here?" — gained":""}</b>`;
@@ -1804,6 +1975,7 @@ function openClassInfo(name){
   let b=`<p>${esc(d.description||"")}</p>`;
   const meta=[d.hitDie?("Hit die "+d.hitDie):"",d.spellcasting?("Spellcasting "+d.spellcasting.toUpperCase()):"",d.savingThrows?("Saves "+d.savingThrows.map(x=>x.toUpperCase()).join("/")):""].filter(Boolean).join(" · ");
   if(meta)b+=`<p class="hint"><b>${esc(meta)}</b></p>`;
+  b+=tableChipsHTML(name,"class");
   const subMap=subclassesFor(d);
   if(Object.keys(subMap).length){
     b+=`<div style="border-top:1px dotted var(--hair);padding-top:8px;margin-top:8px">`;
@@ -2331,6 +2503,75 @@ function renderPortrait(){
   el.innerHTML=character.portraitImg?`<img src="${character.portraitImg}" alt="Portrait">`:`<div class="ph">No portrait yet</div>`;
 }
 
+let _adjWired=false,_adjSync=null;
+/* One transaction across several denominations — "that costs 2gp 5sp" is a
+   single action here rather than two edits, and it can't leave you halfway
+   through if part of it would overdraw. */
+function openCoinAdjust(){
+  const keys=coinKeys();
+  const rows=keys.map(k=>{
+    const d=COIN_ALL.find(x=>x[0]===k);
+    return `<div class="coin"><label title="${d[2]}">${d[1]}</label>
+      <input type="text" inputmode="tel" data-adj="${k}" placeholder="0"
+             aria-label="Adjust ${d[2]} — e.g. 10 to gain, -5 to spend"></div>`;
+  }).join("");
+  openModal("Adjust coins",`
+    <p class="hint">How many of each you gained. Use a minus to spend: <b>-5</b>.</p>
+    <div class="coins">${rows}</div>
+    <p class="hint" id="adjPrev" style="margin-top:10px"></p>
+    <div class="m-actions"><button class="tbtn" id="adjCancel" type="button">Cancel</button>
+      <button class="tbtn primary" id="adjGo" type="button">Apply</button></div>`);
+  const boxes=()=>[...document.querySelectorAll("#mBody [data-adj]")];
+  const prev=document.getElementById("adjPrev"), go=document.getElementById("adjGo");
+  /* Work out the whole transaction before applying any of it. */
+  const plan=()=>{
+    const out={},bad=[];let any=false;
+    boxes().forEach(b=>{
+      const k=b.dataset.adj, raw=String(b.value).replace(/[\s,]/g,"").replace(/[−–—]/g,"-");
+      if(!raw)return;
+      if(!/^[+-]?\d+$/.test(raw)){bad.push(COIN_ALL.find(x=>x[0]===k)[1]);return;}
+      const delta=parseInt(raw,10);
+      if(!delta)return;
+      any=true;
+      const now=num((character.coins||{})[k]);
+      out[k]={delta,now,next:now+delta};
+    });
+    return {out,bad,any};
+  };
+  const sync=()=>{
+    const {out,bad,any}=plan();
+    const over=Object.keys(out).filter(k=>out[k].next<0);
+    if(bad.length){prev.textContent="Not a number: "+bad.join(", ");go.disabled=true;return;}
+    if(over.length){
+      prev.textContent="You don't have enough "+
+        over.map(k=>`${COIN_ALL.find(x=>x[0]===k)[1]} (have ${out[k].now}, spending ${-out[k].delta})`).join(", ")+
+        ". Auto-convert first, or use a bigger coin.";
+      go.disabled=true;return;
+    }
+    go.disabled=!any;
+    prev.textContent=any
+      ? "After: "+Object.keys(out).map(k=>`${out[k].next} ${COIN_ALL.find(x=>x[0]===k)[1]}`).join(", ")
+      : "Enter an amount to see the result.";
+  };
+  /* #mBody is the shared modal body and outlives this modal — one delegated
+     listener installed once, not a new one every time Adjust is opened. Same
+     guard as the update review list. */
+  _adjSync=sync;
+  if(!_adjWired){
+    document.getElementById("mBody").addEventListener("input",e=>{
+      if(e.target&&e.target.matches&&e.target.matches("[data-adj]")&&_adjSync)_adjSync();
+    });
+    _adjWired=true;
+  }
+  sync();
+  document.getElementById("adjCancel").addEventListener("click",closeModal);
+  go.addEventListener("click",()=>{
+    const {out}=plan();
+    character.coins=character.coins||{};
+    Object.keys(out).forEach(k=>{character.coins[k]=out[k].next;});
+    closeModal();renderCoins();scheduleSave();
+  });
+}
 /* push whole character into DOM */
 function convertCoins(){
   // value of each coin in copper; electrum counts as input but isn't generated as output
@@ -2341,11 +2582,55 @@ function convertCoins(){
   out.forEach(([k,v])=>{const n=Math.floor(total/v);total-=n*v;res[k]=n>0?n:"";});
   character.coins=res;renderCoins();scheduleSave();
 }
+const COIN_ALL=[["cp","CP","Copper"],["sp","SP","Silver"],["ep","EP","Electrum"],
+                ["gp","GP","Gold"],["pp","PP","Platinum"]];
+/* Electrum is a D&D-only oddity; Humblewood doesn't use it. */
+function coinKeys(){return (character.system==="dnd")?["cp","sp","ep","gp","pp"]:["cp","sp","gp"];}
+
+/* What a coin box should become, given what was typed into it.
+     "12"  -> set to 12          "+10" -> add           "-5" -> spend
+     ""    -> cleared            anything else -> null (caller puts it back)
+   Signed entries are the point of this: during play you know what you SPENT,
+   not what the new total is. Never goes below zero — you can't owe copper.
+   Accepts the unicode minus too, since the on-screen hint shows one. */
+function coinEntry(cur,raw){
+  const s=String(raw==null?"":raw).trim().replace(/[−–—]/g,"-");
+  if(!s)return "";
+  /* Space is allowed after the sign ("+ 10") but NOT inside the digits: "1 2"
+     is a slip, and quietly reading it as 12 is the sort of silent coercion
+     that loses someone their gold. Unrecognised entries are rejected instead. */
+  const digits=t=>/^\d+$/.test(t)||/^\d{1,3}(,\d{3})+$/.test(t) ? parseInt(t.replace(/,/g,""),10) : null;
+  const m=/^([+-])\s*(\S+)$/.exec(s);
+  if(m){
+    const n=digits(m[2]);
+    return n===null?null:Math.max(0,num(cur)+n*(m[1]==="-"?-1:1));
+  }
+  return digits(s);
+}
 function renderCoins(){
   const el=document.getElementById("coins");if(!el)return;
-  const ALL=[["cp","CP","Copper"],["sp","SP","Silver"],["ep","EP","Electrum"],["gp","GP","Gold"],["pp","PP","Platinum"]];
-  const keys=(character.system==="dnd")?["cp","sp","ep","gp","pp"]:["cp","sp","gp"];
-  el.innerHTML=keys.map(k=>{const d=ALL.find(x=>x[0]===k);const v=(character.coins&&character.coins[k]!=null)?character.coins[k]:"";return `<div class="coin"><label title="${d[2]}">${d[1]}</label><input type="number" data-path="character.coins.${k}" value="${esc(v)}" placeholder="0"></div>`;}).join("");
+  /* NOT data-path: that handler writes on every keystroke, which would store
+     "+" the moment you typed it and lose the number you were adding to. These
+     apply on change (blur/Enter), once the entry is complete. inputmode="tel"
+     rather than "numeric" because the numeric keypad on iOS has no sign keys. */
+  el.innerHTML=coinKeys().map(k=>{
+    const d=COIN_ALL.find(x=>x[0]===k);
+    const v=(character.coins&&character.coins[k]!=null)?character.coins[k]:"";
+    return `<div class="coin"><label title="${d[2]}">${d[1]}</label>`+
+      `<input type="text" inputmode="tel" data-coin="${k}" value="${esc(v)}" placeholder="0" `+
+      `aria-label="${d[2]} — type a number, or +10 / -5 to adjust"></div>`;
+  }).join("");
+}
+/* Commit one coin box. Returns false if the entry made no sense. */
+function applyCoinInput(inp){
+  const k=inp.dataset.coin;if(!k)return true;
+  character.coins=character.coins||{};
+  const next=coinEntry(character.coins[k],inp.value);
+  if(next===null){inp.value=(character.coins[k]!=null)?character.coins[k]:"";return false;}
+  character.coins[k]=next;
+  inp.value=next;
+  scheduleSave();
+  return true;
 }
 function renderAll(){
   renderCoins();
@@ -2359,13 +2644,54 @@ let saveTimer=null, lsOK=true, activeId=null;
 function charKey(id){return "hw-fb-c-"+id;}
 function libLoad(){try{const s=localStorage.getItem(K_LIB);if(s)return JSON.parse(s);}catch(e){}return {autoload:null,index:[]};}
 function libSave(lib){try{localStorage.setItem(K_LIB,JSON.stringify(lib));}catch(e){}}
-function libTouch(){ // update the active character's index entry (name/system/updated)
+function libTouch(){ // update the active character's index entry (name/system/version/updated)
   if(!activeId)return;
   const lib=libLoad();
-  const meta={id:activeId,name:character.name||"Unnamed",system:character.system||"humblewood",updated:Date.now()};
+  /* appVersion rides on the index so the home cards can badge it without
+     reading (and parsing) every character blob */
+  const meta={id:activeId,name:character.name||"Unnamed",system:character.system||"humblewood",appVersion:character.appVersion||"",updated:Date.now()};
   const i=lib.index.findIndex(x=>x.id===activeId);
   if(i>=0)lib.index[i]=meta;else lib.index.push(meta);
   libSave(lib);
+}
+/* Why localStorage said no, in words a player can act on. The browser's own
+   message ("QuotaExceededError") tells them nothing about what to do. */
+function storageWhy(e){
+  const n=(e&&e.name)||"", m=(e&&e.message)||"";
+  if(/quota|exceed/i.test(n+" "+m))return "your browser's storage is full";
+  if(/security|denied/i.test(n+" "+m))return "your browser is blocking storage for this page";
+  return "your browser refused to save"+(n?" ("+n+")":"");
+}
+/* Save a snapshot of a character as a separate library entry, WITHOUT switching
+   to it (that's the difference from finishImport).
+
+   Returns {id, copy} on success, or {error, copy} if it could not be stored —
+   `copy` is the snapshot either way, so a caller that can't use storage can
+   still offer it as a download rather than dead-ending.
+
+   The index write is verified rather than assumed: libSave() swallows its own
+   quota error, so without the read-back a backup could sit in storage while
+   being invisible on the home screen — and we would have told the player to go
+   and look for it there. */
+function backupCharacter(ch,tag){
+  let copy;
+  try{
+    copy=JSON.parse(JSON.stringify(ch));
+    copy.id=uid();
+    copy.name=(ch.name||"Character")+" (backup"+(tag?" "+tag:"")+")";
+    copy.isBackup=true;
+  }catch(e){return {error:"this character couldn't be copied"};}
+  try{
+    localStorage.setItem(charKey(copy.id),JSON.stringify(copy));
+  }catch(e){return {error:storageWhy(e),copy};}
+  const lib=libLoad();
+  lib.index.push({id:copy.id,name:copy.name,system:copy.system||"humblewood",appVersion:copy.appVersion||"",updated:Date.now()});
+  libSave(lib);
+  if(!libLoad().index.some(x=>x.id===copy.id)){
+    try{localStorage.removeItem(charKey(copy.id));}catch(e){}   // don't orphan it
+    return {error:"your browser's storage is full",copy};
+  }
+  return {id:copy.id,copy};
 }
 function scheduleSave(){
   const el=document.getElementById("savestate");if(el){el.textContent="Saving…";el.className="savestate";}
@@ -2387,6 +2713,10 @@ function migrate(s){
   // Identity & system guard.
   base.id=s.id||base.id||uid();
   base.system=(s.system==="dnd"||s.system==="humblewood")?s.system:blank.system;
+  /* Preserve the stamp, NEVER advance it. migrate() runs on every load, so
+     stamping APP_VERSION here would erase the very mismatch the update tool
+     exists to find. Only applying or dismissing an update may advance it. */
+  base.appVersion=(typeof s.appVersion==="string")?s.appVersion:"";
   // Normalize structured objects onto full defaults so missing sub-keys are filled in.
   ["hp","death","abilities","saves","skills","slots"].forEach(k=>{ base[k]=Object.assign({},blank[k],(s[k]&&typeof s[k]==="object"&&!Array.isArray(s[k]))?s[k]:{}); });
   // Coins: map legacy keys onto a full coin object.
@@ -2455,6 +2785,8 @@ function finishImport(ch){
   character=ch;activeId=ch.id;
   try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){}
   libTouch();settings.skin=skinForSystem(ch.system);saveSettings();applyTheme();renderAll();hideHome();
+  /* last, so it stacks after the Replace/Copy clash modal rather than under it */
+  maybePromptUpdate();
 }
 function importChar(file){
   const r=new FileReader();
@@ -2479,6 +2811,455 @@ function importChar(file){
   r.readAsText(file);
 }
 
+/* ================= character ↔ rules diff =================
+   Characters COPY rules entries, so a sheet drifts from the data over time.
+   This finds the drift. Pure functions only — no DOM — so it stays testable and
+   so the UI layer below can render whatever it likes from the result.
+
+   Matching is the hard part. A copy stamped by stampSrc() carries its pack, its
+   category and per-field hashes, and matches exactly. Anything added before
+   stamping existed has only its NAME, which the app itself knows to be ambiguous
+   (see recomputeDups/dispName) — those are reported as `ambiguous` and never
+   ticked by default. We would rather ask than silently pick the wrong entry.
+
+   A COPY IS NOT ITS DEF. Copy sites transform: browse folds a presentation line
+   into an item's description and converts "2 gp" to the number 2. Comparing a
+   copy against the raw rules entry therefore reports every browse-added item as
+   permanently changed, and "updating" it strips the meta line and puts the
+   string back. So the diff compares against a PROJECTION — the same transform
+   the copy site applied — recorded per copy as `src.shape`. */
+
+/* Rules-owned fields per kind: what an update is allowed to overwrite. Anything
+   NOT listed here is character-local (qty, equipped, prepared, uses.used, id,
+   origin, grant, ...) and must survive an update untouched. */
+const UPD_FIELDS={
+  feature:["description","effects","uses","cost"],
+  spell:["level","meta","text"],
+  item:["description","effects","cost","weapon"]
+};
+const UPD_CATS=[["features","feature"],["spells","spell"],["inventory","item"]];
+
+/* What a copy of `def` SHOULD look like, for the shape it was copied in.
+   "browse" = added through the item picker (meta line + gp cost);
+   "plain"  = copied verbatim (granted items, traits, spells). */
+function updProject(def,kind,shape){
+  if(!def)return {};
+  if(kind==="item"&&shape==="browse"){
+    const m=itemMetaLine(def);
+    const p={description:(m?m+"\n":"")+(def.description||""),
+             effects:Array.isArray(def.effects)?def.effects:[]};
+    const c=costToGp(def.cost); if(c!=null)p.cost=c;
+    if(def.weapon)p.weapon=def.weapon;
+    return p;
+  }
+  const p={};
+  (UPD_FIELDS[kind]||[]).forEach(f=>{if(def[f]!==undefined)p[f]=def[f];});
+  return p;
+}
+/* per-field hashes of the projection — so a later diff can say WHICH field the
+   pack changed, and leave fields the player deviated on alone */
+function fpMap(obj,kind){
+  const out={};
+  (UPD_FIELDS[kind]||[]).forEach(f=>{out[f]=fpHash(obj?obj[f]:null);});
+  return out;
+}
+/* Tag a fresh copy with where it came from and what both sides looked like.
+   `cat` is the RULE_CATS bucket the def lives in ("feats"/"spells"/"items"), or
+   "" for a trait embedded inside a class/race/background — those have no
+   top-level entry, so the diff re-resolves them through the copy's `origin`. */
+function stampSrc(copy,def,kind,cat,shape){
+  if(!copy||!def)return copy;
+  copy.src={cat:cat||"",pack:def._source||"",kind,shape:shape||"plain",
+            name:def.name||copy.name||"",
+            fp:fpMap(updProject(def,kind,shape||"plain"),kind),
+            cfp:fpMap(copy,kind)};
+  return copy;
+}
+/* after writing rules-owned fields onto a copy, re-baseline both sides */
+function restampSrc(copy,def,kind){
+  if(!copy||!copy.src)return copy;
+  copy.src.fp=fpMap(updProject(def,kind,copy.src.shape),kind);
+  copy.src.cfp=fpMap(copy,kind);
+  return copy;
+}
+
+function updCandidates(cat,name){
+  const n=String(name||"").trim().toLowerCase();
+  if(!n)return [];
+  return (rules[cat]||[]).filter(x=>String(x.name||"").trim().toLowerCase()===n);
+}
+/* Resolve a copy back to its rules entry.
+   -> {def} | {ambiguous:[...]} | {} when nothing matches */
+function updResolve(copy,kind){
+  const src=copy&&copy.src;
+  if(src&&src.cat){
+    const hits=updCandidates(src.cat,src.name||copy.name);
+    if(src.pack){
+      const exact=hits.filter(x=>(x._source||"")===src.pack);
+      if(exact.length===1)return {def:exact[0]};
+      if(exact.length>1)return {ambiguous:exact};
+      /* The pack this was copied from isn't loaded. A same-named entry from a
+         DIFFERENT pack is not the same content — adopting it silently is the
+         exact guess this design refuses to make. Offer it, labelled, unticked. */
+      if(hits.length)return {def:hits[0],loose:true,otherPack:src.pack};
+      return {};
+    }
+    if(hits.length===1)return {def:hits[0]};
+    if(hits.length>1)return {ambiguous:hits};
+    return {};
+  }
+  /* embedded class/race/background trait — re-resolve through the origin */
+  if(kind==="feature"&&copy.origin)return updTraitFromOrigin(copy);
+  /* unstamped legacy copy: name-only, across the plausible categories */
+  const cats=kind==="spell"?["spells"]:kind==="item"?["items"]:["feats"];
+  let hits=[];
+  cats.forEach(c=>{hits=hits.concat(updCandidates(c,copy.name));});
+  if(kind==="feature"&&!hits.length){
+    /* feats are stored as "Feat: Alert" */
+    const m=String(copy.name||"").match(/^Feat:\s*(.+)$/i);
+    if(m)hits=updCandidates("feats",m[1]);
+  }
+  if(hits.length===1)return {def:hits[0],loose:true};
+  if(hits.length>1)return {ambiguous:hits,loose:true};
+  return {};
+}
+/* Find the trait a granted feature came from, inside its class/race/background
+   definition. Those traits have no top-level rules entry to look up. */
+function updTraitFromOrigin(copy){
+  const o=copy.origin||{},nm=String(copy.name||"").trim().toLowerCase();
+  const from=list=>(list||[]).find(t=>String(t.name||"").trim().toLowerCase()===nm);
+  if(o.kind==="race"){
+    const d=findRaceDef(o.name);if(!d)return {};
+    let t=from(d.traits);
+    if(!t&&character.race&&character.race.subrace){
+      const s=(d.subraces||[]).find(x=>x.name===character.race.subrace);
+      if(s)t=from(s.traits);
+    }
+    return t?{def:t}:{};
+  }
+  if(o.kind==="background"){
+    const d=findBackgroundDef(o.name);if(!d)return {};
+    const single=(d.feature&&String(d.feature.name||"").trim().toLowerCase()===nm)?d.feature:null;
+    const t=single||from(d.traits);
+    return t?{def:t}:{};
+  }
+  if(o.kind==="class"){
+    const d=findClassDef(o.class);if(!d)return {};
+    const lv=(d.levels||{})[String(o.level)]||{};
+    let t=from(lv.traits);
+    if(!t&&o.subclass){
+      const sc=subclassesFor(d)[o.subclass];
+      if(sc)t=from(((sc.levels||{})[String(o.level)]||{}).traits);
+    }
+    return t?{def:t}:{};
+  }
+  return {};
+}
+/* Which rules-owned fields the PACK changed since this copy was made.
+   Compared projection-then vs projection-now, not copy vs projection: a player
+   who overrode an item's cost at add time hasn't been changed by anything, and
+   must not be nagged about it — or have it silently overwritten. */
+function updChangedFields(copy,def,kind){
+  const shape=(copy.src&&copy.src.shape)||"plain";
+  const now=fpMap(updProject(def,kind,shape),kind);
+  const then=copy.src&&copy.src.fp;
+  if(then&&typeof then==="object")
+    return (UPD_FIELDS[kind]||[]).filter(f=>now[f]!==then[f]);
+  /* unstamped legacy copy — no baseline, so fall back to copy vs projection */
+  const proj=updProject(def,kind,shape);
+  return (UPD_FIELDS[kind]||[]).filter(f=>fpHash(copy[f])!==fpHash(proj[f]));
+}
+/* has the player hand-edited this copy since it was added? */
+function updEdited(copy,kind){
+  const then=copy.src&&copy.src.cfp;
+  if(!then||typeof then!=="object")return null;   /* unknowable */
+  const now=fpMap(copy,kind);
+  return (UPD_FIELDS[kind]||[]).some(f=>now[f]!==then[f]);
+}
+/* Traits the rules now grant that the sheet doesn't have. Only ever ADDITIVE —
+   a level already held gaining a trait is the case that matters. */
+function updMissingTraits(){
+  /* Keyed by ORIGIN + name, not name alone: a Fighter/Barbarian legitimately has
+     two different "Extra Attack" traits, and a flat name set would hide the
+     second one forever. */
+  const key=(o,nm)=>[o&&o.kind,o&&(o.class||o.name),o&&o.subclass,o&&o.level,
+                     String(nm||"").trim().toLowerCase()].join("|");
+  const have=new Set((character.features||[]).map(f=>key(f.origin,f.name)));
+  const untagged=new Set((character.features||[]).filter(f=>!f.origin).map(f=>String(f.name||"").trim().toLowerCase()));
+  const out=[];
+  const want=(t,origin,label)=>{
+    if(!t||!t.name)return;
+    if(have.has(key(origin,t.name)))return;
+    /* An UNTAGGED feature of the same name is probably this trait from before
+       origins were recorded — don't offer a duplicate of something they have. */
+    if(untagged.has(String(t.name).trim().toLowerCase()))return;
+    out.push({cat:"features",kind:"feature",type:"added",name:t.name,def:t,origin,
+              pack:label,why:"new in "+label,edited:false,fields:["description"]});
+  };
+  if(character.race&&character.race.name){
+    const d=findRaceDef(character.race.name);
+    if(d){
+      (d.traits||[]).forEach(t=>want(t,{kind:"race",name:d.name},d.name));
+      const s=(d.subraces||[]).find(x=>x.name===character.race.subrace);
+      if(s)(s.traits||[]).forEach(t=>want(t,{kind:"race",name:d.name},d.name+" ("+s.name+")"));
+    }
+  }
+  if(character.bg&&character.bg.name){
+    const d=findBackgroundDef(character.bg.name);
+    /* a background grants ONE `feature` object, not a `traits` array */
+    if(d&&d.feature&&d.feature.name)want(d.feature,{kind:"background",name:d.name},d.name);
+    if(d)(d.traits||[]).forEach(t=>want(t,{kind:"background",name:d.name},d.name));
+  }
+  (character.classes||[]).forEach(c=>{
+    const d=findClassDef(c.name);if(!d)return;
+    const lvl=num(c.level);
+    for(let L=1;L<=lvl;L++){
+      const lv=(d.levels||{})[String(L)]||{};
+      (lv.traits||[]).forEach(t=>want(t,{kind:"class",class:c.name,level:L},c.name+" "+L));
+      if(c.subclass){
+        const sc=subclassesFor(d)[c.subclass];
+        if(sc)(((sc.levels||{})[String(L)]||{}).traits||[]).forEach(t=>
+          want(t,{kind:"class",class:c.name,level:L,subclass:c.subclass},c.subclass+" "+L));
+      }
+    }
+  });
+  return out;
+}
+/* The whole diff. Rows are UI-agnostic; `apply` marks the default tick state. */
+function diffCharacter(){
+  const rows=[];
+  const anyRules=RULE_CATS.some(c=>(rules[c]||[]).length);
+  if(!anyRules)return {rows,anyRules:false};
+  UPD_CATS.forEach(([cat,kind])=>{
+    (character[cat]||[]).forEach(copy=>{
+      const r=updResolve(copy,kind);
+      if(r.ambiguous){
+        rows.push({cat,kind,type:"ambiguous",id:copy.id,name:copy.name,copy,
+                   pack:r.ambiguous.map(x=>x._source||"?").join(" / "),
+                   why:"same name in "+r.ambiguous.length+" packs — can't tell which",
+                   edited:false,fields:[],apply:false});
+        return;
+      }
+      if(!r.def){
+        rows.push({cat,kind,type:"unmatched",id:copy.id,name:copy.name,copy,pack:"",
+                   why:"not in any loaded pack",edited:false,fields:[],apply:false});
+        return;
+      }
+      const fields=updChangedFields(copy,r.def,kind);
+      if(!fields.length)return;
+      /* Edited by the player? Only knowable when a copy-time baseline exists;
+         without one (legacy, or a loose match) treat it as possibly-edited. */
+      const ed=updEdited(copy,kind);
+      const edited=ed===null?true:ed;
+      const why=r.otherPack
+        ? `“${r.otherPack}” isn't loaded — this is the ${r.def._source||"other"} version`
+        : fields.join(", ")+" changed"+(r.loose?" (matched by name only)":"");
+      rows.push({cat,kind,type:"changed",id:copy.id,name:copy.name,copy,def:r.def,
+                 pack:r.def._source||"",
+                 why,edited,fields,
+                 apply:!edited&&!r.loose&&!r.otherPack});
+    });
+  });
+  updMissingTraits().forEach(r=>rows.push(Object.assign({apply:true},r)));
+  return {rows,anyRules:true};
+}
+/* Write the rules-owned fields of one row onto the character. Everything not in
+   UPD_FIELDS is character-local and is deliberately left alone. */
+function applyUpdateRow(row){
+  if(row.type==="added"){
+    addFeatureFromDef(row.def,row.origin);
+    const added=character.features[character.features.length-1];
+    if(added)stampSrc(added,row.def,"feature","");
+    return true;
+  }
+  if(row.type!=="changed"||!row.copy||!row.def)return false;
+  const shape=(row.copy.src&&row.copy.src.shape)||"plain";
+  const proj=updProject(row.def,row.kind,shape);
+  const spent=(row.copy.uses||{}).used;
+  /* Only write the fields the PACK actually changed. Writing all of them would
+     clobber deliberate deviations (a custom cost typed in at add time). */
+  (row.fields||[]).forEach(f=>{
+    if(proj[f]===undefined){delete row.copy[f];return;}
+    row.copy[f]=JSON.parse(JSON.stringify(proj[f]));
+  });
+  /* uses.max may have moved; the player's spent count must survive it */
+  if(row.copy.uses)row.copy.uses.used=num(spent);
+  if(!row.copy.src)stampSrc(row.copy,row.def,row.kind,row.cat==="inventory"?"items":row.cat,shape);
+  else restampSrc(row.copy,row.def,row.kind);
+  /* a weapon's dice/type may have changed — the linked attack row is derived
+     from the item and does not update itself */
+  if(row.kind==="item"&&row.copy.weapon)updResyncAttack(row.copy);
+  return true;
+}
+/* Rebuild the attack derived from an inventory item, preserving nothing the
+   player owns on it beyond its identity (attacks are wholly item-derived). */
+function updResyncAttack(it){
+  const i=(character.attacks||[]).findIndex(a=>a.itemId===it.id);
+  if(i<0){if(typeof addAttackForItem==="function")addAttackForItem(it);return;}
+  const keepId=character.attacks[i].id;
+  character.attacks.splice(i,1);
+  if(typeof addAttackForItem==="function")addAttackForItem(it);
+  const now=(character.attacks||[]).find(a=>a.itemId===it.id);
+  if(now)now.id=keepId;   /* keep the id stable so collapse state survives */
+}
+function applyUpdates(rows){
+  let n=0;
+  const touched=[];
+  (rows||[]).forEach(r=>{if(applyUpdateRow(r)){n++;if(r.kind==="spell"&&r.copy)touched.push(r.copy);}});
+  /* only the spells we actually rewrote — resyncing every spell would rebuild
+     attack rows the player never asked us to touch */
+  if(typeof syncSpellAttack==="function")touched.forEach(sp=>syncSpellAttack(sp));
+  if(n)recompute();
+  return n;
+}
+/* has this character fallen behind, and is there anything to say about it? */
+function charNeedsUpdate(ch){
+  ch=ch||character;
+  if(!ch)return false;
+  if(ch.isBackup)return false;
+  if(ch.skipUpdate&&ch.skipUpdate===APP_VERSION)return false;
+  if(cmpVer(ch.appVersion||"0.0.0",APP_VERSION)>=0)return false;
+  return RULE_CATS.some(c=>(rules[c]||[]).length);
+}
+
+/* ================= update UI ================= */
+const UPD_LABELS={features:"Features & traits",spells:"Spells",inventory:"Items"};
+function updRowHTML(r,i){
+  const tag=r.type==="added"?`<span class="chip">new</span>`
+    :r.type==="ambiguous"?`<span class="chip">ambiguous</span>`
+    :r.type==="unmatched"?`<span class="chip">not in your packs</span>`
+    :r.edited?`<span class="chip">you edited this</span>`:"";
+  const dis=(r.type==="unmatched"||r.type==="ambiguous")?" disabled":"";
+  return `<label class="opt" style="align-items:flex-start">
+    <input type="checkbox" data-upd="${i}"${r.apply?" checked":""}${dis}>
+    <span><b>${esc(r.name||"—")}</b> ${tag}
+      <span class="hint" style="display:block">${esc(r.why)}${r.pack?" · "+esc(r.pack):""}</span></span></label>`;
+}
+function openUpdateReview(){
+  const {rows,anyRules}=diffCharacter();
+  if(!anyRules){openModal("Check for updates",`<p class="hint">No rules packs are loaded, so there's nothing to compare against. Import a pack from Settings first.</p>`);return;}
+  const actionable=rows.filter(r=>r.type==="changed"||r.type==="added");
+  if(!rows.length){
+    markCharChecked();
+    openModal("Check for updates",`<p>Everything on this sheet already matches your loaded rules.</p><p class="hint">Marked as checked against v${esc(APP_VERSION)}.</p>`);
+    return;
+  }
+  _updRows=rows;
+  let body=`<p class="hint">Ticked items will be rewritten from your loaded rules packs. Your own numbers — quantities, what's equipped or prepared, uses spent — are never touched.</p>`;
+  /* Only worth offering when there is more than one thing to tick. The buttons
+     never touch disabled rows — those can't be applied at all. */
+  if(actionable.length>1){
+    body+=`<div class="m-actions" style="justify-content:flex-start;gap:8px;margin:2px 0 6px">
+      <button class="tbtn" id="updAll" type="button">Select all</button>
+      <button class="tbtn" id="updNone" type="button">Select none</button>
+      <span class="hint" id="updCount" style="align-self:center"></span></div>`;
+  }
+  ["features","spells","inventory"].forEach(cat=>{
+    const inCat=rows.map((r,i)=>[r,i]).filter(([r])=>r.cat===cat);
+    if(!inCat.length)return;
+    body+=`<div class="spell-h">${esc(UPD_LABELS[cat]||cat)} (${inCat.length})</div>`;
+    body+=inCat.map(([r,i])=>updRowHTML(r,i)).join("");
+  });
+  const note=rows.some(r=>r.type==="unmatched"||r.type==="ambiguous")
+    ? `<p class="hint" style="margin-top:8px">Greyed-out rows can't be updated automatically — either the entry isn't in a loaded pack, or the same name appears in more than one and there's no way to tell which you used. Nothing is ever deleted.</p>`:"";
+  body+=note+`<div class="m-actions" style="flex-wrap:wrap;gap:8px">
+    <button class="tbtn" id="updCancel">Cancel</button>
+    <button class="tbtn primary" id="updGo">Back up and update</button></div>`;
+  openModal("Updates for "+(character.name||"this character"),body);
+  const go=document.getElementById("updGo");
+  const pickable=()=>[...document.querySelectorAll("#mBody [data-upd]:not([disabled])")];
+  const sync=()=>{const n=document.querySelectorAll("#mBody [data-upd]:checked").length;
+    go.textContent=n?`Back up and update ${n}`:"Back up and mark checked";
+    const cnt=document.getElementById("updCount");
+    if(cnt)cnt.textContent=`${n} of ${pickable().length} selected`;};
+  const setAll=v=>{pickable().forEach(b=>{b.checked=v;});sync();};
+  const bAll=document.getElementById("updAll"), bNone=document.getElementById("updNone");
+  if(bAll)bAll.addEventListener("click",()=>setAll(true));
+  if(bNone)bNone.addEventListener("click",()=>setAll(false));
+  /* #mBody is the shared modal body and outlives this modal — one delegated
+     listener installed once, not a new one on every review */
+  if(!_updWired){document.getElementById("mBody").addEventListener("change",e=>{
+    if(e.target&&e.target.matches&&e.target.matches("[data-upd]")&&_updSync)_updSync();});_updWired=true;}
+  _updSync=sync;sync();
+  document.getElementById("updCancel").addEventListener("click",closeModal);
+  go.addEventListener("click",()=>{
+    const picked=[...document.querySelectorAll("#mBody [data-upd]:checked")].map(el=>_updRows[num(el.dataset.upd)]).filter(Boolean);
+    commitUpdates(picked,actionable.length);
+  });
+}
+let _updRows=[],_updWired=false,_updSync=null;
+function markCharChecked(){
+  character.appVersion=APP_VERSION;
+  if(character.skipUpdate)delete character.skipUpdate;
+  libTouch();scheduleSave();
+}
+/* Finish the update once a backup exists. `where` describes it for the receipt. */
+function finishUpdates(picked,offered,where){
+  const n=applyUpdates(picked);
+  markCharChecked();
+  renderAll();renderHome();
+  const skipped=Math.max(0,offered-n);
+  openModal("Updated",`<p>${n?`Updated <b>${n}</b> item${n===1?"":"s"}`:"Marked as checked"}${skipped?`, left <b>${skipped}</b> alone`:""}.</p>
+    <p class="hint">${where}</p>`);
+}
+function commitUpdates(picked,offered){
+  /* Back up FIRST — an update without a backup is exactly what this feature
+     promised not to do. But storage being full must not be a dead end: a
+     downloaded file is a perfectly good backup, so offer that instead of
+     refusing to go on. */
+  /* capture the name BEFORE markCharChecked() advances appVersion — otherwise
+     the confirmation tells them to look for a backup that isn't called that */
+  const tag="v"+(character.appVersion||"?");
+  const bakName=(character.name||"Character")+" (backup "+tag+")";
+  const res=backupCharacter(character,tag);
+  if(res.id){
+    finishUpdates(picked,offered,
+      `A backup was saved to your character list as “${esc(bakName)}”. Delete it from the home screen when you're happy.`);
+    return;
+  }
+  const fname=bakName.replace(/[^a-z0-9\-_ ]/gi,"").trim()+".json";
+  openModal("Save the backup as a file?",`
+    <p>Nothing has been changed yet. A backup couldn't be kept in the app because ${esc(res.error)}.</p>
+    <p>Fieldbook can download it as a file instead, then carry on with the update.</p>
+    <p class="hint">Your rules packs are what usually fills storage. Settings → Rules data → <b>Clear all</b>
+      frees the most space; your characters aren't affected and you can re-import the packs afterwards.</p>
+    <div class="m-actions" style="flex-wrap:wrap;gap:8px">
+      <button class="tbtn" id="bakCancel" type="button">Cancel</button>
+      <button class="tbtn primary" id="bakDl" type="button">Download backup and update</button>
+    </div>`);
+  document.getElementById("bakCancel").addEventListener("click",closeModal);
+  document.getElementById("bakDl").addEventListener("click",()=>{
+    try{
+      dl(new Blob([JSON.stringify(res.copy||character,null,2)],{type:"application/json"}),fname);
+    }catch(e){
+      openModal("Couldn't back up",`<p>The download didn't start, so nothing was changed.</p>
+        <p class="hint">Export this character with <b>Save</b> first, then run the check again.</p>`);
+      return;
+    }
+    finishUpdates(picked,offered,
+      `A backup was downloaded as “${esc(fname)}” — keep it until you're happy with the result. It is not in your character list, so import it if you need it back.`);
+  });
+}
+/* the nudge shown on load/import when a sheet is behind */
+function maybePromptUpdate(){
+  if(!charNeedsUpdate(character))return;
+  const {rows}=diffCharacter();
+  const n=rows.filter(r=>r.type==="changed"||r.type==="added").length;
+  if(!rows.length){markCharChecked();return;}   /* nothing to do — quietly current */
+  const was=character.appVersion?"v"+esc(character.appVersion):"an earlier version";
+  openModal("Rules updates available",`
+    <p><b>${esc(character.name||"This character")}</b> was last checked against ${was}. You're on v${esc(APP_VERSION)}.</p>
+    <p>${n?`<b>${n}</b> item${n===1?"":"s"} on this sheet ${n===1?"differs":"differ"} from your loaded rules.`:`Some entries couldn't be matched to your loaded rules.`}</p>
+    <p class="hint">Updating always takes a backup first, and never changes your own numbers. You can also just play as-is.</p>
+    <div class="m-actions" style="flex-wrap:wrap;gap:8px">
+      <button class="tbtn" id="updLater">Not now</button>
+      <button class="tbtn" id="updNever">Don't ask again for v${esc(APP_VERSION)}</button>
+      <button class="tbtn primary" id="updReview">Review updates</button>
+    </div>`);
+  document.getElementById("updLater").addEventListener("click",closeModal);
+  document.getElementById("updNever").addEventListener("click",()=>{character.skipUpdate=APP_VERSION;scheduleSave();closeModal();});
+  document.getElementById("updReview").addEventListener("click",()=>{closeModal();openUpdateReview();});
+}
 /* ================= character library + home ================= */
 function skinForSystem(sys){return sys==="dnd"?"classic":"humblewood";}
 function systemForSkin(skin){return skin==="classic"?"dnd":"humblewood";}
@@ -2488,10 +3269,14 @@ function loadCharById(id){
   try{character=migrate(JSON.parse(raw));}catch(e){return false;}
   activeId=character.id||id;
   settings.skin=skinForSystem(character.system);saveSettings();applyTheme();
-  renderAll();hideHome();return true;
+  renderAll();hideHome();
+  /* after the sheet is on screen, so the prompt has context behind it */
+  maybePromptUpdate();
+  return true;
 }
 function newCharacter(name,system){
   const c=blankChar();c.system=(system==="dnd")?"dnd":"humblewood";c.name=name||"";c.glossary=seedGlossary();
+  c.appVersion=APP_VERSION;   // safe here: runtime, long after 30-version.js has run
   character=c;activeId=c.id;
   try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){}
   libTouch();
@@ -2541,8 +3326,12 @@ function renderHome(){
     wrap.innerHTML=items.map(m=>{
       const badge=m.system==="dnd"?"D&amp;D":"Humblewood";
       const auto=lib.autoload===m.id;
+      /* behind = made before this app version, so the update tool has something
+         to offer. "" (never stamped) counts as behind. */
+      const behind=cmpVer(m.appVersion||"0.0.0",APP_VERSION)<0;
+      const ver=`<span class="verbadge${behind?" old":""}" title="${behind?"Last checked against v"+esc(m.appVersion||"an earlier version")+" — updates may be available":"Up to date with v"+esc(APP_VERSION)}">v${esc(m.appVersion||"?")}</span>`;
       return `<div class="hcard">
-        <button class="hcard-load" data-load="${esc(m.id)}"><span class="hcard-name">${esc(m.name||"Unnamed")}</span><span class="hcard-meta"><span class="sysbadge ${m.system==="dnd"?"dnd":"hbw"}">${badge}</span> ${esc(fmtWhen(m.updated))}</span></button>
+        <button class="hcard-load" data-load="${esc(m.id)}"><span class="hcard-name">${esc(m.name||"Unnamed")}</span><span class="hcard-meta"><span class="sysbadge ${m.system==="dnd"?"dnd":"hbw"}">${badge}</span> ${ver} ${esc(fmtWhen(m.updated))}</span></button>
         <button class="hcard-star ${auto?"on":""}" data-autoload="${esc(m.id)}" title="${auto?"Autoload on":"Set as autoload"}">${auto?"★":"☆"}</button>
         <button class="icon danger" data-delchar="${esc(m.id)}" title="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>`;
@@ -2907,7 +3696,7 @@ function browseItems(){
   const RAR=["Mundane","Common","Uncommon","Rare","Very Rare","Legendary","Artifact"];
   const cats=[...new Set(lib.map(catOf))].sort().map(c=>({value:c.toLowerCase(),label:c}));
   const rars=[...new Set(lib.map(rarOf))].sort((a,b)=>RAR.indexOf(a)-RAR.indexOf(b)).map(r=>({value:r.toLowerCase(),label:r}));
-  const meta=x=>[x.type,(x.rarity&&x.rarity!=="Mundane")?x.rarity:"",x.attune?("Attunement"+(x.attuneNote?" ("+x.attuneNote+")":"")):"",x.cost,(x.weight!=null?x.weight+" lb":"")].filter(Boolean).join(" · ");
+  const meta=itemMetaLine;   /* shared with the update diff — see 25-origins-items.js */
   openBrowse({
     noun:"items", items:lib, id:x=>x._id||x.name,
     search:x=>`${x.name} ${x.type||""} ${x.category||""} ${x.rarity||""}`,
@@ -2924,7 +3713,7 @@ function browseItems(){
       {key:"rar",label:"Rarity",type:"multi",options:rars,match:(e,a)=>a.has(rarOf(e).toLowerCase())},
       {key:"attune",label:"Needs attunement",type:"toggle",match:e=>!!e.attune}
     ],
-    onAdd:(entries,og,costOverride)=>{entries.forEach(x=>{const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());if(ex){ex.qty=num(ex.qty)+1;return;}const m=meta(x);const it={id:uid(),name:x.name,qty:1,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:false};if(og)it.origin=og;const c=(costOverride!=null?costOverride:costToGp(x.cost));if(c!=null)it.cost=c;if(x.weapon)it.weapon=x.weapon;character.inventory.push(it);if(it.weapon)addAttackForItem(it);});renderInventory();renderAttacks();recompute();scheduleSave();}
+    onAdd:(entries,og,costOverride)=>{entries.forEach(x=>{const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());if(ex){ex.qty=num(ex.qty)+1;return;}const m=meta(x);const it={id:uid(),name:x.name,qty:1,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:false};if(og)it.origin=og;const c=(costOverride!=null?costOverride:costToGp(x.cost));if(c!=null)it.cost=c;if(x.weapon)it.weapon=x.weapon;stampSrc(it,x,"item","items","browse");character.inventory.push(it);if(it.weapon)addAttackForItem(it);});renderInventory();renderAttacks();recompute();scheduleSave();}
   });
 }
 /* create an Attacks & Weapons entry linked to a weapon inventory item */
@@ -2963,7 +3752,7 @@ function browseSpells(){
       {key:"school",label:"School",type:"multi",options:schoolOpts,match:(e,a)=>a.has(schoolOf(e).toLowerCase())},
       {key:"conc",label:"Concentration",type:"toggle",match:e=>/concentration/i.test(e.meta||"")}
     ],
-    onAdd:(entries,og)=>{entries.forEach(x=>{if(character.spells.some(s=>String(s.name||"").toLowerCase()===String(x.name||"").toLowerCase()))return;const sp={id:uid(),name:x.name,level:num(x.level),meta:x.meta||"",text:x.text||"",prepared:false,granted:og?grantedFromOrigin(og.kind):"",origin:og||null};detectSpellAttack(sp);character.spells.push(sp);syncSpellAttack(sp);});renderSpells();renderAttacks();scheduleSave();}
+    onAdd:(entries,og)=>{entries.forEach(x=>{if(character.spells.some(s=>String(s.name||"").toLowerCase()===String(x.name||"").toLowerCase()))return;const sp={id:uid(),name:x.name,level:num(x.level),meta:x.meta||"",text:x.text||"",prepared:false,granted:og?grantedFromOrigin(og.kind):"",origin:og||null};detectSpellAttack(sp);stampSrc(sp,x,"spell","spells");character.spells.push(sp);syncSpellAttack(sp);});renderSpells();renderAttacks();scheduleSave();}
   });
 }
 
@@ -2993,6 +3782,85 @@ function openGlossForm(existing){
   });
 }
 
+/* ================= rules tables =================
+   Tables come from a rules pack as their own category (see rules-schema §6.11).
+   The converter lifts each table out of the prose it lived in and leaves a
+   "[Table: Name]" anchor behind; highlight() turns that into a tappable chip.
+   Everything here is read-only reference material — no character state. */
+function allTables(){return rules.tables||[]}
+function findTable(name){
+  const n=String(name||"").trim().toLowerCase();
+  if(!n)return null;
+  return allTables().find(t=>String(t.name||"").trim().toLowerCase()===n)||null;
+}
+/* tables belonging to an entity — lets a class show its progression table even
+   though the class blurb has no anchor in it */
+function tablesFor(name,kind){
+  const n=String(name||"").trim().toLowerCase();
+  if(!n)return [];
+  return allTables().filter(t=>String(t.owner||"").trim().toLowerCase()===n&&(!kind||t.ownerKind===kind));
+}
+function tableHTML(t){
+  if(!t||!Array.isArray(t.rows)||!t.rows.length)return `<p class="hint">This table has no rows.</p>`;
+  const al=t.align||[],a=i=>al[i]==="center"?" style=\"text-align:center\"":(al[i]==="right"?" style=\"text-align:right\"":"");
+  const cols=t.cols||[];
+  const head=cols.some(c=>c!=="")?`<thead><tr>${cols.map((c,i)=>`<th${a(i)}>${esc(c)}</th>`).join("")}</tr></thead>`:"";
+  const body=t.rows.map(r=>`<tr>${r.map((c,i)=>`<td${a(i)}>${esc(c)}</td>`).join("")}</tr>`).join("");
+  return `<div class="tbl-wrap"><table class="rtbl">${head}<tbody>${body}</tbody></table></div>`;
+}
+function tableMeta(t){
+  const bits=[];
+  if(t.owner)bits.push(t.owner+(t.ownerKind?" ("+t.ownerKind+")":""));
+  bits.push(t.rows.length+" row"+(t.rows.length===1?"":"s"));
+  return bits.join(" · ");
+}
+function openTableView(t){
+  if(!t)return;
+  openModal(t.name,`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(tableMeta(t))}</p>`+tableHTML(t));
+}
+function openTableByName(name){
+  const t=findTable(name);
+  if(t)openTableView(t);
+  else openModal(String(name||"Table"),`<p class="hint">That table isn’t in any loaded rules pack. Import a pack that includes tables from Settings.</p>`);
+}
+const TBL_KINDS=[["class","Class progression"],["subclass","Subclass progression"],["race","Species & lineages"],["spell","Spells"],["item","Items & equipment"],["feat","Feats"],["background","Backgrounds"],["rule","Rules & glossary"]];
+function renderTables(){
+  const el=document.getElementById("tablesList");if(!el)return;
+  const si=document.getElementById("tablesSearch");
+  const q=(si?si.value:"").trim().toLowerCase();
+  const list=allTables().filter(t=>{
+    if(!q)return true;
+    return (String(t.name||"")+" "+String(t.owner||"")+" "+(t.cols||[]).join(" ")).toLowerCase().includes(q);
+  });
+  el.innerHTML="";
+  if(!allTables().length){
+    el.insertAdjacentHTML("beforeend",`<div class="empty" style="line-height:1.7">No tables loaded yet. Tables come from a rules pack — <button class="linkbtn" id="tablesImport">Import rules files</button> or add a source in Settings.</div>`);
+    return;
+  }
+  if(!list.length){el.insertAdjacentHTML("beforeend",`<div class="empty">No matches.</div>`);return;}
+  const seen=new Set();
+  const groups=TBL_KINDS.map(([kind,label])=>[label,list.filter(t=>t.ownerKind===kind)]);
+  groups.forEach(g=>g[1].forEach(t=>seen.add(t)));
+  const rest=list.filter(t=>!seen.has(t));
+  if(rest.length)groups.push(["Other",rest]);
+  groups.forEach(([label,arr])=>{
+    if(!arr.length)return;
+    const h=document.createElement("div");h.className="spell-h";h.textContent=`${label} (${arr.length})`;el.appendChild(h);
+    arr.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))).forEach(t=>{
+      const d=document.createElement("div");d.className="item";
+      d.innerHTML=`<div class="top"><span class="nm">${esc(dispName(t,"tables"))}</span><span class="chip">${esc(String(t.rows.length))} rows</span>
+        <button class="icon" data-view-table="${esc(t.name)}" aria-label="View table"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+        ${t.owner?`<div class="desc hint">From ${esc(t.owner)}</div>`:""}`;
+      el.appendChild(d);
+    });
+  });
+}
+/* a row of chips linking to an entity's tables — used by the class/race views */
+function tableChipsHTML(name,kind){
+  const ts=tablesFor(name,kind);
+  if(!ts.length)return "";
+  return `<div class="tblchips">`+ts.map(t=>`<button type="button" class="tblref" data-tbl="${esc(t.name)}">${esc(t.name)}</button>`).join("")+`</div>`;
+}
 /* ================= settings modal ================= */
 function openSettings(){
   openModal("Settings",`
@@ -3017,7 +3885,7 @@ function openSettings(){
         <button class="tbtn" id="btnFetchRules">Fetch all</button>
         <button class="tbtn" id="btnImportRules">Import files</button>
         <button class="tbtn" id="btnRulesTemplate">Get templates</button>
-        <button class="tbtn" id="btnClearRules">Clear all</button>
+        <button class="tbtn danger" id="btnClearRules" style="margin-left:auto">Clear all</button>
       </div>
       <div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${rulesStatusText()}</div>
       <input type="file" id="fileRules" accept="application/json,.json" multiple class="hidefile">
@@ -3026,6 +3894,11 @@ function openSettings(){
       <p class="hint">Everything currently in your rules pool, grouped by file (or source). Remove any piece you no longer want loaded.</p>
       <div id="rulesData"></div>
     </div>
+    ${activeId?`<div style="border-top:1px dotted var(--hair);margin:14px 0 12px"></div>
+    <div class="field"><label class="f">This character</label>
+      <p class="hint">Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compare this sheet against your loaded rules and update what you choose. A backup is always saved first.</p>
+      <div class="m-actions" style="justify-content:flex-start"><button class="tbtn" id="btnCharUpdate">Check for rules updates</button></div>
+    </div>`:""}
     <div style="border-top:1px dotted var(--hair);margin:14px 0 12px"></div>
     <div class="m-actions" style="justify-content:flex-start">
       <button class="tbtn" id="btnExportSettings">Export settings</button>
@@ -3043,7 +3916,8 @@ function openSettings(){
   document.getElementById("srcList").addEventListener("click",e=>{const d=e.target.closest("[data-src-del]");if(!d)return;settings.rulesSources.splice(num(d.dataset.srcDel),1);saveSettings();renderSrcRows();});
   document.getElementById("addSrc").addEventListener("click",()=>{const i=document.getElementById("newSrc");const v=i.value.trim();if(!v)return;settings.rulesSources.push(v);i.value="";saveSettings();renderSrcRows();});
   document.getElementById("btnFetchRules").addEventListener("click",fetchAllRules);
-  document.getElementById("btnClearRules").addEventListener("click",()=>{resetRules();saveRulesCache();refreshRulesUI();updateRulesStatus("Rules cleared.","");});
+  document.getElementById("btnClearRules").addEventListener("click",clearAllRules);
+  {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());
   document.getElementById("fileRules").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
@@ -3056,34 +3930,71 @@ function openSettings(){
     }catch(err){alert("Not a valid settings file.")}};r.readAsText(f);e.target.value="";});
 }
 function rulesStatusText(){
-  const k=(rules.keywords||[]).length,f=(rules.features||[]).length,i=(rules.items||[]).length,s=(rules.spells||[]).length,r=(rules.races||[]).length,c=(rules.classes||[]).length;
-  return (k+f+i+s+r+c)?`Loaded${rules.name?" “"+rules.name+"”":""}: ${r} races · ${c} classes · ${k} keywords · ${f} traits · ${i} items · ${s} spells.`:"No rules loaded.";
+  const k=(rules.keywords||[]).length,f=(rules.features||[]).length,i=(rules.items||[]).length,s=(rules.spells||[]).length,r=(rules.races||[]).length,c=(rules.classes||[]).length,t=(rules.tables||[]).length;
+  return (k+f+i+s+r+c+t)?`Loaded${rules.name?" “"+rules.name+"”":""}: ${r} races · ${c} classes · ${k} keywords · ${f} traits · ${i} items · ${s} spells${t?" · "+t+" tables":""}.`:"No rules loaded.";
 }
 function updateRulesStatus(msg,cls){const el=document.getElementById("rulesStatus");if(el){el.textContent=msg||rulesStatusText();el.className="status "+(cls||"");}}
-function refreshRulesUI(){renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderAllRT();}
-const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses"];
+function refreshRulesUI(){renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderAllRT();}
+const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
+/* display names for a category — one map, used by both the group summary and
+   the headings in the loaded-data list */
+const CAT_NAMES={keywords:"Glossary",features:"Traits",items:"Items",spells:"Spells",races:"Species",classes:"Classes",feats:"Feats",backgrounds:"Backgrounds",subclasses:"Subclasses",tables:"Tables"};
+function catName(c){return CAT_NAMES[c]||c;}
 function loadedRulesGroups(){
   const groups={};
   RULE_CATS.forEach(cat=>(rules[cat]||[]).forEach(e=>{
     const isFile=!!e._file, label=e._file||(e._source||"Unknown");
     const key=(isFile?"f:":"s:")+label;
-    if(!groups[key])groups[key]={key,label,isFile,source:e._source||"",count:0,cats:{}};
+    if(!groups[key])groups[key]={key,label,isFile,source:e._source||"",rulebook:!!e._rulebook,count:0,cats:{}};
     groups[key].count++;groups[key].cats[cat]=(groups[key].cats[cat]||0)+1;
+    if(e._rulebook)groups[key].rulebook=true;
   }));
   return Object.values(groups).sort((a,b)=>a.label.localeCompare(b.label));
+}
+/* which heading a pack files under: a whole-system rulebook, its single
+   category, or Mixed when it spans several */
+function rulesBucket(g){
+  if(g.rulebook)return "rulebook";
+  const ks=Object.keys(g.cats);
+  return ks.length===1?ks[0]:"mixed";
 }
 function removeRulesGroup(key){
   const g=loadedRulesGroups().find(x=>x.key===key);if(!g)return;
   RULE_CATS.forEach(cat=>{if(!rules[cat])return;rules[cat]=rules[cat].filter(e=> g.isFile ? e._file!==g.label : (e._file?true:(e._source||"Unknown")!==g.label));});
   reindexRules();recomputeDups();saveRulesCache();refreshRulesUI();renderAll();renderRulesData();updateRulesStatus(rulesStatusText(),"ok");
 }
+/* Unload every rules pack. Destructive and irreversible without re-importing,
+   so it always confirms — and it says characters are safe, because "clear data"
+   reads like it might delete them. It doesn't: resetRules() only touches the
+   shared rules pool, never `character`. */
+function clearAllRules(){
+  const packs=loadedRulesGroups().length;
+  if(!packs){updateRulesStatus("Nothing loaded to clear.","");return false;}
+  const what=RULE_CATS.map(c=>{const n=(rules[c]||[]).length;return n?`${n} ${catName(c).toLowerCase()}`:null;}).filter(Boolean).join(", ");
+  if(!confirm(`Unload all rules data?\n\nThis removes ${packs} pack${packs===1?"":"s"} — ${what}.\n\nYour characters are NOT affected, but anything they reference from these packs will stop auto-filling until you import again.`))return false;
+  resetRules();saveRulesCache();refreshRulesUI();renderRulesData();renderAll();
+  updateRulesStatus("Rules cleared.","");
+  return true;
+}
 function rulesDataHTML(){
   const groups=loadedRulesGroups();
   if(!groups.length)return `<p class="hint" style="margin:4px 0">No rules data loaded.</p>`;
-  return groups.map(g=>{
-    const summary=Object.entries(g.cats).map(([c,n])=>`${n} ${c==="features"?"traits":c}`).join(" · ");
-    return `<div class="rd-row"><div class="rd-main"><div class="rd-name">${esc(g.label)}${g.isFile&&g.source?` <span class="rd-src">${esc(g.source)}</span>`:""}</div><div class="rd-sub">${esc(summary)}</div></div><button class="icon danger" data-rd-del="${esc(g.key)}" title="Remove this data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
-  }).join("");
+  const row=(g,withSummary)=>{
+    const summary=withSummary?Object.entries(g.cats).map(([c,n])=>`${n} ${catName(c).toLowerCase()}`).join(" · "):"";
+    return `<div class="rd-row"><div class="rd-main"><div class="rd-name">${esc(g.label)}${g.isFile&&g.source?` <span class="rd-src">${esc(g.source)}</span>`:""}</div>${summary?`<div class="rd-sub">${esc(summary)}</div>`:""}</div><button class="icon danger" data-rd-del="${esc(g.key)}" title="Remove this data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
+  };
+  /* whole-system packs first, then one heading per category, Mixed last */
+  const order=["rulebook"].concat(RULE_CATS,["mixed"]);
+  const label={rulebook:"Rulebook",mixed:"Mixed"};
+  let html="";
+  order.forEach(b=>{
+    const inB=groups.filter(g=>rulesBucket(g)===b);
+    if(!inB.length)return;
+    html+=`<div class="spell-h">${esc(label[b]||catName(b))} (${inB.length})</div>`;
+    /* the heading already names the category on single-category rows */
+    html+=inB.map(g=>row(g,b==="rulebook"||b==="mixed")).join("");
+  });
+  return html;
 }
 function renderRulesData(){
   const html=rulesDataHTML();
@@ -3094,7 +4005,7 @@ function renderSrcRows(){
   const srcs=settings.rulesSources||[];
   host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${i}"><button class="icon danger" data-src-del="${i}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
 }
-function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[]};}
+function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[]};}
 function keyOf(x,kind){return kind==="subclasses"?(String(x.class||"")+"|"+String(x.name||"")).trim().toLowerCase():String(kind==="keywords"?(x.term||""):(x.name||"")).trim().toLowerCase();}
 /* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules */
 function srcLabel(obj){return String(obj.system||obj.name||"Rules").trim();}
@@ -3102,7 +4013,7 @@ function mergeRules(obj,fileName){
   if(obj.name&&!rules.name)rules.name=obj.name;
   const src=srcLabel(obj);
   const traitArr=Array.isArray(obj.features)?obj.features:(Array.isArray(obj.traits)?obj.traits:null);
-  const cats={keywords:obj.keywords,features:traitArr,items:obj.items,spells:obj.spells,races:obj.races,classes:obj.classes,feats:obj.feats,backgrounds:obj.backgrounds,subclasses:obj.subclasses};
+  const cats={keywords:obj.keywords,features:traitArr,items:obj.items,spells:obj.spells,races:obj.races,classes:obj.classes,feats:obj.feats,backgrounds:obj.backgrounds,subclasses:obj.subclasses,tables:obj.tables};
   Object.keys(cats).forEach(kind=>{
     const arr=cats[kind];if(!Array.isArray(arr))return;
     /* key by SOURCE + name: re-loading the same source replaces its own entries,
@@ -3110,7 +4021,7 @@ function mergeRules(obj,fileName){
     const map=new Map((rules[kind]||[]).map(x=>[(x._source||"")+"\u0000"+keyOf(x,kind),x]));
     arr.forEach(raw=>{
       const base=(kind==="keywords")?{id:uid(),term:raw.term||"",type:raw.type==="image"?"image":"text",text:raw.text||"",image:raw.image||null,cond:!!raw.cond}:Object.assign({},raw);
-      base._source=src;if(fileName)base._file=fileName;
+      base._source=src;if(fileName)base._file=fileName;if(obj.rulebook)base._rulebook=1;
       const nm=keyOf(base,kind);if(!nm)return;
       map.set(src+"\u0000"+nm,base);
     });
@@ -3125,14 +4036,14 @@ function mergeRules(obj,fileName){
 let _ruleSeq=0;
 function reindexRules(){
   _ruleSeq=0;
-  ["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses"].forEach(kind=>{
+  RULE_CATS.forEach(kind=>{
     (rules[kind]||[]).forEach(x=>{x._id="r"+(_ruleSeq++);});
   });
 }
 /* names that appear in more than one source within a category → shown annotated */
 function recomputeDups(){
   rules._dups={};
-  ["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses"].forEach(kind=>{
+  RULE_CATS.forEach(kind=>{
     const seen={},dup=new Set();
     (rules[kind]||[]).forEach(x=>{const n=keyOf(x,kind);if(!n)return;if(seen[n])dup.add(n);seen[n]=1;});
     rules._dups[kind]=dup;
@@ -3263,6 +4174,8 @@ function wire(){
     if((m=t.closest(".dot[data-skill]"))){const k=m.dataset.skill;character.skills[k]=((character.skills[k]||0)+1)%3;recompute();scheduleSave();return;}
     if((m=t.closest("[data-stat]"))){openStatBreakdown(m.dataset.stat);return;}
     if((m=t.closest(".kw"))){const g=allGlossary().find(x=>x.id===m.dataset.gid);if(g)openGlossView(g);return;}
+    if((m=t.closest(".tblref"))){openTableByName(m.dataset.tbl);return;}
+    if((m=t.closest("[data-view-table]"))){openTableByName(m.dataset.viewTable);return;}
     if((m=t.closest("[data-edit]"))){const k=m.dataset.edit;editing[k]=!editing[k];renderRT(k);if(!editing[k])scheduleSave();return;}
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
@@ -3310,6 +4223,7 @@ function wire(){
     if((m=t.closest("[data-fuse]"))){const f=character.features.find(x=>x.id===m.dataset.fuse);if(f&&f.uses){const i=num(m.dataset.i);f.uses.used=(num(f.uses.used)===i)?i-1:i;renderFeatures();scheduleSave();}return;}
     if((m=t.closest("[data-usefeat]")))return useFeature(m.dataset.usefeat);
     if(t.closest("#glossImport"))return document.getElementById("glossRulesFiles").click();
+    if(t.closest("#tablesImport"))return document.getElementById("tablesRulesFiles").click();
     if((m=t.closest("[data-invitem]"))){const id=m.dataset.invitem,ic=invCol();ic.items[id]=!ic.items[id];renderInventory();scheduleSave();return;}
     if((m=t.closest("[data-fav-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.favItem);if(it){it.fav=!it.fav;renderInventory();scheduleSave();}return;}
     if((m=t.closest("[data-invsec]"))){const s=invCol().sections;s[m.dataset.invsec]=!s[m.dataset.invsec];renderInventory();scheduleSave();return;}
@@ -3343,7 +4257,11 @@ function wire(){
     if((m=t.closest("[data-edit-gloss]")))return openGlossForm(character.glossary.find(x=>x.id===m.dataset.editGloss));
     if((m=t.closest("[data-del-gloss]"))){const g=character.glossary.find(x=>x.id===m.dataset.delGloss);if(g&&confirm(`Delete “${g.term}”?`)){character.glossary=character.glossary.filter(x=>x.id!==g.id);renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();}return;}
   });
-  document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("kw")){e.preventDefault();const g=allGlossary().find(x=>x.id===e.target.dataset.gid);if(g)openGlossView(g);}});
+  document.addEventListener("keydown",e=>{
+    if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
+    if(e.target.classList.contains("kw")){e.preventDefault();const g=allGlossary().find(x=>x.id===e.target.dataset.gid);if(g)openGlossView(g);return;}
+    if(e.target.classList.contains("tblref")){e.preventDefault();openTableByName(e.target.dataset.tbl);}
+  });
   // star + hp
   document.getElementById("starBtn").addEventListener("click",()=>{character.inspiration=!character.inspiration;recompute();scheduleSave();});
   document.getElementById("hpPlus").addEventListener("click",()=>bumpHP(1));
@@ -3360,6 +4278,7 @@ function wire(){
   // add glossary
   document.getElementById("btnAddGloss").addEventListener("click",()=>openGlossForm());
   document.getElementById("glossSearch").addEventListener("input",()=>renderGloss());
+  document.getElementById("tablesSearch").addEventListener("input",()=>renderTables());
   document.getElementById("addFamiliarLink").addEventListener("click",()=>openFamiliarForm());
   document.getElementById("btnLevelUp").addEventListener("click",doLevelUp);
   document.getElementById("btnLevelDown").addEventListener("click",doLevelDown);
@@ -3369,18 +4288,30 @@ function wire(){
   const _vb=document.getElementById("btnVer");if(_vb){_vb.textContent="v"+APP_VERSION;_vb.addEventListener("click",openChangelog);}
   document.getElementById("btnHome").addEventListener("click",showHome);
   document.getElementById("btnCoinConvert").addEventListener("click",convertCoins);
+  document.getElementById("btnCoinAdjust").addEventListener("click",openCoinAdjust);
+  /* Coin boxes commit on change, not on input: mid-typing, "+1" is not yet the
+     number you meant. Enter commits without leaving the field. */
+  document.addEventListener("change",e=>{const c=e.target.closest&&e.target.closest("[data-coin]");if(c)applyCoinInput(c);});
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Enter")return;
+    const c=e.target.closest&&e.target.closest("[data-coin]");
+    if(c){e.preventDefault();applyCoinInput(c);c.select();}
+  });
   document.getElementById("invCollapseAll").addEventListener("click",()=>{const ic=invCol();const anyOpen=character.inventory.some(it=>!ic.items[it.id]);character.inventory.forEach(it=>{ic.items[it.id]=anyOpen;});renderInventory();scheduleSave();});
   // ---- home screen ----
   document.getElementById("homeCog").addEventListener("click",()=>{homeForceSetup=!homeForceSetup;renderHome();});
   document.getElementById("homeBack").addEventListener("click",()=>{if(activeId)hideHome();});
   document.getElementById("homeNew").addEventListener("click",openNewCharacter);
+  document.getElementById("homeLoadChar").addEventListener("click",()=>document.getElementById("fileLoad").click());
   document.getElementById("homeSkin").addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(!b)return;settings.skin=b.dataset.skin;applyTheme();saveSettings();syncHomeSetupControls();});
   document.getElementById("homeMode").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;settings.theme=b.dataset.th;applyTheme();saveSettings();syncHomeSetupControls();});
   document.getElementById("homeRough").addEventListener("click",()=>{settings.rough=!settings.rough;applyTheme();saveSettings();syncHomeSetupControls();});
   document.getElementById("homeImportBtn").addEventListener("click",()=>document.getElementById("homeRulesFiles").click());
   document.getElementById("homeRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";setTimeout(()=>{const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();},400);});
   document.getElementById("glossRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
+  document.getElementById("tablesRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
   document.getElementById("homeRulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`)){removeRulesGroup(d.dataset.rdDel);const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
+  document.getElementById("homeClearRules").addEventListener("click",()=>{if(clearAllRules()){const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
   document.getElementById("homeChars").addEventListener("click",e=>{
     let m;
     if((m=e.target.closest("[data-load]")))return loadCharById(m.dataset.load);

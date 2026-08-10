@@ -180,6 +180,75 @@ function renderPortrait(){
   el.innerHTML=character.portraitImg?`<img src="${character.portraitImg}" alt="Portrait">`:`<div class="ph">No portrait yet</div>`;
 }
 
+let _adjWired=false,_adjSync=null;
+/* One transaction across several denominations — "that costs 2gp 5sp" is a
+   single action here rather than two edits, and it can't leave you halfway
+   through if part of it would overdraw. */
+function openCoinAdjust(){
+  const keys=coinKeys();
+  const rows=keys.map(k=>{
+    const d=COIN_ALL.find(x=>x[0]===k);
+    return `<div class="coin"><label title="${d[2]}">${d[1]}</label>
+      <input type="text" inputmode="tel" data-adj="${k}" placeholder="0"
+             aria-label="Adjust ${d[2]} — e.g. 10 to gain, -5 to spend"></div>`;
+  }).join("");
+  openModal("Adjust coins",`
+    <p class="hint">How many of each you gained. Use a minus to spend: <b>-5</b>.</p>
+    <div class="coins">${rows}</div>
+    <p class="hint" id="adjPrev" style="margin-top:10px"></p>
+    <div class="m-actions"><button class="tbtn" id="adjCancel" type="button">Cancel</button>
+      <button class="tbtn primary" id="adjGo" type="button">Apply</button></div>`);
+  const boxes=()=>[...document.querySelectorAll("#mBody [data-adj]")];
+  const prev=document.getElementById("adjPrev"), go=document.getElementById("adjGo");
+  /* Work out the whole transaction before applying any of it. */
+  const plan=()=>{
+    const out={},bad=[];let any=false;
+    boxes().forEach(b=>{
+      const k=b.dataset.adj, raw=String(b.value).replace(/[\s,]/g,"").replace(/[−–—]/g,"-");
+      if(!raw)return;
+      if(!/^[+-]?\d+$/.test(raw)){bad.push(COIN_ALL.find(x=>x[0]===k)[1]);return;}
+      const delta=parseInt(raw,10);
+      if(!delta)return;
+      any=true;
+      const now=num((character.coins||{})[k]);
+      out[k]={delta,now,next:now+delta};
+    });
+    return {out,bad,any};
+  };
+  const sync=()=>{
+    const {out,bad,any}=plan();
+    const over=Object.keys(out).filter(k=>out[k].next<0);
+    if(bad.length){prev.textContent="Not a number: "+bad.join(", ");go.disabled=true;return;}
+    if(over.length){
+      prev.textContent="You don't have enough "+
+        over.map(k=>`${COIN_ALL.find(x=>x[0]===k)[1]} (have ${out[k].now}, spending ${-out[k].delta})`).join(", ")+
+        ". Auto-convert first, or use a bigger coin.";
+      go.disabled=true;return;
+    }
+    go.disabled=!any;
+    prev.textContent=any
+      ? "After: "+Object.keys(out).map(k=>`${out[k].next} ${COIN_ALL.find(x=>x[0]===k)[1]}`).join(", ")
+      : "Enter an amount to see the result.";
+  };
+  /* #mBody is the shared modal body and outlives this modal — one delegated
+     listener installed once, not a new one every time Adjust is opened. Same
+     guard as the update review list. */
+  _adjSync=sync;
+  if(!_adjWired){
+    document.getElementById("mBody").addEventListener("input",e=>{
+      if(e.target&&e.target.matches&&e.target.matches("[data-adj]")&&_adjSync)_adjSync();
+    });
+    _adjWired=true;
+  }
+  sync();
+  document.getElementById("adjCancel").addEventListener("click",closeModal);
+  go.addEventListener("click",()=>{
+    const {out}=plan();
+    character.coins=character.coins||{};
+    Object.keys(out).forEach(k=>{character.coins[k]=out[k].next;});
+    closeModal();renderCoins();scheduleSave();
+  });
+}
 /* push whole character into DOM */
 function convertCoins(){
   // value of each coin in copper; electrum counts as input but isn't generated as output
@@ -190,11 +259,55 @@ function convertCoins(){
   out.forEach(([k,v])=>{const n=Math.floor(total/v);total-=n*v;res[k]=n>0?n:"";});
   character.coins=res;renderCoins();scheduleSave();
 }
+const COIN_ALL=[["cp","CP","Copper"],["sp","SP","Silver"],["ep","EP","Electrum"],
+                ["gp","GP","Gold"],["pp","PP","Platinum"]];
+/* Electrum is a D&D-only oddity; Humblewood doesn't use it. */
+function coinKeys(){return (character.system==="dnd")?["cp","sp","ep","gp","pp"]:["cp","sp","gp"];}
+
+/* What a coin box should become, given what was typed into it.
+     "12"  -> set to 12          "+10" -> add           "-5" -> spend
+     ""    -> cleared            anything else -> null (caller puts it back)
+   Signed entries are the point of this: during play you know what you SPENT,
+   not what the new total is. Never goes below zero — you can't owe copper.
+   Accepts the unicode minus too, since the on-screen hint shows one. */
+function coinEntry(cur,raw){
+  const s=String(raw==null?"":raw).trim().replace(/[−–—]/g,"-");
+  if(!s)return "";
+  /* Space is allowed after the sign ("+ 10") but NOT inside the digits: "1 2"
+     is a slip, and quietly reading it as 12 is the sort of silent coercion
+     that loses someone their gold. Unrecognised entries are rejected instead. */
+  const digits=t=>/^\d+$/.test(t)||/^\d{1,3}(,\d{3})+$/.test(t) ? parseInt(t.replace(/,/g,""),10) : null;
+  const m=/^([+-])\s*(\S+)$/.exec(s);
+  if(m){
+    const n=digits(m[2]);
+    return n===null?null:Math.max(0,num(cur)+n*(m[1]==="-"?-1:1));
+  }
+  return digits(s);
+}
 function renderCoins(){
   const el=document.getElementById("coins");if(!el)return;
-  const ALL=[["cp","CP","Copper"],["sp","SP","Silver"],["ep","EP","Electrum"],["gp","GP","Gold"],["pp","PP","Platinum"]];
-  const keys=(character.system==="dnd")?["cp","sp","ep","gp","pp"]:["cp","sp","gp"];
-  el.innerHTML=keys.map(k=>{const d=ALL.find(x=>x[0]===k);const v=(character.coins&&character.coins[k]!=null)?character.coins[k]:"";return `<div class="coin"><label title="${d[2]}">${d[1]}</label><input type="number" data-path="character.coins.${k}" value="${esc(v)}" placeholder="0"></div>`;}).join("");
+  /* NOT data-path: that handler writes on every keystroke, which would store
+     "+" the moment you typed it and lose the number you were adding to. These
+     apply on change (blur/Enter), once the entry is complete. inputmode="tel"
+     rather than "numeric" because the numeric keypad on iOS has no sign keys. */
+  el.innerHTML=coinKeys().map(k=>{
+    const d=COIN_ALL.find(x=>x[0]===k);
+    const v=(character.coins&&character.coins[k]!=null)?character.coins[k]:"";
+    return `<div class="coin"><label title="${d[2]}">${d[1]}</label>`+
+      `<input type="text" inputmode="tel" data-coin="${k}" value="${esc(v)}" placeholder="0" `+
+      `aria-label="${d[2]} — type a number, or +10 / -5 to adjust"></div>`;
+  }).join("");
+}
+/* Commit one coin box. Returns false if the entry made no sense. */
+function applyCoinInput(inp){
+  const k=inp.dataset.coin;if(!k)return true;
+  character.coins=character.coins||{};
+  const next=coinEntry(character.coins[k],inp.value);
+  if(next===null){inp.value=(character.coins[k]!=null)?character.coins[k]:"";return false;}
+  character.coins[k]=next;
+  inp.value=next;
+  scheduleSave();
+  return true;
 }
 function renderAll(){
   renderCoins();

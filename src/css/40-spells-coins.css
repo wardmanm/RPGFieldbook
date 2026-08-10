@@ -30,3 +30,4 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .coin label{font-family:var(--head);font-size:10px;letter-spacing:.05em;color:var(--ink-soft);display:block;margin-bottom:3px}
 .coin input{text-align:center;font-weight:700}
 
+.coin-hint{margin:8px 0 0;text-align:center}

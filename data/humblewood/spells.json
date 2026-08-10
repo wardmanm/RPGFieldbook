@@ -1,0 +1,485 @@
+{
+  "system": "Humblewood",
+  "name": "Humblewood Spells (2024)",
+  "version": 1,
+  "_note": "New spells from the Humblewood setting, tagged with the class lists from the book so the picker's 'only my class' filter works. Veil of Dusk, Globe of Twilight, and Stellar Bodies are also the Night Domain's book spells; Ambush Prey is granted by the Vulpin ancestry.",
+  "spells": [
+    {
+      "name": "Gust Barrier",
+      "level": 0,
+      "meta": "Evocation · 1 action · Self · S · 1 round",
+      "text": "You spread your arms wide, becoming enveloped by the air around you. Until the end of your next turn, any ranged attack against you is made with disadvantage. A melee attacker who successfully hits you must make a Constitution saving throw against your spell save DC; on a failure, the attacker is flung up to 10 feet away from you and knocked prone.",
+      "class": [
+        "Bard",
+        "Druid",
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Elevated Sight",
+      "level": 1,
+      "meta": "Divination · 1 action · Self · V, S · Concentration, up to 1 minute",
+      "text": "You cast your eyes skyward, gaining sight from a higher vantage. You project your vision through an invisible sensor that appears in a spot up to 120 feet above you, seeing through it as if you were flying, with a full 360-degree view.\nThe sensor moves with you, keeping its height relative to you; you can use a bonus action to adjust its height, up to a maximum of 120 feet above you. While looking through the sensor you are blind, but you can switch between seeing through the sensor and through your own eyes at any time during your turn.",
+      "class": [
+        "Cleric",
+        "Druid",
+        "Ranger",
+        "Warlock",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Spiny Shield",
+      "level": 1,
+      "meta": "Abjuration · 1 reaction · Self · V, S, M · 1 round",
+      "text": "As a reaction, an ethereal barrier of force spikes interposes itself between you and an attacker. Until your next turn, when you are hit by a melee attack the barrier reduces the damage you take by 2d4 and deals that same amount of piercing damage to the attacker. The shield is ineffective against ranged attackers, but still grants a +2 bonus to AC (treat as half cover) against them for the duration.\nAt Higher Levels: When cast using a slot above 1st level, increase the effect by an additional 1d4 for every slot level above 1st.\nMaterial: a small quill.",
+      "class": [
+        "Druid",
+        "Ranger",
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Veil of Dusk",
+      "level": 1,
+      "meta": "Abjuration · 1 bonus action · 60 feet · V, S, M · Concentration, up to 10 minutes",
+      "text": "You incant toward a creature, cloaking it in a shadowy veil of darkness and silence. For the duration, the target gains a +1 bonus to its Armor Class and makes Stealth checks with advantage.\nMaterial: a pinch of soot.",
+      "class": [
+        "Druid",
+        "Warlock"
+      ]
+    },
+    {
+      "name": "Ambush Prey",
+      "level": 2,
+      "meta": "Illusion · 1 action · Self · S, M · 1 hour",
+      "text": "You channel primal predatory energies to conceal yourself and surprise your target. You become invisible for the duration, gaining advantage on all Dexterity (Stealth) checks to remain hidden. Moving 5 feet or more from the position where you cast the spell ends the effect.\nWhile you remain invisible, the first attack you make against a target unaware of your presence deals an extra 1d6 damage; this attack ends the spell.\nAt Higher Levels: When cast using a slot above 2nd level, the first attack's extra damage increases by 1d6 for every slot level above 2nd.\nMaterial: a broken twig.",
+      "class": [
+        "Ranger"
+      ]
+    },
+    {
+      "name": "Feathered Reach",
+      "level": 3,
+      "meta": "Transmutation · 1 action · Self · S, M · 1 minute",
+      "text": "You transform your arms into powerful wings and your fingers into long feathers for 1 minute, after which the feathers fall out and you float gently to the ground. While the spell is active:\n• As a bonus action you can fly up to double your movement speed; you must land when you finish the movement, but you take no fall damage while the spell lasts.\n• Once on your turn you can propel yourself upward a distance equal to half your movement speed, and may combine it with a regular jump.\n• When falling, you can use your reaction to glide, flying up to your movement speed in any direction and choosing where to land.\n• You have advantage on all Athletics checks to make a long or high jump, don't need to move 10 feet first, and triple the distance you would normally jump.\nYour hands must be free of shields and heavy weapons, and you can't be encumbered.\nMaterial: a small feather.",
+      "class": [
+        "Druid",
+        "Ranger"
+      ]
+    },
+    {
+      "name": "Globe of Twilight",
+      "level": 3,
+      "meta": "Conjuration · 1 action · Self (15-foot radius, 15 ft high) · V, S, M · Concentration, up to 10 minutes",
+      "text": "You shroud the area around you in a sphere of night sky dotted with miniature stars — twilight that conceals your allies but clearly illuminates your enemies. The area is lightly obscured by magical shadow; aside from the stars, only light produced by a spell of 3rd level or higher can illuminate inside it. Nonmagical light doesn't function inside, and other magical radiance produces only dim light in a 5-foot space.\nYou may designate any number of creatures you can see to be concealed by the shadows while in the sphere: a concealed creature has advantage on Dexterity (Stealth) checks inside and may attempt to hide at any time. Creatures within the area have disadvantage on Wisdom (Perception) checks to see those outside it.\nAll other creatures in the area are dazzled by the miniature stars, taking disadvantage on all Perception checks inside the sphere. When such a creature enters the area for the first time or starts its turn there, it must make a Wisdom saving throw or be blinded until the end of its turn.\nMaterial: a dab of pitch and a bag of glittering sand.",
+      "class": [
+        "Druid",
+        "Ranger",
+        "Warlock"
+      ]
+    },
+    {
+      "name": "Invoke the Amaranthine",
+      "level": 3,
+      "meta": "Divination · 10 minutes · Self · V, S, M · 24 hours",
+      "text": "You call upon an Amaranthine to grant you insight into the Great Rhythm. When you cast this spell, roll two d20s and record the results. For each die, choose attack roll, skill check, or saving throw (you may choose an option multiple times). For the next 24 hours, you may substitute any matching roll of an ally or enemy you can see within 60 feet with one of the recorded numbers of that type; the target still adds relevant modifiers, but otherwise the substituted number is treated as the number rolled.\nTo do this you must spend a reaction to present your holy symbol and invoke the name of the Amaranthine whose energies you called upon, any time after the roll is made but before its outcome is determined. The spell ends after 24 hours or when both dice have been expended.\nMaterial: a holy symbol of the Amaranthine. (Casting time, range, components, and duration have special elements — see the description.)",
+      "class": [
+        "Cleric",
+        "Paladin"
+      ]
+    },
+    {
+      "name": "Shape Plants",
+      "level": 4,
+      "meta": "Transmutation · 1 action · Touch · V, S · Instantaneous",
+      "text": "You alter the growth of plants. Any plant life you can see within range that fits within a 5-foot cube takes on whatever shape you desire. If the plant is a bramble or capable of growing thorns, you may turn the affected area into difficult terrain that deals 2d4 piercing damage for every 5 feet a creature moves through it. You may also increase or decrease the flowers, vines, leaves, thorns, branches, or fruit produced by any plant you shape.\nAfter one hour the magic fades and the plant resumes its normal shape. If you can use speak with plants (or a similar ability), you may persuade it to retain the new form; if the plant accepts (at the GM's discretion), the change becomes permanent.\nAt Higher Levels: When cast using a slot above 4th level, the cube of plant life you can affect increases by 5 feet for every slot level above 4th.",
+      "class": [
+        "Bard",
+        "Cleric",
+        "Druid"
+      ]
+    },
+    {
+      "name": "Stellar Bodies",
+      "level": 4,
+      "meta": "Evocation · 1 action · Special · V, S · 1 minute",
+      "text": "You create two small stars that orbit you, shedding dim light in a 10-foot radius centered on you. If a creature within 5 feet of you hits you with a melee attack, it must make a Wisdom saving throw or take 1d8 radiant damage for each star orbiting you.\nOnce per round on your turn, you may use your action to send a star streaking toward an enemy, expending it in a blinding flash. Make a ranged spell attack against a target within 120 feet, dealing 4d8 radiant damage on a hit; the target must then make a Constitution saving throw or be blinded until the start of your next turn.\nThe spell ends when its duration expires, you fall unconscious, or you have expended all of your stars.\nAt Higher Levels: When cast using a slot above 4th level, create one additional star for every two slot levels above 4th. For each additional star, the radius of dim light centered on you increases by 5 feet.",
+      "class": [
+        "Cleric",
+        "Druid",
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Glinteye",
+      "level": 1,
+      "meta": "Divination · 1 action · Self (30 feet) · M (a fine quartz crystal worth at least 100 gp) · 1 minute",
+      "text": "Holding the crystal up to your eyeline and looking through it, you perceive the true value of objects. For the duration of the spell, you can instantly determine the following information about any object you can see within 30 feet of you: The object's approximate worth in gp, and a fair market price for the object (if any) Whether or not the object possesses a magical aura Any historical or scholarly significance possessed by the object Whether or not the object was stolen within the last 10 days",
+      "class": [
+        "Bard",
+        "Cleric",
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Hearth & Home",
+      "level": 1,
+      "meta": "Conjuration · 10 minutes · 5 feet · V, S, M (a small flintstone and a pile of tinder, which the spell consumes) · 24 hours",
+      "text": "You conjure a small flagstone hearth in a space within 5 feet of you. The hearth is lit with a magical flame that emits bright light in a 20-foot radius, dim light for an additional 20 feet, and tangible warmth. For the duration, you can light or extinguish this flame as an action, but otherwise, the hearth remains lit until dispelled. While the hearth is lit, you can sense where it is in your mind and know the shortest (though not the safest) path to reach it. If you move farther than 1 mile from the conjured hearth or cast this spell again, the hearth disappears and the spell ends.",
+      "class": [
+        "Bard",
+        "Cleric",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Fillian's Wind Dance",
+      "level": 2,
+      "meta": "Evocation · 1 bonus action · Self · S · Concentration, up to 1 minute",
+      "text": "You begin a magical dance that harnesses the power of the wind. You must continue the dance to maintain concentration on the spell, which requires moving at least 5 feet each round after you cast it. While under the effect of the spell, you gain the following benefits: Your movement speed increases by 10 feet. Your movement doesn't provoke attacks of opportunity. Ranged attacks against you are made with disadvantage. For the spell's duration, your strikes are accompanied by strong gusts of wind. Once on each of your turns when you make a successful melee attack against a hostile creature, they must also succeed on a Strength saving throw or be pushed back 10 feet.",
+      "class": [
+        "Bard",
+        "Ranger",
+        "Sorcerer"
+      ]
+    },
+    {
+      "name": "Kiss of Witch Hazel",
+      "level": 2,
+      "meta": "Enchantment · 1 action · 30 feet · V, M (a fragrant flower) · Instantaneous",
+      "text": "Your kind words are infused with the power of the fabled mage witch, Hazel. A breeze carries your murmurs to an allied creature, enveloping it in a soothing fragrance that bolsters its vital energies. A target within range regains hit points equal to 1d6 + your spellcasting ability modifier. If the allied creature is blinded, deafened, or poisoned, it can immediately repeat its saving throw against the effect, ending it on a success. This spell has no effect on constructs or undead. At Higher Levels. When you cast this spell using a spell slot of 3rd level or higher, the target heals an extra 1d6 hit points for every slot level above 2nd.",
+      "class": [
+        "Bard",
+        "Druid"
+      ]
+    },
+    {
+      "name": "Nature's Guide",
+      "level": 2,
+      "meta": "Enchantment · 1 minute · 1 mile · V, M (a musical instrument and a morsel of food) · 8 hours",
+      "text": "You play an alluring song, beckoning a nearby beast or monstrosity. By offering the beckoned creature the morsel of food, it agrees to serve as your guide. The type of creature is chosen by the GM based on your location. The creature is considered charmed for the duration of the spell, but the spell ends if combat begins or if the creature takes damage. You and the charmed creature have an empathic link through which you can share simple concepts and emotions. The creature imparts its knowledge of the terrain to you and can lead you toward another creature, object, or place that you seek so long as the creature is familiar with it. The creature also leads you along paths that avoid places or creatures that it recognizes as dangerous. For example, if the creature is hunted, it avoids its predators. The creature cannot be surprised while the spell is active and informs you whenever it senses a hostile creature or situation. You can end the spell as an action, at which point the charmed condition ends and the creature leaves. If the spell is ended by combat or by damage dealt to the creature, there is a 50 percent chance it becomes hostile toward you and attacks.",
+      "class": [
+        "Bard",
+        "Druid",
+        "Ranger"
+      ]
+    },
+    {
+      "name": "Haunting Echo",
+      "level": 3,
+      "meta": "Illusion · 1 action · 60 feet · V · Instantaneous",
+      "text": "You hurl a disparaging insult at a creature within range that barrages its mind. The target must make a Wisdom saving throw, taking 4d8 psychic damage on a failed saving throw or half as much on a successful one. On a failed save the insult echoes, also causing the creature to be deafened and react oddly. At the start of the creature's next turn, roll a d4 and consult the table below to see how the creature reacts.",
+      "class": [
+        "Bard",
+        "Warlock"
+      ]
+    },
+    {
+      "name": "Mind Marble",
+      "level": 6,
+      "meta": "Transmutation · 1 action (Ritual) · Touch · V, S · Instantaneous",
+      "text": "This spell allows you to manage thoughts and memories in the form of pea-sized spheres. These spheres, called mind marbles, can be carried and are nearly weightless. A sphere can be destroyed by an effect that dispels or suppresses a 6th level spell, but it is otherwise indestructible. This spell can be used in one of two ways, chosen when you cast the spell. If either version of the spell is cast on an unwilling target, the creature can resist with a successful Wisdom saving throw. The creature makes this saving throw with advantage if it is hostile or distrustful toward you. Pluck. You can touch a creature (including yourself) to remove its thoughts and store them in a mind marble. When casting the spell, you choose some knowledge, skill, or memory to take from the target. This can be as simple as \"skill with longswords\" or as complex as \"the night of the autumn ball, from dusk to dawn.\" Whatever information you take is removed from the creature's thoughts. If knowledge was taken, the creature forgets it, but if a specific memory was taken, the creature is aware of the memory's absence despite being unable to recall it. Class features and information that a creature needs to survive (like knowing how to walk or breathe) can't be plucked. Plant. You can plant a mind marble you possess into your mind or the mind of another creature within range by pressing the orb into the creature's body. Once planted, the mind marble dissipates and the thoughts it contains take root within the mind of the target. Skills and knowledge are transferred seamlessly. Any memories planted in a creature's mind can be experienced from a first-person perspective by spending 10 minutes in quiet meditation. A creature always knows the difference between a memory that has been planted and its own.",
+      "class": [
+        "Bard",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Khaluz's Blessing",
+      "level": 1,
+      "meta": "Evocation · 1 action · Touch · V, M (a melee weapon) · Concentration, up to 1 minute",
+      "text": "You chant a holy phrase as the weapon in your hand begins to glow. You can channel this light into burning rays that scorch your enemies. The weapon radiates bright light in a 30-foot radius and dim light for an additional 30 feet. When you cast this spell, you use the weapon's light to make a ranged spell attack against a creature you can see within 60 feet. On a hit, the target takes 1d8 radiant damage. Once per turn and while concentrating on the spell, as an action you can repeat the attack. If a feature (like Extra Attack) grants you one or more additional attacks when you take the Attack action, you can only use one of your attacks to launch the burning rays. You use your additional attacks normally. At Higher Levels. When you cast this spell using a spell slot of 3rd level or higher, the damage increases by 1d8 for every two slot levels above 1st.",
+      "class": [
+        "Cleric",
+        "Druid",
+        "Paladin"
+      ]
+    },
+    {
+      "name": "Bad Berry",
+      "level": 2,
+      "meta": "Transmutation · 1 action · Touch · V, S, M (a food item) · 6 hours",
+      "text": "You weave an insidious curse into a single piece of food. The foodstuff becomes far more appetizing to the senses: loaves and pies plump and exude an inviting aroma, apples become brightly colored and have a noticeable shine, and thin stews become meals fit for a king. Yet, however appealing the food may seem, it tastes of ash. A creature that has even the smallest bite of the cursed food must make a Constitution saving throw, taking 4d8 necrotic damage and becoming poisoned on a failure or taking half as much damage on a success. The poisoned effect lasts for 12 hours.",
+      "class": [
+        "Cleric",
+        "Druid",
+        "Warlock"
+      ]
+    },
+    {
+      "name": "Cymatic Sight",
+      "level": 2,
+      "meta": "Transmutation · 1 action · Self · V, S, M (a small ceramic plate and a lock of horse hair) · Concentration, up to 1 minute",
+      "text": "2nd-level transmutation Casting Time: 1 action Range: Self Components: V, S, M (a small ceramic plate) Duration: Concentration, up to 1 minute You amplify your connection to the energies of the earth, granting you the ability to detect movement through vibrations. For the duration, you have tremorsense out to a range of 60 feet. Tremorsense allows you to detect and pinpoint the origin of vibrations within range, provided that you and the source of the vibrations are in contact with the same solid or liquid (for example, ground or water). Tremorsense cannot be used to detect flying creatures. Added to the spell lists for Cleric, Druid, Ranger, Sorcerer, Wizard",
+      "class": [
+        "Cleric",
+        "Druid",
+        "Ranger",
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Guiding Stars",
+      "level": 2,
+      "meta": "Divination · 1 action · 60 feet · V, S · Concentration, up to 1 hour",
+      "text": "Small floating stars appear, marking the safest pathway out of an area (if one exists). They twinkle brightest the moment before danger emerges, preventing you from being surprised during combat for the spell's duration. You can end the spell early as a bonus action. When you do, you can grant yourself or an allied creature within range advantage on its next ability check, attack roll, or saving throw.",
+      "class": [
+        "Cleric",
+        "Druid",
+        "Paladin",
+        "Warlock",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Healing Haze",
+      "level": 2,
+      "meta": "Conjuration · 1 action · 60 feet · V, S, M (a drop of water and a puff of air) · Concentration, up to 1 minute",
+      "text": "A cloud of silvery mist materializes in a 10-footradius sphere within range, obscuring everything within it. As a bonus action on your turn, you can move the cloud up to 30 feet in any direction. While concentrating on the spell, you can use an action to have the cloud sprinkle a gentle drizzle of rainfall down on anything within the fog. Each creature caught in the rain regains hit points equal to 1d6 + your spellcasting ability modifier.",
+      "class": [
+        "Cleric",
+        "Druid"
+      ]
+    },
+    {
+      "name": "Isolate",
+      "level": 3,
+      "meta": "Illusion · 1 action · 30 feet · V, S · 1 minute",
+      "text": "You cause a creature within range to take on a form that reflects its innermost evil. The target must succeed on a Wisdom saving throw or assume an unsettling, monstrous appearance for the duration. While transformed, the creature is plagued with dread and takes 1d8 psychic damage at the start of each of its turns. A creature reduced to 0 hit points by the psychic damage falls unconscious but is stable. This spell causes allies of the affected creature to be repulsed by the sight of them. Until the spell ends, any creature who attempts to heal the affected creature, target the affected creature with a beneficial spell, or render other forms of aid to the affected creature must succeed on a Wisdom saving throw. On a failed save, the creature rendering aid to the affected creature must choose a new target for the spell or effect, or the spell or effect fails. This spell doesn't prevent the affected creature from benefiting from area effects, such as standing inside a magic circle. If the affected creature honestly surrenders, allows itself to be captured, or performs a selfless act on another's behalf, the isolate spell immediately ends. This spell has no effect on a creature that is immune to psychic damage.",
+      "class": [
+        "Cleric",
+        "Paladin"
+      ]
+    },
+    {
+      "name": "Eat Rocks",
+      "level": 0,
+      "meta": "Conjuration · 1 action · 90 feet · V, S · Instantaneous",
+      "text": "With a mighty shout, you conjure a collection of stones to pummel and distract your foe. One target within range must succeed on a Constitution saving throw or take 1d8 bludgeoning damage. Additionally, the next attack made against the target before the start of your next turn is made with advantage. This spell's damage increases by 1d8 when you reach 5th level (2d8), 11th level (3d8), and17th level (4d8).",
+      "class": [
+        "Druid",
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Elastic Tongue",
+      "level": 0,
+      "meta": "Transmutation · 1 action · 20 feet · V, S · Instantaneous",
+      "text": "As you finish casting the spell, your tongue grows long and sticky like a toad's, shooting out from your mouth and targeting an object within range. The sticky tongue latches onto the object and pulls it to you. If you have free hands, you can immediately wield the object; otherwise, it drops at your feet. If the object is being held or carried by a creature, the creature must succeed on a Strength saving throw against your spell save DC to maintain its grip on the object. If you target an object that is too heavy to move, like a wall or a large rock, you are instead pulled toward the object, provoking opportunity attacks as normal.",
+      "class": [
+        "Druid",
+        "Sorcerer",
+        "Warlock",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Ethereal Claws",
+      "level": 0,
+      "meta": "Evocation · 1 action · Touch · S · Instantaneous",
+      "text": "Jagged, spectral claws surround your hands and feet, allowing you to attack with the ferocity of a beast. Make a melee spell attack against a creature you can reach. On a hit, the target takes 1d8 slashing damage. If the attack roll scores a critical hit, the target takes an additional 5 slashing damage. After you make the attack, the spectral claws dissipate. This spell's damage increases by 1d8 when you reach 5th level (2d8), 11th level (3d8), and 17th level (4d8).",
+      "class": [
+        "Druid",
+        "Warlock"
+      ]
+    },
+    {
+      "name": "Nettle's Needlework",
+      "level": 2,
+      "meta": "Transmutation · 1 action (Ritual) · Touch · V, S, M (a pair of scissors, fine thread, and a silver sewing needle worth at least 50 gp) · 1 hour",
+      "text": "You can cut apart or stitch together an object of your choice. Choose one when you cast this spell. Cut. You can make a surgical cut up to 20 feet long and no more than 5 feet deep into a surface or freestanding object. For the duration, the surrounding surface becomes pliable like fabric and can be pulled open as wide as 5 feet. The cut can be used by creatures to pass through the object or be used to conceal themselves inside of the object (if the interior dimensions of the object allow). When not pulled open, the cut can't be detected by the naked eye, although anyone investigating the area can discover the cut with an Intelligence (Investigation) check against your spell save DC. Alternatively, you can make a single, continuous cut through a nonmagical object less than 5 feet wide to slice it into separate parts. If the two parts are not rejoined before the spell ends, the cut becomes permanent. Stitch. You use your needle and thread to magically sew two objects together so long as the two connected objects do not exceed a volume of 125 cubic feet. This can be used to simply mend a broken object or to seal an entrance by sewing a door to its frame. Once you finish your needlework, the threads disappear, and the objects fuse together at the seam for the duration.",
+      "class": [
+        "Druid",
+        "Sorcerer",
+        "Warlock",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Briar Bastion",
+      "level": 3,
+      "meta": "Conjuration · 1 action · 60 feet · V, S, M (a single rose) · Concentration, up to 1 minute",
+      "text": "A defensive hedgerow of thorny rose-briar springs forth from the ground. You can choose to have the barrier form a wall up to 30 feet long and 5 feet tall, or a circle that is 15 feet in diameter and 10 feet tall. In either formation, the vegetation is 5 feet thick, providing threequarters cover, and creatures on both sides of it are heavily obscured. A creature that enters the briar for the first time on its turn or starts its turn inside must make a Dexterity saving throw. On a failure, it takes 3d4 piercing damage and its speed is reduced to 0 until the start of its next turn.",
+      "class": [
+        "Druid",
+        "Ranger"
+      ]
+    },
+    {
+      "name": "Entomb",
+      "level": 3,
+      "meta": "Transmutation · 1 action · 90 feet · V, S, M (a handful of wet mud) · Concentration, up to 1 minute",
+      "text": "The ground beneath an enemy softens to a mud-like consistency and begins to engulf and crush them. Choose one creature you can see within range. The target must succeed on a Strength saving throw or be restrained and take 2d8 bludgeoning damage at the start of each of its turns. A restrained creature can attempt a new saving throw at the end of its turn, ending the effect on a success. This spell has no effect on a creature that is not touching the ground.",
+      "class": [
+        "Druid",
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Rekindle",
+      "level": 3,
+      "meta": "Necromancy · 1 action · Touch · V, S, M (a piece of charcoal made from animal bone) · Concentration, up to 1 hour",
+      "text": "You touch a corpse, immolating it to give its memories form. A fiery spirit assumes the appearance of the deceased creature and plays out the actions it took in life. For the spell to work, the corpse can't be undead and must be mostly intact. The spirit uses the stat block for a fire elemental. When you cast this spell, you immediately know how long the creature lived. As you are concentrating on the spell, you can influence the spirit to act out any event from its life. The spirit peacefully reenacts the movements of the deceased without moving from the spot where the corpse was. With a dry and raspy voice that sounds like crackling tinder, it repeats the same words it spoke in life. You can choose to end the spell and disperse the spirit as an action, but if your concentration is broken or the spirit takes damage at any point, the spirit doesn't disappear. Instead, you lose control of the spirit, it becomes hostile toward all creatures within sight, and it might attack. An uncontrolled spirit can't be dismissed by you, and it disappears 1 hour after you summoned it.",
+      "class": [
+        "Druid",
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Tangled Growth",
+      "level": 3,
+      "meta": "Abjuration · 1 minute (Ritual) · Self (20-foot radius) · V, S, M (a poultice of herbs, roots, and powdered silver worth at least 50 gp, which the spell consumes) · 8 hours",
+      "text": "You sprinkle the poultice in a circle around you, creating a zone of protective natural magic. The spell's area becomes covered in tangled vines, blooming with sweet-smelling flowers that last for the duration of the spell. When you finish casting the spell, choose any number of creatures you can see (including yourself). These creatures have advantage on all saving throws while within the circle. When hostile creatures enter the area for the first time on their turn or start their turn within the area, the vegetation attacks them with constricting vines. They must succeed on a Dexterity saving throw or take 3d8 bludgeoning damage and become grappled by the vines. The escape DC is equal to your spell save DC. On a success, a creature takes half damage and is not grappled.",
+      "class": [
+        "Druid",
+        "Ranger",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Aether Aquatica",
+      "level": 4,
+      "meta": "Conjuration · 10 minutes · 30 feet · V, S, M (a gold statuette of a fish worth 20 gp, which the spell consumes, and a large body of water) · 24 hours",
+      "text": "From the depths of the water, you conjure a massive but gentle elemental to transport you across the waves. The conjured elemental is a Huge creature made of shimmering water, and it takes the shape of an aquatic creature of your choice. It has an AC of 19, 150 hit points, and a damage threshold of 20. It is immune to acid, poison, and psychic damage. The elemental has a swimming speed of 80 feet and cannot make attacks, though you can command it to take other actions on your turn. At your command, the elemental's mouth opens, creating a portal to an extradimensional space inside of it. You and up to nine other creatures of Medium size or smaller can fit in this space, which contains a common room, a cargo hold capable of storing 30 cubic feet of cargo, and quarters for yourself and your guests. The interior is fully furnished, and you can alter the number of quarters as well as the look of each area by spending 1 minute focusing on the desired change. The common room contains an oval window that shows the elemental's field of view. While you are inside the common room, you can direct the elemental to take actions. When the spell ends, or if the elemental is reduced to 0 hit points, it slowly begins to disintegrate into tiny bubbles over the next 1d10 minutes. Once it has disappeared, creatures and objects not created by the spell are flung into random spaces within 5 feet of where the elemental used to be. If the elemental has 1 or more hit points remaining, you can extend the duration by casting the spell again.",
+      "class": [
+        "Druid",
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Burrow",
+      "level": 5,
+      "meta": "Conjuration · 1 action (Ritual) · 80 feet · V, S, M (a small stone carving of a claw or a shovel) · 24 hours",
+      "text": "You conjure a 5-foot-wide hole in a solid surface within range. The hole appears to lead to an endless dark tunnel. While casting the spell, choose any number of creatures that you can see. When you or a chosen creature enters the hole, you or the creature is instantly teleported to a cozy den. Other creatures that enter the hole are immediately turned around and forced to exit it. Any spell, effect, or object that enters the hole cannot reach the den unless you allow it. The den is an extradimensional space that resembles an underground burrow and is large enough to accomodate you and ten other Medium or smaller creatures. The atmosphere inside the den is always comfortable and dry. Until the spell ends, you can command the interior to become dimly lit or dark. A 5-foot-wide porthole in the den shows you the area outside the hole and can be used to exit the space. You cannot cast spells or attack through this opening. Subsequent castings of this spell do not end the first effect, and these holes become new entrances to the den created by your first casting of this spell. Any creatures still inside the den when the spell ends appear outside the den in an unoccupied space within 20 feet of the entrance to the den.",
+      "class": [
+        "Druid",
+        "Ranger",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Enthrall Plant",
+      "level": 6,
+      "meta": "Necromancy · 1 action · 10 feet · V, S, M (an obsidian amulet worth at least 500 gp, anointed with fresh animal blood) · Concentration, up to 10 minutes",
+      "text": "Imbuing a Large or smaller mundane plant with tendrils of shadowy magic, you take control of it, causing it to grow unnaturally and uproot into a sentient, mobile servant tied to your life force. For the duration of the spell, the plant's bark or leaves ripple with dark energy and it becomes a lumbering construct with the statistics of a shield guardian. You have a telepathic link to your creation while you are on the same plane of existence. You can use this telepathic link to issue commands to your construct while you are conscious (no action required), which it does its best to obey. You can specify a simple and general course of action, such as \"Attack that creature,\" \"Run over there,\" or \"Fetch that object.\" If the plant completes the order and receives no further direction from you, it defends and preserves itself to the best of its ability. As an action, you can take total and precise control of the plant. Until the end of your next turn, the plant takes only the actions you choose and doesn't do anything that you don't allow it to do. During this time, you can also cause it to take a reaction, but this requires you to expend your own reaction. At Higher Levels. When you cast this spell using a spell slot of 7th level, you can concentrate on it for up to 1 hour. When you use a spell slot of 8th level, you can concentrate on it for up to 8 hours. When you use a spell slot of 9th level or higher, the spell no longer requires concentration.",
+      "class": [
+        "Druid",
+        "Warlock"
+      ]
+    },
+    {
+      "name": "Cairith's Corral",
+      "level": 2,
+      "meta": "Evocation · 1 action · Touch · V, S · 1 minute",
+      "text": "Shout a challenge and make a melee spell attack against a hostile creature that is Large or smaller. On a success, you summon a spectral spherical cage that traps both you and the hostile creature inside. The cage is 30 feet wide and 20 feet tall, and is an immobile, solid barrier that prevents matter from passing through it. It can be magically dispelled or suppressed (as if under the effects of the antimagic field spell). Creatures only partially within the perimeter of the cage and those too large to fit inside the cage are pushed away from the cage until they are completely outside it. A creature inside the cage can't leave it by nonmagical means. The spell ends once you or the hostile creature are reduced to 0 hit points.",
+      "class": [
+        "Paladin",
+        "Ranger"
+      ]
+    },
+    {
+      "name": "Metabolise",
+      "level": 3,
+      "meta": "Transmutation · 1 action · Self · V, S · Concentration, up to 1 hour",
+      "text": "You transform your body into the ultimate devourer, capable of eating and gaining nourishment from almost anything. While active, your bite can cut or crush any nonmagical object. Furthermore, if you eat anything that is harmful (such as poison or lava) you have resistance to any damage the substance or object would deal and advantage on saving throws to resist harmful effects caused by what you eat. As an action, you can consume 5 cubic feet worth of material within your reach, destroying the material to regain hit points equal to 1d10 + your spellcasting ability modifier. At Higher Levels. When you cast this spell using a spell slot of 5th level or higher, you can consume an additional 5 cubic feet worth of material and regain an additional 1d10 hit points per action for every two slot levels above 3rd.",
+      "class": [
+        "Ranger",
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Concussive Launch",
+      "level": 2,
+      "meta": "Transmutation · 1 action · Self (60-foot line) · V, S · Instantaneous",
+      "text": "Your flesh hardens as jets of flame from your feet propel you with tremendous velocity. You rocket forward 60 feet in a direction of your choice without provoking attacks of opportunity. Each creature in your path must make a Strength saving throw. On a failed save, a creature takes 4d8 bludgeoning damage and is knocked prone. On a successful save, a creature takes half as much damage and remains standing. Unsecured objects in your path take 4d10 bludgeoning damage, ignoring damage thresholds. If you deal damage to a creature or object in this way, you become incapacitated until the end of your next turn. The spell discharges a concussive boom audible out to 300 feet. At Higher Levels. When you cast this spell using a spell slot of 3rd level or higher, you increase the bludgeoning damage dealt to creatures by 1d8, and the bludgeoning damage dealt to objects by 1d10, for each slot level above 2nd.",
+      "class": [
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Fall Apart",
+      "level": 2,
+      "meta": "Necromancy · 1 action · Self · V, S, M (a quill and some ink) · Concentration, up to 24 hours",
+      "text": "Using a quill, you draw a dotted line around a part of your body. This body part separates from you once you finish casting the spell. How you choose to separate your body is up to you. For example, you could make a dotted line around your waist to bisect yourself into a top half and a bottom half, or you could trace the dotted line around your eye, ear, or mouth to separate it from your face. The separation deals no damage and leaves no wound. If you occupy the same space as your detached body part, you can reattach it as an action. You receive sensory information from your body part and can control it so long as you are on the same plane. Body parts that possess the ability to propel themselves (such as a hand that can skitter around on its fingers) can move up to half of your speed each turn, reducing your own movement speed by an amount equal to the distance the part travels. As a bonus action, you can take an action with your body part. The type of action is restricted by how you chose to separate yourself. For example, an eye can't speak, and a separated hand can't cast spells. Your body part uses your armor class, and any damage dealt to it is transferred to you. Once the spell ends, or once your body part takes damage, it immediately dissipates in a ghostly wisp and appears reattached to you. At Higher Levels. When you cast this spell using a spell slot of 3rd level or higher, you can separate an additional body part from yourself for each slot level above 2nd.",
+      "class": [
+        "Sorcerer",
+        "Warlock",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Wrath of Roots",
+      "level": 7,
+      "meta": "Conjuration · 1 action · 120 feet · V, S, M (a dead plant) · Instantaneous",
+      "text": "You summon snaking roots that erupt from the earth and enact nature's wrath. As the roots spread they tear up the ground, making it difficult terrain. Each creature within a 20-foot radius centered on a point you choose must make a Dexterity saving throw. A creature takes 7d12 bludgeoning damage and becomes restrained on a failed save, or takes half as much damage on a success. A restrained creature can attempt a Strength saving throw at the end of its turn, ending the effect on a success. A nonmagical object that isn't being worn or carried takes double damage if it's in the spell's range. When casting the spell, you can choose to have the roots shoot up into the air instead of spreading laterally. If you do so, the radius of the spell is reduced to 10 feet and its vertical reach is increased to 40 feet. Any flying creatures within the area of the spell's effect that fail the saving throw are forced to the ground and are restrained (but do not suffer any falling damage). At Higher Levels. When you cast this spell using a spell slot of 8th level or higher, increase the bludgeoning damage dealt by the spell by 2d12 for every slot level above 7th.",
+      "class": [
+        "Sorcerer",
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Aether Figment",
+      "level": 2,
+      "meta": "Conjuration · 10 minutes (Ritual) · Touch · V, S, M (an arcane focus or magical object worth at least 10 gp) · Instantaneous",
+      "text": "You use an arcane focus or magical item in your possession to call forth a pale figment. The translucent figment has the stats of a CR 0 beast of your choice (chosen the first time you cast this spell on the object) but has the construct creature type. The figment takes on the form of the chosen creature while the used object floats at the core of the figment. The figment gains access to any traits or properties possessed by the item, has an Intelligence score of 10, and can speak any languages you know. The construct is sentient and obeys your commands to the best of its ability. As an action, you can command the figment to revert to being an item or to turn back into a creature. While in its item form the figment can still see and hear as normal and can communicate with you telepathically out to a range of 60 feet. If the figment is reduced to 0 hit points, roll a d20. On a result of 10 or lower, the item it was created from is destroyed. Magical items of rare or higher rarity have advantage on this roll. You can only have one figment at a time. If you cast this spell while you already have a figment, you must choose which one to keep.",
+      "class": [
+        "Wizard"
+      ]
+    },
+    {
+      "name": "Arboreal Eruption",
+      "level": 3,
+      "meta": "Conjuration · 1 action · 30 feet · S, M (a seed or nut, which the spell consumes) · Concentration, up to 10 minutes",
+      "class": [
+        "Druid",
+        "Ranger",
+        "Wizard"
+      ],
+      "text": "3rd-level conjuration Casting Time: 1 action Range: 30 feet Components: S, M (a seed or nut, which the spell consumes) Duration: Concentration, up to 10 minutes You instantly cause a tree to sprout to its full height from the ground at a point within range. The tree grows to a height of 30 feet and its trunk is 5 feet wide. The tree's branches extend 10 feet out from its trunk, and each branch can support up to 250 pounds. The tree lasts for the duration. If the tree sprouts under a Large or smaller creature, that creature must succeed on a Dexterity saving throw or be flung 35 feet into the air and 15 feet away from the tree in a direction of your choice and begins to fall at the start of its turn. A creature can choose to fail the save. If the tree sprouts in an area that can't accommodate its full height, it stops growing 5 feet from any obstacle above it, and any creature it is lifting is not flung off the tree as its growth slows. Added to the spell lists for Druid, Ranger, Wizard"
+    },
+    {
+      "name": "Divert Power",
+      "level": 3,
+      "meta": "Necromancy · 1 bonus action · Touch · V, S, M (a magic item with at least 1 charge) · Instantaneous",
+      "class": [
+        "Bard",
+        "Paladin",
+        "Wizard"
+      ],
+      "text": "3rd-level necromancy Casting Time: 1 bonus action Range: Touch Components: V, S, M (a magic item with at least 1 charge) Duration: Instantaneous You touch a magic item and draw out its power to empower your next spell, absorbing the energy of up to 3 charges from the magic item, which are lost as if they had been expended. Before the end of your next turn, the next spell you cast that deals damage deals an extra 1d6 force damage for each charge you absorbed. Additionally, you have advantage on the next spell attack roll you make within the next minute."
+    },
+    {
+      "name": "Kren's Kindness",
+      "level": 1,
+      "meta": "Necromancy · 1 action · Touch · V, S · Instantaneous",
+      "class": [
+        "Bard",
+        "Cleric",
+        "Warlock"
+      ],
+      "text": "1st-level necromancy Casting Time: 1 action Range: Touch Components: V, S Duration: Instantaneous You touch a creature you can see and call upon the uncertain aid of the trickster Amaranthine Kren to grant a dubious trade of vitality. The target takes 1d8 force damage. As long as it has at least 1 hit point remaining, it then gains 1d10 temporary hit points. While these temporary hit points remain, the target cannot regain hit points. An unwilling creature that succeeds on a Charisma saving throw is unaffected. At Higher Levels. When you cast this spell using a spell slot of 2nd level or higher, the damage increases by 1d8, and the temporary hit points increase by 1d10 for each slot above 1st. Added to the spell lists for Bard, Cleric, Warlock"
+    },
+    {
+      "name": "Spectral Stampede",
+      "level": 5,
+      "meta": "Conjuration · 1 action · Self · V, S · Concentration, up to 1 minute",
+      "class": [
+        "Druid",
+        "Wizard"
+      ],
+      "text": "5th-level conjuration Casting Time: 1 action Range: Self Components: V, S Duration: Concentration, up to 1 minute You summon a stampede of spectral beasts that appear in a 30-foot-long, 10-foot-tall, and 10-foot-wide line, originating from you and running in a direction of your choice. At the end of each of your turns, the line of beasts moves straight forward at a speed of 40 feet per round. You are lifted onto the backs of the spectral beasts and are carried by them. When the stampede enters the space of any other creature, the creature must make a Dexterity saving throw, taking 8d6 bludgeoning damage on a failure or half as much damage on a success. When a creature enters the line's area, the creature must make a Dexterity saving throw. On a failure, the creature takes 6d6 bludgeoning damage. On a success, the creature climbs onto the backs of the beasts. Creatures can move while on top of the beasts as if the stampede were difficult terrain. If the stampede encounters an obstacle it can't break through, the spell ends. At Higher Levels. When you cast this spell using a spell slot of 8th level or higher, you can use a bonus action on each of your turns to direct the line of spectral beasts in another direction."
+    }
+  ]
+}

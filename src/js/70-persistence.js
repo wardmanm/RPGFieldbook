@@ -4,13 +4,54 @@ let saveTimer=null, lsOK=true, activeId=null;
 function charKey(id){return "hw-fb-c-"+id;}
 function libLoad(){try{const s=localStorage.getItem(K_LIB);if(s)return JSON.parse(s);}catch(e){}return {autoload:null,index:[]};}
 function libSave(lib){try{localStorage.setItem(K_LIB,JSON.stringify(lib));}catch(e){}}
-function libTouch(){ // update the active character's index entry (name/system/updated)
+function libTouch(){ // update the active character's index entry (name/system/version/updated)
   if(!activeId)return;
   const lib=libLoad();
-  const meta={id:activeId,name:character.name||"Unnamed",system:character.system||"humblewood",updated:Date.now()};
+  /* appVersion rides on the index so the home cards can badge it without
+     reading (and parsing) every character blob */
+  const meta={id:activeId,name:character.name||"Unnamed",system:character.system||"humblewood",appVersion:character.appVersion||"",updated:Date.now()};
   const i=lib.index.findIndex(x=>x.id===activeId);
   if(i>=0)lib.index[i]=meta;else lib.index.push(meta);
   libSave(lib);
+}
+/* Why localStorage said no, in words a player can act on. The browser's own
+   message ("QuotaExceededError") tells them nothing about what to do. */
+function storageWhy(e){
+  const n=(e&&e.name)||"", m=(e&&e.message)||"";
+  if(/quota|exceed/i.test(n+" "+m))return "your browser's storage is full";
+  if(/security|denied/i.test(n+" "+m))return "your browser is blocking storage for this page";
+  return "your browser refused to save"+(n?" ("+n+")":"");
+}
+/* Save a snapshot of a character as a separate library entry, WITHOUT switching
+   to it (that's the difference from finishImport).
+
+   Returns {id, copy} on success, or {error, copy} if it could not be stored —
+   `copy` is the snapshot either way, so a caller that can't use storage can
+   still offer it as a download rather than dead-ending.
+
+   The index write is verified rather than assumed: libSave() swallows its own
+   quota error, so without the read-back a backup could sit in storage while
+   being invisible on the home screen — and we would have told the player to go
+   and look for it there. */
+function backupCharacter(ch,tag){
+  let copy;
+  try{
+    copy=JSON.parse(JSON.stringify(ch));
+    copy.id=uid();
+    copy.name=(ch.name||"Character")+" (backup"+(tag?" "+tag:"")+")";
+    copy.isBackup=true;
+  }catch(e){return {error:"this character couldn't be copied"};}
+  try{
+    localStorage.setItem(charKey(copy.id),JSON.stringify(copy));
+  }catch(e){return {error:storageWhy(e),copy};}
+  const lib=libLoad();
+  lib.index.push({id:copy.id,name:copy.name,system:copy.system||"humblewood",appVersion:copy.appVersion||"",updated:Date.now()});
+  libSave(lib);
+  if(!libLoad().index.some(x=>x.id===copy.id)){
+    try{localStorage.removeItem(charKey(copy.id));}catch(e){}   // don't orphan it
+    return {error:"your browser's storage is full",copy};
+  }
+  return {id:copy.id,copy};
 }
 function scheduleSave(){
   const el=document.getElementById("savestate");if(el){el.textContent="Saving…";el.className="savestate";}
@@ -32,6 +73,10 @@ function migrate(s){
   // Identity & system guard.
   base.id=s.id||base.id||uid();
   base.system=(s.system==="dnd"||s.system==="humblewood")?s.system:blank.system;
+  /* Preserve the stamp, NEVER advance it. migrate() runs on every load, so
+     stamping APP_VERSION here would erase the very mismatch the update tool
+     exists to find. Only applying or dismissing an update may advance it. */
+  base.appVersion=(typeof s.appVersion==="string")?s.appVersion:"";
   // Normalize structured objects onto full defaults so missing sub-keys are filled in.
   ["hp","death","abilities","saves","skills","slots"].forEach(k=>{ base[k]=Object.assign({},blank[k],(s[k]&&typeof s[k]==="object"&&!Array.isArray(s[k]))?s[k]:{}); });
   // Coins: map legacy keys onto a full coin object.
@@ -100,6 +145,8 @@ function finishImport(ch){
   character=ch;activeId=ch.id;
   try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){}
   libTouch();settings.skin=skinForSystem(ch.system);saveSettings();applyTheme();renderAll();hideHome();
+  /* last, so it stacks after the Replace/Copy clash modal rather than under it */
+  maybePromptUpdate();
 }
 function importChar(file){
   const r=new FileReader();

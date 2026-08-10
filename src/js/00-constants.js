@@ -19,8 +19,13 @@ const FX_LABEL={};fxTargets().forEach(([l,t])=>FX_LABEL[t]=l);
 
 /* ================= state ================= */
 function uid(){return Math.random().toString(36).slice(2,9)}
+/* appVersion is the app version this character was last RECONCILED against — not
+   "last saved with". It stays "" here on purpose: this function is called at top
+   level on the line below, before 30-version.js has run, so touching APP_VERSION
+   from here would be a TDZ ReferenceError and the app would never boot.
+   newCharacter() stamps the real version; "" means "never checked". */
 function blankChar(){
-  const c={id:uid(),system:"humblewood",name:"",class:"",ancestry:"",background:"",alignment:"",xp:"",level:1,
+  const c={id:uid(),appVersion:"",system:"humblewood",name:"",class:"",ancestry:"",background:"",alignment:"",xp:"",level:1,
     ac:"",init:"",speed:"",hitdice:"",hdManual:false,inspiration:false,
     hp:{cur:"",max:"",temp:""}, death:{succ:0,fail:0},
     coins:{cp:"",sp:"",ep:"",gp:"",pp:""},
@@ -38,7 +43,7 @@ function blankChar(){
 }
 let character=blankChar();
 let settings={skin:"humblewood",theme:"light",autoload:true,rough:true,rulesSources:[]};
-let rules={name:"",version:0,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[]};
+let rules={name:"",version:0,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[]};
 
 function seedGlossary(){return [];}
 
@@ -51,6 +56,28 @@ function escReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
 function get(o,p){return p.split(".").reduce((a,k)=>a&&a[k],o)}
 function setP(o,p,v){const ks=p.split(".");const last=ks.pop();let t=o;ks.forEach(k=>t=t[k]);t[last]=v}
 function allGlossary(){return [...(rules.keywords||[]).map(k=>({...k,_locked:true})), ...character.glossary]}
+
+/* ================= fingerprints =================
+   Value hashes used by the character/rules update tool (72-char-update.js) to
+   tell "the pack changed" from "the player edited this". Kept here because they
+   are generic; the field lists and the copy-shape projections live with the
+   diff, which is what defines them. */
+function fpNorm(v){
+  if(v===null||v===undefined||v==="")return null;
+  if(Array.isArray(v))return v.map(fpNorm);
+  if(typeof v==="object"){
+    const o={};Object.keys(v).sort().forEach(k=>{const n=fpNorm(v[k]);if(n!==null)o[k]=n;});
+    return Object.keys(o).length?o:null;
+  }
+  if(typeof v==="string"){const s=v.replace(/\s+/g," ").trim();return s||null;}
+  return v;
+}
+function fpHash(v){
+  const s=JSON.stringify(fpNorm(v));
+  let h=5381;
+  for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;   /* djb2-xor, 32-bit */
+  return h.toString(36);
+}
 
 /* ================= effects engine ================= */
 function contributions(){

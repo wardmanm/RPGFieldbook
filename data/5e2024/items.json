@@ -14,6 +14,28 @@
       "effects": []
     },
     {
+      "name": "Arrow",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 0.05,
+      "cost": "5 cp",
+      "description": "Arrows are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nArrows are typically stored in a Quiver (bought separately)",
+      "effects": []
+    },
+    {
+      "name": "Arrows (20)",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "1 gp",
+      "description": "Arrows are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nArrows are typically stored in a Quiver (bought separately)",
+      "effects": []
+    },
+    {
       "name": "Bagpipes",
       "system": "XPHB",
       "category": "Tool",
@@ -59,6 +81,48 @@
         "ability": "dex",
         "notes": "Range 25/100 · Ammunition, Loading · Mastery: Vex"
       }
+    },
+    {
+      "name": "Blowgun Needle",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 0.02,
+      "cost": "2 cp",
+      "effects": []
+    },
+    {
+      "name": "Blowgun Needles (50)",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "1 gp",
+      "effects": []
+    },
+    {
+      "name": "Bolt",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 0.075,
+      "cost": "5 cp",
+      "description": "Crossbow bolts are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nBolts are typically stored in a Crossbow Bolt Case (bought separately)",
+      "effects": []
+    },
+    {
+      "name": "Bolts (20)",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 1.5,
+      "cost": "1 gp",
+      "description": "Crossbow bolts are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nBolts are typically stored in a Crossbow Bolt Case (bought separately)",
+      "effects": []
     },
     {
       "name": "Breastplate",
@@ -178,6 +242,36 @@
       "effects": []
     },
     {
+      "name": "Crossbow Bolt",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 0.075,
+      "cost": "5 cp",
+      "effects": []
+    },
+    {
+      "name": "Crossbow Bolts (20)",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 1.5,
+      "cost": "1 gp",
+      "effects": []
+    },
+    {
+      "name": "Crystal",
+      "system": "XPHB",
+      "category": "Focus",
+      "type": "Spellcasting Focus",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "10 gp",
+      "effects": []
+    },
+    {
       "name": "Dagger",
       "system": "XPHB",
       "category": "Weapon",
@@ -233,6 +327,28 @@
       "weight": 10,
       "cost": "25 gp",
       "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "Firearm Bullet",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 0.2,
+      "cost": "3 sp",
+      "description": "Firearm Bullets are destroyed upon use in a modern firearm",
+      "effects": []
+    },
+    {
+      "name": "Firearm Bullets (10)",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "3 gp",
+      "description": "Firearm Bullets are destroyed upon use in a modern firearm",
       "effects": []
     },
     {
@@ -699,6 +815,56 @@
       }
     },
     {
+      "name": "Needle",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 0.02,
+      "cost": "2 cp",
+      "description": "Blowgun needles are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nNeedles are typically stored in a Pouch (bought separately)",
+      "effects": []
+    },
+    {
+      "name": "Needles (50)",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "1 gp",
+      "description": "Blowgun needles are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nNeedles are typically stored in a Pouch (bought separately)",
+      "effects": []
+    },
+    {
+      "name": "Net",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Martial Ranged Weapon",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "1 gp",
+      "description": "Range 5/15 ft · Properties: S, Thrown. Special: A Large or smaller creature hit by a net is restrained until it is freed. A net has no effect on creatures that are formless, or creatures that are Huge or larger. A creature can use its action to make a DC 10 Strength check, freeing itself or another creature within its reach on a success. Dealing 5 slashing damage to the net (AC 10) also frees the creature without harming it, ending the effect and destroying the net. When you use an action, bonus action, or reaction to attack with a net, you can make only one attack regardless of the number of attacks you can normally make",
+      "effects": [],
+      "weapon": {
+        "kind": "ranged",
+        "dice": "",
+        "damageType": "",
+        "ability": "dex",
+        "notes": "Range 5/15 · S, Thrown"
+      }
+    },
+    {
+      "name": "Orb",
+      "system": "XPHB",
+      "category": "Focus",
+      "type": "Spellcasting Focus",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "20 gp",
+      "effects": []
+    },
+    {
       "name": "Padded Armor",
       "system": "XPHB",
       "category": "Armor",
@@ -837,6 +1003,16 @@
       "effects": []
     },
     {
+      "name": "Rod",
+      "system": "XPHB",
+      "category": "Focus",
+      "type": "Spellcasting Focus",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "10 gp",
+      "effects": []
+    },
+    {
       "name": "Scale Mail",
       "system": "XPHB",
       "category": "Armor",
@@ -959,6 +1135,27 @@
       }
     },
     {
+      "name": "Sling Bullet",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 0.075,
+      "description": "Sling bullets are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nSling Bullets are typically stored in a Pouch (bought separately)",
+      "effects": []
+    },
+    {
+      "name": "Sling Bullets (20)",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Mundane",
+      "weight": 1.5,
+      "cost": "4 cp",
+      "description": "Sling bullets are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nSling Bullets are typically stored in a Pouch (bought separately)",
+      "effects": []
+    },
+    {
       "name": "Smith's Tools",
       "system": "XPHB",
       "category": "Tool",
@@ -997,6 +1194,24 @@
       "cost": "200 gp",
       "description": "AC 17 · Requires Strength 15 · Disadvantage on Stealth",
       "effects": []
+    },
+    {
+      "name": "Staff",
+      "system": "XPHB",
+      "category": "Staff",
+      "type": "Simple Weapon",
+      "rarity": "Mundane",
+      "weight": 4,
+      "cost": "5 gp",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d6",
+        "damageType": "bludgeoning",
+        "ability": "str",
+        "notes": "Versatile 1d8 · Mastery: Topple"
+      }
     },
     {
       "name": "Studded Leather Armor",
@@ -1047,6 +1262,16 @@
       "weight": 1,
       "cost": "30 gp",
       "description": "Ability:: Charisma\nUtilize:: Play a known tune (DC 10), or improvise a song (DC 15)",
+      "effects": []
+    },
+    {
+      "name": "Wand",
+      "system": "XPHB",
+      "category": "Focus",
+      "type": "Spellcasting Focus",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "10 gp",
       "effects": []
     },
     {
@@ -1124,6 +1349,24 @@
       "cost": "1 gp",
       "description": "Ability:: Dexterity\nUtilize:: Carve a pattern in wood (DC 10)\nCraft:: Club, Greatclub, Quarterstaff, Ranged weapons (except Pistol, Musket, and Sling), Arcane Focus, Arrows, Bolts, Druidic Focus, Ink Pen, Needles",
       "effects": []
+    },
+    {
+      "name": "Wooden Staff",
+      "system": "XPHB",
+      "category": "Focus",
+      "type": "Simple Weapon",
+      "rarity": "Mundane",
+      "weight": 4,
+      "cost": "5 gp",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d6",
+        "damageType": "bludgeoning",
+        "ability": "str",
+        "notes": "Versatile 1d8 · Mastery: Topple"
+      }
     }
   ]
 }

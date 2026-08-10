@@ -1,0 +1,1434 @@
+{
+  "system": "Humblewood",
+  "name": "Humblewood Tables",
+  "version": 1,
+  "tables": [
+    {
+      "name": "Ambassador Bond",
+      "owner": "Ambassador",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Bond"
+      ],
+      "rows": [
+        [
+          "1",
+          "I love my home and feel the weight of my responsibility to represent it well."
+        ],
+        [
+          "2",
+          "I was blackmailed by someone back home into taking up this mission."
+        ],
+        [
+          "3",
+          "I have fallen in love with someone from outside my home, and now my loyalties are torn."
+        ],
+        [
+          "4",
+          "Although I am working for the authorities in my homeland, I am actually a double agent for a different faction back home."
+        ],
+        [
+          "5",
+          "I leapt at the chance to leave my homeland because I did something unforgivable."
+        ],
+        [
+          "6",
+          "I have children back home, and I must work to secure a safer world for them."
+        ]
+      ]
+    },
+    {
+      "name": "Ambassador Flaw",
+      "owner": "Ambassador",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Flaw"
+      ],
+      "rows": [
+        [
+          "1",
+          "My enthusiasm for the new things around me can become overbearing."
+        ],
+        [
+          "2",
+          "I can never fully relax."
+        ],
+        [
+          "3",
+          "When I am met with suspicion, I react in kind."
+        ],
+        [
+          "4",
+          "My thoughts are always far from the present moment."
+        ],
+        [
+          "5",
+          "I enjoy using my unusual status to make others feel off balance."
+        ],
+        [
+          "6",
+          "I get envious of the nobility and upper class folk I get to mingle with."
+        ]
+      ]
+    },
+    {
+      "name": "Ambassador Ideal",
+      "owner": "Ambassador",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Ideal"
+      ],
+      "rows": [
+        [
+          "1",
+          "Connection. Communication is the antidote to conflict. (Good)"
+        ],
+        [
+          "2",
+          "Respect. Guests should abide by the laws of their hosts. (Lawful)"
+        ],
+        [
+          "3",
+          "Adaptability. Change yourself to suit the situation. (Chaotic)"
+        ],
+        [
+          "4",
+          "Open Minded. It is natural that things will be different in different places. (Neutral)"
+        ],
+        [
+          "5",
+          "Conniving. Learning about others is the first step to manipulating them. (Evil)"
+        ],
+        [
+          "6",
+          "Mending. Even the most damaged relationship can be mended with good mediation. (Good)"
+        ]
+      ]
+    },
+    {
+      "name": "Ambassador Personality Trait",
+      "owner": "Ambassador",
+      "ownerKind": "background",
+      "cols": [
+        "d8",
+        "Personality Trait"
+      ],
+      "rows": [
+        [
+          "1",
+          "I have been to many places and I love to talk about them."
+        ],
+        [
+          "2",
+          "I collect local currencies from every different region that I visit."
+        ],
+        [
+          "3",
+          "I come from humble beginnings and look to prove myself to the world."
+        ],
+        [
+          "4",
+          "I am eager to experience everything new around me."
+        ],
+        [
+          "5",
+          "I write the name of every person I meet in a notebook so I don't forget them."
+        ],
+        [
+          "6",
+          "I am sometimes overtaken by homesickness and melancholy."
+        ],
+        [
+          "7",
+          "I believe a firm handshake is the best first impression."
+        ],
+        [
+          "8",
+          "I try to learn at least twenty words of the language of each new place before I visit."
+        ]
+      ]
+    },
+    {
+      "name": "Bandit Defector Bond",
+      "cols": [
+        "d6",
+        "Bond"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "I did some hard time in Alderheart's prison, and the perch guard who arrested me still has it out for me."
+        ],
+        [
+          "2",
+          "I stole something valuable from the Captain of my unit. I'm in big trouble if they ever find me."
+        ],
+        [
+          "3",
+          "I harbor a terrible secret that might change how people think of me if it got out."
+        ],
+        [
+          "4",
+          "I still sympathize with the Coalition's aims, I just believe there's a better way."
+        ],
+        [
+          "5",
+          "My friends in the Coalition didn't understand why I had to leave. They've branded me a traitor."
+        ],
+        [
+          "6",
+          "I had people in the Coalition who looked up to me as a leader. They might still follow me, if I could only reach them."
+        ]
+      ],
+      "owner": "Bandit Defector",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Bandit Defector Flaw",
+      "cols": [
+        "d6",
+        "Flaw"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "I'm always ready to bail when something goes wrong."
+        ],
+        [
+          "2",
+          "Whenever I see something valuable, I can't help but think of a way to steal it."
+        ],
+        [
+          "3",
+          "It's hard for me to trust people. I've been burned before."
+        ],
+        [
+          "4",
+          "I have a problem with authority. Nobody tells me what to do."
+        ],
+        [
+          "5",
+          "There's a warrant out for my arrest."
+        ],
+        [
+          "6",
+          "I have a bad habit that I picked up on the road."
+        ]
+      ],
+      "owner": "Bandit Defector",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Bandit Defector Ideal",
+      "cols": [
+        "d6",
+        "Ideal"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Repentance. I've done terrible things in the past, and I want to try and make up for them. (Good)"
+        ],
+        [
+          "2",
+          "Nature. I've seen what's happening to the forest, and it's bigger than all of us. We're all doomed unless we do something about it. (Neutral)"
+        ],
+        [
+          "3",
+          "Friendship. My friends are like family to me, and I'll keep trying to do right by them until the end. (Good)"
+        ],
+        [
+          "4",
+          "Self-Preservation. Any good rat knows when it's time to flee a sinking ship. I want to be clear of the Bandit Coalition when it goes down. (Evil)"
+        ],
+        [
+          "5",
+          "Compassion. The struggle between humblefolk and birdfolk will only lead to more bloodshed. It needs to stop somewhere. (Good)"
+        ],
+        [
+          "6",
+          "Freedom. I just want to be free to live my own life, and make my own way in the world. (Chaotic)"
+        ]
+      ],
+      "owner": "Bandit Defector",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Bandit Defector Personality Trait",
+      "cols": [
+        "d8",
+        "Personality Trait"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "I am plucky and confident in my abilities, at least, that's what I want others to think."
+        ],
+        [
+          "2",
+          "I often crack jokes to lighten the mood."
+        ],
+        [
+          "3",
+          "I like to keep my secrets, and those who try to pry into my life irritate me."
+        ],
+        [
+          "4",
+          "I have trouble sleeping unless I'm on the ground (or floor) in my bedroll."
+        ],
+        [
+          "5",
+          "I picked up many stories during my time on the road, and I have one for every occasion."
+        ],
+        [
+          "6",
+          "You mess with my friends, you mess with me."
+        ],
+        [
+          "7",
+          "I never really had a plan in life, I tend to just go with the flow."
+        ],
+        [
+          "8",
+          "I'm as cautious as they come."
+        ]
+      ],
+      "owner": "Bandit Defector",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Bandit Specialty",
+      "cols": [
+        "d6",
+        "Bandit Specialty"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Lookout"
+        ],
+        [
+          "2",
+          "Lifter"
+        ],
+        [
+          "3",
+          "Tug"
+        ],
+        [
+          "4",
+          "Runner"
+        ],
+        [
+          "5",
+          "Hustler"
+        ],
+        [
+          "6",
+          "Captain"
+        ]
+      ],
+      "owner": "Bandit Defector",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Courtier Bond",
+      "owner": "Courtier",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Bond"
+      ],
+      "rows": [
+        [
+          "1",
+          "I'm scared my friends won't like me if they find out who I truly am."
+        ],
+        [
+          "2",
+          "I was very close with someone at court, but they betrayed me."
+        ],
+        [
+          "3",
+          "I believe the tales of chivalry that I grew up hearing and want to be the kind of gallant noble that exists in stories."
+        ],
+        [
+          "4",
+          "I hate the court I grew up in and hate the marks it left on my personality even more."
+        ],
+        [
+          "5",
+          "I love the opulence and comfort of court life."
+        ],
+        [
+          "6",
+          "I was raised by a nursemaid who I love like a mother. I know her far better than my own parents."
+        ]
+      ]
+    },
+    {
+      "name": "Courtier Flaw",
+      "owner": "Courtier",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Flaw"
+      ],
+      "rows": [
+        [
+          "1",
+          "Raised in opulence, I am unaware of my own privilege."
+        ],
+        [
+          "2",
+          "I don't respect the time of others."
+        ],
+        [
+          "3",
+          "I fall back on stiff politeness, finding it hard to connect with others."
+        ],
+        [
+          "4",
+          "I judge folk for their lack of refinement."
+        ],
+        [
+          "5",
+          "I am terrified of the world beyond the familiarity of the court."
+        ],
+        [
+          "6",
+          "I treat my relationships with others as trinkets to be tossed aside when they no longer entertain me."
+        ]
+      ]
+    },
+    {
+      "name": "Courtier Ideal",
+      "owner": "Courtier",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Ideal"
+      ],
+      "rows": [
+        [
+          "1",
+          "Dignity. Respect causes the relationships between folk of all kinds to flourish. (Lawful)"
+        ],
+        [
+          "2",
+          "Sincerity. Even though it may hinder my prospects, I want to live according to my truth. (Good)"
+        ],
+        [
+          "3",
+          "Caution. Decisions are best made after careful deliberation of all sides. (Neutral)"
+        ],
+        [
+          "4",
+          "Dominance. Power and privilege are mine by right. (Evil)"
+        ],
+        [
+          "5",
+          "Liberty. I will never let myself be stifled by stuffy manners again. (Chaotic)"
+        ],
+        [
+          "6",
+          "Change. I will be part of the revolution, whether from the inside or the outside. (Chaotic)"
+        ]
+      ]
+    },
+    {
+      "name": "Courtier Personality Trait",
+      "owner": "Courtier",
+      "ownerKind": "background",
+      "cols": [
+        "d8",
+        "Personality Trait"
+      ],
+      "rows": [
+        [
+          "1",
+          "I love to gossip."
+        ],
+        [
+          "2",
+          "I'm deeply awkward outside of the social situation I grew up in."
+        ],
+        [
+          "3",
+          "I'm highly aware of other folks' comfort and discomfort in social situations."
+        ],
+        [
+          "4",
+          "I wield my refined manners with the elegance of a rapier."
+        ],
+        [
+          "5",
+          "I see every interaction as a transaction."
+        ],
+        [
+          "6",
+          "Etiquette is very important to me."
+        ],
+        [
+          "7",
+          "I have an endless supply of amusing anecdotes."
+        ],
+        [
+          "8",
+          "I have a strong sense of duty and propriety."
+        ]
+      ]
+    },
+    {
+      "name": "Community Place",
+      "cols": [
+        "d6",
+        "Community Place"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "I am considered weak or unskilled and many treat me like a fledgling."
+        ],
+        [
+          "2",
+          "I am looked upon as a traitor to my people."
+        ],
+        [
+          "3",
+          "My family wants me to return to the perch, but I just can't."
+        ],
+        [
+          "4",
+          "I am not welcome back in my home perch."
+        ],
+        [
+          "5",
+          "I am viewed as an oddity, someone for others to laugh at and tease."
+        ],
+        [
+          "6",
+          "I have found a new community on the forest floor."
+        ]
+      ],
+      "owner": "Grounded",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Grounded Bond",
+      "cols": [
+        "d6",
+        "Bond"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "My family has been the subject of ridicule ever since I left my home perch."
+        ],
+        [
+          "2",
+          "A bully from my childhood now holds a position of power in my home perch."
+        ],
+        [
+          "3",
+          "I follow the teachings of a wise outcast I met in my travels."
+        ],
+        [
+          "4",
+          "I feel kinship to a culture outside my own."
+        ],
+        [
+          "5",
+          "I won't tolerate anyone who insults me or my friends."
+        ],
+        [
+          "6",
+          "I have found a new family on the forest floor, and they mean more to me than anything."
+        ]
+      ],
+      "owner": "Grounded",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Grounded Flaw",
+      "cols": [
+        "d6",
+        "Flaw"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "I am incapable of action when I'm at great heights."
+        ],
+        [
+          "2",
+          "I lash out at the slightest insult."
+        ],
+        [
+          "3",
+          "I keep a distance from others so they won't learn of my fears."
+        ],
+        [
+          "4",
+          "I project my insecurities onto others."
+        ],
+        [
+          "5",
+          "I am uncouth and mannerless."
+        ],
+        [
+          "6",
+          "I find hard to trust other birdfolk."
+        ]
+      ],
+      "owner": "Grounded",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Grounded Ideal",
+      "cols": [
+        "d6",
+        "Ideal"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Adversity. Others think of me as weak, but I will prove my worth with hard work and determination. (Lawful)"
+        ],
+        [
+          "2",
+          "Encouragement. I try to seek out and support others like me who are seen as outcasts. (Good)"
+        ],
+        [
+          "3",
+          "Exploration. I yearn to experience unique cultures and discover new places. (Chaotic)"
+        ],
+        [
+          "4",
+          "Safety. In this dangerous world, it's best to keep your head down and stay cautious. (Neutral)"
+        ],
+        [
+          "5",
+          "Rebellion. Who cares what others think of me, so long as my actions reflect how I feel in my heart? (Chaotic)"
+        ],
+        [
+          "6",
+          "Compromise. The best way to respect each other's differences is to find a solution that doesn't exclude anyone. (Good)"
+        ]
+      ],
+      "owner": "Grounded",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Grounded Personality Trait",
+      "cols": [
+        "d8",
+        "Personality Trait"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "I always second guess my choices."
+        ],
+        [
+          "2",
+          "I have learned to not let the comments of others affect me."
+        ],
+        [
+          "3",
+          "I'm eager to show the benefits of my unique perspective."
+        ],
+        [
+          "4",
+          "I'm slow to trust someone new, but open up over shared hardships."
+        ],
+        [
+          "5",
+          "I manufacture difficult situations to prove my abilities."
+        ],
+        [
+          "6",
+          "I get embarrassed easily, even when someone tries to compliment me."
+        ],
+        [
+          "7",
+          "I will deny my fears to everyone."
+        ],
+        [
+          "8",
+          "I want to see how others handle situations I'm afraid of."
+        ]
+      ],
+      "owner": "Grounded",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Seaborn Bond",
+      "owner": "Seaborn",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Bond"
+      ],
+      "rows": [
+        [
+          "1",
+          "The crew of my ship is closer to me than family."
+        ],
+        [
+          "2",
+          "A sea beast sank my ship. I will have my revenge."
+        ],
+        [
+          "3",
+          "The sea holds many dangers, and my superstitions keep me safe."
+        ],
+        [
+          "4",
+          "A wise weather watcher took me under their wing as a child and taught me so much."
+        ],
+        [
+          "5",
+          "From my first steps on land, I knew that something special awaited here for me."
+        ],
+        [
+          "6",
+          "As a child, I saw something glinting in the depths. I've always longed to find that treasure."
+        ]
+      ]
+    },
+    {
+      "name": "Seaborn Flaw",
+      "owner": "Seaborn",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Flaw"
+      ],
+      "rows": [
+        [
+          "1",
+          "My recklessness causes trouble for myself and others."
+        ],
+        [
+          "2",
+          "I owe a great debt that I ran up gambling and would do anything to get free of it."
+        ],
+        [
+          "3",
+          "I can't stand anyone telling me what to do, even when I don't know best."
+        ],
+        [
+          "4",
+          "I am wracked by guilt over saving my own life over the life of a crewmate. No one can ever know"
+        ],
+        [
+          "5",
+          "what I did. I'm lazy and spend more time getting other people to do my job than doing it myself."
+        ],
+        [
+          "6",
+          "I like to make myself feel important by lying about the things I've seen and done."
+        ]
+      ]
+    },
+    {
+      "name": "Seaborn Ideal",
+      "owner": "Seaborn",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Ideal"
+      ],
+      "rows": [
+        [
+          "1",
+          "Compassion. It's my duty to help anyone stranded or lost. (Good)"
+        ],
+        [
+          "2",
+          "Acceptance. When strong winds blow, all we can do is let them take us where they will. (Chaotic)"
+        ],
+        [
+          "3",
+          "Order. A ship can only sail if everyone understands their place on it. (Lawful)"
+        ],
+        [
+          "4",
+          "Opportunistic. The sea takes what it pleases, and so do I. (Evil)"
+        ],
+        [
+          "5",
+          "Curiosity. The seas have so many secrets, and I want to discover them all. (Neutral)"
+        ],
+        [
+          "6",
+          "Understanding. By watching the waves, the stars, and the clouds, we can better care for our seas. (Good)"
+        ]
+      ]
+    },
+    {
+      "name": "Seaborn Personality Trait",
+      "owner": "Seaborn",
+      "ownerKind": "background",
+      "cols": [
+        "d8",
+        "Personality Trait"
+      ],
+      "rows": [
+        [
+          "1",
+          "I long for new horizons."
+        ],
+        [
+          "2",
+          "I feel uneasy and unbalanced on land, no matter how long I am ashore."
+        ],
+        [
+          "3",
+          "The sea might claim me any day, so why not have some fun first?"
+        ],
+        [
+          "4",
+          "I'm very ambitious. Someday, I'll be captain of my own ship."
+        ],
+        [
+          "5",
+          "I am very superstitious. The slightest misstep might bring misfortune to us all."
+        ],
+        [
+          "6",
+          "I love being helpful and jump to take care of any task I see undone."
+        ],
+        [
+          "7",
+          "I know dozens of sea tales and love gathering more wherever I go."
+        ],
+        [
+          "8",
+          "Going to new places and meeting new folk thrills me."
+        ]
+      ]
+    },
+    {
+      "name": "Underscout Bond",
+      "owner": "Underscout",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Bond"
+      ],
+      "rows": [
+        [
+          "1",
+          "My first close friend was a burrowing animal who I learned a lot of survival skills from."
+        ],
+        [
+          "2",
+          "A family member was a famous underscout, and I have been living in their shadow forever."
+        ],
+        [
+          "3",
+          "I lost someone important to me while on a difficult delve."
+        ],
+        [
+          "4",
+          "I see my party as my responsibility, I need to keep them safe."
+        ],
+        [
+          "5",
+          "I need to return to the underground regularly, even if it's just briefly."
+        ],
+        [
+          "6",
+          "My burrow home was taken from my family when I was young, and I want to take it back someday."
+        ]
+      ]
+    },
+    {
+      "name": "Underscout Flaw",
+      "owner": "Underscout",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Flaw"
+      ],
+      "rows": [
+        [
+          "1",
+          "I struggle to find things to talk about with surface dwellers."
+        ],
+        [
+          "2",
+          "I always have dirty on my fur, skin or feathers, and it puts some people off."
+        ],
+        [
+          "3",
+          "I am a picky eater, if something is too complicated or expensive I won't enjoy it."
+        ],
+        [
+          "4",
+          "If I see a cave opening or an unexplored path, I can't help myself from investigating it."
+        ],
+        [
+          "5",
+          "I have a hard time sitting still for long periods of time."
+        ],
+        [
+          "6",
+          "I lose track of time very easily."
+        ]
+      ]
+    },
+    {
+      "name": "Underscout Ideal",
+      "owner": "Underscout",
+      "ownerKind": "background",
+      "cols": [
+        "d6",
+        "Ideal"
+      ],
+      "rows": [
+        [
+          "1",
+          "Learning. The underground is full of profound knowledge that can teach us a lot. (Good)"
+        ],
+        [
+          "2",
+          "Expansion. There is a whole world beneath the earth ready to be conquered. (Evil)"
+        ],
+        [
+          "3",
+          "Treasure. Where there is stone and dirt, there are goodies to uncover. (Neutral)"
+        ],
+        [
+          "4",
+          "Wandering. Naturally forming cave networks mean you never know where you might end up. (Chaotic)"
+        ],
+        [
+          "5",
+          "Protection. The deep dark places of the world hide many dangers to defend against. (Lawful)"
+        ],
+        [
+          "6",
+          "Healing. Much of Everden's wounds can be healed by going to its roots. (Good)"
+        ]
+      ]
+    },
+    {
+      "name": "Underscout Personality Trait",
+      "owner": "Underscout",
+      "ownerKind": "background",
+      "cols": [
+        "d8",
+        "Personality Trait"
+      ],
+      "rows": [
+        [
+          "1",
+          "I love getting lost to see where I end up."
+        ],
+        [
+          "2",
+          "I prefer sleeping in slightly cramped spaces."
+        ],
+        [
+          "3",
+          "I always have rocks and pebbles in my pockets from the various places I've explored."
+        ],
+        [
+          "4",
+          "I find camping outdoors under an open sky to be a bit intimidating."
+        ],
+        [
+          "5",
+          "I speak to bugs and critters like they are my close friends."
+        ],
+        [
+          "6",
+          "I love to cook with subterranean ingredients, like roots and mushrooms."
+        ],
+        [
+          "7",
+          "I don't mind getting a bit dirty, and often do so on purpose."
+        ],
+        [
+          "8",
+          "I like leaving messages along the routes I take for other explorers to find."
+        ]
+      ]
+    },
+    {
+      "name": "Acceptance",
+      "cols": [
+        "d6",
+        "Acceptance"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "I am truly blessed and have power over the wind itself."
+        ],
+        [
+          "2",
+          "I am devoted to the wind spirits, in action and title."
+        ],
+        [
+          "3",
+          "I believe in nature and goodness."
+        ],
+        [
+          "4",
+          "I will work tirelessly to earn the respect of those who give me this title."
+        ],
+        [
+          "5",
+          "I accept this honor but have my doubts."
+        ],
+        [
+          "6",
+          "I feel nothing for this title, and carry it against my will."
+        ]
+      ],
+      "owner": "Wind-Touched",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Wind-Touched Bond",
+      "cols": [
+        "d6",
+        "Bond"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "I am guided by a wise elder who prepares me for my destiny."
+        ],
+        [
+          "2",
+          "I am estranged from my parents who don't believe in my blessing."
+        ],
+        [
+          "3",
+          "I seek to discredit the person who burdened me with this moniker."
+        ],
+        [
+          "4",
+          "I live in the shadow of my mentor, seeking their approval."
+        ],
+        [
+          "5",
+          "I have a sibling who is not blessed, which causes tension"
+        ],
+        [
+          "6",
+          "I am one with the wind. Personal relationships are fleeting."
+        ]
+      ],
+      "owner": "Wind-Touched",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Wind-Touched Flaw",
+      "cols": [
+        "d6",
+        "Flaw"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "I can't accept another's suggestion once I've set my path."
+        ],
+        [
+          "2",
+          "I expect nothing less than reverence from common people."
+        ],
+        [
+          "3",
+          "I blindly trust in the power of my blessing."
+        ],
+        [
+          "4",
+          "I am overly concerned about how others see me."
+        ],
+        [
+          "5",
+          "I will prove my worth, even if it means putting myself and my friends in danger."
+        ],
+        [
+          "6",
+          "I am burdened with responsibility, and find it hard to make even the simplest decisions."
+        ]
+      ],
+      "owner": "Wind-Touched",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Wind-Touched Ideal",
+      "cols": [
+        "d6",
+        "Ideal"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Responsibility. The powers I have been gifted with are meant to serve the common good. (Good)"
+        ],
+        [
+          "2",
+          "Heroism. The wind chose me to be a brave warrior and leader, so shall it be. (Lawful)"
+        ],
+        [
+          "3",
+          "Egotism. My powers situate me above others. The masses should know their place. (Evil)"
+        ],
+        [
+          "4",
+          "Mysticism. Connected to nature, I speak for the wind and divine its will for others. (Neutral)"
+        ],
+        [
+          "5",
+          "Cynicism. What matters isn't whether or not my powers are genuine, but what advantages I can reap because of that belief. (Evil)"
+        ],
+        [
+          "6",
+          "Naturalism. The wind speaks to my soul, and I am bound to go wherever it directs me. (Chaotic)"
+        ]
+      ],
+      "owner": "Wind-Touched",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Wind-Touched Personality Trait",
+      "cols": [
+        "d8",
+        "Personality Trait"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "I never back down from a challenge."
+        ],
+        [
+          "2",
+          "I always end up being the center of attention."
+        ],
+        [
+          "3",
+          "I am gifted by the wind and destined for greatness."
+        ],
+        [
+          "4",
+          "I have no time for those who doubt me."
+        ],
+        [
+          "5",
+          "I seek out challenges to test myself."
+        ],
+        [
+          "6",
+          "I am better than everyone else."
+        ],
+        [
+          "7",
+          "I avoid showing my power at all costs."
+        ],
+        [
+          "8",
+          "I remain humble despite my blessing."
+        ]
+      ],
+      "owner": "Wind-Touched",
+      "ownerKind": "background",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Standard Languages",
+      "cols": [
+        "Language",
+        "Typical",
+        "Speakers Script"
+      ],
+      "align": [
+        "left",
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Birdfolk",
+          "Birdfolk, Humblefolk",
+          "Birdfolk"
+        ],
+        [
+          "Cervan",
+          "Cervans",
+          "-"
+        ],
+        [
+          "Hedge",
+          "Hedges",
+          "Sylvan"
+        ],
+        [
+          "Jerbeen",
+          "Jerbeens",
+          "Birdfolk"
+        ],
+        [
+          "Mapach",
+          "Mapachs",
+          "Mapach"
+        ],
+        [
+          "Vulpin",
+          "Vulpins",
+          "Vulpin"
+        ]
+      ],
+      "owner": "Languages of the Wood",
+      "ownerKind": "rule",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Random Height and Weight",
+      "cols": [
+        "Race",
+        "AND Base Height",
+        "Height Modifier",
+        "Base Weight",
+        "Weight Modifier"
+      ],
+      "align": [
+        "left",
+        "left",
+        "left",
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Cervan (Grove)",
+          "4'8\"",
+          "+2d10",
+          "110 lb.",
+          "× (1d4) lb."
+        ],
+        [
+          "Cervan (Pronghorn)",
+          "6'1\"",
+          "+2d10",
+          "120 lb.",
+          "× (2d4) lb."
+        ],
+        [
+          "Corvum",
+          "4'4\"",
+          "+2d10",
+          "70 lb.",
+          "× (1d4) lb."
+        ],
+        [
+          "Gallus",
+          "3'4\"",
+          "+3d10",
+          "55 lb.",
+          "× (1d4) lb."
+        ],
+        [
+          "Hedge",
+          "2'11\"",
+          "+2d6",
+          "30 lb.",
+          "× (1d4) lb."
+        ],
+        [
+          "Jerbeen",
+          "2'4\"",
+          "+2d4",
+          "20 lb.",
+          "× (1d2) lb."
+        ],
+        [
+          "Luma",
+          "2'8\"",
+          "+2d4",
+          "25 lb.",
+          "× 1 lb."
+        ],
+        [
+          "Mapach",
+          "3'11\"",
+          "+2d6",
+          "85 lb.",
+          "× (2d4) lb."
+        ],
+        [
+          "Raptor",
+          "2'11\"",
+          "+2d6",
+          "25 lb.",
+          "× 1 lb."
+        ],
+        [
+          "Strig",
+          "3'10\"",
+          "+2d10",
+          "80 lb.",
+          "× (1d6) lb."
+        ],
+        [
+          "Vulpin",
+          "4'2\"",
+          "+2d10",
+          "80 lb.",
+          "× (2d4) lb."
+        ]
+      ],
+      "owner": "Random Height and Weight",
+      "ownerKind": "rule",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Community Domain Spells",
+      "cols": [
+        "Cleric Level",
+        "Spells"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Aid, Bless, Goodberry, Heroism"
+        ],
+        [
+          "5th",
+          "Beacon of hope, Spirit guardians"
+        ],
+        [
+          "7th",
+          "Banishment, Faithful hound"
+        ],
+        [
+          "9th",
+          "Mass cure wounds, Telepathic bond"
+        ]
+      ],
+      "owner": "Community Domain",
+      "ownerKind": "subclass",
+      "source": "Humblewood"
+    },
+    {
+      "name": "Night Domain Spells",
+      "cols": [
+        "Cleric Level",
+        "Spells"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Darkness, Moonbeam, Sleep, Veil Of Dusk*"
+        ],
+        [
+          "5th",
+          "Nondetection, Globe Of Twilight*"
+        ],
+        [
+          "7th",
+          "Divination, Stellar Bodies*"
+        ],
+        [
+          "9th",
+          "Dream, Seeming"
+        ]
+      ],
+      "owner": "Night Domain",
+      "ownerKind": "subclass",
+      "source": "Humblewood"
+    }
+  ]
+}

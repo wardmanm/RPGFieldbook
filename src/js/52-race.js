@@ -1,7 +1,27 @@
 /* ---- ancestry / race ---- */
 function raceTerm(){return (settings.skin==="classic")?"Race":"Ancestry";}
+/* Which system a rules entry belongs to, or "" when we can't tell.
+   Species are the one category the two systems don't share — a Humblewood
+   character is never an elf — unlike classes/spells, where Humblewood content
+   supplements the D&D core rather than replacing it. */
+function systemOf(entry){
+  const s=String((entry&&entry._source)||"").trim().toLowerCase();
+  if(!s)return "";
+  if(s==="humblewood")return "humblewood";
+  if(s==="xphb"||s==="phb"||s==="dnd"||s.indexOf("d&d")>=0)return "dnd";
+  return "";
+}
+/* Species offered to THIS character. Filters the picker only — never
+   findRaceDef(). A character who already has a cross-system ancestry (an
+   imported sheet, a switched system) must keep resolving it, or their traits
+   silently vanish. Unknown sources (homebrew) show for both systems: never hide
+   someone's own content. */
+function racesForCharacter(){
+  const sys=(character&&character.system==="dnd")?"dnd":"humblewood";
+  return (rules.races||[]).filter(r=>{const s=systemOf(r);return !s||s===sys;});
+}
 function raceOptions(){
-  const list=rules.races||[];
+  const list=racesForCharacter();
   const cats={};const flat=[];
   list.forEach(r=>{ if(r.category){(cats[r.category]=cats[r.category]||[]).push(r);} else flat.push(r); });
   const opt=r=>`<option value="${esc(r._id||r.name)}">${esc(dispName(r,"races"))}</option>`;
@@ -14,7 +34,7 @@ function raceOptions(){
 }
 function raceSummary(d){const bits=[];if(d.abilityScores)bits.push(Object.entries(d.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", "));if(d.speed)bits.push("Speed "+d.speed);if((d.traits||[]).length)bits.push(d.traits.length+" trait(s)");if((d.subraces||[]).length)bits.push(d.subraces.length+" subraces");return bits.length?`<p class="hint"><b>${esc(bits.join(" · "))}</b></p>`:"";}
 function openAddRace(){
-  const term=raceTerm(), list=rules.races||[];
+  const term=raceTerm(), list=racesForCharacter();
   openModal("Add "+term.toLowerCase(),`
     ${list.length?`<div class="field"><label class="f">${esc(term)} from rules</label><select id="raceSel"><option value="">— choose —</option>${raceOptions()}</select></div>`:`<p class="hint">No ${term.toLowerCase()} entries in the loaded rules. Enter a custom name; no traits will be auto-applied.</p>`}
     <div class="field" id="subWrap" style="display:none"><label class="f">Subrace</label><select id="subSel"></select></div>
@@ -111,6 +131,8 @@ function openRaceInfo(name){
     return s;
   };
   let b=`<p>${esc(d.description||"")}</p>`+(d.category?`<p class="hint">${esc(d.category)}</p>`:"")+sect(d);
+  /* species-owned tables link from here; owner-based, so no prose anchor needed */
+  b+=tableChipsHTML(name,"race");
   (d.subraces||[]).forEach(sd=>{
     b+=`<div style="border-top:2px solid var(--line);margin-top:10px;padding-top:8px"><b style="${cur===sd.name?"color:var(--accent)":""}">${esc(sd.name)}${cur===sd.name?" — selected":""}</b>${sd.description?`<p class="hint" style="margin:4px 0">${esc(sd.description)}</p>`:""}${sect(sd)}</div>`;
   });

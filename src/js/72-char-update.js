@@ -1,0 +1,449 @@
+/* ================= character ↔ rules diff =================
+   Characters COPY rules entries, so a sheet drifts from the data over time.
+   This finds the drift. Pure functions only — no DOM — so it stays testable and
+   so the UI layer below can render whatever it likes from the result.
+
+   Matching is the hard part. A copy stamped by stampSrc() carries its pack, its
+   category and per-field hashes, and matches exactly. Anything added before
+   stamping existed has only its NAME, which the app itself knows to be ambiguous
+   (see recomputeDups/dispName) — those are reported as `ambiguous` and never
+   ticked by default. We would rather ask than silently pick the wrong entry.
+
+   A COPY IS NOT ITS DEF. Copy sites transform: browse folds a presentation line
+   into an item's description and converts "2 gp" to the number 2. Comparing a
+   copy against the raw rules entry therefore reports every browse-added item as
+   permanently changed, and "updating" it strips the meta line and puts the
+   string back. So the diff compares against a PROJECTION — the same transform
+   the copy site applied — recorded per copy as `src.shape`. */
+
+/* Rules-owned fields per kind: what an update is allowed to overwrite. Anything
+   NOT listed here is character-local (qty, equipped, prepared, uses.used, id,
+   origin, grant, ...) and must survive an update untouched. */
+const UPD_FIELDS={
+  feature:["description","effects","uses","cost"],
+  spell:["level","meta","text"],
+  item:["description","effects","cost","weapon"]
+};
+const UPD_CATS=[["features","feature"],["spells","spell"],["inventory","item"]];
+
+/* What a copy of `def` SHOULD look like, for the shape it was copied in.
+   "browse" = added through the item picker (meta line + gp cost);
+   "plain"  = copied verbatim (granted items, traits, spells). */
+function updProject(def,kind,shape){
+  if(!def)return {};
+  if(kind==="item"&&shape==="browse"){
+    const m=itemMetaLine(def);
+    const p={description:(m?m+"\n":"")+(def.description||""),
+             effects:Array.isArray(def.effects)?def.effects:[]};
+    const c=costToGp(def.cost); if(c!=null)p.cost=c;
+    if(def.weapon)p.weapon=def.weapon;
+    return p;
+  }
+  const p={};
+  (UPD_FIELDS[kind]||[]).forEach(f=>{if(def[f]!==undefined)p[f]=def[f];});
+  return p;
+}
+/* per-field hashes of the projection — so a later diff can say WHICH field the
+   pack changed, and leave fields the player deviated on alone */
+function fpMap(obj,kind){
+  const out={};
+  (UPD_FIELDS[kind]||[]).forEach(f=>{out[f]=fpHash(obj?obj[f]:null);});
+  return out;
+}
+/* Tag a fresh copy with where it came from and what both sides looked like.
+   `cat` is the RULE_CATS bucket the def lives in ("feats"/"spells"/"items"), or
+   "" for a trait embedded inside a class/race/background — those have no
+   top-level entry, so the diff re-resolves them through the copy's `origin`. */
+function stampSrc(copy,def,kind,cat,shape){
+  if(!copy||!def)return copy;
+  copy.src={cat:cat||"",pack:def._source||"",kind,shape:shape||"plain",
+            name:def.name||copy.name||"",
+            fp:fpMap(updProject(def,kind,shape||"plain"),kind),
+            cfp:fpMap(copy,kind)};
+  return copy;
+}
+/* after writing rules-owned fields onto a copy, re-baseline both sides */
+function restampSrc(copy,def,kind){
+  if(!copy||!copy.src)return copy;
+  copy.src.fp=fpMap(updProject(def,kind,copy.src.shape),kind);
+  copy.src.cfp=fpMap(copy,kind);
+  return copy;
+}
+
+function updCandidates(cat,name){
+  const n=String(name||"").trim().toLowerCase();
+  if(!n)return [];
+  return (rules[cat]||[]).filter(x=>String(x.name||"").trim().toLowerCase()===n);
+}
+/* Resolve a copy back to its rules entry.
+   -> {def} | {ambiguous:[...]} | {} when nothing matches */
+function updResolve(copy,kind){
+  const src=copy&&copy.src;
+  if(src&&src.cat){
+    const hits=updCandidates(src.cat,src.name||copy.name);
+    if(src.pack){
+      const exact=hits.filter(x=>(x._source||"")===src.pack);
+      if(exact.length===1)return {def:exact[0]};
+      if(exact.length>1)return {ambiguous:exact};
+      /* The pack this was copied from isn't loaded. A same-named entry from a
+         DIFFERENT pack is not the same content — adopting it silently is the
+         exact guess this design refuses to make. Offer it, labelled, unticked. */
+      if(hits.length)return {def:hits[0],loose:true,otherPack:src.pack};
+      return {};
+    }
+    if(hits.length===1)return {def:hits[0]};
+    if(hits.length>1)return {ambiguous:hits};
+    return {};
+  }
+  /* embedded class/race/background trait — re-resolve through the origin */
+  if(kind==="feature"&&copy.origin)return updTraitFromOrigin(copy);
+  /* unstamped legacy copy: name-only, across the plausible categories */
+  const cats=kind==="spell"?["spells"]:kind==="item"?["items"]:["feats"];
+  let hits=[];
+  cats.forEach(c=>{hits=hits.concat(updCandidates(c,copy.name));});
+  if(kind==="feature"&&!hits.length){
+    /* feats are stored as "Feat: Alert" */
+    const m=String(copy.name||"").match(/^Feat:\s*(.+)$/i);
+    if(m)hits=updCandidates("feats",m[1]);
+  }
+  if(hits.length===1)return {def:hits[0],loose:true};
+  if(hits.length>1)return {ambiguous:hits,loose:true};
+  return {};
+}
+/* Find the trait a granted feature came from, inside its class/race/background
+   definition. Those traits have no top-level rules entry to look up. */
+function updTraitFromOrigin(copy){
+  const o=copy.origin||{},nm=String(copy.name||"").trim().toLowerCase();
+  const from=list=>(list||[]).find(t=>String(t.name||"").trim().toLowerCase()===nm);
+  if(o.kind==="race"){
+    const d=findRaceDef(o.name);if(!d)return {};
+    let t=from(d.traits);
+    if(!t&&character.race&&character.race.subrace){
+      const s=(d.subraces||[]).find(x=>x.name===character.race.subrace);
+      if(s)t=from(s.traits);
+    }
+    return t?{def:t}:{};
+  }
+  if(o.kind==="background"){
+    const d=findBackgroundDef(o.name);if(!d)return {};
+    const single=(d.feature&&String(d.feature.name||"").trim().toLowerCase()===nm)?d.feature:null;
+    const t=single||from(d.traits);
+    return t?{def:t}:{};
+  }
+  if(o.kind==="class"){
+    const d=findClassDef(o.class);if(!d)return {};
+    const lv=(d.levels||{})[String(o.level)]||{};
+    let t=from(lv.traits);
+    if(!t&&o.subclass){
+      const sc=subclassesFor(d)[o.subclass];
+      if(sc)t=from(((sc.levels||{})[String(o.level)]||{}).traits);
+    }
+    return t?{def:t}:{};
+  }
+  return {};
+}
+/* Which rules-owned fields the PACK changed since this copy was made.
+   Compared projection-then vs projection-now, not copy vs projection: a player
+   who overrode an item's cost at add time hasn't been changed by anything, and
+   must not be nagged about it — or have it silently overwritten. */
+function updChangedFields(copy,def,kind){
+  const shape=(copy.src&&copy.src.shape)||"plain";
+  const now=fpMap(updProject(def,kind,shape),kind);
+  const then=copy.src&&copy.src.fp;
+  if(then&&typeof then==="object")
+    return (UPD_FIELDS[kind]||[]).filter(f=>now[f]!==then[f]);
+  /* unstamped legacy copy — no baseline, so fall back to copy vs projection */
+  const proj=updProject(def,kind,shape);
+  return (UPD_FIELDS[kind]||[]).filter(f=>fpHash(copy[f])!==fpHash(proj[f]));
+}
+/* has the player hand-edited this copy since it was added? */
+function updEdited(copy,kind){
+  const then=copy.src&&copy.src.cfp;
+  if(!then||typeof then!=="object")return null;   /* unknowable */
+  const now=fpMap(copy,kind);
+  return (UPD_FIELDS[kind]||[]).some(f=>now[f]!==then[f]);
+}
+/* Traits the rules now grant that the sheet doesn't have. Only ever ADDITIVE —
+   a level already held gaining a trait is the case that matters. */
+function updMissingTraits(){
+  /* Keyed by ORIGIN + name, not name alone: a Fighter/Barbarian legitimately has
+     two different "Extra Attack" traits, and a flat name set would hide the
+     second one forever. */
+  const key=(o,nm)=>[o&&o.kind,o&&(o.class||o.name),o&&o.subclass,o&&o.level,
+                     String(nm||"").trim().toLowerCase()].join("|");
+  const have=new Set((character.features||[]).map(f=>key(f.origin,f.name)));
+  const untagged=new Set((character.features||[]).filter(f=>!f.origin).map(f=>String(f.name||"").trim().toLowerCase()));
+  const out=[];
+  const want=(t,origin,label)=>{
+    if(!t||!t.name)return;
+    if(have.has(key(origin,t.name)))return;
+    /* An UNTAGGED feature of the same name is probably this trait from before
+       origins were recorded — don't offer a duplicate of something they have. */
+    if(untagged.has(String(t.name).trim().toLowerCase()))return;
+    out.push({cat:"features",kind:"feature",type:"added",name:t.name,def:t,origin,
+              pack:label,why:"new in "+label,edited:false,fields:["description"]});
+  };
+  if(character.race&&character.race.name){
+    const d=findRaceDef(character.race.name);
+    if(d){
+      (d.traits||[]).forEach(t=>want(t,{kind:"race",name:d.name},d.name));
+      const s=(d.subraces||[]).find(x=>x.name===character.race.subrace);
+      if(s)(s.traits||[]).forEach(t=>want(t,{kind:"race",name:d.name},d.name+" ("+s.name+")"));
+    }
+  }
+  if(character.bg&&character.bg.name){
+    const d=findBackgroundDef(character.bg.name);
+    /* a background grants ONE `feature` object, not a `traits` array */
+    if(d&&d.feature&&d.feature.name)want(d.feature,{kind:"background",name:d.name},d.name);
+    if(d)(d.traits||[]).forEach(t=>want(t,{kind:"background",name:d.name},d.name));
+  }
+  (character.classes||[]).forEach(c=>{
+    const d=findClassDef(c.name);if(!d)return;
+    const lvl=num(c.level);
+    for(let L=1;L<=lvl;L++){
+      const lv=(d.levels||{})[String(L)]||{};
+      (lv.traits||[]).forEach(t=>want(t,{kind:"class",class:c.name,level:L},c.name+" "+L));
+      if(c.subclass){
+        const sc=subclassesFor(d)[c.subclass];
+        if(sc)(((sc.levels||{})[String(L)]||{}).traits||[]).forEach(t=>
+          want(t,{kind:"class",class:c.name,level:L,subclass:c.subclass},c.subclass+" "+L));
+      }
+    }
+  });
+  return out;
+}
+/* The whole diff. Rows are UI-agnostic; `apply` marks the default tick state. */
+function diffCharacter(){
+  const rows=[];
+  const anyRules=RULE_CATS.some(c=>(rules[c]||[]).length);
+  if(!anyRules)return {rows,anyRules:false};
+  UPD_CATS.forEach(([cat,kind])=>{
+    (character[cat]||[]).forEach(copy=>{
+      const r=updResolve(copy,kind);
+      if(r.ambiguous){
+        rows.push({cat,kind,type:"ambiguous",id:copy.id,name:copy.name,copy,
+                   pack:r.ambiguous.map(x=>x._source||"?").join(" / "),
+                   why:"same name in "+r.ambiguous.length+" packs — can't tell which",
+                   edited:false,fields:[],apply:false});
+        return;
+      }
+      if(!r.def){
+        rows.push({cat,kind,type:"unmatched",id:copy.id,name:copy.name,copy,pack:"",
+                   why:"not in any loaded pack",edited:false,fields:[],apply:false});
+        return;
+      }
+      const fields=updChangedFields(copy,r.def,kind);
+      if(!fields.length)return;
+      /* Edited by the player? Only knowable when a copy-time baseline exists;
+         without one (legacy, or a loose match) treat it as possibly-edited. */
+      const ed=updEdited(copy,kind);
+      const edited=ed===null?true:ed;
+      const why=r.otherPack
+        ? `“${r.otherPack}” isn't loaded — this is the ${r.def._source||"other"} version`
+        : fields.join(", ")+" changed"+(r.loose?" (matched by name only)":"");
+      rows.push({cat,kind,type:"changed",id:copy.id,name:copy.name,copy,def:r.def,
+                 pack:r.def._source||"",
+                 why,edited,fields,
+                 apply:!edited&&!r.loose&&!r.otherPack});
+    });
+  });
+  updMissingTraits().forEach(r=>rows.push(Object.assign({apply:true},r)));
+  return {rows,anyRules:true};
+}
+/* Write the rules-owned fields of one row onto the character. Everything not in
+   UPD_FIELDS is character-local and is deliberately left alone. */
+function applyUpdateRow(row){
+  if(row.type==="added"){
+    addFeatureFromDef(row.def,row.origin);
+    const added=character.features[character.features.length-1];
+    if(added)stampSrc(added,row.def,"feature","");
+    return true;
+  }
+  if(row.type!=="changed"||!row.copy||!row.def)return false;
+  const shape=(row.copy.src&&row.copy.src.shape)||"plain";
+  const proj=updProject(row.def,row.kind,shape);
+  const spent=(row.copy.uses||{}).used;
+  /* Only write the fields the PACK actually changed. Writing all of them would
+     clobber deliberate deviations (a custom cost typed in at add time). */
+  (row.fields||[]).forEach(f=>{
+    if(proj[f]===undefined){delete row.copy[f];return;}
+    row.copy[f]=JSON.parse(JSON.stringify(proj[f]));
+  });
+  /* uses.max may have moved; the player's spent count must survive it */
+  if(row.copy.uses)row.copy.uses.used=num(spent);
+  if(!row.copy.src)stampSrc(row.copy,row.def,row.kind,row.cat==="inventory"?"items":row.cat,shape);
+  else restampSrc(row.copy,row.def,row.kind);
+  /* a weapon's dice/type may have changed — the linked attack row is derived
+     from the item and does not update itself */
+  if(row.kind==="item"&&row.copy.weapon)updResyncAttack(row.copy);
+  return true;
+}
+/* Rebuild the attack derived from an inventory item, preserving nothing the
+   player owns on it beyond its identity (attacks are wholly item-derived). */
+function updResyncAttack(it){
+  const i=(character.attacks||[]).findIndex(a=>a.itemId===it.id);
+  if(i<0){if(typeof addAttackForItem==="function")addAttackForItem(it);return;}
+  const keepId=character.attacks[i].id;
+  character.attacks.splice(i,1);
+  if(typeof addAttackForItem==="function")addAttackForItem(it);
+  const now=(character.attacks||[]).find(a=>a.itemId===it.id);
+  if(now)now.id=keepId;   /* keep the id stable so collapse state survives */
+}
+function applyUpdates(rows){
+  let n=0;
+  const touched=[];
+  (rows||[]).forEach(r=>{if(applyUpdateRow(r)){n++;if(r.kind==="spell"&&r.copy)touched.push(r.copy);}});
+  /* only the spells we actually rewrote — resyncing every spell would rebuild
+     attack rows the player never asked us to touch */
+  if(typeof syncSpellAttack==="function")touched.forEach(sp=>syncSpellAttack(sp));
+  if(n)recompute();
+  return n;
+}
+/* has this character fallen behind, and is there anything to say about it? */
+function charNeedsUpdate(ch){
+  ch=ch||character;
+  if(!ch)return false;
+  if(ch.isBackup)return false;
+  if(ch.skipUpdate&&ch.skipUpdate===APP_VERSION)return false;
+  if(cmpVer(ch.appVersion||"0.0.0",APP_VERSION)>=0)return false;
+  return RULE_CATS.some(c=>(rules[c]||[]).length);
+}
+
+/* ================= update UI ================= */
+const UPD_LABELS={features:"Features & traits",spells:"Spells",inventory:"Items"};
+function updRowHTML(r,i){
+  const tag=r.type==="added"?`<span class="chip">new</span>`
+    :r.type==="ambiguous"?`<span class="chip">ambiguous</span>`
+    :r.type==="unmatched"?`<span class="chip">not in your packs</span>`
+    :r.edited?`<span class="chip">you edited this</span>`:"";
+  const dis=(r.type==="unmatched"||r.type==="ambiguous")?" disabled":"";
+  return `<label class="opt" style="align-items:flex-start">
+    <input type="checkbox" data-upd="${i}"${r.apply?" checked":""}${dis}>
+    <span><b>${esc(r.name||"—")}</b> ${tag}
+      <span class="hint" style="display:block">${esc(r.why)}${r.pack?" · "+esc(r.pack):""}</span></span></label>`;
+}
+function openUpdateReview(){
+  const {rows,anyRules}=diffCharacter();
+  if(!anyRules){openModal("Check for updates",`<p class="hint">No rules packs are loaded, so there's nothing to compare against. Import a pack from Settings first.</p>`);return;}
+  const actionable=rows.filter(r=>r.type==="changed"||r.type==="added");
+  if(!rows.length){
+    markCharChecked();
+    openModal("Check for updates",`<p>Everything on this sheet already matches your loaded rules.</p><p class="hint">Marked as checked against v${esc(APP_VERSION)}.</p>`);
+    return;
+  }
+  _updRows=rows;
+  let body=`<p class="hint">Ticked items will be rewritten from your loaded rules packs. Your own numbers — quantities, what's equipped or prepared, uses spent — are never touched.</p>`;
+  /* Only worth offering when there is more than one thing to tick. The buttons
+     never touch disabled rows — those can't be applied at all. */
+  if(actionable.length>1){
+    body+=`<div class="m-actions" style="justify-content:flex-start;gap:8px;margin:2px 0 6px">
+      <button class="tbtn" id="updAll" type="button">Select all</button>
+      <button class="tbtn" id="updNone" type="button">Select none</button>
+      <span class="hint" id="updCount" style="align-self:center"></span></div>`;
+  }
+  ["features","spells","inventory"].forEach(cat=>{
+    const inCat=rows.map((r,i)=>[r,i]).filter(([r])=>r.cat===cat);
+    if(!inCat.length)return;
+    body+=`<div class="spell-h">${esc(UPD_LABELS[cat]||cat)} (${inCat.length})</div>`;
+    body+=inCat.map(([r,i])=>updRowHTML(r,i)).join("");
+  });
+  const note=rows.some(r=>r.type==="unmatched"||r.type==="ambiguous")
+    ? `<p class="hint" style="margin-top:8px">Greyed-out rows can't be updated automatically — either the entry isn't in a loaded pack, or the same name appears in more than one and there's no way to tell which you used. Nothing is ever deleted.</p>`:"";
+  body+=note+`<div class="m-actions" style="flex-wrap:wrap;gap:8px">
+    <button class="tbtn" id="updCancel">Cancel</button>
+    <button class="tbtn primary" id="updGo">Back up and update</button></div>`;
+  openModal("Updates for "+(character.name||"this character"),body);
+  const go=document.getElementById("updGo");
+  const pickable=()=>[...document.querySelectorAll("#mBody [data-upd]:not([disabled])")];
+  const sync=()=>{const n=document.querySelectorAll("#mBody [data-upd]:checked").length;
+    go.textContent=n?`Back up and update ${n}`:"Back up and mark checked";
+    const cnt=document.getElementById("updCount");
+    if(cnt)cnt.textContent=`${n} of ${pickable().length} selected`;};
+  const setAll=v=>{pickable().forEach(b=>{b.checked=v;});sync();};
+  const bAll=document.getElementById("updAll"), bNone=document.getElementById("updNone");
+  if(bAll)bAll.addEventListener("click",()=>setAll(true));
+  if(bNone)bNone.addEventListener("click",()=>setAll(false));
+  /* #mBody is the shared modal body and outlives this modal — one delegated
+     listener installed once, not a new one on every review */
+  if(!_updWired){document.getElementById("mBody").addEventListener("change",e=>{
+    if(e.target&&e.target.matches&&e.target.matches("[data-upd]")&&_updSync)_updSync();});_updWired=true;}
+  _updSync=sync;sync();
+  document.getElementById("updCancel").addEventListener("click",closeModal);
+  go.addEventListener("click",()=>{
+    const picked=[...document.querySelectorAll("#mBody [data-upd]:checked")].map(el=>_updRows[num(el.dataset.upd)]).filter(Boolean);
+    commitUpdates(picked,actionable.length);
+  });
+}
+let _updRows=[],_updWired=false,_updSync=null;
+function markCharChecked(){
+  character.appVersion=APP_VERSION;
+  if(character.skipUpdate)delete character.skipUpdate;
+  libTouch();scheduleSave();
+}
+/* Finish the update once a backup exists. `where` describes it for the receipt. */
+function finishUpdates(picked,offered,where){
+  const n=applyUpdates(picked);
+  markCharChecked();
+  renderAll();renderHome();
+  const skipped=Math.max(0,offered-n);
+  openModal("Updated",`<p>${n?`Updated <b>${n}</b> item${n===1?"":"s"}`:"Marked as checked"}${skipped?`, left <b>${skipped}</b> alone`:""}.</p>
+    <p class="hint">${where}</p>`);
+}
+function commitUpdates(picked,offered){
+  /* Back up FIRST — an update without a backup is exactly what this feature
+     promised not to do. But storage being full must not be a dead end: a
+     downloaded file is a perfectly good backup, so offer that instead of
+     refusing to go on. */
+  /* capture the name BEFORE markCharChecked() advances appVersion — otherwise
+     the confirmation tells them to look for a backup that isn't called that */
+  const tag="v"+(character.appVersion||"?");
+  const bakName=(character.name||"Character")+" (backup "+tag+")";
+  const res=backupCharacter(character,tag);
+  if(res.id){
+    finishUpdates(picked,offered,
+      `A backup was saved to your character list as “${esc(bakName)}”. Delete it from the home screen when you're happy.`);
+    return;
+  }
+  const fname=bakName.replace(/[^a-z0-9\-_ ]/gi,"").trim()+".json";
+  openModal("Save the backup as a file?",`
+    <p>Nothing has been changed yet. A backup couldn't be kept in the app because ${esc(res.error)}.</p>
+    <p>Fieldbook can download it as a file instead, then carry on with the update.</p>
+    <p class="hint">Your rules packs are what usually fills storage. Settings → Rules data → <b>Clear all</b>
+      frees the most space; your characters aren't affected and you can re-import the packs afterwards.</p>
+    <div class="m-actions" style="flex-wrap:wrap;gap:8px">
+      <button class="tbtn" id="bakCancel" type="button">Cancel</button>
+      <button class="tbtn primary" id="bakDl" type="button">Download backup and update</button>
+    </div>`);
+  document.getElementById("bakCancel").addEventListener("click",closeModal);
+  document.getElementById("bakDl").addEventListener("click",()=>{
+    try{
+      dl(new Blob([JSON.stringify(res.copy||character,null,2)],{type:"application/json"}),fname);
+    }catch(e){
+      openModal("Couldn't back up",`<p>The download didn't start, so nothing was changed.</p>
+        <p class="hint">Export this character with <b>Save</b> first, then run the check again.</p>`);
+      return;
+    }
+    finishUpdates(picked,offered,
+      `A backup was downloaded as “${esc(fname)}” — keep it until you're happy with the result. It is not in your character list, so import it if you need it back.`);
+  });
+}
+/* the nudge shown on load/import when a sheet is behind */
+function maybePromptUpdate(){
+  if(!charNeedsUpdate(character))return;
+  const {rows}=diffCharacter();
+  const n=rows.filter(r=>r.type==="changed"||r.type==="added").length;
+  if(!rows.length){markCharChecked();return;}   /* nothing to do — quietly current */
+  const was=character.appVersion?"v"+esc(character.appVersion):"an earlier version";
+  openModal("Rules updates available",`
+    <p><b>${esc(character.name||"This character")}</b> was last checked against ${was}. You're on v${esc(APP_VERSION)}.</p>
+    <p>${n?`<b>${n}</b> item${n===1?"":"s"} on this sheet ${n===1?"differs":"differ"} from your loaded rules.`:`Some entries couldn't be matched to your loaded rules.`}</p>
+    <p class="hint">Updating always takes a backup first, and never changes your own numbers. You can also just play as-is.</p>
+    <div class="m-actions" style="flex-wrap:wrap;gap:8px">
+      <button class="tbtn" id="updLater">Not now</button>
+      <button class="tbtn" id="updNever">Don't ask again for v${esc(APP_VERSION)}</button>
+      <button class="tbtn primary" id="updReview">Review updates</button>
+    </div>`);
+  document.getElementById("updLater").addEventListener("click",closeModal);
+  document.getElementById("updNever").addEventListener("click",()=>{character.skipUpdate=APP_VERSION;scheduleSave();closeModal();});
+  document.getElementById("updReview").addEventListener("click",()=>{closeModal();openUpdateReview();});
+}

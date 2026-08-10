@@ -1,0 +1,192 @@
+{
+  "system": "Humblewood",
+  "name": "Humblewood Backgrounds (2024)",
+  "version": 1,
+  "_note": "2024-style backgrounds: pick an ability-score spread among the three listed (either +2/+1 to two of them, or +1/+1/+1 to all three), gain the listed Origin feat (some offer a choice), two skill proficiencies, a tool proficiency, sometimes a language, and starting equipment. The background feature is included as a trait.",
+  "backgrounds": [
+    {
+      "name": "Bandit Defector",
+      "description": "You were once a member of the Bandit Coalition, moving from place to place, ambushing and robbing passing merchants. Something made you decide that path was no longer worth pursuing, and you left that life behind. But quitting the Bandit Coalition isn't so easy.",
+      "abilityScores": [
+        "str",
+        "dex",
+        "wis"
+      ],
+      "feat": "Opportunistic Thief",
+      "skills": [
+        "Deception",
+        "Survival"
+      ],
+      "tools": "Disguise Kit, and one Gaming Set or Musical Instrument of your choice",
+      "equipment": "a knife, a cooking pot, a winter blanket, an object you received as your cut from a successful robbery, common clothes, and a pouch with 10 gp",
+      "equipmentGrants": [
+        {
+          "items": [
+            {
+              "name": "Knife"
+            },
+            {
+              "name": "Cooking Pot"
+            },
+            {
+              "name": "Winter Blanket"
+            },
+            {
+              "name": "An object received as your cut from a robbery"
+            },
+            {
+              "name": "Common Clothes"
+            }
+          ],
+          "gold": 10
+        }
+      ],
+      "feature": {
+        "name": "Bandit Routes",
+        "description": "As someone who once assisted in countless highway robberies, you are familiar with the roads of the Wood and escape paths used by bandits. When you are not in combat, you (and companions you lead) can travel between locations that cut through forested areas twice as fast as your speed would normally allow."
+      }
+    },
+    {
+      "name": "Grounded",
+      "description": "Despite the inherent vertical aspects of birdfolk culture, you have always felt safer and more at peace with your feet firmly planted on the soil. You are practical and level-headed, but due to your different perspective on the world, other birdfolk see you as quirky or unsettling. Your unique insight allows you to connect with the humblefolk who live under the forest canopy in ways perch-dwelling birdfolk cannot.",
+      "abilityScores": [
+        "str",
+        "con",
+        "wis"
+      ],
+      "feat": [
+        "Woodwise",
+        "Speech of the Ancient Beasts"
+      ],
+      "skills": [
+        "Athletics",
+        "Insight"
+      ],
+      "tools": "one type of Artisan's Tools of your choice",
+      "languages": "one language of your choice",
+      "equipment": "a set of Artisan's Tools (one of your choice), a walking stick, a trinket from another culture, traveling clothes, and a belt pouch with 5 gp",
+      "equipmentGrants": [
+        {
+          "items": [
+            {
+              "name": "Artisan's Tools (one of your choice)"
+            },
+            {
+              "name": "Walking Stick"
+            },
+            {
+              "name": "Trinket from another culture"
+            },
+            {
+              "name": "Traveling Clothes"
+            }
+          ],
+          "gold": 5
+        }
+      ],
+      "feature": {
+        "name": "Find Another Path",
+        "description": "Since you have lived your life close to the ground, you are familiar with the undergrowth in the same way other birdfolk are familiar with the canopy. You can always recall the general layout of the terrain around you while traveling along the forest floor. If your path is ever blocked by an obstacle that requires you to climb or otherwise gain height to circumvent it, you can always find a way around, so long as such a path exists. Additionally, you are adept at finding shelter in the Wood while traveling, and can usually locate a suitable safe shelter (a cave, a tree hollow, or bramble thicket) somewhere on the forest floor for you and up to five other creatures."
+      }
+    },
+    {
+      "name": "Wind-Touched",
+      "description": "There are legends within the Wood, of birdfolk blessed by the wind who are destined to soar over any and all obstacles. When a chick is born with special markings or unique feather patterns, or when they survive a dramatic childhood event, some folks brand them \"Wind-Touched.\" Tough a few dismiss the notion of the Wind-Touched as superstition, others heap reverence upon those believed chosen. According to legend, one who is touched by the wind will never feel at ease anywhere but high in the forest canopy, with the wind in their feathers.",
+      "abilityScores": [
+        "dex",
+        "con",
+        "cha"
+      ],
+      "feat": [
+        "Aerial Expert",
+        "Perfect Landing"
+      ],
+      "skills": [
+        "Acrobatics",
+        "Performance"
+      ],
+      "tools": "one type of wind Musical Instrument",
+      "languages": "Auran (you can speak as well as understand it)",
+      "equipment": "a wind Musical Instrument of your choice, an ornate cloak, a symbol of the wind, common clothes, and a belt pouch with 10 gp",
+      "equipmentGrants": [
+        {
+          "items": [
+            {
+              "name": "Wind Musical Instrument (your choice)"
+            },
+            {
+              "name": "Ornate Cloak"
+            },
+            {
+              "name": "Symbol of the Wind"
+            },
+            {
+              "name": "Common Clothes"
+            }
+          ],
+          "gold": 10
+        }
+      ],
+      "feature": {
+        "name": "Supernatural Presence",
+        "description": "Whether or not you are truly Wind-Touched, there are folk all across Everden that believe that you have been divinely blessed. If you make a show of power or skill that can be attributed to the wind or air, such as feats of acrobatics or commanding unseen forces, those believers will be bolstered by your supernatural presence. They will support you and, depending on how well you have convinced them of your powers, treat you with reverence and possibly even worship."
+      }
+    },
+    {
+      "name": "Ambassador",
+      "description": "You have traveled far from your home into unfamiliar lands. You may well be the first of your kind that other folk have ever met. You could be part of an official delegation or an independent agent trying to foster communication between your homeland and wherever you find yourself. Improving trade, disproving unkind rumors, or even averting war are all tasks that may lie ahead of you. You have prepared as best you can, but you know that curiosity and humility will be the most useful tools you have to complete your mission.",
+      "feature": {
+        "name": "Diplomatic Privilege",
+        "description": "Your diplomatic credentials give you a degree of access and protection while on your travels. If you show proof of your role as ambassador to local authorities when you arrive somewhere new, you can make any Charisma (Persuasion) checks to gain access to important documents, restricted areas and private meetings with advantage. Mending. Even the most damaged relationship can be mended with good mediation. (Good) hem. hat I visit. self to the world. ook so I don't forget them. elancholy. each new place before I visit."
+      }
+    },
+    {
+      "name": "Underscout",
+      "description": "Perhaps you were raised underground, or found a home there later in life, but you've always had a gift for navigating caves and burrows. You have honed your senses to navigate those places, following the smells and sounds to get fellow folk safely from one place to another. The call to adventure has lured you out of the burrow, and your skills as an underground explorer make you a valuable member of any party.",
+      "feature": {
+        "name": "Deep Delver",
+        "description": "Your experience living and exploring in the lightless underground means it is very difficult for you to get lost. If you take one minute to examine your surroundings you can determine which way is north, even when the sky or other key signposts are not visible. e various places I've explored. t intimidating. riends. oots and mushrooms. urpose. er explorers to find. wledge that can teach us a lot. (Good) h ready to be conquered. (Evil) dies to uncover. (Neutral) you never know where you might end up. (Chaotic) e many dangers to defend against. (Lawful) by going to its roots. (Good) arned a lot of survival skills from. ve been living in their shadow forever. elve. m safe. it's just briefly. was young, and I want to take it back someday."
+      }
+    },
+    {
+      "name": "Courtier",
+      "description": "You grew up in the court, watching the fortunes of nobles rise and fall through complex plots and subtle schemes. Trained in courtly manners, you can navigate complex social situations with grace. You understand that a well-placed word can be just as devastating as a dagger in the back. Though you have enjoyed a measure of power and influence, you know that you are just a small link in a long chain of alliances and enmities and that folk far more powerful than you could end your career in an instant. Early on, you learned that trust is just another resource to be gathered and spent. Now, something has taken you away from the familiar social dangers of the court. Were you sent away in disgrace, or did you flee to find a different kind of life for yourself? Perhaps you are still working for the court clandestinely or in the open? No matter what, the court has left its talon marks on your soul.",
+      "feature": {
+        "name": "Courtly Manners",
+        "description": "Your masterful grasp of etiquette makes you welcome in the highest social circles and courts wherever you go. However, you understand that nothing comes for free in these environments. Nobles and other court figures may ask you to give something to them in exchange for access to the court, such as information or a subtle bribe. rew up in. t in social situations. ier."
+      }
+    },
+    {
+      "name": "Seaborn",
+      "description": "You grew up on the ocean with the broad sky above you and the deep water below. Walking the deck of a ship as it rocks is second nature to you. Your childhood was shaped by the regularity of the tides and the uncertainty of the weather as much as by your caregivers. You might have grown up on board a sailing vessel or on one of the great raft settlements that float across the oceans of Everden. You can roll on or pick from the",
+      "feature": {
+        "name": "Ship Shape",
+        "description": "You understand how to work a ship and speak with other sea folk. Thanks to your experience, you can barter for passage on many ships for free in exchange for lending a paw or talon. You might be skilled in sail mending, net making, weather watching, navigation, or simply knowing how to be in the right place at the right time on a busy vessel. Additionally, you have advantage on Charisma (Persuasion) checks made to interact with sailors."
+      }
+    },
+    {
+      "name": "Stonesinger",
+      "description": "You are a practitioner of the ancient arma hedge art of stonesinging. This musical tradition has been passed down from generation to generation, combining chants with the natural resonant tones of rocks. It is said that long ago, the stones sang back to skilled stone singers. The question of why the stones have fallen silent haunts the stonesingers of today, and anyone who found a way to reawaken the stones would be hailed as the greatest of all stonesingers.",
+      "feature": {
+        "name": "Stonewise",
+        "description": "You are attuned to the sounds of the earth. You can easily identify rocks and gems by tapping on them as an Action to learn their properties and value in gp. Additionally, while moving through rocky landscapes you can find the safest paths to avoid landslips, crevasses, and other natural hazards. As a bonus action, you can make a Charisma (Performance) check against a creature within 5 feet of you to perform a bewildering dance, contested by the target's Wisdom (Insight) check. If you succeed, the target has disadvantage on the next attack or check it makes against you before the end of your next turn. Once you have used this trait, you can't use it again until you have completed a short or long rest. Shifting Camouflage. Your fur gradually changes color to better hide you in the environment you find yourself in. You have advantage on Stealth checks made to hide or move undetected through natural terrain as long as you have been in that terrain for at least 10 days. Slippery Dancer. You have advantage on Dexterity saving throws against magic."
+      }
+    },
+    {
+      "name": "Warrenborn",
+      "description": "You grew up in the winding tunnels of one of Wesden's mountain warrens, embraced by a tight-knit community. Your neighbors were as close as family-dozens of aunts, uncles, and cousins. Beyond the warren door, you were taught how to survive in the difficult landscape, but you always knew a warm welcome awaited at home. While your home was cozy, it could also be stifling for someone who longed for adventure.",
+      "feature": {
+        "name": "Warrenborn",
+        "description": "From your earliest days in the tight quarters of the warren, you learned the importance of getting along with others. Outside of combat, you are skilled at calming inflamed tempers and helping people understand each other's points of view. You also have ties to a specific warren and can always find a warm welcome, healing, supplies, and shelter when you visit. Other warrens will likely extend the same hospitality to you if your warren has connections to them."
+      }
+    },
+    {
+      "name": "Wonderstruck",
+      "description": "At some point in your life, you felt the brush of an Amaranthine's wing or paw. The experience changed you forever as they gave you a glimpse into the immensity of the Great Rhythm. You can select the form of this experience from the",
+      "feature": {
+        "name": "Reverberations",
+        "description": "After encountering an Amarantine, you can still hear divine resonances that grow stronger the less attached you are to this world. Whenever you make a death saving throw, you experience another vision from the Amaranthine that gives you some new insight should you survive."
+      }
+    }
+  ]
+}

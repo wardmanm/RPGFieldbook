@@ -1,0 +1,163 @@
+name: Release
+
+# Publishing is triggered by pushing an annotated tag that a LOCAL release cut
+# already produced:
+#
+#   ./build.sh --release patch      # bumps APP_VERSION, folds in UNRELEASED.md
+#   git commit -am "Release v1.2.2"
+#   git tag -a v1.2.2 -m "v1.2.2" && git push && git push --tags
+#
+# The version decision, the changelog wording and the artifact all stay under
+# your eye locally; this workflow only PUBLISHES, and refuses to publish
+# anything it cannot independently reproduce from source.
+#
+# workflow_dispatch re-publishes an existing tag — for when an upload failed and
+# the release needs rebuilding, without cutting a new version.
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)publish, e.g. v1.2.2"
+        required: true
+        type: string
+
+permissions:
+  contents: write        # create the release and upload assets
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          case "$TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::'$TAG' is not a vX.Y.Z tag"; exit 1 ;;
+          esac
+          echo "tag=$TAG"            >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}"    >> "$GITHUB_OUTPUT"
+
+      # Full history: the source zip is built from `git ls-files`.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # The tag is a claim about the source. Check it before building anything:
+      # tagging without cutting the release is the easy mistake, and it would
+      # otherwise ship a bundle whose in-app version disagrees with its filename.
+      - name: Verify the tag matches APP_VERSION
+        run: |
+          SRC=$(grep -oE 'APP_VERSION="[^"]+"' src/js/30-version.js | head -1 | cut -d'"' -f2)
+          echo "tag=${{ steps.tag.outputs.version }}  src/js/30-version.js=$SRC"
+          if [ "$SRC" != "${{ steps.tag.outputs.version }}" ]; then
+            echo "::error::tag v${{ steps.tag.outputs.version }} but APP_VERSION is $SRC."
+            echo "::error::Cut the release first: ./build.sh --release <level>"
+            exit 1
+          fi
+
+      # Pending notes at a release tag mean the tag was not cut with --release:
+      # those bullets are missing from the changelog, so the release notes would
+      # be incomplete. It also makes build.sh name the zips "+dev", which would
+      # otherwise surface later as a baffling "missing asset" failure.
+      - name: Refuse a tag with unreleased notes
+        run: |
+          N=$(sed -n '/^## Pending/,$p' src/docs/UNRELEASED.md | grep -c '^- ' || true)
+          if [ "$N" -gt 0 ]; then
+            echo "::error::$N unreleased note(s) still in src/docs/UNRELEASED.md at this tag."
+            echo "::error::They are missing from the changelog, so these release notes would be incomplete."
+            echo "::error::Cut the tag with ./build.sh --release <level>, which folds them in and empties the notebook."
+            sed -n '/^## Pending/,$p' src/docs/UNRELEASED.md | grep '^- ' | head -5
+            exit 1
+          fi
+          echo "notebook is empty — the changelog is complete for this tag."
+
+      # ci.yml only runs on pushes to main, so a tag skips it entirely. Without
+      # this, the reproducibility gate below proves the artifact matches the
+      # source — but nothing proves the source works.
+      - name: Tests
+        run: ./src/tests/run.sh
+
+      # Build, validate and zip exactly as a local run would.
+      - name: Build
+        run: ./build.sh
+
+      # The proof that what we publish is what the source says. dist/fieldbook.html
+      # is tracked, so a clean rebuild must reproduce it byte for byte; a diff here
+      # means the committed artifact was hand-edited or built from other sources.
+      - name: Verify the committed artifact is reproducible
+        run: |
+          if ! git diff --exit-code --stat -- dist/fieldbook.html; then
+            echo "::error::A clean rebuild does not reproduce the committed dist/fieldbook.html."
+            echo "::error::Run ./build.sh locally and commit the result before tagging."
+            exit 1
+          fi
+          echo "dist/fieldbook.html reproduced byte-for-byte."
+
+      - name: Verify the generated changelog is committed
+        run: |
+          if ! git diff --exit-code --stat -- docs/CHANGELOG.md; then
+            echo "::error::docs/CHANGELOG.md is out of date with the in-app CHANGELOG array."
+            exit 1
+          fi
+
+      - name: Collect release notes
+        id: notes
+        run: |
+          node scripts/release-notes.js "${{ steps.tag.outputs.version }}" > /tmp/notes.md
+          {
+            echo
+            echo "---"
+            echo
+            echo "**Just want the app?** Download \`fieldbook.html\` and open it — that is the whole thing."
+            echo "For the rules data as well, take \`fieldbook-v${{ steps.tag.outputs.version }}.zip\`."
+          } >> /tmp/notes.md
+          echo "Release body:"; cat /tmp/notes.md
+
+      - name: Check the assets exist
+        run: |
+          V="${{ steps.tag.outputs.version }}"
+          for f in dist/fieldbook.html \
+                   "dist/fieldbook-v$V.zip" \
+                   "dist/fieldbook-v$V-source.zip" \
+                   dist/5e2024_full.json \
+                   dist/humblewood_full.json; do
+            [ -s "$f" ] || { echo "::error::missing or empty asset: $f"; exit 1; }
+            printf '  %-42s %s\n' "$f" "$(du -h "$f" | cut -f1)"
+          done
+
+      # `gh` ships on the runner, so this needs no third-party action — one less
+      # supply-chain dependency to pin and audit for something that publishes.
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          V="${{ steps.tag.outputs.version }}"
+          TAG="${{ steps.tag.outputs.tag }}"
+          ASSETS=(dist/fieldbook.html
+                  "dist/fieldbook-v$V.zip"
+                  "dist/fieldbook-v$V-source.zip"
+                  dist/5e2024_full.json
+                  dist/humblewood_full.json)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists — updating notes and re-uploading assets."
+            gh release edit "$TAG" --title "Fieldbook $TAG" --notes-file /tmp/notes.md
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
+          else
+            gh release create "$TAG" "${ASSETS[@]}" \
+              --title "Fieldbook $TAG" --notes-file /tmp/notes.md
+          fi
+          echo "Published: $(gh release view "$TAG" --json url -q .url)"

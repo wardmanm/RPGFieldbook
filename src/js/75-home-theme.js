@@ -7,10 +7,14 @@ function loadCharById(id){
   try{character=migrate(JSON.parse(raw));}catch(e){return false;}
   activeId=character.id||id;
   settings.skin=skinForSystem(character.system);saveSettings();applyTheme();
-  renderAll();hideHome();return true;
+  renderAll();hideHome();
+  /* after the sheet is on screen, so the prompt has context behind it */
+  maybePromptUpdate();
+  return true;
 }
 function newCharacter(name,system){
   const c=blankChar();c.system=(system==="dnd")?"dnd":"humblewood";c.name=name||"";c.glossary=seedGlossary();
+  c.appVersion=APP_VERSION;   // safe here: runtime, long after 30-version.js has run
   character=c;activeId=c.id;
   try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){}
   libTouch();
@@ -60,8 +64,12 @@ function renderHome(){
     wrap.innerHTML=items.map(m=>{
       const badge=m.system==="dnd"?"D&amp;D":"Humblewood";
       const auto=lib.autoload===m.id;
+      /* behind = made before this app version, so the update tool has something
+         to offer. "" (never stamped) counts as behind. */
+      const behind=cmpVer(m.appVersion||"0.0.0",APP_VERSION)<0;
+      const ver=`<span class="verbadge${behind?" old":""}" title="${behind?"Last checked against v"+esc(m.appVersion||"an earlier version")+" — updates may be available":"Up to date with v"+esc(APP_VERSION)}">v${esc(m.appVersion||"?")}</span>`;
       return `<div class="hcard">
-        <button class="hcard-load" data-load="${esc(m.id)}"><span class="hcard-name">${esc(m.name||"Unnamed")}</span><span class="hcard-meta"><span class="sysbadge ${m.system==="dnd"?"dnd":"hbw"}">${badge}</span> ${esc(fmtWhen(m.updated))}</span></button>
+        <button class="hcard-load" data-load="${esc(m.id)}"><span class="hcard-name">${esc(m.name||"Unnamed")}</span><span class="hcard-meta"><span class="sysbadge ${m.system==="dnd"?"dnd":"hbw"}">${badge}</span> ${ver} ${esc(fmtWhen(m.updated))}</span></button>
         <button class="hcard-star ${auto?"on":""}" data-autoload="${esc(m.id)}" title="${auto?"Autoload on":"Set as autoload"}">${auto?"★":"☆"}</button>
         <button class="icon danger" data-delchar="${esc(m.id)}" title="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>`;

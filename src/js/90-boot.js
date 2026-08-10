@@ -25,6 +25,8 @@ function wire(){
     if((m=t.closest(".dot[data-skill]"))){const k=m.dataset.skill;character.skills[k]=((character.skills[k]||0)+1)%3;recompute();scheduleSave();return;}
     if((m=t.closest("[data-stat]"))){openStatBreakdown(m.dataset.stat);return;}
     if((m=t.closest(".kw"))){const g=allGlossary().find(x=>x.id===m.dataset.gid);if(g)openGlossView(g);return;}
+    if((m=t.closest(".tblref"))){openTableByName(m.dataset.tbl);return;}
+    if((m=t.closest("[data-view-table]"))){openTableByName(m.dataset.viewTable);return;}
     if((m=t.closest("[data-edit]"))){const k=m.dataset.edit;editing[k]=!editing[k];renderRT(k);if(!editing[k])scheduleSave();return;}
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
@@ -72,6 +74,7 @@ function wire(){
     if((m=t.closest("[data-fuse]"))){const f=character.features.find(x=>x.id===m.dataset.fuse);if(f&&f.uses){const i=num(m.dataset.i);f.uses.used=(num(f.uses.used)===i)?i-1:i;renderFeatures();scheduleSave();}return;}
     if((m=t.closest("[data-usefeat]")))return useFeature(m.dataset.usefeat);
     if(t.closest("#glossImport"))return document.getElementById("glossRulesFiles").click();
+    if(t.closest("#tablesImport"))return document.getElementById("tablesRulesFiles").click();
     if((m=t.closest("[data-invitem]"))){const id=m.dataset.invitem,ic=invCol();ic.items[id]=!ic.items[id];renderInventory();scheduleSave();return;}
     if((m=t.closest("[data-fav-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.favItem);if(it){it.fav=!it.fav;renderInventory();scheduleSave();}return;}
     if((m=t.closest("[data-invsec]"))){const s=invCol().sections;s[m.dataset.invsec]=!s[m.dataset.invsec];renderInventory();scheduleSave();return;}
@@ -105,7 +108,11 @@ function wire(){
     if((m=t.closest("[data-edit-gloss]")))return openGlossForm(character.glossary.find(x=>x.id===m.dataset.editGloss));
     if((m=t.closest("[data-del-gloss]"))){const g=character.glossary.find(x=>x.id===m.dataset.delGloss);if(g&&confirm(`Delete “${g.term}”?`)){character.glossary=character.glossary.filter(x=>x.id!==g.id);renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();}return;}
   });
-  document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("kw")){e.preventDefault();const g=allGlossary().find(x=>x.id===e.target.dataset.gid);if(g)openGlossView(g);}});
+  document.addEventListener("keydown",e=>{
+    if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
+    if(e.target.classList.contains("kw")){e.preventDefault();const g=allGlossary().find(x=>x.id===e.target.dataset.gid);if(g)openGlossView(g);return;}
+    if(e.target.classList.contains("tblref")){e.preventDefault();openTableByName(e.target.dataset.tbl);}
+  });
   // star + hp
   document.getElementById("starBtn").addEventListener("click",()=>{character.inspiration=!character.inspiration;recompute();scheduleSave();});
   document.getElementById("hpPlus").addEventListener("click",()=>bumpHP(1));
@@ -122,6 +129,7 @@ function wire(){
   // add glossary
   document.getElementById("btnAddGloss").addEventListener("click",()=>openGlossForm());
   document.getElementById("glossSearch").addEventListener("input",()=>renderGloss());
+  document.getElementById("tablesSearch").addEventListener("input",()=>renderTables());
   document.getElementById("addFamiliarLink").addEventListener("click",()=>openFamiliarForm());
   document.getElementById("btnLevelUp").addEventListener("click",doLevelUp);
   document.getElementById("btnLevelDown").addEventListener("click",doLevelDown);
@@ -131,6 +139,15 @@ function wire(){
   const _vb=document.getElementById("btnVer");if(_vb){_vb.textContent="v"+APP_VERSION;_vb.addEventListener("click",openChangelog);}
   document.getElementById("btnHome").addEventListener("click",showHome);
   document.getElementById("btnCoinConvert").addEventListener("click",convertCoins);
+  document.getElementById("btnCoinAdjust").addEventListener("click",openCoinAdjust);
+  /* Coin boxes commit on change, not on input: mid-typing, "+1" is not yet the
+     number you meant. Enter commits without leaving the field. */
+  document.addEventListener("change",e=>{const c=e.target.closest&&e.target.closest("[data-coin]");if(c)applyCoinInput(c);});
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Enter")return;
+    const c=e.target.closest&&e.target.closest("[data-coin]");
+    if(c){e.preventDefault();applyCoinInput(c);c.select();}
+  });
   document.getElementById("invCollapseAll").addEventListener("click",()=>{const ic=invCol();const anyOpen=character.inventory.some(it=>!ic.items[it.id]);character.inventory.forEach(it=>{ic.items[it.id]=anyOpen;});renderInventory();scheduleSave();});
   // ---- home screen ----
   document.getElementById("homeCog").addEventListener("click",()=>{homeForceSetup=!homeForceSetup;renderHome();});
@@ -143,7 +160,9 @@ function wire(){
   document.getElementById("homeImportBtn").addEventListener("click",()=>document.getElementById("homeRulesFiles").click());
   document.getElementById("homeRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";setTimeout(()=>{const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();},400);});
   document.getElementById("glossRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
+  document.getElementById("tablesRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
   document.getElementById("homeRulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`)){removeRulesGroup(d.dataset.rdDel);const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
+  document.getElementById("homeClearRules").addEventListener("click",()=>{if(clearAllRules()){const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
   document.getElementById("homeChars").addEventListener("click",e=>{
     let m;
     if((m=e.target.closest("[data-load]")))return loadCharById(m.dataset.load);

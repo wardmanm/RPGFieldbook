@@ -4,6 +4,7 @@
 # dist/fieldbook-v<version>.zip. Run from the repo root:
 #
 #   ./build.sh                    build + validate. NEVER changes the version.
+#   ./build.sh --no-zip           skip the zips — fast path to dist/fieldbook.html
 #   ./build.sh --release patch    cut a release first, then build
 #   ./build.sh --release minor
 #   ./build.sh --release major
@@ -12,10 +13,14 @@
 # Releasing is a separate, deliberate act: it folds the pending notes from
 # src/docs/UNRELEASED.md into a new CHANGELOG entry and bumps APP_VERSION.
 # A bare build has to be safe to run constantly, so it must not touch either.
+#
+# Build with unreleased notes pending and the zips are marked "+dev" — their
+# contents are NOT the version their name would otherwise claim.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 RELEASE=""
+NOZIP=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --release)
@@ -23,10 +28,21 @@ while [ $# -gt 0 ]; do
       [ $# -gt 0 ] || { echo "--release needs a level: patch | minor | major | X.Y.Z"; exit 1; }
       RELEASE="$1"; shift ;;
     --release=*) RELEASE="${1#*=}"; shift ;;
-    -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --no-zip) NOZIP=1; shift ;;
+    -h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $1 (try --help)"; exit 1 ;;
   esac
 done
+
+# Closing output, shared by the normal path and the --no-zip early exit.
+# VER/PENDING are set later; the body is evaluated at call time.
+finish(){
+  echo "==> Done (v$VER). Remember: browser smoke-test any UI changes before publishing."
+  if [ -z "$RELEASE" ] && [ "$PENDING" -gt 0 ]; then
+    echo "    $PENDING unreleased note(s) in src/docs/UNRELEASED.md — still on v$VER."
+    echo "    Cut a release with: ./build.sh --release patch|minor|major"
+  fi
+}
 
 # A private temp dir, not a fixed name in a world-writable /tmp. The .js
 # extension is required: node --check refuses to parse an unknown extension.
@@ -67,11 +83,17 @@ NODE
 node --check "$TMPJS"
 echo "    ok"
 
-echo "==> Validating data/*.json"
-for f in data/*.json; do
+echo "==> Validating data/**/*.json"
+DATAFILES=$(find data -name '*.json' | sort)
+for f in $DATAFILES; do
   node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" || { echo "    INVALID: $f"; exit 1; }
 done
-echo "    ok ($(ls data/*.json | wc -l | tr -d ' ') files)"
+echo "    ok ($(echo "$DATAFILES" | wc -l | tr -d ' ') files)"
+
+# Roll each system's per-category files into one importable pack. This is what
+# players get; the individual files stay in the repo for cherry-picking.
+echo "==> Bundling rules packs"
+node scripts/bundle-rules.js || { echo "    bundling failed"; exit 1; }
 
 echo "==> Regenerating docs/CHANGELOG.md from the in-app CHANGELOG array"
 VER=$(node scripts/gen-changelog.js)
@@ -84,8 +106,31 @@ case "$VER" in
   [0-9]*.[0-9]*.[0-9]*) ;;
   *) echo "    BAD APP_VERSION: '$VER' (want X.Y.Z)"; exit 1 ;;
 esac
-BUNDLE="dist/fieldbook-v$VER.zip"
-SOURCE="dist/fieldbook-v$VER-source.zip"
+# Count the notebook once: it decides both the zip naming and the closing nudge.
+PENDING=0
+if [ -f src/docs/UNRELEASED.md ]; then
+  PENDING=$(sed -n '/^## Pending/,$p' src/docs/UNRELEASED.md | grep -c '^- ' || true)
+fi
+
+if [ -n "$NOZIP" ]; then
+  echo "==> Skipping zips (--no-zip)"
+  finish
+  exit 0
+fi
+
+# A build carrying unreleased work is NOT the version it would otherwise be
+# named for, and a zip named fieldbook-v1.2.1.zip that isn't v1.2.1 is a trap
+# for whoever you hand it to. "+dev" is semver build metadata: 1.2.1+dev reads
+# as "1.2.1 plus extra", which is what it is. ("-dev" would mean a PRE-release
+# of 1.2.1 — the opposite.) --release empties the notebook first, so releases
+# and clean rebuilds keep their plain names; the release workflow relies on that.
+TAGSUF=""
+if [ -z "$RELEASE" ] && [ "$PENDING" -gt 0 ]; then
+  TAGSUF="+dev"
+  echo "    $PENDING unreleased note(s) pending — naming the zips v$VER$TAGSUF"
+fi
+BUNDLE="dist/fieldbook-v$VER$TAGSUF.zip"
+SOURCE="dist/fieldbook-v$VER$TAGSUF-source.zip"
 
 # Clear every old zip so dist/ never accumulates stale versions, and a failed
 # build can't leave last version's bundle looking like the current one.
@@ -102,9 +147,18 @@ rm -rf .buildtmp
 mkdir -p .buildtmp/data .buildtmp/docs .buildtmp/scripts
 cp dist/fieldbook.html .buildtmp/
 cp README.md .buildtmp/
-cp data/*.json .buildtmp/data/
+# The app is MIT; shipping it without its licence would be an oversight.
+cp LICENSE .buildtmp/
+# ONE pack per system, not the per-category files — players import two files, not
+# sixteen. The individual files remain in the repo (and in the source zip).
+cp dist/5e2024_full.json dist/humblewood_full.json .buildtmp/data/
 cp docs/*.md .buildtmp/docs/
 cp scripts/convert.py .buildtmp/scripts/
+# convert.py's hand-authored inputs travel with it — without them an advanced
+# player regenerating data silently loses the Archery/Defense effects and the
+# Rage/Focus/Sorcery trackers. (They are not loadable rules packs, so they must
+# NOT go in data/.)
+cp data/overlay.json data/class-resources.json .buildtmp/scripts/
 ( cd .buildtmp && zip -rq "../$BUNDLE" . -x '*.DS_Store' )
 rm -rf .buildtmp
 echo "    wrote $BUNDLE"
@@ -115,7 +169,20 @@ const {execFileSync}=require("child_process");
 const zip=process.argv[2];
 const names=execFileSync("unzip",["-Z1",zip],{encoding:"utf8"})
   .split("\n").map(s=>s.replace(/^\.\//,"")).filter(Boolean);
-const banned=names.filter(n=>/^src\/|^CLAUDE\.md$|^build\.sh$|^\.|WIRING-LEDGER|ADR-\d|UNRELEASED|build-html\.js|gen-changelog\.js|release\.js/.test(n));
+// ^src\/ already covers src/tests/ — the audience rule does that work for us.
+const banned=names.filter(n=>/^src\/|^CLAUDE\.md$|^build\.sh$|^dev\.sh$|^\.|WIRING-LEDGER|ADR-\d|UNRELEASED|RELEASING|build-html\.js|gen-changelog\.js|release(-notes)?\.js|bundle-rules\.js|extract-humblewood\.py/.test(n));
+// data/ must hold ONLY the bundled packs — a stray per-category file means the
+// zip stopped matching what README section 9 promises.
+const dataFiles=names.filter(n=>/^data\/.+/.test(n));
+const strays=dataFiles.filter(n=>!/^data\/(5e2024|humblewood)_full\.json$/.test(n));
+if(strays.length)banned.push(...strays);
+// docs/ is an ALLOWLIST, not a blocklist. Naming each dev doc to ban leaves a
+// hole the size of the next one written: HUMBLEWOOD-PLAYTESTS.md was not in the
+// list and would have shipped if it ever landed in docs/.
+const docFiles=names.filter(n=>/^docs\/.+/.test(n)&&!n.endsWith("/"));
+const docStrays=docFiles.filter(n=>!/^docs\/(CHANGELOG|README-converter|rules-schema)\.md$/.test(n));
+if(docStrays.length)banned.push(...docStrays);
+if(!dataFiles.length)banned.push("(no rules packs in data/ — bundling did not run)");
 if(banned.length){
   // Delete the bundle: a zip that fails this check must never be publishable.
   require("fs").unlinkSync(zip);
@@ -142,13 +209,5 @@ else
   echo "    skipped — not a git checkout, so the source file list is unknown"
 fi
 
-echo "==> Done (v$VER). Remember: browser smoke-test any UI changes before publishing."
-
-# Surface the notebook on a plain build so pending work can't be quietly forgotten.
-if [ -z "$RELEASE" ]; then
-  PENDING=$(sed -n '/^## Pending/,$p' src/docs/UNRELEASED.md | grep -c '^- ' || true)
-  if [ "$PENDING" -gt 0 ]; then
-    echo "    $PENDING unreleased note(s) in src/docs/UNRELEASED.md — still on v$VER."
-    echo "    Cut a release with: ./build.sh --release patch|minor|major"
-  fi
-fi
+# Surfaces the notebook on a plain build so pending work can't be quietly forgotten.
+finish

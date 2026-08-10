@@ -74,12 +74,14 @@ When you first open Fieldbook you'll see a **home screen**. Two quick things to 
 
 ### a) Load the rules data (recommended)
 
-The app comes with data files for the 2024 rules and Humblewood — spells, classes, items,
-conditions, and so on. Loading them turns on the pickers and auto-calculations. You can load
-them in any of these places:
+The app comes with one rules file per game — `5e2024_full.json` for D&D 2024 and
+`humblewood_full.json` for Humblewood, in the `data` folder. Each holds everything for that
+system: species, classes, spells, feats, backgrounds and reference tables (the D&D pack also has
+items and rules glossary entries).
+Loading them turns on the pickers and auto-calculations. You can load them in any of these places:
 
-- **On the home screen:** under **Rules data**, tap **Import rules files (bulk)** and select the
-  files from the `data` folder (you can pick several at once).
+- **On the home screen:** under **Rules data**, tap **Import rules files (bulk)** and pick one or
+  both files from the `data` folder.
 - **Later, from Settings** (gear icon): **Rules → Import files**.
 - **From the Rules tab:** if nothing is loaded yet, there's an **Import rules files** link right
   there.
@@ -88,8 +90,8 @@ Pick as many or as few of the `data` files as you want. They merge together, and
 they're remembered for next time. You never *have* to load them — you can fill everything in by
 hand — but they make life much easier.
 
-> **Tip:** You don't have to load everything. Want only Humblewood? Load just the `humblewood-…`
-> files. Want only core D&D? Load the `…-2024` files.
+> **Tip:** You don't have to load both. Playing only Humblewood? Load just `humblewood_full.json`.
+> Only core D&D? Load just `5e2024_full.json`.
 
 ### b) Create a character
 
@@ -184,6 +186,20 @@ A searchable glossary of conditions and rules terms. It shows entries from any r
 loaded, plus any personal terms or house rules you add yourself. If nothing's loaded, there's a
 handy **Import rules files** link.
 
+### 📋 Tables
+
+Every reference table in the rules you've loaded, in one searchable list — roll tables, class
+level progressions, background personality/ideal/bond/flaw tables, and the lookup tables the rules
+keep pointing you at.
+
+You mostly won't need to come here, because the tables come to you: wherever a spell, feat, item or
+class feature mentions one by name, that name is highlighted in the text. Tap it and the table opens
+right there, without losing your place. Species, backgrounds and subclasses also link to their own
+tables from their info panels.
+
+Tables arrive with your rules packs, so if you don't see any, import a pack. Descriptions still read
+perfectly well without them.
+
 ### 🖨️ Printing or saving a PDF
 
 Tap the **Print** button (the printer icon in the top bar) to get a clean, printer-friendly
@@ -228,7 +244,33 @@ happening behind the scenes.
   goes away too. (When you build a custom item, tick the **Weapon** box to get the same linking.)
 
 - **Multiple characters.** Keep a whole party. Switch, duplicate, or delete them from the home
-  screen, and set one to open automatically.
+  screen, and set one to open automatically. There's an **Import** button there too, so you can open
+  a saved character file without going into a sheet first.
+
+- **Starting hit points.** Add your first class at level 1 and Max HP is filled in from the hit die
+  — a d8 class starts on 8, at full health. It only ever fills in a blank, so a number you typed
+  yourself is never overwritten, and it stays out of the way when you multiclass.
+
+- **Adding and spending coins.** Type a plain number in a coin box to set it, or **+10** / **-5** to
+  add or spend without doing the arithmetic. For a purchase spanning several denominations, the
+  **Adjust** button takes an amount for each coin at once, shows you the resulting totals, and won't
+  let you spend coins you don't have.
+
+- **Keeping up with rules updates.** Your character remembers which version of Fieldbook it was last
+  checked against — that's the small badge on its card, which turns gold when there may be something
+  new. Open it and Fieldbook offers to compare the sheet against your loaded rules and show exactly
+  what differs: a feat whose wording changed, a spell that was corrected, a feature that was missing.
+  Tick what you want and leave the rest, or just carry on playing.
+
+  Anything you've hand-edited is flagged and left unticked, entries that can't be matched with
+  confidence are shown but never changed, **nothing is ever deleted**, and your own numbers are never
+  touched. **A backup is always saved first** — as a separate entry in your character list, or as a
+  downloaded file if your browser is out of space. You can run the check any time from
+  **Settings → This character → Check for rules updates**.
+
+- **New versions of the app.** When a newer release is published, an **↑ Update** pill appears in the
+  top bar linking to the download. It only looks when you're online and fails quietly otherwise, so
+  the app still works completely offline.
 
 ---
 
@@ -280,14 +322,18 @@ Everything stays on your device. The app doesn't send your characters anywhere.
 ```
 fieldbook.html      ← the app — open this to run Fieldbook
 README.md           ← this guide
-data/               ← the rules data files (import the ones you want)
-   • 2024 D&D: conditions, glossary, feats, backgrounds, classes, spells, items, magic items
-   • Humblewood: races, backgrounds, feats, classes, subclasses, spells
+LICENSE             ← the MIT licence this app is released under
+data/               ← the rules data — one file per game, import the ones you play
+   • 5e2024_full.json     — D&D 2024: species, classes, spells, feats, backgrounds,
+                            items, magic items, conditions, glossary, reference tables
+   • humblewood_full.json — Humblewood: species, classes, subclasses, spells, feats,
+                            backgrounds, reference tables
 docs/               ← reference material (you can ignore these to just play)
    • CHANGELOG — what changed in each release
    • rules schema — the format, if you want to write your own rules data
    • converter notes — how the data-generation tool works
-scripts/            ← convert.py, for advanced users who want to generate their own rules data
+scripts/            ← convert.py (plus overlay.json and class-resources.json, the two
+                      files it reads), for advanced users generating their own rules data
 ```
 
 **To play, you only ever need `fieldbook.html`.** The `data` files make the pickers and

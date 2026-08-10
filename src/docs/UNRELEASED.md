@@ -6,6 +6,12 @@ version while you work — nothing here is versioned yet.
 **Add a `- ` bullet for every player-visible change as you make it.** One bullet per change, written
 the way it should read in the changelog (players see these). Text can wrap onto continuation lines.
 
+Bullets are copied VERBATIM into three places that render differently, so:
+- **No angle brackets.** `<name>` is an HTML tag on GitHub and disappears from the release notes.
+- **No literal version numbers** — they go stale the moment the version is bumped.
+- `**bold**` renders on GitHub and in `docs/CHANGELOG.md`, but shows as literal asterisks in the
+  app's own What's New list, which escapes its text. Use it sparingly.
+
 When you are ready to cut a release, run one of:
 
 ```
@@ -27,3 +33,92 @@ Bullets below this line — leave the heading in place.
 - Character library: an **Import** button now sits beside **New character**, so you can load a saved
   character file straight from the home screen without opening a sheet first. If the file matches a
   character you already have, you are still asked whether to replace it or import it as a copy.
+- Update check: the app now looks for new versions on GitHub. When a newer release is published, an
+  **↑ Update** pill appears in the top bar linking to the download page. It only checks when you are
+  online and fails silently otherwise, so the app still works fully offline.
+- **Tables.** Rules tables now display properly. A new **Tables** tab lists every table in your
+  loaded rules — roll tables, class progressions, and the lookup tables the rules keep referring to
+  — with a filter box. Wherever a spell, item, feat, or class feature mentions one of them, the
+  table's name is highlighted in the text: tap it to open the table right there without leaving what
+  you were reading. Class and subclass views also link to their own level-progression table.
+  Tables come from your rules pack, so import an updated pack to get them; descriptions still read
+  normally if you haven't.
+- Rules data: the packs now cover the **whole** 2024 Player's Handbook rather than just the free
+  basic-rules subset — **77 feats instead of 17**, 99 base items instead of 78, and 528 magic items
+  instead of 440. Class and subclass features that the rules text referred to but that were missing
+  entirely (such as the Sorcerer's Wild Magic Surge) are now present too. Nothing that was already
+  there has been removed.
+- **D&D 2024 species are here.** All ten — Aasimar, Dragonborn, Dwarf, Elf, Gnome, Goliath,
+  Halfling, Human, Orc, Tiefling — with their traits, speeds and skill choices. Lineages are proper
+  choosers rather than paragraphs to read: pick Drow, High Elf or Wood Elf for an Elf, one of six
+  giant ancestries for a Goliath, a fiendish legacy for a Tiefling, or a damage type for a
+  Dragonborn.
+- **One file per game.** The download now contains `5e2024_full.json` and `humblewood_full.json`
+  instead of sixteen separate files — import one and you have everything for that system. They show
+  up under a **Rulebook** heading in Settings so you can tell them from individual packs, and you
+  can still import single category files if you prefer to pick and choose.
+- The ancestry list now matches the game you're playing: a D&D character is offered D&D species and
+  a Humblewood character is offered Humblewood ones, instead of both lists jumbled together. Your
+  own homebrew ancestries still show up for both, and an existing character keeps whatever ancestry
+  it already has.
+- Settings → Rules data now groups what you've loaded by what it contains — Spells, Species,
+  Classes and so on — instead of one long undifferentiated list.
+- **Clear all** now asks before it unloads your rules data, tells you what it's about to remove, and
+  confirms that your characters aren't affected. It also updates the list immediately instead of
+  leaving already-removed packs on screen. There's now a Clear all on the home screen too.
+- **Characters remember which version of Fieldbook they were last checked against**, shown as a
+  small version badge on each card in your character list. It turns gold when there may be updates
+  waiting.
+- **Rules updates for existing characters.** When you open a character that predates your current
+  rules data, Fieldbook offers to compare the sheet against your loaded packs and shows exactly
+  what differs — a feat whose wording changed, a spell that was corrected, a class feature that was
+  missing. Tick the ones you want, leave the rest, or just carry on playing as-is. Anything you've
+  hand-edited yourself is flagged and left unticked so an update can't quietly overwrite your own
+  wording, and entries that can't be matched with confidence are shown but never changed.
+  **Nothing is ever deleted**, and your own numbers — quantities, what's equipped or prepared, uses
+  spent, hit points — are never touched.
+- **Updating always saves a backup first**, as a separate entry in your character list named after
+  the character with "(backup)" and the version appended. If you don't like the result, load the
+  backup; when you're happy, delete it from the home screen.
+- You can run the check any time from **Settings → This character → Check for rules updates**, even
+  if you dismissed the prompt.
+- **Coins can be added and spent without doing the sums.** Type **+10** or **-5** into any coin box
+  and it adjusts what's already there instead of replacing it; a plain number still just sets the
+  amount. For a purchase across several denominations there's a new **Adjust** button beside
+  Auto-convert — enter what you gained or spent for each coin at once, see the resulting totals
+  before you commit, and it won't let you spend coins you don't have.
+- **A level 1 character's max HP is filled in for you.** Add your first class at level 1 and
+  Fieldbook sets Max HP to the hit die's maximum — a d8 class starts on 8, at full health. It only
+  ever fills in a blank, so a number you typed yourself is left alone, and it doesn't apply when
+  you multiclass or start above level 1, where the HP you gain is yours to roll.
+- The updates list now has **Select all** and **Select none** buttons, with a running count of how
+  many are ticked, so you don't have to click through a long list one row at a time. They only touch
+  rows that can actually be applied — greyed-out ones stay as they are.
+- **A full browser can no longer stop you updating.** If Fieldbook can't keep the backup in the app,
+  it now tells you why and offers to download it as a file instead, then carries on. Previously it
+  just refused and did nothing. It also no longer reports success when the backup saved but didn't
+  make it into your character list — that could send you looking for a backup that wasn't there.
+- **Humblewood text now matches the book.** Every core species, background, subclass feature and
+  feat has been re-taken from the official 2024 Player Character Options document word for word.
+  The text you were reading before was a paraphrase, and in places it had quietly lost things — a
+  dozen traits were missing entirely, including each species' Lineage trait (Corvum Lineage, Gallus
+  Lineage, and so on), the Raptor's Hunter's Training, and two Mistral Raptor traits.
+- **Every Humblewood playtest packet is now in your rules data.** Two years of monthly releases,
+  folded in: **ten new species** — Talpo, Vesper, Rhopala, Roden, Porchini, Almare, Arkton, Lunin,
+  Pexian and Mustel — plus new lineages for species you already had, including the **Marshfoot
+  Gallus**. Each comes with its full trait list and lineage choices.
+- **Six new subclasses**: the Fighter's Workhand, the Bard's College of Courtly Jests, the Warlock's
+  Whispering Wind patron, the Rogue's Burrowskulker, the Barbarian's Path of the Corsair, and the
+  Monk's Way of the Wrangler — each with its features at the right levels.
+- **Seven new backgrounds**: Ambassador, Underscout, Courtier, Seaborn, Stonesinger, Warrenborn and
+  Wonderstruck. Four of them bring their d8 Personality Trait, Ideal, Bond and Flaw tables with
+  them, so you can roll your character's characteristics in the Tables tab.
+- **The playtest text now matches the packets word for word.** Every playtest species, subclass,
+  feat and the whole Gadgeteer class had been rewritten in shorter form at some point, and the
+  spells worst of all — most ran barely half the length of the printed text, losing details as they
+  went. All of it has been re-taken from the source. A stray "(Humblewood 2 Playtest.)" that had
+  been appended to a dozen descriptions is gone too.
+- **Humblewood has reference tables too.** 35 of them: Random Height and Weight, Standard Languages,
+  the Community and Night Domain spell lists, and every background's d6/d8 Personality Trait, Ideal,
+  Bond and Flaw table, plus Bandit Specialty, Community Place and Acceptance. They appear in the
+  Tables tab, and each background, species and subclass links to its own from its info panel.

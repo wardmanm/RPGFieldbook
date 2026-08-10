@@ -63,7 +63,7 @@ function browseItems(){
   const RAR=["Mundane","Common","Uncommon","Rare","Very Rare","Legendary","Artifact"];
   const cats=[...new Set(lib.map(catOf))].sort().map(c=>({value:c.toLowerCase(),label:c}));
   const rars=[...new Set(lib.map(rarOf))].sort((a,b)=>RAR.indexOf(a)-RAR.indexOf(b)).map(r=>({value:r.toLowerCase(),label:r}));
-  const meta=x=>[x.type,(x.rarity&&x.rarity!=="Mundane")?x.rarity:"",x.attune?("Attunement"+(x.attuneNote?" ("+x.attuneNote+")":"")):"",x.cost,(x.weight!=null?x.weight+" lb":"")].filter(Boolean).join(" · ");
+  const meta=itemMetaLine;   /* shared with the update diff — see 25-origins-items.js */
   openBrowse({
     noun:"items", items:lib, id:x=>x._id||x.name,
     search:x=>`${x.name} ${x.type||""} ${x.category||""} ${x.rarity||""}`,
@@ -80,7 +80,7 @@ function browseItems(){
       {key:"rar",label:"Rarity",type:"multi",options:rars,match:(e,a)=>a.has(rarOf(e).toLowerCase())},
       {key:"attune",label:"Needs attunement",type:"toggle",match:e=>!!e.attune}
     ],
-    onAdd:(entries,og,costOverride)=>{entries.forEach(x=>{const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());if(ex){ex.qty=num(ex.qty)+1;return;}const m=meta(x);const it={id:uid(),name:x.name,qty:1,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:false};if(og)it.origin=og;const c=(costOverride!=null?costOverride:costToGp(x.cost));if(c!=null)it.cost=c;if(x.weapon)it.weapon=x.weapon;character.inventory.push(it);if(it.weapon)addAttackForItem(it);});renderInventory();renderAttacks();recompute();scheduleSave();}
+    onAdd:(entries,og,costOverride)=>{entries.forEach(x=>{const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());if(ex){ex.qty=num(ex.qty)+1;return;}const m=meta(x);const it={id:uid(),name:x.name,qty:1,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:false};if(og)it.origin=og;const c=(costOverride!=null?costOverride:costToGp(x.cost));if(c!=null)it.cost=c;if(x.weapon)it.weapon=x.weapon;stampSrc(it,x,"item","items","browse");character.inventory.push(it);if(it.weapon)addAttackForItem(it);});renderInventory();renderAttacks();recompute();scheduleSave();}
   });
 }
 /* create an Attacks & Weapons entry linked to a weapon inventory item */
@@ -119,7 +119,7 @@ function browseSpells(){
       {key:"school",label:"School",type:"multi",options:schoolOpts,match:(e,a)=>a.has(schoolOf(e).toLowerCase())},
       {key:"conc",label:"Concentration",type:"toggle",match:e=>/concentration/i.test(e.meta||"")}
     ],
-    onAdd:(entries,og)=>{entries.forEach(x=>{if(character.spells.some(s=>String(s.name||"").toLowerCase()===String(x.name||"").toLowerCase()))return;const sp={id:uid(),name:x.name,level:num(x.level),meta:x.meta||"",text:x.text||"",prepared:false,granted:og?grantedFromOrigin(og.kind):"",origin:og||null};detectSpellAttack(sp);character.spells.push(sp);syncSpellAttack(sp);});renderSpells();renderAttacks();scheduleSave();}
+    onAdd:(entries,og)=>{entries.forEach(x=>{if(character.spells.some(s=>String(s.name||"").toLowerCase()===String(x.name||"").toLowerCase()))return;const sp={id:uid(),name:x.name,level:num(x.level),meta:x.meta||"",text:x.text||"",prepared:false,granted:og?grantedFromOrigin(og.kind):"",origin:og||null};detectSpellAttack(sp);stampSrc(sp,x,"spell","spells");character.spells.push(sp);syncSpellAttack(sp);});renderSpells();renderAttacks();scheduleSave();}
   });
 }
 

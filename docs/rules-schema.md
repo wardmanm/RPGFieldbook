@@ -33,7 +33,8 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
   "classes":     [ ... ],
   "subclasses":  [ ... ],
   "backgrounds": [ ... ],
-  "feats":       [ ... ]
+  "feats":       [ ... ],
+  "tables":      [ ... ]
 }
 ```
 
@@ -41,6 +42,10 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
   annotation when names collide across sources. Use `"XPHB"` for D&D 2024 core, `"Humblewood"`
   for Humblewood, or your own campaign label.
 - **`name`, `version`, `_note`** — optional metadata. `_note` is ignored by the app.
+- **`rulebook`** *(optional, boolean)* — mark a pack that carries a whole system in one file, the
+  way `5e2024_full.json` and `humblewood_full.json` do. Purely presentational: the app files it
+  under a **Rulebook** heading in Settings → Loaded rules data instead of **Mixed**. Merging is
+  unaffected — a rulebook merges exactly as its individual files would.
 - Category keys are all optional; include only what the pack provides. Split a large pack
   across several files (one category each) or keep it in one file — both work.
 - `"features"` and `"traits"` are accepted as aliases for the same category.
@@ -197,6 +202,15 @@ reach that level.
 - `subraces[]` (a.k.a. lineages) use the same shape as the parent; the app shows them as
   sub-options and applies the chosen one.
 - `category` is an optional grouping label in the ancestry picker.
+- `choices[]` offers a player-chosen skill, same shape as a class's: `{ "type": "skill",
+  "choose": 1, "from": ["Insight","Perception","Survival"] }`. Put it on the race (or inside a
+  trait) rather than baking a fixed `skills` list when the rules let the player pick.
+- **Species are filtered by system.** The ancestry picker only offers races whose `system` matches
+  the character's (`"XPHB"` → a D&D character, `"Humblewood"` → a Humblewood one); any other label
+  is treated as setting-agnostic and shown to both, so homebrew is never hidden. Only *races* are
+  filtered — classes, spells, feats and items stay pooled, because Humblewood supplements the D&D
+  core rather than replacing it. A character that already has a cross-system ancestry keeps it and
+  all its traits; the filter applies to the picker, not to lookups.
 
 **`abilityChoice`** *(optional, on a race **or** a subrace)* — offers a player-chosen ability
 increase in the Add-ancestry dialog, the way backgrounds do:
@@ -357,10 +371,25 @@ gain and reset them, and add their own manual resources on the sheet. When gener
   AC + capped Dex (light = uncapped, medium = +2, heavy = none) and shields (+2) are read from the
   description automatically; you may instead give a structured `"armor": {"kind":"body","base":14,"dexCap":2}`
   or `{"kind":"shield","bonus":2}`. Magic bonuses still go through `effects` (`{"target":"ac","value":1}`).
+- **Weapons create an Attacks entry.** Give an item a structured `weapon` object and adding it to a
+  character automatically creates the matching row under **Attacks & Weapons**, with to-hit and
+  damage worked out; removing the item removes the attack again.
+
+  ```json
+  "weapon": { "kind": "melee", "ability": "str", "dice": "1d8", "damageType": "slashing",
+              "notes": "Versatile (1d10)", "atkMisc": 0, "dmgMisc": 0 }
+  ```
+
+  `kind` is `"melee"` or `"ranged"`; `ability` is the ability the attack uses (`str`/`dex`/…, and
+  finesse weapons should name the one the character will actually want); `dice` is the damage dice;
+  `damageType` is free text. `notes`, `atkMisc` and `dmgMisc` are optional — the last two are flat
+  modifiers added to the roll, for a `+1` weapon that has no other effect. Without a `weapon` object
+  an item is just inventory, however weapon-like its description reads.
 - **`effects`** apply **while equipped** (e.g. a Ring of Protection: `{"target":"ac","value":1}`). Base
-  gear/weapons/armor usually have none — the app doesn't auto-apply weapon damage or replace base
-  AC; that lives in the `description`. `equipped` and `qty` are set per-character when the item is
-  added, not in the pack.
+  gear/armor usually have none — the app doesn't replace base AC from an effect; that lives in the
+  `description` or the `armor` object. Weapon damage comes from `weapon`, not from `effects`.
+  `equipped`, `qty` and `sectionOverride` (which inventory section to file it under) are set
+  per-character when the item is added, not in the pack.
 - Optional facet/display fields used by the item browser: **`category`** (coarse — Weapon / Armor /
   Tool / Gear / Wondrous Item / Potion / Ring / Wand / etc.), **`type`** (specific, e.g. "Heavy Armor"),
   **`rarity`** (Mundane / Common / Uncommon / Rare / Very Rare / Legendary / Artifact), **`cost`**
@@ -422,6 +451,52 @@ character's Inventory (and coins) when the source is added. Supports fixed grant
   and **races** (§6.2). Class gold-alternatives expressed as dice (e.g. `5d4 × 10`) are converted
   to their **average** by `convert.py`.
 
+### 6.11 `tables` — reference tables
+
+Roll tables, class progressions, and the lookup tables the rules prose keeps pointing at. They
+appear in the app's **Tables** tab, and any description that carries a `[Table: Name]` anchor
+(§7) renders that name as a tappable chip which opens the table in place.
+
+```json
+"tables": [
+  {
+    "name": "Wild Magic Surge",
+    "caption": "Wild Magic Surge",
+    "cols": ["1d100", "Effect"],
+    "align": ["center", "left"],
+    "rows": [
+      ["01-02", "Roll on this table at the start of each of your turns."],
+      ["03-04", "You cast Fireball as a level 3 spell."]
+    ],
+    "owner": "Wild Magic Sorcery",
+    "ownerKind": "subclass"
+  }
+]
+```
+
+- **`name`** (required) — the merge key **and** the anchor target, so it must be unique within a
+  pack and match any `[Table: …]` anchor exactly (lookup is case- and whitespace-insensitive).
+  `convert.py` uniquifies collisions by appending ` (2)`, ` (3)`.
+- **`rows`** (required) — an array of arrays of **strings**. Cells are plain text, escaped on
+  render; no markup. Ragged rows are padded to the widest row, but authoring them rectangular is
+  better. A table with no rows is skipped.
+- **`cols`** — the header labels. The key is `cols`; **`columns` is not read**, and a table that uses
+  it renders with no header row while looking perfectly correct in the JSON. Omit `cols`, or leave
+  every entry `""`, only when you genuinely want a headerless table.
+- **`align`** — per-column `"left"` (default) / `"center"` / `"right"`.
+- **`caption`** — optional; only present when the source table had one. `name` is what's displayed.
+- **`source`** — optional provenance label (e.g. `"Humblewood"`), for tables extracted from a book
+  rather than generated by `convert.py`. Display only.
+- Keys beginning with `_` are **extractor internals and must not appear in a shipped pack**. The
+  Humblewood extractor strips them on write.
+- **`owner`** / **`ownerKind`** — which entity the table came from. `ownerKind` is one of
+  `class`, `subclass`, `spell`, `item`, `feat`, `background`, `rule`; it groups the Tables tab and
+  lets a class or subclass view show a chip for its own table even when no prose anchor exists.
+- Rolling is **not** performed in-app — a `1d100` column is just text (`"01-02"`), so players roll
+  their own dice.
+- Tables are **reference data only**: nothing here is written to a character, so adding or removing
+  a tables pack never affects saved characters.
+
 ## 7. Conventions & tips
 
 - Use **`system: "XPHB"`** for D&D 2024 core content and a distinct label (e.g. `"Humblewood"`)
@@ -435,3 +510,8 @@ character's Inventory (and coins) when the source is added. Supports fixed grant
 - Only set a class/subclass **`spellcasting`** ability when you want the app's automatic
   spell-slot table; leave it off for point/resource-based classes.
 - Effects are **numbers only** — everything conditional or non-numeric goes in `description`.
+- **Link a table from prose with a `[Table: Name]` anchor.** Put it in any description/text field
+  at the point the table belongs; the app turns it into a chip that opens the matching §6.11 table.
+  If no matching table is loaded it degrades to the plain sentence "the *Name* table", so an anchor
+  is always safe to author even when the tables pack is optional. `convert.py` writes these
+  automatically wherever it lifts a table out of 5e-tools prose.

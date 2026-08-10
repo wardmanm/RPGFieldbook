@@ -9,8 +9,9 @@ something irreversible.
 **Fieldbook** is a standalone, single-file HTML character sheet app supporting **D&D 5e 2024 (XPHB)**
 and the **Humblewood** TTRPG. The app ships as one self-contained file, `dist/fieldbook.html`, built
 by concatenating the fragments in `src/` — HTML + CSS + JS, no runtime dependencies. A Python CLI
-(`scripts/convert.py`) turns source data (5e-tools exports, Humblewood playtest PDFs) into the app's
-JSON, which players load at runtime.
+(`scripts/convert.py`) turns 5e-tools exports into the app's JSON; a second, dev-only CLI
+(`scripts/extract-humblewood.py`) reads the Humblewood books and playtest PDFs. Players load the
+resulting JSON at runtime.
 
 ## Non-negotiable constraints
 
@@ -33,30 +34,61 @@ The split is by AUDIENCE: anything under `src/` is development material and neve
 src/                    THE SOURCE OF TRUTH — edit here, never the built file
   fieldbook.template.html  HTML shell + the whole <body>; two markers: /*@@CSS@@*/ and //@@JS@@
   manifest.json         the authoritative concatenation ORDER for js/ and css/
-  js/*.js               19 fragments, concatenated into the single <script>
-  css/*.css             6 fragments, concatenated into the single <style>
+  js/*.js               21 fragments, concatenated into the single <script>
+  css/*.css             7 fragments, concatenated into the single <style>
+  tests/                THE TEST SUITES — run with ./src/tests/run.sh (dev)
+    harness.js          loads the app the way the build concatenates it
+    converter.py · tables.js · rules-data.js · sheet.js · char-update.js · docs.js
+    humblewood-verbatim.py   needs .venv + the PDFs; SKIPS cleanly without them
   docs/                 DEV DOCS — deliberately excluded from the zip
     UNRELEASED.md       running notebook of changes since the last release — ADD TO THIS
+    RELEASING.md        how to cut and publish a release, and what CI refuses
     ADR-001-source-split.md  why the source is split and how the build works
     WIRING-LEDGER.md    running log of what's been done + what's deferred — READ THIS
+    HUMBLEWOOD-PLAYTESTS.md  what each playtest packet adds, and what supersedes what
 dist/
   fieldbook.html        the app — a BUILD ARTIFACT. Never hand-edit. Tracked in git.
+  5e2024_full.json      one bundled rules pack per system — generated (gitignored)
+  humblewood_full.json    …these are what the zip's data/ contains
   fieldbook-v1.2.1.zip  the player bundle — allowlisted, no dev material (gitignored)
   fieldbook-v1.2.1-source.zip   the whole repo, for archiving/handoff (gitignored)
+.github/workflows/
+  ci.yml                syntax, manifest parity, data, byte hygiene, tests, full build
+  release.yml           publishes on a version tag; refuses if it can't reproduce
 README.md               player-facing guide                      → ships
+LICENSE                 MIT                                      → ships
 CLAUDE.md               this file (dev)
 build.sh                build + validate + both zips; --release <level> also cuts a version
-data/*.json             rules data the app loads                 → ships
+dev.sh                  interactive menu over every build/test/release task (dev)
+data/
+  5e2024/*.json         per-category rules data — does NOT ship; bundled into the packs
+  humblewood/*.json       (the two dist/*_full.json bundles are what players get)
+  overlay.json          hand-authored convert.py inputs — ship to the zip's scripts/,
+  class-resources.json    NOT to its data/, because they are not loadable packs
 docs/                   PLAYER-FACING reference                  → ships
   rules-schema.md       schema for every data file — READ before changing data shape
   README-converter.md   how convert.py works
   CHANGELOG.md          generated from the in-app CHANGELOG array (do not hand-edit)
 scripts/
-  convert.py            the data converter (advanced players)    → ships
-  build-html.js         concatenates src/ → dist/fieldbook.html  (dev)
-  gen-changelog.js      regenerates docs/CHANGELOG.md            (dev)
-  release.js            bumps APP_VERSION + folds in UNRELEASED.md (dev)
+  convert.py            5e-tools JSON → rules data (advanced players)  → ships
+  extract-humblewood.py Humblewood PDFs → rules data; needs .venv      (dev)
+  build-html.js         concatenates src/ → dist/fieldbook.html        (dev)
+  bundle-rules.js       data/<system>/*.json → dist/<system>_full.json (dev)
+  gen-changelog.js      regenerates docs/CHANGELOG.md                  (dev)
+  release.js            bumps APP_VERSION + folds in UNRELEASED.md     (dev)
+  release-notes.js      slices one version out of the changelog for the release body
 ```
+
+**Anything added under `docs/` ships.** The zip's `docs/` is an allowlist of exactly three files;
+build.sh deletes the bundle if a fourth appears. Dev docs go in `src/docs/`.
+
+`./build.sh --no-zip` stops after the artifact, the rules-pack bundles and all the validation —
+the fast path when you only want `dist/fieldbook.html`. It leaves any existing zips alone.
+
+A plain build with pending notes in `src/docs/UNRELEASED.md` names its zips **`v<version>+dev`**,
+because their contents are *not* the released version their name would otherwise claim. `--release`
+empties the notebook first, so releases (and clean rebuilds at a tag) keep plain names — the release
+workflow depends on that.
 
 `./build.sh` emits **two** zips:
 
@@ -75,6 +107,18 @@ scripts/
 open. Read it at the start of any non-trivial task, and append a short entry when you finish one.
 
 ## Build & validate — the owner runs the build
+
+**`./dev.sh`** is the human entry point: a menu over every task below, with a status header showing
+version, branch, pending notes and whether the artifact is stale. It only shells out to `build.sh`
+and `scripts/*` — no build logic lives in it, so it can't drift from what CI runs.
+
+**Tests: `./src/tests/run.sh`** (across seven suites; `humblewood-verbatim` adds 129 more locally and
+skips cleanly without `.venv` and the PDFs). The `docs` suite asserts the counts and filenames these
+notes quote, so this file can't drift from the code again without a test going red.
+
+Unlike the build, the tests are safe to run unprompted — they touch no tracked file. Run them after any change to `src/js`, `scripts/`, or
+`data/`. The builder's fragment validator only reads `src/js` and `src/css`, so `.js` files under
+`src/tests/` are deliberately outside it.
 
 **Do not run `./build.sh` (or `node scripts/build-html.js`) unless Mike asks for it.** Builds are his
 call: the build rewrites the tracked artifact `dist/fieldbook.html` and regenerates
@@ -124,12 +168,33 @@ version, so a plain `./build.sh` never changes it — only `--release` does.
 
 ## Publishing / updates
 
-The app has a GitHub update check: set `const UPDATE_REPO = "owner/repo"` to enable it. To publish an
-update, cut a **GitHub Release** tagged `vX.Y.Z` (matching `APP_VERSION`) and attach
-`dist/fieldbook.html` — players who just want the app download that one file. Attach
-`dist/fieldbook-vX.Y.Z.zip` alongside it for the full bundle with the rules data. The zip filenames
-already carry the version, so they match the release tag with no renaming.
-The in-app badge compares the latest release tag to `APP_VERSION` and links players to the release.
+The app has a GitHub update check (`UPDATE_REPO = "wardmanm/RPGFieldbook"`). The in-app badge
+compares the latest release tag to `APP_VERSION` and links players to the release.
+
+**Publishing is automated — pushing the tag is the whole trigger.** Do not upload assets by hand.
+
+```bash
+./build.sh --release patch          # bumps APP_VERSION, folds in UNRELEASED.md, builds
+git commit -am "Release v1.2.2"     # the version bump AND the rebuilt dist/fieldbook.html
+git tag -a v1.2.2 -m "v1.2.2"
+git push && git push --tags         # the tag push publishes
+```
+
+`.github/workflows/release.yml` then rebuilds from the tag in a clean checkout and refuses to
+publish unless: the tag matches `APP_VERSION`, and the rebuild **reproduces the committed
+`dist/fieldbook.html` byte for byte**. That second check is the point — it makes a release provably
+the thing the source produces. It attaches `fieldbook.html`, both zips, and both `*_full.json` rules
+packs, with that version's `docs/CHANGELOG.md` section as the body.
+
+**Tags, not release branches.** A tag is already an immutable snapshot; a branch is a *mutable*
+pointer and would be the wrong tool for "must never change". Roll back with `git checkout v1.2.1`,
+or point a player at the older release. Only create a branch if you actually need to *maintain* an
+old line — and then create it from the tag, at that moment: `git switch -c release/1.2.x v1.2.1`.
+
+`.github/workflows/ci.yml` runs the mechanical checks on every push and PR, including
+`build-html.js --check`. A stale committed artifact fails CI *before* it can become a bad release.
+
+**Full procedure, failure modes and rollback: `src/docs/RELEASING.md`.**
 
 ## Architecture invariants (don't violate without discussing)
 
@@ -156,15 +221,28 @@ The in-app badge compares the latest release tag to `APP_VERSION` and links play
   timed/concentration spells to the Active Spells card (elapsed time + global round counter).
 - **Tabs & ToC.** The tab bar is sticky; the title bar scrolls away. The ☰ flyout lists the active
   tab's sections and opens below the top bars.
+- **Tables are data, and `cols` is the key.** Every table carries `name` (the merge key), `cols`,
+  `rows`, `owner` and `ownerKind`. `tableHTML()` reads **`cols`** — a table using any other key
+  renders with no header row and looks fine in the JSON, which is exactly how 16 shipped broken
+  once. Prose links to a table by embedding the anchor `[Table: Exact Name]`, resolved at render
+  time; `highlight()` lifts anchors out *before* escaping and before the glossary pass. Extractor
+  internals must never reach `data/` — underscore-prefixed keys are stripped on write.
+- **Character copies are not their definitions.** A sheet stores *copies* of rules entries, so it
+  drifts as packs update. `72-char-update.js` finds that drift with per-field fingerprints and a
+  `src` provenance stamp, and is pure — no DOM — so it stays testable. Three rules hold: it never
+  deletes, it never touches the player's own numbers (quantities, equipped/prepared, uses, HP), and
+  it **never updates without a backup first** — if storage refuses, it offers the backup as a
+  download rather than proceeding unprotected.
 
 ## Converter (scripts/convert.py) conventions
 
-- Subcommands: `conditions, glossary, feats, backgrounds, items, spells, classes, all`. Common flags:
+- Subcommands: `conditions, glossary, feats, backgrounds, items, spells, classes, races, all`. Flags:
   `--sources sources.json` (spell→class map), `--overlay overlay.json` (class-resources overlay).
 - **The recurring bug: `basicRules2024`.** That flag selects only the *free* rules subset. It has
   already caused missing **backgrounds** (4 vs 16) and missing **spells** (339 vs 391). Backgrounds
-  and spells now filter on `source == "XPHB"` instead. **If you touch any other converter path
-  (feats, items, classes) assume it may have the same trim** and check against the full XPHB source.
+  and spells now filter on `source == "XPHB"` instead. The same trim was then found and fixed in
+  **feats** (17 vs 77), **items** (78 vs 99) and **magic items** (440 vs 528). **Assume any converter
+  path you touch has it too** and check the count against the full XPHB source before believing it.
 - Spells only get `class` tags when `--sources sources.json` is provided; the 5e-tools spell file has
   no per-spell class data.
 - New Humblewood content is folded into the existing consolidated files, not new per-packet files.

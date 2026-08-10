@@ -3,7 +3,7 @@ const APP_VERSION="1.2.1";
 /* Set this to your GitHub "owner/repo" to enable the update badge. Leave "" to disable.
    The badge appears when a GitHub Release with a newer tag (e.g. v1.2.0) exists, and links
    to that release's page (attach fieldbook.html to the release so players can download it). */
-const UPDATE_REPO="";
+const UPDATE_REPO="wardmanm/RPGFieldbook";
 function cmpVer(a,b){const pa=String(a||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0),pb=String(b||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);for(let i=0;i<3;i++){if((pa[i]||0)>(pb[i]||0))return 1;if((pa[i]||0)<(pb[i]||0))return -1;}return 0;}
 function checkForUpdate(){
   if(!UPDATE_REPO||(navigator.onLine===false))return;

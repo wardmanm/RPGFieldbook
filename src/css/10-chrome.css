@@ -16,6 +16,9 @@
 .tbtn:hover{background:var(--paper-2)}
 .tbtn.primary{background:var(--accent);color:#20160a;border-color:var(--ink)}
 html[data-theme="dark"] .tbtn.primary{color:#20160a}
+/* destructive action — reads as a warning before it is pressed, not after */
+.tbtn.danger{color:var(--brick);border-color:var(--brick)}
+.tbtn.danger:hover{background:color-mix(in srgb,var(--brick) 14%,transparent)}
 .tbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
 .savestate{font-family:var(--head);font-size:11px;letter-spacing:.06em;color:var(--ink-soft);min-width:70px;text-align:right}
 .savestate.on{color:var(--accent)}

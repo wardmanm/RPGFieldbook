@@ -1,0 +1,5596 @@
+{
+  "system": "XPHB",
+  "name": "XPHB Tables",
+  "version": 1,
+  "tables": [
+    {
+      "name": "Artificer Features",
+      "cols": [
+        "Level",
+        "Infusions Known",
+        "Infused Items"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "0",
+          "0"
+        ],
+        [
+          "2",
+          "4",
+          "2"
+        ],
+        [
+          "3",
+          "4",
+          "2"
+        ],
+        [
+          "4",
+          "4",
+          "2"
+        ],
+        [
+          "5",
+          "4",
+          "2"
+        ],
+        [
+          "6",
+          "6",
+          "3"
+        ],
+        [
+          "7",
+          "6",
+          "3"
+        ],
+        [
+          "8",
+          "6",
+          "3"
+        ],
+        [
+          "9",
+          "6",
+          "3"
+        ],
+        [
+          "10",
+          "8",
+          "4"
+        ],
+        [
+          "11",
+          "8",
+          "4"
+        ],
+        [
+          "12",
+          "8",
+          "4"
+        ],
+        [
+          "13",
+          "8",
+          "4"
+        ],
+        [
+          "14",
+          "10",
+          "5"
+        ],
+        [
+          "15",
+          "10",
+          "5"
+        ],
+        [
+          "16",
+          "10",
+          "5"
+        ],
+        [
+          "17",
+          "10",
+          "5"
+        ],
+        [
+          "18",
+          "12",
+          "6"
+        ],
+        [
+          "19",
+          "12",
+          "6"
+        ],
+        [
+          "20",
+          "12",
+          "6"
+        ]
+      ],
+      "owner": "Artificer",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Barbarian Features",
+      "cols": [
+        "Level",
+        "Rages",
+        "Rage Damage",
+        "Weapon Mastery"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "2",
+          "",
+          "2"
+        ],
+        [
+          "2",
+          "2",
+          "",
+          "2"
+        ],
+        [
+          "3",
+          "3",
+          "",
+          "2"
+        ],
+        [
+          "4",
+          "3",
+          "",
+          "3"
+        ],
+        [
+          "5",
+          "3",
+          "",
+          "3"
+        ],
+        [
+          "6",
+          "4",
+          "",
+          "3"
+        ],
+        [
+          "7",
+          "4",
+          "",
+          "3"
+        ],
+        [
+          "8",
+          "4",
+          "",
+          "3"
+        ],
+        [
+          "9",
+          "4",
+          "",
+          "3"
+        ],
+        [
+          "10",
+          "4",
+          "",
+          "4"
+        ],
+        [
+          "11",
+          "4",
+          "",
+          "4"
+        ],
+        [
+          "12",
+          "5",
+          "",
+          "4"
+        ],
+        [
+          "13",
+          "5",
+          "",
+          "4"
+        ],
+        [
+          "14",
+          "5",
+          "",
+          "4"
+        ],
+        [
+          "15",
+          "5",
+          "",
+          "4"
+        ],
+        [
+          "16",
+          "5",
+          "",
+          "4"
+        ],
+        [
+          "17",
+          "6",
+          "",
+          "4"
+        ],
+        [
+          "18",
+          "6",
+          "",
+          "4"
+        ],
+        [
+          "19",
+          "6",
+          "",
+          "4"
+        ],
+        [
+          "20",
+          "6",
+          "",
+          "4"
+        ]
+      ],
+      "owner": "Barbarian",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Beast Shapes",
+      "cols": [
+        "Druid Level",
+        "Known Forms",
+        "Max CR",
+        "Fly Speed"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "2",
+          "4",
+          "1/4",
+          "No"
+        ],
+        [
+          "4",
+          "6",
+          "1/2",
+          "No"
+        ],
+        [
+          "8",
+          "8",
+          "1",
+          "Yes"
+        ]
+      ],
+      "caption": "Beast Shapes",
+      "owner": "Druid",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Cleric Features",
+      "cols": [
+        "Level",
+        "Channel Divinity"
+      ],
+      "align": [
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "0"
+        ],
+        [
+          "2",
+          "2"
+        ],
+        [
+          "3",
+          "2"
+        ],
+        [
+          "4",
+          "2"
+        ],
+        [
+          "5",
+          "2"
+        ],
+        [
+          "6",
+          "3"
+        ],
+        [
+          "7",
+          "3"
+        ],
+        [
+          "8",
+          "3"
+        ],
+        [
+          "9",
+          "3"
+        ],
+        [
+          "10",
+          "3"
+        ],
+        [
+          "11",
+          "3"
+        ],
+        [
+          "12",
+          "3"
+        ],
+        [
+          "13",
+          "3"
+        ],
+        [
+          "14",
+          "3"
+        ],
+        [
+          "15",
+          "3"
+        ],
+        [
+          "16",
+          "3"
+        ],
+        [
+          "17",
+          "3"
+        ],
+        [
+          "18",
+          "4"
+        ],
+        [
+          "19",
+          "4"
+        ],
+        [
+          "20",
+          "4"
+        ]
+      ],
+      "owner": "Cleric",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Creating Spell Slots",
+      "cols": [
+        "Spell Slot Level",
+        "Sorcery Point Cost",
+        "Min. Sorcerer Level"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "2",
+          "2"
+        ],
+        [
+          "2",
+          "3",
+          "3"
+        ],
+        [
+          "3",
+          "5",
+          "5"
+        ],
+        [
+          "4",
+          "6",
+          "7"
+        ],
+        [
+          "5",
+          "7",
+          "9"
+        ]
+      ],
+      "caption": "Creating Spell Slots",
+      "owner": "Sorcerer",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Druid Features",
+      "cols": [
+        "Level",
+        "Wild Shape"
+      ],
+      "align": [
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "0"
+        ],
+        [
+          "2",
+          "2"
+        ],
+        [
+          "3",
+          "2"
+        ],
+        [
+          "4",
+          "2"
+        ],
+        [
+          "5",
+          "2"
+        ],
+        [
+          "6",
+          "3"
+        ],
+        [
+          "7",
+          "3"
+        ],
+        [
+          "8",
+          "3"
+        ],
+        [
+          "9",
+          "3"
+        ],
+        [
+          "10",
+          "3"
+        ],
+        [
+          "11",
+          "3"
+        ],
+        [
+          "12",
+          "3"
+        ],
+        [
+          "13",
+          "3"
+        ],
+        [
+          "14",
+          "3"
+        ],
+        [
+          "15",
+          "3"
+        ],
+        [
+          "16",
+          "3"
+        ],
+        [
+          "17",
+          "4"
+        ],
+        [
+          "18",
+          "4"
+        ],
+        [
+          "19",
+          "4"
+        ],
+        [
+          "20",
+          "4"
+        ]
+      ],
+      "owner": "Druid",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Fighter Features",
+      "cols": [
+        "Level",
+        "Second Wind",
+        "Weapon Mastery"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "2",
+          "3"
+        ],
+        [
+          "2",
+          "2",
+          "3"
+        ],
+        [
+          "3",
+          "2",
+          "3"
+        ],
+        [
+          "4",
+          "3",
+          "4"
+        ],
+        [
+          "5",
+          "3",
+          "4"
+        ],
+        [
+          "6",
+          "3",
+          "4"
+        ],
+        [
+          "7",
+          "3",
+          "4"
+        ],
+        [
+          "8",
+          "3",
+          "4"
+        ],
+        [
+          "9",
+          "3",
+          "4"
+        ],
+        [
+          "10",
+          "4",
+          "5"
+        ],
+        [
+          "11",
+          "4",
+          "5"
+        ],
+        [
+          "12",
+          "4",
+          "5"
+        ],
+        [
+          "13",
+          "4",
+          "5"
+        ],
+        [
+          "14",
+          "4",
+          "5"
+        ],
+        [
+          "15",
+          "4",
+          "5"
+        ],
+        [
+          "16",
+          "4",
+          "6"
+        ],
+        [
+          "17",
+          "4",
+          "6"
+        ],
+        [
+          "18",
+          "4",
+          "6"
+        ],
+        [
+          "19",
+          "4",
+          "6"
+        ],
+        [
+          "20",
+          "4",
+          "6"
+        ]
+      ],
+      "owner": "Fighter",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Monk Features",
+      "cols": [
+        "Level",
+        "Martial Arts",
+        "Focus Points",
+        "Unarmored Movement"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "",
+          "0",
+          ""
+        ],
+        [
+          "2",
+          "",
+          "2",
+          ""
+        ],
+        [
+          "3",
+          "",
+          "3",
+          ""
+        ],
+        [
+          "4",
+          "",
+          "4",
+          ""
+        ],
+        [
+          "5",
+          "",
+          "5",
+          ""
+        ],
+        [
+          "6",
+          "",
+          "6",
+          ""
+        ],
+        [
+          "7",
+          "",
+          "7",
+          ""
+        ],
+        [
+          "8",
+          "",
+          "8",
+          ""
+        ],
+        [
+          "9",
+          "",
+          "9",
+          ""
+        ],
+        [
+          "10",
+          "",
+          "10",
+          ""
+        ],
+        [
+          "11",
+          "",
+          "11",
+          ""
+        ],
+        [
+          "12",
+          "",
+          "12",
+          ""
+        ],
+        [
+          "13",
+          "",
+          "13",
+          ""
+        ],
+        [
+          "14",
+          "",
+          "14",
+          ""
+        ],
+        [
+          "15",
+          "",
+          "15",
+          ""
+        ],
+        [
+          "16",
+          "",
+          "16",
+          ""
+        ],
+        [
+          "17",
+          "",
+          "17",
+          ""
+        ],
+        [
+          "18",
+          "",
+          "18",
+          ""
+        ],
+        [
+          "19",
+          "",
+          "19",
+          ""
+        ],
+        [
+          "20",
+          "",
+          "20",
+          ""
+        ]
+      ],
+      "owner": "Monk",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Mystic Features",
+      "cols": [
+        "Level",
+        "Talents Known",
+        "Disciplines Known",
+        "Psi Points",
+        "Psi Limit"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "1",
+          "1",
+          "4",
+          "2"
+        ],
+        [
+          "2",
+          "1",
+          "1",
+          "6",
+          "2"
+        ],
+        [
+          "3",
+          "2",
+          "2",
+          "14",
+          "3"
+        ],
+        [
+          "4",
+          "2",
+          "2",
+          "17",
+          "3"
+        ],
+        [
+          "5",
+          "2",
+          "3",
+          "27",
+          "5"
+        ],
+        [
+          "6",
+          "2",
+          "3",
+          "32",
+          "5"
+        ],
+        [
+          "7",
+          "2",
+          "4",
+          "38",
+          "6"
+        ],
+        [
+          "8",
+          "2",
+          "4",
+          "44",
+          "6"
+        ],
+        [
+          "9",
+          "2",
+          "5",
+          "57",
+          "7"
+        ],
+        [
+          "10",
+          "3",
+          "5",
+          "64",
+          "7"
+        ],
+        [
+          "11",
+          "3",
+          "5",
+          "64",
+          "7"
+        ],
+        [
+          "12",
+          "3",
+          "6",
+          "64",
+          "7"
+        ],
+        [
+          "13",
+          "3",
+          "6",
+          "64",
+          "7"
+        ],
+        [
+          "14",
+          "3",
+          "6",
+          "64",
+          "7"
+        ],
+        [
+          "15",
+          "3",
+          "7",
+          "64",
+          "7"
+        ],
+        [
+          "16",
+          "3",
+          "7",
+          "64",
+          "7"
+        ],
+        [
+          "17",
+          "4",
+          "7",
+          "64",
+          "7"
+        ],
+        [
+          "18",
+          "4",
+          "8",
+          "71",
+          "7"
+        ],
+        [
+          "19",
+          "4",
+          "8",
+          "71",
+          "7"
+        ],
+        [
+          "20",
+          "4",
+          "8",
+          "71",
+          "7"
+        ]
+      ],
+      "owner": "Mystic",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Paladin Features",
+      "cols": [
+        "Level",
+        "Channel Divinity"
+      ],
+      "align": [
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "0"
+        ],
+        [
+          "2",
+          "0"
+        ],
+        [
+          "3",
+          "2"
+        ],
+        [
+          "4",
+          "2"
+        ],
+        [
+          "5",
+          "2"
+        ],
+        [
+          "6",
+          "2"
+        ],
+        [
+          "7",
+          "2"
+        ],
+        [
+          "8",
+          "2"
+        ],
+        [
+          "9",
+          "2"
+        ],
+        [
+          "10",
+          "2"
+        ],
+        [
+          "11",
+          "3"
+        ],
+        [
+          "12",
+          "3"
+        ],
+        [
+          "13",
+          "3"
+        ],
+        [
+          "14",
+          "3"
+        ],
+        [
+          "15",
+          "3"
+        ],
+        [
+          "16",
+          "3"
+        ],
+        [
+          "17",
+          "3"
+        ],
+        [
+          "18",
+          "3"
+        ],
+        [
+          "19",
+          "3"
+        ],
+        [
+          "20",
+          "3"
+        ]
+      ],
+      "owner": "Paladin",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Ranger Features",
+      "cols": [
+        "Level",
+        "Favored Enemy"
+      ],
+      "align": [
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "2"
+        ],
+        [
+          "2",
+          "2"
+        ],
+        [
+          "3",
+          "2"
+        ],
+        [
+          "4",
+          "2"
+        ],
+        [
+          "5",
+          "3"
+        ],
+        [
+          "6",
+          "3"
+        ],
+        [
+          "7",
+          "3"
+        ],
+        [
+          "8",
+          "3"
+        ],
+        [
+          "9",
+          "4"
+        ],
+        [
+          "10",
+          "4"
+        ],
+        [
+          "11",
+          "4"
+        ],
+        [
+          "12",
+          "4"
+        ],
+        [
+          "13",
+          "5"
+        ],
+        [
+          "14",
+          "5"
+        ],
+        [
+          "15",
+          "5"
+        ],
+        [
+          "16",
+          "5"
+        ],
+        [
+          "17",
+          "6"
+        ],
+        [
+          "18",
+          "6"
+        ],
+        [
+          "19",
+          "6"
+        ],
+        [
+          "20",
+          "6"
+        ]
+      ],
+      "owner": "Ranger",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Sorcerer Features",
+      "cols": [
+        "Level",
+        "Sorcery Points"
+      ],
+      "align": [
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "0"
+        ],
+        [
+          "2",
+          "2"
+        ],
+        [
+          "3",
+          "3"
+        ],
+        [
+          "4",
+          "4"
+        ],
+        [
+          "5",
+          "5"
+        ],
+        [
+          "6",
+          "6"
+        ],
+        [
+          "7",
+          "7"
+        ],
+        [
+          "8",
+          "8"
+        ],
+        [
+          "9",
+          "9"
+        ],
+        [
+          "10",
+          "10"
+        ],
+        [
+          "11",
+          "11"
+        ],
+        [
+          "12",
+          "12"
+        ],
+        [
+          "13",
+          "13"
+        ],
+        [
+          "14",
+          "14"
+        ],
+        [
+          "15",
+          "15"
+        ],
+        [
+          "16",
+          "16"
+        ],
+        [
+          "17",
+          "17"
+        ],
+        [
+          "18",
+          "18"
+        ],
+        [
+          "19",
+          "19"
+        ],
+        [
+          "20",
+          "20"
+        ]
+      ],
+      "owner": "Sorcerer",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Warlock Features",
+      "cols": [
+        "Level",
+        "Invocations",
+        "Spell Slots",
+        "Slot Level"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "1",
+          "1",
+          "1"
+        ],
+        [
+          "2",
+          "3",
+          "2",
+          "1"
+        ],
+        [
+          "3",
+          "3",
+          "2",
+          "2"
+        ],
+        [
+          "4",
+          "3",
+          "2",
+          "2"
+        ],
+        [
+          "5",
+          "5",
+          "2",
+          "3"
+        ],
+        [
+          "6",
+          "5",
+          "2",
+          "3"
+        ],
+        [
+          "7",
+          "6",
+          "2",
+          "4"
+        ],
+        [
+          "8",
+          "6",
+          "2",
+          "4"
+        ],
+        [
+          "9",
+          "7",
+          "2",
+          "5"
+        ],
+        [
+          "10",
+          "7",
+          "2",
+          "5"
+        ],
+        [
+          "11",
+          "7",
+          "3",
+          "5"
+        ],
+        [
+          "12",
+          "8",
+          "3",
+          "5"
+        ],
+        [
+          "13",
+          "8",
+          "3",
+          "5"
+        ],
+        [
+          "14",
+          "8",
+          "3",
+          "5"
+        ],
+        [
+          "15",
+          "9",
+          "3",
+          "5"
+        ],
+        [
+          "16",
+          "9",
+          "3",
+          "5"
+        ],
+        [
+          "17",
+          "9",
+          "4",
+          "5"
+        ],
+        [
+          "18",
+          "10",
+          "4",
+          "5"
+        ],
+        [
+          "19",
+          "10",
+          "4",
+          "5"
+        ],
+        [
+          "20",
+          "10",
+          "4",
+          "5"
+        ]
+      ],
+      "owner": "Warlock",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Fast Crafting",
+      "cols": [
+        "Artisan's Tools",
+        "Crafted Gear"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Carpenter's Tools",
+          "Ladder, Torch"
+        ],
+        [
+          "Leatherworker's Tools",
+          "Crossbow Bolt Case, Map or Scroll Case, Pouch"
+        ],
+        [
+          "Mason's Tools",
+          "Block and Tackle"
+        ],
+        [
+          "Potter's Tools",
+          "Jug, Lamp"
+        ],
+        [
+          "Smith's Tools",
+          "Ball Bearings, Bucket, Caltrops, Grappling Hook, Iron Pot"
+        ],
+        [
+          "Tinker's Tools",
+          "Bell, Shovel, Tinderbox"
+        ],
+        [
+          "Weaver's Tools",
+          "Basket, Rope, Net, Tent"
+        ],
+        [
+          "Woodcarver's Tools",
+          "Club, Greatclub, Quarterstaff"
+        ]
+      ],
+      "caption": "Fast Crafting",
+      "owner": "Crafter",
+      "ownerKind": "feat"
+    },
+    {
+      "name": "Apparatus of Kwalish Levers",
+      "cols": [
+        "Lever",
+        "Up",
+        "Down"
+      ],
+      "align": [
+        "center",
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Legs extend, allowing the apparatus to walk and swim.",
+          "Legs retract, reducing the apparatus's Speed and Swim Speed to 0 and making it unable to benefit from bonuses to speed."
+        ],
+        [
+          "2",
+          "Forward window shutter opens.",
+          "Forward window shutter closes."
+        ],
+        [
+          "3",
+          "Side window shutters open (two per side).",
+          "Side window shutters close (two per side)."
+        ],
+        [
+          "4",
+          "Two claws extend from the front side of the apparatus.",
+          "The claws retract."
+        ],
+        [
+          "5",
+          "Each extended claw makes the following melee attack: 8 to hit, reach 5 ft. Hit: 7 (2d6) Bludgeoning damage.",
+          "Each extended claw makes the following melee attack: 8 to hit, reach 5 ft. Hit: The target has the Grappled condition (escape DC 15)."
+        ],
+        [
+          "6",
+          "The apparatus walks or swims forward provided its legs are extended.",
+          "The apparatus walks or swims backward provided its legs are extended."
+        ],
+        [
+          "7",
+          "The apparatus turns 90 degrees counterclockwise provided its legs are extended.",
+          "The apparatus turns 90 degrees clockwise provided its legs are extended."
+        ],
+        [
+          "8",
+          "Eyelike fixtures emit Bright Light in a 30-foot radius and Dim Light for an additional 30 feet.",
+          "The light turns off."
+        ],
+        [
+          "9",
+          "The apparatus sinks up to 20 feet if it's in liquid.",
+          "The apparatus rises up to 20 feet if it's in liquid."
+        ],
+        [
+          "10",
+          "The rear hatch unseals and opens.",
+          "The rear hatch closes and seals."
+        ]
+      ],
+      "caption": "Apparatus of Kwalish Levers",
+      "owner": "Apparatus of Kwalish",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Bag of Beans Table",
+      "cols": [
+        "1d100",
+        "Effect"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "01",
+          "5d4 toadstools sprout. If a creature eats a toadstool, roll any die. On an odd roll, the eater must succeed on a DC 15 Constitution saving throw or take 5d6 Poison damage and have the Poisoned condition for 1 hour. On an even roll, the eater gains 5d6 Temporary Hit Points for 1 hour."
+        ],
+        [
+          "02-10",
+          "A geyser erupts and spouts water, beer, mayonnaise, tea, vinegar, wine, or oil (DM's choice) 30 feet into the air for 1d4 minutes."
+        ],
+        [
+          "11-20",
+          "A Treant sprouts. Roll any die. On an odd roll, the treant is Chaotic Evil. On an even roll, the treant is Chaotic Good."
+        ],
+        [
+          "21-30",
+          "An animate but immobile stone statue in your likeness rises and makes verbal threats against you. If you leave it and others come near, it describes you as the most heinous of villains and directs the newcomers to find and attack you. If you are on the same plane of existence as the statue, it knows where you are. The statue becomes inanimate after 24 hours."
+        ],
+        [
+          "31-40",
+          "A campfire with green flames springs forth and burns for 24 hours or until it is extinguished."
+        ],
+        [
+          "41-50",
+          "Three Shrieker Fungi sprout."
+        ],
+        [
+          "51-60",
+          "1d4 + 4 bright-pink toads crawl forth. Whenever a toad is touched, it transforms into a Large or smaller monster of the DM's choice that acts in accordance with its alignment and nature. The monster remains for 1 minute, then disappears in a puff of bright-pink smoke."
+        ],
+        [
+          "61-70",
+          "A hungry Bulette burrows up and attacks."
+        ],
+        [
+          "71-80",
+          "A fruit tree grows. It has 1d10 + 20 fruit, 1d8 of which act as randomly determined potions. The tree vanishes after 1 hour. Picked fruit remains, retaining any magic for 30 days."
+        ],
+        [
+          "81-90",
+          "A nest of 1d4 + 3 rainbow-colored eggs springs up. Any creature that eats an egg makes a DC 20 Constitution saving throw. On a successful save, a creature permanently increases its lowest ability score by 1, randomly choosing among equally low scores. On a failed save, the creature takes 10d6 Force damage from an internal explosion."
+        ],
+        [
+          "91-95",
+          "A pyramid with a 60-foot-square base bursts upward. Inside is a burial chamber containing a Mummy, a Mummy Lord, or some other Undead of the DM's choice. Its sarcophagus contains treasure of the DM's choice."
+        ],
+        [
+          "96-00",
+          "A giant beanstalk sprouts, growing to a height of the DM's choice. The top leads where the DM chooses, such as to a great view, a cloud giant's castle, or another plane of existence."
+        ]
+      ],
+      "owner": "Bag of Beans",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Bag of Tricks, Gray Table",
+      "cols": [
+        "1d8",
+        "Creature"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Weasel"
+        ],
+        [
+          "2",
+          "Giant Rat"
+        ],
+        [
+          "3",
+          "Badger"
+        ],
+        [
+          "4",
+          "Boar"
+        ],
+        [
+          "5",
+          "Panther"
+        ],
+        [
+          "6",
+          "Giant Badger"
+        ],
+        [
+          "7",
+          "Dire Wolf"
+        ],
+        [
+          "8",
+          "Giant Elk"
+        ]
+      ],
+      "owner": "Bag of Tricks, Gray",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Bag of Tricks, Rust Table",
+      "cols": [
+        "1d8",
+        "Creature"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Rat"
+        ],
+        [
+          "2",
+          "Owl"
+        ],
+        [
+          "3",
+          "Mastiff"
+        ],
+        [
+          "4",
+          "Goat"
+        ],
+        [
+          "5",
+          "Giant Goat"
+        ],
+        [
+          "6",
+          "Giant Boar"
+        ],
+        [
+          "7",
+          "Lion"
+        ],
+        [
+          "8",
+          "Brown Bear"
+        ]
+      ],
+      "owner": "Bag of Tricks, Rust",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Bag of Tricks, Tan Table",
+      "cols": [
+        "1d8",
+        "Creature"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Jackal"
+        ],
+        [
+          "2",
+          "Ape"
+        ],
+        [
+          "3",
+          "Baboon"
+        ],
+        [
+          "4",
+          "Axe Beak"
+        ],
+        [
+          "5",
+          "Black Bear"
+        ],
+        [
+          "6",
+          "Giant Weasel"
+        ],
+        [
+          "7",
+          "Giant Hyena"
+        ],
+        [
+          "8",
+          "Tiger"
+        ]
+      ],
+      "owner": "Bag of Tricks, Tan",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Candle of Invocation Table",
+      "cols": [
+        "1d100",
+        "Outer Plane"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "01-05",
+          "Abyss"
+        ],
+        [
+          "06-10",
+          "Acheron"
+        ],
+        [
+          "11-17",
+          "Arborea"
+        ],
+        [
+          "18-25",
+          "Arcadia"
+        ],
+        [
+          "26-33",
+          "Beastlands"
+        ],
+        [
+          "34-41",
+          "Bytopia"
+        ],
+        [
+          "42-46",
+          "Carceri"
+        ],
+        [
+          "47-54",
+          "Elysium"
+        ],
+        [
+          "55-59",
+          "Gehenna"
+        ],
+        [
+          "60-64",
+          "Hades"
+        ],
+        [
+          "65-69",
+          "Limbo"
+        ],
+        [
+          "70-77",
+          "Mechanus"
+        ],
+        [
+          "78-85",
+          "Mount Celestia"
+        ],
+        [
+          "86-90",
+          "Nine Hells"
+        ],
+        [
+          "91-95",
+          "Pandemonium"
+        ],
+        [
+          "96-00",
+          "Ysgard"
+        ]
+      ],
+      "owner": "Candle of Invocation",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Cube of Force Faces",
+      "cols": [
+        "Spell",
+        "Charge Cost"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Mage Armor",
+          "1"
+        ],
+        [
+          "Shield",
+          "1"
+        ],
+        [
+          "Leomund's Tiny Hut",
+          "3"
+        ],
+        [
+          "Mordenkainen's Private Sanctum",
+          "4"
+        ],
+        [
+          "Otiluke's Resilient Sphere",
+          "4"
+        ],
+        [
+          "Wall of Force",
+          "5"
+        ]
+      ],
+      "caption": "Cube of Force Faces",
+      "owner": "Cube of Force",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Deck of Illusions",
+      "cols": [
+        "1d100",
+        "Illusion"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "01-03",
+          "Adult Red Dragon"
+        ],
+        [
+          "04-06",
+          "Archmage"
+        ],
+        [
+          "07-09",
+          "Assassin"
+        ],
+        [
+          "10-12",
+          "Bandit Captain"
+        ],
+        [
+          "13-15",
+          "Beholder"
+        ],
+        [
+          "16-18",
+          "Berserker"
+        ],
+        [
+          "19-21",
+          "Bugbear Warrior"
+        ],
+        [
+          "22-24",
+          "Cloud Giant"
+        ],
+        [
+          "25-27",
+          "Druid"
+        ],
+        [
+          "28-30",
+          "Erinyes"
+        ],
+        [
+          "31-33",
+          "Ettin"
+        ],
+        [
+          "34-36",
+          "Fire Giant"
+        ],
+        [
+          "37-39",
+          "Frost Giant"
+        ],
+        [
+          "40-42",
+          "Gnoll Warrior"
+        ],
+        [
+          "43-45",
+          "Goblin Warrior"
+        ],
+        [
+          "46-48",
+          "Guardian Naga"
+        ],
+        [
+          "49-51",
+          "Hill Giant"
+        ],
+        [
+          "52-54",
+          "Hobgoblin Warrior"
+        ],
+        [
+          "55-57",
+          "Incubus"
+        ],
+        [
+          "58-60",
+          "Iron Golem"
+        ],
+        [
+          "61-63",
+          "Knight"
+        ],
+        [
+          "64-66",
+          "Kobold Warrior"
+        ],
+        [
+          "67-69",
+          "Lich"
+        ],
+        [
+          "70-72",
+          "Medusa"
+        ],
+        [
+          "73-75",
+          "Night Hag"
+        ],
+        [
+          "76-78",
+          "Ogre"
+        ],
+        [
+          "79-81",
+          "Oni"
+        ],
+        [
+          "82-84",
+          "Priest"
+        ],
+        [
+          "85-87",
+          "Succubus"
+        ],
+        [
+          "88-90",
+          "Troll"
+        ],
+        [
+          "91-93",
+          "Warrior Veteran"
+        ],
+        [
+          "94-96",
+          "Wyvern"
+        ],
+        [
+          "97-00",
+          "The card drawer"
+        ]
+      ],
+      "caption": "Deck of Illusions",
+      "owner": "Deck of Illusions",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Deck of Many Things",
+      "cols": [
+        "1d100 (13-Card Deck)",
+        "1d100 (22-Card Deck)",
+        "Card"
+      ],
+      "align": [
+        "center",
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "—",
+          "01-05",
+          "Balance"
+        ],
+        [
+          "—",
+          "06-10",
+          "Comet"
+        ],
+        [
+          "—",
+          "11-14",
+          "Donjon"
+        ],
+        [
+          "01-08",
+          "15-18",
+          "Euryale"
+        ],
+        [
+          "—",
+          "19-23",
+          "Fates"
+        ],
+        [
+          "09-16",
+          "24-27",
+          "Flames"
+        ],
+        [
+          "—",
+          "28-31",
+          "Fool"
+        ],
+        [
+          "—",
+          "32-36",
+          "Gem"
+        ],
+        [
+          "17-24",
+          "37-41",
+          "Jester"
+        ],
+        [
+          "25-32",
+          "42-46",
+          "Key"
+        ],
+        [
+          "33-40",
+          "47-51",
+          "Knight"
+        ],
+        [
+          "41-48",
+          "52-56",
+          "Moon"
+        ],
+        [
+          "—",
+          "57-60",
+          "Puzzle"
+        ],
+        [
+          "49-56",
+          "61-64",
+          "Rogue"
+        ],
+        [
+          "57-64",
+          "65-68",
+          "Ruin"
+        ],
+        [
+          "—",
+          "69-73",
+          "Sage"
+        ],
+        [
+          "65-72",
+          "74-77",
+          "Skull"
+        ],
+        [
+          "73-80",
+          "78-82",
+          "Star"
+        ],
+        [
+          "81-88",
+          "83-87",
+          "Sun"
+        ],
+        [
+          "—",
+          "88-91",
+          "Talons"
+        ],
+        [
+          "89-96",
+          "92-96",
+          "Throne"
+        ],
+        [
+          "97-00",
+          "97-00",
+          "Void"
+        ]
+      ],
+      "caption": "Deck of Many Things",
+      "owner": "Deck of Many Things",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Efreeti Bottle Table",
+      "cols": [
+        "1d10",
+        "Effect"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "The efreeti attacks you. After fighting for 5 rounds, the efreeti disappears, and the bottle loses its magic."
+        ],
+        [
+          "2-9",
+          "The efreeti understands your languages and obeys your commands for 1 hour, after which it returns to the bottle, and a new stopper contains it. The stopper can't be removed for 24 hours. The next two times the bottle is opened, the same effect occurs. If the bottle is opened a fourth time, the efreeti escapes and disappears, and the bottle loses its magic."
+        ],
+        [
+          "10",
+          "The efreeti understands your languages and can cast Wish once for you. It disappears when it grants the wish or after 1 hour, and the bottle loses its magic."
+        ]
+      ],
+      "owner": "Efreeti Bottle",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Hat of Many Spells Table",
+      "cols": [
+        "1d100",
+        "Effect"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "01-50",
+          "You cast a random spell determined by rolling 1d10: on a 1, Enlarge/Reduce (enlarge effect); on a 2, Enlarge/Reduce (reduce effect); on a 3, Faerie Fire; on a 4, Fireball; on a 5, Gust of Wind; on a 6, Invisibility (cast on yourself); on a 7, Lightning Bolt; on an 8, Phantasmal Force; on a 9, Polymorph; on a 10, Stinking Cloud."
+        ],
+        [
+          "51-55",
+          "You have the Stunned condition until the end of your next turn, believing something awesome just happened."
+        ],
+        [
+          "56-60",
+          "A harmless swarm of butterflies fills a 10-foot Cube within 30 feet of yourself. The swarm disperses after 1 minute."
+        ],
+        [
+          "61-65",
+          "You pull a nonmagical object out of the hat. Roll 1d4 to determine the object: on a 1, a vial of Acid; on a 2, a flask of Alchemist's Fire; on a 3, a Crowbar; on a 4, a lit Torch."
+        ],
+        [
+          "66-70",
+          "You suffer a bout of \"magic sickness\" and have the Poisoned condition for 1 hour."
+        ],
+        [
+          "71-75",
+          "You have the Petrified condition until the end of your next turn."
+        ],
+        [
+          "76-80",
+          "You pull a nonmagical object out of the hat. Roll 1d4 to determine the object: on a 1, a Dagger; on a 2, a Rope with a Grappling Hook tied to one end; on a 3, a bag of Caltrops; on a 4, a gem worth 50 GP."
+        ],
+        [
+          "81-85",
+          "A creature appears in an unoccupied space as close to you as possible. The creature isn't under your control and acts as it normally would, and it disappears after 1 hour or when it drops to 0 Hit Points. Roll 1d4 to determine the creature: on a 1, a Camel; on a 2, a Constrictor Snake; on a 3, an Elephant; on a 4, a Mule."
+        ],
+        [
+          "86-90",
+          "A Hostile Swarm of Bats flies out of the hat, occupies your space, and attacks you."
+        ],
+        [
+          "91-95",
+          "A vertical, 10-foot-diameter, two-way portal to another plane of existence opens in an unoccupied space within 30 feet of you and remains open until the end of your next turn. The DM determines where it leads."
+        ],
+        [
+          "96-00",
+          "You pull a magic item out of the hat. Roll 1d6 to determine the item's rarity: on a 1-3, Common; on a 4-5, Uncommon; on a 6, Rare. The DM chooses the item, which disappears after 1 hour if it's not consumed or destroyed before then."
+        ]
+      ],
+      "owner": "Hat of Many Spells",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Iron Flask Table",
+      "cols": [
+        "1d100",
+        "Contents"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "01-50",
+          "No creature"
+        ],
+        [
+          "51",
+          "Arcanaloth"
+        ],
+        [
+          "52-54",
+          "Bone Devil"
+        ],
+        [
+          "55-56",
+          "Cambion"
+        ],
+        [
+          "57-58",
+          "Dao"
+        ],
+        [
+          "59",
+          "Deva"
+        ],
+        [
+          "60-61",
+          "Djinni"
+        ],
+        [
+          "62-63",
+          "Efreeti"
+        ],
+        [
+          "64-65",
+          "Erinyes"
+        ],
+        [
+          "66-67",
+          "Fomorian"
+        ],
+        [
+          "68",
+          "Githyanki Knight"
+        ],
+        [
+          "69",
+          "Githzerai Zerth"
+        ],
+        [
+          "70-71",
+          "Glabrezu"
+        ],
+        [
+          "72-74",
+          "Hezrou"
+        ],
+        [
+          "75",
+          "Incubus"
+        ],
+        [
+          "76-77",
+          "Invisible Stalker"
+        ],
+        [
+          "78-79",
+          "Marid"
+        ],
+        [
+          "80",
+          "Marilith"
+        ],
+        [
+          "81-82",
+          "Mezzoloth"
+        ],
+        [
+          "83-84",
+          "Nalfeshnee"
+        ],
+        [
+          "85-86",
+          "Night Hag"
+        ],
+        [
+          "87-88",
+          "Nycaloth"
+        ],
+        [
+          "89",
+          "Planetar"
+        ],
+        [
+          "90-91",
+          "Red Slaad"
+        ],
+        [
+          "92-93",
+          "Salamander"
+        ],
+        [
+          "94",
+          "Solar"
+        ],
+        [
+          "95",
+          "Succubus"
+        ],
+        [
+          "96",
+          "Ultroloth"
+        ],
+        [
+          "97-99",
+          "Vrock"
+        ],
+        [
+          "00",
+          "Xorn"
+        ]
+      ],
+      "owner": "Iron Flask",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Necklace of Prayer Beads Table",
+      "cols": [
+        "1d20",
+        "Bead",
+        "Spell"
+      ],
+      "align": [
+        "center",
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1-6",
+          "Bead of Blessing",
+          "Bless"
+        ],
+        [
+          "7-12",
+          "Bead of Curing",
+          "Cure Wounds (level 2 version)"
+        ],
+        [
+          "13-16",
+          "Bead of Favor",
+          "Greater Restoration"
+        ],
+        [
+          "17-18",
+          "Bead of Smiting",
+          "Shining Smite"
+        ],
+        [
+          "19",
+          "Bead of Summons",
+          "Guardian of Faith"
+        ],
+        [
+          "20",
+          "Bead of Wind Walking",
+          "Wind Walk"
+        ]
+      ],
+      "owner": "Necklace of Prayer Beads",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Orb of Dragonkind Table",
+      "cols": [
+        "Spell",
+        "Charge Cost"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Cure Wounds (level 9 version)",
+          "4"
+        ],
+        [
+          "Daylight",
+          "1"
+        ],
+        [
+          "Death Ward",
+          "2"
+        ],
+        [
+          "Detect Magic",
+          "0"
+        ],
+        [
+          "Scrying (save DC 18)",
+          "3"
+        ]
+      ],
+      "owner": "Orb of Dragonkind",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Ring of Shooting Stars Table",
+      "cols": [
+        "Number of Spheres",
+        "Lightning Damage"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "4d12"
+        ],
+        [
+          "2",
+          "5d4"
+        ],
+        [
+          "3",
+          "2d6"
+        ],
+        [
+          "4",
+          "2d4"
+        ]
+      ],
+      "owner": "Ring of Shooting Stars",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Robe of Useful Items Table",
+      "cols": [
+        "1d100",
+        "Patch"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "01-08",
+          "Bag of 100 GP"
+        ],
+        [
+          "09-15",
+          "Silver coffer (1 foot long, 6 inches wide and deep) worth 500 GP"
+        ],
+        [
+          "16-22",
+          "Iron door (up to 10 feet wide and 10 feet high, barred on one side of your choice), which you can place in an opening you can reach; it conforms to fit the opening, attaching and hinging itself"
+        ],
+        [
+          "23-30",
+          "10 gems worth 100 GP each"
+        ],
+        [
+          "31-44",
+          "Wooden ladder (24 feet long)"
+        ],
+        [
+          "45-51",
+          "Riding Horse with a Riding Saddle"
+        ],
+        [
+          "52-59",
+          "Open pit (a 10-foot Cube), which you can place on the ground within 10 feet of yourself"
+        ],
+        [
+          "60-68",
+          "4 Potions of Healing"
+        ],
+        [
+          "69-75",
+          "Rowboat (12 feet long)"
+        ],
+        [
+          "76-83",
+          "Spell Scroll containing one spell of level 1, 2, or 3 (your choice)"
+        ],
+        [
+          "84-90",
+          "2 Mastiffs"
+        ],
+        [
+          "91-96",
+          "Window (2 feet by 4 feet, up to 2 feet deep), which you can place on a vertical surface you can reach"
+        ],
+        [
+          "97-00",
+          "Portable Ram"
+        ]
+      ],
+      "owner": "Robe of Useful Items",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Sphere of Annihilation Table",
+      "cols": [
+        "1d100",
+        "Result"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "01-50",
+          "The sphere is destroyed."
+        ],
+        [
+          "51-85",
+          "The sphere moves through the portal or into the extradimensional space."
+        ],
+        [
+          "86-00",
+          "A spatial rift sends the sphere and each creature and object within 180 feet of the sphere to a random plane of existence."
+        ]
+      ],
+      "owner": "Sphere of Annihilation",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Staff of Fire Table",
+      "cols": [
+        "Spell",
+        "Charge Cost"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Burning Hands",
+          "1"
+        ],
+        [
+          "Fireball",
+          "3"
+        ],
+        [
+          "Wall of Fire",
+          "4"
+        ]
+      ],
+      "owner": "Staff of Fire",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Staff of Frost Table",
+      "cols": [
+        "Spell",
+        "Charge Cost"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Cone of Cold",
+          "5"
+        ],
+        [
+          "Fog Cloud",
+          "1"
+        ],
+        [
+          "Ice Storm",
+          "4"
+        ],
+        [
+          "Wall of Ice",
+          "4"
+        ]
+      ],
+      "owner": "Staff of Frost",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Staff of Healing Table",
+      "cols": [
+        "Spell",
+        "Charge Cost"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Cure Wounds",
+          "1 charge per spell level (maximum 4 for a level 4 spell)"
+        ],
+        [
+          "Lesser Restoration",
+          "2"
+        ],
+        [
+          "Mass Cure Wounds",
+          "5"
+        ]
+      ],
+      "owner": "Staff of Healing",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Staff of Power Table",
+      "cols": [
+        "Spell",
+        "Charge Cost"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Cone of Cold",
+          "5"
+        ],
+        [
+          "Fireball (level 5 version)",
+          "5"
+        ],
+        [
+          "Globe of Invulnerability",
+          "6"
+        ],
+        [
+          "Hold Monster",
+          "5"
+        ],
+        [
+          "Levitate",
+          "2"
+        ],
+        [
+          "Lightning Bolt (level 5 version)",
+          "5"
+        ],
+        [
+          "Magic Missile",
+          "1"
+        ],
+        [
+          "Ray of Enfeeblement",
+          "1"
+        ],
+        [
+          "Wall of Force",
+          "5"
+        ]
+      ],
+      "owner": "Staff of Power",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Staff of Swarming Insects Table",
+      "cols": [
+        "Spell",
+        "Charge Cost"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Giant Insect",
+          "4"
+        ],
+        [
+          "Insect Plague",
+          "5"
+        ]
+      ],
+      "owner": "Staff of Swarming Insects",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Staff of the Magi Table",
+      "cols": [
+        "Spell",
+        "Charge Cost"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Arcane Lock",
+          "0"
+        ],
+        [
+          "Conjure Elemental",
+          "7"
+        ],
+        [
+          "Detect Magic",
+          "0"
+        ],
+        [
+          "Dispel Magic",
+          "3"
+        ],
+        [
+          "Enlarge/Reduce",
+          "0"
+        ],
+        [
+          "Fireball (level 7 version)",
+          "7"
+        ],
+        [
+          "Flaming Sphere",
+          "2"
+        ],
+        [
+          "Ice Storm",
+          "4"
+        ],
+        [
+          "Invisibility",
+          "2"
+        ],
+        [
+          "Knock",
+          "2"
+        ],
+        [
+          "Light",
+          "0"
+        ],
+        [
+          "Lightning Bolt (level 7 version)",
+          "7"
+        ],
+        [
+          "Mage Hand",
+          "0"
+        ],
+        [
+          "Passwall",
+          "5"
+        ],
+        [
+          "Plane Shift",
+          "7"
+        ],
+        [
+          "Protection from Evil and Good",
+          "0"
+        ],
+        [
+          "Telekinesis",
+          "5"
+        ],
+        [
+          "Wall of Fire",
+          "4"
+        ],
+        [
+          "Web",
+          "2"
+        ]
+      ],
+      "owner": "Staff of the Magi",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Staff of the Woodlands Table",
+      "cols": [
+        "Spell",
+        "Charge Cost"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Animal Friendship",
+          "1"
+        ],
+        [
+          "Awaken",
+          "5"
+        ],
+        [
+          "Barkskin",
+          "2"
+        ],
+        [
+          "Locate Animals or Plants",
+          "2"
+        ],
+        [
+          "Pass without Trace",
+          "2"
+        ],
+        [
+          "Speak with Animals",
+          "1"
+        ],
+        [
+          "Speak with Plants",
+          "3"
+        ],
+        [
+          "Wall of Thorns",
+          "6"
+        ]
+      ],
+      "owner": "Staff of the Woodlands",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Trinkets",
+      "cols": [
+        "1d100",
+        "Trinket"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "01",
+          "A mummified goblin hand"
+        ],
+        [
+          "02",
+          "A crystal that faintly glows in moonlight"
+        ],
+        [
+          "03",
+          "A gold coin minted in an unknown land"
+        ],
+        [
+          "04",
+          "A diary written in a language you don't know"
+        ],
+        [
+          "05",
+          "A brass ring that never tarnishes"
+        ],
+        [
+          "06",
+          "An old chess piece made from glass"
+        ],
+        [
+          "07",
+          "A pair of knucklebone dice, each with a skull symbol on the side that would normally show six pips"
+        ],
+        [
+          "08",
+          "A small idol depicting a nightmarish creature that gives you unsettling dreams when you sleep near it"
+        ],
+        [
+          "09",
+          "A lock of someone's hair"
+        ],
+        [
+          "10",
+          "The deed for a parcel of land in a realm unknown to you"
+        ],
+        [
+          "11",
+          "A 1-ounce block made from an unknown material"
+        ],
+        [
+          "12",
+          "A small cloth doll skewered with needles"
+        ],
+        [
+          "13",
+          "A tooth from an unknown beast"
+        ],
+        [
+          "14",
+          "An enormous scale, perhaps from a dragon"
+        ],
+        [
+          "15",
+          "A bright-green feather"
+        ],
+        [
+          "16",
+          "An old divination card bearing your likeness"
+        ],
+        [
+          "17",
+          "A glass orb filled with moving smoke"
+        ],
+        [
+          "18",
+          "A 1-pound egg with a bright-red shell"
+        ],
+        [
+          "19",
+          "A pipe that blows bubbles"
+        ],
+        [
+          "20",
+          "A glass jar containing a bit of flesh floating in pickling fluid"
+        ],
+        [
+          "21",
+          "A gnome-crafted music box that plays a song you dimly remember from your childhood"
+        ],
+        [
+          "22",
+          "A wooden statuette of a smug halfling"
+        ],
+        [
+          "23",
+          "A brass orb etched with strange runes"
+        ],
+        [
+          "24",
+          "A multicolored stone disk"
+        ],
+        [
+          "25",
+          "A silver icon of a raven"
+        ],
+        [
+          "26",
+          "A bag containing forty-seven teeth, one of which is rotten"
+        ],
+        [
+          "27",
+          "A shard of obsidian that always feels warm to the touch"
+        ],
+        [
+          "28",
+          "A dragon's talon strung on a leather necklace"
+        ],
+        [
+          "29",
+          "A pair of old socks"
+        ],
+        [
+          "30",
+          "A blank book whose pages refuse to hold ink, chalk, graphite, or any other marking"
+        ],
+        [
+          "31",
+          "A silver badge that is a five-pointed star"
+        ],
+        [
+          "32",
+          "A knife that belonged to a relative"
+        ],
+        [
+          "33",
+          "A glass vial filled with nail clippings"
+        ],
+        [
+          "34",
+          "A rectangular metal device with two tiny metal cups on one end that throws sparks when wet"
+        ],
+        [
+          "35",
+          "A white, sequined glove sized for a human"
+        ],
+        [
+          "36",
+          "A vest with one hundred tiny pockets"
+        ],
+        [
+          "37",
+          "A weightless stone"
+        ],
+        [
+          "38",
+          "A sketch of a goblin"
+        ],
+        [
+          "39",
+          "An empty glass vial that smells of perfume"
+        ],
+        [
+          "40",
+          "A gemstone that looks like a lump of coal when examined by anyone but you"
+        ],
+        [
+          "41",
+          "A scrap of cloth from an old banner"
+        ],
+        [
+          "42",
+          "A rank insignia from a lost legionnaire"
+        ],
+        [
+          "43",
+          "A silver bell without a clapper"
+        ],
+        [
+          "44",
+          "A mechanical canary inside a lamp"
+        ],
+        [
+          "45",
+          "A miniature chest carved to look like it has numerous feet on the bottom"
+        ],
+        [
+          "46",
+          "A dead sprite inside a clear glass bottle"
+        ],
+        [
+          "47",
+          "A metal can that has no opening but sounds as if it is filled with liquid, sand, spiders, or broken glass (your choice)"
+        ],
+        [
+          "48",
+          "A glass orb filled with water, in which swims a clockwork goldfish"
+        ],
+        [
+          "49",
+          "A silver spoon with an M engraved on the handle"
+        ],
+        [
+          "50",
+          "A whistle made from gold-colored wood"
+        ],
+        [
+          "51",
+          "A dead scarab beetle the size of your hand"
+        ],
+        [
+          "52",
+          "Two toy soldiers, one missing a head"
+        ],
+        [
+          "53",
+          "A small box filled with different-sized buttons"
+        ],
+        [
+          "54",
+          "A candle that can't be lit"
+        ],
+        [
+          "55",
+          "A miniature cage with no door"
+        ],
+        [
+          "56",
+          "An old key"
+        ],
+        [
+          "57",
+          "An indecipherable treasure map"
+        ],
+        [
+          "58",
+          "A hilt from a broken sword"
+        ],
+        [
+          "59",
+          "A rabbit's foot"
+        ],
+        [
+          "60",
+          "A glass eye"
+        ],
+        [
+          "61",
+          "A cameo of a hideous person"
+        ],
+        [
+          "62",
+          "A silver skull the size of a coin"
+        ],
+        [
+          "63",
+          "An alabaster mask"
+        ],
+        [
+          "64",
+          "A cone of sticky black incense that stinks"
+        ],
+        [
+          "65",
+          "A nightcap that gives you pleasant dreams when you wear it"
+        ],
+        [
+          "66",
+          "A single caltrop made from bone"
+        ],
+        [
+          "67",
+          "A gold monocle frame without the lens"
+        ],
+        [
+          "68",
+          "A 1-inch cube, each side a different color"
+        ],
+        [
+          "69",
+          "A crystal doorknob"
+        ],
+        [
+          "70",
+          "A packet filled with pink dust"
+        ],
+        [
+          "71",
+          "A fragment of a beautiful song, written as musical notes on two pieces of parchment"
+        ],
+        [
+          "72",
+          "A silver teardrop earring containing a real teardrop"
+        ],
+        [
+          "73",
+          "An eggshell painted with scenes of misery in disturbing detail"
+        ],
+        [
+          "74",
+          "A fan that, when unfolded, shows a sleepy cat"
+        ],
+        [
+          "75",
+          "A set of bone pipes"
+        ],
+        [
+          "76",
+          "A four-leaf clover pressed inside a book discussing manners and etiquette"
+        ],
+        [
+          "77",
+          "A sheet of parchment upon which is drawn a mechanical contraption"
+        ],
+        [
+          "78",
+          "An ornate scabbard that fits no blade you have found"
+        ],
+        [
+          "79",
+          "An invitation to a party where a murder happened"
+        ],
+        [
+          "80",
+          "A bronze pentacle with an etching of a rat's head in its center"
+        ],
+        [
+          "81",
+          "A purple handkerchief embroidered with the name of an archmage"
+        ],
+        [
+          "82",
+          "Half a floor plan for a temple, a castle, or another structure"
+        ],
+        [
+          "83",
+          "A bit of folded cloth that, when unfolded, turns into a stylish cap"
+        ],
+        [
+          "84",
+          "A receipt of deposit at a bank in a far-off city"
+        ],
+        [
+          "85",
+          "A diary with seven missing pages"
+        ],
+        [
+          "86",
+          "An empty silver snuffbox bearing the inscription \"dreams\" on its lid"
+        ],
+        [
+          "87",
+          "An iron holy symbol devoted to an unknown god"
+        ],
+        [
+          "88",
+          "A book about a legendary hero's rise and fall, with the last chapter missing"
+        ],
+        [
+          "89",
+          "A vial of dragon blood"
+        ],
+        [
+          "90",
+          "An ancient arrow of elven design"
+        ],
+        [
+          "91",
+          "A needle that never bends"
+        ],
+        [
+          "92",
+          "An ornate brooch of dwarven design"
+        ],
+        [
+          "93",
+          "An empty wine bottle bearing a pretty label that says, \"The Wizard of Wines Winery, Red Dragon Crush, 331422-W\""
+        ],
+        [
+          "94",
+          "A mosaic tile with a multicolored, glazed surface"
+        ],
+        [
+          "95",
+          "A petrified mouse"
+        ],
+        [
+          "96",
+          "A black pirate flag adorned with a dragon's skull and crossbones"
+        ],
+        [
+          "97",
+          "A tiny mechanical crab or spider that moves about when it's not being observed"
+        ],
+        [
+          "98",
+          "A glass jar containing lard with a label that reads, \"Griffon Grease\""
+        ],
+        [
+          "99",
+          "A wooden box with a ceramic bottom that holds a living worm with a head on each end of its body"
+        ],
+        [
+          "00",
+          "A metal urn containing the ashes of a hero"
+        ]
+      ],
+      "caption": "Trinkets",
+      "owner": "Trinket",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Wand of Binding Table",
+      "cols": [
+        "Spell",
+        "Charge Cost"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Hold Monster",
+          "5"
+        ],
+        [
+          "Hold Person",
+          "2"
+        ]
+      ],
+      "owner": "Wand of Binding",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Wand of Fear Table",
+      "cols": [
+        "Spell",
+        "Charge Cost"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Command (\"flee\" or \"grovel\" only)",
+          "1"
+        ],
+        [
+          "Fear (60-foot Cone)",
+          "3"
+        ]
+      ],
+      "owner": "Wand of Fear",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Wand of Wonder Effects",
+      "cols": [
+        "1d100",
+        "Effect"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "01-20",
+          "You cast a spell originating from the chosen point. Roll 1d10 to determine the spell: on a 1-2, Darkness; on a 3-4, Faerie Fire; on a 5-6, Fireball; on a 7-8, Slow; on a 9-10, Stinking Cloud."
+        ],
+        [
+          "21-25",
+          "Nothing happens at the chosen point of origin. Instead, you have the Stunned condition until the start of your next turn, believing something awesome just happened."
+        ],
+        [
+          "26-30",
+          "You cast Gust of Wind. The Line created by the spell extends from you to the chosen point of origin."
+        ],
+        [
+          "31-35",
+          "Nothing happens at the chosen point of origin. Instead, you take 1d6 Psychic damage."
+        ],
+        [
+          "36-40",
+          "Heavy rain falls for 1 minute in a 120-foot-high, 60-foot-radius Cylinder centered on the chosen point of origin. During that time, the area of effect is Lightly Obscured."
+        ],
+        [
+          "41-45",
+          "A cloud of 600 oversized butterflies fills a 60-foot-high, 30-foot-radius Cylinder centered on the chosen point of origin. The butterflies remain for 10 minutes, during which time the area of effect is Heavily Obscured."
+        ],
+        [
+          "46-50",
+          "You cast Lightning Bolt. The Line created by the spell extends from you to the chosen point of origin."
+        ],
+        [
+          "51-55",
+          "The creature closest to the chosen point of origin is enlarged as if you had cast Enlarge/Reduce on it. If the target isn't you and can't be affected by that spell, you become the target instead."
+        ],
+        [
+          "56-60",
+          "A magically formed creature appears in an unoccupied space as close to the chosen point of origin as possible. The creature isn't under your control, acts as it normally would, and disappears after 1 hour or when it drops to 0 Hit Points. Roll 1d4 to determine which creature appears. On a 1, a Rhinoceros appears; on a 2, an Elephant appears; and on a 3-4, a Rat appears."
+        ],
+        [
+          "61-64",
+          "Grass covers a 60-foot-radius circle of ground, with the center of that circle as close to the chosen point of origin as possible. Grass that's already there grows to ten times its normal size and remains overgrown for 1 minute."
+        ],
+        [
+          "65-68",
+          "An object of the DM's choice disappears into the Ethereal Plane. The object must be neither worn nor carried, within 120 feet of the chosen point of origin, and no larger than 10 feet in any dimension. If there are no such objects in range, nothing happens."
+        ],
+        [
+          "69-72",
+          "Nothing happens at the chosen point of origin. Instead, you shrink as if you had cast Enlarge/Reduce on yourself and remain in that state for 1 minute."
+        ],
+        [
+          "73-77",
+          "Leaves grow from the creature nearest to the chosen point of origin. Unless they are picked off, the leaves turn brown and fall off after 24 hours."
+        ],
+        [
+          "78-82",
+          "Nothing happens at the chosen point of origin. Instead, a burst of colorful, shimmering light extends from you in a 30-foot Emanation. Each creature in the area must succeed on a DC 15 Constitution saving throw or have the Blinded condition for 1 minute. A creature repeats the save at the end of each of its turns, ending the effect on itself on a success."
+        ],
+        [
+          "83-87",
+          "Nothing happens at the chosen point of origin. Instead, you cast Invisibility on yourself."
+        ],
+        [
+          "88-92",
+          "Nothing happens at the chosen point of origin. Instead, a stream of 1d4 × 10 gems, each worth 1 GP, shoots from the wand's tip in a Line 30 feet long and 5 feet wide toward the chosen point of origin. Each gem deals 1 Bludgeoning damage, and the total damage of the gems is divided equally among all creatures in the Line."
+        ],
+        [
+          "93-97",
+          "You cast Polymorph, targeting the creature closest to the chosen point of origin. Roll 1d4 to determine the target's new form. On a 1, the new form is a Black Bear; on a 2, the new form is a Giant Wasp; on a 3-4, the new form is a Frog."
+        ],
+        [
+          "98-00",
+          "The creature closest to the chosen point of origin makes a DC 15 Constitution saving throw. On a failed save, the creature has the Restrained condition and begins to turn to stone. While Restrained in this way, the creature repeats the save at the end of its next turn. On a successful save, the effect ends. On a failed save, the creature has the Petrified condition instead of the Restrained condition. The petrification lasts until the creature is freed by the Greater Restoration spell or similar magic."
+        ]
+      ],
+      "caption": "Wand of Wonder Effects",
+      "owner": "Wand of Wonder",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Draconic Ancestors",
+      "cols": [
+        "Dragon",
+        "Damage Type"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Black",
+          "Acid"
+        ],
+        [
+          "Blue",
+          "Lightning"
+        ],
+        [
+          "Brass",
+          "Fire"
+        ],
+        [
+          "Bronze",
+          "Lightning"
+        ],
+        [
+          "Copper",
+          "Acid"
+        ],
+        [
+          "Gold",
+          "Fire"
+        ],
+        [
+          "Green",
+          "Poison"
+        ],
+        [
+          "Red",
+          "Fire"
+        ],
+        [
+          "Silver",
+          "Cold"
+        ],
+        [
+          "White",
+          "Cold"
+        ]
+      ],
+      "caption": "Draconic Ancestors",
+      "owner": "Dragonborn",
+      "ownerKind": "race"
+    },
+    {
+      "name": "Elven Lineages",
+      "cols": [
+        "Lineage",
+        "Level 1",
+        "Level 3",
+        "Level 5"
+      ],
+      "align": [
+        "left",
+        "left",
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Drow",
+          "The range of your Darkvision increases to 120 feet. You also know the Dancing Lights cantrip.",
+          "Faerie Fire",
+          "Darkness"
+        ],
+        [
+          "High Elf",
+          "You know the Prestidigitation cantrip. Whenever you finish a Long Rest, you can replace that cantrip with a different cantrip from the Wizard spell list.",
+          "Detect Magic",
+          "Misty Step"
+        ],
+        [
+          "Wood Elf",
+          "Your Speed increases to 35 feet. You also know the Druidcraft cantrip.",
+          "Longstrider",
+          "Pass without Trace"
+        ]
+      ],
+      "caption": "Elven Lineages",
+      "owner": "Elf",
+      "ownerKind": "race"
+    },
+    {
+      "name": "Fiendish Legacies",
+      "cols": [
+        "Legacy",
+        "Level 1",
+        "Level 3",
+        "Level 5"
+      ],
+      "align": [
+        "left",
+        "left",
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Abyssal",
+          "You have Resistance to Poison damage. You also know the Poison Spray cantrip.",
+          "Ray of Sickness",
+          "Hold Person"
+        ],
+        [
+          "Chthonic",
+          "You have Resistance to Necrotic damage. You also know the Chill Touch cantrip.",
+          "False Life",
+          "Ray of Enfeeblement"
+        ],
+        [
+          "Infernal",
+          "You have Resistance to Fire damage. You also know the Fire Bolt cantrip.",
+          "Hellish Rebuke",
+          "Darkness"
+        ]
+      ],
+      "caption": "Fiendish Legacies",
+      "owner": "Tiefling",
+      "ownerKind": "race"
+    },
+    {
+      "name": "Carrying Capacity",
+      "cols": [
+        "Creature Size",
+        "Carry",
+        "Drag/Lift/Push"
+      ],
+      "align": [
+        "left",
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Tiny",
+          "#$prompt_number:title=Enter Strength Score$# × 7.5 lb.",
+          "#$prompt_number:title=Enter Strength Score$# × 15 lb."
+        ],
+        [
+          "Small/Medium",
+          "#$prompt_number:title=Enter Strength Score$# × 15 lb.",
+          "#$prompt_number:title=Enter Strength Score$# × 30 lb."
+        ],
+        [
+          "Large",
+          "#$prompt_number:title=Enter Strength Score$# × 30 lb.",
+          "#$prompt_number:title=Enter Strength Score$# × 60 lb."
+        ],
+        [
+          "Huge",
+          "#$prompt_number:title=Enter Strength Score$# × 60 lb.",
+          "#$prompt_number:title=Enter Strength Score$# × 120 lb."
+        ],
+        [
+          "Gargantuan",
+          "#$prompt_number:title=Enter Strength Score$# × 120 lb.",
+          "#$prompt_number:title=Enter Strength Score$# × 240 lb."
+        ]
+      ],
+      "caption": "Carrying Capacity",
+      "owner": "Carrying Capacity",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Damage Types",
+      "cols": [
+        "Type",
+        "Examples"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Acid",
+          "Corrosive liquids, digestive enzymes"
+        ],
+        [
+          "Bludgeoning",
+          "Blunt objects, constriction, falling"
+        ],
+        [
+          "Cold",
+          "Freezing water, icy blasts"
+        ],
+        [
+          "Fire",
+          "Flames, unbearable heat"
+        ],
+        [
+          "Force",
+          "Pure magical energy"
+        ],
+        [
+          "Lightning",
+          "Electricity"
+        ],
+        [
+          "Necrotic",
+          "Life-draining energy"
+        ],
+        [
+          "Piercing",
+          "Fangs, puncturing objects"
+        ],
+        [
+          "Poison",
+          "Toxic gas, venom"
+        ],
+        [
+          "Psychic",
+          "Mind-rending energy"
+        ],
+        [
+          "Radiant",
+          "Holy energy, searing radiation"
+        ],
+        [
+          "Slashing",
+          "Claws, cutting objects"
+        ],
+        [
+          "Thunder",
+          "Concussive sound"
+        ]
+      ],
+      "caption": "Damage Types",
+      "owner": "Damage Types",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Object Armor Class",
+      "cols": [
+        "AC",
+        "Substance"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "11",
+          "Cloth, paper, rope"
+        ],
+        [
+          "13",
+          "Crystal, glass, ice"
+        ],
+        [
+          "15",
+          "Wood"
+        ],
+        [
+          "17",
+          "Stone"
+        ],
+        [
+          "19",
+          "Iron, steel"
+        ],
+        [
+          "21",
+          "Mithral"
+        ],
+        [
+          "23",
+          "Adamantite"
+        ]
+      ],
+      "caption": "Object Armor Class",
+      "owner": "Breaking Objects",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Object Hit Points",
+      "cols": [
+        "Size",
+        "Fragile",
+        "Resilient"
+      ],
+      "align": [
+        "left",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "Tiny (bottle, lock)",
+          "2 (1d4)",
+          "5 (2d4)"
+        ],
+        [
+          "Small (chest, lute)",
+          "3 (1d6)",
+          "10 (3d6)"
+        ],
+        [
+          "Medium (barrel, chandelier)",
+          "4 (1d8)",
+          "18 (4d8)"
+        ],
+        [
+          "Large (cart, dining table)",
+          "5 (1d10)",
+          "27 (5d10)"
+        ]
+      ],
+      "caption": "Object Hit Points",
+      "owner": "Breaking Objects",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Confusion Table",
+      "cols": [
+        "1d10",
+        "Behavior for the Turn"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "The target doesn't take an action, and it uses all its movement to move. Roll 1d4 for the direction: 1, north; 2, east; 3, south; or 4, west."
+        ],
+        [
+          "2-6",
+          "The target doesn't move or take actions."
+        ],
+        [
+          "7-8",
+          "The target doesn't move, and it takes the Attack action to make one melee attack against a random creature within reach. If none are within reach, the target takes no action."
+        ],
+        [
+          "9-10",
+          "The target chooses its behavior."
+        ]
+      ],
+      "owner": "Confusion",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Divine Word Effects",
+      "cols": [
+        "Hit Points",
+        "Effect"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "0-20",
+          "The target dies."
+        ],
+        [
+          "21-30",
+          "The target has the Blinded, Deafened, and Stunned conditions for 1 hour."
+        ],
+        [
+          "31-40",
+          "The target has the Blinded and Deafened conditions for 10 minutes."
+        ],
+        [
+          "41-50",
+          "The target has the Deafened condition for 1 minute."
+        ]
+      ],
+      "caption": "Divine Word Effects",
+      "owner": "Divine Word",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Materials",
+      "cols": [
+        "Material",
+        "Duration"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Vegetable matter",
+          "24 hours"
+        ],
+        [
+          "Stone or crystal",
+          "12 hours"
+        ],
+        [
+          "Precious metals",
+          "1 hour"
+        ],
+        [
+          "Gems",
+          "10 minutes"
+        ],
+        [
+          "Adamantine or mithral",
+          "1 minute"
+        ]
+      ],
+      "caption": "Materials",
+      "owner": "Creation",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Omens",
+      "cols": [
+        "Omen",
+        "For Results That Will Be..."
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Weal",
+          "Good"
+        ],
+        [
+          "Woe",
+          "Bad"
+        ],
+        [
+          "Weal and woe",
+          "Good and bad"
+        ],
+        [
+          "Indifference",
+          "Neither good nor bad"
+        ]
+      ],
+      "caption": "Omens",
+      "owner": "Augury",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Precipitation",
+      "cols": [
+        "Stage",
+        "Condition"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Clear"
+        ],
+        [
+          "2",
+          "Light clouds"
+        ],
+        [
+          "3",
+          "Overcast or ground fog"
+        ],
+        [
+          "4",
+          "Rain, hail, or snow"
+        ],
+        [
+          "5",
+          "Torrential rain, driving hail, or blizzard"
+        ]
+      ],
+      "caption": "Precipitation",
+      "owner": "Control Weather",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Prismatic Layers",
+      "cols": [
+        "Order",
+        "Effects"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Red. Failed Save: 12d6 Fire damage. Successful Save: Half as much damage. Additional Effects: Nonmagical ranged attacks can't pass through this layer, which is destroyed if it takes at least 25 Cold damage."
+        ],
+        [
+          "2",
+          "Orange. Failed Save: 12d6 Acid damage. Successful Save: Half as much damage. Additional Effects: Magical ranged attacks can't pass through this layer, which is destroyed by a strong wind (such as the one created by Gust of Wind)."
+        ],
+        [
+          "3",
+          "Yellow. Failed Save: 12d6 Lightning damage. Successful Save: Half as much damage. Additional Effects: The layer is destroyed if it takes at least 60 Force damage."
+        ],
+        [
+          "4",
+          "Green. Failed Save: 12d6 Poison damage. Successful Save: Half as much damage. Additional Effects: A Passwall spell, or another spell of equal or greater level that can open a portal on a solid surface, destroys this layer."
+        ],
+        [
+          "5",
+          "Blue. Failed Save: 12d6 Cold damage. Successful Save: Half as much damage. Additional Effects: The layer is destroyed if it takes at least 25 Fire damage."
+        ],
+        [
+          "6",
+          "Indigo. Failed Save: The target has the Restrained condition and makes a Constitution saving throw at the end of each of its turns. If it successfully saves three times, the condition ends. If it fails three times, it has the Petrified condition until it is freed by an effect like the Greater Restoration spell. The successes and failures needn't be consecutive; keep track of both until the target collects three of a kind. Additional Effects: Spells can't be cast through this layer, which is destroyed by Bright Light shed by the Daylight spell."
+        ],
+        [
+          "7",
+          "Violet. Failed Save: The target has the Blinded condition and makes a Wisdom saving throw at the start of your next turn. On a successful save, the condition ends. On a failed save, the condition ends, and the creature teleports to another plane of existence (DM's choice). Additional Effects: This layer is destroyed by Dispel Magic."
+        ]
+      ],
+      "caption": "Prismatic Layers",
+      "owner": "Prismatic Wall",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Prismatic Rays",
+      "cols": [
+        "1d8",
+        "Ray"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Red. Failed Save: 12d6 Fire damage. Successful Save: Half as much damage."
+        ],
+        [
+          "2",
+          "Orange. Failed Save: 12d6 Acid damage. Successful Save: Half as much damage."
+        ],
+        [
+          "3",
+          "Yellow. Failed Save: 12d6 Lightning damage. Successful Save: Half as much damage."
+        ],
+        [
+          "4",
+          "Green. Failed Save: 12d6 Poison damage. Successful Save: Half as much damage."
+        ],
+        [
+          "5",
+          "Blue. Failed Save: 12d6 Cold damage. Successful Save: Half as much damage."
+        ],
+        [
+          "6",
+          "Indigo. Failed Save: The target has the Restrained condition and makes a Constitution saving throw at the end of each of its turns. If it successfully saves three times, the condition ends. If it fails three times, it has the Petrified condition until it is freed by an effect like the Greater Restoration spell. The successes and failures needn't be consecutive; keep track of both until the target collects three of a kind."
+        ],
+        [
+          "7",
+          "Violet. Failed Save: The target has the Blinded condition and makes a Wisdom saving throw at the start of your next turn. On a successful save, the condition ends. On a failed save, the condition ends, and the creature teleports to another plane of existence (DM's choice)."
+        ],
+        [
+          "8",
+          "Special. The target is struck by two rays. Roll twice, rerolling any 8."
+        ]
+      ],
+      "caption": "Prismatic Rays",
+      "owner": "Prismatic Spray",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Reincarnate Table",
+      "cols": [
+        "1d10",
+        "Species"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Aasimar"
+        ],
+        [
+          "2",
+          "Dragonborn"
+        ],
+        [
+          "3",
+          "Dwarf"
+        ],
+        [
+          "4",
+          "Elf"
+        ],
+        [
+          "5",
+          "Gnome"
+        ],
+        [
+          "6",
+          "Goliath"
+        ],
+        [
+          "7",
+          "Halfling"
+        ],
+        [
+          "8",
+          "Human"
+        ],
+        [
+          "9",
+          "Orc"
+        ],
+        [
+          "10",
+          "Tiefling"
+        ]
+      ],
+      "owner": "Reincarnate",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Scrying Table",
+      "cols": [
+        "Your Knowledge of the Target Is...",
+        "Save Modifier"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Secondhand (heard of the target)",
+          "+5"
+        ],
+        [
+          "Firsthand (met the target)",
+          "+0"
+        ],
+        [
+          "Extensive (know the target well)",
+          "-5"
+        ]
+      ],
+      "owner": "Scrying",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Scrying Table (2)",
+      "cols": [
+        "You Have the Target's...",
+        "Save Modifier"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Picture or other likeness",
+          "-2"
+        ],
+        [
+          "Garment or other possession",
+          "-4"
+        ],
+        [
+          "Body part, lock of hair, or bit of nail",
+          "-10"
+        ]
+      ],
+      "owner": "Scrying",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Teleportation Outcome",
+      "cols": [
+        "Familiarity",
+        "Mishap",
+        "Similar Area",
+        "Off Target",
+        "On Target"
+      ],
+      "align": [
+        "left",
+        "center",
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "Permanent circle",
+          "—",
+          "—",
+          "—",
+          "01-00"
+        ],
+        [
+          "Linked object",
+          "—",
+          "—",
+          "—",
+          "01-00"
+        ],
+        [
+          "Very familiar",
+          "01-05",
+          "06-13",
+          "14-24",
+          "25-00"
+        ],
+        [
+          "Seen casually",
+          "01-33",
+          "34-43",
+          "44-53",
+          "54-00"
+        ],
+        [
+          "Viewed once or described",
+          "01-43",
+          "44-53",
+          "54-73",
+          "74-00"
+        ],
+        [
+          "False destination",
+          "01-50",
+          "51-00",
+          "—",
+          "—"
+        ]
+      ],
+      "caption": "Teleportation Outcome",
+      "owner": "Teleport",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Temperature",
+      "cols": [
+        "Stage",
+        "Condition"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Heat wave"
+        ],
+        [
+          "2",
+          "Hot"
+        ],
+        [
+          "3",
+          "Warm"
+        ],
+        [
+          "4",
+          "Cool"
+        ],
+        [
+          "5",
+          "Cold"
+        ],
+        [
+          "6",
+          "Freezing"
+        ]
+      ],
+      "caption": "Temperature",
+      "owner": "Control Weather",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Wind",
+      "cols": [
+        "Stage",
+        "Condition"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Calm"
+        ],
+        [
+          "2",
+          "Moderate wind"
+        ],
+        [
+          "3",
+          "Strong wind"
+        ],
+        [
+          "4",
+          "Gale"
+        ],
+        [
+          "5",
+          "Storm"
+        ]
+      ],
+      "caption": "Wind",
+      "owner": "Control Weather",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Alchemist Spells",
+      "cols": [
+        "Artificer Level",
+        "Spell"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "healing word, ray of sickness"
+        ],
+        [
+          "5th",
+          "flaming sphere, Melf's acid arrow"
+        ],
+        [
+          "9th",
+          "gaseous form, mass healing word"
+        ],
+        [
+          "13th",
+          "blight, death ward"
+        ],
+        [
+          "17th",
+          "cloudkill, raise dead"
+        ]
+      ],
+      "caption": "Alchemist Spells",
+      "owner": "Alchemist",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Archfey Spells",
+      "cols": [
+        "Warlock Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3",
+          "Calm Emotions, Faerie Fire, Misty Step, Phantasmal Force, Sleep"
+        ],
+        [
+          "5",
+          "Blink, Plant Growth"
+        ],
+        [
+          "7",
+          "Dominate Beast, Greater Invisibility"
+        ],
+        [
+          "9",
+          "Dominate Person, Seeming"
+        ]
+      ],
+      "caption": "Archfey Spells",
+      "owner": "Archfey Patron",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Arid Land",
+      "cols": [
+        "Druid Level",
+        "Circle Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Blur, Burning Hands, Fire Bolt"
+        ],
+        [
+          "5th",
+          "Fireball"
+        ],
+        [
+          "7th",
+          "Blight"
+        ],
+        [
+          "9th",
+          "Wall of Stone"
+        ]
+      ],
+      "caption": "Arid Land",
+      "owner": "Circle of the Land",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Armorer Spells",
+      "cols": [
+        "Artificer Level",
+        "Spell"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "magic missile, thunderwave"
+        ],
+        [
+          "5th",
+          "mirror image, shatter"
+        ],
+        [
+          "9th",
+          "hypnotic pattern, lightning bolt"
+        ],
+        [
+          "13th",
+          "fire shield, greater invisibility"
+        ],
+        [
+          "17th",
+          "passwall, wall of force"
+        ]
+      ],
+      "caption": "Armorer Spells",
+      "owner": "Armorer",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Artillerist Spells",
+      "cols": [
+        "Artificer Level",
+        "Spell"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "shield, thunderwave"
+        ],
+        [
+          "5th",
+          "scorching ray, shatter"
+        ],
+        [
+          "9th",
+          "fireball, wind wall"
+        ],
+        [
+          "13th",
+          "ice storm, wall of fire"
+        ],
+        [
+          "17th",
+          "cone of cold, wall of force"
+        ]
+      ],
+      "caption": "Artillerist Spells",
+      "owner": "Artillerist",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Battle Smith Spells",
+      "cols": [
+        "Artificer Level",
+        "Spell"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "heroism, shield"
+        ],
+        [
+          "5th",
+          "branding smite, warding bond"
+        ],
+        [
+          "9th",
+          "aura of vitality, conjure barrage"
+        ],
+        [
+          "13th",
+          "aura of purity, fire shield"
+        ],
+        [
+          "17th",
+          "banishing smite, mass cure wounds"
+        ]
+      ],
+      "caption": "Battle Smith Spells",
+      "owner": "Battle Smith",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Celestial Spells",
+      "cols": [
+        "Warlock Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3",
+          "Aid, Cure Wounds, Guiding Bolt, Lesser Restoration, Light, Sacred Flame"
+        ],
+        [
+          "5",
+          "Daylight, Revivify"
+        ],
+        [
+          "7",
+          "Guardian of Faith, Wall of Fire"
+        ],
+        [
+          "9",
+          "Greater Restoration, Summon Celestial"
+        ]
+      ],
+      "caption": "Celestial Spells",
+      "owner": "Celestial Patron",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Circle of the Moon Spells",
+      "cols": [
+        "Druid Level",
+        "Prepared Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3",
+          "Cure Wounds, Moonbeam, Starry Wisp"
+        ],
+        [
+          "5",
+          "Conjure Animals"
+        ],
+        [
+          "7",
+          "Fount of Moonlight"
+        ],
+        [
+          "9",
+          "Mass Cure Wounds"
+        ]
+      ],
+      "caption": "Circle of the Moon Spells",
+      "owner": "Circle of the Moon",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Circle of the Sea Spells",
+      "cols": [
+        "Druid Level",
+        "Prepared Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Fog Cloud, Gust of Wind, Ray of Frost, Shatter, Thunderwave"
+        ],
+        [
+          "5th",
+          "Lightning Bolt, Water Breathing"
+        ],
+        [
+          "7th",
+          "Control Water, Ice Storm"
+        ],
+        [
+          "9th",
+          "Conjure Elemental, Hold Monster"
+        ]
+      ],
+      "caption": "Circle of the Sea Spells",
+      "owner": "Circle of the Sea",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Clockwork Spells",
+      "cols": [
+        "Sorcerer Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Aid, Alarm, Lesser Restoration, Protection from Evil and Good"
+        ],
+        [
+          "5th",
+          "Dispel Magic, Protection From Energy"
+        ],
+        [
+          "7th",
+          "Freedom of Movement, Summon Construct"
+        ],
+        [
+          "9th",
+          "Greater Restoration, Wall of Force"
+        ]
+      ],
+      "caption": "Clockwork Spells",
+      "owner": "Clockwork Sorcery",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Draconic Spells",
+      "cols": [
+        "Sorcerer Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Alter Self, Chromatic Orb, Command, Dragon's Breath"
+        ],
+        [
+          "5th",
+          "Fear, Fly"
+        ],
+        [
+          "7th",
+          "Arcane Eye, Charm Monster"
+        ],
+        [
+          "9th",
+          "Legend Lore, Summon Dragon"
+        ]
+      ],
+      "caption": "Draconic Spells",
+      "owner": "Draconic Sorcery",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Eldritch Cannons",
+      "cols": [
+        "Cannon",
+        "Activation"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Flamethrower",
+          "The cannon exhales fire in an adjacent 15-foot cone that you designate. Each creature in that area must make a Dexterity saving throw against your spell save DC, taking 2d8 fire damage on a failed save or half as much damage on a successful one. The fire ignites any flammable objects in the area that aren't being worn or carried."
+        ],
+        [
+          "Force Ballista",
+          "Make a ranged spell attack, originating from the cannon, at one creature or object within 120 feet of it. On a hit, the target takes 2d8 force damage, and if the target is a creature, it is pushed up to 5 feet away from the cannon."
+        ],
+        [
+          "Protector",
+          "The cannon emits a burst of positive energy that grants itself and each creature of your choice within 10 feet of it a number of temporary hit points equal to 1d8 + your Intelligence modifier (minimum of +1)."
+        ]
+      ],
+      "caption": "Eldritch Cannons",
+      "owner": "Artillerist",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Experimental Elixir",
+      "cols": [
+        "d6",
+        "Effect"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Healing. The drinker regains a number of hit points equal to 2d4 + your Intelligence modifier."
+        ],
+        [
+          "2",
+          "Swiftness. The drinker's walking speed increases by 10 feet for 1 hour."
+        ],
+        [
+          "3",
+          "Resilience. The drinker gains a +1 bonus to AC for 10 minutes."
+        ],
+        [
+          "4",
+          "Boldness. The drinker can roll a d4 and add the number rolled to every attack roll and saving throw they make for the next minute."
+        ],
+        [
+          "5",
+          "Flight. The drinker gains a flying speed of 10 feet for 10 minutes."
+        ],
+        [
+          "6",
+          "Transformation. The drinker's body is transformed as if by the alter self spell. The drinker determines the transformation caused by the spell, the effects of which last for 10 minutes."
+        ]
+      ],
+      "caption": "Experimental Elixir",
+      "owner": "Alchemist",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Fey Wanderer Spells",
+      "cols": [
+        "Ranger Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Charm Person"
+        ],
+        [
+          "5th",
+          "Misty Step"
+        ],
+        [
+          "9th",
+          "Summon Fey"
+        ],
+        [
+          "13th",
+          "Dimension Door"
+        ],
+        [
+          "17th",
+          "Mislead"
+        ]
+      ],
+      "caption": "Fey Wanderer Spells",
+      "owner": "Fey Wanderer",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Feywild Gifts",
+      "cols": [
+        "1d6",
+        "Gift"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Illusory butterflies flutter around you while you take a Short or Long Rest."
+        ],
+        [
+          "2",
+          "Flowers bloom from your hair each dawn."
+        ],
+        [
+          "3",
+          "You faintly smell of cinnamon, lavender, nutmeg, or another comforting herb or spice."
+        ],
+        [
+          "4",
+          "Your shadow dances while no one is looking directly at it."
+        ],
+        [
+          "5",
+          "Horns or antlers sprout from your head."
+        ],
+        [
+          "6",
+          "Your skin and hair change color each dawn."
+        ]
+      ],
+      "caption": "Feywild Gifts",
+      "owner": "Fey Wanderer",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Fiend Spells",
+      "cols": [
+        "Warlock Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3",
+          "Burning Hands, Command, Scorching Ray, Suggestion"
+        ],
+        [
+          "5",
+          "Fireball, Stinking Cloud"
+        ],
+        [
+          "7",
+          "Fire Shield, Wall of Fire"
+        ],
+        [
+          "9",
+          "Geas, Insect Plague"
+        ]
+      ],
+      "caption": "Fiend Spells",
+      "owner": "Fiend Patron",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Gloom Stalker Spells",
+      "cols": [
+        "Ranger Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Disguise Self"
+        ],
+        [
+          "5th",
+          "Rope Trick"
+        ],
+        [
+          "9th",
+          "Fear"
+        ],
+        [
+          "13th",
+          "Greater Invisibility"
+        ],
+        [
+          "17th",
+          "Seeming"
+        ]
+      ],
+      "caption": "Gloom Stalker Spells",
+      "owner": "Gloom Stalker",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Great Old One Spells",
+      "cols": [
+        "Warlock Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3",
+          "Detect Thoughts, Dissonant Whispers, Phantasmal Force, Tasha's Hideous Laughter"
+        ],
+        [
+          "5",
+          "Clairvoyance, Hunger of Hadar"
+        ],
+        [
+          "7",
+          "Confusion, Summon Aberration"
+        ],
+        [
+          "9",
+          "Modify Memory, Telekinesis"
+        ]
+      ],
+      "caption": "Great Old One Spells",
+      "owner": "Great Old One Patron",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Life Domain Spells",
+      "cols": [
+        "Cleric Level",
+        "Prepared Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Aid, Bless, Cure Wounds, Lesser Restoration"
+        ],
+        [
+          "5th",
+          "Mass Healing Word, Revivify"
+        ],
+        [
+          "7th",
+          "Aura of Life, Death Ward"
+        ],
+        [
+          "9th",
+          "Greater Restoration, Mass Cure Wounds"
+        ]
+      ],
+      "caption": "Life Domain Spells",
+      "owner": "Life Domain",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Light Domain Spells",
+      "cols": [
+        "Cleric Level",
+        "Prepared Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Burning Hands, Faerie Fire, Scorching Ray, See Invisibility"
+        ],
+        [
+          "5th",
+          "Daylight, Fireball"
+        ],
+        [
+          "7th",
+          "Arcane Eye, Wall of Fire"
+        ],
+        [
+          "9th",
+          "Flame Strike, Scrying"
+        ]
+      ],
+      "caption": "Light Domain Spells",
+      "owner": "Light Domain",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Manifestations of Order",
+      "cols": [
+        "1d6",
+        "Manifestation"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Spectral cogwheels hover behind you."
+        ],
+        [
+          "2",
+          "The hands of a clock spin in your eyes."
+        ],
+        [
+          "3",
+          "Your skin glows with a brassy sheen."
+        ],
+        [
+          "4",
+          "Floating equations and geometric objects overlay your body."
+        ],
+        [
+          "5",
+          "Your Spellcasting Focus temporarily takes the form of a Tiny clockwork mechanism."
+        ],
+        [
+          "6",
+          "The ticking of gears or ringing of a clock can be heard by you and those affected by your magic."
+        ]
+      ],
+      "caption": "Manifestations of Order",
+      "owner": "Clockwork Sorcery",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Nature's Ward",
+      "cols": [
+        "Land Type",
+        "Resistance"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Arid",
+          "Fire"
+        ],
+        [
+          "Polar",
+          "Cold"
+        ],
+        [
+          "Temperate",
+          "Lightning"
+        ],
+        [
+          "Tropical",
+          "Poison"
+        ]
+      ],
+      "caption": "Nature's Ward",
+      "owner": "Circle of the Land",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Oath of Devotion Spells",
+      "cols": [
+        "Paladin Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Protection from Evil and Good, Shield of Faith"
+        ],
+        [
+          "5th",
+          "Aid, Zone of Truth"
+        ],
+        [
+          "9th",
+          "Beacon of Hope, Dispel Magic"
+        ],
+        [
+          "13th",
+          "Freedom of Movement, Guardian of Faith"
+        ],
+        [
+          "17th",
+          "Commune, Flame Strike"
+        ]
+      ],
+      "caption": "Oath of Devotion Spells",
+      "owner": "Oath of Devotion",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Oath of Glory Spells",
+      "cols": [
+        "Paladin Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Guiding Bolt, Heroism"
+        ],
+        [
+          "5th",
+          "Enhance Ability, Magic Weapon"
+        ],
+        [
+          "9th",
+          "Haste, Protection from Energy"
+        ],
+        [
+          "13th",
+          "Compulsion, Freedom of Movement"
+        ],
+        [
+          "17th",
+          "Legend Lore, Yolande's Regal Presence"
+        ]
+      ],
+      "caption": "Oath of Glory Spells",
+      "owner": "Oath of Glory",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Oath of Vengeance Spells",
+      "cols": [
+        "Paladin Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Bane, Hunter's Mark"
+        ],
+        [
+          "5th",
+          "Hold Person, Misty Step"
+        ],
+        [
+          "9th",
+          "Haste, Protection from Energy"
+        ],
+        [
+          "13th",
+          "Banishment, Dimension Door"
+        ],
+        [
+          "17th",
+          "Hold Monster, Scrying"
+        ]
+      ],
+      "caption": "Oath of Vengeance Spells",
+      "owner": "Oath of Vengeance",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Oath of the Ancients Spells",
+      "cols": [
+        "Paladin Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Ensnaring Strike, Speak with Animals"
+        ],
+        [
+          "5th",
+          "Misty Step, Moonbeam"
+        ],
+        [
+          "9th",
+          "Plant Growth, Protection from Energy"
+        ],
+        [
+          "13th",
+          "Ice Storm, Stoneskin"
+        ],
+        [
+          "17th",
+          "Commune with Nature, Tree Stride"
+        ]
+      ],
+      "caption": "Oath of the Ancients Spells",
+      "owner": "Oath of the Ancients",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Order of the Soul Knife Table",
+      "cols": [
+        "Psi Points",
+        "Attack and Damage Bonus"
+      ],
+      "align": [
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "2",
+          "+1"
+        ],
+        [
+          "5",
+          "+2"
+        ],
+        [
+          "7",
+          "+4"
+        ]
+      ],
+      "owner": "Order of the Soul Knife",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Order of the Wu Jen Table",
+      "cols": [
+        "Spell Slot Level",
+        "Psi Cost"
+      ],
+      "align": [
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1st",
+          "2"
+        ],
+        [
+          "2nd",
+          "3"
+        ],
+        [
+          "3rd",
+          "5"
+        ],
+        [
+          "4th",
+          "6"
+        ],
+        [
+          "5th",
+          "7"
+        ]
+      ],
+      "owner": "Order of the Wu Jen",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Polar Land",
+      "cols": [
+        "Druid Level",
+        "Circle Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Fog Cloud, Hold Person, Ray of Frost"
+        ],
+        [
+          "5th",
+          "Sleet Storm"
+        ],
+        [
+          "7th",
+          "Ice Storm"
+        ],
+        [
+          "9th",
+          "Cone of Cold"
+        ]
+      ],
+      "caption": "Polar Land",
+      "owner": "Circle of the Land",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Psi Warrior Energy Dice",
+      "cols": [
+        "Fighter Level",
+        "Die Size",
+        "Number"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "3",
+          "D6",
+          "4"
+        ],
+        [
+          "5",
+          "D8",
+          "6"
+        ],
+        [
+          "9",
+          "D8",
+          "8"
+        ],
+        [
+          "11",
+          "D10",
+          "8"
+        ],
+        [
+          "13",
+          "D10",
+          "10"
+        ],
+        [
+          "17",
+          "D12",
+          "12"
+        ]
+      ],
+      "caption": "Psi Warrior Energy Dice",
+      "owner": "Psi Warrior",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Psionic Spells",
+      "cols": [
+        "Sorcerer Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Arms of Hadar, Calm Emotions, Detect Thoughts, Dissonant Whispers, Mind Sliver"
+        ],
+        [
+          "5th",
+          "Hunger of Hadar, Sending"
+        ],
+        [
+          "7th",
+          "Evard's Black Tentacles, Summon Aberration"
+        ],
+        [
+          "9th",
+          "Rary's Telepathic Bond, Telekinesis"
+        ]
+      ],
+      "caption": "Psionic Spells",
+      "owner": "Aberrant Sorcery",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Soulknife Energy Dice",
+      "cols": [
+        "Rogue Level",
+        "Die Size",
+        "Number"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "3",
+          "D6",
+          "4"
+        ],
+        [
+          "5",
+          "D8",
+          "6"
+        ],
+        [
+          "9",
+          "D8",
+          "8"
+        ],
+        [
+          "11",
+          "D10",
+          "8"
+        ],
+        [
+          "13",
+          "D10",
+          "10"
+        ],
+        [
+          "17",
+          "D12",
+          "12"
+        ]
+      ],
+      "caption": "Soulknife Energy Dice",
+      "owner": "Soulknife",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Star Map",
+      "cols": [
+        "1d6",
+        "Map Form"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "A scroll bearing depictions of constellations"
+        ],
+        [
+          "2",
+          "A stone tablet with fine holes drilled through it"
+        ],
+        [
+          "3",
+          "An owlbear hide tooled with stellar symbols"
+        ],
+        [
+          "4",
+          "A collection of maps bound in an ebony cover"
+        ],
+        [
+          "5",
+          "A crystal engraved with starry patterns"
+        ],
+        [
+          "6",
+          "A glass disk etched with constellations"
+        ]
+      ],
+      "caption": "Star Map",
+      "owner": "Circle of the Stars",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Temperate Land",
+      "cols": [
+        "Druid Level",
+        "Circle Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Misty Step, Shocking Grasp, Sleep"
+        ],
+        [
+          "5th",
+          "Lightning Bolt"
+        ],
+        [
+          "7th",
+          "Freedom of Movement"
+        ],
+        [
+          "9th",
+          "Tree Stride"
+        ]
+      ],
+      "caption": "Temperate Land",
+      "owner": "Circle of the Land",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Trickery Domain Spells",
+      "cols": [
+        "Cleric Level",
+        "Prepared Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Charm Person, Disguise Self, Invisibility, Pass without Trace"
+        ],
+        [
+          "5th",
+          "Hypnotic Pattern, Nondetection"
+        ],
+        [
+          "7th",
+          "Confusion, Dimension Door"
+        ],
+        [
+          "9th",
+          "Dominate Person, Modify Memory"
+        ]
+      ],
+      "caption": "Trickery Domain Spells",
+      "owner": "Trickery Domain",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Tropical Land",
+      "cols": [
+        "Druid Level",
+        "Circle Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Acid Splash, Ray of Sickness, Web"
+        ],
+        [
+          "5th",
+          "Stinking Cloud"
+        ],
+        [
+          "7th",
+          "Polymorph"
+        ],
+        [
+          "9th",
+          "Insect Plague"
+        ]
+      ],
+      "caption": "Tropical Land",
+      "owner": "Circle of the Land",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "War Domain Spells",
+      "cols": [
+        "Cleric Level",
+        "Prepared Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "Guiding Bolt, Magic Weapon, Shield of Faith, Spiritual Weapon"
+        ],
+        [
+          "5th",
+          "Crusader's Mantle, Spirit Guardians"
+        ],
+        [
+          "7th",
+          "Fire Shield, Freedom of Movement"
+        ],
+        [
+          "9th",
+          "Hold Monster, Steel Wind Strike"
+        ]
+      ],
+      "caption": "War Domain Spells",
+      "owner": "War Domain",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Wild Magic Surge",
+      "cols": [
+        "1d100",
+        "Effect"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "01–04",
+          "Roll on this table at the start of each of your turns for the next minute, ignoring this result on subsequent rolls."
+        ],
+        [
+          "05–08",
+          "A creature that is Friendly toward you appears in a random unoccupied space within 60 feet of you. The creature is under the DM's control and disappears 1 minute later. Roll 1d4 to determine the creature: on a 1, a Modron Duodrone appears; on a 2, a Flumph appears; on a 3, a Modron Monodrone appears; on a 4, a Unicorn appears. See the Monster Manual for the creature's stat block."
+        ],
+        [
+          "09–12",
+          "For the next minute, you regain 5 Hit Points at the start of each of your turns."
+        ],
+        [
+          "13–16",
+          "Creatures have Disadvantage on saving throws against the next spell you cast in the next minute that involves a saving throw."
+        ],
+        [
+          "17–20",
+          "You are subjected to an effect that lasts for 1 minute unless its description says otherwise. Roll 1d8 to determine the effect: on a 1, you're surrounded by faint, ethereal music only you and creatures within 5 feet of you can hear; on a 2, your size increases by one size category; on a 3, you grow a long beard made of feathers that remains until you sneeze, at which point the feathers explode from your face and vanish; on a 4, you must shout when you speak; on a 5, illusory butterflies flutter in the air within 10 feet of you; on a 6, an eye appears on your forehead, granting you Advantage on Wisdom (Perception) checks; on a 7, pink bubbles float out of your mouth whenever you speak; on an 8, your skin turns a vibrant shade of blue for 24 hours or until the effect is ended by a Remove Curse spell."
+        ],
+        [
+          "21–24",
+          "For the next minute, all your spells with a casting time of an action have a casting time of a Bonus Action."
+        ],
+        [
+          "25–28",
+          "You are transported to the Astral Plane until the end of your next turn. You then return to the space you previously occupied or the nearest unoccupied space if that space is occupied."
+        ],
+        [
+          "29–32",
+          "The next time you cast a spell that deals damage within the next minute, don't roll the spell's damage dice for the damage. Instead use the highest number possible for each damage die."
+        ],
+        [
+          "33–36",
+          "You have Resistance to all damage for the next minute."
+        ],
+        [
+          "37–40",
+          "You turn into a potted plant until the start of your next turn. While you're a plant, you have the Incapacitated condition and have Vulnerability to all damage. If you drop to 0 Hit Points, your pot breaks, and your form reverts."
+        ],
+        [
+          "41–44",
+          "For the next minute, you can teleport up to 20 feet as a Bonus Action on each of your turns."
+        ],
+        [
+          "45–48",
+          "You and up to three creatures you choose within 30 feet of you have the Invisible condition for 1 minute. This invisibility ends on a creature immediately after it makes an attack roll, deals damage, or casts a spell."
+        ],
+        [
+          "49–52",
+          "A spectral shield hovers near you for the next minute, granting you a +2 bonus to AC and immunity to Magic Missile."
+        ],
+        [
+          "53–56",
+          "You can take one extra action on this turn."
+        ],
+        [
+          "57–60",
+          "You cast a random spell. If the spell normally requires Concentration, it doesn't require Concentration in this case; the spell lasts for its full duration. Roll 1d10 to determine the spell: on a 1, Confusion; on a 2, Fireball; on a 3, Fog Cloud; on a 4, Fly (cast on a random creature within 60 feet of you), on a 5, Grease; on a 6, Levitate (cast on yourself); on a 7, Magic Missile (cast as a level 5 spell); on an 8, Mirror Image; on a 9, Polymorph (cast on yourself), and if you fail the saving throw, you turn into a Goat (see appendix B); on a 10, See Invisibility."
+        ],
+        [
+          "61–64",
+          "For the next minute, any flammable, nonmagical object you touch that isn't being worn or carried by another creature bursts into flame, takes 1d4 Fire damage, and is burning."
+        ],
+        [
+          "65–68",
+          "If you die within the next hour, you immediately revive as if by the Reincarnate spell."
+        ],
+        [
+          "69–72",
+          "You have the Frightened condition until the end of your next turn. The DM determines the source of your fear."
+        ],
+        [
+          "73–76",
+          "You teleport up to 60 feet to an unoccupied space you can see."
+        ],
+        [
+          "77–80",
+          "A random creature within 60 feet of you has the Poisoned condition for 1d4 hours."
+        ],
+        [
+          "81–84",
+          "You radiate Bright Light in a 30-foot radius for the next minute. Any creature that ends its turn within 5 feet of you has the Blinded condition until the end of its next turn."
+        ],
+        [
+          "85–88",
+          "Up to three creatures of your choice that you can see within 30 feet of you take 1d10 Necrotic damage. You regain Hit Points equal to the sum of the Necrotic damage dealt."
+        ],
+        [
+          "89–92",
+          "Up to three creatures of your choice that you can see within 30 feet of you take 4d10 Lightning damage."
+        ],
+        [
+          "93–96",
+          "You and all creatures within 30 feet of you have Vulnerability to Piercing damage for the next minute."
+        ],
+        [
+          "97–00",
+          "Roll 1d6. On a 1, you regain 2d10 Hit Points; on a 2, one ally of your choice within 300 feet of you regains 2d10 Hit Points; on a 3, you regain your lowest-level expended spell slot; on a 4, one ally of your choice within 300 feet of you regains their lowest-level expended spell slot; on a 5, you regain all your expended Sorcery Points; on a 6, all the effects of row 17–20 affect you simultaneously."
+        ]
+      ],
+      "caption": "Wild Magic Surge",
+      "owner": "Wild Magic Sorcery",
+      "ownerKind": "subclass"
+    }
+  ]
+}

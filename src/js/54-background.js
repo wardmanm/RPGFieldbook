@@ -92,6 +92,9 @@ function openBackgroundInfo(name){
   if(d.languages)b+=`<p><b>Languages:</b> ${esc(d.languages)}</p>`;
   if(d.equipment)b+=`<p><b>Equipment:</b> ${esc(d.equipment)}</p>`;
   if(d.feature&&d.feature.name)b+=`<p style="border-top:1px dotted var(--hair);padding-top:8px"><b>${esc(d.feature.name)}.</b> ${highlight(d.feature.description||"")}</p>`;
+  /* Suggested-characteristic and specialty tables are owned by the background,
+     so they link from here rather than needing an anchor in the prose. */
+  b+=tableChipsHTML(d.name,"background");
   const cur=character.bg;
   if(cur&&cur.name===d.name){const bits=[];if(cur.feat)bits.push("Feat: "+cur.feat);if(cur.abils)bits.push(cur.abils.map(e=>e.target.split(".")[1].toUpperCase()+" "+fmt(e.value)).join(", "));if(bits.length)b+=`<p class="hint" style="border-top:2px solid var(--line);margin-top:8px;padding-top:8px">Your choices — ${esc(bits.join(" · "))}</p>`;}
   openModal(d.name,b);

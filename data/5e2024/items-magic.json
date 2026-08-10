@@ -39,6 +39,16 @@
       "effects": []
     },
     {
+      "name": "Abacus",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "2 gp",
+      "effects": []
+    },
+    {
       "name": "Acid",
       "system": "XPHB",
       "category": "Gear",
@@ -47,6 +57,17 @@
       "weight": 1,
       "cost": "25 gp",
       "description": "When you take the Attack action, you can replace one of your attacks with throwing a vial of Acid. Target one creature or object you can see within 20 feet of yourself. The target must succeed on a Dexterity saving throw (DC 8 plus your Dexterity modifier and Proficiency Bonus) or take 2d6 Acid damage",
+      "effects": []
+    },
+    {
+      "name": "Acid (vial)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "25 gp",
+      "description": "As an action, you can splash the contents of this vial onto a creature within 5 feet of you or throw the vial up to 20 feet, shattering it on impact. In either case, make a ranged attack against a creature or object, treating the acid as an improvised weapon. On a hit, the target takes 2d6 acid damage",
       "effects": []
     },
     {
@@ -67,6 +88,26 @@
       "weight": 1,
       "cost": "50 gp",
       "description": "When you take the Attack action, you can replace one of your attacks with throwing a flask of Alchemist's Fire. Target one creature or object you can see within 20 feet of yourself. The target must succeed on a Dexterity saving throw (DC 8 plus your Dexterity modifier and Proficiency Bonus) or take 1d4 Fire damage and start burning",
+      "effects": []
+    },
+    {
+      "name": "Alchemist's Fire (flask)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "50 gp",
+      "description": "This sticky, adhesive fluid ignites when exposed to air. As an action, you can throw this flask up to 20 feet, shattering it on impact. Make a ranged attack against a creature or object, treating the alchemist's fire as an improvised weapon. On a hit, the target takes 1d4 fire damage at the start of each of its turns. A creature can end this damage by using its action to make a DC 10 Dexterity check to extinguish the flames",
+      "effects": []
+    },
+    {
+      "name": "Ale (gallon)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Food and Drink",
+      "rarity": "Mundane",
+      "cost": "2 sp",
       "effects": []
     },
     {
@@ -133,13 +174,23 @@
       "effects": []
     },
     {
+      "name": "Antitoxin (vial)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "50 gp",
+      "description": "A creature that drinks this vial of liquid gains advantage on saving throws against poison for 1 hour. It confers no benefit to undead or constructs",
+      "effects": []
+    },
+    {
       "name": "Apparatus of Kwalish",
       "system": "XPHB",
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Legendary",
       "weight": 500,
-      "description": "This item first appears to be a sealed iron barrel weighing 500 pounds. The barrel has a hidden catch, which can be found with a successful DC 20 Intelligence (Investigation) check. Releasing the catch unlocks a hatch at one end of the barrel, allowing two Medium or smaller creatures to crawl inside. Ten levers are set in a row at the far end, each in a neutral position, able to move up or down. When certain levers are used, the apparatus transforms to resemble a giant lobster.\nThe Apparatus of Kwalish is a Large object with the following statistics: AC 20; HP 200; Speed 30 ft., Swim 30 ft. (or 0 ft. for both if the legs aren't extended); Immunity to Poison and Psychic damage.\nTo be used as a vehicle, the apparatus requires one pilot. While the apparatus's hatch is closed, the compartment is airtight and watertight. The compartment holds enough air for 10 hours of breathing, divided by the number of breathing creatures inside.\nThe apparatus floats on water. It can also go underwater to a depth of 900 feet. Below that, the vehicle takes 2d6 Bludgeoning damage each minute from pressure.\nA creature in the compartment can take a Utilize action to move as many as two of the apparatus's levers up or down. After each use, a lever goes back to its neutral position. Each lever, from left to right, functions as shown in the Apparatus of Kwalish Levers table",
+      "description": "This item first appears to be a sealed iron barrel weighing 500 pounds. The barrel has a hidden catch, which can be found with a successful DC 20 Intelligence (Investigation) check. Releasing the catch unlocks a hatch at one end of the barrel, allowing two Medium or smaller creatures to crawl inside. Ten levers are set in a row at the far end, each in a neutral position, able to move up or down. When certain levers are used, the apparatus transforms to resemble a giant lobster.\nThe Apparatus of Kwalish is a Large object with the following statistics: AC 20; HP 200; Speed 30 ft., Swim 30 ft. (or 0 ft. for both if the legs aren't extended); Immunity to Poison and Psychic damage.\nTo be used as a vehicle, the apparatus requires one pilot. While the apparatus's hatch is closed, the compartment is airtight and watertight. The compartment holds enough air for 10 hours of breathing, divided by the number of breathing creatures inside.\nThe apparatus floats on water. It can also go underwater to a depth of 900 feet. Below that, the vehicle takes 2d6 Bludgeoning damage each minute from pressure.\nA creature in the compartment can take a Utilize action to move as many as two of the apparatus's levers up or down. After each use, a lever goes back to its neutral position. Each lever, from left to right, functions as shown in the Apparatus of Kwalish Levers table.\n[Table: Apparatus of Kwalish Levers]",
       "effects": []
     },
     {
@@ -186,7 +237,7 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Rare",
-      "description": "This heavy cloth bag contains 3d4 dry beans when found. The bag weighs half a pound regardless of how many beans it contains and becomes a nonmagical item when it no longer contains any beans.\nIf you dump one or more beans out of the bag, they explode in a 10-foot-radius Sphere centered on them. All the dumped beans are destroyed in the explosion, and each creature in the Sphere, including you, makes a DC 15 Dexterity saving throw, taking 5d4 Force damage on a failed save or half as much damage on a successful one.\nIf you remove a bean from the bag, plant it in dirt or sand, and then water it, the bean disappears as it produces an effect 1 minute later from the ground where it was planted. The DM can choose an effect from the following table or determine it randomly",
+      "description": "This heavy cloth bag contains 3d4 dry beans when found. The bag weighs half a pound regardless of how many beans it contains and becomes a nonmagical item when it no longer contains any beans.\nIf you dump one or more beans out of the bag, they explode in a 10-foot-radius Sphere centered on them. All the dumped beans are destroyed in the explosion, and each creature in the Sphere, including you, makes a DC 15 Dexterity saving throw, taking 5d4 Force damage on a failed save or half as much damage on a successful one.\nIf you remove a bean from the bag, plant it in dirt or sand, and then water it, the bean disappears as it produces an effect 1 minute later from the ground where it was planted. The DM can choose an effect from the following table or determine it randomly.\n[Table: Bag of Beans Table]",
       "effects": []
     },
     {
@@ -214,7 +265,7 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Uncommon",
-      "description": "This bag made from gray cloth appears empty. Reaching inside the bag, however, reveals the presence of a small, fuzzy object.\nYou can take a Magic action to pull the fuzzy object from the bag and throw it up to 20 feet. When the object lands, it transforms into a creature you determine by rolling on the table below. See the Monster Manual for the creature's stat block. The creature vanishes at the next dawn or when it is reduced to 0 Hit Points.\nThe creature is Friendly to you and your allies, and it acts immediately after you on your Initiative count. You can take a Bonus Action to command how the creature moves and what action it takes on its next turn, such as attacking an enemy. In the absence of such orders, the creature acts in a fashion appropriate to its nature.\nOnce three fuzzy objects have been pulled from the bag, the bag can't be used again until the next dawn",
+      "description": "This bag made from gray cloth appears empty. Reaching inside the bag, however, reveals the presence of a small, fuzzy object.\nYou can take a Magic action to pull the fuzzy object from the bag and throw it up to 20 feet. When the object lands, it transforms into a creature you determine by rolling on the table below. See the Monster Manual for the creature's stat block. The creature vanishes at the next dawn or when it is reduced to 0 Hit Points.\nThe creature is Friendly to you and your allies, and it acts immediately after you on your Initiative count. You can take a Bonus Action to command how the creature moves and what action it takes on its next turn, such as attacking an enemy. In the absence of such orders, the creature acts in a fashion appropriate to its nature.\nOnce three fuzzy objects have been pulled from the bag, the bag can't be used again until the next dawn.\n[Table: Bag of Tricks, Gray Table]",
       "effects": []
     },
     {
@@ -223,7 +274,7 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Uncommon",
-      "description": "This bag made from rust cloth appears empty. Reaching inside the bag, however, reveals the presence of a small, fuzzy object.\nYou can take a Magic action to pull the fuzzy object from the bag and throw it up to 20 feet. When the object lands, it transforms into a creature you determine by rolling on the table below. See the Monster Manual for the creature's stat block. The creature vanishes at the next dawn or when it is reduced to 0 Hit Points.\nThe creature is Friendly to you and your allies, and it acts immediately after you on your Initiative count. You can take a Bonus Action to command how the creature moves and what action it takes on its next turn, such as attacking an enemy. In the absence of such orders, the creature acts in a fashion appropriate to its nature.\nOnce three fuzzy objects have been pulled from the bag, the bag can't be used again until the next dawn",
+      "description": "This bag made from rust cloth appears empty. Reaching inside the bag, however, reveals the presence of a small, fuzzy object.\nYou can take a Magic action to pull the fuzzy object from the bag and throw it up to 20 feet. When the object lands, it transforms into a creature you determine by rolling on the table below. See the Monster Manual for the creature's stat block. The creature vanishes at the next dawn or when it is reduced to 0 Hit Points.\nThe creature is Friendly to you and your allies, and it acts immediately after you on your Initiative count. You can take a Bonus Action to command how the creature moves and what action it takes on its next turn, such as attacking an enemy. In the absence of such orders, the creature acts in a fashion appropriate to its nature.\nOnce three fuzzy objects have been pulled from the bag, the bag can't be used again until the next dawn.\n[Table: Bag of Tricks, Rust Table]",
       "effects": []
     },
     {
@@ -232,7 +283,17 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Uncommon",
-      "description": "This bag made from tan cloth appears empty. Reaching inside the bag, however, reveals the presence of a small, fuzzy object.\nYou can take a Magic action to pull the fuzzy object from the bag and throw it up to 20 feet. When the object lands, it transforms into a creature you determine by rolling on the table below. See the Monster Manual for the creature's stat block. The creature vanishes at the next dawn or when it is reduced to 0 Hit Points.\nThe creature is Friendly to you and your allies, and it acts immediately after you on your Initiative count. You can take a Bonus Action to command how the creature moves and what action it takes on its next turn, such as attacking an enemy. In the absence of such orders, the creature acts in a fashion appropriate to its nature.\nOnce three fuzzy objects have been pulled from the bag, the bag can't be used again until the next dawn",
+      "description": "This bag made from tan cloth appears empty. Reaching inside the bag, however, reveals the presence of a small, fuzzy object.\nYou can take a Magic action to pull the fuzzy object from the bag and throw it up to 20 feet. When the object lands, it transforms into a creature you determine by rolling on the table below. See the Monster Manual for the creature's stat block. The creature vanishes at the next dawn or when it is reduced to 0 Hit Points.\nThe creature is Friendly to you and your allies, and it acts immediately after you on your Initiative count. You can take a Bonus Action to command how the creature moves and what action it takes on its next turn, such as attacking an enemy. In the absence of such orders, the creature acts in a fashion appropriate to its nature.\nOnce three fuzzy objects have been pulled from the bag, the bag can't be used again until the next dawn.\n[Table: Bag of Tricks, Tan Table]",
+      "effects": []
+    },
+    {
+      "name": "Ball Bearing",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 0.002,
+      "description": "Most commonly found inside a bag of ball bearings",
       "effects": []
     },
     {
@@ -244,6 +305,17 @@
       "weight": 2,
       "cost": "1 gp",
       "description": "As a Utilize action, you can spill Ball Bearings from their pouch. They spread to cover a level, 10-foot-square area within 10 feet of yourself. A creature that enters this area for the first time on a turn must succeed on a DC 10 Dexterity saving throw or have the Prone condition. It takes 10 minutes to recover the Ball Bearings",
+      "effects": []
+    },
+    {
+      "name": "Ball Bearings (bag of 1,000)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "1 gp",
+      "description": "As an action, you can spill these tiny metal balls from their pouch to cover a level area 10 feet square. A creature moving across the covered area must succeed on a DC 10 Dexterity saving throw or fall prone. A creature moving through the area at half speed doesn't need to make the saving throw",
       "effects": []
     },
     {
@@ -265,6 +337,16 @@
       "rarity": "Mundane",
       "cost": "100 gp",
       "description": "As a Bonus Action, you can use a vial of Basic Poison to coat one weapon or up to three pieces of ammunition. A creature that takes Piercing or Slashing damage from the poisoned weapon or ammunition takes an extra 1d4 Poison damage. Once applied, the poison retains potency for 1 minute or until its damage is dealt, whichever comes first",
+      "effects": []
+    },
+    {
+      "name": "Basic Poison (vial)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "100 gp",
+      "description": "You can use the poison in this vial to coat one slashing or piercing weapon or up to three pieces of ammunition. Applying the poison takes an action. A creature hit by the poisoned weapon or ammunition must make a DC 10 Constitution saving throw or take 1d4 poison damage. Once applied, the poison retains potency for 1 minute before drying",
       "effects": []
     },
     {
@@ -386,6 +468,16 @@
       "rarity": "Legendary",
       "attune": true,
       "description": "While wearing this belt, your Strength score changes to 29. The item has no effect on you if your Strength without the belt is equal to or greater than the belt's score",
+      "effects": []
+    },
+    {
+      "name": "Bit and bridle",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Tack and Harness",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "2 gp",
       "effects": []
     },
     {
@@ -645,6 +737,17 @@
       "effects": []
     },
     {
+      "name": "Caltrop",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 0.1,
+      "cost": "5 cp",
+      "description": "As an action, you can spread a single bag of caltrops to cover a 5-foot-square area. Any creature that enters the area must succeed on a DC 15 Dexterity saving throw or stop moving and take 1 piercing damage. Until the creature regains at least 1 hit point, its walking speed is reduced by 10 feet. A creature moving through the area at half speed doesn't need to make the saving throw",
+      "effects": []
+    },
+    {
       "name": "Caltrops",
       "system": "XPHB",
       "category": "Gear",
@@ -653,6 +756,17 @@
       "weight": 2,
       "cost": "1 gp",
       "description": "As a Utilize action, you can spread Caltrops from their bag to cover a 5-foot-square area within 5 feet of yourself. A creature that enters this area for the first time on a turn must succeed on a DC 15 Dexterity saving throw or take 1 Piercing damage and have its Speed reduced to 0 until the start of its next turn. It takes 10 minutes to recover the Caltrops",
+      "effects": []
+    },
+    {
+      "name": "Caltrops (bag of 20)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "1 gp",
+      "description": "As an action, you can spread a single bag of caltrops to cover a 5-foot-square area. Any creature that enters the area must succeed on a DC 15 Dexterity saving throw or stop moving and take 1 piercing damage. Until the creature regains at least 1 hit point, its walking speed is reduced by 10 feet. A creature moving through the area at half speed doesn't need to make the saving throw",
       "effects": []
     },
     {
@@ -681,7 +795,16 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "This candle's magic is activated when the candle is lit, which requires a Magic action. After burning for 4 hours, the candle is destroyed. You can snuff it out early for use at a later time. Deduct the time it burned in increments of 1 minute from its total burn time.\nWhile lit, the candle sheds Dim Light in a 30-foot radius. While you are within that light, you have Advantage on D20 Tests. In addition, a Cleric or Druid in the light can cast level 1 spells they have prepared without expending spell slots.\nAlternatively, when you light the candle for the first time, you can cast Gate with it. Doing so destroys the candle. The portal created by the spell links to a particular Outer Plane chosen by the DM or determined by rolling on the following table",
+      "description": "This candle's magic is activated when the candle is lit, which requires a Magic action. After burning for 4 hours, the candle is destroyed. You can snuff it out early for use at a later time. Deduct the time it burned in increments of 1 minute from its total burn time.\nWhile lit, the candle sheds Dim Light in a 30-foot radius. While you are within that light, you have Advantage on D20 Tests. In addition, a Cleric or Druid in the light can cast level 1 spells they have prepared without expending spell slots.\nAlternatively, when you light the candle for the first time, you can cast Gate with it. Doing so destroys the candle. The portal created by the spell links to a particular Outer Plane chosen by the DM or determined by rolling on the following table.\n[Table: Candle of Invocation Table]",
+      "effects": []
+    },
+    {
+      "name": "Canvas (1 sq. yd.)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "cost": "1 sp",
       "effects": []
     },
     {
@@ -770,6 +893,26 @@
       "effects": []
     },
     {
+      "name": "Chain (10 feet)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 10,
+      "cost": "5 gp",
+      "description": "A chain has 10 hit points. It can be burst with a successful DC 20 Strength check",
+      "effects": []
+    },
+    {
+      "name": "Chalk (1 piece)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "1 cp",
+      "effects": []
+    },
+    {
       "name": "Chariot",
       "system": "XPHB",
       "category": "Vehicle",
@@ -800,6 +943,15 @@
       "effects": []
     },
     {
+      "name": "Chicken",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "cost": "2 cp",
+      "effects": []
+    },
+    {
       "name": "Chime of Opening",
       "system": "XPHB",
       "category": "Wondrous Item",
@@ -807,6 +959,25 @@
       "rarity": "Rare",
       "weight": 1,
       "description": "This hollow metal tube measures about 1 foot long and weighs 1 pound. As a Magic action, you can strike the chime to cast Knock. The spell's customary knocking sound is replaced by the clear, ringing tone of the chime, which is audible out to 300 feet. The chime can be used 10 times. After the tenth time, it cracks and becomes useless",
+      "effects": []
+    },
+    {
+      "name": "Chunk of Meat",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Food and Drink",
+      "rarity": "Mundane",
+      "cost": "3 sp",
+      "effects": []
+    },
+    {
+      "name": "Cinnamon",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "2 gp",
       "effects": []
     },
     {
@@ -929,7 +1100,36 @@
       "effects": []
     },
     {
+      "name": "Cloves",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "3 gp",
+      "effects": []
+    },
+    {
+      "name": "Common Clothes",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "5 sp",
+      "effects": []
+    },
+    {
       "name": "Common Wine (bottle)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Food and Drink",
+      "rarity": "Mundane",
+      "cost": "2 sp",
+      "effects": []
+    },
+    {
+      "name": "Common Wine (pitcher)",
       "system": "XPHB",
       "category": "Gear",
       "type": "Food and Drink",
@@ -946,6 +1146,16 @@
       "weight": 2,
       "cost": "25 gp",
       "description": "A Component Pouch is watertight and filled with compartments that hold all the free Material components of your spells",
+      "effects": []
+    },
+    {
+      "name": "Copper",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "5 sp",
       "effects": []
     },
     {
@@ -973,6 +1183,34 @@
       "weight": 4,
       "cost": "5 gp",
       "description": "While wearing a Costume, you have Advantage on any ability check you make to impersonate the person or type of person it represents",
+      "effects": []
+    },
+    {
+      "name": "Costume Clothes",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 4,
+      "cost": "5 gp",
+      "effects": []
+    },
+    {
+      "name": "Cotton Cloth (1 sq. yd.)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "cost": "5 sp",
+      "effects": []
+    },
+    {
+      "name": "Cow",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "cost": "10 gp",
       "effects": []
     },
     {
@@ -1048,7 +1286,7 @@
       "type": "Wondrous Item",
       "rarity": "Rare",
       "attune": true,
-      "description": "This cube is about an inch across. Each face has a distinct marking on it. You can press one of those faces, expend the number of charges required for it, and thereby cast the spell associated with it (save DC 17), as shown in the Cube of Force Faces table.\nThe cube starts with 10 charges, and it regains 1d6 expended charges daily at dawn",
+      "description": "This cube is about an inch across. Each face has a distinct marking on it. You can press one of those faces, expend the number of charges required for it, and thereby cast the spell associated with it (save DC 17), as shown in the Cube of Force Faces table.\nThe cube starts with 10 charges, and it regains 1d6 expended charges daily at dawn.\n[Table: Cube of Force Faces]",
       "effects": []
     },
     {
@@ -1114,7 +1352,7 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Uncommon",
-      "description": "This box contains a set of cards. A full deck has 34 cards: 32 depicting specific creatures and two with a mirrored surface. A deck found as treasure is usually missing 1d20 - 1 cards.\nThe magic of the deck functions only if its cards are drawn at random. You can take a Magic action to draw a card at random from the deck and throw it to the ground at a point within 30 feet of yourself. An illusion of a creature, determined by rolling on the Deck of Illusions table, forms over the thrown card and remains until dispelled. The illusory creature created by the card looks and behaves like a real creature of its kind, except that it can do no harm. While you are within 120 feet of the illusory creature and can see it, you can take a Magic action to move it anywhere within 30 feet of its card.\nAny physical interaction with the illusory creature reveals it to be false, because objects pass through it. A creature that takes a Study action to visually inspect the illusory creature identifies it as an illusion with a successful DC 15 Intelligence (Investigation) check. The illusion lasts until its card is moved or the illusion is dispelled (using a Dispel Magic spell or a similar effect). When the illusion ends, the image on its card disappears, and that card can't be used again",
+      "description": "This box contains a set of cards. A full deck has 34 cards: 32 depicting specific creatures and two with a mirrored surface. A deck found as treasure is usually missing 1d20 - 1 cards.\nThe magic of the deck functions only if its cards are drawn at random. You can take a Magic action to draw a card at random from the deck and throw it to the ground at a point within 30 feet of yourself. An illusion of a creature, determined by rolling on the Deck of Illusions table, forms over the thrown card and remains until dispelled. The illusory creature created by the card looks and behaves like a real creature of its kind, except that it can do no harm. While you are within 120 feet of the illusory creature and can see it, you can take a Magic action to move it anywhere within 30 feet of its card.\nAny physical interaction with the illusory creature reveals it to be false, because objects pass through it. A creature that takes a Study action to visually inspect the illusory creature identifies it as an illusion with a successful DC 15 Intelligence (Investigation) check. The illusion lasts until its card is moved or the illusion is dispelled (using a Dispel Magic spell or a similar effect). When the illusion ends, the image on its card disappears, and that card can't be used again.\n[Table: Deck of Illusions]",
       "effects": []
     },
     {
@@ -1123,7 +1361,7 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Legendary",
-      "description": "Usually found in a box or pouch, this deck contains a number of cards made of ivory or vellum. Most (75 percent) of these decks have thirteen cards, but some have twenty-two. Use the appropriate column of the Deck of Many Things table when randomly determining cards drawn from the deck.\nBefore you draw a card, you must declare how many cards you intend to draw and then draw them randomly. Any cards drawn in excess of this number have no effect. Otherwise, as soon as you draw a card from the deck, its magic takes effect. You must draw each card no more than 1 hour after the previous draw. If you fail to draw the chosen number, the remaining number of cards fly from the deck on their own and take effect all at once.\nOnce a card is drawn, it disappears. Unless the card is the Fool or Jester, the card reappears in the deck, making it possible to draw the same card twice. (Once the Fool or Jester has left the deck, reroll on the table if that card comes up again.)\nEach card's effect is described below.\nBalance: You can increase one of your ability scores by 2, to a maximum of 22, provided you also decrease another one of your ability scores by 2. You can't decrease an ability that has a score of 5 or lower. Alternatively, you can choose not to adjust your ability scores, in which case this card has no effect.\nComet: The next time you enter combat against one or more Hostile creatures, you can select one of them as your foe when you roll Initiative. If you reduce your foe to 0 Hit Points during that combat, you have Advantage on Death Saving Throws for 1 year. If someone else reduces your chosen foe to 0 Hit Points or you don't choose a foe, this card has no effect.\nDonjon: You disappear and become entombed in a state of suspended animation in an extradimensional sphere. Everything you're wearing and carrying disappears with you except for Artifacts, which stay behind in the space you occupied when you disappeared. You remain imprisoned until you are found and removed from the sphere. You can't be located by any Divination magic, but a Wish spell can reveal the location of your prison. You draw no more cards.\nEuryale: The card's medusa-like visage curses you. You take a -2 penalty to saving throws while cursed in this way. Only a god or the magic of the Fates card can end this curse.\nFates: Reality's fabric unravels and spins anew, allowing you to avoid or erase one event as if it never happened. You can use the card's magic as soon as you draw the card or at any other time before you die.\nFlames: A powerful devil becomes your enemy. The devil seeks your ruin and torments you, savoring your suffering before attempting to slay you. This enmity lasts until either you or the devil dies.\nA Question of Enmity: Two of the cards in the Deck of Many Things can earn a character the enmity of another being. With the Flames card, the enmity is overt. The character should experience the devil's malevolent efforts on multiple occasions. Seeking out the fiend shouldn't be a simple task, and the adventurer should clash with the devil's allies and followers a few times before being able to confront the devil. In the case of the Rogue card, the enmity is secret and should come from someone thought to be a friend or an ally. As Dungeon Master, you should wait for a dramatically appropriate moment to reveal this enmity, leaving the adventurer guessing who is likely to become a betrayer.\nFool: You have Disadvantage on D20 Tests for the next 72 hours. Draw another card; this draw doesn't count as one of your declared draws.\nGem: Twenty-five pieces of jewelry worth 2,000 GP each or fifty gems worth 1,000 GP each appear at your feet.\nJester: You have Advantage on D20 Tests for the next 72 hours, or you can draw two additional cards beyond your declared draws.\nKey: A Rare or rarer magic weapon with which you are proficient appears on your person. The DM chooses the weapon.\nKnight: You gain the service of a Knight, who magically appears in an unoccupied space you choose within 30 feet of yourself. The knight has the same alignment as you and serves you loyally until death, believing the two of you have been drawn together by fate. Work with your DM to create a name and backstory for this NPC. The DM can use a different stat block to represent the knight, as desired.\nMoon: You gain the ability to cast Wish 1d3 times.\nPuzzle: Permanently reduce your Intelligence or Wisdom by 1d4 + 1 (to a minimum score of 1). You can draw one additional card beyond your declared draws.\nRogue: An NPC of the DM's choice becomes Hostile toward you. You don't know the identity of this NPC until they or someone else reveals it. Nothing less than a Wish spell or divine intervention can end the NPC's hostility toward you.\nRuin: All forms of wealth that you carry or own, other than magic items, are lost to you. Portable property vanishes. Businesses, buildings, and land you own are lost in a way that alters reality the least. If you have a Bastion (see the Dungeon Master's Guide), it is destroyed by some calamity beyond your control. Any documentation that proves you should own something lost to this card also disappears.\nSage: At any time you choose within one year of drawing this card, you can ask a question in meditation and mentally receive a truthful answer to that question.\nSkull: An Avatar of Death appears in an unoccupied space as close to you as possible. The avatar targets only you with its attacks, appearing as a ghostly skeleton clad in a tattered black robe and carrying a spectral scythe. The avatar disappears when it drops to 0 Hit Points or you die. If an ally of yours deals damage to the avatar, that ally summons another Avatar of Death. The new avatar appears in an unoccupied space as close to that ally as possible and targets only that ally with its attacks. You and your allies can each summon only one avatar as a consequence of this draw. A creature slain by an avatar can't be restored to life.\nStar: Increase one of your ability scores by 2, to a maximum of 24.\nSun: A magic item (chosen by the DM) appears on your person. In addition, you gain 10 Temporary Hit Points daily at dawn until you die.\nTalons: Every magic item you wear or carry disintegrates. Artifacts in your possession vanish instead.\nThrone: You gain proficiency and Expertise in your choice of History, Insight, Intimidation, or Persuasion. In addition, you gain rightful ownership of a small keep somewhere in the world. However, the keep is currently home to one or more monsters, which must be cleared out before you can claim the keep as yours.\nVoid: Your soul is drawn from your body and contained in an object in a place of the DM's choice. One or more powerful beings guard the place. While your soul is trapped in this way, your body is inert, ceases aging, and requires no food, air, or water. A Wish spell can't return your soul to your body, but the spell reveals the location of the object that holds your soul. You draw no more cards",
+      "description": "Usually found in a box or pouch, this deck contains a number of cards made of ivory or vellum. Most (75 percent) of these decks have thirteen cards, but some have twenty-two. Use the appropriate column of the Deck of Many Things table when randomly determining cards drawn from the deck.\nBefore you draw a card, you must declare how many cards you intend to draw and then draw them randomly. Any cards drawn in excess of this number have no effect. Otherwise, as soon as you draw a card from the deck, its magic takes effect. You must draw each card no more than 1 hour after the previous draw. If you fail to draw the chosen number, the remaining number of cards fly from the deck on their own and take effect all at once.\nOnce a card is drawn, it disappears. Unless the card is the Fool or Jester, the card reappears in the deck, making it possible to draw the same card twice. (Once the Fool or Jester has left the deck, reroll on the table if that card comes up again.)\n[Table: Deck of Many Things]\nEach card's effect is described below.\nBalance: You can increase one of your ability scores by 2, to a maximum of 22, provided you also decrease another one of your ability scores by 2. You can't decrease an ability that has a score of 5 or lower. Alternatively, you can choose not to adjust your ability scores, in which case this card has no effect.\nComet: The next time you enter combat against one or more Hostile creatures, you can select one of them as your foe when you roll Initiative. If you reduce your foe to 0 Hit Points during that combat, you have Advantage on Death Saving Throws for 1 year. If someone else reduces your chosen foe to 0 Hit Points or you don't choose a foe, this card has no effect.\nDonjon: You disappear and become entombed in a state of suspended animation in an extradimensional sphere. Everything you're wearing and carrying disappears with you except for Artifacts, which stay behind in the space you occupied when you disappeared. You remain imprisoned until you are found and removed from the sphere. You can't be located by any Divination magic, but a Wish spell can reveal the location of your prison. You draw no more cards.\nEuryale: The card's medusa-like visage curses you. You take a -2 penalty to saving throws while cursed in this way. Only a god or the magic of the Fates card can end this curse.\nFates: Reality's fabric unravels and spins anew, allowing you to avoid or erase one event as if it never happened. You can use the card's magic as soon as you draw the card or at any other time before you die.\nFlames: A powerful devil becomes your enemy. The devil seeks your ruin and torments you, savoring your suffering before attempting to slay you. This enmity lasts until either you or the devil dies.\nA Question of Enmity: Two of the cards in the Deck of Many Things can earn a character the enmity of another being. With the Flames card, the enmity is overt. The character should experience the devil's malevolent efforts on multiple occasions. Seeking out the fiend shouldn't be a simple task, and the adventurer should clash with the devil's allies and followers a few times before being able to confront the devil. In the case of the Rogue card, the enmity is secret and should come from someone thought to be a friend or an ally. As Dungeon Master, you should wait for a dramatically appropriate moment to reveal this enmity, leaving the adventurer guessing who is likely to become a betrayer.\nFool: You have Disadvantage on D20 Tests for the next 72 hours. Draw another card; this draw doesn't count as one of your declared draws.\nGem: Twenty-five pieces of jewelry worth 2,000 GP each or fifty gems worth 1,000 GP each appear at your feet.\nJester: You have Advantage on D20 Tests for the next 72 hours, or you can draw two additional cards beyond your declared draws.\nKey: A Rare or rarer magic weapon with which you are proficient appears on your person. The DM chooses the weapon.\nKnight: You gain the service of a Knight, who magically appears in an unoccupied space you choose within 30 feet of yourself. The knight has the same alignment as you and serves you loyally until death, believing the two of you have been drawn together by fate. Work with your DM to create a name and backstory for this NPC. The DM can use a different stat block to represent the knight, as desired.\nMoon: You gain the ability to cast Wish 1d3 times.\nPuzzle: Permanently reduce your Intelligence or Wisdom by 1d4 + 1 (to a minimum score of 1). You can draw one additional card beyond your declared draws.\nRogue: An NPC of the DM's choice becomes Hostile toward you. You don't know the identity of this NPC until they or someone else reveals it. Nothing less than a Wish spell or divine intervention can end the NPC's hostility toward you.\nRuin: All forms of wealth that you carry or own, other than magic items, are lost to you. Portable property vanishes. Businesses, buildings, and land you own are lost in a way that alters reality the least. If you have a Bastion (see the Dungeon Master's Guide), it is destroyed by some calamity beyond your control. Any documentation that proves you should own something lost to this card also disappears.\nSage: At any time you choose within one year of drawing this card, you can ask a question in meditation and mentally receive a truthful answer to that question.\nSkull: An Avatar of Death appears in an unoccupied space as close to you as possible. The avatar targets only you with its attacks, appearing as a ghostly skeleton clad in a tattered black robe and carrying a spectral scythe. The avatar disappears when it drops to 0 Hit Points or you die. If an ally of yours deals damage to the avatar, that ally summons another Avatar of Death. The new avatar appears in an unoccupied space as close to that ally as possible and targets only that ally with its attacks. You and your allies can each summon only one avatar as a consequence of this draw. A creature slain by an avatar can't be restored to life.\nStar: Increase one of your ability scores by 2, to a maximum of 24.\nSun: A magic item (chosen by the DM) appears on your person. In addition, you gain 10 Temporary Hit Points daily at dawn until you die.\nTalons: Every magic item you wear or carry disintegrates. Artifacts in your possession vanish instead.\nThrone: You gain proficiency and Expertise in your choice of History, Insight, Intimidation, or Persuasion. In addition, you gain rightful ownership of a small keep somewhere in the world. However, the keep is currently home to one or more monsters, which must be cleared out before you can claim the keep as yours.\nVoid: Your soul is drawn from your body and contained in an object in a place of the DM's choice. One or more powerful beings guard the place. While your soul is trapped in this way, your body is inert, ceases aging, and requires no food, air, or water. A Wish spell can't return your soul to your body, but the spell reveals the location of the object that holds your soul. You draw no more cards",
       "effects": []
     },
     {
@@ -1165,6 +1403,15 @@
       "weight": 3,
       "cost": "25 gp",
       "description": "Ability:: Charisma\nUtilize:: Apply makeup (DC 10)\nCraft:: Costume",
+      "effects": []
+    },
+    {
+      "name": "Donkey",
+      "system": "XPHB",
+      "category": "Mount",
+      "type": "Mount",
+      "rarity": "Mundane",
+      "cost": "8 gp",
       "effects": []
     },
     {
@@ -1260,7 +1507,7 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Very Rare",
-      "description": "When you take a Magic action to remove the stopper of this painted brass bottle, a cloud of thick smoke flows out of it. At the end of your turn, the smoke disappears with a flash of harmless fire, and an Efreeti appears in an unoccupied space within 30 feet of you.\nThe first time the bottle is opened, the DM rolls on the following table to determine what happens",
+      "description": "When you take a Magic action to remove the stopper of this painted brass bottle, a cloud of thick smoke flows out of it. At the end of your turn, the smoke disappears with a flash of harmless fire, and an Efreeti appears in an unoccupied space within 30 feet of you.\nThe first time the bottle is opened, the DM rolls on the following table to determine what happens.\n[Table: Efreeti Bottle Table]",
       "effects": []
     },
     {
@@ -1510,6 +1757,17 @@
       "effects": []
     },
     {
+      "name": "Fishing Tackle",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 4,
+      "cost": "1 gp",
+      "description": "This kit includes a wooden rod, silken line, corkwood bobbers, steel hooks, lead sinkers, velvet lures, and narrow netting",
+      "effects": []
+    },
+    {
       "name": "Flask",
       "system": "XPHB",
       "category": "Gear",
@@ -1518,6 +1776,16 @@
       "weight": 1,
       "cost": "2 cp",
       "description": "A Flask holds up to 1 pint",
+      "effects": []
+    },
+    {
+      "name": "Flour",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "2 cp",
       "effects": []
     },
     {
@@ -1580,6 +1848,16 @@
       "effects": []
     },
     {
+      "name": "Ginger",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "1 gp",
+      "effects": []
+    },
+    {
       "name": "Glamoured Studded Leather",
       "system": "XPHB",
       "category": "Armor",
@@ -1635,12 +1913,31 @@
       "effects": []
     },
     {
+      "name": "Goat",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "cost": "1 gp",
+      "effects": []
+    },
+    {
       "name": "Goggles of Night",
       "system": "XPHB",
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Uncommon",
       "description": "While wearing these dark lenses, you have Darkvision out to 60 feet. If you already have Darkvision, wearing the goggles increases its range by 60 feet",
+      "effects": []
+    },
+    {
+      "name": "Gold",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "50 gp",
       "effects": []
     },
     {
@@ -1687,6 +1984,16 @@
       ]
     },
     {
+      "name": "Hammer",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "1 gp",
+      "effects": []
+    },
+    {
       "name": "Hat of Disguise",
       "system": "XPHB",
       "category": "Wondrous Item",
@@ -1704,7 +2011,7 @@
       "rarity": "Very Rare",
       "attune": true,
       "attuneNote": "by a wizard",
-      "description": "This pointed hat has the following properties.\nSpellcasting Focus: While holding the hat, you can use it as a Spellcasting Focus for your Wizard spells. Any spell you cast using the hat gains a special Somatic component: you must reach into the hat and \"pull\" the spell out of it.\nUnknown Spell: While holding the hat, you can try to cast a level 1+ spell you don't know. The spell must be on the Wizard spell list, it must be of a level you can cast, and it can't have Material components costing more than 1,000 GP. Once you decide on the spell, you must expend a spell slot of the spell's level. Then, to determine whether you cast the spell, make an Intelligence (Arcana) check (DC 10 plus the spell's level). On a successful check, you cast the spell using its normal casting time, and you can't use this property again until you finish a Short or Long Rest. On a failed check, you fail to cast the spell and a random effect occurs instead, determined by rolling on the following table. Any spell you cast from the hat uses your spell save DC and spell attack bonus",
+      "description": "This pointed hat has the following properties.\nSpellcasting Focus: While holding the hat, you can use it as a Spellcasting Focus for your Wizard spells. Any spell you cast using the hat gains a special Somatic component: you must reach into the hat and \"pull\" the spell out of it.\nUnknown Spell: While holding the hat, you can try to cast a level 1+ spell you don't know. The spell must be on the Wizard spell list, it must be of a level you can cast, and it can't have Material components costing more than 1,000 GP. Once you decide on the spell, you must expend a spell slot of the spell's level. Then, to determine whether you cast the spell, make an Intelligence (Arcana) check (DC 10 plus the spell's level). On a successful check, you cast the spell using its normal casting time, and you can't use this property again until you finish a Short or Long Rest. On a failed check, you fail to cast the spell and a random effect occurs instead, determined by rolling on the following table. Any spell you cast from the hat uses your spell save DC and spell attack bonus. [Table: Hat of Many Spells Table]",
       "effects": []
     },
     {
@@ -1768,6 +2075,17 @@
       "effects": []
     },
     {
+      "name": "Hempen Rope (50 feet)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 10,
+      "cost": "1 gp",
+      "description": "Rope, whether made of hemp or silk, has 2 hit points and can be burst with a DC 17 Strength check",
+      "effects": []
+    },
+    {
       "name": "Herbalism Kit",
       "system": "XPHB",
       "category": "Tool",
@@ -1797,6 +2115,17 @@
       "weight": 1,
       "cost": "25 gp",
       "description": "When you take the Attack action, you can replace one of your attacks with throwing a flask of Holy Water. Target one creature you can see within 20 feet of yourself. The target must succeed on a Dexterity saving throw (DC 8 plus your Dexterity modifier and Proficiency Bonus) or take 2d8 Radiant damage if it is a Fiend or an Undead",
+      "effects": []
+    },
+    {
+      "name": "Holy Water (flask)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "25 gp",
+      "description": "As an action, you can splash the contents of this flask onto a creature within 5 feet of you or throw it up to 20 feet, shattering it on impact. In either case, make a ranged attack against a target creature, treating the holy water as an improvised weapon. If the target is a fiend or undead, it takes 2d6 radiant damage.\nA cleric or paladin may create holy water by performing a special ritual. The ritual takes 1 hour to perform, uses 25 gp worth of powdered silver, and requires the caster to expend a 1st-level spell slot",
       "effects": []
     },
     {
@@ -1874,6 +2203,25 @@
       "effects": []
     },
     {
+      "name": "Hourglass",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "25 gp",
+      "effects": []
+    },
+    {
+      "name": "Hunk of Cheese",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Food and Drink",
+      "rarity": "Mundane",
+      "cost": "1 sp",
+      "effects": []
+    },
+    {
       "name": "Hunting Trap",
       "system": "XPHB",
       "category": "Gear",
@@ -1902,6 +2250,15 @@
       "rarity": "Mundane",
       "cost": "10 gp",
       "description": "Ink comes in a 1-ounce bottle, which provides enough ink to write about 500 pages",
+      "effects": []
+    },
+    {
+      "name": "Ink (1-ounce bottle)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "10 gp",
       "effects": []
     },
     {
@@ -2060,6 +2417,16 @@
       "effects": []
     },
     {
+      "name": "Iron",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "1 sp",
+      "effects": []
+    },
+    {
       "name": "Iron Bands of Bilarro",
       "system": "XPHB",
       "category": "Wondrous Item",
@@ -2075,7 +2442,7 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Legendary",
-      "description": "While holding this brass-stoppered iron flask, you can take a Magic action to target a creature that you can see within 60 feet of yourself. If the flask is empty and the target is native to a plane of existence other than the one you're on, the target must succeed on a DC 17 Wisdom saving throw or be trapped in the flask. If the target has been trapped by the flask before, it has Advantage on the save. Once trapped, a creature remains in the flask until released. The flask can hold only one creature at a time. A creature trapped in the flask doesn't age and doesn't need to breathe, eat, or drink.\nYou can take a Magic action to remove the flask's stopper and release the creature in the flask. The creature then obeys your commands for 1 hour, understanding those commands even if it doesn't know the language in which the commands are given. If you issue no commands or give the creature a command that is likely to result in its death or imprisonment, it defends itself but otherwise takes no actions. At the end of the duration, the creature acts in accordance with its normal disposition and alignment.\nAn Identify spell reveals if the flask contains a creature, but the only way to determine the type of creature is to open the flask. A newly discovered Iron Flask might already contain a creature chosen by the DM or determined randomly by rolling on the following table (see the Monster Manual for the creature's stat block)",
+      "description": "While holding this brass-stoppered iron flask, you can take a Magic action to target a creature that you can see within 60 feet of yourself. If the flask is empty and the target is native to a plane of existence other than the one you're on, the target must succeed on a DC 17 Wisdom saving throw or be trapped in the flask. If the target has been trapped by the flask before, it has Advantage on the save. Once trapped, a creature remains in the flask until released. The flask can hold only one creature at a time. A creature trapped in the flask doesn't age and doesn't need to breathe, eat, or drink.\nYou can take a Magic action to remove the flask's stopper and release the creature in the flask. The creature then obeys your commands for 1 hour, understanding those commands even if it doesn't know the language in which the commands are given. If you issue no commands or give the creature a command that is likely to result in its death or imprisonment, it defends itself but otherwise takes no actions. At the end of the duration, the creature acts in accordance with its normal disposition and alignment.\nAn Identify spell reveals if the flask contains a creature, but the only way to determine the type of creature is to open the flask. A newly discovered Iron Flask might already contain a creature chosen by the DM or determined randomly by rolling on the following table (see the Monster Manual for the creature's stat block).\n[Table: Iron Flask Table]",
       "effects": []
     },
     {
@@ -2109,6 +2476,16 @@
       "weight": 5,
       "cost": "1 gp",
       "description": "Iron Spikes come in bundles of ten. As a Utilize action, you can use a blunt object, such as a Light Hammer, to hammer a spike into wood, earth, or a similar material. You can do so to jam a door shut or to then tie a Rope or Chain to the Spike",
+      "effects": []
+    },
+    {
+      "name": "Iron Spikes (10)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 5,
+      "cost": "1 gp",
       "effects": []
     },
     {
@@ -2149,6 +2526,15 @@
       "effects": []
     },
     {
+      "name": "Keoghtom's Ointment",
+      "system": "XPHB",
+      "category": "Wondrous Item",
+      "type": "Wondrous Item",
+      "rarity": "Uncommon",
+      "description": "This glass jar, 3 inches in diameter, contains 1d4 + 1 doses of a thick mixture that smells faintly of aloe. The jar and its contents weigh ½ pound.\nAs an action, one dose of the ointment can be swallowed or applied to the skin. The creature that receives it regains 2d8 + 2 hit points, ceases to be poisoned, and is cured of any disease",
+      "effects": []
+    },
+    {
       "name": "Ladder",
       "system": "XPHB",
       "category": "Gear",
@@ -2157,6 +2543,17 @@
       "weight": 25,
       "cost": "1 sp",
       "description": "A Ladder is 10 feet tall. You must climb to move up or down it",
+      "effects": []
+    },
+    {
+      "name": "Ladder (10-foot)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 25,
+      "cost": "1 sp",
+      "description": "Ladder (10-foot)",
       "effects": []
     },
     {
@@ -2177,6 +2574,24 @@
       "type": "Wondrous Item",
       "rarity": "Uncommon",
       "description": "While lit, this hooded lantern burns for 6 hours on 1 pint of oil, shedding Bright Light in a 30-foot radius and Dim Light for an additional 30 feet. Invisible creatures and objects are visible as long as they are in the lantern's Bright Light. You can take a Utilize action to lower the hood, reducing the lantern's light to Dim Light in a 5-foot radius",
+      "effects": []
+    },
+    {
+      "name": "Linen (1 sq. yd.)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "cost": "5 gp",
+      "effects": []
+    },
+    {
+      "name": "Loaf of Bread",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Food and Drink",
+      "rarity": "Mundane",
+      "cost": "2 cp",
       "effects": []
     },
     {
@@ -2388,6 +2803,28 @@
       "effects": []
     },
     {
+      "name": "Merchant's Scale",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "5 gp",
+      "description": "A scale includes a small balance, pans, and a suitable assortment of weights up to 2 pounds. With it, you can measure the exact weight of small objects, such as raw precious metals or trade goods, to help determine their worth",
+      "effects": []
+    },
+    {
+      "name": "Mess Kit",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "2 sp",
+      "description": "This tin box contains a cup and simple cutlery. The box clamps together, and one side can be used as a cooking pan and the other as a plate or shallow bowl",
+      "effects": []
+    },
+    {
       "name": "Military Saddle",
       "system": "XPHB",
       "category": "Gear",
@@ -2396,6 +2833,16 @@
       "weight": 30,
       "cost": "20 gp",
       "description": "A saddle comes with a bit, a bridle, reins, and any other equipment needed to use the saddle. A Military Saddle gives Advantage on any ability check you make to remain mounted",
+      "effects": []
+    },
+    {
+      "name": "Miner's Pick",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 10,
+      "cost": "2 gp",
       "effects": []
     },
     {
@@ -2469,7 +2916,7 @@
       "weight": 1,
       "attune": true,
       "attuneNote": "by a cleric, druid, or paladin",
-      "description": "This necklace has 1d4 + 2 magic beads made from aquamarine, black pearl, or topaz. It also has many nonmagical beads made from stones such as amber, bloodstone, citrine, coral, jade, pearl, or quartz. If a magic bead is removed from the necklace, that bead loses its magic.\nSix types of magic beads exist. The DM decides the type of each bead on the necklace or determines it randomly by rolling on the table below. A necklace can have more than one bead of the same type. To use one, you must be wearing the necklace. Each bead contains a spell that you can cast from it as a Bonus Action (using your spell save DC if a save is necessary). Once a magic bead's spell is cast, that bead can't be used again until the next dawn",
+      "description": "This necklace has 1d4 + 2 magic beads made from aquamarine, black pearl, or topaz. It also has many nonmagical beads made from stones such as amber, bloodstone, citrine, coral, jade, pearl, or quartz. If a magic bead is removed from the necklace, that bead loses its magic.\nSix types of magic beads exist. The DM decides the type of each bead on the necklace or determines it randomly by rolling on the table below. A necklace can have more than one bead of the same type. To use one, you must be wearing the necklace. Each bead contains a spell that you can cast from it as a Bonus Action (using your spell save DC if a save is necessary). Once a magic bead's spell is cast, that bead can't be used again until the next dawn.\n[Table: Necklace of Prayer Beads Table]",
       "effects": []
     },
     {
@@ -2501,6 +2948,17 @@
       "weight": 1,
       "cost": "1 sp",
       "description": "You can douse a creature, object, or space with Oil or use it as fuel, as detailed below.\nDousing a Creature or an Object: When you take the Attack action, you can replace one of your attacks with throwing an Oil flask. Target one creature or object within 20 feet of yourself. The target must succeed on a Dexterity saving throw (DC 8 plus your Dexterity modifier and Proficiency Bonus) or be covered in oil. If the target takes Fire damage before the oil dries (after 1 minute), the target takes an extra 5 Fire damage from burning oil.\nDousing a Space: You can take the Utilize action to pour an Oil flask on level ground to cover a 5-foot-square area within 5 feet of yourself. If lit, the oil burns until the end of the turn 2 rounds from when the oil was lit (or 12 seconds) and deals 5 Fire damage to any creature that enters the area or ends its turn there. A creature can take this damage only once per turn.\nFuel: Oil serves as fuel for Lamps and Lanterns. Once lit, a flask of Oil burns for 6 hours in a Lamp or Lantern. That duration doesn't need to be consecutive; you can extinguish the burning Oil (as a Utilize action) and rekindle it again until it has burned for a total of 6 hours",
+      "effects": []
+    },
+    {
+      "name": "Oil (flask)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "1 sp",
+      "description": "Oil usually comes in a clay flask that holds 1 pint. As an action, you can splash the oil in this flask onto a creature within 5 feet of you or throw it up to 20 feet, shattering it on impact. Make a ranged attack against a target creature or object, treating the oil as an improvised weapon. On a hit, the target is covered in oil. If the target takes any fire damage before the oil dries (after 1 minute), the target takes an additional 5 fire damage from the burning oil. You can also pour a flask of oil on the ground to cover a 5-foot-square area, provided that the surface is level. If lit, the oil burns for 2 rounds and deals 5 fire damage to any creature that enters the area or ends its turn in the area. A creature can take this damage only once per turn",
       "effects": []
     },
     {
@@ -2550,7 +3008,26 @@
       "rarity": "Artifact",
       "weight": 3,
       "attune": true,
-      "description": "Long ago, in the Dragonlance setting, elves and humans waged a terrible war against chromatic dragons. When the world seemed doomed, the wizards of the Towers of High Sorcery came together and forged five Orbs of Dragonkind to help defeat the dragons. One orb was taken to each of the five towers, and there they were used to speed the war toward a victorious end. The wizards used the orbs to lure dragons to them, then destroyed the dragons with powerful magic.\nAs the Towers of High Sorcery fell in later ages, the orbs were destroyed or faded into legend, and only three are thought to survive. Their magic has been warped over the centuries. Their primary purpose of calling dragons still functions, but they also allow some measure of control over dragons.\nEach orb contains the essence of an evil dragon, a presence that resents any attempt to coax magic from it. Those who try to wield an orb's magic but lack sufficient force of personality might find themselves under the orb's control.\nAn orb is an etched crystal globe about 10 inches in diameter. When used, it grows to about 20 inches in diameter, and mist swirls inside it.\nWhile attuned to an orb, you can take a Magic action to peer into the orb's depths. You must then make a DC 15 Charisma saving throw. On a successful save, you control the orb for as long as you remain attuned to it. On a failed save, the orb imposes the Charmed condition on you for as long as you remain attuned to it.\nWhile you are Charmed by the orb, you can't voluntarily end your Attunement to it, and the orb casts Suggestion on you at will (save DC 18), urging you to work toward the evil ends it desires. The dragon essence within the orb might want many things: the annihilation of a particular society or organization, freedom from the orb, to spread suffering in the world, to advance the worship of Tiamat, or something else the DM decides.\nRandom Properties: An Orb of Dragonkind has the following random properties: • 2 minor beneficial properties\n• 1 minor detrimental property\n• 1 major detrimental property\nSpells: The orb has 7 charges and regains 1d4 + 3 expended charges daily at dawn. If you control the orb, you can cast one of the spells on the following table from it. The table indicates how many charges you must expend to cast the spell.\nCall Dragons: While you control the orb, you can take a Magic action to cause the orb to issue a telepathic call that extends in all directions for 40 miles. Chromatic dragons in range feel compelled to come to the orb as soon as possible by the most direct route. Dragon deities such as Tiamat are unaffected by this call. Chromatic dragons drawn to the orb might be Hostile toward you for compelling them against their will. Once you have used this property, it can't be used again for 1 hour.\nDestroying an Orb: An Orb of Dragonkind has AC 20 and is destroyed if it takes damage from a +3 Weapon or a Disintegrate spell. Nothing else can harm it",
+      "description": "Long ago, in the Dragonlance setting, elves and humans waged a terrible war against chromatic dragons. When the world seemed doomed, the wizards of the Towers of High Sorcery came together and forged five Orbs of Dragonkind to help defeat the dragons. One orb was taken to each of the five towers, and there they were used to speed the war toward a victorious end. The wizards used the orbs to lure dragons to them, then destroyed the dragons with powerful magic.\nAs the Towers of High Sorcery fell in later ages, the orbs were destroyed or faded into legend, and only three are thought to survive. Their magic has been warped over the centuries. Their primary purpose of calling dragons still functions, but they also allow some measure of control over dragons.\nEach orb contains the essence of an evil dragon, a presence that resents any attempt to coax magic from it. Those who try to wield an orb's magic but lack sufficient force of personality might find themselves under the orb's control.\nAn orb is an etched crystal globe about 10 inches in diameter. When used, it grows to about 20 inches in diameter, and mist swirls inside it.\nWhile attuned to an orb, you can take a Magic action to peer into the orb's depths. You must then make a DC 15 Charisma saving throw. On a successful save, you control the orb for as long as you remain attuned to it. On a failed save, the orb imposes the Charmed condition on you for as long as you remain attuned to it.\nWhile you are Charmed by the orb, you can't voluntarily end your Attunement to it, and the orb casts Suggestion on you at will (save DC 18), urging you to work toward the evil ends it desires. The dragon essence within the orb might want many things: the annihilation of a particular society or organization, freedom from the orb, to spread suffering in the world, to advance the worship of Tiamat, or something else the DM decides.\nRandom Properties: An Orb of Dragonkind has the following random properties: • 2 minor beneficial properties\n• 1 minor detrimental property\n• 1 major detrimental property\nSpells: The orb has 7 charges and regains 1d4 + 3 expended charges daily at dawn. If you control the orb, you can cast one of the spells on the following table from it. The table indicates how many charges you must expend to cast the spell. [Table: Orb of Dragonkind Table]\nCall Dragons: While you control the orb, you can take a Magic action to cause the orb to issue a telepathic call that extends in all directions for 40 miles. Chromatic dragons in range feel compelled to come to the orb as soon as possible by the most direct route. Dragon deities such as Tiamat are unaffected by this call. Chromatic dragons drawn to the orb might be Hostile toward you for compelling them against their will. Once you have used this property, it can't be used again for 1 hour.\nDestroying an Orb: An Orb of Dragonkind has AC 20 and is destroyed if it takes damage from a +3 Weapon or a Disintegrate spell. Nothing else can harm it",
+      "effects": []
+    },
+    {
+      "name": "Ox",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "cost": "15 gp",
+      "effects": []
+    },
+    {
+      "name": "Pack Saddle",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Tack and Harness",
+      "rarity": "Mundane",
+      "weight": 15,
+      "cost": "5 gp",
       "effects": []
     },
     {
@@ -2564,6 +3041,15 @@
       "effects": []
     },
     {
+      "name": "Paper (one sheet)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "2 sp",
+      "effects": []
+    },
+    {
       "name": "Parchment",
       "system": "XPHB",
       "category": "Gear",
@@ -2571,6 +3057,15 @@
       "rarity": "Mundane",
       "cost": "1 sp",
       "description": "One sheet of Parchment can hold about 250 handwritten words",
+      "effects": []
+    },
+    {
+      "name": "Parchment (one sheet)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "1 sp",
       "effects": []
     },
     {
@@ -2585,6 +3080,16 @@
       "effects": []
     },
     {
+      "name": "Pepper",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "2 gp",
+      "effects": []
+    },
+    {
       "name": "Perfume",
       "system": "XPHB",
       "category": "Gear",
@@ -2592,6 +3097,15 @@
       "rarity": "Mundane",
       "cost": "5 gp",
       "description": "Perfume comes in a 4-ounce vial. For 1 hour after applying Perfume to yourself, you have Advantage on Charisma (Persuasion) checks made to influence an Indifferent Humanoid within 5 feet of yourself",
+      "effects": []
+    },
+    {
+      "name": "Perfume (vial)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "5 gp",
       "effects": []
     },
     {
@@ -2638,6 +3152,15 @@
       "effects": []
     },
     {
+      "name": "Pig",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "cost": "3 gp",
+      "effects": []
+    },
+    {
       "name": "Pipes of Haunting",
       "system": "XPHB",
       "category": "Wondrous Item",
@@ -2654,6 +3177,46 @@
       "rarity": "Uncommon",
       "attune": true,
       "description": "While these pipes are on your person, ordinary rats and giant rats are Indifferent toward you and won't attack you unless you threaten or harm them.\nThe pipes have 3 charges and regain 1d3 expended charges daily at dawn. If you play the pipes as a Magic action, you can take a Bonus Action to expend 1 to 3 charges, calling forth one Swarm of Rats with each expended charge if enough rats are within half a mile of you to be called in this fashion (as determined by the DM). If there aren't enough rats to form a swarm, the charge is wasted. Called swarms move toward the music by the shortest available route but aren't under your control otherwise.\nWhenever a Swarm of Rats that isn't under another creature's control comes within 30 feet of you while you are playing the pipes, the swarm makes a DC 15 Wisdom saving throw. On a successful save, the swarm behaves as it normally would and can't be swayed by the pipes' music for the next 24 hours. On a failed save, the swarm is swayed by the pipes' music and becomes Friendly to you and your allies for as long as you continue to play the pipes each round as a Magic action. A Friendly swarm obeys your commands. If you issue no commands to a Friendly swarm, it defends itself but otherwise takes no actions. If a Friendly swarm starts its turn more than 30 feet away from you, your control over that swarm ends, and the swarm behaves as it normally would and can't be swayed by the pipes' music for the next 24 hours",
+      "effects": []
+    },
+    {
+      "name": "Pitcher",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 4,
+      "cost": "2 cp",
+      "description": "A pitcher holds 1 gallon of liquid",
+      "effects": []
+    },
+    {
+      "name": "Piton",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 0.25,
+      "cost": "5 cp",
+      "effects": []
+    },
+    {
+      "name": "Platinum",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "500 gp",
+      "effects": []
+    },
+    {
+      "name": "Playing Card Set",
+      "system": "XPHB",
+      "category": "Tool",
+      "type": "Gaming Set",
+      "rarity": "Mundane",
+      "cost": "5 sp",
       "effects": []
     },
     {
@@ -2686,6 +3249,16 @@
       "weight": 7,
       "cost": "5 cp",
       "description": "A Pole is 10 feet long. You can use it to touch something up to 10 feet away. If you must make a Strength (Athletics) check as part of a High or Long Jump, you can use the Pole to vault, giving yourself Advantage on the check",
+      "effects": []
+    },
+    {
+      "name": "Pole (10-foot)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 7,
+      "cost": "5 cp",
       "effects": []
     },
     {
@@ -3101,6 +3674,22 @@
       "effects": []
     },
     {
+      "name": "Psychic Blade",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Mundane",
+      "description": "Damage 1d6 psychic · Range 60/120 ft · Properties: F, T · Mastery: {'uid': 'Vex",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d6",
+        "damageType": "psychic",
+        "ability": "str",
+        "notes": "Range 60/120 · F, T · Mastery: {'uid': 'Vex"
+      }
+    },
+    {
       "name": "Quaal's Feather Token, Anchor",
       "system": "XPHB",
       "category": "Wondrous Item",
@@ -3217,6 +3806,17 @@
       "weight": 2,
       "cost": "5 sp",
       "description": "Rations consist of travel-ready food, including jerky, dried fruit, hardtack, and nuts. See \"Malnutrition\" for the risks of not eating",
+      "effects": []
+    },
+    {
+      "name": "Rations (1 day)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 2,
+      "cost": "5 sp",
+      "description": "Rations consist of dry foods suitable for extended travel, including jerky, dried fruit, hardtack, and nuts",
       "effects": []
     },
     {
@@ -3522,7 +4122,7 @@
       "type": "Ring",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "You can cast Dancing Lights or Light from the ring.\nThe ring has 6 charges and regains 1d6 expended charges daily at dawn. You can expend its charges to use the properties below.\nFaerie Fire: You can expend 1 charge to cast Faerie Fire from the ring.\nLightning Spheres: You can expend 2 charges as a Magic action to create up to four 3-foot-diameter spheres of lightning. Each sphere appears in an unoccupied space you can see within 120 feet of yourself. The spheres last as long as you maintain Concentration, up to 1 minute. Each sphere sheds Dim Light in a 30-foot radius. As a Bonus Action, you can move each sphere up to 30 feet, but no farther than 120 feet away from yourself. The first time the sphere comes within 5 feet of a creature other than you that isn't behind Total Cover, the sphere discharges lightning at that creature and disappears. That creature makes a DC 15 Dexterity saving throw. On a failed save, the creature takes Lightning damage based on the number of spheres you created, as shown in the following table. On a successful save, the creature takes half as much damage.\nShooting Stars: You can expend 1 to 3 charges as a Magic action. For every charge you expend, you launch a glowing mote of light from the ring at a point you can see within 60 feet of yourself. Each creature in a 15-foot Cube originating from that point is showered in sparks and makes a DC 15 Dexterity saving throw, taking 5d4 Radiant damage on a failed save or half as much damage on a successful one",
+      "description": "You can cast Dancing Lights or Light from the ring.\nThe ring has 6 charges and regains 1d6 expended charges daily at dawn. You can expend its charges to use the properties below.\nFaerie Fire: You can expend 1 charge to cast Faerie Fire from the ring.\nLightning Spheres: You can expend 2 charges as a Magic action to create up to four 3-foot-diameter spheres of lightning. Each sphere appears in an unoccupied space you can see within 120 feet of yourself. The spheres last as long as you maintain Concentration, up to 1 minute. Each sphere sheds Dim Light in a 30-foot radius. As a Bonus Action, you can move each sphere up to 30 feet, but no farther than 120 feet away from yourself. The first time the sphere comes within 5 feet of a creature other than you that isn't behind Total Cover, the sphere discharges lightning at that creature and disappears. That creature makes a DC 15 Dexterity saving throw. On a failed save, the creature takes Lightning damage based on the number of spheres you created, as shown in the following table. On a successful save, the creature takes half as much damage. [Table: Ring of Shooting Stars Table]\nShooting Stars: You can expend 1 to 3 charges as a Magic action. For every charge you expend, you launch a glowing mote of light from the ring at a point you can see within 60 feet of yourself. Each creature in a 15-foot Cube originating from that point is showered in sparks and makes a DC 15 Dexterity saving throw, taking 5d4 Radiant damage on a failed save or half as much damage on a successful one",
       "effects": []
     },
     {
@@ -3704,7 +4304,17 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Uncommon",
-      "description": "This robe has cloth patches of various shapes and colors covering it. While wearing the robe, you can take a Magic action to detach one of the patches, causing it to become the object or creature it represents. Once the last patch is removed, the robe becomes an ordinary garment.\nThe robe has two of each of the following patches:\n• Bullseye Lantern (filled and lit)\n• Dagger\n• Mirror\n• Pole\n• Rope (coiled)\n• Sack\nIn addition, the robe has 4d4 other patches. The DM chooses the patches or determines them randomly by rolling on the following table",
+      "description": "This robe has cloth patches of various shapes and colors covering it. While wearing the robe, you can take a Magic action to detach one of the patches, causing it to become the object or creature it represents. Once the last patch is removed, the robe becomes an ordinary garment.\nThe robe has two of each of the following patches:\n• Bullseye Lantern (filled and lit)\n• Dagger\n• Mirror\n• Pole\n• Rope (coiled)\n• Sack\nIn addition, the robe has 4d4 other patches. The DM chooses the patches or determines them randomly by rolling on the following table.\n[Table: Robe of Useful Items Table]",
+      "effects": []
+    },
+    {
+      "name": "Robes",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 4,
+      "cost": "1 gp",
       "effects": []
     },
     {
@@ -3862,12 +4472,42 @@
       "effects": []
     },
     {
+      "name": "Saddlebags",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Tack and Harness",
+      "rarity": "Mundane",
+      "weight": 8,
+      "cost": "4 gp",
+      "effects": []
+    },
+    {
+      "name": "Saffron",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "15 gp",
+      "effects": []
+    },
+    {
       "name": "Sailing Ship",
       "system": "XPHB",
       "category": "Vehicle",
       "type": "Vehicle (Water)",
       "rarity": "Mundane",
       "cost": "10000 gp",
+      "effects": []
+    },
+    {
+      "name": "Salt",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "5 cp",
       "effects": []
     },
     {
@@ -3927,6 +4567,15 @@
       }
     },
     {
+      "name": "Sealing Wax",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "5 sp",
+      "effects": []
+    },
+    {
       "name": "Sending Stones",
       "system": "XPHB",
       "category": "Wondrous Item",
@@ -3943,6 +4592,15 @@
       "rarity": "Uncommon",
       "weight": 6,
       "description": "AC +2 (Shield) · Base item: Shield. While holding this Shield, you have Advantage on Initiative rolls and Wisdom (Perception) checks. The Shield is emblazoned with a symbol of an eye",
+      "effects": []
+    },
+    {
+      "name": "Sheep",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "cost": "2 gp",
       "effects": []
     },
     {
@@ -3994,6 +4652,45 @@
       "effects": []
     },
     {
+      "name": "Signet Ring",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "5 gp",
+      "effects": []
+    },
+    {
+      "name": "Silk (1 sq. yd.)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "cost": "10 gp",
+      "effects": []
+    },
+    {
+      "name": "Silk Rope (50 feet)",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 5,
+      "cost": "10 gp",
+      "description": "Rope, whether made of hemp or silk, has 2 hit points and can be burst with a DC 17 Strength check",
+      "effects": []
+    },
+    {
+      "name": "Silver",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "5 gp",
+      "effects": []
+    },
+    {
       "name": "Silver Dragon Scale Mail",
       "system": "XPHB",
       "category": "Armor",
@@ -4020,6 +4717,16 @@
       "effects": []
     },
     {
+      "name": "Sledgehammer",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 10,
+      "cost": "2 gp",
+      "effects": []
+    },
+    {
       "name": "Slippers of Spider Climbing",
       "system": "XPHB",
       "category": "Wondrous Item",
@@ -4030,12 +4737,102 @@
       "effects": []
     },
     {
+      "name": "Soap",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "2 cp",
+      "effects": []
+    },
+    {
       "name": "Sovereign Glue",
       "system": "XPHB",
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Legendary",
       "description": "This viscous, milky-white substance can form a permanent adhesive bond between any two objects. It must be stored in a jar or flask that has been coated inside with Oil of Slipperiness. When found, a container contains 1d6 + 1 ounces.\nOne ounce of the glue can cover a 1-foot square surface. Applying an ounce of Sovereign Glue takes a Utilize action, and the applied glue takes 1 minute to set. Once it has done so, the bond it creates can be broken only by the application of Universal Solvent or Oil of Etherealness, or with a Wish spell",
+      "effects": []
+    },
+    {
+      "name": "Spell Scroll (1st Level)",
+      "system": "XPHB",
+      "category": "Scroll",
+      "type": "Scroll",
+      "rarity": "Common",
+      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 11. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 13 and an attack bonus of 5.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 11 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
+      "effects": []
+    },
+    {
+      "name": "Spell Scroll (2nd Level)",
+      "system": "XPHB",
+      "category": "Scroll",
+      "type": "Scroll",
+      "rarity": "Uncommon",
+      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 12. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 13 and an attack bonus of 5.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 12 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
+      "effects": []
+    },
+    {
+      "name": "Spell Scroll (3rd Level)",
+      "system": "XPHB",
+      "category": "Scroll",
+      "type": "Scroll",
+      "rarity": "Uncommon",
+      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 13. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 15 and an attack bonus of 7.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 13 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
+      "effects": []
+    },
+    {
+      "name": "Spell Scroll (4th Level)",
+      "system": "XPHB",
+      "category": "Scroll",
+      "type": "Scroll",
+      "rarity": "Rare",
+      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 14. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 15 and an attack bonus of 7.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 14 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
+      "effects": []
+    },
+    {
+      "name": "Spell Scroll (5th Level)",
+      "system": "XPHB",
+      "category": "Scroll",
+      "type": "Scroll",
+      "rarity": "Rare",
+      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 15. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 17 and an attack bonus of 9.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 15 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
+      "effects": []
+    },
+    {
+      "name": "Spell Scroll (6th Level)",
+      "system": "XPHB",
+      "category": "Scroll",
+      "type": "Scroll",
+      "rarity": "Very Rare",
+      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 16. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 17 and an attack bonus of 9.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 16 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
+      "effects": []
+    },
+    {
+      "name": "Spell Scroll (7th Level)",
+      "system": "XPHB",
+      "category": "Scroll",
+      "type": "Scroll",
+      "rarity": "Very Rare",
+      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 17. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 18 and an attack bonus of 10.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 17 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
+      "effects": []
+    },
+    {
+      "name": "Spell Scroll (8th Level)",
+      "system": "XPHB",
+      "category": "Scroll",
+      "type": "Scroll",
+      "rarity": "Very Rare",
+      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 18. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 18 and an attack bonus of 10.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 18 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
+      "effects": []
+    },
+    {
+      "name": "Spell Scroll (9th Level)",
+      "system": "XPHB",
+      "category": "Scroll",
+      "type": "Scroll",
+      "rarity": "Legendary",
+      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 19. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 19 and an attack bonus of 11.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 19 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
       "effects": []
     },
     {
@@ -4131,6 +4928,17 @@
       "effects": []
     },
     {
+      "name": "Spellbook",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 3,
+      "cost": "50 gp",
+      "description": "Essential for wizards, a spellbook is a leather-bound tome with 100 blank vellum pages suitable for recording spells",
+      "effects": []
+    },
+    {
       "name": "Spellguard Shield",
       "system": "XPHB",
       "category": "Armor",
@@ -4147,7 +4955,7 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Legendary",
-      "description": "This 2-foot-diameter black sphere is a hole in the multiverse, hovering in space and stabilized by a magical field surrounding it.\nThe sphere obliterates all matter it passes through and all matter that passes through it. Artifacts are the exception. Unless an Artifact is susceptible to damage from a Sphere of Annihilation, it passes through the sphere unscathed. Anything else that touches the sphere but isn't wholly engulfed and obliterated by it takes 8d10 Force damage.\nControlling the Sphere: A Sphere of Annihilation is stationary until someone takes control of it. If you are within 60 feet of a sphere, you can take a Magic action to make a DC 25 Intelligence (Arcana) check. On a successful check, you control the sphere until the start of your next turn, and if it was under another creature's control, that creature loses control of the sphere. On a failed check, the sphere moves 10 feet toward you in a straight line. While in control of the sphere, you can take a Bonus Action to cause it to move in one direction of your choice, up to a number of feet equal to 5 times your Intelligence modifier (minimum 5 feet). Any creature whose space the sphere enters must succeed on a DC 19 Dexterity saving throw or be touched by it, taking 8d10 Force damage. A creature reduced to 0 Hit Points by this damage is obliterated, leaving its possessions behind but no other physical remains.\nSphere Interactions: If the sphere comes into contact with a planar portal (such as that created by the Gate spell) or an extradimensional space (such as that within a Portable Hole), the DM determines randomly what happens using the following table",
+      "description": "This 2-foot-diameter black sphere is a hole in the multiverse, hovering in space and stabilized by a magical field surrounding it.\nThe sphere obliterates all matter it passes through and all matter that passes through it. Artifacts are the exception. Unless an Artifact is susceptible to damage from a Sphere of Annihilation, it passes through the sphere unscathed. Anything else that touches the sphere but isn't wholly engulfed and obliterated by it takes 8d10 Force damage.\nControlling the Sphere: A Sphere of Annihilation is stationary until someone takes control of it. If you are within 60 feet of a sphere, you can take a Magic action to make a DC 25 Intelligence (Arcana) check. On a successful check, you control the sphere until the start of your next turn, and if it was under another creature's control, that creature loses control of the sphere. On a failed check, the sphere moves 10 feet toward you in a straight line. While in control of the sphere, you can take a Bonus Action to cause it to move in one direction of your choice, up to a number of feet equal to 5 times your Intelligence modifier (minimum 5 feet). Any creature whose space the sphere enters must succeed on a DC 19 Dexterity saving throw or be touched by it, taking 8d10 Force damage. A creature reduced to 0 Hit Points by this damage is obliterated, leaving its possessions behind but no other physical remains.\nSphere Interactions: If the sphere comes into contact with a planar portal (such as that created by the Gate spell) or an extradimensional space (such as that within a Portable Hole), the DM determines randomly what happens using the following table. [Table: Sphere of Annihilation Table]",
       "effects": []
     },
     {
@@ -4207,7 +5015,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a druid, sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. You have Resistance to Fire damage while you hold this staff.\nSpells: The staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell.\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff crumbles into cinders and is destroyed",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. You have Resistance to Fire damage while you hold this staff.\nSpells: The staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Fire Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff crumbles into cinders and is destroyed",
       "effects": [],
       "weapon": {
         "kind": "melee",
@@ -4226,7 +5034,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a druid, sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. You have Resistance to Cold damage while you hold this staff.\nSpells: The staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell.\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff turns to water and is destroyed",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. You have Resistance to Cold damage while you hold this staff.\nSpells: The staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Frost Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff turns to water and is destroyed",
       "effects": [],
       "weapon": {
         "kind": "melee",
@@ -4245,7 +5053,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a bard, cleric, or druid",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spellcasting ability modifier. The table indicates how many charges you must expend to cast the spell.\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff vanishes in a flash of light, lost forever",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spellcasting ability modifier. The table indicates how many charges you must expend to cast the spell.\n[Table: Staff of Healing Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff vanishes in a flash of light, lost forever",
       "effects": [],
       "weapon": {
         "kind": "melee",
@@ -4264,7 +5072,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 20 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you gain a +2 bonus to Armor Class, saving throws, and spell attack rolls.\nSpells: While holding the staff , you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell.\nRegaining Charges: The staff regains 2d8 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff retains its +2 bonus to attack rolls and damage rolls but loses all other properties. On a 20, the staff regains 1d8 + 2 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 4 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 20 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you gain a +2 bonus to Armor Class, saving throws, and spell attack rolls.\nSpells: While holding the staff , you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Power Table]\nRegaining Charges: The staff regains 2d8 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff retains its +2 bonus to attack rolls and damage rolls but loses all other properties. On a 20, the staff regains 1d8 + 2 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 4 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
       "effects": [
         {
           "target": "ac",
@@ -4351,7 +5159,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a bard, cleric, druid, sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 10 charges.\nInsect Cloud: While holding the staff , you can take a Magic action and expend 1 charge to cause a swarm of harmless flying insects to fill a 30-foot Emanation originating from you. The insects remain for 10 minutes, making the area Heavily Obscured for creatures other than you. A strong wind (like that created by Gust of Wind) disperses the swarm and ends the effect.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC and spell attack modifier. The table indicates how many charges you must expend to cast the spell.\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, a swarm of insects consumes and destroys the staff, then disperses",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 10 charges.\nInsect Cloud: While holding the staff , you can take a Magic action and expend 1 charge to cause a swarm of harmless flying insects to fill a 30-foot Emanation originating from you. The insects remain for 10 minutes, making the area Heavily Obscured for creatures other than you. A strong wind (like that created by Gust of Wind) disperses the swarm and ends the effect.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC and spell attack modifier. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Swarming Insects Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, a swarm of insects consumes and destroys the staff, then disperses",
       "effects": [],
       "weapon": {
         "kind": "melee",
@@ -4370,7 +5178,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 50 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls.\nSpell Absorption: While holding the staff , you have Advantage on saving throws against spells. In addition, you can take a Reaction when another creature casts a spell that targets only you. If you do, the staff absorbs the magic of the spell, canceling its effect and gaining a number of charges equal to the absorbed spell's level. However, if doing so brings the staff's total number of charges above 50, the staff explodes as if you activated its Retributive Strike (see below).\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell.\nRegaining Charges: The staff regains 4d6 + 2 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 20, the staff regains 1d12 + 1 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 6 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 50 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls.\nSpell Absorption: While holding the staff , you have Advantage on saving throws against spells. In addition, you can take a Reaction when another creature casts a spell that targets only you. If you do, the staff absorbs the magic of the spell, canceling its effect and gaining a number of charges equal to the absorbed spell's level. However, if doing so brings the staff's total number of charges above 50, the staff explodes as if you activated its Retributive Strike (see below).\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Magi Table]\nRegaining Charges: The staff regains 4d6 + 2 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 20, the staff regains 1d12 + 1 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 6 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
       "effects": [
         {
           "target": "attack",
@@ -4418,7 +5226,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a druid",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 6 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you have a +2 bonus to spell attack rolls.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell.\nTree Form: You can take a Magic action to plant one end of the staff in earth in an unoccupied space and expend 1 charge to transform the staff into a healthy tree. The tree is 60 feet tall and has a 5-foot-diameter trunk, and its branches at the top spread out in a 20-foot radius. The tree appears ordinary but radiates a faint aura of Transmutation magic that can be discerned with the Detect Magic spell. While touching the tree and using a Magic action, you return the staff to its normal form. Any creature in the tree falls when the tree reverts to a staff.\nRegaining Charges: The staff regains 1d6 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff loses its properties and becomes a nonmagical Quarterstaff",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 6 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you have a +2 bonus to spell attack rolls.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Woodlands Table]\nTree Form: You can take a Magic action to plant one end of the staff in earth in an unoccupied space and expend 1 charge to transform the staff into a healthy tree. The tree is 60 feet tall and has a 5-foot-diameter trunk, and its branches at the top spread out in a 20-foot radius. The tree appears ordinary but radiates a faint aura of Transmutation magic that can be discerned with the Detect Magic spell. While touching the tree and using a Magic action, you return the staff to its normal form. Any creature in the tree falls when the tree reverts to a staff.\nRegaining Charges: The staff regains 1d6 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff loses its properties and becomes a nonmagical Quarterstaff",
       "effects": [
         {
           "target": "attack",
@@ -4486,6 +5294,16 @@
         "ability": "str",
         "notes": "Versatile 1d8 · V · Mastery: Topple"
       }
+    },
+    {
+      "name": "Steel Mirror",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 0.5,
+      "cost": "5 gp",
+      "effects": []
     },
     {
       "name": "Stone of Controlling Earth Elementals",
@@ -4605,6 +5423,17 @@
       "effects": []
     },
     {
+      "name": "Tankard",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "2 cp",
+      "description": "A tankard holds 1 pint of liquid",
+      "effects": []
+    },
+    {
       "name": "Tent",
       "system": "XPHB",
       "category": "Gear",
@@ -4707,6 +5536,15 @@
       "effects": []
     },
     {
+      "name": "Totem",
+      "system": "XPHB",
+      "category": "Focus",
+      "type": "Spellcasting Focus",
+      "rarity": "Mundane",
+      "cost": "1 gp",
+      "effects": []
+    },
+    {
       "name": "Traveler's Clothes",
       "system": "XPHB",
       "category": "Gear",
@@ -4741,7 +5579,18 @@
       "category": "Gear",
       "type": "Adventuring Gear",
       "rarity": "Mundane",
-      "description": "When you make your character, you can roll once on the Trinkets table to gain a Tiny trinket, a simple item lightly touched by mystery. The DM might also use this table. It can help stock a room in a dungeon or fill a creature's pockets",
+      "description": "When you make your character, you can roll once on the Trinkets table to gain a Tiny trinket, a simple item lightly touched by mystery. The DM might also use this table. It can help stock a room in a dungeon or fill a creature's pockets.\n[Table: Trinkets]",
+      "effects": []
+    },
+    {
+      "name": "Two-Person Tent",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 20,
+      "cost": "2 gp",
+      "description": "A simple and portable canvas shelter, a tent sleeps two",
       "effects": []
     },
     {
@@ -4781,7 +5630,7 @@
       "rarity": "Rare",
       "weight": 1,
       "attune": true,
-      "description": "This wand has 7 charges.\nSpells: While holding the wand, you can cast one of the spells (save DC 17) on the following table from it. The table indicates how many charges you must expend to cast the spell.\nRegaining Charges: The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll 1d20. On a 1, the wand crumbles into ashes and is destroyed",
+      "description": "This wand has 7 charges.\nSpells: While holding the wand, you can cast one of the spells (save DC 17) on the following table from it. The table indicates how many charges you must expend to cast the spell. [Table: Wand of Binding Table]\nRegaining Charges: The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll 1d20. On a 1, the wand crumbles into ashes and is destroyed",
       "effects": []
     },
     {
@@ -4803,7 +5652,7 @@
       "rarity": "Rare",
       "weight": 1,
       "attune": true,
-      "description": "This wand has 7 charges.\nSpells: While holding the wand, you can cast one of the spells (save DC 15) on the following table from it. The table indicates how many charges you must expend to cast the spell.\nRegaining Charges: The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll 1d20. On a 1, the wand crumbles into ashes and is destroyed",
+      "description": "This wand has 7 charges.\nSpells: While holding the wand, you can cast one of the spells (save DC 15) on the following table from it. The table indicates how many charges you must expend to cast the spell. [Table: Wand of Fear Table]\nRegaining Charges: The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll 1d20. On a 1, the wand crumbles into ashes and is destroyed",
       "effects": []
     },
     {
@@ -4904,7 +5753,7 @@
       "rarity": "Rare",
       "weight": 1,
       "attune": true,
-      "description": "This wand has 7 charges. While holding it, you can take a Magic action to expend 1 charge while choosing a point within 120 feet of yourself. That location becomes the point of origin of a spell or other magical effect determined by rolling on the Wand of Wonder Effects table. Spells cast from the wand have a save DC of 15. If a spell's maximum range is normally less than 120 feet, it becomes 120 feet when cast from the wand. If an effect has multiple possible subjects, the DM determines randomly which among them are affected.\nRegaining Charges: The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll 1d20. On a 1, the wand crumbles into dust and is destroyed",
+      "description": "This wand has 7 charges. While holding it, you can take a Magic action to expend 1 charge while choosing a point within 120 feet of yourself. That location becomes the point of origin of a spell or other magical effect determined by rolling on the Wand of Wonder Effects table. Spells cast from the wand have a save DC of 15. If a spell's maximum range is normally less than 120 feet, it becomes 120 feet when cast from the wand. If an effect has multiple possible subjects, the DM determines randomly which among them are affected.\nRegaining Charges: The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll 1d20. On a 1, the wand crumbles into dust and is destroyed.\n[Table: Wand of Wonder Effects]",
       "effects": []
     },
     {
@@ -4943,6 +5792,26 @@
       "type": "Wondrous Item",
       "rarity": "Legendary",
       "description": "This fine black cloth, soft as silk, is folded up to the dimensions of a handkerchief. It unfolds into a circular sheet 6 feet in diameter.\nYou can take a Magic action to unfold the Well of Many Worlds and place it on a solid surface, whereupon it forms a two-way, 6-foot-diameter, circular portal to another world or plane of existence. Each time the item opens a portal, the DM decides where it leads. The portal remains open until a creature within 5 feet of it takes a Magic action to close it by taking hold of the edges of the cloth and folding it up.\nOnce the Well of Many Worlds has opened a portal, it can't do so again for 1d8 hours",
+      "effects": []
+    },
+    {
+      "name": "Wheat",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Trade Good",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "1 cp",
+      "effects": []
+    },
+    {
+      "name": "Whetstone",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "weight": 1,
+      "cost": "1 cp",
       "effects": []
     },
     {

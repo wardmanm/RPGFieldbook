@@ -42,15 +42,34 @@ function recompute(){
 function mark(el,on){el.classList.toggle("fx-on",!!on);}
 
 /* ================= keyword highlight ================= */
+/* A private-use char used as a placeholder while "[Table: Name]" anchors are
+   held aside: it cannot occur in rules text, esc() leaves it alone, and being a
+   non-word char the glossary \b...\b pass cannot match across it. One per
+   anchor, restored in order - both passes scan left to right. */
+const TBL_MARK="\uE000";
 function highlight(text){
-  const escd=esc(text||"");
+  /* Lift the anchors out BEFORE escaping (so names stay raw for the lookup) and
+     before the glossary pass, which would otherwise chew through a table name
+     like "Damage Types" and corrupt the markup we build from it. */
+  const tbls=[];
+  const src=String(text||"").replace(/\[Table:\s*([^\]]+)\]/g,(m,nm)=>{tbls.push(nm.trim());return TBL_MARK;});
+  let escd=esc(src);
   const terms=allGlossary().map(g=>g.term).filter(Boolean).sort((a,b)=>b.length-a.length);
-  if(!terms.length)return escd;
-  const pat=terms.map(t=>escReg(esc(t))).join("|");
-  const re=new RegExp("\\b("+pat+")\\b","gi");
-  return escd.replace(re,m=>{
-    const g=allGlossary().find(x=>x.term.toLowerCase()===m.toLowerCase().replace(/&amp;/g,"&"));
-    return `<span class="kw" data-gid="${g?g.id:""}" role="button" tabindex="0">${m}</span>`;
+  if(terms.length){
+    const pat=terms.map(t=>escReg(esc(t))).join("|");
+    const re=new RegExp("\\b("+pat+")\\b","gi");
+    escd=escd.replace(re,m=>{
+      const g=allGlossary().find(x=>x.term.toLowerCase()===m.toLowerCase().replace(/&amp;/g,"&"));
+      return `<span class="kw" data-gid="${g?g.id:""}" role="button" tabindex="0">${m}</span>`;
+    });
+  }
+  if(!tbls.length)return escd;
+  let i=0;
+  return escd.replace(new RegExp(TBL_MARK,"g"),()=>{
+    const nm=tbls[i++];
+    /* no tables pack loaded -> read as plain prose, not a dead chip */
+    if(!findTable(nm))return esc("the "+nm+" table");
+    return `<span class="tblref" data-tbl="${esc(nm)}" role="button" tabindex="0">${esc(nm)}</span>`;
   });
 }
 

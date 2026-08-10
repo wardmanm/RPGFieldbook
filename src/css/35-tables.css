@@ -1,0 +1,25 @@
+/* ================= reference tables ================= */
+/* An inline "[Table: Name]" anchor. Deliberately not a .kw — a glossary term
+   pops a definition, this opens a table — so it takes the accent (honey) rather
+   than accent-2 (verdigris) and a grid glyph rather than the ❧. */
+.tblref{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;
+  text-decoration-style:dashed;text-underline-offset:3px;border-radius:3px;
+  background:none;border:0;font:inherit;padding:0}
+.tblref::after{content:"▦";font-size:.75em;vertical-align:super;margin-left:2px;opacity:.7}
+.tblref:hover,.tblref:focus{background:color-mix(in srgb,var(--accent) 18%,transparent);outline:none}
+.tblchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:7px}
+
+/* The table itself. A d100 table must scroll inside its own box — never let it
+   push the page body sideways on a phone. */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:2px 0 10px;
+  border:1.5px solid var(--line);border-radius:var(--radius);background:var(--field)}
+table.rtbl{border-collapse:collapse;width:100%;font-size:14px;line-height:1.45}
+table.rtbl th,table.rtbl td{padding:6px 10px;text-align:left;vertical-align:top;
+  border-bottom:1px solid var(--hair)}
+table.rtbl th{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-soft);white-space:nowrap;
+  border-bottom:1.5px solid var(--line);position:sticky;top:0;background:var(--panel)}
+table.rtbl tbody tr:nth-child(even){background:color-mix(in srgb,var(--ink) 4%,transparent)}
+table.rtbl tbody tr:last-child td{border-bottom:0}
+/* roll/level columns read as a fixed gutter, not a wrapping text column */
+table.rtbl td:first-child{white-space:nowrap;font-family:var(--head);font-weight:700}

@@ -25,6 +25,15 @@ function spellOrigin(s){return s.origin||originFromGranted(s.granted);}
 function originBadge(o,attr,id){if(!o)return "";const t=esc(originLabel(o)+(o.at?" · added "+new Date(o.at).toLocaleDateString():""));return `<button class="orig-b" ${attr}="${id}" title="${t}" aria-label="Origin: ${t}">${esc(originLetter(o))}</button>`;}
 function openOriginInfo(o){if(!o){openModal("Origin",`<p class="hint">No origin recorded. Edit this to set where it came from.</p>`);return;}openModal("Origin",`<p><b>${esc(originLabel(o))}</b></p><p class="hint">Added: ${esc(o.at?new Date(o.at).toLocaleString():"—")}</p>`);}
 function originOptionsHTML(cur,includeClass){const none=`<option value=""${!cur?" selected":""}>— none —</option>`;return none+ORIGIN_KINDS.map(x=>`<option value="${x.k}"${cur&&cur.kind===x.k?" selected":""}>${esc(x.label)}</option>`).join("");}
+/* The presentation line browse folds into an added item's description. Shared,
+   not inlined, because the update diff must reproduce the SAME transform — an
+   item copy is not field-identical to its rules entry, and comparing a copy
+   against the raw entry reports every browse-added item as changed forever. */
+function itemMetaLine(x){
+  return [x.type,(x.rarity&&x.rarity!=="Mundane")?x.rarity:"",
+          x.attune?("Attunement"+(x.attuneNote?" ("+x.attuneNote+")":"")):"",
+          x.cost,(x.weight!=null?x.weight+" lb":"")].filter(Boolean).join(" · ");
+}
 function fmtGp(n){n=num(n);return (Number.isInteger(n)?n:Math.round(n*100)/100)+" gp";}
 function costToGp(str){if(str==null)return null;const s=String(str).toLowerCase().replace(/,/g,"");const mult={pp:10,gp:1,ep:0.5,sp:0.1,cp:0.01};let gp=0,found=false,m;const re=/(\d+(?:\.\d+)?)\s*(pp|gp|ep|sp|cp)\b/g;while((m=re.exec(s))){gp+=parseFloat(m[1])*mult[m[2]];found=true;}if(!found){const n=parseFloat(s);return isNaN(n)?null:n;}return Math.round(gp*100)/100;}
 function inventoryTotal(){return (character.inventory||[]).reduce((a,it)=>a+num(it.cost)*(num(it.qty)||1),0);}

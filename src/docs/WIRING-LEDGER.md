@@ -439,6 +439,755 @@ Verified: modal is `z-index:80` against `.home`'s `60`, so the clash prompt laye
 screen. `--ink-soft` (not `--muted`, which does not exist) is defined in all four theme blocks.
 **Interactive behaviour is not confirmed here — owner QA.**
 
+### GitHub update badge switched on
+`UPDATE_REPO` in `src/js/30-version.js` set to `wardmanm/RPGFieldbook` (was `""` = disabled). The
+badge only appears when a release tag compares **newer** than `APP_VERSION`, so the first release
+that triggers it must be ≥ v1.2.2. The repo must also be public — the unauthenticated
+`api.github.com` call 404s otherwise and `r.ok?r.json():null` silently no-ops.
+
+### Tables — converter, `tables` category, Tables tab
+
+**Root cause first: this was a converter data-loss bug, not a missing feature.** `flatten()` in
+`scripts/convert.py` had `elif t in ('table','tableGroup','image','gallery'): pass` — every
+5e-tools table was silently discarded while the prose around it was kept. Confirmed by grep: zero
+`"type":"table"` / `colLabels` / `rows` / pipe-tables anywhere in `data/*.json`, while the shipped
+data is littered with dangling references (Augury→Omens, Teleport→Teleportation Outcome, Deck of
+Illusions, 8 staves with "the following table", the whole d100 **Wild Magic Surge** table — cited
+by three later Sorcerer features that survived, Barbarian Rage Damage / Weapon Mastery, Bardic Die,
+Carrying Capacity, Damage Types, Object AC/HP). 66 "table" mentions in `classes-2024.json` alone.
+
+**Converter.** A table sink (`_SINK`) plus a `table_ctx(sink, name, kind)` context manager; each
+`convert_*` wraps its per-entity `flatten()` call so tables inherit an `owner`/`ownerKind`.
+`_norm_table` normalizes to `{name, cols, align, rows, owner, ownerKind}`; `_cell_text` handles the
+three 5e-tools cell shapes (string/number, `{roll:{min,max,pad}}` → `"01-02"`, `{entry|entries}`);
+`_register` dedupes identical tables and uniquifies name collisions — **names are the app's merge
+key**, so this is load-bearing. `tableGroup` recurses. Each lifted table leaves a `[Table: Name]`
+anchor in the prose at the exact spot it came from.
+
+Deliberate: **when no sink is active the old drop behaviour is kept** rather than emitting an
+anchor. An anchor with no table behind it would be worse than the silent drop it replaced.
+
+`_class_tables()` converts `classTableGroups` into a Level-indexed `"{Class} Features"` table,
+recovering every column — this is the fix for Rage Damage / Weapon Mastery / Bardic Die. Spell-slot
+groups are skipped (the app derives slots by level; a 10-column grid would swamp a phone).
+`_spell_notes()` is **left exactly as-is** — it feeds the per-level "you can now have N cantrips"
+notes; the overlap with the new table is intentional. Output is `tables-2024.json` via `all`, or
+`--tables PATH` on any single subcommand.
+
+Also fixed in passing: `_write()`'s entry-count `or` chain omitted items/backgrounds/races/
+subclasses, so those files always printed "0 entries" — cosmetic, but it hides real counts on the
+run that matters.
+
+**Two further data-loss bugs found while verifying against the real 5e-tools tree** (`_conversion-data/5etools-v2.33.2`, which is on disk — the conversion was actually run, not just reasoned about):
+
+1. **`refSubclassFeature` / `refClassFeature` nodes were dropped too.** A feature's entries can
+   *reference* a sibling feature instead of containing it; `flatten()` fell through those silently,
+   losing the entire referenced feature. 558 such nodes across the dataset. This — not the table
+   drop — is why **Wild Magic Surge** was missing: the feature holding the table was never inlined,
+   while Controlled Chaos and Tamed Surge survived and kept citing it. Fixed with a `ref_ctx`
+   resolver hook mirroring the table sink, wired to `convert_classes`' existing `cfidx`/`sfidx`,
+   with a `_REFSEEN` cycle guard so a self-referencing feature can't loop.
+2. **The `basicRules2024` trim, again — this time in feats and items** (owner asked for full XPHB).
+   `pick_2024_preferred()` filtered on the `basicRules2024` flag, which selects only the *free*
+   rules subset. Now it takes everything with `source == "XPHB"` and backfills basic-rules entries
+   whose names XPHB doesn't cover. `convert_items` used the same flag inline and now routes through
+   the same helper. Backgrounds and spells already filtered on source and are unchanged.
+
+Measured against the real data, versus the shipped `data/*.json`, **nothing was lost anywhere**:
+feats 17 → **77** (+60: Actor, Athlete, the Fighting Styles, all the Boons), base items 78 → **99**
+(+21 ammunition), magic items 440 → **528** (+88). conditions 18, glossary 114, backgrounds 16,
+spells 391, classes 14 — all unchanged. Tables recovered: **97 unique, 897 rows** (13 class, 38
+subclass, 28 item, 13 spell, 4 rule, 1 feat), 86 prose anchors, **0 dangling, 0 unresolved `{@`
+tags**. Wild Magic Surge 25 rows, Deck of Illusions 33, Barbarian Features 20 with the Rage Damage
+and Weapon Mastery columns present.
+
+Caveat for the next run: `all` globs `items-base*.json`, so magic items are still a separate
+invocation — give it its own `--tables` path. The two table packs merged cleanly here (97/97 unique
+names), but names are the merge key, so a collision between the two files would silently replace.
+Worth re-checking whenever the source data is updated.
+
+**App.** New rules category `tables` registered in four places (`00-constants.js` initializer,
+`RULE_CATS`, `mergeRules` cats map, `resetRules`). `reindexRules()` and `recomputeDups()` each
+carried their own hardcoded copy of the nine-category list — both now use `RULE_CATS`. That
+duplication was exactly the trap that would have left tables without an `_id`; four copies of one
+list is a bug generator, not a style nit.
+
+New `src/js/86-tables.js` (`findTable`, `tablesFor`, `tableHTML`, `openTableView`, `renderTables`,
+`tableChipsHTML`) and `src/css/35-tables.css`; both added to `src/manifest.json`. Tables tab +
+panel in the template; ToC picks it up for free via the existing `.card > .label` scan. Reuses
+`openModal` as-is — no new modal plumbing.
+
+`highlight()` in `10-compute.js` renders the anchors. **Ordering is load-bearing**: anchors are
+lifted out *before* `esc()` (so names stay raw for lookup) and *before* the glossary pass, which
+would otherwise match a glossary term inside a table name ("Damage Types") and corrupt the markup
+built from it. Placeholder is `` — private-use, so it cannot occur in rules text, `esc()`
+leaves it alone, and being a non-word char the glossary `\b…\b` pass cannot match across it. One
+mark per anchor, restored in order. **An unresolved anchor degrades to the plain sentence "the X
+table", never a dead chip** — the tables pack is a separate optional download.
+
+Tested (scratchpad, throwaway): 36 Python checks on the converter (roll padding, tag stripping,
+ragged-row padding, dedupe/uniquify, tableGroup recursion, no-sink drop, class-table column
+recovery, `_spell_notes` unchanged) and 45 Node checks on the app (cell escaping incl. `<script>`
+and quotes, the glossary-term-inside-a-table-name hazard, multi-anchor ordering, a stray PUA char
+in source text, unresolved-anchor fallback, `migrate` round-trip and idempotence, `mergeRules`
+ingest/replace). Plus an end-to-end `convert.py all` on a synthetic 5e-tools tree: every emitted
+anchor resolved, names unique, no `{@` residue.
+
+**Not verified here:** anything interactive. Owner QA — the tab, the chips, the modal-from-modal
+case (the modal is a singleton, so opening a table from inside a spell preview replaces it), phone
+width scrolling, and both skins × both themes.
+
+### Full re-conversion, data reorganized by system, bundled packs, species
+
+**`convert.py all` was broken against the real 5e-tools tree, silently.** Verified with `glob.glob`
+against `_conversion-data/5etools-v2.33.2`: `spells*.json` and `class-*.json` matched nothing
+because `spells/` and `class/` are *subdirectories*, so a plain `all` produced **no spells and no
+classes** — the `if X:` guards just skipped the writes. `sources.json` (in `spells/`) was likewise
+unfound, so spells got no class tags. `items-base*.json` matched first, so `items.json` (magic) was
+never reached. `class-sidekick.json` has `hd: null` and killed all 14 classes with a TypeError.
+
+**Worst of it: the overlay and class-resources were being dropped.** `all` looked for
+`overlay.json`/`class-resources.json` in the *input* dir; both live in `data/`. And `all` had no
+`--resources` flag at all, so there was no way to supply them. My earlier "nothing lost" check
+compared entry *names* only — at content level that run lost **Archery +2 ranged / Defense +1 AC**
+(feats *and* fighting-style options) and the **Rage / Focus Points / Sorcery Points** trackers.
+Both are now asserted explicitly in the test suite; a name-level diff is not sufficient here.
+
+Fixes: search `d` + `d/spells` + `d/class`; convert both item files into one table sink; look for
+the helper files in the input dir then fall back to the repo's `data/`, printing which was used;
+`--overlay`/`--resources` on `all`; skip a class with no `hd` and note it; and a `WARNING:` line
+plus an end-of-run summary for every missing input. Silent skipping was the root cause of every bug
+in this whole task — the converter now refuses to be quiet about it.
+
+One command, no staging, everything found: 18 conditions · 114 glossary · 99 items · 528 magic
+items · 16 backgrounds · **77 feats** · **10 species** · 391 spells · 14 classes · **100 tables**.
+
+**`convert_races()`** (new). 2024 lineages live in `_versions` (`"Elf; Drow Lineage"` → subrace
+`Drow`), whose `_mod.entries` is sometimes a dict and sometimes a list — both handled. Covers Elf 3,
+Gnome 2, Goliath 6, Tiefling 3. Dragonborn's `_versions` is an unnamed `_abstract` template, so its
+10 ancestries come from the Draconic Ancestry table's first column instead — a real chooser rather
+than prose, per CLAUDE.md. Aasimar/Dwarf/Halfling/Human/Orc correctly have none. Skill blocks become
+`choices` (Elf: 1 of 3; Human: any 1) rather than a bogus fixed `skills` list — the app already
+supports race-level skill choosers (52-race.js:77). No `abilityScores`: 2024 puts those on
+backgrounds.
+
+**`data/` reorganized** into `data/5e2024/` and `data/humblewood/`, filenames unprefixed since the
+folder names the system. `overlay.json` and `class-resources.json` stay at the `data/` root
+**deliberately** — they are converter inputs, not loadable packs, and the bundler globs the system
+folders, so anything inside would be swept into a pack.
+
+**`scripts/bundle-rules.js`** rolls each folder into `dist/<system>_full.json` (gitignored artifacts,
+attachable to a release), and the player zip's `data/` now carries only those two. The bundler
+**mirrors `mergeRules` exactly** — keyed by name, last wins, replaced in place — because the whole
+promise of a bundle is that importing it equals importing the files individually. That equality is
+asserted for both systems in the test suite. It found one real duplicate: `Net` appears in both
+`items.json` and `items-magic.json` (5e-tools' magic item file carries 200 mundane items). Deduping
+it silently would have been wrong, so it is reported on every build. Hard failure is reserved for a
+folder whose files disagree on `system`.
+
+Side effect handled: the zip used to ship `overlay.json`/`class-resources.json` inertly in `data/`.
+They now travel in `scripts/` next to `convert.py`, which needs them — without that an advanced
+player regenerating data would hit the exact silent loss described above. `build.sh` validates
+`data/**/*.json` recursively now, and the post-zip allowlist asserts `data/` holds *only* the two
+bundles (and that bundling ran at all).
+
+**App.** New `rulebook: true` pack flag, stamped onto entries as `_rulebook` by `mergeRules` beside
+`_source`/`_file`; the loaded-data list buckets by rulebook → single category → Mixed, with a shared
+`CAT_NAMES` display map replacing the inline `features?"traits"` ternary. **Clear all already
+existed and was dangerous** — no confirmation at all, and it never called `renderRulesData()`, so
+the list kept showing packs that were already gone. Now confirms with counts, states plainly that
+characters are unaffected (`resetRules()` only touches the rules pool), refreshes, and is styled
+`.tbtn.danger`; a matching button was added to the home panel.
+
+**Species are filtered by system** in `raceOptions()` via a new `racesForCharacter()` +
+`systemOf()`. Races only: Humblewood is a 5e *setting*, so its 1 class / 2 subclasses / 44 spells
+supplement the D&D core and filtering those would break it — species are the one exclusive
+category. `findRaceDef()` is deliberately **not** filtered: a character with a cross-system ancestry
+(imported sheet, switched system) must keep resolving it or its traits vanish silently. Unknown
+`_source` values show in both systems so homebrew is never hidden. `openAddRace` was also switched
+to the filtered list, otherwise its `list.length` check would render an empty dropdown instead of
+the "no entries — enter a custom name" hint.
+
+Tested: 66 Python + 33 Node checks, all green, on top of the existing suites. Includes the two
+content-level regressions above, the bundle round-trip for both systems, `findRaceDef` still
+resolving cross-system, and Clear-all leaving `character` intact.
+
+**Not verified here:** anything interactive — owner QA.
+
+### Character version stamp + rules-update tool
+
+**`appVersion` means "last reconciled against", not "last saved with".** `migrate()` deliberately
+**preserves and never advances it** — migrate runs on every load, so stamping there would erase the
+mismatch the tool exists to find. It advances only when the player applies updates or dismisses.
+`blankChar()` seeds `""`; `newCharacter()` stamps `APP_VERSION`; `libTouch()` carries it into the
+index so the home cards can badge it without parsing every character blob.
+
+**TDZ trap, avoided deliberately.** `00-constants.js:44` runs `let character=blankChar()` at TOP
+LEVEL, and `30-version.js` is concatenated after it. Referencing `APP_VERSION` from inside
+`blankChar()` would throw a ReferenceError before any UI exists — a white screen, not a degraded
+one. That is why the default is `""` and the real stamp happens in `newCharacter()`. The test suite
+evaluates the whole concatenation in manifest order specifically to catch a regression here. Do not
+"tidy" this by moving `APP_VERSION` — ADR-001 forbids reordering.
+
+**The blocker this feature had to solve first: copies had no link home.** Characters denormalize —
+`addFeatureFromDef`, `grantItemByName`, both `85-browse.js` `onAdd` handlers copy rules entries onto
+the sheet. But rules `_id` is a positional counter reassigned by `reindexRules()` on every boot and
+every import, `_source` was never copied onto the character, and `recomputeDups`/`dispName` exist
+precisely because the same name can live in several packs. There was also no way to tell a
+hand-edited copy from a pristine one. So a naive "re-sync by name" would have silently mis-matched
+entries and destroyed player edits.
+
+Fix: `stampSrc(copy,def,kind,cat)` records `{cat,pack,name,fp,cfp}` at copy time. **Two**
+fingerprints, not one, and this is the subtle part — a copy is not field-identical to its def
+(`browseItems` folds a meta line into `description`), so `fp` (the def at copy time) and `cfp` (the
+copy at copy time) are each only ever compared against their own kind:
+
+- current def fp ≠ `src.fp`  → the pack changed
+- current copy fp ≠ `src.cfp` → **the player edited it** → shown, but never ticked by default
+
+`grantFeatDef` needed a re-stamp: `addFeatureFromDef` only ever sees the synthesized
+`{name:"Feat: X"}` wrapper, which carries no pack and the wrong name.
+
+**Matching, honestly graded.** Stamped copies resolve by pack + name. Unstamped legacy copies have
+only a name; where that hits one entry it is matched but marked `loose` (and therefore treated as
+possibly-edited, unticked); where it hits several it is reported `ambiguous` and never actioned. We
+would rather ask than guess. Embedded class/race/background traits have no top-level rules entry at
+all, so `updTraitFromOrigin` re-resolves them through the copy's `origin` (kind/name/class/level/
+subclass) into the live definition.
+
+**Origins are never re-applied wholesale, on purpose.** `removeRace`/`removeClass`/
+`removeBackground` do revert cleanly, so remove-then-add is tempting — but it replays every level
+from 1 and destroys choices the app keeps **no replay record of**: ASI targets, skill picks,
+subclass selection, background feat, the race ability spread. Those survive only as baked effects.
+So the tool works per feature/spell/item, which covers the actual drift and touches none of it.
+Class/race/background descriptions already re-resolve live by name through `ruleById`, so they need
+no updating at all.
+
+`UPD_FIELDS` is the allowlist of rules-owned fields. Everything absent from it is character-local
+(`id`, `qty`, `equipped`, `prepared`, `uses.used`, `origin`, `grant`) and survives an update
+untouched — asserted explicitly in the tests, since this is the promise most worth keeping.
+
+**Backup before mutation.** `backupCharacter()` is `finishImport` minus the tail that switches the
+active character — it writes a new keyed blob and a library entry and returns the new id, or `null`
+if storage refuses. `commitUpdates` treats `null` as fatal and changes nothing: an update without a
+backup is exactly what this feature promised not to do. Backups carry `isBackup:true` so they never
+prompt for updates themselves.
+
+Hooks: `loadCharById` after `renderAll()/hideHome()` (so the sheet is behind the prompt) and
+`finishImport` last (so it stacks after the Replace/Copy clash modal, not under it). Boot autoload
+is safe — `90-boot.js` restores the rules cache at :176 before autoloading at :183. Suppressed when
+no packs are loaded, when `skipUpdate === APP_VERSION`, and for backups. Manual entry point in
+Settings → This character, so dismissing is not a one-way door.
+
+Tested: 86 Node checks — fingerprint stability/sensitivity, migrate never advancing the stamp,
+changed/added/ambiguous/unmatched classification, edited-copy detection, character-local state
+surviving apply, re-baselining so a row isn't offered twice, every gating rule, backup semantics
+including the quota-refusal path, the boot-order regression, and the five regressions below.
+
+#### Five bugs found by probing the finished tool — and why the tests missed them
+
+The first suite built copies by hand (`copy.description = def.description`). **No copy site in the
+app does that.** That single idealisation hid a whole class of bugs; the fixtures now construct
+copies exactly as `browseItems`, `grantItemByName`, `browseSpells` and `grantFeatDef` do, and every
+finding below has a permanent `R*` regression test.
+
+1. **Every browse-added item was a permanent false positive, and "updating" it did damage.**
+   `browseItems` folds a presentation line into `description` and converts `"2 gp"` to the number
+   `2`. Comparing a copy against the raw entry therefore always differed — and applying stripped the
+   meta line and wrote the string back, breaking `inventoryTotal()` for sub-gp costs. Root cause: a
+   copy is not its def. Fixed with `updProject(def,kind,shape)` — the diff now compares against the
+   *same transform the copy site applied*, with `src.shape` (`"browse"` / `"plain"`) recorded per
+   copy, and `itemMetaLine()` hoisted out of the `browseItems` closure so there is one definition of
+   the transform rather than two.
+2. **Weapon updates left the derived attack stale** — item said `2d8`, the attack row still said
+   `1d8`. `updResyncAttack()` rebuilds it, keeping the attack's id so collapse state survives.
+3. **Multiclass lost same-named traits.** The missing-trait check keyed on a flat name Set, so a
+   Fighter/Barbarian was never offered Barbarian's Extra Attack. Now keyed on origin + name, with a
+   separate guard so an *untagged* legacy feature of the same name isn't duplicated.
+4. **Silent cross-pack adoption.** If the pack a copy was stamped from was no longer loaded, a
+   same-named entry from a different pack was matched and presented as confident — exactly the guess
+   this design exists to refuse. Now returns `loose` + `otherPack`, is never ticked, and the row
+   says which pack is missing.
+5. **The background branch was dead code** — backgrounds carry a single `feature` object, not a
+   `traits` array, so background content was never offered.
+
+Also fixed while in there: the success message named the backup using `appVersion` *after*
+`markCharChecked()` had advanced it (so it pointed at a file that didn't exist); `#mBody` gained a
+new `change` listener on every review open; and `applyUpdates` re-ran `syncSpellAttack` over every
+spell rather than the ones it touched.
+
+Changing the fingerprint from one whole-object hash to a **per-field map** was what made the
+per-field fix possible, and it bought something better than parity: an update now writes only the
+fields the pack actually moved, so a player's typed cost override survives a description update
+instead of being clobbered.
+
+**Not verified here:** anything interactive — owner QA.
+
+### Release automation (GitHub Actions)
+
+`.github/workflows/release.yml` publishes on a `v*.*.*` tag push; `ci.yml` runs the mechanical
+checks on every push and PR.
+
+**Tag-triggered, not dispatch-triggered.** The alternative — a `workflow_dispatch` that runs
+`./build.sh --release <level>` in CI — would have to commit the version bump and the rebuilt
+`dist/fieldbook.html` back to `main` from a bot, and the changelog would go public before anyone
+read it. Keeping the cut local leaves the version decision and the release wording where CLAUDE.md
+already puts them (owner's call) and reduces CI to a publisher. `workflow_dispatch` is still wired,
+but only to *re-publish an existing tag* after a failed upload.
+
+**The guard that earns the workflow its keep:** after building from a clean checkout of the tag it
+runs `git diff --exit-code -- dist/fieldbook.html`. Since the artifact is tracked, a clean rebuild
+must reproduce it byte for byte — so every release is provably the thing the committed source
+produces. It also asserts the tag equals `APP_VERSION` (tagging without cutting is the easy mistake)
+and that `docs/CHANGELOG.md` is current.
+
+**Tags, not release branches** — the owner asked about cutting a branch per release for rollback.
+A tag is already immutable (it points at a content-addressed commit); a branch is a *mutable*
+pointer, so a branch-per-release is both weaker for the stated purpose and permanent clutter.
+Release branches earn their place only when an old line must be *maintained*, which is a decision
+to make when it happens: `git switch -c release/1.2.x v1.2.1`.
+
+No third-party actions beyond first-party `actions/checkout`/`setup-node`/`setup-python` — releases
+are published with the runner's preinstalled `gh`, so there is nothing extra to pin or audit on the
+path that ships code to players.
+
+`scripts/release-notes.js <version>` slices one section out of the generated `docs/CHANGELOG.md`
+(not the in-app array) so the release body and the shipped changelog are provably the same text; it
+exits non-zero rather than publishing an empty body.
+
+The zip allowlist verifier and `bundle-rules.js` both run in CI, so the "only the two full packs
+ship in `data/`" rule is machine-checked on every push rather than only at release time.
+
+### `src/tests/` and `./dev.sh`
+
+**The suites were throwaway.** Every logic check written during the tables / data-reorg /
+character-update work lived in a scratchpad and would have vanished with it; CI covered syntax,
+JSON validity and staleness but no logic at all. They now live in `src/tests/` — under `src/`
+because that is the audience boundary, which means `^src\/` in the zip's banned-pattern regex
+already excludes them from the player bundle, while the source zip (`git ls-files`) includes them.
+
+Safe because `validateOrder` (build-html.js) is invoked only for `src/js` and `src/css` and reads
+them non-recursively, so `.js` under `src/tests/` is outside the unlisted-fragment guard. There is a
+verification step for exactly this, since it is the one real hazard of the location.
+
+`harness.js` removes ~25 lines of duplicated vm/DOM bootstrap per suite. It deliberately still
+evaluates **the real concatenation in manifest order** — that *is* the boot-order TDZ guard, so it
+must not become per-fragment `require`s.
+
+**Counts corrected: 227, not 231.** The earlier figure came from `grep -c PASS`, which also matched
+each suite's own `ALL PASSED` summary line — one phantom check per suite. The suites now print their
+own totals and `run.sh` sums them, so the number can't drift from reality again. Per suite:
+converter 65, tables 45, rules-data 32, char-update 85.
+
+Verified the runner actually fails: breaking `fpNorm`'s whitespace collapse turned char-update red
+and exited 1. A green runner that cannot go red is worth nothing.
+
+**`./dev.sh`** is a menu, not a build system — every item shells out to `build.sh` / `scripts/*` and
+prints the command first, so there is one implementation of each task and the menu teaches the CLI
+rather than hiding it. Bash 3.2 only (macOS still ships 3.2.57): no associative arrays, no
+`mapfile`, no `${v,,}`. Git Bash on Windows works because `.gitattributes` already pins `eol=lf`;
+browser-open picks `open`/`start`/`xdg-open` off `uname -s`, and the converter item checks for both
+python and `_conversion-data/` before offering itself. If stdin isn't a TTY it prints the menu and
+exits 0 rather than looping forever on `read` — otherwise a stray `./dev.sh` would hang a CI job.
+
+### `--no-zip` and `+dev` zip naming
+
+`./build.sh` always built the zips — plain builds included — so a dev build produced
+`fieldbook-v1.2.1.zip` whose contents were *not* v1.2.1. Harmless on your own disk, genuinely
+misleading the moment you hand it to a playtester. Two additions:
+
+- **`--no-zip`** stops after the artifact, the rules packs and all validation. It also skips the
+  `rm -f dist/*.zip` wipe, so it can't destroy a zip you meant to keep.
+- **`+dev` suffix** when a *non-release* build has pending notes in `UNRELEASED.md`. Semver build
+  metadata, deliberately: `1.2.1+dev` means "1.2.1 plus extra", whereas `-dev` would denote a
+  *pre*-release of 1.2.1 — the opposite of the truth.
+
+The condition is "no `--release` **and** pending > 0", not merely "no `--release`". That matters
+beyond taste: the release workflow runs a plain `./build.sh` at the tag, where `release.js` has
+already emptied the notebook, so it still gets plain filenames and its asset check passes.
+
+Consequence handled: a tag carrying pending notes would now produce `+dev` zips and fail the asset
+check with a confusing "missing asset" message. Since such a tag is broken anyway — the bullets are
+absent from the changelog, so the release notes would be incomplete — the workflow's pending-notes
+step was promoted from a warning to an explicit early failure that names the real cause and prints
+the offending bullets.
+
+A shared `finish()` helper prints the closing line and the notebook nudge, so the `--no-zip` early
+exit doesn't duplicate them, and the notebook is counted once and reused for both the naming
+decision and that nudge.
+
+### Humblewood: verbatim core prose + 19 tables (condensed 2024 doc only)
+
+**The core prose was a paraphrase, and it had lost content.** Measured before the change:
+`verbatim: 0 / 45`, longest verbatim run typically 15-30%. Not drift — wholesale rewriting. It had
+also silently dropped a dozen traits, including every species' Lineage trait. Whoever built the
+original data condensed by hand and lost things doing it.
+
+Fixed to **130/134 verbatim**. The four exceptions are ours, not the book's — see "kept" below.
+
+`scripts/extract-humblewood.py` is DEV-ONLY: it needs pdfplumber/pymupdf from `.venv`, so it stays
+out of the stdlib-only `convert.py` that ships. Its *output* is what gets committed.
+
+**Style is structure in this PDF**, which is what made it tractable: `P22Aragon` 36 = entity title,
+`AGaramondPro-Bold` 14 = section, `AGaramondPro-BoldItalic` 10 = trait run-in name,
+`AGaramondPro-Regular` 14 = narrative subsection (skipped, per the like-for-like rule).
+
+Six extraction problems, each fixed structurally rather than by heuristic:
+
+1. **Small-caps headings arrive letter-split.** "LEVEL 3: BONUS PROFICIENCIES" is six alternating
+   12pt/8.4pt fragments. Both bbox top AND bottom shift with font size, so neither groups them;
+   `origin_y` (the text baseline) is identical across all six (118.40) and does.
+2. **Table rows landed in prose** — table cells are body-styled. `table_at` now reports the band it
+   consumed and prose skips it.
+3. **Drop caps** — Luma's title extracts as "uma". Matching headings against EXPECTED names fixed it
+   and also rejected a pull-quote posing as a fourth background.
+4. **Subraces are styled identically to narrative sections** (both Regular 14pt). Resolved by
+   matching against the subrace names already in races.json.
+5. **Background features were captured then wiped** by the following "Suggested Characteristics"
+   heading.
+6. **Page furniture** — the running footer, and separately the bare page number, which is set in the
+   BODY face so only its position gives it away (always the bottom 35pt). Woodwise ended
+   "...by magical means. 38".
+
+**Two source defects, corrected explicitly rather than propagated:**
+
+- `HEAD_ERRATA` — p35 prints "LEVEL 3: NIGHT DOMAIN SPELLS" **twice**; the second sits above the
+  Ward of Shadows text. Taken literally it overwrote the real spells feature. Any *undocumented*
+  repeated heading is now a hard error, not a silent overwrite.
+- `TEXT_ERRATA` — p15 prints "**Stig** Lineage. There are two main lineages of **Srig**". Verified at
+  5x zoom: the book's typo, not ours. Applied inside `normalise()` so the verbatim check sees the
+  same corrected text on both sides and stays meaningful.
+
+**Merge preserves structure.** Only `description` / `feature.description` / `traits[].description`
+are replaced; `abilityScores`, `skills`, `equipmentGrants`, `effects`, `feat`, `levels` structure and
+the rest are ours and untouched — same split as the character-update tool. Playtest content
+(Gadgeteer, Deep Roots, 44 spells, 6 races, 3 feats) verified byte-identical to HEAD.
+
+Result: **113 reworded, 11 added, 1 renamed, 4 kept.**
+
+- *renamed*: Huden Gallus had "One With the Land" AND "One With the Wood", identical text — the
+  source renamed it and both survived. `RENAMED` map drops ours.
+- *kept*: Raptor "Size & Speed", Mistral Raptor "Diving Strike", Hedge "Burrow", Mapach "Climber" —
+  real content absent from the condensed doc, so almost certainly playtest. **Owner's call: keep**;
+  dropping rules someone may be using is the harder error to undo. Confirm each in the playtest pass.
+
+**Tables: 19** (was 23). The four subclass "Features" tables were dropped — they duplicate
+`subclasses.json` `levels` and carry the source's un-renumbered 2014 levels (the table says
+1st/2nd/6th while the headings on the same page say LEVEL 3/6/17). Every spec must now declare
+`rows`; a spec without one is unverifiable, which is exactly how four broken tables passed as "no
+problems". De-hyphenation added (103 line-break hyphens, all syllable breaks).
+
+**Cross-linking** is owner-based plus two inline anchors. The source names a table in three places;
+two land in fields we hold (`[Table: Community Domain Spells]`, `[Table: Night Domain Spells]`) and
+are rewritten in place so the sentence still reads as printed. The Bandit Specialty reference sits in
+a narrative section the like-for-like rule skips, and the other three references are unnamed ("roll
+on the table below") — inserting a name there would be editorialising. Owner chips cover all of them;
+`tableChipsHTML` is now wired into all four entity views (race, background, class, subclass).
+
+#### Two measurement bugs — a green check is not proof
+
+Twice the *checker* was wrong and would have sent me fixing correct code:
+
+- it built its reference with plain `get_text()`, interleaving the two columns, so anything crossing
+  a column break looked non-verbatim (9 cases), and it left page furniture and table rows in the
+  reference (12 more). The reference must be assembled exactly as the extractor reads the page.
+- the page-number bug was **invisible to it**: both sides contained "38", so they agreed. Only
+  reading the rendered output against the page caught it.
+
+`src/tests/humblewood-verbatim.py` locks this in (129 checks). It SKIPS cleanly when the PDF or
+`.venv` is absent, so CI stays green without them: 227 checks in CI, 356 locally.
+
+`run.sh` now **always** rebundles — it previously only rebuilt when `dist/*_full.json` was missing,
+so a stale bundle silently passed the round-trip test after `data/` gained the tables category.
+
+---
+
+## Humblewood playtest survey → `src/docs/HUMBLEWOOD-PLAYTESTS.md`
+
+Catalogued all 27 playtest PDFs (23 unique documents; 4 exact-duplicate pairs) ahead of extracting
+them. Documentation only — no code or data changed. The map is dev-only under `src/`, so the
+existing `^src\/` rule in build.sh's allowlist check keeps it out of the player zip with no change
+to the build.
+
+**The playtest data has the same paraphrase defect the core prose did, and worse.** Measured field
+by field against the packet PDFs: **27 of 172 prose fields verbatim (16%)**. Spells are **0/44** and
+are not merely reworded but *summarised* — the paraphrases run to a median **72% of the real
+length**, worst 44% (Cymatic Sight 295 ch vs 667; Mind Marble 873 vs 1800), with two that had text
+*added* instead. Gadgeteer is 1/27, Engineer and Fizzar 0/7 each. Ten descriptions also carry an
+invented `(Humblewood 2 Playtest.)` suffix that appears in no source. So "we already have it" does
+not mean done, and the map records three states — verbatim / paraphrased / absent — rather than two.
+
+*(This entry first read "median 59% of source, worst 31%, Entomb 372 ch vs 1208". That measured
+against a crude PDF slice which swallowed each spell's stat block and ran into the next spell's
+heading — Entomb's real body is 460 ch. The figures above compare the old text to the verbatim text
+that replaced it. The 0/44 verbatim count was never affected.)*
+
+**Fizzar → Gadgeteer.** March 2024 shipped Fizzar as a standalone class with its own technology
+system; November 2024 reissued it as "The Gadgeteer Class 2.1" with Fizzar demoted to a Path.
+Word counts in Nov 2024: Fizzar 7, Engineer 2, **Scroungecrafter 0** — the March specialization was
+dropped outright, along with technology tiers, schematics, the workbook and the Fizzcraft Kit.
+**March 2024 is excluded from extraction**; taking it verbatim would add a dead class. Our
+`classes.json` already follows Nov 2024.
+
+Other supersessions worth not rediscovering: Mustel is **one** race across Sep 2024 + Feb 2025
+(Brightfang, Longdance, then Webpaw); Marshfoot Gallus / Arma Hedge / Rockburrow Jerbeen are
+lineages on **core** species and each packet reprints the shared core traits, so a careless merge
+would overwrite verbatim core prose with paraphrased reprints; Nov 2024 p3 reprints Seeta as a
+recap; Spectral Stampede is printed in both Jul 2024 and Aug 2024.
+
+Two source defects in Spells Vol 2: it prints **"Etheral Claws"** (we hold *Ethereal Claws*) and
+indexes **"Hearth"** for *Hearth & Home*. Neither is a missing spell — Vol 2 is complete by name.
+
+Two extraction traps recorded for the next pass: **Jan 2025 (Pexian)** sets trait names in plain
+bold, not bold-italic, so they classify as `label` and vanish from a normal run; and **Spells Vol 2**
+is a Times New Roman document from a different template that needs its own parser.
+
+#### A third measurement bug — same lesson as the last two
+
+The first two passes at the verbatim measurement both reported clean-looking numbers that were
+wrong, for the same reason as the earlier checker bugs: the checker didn't look where the data was.
+
+- Walking only `description` **silently skipped all 44 spells**, which store prose in `text`.
+- Assuming `levels` is a list skipped every class and subclass feature — `levels` is
+  `{"1": {"traits": [...]}}`. That hid 88 of 172 fields and made the defect look half its real size
+  (the first figure was "25/84").
+
+Use a shape-agnostic recursive walker collecting every `description`/`text` in the subtree. A
+measurement that finds fewer problems than expected is a reason to check the measurement.
+
+---
+
+## Humblewood playtests extracted — 23 packets folded in
+
+`scripts/extract-humblewood.py` gained a playtest mode: a `PACKETS` registry plus `--playtests`
+(preview, writes nothing) and `--write-playtests`. The core-book path is untouched and its 129/133
+suite still passes; core race prose and traits are byte-identical to before (checked explicitly).
+
+**What landed.** Races 16 → **26**, lineages 21 → **35**, backgrounds 3 → **10**, subclasses 5 →
+**11**, tables 19 → **35**. Prose across every Humblewood file is now **450/472 verbatim**, up from
+27/172 on the playtest content; the extractor self-checks at **350/350** before writing.
+
+**Mechanics are derived, not invented.** `speed`, `languages` and `abilityChoice` come from the
+stat rows; anything unparseable is reported rather than guessed. Lunin states no speed anywhere in
+its packet, so `speed=30` is declared on its spec where it can be seen, not silently defaulted.
+
+**Declare-what-you-expect, everywhere.** Extending the table specs' `rows` rule: every race spec
+declares its trait count, every subclass its feature list. That is what makes the boundaries
+tractable — neither a heading nor a title reliably ends an entity in these packets.
+
+**Six layout facts that each broke a first attempt**, all now handled:
+
+- **Drop caps.** Absent from the core book, present in every packet. A drop cap is its own span in
+  the display face, so it classified as a `title` (ending the entity being parsed) and, being three
+  lines tall, sorted by baseline into the *middle* of its own paragraph. Every description was
+  losing its first letter. `dropcap_repair()` reattaches it to the line it visually starts.
+- **Full-width headings** are cut in half by the column clip, so "New Background: Ambassador"
+  arrives as two fragments a whole column apart — and the second repeats the drop-cap letter, so
+  rejoining needs a one-character overlap allowance.
+- **Trait lists resume across a foreign section.** Roden's traits run ASI/Speed/Age, then "Lurker's
+  Landing", then Size/Bite/... An intervening heading or title now suspends collection rather than
+  ending it; the declared count is what makes that safe.
+- **Roll tables shred into the prose.** They are full width, so their rows land between the columns.
+  A background feature had grown to 1750 characters ending "...I bleed tree sap." A bare `d6`/`d8`
+  label now marks a table start; for backgrounds it *suspends*, because Ambassador, Underscout and
+  Courtier keep their Feature block on the far side of the table.
+- **Italic cross-reference callouts** ("Humblewood Campaign Setting") are set in the same
+  bold-italic as run-in trait names and were landing at the top of trait lists.
+- **One unbolded run-in**: the publisher failed to bold Pexian's "Ability Score Increases.", so it
+  arrived as body text. Named on the spec rather than pattern-guessed.
+
+**Spells Vol 2 has its own reader.** Times New Roman, single column, 12pt bold headings — the shared
+style classifier reads its spell names as body text. A line set *entirely* in bold is a name; a
+run-in like "Cut. You can make a surgical cut..." mixes bold with regular and is body. Two source
+defects handled like `TEXT_ERRATA`: it prints "Etheral Claws" (we hold *Ethereal Claws*) and a
+"d4 Effect" table header in name styling.
+
+**Deferred, with reasons:**
+
+- **10 spells have no source we hold** — Ambush Prey, Elevated Sight, Feathered Reach, Globe of
+  Twilight, Gust Barrier, Invoke the Amaranthine, Shape Plants, Spiny Shield, Stellar Bodies, Veil
+  of Dusk. Humblewood Vol 1 content; the condensed doc lists some in domain spell tables but prints
+  no descriptions. Their text is untouched. This one needs a PDF we do not have.
+- **Sep 2024's 12 characteristic tables** (Stonesinger, Warrenborn, Wonderstruck). Those three
+  backgrounds share pages in a layout the table reader does not handle — stacked *and* side by side,
+  headings interleaving once columns are flattened. 6 of 12 came back malformed, so all 12 are
+  dropped: it is four tables per background or none, since a Flaw table with no Ideal table reads as
+  "the book has no Ideals". The other four backgrounds' 16 tables are in.
+- **March 2024 (Fizzar) is excluded on purpose** — superseded in full by Nov 2024. Do not add it.
+
+#### A table can be the right size and still be the wrong pixels
+
+Row counts are not sufficient. Two characteristic tables came back with exactly six rows numbered
+1–6 and were still wrong, having absorbed words from the column beside them ("...rural bumpkin,
+d10 Experience so I judge"). The builder now also requires the die faces to read 1..n in order and
+rejects any cell carrying text bled in from a neighbour. Same lesson as the earlier checker bugs:
+a clean-looking count is not proof, and the only way to know is to read the output.
+
+`src/tests/humblewood-verbatim.py` now derives its playtest exclusions from `eh.PACKETS` instead of
+a hardcoded pair, so adding a packet can never silently turn the core suite red.
+
+---
+
+## Character update tool — select all/none, and the backup dead end
+
+**Select all / Select none** on the review list, with a live "n of m selected" count. Shown only
+when there is more than one actionable row, and they skip disabled rows — unmatched and ambiguous
+entries can't be applied at all, so "select all" must not appear to tick them.
+
+**The backup could dead-end the whole feature.** `backupCharacter()` wrapped everything in one
+`try/catch` returning `null`, so every failure — quota, a blocked origin, an unserialisable
+character — surfaced as the same "your browser wouldn't save" modal, with no way to proceed and no
+clue which it was. It now returns `{id, copy}` or `{error, copy}`, where `error` is a phrase a
+player can act on and `copy` is the snapshot, so the caller can offer it as a **download** instead
+of refusing. The guarantee ("never update without a backup first") is kept; the dead end is gone.
+
+**It could also report success when the backup was invisible.** `libSave()` swallows its own quota
+error, so the character blob could land in storage while the index write was dropped — leaving a
+backup that exists but never appears on the home screen, right after we told the player to go and
+look for it there. The index write is now verified by reading it back, and a dropped write removes
+the orphaned blob rather than leaving it to consume the storage that was already short.
+
+Likely trigger, unconfirmed without a browser: the rules cache is a single localStorage key holding
+every loaded pack. `5e2024_full.json` alone is 1.1 MB of JSON, and browsers store strings as UTF-16,
+so the cache can occupy ~2.7 MB of a typical 5 MB origin quota before any characters exist. The new
+modal names Settings → Rules data → Clear all as the way to free the most space.
+
+Five new checks in `src/tests/char-update.js` (85 → 90), including one that blocks the index write
+specifically to prove the read-back catches it.
+
+#### Coins: inline +/- entry, and an Adjust transaction
+
+Both forms, because each covers the other's weakness.
+
+**Inline.** `coinEntry(cur, raw)` in `65-resources.js` is the whole feature: `"+10"` adds, `"-5"`
+spends, a plain number sets, empty clears, and **anything else returns null** so the caller puts the
+old value back. Rejecting rather than coercing is the important part — reading a slip like `"1 2"`
+as 12 would quietly rewrite someone's gold. Floors at zero; you can't owe copper.
+
+Three wiring consequences:
+
+- The boxes **dropped `data-path`**. That handler writes on every keystroke, so it would store `"+"`
+  the instant it was typed and lose the number being added to. They commit on `change` (blur or
+  Enter) via a `data-coin` handler instead. `renderCoins()` already rebuilt them from the model, so
+  nothing else needed to change.
+- `type="text" inputmode="tel"`, not `number`. `type=number` rejects a leading `+` outright (the
+  HTML valid-floating-point grammar has no `+`), and iOS's `inputmode="numeric"` keypad has no sign
+  keys at all — the telephone pad does.
+- An on-screen hint under the row, because an input that silently understands `+10` is otherwise
+  undiscoverable.
+
+**Adjust** (`openCoinAdjust`) handles "that costs 2gp 5sp" as one action: an amount per
+denomination, a preview of the resulting totals, and the whole transaction is planned before any of
+it is applied, so a shortfall in one coin can't leave the others half-spent. Apply is disabled while
+the entry is invalid or would overdraw, and the message says which coin is short. It reuses the
+update tool's `#mBody` guard — that node outlives the modal, so the delegated listener is installed
+once rather than on every open.
+
+28 checks in a new `src/tests/sheet.js` (registered in `run.sh`), for pure sheet functions. Total
+247 → 275.
+
+#### Level-1 max HP seeded from the hit die
+
+`seedLevel1HP()` in `56-class.js`: adding a class when the result is **one class at total level 1**
+sets `hp.max` (and `hp.cur`) to `hitDieMax(def)` — d8 → 8. There is no roll and no choice at level
+1, so the number is deterministic. `hp.max` is a plain player-entered figure with effects summed on
+top and **no automatic CON**, so the die maximum is the whole value; nothing else needed changing.
+
+Three constraints it respects, each with a test:
+
+- **Only over a blank.** A number the player typed is theirs and is never overwritten.
+- **Not on multiclass, not above level 1** — those levels give a rolled or averaged amount that is
+  the player's call, so the seed is limited to the one case with a single right answer.
+- **Clean revert**, matching how the other class grants behave: `removeClass()` clears `hp.max`
+  again *only if it still equals the number that was seeded*, so swapping a d10 class for a d6 one
+  at level 1 doesn't silently keep 10 — while an edited value survives untouched.
+
+15 checks (90 → 105).
+
+---
+
+## Pre-release sanity pass
+
+Three audits over the whole repo before cutting the first release since v1.2.1. Two real defects,
+one release-blocking discovery, and a lot of doc drift.
+
+#### The release would have failed, silently
+
+`release.yml` checks out the **tag** into a clean runner, so anything untracked is simply absent.
+Fourteen paths were untracked, including `.github/` itself — and because GitHub loads workflow files
+from the pushed ref, a tag with no `release.yml` queues **no run at all**: no release, no error,
+nothing in Actions. Every other blocker fails loudly; that one doesn't.
+
+Proved rather than argued, by exporting the two file sets and building each:
+
+- `git ls-files --cached` → 60 files → dies immediately on `FRAGMENT ORDER DRIFT in src/css`.
+- tracked + untracked-not-ignored → 83 files → builds clean, correct pack counts.
+
+Worse than the loud failures was the quiet one: `bundle-rules.js` treats a missing system directory
+as a *successful skip*, so an untracked `data/5e2024/races.json` would have shipped a pack with no
+`races` key at all — an empty species picker, while the changelog announced "All ten".
+
+`RELEASING.md` §1 documented `git commit -am`, which stages tracked modifications only and therefore
+**cannot** pick up a new fragment, data file or workflow. The documented happy path was the cause.
+It now opens with a `git status --porcelain` gate and uses `git add -A`.
+
+#### Two defects in shipped data, both from the playtest table work
+
+- **16 of 35 Humblewood tables rendered headerless.** `build_pt_tables()` emitted `columns`; the
+  schema and `86-tables.js` both read `cols`. The JSON looks perfectly correct either way, which is
+  the whole problem.
+- **`_region` shipped** on 19 tables — the extractor's page-band marker, meaningless to players. It
+  has to exist in memory (`write_prose()` uses it to keep table rows out of prose), so it is now
+  stripped at the write boundary, along with any other underscore-prefixed key.
+
+Neither was visible to any test. `src/tests/tables.js` now asserts, for both systems: every table
+has a non-empty `cols`, no underscore keys ship, every row matches its column count, names are
+unique, and every table declares an owner.
+
+#### Doc claims are now assertions, not prose
+
+The counts in CLAUDE.md had been wrong for a while (19/6 fragments when there were 21/7; "227 checks
+across four suites" when there were six) because prose has no compiler. New `src/tests/docs.js`
+(36 checks) asserts fragment counts against `manifest.json`, suite counts against `run.sh`, that
+every suite file on disk is registered, that no doc names a pre-reorganisation data filename, and
+that `build.sh` and README §9 agree about the zip. It caught its own addition — adding the suite made
+CLAUDE.md's "six" wrong and the suite went red.
+
+It also guards the two changelog traps found here: `UNRELEASED.md` bullets are copied **verbatim**
+into the GitHub release body, where `<name>` is parsed as an HTML tag and vanishes, and a hard-coded
+`v1.2.1` goes stale on the next bump. Both existed; both are now impossible to reintroduce silently.
+
+#### Packaging
+
+- **LICENSE now ships.** The app is MIT and the zip didn't contain its licence.
+- **The docs guard is an allowlist.** It listed dev-doc names to *ban*, which leaves a hole the size
+  of the next doc written — `HUMBLEWOOD-PLAYTESTS.md` was not on the list and would have shipped if
+  it ever landed in `docs/`. Now only CHANGELOG, README-converter and rules-schema may be there.
+  Verified both ways: a clean build produces an 11-file bundle; planting a dev doc in `docs/` deletes
+  the zip.
+- `.gitignore` gained `.claude/` (previously ignored only by Mike's global config, so on any other
+  clone it rode into the source zip) and the scratch patterns are root-anchored.
+- CI compiles `scripts/*.py`, not just `convert.py` — the 108 KB extractor was never syntax-checked.
+- **`release.yml` now runs the tests.** `ci.yml` triggers only on pushes to `main`, so a tag skipped
+  every check except reproducibility — which proves the artifact matches the source, not that the
+  source works.
+- `convert.py` writes a trailing newline; the ten 5e2024 data files it had produced violated the
+  repo's own `.editorconfig`.
+
+#### Renamed one fragment, and declined to rename another
+
+`72-charupdate.js` → **`72-char-update.js`**: every other multi-word fragment hyphenates, and its
+test is `char-update.js`, so the pair didn't grep as a unit.
+
+The audit also proposed `50-classrace.js` → `50-rules-lookup.js`, calling it a pure lookup layer.
+**Rejected** — it also owns `renderClassRace()` and all the shared grant machinery
+(`applyEquipGrants`, `revertEquipmentGrants`, `grantFeatDef`, `addFeatureFromDef`). The proposed name
+described it less accurately than the current one.
+
+Tests 287 → **323** across seven suites.
+
+---
+
 ---
 
 ## Deferred — needs the source book

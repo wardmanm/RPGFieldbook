@@ -7,32 +7,91 @@ You run it locally whenever the data changes — no more hand-conversion.
 ## Get the source data
 From the 5e-tools GitHub data repo (or the site's `data/` folder):
 - `conditionsdiseases.json`
+- `variantrules.json` (the rules glossary)
 - `feats.json`
+- `backgrounds.json`
+- `races.json`
+- `items-base.json` and `items.json` (base gear and magic items — two separate files)
 - `spells/spells-xphb.json`
 - `spells/sources.json` (spell → class mapping)
 - `class/class-*.json` (one per class)
 
+`all` finds these itself inside an unpacked 5e-tools dump; you only need the individual paths when
+running one subcommand at a time.
+
 ## Run it
 
 ```bash
-# one at a time
-python convert.py conditions conditionsdiseases.json                 -o conditions-2024.json
-python convert.py feats      feats.json --overlay overlay.json        -o feats-2024.json
-python convert.py spells     spells-xphb.json --sources sources.json  -o spells-2024.json
-python convert.py classes    class-*.json --overlay overlay.json      -o classes-2024.json
+# everything, in one go — this is the normal way
+python convert.py all _conversion-data/5etools-v2.33.2 -o data/5e2024
 
-# or everything found in a folder at once
-python convert.py all ./5etools-data --overlay overlay.json -o ./rules
+# or one category at a time
+python convert.py conditions conditionsdiseases.json                 -o conditions.json
+python convert.py feats      feats.json --overlay ../data/overlay.json -o feats.json
+python convert.py spells     spells-xphb.json --sources sources.json  -o spells.json
+python convert.py classes    class-*.json --overlay ../data/overlay.json -o classes.json
+python convert.py races      races.json                              -o races.json
 ```
 
-Import the resulting `*-2024.json` files into the app via **Settings → Rules → Import files**,
-or host them and add them as sources (a manifest with `include: [...]` also works).
+`all` handles the whole 5e-tools dump as it actually ships:
+
+- it searches the input directory **and its `spells/` and `class/` subdirectories**, so spells,
+  classes and `sources.json` are all found;
+- it converts **both** `items-base.json` (mundane) and `items.json` (magic), into `items.json` and
+  `items-magic.json`;
+- it falls back to the repo's `data/overlay.json` and `data/class-resources.json` when they aren't
+  in the input dir — without those you lose the Archery/Defense effects and the Rage/Focus/Sorcery
+  trackers;
+- it **warns loudly** for anything it can't find and prints a summary at the end, rather than
+  silently writing nothing;
+- classes with no hit die (the TCE sidekicks) are skipped with a note instead of aborting the run.
+
+Output goes to `data/5e2024/`. Players don't import these individually — `./build.sh` rolls each
+system's folder into one `dist/<system>_full.json` pack, and that's what ships. Import either the
+full pack or any individual file via **Settings → Rules → Import files**, or host them and add them
+as sources (a manifest with `include: [...]` also works).
 
 ## What each converter produces
+**Selection rule:** everything whose `source` is **XPHB** — the definitive 2024 book — plus any
+basic-rules entry XPHB doesn't already cover by name (2024 wins, then the free 2024 subset, then
+2014). Do **not** filter on `basicRules2024` alone: that flag selects only the *free* subset and
+silently trims the book. It has already cost 4-of-16 backgrounds, 339-of-391 spells, and
+17-of-77 feats.
+
 - **conditions** → `{ "keywords": [...] }` — 2024 conditions/statuses, plus any 2014 ones with no 2024 version.
 - **feats** → `{ "feats": [...] }` — category + prerequisite line, then flattened text; effects from the overlay.
 - **spells** → `{ "spells": [...] }` — `meta` (school · time · range · components · duration) + flattened text + higher-level/material; with `--sources`, each spell is tagged with its 2024 `class` list.
 - **classes** → `{ "classes": [...] }` — hit die, saves, level-1 skill choice, spellcasting ability, per-level traits, ASIs as `asi` choices, subclass choice at the right level, Fighting Style as an `option` choice, and each XPHB subclass. Caster classes also get per-level "prepared/known spells" notes read from the class table.
+- **races** → `{ "races": [...] }` — the 10 XPHB species, with speed, traits, and skill choices. 2024 lineages (Elf, Gnome, Goliath, Tiefling) come from `_versions` and become `subraces`; Dragonborn's ancestry is template-only in the source, so its picks are read off the Draconic Ancestry table. No `abilityScores` — 2024 puts ability increases on backgrounds.
+- **glossary** → `{ "keywords": [...] }` — rules-glossary terms (Advantage, Cover, Difficult Terrain…), the same category `conditions` writes to, so the two merge in the app.
+- **backgrounds** → `{ "backgrounds": [...] }` — the 16 XPHB backgrounds: ability scores, feat, skill and tool proficiencies, equipment and its structured `equipmentGrants`.
+- **items** → `{ "items": [...] }` — reads **both** item files and writes two packs: base gear and magic items. Between them the largest output the converter produces.
+- **tables** → `{ "tables": [...] }` — see below. Written to `tables.json` by `all`, or to the path given by `--tables` on a single subcommand.
+
+## Tables
+5e-tools prose contains real table structures (roll tables, class progressions, lookup tables).
+Every converter lifts those out into a **separate tables pack** and leaves a `[Table: Name]`
+anchor in the description where the table used to sit; the app renders that anchor as a chip
+that opens the table, and as plain text if no tables pack is loaded. Each table records the
+entity it came from (`owner` / `ownerKind`), so the Tables tab can group them and a class view
+can link to its own progression table.
+
+```bash
+python convert.py all _conversion-data/5etools-v2.33.2 -o data/5e2024   # writes tables.json too
+python convert.py spells spells-xphb.json -o spells.json --tables tables.json
+```
+
+`all` collects every source's tables into a single `tables.json`. Class progression tables capture
+**every** column of `classTableGroups` — Rage Damage, Weapon Mastery, Bardic Die and the rest — not
+just the cantrip/prepared-spell counts that become per-level notes. Spell-slot columns are skipped
+because the app already derives slots by level. Roll ranges render as text (`01-02`); the app does
+not roll for you.
+
+**Referenced features.** A class/subclass feature's entries can point at a sibling feature
+(`{"type":"refSubclassFeature", …}`) instead of containing it. Those references are resolved and
+inlined; before, they were dropped along with the whole referenced feature. This is what used to
+lose the **Wild Magic Surge** table — three later Sorcerer features cited a table that had never
+made it into the data.
 
 ## The overlay (`overlay.json`)
 5e-tools stores mechanical bonuses (e.g. "Archery gives +2 to ranged attacks") only as prose.
@@ -56,6 +115,8 @@ Add your own entries. Valid effect targets: `ac`, `init`, `speed`, `hp.max`, `pr
 ## Useful flags (classes)
 - `--include-legacy` — also include non-XPHB subclasses (TCE, XGE, …). Off by default to keep the ruleset edition-consistent; turning it on mixes 2014 subclasses into the 2024 chassis.
 - `--no-spell-notes` — skip the per-level prepared/known-spells notes.
+- `--tables PATH` *(any subcommand)* — also write that source's lifted tables to `PATH`. `all` always writes `tables.json`.
+- `--overlay PATH` / `--resources PATH` *(incl. `all`)* — point at the hand-authored inputs explicitly. `all` looks in the input dir then `data/`, so you rarely need these.
 
 
 ## Equipment

@@ -1,0 +1,520 @@
+{
+  "system": "Humblewood",
+  "name": "Humblewood Subclasses (2024)",
+  "version": 1,
+  "_note": "Standalone subclasses that attach to a base class by name. Cleric domain spell lists reference three Humblewood spells (Veil of Dusk, Globe of Twilight, Stellar Bodies), marked * in the descriptions; these are now defined in humblewood-spells.json.",
+  "subclasses": [
+    {
+      "class": "Bard",
+      "name": "College of the Road",
+      "description": "Learn from People You Meet on Your Travels Not an officially recognized college, the College of the Road represents the personal and eclectic sets of skills, knowledge, and techniques a wandering bard picks up along their journey. As inveterate jacks-of-all-trades, bards possess a variety of aptitudes in combat, magecraft, and general know-how, making them particularly well suited to learning a variety of different skills. It often happens that while traveling, a bard winds up sharing their campfire with a motley assortment of wandering adventurers who may impart valuable lessons in exchange for a lively song or a well-told tale. Compared to students of other Bard Colleges, a special kind of sensibility is important for the College of the Road. How effectively a bard of this College can apply what they have learned depends on their understanding and insight. The College of the Road is sometimes a harsh teacher, but bards who follow this path often find themselves rewarded with a diverse array of useful tricks and tactics. Those who underestimate a bard from the College of the Road soon find that these \"graduates\" are full of surprises. Bard Level Feature Bonus Proficiencies, Wanderer's Lore, 3rd Traveler's Tricks (2 options) Favorite Trick (1st), Improved Tricks, 6th Traveler's Tricks (3 options) Favorite Trick (2nd), Improved Tricks, 14th Traveler's Tricks (4 options)",
+      "levels": {
+        "3": {
+          "traits": [
+            {
+              "name": "Bonus Proficiencies",
+              "description": "When you join the College of the Road at 3rd level, you gain a few useful proficiencies picked up from your time on the road. Choose three of the following options (each option can only be selected once):\n• You gain proficiency with a Gaming Set of your choice\n• You gain proficiency with a martial weapon of your choice\n• You gain proficiency with Herbalism Kits\n• You gain proficiency with Thieves' Tools\n• You gain proficiency with a skill of your choice\n• You learn two languages of your choice"
+            },
+            {
+              "name": "Traveler's Tricks",
+              "description": "You already have several memorable experiences from your life on the road. You learn two Traveler's Tricks of your choice (see Traveler's Trick Options). These Traveler's Tricks represent skills, techniques, and useful pieces of knowledge picked up along the way. Each one requires you to expend a use of your Bardic Inspiration, and takes a Bonus Action to use unless otherwise specified. At 6th level and at 14th level you learn an additional Traveler's Trick."
+            },
+            {
+              "name": "Wanderer's Lore",
+              "description": "You can share any useful tidbits of information you have come across in your travels to help others to see problems from a new angle. When a creature has a Bardic Inspiration die granted by you, they may make a single Arcana, History, Nature, or Religion check with Advantage. The creature may choose whether or not to add the Bardic Inspiration die to this roll."
+            }
+          ]
+        },
+        "6": {
+          "traits": [
+            {
+              "name": "Favorite Trick",
+              "description": "You have gained enough mastery over one of your Traveler's Tricks that you can use it whenever it's needed. You may choose one Traveler's Trick that you know and designate it as your favorite trick. If you roll Initiative and have no uses of Bardic Inspiration remaining, you regain one use of it. Any Bardic Inspiration gained in this way can only be used to perform your favorite trick. At 14th level you can select a second favorite trick from among Traveler's Tricks you know."
+            },
+            {
+              "name": "Improved Tricks",
+              "description": "At 6th and 14th levels, your Traveler's Tricks become stronger. By practicing the tricks you know, and encountering stronger adventurers who share their knowledge with you, your mastery over your tricks increases."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "class": "Cleric",
+      "name": "Community Domain",
+      "description": "Bring People Together The community domain focuses on the ties that bind all people together. These are the ties of family and friendship, the ties to ancestors, as well as the ties between elders and the next generation with whom they share their wisdom. The power of the Gods of community is in the security of home and hearth, and the joy of good company. Many such gods teach the value of tradition and simple ways of living in harmony with the natural world. They also tend towards the rule of law, not as a kind of great bureaucracy, but as sacred traditions passed from generation to generation. Some gods advocate the removal of harsh or disruptive forces to this order, and proper sanctions for the violation of the goodwill that any community ought to provide. Clerics of such gods value unity, and praise the strength that can be gained when people support each other. Cleric Level Feature 1st Domain Spells, Blessing of the Hearth 2nd Channel Divinity: Magnificent Feast 6th Channel Divinity: Community Watch 8th Divine Strike (1d8) 14th Divine Strike (2d8) 17th Paragon of the People",
+      "levels": {
+        "3": {
+          "traits": [
+            {
+              "name": "Community Domain Spells",
+              "description": "Your connection to this divine domain ensures you always have certain spells ready. When you reach a Cleric level specified in the [Table: Community Domain Spells] table, you thereafter always have the listed spells prepared."
+            },
+            {
+              "name": "Blessing of the Hearth",
+              "description": "You gain the ability to conjure a small flagstone hearth with a simple iron cooking pot whenever you rest. This hearth helps warm you and your companions and can be used to prepare hearty and nutritious meals on the road. If you or any friendly creatures you make camp with would regain Hit Points at the end of a Short Rest by spending one or more Hit Point Dice, each of those creatures may choose to re-roll one of their Hit Point Dice, taking the higher roll between the two. Additionally, you gain proficiency with Cook's Utensils."
+            },
+            {
+              "name": "Magnificent Feast",
+              "description": "As a Magic action, you present your Holy Symbol and expend a use of your Channel Divinity to conjure a magical feast for the rough road ahead. By spending 10 minutes, you may create a number of delicious, well-prepared, yet simple food items equal to your Wisdom modifier (minimum of 1). These food items will last up to 8 hours or until the end of a rest and will never spoil. Eating food created in this way takes an Action, and a creature who eats it regains Hit Points equal to 2d4 + your Cleric level. The food can also remove either the Frightened or Poisoned condition from that creature (chosen by the creature when consumed)."
+            }
+          ]
+        },
+        "6": {
+          "traits": [
+            {
+              "name": "Community Watch",
+              "description": "As a Magic action, you present your Holy Symbol and expend a use of your Channel Divinity to instill a feeling of vigilant protection in you and your allies. You grant yourself and a number of allies, up to your Wisdom modifier (minimum of 1), a boon from your deity. Allies must be able to see you and be within 30 feet to receive the boon. Once per round, a creature benefitting from this boon can roll a d6, adding the result to a D20 Test. This effect lasts for a number of rounds equal to your Wisdom modifier (minimum of 1 round). A creature can only benefit from this effect if it can see at least one of its allies."
+            },
+            {
+              "name": "Divine Strike",
+              "description": "You gain the ability to infuse your weapon with the power to punish wrongdoing. Once on each of your turns, when you hit a creature with a weapon attack, you can cause the attack to deal an extra 1d8 Psychic damage to the target. Visions of the evil they have wrought upon others flash before their eyes. You choose whether any foe reduced to 0 hit points by this attack remains stable or dies. When you reach 14th level, the extra damage increases to 2d8."
+            }
+          ]
+        },
+        "17": {
+          "traits": [
+            {
+              "name": "Paragon of the People",
+              "description": "Your Community Watch grants an additional d6 to each affected ally. It also grants immunity to Fear for the duration of the effect. Additionally, your Magnificent Feast produces twice as many foodstuffs, each of which can, when consumed, remove a single curse or disease affecting the target (including attunement to a cursed item)."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "class": "Cleric",
+      "name": "Night Domain",
+      "description": "Bring Darkness with You, Wherever You Go The night is mysterious and conceals many unseen dangers. However, the cover of darkness also brings protection from predators and shadows within which one can conceal themselves. The gods of night are varied, encompassing those who would use the cover of darkness to protect others from threats to those who would use the shadows for wrongdoings. The motives of night gods are often shrouded in mystery. Many teach their followers that it is only by peering through the darkness and looking beyond what is hidden that one can attain truth. Clerics of night do their best to keep themselves and their companions safe while journeying through the darkness. Cleric Level Feature Eye of Twilight, Invocation of Night, Night 3rd Domain Spells, Ward of Shadows 6th Improved Ward, Veil of Dreams Creature of the Night, Eye of Twilight 17th improvement",
+      "levels": {
+        "3": {
+          "traits": [
+            {
+              "name": "Eye of Twilight",
+              "description": "A divine blessing grants you the ability to see more clearly in dark and dim conditions. You can see in Dim Light within 60 feet of you as if it were Bright Light and in magical or nonmagical Darkness as if it were only Dim Light. You can't discern color in the Darkness, only shades of gray. When you reach 6th level, you can see in Dim Light within 120 feet of you as if it were Bright Light and in magical or nonmagical Darkness as if it were Dim Light. You can't discern color in the Darkness, only shades of gray. At 8th level, you can see normally in Darkness, both magical and nonmagical, within 120 feet. Finally, at 17th level, your eyes are able to see the truth hiding within darkness. You gain the ability to call upon the powers of your deity to grant yourself Truesight within 120 feet of you for a number of minutes equal to your Wisdom modifier (a minimum of 1 minute). Your Truesight only functions while in conditions of magical or nonmagical Darkness. Once you have used this feature, you cannot use it again until you have completed a Long Rest."
+            },
+            {
+              "name": "Night Domain Spells",
+              "description": "Your connection to this divine domain ensures you always have certain spells ready. When you reach a Cleric level specified in the [Table: Night Domain Spells] table, you thereafter always have the listed spells prepared. Spells marked with an asterisk (*) can be found in this book."
+            },
+            {
+              "name": "Ward of Shadows",
+              "description": "You can create a ward of divine shadows to conceal yourself from an attacking enemy. When attacked by a creature you can see within 30 feet of you, you can use your Reaction to impose Disadvantage on the Attack Roll as shadows envelop your form. An attacker that can't be Blinded is immune to this feature. You can use this feature a number of times equal to your Wisdom modifier (a minimum of once) and regain all expended uses when you finish a long rest.",
+              "uses": {
+                "max": {
+                  "formula": "wis"
+                },
+                "per": "long"
+              }
+            },
+            {
+              "name": "Invocation of Night",
+              "description": "As a Magic action, you present your Holy Symbol and expend a use of your Channel Divinity to harness the powers of night, clouding the vision of your foes in a shroud of darkness. You cause any source of mundane or magical light within 30 feet of you to be extinguished. Additionally, each hostile creature within 30 feet of you must make a Constitution saving throw. A creature who fails the saving throw is Blinded for a number of rounds equal to your cleric level. A creature Blinded in this way can repeat its saving throw at the end of each of its turns, ending the effect on a success. A creature that has Total Cover from you is not affected."
+            }
+          ]
+        },
+        "6": {
+          "traits": [
+            {
+              "name": "Improved Ward",
+              "description": "You can use your Ward of Shadows feature whenever a creature you can see within 30 feet of you attacks a creature other than yourself."
+            },
+            {
+              "name": "Veil of Dreams",
+              "description": "You gain mastery over magical sleep. When you cast the Sleep spell, you can increase the radius of the Sphere to 10 feet. Additionally, a target that fails its first saving throw against your Sleep spell has Disadvantage on its second saving throw to resist falling asleep."
+            }
+          ]
+        },
+        "17": {
+          "traits": [
+            {
+              "name": "Creature of the Night",
+              "description": "Starting at 17th level, you can use your Action to activate a supernatural aura of deep night. It lasts for 1 minute, or until you dismiss it using another Action. You emit Heavily Obscuring Darkness in a 30-foot radius and Lightly Obscuring shadows 50 feet beyond that. The darkness and shadows overlap and smother existing sources of light. Only light produced by a 9th level spell or similarly powerful effect can negate the Darkness and shadows. Enemies within the shadows constantly feel the presence of hungry predators watching them and become Frightened as long as they remain inside the affected area. Enemies in the Darkness are both Blinded and Frightened for as long as they remain within its area."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "class": "Fighter",
+      "name": "Scofflaw",
+      "description": "Fight in an Underhanded Way A fighter who hits hard and fights dirty, the Scofflaw balks at the ideals of honor and tradition, doing what they need to survive. Rules are made to be broken, and the Scofflaw extends this logic to their fighting style. Using every trick at their disposal to gain the upper hand against their foes, the Scofflaw cows their enemy into submission or overwhelms their defenses with a single cheap shot. Scofflaws eventually trust their notorious reputation to do much of the work for them, gaining the ability to cause foes to quake with a single threat. Scofflaws are a diverse bunch that run the gamut from graceful yet deadly knaves to bruiser thugs. What ties them together is their belief that there's no such thing as a bad win. Fighter Level Feature Bonus Proficiency, Brutal Brawler, Intimi3rd dating Banter 7th Misdirection 10th Blindside, Brutal Brawler Improvement 15th Infamy, Blindside Improvement Two For Flinching, Brutal Brawler Improve18th ment, Blindside Improvement",
+      "levels": {
+        "3": {
+          "traits": [
+            {
+              "name": "Bonus Proficiency",
+              "description": "You gain proficiency in one of the following skills of your choice: Deception, Insight, Intimidation, Sleight of Hand, or Stealth. Alternatively, you may learn Thieves' Cant."
+            },
+            {
+              "name": "Brutal Brawler",
+              "description": "Your tavernside scuffles have honed your ability to deal damage with just about anything that's handy. You have proficiency with improvised weapons and treat any improvised weapon you handle as if it has the Finesse quality. Additionally, whenever you hit with an improvised weapon, you may spend a Bonus Action to break it over your opponent. Doing this destroys the weapon but deals the maximum number each of the weapon's damage dice could deal to the target. Any additional dice added to the attack's damage roll are not affected by this ability. At 10th level, the improvised weapons you wield become even more lethal in your hands. When you spend your Bonus Action to break an improvised weapon over your opponent, add an additional 2d6 to the weapon's base damage dice. At 18th level, you have Advantage on attacks you make with improvised weapons."
+            },
+            {
+              "name": "Intimidating Banter",
+              "description": "You are adept at integrating insults and barbs into your fighting style. So long as you are in combat, you may choose to use Strength or Dexterity to make Charisma Ability Checks."
+            }
+          ],
+          "choices": [
+            {
+              "type": "skill",
+              "choose": 1,
+              "from": [
+                "Deception",
+                "Insight",
+                "Intimidation",
+                "Sleight of Hand",
+                "Stealth"
+              ]
+            }
+          ]
+        },
+        "7": {
+          "traits": [
+            {
+              "name": "Misdirection",
+              "description": "You are adept at using words and gestures to taunt or fake-out you nent, turning their lack of composure against them. This allows yo your foe into swinging in ways that can cause them to strike their or which leave them open to a counterattack. As a Bonus Action y misdirect an opponent within 5 feet of you. The target must succe Intelligence saving throw against a DC equal to 8 + your Proficien your Strength or Dexterity modifier. On a failure, they must spen their Reaction to attack a creature of your choice within 5 feet of them. If no other creatures are present within 5 feet of them, they waste their Reaction attacking the air where you once were. In order for you to misdirect a creature in this way they must be able to see, hear, or otherwise be able to understand you."
+            }
+          ]
+        },
+        "10": {
+          "traits": [
+            {
+              "name": "Blindside",
+              "description": "You are truly skilled at exploiting the openings you create in combat, hitting off-guard opponents with precise blows that are swift and deadly. You may use this technique against any creature that hasn't yet taken a turn in combat or who you have successfully misdirected this turn. You may also apply this technique to any Attack Roll you make with Advantage. On a hit, you exploit an opening in the target's defenses, dealing an extra 5d6 points of damage. Once you use this ability, you can't use it again until you have taken a Short or Long Rest. At 15th level, the damage dealt by your Blindside increases to 7d6. At 18th level, the damage dealt by your Blindside increases to 9d6. If you have no uses of this ability when you roll Initiative, you regain one use of it."
+            }
+          ]
+        },
+        "15": {
+          "traits": [
+            {
+              "name": "Infamy",
+              "description": "Your reputation precedes you, making it easy for you to strike fear into the hearts of anyone foolish enough to oppose you. When making an Attack, you can utter deadly threats to a single target within 30 feet of you, causing them to become Frightened of you for 1 minute on a failed Wisdom saving throw. An affected target may repeat this saving throw at th of each of their turns, ending the effect on a success. The DC for t saving throw is 8 + your Proficiency Bonus + your Strength or De modifier. A creature who has witnessed or heard tales of your ruth makes this saving throw with Disadvantage. In order for you to use this feature, a creature must be able to hear, or otherwise be able to understand you."
+            }
+          ]
+        },
+        "18": {
+          "traits": [
+            {
+              "name": "Two for Flinching",
+              "description": "You have perfected the art of exploiting your opponent's weakness ever you take the Attack action against an opponent you have suc misdirected this turn or an opponent that is afflicted by a conditio may make one additional attack against that opponent. You may o this feature once per round . ur oppoou to goad allies, you can eed on an ncy Bonus + nd he end this exterity hlessness see, s. Whencessfully on, you only use"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "class": "Sorcerer",
+      "name": "Deep Roots",
+      "description": "The world of Everden hums with natural magic. Some folk have an innate ability to absorb, store, and redirect this energy using their own bodies. Such sorcerers are often marked by their connection to the landscape around them, taking on physical features that mirror the terrain around them. As living batteries, these sorcerers can even absorb huge amounts of arcane power from other sources, such as other magic users. Your roots run deep, and you can feel the life of the land around you as if it were an extension of your own body. This connection with nature fills your body with power that you can use to reshape the world around you. Whether you choose to work in harmony with the land or change it to suit your purposes is up to you. Regardless of your choice, you are also shaped by the world around you, as nature's mighty harmony pulls you to play your part in its complex song.",
+      "levels": {
+        "1": {
+          "traits": [
+            {
+              "name": "In Tune with the Land",
+              "description": "You know the druidcraft cantrip and can understand and speak Terran."
+            },
+            {
+              "name": "Grounded Magic",
+              "description": "Starting at 1st level, you learn additional spells when you reach certain levels in this class, as shown on the Deep Roots Spells table. Each of these spells counts as a sorcerer spell for you, but it doesn't count against the number of sorcerer spells you know."
+            },
+            {
+              "name": "Natural Battery",
+              "description": "Starting from 1st level, when you are hit by an attack that deals magical damage or cold, fire, force, lightning or radiant damage, you can halve the damage you take and add a d6 to your Natural Battery dice pool. You can use this feature a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest. When you hit a creature with an attack, you can spend any number of d6s from your Natural Battery dice pool to add a bonus to the attack's damage. You choose the type of bonus damage from between cold, fire, force, and lightning damage. You lose any remaining dice in your Natural Battery dice pool when you finish a long rest. When you reach 9th level in this class, your Natural Battery dice increase to d8s, and when you reach 17th level, they increase to d10s.",
+              "uses": {
+                "max": 2,
+                "per": "long"
+              }
+            }
+          ]
+        },
+        "6": {
+          "traits": [
+            {
+              "name": "Land's Harmony",
+              "description": "At 6th level, your connection with the land deepens and begins to change you further. Depending on the terrain you most recently finished a long rest in, you gain one of the following benefits. These benefits last until you finish your next long rest. Terrain Benefit Arctic You gain resistance to cold damage. Coast You can cast the water breathing spell once per day without expending a spell slot. Desert You gain resistance to fire damage. Forest You can cast the speak with plants spell once per day without expending a spell slot. Grassland Your walking speed increases by 5 feet, and you can disengage as a bonus action. Mountain You can cast the call lightning spell once per day without expending a spell slot. Swamp You ignore nonmagical difficult terrain."
+            }
+          ]
+        },
+        "14": {
+          "traits": [
+            {
+              "name": "Home Turf",
+              "description": "From 14th level, your connection with nature energizes you even further. When you take a short rest, you can add one die to your Natural Battery dice pool. You can use this feature a number of times equal to your Charisma modifier, and you regain all expended uses when you finish a long rest."
+            }
+          ]
+        },
+        "18": {
+          "traits": [
+            {
+              "name": "Charged Up",
+              "description": "At 18th level, your control over the power that gathers within you becomes more precise. As a bonus action, you can convert any number of dice in your Natural Battery dice pool into sorcery points.\n• You gain proficiency in one set of artisan's tools of your choice.\n• Choose one set of artisan's tools that you are proficient with. You gain expertise with these tools, adding double your proficiency bonus to checks made with them."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "class": "Fighter",
+      "name": "Workhand",
+      "description": "You may be a retired soldier who took up a hammer and anvil, or simply a carpenter who has had to take up arms to defend what is right. Either way, you've learned to use the tools of your trade as hearty weapons, pushing them to their limits in combat. Wielding mallets and scissors as implements of battle also causes your foes to put their guards down around you, as no one suspects the smith with only a toolbelt to be fully armed.",
+      "levels": {
+        "3": {
+          "traits": [
+            {
+              "name": "Bonus Proficiencies",
+              "description": "Beginning when you choose this archetype at 3rd level, you gain proficiency with your choice of carpenter's tools, mason's tools or smith's tools. You also gain proficiency with improvised weapons."
+            },
+            {
+              "name": "Ready For Anything",
+              "description": "Additionally at 3rd level you've learned how to use your tools as weapons in combat. During a Short or Long Rest, you can prepare a set of tools you are proficient with for battle to be used as one of the following:\n• Two improvised melee weapons that do 1d6 piercing damage and have the light and finesse properties.\n• An improvised melee weapon that does 1d10 bludgeoning damage and has the two-handed and heavy properties."
+            }
+          ]
+        },
+        "7": {
+          "traits": [
+            {
+              "name": "Strong Arms, Light Work",
+              "description": "Starting at 7th level, your skill with your tools in combat pays dividends when crafting with them as well. When crafting non-magical items with tools you are proficient with, the time required to craft them is quartered (ex. A project that would normally take eight hours would only take two.)"
+            }
+          ]
+        },
+        "10": {
+          "traits": [
+            {
+              "name": "Improved Tools",
+              "description": "At 10th level, you have learned how to use your tools in ways far beyond how they were designed to be used. You can prepare your tools as one of the following upgraded options:\n• Four improvised melee weapons that do 1d8 piercing damage and have the light, finesse and thrown (range 20/60) properties.\n• An improvised melee weapon that does 1d12 bludgeoning damage and has the two-handed, heavy and reach properties. Additionally, when you deal damage with an improvised weapon, you can add your proficiency bonus to the damage roll."
+            }
+          ]
+        },
+        "15": {
+          "traits": [
+            {
+              "name": "Craftsman's Shield",
+              "description": "Starting at 15th level, your tools don't just arm you, but also protect you. While wielding tools you are proficient with, you gain the benefits of a shield without needing a free hand to use it."
+            }
+          ]
+        },
+        "18": {
+          "traits": [
+            {
+              "name": "The Flurry of Creation",
+              "description": "At 18th level, when you use your action to attack with your tools, you can make one weapon attack as a bonus action."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "class": "Bard",
+      "name": "College of Courtly Jests",
+      "description": "Bards of the College of Courtly Jests see through people like they were spirits, and can cut them down with a single clever turn of phrase. Your ability to read a room and see who are the movies and shakers in the crowd is unparalleled. You are welcome at any party as your jokes and jests bring much merriment, and your insight into people's intentions is invaluable.",
+      "levels": {
+        "3": {
+          "traits": [
+            {
+              "name": "With The In Crowd",
+              "description": "When you choose this subclass at 3rd level, your ability to read folks' intentions and charm your way into any social situation is infamous. You are proficient with the Wisdom (Insight) skill, and, whenever you make a skill check using Insight you can add double your proficiency bonus to die roll. Additionally, you can use your Charisma instead of Wisdom when making Insight skill checks."
+            },
+            {
+              "name": "Subtle Jabs",
+              "description": "Also at 3rd level, you know how to poke fun at someone in a way that can trip them up. As a bonus action, you can expend one use of your Bardic Inspiration and choose one creature you can see within 60 feet of you. The creature has disadvantage on the next saving throw it makes before the end of your next turn."
+            }
+          ]
+        },
+        "6": {
+          "traits": [
+            {
+              "name": "Cut To The Quick",
+              "description": "At 6th level, you are a master at seeing right . When you make a Wisdom or Charisma (Insight) check, you can treat a d20 roll of 9 or lower as a 10."
+            }
+          ]
+        },
+        "14": {
+          "traits": [
+            {
+              "name": "Deadly Jest",
+              "description": "Starting at 14th level, your cutting commentary can cause actual harm to anyone who falls prey to it. Whenever you expend one use of your Bardic Inspiration, you can choose one creature who can hear you within 30 feet. That creature must make a Wisdom saving throw against your spell save DC, taking 4d10 psychic damage on a failed save, and half as much damage on a successful one. This damage increases to 4d12 psychic damage when you reach level 17 in this class, alongside the upgrade to your Bardic Inspiration die."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "class": "Warlock",
+      "name": "The Whispering Wind",
+      "description": "",
+      "levels": {
+        "1": {
+          "traits": [
+            {
+              "name": "Expanded Spell List",
+              "description": "The Whispering Wind lets you choose from an expanded list of spells when you learn a warlock spell. The following spells are added to the warlock spell list for you."
+            },
+            {
+              "name": "Voice of the Wind",
+              "description": "Starting at 1st level, you learn to send the wind's whispers far and wide. You know the message cantrip, you can cast it as a bonus action, and its range is increased to 1000 feet for you. As long as you know the general location of the target of the message, and they are within 1000 feet, they receive the message. Additionally at 1st level, you learn to tell encouraging and terrifying stories by shaping the air itself. You know the silent image spell and always have it prepared. You can cast silent image without expending a spell slot a number of times equal to your charisma modifier, and you regain all expended uses when you finish a long rest. Whenever you cast the spell, you can choose one of the following additional effects. A Vision of Courage. Up to 4 other creatures of your choice who can see the illusion gain 2d4 temporary hit points. A Vision of Terror. Up to 4 creatures of your choice who can see the illusion must make a Wisdom save against your spell save DC or be frightened of you for as long as you maintain concentration on silent image ."
+            }
+          ]
+        },
+        "6": {
+          "traits": [
+            {
+              "name": "Nature's Force",
+              "description": "Starting at 6th level, you are imbued with safety from the wind, and can add the wind's power to your magic. You have resistance to cold damage. Additionally, you can substitute the damage type of any spell you cast to be cold damage instead of its normal damage type. You can do this a number of times equal to your proficiency bonus, and regain all expended after a long rest. When a spell you cast deals cold damage to a target, the target must also make a Constitution saving throw against your spell save DC or be knocked back 10 feet."
+            }
+          ]
+        },
+        "10": {
+          "traits": [
+            {
+              "name": "10th Level Feature",
+              "description": "Beginning at 10th level, your ability to tell stories with the wind reaches new heights. When you cast silent image , the additional effect you choose can affect any number of creatures. Additionally, you have access to two additional options to choose from when you cast silent image . A Vision of Flight. Any number of creatures of your choice who can see the illusion gain a fly speed equal to their walking speed for the duration of the silent image spell. This effect ends immediately if you stop concentrating on silent image for any reason. A Vision of Warriors. Any number of creatures of your choice who can see the illusion must make a Dexterity saving throw against your spell save DC, taking 4d8 force damage on a failure, and half as much damage on a success."
+            }
+          ]
+        },
+        "14": {
+          "traits": [
+            {
+              "name": "14th Level Feature",
+              "description": "Starting at 14th level, your ability to speak the word of the wind and conjure visions is unparalleled. When you cast silent image , you can choose two additional effects. Additionally, when you cast the message cantrip, you can choose one of the following additional effects: • You can target any number of people within a mile of you to receive the message, but it can only be five words or less, and the targets cannot reply. • You can target someone on a different plane, but the target also learns what plane you are on. • You can use the message cantrip to target someone within range of the message cantrip with a spell that has a verbal component. You must still use your action to cast the second spell, and casting it still uses a spell slot. Once you've used this effect, you can't use it again until you've had a long rest."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "class": "Rogue",
+      "name": "Burrowskulker",
+      "description": "",
+      "levels": {
+        "3": {
+          "traits": [
+            {
+              "name": "Narrow Maneuvers",
+              "description": "When you choose this archetype at 3rd level, you are able to leverage narrow passageways and cramped areas. When moving as part of the disengage action, spaces occupied by enemies do not block your movement, and you are able to move through enemy spaces as though they were difficult terrain."
+            },
+            {
+              "name": "Wallcrawler",
+              "description": "Starting at 3rd level, your strange affinity for caves and caverns gives you mastery over maneuvering difficult spaces. You have a climbing speed equal to your walking speed."
+            }
+          ]
+        },
+        "9": {
+          "traits": [
+            {
+              "name": "Quick Nick",
+              "description": "At 9th level, your ability to duck through a crowd allows you to attack quickly and unseen. As part of a disengage action you can make a melee weapon attack against one enemy whose space you move through during the disengage action. You can use this feature a number of times equal to your proficiency bonus, and regain all uses of it after a long rest."
+            }
+          ]
+        },
+        "13": {
+          "traits": [
+            {
+              "name": "Natural Camouflage",
+              "description": "Starting at 13th level, your mastery over natural environments allows you to dress according to your surroundings, effectively letting you disappear into the natural world around you. During a short rest you can choose a type of natural environment (caves, forest, mountains, etc) to blend in with. While camouflaged in this way you can use an action to gain the benefits of the pass without trace spell (affecting only you) for 1 hour while in the chosen environment. Once you use this feature you can't do so again until you finish a short or long rest."
+            }
+          ]
+        },
+        "17": {
+          "traits": [
+            {
+              "name": "Living Hazard",
+              "description": "Beginning at 17th level, you know how to wield nature itself as a weapon as you sneak unseen. When you are under the effect of your natural camouflage feature, you can choose to have the damage inflicted by your Sneak Attack feature to deal bludgeoning, cold or thunder damage instead of the damage type of your weapon."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "class": "Barbarian",
+      "name": "Path of the Corsair",
+      "description": "Barbarians who follow the Path of the Corsair have learned how to command their allies and their own bodies through time spent on sailing vessels. They move fluidly and steadily, and their controlled rage empowers their comrades to work together without fear.",
+      "levels": {
+        "3": {
+          "traits": [
+            {
+              "name": "Sea Legs",
+              "description": "Starting when you choose this path at 3rd level, your time at sea has made you maneuverable on land and on the water. You have swimming and climbing speeds equal to your walking speed. Additionally, while you are raging, you can take the Dash action as a Bonus Action."
+            },
+            {
+              "name": "Captain's Orders",
+              "description": "Beginning at 3rd level, your commanding presence encourages your allies to join you in the fray. When you hit a creature with an attack while you are raging, an ally of your choice within 30 feet of you that can see and hear you can use their Reaction to move up to their speed and make one melee attack. You can use this feature a number of times equal to your Proficiency Bonus, and you regain all expended uses when you complete a Long Rest. When you reach 12th level in this class, when you use this feature, the attack made by your ally is made with advantage."
+            }
+          ]
+        },
+        "6": {
+          "traits": [
+            {
+              "name": "Sailor's Knacks",
+              "description": "Beginning at 6th level, your rigorous training makes you prepared for almost anything. You gain one of the following options of your choice. Whenever you complete a Long Rest, you can change your choice. All Weather. You have resistance to cold and lightning damage. Steady Senses. You have tremorsense with a range of 20 feet. Water Walker. You can cast the water walk spell as a ritual. Your spellcasting ability for this spell is Wisdom."
+            }
+          ]
+        },
+        "10": {
+          "traits": [
+            {
+              "name": "Steady Rage",
+              "description": "Starting at 10th level, your sturdiness in battle is matched only by your ability to unbalance others. You have advantage on saving throws made to resist being knocked prone. Additionally, when you hit a creature with a melee weapon attack while you are raging, you can knock them off their balance. The target must succeed on a Strength saving throw (DC equal to 8 + your Constitution modifier + your Proficiency Bonus) or suffer one of the following effects (your choice):\n• It drops one item or weapon it is holding.\n• It is knocked prone."
+            }
+          ]
+        },
+        "14": {
+          "traits": [
+            {
+              "name": "Inspiring Commander",
+              "description": "Starting at 14th level, your boldness in battle steels your allies against fear and coercion. While you are raging, you can use a Bonus Action to cause all allies within 30 feet of you to be immune to the Charmed and Frightened conditions for the duration of your rage. Additionally, if an ally is Charmed or Frightened when you use this feature, the condition ends for them. Once you use this feature, you can't use it again until you complete a Long Rest unless you expend a use of your Rage (no action required) to restore your use of it. Lunin Corsair Barbarian"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "class": "Monk",
+      "name": "Way of the Wrangler",
+      "description": "Across the sweeping plains of the Firnveldt and beyond, the monks who follow the Way of the Wrangler guide herds of animals safely across the wilds. A wrangler is never found without their trusty lasso, which they use to maneuver all manner of creatures. Wranglers are often seen as reckless daredevils, and many of them lean into this reputation, making money performing perilous stunts at fairs and festivals. Some wranglers prefer to lead a quieter life, helping people better understand and commune with the beasts of Everden.",
+      "levels": {
+        "3": {
+          "traits": [
+            {
+              "name": "Friend of Beasts",
+              "description": "When you choose this tradition at 3rd level, you gain proficiency in the Animal Handling skill if you don't already have it. Your hand-to-hand combat skills mix with the talents of a cattle herd. When making Wisdom (Animal Handling) skill checks, you add your Dexterity modifier to the check in addition to your Wisdom modifier and proficiency bonus. You also gain proficiency with the whip, and it is considered a monk weapon for you. Additionally, by spending 10 minutes communing with a beast that is friendly to you, you can regain ki points equal to your wisdom modifier. You must finish a long rest before you can use this feature again."
+            },
+            {
+              "name": "Monster Rider",
+              "description": "At 3rd level, you gain the ability to hop across the battlefield on the backs of larger creatures, as well as maneuver creatures around using your whip. Lasso. When you make a successful attack roll against a creature with your whip, you can forgo doing damage to grapple the creature instead. The DC to escape this grapple is equal to 8 plus your proficiency modifier plus your dexterity modifier. Mount. When you have a Large or bigger non-humanoid creature grappled by your whip, you can use a bonus action to spend one ki point and immediately pull yourself up onto its back or shoulders. This ends the grapple on the creature. While on the back of a Large or bigger creature, you have advantage on Animal Handling checks made to guide or influence the creature's actions."
+            }
+          ]
+        },
+        "6": {
+          "traits": [
+            {
+              "name": "Monster Guider",
+              "description": "When you reach 6th level in this class, your skill with your whip becomes more refined. The reach of your whip increases by five feet. Additionally, when you successfully grapple a creature with your whip, you can spend a ki point to also move that creature a number of feet up to the reach of your whip in any direction, temporarily ignoring the effects of the grapple. Additionally, at 6th level you gain the ability to channel your ki into your interactions with beasts and other creatures. As an action, you can spend a ki point to cast the speak with animals spell without components and without expending a spell slot."
+            }
+          ]
+        },
+        "11": {
+          "traits": [
+            {
+              "name": "Leader of the Herd",
+              "description": "At 11th level, you give off an aura that makes animals trust you quickly, and they will come to your aid. As an action, you can spend 2 ki points to target a beast within 30 feet that can hear you. The target is charmed by you for 10 minutes and can understand your simple commands. You can have a number of creatures charmed at one time equal to your wisdom modifier. If you or an ally harm a creature charmed by this feature, the charm condition ends immediately. Additionally, as an action, you can spend 6 ki points to cast the spectral stampede spell without components and without expending a spell slot. Your spellcasting ability for this spell is wisdom."
+            }
+          ]
+        },
+        "17": {
+          "traits": [
+            {
+              "name": "Freedom of the Plains",
+              "description": "When you reach 17th level in this class, almost nothing can slow you down. You cannot be restrained, and you are not affected by difficult terrain."
+            },
+            {
+              "name": "Lasso Master",
+              "description": "At 17th level, your skill with your whip is unparalleled. Your whip's reach increases to thirty feet. Additionally, when a creature within reach of your whip hits you with a weapon attack, you can use your reaction and spend 3 ki points to make a whip attack against them. If your attack is successful, the damage of the attack targeting you is reduced to 0. You must declare this reaction before damage for the attack is rolled."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

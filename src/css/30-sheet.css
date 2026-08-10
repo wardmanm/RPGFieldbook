@@ -54,6 +54,11 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .sysbadge{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line)}
 .sysbadge.hbw{color:var(--accent-2);border-color:color-mix(in srgb,var(--accent-2) 55%,var(--line))}
 .sysbadge.dnd{color:var(--brick);border-color:color-mix(in srgb,var(--brick) 55%,var(--line))}
+/* app version the character was last reconciled against — quiet when current,
+   accented when the update tool has something to offer */
+.verbadge{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--ink-soft)}
+.verbadge.old{color:var(--accent)}
+.verbadge.old::after{content:"↑";margin-left:1px}
 .hcard-star{background:transparent;border:0;cursor:pointer;font-size:22px;line-height:1;color:var(--ink-soft);padding:0 8px;align-self:center}
 .hcard-star.on{color:var(--accent)}
 /* .icon has a fixed height, so the row's align-items:stretch leaves it at the top; center it like the star */

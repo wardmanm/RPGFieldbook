@@ -1,0 +1,1635 @@
+{
+  "system": "Humblewood",
+  "name": "Humblewood Ancestries (2024)",
+  "version": 2,
+  "_note": "2024 Humblewood ancestries follow 2024 rules: ability score increases come from BACKGROUNDS, not ancestry, so there is no abilityScores field. Two-lineage ancestries model their lineages as subraces. Traits granting a CHOICE of skill are described in text (pick manually); traits granting a fixed skill use the skills array. Base-AC traits (Hedge) and natural-weapon traits (Talons/Antlers/Bite) are described in text — add natural weapons via the Attacks section. Prose is taken verbatim from the source books and playtest packets; speed, languages and abilityChoice are derived from the stat rows. Playtest ancestries are marked by carrying abilityChoice.",
+  "races": [
+    {
+      "name": "Corvum",
+      "category": "Birdfolk",
+      "speed": 30,
+      "languages": "Birdfolk, Common",
+      "description": "Corvums are a crow-like race with dark feathers and sharp minds. Their reputation in birdfolk society is nothing short of villainous, and they are regularly cast as the antagonists of any given situation. It's hard to say whether the corvums are distrusted because they behave the way they do, or if they behave the way they do because they are distrusted.",
+      "traits": [
+        {
+          "name": "Glide",
+          "description": "Using your feathered arms, you can slow your fall, and glide short distances. When falling you can use your Reaction to spread your arms, stiffen your wing feathers, and slow your descent. While doing so, you continue to fall gently at a speed of 60 feet per round, taking no fall damage when you land. If you would fall at least 10 feet in this way, you may fly up to your Speed in one direction you choose, although you cannot choose to move upwards, landing in the space you finish your movement. You can't Glide while carrying heavy weapons or wielding a shield (though you may drop any held items as part of your Reaction). You can't Glide while wearing Heavy armor, or if you are encumbered."
+        },
+        {
+          "name": "Talons",
+          "description": "Your sharp claws aid you in unarmed combat and while climbing. Your Unarmed Strike with your Talons deals 1d4 Piercing damage. Additionally, you have Advantage on Strength (Athletics) checks made to climb any surface your Talons could reasonably grip."
+        },
+        {
+          "name": "Learned",
+          "description": "You gain proficiency in one of the following skills: Arcana, History, Nature, or Religion.",
+          "choices": [
+            {
+              "type": "skill",
+              "choose": 1,
+              "from": [
+                "Arcana",
+                "History",
+                "Nature",
+                "Religion"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Appraising Eye",
+          "description": "You have an almost supernatural ability to appraise objects. When you use a Study Action to examine any object, you can determine any magical properties the item has, how they might be used or activated, as well as a fair estimation of market price. Using this skill strains the eyes, and you must complete a Long or Short Rest before you can use it again."
+        },
+        {
+          "name": "Language of the Air",
+          "description": "You understand Auran, though you cannot speak it naturally."
+        },
+        {
+          "name": "Corvum Lineage",
+          "description": "There are two main lineages of Corvum: Dusk and Kindled. Choose one of these lineages."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Dusk Corvum",
+          "description": "As a dusk corvum, you are more at home in the bustle of society than in the wilds of the forest. You understand subtle social cues the way a hunter understands their prey, and you're just as quick to capitalize on an advantage.",
+          "skills": [
+            "Insight"
+          ],
+          "traits": [
+            {
+              "name": "Skulker",
+              "description": "You have Advantage on Dexterity (Stealth) checks made in Dim Light or Darkness."
+            },
+            {
+              "name": "Street Smarts",
+              "description": "You gain proficiency in the Insight skill."
+            }
+          ]
+        },
+        {
+          "name": "Kindled Corvum",
+          "description": "As a kindled corvum, you know implicitly that you are the smartest in the room. Your ability to utilize your knowledge to your advantage, along with your deep understanding of others' motivations, makes you a formidable opponent.",
+          "traits": [
+            {
+              "name": "Convincing",
+              "description": "Kindled corvums have a way with words, and are accomplished at saying what someone wants or needs to hear. You have proficiency in either the Deception or Persuasion skill. Additionally, you have Advantage on all Charisma checks made to convince someone of your exceptional knowledge on any topic related to the skill you selected with your learned trait (Arcana, History, Nature, or Religion).",
+              "choices": [
+                {
+                  "type": "skill",
+                  "choose": 1,
+                  "from": [
+                    "Deception",
+                    "Persuasion"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Sharp Mind",
+              "description": "You learn one additional language of your choice, gain proficiency in a Tool of your choice, and are able to accurately recall with perfect clarity anything you have seen or heard within the past month."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gallus",
+      "category": "Birdfolk",
+      "speed": 30,
+      "languages": "Birdfolk, Common",
+      "description": "The gallus commonly dwell in small, familial communities as opposed to the grand perches of the Wood. Of the birdfolk, they are the most likely to be found living among the humblefolk. Gallus have a deep respect for nature and a love of gardening unmatched by other birdfolk. They value their social bonds above all else, and are always ready to help their neighbors and promote the common good. They are polite but have little patience for deceit and rudeness.",
+      "traits": [
+        {
+          "name": "Glide",
+          "description": "Using your feathered arms, you can slow your fall, and glide short distances. When falling you can use your Reaction to spread your arms, stiffen your wing feathers, and slow your descent. While doing so, you continue to fall gently at a speed of 60 feet per round, taking no fall damage when you land. If you would fall at least 10 feet in this way, you may fly up to your Speed in one direction you choose, although you cannot choose to move upwards, landing in the space you finish your movement. You can't Glide while carrying heavy weapons or wielding a shield (though you may drop any held items as part of your Reaction). You can't Glide while wearing Heavy armor, or if you are encumbered."
+        },
+        {
+          "name": "Wing Flap",
+          "description": "As a Bonus Action, you can use your powerful feathered arms to propel yourself upward a distance equal to half your Speed. You can use it in conjunction with a regular jump, but not while gliding."
+        },
+        {
+          "name": "Communal",
+          "description": "Whenever you make an Intelligence (History) check related to the history of your race, culture, or community, you are considered proficient in the History skill and add double your Proficiency Bonus to the check, instead of your normal Proficiency Bonus."
+        },
+        {
+          "name": "Militia Training",
+          "description": "You have proficiency in simple weapons."
+        },
+        {
+          "name": "Of the People",
+          "description": "You gain proficiency with the Artisan Tools of your choice, either Brewer's Supplies, Carpenter's Tools, or Smith's Tools."
+        },
+        {
+          "name": "Language of the Air",
+          "description": "You can understand Auran, though you cannot speak it naturally."
+        },
+        {
+          "name": "Gallus Lineage",
+          "description": "There are two main lineages of Gallus: bright and huden. Choose one of these lineages."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Bright Gallus",
+          "description": "As a bright gallus, you are a natural leader. Growing up in your close-knit community has taught you how to inspire others and rally folks to a common cause. This air of command follows you wherever you roam.",
+          "skills": [
+            "Insight"
+          ],
+          "traits": [
+            {
+              "name": "Inspiring",
+              "description": "Using an Action to words of advice or encouragement, you can inspire an ally who is able to see and hear you. The ally can roll a d4 and add the number rolled to their next D20 Test."
+            },
+            {
+              "name": "Understanding",
+              "description": "You have proficiency in the Insight skill."
+            }
+          ]
+        },
+        {
+          "name": "Huden Gallus",
+          "description": "As a huden gallus, you are of the land. Like the Amaranthine Hanera, you have a unique connection to the Great Rhythm of nature, and in return, the Rhythm grants you many gifts. This innate bond with nature may alienate you from city life, but you will always have a home within the more remote parts of the Wood.",
+          "skills": [
+            "Nature"
+          ],
+          "traits": [
+            {
+              "name": "One With the Wood",
+              "description": "You have proficiency in the Nature skill."
+            },
+            {
+              "name": "Seedspeech",
+              "description": "Your connection to the Great Rhythm is such that you can speak with the greenery of the forest itself. Through speech and touch you can communicate simple ideas to living plants. You are able to interpret their responses in simple language. Plants in the Wood do not experience the world in terms of sight, but most can feel differences in temperature, describe things that have touched them, as well as hear vibrations that happened around them (including speech)."
+            }
+          ]
+        },
+        {
+          "name": "Marshfoot",
+          "description": "As a marshfoot gallus, you are self-sufficient, and like to help others become self-sufficient as well. Rivers and lakes are your home, and you can move through water like a fish.",
+          "traits": [
+            {
+              "name": "Waterborne",
+              "description": "You have a swim speed equal to your movement speed."
+            },
+            {
+              "name": "Self Sufficient",
+              "description": "You have proficiency with your choice of cooking utensils, long bow, vehicles (land) or vehicles (water)."
+            },
+            {
+              "name": "Skilled Diver",
+              "description": "While in water, you can take the dash action as a bonus action. You can use this trait a number of times equal to your proficiency bonus, and recover all uses of it after a long rest."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Luma",
+      "category": "Birdfolk",
+      "speed": 25,
+      "languages": "Birdfolk, Common",
+      "description": "Lumas are a race of polar opposites when it comes to their role in perch society. They are as often shunned for their eccentricities as they are celebrated for them. Lumas are smaller than most birdfolk, and resemble either doves or pigeons. Many have ruffs of feathers that shine with unique iridescent colors, something which can be seen as either alluring or unusual. Most fledgling lumas approach social situations with hesitation, until a time when society inevitably labels them an outcast or a notable figure, and the individual naturally adapts to the role.",
+      "traits": [
+        {
+          "name": "Glide",
+          "description": "Using your feathered arms, you can slow your fall, and glide short distances. When falling you can use your Reaction to spread your arms, stiffen your wing feathers, and slow your descent. While doing so, you continue to fall gently at a speed of 60 feet per round, taking no fall damage when you land. If you would fall at least 10 feet in this way, you may fly up to your Speed in one direction you choose, although you cannot choose to move upwards, landing in the space you finish your movement. You can't Glide while carrying heavy weapons or wielding a shield (though you may drop any held items as part of your Reaction). You can't Glide while wearing Heavy armor, or if you are encumbered."
+        },
+        {
+          "name": "Wing Flap",
+          "description": "As a Bonus Action, you can use your powerful feathered arms to propel yourself upward a distance equal to half your Speed. You can use it in conjunction with a regular jump, but not while gliding."
+        },
+        {
+          "name": "Touched",
+          "description": "You know one cantrip from the sorcerer spell list. Charisma is your spellcasting ability for this cantrip."
+        },
+        {
+          "name": "Fated",
+          "description": "Whether by luck or a guiding presence, you always seem to find your way. You can choose to reroll any D20 Test. You can decide to do this after your roll, but only before the outcome of the roll has been determined. You can't use this feature again until you have completed a Long Rest.",
+          "uses": {
+            "max": 1,
+            "per": "long"
+          }
+        },
+        {
+          "name": "Language of the Air",
+          "description": "You can understand Auran, though you cannot speak it naturally."
+        },
+        {
+          "name": "Luma Lineage",
+          "description": "There are two main lineages of Luma: Sable and Sera. Choose one of these lineages."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Sable Luma",
+          "description": "As a sable luma, you are often found on the fringes of social situations. While you are overlooked by the crowd, your gifts are undeniable. You are destined for greatness.",
+          "traits": [
+            {
+              "name": "Hard to Read",
+              "description": "Your innate eccentricities make it hard for other folk to figure you out. When someone performs a Wisdom (Insight) check against you, they have Disadvantage on their roll. Additionally, you have Advantage on Charisma (Deception) checks made against creatures that are not lumas."
+            },
+            {
+              "name": "Resilience",
+              "description": "You have Advantage on saving throws against being Poisoned and Resistance against Poison damage."
+            }
+          ]
+        },
+        {
+          "name": "Sera Luma",
+          "description": "As a sera luma, you are revered and celebrated by those around you. You have an almost unnatural beauty and grace, inspiring admiration in some and jealousy in others.",
+          "traits": [
+            {
+              "name": "Songbird",
+              "description": "When you perform, you can demonstrate the innate and mystical power of your charisma. You can cast the charm person spell once per Long Rest. This spell does not require any somatic components to cast. Charisma is your spellcasting ability for this spell.",
+              "uses": {
+                "max": 1,
+                "per": "long"
+              }
+            },
+            {
+              "name": "Center of Attention",
+              "description": "You have proficiency in the Performance skill."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Raptor",
+      "category": "Birdfolk",
+      "speed": 30,
+      "skills": [
+        "Perception"
+      ],
+      "languages": "Birdfolk, Common",
+      "description": "When the birdfolk think of hunters or rangers, they picture a raptor. Resembling small hawks, eagles, and other birds of prey, they have sharp talons and agile builds that help them effortlessly glide through the canopy. These birdfolk are swift and strong with an uncanny knack for tracking. They are rarely prey, and are quick to turn the tables when finding themselves hunted.",
+      "traits": [
+        {
+          "name": "Size & Speed",
+          "description": "Choose Small or Medium. Your walking Speed is 25 ft if Small or 30 ft if Medium — set your Speed to match."
+        },
+        {
+          "name": "Glide",
+          "description": "Using your feathered arms, you can slow your fall, and glide short distances. When falling you can use your Reaction to spread your arms, stiffen your wing feathers, and slow your descent. While doing so, you continue to fall gently at a speed of 60 feet per round, taking no fall damage when you land. If you would fall at least 10 feet in this way, you may fly up to your Speed in one direction you choose, although you cannot choose to move upwards, landing in the space you finish your movement. You can't Glide while carrying heavy weapons or wielding a shield (though you may drop any held items as part of your Reaction). You can't Glide while wearing Heavy armor, or if you are encumbered."
+        },
+        {
+          "name": "Talons",
+          "description": "Your sharp claws aid you in unarmed combat and while climbing. Your Unarmed Strike with your Talons deals 1d4 Piercing damage. Additionally, you have Advantage on Strength (Athletics) checks made to climb any surface your Talons could reasonably grip."
+        },
+        {
+          "name": "Keen Senses",
+          "description": "You have proficiency in the Perception skill."
+        },
+        {
+          "name": "Woodland Hunter",
+          "description": "Your accuracy allows you to treat Three-quarters Cover as Half Cover and Half Cover as no Cover."
+        },
+        {
+          "name": "Language of the Air",
+          "description": "You can understand Auran, though you cannot speak it naturally."
+        },
+        {
+          "name": "Hunter's Training",
+          "description": "You have proficiency with longbows, shortbows, and spears. Additionally, your familiarity with the longbow means that it is not considered a heavy weapon for you."
+        },
+        {
+          "name": "Raptor Lineage",
+          "description": "There are two main lineages of Raptor: Maran and Mistral. Choose one of these lineages."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Maran Raptor",
+          "description": "As a maran raptor, you are as at home in the water as you are in the trees. You also have a wealth of patience, acting only when it best suits your goals.",
+          "traits": [
+            {
+              "name": "Swimmer",
+              "description": "You have a Swim Speed of 25 feet."
+            },
+            {
+              "name": "Patient",
+              "description": "When take the Ready Action, you have Advantage on the first D20 Test you make as a part of that Action."
+            }
+          ]
+        },
+        {
+          "name": "Mistral Raptor",
+          "description": "As a mistral raptor, you are most at home far from the ground. You can range for miles in the Wood without ever setting talon to soil, moving more confidently through the branches than some move on flat ground.",
+          "traits": [
+            {
+              "name": "Diving Strike",
+              "description": "You excel at striking from above, capitalizing on a glide or dive to close on prey (see book for specifics)."
+            },
+            {
+              "name": "Agile",
+              "description": "You have proficiency in the Acrobatics skill."
+            },
+            {
+              "name": "Aerial Defense",
+              "description": "Creatures that attack you while you are falling, gliding, or jumping have Disadvantage on their attack roll."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Strig",
+      "category": "Birdfolk",
+      "speed": 30,
+      "languages": "Birdfolk, Common",
+      "description": "Strigs are the most imposing of the birdfolk races. Resembling owls, their thick feathers, solid bodies, and broad wings have earned them a reputation as the most powerful of the birdfolk races. They value strength and endurance, traits they believe crucial for survival in the Wood. Although they are not necessarily prejudiced against those who are weaker, strigs are quick to call out when someone is not doing their best for the common good.",
+      "traits": [
+        {
+          "name": "Glide",
+          "description": "Using your feathered arms, you can slow your fall, and glide short distances. When falling you can use your Reaction to spread your arms, stiffen your wing feathers, and slow your descent. While doing so, you continue to fall gently at a speed of 60 feet per round, taking no fall damage when you land. If you would fall at least 10 feet in this way, you may fly up to your Speed in one direction you choose, although you cannot choose to move upwards, landing in the space you finish your movement. You can't Glide while carrying heavy weapons or wielding a shield (though you may drop any held items as part of your Reaction). You can't Glide while wearing Heavy armor, or if you are encumbered."
+        },
+        {
+          "name": "Talons",
+          "description": "Your sharp claws aid you in unarmed combat and while climbing. Your Unarmed Strike with your Talons deals 1d4 Piercing damage. Additionally, you have Advantage on Strength (Athletics) checks made to climb any surface your Talons could reasonably grip."
+        },
+        {
+          "name": "Darkvision",
+          "description": "You have Darkvision with a range of 60 feet."
+        },
+        {
+          "name": "Patterned Feathers",
+          "description": "You have Advantage on Dexterity (Stealth) checks when you attempt to Hide in a forest."
+        },
+        {
+          "name": "Language of the Air",
+          "description": "You can understand Auran, though you cannot speak it naturally."
+        },
+        {
+          "name": "Strig Lineage",
+          "description": "There are two main lineages of Strig: Stout and Swift. Choose one of these lineages."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Stout Strig",
+          "description": "As a stout strig, you are as hearty as you are strong, able to weather hardship and impose your will on the world around you.",
+          "skills": [
+            "Intimidation"
+          ],
+          "traits": [
+            {
+              "name": "Imposing",
+              "description": "You have proficiency in the Intimidation skill."
+            },
+            {
+              "name": "Brawler",
+              "description": "When you successfully attack a target with your Talons, you can choose to Grapple that target as a Bonus Action."
+            }
+          ]
+        },
+        {
+          "name": "Swift Strig",
+          "description": "As a swift strig, you are a powerful force in the Wood who ranges far and wide without ever missing a step. You are most capable when immersed in the forest.",
+          "skills": [
+            "Survival"
+          ],
+          "traits": [
+            {
+              "name": "Swift",
+              "description": "Your base walking speed increases to 35 feet.",
+              "effects": [
+                {
+                  "target": "speed",
+                  "value": 5
+                }
+              ]
+            },
+            {
+              "name": "Survivor",
+              "description": "You have proficiency in the Survival skill."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cervan",
+      "category": "Humblefolk",
+      "speed": 30,
+      "languages": "Humblefolk, Common",
+      "description": "Cervans are a versatile deer-like folk who make their homes in small, intimate villages throughout Humblewood. More insular than other humblefolk, cervans often reside deep in the most ancient parts of Humblewood's vast forest, in tree stands and groves far from birdfolk perches.",
+      "traits": [
+        {
+          "name": "Practical",
+          "description": "Cervans are eminently practical and like to spend their time learning useful skills for life in their woodland villages. You gain proficiency in one of the following skills: Athletics, Medicine, Nature, or Survival.",
+          "choices": [
+            {
+              "type": "skill",
+              "choose": 1,
+              "from": [
+                "Athletics",
+                "Medicine",
+                "Nature",
+                "Survival"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Surge of Vigor",
+          "description": "As a cervan, you possess a great tenacity and will to survive, which allows you to bounce back from even the most devastating blows. If an attack deals over half of your current remaining hit points in damage, (even if your hit points are reduced to 0 by the attack), you immediately regain hit points equal to 1d12 + your Constitution modifier. You can't use this feature again until you have completed a Long Rest."
+        },
+        {
+          "name": "Cervan Lineage",
+          "description": "There are two main lineages of Cervan: Grove and Pronghorn. Choose one of these lineages."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Grove Cervan",
+          "description": "As a grove cervan, you are swift and agile, able to quickly maneuver out of harm's way. You are also incredibly versatile and can fulfill a variety of roles within a village or an adventuring party.",
+          "traits": [
+            {
+              "name": "Swift",
+              "description": "Your base walking speed increases to 35 feet.",
+              "effects": [
+                {
+                  "target": "speed",
+                  "value": 5
+                }
+              ]
+            },
+            {
+              "name": "Standing Leap",
+              "description": "Your base long jump is 30 feet, and your base high jump is 15 feet, with or without a running start."
+            },
+            {
+              "name": "Nimble Step",
+              "description": "Opportunity Attacks made against you are rolled with Disadvantage."
+            }
+          ]
+        },
+        {
+          "name": "Pronghorn Cervan",
+          "description": "As a pronghorn cervan, you were born larger and stronger than others in the community and found yourself laden with expectations from a very young age. It is up to you whether you embrace your position of privilege, or rebel against the constraints thrust upon you by cervan society.",
+          "traits": [
+            {
+              "name": "Robust Build",
+              "description": "Your carrying capacity and the weight you can push, drag, or lift are doubled."
+            },
+            {
+              "name": "Antlers",
+              "description": "You have a set of large, strong antlers that can be used to make devastating charge attacks. You can use your Unarmed Strike to gore opponents, dealing 1d6 + your Strength modifier Piercing damage on a hit. Additionally, if you move at least 20 feet in a straight line toward an opponent, you can spend a Bonus Action to charge them, dealing an extra 1d6 Piercing damage. If the target of your charge is Large or smaller, they must make a Strength saving throw against a DC of your Proficiency Bonus + 8 + your Strength modifier. On a failed save, the target is pushed 10 feet away from you into a space of your choice."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Hedge",
+      "category": "Humblefolk",
+      "speed": 25,
+      "languages": "Humblefolk, Common",
+      "description": "The most diplomatic and good natured of all the humblefolk, hedges like to live quiet lives in villages throughout the Wood, or within the safety of birdfolk perches. They resemble hedgehogs, although the quills that cover their backs are far tougher, hard enough to repel blades and sharp enough to pierce the solid hides of monstrous creatures. Despite their sturdiness, hedges are sensitive and emotional creatures, who display meekness more than bravado. Their meek demeanor and deference in social situations has earned them a reputation as cowards in the eyes of outsiders. But rather than being born of cowardice, their behavior stems from a desire to respect the feelings and sensitivities of others, something considered to be of utmost importance in hedge society.",
+      "traits": [
+        {
+          "name": "Burrow",
+          "description": "You have a Burrow Speed of 15 feet."
+        },
+        {
+          "name": "Spiny Quills",
+          "description": "The backs of hedges are covered with spiny quills, which makes it impossible for hedges to wear armor. These quills provide exceptional protection, therefore you have a base armor class of 14 + your Dexterity modifier. Even though you can't wear armor, you can still benefit from the armor class bonus provided by shields so long as you are proficient with them."
+        },
+        {
+          "name": "Curl Up",
+          "description": "You can use your action to curl up, exposing attackers to a wall of your toughened quills. While curled up you cannot move, attack, or cast spells with somatic components, and your base armor class becomes 19. You cannot benefit from any Dexterity bonus to armor class while curled up, but you can still use shields. Any creature that misses you with a melee attack while you are curled up takes 2d4 Piercing damage from your sharp quills. If a creature hits you while you are curled up, you are knocked Prone in your space at the end of the turn. You may uncurl yourself at any point during your turn."
+        },
+        {
+          "name": "Forest Magic",
+          "description": "You have a deep connection to the magic of the Wood. You know the druidcraft cantrip. Additionally, you can cast animal messenger as a 2nd level spell once with this trait, and regain the ability to do so after a short or Long Rest. Charisma is your spellcasting ability for these spells."
+        },
+        {
+          "name": "Speak with Bugs",
+          "description": "Through sounds and gestures, you can communicate simple ideas with creatures of the beast subtype that represent insects, spiders, worms, and other creepy crawlies, regardless of their size."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Arma Hedge",
+          "description": "Armadillo- and pangolin-like hedges with bony armor plates instead of spiny quills, blessed by Henwin with a deep connection to the earth.",
+          "traits": [
+            {
+              "name": "Armor Plates",
+              "description": "You have tough plates of bone or keratin that cover your body and make it impossible to wear armor (though you can still use shields). Your base AC is 17 and does not benefit from your Dexterity modifier."
+            },
+            {
+              "name": "Earthblessed",
+              "description": "You know the resistance cantrip and can cast it without requiring material components. Additionally, you can cast cymatic sight* without material components once using this trait and regain the ability to do so when you finish a long rest. Charisma is your spellcasting ability for these spells."
+            },
+            {
+              "name": "Plate Wall",
+              "description": "As an action, you can focus on defense to present your foes with a solid wall of your armor plates. Until the start of your next turn, you have resistance to all damage except psychic damage and you have advantage on ability checks and saving throws to resist being moved or knocked prone. When you take this action, your speed becomes 0 until the end of your next turn. If you are moved before your next turn, your Plate Wall effect ends and you land prone in the space you were moved to."
+            },
+            {
+              "name": "Speech of Stone and Soil",
+              "description": "You have the magical ability to speak with rocks, crystals, and minerals. When doing so, you impart limited sentience on the stone for a number of minutes equal to your proficiency bonus. During this time, the rock communicates with you telepathically, and it can transmit any basic occurrences it has experienced (for example, pressure, temperature, wetness, or sounds, such as words spoken near it)."
+            },
+            {
+              "name": "Size",
+              "description": "Arma hedges are taller than their spiny cousins, standing between around 3 and 4 1⁄2 feet, and tend to have heavy builds, weighing between just over 70 and just over 100 pounds. Your size is Small or Medium."
+            }
+          ],
+          "abilityChoice": {
+            "modes": [
+              "2-1"
+            ],
+            "hint": "typical: CON & CHA"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jerbeen",
+      "category": "Humblefolk",
+      "speed": 30,
+      "languages": "Birdfolk, Jerbeen",
+      "description": "Jerbeens are small mouse-like folk with long, furred tails that help them balance. In proportion to the rest of their body, a jerbeen's legs are long and powerful. Jerbeens can be found in a variety of places across the Wood, usually forming their own communities within birdfolk perches and humblefolk villages. Seldom do they live alone. A jerbeen's home can contain several generations, including extended family and cousins living together under one roof. Jerbeens have a strong sense of family and like to surround themselves with good company wherever they rest.",
+      "traits": [
+        {
+          "name": "Nimbleness",
+          "description": "You can move through the space of any creature that is of a size larger than yours but can't stop in that space."
+        },
+        {
+          "name": "Take Heart",
+          "description": "You have Advantage on Strength saving throws and saving throws against being Frightened as long as you are within 5 feet of an ally who isn't Frightened or Incapacitated that you can both see and hear."
+        },
+        {
+          "name": "Team Tactics",
+          "description": "You can use the Help action as a Bonus Action."
+        },
+        {
+          "name": "Standing Leap",
+          "description": "Your base long jump is 30 feet, and your base high jump is 15 feet, with or without a running start."
+        },
+        {
+          "name": "Languages",
+          "description": "You can speak, read, and write Birdfolk and Jerbeen."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Rockburrow Jerbeen",
+          "description": "Additionally, as a rockburrow jerbeen, you have the following traits:",
+          "traits": [
+            {
+              "name": "Cheek Pouches",
+              "description": "Your cheeks have elastic pouches that can  ⁄5stretch to fit cubic feet and allow you to safely store up to 2 lbs of objects. While stored in this way, objects are concealed and have total cover. You can stow or retrieve objects in your cheek pouches as a bonus action."
+            },
+            {
+              "name": "Fluff Up",
+              "description": "As a bonus action, you can give yourself advantage on Intimidation checks against creatures that are Medium or Large."
+            },
+            {
+              "name": "Thick Fur",
+              "description": "You have resistance to nonmagical bludgeoning damage."
+            },
+            {
+              "name": "Size",
+              "description": "Rockburrow jerbeens have heavier and denser bodies than field scurry jerbeens and are slightly taller on average, standing between 2 1⁄2 and 3 1⁄2 feet tall, and weighing between 40 and 60 pounds. Your size is Small."
+            }
+          ],
+          "abilityChoice": {
+            "modes": [
+              "2-1",
+              "1-1-1"
+            ],
+            "hint": "typical: CON & WIS"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mapach",
+      "category": "Humblefolk",
+      "speed": 30,
+      "languages": "Humblefolk, Common",
+      "description": "Naturally curious, mapachs are a medium-sized racoon-like race. They are crafty, hearty, and tough, but their true strength lies in the potential they see when looking at the world around them. Mapachs have incredibly light hands and a great degree of fine motor control that doesn't diminish with age. They are also adept at climbing and sneaking. This, combined with their love of trinkets, has earned them an undeserved reputation as thieves. While there are exceptions, most mapachs are quite good-natured, if a little eccentric.",
+      "traits": [
+        {
+          "name": "Climber",
+          "description": "You have a Climb Speed of 20 feet."
+        },
+        {
+          "name": "Darkvision",
+          "description": "You have Darkvision with a range of 60 feet."
+        },
+        {
+          "name": "Resilience",
+          "description": "You have Advantage on saving throws against being Poisoned and Resistance against Poison damage."
+        },
+        {
+          "name": "Scroungecraft",
+          "description": "You are proficient with Tinker's Tools. Additionally, you have the ability to construct crude but functional versions of common items using materials present in your surroundings. You may spend 10 minutes to craft these materials into any tool or piece of adventuring gear worth 30 gold pieces or less. The item will be completely functional, even capable of passing for a disguise (if you crafted an article of clothing). Tools, along with any other item that would logically break on its first use (caltrops, arrows), will become useless afterward. Scroungecrafted items will otherwise last 1 hour before falling apart. Depending on the materials available, a Game Master (GM) may rule that you cannot craft an item in this way. For example, a vial of acid might be easy to make if you happen to be near a nest of acidic beetle larvae, or bark can be bound into a makeshift flask, but it would be difficult to create a passable facsimile of silken robes from a pile of leaves. Should you have access to the proper materials, you can spend 8 hours converting an item you have Scroungecrafted in this way into a permanent version, so long as you start this process before the item falls apart. Items crafted in such a way will function exactly as a normal version of the item, and if you have proficiency in the tools used to craft them, they can even look professionally crafted. Otherwise, they retain a rather rough, cobbled-together appearance. You can also use Scroungecraft to repair broken equipment, provided you have the materials on hand. How long your repairs hold together is up to the GM."
+        },
+        {
+          "name": "Skulker",
+          "description": "You have Advantage on Stealth checks made in Dim Light and Darkness."
+        }
+      ]
+    },
+    {
+      "name": "Vulpin",
+      "category": "Humblefolk",
+      "speed": 30,
+      "languages": "Humblefolk, Common",
+      "description": "Vulpins are fox-like in appearance, with light builds and sharp fangs. One of the least understood and most often vilified humblefolk in the Wood, vulpins have earned a bad reputation that isn't entirely deserved. Much of this stems from the fact that vulpins are ambitious. Sometimes their drive to succeed can make it difficult for them to empathize with others. Vulpins feel just as deeply as other folk of the Wood, but they possess a keen survival instinct which sometimes causes them to take courses of action that are selfish. Moreover, they are sharp and savvy, possessing an uncanny force of personality that allows them to easily sway the trust of others. In the right situations, vulpins can be true friends, and in the wrong ones, deadly enemies.",
+      "traits": [
+        {
+          "name": "Darkvision",
+          "description": "You have Darkvision with a range of 60 feet."
+        },
+        {
+          "name": "Bite",
+          "description": "You have sharp fangs that enable you to make natural bite attacks. You can choose to bite as an Unarmed Strike that deals 1d6 Piercing damage, which can be calculated using either your Strength or Dexterity modifier for both the attack roll and damage bonus."
+        },
+        {
+          "name": "Evasive",
+          "description": "You add your Intelligence modifier as a bonus on all Dexterity saving throws."
+        },
+        {
+          "name": "Bewitching Guile",
+          "description": "You can cast charm person as a 1st level spell with this trait, and regain the ability to do so when you finish a Long Rest. When you reach character level 3, you can cast ambush prey as a 2nd level spell with this trait, and regain the ability to do so when you finish a Long Rest. When you reach character level 5, you can cast fear with this trait, and regain all expended uses when you finish a Long Rest. Intelligence is your spellcasting ability for these spells."
+        }
+      ]
+    },
+    {
+      "name": "Greno",
+      "category": "Greno",
+      "speed": 30,
+      "languages": "Birdfolk, Greno",
+      "description": "Greno are a folk similar to frogs and toads. They live comfortably in water and on land thanks to their amphibious nature and webbed hands and feet that make them excellent swimmers.",
+      "traits": [
+        {
+          "name": "Amphibious",
+          "description": "You can breathe air and water."
+        },
+        {
+          "name": "Bombastic Croak",
+          "description": ". As a bonus action, when you make a weapon attack or a spell attack that has a verbal component, you can empower your attack with a war croak. If your attack hits, it is considered a critical hit. Your croak can be heard 1,000 feet away. Once you have used this ability, you can't use it again until you finish a long rest.",
+          "uses": {
+            "max": 1,
+            "per": "long"
+          }
+        },
+        {
+          "name": "Jumper",
+          "description": "Your long jump is a distance equal to your walking speed and your high jump is a distance equal to half your walking speed, with or without a running start."
+        },
+        {
+          "name": "Swimmer",
+          "description": "You have a swimming speed equal to your walking speed."
+        },
+        {
+          "name": "Size",
+          "description": "Grenos tend towards either streamlined builds or round ones. Your size is Medium or Small."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Venim",
+          "description": "Inspired by poisonous frogs, these flamboyant grenos warn of their dangerous skin with vibrant colors.",
+          "traits": [
+            {
+              "name": "Poison Skin (3/Day)",
+              "description": ". When a creature touches you or hits you with a melee weapon attack, you can use your reaction to force that creature to make a Constitution saving throw (DC equals 8 + your Constitution modifier + proficiency bonus). On a failed save, the creature takes poison damage equal to double your proficiency bonus and is poisoned until the end of your next turn.",
+              "uses": {
+                "max": 3,
+                "per": "long"
+              }
+            },
+            {
+              "name": "Warning Colors",
+              "description": "You are proficient in the Intimidation skill.",
+              "skills": [
+                "Intimidation"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Veret",
+          "description": "Inspired by wood frogs, grass frogs, and green frogs, these adaptable grenos are particularly sensitive to their environments.",
+          "traits": [
+            {
+              "name": "Sticky Feet",
+              "description": "You have a climbing speed equal to your walking speed."
+            },
+            {
+              "name": "Sensitive Skin",
+              "description": "You can cast the detect poison and disease spell at will without the need for verbal or material components. When you reach 5th level, you can also cast the protection from poison spell once a day without expending a spell slot. Wisdom is your spellcasting ability for these spells.",
+              "uses": {
+                "max": 1,
+                "per": "long"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verru",
+          "description": "Inspired by toads, these tough grenos are well-adapted to life on land and have a reputation for great endurance.",
+          "traits": [
+            {
+              "name": "Unslowed Toad",
+              "description": "You have advantage on saving throws to resist gaining levels of exhaustion and being petrified."
+            },
+            {
+              "name": "Warty Skin",
+              "description": "You have resistance to slashing damage."
+            }
+          ]
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1",
+          "1-1-1"
+        ],
+        "hint": "typical: venim CON & WIS, veret WIS & DEX, verru WIS & STR"
+      }
+    },
+    {
+      "name": "Sylph",
+      "category": "Birdfolk",
+      "speed": 35,
+      "languages": "Birdfolk, plus one language of your choice; you also understand Auran but can't speak it",
+      "description": "The sylph are the smallest of all the birdfolk in Everden. They have the speed, liveliness, and energy of hummingbirds. It is unwise to underestimate the short-statured sylphs as they are capable of great feats of endurance and bravery.",
+      "traits": [
+        {
+          "name": "Determined",
+          "description": "You have advantage on saving throws against being frightened and taking levels of exhaustion."
+        },
+        {
+          "name": "Diminutive",
+          "description": "You can move through the space of any creature that is of a size larger than yours."
+        },
+        {
+          "name": "Healing Stillness",
+          "description": "When you take a short rest, you can choose to enter a deep slumber that lasts at least 1 hour to preserve your energy. During this slumber, you are unconscious. Any hit dice you spend while resting in this way are rolled with advantage. If you wake early from your slumber, you do not gain this benefit, but you can still spend hit dice as normal and gain the normal benefits of a short rest."
+        },
+        {
+          "name": "Hover",
+          "description": "By beating your feathered forearms rapidly, you can hold yourself steady in the air for brief periods. When falling, you can use your reaction to halt your descent and begin to hover in place. On subsequent turns, you must use a bonus action to continue hovering. When you stop hovering, you begin to glide straight down at a rate of 30 feet per round, and you don't take any damage from the fall or land prone. You can't hover while wearing heavy armor or if you are encumbered."
+        },
+        {
+          "name": "Wing Flap",
+          "description": "As a bonus action, you can use your feathered arms to propel yourself upward a distance equal to half your movement speed. You can use it in conjunction with a regular jump, and can use your hover trait following your wing flap."
+        },
+        {
+          "name": "Quick Reflexes",
+          "description": "You can take two reactions. Once you have used this ability, you can't use it again until you finish a short or long rest.",
+          "uses": {
+            "max": 1,
+            "per": "short"
+          }
+        },
+        {
+          "name": "Moving Target",
+          "description": "When you take the Dash action, the next attack made against you before the start of your next turn is made with disadvantage."
+        },
+        {
+          "name": "Size",
+          "description": "Most sylphs are under two and a half feet tall and weigh around 30 pounds. Your size is Small."
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1"
+        ],
+        "hint": "typical: DEX & CON"
+      }
+    },
+    {
+      "name": "Tilia",
+      "category": "Tilia",
+      "speed": 30,
+      "languages": "Birdfolk, Tilian",
+      "description": "Tilias are a gecko-like folk known for their curiosity, openness, and joviality. Creativity and open-mindedness are the cornerstones of tilian society, and those seen as sophisticated are held in great regard. The most respect, however, is afforded to those who can advance their agendas subtly through wit and charm.",
+      "traits": [
+        {
+          "name": "Sticky Grip",
+          "description": "Your hands and feet have special pads that allow you to climb in extraordinary ways. You can climb upside down or on difficult surfaces without making ability checks."
+        },
+        {
+          "name": "Sticky Tongue",
+          "description": "Your long, sticky tongue can be used to grab distant objects. As a bonus action, you can extend your tongue toward an object weighing 20 pounds or less that you can see within 20 feet of you. Your tongue grabs the object and pulls it to you in a straight line. You can catch the object if you have a free hand; otherwise, it lands at your feet. If the object is being held or carried by a creature, the creature can maintain its hold on the object by succeeding on an opposed Strength (Athletics) check against you. Alternatively, you can use your action to project your tongue at a surface within 20 feet, pulling you directly to it and provoking opportunity attacks as normal."
+        },
+        {
+          "name": "Purifying Skin",
+          "description": "Your scales secrete an oil that protects you from infection. You have advantage on saving throws made to resist being infected with a disease."
+        },
+        {
+          "name": "Size",
+          "description": "Your size is Medium or Small. Tilias range from smaller builds that are just under 3 feet tall to around 5 feet tall and have long bodies that tend to be lighter than they look."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Treescale Tilia",
+          "description": "As a treescale tilia, you are adept at blending into your forest surroundings and can secrete a natural toxin from your scales. Treescale tilias often have bright-colored or patterned scales that blend in with the leaves and trees of the forest. They tend to prefer balmy climates with lots of lush greenery. Many treescale tilia are found throughout the jungles of the Tanglewilds and the windswept Gasparian Isles far to the east of Wesden.",
+          "traits": [
+            {
+              "name": "Forest Cunning",
+              "description": "You have advantage on Dexterity (Stealth) checks made to hide in forests and jungles."
+            },
+            {
+              "name": "Poison Skin",
+              "description": "Your scales can secrete toxins at will. When a creature touches you or hits you with a melee weapon attack using natural weapons, you can use your reaction to force that creature to make a Constitution saving throw (DC equals 8 + your Constitution modifier + your proficiency bonus). On a failed save, the creature takes poison damage equal to double your proficiency bonus and is poisoned until the end of your next turn. On a success, they take half as much damage and aren't poisoned. You can use it a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest.",
+              "uses": {
+                "max": 2,
+                "per": "long"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sandscale Tilia",
+          "description": "As a sandscale tilia, you are perfectly adapted to the desert heat and can easily hide and travel in sandy environments. Sandscale tilias have warm or sandy-colored scales and dark eyes that counteract the glare of the sun. They thrive in arid places across Everden, with large communities in the desert land of Dustbloom, which lies far from Wesden across the vast Songsea. Like all tilias, their curiosity compels them to learn more about the world. Adventurous sandscales can be found traveling in Wesden, searching for tales to bring back home.",
+          "traits": [
+            {
+              "name": "Desert Lore",
+              "description": "You have proficiency in the Nature skill. Additionally, you have advantage on Wisdom (Survival) checks made in desert environments.",
+              "skills": [
+                "Nature"
+              ]
+            },
+            {
+              "name": "Heat Tolerance",
+              "description": "You are naturally adapted to hot climates. You automatically succeed on saving throws to resist exhaustion from exposure to heat in excess of 100 degrees Fahrenheit, and you can survive without water for 4 days before suffering from exhaustion."
+            },
+            {
+              "name": "Sand Swimmer",
+              "description": "You glide through the sand with ease. When moving through sand, you have a burrow speed equal to your walking speed, and you have advantage on Dexterity (Stealth) checks to hide while burrowing through sand."
+            }
+          ]
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1",
+          "1-1-1"
+        ],
+        "hint": "typical: DEX & CON, or DEX/CON/CHA"
+      }
+    },
+    {
+      "name": "Eluran",
+      "category": "Eluran",
+      "speed": 30,
+      "languages": "Eluran, plus one language of your choice",
+      "description": "Elurans are feline folk renowned for their poise, calm demeanor, and keen insight into the motives of others. Some elurans are talented craftspeople whose wares are traded as far as the northern Frostcap Mountains. The eluran culture has flourished in the jungle of the Tanglewilds.",
+      "traits": [
+        {
+          "name": "Darkvision",
+          "description": "Your eyes are well suited to hunting at night. You can see in dim light within 60 feet of you as if it were bright light and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+        },
+        {
+          "name": "Claws",
+          "description": "You have sharp claws that you can use as natural weapons to make unarmed strikes. When you hit with them, the strike deals 1d6 + your Strength modifier slashing damage, instead of the bludgeoning damage normal for an unarmed strike. Additionally, you have advantage on Strength (Athletics) checks made to climb any surface your claws could reasonably grip."
+        },
+        {
+          "name": "Graceful Landing",
+          "description": "When you fall, you don't land prone as long as you aren't incapacitated. Additionally, you can subtract up to 20 feet from a fall when calculating falling damage."
+        },
+        {
+          "name": "Wariness",
+          "description": "You have keen senses and a knack for avoiding danger. You have proficiency in the Insight and Perception skills.",
+          "skills": [
+            "Insight",
+            "Perception"
+          ]
+        },
+        {
+          "name": "Size",
+          "description": "Elurans come in a variety of shapes and sizes, ranging from 3 and a half to just over 6 feet in height, with builds that range from slender to plump or muscular. Your size is Medium or Small."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Moon Eluran",
+          "description": "As a moon eluran, you can produce a gentle healing purr. Moon elurans are generally smaller than their sun counterparts and have appearances that many find endearing.",
+          "traits": [
+            {
+              "name": "Soothing Purr",
+              "description": "You can produce a comforting purr to calm jangled nerves during a short rest. If you or any friendly creatures who can hear your purr regain hit points at the end of the short rest by spending one or more Hit Dice, each of"
+            },
+            {
+              "name": "Paws of the Artist",
+              "description": "You gain proficiency with a set of artisan's tools or a musical instrument of your choice."
+            }
+          ]
+        },
+        {
+          "name": "Sun Eluran",
+          "description": "As a sun eluran, you possess a hunter's instincts and can unleash a fearsome roar. Sun elurans are more physically imposing than their moon counterparts and tend to have manes or patterns of dark spots or stripes on their fur.",
+          "traits": [
+            {
+              "name": "Thunderous Roar",
+              "description": "As an action, you can unleash a mighty, earth-shaking roar. When you do so, each Large or smaller creature within 10 feet of you must succeed on a Constitution saving throw with a DC equal to 8 + your Strength modifier + your proficiency bonus or be knocked prone. Once you unleash your roar, you can't do so again until you finish a long rest.",
+              "uses": {
+                "max": 1,
+                "per": "long"
+              }
+            },
+            {
+              "name": "Hunter's Weapon Training",
+              "description": "You have proficiency with blowguns, clubs, javelins, longbows, scimitars, and spears. using tools in unconventional ways, means that if a seeta is not sufficiently entertained, they will often make their own fun, especially if that fun involves taking something apart."
+            }
+          ]
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1"
+        ],
+        "hint": "typical: moon DEX & WIS, sun STR & WIS"
+      }
+    },
+    {
+      "name": "Seeta",
+      "category": "Birdfolk",
+      "speed": 30,
+      "languages": "Birdfolk, plus two languages of your choice; you also understand Auran but can't speak it",
+      "description": "Seeta are a diverse group of birdfolk with colorful plumage and prominent beaks. Many seeta make their home in treetop communities throughout the Tanglewilds and in the Gasparian Isles.",
+      "traits": [
+        {
+          "name": "Glide",
+          "description": "Using your feathered arms, you can slow your fall and glide short distances. When falling, you can use your reaction to spread your arms, stiffen your wing feathers, and slow your descent. While doing so, you continue to fall gently at a speed of 60 feet per round, taking no fall damage when you land. If you would fall at least 10 feet in this way, you may fly up to your movement speed in any direction you choose, although you cannot choose to move upwards, landing in the space you finish your movement. You cannot glide while carrying heavy weapons or wielding a shield (though you may drop any held items as part of your reaction to spread your arms). You cannot glide while wearing heavy armor, or if you are encumbered."
+        },
+        {
+          "name": "Wing Flap",
+          "description": "As a bonus action, you can use your powerful feathered arms to propel yourself upward a distance equal to half your movement speed. You can use it in conjunction with a regular jump, but not while gliding."
+        },
+        {
+          "name": "Strong Beak",
+          "description": "Your large curved beak is a natural weapon that you can use to make unarmed strikes. On a hit, you deal piercing damage equal to 1d6 + your Strength modifier, instead of the bludgeoning damage normal for an unarmed strike."
+        },
+        {
+          "name": "Striking Plumage",
+          "description": "You have proficiency in the Intimidation skill.",
+          "skills": [
+            "Intimidation"
+          ]
+        },
+        {
+          "name": "The Knack",
+          "description": "You can turn your talons to many crafts. You have proficiency with two sets of artisan's tools of your choice. You can also use these tools in unconventional ways. You can use artisan's tools that you are proficient with to attempt a check that would usually require a different set of tools. When using tools in this way, you can add half your proficiency bonus, rounded down, to the check."
+        },
+        {
+          "name": "Mimicry",
+          "description": "You have the innate ability to alter your voice, allowing you to convincingly replicate any sound you've heard, such as another voice, a spell being cast, or the sound of a weapon striking stone. A creature that hears the sounds can tell that they are imitations with a successful Wisdom (Insight) check. The DC for this check equals 8 + your proficiency bonus + your Intelligence modifier (minimum of 1)."
+        },
+        {
+          "name": "Size",
+          "description": "Most seeta stand 4 to 5 feet tall and weigh around 90 pounds, but it is not uncommon for them to be smaller and lighter. Your size is Medium or Small."
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1"
+        ],
+        "hint": "typical: INT & STR"
+      }
+    },
+    {
+      "name": "Capran",
+      "category": "Capran",
+      "speed": 30,
+      "languages": "Birdfolk, Capran",
+      "description": "Caprans are a group of goatand sheep-like folk whose myths say they parted ways with the cervans living in Humblewood in ancient times. They traveled across the tall peaks of the Horned Ridge under the guidance of Arghan, their patron Amaranthine. Capable of enduring rugged environments, caprans make their homes across Wesden, from the steppes and foothills of Firnveldt to the frozen north of the Crystal Expanse and the volatile wilderness of Stormcrag.",
+      "traits": [
+        {
+          "name": "Hard Headed",
+          "description": "Whether or not you have horns, you can use your tough head to deliver unarmed strikes. When you hit with it, the strike deals 1d6 + your Strength modifier bludgeoning damage, instead of the bludgeoning damage normal for an unarmed strike. If you move at least 20 feet straight toward a target and then hit it with an unarmed strike using your head, the target must succeed on a Strength saving throw against a DC equal to 8 + your Strength modifier + your proficiency bonus, or be knocked prone."
+        },
+        {
+          "name": "Stubborn Mind",
+          "description": "You have advantage on saving throws against being charmed."
+        },
+        {
+          "name": "Size",
+          "description": "Caprans generally stand between 5 1⁄2 and 6 1⁄2 feet tall and tend to have solid builds. Your size is Medium."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Yantan Capran",
+          "description": "Often resembling mountain goats, markhor, and ibexes, yantan caprans are sturdy survivors. They are adapted to move through harsh and rugged conditions with ease. Most yantan caprans have horns, which can vary greatly in size and shape.",
+          "traits": [
+            {
+              "name": "Legacy of Learning",
+              "description": "You gain proficiency in one of the following skills: Animal Handling, Athletics, or History.",
+              "choices": [
+                {
+                  "type": "skill",
+                  "choose": 1,
+                  "from": [
+                    "Animal Handling",
+                    "Athletics",
+                    "History"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Sure Footing",
+              "description": "You ignore nonmagical difficult terrain and have advantage on Dexterity and Strength checks and saving throws made to climb or maintain your balance."
+            }
+          ]
+        },
+        {
+          "name": "Tethera Capran",
+          "description": "Often resembling bighorn sheep, argali, moufflon, and other members of the sheep family, tethera caprans are usually highly social. They tend to care deeply about the lives of those around them. Some tethera caprans have horns, but most do not.",
+          "traits": [
+            {
+              "name": "Friendly Face",
+              "description": "You gain proficiency in one of the following skills: Insight or Persusaion, and you have advantage on checks made to convince humanoids who you are not currently fighting that you are trustworthy.",
+              "choices": [
+                {
+                  "type": "skill",
+                  "choose": 1,
+                  "from": [
+                    "Insight",
+                    "Persuasion"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Flock Together",
+              "description": "When you take the Help action and the check or attack you are helping with fails, you can allow the creature making the check to reroll it if you are within 5 feet. The creature must use the new result. You can use this ability a number of times equal to your proficiency bonus and regain all expended uses when you finish a long rest.",
+              "uses": {
+                "max": 2,
+                "per": "long"
+              }
+            }
+          ]
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1",
+          "1-1-1"
+        ],
+        "hint": "typical: yantan DEX/CON/STR, tethera CON/STR/WIS"
+      }
+    },
+    {
+      "name": "Talpo",
+      "category": "Talpo",
+      "speed": 30,
+      "languages": "Birdfolk and can read and write in the tunnel glyph language of the talpos",
+      "description": "The talpos follow a version of the amaranthine Altus, who they portray as a brawny mole with claws made of diamond. They believe that this incarnation carved the talpos from solid rock, instilling them with Altus's resilience and tenacity. To show reverence to Altus, many talpos carry an uncut diamond and use it to etch Altus's mark into solid rock in their homes and mines.",
+      "traits": [
+        {
+          "name": "Size",
+          "description": "Most talpo are on the shorter side, coming in between five and five-and-a-half feet tall. Your size is Medium."
+        },
+        {
+          "name": "Born To Dig",
+          "description": "You have a burrowing speed of 20 feet. Anything that increases your movement speed also increases your burrowing speed."
+        },
+        {
+          "name": "Claws",
+          "description": "Your powerful fore-claws can work as weapons in a pinch. You can choose to attack with your claws as an unarmed strike that deals 1d6 points of slashing damage, which can be calculated using either your Strength or Dexterity modifier for both the attack roll and damage bonus."
+        },
+        {
+          "name": "Darkvision",
+          "description": "You have darkvision out to 60 feet."
+        },
+        {
+          "name": "Efficient Breathers",
+          "description": "The number of minutes you can hold your breath and the number of rounds you can go without air is doubled."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Dirtsnout",
+          "description": "Inspired by european moles, the dirtsnout talpos are the most comfortable underground, able to navigate the dark with ease.",
+          "traits": [
+            {
+              "name": "Deep Detection",
+              "description": "You have tremorsense out to 10 feet and you always know what way is north regardless of how deep below ground you are."
+            },
+            {
+              "name": "Strong Hands",
+              "description": "You have proficiency in athletics and your choice of jeweler's tools, mason's tools or potter's tools."
+            }
+          ]
+        },
+        {
+          "name": "Starsnout",
+          "description": "Inspired by star-nosed moles, starsnout talpos have a uniquely flared snout that makes them particularly good at sniffing out poisons, plants and even other's feelings.",
+          "traits": [
+            {
+              "name": "Empath",
+              "description": "You have proficiency with the Insight skill."
+            },
+            {
+              "name": "Sensitive Nose",
+              "description": "You can cast detect poison and disease as a 1st level spell with this trait, and regain the ability to do so when you finish a long rest. When you reach 3rd level, you can cast locate animal or plants as a 2nd level spell with this trait, and regain the ability to do so when you finish a long rest. Charisma is your spellcasting ability for these spells."
+            }
+          ]
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1"
+        ],
+        "hint": "dirtsnout talpo: Strength and Wisdom; starsnout talpo: Charisma and Strength"
+      }
+    },
+    {
+      "name": "Vesper",
+      "category": "Birdfolk",
+      "speed": 30,
+      "languages": "Birdfolk, Vesperanto, One other language",
+      "description": "The vesper species is inspired by bats and flying foxes. These cave-dwelling folk are cloaked in mystery and are most at home in darkness. Most folk believe that the elusive vespers are just myths. They feature as villains in ancient birdfolk legends, which describe them as unnatural beings transformed from birdfolk into their current forms by an evil Amaranthine. Other tales paint vespers as blood-drinking creatures of ill omen that come from another world and threaten all of Everden. However, vespers are very real and nothing like the stories told about them on the surface of Everden.",
+      "traits": [
+        {
+          "name": "Size",
+          "description": "Vespers vary in size, standing roughly between 3 feet and 5 and a half feet. Your size is Medium or Small."
+        },
+        {
+          "name": "Bat Climb",
+          "description": "You can stand and walk upside down on horizontal surfaces without effort or needing to make a skill check. When moving upside down in this way, you use your walking speed, not your climbing speed, and your hands are free."
+        },
+        {
+          "name": "Echolocation",
+          "description": "You have blindsight out to a range of 60 feet as long as you aren't deafened."
+        },
+        {
+          "name": "Nightblessed",
+          "description": "The night gifts you with a limited ability to fly. While in darkness, you have a flying speed of 30 feet. If you enter an area of dim or bright light, you begin to fall."
+        },
+        {
+          "name": "Hypersonic Squeak",
+          "description": "As an action, you can emit an inaudible but impactful burst of sound to briefly disorient your foes. Each creature within a 10-foot cone originating from you must make a Constitution saving throw. The DC for this saving throw is equal to 8 + your Wisdom modifier + your proficiency bonus. Deafened creatures automatically succeed on this saving throw. On a failed save, a target takes 1d6 thunder damage and becomes deafened until the end of your next turn. While deafened in this way, a creature can't take reactions. Once you have used this ability, you must complete a short or long rest before you can use it again."
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1",
+          "1-1-1"
+        ],
+        "hint": "vesper: Dexterity and Wisdom"
+      }
+    },
+    {
+      "name": "Rhopala",
+      "category": "Rhopala",
+      "speed": 30,
+      "languages": "Birdfolk, Rhopala, One other language",
+      "description": "The rhopala are a nomadic, moth and butterfly-like species that build their homes in silky webs that can temporarily cling to trunks and branches. They follow stars and the moon, seeking guidance and enlightenment from the night sky.",
+      "traits": [
+        {
+          "name": "Size",
+          "description": ". Rhopala are as varied in size and color as any birdfolk. Your size is Medium or Small."
+        },
+        {
+          "name": "Evolving Form",
+          "description": ". You begin your life wingless, eventually growing wings that give you short bursts of flight. You have a burrowing speed of 10 feet. When you reach 3rd level, you lose your burrowing speed, but can instead use your bonus action to extend your new wings and gain a flying speed of 40 feet for 1 minute. You can do this a number of times equal to your proficiency bonus, and regain all uses of this trait when you finish a long rest."
+        },
+        {
+          "name": "Extra Limbs",
+          "description": "You have an extra set of arms which can be used to manipulate and carry additional items."
+        },
+        {
+          "name": "Silkweaver's Knack",
+          "description": "You are proficient with weaver's tools and can cast the mending cantrip without material components."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Boldwing Rhopala",
+          "description": "Inspired by butterflies, boldwing rhopala are bright and colorful, and can use this to dazzle and distract anyone they come across. They can also flit about easily, making them hard to pin down.",
+          "traits": [
+            {
+              "name": "Dazzling Display",
+              "description": "You know the color spray spell and can cast it once without spell components and without using a spell slot. Your spellcasting modifier for this spell is your choice of Wisdom or Charisma. After you've used this trait once, you can't use it again until you finish a long rest."
+            },
+            {
+              "name": "Evasive Maneuvers",
+              "description": "You can take the disengage action as a bonus action."
+            }
+          ]
+        },
+        {
+          "name": "Dustwing Rhopala",
+          "description": "Inspired by moths, dustwing rhopala have neutral colors that make them skilled at blending in with their surroundings. They also carry a piece of the starlight of Sihlk in them which they can conjure to guide others.",
+          "traits": [
+            {
+              "name": "Camouflage",
+              "description": "You are proficient with the stealth skill. You have advantage when taking the Hide action when you are in a natural environment with neutral colors, like amongst rocks or up against the bark of a tree."
+            },
+            {
+              "name": "Light Bearer",
+              "description": "You know the light cantrip and can cast it without material components. At 3rd level you learn the moonbeam spell and can cast it once without material components and without expending a spell slot. Once you've cast moonbeam this way you can't cast it again until you finish a long rest."
+            }
+          ]
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1"
+        ],
+        "hint": "rhopala: Wisdom and Dexterity"
+      }
+    },
+    {
+      "name": "Roden",
+      "category": "Roden",
+      "speed": 30,
+      "languages": "Birdfolk, Roden, One other language",
+      "description": "The roden are a cunning and tight knit species known for their talent for exploration and survival. They live and convene in large numbers, believing that there is no such thing as 'too many hands' when it comes to work and community.",
+      "traits": [
+        {
+          "name": "Size",
+          "description": ". Adult roden are on average around 5 feet tall. Your size is Medium."
+        },
+        {
+          "name": "Bite",
+          "description": "You have strong teeth that enable you to make natural bite attacks. You can choose to bite as an unarmed strike that deals 1d6 points of piercing damage, which can be calculated using either your Strength or Dexterity modifier for both the attack roll and damage bonus."
+        },
+        {
+          "name": "Iron Stomachs",
+          "description": "You have resistance to poison damage and have advantage on saving throws to prevent or end the poison condition."
+        },
+        {
+          "name": "Never Lost",
+          "description": "You are proficient with the survival skill, and have advantage on Wisdom (Survival) checks to navigate cramped spaces, cave networks and other labyrinthian environments."
+        },
+        {
+          "name": "Sensitive Whiskers",
+          "description": "You can use a bonus action to gain tremorsense in a 20 foot radius for 1 minute. You can use this trait a number of times equal to your proficiency bonus, and regain all uses of it when you finish a long rest."
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1"
+        ],
+        "hint": "roden: Dexterity and Wisdom"
+      }
+    },
+    {
+      "name": "Porchini",
+      "category": "Porchini",
+      "speed": 30,
+      "languages": "Birdfolk, Porchini",
+      "description": "The porchini are a pig-like folk well known for their quick wits and quicker footing. They enjoy the finer things in life, and have a nose for quality food and wares. Porchini are often fickle, moving from one exciting thing to the next, but when it comes to defending a position they know how to hold their ground.",
+      "traits": [
+        {
+          "name": "Size",
+          "description": "Porchinis tend to be stout, rarely getting taller than five feet. Your size is Medium or Small."
+        },
+        {
+          "name": "Keen Snout",
+          "description": "You have advantage on Wisdom (Perception) and Intelligence (Investigation) checks that benefit from your strong sense of smell."
+        },
+        {
+          "name": "Never Cornered",
+          "description": "You can take the disengage action using your bonus action. You can do this a number of times equal to your proficiency bonus, and regain all uses of this trait after a long rest."
+        },
+        {
+          "name": "Resilience",
+          "description": "You have advantage on saving throws against poison and resistance against poison damage."
+        },
+        {
+          "name": "Tusks",
+          "description": "You have large curved tusks that can act as weapons at close range. You can use your unarmed strike to jab at enemies, dealing 1d6 plus your Strength or Dexterity modifier piercing damage on a hit. Additionally, if you move at least 20 feet in a straight line towards an opponent, you can use your bonus action to ram them. The target of the ram must make a Dexterity saving throw against a DC of 8 + your proficiency bonus + your Strength or Dexterity modifier. On a failure, the target is knocked prone."
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1"
+        ],
+        "hint": "porchini: Wisdom and Dexterity"
+      }
+    },
+    {
+      "name": "Almare",
+      "category": "Birdfolk",
+      "speed": 30,
+      "languages": "Birdfolk, One other language",
+      "description": "The almare are intrepid birdfolk shaped by the rough and tumble of tempestuous seas. They have a reputation for being bold, brash, and always getting what they want one way or another. Among all the birdfolk, they are the most adept at using their feathered arms to perform extraordinary feats while gliding.",
+      "traits": [
+        {
+          "name": "Size",
+          "description": "With their massive wingspan, the largest almares are among the most imposing birdfolk, while smaller almares have elegant silhouettes. Your size is Medium."
+        },
+        {
+          "name": "Glide",
+          "description": "Using your feathered arms, you can slow your fall and glide short distances. When falling, you can use your reaction to spread your arms, stiffen your wing feathers, and slow your descent. While doing so, you continue to fall gently at a speed of 60 feet per round, taking no fall damage when you land. If you would fall at least 10 feet in this way, you may fly up to your movement speed in any direction you choose, although you cannot choose to move upwards, landing in the space you finish your movement. You can't glide while carrying heavy weapons or wielding a shield (though you may drop any held items as part of your reaction to spread your arms). You cannot glide while wearing heavy armor or if you are encumbered."
+        },
+        {
+          "name": "Seafeathers",
+          "description": "Your waterproof feathers also give you a measure of protection against the arcane. You have advantage on Constitution saving throws against magic."
+        },
+        {
+          "name": "Wing Flap",
+          "description": "As a bonus action, you can use your powerful feathered arms to propel yourself upward a distance equal to half your speed. You can use it in conjunction with a regular jump, but not while gliding."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Shieldwing",
+          "description": "Shieldwing almares are a good fit for characters inspired by larger seabirds, such as albatrosses, gannets, cormorants, frigatebirds, and boobies.",
+          "traits": [
+            {
+              "name": "Greater Glide",
+              "description": "While gilding, you can use your bonus action to glide upwards up to your speed. Once you have used this ability, you must complete a short rest before you can use it again. Additionally, you can glide while carrying heavy weapons and shields and wearing heavy armor."
+            },
+            {
+              "name": "Imposing Wingspan",
+              "description": "You can add your Constitution modifier to your Intimidation and Persuasion checks (minimum of 1)."
+            },
+            {
+              "name": "Seaswise Endurance",
+              "description": "You have advantage on saving throws to resist taking levels of exhaustion."
+            }
+          ]
+        },
+        {
+          "name": "Swordwing",
+          "description": "Swordwing almares are a good fit for characters inspired by smaller seabirds, such as seagulls, terns, skuas, and tropicbirds.",
+          "traits": [
+            {
+              "name": "Brash Opportunist",
+              "description": "You can add your Constitution modifier to Deception and Sleight of Hand checks (minimum of 1)."
+            },
+            {
+              "name": "Seawise Agility",
+              "description": "When you make a melee attack on your turn, you can disengage as a bonus action. Once you have used this ability, you must complete a short rest before you can use it again."
+            },
+            {
+              "name": "Sky Dive",
+              "description": "While falling or gliding, you can use your action to drop into a dive to make a melee attack against a target within no more than 100 feet below you and no more than 20 feet from you in any other direction. You have advantage on this attack, and you deal an additional 1d8 damage of the attack's type on a hit. You take no damage from the rapid descent and don't land prone if you end your turn on a surface. When you finish your dive, you end your movement in an unoccupied space adjacent to the target. You can't dive at targets that are above you or parallel with you."
+            }
+          ]
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1",
+          "1-1-1"
+        ],
+        "hint": "shieldwing almare: Constitution and Charisma; swordwing almare: Dexterity and Charisma"
+      }
+    },
+    {
+      "name": "Arkton",
+      "category": "Arkton",
+      "speed": 30,
+      "languages": "Arkton, Birdfolk, and one other language of your choice",
+      "description": "Arktons resemble bears of all kinds, from the massive polar and grizzly bears to the smaller sun and sloth bears. They are the largest of the folk in Everden and use their naturally intimidating size to defend and comfort their allies.",
+      "traits": [
+        {
+          "name": "Size",
+          "description": "Your size is Medium or Large."
+        },
+        {
+          "name": "Guardian's Roar",
+          "description": "When another creature within 20 feet of you is targeted with an attack, you can use your reaction to roar, making a Charisma (Intimidation) check contested by the attack roll. If you succeed, the attacker must reroll its attack and use the new result. If the second attack misses, the attacker becomes frightened of you until the end of its next turn. You can use this ability a number of times equal to your proficiency bonus, regaining all expended uses at the end of a long rest."
+        },
+        {
+          "name": "Bear Snug",
+          "description": "When you take a short rest, you can touch another willing creature and spend one of your hit dice to heal it. The target regains hit points equal to a roll of your hit die. A creature can benefit from this ability once per long rest."
+        },
+        {
+          "name": "Darkvision",
+          "description": "You can see in dim light within 60 feet of you as if it were bright light and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray. Imposing Presence. You have proficiency with the Intimidation skill."
+        },
+        {
+          "name": "Heavy Claws",
+          "description": "You have powerful claws that you can use as natural weapons to make unarmed strikes. When you hit with them, the strike deals 2d6 + your Strength modifier bludgeoning damage."
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1",
+          "1-1-1"
+        ],
+        "hint": "arkton: Strength and Wisdom"
+      }
+    },
+    {
+      "name": "Lunin",
+      "category": "Lunin",
+      "speed": 30,
+      "languages": "Birdfolk, Lunin, One other language",
+      "description": "Lunins are a race of canine folk. Though they all share the ability to bite, extraordinary noses, and a deep sense of loyalty, they exhibit great diversity in their other skills. Their furry coats can be long, short, wiry, curly, or silky, and they come in almost any shade with patterns of markings from solid to spotty.",
+      "traits": [
+        {
+          "name": "Size",
+          "description": "Lunins are one of the most diverse species in Everden and come in all shapes and sizes. Your size is Medium or Small."
+        },
+        {
+          "name": "Acute Nose",
+          "description": "You have advantage on Wisdom (Perception) checks related to your sense of smell. Additionally, you can use an Action to sniff a creature and identify any diseases it is currently suffering from or sniff a potion or poison and understand its properties as if you had cast the identify spell."
+        },
+        {
+          "name": "Bite",
+          "description": ". You have strong teeth that enable you to make natural bite attacks. You can choose to Bite as an unarmed strike that deals 1d6 piercing damage, which can be calculated using either your Strength or Dexterity modifier for both the attack roll and damage bonus. You are proficient with this attack."
+        },
+        {
+          "name": "Pack Position",
+          "description": "You can take the Dash action as a Bonus Action if you end your movement adjacent to one of your allies."
+        },
+        {
+          "name": "Pedigree",
+          "description": "Choose your pedigree from the Lunin Pedigree table. Your Pedigree grants you associated traits."
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1"
+        ],
+        "hint": "lunin: Strength and Charisma"
+      }
+    },
+    {
+      "name": "Mustel",
+      "category": "Mustel",
+      "speed": 30,
+      "languages": "Birdfolk, Mustel",
+      "description": "The independent and determined mustel are some of the least common folk in Wesden. They have a reputation for being stubborn as once a mustel has set their mind to a course of action, it is almost impossible to convince them to give up. All mustels have powerful jaws, no matter their size.",
+      "traits": [
+        {
+          "name": "Bite",
+          "description": "You have sharp fangs that enable you to make natural bite attacks. You can choose to bite as an unarmed strike that deals 1d6 piercing damage, which can be calculated using either your Strength or Dexterity modifier for both the attack roll and damage bonus."
+        },
+        {
+          "name": "Relentless",
+          "description": "When you take damage due to failing a saving throw or being hit by an attack, you can reduce the damage you take by half (no action required). Once you have used this feature, you can't use it again until you finish a long rest."
+        },
+        {
+          "name": "Scenting",
+          "description": "You have a powerful nose. As a bonus action, you can attempt to sniff out invisible or hidden creatures. When you successfully pick up the scent of an invisible or hidden creature, you learn its location as if it were not invisible or hidden from you."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Webpaw Mustel",
+          "description": "Webpaw mustels are inspired by otters, from the diminutive Asian small-clawed otter to the giant river otter. Adapted to life in rivers and seas as well as on land, these folk navigate both with playful grace.",
+          "traits": [
+            {
+              "name": "Size",
+              "description": "Webpaws tend to have narrow, well-muscled builds and are covered in thick fur. They typically stand between 4 and 6 feet tall, though a few can reach almost 7 feet tall. Your size is Medium or Small."
+            },
+            {
+              "name": "Hold Breath",
+              "description": "You can hold your breath for up to 10 minutes."
+            },
+            {
+              "name": "Playful Paws",
+              "description": "You have proficiency in one musical instrument or artisan's tool of your choice."
+            },
+            {
+              "name": "Slick Fur",
+              "description": "Your thick fur insulates you from arcane energies and environmental effects. You have advantage on Constitution saving throws against magic and on Dexterity and Constitution saving throws while swimming."
+            },
+            {
+              "name": "Waterdancer",
+              "description": "While swimming, you can take the Disengage action as a bonus action. When you reach 10th level, you can take the Disengage action as a bonus action on land."
+            },
+            {
+              "name": "Water Wise",
+              "description": "You are proficient in the Nature skill. When you make a Nature check related to seas, rivers, or water-dwelling creatures, you add a bonus to the check equal to your Wisdom modifier (minimum of +1)."
+            }
+          ]
+        },
+        {
+          "name": "Brightfang",
+          "description": "Brightfang mustel resemble wolverines, badgers, and mink. Their imposing physique and resilience allow them to explore rugged landscapes such as the Crystal Expanse and the Frostcaps. They are the most solitary of the mustels and have a reputation for being able to tackle any challenge.",
+          "traits": [
+            {
+              "name": "Size",
+              "description": "Brightfangs are the tallest and heaviest of the mustel, typically standing over 6 and half feet tall. Your size is Medium."
+            },
+            {
+              "name": "Bigger Bite",
+              "description": "Your natural bite attack is crushingly strong and deals 1d8 damage instead of 1d6. When you reach level 9, this increases to 1d10."
+            },
+            {
+              "name": "Scrappy",
+              "description": "When you take damage due to failing a saving throw or being hit by an attack, you can reduce the damage you take by half. Once you have used this feature, you can't use it again until you finish a long rest."
+            },
+            {
+              "name": "Strong Claws",
+              "description": "You gain proficiency in the Athletics skill and have advantage on skill checks made to climb or dig. Brightfang"
+            }
+          ]
+        },
+        {
+          "name": "Longdance",
+          "description": "Longdance mustels are inspired by weasels and their winter form, the ermine. They also draw on the traits of martens, polecats, and stoats. While all mustel are a rare sight in Wesden, the longdances are the most mysterious. Rumors say that they have the power to hypnotize other folk with their dancing. This is untrue, but some longdances use the stories about them to their advantage, while others resent being seen as magical.",
+          "traits": [
+            {
+              "name": "Size",
+              "description": "Longdance mustel have long, slender bodies that vary in height from 2 feet to over 6 feet tall. Your size is Medium or Small."
+            },
+            {
+              "name": "Fleet Feet",
+              "description": "You have proficiency in the Performance skill."
+            },
+            {
+              "name": "Shifting Camouflage",
+              "description": "Your fur gradually changes color to better hide you in the environment you find yourself in. You have advantage on Stealth checks made to hide or move undetected through natural terrain as long as you have been in that terrain for at least 10 days."
+            },
+            {
+              "name": "Slippery Dancer",
+              "description": "You have advantage on Dexterity saving throws against magic."
+            }
+          ]
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1"
+        ],
+        "hint": "webpaw mustel: Charisma and Wisdom"
+      }
+    },
+    {
+      "name": "Pexian",
+      "category": "Pexian",
+      "speed": 30,
+      "languages": "Pexian, One other language",
+      "description": "Pexians are amphibious folk who originate in underground lakes on the Gasparian Isles. Today, they are found across land and sea, where they can use their ability to navigate both land and water to their advantage. Pexians are excellent swimmers thanks to their webbed hands and feet and strong tails. Artistry and philosophy are highly valued in pexian culture, and personal decoration is used to express beliefs as well as personal style. Pexians often adorn the colorful frills on their heads and tails with jewelry.",
+      "traits": [
+        {
+          "name": "Size",
+          "description": "Cave pexians stand around 3 to 4 feet tall on their hind legs or 4 to 5 feet tall on their tails. Swamp pexians are typically taller and broader, reaching heights of around 5 and 1⁄2 to 6 feet. Your size is Medium."
+        },
+        {
+          "name": "Amphibious",
+          "description": "You are able to breathe both air and water."
+        },
+        {
+          "name": "Regeneration",
+          "description": "You are able to regenerate your body to heal wounds and restore lost limbs, though the process is taxing. As an action, you can enter a regenerative state, which lasts for one hour. During this time, you restore a number of hit points equal to your proficiency bonus every 10 minutes. While in your regenerative state, you can regrow lost limbs, but take a level of exhaustion for each body part regrown in this way. You are incapacitated while in your regenerative state but can end it at any time as a bonus action. Once used, this feature can't be used again until you complete a long rest."
+        },
+        {
+          "name": "Origin",
+          "description": "Choose either the swamp pexian or cave pexian origin option. Cave Pexian Concept Art."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Cave Pexians",
+          "description": "Cave pexians are inspired by the juvenile forms of axolotls and olms. They have smooth skin and brightly colored frills. Cave pexians have a wide range of vibrant skin tones, including pink, gold, and luminescent green.",
+          "traits": [
+            {
+              "name": "Soft Body",
+              "description": "Your pliable body can fit into places most others can't. You can fit through an opening as narrow as 1 foot wide without squeezing."
+            },
+            {
+              "name": "Swamp Pexian Transformation",
+              "description": "You can choose to become a swamp pexian by carrying out a ritual that takes 24 hours to complete. At the end of this ritual, you lose your cave pexian traits and gain the swamp pexian traits. When you make this shift, you can change one or both of your choice of Ability Score increases that you made at 1st level."
+            },
+            {
+              "name": "Tail and Feet",
+              "description": "Your long, thick tail can support your body weight, as well as the weight of any carried equipment, as long as you are unencumbered. You can spend 10 feet of movement to stand on your tail or dismount from it. While standing on your tail, your speed becomes 0, but you can use your feet with a bonus action to interact with objects, quaff a potion, make a Dexterity (Sleight of Hand) check, or retrieve an item from your bag. When you engage in two weapon fighting and make a melee weapon attack using your feet, you can add your ability modifier to the damage of the second attack."
+            }
+          ]
+        },
+        {
+          "name": "Swamp Pexians",
+          "description": "Swamp pexians are inspired by the adult form of axolotls as well as other salamanders and newts. They tend towards builds that are bulky and powerfully muscled. Swamp pexians are less brightly colored than their cave pexian kin and have rough skin in shades of green, brown, and grey, though their head and tail frills are often vibrant shades of orange, red, or blue.",
+          "traits": [
+            {
+              "name": "Big Jaws",
+              "description": "You can use your jaws to make an unarmed strike that deals 1d6 + Strength piercing damage. When you hit with your Big Jaws, you can use your bonus action to grapple the target if it is Medium or smaller. The escape DC for this grapple is equal to 8 + your Strength modifier + your proficiency bonus."
+            },
+            {
+              "name": "Cave Pexian Transformation",
+              "description": "You can choose to become a cave pexian by carrying out a ritual that takes 24 hours to complete. At the end of this ritual, you lose your swamp pexian traits and gain the cave pexian traits. When you make this shift, you can change one or both of your choice of Ability Score increases that you made at 1st level."
+            },
+            {
+              "name": "Wet and Dry",
+              "description": "The caves have a mixture of underwater and air-filled chambers and tunnel streets, excavated by both ancient pexians and the flow of water. While pexians and other folks who are comfortable in the water, like webpaw mustels, could move through the wet areas with ease, other visitors and residents relied on the dry passages and caves to move around. Even then, a quick dip to move from one dry area to another was often required. Many walls in public areas are carved and inlaid with mosaics made from shells."
+            },
+            {
+              "name": "Swamp Camouflage",
+              "description": "Your mottled skin gives you advantage on Stealth checks made to hide or move through water or marshy areas."
+            },
+            {
+              "name": "Tail Slap",
+              "description": "Your powerful tail can aid you in jumping and swimming. By slapping your tail when jumping, you can add a number of additional feet to your high jump equal to your Strength modifier. Additionally, your powerful tail increases your swim speed by 5 feet."
+            }
+          ]
+        }
+      ],
+      "abilityChoice": {
+        "modes": [
+          "2-1"
+        ],
+        "hint": "cave pexian: Charisma and Dexterity; swamp pexian: Strength and Wisdom"
+      }
+    }
+  ]
+}
