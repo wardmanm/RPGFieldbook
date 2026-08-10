@@ -1,0 +1,3 @@
+# Blank issues stay ON: this is a solo board and a one-line note shouldn't need
+# a template. The four below are shortcuts, not gates.
+blank_issues_enabled: true
