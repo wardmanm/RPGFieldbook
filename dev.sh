@@ -150,7 +150,7 @@ where_things_live() {
                     build bundles them into dist/<system>_full.json
   ${B}Notebook${OFF}          src/docs/UNRELEASED.md — one bullet per player-visible change
   ${B}Releasing${OFF}         src/docs/RELEASING.md — full procedure and failure modes
-  ${B}Conventions${OFF}       CLAUDE.md · project memory: src/docs/WIRING-LEDGER.md
+  ${B}Conventions${OFF}       CLAUDE.md · project memory: src/docs/_claude/WIRING-LEDGER.md
 
 EOF
 }

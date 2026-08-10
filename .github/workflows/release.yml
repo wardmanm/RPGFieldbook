@@ -46,7 +46,11 @@ jobs:
           echo "tag=$TAG"            >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}"    >> "$GITHUB_OUTPUT"
 
-      # Full history: the source zip is built from `git ls-files`.
+      # fetch-depth: 0 is no longer strictly required — the source zip that
+      # needed `git ls-files` is gone, and the two things that still use git
+      # (build-html.js's clobber guard via `git show HEAD:…`, and the
+      # reproducibility `git diff`) both work at depth 1. Kept because it costs
+      # seconds on a repo this size and a full checkout can't surprise us.
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.tag.outputs.tag }}
@@ -117,13 +121,44 @@ jobs:
       - name: Collect release notes
         id: notes
         run: |
-          node scripts/release-notes.js "${{ steps.tag.outputs.version }}" > /tmp/notes.md
+          V="${{ steps.tag.outputs.version }}"
+          TAG="${{ steps.tag.outputs.tag }}"
+          node scripts/release-notes.js "$V" > /tmp/notes.md
+
+          # Tell players WHAT to download. Most releases change the app but not
+          # the rules data, and re-importing packs is the tedious part — so say
+          # plainly when they can skip it. Per system, because a D&D-only player
+          # should not be sent to re-import Humblewood.
+          PREV=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname \
+                 | grep -vx "$TAG" | head -1 || true)
+          CHANGED=""
+          note_changed() {                        # append `name` to a comma list
+            [ -n "$CHANGED" ] && CHANGED="$CHANGED, "
+            CHANGED="$CHANGED\`$1\`"
+          }
+          if [ -n "$PREV" ]; then
+            git diff --quiet "$PREV" "$TAG" -- data/5e2024     || note_changed 5e2024_full.json
+            git diff --quiet "$PREV" "$TAG" -- data/humblewood || note_changed humblewood_full.json
+          fi
           {
             echo
             echo "---"
             echo
             echo "**Just want the app?** Download \`fieldbook.html\` and open it — that is the whole thing."
-            echo "For the rules data as well, take \`fieldbook-v${{ steps.tag.outputs.version }}.zip\`."
+            if [ -z "$PREV" ]; then
+              echo
+              echo "Take the rules data too: \`5e2024_full.json\` and \`humblewood_full.json\`,"
+              echo "or \`fieldbook-v$V.zip\` for everything in one download."
+            elif [ -z "$CHANGED" ]; then
+              echo
+              echo "**The rules data has not changed since $PREV** — if you already have it loaded,"
+              echo "you only need \`fieldbook.html\`. Your characters and rules packs are untouched."
+            else
+              echo
+              echo "**Updated rules data:** $CHANGED."
+              echo "Re-import those from Settings → Rules data after updating the app."
+              echo "Packs that are not listed have not changed — no need to re-import them."
+            fi
           } >> /tmp/notes.md
           echo "Release body:"; cat /tmp/notes.md
 
@@ -132,7 +167,6 @@ jobs:
           V="${{ steps.tag.outputs.version }}"
           for f in dist/fieldbook.html \
                    "dist/fieldbook-v$V.zip" \
-                   "dist/fieldbook-v$V-source.zip" \
                    dist/5e2024_full.json \
                    dist/humblewood_full.json; do
             [ -s "$f" ] || { echo "::error::missing or empty asset: $f"; exit 1; }
@@ -147,9 +181,10 @@ jobs:
         run: |
           V="${{ steps.tag.outputs.version }}"
           TAG="${{ steps.tag.outputs.tag }}"
+          # No source archive here: GitHub attaches "Source code (zip)" and
+          # "(tar.gz)" to every release itself, from the tag.
           ASSETS=(dist/fieldbook.html
                   "dist/fieldbook-v$V.zip"
-                  "dist/fieldbook-v$V-source.zip"
                   dist/5e2024_full.json
                   dist/humblewood_full.json)
           if gh release view "$TAG" >/dev/null 2>&1; then

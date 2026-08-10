@@ -34,6 +34,16 @@ const SYSTEMS = [
   { dir: "humblewood", out: "humblewood_full.json", name: "Humblewood — Complete Rulebook" },
 ];
 
+/* DATA_VERSIONS lives in src/js/30-version.js so the app and the packs cannot
+   disagree about it — read, never duplicated. Parsed rather than imported
+   because the fragment is a plain script, not a module. */
+function dataVersions() {
+  const src = fs.readFileSync(path.join(ROOT, "src/js/30-version.js"), "utf8");
+  const m = /const\s+DATA_VERSIONS\s*=\s*(\{[^}]*\})/.exec(src);
+  if (!m) throw new Error("DATA_VERSIONS not found in src/js/30-version.js");
+  return JSON.parse(m[1]);
+}
+
 /* subclasses are keyed by class+name, everything else by name; keywords use `term` */
 function keyOf(entry, cat) {
   if (cat === "keywords") return String(entry.term || "").trim().toLowerCase();
@@ -90,7 +100,13 @@ function bundle(sys) {
   }
   if (errors.length) return { errors };
 
-  const pack = { system: system || sys.dir, name: sys.name, version: 1, rulebook: true };
+  const sysName = system || sys.dir;
+  // `version` is the SCHEMA version; `dataVersion` is which release this
+  // system's content last changed in, and is what the app compares against.
+  const dv = dataVersions()[sysName];
+  if (!dv) return { errors: [`${sys.dir}: no DATA_VERSIONS entry for system "${sysName}" ` +
+                             `— add one in src/js/30-version.js`] };
+  const pack = { system: sysName, name: sys.name, version: 1, dataVersion: dv, rulebook: true };
   for (const cat of CATS) if (out[cat] && out[cat].length) pack[cat] = out[cat];
 
   fs.mkdirSync(OUTDIR, { recursive: true });

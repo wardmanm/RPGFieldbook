@@ -47,6 +47,8 @@ update badge starts pointing at it.
 `scripts/release.js` owns `APP_VERSION` and the `CHANGELOG` array — **never hand-edit either.** It:
 
 - bumps `APP_VERSION` in `src/js/30-version.js`,
+- bumps `DATA_VERSIONS[<system>]` to the new version **only for systems whose `data/<dir>/` changed
+  since the previous tag** (it prints which, or "rules data unchanged — players need only the app"),
 - folds every pending bullet from `src/docs/UNRELEASED.md` into a new `CHANGELOG` entry,
 - empties the notebook,
 - and then `build.sh` rebuilds, revalidates and re-zips.
@@ -60,7 +62,7 @@ current one (that would break the in-app update check).
 |---|---|
 | `fieldbook.html` | Players who just want the app. This is the whole thing. |
 | `fieldbook-v<V>.zip` | The player bundle — app, README, rules packs, docs, converter. |
-| `fieldbook-v<V>-source.zip` | The whole repo, for archiving or handoff. |
+| GitHub's own `Source code (zip)` / `(tar.gz)` | Attached automatically from the tag — we don't build or upload a source archive. |
 | `5e2024_full.json`, `humblewood_full.json` | Rules packs on their own, for someone updating data without re-downloading the app. |
 
 The release body is that version's section of `docs/CHANGELOG.md`, sliced out by
@@ -82,7 +84,6 @@ A plain `./build.sh` is the everyday build: it validates everything and produces
 
 ```
 dist/fieldbook-v1.2.1+dev.zip
-dist/fieldbook-v1.2.1+dev-source.zip
 ```
 
 That build contains unreleased work, so it is *not* v1.2.1 — and a zip named `fieldbook-v1.2.1.zip`

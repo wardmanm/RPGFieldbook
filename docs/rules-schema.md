@@ -451,6 +451,17 @@ character's Inventory (and coins) when the source is added. Supports fixed grant
   and **races** (§6.2). Class gold-alternatives expressed as dice (e.g. `5d4 × 10`) are converted
   to their **average** by `convert.py`.
 
+### 6.10a Pack-level `dataVersion`
+
+The two bundled packs carry `"dataVersion": "1.3.0"` alongside `system` and `name`. It is the
+Fieldbook release in which **that system's** content last changed, and the app compares it against
+what the running build expects, so it can say "your rules data is current" or "a newer pack exists".
+
+It is per system: a release that only touches Humblewood leaves the D&D pack's `dataVersion` alone,
+so D&D players aren't told to re-import a file that hasn't moved. Distinct from `version`, which is
+the schema version. Hand-written packs can omit it — an absent `dataVersion` means "unknown", and
+the app stays quiet rather than guessing.
+
 ### 6.11 `tables` — reference tables
 
 Roll tables, class progressions, and the lookup tables the rules prose keeps pointing at. They

@@ -82,9 +82,10 @@ function loadedRulesGroups(){
   RULE_CATS.forEach(cat=>(rules[cat]||[]).forEach(e=>{
     const isFile=!!e._file, label=e._file||(e._source||"Unknown");
     const key=(isFile?"f:":"s:")+label;
-    if(!groups[key])groups[key]={key,label,isFile,source:e._source||"",rulebook:!!e._rulebook,count:0,cats:{}};
+    if(!groups[key])groups[key]={key,label,isFile,source:e._source||"",rulebook:!!e._rulebook,dataVersion:e._dataVersion||"",count:0,cats:{}};
     groups[key].count++;groups[key].cats[cat]=(groups[key].cats[cat]||0)+1;
     if(e._rulebook)groups[key].rulebook=true;
+    if(e._dataVersion)groups[key].dataVersion=e._dataVersion;
   }));
   return Object.values(groups).sort((a,b)=>a.label.localeCompare(b.label));
 }
@@ -113,12 +114,37 @@ function clearAllRules(){
   updateRulesStatus("Rules cleared.","");
   return true;
 }
+/* Is a loaded pack's content older than the build expects?
+
+   DATA_VERSIONS records the release in which each system's data last changed,
+   so this answers the question players actually have after updating the app:
+   "do I need to re-download the rules too?" A system whose data did NOT change
+   keeps its old version, so nobody is nagged to re-import a pack that is still
+   correct.
+
+   Unknown (an old pack from before stamping, or homebrew) is NOT stale — we
+   have no evidence either way, and a false alarm on someone's own content is
+   worse than staying quiet. */
+function dataStatus(g){
+  const want=(typeof DATA_VERSIONS!=="undefined"&&DATA_VERSIONS[g.source])||"";
+  if(!want||!g.dataVersion)return {state:"unknown"};
+  const c=cmpVer(g.dataVersion,want);
+  if(c<0)return {state:"stale",have:g.dataVersion,want};
+  return {state:"current",have:g.dataVersion};
+}
+function dataStatusHTML(g){
+  const st=dataStatus(g);
+  if(st.state==="stale")
+    return ` <span class="chip warn" title="This pack is from v${esc(st.have)}; this version of Fieldbook ships v${esc(st.want)}. Re-import it from the latest release.">update available · v${esc(st.have)}</span>`;
+  if(st.state==="current")return ` <span class="rd-src" title="Up to date with this version of Fieldbook.">v${esc(st.have)}</span>`;
+  return "";
+}
 function rulesDataHTML(){
   const groups=loadedRulesGroups();
   if(!groups.length)return `<p class="hint" style="margin:4px 0">No rules data loaded.</p>`;
   const row=(g,withSummary)=>{
     const summary=withSummary?Object.entries(g.cats).map(([c,n])=>`${n} ${catName(c).toLowerCase()}`).join(" · "):"";
-    return `<div class="rd-row"><div class="rd-main"><div class="rd-name">${esc(g.label)}${g.isFile&&g.source?` <span class="rd-src">${esc(g.source)}</span>`:""}</div>${summary?`<div class="rd-sub">${esc(summary)}</div>`:""}</div><button class="icon danger" data-rd-del="${esc(g.key)}" title="Remove this data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
+    return `<div class="rd-row"><div class="rd-main"><div class="rd-name">${esc(g.label)}${g.isFile&&g.source?` <span class="rd-src">${esc(g.source)}</span>`:""}${dataStatusHTML(g)}</div>${summary?`<div class="rd-sub">${esc(summary)}</div>`:""}</div><button class="icon danger" data-rd-del="${esc(g.key)}" title="Remove this data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
   };
   /* whole-system packs first, then one heading per category, Mixed last */
   const order=["rulebook"].concat(RULE_CATS,["mixed"]);
@@ -159,6 +185,7 @@ function mergeRules(obj,fileName){
     arr.forEach(raw=>{
       const base=(kind==="keywords")?{id:uid(),term:raw.term||"",type:raw.type==="image"?"image":"text",text:raw.text||"",image:raw.image||null,cond:!!raw.cond}:Object.assign({},raw);
       base._source=src;if(fileName)base._file=fileName;if(obj.rulebook)base._rulebook=1;
+      if(obj.dataVersion)base._dataVersion=obj.dataVersion;
       const nm=keyOf(base,kind);if(!nm)return;
       map.set(src+"\u0000"+nm,base);
     });

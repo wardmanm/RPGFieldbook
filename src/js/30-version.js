@@ -1,5 +1,12 @@
 /* ---- app version & changelog (bump APP_VERSION + add a CHANGELOG entry on every fieldbook.html change) ---- */
-const APP_VERSION="1.3.0";
+const APP_VERSION="1.3.1";
+/* The release in which each system's RULES DATA last changed, keyed by the
+   `system` field its pack carries. Owned by scripts/release.js, which bumps a
+   system only when its data/<dir>/ actually changed since the previous tag —
+   so the app can tell "you need the new app" from "you also need new data".
+   scripts/bundle-rules.js stamps each pack with its own value as `dataVersion`;
+   dataStatus() compares what a player loaded against these. Never hand-edit. */
+const DATA_VERSIONS={"XPHB":"1.3.0","Humblewood":"1.3.0"};
 /* Set this to your GitHub "owner/repo" to enable the update badge. Leave "" to disable.
    The badge appears when a GitHub Release with a newer tag (e.g. v1.2.0) exists, and links
    to that release's page (attach fieldbook.html to the release so players can download it). */
@@ -20,6 +27,9 @@ function checkForUpdate(){
     }).catch(()=>{});
 }
 const CHANGELOG=[
+  {v:"1.3.1", date:"2026-08-10", notes:[
+    "**Fieldbook now tells you when your rules data needs updating — and when it doesn't.** Most updates change the app but not the rules, and re-importing packs you already have is a chore. Each pack now records which release its contents came from, and Settings → Rules data shows it: an **update available** badge if a newer version of that pack exists, and nothing at all if you're current. Release notes say the same thing up front, naming only the packs that actually changed — so if you play D&D and only the Humblewood data moved, you'll be told to skip it."
+  ]},
   {v:"1.3.0", date:"2026-08-10", notes:[
     "Character library: the delete button on each character card is now vertically centred instead of sitting at the top of the row, matching the autoload star.",
     "Character library: an **Import** button now sits beside **New character**, so you can load a saved character file straight from the home screen without opening a sheet first. If the file matches a character you already have, you are still asked whether to replace it or import it as a copy.",

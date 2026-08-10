@@ -93,7 +93,7 @@ and why.
 
 ```
 src/   fieldbook.template.html · manifest.json · js/ (21 fragments) · css/ (7) · tests/ · docs/
-dist/  fieldbook.html (tracked) · fieldbook-v<version>.zip + -source.zip (ignored) · .buildstamp (ignored)
+dist/  fieldbook.html (tracked) · fieldbook-v<version>.zip · <system>_full.json · .buildstamp (all ignored)
 ```
 
 `dist/fieldbook.html` stays **tracked**, not gitignored: it is the release artifact, the file the

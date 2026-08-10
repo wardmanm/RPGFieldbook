@@ -107,6 +107,10 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .chip{font-family:var(--head);font-size:10px;letter-spacing:.03em;padding:3px 7px;border-radius:99px;
   background:color-mix(in srgb,var(--accent-2) 16%,transparent);color:var(--accent-2);text-transform:uppercase;font-weight:700}
 .chip.off{opacity:.45;text-decoration:line-through}
+/* "update available" on a rules pack — the accent (honey/gold) rather than the
+   default verdigris, so it reads as attention-worthy without looking like an
+   error. Nothing is broken; the pack just isn't the newest. */
+.chip.warn{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
 .equip{display:inline-flex;align-items:center;gap:6px;font-family:var(--head);font-size:10px;text-transform:uppercase;
   letter-spacing:.05em;color:var(--ink-soft);cursor:pointer;user-select:none}
 .equip .box{width:16px;height:16px;border-radius:4px;border:2px solid var(--line);display:inline-grid;place-items:center}

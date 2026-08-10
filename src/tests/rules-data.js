@@ -8,6 +8,7 @@ const {X, state, bootError, fragments} = loadApp([
   'RULE_CATS','systemOf','racesForCharacter','raceOptions','findRaceDef',
   'loadedRulesGroups','rulesBucket','rulesDataHTML','clearAllRules',
   'mergeRules','resetRules','blankChar','migrate','catName',
+  'DATA_VERSIONS','dataStatus','dataStatusHTML',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -91,4 +92,56 @@ for(const sys of ['5e2024','humblewood']){
   ck(sys+' bundle is non-empty', tot>0, tot);
   console.log('      '+sys+': '+tot+' entries across '+files.length+' files');
 }
+// ---------- rules-data staleness ("do I need to re-download the packs?")
+// DATA_VERSIONS records the release each system's DATA last changed in, so a
+// system whose data didn't move keeps its old version and its holders are not
+// nagged. The three states have to be distinguishable, and "unknown" must never
+// be reported as stale — a false alarm on someone's homebrew is worse than
+// staying quiet.
+X.resetRules();
+X.mergeRules({system:'XPHB', dataVersion:'1.0.0', rulebook:true,
+              races:[{name:'Elf'}]}, '5e2024_full.json');
+X.mergeRules({system:'Humblewood', dataVersion:X.DATA_VERSIONS['Humblewood'], rulebook:true,
+              races:[{name:'Corvum'}]}, 'humblewood_full.json');
+X.mergeRules({system:'Homebrew', rulebook:true, races:[{name:'Mine'}]}, 'mine.json');
+
+const byLabel = {};
+X.loadedRulesGroups().forEach(g => { byLabel[g.source] = g; });
+
+ck('a pack behind DATA_VERSIONS is stale',
+   X.dataStatus(byLabel['XPHB']).state === 'stale', X.dataStatus(byLabel['XPHB']));
+ck('stale status reports both versions',
+   X.dataStatus(byLabel['XPHB']).have === '1.0.0' &&
+   X.dataStatus(byLabel['XPHB']).want === X.DATA_VERSIONS['XPHB']);
+ck('a pack at DATA_VERSIONS is current',
+   X.dataStatus(byLabel['Humblewood']).state === 'current');
+ck('an unstamped/unknown system is NOT stale',
+   X.dataStatus(byLabel['Homebrew']).state === 'unknown');
+ck('the loaded dataVersion is recorded on the group',
+   byLabel['XPHB'].dataVersion === '1.0.0');
+
+// the badge: visible for stale, quiet otherwise
+ck('stale renders an update chip', /update available/.test(X.dataStatusHTML(byLabel['XPHB'])));
+ck('current renders no update chip', !/update available/.test(X.dataStatusHTML(byLabel['Humblewood'])));
+ck('unknown renders nothing at all', X.dataStatusHTML(byLabel['Homebrew']) === '');
+ck('the chip reaches the Settings list', /update available/.test(X.rulesDataHTML()));
+
+// a NEWER pack than the app expects is not "stale" either — the player is ahead
+X.resetRules();
+X.mergeRules({system:'XPHB', dataVersion:'99.0.0', rulebook:true, races:[{name:'Elf'}]}, 'f.json');
+ck('a pack newer than the app is not flagged stale',
+   X.dataStatus(X.loadedRulesGroups()[0]).state === 'current');
+
+// ---------- every shipped pack agrees with DATA_VERSIONS
+[['5e2024_full.json','XPHB'], ['humblewood_full.json','Humblewood']].forEach(([f, sysName]) => {
+  const p = path.join(ROOT, 'dist', f);
+  if (!fs.existsSync(p)) { ck(f + ' exists', false); return; }
+  const pack = JSON.parse(fs.readFileSync(p, 'utf8'));
+  ck(f + ' declares a dataVersion', !!pack.dataVersion, pack.dataVersion);
+  ck(f + ' dataVersion matches DATA_VERSIONS.' + sysName,
+     pack.dataVersion === X.DATA_VERSIONS[sysName],
+     pack.dataVersion + ' vs ' + X.DATA_VERSIONS[sysName]);
+  ck(f + " system is the DATA_VERSIONS key", pack.system === sysName, pack.system);
+});
+
 ck.done();

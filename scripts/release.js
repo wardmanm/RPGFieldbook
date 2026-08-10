@@ -13,6 +13,7 @@
  */
 "use strict";
 const fs = require("fs");
+const { spawnSync } = require("child_process");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -102,7 +103,41 @@ if (at < 0) die("could not find `const CHANGELOG=[` in src/js/30-version.js");
 
 let out = src.slice(0, at + anchor.length) + entry + src.slice(at + anchor.length);
 out = out.replace(/APP_VERSION\s*=\s*"[^"]+"/, `APP_VERSION="${next}"`);
+
+/* ---------------- data versions ----------------
+   Bump a system's dataVersion ONLY if its data actually changed since the last
+   release, so a player whose packs are still current isn't told to re-download
+   them. Compared against the newest existing tag, working tree included —
+   that is what this release will contain. Silently leaves everything alone if
+   git or the tags are unavailable (a source-zip build, a fresh clone with no
+   tags): the cost is a stale-looking pack, never a wrong bump. */
+const SYSTEM_DIRS = { XPHB: "5e2024", Humblewood: "humblewood" };
+function lastTag() {
+  const r = spawnSync("git", ["-C", ROOT, "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*",
+                              "--sort=-v:refname"], { encoding: "utf8" });
+  if (r.status !== 0) return null;
+  return (r.stdout || "").split("\n").map((x) => x.trim()).filter(Boolean)[0] || null;
+}
+function dataChangedSince(tag, dir) {
+  const r = spawnSync("git", ["-C", ROOT, "diff", "--quiet", tag, "--", "data/" + dir]);
+  return r.status === 1;                       // 0 = same, 1 = differs, else error
+}
+const dvm = /const\s+DATA_VERSIONS\s*=\s*(\{[^}]*\})/.exec(out);
+if (!dvm) die("could not find DATA_VERSIONS in src/js/30-version.js");
+const versions = JSON.parse(dvm[1]);
+const tag = lastTag();
+const bumped = [];
+for (const sysName of Object.keys(versions)) {
+  const dir = SYSTEM_DIRS[sysName];
+  if (!dir) { console.error(`    WARNING: no data dir mapped for system "${sysName}"`); continue; }
+  if (!tag) { versions[sysName] = next; bumped.push(sysName + " (no previous tag)"); continue; }
+  if (dataChangedSince(tag, dir)) { versions[sysName] = next; bumped.push(sysName); }
+}
+out = out.replace(dvm[1], JSON.stringify(versions).replace(/","/g, '","'));
 fs.writeFileSync(VERSION_JS, out);
+console.error(bumped.length
+  ? `    rules data changed: ${bumped.join(", ")} -> dataVersion ${next}`
+  : `    rules data unchanged since ${tag} — players need only the app`);
 
 /* ---------------- empty the notebook ---------------- */
 

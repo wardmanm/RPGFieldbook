@@ -135,7 +135,6 @@ if [ -z "$RELEASE" ] && [ "$PENDING" -gt 0 ]; then
   echo "    $PENDING unreleased note(s) pending — naming the zips v$VER$TAGSUF"
 fi
 BUNDLE="dist/fieldbook-v$VER$TAGSUF.zip"
-SOURCE="dist/fieldbook-v$VER$TAGSUF-source.zip"
 
 # Clear every old zip so dist/ never accumulates stale versions, and a failed
 # build can't leave last version's bundle looking like the current one.
@@ -155,7 +154,7 @@ cp README.md .buildtmp/
 # The app is MIT; shipping it without its licence would be an oversight.
 cp LICENSE .buildtmp/
 # ONE pack per system, not the per-category files — players import two files, not
-# sixteen. The individual files remain in the repo (and in the source zip).
+# sixteen. The individual files remain in the repo for cherry-picking.
 cp dist/5e2024_full.json dist/humblewood_full.json .buildtmp/data/
 cp docs/*.md .buildtmp/docs/
 cp scripts/convert.py .buildtmp/scripts/
@@ -198,21 +197,12 @@ if(banned.length){
 console.error("    bundle is player-facing only ("+names.filter(n=>!n.endsWith("/")).length+" files)");
 NODE
 
-echo "==> Building $SOURCE"
-# THE WHOLE REPO — the counterpart to the player bundle. Membership comes from
-# git: tracked files plus untracked-but-not-ignored ones. That is exactly "every
-# source file", including anything not yet `git add`ed, while .gitignore keeps
-# build artifacts out. dist/fieldbook.html is tracked, so it rides along and the
-# zip can be checked against its own rebuild.
-if git rev-parse --git-dir >/dev/null 2>&1; then
-  # Skipped rather than fatal when git is absent: build.sh must still work for
-  # someone who unzipped THIS zip and has no .git directory.
-  git ls-files --cached --others --exclude-standard > "$TMPDIR_BUILD/srclist"
-  zip -q "$SOURCE" -@ < "$TMPDIR_BUILD/srclist"
-  echo "    wrote $SOURCE ($(wc -l < "$TMPDIR_BUILD/srclist" | tr -d ' ') files)"
-else
-  echo "    skipped — not a git checkout, so the source file list is unknown"
-fi
+# NO source zip. GitHub attaches "Source code (zip)" and "(tar.gz)" to every
+# release automatically, built from the tag — which on a clean checkout is the
+# same file set this used to produce, so it was a byte-for-byte duplicate of an
+# asset we get for free. It was also the one asset that differed between a local
+# build and the runner's, because it swept in untracked files. For a local
+# snapshot use `git archive HEAD -o snapshot.zip`.
 
 # Surfaces the notebook on a plain build so pending work can't be quietly forgotten.
 finish

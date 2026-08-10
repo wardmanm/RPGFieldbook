@@ -677,7 +677,8 @@ def extract_races(doc, skip, known_subraces=None):
 # own PDF with its own front matter, and that most of this content is NEW
 # rather than an update to a record we already hold.
 #
-# Full survey, supersessions and per-packet contents: src/docs/HUMBLEWOOD-PLAYTESTS.md
+# Full survey, supersessions and per-packet contents:
+#   src/docs/_claude/HUMBLEWOOD-PLAYTESTS.md
 PT_DIR = os.path.join(ROOT, "_conversion-data/Rulebooks")
 
 # `first` skips the cover/credits/Patreon advert (and, in 2025+, a recurring
@@ -816,7 +817,7 @@ PACKETS = [
                      merge_into_core=True)]),
 
     # 2024-03 (Fizzar) is DELIBERATELY ABSENT — superseded in full by 2024-11.
-    # See src/docs/HUMBLEWOOD-PLAYTESTS.md §5. Do not add it back.
+    # See src/docs/_claude/HUMBLEWOOD-PLAYTESTS.md §5. Do not add it back.
 
     dict(date="2024-02", file="HW2_Playtest_February2024.pdf", first=8,
          subclasses=[dict(name="Deep Roots", cls="Sorcerer",

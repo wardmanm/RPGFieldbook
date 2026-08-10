@@ -32,7 +32,7 @@ reading order) rather than transcribed by hand, so trait and feature names match
 | `HWP_Playtest_November2024.pdf` / `…-1.pdf` |
 
 Font styling is structural and matches the condensed core doc, so `styled_spans()` and `classify()`
-in [scripts/extract-humblewood.py](../../scripts/extract-humblewood.py) carry over unchanged:
+in [scripts/extract-humblewood.py](../../../scripts/extract-humblewood.py) carry over unchanged:
 
 | Style | Meaning |
 |---|---|

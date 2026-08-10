@@ -357,6 +357,8 @@ The zip had been shipping the whole repo — `CLAUDE.md`, `build.sh`, dotfiles, 
 
 ### Follow-up: a second zip, `dist/fieldbook-source.zip`
 
+**SUPERSEDED — the source zip was removed on 2026-08-10; see the entry at the end of this file.**
+
 The player bundle deliberately drops the sources, so the build now also emits a full-repo zip for
 archiving and handoff. Two zips, two audiences.
 
@@ -902,7 +904,7 @@ so a stale bundle silently passed the round-trip test after `data/` gained the t
 
 ---
 
-## Humblewood playtest survey → `src/docs/HUMBLEWOOD-PLAYTESTS.md`
+## Humblewood playtest survey → `src/docs/_claude/HUMBLEWOOD-PLAYTESTS.md`
 
 Catalogued all 27 playtest PDFs (23 unique documents; 4 exact-duplicate pairs) ahead of extracting
 them. Documentation only — no code or data changed. The map is dev-only under `src/`, so the
@@ -1185,6 +1187,91 @@ The audit also proposed `50-classrace.js` → `50-rules-lookup.js`, calling it a
 described it less accurately than the current one.
 
 Tests 287 → **323** across seven suites.
+
+---
+
+## Source zip removed — GitHub already provides one
+
+`./build.sh` emitted `fieldbook-v<V>-source.zip` from `git ls-files --cached --others
+--exclude-standard`, and `release.yml` attached it. Both are gone.
+
+GitHub attaches **Source code (zip)** and **(tar.gz)** to every release automatically, built from the
+tag. `.gitattributes` sets no `export-ignore`, so that archive is the tracked files at the tag — and
+on a clean runner checkout our zip was built from exactly the same 84 files. It was a byte-for-byte
+duplicate of an asset we get for free.
+
+It was also **the only asset that differed between a local build and the runner's**: ours swept in
+untracked-but-not-ignored files, so a locally built `-source.zip` and the published one could carry
+different contents under an identical name, with nothing verifying either. The earlier pre-release
+audit flagged that as a should-fix; deleting the thing resolves it rather than papering over it.
+
+Releases now carry 4 of our assets (`fieldbook.html`, the player zip, the two rules packs) plus
+GitHub's 2 automatic archives. For a local snapshot: `git archive HEAD -o snapshot.zip`.
+
+Knock-on: `release.yml`'s `fetch-depth: 0` was justified in a comment by "the source zip is built
+from `git ls-files`", which is no longer true. The two remaining git users — `build-html.js`'s
+clobber guard (`git show HEAD:…`) and the reproducibility `git diff` — both work at depth 1, so full
+history is no longer required. Left in place (seconds on a repo this size, and the pipeline had just
+gone green) with the comment corrected to say so.
+
+---
+
+## Dev docs split by reader: `src/docs/_claude/`
+
+`src/docs/` mixed two audiences. Split so a human opening the folder sees only what is theirs:
+
+| Stays in `src/docs/` (Mike's) | Moved to `src/docs/_claude/` (agent context) |
+|---|---|
+| `UNRELEASED.md` — he writes the bullets | `WIRING-LEDGER.md` — working memory, read at the start of a task |
+| `RELEASING.md` — he follows it to publish | `HUMBLEWOOD-PLAYTESTS.md` — extraction reference |
+| `ADR-001-source-split.md` | |
+
+**ADR-001 deliberately stayed.** It is a decision record, not working notes: it explains why the
+`src/` split exists and is cross-referenced from CLAUDE.md rule 1 and from the build scripts. Any
+future maintainer needs it, so it belongs with the human docs even though it is dense.
+
+`git mv`, so history follows. Six references updated (`dev.sh`, CLAUDE.md ×2, the extractor ×2, and
+one inside the ledger), plus a markdown link inside HUMBLEWOOD-PLAYTESTS.md that was a directory
+level short after the move. No packaging risk either way: the zip guard's `^src\/` rule already
+covers anything under `src/`, `_claude/` included.
+
+---
+
+## "Do I need the new data too?" — per-system dataVersion
+
+Most releases change the app but not the rules packs, and re-importing packs is the tedious part.
+Nothing told a player which kind of release they were looking at, so the safe assumption was always
+"re-download everything".
+
+**One source of truth.** `DATA_VERSIONS` in `src/js/30-version.js` records, per system, the release
+in which that system's data last changed:
+
+- `scripts/release.js` bumps a system **only if `git diff <last tag> -- data/<dir>` says it moved**,
+  working tree included (that is what the release will contain). Prints which systems bumped, or
+  "rules data unchanged — players need only the app".
+- `scripts/bundle-rules.js` reads it — never duplicates it — and stamps each pack as `dataVersion`.
+  A system with no `DATA_VERSIONS` entry fails the build rather than shipping unstamped.
+- `mergeRules()` records the loaded pack's value per entry as `_dataVersion`, alongside the existing
+  `_source`/`_rulebook` stamps, so it survives the localStorage cache and the remove-group filter
+  for free. `dataStatus()` compares it and Settings → Rules data badges the pack.
+- `release.yml` runs the same per-system diff and writes the answer into the release body.
+
+**Per system, deliberately.** A global flag would tell a D&D-only player to re-import Humblewood
+because Humblewood changed. The diff is per directory, so it costs nothing to be precise.
+
+**Unknown is not stale.** A pack with no `dataVersion` — homebrew, or anything predating this — is
+reported `unknown` and badged with nothing. A false alarm on someone's own content is worse than
+silence. A pack *newer* than the build expects is also not flagged; the player is simply ahead.
+
+Four release-note cases, each exercised before committing: first release (take everything), data
+unchanged (app only, names the previous tag), one system changed, both changed. The first attempt
+formatted the pack list with a clever `sed` that produced mismatched backticks — replaced with a
+plain shell accumulator and tested, rather than trusted.
+
+16 checks in `rules-data.js` (the three states, the badge, and that both shipped packs agree with
+`DATA_VERSIONS`), plus wiring guards in `docs.js`: `DATA_VERSIONS` must be `JSON.parse`-able because
+`bundle-rules.js` parses it, every value must be X.Y.Z, and every system must map to a data dir in
+`release.js`. Tests 323 → 348.
 
 ---
 

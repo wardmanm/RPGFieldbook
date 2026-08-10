@@ -3,6 +3,10 @@
 What changed in each release. The version you are running is shown in the app's top bar —
 tap it to read this same list in-app.
 
+## v1.3.1 — 2026-08-10
+
+- **Fieldbook now tells you when your rules data needs updating — and when it doesn't.** Most updates change the app but not the rules, and re-importing packs you already have is a chore. Each pack now records which release its contents came from, and Settings → Rules data shows it: an **update available** badge if a newer version of that pack exists, and nothing at all if you're current. Release notes say the same thing up front, naming only the packs that actually changed — so if you play D&D and only the Humblewood data moved, you'll be told to skip it.
+
 ## v1.3.0 — 2026-08-10
 
 - Character library: the delete button on each character card is now vertically centred instead of sitting at the top of the row, matching the autoload star.

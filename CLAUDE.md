@@ -44,14 +44,14 @@ src/                    THE SOURCE OF TRUTH — edit here, never the built file
     UNRELEASED.md       running notebook of changes since the last release — ADD TO THIS
     RELEASING.md        how to cut and publish a release, and what CI refuses
     ADR-001-source-split.md  why the source is split and how the build works
-    WIRING-LEDGER.md    running log of what's been done + what's deferred — READ THIS
-    HUMBLEWOOD-PLAYTESTS.md  what each playtest packet adds, and what supersedes what
+    _claude/            AGENT CONTEXT — working memory and reference, not for humans
+      WIRING-LEDGER.md    running log of what's been done + what's deferred — READ THIS
+      HUMBLEWOOD-PLAYTESTS.md  what each playtest packet adds, and what supersedes what
 dist/
   fieldbook.html        the app — a BUILD ARTIFACT. Never hand-edit. Tracked in git.
   5e2024_full.json      one bundled rules pack per system — generated (gitignored)
   humblewood_full.json    …these are what the zip's data/ contains
-  fieldbook-v1.2.1.zip  the player bundle — allowlisted, no dev material (gitignored)
-  fieldbook-v1.2.1-source.zip   the whole repo, for archiving/handoff (gitignored)
+  fieldbook-v1.3.0.zip  the player bundle — allowlisted, no dev material (gitignored)
 .github/workflows/
   ci.yml                syntax, manifest parity, data, byte hygiene, tests, full build
   release.yml           publishes on a version tag; refuses if it can't reproduce
@@ -90,20 +90,21 @@ because their contents are *not* the released version their name would otherwise
 empties the notebook first, so releases (and clean rebuilds at a tag) keep plain names — the release
 workflow depends on that.
 
-`./build.sh` emits **two** zips:
+`./build.sh` emits **one** zip:
 
 - **`dist/fieldbook-v<version>.zip` — player-facing only.** Exactly what README section 9 advertises:
-  `fieldbook.html`, `README.md`, `data/`, `docs/`, `scripts/convert.py`. It is an allowlist, and the
-  build verifies it afterwards and **deletes the zip** if anything development-shaped got in. If you
-  add a dev-only doc or tool, put it under `src/` (or leave it at root) — never in `docs/`, or it
-  ships.
-- **`dist/fieldbook-v<version>-source.zip` — the whole repo.** Membership is `git ls-files --cached --others
-  --exclude-standard`, i.e. every tracked file plus anything untracked that isn't gitignored, so
-  work you haven't committed yet is still captured. It rebuilds standalone: unzip it anywhere and
-  `./build.sh` reproduces `dist/fieldbook.html` byte-for-byte (the source-zip step itself skips
-  when there's no `.git`).
+  `fieldbook.html`, `README.md`, `LICENSE`, `data/`, `docs/`, `scripts/convert.py`. It is an
+  allowlist, and the build verifies it afterwards and **deletes the zip** if anything
+  development-shaped got in. If you add a dev-only doc or tool, put it under `src/` (or leave it at
+  root) — never in `docs/`, or it ships.
 
-`src/docs/WIRING-LEDGER.md` is the memory of the project — what's been built, why, and what's still
+**There is deliberately no source zip.** GitHub attaches `Source code (zip)` and `(tar.gz)` to every
+release itself, built from the tag — which on a clean checkout is the identical file set, so ours
+was a byte-for-byte duplicate of a free asset. It was also the only asset that differed between a
+local build and the runner's, because it swept in untracked files. For a local snapshot:
+`git archive HEAD -o snapshot.zip`.
+
+`src/docs/_claude/WIRING-LEDGER.md` is the memory of the project — what's been built, why, and what's still
 open. Read it at the start of any non-trivial task, and append a short entry when you finish one.
 
 ## Build & validate — the owner runs the build
@@ -157,9 +158,16 @@ version, so a plain `./build.sh` never changes it — only `--release` does.
   `X.Y.Z`). That folds every pending bullet into a new `CHANGELOG` entry in `src/js/30-version.js`,
   bumps `APP_VERSION`, empties the notebook, and then builds. Semver as usual: patch = fix,
   minor = feature, major = breaking rework.
-- **Never hand-edit `APP_VERSION` or the `CHANGELOG` array.** `scripts/release.js` owns both. It
-  refuses to release with an empty notebook, and refuses a version that isn't higher than the
-  current one (that would break the in-app update check).
+- **Never hand-edit `APP_VERSION`, `DATA_VERSIONS` or the `CHANGELOG` array.** `scripts/release.js`
+  owns all three. It refuses to release with an empty notebook, and refuses a version that isn't
+  higher than the current one (that would break the in-app update check).
+- **`DATA_VERSIONS` answers "do players need the new rules packs too?"** It records, per system, the
+  release in which that system's `data/<dir>/` last changed — `release.js` bumps a system only when
+  git says its directory actually moved since the previous tag. `bundle-rules.js` stamps each pack
+  with its own value as `dataVersion`; the app compares what a player loaded against it and badges
+  the pack in Settings. The release notes use the same per-system diff to name only the packs worth
+  re-downloading. A system whose data didn't change keeps its old version, so nobody is nagged to
+  re-import a file that is still correct.
 - A plain build prints how many unreleased notes are pending, so work in progress can't be silently
   forgotten.
 - **Data-only or converter-only changes need no note and no release** (the app didn't change). Put

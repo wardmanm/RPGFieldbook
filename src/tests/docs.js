@@ -110,4 +110,33 @@ if (docsAllowed) {
 ck('build.sh ships LICENSE', /cp LICENSE /.test(build));
 ck('README section 9 lists LICENSE', /LICENSE\s+←/.test(readme));
 
+// ---------- DATA_VERSIONS must cover every system bundle-rules.js emits
+// A system with no entry makes bundle-rules.js fail the build, which is the
+// right behaviour — but catching it here says why, before the build does.
+const bundle = read('scripts/bundle-rules.js');
+const version = read('src/js/30-version.js');
+const dvm = /const\s+DATA_VERSIONS\s*=\s*(\{[^}]*\})/.exec(version);
+ck('DATA_VERSIONS is present and parseable', !!dvm);
+if (dvm) {
+  let parsed = null;
+  try { parsed = JSON.parse(dvm[1]); } catch (e) { /* reported below */ }
+  ck('DATA_VERSIONS is valid JSON (bundle-rules.js parses it with JSON.parse)', !!parsed, dvm[1]);
+  if (parsed) {
+    Object.entries(parsed).forEach(([sys, v]) =>
+      ck('DATA_VERSIONS.' + sys + ' is an X.Y.Z version', /^\d+\.\d+\.\d+$/.test(v), v));
+    // every system folder bundle-rules knows about needs a mapping in release.js
+    const dirs = [...bundle.matchAll(/\{\s*dir:\s*"([^"]+)"/g)].map(m => m[1]);
+    const relMap = /const\s+SYSTEM_DIRS\s*=\s*\{([^}]*)\}/.exec(read('scripts/release.js'));
+    ck('release.js maps systems to data dirs', !!relMap);
+    if (relMap) {
+      const mapped = [...relMap[1].matchAll(/(\w+)\s*:\s*"([^"]+)"/g)];
+      const mappedDirs = mapped.map(m => m[2]);
+      const mappedSys = mapped.map(m => m[1]);
+      dirs.forEach(d => ck('data dir "' + d + '" has a SYSTEM_DIRS mapping', mappedDirs.includes(d)));
+      Object.keys(parsed).forEach(sys =>
+        ck('DATA_VERSIONS system "' + sys + '" is mapped to a dir', mappedSys.includes(sys)));
+    }
+  }
+}
+
 ck.done();
