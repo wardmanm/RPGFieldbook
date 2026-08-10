@@ -46,7 +46,12 @@ finish(){
 
 # A private temp dir, not a fixed name in a world-writable /tmp. The .js
 # extension is required: node --check refuses to parse an unknown extension.
-TMPDIR_BUILD=$(mktemp -d -t fieldbook)
+#
+# An explicit template, NOT `-t fieldbook`: the two mktemps disagree about what
+# -t means. BSD (macOS) reads it as a prefix and appends its own X's; GNU (the
+# CI runner) reads it as the whole template and rejects it with "too few X's".
+# Passing the full path with X's is the form both accept.
+TMPDIR_BUILD=$(mktemp -d "${TMPDIR:-/tmp}/fieldbook.XXXXXXXX")
 TMPJS="$TMPDIR_BUILD/_fieldbook.js"
 trap 'rm -rf "$TMPDIR_BUILD"' EXIT
 

@@ -74,15 +74,26 @@ const OLD = /\b(humblewood-(races|spells|feats|classes|subclasses|backgrounds)|(
 // ---------- changelog notebook: the traps that reach the public release notes
 // Bullets are copied verbatim into the GitHub release body, where <name> is an
 // HTML tag and disappears; and a literal version goes stale on the next bump.
+// An EMPTY notebook is correct immediately after a release is cut, so this
+// checks the bullets that exist rather than demanding some exist. (It first
+// asserted `length > 0` and went red the moment a release was cut — a test
+// that fails on a legitimate state is worse than no test.)
 const pending = read('src/docs/UNRELEASED.md').split(/^## Pending/m)[1] || '';
 const bullets = pending.split(/\n(?=- )/).filter(b => b.trim().startsWith('- '));
-ck('UNRELEASED has pending bullets to check', bullets.length > 0, bullets.length);
 const angled = bullets.filter(b => /<[A-Za-z/]/.test(b));
 ck('no pending bullet contains an angle-bracket tag', angled.length === 0,
    angled.map(b => b.slice(0, 60)));
 const versioned = bullets.filter(b => /\bv\d+\.\d+\.\d+\b/.test(b));
 ck('no pending bullet hard-codes a version', versioned.length === 0,
    versioned.map(b => b.slice(0, 60)));
+
+// Last line of defence: the notebook empties on release, so once a bad bullet
+// is folded in, this is the only place left to catch it before the tag. The
+// generated changelog IS the GitHub release body.
+const changelogBad = read('docs/CHANGELOG.md').split('\n')
+  .filter(l => l.startsWith('- ') && /<[A-Za-z/]/.test(l));
+ck('no changelog entry contains an angle-bracket tag', changelogBad.length === 0,
+   changelogBad.map(l => l.slice(0, 70)));
 
 // ---------- the player zip allowlist and README section 9 must agree
 const build = read('build.sh');
