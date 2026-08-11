@@ -1,12 +1,12 @@
 /* ---- app version & changelog (bump APP_VERSION + add a CHANGELOG entry on every fieldbook.html change) ---- */
-const APP_VERSION="1.3.1";
+const APP_VERSION="1.4.0";
 /* The release in which each system's RULES DATA last changed, keyed by the
    `system` field its pack carries. Owned by scripts/release.js, which bumps a
    system only when its data/<dir>/ actually changed since the previous tag —
    so the app can tell "you need the new app" from "you also need new data".
    scripts/bundle-rules.js stamps each pack with its own value as `dataVersion`;
    dataStatus() compares what a player loaded against these. Never hand-edit. */
-const DATA_VERSIONS={"XPHB":"1.3.0","Humblewood":"1.3.0"};
+const DATA_VERSIONS={"XPHB":"1.4.0","Humblewood":"1.3.0"};
 /* Set this to your GitHub "owner/repo" to enable the update badge. Leave "" to disable.
    The badge appears when a GitHub Release with a newer tag (e.g. v1.2.0) exists, and links
    to that release's page (attach fieldbook.html to the release so players can download it). */
@@ -40,6 +40,29 @@ function showUpdatePill(){
   el.style.display="inline-flex";
 }
 const CHANGELOG=[
+  {v:"1.4.0", date:"2026-08-11", notes:[
+    "Items can carry a weight, and the Inventory tab totals up what you're hauling. Gear added from the rules browser brings its weight with it.",
+    "New per-character Encumbrance setting, in Settings: off, the standard rules, or the variant Encumbered / Heavily Encumbered tiers. When it's on, a heavy pack really does slow you down — the Speed on your sheet drops, tapping it explains why, and a badge on the Inventory card shows how close to your limit you are.",
+    "Coins count toward what you're carrying, at 50 coins to the pound, with a switch to turn that off.",
+    "Characters now have a Size, shown in Vitals next to Speed. It comes from your ancestry unless you tap it and pick your own — the picker tells you what each size would let you carry before you commit. Large characters carry twice as much, Tiny half as much, and Size prints on the sheet.",
+    "Item costs under 1 gp are no longer rounded down to zero in the item list or the inventory total.",
+    "Fixed: editing an item no longer quietly loses its favourite star, or its link back to the rules pack it came from.",
+    "Settings is now grouped into collapsible sections — Appearance, This character, Rules data, and Characters & backup — instead of one long scroll. It remembers which ones you left open, and the folded Rules data header still tells you how much is loaded.",
+    "The Hit Point boxes now take signed entries, the way the coin boxes do: type -7 to take damage, +4 to heal, or a plain number to set the total. All three boxes work this way, and Current HP won't run past your maximum or below zero.",
+    "Short and Long Rest and your Hit Dice have moved into their own Rest & Recovery card, just below Vitals. Hit Dice used to be listed twice in two different places; now it's in one.",
+    "Hit Dice are easier to read: one line per die size showing how many you have left in words, and a labelled Roll button. While they're set automatically from your class the text box is hidden, since it only repeated what the dice below it already said — switch to manual and it comes back.",
+    "Vitals is tidier: Inspiration is a star in the card's heading rather than a box of its own, and the death saves now read as failures, a skull, then successes, centred under the HP buttons. Both sets fill outward from the skull.",
+    "Fixed: the HP minus button could take you below zero.",
+    "Every section of your sheet can now hold a note. Tap the little page icon beside any heading on the Sheet, Spells, Inventory or Story tabs and jot down whatever you need — the icon lights up when there's something there, and hovering it shows you what without opening anything.",
+    "Notes understand a bit of formatting: bold, italics, code, headings, bullet and numbered lists, quotes and dividers. Rules terms you know stay tappable inside them, same as everywhere else.",
+    "New Notes tab: every note you've written, grouped by the tab it came from, each with a link that takes you straight back to the section it belongs to. Notes print with your sheet too.",
+    "The tab bar switches from words to icons when the screen gets narrow, and there's a new Icon tabs switch in Settings if you'd rather have icons all the time.",
+    "The Inspiration star is bigger and easier to hit.",
+    "Fixed: equipment handed to you by a class or background arrived with no gp value, so your inventory total was wildly wrong. It also brings its category across now. For characters you already have, run Check for rules updates in Settings and it will fill the missing values in.",
+    "Fixed: items that weren't weapons or armour all piled into Loot instead of Gear, Tools or Consumables. Gear you add from now on files itself properly.",
+    "Fixed: the Tables tab was empty when you reopened the app, even with a rules pack loaded — the tables were there, nothing had drawn them, and typing in the filter box made them appear. It also means the tab now tells you how to import tables when you have none, instead of showing nothing.",
+    "The update notice now takes the version number's place in the top bar instead of stranding itself at the other end of it. Hover it to see which version is waiting and which one you're on, and tap it for the release notes and the download."
+  ]},
   {v:"1.3.1", date:"2026-08-10", notes:[
     "**Fieldbook now tells you when your rules data needs updating — and when it doesn't.** Most updates change the app but not the rules, and re-importing packs you already have is a chore. Each pack now records which release its contents came from, and Settings → Rules data shows it: an **update available** badge if a newer version of that pack exists, and nothing at all if you're current. Release notes say the same thing up front, naming only the packs that actually changed — so if you play D&D and only the Humblewood data moved, you'll be told to skip it."
   ]},
