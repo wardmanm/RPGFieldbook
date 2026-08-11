@@ -10,6 +10,32 @@ function openGlossView(g){
   let body= g.type==="image"? (g.image?`<img src="${g.image}" alt="${esc(g.term)}">`:`<p><em>No image attached.</em></p>`) : `<p>${esc(g.text||"—")}</p>`;
   openModal(g.term,body);
 }
+/* ---- size picker (the Size box in Vitals) ----
+   The same control Settings offers, put where the stat is shown. Size is a
+   choice, not a derived number, so it gets a chooser rather than the read-only
+   breakdown the other Vitals boxes tap through to. */
+function openSizePicker(){
+  const c=contributions();
+  const line=(sz)=>{
+    const eff=sz||raceDefSize()||"Medium";
+    const mult=SIZE_CARRY[eff]||1;
+    return `${eff} — carry up to ${fmtWt(capacityFor(eff,c))}`+
+      (mult===1?"":` (${mult>1?"double":"half"} a Medium character's)`)+
+      (sz?"":" · taken from your ancestry");
+  };
+  openModal("Size",`
+    <div class="field"><label class="f">Creature size</label><select id="szSel">${sizeOptionsHTML(character.size)}</select></div>
+    <p class="hint" id="szHint">${esc(line(character.size))}</p>
+    <p class="hint">Size sets how much you can carry. It only changes anything on the sheet while Encumbrance is switched on, in Settings.</p>
+    <div class="m-actions"><button class="tbtn" id="szCancel">Cancel</button><button class="tbtn primary" id="szSave">Save</button></div>`);
+  const sel=document.getElementById("szSel"), hint=document.getElementById("szHint");
+  sel.addEventListener("change",()=>{hint.textContent=line(sel.value);});
+  document.getElementById("szCancel").addEventListener("click",closeModal);
+  document.getElementById("szSave").addEventListener("click",()=>{
+    character.size=sel.value;
+    closeModal();renderInventory();recompute();scheduleSave();
+  });
+}
 function openStatBreakdown(target){
   const c=contributions();const contr=c.filter(x=>x.target===target);
   let base="", label=FX_LABEL[target]||target, grantLines="";
@@ -23,6 +49,16 @@ function openStatBreakdown(target){
   let rows=`<p style="margin-bottom:6px">${esc(base)}</p>`+grantLines;
   if(contr.length)rows+=contr.map(x=>`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(x.source)}</span><b>${fmt(x.value)}</b></div>`).join("");
   else if(!grantLines)rows+=`<p style="color:var(--ink-soft);font-style:italic">No item, feature, or grant effects apply.</p>`;
+  /* Encumbrance is last because it is applied last — after the numeric effects,
+     and sometimes as a replacement rather than a modifier. */
+  if(target==="speed"){
+    const st=encState(c);
+    if(st.mode!=="none"&&st.tier!=="ok"){
+      const val=st.floor!=null?(st.floor+" ft"):fmt(st.penalty);
+      rows+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(st.label)} (${esc(fmtWt(st.carried))} / ${esc(fmtWt(st.cap))})</span><b>${esc(val)}</b></div>`;
+      rows+=`<p class="hint" style="margin-top:6px">${esc(encTierNote(st))}</p>`;
+    }
+  }
   openModal(label+" breakdown",rows);
 }
 
@@ -82,8 +118,9 @@ function openItemForm(existing){
       <div class="field"><label class="f">Quantity</label><input id="iQty" type="number" min="1" value="${num(it.qty)||1}"></div></div>
     <div class="field"><label class="f">Description</label><textarea id="iDesc">${esc(it.description||"")}</textarea></div>
     <div class="field"><label class="f">Category</label><select id="iCategory"><option value=""${!it.sectionOverride?" selected":""}>Automatic (${esc(invSection(it))})</option>${INV_ORDER.map(sname=>`<option value="${sname}"${it.sectionOverride===sname?" selected":""}>${sname}</option>`).join("")}</select></div>
-    <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${it.cost!=null&&it.cost!==""?num(it.cost):""}" placeholder="0"></div>
-      <div class="field"><label class="f">Origin</label><select id="iOrigin">${originOptionsHTML(it.origin,false)}</select></div></div>
+    <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${it.cost!=null&&it.cost!==""?fnum(it.cost):""}" placeholder="0"></div>
+      <div class="field"><label class="f">Weight each (lb, optional)</label><input id="iWeight" type="number" min="0" step="0.01" value="${it.weight!=null&&it.weight!==""?fnum(it.weight):""}" placeholder="0"></div></div>
+    <div class="field"><label class="f">Origin</label><select id="iOrigin">${originOptionsHTML(it.origin,false)}</select></div>
     <div class="field" id="iOrigDetWrap" style="${it.origin?"":"display:none"}"><label class="f">Origin detail</label><input id="iOrigDet" value="${esc((it.origin&&it.origin.detail)||"")}" placeholder="${esc((it.origin&&originDef(it.origin.kind)&&originDef(it.origin.kind).ph)||"place, who, etc.")}"></div>
     <div class="field"><label class="f">Effects while equipped</label><div id="iFx">${fxEditorRows(it.effects)}</div><button class="fx-add" id="iAddFx">+ Add effect</button></div>
     <label class="equip ${it.equipped?"on":""}" id="iEquip" style="font-size:12px"><span class="box"></span>Equipped (apply effects now)</label>
@@ -104,7 +141,7 @@ function openItemForm(existing){
   document.getElementById("iAddFx").addEventListener("click",()=>fxWrap.insertAdjacentHTML("beforeend",fxRow(null)));
   fxWrap.addEventListener("click",e=>{const d=e.target.closest(".fx-del");if(d)d.closest(".fxrow").remove()});
   const libSel=document.getElementById("iLib");
-  if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;fxWrap.innerHTML=fxEditorRows(x.effects);
+  if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;const wg=fnum(x.weight);if(wg)document.getElementById("iWeight").value=wg;fxWrap.innerHTML=fxEditorRows(x.effects);
     if(x.weapon){isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}});
   document.getElementById("iCancel").addEventListener("click",closeModal);
   const iOrig=document.getElementById("iOrigin"),iOrigW=document.getElementById("iOrigDetWrap"),iOrigD=document.getElementById("iOrigDet");
@@ -113,10 +150,17 @@ function openItemForm(existing){
     const rec={id:it.id,name:document.getElementById("iName").value.trim()||"Item",qty:num(document.getElementById("iQty").value)||1,description:document.getElementById("iDesc").value,effects:collectFx(fxWrap),equipped};
     const so=document.getElementById("iCategory").value;if(so)rec.sectionOverride=so;
     if(it.category)rec.category=it.category;if(it.type)rec.type=it.type;
-    const cv=document.getElementById("iCost").value;if(cv!==""&&num(cv)>=0)rec.cost=num(cv);
+    const cv=document.getElementById("iCost").value;if(cv!==""&&fnum(cv)>=0)rec.cost=fnum(cv);
+    const wv=document.getElementById("iWeight").value;if(wv!==""&&fnum(wv)>0)rec.weight=fnum(wv);
     const ok=document.getElementById("iOrigin").value;if(ok)rec.origin={kind:ok,detail:document.getElementById("iOrigDet").value.trim(),at:(it.origin&&it.origin.at)||Date.now()};
     if(it.grant)rec.grant=it.grant;
     if(it.attackId)rec.attackId=it.attackId;
+    /* rec is rebuilt from the form, so anything the form doesn't ask about has to
+       be carried across explicitly or an edit silently discards it: the favourite
+       star, and — worse, because it is invisible — the src stamp the rules-update
+       tool needs to tell "the pack changed" from "the player edited this". */
+    if(it.fav)rec.fav=it.fav;
+    if(it.src)rec.src=it.src;
     const dice=document.getElementById("iWDice").value.trim();
     if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(it.weapon&&it.weapon.notes)||""};if(it.weapon&&it.weapon.atkMisc!=null)rec.weapon.atkMisc=it.weapon.atkMisc;if(it.weapon&&it.weapon.dmgMisc!=null)rec.weapon.dmgMisc=it.weapon.dmgMisc;}
     const i=character.inventory.findIndex(x=>x.id===it.id);if(i>=0)character.inventory[i]=rec;else character.inventory.push(rec);

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light" data-skin="humblewood" data-rough="on">
+<html lang="en" data-theme="light" data-skin="humblewood" data-rough="on" data-tabs="labels">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -102,7 +102,9 @@ html[data-theme="dark"] .tbtn.primary{color:#20160a}
 .savestate.on{color:var(--accent)}
 .verbtn{align-self:center;margin-right:auto;font-family:var(--head);font-size:10px;letter-spacing:.06em;color:var(--ink-soft);background:none;border:1px solid var(--hair);border-radius:20px;padding:2px 9px;cursor:pointer}
 .verbtn:hover{color:var(--accent);border-color:var(--accent)}
-.updpill{align-self:center;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:#20160a;background:var(--accent);border:1px solid var(--ink);border-radius:20px;padding:3px 11px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:updpulse 2.4s ease-in-out infinite}
+/* Takes over the version button's slot — same margin-right:auto, so it sits
+   where the version did instead of being pushed to the far end of the bar. */
+.updpill{align-self:center;margin-right:auto;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:#20160a;background:var(--accent);border:1px solid var(--ink);border-radius:20px;padding:3px 11px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:updpulse 2.4s ease-in-out infinite}
 .updpill:hover{filter:brightness(1.06)}
 @keyframes updpulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}50%{box-shadow:0 0 0 4px transparent}}
 
@@ -110,7 +112,24 @@ html[data-theme="dark"] .tbtn.primary{color:#20160a}
   display:flex;gap:0;padding:0 clamp(8px,2vw,18px)}
 .tab{flex:1;max-width:220px;font-family:var(--head);font-weight:700;letter-spacing:.06em;
   font-size:14px;text-transform:uppercase;color:var(--ink-soft);background:none;border:0;
-  padding:13px 6px;cursor:pointer;border-bottom:3px solid transparent;min-height:48px}
+  padding:13px 6px;cursor:pointer;border-bottom:3px solid transparent;min-height:48px;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px}
+/* Seven words don't fit a phone, so below the breakpoint each tab shows its
+   glyph instead — and the Icon tabs setting forces that at any width, for
+   anyone who prefers it. */
+.tabicon{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;display:none;flex:none}
+@media(max-width:860px){.tab .tlbl{display:none}.tabicon{display:block}}
+html[data-tabs="icons"] .tab .tlbl{display:none}
+html[data-tabs="icons"] .tabicon{display:block}
+/* Very narrow: let the bar scroll rather than crushing the glyphs. .tab-toc's
+   margin-left:auto collapses to nothing in a scroll container, so it has to be
+   pinned instead or it scrolls off the end. */
+@media(max-width:400px){
+  .tabbar{overflow-x:auto;scrollbar-width:none}
+  .tabbar::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;min-width:46px}
+  .tab-toc{position:sticky;right:0;background:var(--paper-2)}
+}
 .tab.active{color:var(--ink);border-bottom-color:var(--accent)}
 .tab:hover{color:var(--ink)}
 .tab-toc{flex:0 0 auto;margin-left:auto;background:none;border:0;color:var(--ink-soft);cursor:pointer;padding:0 12px;min-height:48px;display:inline-flex;align-items:center;font-size:18px}
@@ -163,6 +182,43 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .g2>*,.g3>*{min-width:0}
+/* ---- section notes ----
+   The icon takes the .starbtn approach to state: faint when there's nothing
+   there, accent when there is. margin-left:auto parks it at the far right of
+   every heading regardless of where that card's .grow happens to sit. */
+.label .notebtn{position:relative;background:none;border:0;cursor:pointer;padding:3px 4px;
+  color:var(--hair);display:inline-flex;align-items:center;flex:none;margin-left:auto}
+.label .notebtn.on{color:var(--accent)}
+.label .notebtn:hover,.label .notebtn:focus-visible{color:var(--accent-2)}
+.notebtn .noteicon{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+/* The preview opens DOWNWARD always: the tab bar is z-index 40 and sticky, so a
+   card that opened upward would slide under it. Every inherited .label property
+   is reset — uppercase 12px letter-spaced .14em is unreadable as prose. */
+.n-pop{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:30;
+  width:min(300px,70vw);background:var(--paper);border:1.5px solid var(--line);border-radius:8px;
+  box-shadow:var(--shadow);padding:8px 10px;font-family:var(--body);font-size:13px;line-height:1.5;
+  letter-spacing:normal;text-transform:none;font-weight:400;color:var(--ink);text-align:left;white-space:normal}
+.notebtn:hover .n-pop,.notebtn:focus-visible .n-pop{display:block}
+/* NOT .rt-view: that is white-space:pre-wrap, which would double every newline
+   now that the blocks are real elements. */
+.n-body{font-size:15px;line-height:1.6;word-break:break-word;margin-top:6px}
+.n-body p{margin:0 0 8px}
+.n-body p:last-child,.n-body>*:last-child{margin-bottom:0}
+.n-h{font-family:var(--head);font-weight:800;letter-spacing:.05em;color:var(--ink);margin:10px 0 4px}
+.n-h1{font-size:16px}.n-h2{font-size:15px}
+.n-h3,.n-h4,.n-h5,.n-h6{font-size:14px;color:var(--ink-soft)}
+.n-ul,.n-ol{margin:0 0 8px;padding-left:20px}
+.n-ul li,.n-ol li{margin:2px 0}
+.n-q{margin:0 0 8px;padding:2px 0 2px 10px;border-left:3px solid var(--hair);color:var(--ink-soft)}
+.n-hr{border:0;border-top:1px solid var(--hair);margin:10px 0}
+.n-body code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--field);
+  border:1px solid var(--hair);border-radius:4px;padding:0 4px}
+.n-when{font-family:var(--head);font-size:11px;color:var(--ink-soft);flex:none}
+.n-jump{font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.02em;text-align:left}
+.n-edit{min-height:min(46vh,340px);resize:vertical}
+/* a brief nudge so a jump lands somewhere you can see it happened */
+.n-flash::before{border-color:var(--accent);transition:border-color .3s}
+
 .fgroup{margin-bottom:12px}
 .fghead{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 2px;border-bottom:1.5px solid var(--line);margin:0 0 8px;user-select:none}
 .fghead:hover .fgname{color:var(--accent-2)}
@@ -173,21 +229,50 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 .fitoggle{background:transparent;border:0;cursor:pointer;padding:0 2px;display:inline-flex;align-items:center;flex:none;color:var(--ink-soft)}
 .fitem .top{align-items:center}
 input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
-.rest-row{display:flex;gap:8px;margin-top:10px}
+.rest-row{display:flex;gap:8px}
 .restbtn{flex:1;font-family:var(--head);font-weight:700;font-size:12px;letter-spacing:.03em;padding:7px 6px;border-radius:8px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer}
 .restbtn:hover{border-color:var(--accent-2);color:var(--accent-2)}
+/* One grid for the whole pool, so a multiclass character's two rows line their
+   die, pips, count and Roll up with each other instead of each centring on its
+   own width. display:contents lets each .hd-row hand its four cells straight to
+   this grid; justify-content keeps the block centred rather than stretched
+   across a card-wide box. */
 .hd-wrap{margin-top:10px}
-.hd-title{font-family:var(--head);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:6px}
+/* The pool's own grid, holding just the die rows — the warning banner is
+   rendered outside it, because a grid item spanning every column feeds that
+   column's sizing and stretched the Roll buttons to the width of a sentence. */
+.hd-grid{display:grid;grid-template-columns:repeat(4,max-content);justify-content:center;align-items:center;gap:6px 10px}
+/* The Hit Dice field and its pool, finally in one place. A real border rather
+   than the ::before inset trick the cards use: nothing nests inside it that
+   would need lifting back above an overlay. */
+.hd-box{margin-top:12px;background:var(--field);border:1.5px solid var(--line);border-radius:9px;padding:10px}
+/* label and mode pill on the left, aligned with the die rows below; the manual
+   text field only exists when it isn't a duplicate of them */
+.hd-head{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:2px}
+.hd-head .n{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+.hd-head input{width:130px;text-align:center;font-weight:700;font-size:15px;padding:4px;min-height:34px}
+.hd-none{margin:0}
 .hd-mode{font-family:var(--head);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px;border-radius:999px;border:1px solid var(--line);background:var(--field);color:var(--ink-soft);cursor:pointer;margin-left:4px}
 .hd-mode.manual{color:var(--brick);border-color:var(--brick)}
 .hd-warn{font-family:var(--head);font-size:10px;color:var(--brick);text-align:center;margin-bottom:8px;line-height:1.5}
 .linkbtn{background:none;border:0;color:var(--accent-2);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
-.hd-row{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:5px;flex-wrap:wrap}
-.hd-die{font-family:var(--head);font-weight:800;font-size:13px;min-width:44px}
+/* die · pips · how many are left · Roll — one line per die size, so a
+   multiclass character just stacks two of them */
+/* Not a flex row of its own — its cells belong to .hd-wrap's grid (above), which
+   is what stopped the old layout pushing one lonely pip to the left edge and the
+   Roll button to the right. */
+.hd-row{display:contents}
+.hd-die{font-family:var(--head);font-weight:800;font-size:14px;text-align:right}
 .hd-pips{display:flex;gap:5px;flex-wrap:wrap}
+/* the words that stop "filled" being ambiguous; pushed right so Roll sits at the edge */
+.hd-left{font-family:var(--head);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);text-align:right}
+.hd-left.out{color:var(--brick)}
 .hd-b,.use-b{width:16px;height:16px;border-radius:5px;border:2px solid var(--line);background:transparent;cursor:pointer;padding:0}
 .hd-b.used,.use-b.used{background:var(--ink-soft);border-color:var(--ink-soft)}
-.hd-roll{border:1.5px solid var(--line);background:var(--field);border-radius:7px;cursor:pointer;font-size:13px;line-height:1;padding:3px 7px}
+/* a labelled button, not a bare 🎲 — it rolls the die AND heals you, which an
+   emoji on its own doesn't say */
+.hd-roll{flex:none;font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+  border:1.5px solid var(--line);background:var(--field);color:var(--ink);border-radius:7px;cursor:pointer;line-height:1;padding:6px 11px}
 .hd-roll:hover:not(:disabled){border-color:var(--accent)}
 .hd-roll:disabled{opacity:.35;cursor:default}
 .use-row{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
@@ -281,17 +366,24 @@ html[data-rough="on"] .ability::before{filter:url(#rough)}
 .dot[data-lvl="1"]{background:var(--accent-2)}
 .dot[data-lvl="2"]{background:var(--accent-2);box-shadow:0 0 0 2.5px var(--panel),0 0 0 4.5px var(--line)}
 
-/* vitals strip */
-.vitals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+/* Vitals strip: five boxes, three then two, both rows filling the width. Six
+   columns rather than three is what lets the second row split in halves. */
+.vitals{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
 .vbox{position:relative;background:var(--field);border-radius:9px;padding:9px;text-align:center}
 .vbox::before{content:"";position:absolute;inset:1px;border:2px solid var(--line);border-radius:10px;pointer-events:none}
 html[data-rough="on"] .vbox::before{filter:url(#rough)}
 .vbox>*{position:relative}
 .vbox .n{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
 .vbox .big{font-family:var(--display);font-weight:900;font-size:26px;line-height:1.1;cursor:pointer}
-.vbox input{text-align:center;font-weight:700;font-size:18px;padding:4px;min-height:34px}
-.inspire{grid-column:span 1}
-.starbtn{background:none;border:0;cursor:pointer;font-size:30px;line-height:1;color:var(--hair);padding:0}
+/* a word, not a number — "Gargantuan" at 26px does not fit a third of the row */
+.vbox .big.txt{font-size:15px;letter-spacing:.02em;overflow-wrap:anywhere;padding:5px 0 4px}
+/* Scoped to .vitals> because .vbox is reused outside the grid — Level,
+   Proficiency Bonus, Spell save DC — where a grid-column would mean nothing. */
+.vitals>.vbox{grid-column:span 2}
+.vitals>.vbox.wide{grid-column:span 3}
+/* Inspiration is a marker, not a stat: it lives in the Vitals card's heading
+   rather than taking a box of its own, so it sizes to a 12px label row. */
+.starbtn{background:none;border:0;cursor:pointer;font-size:26px;line-height:1;color:var(--hair);padding:0 2px;margin:-3px 0;flex:none}
 .starbtn.on{color:var(--accent)}
 
 .hpwrap{position:relative;background:var(--field);border-radius:9px;padding:10px}
@@ -327,8 +419,20 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .hpcol input{width:66px;text-align:center;font-family:var(--display);font-weight:900;font-size:22px;padding:4px}
 .hp-step{display:flex;gap:6px;justify-content:center;margin-top:8px}
 .hp-step button{width:34px;height:34px;border-radius:7px;border:2px solid var(--brick);background:var(--field);color:var(--brick);font-size:18px;font-weight:700;cursor:pointer}
-.death{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;font-family:var(--head);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+/* successes – skull – failures, centred under the +/- buttons. No text
+   properties: there is no text left, and letter-spacing would hang a phantom
+   gap off the right of the skull. */
+.death{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px}
 .death .set{display:flex;gap:5px}
+/* Both groups fill OUTWARD from the skull, so the two rows of pips grow away
+   from the centre rather than both marching left-to-right. The failure set is
+   the left one, so its first mark is its rightmost circle — which is why it is
+   laid out in reverse rather than having buildDeath() count backwards. */
+.death .set[data-kind="fail"]{flex-direction:row-reverse}
+/* sized against the 17px circles either side of it — it is the anchor of the
+   row, so it should not read smaller than what it separates */
+.death .dskull{font-size:18px;line-height:1;color:var(--brick);opacity:.8}
+.death .dsep{color:var(--ink-soft);opacity:.5;font-size:14px;line-height:1}
 .death .c{width:17px;height:17px;border-radius:50%;border:2px solid var(--line);cursor:pointer;background:transparent}
 .death .c.on{background:var(--brick)}
 .death .c.fail.on{background:var(--brick)}
@@ -369,6 +473,12 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
    default verdigris, so it reads as attention-worthy without looking like an
    error. Nothing is broken; the pack just isn't the newest. */
 .chip.warn{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+/* over your carrying capacity — the one chip state that IS a problem, so it
+   borrows the danger colour the delete buttons and manual-hit-dice warning use */
+.chip.bad{background:color-mix(in srgb,var(--brick) 18%,transparent);color:var(--brick)}
+/* the encumbrance badge sits in a card label, which is uppercase and letter-spaced;
+   the pill carries its own casing so "12.5 lb / 150 lb" stays readable */
+.enc-pill{text-transform:none;letter-spacing:0}
 .equip{display:inline-flex;align-items:center;gap:6px;font-family:var(--head);font-size:10px;text-transform:uppercase;
   letter-spacing:.05em;color:var(--ink-soft);cursor:pointer;user-select:none}
 .equip .box{width:16px;height:16px;border-radius:4px;border:2px solid var(--line);display:inline-grid;place-items:center}
@@ -462,8 +572,12 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .spell .meta{font-family:var(--head);font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em}
 
 /* coins */
-.coins{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.coin{text-align:center}
+/* Humblewood has three denominations and D&D has five, so a fixed five-column
+   grid stranded the Humblewood set against two empty columns on the right.
+   Flex centres whatever number there happens to be; the cap stops three boxes
+   sprawling, and five still shrink to fill the row exactly as before. */
+.coins{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.coin{flex:1 1 0;min-width:0;max-width:150px;text-align:center}
 .coin label{font-family:var(--head);font-size:10px;letter-spacing:.05em;color:var(--ink-soft);display:block;margin-bottom:3px}
 .coin input{text-align:center;font-weight:700}
 
@@ -515,6 +629,20 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 .status.ok{color:var(--accent-2)}
 .status.err{color:var(--brick)}
 .hint{font-size:13px;color:var(--ink-soft);line-height:1.5;margin:2px 0 10px}
+/* Settings sections. The group itself is the shared .fgroup/.fghead idiom; these
+   only adjust it for a modal — the header sticks to the top of the scrolling
+   body so you can always see which section you are in and fold it away, and the
+   last section drops its bottom margin so the modal doesn't end in dead space. */
+#setSections .fghead{position:sticky;top:-6px;z-index:1;background:var(--panel);padding:8px 2px}
+#setSections .fgroup:last-child{margin-bottom:0}
+#setSections .fgroup:last-child .setsec-body>*:last-child{margin-bottom:0}
+.setsec-body{padding-top:2px}
+/* the download offer at the top of the changelog while an update is pending —
+   the pill replaced the version button, so this is the only route to the release */
+.updbanner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;
+  border:2px solid var(--accent);border-radius:8px;background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.updbanner .hint{margin:2px 0 0}
+.updbanner a{flex:none;margin-left:auto;text-decoration:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 #printArea{display:none}
 @media print{
@@ -554,7 +682,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 <div class="topbar">
   <div class="wordmark"><span id="wmMain">Humblewood</span><small id="wmSub">The Fieldbook</small></div>
   <button class="verbtn" id="btnVer" title="Version & changelog">v—</button>
-  <a class="updpill" id="updatePill" target="_blank" rel="noopener" style="display:none"></a>
+  <button class="updpill" id="updatePill" style="display:none"></button>
   <span id="savestate" class="savestate"></span>
   <button class="tbtn" id="btnHome" title="Characters / home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 9v11a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9"/></svg></button>
   <button class="tbtn" id="btnTheme" title="Toggle light / dark">
@@ -568,12 +696,16 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 </div>
 
 <div class="tabbar">
-  <button class="tab active" data-tab="sheet">Sheet</button>
-  <button class="tab" data-tab="spells">Spells</button>
-  <button class="tab" data-tab="inventory">Inventory</button>
-  <button class="tab" data-tab="story">Story</button>
-  <button class="tab" data-tab="rules">Rules</button>
-  <button class="tab" data-tab="tables">Tables</button>
+  <!-- Each tab carries both a glyph and its word; CSS shows one or the other.
+       No <title> inside these SVGs — buildToc() reads the button's textContent
+       for the flyout heading and a title would concatenate into it. -->
+  <button class="tab active" data-tab="sheet" aria-label="Sheet"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="tlbl">Sheet</span></button>
+  <button class="tab" data-tab="spells" aria-label="Spells"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3l1.7 4.3L17 9l-4.3 1.7L11 15l-1.7-4.3L5 9l4.3-1.7z"/><path d="M18 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg><span class="tlbl">Spells</span></button>
+  <button class="tab" data-tab="inventory" aria-label="Inventory"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5l9-4.5 9 4.5v9l-9 4.5-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/></svg><span class="tlbl">Inventory</span></button>
+  <button class="tab" data-tab="story" aria-label="Story"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21z"/></svg><span class="tlbl">Story</span></button>
+  <button class="tab" data-tab="notes" aria-label="Notes"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg><span class="tlbl">Notes</span></button>
+  <button class="tab" data-tab="rules" aria-label="Rules"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/><path d="M9 8h6"/></svg><span class="tlbl">Rules</span></button>
+  <button class="tab" data-tab="tables" aria-label="Tables"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14.5h18M9 9v11"/></svg><span class="tlbl">Tables</span></button>
   <button class="tab-toc" id="btnToc" title="Jump to a section" aria-label="Table of contents">☰</button>
 </div>
 <div class="toc-back" id="tocBack"></div>
@@ -584,7 +716,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
   <section class="tabpanel active" id="tab-sheet">
     <div class="cols">
       <div class="stack">
-        <div class="card">
+        <div class="card" data-note="portrait">
           <div class="label">Portrait <span class="grow"></span></div>
           <div class="portrait" id="portrait"><div class="ph">No portrait yet</div></div>
           <div class="rowbtns">
@@ -603,69 +735,24 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" data-note="origin">
           <div class="label"><span id="craceWord">Ancestry</span> &amp; Background <span class="grow"></span></div>
           <div id="raceBgBox"></div>
         </div>
 
-        <div class="card">
+        <div class="card" data-note="class">
           <div class="label">Class <span class="grow"></span><button class="add" id="btnLevelUp">▲ Level up</button><button class="add" id="btnLevelDown">▼ Level down</button></div>
           <div id="classBox"></div>
         </div>
       </div>
 
       <div class="stack">
-        <div class="card">
+        <div class="card" data-note="abilities">
           <div class="label">Ability Scores &amp; Saves <span class="grow"></span></div>
           <div class="abilities" id="abilities"></div>
         </div>
 
-        <div class="card">
-          <div class="label">Vitals <span class="grow"></span></div>
-          <div class="vitals" style="margin-bottom:11px">
-            <div class="vbox"><div class="n">Armor Class</div><div class="big" data-stat="ac" id="acDisp">10</div></div>
-            <div class="vbox"><div class="n">Initiative</div><div class="big" data-stat="init" id="initDisp">+0</div></div>
-            <div class="vbox"><div class="n">Speed</div><div class="big" data-stat="speed" id="speedDisp">0</div></div>
-            <div class="vbox"><div class="n">Passive Perc.</div><div class="big" id="passDisp">10</div></div>
-            <div class="vbox"><div class="n">Hit Dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">auto</button></div><input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly></div>
-            <div class="vbox inspire"><div class="n">Inspiration</div><button class="starbtn" id="starBtn" aria-label="Toggle inspiration">✦</button></div>
-          </div>
-          <div class="hpwrap">
-            <div class="hp-title">Hit Points</div>
-            <div class="hprow">
-              <div class="hpcol"><div class="n">Current</div><input type="number" data-path="character.hp.cur" placeholder="0" aria-label="Current HP"></div>
-              <div class="hpcol"><div class="n">Max</div><input type="number" data-path="character.hp.max" data-recompute placeholder="0" aria-label="Base max HP"></div>
-              <div class="hpcol"><div class="n">Temp</div><input type="number" data-path="character.hp.temp" placeholder="0" aria-label="Temp HP"></div>
-            </div>
-            <div class="hp-step">
-              <button id="hpMinus" aria-label="Lose HP">−</button>
-              <button id="hpPlus" aria-label="Gain HP">+</button>
-            </div>
-            <div class="death">Death Saves
-              <span class="set" id="deathSucc" data-kind="succ"></span>
-              <span style="opacity:.5">·</span>
-              <span class="set" id="deathFail" data-kind="fail"></span>
-            </div>
-            <div class="rest-row">
-              <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
-              <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
-            </div>
-            <div class="hd-wrap" id="hdWrap"></div>
-            <div id="maxNote" style="text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px">Item / feature bonuses to Max HP appear here</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="label">Statuses &amp; Conditions <button class="add" data-add="status"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
-          <div id="statusList"></div>
-        </div>
-
-        <div class="card">
-          <div class="label">Attacks &amp; Weapons <button class="add" data-add="attack"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
-          <div id="attackList"></div>
-        </div>
-
-        <div class="card">
+        <div class="card" data-note="skills">
           <div class="label">Skills <span class="grow"></span></div>
           <div class="skills" id="skills"></div>
           <div class="legend">
@@ -674,17 +761,79 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" data-note="vitals">
+          <div class="label">Vitals <span class="grow"></span><button class="starbtn" id="starBtn" title="Inspiration" aria-label="Toggle inspiration" aria-pressed="false">&#10022;</button></div>
+          <div class="vitals" style="margin-bottom:11px">
+            <div class="vbox"><div class="n">Armor Class</div><div class="big" data-stat="ac" id="acDisp">10</div></div>
+            <div class="vbox"><div class="n">Initiative</div><div class="big" data-stat="init" id="initDisp">+0</div></div>
+            <div class="vbox"><div class="n">Speed</div><div class="big" data-stat="speed" id="speedDisp">0</div></div>
+            <div class="vbox wide"><div class="n">Size</div><div class="big txt" id="sizeDisp" role="button" tabindex="0" title="Tap to set your size">Medium</div></div>
+            <div class="vbox wide"><div class="n">Passive Perc.</div><div class="big" id="passDisp">10</div></div>
+          </div>
+          <div class="hpwrap">
+            <div class="hp-title">Hit Points</div>
+            <div class="hprow">
+              <div class="hpcol"><div class="n">Current</div><input type="text" inputmode="tel" data-hp="cur" id="hpCur" placeholder="0" aria-label="Current HP — type a number, or +4 / -7 to adjust"></div>
+              <div class="hpcol"><div class="n">Max</div><input type="text" inputmode="tel" data-hp="max" id="hpMax" placeholder="0" aria-label="Base max HP — type a number, or +4 / -7 to adjust"></div>
+              <div class="hpcol"><div class="n">Temp</div><input type="text" inputmode="tel" data-hp="temp" id="hpTemp" placeholder="0" aria-label="Temp HP — type a number, or +4 / -7 to adjust"></div>
+            </div>
+            <div class="hp-step">
+              <button id="hpMinus" aria-label="Lose HP">−</button>
+              <button id="hpPlus" aria-label="Gain HP">+</button>
+            </div>
+            <!-- the skull is written as entities on purpose: U+FE0E (text
+                 presentation, so it renders as ink and not a colour emoji) is an
+                 invisible byte that a whitespace cleanup would silently eat, and
+                 the build is byte-exact. -->
+            <!-- Failures left, successes right — dying is what you read first,
+                 and it puts the red beside the skull's own colour. -->
+            <div class="death" title="Death Saves">
+              <span class="set" id="deathFail" data-kind="fail" aria-label="Death save failures"></span>
+              <span class="dsep" aria-hidden="true">&ndash;</span>
+              <span class="dskull" role="img" aria-label="Death Saves">&#9760;&#65038;</span>
+              <span class="dsep" aria-hidden="true">&ndash;</span>
+              <span class="set" id="deathSucc" data-kind="succ" aria-label="Death save successes"></span>
+            </div>
+            <div id="maxNote" style="text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px">Item / feature bonuses to Max HP appear here</div>
+          </div>
+        </div>
+
+        <div class="card" data-note="rest">
+          <div class="label">Rest &amp; Recovery <span class="grow"></span></div>
+          <div class="rest-row">
+            <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
+            <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
+          </div>
+          <div class="hd-box">
+            <div class="hd-head">
+              <span class="n">Hit Dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">auto</button></span>
+              <input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly aria-label="Hit Dice">
+            </div>
+            <div class="hd-wrap" id="hdWrap"></div>
+          </div>
+        </div>
+
+        <div class="card" data-note="statuses">
+          <div class="label">Statuses &amp; Conditions <button class="add" data-add="status"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="statusList"></div>
+        </div>
+
+        <div class="card" data-note="attacks">
+          <div class="label">Attacks &amp; Weapons <button class="add" data-add="attack"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="attackList"></div>
+        </div>
+
+        <div class="card" data-note="resources">
           <div class="label">Resources <button class="add" id="addResource"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Resource</button><span class="grow"></span></div>
           <div id="resList"></div>
         </div>
 
-        <div class="card">
+        <div class="card" data-note="features">
           <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
           <div id="featureList"></div>
         </div>
 
-        <div class="card" id="familiarCard" style="display:none">
+        <div class="card" data-note="familiars" id="familiarCard" style="display:none">
           <div class="label">Familiars &amp; Companions <button class="add" data-add="familiar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
           <div id="familiarList"></div>
         </div>
@@ -696,11 +845,11 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
   <!-- ============ INVENTORY TAB ============ -->
   <section class="tabpanel" id="tab-inventory">
     <div class="stack" style="max-width:720px;margin:0 auto">
-      <div class="card">
-        <div class="label">Equipment &amp; Inventory <button class="add" data-add="item"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="invCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="invCollapseLbl">Collapse all</span></button></div>
+      <div class="card" data-note="inventory">
+        <div class="label">Equipment &amp; Inventory <span class="chip enc-pill" id="encPill" style="display:none"></span> <button class="add" data-add="item"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="invCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="invCollapseLbl">Collapse all</span></button></div>
         <div id="inventoryList"></div>
       </div>
-      <div class="card">
+      <div class="card" data-note="coins">
         <div class="label">Coins <span class="grow"></span><button class="add" id="btnCoinAdjust" title="Add or spend several denominations at once"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Adjust</button><button class="add" id="btnCoinConvert" title="Roll lower coins up into higher denominations"><svg viewBox="0 0 24 24"><path d="M7 4v13m0 0-3-3m3 3 3-3M17 20V7m0 0 3 3m-3-3-3 3"/></svg>Auto-convert</button></div>
         <div class="coins" id="coins"></div>
         <p class="hint coin-hint">Type a number to set it, or <b>+10</b> / <b>-5</b> to add or spend.</p>
@@ -711,7 +860,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
   <!-- ============ SPELLS TAB ============ -->
   <section class="tabpanel" id="tab-spells">
     <div class="stack">
-      <div class="card">
+      <div class="card" data-note="spellcasting">
         <div class="label">Spellcasting <span class="grow"></span></div>
         <div class="g3">
           <div class="field"><label class="f">Spellcasting ability</label>
@@ -722,12 +871,12 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
           <div class="field"><label class="f">Spell attack</label><div class="vbox" style="padding:6px"><div class="big" id="satkDisp">—</div></div></div>
         </div>
       </div>
-      <div class="card">
+      <div class="card" data-note="slots">
         <div class="label">Spell Slots <button class="add" id="restoreSlots">↻ Restore all</button><span class="grow"></span></div>
         <div class="slotgrid" id="slotGrid"></div>
         <p class="hint" id="slotAutoNote" style="margin-top:8px"></p>
       </div>
-      <div class="card" id="activeSpellCard" style="display:none">
+      <div class="card" data-note="activespells" id="activeSpellCard" style="display:none">
         <div class="label">Active Spells <span class="grow"></span>
           <span style="display:inline-flex;align-items:center;gap:6px;font-family:var(--head);font-size:12px">Round
             <button class="add" data-round="-1" aria-label="Previous round">−</button>
@@ -737,7 +886,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         </div>
         <div id="activeSpellList"></div>
       </div>
-      <div class="card">
+      <div class="card" data-note="spells">
         <div class="label">Spells &amp; Cantrips <button class="add" data-add="spell"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
         <div id="spellList"></div>
       </div>
@@ -748,7 +897,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
   <section class="tabpanel" id="tab-story">
     <div class="cols">
       <div class="stack">
-        <div class="card">
+        <div class="card" data-note="proficiencies">
           <div class="label">Proficiencies &amp; Languages <span class="grow"></span></div>
           <div id="rt-proficiencies"></div>
           <div class="rt-head" style="margin-top:8px"><span></span><button class="editbtn" data-edit="proficiencies"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Edit</span></button></div>
@@ -779,6 +928,18 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         <input id="tablesSearch" placeholder="Filter tables…" autocomplete="off" style="margin-bottom:10px">
         <input type="file" id="tablesRulesFiles" accept="application/json,.json" multiple class="hidefile">
         <div id="tablesList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NOTES TAB ============ -->
+  <!-- No data-note on this card: it collects notes, it doesn't take one. -->
+  <section class="tabpanel" id="tab-notes">
+    <div class="stack" style="max-width:820px;margin:0 auto">
+      <div class="card">
+        <div class="label">Section Notes <span class="grow"></span></div>
+        <p class="hint">Everything you've jotted against a section of your sheet, gathered here. Tap a heading to jump back to where it belongs.</p>
+        <div id="notesList"></div>
       </div>
     </div>
   </section>
@@ -862,6 +1023,11 @@ function blankChar(){
     features:[], inventory:[], statuses:[], familiars:[], glossary:[],
     featCollapse:{groups:{},items:{}}, invCollapse:{items:{}}, atkCollapse:{items:{}}, hdUsed:{}, resources:[],
     activeSpells:[], combatRound:0, grantGold:{},
+    size:"", encumbrance:"none", coinWeight:true,
+    /* Notes pinned to a section of the sheet, keyed by NOTE_SECTIONS id.
+       NOT `notes` — that name is taken by the Story tab's bio field (see BIO
+       above), and this is a different thing entirely. */
+    secNotes:{}, noteCollapse:{},
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);
@@ -870,13 +1036,24 @@ function blankChar(){
   return c;
 }
 let character=blankChar();
-let settings={skin:"humblewood",theme:"light",autoload:true,rough:true,rulesSources:[]};
+/* setCollapse: which Settings sections are folded shut, keyed by section id.
+   Absent key = never touched, so SET_SECTIONS' first-run defaults apply. */
+let settings={skin:"humblewood",theme:"light",autoload:true,rough:true,rulesSources:[],setCollapse:{},tabIcons:false};
 let rules={name:"",version:0,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[]};
 
 function seedGlossary(){return [];}
 
 /* ================= helpers ================= */
 function num(v){const n=parseInt(v,10);return isNaN(n)?0:n}
+/* num() is parseInt, which is right for counts and scores but wrong for pounds
+   and coin: an arrow weighs 0.05 lb and a candle costs 0.01 gp, and parseInt
+   turns both into 0. Anything measured rather than counted uses fnum. */
+function fnum(v){const n=parseFloat(v);return isNaN(n)?0:n}
+/* creature sizes, smallest first — the order IS the comparison (a race offering
+   a choice of sizes seeds the largest), and the multiplier is carrying capacity:
+   halved below Small, doubled above Medium. */
+const SIZES=["Tiny","Small","Medium","Large","Huge","Gargantuan"];
+const SIZE_CARRY={Tiny:0.5,Small:1,Medium:1,Large:2,Huge:2,Gargantuan:2};
 function modOf(score){return Math.floor((num(score)-10)/2)}
 function fmt(n){return (n>=0?"+":"")+n}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -917,8 +1094,21 @@ function contributions(){
   return list;
 }
 function sumFx(target,contribs){return contribs.filter(c=>c.target===target).reduce((a,c)=>a+c.value,0)}
-function effMaxHP(){return num(character.hp.max)+sumFx("hp.max",contributions());}
-function clampCurHP(){const mx=effMaxHP();if(mx>0&&num(character.hp.cur)>mx){character.hp.cur=mx;const ci=document.querySelector('[data-path="character.hp.cur"]');if(ci)ci.value=mx;}}
+/* `c` is optional: pass the contributions you already computed to avoid a second
+   pass, omit it and one is taken. This expression used to be written out in
+   three places, which is two chances for them to disagree. */
+function effMaxHP(c){return num(character.hp.max)+sumFx("hp.max",c||contributions());}
+/* The HP bounds, in one place. Every path that changes HP — a typed entry, the
+   +/- buttons, spending a hit die, a long rest, or lowering Max under Current —
+   ends here, so the rule cannot be enforced in one of them and not another.
+   Model only, no DOM: callers pair it with renderHP().
+   "" must survive as "": it means "not set yet", which is not the same as zero,
+   and removeClass() distinguishes them when it un-seeds a level-1 character. */
+function clampHP(){
+  ["cur","max","temp"].forEach(k=>{if(character.hp[k]!==""&&num(character.hp[k])<0)character.hp[k]=0;});
+  const mx=effMaxHP();
+  if(mx>0&&num(character.hp.cur)>mx)character.hp.cur=mx;
+}
 function abilFinal(k,contribs){return num(character.abilities[k])+sumFx("ability."+k,contribs)}
 function pbValue(contribs){const l=Math.max(1,Math.min(20,num(character.level)||1));return 2+Math.floor((l-1)/4)+sumFx("profBonus",contribs)}
 /* ---- proficiency grants (provenance) ---- */
@@ -1051,16 +1241,28 @@ function recompute(){
   const acEl=document.getElementById("acDisp");acEl.textContent=acBase+acFx;mark(acEl,!!acFx);
   const initBase=character.init===""?mods.dex:num(character.init), initFx=sumFx("init",c);
   const initEl=document.getElementById("initDisp");initEl.textContent=fmt(initBase+initFx);mark(initEl,!!initFx);
-  const spFx=sumFx("speed",c);const spEl=document.getElementById("speedDisp");spEl.textContent=num(character.speed)+spFx;mark(spEl,!!spFx);
+  const spFx=sumFx("speed",c), spBase=num(character.speed)+spFx;
+  /* encumbrance is applied last and outside the effects engine on purpose: two of
+     its outcomes replace the speed rather than adjust it, and its third cost
+     (disadvantage) isn't numeric at all. See encState() in 25-origins-items.js. */
+  const encSt=encState(c), spd=encSpeed(spBase,encSt);
+  const spEl=document.getElementById("speedDisp");spEl.textContent=spd;mark(spEl,!!spFx||spd!==spBase);
+  /* marked when you have set it yourself rather than taking the ancestry's —
+     the same "this isn't the default" signal the other Vitals boxes use */
+  const szEl=document.getElementById("sizeDisp");
+  if(szEl){szEl.textContent=charSize();mark(szEl,!!character.size);}
   const pv=mods.wis+(effSkill("perception")>0?pb:0)+(effSkill("perception")>1?pb:0)+sumFx("skill.perception",c);
   document.getElementById("passDisp").textContent=10+pv;
   const hpFx=sumFx("hp.max",c);
   const mn=document.getElementById("maxNote");
   if(mn)mn.textContent=hpFx?`Effective Max HP: ${num(character.hp.max)+hpFx} (base ${num(character.hp.max)} ${fmt(hpFx)})`:"Item / feature bonuses to Max HP appear here";
-  document.getElementById("starBtn").classList.toggle("on",!!character.inspiration);
+  /* guarded: recompute() is the hottest function in the app, and an unguarded
+     lookup here turns a renamed id into a white screen rather than a dead star */
+  {const sb=document.getElementById("starBtn");if(sb){sb.classList.toggle("on",!!character.inspiration);sb.setAttribute("aria-pressed",character.inspiration?"true":"false");}}
   const sa=character.spellAbility;
   document.getElementById("dcDisp").textContent=sa?String(8+pb+mods[sa]):"—";
   document.getElementById("satkDisp").textContent=sa?fmt(pb+mods[sa]):"—";
+  renderEncPill(encSt);
   renderDeath();autoSlots();renderSlotBubbles();renderHitDice();syncResources();renderResources();
   (character.attacks||[]).forEach(a=>{if(a.source==="spell"&&!a.save)a.ability=character.spellAbility||"none";});
   renderAttacks();renderActiveSpells();
@@ -1235,9 +1437,89 @@ function itemMetaLine(x){
           x.attune?("Attunement"+(x.attuneNote?" ("+x.attuneNote+")":"")):"",
           x.cost,(x.weight!=null?x.weight+" lb":"")].filter(Boolean).join(" · ");
 }
-function fmtGp(n){n=num(n);return (Number.isInteger(n)?n:Math.round(n*100)/100)+" gp";}
+function fmtGp(n){n=fnum(n);return Math.round(n*100)/100+" gp";}
 function costToGp(str){if(str==null)return null;const s=String(str).toLowerCase().replace(/,/g,"");const mult={pp:10,gp:1,ep:0.5,sp:0.1,cp:0.01};let gp=0,found=false,m;const re=/(\d+(?:\.\d+)?)\s*(pp|gp|ep|sp|cp)\b/g;while((m=re.exec(s))){gp+=parseFloat(m[1])*mult[m[2]];found=true;}if(!found){const n=parseFloat(s);return isNaN(n)?null:n;}return Math.round(gp*100)/100;}
-function inventoryTotal(){return (character.inventory||[]).reduce((a,it)=>a+num(it.cost)*(num(it.qty)||1),0);}
+function inventoryTotal(){return Math.round((character.inventory||[]).reduce((a,it)=>a+fnum(it.cost)*(num(it.qty)||1),0)*100)/100;}
+
+/* ---- carried weight and encumbrance ----
+   All pure and DOM-free so they stay testable; the rendering lives in 40-sheet
+   (the pill and the totals row), 10-compute (the speed) and 80-modal-forms (the
+   breakdown). Weight is measured, not counted, so everything here uses fnum. */
+function fmtWt(n){return Math.round(fnum(n)*100)/100+" lb";}
+function itemWeight(it){return fnum(it&&it.weight);}            /* per unit */
+function itemWeightTotal(it){return itemWeight(it)*(num(it&&it.qty)||1);}
+/* 5e: 50 coins weigh a pound. Sums every denomination the sheet holds rather
+   than coinKeys(), because an imported character can be carrying electrum the
+   current skin doesn't display — it is still in their purse. */
+function coinsWeight(){
+  if(character.coinWeight===false)return 0;
+  const c=character.coins||{};
+  return Object.keys(c).reduce((a,k)=>a+num(c[k]),0)/50;
+}
+/* Rounded to 2dp HERE, before anything compares it to a threshold: 20 arrows at
+   0.05 lb is 1.0000000000000002 in binary floating point, which would read as
+   "over" against a capacity of exactly 1. */
+function carriedWeight(){
+  const items=(character.inventory||[]).reduce((a,it)=>a+itemWeightTotal(it),0);
+  return Math.round((items+coinsWeight())*100)/100;
+}
+/* Size is derived, not stored twice: an explicit choice wins, else the ancestry's
+   own size, else Medium. A species offering a choice ("Small or Medium") lists
+   both and we take the largest — the more permissive default. */
+function raceDefSize(){
+  const d=findRaceDef(character.race&&character.race.name);
+  return sizeName(d&&d.size);
+}
+function sizeName(sz){
+  if(!sz)return "";
+  const list=(Array.isArray(sz)?sz:[sz]).map(s=>String(s).trim()).filter(s=>SIZES.includes(s));
+  if(!list.length)return "";
+  return list.sort((a,b)=>SIZES.indexOf(b)-SIZES.indexOf(a))[0];
+}
+/* What the species DECLARES, for display — "Small or Medium" stays a choice on
+   the page even though sizeName() has to settle on one for the maths. */
+function sizeLabel(sz){return (Array.isArray(sz)?sz:[sz]).filter(Boolean).join(" or ");}
+function charSize(){return character.size||raceDefSize()||"Medium";}
+/* One list of size options, shared by the Vitals picker and Settings, so the two
+   can't drift. "" is the from-ancestry default, and it names what that resolves
+   to rather than leaving you to guess. */
+function sizeOptionsHTML(cur){
+  return `<option value=""${!cur?" selected":""}>From ancestry (${esc(raceDefSize()||"Medium")})</option>`+
+    SIZES.map(s=>`<option value="${s}"${cur===s?" selected":""}>${s}</option>`).join("");
+}
+/* split from carryCapacity so the size picker can PREVIEW what a size would give
+   you before you commit to it */
+function capacityFor(size,contribs){return abilFinal("str",contribs)*15*(SIZE_CARRY[size]||1);}
+function carryCapacity(contribs){return capacityFor(charSize(),contribs);}
+function encMode(){return ["none","standard","variant"].includes(character.encumbrance)?character.encumbrance:"none";}
+/* The one function every consumer reads. Tiers, in both modes, are fractions of
+   the same capacity, so the size multiplier applies all the way up:
+     standard  ok <= cap        | over <= cap*2 | max above
+     variant   ok <= cap/3      | encumbered <= cap*2/3 | heavy <= cap
+               then the standard hard limits take over (over, then max).
+   "over" is the push/drag/lift band: speed becomes 5, not speed minus 5.
+   "max" is the hard limit: you cannot move or hold it at all. */
+function encState(contribs){
+  const mode=encMode(), carried=carriedWeight(), size=charSize();
+  const str=abilFinal("str",contribs), cap=carryCapacity(contribs), max=cap*2;
+  const st={mode,size,str,carried,cap,max,tier:"none",label:"",penalty:0,floor:null};
+  if(mode==="none")return st;
+  if(carried>max){st.tier="max";st.label="Over your hard limit";st.floor=0;return st;}
+  if(carried>cap){st.tier="over";st.label="Over capacity";st.floor=5;return st;}
+  if(mode==="variant"){
+    if(carried>cap*2/3){st.tier="heavy";st.label="Heavily Encumbered";st.penalty=-20;return st;}
+    if(carried>cap/3){st.tier="encumbered";st.label="Encumbered";st.penalty=-10;return st;}
+  }
+  st.tier="ok";st.label="Unencumbered";return st;
+}
+/* Applied AFTER the numeric speed effects, because two of the three outcomes are
+   not additive: over capacity your speed BECOMES 5, and at the hard limit you do
+   not move. Never below zero. */
+function encSpeed(base,st){
+  if(!st||st.mode==="none")return base;
+  if(st.floor!=null)return Math.min(base,st.floor);
+  return Math.max(0,base+st.penalty);
+}
 /* parse an inventory item into an armor descriptor (structured field, or from category/type/description) */
 function itemArmor(it){
   if(!it)return null;
@@ -1277,19 +1559,32 @@ const DATA_VERSIONS={"XPHB":"1.3.0","Humblewood":"1.3.0"};
    to that release's page (attach fieldbook.html to the release so players can download it). */
 const UPDATE_REPO="wardmanm/RPGFieldbook";
 function cmpVer(a,b){const pa=String(a||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0),pb=String(b||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);for(let i=0;i<3;i++){if((pa[i]||0)>(pb[i]||0))return 1;if((pa[i]||0)<(pb[i]||0))return -1;}return 0;}
+/* What the update check found, or null. Held so openChangelog() can lead with a
+   download link — the pill REPLACES the version button rather than sitting
+   beside it, so the changelog has to stay reachable through the pill. */
+let updateAvailable=null;
 function checkForUpdate(){
   if(!UPDATE_REPO||(navigator.onLine===false))return;
   fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`,{headers:{Accept:"application/vnd.github+json"}})
     .then(r=>r.ok?r.json():null)
     .then(rel=>{
       if(!rel||!rel.tag_name||cmpVer(rel.tag_name,APP_VERSION)<=0)return;
-      const el=document.getElementById("updatePill");if(!el)return;
-      const ver=String(rel.tag_name).replace(/^v/i,"");
-      el.href=rel.html_url||`https://github.com/${UPDATE_REPO}/releases/latest`;
-      el.textContent="↑ Update "+ver;
-      el.title=`Version ${ver} is available on GitHub — tap to open the download page (you have ${APP_VERSION}).`;
-      el.style.display="inline-flex";
+      updateAvailable={ver:String(rel.tag_name).replace(/^v/i,""),
+                       url:rel.html_url||`https://github.com/${UPDATE_REPO}/releases/latest`};
+      showUpdatePill();
     }).catch(()=>{});
+}
+/* One control, not two. The version button and the update pill say the same
+   thing — which build you're looking at — so an update takes over its slot
+   instead of crowding in next to it. The version you're ON moves into the
+   tooltip and stays in the changelog's title, so it is never lost. */
+function showUpdatePill(){
+  if(!updateAvailable)return;
+  const el=document.getElementById("updatePill");if(!el)return;
+  const ver=document.getElementById("btnVer");if(ver)ver.style.display="none";
+  el.textContent="↑ v"+updateAvailable.ver;
+  el.title=`Update to version ${updateAvailable.ver} available — you're on ${APP_VERSION}. Tap for what's new and the download.`;
+  el.style.display="inline-flex";
 }
 const CHANGELOG=[
   {v:"1.3.1", date:"2026-08-10", notes:[
@@ -1344,10 +1639,36 @@ const CHANGELOG=[
     "Added this version number and changelog."
   ]}
 ];
+/* When an update is waiting the changelog is the only route to it — the pill
+   took the version button's place — so the modal leads with the download rather
+   than burying it under the history. Empty when there is nothing to offer. */
+function updBannerHTML(){
+  if(!updateAvailable)return "";
+  return `<div class="updbanner"><div><b>Version ${esc(updateAvailable.ver)} is available.</b>`+
+    `<div class="hint">You're on v${esc(APP_VERSION)}. Your characters and rules data are unaffected — you just replace the file.</div></div>`+
+    `<a class="tbtn primary" href="${esc(updateAvailable.url)}" target="_blank" rel="noopener">Download</a></div>`;
+}
 function openChangelog(){
-  const body=`<div style="max-height:60vh;overflow:auto">`+CHANGELOG.map(e=>`<div style="margin-bottom:14px"><div style="font-family:var(--head);font-weight:800"><span style="color:var(--accent)">v${esc(e.v)}</span> <span class="hint" style="font-weight:400">${esc(e.date||"")}</span></div><ul style="margin:6px 0 0;padding-left:18px">${e.notes.map(n=>`<li style="margin:3px 0">${esc(n)}</li>`).join("")}</ul></div>`).join("")+`</div><div class="m-actions"><button class="tbtn primary" id="clOk">Close</button></div>`;
+  const body=updBannerHTML()+`<div style="max-height:60vh;overflow:auto">`+CHANGELOG.map(e=>`<div style="margin-bottom:14px"><div style="font-family:var(--head);font-weight:800"><span style="color:var(--accent)">v${esc(e.v)}</span> <span class="hint" style="font-weight:400">${esc(e.date||"")}</span></div><ul style="margin:6px 0 0;padding-left:18px">${e.notes.map(n=>`<li style="margin:3px 0">${esc(n)}</li>`).join("")}</ul></div>`).join("")+`</div><div class="m-actions"><button class="tbtn primary" id="clOk">Close</button></div>`;
   openModal("Fieldbook v"+APP_VERSION,body);
   const b=document.getElementById("clOk");if(b)b.addEventListener("click",closeModal);
+}
+/* Show a tab. Deliberately does NOT scroll: the tab bar's own handler wants the
+   top of the page, but jumping to a note wants that note's card — so the scroll
+   is the caller's decision, not this function's. */
+function selectTab(name){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
+  document.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+name));
+  closeToc();
+}
+/* Scroll a card to just under the sticky tab bar, whose height is measured live
+   rather than assumed. Shared by the table of contents and the notes jump. */
+function scrollToCard(el){
+  if(!el)return;
+  const tb=document.querySelector(".tabbar");
+  const off=(tb?tb.getBoundingClientRect().height:48)+10;
+  const y=el.getBoundingClientRect().top+window.scrollY-off;
+  window.scrollTo({top:Math.max(0,y),behavior:"smooth"});
 }
 function buildToc(){
   const fly=document.getElementById("tocFly");if(!fly)return;
@@ -1356,11 +1677,11 @@ function buildToc(){
   const items=[];
   if(panel)panel.querySelectorAll(".card > .label, .inv-sec-head").forEach(node=>{
     const target=node.classList.contains("inv-sec-head")?node:node.closest(".card");
-    const cl=node.cloneNode(true);cl.querySelectorAll("button,svg,input,select,.grow,.add,.cnt").forEach(x=>x.remove());
+    const cl=node.cloneNode(true);cl.querySelectorAll("button,svg,input,select,.grow,.add,.cnt,.enc-pill").forEach(x=>x.remove());
     const t=cl.textContent.trim();if(t&&target)items.push({t,target,sub:node.classList.contains("inv-sec-head")});
   });
   fly.innerHTML=`<h4>${esc(tabName)}</h4>`+(items.length?"":`<p class="hint" style="padding:6px">No sections here.</p>`);
-  items.forEach(it=>{const a=document.createElement("a");a.textContent=it.t;if(it.sub)a.style.paddingLeft="20px";a.addEventListener("click",()=>{closeToc();const tb=document.querySelector(".tabbar");const off=(tb?tb.getBoundingClientRect().height:48)+10;const y=it.target.getBoundingClientRect().top+window.scrollY-off;window.scrollTo({top:Math.max(0,y),behavior:"smooth"});});fly.appendChild(a);});
+  items.forEach(it=>{const a=document.createElement("a");a.textContent=it.t;if(it.sub)a.style.paddingLeft="20px";a.addEventListener("click",()=>{closeToc();scrollToCard(it.target);});fly.appendChild(a);});
 }
 function openToc(){buildToc();const tb=document.querySelector(".tabbar");const top=tb?Math.max(0,Math.round(tb.getBoundingClientRect().bottom)):0;const fly=document.getElementById("tocFly"),back=document.getElementById("tocBack");if(fly)fly.style.top=top+"px";if(back)back.style.top=top+"px";if(fly)fly.classList.add("open");if(back)back.classList.add("open");}
 function closeToc(){const f=document.getElementById("tocFly"),b=document.getElementById("tocBack");if(f)f.classList.remove("open");if(b)b.classList.remove("open");}
@@ -1370,9 +1691,13 @@ function invSection(it){
   const c=String(it.category||it.type||"").toLowerCase();
   if(it.weapon||c.includes("weapon"))return "Weapons";
   if(itemArmor(it)||c.includes("armor")||c.includes("shield"))return "Armor";
-  if(/potion|scroll|consumable|ammunition/.test(c))return "Consumables";
-  if(/wand|rod|staff|ring|wondrous|focus/.test(c))return "Magic Items";
-  if(/tool|kit|instrument|supplies|utensils/.test(c))return "Tools";
+  /* Word boundaries are load-bearing, not tidiness: without them "ring" matches
+     inside "Adventu-RING Gear" and every rope and bedroll files as a magic item,
+     and "staff" matches inside "Quarterstaff". These only started mattering when
+     items began carrying a real category. */
+  if(/\b(potion|scroll|consumable|ammunition)\b/.test(c))return "Consumables";
+  if(/\b(wand|rod|staff|ring|wondrous|focus)\b/.test(c))return "Magic Items";
+  if(/\b(tool|tools|kit|instrument|supplies|utensils)\b/.test(c))return "Tools";
   if(/gear/.test(c))return "Gear";
   return "Loot";
 }
@@ -1385,18 +1710,62 @@ function invItemHTML(it){
         <span class="nm">${esc(it.name||"Item")}</span>
         ${it.qty&&num(it.qty)!==1?`<span class="qty">×${num(it.qty)}</span>`:""}
         ${originBadge(itemOrigin(it),"data-orig-item",it.id)}
-        ${num(it.cost)?`<span class="qty" title="Cost each">${esc(fmtGp(it.cost))}</span>`:""}
+        ${fnum(it.cost)?`<span class="qty" title="Cost each">${esc(fmtGp(it.cost))}</span>`:""}
+        ${itemWeight(it)?`<span class="qty" title="Weight each">${esc(fmtWt(it.weight))}</span>`:""}
         ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${it.id}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
         <button class="icon" data-edit-item="${it.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-item="${it.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${ic?"":`${it.description?`<div class="desc">${highlight(it.description)}</div>`:""}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
 }
+/* The carried-weight badge in the Inventory card header. Hidden entirely when
+   encumbrance is off — the weight itself still shows in the totals row, so an
+   always-visible pill would just be noise for tables that don't track it. */
+function renderEncPill(st){
+  const el=document.getElementById("encPill");if(!el)return;
+  st=st||encState(contributions());
+  if(st.mode==="none"){el.style.display="none";el.textContent="";return;}
+  const bad=(st.tier==="over"||st.tier==="max");
+  el.className="chip enc-pill"+(bad?" bad":(st.tier==="ok"?"":" warn"));
+  el.textContent=(st.tier==="ok"?"":st.label+" · ")+fmtWt(st.carried)+" / "+fmtWt(st.cap);
+  el.title=st.label;
+  el.style.display="";
+}
+/* The footer rows under the item list: value, carried weight, and — when
+   encumbrance is on — capacity and what the current tier costs you. Built as a
+   string so the empty-inventory branch can show it too: a character carrying
+   nothing but 900 gold coins is still carrying 18 lb. */
+function invTotalsHTML(){
+  const row=(label,val,cls)=>`<div class="item"><div class="top"><span class="nm">${label}</span><span style="flex:1"></span><b${cls?` class="${cls}"`:""}>${val}</b></div></div>`;
+  let h="";
+  const total=inventoryTotal();
+  if(total>0)h+=row("Total value",esc(fmtGp(total)));
+  const st=encState(contributions());
+  const wt=st.carried;
+  if(!wt&&st.mode==="none")return h;
+  h+=row("Carried weight",esc(fmtWt(wt)));
+  if(st.mode!=="none"){
+    const mult=SIZE_CARRY[st.size]||1;
+    const capNote=`STR ${st.str} × 15${mult!==1?` × ${mult} (${esc(st.size)})`:""}`;
+    h+=`<div class="item"><div class="top"><span class="nm" style="font-weight:400">Capacity</span><span style="flex:1"></span><span class="qty">${esc(capNote)}</span><b>${esc(fmtWt(st.cap))}</b></div>
+      <div class="desc">${esc(encTierNote(st))}</div></div>`;
+  }
+  return h;
+}
+/* One sentence per tier, in the player's terms. The disadvantage clause is prose
+   rather than an effect because effects are numeric-only. */
+function encTierNote(st){
+  if(st.tier==="max")return `Carrying more than ${fmtWt(st.max)} — you cannot move or hold this much.`;
+  if(st.tier==="over")return `Over capacity: you can only push, drag or lift this, and your speed drops to 5 ft. Hard limit ${fmtWt(st.max)}.`;
+  if(st.tier==="heavy")return "Heavily Encumbered: speed −20 ft, and disadvantage on ability checks, attack rolls and saving throws using Strength, Dexterity or Constitution.";
+  if(st.tier==="encumbered")return "Encumbered: speed −10 ft.";
+  return `Unencumbered — ${fmtWt(Math.max(0,Math.round((st.cap-st.carried)*100)/100))} to spare.`;
+}
 function renderInventory(){
   const el=document.getElementById("inventoryList");if(!el)return;el.innerHTML="";
   const caBtn=document.getElementById("invCollapseAll"), caLbl=document.getElementById("invCollapseLbl");
   if(caBtn)caBtn.style.display=character.inventory.length?"inline-flex":"none";
-  if(!character.inventory.length){el.innerHTML=`<div class="empty">No items yet. Equip gear that grants effects (e.g. +1 AC) and your stats update automatically.</div>`;return;}
+  if(!character.inventory.length){el.innerHTML=`<div class="empty">No items yet. Equip gear that grants effects (e.g. +1 AC) and your stats update automatically.</div>`+invTotalsHTML();return;}
   if(caLbl)caLbl.textContent=character.inventory.some(it=>!invCol().items[it.id])?"Collapse all":"Expand all";
   const byName=(a,b)=>String(a.name||"").localeCompare(String(b.name||""));
   const eqThenName=(a,b)=>((b.equipped?1:0)-(a.equipped?1:0))||byName(a,b);
@@ -1413,8 +1782,7 @@ function renderInventory(){
   };
   renderSec("★ Favorites",favs,byName);
   INV_ORDER.forEach(s=>renderSec(s,groups[s]||[],eqThenName));
-  const total=inventoryTotal();
-  if(total>0){const t=document.createElement("div");t.className="item";t.innerHTML=`<div class="top"><span class="nm">Total value</span><span style="flex:1"></span><b>${esc(fmtGp(total))}</b></div>`;el.appendChild(t);}
+  el.insertAdjacentHTML("beforeend",invTotalsHTML());
 }
 function statusTitle(name){
   const g=allGlossary().find(x=>x.term.toLowerCase()===(name||"").toLowerCase());
@@ -1496,6 +1864,18 @@ function grantItemByName(name,qty,sid){
   if(ex){ex.qty=num(ex.qty)+qty;return;}
   const it={id:uid(),name:(def&&def.name)||name,qty,description:(def&&def.description)||"",effects:(def&&Array.isArray(def.effects))?def.effects:[],equipped:false,grant:sid,origin:originFromSid(sid)};
   if(def&&def.weapon)it.weapon=def.weapon;
+  if(def){
+    const wg=fnum(def.weight);if(wg)it.weight=wg;
+    /* Cost is a DISPLAY STRING in the pack ("2 gp", "5 cp") and a gp number on
+       the sheet, so it has to be parsed — copying it raw renders no badge at
+       all and quietly breaks the inventory total. Weight needs no such care,
+       which is exactly why weight worked here and cost didn't. */
+    const cg=costToGp(def.cost);if(cg!=null)it.cost=cg;
+    /* invSection() files by these; without them everything that isn't a weapon
+       or armour lands in Loot. */
+    if(def.category)it.category=def.category;
+    if(def.type)it.type=def.type;
+  }
   if(def)stampSrc(it,def,"item","items");   /* no def = a named grant with no matching item entry */
   character.inventory.push(it);
   if(it.weapon)addAttackForItem(it);
@@ -1627,7 +2007,7 @@ function raceOptions(){
   html+=flat.map(opt).join("");
   return html;
 }
-function raceSummary(d){const bits=[];if(d.abilityScores)bits.push(Object.entries(d.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", "));if(d.speed)bits.push("Speed "+d.speed);if((d.traits||[]).length)bits.push(d.traits.length+" trait(s)");if((d.subraces||[]).length)bits.push(d.subraces.length+" subraces");return bits.length?`<p class="hint"><b>${esc(bits.join(" · "))}</b></p>`:"";}
+function raceSummary(d){const bits=[];if(d.abilityScores)bits.push(Object.entries(d.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", "));if(d.size)bits.push(sizeLabel(d.size));if(d.speed)bits.push("Speed "+d.speed);if((d.traits||[]).length)bits.push(d.traits.length+" trait(s)");if((d.subraces||[]).length)bits.push(d.subraces.length+" subraces");return bits.length?`<p class="hint"><b>${esc(bits.join(" · "))}</b></p>`:"";}
 function openAddRace(){
   const term=raceTerm(), list=racesForCharacter();
   openModal("Add "+term.toLowerCase(),`
@@ -1692,6 +2072,10 @@ function applyRace(sel, subrace, opts){
     (obj.choices||[]).forEach(ch=>{if(ch&&ch.type==="skill")pending.push({ch:Object.assign({},ch,{_sid:"race:"+name}),sid:"race:"+name,label:label});});
     applyEquipGrants(obj.equipmentGrants,"race:"+name,pending);
     if(obj.speed&&(character.speed===""||character.speed==null))character.speed=obj.speed;
+    /* Seeded like speed — only when empty, so a subrace never overrides the base
+       species and a player's own choice always wins. Leaving it "" is also fine:
+       charSize() falls back to the ancestry's own size at read time. */
+    if(obj.size&&(character.size===""||character.size==null))character.size=sizeName(obj.size);
     if(obj.proficiencies||obj.languages){const add=[obj.proficiencies,obj.languages?("Languages: "+obj.languages):""].filter(Boolean).join("\n");character.proficiencies=(character.proficiencies?character.proficiencies+"\n":"")+add;}
   };
   if(d){
@@ -1719,6 +2103,7 @@ function openRaceInfo(name){
   const sect=(obj)=>{
     let s="";
     if(obj.abilityScores)s+=`<p><b>Ability increase:</b> ${Object.entries(obj.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", ")}</p>`;
+    if(obj.size)s+=`<p><b>Size:</b> ${esc(sizeLabel(obj.size))}</p>`;
     if(obj.speed)s+=`<p><b>Speed:</b> ${esc(obj.speed)}</p>`;
     if(obj.proficiencies)s+=`<p><b>Proficiencies:</b> ${esc(obj.proficiencies)}</p>`;
     if(obj.languages)s+=`<p><b>Languages:</b> ${esc(obj.languages)}</p>`;
@@ -1880,13 +2265,7 @@ function seedLevel1HP(d){
   if(num(character.hp.max))return;
   character.hp.max=die;
   if(!num(character.hp.cur))character.hp.cur=die;
-  syncHPInputs();
-}
-function syncHPInputs(){
-  const mx=document.querySelector('[data-path="character.hp.max"]');
-  if(mx)mx.value=character.hp.max;
-  const cu=document.querySelector('[data-path="character.hp.cur"]');
-  if(cu)cu.value=character.hp.cur;
+  renderHP();
 }
 function addClass(name,lvl){
   const d=findClassDef(name);
@@ -1919,7 +2298,7 @@ function removeClass(idx){
   if(seeded&&character.classes.length===1&&num(c.level)===1&&num(character.hp.max)===seeded){
     character.hp.max="";
     if(num(character.hp.cur)===seeded)character.hp.cur="";
-    syncHPInputs();
+    renderHP();
   }
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="class"&&f.origin.class===c.name);
   removeGrants(g=>g.sid==="class:"+c.name||g.sid.indexOf("subclass:"+c.name+":")===0);
@@ -2377,7 +2756,7 @@ function resetFeatureUses(kinds){
 }
 function longRest(){
   const c=contributions();
-  const effMax=num(character.hp.max)+sumFx("hp.max",c), hadMax=effMax>0;
+  const effMax=effMaxHP(c), hadMax=effMax>0;
   if(hadMax)character.hp.cur=effMax;
   character.hp.temp="";
   character.death={succ:0,fail:0};
@@ -2385,8 +2764,7 @@ function longRest(){
   const hdBack=recoverHitDice();
   const featBack=resetFeatureUses(["short","long"]);
   const resBack=resetResources(["short","long"]);
-  const ci=document.querySelector('[data-path="character.hp.cur"]');if(ci)ci.value=character.hp.cur;
-  const ti=document.querySelector('[data-path="character.hp.temp"]');if(ti)ti.value="";
+  renderHP();
   renderDeath();renderFeatures();recompute();scheduleSave();
   const lines=[
     hadMax?`Current HP restored to ${effMax}`:"HP unchanged — set a Max HP first",
@@ -2407,7 +2785,7 @@ function shortRest(){
   const resBack=resetResources(["short"]);
   renderFeatures();renderResources();recompute();scheduleSave();
   const lines=[];if(pactMsg)lines.push(pactMsg);if(featBack)lines.push(`${featBack} short-rest feature tracker${featBack===1?"":"s"} reset`);if(resBack)lines.push(`${resBack} short-rest resource${resBack===1?"":"s"} restored`);
-  restSummary("Short rest",lines.length?lines:["No resources auto-recover on a short rest for this character."],"Spend Hit Dice below to heal. Regular spell slots return on a long rest, not a short one.");
+  restSummary("Short rest",lines.length?lines:["No resources auto-recover on a short rest for this character."],"Spend Hit Dice from the Rest & Recovery card to heal. Regular spell slots return on a long rest, not a short one.");
 }
 /* ---- hit dice pool (derived from class hit die × level) ---- */
 function hitDicePool(){
@@ -2424,27 +2802,45 @@ function hitDicePool(){
 function hdString(pool){return pool.map(p=>p.total+p.die).join(" + ");}
 function renderHitDice(){
   const pool=hitDicePool();
-  // keep the Vitals field in sync with the pool
+  /* One function for both halves of the Rest & Recovery card — the field and the
+     pips. They can't be split: this auto-mode write feeds the pool below it, and
+     no caller ever wants only one of them. */
   if(!character.hdManual)character.hitdice=hdString(pool);
+  /* In auto mode the text field is a read-only echo of the pool below it —
+     the same dice written twice, which is what made this card confusing. So it
+     is HIDDEN unless you're editing them by hand; the auto/manual pill is what
+     brings it back, and it already focuses it on the way in. */
   const inp=document.getElementById("hitdiceInput"), modeBtn=document.querySelector("[data-hdmode]");
-  if(inp){inp.readOnly=!character.hdManual;inp.classList.toggle("autoslot",!character.hdManual);if(!character.hdManual)inp.value=character.hitdice||"";}
+  if(inp){inp.readOnly=!character.hdManual;inp.style.display=character.hdManual?"":"none";if(!character.hdManual)inp.value=character.hitdice||"";}
   if(modeBtn){modeBtn.textContent=character.hdManual?"manual":"auto";modeBtn.classList.toggle("manual",character.hdManual);}
   const el=document.getElementById("hdWrap");if(!el)return;
   const warn=character.hdManual?`<div class="hd-warn">⚠ Manual Hit Dice — they won't follow your class when you level up. <button class="linkbtn" data-hdreset>Reset to class</button></div>`:"";
-  if(!pool.length){el.innerHTML=warn;return;}
-  el.innerHTML=`<div class="hd-title">Hit Dice</div>`+warn+pool.map(p=>{
-    let pips="";for(let i=1;i<=p.total;i++)pips+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${p.die}" data-i="${i}" aria-label="Hit die"></button>`;
-    return `<div class="hd-row"><span class="hd-die">${p.total}${p.die}</span><span class="hd-pips">${pips}</span><button class="hd-roll" data-hdroll="${p.die}" ${p.used>=p.total?"disabled":""} title="Spend one ${p.die} and heal">🎲</button></div>`;
-  }).join("");
+  if(!pool.length){
+    el.innerHTML=warn+`<p class="hint hd-none">${character.hdManual?"Type your dice above, e.g. 2d8 + 1d6.":"Add a class and your Hit Dice appear here. Or switch to manual and type them in."}</p>`;
+    return;
+  }
+  /* The rows get their own grid container so their four columns line up with
+     each other. The warning banner stays OUTSIDE it: a grid item spanning every
+     column still feeds that column sizing, which stretched the Roll buttons to
+     the width of a sentence. */
+  el.innerHTML=warn+`<div class="hd-grid">`+pool.map(p=>{
+    const left=p.total-p.used;
+    /* A pip is filled when the die is SPENT — the same way the spell slot
+       bubbles read. The count beside them says it in words, so nobody has to
+       infer which way round it goes. */
+    let pips="";for(let i=1;i<=p.total;i++)pips+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${p.die}" data-i="${i}" aria-label="${p.die} number ${i}${i<=p.used?" (spent)":""}"></button>`;
+    return `<div class="hd-row"><span class="hd-die">${p.die}</span><span class="hd-pips">${pips}</span>`+
+      `<span class="hd-left${left?"":" out"}">${left} of ${p.total} left</span>`+
+      `<button class="hd-roll" data-hdroll="${p.die}" ${left?"":"disabled"} title="Spend one ${p.die} and heal">Roll</button></div>`;
+  }).join("")+`</div>`;
 }
 function rollHitDie(die){
   const p=hitDicePool().find(x=>x.die===die);if(!p||p.used>=p.total)return;
   const n=parseInt(die.slice(1),10)||8, c=contributions();
   const conMod=Math.floor((abilFinal("con",c)-10)/2), roll=1+Math.floor(Math.random()*n), heal=Math.max(0,roll+conMod);
-  const effMax=num(character.hp.max)+sumFx("hp.max",c);
-  character.hp.cur=Math.min(effMax>0?effMax:1e9, num(character.hp.cur)+heal);
+  character.hp.cur=num(character.hp.cur)+heal;   /* clampHP caps it at the effective max */
   if(!character.hdUsed)character.hdUsed={};character.hdUsed[die]=num(character.hdUsed[die])+1;
-  const ci=document.querySelector('[data-path="character.hp.cur"]');if(ci)ci.value=character.hp.cur;
+  clampHP();renderHP();
   renderHitDice();recompute();scheduleSave();
   restSummary("Hit die spent — "+die,[`Rolled ${roll} ${conMod>=0?"+":"−"} ${Math.abs(conMod)} CON = ${heal} HP`,`Current HP: ${character.hp.cur}`],"");
 }
@@ -2609,7 +3005,9 @@ function openCoinAdjust(){
     const {out}=plan();
     character.coins=character.coins||{};
     Object.keys(out).forEach(k=>{character.coins[k]=out[k].next;});
-    closeModal();renderCoins();scheduleSave();
+    /* coins have weight, so a purse change moves carried weight and can move
+       speed — re-render the inventory totals and recompute, not just the boxes */
+    closeModal();renderCoins();renderInventory();recompute();scheduleSave();
   });
 }
 /* push whole character into DOM */
@@ -2620,20 +3018,23 @@ function convertCoins(){
   const out=(character.system==="dnd")?[["pp",1000],["gp",100],["sp",10],["cp",1]]:[["gp",100],["sp",10],["cp",1]];
   const res={cp:"",sp:"",ep:"",gp:"",pp:""};
   out.forEach(([k,v])=>{const n=Math.floor(total/v);total-=n*v;res[k]=n>0?n:"";});
-  character.coins=res;renderCoins();scheduleSave();
+  character.coins=res;renderCoins();renderInventory();recompute();scheduleSave();
 }
 const COIN_ALL=[["cp","CP","Copper"],["sp","SP","Silver"],["ep","EP","Electrum"],
                 ["gp","GP","Gold"],["pp","PP","Platinum"]];
 /* Electrum is a D&D-only oddity; Humblewood doesn't use it. */
 function coinKeys(){return (character.system==="dnd")?["cp","sp","ep","gp","pp"]:["cp","sp","gp"];}
 
-/* What a coin box should become, given what was typed into it.
+/* What a signed-entry box — coins, HP — should become, given what was typed.
      "12"  -> set to 12          "+10" -> add           "-5" -> spend
      ""    -> cleared            anything else -> null (caller puts it back)
-   Signed entries are the point of this: during play you know what you SPENT,
-   not what the new total is. Never goes below zero — you can't owe copper.
-   Accepts the unicode minus too, since the on-screen hint shows one. */
-function coinEntry(cur,raw){
+   Signed entries are the point of this: during play you know what you SPENT or
+   what damage you TOOK, not what the new total is. Never goes below zero — you
+   can't owe copper, and you can't have less than no hit points.
+   Accepts the unicode minus too, since the on-screen hint shows one.
+   There is deliberately no upper bound here: HP has one and coins don't, and it
+   isn't a property of the entry syntax anyway — see clampHP(). */
+function signedEntry(cur,raw){
   const s=String(raw==null?"":raw).trim().replace(/[−–—]/g,"-");
   if(!s)return "";
   /* Space is allowed after the sign ("+ 10") but NOT inside the digits: "1 2"
@@ -2665,17 +3066,43 @@ function renderCoins(){
 function applyCoinInput(inp){
   const k=inp.dataset.coin;if(!k)return true;
   character.coins=character.coins||{};
-  const next=coinEntry(character.coins[k],inp.value);
+  const next=signedEntry(character.coins[k],inp.value);
   if(next===null){inp.value=(character.coins[k]!=null)?character.coins[k]:"";return false;}
   character.coins[k]=next;
   inp.value=next;
+  renderInventory();recompute();
+  scheduleSave();
+  return true;
+}
+/* The HP boxes work exactly like the coin boxes and for the same reason: they
+   are NOT data-path, because that handler commits on every keystroke and would
+   store "-" the instant you typed it, losing the number you were subtracting
+   from. They commit on change (blur/Enter), once the entry is finished. */
+function renderHP(){
+  ["cur","max","temp"].forEach(k=>{
+    const el=document.getElementById("hp"+k[0].toUpperCase()+k.slice(1));
+    if(el){const v=character.hp[k];el.value=(v===null||v===undefined)?"":v;}
+  });
+}
+/* Commit one HP box. Returns false if the entry made no sense. */
+function applyHPInput(inp){
+  const k=inp.dataset.hp;if(!k||!(k in character.hp))return true;
+  const next=signedEntry(character.hp[k],inp.value);
+  if(next===null){renderHP();return false;}   /* reject: put the model's value back */
+  character.hp[k]=next;
+  clampHP();renderHP();
+  if(k==="max")recompute();   /* what data-recompute did; nothing is derived from cur/temp */
   scheduleSave();
   return true;
 }
 function renderAll(){
-  renderCoins();
+  renderCoins();renderHP();   /* neither is data-path, so neither is in the loop below */
   document.querySelectorAll("[data-path]").forEach(inp=>{const v=get({character},inp.dataset.path);inp.value=(v===null||v===undefined)?"":v});
-  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderAllRT();recompute();
+  /* renderTables belongs here for the same reason renderGloss does: both draw
+     from the rules pool, not the character, so loading a sheet with rules
+     already cached has to draw them. Leaving it out meant the Tables tab was
+     blank after a refresh until you typed in its filter box. */
+  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderNoteIcons();renderNotes();renderAllRT();recompute();
 }
 
 /* ================= persistence ================= */
@@ -2764,7 +3191,7 @@ function migrate(s){
   if(s.coins&&typeof s.coins==="object"){const map={cp:"cp",sp:"sp",ep:"ep",gp:"gp",pp:"pp",km:"cp",sm:"sp",em:"ep",gm:"gp",pm:"pp"};Object.keys(s.coins).forEach(k=>{if(map[k]&&s.coins[k]!==undefined&&s.coins[k]!=="")base.coins[map[k]]=s.coins[k];});}
   // Guarantee list fields are arrays and map fields are plain objects.
   ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources"].forEach(k=>{ if(!Array.isArray(base[k]))base[k]=[]; });
-  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
+  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
   return base;
@@ -2787,7 +3214,7 @@ function printSheet(){
   const abils=ABIL.map(([k,lbl])=>{const sc=abilFinal(k,c),md=modOf(sc);return `<div class="p-abil"><div class="p-ab-l">${lbl}</div><div class="p-ab-s">${sc}</div><div class="p-ab-m">${fmt(md)}</div></div>`;}).join("");
   const hp=`${num(character.hp.cur)} / ${effMaxHP()}${num(character.hp.temp)?` (+${num(character.hp.temp)} temp)`:""}`;
   const hdp=hitDicePool(), hd=hdp.length?hdString(hdp):(character.hitdice||"—");
-  const vit=[["AC",g("acDisp")],["Initiative",g("initDisp")],["Speed",g("speedDisp")],["Prof. Bonus",fmt(pb)],["Passive Perc.",g("passDisp")],["HP",hp],["Hit Dice",hd]].map(([l,v])=>`<span class="p-stat">${l}: <b>${esc(v)||"—"}</b></span>`).join("");
+  const vit=[["AC",g("acDisp")],["Initiative",g("initDisp")],["Speed",g("speedDisp")],["Size",charSize()],["Prof. Bonus",fmt(pb)],["Passive Perc.",g("passDisp")],["HP",hp],["Hit Dice",hd]].map(([l,v])=>`<span class="p-stat">${l}: <b>${esc(v)||"—"}</b></span>`).join("");
   const saves=ABIL.map(([k,lbl])=>`<span class="p-line">${effSaveProf(k)>0?"●":"○"} ${lbl} <span class="p-mark">${esc(g("save-"+k))}</span></span>`).join("");
   const skills=SKILLS.map(([k,lbl,ab])=>{const l=effSkill(k),mk=l>=2?"◆":(l>=1?"●":"○");return `<span class="p-line">${mk} ${lbl} (${ab.toUpperCase()}) <span class="p-mark">${esc(g("skill-"+k))}</span></span>`;}).join("");
   const atkRows=(character.attacks||[]).map(a=>{const n=attackNumbers(a);const save=a.save;const dmg=printStrip(((a.damageDice||"")+((!save&&n.dmgBonus)?` ${fmt(n.dmgBonus)}`:"")+(a.damageType?` ${a.damageType}`:"")).trim());const typ=save?"Spell save":(a.source==="spell"?("Spell "+(n.kind==="ranged"?"Ranged":"Melee")):(n.kind==="ranged"?"Ranged":"Melee"));const hit=save?("DC "+(spellDC()!=null?spellDC():"—")+" "+String(save.ability||"").toUpperCase()):fmt(n.toHit);return `<tr><td>${esc(a.name||"Attack")}</td><td>${esc(typ)}</td><td>${esc(hit)}</td><td>${esc(dmg)||"—"}</td><td>${esc(printStrip(a.notes||""))}</td></tr>`;}).join("");
@@ -2804,6 +3231,10 @@ function printSheet(){
   const inv=(character.inventory||[]).map(it=>`<div class="p-item"><b>${esc(it.name)}</b>${num(it.qty)>1?` ×${num(it.qty)}`:""}${it.equipped?" (equipped)":""}${it.description?`<div>${esc(printStrip(it.description)).replace(/\n/g,"<br>")}</div>`:""}</div>`).join("");
   const coins=["pp","gp","ep","sp","cp"].map(k=>num(character.coins[k])?`${num(character.coins[k])} ${k.toUpperCase()}`:"").filter(Boolean).join(" · ");
   const bio=BIO.map(([k,lbl])=>character[k]?`<div class="p-item"><b>${lbl}</b><div>${esc(printStrip(character[k])).replace(/\n/g,"<br>")}</div></div>`:"").join("");
+  /* Section notes print as PLAIN TEXT — the markdown markers stay visible rather
+     than being rendered. Print escapes everything (see the bio line above); it
+     is not the place to start emitting markup from user input. */
+  const secn=NOTE_SECTIONS.filter(s=>hasNote(s.k)).map(s=>`<div class="p-item"><b>${esc(noteTitle(s))}</b><div>${esc(printStrip(noteText(s.k))).replace(/\n/g,"<br>")}</div></div>`).join("");
   const html=`
     <div class="p-h1">${esc(character.name||"Unnamed Character")}</div>
     <div class="p-sub">${classLine} · Level ${esc(lvl)} · ${raceName} · ${bgName}${align?` · ${align}`:""}</div>
@@ -2817,6 +3248,7 @@ function printSheet(){
     ${feats?`<div class="p-sec">Features &amp; Traits</div><div class="p-two">${feats}</div>`:""}
     ${(inv||coins)?`<div class="p-sec">Inventory${coins?` — ${coins}`:""}</div><div class="p-two">${inv}</div>`:""}
     ${bio?`<div class="p-sec">Character</div>${bio}`:""}
+    ${secn?`<div class="p-sec">Notes</div>${secn}`:""}
   `;
   document.getElementById("printArea").innerHTML=html;
   window.print();
@@ -2875,7 +3307,7 @@ function importChar(file){
 const UPD_FIELDS={
   feature:["description","effects","uses","cost"],
   spell:["level","meta","text"],
-  item:["description","effects","cost","weapon"]
+  item:["description","effects","cost","weight","weapon"]
 };
 const UPD_CATS=[["features","feature"],["spells","spell"],["inventory","item"]];
 
@@ -2889,11 +3321,18 @@ function updProject(def,kind,shape){
     const p={description:(m?m+"\n":"")+(def.description||""),
              effects:Array.isArray(def.effects)?def.effects:[]};
     const c=costToGp(def.cost); if(c!=null)p.cost=c;
+    const w=fnum(def.weight); if(w)p.weight=w;
     if(def.weapon)p.weapon=def.weapon;
     return p;
   }
   const p={};
   (UPD_FIELDS[kind]||[]).forEach(f=>{if(def[f]!==undefined)p[f]=def[f];});
+  /* Cost is the one field whose pack form differs from its stored form: the
+     pack writes "2 gp", the sheet stores 2. Project the STORED form, or the
+     projection describes a copy no copy site would ever produce — which is how
+     granted items sat with no cost at all and the diff never noticed.
+     An unparseable cost ("varies") projects as absent, not as a string. */
+  if(kind==="item"&&"cost" in p){const c=costToGp(def.cost);if(c!=null)p.cost=c;else delete p.cost;}
   return p;
 }
 /* per-field hashes of the projection — so a later diff can say WHICH field the
@@ -3003,8 +3442,12 @@ function updChangedFields(copy,def,kind){
   const shape=(copy.src&&copy.src.shape)||"plain";
   const now=fpMap(updProject(def,kind,shape),kind);
   const then=copy.src&&copy.src.fp;
+  /* A field this app didn't track when the copy was stamped has no baseline in
+     `then`, and "no baseline" is not "the pack changed it" — without this guard,
+     adding a field to UPD_FIELDS flags every previously-stamped copy at once.
+     Those fields baseline on the next restamp instead. */
   if(then&&typeof then==="object")
-    return (UPD_FIELDS[kind]||[]).filter(f=>now[f]!==then[f]);
+    return (UPD_FIELDS[kind]||[]).filter(f=>then[f]!==undefined&&now[f]!==then[f]);
   /* unstamped legacy copy — no baseline, so fall back to copy vs projection */
   const proj=updProject(def,kind,shape);
   return (UPD_FIELDS[kind]||[]).filter(f=>fpHash(copy[f])!==fpHash(proj[f]));
@@ -3091,9 +3534,15 @@ function diffCharacter(){
          without one (legacy, or a loose match) treat it as possibly-edited. */
       const ed=updEdited(copy,kind);
       const edited=ed===null?true:ed;
+      /* "changed" would be a lie for a field the copy never had — that reads as
+         "the pack was edited" when really the app failed to copy it in the
+         first place, which is how granted items ended up with no cost. */
+      const absent=fields.filter(f=>copy[f]===undefined);
       const why=r.otherPack
         ? `“${r.otherPack}” isn't loaded — this is the ${r.def._source||"other"} version`
-        : fields.join(", ")+" changed"+(r.loose?" (matched by name only)":"");
+        : (absent.length===fields.length
+            ? fields.join(", ")+" missing from this copy"
+            : fields.join(", ")+" changed")+(r.loose?" (matched by name only)":"");
       rows.push({cat,kind,type:"changed",id:copy.id,name:copy.name,copy,def:r.def,
                  pack:r.def._source||"",
                  why,edited,fields,
@@ -3403,6 +3852,9 @@ function applyTheme(){
   document.documentElement.dataset.theme=t;
   document.documentElement.dataset.skin=settings.skin||"humblewood";
   document.documentElement.dataset.rough=settings.rough?"on":"off";
+  /* "icons" forces glyph tabs at any width; "labels" leaves it to the viewport,
+     which switches on its own when seven words stop fitting. */
+  document.documentElement.dataset.tabs=settings.tabIcons?"icons":"labels";
   const wm=(settings.skin==="classic")?{main:"D&D",sub:"Character Sheet",title:"D&D Character Sheet"}
                                        :{main:"Humblewood",sub:"The Fieldbook",title:"Fieldbook — Humblewood"};
   const wmM=document.getElementById("wmMain"),wmS=document.getElementById("wmSub");
@@ -3428,6 +3880,32 @@ function openGlossView(g){
   let body= g.type==="image"? (g.image?`<img src="${g.image}" alt="${esc(g.term)}">`:`<p><em>No image attached.</em></p>`) : `<p>${esc(g.text||"—")}</p>`;
   openModal(g.term,body);
 }
+/* ---- size picker (the Size box in Vitals) ----
+   The same control Settings offers, put where the stat is shown. Size is a
+   choice, not a derived number, so it gets a chooser rather than the read-only
+   breakdown the other Vitals boxes tap through to. */
+function openSizePicker(){
+  const c=contributions();
+  const line=(sz)=>{
+    const eff=sz||raceDefSize()||"Medium";
+    const mult=SIZE_CARRY[eff]||1;
+    return `${eff} — carry up to ${fmtWt(capacityFor(eff,c))}`+
+      (mult===1?"":` (${mult>1?"double":"half"} a Medium character's)`)+
+      (sz?"":" · taken from your ancestry");
+  };
+  openModal("Size",`
+    <div class="field"><label class="f">Creature size</label><select id="szSel">${sizeOptionsHTML(character.size)}</select></div>
+    <p class="hint" id="szHint">${esc(line(character.size))}</p>
+    <p class="hint">Size sets how much you can carry. It only changes anything on the sheet while Encumbrance is switched on, in Settings.</p>
+    <div class="m-actions"><button class="tbtn" id="szCancel">Cancel</button><button class="tbtn primary" id="szSave">Save</button></div>`);
+  const sel=document.getElementById("szSel"), hint=document.getElementById("szHint");
+  sel.addEventListener("change",()=>{hint.textContent=line(sel.value);});
+  document.getElementById("szCancel").addEventListener("click",closeModal);
+  document.getElementById("szSave").addEventListener("click",()=>{
+    character.size=sel.value;
+    closeModal();renderInventory();recompute();scheduleSave();
+  });
+}
 function openStatBreakdown(target){
   const c=contributions();const contr=c.filter(x=>x.target===target);
   let base="", label=FX_LABEL[target]||target, grantLines="";
@@ -3441,6 +3919,16 @@ function openStatBreakdown(target){
   let rows=`<p style="margin-bottom:6px">${esc(base)}</p>`+grantLines;
   if(contr.length)rows+=contr.map(x=>`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(x.source)}</span><b>${fmt(x.value)}</b></div>`).join("");
   else if(!grantLines)rows+=`<p style="color:var(--ink-soft);font-style:italic">No item, feature, or grant effects apply.</p>`;
+  /* Encumbrance is last because it is applied last — after the numeric effects,
+     and sometimes as a replacement rather than a modifier. */
+  if(target==="speed"){
+    const st=encState(c);
+    if(st.mode!=="none"&&st.tier!=="ok"){
+      const val=st.floor!=null?(st.floor+" ft"):fmt(st.penalty);
+      rows+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(st.label)} (${esc(fmtWt(st.carried))} / ${esc(fmtWt(st.cap))})</span><b>${esc(val)}</b></div>`;
+      rows+=`<p class="hint" style="margin-top:6px">${esc(encTierNote(st))}</p>`;
+    }
+  }
   openModal(label+" breakdown",rows);
 }
 
@@ -3500,8 +3988,9 @@ function openItemForm(existing){
       <div class="field"><label class="f">Quantity</label><input id="iQty" type="number" min="1" value="${num(it.qty)||1}"></div></div>
     <div class="field"><label class="f">Description</label><textarea id="iDesc">${esc(it.description||"")}</textarea></div>
     <div class="field"><label class="f">Category</label><select id="iCategory"><option value=""${!it.sectionOverride?" selected":""}>Automatic (${esc(invSection(it))})</option>${INV_ORDER.map(sname=>`<option value="${sname}"${it.sectionOverride===sname?" selected":""}>${sname}</option>`).join("")}</select></div>
-    <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${it.cost!=null&&it.cost!==""?num(it.cost):""}" placeholder="0"></div>
-      <div class="field"><label class="f">Origin</label><select id="iOrigin">${originOptionsHTML(it.origin,false)}</select></div></div>
+    <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${it.cost!=null&&it.cost!==""?fnum(it.cost):""}" placeholder="0"></div>
+      <div class="field"><label class="f">Weight each (lb, optional)</label><input id="iWeight" type="number" min="0" step="0.01" value="${it.weight!=null&&it.weight!==""?fnum(it.weight):""}" placeholder="0"></div></div>
+    <div class="field"><label class="f">Origin</label><select id="iOrigin">${originOptionsHTML(it.origin,false)}</select></div>
     <div class="field" id="iOrigDetWrap" style="${it.origin?"":"display:none"}"><label class="f">Origin detail</label><input id="iOrigDet" value="${esc((it.origin&&it.origin.detail)||"")}" placeholder="${esc((it.origin&&originDef(it.origin.kind)&&originDef(it.origin.kind).ph)||"place, who, etc.")}"></div>
     <div class="field"><label class="f">Effects while equipped</label><div id="iFx">${fxEditorRows(it.effects)}</div><button class="fx-add" id="iAddFx">+ Add effect</button></div>
     <label class="equip ${it.equipped?"on":""}" id="iEquip" style="font-size:12px"><span class="box"></span>Equipped (apply effects now)</label>
@@ -3522,7 +4011,7 @@ function openItemForm(existing){
   document.getElementById("iAddFx").addEventListener("click",()=>fxWrap.insertAdjacentHTML("beforeend",fxRow(null)));
   fxWrap.addEventListener("click",e=>{const d=e.target.closest(".fx-del");if(d)d.closest(".fxrow").remove()});
   const libSel=document.getElementById("iLib");
-  if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;fxWrap.innerHTML=fxEditorRows(x.effects);
+  if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;const wg=fnum(x.weight);if(wg)document.getElementById("iWeight").value=wg;fxWrap.innerHTML=fxEditorRows(x.effects);
     if(x.weapon){isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}});
   document.getElementById("iCancel").addEventListener("click",closeModal);
   const iOrig=document.getElementById("iOrigin"),iOrigW=document.getElementById("iOrigDetWrap"),iOrigD=document.getElementById("iOrigDet");
@@ -3531,10 +4020,17 @@ function openItemForm(existing){
     const rec={id:it.id,name:document.getElementById("iName").value.trim()||"Item",qty:num(document.getElementById("iQty").value)||1,description:document.getElementById("iDesc").value,effects:collectFx(fxWrap),equipped};
     const so=document.getElementById("iCategory").value;if(so)rec.sectionOverride=so;
     if(it.category)rec.category=it.category;if(it.type)rec.type=it.type;
-    const cv=document.getElementById("iCost").value;if(cv!==""&&num(cv)>=0)rec.cost=num(cv);
+    const cv=document.getElementById("iCost").value;if(cv!==""&&fnum(cv)>=0)rec.cost=fnum(cv);
+    const wv=document.getElementById("iWeight").value;if(wv!==""&&fnum(wv)>0)rec.weight=fnum(wv);
     const ok=document.getElementById("iOrigin").value;if(ok)rec.origin={kind:ok,detail:document.getElementById("iOrigDet").value.trim(),at:(it.origin&&it.origin.at)||Date.now()};
     if(it.grant)rec.grant=it.grant;
     if(it.attackId)rec.attackId=it.attackId;
+    /* rec is rebuilt from the form, so anything the form doesn't ask about has to
+       be carried across explicitly or an edit silently discards it: the favourite
+       star, and — worse, because it is invisible — the src stamp the rules-update
+       tool needs to tell "the pack changed" from "the player edited this". */
+    if(it.fav)rec.fav=it.fav;
+    if(it.src)rec.src=it.src;
     const dice=document.getElementById("iWDice").value.trim();
     if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(it.weapon&&it.weapon.notes)||""};if(it.weapon&&it.weapon.atkMisc!=null)rec.weapon.atkMisc=it.weapon.atkMisc;if(it.weapon&&it.weapon.dmgMisc!=null)rec.weapon.dmgMisc=it.weapon.dmgMisc;}
     const i=character.inventory.findIndex(x=>x.id===it.id);if(i>=0)character.inventory[i]=rec;else character.inventory.push(rec);
@@ -3753,7 +4249,7 @@ function browseItems(){
       {key:"rar",label:"Rarity",type:"multi",options:rars,match:(e,a)=>a.has(rarOf(e).toLowerCase())},
       {key:"attune",label:"Needs attunement",type:"toggle",match:e=>!!e.attune}
     ],
-    onAdd:(entries,og,costOverride)=>{entries.forEach(x=>{const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());if(ex){ex.qty=num(ex.qty)+1;return;}const m=meta(x);const it={id:uid(),name:x.name,qty:1,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:false};if(og)it.origin=og;const c=(costOverride!=null?costOverride:costToGp(x.cost));if(c!=null)it.cost=c;if(x.weapon)it.weapon=x.weapon;stampSrc(it,x,"item","items","browse");character.inventory.push(it);if(it.weapon)addAttackForItem(it);});renderInventory();renderAttacks();recompute();scheduleSave();}
+    onAdd:(entries,og,costOverride)=>{entries.forEach(x=>{const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());if(ex){ex.qty=num(ex.qty)+1;return;}const m=meta(x);const it={id:uid(),name:x.name,qty:1,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:false};if(og)it.origin=og;const c=(costOverride!=null?costOverride:costToGp(x.cost));if(c!=null)it.cost=c;const wg=fnum(x.weight);if(wg)it.weight=wg;if(x.category)it.category=x.category;if(x.type)it.type=x.type;if(x.weapon)it.weapon=x.weapon;stampSrc(it,x,"item","items","browse");character.inventory.push(it);if(it.weapon)addAttackForItem(it);});renderInventory();renderAttacks();recompute();scheduleSave();}
   });
 }
 /* create an Attacks & Weapons entry linked to a weapon inventory item */
@@ -3901,9 +4397,296 @@ function tableChipsHTML(name,kind){
   if(!ts.length)return "";
   return `<div class="tblchips">`+ts.map(t=>`<button type="button" class="tblref" data-tbl="${esc(t.name)}">${esc(t.name)}</button>`).join("")+`</div>`;
 }
-/* ================= settings modal ================= */
+/* ================= section notes =================
+   A note pinned to any section of the sheet, plus the Notes tab that gathers
+   them. Notes are the player's own words, so they render markdown — and, like
+   every other body of text in the app, they run through highlight() so glossary
+   terms and [Table: X] references stay live inside them.
+
+   NOT to be confused with `character.notes`, which is the Story tab's bio field
+   and predates this. This feature stores `character.secNotes`. */
+
+/* The registry is the single source of truth: it drives the icon injection, the
+   Notes tab's grouping and headings, and a test that checks it against the
+   template both ways. `k` is a stable id — never derive one from a heading,
+   because headings get reworded and the notes would be orphaned. */
+const NOTE_SECTIONS=[
+  {k:"portrait",     tab:"sheet",     title:"Portrait"},
+  {k:"origin",       tab:"sheet",     title:"Ancestry & Background"},
+  {k:"class",        tab:"sheet",     title:"Class"},
+  {k:"abilities",    tab:"sheet",     title:"Ability Scores & Saves"},
+  {k:"skills",       tab:"sheet",     title:"Skills"},
+  {k:"vitals",       tab:"sheet",     title:"Vitals"},
+  {k:"rest",         tab:"sheet",     title:"Rest & Recovery"},
+  {k:"statuses",     tab:"sheet",     title:"Statuses & Conditions"},
+  {k:"attacks",      tab:"sheet",     title:"Attacks & Weapons"},
+  {k:"resources",    tab:"sheet",     title:"Resources"},
+  {k:"features",     tab:"sheet",     title:"Features & Traits"},
+  {k:"familiars",    tab:"sheet",     title:"Familiars & Companions"},
+  {k:"spellcasting", tab:"spells",    title:"Spellcasting"},
+  {k:"slots",        tab:"spells",    title:"Spell Slots"},
+  {k:"activespells", tab:"spells",    title:"Active Spells"},
+  {k:"spells",       tab:"spells",    title:"Spells & Cantrips"},
+  {k:"inventory",    tab:"inventory", title:"Equipment & Inventory"},
+  {k:"coins",        tab:"inventory", title:"Coins"},
+  {k:"proficiencies",tab:"story",     title:"Proficiencies & Languages"}
+];
+const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Story"};
+function noteDef(k){return NOTE_SECTIONS.find(s=>s.k===k)||null;}
+/* The ancestry heading is skin-dependent — "Race" on the classic skin — so the
+   Notes tab has to ask rather than quote the registry, or it would disagree with
+   the card it links to. */
+function noteTitle(def){return (def&&def.k==="origin")?(raceTerm()+" & Background"):(def?def.title:"");}
+
+/* ---- storage, guarded ----
+   migrate() shape-guards secNotes at the TOP level only; nothing coerces the
+   values inside it. A hand-edited or half-broken file can therefore put a string
+   where a note object belongs, so every read goes through here. */
+function noteMap(){const m=character&&character.secNotes;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
+function getNote(k){const n=noteMap()[k];return (n&&typeof n==="object"&&!Array.isArray(n))?n:null;}
+function noteText(k){const n=getNote(k);return n?String(n.text||""):"";}
+function hasNote(k){return !!noteText(k).trim();}
+function noteCount(tab){return NOTE_SECTIONS.filter(s=>s.tab===tab&&hasNote(s.k)).length;}
+/* Blank means no note: saving an empty box DELETES the entry, so "has a note" is
+   one truth test and the Notes tab can never list an empty one.
+   `at` is set once and survives every edit; `editedAt` only moves when the text
+   actually changed, so re-saving without typing doesn't fake activity. */
+function saveNote(k,text){
+  if(!character.secNotes||typeof character.secNotes!=="object"||Array.isArray(character.secNotes))character.secNotes={};
+  const t=String(text==null?"":text);
+  const prev=getNote(k);
+  if(!t.trim()){delete character.secNotes[k];return null;}
+  const now=Date.now();
+  const at=(prev&&typeof prev.at==="number"&&prev.at)||now;
+  const editedAt=(prev&&prev.text===t&&typeof prev.editedAt==="number")?prev.editedAt:now;
+  character.secNotes[k]={text:t,at,editedAt};
+  return character.secNotes[k];
+}
+function noteWhen(n){
+  if(!n||typeof n.at!=="number")return "";
+  const a=fmtWhen(n.at);
+  return "Added "+a+((typeof n.editedAt==="number"&&n.editedAt>n.at)?(" · edited "+fmtWhen(n.editedAt)):"");
+}
+
+/* ================= markdown =================
+   Why this ordering is safe, since it is the whole security argument:
+   highlight() runs esc() over the text, which escapes < and >. So the ONLY
+   angle brackets in its output are the <span class="kw"> / <span class="tblref">
+   tags it inserted itself — which makes /<[^>]+>/g an EXACT tag matcher here,
+   not a heuristic, and lets us hold those tags aside while the markdown regexes
+   run. Anything the player typed is already inert text by that point.
+
+   Running markdown BEFORE the glossary pass would be unsafe the other way: a
+   glossary term like "strong" would match inside the <strong> we just wrote. */
+const NOTE_H0=String.fromCharCode(0xE001), NOTE_H1=String.fromCharCode(0xE002);  /* indexed hold delimiters */
+const NOTE_LB=String.fromCharCode(0xE003);  /* one soft line break inside a block */
+const NOTE_SENTINELS=new RegExp("["+String.fromCharCode(0xE000)+"-"+String.fromCharCode(0xE00F)+"]","g");
+/* Indexed, not a single repeating mark like TBL_MARK: this pass NESTS — a code
+   span can swallow an already-held glossary chip — so ordinal restore-in-order
+   doesn't hold. */
+function noteInline(raw){
+  const hold=[];
+  const P=t=>{hold.push(t);return NOTE_H0+(hold.length-1).toString(36)+NOTE_H1;};
+  let s=highlight(raw);                                        /* esc + glossary + table chips */
+  s=s.replace(/<[^>]+>/g,P);                                   /* exact: esc() ate every user < */
+  s=s.replace(/`([^`]+)`/g,(m,c)=>P("<code>"+c+"</code>"));    /* first, so no emphasis inside code */
+  s=s.replace(/\*\*([^*]+)\*\*/g,(m,c)=>"<strong>"+c+"</strong>");
+  /* the (^|[^*]) guard is what makes an unmatched delimiter inert rather than
+     eating the rest of the line */
+  s=s.replace(/(^|[^*])\*([^*]+)\*/g,(m,a,c)=>a+"<em>"+c+"</em>");
+  s=s.split(NOTE_LB).join("<br>");
+  for(let i=0;i<8&&s.indexOf(NOTE_H0)>=0;i++)
+    s=s.replace(new RegExp(NOTE_H0+"([0-9a-z]+)"+NOTE_H1,"g"),(m,key)=>hold[parseInt(key,36)]||"");
+  return s;
+}
+/* Block grammar, deliberately small. No links (they point at a network, in an
+   offline-first app, and read confusingly beside [Table: X]), no _underscore_
+   emphasis (snake_case), no nested lists, no pipe tables. */
+function noteHTML(text){
+  /* strip our own sentinels AND highlight()'s out of the input first: a player
+     typing one must not be able to forge a placeholder */
+  const src=String(text==null?"":text).replace(/\r\n?/g,"\n").replace(NOTE_SENTINELS,"");
+  if(!src.trim())return "";
+  const lines=src.split("\n"), out=[];
+  let i=0;
+  /* three or more of the same mark, spaces allowed between them: --- , *** ,
+     ___ , and the spaced forms. Checked BEFORE bullets so "* * *" is a rule. */
+  const isHr=l=>/^ {0,3}([-*_])(?: *\1){2,} *$/.test(l);
+  const isH=l=>/^ {0,3}(#{1,6}) +(.*)$/.exec(l);
+  const isUl=l=>/^ {0,3}[-*+] +/.test(l);
+  const isOl=l=>/^ {0,3}(\d{1,9})[.)] +/.exec(l);
+  const isQ=l=>/^ {0,3}> ?/.test(l);
+  const starts=l=>isHr(l)||isH(l)||isUl(l)||isOl(l)||isQ(l);
+  while(i<lines.length){
+    const l=lines[i];
+    if(!l.trim()){i++;continue;}
+    if(isHr(l)){out.push(`<hr class="n-hr">`);i++;continue;}   /* before bullets: "* * *" is a rule */
+    const h=isH(l);
+    if(h){const lv=h[1].length;out.push(`<div class="n-h n-h${lv}">${noteInline(h[2])}</div>`);i++;continue;}
+    if(isUl(l)){
+      const items=[];
+      while(i<lines.length&&isUl(lines[i])&&!isHr(lines[i])){items.push(lines[i].replace(/^ {0,3}[-*+] +/,""));i++;}
+      out.push(`<ul class="n-ul">`+items.map(t=>`<li>${noteInline(t)}</li>`).join("")+`</ul>`);continue;
+    }
+    const o=isOl(l);
+    if(o){
+      const start=parseInt(o[1],10)||1, items=[];
+      while(i<lines.length&&isOl(lines[i])){items.push(lines[i].replace(/^ {0,3}\d{1,9}[.)] +/,""));i++;}
+      out.push(`<ol class="n-ol"${start!==1?` start="${start}"`:""}>`+items.map(t=>`<li>${noteInline(t)}</li>`).join("")+`</ol>`);continue;
+    }
+    if(isQ(l)){
+      const ls=[];
+      while(i<lines.length&&isQ(lines[i])){ls.push(lines[i].replace(/^ {0,3}> ?/,""));i++;}
+      out.push(`<blockquote class="n-q">${noteInline(ls.join(NOTE_LB))}</blockquote>`);continue;
+    }
+    const ls=[];
+    while(i<lines.length&&lines[i].trim()&&!starts(lines[i])){ls.push(lines[i]);i++;}
+    /* ONE highlight() call per block, not per line: highlight() rebuilds the
+       glossary list, sorts it and compiles a fresh RegExp every time, and the
+       Notes tab can render nineteen of these at once. */
+    out.push(`<p>${noteInline(ls.join(NOTE_LB))}</p>`);
+  }
+  return out.join("");
+}
+/* The hover preview is PLAIN TEXT, not noteHTML(): a hover card full of tappable
+   chips is a trap — you reach for the chip and the card disappears — and
+   interactive elements can't legally nest inside the button it lives in. */
+function notePreview(text,max){
+  const s=String(text==null?"":text)
+    .replace(NOTE_SENTINELS,"")
+    .replace(/^ {0,3}(#{1,6} +|[-*+] +|\d{1,9}[.)] +|> ?)/gm,"")
+    .replace(/[*`]/g,"")
+    .replace(/\s+/g," ").trim();
+  const n=max||180;
+  return esc(s.length>n?s.slice(0,n).trim()+"…":s);
+}
+
+/* ================= the icon on each section heading ================= */
+function noteBtnHTML(def){
+  const has=hasNote(def.k), t=noteTitle(def);
+  return `<button class="notebtn${has?" on":""}" data-notebtn="${def.k}" aria-label="${has?"Edit note":"Add a note"} — ${esc(t)}" title="${has?"Edit note":"Add a note"}">`+
+    `<svg class="noteicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>`+
+    (has?`<span class="n-pop">${notePreview(noteText(def.k))}</span>`:"")+
+    `</button>`;
+}
+/* Idempotent, and it replaces only its own button — never label.innerHTML +=,
+   which would re-parse the label and destroy #starBtn, #encPill and #roundNum. */
+function renderNoteIcons(){
+  NOTE_SECTIONS.forEach(def=>{
+    const card=document.querySelector(`[data-note="${def.k}"]`);if(!card)return;
+    const label=card.querySelector(".label");if(!label)return;
+    const old=label.querySelector("[data-notebtn]");
+    if(old)old.outerHTML=noteBtnHTML(def);
+    else label.insertAdjacentHTML("beforeend",noteBtnHTML(def));
+  });
+}
+
+/* ================= the Notes tab ================= */
+function noteGroupOpen(tab){
+  const c=(character&&character.noteCollapse&&typeof character.noteCollapse==="object"&&!Array.isArray(character.noteCollapse))?character.noteCollapse:{};
+  return !c[tab];
+}
+function toggleNoteGroup(tab){
+  if(!character.noteCollapse||typeof character.noteCollapse!=="object"||Array.isArray(character.noteCollapse))character.noteCollapse={};
+  character.noteCollapse[tab]=!character.noteCollapse[tab];
+  renderNotes();scheduleSave();
+}
+function noteEntryHTML(def){
+  const n=getNote(def.k), when=noteWhen(n);
+  return `<div class="item"><div class="top">`+
+    `<button class="linkbtn n-jump" data-notejump="${def.k}">${esc(noteTitle(def))}</button>`+
+    `<span style="flex:1"></span>`+
+    (when?`<span class="n-when">${esc(when)}</span>`:"")+
+    `<button class="icon" data-noteedit="${def.k}" aria-label="Edit note"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`+
+    `</div><div class="n-body">${noteHTML(noteText(def.k))}</div></div>`;
+}
+/* Pure, so the group order, counts, collapse state and empty state are all
+   assertable in the test harness — which can't see the DOM at all. */
+function notesHTML(){
+  const tabs=[];
+  NOTE_SECTIONS.forEach(s=>{if(tabs.indexOf(s.tab)<0)tabs.push(s.tab);});
+  let html="", any=false;
+  tabs.forEach(tab=>{
+    const defs=NOTE_SECTIONS.filter(s=>s.tab===tab&&hasNote(s.k));
+    if(!defs.length)return;
+    any=true;
+    const open=noteGroupOpen(tab);
+    html+=`<div class="fgroup"><div class="fghead" data-notegroup="${tab}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
+      `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`+
+      `<span class="fgname">${esc(NOTE_TABS[tab]||tab)}</span><span class="fgcount">${defs.length}</span></div>`+
+      `<div class="notesec-body" data-notegroupbody="${tab}"${open?"":` style="display:none"`}>`+
+      defs.map(noteEntryHTML).join("")+`</div></div>`;
+  });
+  return any?html:`<div class="empty">No notes yet. Tap the note icon beside any section heading to jot something down — it will show up here.</div>`;
+}
+function renderNotes(){const el=document.getElementById("notesList");if(el)el.innerHTML=notesHTML();}
+
+/* ---- jump to the section a note belongs to ---- */
+function jumpToNote(k){
+  const def=noteDef(k);if(!def)return;
+  selectTab(def.tab);
+  const card=document.querySelector(`[data-note="${def.k}"]`);
+  /* Familiars and Active Spells are display:none until they have content, and
+     scrolling to a hidden element lands nowhere. */
+  if(!card||card.offsetParent===null){window.scrollTo({top:0});return;}
+  scrollToCard(card);
+  card.classList.add("n-flash");setTimeout(()=>card.classList.remove("n-flash"),1200);
+}
+
+/* ---- editor ---- */
+function openNoteEditor(k){
+  const def=noteDef(k);if(!def)return;
+  const n=getNote(k), when=noteWhen(n);
+  openModal("Note — "+noteTitle(def),`
+    <div class="field"><label class="f">Your note</label>
+      <textarea id="noteText" class="n-edit" placeholder="Anything you want to remember about this section…">${esc(noteText(k))}</textarea></div>
+    <p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>
+    ${when?`<p class="hint">${esc(when)}</p>`:""}
+    <div class="m-actions">${n?`<button class="tbtn danger" id="noteDel" style="margin-right:auto">Delete</button>`:""}<button class="tbtn" id="noteCancel">Cancel</button><button class="tbtn primary" id="noteSave">Save</button></div>`);
+  const ta=document.getElementById("noteText");if(ta)ta.focus();
+  document.getElementById("noteCancel").addEventListener("click",closeModal);
+  {const d=document.getElementById("noteDel");if(d)d.addEventListener("click",()=>{saveNote(k,"");closeModal();renderNoteIcons();renderNotes();scheduleSave();});}
+  document.getElementById("noteSave").addEventListener("click",()=>{
+    saveNote(k,document.getElementById("noteText").value);
+    closeModal();renderNoteIcons();renderNotes();scheduleSave();
+  });
+}
+/* ================= settings modal =================
+   The modal grew a control at a time until it was one long scroll, so it is
+   grouped into collapsible sections. They reuse the feature-list idiom
+   (.fgroup/.fghead/.fcaret) rather than inventing a second collapsible — one
+   less thing to keep looking the same. Open/closed is remembered in `settings`,
+   because a setting you visit often shouldn't need reopening every time. */
+const SET_SECTIONS=[
+  /* `open` is the FIRST-RUN default, not the current state. Appearance and the
+     character's own options are what people come here for; the rules-data block
+     is the longest and the least often touched, so it starts folded away — with
+     its entry count on the header, so "did my rules load?" is still answerable
+     without opening it. */
+  {k:"appearance",title:"Appearance",       open:true},
+  {k:"character", title:"This character",   open:true},
+  {k:"rules",     title:"Rules data",       open:false},
+  {k:"backup",    title:"Characters & backup",open:false}
+];
+function setSecDef(k){return SET_SECTIONS.find(s=>s.k===k)||null;}
+/* stored as COLLAPSE (true = closed) so an absent key means "first run", and the
+   defaults above can change later without rewriting anyone's saved settings */
+function setSecOpen(k){
+  const c=(settings&&settings.setCollapse&&typeof settings.setCollapse==="object"&&!Array.isArray(settings.setCollapse))?settings.setCollapse:{};
+  if(k in c)return !c[k];
+  const d=setSecDef(k);return d?d.open:true;
+}
+function setSecHTML(k,body,badge){
+  const d=setSecDef(k);if(!d)return "";
+  const open=setSecOpen(k);
+  return `<div class="fgroup"><div class="fghead" data-setsec="${k}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
+    `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`+
+    `<span class="fgname">${esc(d.title)}</span>${badge?`<span class="fgcount">${esc(badge)}</span>`:""}</div>`+
+    `<div class="setsec-body" data-setsecbody="${k}"${open?"":` style="display:none"`}>${body}</div></div>`;
+}
+function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
 function openSettings(){
-  openModal("Settings",`
+  const secAppearance=`
     <div class="field"><label class="f">Skin</label>
       <div class="seg" id="segSkin">
         <button data-skin="humblewood" class="${(settings.skin||"humblewood")==="humblewood"?"on":""}">Humblewood</button>
@@ -3915,9 +4698,21 @@ function openSettings(){
         <button data-th="light" class="${settings.theme==="light"?"on":""}">Light</button>
         <button data-th="dark" class="${settings.theme==="dark"?"on":""}">Dark</button>
       </div></div>
-    <div class="toggle"><div><div class="t-lbl">Character library</div><div class="t-sub">Switch characters, set autoload, or start a new one.</div></div><button class="tbtn" id="swHome">Open</button></div>
     <div class="toggle"><div><div class="t-lbl">Hand-drawn borders</div><div class="t-sub">Inky wobble. Turn off for a cleaner look / low-end devices.</div></div><button class="switch ${settings.rough?"on":""}" id="swRough"></button></div>
-    <div class="field" style="margin-top:14px"><label class="f">Rules sources</label>
+    <div class="toggle"><div><div class="t-lbl">Icon tabs</div><div class="t-sub">Show the tab bar as icons instead of words, on every screen size. Narrow screens do this anyway.</div></div><button class="switch ${settings.tabIcons?"on":""}" id="swTabIcons"></button></div>`;
+  const secCharacter=activeId?`
+    <div class="g2"><div class="field"><label class="f">Size</label>
+        <select id="setSize">${sizeOptionsHTML(character.size)}</select></div>
+      <div class="field"><label class="f">Encumbrance</label>
+        <select id="setEnc">${[["none","Off — show weight only"],["standard","Standard (capacity, push/drag)"],["variant","Variant (encumbered tiers)"]].map(([v,l])=>`<option value="${v}"${encMode()===v?" selected":""}>${esc(l)}</option>`).join("")}</select></div></div>
+    <p class="hint" id="encHint">${esc(encSettingsHint())}</p>
+    <div class="toggle"><div><div class="t-lbl">Coins count as weight</div><div class="t-sub">50 coins to the pound, the way the rules have it.</div></div><button class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight"></button></div>
+    <div class="field" style="margin-top:12px"><label class="f">Rules updates</label>
+      <p class="hint">Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compare this sheet against your loaded rules and update what you choose. A backup is always saved first.</p>
+      <div class="m-actions" style="justify-content:flex-start"><button class="tbtn" id="btnCharUpdate">Check for rules updates</button></div>
+    </div>`:"";
+  const secRules=`
+    <div class="field"><label class="f">Rules sources</label>
       <p class="hint">Load one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. Fetched when online, cached for offline.</p>
       <div id="srcList"></div>
       <div style="display:flex;gap:7px;margin-top:4px"><input id="newSrc" placeholder="https://…/spells.json"><button class="tbtn" id="addSrc">Add</button></div>
@@ -3933,23 +4728,47 @@ function openSettings(){
     <div class="field" style="margin-top:6px"><label class="f">Loaded rules data</label>
       <p class="hint">Everything currently in your rules pool, grouped by file (or source). Remove any piece you no longer want loaded.</p>
       <div id="rulesData"></div>
-    </div>
-    ${activeId?`<div style="border-top:1px dotted var(--hair);margin:14px 0 12px"></div>
-    <div class="field"><label class="f">This character</label>
-      <p class="hint">Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compare this sheet against your loaded rules and update what you choose. A backup is always saved first.</p>
-      <div class="m-actions" style="justify-content:flex-start"><button class="tbtn" id="btnCharUpdate">Check for rules updates</button></div>
-    </div>`:""}
-    <div style="border-top:1px dotted var(--hair);margin:14px 0 12px"></div>
-    <div class="m-actions" style="justify-content:flex-start">
+    </div>`;
+  const secBackup=`
+    <div class="toggle"><div><div class="t-lbl">Character library</div><div class="t-sub">Switch characters, set autoload, or start a new one.</div></div><button class="tbtn" id="swHome">Open</button></div>
+    <div class="m-actions" style="justify-content:flex-start;margin-top:10px">
       <button class="tbtn" id="btnExportSettings">Export settings</button>
       <button class="tbtn" id="btnImportSettings">Import settings</button>
       <input type="file" id="fileSettings" accept="application/json,.json" class="hidefile">
     </div>
-    <p class="hint" style="margin-top:6px">Export saves your appearance settings <b>and</b> all loaded rules data to one JSON file; import restores both.</p>`);
+    <p class="hint" style="margin-top:6px">Export saves your appearance settings <b>and</b> all loaded rules data to one JSON file; import restores both.</p>`;
+  const n=rulesEntryCount();
+  openModal("Settings",`<div id="setSections">`+
+    setSecHTML("appearance",secAppearance)+
+    (secCharacter?setSecHTML("character",secCharacter,character.name||"unnamed"):"")+
+    setSecHTML("rules",secRules,n?n+" entries":"none loaded")+
+    setSecHTML("backup",secBackup)+
+    `</div>`);
+  /* Delegated from a wrapper INSIDE the modal body, not from #mBody itself:
+     #mBody survives every open, so a listener bound to it would stack up one
+     copy per visit. */
+  const secs=document.getElementById("setSections");
+  const toggleSec=(head)=>{
+    const k=head.dataset.setsec;
+    if(!settings.setCollapse||typeof settings.setCollapse!=="object"||Array.isArray(settings.setCollapse))settings.setCollapse={};
+    const open=!setSecOpen(k);
+    settings.setCollapse[k]=!open;
+    head.setAttribute("aria-expanded",open?"true":"false");
+    const car=head.querySelector(".fcaret");if(car)car.classList.toggle("c",!open);
+    const body=secs.querySelector(`[data-setsecbody="${k}"]`);if(body)body.style.display=open?"":"none";
+    saveSettings();
+  };
+  secs.addEventListener("click",e=>{const h=e.target.closest("[data-setsec]");if(h)toggleSec(h);});
+  secs.addEventListener("keydown",e=>{
+    if(e.key!=="Enter"&&e.key!==" ")return;
+    const h=e.target.closest("[data-setsec]");if(!h)return;
+    e.preventDefault();toggleSec(h);
+  });
   document.getElementById("segSkin").addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(!b)return;settings.skin=b.dataset.skin;document.querySelectorAll("#segSkin button").forEach(x=>x.classList.toggle("on",x===b));applyTheme();saveSettings();if(activeId){character.system=systemForSkin(settings.skin);renderCoins();libTouch();scheduleSave();}});
   document.getElementById("segTheme").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;settings.theme=b.dataset.th;document.querySelectorAll("#segTheme button").forEach(x=>x.classList.toggle("on",x===b));applyTheme();saveSettings();});
   document.getElementById("swHome").addEventListener("click",()=>{closeModal();showHome();});
   document.getElementById("swRough").addEventListener("click",e=>{settings.rough=!settings.rough;e.currentTarget.classList.toggle("on",settings.rough);applyTheme();saveSettings();});
+  document.getElementById("swTabIcons").addEventListener("click",e=>{settings.tabIcons=!settings.tabIcons;e.currentTarget.classList.toggle("on",settings.tabIcons);applyTheme();saveSettings();});
   renderSrcRows();renderRulesData();
   document.getElementById("rulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`))removeRulesGroup(d.dataset.rdDel);});
   document.getElementById("srcList").addEventListener("input",e=>{const inp=e.target.closest("[data-src-i]");if(!inp)return;settings.rulesSources[num(inp.dataset.srcI)]=inp.value.trim();saveSettings();});
@@ -3957,6 +4776,11 @@ function openSettings(){
   document.getElementById("addSrc").addEventListener("click",()=>{const i=document.getElementById("newSrc");const v=i.value.trim();if(!v)return;settings.rulesSources.push(v);i.value="";saveSettings();renderSrcRows();});
   document.getElementById("btnFetchRules").addEventListener("click",fetchAllRules);
   document.getElementById("btnClearRules").addEventListener("click",clearAllRules);
+  /* the size / encumbrance / coin-weight block only exists when a character is
+     open, so every one of these is guarded */
+  {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{character.size=s.value;encSettingsChanged();});}
+  {const s=document.getElementById("setEnc");if(s)s.addEventListener("change",()=>{character.encumbrance=s.value;encSettingsChanged();});}
+  {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());
@@ -3969,12 +4793,29 @@ function openSettings(){
       applyTheme();saveSettings();refreshRulesUI();renderAll();closeModal();openSettings();
     }catch(err){alert("Not a valid settings file.")}};r.readAsText(f);e.target.value="";});
 }
+/* One line under the Size/Encumbrance selects: what you're carrying right now,
+   against what this character can carry. Answers "what does this setting
+   actually do to me" without leaving the modal. */
+function encSettingsHint(){
+  const st=encState(contributions());
+  const carried=`Carrying ${fmtWt(st.carried)}`;
+  if(st.mode==="none")return carried+`. Capacity would be ${fmtWt(st.cap)} (STR ${st.str} × 15, ${charSize()}); turn encumbrance on to apply it.`;
+  return `${carried} of ${fmtWt(st.cap)} (STR ${st.str} × 15, ${charSize()}). ${encTierNote(st)}`;
+}
+function encSettingsChanged(){
+  const h=document.getElementById("encHint");if(h)h.textContent=encSettingsHint();
+  const s=document.getElementById("setSize");
+  if(s&&s.options.length)s.options[0].textContent="From ancestry ("+(raceDefSize()||"Medium")+")";
+  renderInventory();recompute();scheduleSave();
+}
 function rulesStatusText(){
   const k=(rules.keywords||[]).length,f=(rules.features||[]).length,i=(rules.items||[]).length,s=(rules.spells||[]).length,r=(rules.races||[]).length,c=(rules.classes||[]).length,t=(rules.tables||[]).length;
   return (k+f+i+s+r+c+t)?`Loaded${rules.name?" “"+rules.name+"”":""}: ${r} races · ${c} classes · ${k} keywords · ${f} traits · ${i} items · ${s} spells${t?" · "+t+" tables":""}.`:"No rules loaded.";
 }
 function updateRulesStatus(msg,cls){const el=document.getElementById("rulesStatus");if(el){el.textContent=msg||rulesStatusText();el.className="status "+(cls||"");}}
-function refreshRulesUI(){renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderAllRT();}
+/* renderNotes is here because notes run through highlight() too — editing the
+   glossary changes how every note reads. */
+function refreshRulesUI(){renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderAllRT();}
 const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
 /* display names for a category — one map, used by both the group summary and
    the headings in the loaded-data list */
@@ -4218,15 +5059,12 @@ function downloadRulesTemplates(){
 function wire(){
   // tabs
   document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===t));
-    document.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+t.dataset.tab));
-    closeToc();window.scrollTo({top:0});
+    selectTab(t.dataset.tab);window.scrollTo({top:0});
   }));
   // bound inputs
   document.addEventListener("input",e=>{
     const inp=e.target.closest("[data-path]");if(!inp)return;
     setP({character},inp.dataset.path,inp.value);
-    if(inp.dataset.path==="character.hp.cur"||inp.dataset.path==="character.hp.max")clampCurHP();
     if(inp.dataset.path==="character.hitdice")renderHitDice();
     if(inp.hasAttribute("data-recompute"))recompute();
     scheduleSave();
@@ -4244,6 +5082,11 @@ function wire(){
     if((m=t.closest(".tblref"))){openTableByName(m.dataset.tbl);return;}
     if((m=t.closest("[data-view-table]"))){openTableByName(m.dataset.viewTable);return;}
     if((m=t.closest("[data-edit]"))){const k=m.dataset.edit;editing[k]=!editing[k];renderRT(k);if(!editing[k])scheduleSave();return;}
+    // section notes
+    if((m=t.closest("[data-notebtn]")))return openNoteEditor(m.dataset.notebtn);
+    if((m=t.closest("[data-noteedit]")))return openNoteEditor(m.dataset.noteedit);
+    if((m=t.closest("[data-notejump]")))return jumpToNote(m.dataset.notejump);
+    if((m=t.closest("[data-notegroup]"))){toggleNoteGroup(m.dataset.notegroup);return;}
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
     // slot bubbles
@@ -4328,15 +5171,25 @@ function wire(){
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
     if(e.target.classList.contains("kw")){e.preventDefault();const g=allGlossary().find(x=>x.id===e.target.dataset.gid);if(g)openGlossView(g);return;}
     if(e.target.classList.contains("tblref")){e.preventDefault();openTableByName(e.target.dataset.tbl);}
+    /* the notes-tab group headers are role="button" tabindex="0", so they owe
+       the keyboard the same behaviour the Settings sections give it */
+    {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
   });
+  /* These five are markup that moves around, and wire() has no try/catch: a bare
+     getElementById(...).addEventListener on a renamed id throws HERE and every
+     listener registered after it — coins, HP, theme, settings, the home screen —
+     silently never binds. One dead button is a far better failure than that. */
+  const on=(id,ev,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener(ev,fn);};
   // star + hp
-  document.getElementById("starBtn").addEventListener("click",()=>{character.inspiration=!character.inspiration;recompute();scheduleSave();});
-  document.getElementById("hpPlus").addEventListener("click",()=>bumpHP(1));
-  document.getElementById("hpMinus").addEventListener("click",()=>bumpHP(-1));
-  document.getElementById("btnLongRest").addEventListener("click",longRest);
-  document.getElementById("btnShortRest").addEventListener("click",shortRest);
+  on("starBtn","click",()=>{character.inspiration=!character.inspiration;recompute();scheduleSave();});
+  on("hpPlus","click",()=>bumpHP(1));
+  on("hpMinus","click",()=>bumpHP(-1));
+  on("btnLongRest","click",longRest);
+  on("btnShortRest","click",shortRest);
   document.getElementById("addResource").addEventListener("click",()=>openResourceForm());
-  function bumpHP(d){const mx=effMaxHP();let v=num(character.hp.cur)+d;if(mx>0&&v>mx)v=mx;character.hp.cur=v;document.querySelector('[data-path="character.hp.cur"]').value=v;scheduleSave();}
+  /* clampHP owns both bounds, so this no longer needs its own ceiling — and it
+     picks up the floor at 0 it never had. */
+  function bumpHP(d){character.hp.cur=num(character.hp.cur)+d;clampHP();renderHP();scheduleSave();}
   document.getElementById("restoreSlots").addEventListener("click",()=>{for(let lv=1;lv<=9;lv++)character.slots[lv].used=0;renderSlotBubbles();scheduleSave();});
   // portrait
   document.getElementById("btnPortrait").addEventListener("click",()=>document.getElementById("filePortrait").click());
@@ -4353,16 +5206,28 @@ function wire(){
   document.getElementById("btnTheme").addEventListener("click",()=>{let t=settings.theme;if(t==="system")t=document.documentElement.dataset.theme;settings.theme=(t==="dark")?"light":"dark";applyTheme();saveSettings();});
   document.getElementById("btnSettings").addEventListener("click",openSettings);
   const _vb=document.getElementById("btnVer");if(_vb){_vb.textContent="v"+APP_VERSION;_vb.addEventListener("click",openChangelog);}
+  /* same target as the version button it replaces — the changelog, which carries
+     the download link while an update is pending */
+  const _up=document.getElementById("updatePill");if(_up)_up.addEventListener("click",openChangelog);
+  {const s=document.getElementById("sizeDisp");if(s){s.addEventListener("click",openSizePicker);
+    s.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openSizePicker();}});}}
   document.getElementById("btnHome").addEventListener("click",showHome);
   document.getElementById("btnCoinConvert").addEventListener("click",convertCoins);
   document.getElementById("btnCoinAdjust").addEventListener("click",openCoinAdjust);
-  /* Coin boxes commit on change, not on input: mid-typing, "+1" is not yet the
-     number you meant. Enter commits without leaving the field. */
-  document.addEventListener("change",e=>{const c=e.target.closest&&e.target.closest("[data-coin]");if(c)applyCoinInput(c);});
+  /* Coin and HP boxes commit on change, not on input: mid-typing, "+1" is not
+     yet the number you meant. Enter commits without leaving the field, and
+     reselects so you can type the next delta straight away. */
+  function commitBox(t){
+    if(!t||!t.closest)return null;
+    const c=t.closest("[data-coin]");if(c){applyCoinInput(c);return c;}
+    const h=t.closest("[data-hp]");if(h){applyHPInput(h);return h;}
+    return null;
+  }
+  document.addEventListener("change",e=>{commitBox(e.target);});
   document.addEventListener("keydown",e=>{
     if(e.key!=="Enter")return;
-    const c=e.target.closest&&e.target.closest("[data-coin]");
-    if(c){e.preventDefault();applyCoinInput(c);c.select();}
+    const b=commitBox(e.target);
+    if(b){e.preventDefault();b.select();}
   });
   document.getElementById("invCollapseAll").addEventListener("click",()=>{const ic=invCol();const anyOpen=character.inventory.some(it=>!ic.items[it.id]);character.inventory.forEach(it=>{ic.items[it.id]=anyOpen;});renderInventory();scheduleSave();});
   // ---- home screen ----

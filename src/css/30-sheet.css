@@ -23,17 +23,24 @@ html[data-rough="on"] .ability::before{filter:url(#rough)}
 .dot[data-lvl="1"]{background:var(--accent-2)}
 .dot[data-lvl="2"]{background:var(--accent-2);box-shadow:0 0 0 2.5px var(--panel),0 0 0 4.5px var(--line)}
 
-/* vitals strip */
-.vitals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+/* Vitals strip: five boxes, three then two, both rows filling the width. Six
+   columns rather than three is what lets the second row split in halves. */
+.vitals{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
 .vbox{position:relative;background:var(--field);border-radius:9px;padding:9px;text-align:center}
 .vbox::before{content:"";position:absolute;inset:1px;border:2px solid var(--line);border-radius:10px;pointer-events:none}
 html[data-rough="on"] .vbox::before{filter:url(#rough)}
 .vbox>*{position:relative}
 .vbox .n{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
 .vbox .big{font-family:var(--display);font-weight:900;font-size:26px;line-height:1.1;cursor:pointer}
-.vbox input{text-align:center;font-weight:700;font-size:18px;padding:4px;min-height:34px}
-.inspire{grid-column:span 1}
-.starbtn{background:none;border:0;cursor:pointer;font-size:30px;line-height:1;color:var(--hair);padding:0}
+/* a word, not a number — "Gargantuan" at 26px does not fit a third of the row */
+.vbox .big.txt{font-size:15px;letter-spacing:.02em;overflow-wrap:anywhere;padding:5px 0 4px}
+/* Scoped to .vitals> because .vbox is reused outside the grid — Level,
+   Proficiency Bonus, Spell save DC — where a grid-column would mean nothing. */
+.vitals>.vbox{grid-column:span 2}
+.vitals>.vbox.wide{grid-column:span 3}
+/* Inspiration is a marker, not a stat: it lives in the Vitals card's heading
+   rather than taking a box of its own, so it sizes to a 12px label row. */
+.starbtn{background:none;border:0;cursor:pointer;font-size:26px;line-height:1;color:var(--hair);padding:0 2px;margin:-3px 0;flex:none}
 .starbtn.on{color:var(--accent)}
 
 .hpwrap{position:relative;background:var(--field);border-radius:9px;padding:10px}
@@ -69,8 +76,20 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .hpcol input{width:66px;text-align:center;font-family:var(--display);font-weight:900;font-size:22px;padding:4px}
 .hp-step{display:flex;gap:6px;justify-content:center;margin-top:8px}
 .hp-step button{width:34px;height:34px;border-radius:7px;border:2px solid var(--brick);background:var(--field);color:var(--brick);font-size:18px;font-weight:700;cursor:pointer}
-.death{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;font-family:var(--head);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+/* successes – skull – failures, centred under the +/- buttons. No text
+   properties: there is no text left, and letter-spacing would hang a phantom
+   gap off the right of the skull. */
+.death{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px}
 .death .set{display:flex;gap:5px}
+/* Both groups fill OUTWARD from the skull, so the two rows of pips grow away
+   from the centre rather than both marching left-to-right. The failure set is
+   the left one, so its first mark is its rightmost circle — which is why it is
+   laid out in reverse rather than having buildDeath() count backwards. */
+.death .set[data-kind="fail"]{flex-direction:row-reverse}
+/* sized against the 17px circles either side of it — it is the anchor of the
+   row, so it should not read smaller than what it separates */
+.death .dskull{font-size:18px;line-height:1;color:var(--brick);opacity:.8}
+.death .dsep{color:var(--ink-soft);opacity:.5;font-size:14px;line-height:1}
 .death .c{width:17px;height:17px;border-radius:50%;border:2px solid var(--line);cursor:pointer;background:transparent}
 .death .c.on{background:var(--brick)}
 .death .c.fail.on{background:var(--brick)}
@@ -111,6 +130,12 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
    default verdigris, so it reads as attention-worthy without looking like an
    error. Nothing is broken; the pack just isn't the newest. */
 .chip.warn{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+/* over your carrying capacity — the one chip state that IS a problem, so it
+   borrows the danger colour the delete buttons and manual-hit-dice warning use */
+.chip.bad{background:color-mix(in srgb,var(--brick) 18%,transparent);color:var(--brick)}
+/* the encumbrance badge sits in a card label, which is uppercase and letter-spaced;
+   the pill carries its own casing so "12.5 lb / 150 lb" stays readable */
+.enc-pill{text-transform:none;letter-spacing:0}
 .equip{display:inline-flex;align-items:center;gap:6px;font-family:var(--head);font-size:10px;text-transform:uppercase;
   letter-spacing:.05em;color:var(--ink-soft);cursor:pointer;user-select:none}
 .equip .box{width:16px;height:16px;border-radius:4px;border:2px solid var(--line);display:inline-grid;place-items:center}

@@ -34,9 +34,89 @@ function itemMetaLine(x){
           x.attune?("Attunement"+(x.attuneNote?" ("+x.attuneNote+")":"")):"",
           x.cost,(x.weight!=null?x.weight+" lb":"")].filter(Boolean).join(" · ");
 }
-function fmtGp(n){n=num(n);return (Number.isInteger(n)?n:Math.round(n*100)/100)+" gp";}
+function fmtGp(n){n=fnum(n);return Math.round(n*100)/100+" gp";}
 function costToGp(str){if(str==null)return null;const s=String(str).toLowerCase().replace(/,/g,"");const mult={pp:10,gp:1,ep:0.5,sp:0.1,cp:0.01};let gp=0,found=false,m;const re=/(\d+(?:\.\d+)?)\s*(pp|gp|ep|sp|cp)\b/g;while((m=re.exec(s))){gp+=parseFloat(m[1])*mult[m[2]];found=true;}if(!found){const n=parseFloat(s);return isNaN(n)?null:n;}return Math.round(gp*100)/100;}
-function inventoryTotal(){return (character.inventory||[]).reduce((a,it)=>a+num(it.cost)*(num(it.qty)||1),0);}
+function inventoryTotal(){return Math.round((character.inventory||[]).reduce((a,it)=>a+fnum(it.cost)*(num(it.qty)||1),0)*100)/100;}
+
+/* ---- carried weight and encumbrance ----
+   All pure and DOM-free so they stay testable; the rendering lives in 40-sheet
+   (the pill and the totals row), 10-compute (the speed) and 80-modal-forms (the
+   breakdown). Weight is measured, not counted, so everything here uses fnum. */
+function fmtWt(n){return Math.round(fnum(n)*100)/100+" lb";}
+function itemWeight(it){return fnum(it&&it.weight);}            /* per unit */
+function itemWeightTotal(it){return itemWeight(it)*(num(it&&it.qty)||1);}
+/* 5e: 50 coins weigh a pound. Sums every denomination the sheet holds rather
+   than coinKeys(), because an imported character can be carrying electrum the
+   current skin doesn't display — it is still in their purse. */
+function coinsWeight(){
+  if(character.coinWeight===false)return 0;
+  const c=character.coins||{};
+  return Object.keys(c).reduce((a,k)=>a+num(c[k]),0)/50;
+}
+/* Rounded to 2dp HERE, before anything compares it to a threshold: 20 arrows at
+   0.05 lb is 1.0000000000000002 in binary floating point, which would read as
+   "over" against a capacity of exactly 1. */
+function carriedWeight(){
+  const items=(character.inventory||[]).reduce((a,it)=>a+itemWeightTotal(it),0);
+  return Math.round((items+coinsWeight())*100)/100;
+}
+/* Size is derived, not stored twice: an explicit choice wins, else the ancestry's
+   own size, else Medium. A species offering a choice ("Small or Medium") lists
+   both and we take the largest — the more permissive default. */
+function raceDefSize(){
+  const d=findRaceDef(character.race&&character.race.name);
+  return sizeName(d&&d.size);
+}
+function sizeName(sz){
+  if(!sz)return "";
+  const list=(Array.isArray(sz)?sz:[sz]).map(s=>String(s).trim()).filter(s=>SIZES.includes(s));
+  if(!list.length)return "";
+  return list.sort((a,b)=>SIZES.indexOf(b)-SIZES.indexOf(a))[0];
+}
+/* What the species DECLARES, for display — "Small or Medium" stays a choice on
+   the page even though sizeName() has to settle on one for the maths. */
+function sizeLabel(sz){return (Array.isArray(sz)?sz:[sz]).filter(Boolean).join(" or ");}
+function charSize(){return character.size||raceDefSize()||"Medium";}
+/* One list of size options, shared by the Vitals picker and Settings, so the two
+   can't drift. "" is the from-ancestry default, and it names what that resolves
+   to rather than leaving you to guess. */
+function sizeOptionsHTML(cur){
+  return `<option value=""${!cur?" selected":""}>From ancestry (${esc(raceDefSize()||"Medium")})</option>`+
+    SIZES.map(s=>`<option value="${s}"${cur===s?" selected":""}>${s}</option>`).join("");
+}
+/* split from carryCapacity so the size picker can PREVIEW what a size would give
+   you before you commit to it */
+function capacityFor(size,contribs){return abilFinal("str",contribs)*15*(SIZE_CARRY[size]||1);}
+function carryCapacity(contribs){return capacityFor(charSize(),contribs);}
+function encMode(){return ["none","standard","variant"].includes(character.encumbrance)?character.encumbrance:"none";}
+/* The one function every consumer reads. Tiers, in both modes, are fractions of
+   the same capacity, so the size multiplier applies all the way up:
+     standard  ok <= cap        | over <= cap*2 | max above
+     variant   ok <= cap/3      | encumbered <= cap*2/3 | heavy <= cap
+               then the standard hard limits take over (over, then max).
+   "over" is the push/drag/lift band: speed becomes 5, not speed minus 5.
+   "max" is the hard limit: you cannot move or hold it at all. */
+function encState(contribs){
+  const mode=encMode(), carried=carriedWeight(), size=charSize();
+  const str=abilFinal("str",contribs), cap=carryCapacity(contribs), max=cap*2;
+  const st={mode,size,str,carried,cap,max,tier:"none",label:"",penalty:0,floor:null};
+  if(mode==="none")return st;
+  if(carried>max){st.tier="max";st.label="Over your hard limit";st.floor=0;return st;}
+  if(carried>cap){st.tier="over";st.label="Over capacity";st.floor=5;return st;}
+  if(mode==="variant"){
+    if(carried>cap*2/3){st.tier="heavy";st.label="Heavily Encumbered";st.penalty=-20;return st;}
+    if(carried>cap/3){st.tier="encumbered";st.label="Encumbered";st.penalty=-10;return st;}
+  }
+  st.tier="ok";st.label="Unencumbered";return st;
+}
+/* Applied AFTER the numeric speed effects, because two of the three outcomes are
+   not additive: over capacity your speed BECOMES 5, and at the hard limit you do
+   not move. Never below zero. */
+function encSpeed(base,st){
+  if(!st||st.mode==="none")return base;
+  if(st.floor!=null)return Math.min(base,st.floor);
+  return Math.max(0,base+st.penalty);
+}
 /* parse an inventory item into an armor descriptor (structured field, or from category/type/description) */
 function itemArmor(it){
   if(!it)return null;

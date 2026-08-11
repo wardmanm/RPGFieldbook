@@ -25,16 +25,28 @@ function recompute(){
   const acEl=document.getElementById("acDisp");acEl.textContent=acBase+acFx;mark(acEl,!!acFx);
   const initBase=character.init===""?mods.dex:num(character.init), initFx=sumFx("init",c);
   const initEl=document.getElementById("initDisp");initEl.textContent=fmt(initBase+initFx);mark(initEl,!!initFx);
-  const spFx=sumFx("speed",c);const spEl=document.getElementById("speedDisp");spEl.textContent=num(character.speed)+spFx;mark(spEl,!!spFx);
+  const spFx=sumFx("speed",c), spBase=num(character.speed)+spFx;
+  /* encumbrance is applied last and outside the effects engine on purpose: two of
+     its outcomes replace the speed rather than adjust it, and its third cost
+     (disadvantage) isn't numeric at all. See encState() in 25-origins-items.js. */
+  const encSt=encState(c), spd=encSpeed(spBase,encSt);
+  const spEl=document.getElementById("speedDisp");spEl.textContent=spd;mark(spEl,!!spFx||spd!==spBase);
+  /* marked when you have set it yourself rather than taking the ancestry's —
+     the same "this isn't the default" signal the other Vitals boxes use */
+  const szEl=document.getElementById("sizeDisp");
+  if(szEl){szEl.textContent=charSize();mark(szEl,!!character.size);}
   const pv=mods.wis+(effSkill("perception")>0?pb:0)+(effSkill("perception")>1?pb:0)+sumFx("skill.perception",c);
   document.getElementById("passDisp").textContent=10+pv;
   const hpFx=sumFx("hp.max",c);
   const mn=document.getElementById("maxNote");
   if(mn)mn.textContent=hpFx?`Effective Max HP: ${num(character.hp.max)+hpFx} (base ${num(character.hp.max)} ${fmt(hpFx)})`:"Item / feature bonuses to Max HP appear here";
-  document.getElementById("starBtn").classList.toggle("on",!!character.inspiration);
+  /* guarded: recompute() is the hottest function in the app, and an unguarded
+     lookup here turns a renamed id into a white screen rather than a dead star */
+  {const sb=document.getElementById("starBtn");if(sb){sb.classList.toggle("on",!!character.inspiration);sb.setAttribute("aria-pressed",character.inspiration?"true":"false");}}
   const sa=character.spellAbility;
   document.getElementById("dcDisp").textContent=sa?String(8+pb+mods[sa]):"—";
   document.getElementById("satkDisp").textContent=sa?fmt(pb+mods[sa]):"—";
+  renderEncPill(encSt);
   renderDeath();autoSlots();renderSlotBubbles();renderHitDice();syncResources();renderResources();
   (character.attacks||[]).forEach(a=>{if(a.source==="spell"&&!a.save)a.ability=character.spellAbility||"none";});
   renderAttacks();renderActiveSpells();

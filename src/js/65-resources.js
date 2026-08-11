@@ -14,7 +14,7 @@ function resetFeatureUses(kinds){
 }
 function longRest(){
   const c=contributions();
-  const effMax=num(character.hp.max)+sumFx("hp.max",c), hadMax=effMax>0;
+  const effMax=effMaxHP(c), hadMax=effMax>0;
   if(hadMax)character.hp.cur=effMax;
   character.hp.temp="";
   character.death={succ:0,fail:0};
@@ -22,8 +22,7 @@ function longRest(){
   const hdBack=recoverHitDice();
   const featBack=resetFeatureUses(["short","long"]);
   const resBack=resetResources(["short","long"]);
-  const ci=document.querySelector('[data-path="character.hp.cur"]');if(ci)ci.value=character.hp.cur;
-  const ti=document.querySelector('[data-path="character.hp.temp"]');if(ti)ti.value="";
+  renderHP();
   renderDeath();renderFeatures();recompute();scheduleSave();
   const lines=[
     hadMax?`Current HP restored to ${effMax}`:"HP unchanged — set a Max HP first",
@@ -44,7 +43,7 @@ function shortRest(){
   const resBack=resetResources(["short"]);
   renderFeatures();renderResources();recompute();scheduleSave();
   const lines=[];if(pactMsg)lines.push(pactMsg);if(featBack)lines.push(`${featBack} short-rest feature tracker${featBack===1?"":"s"} reset`);if(resBack)lines.push(`${resBack} short-rest resource${resBack===1?"":"s"} restored`);
-  restSummary("Short rest",lines.length?lines:["No resources auto-recover on a short rest for this character."],"Spend Hit Dice below to heal. Regular spell slots return on a long rest, not a short one.");
+  restSummary("Short rest",lines.length?lines:["No resources auto-recover on a short rest for this character."],"Spend Hit Dice from the Rest & Recovery card to heal. Regular spell slots return on a long rest, not a short one.");
 }
 /* ---- hit dice pool (derived from class hit die × level) ---- */
 function hitDicePool(){
@@ -61,27 +60,45 @@ function hitDicePool(){
 function hdString(pool){return pool.map(p=>p.total+p.die).join(" + ");}
 function renderHitDice(){
   const pool=hitDicePool();
-  // keep the Vitals field in sync with the pool
+  /* One function for both halves of the Rest & Recovery card — the field and the
+     pips. They can't be split: this auto-mode write feeds the pool below it, and
+     no caller ever wants only one of them. */
   if(!character.hdManual)character.hitdice=hdString(pool);
+  /* In auto mode the text field is a read-only echo of the pool below it —
+     the same dice written twice, which is what made this card confusing. So it
+     is HIDDEN unless you're editing them by hand; the auto/manual pill is what
+     brings it back, and it already focuses it on the way in. */
   const inp=document.getElementById("hitdiceInput"), modeBtn=document.querySelector("[data-hdmode]");
-  if(inp){inp.readOnly=!character.hdManual;inp.classList.toggle("autoslot",!character.hdManual);if(!character.hdManual)inp.value=character.hitdice||"";}
+  if(inp){inp.readOnly=!character.hdManual;inp.style.display=character.hdManual?"":"none";if(!character.hdManual)inp.value=character.hitdice||"";}
   if(modeBtn){modeBtn.textContent=character.hdManual?"manual":"auto";modeBtn.classList.toggle("manual",character.hdManual);}
   const el=document.getElementById("hdWrap");if(!el)return;
   const warn=character.hdManual?`<div class="hd-warn">⚠ Manual Hit Dice — they won't follow your class when you level up. <button class="linkbtn" data-hdreset>Reset to class</button></div>`:"";
-  if(!pool.length){el.innerHTML=warn;return;}
-  el.innerHTML=`<div class="hd-title">Hit Dice</div>`+warn+pool.map(p=>{
-    let pips="";for(let i=1;i<=p.total;i++)pips+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${p.die}" data-i="${i}" aria-label="Hit die"></button>`;
-    return `<div class="hd-row"><span class="hd-die">${p.total}${p.die}</span><span class="hd-pips">${pips}</span><button class="hd-roll" data-hdroll="${p.die}" ${p.used>=p.total?"disabled":""} title="Spend one ${p.die} and heal">🎲</button></div>`;
-  }).join("");
+  if(!pool.length){
+    el.innerHTML=warn+`<p class="hint hd-none">${character.hdManual?"Type your dice above, e.g. 2d8 + 1d6.":"Add a class and your Hit Dice appear here. Or switch to manual and type them in."}</p>`;
+    return;
+  }
+  /* The rows get their own grid container so their four columns line up with
+     each other. The warning banner stays OUTSIDE it: a grid item spanning every
+     column still feeds that column sizing, which stretched the Roll buttons to
+     the width of a sentence. */
+  el.innerHTML=warn+`<div class="hd-grid">`+pool.map(p=>{
+    const left=p.total-p.used;
+    /* A pip is filled when the die is SPENT — the same way the spell slot
+       bubbles read. The count beside them says it in words, so nobody has to
+       infer which way round it goes. */
+    let pips="";for(let i=1;i<=p.total;i++)pips+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${p.die}" data-i="${i}" aria-label="${p.die} number ${i}${i<=p.used?" (spent)":""}"></button>`;
+    return `<div class="hd-row"><span class="hd-die">${p.die}</span><span class="hd-pips">${pips}</span>`+
+      `<span class="hd-left${left?"":" out"}">${left} of ${p.total} left</span>`+
+      `<button class="hd-roll" data-hdroll="${p.die}" ${left?"":"disabled"} title="Spend one ${p.die} and heal">Roll</button></div>`;
+  }).join("")+`</div>`;
 }
 function rollHitDie(die){
   const p=hitDicePool().find(x=>x.die===die);if(!p||p.used>=p.total)return;
   const n=parseInt(die.slice(1),10)||8, c=contributions();
   const conMod=Math.floor((abilFinal("con",c)-10)/2), roll=1+Math.floor(Math.random()*n), heal=Math.max(0,roll+conMod);
-  const effMax=num(character.hp.max)+sumFx("hp.max",c);
-  character.hp.cur=Math.min(effMax>0?effMax:1e9, num(character.hp.cur)+heal);
+  character.hp.cur=num(character.hp.cur)+heal;   /* clampHP caps it at the effective max */
   if(!character.hdUsed)character.hdUsed={};character.hdUsed[die]=num(character.hdUsed[die])+1;
-  const ci=document.querySelector('[data-path="character.hp.cur"]');if(ci)ci.value=character.hp.cur;
+  clampHP();renderHP();
   renderHitDice();recompute();scheduleSave();
   restSummary("Hit die spent — "+die,[`Rolled ${roll} ${conMod>=0?"+":"−"} ${Math.abs(conMod)} CON = ${heal} HP`,`Current HP: ${character.hp.cur}`],"");
 }
@@ -246,7 +263,9 @@ function openCoinAdjust(){
     const {out}=plan();
     character.coins=character.coins||{};
     Object.keys(out).forEach(k=>{character.coins[k]=out[k].next;});
-    closeModal();renderCoins();scheduleSave();
+    /* coins have weight, so a purse change moves carried weight and can move
+       speed — re-render the inventory totals and recompute, not just the boxes */
+    closeModal();renderCoins();renderInventory();recompute();scheduleSave();
   });
 }
 /* push whole character into DOM */
@@ -257,20 +276,23 @@ function convertCoins(){
   const out=(character.system==="dnd")?[["pp",1000],["gp",100],["sp",10],["cp",1]]:[["gp",100],["sp",10],["cp",1]];
   const res={cp:"",sp:"",ep:"",gp:"",pp:""};
   out.forEach(([k,v])=>{const n=Math.floor(total/v);total-=n*v;res[k]=n>0?n:"";});
-  character.coins=res;renderCoins();scheduleSave();
+  character.coins=res;renderCoins();renderInventory();recompute();scheduleSave();
 }
 const COIN_ALL=[["cp","CP","Copper"],["sp","SP","Silver"],["ep","EP","Electrum"],
                 ["gp","GP","Gold"],["pp","PP","Platinum"]];
 /* Electrum is a D&D-only oddity; Humblewood doesn't use it. */
 function coinKeys(){return (character.system==="dnd")?["cp","sp","ep","gp","pp"]:["cp","sp","gp"];}
 
-/* What a coin box should become, given what was typed into it.
+/* What a signed-entry box — coins, HP — should become, given what was typed.
      "12"  -> set to 12          "+10" -> add           "-5" -> spend
      ""    -> cleared            anything else -> null (caller puts it back)
-   Signed entries are the point of this: during play you know what you SPENT,
-   not what the new total is. Never goes below zero — you can't owe copper.
-   Accepts the unicode minus too, since the on-screen hint shows one. */
-function coinEntry(cur,raw){
+   Signed entries are the point of this: during play you know what you SPENT or
+   what damage you TOOK, not what the new total is. Never goes below zero — you
+   can't owe copper, and you can't have less than no hit points.
+   Accepts the unicode minus too, since the on-screen hint shows one.
+   There is deliberately no upper bound here: HP has one and coins don't, and it
+   isn't a property of the entry syntax anyway — see clampHP(). */
+function signedEntry(cur,raw){
   const s=String(raw==null?"":raw).trim().replace(/[−–—]/g,"-");
   if(!s)return "";
   /* Space is allowed after the sign ("+ 10") but NOT inside the digits: "1 2"
@@ -302,16 +324,42 @@ function renderCoins(){
 function applyCoinInput(inp){
   const k=inp.dataset.coin;if(!k)return true;
   character.coins=character.coins||{};
-  const next=coinEntry(character.coins[k],inp.value);
+  const next=signedEntry(character.coins[k],inp.value);
   if(next===null){inp.value=(character.coins[k]!=null)?character.coins[k]:"";return false;}
   character.coins[k]=next;
   inp.value=next;
+  renderInventory();recompute();
+  scheduleSave();
+  return true;
+}
+/* The HP boxes work exactly like the coin boxes and for the same reason: they
+   are NOT data-path, because that handler commits on every keystroke and would
+   store "-" the instant you typed it, losing the number you were subtracting
+   from. They commit on change (blur/Enter), once the entry is finished. */
+function renderHP(){
+  ["cur","max","temp"].forEach(k=>{
+    const el=document.getElementById("hp"+k[0].toUpperCase()+k.slice(1));
+    if(el){const v=character.hp[k];el.value=(v===null||v===undefined)?"":v;}
+  });
+}
+/* Commit one HP box. Returns false if the entry made no sense. */
+function applyHPInput(inp){
+  const k=inp.dataset.hp;if(!k||!(k in character.hp))return true;
+  const next=signedEntry(character.hp[k],inp.value);
+  if(next===null){renderHP();return false;}   /* reject: put the model's value back */
+  character.hp[k]=next;
+  clampHP();renderHP();
+  if(k==="max")recompute();   /* what data-recompute did; nothing is derived from cur/temp */
   scheduleSave();
   return true;
 }
 function renderAll(){
-  renderCoins();
+  renderCoins();renderHP();   /* neither is data-path, so neither is in the loop below */
   document.querySelectorAll("[data-path]").forEach(inp=>{const v=get({character},inp.dataset.path);inp.value=(v===null||v===undefined)?"":v});
-  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderAllRT();recompute();
+  /* renderTables belongs here for the same reason renderGloss does: both draw
+     from the rules pool, not the character, so loading a sheet with rules
+     already cached has to draw them. Leaving it out meant the Tables tab was
+     blank after a refresh until you typed in its filter box. */
+  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderNoteIcons();renderNotes();renderAllRT();recompute();
 }
 

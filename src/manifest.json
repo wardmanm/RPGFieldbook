@@ -28,6 +28,7 @@
     "src/js/80-modal-forms.js",
     "src/js/85-browse.js",
     "src/js/86-tables.js",
+    "src/js/87-notes.js",
     "src/js/88-settings.js",
     "src/js/90-boot.js"
   ]

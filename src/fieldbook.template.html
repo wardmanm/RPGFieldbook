@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light" data-skin="humblewood" data-rough="on">
+<html lang="en" data-theme="light" data-skin="humblewood" data-rough="on" data-tabs="labels">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -18,7 +18,7 @@
 <div class="topbar">
   <div class="wordmark"><span id="wmMain">Humblewood</span><small id="wmSub">The Fieldbook</small></div>
   <button class="verbtn" id="btnVer" title="Version & changelog">v—</button>
-  <a class="updpill" id="updatePill" target="_blank" rel="noopener" style="display:none"></a>
+  <button class="updpill" id="updatePill" style="display:none"></button>
   <span id="savestate" class="savestate"></span>
   <button class="tbtn" id="btnHome" title="Characters / home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 9v11a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9"/></svg></button>
   <button class="tbtn" id="btnTheme" title="Toggle light / dark">
@@ -32,12 +32,16 @@
 </div>
 
 <div class="tabbar">
-  <button class="tab active" data-tab="sheet">Sheet</button>
-  <button class="tab" data-tab="spells">Spells</button>
-  <button class="tab" data-tab="inventory">Inventory</button>
-  <button class="tab" data-tab="story">Story</button>
-  <button class="tab" data-tab="rules">Rules</button>
-  <button class="tab" data-tab="tables">Tables</button>
+  <!-- Each tab carries both a glyph and its word; CSS shows one or the other.
+       No <title> inside these SVGs — buildToc() reads the button's textContent
+       for the flyout heading and a title would concatenate into it. -->
+  <button class="tab active" data-tab="sheet" aria-label="Sheet"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="tlbl">Sheet</span></button>
+  <button class="tab" data-tab="spells" aria-label="Spells"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3l1.7 4.3L17 9l-4.3 1.7L11 15l-1.7-4.3L5 9l4.3-1.7z"/><path d="M18 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg><span class="tlbl">Spells</span></button>
+  <button class="tab" data-tab="inventory" aria-label="Inventory"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5l9-4.5 9 4.5v9l-9 4.5-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/></svg><span class="tlbl">Inventory</span></button>
+  <button class="tab" data-tab="story" aria-label="Story"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21z"/></svg><span class="tlbl">Story</span></button>
+  <button class="tab" data-tab="notes" aria-label="Notes"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg><span class="tlbl">Notes</span></button>
+  <button class="tab" data-tab="rules" aria-label="Rules"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/><path d="M9 8h6"/></svg><span class="tlbl">Rules</span></button>
+  <button class="tab" data-tab="tables" aria-label="Tables"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14.5h18M9 9v11"/></svg><span class="tlbl">Tables</span></button>
   <button class="tab-toc" id="btnToc" title="Jump to a section" aria-label="Table of contents">☰</button>
 </div>
 <div class="toc-back" id="tocBack"></div>
@@ -48,7 +52,7 @@
   <section class="tabpanel active" id="tab-sheet">
     <div class="cols">
       <div class="stack">
-        <div class="card">
+        <div class="card" data-note="portrait">
           <div class="label">Portrait <span class="grow"></span></div>
           <div class="portrait" id="portrait"><div class="ph">No portrait yet</div></div>
           <div class="rowbtns">
@@ -67,69 +71,24 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" data-note="origin">
           <div class="label"><span id="craceWord">Ancestry</span> &amp; Background <span class="grow"></span></div>
           <div id="raceBgBox"></div>
         </div>
 
-        <div class="card">
+        <div class="card" data-note="class">
           <div class="label">Class <span class="grow"></span><button class="add" id="btnLevelUp">▲ Level up</button><button class="add" id="btnLevelDown">▼ Level down</button></div>
           <div id="classBox"></div>
         </div>
       </div>
 
       <div class="stack">
-        <div class="card">
+        <div class="card" data-note="abilities">
           <div class="label">Ability Scores &amp; Saves <span class="grow"></span></div>
           <div class="abilities" id="abilities"></div>
         </div>
 
-        <div class="card">
-          <div class="label">Vitals <span class="grow"></span></div>
-          <div class="vitals" style="margin-bottom:11px">
-            <div class="vbox"><div class="n">Armor Class</div><div class="big" data-stat="ac" id="acDisp">10</div></div>
-            <div class="vbox"><div class="n">Initiative</div><div class="big" data-stat="init" id="initDisp">+0</div></div>
-            <div class="vbox"><div class="n">Speed</div><div class="big" data-stat="speed" id="speedDisp">0</div></div>
-            <div class="vbox"><div class="n">Passive Perc.</div><div class="big" id="passDisp">10</div></div>
-            <div class="vbox"><div class="n">Hit Dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">auto</button></div><input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly></div>
-            <div class="vbox inspire"><div class="n">Inspiration</div><button class="starbtn" id="starBtn" aria-label="Toggle inspiration">✦</button></div>
-          </div>
-          <div class="hpwrap">
-            <div class="hp-title">Hit Points</div>
-            <div class="hprow">
-              <div class="hpcol"><div class="n">Current</div><input type="number" data-path="character.hp.cur" placeholder="0" aria-label="Current HP"></div>
-              <div class="hpcol"><div class="n">Max</div><input type="number" data-path="character.hp.max" data-recompute placeholder="0" aria-label="Base max HP"></div>
-              <div class="hpcol"><div class="n">Temp</div><input type="number" data-path="character.hp.temp" placeholder="0" aria-label="Temp HP"></div>
-            </div>
-            <div class="hp-step">
-              <button id="hpMinus" aria-label="Lose HP">−</button>
-              <button id="hpPlus" aria-label="Gain HP">+</button>
-            </div>
-            <div class="death">Death Saves
-              <span class="set" id="deathSucc" data-kind="succ"></span>
-              <span style="opacity:.5">·</span>
-              <span class="set" id="deathFail" data-kind="fail"></span>
-            </div>
-            <div class="rest-row">
-              <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
-              <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
-            </div>
-            <div class="hd-wrap" id="hdWrap"></div>
-            <div id="maxNote" style="text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px">Item / feature bonuses to Max HP appear here</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="label">Statuses &amp; Conditions <button class="add" data-add="status"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
-          <div id="statusList"></div>
-        </div>
-
-        <div class="card">
-          <div class="label">Attacks &amp; Weapons <button class="add" data-add="attack"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
-          <div id="attackList"></div>
-        </div>
-
-        <div class="card">
+        <div class="card" data-note="skills">
           <div class="label">Skills <span class="grow"></span></div>
           <div class="skills" id="skills"></div>
           <div class="legend">
@@ -138,17 +97,79 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" data-note="vitals">
+          <div class="label">Vitals <span class="grow"></span><button class="starbtn" id="starBtn" title="Inspiration" aria-label="Toggle inspiration" aria-pressed="false">&#10022;</button></div>
+          <div class="vitals" style="margin-bottom:11px">
+            <div class="vbox"><div class="n">Armor Class</div><div class="big" data-stat="ac" id="acDisp">10</div></div>
+            <div class="vbox"><div class="n">Initiative</div><div class="big" data-stat="init" id="initDisp">+0</div></div>
+            <div class="vbox"><div class="n">Speed</div><div class="big" data-stat="speed" id="speedDisp">0</div></div>
+            <div class="vbox wide"><div class="n">Size</div><div class="big txt" id="sizeDisp" role="button" tabindex="0" title="Tap to set your size">Medium</div></div>
+            <div class="vbox wide"><div class="n">Passive Perc.</div><div class="big" id="passDisp">10</div></div>
+          </div>
+          <div class="hpwrap">
+            <div class="hp-title">Hit Points</div>
+            <div class="hprow">
+              <div class="hpcol"><div class="n">Current</div><input type="text" inputmode="tel" data-hp="cur" id="hpCur" placeholder="0" aria-label="Current HP — type a number, or +4 / -7 to adjust"></div>
+              <div class="hpcol"><div class="n">Max</div><input type="text" inputmode="tel" data-hp="max" id="hpMax" placeholder="0" aria-label="Base max HP — type a number, or +4 / -7 to adjust"></div>
+              <div class="hpcol"><div class="n">Temp</div><input type="text" inputmode="tel" data-hp="temp" id="hpTemp" placeholder="0" aria-label="Temp HP — type a number, or +4 / -7 to adjust"></div>
+            </div>
+            <div class="hp-step">
+              <button id="hpMinus" aria-label="Lose HP">−</button>
+              <button id="hpPlus" aria-label="Gain HP">+</button>
+            </div>
+            <!-- the skull is written as entities on purpose: U+FE0E (text
+                 presentation, so it renders as ink and not a colour emoji) is an
+                 invisible byte that a whitespace cleanup would silently eat, and
+                 the build is byte-exact. -->
+            <!-- Failures left, successes right — dying is what you read first,
+                 and it puts the red beside the skull's own colour. -->
+            <div class="death" title="Death Saves">
+              <span class="set" id="deathFail" data-kind="fail" aria-label="Death save failures"></span>
+              <span class="dsep" aria-hidden="true">&ndash;</span>
+              <span class="dskull" role="img" aria-label="Death Saves">&#9760;&#65038;</span>
+              <span class="dsep" aria-hidden="true">&ndash;</span>
+              <span class="set" id="deathSucc" data-kind="succ" aria-label="Death save successes"></span>
+            </div>
+            <div id="maxNote" style="text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px">Item / feature bonuses to Max HP appear here</div>
+          </div>
+        </div>
+
+        <div class="card" data-note="rest">
+          <div class="label">Rest &amp; Recovery <span class="grow"></span></div>
+          <div class="rest-row">
+            <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
+            <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
+          </div>
+          <div class="hd-box">
+            <div class="hd-head">
+              <span class="n">Hit Dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">auto</button></span>
+              <input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly aria-label="Hit Dice">
+            </div>
+            <div class="hd-wrap" id="hdWrap"></div>
+          </div>
+        </div>
+
+        <div class="card" data-note="statuses">
+          <div class="label">Statuses &amp; Conditions <button class="add" data-add="status"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="statusList"></div>
+        </div>
+
+        <div class="card" data-note="attacks">
+          <div class="label">Attacks &amp; Weapons <button class="add" data-add="attack"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="attackList"></div>
+        </div>
+
+        <div class="card" data-note="resources">
           <div class="label">Resources <button class="add" id="addResource"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Resource</button><span class="grow"></span></div>
           <div id="resList"></div>
         </div>
 
-        <div class="card">
+        <div class="card" data-note="features">
           <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
           <div id="featureList"></div>
         </div>
 
-        <div class="card" id="familiarCard" style="display:none">
+        <div class="card" data-note="familiars" id="familiarCard" style="display:none">
           <div class="label">Familiars &amp; Companions <button class="add" data-add="familiar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
           <div id="familiarList"></div>
         </div>
@@ -160,11 +181,11 @@
   <!-- ============ INVENTORY TAB ============ -->
   <section class="tabpanel" id="tab-inventory">
     <div class="stack" style="max-width:720px;margin:0 auto">
-      <div class="card">
-        <div class="label">Equipment &amp; Inventory <button class="add" data-add="item"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="invCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="invCollapseLbl">Collapse all</span></button></div>
+      <div class="card" data-note="inventory">
+        <div class="label">Equipment &amp; Inventory <span class="chip enc-pill" id="encPill" style="display:none"></span> <button class="add" data-add="item"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="invCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="invCollapseLbl">Collapse all</span></button></div>
         <div id="inventoryList"></div>
       </div>
-      <div class="card">
+      <div class="card" data-note="coins">
         <div class="label">Coins <span class="grow"></span><button class="add" id="btnCoinAdjust" title="Add or spend several denominations at once"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Adjust</button><button class="add" id="btnCoinConvert" title="Roll lower coins up into higher denominations"><svg viewBox="0 0 24 24"><path d="M7 4v13m0 0-3-3m3 3 3-3M17 20V7m0 0 3 3m-3-3-3 3"/></svg>Auto-convert</button></div>
         <div class="coins" id="coins"></div>
         <p class="hint coin-hint">Type a number to set it, or <b>+10</b> / <b>-5</b> to add or spend.</p>
@@ -175,7 +196,7 @@
   <!-- ============ SPELLS TAB ============ -->
   <section class="tabpanel" id="tab-spells">
     <div class="stack">
-      <div class="card">
+      <div class="card" data-note="spellcasting">
         <div class="label">Spellcasting <span class="grow"></span></div>
         <div class="g3">
           <div class="field"><label class="f">Spellcasting ability</label>
@@ -186,12 +207,12 @@
           <div class="field"><label class="f">Spell attack</label><div class="vbox" style="padding:6px"><div class="big" id="satkDisp">—</div></div></div>
         </div>
       </div>
-      <div class="card">
+      <div class="card" data-note="slots">
         <div class="label">Spell Slots <button class="add" id="restoreSlots">↻ Restore all</button><span class="grow"></span></div>
         <div class="slotgrid" id="slotGrid"></div>
         <p class="hint" id="slotAutoNote" style="margin-top:8px"></p>
       </div>
-      <div class="card" id="activeSpellCard" style="display:none">
+      <div class="card" data-note="activespells" id="activeSpellCard" style="display:none">
         <div class="label">Active Spells <span class="grow"></span>
           <span style="display:inline-flex;align-items:center;gap:6px;font-family:var(--head);font-size:12px">Round
             <button class="add" data-round="-1" aria-label="Previous round">−</button>
@@ -201,7 +222,7 @@
         </div>
         <div id="activeSpellList"></div>
       </div>
-      <div class="card">
+      <div class="card" data-note="spells">
         <div class="label">Spells &amp; Cantrips <button class="add" data-add="spell"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
         <div id="spellList"></div>
       </div>
@@ -212,7 +233,7 @@
   <section class="tabpanel" id="tab-story">
     <div class="cols">
       <div class="stack">
-        <div class="card">
+        <div class="card" data-note="proficiencies">
           <div class="label">Proficiencies &amp; Languages <span class="grow"></span></div>
           <div id="rt-proficiencies"></div>
           <div class="rt-head" style="margin-top:8px"><span></span><button class="editbtn" data-edit="proficiencies"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Edit</span></button></div>
@@ -243,6 +264,18 @@
         <input id="tablesSearch" placeholder="Filter tables…" autocomplete="off" style="margin-bottom:10px">
         <input type="file" id="tablesRulesFiles" accept="application/json,.json" multiple class="hidefile">
         <div id="tablesList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NOTES TAB ============ -->
+  <!-- No data-note on this card: it collects notes, it doesn't take one. -->
+  <section class="tabpanel" id="tab-notes">
+    <div class="stack" style="max-width:820px;margin:0 auto">
+      <div class="card">
+        <div class="label">Section Notes <span class="grow"></span></div>
+        <p class="hint">Everything you've jotted against a section of your sheet, gathered here. Tap a heading to jump back to where it belongs.</p>
+        <div id="notesList"></div>
       </div>
     </div>
   </section>

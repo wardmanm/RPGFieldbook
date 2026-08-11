@@ -25,8 +25,12 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .spell .meta{font-family:var(--head);font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em}
 
 /* coins */
-.coins{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.coin{text-align:center}
+/* Humblewood has three denominations and D&D has five, so a fixed five-column
+   grid stranded the Humblewood set against two empty columns on the right.
+   Flex centres whatever number there happens to be; the cap stops three boxes
+   sprawling, and five still shrink to fill the row exactly as before. */
+.coins{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.coin{flex:1 1 0;min-width:0;max-width:150px;text-align:center}
 .coin label{font-family:var(--head);font-size:10px;letter-spacing:.05em;color:var(--ink-soft);display:block;margin-bottom:3px}
 .coin input{text-align:center;font-weight:700}
 

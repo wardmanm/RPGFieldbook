@@ -1275,6 +1275,451 @@ plain shell accumulator and tested, rather than trusted.
 
 ---
 
+## Done — item weight, encumbrance, and character size
+
+Weight was already in the packs (98 of 99 mundane items, 271 of 528 magic ones) and already being
+thrown away: `itemMetaLine()` folded it into the copied item's *description prose* and no numeric
+field survived. This makes it a real per-item field, totals it, and hangs three rules variants off
+the total. Character `size` had to come with it, because carrying capacity depends on it.
+
+**New character fields, all scalars:** `size:""`, `encumbrance:"none"`, `coinWeight:true`. Scalars
+mean `migrate()` needed no change at all — its allow-all-then-normalize pass carries them, and the
+`blankChar()` defaults fill old saves. Only object/array fields have to join the normalize lists.
+
+**`fnum()` (00-constants.js), next to `num()`.** `num()` is `parseInt`, which is right for counts
+and scores and catastrophic for pounds and copper: an arrow weighs 0.05 lb and a candle costs
+0.01 gp, and both became 0. Anything *measured* rather than *counted* now uses `fnum`. That also
+fixed a live bug nobody had reported — a 1 sp item displayed "0 gp" and contributed nothing to
+inventory value.
+
+**The maths lives in 25-origins-items.js**, beside `costToGp`/`armorAC` — pure, DOM-free, testable.
+`carriedWeight()` rounds to 2dp *before* anything compares it to a threshold: 20 arrows at 0.05 lb
+is 1.0000000000000002 in binary floating point, which reads as "over" against a capacity of exactly
+1. `encState(contribs)` is the single function every consumer reads; `encSpeed(base, st)` turns it
+into a number.
+
+### Design calls, and why
+
+- **`itemMetaLine()` was NOT touched.** It is deliberately shared with `updProject()` — it is the
+  *shape* a browse copy was made in. Changing it flips the description fingerprint of every
+  browse-added item on every sheet, flagging them all as changed forever. `cost` already set the
+  precedent: folded into the meta line *and* carried as a numeric field. Zero blast radius was
+  available for free, so we took it. A test now pins the meta line's exact output.
+- **Encumbrance is not an effect, and must not become one.** Effects are numeric-only and
+  player-authored. A synthetic contribution would render as an editable fx chip, would need
+  `abilFinal("str")` before `contributions()` had finished, and — decisively — cannot express two of
+  the three outcomes: over capacity your speed *becomes* 5 (not −5), and Heavily Encumbered's
+  disadvantage isn't a number at all. It is applied in `recompute()` after the effects, and the
+  disadvantage stays prose in the breakdown modal.
+- **Size is derived-with-override, not copied:** `character.size` → the ancestry's `size` →
+  `"Medium"`. Also seeded on `applyRace` when empty, mirroring the speed seed, so it survives the
+  pack being unloaded. A species offering `["Small","Medium"]` displays the choice and settles on
+  the largest for the maths.
+- **Capacity multipliers** are table-driven (`SIZE_CARRY`): Tiny ×½, Small/Medium ×1, Large and up
+  ×2. RAW's ×4/×8 for Huge/Gargantuan is a two-value edit if a PC ever gets there.
+- **Variant above capacity falls through to the standard hard limits.** Its tiers are `cap/3`,
+  `2cap/3`, `cap`, then `cap*2` — all fractions of the same capacity, so the size multiplier applies
+  the whole way up and no new constants exist.
+- **Default is `"none"`.** `blankChar()`'s default *is* the default for every existing save. Shipping
+  `"standard"` would drop a loot-hoarding character's speed to 5 ft on upgrade with no warning. Owner
+  call, and a test pins it.
+- **Nothing is ever blocked.** Past the hard limit the app says so; it never refuses to add an item.
+
+### The one guard that matters
+
+`updChangedFields` compared `now[f] !== then[f]`. A copy stamped before `weight` joined
+`UPD_FIELDS.item` has no `weight` in `then` — so adding *any* field to `UPD_FIELDS` would have
+flagged every previously-stamped item on every sheet at once. It now filters on
+`then[f] !== undefined && now[f] !== then[f]`: no baseline is not "the pack changed it". Those fields
+baseline on the next restamp. This makes every future field addition non-breaking, and it is
+regression-tested (R6).
+
+### Also fixed while in there
+
+The item form rebuilds `rec` from scratch on save, so anything the form doesn't ask about was
+silently discarded. `fav` (visible: your star vanished) and `src` (invisible and worse: the update
+tool lost its provenance and fell back to the unstamped-legacy path) are now carried across.
+
+### Converter and data
+
+`_race_size()` maps 5e-tools' `T/S/M/L/H/G` to names, keeps a multi-size choice as a list, and drops
+`V` (Varies) rather than guessing. Item weight needed **no** converter change — `convert_items` was
+already emitting it. Verified by regenerating the whole of `data/5e2024/` and diffing: nine of ten
+files reproduced byte-for-byte, and `races.json` differed only by 19 added lines of `size`.
+
+**Deferred:** Humblewood species have no size in the PDFs, so they all read Medium. Jerbeen, Luma and
+Hedge are genuinely Small in the book — fixing that means teaching `extract-humblewood.py`, which has
+a verbatim suite, so the data must not be hand-edited.
+
+Tests 348 → 453: 79 in `sheet.js` (fnum, formatting, per-item and coin weight, size resolution,
+capacity, every tier boundary in both modes, speed, and the migrate round-trip including a
+pre-feature save), 13 in `char-update.js` (weight as a rules-owned field, R6, the frozen meta line),
+7 in `converter.py`, 6 data guards in `rules-data.js`.
+
+---
+
+## Done — granted equipment had no cost, and everything filed as Loot
+
+Reported with a screenshot: a Wizard's starting kit showed weights but no gp, and Total value read
+2 gp for a pack worth ~95. Only the browse-added Dagger had a price.
+
+**Root cause:** `grantItemByName` (50-classrace.js) copied `description`/`effects`/`weight`/`weapon`
+off the definition and **never read `def.cost`**. The tell is *why weight worked and cost didn't*:
+**the pack stores weight as a number but cost as a display string** (`"2 gp"`, `"5 cp"`), and the
+sheet stores a gp number. So weight copied straight across while cost needed `costToGp()` — which
+only the browse path called. Copying it raw would have been worse than nothing: `fnum("1 gp")` is 0,
+so the badge would vanish *and* the inventory total would be silently wrong.
+
+**Why existing characters could be healed.** `updProject`'s `"plain"` branch did a blind
+`p[f]=def[f]`, projecting cost as the raw pack string — a value no copy site ever writes. That is
+why the update tool couldn't see the gap: projection-then and projection-now were both `"1 gp"`.
+Parsing it there makes `then`(hash of `"1 gp"`) differ from `now`(hash of `1`), which raises a row
+that `applyUpdateRow` fills in with the number. The R6 "no baseline is not a change" guard correctly
+does *not* suppress it, because cost has always had a baseline.
+
+The row's wording had to change with it: `fields.join(", ")+" changed"` is a lie when the copy never
+had the field. It now reads "cost missing from this copy" when every flagged field is absent, and
+keeps "changed" otherwise — both cases tested.
+
+### The bug the new tests caught before it shipped
+
+Copying `category`/`type` (the second half of the report — Robe and Spellbook filing as Loot) sent
+them straight into `invSection`, whose alternations were **unanchored substrings**. `"Adventuring
+Gear"` contains `ring`, so the fix as first written filed every rope and bedroll under **Magic
+Items** — worse than the Loot it replaced. `\b` boundaries on the Consumables / Magic Items / Tools
+alternations fix it, and incidentally stop `"Quarterstaff"` matching `staff`.
+
+`invSection` had **no tests at all**, which is how the original mis-filing shipped; it has 18 now.
+`grantItemByName` had none either — the char-update fixture `addGrantItem` mirrored the buggy shape
+faithfully enough to hide the bug for a release, so the new tests call the **real function** and the
+fixture was updated in lockstep.
+
+`category`/`type` were deliberately **kept out of `UPD_FIELDS.item`**: they'd hit the
+`then[f]===undefined` guard and be silently baselined rather than backfilled, buying nothing and
+adding two fields to every item fingerprint. Consequence, stated in the release note: items already
+on a sheet keep their filing; the Category dropdown in the item editor re-files them.
+
+Tests 659 → 704. Verified in a browser against the built file by reproducing the report exactly —
+import the 5e pack, add Wizard, take equipment option A: Total value 95.2 gp, and Robe / Scholar's
+Pack / Spellbook under Gear.
+
+---
+
+## Done — section notes, the Notes tab, and icon tabs
+
+A note on any section of the Sheet / Spells / Inventory tabs, plus Proficiencies on Story — 19 in
+all. The eight Story bio cards are deliberately excluded: they are already free-text, and a note
+attached to your Backstory box is a note about a note.
+
+### The name collision, first, because it is the trap
+
+**`character.notes` already existed** — one of the eight `BIO` strings, rendering the Story tab's
+"Notes" card into `#rt-notes`. This feature is **`character.secNotes`**, and the tab is `#tab-notes`.
+Merging or renaming either into the other breaks the Story tab silently. Recorded in CLAUDE.md's
+invariants as well, because it will bite whoever comes next.
+
+### Markdown on top of highlight(), and why that order is the safety argument
+
+`highlight()` runs `esc()` first, so the **only** angle brackets in its output are the
+`<span class="kw">` / `<span class="tblref">` tags it inserted itself. That makes `/<[^>]+>/g` an
+**exact tag matcher, not a heuristic** — which is what licenses holding those tags aside while the
+markdown regexes run over the rest. Anything the player typed is already inert text by then.
+
+Both alternatives are worse: running markdown *before* the glossary pass lets a term like "strong"
+match inside a `<strong>` we just wrote; running it *after* without protection lets a `*` inside a
+`data-tbl` attribute get eaten.
+
+Three further decisions worth keeping:
+
+- **Indexed placeholders**, not the single repeating `TBL_MARK` idiom. This pass *nests* — a code
+  span can swallow an already-held glossary chip — so ordinal restore-in-order doesn't hold.
+- **One `highlight()` call per block, not per line.** `highlight()` rebuilds the glossary array,
+  sorts every term and compiles a fresh RegExp on each call; the Notes tab can render nineteen notes
+  at once, so per-line would be ~10³ regex compilations in one synchronous render. Lines inside a
+  block join on a sentinel and become `<br>` after the inline pass — which also lets `**bold**` span
+  a soft line break, the nicer outcome.
+- **Sentinels are `String.fromCharCode(0xE001…)`, not literal characters.** The first draft embedded
+  real private-use bytes; invisible bytes in source are one whitespace cleanup away from silently
+  changing behaviour, and the build is byte-exact. (`` was already taken by `TBL_MARK`.)
+  `noteHTML` also strips `-` from its input, so a player typing one can't forge a
+  placeholder — which incidentally hardens `highlight()`'s marker too.
+
+Deliberately unsupported: markdown links (they point at a network, in an offline-first app, and read
+confusingly beside `[Table: X]`), `_underscore_` emphasis (`snake_case`), nested lists, pipe tables.
+**Known limitation:** `**Hit** Points` loses the *Hit Points* chip — the asterisks break `\b(term)\b`.
+Inherent to escaping-then-matching.
+
+### Structure
+
+`NOTE_SECTIONS` is the single source of truth (id ≠ heading — headings get reworded, and a note
+keyed to one would be orphaned); `data-note="k"` marks the card; a test asserts the two agree **both
+ways**. `noteTitle()` special-cases `origin` because that heading is skin-dependent (Race vs
+Ancestry) and a static title would make the Notes tab disagree with the card it links to.
+
+- The icon **must be a `<button>`** and its hover preview **must be a `<span>` inside it** —
+  `buildToc()` clones each `.label` and strips `button,svg,…` before reading text, so a sibling
+  preview would leak into the ToC entry. Verified in the browser: the ToC still reads "Portrait",
+  "Ancestry & Background".
+- The preview is **escaped plain text**, not `noteHTML()`. A hover card full of tappable chips is a
+  trap — you reach for the chip and the card vanishes — and interactive elements can't nest in a
+  button.
+- `selectTab()` was extracted **without** the `window.scrollTo({top:0})`; that stays in the tab
+  click handler. Otherwise a note jump would fight its own tab switch. `scrollToCard()` came out of
+  `buildToc` alongside it. `jumpToNote` guards `offsetParent===null`, because `#familiarCard` and
+  `#activeSpellCard` are `display:none` until they have content.
+- Everything that builds markup is a **pure string function** (`notesHTML`, `noteEntryHTML`,
+  `noteBtnHTML`, `notePreview`), because the harness stubs the DOM — that moved group order, counts,
+  collapse state, escaping and the empty state out of browser QA and into assertions.
+
+### Icon tabs
+
+Seven tabs don't fit a phone, so each carries a glyph and a word and CSS picks: icons under
+`@media(max-width:860px)` or `html[data-tabs="icons"]`, the flag set in `applyTheme()` beside
+`data-theme`/`data-rough`. Under 400px the bar scrolls — and `.tab-toc` has to become
+`position:sticky;right:0`, because its `margin-left:auto` collapses to nothing in a scroll container
+and the ☰ would scroll off the end. **No `<title>` in the tab SVGs**: `buildToc()` reads the button's
+`textContent` for its heading.
+
+The Inventory glyph started as a backpack and read as a *padlock* at 19px — the handle arc sat inside
+the domed body. Swapped for a 3D box after seeing it rendered.
+
+Tests 539 → 659. `tables.js` owns the markdown surface (it already owned `highlight`): escaping,
+sentinel forgery, chips surviving emphasis, every block rule including `* * *` being a rule and not
+a list, inert unmatched delimiters. `rules-data.js` owns the structure: registry ↔ template both
+ways, title agreement, seven tabs ↔ seven panels, the storage guards against a hand-edited
+`secNotes`, and the pure renderers.
+
+Verified in a browser against the built file: a note using every markdown feature renders correctly,
+the jump link lands on Vitals, the icon lights, the ToC is clean, icons appear at 390px, and the
+Icon tabs setting survives a reload.
+
+---
+
+## Done — Tables tab was blank on load (root cause: renderAll never drew it)
+
+Reported: load a rules pack with tables, reopen the app, go to Tables — nothing listed. Typing in
+the filter box made them all appear.
+
+That last detail is the whole diagnosis. The data was never the problem: `boot()` restores `rules`
+from the localStorage cache *before* rendering. The Tables tab has exactly two call sites for
+`renderTables()` — `refreshRulesUI()` (which runs when you import) and the filter box's `input`
+listener. **`renderAll()` never called it.** So a session that imported tables saw them; a session
+that merely *loaded* them from cache did not, until a keystroke in the filter forced a render.
+
+`renderTables()` was the ONLY member of `refreshRulesUI()` missing from `renderAll()`. The glossary
+is the exact analogue — rules-derived, own tab, own search box with an identical listener — and
+`renderGloss()` was in `renderAll()`, which is why the Rules tab always worked and this one didn't.
+Long-standing: `git log -S renderTables -- src/js/65-resources.js` returns nothing, so it was never
+there.
+
+Fix is one call. The test is the interesting part: rather than pinning `renderTables` by name, it
+asserts the **invariant** — every renderer `refreshRulesUI()` calls must also be called by
+`renderAll()`. If a surface needs redrawing when the rules pool changes, it needs drawing when the
+app starts with a pool already in place. That catches this bug and the next one of its shape.
+Written first, watched it fail naming `["renderTables"]`, then fixed.
+
+Side benefit: with `renderTables()` running on load, a character with no tables now gets the tab's
+empty state and its "Import rules files" button. Before, `#tablesList` was untouched markup — a
+blank tab with no way in.
+
+Reproduced and re-verified in a browser against the built file, by the reported steps: import
+`5e2024_full.json`, hard refresh, reopen the character, Tables tab — 100 tables listed with no
+keystroke. Tests 537 → 539.
+
+---
+
+## Done — Vitals restructure: signed HP entry, death row, Rest & Recovery
+
+Reported from a screenshot: Inspiration had a full-width box for something used a few times a
+campaign, the death row was a label plus two unrelated clusters of circles, Hit Dice was listed
+**twice** in two different cards, and rests were crammed inside the Hit Points box.
+
+Vitals now holds five stats (AC / Initiative / Speed, then Size / Passive Perc.) plus HP. Rests and
+everything hit-dice moved to a new **Rest & Recovery** card below it. Inspiration is a star in the
+Vitals `.label` row. Death row is `○○○ – ☠ – ○○○`, centred under the +/− buttons.
+
+**No `migrate()` or `blankChar()` change.** `hp.{cur,max,temp}` keep their `number | ""` types;
+`death`, `hdUsed`, `hdManual`, `inspiration` untouched. Presentation and input handling only — every
+saved character round-trips unchanged. Recorded here so it isn't re-audited later.
+
+### The interesting decisions
+
+- **`coinEntry` → `signedEntry`.** The parser was never coin-specific. Body unchanged, contract
+  unchanged (`number | "" | null`), so all 30 coin assertions carry over untouched by asserting
+  through a local alias.
+- **The ceiling did NOT go in the parser.** Adding a `max` argument was the obvious move and it is
+  wrong: coins have no max, so the parameter would be optional and the contract conditional; and the
+  bound must equally hold for the +/− buttons, spending a hit die, a long rest, and lowering Max
+  below Current. It lives in **`clampHP()`** — model-only, no DOM, therefore testable — which every
+  HP-changing path now ends in. One rule, one place.
+- **`data-path` had to come off the HP inputs.** That handler commits on *every keystroke*, so
+  typing `-3` stores `"-3"` at the first character. It is exactly the failure the coin comment has
+  documented since coins were built. Also `type="number"` sanitizes a leading `+` to empty, so the
+  boxes are `type="text" inputmode="tel"` like coins (`tel`, because the iOS numeric pad has no sign
+  keys). Consequence: they leave `renderAll()`'s `[data-path]` loop, so **`renderHP()` had to join
+  `renderCoins()` there** — that is the character-load path, and missing it would leave the boxes
+  blank over a correct model, with the first blur then writing `""` over real HP.
+- **Eight `[data-path="character.hp.*"]` querySelectors retired**, replaced by `renderHP()`.
+  `syncHPInputs()` in 56-class.js is gone entirely. `effMaxHP(c)` took an optional arg, which
+  retired the two hand-inlined copies of its expression in `longRest` and `rollHitDie`.
+- **`renderHitDice()` was kept whole**, deliberately. Both halves now live in one card, which is the
+  argument *for* not splitting it: the auto-mode `character.hitdice=hdString(pool)` write must run
+  before the field renders and it feeds the pool, and no caller ever wants one half.
+- The skull is written `&#9760;&#65038;` as **numeric entities**. U+FE0E (text presentation, so it
+  renders as ink rather than a colour emoji) is an invisible byte a whitespace cleanup would eat, and
+  the release gate requires a byte-exact rebuild.
+- `.vitals>.vbox` is scoped to the grid: `.vbox` is reused for Level, Proficiency Bonus and Spell
+  save DC, where a `grid-column` means nothing. Deleted `.vbox.span2`, `.vbox input` and `.inspire`
+  (the last was already dead — `.vbox.span2` at 0,2,0 outranked it, which is why the earlier
+  paragraph in this ledger about the 7-box layout is now stale).
+
+### Two live bugs fixed on the way
+
+- **`bumpHP` had no floor at zero** — holding the − button took you to −7 HP. `clampHP()` gives it
+  the floor it never had.
+- The item form's `rec` rebuild was already known to drop fields; separately, `bumpHP`'s
+  `querySelector(...).value` was **unguarded** and would have thrown the moment the input moved.
+
+### The hazard that shaped the code
+
+`wire()` had **five consecutive unguarded** `getElementById(...).addEventListener(...)` —
+`starBtn`, `hpPlus`, `hpMinus`, `btnLongRest`, `btnShortRest` — and all five are markup this change
+moved. `wire()` has no try/catch, so one bad id throws and *every listener after it never binds*:
+coins, HP, theme, settings, the home screen. The sheet renders and is inert, with nothing in the
+console naming the cause. All five now go through a local `on(id,ev,fn)` helper, and the `starBtn`
+lookup inside `recompute()` — the hottest function in the app, where an unguarded miss is a white
+screen — is guarded too.
+
+### Follow-up, same session: the two things that still read badly
+
+- **Death saves were the wrong way round.** Failures now sit left, successes right, and — the part
+  that matters — **both sets fill outward from the skull**: the left group is
+  `flex-direction:row-reverse` so its first mark is its *rightmost* circle. Done in CSS keyed off
+  the existing `data-kind="fail"` (previously decorative, now load-bearing) rather than having
+  `buildDeath()` count backwards, so the click handler and `.on` toggling are untouched.
+- **Hit Dice was mostly duplication.** In auto mode the text field was a read-only echo of the pool
+  directly beneath it — the same dice written twice — so it is now **hidden unless you're in manual
+  mode**, where it is the actual source of truth. The pill already focuses it on the way in.
+  Rows became `d10 · pips · "2 of 3 left" · [Roll]`: the count in words removes the filled-means-spent
+  ambiguity without changing the convention (which the spell slots share), and the bare 🎲 became a
+  labelled button, since it rolls *and* heals and an emoji doesn't say that. Added an empty state —
+  with no class and no manual entry the box used to be a greyed dashed field echoing nothing.
+
+One test had to be loosened: the `.death` guard pinned success-before-failure via a positional
+regex. It fired correctly on this change, but it was over-specified — it now asserts *containment*
+(what the `.death .c` click delegation actually needs) plus a separate, deliberate assertion of the
+new order and the row-reverse rule. Tests 535 → 537.
+
+Verified in a browser against the built file: death row renders `○●● – ☠ – ●○○` with red left and
+teal right, both filling from the centre; manual mode shows the field and two die rows; auto mode
+with no class shows the empty state and no field.
+
+Tests 510 → 535. `sheet.js` gained the `clampHP` bounds (including that `""` stays `""`, which
+`removeClass` depends on), the effective-max ceiling, and signed entry composed as `applyHPInput`
+composes it. `rules-data.js` gained template guards for everything here that fails silently: no HP
+box carries `data-path`, all three have a `data-hp` hook and are `type="text"`, the death circles are
+still inside `.death`, the skull keeps its text-presentation selector, there is exactly one
+`starBtn` and it is in the Vitals label row, and Rest & Recovery owns both rests plus all three
+hit-dice pieces. Verified they fail by reintroducing `data-path` and by stripping the variation
+selector.
+
+---
+
+## Done — Size on the sheet, in Vitals
+
+Size was only reachable through Settings, which is the wrong home for something that is now a real
+stat. It sits in Vitals after Speed — the stat it interacts with, since encumbrance is what connects
+them.
+
+- Vitals is a 3-column grid that held exactly 6 boxes. A 7th would leave a hole, so Inspiration
+  gained `.span2` and fills the trailing two columns. `.big.txt` drops the display font to 15px:
+  "Gargantuan" at 26px does not fit a third of the row.
+- **Tapping opens a picker, not a breakdown.** The other Vitals boxes tap through to
+  `openStatBreakdown`, which explains a derived number. Size is a *choice*, so it gets a chooser
+  (`openSizePicker` in 80-modal-forms.js) — matching the project's standing preference for a real
+  chooser over a buried setting. Keyboard-operable, like the Settings headers.
+- `sizeOptionsHTML()` is shared by the picker and Settings so the two option lists cannot drift, and
+  `capacityFor(size, contribs)` was split out of `carryCapacity()` so the picker can **preview** what
+  a size would let you carry before you commit to it. `carryCapacity()` is now just
+  `capacityFor(charSize(), …)`.
+- `recompute()` marks the box `fx-on` when the size was set by hand rather than taken from the
+  ancestry — the same "this isn't the default" signal the other boxes use.
+- Added to the print sheet's vitals line; it is a sheet stat now.
+
+**The id-wiring check went app-wide.** The settings-only version was already there; a trial run over
+`fieldbook.template.html` plus every `src/js` fragment found 311 declared ids and 286 looked up, with
+**zero** violations — so it is enforceable as a standing assertion rather than a one-off. Ids built
+by concatenation (`"mod-"+k`) don't match the pattern and are left alone. Verified it fails by
+renaming `sizeDisp` in the template: it named both the id and the file that would have broken.
+Tests 498 → 510.
+
+---
+
+## Done — Settings split into collapsible sections
+
+The modal had grown a control at a time into one long scroll. Now four groups:
+**Appearance** (skin, mode, hand-drawn borders), **This character** (size, encumbrance, coin weight,
+the rules-update check), **Rules data** (sources + loaded data), **Characters & backup** (the library
+button, export/import settings). The character group renders only when one is open.
+
+Reused `.fgroup`/`.fghead`/`.fgname`/`.fcaret` from the feature list rather than inventing a second
+collapsible — the app should not have two things that look like a section header. CSS in
+`50-modal.css` only adapts it for a modal: the header is `position:sticky` inside the scrolling body,
+and the last group drops its trailing margin.
+
+- **State is stored as COLLAPSE, not "open"** (`settings.setCollapse`, keyed by section id). An
+  absent key means "never touched", so `SET_SECTIONS`' first-run defaults can be changed later
+  without reopening a section someone deliberately shut. `setSecOpen()` also defends against a
+  non-object — settings come from a file a user can hand-edit.
+- **Defaults:** Appearance and This character open; Rules data and Backup shut. Rules data is the
+  longest block and the least often touched, so its header carries the entry count — "did my rules
+  load?" stays answerable while it is folded away. The character group's badge is the character's
+  name, since those settings are per-character and that is the thing worth confirming.
+- **Toggling does not re-render the modal.** It flips `display` and the caret class in place, so
+  every listener, input value and the scroll position survive. Re-rendering would have meant
+  re-attaching everything.
+- **The delegated listener binds to `#setSections`, not `#mBody`.** `#mBody` outlives every modal, so
+  a listener on it would stack one copy per visit — which is why the rest of this file binds to
+  elements inside the body that get replaced each time. Same trap, worth not falling into.
+- Headers are `role="button" tabindex="0"` with Enter/Space handling and `aria-expanded`. The
+  feature-list headers this borrows from are mouse-only; no reason to repeat that here.
+
+The real risk in this refactor was silent: moving markup between template literals renames or drops
+an id, the handler's `getElementById` returns null, and the control just stops working with no error
+anywhere. So `rules-data.js` now parses `openSettings()`'s own source and asserts **both** directions
+— every id it looks up exists in the markup it builds, and every id it renders is wired to something
+(bar a short inert list of render targets). Verified it fails by breaking an id deliberately: both
+checks fired, naming the id in each direction. 33 checks added, tests 465 → 498.
+
+---
+
+## Done — the update pill replaces the version button
+
+Reported as "the notification sits awkwardly to the right with the current version where it should
+be". Cause: `.verbtn` carries `margin-right:auto`, so *everything after it* — including
+`#updatePill` — was pushed to the far end of the top bar. The pill was never mispositioned; it was
+downstream of the spacer.
+
+Fixed by making it one control rather than two. They say the same thing (which build you're looking
+at), so `showUpdatePill()` hides `#btnVer` and the pill inherits the same `margin-right:auto`, landing
+exactly where the version was. The version you're *on* moves into the tooltip
+("Update to version X available — you're on Y") and stays in the changelog's title, so it is never
+lost, which was the owner's condition.
+
+The consequence that needed handling: `openChangelog` was reachable **only** from `#btnVer`, so
+hiding it would have stranded "What's new". The pill therefore opens the changelog rather than
+linking straight to GitHub, and the changelog leads with a download banner while an update is
+pending. `updateAvailable` (a module-level `let` in 30-version.js) is what both read.
+
+`#updatePill` became a `<button>` — it no longer navigates, and an `<a>` with a live `href` that
+`preventDefault`s is a lie about what it does.
+
+7 checks in `char-update.js` over `updBannerHTML()`, which was split out of `openChangelog` precisely
+so it could be asserted: present/absent, both version numbers, the link, and that a release tag is
+escaped rather than injected as markup. Tests 458 → 465.
+
+---
+
 ---
 
 ## Deferred — needs the source book

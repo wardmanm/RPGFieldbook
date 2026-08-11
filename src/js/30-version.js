@@ -12,19 +12,32 @@ const DATA_VERSIONS={"XPHB":"1.3.0","Humblewood":"1.3.0"};
    to that release's page (attach fieldbook.html to the release so players can download it). */
 const UPDATE_REPO="wardmanm/RPGFieldbook";
 function cmpVer(a,b){const pa=String(a||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0),pb=String(b||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);for(let i=0;i<3;i++){if((pa[i]||0)>(pb[i]||0))return 1;if((pa[i]||0)<(pb[i]||0))return -1;}return 0;}
+/* What the update check found, or null. Held so openChangelog() can lead with a
+   download link — the pill REPLACES the version button rather than sitting
+   beside it, so the changelog has to stay reachable through the pill. */
+let updateAvailable=null;
 function checkForUpdate(){
   if(!UPDATE_REPO||(navigator.onLine===false))return;
   fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`,{headers:{Accept:"application/vnd.github+json"}})
     .then(r=>r.ok?r.json():null)
     .then(rel=>{
       if(!rel||!rel.tag_name||cmpVer(rel.tag_name,APP_VERSION)<=0)return;
-      const el=document.getElementById("updatePill");if(!el)return;
-      const ver=String(rel.tag_name).replace(/^v/i,"");
-      el.href=rel.html_url||`https://github.com/${UPDATE_REPO}/releases/latest`;
-      el.textContent="↑ Update "+ver;
-      el.title=`Version ${ver} is available on GitHub — tap to open the download page (you have ${APP_VERSION}).`;
-      el.style.display="inline-flex";
+      updateAvailable={ver:String(rel.tag_name).replace(/^v/i,""),
+                       url:rel.html_url||`https://github.com/${UPDATE_REPO}/releases/latest`};
+      showUpdatePill();
     }).catch(()=>{});
+}
+/* One control, not two. The version button and the update pill say the same
+   thing — which build you're looking at — so an update takes over its slot
+   instead of crowding in next to it. The version you're ON moves into the
+   tooltip and stays in the changelog's title, so it is never lost. */
+function showUpdatePill(){
+  if(!updateAvailable)return;
+  const el=document.getElementById("updatePill");if(!el)return;
+  const ver=document.getElementById("btnVer");if(ver)ver.style.display="none";
+  el.textContent="↑ v"+updateAvailable.ver;
+  el.title=`Update to version ${updateAvailable.ver} available — you're on ${APP_VERSION}. Tap for what's new and the download.`;
+  el.style.display="inline-flex";
 }
 const CHANGELOG=[
   {v:"1.3.1", date:"2026-08-10", notes:[
@@ -79,8 +92,17 @@ const CHANGELOG=[
     "Added this version number and changelog."
   ]}
 ];
+/* When an update is waiting the changelog is the only route to it — the pill
+   took the version button's place — so the modal leads with the download rather
+   than burying it under the history. Empty when there is nothing to offer. */
+function updBannerHTML(){
+  if(!updateAvailable)return "";
+  return `<div class="updbanner"><div><b>Version ${esc(updateAvailable.ver)} is available.</b>`+
+    `<div class="hint">You're on v${esc(APP_VERSION)}. Your characters and rules data are unaffected — you just replace the file.</div></div>`+
+    `<a class="tbtn primary" href="${esc(updateAvailable.url)}" target="_blank" rel="noopener">Download</a></div>`;
+}
 function openChangelog(){
-  const body=`<div style="max-height:60vh;overflow:auto">`+CHANGELOG.map(e=>`<div style="margin-bottom:14px"><div style="font-family:var(--head);font-weight:800"><span style="color:var(--accent)">v${esc(e.v)}</span> <span class="hint" style="font-weight:400">${esc(e.date||"")}</span></div><ul style="margin:6px 0 0;padding-left:18px">${e.notes.map(n=>`<li style="margin:3px 0">${esc(n)}</li>`).join("")}</ul></div>`).join("")+`</div><div class="m-actions"><button class="tbtn primary" id="clOk">Close</button></div>`;
+  const body=updBannerHTML()+`<div style="max-height:60vh;overflow:auto">`+CHANGELOG.map(e=>`<div style="margin-bottom:14px"><div style="font-family:var(--head);font-weight:800"><span style="color:var(--accent)">v${esc(e.v)}</span> <span class="hint" style="font-weight:400">${esc(e.date||"")}</span></div><ul style="margin:6px 0 0;padding-left:18px">${e.notes.map(n=>`<li style="margin:3px 0">${esc(n)}</li>`).join("")}</ul></div>`).join("")+`</div><div class="m-actions"><button class="tbtn primary" id="clOk">Close</button></div>`;
   openModal("Fieldbook v"+APP_VERSION,body);
   const b=document.getElementById("clOk");if(b)b.addEventListener("click",closeModal);
 }

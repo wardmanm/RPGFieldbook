@@ -22,7 +22,7 @@
 const UPD_FIELDS={
   feature:["description","effects","uses","cost"],
   spell:["level","meta","text"],
-  item:["description","effects","cost","weapon"]
+  item:["description","effects","cost","weight","weapon"]
 };
 const UPD_CATS=[["features","feature"],["spells","spell"],["inventory","item"]];
 
@@ -36,11 +36,18 @@ function updProject(def,kind,shape){
     const p={description:(m?m+"\n":"")+(def.description||""),
              effects:Array.isArray(def.effects)?def.effects:[]};
     const c=costToGp(def.cost); if(c!=null)p.cost=c;
+    const w=fnum(def.weight); if(w)p.weight=w;
     if(def.weapon)p.weapon=def.weapon;
     return p;
   }
   const p={};
   (UPD_FIELDS[kind]||[]).forEach(f=>{if(def[f]!==undefined)p[f]=def[f];});
+  /* Cost is the one field whose pack form differs from its stored form: the
+     pack writes "2 gp", the sheet stores 2. Project the STORED form, or the
+     projection describes a copy no copy site would ever produce — which is how
+     granted items sat with no cost at all and the diff never noticed.
+     An unparseable cost ("varies") projects as absent, not as a string. */
+  if(kind==="item"&&"cost" in p){const c=costToGp(def.cost);if(c!=null)p.cost=c;else delete p.cost;}
   return p;
 }
 /* per-field hashes of the projection — so a later diff can say WHICH field the
@@ -150,8 +157,12 @@ function updChangedFields(copy,def,kind){
   const shape=(copy.src&&copy.src.shape)||"plain";
   const now=fpMap(updProject(def,kind,shape),kind);
   const then=copy.src&&copy.src.fp;
+  /* A field this app didn't track when the copy was stamped has no baseline in
+     `then`, and "no baseline" is not "the pack changed it" — without this guard,
+     adding a field to UPD_FIELDS flags every previously-stamped copy at once.
+     Those fields baseline on the next restamp instead. */
   if(then&&typeof then==="object")
-    return (UPD_FIELDS[kind]||[]).filter(f=>now[f]!==then[f]);
+    return (UPD_FIELDS[kind]||[]).filter(f=>then[f]!==undefined&&now[f]!==then[f]);
   /* unstamped legacy copy — no baseline, so fall back to copy vs projection */
   const proj=updProject(def,kind,shape);
   return (UPD_FIELDS[kind]||[]).filter(f=>fpHash(copy[f])!==fpHash(proj[f]));
@@ -238,9 +249,15 @@ function diffCharacter(){
          without one (legacy, or a loose match) treat it as possibly-edited. */
       const ed=updEdited(copy,kind);
       const edited=ed===null?true:ed;
+      /* "changed" would be a lie for a field the copy never had — that reads as
+         "the pack was edited" when really the app failed to copy it in the
+         first place, which is how granted items ended up with no cost. */
+      const absent=fields.filter(f=>copy[f]===undefined);
       const why=r.otherPack
         ? `“${r.otherPack}” isn't loaded — this is the ${r.def._source||"other"} version`
-        : fields.join(", ")+" changed"+(r.loose?" (matched by name only)":"");
+        : (absent.length===fields.length
+            ? fields.join(", ")+" missing from this copy"
+            : fields.join(", ")+" changed")+(r.loose?" (matched by name only)":"");
       rows.push({cat,kind,type:"changed",id:copy.id,name:copy.name,copy,def:r.def,
                  pack:r.def._source||"",
                  why,edited,fields,

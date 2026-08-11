@@ -941,6 +941,26 @@ def _race_speed(sp):
         return ', '.join(bits)
     return ''
 
+_SIZE_NAMES = {'T': 'Tiny', 'S': 'Small', 'M': 'Medium',
+               'L': 'Large', 'H': 'Huge', 'G': 'Gargantuan'}
+
+def _race_size(sz):
+    """5e-tools size is a list of single-letter codes, occasionally a bare string.
+
+    -> '' | 'Medium' | ['Small', 'Medium'].  A species offering a choice keeps
+    both, because the app displays the choice and only settles on one (the
+    largest) when it needs a carrying capacity.  'V' (Varies) is dropped: it
+    names no size, and a wrong size is worse than none.
+    """
+    if not sz:
+        return ''
+    codes = sz if isinstance(sz, list) else [sz]
+    names = [_SIZE_NAMES[c] for c in codes
+             if isinstance(c, str) and c in _SIZE_NAMES]
+    if not names:
+        return ''
+    return names[0] if len(names) == 1 else names
+
 def _race_skills(sp):
     """-> (fixed skill names, choice blocks). The app supports both (52-race.js)."""
     fixed, choices = [], []
@@ -1028,6 +1048,8 @@ def convert_races(path, overlay=None, tables=None, **_):
     out = []
     for r in chosen:
         rec = {'name': r['name'], 'system': 'XPHB'}
+        sz = _race_size(r.get('size'))
+        if sz: rec['size'] = sz
         sp = _race_speed(r.get('speed'))
         if sp: rec['speed'] = sp
         fixed, choices = _race_skills(r.get('skillProficiencies'))

@@ -2,15 +2,12 @@
 function wire(){
   // tabs
   document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===t));
-    document.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+t.dataset.tab));
-    closeToc();window.scrollTo({top:0});
+    selectTab(t.dataset.tab);window.scrollTo({top:0});
   }));
   // bound inputs
   document.addEventListener("input",e=>{
     const inp=e.target.closest("[data-path]");if(!inp)return;
     setP({character},inp.dataset.path,inp.value);
-    if(inp.dataset.path==="character.hp.cur"||inp.dataset.path==="character.hp.max")clampCurHP();
     if(inp.dataset.path==="character.hitdice")renderHitDice();
     if(inp.hasAttribute("data-recompute"))recompute();
     scheduleSave();
@@ -28,6 +25,11 @@ function wire(){
     if((m=t.closest(".tblref"))){openTableByName(m.dataset.tbl);return;}
     if((m=t.closest("[data-view-table]"))){openTableByName(m.dataset.viewTable);return;}
     if((m=t.closest("[data-edit]"))){const k=m.dataset.edit;editing[k]=!editing[k];renderRT(k);if(!editing[k])scheduleSave();return;}
+    // section notes
+    if((m=t.closest("[data-notebtn]")))return openNoteEditor(m.dataset.notebtn);
+    if((m=t.closest("[data-noteedit]")))return openNoteEditor(m.dataset.noteedit);
+    if((m=t.closest("[data-notejump]")))return jumpToNote(m.dataset.notejump);
+    if((m=t.closest("[data-notegroup]"))){toggleNoteGroup(m.dataset.notegroup);return;}
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
     // slot bubbles
@@ -112,15 +114,25 @@ function wire(){
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
     if(e.target.classList.contains("kw")){e.preventDefault();const g=allGlossary().find(x=>x.id===e.target.dataset.gid);if(g)openGlossView(g);return;}
     if(e.target.classList.contains("tblref")){e.preventDefault();openTableByName(e.target.dataset.tbl);}
+    /* the notes-tab group headers are role="button" tabindex="0", so they owe
+       the keyboard the same behaviour the Settings sections give it */
+    {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
   });
+  /* These five are markup that moves around, and wire() has no try/catch: a bare
+     getElementById(...).addEventListener on a renamed id throws HERE and every
+     listener registered after it — coins, HP, theme, settings, the home screen —
+     silently never binds. One dead button is a far better failure than that. */
+  const on=(id,ev,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener(ev,fn);};
   // star + hp
-  document.getElementById("starBtn").addEventListener("click",()=>{character.inspiration=!character.inspiration;recompute();scheduleSave();});
-  document.getElementById("hpPlus").addEventListener("click",()=>bumpHP(1));
-  document.getElementById("hpMinus").addEventListener("click",()=>bumpHP(-1));
-  document.getElementById("btnLongRest").addEventListener("click",longRest);
-  document.getElementById("btnShortRest").addEventListener("click",shortRest);
+  on("starBtn","click",()=>{character.inspiration=!character.inspiration;recompute();scheduleSave();});
+  on("hpPlus","click",()=>bumpHP(1));
+  on("hpMinus","click",()=>bumpHP(-1));
+  on("btnLongRest","click",longRest);
+  on("btnShortRest","click",shortRest);
   document.getElementById("addResource").addEventListener("click",()=>openResourceForm());
-  function bumpHP(d){const mx=effMaxHP();let v=num(character.hp.cur)+d;if(mx>0&&v>mx)v=mx;character.hp.cur=v;document.querySelector('[data-path="character.hp.cur"]').value=v;scheduleSave();}
+  /* clampHP owns both bounds, so this no longer needs its own ceiling — and it
+     picks up the floor at 0 it never had. */
+  function bumpHP(d){character.hp.cur=num(character.hp.cur)+d;clampHP();renderHP();scheduleSave();}
   document.getElementById("restoreSlots").addEventListener("click",()=>{for(let lv=1;lv<=9;lv++)character.slots[lv].used=0;renderSlotBubbles();scheduleSave();});
   // portrait
   document.getElementById("btnPortrait").addEventListener("click",()=>document.getElementById("filePortrait").click());
@@ -137,16 +149,28 @@ function wire(){
   document.getElementById("btnTheme").addEventListener("click",()=>{let t=settings.theme;if(t==="system")t=document.documentElement.dataset.theme;settings.theme=(t==="dark")?"light":"dark";applyTheme();saveSettings();});
   document.getElementById("btnSettings").addEventListener("click",openSettings);
   const _vb=document.getElementById("btnVer");if(_vb){_vb.textContent="v"+APP_VERSION;_vb.addEventListener("click",openChangelog);}
+  /* same target as the version button it replaces — the changelog, which carries
+     the download link while an update is pending */
+  const _up=document.getElementById("updatePill");if(_up)_up.addEventListener("click",openChangelog);
+  {const s=document.getElementById("sizeDisp");if(s){s.addEventListener("click",openSizePicker);
+    s.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openSizePicker();}});}}
   document.getElementById("btnHome").addEventListener("click",showHome);
   document.getElementById("btnCoinConvert").addEventListener("click",convertCoins);
   document.getElementById("btnCoinAdjust").addEventListener("click",openCoinAdjust);
-  /* Coin boxes commit on change, not on input: mid-typing, "+1" is not yet the
-     number you meant. Enter commits without leaving the field. */
-  document.addEventListener("change",e=>{const c=e.target.closest&&e.target.closest("[data-coin]");if(c)applyCoinInput(c);});
+  /* Coin and HP boxes commit on change, not on input: mid-typing, "+1" is not
+     yet the number you meant. Enter commits without leaving the field, and
+     reselects so you can type the next delta straight away. */
+  function commitBox(t){
+    if(!t||!t.closest)return null;
+    const c=t.closest("[data-coin]");if(c){applyCoinInput(c);return c;}
+    const h=t.closest("[data-hp]");if(h){applyHPInput(h);return h;}
+    return null;
+  }
+  document.addEventListener("change",e=>{commitBox(e.target);});
   document.addEventListener("keydown",e=>{
     if(e.key!=="Enter")return;
-    const c=e.target.closest&&e.target.closest("[data-coin]");
-    if(c){e.preventDefault();applyCoinInput(c);c.select();}
+    const b=commitBox(e.target);
+    if(b){e.preventDefault();b.select();}
   });
   document.getElementById("invCollapseAll").addEventListener("click",()=>{const ic=invCol();const anyOpen=character.inventory.some(it=>!ic.items[it.id]);character.inventory.forEach(it=>{ic.items[it.id]=anyOpen;});renderInventory();scheduleSave();});
   // ---- home screen ----

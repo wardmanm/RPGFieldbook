@@ -178,6 +178,7 @@ reach that level.
   "name": "Mapach",
   "category": "Humblefolk",
   "description": "…",
+  "size": "Medium",
   "speed": "30 ft",
   "abilityScores": { "dex": 2, "con": 1 },
   "skills": ["Sleight of Hand"],
@@ -193,6 +194,12 @@ reach that level.
 }
 ```
 
+- `size` is one of `Tiny`, `Small`, `Medium`, `Large`, `Huge`, `Gargantuan` — or an **array** of them
+  for a species that offers a choice (`["Small","Medium"]`), which the app shows as "Small or Medium".
+  It seeds the character's Size the same way `speed` seeds their speed: only when it isn't already
+  set, so a subrace never overrides its parent and the player's own choice always wins. Size is what
+  drives carrying capacity (Large and up carry double, Tiny half). Omit it and the character reads as
+  Medium; a character can always set their own in **Settings**.
 - `abilityScores` is a map of `abbr → +N`. **2024 races usually omit it** (ability boosts come
   from backgrounds); include it only for older/ancestry-boost content. For a *player-chosen*
   racial increase (older-style "+2 to any, +1 to any"), use `abilityChoice` instead (below).
@@ -390,6 +397,11 @@ gain and reset them, and add their own manual resources on the sheet. When gener
   `description` or the `armor` object. Weapon damage comes from `weapon`, not from `effects`.
   `equipped`, `qty` and `sectionOverride` (which inventory section to file it under) are set
   per-character when the item is added, not in the pack.
+- **`weight`** is a **number of pounds, per unit** — not per stack. It is copied onto the character's
+  item when the item is added, totalled in the Inventory tab (multiplied by quantity, and added to
+  the weight of any coins carried), and used for carrying capacity when the character has
+  encumbrance switched on. Omit it and the item weighs nothing, which is the right answer for most
+  small things.
 - Optional facet/display fields used by the item browser: **`category`** (coarse — Weapon / Armor /
   Tool / Gear / Wondrous Item / Potion / Ring / Wand / etc.), **`type`** (specific, e.g. "Heavy Armor"),
   **`rarity`** (Mundane / Common / Uncommon / Rare / Very Rare / Legendary / Artifact), **`cost`**

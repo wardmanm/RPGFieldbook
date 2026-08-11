@@ -43,13 +43,7 @@ function seedLevel1HP(d){
   if(num(character.hp.max))return;
   character.hp.max=die;
   if(!num(character.hp.cur))character.hp.cur=die;
-  syncHPInputs();
-}
-function syncHPInputs(){
-  const mx=document.querySelector('[data-path="character.hp.max"]');
-  if(mx)mx.value=character.hp.max;
-  const cu=document.querySelector('[data-path="character.hp.cur"]');
-  if(cu)cu.value=character.hp.cur;
+  renderHP();
 }
 function addClass(name,lvl){
   const d=findClassDef(name);
@@ -82,7 +76,7 @@ function removeClass(idx){
   if(seeded&&character.classes.length===1&&num(c.level)===1&&num(character.hp.max)===seeded){
     character.hp.max="";
     if(num(character.hp.cur)===seeded)character.hp.cur="";
-    syncHPInputs();
+    renderHP();
   }
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="class"&&f.origin.class===c.name);
   removeGrants(g=>g.sid==="class:"+c.name||g.sid.indexOf("subclass:"+c.name+":")===0);

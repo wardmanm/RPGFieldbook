@@ -32,6 +32,18 @@ function grantItemByName(name,qty,sid){
   if(ex){ex.qty=num(ex.qty)+qty;return;}
   const it={id:uid(),name:(def&&def.name)||name,qty,description:(def&&def.description)||"",effects:(def&&Array.isArray(def.effects))?def.effects:[],equipped:false,grant:sid,origin:originFromSid(sid)};
   if(def&&def.weapon)it.weapon=def.weapon;
+  if(def){
+    const wg=fnum(def.weight);if(wg)it.weight=wg;
+    /* Cost is a DISPLAY STRING in the pack ("2 gp", "5 cp") and a gp number on
+       the sheet, so it has to be parsed — copying it raw renders no badge at
+       all and quietly breaks the inventory total. Weight needs no such care,
+       which is exactly why weight worked here and cost didn't. */
+    const cg=costToGp(def.cost);if(cg!=null)it.cost=cg;
+    /* invSection() files by these; without them everything that isn't a weapon
+       or armour lands in Loot. */
+    if(def.category)it.category=def.category;
+    if(def.type)it.type=def.type;
+  }
   if(def)stampSrc(it,def,"item","items");   /* no def = a named grant with no matching item entry */
   character.inventory.push(it);
   if(it.weapon)addAttackForItem(it);

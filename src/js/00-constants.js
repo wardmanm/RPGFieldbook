@@ -34,6 +34,11 @@ function blankChar(){
     features:[], inventory:[], statuses:[], familiars:[], glossary:[],
     featCollapse:{groups:{},items:{}}, invCollapse:{items:{}}, atkCollapse:{items:{}}, hdUsed:{}, resources:[],
     activeSpells:[], combatRound:0, grantGold:{},
+    size:"", encumbrance:"none", coinWeight:true,
+    /* Notes pinned to a section of the sheet, keyed by NOTE_SECTIONS id.
+       NOT `notes` — that name is taken by the Story tab's bio field (see BIO
+       above), and this is a different thing entirely. */
+    secNotes:{}, noteCollapse:{},
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);
@@ -42,13 +47,24 @@ function blankChar(){
   return c;
 }
 let character=blankChar();
-let settings={skin:"humblewood",theme:"light",autoload:true,rough:true,rulesSources:[]};
+/* setCollapse: which Settings sections are folded shut, keyed by section id.
+   Absent key = never touched, so SET_SECTIONS' first-run defaults apply. */
+let settings={skin:"humblewood",theme:"light",autoload:true,rough:true,rulesSources:[],setCollapse:{},tabIcons:false};
 let rules={name:"",version:0,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[]};
 
 function seedGlossary(){return [];}
 
 /* ================= helpers ================= */
 function num(v){const n=parseInt(v,10);return isNaN(n)?0:n}
+/* num() is parseInt, which is right for counts and scores but wrong for pounds
+   and coin: an arrow weighs 0.05 lb and a candle costs 0.01 gp, and parseInt
+   turns both into 0. Anything measured rather than counted uses fnum. */
+function fnum(v){const n=parseFloat(v);return isNaN(n)?0:n}
+/* creature sizes, smallest first — the order IS the comparison (a race offering
+   a choice of sizes seeds the largest), and the multiplier is carrying capacity:
+   halved below Small, doubled above Medium. */
+const SIZES=["Tiny","Small","Medium","Large","Huge","Gargantuan"];
+const SIZE_CARRY={Tiny:0.5,Small:1,Medium:1,Large:2,Huge:2,Gargantuan:2};
 function modOf(score){return Math.floor((num(score)-10)/2)}
 function fmt(n){return (n>=0?"+":"")+n}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -89,8 +105,21 @@ function contributions(){
   return list;
 }
 function sumFx(target,contribs){return contribs.filter(c=>c.target===target).reduce((a,c)=>a+c.value,0)}
-function effMaxHP(){return num(character.hp.max)+sumFx("hp.max",contributions());}
-function clampCurHP(){const mx=effMaxHP();if(mx>0&&num(character.hp.cur)>mx){character.hp.cur=mx;const ci=document.querySelector('[data-path="character.hp.cur"]');if(ci)ci.value=mx;}}
+/* `c` is optional: pass the contributions you already computed to avoid a second
+   pass, omit it and one is taken. This expression used to be written out in
+   three places, which is two chances for them to disagree. */
+function effMaxHP(c){return num(character.hp.max)+sumFx("hp.max",c||contributions());}
+/* The HP bounds, in one place. Every path that changes HP — a typed entry, the
+   +/- buttons, spending a hit die, a long rest, or lowering Max under Current —
+   ends here, so the rule cannot be enforced in one of them and not another.
+   Model only, no DOM: callers pair it with renderHP().
+   "" must survive as "": it means "not set yet", which is not the same as zero,
+   and removeClass() distinguishes them when it un-seeds a level-1 character. */
+function clampHP(){
+  ["cur","max","temp"].forEach(k=>{if(character.hp[k]!==""&&num(character.hp[k])<0)character.hp[k]=0;});
+  const mx=effMaxHP();
+  if(mx>0&&num(character.hp.cur)>mx)character.hp.cur=mx;
+}
 function abilFinal(k,contribs){return num(character.abilities[k])+sumFx("ability."+k,contribs)}
 function pbValue(contribs){const l=Math.max(1,Math.min(20,num(character.level)||1));return 2+Math.floor((l-1)/4)+sumFx("profBonus",contribs)}
 /* ---- proficiency grants (provenance) ---- */

@@ -24,7 +24,9 @@ html[data-theme="dark"] .tbtn.primary{color:#20160a}
 .savestate.on{color:var(--accent)}
 .verbtn{align-self:center;margin-right:auto;font-family:var(--head);font-size:10px;letter-spacing:.06em;color:var(--ink-soft);background:none;border:1px solid var(--hair);border-radius:20px;padding:2px 9px;cursor:pointer}
 .verbtn:hover{color:var(--accent);border-color:var(--accent)}
-.updpill{align-self:center;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:#20160a;background:var(--accent);border:1px solid var(--ink);border-radius:20px;padding:3px 11px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:updpulse 2.4s ease-in-out infinite}
+/* Takes over the version button's slot — same margin-right:auto, so it sits
+   where the version did instead of being pushed to the far end of the bar. */
+.updpill{align-self:center;margin-right:auto;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:#20160a;background:var(--accent);border:1px solid var(--ink);border-radius:20px;padding:3px 11px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:updpulse 2.4s ease-in-out infinite}
 .updpill:hover{filter:brightness(1.06)}
 @keyframes updpulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}50%{box-shadow:0 0 0 4px transparent}}
 
@@ -32,7 +34,24 @@ html[data-theme="dark"] .tbtn.primary{color:#20160a}
   display:flex;gap:0;padding:0 clamp(8px,2vw,18px)}
 .tab{flex:1;max-width:220px;font-family:var(--head);font-weight:700;letter-spacing:.06em;
   font-size:14px;text-transform:uppercase;color:var(--ink-soft);background:none;border:0;
-  padding:13px 6px;cursor:pointer;border-bottom:3px solid transparent;min-height:48px}
+  padding:13px 6px;cursor:pointer;border-bottom:3px solid transparent;min-height:48px;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px}
+/* Seven words don't fit a phone, so below the breakpoint each tab shows its
+   glyph instead — and the Icon tabs setting forces that at any width, for
+   anyone who prefers it. */
+.tabicon{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;display:none;flex:none}
+@media(max-width:860px){.tab .tlbl{display:none}.tabicon{display:block}}
+html[data-tabs="icons"] .tab .tlbl{display:none}
+html[data-tabs="icons"] .tabicon{display:block}
+/* Very narrow: let the bar scroll rather than crushing the glyphs. .tab-toc's
+   margin-left:auto collapses to nothing in a scroll container, so it has to be
+   pinned instead or it scrolls off the end. */
+@media(max-width:400px){
+  .tabbar{overflow-x:auto;scrollbar-width:none}
+  .tabbar::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;min-width:46px}
+  .tab-toc{position:sticky;right:0;background:var(--paper-2)}
+}
 .tab.active{color:var(--ink);border-bottom-color:var(--accent)}
 .tab:hover{color:var(--ink)}
 .tab-toc{flex:0 0 auto;margin-left:auto;background:none;border:0;color:var(--ink-soft);cursor:pointer;padding:0 12px;min-height:48px;display:inline-flex;align-items:center;font-size:18px}

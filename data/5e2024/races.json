@@ -6,6 +6,10 @@
     {
       "name": "Aasimar",
       "system": "XPHB",
+      "size": [
+        "Small",
+        "Medium"
+      ],
       "speed": "30 ft",
       "description": "",
       "traits": [
@@ -34,6 +38,7 @@
     {
       "name": "Dragonborn",
       "system": "XPHB",
+      "size": "Medium",
       "speed": "30 ft",
       "description": "",
       "traits": [
@@ -104,6 +109,7 @@
     {
       "name": "Dwarf",
       "system": "XPHB",
+      "size": "Medium",
       "speed": "30 ft",
       "description": "",
       "traits": [
@@ -128,6 +134,7 @@
     {
       "name": "Elf",
       "system": "XPHB",
+      "size": "Medium",
       "speed": "30 ft",
       "choices": [
         {
@@ -203,6 +210,7 @@
     {
       "name": "Gnome",
       "system": "XPHB",
+      "size": "Small",
       "speed": "30 ft",
       "description": "",
       "traits": [
@@ -245,6 +253,7 @@
     {
       "name": "Goliath",
       "system": "XPHB",
+      "size": "Medium",
       "speed": "35 ft",
       "description": "",
       "traits": [
@@ -327,6 +336,7 @@
     {
       "name": "Halfling",
       "system": "XPHB",
+      "size": "Small",
       "speed": "30 ft",
       "description": "",
       "traits": [
@@ -351,6 +361,10 @@
     {
       "name": "Human",
       "system": "XPHB",
+      "size": [
+        "Small",
+        "Medium"
+      ],
       "speed": "30 ft",
       "choices": [
         {
@@ -397,6 +411,7 @@
     {
       "name": "Orc",
       "system": "XPHB",
+      "size": "Medium",
       "speed": "30 ft",
       "description": "",
       "traits": [
@@ -417,6 +432,10 @@
     {
       "name": "Tiefling",
       "system": "XPHB",
+      "size": [
+        "Small",
+        "Medium"
+      ],
       "speed": "30 ft",
       "description": "",
       "traits": [

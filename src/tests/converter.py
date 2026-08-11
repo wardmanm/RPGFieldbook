@@ -185,6 +185,16 @@ ck('speed dict walk+fly', C._race_speed({'walk': 30, 'fly': 30}) == '30 ft, fly 
 ck('speed fly:true', C._race_speed({'walk': 25, 'fly': True}) == '25 ft, fly equal to walking speed', C._race_speed({'walk':25,'fly':True}))
 ck('speed missing', C._race_speed(None) == '')
 
+# size: single code -> one name, several -> the choice is kept for the app to show
+ck('size single code', C._race_size(['M']) == 'Medium', C._race_size(['M']))
+ck('size choice kept as a list', C._race_size(['S', 'M']) == ['Small', 'Medium'], C._race_size(['S','M']))
+ck('size bare string', C._race_size('M') == 'Medium', C._race_size('M'))
+ck('size missing', C._race_size(None) == '')
+ck('size empty list', C._race_size([]) == '')
+# "V" is Varies — it names no size, and guessing one is worse than omitting it
+ck('size Varies dropped', C._race_size(['V']) == '', C._race_size(['V']))
+ck('size unknown code dropped from a mix', C._race_size(['S', 'V']) == 'Small', C._race_size(['S','V']))
+
 fx, chs = C._race_skills([{'choose': {'from': ['insight', 'perception']}}])
 ck('skill choose -> chooser', not fx and chs == [{'type':'skill','choose':1,'from':['Insight','Perception']}], (fx, chs))
 fx, chs = C._race_skills([{'any': 1}])

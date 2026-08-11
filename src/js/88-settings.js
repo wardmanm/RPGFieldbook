@@ -1,6 +1,39 @@
-/* ================= settings modal ================= */
+/* ================= settings modal =================
+   The modal grew a control at a time until it was one long scroll, so it is
+   grouped into collapsible sections. They reuse the feature-list idiom
+   (.fgroup/.fghead/.fcaret) rather than inventing a second collapsible — one
+   less thing to keep looking the same. Open/closed is remembered in `settings`,
+   because a setting you visit often shouldn't need reopening every time. */
+const SET_SECTIONS=[
+  /* `open` is the FIRST-RUN default, not the current state. Appearance and the
+     character's own options are what people come here for; the rules-data block
+     is the longest and the least often touched, so it starts folded away — with
+     its entry count on the header, so "did my rules load?" is still answerable
+     without opening it. */
+  {k:"appearance",title:"Appearance",       open:true},
+  {k:"character", title:"This character",   open:true},
+  {k:"rules",     title:"Rules data",       open:false},
+  {k:"backup",    title:"Characters & backup",open:false}
+];
+function setSecDef(k){return SET_SECTIONS.find(s=>s.k===k)||null;}
+/* stored as COLLAPSE (true = closed) so an absent key means "first run", and the
+   defaults above can change later without rewriting anyone's saved settings */
+function setSecOpen(k){
+  const c=(settings&&settings.setCollapse&&typeof settings.setCollapse==="object"&&!Array.isArray(settings.setCollapse))?settings.setCollapse:{};
+  if(k in c)return !c[k];
+  const d=setSecDef(k);return d?d.open:true;
+}
+function setSecHTML(k,body,badge){
+  const d=setSecDef(k);if(!d)return "";
+  const open=setSecOpen(k);
+  return `<div class="fgroup"><div class="fghead" data-setsec="${k}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
+    `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`+
+    `<span class="fgname">${esc(d.title)}</span>${badge?`<span class="fgcount">${esc(badge)}</span>`:""}</div>`+
+    `<div class="setsec-body" data-setsecbody="${k}"${open?"":` style="display:none"`}>${body}</div></div>`;
+}
+function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
 function openSettings(){
-  openModal("Settings",`
+  const secAppearance=`
     <div class="field"><label class="f">Skin</label>
       <div class="seg" id="segSkin">
         <button data-skin="humblewood" class="${(settings.skin||"humblewood")==="humblewood"?"on":""}">Humblewood</button>
@@ -12,9 +45,21 @@ function openSettings(){
         <button data-th="light" class="${settings.theme==="light"?"on":""}">Light</button>
         <button data-th="dark" class="${settings.theme==="dark"?"on":""}">Dark</button>
       </div></div>
-    <div class="toggle"><div><div class="t-lbl">Character library</div><div class="t-sub">Switch characters, set autoload, or start a new one.</div></div><button class="tbtn" id="swHome">Open</button></div>
     <div class="toggle"><div><div class="t-lbl">Hand-drawn borders</div><div class="t-sub">Inky wobble. Turn off for a cleaner look / low-end devices.</div></div><button class="switch ${settings.rough?"on":""}" id="swRough"></button></div>
-    <div class="field" style="margin-top:14px"><label class="f">Rules sources</label>
+    <div class="toggle"><div><div class="t-lbl">Icon tabs</div><div class="t-sub">Show the tab bar as icons instead of words, on every screen size. Narrow screens do this anyway.</div></div><button class="switch ${settings.tabIcons?"on":""}" id="swTabIcons"></button></div>`;
+  const secCharacter=activeId?`
+    <div class="g2"><div class="field"><label class="f">Size</label>
+        <select id="setSize">${sizeOptionsHTML(character.size)}</select></div>
+      <div class="field"><label class="f">Encumbrance</label>
+        <select id="setEnc">${[["none","Off — show weight only"],["standard","Standard (capacity, push/drag)"],["variant","Variant (encumbered tiers)"]].map(([v,l])=>`<option value="${v}"${encMode()===v?" selected":""}>${esc(l)}</option>`).join("")}</select></div></div>
+    <p class="hint" id="encHint">${esc(encSettingsHint())}</p>
+    <div class="toggle"><div><div class="t-lbl">Coins count as weight</div><div class="t-sub">50 coins to the pound, the way the rules have it.</div></div><button class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight"></button></div>
+    <div class="field" style="margin-top:12px"><label class="f">Rules updates</label>
+      <p class="hint">Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compare this sheet against your loaded rules and update what you choose. A backup is always saved first.</p>
+      <div class="m-actions" style="justify-content:flex-start"><button class="tbtn" id="btnCharUpdate">Check for rules updates</button></div>
+    </div>`:"";
+  const secRules=`
+    <div class="field"><label class="f">Rules sources</label>
       <p class="hint">Load one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. Fetched when online, cached for offline.</p>
       <div id="srcList"></div>
       <div style="display:flex;gap:7px;margin-top:4px"><input id="newSrc" placeholder="https://…/spells.json"><button class="tbtn" id="addSrc">Add</button></div>
@@ -30,23 +75,47 @@ function openSettings(){
     <div class="field" style="margin-top:6px"><label class="f">Loaded rules data</label>
       <p class="hint">Everything currently in your rules pool, grouped by file (or source). Remove any piece you no longer want loaded.</p>
       <div id="rulesData"></div>
-    </div>
-    ${activeId?`<div style="border-top:1px dotted var(--hair);margin:14px 0 12px"></div>
-    <div class="field"><label class="f">This character</label>
-      <p class="hint">Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compare this sheet against your loaded rules and update what you choose. A backup is always saved first.</p>
-      <div class="m-actions" style="justify-content:flex-start"><button class="tbtn" id="btnCharUpdate">Check for rules updates</button></div>
-    </div>`:""}
-    <div style="border-top:1px dotted var(--hair);margin:14px 0 12px"></div>
-    <div class="m-actions" style="justify-content:flex-start">
+    </div>`;
+  const secBackup=`
+    <div class="toggle"><div><div class="t-lbl">Character library</div><div class="t-sub">Switch characters, set autoload, or start a new one.</div></div><button class="tbtn" id="swHome">Open</button></div>
+    <div class="m-actions" style="justify-content:flex-start;margin-top:10px">
       <button class="tbtn" id="btnExportSettings">Export settings</button>
       <button class="tbtn" id="btnImportSettings">Import settings</button>
       <input type="file" id="fileSettings" accept="application/json,.json" class="hidefile">
     </div>
-    <p class="hint" style="margin-top:6px">Export saves your appearance settings <b>and</b> all loaded rules data to one JSON file; import restores both.</p>`);
+    <p class="hint" style="margin-top:6px">Export saves your appearance settings <b>and</b> all loaded rules data to one JSON file; import restores both.</p>`;
+  const n=rulesEntryCount();
+  openModal("Settings",`<div id="setSections">`+
+    setSecHTML("appearance",secAppearance)+
+    (secCharacter?setSecHTML("character",secCharacter,character.name||"unnamed"):"")+
+    setSecHTML("rules",secRules,n?n+" entries":"none loaded")+
+    setSecHTML("backup",secBackup)+
+    `</div>`);
+  /* Delegated from a wrapper INSIDE the modal body, not from #mBody itself:
+     #mBody survives every open, so a listener bound to it would stack up one
+     copy per visit. */
+  const secs=document.getElementById("setSections");
+  const toggleSec=(head)=>{
+    const k=head.dataset.setsec;
+    if(!settings.setCollapse||typeof settings.setCollapse!=="object"||Array.isArray(settings.setCollapse))settings.setCollapse={};
+    const open=!setSecOpen(k);
+    settings.setCollapse[k]=!open;
+    head.setAttribute("aria-expanded",open?"true":"false");
+    const car=head.querySelector(".fcaret");if(car)car.classList.toggle("c",!open);
+    const body=secs.querySelector(`[data-setsecbody="${k}"]`);if(body)body.style.display=open?"":"none";
+    saveSettings();
+  };
+  secs.addEventListener("click",e=>{const h=e.target.closest("[data-setsec]");if(h)toggleSec(h);});
+  secs.addEventListener("keydown",e=>{
+    if(e.key!=="Enter"&&e.key!==" ")return;
+    const h=e.target.closest("[data-setsec]");if(!h)return;
+    e.preventDefault();toggleSec(h);
+  });
   document.getElementById("segSkin").addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(!b)return;settings.skin=b.dataset.skin;document.querySelectorAll("#segSkin button").forEach(x=>x.classList.toggle("on",x===b));applyTheme();saveSettings();if(activeId){character.system=systemForSkin(settings.skin);renderCoins();libTouch();scheduleSave();}});
   document.getElementById("segTheme").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;settings.theme=b.dataset.th;document.querySelectorAll("#segTheme button").forEach(x=>x.classList.toggle("on",x===b));applyTheme();saveSettings();});
   document.getElementById("swHome").addEventListener("click",()=>{closeModal();showHome();});
   document.getElementById("swRough").addEventListener("click",e=>{settings.rough=!settings.rough;e.currentTarget.classList.toggle("on",settings.rough);applyTheme();saveSettings();});
+  document.getElementById("swTabIcons").addEventListener("click",e=>{settings.tabIcons=!settings.tabIcons;e.currentTarget.classList.toggle("on",settings.tabIcons);applyTheme();saveSettings();});
   renderSrcRows();renderRulesData();
   document.getElementById("rulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`))removeRulesGroup(d.dataset.rdDel);});
   document.getElementById("srcList").addEventListener("input",e=>{const inp=e.target.closest("[data-src-i]");if(!inp)return;settings.rulesSources[num(inp.dataset.srcI)]=inp.value.trim();saveSettings();});
@@ -54,6 +123,11 @@ function openSettings(){
   document.getElementById("addSrc").addEventListener("click",()=>{const i=document.getElementById("newSrc");const v=i.value.trim();if(!v)return;settings.rulesSources.push(v);i.value="";saveSettings();renderSrcRows();});
   document.getElementById("btnFetchRules").addEventListener("click",fetchAllRules);
   document.getElementById("btnClearRules").addEventListener("click",clearAllRules);
+  /* the size / encumbrance / coin-weight block only exists when a character is
+     open, so every one of these is guarded */
+  {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{character.size=s.value;encSettingsChanged();});}
+  {const s=document.getElementById("setEnc");if(s)s.addEventListener("change",()=>{character.encumbrance=s.value;encSettingsChanged();});}
+  {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());
@@ -66,12 +140,29 @@ function openSettings(){
       applyTheme();saveSettings();refreshRulesUI();renderAll();closeModal();openSettings();
     }catch(err){alert("Not a valid settings file.")}};r.readAsText(f);e.target.value="";});
 }
+/* One line under the Size/Encumbrance selects: what you're carrying right now,
+   against what this character can carry. Answers "what does this setting
+   actually do to me" without leaving the modal. */
+function encSettingsHint(){
+  const st=encState(contributions());
+  const carried=`Carrying ${fmtWt(st.carried)}`;
+  if(st.mode==="none")return carried+`. Capacity would be ${fmtWt(st.cap)} (STR ${st.str} × 15, ${charSize()}); turn encumbrance on to apply it.`;
+  return `${carried} of ${fmtWt(st.cap)} (STR ${st.str} × 15, ${charSize()}). ${encTierNote(st)}`;
+}
+function encSettingsChanged(){
+  const h=document.getElementById("encHint");if(h)h.textContent=encSettingsHint();
+  const s=document.getElementById("setSize");
+  if(s&&s.options.length)s.options[0].textContent="From ancestry ("+(raceDefSize()||"Medium")+")";
+  renderInventory();recompute();scheduleSave();
+}
 function rulesStatusText(){
   const k=(rules.keywords||[]).length,f=(rules.features||[]).length,i=(rules.items||[]).length,s=(rules.spells||[]).length,r=(rules.races||[]).length,c=(rules.classes||[]).length,t=(rules.tables||[]).length;
   return (k+f+i+s+r+c+t)?`Loaded${rules.name?" “"+rules.name+"”":""}: ${r} races · ${c} classes · ${k} keywords · ${f} traits · ${i} items · ${s} spells${t?" · "+t+" tables":""}.`:"No rules loaded.";
 }
 function updateRulesStatus(msg,cls){const el=document.getElementById("rulesStatus");if(el){el.textContent=msg||rulesStatusText();el.className="status "+(cls||"");}}
-function refreshRulesUI(){renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderAllRT();}
+/* renderNotes is here because notes run through highlight() too — editing the
+   glossary changes how every note reads. */
+function refreshRulesUI(){renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderAllRT();}
 const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
 /* display names for a category — one map, used by both the group summary and
    the headings in the loaded-data list */

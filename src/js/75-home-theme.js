@@ -101,6 +101,9 @@ function applyTheme(){
   document.documentElement.dataset.theme=t;
   document.documentElement.dataset.skin=settings.skin||"humblewood";
   document.documentElement.dataset.rough=settings.rough?"on":"off";
+  /* "icons" forces glyph tabs at any width; "labels" leaves it to the viewport,
+     which switches on its own when seven words stop fitting. */
+  document.documentElement.dataset.tabs=settings.tabIcons?"icons":"labels";
   const wm=(settings.skin==="classic")?{main:"D&D",sub:"Character Sheet",title:"D&D Character Sheet"}
                                        :{main:"Humblewood",sub:"The Fieldbook",title:"Fieldbook — Humblewood"};
   const wmM=document.getElementById("wmMain"),wmS=document.getElementById("wmSub");

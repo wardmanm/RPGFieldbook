@@ -45,6 +45,20 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 .status.ok{color:var(--accent-2)}
 .status.err{color:var(--brick)}
 .hint{font-size:13px;color:var(--ink-soft);line-height:1.5;margin:2px 0 10px}
+/* Settings sections. The group itself is the shared .fgroup/.fghead idiom; these
+   only adjust it for a modal — the header sticks to the top of the scrolling
+   body so you can always see which section you are in and fold it away, and the
+   last section drops its bottom margin so the modal doesn't end in dead space. */
+#setSections .fghead{position:sticky;top:-6px;z-index:1;background:var(--panel);padding:8px 2px}
+#setSections .fgroup:last-child{margin-bottom:0}
+#setSections .fgroup:last-child .setsec-body>*:last-child{margin-bottom:0}
+.setsec-body{padding-top:2px}
+/* the download offer at the top of the changelog while an update is pending —
+   the pill replaced the version button, so this is the only route to the release */
+.updbanner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;
+  border:2px solid var(--accent);border-radius:8px;background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.updbanner .hint{margin:2px 0 0}
+.updbanner a{flex:none;margin-left:auto;text-decoration:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 #printArea{display:none}
 @media print{

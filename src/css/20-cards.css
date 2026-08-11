@@ -23,6 +23,43 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .g2>*,.g3>*{min-width:0}
+/* ---- section notes ----
+   The icon takes the .starbtn approach to state: faint when there's nothing
+   there, accent when there is. margin-left:auto parks it at the far right of
+   every heading regardless of where that card's .grow happens to sit. */
+.label .notebtn{position:relative;background:none;border:0;cursor:pointer;padding:3px 4px;
+  color:var(--hair);display:inline-flex;align-items:center;flex:none;margin-left:auto}
+.label .notebtn.on{color:var(--accent)}
+.label .notebtn:hover,.label .notebtn:focus-visible{color:var(--accent-2)}
+.notebtn .noteicon{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+/* The preview opens DOWNWARD always: the tab bar is z-index 40 and sticky, so a
+   card that opened upward would slide under it. Every inherited .label property
+   is reset — uppercase 12px letter-spaced .14em is unreadable as prose. */
+.n-pop{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:30;
+  width:min(300px,70vw);background:var(--paper);border:1.5px solid var(--line);border-radius:8px;
+  box-shadow:var(--shadow);padding:8px 10px;font-family:var(--body);font-size:13px;line-height:1.5;
+  letter-spacing:normal;text-transform:none;font-weight:400;color:var(--ink);text-align:left;white-space:normal}
+.notebtn:hover .n-pop,.notebtn:focus-visible .n-pop{display:block}
+/* NOT .rt-view: that is white-space:pre-wrap, which would double every newline
+   now that the blocks are real elements. */
+.n-body{font-size:15px;line-height:1.6;word-break:break-word;margin-top:6px}
+.n-body p{margin:0 0 8px}
+.n-body p:last-child,.n-body>*:last-child{margin-bottom:0}
+.n-h{font-family:var(--head);font-weight:800;letter-spacing:.05em;color:var(--ink);margin:10px 0 4px}
+.n-h1{font-size:16px}.n-h2{font-size:15px}
+.n-h3,.n-h4,.n-h5,.n-h6{font-size:14px;color:var(--ink-soft)}
+.n-ul,.n-ol{margin:0 0 8px;padding-left:20px}
+.n-ul li,.n-ol li{margin:2px 0}
+.n-q{margin:0 0 8px;padding:2px 0 2px 10px;border-left:3px solid var(--hair);color:var(--ink-soft)}
+.n-hr{border:0;border-top:1px solid var(--hair);margin:10px 0}
+.n-body code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--field);
+  border:1px solid var(--hair);border-radius:4px;padding:0 4px}
+.n-when{font-family:var(--head);font-size:11px;color:var(--ink-soft);flex:none}
+.n-jump{font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.02em;text-align:left}
+.n-edit{min-height:min(46vh,340px);resize:vertical}
+/* a brief nudge so a jump lands somewhere you can see it happened */
+.n-flash::before{border-color:var(--accent);transition:border-color .3s}
+
 .fgroup{margin-bottom:12px}
 .fghead{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 2px;border-bottom:1.5px solid var(--line);margin:0 0 8px;user-select:none}
 .fghead:hover .fgname{color:var(--accent-2)}
@@ -33,21 +70,50 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 .fitoggle{background:transparent;border:0;cursor:pointer;padding:0 2px;display:inline-flex;align-items:center;flex:none;color:var(--ink-soft)}
 .fitem .top{align-items:center}
 input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
-.rest-row{display:flex;gap:8px;margin-top:10px}
+.rest-row{display:flex;gap:8px}
 .restbtn{flex:1;font-family:var(--head);font-weight:700;font-size:12px;letter-spacing:.03em;padding:7px 6px;border-radius:8px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer}
 .restbtn:hover{border-color:var(--accent-2);color:var(--accent-2)}
+/* One grid for the whole pool, so a multiclass character's two rows line their
+   die, pips, count and Roll up with each other instead of each centring on its
+   own width. display:contents lets each .hd-row hand its four cells straight to
+   this grid; justify-content keeps the block centred rather than stretched
+   across a card-wide box. */
 .hd-wrap{margin-top:10px}
-.hd-title{font-family:var(--head);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:6px}
+/* The pool's own grid, holding just the die rows — the warning banner is
+   rendered outside it, because a grid item spanning every column feeds that
+   column's sizing and stretched the Roll buttons to the width of a sentence. */
+.hd-grid{display:grid;grid-template-columns:repeat(4,max-content);justify-content:center;align-items:center;gap:6px 10px}
+/* The Hit Dice field and its pool, finally in one place. A real border rather
+   than the ::before inset trick the cards use: nothing nests inside it that
+   would need lifting back above an overlay. */
+.hd-box{margin-top:12px;background:var(--field);border:1.5px solid var(--line);border-radius:9px;padding:10px}
+/* label and mode pill on the left, aligned with the die rows below; the manual
+   text field only exists when it isn't a duplicate of them */
+.hd-head{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:2px}
+.hd-head .n{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+.hd-head input{width:130px;text-align:center;font-weight:700;font-size:15px;padding:4px;min-height:34px}
+.hd-none{margin:0}
 .hd-mode{font-family:var(--head);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px;border-radius:999px;border:1px solid var(--line);background:var(--field);color:var(--ink-soft);cursor:pointer;margin-left:4px}
 .hd-mode.manual{color:var(--brick);border-color:var(--brick)}
 .hd-warn{font-family:var(--head);font-size:10px;color:var(--brick);text-align:center;margin-bottom:8px;line-height:1.5}
 .linkbtn{background:none;border:0;color:var(--accent-2);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
-.hd-row{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:5px;flex-wrap:wrap}
-.hd-die{font-family:var(--head);font-weight:800;font-size:13px;min-width:44px}
+/* die · pips · how many are left · Roll — one line per die size, so a
+   multiclass character just stacks two of them */
+/* Not a flex row of its own — its cells belong to .hd-wrap's grid (above), which
+   is what stopped the old layout pushing one lonely pip to the left edge and the
+   Roll button to the right. */
+.hd-row{display:contents}
+.hd-die{font-family:var(--head);font-weight:800;font-size:14px;text-align:right}
 .hd-pips{display:flex;gap:5px;flex-wrap:wrap}
+/* the words that stop "filled" being ambiguous; pushed right so Roll sits at the edge */
+.hd-left{font-family:var(--head);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);text-align:right}
+.hd-left.out{color:var(--brick)}
 .hd-b,.use-b{width:16px;height:16px;border-radius:5px;border:2px solid var(--line);background:transparent;cursor:pointer;padding:0}
 .hd-b.used,.use-b.used{background:var(--ink-soft);border-color:var(--ink-soft)}
-.hd-roll{border:1.5px solid var(--line);background:var(--field);border-radius:7px;cursor:pointer;font-size:13px;line-height:1;padding:3px 7px}
+/* a labelled button, not a bare 🎲 — it rolls the die AND heals you, which an
+   emoji on its own doesn't say */
+.hd-roll{flex:none;font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+  border:1.5px solid var(--line);background:var(--field);color:var(--ink);border-radius:7px;cursor:pointer;line-height:1;padding:6px 11px}
 .hd-roll:hover:not(:disabled){border-color:var(--accent)}
 .hd-roll:disabled{opacity:.35;cursor:default}
 .use-row{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}

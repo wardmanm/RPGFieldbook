@@ -1,5 +1,7 @@
 /* Tables: the renderer, the [Table: X] anchor pass against the glossary
-   highlighter, the rules-data category, and migrate() round-tripping. */
+   highlighter, the rules-data category, and migrate() round-tripping.
+   Also the section-note markdown renderer, which lives here because it is built
+   ON TOP of highlight() and its whole safety argument is about that pipeline. */
 const {loadApp, makeCheck} = require('./harness');
 
 const ck = makeCheck();
@@ -7,6 +9,7 @@ const {X, bootError, fragments} = loadApp([
   'RULE_CATS','TBL_MARK',
   'findTable','tablesFor','tableHTML','tableChipsHTML','highlight',
   'blankChar','migrate','resetRules','mergeRules','dispName','esc',
+  'noteHTML','noteInline','notePreview',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -148,5 +151,103 @@ const ROOT = path.join(__dirname, '..', '..');
   ck(sys + ': every table declares an owner and kind',
      tables.every(t => t.owner && t.ownerKind), tables.filter(t => !t.owner || !t.ownerKind).map(t => t.name).slice(0, 4));
 });
+
+/* ================= section-note markdown =================
+   noteHTML() renders the player's own words, so it is the one place in the app
+   where markup is built from arbitrary typed input. It composes with
+   highlight(): escape first, THEN hold the tags highlight() inserted aside while
+   the markdown regexes run. Everything below either guards that composition or
+   pins a block rule. */
+const md = X.noteHTML;
+const PU = c => String.fromCharCode(c);
+
+// ---------- escaping: nothing typed can ever become markup
+ck('a typed tag is escaped, not rendered', !md('<img src=x onerror=1>').includes('<img'));
+ck('...and is still visible as text', md('<img src=x onerror=1>').includes('&lt;img'));
+ck('escaping survives being wrapped in bold',
+   md('**<script>**').includes('<strong>&lt;script&gt;</strong>'), md('**<script>**'));
+ck('a quote in a note cannot break an attribute', !/="[^"]*"[^>]*onerror/i.test(md('" onerror="x')));
+// the placeholders are private-use chars; a player typing one must not be able
+// to forge one, and none may ever survive into the output
+[0xE000, 0xE001, 0xE002, 0xE003].forEach(c => {
+  ck('a literal U+' + c.toString(16).toUpperCase() + ' cannot forge a placeholder',
+     !md('a' + PU(c) + '0' + PU(c) + 'b').includes(PU(c)));
+});
+ck('no sentinel leaks into ordinary output',
+   !/[-]/.test(md('# H\n- a\n\n> q\n\n`c` **b** *i*')), md('# H\n- a'));
+
+// ---------- it composes with the glossary, which is the point
+X.resetRules();
+X.mergeRules({keywords: [{term: 'Prone', text: 'On the floor.'}]}, 'g.json');
+X.character = X.blankChar();
+ck('a glossary term inside a note is still tappable', md('You are Prone.').includes('class="kw"'));
+// the chip is a single held token, so emphasis around it can't split it
+ck('a chip survives being wrapped in bold',
+   md('**Prone creature**').includes('<strong><span class="kw"'), md('**Prone creature**'));
+ck('a chip is not mangled by italics', (md('*Prone*').match(/class="kw"/g) || []).length === 1);
+
+// ---------- and with table anchors
+X.resetRules();
+X.mergeRules({tables: [T]}, 't.json');
+X.character = X.blankChar();
+const tbl = md('See [Table: Wild Magic Surge] now.');
+ck('a table anchor inside a note still renders a chip', tbl.includes('class="tblref"'), tbl);
+ck('the table name in the attribute is intact', tbl.includes('data-tbl="Wild Magic Surge"'), tbl);
+ck('a bold block does not corrupt the table attribute',
+   md('**[Table: Wild Magic Surge]**').includes('data-tbl="Wild Magic Surge"'));
+ck('an anchor to a table that is not loaded reads as prose',
+   !md('[Table: No Such Thing]').includes('tblref'));
+X.resetRules();
+X.character = X.blankChar();
+
+// ---------- blocks
+ck('# is a heading', md('# Title').includes('n-h1'));
+ck('###### is a level-6 heading', md('###### Deep').includes('n-h6'));
+ck('a lone # with no text is not a heading', !md('#nospace').includes('n-h'));
+ck('- makes a bullet list', md('- a\n- b').includes('<ul class="n-ul"><li>a</li><li>b</li></ul>'), md('- a\n- b'));
+ck('+ and * also make bullets', md('+ a').includes('<li>') && md('* a').includes('<li>'));
+ck('1. makes an ordered list', md('1. a\n2. b').includes('<ol class="n-ol"><li>a</li><li>b</li></ol>'), md('1. a\n2. b'));
+ck('an ordered list keeps where it started', md('3. c').includes('start="3"'));
+ck('1) works as well as 1.', md('1) a').includes('<ol'));
+ck('> makes a quote', md('> hush').includes('<blockquote class="n-q">hush</blockquote>'), md('> hush'));
+ck('consecutive quote lines are one block', (md('> a\n> b').match(/blockquote/g) || []).length === 2);
+ck('--- makes a rule', md('---').includes('<hr class="n-hr">'));
+// this ordering is the whole reason hr is checked before bullets
+ck('* * * is a rule, not a bullet list', md('* * *').includes('n-hr') && !md('* * *').includes('<li>'));
+ck('an italic line is not mistaken for a bullet',
+   md('*italic*').includes('<em>') && !md('*italic*').includes('<li>'), md('*italic*'));
+ck('a blank line splits paragraphs', (md('a\n\nb').match(/<p>/g) || []).length === 2);
+ck('a single newline is a soft break inside one paragraph',
+   (md('a\nb').match(/<p>/g) || []).length === 1 && md('a\nb').includes('<br>'));
+ck('a block starter ends the paragraph above it',
+   md('text\n- item').includes('</p><ul'), md('text\n- item'));
+
+// ---------- inline
+ck('**bold**', md('**b**').includes('<strong>b</strong>'));
+ck('*italic*', md('*i*').includes('<em>i</em>'));
+ck('`code`', md('`c`').includes('<code>c</code>'));
+ck('code wins over emphasis inside it',
+   md('`**x**`').includes('<code>**x**</code>') && !md('`**x**`').includes('<strong>'), md('`**x**`'));
+// unmatched delimiters must be inert, not eat the rest of the line
+ck('an unmatched * is literal', md('*foo').includes('*foo') && !md('*foo').includes('<em>'));
+ck('**foo* is literal', !md('**foo*').includes('<strong>') && !md('**foo*').includes('<em>'), md('**foo*'));
+ck('a lone asterisk between words is literal', md('a * b').includes('a * b'), md('a * b'));
+ck('an unmatched backtick is literal', md('`foo').includes('`foo'));
+
+// ---------- nothing in, nothing out
+[null, undefined, '', '   ', '\n\n', ' \n \t \n'].forEach(v => {
+  ck('a note of ' + JSON.stringify(v) + ' renders nothing', md(v) === '');
+});
+
+// ---------- the hover preview is plain text, deliberately
+const pv = X.notePreview;
+ck('the preview strips block markers', pv('# Title\n- one\n- two') === 'Title one two', pv('# Title\n- one\n- two'));
+ck('the preview strips inline markers', pv('**b** and `c`') === 'b and c');
+ck('the preview collapses whitespace', pv('a\n\n\n   b') === 'a b');
+ck('the preview escapes, since it goes in an attribute-adjacent span',
+   pv('<img>') === '&lt;img&gt;');
+ck('the preview is capped and ellipsised', pv('x'.repeat(400)).length < 220 && pv('x'.repeat(400)).endsWith('…'));
+ck('a short preview is not ellipsised', !pv('short').endsWith('…'));
+ck('the preview of nothing is empty', pv('') === '' && pv(null) === '');
 
 ck.done();

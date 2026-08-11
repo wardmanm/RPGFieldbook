@@ -32,7 +32,7 @@ function raceOptions(){
   html+=flat.map(opt).join("");
   return html;
 }
-function raceSummary(d){const bits=[];if(d.abilityScores)bits.push(Object.entries(d.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", "));if(d.speed)bits.push("Speed "+d.speed);if((d.traits||[]).length)bits.push(d.traits.length+" trait(s)");if((d.subraces||[]).length)bits.push(d.subraces.length+" subraces");return bits.length?`<p class="hint"><b>${esc(bits.join(" · "))}</b></p>`:"";}
+function raceSummary(d){const bits=[];if(d.abilityScores)bits.push(Object.entries(d.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", "));if(d.size)bits.push(sizeLabel(d.size));if(d.speed)bits.push("Speed "+d.speed);if((d.traits||[]).length)bits.push(d.traits.length+" trait(s)");if((d.subraces||[]).length)bits.push(d.subraces.length+" subraces");return bits.length?`<p class="hint"><b>${esc(bits.join(" · "))}</b></p>`:"";}
 function openAddRace(){
   const term=raceTerm(), list=racesForCharacter();
   openModal("Add "+term.toLowerCase(),`
@@ -97,6 +97,10 @@ function applyRace(sel, subrace, opts){
     (obj.choices||[]).forEach(ch=>{if(ch&&ch.type==="skill")pending.push({ch:Object.assign({},ch,{_sid:"race:"+name}),sid:"race:"+name,label:label});});
     applyEquipGrants(obj.equipmentGrants,"race:"+name,pending);
     if(obj.speed&&(character.speed===""||character.speed==null))character.speed=obj.speed;
+    /* Seeded like speed — only when empty, so a subrace never overrides the base
+       species and a player's own choice always wins. Leaving it "" is also fine:
+       charSize() falls back to the ancestry's own size at read time. */
+    if(obj.size&&(character.size===""||character.size==null))character.size=sizeName(obj.size);
     if(obj.proficiencies||obj.languages){const add=[obj.proficiencies,obj.languages?("Languages: "+obj.languages):""].filter(Boolean).join("\n");character.proficiencies=(character.proficiencies?character.proficiencies+"\n":"")+add;}
   };
   if(d){
@@ -124,6 +128,7 @@ function openRaceInfo(name){
   const sect=(obj)=>{
     let s="";
     if(obj.abilityScores)s+=`<p><b>Ability increase:</b> ${Object.entries(obj.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", ")}</p>`;
+    if(obj.size)s+=`<p><b>Size:</b> ${esc(sizeLabel(obj.size))}</p>`;
     if(obj.speed)s+=`<p><b>Speed:</b> ${esc(obj.speed)}</p>`;
     if(obj.proficiencies)s+=`<p><b>Proficiencies:</b> ${esc(obj.proficiencies)}</p>`;
     if(obj.languages)s+=`<p><b>Languages:</b> ${esc(obj.languages)}</p>`;

@@ -11,7 +11,8 @@ const {X, state, store, bootError, fragments} = loadApp([
   'updProject','updEdited','itemMetaLine','costToGp','addAttackForItem','findClassDef',
   'diffCharacter','applyUpdateRow','applyUpdates','charNeedsUpdate','updResolve','updChangedFields',
   'backupCharacter','libLoad','charKey','mergeRules','resetRules','addFeatureFromDef',
-  'addClass','removeClass','hitDieMax','totalLevel','num',
+  'addClass','removeClass','hitDieMax','totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
+  'grantItemByName',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -41,6 +42,23 @@ ck('migrate absent appVersion -> ""', X.migrate({abilities:{}}).appVersion==='')
 ck('migrate non-string appVersion -> ""', X.migrate({abilities:{},appVersion:12}).appVersion==='');
 ck('cmpVer detects behind', X.cmpVer('1.0.0',X.APP_VERSION)<0 && X.cmpVer('0.0.0',X.APP_VERSION)<0);
 
+// ---------- the app-update banner
+// The update pill REPLACES the version button in the top bar, so the changelog
+// is the only remaining route to the download. If this banner ever goes missing
+// there is no way left to reach the release.
+ck('no banner when there is no update', X.updBannerHTML()==='');
+X.updateAvailable={ver:'9.9.9',url:'https://example.test/rel'};
+const banner=X.updBannerHTML();
+ck('the banner names the new version', banner.includes('9.9.9'), banner);
+ck('the banner still shows the version you are on', banner.includes('v'+X.APP_VERSION), banner);
+ck('the banner links to the release', banner.includes('https://example.test/rel'), banner);
+ck('the banner reassures that characters are unaffected', /unaffected/i.test(banner), banner);
+// a release title is attacker-controllable in principle; it must not become markup
+X.updateAvailable={ver:'<img src=x>',url:'https://example.test/"onerror="x'};
+ck('banner escapes the version', !X.updBannerHTML().includes('<img'), X.updBannerHTML());
+ck('banner escapes the url', !/href="[^"]*"on/.test(X.updBannerHTML()), X.updBannerHTML());
+X.updateAvailable=null;
+
 // ---------- fixture: rules + a character
 function setup(){
   X.resetRules();
@@ -65,6 +83,7 @@ function addBrowseItem(name){
             description:(m?m+"\n":"")+(def.description||""),
             effects:Array.isArray(def.effects)?def.effects:[],equipped:false};
   const c=X.costToGp(def.cost); if(c!=null)it.cost=c;
+  const w=X.fnum(def.weight); if(w)it.weight=w;
   if(def.weapon)it.weapon=def.weapon;
   X.stampSrc(it,def,'item','items','browse');
   X.character.inventory.push(it); return it;
@@ -73,6 +92,10 @@ function addGrantItem(name){                       /* grantItemByName shape */
   const def=(X.rules.items||[]).find(x=>x.name===name);
   const it={id:'g-'+name,name:def.name,qty:1,description:def.description||"",
             effects:def.effects||[],equipped:false,grant:'class:Bard'};
+  const w=X.fnum(def.weight); if(w)it.weight=w;
+  const c=X.costToGp(def.cost); if(c!=null)it.cost=c;
+  if(def.category)it.category=def.category;
+  if(def.type)it.type=def.type;
   X.stampSrc(it,def,'item','items');
   X.character.inventory.push(it); return it;
 }
@@ -322,10 +345,90 @@ ck('R5 not offered twice', X.diffCharacter().rows.filter(x=>x.type==='added'&&x.
 ck('R5 resolves back through origin afterwards',
    X.updResolve(X.character.features.find(f=>f.name==='Researcher'),'feature').def!==undefined);
 
+// ---------- class/background starting equipment (grantItemByName)
+// Tested against the REAL function, not the fixture above: the fixture mirrored
+// this copy site faithfully enough to hide a live bug for a whole release —
+// granted items arrived with no gp value, because the pack writes cost as a
+// display string ("1 gp") and only the browse path parsed it.
+c=setup();
+X.grantItemByName('Rope', 1, 'class:Bard');
+let g = X.character.inventory.find(i => i.name === 'Rope');
+ck('a granted item lands in the inventory', !!g);
+ck('a granted item carries its cost', g.cost === 1, g.cost);
+ck('...as a NUMBER, not the pack string', typeof g.cost === 'number', typeof g.cost);
+ck('a granted item carries its weight', g.weight === 5);
+// without these invSection() files everything that is not a weapon under Loot
+ck('a granted item carries its category', g.category === 'Gear', g.category);
+ck('a granted item carries its type', g.type === 'Adventuring Gear', g.type);
+ck('a granted item is tagged with what granted it', g.grant === 'class:Bard');
+ck('a granted item is stamped for the update tool', !!(g.src && g.src.fp));
+ck('a freshly granted item raises no update rows',
+   X.diffCharacter().rows.length === 0, X.diffCharacter().rows.map(x => x.name + ':' + x.why));
+
+// granting the same thing twice stacks rather than duplicating
+X.grantItemByName('Rope', 2, 'class:Bard');
+ck('granting the same item again bumps the quantity',
+   X.character.inventory.filter(i => i.name === 'Rope').length === 1 &&
+   X.character.inventory.find(i => i.name === 'Rope').qty === 3);
+
+// a grant naming something no loaded pack has must still produce a usable item
+c = setup();
+X.grantItemByName('Imaginary Trinket', 1, 'bg:Sage');
+const un = X.character.inventory.find(i => i.name === 'Imaginary Trinket');
+ck('a grant with no matching definition still adds the item', !!un);
+ck('...with no cost invented for it', un.cost === undefined);
+ck('...and no stamp, since there is nothing to compare against', un.src === undefined);
+
+// a cost the parser cannot read must produce NO cost, not a broken one
+c = setup();
+X.rules.items.push({name: 'Priceless Thing', description: 'x', cost: 'varies', category: 'Gear'});
+X.grantItemByName('Priceless Thing', 1, 'class:Bard');
+const pr = X.character.inventory.find(i => i.name === 'Priceless Thing');
+ck('an unparseable cost is left off rather than stored badly', pr.cost === undefined, pr.cost);
+ck('the projection drops it too, so it never diffs',
+   X.updProject(X.rules.items.find(i => i.name === 'Priceless Thing'), 'item', 'plain').cost === undefined);
+
+// ---------- the backfill for characters that already have the bug
+// A granted item saved by the old code has no cost and a stamp whose baseline
+// says the cost should be the pack's raw string. The diff must notice, say so
+// honestly, and applying must write the parsed number.
+c = setup();
+const old = addGrantItem('Rope');
+delete old.cost;                                  // as the old grant path left it
+old.src.fp.cost = X.fpHash('1 gp');               // the old raw-string projection
+old.src.cfp.cost = X.fpHash(undefined);
+const bf = X.diffCharacter().rows.find(r => r.name === 'Rope');
+ck('a legacy granted item is flagged', !!bf && bf.fields.indexOf('cost') >= 0, bf && bf.fields);
+ck('...and worded as missing, not as a pack change',
+   bf && /missing/.test(bf.why) && !/changed/.test(bf.why), bf && bf.why);
+ck('...and ticked, since the player never edited it', bf && bf.apply === true);
+old.qty = 4; old.equipped = true; old.fav = true;
+X.applyUpdateRow(bf);
+ck('applying backfills the cost as a number', old.cost === 1, old.cost);
+ck('...leaving the quantity alone', old.qty === 4);
+ck('...leaving equipped alone', old.equipped === true);
+ck('...leaving the favourite star alone', old.fav === true);
+ck('and it goes quiet afterwards', X.diffCharacter().rows.length === 0,
+   X.diffCharacter().rows.map(x => x.why));
+
+// a real pack change to cost still reads as a change, not as missing
+c = setup();
+const ci = addGrantItem('Rope');
+X.rules.items.find(i => i.name === 'Rope').cost = '9 gp';
+const chg = X.diffCharacter().rows.find(r => r.name === 'Rope');
+ck('a genuine cost change is still worded as changed',
+   chg && /changed/.test(chg.why), chg && chg.why);
+X.applyUpdateRow(chg);
+ck('...and applies as a number', ci.cost === 9, ci.cost);
+
 // ---------- level-1 max HP seeding
 // A single class at level 1 has no roll and no choice, so max HP is simply the
 // hit die's maximum. It must never overwrite a number the player typed, and it
 // must not fire when multiclassing (the second class gets a rolled/average HP).
+// These assert the MODEL only. The DOM half (renderHP) is inert here because the
+// harness stubs getElementById to a proxy that swallows writes — so a broken HP
+// input would still pass this block. That is what src/tests/rules-data.js's
+// template guards are for; don't add DOM expectations here.
 c=setup();
 ck('hitDieMax parses "d8"', X.hitDieMax({hitDie:'d8'})===8);
 ck('hitDieMax parses a bare number', X.hitDieMax({hitDie:'10'})===10);
@@ -371,5 +474,50 @@ ck('an HP the player edited survives class removal', X.num(X.character.hp.max)==
 
 hpSetup(CLS); X.addClass('Fighter',1); X.addClass('Wizard',1); X.removeClass(1);
 ck('removing a multiclass level does not clear HP', X.num(X.character.hp.max)===10);
+
+// ---------- item weight is rules-owned, like cost
+c=setup();
+ck('weight is a tracked item field', (X.UPD_FIELDS.item||[]).includes('weight'));
+const wRope=addBrowseItem('Rope');   /* pack says 5 lb */
+ck('a browse copy carries the numeric weight', wRope.weight===5);
+ck('a fresh copy of an unchanged pack reports nothing',
+   X.diffCharacter().rows.length===0, X.diffCharacter().rows.map(x=>x.name+':'+x.fields));
+
+X.rules.items.find(x=>x.name==='Rope').weight=10;
+let wRows=X.diffCharacter().rows, wRow=wRows.find(x=>x.name==='Rope');
+/* the meta line embeds the weight too, so a weight change legitimately moves
+   both fields — what matters is that weight is named, not just prose */
+ck('a pack weight change is reported', wRow&&wRow.type==='changed', wRows.map(x=>x.name+':'+x.type));
+ck('and names the weight field', wRow&&wRow.fields.includes('weight'), wRow&&wRow.fields);
+wRope.qty=7; wRope.equipped=true; wRope.fav=true;
+X.applyUpdateRow(wRow);
+ck('applying writes the new weight', wRope.weight===10, wRope.weight);
+ck('the player quantity is untouched', wRope.qty===7);
+ck('equipped state is untouched', wRope.equipped===true);
+ck('the favourite star is untouched', wRope.fav===true);
+
+/* R6 — the regression this guard exists for. A copy stamped BEFORE weight was
+   a tracked field has no weight baseline. "No baseline" is not "the pack
+   changed it": without the guard, adding any field to UPD_FIELDS flags every
+   previously-stamped item on the sheet at once. */
+c=setup();
+const oldCopy=addBrowseItem('Rope');
+delete oldCopy.src.fp.weight;                    /* as an older app would have left it */
+ck('an item stamped before weight was tracked is not flagged',
+   X.updChangedFields(oldCopy,X.rules.items.find(x=>x.name==='Rope'),'item').length===0,
+   X.updChangedFields(oldCopy,X.rules.items.find(x=>x.name==='Rope'),'item'));
+ck('...and so raises no row at all', X.diffCharacter().rows.length===0,
+   X.diffCharacter().rows.map(x=>x.name+':'+x.fields));
+/* but a field it DID have a baseline for still diffs normally */
+X.rules.items.find(x=>x.name==='Rope').description='Changed rope.';
+ck('a tracked field still diffs on the same copy',
+   X.updChangedFields(oldCopy,X.rules.items.find(x=>x.name==='Rope'),'item').join()==='description');
+
+/* the meta line is deliberately frozen: it is the shape a browse copy was made
+   in, and changing it re-flags every browse-added item on every sheet forever */
+c=setup();
+ck('itemMetaLine still ends with the weight',
+   X.itemMetaLine({type:'Adventuring Gear',cost:'1 gp',weight:5})==='Adventuring Gear · 1 gp · 5 lb',
+   X.itemMetaLine({type:'Adventuring Gear',cost:'1 gp',weight:5}));
 
 ck.done();

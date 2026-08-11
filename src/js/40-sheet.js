@@ -1,3 +1,20 @@
+/* Show a tab. Deliberately does NOT scroll: the tab bar's own handler wants the
+   top of the page, but jumping to a note wants that note's card — so the scroll
+   is the caller's decision, not this function's. */
+function selectTab(name){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
+  document.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+name));
+  closeToc();
+}
+/* Scroll a card to just under the sticky tab bar, whose height is measured live
+   rather than assumed. Shared by the table of contents and the notes jump. */
+function scrollToCard(el){
+  if(!el)return;
+  const tb=document.querySelector(".tabbar");
+  const off=(tb?tb.getBoundingClientRect().height:48)+10;
+  const y=el.getBoundingClientRect().top+window.scrollY-off;
+  window.scrollTo({top:Math.max(0,y),behavior:"smooth"});
+}
 function buildToc(){
   const fly=document.getElementById("tocFly");if(!fly)return;
   const panel=document.querySelector(".tabpanel.active");
@@ -5,11 +22,11 @@ function buildToc(){
   const items=[];
   if(panel)panel.querySelectorAll(".card > .label, .inv-sec-head").forEach(node=>{
     const target=node.classList.contains("inv-sec-head")?node:node.closest(".card");
-    const cl=node.cloneNode(true);cl.querySelectorAll("button,svg,input,select,.grow,.add,.cnt").forEach(x=>x.remove());
+    const cl=node.cloneNode(true);cl.querySelectorAll("button,svg,input,select,.grow,.add,.cnt,.enc-pill").forEach(x=>x.remove());
     const t=cl.textContent.trim();if(t&&target)items.push({t,target,sub:node.classList.contains("inv-sec-head")});
   });
   fly.innerHTML=`<h4>${esc(tabName)}</h4>`+(items.length?"":`<p class="hint" style="padding:6px">No sections here.</p>`);
-  items.forEach(it=>{const a=document.createElement("a");a.textContent=it.t;if(it.sub)a.style.paddingLeft="20px";a.addEventListener("click",()=>{closeToc();const tb=document.querySelector(".tabbar");const off=(tb?tb.getBoundingClientRect().height:48)+10;const y=it.target.getBoundingClientRect().top+window.scrollY-off;window.scrollTo({top:Math.max(0,y),behavior:"smooth"});});fly.appendChild(a);});
+  items.forEach(it=>{const a=document.createElement("a");a.textContent=it.t;if(it.sub)a.style.paddingLeft="20px";a.addEventListener("click",()=>{closeToc();scrollToCard(it.target);});fly.appendChild(a);});
 }
 function openToc(){buildToc();const tb=document.querySelector(".tabbar");const top=tb?Math.max(0,Math.round(tb.getBoundingClientRect().bottom)):0;const fly=document.getElementById("tocFly"),back=document.getElementById("tocBack");if(fly)fly.style.top=top+"px";if(back)back.style.top=top+"px";if(fly)fly.classList.add("open");if(back)back.classList.add("open");}
 function closeToc(){const f=document.getElementById("tocFly"),b=document.getElementById("tocBack");if(f)f.classList.remove("open");if(b)b.classList.remove("open");}
@@ -19,9 +36,13 @@ function invSection(it){
   const c=String(it.category||it.type||"").toLowerCase();
   if(it.weapon||c.includes("weapon"))return "Weapons";
   if(itemArmor(it)||c.includes("armor")||c.includes("shield"))return "Armor";
-  if(/potion|scroll|consumable|ammunition/.test(c))return "Consumables";
-  if(/wand|rod|staff|ring|wondrous|focus/.test(c))return "Magic Items";
-  if(/tool|kit|instrument|supplies|utensils/.test(c))return "Tools";
+  /* Word boundaries are load-bearing, not tidiness: without them "ring" matches
+     inside "Adventu-RING Gear" and every rope and bedroll files as a magic item,
+     and "staff" matches inside "Quarterstaff". These only started mattering when
+     items began carrying a real category. */
+  if(/\b(potion|scroll|consumable|ammunition)\b/.test(c))return "Consumables";
+  if(/\b(wand|rod|staff|ring|wondrous|focus)\b/.test(c))return "Magic Items";
+  if(/\b(tool|tools|kit|instrument|supplies|utensils)\b/.test(c))return "Tools";
   if(/gear/.test(c))return "Gear";
   return "Loot";
 }
@@ -34,18 +55,62 @@ function invItemHTML(it){
         <span class="nm">${esc(it.name||"Item")}</span>
         ${it.qty&&num(it.qty)!==1?`<span class="qty">×${num(it.qty)}</span>`:""}
         ${originBadge(itemOrigin(it),"data-orig-item",it.id)}
-        ${num(it.cost)?`<span class="qty" title="Cost each">${esc(fmtGp(it.cost))}</span>`:""}
+        ${fnum(it.cost)?`<span class="qty" title="Cost each">${esc(fmtGp(it.cost))}</span>`:""}
+        ${itemWeight(it)?`<span class="qty" title="Weight each">${esc(fmtWt(it.weight))}</span>`:""}
         ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${it.id}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
         <button class="icon" data-edit-item="${it.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-item="${it.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${ic?"":`${it.description?`<div class="desc">${highlight(it.description)}</div>`:""}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
 }
+/* The carried-weight badge in the Inventory card header. Hidden entirely when
+   encumbrance is off — the weight itself still shows in the totals row, so an
+   always-visible pill would just be noise for tables that don't track it. */
+function renderEncPill(st){
+  const el=document.getElementById("encPill");if(!el)return;
+  st=st||encState(contributions());
+  if(st.mode==="none"){el.style.display="none";el.textContent="";return;}
+  const bad=(st.tier==="over"||st.tier==="max");
+  el.className="chip enc-pill"+(bad?" bad":(st.tier==="ok"?"":" warn"));
+  el.textContent=(st.tier==="ok"?"":st.label+" · ")+fmtWt(st.carried)+" / "+fmtWt(st.cap);
+  el.title=st.label;
+  el.style.display="";
+}
+/* The footer rows under the item list: value, carried weight, and — when
+   encumbrance is on — capacity and what the current tier costs you. Built as a
+   string so the empty-inventory branch can show it too: a character carrying
+   nothing but 900 gold coins is still carrying 18 lb. */
+function invTotalsHTML(){
+  const row=(label,val,cls)=>`<div class="item"><div class="top"><span class="nm">${label}</span><span style="flex:1"></span><b${cls?` class="${cls}"`:""}>${val}</b></div></div>`;
+  let h="";
+  const total=inventoryTotal();
+  if(total>0)h+=row("Total value",esc(fmtGp(total)));
+  const st=encState(contributions());
+  const wt=st.carried;
+  if(!wt&&st.mode==="none")return h;
+  h+=row("Carried weight",esc(fmtWt(wt)));
+  if(st.mode!=="none"){
+    const mult=SIZE_CARRY[st.size]||1;
+    const capNote=`STR ${st.str} × 15${mult!==1?` × ${mult} (${esc(st.size)})`:""}`;
+    h+=`<div class="item"><div class="top"><span class="nm" style="font-weight:400">Capacity</span><span style="flex:1"></span><span class="qty">${esc(capNote)}</span><b>${esc(fmtWt(st.cap))}</b></div>
+      <div class="desc">${esc(encTierNote(st))}</div></div>`;
+  }
+  return h;
+}
+/* One sentence per tier, in the player's terms. The disadvantage clause is prose
+   rather than an effect because effects are numeric-only. */
+function encTierNote(st){
+  if(st.tier==="max")return `Carrying more than ${fmtWt(st.max)} — you cannot move or hold this much.`;
+  if(st.tier==="over")return `Over capacity: you can only push, drag or lift this, and your speed drops to 5 ft. Hard limit ${fmtWt(st.max)}.`;
+  if(st.tier==="heavy")return "Heavily Encumbered: speed −20 ft, and disadvantage on ability checks, attack rolls and saving throws using Strength, Dexterity or Constitution.";
+  if(st.tier==="encumbered")return "Encumbered: speed −10 ft.";
+  return `Unencumbered — ${fmtWt(Math.max(0,Math.round((st.cap-st.carried)*100)/100))} to spare.`;
+}
 function renderInventory(){
   const el=document.getElementById("inventoryList");if(!el)return;el.innerHTML="";
   const caBtn=document.getElementById("invCollapseAll"), caLbl=document.getElementById("invCollapseLbl");
   if(caBtn)caBtn.style.display=character.inventory.length?"inline-flex":"none";
-  if(!character.inventory.length){el.innerHTML=`<div class="empty">No items yet. Equip gear that grants effects (e.g. +1 AC) and your stats update automatically.</div>`;return;}
+  if(!character.inventory.length){el.innerHTML=`<div class="empty">No items yet. Equip gear that grants effects (e.g. +1 AC) and your stats update automatically.</div>`+invTotalsHTML();return;}
   if(caLbl)caLbl.textContent=character.inventory.some(it=>!invCol().items[it.id])?"Collapse all":"Expand all";
   const byName=(a,b)=>String(a.name||"").localeCompare(String(b.name||""));
   const eqThenName=(a,b)=>((b.equipped?1:0)-(a.equipped?1:0))||byName(a,b);
@@ -62,8 +127,7 @@ function renderInventory(){
   };
   renderSec("★ Favorites",favs,byName);
   INV_ORDER.forEach(s=>renderSec(s,groups[s]||[],eqThenName));
-  const total=inventoryTotal();
-  if(total>0){const t=document.createElement("div");t.className="item";t.innerHTML=`<div class="top"><span class="nm">Total value</span><span style="flex:1"></span><b>${esc(fmtGp(total))}</b></div>`;el.appendChild(t);}
+  el.insertAdjacentHTML("beforeend",invTotalsHTML());
 }
 function statusTitle(name){
   const g=allGlossary().find(x=>x.term.toLowerCase()===(name||"").toLowerCase());

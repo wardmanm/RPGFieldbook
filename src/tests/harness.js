@@ -21,7 +21,7 @@ const vm = require("vm");
 const ROOT = path.resolve(__dirname, "..", "..");
 
 /* the three globals a suite may need to WRITE, so they need accessors */
-const MUTABLE = ["rules", "character", "activeId"];
+const MUTABLE = ["rules", "character", "activeId", "updateAvailable"];
 
 function loadApp(names) {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "src/manifest.json"), "utf8"));

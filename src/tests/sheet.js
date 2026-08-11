@@ -1,14 +1,25 @@
 /* Sheet mechanics: the small pure functions the character sheet leans on.
-   Currently the coin-box entry parser, which is the whole of the add/subtract
-   currency feature — everything else about it is DOM wiring. */
+   The coin-box entry parser, which is the whole of the add/subtract currency
+   feature, and the carried-weight/encumbrance maths — everything else about
+   both is DOM wiring. */
 const {loadApp, makeCheck} = require('./harness');
 
 const ck = makeCheck();
-const {X, bootError, fragments} = loadApp(['coinEntry', 'num']);
+const {X, bootError, fragments} = loadApp([
+  'signedEntry', 'num', 'fnum', 'fmtWt', 'fmtGp', 'blankChar', 'migrate',
+  'clampHP', 'effMaxHP',
+  'itemWeight', 'itemWeightTotal', 'coinsWeight', 'carriedWeight',
+  'sizeName', 'sizeLabel', 'charSize', 'carryCapacity', 'encMode', 'encState',
+  'encSpeed', 'encTierNote', 'contributions', 'inventoryTotal', 'SIZES', 'SIZE_CARRY',
+  'capacityFor', 'sizeOptionsHTML', 'invSection',
+]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
 
-const e = X.coinEntry;
+// Was `coinEntry` until the HP boxes wanted the same behaviour; the parser was
+// never coin-specific, so it got a name that says what it does. Every assertion
+// below is unchanged — that is the point of asserting through `e`.
+const e = X.signedEntry;
 
 // ---------- absolute entry still works
 ck('a plain number sets the value', e(7, '12') === 12);
@@ -43,5 +54,296 @@ ck('rejection does not mutate anything', X.num(42) === 42);
 // ---------- a rejected entry must be distinguishable from a cleared one
 ck('null (invalid) and "" (cleared) are different results',
    e(5, 'abc') === null && e(5, '') === '');
+
+/* ================= hit points ================= */
+
+// The HP boxes take the same signed entries as the coin boxes, but unlike coins
+// they have a CEILING. That bound lives in clampHP(), not in the parser: it also
+// has to hold when you spend a hit die, take a long rest, or drop Max below
+// Current, and one rule enforced in four places is a rule enforced in three.
+function hpOf(o) {
+  const c = X.blankChar();
+  Object.assign(c.hp, o);
+  X.character = c;
+  return c;
+}
+hpOf({cur: 9, max: 12, temp: ''});   X.clampHP();
+ck('under max is left alone', X.character.hp.cur === 9);
+hpOf({cur: 20, max: 12, temp: ''});  X.clampHP();
+ck('current is capped at max', X.character.hp.cur === 12);
+hpOf({cur: 20, max: '', temp: ''});  X.clampHP();
+ck('no max set means no cap yet', X.character.hp.cur === 20);
+hpOf({cur: -3, max: 12, temp: ''});  X.clampHP();
+ck('current floors at zero', X.character.hp.cur === 0);
+hpOf({cur: 1, max: -5, temp: -2});   X.clampHP();
+ck('max and temp floor at zero too', X.character.hp.max === 0 && X.character.hp.temp === 0);
+// "" means "not set yet", which is not zero — removeClass() tells them apart
+// when it takes back a level-1 seeded HP, so clamping must not coerce.
+hpOf({cur: '', max: '', temp: ''});  X.clampHP();
+ck('empty stays empty, not zero', X.character.hp.cur === '' && X.character.hp.max === '');
+
+// ---------- the ceiling is the EFFECTIVE max, not the number in the box
+hpOf({cur: 16, max: 10, temp: ''});
+X.character.features = [{name: 'Tough', effects: [{target: 'hp.max', value: 5}]}];
+ck('effMaxHP counts hp.max effects', X.effMaxHP() === 15);
+ck('effMaxHP(c) agrees with effMaxHP()', X.effMaxHP(X.contributions()) === X.effMaxHP());
+X.clampHP();
+ck('a +5 max HP item lets you keep 15, not 10', X.character.hp.cur === 15);
+
+// ---------- signed entry composed the way applyHPInput composes it
+hpOf({cur: 8, max: 12, temp: ''});
+const typeHP = (k, s) => { const n = X.signedEntry(X.character.hp[k], s);
+  if (n !== null) { X.character.hp[k] = n; X.clampHP(); } return n; };
+typeHP('cur', '-3');
+ck('typing -3 into Current takes 3 damage', X.character.hp.cur === 5);
+typeHP('cur', '+50');
+ck('healing past your maximum stops at your maximum', X.character.hp.cur === 12);
+typeHP('cur', '-100');
+ck('a big hit floors at zero, never negative', X.character.hp.cur === 0);
+typeHP('temp', '+7');
+ck('temp HP takes signed entries too', X.character.hp.temp === 7);
+ck('junk in an HP box is rejected, not read as zero', typeHP('cur', '5 hp') === null);
+ck('and the rejected box keeps its value', X.character.hp.cur === 0);
+// lowering Max has to drag Current down with it
+hpOf({cur: 30, max: 30, temp: ''});
+typeHP('max', '-20');
+ck('lowering Max pulls Current down to it', X.character.hp.cur === 10 && X.character.hp.max === 10);
+
+/* ================= inventory filing =================
+   invSection() reads category/type. Nothing used to copy those onto an item, so
+   everything that wasn't a weapon or armour fell through to Loot — a class's
+   Scholar's Pack and Spellbook included. There were no tests here at all, which
+   is how that shipped. */
+const sec = (o) => X.invSection(Object.assign({name: 'x'}, o));
+ck('a weapon files under Weapons', sec({weapon: {dice: '1d6'}}) === 'Weapons');
+ck('...and so does anything typed as one', sec({category: 'Weapon'}) === 'Weapons');
+ck('armour files under Armor', sec({category: 'Armor'}) === 'Armor');
+ck('a shield files under Armor', sec({type: 'Shield'}) === 'Armor');
+ck('gear files under Gear', sec({category: 'Gear'}) === 'Gear');
+ck('adventuring gear files under Gear', sec({type: 'Adventuring Gear'}) === 'Gear');
+ck('tools file under Tools', sec({category: 'Tool'}) === 'Tools');
+ck('an instrument files under Tools', sec({type: "Musical Instrument"}) === 'Tools');
+ck('ammunition files under Consumables', sec({category: 'Ammunition'}) === 'Consumables');
+ck('a potion files under Consumables', sec({category: 'Potion'}) === 'Consumables');
+ck('a ring files under Magic Items', sec({category: 'Ring'}) === 'Magic Items');
+ck('a wondrous item files under Magic Items', sec({category: 'Wondrous Item'}) === 'Magic Items');
+// the fallback, and the bug: with no category at all everything looked like loot
+ck('something uncategorised falls back to Loot', sec({}) === 'Loot');
+ck('category wins over type', sec({category: 'Gear', type: 'Musical Instrument'}) === 'Gear');
+// a shield is a shield whichever field says so — itemArmor() reads type directly
+ck('a Gear-categorised shield still files as Armor',
+   sec({category: 'Gear', type: 'Shield'}) === 'Armor');
+// the substring traps: these all used to file as Magic Items
+ck('"Adventuring Gear" is gear, not a ring', sec({type: 'Adventuring Gear'}) === 'Gear');
+ck('a quarterstaff is not a magic staff',
+   sec({category: 'Weapon', type: 'Quarterstaff'}) === 'Weapons');
+ck('"Adventuring Gear" does not match on the ring in adventuring',
+   sec({category: 'Adventuring Gear'}) === 'Gear');
+// the player's own choice beats all of it
+ck('an explicit section override wins', sec({category: 'Gear', sectionOverride: 'Tools'}) === 'Tools');
+ck('a nonsense override is ignored', sec({category: 'Gear', sectionOverride: 'Nowhere'}) === 'Gear');
+
+/* ================= carried weight and encumbrance ================= */
+
+// Build a character the way the app does, then assert against the real helpers.
+// They read the module-level `character`, so each block sets it up first.
+function sheet(over) {
+  const c = X.blankChar();
+  Object.assign(c, over || {});
+  X.character = c;
+  return c;
+}
+const item = (o) => Object.assign({id: 'x', name: 'Thing', qty: 1}, o);
+
+// ---------- fnum: pounds and copper are measured, not counted
+// num() is parseInt. An arrow weighs 0.05 lb and a candle costs 0.01 gp, so
+// using num() for either silently turns them into nothing.
+ck('num truncates a fractional weight to zero (why fnum exists)', X.num('0.05') === 0);
+ck('fnum keeps it', X.fnum('0.05') === 0.05);
+ck('fnum of a bare number passes through', X.fnum(3) === 3);
+ck('fnum of empty is zero', X.fnum('') === 0);
+ck('fnum of undefined is zero', X.fnum(undefined) === 0);
+ck('fnum of rubbish is zero, not NaN', X.fnum('abc') === 0);
+ck('fnum reads the number off "3 lb"', X.fnum('3 lb') === 3);
+
+// ---------- formatting
+ck('fmtWt prints a whole number plainly', X.fmtWt(3) === '3 lb');
+ck('fmtWt keeps two decimals', X.fmtWt(0.05) === '0.05 lb');
+ck('fmtWt rounds to two decimals', X.fmtWt(12.345) === '12.35 lb');
+ck('fmtWt of nothing is 0 lb', X.fmtWt(undefined) === '0 lb');
+// the same parseInt bug used to eat sub-1gp costs
+ck('fmtGp no longer rounds a 1 sp cost to zero', X.fmtGp(0.1) === '0.1 gp');
+ck('fmtGp still prints whole gp plainly', X.fmtGp(75) === '75 gp');
+
+// ---------- per-item weight, times quantity
+sheet();
+ck('an item with no weight weighs nothing', X.itemWeight(item({})) === 0);
+ck('weight is per unit', X.itemWeight(item({weight: 0.05, qty: 20})) === 0.05);
+ck('20 arrows at 0.05 lb weigh exactly 1 lb, not 0',
+   X.itemWeightTotal(item({weight: 0.05, qty: 20})) === 1);
+ck('a missing qty counts as one', X.itemWeightTotal(item({weight: 3, qty: undefined})) === 3);
+
+// ---------- coins weigh something: 50 to the pound
+sheet({coins: {cp: '', sp: '', ep: '', gp: 500, pp: ''}});
+ck('500 gold coins weigh 10 lb', X.coinsWeight() === 10);
+sheet({coins: {cp: 25, sp: 25, ep: '', gp: '', pp: ''}});
+ck('denominations sum before dividing', X.coinsWeight() === 1);
+sheet({coins: {cp: '', sp: '', ep: '', gp: '', pp: ''}});
+ck('an empty purse weighs nothing', X.coinsWeight() === 0);
+sheet({coins: {gp: 500}, coinWeight: false});
+ck('the coin-weight switch turns it off', X.coinsWeight() === 0);
+// electrum is D&D-only, so coinKeys() hides it on a Humblewood sheet — but an
+// imported character can still be carrying some, and it is still in the purse.
+sheet({system: 'humblewood', coins: {cp: '', sp: '', ep: 50, gp: '', pp: ''}});
+ck('electrum counts even when the skin does not show it', X.coinsWeight() === 1);
+
+// ---------- the total
+sheet({coins: {gp: 100}, inventory: [item({weight: 3}), item({weight: 0.05, qty: 20})]});
+ck('carried weight is items plus coins', X.carriedWeight() === 6);
+sheet({inventory: [item({weight: 0.05, qty: 20})]});
+ck('carried weight is rounded, so binary float never trips a threshold',
+   X.carriedWeight() === 1, X.carriedWeight());
+sheet({inventory: [item({weight: 3, equipped: false}), item({weight: 3, equipped: true})]});
+ck('unequipped gear still weighs — you are carrying it', X.carriedWeight() === 6);
+sheet({inventory: [item({cost: 0.1, qty: 3})]});
+ck('inventory value no longer truncates sub-1gp costs', X.inventoryTotal() === 0.3);
+
+// ---------- size: explicit choice, else ancestry, else Medium
+// the app stores full names; the converter is what turns 5e-tools' codes into them
+ck('sizeName rejects a raw 5e-tools code', X.sizeName(['M']) === '');
+ck('sizeName takes full names', X.sizeName(['Medium']) === 'Medium');
+ck('sizeName of a bare string works', X.sizeName('Small') === 'Small');
+ck('a choice of sizes settles on the largest', X.sizeName(['Small', 'Medium']) === 'Medium');
+ck('sizeName of nothing is empty', X.sizeName(null) === '');
+ck('sizeName drops sizes it does not know', X.sizeName(['Varies']) === '');
+ck('sizeLabel keeps the choice for display', X.sizeLabel(['Small', 'Medium']) === 'Small or Medium');
+
+X.rules = {races: [{name: 'Halfling', size: 'Small'}, {name: 'Goliath', size: 'Medium'}]};
+sheet({race: {name: 'Halfling'}});
+ck('size falls back to the ancestry', X.charSize() === 'Small');
+sheet({race: {name: 'Halfling'}, size: 'Large'});
+ck('an explicit size beats the ancestry', X.charSize() === 'Large');
+sheet({race: {name: 'Nobody Knows'}});
+ck('an unresolvable ancestry reads as Medium', X.charSize() === 'Medium');
+sheet();
+ck('no ancestry at all reads as Medium', X.charSize() === 'Medium');
+X.rules = {races: []};
+
+// ---------- carrying capacity
+const cap = (over) => { sheet(over); return X.carryCapacity(X.contributions()); };
+ck('STR 10, Medium: 150 lb', cap({}) === 150);
+ck('STR 18, Medium: 270 lb', cap({abilities: Object.assign(X.blankChar().abilities, {str: 18})}) === 270);
+ck('Large doubles it', cap({size: 'Large'}) === 300);
+ck('Tiny halves it', cap({size: 'Tiny'}) === 75);
+ck('Small is not halved — only Tiny is', cap({size: 'Small'}) === 150);
+ck('a +2 STR item raises capacity, because it raises Strength',
+   cap({size: 'Medium', inventory: [item({equipped: true, effects: [{target: 'ability.str', value: 2}]})]}) === 180);
+
+// capacityFor is split out so the size picker can preview a size before you
+// commit to it — it must agree with the capacity you actually get.
+sheet({size: 'Large'});
+ck('capacityFor previews a size you have not chosen',
+   X.capacityFor('Tiny', X.contributions()) === 75);
+ck('previewing does not change your real capacity',
+   X.carryCapacity(X.contributions()) === 300);
+ck('carryCapacity is capacityFor of your current size',
+   X.carryCapacity(X.contributions()) === X.capacityFor(X.charSize(), X.contributions()));
+ck('an unknown size falls back to the Medium multiplier',
+   X.capacityFor('Enormous', X.contributions()) === 150);
+
+// ---------- the size options list, shared by Vitals and Settings
+X.rules = {races: [{name: 'Halfling', size: 'Small'}]};
+sheet({race: {name: 'Halfling'}});
+let opts = X.sizeOptionsHTML(X.character.size);
+ck('the from-ancestry option names what it resolves to', opts.includes('From ancestry (Small)'), opts);
+ck('with no explicit size, from-ancestry is selected',
+   /value=""\s+selected/.test(opts), opts.slice(0, 120));
+ck('every size is offered', X.SIZES.every(s => opts.includes('>' + s + '<')));
+sheet({race: {name: 'Halfling'}, size: 'Large'});
+opts = X.sizeOptionsHTML(X.character.size);
+ck('an explicit size is the selected option', opts.includes('value="Large" selected'), opts);
+ck('and from-ancestry is no longer selected', !/value=""\s+selected/.test(opts));
+X.rules = {races: []};
+ck('with no ancestry the fallback is named as Medium',
+   X.sizeOptionsHTML('').includes('From ancestry (Medium)'));
+
+// ---------- tiers. STR 10 Medium: cap 150, hard limit 300.
+// Weight is supplied as one item so the boundaries are exact.
+function tier(mode, lb, over) {
+  sheet(Object.assign({encumbrance: mode, inventory: lb ? [item({weight: lb})] : []}, over || {}));
+  return X.encState(X.contributions());
+}
+ck('mode off reports no tier at any weight', tier('none', 9999).tier === 'none');
+ck('mode off still reports what you are carrying', tier('none', 42).carried === 42);
+ck('an unknown mode falls back to off', tier('nonsense', 9999).tier === 'none');
+
+ck('standard: exactly at capacity is fine', tier('standard', 150).tier === 'ok');
+ck('standard: a hundredth over is over', tier('standard', 150.01).tier === 'over');
+ck('standard: over means speed becomes 5, not minus 5', tier('standard', 200).floor === 5);
+ck('standard: exactly at the hard limit is still liftable', tier('standard', 300).tier === 'over');
+ck('standard: past the hard limit you cannot move', tier('standard', 300.01).tier === 'max');
+ck('standard: the hard limit is twice capacity', tier('standard', 10).max === 300);
+ck('standard has no middle tiers', tier('standard', 100).tier === 'ok');
+
+ck('variant: up to a third of capacity is unencumbered', tier('variant', 50).tier === 'ok');
+ck('variant: past that is Encumbered', tier('variant', 50.01).tier === 'encumbered');
+ck('variant: Encumbered costs 10 ft', tier('variant', 75).penalty === -10);
+ck('variant: two thirds is still only Encumbered', tier('variant', 100).tier === 'encumbered');
+ck('variant: past two thirds is Heavily Encumbered', tier('variant', 100.01).tier === 'heavy');
+ck('variant: Heavily Encumbered costs 20 ft', tier('variant', 150).penalty === -20);
+ck('variant: above capacity the standard limits take over', tier('variant', 150.01).tier === 'over');
+ck('variant: and so does the hard limit', tier('variant', 300.01).tier === 'max');
+// the tiers are fractions of capacity, so size scales all of them
+ck('variant tiers scale with size', tier('variant', 100, {size: 'Large'}).tier === 'ok');
+
+// ---------- what that does to speed
+const st = (mode, lb) => tier(mode, lb);
+ck('off never touches speed', X.encSpeed(30, st('none', 9999)) === 30);
+ck('unencumbered leaves speed alone', X.encSpeed(30, st('variant', 10)) === 30);
+ck('Encumbered is minus 10', X.encSpeed(30, st('variant', 75)) === 20);
+ck('Heavily Encumbered is minus 20', X.encSpeed(30, st('variant', 150)) === 10);
+ck('over capacity replaces speed with 5', X.encSpeed(30, st('standard', 200)) === 5);
+ck('past the hard limit you do not move', X.encSpeed(30, st('standard', 400)) === 0);
+// a replacement must never make you FASTER, and a penalty must not go negative
+ck('a slow character does not speed up to 5', X.encSpeed(0, st('standard', 200)) === 0);
+ck('a 5 ft speed stays 5 ft when over capacity', X.encSpeed(5, st('standard', 200)) === 5);
+ck('speed never goes below zero', X.encSpeed(15, st('variant', 150)) === 0);
+
+// ---------- the prose that carries the non-numeric half of the rules
+// Heavily Encumbered costs a speed penalty AND disadvantage on STR/DEX/CON.
+// Only the penalty is a number, so if this sentence goes missing the player
+// silently loses half the rule — there is nowhere else it is written down.
+ck('every tier explains itself',
+   ['ok', 'encumbered', 'heavy', 'over', 'max'].every((t, i) =>
+     X.encTierNote(tier(i > 2 ? 'standard' : 'variant', [10, 75, 150, 200, 400][i])).length > 10));
+ck('Heavily Encumbered still names the disadvantage',
+   /disadvantage/i.test(X.encTierNote(tier('variant', 150))));
+ck('Heavily Encumbered names which abilities',
+   /Strength.*Dexterity.*Constitution/.test(X.encTierNote(tier('variant', 150))));
+ck('over capacity explains it is push/drag/lift only',
+   /push, drag or lift/i.test(X.encTierNote(tier('standard', 200))));
+ck('the hard limit note quotes the actual limit',
+   X.encTierNote(tier('standard', 400)).includes('300 lb'), X.encTierNote(tier('standard', 400)));
+
+// ---------- these settings have to survive save and load
+const saved = JSON.parse(JSON.stringify(sheet({
+  size: 'Small', encumbrance: 'variant', coinWeight: false,
+  inventory: [item({weight: 0.05, qty: 20})],
+})));
+const back = X.migrate(saved);
+ck('size survives a save/load round-trip', back.size === 'Small');
+ck('encumbrance mode survives', back.encumbrance === 'variant');
+ck('the coin-weight switch survives, including when it is off', back.coinWeight === false);
+ck('item weight survives', back.inventory[0].weight === 0.05);
+
+// A sheet saved before this feature existed has none of these keys. It must come
+// back with encumbrance OFF — silently dropping an existing character's speed to
+// 5 ft because they were already carrying loot is the one unacceptable outcome.
+const legacy = X.migrate({id: 'old', name: 'Existing character', inventory: [item({})]});
+ck('an old save defaults to encumbrance off', legacy.encumbrance === 'none');
+ck('an old save defaults to counting coin weight', legacy.coinWeight === true);
+ck('an old save has no explicit size, so it derives one', legacy.size === '');
+X.character = legacy;
+ck('and therefore takes no speed penalty', X.encState(X.contributions()).tier === 'none');
 
 ck.done();

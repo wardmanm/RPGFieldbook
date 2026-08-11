@@ -33,3 +33,4 @@ Thumbs.db
 
 # Data for conversion (large source PDFs and 5e-tools dumps)
 /_conversion-data/
+.playwright-mcp/

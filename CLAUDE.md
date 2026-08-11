@@ -34,7 +34,7 @@ The split is by AUDIENCE: anything under `src/` is development material and neve
 src/                    THE SOURCE OF TRUTH — edit here, never the built file
   fieldbook.template.html  HTML shell + the whole <body>; two markers: /*@@CSS@@*/ and //@@JS@@
   manifest.json         the authoritative concatenation ORDER for js/ and css/
-  js/*.js               21 fragments, concatenated into the single <script>
+  js/*.js               22 fragments, concatenated into the single <script>
   css/*.css             7 fragments, concatenated into the single <style>
   tests/                THE TEST SUITES — run with ./src/tests/run.sh (dev)
     harness.js          loads the app the way the build concatenates it
@@ -121,11 +121,16 @@ Unlike the build, the tests are safe to run unprompted — they touch no tracked
 `data/`. The builder's fragment validator only reads `src/js` and `src/css`, so `.js` files under
 `src/tests/` are deliberately outside it.
 
-**Do not run `./build.sh` (or `node scripts/build-html.js`) unless Mike asks for it.** Builds are his
-call: the build rewrites the tracked artifact `dist/fieldbook.html` and regenerates
-`docs/CHANGELOG.md`, so an unrequested one creates diff churn he didn't ask for. Finish the `src/`
-edits, then stop and report — say plainly that the change is unbuilt, note that `dist/fieldbook.html`
-is now stale, and list what the build will check and what needs browser QA. Offer to run it; don't.
+**Building to test is fine. Cutting a release is not.** Run `./build.sh` (or
+`node scripts/build-html.js`) whenever you want to verify a change end to end — it rewrites the
+tracked artifact `dist/fieldbook.html` and regenerates `docs/CHANGELOG.md`, and that diff churn is
+accepted as the cost of checking your work. Say plainly when you've built, so the artifact's state is
+never in doubt, and still list what needs browser QA.
+
+**Never cut a release on your own** — no `./build.sh --release`, no `APP_VERSION` bump, no version
+tag, no publishing push. Releases are Mike's call and irreversible: pushing the tag is what makes
+`.github/workflows/release.yml` publish. Add your bullets to `src/docs/UNRELEASED.md`, say a release
+is ready, and stop there.
 
 There is no runtime build *for players* either — the app is still one file they just open. But every
 change must eventually pass these checks, and `./build.sh` runs all of them:
@@ -235,6 +240,12 @@ old line — and then create it from the tag, at that moment: `git switch -c rel
   once. Prose links to a table by embedding the anchor `[Table: Exact Name]`, resolved at render
   time; `highlight()` lifts anchors out *before* escaping and before the glossary pass. Extractor
   internals must never reach `data/` — underscore-prefixed keys are stripped on write.
+- **`character.notes` and `character.secNotes` are different things.** `notes` is one of the eight
+  `BIO` free-text fields on the Story tab and predates everything. `secNotes` is the per-section
+  notes map, keyed by `NOTE_SECTIONS` id (`src/js/87-notes.js`). Don't merge them and don't rename
+  either into the other. Notes render through `noteHTML()`, which layers markdown **on top of**
+  `highlight()` — escape first, then hold the tags `highlight()` inserted aside while the markdown
+  regexes run. That order is the security argument; reversing it is not safe.
 - **Character copies are not their definitions.** A sheet stores *copies* of rules entries, so it
   drifts as packs update. `72-char-update.js` finds that drift with per-field fingerprints and a
   `src` provenance stamp, and is pure — no DOM — so it stays testable. Three rules hold: it never

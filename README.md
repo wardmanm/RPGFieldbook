@@ -143,12 +143,14 @@ Your main character page:
   the app applies the right features and asks you to make any choices (skills, subclass, feats,
   ability increases).
 - **Ability Scores.** Tap any score to see a breakdown of exactly what's adding to it.
-- **Vitals:** AC, Initiative, Speed, Passive Perception, Hit Dice, and Inspiration.
-- **Hit Points:** current / max / temporary HP with quick +/− buttons, death saves, and
-  **Short Rest / Long Rest** buttons.
-- **Hit Dice pool:** spend dice to heal (tap the 🎲 to roll), automatically figured from your
-  class(es). A long rest brings some back. (You can switch this to manual entry — see
-  [section 6](#6-how-the-smart-features-work).)
+- **Vitals:** AC, Initiative, Speed, Size and Passive Perception, with Inspiration as a star in the
+  card's heading.
+- **Hit Points:** current / max / temporary HP with quick +/− buttons, and death saves. All three
+  boxes take **signed entries** like the coin boxes — type `-7` to take damage, `+4` to heal, or a
+  plain number to set the total. Current HP won't go past your maximum or below zero.
+- **Rest & Recovery:** **Short Rest / Long Rest**, plus your **Hit Dice** — spend them to heal (tap
+  the 🎲 to roll), automatically figured from your class(es). A long rest brings some back. (You can
+  switch Hit Dice to manual entry — see [section 6](#6-how-the-smart-features-work).)
 - **Statuses & Conditions**, **Attacks & Weapons**, **Skills**, **Resources**,
   **Features & Traits**, and **Familiars & Companions**.
 
@@ -165,6 +167,11 @@ you scroll, and the **☰** button in the tab bar opens a jump-to-section list f
   Equip items that give bonuses and your stats update automatically.
 - **Coins:** tracks your money, with an **Auto-convert** button that rolls loose change up into
   higher denominations. Coin types match your character's setting.
+- **Carried weight:** items can have a weight, and the bottom of the list totals what you're
+  hauling — including your coins, at 50 to the pound. Turn on **Encumbrance** in Settings and you
+  also get a carrying capacity, a badge in the card header, and a Speed that actually drops when
+  you're overloaded. Two flavours: **Standard** (over Strength × 15 you can only push, drag or
+  lift, at 5 ft of movement) and **Variant** (the Encumbered / Heavily Encumbered tiers).
 
 ### ✨ Spells
 
@@ -174,6 +181,32 @@ you scroll, and the **☰** button in the tab bar opens a jump-to-section list f
   that limit.
 - **Add spells** from a searchable, filterable browser (by level, class, school, and more), or
   add your own.
+
+### 📝 Notes
+
+Every section of your sheet can hold a note — tap the small page icon beside any heading on the
+**Sheet**, **Spells**, **Inventory** or **Story** tabs. The icon lights up when there's something
+there, and hovering it shows you the note without opening it. Each note remembers when you wrote it
+and when you last changed it.
+
+The **Notes** tab gathers them all, grouped by where they came from, with a link on each that takes
+you back to that section. Notes print with your sheet.
+
+Notes support a little formatting:
+
+| You type | You get |
+|---|---|
+| `**bold**` | **bold** |
+| `*italic*` | *italic* |
+| `` `code` `` | fixed-width text |
+| `# Heading` | a heading (`#` to `######` for smaller ones) |
+| `- item` | a bullet list (`*` and `+` work too) |
+| `1. item` | a numbered list |
+| `> quoted` | an indented quote |
+| `---` | a horizontal divider |
+
+Rules terms you know stay tappable inside notes, and `[Table: Some Table]` links to a loaded table,
+exactly as they do everywhere else. Links, tables and nested lists aren't supported.
 
 ### 📖 Story
 
@@ -276,13 +309,22 @@ happening behind the scenes.
 
 ## 7. Settings & themes
 
-Open **Settings** (the gear icon) to:
+Open **Settings** (the gear icon). It's grouped into collapsible sections — **Appearance**, **This
+character**, **Rules data**, **Characters & backup** — and remembers which ones you left open. From
+there you can:
 
 - **Manage rules data:** import files, see a list of everything currently loaded (grouped by
   file), and remove any piece you no longer want.
 - **Back up everything:** **Export / Import settings** saves your appearance settings *and* all
   loaded rules to a single file — handy for moving your whole setup to another device.
 - **Toggle the hand-drawn borders** on or off (turn off for a plainer look or on slower devices).
+- **Icon tabs:** the tab bar switches from words to icons on its own when the screen is narrow;
+  turn this on to get icons at any size.
+- **Set this character's Size and Encumbrance:** Size also sits in Vitals on the sheet, where you can
+  tap it. It comes from your ancestry unless you pick one, and decides how much you can carry (Large
+  and up carry double, Tiny half). Encumbrance is off by default — weight is still tracked and
+  totalled, just without penalties. There's also a switch for whether your coins count toward the
+  load.
 
 **Themes:** there's a light/dark toggle in the top bar, plus a **Humblewood** or **Classic D&D**
 look. The app can also follow your device's system light/dark setting.
