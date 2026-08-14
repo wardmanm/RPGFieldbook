@@ -83,17 +83,49 @@ input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
    rendered outside it, because a grid item spanning every column feeds that
    column's sizing and stretched the Roll buttons to the width of a sentence. */
 .hd-grid{display:grid;grid-template-columns:repeat(4,max-content);justify-content:center;align-items:center;gap:6px 10px}
-/* The Hit Dice field and its pool, finally in one place. A real border rather
-   than the ::before inset trick the cards use: nothing nests inside it that
-   would need lifting back above an overlay. */
-.hd-box{margin-top:12px;background:var(--field);border:1.5px solid var(--line);border-radius:9px;padding:10px}
-/* label and mode pill on the left, aligned with the die rows below; the manual
-   text field only exists when it isn't a duplicate of them */
-.hd-head{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:2px}
-.hd-head .n{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+/* The Hit Dice field and its pool, stacked under the Hit Points panel in Vitals.
+   Same inset ::before as .hpwrap — and for the reason the old comment here got
+   wrong once the two became neighbours: a real CSS border takes no filter, so on
+   the rough skin .hpwrap wobbled and this did not; and a border sits outside the
+   padding box while the inset sits 1px inside, leaving the two frames 1px out at
+   the corners. Verdigris rather than brick — same weight, different voice,
+   matching .hd-title. Safe despite the grid below: >* reaches only the three
+   direct children, so .hd-row's display:contents is untouched. */
+.hd-box{position:relative;margin-top:12px;background:var(--field);border-radius:9px;padding:10px}
+.hd-box::before{content:"";position:absolute;inset:1px;border:2.5px solid var(--accent-2);border-radius:10px;pointer-events:none}
+html[data-rough="on"] .hd-box::before{filter:url(#rough)}
+.hd-box>*{position:relative}
+/* just the manual text field now — the mode pill moved onto the heading. Empty
+   and zero-height in auto mode, which is the common case. */
+.hd-head{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+/* ---- FULL: a boxed cell per die size, echoing the Vitals strip ---- */
+.hd-boxes{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+.hd-cell{position:relative;background:var(--field);border-radius:9px;padding:8px 12px;text-align:center;min-width:96px}
+.hd-cell::before{content:"";position:absolute;inset:1px;border:2px solid var(--line);border-radius:10px;pointer-events:none}
+html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
+.hd-cell>*{position:relative}
+.hd-cd{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+.hd-cv{font-family:var(--display);font-weight:900;font-size:24px;line-height:1.15}
+.hd-cv small{font-size:14px;color:var(--ink-soft);font-weight:700}
+.hd-cell .hd-pips{justify-content:center;margin:5px 0 7px}
+.hd-cell .hd-roll{width:100%}
+/* ---- DICE: every die is its own token, and the token is the control ---- */
+.hd-dice{display:flex;flex-direction:column;gap:7px;align-items:center}
+.hd-drow{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+.hd-d{width:34px;height:34px;border:2px solid var(--accent-2);background:transparent;color:var(--ink);border-radius:9px;
+  font-family:var(--display);font-weight:900;font-size:13px;cursor:pointer;padding:0;line-height:1;
+  display:inline-flex;align-items:center;justify-content:center}
+.hd-d:hover:not(.spent){background:var(--field-focus)}
+/* spent reads as used up, the same direction the pips fill */
+.hd-d.spent{border-color:var(--hair);color:var(--ink-soft);background:var(--hair);opacity:.55}
+.hd-foot{font-size:10px;font-family:var(--head);letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:8px 0 0}
 .hd-head input{width:130px;text-align:center;font-weight:700;font-size:15px;padding:4px;min-height:34px}
 .hd-none{margin:0}
-.hd-mode{font-family:var(--head);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px;border-radius:999px;border:1px solid var(--line);background:var(--field);color:var(--ink-soft);cursor:pointer;margin-left:4px}
+/* One pill, used twice: the hit-dice auto/manual toggle and the Max HP padlock.
+   No margin here — .hd-head is a centred flex row with its own gap, and a stray
+   left margin would push the pair off-centre; .hp-lock re-adds it, where it is
+   the whole spacing mechanism. */
+.hd-mode,.hp-lock{font-family:var(--head);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px;border-radius:999px;border:1px solid var(--line);background:var(--field);color:var(--ink-soft);cursor:pointer}
 .hd-mode.manual{color:var(--brick);border-color:var(--brick)}
 .hd-warn{font-family:var(--head);font-size:10px;color:var(--brick);text-align:center;margin-bottom:8px;line-height:1.5}
 .linkbtn{background:none;border:0;color:var(--accent-2);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
@@ -106,7 +138,9 @@ input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
 .hd-die{font-family:var(--head);font-weight:800;font-size:14px;text-align:right}
 .hd-pips{display:flex;gap:5px;flex-wrap:wrap}
 /* the words that stop "filled" being ambiguous; pushed right so Roll sits at the edge */
-.hd-left{font-family:var(--head);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);text-align:right}
+/* "3/5", not "3 of 5 left" — the words cost a column's width and the panel is
+   320px wide. The long form is the title attribute. */
+.hd-left{font-family:var(--head);font-weight:700;font-size:12px;letter-spacing:.02em;color:var(--ink-soft);text-align:right;font-variant-numeric:tabular-nums}
 .hd-left.out{color:var(--brick)}
 .hd-b,.use-b{width:16px;height:16px;border-radius:5px;border:2px solid var(--line);background:transparent;cursor:pointer;padding:0}
 .hd-b.used,.use-b.used{background:var(--ink-soft);border-color:var(--ink-soft)}

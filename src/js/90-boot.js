@@ -7,7 +7,12 @@ function wire(){
   // bound inputs
   document.addEventListener("input",e=>{
     const inp=e.target.closest("[data-path]");if(!inp)return;
+    /* Grab CON before the write: resyncLevel1HP needs the previous score to
+       recognise its own seeded number. Runs before recompute() so maxNote
+       repaints against the new base. */
+    const prevCon=inp.dataset.path==="character.abilities.con"?character.abilities.con:null;
     setP({character},inp.dataset.path,inp.value);
+    if(prevCon!==null)resyncLevel1HP(prevCon);
     if(inp.dataset.path==="character.hitdice")renderHitDice();
     if(inp.hasAttribute("data-recompute"))recompute();
     scheduleSave();
@@ -32,6 +37,17 @@ function wire(){
     if((m=t.closest("[data-notegroup]"))){toggleNoteGroup(m.dataset.notegroup);return;}
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
+    /* Max HP padlock — mirrors [data-hdmode] below, minus the confirm: switching
+       to manual hit dice is a mode change with consequences at level-up, while
+       this is undone by a second tap. Written as `===false` rather than `!`, so
+       an object whose flag is undefined locks explicitly instead of reading the
+       absence as unlocked. */
+    if(t.closest("[data-hplock]")){
+      character.hp.locked=character.hp.locked===false;
+      renderHP();
+      if(character.hp.locked===false){const i=document.getElementById("hpMax");if(i){i.focus();i.select();}}
+      scheduleSave();return;
+    }
     // slot bubbles
     if((m=t.closest(".slot .b"))){const lv=num(m.dataset.slot),i=num(m.dataset.i);const s=character.slots[lv];s.used=(s.used===i)?i-1:i;renderSlotBubbles();scheduleSave();return;}
     // features
@@ -72,6 +88,21 @@ function wire(){
     }
     if(t.closest("[data-hdreset]")){character.hdManual=false;renderHitDice();scheduleSave();return;}
     if((m=t.closest("[data-hdroll]")))return rollHitDie(m.dataset.hdroll);
+    /* Dice style: the token IS the control. An unspent die rolls and heals; a
+       spent one goes back — exactly ONE, not "everything from here on" the way
+       the pips work. Pips are positions on a track, so clicking pip 3 meaning
+       "three spent" is natural; tokens are interchangeable, and tapping one to
+       get three back would contradict its own tooltip. Putting a die back never
+       un-heals you, matching what the pips have always done. */
+    if((m=t.closest("[data-hddie]"))){
+      const die=m.dataset.hddie,i=num(m.dataset.i),p=hitDicePool().find(x=>x.die===die);
+      if(p&&i<=p.used){
+        if(!character.hdUsed)character.hdUsed={};
+        character.hdUsed[die]=Math.max(0,num(character.hdUsed[die])-1);
+        renderHitDice();recompute();scheduleSave();
+      }else rollHitDie(die);
+      return;
+    }
     if((m=t.closest("[data-hd]"))){const die=m.dataset.hd,i=num(m.dataset.i);if(!character.hdUsed)character.hdUsed={};const u=num(character.hdUsed[die]);character.hdUsed[die]=(u===i)?i-1:i;renderHitDice();recompute();scheduleSave();return;}
     if((m=t.closest("[data-fuse]"))){const f=character.features.find(x=>x.id===m.dataset.fuse);if(f&&f.uses){const i=num(m.dataset.i);f.uses.used=(num(f.uses.used)===i)?i-1:i;renderFeatures();scheduleSave();}return;}
     if((m=t.closest("[data-usefeat]")))return useFeature(m.dataset.usefeat);
@@ -130,9 +161,10 @@ function wire(){
   on("btnLongRest","click",longRest);
   on("btnShortRest","click",shortRest);
   document.getElementById("addResource").addEventListener("click",()=>openResourceForm());
-  /* clampHP owns both bounds, so this no longer needs its own ceiling — and it
-     picks up the floor at 0 it never had. */
-  function bumpHP(d){character.hp.cur=num(character.hp.cur)+d;clampHP();renderHP();scheduleSave();}
+  /* clampHP owns both bounds and adjustHP owns the temp-HP-first rule. Every
+     part a damage path needs lives in 65-resources.js, where the harness can
+     reach it; this is the button, and nothing else. */
+  function bumpHP(d){adjustHP(d);renderHP();scheduleSave();}
   document.getElementById("restoreSlots").addEventListener("click",()=>{for(let lv=1;lv<=9;lv++)character.slots[lv].used=0;renderSlotBubbles();scheduleSave();});
   // portrait
   document.getElementById("btnPortrait").addEventListener("click",()=>document.getElementById("filePortrait").click());

@@ -11,7 +11,8 @@ const {X, state, store, bootError, fragments} = loadApp([
   'updProject','updEdited','itemMetaLine','costToGp','addAttackForItem','findClassDef',
   'diffCharacter','applyUpdateRow','applyUpdates','charNeedsUpdate','updResolve','updChangedFields',
   'backupCharacter','libLoad','charKey','mergeRules','resetRules','addFeatureFromDef',
-  'addClass','removeClass','hitDieMax','totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
+  'addClass','removeClass','doLevelUp','hitDieMax','level1HP','resyncLevel1HP','modOf',
+  'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
@@ -422,9 +423,13 @@ X.applyUpdateRow(chg);
 ck('...and applies as a number', ci.cost === 9, ci.cost);
 
 // ---------- level-1 max HP seeding
-// A single class at level 1 has no roll and no choice, so max HP is simply the
-// hit die's maximum. It must never overwrite a number the player typed, and it
-// must not fire when multiclassing (the second class gets a rolled/average HP).
+// A single class at level 1 has no roll and no choice, so max HP is the hit
+// die's maximum PLUS the Constitution modifier, floored at 1. It must never
+// overwrite a number the player typed, and it must not fire when multiclassing
+// (the second class gets a rolled/average HP).
+// blankChar() starts every ability at 10, so modOf is 0 and the plain-seeding
+// assertions below still expect the bare die — that equality is the proof the
+// CON term didn't change any existing number. The non-default-CON cases follow.
 // These assert the MODEL only. The DOM half (renderHP) is inert here because the
 // harness stubs getElementById to a proxy that swallows writes — so a broken HP
 // input would still pass this block. That is what src/tests/rules-data.js's
@@ -435,16 +440,18 @@ ck('hitDieMax parses a bare number', X.hitDieMax({hitDie:'10'})===10);
 ck('hitDieMax is 0 for junk', X.hitDieMax({hitDie:'big'})===0 && X.hitDieMax({})===0);
 ck('hitDieMax is 0 for no def', X.hitDieMax(null)===0);
 
-const hpSetup=(ruleClasses)=>{
+const hpSetup=(ruleClasses,con)=>{
   c=setup();
   X.resetRules(); X.mergeRules({classes:ruleClasses}, 'test');
   X.character.classes=[]; X.character.level=1;
   X.character.hp.max=''; X.character.hp.cur='';
+  X.character.abilities.con=(con==null)?10:con;
 };
-const CLS=[{name:'Fighter',hitDie:'d10'},{name:'Wizard',hitDie:'d6'},{name:'Rogue',hitDie:'d8'}];
+const CLS=[{name:'Fighter',hitDie:'d10'},{name:'Wizard',hitDie:'d6'},{name:'Rogue',hitDie:'d8'},
+           {name:'Peasant',hitDie:'d4'}];
 
 hpSetup(CLS); X.addClass('Rogue',1);
-ck('level 1 single class seeds max HP from the die', X.num(X.character.hp.max)===8, X.character.hp.max);
+ck('level 1 single class seeds max HP from the die + CON', X.num(X.character.hp.max)===8, X.character.hp.max);
 ck('level 1 also starts at full HP', X.num(X.character.hp.cur)===8, X.character.hp.cur);
 
 hpSetup(CLS); X.character.hp.max=5; X.addClass('Rogue',1);
@@ -474,6 +481,99 @@ ck('an HP the player edited survives class removal', X.num(X.character.hp.max)==
 
 hpSetup(CLS); X.addClass('Fighter',1); X.addClass('Wizard',1); X.removeClass(1);
 ck('removing a multiclass level does not clear HP', X.num(X.character.hp.max)===10);
+
+// ---------- the CON term
+hpSetup(CLS,16);
+ck('level1HP adds a positive CON mod', X.level1HP({hitDie:'d8'})===11, X.level1HP({hitDie:'d8'}));
+hpSetup(CLS,8);
+ck('level1HP subtracts a negative CON mod', X.level1HP({hitDie:'d10'})===9, X.level1HP({hitDie:'d10'}));
+ck('level1HP keeps 0 as the no-die sentinel',
+   X.level1HP({hitDie:'big'})===0 && X.level1HP(null)===0);
+// Floored at 1: a real 0 would be indistinguishable from the sentinel above,
+// and effMaxHP()>0 is what clampHP and longRest read as "a maximum is set".
+hpSetup(CLS,1);
+ck('level1HP floors below zero at 1', X.level1HP({hitDie:'d4'})===1, X.level1HP({hitDie:'d4'}));
+ck('level1HP floors at the boundary too', X.level1HP({hitDie:'d6'})===1, X.level1HP({hitDie:'d6'}));
+
+hpSetup(CLS,16); X.addClass('Rogue',1);
+ck('seeding at CON 16 gives die + 3', X.num(X.character.hp.max)===11, X.character.hp.max);
+ck('...and starts at that full HP', X.num(X.character.hp.cur)===11, X.character.hp.cur);
+
+hpSetup(CLS,16); X.character.hp.max=5; X.addClass('Rogue',1);
+ck('a typed max still survives a non-default CON', X.num(X.character.hp.max)===5);
+
+hpSetup(CLS,16); X.addClass('Fighter',1);
+ck('Fighter at CON 16 seeds 13', X.num(X.character.hp.max)===13, X.character.hp.max);
+X.removeClass(0);
+ck('the un-seed recomputes the CON term too', X.character.hp.max==='' && X.character.hp.cur==='',
+   X.character.hp.max+'/'+X.character.hp.cur);
+
+// ---------- resyncLevel1HP: the seeded number keeps tracking CON
+// Without this, seeding at CON 10 and then editing CON leaves hp.max stale, and
+// removeClass's exact match silently stops firing — the clean-revert regression
+// that putting CON in the formula would otherwise introduce.
+hpSetup(CLS); X.addClass('Fighter',1);
+X.character.abilities.con=16; X.resyncLevel1HP(10);
+ck('resync follows CON up', X.num(X.character.hp.max)===13, X.character.hp.max);
+ck('...and a character at full HP stays at full', X.num(X.character.hp.cur)===13, X.character.hp.cur);
+X.removeClass(0);
+ck('a resynced seed still un-seeds cleanly', X.character.hp.max==='', X.character.hp.max);
+
+hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.max=20; X.character.hp.cur=20;
+X.character.abilities.con=16; X.resyncLevel1HP(10);
+ck('resync leaves a max the player edited alone', X.num(X.character.hp.max)===20, X.character.hp.max);
+
+hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.cur=5;
+X.character.abilities.con=16; X.resyncLevel1HP(10);
+ck('resync moves the max of a damaged character', X.num(X.character.hp.max)===13);
+ck('...but not their current HP', X.num(X.character.hp.cur)===5, X.character.hp.cur);
+
+hpSetup(CLS); X.addClass('Fighter',1); X.resyncLevel1HP(10);
+ck('resync is a no-op when CON did not change', X.num(X.character.hp.max)===10);
+
+hpSetup(CLS); X.addClass('Fighter',2); X.character.hp.max=12;
+X.character.abilities.con=16; X.resyncLevel1HP(10);
+ck('resync stops at level 2 — that max is a rolled total', X.num(X.character.hp.max)===12);
+
+hpSetup(CLS); X.addClass('Fighter',1); X.addClass('Wizard',1);
+X.character.abilities.con=16; X.resyncLevel1HP(10);
+ck('resync does not fire while multiclassed', X.num(X.character.hp.max)===10);
+
+hpSetup(CLS); X.character.abilities.con=16; X.resyncLevel1HP(10);
+ck('resync with no class at all is harmless', X.character.hp.max==='');
+
+// Typing "16" into a number box fires per keystroke and passes through 1
+// (mod -5). Each step recognises the previous step's own number, so the
+// intermediate value is transient rather than sticky.
+hpSetup(CLS); X.addClass('Fighter',1);
+X.character.abilities.con=1; X.resyncLevel1HP(10);
+ck('mid-typing CON 1 clamps a d10 to 5', X.num(X.character.hp.max)===5, X.character.hp.max);
+X.character.abilities.con=16; X.resyncLevel1HP(1);
+ck('...and the next keystroke recovers the right number', X.num(X.character.hp.max)===13,
+   X.character.hp.max);
+ck('...with current HP still tracking it', X.num(X.character.hp.cur)===13, X.character.hp.cur);
+
+// ---------- the Max HP lock never gets in the automatic writers' way
+// They write character.hp.max directly; only a PLAYER typing into the box goes
+// through applyHPInput, which is where the lock lives. If someone ever routes
+// them through the box "for consistency", a locked level-1 character silently
+// ends up with no hit points at all.
+hpSetup(CLS); X.character.hp.locked=true; X.addClass('Rogue',1);
+ck('a locked box does not block the level-1 seed', X.num(X.character.hp.max)===8, X.character.hp.max);
+ck('...and the lock is still on afterwards', X.character.hp.locked===true);
+
+hpSetup(CLS); X.character.hp.locked=true; X.addClass('Rogue',1);
+X.character.abilities.con=16; X.resyncLevel1HP(10);
+ck('a locked box does not block the CON re-sync', X.num(X.character.hp.max)===11, X.character.hp.max);
+
+hpSetup(CLS); X.character.hp.locked=true; X.addClass('Rogue',1); X.removeClass(0);
+ck('a locked box does not block the clean un-seed', X.character.hp.max==='', X.character.hp.max);
+
+// Levelling is the one moment Max HP legitimately changes and the app cannot
+// compute it, so it hands the box back rather than making you fight a padlock.
+hpSetup(CLS); X.addClass('Rogue',1); X.character.hp.locked=true; X.doLevelUp();
+ck('levelling up unlocks Max HP so the new total can be typed', X.character.hp.locked===false);
+ck('...and actually levelled', X.num(X.character.classes[0].level)===2);
 
 // ---------- item weight is rules-owned, like cost
 c=setup();

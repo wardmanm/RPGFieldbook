@@ -61,3 +61,34 @@ Bullets below this line — leave the heading in place.
 - **New rules pack: homebrew.** The first entry is The Predator, a Warlock patron from D&D Wiki, with
   its Pact of Tooth and Claw boon and six Tooth and Fang invocations. It needs the D&D 2024 pack and,
   for two of its expanded spells, Xanathar's Guide — and it will tell you if either is missing.
+- **Fixed: level 1 characters were short on hit points.** Adding your first class now fills in your
+  hit die's maximum plus your Constitution modifier, rather than just the die. If you set
+  Constitution afterwards — which is the order most people build in — the filled-in maximum follows
+  it, and your current HP comes with it while you are still at full. A number you typed into the Max
+  box yourself is never touched, and from level 2 on nothing is filled in for you.
+- **Max HP is now locked by default.** It is the one number that almost never changes once you have
+  built your character, and a stray keystroke in it used to pull your current HP down with it
+  silently. Tap the padlock beside the Max label to open the box, and tap it again to close it.
+  Nothing the app fills in for you is affected — adding your first class still sets your maximum, it
+  still follows your Constitution while you are level 1, and removing that class still takes it back
+  out. Levelling up opens the box for you, because that is the one moment you need to type a new
+  total the app cannot work out for itself.
+- **Hit Dice now sit directly under Hit Points.** They are the same resource read two ways — spending
+  one heals you in the box above it — so they are now a stacked pair inside Vitals rather than being
+  filed under Rest & Recovery two cards away. The pool itself is unchanged: auto or manual, a row per
+  die size, the pips, the count in words and the Roll button. Rest & Recovery keeps the short and
+  long rest buttons.
+- **Hit Dice can now be shown three ways, and you pick per character** under Settings, This
+  character. Full — the default — boxes each die size like a stat block; Condensed is one tight line per size; Dice
+  draws every hit die as a token you tap to spend, with spent ones greyed out. Full and Condensed
+  keep the pips and the Roll button, and they are the two that let you mark a die spent without
+  healing. Whichever you choose, the auto/manual switch now sits on the Hit Dice heading instead of
+  on a line of its own.
+- **Current HP now changes colour as it drops** — amber at half your maximum, red at a quarter. It
+  follows your effective maximum, so an item or feature that raises your HP moves the thresholds with
+  it. Turn it off per character under Settings, This character.
+- **Damage now spends temporary hit points first.** The − button beside your HP, and typing something
+  like -7 into either the Current or the Temp box, all take the hit out of Temp before it reaches
+  Current, and empty the Temp box as it is used up. A hit bigger than your temporary HP carries the
+  rest over into Current instead of stopping at nothing. Healing still only ever touches Current, and
+  still stops at your maximum.

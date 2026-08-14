@@ -742,6 +742,30 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const t = fs.readFileSync(path.join(ROOT, 'src/fieldbook.template.html'), 'utf8');
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
   const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const cardsCss = fs.readFileSync(path.join(ROOT, 'src/css/20-cards.css'), 'utf8');
+  const sheetCss = fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8');
+
+  /* Slice one element and its whole subtree by counting <div>/</div> from the
+     tag carrying `needle`. The guards below used to slice "from this literal to
+     the next <div class=\"card\"" and "non-greedy to the first </div>", and both
+     encoded the current NESTING as well as the current content — so a block
+     moving between cards, or a child turning into a <div>, broke them for
+     reasons that had nothing to do with what they guard. Safe here because no
+     `<div` appears inside an attribute value or an HTML comment in this file. */
+  function block(html, needle) {
+    const at = html.lastIndexOf('<div', html.indexOf(needle));
+    const re = /<div\b|<\/div>/g;
+    re.lastIndex = at;
+    let depth = 0, m;
+    while ((m = re.exec(html))) {
+      depth += m[0] === '</div>' ? -1 : 1;
+      if (depth === 0) return html.slice(at, m.index + m[0].length);
+    }
+    return html.slice(at);
+  }
+  const vitals = block(t, 'data-note="vitals"');
+  const rest = block(t, 'data-note="rest"');
+  const hpwrap = block(t, 'class="hpwrap"');
 
   // The whole point of the HP rework: data-path commits on every keystroke, so
   // typing "-3" would store "-" at the first character.
@@ -752,32 +776,166 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      !/data-hp="[a-z]+"[^>]*type="number"/.test(t) && (t.match(/inputmode="tel" data-hp=/g) || []).length === 3,
      t.match(/<input[^>]*data-hp[^>]*>/g));
 
+  // 90-boot.js is dropped from the test bundle (harness.js), so its call sites
+  // are unreachable and regex-on-source is the only check there is. Brittle, but
+  // the alternative is no coverage at all on wiring that fails quietly.
+  const bumpHP = (js.match(/function bumpHP\([^)]*\)\{[^\n]*\}/) || [''])[0];
+  ck('the − button delegates to adjustHP', /adjustHP\(/.test(bumpHP), bumpHP);
+  ck('...and no longer writes current HP itself', !/character\.hp\.cur\s*=/.test(bumpHP), bumpHP);
+  ck('editing CON re-syncs a level-1 seeded max HP',
+     /character\.abilities\.con/.test(js) && /resyncLevel1HP\(prevCon\)/.test(js));
+
   // the death-save click handler is `.death .c` — the circles must stay inside it
-  const deathBlock = (t.match(/<div class="death"[\s\S]*?<\/div>\s*\n/) || [''])[0];
+  const deathBlock = block(t, 'class="death"');
   ck('both death-save sets are inside .death',
      deathBlock.includes('id="deathSucc"') && deathBlock.includes('id="deathFail"'), deathBlock);
   // failures read first, beside the skull's own colour; successes on the right
   ck('failures come before successes',
      deathBlock.indexOf('id="deathFail"') < deathBlock.indexOf('id="deathSucc"'));
+  ck('the death saves stay inside the HP panel, under the +/- row',
+     hpwrap.includes('id="deathFail"') && hpwrap.indexOf('id="hpMinus"') < hpwrap.indexOf('id="deathFail"'));
   ck('the failure set is laid out in reverse so it fills outward from the skull',
-     /\.death \.set\[data-kind="fail"\]\{[^}]*row-reverse/.test(
-       fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8')));
+     /\.death \.set\[data-kind="fail"\]\{[^}]*row-reverse/.test(sheetCss));
   // a bare U+FE0E is invisible in source and a colour emoji is wrong on the sheet
   ck('the skull is the text-presentation entity pair', t.includes('&#9760;&#65038;'));
 
   // starBtn is looked up UNGUARDED nowhere any more, but it is still the id both
   // recompute() and wire() reach for, and there must be exactly one
   ck('exactly one starBtn', (t.match(/id="starBtn"/g) || []).length === 1);
-  ck('the star sits in the Vitals label row', /<div class="label">Vitals[^\n]*id="starBtn"/.test(t));
+  // was a one-physical-line regex, which pinned the label's formatting as well
+  // as the fact that it holds the star
+  ck('the star sits in the Vitals label row',
+     ((vitals.match(/<div class="label">[\s\S]*?<\/div>/) || [''])[0]).includes('id="starBtn"'));
 
-  // Rest & Recovery owns the rests AND all three hit-dice pieces — the whole
-  // point was that hit dice stopped being in two places
-  const rr = t.slice(t.indexOf('Rest &amp; Recovery'));
-  const card = rr.slice(0, rr.indexOf('<div class="card"'));
-  ck('Rest & Recovery owns both rests and all of hit dice',
-     ['btnShortRest', 'btnLongRest', 'hitdiceInput', 'data-hdmode', 'hdWrap'].every(s => card.includes(s)),
-     ['btnShortRest', 'btnLongRest', 'hitdiceInput', 'data-hdmode', 'hdWrap'].filter(s => !card.includes(s)));
-  ck('hit dice is not still up in Vitals', (t.match(/id="hitdiceInput"/g) || []).length === 1);
+  // Vitals owns Hit Points AND Hit Dice, stacked, so the two read as one pair —
+  // spending a hit die writes straight into the box above it. Rest & Recovery
+  // keeps only the rests, and keeps existing because it is a data-note anchor.
+  const hd = ['hitdiceInput', 'data-hdmode', 'hdWrap'];
+  const owned = ['data-hp="cur"', 'data-hp="max"', 'data-hp="temp"', 'id="deathFail"', 'data-hplock'].concat(hd);
+  ck('Vitals owns HP, the death saves, the padlock and all of hit dice',
+     owned.every(s => vitals.includes(s)), owned.filter(s => !vitals.includes(s)));
+  ck('Rest & Recovery keeps both rest buttons',
+     rest.includes('id="btnShortRest"') && rest.includes('id="btnLongRest"'));
+  ck('...and no hit dice is left behind in it',
+     !hd.some(s => rest.includes(s)) && !/data-hp=/.test(rest), rest);
+  ck('hit dice is written once, not in two cards',
+     (t.match(/id="hitdiceInput"/g) || []).length === 1 &&
+     (t.match(/id="hdWrap"/g) || []).length === 1);
+  ck('the hit-dice panel sits BELOW the HP panel, not inside it',
+     vitals.indexOf('id="hdWrap"') > vitals.indexOf('id="maxNote"') && !hpwrap.includes('id="hdWrap"'));
+
+  // .hd-row is display:contents feeding .hd-grid's repeat(4,max-content): the
+  // row hands its four cells straight to that grid, which is the only reason a
+  // multiclass pool lines its die/pips/count/Roll up across rows. Anything
+  // nested between them breaks the alignment with no error at all — and only on
+  // a multiclass sheet, which is why it needs a guard rather than an eyeball.
+  ck('.hd-row is display:contents', /\.hd-row\{[^}]*display:contents/.test(cardsCss));
+  ck('.hd-grid is the four-column max-content grid it feeds',
+     /\.hd-grid\{[^}]*grid-template-columns:repeat\(4,max-content\)/.test(cardsCss));
+  ck('renderHitDice puts .hd-row directly inside .hd-grid',
+     /class="hd-grid">`\s*\+\s*pool\.map/.test(js) &&
+     /return `<div class="hd-row">/.test(js));
+
+  // the two panels are a pair: one heading rule, one frame treatment, one colour
+  // apart. The rough skin is why the frame matters — a real CSS border takes no
+  // filter, so it stops matching .hpwrap the moment the two become neighbours.
+  ck('Hit Points and Hit Dice share one heading rule', /\.hp-title,\.hd-title\{/.test(sheetCss));
+  // the rule existing is not the same as the panel wearing it
+  ck('both panels actually carry a heading',
+     /<div class="hp-title">Hit Points<\/div>/.test(hpwrap) &&
+     /<div class="hd-title">Hit Dice[\s\S]{0,200}?<\/div>/.test(vitals));
+  // the auto/manual pill rides ON the heading — alone on its own line it read as
+  // an orphaned control and cost a whole row of the panel's height
+  ck('the auto/manual pill sits on the Hit Dice heading',
+     /<div class="hd-title">Hit Dice <button class="hd-mode" data-hdmode/.test(vitals));
+  // anchored at a line start so it matches the STANDALONE rule, not the shared
+  // `.hp-title,.hd-title{...}` one, whose body has no colour at all
+  ck('the hit-dice heading is not brick (that is the HP panel\'s colour)',
+     /\n\.hd-title\{[^}]*color:var\(--(?!brick\))[a-z0-9-]+\)/.test(sheetCss),
+     (sheetCss.match(/\n\.hd-title\{[^}]*\}/) || [''])[0]);
+  ck('the hit-dice panel takes the rough skin like the HP panel does',
+     /html\[data-rough="on"\] \.hd-box::before/.test(cardsCss) &&
+     /html\[data-rough="on"\] \.hpwrap::before/.test(sheetCss));
+
+  // ---- the Max HP lock
+  ck('exactly one padlock, and it is beside the Max label',
+     (t.match(/data-hplock/g) || []).length === 1 && /Max <button class="hp-lock" data-hplock/.test(t),
+     (t.match(/<div class="n">Max[\s\S]{0,60}/) || [''])[0]);
+  // U+1F512 has no text-presentation variant, so the &#65038; trick that tames
+  // the skull does not exist for it — it would render as a colour emoji
+  ck('the padlock is an icon button, not an emoji',
+     /data-hplock[\s\S]{0,200}<svg/.test(t) && !/🔒|&#128274;/.test(t));
+  ck('the padlock announces its state to a screen reader',
+     /data-hplock[\s\S]{0,160}aria-pressed=/.test(t));
+  ck('the padlock shares the hit-dice pill', /\.hd-mode,\.hp-lock\{/.test(cardsCss));
+  // two layers: readOnly is only a hint, so applyHPInput refuses it a second time
+  ck('renderHP drives the Max box readOnly from the lock',
+     /function renderHP\(\)\{[\s\S]*?getElementById\("hpMax"\)[\s\S]{0,60}readOnly=/.test(js));
+  ck('...and repaints the padlock itself', /function renderHP\(\)\{[\s\S]*?data-hplock/.test(js));
+  ck('applyHPInput refuses a locked Max before it writes anything',
+     /k==="max"&&character\.hp\.locked!==false\)\{renderHP\(\);return false;\}/.test(js));
+  ck('the data-hp guard no longer admits the new non-numeric key',
+     !/inp\.dataset\.hp;if\(!k\|\|!\(k in character\.hp\)\)/.test(js));
+  ck('the padlock is wired and toggles the lock',
+     /closest\("\[data-hplock\]"\)/.test(js) && /character\.hp\.locked=character\.hp\.locked===false/.test(js));
+  ck('unlocking focuses the Max box',
+     /data-hplock[\s\S]{0,340}getElementById\("hpMax"\)[\s\S]{0,90}focus\(\)/.test(js));
+  ck('the padlock does not ask for confirmation', !/data-hplock[\s\S]{0,340}confirm\(/.test(js));
+  // the automatic writers go to the model, not through the box: only doLevelUp
+  // may touch the flag, and only to clear it
+  const cls = fs.readFileSync(path.join(ROOT, 'src/js/56-class.js'), 'utf8');
+  ck('56-class.js touches the lock exactly once', (cls.match(/hp\.locked/g) || []).length === 1);
+  ck('...in doLevelUp, and only to clear it',
+     /function doLevelUp\(\)\{[\s\S]*?character\.hp\.locked=false;renderHP\(\)/.test(cls));
+  ck('the seed and the un-seed still write hp.max directly (they bypass the lock)',
+     /character\.hp\.max=hp;/.test(cls) && /character\.hp\.max=now;/.test(cls) && /character\.hp\.max="";/.test(cls));
+
+  // ---- current-HP colour bands
+  ck('the warn colour is its own token, not --accent',
+     // on the classic skin --accent IS --brick, so reusing it would make the
+     // amber and the red bands identical
+     /--warn:/.test(fs.readFileSync(path.join(ROOT, 'src/css/00-tokens.css'), 'utf8')));
+  ck('--warn is defined in every palette that defines --brick', (() => {
+    const tok = fs.readFileSync(path.join(ROOT, 'src/css/00-tokens.css'), 'utf8');
+    return (tok.match(/--warn:/g) || []).length === (tok.match(/--brick:/g) || []).length;
+  })());
+  ck('both bands are styled on the HP box',
+     /\.hpcol input\.hp-warn\{color:var\(--warn\)\}/.test(sheetCss) &&
+     /\.hpcol input\.hp-danger\{color:var\(--brick\)\}/.test(sheetCss));
+  ck('renderHP paints the band onto the Current box',
+     /function renderHP\(\)\{[\s\S]*?getElementById\("hpCur"\)[\s\S]{0,140}classList\.toggle\("hp-warn"/.test(js));
+  ck('the colour switch is in the "This character" settings section, per character',
+     /id="swHpColor"/.test(js) && /character\.hpColor/.test(js));
+
+  // ---- the three hit-dice styles
+  // Each is a separate builder, so a broken one is a broken LOOK, not an error.
+  ck('all three hit-dice styles have a builder',
+     /function hdFullHTML\(/.test(js) && /function hdCondensedHTML\(/.test(js) && /function hdDiceHTML\(/.test(js));
+  ck('renderHitDice picks between all three', (() => {
+     const r = (js.match(/function renderHitDice\(\)\{[\s\S]*?\n\}/) || [''])[0];
+     return /hdFullHTML/.test(r) && /hdDiceHTML/.test(r) && /hdCondensedHTML/.test(r);
+  })());
+  // an unknown or absent value must land on full — the same value blankChar
+  // defaults to, which is what saves the setting from needing a migration and
+  // stops an old sheet showing something a new character would not
+  ck('an unrecognised style falls back to full',
+     /function hdStyle\(\)\{[\s\S]{0,160}?:"full"/.test(js),
+     (js.match(/function hdStyle\(\)\{[\s\S]{0,160}/) || [''])[0]);
+  ck('...and blankChar defaults to the same thing', /hdStyle:"full"/.test(js));
+  ck('the style picker is per character, in the settings modal',
+     /id="segHdStyle"/.test(js) && /character\.hdStyle=b\.dataset\.hdstyle/.test(js));
+  ck('all three styles are offered by name', (() => {
+     const seg = (js.match(/id="segHdStyle"[\s\S]{0,400}/) || [''])[0];
+     return ['full', 'condensed', 'dice'].every(v => seg.includes(`"${v}"`));
+  })());
+  // the dice style's token is the control: unspent rolls, spent goes back
+  ck('the dice tokens are wired', /closest\("\[data-hddie\]"\)/.test(js));
+  ck('...and tapping an unspent die rolls it',
+     /data-hddie[\s\S]{0,400}rollHitDie\(die\)/.test(js));
+  ck('the full and condensed styles keep the pips and the Roll button',
+     /function hdPips\(/.test(js) &&
+     ['hdFullHTML', 'hdCondensedHTML'].every(f =>
+       new RegExp('function ' + f + '\\([\\s\\S]*?data-hdroll').test(js)));
 }
 
 // ---------- Settings modal: every control is still wired

@@ -6,8 +6,8 @@ const {loadApp, makeCheck} = require('./harness');
 
 const ck = makeCheck();
 const {X, bootError, fragments} = loadApp([
-  'signedEntry', 'num', 'fnum', 'fmtWt', 'fmtGp', 'blankChar', 'migrate',
-  'clampHP', 'effMaxHP',
+  'signedEntry', 'signedDelta', 'num', 'fnum', 'fmtWt', 'fmtGp', 'blankChar', 'migrate',
+  'clampHP', 'effMaxHP', 'adjustHP', 'applyHPInput', 'renderHP', 'hpBand', 'hdStyle',
   'itemWeight', 'itemWeightTotal', 'coinsWeight', 'carriedWeight',
   'sizeName', 'sizeLabel', 'charSize', 'carryCapacity', 'encMode', 'encState',
   'encSpeed', 'encTierNote', 'contributions', 'inventoryTotal', 'SIZES', 'SIZE_CARRY',
@@ -90,9 +90,69 @@ ck('effMaxHP(c) agrees with effMaxHP()', X.effMaxHP(X.contributions()) === X.eff
 X.clampHP();
 ck('a +5 max HP item lets you keep 15, not 10', X.character.hp.cur === 15);
 
+// ---------- damage spends temporary HP first
+// Temp was stored, displayed and cleared on a long rest, but nothing ever spent
+// it — the player did the subtraction by hand. adjustHP is the one delta path:
+// the − button, a typed negative, and a spent hit die all come through here.
+hpOf({cur: 9, max: 12, temp: ''});  X.adjustHP(-1);
+ck('with no temp, damage comes straight off current', X.character.hp.cur === 8);
+ck('...and an unset temp is not coerced to zero', X.character.hp.temp === '');
+
+hpOf({cur: 10, max: 10, temp: 5});  X.adjustHP(-3);
+ck('temp HP soaks the hit first', X.character.hp.temp === 2);
+ck('...leaving current untouched', X.character.hp.cur === 10);
+
+hpOf({cur: 10, max: 10, temp: 3});  X.adjustHP(-3);
+ck('temp spent exactly to nothing reads back blank, as a long rest leaves it',
+   X.character.hp.temp === '' && X.character.hp.cur === 10);
+
+hpOf({cur: 10, max: 10, temp: 2});  X.adjustHP(-5);
+ck('damage past your temp spills into current', X.character.hp.cur === 7);
+ck('...and the temp box empties', X.character.hp.temp === '');
+
+hpOf({cur: 5, max: 12, temp: 5});   X.adjustHP(3);
+ck('healing never touches temp — it is granted, not restored',
+   X.character.hp.cur === 8 && X.character.hp.temp === 5);
+hpOf({cur: 12, max: 12, temp: 5});  X.adjustHP(1);
+ck('healing overflow does not become temp',
+   X.character.hp.cur === 12 && X.character.hp.temp === 5);
+
+hpOf({cur: 1, max: 12, temp: 0});   X.adjustHP(-50);
+ck('overkill still floors at zero', X.character.hp.cur === 0);
+// clampHP floors temp but never caps it: a big ward legitimately exceeds max.
+hpOf({cur: 5, max: 10, temp: 20});  X.adjustHP(-1);
+ck('temp above your maximum stays legal', X.character.hp.temp === 19 && X.character.hp.cur === 5);
+
+hpOf({cur: 15, max: 10, temp: 4});
+X.character.features = [{name: 'Tough', effects: [{target: 'hp.max', value: 5}]}];
+X.adjustHP(-6);
+ck('adjustHP clamps against the EFFECTIVE max',
+   X.character.hp.temp === '' && X.character.hp.cur === 13,
+   X.character.hp.temp + '/' + X.character.hp.cur);
+X.character.features = [];
+
+hpOf({cur: 8, max: 12, temp: 3});   X.adjustHP(0);
+ck('a zero delta moves nothing',
+   X.character.hp.cur === 8 && X.character.hp.temp === 3 && X.character.hp.max === 12);
+
+// ---------- signedDelta: the same grammar, read as a delta rather than a total
+const d = X.signedDelta;
+ck('signedDelta reads damage', d('-7') === -7);
+ck('signedDelta reads healing, space after the sign and all', d('+ 4') === 4);
+ck('signedDelta takes the unicode minus the hint shows', d('−7') === -7);
+ck('signedDelta reads grouped digits', d('-1,200') === -1200);
+ck('a bare total is not a delta', d('12') === null);
+ck('junk is not a delta either', d('+ab') === null && d('') === null && d(null) === null);
+
 // ---------- signed entry composed the way applyHPInput composes it
+// NOTE: typeHP documents how signedDelta / signedEntry / clampHP COMPOSE. It is
+// not applyHPInput and deliberately carries no Max-HP lock guard — the lock is
+// asserted against the real function further down.
 hpOf({cur: 8, max: 12, temp: ''});
-const typeHP = (k, s) => { const n = X.signedEntry(X.character.hp[k], s);
+const typeHP = (k, s) => {
+  const dmg = (k === 'cur' || k === 'temp') ? X.signedDelta(s) : null;
+  if (dmg !== null && dmg < 0) { X.adjustHP(dmg); return dmg; }
+  const n = X.signedEntry(X.character.hp[k], s);
   if (n !== null) { X.character.hp[k] = n; X.clampHP(); } return n; };
 typeHP('cur', '-3');
 ck('typing -3 into Current takes 3 damage', X.character.hp.cur === 5);
@@ -101,13 +161,150 @@ ck('healing past your maximum stops at your maximum', X.character.hp.cur === 12)
 typeHP('cur', '-100');
 ck('a big hit floors at zero, never negative', X.character.hp.cur === 0);
 typeHP('temp', '+7');
-ck('temp HP takes signed entries too', X.character.hp.temp === 7);
+ck('granting temp HP still just adds to the box', X.character.hp.temp === 7);
 ck('junk in an HP box is rejected, not read as zero', typeHP('cur', '5 hp') === null);
 ck('and the rejected box keeps its value', X.character.hp.cur === 0);
-// lowering Max has to drag Current down with it
-hpOf({cur: 30, max: 30, temp: ''});
+// lowering Max has to drag Current down with it. A negative in the MAX box is
+// still a plain edit — only the Current box reads one as damage.
+hpOf({cur: 30, max: 30, temp: 4});
 typeHP('max', '-20');
 ck('lowering Max pulls Current down to it', X.character.hp.cur === 10 && X.character.hp.max === 10);
+ck('...without spending temp on the way', X.character.hp.temp === 4);
+// and the Current box routes through adjustHP, so a typed hit spends temp too
+hpOf({cur: 10, max: 10, temp: 5});
+typeHP('cur', '-7');
+ck('typing damage into Current spends temp first',
+   X.character.hp.temp === '' && X.character.hp.cur === 8,
+   X.character.hp.temp + '/' + X.character.hp.cur);
+typeHP('cur', '+1');
+ck('typing a heal leaves temp alone', X.character.hp.cur === 9 && X.character.hp.temp === '');
+// A negative in the TEMP box is damage too, and means the same as the same
+// entry in Current. signedEntry would have floored temp at 0 and thrown the
+// overflow away, leaving you 2 hit points better off than you should be.
+hpOf({cur: 10, max: 10, temp: 3});
+typeHP('temp', '-5');
+ck('damage typed into Temp rolls the overflow into current',
+   X.character.hp.temp === '' && X.character.hp.cur === 8,
+   X.character.hp.temp + '/' + X.character.hp.cur);
+hpOf({cur: 10, max: 10, temp: 5});
+typeHP('temp', '-3');
+ck('...and stops at Temp when it covers the hit',
+   X.character.hp.temp === 2 && X.character.hp.cur === 10);
+
+/* ---- the Max HP lock ----
+   Max is the one number that barely moves after character creation and is
+   catastrophic to fat-finger: a stray digit drags Current down through clampHP()
+   and there is no undo. Asserted against the REAL applyHPInput, not the
+   composition helper above — the harness's DOM stub swallows renderHP's writes,
+   returns null from querySelector and no-ops setTimeout, so it is safe to call. */
+const box = (k, v) => X.applyHPInput({dataset: {hp: k}, value: v});
+
+ck('a new character starts with Max HP locked', X.blankChar().hp.locked === true);
+
+// temp deliberately empty here, so damage to Current is unambiguous — with temp
+// set it would be soaked first, which the block above already covers
+hpOf({cur: 8, max: 12, temp: ''});
+ck('a locked Max box refuses a typed number', box('max', '40') === false);
+ck('...and the model is untouched', X.character.hp.max === 12);
+ck('a locked Max box refuses a typed delta too',
+   box('max', '+5') === false && X.character.hp.max === 12);
+ck('the lock is only on Max — Current still takes damage',
+   box('cur', '-3') === true && X.character.hp.cur === 5);
+ck('...and Temp still takes a grant', box('temp', '+4') === true && X.character.hp.temp === 4);
+
+X.character.hp.locked = false;
+ck('unlocked, Max takes the number', box('max', '40') === true && X.character.hp.max === 40);
+ck('...and a negative in Max is still a plain edit, not damage',
+   box('max', '-30') === true && X.character.hp.max === 10 && X.character.hp.temp === 4);
+// Current was 5 and the new max is 10, so nothing to drag; push it over first
+X.character.hp.cur = 30;
+ck('...which still drags Current down with it',
+   box('max', '-2') === true && X.character.hp.max === 8 && X.character.hp.cur === 8);
+
+// A character object that never went through migrate() must read as LOCKED, not
+// as unlocked-by-absence: `!==false`, not a truth test.
+hpOf({cur: 8, max: 12, temp: ''});
+delete X.character.hp.locked;
+ck('a missing lock flag means locked', box('max', '99') === false && X.character.hp.max === 12);
+
+// `locked` is a key on character.hp now, so the old `k in character.hp` guard
+// would have let a data-hp="locked" hook write a boolean field.
+hpOf({cur: 8, max: 12, temp: ''});
+ck('no data-hp hook can reach the lock flag',
+   box('locked', 'false') === true && X.character.hp.locked === true);
+
+// The lock is a new sub-key of character.hp. migrate() normalizes hp onto
+// blankChar()'s defaults, so this needs no new code — which is exactly why it
+// needs a test, or the next person to tidy that Object.assign silently unlocks
+// every sheet in the world.
+const preLock = X.migrate({id: 'old', name: 'Before the lock', hp: {cur: 12, max: 24, temp: ''}});
+ck('a sheet saved before the lock comes back locked', preLock.hp.locked === true);
+ck('...with its HP numbers untouched', preLock.hp.max === 24 && preLock.hp.cur === 12);
+const unlocked = X.migrate({id: 'u', hp: {cur: 30, max: 30, temp: '', locked: false}});
+ck('a deliberately unlocked sheet survives a round-trip', unlocked.hp.locked === false);
+ck('...and a second one', X.migrate(JSON.parse(JSON.stringify(unlocked))).hp.locked === false);
+// migrate's Object.assign only runs when s.hp is a non-array object, so a sheet
+// with no hp at all is a separate branch
+ck('a sheet with no hp object at all still comes back locked',
+   X.migrate({id: 'bare'}).hp.locked === true);
+
+/* ---- current HP colours by how much of your maximum is left ----
+   Measured against the EFFECTIVE max so an item that raises it moves the bands,
+   and excluding temp, which sits above your maximum rather than inside it. */
+X.character.features = [];
+hpOf({cur: 20, max: 20, temp: ''});
+ck('full HP is not coloured', X.hpBand() === '');
+hpOf({cur: 11, max: 20, temp: ''});
+ck('just over half is not coloured', X.hpBand() === '');
+hpOf({cur: 10, max: 20, temp: ''});
+ck('exactly half is amber', X.hpBand() === 'hp-warn');
+hpOf({cur: 6, max: 20, temp: ''});
+ck('above a quarter is still amber', X.hpBand() === 'hp-warn');
+hpOf({cur: 5, max: 20, temp: ''});
+ck('exactly a quarter is red', X.hpBand() === 'hp-danger');
+hpOf({cur: 0, max: 20, temp: ''});
+ck('nothing left is red', X.hpBand() === 'hp-danger');
+// a blank new character must not open painted red
+hpOf({cur: '', max: '', temp: ''});
+ck('no maximum set means no band at all', X.hpBand() === '');
+// temp is a buffer ABOVE the maximum — folding it in could read as healthy
+// while the real pool is empty
+hpOf({cur: 3, max: 20, temp: 30});
+ck('temp HP does not lift you out of the red band', X.hpBand() === 'hp-danger');
+// the bands follow the effective max, not the number in the box
+hpOf({cur: 11, max: 20, temp: ''});
+X.character.features = [{name: 'Tough', effects: [{target: 'hp.max', value: 20}]}];
+ck('an item that raises your maximum moves the thresholds', X.hpBand() === 'hp-warn');
+X.character.features = [];
+hpOf({cur: 3, max: 20, temp: ''});
+X.character.hpColor = false;
+ck('the per-character switch turns the colouring off', X.hpBand() === '');
+X.character.hpColor = true;
+ck('...and back on', X.hpBand() === 'hp-danger');
+ck('colouring is on by default for a new character', X.blankChar().hpColor === true);
+ck('...and for a sheet saved before the setting existed',
+   X.migrate({id: 'old2'}).hpColor === true);
+
+/* ---- the hit-dice display style ----
+   Three looks, chosen per character. hdStyle() resolves anything it does not
+   recognise to full — the same value blankChar defaults to, so an older sheet
+   with no field at all lands on the same look a new character gets, and the
+   setting needs no migration of its own. */
+ck('a new character defaults to full', X.blankChar().hdStyle === 'full');
+X.character.hdStyle = 'full';      ck('full is honoured', X.hdStyle() === 'full');
+X.character.hdStyle = 'dice';      ck('dice is honoured', X.hdStyle() === 'dice');
+X.character.hdStyle = 'condensed'; ck('condensed is honoured', X.hdStyle() === 'condensed');
+X.character.hdStyle = 'nonsense';  ck('an unknown style falls back', X.hdStyle() === 'full');
+delete X.character.hdStyle;        ck('a missing style falls back too', X.hdStyle() === 'full');
+ck('a sheet saved before the styles existed reads as full',
+   X.migrate({id: 'old3'}).hdStyle === 'full');
+// the fallback and the blankChar default must not drift apart, or an old sheet
+// and a new character show different things
+ck('the fallback agrees with the default', (() => {
+  delete X.character.hdStyle; return X.hdStyle() === X.blankChar().hdStyle;
+})());
+ck('a chosen style survives a round-trip',
+   X.migrate(JSON.parse(JSON.stringify(X.migrate({id: 'k', hdStyle: 'dice'})))).hdStyle === 'dice');
 
 /* ================= inventory filing =================
    invSection() reads category/type. Nothing used to copy those onto an item, so

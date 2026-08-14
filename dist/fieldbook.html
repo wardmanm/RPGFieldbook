@@ -26,6 +26,10 @@ html[data-theme="light"]{
   --accent:#a8701f;     /* honey/ochre */
   --accent-2:#2f6f60;   /* verdigris */
   --brick:#98351f;
+  /* The middle band of a warning — Current HP at half. Its own token rather
+     than --accent, because on the classic skin --accent IS --brick and the two
+     HP bands would be the same colour. */
+  --warn:#b07408;
   --field:rgba(255,255,255,.55);
   --field-focus:#fffdf6;
   --shadow:0 10px 26px rgba(40,30,12,.20);
@@ -42,6 +46,7 @@ html[data-theme="dark"]{
   --accent:#d8a544;
   --accent-2:#5eb7a3;
   --brick:#d5765f;
+  --warn:#e0b452;
   --field:rgba(255,255,255,.05);
   --field-focus:#2c2720;
   --shadow:0 10px 30px rgba(0,0,0,.5);
@@ -55,6 +60,7 @@ html[data-skin="classic"][data-theme="light"]{
   --accent:#8f2318;      /* deep D&D red */
   --accent-2:#2c5f97;    /* slate blue (links / affected) */
   --brick:#8f2318;
+  --warn:#9a6a05;        /* dark gold — --accent is the red here, so it can't serve */
   --field:rgba(255,255,255,.5); --field-focus:#fffdf5;
   --shadow:0 10px 26px rgba(40,25,10,.2); --ground:#c7b795;
 }
@@ -64,6 +70,7 @@ html[data-skin="classic"][data-theme="dark"]{
   --accent:#e2564a;      /* bright red on dark */
   --accent-2:#78acdd;    /* light blue */
   --brick:#e2564a;
+  --warn:#dcae4e;        /* pale gold */
   --field:rgba(255,255,255,.05); --field-focus:#282218;
   --shadow:0 10px 30px rgba(0,0,0,.55); --ground:#0c0a07;
 }
@@ -242,17 +249,49 @@ input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
    rendered outside it, because a grid item spanning every column feeds that
    column's sizing and stretched the Roll buttons to the width of a sentence. */
 .hd-grid{display:grid;grid-template-columns:repeat(4,max-content);justify-content:center;align-items:center;gap:6px 10px}
-/* The Hit Dice field and its pool, finally in one place. A real border rather
-   than the ::before inset trick the cards use: nothing nests inside it that
-   would need lifting back above an overlay. */
-.hd-box{margin-top:12px;background:var(--field);border:1.5px solid var(--line);border-radius:9px;padding:10px}
-/* label and mode pill on the left, aligned with the die rows below; the manual
-   text field only exists when it isn't a duplicate of them */
-.hd-head{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:2px}
-.hd-head .n{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+/* The Hit Dice field and its pool, stacked under the Hit Points panel in Vitals.
+   Same inset ::before as .hpwrap — and for the reason the old comment here got
+   wrong once the two became neighbours: a real CSS border takes no filter, so on
+   the rough skin .hpwrap wobbled and this did not; and a border sits outside the
+   padding box while the inset sits 1px inside, leaving the two frames 1px out at
+   the corners. Verdigris rather than brick — same weight, different voice,
+   matching .hd-title. Safe despite the grid below: >* reaches only the three
+   direct children, so .hd-row's display:contents is untouched. */
+.hd-box{position:relative;margin-top:12px;background:var(--field);border-radius:9px;padding:10px}
+.hd-box::before{content:"";position:absolute;inset:1px;border:2.5px solid var(--accent-2);border-radius:10px;pointer-events:none}
+html[data-rough="on"] .hd-box::before{filter:url(#rough)}
+.hd-box>*{position:relative}
+/* just the manual text field now — the mode pill moved onto the heading. Empty
+   and zero-height in auto mode, which is the common case. */
+.hd-head{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+/* ---- FULL: a boxed cell per die size, echoing the Vitals strip ---- */
+.hd-boxes{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+.hd-cell{position:relative;background:var(--field);border-radius:9px;padding:8px 12px;text-align:center;min-width:96px}
+.hd-cell::before{content:"";position:absolute;inset:1px;border:2px solid var(--line);border-radius:10px;pointer-events:none}
+html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
+.hd-cell>*{position:relative}
+.hd-cd{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+.hd-cv{font-family:var(--display);font-weight:900;font-size:24px;line-height:1.15}
+.hd-cv small{font-size:14px;color:var(--ink-soft);font-weight:700}
+.hd-cell .hd-pips{justify-content:center;margin:5px 0 7px}
+.hd-cell .hd-roll{width:100%}
+/* ---- DICE: every die is its own token, and the token is the control ---- */
+.hd-dice{display:flex;flex-direction:column;gap:7px;align-items:center}
+.hd-drow{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+.hd-d{width:34px;height:34px;border:2px solid var(--accent-2);background:transparent;color:var(--ink);border-radius:9px;
+  font-family:var(--display);font-weight:900;font-size:13px;cursor:pointer;padding:0;line-height:1;
+  display:inline-flex;align-items:center;justify-content:center}
+.hd-d:hover:not(.spent){background:var(--field-focus)}
+/* spent reads as used up, the same direction the pips fill */
+.hd-d.spent{border-color:var(--hair);color:var(--ink-soft);background:var(--hair);opacity:.55}
+.hd-foot{font-size:10px;font-family:var(--head);letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:8px 0 0}
 .hd-head input{width:130px;text-align:center;font-weight:700;font-size:15px;padding:4px;min-height:34px}
 .hd-none{margin:0}
-.hd-mode{font-family:var(--head);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px;border-radius:999px;border:1px solid var(--line);background:var(--field);color:var(--ink-soft);cursor:pointer;margin-left:4px}
+/* One pill, used twice: the hit-dice auto/manual toggle and the Max HP padlock.
+   No margin here — .hd-head is a centred flex row with its own gap, and a stray
+   left margin would push the pair off-centre; .hp-lock re-adds it, where it is
+   the whole spacing mechanism. */
+.hd-mode,.hp-lock{font-family:var(--head);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px;border-radius:999px;border:1px solid var(--line);background:var(--field);color:var(--ink-soft);cursor:pointer}
 .hd-mode.manual{color:var(--brick);border-color:var(--brick)}
 .hd-warn{font-family:var(--head);font-size:10px;color:var(--brick);text-align:center;margin-bottom:8px;line-height:1.5}
 .linkbtn{background:none;border:0;color:var(--accent-2);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
@@ -265,7 +304,9 @@ input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
 .hd-die{font-family:var(--head);font-weight:800;font-size:14px;text-align:right}
 .hd-pips{display:flex;gap:5px;flex-wrap:wrap}
 /* the words that stop "filled" being ambiguous; pushed right so Roll sits at the edge */
-.hd-left{font-family:var(--head);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);text-align:right}
+/* "3/5", not "3 of 5 left" — the words cost a column's width and the panel is
+   320px wide. The long form is the title attribute. */
+.hd-left{font-family:var(--head);font-weight:700;font-size:12px;letter-spacing:.02em;color:var(--ink-soft);text-align:right;font-variant-numeric:tabular-nums}
 .hd-left.out{color:var(--brick)}
 .hd-b,.use-b{width:16px;height:16px;border-radius:5px;border:2px solid var(--line);background:transparent;cursor:pointer;padding:0}
 .hd-b.used,.use-b.used{background:var(--ink-soft);border-color:var(--ink-soft)}
@@ -390,7 +431,14 @@ html[data-rough="on"] .vbox::before{filter:url(#rough)}
 .hpwrap::before{content:"";position:absolute;inset:1px;border:2.5px solid var(--brick);border-radius:10px;pointer-events:none}
 html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .hpwrap>*{position:relative}
-.hp-title{font-family:var(--head);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:var(--brick);text-align:center;margin-bottom:9px}
+/* One heading shape for the two stacked panels in Vitals, so Hit Points and Hit
+   Dice read as a pair. Only the colour differs — brick is the HP box's own frame
+   colour, and repeating it below would flatten the two into one. */
+.hp-title,.hd-title{font-family:var(--head);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11px;text-align:center;margin-bottom:9px}
+.hp-title{color:var(--brick)}
+/* the heading carries the auto/manual pill, so it is a centred flex row rather
+   than a plain text line; the pill keeps its own baseline */
+.hd-title{color:var(--accent-2);display:flex;align-items:center;justify-content:center;gap:7px}
 .home{position:fixed;inset:0;z-index:60;background:var(--paper);overflow:auto;display:none;flex-direction:column;padding:22px 16px 60px}
 .home-inner{width:100%;max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 .home-head{display:flex;align-items:center;gap:12px}
@@ -417,6 +465,23 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .hpcol{text-align:center}
 .hpcol .n{font-family:var(--head);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;margin-bottom:2px}
 .hpcol input{width:66px;text-align:center;font-family:var(--display);font-weight:900;font-size:22px;padding:4px}
+/* Current HP colours by how much of your maximum is left — amber at half, brick
+   at a quarter. --warn is its own token rather than --accent because on the
+   classic skin --accent IS --brick, which would make the two bands identical. */
+.hpcol input.hp-warn{color:var(--warn)}
+.hpcol input.hp-danger{color:var(--brick)}
+/* The padlock rides inside the Max label. An icon, not a word, so the label
+   stays narrower than the 66px input below it and the three HP columns keep the
+   widths they have. Pill shape comes from .hd-mode in 20-cards.css — the sheet
+   has one pill and it is now used twice. */
+.hp-lock{margin-left:4px;padding:1px 5px;line-height:0;vertical-align:-2px}
+.hp-lock svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.2;display:block}
+/* Unlocked is the state worth noticing, so it borrows the brick treatment
+   .hd-mode.manual uses for "you have left the automatic path". */
+.hp-lock.open{color:var(--brick);border-color:var(--brick)}
+.hp-lock .sh-open{display:none}
+.hp-lock.open .sh-shut{display:none}
+.hp-lock.open .sh-open{display:inline}
 .hp-step{display:flex;gap:6px;justify-content:center;margin-top:8px}
 .hp-step button{width:34px;height:34px;border-radius:7px;border:2px solid var(--brick);background:var(--field);color:var(--brick);font-size:18px;font-weight:700;cursor:pointer}
 /* successes – skull – failures, centred under the +/- buttons. No text
@@ -773,9 +838,16 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
           <div class="hpwrap">
             <div class="hp-title">Hit Points</div>
             <div class="hprow">
-              <div class="hpcol"><div class="n">Current</div><input type="text" inputmode="tel" data-hp="cur" id="hpCur" placeholder="0" aria-label="Current HP — type a number, or +4 / -7 to adjust"></div>
-              <div class="hpcol"><div class="n">Max</div><input type="text" inputmode="tel" data-hp="max" id="hpMax" placeholder="0" aria-label="Base max HP — type a number, or +4 / -7 to adjust"></div>
-              <div class="hpcol"><div class="n">Temp</div><input type="text" inputmode="tel" data-hp="temp" id="hpTemp" placeholder="0" aria-label="Temp HP — type a number, or +4 / -7 to adjust"></div>
+              <div class="hpcol"><div class="n">Current</div><input type="text" inputmode="tel" data-hp="cur" id="hpCur" placeholder="0" aria-label="Current HP — type a number, or +4 to heal / -7 for damage, which spends temp HP first"></div>
+              <!-- The padlock is an inline SVG, not U+1F512: that codepoint has
+                   no text-presentation variant, so the &#65038; trick that keeps
+                   the death-save skull as ink does not exist for it and it would
+                   render as a colour emoji. Both shackle paths ship here and CSS
+                   toggles them off .hp-lock.open, so renderHP only does a
+                   classList.toggle — the same thing renderHitDice does for the
+                   hit-dice mode pill. -->
+              <div class="hpcol"><div class="n">Max <button class="hp-lock" data-hplock aria-pressed="true" aria-label="Lock or unlock Max HP" title="Max HP is locked — tap to edit it"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path class="sh-shut" d="M8.5 10.5V7a3.5 3.5 0 0 1 7 0v3.5"/><path class="sh-open" d="M8.5 10.5V7a3.5 3.5 0 0 1 6.9-.9"/></svg></button></div><input type="text" inputmode="tel" data-hp="max" id="hpMax" placeholder="0" aria-label="Base max HP — locked by default; unlock with the padlock beside this label, then type a number or +4 / -7 to adjust"></div>
+              <div class="hpcol"><div class="n">Temp</div><input type="text" inputmode="tel" data-hp="temp" id="hpTemp" placeholder="0" aria-label="Temp HP — type a number, or +4 to grant / -7 for damage, which spills into current HP"></div>
             </div>
             <div class="hp-step">
               <button id="hpMinus" aria-label="Lose HP">−</button>
@@ -796,6 +868,25 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
             </div>
             <div id="maxNote" style="text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px">Item / feature bonuses to Max HP appear here</div>
           </div>
+          <!-- Hit Dice reads as the second half of the Hit Points panel, not as
+               a rest fixture: they are the same resource seen twice, and
+               spending one writes straight into the box above. A SIBLING of
+               .hpwrap, never a child — nesting would put it inside the brick
+               ::before overlay and make one frame enclose both.
+               Nothing may be inserted between #hdWrap and .hd-grid, or inside
+               it: .hd-row is display:contents and hands its four cells straight
+               to that grid, which is the only reason a multiclass pool lines up
+               column by column. A wrapper there breaks it with no error. -->
+          <div class="hd-box">
+            <!-- the auto/manual pill rides ON the heading, not under it: alone
+                 on its own line it read as an orphaned control and cost a whole
+                 row of the panel's height -->
+            <div class="hd-title">Hit Dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">auto</button></div>
+            <div class="hd-head">
+              <input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly aria-label="Hit Dice">
+            </div>
+            <div class="hd-wrap" id="hdWrap"></div>
+          </div>
         </div>
 
         <div class="card" data-note="rest">
@@ -803,13 +894,6 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
           <div class="rest-row">
             <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
             <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
-          </div>
-          <div class="hd-box">
-            <div class="hd-head">
-              <span class="n">Hit Dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">auto</button></span>
-              <input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly aria-label="Hit Dice">
-            </div>
-            <div class="hd-wrap" id="hdWrap"></div>
           </div>
         </div>
 
@@ -1016,14 +1100,21 @@ function uid(){return Math.random().toString(36).slice(2,9)}
 function blankChar(){
   const c={id:uid(),appVersion:"",system:"humblewood",name:"",class:"",ancestry:"",background:"",alignment:"",xp:"",level:1,
     ac:"",init:"",speed:"",hitdice:"",hdManual:false,inspiration:false,
-    hp:{cur:"",max:"",temp:""}, death:{succ:0,fail:0},
+    /* `locked` guards the Max box, and lives INSIDE hp on purpose: migrate()
+       normalizes hp onto blankChar's defaults, so every existing sheet gains it
+       with no migration code, and one that deliberately saved false keeps it.
+       Locked by default — Max is the one number that barely moves after
+       character creation, and a stray digit in it drags Current down through
+       clampHP() with no undo. The automatic writers in 56-class.js set the
+       model directly and are deliberately not subject to it. */
+    hp:{cur:"",max:"",temp:"",locked:true}, death:{succ:0,fail:0},
     coins:{cp:"",sp:"",ep:"",gp:"",pp:""},
     abilities:{},saves:{},skills:{},
     spellAbility:"", slots:{}, spells:[], attacks:[], race:null, bg:null, classes:[], grants:[],
     features:[], inventory:[], statuses:[], familiars:[], glossary:[],
     featCollapse:{groups:{},items:{}}, invCollapse:{items:{}}, atkCollapse:{items:{}}, hdUsed:{}, resources:[],
     activeSpells:[], combatRound:0, grantGold:{},
-    size:"", encumbrance:"none", coinWeight:true,
+    size:"", encumbrance:"none", coinWeight:true, hpColor:true, hdStyle:"full",
     /* Notes pinned to a section of the sheet, keyed by NOTE_SECTIONS id.
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
        above), and this is a different thing entirely. */
@@ -2302,16 +2393,52 @@ function hitDieMax(d){
   const m=/^\s*d?(\d+)\s*$/i.exec(String((d&&d.hitDie)||""));
   return m?parseInt(m[1],10):0;
 }
-/* Level 1 with a single class has no roll and no choice: max HP is the hit
-   die's maximum. Filled in on the player's behalf, but ONLY over a blank —
-   a number they typed is theirs, and this must never overwrite it. */
-function seedLevel1HP(d){
+/* The level-1 maximum, in one place, because three callers have to agree on it
+   to the number: seedLevel1HP() writes it, resyncLevel1HP() re-writes it, and
+   removeClass() only takes it back out when the box still holds exactly it.
+   Floors at 1 — you always gain at least a hit point per level, and a computed
+   0 would be indistinguishable from the 0 this returns for an unparseable die,
+   which effMaxHP()>0 reads as "no maximum set" in clampHP() and longRest(). */
+function level1HP(d){
   const die=hitDieMax(d);
-  if(!die||character.classes.length!==1||totalLevel()!==1)return;
+  return die?Math.max(1,die+modOf(character.abilities.con)):0;
+}
+/* Level 1 with a single class has no roll and no choice: max HP is the hit
+   die's maximum plus your Constitution modifier. Filled in on the player's
+   behalf, but ONLY over a blank — a number they typed is theirs, and this must
+   never overwrite it.
+   CON is read from the SCORE, not abilFinal(): contributions() folds in
+   equipped items, active statuses and summoned familiars, and this number has
+   to be re-derivable unchanged minutes later by removeClass(). An effect that
+   should raise max HP has its own target ("hp.max") and layers on top. */
+function seedLevel1HP(d){
+  const hp=level1HP(d);
+  if(!hp||character.classes.length!==1||totalLevel()!==1)return;
   if(num(character.hp.max))return;
-  character.hp.max=die;
-  if(!num(character.hp.cur))character.hp.cur=die;
+  character.hp.max=hp;
+  if(!num(character.hp.cur))character.hp.cur=hp;
   renderHP();
+}
+/* Entering CON after picking the class is the normal order for a lot of
+   players, and the seeded number would otherwise be stale forever — worse, it
+   would stop matching what removeClass() recomputes, so the clean revert below
+   would silently stop firing. Stateless on purpose: the caller hands over the
+   PREVIOUS score, so "is this still ours?" is answered by recomputing what we
+   would have written then and matching it exactly — the same test removeClass()
+   has always used, and the same thing it trades away (a player who typed, by
+   coincidence, exactly the seeded number).
+   Deliberately stops at level 2: from there hp.max is a rolled total the app
+   never computed and must not touch. Safe to call on every keystroke. */
+function resyncLevel1HP(prevCon){
+  if(character.classes.length!==1||totalLevel()!==1)return;
+  const d=findClassDef(character.classes[0].name),die=hitDieMax(d);
+  if(!die)return;
+  const was=Math.max(1,die+modOf(prevCon)),now=level1HP(d);
+  if(was===now||num(character.hp.max)!==was)return;
+  const full=num(character.hp.cur)===was;
+  character.hp.max=now;
+  if(full)character.hp.cur=now;
+  clampHP();renderHP();
 }
 function addClass(name,lvl){
   const d=findClassDef(name);
@@ -2339,8 +2466,10 @@ function removeClass(idx){
   /* Clean revert, same rule as the other class grants: if the only thing in
      Max HP is the number seedLevel1HP() put there, take it back out so
      swapping a d10 class for a d6 one doesn't silently keep 10. Anything else
-     in that box is the player's and is left alone. */
-  const seeded=hitDieMax(findClassDef(c.name));
+     in that box is the player's and is left alone. It has to recompute the
+     WHOLE formula, CON modifier included — which is why resyncLevel1HP() keeps
+     the box tracking CON, so this match still lands after a stat is edited. */
+  const seeded=level1HP(findClassDef(c.name));
   if(seeded&&character.classes.length===1&&num(c.level)===1&&num(character.hp.max)===seeded){
     character.hp.max="";
     if(num(character.hp.cur)===seeded)character.hp.cur="";
@@ -2360,6 +2489,12 @@ function doLevelUp(){
     const newL=num(entry.level)+1;if(newL>20){alert(entry.name+" is already level 20.");return;}
     entry.level=newL;
     const res=applyClassLevel(entry,d,newL);
+    /* Levelling is the one moment Max HP legitimately changes and the app
+       cannot compute it — from level 2 on it is a roll (or the average) only
+       the player knows. Hand the box back rather than making them fight a
+       padlock, and leave it open: re-locking mid-edit would be worse.
+       renderHP explicitly, because recompute() does not call it. */
+    character.hp.locked=false;renderHP();
     character.level=totalLevel();const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
     renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
     runChoices(entry.name,res.choices,res.notes);
@@ -2865,28 +3000,73 @@ function renderHitDice(){
     el.innerHTML=warn+`<p class="hint hd-none">${character.hdManual?"Type your dice above, e.g. 2d8 + 1d6.":"Add a class and your Hit Dice appear here. Or switch to manual and type them in."}</p>`;
     return;
   }
-  /* The rows get their own grid container so their four columns line up with
-     each other. The warning banner stays OUTSIDE it: a grid item spanning every
-     column still feeds that column sizing, which stretched the Roll buttons to
-     the width of a sentence. */
-  el.innerHTML=warn+`<div class="hd-grid">`+pool.map(p=>{
+  const style=hdStyle();
+  el.innerHTML=warn+(style==="condensed"?hdCondensedHTML(pool):style==="dice"?hdDiceHTML(pool):hdFullHTML(pool));
+}
+/* Which of the three looks this character uses. Anything unrecognised — an
+   older sheet, a hand-edited file — falls back to full, which is also
+   blankChar's default, so the setting needs no migration of its own and an old
+   sheet lands on the same look a new one does. */
+function hdStyle(){const s=character.hdStyle;return (s==="condensed"||s==="dice")?s:"full";}
+/* A pip is filled when the die is SPENT — the same way the spell slot bubbles
+   read. The count beside them says which way round it goes, so nobody has to
+   infer it. Shared by the full and condensed styles; the dice style has no
+   separate pips, because there the dice ARE the pips. */
+function hdPips(p){
+  let h="";
+  for(let i=1;i<=p.total;i++)h+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${p.die}" data-i="${i}" aria-label="${p.die} number ${i}${i<=p.used?" (spent)":""}"></button>`;
+  return h;
+}
+/* CONDENSED — one line per die size. The rows get their own grid container so
+   their four columns line up with each other; .hd-row is display:contents and
+   hands its cells straight to it, which is the whole mechanism. The warning
+   banner stays OUTSIDE that grid: a grid item spanning every column still feeds
+   the column sizing, which stretched the Roll buttons to the width of a
+   sentence. */
+function hdCondensedHTML(pool){
+  return `<div class="hd-grid">`+pool.map(p=>{
     const left=p.total-p.used;
-    /* A pip is filled when the die is SPENT — the same way the spell slot
-       bubbles read. The count beside them says it in words, so nobody has to
-       infer which way round it goes. */
-    let pips="";for(let i=1;i<=p.total;i++)pips+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${p.die}" data-i="${i}" aria-label="${p.die} number ${i}${i<=p.used?" (spent)":""}"></button>`;
-    return `<div class="hd-row"><span class="hd-die">${p.die}</span><span class="hd-pips">${pips}</span>`+
-      `<span class="hd-left${left?"":" out"}">${left} of ${p.total} left</span>`+
+    return `<div class="hd-row"><span class="hd-die">${p.die}</span><span class="hd-pips">${hdPips(p)}</span>`+
+      `<span class="hd-left${left?"":" out"}" title="${left} of ${p.total} left">${left}/${p.total}</span>`+
       `<button class="hd-roll" data-hdroll="${p.die}" ${left?"":"disabled"} title="Spend one ${p.die} and heal">Roll</button></div>`;
   }).join("")+`</div>`;
+}
+/* FULL — a boxed cell per die size, speaking the same language as the Vitals
+   strip and the Hit Points panel it now sits under. */
+function hdFullHTML(pool){
+  return `<div class="hd-boxes">`+pool.map(p=>{
+    const left=p.total-p.used;
+    return `<div class="hd-cell"><div class="hd-cd">${p.die}</div>`+
+      `<div class="hd-cv">${left}<small> / ${p.total}</small></div>`+
+      `<div class="hd-pips">${hdPips(p)}</div>`+
+      `<button class="hd-roll" data-hdroll="${p.die}" ${left?"":"disabled"} title="Spend one ${p.die} and heal">Roll</button></div>`;
+  }).join("")+`</div>`;
+}
+/* DICE — every die is its own token, so the die size, the pip and the count
+   stop saying the same thing three times over. Tapping an unspent one rolls it;
+   tapping a spent one puts it back, with the same "click pip i" semantics the
+   other two styles have. The trade: there is no way to mark a die spent WITHOUT
+   healing here. That is what the other two styles keep it for. */
+function hdDiceHTML(pool){
+  return `<div class="hd-dice">`+pool.map(p=>
+    `<div class="hd-drow">`+Array.from({length:p.total},(_,i)=>{
+      const spent=i<p.used;
+      return `<button class="hd-d${spent?" spent":""}" data-hddie="${p.die}" data-i="${i+1}"`+
+        ` title="${spent?"Spent — tap to put it back":"Tap to spend this "+p.die+" and heal"}"`+
+        ` aria-label="${p.die}${spent?", spent":""}">${p.die.slice(1)}</button>`;
+    }).join("")+`</div>`).join("")+
+    `</div><p class="hint hd-foot">Tap a die to spend it and heal</p>`;
 }
 function rollHitDie(die){
   const p=hitDicePool().find(x=>x.die===die);if(!p||p.used>=p.total)return;
   const n=parseInt(die.slice(1),10)||8, c=contributions();
+  /* abilFinal here, unlike level1HP's modOf: this value is consumed in the
+     instant it is computed and never re-derived, so transient contributions are
+     exactly what should count. Don't "harmonise" the two. */
   const conMod=Math.floor((abilFinal("con",c)-10)/2), roll=1+Math.floor(Math.random()*n), heal=Math.max(0,roll+conMod);
-  character.hp.cur=num(character.hp.cur)+heal;   /* clampHP caps it at the effective max */
+  adjustHP(heal);   /* positive: never touches temp, and clampHP caps it at the effective max */
   if(!character.hdUsed)character.hdUsed={};character.hdUsed[die]=num(character.hdUsed[die])+1;
-  clampHP();renderHP();
+  renderHP();
   renderHitDice();recompute();scheduleSave();
   restSummary("Hit die spent — "+die,[`Rolled ${roll} ${conMod>=0?"+":"−"} ${Math.abs(conMod)} CON = ${heal} HP`,`Current HP: ${character.hp.cur}`],"");
 }
@@ -3083,16 +3263,30 @@ function coinKeys(){return (character.system==="dnd")?["cp","sp","ep","gp","pp"]
 function signedEntry(cur,raw){
   const s=String(raw==null?"":raw).trim().replace(/[−–—]/g,"-");
   if(!s)return "";
-  /* Space is allowed after the sign ("+ 10") but NOT inside the digits: "1 2"
-     is a slip, and quietly reading it as 12 is the sort of silent coercion
-     that loses someone their gold. Unrecognised entries are rejected instead. */
-  const digits=t=>/^\d+$/.test(t)||/^\d{1,3}(,\d{3})+$/.test(t) ? parseInt(t.replace(/,/g,""),10) : null;
   const m=/^([+-])\s*(\S+)$/.exec(s);
   if(m){
-    const n=digits(m[2]);
+    const n=entryDigits(m[2]);
     return n===null?null:Math.max(0,num(cur)+n*(m[1]==="-"?-1:1));
   }
-  return digits(s);
+  return entryDigits(s);
+}
+/* Space is allowed after the sign ("+ 10") but NOT inside the digits: "1 2" is
+   a slip, and quietly reading it as 12 is the sort of silent coercion that
+   loses someone their gold. Unrecognised entries are rejected instead.
+   Shared by signedEntry and signedDelta so the grammar can't drift between the
+   two readings of the same typed box. */
+function entryDigits(t){return /^\d+$/.test(t)||/^\d{1,3}(,\d{3})+$/.test(t) ? parseInt(t.replace(/,/g,""),10) : null;}
+/* The signed half of signedEntry(), for the callers that need the DELTA rather
+   than the result: "-7" -> -7, "+4" -> 4, and null for a bare total or anything
+   unparseable. Damage has to know it was seven points, not that the box should
+   end up reading three, because temporary HP is spent before Current is —
+   signedEntry has already folded the delta away (and floored it at 0) by the
+   time it returns. */
+function signedDelta(raw){
+  const m=/^([+-])\s*(\S+)$/.exec(String(raw==null?"":raw).trim().replace(/[−–—]/g,"-"));
+  if(!m)return null;
+  const n=entryDigits(m[2]);
+  return n===null?null:n*(m[1]==="-"?-1:1);
 }
 function renderCoins(){
   const el=document.getElementById("coins");if(!el)return;
@@ -3120,19 +3314,85 @@ function applyCoinInput(inp){
   scheduleSave();
   return true;
 }
+/* Damage comes off TEMPORARY hit points first. Nothing in the app had ever
+   spent them — they were stored, displayed and cleared on a long rest, and the
+   player did the subtraction by hand. Healing never touches temp: temp HP is
+   granted, not restored, so a positive delta goes straight to Current.
+   Model + clamp only, no DOM — callers pair it with renderHP(), the same
+   contract clampHP() has. It lives HERE rather than in 90-boot.js because the
+   test harness drops that fragment: logic in it is untestable by construction,
+   so 90-boot keeps the wiring and nothing else. */
+function adjustHP(delta){
+  let d=num(delta);
+  if(d<0){
+    const soak=Math.min(num(character.hp.temp),-d);
+    if(soak>0){
+      character.hp.temp=(num(character.hp.temp)-soak)||"";   /* spent out reads blank, as a long rest leaves it */
+      d+=soak;
+    }
+  }
+  if(d)character.hp.cur=num(character.hp.cur)+d;
+  clampHP();
+}
 /* The HP boxes work exactly like the coin boxes and for the same reason: they
    are NOT data-path, because that handler commits on every keystroke and would
    store "-" the instant you typed it, losing the number you were subtracting
    from. They commit on change (blur/Enter), once the entry is finished. */
+/* Which band Current HP falls in, as a class name — "" for none. Measured
+   against the EFFECTIVE max, so an item that raises your maximum moves the
+   thresholds with it. Temp is excluded: it sits ABOVE your maximum, so folding
+   it in could read as healthy while your real pool is empty.
+   No maximum set means no band at all — a blank new character must not open
+   painted red. Pure, so the bands are testable without a DOM. */
+function hpBand(){
+  if(character.hpColor===false)return "";
+  const mx=effMaxHP();if(mx<=0)return "";
+  const pct=num(character.hp.cur)/mx*100;
+  return (pct<=25)?"hp-danger":(pct<=50)?"hp-warn":"";
+}
 function renderHP(){
   ["cur","max","temp"].forEach(k=>{
     const el=document.getElementById("hp"+k[0].toUpperCase()+k.slice(1));
     if(el){const v=character.hp[k];el.value=(v===null||v===undefined)?"":v;}
   });
+  const cur=document.getElementById("hpCur"),band=hpBand();
+  if(cur){cur.classList.toggle("hp-warn",band==="hp-warn");cur.classList.toggle("hp-danger",band==="hp-danger");}
+  /* Two layers, the same shape the auto spell-slot fields use: readOnly so the
+     browser refuses the edit, AND a refusal in applyHPInput, because readOnly
+     is only a hint — paste, autofill and any programmatic caller go straight
+     past it. `!==false` rather than a truth test, so an object that never went
+     through migrate() reads as locked rather than silently editable. */
+  const locked=character.hp.locked!==false;
+  const mx=document.getElementById("hpMax");if(mx)mx.readOnly=locked;
+  const lk=document.querySelector("[data-hplock]");
+  if(lk){
+    lk.classList.toggle("open",!locked);
+    lk.setAttribute("aria-pressed",locked?"true":"false");
+    lk.title=locked?"Max HP is locked — tap to edit it":"Max HP is unlocked — tap to lock it";
+  }
 }
-/* Commit one HP box. Returns false if the entry made no sense. */
+/* Commit one HP box. Returns false if the entry was refused. */
 function applyHPInput(inp){
-  const k=inp.dataset.hp;if(!k||!(k in character.hp))return true;
+  const k=inp.dataset.hp;
+  /* An explicit list, not `k in character.hp`: `locked` is a key on that object
+     now, and a data-hp hook must never be able to write a boolean field. */
+  if(k!=="cur"&&k!=="max"&&k!=="temp")return true;
+  /* Max is locked by default, and the padlock is the only way a PLAYER changes
+     it. renderHP has already made the box readOnly; this is the second layer,
+     because readOnly does not stop a paste. The automatic writers
+     (seedLevel1HP, resyncLevel1HP, removeClass's un-seed — all 56-class.js) go
+     to the model directly and BYPASS this on purpose: routing them through here
+     would leave a locked level-1 character with no hit points at all. */
+  if(k==="max"&&character.hp.locked!==false){renderHP();return false;}
+  /* A negative typed into Current OR Temp IS damage, and goes through the one
+     damage path: temp first, then the overflow into current. Typing -5 against
+     3 temp has to leave you 2 down on current, not throw the extra away, and it
+     must mean the same thing whichever of the two boxes you happened to type it
+     in. Everything else — a heal, a bare total, anything in the Max box, where
+     a negative is you lowering your maximum — stays a plain edit to the box you
+     typed in. Junk like "+ab" reads as null and is rejected below. */
+  const dmg=(k==="cur"||k==="temp")?signedDelta(inp.value):null;
+  if(dmg!==null&&dmg<0){adjustHP(dmg);renderHP();scheduleSave();return true;}
   const next=signedEntry(character.hp[k],inp.value);
   if(next===null){renderHP();return false;}   /* reject: put the model's value back */
   character.hp[k]=next;
@@ -4998,6 +5258,13 @@ function openSettings(){
         <select id="setEnc">${[["none","Off — show weight only"],["standard","Standard (capacity, push/drag)"],["variant","Variant (encumbered tiers)"]].map(([v,l])=>`<option value="${v}"${encMode()===v?" selected":""}>${esc(l)}</option>`).join("")}</select></div></div>
     <p class="hint" id="encHint">${esc(encSettingsHint())}</p>
     <div class="toggle"><div><div class="t-lbl">Coins count as weight</div><div class="t-sub">50 coins to the pound, the way the rules have it.</div></div><button class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight"></button></div>
+    <div class="toggle"><div><div class="t-lbl">Colour current HP</div><div class="t-sub">Amber at half your maximum, red at a quarter.</div></div><button class="switch ${character.hpColor!==false?"on":""}" id="swHpColor"></button></div>
+    <div class="field"><label class="f">Hit Dice display</label>
+      <div class="seg" id="segHdStyle">
+        ${[["full","Full"],["condensed","Condensed"],["dice","Dice"]].map(([v,l])=>
+          `<button data-hdstyle="${v}" class="${hdStyle()===v?"on":""}">${l}</button>`).join("")}
+      </div>
+      <p class="hint">Full boxes each die size like a stat; Condensed is one tight line per size; Dice draws every die as a token you tap to spend. Only Full and Condensed let you mark a die spent without healing.</p></div>
     <div class="field" style="margin-top:12px"><label class="f">Rules updates</label>
       <p class="hint">Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compare this sheet against your loaded rules and update what you choose. A backup is always saved first.</p>
       <div class="m-actions" style="justify-content:flex-start"><button class="tbtn" id="btnCharUpdate">Check for rules updates</button></div>
@@ -5072,6 +5339,8 @@ function openSettings(){
   {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{character.size=s.value;encSettingsChanged();});}
   {const s=document.getElementById("setEnc");if(s)s.addEventListener("change",()=>{character.encumbrance=s.value;encSettingsChanged();});}
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
+  {const b=document.getElementById("swHpColor");if(b)b.addEventListener("click",()=>{character.hpColor=(character.hpColor===false);b.classList.toggle("on",character.hpColor!==false);renderHP();scheduleSave();});}
+  {const g=document.getElementById("segHdStyle");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-hdstyle]");if(!b)return;character.hdStyle=b.dataset.hdstyle;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderHitDice();scheduleSave();});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());
@@ -5466,7 +5735,12 @@ function wire(){
   // bound inputs
   document.addEventListener("input",e=>{
     const inp=e.target.closest("[data-path]");if(!inp)return;
+    /* Grab CON before the write: resyncLevel1HP needs the previous score to
+       recognise its own seeded number. Runs before recompute() so maxNote
+       repaints against the new base. */
+    const prevCon=inp.dataset.path==="character.abilities.con"?character.abilities.con:null;
     setP({character},inp.dataset.path,inp.value);
+    if(prevCon!==null)resyncLevel1HP(prevCon);
     if(inp.dataset.path==="character.hitdice")renderHitDice();
     if(inp.hasAttribute("data-recompute"))recompute();
     scheduleSave();
@@ -5491,6 +5765,17 @@ function wire(){
     if((m=t.closest("[data-notegroup]"))){toggleNoteGroup(m.dataset.notegroup);return;}
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
+    /* Max HP padlock — mirrors [data-hdmode] below, minus the confirm: switching
+       to manual hit dice is a mode change with consequences at level-up, while
+       this is undone by a second tap. Written as `===false` rather than `!`, so
+       an object whose flag is undefined locks explicitly instead of reading the
+       absence as unlocked. */
+    if(t.closest("[data-hplock]")){
+      character.hp.locked=character.hp.locked===false;
+      renderHP();
+      if(character.hp.locked===false){const i=document.getElementById("hpMax");if(i){i.focus();i.select();}}
+      scheduleSave();return;
+    }
     // slot bubbles
     if((m=t.closest(".slot .b"))){const lv=num(m.dataset.slot),i=num(m.dataset.i);const s=character.slots[lv];s.used=(s.used===i)?i-1:i;renderSlotBubbles();scheduleSave();return;}
     // features
@@ -5531,6 +5816,21 @@ function wire(){
     }
     if(t.closest("[data-hdreset]")){character.hdManual=false;renderHitDice();scheduleSave();return;}
     if((m=t.closest("[data-hdroll]")))return rollHitDie(m.dataset.hdroll);
+    /* Dice style: the token IS the control. An unspent die rolls and heals; a
+       spent one goes back — exactly ONE, not "everything from here on" the way
+       the pips work. Pips are positions on a track, so clicking pip 3 meaning
+       "three spent" is natural; tokens are interchangeable, and tapping one to
+       get three back would contradict its own tooltip. Putting a die back never
+       un-heals you, matching what the pips have always done. */
+    if((m=t.closest("[data-hddie]"))){
+      const die=m.dataset.hddie,i=num(m.dataset.i),p=hitDicePool().find(x=>x.die===die);
+      if(p&&i<=p.used){
+        if(!character.hdUsed)character.hdUsed={};
+        character.hdUsed[die]=Math.max(0,num(character.hdUsed[die])-1);
+        renderHitDice();recompute();scheduleSave();
+      }else rollHitDie(die);
+      return;
+    }
     if((m=t.closest("[data-hd]"))){const die=m.dataset.hd,i=num(m.dataset.i);if(!character.hdUsed)character.hdUsed={};const u=num(character.hdUsed[die]);character.hdUsed[die]=(u===i)?i-1:i;renderHitDice();recompute();scheduleSave();return;}
     if((m=t.closest("[data-fuse]"))){const f=character.features.find(x=>x.id===m.dataset.fuse);if(f&&f.uses){const i=num(m.dataset.i);f.uses.used=(num(f.uses.used)===i)?i-1:i;renderFeatures();scheduleSave();}return;}
     if((m=t.closest("[data-usefeat]")))return useFeature(m.dataset.usefeat);
@@ -5589,9 +5889,10 @@ function wire(){
   on("btnLongRest","click",longRest);
   on("btnShortRest","click",shortRest);
   document.getElementById("addResource").addEventListener("click",()=>openResourceForm());
-  /* clampHP owns both bounds, so this no longer needs its own ceiling — and it
-     picks up the floor at 0 it never had. */
-  function bumpHP(d){character.hp.cur=num(character.hp.cur)+d;clampHP();renderHP();scheduleSave();}
+  /* clampHP owns both bounds and adjustHP owns the temp-HP-first rule. Every
+     part a damage path needs lives in 65-resources.js, where the harness can
+     reach it; this is the button, and nothing else. */
+  function bumpHP(d){adjustHP(d);renderHP();scheduleSave();}
   document.getElementById("restoreSlots").addEventListener("click",()=>{for(let lv=1;lv<=9;lv++)character.slots[lv].used=0;renderSlotBubbles();scheduleSave();});
   // portrait
   document.getElementById("btnPortrait").addEventListener("click",()=>document.getElementById("filePortrait").click());

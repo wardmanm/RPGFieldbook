@@ -54,6 +54,13 @@ function openSettings(){
         <select id="setEnc">${[["none","Off — show weight only"],["standard","Standard (capacity, push/drag)"],["variant","Variant (encumbered tiers)"]].map(([v,l])=>`<option value="${v}"${encMode()===v?" selected":""}>${esc(l)}</option>`).join("")}</select></div></div>
     <p class="hint" id="encHint">${esc(encSettingsHint())}</p>
     <div class="toggle"><div><div class="t-lbl">Coins count as weight</div><div class="t-sub">50 coins to the pound, the way the rules have it.</div></div><button class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight"></button></div>
+    <div class="toggle"><div><div class="t-lbl">Colour current HP</div><div class="t-sub">Amber at half your maximum, red at a quarter.</div></div><button class="switch ${character.hpColor!==false?"on":""}" id="swHpColor"></button></div>
+    <div class="field"><label class="f">Hit Dice display</label>
+      <div class="seg" id="segHdStyle">
+        ${[["full","Full"],["condensed","Condensed"],["dice","Dice"]].map(([v,l])=>
+          `<button data-hdstyle="${v}" class="${hdStyle()===v?"on":""}">${l}</button>`).join("")}
+      </div>
+      <p class="hint">Full boxes each die size like a stat; Condensed is one tight line per size; Dice draws every die as a token you tap to spend. Only Full and Condensed let you mark a die spent without healing.</p></div>
     <div class="field" style="margin-top:12px"><label class="f">Rules updates</label>
       <p class="hint">Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compare this sheet against your loaded rules and update what you choose. A backup is always saved first.</p>
       <div class="m-actions" style="justify-content:flex-start"><button class="tbtn" id="btnCharUpdate">Check for rules updates</button></div>
@@ -128,6 +135,8 @@ function openSettings(){
   {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{character.size=s.value;encSettingsChanged();});}
   {const s=document.getElementById("setEnc");if(s)s.addEventListener("change",()=>{character.encumbrance=s.value;encSettingsChanged();});}
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
+  {const b=document.getElementById("swHpColor");if(b)b.addEventListener("click",()=>{character.hpColor=(character.hpColor===false);b.classList.toggle("on",character.hpColor!==false);renderHP();scheduleSave();});}
+  {const g=document.getElementById("segHdStyle");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-hdstyle]");if(!b)return;character.hdStyle=b.dataset.hdstyle;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderHitDice();scheduleSave();});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());

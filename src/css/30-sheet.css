@@ -47,7 +47,14 @@ html[data-rough="on"] .vbox::before{filter:url(#rough)}
 .hpwrap::before{content:"";position:absolute;inset:1px;border:2.5px solid var(--brick);border-radius:10px;pointer-events:none}
 html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .hpwrap>*{position:relative}
-.hp-title{font-family:var(--head);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:var(--brick);text-align:center;margin-bottom:9px}
+/* One heading shape for the two stacked panels in Vitals, so Hit Points and Hit
+   Dice read as a pair. Only the colour differs — brick is the HP box's own frame
+   colour, and repeating it below would flatten the two into one. */
+.hp-title,.hd-title{font-family:var(--head);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11px;text-align:center;margin-bottom:9px}
+.hp-title{color:var(--brick)}
+/* the heading carries the auto/manual pill, so it is a centred flex row rather
+   than a plain text line; the pill keeps its own baseline */
+.hd-title{color:var(--accent-2);display:flex;align-items:center;justify-content:center;gap:7px}
 .home{position:fixed;inset:0;z-index:60;background:var(--paper);overflow:auto;display:none;flex-direction:column;padding:22px 16px 60px}
 .home-inner{width:100%;max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 .home-head{display:flex;align-items:center;gap:12px}
@@ -74,6 +81,23 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .hpcol{text-align:center}
 .hpcol .n{font-family:var(--head);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;margin-bottom:2px}
 .hpcol input{width:66px;text-align:center;font-family:var(--display);font-weight:900;font-size:22px;padding:4px}
+/* Current HP colours by how much of your maximum is left — amber at half, brick
+   at a quarter. --warn is its own token rather than --accent because on the
+   classic skin --accent IS --brick, which would make the two bands identical. */
+.hpcol input.hp-warn{color:var(--warn)}
+.hpcol input.hp-danger{color:var(--brick)}
+/* The padlock rides inside the Max label. An icon, not a word, so the label
+   stays narrower than the 66px input below it and the three HP columns keep the
+   widths they have. Pill shape comes from .hd-mode in 20-cards.css — the sheet
+   has one pill and it is now used twice. */
+.hp-lock{margin-left:4px;padding:1px 5px;line-height:0;vertical-align:-2px}
+.hp-lock svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.2;display:block}
+/* Unlocked is the state worth noticing, so it borrows the brick treatment
+   .hd-mode.manual uses for "you have left the automatic path". */
+.hp-lock.open{color:var(--brick);border-color:var(--brick)}
+.hp-lock .sh-open{display:none}
+.hp-lock.open .sh-shut{display:none}
+.hp-lock.open .sh-open{display:inline}
 .hp-step{display:flex;gap:6px;justify-content:center;margin-top:8px}
 .hp-step button{width:34px;height:34px;border-radius:7px;border:2px solid var(--brick);background:var(--field);color:var(--brick);font-size:18px;font-weight:700;cursor:pointer}
 /* successes – skull – failures, centred under the +/- buttons. No text

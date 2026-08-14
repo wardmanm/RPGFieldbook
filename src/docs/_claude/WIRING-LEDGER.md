@@ -1949,6 +1949,213 @@ fallback simply never runs.
 
 ---
 
+## Done — CON in the level-1 HP seed, and damage that spends temp HP
+
+Two bugs Mike caught in play: level-1 max HP ignored Constitution, and nothing in the app had ever
+spent temporary HP — it was stored, rendered, cleared on a long rest and printed, and the player did
+the subtraction by hand.
+
+**`level1HP(d)` in `56-class.js` is the one formula**, `hitDieMax + modOf(con)`, because three sites
+have to agree on it *to the number*: `seedLevel1HP()` writes it, `resyncLevel1HP()` re-writes it, and
+`removeClass()` only un-seeds when the box still holds exactly it.
+
+**CON is read with `modOf()`, not `abilFinal()`.** `contributions()` folds in equipped items, active
+statuses and summoned familiars, so an effects-aware seed would be un-seedable minutes later —
+un-equip a cloak between adding and removing a class and the clean revert stops firing *silently*.
+Effects already have their own route into this number (the `hp.max` target), which is where a CON
+buff that should raise HP belongs; baked into the base it would also be invisible to `maxNote` and
+would never come back off. `rollHitDie()` keeps `abilFinal` and is right to — that value is consumed
+in the instant it is computed and never re-derived. There is a comment on both saying so; don't
+"harmonise" them.
+
+**Floored at 1, not 0.** `effMaxHP()>0` is the "a maximum is set" sentinel in both `clampHP()` and
+`longRest()`, so a computed 0 would quietly disable the Current-HP ceiling and make a long rest claim
+no maximum was set. `level1HP()` also returns 0 to mean "no parseable die", so a real 0 would be
+indistinguishable from the sentinel. It bites at `d4`+CON 1, and transiently every time someone types
+a CON score digit by digit.
+
+**`resyncLevel1HP(prevCon)` is not a nicety — without it, adding CON to the formula is a
+regression.** Seed at CON 10, type CON 16, and `hp.max` no longer equals what `removeClass()`
+recomputes, so the clean revert silently stops working and a d10's HP survives onto a d6 class. It
+also closes the ordering hazard: pick the class before entering stats (the common order) and the seed
+would otherwise be die+0 forever. Stateless — the boot `input` handler passes the *previous* score,
+and the guard is "does the box still hold what we would have written then?", the same heuristic and
+the same trade-off `removeClass` has always used. No new character field, no `blankChar` default, no
+migrate surface: a pre-change sheet holds `die`, which is exactly what `modOf(10)` reproduces, so it
+upgrades itself the first time CON is edited. It deliberately stops at level 2, where `hp.max` is a
+rolled total the app never computed. Per-keystroke jitter is transient: each step recognises the
+previous step's own number, and a character at full HP stays at full through the whole sequence.
+
+**`adjustHP(delta)` in `65-resources.js` is now the one HP-delta path** — the − button, a typed
+negative in the Current box, and a spent hit die all go through it. Damage soaks into `hp.temp`
+first; healing never touches temp (temp HP is granted, not restored); exhausted temp reads back as
+`""` rather than 0, matching what `longRest()` leaves behind. Model + clamp only, no DOM, the same
+contract `clampHP()` has.
+
+**It lives in `65-resources.js` because `harness.js` drops `90-boot.js` from the test bundle** —
+logic in that fragment is untestable by construction, so 90-boot keeps the wiring and nothing else.
+Its two call sites are covered by regex-on-source guards in `rules-data.js`, beside the existing
+template guards, which is brittle but is the only coverage available there.
+
+**Typed damage needed `signedDelta()`.** `signedEntry()` returns an *absolute* result and floors at
+0, so the delta (and any overkill) is gone by the time `applyHPInput` sees it, and `min(temp,
+damage)` needs the raw number. Rather than duplicate the digit grammar, it was lifted out of
+`signedEntry` into `entryDigits()` and both now share it.
+
+**Current AND Temp both read a negative as damage** — the second half of that was a follow-up from
+play: `-5` against 3 temp used to floor the Temp box at 0 and throw the extra 2 away, leaving the
+character two hit points better off than they should be. Both boxes now route the delta through
+`adjustHP`, so a hit means the same thing whichever one you type it in, and the overflow spills.
+`+7` in Temp is still a plain grant, and Max keeps plain-edit semantics because a negative there is
+you *lowering your maximum*, not taking damage — `sheet.js` asserts that a `-20` in Max still drags
+Current down without touching Temp.
+
+**Needs a browser smoke-test:** add a class on a fresh character at CON 16 and check Max/Current;
+add the class first, then type a CON score digit by digit and confirm the numbers track without
+sticking on an intermediate value; type your own Max and confirm CON edits leave it alone; swap a d10
+class for a d6 one at a non-default CON and confirm the old maximum does not survive; press − with
+Temp set and confirm Temp drains before Current; type -5 into Current with Temp 2, and again into
+Temp with Temp 3, and confirm the spill both ways; confirm + never touches Temp.
+
+---
+
+## Done — Max HP lock, Hit Dice under Hit Points, current-HP colour bands
+
+Three changes to the same corner of the Sheet tab, all owner decisions. Recorded so they are not
+re-litigated.
+
+### A. `character.hp.locked`
+
+**The new field lives INSIDE `hp`, and that is the whole migration story.** `migrate()` already does
+`Object.assign({},blank.hp,s.hp)` over the structured keys, so every existing sheet gains
+`locked:true` with no new code, and one that deliberately saved `locked:false` keeps it. Chosen over
+a top-level `hpLocked` for exactly that. Tested both directions, plus the no-`hp`-at-all branch (a
+separate code path) and a second round-trip.
+
+**Two layers, the shape the auto spell-slot fields already use.** `renderHP()` sets `hpMax.readOnly`
+and repaints the pill; `applyHPInput()` refuses `k==="max"` again and returns `false`. `readOnly` is
+only a hint — paste, autofill and any programmatic caller walk straight past it, which is why
+`90-boot.js`'s slot handler has always carried `if(slotsAuto)return` beside `65-resources.js`'s
+`inp.readOnly=slotsAuto`. Read as `!==false`, never a truth test, so an object that never went
+through `migrate()` is locked rather than silently editable.
+
+**The automatic writers BYPASS the lock, on purpose.** `seedLevel1HP`, `resyncLevel1HP` and
+`removeClass`'s un-seed all write `character.hp.max` directly and never went through the box. Routing
+them through `applyHPInput` "for consistency" would leave a locked level-1 character with no hit
+points at all. `char-update.js` asserts all three under a locked box; `rules-data.js` asserts
+`56-class.js` names `hp.locked` exactly once.
+
+**`doLevelUp()` clears the lock and calls `renderHP()` itself** — `recompute()` does not call it, and
+a model that says unlocked while the DOM is still `readOnly` fails silently. Levelling is the one
+moment Max HP legitimately changes and the app cannot compute the new value, so it hands the box
+back. It stays open until the player closes it; re-locking mid-edit would be worse. `doLevelDown`
+deliberately does nothing here.
+
+**No confirm dialog**, unlike `[data-hdmode]`: switching to manual hit dice is a mode change with
+consequences at level-up, while this is undone by a second tap.
+
+**One latent bug fell out of it.** `applyHPInput` guarded with `!(k in character.hp)`, which `locked`
+now satisfies — a `data-hp="locked"` hook could have written a boolean field. Now an explicit
+`cur`/`max`/`temp` list, with a test.
+
+**The pill is an inline SVG, not an emoji.** U+1F512 has no text-presentation variant, so the
+`&#65038;` trick that keeps the death-save skull as ink does not exist for it and it would render as
+a colour emoji. Both shackle paths ship in the template and CSS toggles them off `.hp-lock.open`, so
+`renderHP()` only does `classList.toggle` — the same thing `renderHitDice()` does for
+`.hd-mode.manual`. Icon-only, so the Max label stays narrower than the 66px input and the three HP
+columns keep their widths.
+
+### B. Hit Dice under Hit Points
+
+From a reference screenshot: HIT POINTS over HIT DICE as one panel pair. The whole `.hd-box` moved
+out of Rest & Recovery into Vitals, below the death saves, as a **sibling** of `.hpwrap` — nesting it
+would put it inside the brick `::before` overlay and make one frame enclose both. HP box order is
+unchanged (Current, Max, Temp — the screenshot's Max-first was deliberately not adopted, because
+Current is the number that actually moves) and the death row is unchanged.
+
+**Both cards survive**, because both are `data-note` anchors (`vitals` and `rest` in `NOTE_SECTIONS`).
+Deleting Rest & Recovery would orphan any note pinned to it.
+
+**The nesting is load-bearing.** `.hd-row{display:contents}` hands its four cells straight to
+`.hd-grid`'s `repeat(4,max-content)`, which is the only reason a multiclass pool lines its
+die/pips/count/Roll up across rows. Nothing new sits between `#hdWrap` and `.hd-grid` or inside it,
+and `.hd-box>*{position:relative}` reaches only the three direct children. Guarded in CSS *and* in
+`renderHitDice`'s source, because it breaks silently — and only on a multiclass sheet.
+
+**`.hd-box` gave up its real border for `.hpwrap`'s inset `::before`.** The old comment said a real
+border was fine because nothing nested inside needed lifting above an overlay — true, and beside the
+point once the two boxes became neighbours. A real border takes no `filter`, so on the rough skin
+`.hpwrap` wobbled and `.hd-box` did not; and a border sits outside the padding box while the inset
+sits 1px inside, leaving the frames 1px out at the corners. Now 2.5px verdigris, matching `.hd-title`.
+
+`.hp-title`/`.hd-title` share one rule with the colour split out; `.hd-mode`/`.hp-lock` share the
+pill (its `margin-left` moved onto `.hp-lock`, or it would push the centred `.hd-head` off by 2px).
+`<span class="n">Hit Dice</span>` came out of `.hd-head`, which made `.hd-head .n` dead CSS — deleted.
+
+### B2. Three hit-dice looks, chosen per character
+
+The moved panel still looked rough in play, so it was redesigned. Three options were built as live
+variants in the real app and screenshotted for the owner to choose from; he took all three as a
+setting rather than one.
+
+`character.hdStyle` is `"full"` | `"condensed"` | `"dice"`, **defaulting to full** (owner's call — it
+speaks the same language as the Vitals strip and the HP panel directly above it, and is the most
+self-explanatory of the three; the cost is height, in a card that already carries the stat strip, HP
+and the death row). **`hdStyle()` resolves anything unrecognised to the same value**, so an older
+sheet with no field lands on exactly what a new character gets and the setting needs no migration of
+its own. A test asserts the fallback and the `blankChar` default agree — split them and old sheets
+silently render something new ones never would.
+
+`renderHitDice()` now picks between `hdFullHTML` / `hdCondensedHTML` / `hdDiceHTML`, with `hdPips()`
+shared by the first two. Condensed keeps `.hd-grid` + `.hd-row{display:contents}` — the multiclass
+column alignment is unchanged and still guarded.
+
+**The actual cause of "rough" was the auto/manual pill.** Alone on its own centred line it read as an
+orphaned control and cost a whole row of the panel's height. It now rides on the `.hd-title` heading,
+which is why that became a flex row. `.hd-head` keeps only the manual text field and is zero-height
+in auto mode, the common case. `"3 of 5 left"` also became `"3/5"` (the long form is the `title`) —
+the words cost a grid column in a 320px panel.
+
+**In the dice style the token IS the control**, so the die size, the pip and the count stop saying the
+same thing three times. Tapping an unspent die rolls and heals; tapping a spent one puts back exactly
+**one** — deliberately *not* the pips' "click position i means i are spent" semantics. Pips are
+positions on a track, so that reading is natural there; tokens are interchangeable, and tapping one
+to get three back contradicts its own tooltip. (It was built the pip way first and caught in a live
+click-through.) Putting a die back never un-heals you, matching what the pips have always done.
+
+**Known limitation, deliberate:** the dice style has no way to mark a die spent *without* healing,
+because tapping is the roll. Full and Condensed keep the pips for that, and the settings hint says so.
+
+### C. Current-HP colour bands
+
+`hpBand()` is pure and returns a class name: amber at or below 50%, brick at or below 25%. Measured
+against `effMaxHP()`, so an item that raises your maximum moves the thresholds. **Temp is excluded** —
+it sits above your maximum, and folding it in could read as healthy while the real pool is empty.
+`effMaxHP()<=0` returns no band at all, so a blank new character does not open painted red.
+
+**`--warn` is a new token rather than `--accent`.** On the classic skin `--accent` and `--brick` are
+the same value (`#8f2318`), so reusing it would have made the two bands identical there. Defined in
+all four palettes; a test asserts `--warn` appears as often as `--brick` so a future palette cannot
+be added with one and not the other.
+
+**`character.hpColor` follows `coinWeight` exactly** — top-level, default true, read as `!==false`,
+with its switch in the Settings modal's "This character" section. Per character, as asked.
+
+### The test guards had to be rebuilt
+
+`rules-data.js`'s Vitals block sliced "from this literal to the next `<div class="card"`" and
+"non-greedy to the first `</div>`". Both encoded the current *nesting* as well as the content, so
+moving a block between cards broke them for reasons unrelated to what they guarded. Replaced with one
+`block(html, needle)` helper that counts `<div>`/`</div>`. Every new guard was mutation-tested — the
+thing it guards was reverted and the guard confirmed to fire — which caught one that only checked the
+`.hd-title` CSS rule existed and not that the panel wore it.
+
+**Needs a browser smoke-test:** the padlock in both states, all four skin/theme combinations, the
+rough skin (both panels must wobble by the same amount), a multiclass pool's column alignment, the
+three colour bands, and the narrow-phone width.
+
+---
+
 ## Known minor limitations (not blocking)
 
 - **Class-level feat skill-choices** grant to sid `class:<Name>`, so they revert when the class is

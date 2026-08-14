@@ -109,9 +109,16 @@
           <div class="hpwrap">
             <div class="hp-title">Hit Points</div>
             <div class="hprow">
-              <div class="hpcol"><div class="n">Current</div><input type="text" inputmode="tel" data-hp="cur" id="hpCur" placeholder="0" aria-label="Current HP — type a number, or +4 / -7 to adjust"></div>
-              <div class="hpcol"><div class="n">Max</div><input type="text" inputmode="tel" data-hp="max" id="hpMax" placeholder="0" aria-label="Base max HP — type a number, or +4 / -7 to adjust"></div>
-              <div class="hpcol"><div class="n">Temp</div><input type="text" inputmode="tel" data-hp="temp" id="hpTemp" placeholder="0" aria-label="Temp HP — type a number, or +4 / -7 to adjust"></div>
+              <div class="hpcol"><div class="n">Current</div><input type="text" inputmode="tel" data-hp="cur" id="hpCur" placeholder="0" aria-label="Current HP — type a number, or +4 to heal / -7 for damage, which spends temp HP first"></div>
+              <!-- The padlock is an inline SVG, not U+1F512: that codepoint has
+                   no text-presentation variant, so the &#65038; trick that keeps
+                   the death-save skull as ink does not exist for it and it would
+                   render as a colour emoji. Both shackle paths ship here and CSS
+                   toggles them off .hp-lock.open, so renderHP only does a
+                   classList.toggle — the same thing renderHitDice does for the
+                   hit-dice mode pill. -->
+              <div class="hpcol"><div class="n">Max <button class="hp-lock" data-hplock aria-pressed="true" aria-label="Lock or unlock Max HP" title="Max HP is locked — tap to edit it"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path class="sh-shut" d="M8.5 10.5V7a3.5 3.5 0 0 1 7 0v3.5"/><path class="sh-open" d="M8.5 10.5V7a3.5 3.5 0 0 1 6.9-.9"/></svg></button></div><input type="text" inputmode="tel" data-hp="max" id="hpMax" placeholder="0" aria-label="Base max HP — locked by default; unlock with the padlock beside this label, then type a number or +4 / -7 to adjust"></div>
+              <div class="hpcol"><div class="n">Temp</div><input type="text" inputmode="tel" data-hp="temp" id="hpTemp" placeholder="0" aria-label="Temp HP — type a number, or +4 to grant / -7 for damage, which spills into current HP"></div>
             </div>
             <div class="hp-step">
               <button id="hpMinus" aria-label="Lose HP">−</button>
@@ -132,6 +139,25 @@
             </div>
             <div id="maxNote" style="text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px">Item / feature bonuses to Max HP appear here</div>
           </div>
+          <!-- Hit Dice reads as the second half of the Hit Points panel, not as
+               a rest fixture: they are the same resource seen twice, and
+               spending one writes straight into the box above. A SIBLING of
+               .hpwrap, never a child — nesting would put it inside the brick
+               ::before overlay and make one frame enclose both.
+               Nothing may be inserted between #hdWrap and .hd-grid, or inside
+               it: .hd-row is display:contents and hands its four cells straight
+               to that grid, which is the only reason a multiclass pool lines up
+               column by column. A wrapper there breaks it with no error. -->
+          <div class="hd-box">
+            <!-- the auto/manual pill rides ON the heading, not under it: alone
+                 on its own line it read as an orphaned control and cost a whole
+                 row of the panel's height -->
+            <div class="hd-title">Hit Dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">auto</button></div>
+            <div class="hd-head">
+              <input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly aria-label="Hit Dice">
+            </div>
+            <div class="hd-wrap" id="hdWrap"></div>
+          </div>
         </div>
 
         <div class="card" data-note="rest">
@@ -139,13 +165,6 @@
           <div class="rest-row">
             <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
             <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
-          </div>
-          <div class="hd-box">
-            <div class="hd-head">
-              <span class="n">Hit Dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">auto</button></span>
-              <input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly aria-label="Hit Dice">
-            </div>
-            <div class="hd-wrap" id="hdWrap"></div>
           </div>
         </div>
 

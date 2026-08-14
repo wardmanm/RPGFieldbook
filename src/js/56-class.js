@@ -34,16 +34,52 @@ function hitDieMax(d){
   const m=/^\s*d?(\d+)\s*$/i.exec(String((d&&d.hitDie)||""));
   return m?parseInt(m[1],10):0;
 }
-/* Level 1 with a single class has no roll and no choice: max HP is the hit
-   die's maximum. Filled in on the player's behalf, but ONLY over a blank —
-   a number they typed is theirs, and this must never overwrite it. */
-function seedLevel1HP(d){
+/* The level-1 maximum, in one place, because three callers have to agree on it
+   to the number: seedLevel1HP() writes it, resyncLevel1HP() re-writes it, and
+   removeClass() only takes it back out when the box still holds exactly it.
+   Floors at 1 — you always gain at least a hit point per level, and a computed
+   0 would be indistinguishable from the 0 this returns for an unparseable die,
+   which effMaxHP()>0 reads as "no maximum set" in clampHP() and longRest(). */
+function level1HP(d){
   const die=hitDieMax(d);
-  if(!die||character.classes.length!==1||totalLevel()!==1)return;
+  return die?Math.max(1,die+modOf(character.abilities.con)):0;
+}
+/* Level 1 with a single class has no roll and no choice: max HP is the hit
+   die's maximum plus your Constitution modifier. Filled in on the player's
+   behalf, but ONLY over a blank — a number they typed is theirs, and this must
+   never overwrite it.
+   CON is read from the SCORE, not abilFinal(): contributions() folds in
+   equipped items, active statuses and summoned familiars, and this number has
+   to be re-derivable unchanged minutes later by removeClass(). An effect that
+   should raise max HP has its own target ("hp.max") and layers on top. */
+function seedLevel1HP(d){
+  const hp=level1HP(d);
+  if(!hp||character.classes.length!==1||totalLevel()!==1)return;
   if(num(character.hp.max))return;
-  character.hp.max=die;
-  if(!num(character.hp.cur))character.hp.cur=die;
+  character.hp.max=hp;
+  if(!num(character.hp.cur))character.hp.cur=hp;
   renderHP();
+}
+/* Entering CON after picking the class is the normal order for a lot of
+   players, and the seeded number would otherwise be stale forever — worse, it
+   would stop matching what removeClass() recomputes, so the clean revert below
+   would silently stop firing. Stateless on purpose: the caller hands over the
+   PREVIOUS score, so "is this still ours?" is answered by recomputing what we
+   would have written then and matching it exactly — the same test removeClass()
+   has always used, and the same thing it trades away (a player who typed, by
+   coincidence, exactly the seeded number).
+   Deliberately stops at level 2: from there hp.max is a rolled total the app
+   never computed and must not touch. Safe to call on every keystroke. */
+function resyncLevel1HP(prevCon){
+  if(character.classes.length!==1||totalLevel()!==1)return;
+  const d=findClassDef(character.classes[0].name),die=hitDieMax(d);
+  if(!die)return;
+  const was=Math.max(1,die+modOf(prevCon)),now=level1HP(d);
+  if(was===now||num(character.hp.max)!==was)return;
+  const full=num(character.hp.cur)===was;
+  character.hp.max=now;
+  if(full)character.hp.cur=now;
+  clampHP();renderHP();
 }
 function addClass(name,lvl){
   const d=findClassDef(name);
@@ -71,8 +107,10 @@ function removeClass(idx){
   /* Clean revert, same rule as the other class grants: if the only thing in
      Max HP is the number seedLevel1HP() put there, take it back out so
      swapping a d10 class for a d6 one doesn't silently keep 10. Anything else
-     in that box is the player's and is left alone. */
-  const seeded=hitDieMax(findClassDef(c.name));
+     in that box is the player's and is left alone. It has to recompute the
+     WHOLE formula, CON modifier included — which is why resyncLevel1HP() keeps
+     the box tracking CON, so this match still lands after a stat is edited. */
+  const seeded=level1HP(findClassDef(c.name));
   if(seeded&&character.classes.length===1&&num(c.level)===1&&num(character.hp.max)===seeded){
     character.hp.max="";
     if(num(character.hp.cur)===seeded)character.hp.cur="";
@@ -92,6 +130,12 @@ function doLevelUp(){
     const newL=num(entry.level)+1;if(newL>20){alert(entry.name+" is already level 20.");return;}
     entry.level=newL;
     const res=applyClassLevel(entry,d,newL);
+    /* Levelling is the one moment Max HP legitimately changes and the app
+       cannot compute it — from level 2 on it is a roll (or the average) only
+       the player knows. Hand the box back rather than making them fight a
+       padlock, and leave it open: re-locking mid-edit would be worse.
+       renderHP explicitly, because recompute() does not call it. */
+    character.hp.locked=false;renderHP();
     character.level=totalLevel();const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
     renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
     runChoices(entry.name,res.choices,res.notes);

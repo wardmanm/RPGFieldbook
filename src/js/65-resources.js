@@ -77,28 +77,73 @@ function renderHitDice(){
     el.innerHTML=warn+`<p class="hint hd-none">${character.hdManual?"Type your dice above, e.g. 2d8 + 1d6.":"Add a class and your Hit Dice appear here. Or switch to manual and type them in."}</p>`;
     return;
   }
-  /* The rows get their own grid container so their four columns line up with
-     each other. The warning banner stays OUTSIDE it: a grid item spanning every
-     column still feeds that column sizing, which stretched the Roll buttons to
-     the width of a sentence. */
-  el.innerHTML=warn+`<div class="hd-grid">`+pool.map(p=>{
+  const style=hdStyle();
+  el.innerHTML=warn+(style==="condensed"?hdCondensedHTML(pool):style==="dice"?hdDiceHTML(pool):hdFullHTML(pool));
+}
+/* Which of the three looks this character uses. Anything unrecognised — an
+   older sheet, a hand-edited file — falls back to full, which is also
+   blankChar's default, so the setting needs no migration of its own and an old
+   sheet lands on the same look a new one does. */
+function hdStyle(){const s=character.hdStyle;return (s==="condensed"||s==="dice")?s:"full";}
+/* A pip is filled when the die is SPENT — the same way the spell slot bubbles
+   read. The count beside them says which way round it goes, so nobody has to
+   infer it. Shared by the full and condensed styles; the dice style has no
+   separate pips, because there the dice ARE the pips. */
+function hdPips(p){
+  let h="";
+  for(let i=1;i<=p.total;i++)h+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${p.die}" data-i="${i}" aria-label="${p.die} number ${i}${i<=p.used?" (spent)":""}"></button>`;
+  return h;
+}
+/* CONDENSED — one line per die size. The rows get their own grid container so
+   their four columns line up with each other; .hd-row is display:contents and
+   hands its cells straight to it, which is the whole mechanism. The warning
+   banner stays OUTSIDE that grid: a grid item spanning every column still feeds
+   the column sizing, which stretched the Roll buttons to the width of a
+   sentence. */
+function hdCondensedHTML(pool){
+  return `<div class="hd-grid">`+pool.map(p=>{
     const left=p.total-p.used;
-    /* A pip is filled when the die is SPENT — the same way the spell slot
-       bubbles read. The count beside them says it in words, so nobody has to
-       infer which way round it goes. */
-    let pips="";for(let i=1;i<=p.total;i++)pips+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${p.die}" data-i="${i}" aria-label="${p.die} number ${i}${i<=p.used?" (spent)":""}"></button>`;
-    return `<div class="hd-row"><span class="hd-die">${p.die}</span><span class="hd-pips">${pips}</span>`+
-      `<span class="hd-left${left?"":" out"}">${left} of ${p.total} left</span>`+
+    return `<div class="hd-row"><span class="hd-die">${p.die}</span><span class="hd-pips">${hdPips(p)}</span>`+
+      `<span class="hd-left${left?"":" out"}" title="${left} of ${p.total} left">${left}/${p.total}</span>`+
       `<button class="hd-roll" data-hdroll="${p.die}" ${left?"":"disabled"} title="Spend one ${p.die} and heal">Roll</button></div>`;
   }).join("")+`</div>`;
+}
+/* FULL — a boxed cell per die size, speaking the same language as the Vitals
+   strip and the Hit Points panel it now sits under. */
+function hdFullHTML(pool){
+  return `<div class="hd-boxes">`+pool.map(p=>{
+    const left=p.total-p.used;
+    return `<div class="hd-cell"><div class="hd-cd">${p.die}</div>`+
+      `<div class="hd-cv">${left}<small> / ${p.total}</small></div>`+
+      `<div class="hd-pips">${hdPips(p)}</div>`+
+      `<button class="hd-roll" data-hdroll="${p.die}" ${left?"":"disabled"} title="Spend one ${p.die} and heal">Roll</button></div>`;
+  }).join("")+`</div>`;
+}
+/* DICE — every die is its own token, so the die size, the pip and the count
+   stop saying the same thing three times over. Tapping an unspent one rolls it;
+   tapping a spent one puts it back, with the same "click pip i" semantics the
+   other two styles have. The trade: there is no way to mark a die spent WITHOUT
+   healing here. That is what the other two styles keep it for. */
+function hdDiceHTML(pool){
+  return `<div class="hd-dice">`+pool.map(p=>
+    `<div class="hd-drow">`+Array.from({length:p.total},(_,i)=>{
+      const spent=i<p.used;
+      return `<button class="hd-d${spent?" spent":""}" data-hddie="${p.die}" data-i="${i+1}"`+
+        ` title="${spent?"Spent — tap to put it back":"Tap to spend this "+p.die+" and heal"}"`+
+        ` aria-label="${p.die}${spent?", spent":""}">${p.die.slice(1)}</button>`;
+    }).join("")+`</div>`).join("")+
+    `</div><p class="hint hd-foot">Tap a die to spend it and heal</p>`;
 }
 function rollHitDie(die){
   const p=hitDicePool().find(x=>x.die===die);if(!p||p.used>=p.total)return;
   const n=parseInt(die.slice(1),10)||8, c=contributions();
+  /* abilFinal here, unlike level1HP's modOf: this value is consumed in the
+     instant it is computed and never re-derived, so transient contributions are
+     exactly what should count. Don't "harmonise" the two. */
   const conMod=Math.floor((abilFinal("con",c)-10)/2), roll=1+Math.floor(Math.random()*n), heal=Math.max(0,roll+conMod);
-  character.hp.cur=num(character.hp.cur)+heal;   /* clampHP caps it at the effective max */
+  adjustHP(heal);   /* positive: never touches temp, and clampHP caps it at the effective max */
   if(!character.hdUsed)character.hdUsed={};character.hdUsed[die]=num(character.hdUsed[die])+1;
-  clampHP();renderHP();
+  renderHP();
   renderHitDice();recompute();scheduleSave();
   restSummary("Hit die spent — "+die,[`Rolled ${roll} ${conMod>=0?"+":"−"} ${Math.abs(conMod)} CON = ${heal} HP`,`Current HP: ${character.hp.cur}`],"");
 }
@@ -295,16 +340,30 @@ function coinKeys(){return (character.system==="dnd")?["cp","sp","ep","gp","pp"]
 function signedEntry(cur,raw){
   const s=String(raw==null?"":raw).trim().replace(/[−–—]/g,"-");
   if(!s)return "";
-  /* Space is allowed after the sign ("+ 10") but NOT inside the digits: "1 2"
-     is a slip, and quietly reading it as 12 is the sort of silent coercion
-     that loses someone their gold. Unrecognised entries are rejected instead. */
-  const digits=t=>/^\d+$/.test(t)||/^\d{1,3}(,\d{3})+$/.test(t) ? parseInt(t.replace(/,/g,""),10) : null;
   const m=/^([+-])\s*(\S+)$/.exec(s);
   if(m){
-    const n=digits(m[2]);
+    const n=entryDigits(m[2]);
     return n===null?null:Math.max(0,num(cur)+n*(m[1]==="-"?-1:1));
   }
-  return digits(s);
+  return entryDigits(s);
+}
+/* Space is allowed after the sign ("+ 10") but NOT inside the digits: "1 2" is
+   a slip, and quietly reading it as 12 is the sort of silent coercion that
+   loses someone their gold. Unrecognised entries are rejected instead.
+   Shared by signedEntry and signedDelta so the grammar can't drift between the
+   two readings of the same typed box. */
+function entryDigits(t){return /^\d+$/.test(t)||/^\d{1,3}(,\d{3})+$/.test(t) ? parseInt(t.replace(/,/g,""),10) : null;}
+/* The signed half of signedEntry(), for the callers that need the DELTA rather
+   than the result: "-7" -> -7, "+4" -> 4, and null for a bare total or anything
+   unparseable. Damage has to know it was seven points, not that the box should
+   end up reading three, because temporary HP is spent before Current is —
+   signedEntry has already folded the delta away (and floored it at 0) by the
+   time it returns. */
+function signedDelta(raw){
+  const m=/^([+-])\s*(\S+)$/.exec(String(raw==null?"":raw).trim().replace(/[−–—]/g,"-"));
+  if(!m)return null;
+  const n=entryDigits(m[2]);
+  return n===null?null:n*(m[1]==="-"?-1:1);
 }
 function renderCoins(){
   const el=document.getElementById("coins");if(!el)return;
@@ -332,19 +391,85 @@ function applyCoinInput(inp){
   scheduleSave();
   return true;
 }
+/* Damage comes off TEMPORARY hit points first. Nothing in the app had ever
+   spent them — they were stored, displayed and cleared on a long rest, and the
+   player did the subtraction by hand. Healing never touches temp: temp HP is
+   granted, not restored, so a positive delta goes straight to Current.
+   Model + clamp only, no DOM — callers pair it with renderHP(), the same
+   contract clampHP() has. It lives HERE rather than in 90-boot.js because the
+   test harness drops that fragment: logic in it is untestable by construction,
+   so 90-boot keeps the wiring and nothing else. */
+function adjustHP(delta){
+  let d=num(delta);
+  if(d<0){
+    const soak=Math.min(num(character.hp.temp),-d);
+    if(soak>0){
+      character.hp.temp=(num(character.hp.temp)-soak)||"";   /* spent out reads blank, as a long rest leaves it */
+      d+=soak;
+    }
+  }
+  if(d)character.hp.cur=num(character.hp.cur)+d;
+  clampHP();
+}
 /* The HP boxes work exactly like the coin boxes and for the same reason: they
    are NOT data-path, because that handler commits on every keystroke and would
    store "-" the instant you typed it, losing the number you were subtracting
    from. They commit on change (blur/Enter), once the entry is finished. */
+/* Which band Current HP falls in, as a class name — "" for none. Measured
+   against the EFFECTIVE max, so an item that raises your maximum moves the
+   thresholds with it. Temp is excluded: it sits ABOVE your maximum, so folding
+   it in could read as healthy while your real pool is empty.
+   No maximum set means no band at all — a blank new character must not open
+   painted red. Pure, so the bands are testable without a DOM. */
+function hpBand(){
+  if(character.hpColor===false)return "";
+  const mx=effMaxHP();if(mx<=0)return "";
+  const pct=num(character.hp.cur)/mx*100;
+  return (pct<=25)?"hp-danger":(pct<=50)?"hp-warn":"";
+}
 function renderHP(){
   ["cur","max","temp"].forEach(k=>{
     const el=document.getElementById("hp"+k[0].toUpperCase()+k.slice(1));
     if(el){const v=character.hp[k];el.value=(v===null||v===undefined)?"":v;}
   });
+  const cur=document.getElementById("hpCur"),band=hpBand();
+  if(cur){cur.classList.toggle("hp-warn",band==="hp-warn");cur.classList.toggle("hp-danger",band==="hp-danger");}
+  /* Two layers, the same shape the auto spell-slot fields use: readOnly so the
+     browser refuses the edit, AND a refusal in applyHPInput, because readOnly
+     is only a hint — paste, autofill and any programmatic caller go straight
+     past it. `!==false` rather than a truth test, so an object that never went
+     through migrate() reads as locked rather than silently editable. */
+  const locked=character.hp.locked!==false;
+  const mx=document.getElementById("hpMax");if(mx)mx.readOnly=locked;
+  const lk=document.querySelector("[data-hplock]");
+  if(lk){
+    lk.classList.toggle("open",!locked);
+    lk.setAttribute("aria-pressed",locked?"true":"false");
+    lk.title=locked?"Max HP is locked — tap to edit it":"Max HP is unlocked — tap to lock it";
+  }
 }
-/* Commit one HP box. Returns false if the entry made no sense. */
+/* Commit one HP box. Returns false if the entry was refused. */
 function applyHPInput(inp){
-  const k=inp.dataset.hp;if(!k||!(k in character.hp))return true;
+  const k=inp.dataset.hp;
+  /* An explicit list, not `k in character.hp`: `locked` is a key on that object
+     now, and a data-hp hook must never be able to write a boolean field. */
+  if(k!=="cur"&&k!=="max"&&k!=="temp")return true;
+  /* Max is locked by default, and the padlock is the only way a PLAYER changes
+     it. renderHP has already made the box readOnly; this is the second layer,
+     because readOnly does not stop a paste. The automatic writers
+     (seedLevel1HP, resyncLevel1HP, removeClass's un-seed — all 56-class.js) go
+     to the model directly and BYPASS this on purpose: routing them through here
+     would leave a locked level-1 character with no hit points at all. */
+  if(k==="max"&&character.hp.locked!==false){renderHP();return false;}
+  /* A negative typed into Current OR Temp IS damage, and goes through the one
+     damage path: temp first, then the overflow into current. Typing -5 against
+     3 temp has to leave you 2 down on current, not throw the extra away, and it
+     must mean the same thing whichever of the two boxes you happened to type it
+     in. Everything else — a heal, a bare total, anything in the Max box, where
+     a negative is you lowering your maximum — stays a plain edit to the box you
+     typed in. Junk like "+ab" reads as null and is rejected below. */
+  const dmg=(k==="cur"||k==="temp")?signedDelta(inp.value):null;
+  if(dmg!==null&&dmg<0){adjustHP(dmg);renderHP();scheduleSave();return true;}
   const next=signedEntry(character.hp[k],inp.value);
   if(next===null){renderHP();return false;}   /* reject: put the model's value back */
   character.hp[k]=next;
