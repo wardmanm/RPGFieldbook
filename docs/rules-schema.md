@@ -24,6 +24,10 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
   "name": "Humblewood Races",
   "version": 1,
   "_note": "Optional free text; ignored by the app.",
+  "excludeSystems": ["humblewood"],
+  "requires": [
+    { "pack": "D&D 2024", "file": "5e2024_full.json", "spells": ["Haste"] }
+  ],
 
   "keywords":    [ ... ],
   "features":    [ ... ],
@@ -42,6 +46,37 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
   annotation when names collide across sources. Use `"XPHB"` for D&D 2024 core, `"Humblewood"`
   for Humblewood, or your own campaign label.
 - **`name`, `version`, `_note`** — optional metadata. `_note` is ignored by the app.
+- **`excludeSystems`** *(optional, array of strings)* — character systems this pack's **species**
+  must not be offered to. Values are `"dnd"` and/or `"humblewood"`, matched case-insensitively.
+  Use it when `system` is a label the app can't place on its own: the D&D supplements ship
+  `"system": "XGE"` / `"TCE"`, which is neither `"XPHB"` nor `"Humblewood"`, so without this
+  Tasha's Custom Lineage would offer itself to a Humblewood character. It affects the ancestry
+  picker only — spells, feats, subclasses and items from the pack stay available to everyone, and
+  an already-chosen species always keeps resolving (see §6.2). If a pack is split across several
+  files, **every file must declare the same value**: the bundler folds a folder into one file, so
+  it can only carry one answer, and it fails the build if the files disagree.
+- **`requires`** *(optional, array)* — content this pack refers to but does **not** ship, so the app
+  can tell a player what's missing instead of failing quietly. Each entry names a source, then lists
+  entry names per category using the same category keys as the pack body:
+
+  ```json
+  { "pack": "Xanathar's Guide to Everything", "file": "xanathars_full.json",
+    "spells": ["Cause Fear", "Primal Savagery"] }
+  ```
+
+  `pack` and `file` are for the message; `file` is the actionable half, because it tells the player
+  exactly what to import. Names are matched **case-insensitively against everything loaded,
+  whichever pack supplies it** — having that spell from somewhere else is not an error. A category
+  key the app doesn't know is ignored rather than reported missing. Every file in a folder must
+  declare the same value, for the same reason as `excludeSystems`.
+
+  You do **not** need to declare a subclass's parent class: that is a field the app resolves, so a
+  missing one is detected on its own (§6.5). Declare what the schema *can't* see — an expanded spell
+  list is prose, so the spells it names are invisible to any automatic check.
+
+  Nothing here ever blocks loading. The pack merges as normal and everything it does ship keeps
+  working; the app shows a red **! n missing** chip on that pack in Settings → Rules data, with a
+  tooltip naming what's absent and where to get it.
 - **`rulebook`** *(optional, boolean)* — mark a pack that carries a whole system in one file, the
   way `5e2024_full.json` and `humblewood_full.json` do. Purely presentational: the app files it
   under a **Rulebook** heading in Settings → Loaded rules data instead of **Mixed**. Merging is
@@ -218,6 +253,10 @@ reach that level.
   filtered — classes, spells, feats and items stay pooled, because Humblewood supplements the D&D
   core rather than replacing it. A character that already has a cross-system ancestry keeps it and
   all its traits; the filter applies to the picker, not to lookups.
+  A pack whose `system` is a label the app can't place can say who it is **not** for instead, with
+  the file-level `excludeSystems` (§1) — that is how the D&D supplement packs (`"XGE"`, `"TCE"`)
+  keep Tasha's Custom Lineage out of a Humblewood character's list. An explicit exclusion wins over
+  the name-based guess.
 
 **`abilityChoice`** *(optional, on a race **or** a subrace)* — offers a player-chosen ability
 increase in the Add-ancestry dialog, the way backgrounds do:
@@ -341,6 +380,15 @@ gain and reset them, and add their own manual resources on the sheet. When gener
   class's subclass picker alongside any others, annotated by source.
 - `levels` use the same shape as class levels (`traits`, `choices`, `spells`).
 - `spellcasting` here grants a subclass caster ability (e.g. Eldritch Knight) if desired.
+- **If the parent class isn't loaded**, the subclass is unreachable — it can't attach to anything.
+  The app detects that on its own (no `requires` entry needed) and shows a red **! n missing** chip
+  on your pack naming the classes it couldn't find, rather than the subclass picker claiming the
+  class has no subclasses.
+- **Same name as one the class already has?** Both are offered, and yours is labelled with your
+  pack — `Gloom Stalker` and `Gloom Stalker (XGE)`. It does **not** replace the existing one:
+  the picker's key is what a character stores, so overwriting it would silently change subclasses
+  that were already chosen. Re-importing your *own* pack still replaces your own entry, so
+  updating a pack works as expected.
 
 ### 6.6 `feats`
 

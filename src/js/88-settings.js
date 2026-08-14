@@ -155,6 +155,10 @@ function encSettingsChanged(){
   if(s&&s.options.length)s.options[0].textContent="From ancestry ("+(raceDefSize()||"Medium")+")";
   renderInventory();recompute();scheduleSave();
 }
+/* A pack that is loaded but could not be SAVED is the one state the loaded-data
+   list can't show on a row: the entry is there, it just won't come back. Say it
+   above the list, in red, rather than letting a reload quietly undo the import. */
+function rulesCacheWarning(){return rulesCacheError||"";}
 function rulesStatusText(){
   const k=(rules.keywords||[]).length,f=(rules.features||[]).length,i=(rules.items||[]).length,s=(rules.spells||[]).length,r=(rules.races||[]).length,c=(rules.classes||[]).length,t=(rules.tables||[]).length;
   return (k+f+i+s+r+c+t)?`Loaded${rules.name?" “"+rules.name+"”":""}: ${r} races · ${c} classes · ${k} keywords · ${f} traits · ${i} items · ${s} spells${t?" · "+t+" tables":""}.`:"No rules loaded.";
@@ -190,6 +194,11 @@ function rulesBucket(g){
 function removeRulesGroup(key){
   const g=loadedRulesGroups().find(x=>x.key===key);if(!g)return;
   RULE_CATS.forEach(cat=>{if(!rules[cat])return;rules[cat]=rules[cat].filter(e=> g.isFile ? e._file!==g.label : (e._file?true:(e._source||"Unknown")!==g.label));});
+  /* drop a source's `requires` once none of its entries are left, so the
+     persisted object doesn't accumulate declarations for packs that are gone */
+  if(rules.requires)Object.keys(rules.requires).forEach(src=>{
+    if(!RULE_CATS.some(c=>(rules[c]||[]).some(e=>(e._source||"")===src)))delete rules.requires[src];
+  });
   reindexRules();recomputeDups();saveRulesCache();refreshRulesUI();renderAll();renderRulesData();updateRulesStatus(rulesStatusText(),"ok");
 }
 /* Unload every rules pack. Destructive and irreversible without re-importing,
@@ -230,12 +239,97 @@ function dataStatusHTML(g){
   if(st.state==="current")return ` <span class="rd-src" title="Up to date with this version of Fieldbook.">v${esc(st.have)}</span>`;
   return "";
 }
+/* ---- does a pack have everything it references? ----
+
+   A pack can lean on content it doesn't ship: Xanathar's 31 subclasses all
+   attach to classes from the D&D 2024 pack, and homebrew leans on whatever its
+   author had loaded. Until now that failed SILENTLY and misleadingly — the
+   subclasses merge, Settings counts them as loaded, and the subclass picker then
+   says "this class has no subclasses in the loaded rules", which is false. They
+   are loaded; their parent class isn't.
+
+   Two sources, because one alone is not enough:
+
+   - STRUCTURAL: `subclasses[].class` is a real field the app resolves, so a
+     missing parent class is detectable with no authoring at all. This is what
+     catches a homebrew pack nobody annotated.
+   - DECLARED (`requires`, schema §1): for references the schema cannot model.
+     `levels[].spells` is prose, so a subclass's expanded spell list names its
+     spells only inside sentences — undetectable structurally, and guessing at
+     prose would invent as many references as it found.
+
+   This is a PURE function of `rules`, deliberately: mergeRules never runs at
+   boot (90-boot.js restores the merged pool from localStorage), so anything
+   computed during merge would be lost on reload. Only the declaration is stored.
+   Nothing here ever blocks loading — the pack works, minus what it references. */
+function missingRequirements(src){
+  const out=[];
+  const has=(cat,name)=>!!ruleById(cat,name);
+  /* structural: a subclass whose parent class isn't loaded is unreachable */
+  const orphan=[];
+  (rules.subclasses||[]).forEach(s=>{
+    if((s._source||"")!==src||!s.class)return;
+    if(!findClassDef(s.class)&&orphan.indexOf(s.class)<0)orphan.push(s.class);
+  });
+  if(orphan.length)out.push({pack:"",file:"",missing:orphan.map(n=>({cat:"classes",name:n}))});
+  /* declared */
+  const decl=(rules.requires&&rules.requires[src])||[];
+  decl.forEach(grp=>{
+    if(!grp||typeof grp!=="object")return;
+    const miss=[];
+    RULE_CATS.forEach(cat=>{        /* a category we don't know is ignored, not reported */
+      (Array.isArray(grp[cat])?grp[cat]:[]).forEach(name=>{
+        if(name&&!has(cat,name))miss.push({cat,name:String(name)});
+      });
+    });
+    if(miss.length)out.push({pack:String(grp.pack||""),file:String(grp.file||""),missing:miss});
+  });
+  return out;
+}
+/* "Classes" -> "class", not "classe". Spelled out rather than de-pluralised,
+   because the display names are not all regular ("Species" is both). */
+const CAT_ONE={keywords:"glossary entry",features:"trait",items:"item",spells:"spell",
+  races:"species",classes:"class",feats:"feat",backgrounds:"background",
+  subclasses:"subclass",tables:"table"};
+function requiresStatusHTML(g){
+  const groups=missingRequirements(g.source);
+  if(!groups.length)return "";
+  const n=groups.reduce((a,b)=>a+b.missing.length,0);
+  const lines=groups.map(gr=>{
+    /* grouped by category, so eight missing classes read as one line and not as
+       the same word repeated eight times */
+    const byCat={};
+    gr.missing.forEach(m=>{(byCat[m.cat]=byCat[m.cat]||[]).push(m.name);});
+    const names=Object.keys(byCat).map(c=>{
+      const v=byCat[c];
+      return v.length+" "+(v.length===1?(CAT_ONE[c]||c):catName(c).toLowerCase())+": "+v.join(", ");
+    }).join("; ");
+    const from=gr.file?" — import "+gr.file
+      :(gr.pack?" — from "+gr.pack
+        :" — load the pack that defines them, then these will work");
+    return names+from;
+  });
+  /* "!" because colour alone can't carry this: in the Classic skin --brick and
+     --accent are the SAME value, so this chip and the amber "update available"
+     one are indistinguishable by colour. */
+  return ` <span class="chip bad" title="${esc("This pack refers to "+n+" entr"+(n===1?"y":"ies")+" that aren't loaded. It still works — anything referring to them just won't fill in.\n\n"+lines.join("\n"))}">! ${n} missing</span>`;
+}
+/* one line for the status area, so this is visible at import and not only if
+   someone happens to open the loaded-data list */
+function missingSummary(){
+  const bad=loadedRulesGroups().filter(g=>missingRequirements(g.source).length);
+  if(!bad.length)return "";
+  const names=[...new Set(bad.map(g=>g.source||g.label))];
+  return " "+names.join(", ")+(names.length===1?" refers":" refer")+" to content that isn't loaded — see Loaded data below.";
+}
 function rulesDataHTML(){
   const groups=loadedRulesGroups();
-  if(!groups.length)return `<p class="hint" style="margin:4px 0">No rules data loaded.</p>`;
+  const warn=rulesCacheWarning()
+    ? `<p class="status err" style="margin:4px 0 8px">${esc(rulesCacheWarning())}</p>` : "";
+  if(!groups.length)return warn+`<p class="hint" style="margin:4px 0">No rules data loaded.</p>`;
   const row=(g,withSummary)=>{
     const summary=withSummary?Object.entries(g.cats).map(([c,n])=>`${n} ${catName(c).toLowerCase()}`).join(" · "):"";
-    return `<div class="rd-row"><div class="rd-main"><div class="rd-name">${esc(g.label)}${g.isFile&&g.source?` <span class="rd-src">${esc(g.source)}</span>`:""}${dataStatusHTML(g)}</div>${summary?`<div class="rd-sub">${esc(summary)}</div>`:""}</div><button class="icon danger" data-rd-del="${esc(g.key)}" title="Remove this data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
+    return `<div class="rd-row"><div class="rd-main"><div class="rd-name">${esc(g.label)}${g.isFile&&g.source?` <span class="rd-src">${esc(g.source)}</span>`:""}${dataStatusHTML(g)}${requiresStatusHTML(g)}</div>${summary?`<div class="rd-sub">${esc(summary)}</div>`:""}</div><button class="icon danger" data-rd-del="${esc(g.key)}" title="Remove this data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
   };
   /* whole-system packs first, then one heading per category, Mixed last */
   const order=["rulebook"].concat(RULE_CATS,["mixed"]);
@@ -248,7 +342,7 @@ function rulesDataHTML(){
     /* the heading already names the category on single-category rows */
     html+=inB.map(g=>row(g,b==="rulebook"||b==="mixed")).join("");
   });
-  return html;
+  return warn+html;
 }
 function renderRulesData(){
   const html=rulesDataHTML();
@@ -259,7 +353,7 @@ function renderSrcRows(){
   const srcs=settings.rulesSources||[];
   host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${i}"><button class="icon danger" data-src-del="${i}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
 }
-function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[]};}
+function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{}};}
 function keyOf(x,kind){return kind==="subclasses"?(String(x.class||"")+"|"+String(x.name||"")).trim().toLowerCase():String(kind==="keywords"?(x.term||""):(x.name||"")).trim().toLowerCase();}
 /* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules */
 function srcLabel(obj){return String(obj.system||obj.name||"Rules").trim();}
@@ -267,6 +361,20 @@ function mergeRules(obj,fileName){
   if(obj.name&&!rules.name)rules.name=obj.name;
   const src=srcLabel(obj);
   const traitArr=Array.isArray(obj.features)?obj.features:(Array.isArray(obj.traits)?obj.traits:null);
+  /* Character systems this pack's species must NOT be offered to. A supplement
+     (Xanathar's, Tasha's) is D&D content the app can't infer a system for, so it
+     says who it is NOT for rather than who it is for — see rules-schema §1. */
+  const excl=Array.isArray(obj.excludeSystems)
+    ? obj.excludeSystems.map(x=>String(x).trim().toLowerCase()).filter(Boolean) : null;
+  /* What this pack refers to but doesn't ship (schema §1). Kept per SOURCE on
+     `rules`, not stamped per entry: it's pack-level and can be long. It lives in
+     `rules` because that whole object is what saveRulesCache() persists and what
+     boot restores — mergeRules never runs again. Must stay plain arrays and
+     strings for that round trip; rules._dups uses Sets and serialises to {}. */
+  if(Array.isArray(obj.requires)){
+    if(!rules.requires||typeof rules.requires!=="object")rules.requires={};
+    rules.requires[srcLabel(obj)]=obj.requires;
+  }
   const cats={keywords:obj.keywords,features:traitArr,items:obj.items,spells:obj.spells,races:obj.races,classes:obj.classes,feats:obj.feats,backgrounds:obj.backgrounds,subclasses:obj.subclasses,tables:obj.tables};
   Object.keys(cats).forEach(kind=>{
     const arr=cats[kind];if(!Array.isArray(arr))return;
@@ -277,6 +385,7 @@ function mergeRules(obj,fileName){
       const base=(kind==="keywords")?{id:uid(),term:raw.term||"",type:raw.type==="image"?"image":"text",text:raw.text||"",image:raw.image||null,cond:!!raw.cond}:Object.assign({},raw);
       base._source=src;if(fileName)base._file=fileName;if(obj.rulebook)base._rulebook=1;
       if(obj.dataVersion)base._dataVersion=obj.dataVersion;
+      if(excl&&excl.length)base._excludeSystems=excl;
       const nm=keyOf(base,kind);if(!nm)return;
       map.set(src+"\u0000"+nm,base);
     });
@@ -331,14 +440,16 @@ function fetchAllRules(){
   updateRulesStatus(`Fetching ${srcs.length} source${srcs.length>1?"s":""}…`,"");
   resetRules();const seen=new Set();
   srcs.reduce((p,u)=>p.then(()=>fetchRulesFrom(u,seen)),Promise.resolve())
-    .then(()=>{saveRulesCache();refreshRulesUI();updateRulesStatus("Fetched. "+rulesStatusText(),"ok");})
-    .catch(err=>{saveRulesCache();refreshRulesUI();updateRulesStatus("Couldn't finish ("+err.message+"). Kept what loaded; if offline or CORS-blocked, import files instead.","err");});
+    /* renderRulesData() was missing here: a fetch refreshed the sheet but left the
+       loaded-data list — and now its missing-content chips — showing the old state. */
+    .then(()=>{const m=missingSummary();saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus("Fetched. "+rulesStatusText()+m,m?"err":"ok");})
+    .catch(err=>{saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus("Couldn't finish ("+err.message+"). Kept what loaded; if offline or CORS-blocked, import files instead.","err");});
 }
 /* import one or many files; each is merged so you can load traits.json, spells.json, … separately */
 function importRulesFiles(files){
   const list=Array.from(files);let ok=0,bad=0;
   (function next(i){
-    if(i>=list.length){saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus(`Merged ${ok} file(s)${bad?", "+bad+" failed":""}. `+rulesStatusText(),bad?"err":"ok");return;}
+    if(i>=list.length){const m=missingSummary();saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus(`Merged ${ok} file(s)${bad?", "+bad+" failed":""}. `+rulesStatusText()+m,(bad||m)?"err":"ok");return;}
     const r=new FileReader();
     r.onload=()=>{try{mergeRules(JSON.parse(r.result),list[i].name);ok++;}catch(e){bad++;}next(i+1);};
     r.onerror=()=>{bad++;next(i+1);};

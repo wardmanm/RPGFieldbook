@@ -153,9 +153,10 @@ cp dist/fieldbook.html .buildtmp/
 cp README.md .buildtmp/
 # The app is MIT; shipping it without its licence would be an oversight.
 cp LICENSE .buildtmp/
-# ONE pack per system, not the per-category files — players import two files, not
-# sixteen. The individual files remain in the repo for cherry-picking.
-cp dist/5e2024_full.json dist/humblewood_full.json .buildtmp/data/
+# ONE pack per system, not the per-category files — players import one file per
+# game, not thirty. The individual files remain in the repo for cherry-picking.
+cp dist/5e2024_full.json dist/humblewood_full.json \
+   dist/xanathars_full.json dist/tashas_full.json dist/homebrew_full.json .buildtmp/data/
 cp docs/*.md .buildtmp/docs/
 cp scripts/convert.py .buildtmp/scripts/
 # convert.py's hand-authored inputs travel with it — without them an advanced
@@ -178,7 +179,7 @@ const banned=names.filter(n=>/^src\/|^CLAUDE\.md$|^build\.sh$|^dev\.sh$|^\.|WIRI
 // data/ must hold ONLY the bundled packs — a stray per-category file means the
 // zip stopped matching what README section 9 promises.
 const dataFiles=names.filter(n=>/^data\/.+/.test(n));
-const strays=dataFiles.filter(n=>!/^data\/(5e2024|humblewood)_full\.json$/.test(n));
+const strays=dataFiles.filter(n=>!/^data\/(5e2024|humblewood|xanathars|tashas|homebrew)_full\.json$/.test(n));
 if(strays.length)banned.push(...strays);
 // docs/ is an ALLOWLIST, not a blocklist. Naming each dev doc to ban leaves a
 // hole the size of the next one written: HUMBLEWOOD-PLAYTESTS.md was not in the

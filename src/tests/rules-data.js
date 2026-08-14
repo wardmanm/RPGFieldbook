@@ -8,6 +8,10 @@ const {loadApp, makeCheck, ROOT} = require('./harness');
 const ck = makeCheck();
 const {X, state, bootError, fragments} = loadApp([
   'RULE_CATS','systemOf','racesForCharacter','raceOptions','findRaceDef',
+  'subclassesFor','findClassDef',
+  'missingRequirements','requiresStatusHTML','missingSummary',
+  'saveRulesCache','rulesCacheWarning','cacheBytes',
+  'lzwCompress','lzwDecompress','readRulesCacheString',
   'loadedRulesGroups','rulesBucket','rulesDataHTML','clearAllRules',
   'mergeRules','resetRules','blankChar','migrate','catName',
   'DATA_VERSIONS','dataStatus','dataStatusHTML',
@@ -45,6 +49,174 @@ ck('findRaceDef still resolves cross-system', !!X.findRaceDef('Elf'), 'Elf unres
 X.character.system='dnd';
 ck('findRaceDef resolves the other way too', !!X.findRaceDef('Strig'));
 
+// ---------- excludeSystems: a supplement says who it is NOT for
+// systemOf() cannot place "TCE", so without this Tasha's Custom Lineage would
+// offer itself to Humblewood characters.
+X.resetRules();
+X.mergeRules({system:'Humblewood',races:[{name:'Strig'}]},'hw.json');
+X.mergeRules({system:'TCE',excludeSystems:['humblewood'],races:[{name:'Custom Lineage'}]},'tashas.json');
+ck('systemOf cannot place a supplement', X.systemOf({_source:'TCE'})==='');
+ck('_excludeSystems stamped by mergeRules',
+   (X.rules.races||[]).some(r=>r.name==='Custom Lineage'&&Array.isArray(r._excludeSystems)));
+X.character.system='dnd';
+ck('dnd char is offered Custom Lineage', X.racesForCharacter().some(r=>r.name==='Custom Lineage'));
+X.character.system='humblewood';
+ck('hbw char is NOT offered Custom Lineage', !X.racesForCharacter().some(r=>r.name==='Custom Lineage'));
+ck('hbw char still sees its own species', X.racesForCharacter().some(r=>r.name==='Strig'));
+// same rule as systemOf: the picker filters, the resolver never does
+ck('findRaceDef ignores excludeSystems', !!X.findRaceDef('Custom Lineage'));
+ck('excludeSystems is case-insensitive', (()=>{
+  X.resetRules();
+  X.mergeRules({system:'TCE',excludeSystems:['Humblewood'],races:[{name:'CL'}]},'t.json');
+  X.character.system='humblewood';
+  return !X.racesForCharacter().length;})());
+
+// ---------- missing dependencies: a pack that refers to content it doesn't ship
+// Two sources. STRUCTURAL catches a subclass whose parent class isn't loaded —
+// which used to fail silently AND misleadingly (the picker claimed the class had
+// no subclasses, when they were loaded and merely unreachable). DECLARED covers
+// what the schema can't model: levels[].spells is prose, so an expanded spell
+// list names its spells only inside sentences.
+X.resetRules();
+X.mergeRules({system:'XPHB',classes:[{name:'Warlock'}],spells:[{name:'Haste'}]},'5e.json');
+X.mergeRules({system:'Homebrew',subclasses:[{class:'Warlock',name:'The Predator'}],
+  requires:[{pack:"Xanathar's",file:'xanathars_full.json',spells:['Cause Fear']},
+            {pack:'D&D 2024',file:'5e2024_full.json',spells:['Haste']}]},'hb.json');
+{
+  const m=X.missingRequirements('Homebrew');
+  const flat=m.flatMap(g=>g.missing.map(x=>x.name));
+  ck('a declared name that IS loaded is not reported', !flat.includes('Haste'), flat);
+  ck('a declared name that is missing is reported', flat.includes('Cause Fear'), flat);
+  ck('the report names the file that provides it',
+     m.some(g=>g.file==='xanathars_full.json'&&g.missing.some(x=>x.name==='Cause Fear')), m);
+  ck('a pack with nothing missing reports nothing', X.missingRequirements('XPHB').length===0);
+  ck('requires is stored on rules, keyed by source', !!(X.rules.requires||{})['Homebrew']);
+}
+// case-insensitive, and satisfied by ANY pack — `file` is documentation, not a constraint
+X.resetRules();
+X.mergeRules({system:'Elsewhere',spells:[{name:'CAUSE FEAR'}]},'other.json');
+X.mergeRules({system:'Homebrew',requires:[{file:'xanathars_full.json',spells:['Cause Fear']}]},'hb.json');
+ck('matching is case-insensitive and pack-blind', X.missingRequirements('Homebrew').length===0,
+   X.missingRequirements('Homebrew'));
+// a category the app doesn't know must be ignored, not reported missing
+X.resetRules();
+X.mergeRules({system:'Homebrew',requires:[{file:'x.json',gizmos:['Whatsit']}]},'hb.json');
+ck('an unknown category is ignored, not reported', X.missingRequirements('Homebrew').length===0);
+// structural: no declaration at all, parent class absent
+X.resetRules();
+X.mergeRules({system:'Homebrew',subclasses:[{class:'Warlock',name:'The Predator'}]},'hb.json');
+{
+  const m=X.missingRequirements('Homebrew');
+  ck('a missing parent class is caught with NO declaration',
+     m.some(g=>g.missing.some(x=>x.cat==='classes'&&x.name==='Warlock')), m);
+  ck('the structural report has no file to point at', m.every(g=>!g.file));
+  const h=X.requiresStatusHTML({source:'Homebrew'});
+  ck('the chip is rendered', /chip bad/.test(h), h);
+  ck('the chip carries a glyph, not just colour', />!\s/.test(h.replace(/^[^>]*>/,'>')), h);
+  ck('the chip explains itself in a tooltip', /title="[^"]*Warlock/.test(h), h);
+  ck('missingSummary names the pack', /Homebrew/.test(X.missingSummary()), X.missingSummary());
+}
+// and once the class is loaded, everything goes quiet
+X.mergeRules({system:'XPHB',classes:[{name:'Warlock'}]},'5e.json');
+ck('loading the missing class clears the report', X.missingRequirements('Homebrew').length===0);
+ck('nothing missing renders no chip', X.requiresStatusHTML({source:'Homebrew'})==='');
+ck('nothing missing gives an empty summary', X.missingSummary()==='');
+// the declaration must survive the localStorage round trip, because mergeRules
+// is never called again at boot — 90-boot.js restores the merged pool directly
+X.resetRules();
+X.mergeRules({system:'Homebrew',subclasses:[{class:'Warlock',name:'P'}],
+  requires:[{file:'f.json',spells:['Nope']}]},'hb.json');
+{
+  const revived=JSON.parse(JSON.stringify(X.rules));
+  ck('requires survives a JSON round trip', !!(revived.requires||{})['Homebrew'],
+     Object.keys(revived.requires||{}));
+  X.rules=revived;
+  ck('and still reports after restore', X.missingRequirements('Homebrew').length>0);
+}
+
+// ---------- the rules cache must never fail silently
+// Five packs merge to ~2.3M characters — ~4.6 MiB as UTF-16, over a 5 MiB
+// localStorage quota. saveRulesCache() used to swallow QuotaExceededError with
+// an empty catch, so the PREVIOUS value survived: the packs looked loaded all
+// session and the next reload restored the older set, with nothing said.
+// (No indexedDB in the harness, so this exercises the localStorage fallback —
+// which is exactly the path a browser that refuses IDB would take.)
+X.resetRules();
+X.mergeRules({system:'XPHB',spells:[{name:'Fireball'}]},'5e.json');
+state.quotaFull=false;
+X.saveRulesCache();
+ck('a write that fits reports no error', X.rulesCacheWarning()==='', X.rulesCacheWarning());
+ck('and nothing red is rendered', !/status err/.test(X.rulesDataHTML()));
+state.quotaFull=true;
+X.mergeRules({system:'XGE',spells:[{name:'Cause Fear'}]},'xge.json');
+X.saveRulesCache();
+{
+  const w=X.rulesCacheWarning();
+  ck('a refused write is REPORTED, not swallowed', w!=='', w);
+  ck('the warning says it will not survive a reload', /next time|reload/i.test(w), w);
+  ck('the warning says what to do about it', /unload|re-import/i.test(w), w);
+  ck('the warning quotes a size in bytes, not characters', /\d+\s*(KB|MB)/.test(w), w);
+  ck('the warning reaches the loaded-data list in red', /status err/.test(X.rulesDataHTML()));
+  // the pool itself is untouched — this is a save failure, not a load failure
+  ck('the packs stay loaded and usable this session',
+     (X.rules.spells||[]).length===2, (X.rules.spells||[]).length);
+}
+state.quotaFull=false;
+X.saveRulesCache();
+ck('the warning clears once a write succeeds', X.rulesCacheWarning()==='', X.rulesCacheWarning());
+ck('and the red line goes away', !/status err/.test(X.rulesDataHTML()));
+
+// ---------- the compressor behind the localStorage fallback
+// Used only when IndexedDB is refused (WebKit on file:// is the case it exists
+// for), where the pool must fit ~5 MiB and five packs is ~4.3 MiB uncompressed.
+// A broken decompress would be worse than the bug this was written to fix, so
+// the round trip is asserted on the shapes that break naive implementations —
+// and on the real shipped payload.
+{
+  const rt = s => X.lzwDecompress(X.lzwCompress(s));
+  const same = (n, s) => ck('lzw round-trip: ' + n, rt(s) === s);
+  same('empty', '');
+  same('single char', 'a');
+  same('repeat (the KwKwK case)', 'a'.repeat(40));
+  same('alternating', 'ab'.repeat(500));
+  same('every byte value', Array.from({length:256},(_,i)=>String.fromCharCode(i)).join(''));
+  same('em dash and curly quotes', 'a — b “c” ‘d’ … é ñ ü');
+  same('CJK', '龍のダンジョン'.repeat(50));
+  same('emoji / surrogate pairs', '🐉🔥'.repeat(50));
+  same('escapes', '"\\"\\\\"\n\t');
+  // deterministic fuzz — no Math.random, so a failure is reproducible
+  let seed = 12345, ok = true;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  for (let i = 0; i < 25 && ok; i++) {
+    let s = '';
+    for (let j = 0, n = Math.floor(rnd()*1500); j < n; j++) {
+      const r = rnd();
+      s += r < 0.7 ? String.fromCharCode(32 + Math.floor(rnd()*95))
+         : r < 0.9 ? '{}[]",:'[Math.floor(rnd()*7)]
+         : String.fromCharCode(0xC0 + Math.floor(rnd()*200));
+    }
+    ok = rt(s) === s;
+  }
+  ck('lzw round-trip: 25 fuzzed strings', ok);
+
+  // the real payload, and the size claim the iOS fallback rests on
+  const pool = fs.readFileSync(path.join(ROOT,'dist','5e2024_full.json'), 'utf8');
+  const packed = X.lzwCompress(pool);
+  ck('lzw round-trips the shipped 5e2024 pack exactly', X.lzwDecompress(packed) === pool);
+  ck('lzw gets the pack under a third of its size', packed.length < pool.length/3,
+     (100*packed.length/pool.length).toFixed(0) + '%');
+
+  // the tagged wrapper the fallback writes and boot reads
+  ck('a tagged value decodes back', X.readRulesCacheString('\u0001LZ'+packed) === pool);
+  ck('an untagged value is legacy plain JSON and still reads',
+     X.readRulesCacheString('{"a":1}') === '{"a":1}');
+  ck('empty reads as empty',
+     X.readRulesCacheString('') === '' && X.readRulesCacheString(null) === '');
+  // corrupt must degrade to "nothing cached", never throw at boot
+  ck('a corrupt payload returns empty rather than throwing',
+     X.readRulesCacheString('\u0001LZ￿￿￿') === '');
+}
+
 // ---------- rules-data bucketing
 X.resetRules();
 X.mergeRules({system:'XPHB',spells:[{name:'Fireball'}]},'spells.json');
@@ -81,7 +253,7 @@ function entrySet(r){
   X.RULE_CATS.forEach(c=>{o[c]=(r[c]||[]).map(e=>String(e.name||e.term||'')).sort();});
   return o;
 }
-for(const sys of ['5e2024','humblewood']){
+for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
   const dir=path.join('data',sys);
   const files=fs.readdirSync(dir).filter(f=>f.endsWith('.json')).sort();
   X.resetRules();
@@ -117,6 +289,155 @@ for(const sys of ['5e2024','humblewood']){
   });
 }
 
+// ---------- the supplement packs (Xanathar's, Tasha's)
+// These counts are the whole defence against the failure this converter keeps
+// producing: a source filter that matches nothing writes a valid, empty,
+// entirely plausible-looking pack. A wrong number here is a red test; a silent
+// zero would be a shipped pack with nothing in it.
+{
+  const EXPECT={
+    xanathars:{system:'XGE',files:{
+      'glossary.json':['keywords',22], 'items-magic.json':['items',43],
+      'feats.json':['feats',15], 'spells.json':['spells',95],
+      'subclasses.json':['subclasses',31], 'features.json':['features',22],
+      'tables.json':['tables',74]}},
+    // 26 subclasses, not 30: the Artificer's four already reach the player
+    // through the 5e2024 pack, so repeating them would sit BESIDE them.
+    tashas:{system:'TCE',files:{
+      'glossary.json':['keywords',3], 'items-magic.json':['items',84],
+      'feats.json':['feats',15], 'races.json':['races',1], 'spells.json':['spells',21],
+      'subclasses.json':['subclasses',26], 'features.json':['features',76],
+      'tables.json':['tables',37]}},
+  };
+  Object.entries(EXPECT).forEach(([dir,spec])=>{
+    const onDisk=fs.readdirSync(path.join('data',dir)).filter(f=>f.endsWith('.json')).sort();
+    ck(dir+' ships exactly the expected files',
+       JSON.stringify(onDisk)===JSON.stringify(Object.keys(spec.files).sort()), onDisk);
+    Object.entries(spec.files).forEach(([f,[cat,n]])=>{
+      const p=path.join('data',dir,f);
+      if(!fs.existsSync(p)){ck(dir+'/'+f+' exists',false);return;}
+      const o=JSON.parse(fs.readFileSync(p,'utf8'));
+      ck(dir+'/'+f+' has '+n+' '+cat, (o[cat]||[]).length===n, (o[cat]||[]).length);
+      ck(dir+'/'+f+' declares system '+spec.system, o.system===spec.system, o.system);
+      // every file, not just races.json: the bundler treats excludeSystems as a
+      // folder-level property and errors if the files disagree.
+      ck(dir+'/'+f+' excludes humblewood',
+         JSON.stringify(o.excludeSystems)===JSON.stringify(['humblewood']), o.excludeSystems);
+      ck(dir+'/'+f+' says it is 2014-era content', /2014/.test(o._note||''), o._note);
+    });
+    // A subclass with no traits is what shipping the _copy stub looks like:
+    // right count, valid JSON, no features.
+    const subs=JSON.parse(fs.readFileSync(path.join('data',dir,'subclasses.json'),'utf8')).subclasses;
+    const hollow=subs.filter(s=>!s.class||!s.levels||
+      !Object.values(s.levels).some(l=>(l.traits||[]).length));
+    ck(dir+' every subclass has a class and at least one trait', hollow.length===0,
+       hollow.map(s=>s.name));
+    // features merge by name within a system — duplicates vanish silently
+    const feats=JSON.parse(fs.readFileSync(path.join('data',dir,'features.json'),'utf8')).features;
+    ck(dir+' feature names are unique', new Set(feats.map(f=>f.name)).size===feats.length);
+    ck(dir+' every feature names its kind', feats.every(f=>f.source&&f.description));
+  });
+  // Custom Lineage is the one species here, and the reason excludeSystems exists
+  const cl=JSON.parse(fs.readFileSync(path.join('data','tashas','races.json'),'utf8')).races[0];
+  const SIZES=['Tiny','Small','Medium','Large','Huge','Gargantuan'];
+  ck('Custom Lineage declares sizes the app knows',
+     (Array.isArray(cl.size)?cl.size:[cl.size]).every(s=>SIZES.includes(s)), cl.size);
+  // the class-tag filter feeds the spell browser's "only my class" toggle
+  // ---- the homebrew pack: hand-authored, and the reason `requires` exists
+  {
+    const files=fs.readdirSync(path.join('data','homebrew')).filter(f=>f.endsWith('.json')).sort();
+    ck('homebrew ships the expected files',
+       JSON.stringify(files)===JSON.stringify(['features.json','subclasses.json','tables.json']), files);
+    const reqs=files.map(f=>JSON.parse(fs.readFileSync(path.join('data','homebrew',f),'utf8')));
+    ck('every homebrew file declares system Homebrew', reqs.every(o=>o.system==='Homebrew'));
+    // bundle-rules.js compares these with JSON.stringify and fails the build if
+    // they differ, so a mismatch must be a red test here first
+    const one=JSON.stringify(reqs[0].requires);
+    ck('every homebrew file declares the SAME requires', reqs.every(o=>JSON.stringify(o.requires)===one));
+    ck('homebrew declares what it needs', Array.isArray(reqs[0].requires)&&reqs[0].requires.length>0);
+    // The whole demo rests on these resolving once the right pack is imported.
+    // A typo here would show as "missing" forever and look like a working feature.
+    const pool={};
+    ['5e2024','humblewood','xanathars','tashas'].forEach(d=>{
+      X.RULE_CATS.forEach(cat=>{
+        const p=path.join('data',d,cat==='spells'?'spells.json':(cat==='classes'?'classes.json':'__none'));
+        if(!fs.existsSync(p))return;
+        (JSON.parse(fs.readFileSync(p,'utf8'))[cat]||[]).forEach(e=>{
+          (pool[cat]=pool[cat]||new Set()).add(String(e.name).toLowerCase());});
+      });
+    });
+    const unresolvable=[];
+    reqs[0].requires.forEach(g=>X.RULE_CATS.forEach(cat=>{
+      (g[cat]||[]).forEach(n=>{ if(!(pool[cat]&&pool[cat].has(String(n).toLowerCase())))
+        unresolvable.push(cat+': '+n); });
+    }));
+    ck('every name homebrew requires exists in a shipped pack', unresolvable.length===0, unresolvable);
+    const sub=JSON.parse(fs.readFileSync(path.join('data','homebrew','subclasses.json'),'utf8')).subclasses[0];
+    ck('the Predator attaches to Warlock', sub.class==='Warlock'&&sub.name==='The Predator');
+    ck('the Predator has traits at every declared level',
+       Object.values(sub.levels).every(l=>(l.traits||[]).length>0), Object.keys(sub.levels));
+  }
+  const xsp=JSON.parse(fs.readFileSync(path.join('data','xanathars','spells.json'),'utf8')).spells;
+  ck('every Xanathar\'s spell carries a class list',
+     xsp.every(s=>Array.isArray(s.class)&&s.class.length),
+     xsp.filter(s=>!(s.class||[]).length).map(s=>s.name));
+
+  // findTable() looks a table up by NAME across every loaded pack, and a
+  // "[Table: X]" anchor carries no pack of its own — so two packs sharing a
+  // table name means one book's prose opens the other book's table.
+  const seen={};
+  ['5e2024','humblewood','xanathars','tashas','homebrew'].forEach(d=>{
+    const p=path.join('data',d,'tables.json');
+    if(!fs.existsSync(p))return;
+    JSON.parse(fs.readFileSync(p,'utf8')).tables.forEach(t=>{(seen[t.name]=seen[t.name]||[]).push(d);});
+  });
+  const clash=Object.entries(seen).filter(([,v])=>v.length>1);
+  ck('no table name is used by two packs', clash.length===0,
+     clash.map(([n,v])=>n+' -> '+v.join(', ')));
+  // and the anchors must follow the rename, or they resolve to nothing
+  ['xanathars','tashas','homebrew'].forEach(d=>{
+    const names=new Set(JSON.parse(fs.readFileSync(path.join('data',d,'tables.json'),'utf8'))
+      .tables.map(t=>t.name));
+    const dangling=[];
+    fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
+      const raw=fs.readFileSync(path.join('data',d,f),'utf8');
+      (raw.match(/\[Table: [^\]"]+\]/g)||[]).forEach(m=>{
+        const nm=m.slice(8,-1);
+        if(!names.has(nm))dangling.push(f+': '+nm);
+      });
+    });
+    ck(d+' every [Table: …] anchor resolves inside its own pack', dangling.length===0, dangling);
+  });
+}
+
+// ---------- subclassesFor: a supplement must not overwrite a 2024 subclass
+// The map is keyed by NAME because that is what character.classes[].subclass
+// stores. The 2024 PHB reprinted seven XGE/TCE subclasses, so a bare last-wins
+// merge would silently swap a 2024 character's Gloom Stalker for the 2014 one.
+X.resetRules();
+X.mergeRules({system:'XPHB',classes:[{name:'Ranger',subclasses:{'Gloom Stalker':{description:'2024'}}}]},'5e.json');
+X.mergeRules({system:'XGE',subclasses:[{class:'Ranger',name:'Gloom Stalker',description:'2014'}]},'xge.json');
+{
+  const m=X.subclassesFor(X.findClassDef('Ranger'));
+  ck('the 2024 subclass keeps its bare name', m['Gloom Stalker'] && m['Gloom Stalker'].description==='2024',
+     m['Gloom Stalker']);
+  ck('the supplement version is offered too, tagged with its pack',
+     !!m['Gloom Stalker (XGE)'] && m['Gloom Stalker (XGE)'].description==='2014', Object.keys(m));
+}
+// a standalone subclass with no nested rival still uses its plain name
+X.resetRules();
+X.mergeRules({system:'XPHB',classes:[{name:'Ranger'}]},'5e.json');
+X.mergeRules({system:'XGE',subclasses:[{class:'Ranger',name:'Horizon Walker'}]},'xge.json');
+ck('an uncontested subclass is not renamed',
+   !!X.subclassesFor(X.findClassDef('Ranger'))['Horizon Walker']);
+// re-importing the SAME pack must still replace, not accumulate
+X.mergeRules({system:'XGE',subclasses:[{class:'Ranger',name:'Horizon Walker',description:'v2'}]},'xge.json');
+{
+  const m=X.subclassesFor(X.findClassDef('Ranger'));
+  ck('re-importing a pack replaces its own subclass',
+     Object.keys(m).length===1 && m['Horizon Walker'].description==='v2', Object.keys(m));
+}
+
 // ---------- rules-data staleness ("do I need to re-download the packs?")
 // DATA_VERSIONS records the release each system's DATA last changed in, so a
 // system whose data didn't move keeps its old version and its holders are not
@@ -128,7 +449,10 @@ X.mergeRules({system:'XPHB', dataVersion:'1.0.0', rulebook:true,
               races:[{name:'Elf'}]}, '5e2024_full.json');
 X.mergeRules({system:'Humblewood', dataVersion:X.DATA_VERSIONS['Humblewood'], rulebook:true,
               races:[{name:'Corvum'}]}, 'humblewood_full.json');
-X.mergeRules({system:'Homebrew', rulebook:true, races:[{name:'Mine'}]}, 'mine.json');
+/* deliberately a system DATA_VERSIONS has never heard of — "Homebrew" used to
+   play this role and is now a real shipped pack, which made the test read as if
+   it were asserting something about that pack. */
+X.mergeRules({system:'MyOwnStuff', rulebook:true, races:[{name:'Mine'}]}, 'mine.json');
 
 const byLabel = {};
 X.loadedRulesGroups().forEach(g => { byLabel[g.source] = g; });
@@ -141,14 +465,14 @@ ck('stale status reports both versions',
 ck('a pack at DATA_VERSIONS is current',
    X.dataStatus(byLabel['Humblewood']).state === 'current');
 ck('an unstamped/unknown system is NOT stale',
-   X.dataStatus(byLabel['Homebrew']).state === 'unknown');
+   X.dataStatus(byLabel['MyOwnStuff']).state === 'unknown');
 ck('the loaded dataVersion is recorded on the group',
    byLabel['XPHB'].dataVersion === '1.0.0');
 
 // the badge: visible for stale, quiet otherwise
 ck('stale renders an update chip', /update available/.test(X.dataStatusHTML(byLabel['XPHB'])));
 ck('current renders no update chip', !/update available/.test(X.dataStatusHTML(byLabel['Humblewood'])));
-ck('unknown renders nothing at all', X.dataStatusHTML(byLabel['Homebrew']) === '');
+ck('unknown renders nothing at all', X.dataStatusHTML(byLabel['MyOwnStuff']) === '');
 ck('the chip reaches the Settings list', /update available/.test(X.rulesDataHTML()));
 
 // a NEWER pack than the app expects is not "stale" either — the player is ahead
@@ -158,7 +482,9 @@ ck('a pack newer than the app is not flagged stale',
    X.dataStatus(X.loadedRulesGroups()[0]).state === 'current');
 
 // ---------- every shipped pack agrees with DATA_VERSIONS
-[['5e2024_full.json','XPHB'], ['humblewood_full.json','Humblewood']].forEach(([f, sysName]) => {
+[['5e2024_full.json','XPHB'], ['humblewood_full.json','Humblewood'],
+ ['xanathars_full.json','XGE'], ['tashas_full.json','TCE'],
+ ['homebrew_full.json','Homebrew']].forEach(([f, sysName]) => {
   const p = path.join(ROOT, 'dist', f);
   if (!fs.existsSync(p)) { ck(f + ' exists', false); return; }
   const pack = JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -167,6 +493,16 @@ ck('a pack newer than the app is not flagged stale',
      pack.dataVersion === X.DATA_VERSIONS[sysName],
      pack.dataVersion + ' vs ' + X.DATA_VERSIONS[sysName]);
   ck(f + " system is the DATA_VERSIONS key", pack.system === sysName, pack.system);
+});
+// The bundle is the file players actually import. bundle-rules.js builds it from
+// a fixed key list, so a pack property it doesn't know about is dropped — the
+// per-category files would filter correctly and the bundle silently would not.
+[['xanathars_full.json'], ['tashas_full.json']].forEach(([f]) => {
+  const p = path.join(ROOT, 'dist', f);
+  if (!fs.existsSync(p)) return;
+  const pack = JSON.parse(fs.readFileSync(p, 'utf8'));
+  ck(f + ' carries excludeSystems through bundling',
+     JSON.stringify(pack.excludeSystems) === JSON.stringify(['humblewood']), pack.excludeSystems);
 });
 
 // ---------- Settings modal: collapsible sections

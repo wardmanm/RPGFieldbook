@@ -124,7 +124,7 @@ ck('dispName works for tables', X.dispName(X.rules.tables[0], 'tables') === 'Ome
 // editor, and nothing here caught either. These two assertions do.
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
-['5e2024', 'humblewood'].forEach(sys => {
+['5e2024', 'humblewood', 'xanathars', 'tashas', 'homebrew'].forEach(sys => {
   const f = path.join(ROOT, 'data', sys, 'tables.json');
   if (!fs.existsSync(f)) { ck(sys + ' tables.json exists', false); return; }
   const tables = JSON.parse(fs.readFileSync(f, 'utf8')).tables;

@@ -74,14 +74,37 @@ When you first open Fieldbook you'll see a **home screen**. Two quick things to 
 
 ### a) Load the rules data (recommended)
 
-The app comes with one rules file per game — `5e2024_full.json` for D&D 2024 and
-`humblewood_full.json` for Humblewood, in the `data` folder. Each holds everything for that
-system: species, classes, spells, feats, backgrounds and reference tables (the D&D pack also has
-items and rules glossary entries).
+The app comes with one rules file per book, in the `data` folder:
+
+- **`5e2024_full.json`** — D&D 2024: species, classes, spells, feats, backgrounds, items, magic
+  items, conditions, glossary and reference tables. Start here for D&D.
+- **`humblewood_full.json`** — Humblewood: species, classes, subclasses, spells, feats,
+  backgrounds and reference tables.
+- **`xanathars_full.json`** — Xanathar's Guide to Everything: 95 spells, 31 subclasses, 15 feats,
+  43 magic items, the Eldritch Invocations and Arcane Shot options, and the downtime and
+  tool-proficiency rules with their tables.
+- **`tashas_full.json`** — Tasha's Cauldron of Everything: 26 subclasses, 21 spells, 15 feats,
+  84 magic items, Custom Lineage, and the infusions, metamagic, fighting styles, maneuvers, runes
+  and optional class features.
+- **`homebrew_full.json`** — community homebrew, currently The Predator (a Warlock patron) with its
+  pact boon and invocations.
+
+The last three are **add-ons to D&D 2024, not games of their own** — load `5e2024_full.json` as
+well, or there will be no classes for their subclasses to attach to. If a pack refers to something
+you haven't loaded, Fieldbook says so: the pack gets a red **! n missing** badge under **Loaded
+data**, and hovering it lists what's absent and which file to import. Nothing breaks — you just
+won't get the parts that depend on the missing pack.
+
+> **A note on editions.** Xanathar's and Tasha's are 2014-era books, converted exactly as
+> published. Their subclasses list features at the 2014 levels, and the text refers to 2014 class
+> features. Where the 2024 Player's Handbook reprinted a subclass, you get **both** — the 2024 one
+> under its plain name and the older one tagged with its book, e.g. `Gloom Stalker (XGE)` — so
+> nothing you have already chosen changes, and you pick which version your table uses.
+
 Loading them turns on the pickers and auto-calculations. You can load them in any of these places:
 
-- **On the home screen:** under **Rules data**, tap **Import rules files (bulk)** and pick one or
-  both files from the `data` folder.
+- **On the home screen:** under **Rules data**, tap **Import rules files (bulk)** and pick as many
+  of the files from the `data` folder as you want.
 - **Later, from Settings** (gear icon): **Rules → Import files**.
 - **From the Rules tab:** if nothing is loaded yet, there's an **Import rules files** link right
   there.
@@ -90,8 +113,9 @@ Pick as many or as few of the `data` files as you want. They merge together, and
 they're remembered for next time. You never *have* to load them — you can fill everything in by
 hand — but they make life much easier.
 
-> **Tip:** You don't have to load both. Playing only Humblewood? Load just `humblewood_full.json`.
-> Only core D&D? Load just `5e2024_full.json`.
+> **Tip:** You don't have to load them all. Playing only Humblewood? Load just
+> `humblewood_full.json`. Only core D&D? Load just `5e2024_full.json`, and add
+> `xanathars_full.json`, `tashas_full.json` or `homebrew_full.json` if your table uses them.
 
 ### b) Create a character
 
@@ -365,11 +389,17 @@ Everything stays on your device. The app doesn't send your characters anywhere.
 fieldbook.html      ← the app — open this to run Fieldbook
 README.md           ← this guide
 LICENSE             ← the MIT licence this app is released under
-data/               ← the rules data — one file per game, import the ones you play
+data/               ← the rules data — one file per book, import the ones you play
    • 5e2024_full.json     — D&D 2024: species, classes, spells, feats, backgrounds,
                             items, magic items, conditions, glossary, reference tables
    • humblewood_full.json — Humblewood: species, classes, subclasses, spells, feats,
                             backgrounds, reference tables
+   • xanathars_full.json  — Xanathar's Guide: subclasses, spells, feats, magic items,
+                            invocations, downtime and tool rules (add-on to D&D 2024)
+   • tashas_full.json     — Tasha's Cauldron: subclasses, spells, feats, magic items,
+                            Custom Lineage, infusions and optional class features
+                            (add-on to D&D 2024)
+   • homebrew_full.json   — community homebrew (add-on to D&D 2024)
 docs/               ← reference material (you can ignore these to just play)
    • CHANGELOG — what changed in each release
    • rules schema — the format, if you want to write your own rules data

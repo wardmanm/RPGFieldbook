@@ -6,7 +6,7 @@ const APP_VERSION="1.4.0";
    so the app can tell "you need the new app" from "you also need new data".
    scripts/bundle-rules.js stamps each pack with its own value as `dataVersion`;
    dataStatus() compares what a player loaded against these. Never hand-edit. */
-const DATA_VERSIONS={"XPHB":"1.4.0","Humblewood":"1.3.0"};
+const DATA_VERSIONS={"XPHB":"1.4.0","Humblewood":"1.3.0","XGE":"1.4.0","TCE":"1.4.0","Homebrew":"1.4.0"};
 /* Set this to your GitHub "owner/repo" to enable the update badge. Leave "" to disable.
    The badge appears when a GitHub Release with a newer tag (e.g. v1.2.0) exists, and links
    to that release's page (attach fieldbook.html to the release so players can download it). */

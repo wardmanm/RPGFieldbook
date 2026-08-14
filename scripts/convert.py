@@ -32,7 +32,7 @@ Options that apply where relevant:
 
 No third-party dependencies — standard library only. Python 3.8+.
 """
-import json, re, argparse, glob, os, sys, contextlib
+import json, re, argparse, glob, os, sys, contextlib, collections
 
 # ---------------------------------------------------------------- tag rendering
 # 5e-tools inline tags look like {@tag arg|arg|arg}. Different tags put the
@@ -144,6 +144,26 @@ def _align(style):
         return 'right'
     return 'left'
 
+_RESERVED = frozenset()   # table names another pack already owns
+_SUFFIX = ''              # what to append when we'd collide with one
+
+@contextlib.contextmanager
+def reserved_names(names, suffix):
+    """Table names are a GLOBAL lookup in the app (findTable, 86-tables.js) — the
+    "[Table: X]" anchor carries no pack, so the first loaded X wins. The 2024 PHB
+    reprinted seven Xanathar's/Tasha's subclasses, so "Gloom Stalker Spells" names
+    two genuinely different tables; without this, the 2014 subclass's own anchor
+    opens the 2024 table. Renaming here rather than in the app is what keeps the
+    anchors correct for free: _register returns the final name and flatten() uses
+    exactly that."""
+    global _RESERVED, _SUFFIX
+    prev = (_RESERVED, _SUFFIX)
+    _RESERVED, _SUFFIX = frozenset(names or ()), suffix or ''
+    try:
+        yield
+    finally:
+        _RESERVED, _SUFFIX = prev
+
 def _register(tbl, sink):
     """Add a table to the sink under a unique name; reuse an identical one.
     Names are the merge key in the app, so they must not collide."""
@@ -152,6 +172,8 @@ def _register(tbl, sink):
     for t in sink:
         if t['cols'] == tbl['cols'] and t['rows'] == tbl['rows']:
             return t['name']            # same table captured already — reuse it
+    if _SUFFIX and tbl['name'] in _RESERVED:
+        tbl['name'] = tbl['name'] + _SUFFIX
     taken = {t['name'] for t in sink}
     if tbl['name'] in taken:
         i = 2
@@ -322,29 +344,103 @@ def pick_2024_preferred(entries, name_key='name'):
     legacy = [e for e in entries if e.get('basicRules') is True and e[name_key] not in names]
     return xphb + two4 + legacy
 
+# ---------------------------------------------------------------- which book
+# Everything below used to say 'XPHB' out loud, twelve times over, and filter on
+# it in five more places. A supplement (Xanathar's, Tasha's) is the same pipeline
+# pointed at a different source code, so the book became a parameter instead.
+#
+# The DEFAULT Book reproduces the original behaviour byte for byte — no source
+# codes means pick_2024_preferred, and the pack names are the exact strings the
+# committed data/5e2024/ files already carry. Do not "tidy" these strings.
+_XPHB_NAMES = {
+    'items': 'D&D 2024 Items', 'backgrounds': 'D&D 2024 Backgrounds',
+    'classes': 'XPHB Classes (2024)', 'races': 'D&D 2024 Species',
+    'tables': 'XPHB Tables',
+}
+
+class Book:
+    """The source book(s) a run converts, and how its packs are labelled.
+
+    codes           5e-tools `source` values to keep. Empty = the 2024 default
+                    (pick_2024_preferred), which is what data/5e2024/ was built with.
+    system          the string stamped as each pack's `system` field. This is the
+                    app's merge namespace AND the DATA_VERSIONS key.
+    names           per-output-stem pack display names.
+    note            `_note` written into every pack — used to say out loud that a
+                    supplement is 2014-era content sitting beside the 2024 rules.
+    exclude_systems `excludeSystems` — character systems this pack's species must
+                    not be offered to (see docs/rules-schema.md §1).
+    """
+    def __init__(self, codes=None, system='XPHB', names=None, note='', exclude_systems=None):
+        self.codes = tuple(codes or ())
+        self.system = system
+        self.names = dict(_XPHB_NAMES)
+        self.names.update(names or {})
+        self.note = note or ''
+        self.exclude_systems = tuple(exclude_systems or ())
+
+    @property
+    def is_default(self):
+        """True for the plain 2024 run — the one whose output must never move."""
+        return not self.codes
+
+DEFAULT_BOOK = Book()
+
+def _bk(book):
+    return book if book is not None else DEFAULT_BOOK
+
+def pick_sources(entries, book=None, name_key='name'):
+    """Select entries for `book`. With no explicit source codes this is exactly
+    pick_2024_preferred; with them it is a plain source filter — the basicRules
+    backfills are 2024 flags and are never set on a supplement's entries."""
+    b = _bk(book)
+    if b.is_default:
+        return pick_2024_preferred(entries, name_key)
+    codes = set(b.codes)
+    return [e for e in entries if e.get('source') in codes]
+
+def _pack(book, cat, arr, stem=None, version=None):
+    """Build a pack wrapper. Key order is load-bearing: the committed 5e2024
+    files were written as system, name?, version?, <array> and the build compares
+    bytes. `_note`/`excludeSystems` are absent unless the book sets them, so the
+    default run is untouched."""
+    b = _bk(book)
+    out = {'system': b.system}
+    nm = b.names.get(stem if stem is not None else cat)
+    if nm:
+        out['name'] = nm
+    if version is not None:
+        out['version'] = version
+    if b.note:
+        out['_note'] = b.note
+    if b.exclude_systems:
+        out['excludeSystems'] = list(b.exclude_systems)
+    out[cat] = arr
+    return out
+
 # ================================================================ CONDITIONS
-def convert_conditions(path, overlay=None, tables=None, **_):
+def convert_conditions(path, overlay=None, tables=None, book=None, **_):
     d = json.load(open(path, encoding='utf-8'))
     buckets = [d.get('condition', []), d.get('status', []), d.get('disease', [])]
     entries = [e for b in buckets for e in b]
-    chosen = pick_2024_preferred(entries)
+    chosen = pick_sources(entries, book)
     keywords = []
     for e in chosen:
         with table_ctx(tables, e['name'], 'rule'):
             keywords.append({'term': e['name'], 'type': 'text',
                              'text': flatten(e.get('entries', [])), 'cond': True})
-    return {'system': 'XPHB', 'keywords': keywords}
+    return _pack(book, 'keywords', keywords, stem='conditions')
 
 # ================================================================ GLOSSARY (variant rules)
-def convert_glossary(path, overlay=None, tables=None, **_):
+def convert_glossary(path, overlay=None, tables=None, book=None, **_):
     d = json.load(open(path, encoding='utf-8'))
-    chosen = pick_2024_preferred(d.get('variantrule', []))
+    chosen = pick_sources(d.get('variantrule', []), book)
     keywords = []
     for e in chosen:
         with table_ctx(tables, e['name'], 'rule'):
             keywords.append({'term': e['name'], 'type': 'text',
                              'text': flatten(e.get('entries', []))})
-    return {'system': 'XPHB', 'keywords': keywords}
+    return _pack(book, 'keywords', keywords, stem='glossary')
 
 # ================================================================ ITEMS
 _DMG = {'S': 'slashing', 'P': 'piercing', 'B': 'bludgeoning', 'R': 'radiant', 'N': 'necrotic', 'F': 'force', 'L': 'lightning', 'C': 'cold', 'A': 'acid', 'T': 'thunder', 'Y': 'psychic', 'O': 'poison', 'I': 'fire'}
@@ -387,7 +483,7 @@ def _coarse(tcode, it):
     if it.get('armor'): return 'Armor'
     return 'Gear'
 
-def convert_items(path, overlay=None, tables=None, **_):
+def convert_items(path, overlay=None, tables=None, book=None, **_):
     d = json.load(open(path, encoding='utf-8'))
     # type-name map: from the file's itemType table if present, else the static fallback
     types = dict(_ITYPES)
@@ -401,7 +497,7 @@ def convert_items(path, overlay=None, tables=None, **_):
         if ab and nm: props[ab] = nm
     src = d.get('baseitem') if d.get('baseitem') else d.get('item', [])
     out = []
-    keep = {id(e) for e in pick_2024_preferred(src)}
+    keep = {id(e) for e in pick_sources(src, book)}
     for it in src:
         if id(it) not in keep: continue
         tcode = _abbr(it.get('type', ''))
@@ -458,7 +554,7 @@ def convert_items(path, overlay=None, tables=None, **_):
         # attunement
         ra = it.get('reqAttune')
         attune = bool(ra) and ra is not False
-        rec = {'name': it['name'], 'system': 'XPHB', 'category': category, 'type': tname.strip(),
+        rec = {'name': it['name'], 'system': _bk(book).system, 'category': category, 'type': tname.strip(),
                'rarity': _RAR.get(it.get('rarity', 'none'), (it.get('rarity') or 'Mundane').title()),
                'weight': it.get('weight', None), 'cost': _cost(it.get('value')),
                'attune': attune, 'attuneNote': (strip_tags(ra) if isinstance(ra, str) and ra not in ('optional',) else ''),
@@ -467,7 +563,7 @@ def convert_items(path, overlay=None, tables=None, **_):
         rec.setdefault('effects', [])
         if weapon_data: rec['weapon'] = weapon_data
         out.append(rec)
-    return {'system': 'XPHB', 'name': 'D&D 2024 Items', 'items': out}
+    return _pack(book, 'items', out, stem='items')
 
 # ================================================================ BACKGROUNDS
 def _titlecase_item(name):
@@ -569,12 +665,16 @@ def _equip_grants_class(se):
                 out.append({'choose': [{'label': 'B', 'gold': g}]})
     return out or None
 
-def convert_backgrounds(path, overlay=None, tables=None, **_):
+def convert_backgrounds(path, overlay=None, tables=None, book=None, **_):
     d = json.load(open(path, encoding='utf-8'))
-    chosen = [b for b in d.get('background', []) if b.get('source') == 'XPHB']
+    bk = _bk(book)
+    # Backgrounds get NO basicRules backfill — that flag names the free subset and
+    # once cost us 12 of the 16 XPHB backgrounds. Source is the whole filter.
+    codes = set(bk.codes) or {'XPHB'}
+    chosen = [b for b in d.get('background', []) if b.get('source') in codes]
     out = []
     for b in chosen:
-        rec = {'name': b['name'], 'system': 'XPHB'}
+        rec = {'name': b['name'], 'system': bk.system}
         ab = b.get('ability', [])
         if ab:
             fr = ab[0].get('choose', {}).get('weighted', {}).get('from', [])
@@ -601,31 +701,45 @@ def convert_backgrounds(path, overlay=None, tables=None, **_):
             rec['equipmentGrants'] = eg
         rec['description'] = ''
         out.append(rec)
-    return {'system': 'XPHB', 'name': 'D&D 2024 Backgrounds', 'backgrounds': out}
+    return _pack(book, 'backgrounds', out, stem='backgrounds')
 
 # ================================================================ FEATS
-def _render_prereq(pr):
+def _render_prereq(pr, legacy=False):
+    """`legacy` adds the prerequisite shapes 2014-era books use. Both of the extra
+    branches are gated rather than merely "verified harmless": `race` never occurs
+    in the 2024 run (0 of 77 feats) but `proficiency` does (5 of 77) and is not
+    rendered today, so rendering it unconditionally would move data/5e2024/."""
     if not pr: return ''
     alts = []
     for block in pr:
         parts = []
         if 'level' in block: parts.append(f"Level {block['level']}+")
+        if legacy and block.get('race'):
+            races = []
+            for r in block['race']:
+                nm = (r.get('name') or '').title()
+                if r.get('subrace'): nm += f" ({str(r['subrace']).title()})"
+                if nm: races.append(nm)
+            if races: parts.append(' or '.join(races))
         if 'feature' in block: parts.append(', '.join(block['feature']) + ' feature')
         if block.get('spellcasting2020') or block.get('spellcastingFeature'): parts.append('Spellcasting feature')
         for a in block.get('ability', []):
             for k, v in a.items(): parts.append(f"{ABIL_FULL.get(k, k)} {v}+")
+        if legacy and block.get('proficiency'):
+            for p in block['proficiency']:
+                for k, v in p.items(): parts.append(f"{str(v).title()} {k}")
         if 'other' in block: parts.append(strip_tags(block['other']))
         if parts: alts.append(' and '.join(parts))
     return ' or '.join(alts)
 
-def convert_feats(path, overlay=None, tables=None, **_):
+def convert_feats(path, overlay=None, tables=None, book=None, **_):
     overlay = overlay or {}
     d = json.load(open(path, encoding='utf-8'))
-    chosen = pick_2024_preferred(d.get('feat', []))
+    chosen = pick_sources(d.get('feat', []), book)
     out = []
     for f in chosen:
         lead = CAT_LABEL.get(f.get('category'), '')
-        pr = _render_prereq(f.get('prerequisite'))
+        pr = _render_prereq(f.get('prerequisite'), legacy=not _bk(book).is_default)
         if pr: lead = (lead + ' · ' if lead else '') + 'Prerequisite: ' + pr
         with table_ctx(tables, f['name'], 'feat'):
             body = flatten(f.get('entries', []))
@@ -634,7 +748,7 @@ def convert_feats(path, overlay=None, tables=None, **_):
         rec = {'name': f['name'], 'description': ((lead + '\n' if lead else '') + body).strip()}
         apply_overlay(f['name'], rec, overlay)
         out.append(rec)
-    return {'system': 'XPHB', 'feats': out}
+    return _pack(book, 'feats', out, stem='feats')
 
 # ================================================================ SPELLS
 def _cast_time(s):
@@ -681,17 +795,34 @@ def _material(s):
     if isinstance(m, dict): return m.get('text')
     return None
 
-def convert_spells(path, sources=None, tables=None, **_):
+def convert_spells(path, sources=None, tables=None, book=None, **_):
     d = json.load(open(path, encoding='utf-8'))
-    chosen = [s for s in d.get('spell', []) if s.get('source') == 'XPHB'] \
-             or pick_2024_preferred(d.get('spell', []))
+    bk = _bk(book)
+    if bk.is_default:
+        chosen = [s for s in d.get('spell', []) if s.get('source') == 'XPHB'] \
+                 or pick_2024_preferred(d.get('spell', []))
+    else:
+        chosen = pick_sources(d.get('spell', []), book)
     classmap = {}
     if sources:
         srcdata = json.load(open(sources, encoding='utf-8'))
-        # merge every book's spell->class map; keep 2024 sources (XPHB + EFA = 2024 Artificer)
-        for book, spells in srcdata.items():
+        # merge every book's spell->class map; keep 2024 sources (XPHB + EFA = 2024
+        # Artificer).
+        #
+        # A supplement needs two widenings, both gated so the 2024 run cannot move.
+        # sources.json records a 2014 book's spells under `classVariant`, not
+        # `class`: reading only `class` gives XGE 0 of 95 class tags and TCE 7 of
+        # 21 — a pack that looks complete until someone ticks "only my class" and
+        # sees nothing. And the class list for those spells is filed under PHB/TCE,
+        # so those sources come in too. The class NAMES are the same 2024 strings
+        # either way (verified: no 2014-only class appears), which is the point —
+        # a supplement's spells must name classes the player has on their sheet.
+        keys = ('class',) if bk.is_default else ('class', 'classVariant')
+        want = ('XPHB', 'EFA') if bk.is_default else ('XPHB', 'EFA', 'PHB', 'TCE')
+        for _srcbook, spells in srcdata.items():
             for spname, info in spells.items():
-                names = sorted({c['name'] for c in info.get('class', []) if c.get('source') in ('XPHB', 'EFA')})
+                names = sorted({c['name'] for k in keys for c in info.get(k, [])
+                                if c.get('source') in want})
                 if names:
                     classmap.setdefault(spname, set()).update(names)
     out = []
@@ -708,7 +839,7 @@ def convert_spells(path, sources=None, tables=None, **_):
         if cls: rec['class'] = sorted(cls)
         out.append(rec)
     out.sort(key=lambda x: (x['level'], x['name']))
-    return {'system': 'XPHB', 'spells': out}
+    return _pack(book, 'spells', out, stem='spells')
 
 # ================================================================ CLASSES
 def _spell_notes(entry):
@@ -791,18 +922,31 @@ def _class_tables(entry, owner, kind, sink):
 def _ref_str(ref):
     return ref.get('classFeature') if isinstance(ref, dict) else ref
 
-def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True, resources=None, tables=None, **_):
+def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True, resources=None,
+                    tables=None, book=None, only=None, **_):
     overlay = overlay or {}
     resources = resources or {}
+    bk = _bk(book)
+    # Which printing of a class to take. The default is unchanged (2024, then the
+    # 2014 PHB, then whatever the file holds); a supplement asks for its own.
+    prefer = list(bk.codes) or ['XPHB', 'PHB']
+    only = {str(n).lower() for n in (only or ())}
     out_classes = []
     warnings = []
     for path in paths:
         d = json.load(open(path, encoding='utf-8'))
         cls = d.get('class', [])
-        entry = next((c for c in cls if c.get('source') == 'XPHB'), None) \
-                or next((c for c in cls if c.get('source') == 'PHB'), None) \
-                or (cls[0] if cls else None)
+        entry = None
+        for want in prefer:
+            entry = next((c for c in cls if c.get('source') == want), None)
+            if entry:
+                break
+        if entry is None and bk.is_default:
+            entry = cls[0] if cls else None
         if not entry:
+            continue
+        # A supplement converts only the classes it actually prints.
+        if only and entry['name'].lower() not in only:
             continue
         # TCE "sidekick" classes have hd: null. Skip them with a note rather than
         # dying on entry['hd']['faces'] and taking every other class down too.
@@ -810,7 +954,7 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
             warnings.append(f"{entry.get('name', path)}: no hit die — skipped (not a player class)")
             continue
         src = entry['source']
-        if src != 'XPHB':
+        if bk.is_default and src != 'XPHB':
             warnings.append(f"{entry['name']}: no XPHB version, used {src}")
 
         cfidx = {(cf['name'].lower(), cf['source'], int(cf['level']), cf['className'].lower()): cf
@@ -866,7 +1010,10 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
             lvl = int(parts[3]); cn = parts[1]
             if name == 'Ability Score Improvement':
                 addchoice(lvl, {'type': 'asi'}); continue
-            if name == 'Fighting Style':
+            # FIGHTING_STYLES is the 2024 menu, wording and all. Substituting it into
+            # a 2014-era class would print 2024 text where that book's own list
+            # belongs — and it would read perfectly, which is what makes it dangerous.
+            if name == 'Fighting Style' and bk.is_default:
                 fs = [apply_overlay(o['name'], dict(o), overlay) for o in (dict(x) for x in FIGHTING_STYLES)]
                 addchoice(lvl, {'type': 'option', 'label': 'Choose a Fighting Style', 'choose': 1, 'from': fs}); continue
             cf = cfidx.get((name.lower(), fsrc, lvl, cn.lower())) or cfidx.get((name.lower(), src, lvl, cn.lower()))
@@ -922,7 +1069,248 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
 
     for w in warnings:
         print('  note:', w, file=sys.stderr)
-    return {'system': 'XPHB', 'name': 'XPHB Classes (2024)', 'version': 1, 'classes': out_classes}
+    return _pack(book, 'classes', out_classes, stem='classes', version=1)
+
+# ================================================================ SUBCLASSES (standalone)
+def _sub_ref_str(ref):
+    """subclassFeatures entries are usually plain strings, occasionally a wrapper
+    dict. _ref_str() only knows the classFeature key, and returning None here
+    would drop the feature silently."""
+    if isinstance(ref, dict):
+        return ref.get('subclassFeature') or ref.get('classFeature')
+    return ref
+
+def _subclass_levels(sc, sfidx, resolver, tables, src):
+    """Shared with convert_classes' nested build: features by level, plus the
+    first substantial prose line as the description."""
+    featlist = []
+    for ref in sc.get('subclassFeatures', []):
+        parts = str(_sub_ref_str(ref) or '').split('|')
+        if len(parts) < 6:
+            continue
+        # name|className|classSource|subclassShortName|subclassSource|level[|featureSource]
+        # A 7th part names the feature's OWN source and overrides the 5th — five
+        # XGE/TCE features are printed in a different book from their subclass.
+        nm = parts[0]
+        subsrc = (parts[6] if len(parts) > 6 and parts[6].strip() else parts[4]) or src
+        try:
+            lvl = int(parts[5])
+        except ValueError:
+            continue
+        sf = sfidx.get((nm.lower(), subsrc, lvl, parts[3].lower())) \
+            or sfidx.get((nm.lower(), parts[4] or src, lvl, parts[3].lower()))
+        if sf:
+            featlist.append((lvl, nm, sf))
+    featlist.sort(key=lambda x: x[0])
+    slevels, desc = {}, ''
+    for lvl, nm, sf in featlist:
+        with table_ctx(tables, sc['name'], 'subclass'), ref_ctx(resolver):
+            slevels.setdefault(lvl, {}).setdefault('traits', []).append(
+                {'name': nm, 'description': flatten(sf.get('entries', []))})
+        if not desc:
+            for e in sf.get('entries', []):
+                if isinstance(e, str) and len(strip_tags(e)) > 40:
+                    desc = strip_tags(e); break
+    return slevels, desc
+
+def convert_subclasses(paths, book=None, tables=None, skip_classes=(), **_):
+    """Subclasses a supplement adds to classes the player already has, as
+    standalone `subclasses` records that attach by class name (schema §6.5).
+
+    THE TRAP: 5e-tools carries every XGE/TCE subclass TWICE — 122 records for 61
+    real subclasses. The duplicate is a 5e-tools `_copy` STUB (classSource XPHB,
+    or EFA for the Artificer) which inherits from the original and, in 35 of the
+    57 cases, carries no `subclassFeatures` of its own at all.
+
+    So the filter is `'_copy' not in sc`, NOT a (className, name) dedupe keeping
+    the newest classSource. Keeping the stub yields a subclass with `levels: {}`
+    — valid JSON, correct entry count, and no features. Preferring classSource
+    "XPHB" here would have shipped 26 subclasses out of 61 and reported 26 as if
+    that were the whole book.
+
+    `className` is the plain class name on both records, so taking the original
+    still attaches it to the 2024 class the player has.
+    """
+    bk = _bk(book)
+    codes = set(bk.codes)
+    skip = {str(c).lower() for c in skip_classes}
+    picked, files = [], []
+    for path in paths:
+        d = json.load(open(path, encoding='utf-8'))
+        fi = len(files); files.append(d)
+        for sc in d.get('subclass', []):
+            if codes and sc.get('source') not in codes:
+                continue
+            if '_copy' in sc:
+                continue
+            cn = sc.get('className') or ''
+            if cn.lower() in skip or not sc.get('name'):
+                continue
+            picked.append((sc, fi))
+
+    out, empty = [], []
+    for sc, fi in picked:
+        d = files[fi]
+        src = sc.get('classSource') or sc.get('source')
+        sfidx = {(sf['name'].lower(), sf['source'], int(sf['level']), sf.get('subclassShortName', '').lower()): sf
+                 for sf in d.get('subclassFeature', [])}
+        cfidx = {(cf['name'].lower(), cf['source'], int(cf['level']), cf['className'].lower()): cf
+                 for cf in d.get('classFeature', [])}
+
+        def _resolve_ref(node, _sfidx=sfidx, _cfidx=cfidx, _src=src):
+            try:
+                if node.get('type') == 'refClassFeature':
+                    p = str(node.get('classFeature') or '').split('|')
+                    return _cfidx.get((p[0].lower(), p[2] or _src, int(p[3]), p[1].lower()))
+                p = str(node.get('subclassFeature') or '').split('|')
+                return _sfidx.get((p[0].lower(), p[4] or _src, int(p[5]), p[3].lower()))
+            except (IndexError, ValueError):
+                return None
+
+        slevels, desc = _subclass_levels(sc, sfidx, _resolve_ref, tables, src)
+        if not slevels:
+            # Never drop one quietly — a featureless subclass means the ref format
+            # changed, and silence is how 35 empty stubs would have looked fine.
+            empty.append('%s (%s)' % (sc['name'], sc['className']))
+            continue
+        rec = {'class': sc['className'], 'name': sc['name'], 'description': desc}
+        if sc.get('spellcastingAbility'):
+            rec['spellcasting'] = sc['spellcastingAbility']
+        rec['levels'] = {str(k): slevels[k] for k in sorted(slevels)}
+        if tables is not None:
+            _class_tables(sc, sc['name'], 'subclass', tables)
+        out.append(rec)
+    if empty:
+        print('  WARNING: %d subclass(es) resolved no features: %s'
+              % (len(empty), ', '.join(sorted(empty))), file=sys.stderr)
+    out.sort(key=lambda x: (x['class'], x['name']))
+    return _pack(book, 'subclasses', out, stem='subclasses', version=1)
+
+# ================================================================ OPTIONAL FEATURES
+# Invocations, metamagic, infusions, maneuvers, runes, fighting styles, arcane
+# shots. The app has no dedicated category for these and doesn't need one: they
+# are standalone `features` (displayed as "Traits", schema §6.9), pickable from
+# the rules-pack library, with `source` naming what kind of option they are.
+_OFT_FAMILY = {
+    'AS': 'Arcane Shot', 'EI': 'Eldritch Invocation', 'AI': 'Artificer Infusion',
+    'MM': 'Metamagic', 'MV:B': 'Battle Master Maneuver', 'MV': 'Maneuver',
+    'RN': 'Rune', 'PB': 'Pact Boon', 'OI': 'Onomancy Resonant',
+    'SHP:H': 'Ship Upgrade', 'IWM:W': 'Infernal War Machine Upgrade',
+    'OFS': 'Optional Class Feature',
+}
+_FS_CLASS = {'F': 'Fighter', 'P': 'Paladin', 'R': 'Ranger', 'B': 'Bard'}
+
+def _oft_label(codes):
+    """One readable kind-label for a record's featureType codes. Fighting styles
+    carry one code per class that can take them, so they collapse into a single
+    'Fighting Style (Fighter, Paladin, Ranger)' rather than three labels."""
+    codes = [str(c) for c in (codes or [])]
+    fs = [_FS_CLASS.get(c.split(':', 1)[1], c.split(':', 1)[1])
+          for c in codes if c.startswith('FS:') and ':' in c]
+    rest, seen = [], set()
+    for c in codes:
+        if c.startswith('FS:'):
+            continue
+        lab = _OFT_FAMILY.get(c, c)
+        if lab not in seen:
+            seen.add(lab); rest.append(lab)
+    if fs:
+        rest.insert(0, 'Fighting Style (%s)' % ', '.join(fs))
+    return ' · '.join(rest)
+
+def _render_optfeat_prereq(pr):
+    """Optional features use their own prerequisite shapes — notably `level` is a
+    dict here ({level, class, subclass}), where _render_prereq expects an int and
+    would print the raw dict into the description."""
+    if not pr: return ''
+    alts = []
+    for block in pr:
+        parts = []
+        lv = block.get('level')
+        if isinstance(lv, dict):
+            bit = 'Level %s' % lv.get('level')
+            cn = (lv.get('class') or {}).get('name')
+            if cn: bit += ' ' + cn
+            sn = (lv.get('subclass') or {}).get('name')
+            if sn: bit += ' (%s)' % sn
+            parts.append(bit)
+        elif lv is not None:
+            parts.append('Level %s+' % lv)
+        if block.get('pact'):
+            parts.append('Pact of the %s' % block['pact'])
+        for s in block.get('spell') or []:
+            nm = str(s).split('#')
+            parts.append(nm[0].title() + (' cantrip' if len(nm) > 1 and nm[1] == 'c' else ' spell'))
+        for it in block.get('item') or []:
+            parts.append(strip_tags(str(it)))
+        if block.get('feature'):
+            parts.append(', '.join(block['feature']) + ' feature')
+        for a in block.get('ability', []):
+            for k, v in a.items(): parts.append('%s %s+' % (ABIL_FULL.get(k, k), v))
+        if block.get('other'):
+            parts.append(strip_tags(block['other']))
+        if parts: alts.append(' and '.join(parts))
+    return ' or '.join(alts)
+
+def convert_optional_features(path, book=None, tables=None, overlay=None, **_):
+    d = json.load(open(path, encoding='utf-8'))
+    chosen = pick_sources(d.get('optionalfeature', []), book)
+    out = []
+    for f in chosen:
+        pr = _render_optfeat_prereq(f.get('prerequisite'))
+        with table_ctx(tables, f['name'], 'feat'):
+            body = flatten(f.get('entries', []))
+        lead = ('Prerequisite: ' + pr) if pr else ''
+        rec = {'name': f['name'], 'source': _oft_label(f.get('featureType')),
+               'description': ((lead + '\n' if lead else '') + body).strip()}
+        apply_overlay(f['name'], rec, overlay or {})
+        out.append(rec)
+    out.sort(key=lambda x: (x['source'], x['name']))
+    return out
+
+def convert_class_features(paths, book=None, tables=None, skip_classes=(), **_):
+    """Tasha's "Optional Class Features" — per-class additions and replacements
+    that live as `classFeature` records, NOT in optionalfeatures.json.
+
+    Names repeat across classes (three classes print "Martial Versatility", the
+    Ranger prints "Deft Explorer Improvement" at two levels). `features` merge on
+    name within a source, so an unqualified name silently swallows its twins:
+    every record is prefixed with its class, and a still-colliding name takes its
+    level as well."""
+    bk = _bk(book)
+    codes = set(bk.codes)
+    skip = {str(c).lower() for c in skip_classes}
+    picked = []
+    for path in paths:
+        d = json.load(open(path, encoding='utf-8'))
+        # A class this book DEFINES gets its features through convert_classes as a
+        # normal level progression. Only additions to other people's classes are
+        # optional features — one rule that drops the Artificer's 22 and the
+        # sidekicks' 47 without naming either.
+        own = {c['name'].lower() for c in d.get('class', []) if not codes or c.get('source') in codes}
+        for cf in d.get('classFeature', []):
+            if codes and cf.get('source') not in codes:
+                continue
+            cn = cf.get('className') or ''
+            if not cn or cn.lower() in own or cn.lower() in skip:
+                continue
+            picked.append(cf)
+
+    # Disambiguate across the WHOLE colliding group, not as we go: appending the
+    # level only to the second arrival leaves one bare name and one qualified one,
+    # which reads as if they were different kinds of thing.
+    counts = collections.Counter('%s: %s' % (cf['className'], cf['name']) for cf in picked)
+    out = []
+    for cf in picked:
+        nm = '%s: %s' % (cf['className'], cf['name'])
+        if counts[nm] > 1:
+            nm = '%s (Level %s)' % (nm, cf.get('level'))
+        with table_ctx(tables, cf['name'], 'class'):
+            body = flatten(cf.get('entries', []))
+        out.append({'name': nm, 'source': '%s (Optional Class Feature)' % cf['className'],
+                    'description': ('Level %s.\n' % cf.get('level') + body).strip()})
+    out.sort(key=lambda x: (x['source'], x['name']))
+    return out
 
 # ================================================================ RACES
 def _race_speed(sp):
@@ -1039,15 +1427,15 @@ def _table_subraces(entry, tables):
                 return subs
     return []
 
-def convert_races(path, overlay=None, tables=None, **_):
+def convert_races(path, overlay=None, tables=None, book=None, **_):
     d = json.load(open(path, encoding='utf-8'))
-    chosen = pick_2024_preferred(d.get('race', []))
+    chosen = pick_sources(d.get('race', []), book)
     bysub = {}
     for s in d.get('subrace', []):
         bysub.setdefault(s.get('raceName'), []).append(s)
     out = []
     for r in chosen:
-        rec = {'name': r['name'], 'system': 'XPHB'}
+        rec = {'name': r['name'], 'system': _bk(book).system}
         sz = _race_size(r.get('size'))
         if sz: rec['size'] = sz
         sp = _race_speed(r.get('speed'))
@@ -1080,7 +1468,7 @@ def convert_races(path, overlay=None, tables=None, **_):
         apply_overlay(r['name'], rec, overlay or {})
         out.append(rec)
     out.sort(key=lambda x: x['name'])
-    return {'system': 'XPHB', 'name': 'D&D 2024 Species', 'version': 1, 'races': out}
+    return _pack(book, 'races', out, stem='races', version=1)
 
 # ================================================================ CLI
 def _write(obj, path):
@@ -1090,15 +1478,184 @@ def _write(obj, path):
     residual = open(path, encoding='utf-8').read().count('{@')
     n = len(obj.get('keywords') or obj.get('feats') or obj.get('spells') or obj.get('classes')
             or obj.get('items') or obj.get('backgrounds') or obj.get('races')
-            or obj.get('subclasses') or obj.get('tables') or [])
+            or obj.get('subclasses') or obj.get('features') or obj.get('tables') or [])
     print(f"  wrote {path}  ({n} entries{', ' + str(residual) + ' unresolved tags!' if residual else ''})")
 
-def _write_tables(tables, path):
+def _write_tables(tables, path, book=None):
     if not tables:
         print("  no tables found — nothing written to " + path)
         return
     tables.sort(key=lambda t: (t.get('ownerKind', ''), t['name']))
-    _write({'system': 'XPHB', 'name': 'XPHB Tables', 'version': 1, 'tables': tables}, path)
+    _write(_pack(book, 'tables', tables, stem='tables', version=1), path)
+
+_SUPP_WORDS = {'glossary': 'Rules', 'items': 'Magic Items', 'feats': 'Feats',
+               'races': 'Species', 'spells': 'Spells', 'classes': 'Classes',
+               'subclasses': 'Subclasses', 'features': 'Options', 'tables': 'Tables'}
+
+_EDITION_NOTE = (
+    "%s is 2014-era D&D content, converted as published for use alongside the 2024 rules. "
+    "Subclass features are listed at their 2014 levels (a 2024 character picks a subclass at "
+    "level 3 and gains any earlier features at once), and the prose cites 2014 class features "
+    "and terminology. Where the 2024 Player's Handbook reprinted a subclass, both versions are "
+    "offered and this one is tagged with its pack. %sNothing here has been rewritten to match "
+    "the 2024 rules — check with your table before using it.")
+
+# The books this converter knows how to produce, so that a re-run reproduces the
+# shipped packs exactly. Every field is still overridable by flag; what must not
+# drift is the prose, which would otherwise live in dev.sh and in whatever command
+# someone last pasted.
+SUPPLEMENTS = {
+    'XGE': {'pack_name': "Xanathar's Guide to Everything", 'exclude_systems': 'humblewood'},
+    'TCE': {'pack_name': "Tasha's Cauldron of Everything", 'exclude_systems': 'humblewood',
+            # The Artificer and its four subclasses already reach the player through the
+            # 2024 pack (convert_classes' fallback picks up the TCE printing). Shipping
+            # them again would sit beside them, not replace them.
+            'skip_classes': 'Artificer',
+            'extra_note': "The Artificer class and its four subclasses already reach you "
+                          "through the D&D 2024 pack, so they are not repeated here; its "
+                          "infusions are under Traits. "},
+}
+
+def supplement_defaults(code):
+    """Flag defaults for a known book, including its _note."""
+    d = dict(SUPPLEMENTS.get(code, {}))
+    if d.get('pack_name'):
+        d.setdefault('note', _EDITION_NOTE % (d['pack_name'], d.pop('extra_note', '')))
+    d.pop('extra_note', None)
+    return d
+
+def _find_in(d, *names):
+    """Look for a file in the dump root and its spells/ and class/ subdirectories."""
+    dirs = [d] + [os.path.join(d, s) for s in ('spells', 'class') if os.path.isdir(os.path.join(d, s))]
+    for n in names:
+        for sd in dirs:
+            hits = sorted(glob.glob(os.path.join(sd, n)))
+            if hits:
+                return hits
+    return []
+
+def _run_supplement(a):
+    """One supplement book -> one pack folder.
+
+    Deliberately NOT folded into `all`: `all` converts the core rules from many
+    files at once, this converts one book, and the two share no input list. The
+    guarantee that matters is that `all`'s output never moves — see Book.is_default.
+    """
+    code = a.book.strip()
+    # Flags win; anything not given falls back to the book's profile, so a re-run
+    # with just --book reproduces the committed pack.
+    dflt = supplement_defaults(code)
+    def opt(name):
+        return str(getattr(a, name, '') or dflt.get(name, '') or '')
+    def csv(name):
+        return [x.strip() for x in opt(name).split(',') if x.strip()]
+
+    system = (a.system or code).strip()
+    label = opt('pack_name').strip()
+    if not label:
+        print('  ERROR: --pack-name is required for a book this converter has no profile for '
+              '(known: %s)' % ', '.join(sorted(SUPPLEMENTS)), file=sys.stderr)
+        return 1
+    only = csv('classes')
+    # Classes whose subclasses already reach the player from another pack. Emitting
+    # them again would not override the existing ones, it would sit beside them —
+    # see subclassesFor() in src/js/50-classrace.js.
+    skip = only + csv('skip_classes')
+    bk = Book(codes=[code], system=system,
+              names={stem: '%s — %s' % (label, word) for stem, word in _SUPP_WORDS.items()},
+              note=opt('note'), exclude_systems=csv('exclude_systems'))
+
+    d, outdir = a.dir, a.out
+    os.makedirs(outdir, exist_ok=True)
+    problems = []
+    def warn(msg):
+        problems.append(msg)
+        print('  WARNING: ' + msg)
+
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ov = None
+    for cand in ([a.overlay] if a.overlay else []) + [os.path.join(d, 'overlay.json'),
+                                                      os.path.join(here, 'data', 'overlay.json')]:
+        if cand and os.path.exists(cand):
+            print('  using overlay: %s' % cand); ov = cand; break
+    overlay = load_overlay(ov)
+
+    global _RESERVED, _SUFFIX
+    if a.avoid_table_names:
+        try:
+            other = json.load(open(a.avoid_table_names, encoding='utf-8')).get('tables') or []
+        except (OSError, ValueError) as e:
+            warn('could not read %s (%s) — table names may collide with it'
+                 % (a.avoid_table_names, e))
+            other = []
+        _RESERVED = frozenset(t.get('name', '') for t in other)
+        _SUFFIX = ' (%s)' % code
+        print('  avoiding %d table name(s) already used by %s'
+              % (len(_RESERVED), a.avoid_table_names))
+
+    tbls = []
+    def emit(obj, stem, cat):
+        """Write a pack only if it has content. An empty pack file would import
+        cleanly and say nothing — the exact silent-skip failure this converter
+        has been bitten by before, so say so out loud instead."""
+        if not obj.get(cat):
+            print('  (no %s in %s — no file written)' % (cat, code))
+            return
+        _write(obj, os.path.join(outdir, stem + '.json'))
+
+    gloss = _find_in(d, 'variantrules.json', '*variantrule*.json')
+    if not gloss: warn('no variantrules.json found')
+    else: emit(convert_glossary(gloss[0], tables=tbls, book=bk), 'glossary', 'keywords')
+
+    magic = _find_in(d, 'items.json')
+    if not magic: warn('no items.json found')
+    else: emit(convert_items(magic[0], tables=tbls, book=bk), 'items-magic', 'items')
+
+    feats = _find_in(d, 'feats.json', 'feat.json')
+    if not feats: warn('no feats.json found')
+    else: emit(convert_feats(feats[0], overlay=overlay, tables=tbls, book=bk), 'feats', 'feats')
+
+    races = _find_in(d, 'races.json')
+    if not races: warn('no races.json found')
+    else: emit(convert_races(races[0], tables=tbls, book=bk), 'races', 'races')
+
+    # One book's spells live in one file — no globbing, because a glob that
+    # matched the wrong book would convert it silently and look correct.
+    spellfile = os.path.join(d, 'spells', 'spells-%s.json' % code.lower())
+    srcs = _find_in(d, 'sources.json')
+    if not srcs: warn('sources.json not found — spells will have no class tags')
+    if not os.path.exists(spellfile):
+        warn('no %s found' % spellfile)
+    else:
+        emit(convert_spells(spellfile, sources=srcs[0] if srcs else None, tables=tbls, book=bk),
+             'spells', 'spells')
+
+    classfiles = _find_in(d, 'class-*.json')
+    if not classfiles:
+        warn('no class-*.json found')
+    else:
+        # Classes the book prints in full carry their own subclasses nested, so
+        # the standalone subclasses file must skip them or they ship twice.
+        if only:
+            cres = load_class_resources(os.path.join(here, 'data', 'class-resources.json'))
+            emit(convert_classes(classfiles, overlay=overlay, resources=cres, tables=tbls,
+                                 book=bk, only=only), 'classes', 'classes')
+        emit(convert_subclasses(classfiles, book=bk, tables=tbls, skip_classes=skip),
+             'subclasses', 'subclasses')
+
+    optf = _find_in(d, 'optionalfeatures.json')
+    if not optf: warn('no optionalfeatures.json found')
+    feats_out = (convert_optional_features(optf[0], book=bk, tables=tbls) if optf else []) \
+        + (convert_class_features(classfiles, book=bk, tables=tbls, skip_classes=skip) if classfiles else [])
+    emit(_pack(bk, 'features', feats_out, stem='features', version=1), 'features', 'features')
+
+    _write_tables(tbls, os.path.join(outdir, 'tables.json'), book=bk)
+    if problems:
+        print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
+        for p in problems:
+            print('    - ' + p)
+    else:
+        print('\n  all inputs found.')
 
 def main():
     ap = argparse.ArgumentParser(description="Convert 5e-tools JSON into Fieldbook rules JSON.")
@@ -1117,7 +1674,29 @@ def main():
     pa = sub.add_parser('all'); pa.add_argument('dir'); pa.add_argument('-o', '--out', required=True)
     pa.add_argument('--overlay'); pa.add_argument('--resources')
     pa.add_argument('--include-legacy', action='store_true')
+
+    ps = sub.add_parser('supplement', help='convert one supplement book (e.g. XGE, TCE) into a pack folder')
+    ps.add_argument('dir'); ps.add_argument('-o', '--out', required=True)
+    ps.add_argument('--book', required=True, help='5e-tools source code, e.g. XGE or TCE')
+    ps.add_argument('--system', help='pack `system` field (defaults to --book)')
+    ps.add_argument('--pack-name', default='',
+                    help='human label, e.g. "Xanathar\'s Guide to Everything". Defaults to the '
+                         'built-in profile for --book (see SUPPLEMENTS)')
+    ps.add_argument('--note', default='',
+                    help='_note written into every pack in the folder (defaults to the profile)')
+    ps.add_argument('--classes', default='', help='comma-separated classes this book PRINTS IN FULL (e.g. Artificer)')
+    ps.add_argument('--skip-classes', default='',
+                    help='comma-separated classes whose subclasses already ship in another pack')
+    ps.add_argument('--avoid-table-names', default='', metavar='PACK.json',
+                    help='an existing tables pack whose table names must not be reused '
+                         '(the app looks tables up by name alone)')
+    ps.add_argument('--exclude-systems', default='',
+                    help='comma-separated character systems this pack\'s species must not be offered to')
+    ps.add_argument('--overlay'); ps.add_argument('--resources')
     a = ap.parse_args()
+
+    if a.cmd == 'supplement':
+        return _run_supplement(a)
 
     if a.cmd == 'all':
         d, outdir = a.dir, a.out
@@ -1215,4 +1794,4 @@ def main():
         _write_tables(tbls, a.tables)
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main() or 0)

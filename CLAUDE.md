@@ -7,7 +7,8 @@ something irreversible.
 ## What this is
 
 **Fieldbook** is a standalone, single-file HTML character sheet app supporting **D&D 5e 2024 (XPHB)**
-and the **Humblewood** TTRPG. The app ships as one self-contained file, `dist/fieldbook.html`, built
+and the **Humblewood** TTRPG, plus two D&D supplement packs (**Xanathar's Guide**, **Tasha's
+Cauldron**). The app ships as one self-contained file, `dist/fieldbook.html`, built
 by concatenating the fragments in `src/` — HTML + CSS + JS, no runtime dependencies. A Python CLI
 (`scripts/convert.py`) turns 5e-tools exports into the app's JSON; a second, dev-only CLI
 (`scripts/extract-humblewood.py`) reads the Humblewood books and playtest PDFs. Players load the
@@ -20,7 +21,14 @@ resulting JSON at runtime.
    from a local file and work offline. Do not add `<script src>`/`<link href>` to third-party URLs,
    and do not split the *delivered* app into modules — the `src/` split is concatenation only, with
    no `import`/`export` and no `type="module"` (see src/docs/ADR-001-source-split.md).
-2. **Offline-first.** localStorage for persistence. The only network calls are optional and must fail
+2. **Offline-first.** localStorage for characters, settings and the library; **IndexedDB for the
+   rules cache**, which at five packs is ~4.4 MiB of UTF-16 and does not fit in a 5 MiB origin quota
+   (localStorage remains its fallback and migration source, compressed — LZW, ~19% — because
+   uncompressed it cannot hold five packs). Every IndexedDB call is timed out: absent and throwing
+   reject at once, but a request that *hangs* would leave a failed save unreported forever. A storage
+   write that does not land must SAY SO — an empty `catch` around `setItem` is how five loaded packs
+   silently became two.
+   The only network calls are optional and must fail
    silently when offline: the rules-source fetch (user-configured URLs) and the GitHub update check.
 3. **Backward-compatible data.** Never break loading of existing saved characters. New character
    fields must be optional and must survive a save→load round-trip (see `migrate`).
@@ -51,6 +59,9 @@ dist/
   fieldbook.html        the app — a BUILD ARTIFACT. Never hand-edit. Tracked in git.
   5e2024_full.json      one bundled rules pack per system — generated (gitignored)
   humblewood_full.json    …these are what the zip's data/ contains
+  xanathars_full.json     XGE and TCE are D&D *supplements*: additive packs, not
+  tashas_full.json        systems a character is created in
+  homebrew_full.json      hand-authored third-party content, likewise additive
   fieldbook-v1.3.0.zip  the player bundle — allowlisted, no dev material (gitignored)
 .github/workflows/
   ci.yml                syntax, manifest parity, data, byte hygiene, tests, full build
@@ -62,7 +73,12 @@ build.sh                build + validate + both zips; --release <level> also cut
 dev.sh                  interactive menu over every build/test/release task (dev)
 data/
   5e2024/*.json         per-category rules data — does NOT ship; bundled into the packs
-  humblewood/*.json       (the two dist/*_full.json bundles are what players get)
+  humblewood/*.json       (the four dist/*_full.json bundles are what players get)
+  xanathars/*.json      Xanathar's Guide (system "XGE") — 2014-era, converted as published
+  tashas/*.json         Tasha's Cauldron (system "TCE") — ditto
+  homebrew/*.json       HAND-AUTHORED (system "Homebrew"); no converter — sources are
+                          PDFs/HTML/JSON and each piece needs judgement. Declares
+                          `requires` for what it references but does not ship.
   overlay.json          hand-authored convert.py inputs — ship to the zip's scripts/,
   class-resources.json    NOT to its data/, because they are not loadable packs
 docs/                   PLAYER-FACING reference                  → ships
@@ -265,6 +281,34 @@ old line — and then create it from the tag, at that moment: `git switch -c rel
 - Spells only get `class` tags when `--sources sources.json` is provided; the 5e-tools spell file has
   no per-spell class data.
 - New Humblewood content is folded into the existing consolidated files, not new per-packet files.
+
+### Supplements (`convert.py supplement`)
+
+One book at a time, selected by `source` code, into its own pack folder. `Book` carries the source
+codes, the `system` stamp, the pack names, the `_note` and `excludeSystems`; the **default `Book` is
+the 2024 path**, so omitting the flags reproduces `data/5e2024/` byte for byte. That equality is the
+gate on any converter change — if `data/5e2024/` moves, `release.js` bumps XPHB's `DATA_VERSIONS`
+and every player is told to re-download a pack that didn't really change. Check it first and last:
+
+```bash
+python3 scripts/convert.py all _conversion-data/5etools-v2.33.2 -o /tmp/chk && diff -r /tmp/chk data/5e2024
+```
+
+Three traps, all of which produce output that looks entirely correct:
+
+- **Subclasses dedupe on `_copy`, never on name.** 5e-tools ships each XGE/TCE subclass twice; the
+  second is a `_copy` stub under the 2024 `classSource`, and 35 of 57 carry no features. Preferring
+  the newer `classSource` ships subclasses with `"levels": {}`.
+- **Spell class tags live under `classVariant`** for a 2014-era book, and under PHB/TCE sources.
+  Reading only `class`/XPHB gives Xanathar's 0 of 95 tags — a complete-looking pack whose "only my
+  class" filter shows nothing.
+- **Table names are a global lookup** (`findTable`), and `[Table: …]` anchors carry no pack. Pass
+  `--avoid-table-names data/5e2024/tables.json` so the eight names the 2024 PHB reuses get suffixed;
+  the anchors follow automatically because `_register` returns the final name.
+
+Anything a supplement adds that the core pack already has — the Artificer and its subclasses — is
+**skipped**, not shipped again: `subclassesFor()` offers a same-named subclass alongside the
+existing one rather than replacing it, so a duplicate would be visible, not silent.
 
 ## Source split — IN EFFECT (see src/docs/ADR-001-source-split.md)
 

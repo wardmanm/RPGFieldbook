@@ -15,10 +15,19 @@ function systemOf(entry){
    findRaceDef(). A character who already has a cross-system ancestry (an
    imported sheet, a switched system) must keep resolving it, or their traits
    silently vanish. Unknown sources (homebrew) show for both systems: never hide
-   someone's own content. */
+   someone's own content.
+
+   A pack may also name systems it is NOT for (`excludeSystems`). That is how a
+   D&D supplement whose source string systemOf() can't place — Xanathar's,
+   Tasha's — keeps Tasha's Custom Lineage out of a Humblewood character's
+   ancestry list while its spells, feats and subclasses stay available to
+   everyone. An explicit exclusion beats the name-based guess. */
 function racesForCharacter(){
   const sys=(character&&character.system==="dnd")?"dnd":"humblewood";
-  return (rules.races||[]).filter(r=>{const s=systemOf(r);return !s||s===sys;});
+  return (rules.races||[]).filter(r=>{
+    const ex=r&&r._excludeSystems;
+    if(Array.isArray(ex)&&ex.indexOf(sys)>=0)return false;
+    const s=systemOf(r);return !s||s===sys;});
 }
 function raceOptions(){
   const list=racesForCharacter();

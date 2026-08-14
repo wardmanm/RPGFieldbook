@@ -51,6 +51,48 @@ system's folder into one `dist/<system>_full.json` pack, and that's what ships. 
 full pack or any individual file via **Settings → Rules → Import files**, or host them and add them
 as sources (a manifest with `include: [...]` also works).
 
+## Supplements: one book at a time
+
+`all` converts the core rules. A single supplement — Xanathar's Guide, Tasha's Cauldron — uses
+`supplement`, which selects by `source` code instead and writes its own pack folder:
+
+```bash
+python convert.py supplement _conversion-data/5etools-v2.33.2 -o data/xanathars \
+  --book XGE --system XGE --pack-name "Xanathar's Guide to Everything" \
+  --exclude-systems humblewood --avoid-table-names data/5e2024/tables.json \
+  --note "…2014-era content, converted as published…"
+```
+
+| flag | what it does |
+|---|---|
+| `--book XGE` | the 5e-tools `source` code to keep. **Required** — there is no default, because a wrong one silently converts nothing |
+| `--system XGE` | the pack's `system` field: the app's merge namespace and the `DATA_VERSIONS` key. Defaults to `--book` |
+| `--pack-name` | human label; each file gets `"<label> — Spells"` and so on |
+| `--note` | `_note` written into every file in the folder |
+| `--exclude-systems` | `excludeSystems` (schema §1) — character systems this pack's species must not be offered to |
+| `--classes Artificer` | classes this book prints **in full**; they get a `classes.json` with their subclasses nested |
+| `--skip-classes Artificer` | classes whose subclasses already reach the player from another pack, so they aren't shipped twice |
+| `--avoid-table-names PACK.json` | an existing tables pack whose table names must not be reused |
+
+It converts glossary, magic items, feats, races, spells, subclasses, optional features and tables,
+and **writes no file for a category the book has nothing in** rather than shipping an empty pack.
+
+Three things are specific to a 2014-era book and worth knowing:
+
+- **Subclasses are deduplicated by `_copy`, not by name.** 5e-tools carries every XGE/TCE subclass
+  twice — the second is a `_copy` stub under the 2024 `classSource`, and 35 of the 57 stubs carry
+  no features at all. Keeping the stub gives you a subclass with `"levels": {}`: right count, valid
+  JSON, nothing in it.
+- **Class tags come from `classVariant`.** `sources.json` files a 2014 book's spells under
+  `classVariant`, not `class`. Read only `class` and every Xanathar's spell ships with no class
+  list, so the spell browser's "only my class" filter hides all 95 of them.
+- **Table names are global in the app.** `findTable` looks up by name and the `[Table: …]` anchor
+  carries no pack, so `--avoid-table-names` renames the eight tables the 2024 PHB reprinted under
+  the same name (`Gloom Stalker Spells (XGE)`). The anchors follow the rename automatically.
+
+The 2024 path is untouched by all of this: with no `--book`, selection, pack names and the `system`
+stamp are exactly what they were, and `data/5e2024/` reconverts byte for byte.
+
 ## What each converter produces
 **Selection rule:** everything whose `source` is **XPHB** — the definitive 2024 book — plus any
 basic-rules entry XPHB doesn't already cover by name (2024 wins, then the free 2024 subset, then

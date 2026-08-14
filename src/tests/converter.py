@@ -232,6 +232,135 @@ ck('table fallback -> subraces', [s['name'] for s in tsubs] == ['Black', 'Blue']
 ck('table fallback description', tsubs[0]['description'] == 'Damage Type: Acid', tsubs[0])
 ck('table fallback when no table', C._table_subraces({'entries': []}, None) == [])
 
+# ---- 13. supplement books: source selection and pack headers
+XGE = C.Book(codes=['XGE'], system='XGE',
+             names={'spells': "Xanathar's — Spells"}, note='2014-era.',
+             exclude_systems=['humblewood'])
+ck('default Book is the 2024 path', C.DEFAULT_BOOK.is_default and not XGE.is_default)
+ck('pick_sources default == pick_2024_preferred',
+   [e['name'] for e in C.pick_sources(pool)] == [e['name'] for e in C.pick_2024_preferred(pool)])
+ck('pick_sources by book selects only that source',
+   [e['name'] for e in C.pick_sources(pool, C.Book(codes=['TCE']))] == ['Unrelated'])
+# The canary the whole task rests on: the old filter is not merely wrong for a
+# supplement, it is SILENTLY wrong — an empty pack that imports cleanly.
+ck('pick_2024_preferred returns [] for a supplement',
+   C.pick_2024_preferred([{'name': 'A', 'source': 'XGE'}]) == [])
+
+# Key ORDER is load-bearing: json.dump writes insertion order and data/5e2024/
+# is compared byte for byte.
+ck('_pack XPHB items header exact',
+   list(C._pack(None, 'items', [1], stem='items').items())
+   == [('system', 'XPHB'), ('name', 'D&D 2024 Items'), ('items', [1])])
+ck('_pack XPHB classes header exact',
+   list(C._pack(None, 'classes', [], stem='classes', version=1).items())
+   == [('system', 'XPHB'), ('name', 'XPHB Classes (2024)'), ('version', 1), ('classes', [])])
+ck('_pack XPHB unnamed categories carry no name',
+   list(C._pack(None, 'feats', []).items()) == [('system', 'XPHB'), ('feats', [])])
+ck('_pack supplement carries _note and excludeSystems, array last',
+   list(C._pack(XGE, 'spells', [], stem='spells').items())
+   == [('system', 'XGE'), ('name', "Xanathar's — Spells"), ('_note', '2014-era.'),
+       ('excludeSystems', ['humblewood']), ('spells', [])])
+
+# ---- 14. subclasses: the _copy stub is the duplicate, not a rival printing
+_SC_FEAT = {'name': 'Trick', 'source': 'XGE', 'level': 3, 'subclassShortName': 'Scout',
+            'className': 'Rogue', 'entries': ['A long enough description line to be picked as the blurb.']}
+def _scfile(**over):
+    d = {'subclassFeature': [_SC_FEAT], 'classFeature': [],
+         'subclass': [
+             {'name': 'Scout', 'className': 'Rogue', 'source': 'XGE', 'classSource': 'PHB',
+              'subclassFeatures': ['Trick|Rogue|PHB|Scout|XGE|3']},
+             # the stub: newer classSource, no features of its own
+             {'name': 'Scout', 'className': 'Rogue', 'source': 'XGE', 'classSource': 'XPHB',
+              '_copy': {'name': 'Scout'}},
+         ]}
+    d.update(over); return d
+import tempfile
+def _tmpjson(obj):
+    fh = tempfile.NamedTemporaryFile('w', suffix='.json', delete=False, encoding='utf-8')
+    json.dump(obj, fh); fh.close(); return fh.name
+
+got = C.convert_subclasses([_tmpjson(_scfile())], book=XGE, tables=[])['subclasses']
+ck('_copy stub deduped away', len(got) == 1, got)
+ck('the kept record is the one WITH features', got and got[0]['levels'].get('3'), got)
+ck('subclass attaches by plain class name', got and got[0]['class'] == 'Rogue', got)
+ck('subclass description lifted from its first feature',
+   got and got[0]['description'].startswith('A long enough'), got)
+
+# a 7th UID part names the feature's own source and overrides the 5th
+seven = _scfile()
+seven['subclassFeature'][0]['source'] = 'TCE'
+seven['subclass'][0]['subclassFeatures'] = ['Trick|Rogue|PHB|Scout|XGE|3|TCE']
+g7 = C.convert_subclasses([_tmpjson(seven)], book=XGE, tables=[])['subclasses']
+ck('7-part subclassFeature UID resolves', g7 and g7[0]['levels'].get('3'), g7)
+
+# ---- 15. optional features
+ck('featureType label', C._oft_label(['EI']) == 'Eldritch Invocation')
+ck('fighting styles collapse into one label',
+   C._oft_label(['FS:F', 'FS:P', 'FS:R']) == 'Fighting Style (Fighter, Paladin, Ranger)',
+   C._oft_label(['FS:F', 'FS:P', 'FS:R']))
+ck('optfeat prereq: level is a dict here, not an int',
+   C._render_optfeat_prereq([{'level': {'level': 14, 'class': {'name': 'Artificer'}}}])
+   == 'Level 14 Artificer')
+ck('optfeat prereq: pact', C._render_optfeat_prereq([{'pact': 'Tome'}]) == 'Pact of the Tome')
+ck('optfeat prereq: cantrip suffix',
+   C._render_optfeat_prereq([{'spell': ['eldritch blast#c']}]) == 'Eldritch Blast cantrip')
+
+# ---- 16. optional CLASS features (Tasha's) — exclusion and collision naming
+cffile = {'class': [{'name': 'Artificer', 'source': 'TCE'}],
+          'classFeature': [
+              {'name': 'Infuse Item', 'className': 'Artificer', 'source': 'TCE', 'level': 2, 'entries': ['x']},
+              {'name': 'Favored Foe', 'className': 'Ranger', 'source': 'TCE', 'level': 1, 'entries': ['x']},
+              {'name': 'Deft Explorer', 'className': 'Ranger', 'source': 'TCE', 'level': 6, 'entries': ['x']},
+              {'name': 'Deft Explorer', 'className': 'Ranger', 'source': 'TCE', 'level': 10, 'entries': ['x']},
+          ]}
+cfs = C.convert_class_features([_tmpjson(cffile)], book=C.Book(codes=['TCE'], system='TCE'), tables=[])
+names = [x['name'] for x in cfs]
+ck("a book's own class keeps its features out of the options list",
+   not any('Artificer' in n for n in names), names)
+ck('optional class features are class-qualified', 'Ranger: Favored Foe' in names, names)
+# one bare + one suffixed would read as two different kinds of thing
+ck('colliding names are BOTH disambiguated',
+   sorted(n for n in names if 'Deft' in n)
+   == ['Ranger: Deft Explorer (Level 10)', 'Ranger: Deft Explorer (Level 6)'], names)
+ck('every optional class feature name is unique', len(names) == len(set(names)), names)
+
+# ---- 17. legacy prerequisite shapes are GATED, not merely harmless
+race_pr = [{'race': [{'name': 'elf', 'subrace': 'drow'}]}]
+ck('race prerequisite renders under legacy',
+   C._render_prereq(race_pr, legacy=True) == 'Elf (Drow)', C._render_prereq(race_pr, legacy=True))
+ck('race prerequisite is invisible to the 2024 run', C._render_prereq(race_pr) == '')
+# `proficiency` DOES occur in the 2024 run and is not rendered there today —
+# rendering it unconditionally would move data/5e2024/feats.json.
+prof_pr = [{'proficiency': [{'armor': 'heavy'}]}]
+ck('proficiency prerequisite is invisible to the 2024 run', C._render_prereq(prof_pr) == '')
+ck('proficiency prerequisite renders under legacy',
+   C._render_prereq(prof_pr, legacy=True) == 'Heavy armor', C._render_prereq(prof_pr, legacy=True))
+ck('existing prereq shapes unchanged',
+   C._render_prereq([{'level': 4, 'ability': [{'str': 13}]}]) == 'Level 4+ and Strength 13+')
+
+# ---- 18. table names must not collide with another pack's (findTable is global)
+tnode = {'type': 'table', 'caption': 'Gloom Stalker Spells',
+         'colLabels': ['Level', 'Spell'], 'rows': [['3', 'Disguise Self']]}
+sink = []
+with C.table_ctx(sink, 'Gloom Stalker', 'subclass'):
+    plain = C.flatten([tnode])
+ck('unreserved name is left alone', sink[0]['name'] == 'Gloom Stalker Spells', sink[0]['name'])
+ck('anchor matches the registered name', plain == '[Table: Gloom Stalker Spells]', plain)
+sink2 = []
+with C.reserved_names(['Gloom Stalker Spells'], ' (XGE)'), \
+     C.table_ctx(sink2, 'Gloom Stalker', 'subclass'):
+    anchored = C.flatten([tnode])
+ck('a name another pack owns is suffixed', sink2[0]['name'] == 'Gloom Stalker Spells (XGE)',
+   sink2[0]['name'])
+# the anchor is what makes the rename safe: rename without it and the chip dies
+ck('the anchor follows the rename', anchored == '[Table: Gloom Stalker Spells (XGE)]', anchored)
+sink3 = []
+with C.reserved_names(['Something Else'], ' (XGE)'), C.table_ctx(sink3, 'X', 'subclass'):
+    C.flatten([tnode])
+ck('non-colliding names are untouched under reservation',
+   sink3[0]['name'] == 'Gloom Stalker Spells', sink3[0]['name'])
+ck('reservation is scoped — the 2024 run sees none', C._SUFFIX == '' and not C._RESERVED)
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

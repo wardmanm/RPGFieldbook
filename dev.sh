@@ -163,10 +163,37 @@ convert_data() {
     printf 'The converter needs python3 (or python). Everything else in this menu works without it.\n'
     return 0
   fi
-  printf '\nSource: %s\n' "$dir"
-  printf 'This OVERWRITES data/5e2024/*.json. Proceed? [y/N] '
+  printf '\nSource: %s\n\n' "$dir"
+  printf '  1) D&D 2024 core        -> data/5e2024\n'
+  printf "  2) Xanathar's Guide     -> data/xanathars\n"
+  printf "  3) Tasha's Cauldron     -> data/tashas\n"
+  printf '  4) all three\n'
+  printf '  q) cancel\n\n'
+  printf 'Which? [q] '
+  local which; read -r which
+  # The book profiles (pack names, the 2014-era _note, Artificer skip) live in
+  # convert.py's SUPPLEMENTS table, not here — duplicating that prose in a menu is
+  # how a re-run silently stops reproducing the committed packs.
+  local core=0 xge=0 tce=0
+  case "$which" in
+    1) core=1 ;; 2) xge=1 ;; 3) tce=1 ;; 4) core=1; xge=1; tce=1 ;;
+    *) printf 'cancelled\n'; return 0 ;;
+  esac
+  local targets=""
+  [ "$core" = 1 ] && targets="$targets data/5e2024"
+  [ "$xge" = 1 ] && targets="$targets data/xanathars"
+  [ "$tce" = 1 ] && targets="$targets data/tashas"
+  printf 'This OVERWRITES%s/*.json. Proceed? [y/N] ' "$targets"
   local ok; read -r ok
-  case "$ok" in y|Y) run "$PY" scripts/convert.py all "$dir" -o data/5e2024 ;; *) printf 'cancelled\n' ;; esac
+  case "$ok" in y|Y) : ;; *) printf 'cancelled\n'; return 0 ;; esac
+  [ "$core" = 1 ] && run "$PY" scripts/convert.py all "$dir" -o data/5e2024
+  # --avoid-table-names: the app looks tables up by name across every loaded pack,
+  # so a supplement must not reuse one the core pack already owns.
+  [ "$xge" = 1 ] && run "$PY" scripts/convert.py supplement "$dir" -o data/xanathars \
+      --book XGE --system XGE --avoid-table-names data/5e2024/tables.json
+  [ "$tce" = 1 ] && run "$PY" scripts/convert.py supplement "$dir" -o data/tashas \
+      --book TCE --system TCE --avoid-table-names data/5e2024/tables.json
+  return 0
 }
 
 where_things_live() {
@@ -175,7 +202,7 @@ where_things_live() {
   ${B}Source of truth${OFF}   src/  — js/ css/ fragments (order: src/manifest.json),
                     fieldbook.template.html, tests/, docs/ (dev-only)
   ${B}Build artifact${OFF}    dist/fieldbook.html — never hand-edit; rebuild instead
-  ${B}Rules data${OFF}        data/5e2024/ and data/humblewood/ (per category);
+  ${B}Rules data${OFF}        data/5e2024/, humblewood/, xanathars/, tashas/ (per category);
                     build bundles them into dist/<system>_full.json
   ${B}Notebook${OFF}          src/docs/UNRELEASED.md — one bullet per player-visible change
   ${B}Releasing${OFF}         src/docs/RELEASING.md — full procedure and failure modes

@@ -4,11 +4,25 @@ function findClassDef(n){return ruleById("classes",n);}
 function findFeatDef(n){return ruleById("feats",n);}
 /* subclasses available for a class = the class's own subclasses + any standalone
    entries in the "subclasses" category whose class matches (so add-on packs can
-   attach subclasses to an existing class without duplicating the whole class) */
+   attach subclasses to an existing class without duplicating the whole class).
+
+   The key is the subclass NAME because that is what `character.classes[].subclass`
+   stores — so a same-named entry from a DIFFERENT pack must not take the key, or
+   loading a supplement silently rewrites what every existing character already
+   chose. The 2024 PHB reprinted seven Xanathar's/Tasha's subclasses (Gloom
+   Stalker, Fey Wanderer, Soulknife...) with revised text and different levels, so
+   this is a real collision, not a theoretical one. The later arrival is offered
+   alongside, tagged with its pack — the player picks the edition. Same pack, same
+   name still replaces, which is how re-importing a pack updates it. */
 function subclassesFor(d){
   const out={};
   if(d&&d.subclasses)Object.keys(d.subclasses).forEach(n=>{out[n]=Object.assign({_source:d._source},d.subclasses[n]);});
-  (rules.subclasses||[]).forEach(s=>{if(s&&s.class&&d&&String(s.class).toLowerCase()===String(d.name||"").toLowerCase())out[s.name]=s;});
+  (rules.subclasses||[]).forEach(s=>{
+    if(!(s&&s.class&&d&&String(s.class).toLowerCase()===String(d.name||"").toLowerCase()))return;
+    const prev=out[s.name];
+    const k=(prev&&(prev._source||"")!==(s._source||""))?s.name+" ("+(s._source||"other")+")":s.name;
+    out[k]=s;
+  });
   return out;
 }
 function totalLevel(){return (character.classes||[]).reduce((a,c)=>a+num(c.level),0)||num(character.level)||1;}

@@ -1,0 +1,2676 @@
+{
+  "system": "XGE",
+  "name": "Xanathar's Guide to Everything — Tables",
+  "version": 1,
+  "_note": "Xanathar's Guide to Everything is 2014-era D&D content, converted as published for use alongside the 2024 rules. Subclass features are listed at their 2014 levels (a 2024 character picks a subclass at level 3 and gains any earlier features at once), and the prose cites 2014 class features and terminology. Where the 2024 Player's Handbook reprinted a subclass, both versions are offered and this one is tagged with its pack. Nothing here has been rewritten to match the 2024 rules — check with your table before using it.",
+  "excludeSystems": [
+    "humblewood"
+  ],
+  "tables": [
+    {
+      "name": "Alchemist's Supplies",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Create a puff of thick smoke",
+          "10"
+        ],
+        [
+          "Identify a poison",
+          "10"
+        ],
+        [
+          "Identify a substance",
+          "15"
+        ],
+        [
+          "Start a fire",
+          "15"
+        ],
+        [
+          "Neutralize acid",
+          "20"
+        ]
+      ],
+      "caption": "Alchemist's Supplies",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Brewer's Supplies",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Detect poison or impurities in a drink",
+          "10"
+        ],
+        [
+          "Identify alcohol",
+          "15"
+        ],
+        [
+          "Ignore effects of alcohol",
+          "20"
+        ]
+      ],
+      "caption": "Brewer's Supplies",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Buying Magic Items",
+      "cols": [
+        "Check Total",
+        "Items Acquired"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1–5",
+          "Roll 1d6 times on Magic Item Table A."
+        ],
+        [
+          "6–10",
+          "Roll 1d4 times on Magic Item Table B."
+        ],
+        [
+          "11–15",
+          "Roll 1d4 times on Magic Item Table C."
+        ],
+        [
+          "16–20",
+          "Roll 1d4 times on Magic Item Table D."
+        ],
+        [
+          "21–25",
+          "Roll 1d4 times on Magic Item Table E."
+        ],
+        [
+          "26–30",
+          "Roll 1d4 times on Magic Item Table F."
+        ],
+        [
+          "31–35",
+          "Roll 1d4 times on Magic Item Table G."
+        ],
+        [
+          "36–40",
+          "Roll 1d4 times on Magic Item Table H."
+        ],
+        [
+          "41+",
+          "Roll 1d4 times on Magic Item Table I."
+        ]
+      ],
+      "caption": "Buying Magic Items",
+      "owner": "Downtime Activity: Buying a Magic Item",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Calligrapher's Supplies",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Identify writer of nonmagical script",
+          "10"
+        ],
+        [
+          "Determine writer's state of mind",
+          "15"
+        ],
+        [
+          "Spot forged text",
+          "15"
+        ],
+        [
+          "Forge a signature",
+          "20"
+        ]
+      ],
+      "caption": "Calligrapher's Supplies",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Carousing",
+      "cols": [
+        "Check Total",
+        "Result"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1–5",
+          "Character has made a hostile contact."
+        ],
+        [
+          "6–10",
+          "Character has made no new contacts."
+        ],
+        [
+          "11–15",
+          "Character has made an allied contact."
+        ],
+        [
+          "16–20",
+          "Character has made two allied contacts."
+        ],
+        [
+          "21+",
+          "Character has made three allied contacts."
+        ]
+      ],
+      "caption": "Carousing",
+      "owner": "Downtime Activity: Carousing",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Carpenter's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Build a simple wooden structure",
+          "10"
+        ],
+        [
+          "Design a complex wooden structure",
+          "15"
+        ],
+        [
+          "Find a weak point in a wooden wall",
+          "15"
+        ],
+        [
+          "Pry apart a door",
+          "20"
+        ]
+      ],
+      "caption": "Carpenter's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Cartographer's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Determine a map's age and origin",
+          "10"
+        ],
+        [
+          "Estimate direction and distance to a landmark",
+          "15"
+        ],
+        [
+          "Discern that a map is fake",
+          "15"
+        ],
+        [
+          "Fill in a missing part of a map",
+          "20"
+        ]
+      ],
+      "caption": "Cartographer's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Cobbler's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Determine a shoe's age and origin",
+          "10"
+        ],
+        [
+          "Find a hidden compartment in a boot heel",
+          "15"
+        ]
+      ],
+      "caption": "Cobbler's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Cook's Utensils",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Create a typical meal",
+          "10"
+        ],
+        [
+          "Duplicate a meal",
+          "10"
+        ],
+        [
+          "Spot poison or impurities in food",
+          "15"
+        ],
+        [
+          "Create a gourmet meal",
+          "15"
+        ]
+      ],
+      "caption": "Cook's Utensils",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Crafting Complications",
+      "cols": [
+        "d6",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Rumors swirl that what you're working on is unstable and a threat to the community.*"
+        ],
+        [
+          "2",
+          "Your tools are stolen, forcing you to buy new ones.*"
+        ],
+        [
+          "3",
+          "A local wizard shows keen interest in your work and insists on observing you."
+        ],
+        [
+          "4",
+          "A powerful noble offers a hefty price for your work and is not interested in hearing no for an answer.*"
+        ],
+        [
+          "5",
+          "A dwarf clan accuses you of stealing its secret lore to fuel your work.*"
+        ],
+        [
+          "6",
+          "A competitor spreads rumors that your work is shoddy and prone to failure.*"
+        ]
+      ],
+      "caption": "Crafting Complications",
+      "owner": "Downtime Activity: Crafting an Item",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Crime Complications",
+      "cols": [
+        "d8",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "A bounty equal to your earnings is offered for information about your crime.*"
+        ],
+        [
+          "2",
+          "An unknown person contacts you, threatening to reveal your crime if you don't render a service.*"
+        ],
+        [
+          "3",
+          "Your victim is financially ruined by your crime."
+        ],
+        [
+          "4",
+          "Someone who knows of your crime has been arrested on an unrelated matter.*"
+        ],
+        [
+          "5",
+          "Your loot is a single, easily identified item that you can't fence in this region."
+        ],
+        [
+          "6",
+          "You robbed someone who was under a local crime lord's protection, and who now wants revenge."
+        ],
+        [
+          "7",
+          "Your victim calls in a favor from a guard, doubling the efforts to solve the case."
+        ],
+        [
+          "8",
+          "Your victim asks one of your adventuring companions to solve the crime."
+        ]
+      ],
+      "caption": "Crime Complications",
+      "owner": "Downtime Activity: Crime",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Disguise Kit",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Cover injuries or distinguishing marks",
+          "10"
+        ],
+        [
+          "Spot a disguise being used by someone else",
+          "15"
+        ],
+        [
+          "Copy a humanoid's appearance",
+          "20"
+        ]
+      ],
+      "caption": "Disguise Kit",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Downtime Activity: Crafting an Item Table",
+      "cols": [
+        "Proficiency",
+        "Items"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Herbalism kit",
+          "Antitoxin, potion of healing"
+        ],
+        [
+          "Leatherworker's tools",
+          "Leather armor, boots"
+        ],
+        [
+          "Smith's tools",
+          "Armor, weapons"
+        ],
+        [
+          "Weaver's tools",
+          "Cloaks, robes"
+        ]
+      ],
+      "owner": "Downtime Activity: Crafting an Item",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Forgery Kit",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Mimic handwriting",
+          "15"
+        ],
+        [
+          "Duplicate a wax seal",
+          "20"
+        ]
+      ],
+      "caption": "Forgery Kit",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Gambling Complications",
+      "cols": [
+        "d6",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "You are accused of cheating. You decide whether you actually did cheat or were framed.*"
+        ],
+        [
+          "2",
+          "The town guards raid the gambling hall and throw you in jail.*"
+        ],
+        [
+          "3",
+          "A noble in town loses badly to you and loudly vows to get revenge.*"
+        ],
+        [
+          "4",
+          "You won a sum from a low-ranking member of a thieves' guild, and the guild wants its money back."
+        ],
+        [
+          "5",
+          "A local crime boss insists you start frequenting the boss's gambling parlor and no others."
+        ],
+        [
+          "6",
+          "A high-stakes gambler comes to town and insists that you take part in a game."
+        ]
+      ],
+      "caption": "Gambling Complications",
+      "owner": "Downtime Activity: Gambling",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Gambling Results",
+      "cols": [
+        "Result",
+        "Value"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "0 successes",
+          "Lose all the money you bet, and accrue a debt equal to that amount."
+        ],
+        [
+          "1 success",
+          "Lose half the money you bet."
+        ],
+        [
+          "2 successes",
+          "Gain the amount you bet plus half again more."
+        ],
+        [
+          "3 successes",
+          "Gain double the amount you bet."
+        ]
+      ],
+      "caption": "Gambling Results",
+      "owner": "Downtime Activity: Gambling",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Gaming Set",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Catch a player cheating",
+          "15"
+        ],
+        [
+          "Gain insight into an opponent's personality",
+          "15"
+        ]
+      ],
+      "caption": "Gaming Set",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Glassblower's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Identify source of glass",
+          "10"
+        ],
+        [
+          "Determine what a glass object once held",
+          "20"
+        ]
+      ],
+      "caption": "Glassblower's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Herbalism Kit",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Find plants",
+          "15"
+        ],
+        [
+          "Identify poison",
+          "20"
+        ]
+      ],
+      "caption": "Herbalism Kit",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Individual Treasure",
+      "cols": [
+        "Level Gained",
+        "Lifestyle",
+        "Reward"
+      ],
+      "align": [
+        "center",
+        "left",
+        "right"
+      ],
+      "rows": [
+        [
+          "2-4",
+          "Modest",
+          "75 gp"
+        ],
+        [
+          "5-10",
+          "Comfortable",
+          "150 gp"
+        ],
+        [
+          "11-16",
+          "Wealthy",
+          "550 gp"
+        ],
+        [
+          "17-20",
+          "Aristocratic",
+          "5,500 gp"
+        ]
+      ],
+      "caption": "Individual Treasure",
+      "owner": "Shared Campaign Variant Rules",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Jeweler's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Modify a gem's appearance",
+          "15"
+        ],
+        [
+          "Determine a gem's history",
+          "20"
+        ]
+      ],
+      "caption": "Jeweler's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Leatherworker's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Modify a leather item's appearance",
+          "10"
+        ],
+        [
+          "Determine a leather item's history",
+          "20"
+        ]
+      ],
+      "caption": "Leatherworker's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Loot Value",
+      "cols": [
+        "DC",
+        "Value"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "10",
+          "50 gp, robbery of a struggling merchant"
+        ],
+        [
+          "15",
+          "100 gp, robbery of a prosperous merchant"
+        ],
+        [
+          "20",
+          "200 gp, robbery of a noble"
+        ],
+        [
+          "25",
+          "1,000 gp, robbery of one of the richest figures in town"
+        ]
+      ],
+      "caption": "Loot Value",
+      "owner": "Downtime Activity: Crime",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Lower-Class Carousing Complications",
+      "cols": [
+        "d8",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "A pickpocket lifts 1d10 × 5 gp from you.*"
+        ],
+        [
+          "2",
+          "A bar brawl leaves you with a scar.*"
+        ],
+        [
+          "3",
+          "You have fuzzy memories of doing something very, very illegal, but can't remember exactly what."
+        ],
+        [
+          "4",
+          "You are banned from a tavern after some obnoxious behavior.*"
+        ],
+        [
+          "5",
+          "After a few drinks, you swore in the town square to pursue a dangerous quest."
+        ],
+        [
+          "6",
+          "Surprise! You're married."
+        ],
+        [
+          "7",
+          "Streaking naked through the streets seemed like a great idea at the time."
+        ],
+        [
+          "8",
+          "Everyone is calling you by some weird, embarrassing nickname, like Puddle Drinker or Bench Slayer, and no one will say why.*"
+        ]
+      ],
+      "caption": "Lower-Class Carousing Complications",
+      "owner": "Downtime Activity: Carousing",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Magic Item Base Prices",
+      "cols": [
+        "Rarity",
+        "Base Price*"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "Common",
+          "100 gp"
+        ],
+        [
+          "Uncommon",
+          "400 gp"
+        ],
+        [
+          "Rare",
+          "4,000 gp"
+        ],
+        [
+          "Very rare",
+          "40,000 gp"
+        ],
+        [
+          "Legendary",
+          "200,000 gp"
+        ]
+      ],
+      "caption": "Magic Item Base Prices",
+      "owner": "Downtime Activity: Selling a Magic Item",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Magic Item Crafting Time and Cost",
+      "cols": [
+        "Item Rarity",
+        "Workweeks*",
+        "Cost*"
+      ],
+      "align": [
+        "left",
+        "center",
+        "right"
+      ],
+      "rows": [
+        [
+          "Common",
+          "1",
+          "50 gp"
+        ],
+        [
+          "Uncommon",
+          "2",
+          "200 gp"
+        ],
+        [
+          "Rare",
+          "10",
+          "2,000 gp"
+        ],
+        [
+          "Very rare",
+          "25",
+          "20,000 gp"
+        ],
+        [
+          "Legendary",
+          "50",
+          "100,000 gp"
+        ]
+      ],
+      "caption": "Magic Item Crafting Time and Cost",
+      "owner": "Downtime Activity: Crafting an Item",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Magic Item Ingredients",
+      "cols": [
+        "Item Rarity",
+        "CR Range"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Common",
+          "1–3"
+        ],
+        [
+          "Uncommon",
+          "4–8"
+        ],
+        [
+          "Rare",
+          "9–12"
+        ],
+        [
+          "Very rare",
+          "13–18"
+        ],
+        [
+          "Legendary",
+          "19+"
+        ]
+      ],
+      "caption": "Magic Item Ingredients",
+      "owner": "Downtime Activity: Crafting an Item",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Magic Item Offer",
+      "cols": [
+        "Check Total",
+        "Offer"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1–10",
+          "50% of base price"
+        ],
+        [
+          "11–20",
+          "100% of base price"
+        ],
+        [
+          "21+",
+          "150% of base price"
+        ]
+      ],
+      "caption": "Magic Item Offer",
+      "owner": "Downtime Activity: Selling a Magic Item",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Magic Item Price",
+      "cols": [
+        "Rarity",
+        "Asking Price*"
+      ],
+      "align": [
+        "left",
+        "right"
+      ],
+      "rows": [
+        [
+          "Common",
+          "(1d6 + 1) × 10 gp"
+        ],
+        [
+          "Uncommon",
+          "1d6 × 100 gp"
+        ],
+        [
+          "Rare",
+          "2d10 × 1,000 gp"
+        ],
+        [
+          "Very rare",
+          "(1d4 + 1) × 10,000 gp"
+        ],
+        [
+          "Legendary",
+          "2d6 × 25,000 gp"
+        ]
+      ],
+      "caption": "Magic Item Price",
+      "owner": "Downtime Activity: Buying a Magic Item",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Magic Item Purchase Complications",
+      "cols": [
+        "d12",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "The item is a fake, planted by an enemy.*"
+        ],
+        [
+          "2",
+          "The item is stolen by the party's enemies.*"
+        ],
+        [
+          "3",
+          "The item is cursed by a god."
+        ],
+        [
+          "4",
+          "The item's original owner will kill to reclaim it; the party's enemies spread news of its sale.*"
+        ],
+        [
+          "5",
+          "The item is at the center of a dark prophecy."
+        ],
+        [
+          "6",
+          "The seller is murdered before the sale.*"
+        ],
+        [
+          "7",
+          "The seller is a devil looking to make a bargain."
+        ],
+        [
+          "8",
+          "The item is the key to freeing an evil entity."
+        ],
+        [
+          "9",
+          "A third party bids on the item, doubling its price.*"
+        ],
+        [
+          "10",
+          "The item is an enslaved, intelligent entity."
+        ],
+        [
+          "11",
+          "The item is tied to a cult."
+        ],
+        [
+          "12",
+          "The party's enemies spread rumors that the item is an artifact of evil.*"
+        ]
+      ],
+      "caption": "Magic Item Purchase Complications",
+      "owner": "Downtime Activity: Buying a Magic Item",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Magic Item Sale Complications",
+      "cols": [
+        "d6",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Your enemy secretly arranges to buy the item to use it against you.*"
+        ],
+        [
+          "2",
+          "A thieves' guild, alerted to the sale, attempts to steal your item.*"
+        ],
+        [
+          "3",
+          "A foe circulates rumors that your item is a fake.*"
+        ],
+        [
+          "4",
+          "A sorcerer claims your item as a birthright and demands you hand it over."
+        ],
+        [
+          "5",
+          "Your item's previous owner, or surviving allies of the owner, vow to retake the item by force."
+        ],
+        [
+          "6",
+          "The buyer is murdered before the sale is finalized.*"
+        ]
+      ],
+      "caption": "Magic Item Sale Complications",
+      "owner": "Downtime Activity: Selling a Magic Item",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Magic Items by Tier",
+      "cols": [
+        "Magic Item Table",
+        "Available at Tiers",
+        "Point Cost"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "A",
+          "1–4",
+          "4"
+        ],
+        [
+          "B",
+          "1–4",
+          "4"
+        ],
+        [
+          "C",
+          "1–4",
+          "4"
+        ],
+        [
+          "D",
+          "2–4",
+          "8"
+        ],
+        [
+          "E",
+          "3–4",
+          "8"
+        ],
+        [
+          "F",
+          "1–4",
+          "8"
+        ],
+        [
+          "G",
+          "2–4",
+          "10"
+        ],
+        [
+          "H",
+          "3–4",
+          "10"
+        ],
+        [
+          "I",
+          "3–4",
+          "12"
+        ]
+      ],
+      "caption": "Magic Items by Tier",
+      "owner": "Shared Campaign Variant Rules",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Mason's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Chisel a small hole in a stone wall",
+          "10"
+        ],
+        [
+          "Find a weak point in a stone wall",
+          "15"
+        ]
+      ],
+      "caption": "Mason's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Middle-Class Carousing Complications",
+      "cols": [
+        "d8",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "You accidentally insulted a guild master, and only a public apology will let you do business with the guild again.*"
+        ],
+        [
+          "2",
+          "You swore to complete some quest on behalf of a temple or a guild."
+        ],
+        [
+          "3",
+          "A social gaffe has made you the talk of the town.*"
+        ],
+        [
+          "4",
+          "A particularly obnoxious person has taken an intense romantic interest in you.*"
+        ],
+        [
+          "5",
+          "You have made a foe out of a local spellcaster.*"
+        ],
+        [
+          "6",
+          "You have been recruited to help run a local festival, play, or similar event."
+        ],
+        [
+          "7",
+          "You made a drunken toast that scandalized the locals."
+        ],
+        [
+          "8",
+          "You spent an additional 100 gp trying to impress people."
+        ]
+      ],
+      "caption": "Middle-Class Carousing Complications",
+      "owner": "Downtime Activity: Carousing",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Musical Instrument",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Identify a tune",
+          "10"
+        ],
+        [
+          "Improvise a tune",
+          "20"
+        ]
+      ],
+      "caption": "Musical Instrument",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Navigator's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Plot a course",
+          "10"
+        ],
+        [
+          "Discover your position on a nautical chart",
+          "15"
+        ]
+      ],
+      "caption": "Navigator's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Painter's Supplies",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Paint an accurate portrait",
+          "10"
+        ],
+        [
+          "Create a painting with a hidden message",
+          "20"
+        ]
+      ],
+      "caption": "Painter's Supplies",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Pit Fighting Complications",
+      "cols": [
+        "d6",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "An opponent swears to take revenge on you.*"
+        ],
+        [
+          "2",
+          "A crime boss approaches you and offers to pay you to intentionally lose a few matches.*"
+        ],
+        [
+          "3",
+          "You defeat a popular local champion, drawing the crowd's ire."
+        ],
+        [
+          "4",
+          "You defeat a noble's servant, drawing the wrath of the noble's house.*"
+        ],
+        [
+          "5",
+          "You are accused of cheating. Whether the allegation is true or not, your reputation is tarnished.*"
+        ],
+        [
+          "6",
+          "You accidentally deliver a near-fatal wound to a foe."
+        ]
+      ],
+      "caption": "Pit Fighting Complications",
+      "owner": "Downtime Activity: Pit Fighting",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Pit Fighting Results",
+      "cols": [
+        "Result",
+        "Value"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "0 successes",
+          "Lose your bouts, earning nothing."
+        ],
+        [
+          "1 success",
+          "Win 50 gp."
+        ],
+        [
+          "2 successes",
+          "Win 100 gp."
+        ],
+        [
+          "3 successes",
+          "Win 200 gp."
+        ]
+      ],
+      "caption": "Pit Fighting Results",
+      "owner": "Downtime Activity: Pit Fighting",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Poisoner's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Spot a poisoned object",
+          "10"
+        ],
+        [
+          "Determine the effects of a poison",
+          "20"
+        ]
+      ],
+      "caption": "Poisoner's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Potion of Healing Creation",
+      "cols": [
+        "Type",
+        "Time",
+        "Cost"
+      ],
+      "align": [
+        "left",
+        "left",
+        "right"
+      ],
+      "rows": [
+        [
+          "Healing",
+          "1 day",
+          "25 gp"
+        ],
+        [
+          "Greater healing",
+          "1 workweek",
+          "100 gp"
+        ],
+        [
+          "Superior healing",
+          "3 workweeks",
+          "1,000 gp"
+        ],
+        [
+          "Supreme healing",
+          "4 workweeks",
+          "10,000 gp"
+        ]
+      ],
+      "caption": "Potion of Healing Creation",
+      "owner": "Downtime Activity: Crafting an Item",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Potions for Sale",
+      "cols": [
+        "Potion of...",
+        "Cost"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "Healing",
+          "50 gp"
+        ],
+        [
+          "Climbing",
+          "75 gp"
+        ],
+        [
+          "Animal friendship",
+          "100 gp"
+        ],
+        [
+          "Greater healing",
+          "100 gp"
+        ],
+        [
+          "Water breathing",
+          "100 gp"
+        ],
+        [
+          "Superior healing",
+          "500 gp"
+        ],
+        [
+          "Supreme healing",
+          "5,000 gp"
+        ],
+        [
+          "Invisibility",
+          "5,000 gp"
+        ]
+      ],
+      "caption": "Potions for Sale",
+      "owner": "Shared Campaign Variant Rules",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Potter's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Determine what a vessel once held",
+          "10"
+        ],
+        [
+          "Create a serviceable pot",
+          "15"
+        ],
+        [
+          "Find a weak point in a ceramic object",
+          "20"
+        ]
+      ],
+      "caption": "Potter's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Religious Service",
+      "cols": [
+        "Check Total",
+        "Result"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1–10",
+          "No effect. Your efforts fail to make a lasting impression."
+        ],
+        [
+          "11–20",
+          "You earn one favor."
+        ],
+        [
+          "21+",
+          "You earn two favors."
+        ]
+      ],
+      "caption": "Religious Service",
+      "owner": "Downtime Activity: Religious Service",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Religious Service Complications",
+      "cols": [
+        "d6",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "You have offended a priest through your words or actions.*"
+        ],
+        [
+          "2",
+          "Blasphemy is still blasphemy, even if you did it by accident."
+        ],
+        [
+          "3",
+          "A secret sect in the temple offers you membership."
+        ],
+        [
+          "4",
+          "Another temple tries to recruit you as a spy.*"
+        ],
+        [
+          "5",
+          "The temple elders implore you to take up a holy quest."
+        ],
+        [
+          "6",
+          "You accidentally discover that an important person in the temple is a fiend worshiper."
+        ]
+      ],
+      "caption": "Religious Service Complications",
+      "owner": "Downtime Activity: Religious Service",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Research Complications",
+      "cols": [
+        "d6",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "You accidentally damage a rare book."
+        ],
+        [
+          "2",
+          "You offend a sage, who demands an extravagant gift.*"
+        ],
+        [
+          "3",
+          "If you had known that book was cursed, you never would have opened it."
+        ],
+        [
+          "4",
+          "A sage becomes obsessed with convincing you of a number of strange theories about reality.*"
+        ],
+        [
+          "5",
+          "Your actions cause you to be banned from a library until you make reparations.*"
+        ],
+        [
+          "6",
+          "You uncovered useful lore, but only by promising to complete a dangerous task in return."
+        ]
+      ],
+      "caption": "Research Complications",
+      "owner": "Downtime Activity: Research",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Research Outcomes",
+      "cols": [
+        "Check Total",
+        "Outcome"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1–5",
+          "No effect."
+        ],
+        [
+          "6–10",
+          "You learn one piece of lore."
+        ],
+        [
+          "11–20",
+          "You learn two pieces of lore."
+        ],
+        [
+          "21+",
+          "You learn three pieces of lore."
+        ]
+      ],
+      "caption": "Research Outcomes",
+      "owner": "Downtime Activity: Research",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Rival",
+      "cols": [
+        "d20",
+        "Rival"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Tax collector who is convinced the characters are dodging fees"
+        ],
+        [
+          "2",
+          "Politician who is concerned that the characters are causing more trouble than they solve"
+        ],
+        [
+          "3",
+          "High priest who worries the characters are diminishing the temple's prestige"
+        ],
+        [
+          "4",
+          "Wizard who blames the characters for some recent troubles"
+        ],
+        [
+          "5",
+          "Rival adventuring party"
+        ],
+        [
+          "6",
+          "Bard who loves a scandal enough to spark one"
+        ],
+        [
+          "7",
+          "Childhood rival or member of a rival clan"
+        ],
+        [
+          "8",
+          "Scorned sibling or parent"
+        ],
+        [
+          "9",
+          "Merchant who blames the characters for any business woes"
+        ],
+        [
+          "10",
+          "Newcomer out to make a mark on the world"
+        ],
+        [
+          "11",
+          "Sibling or ally of defeated enemy"
+        ],
+        [
+          "12",
+          "Official seeking to restore a tarnished reputation"
+        ],
+        [
+          "13",
+          "Deadly foe disguised as a social rival"
+        ],
+        [
+          "14",
+          "Fiend seeking to tempt the characters to evil"
+        ],
+        [
+          "15",
+          "Spurned romantic interest"
+        ],
+        [
+          "16",
+          "Political opportunist seeking a scapegoat"
+        ],
+        [
+          "17",
+          "Traitorous noble looking to foment a revolution"
+        ],
+        [
+          "18",
+          "Would-be tyrant who brooks no opposition"
+        ],
+        [
+          "19",
+          "Exiled noble looking for revenge"
+        ],
+        [
+          "20",
+          "Corrupt official worried that recent misdeeds will be revealed"
+        ]
+      ],
+      "caption": "Rival",
+      "owner": "Downtime Revisited",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Scribe a Scroll Complications",
+      "cols": [
+        "d6",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "You bought up the last of the rare ink used to craft scrolls, angering a wizard in town."
+        ],
+        [
+          "2",
+          "The priest of a temple of good accuses you of trafficking in dark magic.*"
+        ],
+        [
+          "3",
+          "A wizard eager to collect one of your spells in a book presses you to sell the scroll."
+        ],
+        [
+          "4",
+          "Due to a strange error in creating the scroll, it is instead a random spell of the same level."
+        ],
+        [
+          "5",
+          "The rare parchment you bought for your scroll has a barely visible map on it."
+        ],
+        [
+          "6",
+          "A thief attempts to break into your workroom.*"
+        ]
+      ],
+      "caption": "Scribe a Scroll Complications",
+      "owner": "Downtime Activity: Scribing a Spell Scroll",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Smith's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Sharpen a dull blade",
+          "10"
+        ],
+        [
+          "Repair a suit of armor",
+          "15"
+        ],
+        [
+          "Sunder a nonmagical metal object",
+          "15"
+        ]
+      ],
+      "caption": "Smith's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Spell Scroll Costs",
+      "cols": [
+        "Spell Level",
+        "Time",
+        "Cost"
+      ],
+      "align": [
+        "center",
+        "left",
+        "right"
+      ],
+      "rows": [
+        [
+          "Cantrip",
+          "1 day",
+          "15 gp"
+        ],
+        [
+          "1st",
+          "1 day",
+          "25 gp"
+        ],
+        [
+          "2nd",
+          "3 days",
+          "250 gp"
+        ],
+        [
+          "3rd",
+          "1 workweek",
+          "500 gp"
+        ],
+        [
+          "4th",
+          "2 workweeks",
+          "2,500 gp"
+        ],
+        [
+          "5th",
+          "4 workweeks",
+          "5,000 gp"
+        ],
+        [
+          "6th",
+          "8 workweeks",
+          "15,000 gp"
+        ],
+        [
+          "7th",
+          "16 workweeks",
+          "25,000 gp"
+        ],
+        [
+          "8th",
+          "32 workweeks",
+          "50,000 gp"
+        ],
+        [
+          "9th",
+          "48 workweeks",
+          "250,000 gp"
+        ]
+      ],
+      "caption": "Spell Scroll Costs",
+      "owner": "Downtime Activity: Scribing a Spell Scroll",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Spell Scrolls for Sale",
+      "cols": [
+        "Spell Level",
+        "Cost"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "Cantrip",
+          "25 gp"
+        ],
+        [
+          "1st",
+          "75 gp"
+        ],
+        [
+          "2nd",
+          "150 gp"
+        ],
+        [
+          "3rd",
+          "300 gp"
+        ],
+        [
+          "4th",
+          "500 gp"
+        ],
+        [
+          "5th",
+          "1,000 gp"
+        ]
+      ],
+      "caption": "Spell Scrolls for Sale",
+      "owner": "Shared Campaign Variant Rules",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Thieves' Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Pick a lock",
+          "Varies"
+        ],
+        [
+          "Disable a trap",
+          "Varies"
+        ]
+      ],
+      "caption": "Thieves' Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Tinker's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Temporarily repair a disabled device",
+          "10"
+        ],
+        [
+          "Repair an item in half the time",
+          "15"
+        ],
+        [
+          "Improvise a temporary item using scraps",
+          "20"
+        ]
+      ],
+      "caption": "Tinker's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Training Complications",
+      "cols": [
+        "d6",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Your instructor disappears, forcing you to spend one workweek finding a new one.*"
+        ],
+        [
+          "2",
+          "Your teacher instructs you in rare, archaic methods, which draw comments from others."
+        ],
+        [
+          "3",
+          "Your teacher is a spy sent to learn your plans.*"
+        ],
+        [
+          "4",
+          "Your teacher is a wanted criminal."
+        ],
+        [
+          "5",
+          "Your teacher is a cruel taskmaster."
+        ],
+        [
+          "6",
+          "Your teacher asks for help dealing with a threat."
+        ]
+      ],
+      "caption": "Training Complications",
+      "owner": "Downtime Activity: Training",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Upper-Class Carousing Complications",
+      "cols": [
+        "d8",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "A pushy noble family wants to marry off one of their scions to you.*"
+        ],
+        [
+          "2",
+          "You tripped and fell during a dance, and people can't stop talking about it."
+        ],
+        [
+          "3",
+          "You have agreed to take on a noble's debts."
+        ],
+        [
+          "4",
+          "You have been challenged to a joust by a knight.*"
+        ],
+        [
+          "5",
+          "You have made a foe out of a local noble.*"
+        ],
+        [
+          "6",
+          "A boring noble insists you visit each day and listen to long, tedious theories of magic."
+        ],
+        [
+          "7",
+          "You have become the target of a variety of embarrassing rumors.*"
+        ],
+        [
+          "8",
+          "You spent an additional 500 gp trying to impress people."
+        ]
+      ],
+      "caption": "Upper-Class Carousing Complications",
+      "owner": "Downtime Activity: Carousing",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Vehicles",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Navigate rough terrain or waters",
+          "10"
+        ],
+        [
+          "Assess a vehicle's condition",
+          "15"
+        ],
+        [
+          "Take a tight corner at high speed",
+          "20"
+        ]
+      ],
+      "caption": "Vehicles",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Wages",
+      "cols": [
+        "Check Total",
+        "Earnings"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "9 or lower",
+          "Poor lifestyle for the week"
+        ],
+        [
+          "10–14",
+          "Modest lifestyle for the week"
+        ],
+        [
+          "15–20",
+          "Comfortable lifestyle for the week"
+        ],
+        [
+          "21+",
+          "Comfortable lifestyle for the week + 25 gp"
+        ]
+      ],
+      "caption": "Wages",
+      "owner": "Downtime Activity: Work",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Weaver's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Repurpose cloth",
+          "10"
+        ],
+        [
+          "Mend a hole in a piece of cloth",
+          "10"
+        ],
+        [
+          "Tailor an outfit",
+          "15"
+        ]
+      ],
+      "caption": "Weaver's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Woodcarver's Tools",
+      "cols": [
+        "Activity",
+        "DC"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Craft a small wooden figurine",
+          "10"
+        ],
+        [
+          "Carve an intricate pattern in wood",
+          "15"
+        ]
+      ],
+      "caption": "Woodcarver's Tools",
+      "owner": "Tool Proficiencies",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Work Complications",
+      "cols": [
+        "d6",
+        "Complication"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "A difficult customer or a fight with a coworker reduces the wages you earn by one category.*"
+        ],
+        [
+          "2",
+          "Your employer's financial difficulties result in your not being paid.*"
+        ],
+        [
+          "3",
+          "A coworker with ties to an important family in town takes a dislike to you.*"
+        ],
+        [
+          "4",
+          "Your employer is involved with a dark cult or a criminal enterprise."
+        ],
+        [
+          "5",
+          "A crime ring targets your business for extortion.*"
+        ],
+        [
+          "6",
+          "You gain a reputation for laziness (unjustified or not, as you choose), giving you disadvantage on checks made for this downtime activity for the next six workweeks you devote to it.*"
+        ]
+      ],
+      "caption": "Work Complications",
+      "owner": "Downtime Activity: Work",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Chaos Bolt",
+      "cols": [
+        "d8",
+        "Damage Type"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Acid"
+        ],
+        [
+          "2",
+          "Cold"
+        ],
+        [
+          "3",
+          "Fire"
+        ],
+        [
+          "4",
+          "Force"
+        ],
+        [
+          "5",
+          "Lightning"
+        ],
+        [
+          "6",
+          "Poison"
+        ],
+        [
+          "7",
+          "Psychic"
+        ],
+        [
+          "8",
+          "Thunder"
+        ]
+      ],
+      "caption": "Chaos Bolt",
+      "owner": "Chaos Bolt",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Summon Lesser Demons Table",
+      "cols": [
+        "d6",
+        "Demons Summoned"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1-2",
+          "Two demons of challenge rating 1 or lower"
+        ],
+        [
+          "3-4",
+          "Four demons of challenge rating 1/2 or lower"
+        ],
+        [
+          "5-6",
+          "Eight demons of challenge rating 1/4 or lower"
+        ]
+      ],
+      "owner": "Summon Lesser Demons",
+      "ownerKind": "spell"
+    },
+    {
+      "name": "Celestial Expanded Spells",
+      "cols": [
+        "Spell Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1st",
+          "cure wounds, guiding bolt"
+        ],
+        [
+          "2nd",
+          "flaming sphere, lesser restoration"
+        ],
+        [
+          "3rd",
+          "daylight, revivify"
+        ],
+        [
+          "4th",
+          "guardian of faith, wall of fire"
+        ],
+        [
+          "5th",
+          "flame strike, greater restoration"
+        ]
+      ],
+      "caption": "Celestial Expanded Spells",
+      "owner": "The Celestial",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Divine Soul Table",
+      "cols": [
+        "Affinity",
+        "Spell"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Good",
+          "cure wounds"
+        ],
+        [
+          "Evil",
+          "inflict wounds"
+        ],
+        [
+          "Law",
+          "bless"
+        ],
+        [
+          "Chaos",
+          "bane"
+        ],
+        [
+          "Neutrality",
+          "protection from evil and good"
+        ]
+      ],
+      "owner": "Divine Soul",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Forge Domain Spells",
+      "cols": [
+        "Cleric Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1st",
+          "identify, searing smite"
+        ],
+        [
+          "3rd",
+          "heat metal, magic weapon"
+        ],
+        [
+          "5th",
+          "elemental weapon, protection from energy"
+        ],
+        [
+          "7th",
+          "fabricate, wall of fire"
+        ],
+        [
+          "9th",
+          "animate objects, creation"
+        ]
+      ],
+      "caption": "Forge Domain Spells",
+      "owner": "Forge Domain",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Gloom Stalker Spells (XGE)",
+      "cols": [
+        "Ranger Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "disguise self"
+        ],
+        [
+          "5th",
+          "rope trick"
+        ],
+        [
+          "9th",
+          "fear"
+        ],
+        [
+          "13th",
+          "greater invisibility"
+        ],
+        [
+          "17th",
+          "seeming"
+        ]
+      ],
+      "caption": "Gloom Stalker Spells",
+      "owner": "Gloom Stalker",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Grave Domain Spells",
+      "cols": [
+        "Cleric Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1st",
+          "bane, false life"
+        ],
+        [
+          "3rd",
+          "gentle repose, ray of enfeeblement"
+        ],
+        [
+          "5th",
+          "revivify, vampiric touch"
+        ],
+        [
+          "7th",
+          "blight, death ward"
+        ],
+        [
+          "9th",
+          "antilife shell, raise dead"
+        ]
+      ],
+      "caption": "Grave Domain Spells",
+      "owner": "Grave Domain",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Hexblade Expanded Spells",
+      "cols": [
+        "Spell Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1st",
+          "shield, wrathful smite"
+        ],
+        [
+          "2nd",
+          "blur, branding smite"
+        ],
+        [
+          "3rd",
+          "blink, elemental weapon"
+        ],
+        [
+          "4th",
+          "phantasmal killer, staggering smite"
+        ],
+        [
+          "5th",
+          "banishing smite, cone of cold"
+        ]
+      ],
+      "caption": "Hexblade Expanded Spells",
+      "owner": "The Hexblade",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Horizon Walker Spells",
+      "cols": [
+        "Ranger Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "protection from evil and good"
+        ],
+        [
+          "5th",
+          "misty step"
+        ],
+        [
+          "9th",
+          "haste"
+        ],
+        [
+          "13th",
+          "banishment"
+        ],
+        [
+          "17th",
+          "teleportation circle"
+        ]
+      ],
+      "caption": "Horizon Walker Spells",
+      "owner": "Horizon Walker",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Monster Slayer Spells",
+      "cols": [
+        "Ranger Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "protection from evil and good"
+        ],
+        [
+          "5th",
+          "zone of truth"
+        ],
+        [
+          "9th",
+          "magic circle"
+        ],
+        [
+          "13th",
+          "banishment"
+        ],
+        [
+          "17th",
+          "hold monster"
+        ]
+      ],
+      "caption": "Monster Slayer Spells",
+      "owner": "Monster Slayer",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Oath of Conquest Spells",
+      "cols": [
+        "Paladin Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "armor of Agathys, command"
+        ],
+        [
+          "5th",
+          "hold person, spiritual weapon"
+        ],
+        [
+          "9th",
+          "bestow curse, fear"
+        ],
+        [
+          "13th",
+          "dominate beast, stoneskin"
+        ],
+        [
+          "17th",
+          "cloudkill, dominate person"
+        ]
+      ],
+      "caption": "Oath of Conquest Spells",
+      "owner": "Oath of Conquest",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Oath of Redemption Spells",
+      "cols": [
+        "Paladin Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "sanctuary, sleep"
+        ],
+        [
+          "5th",
+          "calm emotions, hold person"
+        ],
+        [
+          "9th",
+          "counterspell, hypnotic pattern"
+        ],
+        [
+          "13th",
+          "Otiluke's Resilient Sphere, stoneskin"
+        ],
+        [
+          "17th",
+          "hold monster, wall of force"
+        ]
+      ],
+      "caption": "Oath of Redemption Spells",
+      "owner": "Oath of Redemption",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Shadow Sorcerer Quirks",
+      "cols": [
+        "d6",
+        "Quirk"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "You are always icy cold to the touch."
+        ],
+        [
+          "2",
+          "When you are asleep, you don't appear to breathe (though you must still breathe to survive)."
+        ],
+        [
+          "3",
+          "You barely bleed, even when badly injured."
+        ],
+        [
+          "4",
+          "Your heart beats once per minute. This event sometimes surprises you."
+        ],
+        [
+          "5",
+          "You have trouble remembering that living creatures and corpses should be treated differently."
+        ],
+        [
+          "6",
+          "You blinked. Once. Last week."
+        ]
+      ],
+      "caption": "Shadow Sorcerer Quirks",
+      "owner": "Shadow Magic",
+      "ownerKind": "subclass"
+    }
+  ]
+}

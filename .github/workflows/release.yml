@@ -139,6 +139,9 @@ jobs:
           if [ -n "$PREV" ]; then
             git diff --quiet "$PREV" "$TAG" -- data/5e2024     || note_changed 5e2024_full.json
             git diff --quiet "$PREV" "$TAG" -- data/humblewood || note_changed humblewood_full.json
+            git diff --quiet "$PREV" "$TAG" -- data/xanathars  || note_changed xanathars_full.json
+            git diff --quiet "$PREV" "$TAG" -- data/tashas     || note_changed tashas_full.json
+            git diff --quiet "$PREV" "$TAG" -- data/homebrew   || note_changed homebrew_full.json
           fi
           {
             echo
@@ -147,7 +150,8 @@ jobs:
             echo "**Just want the app?** Download \`fieldbook.html\` and open it — that is the whole thing."
             if [ -z "$PREV" ]; then
               echo
-              echo "Take the rules data too: \`5e2024_full.json\` and \`humblewood_full.json\`,"
+              echo "Take the rules data too: \`5e2024_full.json\`, \`humblewood_full.json\`,"
+              echo "\`xanathars_full.json\`, \`tashas_full.json\` and \`homebrew_full.json\`,"
               echo "or \`fieldbook-v$V.zip\` for everything in one download."
             elif [ -z "$CHANGED" ]; then
               echo
@@ -168,7 +172,10 @@ jobs:
           for f in dist/fieldbook.html \
                    "dist/fieldbook-v$V.zip" \
                    dist/5e2024_full.json \
-                   dist/humblewood_full.json; do
+                   dist/humblewood_full.json \
+                   dist/xanathars_full.json \
+                   dist/tashas_full.json \
+                   dist/homebrew_full.json; do
             [ -s "$f" ] || { echo "::error::missing or empty asset: $f"; exit 1; }
             printf '  %-42s %s\n' "$f" "$(du -h "$f" | cut -f1)"
           done
@@ -186,7 +193,10 @@ jobs:
           ASSETS=(dist/fieldbook.html
                   "dist/fieldbook-v$V.zip"
                   dist/5e2024_full.json
-                  dist/humblewood_full.json)
+                  dist/humblewood_full.json
+                  dist/xanathars_full.json
+                  dist/tashas_full.json
+                  dist/homebrew_full.json)
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists — updating notes and re-uploading assets."
             gh release edit "$TAG" --title "Fieldbook $TAG" --notes-file /tmp/notes.md

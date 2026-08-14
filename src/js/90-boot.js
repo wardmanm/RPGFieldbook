@@ -206,7 +206,12 @@ function boot(){
   try{const s=localStorage.getItem(K_SET);if(s)settings=Object.assign(settings,JSON.parse(s));}catch(e){}
   if(!Array.isArray(settings.rulesSources))settings.rulesSources=[];
   if(settings.rulesUrl){if(!settings.rulesSources.includes(settings.rulesUrl))settings.rulesSources.push(settings.rulesUrl);delete settings.rulesUrl;saveSettings();}
-  try{const rr=localStorage.getItem(K_RULES);if(rr)rules=Object.assign(rules,JSON.parse(rr));}catch(e){}
+  /* localStorage first and synchronously, so the sheet draws with rules already
+     in hand. It is now only the FALLBACK store and the migration source — the
+     IndexedDB copy is authoritative and is hydrated over the top a tick later
+     (see loadRulesCacheAsync), because five packs no longer fit in localStorage
+     at all. */
+  try{const rr=readRulesCacheString(localStorage.getItem(K_RULES));if(rr)rules=Object.assign(rules,JSON.parse(rr));}catch(e){}
   reindexRules();recomputeDups();
   buildAbilities();buildSkills();buildDeath();buildSlots();buildBio();
   wire();applyTheme();
@@ -220,6 +225,10 @@ function boot(){
     showHome();
   }
   if(!lsOK){const ss=document.getElementById("savestate");if(ss)ss.textContent="Use Save ↑";}
+  /* After the first paint, not before it: the rules cache lives in IndexedDB now
+     and reading it is async. Everything above already drew with whatever
+     localStorage had (usually nothing, once migrated), and this replaces it. */
+  loadRulesCacheAsync();
   checkForUpdate();
 }
 boot();

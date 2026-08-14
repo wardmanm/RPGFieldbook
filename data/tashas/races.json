@@ -1,0 +1,91 @@
+{
+  "system": "TCE",
+  "name": "Tasha's Cauldron of Everything — Species",
+  "version": 1,
+  "_note": "Tasha's Cauldron of Everything is 2014-era D&D content, converted as published for use alongside the 2024 rules. Subclass features are listed at their 2014 levels (a 2024 character picks a subclass at level 3 and gains any earlier features at once), and the prose cites 2014 class features and terminology. Where the 2024 Player's Handbook reprinted a subclass, both versions are offered and this one is tagged with its pack. The Artificer class and its four subclasses already reach you through the D&D 2024 pack, so they are not repeated here; its infusions are under Traits. Nothing here has been rewritten to match the 2024 rules — check with your table before using it.",
+  "excludeSystems": [
+    "humblewood"
+  ],
+  "races": [
+    {
+      "name": "Custom Lineage",
+      "system": "TCE",
+      "size": [
+        "Small",
+        "Medium"
+      ],
+      "speed": "30 ft",
+      "choices": [
+        {
+          "type": "skill",
+          "choose": 1,
+          "from": [
+            "Acrobatics",
+            "Animal Handling",
+            "Arcana",
+            "Athletics",
+            "Deception",
+            "History",
+            "Insight",
+            "Intimidation",
+            "Investigation",
+            "Medicine",
+            "Nature",
+            "Perception",
+            "Performance",
+            "Persuasion",
+            "Religion",
+            "Sleight of Hand",
+            "Stealth",
+            "Survival"
+          ]
+        }
+      ],
+      "description": "Instead of choosing one of the game's races for your character at 1st level, you can use the following traits to represent your character's lineage, giving you full control over how your character's origin shaped them:",
+      "traits": [
+        {
+          "name": "Creature Type",
+          "description": "You are a humanoid. You determine your appearance and whether you resemble any of your kin."
+        },
+        {
+          "name": "Size",
+          "description": "You are Small or Medium (your choice)."
+        },
+        {
+          "name": "Feat",
+          "description": "You gain one feat of your choice for which you qualify."
+        },
+        {
+          "name": "Variable Trait",
+          "description": "You gain one of the following options of your choice: (a) darkvision with a range of 60 feet or (b) proficiency in one skill of your choice."
+        },
+        {
+          "name": "Languages",
+          "description": "You can speak, read, and write Common and one other language that you and your DM agree is appropriate for your character."
+        }
+      ],
+      "subraces": [
+        {
+          "name": "Darkvision",
+          "description": "You gain darkvision with a range of 60 feet.",
+          "traits": [
+            {
+              "name": "Variable Trait; Darkvision",
+              "description": "You gain darkvision with a range of 60 feet."
+            }
+          ]
+        },
+        {
+          "name": "Skill Proficiency",
+          "description": "You gain proficiency in one skill of your choice.",
+          "traits": [
+            {
+              "name": "Variable Trait; Skill Proficiency",
+              "description": "You gain proficiency in one skill of your choice."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1726 @@
+{
+  "system": "TCE",
+  "name": "Tasha's Cauldron of Everything — Tables",
+  "version": 1,
+  "_note": "Tasha's Cauldron of Everything is 2014-era D&D content, converted as published for use alongside the 2024 rules. Subclass features are listed at their 2014 levels (a 2024 character picks a subclass at level 3 and gains any earlier features at once), and the prose cites 2014 class features and terminology. Where the 2024 Player's Handbook reprinted a subclass, both versions are offered and this one is tagged with its pack. The Artificer class and its four subclasses already reach you through the D&D 2024 pack, so they are not repeated here; its infusions are under Traits. Nothing here has been rewritten to match the 2024 rules — check with your table before using it.",
+  "excludeSystems": [
+    "humblewood"
+  ],
+  "tables": [
+    {
+      "name": "Primal Awareness Spells",
+      "cols": [
+        "Ranger Level",
+        "Spell"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "speak with animals"
+        ],
+        [
+          "5th",
+          "beast sense"
+        ],
+        [
+          "9th",
+          "speak with plants"
+        ],
+        [
+          "13th",
+          "locate creature"
+        ],
+        [
+          "17th",
+          "commune with nature"
+        ]
+      ],
+      "caption": "Primal Awareness Spells",
+      "owner": "Primal Awareness",
+      "ownerKind": "class"
+    },
+    {
+      "name": "Replicable Items (10th-Level Artificer)",
+      "cols": [
+        "Magic Item",
+        "Attunement"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Boots of striding and springing",
+          "Yes"
+        ],
+        [
+          "Boots of the Winterlands",
+          "Yes"
+        ],
+        [
+          "Bracers of archery",
+          "Yes"
+        ],
+        [
+          "Brooch of shielding",
+          "Yes"
+        ],
+        [
+          "Cloak of protection",
+          "Yes"
+        ],
+        [
+          "Eyes of the eagle",
+          "Yes"
+        ],
+        [
+          "Gauntlets of ogre power",
+          "Yes"
+        ],
+        [
+          "Gloves of missile snaring",
+          "Yes"
+        ],
+        [
+          "Gloves of swimming and climbing",
+          "Yes"
+        ],
+        [
+          "Hat of disguise",
+          "Yes"
+        ],
+        [
+          "Headband of intellect",
+          "Yes"
+        ],
+        [
+          "Helm of telepathy",
+          "Yes"
+        ],
+        [
+          "Medallion of thoughts",
+          "Yes"
+        ],
+        [
+          "Necklace of adaptation",
+          "Yes"
+        ],
+        [
+          "Periapt of wound closure",
+          "Yes"
+        ],
+        [
+          "Pipes of the sewers",
+          "Yes"
+        ],
+        [
+          "Quiver of Ehlonna",
+          "No"
+        ],
+        [
+          "Ring of jumping",
+          "Yes"
+        ],
+        [
+          "Ring of mind shielding",
+          "Yes"
+        ],
+        [
+          "Slippers of spider climbing",
+          "Yes"
+        ],
+        [
+          "Ventilating lungs (detailed in chapter 5)",
+          "Yes"
+        ],
+        [
+          "Winged boots",
+          "Yes"
+        ]
+      ],
+      "caption": "Replicable Items (10th-Level Artificer)",
+      "owner": "Replicate Magic Item",
+      "ownerKind": "feat"
+    },
+    {
+      "name": "Replicable Items (14th-Level Artificer)",
+      "cols": [
+        "Magic Item",
+        "Attunement"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Amulet of health",
+          "Yes"
+        ],
+        [
+          "Arcane propulsion arm (detailed in chapter 5)",
+          "Yes"
+        ],
+        [
+          "Belt of hill giant strength",
+          "Yes"
+        ],
+        [
+          "Boots of levitation",
+          "Yes"
+        ],
+        [
+          "Boots of speed",
+          "Yes"
+        ],
+        [
+          "Bracers of defense",
+          "Yes"
+        ],
+        [
+          "Cloak of the bat",
+          "Yes"
+        ],
+        [
+          "Dimensional shackles",
+          "No"
+        ],
+        [
+          "Gem of seeing",
+          "Yes"
+        ],
+        [
+          "Horn of blasting",
+          "No"
+        ],
+        [
+          "Ring of free action",
+          "Yes"
+        ],
+        [
+          "Ring of protection",
+          "Yes"
+        ],
+        [
+          "Ring of the ram",
+          "Yes"
+        ]
+      ],
+      "caption": "Replicable Items (14th-Level Artificer)",
+      "owner": "Replicate Magic Item",
+      "ownerKind": "feat"
+    },
+    {
+      "name": "Replicable Items (2nd-Level Artificer)",
+      "cols": [
+        "Magic Item",
+        "Attunement"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Alchemy jug",
+          "No"
+        ],
+        [
+          "Bag of holding",
+          "No"
+        ],
+        [
+          "Cap of water breathing",
+          "No"
+        ],
+        [
+          "Goggles of night",
+          "No"
+        ],
+        [
+          "Rope of climbing",
+          "No"
+        ],
+        [
+          "Sending stones",
+          "No"
+        ],
+        [
+          "Wand of magic detection",
+          "No"
+        ],
+        [
+          "Wand of secrets",
+          "No"
+        ]
+      ],
+      "caption": "Replicable Items (2nd-Level Artificer)",
+      "owner": "Replicate Magic Item",
+      "ownerKind": "feat"
+    },
+    {
+      "name": "Replicable Items (6th-Level Artificer)",
+      "cols": [
+        "Magic Item",
+        "Attunement"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Boots of elvenkind",
+          "No"
+        ],
+        [
+          "Cloak of elvenkind",
+          "Yes"
+        ],
+        [
+          "Cloak of the manta ray",
+          "No"
+        ],
+        [
+          "Eyes of charming",
+          "Yes"
+        ],
+        [
+          "Gloves of thievery",
+          "No"
+        ],
+        [
+          "Lantern of revealing",
+          "No"
+        ],
+        [
+          "Pipes of haunting",
+          "No"
+        ],
+        [
+          "Ring of water walking",
+          "No"
+        ]
+      ],
+      "caption": "Replicable Items (6th-Level Artificer)",
+      "owner": "Replicate Magic Item",
+      "ownerKind": "feat"
+    },
+    {
+      "name": "Elemental Essence Shards",
+      "cols": [
+        "d4",
+        "Element",
+        "Shard"
+      ],
+      "align": [
+        "center",
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Air",
+          "Elemental Essence Shard (Air)"
+        ],
+        [
+          "2",
+          "Earth",
+          "Elemental Essence Shard (Earth)"
+        ],
+        [
+          "3",
+          "Fire",
+          "Elemental Essence Shard (Fire)"
+        ],
+        [
+          "4",
+          "Water",
+          "Elemental Essence Shard (Water)"
+        ]
+      ],
+      "caption": "Elemental Essence Shards",
+      "owner": "Elemental Essence Shard",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Extraplanar Reversal",
+      "cols": [
+        "d100",
+        "Effect"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1-25",
+          "A portal to a random plane opens. The portal closes after 5 minutes."
+        ],
+        [
+          "26-45",
+          "2d4 imps and 2d4 quasits appear."
+        ],
+        [
+          "46-60",
+          "1d8 succubi/incubi appear."
+        ],
+        [
+          "61-70",
+          "1d10 barbed devils and 1d10 vrocks appear."
+        ],
+        [
+          "71-80",
+          "1 arcanaloth, 1 night hag, and 1 rakshasa appear."
+        ],
+        [
+          "81-85",
+          "1 ice devil and 1 marilith appear."
+        ],
+        [
+          "86-90",
+          "1 balor and 1 pit fiend appear. At the DM's discretion, a portal opens into the presence of an archdevil or demon lord instead, then closes after 5 minutes."
+        ],
+        [
+          "91-00",
+          "Iggwilv's Curse (see the Iggwilv's Curse property)."
+        ]
+      ],
+      "caption": "Extraplanar Reversal",
+      "owner": "Crook of Rao",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Outer Essence Shards",
+      "cols": [
+        "d4",
+        "Property",
+        "Shard"
+      ],
+      "align": [
+        "center",
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Lawful",
+          "Outer Essence Shard (Lawful)"
+        ],
+        [
+          "2",
+          "Chaotic",
+          "Outer Essence Shard (Chaotic)"
+        ],
+        [
+          "3",
+          "Good",
+          "Outer Essence Shard (Good)"
+        ],
+        [
+          "4",
+          "Evil",
+          "Outer Essence Shard (Evil)"
+        ]
+      ],
+      "caption": "Outer Essence Shards",
+      "owner": "Outer Essence Shard",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Souls of the Tarokka",
+      "cols": [
+        "d100",
+        "Card",
+        "Soul"
+      ],
+      "align": [
+        "center",
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "1",
+          "Artifact",
+          "Flameskull"
+        ],
+        [
+          "2",
+          "Beast",
+          "Wraith"
+        ],
+        [
+          "3",
+          "Broken",
+          "Banshee"
+        ],
+        [
+          "4",
+          "Darklord",
+          "Vampire"
+        ],
+        [
+          "5",
+          "Donjon",
+          "Mummy"
+        ],
+        [
+          "6",
+          "Executioner",
+          "Death knight"
+        ],
+        [
+          "7",
+          "Ghost",
+          "Ghost"
+        ],
+        [
+          "8",
+          "Horseman",
+          "Mummy lord"
+        ],
+        [
+          "9",
+          "Innocent",
+          "Ghost"
+        ],
+        [
+          "10",
+          "Marionette",
+          "Mummy"
+        ],
+        [
+          "11",
+          "Mists",
+          "Wraith"
+        ],
+        [
+          "12",
+          "Raven",
+          "Vampire spawn"
+        ],
+        [
+          "13",
+          "Seer",
+          "Vampire"
+        ],
+        [
+          "14",
+          "Tempter",
+          "Vampire spawn"
+        ],
+        [
+          "15-100",
+          "—",
+          "—"
+        ]
+      ],
+      "caption": "Souls of the Tarokka",
+      "owner": "Luba's Tarokka of Souls",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Teeth of Dahlver-Nar",
+      "cols": [
+        "d20",
+        "Tale and Tooth",
+        "Creatures Summoned",
+        "Implanted Effect"
+      ],
+      "align": [
+        "center",
+        "left",
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "The Staring Cats of Uldun-dar (ivory cat molar)",
+          "9 cats",
+          "The tooth has 8 charges. As an action, you can expend 1 charge to cast the revivify spell from the tooth. If you are dead at the start of your turn, the tooth expends 1 charge and casts revivify on you."
+        ],
+        [
+          "2",
+          "Duggle's Surprising Day (human molar)",
+          "1 commoner",
+          "When you finish a long rest, the tooth casts sanctuary (DC 18) on you, and the spell lasts for 24 hours or until you break it."
+        ],
+        [
+          "3",
+          "The Golden Age of Dhakaan (golden goblin bicuspid)",
+          "10 goblins, 1 goblin boss",
+          "When you are hit by an attack and an ally is within 5 feet of you, you can use your reaction to cause them to be hit instead. You can't use this reaction again until you finish a short or long rest."
+        ],
+        [
+          "4",
+          "The Mill Road Murders (halfling canine)",
+          "3 green hags in a coven",
+          "When you damage a target that hasn't taken a turn in this combat, the target takes an extra 3d10 slashing damage from ghostly blades."
+        ],
+        [
+          "5",
+          "Dooms of the Malpheggi (emerald lizardfolk fang)",
+          "1 lizardfolk queen and 4 lizardfolk",
+          "You gain reptilian scales, granting you a +2 bonus to your AC. Additionally, when you finish a long rest, you must succeed on a DC 15 Constitution saving throw or gain 1 level of exhaustion."
+        ],
+        [
+          "6",
+          "The Stable Hand's Secret (sweet-tasting human canine)",
+          "2 incubi",
+          "When you make a Charisma check against a humanoid, you can roll a d10 and add the number rolled as a bonus to the result. The creature then becomes hostile to you at the next dawn."
+        ],
+        [
+          "7",
+          "The Donkey's Dream (rainbow-colored donkey molar)",
+          "1 unicorn",
+          "The tooth has 3 charges. As an action, you can expend 1 charge to touch a creature. The target regains 2d8 + 2 hit points, and all diseases and poisons affecting it are removed. When you use this action, a shimmering image of a unicorn's horn appears until the end of your turn, sprouting from your forehead. The tooth regains all expended charges daily at dawn. You gain the following flaw: \"When I see wickedness in action, I must oppose it.\""
+        ],
+        [
+          "8",
+          "Beyond the Rock of Bral (silver mind flayer tooth)",
+          "2 mind flayers",
+          "You gain telepathy out to 120 feet as described in the Monster Manual, and you can cast the detect thoughts spell at will, requiring no components. You also have disadvantage on Wisdom (Insight) and Wisdom (Perception) checks from constant whispers of memories and nearby minds."
+        ],
+        [
+          "9",
+          "The Disappearances of Half Hollow (vomerine tooth of a Large toad)",
+          "4 giant toads",
+          "Your long jump is up to 30 feet and your high jump is up to 15 feet, with or without a running start."
+        ],
+        [
+          "10",
+          "Legendry of Phantoms and Ghosts (obsidian human molar)",
+          "1 giant octopus, 1 mage, 1 specter",
+          "As an action, you can use the tooth to cast the Evard's black tentacles spell (DC 18). Once this property is used, it can't be used again until the next dawn."
+        ],
+        [
+          "11",
+          "The Thousand Deaths of Jander Sunstar (yellowed vampire fang)",
+          "1 vampire",
+          "You can make a bite attack as an unarmed strike. On a hit, it deals 1d6 piercing damage plus 3d6 necrotic damage. You regain a number of hit points equal to the necrotic damage dealt. While you are in sunlight, you can't regain hit points."
+        ],
+        [
+          "12",
+          "Nightmares of Kaggash (twisted beholder tooth)",
+          "1 beholder",
+          "As an action, you can cast the eyebite spell from the tooth. Once you use this action, it can't be used again until the next dawn. Whenever you finish a long rest, roll a d20. On a 20, an aberration chosen by the DM appears within 30 feet of you and attacks."
+        ],
+        [
+          "13",
+          "Three Bridges to the Sky (lapis lazuli oni fang)",
+          "3 oni",
+          "You gain a flying speed of 30 feet, and you can use the tooth to cast the detect magic spell at will. While you are attuned to fewer than 3 magic items, you gain 1 level of exhaustion that can't be removed until you are attuned to three or more magic items."
+        ],
+        [
+          "14",
+          "The Claws of Dragotha (broken translucent fang)",
+          "1 adult red dracolich",
+          "You can use the tooth to cast the create undead spell. Once this property is used, it can't be used again until the next dawn. Each time you create an undead creature using the tooth, a skeleton, zombie, or ghoul also appears at a random location within 5 miles of you, searching for the living to kill. A humanoid killed by these undead rises as the same type of undead at the next midnight."
+        ],
+        [
+          "15",
+          "Ashes of the Ages and Eternal Fire (jade humanoid bicuspid)",
+          "1 dao, 1 djinni, 1 efreeti, 1 marid",
+          "You can use the tooth to cast counterspell at 9th level. Once you use this property, it can't be used again until the next dawn. Whenever you finish a long rest, if you haven't used the tooth to counter a spell since your last long rest, your hit point maximum is reduced by 2d10. If this reduces your hit point maximum to 0, you die."
+        ],
+        [
+          "16",
+          "Daughters of Bel (green steel pit fiend fang)",
+          "1 pit fiend",
+          "You can use the tooth to cast dominate monster (DC 18). Once you use this property, it can't be used again until the next dawn. You smell strongly of burning sulfur."
+        ],
+        [
+          "17",
+          "Why the Sky Screams (blue dragon fang)",
+          "1 ancient blue dragon",
+          "You gain immunity to lightning damage and vulnerability to thunder damage."
+        ],
+        [
+          "18",
+          "The Last Tarrasque (jagged sliver of tarrasque tooth)",
+          "1 tarrasque (ignores you and your commands appears for 1d4 rounds then vanishes)",
+          "You deal double damage to objects and structures. If you take 20 or more damage in one turn, you must succeed on a DC 18 Wisdom saving throw or spend your next turn in a murderous fury. During this rage, you must use your action to make an unarmed strike against a creature that damaged you, or a random creature you can see if you weren't damaged by a creature, moving as close as you can to the target if necessary."
+        ],
+        [
+          "19",
+          "Incendax's Tooth (ruby-veined red dragon fang)",
+          "1 ancient red dragon",
+          "You gain immunity to fire damage, and as an action, you can exhale fire in a 90-foot cone. Each creature in that area must make a DC 24 Dexterity saving throw, taking 26d6 fire damage on a failed save, or half as much damage on a successful one. After using the breath weapon, you gain 2 levels of exhaustion."
+        ],
+        [
+          "20",
+          "Dahlver-Nar's Tooth (dusty human molar)",
+          "1 priest",
+          "As an action you can call on a divine force to come to your aid. Describe the assistance you seek, and the DM decides the nature of the intervention (the effect of any cleric spell would be appropriate). Once this property is used, it can't be used again for 7 days."
+        ]
+      ],
+      "caption": "Teeth of Dahlver-Nar",
+      "owner": "Teeth of Dahlver-Nar",
+      "ownerKind": "item"
+    },
+    {
+      "name": "Proficiency Swaps",
+      "cols": [
+        "Proficiency",
+        "Replacement Proficiency"
+      ],
+      "align": [
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "Skill",
+          "Skill"
+        ],
+        [
+          "Armor",
+          "Simple/martial weapon or tool"
+        ],
+        [
+          "Simple weapon",
+          "Simple weapon or tool"
+        ],
+        [
+          "Martial weapon",
+          "Simple/martial weapon or tool"
+        ],
+        [
+          "Tool",
+          "Tool or simple weapon"
+        ]
+      ],
+      "caption": "Proficiency Swaps",
+      "owner": "Customizing Your Origin",
+      "ownerKind": "rule"
+    },
+    {
+      "name": "Aberrant Origins",
+      "cols": [
+        "d6",
+        "Origin"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "You were exposed to the Far Realm's warping influence. You are convinced that a tentacle is now growing on you, but no one else can see it."
+        ],
+        [
+          "2",
+          "A psychic wind from the Astral Plane carried psionic energy to you. When you use your powers, faint motes of light sparkle around you."
+        ],
+        [
+          "3",
+          "You once suffered the dominating powers of an aboleth, leaving a psychic splinter in your mind."
+        ],
+        [
+          "4",
+          "You were implanted with a mind flayer tadpole, but the ceremorphosis never completed. And now its psionic power is yours. When you use it, your flesh shines with a strange mucus."
+        ],
+        [
+          "5",
+          "As a child, you had an imaginary friend that looked like a flumph or a strange platypus-like creature. One day, it gifted you with psionic powers, which have ended up being not so imaginary."
+        ],
+        [
+          "6",
+          "Your nightmares whisper the truth to you: your psionic powers are not your own. You draw them from your parasitic twin!"
+        ]
+      ],
+      "caption": "Aberrant Origins",
+      "owner": "Aberrant Mind",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Circle of Spores Spells",
+      "cols": [
+        "Druid Level",
+        "Circle Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "blindness/deafness, gentle repose"
+        ],
+        [
+          "5th",
+          "animate dead, gaseous form"
+        ],
+        [
+          "7th",
+          "blight, confusion"
+        ],
+        [
+          "9th",
+          "cloudkill, contagion"
+        ]
+      ],
+      "caption": "Circle of Spores Spells",
+      "owner": "Circle of Spores",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Circle of Wildfire Spells",
+      "cols": [
+        "Druid Level",
+        "Circle Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "2nd",
+          "burning hands, cure wounds"
+        ],
+        [
+          "3rd",
+          "flaming sphere, scorching ray"
+        ],
+        [
+          "5th",
+          "plant growth, revivify"
+        ],
+        [
+          "7th",
+          "aura of life, fire shield"
+        ],
+        [
+          "9th",
+          "flame strike, mass cure wounds"
+        ]
+      ],
+      "caption": "Circle of Wildfire Spells",
+      "owner": "Circle of Wildfire",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Clockwork Spells (TCE)",
+      "cols": [
+        "Sorcerer Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1st",
+          "alarm, protection from evil and good"
+        ],
+        [
+          "3rd",
+          "aid, lesser restoration"
+        ],
+        [
+          "5th",
+          "dispel magic, protection from energy"
+        ],
+        [
+          "7th",
+          "freedom of movement, summon construct"
+        ],
+        [
+          "9th",
+          "greater restoration, wall of force"
+        ]
+      ],
+      "caption": "Clockwork Spells",
+      "owner": "Clockwork Soul",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Fathomless Expanded Spells",
+      "cols": [
+        "Spell Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1st",
+          "create or destroy water, thunderwave"
+        ],
+        [
+          "2nd",
+          "gust of wind, silence"
+        ],
+        [
+          "3rd",
+          "lightning bolt, sleet storm"
+        ],
+        [
+          "4th",
+          "control water, summon elemental (water only)"
+        ],
+        [
+          "5th",
+          "Bigby's hand (appears as a tentacle), cone of cold"
+        ]
+      ],
+      "caption": "Fathomless Expanded Spells",
+      "owner": "The Fathomless",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Fey Wanderer Spells (TCE)",
+      "cols": [
+        "Ranger Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "charm person"
+        ],
+        [
+          "5th",
+          "misty step"
+        ],
+        [
+          "9th",
+          "dispel magic"
+        ],
+        [
+          "13th",
+          "dimension door"
+        ],
+        [
+          "17th",
+          "mislead"
+        ]
+      ],
+      "caption": "Fey Wanderer Spells",
+      "owner": "Fey Wanderer",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Feywild Gifts (TCE)",
+      "cols": [
+        "d6",
+        "Gift"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Illusory butterflies flutter around you while you take a short or long rest."
+        ],
+        [
+          "2",
+          "Fresh, seasonal flowers sprout from your hair each dawn."
+        ],
+        [
+          "3",
+          "You faintly smell of cinnamon, lavender, nutmeg, or another comforting herb or spice."
+        ],
+        [
+          "4",
+          "Your shadow dances while no one is looking directly at it."
+        ],
+        [
+          "5",
+          "Horns or antlers sprout from your head."
+        ],
+        [
+          "6",
+          "Your skin and hair change color to match the season at each dawn."
+        ]
+      ],
+      "caption": "Feywild Gifts",
+      "owner": "Fey Wanderer",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Genie Expanded Spells",
+      "cols": [
+        "Spell Level",
+        "Genie Spells",
+        "Dao Spells",
+        "Djinni Spells",
+        "Efreeti Spells",
+        "Marid Spells"
+      ],
+      "align": [
+        "center",
+        "left",
+        "left",
+        "left",
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1st",
+          "detect evil and good",
+          "sanctuary",
+          "thunderwave",
+          "burning hands",
+          "fog cloud"
+        ],
+        [
+          "2nd",
+          "phantasmal force",
+          "spike growth",
+          "gust of wind",
+          "scorching ray",
+          "blur"
+        ],
+        [
+          "3rd",
+          "create food and water",
+          "meld into stone",
+          "wind wall",
+          "fireball",
+          "sleet storm"
+        ],
+        [
+          "4th",
+          "phantasmal killer",
+          "stone shape",
+          "greater invisibility",
+          "fire shield",
+          "control water"
+        ],
+        [
+          "5th",
+          "creation",
+          "wall of stone",
+          "seeming",
+          "flame strike",
+          "cone of cold"
+        ],
+        [
+          "9th",
+          "wish",
+          "—",
+          "—",
+          "—",
+          "—"
+        ]
+      ],
+      "caption": "Genie Expanded Spells",
+      "owner": "The Genie",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Genie Kind",
+      "cols": [
+        "d4",
+        "Kind",
+        "Element"
+      ],
+      "align": [
+        "center",
+        "left",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Dao",
+          "Earth"
+        ],
+        [
+          "2",
+          "Djinni",
+          "Air"
+        ],
+        [
+          "3",
+          "Efreeti",
+          "Fire"
+        ],
+        [
+          "4",
+          "Marid",
+          "Water"
+        ]
+      ],
+      "caption": "Genie Kind",
+      "owner": "The Genie",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Genie's Vessel",
+      "cols": [
+        "d6",
+        "Vessel"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Oil lamp"
+        ],
+        [
+          "2",
+          "Urn"
+        ],
+        [
+          "3",
+          "Ring with a compartment"
+        ],
+        [
+          "4",
+          "Stoppered bottle"
+        ],
+        [
+          "5",
+          "Hollow statuette"
+        ],
+        [
+          "6",
+          "Ornate lantern"
+        ]
+      ],
+      "caption": "Genie's Vessel",
+      "owner": "The Genie",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Manifestations of Order (TCE)",
+      "cols": [
+        "d6",
+        "Manifestation"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Spectral cogwheels hover behind you."
+        ],
+        [
+          "2",
+          "The hands of a clock spin in your eyes."
+        ],
+        [
+          "3",
+          "Your skin glows with a brassy sheen."
+        ],
+        [
+          "4",
+          "Floating equations and geometric objects overlay your body."
+        ],
+        [
+          "5",
+          "Your spellcasting focus temporarily takes the form of a Tiny clockwork mechanism."
+        ],
+        [
+          "6",
+          "The ticking of gears or ringing of a clock can be heard by you and those affected by your magic."
+        ]
+      ],
+      "caption": "Manifestations of Order",
+      "owner": "Clockwork Soul",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Merciful Mask",
+      "cols": [
+        "d6",
+        "Mask Appearance"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Raven"
+        ],
+        [
+          "2",
+          "Blank and white"
+        ],
+        [
+          "3",
+          "Crying visage"
+        ],
+        [
+          "4",
+          "Laughing visage"
+        ],
+        [
+          "5",
+          "Skull"
+        ],
+        [
+          "6",
+          "Butterfly"
+        ]
+      ],
+      "caption": "Merciful Mask",
+      "owner": "Way of Mercy",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Oath of Glory Spells (TCE)",
+      "cols": [
+        "Paladin Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "guiding bolt, heroism"
+        ],
+        [
+          "5th",
+          "enhance ability, magic weapon"
+        ],
+        [
+          "9th",
+          "haste, protection from energy"
+        ],
+        [
+          "13th",
+          "compulsion, freedom of movement"
+        ],
+        [
+          "17th",
+          "commune, flame strike"
+        ]
+      ],
+      "caption": "Oath of Glory Spells",
+      "owner": "Oath of Glory",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Oath of the Watchers Spells",
+      "cols": [
+        "Paladin Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "alarm, detect magic"
+        ],
+        [
+          "5th",
+          "moonbeam, see invisibility"
+        ],
+        [
+          "9th",
+          "counterspell, nondetection"
+        ],
+        [
+          "13th",
+          "aura of purity, banishment"
+        ],
+        [
+          "17th",
+          "hold monster, scrying"
+        ]
+      ],
+      "caption": "Oath of the Watchers Spells",
+      "owner": "Oath of the Watchers",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Order Domain Spells",
+      "cols": [
+        "Cleric Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1st",
+          "command, heroism"
+        ],
+        [
+          "3rd",
+          "hold person, zone of truth"
+        ],
+        [
+          "5th",
+          "mass healing word, slow"
+        ],
+        [
+          "7th",
+          "compulsion, locate creature"
+        ],
+        [
+          "9th",
+          "commune, dominate person"
+        ]
+      ],
+      "caption": "Order Domain Spells",
+      "owner": "Order Domain",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Origin of the Beast",
+      "cols": [
+        "d4",
+        "Origin"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "One of your parents is a lycanthrope, and you've inherited some of their curse."
+        ],
+        [
+          "2",
+          "You are descended from an archdruid and inherited the ability to partially change shape."
+        ],
+        [
+          "3",
+          "A fey spirit gifted you with the ability to adopt different bestial aspects."
+        ],
+        [
+          "4",
+          "An ancient animal spirit dwells within you, allowing you to walk this path."
+        ]
+      ],
+      "caption": "Origin of the Beast",
+      "owner": "Path of the Beast",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Peace Deities",
+      "cols": [
+        "Example Deity",
+        "Pantheon"
+      ],
+      "align": [
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "SCAG",
+          "Elven"
+        ],
+        [
+          "SCAG",
+          "Dwarven"
+        ],
+        [
+          "Boldrei",
+          "Eberron"
+        ],
+        [
+          "SCAG",
+          "Halfling"
+        ],
+        [
+          "Eldath",
+          "Forgotten Realms"
+        ],
+        [
+          "SCAG",
+          "Gnomish"
+        ],
+        [
+          "Paladine",
+          "Dragonlance"
+        ],
+        [
+          "Rao",
+          "Greyhawk"
+        ]
+      ],
+      "caption": "Peace Deities",
+      "owner": "Peace Domain",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Peace Domain Spells",
+      "cols": [
+        "Cleric Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1st",
+          "heroism, sanctuary"
+        ],
+        [
+          "3rd",
+          "aid, warding bond"
+        ],
+        [
+          "5th",
+          "beacon of hope, sending"
+        ],
+        [
+          "7th",
+          "aura of purity, Otiluke's resilient sphere"
+        ],
+        [
+          "9th",
+          "greater restoration, Rary's telepathic bond"
+        ]
+      ],
+      "caption": "Peace Domain Spells",
+      "owner": "Peace Domain",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Psionic Spells (TCE)",
+      "cols": [
+        "Sorcerer Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1st",
+          "arms of Hadar, dissonant whispers, mind sliver"
+        ],
+        [
+          "3rd",
+          "calm emotions, detect thoughts"
+        ],
+        [
+          "5th",
+          "hunger of Hadar, sending"
+        ],
+        [
+          "7th",
+          "Evard's black tentacles, summon aberration"
+        ],
+        [
+          "9th",
+          "Rary's telepathic bond, telekinesis"
+        ]
+      ],
+      "caption": "Psionic Spells",
+      "owner": "Aberrant Mind",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Runes Known",
+      "cols": [
+        "Fighter Level",
+        "Number of Runes"
+      ],
+      "align": [
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "2"
+        ],
+        [
+          "7th",
+          "3"
+        ],
+        [
+          "10th",
+          "4"
+        ],
+        [
+          "15th",
+          "5"
+        ]
+      ],
+      "caption": "Runes Known",
+      "owner": "Rune Knight",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Star Map (TCE)",
+      "cols": [
+        "d6",
+        "Map Form"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "A scroll covered with depictions of constellations"
+        ],
+        [
+          "2",
+          "A stone tablet with fine holes drilled through it"
+        ],
+        [
+          "3",
+          "A speckled owlbear hide, tooled with raised marks"
+        ],
+        [
+          "4",
+          "A collection of maps bound in an ebony cover"
+        ],
+        [
+          "5",
+          "A crystal that projects starry patterns when placed before a light"
+        ],
+        [
+          "6",
+          "Glass disks that depict constellations"
+        ]
+      ],
+      "caption": "Star Map",
+      "owner": "Circle of Stars",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Swarm Appearance",
+      "cols": [
+        "d4",
+        "Appearance"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Swarming insects"
+        ],
+        [
+          "2",
+          "Miniature twig blights"
+        ],
+        [
+          "3",
+          "Fluttering birds"
+        ],
+        [
+          "4",
+          "Playful pixies"
+        ]
+      ],
+      "caption": "Swarm Appearance",
+      "owner": "Swarmkeeper",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Swarmkeeper Spells",
+      "cols": [
+        "Ranger Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "3rd",
+          "faerie fire"
+        ],
+        [
+          "5th",
+          "web"
+        ],
+        [
+          "9th",
+          "gaseous form"
+        ],
+        [
+          "13th",
+          "arcane eye"
+        ],
+        [
+          "17th",
+          "insect plague"
+        ]
+      ],
+      "caption": "Swarmkeeper Spells",
+      "owner": "Swarmkeeper",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Twilight Deities",
+      "cols": [
+        "Example Deity",
+        "Pantheon"
+      ],
+      "align": [
+        "center",
+        "center"
+      ],
+      "rows": [
+        [
+          "Boldrei",
+          "Eberron"
+        ],
+        [
+          "Celestian",
+          "Greyhawk"
+        ],
+        [
+          "Dol Arrah",
+          "Eberron"
+        ],
+        [
+          "Helm",
+          "Forgotten Realms"
+        ],
+        [
+          "Ilmater",
+          "Forgotten Realms"
+        ],
+        [
+          "Mishakal",
+          "Dragonlance"
+        ],
+        [
+          "Selûne",
+          "Forgotten Realms"
+        ],
+        [
+          "Yondalla",
+          "Halfling"
+        ]
+      ],
+      "caption": "Twilight Deities",
+      "owner": "Twilight Domain",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Twilight Domain Spells",
+      "cols": [
+        "Cleric Level",
+        "Spells"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1st",
+          "faerie fire, sleep"
+        ],
+        [
+          "3rd",
+          "moonbeam, see invisibility"
+        ],
+        [
+          "5th",
+          "aura of vitality, Leomund's tiny hut"
+        ],
+        [
+          "7th",
+          "aura of life, greater invisibility"
+        ],
+        [
+          "9th",
+          "circle of power, mislead"
+        ]
+      ],
+      "caption": "Twilight Domain Spells",
+      "owner": "Twilight Domain",
+      "ownerKind": "subclass"
+    },
+    {
+      "name": "Wild Magic",
+      "cols": [
+        "d8",
+        "Magical Effect"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "1",
+          "Shadowy tendrils lash around you. Each creature of your choice that you can see within 30 feet of you must succeed on a Constitution saving throw or take 1d12 necrotic damage. You also gain 1d12 temporary hit points."
+        ],
+        [
+          "2",
+          "You teleport up to 30 feet to an unoccupied space you can see. Until your rage ends, you can use this effect again on each of your turns as a bonus action."
+        ],
+        [
+          "3",
+          "An intangible spirit, which looks like a flumph or a pixie (your choice), appears within 5 feet of one creature of your choice that you can see within 30 feet of you. At the end of the current turn, the spirit explodes, and each creature within 5 feet of it must succeed on a Dexterity saving throw or take 1d6 force damage. Until your rage ends, you can use this effect again, summoning another spirit, on each of your turns as a bonus action."
+        ],
+        [
+          "4",
+          "Magic infuses one weapon of your choice that you are holding. Until your rage ends, the weapon's damage type changes to force, and it gains the light and thrown properties, with a normal range of 20 feet and a long range of 60 feet. If the weapon leaves your hand, the weapon reappears in your hand at the end of the current turn."
+        ],
+        [
+          "5",
+          "Whenever a creature hits you with an attack roll before your rage ends, that creature takes 1d6 force damage, as magic lashes out in retribution."
+        ],
+        [
+          "6",
+          "Until your rage ends, you are surrounded by multi colored, protective lights; you gain a +1 bonus to AC, and while within 10 feet of you, your allies gain the same bonus."
+        ],
+        [
+          "7",
+          "Flowers and vines temporarily grow around you. Until your rage ends, the ground within 15 feet of you is 3 for your enemies."
+        ],
+        [
+          "8",
+          "A bolt of light shoots from your chest. Another creature of your choice that you can see within 30 feet of you must succeed on a Constitution saving throw or take 1d6 radiant damage and be blinded until the start of your next turn. Until your rage ends, you can use this effect again on each of your turns as a bonus action."
+        ]
+      ],
+      "caption": "Wild Magic",
+      "owner": "Path of Wild Magic",
+      "ownerKind": "subclass"
+    }
+  ]
+}

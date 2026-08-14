@@ -1730,6 +1730,225 @@ can be assigned yet. Resolve when the Humblewood 1 core race page is on hand.
 
 ---
 
+## Xanathar's + Tasha's as supplement packs (`data/xanathars`, `data/tashas`)
+
+Two new systems, `XGE` and `TCE`, converted from the same 5e-tools dump. **Supplements, not games**:
+a character is never created "in" them. Counts — XGE 22 keywords · 43 items · 15 feats · 95 spells ·
+31 subclasses · 22 features · 74 tables. TCE 3 · 84 · 15 · 1 race · 21 spells · 26 subclasses ·
+76 features · 37 tables.
+
+**`convert.py` was XPHB in twelve string literals and five filters.** Now a `Book` carries the
+source codes, the `system` stamp, per-stem pack names, `_note` and `excludeSystems`; `pick_sources`
+dispatches to the untouched `pick_2024_preferred` when no codes are given, and `_pack` builds the
+header in the original key order. **The default Book reproduces `data/5e2024/` byte for byte** —
+checked before the refactor (the converter already was reproducible), after it, and again at the
+end. That equality is the gate: if the 5e2024 folder moves, `release.js` bumps XPHB's data version
+and every player is told to re-download 1.1 MB that didn't change.
+
+**Four things looked right and were wrong.** All four were found by measuring, not by reading:
+
+1. **`_copy` stubs.** 5e-tools ships every XGE/TCE subclass twice: 122 records, 61 real. The plan
+   said "dedupe by (className, name), prefer the newer classSource". That is backwards — the
+   duplicate IS the newer one, a `_copy` stub, and **35 of 57 carry no `subclassFeatures` at all**.
+   Preferring it would have shipped 26 subclasses of 61, each with `"levels": {}` — right-looking
+   JSON, correct entry count in the build log, no features. The filter is `'_copy' not in sc`.
+2. **Spell class tags.** `sources.json` files a 2014 book's spells under `classVariant`, not
+   `class`, and under PHB/TCE sources. The existing reader gave **XGE 0 of 95 tags**: a complete
+   pack whose "only my class" filter hides everything in it. Widened, gated on the book so the 2024
+   run cannot move. Now 95/95 and 21/21, all naming 2024 classes.
+3. **`subclassesFor()` clobbered by name.** The map key is what `character.classes[].subclass`
+   stores, and the 2024 PHB reprinted **seven** XGE/TCE subclasses (Gloom Stalker, Fey Wanderer,
+   Soulknife, Psi Warrior, Oath of Glory, Path of the Zealot, College of Glamour). Loading a
+   supplement would have silently swapped every existing 2024 character's subclass for the 2014
+   one. Now a same-named entry from a different pack is offered *beside* it as `Gloom Stalker (XGE)`;
+   same-pack re-import still replaces, so updating a pack still works.
+4. **Table names are a global lookup.** `findTable` matches on name and `[Table: …]` anchors carry
+   no pack, so eight names the 2024 PHB reuses would have opened the wrong table.
+   `--avoid-table-names data/5e2024/tables.json` suffixes just those eight; the anchors follow for
+   free because `_register` returns the final name and `flatten()` uses exactly that. Asserted:
+   zero cross-pack collisions, zero dangling anchors.
+
+**`excludeSystems`** (schema §1) is the mechanism for the species filter, chosen over extending
+`systemOf()`: a pack whose `system` the app can't place says who it is **not** for. Stamped per
+entry by `mergeRules`, honoured in `racesForCharacter` only — `findRaceDef` stays unfiltered, same
+rule as `systemOf`. `bundle-rules.js` had to learn it too: the bundle is built from a fixed key
+list, so without that the per-category files would filter and the file players actually import
+would not.
+
+**Not shipped, deliberately:** the Artificer. It is **already in `data/5e2024/classes.json`,
+stamped `XPHB`** — `convert_classes`' `cls[0]` fallback picks up its TCE printing (same for the UA
+Mystic). Owner's call: leave the mislabel alone rather than move `data/5e2024/` and make everyone
+re-download; Tasha's therefore skips the Artificer class *and* its four subclasses (`--skip-classes`)
+rather than shipping duplicates beside them. **Known issue: Artificer and Mystic are 2014/UA content
+labelled XPHB.** Fixing it means dropping both from the core pack, a data version bump, and anyone
+playing an Artificer on the core pack alone losing the class unless they also import Tasha's.
+
+Book profiles (pack names, the 2014-era `_note`, the Artificer skip) live in `SUPPLEMENTS` in
+`convert.py`, not in `dev.sh` — prose duplicated into a menu is how a re-run quietly stops
+reproducing the committed packs. `dev.sh` now offers core / XGE / TCE / all three.
+
+Also out of scope: XGE's 11 encounter tables, 12 traps and 8 name tables (bespoke 5e-tools shapes
+needing their own parsers, for DM content the sheet cannot act on), and the 3 TCE sidekick classes
+(`hd: null`, already skipped by the existing guard).
+
+851 checks green across 7 suites, including the four count tables, "no empty category", "every
+subclass has ≥1 trait", "feature names unique", and the cross-pack table-name and anchor checks.
+**Not verified here:** anything interactive — owner QA.
+
+---
+
+## Homebrew pack + missing-dependency reporting
+
+A fifth pack, `data/homebrew/` (`system: "Homebrew"`), and the machinery it forced into the open.
+
+**The bug was already shipping.** `subclassesFor()` guards on the parent class def being truthy, so
+a subclass whose class isn't loaded returns `{}` from the whole standalone loop. Humblewood's 11
+subclasses, Xanathar's 31 and Tasha's 26 all attach to `data/5e2024/classes.json`. Load any of them
+alone and the subclasses merge, Settings counts them as loaded, and they are unreachable — while the
+picker says *"This class has no subclasses in the loaded rules"*, which is **false**. No warning at
+import, none at boot. Every other unresolved reference in the app degrades just as quietly (a
+missing feat becomes an empty feature named `Feat: X`; a missing granted item becomes a bare name).
+
+**Two detectors, because one can't cover it.**
+
+- **Structural** — `subclasses[].class` is a field the app actually resolves, so a missing parent is
+  detectable with **no authoring at all**. This is what catches homebrew nobody annotated, and it is
+  why the other three packs needed no data change: their `dataVersion` doesn't move and nobody is
+  told to re-download.
+- **Declared** (`requires`, schema §1) — for what the schema can't model. `levels[].spells` is prose
+  (`{note}`), so a subclass's expanded spell list names its spells **only inside sentences**.
+  Scanning prose would invent as many references as it found. The Predator's 13 spells are exactly
+  this case: 11 from XPHB, **Cause Fear and Primal Savagery from XGE**.
+
+`requires` groups by providing pack and carries a `file`, so the message is actionable — *"2 spells:
+Cause Fear, Primal Savagery — import xanathars_full.json"* rather than just naming the absence.
+Matching is case-insensitive and **pack-blind**: `pack`/`file` are documentation, not a constraint,
+so having the spell from somewhere else is not an error. An unknown category key is ignored, so
+adding a category later can never turn old packs red.
+
+**Where the state lives, and why it's split.** `mergeRules` never runs at boot —
+`90-boot.js:209-210` restores the merged pool from localStorage and rebuilds only the derived
+structures. So the *declaration* is stored (`rules.requires`, keyed by source; `saveRulesCache()`
+stringifies all of `rules`, so plain JSON persists free — `_dups` uses `Set`s and serialises to
+`{}`, which is the trap to avoid) and the *verdict* is not: `missingRequirements()` is a pure
+function of `rules`, called at render time. Nothing to persist, nothing to invalidate, and testable
+in the vm harness, which cannot run `boot()`. `removeRulesGroup` prunes a source's declaration once
+none of its entries remain.
+
+**The chip reuses `.chip.bad`** — already the documented "this IS a problem" state, against
+`--brick`, as opposed to `.chip.warn`'s deliberate "nothing is broken, just not newest". But
+**colour alone cannot carry it**: in the Classic skin `--accent` and `--brick` are the same value,
+so a red chip and the amber "update available" chip are identical there. Hence the `!` glyph, the
+same trick as `.verbadge.old::after{content:"↑"}`. Tooltip is a plain `title=`, the app's only
+tooltip mechanism outside the note preview. Tooltip lines group by category, so eight missing
+classes read as one line rather than "(class)" eight times — and `CAT_ONE` spells the singulars out,
+because `replace(/s$/,"")` turned "Classes" into "classe".
+
+Two supporting fixes: `importRulesFiles`/`fetchAllRules` now add a one-line summary through
+`updateRulesStatus`, and **`fetchAllRules` never called `renderRulesData()`** — pre-existing, and it
+would have left the new chip stale after a URL fetch.
+
+**The data is hand-authored, and stays that way.** Homebrew sources are PDFs, HTML and JSON; each
+piece needs judgement about which features are traits vs invocations and what levels they land on.
+The Predator came from a D&D Wiki page. Its 6 invocations and pact boon ship as `features` (the
+XGE/TCE convention) — note the app cannot auto-attach those, `rules.features` is a manual picker
+library, which is true of every invocation we ship. A throwaway generator built the three files only
+so the `requires` block is byte-identical across them: `bundle-rules.js` compares them with
+`JSON.stringify` and fails the build if they disagree, exactly as it does for `system` and
+`excludeSystems`.
+
+Verified end-to-end against the real bundles: homebrew + 5e2024 without Xanathar's names the two
+spells and the file; all five packs is silent; humblewood alone and xanathars alone now report their
+missing classes structurally. A test asserts every name in `requires` resolves against a shipped
+pack, so the demo case can only ever be "not imported", never "misspelled".
+
+**Not verified here:** anything interactive — owner QA. Especially the Classic-skin colour case.
+
+### The rules cache outgrew localStorage — caught in play, fixed to IndexedDB
+
+Reported the same day: import all five packs, reload, and only 5e2024 and Humblewood come back.
+
+**The ledger called this shot** when there were two packs: *"the rules cache is a single localStorage
+key holding every loaded pack… ~2.7 MB of a typical 5 MB origin quota before any characters exist."*
+Adding XGE, TCE and Homebrew took it over.
+
+**Measured, not assumed** (real browser, five packs merged): the pool serialises to **2,292,912
+characters — 4.37 MiB as UTF-16**, against Chrome's 5 MiB per-origin cap, shared with characters,
+library and settings. Quoting the *character* count is what made this look survivable. Only **1.2%**
+is regenerable metadata (`_id`, `_dups`), so trimming was never going to save it.
+
+**Two wrong turns worth recording, because both were tested rather than shipped.** First hypothesis
+was quota, which I could not reproduce — Chromium at `http://127.0.0.1` swallowed 2.29M chars
+happily. Second was the home-screen import path, which turns out to call the same
+`importRulesFiles`. What settled it was proving the *read* side correct: writing all five, reloading,
+and getting a status line identical to the reporter's first screenshot. Merge and boot restore are
+fine; the **write** was the only failure point.
+
+**Root cause:** `saveRulesCache(){try{localStorage.setItem(...)}catch(e){}}` — one key for the whole
+pool, and an empty catch. A rejected write left the **previous** value in place, so the packs looked
+loaded all session and the next boot faithfully restored the older set. Silent by construction.
+
+**Fix.** The pool moved to **IndexedDB** (quota is a share of free disk, no dependencies, works from
+`file://` offline). localStorage stays as the fallback for anything that refuses IDB and as the
+migration source; the first successful IDB write **deletes the old key**, returning ~3 MB that was
+also starving character autosave and the update-tool backups (`libSave` swallows its own quota error
+— see above, same family of bug). Boot still reads localStorage synchronously so the first paint has
+rules in hand, then `loadRulesCacheAsync()` hydrates the authoritative IDB copy over the top.
+
+**And it can no longer fail quietly.** `saveRulesCache()` returns a promise resolving to an error
+string; `rulesCacheError` renders as a red line above the loaded-data list, naming the size **in
+bytes rather than characters** and saying what to do. Verified in a browser across all three paths:
+IDB available (migrates, survives reload, five groups back); IDB refused (falls back to localStorage,
+silent success); both refused (red line, pool still usable this session). The harness has no
+`indexedDB`, so the existing suite exercises the fallback branch and its `quotaFull` switch reaches
+the loud path — 10 new checks.
+
+**Watch for:** the transient where a stale localStorage cache paints first and IDB replaces it a tick
+later. It self-heals after the first save (the old key is removed) and only shows on the migrating
+boot.
+
+#### Follow-up: mobile, and the third way IndexedDB fails
+
+Asked whether IndexedDB holds up on mobile. Android is Chromium — the engine already tested. **iOS is
+the risk and could not be tested here** (no WebKit build on the machine, and the MCP browser refuses
+`file://`): every iOS browser is WebKit, *including the Edge the README tells iPhone users to
+install*, and WebKit has historically refused IndexedDB on `file://` origins. Rather than assert
+either way, the unknown was made safe.
+
+**The question found a real gap.** Absent and throwing both reject immediately, but a request that
+**hangs** — never firing success or error — leaves the promise pending forever, so a failed save
+goes unreported and the boot hydration never completes: the original bug, restored. That is exactly
+how flaky WebKit misbehaves. `idbTimeout()` now bounds every IDB call at 4s. Verified with a stub
+`indexedDB.open` that returns a request firing nothing: settles in 4003 ms and falls back.
+
+**The localStorage fallback now compresses**, because the fallback existed but could not actually
+hold the data — five packs is ~4.37 MiB against ~5 MiB, so "fall back to localStorage" was a
+promise it could not keep. LZW over UTF-8 bytes, codes packed **15 bits per character offset by
+32**: the output lands in [32, 32799], entirely below the surrogate range at 55296, so every unit is
+a valid lone BMP character that survives a localStorage round trip. 16-bit packing emits lone
+surrogates, which some browsers silently mangle — that would be data loss disguised as a fix.
+
+Measured on the real bundles: **4.33 MiB → 0.83 MiB (19%)**, a 5.2x reduction, so all five packs fit
+with room to spare even with no IndexedDB at all. Verified end-to-end with `indexedDB` set to
+`undefined`: five packs saved compressed, reload, five groups back.
+
+Only the fallback path compresses — IndexedDB has room and plain JSON there stays debuggable. The
+stored value is tagged `LZ`; an untagged value is a plain-JSON cache from an older build and
+still reads, and a corrupt payload returns `""` (treated as "nothing cached") rather than throwing
+at boot.
+
+Implementation notes worth keeping: the dictionary **stops growing** at 65536 rather than resetting —
+a reset must be mirrored by a decoder whose dictionary lags one step, which is a classic off-by-one
+that only shows on huge inputs. The decoder expands via `(prefix, byte)` pairs and a growable
+`Uint8Array`, never `Array.concat`, because the output is megabytes on a phone. 22 new checks cover
+the shapes that break naive LZW (the KwKwK case, every byte value, surrogate pairs, CJK) plus
+deterministic fuzz and the real shipped pack.
+
+**Still unverified:** iOS itself. If it turns out IndexedDB *is* available there, the compressed
+fallback simply never runs.
+
+---
+
 ## Known minor limitations (not blocking)
 
 - **Class-level feat skill-choices** grant to sid `class:<Name>`, so they revert when the class is

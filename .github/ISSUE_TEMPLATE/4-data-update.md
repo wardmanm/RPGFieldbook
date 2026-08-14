@@ -4,7 +4,7 @@ about: Rules content — new or corrected entries in data/
 labels: data-update
 ---
 
-**System** — 5e2024 / humblewood
+**System** — 5e2024 / humblewood / XGE / TCE / Homebrew
 
 **What changes** — category and entries
 

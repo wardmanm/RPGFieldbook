@@ -111,7 +111,8 @@ out = out.replace(/APP_VERSION\s*=\s*"[^"]+"/, `APP_VERSION="${next}"`);
    that is what this release will contain. Silently leaves everything alone if
    git or the tags are unavailable (a source-zip build, a fresh clone with no
    tags): the cost is a stale-looking pack, never a wrong bump. */
-const SYSTEM_DIRS = { XPHB: "5e2024", Humblewood: "humblewood" };
+const SYSTEM_DIRS = { XPHB: "5e2024", Humblewood: "humblewood", XGE: "xanathars", TCE: "tashas",
+                      Homebrew: "homebrew" };
 function lastTag() {
   const r = spawnSync("git", ["-C", ROOT, "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*",
                               "--sort=-v:refname"], { encoding: "utf8" });
