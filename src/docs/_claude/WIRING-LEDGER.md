@@ -2299,6 +2299,54 @@ the same one the skills/saves rows have.
 
 ---
 
+## Done — favourites on Features & Traits
+
+A mirror of the inventory star rather than a second idiom: tap it and the feature **moves** to a
+pinned `★ Favorites` group (not copied — the origin groups are built from non-favourites only, the
+same partition `renderInventory` does).
+
+**Most of it came for free, and that is the point of mirroring.** `.fav` in `10-chrome.css` is a
+generic class with no `.item`/`.inv` scoping, so a feature star inherits it with no new CSS.
+`migrate()` copies arrays wholesale, so a per-feature `fav` survives save/load with no migration.
+`featCollapse.groups` is keyed by label string, so `"★ Favorites"` is a collapse key alongside `Elf`
+and `Fighter` — exactly how `invCollapse.sections` holds the same string. And `fav` is absent from
+`UPD_FIELDS.feature`, so `applyUpdateRow` never writes it and `updEdited` never mistakes it for a
+player edit.
+
+**`featGroups(list)` was extracted as a pure function.** `renderFeatures` writes through `innerHTML`
+on an element the harness stubs, so none of the grouping was reachable by a test. Pulling the
+partition, ordering and sort out means the interesting half is asserted directly, and `featItemHTML`
+turned out to be pure already (it reads character state but no DOM), so the star markup is assertable
+too. Inventory keeps its partition inline — the two behave identically but differ in shape; worth
+knowing before assuming they share code.
+
+**Sorting differs from the rest of the list, on purpose.** The Favourites group sorts by name,
+matching inventory's Favorites section. The origin groups keep grant order, which for a class is
+level order — that is existing behaviour and was left alone.
+
+**A pre-existing bug fixed on the way.** `openFeatureForm`'s save rebuilds the record from the form,
+so it dropped everything the form does not ask about. `fav` would have been the third casualty:
+`origin` and `src` were already being lost, meaning an edited class feature jumped to the "Other"
+group and stopped being recognised by the rules-update tool. All three are now carried across, the
+same guard the item form has had since the identical bug was fixed there (changelog, `30-version.js`).
+There is a source guard per field, because each fails differently and all three fail silently.
+
+**Known limitation:** a favourited **granted** feature loses its star if the grant is rebuilt —
+changing subclass, removing a class or swapping ancestry runs `removeFeaturesWhere` and re-adds via
+`addFeatureFromDef`, which creates a new object with a new id. Inventory does not have this because
+`grantItemByName` matches and reuses the existing item. Levelling up is safe: it only *adds*
+features. Left as-is because in most of those paths the feature genuinely changes.
+
+Also unlike inventory: `buildToc` collects `.inv-sec-head` but not `.fghead`, so the feature
+Favourites group does not appear in the ☰ menu. Adding it would put every feature group in there.
+
+**Verified interactively:** starring moves the row and drops the origin group's count, unstarring
+returns it, two stars sort by name, the group collapse persists, a feature's own collapsed body
+survives the hop between groups (it is keyed by id), Use still works from the Favourites group, and
+an edit keeps star, origin and pack link.
+
+---
+
 ## Known minor limitations (not blocking)
 
 - **Class-level feat skill-choices** grant to sid `class:<Name>`, so they revert when the class is

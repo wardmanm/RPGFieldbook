@@ -1076,6 +1076,31 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the box reports its state to a screen reader, not just a name',
      /class="pin [^"]*"[\s\S]{0,160}aria-pressed="\$\{s\.prepared\?"true":"false"\}/.test(js));
   ck('...and says what tapping it will do', /title="\$\{s\.prepared\?"Prepared/.test(js));
+
+  // ---------- favourites on Features & Traits
+  // The grouping is covered properly in sheet.js (featGroups is pure). These are
+  // the wiring bits the stub DOM cannot reach.
+  ck('the feature star is wired',
+     /closest\("\[data-fav-feature\]"\)/.test(js) && /f\.fav=!f\.fav;renderFeatures\(\)/.test(js));
+  // a star moves a row between groups and changes nothing derived — calling
+  // recompute here would be a pointless full re-render on every tap, and it is
+  // deliberately absent from the inventory star too
+  ck('...and does not recompute, matching the inventory star', (() => {
+    const h = (js.match(/closest\("\[data-fav-feature\]"\)+\{[^}]*\}[^}]*\}/) || [''])[0];
+    return !!h && !/recompute\(\)/.test(h);
+  })());
+  // The edit form rebuilds the record from the form fields, so anything it does
+  // not ask about is dropped. All three are invisible when lost, and each fails
+  // differently: no star, the row jumps to "Other", the update tool stops
+  // recognising it. One guard each.
+  const featSave = (js.match(/const rec=\{id:f\.id,name:document\.getElementById\("fName"\)[\s\S]{0,2000}?character\.features\[i\]=rec/) || [''])[0];
+  ck('editing a feature keeps its favourite star', /if\(f\.fav\)rec\.fav=f\.fav;/.test(featSave), featSave.slice(-300));
+  ck('...keeps its origin, so it stays in its class group', /if\(f\.origin\)rec\.origin=f\.origin;/.test(featSave));
+  ck('...and keeps the src stamp the update tool reads', /if\(f\.src\)rec\.src=f\.src;/.test(featSave));
+  // fav must stay OUT of the rules-owned list, or an update would clobber it
+  ck('fav is not a rules-owned field on either kind',
+     /feature:\["description","effects","uses","cost"\]/.test(js) &&
+     /item:\["description","effects","cost","weight","weapon"\]/.test(js));
 }
 
 // ---------- Settings modal: every control is still wired

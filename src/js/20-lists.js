@@ -18,6 +18,7 @@ function featItemHTML(f){
   return `<div class="item fitem">
       <div class="top">
         <button class="fitoggle" data-fitem="${f.id}" aria-label="Collapse item"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="fav ${f.fav?"on":""}" data-fav-feature="${f.id}" aria-label="Favorite" title="Favorite">${f.fav?"★":"☆"}</button>
         <span class="nm">${esc(f.name||"Feature")}</span>
         ${f.source?`<span class="qty">${esc(f.source)}</span>`:""}
         ${(hasCost||hasUses)?`<button class="use-go" data-usefeat="${f.id}">Use</button>`:""}
@@ -63,17 +64,37 @@ function useFeature(id){
   if(hasUses)f.uses.used=Math.min(umx,num(f.uses.used)+1);
   renderFeatures();renderResources();scheduleSave();
 }
+/* The label of the pinned group. A string, and used as one: featCollapse.groups
+   is keyed by label, so this doubles as the collapse key — exactly how
+   invCollapse.sections holds "★ Favorites". */
+const FEAT_FAV="★ Favorites";
+/* Split the feature list into the groups the list renders, in order. Favourites
+   are MOVED, not copied — the origin groups are built from non-favourites only,
+   the same partition renderInventory does. Sorted by name like inventory's
+   Favorites section; the origin groups keep grant order, which for a class is
+   level order.
+   Pure on purpose: renderFeatures writes through innerHTML on an element the
+   test harness stubs, so this is the only part of the grouping that can be
+   asserted. */
+function featGroups(list){
+  const all=Array.isArray(list)?list:[];
+  const out=[];
+  const favs=all.filter(f=>f&&f.fav).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+  if(favs.length)out.push({label:FEAT_FAV,items:favs});
+  const order=[],groups={};
+  all.filter(f=>f&&!f.fav).forEach(f=>{const g=featGroupLabel(f);if(!groups[g]){groups[g]=[];order.push(g);}groups[g].push(f);});
+  order.forEach(g=>out.push({label:g,items:groups[g]}));
+  return out;
+}
 function renderFeatures(){
   const el=document.getElementById("featureList");
   const list=character.features||[];
   if(!list.length){el.innerHTML=`<div class="empty">No features yet. Add ancestry traits, class features, or feats — attach effects to auto-adjust stats.</div>`;return;}
-  const order=[],groups={};
-  list.forEach(f=>{const g=featGroupLabel(f);if(!groups[g]){groups[g]=[];order.push(g);}groups[g].push(f);});
   let html="";
-  order.forEach(g=>{
-    const items=groups[g], gc=!!featCol().groups[g];
-    html+=`<div class="fgroup"><div class="fghead" data-fgroup="${esc(g)}"><svg class="fcaret ${gc?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg><span class="fgname">${esc(g)}</span><span class="fgcount">${items.length}</span></div>`;
-    if(!gc)items.forEach(f=>{html+=featItemHTML(f);});
+  featGroups(list).forEach(grp=>{
+    const gc=!!featCol().groups[grp.label];
+    html+=`<div class="fgroup"><div class="fghead" data-fgroup="${esc(grp.label)}"><svg class="fcaret ${gc?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg><span class="fgname">${esc(grp.label)}</span><span class="fgcount">${grp.items.length}</span></div>`;
+    if(!gc)grp.items.forEach(f=>{html+=featItemHTML(f);});
     html+=`</div>`;
   });
   el.innerHTML=html;

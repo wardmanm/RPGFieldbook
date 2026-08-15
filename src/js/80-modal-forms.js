@@ -123,6 +123,15 @@ function openFeatureForm(existing){
     if(um>0)rec.uses={max:um,per:document.getElementById("fUsesPer").value,used:Math.min(num(f.uses&&f.uses.used),um)};
     const cAmt=Math.max(0,num(document.getElementById("fCost").value)), cRes=document.getElementById("fCostRes").value.trim();
     if(cAmt>0&&cRes)rec.cost={resource:cRes,amount:cAmt};
+    /* rec is rebuilt from the form, so anything the form doesn't ask about has to
+       be carried across explicitly or an edit silently discards it — the same
+       trap the item editor already guards against. All three are invisible when
+       lost: the favourite star, the origin that files this under its class
+       rather than "Other", and the src stamp the rules-update tool needs to tell
+       "the pack changed" from "the player edited this". */
+    if(f.fav)rec.fav=f.fav;
+    if(f.origin)rec.origin=f.origin;
+    if(f.src)rec.src=f.src;
     const i=character.features.findIndex(x=>x.id===f.id);if(i>=0)character.features[i]=rec;else character.features.push(rec);
     closeModal();renderFeatures();recompute();scheduleSave();
   });

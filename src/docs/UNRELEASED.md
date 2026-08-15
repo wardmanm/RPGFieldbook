@@ -66,6 +66,14 @@ Bullets below this line — leave the heading in place.
   Constitution afterwards — which is the order most people build in — the filled-in maximum follows
   it, and your current HP comes with it while you are still at full. A number you typed into the Max
   box yourself is never touched, and from level 2 on nothing is filled in for you.
+- **Features and traits can be starred, the same way items can.** Tap the star on any feature and it
+  moves to a Favourites group pinned above your ancestry, class and background groups, so the two or
+  three you actually reach for in a fight are at the top. Starred features are sorted by name, and
+  the group can be collapsed like any other. Nothing is starred to begin with, and with nothing
+  starred the group doesn't appear at all.
+- **Fixed: editing a feature no longer loses where it came from.** An edited class feature used to
+  drop out of its class group into "Other" and quietly lose its link back to the rules pack, so the
+  update checker stopped recognising it. It now keeps both — and its star.
 - **The tick in the spell boxes now sits in the middle of the box**, and an empty one matches the
   page instead of showing a grey square. The same tick is used for Equipped and Concentration, and
   those are straightened out too.

@@ -114,6 +114,10 @@ function wire(){
     if(t.closest("#btnToc"))return openToc();
     if(t.closest("#tocBack"))return closeToc();
     if((m=t.closest("[data-fitem]"))){const id=m.dataset.fitem,fc=featCol();fc.items[id]=!fc.items[id];renderFeatures();scheduleSave();return;}
+    /* No recompute(): a star moves a feature between groups and changes nothing
+       derived. Same as the inventory star above, and unlike the On/Off toggle
+       below, which does change what the effects engine sees. */
+    if((m=t.closest("[data-fav-feature]"))){const f=character.features.find(x=>x.id===m.dataset.favFeature);if(f){f.fav=!f.fav;renderFeatures();scheduleSave();}return;}
     if((m=t.closest("[data-fgroup]"))){const g=m.dataset.fgroup,fc=featCol();fc.groups[g]=!fc.groups[g];renderFeatures();scheduleSave();return;}
     if((m=t.closest("[data-edit-feature]")))return openFeatureForm(character.features.find(x=>x.id===m.dataset.editFeature));
     if((m=t.closest("[data-del-feature]"))){const f=character.features.find(x=>x.id===m.dataset.delFeature);if(f&&confirm(`Delete “${f.name}”?`)){character.features=character.features.filter(x=>x.id!==f.id);renderFeatures();recompute();scheduleSave();}return;}

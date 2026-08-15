@@ -13,6 +13,7 @@ const {X, bootError, fragments} = loadApp([
   'encSpeed', 'encTierNote', 'contributions', 'inventoryTotal', 'SIZES', 'SIZE_CARRY',
   'capacityFor', 'sizeOptionsHTML', 'invSection',
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
+  'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -655,6 +656,63 @@ X.character = X.blankChar();
      sub.indexOf('data-choose') === -1 && /type="radio"/.test(sub), sub);
   const asi = fld({type: 'asi'});
   ck('an ASI block is unchanged', asi.indexOf('data-choose') === -1, asi);
+}
+
+/* ================= favourites on Features & Traits =================
+   Mirrors the inventory star: a favourite is MOVED to a pinned group at the top,
+   not copied into one. featGroups is pure so the partition and ordering are
+   assertable — renderFeatures itself writes through innerHTML on an element the
+   harness stubs, so nothing about it is reachable. */
+X.character = X.blankChar();
+const feat = (id, name, origin, fav) => ({id, name, origin: origin || null, fav: fav || undefined, enabled: true});
+const RACE = {kind: 'race', name: 'Elf'}, CLS = {kind: 'class', class: 'Rogue'};
+
+{
+  const g = X.featGroups([feat('1', 'Darkvision', RACE), feat('2', 'Sneak Attack', CLS)]);
+  ck('with nothing starred there is no favourites group',
+     g.length === 2 && g.every(x => x.label !== X.FEAT_FAV), g.map(x => x.label));
+  ck('...and the origin groups are in grant order', g[0].label === 'Elf' && g[1].label === 'Rogue');
+}
+{
+  const g = X.featGroups([feat('1', 'Darkvision', RACE), feat('2', 'Sneak Attack', CLS, true),
+                          feat('3', 'Fey Ancestry', RACE)]);
+  ck('a starred feature makes a favourites group, and it comes first', g[0].label === X.FEAT_FAV);
+  ck('...holding exactly the starred one', g[0].items.map(f => f.name).join() === 'Sneak Attack');
+  ck('...which LEAVES its origin group rather than appearing twice',
+     g.filter(x => x.label === 'Rogue').length === 0 &&
+     g.find(x => x.label === 'Elf').items.length === 2, g.map(x => x.label + ':' + x.items.length));
+}
+{
+  // alphabetical in Favourites, mirroring inventory; grant order everywhere else
+  const g = X.featGroups([feat('1', 'Zealous Presence', CLS, true), feat('2', 'Action Surge', CLS, true),
+                          feat('3', 'Mask of the Wild', RACE), feat('4', 'Darkvision', RACE)]);
+  ck('the favourites group sorts by name',
+     g[0].items.map(f => f.name).join() === 'Action Surge,Zealous Presence');
+  ck('...while the origin groups keep the order they were granted in',
+     g[1].items.map(f => f.name).join() === 'Mask of the Wild,Darkvision');
+}
+{
+  const g = X.featGroups([feat('1', 'Lucky', null), feat('2', 'Tough', null, true)]);
+  ck('a feature with no origin still groups under Other',
+     g[0].label === X.FEAT_FAV && g[1].label === 'Other');
+}
+ck('an empty list makes no groups at all',
+   X.featGroups([]).length === 0 && X.featGroups(null).length === 0);
+
+// ---------- the star markup matches inventory's
+{
+  const off = X.featItemHTML(feat('f1', 'Darkvision', RACE));
+  const on = X.featItemHTML(feat('f2', 'Sneak Attack', CLS, true));
+  ck('every feature row carries a star hooked to its id',
+     /data-fav-feature="f1"/.test(off) && /data-fav-feature="f2"/.test(on));
+  ck('an unstarred row is a hollow star with no on class',
+     /class="fav "[^>]*>☆</.test(off), (off.match(/<button class="fav[^<]*<\/button>/) || [''])[0]);
+  ck('a starred row is filled and marked on',
+     /class="fav on"[^>]*>★</.test(on), (on.match(/<button class="fav[^<]*<\/button>/) || [''])[0]);
+  ck('the star sits before the name, the slot inventory uses',
+     off.indexOf('data-fav-feature') < off.indexOf('class="nm"'));
+  ck('...and after the collapse caret, so the row reads the same as an item',
+     off.indexOf('data-fitem') < off.indexOf('data-fav-feature'));
 }
 
 ck.done();

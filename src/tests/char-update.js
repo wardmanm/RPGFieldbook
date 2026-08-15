@@ -113,7 +113,7 @@ function addFeat(name){                            /* grantFeatDef shape */
   X.character.features.push(f); return f;
 }
 let c=setup();
-const feat=addFeat('Alert');
+const feat=addFeat('Alert'); feat.fav=true;   /* character-local, like an item's star */
 const spell=addBrowseSpell('Bless'); spell.prepared=true;
 const item=addBrowseItem('Rope'); item.qty=7; item.equipped=true;
 
@@ -133,6 +133,9 @@ ck('unchanged siblings not raised', rows.length===1, rows.map(x=>x.name));
 X.applyUpdates([r]);
 ck('apply rewrites description', feat.description==='UPDATED alert text.', feat.description);
 ck('apply preserves id', feat.id==='f-Alert', feat.id);
+/* fav is absent from UPD_FIELDS.feature, so applyUpdateRow never names it and
+   never writes it — the same guarantee an item's star has. */
+ck('...and the favourite star', feat.fav===true);
 ck('apply preserves enabled', feat.enabled===true);
 ck('apply re-baselines fp -> no repeat row', X.diffCharacter().rows.length===0, X.diffCharacter().rows.map(x=>x.name));
 
