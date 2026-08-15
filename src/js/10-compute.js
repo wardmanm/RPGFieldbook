@@ -84,6 +84,37 @@ function highlight(text){
     return `<span class="tblref" data-tbl="${esc(nm)}" role="button" tabindex="0">${esc(nm)}</span>`;
   });
 }
+/* highlight() plus ONE thing: **bold**. Rules prose carries run-in headings the
+   source sets in bold — the Gadgeteer's frame and component lists are a
+   3,000-character paragraph without them — and the extractor now preserves them
+   as ** markers. Newlines already render; every surface this reaches is
+   white-space:pre-wrap.
+
+   Ordering is the security argument, borrowed wholesale from noteInline():
+   highlight() runs esc() first, so the only angle brackets left in its output
+   are the <span> chips it inserted itself. That makes /<[^>]+>/g an EXACT tag
+   matcher rather than a heuristic, and lets those chips be held aside while the
+   bold regex runs. Doing markup before the glossary pass would be unsafe the
+   other way — a term like "strong" would match inside a tag we had just written.
+
+   Bold ONLY, deliberately not noteInline itself: its single-asterisk emphasis
+   rule would pair up the unpaired footnote markers already in the Humblewood
+   data ("divert power*", "cymatic sight*", "Spells marked with an asterisk (*)")
+   and italicise everything between them. `**` cannot match a lone `*`. */
+/* Indexed private-use delimiters, written as ESCAPES not literals: an invisible
+   byte in source is the thing .editorconfig and the byte-exact build exist to
+   guard against, and a whitespace cleanup would eat it silently. Distinct from
+   TBL_MARK (E000) and the note holds (E001-E003), so the passes cannot collide.
+   Indexed rather than one repeating mark because the chips are restored by
+   identity — a bare sentinel would let the restore regex match ordinary prose. */
+const DESC_H0="\uE00A", DESC_H1="\uE00B";
+function descHTML(text){
+  const hold=[];
+  let s=highlight(text);
+  s=s.replace(/<[^>]+>/g,m=>{hold.push(m);return DESC_H0+(hold.length-1).toString(36)+DESC_H1;});
+  s=s.replace(/\*\*([^*]+)\*\*/g,(m,c)=>"<strong>"+c+"</strong>");
+  return s.replace(new RegExp(DESC_H0+"([0-9a-z]+)"+DESC_H1,"g"),(m,k)=>hold[parseInt(k,36)]||"");
+}
 
 /* ================= rich text (bio + proficiencies) ================= */
 const editing={};

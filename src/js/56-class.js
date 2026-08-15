@@ -204,7 +204,7 @@ function openSubclassInfo(className,subName){
   if(sc.levels)Object.keys(sc.levels).map(Number).sort((a,b)=>a-b).forEach(L=>{
     const lv=sc.levels[String(L)],here=entry&&num(entry.level)>=L;
     b+=`<div style="border-top:1px dotted var(--hair);padding-top:8px;margin-top:8px"><b style="${here?"color:var(--accent)":""}">Level ${L}${here?" — gained":""}</b>`;
-    (lv.traits||[]).forEach(t=>b+=`<p style="margin:4px 0"><b>${esc(t.name)}.</b> ${highlight(t.description||"")}</p>`);
+    (lv.traits||[]).forEach(t=>b+=`<p style="margin:4px 0"><b>${esc(t.name)}.</b> ${descHTML(t.description||"")}</p>`);
     (lv.choices||[]).forEach(ch=>b+=`<p class="hint" style="margin:3px 0">▸ Choose: ${esc(ch.label||ch.type)}</p>`);
     b+=`</div>`;
   });
@@ -228,7 +228,7 @@ function openClassInfo(name){
   if(d.levels)Object.keys(d.levels).map(Number).sort((x,y)=>x-y).forEach(L=>{
     const lv=d.levels[String(L)],here=entry&&num(entry.level)===L;
     b+=`<div style="border-top:1px dotted var(--hair);padding-top:8px;margin-top:8px"><b style="${here?"color:var(--accent)":""}">Level ${L}${here?" — current":""}</b>`;
-    (lv.traits||[]).forEach(t=>b+=`<p style="margin:4px 0"><b>${esc(t.name)}.</b> ${highlight(t.description||"")}</p>`);
+    (lv.traits||[]).forEach(t=>b+=`<p style="margin:4px 0"><b>${esc(t.name)}.</b> ${descHTML(t.description||"")}</p>`);
     (lv.choices||[]).forEach(ch=>b+=`<p class="hint" style="margin:3px 0">▸ Choose: ${esc(ch.label||ch.type)}</p>`);
     if(lv.spells)b+=`<p class="hint" style="margin:3px 0;color:var(--accent-2)">✦ Spells: ${esc(lv.spells.note||("up to "+lv.spells.known+" known"))}</p>`;
     b+=`</div>`;

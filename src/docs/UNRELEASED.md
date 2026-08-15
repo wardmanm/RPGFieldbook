@@ -66,6 +66,10 @@ Bullets below this line — leave the heading in place.
   Constitution afterwards — which is the order most people build in — the filled-in maximum follows
   it, and your current HP comes with it while you are still at full. A number you typed into the Max
   box yourself is never touched, and from level 2 on nothing is filled in for you.
+- **The Gadgeteer's frames and components are readable now.** Those lists used to run together into a
+  single wall of text; each frame and component now starts on its own line with its name in bold, and
+  the run-in headings like Scrap Cost and Remote Control stand out from the prose around them. Not a
+  word of it has changed — only the layout.
 - **The spell search now shows how many spells you have at each level.** Each heading carries a count
   against what you have available — cantrips known, or spell slots for the higher levels — and it
   counts up as you tick spells, turning red if you go past it. It does not stop you: some characters

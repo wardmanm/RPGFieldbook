@@ -2402,6 +2402,67 @@ first, then assert inside it.
 
 ---
 
+## Done — Gadgeteer prose keeps the shape the PDF gives it
+
+The Frames (3,300 chars) and Components (5,600 chars) traits read as unbroken paragraphs. **The
+layout information was in the PDF the whole time and the extractor was throwing it away**:
+`classify()` already tags "Autonomous Frame" as `head`, "Remote Control." as `trait`, "Scrap Cost:"
+as `label` and the tagline as `prereq`, and `pt_all_subs` appended all of them as flat text.
+`flush()` folds `" *\n *"` to a newline, so emitting `\n` and `**` markers there survives the join —
+the same mechanism the `\n• ` bullets have always used. Nothing is reworded; a test strips the markup
+and compares.
+
+**The fix had to be in the extractor, not the data.** `set_prose` rewrites descriptions wholesale
+with no preserve check, and the November 2024 PDF is in the repo — a hand edit would have been
+reverted on the next run and logged only as "reworded".
+
+**A blank line goes BEFORE a type name, not after it.** First attempt put it between the name and its
+tagline, which separated the wrong things; it now separates one frame from the last.
+
+### The extractor was not idempotent, and that had to be fixed first
+
+Running it unchanged rewrote the **Mustel** species description with **Webpaw** lineage text. Cause:
+`PACKETS` runs newest-first and `fresh()` is first-writer-wins — which is right for the shared traits
+a lineage packet reprints, but the Feb 2025 "Mustel, Webpaw" packet also reached
+`take(cur,"description")` and claimed the species intro that belongs to the Sep 2024 packet. The
+creation path was never involved: `by_race` is built from the existing data, so Mustel already
+existed.
+
+Fixed with a `no_description` spec flag on that one packet — narrower than `merge_into_core`, which
+would also have stopped its traits merging. **The verification is a zero diff**: the extractor now
+reproduces the committed data exactly, which is what makes any future re-extraction safe. Anyone who
+had run `--write-playtests` before this would have silently shipped Webpaw text as the species intro.
+
+**Keep the idempotency check as the first step of any extractor work.** Run it unchanged, confirm
+`git diff data/` is empty, and only then change anything — otherwise a formatting change arrives
+mixed with unrelated churn.
+
+### descHTML: highlight() plus **bold**, and nothing else
+
+`highlight()` escapes and supports no markup. `descHTML` adds one `**…**` → `<strong>` pass, holding
+highlight's own chips aside first — the ordering is the security argument lifted from `noteInline`:
+`esc()` having eaten every user `<` is what makes `/<[^>]+>/g` an exact tag matcher rather than a
+heuristic.
+
+**Bold only, deliberately not `noteInline` itself.** Its single-asterisk emphasis rule would pair up
+the unpaired footnote markers already in the Humblewood data ("divert power\*", "cymatic sight\*",
+"Spells marked with an asterisk (\*)") and italicise everything between them. There are tests using
+those exact strings.
+
+Used at the two surfaces Gadgeteer prose reaches — the features card and the class/subclass info
+panes. Items, spells and familiars keep `highlight()`; no shipped pack uses `**` there.
+
+**Sentinels are written as `""` escapes, not literal characters.** A first pass put the real
+private-use bytes in the source, which is exactly the invisible-byte hazard `.editorconfig` and the
+byte-exact build exist to guard against. There is a test asserting the escape form.
+
+**`humblewood-verbatim` still passes 129/133** — it never reads `classes.json`, and its `norm()`
+strips `*` and collapses whitespace regardless. Note it is SKIPPED by `./src/tests/run.sh` because
+that uses system python; run it with `.venv/bin/python src/tests/humblewood-verbatim.py` after any
+extractor change.
+
+---
+
 ## Known minor limitations (not blocking)
 
 - **Class-level feat skill-choices** grant to sid `class:<Name>`, so they revert when the class is

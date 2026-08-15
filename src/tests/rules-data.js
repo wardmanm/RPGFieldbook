@@ -1143,6 +1143,60 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      !/items\.filter\(s=>!s\.granted\)/.test(renderSpellsBody), renderSpellsBody.slice(0, 400));
   ck('...and the browser reads the same one',
      /groupBadge:\(key,chosen\)=>\{[\s\S]{0,200}spellLevelTally\(lv\)/.test(js));
+
+  // ---------- Gadgeteer prose keeps the shape the PDF carries
+  // The frame and component lists were one 3,000-character paragraph because
+  // pt_all_subs appended head/trait/label spans as flat text. The extractor now
+  // keeps them; these assert the DATA, so they fail if a re-extraction ever
+  // drops it again — the reason the fix went in the extractor and not by hand.
+  {
+    const hw = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/humblewood/classes.json'), 'utf8'));
+    const gad = (hw.classes || []).find(c => c.name === 'Gadgeteer');
+    const tr = n => ((((gad || {}).levels || {})['1'] || {}).traits || []).find(t => t.name === n);
+    const frames = tr('Frames'), comps = tr('Components');
+    ck('the Gadgeteer still has its Frames and Components traits', !!frames && !!comps);
+    ['Frames', 'Components'].forEach(n => {
+      const t = tr(n);
+      ck(n + ' is broken into lines', (t.description.match(/\n/g) || []).length > 5,
+         (t.description.match(/\n/g) || []).length);
+      ck('...and its type names are bold', /\*\*[^*]+\*\*/.test(t.description));
+    });
+    // the whole point: layout only. Strip the markup and the words must be there.
+    const bare = s => s.replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+    [['Frames', 'You can build gadgets using the following frames. Autonomous Frame This convenient gadget can act semi-independently. Scrap Cost: 3'],
+     ['Frames', 'Handheld Frame This versatile gadget requires two hands to wield.']].forEach(([n, phrase]) => {
+      ck('the wording of ' + n + ' is unchanged: "' + phrase.slice(0, 34) + '…"',
+         bare(tr(n).description).indexOf(phrase) > -1);
+    });
+    ck('a frame name starts its own line',
+       /\n\*\*Autonomous Frame\*\*\n/.test(frames.description));
+    ck('a run-in heading keeps its prose beside it',
+       /\n\*\*Remote Control\.\*\* Your gadget moves/.test(frames.description));
+  }
+  // A lineage packet must not claim the species description — Feb 2025's Webpaw
+  // section was overwriting the mustel intro, which made the extractor
+  // non-idempotent and would have churned this file on every run.
+  {
+    const py = fs.readFileSync(path.join(ROOT, 'scripts/extract-humblewood.py'), 'utf8');
+    ck('the Webpaw packet does not claim the species description',
+       /title="Mustel, Webpaw"[\s\S]{0,220}no_description=True/.test(py));
+    ck('...and the extractor honours that flag',
+       /if not spec\.get\("no_description"\):\s*\n\s*take\(cur, "description"/.test(py));
+    ck('the extractor keeps head/trait/label spans distinct',
+       /if style == "head":[\s\S]{0,220}\\n\\n\*\*%s\*\*/.test(py) &&
+       /elif style in \("trait", "label"\):[\s\S]{0,120}\\n\*\*%s\*\*/.test(py));
+  }
+  // bold is rendered by descHTML, not highlight — and only where it is needed
+  ck('descHTML is bold-only, so lone footnote asterisks stay literal',
+     /function descHTML\(text\)\{[\s\S]{0,400}\\\*\\\*\(\[\^\*\]\+\)\\\*\\\*/.test(js) &&
+     !/function descHTML\(text\)\{[\s\S]{0,400}<em>/.test(js));
+  ck('...and holds highlight\'s own chips aside while it runs',
+     /function descHTML\(text\)\{[\s\S]{0,300}<\[\^>\]\+>\/g/.test(js));
+  ck('the feature card and class info panes use it',
+     /class="desc">\$\{descHTML\(f\.description\)\}/.test(js) &&
+     (js.match(/\$\{descHTML\(t\.description\|\|""\)\}/g) || []).length === 2);
+  ck('the sentinels are written as escapes, not invisible bytes',
+     /const DESC_H0="\\uE00A", DESC_H1="\\uE00B"/.test(js));
 }
 
 // ---------- Settings modal: every control is still wired

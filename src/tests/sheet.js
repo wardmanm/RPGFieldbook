@@ -15,6 +15,7 @@ const {X, bootError, fragments} = loadApp([
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
   'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
   'spellLevelTally', 'spellAllotment', 'cantripsKnown',
+  'descHTML', 'highlight', 'mergeRules', 'resetRules',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -765,5 +766,58 @@ X.character.spells = [spell('Bless', 1), spell('Shield', 1), spell('Cure Wounds'
   ck('going over the allotment is allowed and simply reported',
      t.added === 3 && t.allot === 1, t);
 }
+
+/* ================= descHTML: highlight() plus **bold** =================
+   Rules prose carries run-in headings the source sets in bold. This is
+   highlight() with exactly one addition, and the ordering is the security
+   argument: esc() runs first, so the only tags in play are the ones highlight()
+   inserted itself. */
+X.character = X.blankChar();
+X.resetRules();
+
+ck('bold markers become strong', X.descHTML('**Autonomous Frame**') === '<strong>Autonomous Frame</strong>');
+ck('a run-in heading keeps its prose beside it',
+   X.descHTML('**Mobile.** Your gadget can move.') === '<strong>Mobile.</strong> Your gadget can move.');
+ck('several in one string all convert',
+   (X.descHTML('**A** x **B** y').match(/<strong>/g) || []).length === 2);
+ck('newlines are left alone — the CSS renders them',
+   X.descHTML('one\ntwo').indexOf('\n') > -1);
+
+// The footnote asterisks that are ALREADY in the Humblewood data. A single *
+// must stay literal: this is why descHTML is bold-only and not noteInline.
+['You learn the divert power* spell.',
+ 'you can cast cymatic sight* without material components',
+ 'Spells marked with an asterisk (*) can be found in this book.'].forEach(s => {
+  const out = X.descHTML(s);
+  ck('a lone asterisk stays literal: ' + s.slice(0, 28),
+     out.indexOf('*') > -1 && out.indexOf('<strong>') === -1 && out.indexOf('<em>') === -1, out);
+});
+ck('two lone asterisks in one string do not pair up',
+   X.descHTML('cast divert power* and cymatic sight* freely').indexOf('<em>') === -1);
+
+// escaping is highlight()'s job and must survive the bold pass
+ck('markup in the text is still escaped',
+   X.descHTML('<script>alert(1)</script>').indexOf('<script>') === -1);
+ck('...including inside a bold run',
+   X.descHTML('**<img src=x onerror=1>**').indexOf('<img') === -1);
+ck('an unclosed marker is inert', X.descHTML('**not bold').indexOf('<strong>') === -1);
+ck('empty and null are safe', X.descHTML('') === '' && X.descHTML(null) === '' && X.descHTML(undefined) === '');
+ck('no sentinel leaks into the output',
+   !/[\uE000-\uE00F]/.test(X.descHTML('**A** plain **B**')), JSON.stringify(X.descHTML('**A** plain **B**')));
+
+// a glossary chip must survive being held aside, and bold must not corrupt it
+X.mergeRules({keywords: [{term: 'Dodge', text: 'A defensive action.'}]}, 'probe');
+{
+  const out = X.descHTML('takes the Dodge action');
+  ck('a glossary term still becomes a chip', /class="kw"/.test(out), out);
+  const bold = X.descHTML('**Remote Control.** takes the Dodge action');
+  ck('...and still does when a bold run precedes it',
+     /<strong>Remote Control\.<\/strong>/.test(bold) && /class="kw"/.test(bold), bold);
+  ck('bold does not eat the chip markup', bold.indexOf('<strong>Dodge') === -1, bold);
+  // the chip's own attributes contain no ** so nothing inside it can convert
+  ck('a chip is returned intact, not re-escaped',
+     bold.indexOf('&lt;span') === -1, bold);
+}
+X.resetRules();
 
 ck.done();

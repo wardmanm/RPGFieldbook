@@ -754,10 +754,12 @@ PACKETS = [
                                     "Sailor's Knacks", "Inspiring Commander"])]),
 
     dict(date="2025-02", file="HWP_Playtest_Feb2025.pdf", first=5,
-         # third Mustel lineage; the packet reprints the shared MUSTEL TRAITS
+         # third Mustel lineage; the packet reprints the shared MUSTEL TRAITS.
+         # no_description: it opens on Webpaw, not on the species — the mustel
+         # intro belongs to the Sep 2024 packet that introduced them.
          races=[dict(name="Mustel", title="Mustel, Webpaw", traits=6,
                      traits_head="MUSTEL TRAITS", lineages=["Webpaw Mustel"],
-                     lineage_traits={"Webpaw Mustel": 8})],
+                     lineage_traits={"Webpaw Mustel": 8}, no_description=True)],
          backgrounds=[dict(name="Seaborn", title="New Background: Seaborn")]),
 
     dict(date="2025-01", file="HWP_Playtest_Jan2025.pdf", first=4,
@@ -1391,8 +1393,26 @@ def pt_all_subs(st):
         # Headings INSIDE a section are part of it — "Frames" runs through
         # Autonomous / Handheld / Wearable Frame, and dropping those three words
         # leaves the text non-contiguous with the page.
+        #
+        # Keep the SHAPE the page already carries, too. classify() distinguishes
+        # a frame name (head) from a run-in heading like "Remote Control."
+        # (trait) or "Scrap Cost:" (label) from the prose around them, and this
+        # used to append all of it as flat text — which is why Frames and
+        # Components read as one 3,000-character paragraph. Nothing is added or
+        # reworded: only a newline and the bold markers the page itself implies.
+        # flush() folds " *\n *" to a single newline, so these survive the join —
+        # the same mechanism the bullet style has always relied on.
         if name and style in ("body", "bullet", "trait", "label", "prereq", "head"):
-            buf.append(text)
+            if style == "head":
+                # blank line BEFORE, none after: the gap separates one frame or
+                # component from the last, rather than the name from its tagline
+                buf.append("\n\n**%s**" % text.strip())
+            elif style in ("trait", "label"):
+                buf.append("\n**%s**" % text.strip())        # run-in: prose continues beside it
+            elif style == "prereq":
+                buf.append("\n" + text)                      # the italic tagline under a type
+            else:
+                buf.append(text)
     close()
     return out
 
@@ -1730,7 +1750,14 @@ def pt_write(problems):
                 log.append(("CREATED", "race/" + r["name"]))
             elif not core:
                 w = "race/" + r["name"]
-                take(cur, "description", r["description"], w)
+                # A packet that introduces a LINEAGE opens with that lineage's
+                # prose, not the species'. First-writer-wins is right for the
+                # shared traits it reprints (newest printing kept), but for the
+                # description it hands the species intro to whichever lineage
+                # packet happens to be newest — Feb 2025 was overwriting the
+                # mustel intro with Webpaw's. Traits are untouched by this.
+                if not spec.get("no_description"):
+                    take(cur, "description", r["description"], w)
                 take_traits(cur.setdefault("traits", []), split_traits(r["traits"]), w)
             # merge_into_core: the packet reprints the CORE species' shared
             # traits, which are already verbatim from the book. Overwriting them
