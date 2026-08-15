@@ -739,19 +739,31 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
 // All of this is markup a delegated handler or a CSS rule depends on, and all of
 // it fails SILENTLY: no error, just a control that stops doing anything.
 {
-  const t = fs.readFileSync(path.join(ROOT, 'src/fieldbook.template.html'), 'utf8');
+  /* Comments are stripped before anything else looks at the template. block()
+     counts <div>/</div> to find an element's extent, so a `<div` written inside
+     a comment — describing the markup, which is exactly the kind of comment this
+     file attracts — throws the depth off and silently stretches a slice past the
+     element it was meant to bound. Counting guards would drift the same way.
+     Cheaper to remove comments once than to keep "don't write <div in a comment"
+     true by hand forever. */
+  const t = fs.readFileSync(path.join(ROOT, 'src/fieldbook.template.html'), 'utf8')
+    .replace(/<!--[\s\S]*?-->/g, '');
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
   const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
-  const cardsCss = fs.readFileSync(path.join(ROOT, 'src/css/20-cards.css'), 'utf8');
-  const sheetCss = fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8');
+  /* CSS comments go the same way as the HTML ones, and for the same reason: a
+     comment explaining a rule quotes that rule, so counting guards see it twice.
+     `display:contents` tripped exactly that within minutes of being written. */
+  const css = f => fs.readFileSync(path.join(ROOT, 'src/css/' + f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const cardsCss = css('20-cards.css');
+  const sheetCss = css('30-sheet.css');
+  const chromeCss = css('10-chrome.css');
 
   /* Slice one element and its whole subtree by counting <div>/</div> from the
      tag carrying `needle`. The guards below used to slice "from this literal to
      the next <div class=\"card\"" and "non-greedy to the first </div>", and both
      encoded the current NESTING as well as the current content — so a block
      moving between cards, or a child turning into a <div>, broke them for
-     reasons that had nothing to do with what they guard. Safe here because no
-     `<div` appears inside an attribute value or an HTML comment in this file. */
+     reasons that had nothing to do with what they guard. */
   function block(html, needle) {
     const at = html.lastIndexOf('<div', html.indexOf(needle));
     const re = /<div\b|<\/div>/g;
@@ -936,6 +948,67 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /function hdPips\(/.test(js) &&
      ['hdFullHTML', 'hdCondensedHTML'].every(f =>
        new RegExp('function ' + f + '\\([\\s\\S]*?data-hdroll').test(js)));
+
+  // ---------- Familiars live in the LEFT sidebar
+  // You reach for a familiar mid-fight, and it used to be the last card on the
+  // sheet. The card and the button are a mutually-exclusive pair that
+  // renderFamiliars() looks up UNGUARDED — a missing id throws and takes out
+  // every listener registered after it.
+  const left = block(t, 'class="stack"');                       // the first stack is the left one
+  const right = block(t.slice(t.indexOf('class="stack"') + 8), 'class="stack"');
+  ck('the left stack is the portrait column', left.includes('id="portrait"') && !left.includes('id="hpCur"'));
+  ck('the right stack is the main column', right.includes('id="hpCur"') && !right.includes('id="portrait"'));
+  ck('familiars moved into the left sidebar',
+     left.includes('data-note="familiars"') && left.includes('id="addFamiliarLink"'));
+  ck('...and nothing is left behind in the right column',
+     !right.includes('data-note="familiars"') && !right.includes('id="addFamiliarLink"'));
+  ck('the card and its add button stay adjacent — they are one control',
+     /id="familiarList"><\/div>\s*<\/div>\s*<button class="mini" id="addFamiliarLink"/.test(t));
+  ck('both familiar ids exist exactly once (both are looked up unguarded)',
+     ['familiarCard', 'addFamiliarLink', 'familiarList'].every(id =>
+       (t.match(new RegExp('id="' + id + '"', 'g')) || []).length === 1));
+  ck('the familiars card keeps the attribute order the card count needs',
+     /<div class="card" data-note="familiars" id="familiarCard"/.test(t));
+  ck('it sits below Class, so the identity cards stay together',
+     left.indexOf('data-note="familiars"') > left.indexOf('data-note="class"'));
+
+  // On a phone the columns collapse and the sidebar renders FIRST, which would
+  // put familiars above HP and Skills. order alone cannot fix that — order only
+  // reorders siblings — so the stacks are flattened inside the media query and
+  // the pair is sunk. Both halves must be inside the query: display:contents at
+  // top level would destroy the two-column desktop layout outright.
+  const mq = (chromeCss.match(/@media\(max-width:820px\)\{[\s\S]*?\n\}/) || [''])[0];
+  ck('the phone layout flattens the stacks', /\.stack\{display:contents\}/.test(mq), mq);
+  ck('...and sinks familiars below the main stack',
+     /#familiarCard,#addFamiliarLink\{order:1\}/.test(mq), mq);
+  ck('neither rule escapes the media query (they would break the desktop layout)',
+     !/^\.stack\{display:contents\}/m.test(chromeCss) &&
+     (chromeCss.match(/display:contents/g) || []).length === 1);
+  /* Existing is not the same as WINNING. `.stack{display:grid}` and the query's
+     `.stack{display:contents}` have identical specificity, so whichever comes
+     last applies — and with the query written above the base rule the phone
+     layout silently did nothing at all. Only a browser shows that; here, assert
+     the order that makes it work. */
+  ck('the media query comes after the .stack rule it overrides',
+     chromeCss.indexOf('@media(max-width:820px)') > chromeCss.indexOf('.stack{display:grid'),
+     {query: chromeCss.indexOf('@media(max-width:820px)'), base: chromeCss.indexOf('.stack{display:grid')});
+  ck('the desktop layout is still two columns',
+     /\.cols\{display:grid;[^}]*grid-template-columns:minmax\(0,320px\) minmax\(0,1fr\)/.test(chromeCss));
+
+  // 320px leaves ~266px inside an .item, and .item .top has no wrap: the pill,
+  // two icons and the gaps eat ~200px before the name is drawn.
+  ck('the familiar row may wrap in the narrow column',
+     /#familiarList \.item \.top\{flex-wrap:wrap\}/.test(sheetCss));
+  ck('...and the fix is scoped, so Statuses in the wide column is untouched',
+     !/^\.item \.top\{[^}]*flex-wrap/m.test(sheetCss));
+  ck('the summoned pill does not break inside its own border',
+     /#familiarList \.fam-state\{white-space:nowrap\}/.test(sheetCss));
+
+  // buildToc listed every card label with no visibility filter, so a hidden
+  // card gave a menu entry that scrolled to a zero-height box. jumpToNote has
+  // always made this check; the two now agree.
+  ck('the section menu skips cards that are not showing',
+     /function buildToc\(\)\{[\s\S]*?offsetParent===null\)return;/.test(js));
 }
 
 // ---------- Settings modal: every control is still wired

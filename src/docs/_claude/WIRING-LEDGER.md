@@ -2156,6 +2156,62 @@ three colour bands, and the narrow-phone width.
 
 ---
 
+## Done — Familiars moved to the left sidebar
+
+Familiars were the last card in the right column, below Vitals, Statuses, Attacks, Resources and
+Features. You reach for a familiar mid-fight, so that was the wrong end of the page. The card and
+`#addFamiliarLink` moved together into the left `.stack`, under Class — the three identity cards stay
+grouped, and the card is `display:none` until it has content, so it costs nothing when empty.
+
+**The card and the button are one control.** `renderFamiliars()` shows exactly one of them and looks
+both up **unguarded**, so they move together and neither id may be renamed — a missing id throws
+inside `wire()`, which has no try/catch, and takes out every listener registered after it. A guard
+asserts they stay adjacent and that all three ids appear exactly once.
+
+**`order` could not do the phone fix, and that is the interesting part.** At ≤820px the columns
+collapse and the sidebar renders first, which would put familiars above HP and Skills. `order` only
+reorders *siblings*, and inside `.stack` the card can never move past the other column's cards. So
+the media query sets `.stack{display:contents}` — every card becomes a direct grid item of `.cols` —
+and then one `order:1` sinks the pair below everything else. This is free rather than a refactor
+because `.stack` carries exactly one rule and its `gap` is byte-identical to `.cols`'s, so nothing
+moves. Both halves must stay INSIDE the query: `display:contents` at top level would destroy the
+two-column desktop layout, and there is a guard for that.
+
+**And the query MUST sit below the `.stack` rule it overrides.** Written above it — where the old
+one-line query lived — `.stack{display:grid}` wins on source order at equal specificity and the
+entire phone fix does nothing: no error, no warning, `display` just computes to `grid`. It was built
+that way first and only the browser showed it; the guard asserting the rule *existed* passed happily.
+A regex cannot see the cascade, so the test now asserts the ORDER of the two rules as well.
+
+**The wrap fix needed `flex-basis:100%`, not just `flex-wrap`.** `.item .nm` is `flex:1 1 0` with
+`min-width:0`, so it can shrink to nothing — which means flex always finds "room" on line one and
+never wraps the controls down. The result was a name box 12px wide with 110px of text running
+straight across the type beside it. Giving the name the whole first line is what actually wraps the
+pill and icons. Also caught in the browser: the assertions all passed, because nothing overflowed the
+*item* — only the name's own box.
+
+**The 320px column needed the row to wrap.** ~266px inside an `.item`, and the Summoned pill, two
+icon buttons and the gaps eat ~200px of it before the name is drawn; `.item .top` had no wrap and
+`.qty` no `min-width:0`, so a real name plus a type like "Pseudodragon" pushed the row through the
+item's own border. Fixed **scoped to `#familiarList`**, because Statuses uses the same `.item` markup
+but still lives in the wide column where the single row is right. A guard asserts the scoping, since
+an unscoped `.item .top{flex-wrap:wrap}` would silently restyle Statuses.
+
+**A pre-existing bug the move exposed.** `buildToc()` listed every `.card > .label` with no
+visibility filter, and `scrollToCard()` has no `offsetParent` guard — so the ☰ menu already showed
+"Familiars & Companions" when the card was hidden, and picking it scrolled to a zero-height box.
+Harmless-looking while it was last in the list; fourth from the top it would get hit. `buildToc` now
+makes the same `offsetParent===null` check `jumpToNote()` has always made, so the two consumers agree.
+This fixes `#activeSpellCard` for free.
+
+**The test slicer now strips HTML comments first.** `block()` finds an element's extent by counting
+`<div>`/`</div>`, and its comment used to claim safety "because no `<div` appears inside a comment" —
+a condition kept true by hand. The comment written for this very move broke it within minutes
+(it quoted the markup it was describing). Comments are stripped once, up front; the invariant is now
+enforced rather than remembered.
+
+---
+
 ## Known minor limitations (not blocking)
 
 - **Class-level feat skill-choices** grant to sid `class:<Name>`, so they revert when the class is

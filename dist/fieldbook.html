@@ -161,8 +161,24 @@ html[data-tabs="icons"] .tabicon{display:block}
 .tabpanel.active{display:block;animation:rise .18s ease}
 @keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .cols{display:grid;gap:clamp(12px,2vw,18px);grid-template-columns:minmax(0,320px) minmax(0,1fr);align-items:start}
-@media(max-width:820px){.cols{grid-template-columns:1fr}}
 .stack{display:grid;gap:clamp(12px,2vw,18px);align-content:start;min-width:0}
+/* One column on a phone, and the sidebar's cards fall in ahead of the main
+   stack. That is right for the portrait/origin/class block but wrong for
+   Familiars, which would land above HP and Skills.
+   `order` alone cannot fix it — order only reorders SIBLINGS, and inside .stack
+   the card can never move past the other column's cards. So the stacks are
+   flattened here and every card becomes a direct item of .cols, which is free:
+   .stack carries exactly one rule and its gap is byte-identical to .cols's, so
+   the spacing does not move. Default order is 0, so one order:1 sinks the pair
+   below everything without touching any other card.
+   MUST stay below the .stack rule above: same specificity, so the later
+   declaration wins, and above it display:grid quietly beat display:contents and
+   the whole thing did nothing. */
+@media(max-width:820px){
+  .cols{grid-template-columns:1fr}
+  .stack{display:contents}
+  #familiarCard,#addFamiliarLink{order:1}
+}
 
 /* ================= Ink cards ================= */
 .card{position:relative;background:var(--panel);border-radius:var(--radius);padding:15px;box-shadow:var(--shadow);min-width:0}
@@ -561,6 +577,21 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
   padding:5px 10px;border-radius:99px;cursor:pointer;border:2px solid var(--line);user-select:none}
 .fam-state.on{background:color-mix(in srgb,var(--accent-2) 22%,transparent);color:var(--accent-2);border-color:var(--accent-2)}
 .fam-state.off{background:var(--field);color:var(--ink-soft)}
+/* Familiars moved to the 320px sidebar, which leaves ~266px inside an .item.
+   The Summoned pill, the two icon buttons and the gaps eat ~200px of that
+   BEFORE the name is drawn, and .item .top has no wrap — so a real name plus a
+   type like "Pseudodragon" pushed the row through the item's own border.
+   Scoped to #familiarList on purpose: Statuses uses the same .item markup but
+   still lives in the wide column, where nothing is wrong with the single row. */
+#familiarList .item .top{flex-wrap:wrap}
+/* flex-basis:100%, not just min-width:0. .nm is flex:1 1 0 and may shrink to
+   nothing, so wrapping alone did NOT move the pill down — flex kept everything
+   on line one and squeezed the name's BOX to 12px while its text ran 110px
+   across the type beside it. Claiming the first line is what actually wraps the
+   controls; anywhere covers a single unbroken 30-character name. */
+#familiarList .item .nm{flex-basis:100%;overflow-wrap:anywhere}
+#familiarList .item .qty{min-width:0}   /* the type is a lone word: let it shrink */
+#familiarList .fam-state{white-space:nowrap}  /* don't break "Summoned" inside its own pill */
 .cr-chip{display:flex;align-items:center;gap:9px;background:var(--field);border:2px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:8px;cursor:pointer;position:relative;min-width:0}
 .cr-chip:hover{border-color:var(--accent-2)}
 .cr-chip .cr-k{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;flex:none}
@@ -809,6 +840,20 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
           <div class="label">Class <span class="grow"></span><button class="add" id="btnLevelUp">▲ Level up</button><button class="add" id="btnLevelDown">▼ Level down</button></div>
           <div id="classBox"></div>
         </div>
+
+        <!-- Familiars live in the sidebar, beside the portrait and class, rather
+             than at the bottom of the long right-hand column: you reach for a
+             familiar mid-fight, and it was the last thing on the sheet.
+             The card and the button are a mutually-exclusive PAIR — renderFamiliars
+             shows exactly one of them and looks both up unguarded — so they move
+             together and neither id may be renamed. Keep the card's attribute
+             order too: a template guard counts card openings by literal prefix,
+             and putting the id first hides this one from it. -->
+        <div class="card" data-note="familiars" id="familiarCard" style="display:none">
+          <div class="label">Familiars &amp; Companions <button class="add" data-add="familiar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="familiarList"></div>
+        </div>
+        <button class="mini" id="addFamiliarLink" style="max-width:260px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a familiar</button>
       </div>
 
       <div class="stack">
@@ -917,11 +962,6 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
           <div id="featureList"></div>
         </div>
 
-        <div class="card" data-note="familiars" id="familiarCard" style="display:none">
-          <div class="label">Familiars &amp; Companions <button class="add" data-add="familiar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
-          <div id="familiarList"></div>
-        </div>
-        <button class="mini" id="addFamiliarLink" style="max-width:260px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a familiar</button>
       </div>
     </div>
   </section>
@@ -1791,6 +1831,11 @@ function buildToc(){
   const items=[];
   if(panel)panel.querySelectorAll(".card > .label, .inv-sec-head").forEach(node=>{
     const target=node.classList.contains("inv-sec-head")?node:node.closest(".card");
+    /* Skip cards that aren't showing. #familiarCard and #activeSpellCard are
+       display:none until they have content, and listing one gives a menu entry
+       that scrolls to a zero-height box and lands nowhere. jumpToNote() has
+       always made this check; this is the same rule, in the other consumer. */
+    if(target&&target.offsetParent===null)return;
     const cl=node.cloneNode(true);cl.querySelectorAll("button,svg,input,select,.grow,.add,.cnt,.enc-pill").forEach(x=>x.remove());
     const t=cl.textContent.trim();if(t&&target)items.push({t,target,sub:node.classList.contains("inv-sec-head")});
   });

@@ -177,6 +177,21 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
   padding:5px 10px;border-radius:99px;cursor:pointer;border:2px solid var(--line);user-select:none}
 .fam-state.on{background:color-mix(in srgb,var(--accent-2) 22%,transparent);color:var(--accent-2);border-color:var(--accent-2)}
 .fam-state.off{background:var(--field);color:var(--ink-soft)}
+/* Familiars moved to the 320px sidebar, which leaves ~266px inside an .item.
+   The Summoned pill, the two icon buttons and the gaps eat ~200px of that
+   BEFORE the name is drawn, and .item .top has no wrap — so a real name plus a
+   type like "Pseudodragon" pushed the row through the item's own border.
+   Scoped to #familiarList on purpose: Statuses uses the same .item markup but
+   still lives in the wide column, where nothing is wrong with the single row. */
+#familiarList .item .top{flex-wrap:wrap}
+/* flex-basis:100%, not just min-width:0. .nm is flex:1 1 0 and may shrink to
+   nothing, so wrapping alone did NOT move the pill down — flex kept everything
+   on line one and squeezed the name's BOX to 12px while its text ran 110px
+   across the type beside it. Claiming the first line is what actually wraps the
+   controls; anywhere covers a single unbroken 30-character name. */
+#familiarList .item .nm{flex-basis:100%;overflow-wrap:anywhere}
+#familiarList .item .qty{min-width:0}   /* the type is a lone word: let it shrink */
+#familiarList .fam-state{white-space:nowrap}  /* don't break "Summoned" inside its own pill */
 .cr-chip{display:flex;align-items:center;gap:9px;background:var(--field);border:2px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:8px;cursor:pointer;position:relative;min-width:0}
 .cr-chip:hover{border-color:var(--accent-2)}
 .cr-chip .cr-k{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;flex:none}

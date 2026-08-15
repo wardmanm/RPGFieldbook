@@ -22,6 +22,11 @@ function buildToc(){
   const items=[];
   if(panel)panel.querySelectorAll(".card > .label, .inv-sec-head").forEach(node=>{
     const target=node.classList.contains("inv-sec-head")?node:node.closest(".card");
+    /* Skip cards that aren't showing. #familiarCard and #activeSpellCard are
+       display:none until they have content, and listing one gives a menu entry
+       that scrolls to a zero-height box and lands nowhere. jumpToNote() has
+       always made this check; this is the same rule, in the other consumer. */
+    if(target&&target.offsetParent===null)return;
     const cl=node.cloneNode(true);cl.querySelectorAll("button,svg,input,select,.grow,.add,.cnt,.enc-pill").forEach(x=>x.remove());
     const t=cl.textContent.trim();if(t&&target)items.push({t,target,sub:node.classList.contains("inv-sec-head")});
   });

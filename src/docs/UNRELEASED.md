@@ -66,6 +66,11 @@ Bullets below this line — leave the heading in place.
   Constitution afterwards — which is the order most people build in — the filled-in maximum follows
   it, and your current HP comes with it while you are still at full. A number you typed into the Max
   box yourself is never touched, and from level 2 on nothing is filled in for you.
+- **Familiars and companions moved to the sidebar**, under your portrait, ancestry and class, instead
+  of sitting at the very bottom of the sheet behind everything else — you reach for a familiar in the
+  middle of a fight. On a phone they stay below the main run of cards, so your hit points and skills
+  keep their place near the top. Also fixed: the section menu used to list Familiars even when you
+  had none, and picking it did nothing.
 - **Max HP is now locked by default.** It is the one number that almost never changes once you have
   built your character, and a stray keystroke in it used to pull your current HP down with it
   silently. Tap the padlock beside the Max label to open the box, and tap it again to close it.

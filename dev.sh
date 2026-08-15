@@ -95,6 +95,8 @@ menu() {
   DATA
     5  Rebuild rules bundles
     6  Re-convert rules data from 5e-tools
+  GIT
+    c  Commit…                   (type, issue number, message, then push)
   RELEASE
     7  Cut a release…
     8  Release checklist
@@ -196,6 +198,105 @@ convert_data() {
   return 0
 }
 
+# ---------------------------------------------------------------- commit
+# Build the commit subject from its parts. PURE — no prompts, no git, no colour —
+# so the formatting can be exercised on its own without making a commit:
+#
+#   commit_subject task closes "26, 30" "lorum ipsum"
+#     -> task [26/30]: lorum ipsum, closes #26, closes #30
+#
+# Numbers may be separated by commas, spaces or both, and may carry a leading #.
+# Returns 1 without printing if any of them isn't a number, so the caller can
+# re-prompt rather than commit something malformed.
+commit_subject() {
+  local type="$1" kw="$2" raw="$3" msg="$4"
+  local n slash="" trailer=""
+  # Deliberate word splitting: tr has already turned , and # into spaces, and
+  # every token is checked to be digits before it is used.
+  for n in $(printf '%s' "$raw" | tr ',#' '  '); do
+    case "$n" in ''|*[!0-9]*) return 1 ;; esac
+    if [ -z "$slash" ]; then slash="$n"; else slash="$slash/$n"; fi
+    trailer="$trailer, $kw #$n"
+  done
+  if [ -n "$slash" ]; then
+    printf '%s [%s]: %s%s\n' "$type" "$slash" "$msg" "$trailer"
+  else
+    printf '%s: %s\n' "$type" "$msg"
+  fi
+}
+
+commit_menu() {
+  git rev-parse --git-dir >/dev/null 2>&1 || {
+    printf '\n%sNot a git repository.%s\n' "$YEL" "$OFF"; return 0; }
+  if [ -z "$(git status --porcelain)" ]; then
+    printf '\n%sNothing to commit — the working tree is clean.%s\n' "$YEL" "$OFF"; return 0
+  fi
+
+  printf '\n%sCommit%s  (branch: %s)\n\n' "$B" "$OFF" "$(git_branch)"
+  git status --short
+  printf '\n    1  bug    → fixes\n    2  task   → closes\n    3  data   → closes\n    b  back\n\n'
+  printf '  Type: '
+  local c type kw; read -r c
+  case "$c" in
+    1|bug|BUG)   type=bug;  kw=fixes ;;
+    2|task|TASK) type=task; kw=closes ;;
+    3|data|DATA) type=data; kw=closes ;;
+    *) printf 'cancelled\n'; return 0 ;;
+  esac
+
+  printf '  Issue number(s) — "34" or "26, 30": '
+  local raw; read -r raw
+  if [ -z "$raw" ]; then
+    printf '\n  %sNo issue number. Commit as "%s: <message>", with nothing closed? [y/N] %s' "$YEL" "$type" "$OFF"
+    local noissue; read -r noissue
+    case "$noissue" in y|Y) : ;; *) printf 'cancelled\n'; return 0 ;; esac
+  fi
+
+  printf '  Message: '
+  local msg; read -r msg
+  [ -n "$msg" ] || { printf '\n%sNo message — cancelled.%s\n' "$YEL" "$OFF"; return 0; }
+
+  local subject
+  subject=$(commit_subject "$type" "$kw" "$raw" "$msg") || {
+    printf '\n%s"%s" is not a list of numbers — cancelled.%s\n' "$YEL" "$raw" "$OFF"; return 0; }
+
+  # Shown BEFORE staging, so backing out at the next prompt still tells you what
+  # the message would have been.
+  printf '\n    git commit -m "%s"\n' "$subject"
+
+  # `git add -A`, never `commit -a`: -a stages tracked changes only, so it
+  # silently misses a new fragment, data file or workflow — the same trap the
+  # release checklist calls out.
+  if git diff --cached --quiet; then
+    printf '\n  Nothing staged yet. Stage everything (git add -A)? [Y/n] '
+    local a; read -r a
+    case "$a" in
+      n|N) printf '  cancelled — stage what you want, then come back\n'; return 0 ;;
+    esac
+    run git add -A || return 0
+  else
+    printf '\n  %sCommitting what is already staged.%s\n' "$DIM" "$OFF"
+  fi
+
+  printf '\n  Commit the above? [y/N] '
+  local ok; read -r ok
+  case "$ok" in
+    y|Y) : ;;
+    *) printf '  cancelled — nothing committed, staging left as it is\n'; return 0 ;;
+  esac
+  run git commit -m "$subject" || return 0
+
+  local br; br=$(git_branch)
+  printf '\n  Push to origin/%s? [y/N] ' "$br"
+  local p; read -r p
+  case "$p" in
+    # No --follow-tags on purpose: pushing a TAG is what publishes a release,
+    # and that is a separate, deliberate act (menu 7 prints those commands).
+    y|Y) run git push -u origin "$br" ;;
+    *)   printf '  not pushed — "git push" when you are ready\n' ;;
+  esac
+}
+
 where_things_live() {
   cat <<EOF
 
@@ -253,6 +354,7 @@ while true; do
     4) run ./src/tests/run.sh; pause ;;
     5) run node scripts/bundle-rules.js; pause ;;
     6) convert_data; pause ;;
+    c|C) commit_menu; pause ;;
     7) release_menu; pause ;;
     8) checklist; pause ;;
     9) if [ -f dist/fieldbook.html ]; then

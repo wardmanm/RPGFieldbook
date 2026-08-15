@@ -80,6 +80,20 @@
           <div class="label">Class <span class="grow"></span><button class="add" id="btnLevelUp">▲ Level up</button><button class="add" id="btnLevelDown">▼ Level down</button></div>
           <div id="classBox"></div>
         </div>
+
+        <!-- Familiars live in the sidebar, beside the portrait and class, rather
+             than at the bottom of the long right-hand column: you reach for a
+             familiar mid-fight, and it was the last thing on the sheet.
+             The card and the button are a mutually-exclusive PAIR — renderFamiliars
+             shows exactly one of them and looks both up unguarded — so they move
+             together and neither id may be renamed. Keep the card's attribute
+             order too: a template guard counts card openings by literal prefix,
+             and putting the id first hides this one from it. -->
+        <div class="card" data-note="familiars" id="familiarCard" style="display:none">
+          <div class="label">Familiars &amp; Companions <button class="add" data-add="familiar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="familiarList"></div>
+        </div>
+        <button class="mini" id="addFamiliarLink" style="max-width:260px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a familiar</button>
       </div>
 
       <div class="stack">
@@ -188,11 +202,6 @@
           <div id="featureList"></div>
         </div>
 
-        <div class="card" data-note="familiars" id="familiarCard" style="display:none">
-          <div class="label">Familiars &amp; Companions <button class="add" data-add="familiar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
-          <div id="familiarList"></div>
-        </div>
-        <button class="mini" id="addFamiliarLink" style="max-width:260px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a familiar</button>
       </div>
     </div>
   </section>
