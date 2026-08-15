@@ -2347,6 +2347,61 @@ an edit keeps star, origin and pack link.
 
 ---
 
+## Done — spell browser: per-level counts, and the Add button that was off-screen
+
+### The overflow, which was not a near-miss
+
+The Add button was laid out **past the right edge of the viewport**, and `.browse` is
+`position:fixed;inset:0` with no scroll container — so there was no way to reach it at all. Three
+things combined:
+
+1. `#brOrigin` carried an inline `flex:0 0 auto`;
+2. `flex-basis:auto` resolves from the item's `width`, and the global
+   `input,select,textarea{width:100%}` sets that to 100% **of the footer**;
+3. `flex-shrink:0` meant it could never give any of it back.
+
+So the select claimed the entire row and everything after it was pushed out. Fixed on
+`.browse-foot` rather than in the spell config, because the item browser shares that footer and was
+worse (it has a cost input too). `width:auto` on `.br-origin` is the actual fix — `flex-wrap` alone
+would just have given every screen size a full-width select with the button beneath it. The inline
+styles moved to classes; leaving them inline is what hid the bug in the first place.
+
+Deliberately **not** patched with `overflow-x:hidden` on `.browse`: that hides a recurrence instead
+of preventing one. A guard asserts the global `width:100%` rule still exists, because the fix is an
+override and is meaningless without it.
+
+### The count
+
+**`spellLevelTally(lv)` is now the single source** for both the Spells tab heading and the browser's,
+so the number you see while picking is the number you get. `renderSpells` was refactored onto it
+rather than keeping its own copy of the arithmetic.
+
+**Two new generic hooks on `openBrowse`** — `cfg.groupKey` (stamped as `data-brg`) and
+`cfg.groupBadge(key, chosen)`. `cfg.group` returns a string that gets `esc()`'d, so a count cannot be
+smuggled through it, and it would be stale anyway.
+
+**The badges repaint from `foot()`, not by re-rendering.** The row handler deliberately updates the
+clicked row in place and calls `foot()`; re-rendering would discard the scroll position and redraw
+400+ rows on every tap. `paintGroupBadges()` touches only the headings, which keeps that property.
+
+**Three things the projection has to respect**, all verified in the browser: a spell already on the
+sheet is skipped by `onAdd` so it adds nothing; the origin dropdown applies to the whole batch, and a
+Feat/Background origin lands the picks as `granted`, which never counts — so changing the dropdown
+repaints; and `allot===0` means "no allotment known", which shows a bare number, or no badge at all
+when there is also nothing known (a level with no slots stays clean rather than reading "0").
+
+**Verified:** at 360px the Add button is fully on screen with no horizontal overflow, on both the
+spell and item browsers, while a desktop width still lays the footer out as one row. 3/4 → 4/4 → 5/4
+red as two cantrips are ticked; a duplicate does not move it; origin=Feat drops it back to 3/4; and
+after adding, the Spells tab shows exactly what the browser predicted.
+
+**One test lesson worth keeping:** the first guard for "the tab uses the shared tally" was vacuous —
+`/function renderSpells\(\)\{[\s\S]*?spellLevelTally\(lv\)/` ran straight past `renderSpells` and
+matched `browseSpells`' call instead, so it passed with the mutation applied. Slice the function body
+first, then assert inside it.
+
+---
+
 ## Known minor limitations (not blocking)
 
 - **Class-level feat skill-choices** grant to sid `class:<Name>`, so they revert when the class is

@@ -186,9 +186,9 @@ function renderSpells(){
   const byLv={};character.spells.forEach(s=>{(byLv[s.level=num(s.level)]=byLv[s.level]||[]).push(s)});
   Object.keys(byLv).map(Number).sort((a,b)=>a-b).forEach(lv=>{
     const items=byLv[lv];
-    const added=items.filter(s=>!s.granted).length;      // counts toward allotment
-    const granted=items.length-added;                    // from feat/background/etc.
-    const allot=spellAllotment(lv);
+    /* Shared with the spell browser's heading, so the number you see while
+       picking is the number you get. */
+    const {added,granted,allot}=spellLevelTally(lv);
     const over=allot>0&&added>allot;
     const countTxt=(allot>0?`${added}/${allot}`:`${added}`)+(granted?` <span class="gr">+${granted}</span>`:"");
     const h=document.createElement("div");h.className="spell-h";

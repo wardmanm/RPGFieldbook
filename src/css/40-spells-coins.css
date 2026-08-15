@@ -13,8 +13,11 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .slot .cfg input{width:40px;text-align:center;padding:3px;min-height:28px;font-size:13px}
 .spell-h{font-family:var(--head);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:12px;
   color:var(--accent);margin:14px 0 6px;padding-bottom:3px;border-bottom:2px solid var(--hair);display:flex;align-items:center;gap:8px}
-.spell-count{margin-left:auto;font-family:var(--head);font-size:11px;font-weight:800;color:var(--ink-soft);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:1px 9px;letter-spacing:.02em}
-.spell-count.over{color:#fff;background:var(--brick);border-color:var(--brick)}
+/* One pill for both: the Spells tab heading and the spell browser's group
+   heading. They show the same tally (spellLevelTally), so they should not look
+   like two different things. */
+.spell-count,.brgcount{margin-left:auto;font-family:var(--head);font-size:11px;font-weight:800;color:var(--ink-soft);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:1px 9px;letter-spacing:.02em;flex:none}
+.spell-count.over,.brgcount.over{color:#fff;background:var(--brick);border-color:var(--brick)}
 .spell-count .gr{color:var(--accent-2);font-weight:700}
 .spell .gtag{font-family:var(--head);font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:1px 7px;flex:none}
 .spell{display:flex;align-items:center;gap:9px;padding:7px 2px;border-bottom:1px dotted var(--hair)}

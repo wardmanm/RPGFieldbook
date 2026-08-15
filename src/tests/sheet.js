@@ -14,6 +14,7 @@ const {X, bootError, fragments} = loadApp([
   'capacityFor', 'sizeOptionsHTML', 'invSection',
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
   'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
+  'spellLevelTally', 'spellAllotment', 'cantripsKnown',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -713,6 +714,56 @@ ck('an empty list makes no groups at all',
      off.indexOf('data-fav-feature') < off.indexOf('class="nm"'));
   ck('...and after the collapse caret, so the row reads the same as an item',
      off.indexOf('data-fitem') < off.indexOf('data-fav-feature'));
+}
+
+/* ================= spells per level =================
+   spellLevelTally is the one place both the Spells tab heading and the spell
+   browser's heading get their numbers, so the browser cannot promise something
+   the sheet then disagrees with. Pure, hence assertable here. */
+X.character = X.blankChar();
+const spell = (name, level, granted) => ({id: 'sp-' + name, name, level, granted: granted || ''});
+
+X.character.spells = [];
+ck('a level with nothing is all zeros', (() => {
+  const t = X.spellLevelTally(3);
+  return t.added === 0 && t.granted === 0;
+})());
+
+X.character.spells = [spell('Fire Bolt', 0), spell('Light', 0), spell('Guidance', 0, 'Feat')];
+ck('added counts only what is NOT granted', X.spellLevelTally(0).added === 2);
+ck('...and granted is counted separately', X.spellLevelTally(0).granted === 1);
+ck('a different level sees none of them', X.spellLevelTally(1).added === 0);
+
+// levels 1-9 take their allotment from the SLOT total, not from spells known
+X.character.slots = {1: {total: 4, used: 0}, 2: {total: 3, used: 0}};
+X.character.spells = [spell('Bless', 1), spell('Shield', 1)];
+ck('a spell level reads its allotment from the slots', X.spellLevelTally(1).allot === 4);
+ck('...and a level with no slots has no allotment', X.spellLevelTally(9).allot === 0);
+ck('the tally agrees with spellAllotment directly',
+   X.spellLevelTally(2).allot === X.spellAllotment(2));
+
+// level 0 takes it from cantrips-known, which is derived from class levels
+X.character.slots = {};
+X.character.classes = [{name: 'Wizard', level: 1}];
+ck('cantrips take their allotment from the class table',
+   X.spellLevelTally(0).allot === X.cantripsKnown() && X.cantripsKnown() === 3);
+X.character.classes = [{name: 'Wizard', level: 4}];
+ck('...and it moves with level', X.spellLevelTally(0).allot === 4);
+X.character.classes = [];
+ck('no caster class means no cantrip allotment', X.spellLevelTally(0).allot === 0);
+
+// the string level a data file might carry must not break the match
+X.character.classes = [];
+X.character.spells = [{id: 'x', name: 'Mage Hand', level: '0', granted: ''}];
+ck('a level stored as a string still tallies', X.spellLevelTally(0).added === 1);
+
+// being over the allotment is a fact the tally reports, not one it prevents
+X.character.slots = {1: {total: 1, used: 0}};
+X.character.spells = [spell('Bless', 1), spell('Shield', 1), spell('Cure Wounds', 1)];
+{
+  const t = X.spellLevelTally(1);
+  ck('going over the allotment is allowed and simply reported',
+     t.added === 3 && t.allot === 1, t);
 }
 
 ck.done();

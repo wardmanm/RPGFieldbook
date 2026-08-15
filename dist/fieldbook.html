@@ -368,7 +368,8 @@ html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
 .fpill.clear{border-style:dashed}
 .browse-count{font-family:var(--head);font-size:11px;color:var(--ink-soft);padding:4px 2px;text-transform:uppercase;letter-spacing:.04em}
 .browse-list{flex:1;overflow:auto;border-top:1px solid var(--hair);-webkit-overflow-scrolling:touch}
-.brgroup{position:sticky;top:0;background:var(--paper);font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:11px;color:var(--accent);padding:9px 2px 4px;border-bottom:1px solid var(--hair)}
+/* flex so the count pill's margin-left:auto can push it to the right edge */
+.brgroup{position:sticky;top:0;background:var(--paper);display:flex;align-items:center;gap:8px;font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:11px;color:var(--accent);padding:9px 2px 4px;border-bottom:1px solid var(--hair)}
 .brow{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px dotted var(--hair);cursor:pointer}
 .brow.sel{background:color-mix(in srgb,var(--accent) 15%,transparent)}
 .brk{width:16px;text-align:center;flex:none;color:var(--accent);font-weight:900}
@@ -378,8 +379,21 @@ html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
 .brinfo{background:transparent;border:0;color:var(--ink-soft);cursor:pointer;padding:4px;flex:none;display:inline-flex;align-items:center}
 .brinfo svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
 .brinfo:hover{color:var(--accent-2)}
-.browse-foot{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--hair)}
-.browse-foot .tbtn{flex:1}
+/* The Add button used to be laid out PAST the right edge of the screen, with no
+   way to reach it: .browse is position:fixed with no scroll container, so the
+   overflow simply left the viewport. Cause was the origin <select> — it carried
+   flex:0 0 auto, and flex-basis:auto resolves from `width`, which the global
+   input,select,textarea rule sets to 100%. So it claimed the entire footer and,
+   being flex-shrink:0, never gave any back.
+   width:auto on the select is the fix; flex-wrap is the safety net, so a control
+   that cannot fit drops to the next line instead of off the edge. Scoped to the
+   footer, not to spells, because the item browser has the same footer plus a
+   cost input and was worse. */
+.browse-foot{display:flex;flex-wrap:wrap;gap:10px;padding:10px 0;border-top:1px solid var(--hair)}
+.browse-foot .tbtn{flex:1 1 120px}
+.br-origin{flex:1 1 130px;min-width:0;width:auto}
+.br-origdet{flex:1 1 90px;min-width:70px}
+.br-cost{flex:0 1 84px;min-width:64px}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 
 /* portrait */
@@ -666,8 +680,11 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .slot .cfg input{width:40px;text-align:center;padding:3px;min-height:28px;font-size:13px}
 .spell-h{font-family:var(--head);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:12px;
   color:var(--accent);margin:14px 0 6px;padding-bottom:3px;border-bottom:2px solid var(--hair);display:flex;align-items:center;gap:8px}
-.spell-count{margin-left:auto;font-family:var(--head);font-size:11px;font-weight:800;color:var(--ink-soft);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:1px 9px;letter-spacing:.02em}
-.spell-count.over{color:#fff;background:var(--brick);border-color:var(--brick)}
+/* One pill for both: the Spells tab heading and the spell browser's group
+   heading. They show the same tally (spellLevelTally), so they should not look
+   like two different things. */
+.spell-count,.brgcount{margin-left:auto;font-family:var(--head);font-size:11px;font-weight:800;color:var(--ink-soft);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:1px 9px;letter-spacing:.02em;flex:none}
+.spell-count.over,.brgcount.over{color:#fff;background:var(--brick);border-color:var(--brick)}
 .spell-count .gr{color:var(--accent-2);font-weight:700}
 .spell .gtag{font-family:var(--head);font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:1px 7px;flex:none}
 .spell{display:flex;align-items:center;gap:9px;padding:7px 2px;border-bottom:1px dotted var(--hair)}
@@ -1369,6 +1386,17 @@ function cantripsFor(name,L){const t=CANTRIPS[String(name||"").toLowerCase()];if
 function cantripsKnown(){let c=0;(character.classes||[]).forEach(cl=>c+=cantripsFor(cl.name,num(cl.level)));return c;}
 /* per spell-level allotment: cantrips-known for level 0, spell slots for 1-9 */
 function spellAllotment(lv){return lv===0?cantripsKnown():((character.slots[lv]&&character.slots[lv].total)||0);}
+/* What one spell level looks like right now: how many you ADDED (those count
+   against the allotment), how many were GRANTED by a feat/background/ancestry
+   (those don't), and the allotment itself. allot===0 means "no allotment known",
+   which callers show as a bare count rather than "n/0".
+   The single source of truth for both the Spells tab heading and the browser's,
+   so the two cannot drift apart. Pure — no DOM. */
+function spellLevelTally(lv){
+  const at=(character.spells||[]).filter(s=>num(s.level)===num(lv));
+  const added=at.filter(s=>!s.granted).length;
+  return {added,granted:at.length-added,allot:spellAllotment(lv)};
+}
 
 /* ================= recompute derived ================= */
 function recompute(){
@@ -3059,9 +3087,9 @@ function renderSpells(){
   const byLv={};character.spells.forEach(s=>{(byLv[s.level=num(s.level)]=byLv[s.level]||[]).push(s)});
   Object.keys(byLv).map(Number).sort((a,b)=>a-b).forEach(lv=>{
     const items=byLv[lv];
-    const added=items.filter(s=>!s.granted).length;      // counts toward allotment
-    const granted=items.length-added;                    // from feat/background/etc.
-    const allot=spellAllotment(lv);
+    /* Shared with the spell browser's heading, so the number you see while
+       picking is the number you get. */
+    const {added,granted,allot}=spellLevelTally(lv);
     const over=allot>0&&added>allot;
     const countTxt=(allot>0?`${added}/${allot}`:`${added}`)+(granted?` <span class="gr">+${granted}</span>`:"");
     const h=document.createElement("div");h.className="spell-h";
@@ -4972,15 +5000,37 @@ function openBrowse(cfg){
   function sumHTML(){const ch=activeChips();if(!ch.length)return "";return `<div class="brsum">${ch.map(c=>`<button class="fpill on" data-rm="${esc(c.key)}" data-rmv="${esc(c.val||"")}" data-rmt="${c.toggle?1:0}">${esc(c.label)} ✕</button>`).join("")}<button class="fpill clear" id="brClear">Clear</button></div>`;}
   function rowHTML(e){const id=idOf(e),sel=st.sel.has(id),ad=added(e),r=cfg.row(e);
     return `<div class="brow ${sel?"sel":""}" data-row="${esc(id)}"><span class="brk">${sel?"✓":(ad?"•":"")}</span><span class="brn">${esc(r.title)}${ad?` <span class="badge">added</span>`:""}</span>${r.tag?`<span class="btag">${esc(r.tag)}</span>`:""}<button class="brinfo" data-brinfo="${esc(id)}" aria-label="Preview"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>`;}
+  /* Repaint the group headings' badges in place. Called from foot(), which the
+     row handler already calls — so the count tracks what you tick WITHOUT
+     re-rendering the list. Re-rendering would throw away the scroll position and
+     redraw 400+ rows on every tap. */
+  function paintGroupBadges(){
+    if(!cfg.groupBadge)return;
+    const chosen=(cfg.items||[]).filter(x=>st.sel.has(idOf(x)));
+    Array.prototype.slice.call(document.querySelectorAll("#brList .brgroup[data-brg]")).forEach(h=>{
+      const el=h.querySelector("[data-brgc]");if(!el)return;
+      const b=cfg.groupBadge(h.dataset.brg,chosen);
+      el.textContent=b?b.text:"";
+      el.title=(b&&b.title)||"";
+      el.style.display=b?"":"none";
+      el.classList.toggle("over",!!(b&&b.over));
+    });
+  }
   function foot(){const n=st.sel.size,b=document.getElementById("brAdd"),c=document.getElementById("brCount");
     if(b){b.disabled=!n;b.textContent=n?`Add ${n} ${cfg.noun||""}`:`Add ${cfg.noun||""}`;}
-    if(c)c.textContent=`${lastCount} result${lastCount===1?"":"s"}${n?` · ${n} selected`:""}`;}
+    if(c)c.textContent=`${lastCount} result${lastCount===1?"":"s"}${n?` · ${n} selected`:""}`;
+    paintGroupBadges();}
   function renderList(){
     let list=(cfg.items||[]).filter(passes);if(cfg.sort)list=list.slice().sort(cfg.sort);
     lastCount=list.length;const L=document.getElementById("brList");if(!L)return;
     if(!list.length){L.innerHTML=`<div class="empty">No matches. Adjust filters.</div>`;foot();return;}
     let html="",lg=null;
-    list.forEach(e=>{if(cfg.group){const g=cfg.group(e);if(g!==lg){html+=`<div class="brgroup">${esc(g)}</div>`;lg=g;}}html+=rowHTML(e);});
+    /* The badge span is emitted empty and filled by paintGroupBadges — cfg.group
+       returns a string that gets escaped, so a count cannot be smuggled through
+       it, and the value has to be re-derivable on every tick anyway. */
+    list.forEach(e=>{if(cfg.group){const g=cfg.group(e);if(g!==lg){
+      const key=cfg.groupKey?cfg.groupKey(e):g;
+      html+=`<div class="brgroup"${cfg.groupBadge?` data-brg="${esc(key)}"`:""}>${esc(g)}${cfg.groupBadge?`<span class="brgcount" data-brgc></span>`:""}</div>`;lg=g;}}html+=rowHTML(e);});
     L.innerHTML=html;foot();
   }
   function render(){const fc=activeChips().length;
@@ -4989,10 +5039,14 @@ function openBrowse(cfg){
       ${st.showFilters?`<div class="browse-facets">${facetHTML()}${fc?`<button class="fpill clear" id="brClearF" style="align-self:flex-start">Clear all</button>`:""}</div>`:sumHTML()}
       <div class="browse-count" id="brCount"></div>
       <div class="browse-list" id="brList"></div>
-      <div class="browse-foot">${cfg.originSelect?`<select id="brOrigin" style="flex:0 0 auto;min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 8px">${originOptionsHTML(null,cfg.originSelect==="spell")}</select><input id="brOrigDet" placeholder="origin detail" style="flex:1 1 90px;min-width:70px;min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 10px">`:""}${cfg.costInput?`<input id="brCost" type="number" min="0" step="0.01" placeholder="cost gp" title="Overrides the item's listed price; blank uses the price from the rules data" style="flex:0 0 84px;width:84px;min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 8px">`:""}<button class="tbtn primary" id="brAdd" disabled></button></div>
+      <div class="browse-foot">${cfg.originSelect?`<select id="brOrigin" class="br-origin" style="min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 8px">${originOptionsHTML(null,cfg.originSelect==="spell")}</select><input id="brOrigDet" class="br-origdet" placeholder="origin detail" style="min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 10px">`:""}${cfg.costInput?`<input id="brCost" class="br-cost" type="number" min="0" step="0.01" placeholder="cost gp" title="Overrides the item's listed price; blank uses the price from the rules data" style="min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 8px">`:""}<button class="tbtn primary" id="brAdd" disabled></button></div>
     </div>`;renderList();}
   function clearAll(){(cfg.facets||[]).forEach(f=>{st.facets[f.key]=f.type==="toggle"?false:new Set();});}
-  host.oninput=e=>{if(e.target.id==="brSearch"){st.q=e.target.value;renderList();}};
+  /* The origin applies to the whole batch, so changing it changes whether the
+     picks count — repaint the headings. */
+  host.oninput=e=>{if(e.target.id==="brSearch"){st.q=e.target.value;renderList();}
+    else if(e.target.id==="brOrigin")paintGroupBadges();};
+  host.onchange=e=>{if(e.target.id==="brOrigin")paintGroupBadges();};
   host.onclick=e=>{let m;
     if(e.target.closest("#brClose"))return closeBrowse();
     if(e.target.closest("#brFilters")){st.showFilters=!st.showFilters;render();return;}
@@ -5060,6 +5114,26 @@ function browseSpells(){
     row:x=>({title:dispName(x,"spells"),tag:schoolOf(x)}),
     sort:(a,b)=>num(a.level)-num(b.level)||String(a.name||"").localeCompare(String(b.name||"")),
     group:x=>num(x.level)===0?"Cantrips":"Level "+num(x.level),
+    groupKey:x=>String(num(x.level)),
+    /* How many you have at this level against your allotment, INCLUDING what is
+       ticked right now — going over is allowed, so the number is only worth
+       having at the moment you are about to. Three things it has to respect:
+       a spell already on the sheet is skipped by onAdd, so it adds nothing; the
+       origin dropdown applies to the whole batch, and a Feat/Background origin
+       lands them as `granted`, which never counts; and allot===0 means "no
+       allotment known", shown as a bare number rather than "n/0". */
+    groupBadge:(key,chosen)=>{
+      const lv=num(key), t=spellLevelTally(lv);
+      const os=document.getElementById("brOrigin");
+      const willGrant=!!(os&&os.value&&grantedFromOrigin(os.value));
+      const picking=willGrant?0:chosen.filter(x=>num(x.level)===lv&&
+        !character.spells.some(s=>String(s.name||"").toLowerCase()===String(x.name||"").toLowerCase())).length;
+      const added=t.added+picking;
+      if(!t.allot&&!added)return null;               /* nothing known, nothing allowed: no badge */
+      return {text:t.allot>0?`${added}/${t.allot}`:String(added),
+              over:t.allot>0&&added>t.allot,
+              title:t.allot>0?"On your sheet, including what you have ticked / available":"On your sheet"};
+    },
     added:x=>character.spells.some(s=>String(s.name||"").toLowerCase()===String(x.name||"").toLowerCase()),
     preview:x=>openSpellView({name:x.name,level:num(x.level),meta:x.meta,text:x.text}),
     onCustom:()=>openSpellForm(),

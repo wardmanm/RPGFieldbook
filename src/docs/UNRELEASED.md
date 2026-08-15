@@ -66,6 +66,15 @@ Bullets below this line — leave the heading in place.
   Constitution afterwards — which is the order most people build in — the filled-in maximum follows
   it, and your current HP comes with it while you are still at full. A number you typed into the Max
   box yourself is never touched, and from level 2 on nothing is filled in for you.
+- **The spell search now shows how many spells you have at each level.** Each heading carries a count
+  against what you have available — cantrips known, or spell slots for the higher levels — and it
+  counts up as you tick spells, turning red if you go past it. It does not stop you: some characters
+  are meant to go over, and spells granted by a feat or background have never counted. Picking one
+  you already have, or setting the origin to a feat or background, correctly leaves the count alone.
+- **Fixed: the Add button was off the edge of the screen on a phone.** In the spell and item search
+  screens the origin dropdown was taking the whole width of the bottom bar, pushing the Add button
+  out of view with no way to scroll to it. The bar now wraps, so everything stays on screen at any
+  width.
 - **Features and traits can be starred, the same way items can.** Tap the star on any feature and it
   moves to a Favourites group pinned above your ancestry, class and background groups, so the two or
   three you actually reach for in a fight are at the top. Starred features are sorted by name, and

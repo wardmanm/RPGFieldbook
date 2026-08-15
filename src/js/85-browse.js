@@ -21,15 +21,37 @@ function openBrowse(cfg){
   function sumHTML(){const ch=activeChips();if(!ch.length)return "";return `<div class="brsum">${ch.map(c=>`<button class="fpill on" data-rm="${esc(c.key)}" data-rmv="${esc(c.val||"")}" data-rmt="${c.toggle?1:0}">${esc(c.label)} ✕</button>`).join("")}<button class="fpill clear" id="brClear">Clear</button></div>`;}
   function rowHTML(e){const id=idOf(e),sel=st.sel.has(id),ad=added(e),r=cfg.row(e);
     return `<div class="brow ${sel?"sel":""}" data-row="${esc(id)}"><span class="brk">${sel?"✓":(ad?"•":"")}</span><span class="brn">${esc(r.title)}${ad?` <span class="badge">added</span>`:""}</span>${r.tag?`<span class="btag">${esc(r.tag)}</span>`:""}<button class="brinfo" data-brinfo="${esc(id)}" aria-label="Preview"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>`;}
+  /* Repaint the group headings' badges in place. Called from foot(), which the
+     row handler already calls — so the count tracks what you tick WITHOUT
+     re-rendering the list. Re-rendering would throw away the scroll position and
+     redraw 400+ rows on every tap. */
+  function paintGroupBadges(){
+    if(!cfg.groupBadge)return;
+    const chosen=(cfg.items||[]).filter(x=>st.sel.has(idOf(x)));
+    Array.prototype.slice.call(document.querySelectorAll("#brList .brgroup[data-brg]")).forEach(h=>{
+      const el=h.querySelector("[data-brgc]");if(!el)return;
+      const b=cfg.groupBadge(h.dataset.brg,chosen);
+      el.textContent=b?b.text:"";
+      el.title=(b&&b.title)||"";
+      el.style.display=b?"":"none";
+      el.classList.toggle("over",!!(b&&b.over));
+    });
+  }
   function foot(){const n=st.sel.size,b=document.getElementById("brAdd"),c=document.getElementById("brCount");
     if(b){b.disabled=!n;b.textContent=n?`Add ${n} ${cfg.noun||""}`:`Add ${cfg.noun||""}`;}
-    if(c)c.textContent=`${lastCount} result${lastCount===1?"":"s"}${n?` · ${n} selected`:""}`;}
+    if(c)c.textContent=`${lastCount} result${lastCount===1?"":"s"}${n?` · ${n} selected`:""}`;
+    paintGroupBadges();}
   function renderList(){
     let list=(cfg.items||[]).filter(passes);if(cfg.sort)list=list.slice().sort(cfg.sort);
     lastCount=list.length;const L=document.getElementById("brList");if(!L)return;
     if(!list.length){L.innerHTML=`<div class="empty">No matches. Adjust filters.</div>`;foot();return;}
     let html="",lg=null;
-    list.forEach(e=>{if(cfg.group){const g=cfg.group(e);if(g!==lg){html+=`<div class="brgroup">${esc(g)}</div>`;lg=g;}}html+=rowHTML(e);});
+    /* The badge span is emitted empty and filled by paintGroupBadges — cfg.group
+       returns a string that gets escaped, so a count cannot be smuggled through
+       it, and the value has to be re-derivable on every tick anyway. */
+    list.forEach(e=>{if(cfg.group){const g=cfg.group(e);if(g!==lg){
+      const key=cfg.groupKey?cfg.groupKey(e):g;
+      html+=`<div class="brgroup"${cfg.groupBadge?` data-brg="${esc(key)}"`:""}>${esc(g)}${cfg.groupBadge?`<span class="brgcount" data-brgc></span>`:""}</div>`;lg=g;}}html+=rowHTML(e);});
     L.innerHTML=html;foot();
   }
   function render(){const fc=activeChips().length;
@@ -38,10 +60,14 @@ function openBrowse(cfg){
       ${st.showFilters?`<div class="browse-facets">${facetHTML()}${fc?`<button class="fpill clear" id="brClearF" style="align-self:flex-start">Clear all</button>`:""}</div>`:sumHTML()}
       <div class="browse-count" id="brCount"></div>
       <div class="browse-list" id="brList"></div>
-      <div class="browse-foot">${cfg.originSelect?`<select id="brOrigin" style="flex:0 0 auto;min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 8px">${originOptionsHTML(null,cfg.originSelect==="spell")}</select><input id="brOrigDet" placeholder="origin detail" style="flex:1 1 90px;min-width:70px;min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 10px">`:""}${cfg.costInput?`<input id="brCost" type="number" min="0" step="0.01" placeholder="cost gp" title="Overrides the item's listed price; blank uses the price from the rules data" style="flex:0 0 84px;width:84px;min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 8px">`:""}<button class="tbtn primary" id="brAdd" disabled></button></div>
+      <div class="browse-foot">${cfg.originSelect?`<select id="brOrigin" class="br-origin" style="min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 8px">${originOptionsHTML(null,cfg.originSelect==="spell")}</select><input id="brOrigDet" class="br-origdet" placeholder="origin detail" style="min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 10px">`:""}${cfg.costInput?`<input id="brCost" class="br-cost" type="number" min="0" step="0.01" placeholder="cost gp" title="Overrides the item's listed price; blank uses the price from the rules data" style="min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 8px">`:""}<button class="tbtn primary" id="brAdd" disabled></button></div>
     </div>`;renderList();}
   function clearAll(){(cfg.facets||[]).forEach(f=>{st.facets[f.key]=f.type==="toggle"?false:new Set();});}
-  host.oninput=e=>{if(e.target.id==="brSearch"){st.q=e.target.value;renderList();}};
+  /* The origin applies to the whole batch, so changing it changes whether the
+     picks count — repaint the headings. */
+  host.oninput=e=>{if(e.target.id==="brSearch"){st.q=e.target.value;renderList();}
+    else if(e.target.id==="brOrigin")paintGroupBadges();};
+  host.onchange=e=>{if(e.target.id==="brOrigin")paintGroupBadges();};
   host.onclick=e=>{let m;
     if(e.target.closest("#brClose"))return closeBrowse();
     if(e.target.closest("#brFilters")){st.showFilters=!st.showFilters;render();return;}
@@ -109,6 +135,26 @@ function browseSpells(){
     row:x=>({title:dispName(x,"spells"),tag:schoolOf(x)}),
     sort:(a,b)=>num(a.level)-num(b.level)||String(a.name||"").localeCompare(String(b.name||"")),
     group:x=>num(x.level)===0?"Cantrips":"Level "+num(x.level),
+    groupKey:x=>String(num(x.level)),
+    /* How many you have at this level against your allotment, INCLUDING what is
+       ticked right now — going over is allowed, so the number is only worth
+       having at the moment you are about to. Three things it has to respect:
+       a spell already on the sheet is skipped by onAdd, so it adds nothing; the
+       origin dropdown applies to the whole batch, and a Feat/Background origin
+       lands them as `granted`, which never counts; and allot===0 means "no
+       allotment known", shown as a bare number rather than "n/0". */
+    groupBadge:(key,chosen)=>{
+      const lv=num(key), t=spellLevelTally(lv);
+      const os=document.getElementById("brOrigin");
+      const willGrant=!!(os&&os.value&&grantedFromOrigin(os.value));
+      const picking=willGrant?0:chosen.filter(x=>num(x.level)===lv&&
+        !character.spells.some(s=>String(s.name||"").toLowerCase()===String(x.name||"").toLowerCase())).length;
+      const added=t.added+picking;
+      if(!t.allot&&!added)return null;               /* nothing known, nothing allowed: no badge */
+      return {text:t.allot>0?`${added}/${t.allot}`:String(added),
+              over:t.allot>0&&added>t.allot,
+              title:t.allot>0?"On your sheet, including what you have ticked / available":"On your sheet"};
+    },
     added:x=>character.spells.some(s=>String(s.name||"").toLowerCase()===String(x.name||"").toLowerCase()),
     preview:x=>openSpellView({name:x.name,level:num(x.level),meta:x.meta,text:x.text}),
     onCustom:()=>openSpellForm(),

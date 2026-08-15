@@ -231,4 +231,15 @@ function cantripsFor(name,L){const t=CANTRIPS[String(name||"").toLowerCase()];if
 function cantripsKnown(){let c=0;(character.classes||[]).forEach(cl=>c+=cantripsFor(cl.name,num(cl.level)));return c;}
 /* per spell-level allotment: cantrips-known for level 0, spell slots for 1-9 */
 function spellAllotment(lv){return lv===0?cantripsKnown():((character.slots[lv]&&character.slots[lv].total)||0);}
+/* What one spell level looks like right now: how many you ADDED (those count
+   against the allotment), how many were GRANTED by a feat/background/ancestry
+   (those don't), and the allotment itself. allot===0 means "no allotment known",
+   which callers show as a bare count rather than "n/0".
+   The single source of truth for both the Spells tab heading and the browser's,
+   so the two cannot drift apart. Pure — no DOM. */
+function spellLevelTally(lv){
+  const at=(character.spells||[]).filter(s=>num(s.level)===num(lv));
+  const added=at.filter(s=>!s.granted).length;
+  return {added,granted:at.length-added,allot:spellAllotment(lv)};
+}
 

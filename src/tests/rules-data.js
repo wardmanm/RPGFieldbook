@@ -1101,6 +1101,48 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('fav is not a rules-owned field on either kind',
      /feature:\["description","effects","uses","cost"\]/.test(js) &&
      /item:\["description","effects","cost","weight","weapon"\]/.test(js));
+
+  // ---------- the browse footer, and the per-level count
+  // The Add button was laid out PAST the right edge of the screen with no way to
+  // reach it: .browse is position:fixed with no scroll container, so the overflow
+  // left the viewport. The origin select had flex:0 0 auto, whose basis resolves
+  // from `width` — which the global input,select,textarea rule sets to 100%.
+  ck('the browse footer wraps rather than pushing controls off the edge',
+     /\.browse-foot\{[^}]*flex-wrap:wrap/.test(cardsCss),
+     (cardsCss.match(/\.browse-foot\{[^}]*\}/) || [''])[0]);
+  ck('the origin select overrides the global width:100%',
+     /\.br-origin\{[^}]*width:auto/.test(cardsCss), (cardsCss.match(/\.br-origin\{[^}]*\}/) || [''])[0]);
+  ck('...and can shrink, which flex-shrink:0 prevented',
+     /\.br-origin\{[^}]*flex:1 1 /.test(cardsCss));
+  ck('the global rule this fights is still there (the fix depends on it)',
+     /input,select,textarea\{width:100%/.test(cardsCss));
+  ck('the footer controls carry classes, not the inline flex that caused it',
+     !/id="brOrigin"[^>]*style="flex:/.test(js) && /id="brOrigin" class="br-origin"/.test(js));
+  ck('the Add button can share a row or drop to its own',
+     /\.browse-foot \.tbtn\{flex:1 1 /.test(cardsCss));
+
+  // The count must track what you tick. The row handler deliberately updates the
+  // DOM in place and calls foot() rather than re-rendering 400+ rows, so foot()
+  // is what has to repaint the headings.
+  ck('group headings carry a key the badge painter can find',
+     /class="brgroup"\$\{cfg\.groupBadge\?` data-brg=/.test(js));
+  ck('the badges repaint from foot(), which is what makes the count live',
+     /function foot\(\)\{[\s\S]{0,400}?paintGroupBadges\(\);\}/.test(js));
+  ck('changing the origin repaints too — it decides whether picks count',
+     /brOrigin"\)paintGroupBadges\(\)/.test(js));
+  ck('the badge shares the Spells tab pill rather than inventing a second look',
+     /\.spell-count,\.brgcount\{/.test(css('40-spells-coins.css')));
+  ck('the group heading is flex, so the pill can sit right',
+     /\.brgroup\{[^}]*display:flex/.test(cardsCss));
+  // one tally, so the browser cannot promise a number the sheet disagrees with.
+  // Sliced to renderSpells' own body: an unbounded [\s\S]*? runs straight past
+  // it and finds browseSpells' call instead, which makes the guard vacuous.
+  const renderSpellsBody = (js.match(/function renderSpells\(\)\{[\s\S]*?\n\}/) || [''])[0];
+  ck('the Spells tab reads its counts from the shared tally',
+     /spellLevelTally\(lv\)/.test(renderSpellsBody) &&
+     !/items\.filter\(s=>!s\.granted\)/.test(renderSpellsBody), renderSpellsBody.slice(0, 400));
+  ck('...and the browser reads the same one',
+     /groupBadge:\(key,chosen\)=>\{[\s\S]{0,200}spellLevelTally\(lv\)/.test(js));
 }
 
 // ---------- Settings modal: every control is still wired

@@ -186,7 +186,8 @@ html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
 .fpill.clear{border-style:dashed}
 .browse-count{font-family:var(--head);font-size:11px;color:var(--ink-soft);padding:4px 2px;text-transform:uppercase;letter-spacing:.04em}
 .browse-list{flex:1;overflow:auto;border-top:1px solid var(--hair);-webkit-overflow-scrolling:touch}
-.brgroup{position:sticky;top:0;background:var(--paper);font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:11px;color:var(--accent);padding:9px 2px 4px;border-bottom:1px solid var(--hair)}
+/* flex so the count pill's margin-left:auto can push it to the right edge */
+.brgroup{position:sticky;top:0;background:var(--paper);display:flex;align-items:center;gap:8px;font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:11px;color:var(--accent);padding:9px 2px 4px;border-bottom:1px solid var(--hair)}
 .brow{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px dotted var(--hair);cursor:pointer}
 .brow.sel{background:color-mix(in srgb,var(--accent) 15%,transparent)}
 .brk{width:16px;text-align:center;flex:none;color:var(--accent);font-weight:900}
@@ -196,8 +197,21 @@ html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
 .brinfo{background:transparent;border:0;color:var(--ink-soft);cursor:pointer;padding:4px;flex:none;display:inline-flex;align-items:center}
 .brinfo svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
 .brinfo:hover{color:var(--accent-2)}
-.browse-foot{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--hair)}
-.browse-foot .tbtn{flex:1}
+/* The Add button used to be laid out PAST the right edge of the screen, with no
+   way to reach it: .browse is position:fixed with no scroll container, so the
+   overflow simply left the viewport. Cause was the origin <select> — it carried
+   flex:0 0 auto, and flex-basis:auto resolves from `width`, which the global
+   input,select,textarea rule sets to 100%. So it claimed the entire footer and,
+   being flex-shrink:0, never gave any back.
+   width:auto on the select is the fix; flex-wrap is the safety net, so a control
+   that cannot fit drops to the next line instead of off the edge. Scoped to the
+   footer, not to spells, because the item browser has the same footer plus a
+   cost input and was worse. */
+.browse-foot{display:flex;flex-wrap:wrap;gap:10px;padding:10px 0;border-top:1px solid var(--hair)}
+.browse-foot .tbtn{flex:1 1 120px}
+.br-origin{flex:1 1 130px;min-width:0;width:auto}
+.br-origdet{flex:1 1 90px;min-width:70px}
+.br-cost{flex:0 1 84px;min-width:64px}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 
 /* portrait */
