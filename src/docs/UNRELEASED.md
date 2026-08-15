@@ -66,6 +66,14 @@ Bullets below this line — leave the heading in place.
   Constitution afterwards — which is the order most people build in — the filled-in maximum follows
   it, and your current HP comes with it while you are still at full. A number you typed into the Max
   box yourself is never touched, and from level 2 on nothing is filled in for you.
+- **Fixed: "choose 2 skills" let you choose as many as you liked.** The pickers that appear when you
+  add an ancestry, background or class now stop you once you have made the number of picks you are
+  allowed, and grey out the rest until you change your mind — untick one and they open back up. A
+  skill you already have from somewhere else is shown ticked, says where it came from, cannot be
+  unticked, and does not use up one of your picks. If some of the options are already yours, the
+  picker asks only for the ones you can still make. Trying to move on with picks left over now asks
+  first, and so does closing the picker with Escape or the × — which used to throw the lot away
+  without a word.
 - **Familiars and companions moved to the sidebar**, under your portrait, ancestry and class, instead
   of sitting at the very bottom of the sheet behind everything else — you reach for a familiar in the
   middle of a fight. On a phone they stay below the main run of cards, so your hit points and skills

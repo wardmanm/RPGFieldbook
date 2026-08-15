@@ -198,6 +198,12 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .cr-chip .cr-n{font-family:var(--head);font-weight:700;flex:1;letter-spacing:.02em;font-size:15px;min-width:0;overflow-wrap:anywhere;word-break:break-word}
 .opt{display:flex;align-items:center;gap:9px;margin:5px 0;font-size:15px;cursor:pointer}
 .opt input{width:auto;min-height:auto;margin:0}
+/* A locked option — either already granted elsewhere, or shut off because the
+   block is full — was distinguishable only by the browser's own grey checkbox,
+   with the label still at full ink. Dim the whole row so "you cannot pick this"
+   reads at a glance. :has() is unsupported on older devices, where this simply
+   does not apply and the box is still visibly disabled; nothing depends on it. */
+.opt:has(input:disabled){opacity:.55;cursor:default}
 .link{color:var(--accent-2);font-weight:600;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
 .link:hover{background:color-mix(in srgb,var(--accent-2) 16%,transparent);border-radius:3px}
 .atk-hit{font-family:var(--display);font-weight:900;font-size:16px;letter-spacing:.02em;cursor:pointer;padding:2px 4px;border-radius:5px}

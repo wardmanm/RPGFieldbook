@@ -1,10 +1,31 @@
 /* ================= modal ================= */
 const modal=document.getElementById("modal");
-function openModal(title,html){document.getElementById("mTitle").textContent=title;document.getElementById("mBody").innerHTML=html;modal.classList.add("open");}
-function closeModal(){modal.classList.remove("open");document.getElementById("mBody").innerHTML="";}
-document.getElementById("mClose").addEventListener("click",closeModal);
-modal.addEventListener("click",e=>{if(e.target===modal)closeModal()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&modal.classList.contains("open"))closeModal()});
+/* Closing wipes #mBody, and a "choose 2 skills" prompt cannot be reopened — the
+   only recovery is removing and re-adding the class. So a stray Escape silently
+   costs the player a level's grants. A modal that stands to lose something
+   registers a guard; everything else opens without one, because for an ordinary
+   form Escape IS cancel and must stay instant.
+   The check cannot live inside closeModal(): every Done handler calls that too,
+   and would then have to answer its own prompt. Only the three user-initiated
+   dismissals below go through dismissModal(). */
+let _dismissGuard=null;
+function setDismissGuard(fn){_dismissGuard=fn;}
+function openModal(title,html){_dismissGuard=null;document.getElementById("mTitle").textContent=title;document.getElementById("mBody").innerHTML=html;modal.classList.add("open");}
+function closeModal(){_dismissGuard=null;modal.classList.remove("open");document.getElementById("mBody").innerHTML="";}
+function dismissModal(){
+  if(_dismissGuard){const msg=_dismissGuard();if(msg&&!confirm(msg))return;}
+  closeModal();
+}
+document.getElementById("mClose").addEventListener("click",dismissModal);
+modal.addEventListener("click",e=>{if(e.target===modal)dismissModal()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&modal.classList.contains("open"))dismissModal()});
+/* Locking a full choice block is a render concern, so it rides the modal rather
+   than the global change handler in 90-boot.js — which the test harness drops. */
+modal.addEventListener("change",e=>{
+  const t=e.target;if(!t||!t.closest)return;
+  const div=t.closest(".choice[data-choose]");
+  if(div)syncChoiceLimits(div);
+});
 
 function openGlossView(g){
   let body= g.type==="image"? (g.image?`<img src="${g.image}" alt="${esc(g.term)}">`:`<p><em>No image attached.</em></p>`) : `<p>${esc(g.text||"—")}</p>`;

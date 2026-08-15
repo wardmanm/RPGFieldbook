@@ -12,6 +12,7 @@ const {X, bootError, fragments} = loadApp([
   'sizeName', 'sizeLabel', 'charSize', 'carryCapacity', 'encMode', 'encState',
   'encSpeed', 'encTierNote', 'contributions', 'inventoryTotal', 'SIZES', 'SIZE_CARRY',
   'capacityFor', 'sizeOptionsHTML', 'invSection',
+  'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -542,5 +543,118 @@ ck('an old save defaults to counting coin weight', legacy.coinWeight === true);
 ck('an old save has no explicit size, so it derives one', legacy.size === '');
 X.character = legacy;
 ck('and therefore takes no speed penalty', X.encState(X.contributions()).tier === 'none');
+
+/* ================= "choose N" pickers =================
+   `choose` used to reach the label prose and nowhere else, so a Rogue offering
+   "choose 4 of 10" would grant all ten and ticking none was equally accepted.
+   choiceFieldHTML is a pure string builder — it reads character state but no
+   DOM — so the markup that carries the count is directly assertable here. The
+   live locking and the confirms are DOM, and are guarded in rules-data.js. */
+
+// ---------- effectiveChoose: granted options don't eat the budget...
+ck('a plain choice asks for its full count', X.effectiveChoose(2, 10, 0) === 2);
+ck('one already granted still leaves two NEW picks', X.effectiveChoose(2, 10, 1) === 2);
+ck('a missing count means one', X.effectiveChoose(undefined, 5, 0) === 1 && X.effectiveChoose(0, 5, 0) === 1);
+// ...but it can never ask for more than remain
+ck('choose 2 of 3 with two granted asks for the one that is left', X.effectiveChoose(2, 3, 2) === 1);
+ck('everything granted asks for nothing', X.effectiveChoose(4, 4, 4) === 0);
+ck('it never goes negative', X.effectiveChoose(4, 2, 3) === 0);
+
+// ---------- choiceShortfall: the sentence, or "" when there is nothing owed
+ck('a satisfied block says nothing', X.choiceShortfall([{label: 'Skills', picked: 2, target: 2}]) === '');
+ck('an over-picked block says nothing either',
+   X.choiceShortfall([{label: 'Skills', picked: 3, target: 2}]) === '');
+ck('no blocks at all says nothing',
+   X.choiceShortfall([]) === '' && X.choiceShortfall(null) === '' && X.choiceShortfall(undefined) === '');
+ck('a zero target is satisfied by zero picks — the exhausted-pool case',
+   X.choiceShortfall([{label: 'Skills', picked: 0, target: 0}]) === '');
+{
+  const w = X.choiceShortfall([{label: 'Choose 4 skill(s)', picked: 2, target: 4}]);
+  ck('a short block names itself and both numbers',
+     w.indexOf('Choose 4 skill(s)') > -1 && w.indexOf('2 of 4') > -1, w);
+  ck('...and asks rather than tells', /Continue anyway\?/.test(w), w);
+}
+{
+  // several blocks in one modal: only the unfinished ones are named
+  const w = X.choiceShortfall([
+    {label: 'Skills', picked: 2, target: 2},
+    {label: 'Expertise', picked: 0, target: 2},
+  ]);
+  ck('a finished block is not listed beside an unfinished one',
+     w.indexOf('Expertise') > -1 && w.indexOf('Skills') === -1, w);
+}
+
+// ---------- choiceFieldHTML carries the count into the markup
+const fld = (ch) => X.choiceFieldHTML(ch, 0, null);
+const attr = (html, re) => { const m = re.exec(html); return m ? m[1] : null; };
+X.character = X.blankChar();
+
+{
+  const h = fld({type: 'skill', choose: 2, from: ['Acrobatics', 'Athletics', 'Stealth']});
+  ck('a skill block emits its target as data-choose', attr(h, /data-choose="(\d+)"/) === '2', h);
+  ck('...and a live counter to explain the locking', /data-chcount>0 of 2 chosen/.test(h), h);
+  ck('nothing is pre-checked on a blank character', h.indexOf('checked') === -1, h);
+  ck('no option is marked fixed either', h.indexOf('data-fixed') === -1, h);
+  ck('every option is a checkbox with its skill key',
+     (h.match(/type="checkbox" data-skill-opt="[a-z]+"/g) || []).length === 3, h);
+}
+
+// a proficiency granted elsewhere: locked, labelled with its source, and NOT
+// counted against the budget — this is the case the fix exists for
+X.character = X.blankChar();
+X.grantProf('race:Elf', 'skill', 'perception', 1);
+{
+  const h = fld({type: 'skill', choose: 2, from: ['Perception', 'Stealth', 'Athletics']});
+  ck('a granted option is checked, disabled and fixed',
+     /data-skill-opt="perception" checked disabled data-fixed/.test(h), h);
+  ck('...and names where it came from', h.indexOf('from Elf (ancestry)') > -1, h);
+  ck('the other options stay open', (h.match(/data-skill-opt="(?!perception)[a-z]+"(?! checked)/g) || []).length === 2, h);
+  ck('a granted option does NOT spend one of the picks', attr(h, /data-choose="(\d+)"/) === '2', h);
+  ck('the heading says how many are already yours', h.indexOf('1 already yours') > -1, h);
+}
+
+// exhausted pool: two of three granted, so only one is pickable
+X.character = X.blankChar();
+X.grantProf('race:Elf', 'skill', 'perception', 1);
+X.grantProf('bg:Sage', 'skill', 'athletics', 1);
+{
+  const h = fld({type: 'skill', choose: 2, from: ['Perception', 'Athletics', 'Stealth']});
+  ck('the target drops to what is actually pickable', attr(h, /data-choose="(\d+)"/) === '1', h);
+  ck('...and the heading asks for that many', h.indexOf('Choose 1 skill(s)') > -1, h);
+}
+
+// a skill the player toggled by hand counts as theirs too — effSkill takes the
+// max of the manual dot and the grants
+X.character = X.blankChar();
+X.character.skills.stealth = 1;
+{
+  const h = fld({type: 'skill', choose: 1, from: ['Stealth', 'Athletics']});
+  ck('a hand-set proficiency is locked as well',
+     /data-skill-opt="stealth" checked disabled data-fixed/.test(h), h);
+  ck('...and says so without inventing a source', h.indexOf('(already proficient)') > -1, h);
+}
+
+// ---------- the option type
+X.character = X.blankChar();
+{
+  const one = fld({type: 'option', label: 'Fighting Style', choose: 1,
+                   from: [{name: 'Archery'}, {name: 'Defense'}]});
+  ck('choose:1 options stay radios — structurally capped', /type="radio"/.test(one), one);
+  ck('...so they need no data-choose', one.indexOf('data-choose') === -1, one);
+  const two = fld({type: 'option', label: 'Two Styles', choose: 2,
+                   from: [{name: 'Archery'}, {name: 'Defense'}, {name: 'Duelling'}]});
+  ck('choose:2 options are checkboxes', /type="checkbox"/.test(two), two);
+  ck('...and DO carry the cap', attr(two, /data-choose="(\d+)"/) === '2', two);
+  ck('...with a counter of their own', /data-chcount>0 of 2 chosen/.test(two), two);
+}
+
+// ---------- types with no count are left alone
+{
+  const sub = fld({type: 'subclass', from: ['Thief', 'Assassin']});
+  ck('a subclass block is unchanged and uncapped',
+     sub.indexOf('data-choose') === -1 && /type="radio"/.test(sub), sub);
+  const asi = fld({type: 'asi'});
+  ck('an ASI block is unchanged', asi.indexOf('data-choose') === -1, asi);
+}
 
 ck.done();

@@ -1009,6 +1009,39 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // always made this check; the two now agree.
   ck('the section menu skips cards that are not showing',
      /function buildToc\(\)\{[\s\S]*?offsetParent===null\)return;/.test(js));
+
+  // ---------- "choose N" pickers actually enforce N
+  // choiceFieldHTML is pure and covered properly in sheet.js. What lives here is
+  // the DOM wiring the harness cannot reach: it fails SILENTLY — the boxes just
+  // never lock and Done never asks.
+  ck('the modal locks a full choice block on change',
+     /modal\.addEventListener\("change"[\s\S]{0,200}syncChoiceLimits\(div\)/.test(js));
+  ck('the lock keys on data-fixed, so a granted option is never handed back',
+     /function syncChoiceLimits\([\s\S]*?:not\(\[data-fixed\]\)/.test(js));
+  ck('...and only unchecked options are disabled, so your own picks stay undoable',
+     /function syncChoiceLimits\([\s\S]*?disabled=\(picked>=target&&!cb\.checked\)/.test(js));
+  // both Done buttons, not just the class one: the race/background modal never
+  // populates _activeChoices, so data-choose on the wrapper is its only target
+  ck('the class chooser warns before committing too few',
+     /chDone[\s\S]{0,240}choiceShortfall\(choiceBlocks\(\)\)[\s\S]{0,120}confirm\(warn\)\)return;/.test(js));
+  ck('the race/background chooser warns as well',
+     /xchDone[\s\S]{0,260}choiceShortfall\(choiceBlocks\(\)\)[\s\S]{0,120}confirm\(warn\)\)return;/.test(js));
+  ck('choiceBlocks reads the target from the DOM, not from _activeChoices',
+     /function choiceBlocks\(\)\{[\s\S]*?\.choice\[data-choose\]/.test(js));
+
+  // Escape/×/backdrop used to discard every pick silently, with no way to reopen
+  // a chooser — which would make dismissing the easiest way past the new warning.
+  ck('the three dismissals go through dismissModal, not closeModal',
+     /getElementById\("mClose"\)\.addEventListener\("click",dismissModal\)/.test(js) &&
+     /if\(e\.target===modal\)dismissModal\(\)/.test(js) &&
+     /Escape"&&modal\.classList\.contains\("open"\)\)dismissModal\(\)/.test(js));
+  ck('...and dismissModal asks the guard before closing',
+     /function dismissModal\(\)\{[\s\S]{0,160}_dismissGuard\(\)[\s\S]{0,80}confirm\(msg\)\)return;/.test(js));
+  // the guard must not leak between modals: an ordinary form's Escape is cancel
+  ck('opening any modal clears the guard', /function openModal\([^)]*\)\{_dismissGuard=null;/.test(js));
+  ck('closing clears it too', /function closeModal\(\)\{_dismissGuard=null;/.test(js));
+  ck('both choosers arm the guard after opening',
+     (js.match(/armChoiceDismissGuard\(\);/g) || []).length === 2);
 }
 
 // ---------- Settings modal: every control is still wired

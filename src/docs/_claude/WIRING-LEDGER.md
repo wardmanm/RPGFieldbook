@@ -34,6 +34,10 @@ Last updated after the app-fix pass (feat uses/cost forwarding, uses.max formula
 Verify on-add prompts appear and grants show in the stat breakdown + revert on removing the
 race/background/feat. Syntax (node --check) and the `usesMax` logic are tested; the modal UX is not.
 
+**Superseded in part** — see "choose N pickers actually enforce N" near the end of this file. The
+choosers have since had a real interactive run, `choiceFieldHTML`'s markup is asserted in `sheet.js`,
+and the wiring is regex-guarded in `rules-data.js`. Grant revert on removal is still browser-only.
+
 
 ## Done — equipment grants (this pass)
 
@@ -2209,6 +2213,53 @@ This fixes `#activeSpellCard` for free.
 a condition kept true by hand. The comment written for this very move broke it within minutes
 (it quoted the markup it was describing). Comments are stripped once, up front; the invariant is now
 enforced rather than remembered.
+
+---
+
+## Done — "choose N" pickers actually enforce N
+
+A Rogue's "choose 4 of 10" would grant all ten, and ticking none was equally accepted. There was **no
+count validation anywhere in the app** — `Done` always closed and always committed whatever was
+ticked.
+
+**The root cause was smaller than the symptom: `choose` never reached the DOM.** `choiceFieldHTML`
+rendered it into the label prose and dropped it, so by the time `gatherChoices()` read the boxes back
+there was nothing to check against. The fix is mostly *carrying the number through* — it is now
+`data-choose` on the `.choice` wrapper. That also happens to be the only place the target exists for
+the race/background modal, which never populates `_activeChoices`; `choiceBlocks()` reads the DOM for
+exactly that reason.
+
+**`data-fixed`, not `checked`, drives the re-enable.** Both a granted option and one shut off by the
+block being full are `disabled`; only the attribute separates them. Keying the unlock on `checked`
+would hand a granted proficiency back as an editable box the first time someone unticked one of their
+own picks. Only *unchecked* options are ever disabled, which is what keeps your own picks undoable.
+
+**Granted options do not spend the budget, but they do cap it.** "Choose 2" with one already granted
+still means two new picks. `effectiveChoose()` only lowers the target when there are not enough
+options left to reach it — choose 2 of 3 with two granted asks for the one that remains, because
+nagging forever for a second the player cannot make is worse than asking for what is possible.
+
+**The dismiss guard could not live inside `closeModal()`.** Every Done handler calls that too, and
+would have to answer its own prompt. `dismissModal()` sits in front of the three user-initiated
+dismissals only; `openModal` clears the guard so an ordinary form's Escape stays instant cancel, and
+a chained modal opening over the top resets cleanly. Without this, Escape — which discards every pick
+with no way to reopen the chooser — would have been the easiest way past the new warning.
+
+**Two pure helpers carry the logic** (`effectiveChoose`, `choiceShortfall`) because the harness stubs
+`querySelectorAll` to `[]`. The bigger win: **`choiceFieldHTML` is itself pure** — it reads character
+state but no DOM — so the emitted markup is asserted directly in `sheet.js` with no new
+infrastructure. The live locking and the confirms are regex-guarded in `rules-data.js`, all six
+mutation-tested.
+
+The `option` type's checkbox branch got the same treatment. Every shipped `option` is `choose:1` and
+renders as radios, so it is dead code today — but it was the identical uncapped bug waiting for the
+first `choose:2`.
+
+**Verified interactively** (the choosers had never had a browser run — the ledger used to say so):
+locking at 4 of 10 and unlocking on untick, the under-picked confirm keeping picks on Cancel, a
+pre-granted Perception that cannot be unticked and is not re-granted under the class sid, the
+exhausted-pool heading asking for 1, Escape warning then discarding, an ordinary modal still closing
+instantly, and the race path behaving identically.
 
 ---
 

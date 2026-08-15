@@ -116,8 +116,15 @@ function runExtraChoices(pending){
   });
   body+=`<div class="m-actions"><button class="tbtn primary" id="xchDone">Done</button></div>`;
   openModal("Choose",body);
+  /* Same guard as the class chooser — after openModal, which clears it. This
+     modal never populates _activeChoices, so data-choose on the wrapper is the
+     only place the target exists here; choiceBlocks() reads it from the DOM,
+     which is exactly why it was put there. */
+  armChoiceDismissGuard();
   const b=document.getElementById("xchDone");
   if(b)b.addEventListener("click",()=>{
+    const warn=choiceShortfall(choiceBlocks());
+    if(warn&&!confirm(warn))return;
     gatherChoices().forEach(s=>{if(s.type==="skill")s.keys.forEach(k=>grantProf(s.sid,"skill",k,1));});
     document.querySelectorAll('[data-ctype="equip"]').forEach(div=>{
       const ei=num(div.dataset.eqi),sel=div.querySelector('[data-eq-opt]:checked'),x=equips[ei];
