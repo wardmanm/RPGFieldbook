@@ -2263,6 +2263,42 @@ instantly, and the race path behaving identically.
 
 ---
 
+## Done — the spell "prepared" box: centring, and saying what it is
+
+Two things at once: the ✓ sat low and right inside its box, and nothing anywhere said what the box
+meant.
+
+**The centring had four causes, all from it being a `<button>`.** Measured in the browser rather than
+guessed: computed `padding: 1px 6px` (UA default), `line-height: normal`, `font-family: Arial` — a
+button inherits neither padding nor font — and `font-weight: 900`. With `box-sizing:border-box` on an
+18px square, that padding leaves a **2px-wide content box**, and `place-items:center` dutifully
+centred the glyph on *that* rather than on the button. Arial then supplied a ✓ with different metrics
+from anything else on the sheet, and 900 has no real face in the sheet's fonts so it was
+synthetically emboldened — which widens to the right, re-adding the offset.
+
+Fixed with `padding:0` + `background:transparent` (what `.hd-b`, `.dot` and `.slot .b` all already
+set), `line-height:1` (the house fix, as on `.death .dskull`), an explicit `font-family`, and weight
+700. Verified by screenshotting the rows at 4× zoom before and after — a computed-style check alone
+would not have shown the glyph's ink position.
+
+**`.equip .box` had the same defect** and is the same tick, used for Equipped, Concentration and the
+spell modal's own Prepared control. Fixing one and not the other would have left the row pin and the
+modal box visibly different. It is a `<span>` so it does inherit the font, but it still had no
+`line-height`.
+
+**What the box means: `prepared`, and it is a marker only.** `castSpell()` never consults it,
+`pickSlotLevel` never consults it, and the `x/y` pill in each level header is `added/allotment` —
+nothing to do with it. It had `aria-label="Prepared"` and no visible text, no `title`, no
+`aria-pressed`, so on a phone there was no way to find out. Now: a `Prep` caption at the head of each
+level group (the idiom the hit-dice and feature-use pip rows already use, whose CSS comment says the
+words are what "stop filled being ambiguous"), plus `aria-pressed` and a title that says what a tap
+will do.
+
+Not changed: the print sheet still emits `◆`/`○` for prepared with no key — same gap as before, and
+the same one the skills/saves rows have.
+
+---
+
 ## Known minor limitations (not blocking)
 
 - **Class-level feat skill-choices** grant to sid `class:<Name>`, so they revert when the class is

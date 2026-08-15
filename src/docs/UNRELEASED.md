@@ -66,6 +66,13 @@ Bullets below this line — leave the heading in place.
   Constitution afterwards — which is the order most people build in — the filled-in maximum follows
   it, and your current HP comes with it while you are still at full. A number you typed into the Max
   box yourself is never touched, and from level 2 on nothing is filled in for you.
+- **The tick in the spell boxes now sits in the middle of the box**, and an empty one matches the
+  page instead of showing a grey square. The same tick is used for Equipped and Concentration, and
+  those are straightened out too.
+- **Each spell level now says what that box is for.** A small "Prep" caption sits above the column,
+  because the box had no label at all — it marks a spell as prepared. It is a note to yourself:
+  casting does not check it, and the count beside each level is how many spells you have added, not
+  how many are prepared.
 - **Fixed: "choose 2 skills" let you choose as many as you liked.** The pickers that appear when you
   add an ancestry, background or class now stop you once you have made the number of picks you are
   allowed, and grey out the rest until you change your mind — untick one and they open back up. A

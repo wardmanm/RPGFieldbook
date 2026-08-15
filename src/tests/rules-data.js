@@ -1042,6 +1042,40 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('closing clears it too', /function closeModal\(\)\{_dismissGuard=null;/.test(js));
   ck('both choosers arm the guard after opening',
      (js.match(/armChoiceDismissGuard\(\);/g) || []).length === 2);
+
+  // ---------- the spell "prepared" box
+  // It is a <button>, so it takes UA padding (1px 6px) and inherits no font. On
+  // an 18px border-box square that padding leaves a TWO pixel content area, and
+  // place-items:center then centres the tick on that rather than on the box —
+  // which is what put the ✓ low and right. All four of these matter.
+  const spellCss = css('40-spells-coins.css');
+  const pin = (spellCss.match(/\.spell \.pin\{[^}]*\}/) || [''])[0];
+  ck('the prepared box kills the UA button padding', /padding:0/.test(pin), pin);
+  ck('...and pins the line height, so the glyph centres not the line box',
+     /line-height:1/.test(pin), pin);
+  ck('...and sets a font, because a button inherits none',
+     /font-family:var\(--[a-z-]+\)/.test(pin), pin);
+  ck('...and drops the grey UA button face', /background:transparent/.test(pin), pin);
+  // 900 has no real face in the sheet's fonts, so it was synthetically emboldened
+  // — which widens to the right and re-introduced the very offset being fixed
+  ck('the tick is not asking for a weight the font lacks',
+     /\.spell \.pin\.on::after\{[^}]*font-weight:700/.test(spellCss),
+     (spellCss.match(/\.spell \.pin\.on::after\{[^}]*\}/) || [''])[0]);
+  // the same tick is drawn by .equip .box for Equipped, Concentration and the
+  // spell modal's own Prepared control — fixing one and not the other drifts
+  ck('the other tick control got the same treatment',
+     /\.equip \.box\{[^}]*line-height:1/.test(sheetCss) &&
+     /\.equip\.on \.box::after\{[^}]*line-height:1/.test(sheetCss));
+
+  // The box had no visible meaning at all — only an aria-label, which a player
+  // on a phone never sees.
+  ck('each spell level header captions the column',
+     /class="prep-cap"[^>]*>Prep</.test(js));
+  ck('...and the caption is styled as a caption, not as heading text',
+     /\.spell-h \.prep-cap\{[^}]*color:var\(--ink-soft\)/.test(spellCss));
+  ck('the box reports its state to a screen reader, not just a name',
+     /class="pin [^"]*"[\s\S]{0,160}aria-pressed="\$\{s\.prepared\?"true":"false"\}/.test(js));
+  ck('...and says what tapping it will do', /title="\$\{s\.prepared\?"Prepared/.test(js));
 }
 
 // ---------- Settings modal: every control is still wired

@@ -162,9 +162,13 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .enc-pill{text-transform:none;letter-spacing:0}
 .equip{display:inline-flex;align-items:center;gap:6px;font-family:var(--head);font-size:10px;text-transform:uppercase;
   letter-spacing:.05em;color:var(--ink-soft);cursor:pointer;user-select:none}
-.equip .box{width:16px;height:16px;border-radius:4px;border:2px solid var(--line);display:inline-grid;place-items:center}
+/* Same tick, same centring fix as .spell .pin — this one is a <span> so it does
+   inherit the font, but it still had no line-height and so still centred the
+   line box rather than the glyph. Used for Equipped, Concentration and the spell
+   modal's own Prepared box, so it drifts from the row pin if only one is fixed. */
+.equip .box{width:16px;height:16px;border-radius:4px;border:2px solid var(--line);display:inline-grid;place-items:center;line-height:1}
 .equip.on .box{background:var(--accent-2)}
-.equip.on .box::after{content:"✓";color:#fff;font-size:11px;font-weight:900}
+.equip.on .box::after{content:"✓";color:#fff;font-size:11px;font-weight:700;line-height:1}
 .icon{width:30px;height:30px;border-radius:7px;border:2px solid var(--line);background:var(--field);cursor:pointer;
   display:grid;place-items:center;color:var(--ink-soft)}
 .icon:hover{color:var(--ink)}

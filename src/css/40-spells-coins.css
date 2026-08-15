@@ -18,9 +18,24 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .spell-count .gr{color:var(--accent-2);font-weight:700}
 .spell .gtag{font-family:var(--head);font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:1px 7px;flex:none}
 .spell{display:flex;align-items:center;gap:9px;padding:7px 2px;border-bottom:1px dotted var(--hair)}
-.spell .pin{width:18px;height:18px;border-radius:5px;border:2px solid var(--line);cursor:pointer;flex:none;display:grid;place-items:center}
+/* The prepared box. It is a <button>, which is why the tick used to sit low and
+   right of centre: a button gets UA padding (1px 6px), and with border-box on an
+   18px square that leaves a TWO pixel content area — place-items:center then
+   centred the glyph on that, not on the box. Buttons also inherit no font, so
+   the ✓ came from the UA default (Arial) rather than the sheet's, at weight 900
+   it had no real 900 face and got synthetically emboldened to the right, and the
+   unticked box showed the grey UA button face instead of the parchment.
+   padding:0 and background:transparent are what every comparable control here
+   already sets (.hd-b, .dot, .slot .b); line-height:1 is the house fix for
+   centring a text glyph (.death .dskull). */
+.spell .pin{width:18px;height:18px;border-radius:5px;border:2px solid var(--line);background:transparent;cursor:pointer;flex:none;padding:0;display:grid;place-items:center;font-family:var(--head);line-height:1}
 .spell .pin.on{background:var(--accent)}
-.spell .pin.on::after{content:"✓";font-size:11px;font-weight:900;color:#20160a}
+.spell .pin.on::after{content:"✓";font-size:11px;font-weight:700;line-height:1;color:#20160a}
+/* The column caption. The tick had no visible meaning anywhere — only an
+   aria-label — so it said nothing at all to a player on a phone. Same idiom as
+   the hit-dice and feature-use pip captions, whose CSS comment says the words
+   are what "stop filled being ambiguous". */
+.spell-h .prep-cap{font-family:var(--head);font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);flex:none}
 .spell .nm{flex:1;font-weight:600;cursor:pointer}
 .spell .meta{font-family:var(--head);font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em}
 

@@ -562,9 +562,13 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .enc-pill{text-transform:none;letter-spacing:0}
 .equip{display:inline-flex;align-items:center;gap:6px;font-family:var(--head);font-size:10px;text-transform:uppercase;
   letter-spacing:.05em;color:var(--ink-soft);cursor:pointer;user-select:none}
-.equip .box{width:16px;height:16px;border-radius:4px;border:2px solid var(--line);display:inline-grid;place-items:center}
+/* Same tick, same centring fix as .spell .pin — this one is a <span> so it does
+   inherit the font, but it still had no line-height and so still centred the
+   line box rather than the glyph. Used for Equipped, Concentration and the spell
+   modal's own Prepared box, so it drifts from the row pin if only one is fixed. */
+.equip .box{width:16px;height:16px;border-radius:4px;border:2px solid var(--line);display:inline-grid;place-items:center;line-height:1}
 .equip.on .box{background:var(--accent-2)}
-.equip.on .box::after{content:"✓";color:#fff;font-size:11px;font-weight:900}
+.equip.on .box::after{content:"✓";color:#fff;font-size:11px;font-weight:700;line-height:1}
 .icon{width:30px;height:30px;border-radius:7px;border:2px solid var(--line);background:var(--field);cursor:pointer;
   display:grid;place-items:center;color:var(--ink-soft)}
 .icon:hover{color:var(--ink)}
@@ -667,9 +671,24 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .spell-count .gr{color:var(--accent-2);font-weight:700}
 .spell .gtag{font-family:var(--head);font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:1px 7px;flex:none}
 .spell{display:flex;align-items:center;gap:9px;padding:7px 2px;border-bottom:1px dotted var(--hair)}
-.spell .pin{width:18px;height:18px;border-radius:5px;border:2px solid var(--line);cursor:pointer;flex:none;display:grid;place-items:center}
+/* The prepared box. It is a <button>, which is why the tick used to sit low and
+   right of centre: a button gets UA padding (1px 6px), and with border-box on an
+   18px square that leaves a TWO pixel content area — place-items:center then
+   centred the glyph on that, not on the box. Buttons also inherit no font, so
+   the ✓ came from the UA default (Arial) rather than the sheet's, at weight 900
+   it had no real 900 face and got synthetically emboldened to the right, and the
+   unticked box showed the grey UA button face instead of the parchment.
+   padding:0 and background:transparent are what every comparable control here
+   already sets (.hd-b, .dot, .slot .b); line-height:1 is the house fix for
+   centring a text glyph (.death .dskull). */
+.spell .pin{width:18px;height:18px;border-radius:5px;border:2px solid var(--line);background:transparent;cursor:pointer;flex:none;padding:0;display:grid;place-items:center;font-family:var(--head);line-height:1}
 .spell .pin.on{background:var(--accent)}
-.spell .pin.on::after{content:"✓";font-size:11px;font-weight:900;color:#20160a}
+.spell .pin.on::after{content:"✓";font-size:11px;font-weight:700;line-height:1;color:#20160a}
+/* The column caption. The tick had no visible meaning anywhere — only an
+   aria-label — so it said nothing at all to a player on a phone. Same idiom as
+   the hit-dice and feature-use pip captions, whose CSS comment says the words
+   are what "stop filled being ambiguous". */
+.spell-h .prep-cap{font-family:var(--head);font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);flex:none}
 .spell .nm{flex:1;font-weight:600;cursor:pointer}
 .spell .meta{font-family:var(--head);font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em}
 
@@ -3025,11 +3044,15 @@ function renderSpells(){
     const over=allot>0&&added>allot;
     const countTxt=(allot>0?`${added}/${allot}`:`${added}`)+(granted?` <span class="gr">+${granted}</span>`:"");
     const h=document.createElement("div");h.className="spell-h";
-    h.innerHTML=`<span>${lv===0?"Cantrips":"Level "+lv}</span><span class="spell-count ${over?"over":""}" title="${allot>0?"Added / available":"Added"}${granted?" · +granted (feat/background), not counted":""}">${countTxt}</span>`;
+    /* "Prep" sits first, over the tick column, because the box itself carried no
+       visible meaning — only an aria-label, which a player on a phone never
+       sees. It is a marker you keep yourself: nothing in the app reads it, and
+       casting deliberately does not check it. */
+    h.innerHTML=`<span class="prep-cap" title="The box on each row marks a spell you have prepared">Prep</span><span>${lv===0?"Cantrips":"Level "+lv}</span><span class="spell-count ${over?"over":""}" title="${allot>0?"Added / available":"Added"}${granted?" · +granted (feat/background), not counted":""}">${countTxt}</span>`;
     el.appendChild(h);
     items.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).forEach(s=>{
       const r=document.createElement("div");r.className="spell";
-      r.innerHTML=`<button class="pin ${s.prepared?"on":""}" data-prep="${s.id}" aria-label="Prepared"></button>
+      r.innerHTML=`<button class="pin ${s.prepared?"on":""}" data-prep="${s.id}" aria-label="Prepared" aria-pressed="${s.prepared?"true":"false"}" title="${s.prepared?"Prepared — tap to unprepare":"Not prepared — tap to prepare"}"></button>
         <span class="nm" data-view-spell="${s.id}">${esc(s.name||"Spell")}</span>
         ${(s.origin||s.granted)?originBadge(spellOrigin(s),"data-orig-spell",s.id):""}
         ${s.meta?`<span class="meta">${esc(s.meta)}</span>`:""}

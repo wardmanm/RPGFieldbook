@@ -192,11 +192,15 @@ function renderSpells(){
     const over=allot>0&&added>allot;
     const countTxt=(allot>0?`${added}/${allot}`:`${added}`)+(granted?` <span class="gr">+${granted}</span>`:"");
     const h=document.createElement("div");h.className="spell-h";
-    h.innerHTML=`<span>${lv===0?"Cantrips":"Level "+lv}</span><span class="spell-count ${over?"over":""}" title="${allot>0?"Added / available":"Added"}${granted?" · +granted (feat/background), not counted":""}">${countTxt}</span>`;
+    /* "Prep" sits first, over the tick column, because the box itself carried no
+       visible meaning — only an aria-label, which a player on a phone never
+       sees. It is a marker you keep yourself: nothing in the app reads it, and
+       casting deliberately does not check it. */
+    h.innerHTML=`<span class="prep-cap" title="The box on each row marks a spell you have prepared">Prep</span><span>${lv===0?"Cantrips":"Level "+lv}</span><span class="spell-count ${over?"over":""}" title="${allot>0?"Added / available":"Added"}${granted?" · +granted (feat/background), not counted":""}">${countTxt}</span>`;
     el.appendChild(h);
     items.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).forEach(s=>{
       const r=document.createElement("div");r.className="spell";
-      r.innerHTML=`<button class="pin ${s.prepared?"on":""}" data-prep="${s.id}" aria-label="Prepared"></button>
+      r.innerHTML=`<button class="pin ${s.prepared?"on":""}" data-prep="${s.id}" aria-label="Prepared" aria-pressed="${s.prepared?"true":"false"}" title="${s.prepared?"Prepared — tap to unprepare":"Not prepared — tap to prepare"}"></button>
         <span class="nm" data-view-spell="${s.id}">${esc(s.name||"Spell")}</span>
         ${(s.origin||s.granted)?originBadge(spellOrigin(s),"data-orig-spell",s.id):""}
         ${s.meta?`<span class="meta">${esc(s.meta)}</span>`:""}
