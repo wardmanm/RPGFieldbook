@@ -154,7 +154,7 @@
           "traits": [
             {
               "name": "Sufficiently Advanced Technology",
-              "description": "Beginning at 10th level, your understanding of gadgets gives you insight into magic items. By spending 1 minute handling a magic item, you can learn its properties as if you had cast the\nidentify spell. You can use this feature a number of times equal to your Intelligence modifier (minimum of once) and regain all expended uses when you complete a long rest."
+              "description": "Beginning at 10th level, your understanding of gadgets gives you insight into magic items. By spending 1 minute handling a magic item, you can learn its properties as if you had cast the identify spell. You can use this feature a number of times equal to your Intelligence modifier (minimum of once) and regain all expended uses when you complete a long rest."
             }
           ]
         },
@@ -339,7 +339,7 @@
           "traits": [
             {
               "name": "Arcane Components",
-              "description": "When you choose this path at 3rd level, you gain access to two special components that you can add to your gadgets. Spell Emulator\nSpecial component\n**Scrap Cost:** Equal to tier When you add this component to a gadget, choose one spell from the sorcerer's spell list that does not require concentration. The spell must be of a level equal to the components tier or lower. The component allows you to cast this spell using your gadget a number of times equal to its tier and regains all expended uses when you finish a long rest. The spell uses your or Gadget attack modifier or Gadget save DC. When casting a spell in this way, you do not require components, but you must meet all the other requirements of the spell, including casting time and range.\n**Tier**\n**Scrap Cost**\n**Number of Uses** 1 1 1 2 2 2 3 3 3\n\n**Elemental Battery**\nDefense component\n**Scrap Cost:** 2 While you are wielding this gadget, you can use your bonus action to gain resistance to one of the following damage types until the end of your next turn: acid, cold, fire, force, lightning, or thunder damage. Additionally, on a hit, the next attack you make before the end of your next turn does an additional 1d4 damage of the same type. You can use this ability a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a short rest."
+              "description": "When you choose this path at 3rd level, you gain access to two special components that you can add to your gadgets. Spell Emulator Special component\n**Scrap Cost:** Equal to tier When you add this component to a gadget, choose one spell from the sorcerer's spell list that does not require concentration. The spell must be of a level equal to the components tier or lower. The component allows you to cast this spell using your gadget a number of times equal to its tier and regains all expended uses when you finish a long rest. The spell uses your or Gadget attack modifier or Gadget save DC. When casting a spell in this way, you do not require components, but you must meet all the other requirements of the spell, including casting time and range.\n**Tier**\n**Scrap Cost**\n**Number of Uses** 1 1 1 2 2 2 3 3 3\n\n**Elemental Battery**\nDefense component\n**Scrap Cost:** 2 While you are wielding this gadget, you can use your bonus action to gain resistance to one of the following damage types until the end of your next turn: acid, cold, fire, force, lightning, or thunder damage. Additionally, on a hit, the next attack you make before the end of your next turn does an additional 1d4 damage of the same type. You can use this ability a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a short rest."
             },
             {
               "name": "Elemental Expertise",
@@ -351,7 +351,7 @@
           "traits": [
             {
               "name": "Transferable Skills",
-              "description": "Starting at 6th level, you have learned to read\nspell scrolls the same way you read your arcane blueprints. You can attempt to cast a spell from any\nspell scroll regardless of which spell list it comes from. To successfully use a\nspell scroll , you must make an ability check using your Intelligence modifer to determine whether you cast it successfully. The DC equals 10 + the spell's level. On a failed check, the spell disappears from the scroll with no other effect."
+              "description": "Starting at 6th level, you have learned to read spell scrolls the same way you read your arcane blueprints. You can attempt to cast a spell from any spell scroll regardless of which spell list it comes from. To successfully use a spell scroll , you must make an ability check using your Intelligence modifer to determine whether you cast it successfully. The DC equals 10 + the spell's level. On a failed check, the spell disappears from the scroll with no other effect."
             }
           ]
         },
@@ -367,7 +367,7 @@
           "traits": [
             {
               "name": "Arcane Drain",
-              "description": "At 13th level you learn the\ndivert power* spell. You can cast this spell a number of times equal to your proficiency bonus and regain all uses after a long rest. (See July 2024's Playtest\n**Caprans, Arma Hedges, and Spells** for the details of the\ndivert\npower* spell)."
+              "description": "At 13th level you learn the divert power* spell. You can cast this spell a number of times equal to your proficiency bonus and regain all uses after a long rest. (See July 2024's Playtest\n**Caprans, Arma Hedges, and Spells** for the details of the divert power* spell)."
             }
           ]
         },

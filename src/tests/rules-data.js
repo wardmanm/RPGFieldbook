@@ -1185,6 +1185,45 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     ck('the extractor keeps head/trait/label spans distinct',
        /if style == "head":[\s\S]{0,220}\\n\\n\*\*%s\*\*/.test(py) &&
        /elif style in \("trait", "label"\):[\s\S]{0,120}\\n\*\*%s\*\*/.test(py));
+    // A tagline is POSITIONAL, never stylistic. `prereq` only means italic, and
+    // the book also italicises inline spell names — keying on the style alone
+    // produced "you had cast the\nidentify spell" and split "divert power*"
+    // across two lines. Both parsers must test position.
+    ck('a class tagline is only an italic run directly under a type name',
+       /elif style == "prereq" and prev == "head":/.test(py));
+    ck('an entity tagline is only the FIRST italic run, before any prose',
+       /if \(style == "prereq" and tagline and not desc and not cur_name\):/.test(py));
+    ck('...and prose turns the tagline flag off', /tagline = False\s*# prose has started/.test(py));
+  }
+  // The data itself: taglines broken out, and NOTHING broken mid-sentence.
+  {
+    const hwFile = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'data/humblewood/' + f), 'utf8'));
+    const allDescs = doc => {
+      const out = [];
+      (function rec(o, trail) {
+        if (Array.isArray(o)) return o.forEach(x => rec(x, trail));
+        if (!o || typeof o !== 'object') return;
+        const t = o.name ? trail.concat(o.name) : trail;
+        if (typeof o.description === 'string') out.push([t.join(' > '), o.description]);
+        Object.keys(o).forEach(k => { if (k !== 'description') rec(o[k], t); });
+      })(doc, []);
+      return out;
+    };
+    const sc = hwFile('subclasses.json'), ft = hwFile('feats.json');
+    const road = allDescs(sc).find(([n]) => /College of the Road/.test(n));
+    ck('a subclass tagline sits on its own line',
+       !!road && /^Learn from People You Meet on Your Travels\n/.test(road[1]), road && road[1].slice(0, 60));
+    const feat = allDescs(ft).find(([n]) => /Bandit Cunning/.test(n));
+    ck('a feat type line does too',
+       !!feat && /^Origin Feat\n/.test(feat[1]), feat && feat[1].slice(0, 40));
+    // the regression this exists to prevent, asserted across every Humblewood file
+    const walls = [];
+    ['classes.json', 'races.json', 'feats.json', 'backgrounds.json', 'subclasses.json'].forEach(f => {
+      allDescs(hwFile(f)).forEach(([n, d]) => {
+        if (/[a-z,]\s*\n[a-z]/.test(d)) walls.push(f + ' :: ' + n);
+      });
+    });
+    ck('no description is broken mid-sentence', walls.length === 0, walls.slice(0, 4));
   }
   // bold is rendered by descHTML, not highlight — and only where it is needed
   ck('descHTML is bold-only, so lone footnote asterisks stay literal',

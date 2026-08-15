@@ -444,6 +444,7 @@ def parse_entity(stream, i, stop_styles=("head", "title"), stop_texts=()):
     desc, traits = [], []
     cur_name, cur_body = None, []
     skipping = False
+    tagline = True                    # until the first non-italic span proves otherwise
     j = i
     while j < len(stream):
         _p, _s, _y, text, style = stream[j]
@@ -460,6 +461,22 @@ def parse_entity(stream, i, stop_styles=("head", "title"), stop_texts=()):
         elif style == "footer":
             pass
         elif style in ("body", "label", "prereq", "bullet"):
+            # A subclass opens with a one-line tagline set in italics — "Learn
+            # from People You Meet on Your Travels" — which ran straight into the
+            # prose behind it. Break after it so it reads as the heading it is.
+            #
+            # POSITIONAL, not stylistic, and that distinction is load-bearing:
+            # `prereq` is only "italic", and in the core book italics also mark
+            # inline SPELL NAMES. Keying on the style alone puts a line break
+            # mid-sentence ("you can cast\ncharm person as a 1st level spell").
+            # Only the first italic run, before any prose or trait, is a tagline.
+            if (style == "prereq" and tagline and not desc and not cur_name):
+                desc.append(text.strip() + "\n")
+                tagline = False
+                j += 1
+                continue
+            if style != "bullet":
+                tagline = False       # prose has started; later italics are inline
             if skipping:
                 pass
             elif cur_name:
@@ -1378,6 +1395,7 @@ def pt_all_subs(st):
     needs to supply the words — matched by name.
     """
     out, name, buf = {}, None, []
+    prev = None                       # the style before this one, for the tagline test
     def close():
         if name and name not in out:
             out[name] = flush(buf)
@@ -1386,9 +1404,11 @@ def pt_all_subs(st):
         if style == "sub":
             close()
             name, buf = t, []
+            prev = style
             continue
         if style in ("title",) or is_table_start(style, t):
             close(); name, buf = None, []
+            prev = style
             continue
         # Headings INSIDE a section are part of it — "Frames" runs through
         # Autonomous / Handheld / Wearable Frame, and dropping those three words
@@ -1409,10 +1429,15 @@ def pt_all_subs(st):
                 buf.append("\n\n**%s**" % text.strip())
             elif style in ("trait", "label"):
                 buf.append("\n**%s**" % text.strip())        # run-in: prose continues beside it
-            elif style == "prereq":
-                buf.append("\n" + text)                      # the italic tagline under a type
+            elif style == "prereq" and prev == "head":
+                # ONLY directly under a type name is an italic run a tagline.
+                # `prereq` just means italic, and the book also italicises inline
+                # SPELL NAMES — breaking on style alone gave "you had cast the\n
+                # identify spell" and split "divert power*" across two lines.
+                buf.append("\n" + text)
             else:
                 buf.append(text)
+            prev = style
     close()
     return out
 

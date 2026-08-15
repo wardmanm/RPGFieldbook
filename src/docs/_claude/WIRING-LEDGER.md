@@ -2456,6 +2456,32 @@ panes. Items, spells and familiars keep `highlight()`; no shipped pack uses `**`
 private-use bytes in the source, which is exactly the invisible-byte hazard `.editorconfig` and the
 byte-exact build exist to guard against. There is a test asserting the escape form.
 
+### Extending it — and the trap that nearly came with it
+
+Asked whether the Gadgeteer fix should apply to every Humblewood extract, the answer turned out to be
+**mostly no, with one real exception**. Worth recording because the intuition is reasonable and the
+evidence is not obvious:
+
+**`parse_entity` does not have the problem.** It treats a `trait` span as STRUCTURE — each run-in
+heading becomes its own named trait with its own body — and `head`/`title` end the entity. That is
+exactly why races, feats, backgrounds and core subclasses already read well, and why only the
+Gadgeteer was broken: `pt_all_subs` deliberately keeps a whole section as one blob.
+
+**A blanket `prereq` rule is actively harmful.** `prereq` only means *italic*, and the core book also
+italicises **inline spell names**. Prototyped across all files, it produced `"you can cast\ncharm
+person as a 1st level spell"` in three races. The prototype was reverted.
+
+**And the same trap was already live in what had just shipped.** The `prereq` rule in `pt_all_subs`
+was breaking Gadgeteer path features mid-sentence — `"as if you had cast the\nidentify spell"`, and
+`"divert power*"` split across two lines. Caught only by scanning the data for `[a-z,]\n[a-z]`, not
+by any test that existed. **That scan is now a test**, across every Humblewood file.
+
+**The rule is POSITIONAL in both parsers, never stylistic.** In `pt_all_subs`, an italic run is a
+tagline only when it directly follows a `head`. In `parse_entity`, only the first italic run, before
+any prose or trait. That correctly picks up the genuine shared case — subclass taglines ("Learn from
+People You Meet on Your Travels") and feat type lines ("Origin Feat (Prerequisite: Glide trait)"),
+11 entries — while leaving inline spell names alone.
+
 **`humblewood-verbatim` still passes 129/133** — it never reads `classes.json`, and its `norm()`
 strips `*` and collapses whitespace regardless. Note it is SKIPPED by `./src/tests/run.sh` because
 that uses system python; run it with `.venv/bin/python src/tests/humblewood-verbatim.py` after any

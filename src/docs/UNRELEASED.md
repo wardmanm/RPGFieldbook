@@ -70,6 +70,10 @@ Bullets below this line — leave the heading in place.
   single wall of text; each frame and component now starts on its own line with its name in bold, and
   the run-in headings like Scrap Cost and Remote Control stand out from the prose around them. Not a
   word of it has changed — only the layout.
+- **Subclass and feat headings no longer run into the text under them.** A subclass's one-line
+  summary, and the line that tells you a feat is an Origin Feat and what it needs, both used to be
+  glued to the front of the description. They now sit on their own line, in Humblewood's subclasses
+  and feats alike.
 - **The spell search now shows how many spells you have at each level.** Each heading carries a count
   against what you have available — cantrips known, or spell slots for the higher levels — and it
   counts up as you tick spells, turning red if you go past it. It does not stop you: some characters
