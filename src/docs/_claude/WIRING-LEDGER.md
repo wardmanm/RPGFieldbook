@@ -2631,3 +2631,38 @@ still blocks removal, which is the behaviour worth keeping.
 Verified end to end in a throwaway worktree: full suite passes inside it (1213 checks), the hooks are
 inherited (`core.hooksPath` is shared config and a relative path resolves per working tree), and a
 build there produced its own `dist/fieldbook.html` without touching main's.
+
+## Additional damage types on attacks (#30, 2026-08-17)
+
+An attack may now carry `extraDamage`: an optional array of `{dice,type}` on the attack record. A
+sword that deals 1d8 slashing *and* 1d6 poison is one attack row, not two. The field is **omitted
+when empty**, so an attack saved before this exists is byte-identical to one saved after with no
+extras — nothing to migrate, and `migrate` already passes `character.attacks` through untouched.
+
+Three formatting helpers in `60-attacks.js`, all pure and all unit-tested in `src/tests/sheet.js`
+(320 checks there now): `extraDamageList(a)` normalises and drops empty rows, `damagePartStr()`
+builds one `dice bonus type` fragment, `attackDamageStr(a,bonus)` joins the main part and the extras
+with `" + "`. **The bonus goes on the main part only** — an extra die is its own roll and takes no
+ability modifier, no manual extra, no `damage` effect. That is the rule the tests pin hardest,
+because getting it wrong is invisible in the JSON and wrong at the table.
+
+One helper, three call sites, on purpose: `renderAttacks()`, `openAttackBreakdown()` and the print
+sheet in `71-char-io.js` each had their own copy of the same inline expression, and the print one had
+already drifted. The breakdown modal also spells out that extras roll separately, since its whole job
+is explaining where the numbers come from.
+
+Form UI is a repeatable row list (`#aXDmg` + `attackXDmgRowHTML()` + a delegated click for the
+remove button), read back by `readAttackXDmg()`. Class-based hooks, not `data-*`, so nothing collides
+with the app's global delegated handlers.
+
+**Not done, deliberately.** Spell-sourced attacks cannot get extras: `syncSpellAttack` rebuilds them
+from the spell's own fields, and the spell form lives in `80-modal-forms.js`, owned by another issue
+in this batch. `syncSpellAttack` is untouched and simply produces no `extraDamage`, which the
+formatter handles as "none".
+
+**Pre-existing bug found while reading, NOT fixed here** (out of scope, and it wants its own issue):
+`openAttackForm()` builds a fresh `rec` and drops `itemId`/`spellId`/`source`/`save`. So editing a
+weapon attack silently unlinks it from its inventory item — and `updResyncAttack()` in
+`72-char-update.js` then finds nothing by `itemId` on the next pack update and calls
+`addAttackForItem()`, producing a DUPLICATE attack row. Fixing it means deciding whether a resync may
+overwrite a player-edited attack, which is a real design call, not a one-liner.

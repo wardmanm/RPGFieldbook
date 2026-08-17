@@ -11,6 +11,28 @@ function attackNumbers(a){
   const dmgBonus=(a.addAbilityDamage?abil:0)+num(a.dmgMisc)+dmgFx;
   return {toHit,dmgBonus,atkFx,dmgFx,abilName,kind,pb,abil};
 }
+/* ---- damage lines ----
+   An attack's damage is one main die expression plus any number of ADDITIONAL
+   damage types (`a.extraDamage`, an optional array of {dice,type}) — a sword
+   that deals 1d8 slashing and 1d6 poison. The field is optional: an attack
+   saved before it existed has no `extraDamage` and formats exactly as before.
+   Only the MAIN part takes the computed bonus (ability modifier, manual extra,
+   damage effects); an extra type is its own die roll and gets none of it.
+   Pure — the sheet, the breakdown modal and the print sheet all read these. */
+function extraDamageList(a){
+  const l=(a&&Array.isArray(a.extraDamage))?a.extraDamage:[];
+  return l.map(d=>({dice:String((d&&d.dice)||"").trim(),type:String((d&&d.type)||"").trim()}))
+          .filter(d=>d.dice||d.type);
+}
+function damagePartStr(dice,type,bonus){
+  return (String(dice||"")+(bonus?` ${fmt(bonus)}`:"")+(type?` ${String(type)}`:"")).trim();
+}
+function attackDamageStr(a,bonus){
+  if(!a)return "";
+  return [damagePartStr(a.damageDice,a.damageType,bonus)]
+    .concat(extraDamageList(a).map(d=>damagePartStr(d.dice,d.type,0)))
+    .filter(Boolean).join(" + ");
+}
 /* ---- spell casting, attacks, and active spells ---- */
 function spellDC(){const c=contributions();const sa=character.spellAbility;if(!sa)return null;return 8+pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2);}
 function spellAtkBonus(){const c=contributions();const sa=character.spellAbility;if(!sa)return null;return pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2);}
@@ -123,7 +145,7 @@ function renderAttacks(){
   character.attacks.forEach(a=>{
     const ic=!!atkCol().items[a.id], isSpell=a.source==="spell", save=a.save;
     const n=attackNumbers(a);
-    const dmg=((a.damageDice||"")+((!save&&n.dmgBonus)?` ${fmt(n.dmgBonus)}`:"")+(a.damageType?` ${a.damageType}`:"")).trim();
+    const dmg=attackDamageStr(a,save?0:n.dmgBonus);
     const typeLabel=save?"Spell save":(isSpell?`Spell · ${n.kind==="ranged"?"Ranged":"Melee"}`:(n.kind==="ranged"?"Ranged":"Melee"));
     const dc=spellDC();
     const hitCell=save?`<span class="atk-hit">DC ${dc!=null?dc:"—"} ${esc((save.ability||"").toUpperCase())}</span>`
@@ -141,6 +163,21 @@ function renderAttacks(){
     el.appendChild(d);
   });
 }
+/* one editable {dice,type} row in the attack form's "Additional damage types" list */
+function attackXDmgRowHTML(d){
+  return `<div class="xdmg-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <input class="xdDice" value="${esc((d&&d.dice)||"")}" placeholder="1d6" style="flex:0 0 34%" aria-label="Extra damage dice">
+      <input class="xdType" value="${esc((d&&d.type)||"")}" placeholder="poison" style="flex:1" aria-label="Extra damage type">
+      <button type="button" class="icon danger xdDel" aria-label="Remove damage type"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+    </div>`;
+}
+function readAttackXDmg(){
+  const wrap=document.getElementById("aXDmg");if(!wrap)return [];
+  return Array.prototype.map.call(wrap.querySelectorAll(".xdmg-row"),r=>({
+    dice:(r.querySelector(".xdDice").value||"").trim(),
+    type:(r.querySelector(".xdType").value||"").trim()
+  })).filter(d=>d.dice||d.type);
+}
 function openAttackForm(existing){
   const a=existing||{id:uid(),name:"",kind:"melee",ability:"str",proficient:true,atkMisc:"",damageDice:"",addAbilityDamage:true,dmgMisc:"",damageType:"",notes:""};
   const abilOpts=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"],["finesse","Finesse (best of STR/DEX)"],["none","None"]];
@@ -152,13 +189,23 @@ function openAttackForm(existing){
     <label class="opt" id="aProf"><input type="checkbox" ${a.proficient?"checked":""}>Proficient (add proficiency bonus)</label>
     <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="aDice" value="${esc(a.damageDice)}" placeholder="1d8"></div>
       <div class="field"><label class="f">Damage type</label><input id="aType" value="${esc(a.damageType)}" placeholder="piercing"></div></div>
+    <div class="field"><label class="f">Additional damage types</label>
+      <div id="aXDmg">${extraDamageList(a).map(attackXDmgRowHTML).join("")}</div>
+      <button type="button" class="tbtn" id="aXAdd" style="padding:4px 10px;min-height:auto">+ Add damage type</button>
+      <p class="hint" style="margin:6px 0 0">A second die rolled with this attack — 1d6 poison on a sword. Extras roll on their own; the ability modifier and any bonuses below stay on the main damage.</p></div>
     <div class="field"><label class="f">Extra damage</label><input id="aDmgMisc" type="number" value="${esc(a.dmgMisc)}" placeholder="0"></div>
     <label class="opt" id="aAddAbil"><input type="checkbox" ${a.addAbilityDamage?"checked":""}>Add ability modifier to damage</label>
     <div class="field"><label class="f">Notes</label><input id="aNotes" value="${esc(a.notes||"")}" placeholder="Range 80/320, versatile…"></div>
     <div class="m-actions"><button class="tbtn" id="aCancel">Cancel</button><button class="tbtn primary" id="aSave">${existing?"Save":"Add"}</button></div>`);
   document.getElementById("aCancel").addEventListener("click",closeModal);
+  const xw=document.getElementById("aXDmg"),xa=document.getElementById("aXAdd");
+  if(xa)xa.addEventListener("click",()=>{xw.insertAdjacentHTML("beforeend",attackXDmgRowHTML({}));});
+  if(xw)xw.addEventListener("click",ev=>{const b=ev.target.closest(".xdDel");if(b&&b.parentNode)b.parentNode.remove();});
   document.getElementById("aSave").addEventListener("click",()=>{
     const rec={id:a.id,name:document.getElementById("aName").value.trim()||"Attack",kind:document.getElementById("aKind").value,ability:document.getElementById("aAbil").value,proficient:document.querySelector("#aProf input").checked,atkMisc:document.getElementById("aAtkMisc").value,damageDice:document.getElementById("aDice").value.trim(),damageType:document.getElementById("aType").value.trim(),dmgMisc:document.getElementById("aDmgMisc").value,addAbilityDamage:document.querySelector("#aAddAbil input").checked,notes:document.getElementById("aNotes").value.trim()};
+    /* omitted when empty, so an attack that has no extras carries no field —
+       the shape an older save already has, and what migrate round-trips */
+    const xd=readAttackXDmg();if(xd.length)rec.extraDamage=xd;
     const i=character.attacks.findIndex(x=>x.id===a.id);if(i>=0)character.attacks[i]=rec;else character.attacks.push(rec);
     closeModal();renderAttacks();scheduleSave();
   });
@@ -173,11 +220,14 @@ function openAttackBreakdown(id){
   if(num(a.atkMisc))b+=row("Extra to-hit (manual)",num(a.atkMisc));
   c.filter(x=>x.target==="attack"||x.target==="attack."+n.kind).forEach(x=>b+=row(x.source,x.value));
   b+=`<div style="display:flex;justify-content:space-between;border-top:2px solid var(--line);margin-top:6px;padding-top:6px"><b>To hit</b><b>${fmt(n.toHit)}</b></div>`;
-  b+=`<p style="margin:12px 0 4px"><b>Damage:</b> ${esc(a.damageDice||"—")}${n.dmgBonus?` ${fmt(n.dmgBonus)}`:""}${a.damageType?" "+esc(a.damageType):""}</p>`;
+  b+=`<p style="margin:12px 0 4px"><b>Damage:</b> ${esc(attackDamageStr(a,n.dmgBonus)||"—")}</p>`;
   const dc=c.filter(x=>x.target==="damage"||x.target==="damage."+n.kind);
   if(a.addAbilityDamage&&n.abilName)b+=row(n.abilName+" modifier",n.abil);
   if(num(a.dmgMisc))b+=row("Extra damage (manual)",num(a.dmgMisc));
   dc.forEach(x=>b+=row(x.source,x.value));
+  /* extras are their own dice and take none of the bonuses above — say so */
+  const xd=extraDamageList(a);
+  if(xd.length)b+=`<p class="hint" style="margin:8px 0 0">Rolled separately, with no modifiers: ${esc(xd.map(d=>damagePartStr(d.dice,d.type,0)).join(", "))}</p>`;
   openModal(a.name||"Attack",b);
 }
 function renderSpells(){
