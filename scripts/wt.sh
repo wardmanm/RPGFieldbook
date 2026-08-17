@@ -3,6 +3,7 @@
 #
 #   ./scripts/wt.sh add 41 [slug]   create a worktree + branch for issue 41
 #   ./scripts/wt.sh list            what exists right now
+#   ./scripts/wt.sh status          what each worktree has actually DONE
 #   ./scripts/wt.sh rm 41           remove the worktree and its branch
 #
 # Worktrees live in .claude/worktrees/<issue>/ — inside the repo, but .gitignore
@@ -130,6 +131,30 @@ cmd_list() {
   printf '\n'
 }
 
+# What has actually happened in each worktree. Deliberately git-level rather
+# than agent-level: it tells you the same thing whether the work was done by an
+# agent, by you, or not at all — and it is the only view that survives an agent
+# session ending.
+cmd_status() {
+  local p b n br ahead dirty last
+  printf '\n%s%-6s %-44s %6s %6s  %s%s\n' "$B" "ISSUE" "BRANCH" "AHEAD" "DIRTY" "LAST COMMIT" "$OFF"
+  git worktree list --porcelain | awk '/^worktree /{p=$2} /^branch /{print p" "$2}' \
+  | while read -r p b; do
+      case "$p" in (*/worktrees/*) ;; (*) continue;; esac
+      n=$(basename "$p"); br=${b#refs/heads/}
+      ahead=$(git -C "$p" rev-list --count origin/main..HEAD 2>/dev/null || echo '?')
+      dirty=$(git -C "$p" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+      last=$(git -C "$p" log -1 --format='%cr — %s' 2>/dev/null | cut -c1-42)
+      if [ "$ahead" = "0" ] && [ "$dirty" = "0" ]; then
+        printf '%s%-6s %-44s %6s %6s  %s%s\n' "$DIM" "$n" "$br" "$ahead" "$dirty" "nothing yet" "$OFF"
+      else
+        printf '%-6s %-44s %s%6s%s %6s  %s\n' "$n" "$br" "$GRN" "$ahead" "$OFF" "$dirty" "$last"
+      fi
+    done
+  printf '\n  %sAHEAD = commits not on origin/main. DIRTY = uncommitted files.%s\n' "$DIM" "$OFF"
+  printf '  %sA worktree that built to verify shows DIRTY 1 (dist/fieldbook.html) — expected.%s\n\n' "$DIM" "$OFF"
+}
+
 cmd_rm() {
   local num="${1:-}" path branch
   [ -n "$num" ] || die "usage: wt.sh rm <issue-number>"
@@ -156,8 +181,9 @@ cmd_rm() {
 }
 
 case "${1:-}" in
-  add)  shift; cmd_add "$@" ;;
-  list) cmd_list ;;
-  rm)   shift; cmd_rm "$@" ;;
+  add)    shift; cmd_add "$@" ;;
+  list)   cmd_list ;;
+  status) cmd_status ;;
+  rm)     shift; cmd_rm "$@" ;;
   *)    sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
