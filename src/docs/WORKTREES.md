@@ -21,9 +21,9 @@ git merge --no-ff issue/41-… issue/43-…
 ./scripts/wt.sh rm 41 43
 ```
 
-`wt.sh add <n> [slug]` creates `.claude/worktrees/<n>/` on branch `issue/<n>-<slug>`, based on
-`origin/main`. With `gh` available the slug comes from the issue title; pass one explicitly to skip
-the lookup. The directory sits inside the repo but `.gitignore` covers `.claude/`, so `git status` on
+`wt.sh add <n> [slug]` creates `.claude/worktrees/<n>/` on branch `issue/<n>-<slug>`, based on your
+**local `main`** — so a batch you merged but have not pushed is already in it (see section 7). With
+`gh` available the slug comes from the issue title; pass one explicitly to skip the lookup. The directory sits inside the repo but `.gitignore` covers `.claude/`, so `git status` on
 `main` stays clean.
 
 Each worktree gets:
@@ -138,8 +138,20 @@ which is the behaviour worth keeping. Discard it deliberately with
 - **`gh` missing from non-login shells.** Homebrew's `brew shellenv` lives in `~/.zprofile`, which
   only login shells read, so `/opt/homebrew/bin` can be absent from a spawned shell. `wt.sh` resolves
   `gh` by looking in the usual places rather than trusting `PATH`.
-- **Worktrees branch from `origin/main`.** Anything you have committed locally but not pushed is not
-  in a new worktree. Push before fanning out.
+- **Worktrees branch from LOCAL `main`, deliberately.** They used to branch from `origin/main`, which
+  broke the normal rhythm: merge a batch, then open the next worktree before pushing, and the new
+  branch silently lacked everything just merged — so it rebuilt or conflicted with work already done.
+  Local `main` is never behind origin (a merge has to happen first), so it is the strictly better
+  base. `wt.sh` prints how many commits are not yet pushed when the two differ, because the branch
+  then carries commits nobody else has.
+- **A worktree that built to verify always has a modified `dist/fieldbook.html`.** That is the
+  prescribed end state, and `git worktree remove` counts it as uncommitted work — so `wt.sh rm`
+  restores the artifact first (it regenerates from `src/` in a second) rather than making `--force`
+  routine, which would blunt the guard that still has to catch real uncommitted source.
+- **`git branch -d` measures merged-ness against the branch's UPSTREAM**, not against your local
+  `main`. Branches tracking `origin/main` therefore read as "unmerged" when their work sits in an
+  unpushed local `main`. `wt.sh rm` asks `git merge-base --is-ancestor <branch> main` instead, which
+  is the question that actually matters.
 
 ---
 
