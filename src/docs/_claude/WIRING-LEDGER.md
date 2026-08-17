@@ -2862,3 +2862,39 @@ Six checks in `src/tests/char-update.js` against the real `updResolve`/`updEdite
 exactly and its edit is detected; stamp deleted → loose + `null`; a hand-typed spell has no `src` and
 reports `unmatched`), plus one source guard in `rules-data.js` on the existing `spellSave` slice,
 next to the identical feature/item guards. Suite 1406.
+
+## A resync no longer overwrites a player-edited attack (2026-08-17)
+
+This is the open design call the previous two entries flagged, and the owner's answer is: **if the
+player has edited the attack, do not override it. They did that for a reason.**
+
+`updResyncAttack()` spliced the row out and rebuilt it from the item, so any edit went silently and
+with nothing to undo it. Attacks carry no `src` — nothing resolves them back to a pack, only the ITEM
+can regenerate them — so the missing half was "was this row left exactly as we generated it?".
+
+`genFp` (72-char-update.js) is ONE `fpHash` over `ATK_GEN_FIELDS` — name, kind, ability, atkMisc,
+damageDice, damageType, dmgMisc, notes: the fields `addAttackForItem()` derives from the item. A
+single hash, not an `fpMap`: nothing needs to know which field moved. `updAtkEdited()` is
+three-valued and mirrors `updEdited()` exactly — `null` when there is no stamp — and only `false`
+may be rebuilt:
+
+- `false` still as generated → rebuild, keeping the id so collapse state survives
+- `true`  player edited it   → leave it
+- `null`  no stamp (pre-1.5) → unknowable → leave it
+
+Three places touch the stamp: `addAttackForItem()` stamps at generation; `syncItemAttack()`
+re-stamps when editing the ITEM rewrites the row in place (without this, editing a weapon makes its
+own attack look hand-edited and it would never resync again); and `openAttackForm()`'s save carries
+`a.genFp` across, so a save that changed nothing is still comparable and a real edit reads as an
+edit rather than as unknowable.
+
+**Deliberately outside the fingerprint:** `proficient`, `addAbilityDamage`, `extraDamage`, the id and
+the links. They are the player's on either path — but note that a rebuild regenerates `proficient`
+and `addAbilityDamage` as `true`, so a player who ONLY unticked one of those is classed untouched and
+loses that tick on a resync. That is no worse than the old behaviour (which lost everything), and
+widening the fingerprint instead would freeze the row against all future pack changes.
+
+`genFp` is optional and additive: `migrate` preserves it with no code, old saves have none and land
+in the `null` branch. 18 checks in `src/tests/char-update.js` (R7 covers all three branches, the
+no-duplicate guarantee on both leave-alone paths, the re-stamp on rebuild, and the migrate round
+trip) plus 4 wiring guards in `rules-data.js`. Suite 1424.

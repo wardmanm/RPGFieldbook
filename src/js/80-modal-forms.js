@@ -245,6 +245,10 @@ function syncItemAttack(item){
       existing.name=item.name;existing.kind=w.kind==="ranged"?"ranged":"melee";existing.ability=w.ability||"str";
       existing.damageDice=w.dice||"";existing.damageType=w.damageType||"";existing.notes=w.notes||existing.notes||"";
       if(w.atkMisc!=null)existing.atkMisc=String(w.atkMisc);if(w.dmgMisc!=null)existing.dmgMisc=String(w.dmgMisc);
+      /* every write above came from the item, not from the player, so re-baseline
+         — otherwise editing the WEAPON would make its attack look hand-edited and
+         a later pack update would stop resyncing it */
+      stampAtkGen(existing);
       item.attackId=existing.id;
     }else addAttackForItem(item);
   }else if(existing){

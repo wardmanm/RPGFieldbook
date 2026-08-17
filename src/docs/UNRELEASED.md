@@ -49,6 +49,10 @@ Bullets below this line — leave the heading in place.
 - Editing a spell no longer detaches it from the rules pack it came from. Changing so much as its
   wording used to leave the update tool guessing by name, so it could no longer tell a pack revision
   from something you had deliberately written yourself.
+- Updating your rules packs no longer overwrites an attack you had edited. A weapon's attack row used
+  to be rebuilt from the item every time, so a renamed attack or a damage die you had adjusted was
+  quietly thrown away. Attacks you have changed are now left as you left them, and so are attacks
+  from before this version, where there is no way to tell. Untouched ones still follow the weapon.
 - Spells can now carry additional damage types, the same way attacks do. Add as many extra dice as
   the spell needs in the spell form and they show on the attack row it creates, in the cast dialog
   and on the printed sheet. Extras roll on their own.

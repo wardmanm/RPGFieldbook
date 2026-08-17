@@ -174,6 +174,32 @@ function updEdited(copy,kind){
   const now=fpMap(copy,kind);
   return (UPD_FIELDS[kind]||[]).some(f=>now[f]!==then[f]);
 }
+/* ---- the same question for an attack row ----
+   An attack derived from a weapon is not a copy of a rules entry, so it has no
+   `src`: nothing resolves it back to a pack, and only the ITEM it came from can
+   rebuild it. What it needs is the other half of stampSrc's answer — was this
+   row left exactly as we generated it, or did the player make it theirs?
+
+   `genFp` is one hash over the fields addAttackForItem() derives from the item.
+   Everything else on the row is the player's either way: `proficient` and
+   `addAbilityDamage`, the extras they added, its id, and the links back to the
+   item or spell. Optional and additive — an attack saved before this existed has
+   no genFp, which reads as *unknowable*, and updResyncAttack leaves those alone.
+
+   Deliberately a single hash, not an fpMap: nothing needs to know WHICH field
+   moved, only whether any did. */
+const ATK_GEN_FIELDS=["name","kind","ability","atkMisc","damageDice","damageType","dmgMisc","notes"];
+function atkGenFp(atk){
+  const o={};(ATK_GEN_FIELDS).forEach(f=>{o[f]=atk?atk[f]:undefined;});
+  return fpHash(o);
+}
+/* stamp a freshly generated (or freshly re-generated) attack as untouched */
+function stampAtkGen(atk){ if(atk)atk.genFp=atkGenFp(atk); return atk; }
+/* has the player hand-edited this attack? null = no stamp, so unknowable */
+function updAtkEdited(atk){
+  if(!atk||typeof atk.genFp!=="string")return null;
+  return atkGenFp(atk)!==atk.genFp;
+}
 /* Traits the rules now grant that the sheet doesn't have. Only ever ADDITIVE —
    a level already held gaining a trait is the case that matters. */
 function updMissingTraits(){
@@ -295,16 +321,27 @@ function applyUpdateRow(row){
   if(row.kind==="item"&&row.copy.weapon)updResyncAttack(row.copy);
   return true;
 }
-/* Rebuild the attack derived from an inventory item, preserving nothing the
-   player owns on it beyond its identity (attacks are wholly item-derived). */
+/* Rebuild the attack derived from an inventory item — but only when the player
+   has not made it theirs. An attack the player edited is left ALONE: they did
+   that for a reason, and this used to splice the row out and regenerate it, so
+   the edit went with no warning and nothing to undo it.
+   `updAtkEdited` is three-valued, and only one of the three may be rebuilt:
+     false -> still exactly as generated  -> rebuild, keeping the id
+     true  -> the player edited it        -> leave it
+     null  -> no stamp: from before this  -> unknowable, so leave it
+   Erring toward the player's work is the point; the pack change is still
+   visible on the item itself. */
 function updResyncAttack(it){
   const i=(character.attacks||[]).findIndex(a=>a.itemId===it.id);
   if(i<0){if(typeof addAttackForItem==="function")addAttackForItem(it);return;}
+  if(updAtkEdited(character.attacks[i])!==false)return;
   const keepId=character.attacks[i].id;
   character.attacks.splice(i,1);
   if(typeof addAttackForItem==="function")addAttackForItem(it);
   const now=(character.attacks||[]).find(a=>a.itemId===it.id);
-  if(now)now.id=keepId;   /* keep the id stable so collapse state survives */
+  /* keep the id stable so collapse state survives; addAttackForItem re-stamps,
+     so the rebuilt row is comparable again next time */
+  if(now)now.id=keepId;
 }
 function applyUpdates(rows){
   let n=0;

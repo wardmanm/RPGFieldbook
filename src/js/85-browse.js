@@ -119,6 +119,9 @@ function addAttackForItem(item){
   const atk={id:uid(),name:item.name,kind:(w.kind==="ranged"?"ranged":"melee"),ability:w.ability||"str",proficient:true,
     atkMisc:(w.atkMisc!=null?String(w.atkMisc):""),damageDice:w.dice||"",damageType:w.damageType||"",
     dmgMisc:(w.dmgMisc!=null?String(w.dmgMisc):""),addAbilityDamage:true,notes:w.notes||"",itemId:item.id};
+  /* Fingerprint what we just generated, so a rules-pack update can tell this row
+     apart from one the player has since made their own — see 72-char-update.js. */
+  stampAtkGen(atk);
   character.attacks.push(atk);
   item.attackId=atk.id;
 }

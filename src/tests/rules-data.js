@@ -1135,6 +1135,17 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const atkSave = (js.match(/const rec=\{id:a\.id,name:document\.getElementById\("aName"\)[\s\S]{0,2000}?character\.attacks\[i\]=rec/) || [''])[0];
   ck('the attack form carries the links its boxes never show',
      /carryAttackLinks\(a,rec\);/.test(atkSave), atkSave.slice(-300));
+  // …and the generated-fields fingerprint with them. Drop it and every edited
+  // attack becomes "unknowable" instead of "edited" — same outcome for the
+  // resync, but a save that changed nothing would never resync again.
+  ck('...and the fingerprint that says whether it was ever edited',
+     /if\(a\.genFp\)rec\.genFp=a\.genFp;/.test(atkSave), atkSave.slice(-300));
+  // The two places that WRITE an attack from an item must (re-)baseline it, or
+  // the row looks hand-edited and the update tool stops resyncing it forever.
+  ck('a generated attack is stamped where it is generated',
+     /stampAtkGen\(atk\);\s*character\.attacks\.push\(atk\);/.test(js));
+  ck('...and re-stamped when editing the item rewrites it in place',
+     /stampAtkGen\(existing\);/.test(js));
   // A spell's attack row is rebuilt from the spell, so extra damage types have to
   // be asked for on the SPELL — offered by the same shared control the attack
   // form uses, and read back into the record it saves.

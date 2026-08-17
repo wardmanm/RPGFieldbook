@@ -304,6 +304,10 @@ function openAttackForm(existing){
        the shape an older save already has, and what migrate round-trips */
     const xd=readXDmg("aXDmg");if(xd.length)rec.extraDamage=xd;
     carryAttackLinks(a,rec);
+    /* Carry the generated-fields fingerprint too, so this save is COMPARED
+       against it rather than becoming unknowable: a save that changed nothing
+       still resyncs with its item, and a real edit reads as an edit. */
+    if(a.genFp)rec.genFp=a.genFp;
     const i=character.attacks.findIndex(x=>x.id===a.id);if(i>=0)character.attacks[i]=rec;else character.attacks.push(rec);
     closeModal();renderAttacks();scheduleSave();
   });

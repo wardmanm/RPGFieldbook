@@ -9,6 +9,7 @@ const {X, state, store, bootError, fragments} = loadApp([
   'APP_VERSION','RULE_CATS','cmpVer','blankChar','migrate',
   'fpHash','fpMap','fpNorm','stampSrc','restampSrc',
   'updProject','updEdited','itemMetaLine','costToGp','addAttackForItem','findClassDef',
+  'atkGenFp','stampAtkGen','updAtkEdited','ATK_GEN_FIELDS',
   'diffCharacter','applyUpdateRow','applyUpdates','charNeedsUpdate','updResolve','updChangedFields',
   'backupCharacter','libLoad','charKey','mergeRules','resetRules','addFeatureFromDef',
   'addClass','removeClass','doLevelUp','hitDieMax','level1HP','resyncLevel1HP','modOf',
@@ -322,12 +323,66 @@ club.equipped=true;
 X.addAttackForItem(club);
 const atkId=X.character.attacks[0].id;
 ck('R2 attack created', X.character.attacks[0].damageDice==='1d4', X.character.attacks[0]);
+ck('R2 a generated attack is stamped', typeof X.character.attacks[0].genFp==='string', X.character.attacks[0].genFp);
 X.rules.items[1].weapon={kind:'melee',dice:'2d6',damageType:'bludgeoning',ability:'str',notes:''};
 X.applyUpdates(X.diffCharacter().rows);
 ck('R2 item weapon updated', club.weapon.dice==='2d6', club.weapon);
 ck('R2 linked attack re-synced', X.character.attacks[0].damageDice==='2d6', X.character.attacks[0].damageDice);
 ck('R2 attack id kept stable', X.character.attacks[0].id===atkId);
 ck('R2 no duplicate attack', X.character.attacks.filter(a=>a.itemId===club.id).length===1);
+
+/* R7 — …but a resync must NEVER overwrite an attack the player edited.
+   updResyncAttack used to splice the row out and regenerate it from the item, so
+   a renamed or re-dieced attack was destroyed with no warning and nothing to undo
+   it. The row now carries `genFp`, one hash over the fields addAttackForItem
+   generated, and only a row that still matches it may be rebuilt. Of the three
+   answers updAtkEdited can give, two mean LEAVE IT. */
+function armClub(){                    /* a club, its attack, and a pack change waiting */
+  c=setup();
+  const cl=addBrowseItem('Club'); cl.equipped=true;
+  X.addAttackForItem(cl);
+  X.rules.items[1].weapon={kind:'melee',dice:'2d6',damageType:'bludgeoning',ability:'str',notes:''};
+  return cl;
+}
+// (a) the player edited it
+let cl=armClub(), atk=X.character.attacks[0];
+atk.name="Grandpa's Club"; atk.damageDice='1d6';
+ck('R7 an edited attack reads as edited', X.updAtkEdited(atk)===true);
+X.applyUpdates(X.diffCharacter().rows);
+ck('R7 the item itself still updates', cl.weapon.dice==='2d6', cl.weapon.dice);
+ck('R7 the edited attack is left exactly as the player left it',
+   atk.damageDice==='1d6' && atk.name==="Grandpa's Club", atk);
+ck('R7 and no rebuilt row appears beside it',
+   X.character.attacks.filter(a=>a.itemId===cl.id).length===1, X.character.attacks.map(a=>a.name));
+
+// (b) no stamp at all — a row saved before any of this existed
+cl=armClub(); atk=X.character.attacks[0]; delete atk.genFp;
+ck('R7 an unstamped attack is unknowable, not unedited', X.updAtkEdited(atk)===null);
+X.applyUpdates(X.diffCharacter().rows);
+ck('R7 an unstamped attack is left alone too', atk.damageDice==='1d4', atk.damageDice);
+ck('R7 ...and still leaves no duplicate',
+   X.character.attacks.filter(a=>a.itemId===cl.id).length===1, X.character.attacks.map(a=>a.name));
+
+// (c) untouched — the only case that may be rebuilt
+cl=armClub();
+ck('R7 a freshly generated attack reads as untouched', X.updAtkEdited(X.character.attacks[0])===false);
+X.applyUpdates(X.diffCharacter().rows);
+ck('R7 an untouched attack is still rebuilt', X.character.attacks[0].damageDice==='2d6',
+   X.character.attacks[0].damageDice);
+ck('R7 ...and re-stamped, so it stays comparable next time',
+   X.updAtkEdited(X.character.attacks[0])===false, X.character.attacks[0]);
+
+// what the fingerprint covers, and what it deliberately does not
+cl=armClub(); atk=X.character.attacks[0];
+atk.proficient=false; atk.addAbilityDamage=false; atk.extraDamage=[{dice:'1d6',type:'fire'}];
+ck('R7 the fields only the player owns are outside the fingerprint',
+   X.updAtkEdited(atk)===false, X.ATK_GEN_FIELDS);
+atk.notes='Thrown, range 20/60';
+ck('R7 a change to a generated field IS an edit', X.updAtkEdited(atk)===true);
+ck('R7 the stamp is optional, so an old save loads untouched',
+   X.migrate({abilities:{},attacks:[{id:'a1',name:'Club'}]}).attacks[0].genFp===undefined);
+ck('R7 ...and a stamped one round-trips',
+   X.migrate({abilities:{},attacks:[{id:'a1',name:'Club',genFp:'abc'}]}).attacks[0].genFp==='abc');
 
 // R3 — multiclass: two classes granting a same-named trait
 c=setup();
