@@ -37,8 +37,11 @@ function openBrowse(cfg){
       el.classList.toggle("over",!!(b&&b.over));
     });
   }
+  /* cfg.noun1 is the spelled-out singular, not a de-pluralised noun: stripping an
+     "s" would turn "feats & traits" into "feats & trait". Kept out of foot() so
+     the body stays inside the proximity guard rules-data.js puts on it. */
   function foot(){const n=st.sel.size,b=document.getElementById("brAdd"),c=document.getElementById("brCount");
-    if(b){b.disabled=!n;b.textContent=n?`Add ${n} ${cfg.noun||""}`:`Add ${cfg.noun||""}`;}
+    if(b){b.disabled=!n;b.textContent=n?`Add ${n} ${(n===1&&cfg.noun1)||cfg.noun||""}`:`Add ${cfg.noun||""}`;}
     if(c)c.textContent=`${lastCount} result${lastCount===1?"":"s"}${n?` · ${n} selected`:""}`;
     paintGroupBadges();}
   function renderList(){
@@ -91,7 +94,7 @@ function browseItems(){
   const rars=[...new Set(lib.map(rarOf))].sort((a,b)=>RAR.indexOf(a)-RAR.indexOf(b)).map(r=>({value:r.toLowerCase(),label:r}));
   const meta=itemMetaLine;   /* shared with the update diff — see 25-origins-items.js */
   openBrowse({
-    noun:"items", items:lib, id:x=>x._id||x.name,
+    noun:"items", noun1:"item", items:lib, id:x=>x._id||x.name,
     search:x=>`${x.name} ${x.type||""} ${x.category||""} ${x.rarity||""}`,
     row:x=>({title:x.name,tag:(x.rarity&&x.rarity!=="Mundane")?x.rarity:(x.cost||"")}),
     sort:(a,b)=>String(catOf(a)).localeCompare(String(catOf(b)))||String(a.name||"").localeCompare(String(b.name||"")),
@@ -130,7 +133,7 @@ function browseSpells(){
   const schoolOpts=[...new Set(lib.map(schoolOf).filter(Boolean))].sort().map(s=>({value:s.toLowerCase(),label:s}));
   const defClasses=myCl.filter(c=>classOpts.some(o=>o.value===c));
   openBrowse({
-    noun:"spells", items:lib, id:x=>x._id||x.name,
+    noun:"spells", noun1:"spell", items:lib, id:x=>x._id||x.name,
     search:x=>`${x.name} ${x.meta||""} ${clsOf(x).join(" ")}`,
     row:x=>({title:dispName(x,"spells"),tag:schoolOf(x)}),
     sort:(a,b)=>num(a.level)-num(b.level)||String(a.name||"").localeCompare(String(b.name||"")),
@@ -256,7 +259,7 @@ function browseFeatures(){
     match:(w,a)=>a.has(String(w.e._source||"").toLowerCase())});
   facets.push({key:"noreq",label:"No prerequisite",type:"toggle",match:w=>!featPickPrereq(w)});
   openBrowse({
-    noun:"feats & traits", items:list, id:w=>w.id,
+    noun:"feats & traits", noun1:"feat or trait", items:list, id:w=>w.id,
     /* the description too: "which feat gives me advantage on saves" is the
        question this browser exists to answer, and the list is small enough */
     search:w=>`${w.e.name} ${w.e.source||""} ${w.e.description||""}`,

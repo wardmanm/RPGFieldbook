@@ -35,3 +35,4 @@ Bullets below this line — leave the heading in place.
   (origin, general, fighting style, epic boon), by pack, or to only what has no prerequisite, and
   preview any entry before you add it. Anything already on your sheet is marked. Typing your own
   feature by hand is still there, behind the Custom button.
+- The picker's Add button now reads "Add 1 item" rather than "Add 1 items" when you have ticked exactly one.
