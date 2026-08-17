@@ -3,7 +3,7 @@
    itself — its collapsible sections, and the wiring check below that catches a
    control whose markup and handler have drifted apart. */
 const fs = require('fs'), path = require('path');
-const {loadApp, makeCheck, ROOT} = require('./harness');
+const {loadApp, loadHTML, makeCheck, ROOT} = require('./harness');
 
 const ck = makeCheck();
 const {X, state, bootError, fragments} = loadApp([
@@ -558,7 +558,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
 // headings. If it and the template disagree, a section silently loses its icon
 // or a note becomes unreachable — with no error either way.
 {
-  const t = fs.readFileSync(path.join(ROOT, 'src/fieldbook.template.html'), 'utf8');
+  const t = loadHTML();
   const inTemplate = (t.match(/data-note="([a-z]+)"/g) || []).map(s => s.slice(11, -1));
 
   ck('the registry has 19 sections', X.NOTE_SECTIONS.length === 19, X.NOTE_SECTIONS.length);
@@ -596,7 +596,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
 
 // ---------- the tab bar
 {
-  const t = fs.readFileSync(path.join(ROOT, 'src/fieldbook.template.html'), 'utf8');
+  const t = loadHTML();
   const tabs = (t.match(/class="tab(?: active)?" data-tab="([a-z]+)"/g) || [])
     .map(s => /data-tab="([a-z]+)"/.exec(s)[1]);
   const panels = (t.match(/class="tabpanel(?: active)?" id="tab-([a-z]+)"/g) || [])
@@ -611,6 +611,23 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // inside the icon would end up in the flyout
   ck('no tab icon carries a title element', !/<svg class="tabicon"[^>]*>\s*<title/.test(t));
   ck('the icon-tab mode has a default on the root element', /<html[^>]*data-tabs="labels"/.test(t));
+}
+
+// ---------- loadHTML() agrees with what the build actually shipped
+// harness.loadHTML() re-implements build-html.js's splice rather than calling it
+// (that script builds and process.exit()s at require time), so the two can drift.
+// Every other markup guard here is shape-based and would sail past a stray
+// separator — a join("\n") instead of join("") inserts six blank lines and
+// changes nothing any of them measure. This is the only check that notices.
+//
+// It does mean this suite needs dist/fieldbook.html to be current. If it fails,
+// run ./build.sh (or node scripts/build-html.js) before believing the diagnosis.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const blob = manifest.html.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('');
+  const built = fs.readFileSync(path.join(ROOT, 'dist/fieldbook.html'), 'utf8');
+  ck('the assembled markup is byte-for-byte what the build shipped', built.includes(blob),
+     'dist/fieldbook.html is stale, or loadHTML() no longer splices the way build-html.js does');
 }
 
 // ---------- notes: storage guards and the pure renderers
@@ -700,7 +717,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     return from.slice(0, from.indexOf('\n}') + 2);
   };
   const settings = fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8');
-  const res = fs.readFileSync(path.join(ROOT, 'src/js/65-resources.js'), 'utf8');
+  const res = fs.readFileSync(path.join(ROOT, 'src/js/66-coins-hp.js'), 'utf8');
   const calls = (body) => new Set((body.match(/\brender[A-Za-z]+\(/g) || []).map(s => s.slice(0, -1)));
   const onRulesChange = calls(fnBody(settings, 'refreshRulesUI'));
   const onLoad = calls(fnBody(res, 'renderAll'));
@@ -718,7 +735,8 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
 // concatenation ("mod-"+k) don't match the pattern and are left alone.
 {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
-  const files = ['src/fieldbook.template.html'].concat(manifest.js);
+  // markup lives in the shell AND in src/html now — both declare ids
+  const files = ['src/fieldbook.template.html'].concat(manifest.html, manifest.js);
   const declared = new Set(), used = new Map();
   files.forEach(f => {
     const s = fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -745,9 +763,13 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      file attracts — throws the depth off and silently stretches a slice past the
      element it was meant to bound. Counting guards would drift the same way.
      Cheaper to remove comments once than to keep "don't write <div in a comment"
-     true by hand forever. */
-  const t = fs.readFileSync(path.join(ROOT, 'src/fieldbook.template.html'), 'utf8')
-    .replace(/<!--[\s\S]*?-->/g, '');
+     true by hand forever.
+
+     Order matters: loadHTML() splices FIRST, we strip SECOND. The build's marker
+     <!--@@HTML@@--> is itself an HTML comment, so stripping the raw template
+     first would delete it and the splice would find nothing to replace. Don't
+     "tidy" the strip into the helper. */
+  const t = loadHTML().replace(/<!--[\s\S]*?-->/g, '');
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
   const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
   /* CSS comments go the same way as the HTML ones, and for the same reason: a
@@ -773,7 +795,12 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
       depth += m[0] === '</div>' ? -1 : 1;
       if (depth === 0) return html.slice(at, m.index + m[0].length);
     }
-    return html.slice(at);
+    /* Never return the unterminated tail. Every consumer below asks "is X inside
+       this block?" with .includes(), so a slice running to end-of-document makes
+       those assertions trivially TRUE — the block would swallow the rest of the
+       app and pass. Now that the markup lives in seven separately-editable files,
+       a fragment losing its closing </section> is a real way to get here. */
+    throw new Error('block(): unbalanced <div> searching from ' + JSON.stringify(needle));
   }
   const vitals = block(t, 'data-note="vitals"');
   const rest = block(t, 'data-note="rest"');

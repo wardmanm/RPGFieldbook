@@ -29,6 +29,9 @@ const STAMP = "dist/.buildstamp";
 // output byte-exact — leave the newline behind and you get a spurious blank line.
 const M_CSS = Buffer.from("/*@@CSS@@*/\n");
 const M_JS = Buffer.from("//@@JS@@\n");
+// Unlike the CSS marker (an HTML comment inside <style> is not a CSS comment —
+// see ADR-001), this one sits in body context, where <!-- --> is a real comment.
+const M_HTML = Buffer.from("<!--@@HTML@@-->\n");
 
 const args = process.argv.slice(2);
 const CHECK = args.includes("--check");
@@ -53,10 +56,11 @@ function readManifest() {
   } catch (e) {
     die(`cannot read ${MANIFEST}: ${e.message}`);
   }
-  for (const k of ["css", "js"]) {
+  for (const k of ["css", "js", "html"]) {
     if (!Array.isArray(m[k])) die(`${MANIFEST}: "${k}" must be an array`);
   }
   if (!m.js.length) die(`${MANIFEST}: "js" is empty — nothing to build`);
+  if (!m.html.length) die(`${MANIFEST}: "html" is empty — the body would be blank`);
   return m;
 }
 
@@ -144,9 +148,14 @@ function build() {
   const m = readManifest();
   validateOrder(m.css, "src/css", ".css");
   validateOrder(m.js, "src/js", ".js");
+  validateOrder(m.html, "src/html", ".html");
 
   const cssBlob = Buffer.concat(m.css.map(readFragment));
   const jsBlob = Buffer.concat(m.js.map(readFragment));
+  // No separator between fragments: each already ends in exactly one \n (and
+  // fragments 1..n-1 carry the blank line that used to separate the panels), so
+  // concatenating them reproduces the original body byte for byte.
+  const htmlBlob = Buffer.concat(m.html.map(readFragment));
 
   // ADR rule 2: boot() must be the very last statement, on its own final line.
   // Enforced here so it stays a machine-checked invariant rather than a convention.
@@ -172,6 +181,7 @@ function build() {
   const parts = [
     { i: locate(tpl, M_CSS, "/*@@CSS@@*/"), len: M_CSS.length, blob: cssBlob },
     { i: locate(tpl, M_JS, "//@@JS@@"), len: M_JS.length, blob: jsBlob },
+    { i: locate(tpl, M_HTML, "<!--@@HTML@@-->"), len: M_HTML.length, blob: htmlBlob },
   ].sort((a, b) => a.i - b.i);
 
   const out = [];

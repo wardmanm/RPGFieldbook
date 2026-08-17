@@ -1,4 +1,13 @@
 {
+  "html": [
+    "src/html/00-sheet.html",
+    "src/html/10-inventory.html",
+    "src/html/20-spells.html",
+    "src/html/30-story.html",
+    "src/html/40-rules.html",
+    "src/html/50-tables.html",
+    "src/html/60-notes.html"
+  ],
   "css": [
     "src/css/00-tokens.css",
     "src/css/10-chrome.css",
@@ -22,14 +31,18 @@
     "src/js/58-choices.js",
     "src/js/60-attacks.js",
     "src/js/65-resources.js",
+    "src/js/66-coins-hp.js",
     "src/js/70-persistence.js",
+    "src/js/71-char-io.js",
     "src/js/72-char-update.js",
+    "src/js/73-char-update-ui.js",
     "src/js/75-home-theme.js",
     "src/js/80-modal-forms.js",
     "src/js/85-browse.js",
     "src/js/86-tables.js",
     "src/js/87-notes.js",
     "src/js/88-settings.js",
+    "src/js/89-rules-merge.js",
     "src/js/90-boot.js"
   ]
 }

@@ -67,7 +67,38 @@ status_line() {
   if tag_missing; then
     printf ' %s·%s %sv%s NOT TAGGED%s' "$DIM" "$OFF" "$YEL" "$ver" "$OFF"
   fi
+  # Uninstalled hooks are invisible — nothing fails, the checks simply never
+  # run. Say so in the header rather than letting it be discovered by a red CI.
+  if ! hooks_installed; then
+    printf ' %s·%s %shooks off%s' "$DIM" "$OFF" "$YEL" "$OFF"
+  fi
   printf '\n'
+}
+
+hooks_installed() { [ "$(git config --get core.hooksPath 2>/dev/null)" = ".githooks" ]; }
+
+# core.hooksPath is shared config, and a relative path resolves against whichever
+# working tree the hook runs in — so one install covers the main checkout AND
+# every git worktree, including the ones parallel agents work in.
+install_hooks() {
+  printf '\n%sGit hooks%s\n\n' "$B" "$OFF"
+  if hooks_installed; then
+    printf '  %salready installed%s (core.hooksPath = .githooks)\n' "$GRN" "$OFF"
+  else
+    git config core.hooksPath .githooks
+    printf '  %sinstalled%s — core.hooksPath = .githooks\n' "$GRN" "$OFF"
+  fi
+  cat <<EOF
+
+  ${B}pre-commit${OFF}  js syntax · byte hygiene · json · workflow yaml ·
+              manifest parity · every fragment tracked            ${DIM}(~1s)${OFF}
+  ${B}pre-push${OFF}    all of the above over the whole tree, plus
+              artifact freshness · the full test suite
+
+  Stale dist/ is EXPECTED on a feature branch, so only pre-push checks it.
+  Bypass either with ${DIM}--no-verify${OFF}. Uninstall with:
+    ${DIM}git config --unset core.hooksPath${OFF}
+EOF
 }
 
 # Run a command, showing it first. Never aborts the menu on failure.
@@ -92,6 +123,8 @@ menu() {
     3  Is the artifact stale?
   TEST
     4  Run all tests
+    w  Check workflow YAML parses  (before a push)
+    h  Install git hooks…         (pre-commit + pre-push)
   DATA
     5  Rebuild rules bundles
     6  Re-convert rules data from 5e-tools
@@ -297,11 +330,42 @@ commit_menu() {
   esac
 }
 
+# Do the workflow files still parse as YAML? Deliberately NOT in build.sh or
+# ci.yml: GitHub has to parse a workflow to start the job, so a malformed one
+# never runs and a check inside CI can only ever pass. The only moment this is
+# worth anything is locally, before the push.
+#
+# Skips cleanly with no npx and no network — same contract as the
+# humblewood-verbatim suite. build.sh needs nothing but node/python3/bash and
+# must keep working offline, which is exactly why this lives here instead.
+check_workflows() {
+  printf '\n%sWorkflow YAML%s\n\n' "$B" "$OFF"
+  if ! command -v npx >/dev/null 2>&1; then
+    printf '  %sskipped — npx not found (comes with node)%s\n' "$DIM" "$OFF"
+    return 0
+  fi
+  local bad=0 f out
+  for f in .github/workflows/*.yml; do
+    [ -f "$f" ] || continue
+    if out=$(npx --yes js-yaml "$f" 2>&1 >/dev/null); then
+      printf '  %sok%s    %s\n' "$GRN" "$OFF" "$f"
+    elif printf '%s' "$out" | grep -qiE 'network|ENOTFOUND|EAI_AGAIN|registry|offline'; then
+      printf '  %sskipped — no network to fetch js-yaml%s\n' "$DIM" "$OFF"
+      return 0
+    else
+      printf '  %sFAIL%s  %s\n%s\n' "$RED" "$OFF" "$f" "$out"
+      bad=1
+    fi
+  done
+  [ "$bad" -eq 0 ] && printf '\n  %sall workflows parse%s\n' "$GRN" "$OFF"
+  return "$bad"
+}
+
 where_things_live() {
   cat <<EOF
 
-  ${B}Source of truth${OFF}   src/  — js/ css/ fragments (order: src/manifest.json),
-                    fieldbook.template.html, tests/, docs/ (dev-only)
+  ${B}Source of truth${OFF}   src/  — js/ css/ html/ fragments (order: src/manifest.json),
+                    fieldbook.template.html (the page shell), tests/, docs/ (dev-only)
   ${B}Build artifact${OFF}    dist/fieldbook.html — never hand-edit; rebuild instead
   ${B}Rules data${OFF}        data/5e2024/, humblewood/, xanathars/, tashas/ (per category);
                     build bundles them into dist/<system>_full.json
@@ -352,6 +416,8 @@ while true; do
     2) run ./build.sh --no-zip; pause ;;
     3) run node scripts/build-html.js --check; pause ;;
     4) run ./src/tests/run.sh; pause ;;
+    w|W) check_workflows; pause ;;
+    h|H) install_hooks; pause ;;
     5) run node scripts/bundle-rules.js; pause ;;
     6) convert_data; pause ;;
     c|C) commit_menu; pause ;;

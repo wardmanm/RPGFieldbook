@@ -2507,3 +2507,98 @@ extractor change.
   climb/swim/burrow/fly speeds (only walking `speed` is a target), natural weapons, "you know X".
 - Player-choice ability boosts on feats (Sun Touched, Moonlit) stay by-hand — no feat-level
   ability-choice mechanism (could mirror the new skill-choice path later if wanted).
+
+---
+
+## Markup split + four JS fragment cuts (2026-08-17)
+
+**Why:** several GitHub issues are now worked in parallel, one git worktree each. Branches carry
+src-only diffs (they build to verify but never commit `dist/fieldbook.html`), so builds were already
+untethered — what remained was *source-file* coupling. `src/fieldbook.template.html` held the whole
+`<body>` in 358 lines, its `tab-sheet` panel alone 156 of them, so every UI change landed in one file.
+
+**What moved.** The seven `<section class="tabpanel">` blocks left the template for `src/html/`, one
+per tab, spliced back inside `<div class="page">` at a new `<!--@@HTML@@-->` marker. The template is
+now the page SHELL (100 lines): top bar, tab bar, ToC flyout, home screen, generic modal. Four
+oversized JS fragments were cut at their own banner comments:
+
+| was | now | new fragment |
+|---|---|---|
+| `88-settings.js` 524 | 250 | `89-rules-merge.js` 274 |
+| `65-resources.js` 490 | 238 | `66-coins-hp.js` 252 |
+| `72-char-update.js` 466 | 328 | `73-char-update-ui.js` 138 |
+| `70-persistence.js` 423 | 294 | `71-char-io.js` 129 |
+
+`72-char-update.js` was cut at its own `/* ===== update UI ===== */` banner specifically to make
+CLAUDE.md's "pure — no DOM — so it stays testable" claim true again; lines 329–466 were the DOM half.
+`70-persistence.js` has no clean seam — `71-char-io.js` carries cache hydration, `migrate` and
+export/print/import, which its name only half describes. Taken for size, flagged here as the weak one.
+
+**Acceptance was byte-for-byte identity**, twice over: `dist/fieldbook.html` stayed at 473,556 bytes,
+sha256 `92779c24…`, after the markup split and again after the JS cuts. Because every cut is a
+contiguous slice in the original order, that identity is a *complete* correctness proof — reordering
+is the only thing that can break a top-level TDZ, and slicing cannot reorder. No `APP_VERSION` bump,
+no changelog bullet, no browser QA owed.
+
+**Two asymmetries are preserved inside the fragment files, not regenerated:** `50-tables.html` has no
+banner comment (every other panel does) and `60-notes.html` carries two. A joiner emitting banners per
+panel would have needed to special-case both. Related: `html` fragments concatenate with **no**
+separator, unlike `js` which joins on `\n` — each panel file already carries its trailing blank line.
+
+**`harness.js` gained `loadHTML()`.** `rules-data.js` read the template as the whole body in ~30
+assertions. It now calls one shared assembler, mirroring what `loadApp()` is for JS. It **splices**
+rather than concatenates: appending the panels would put them outside `.page`, which silently turns
+`block()`'s depth walk and the "nothing after the Notes panel takes a note" guard into tautologies.
+It re-implements the builder's splice rather than calling it, because `build-html.js` builds and
+`process.exit()`s at require time — and a test using the builder's own splice could never catch the
+builder splicing wrongly. One assertion pins them together against `dist/fieldbook.html`; verified it
+fails on the `join("\n")`-instead-of-`join("")` mistake, which every shape-based guard sails past.
+
+**Also hardened:** `block()` in `rules-data.js` used to `return html.slice(at)` on unbalanced markup.
+Every consumer asks "is X inside this block?" with `.includes()`, so that made those assertions
+trivially true. It throws now — a fragment losing its `</section>` is a real way to get there.
+
+**Two earlier ledger entries are now stale** (left as written, since they are dated log entries):
+the 2026-08-07 test-placement entry says `validateOrder` "is invoked only for `src/js` and `src/css`"
+— it is invoked for `src/html` too now, though the conclusion it supports (`src/tests/` is outside the
+unlisted-fragment guard) still holds. And the id-wiring entry quotes 311 declared / 286 used; measured
+today it is 323 / 292.
+
+**CI needed two edits or the new directory would have been invisible:** the manifest-parity step
+enumerates directories literally, and so does the byte-hygiene loop. An unlisted `src/html/*.html`
+ships nothing while CI stays green. The zip allowlist needed none — `build.sh`'s dev-material regex
+already starts `^src\/`.
+
+## Local git hooks (2026-08-17)
+
+`.githooks/` + `core.hooksPath`, installed from `dev.sh` menu `h`. Tracked, so they survive a clone
+and get reviewed like code; `.git/hooks` would have done neither.
+
+**They cover worktrees for free.** Measured: from inside a worktree `git rev-parse --git-path hooks`
+resolves to the MAIN repo's `.git/hooks`, and a relative `core.hooksPath` resolves against whichever
+working tree the hook runs in. One install covers every parallel-agent worktree.
+
+**The split is not arbitrary.** `pre-commit` deliberately excludes `build-html.js --check` AND
+`./src/tests/run.sh`. Both need a current `dist/fieldbook.html` — the second only since the byte-pin
+guard was added — and a stale `dist/` is the *expected* state on a feature branch, which the parallel
+worktree flow depends on (src-only diffs, artifact never committed on a branch). Putting either in
+`pre-commit` would block every agent commit. They live in `pre-push`, which in that flow only ever
+fires for the owner, at the moment work reaches CI.
+
+**The check worth having** is `check_manifest_tracked`: every path in `src/manifest.json` must be
+tracked or staged. It is the only one that reads the index rather than the working tree, because
+"written, listed, built, tested — and never `git add`ed" passes every other check and then produces a
+broken app on a clean checkout. Verified against the real case: it named all 11 untracked fragments
+from the markup split with a `git add` line for each.
+
+Everything else reads the working tree, not staged blobs — so `git add -p` could validate bytes that
+are not being committed. Accepted: reading staged content means temp files and rewritten error paths,
+and this repo commits whole files.
+
+`pre-push` will not rebuild for you. A hook that silently changes what you are about to push is the
+wrong shape for a byte-exact artifact. It prints the command and refuses.
+
+Not in CI, on purpose: validating `ci.yml` from inside `ci.yml` is tautological — GitHub must parse
+the workflow to start the job, so a malformed one never runs. And `build.sh` is executed by CI and
+`release.yml`, so an `npx` call there would put a network dependency into a script that otherwise
+needs only node, python3 and bash. The YAML check skips cleanly with no npx and no network.

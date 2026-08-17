@@ -79,6 +79,44 @@ function loadApp(names) {
   return {X: ctx.__X, ctx, store, state, bootError, fragments};
 }
 
+/* The assembled BODY markup, the way the BUILD assembles it: src/html spliced
+ * into the template shell at <!--@@HTML@@--> in src/manifest.json order.
+ *
+ * A second, independent implementation of the splice in scripts/build-html.js,
+ * on purpose — the same argument loadApp() makes above. That script runs a whole
+ * build and process.exit() at require time, so it cannot be required; and even
+ * if it could, a test calling the builder's own splice could never catch the
+ * builder splicing wrongly. CI's `build-html.js --check` keeps the two honest,
+ * as does the byte-pin assertion in rules-data.js.
+ *
+ * SPLICE, not concatenate. The suites slice this string by POSITION — block()
+ * walks <div>/</div> from the nearest preceding <div>, and one guard reads
+ * "nothing after the Notes panel carries a data-note". Appending the fragments
+ * to the end of the shell would put the panels outside <div class="page"> and
+ * turn those guards into tautologies without failing.
+ */
+const HTML_MARK = "<!--@@HTML@@-->\n";   // token PLUS its newline — see build-html.js
+
+function loadHTML() {
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "src/manifest.json"), "utf8"));
+  if (!Array.isArray(manifest.html) || !manifest.html.length) {
+    throw new Error('harness.loadHTML: src/manifest.json has no non-empty "html" array — '
+                    + "every markup guard downstream would go vacuous");
+  }
+  const tpl = fs.readFileSync(path.join(ROOT, "src/fieldbook.template.html"), "utf8");
+  const i = tpl.indexOf(HTML_MARK);
+  if (i < 0) throw new Error("harness.loadHTML: marker <!--@@HTML@@--> not found in the template");
+  if (tpl.indexOf(HTML_MARK, i + 1) >= 0) {
+    throw new Error("harness.loadHTML: marker <!--@@HTML@@--> appears more than once");
+  }
+  /* join("") — NOT join("\n") the way loadApp() does above. Each fragment already
+     ends in its own newline, and fragments 1..n-1 carry the blank line that used
+     to separate the panels. A separator here inserts six blank lines that every
+     shape assertion in the suites would sail straight past. */
+  const blob = manifest.html.map(p => fs.readFileSync(path.join(ROOT, p), "utf8")).join("");
+  return tpl.slice(0, i) + blob + tpl.slice(i + HTML_MARK.length);
+}
+
 /* Tiny assertion recorder — no framework, no dependencies. */
 function makeCheck() {
   const failed = [];
@@ -98,4 +136,4 @@ function makeCheck() {
   return ck;
 }
 
-module.exports = {loadApp, makeCheck, ROOT};
+module.exports = {loadApp, loadHTML, makeCheck, ROOT};

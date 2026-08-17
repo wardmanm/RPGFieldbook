@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Fast, branch-agnostic checks. Runs in ~1s.
+#
+# What is deliberately NOT here: `build-html.js --check` and ./src/tests/run.sh.
+# Both require dist/fieldbook.html to be current, and a stale dist/ is the
+# EXPECTED state on a feature branch — CLAUDE.md says so, and the parallel
+# worktree flow depends on it (agent branches carry src-only diffs and never
+# commit the artifact). Enforcing freshness here would block every one of those
+# commits. That gate lives in pre-push, which is where work reaches CI.
+#
+# Bypass with `git commit --no-verify` if you genuinely need to.
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+. .githooks/checks.sh
+
+FILES=$(staged_files)
+[ -n "$FILES" ] || exit 0
+
+printf '\n%spre-commit%s\n' "$H_B" "$H_OFF"
+
+rc=0
+check_js_syntax      $FILES || rc=1
+check_byte_hygiene   $FILES || rc=1
+check_json           $FILES || rc=1
+check_yaml           $FILES || rc=1
+check_manifest_parity        || rc=1
+check_manifest_tracked       || rc=1
+
+if [ "$rc" -ne 0 ]; then
+  printf '\n%scommit refused.%s Fix the above, or bypass with %sgit commit --no-verify%s\n\n' \
+    "$H_RED" "$H_OFF" "$H_DIM" "$H_OFF"
+else
+  printf '\n'
+fi
+exit "$rc"

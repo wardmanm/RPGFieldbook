@@ -40,9 +40,11 @@ The split is by AUDIENCE: anything under `src/` is development material and neve
 
 ```
 src/                    THE SOURCE OF TRUTH — edit here, never the built file
-  fieldbook.template.html  HTML shell + the whole <body>; two markers: /*@@CSS@@*/ and //@@JS@@
-  manifest.json         the authoritative concatenation ORDER for js/ and css/
-  js/*.js               22 fragments, concatenated into the single <script>
+  fieldbook.template.html  the page SHELL — top bar, tab bar, home, modal; three markers:
+                        /*@@CSS@@*/, <!--@@HTML@@--> and //@@JS@@
+  manifest.json         the authoritative concatenation ORDER for html/, js/ and css/
+  html/*.html           7 fragments, one tab panel each, spliced into <div class="page">
+  js/*.js               26 fragments, concatenated into the single <script>
   css/*.css             7 fragments, concatenated into the single <style>
   tests/                THE TEST SUITES — run with ./src/tests/run.sh (dev)
     harness.js          loads the app the way the build concatenates it
@@ -133,9 +135,18 @@ and `scripts/*` — no build logic lives in it, so it can't drift from what CI r
 skips cleanly without `.venv` and the PDFs). The `docs` suite asserts the counts and filenames these
 notes quote, so this file can't drift from the code again without a test going red.
 
+**Git hooks (`.githooks/`, opt-in).** `./dev.sh` menu `h` sets `core.hooksPath` — one install covers
+the main checkout and every worktree, since a relative `core.hooksPath` resolves against whichever
+working tree the hook runs in. `pre-commit` is the fast set (js syntax, byte hygiene, JSON, workflow
+YAML, manifest parity, and that every manifest-listed fragment is actually tracked — the one that
+catches a new fragment nobody `git add`ed). `pre-push` adds artifact freshness and the full suite.
+**Staleness is checked only on push, never on commit**, because a stale `dist/` is the expected state
+on a feature branch and enforcing it at commit time would block every src-only worktree commit. The
+dev-menu header shows `hooks off` when they are not installed. `--no-verify` bypasses either.
+
 Unlike the build, the tests are safe to run unprompted — they touch no tracked file. Run them after any change to `src/js`, `scripts/`, or
-`data/`. The builder's fragment validator only reads `src/js` and `src/css`, so `.js` files under
-`src/tests/` are deliberately outside it.
+`data/`. The builder's fragment validator only reads `src/js`, `src/css` and `src/html`, so `.js`
+files under `src/tests/` are deliberately outside it.
 
 **Building to test is fine. Cutting a release is not.** Run `./build.sh` (or
 `node scripts/build-html.js`) whenever you want to verify a change end to end — it rewrites the
@@ -321,16 +332,19 @@ The split is done. These rules are live:
 - **Where to edit what:**
   - JS → `src/js/*.js` (the fragment whose name matches the area; they are positional slices)
   - CSS → `src/css/*.css`
-  - **HTML markup (the whole `<body>`) → `src/fieldbook.template.html`**, *not* `src/`'s js/css dirs.
-    This is the easy one to forget.
+  - **A tab panel's markup → `src/html/*.html`** (one file per tab). This is the easy one to forget.
+  - **Everything else in the `<body>` → `src/fieldbook.template.html`** — the top bar, tab bar, ToC
+    flyout, home screen and the generic modal. It is the SHELL, not the whole body any more.
   - `APP_VERSION` / `CHANGELOG` → `src/js/30-version.js`. (Not `00-constants.js` as ADR-001
     originally sketched — they sit mid-file in the original and rule 1 forbids moving them.)
+    Do NOT split this fragment: `dev.sh`, `release.yml`, `release.js` and the `docs` suite all
+    hardcode its name, and the release pipeline dies at the tag if it moves.
 - **Adding or removing a fragment means editing `src/manifest.json`.** It is the authoritative
-  order, not the filename prefixes and not a glob. The build hard-fails if a `.js`/`.css` file
-  exists in `src/` but is not listed, or is listed but missing.
+  order, not the filename prefixes and not a glob. The build hard-fails if a `.js`/`.css`/`.html`
+  file exists in `src/` but is not listed, or is listed but missing.
 - **Concatenation only** — no ES modules, no `import`/`export`, no bundler. Ordered `.js` fragments
-  are inlined into one `<script>`; ordered `.css` into one `<style>`. This is what keeps the app
-  working from `file://` on every device with no server.
+  are inlined into one `<script>`; ordered `.css` into one `<style>`; ordered `.html` into the page
+  body. This is what keeps the app working from `file://` on every device with no server.
 - **Cut, don't reorder:** fragments concatenate in the same top-to-bottom order as the original file,
   and `boot()` stays last — machine-checked by the builder. See ADR-001 for the ordering rationale
   (TDZ on top-level const/let).

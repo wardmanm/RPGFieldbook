@@ -43,10 +43,11 @@ jobs:
         run: |
           node -e '
             const fs=require("fs"),m=require("./src/manifest.json");let bad=0;
-            [...m.js,...m.css].forEach(p=>{if(!fs.existsSync(p)){console.error("listed but missing: "+p);bad=1}});
+            [...m.js,...m.css,...m.html].forEach(p=>{if(!fs.existsSync(p)){console.error("listed but missing: "+p);bad=1}});
             [...fs.readdirSync("src/js").map(f=>"src/js/"+f),
-             ...fs.readdirSync("src/css").map(f=>"src/css/"+f)]
-              .forEach(p=>{if(!m.js.includes(p)&&!m.css.includes(p)){console.error("on disk but unlisted: "+p);bad=1}});
+             ...fs.readdirSync("src/css").map(f=>"src/css/"+f),
+             ...fs.readdirSync("src/html").map(f=>"src/html/"+f)]
+              .forEach(p=>{if(!m.js.includes(p)&&!m.css.includes(p)&&!m.html.includes(p)){console.error("on disk but unlisted: "+p);bad=1}});
             process.exit(bad);'
 
       - name: Every data/**/*.json parses
@@ -79,7 +80,7 @@ jobs:
       - name: Byte hygiene (no CR, no BOM, final newline)
         run: |
           bad=0
-          for f in src/js/*.js src/css/*.css src/manifest.json src/fieldbook.template.html; do
+          for f in src/js/*.js src/css/*.css src/html/*.html src/manifest.json src/fieldbook.template.html; do
             grep -q $'\r' "$f" && { echo "CR bytes: $f"; bad=1; }
             [ "$(head -c3 "$f" | od -An -tx1 | tr -d ' \n')" = "efbbbf" ] && { echo "BOM: $f"; bad=1; }
             [ -n "$(tail -c1 "$f")" ] && { echo "no trailing newline: $f"; bad=1; }

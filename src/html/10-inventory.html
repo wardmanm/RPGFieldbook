@@ -1,0 +1,15 @@
+  <!-- ============ INVENTORY TAB ============ -->
+  <section class="tabpanel" id="tab-inventory">
+    <div class="stack" style="max-width:720px;margin:0 auto">
+      <div class="card" data-note="inventory">
+        <div class="label">Equipment &amp; Inventory <span class="chip enc-pill" id="encPill" style="display:none"></span> <button class="add" data-add="item"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="invCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="invCollapseLbl">Collapse all</span></button></div>
+        <div id="inventoryList"></div>
+      </div>
+      <div class="card" data-note="coins">
+        <div class="label">Coins <span class="grow"></span><button class="add" id="btnCoinAdjust" title="Add or spend several denominations at once"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Adjust</button><button class="add" id="btnCoinConvert" title="Roll lower coins up into higher denominations"><svg viewBox="0 0 24 24"><path d="M7 4v13m0 0-3-3m3 3 3-3M17 20V7m0 0 3 3m-3-3-3 3"/></svg>Auto-convert</button></div>
+        <div class="coins" id="coins"></div>
+        <p class="hint coin-hint">Type a number to set it, or <b>+10</b> / <b>-5</b> to add or spend.</p>
+      </div>
+    </div>
+  </section>
+

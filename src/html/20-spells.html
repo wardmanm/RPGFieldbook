@@ -1,0 +1,36 @@
+  <!-- ============ SPELLS TAB ============ -->
+  <section class="tabpanel" id="tab-spells">
+    <div class="stack">
+      <div class="card" data-note="spellcasting">
+        <div class="label">Spellcasting <span class="grow"></span></div>
+        <div class="g3">
+          <div class="field"><label class="f">Spellcasting ability</label>
+            <select data-path="character.spellAbility" data-recompute>
+              <option value="">—</option><option value="int">Intelligence</option><option value="wis">Wisdom</option><option value="cha">Charisma</option>
+            </select></div>
+          <div class="field"><label class="f">Spell save DC</label><div class="vbox" style="padding:6px"><div class="big" id="dcDisp">—</div></div></div>
+          <div class="field"><label class="f">Spell attack</label><div class="vbox" style="padding:6px"><div class="big" id="satkDisp">—</div></div></div>
+        </div>
+      </div>
+      <div class="card" data-note="slots">
+        <div class="label">Spell Slots <button class="add" id="restoreSlots">↻ Restore all</button><span class="grow"></span></div>
+        <div class="slotgrid" id="slotGrid"></div>
+        <p class="hint" id="slotAutoNote" style="margin-top:8px"></p>
+      </div>
+      <div class="card" data-note="activespells" id="activeSpellCard" style="display:none">
+        <div class="label">Active Spells <span class="grow"></span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-family:var(--head);font-size:12px">Round
+            <button class="add" data-round="-1" aria-label="Previous round">−</button>
+            <b id="roundNum" style="min-width:14px;text-align:center">0</b>
+            <button class="add" data-round="1" aria-label="Next round">+</button>
+          </span>
+        </div>
+        <div id="activeSpellList"></div>
+      </div>
+      <div class="card" data-note="spells">
+        <div class="label">Spells &amp; Cantrips <button class="add" data-add="spell"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+        <div id="spellList"></div>
+      </div>
+    </div>
+  </section>
+

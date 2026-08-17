@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# The real gate: everything CI would reject you for, run before it costs a
+# round trip. A push is the moment work reaches CI and can become a release, so
+# unlike pre-commit this checks the whole tree, not just what was staged.
+#
+# In the parallel-worktree flow agents commit but never push, so this only ever
+# fires for the owner — at exactly the right moment.
+#
+# It will NOT rebuild for you. A hook that silently changes what you are about
+# to push is the wrong shape for a repo whose artifact is byte-exact and whose
+# builds are deliberate.
+#
+# Bypass with `git push --no-verify`.
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+. .githooks/checks.sh
+
+printf '\n%spre-push%s\n' "$H_B" "$H_OFF"
+
+FILES=$(all_files)
+rc=0
+check_js_syntax      $FILES || rc=1
+check_byte_hygiene   $FILES || rc=1
+check_json           $FILES || rc=1
+check_yaml           $FILES || rc=1
+check_manifest_parity        || rc=1
+check_manifest_tracked       || rc=1
+
+# dist/fieldbook.html is tracked, and a stale one is what turns into an
+# unreproducible release — the release workflow rebuilds from the tag and
+# refuses unless it reproduces the committed artifact byte for byte.
+if node scripts/build-html.js --check >/dev/null 2>&1; then
+  ok_msg "dist/fieldbook.html is current"
+else
+  fail_msg "dist/fieldbook.html is STALE"
+  printf '        %s./build.sh --no-zip   then commit the rebuilt artifact%s\n' "$H_DIM" "$H_OFF"
+  rc=1
+fi
+
+if out=$(./src/tests/run.sh 2>&1); then
+  ok_msg "$(printf '%s' "$out" | grep -E '^All .* suites passed' || echo 'tests pass')"
+else
+  fail_msg "tests"
+  printf '%s\n' "$out" | tail -20
+  rc=1
+fi
+
+if [ "$rc" -ne 0 ]; then
+  printf '\n%spush refused.%s Fix the above, or bypass with %sgit push --no-verify%s\n\n' \
+    "$H_RED" "$H_OFF" "$H_DIM" "$H_OFF"
+else
+  printf '\n'
+fi
+exit "$rc"

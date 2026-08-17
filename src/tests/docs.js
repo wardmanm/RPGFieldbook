@@ -20,21 +20,33 @@ const readme = read('README.md');
 const runsh = read('src/tests/run.sh');
 
 // ---------- fragment counts quoted in the dev docs
-const nJs = manifest.js.length, nCss = manifest.css.length;
+const nJs = manifest.js.length, nCss = manifest.css.length, nHtml = manifest.html.length;
 const claudeJs = /js\/\*\.js\s+(\d+) fragments/.exec(claude);
 const claudeCss = /css\/\*\.css\s+(\d+) fragments/.exec(claude);
+const claudeHtml = /html\/\*\.html\s+(\d+) fragments/.exec(claude);
 ck('CLAUDE.md states a JS fragment count', !!claudeJs);
 ck('CLAUDE.md JS fragment count is right', claudeJs && +claudeJs[1] === nJs,
    claudeJs && claudeJs[1] + ' vs ' + nJs);
 ck('CLAUDE.md states a CSS fragment count', !!claudeCss);
 ck('CLAUDE.md CSS fragment count is right', claudeCss && +claudeCss[1] === nCss,
    claudeCss && claudeCss[1] + ' vs ' + nCss);
+ck('CLAUDE.md states an HTML fragment count', !!claudeHtml);
+ck('CLAUDE.md HTML fragment count is right', claudeHtml && +claudeHtml[1] === nHtml,
+   claudeHtml && claudeHtml[1] + ' vs ' + nHtml);
 
 const adr = read('src/docs/ADR-001-source-split.md');
 const adrJs = /js\/ \((\d+) fragments\)/.exec(adr);
 const adrCss = /css\/ \((\d+)\)/.exec(adr);
+const adrHtml = /html\/ \((\d+)\)/.exec(adr);
 ck('ADR-001 JS fragment count is right', adrJs && +adrJs[1] === nJs, adrJs && adrJs[1]);
 ck('ADR-001 CSS fragment count is right', adrCss && +adrCss[1] === nCss, adrCss && adrCss[1]);
+ck('ADR-001 HTML fragment count is right', adrHtml && +adrHtml[1] === nHtml, adrHtml && adrHtml[1]);
+
+// One panel per tab, and the manifest is what the build reads — so an html
+// fragment that exists but went unlisted ships nothing, silently.
+ck('every html fragment holds exactly one tab panel',
+   manifest.html.every(p => (read(p).match(/<section class="tabpanel/g) || []).length === 1),
+   manifest.html);
 
 // ---------- suite count
 const suites = (/SUITES="([^"]+)"/.exec(runsh) || [, ''])[1].trim().split(/\s+/).filter(Boolean);

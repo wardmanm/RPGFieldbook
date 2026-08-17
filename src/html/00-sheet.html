@@ -1,0 +1,158 @@
+  <!-- ============ SHEET TAB ============ -->
+  <section class="tabpanel active" id="tab-sheet">
+    <div class="cols">
+      <div class="stack">
+        <div class="card" data-note="portrait">
+          <div class="label">Portrait <span class="grow"></span></div>
+          <div class="portrait" id="portrait"><div class="ph">No portrait yet</div></div>
+          <div class="rowbtns">
+            <button class="mini" id="btnPortrait"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add image</button>
+            <button class="mini danger" id="btnPortraitDel">Remove</button>
+          </div>
+          <input type="file" id="filePortrait" accept="image/*" class="hidefile">
+          <div class="field"><label class="f">Character name</label><input data-path="character.name" placeholder="Pib Thornwhistle"></div>
+          <div class="g2">
+            <div class="field"><label class="f">Alignment</label><input data-path="character.alignment" placeholder="NG"></div>
+            <div class="field"><label class="f">Experience</label><input type="number" min="0" data-path="character.xp" placeholder="0"></div>
+          </div>
+          <div class="g2">
+            <div class="field"><label class="f">Level</label><div class="vbox" style="padding:6px"><div class="big" id="levelDisp">1</div></div></div>
+            <div class="field"><label class="f">Proficiency Bonus</label><div class="vbox" style="padding:6px"><div class="big" id="pbDisp">+2</div></div></div>
+          </div>
+        </div>
+
+        <div class="card" data-note="origin">
+          <div class="label"><span id="craceWord">Ancestry</span> &amp; Background <span class="grow"></span></div>
+          <div id="raceBgBox"></div>
+        </div>
+
+        <div class="card" data-note="class">
+          <div class="label">Class <span class="grow"></span><button class="add" id="btnLevelUp">▲ Level up</button><button class="add" id="btnLevelDown">▼ Level down</button></div>
+          <div id="classBox"></div>
+        </div>
+
+        <!-- Familiars live in the sidebar, beside the portrait and class, rather
+             than at the bottom of the long right-hand column: you reach for a
+             familiar mid-fight, and it was the last thing on the sheet.
+             The card and the button are a mutually-exclusive PAIR — renderFamiliars
+             shows exactly one of them and looks both up unguarded — so they move
+             together and neither id may be renamed. Keep the card's attribute
+             order too: a template guard counts card openings by literal prefix,
+             and putting the id first hides this one from it. -->
+        <div class="card" data-note="familiars" id="familiarCard" style="display:none">
+          <div class="label">Familiars &amp; Companions <button class="add" data-add="familiar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="familiarList"></div>
+        </div>
+        <button class="mini" id="addFamiliarLink" style="max-width:260px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a familiar</button>
+      </div>
+
+      <div class="stack">
+        <div class="card" data-note="abilities">
+          <div class="label">Ability Scores &amp; Saves <span class="grow"></span></div>
+          <div class="abilities" id="abilities"></div>
+        </div>
+
+        <div class="card" data-note="skills">
+          <div class="label">Skills <span class="grow"></span></div>
+          <div class="skills" id="skills"></div>
+          <div class="legend">
+            <b><i></i>None</b><b><i class="p"></i>Proficient</b><b><i class="e"></i>Expertise</b>
+            <b style="color:var(--ink-soft)">Tap dot to cycle</b>
+          </div>
+        </div>
+
+        <div class="card" data-note="vitals">
+          <div class="label">Vitals <span class="grow"></span><button class="starbtn" id="starBtn" title="Inspiration" aria-label="Toggle inspiration" aria-pressed="false">&#10022;</button></div>
+          <div class="vitals" style="margin-bottom:11px">
+            <div class="vbox"><div class="n">Armor Class</div><div class="big" data-stat="ac" id="acDisp">10</div></div>
+            <div class="vbox"><div class="n">Initiative</div><div class="big" data-stat="init" id="initDisp">+0</div></div>
+            <div class="vbox"><div class="n">Speed</div><div class="big" data-stat="speed" id="speedDisp">0</div></div>
+            <div class="vbox wide"><div class="n">Size</div><div class="big txt" id="sizeDisp" role="button" tabindex="0" title="Tap to set your size">Medium</div></div>
+            <div class="vbox wide"><div class="n">Passive Perc.</div><div class="big" id="passDisp">10</div></div>
+          </div>
+          <div class="hpwrap">
+            <div class="hp-title">Hit Points</div>
+            <div class="hprow">
+              <div class="hpcol"><div class="n">Current</div><input type="text" inputmode="tel" data-hp="cur" id="hpCur" placeholder="0" aria-label="Current HP — type a number, or +4 to heal / -7 for damage, which spends temp HP first"></div>
+              <!-- The padlock is an inline SVG, not U+1F512: that codepoint has
+                   no text-presentation variant, so the &#65038; trick that keeps
+                   the death-save skull as ink does not exist for it and it would
+                   render as a colour emoji. Both shackle paths ship here and CSS
+                   toggles them off .hp-lock.open, so renderHP only does a
+                   classList.toggle — the same thing renderHitDice does for the
+                   hit-dice mode pill. -->
+              <div class="hpcol"><div class="n">Max <button class="hp-lock" data-hplock aria-pressed="true" aria-label="Lock or unlock Max HP" title="Max HP is locked — tap to edit it"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path class="sh-shut" d="M8.5 10.5V7a3.5 3.5 0 0 1 7 0v3.5"/><path class="sh-open" d="M8.5 10.5V7a3.5 3.5 0 0 1 6.9-.9"/></svg></button></div><input type="text" inputmode="tel" data-hp="max" id="hpMax" placeholder="0" aria-label="Base max HP — locked by default; unlock with the padlock beside this label, then type a number or +4 / -7 to adjust"></div>
+              <div class="hpcol"><div class="n">Temp</div><input type="text" inputmode="tel" data-hp="temp" id="hpTemp" placeholder="0" aria-label="Temp HP — type a number, or +4 to grant / -7 for damage, which spills into current HP"></div>
+            </div>
+            <div class="hp-step">
+              <button id="hpMinus" aria-label="Lose HP">−</button>
+              <button id="hpPlus" aria-label="Gain HP">+</button>
+            </div>
+            <!-- the skull is written as entities on purpose: U+FE0E (text
+                 presentation, so it renders as ink and not a colour emoji) is an
+                 invisible byte that a whitespace cleanup would silently eat, and
+                 the build is byte-exact. -->
+            <!-- Failures left, successes right — dying is what you read first,
+                 and it puts the red beside the skull's own colour. -->
+            <div class="death" title="Death Saves">
+              <span class="set" id="deathFail" data-kind="fail" aria-label="Death save failures"></span>
+              <span class="dsep" aria-hidden="true">&ndash;</span>
+              <span class="dskull" role="img" aria-label="Death Saves">&#9760;&#65038;</span>
+              <span class="dsep" aria-hidden="true">&ndash;</span>
+              <span class="set" id="deathSucc" data-kind="succ" aria-label="Death save successes"></span>
+            </div>
+            <div id="maxNote" style="text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px">Item / feature bonuses to Max HP appear here</div>
+          </div>
+          <!-- Hit Dice reads as the second half of the Hit Points panel, not as
+               a rest fixture: they are the same resource seen twice, and
+               spending one writes straight into the box above. A SIBLING of
+               .hpwrap, never a child — nesting would put it inside the brick
+               ::before overlay and make one frame enclose both.
+               Nothing may be inserted between #hdWrap and .hd-grid, or inside
+               it: .hd-row is display:contents and hands its four cells straight
+               to that grid, which is the only reason a multiclass pool lines up
+               column by column. A wrapper there breaks it with no error. -->
+          <div class="hd-box">
+            <!-- the auto/manual pill rides ON the heading, not under it: alone
+                 on its own line it read as an orphaned control and cost a whole
+                 row of the panel's height -->
+            <div class="hd-title">Hit Dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">auto</button></div>
+            <div class="hd-head">
+              <input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly aria-label="Hit Dice">
+            </div>
+            <div class="hd-wrap" id="hdWrap"></div>
+          </div>
+        </div>
+
+        <div class="card" data-note="rest">
+          <div class="label">Rest &amp; Recovery <span class="grow"></span></div>
+          <div class="rest-row">
+            <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
+            <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
+          </div>
+        </div>
+
+        <div class="card" data-note="statuses">
+          <div class="label">Statuses &amp; Conditions <button class="add" data-add="status"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="statusList"></div>
+        </div>
+
+        <div class="card" data-note="attacks">
+          <div class="label">Attacks &amp; Weapons <button class="add" data-add="attack"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="attackList"></div>
+        </div>
+
+        <div class="card" data-note="resources">
+          <div class="label">Resources <button class="add" id="addResource"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Resource</button><span class="grow"></span></div>
+          <div id="resList"></div>
+        </div>
+
+        <div class="card" data-note="features">
+          <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="featureList"></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+

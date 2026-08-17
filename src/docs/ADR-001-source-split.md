@@ -92,7 +92,7 @@ and why.
 **Layout.** Build outputs live in `dist/`, not the repo root:
 
 ```
-src/   fieldbook.template.html · manifest.json · js/ (22 fragments) · css/ (7) · tests/ · docs/
+src/   fieldbook.template.html · manifest.json · js/ (26 fragments) · css/ (7) · html/ (7) · tests/ · docs/
 dist/  fieldbook.html (tracked) · fieldbook-v<version>.zip · <system>_full.json · .buildstamp (all ignored)
 ```
 
@@ -109,7 +109,7 @@ root now holds no build inputs or outputs.
 **Markers.** `/*@@CSS@@*/` and `//@@JS@@`, not the `<!--@@CSS@@-->` sketched above: an HTML comment
 inside `<style>` is not a CSS comment. Real comments keep the template itself syntactically valid.
 
-**Ordering is a manifest, not a glob.** `src/manifest.json` lists both blobs in order. A sorted glob
+**Ordering is a manifest, not a glob.** `src/manifest.json` lists all three blobs in order. A sorted glob
 would silently concatenate a stray `50-x.OLD.js` (this repo accumulates `*.OLD.*` scratch files) and
 still pass `node --check`. The build hard-fails on drift in **both** directions — listed-but-missing
 and present-but-unlisted.
@@ -137,3 +137,42 @@ command substitution, opens a quote bash never closes. Run as `./build.sh` it va
 then died at the changelog step (exit 2), so the zip was never produced by that path. Moving the
 block to `scripts/gen-changelog.js` makes it interpreter-agnostic. The ledger has the measured
 before/after.
+
+---
+
+## As built, part 2 — the markup split (2026-08-17)
+
+The original split left the whole `<body>` in `src/fieldbook.template.html`. It has now been split
+too, on the same terms and for a new reason: **parallel work**. Several GitHub issues are worked at
+once in separate git worktrees, and a single 358-line template meant every UI change landed in one
+file. `src/js/*` gained four fragments in the same pass, halving the four largest.
+
+**A third marker, and this time an HTML comment is right.** `<!--@@HTML@@-->` sits in body context,
+where `<!-- -->` *is* a real comment — so the objection recorded above against `<!--@@CSS@@-->` (an
+HTML comment inside `<style>` is not a CSS comment) does not apply here. The template keeps the page
+SHELL: top bar, tab bar, ToC flyout, `<div class="page">`, home screen, generic modal. The seven tab
+panels moved to `src/html/`, one per tab, spliced back inside `.page`.
+
+**No separator between markup fragments.** `js` fragments are joined with a newline; `html` fragments
+are concatenated with nothing at all. Each panel file carries its own banner comment and the blank
+line that used to follow it, so the fragments already end in exactly one `\n` and concatenation
+reproduces the original body. Two asymmetries are preserved verbatim inside the files rather than
+regenerated: `50-tables.html` has **no** banner comment, and `60-notes.html` carries **two** comment
+lines. A joiner that emitted banners per panel would have had to special-case both.
+
+**Acceptance, again, was byte-for-byte identity** — `dist/fieldbook.html` at 473,556 bytes,
+sha256 `92779c24…`, unchanged. Because every cut is a contiguous slice in the original order, that
+identity is a *complete* correctness proof for the JS split as well: reordering is the only thing
+that can break a top-level TDZ, and slicing cannot reorder. No `APP_VERSION` bump, no changelog
+entry, no browser QA owed.
+
+**The tests needed a shared assembler.** `src/tests/rules-data.js` read the template as if it were
+the whole body in ~30 assertions. `harness.js` gained `loadHTML()`, the one definition of "the
+assembled markup", mirroring what `loadApp()` is for JS. It **splices** rather than concatenates —
+appending the panels would put them outside `<div class="page">`, which turns `block()`'s depth walk
+and the "nothing after the Notes panel takes a note" guard into tautologies that pass. It
+deliberately re-implements the builder's splice instead of calling it: `build-html.js` runs a build
+and `process.exit()` at require time, and a test using the builder's own splice could never catch the
+builder splicing wrongly. One assertion pins the two together by checking the assembled fragments
+appear verbatim in `dist/fieldbook.html` — every other markup guard is shape-based and would sail
+past a stray separator.
