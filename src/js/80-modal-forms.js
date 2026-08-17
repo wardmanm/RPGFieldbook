@@ -141,6 +141,11 @@ function openItemForm(existing){
   const it=existing||{id:uid(),name:"",qty:1,description:"",effects:[],equipped:false};
   const lib=(rules.items||[]);
   const w=it.weapon||{};
+  /* itemUse(), not it.use: a potion that has never been edited has its healing
+     READ from its description, and the form has to show what the Use button is
+     already doing — otherwise saving any other change would quietly turn it off
+     (an empty box saves as "explicitly nothing"). */
+  const use=itemUse(it)||{};
   const abilOpts=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"],["finesse","Finesse (best of STR/DEX)"],["none","None"]];
   openModal(existing?"Edit item":"New item",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="iLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${i}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
@@ -161,18 +166,32 @@ function openItemForm(existing){
       <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="iWDice" value="${esc(w.dice||"")}" placeholder="1d8"></div>
         <div class="field"><label class="f">Damage type</label><input id="iWType" value="${esc(w.damageType||"")}" placeholder="slashing"></div></div>
     </div>
+    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="iUses" type="number" min="0" value="${itemUsesMax(it)||""}" placeholder="0"></div>
+      <div class="field"><label class="f">Resets on</label><select id="iUsesPer">${[["long","Long rest"],["short","Short rest"],["none","Never (manual)"]].map(([v,l])=>`<option value="${v}"${((it.uses&&it.uses.per)||"long")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
+    <div class="g2"><div class="field"><label class="f">Healing when used</label><input id="iHeal" value="${esc(use.heal||"")}" placeholder="2d4+2" autocomplete="off"></div>
+      <div class="field"><label class="f">Status applied when used</label><input id="iStatus" list="itemStatusTerms" value="${esc(use.status||"")}" placeholder="Poisoned, Blessed…" autocomplete="off">${statusDatalistHTML("itemStatusTerms")}</div></div>
+    <label class="equip ${use.consume?"on":""}" id="iConsume" style="font-size:12px"><span class="box"></span>Using one up reduces the quantity</label>
+    <p class="hint">A potion read from the rules pack fills these in for you. Anything with uses or an effect here gets a <b>Use</b> button in your inventory; healing asks whether you rolled it or the app should.</p>
     <div class="m-actions"><button class="tbtn" id="iCancel">Cancel</button><button class="tbtn primary" id="iSave">${existing?"Save":"Add"}</button></div>`);
   let equipped=!!it.equipped;
   const eq=document.getElementById("iEquip");eq.addEventListener("click",()=>{equipped=!equipped;eq.classList.toggle("on",equipped)});
   let isWeapon=!!it.weapon;
   const wtog=document.getElementById("iIsWeapon"), wfields=document.getElementById("iWeaponFields");
   wtog.addEventListener("click",()=>{isWeapon=!isWeapon;wtog.classList.toggle("on",isWeapon);wfields.style.display=isWeapon?"":"none";});
+  let consume=!!use.consume;
+  const ctog=document.getElementById("iConsume");ctog.addEventListener("click",()=>{consume=!consume;ctog.classList.toggle("on",consume)});
   const fxWrap=document.getElementById("iFx");
   document.getElementById("iAddFx").addEventListener("click",()=>fxWrap.insertAdjacentHTML("beforeend",fxRow(null)));
   fxWrap.addEventListener("click",e=>{const d=e.target.closest(".fx-del");if(d)d.closest(".fxrow").remove()});
   const libSel=document.getElementById("iLib");
   if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;const wg=fnum(x.weight);if(wg)document.getElementById("iWeight").value=wg;fxWrap.innerHTML=fxEditorRows(x.effects);
-    if(x.weapon){isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}});
+    if(x.weapon){isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}
+    /* Read the healing out of what was just inserted, the same way the
+       inventory would if this were saved untouched — so the boxes agree with
+       the Use button the player is about to get. */
+    const du=detectItemUse({description:x.description||"",category:x.category,type:x.type,sectionOverride:document.getElementById("iCategory").value});
+    document.getElementById("iHeal").value=(du&&du.heal)||"";
+    consume=!!(du&&du.consume);ctog.classList.toggle("on",consume);});
   document.getElementById("iCancel").addEventListener("click",closeModal);
   const iOrig=document.getElementById("iOrigin"),iOrigW=document.getElementById("iOrigDetWrap"),iOrigD=document.getElementById("iOrigDet");
   if(iOrig)iOrig.addEventListener("change",()=>{const d=originDef(iOrig.value);iOrigW.style.display=iOrig.value?"":"none";if(d&&iOrigD)iOrigD.placeholder=d.ph||"place, who, etc.";});
@@ -193,6 +212,25 @@ function openItemForm(existing){
     if(it.src)rec.src=it.src;
     const dice=document.getElementById("iWDice").value.trim();
     if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(it.weapon&&it.weapon.notes)||""};if(it.weapon&&it.weapon.atkMisc!=null)rec.weapon.atkMisc=it.weapon.atkMisc;if(it.weapon&&it.weapon.dmgMisc!=null)rec.weapon.dmgMisc=it.weapon.dmgMisc;}
+    /* Limited uses and what Use does. Last, because detectItemUse() below reads
+       the FINISHED record — its section depends on the weapon flag set above.
+       `used` is the player's own number and survives an edit, clamped in case
+       the maximum came down. */
+    const um=Math.max(0,num(document.getElementById("iUses").value));
+    if(um>0)rec.uses={max:um,per:document.getElementById("iUsesPer").value,used:Math.min(num(it.uses&&it.uses.used),um)};
+    const heal=document.getElementById("iHeal").value.trim(), stName=document.getElementById("iStatus").value.trim();
+    if(heal&&!parseDiceExpr(heal)){alert(`“${heal}” isn't dice this app can roll. Try 2d4+2, 1d8, or a plain number.`);return;}
+    if(heal||stName||consume){
+      rec.use={};
+      if(heal)rec.use.heal=heal;
+      if(stName)rec.use.status=stName;
+      if(consume)rec.use.consume=true;
+    }else if(detectItemUse(rec)){
+      /* The boxes were cleared against a use this app would otherwise READ back
+         out of the description. Record the refusal, or the next render puts it
+         straight back and clearing it could never stick. */
+      rec.use={off:true};
+    }
     const i=character.inventory.findIndex(x=>x.id===it.id);if(i>=0)character.inventory[i]=rec;else character.inventory.push(rec);
     syncItemAttack(rec);
     closeModal();renderInventory();renderAttacks();recompute();scheduleSave();
@@ -214,12 +252,119 @@ function syncItemAttack(item){
     delete item.attackId;
   }
 }
+/* ---- using an item ----
+   The Use button on an inventory row. Everything it can do is optional and
+   independent: spend one of the item's limited uses, heal, apply a status, use
+   one up. Healing is the only part that has to ASK, because the roll may have
+   happened on the table — that path opens a prompt; everything else applies at
+   once. */
+function useItem(id){
+  const it=(character.inventory||[]).find(x=>x.id===id);if(!it)return;
+  const u=itemUse(it)||{}, mx=itemUsesMax(it);
+  if(mx>0&&num(it.uses.used)>=mx){alert(`No uses of “${it.name}” left — rest to recover.`);return;}
+  if(u.consume&&itemQty(it)<1){alert(`No “${it.name}” left to use.`);return;}
+  const p=u.heal?parseDiceExpr(u.heal):null;
+  if(p&&p.dice.length)return openItemUsePrompt(it,u,p);
+  applyItemUse(it,u,p?p.mod:0,"");
+}
+/* A missing quantity means one, everywhere — an item added without one is not
+   an item you have none of. */
+function itemQty(it){return (it&&it.qty!=null&&it.qty!=="")?num(it.qty):1;}
+/* Add a status by NAME, the way a potion grants one. An existing status of the
+   same name is switched back on rather than duplicated — two "Poisoned" rows
+   would both claim to be the truth. Returns what happened, for the summary. */
+function addStatusByName(name){
+  const nm=String(name||"").trim();if(!nm)return "";
+  const ex=(character.statuses||[]).find(s=>String(s.name||"").toLowerCase()===nm.toLowerCase());
+  if(ex){const was=ex.active!==false;ex.active=true;return was?"already":"reactivated";}
+  character.statuses.push({id:uid(),name:nm,description:"",effects:[],active:true});
+  return "added";
+}
+/* Do it, then say exactly what happened — the healing lands on hit points and
+   the status lands on another tab, so a silent apply leaves the player hunting
+   for the change. */
+function applyItemUse(it,u,heal,note){
+  const lines=[];
+  if(heal>0){
+    adjustHP(heal);renderHP();
+    lines.push((note?note+" — ":"")+`healed ${heal} HP · now ${num(character.hp.cur)}${effMaxHP()?" / "+effMaxHP():""}`);
+  }
+  if(u.status){
+    const what=addStatusByName(u.status);
+    lines.push(what==="already"?`${u.status} was already active`
+      :what==="reactivated"?`${u.status} switched back on`
+      :`${u.status} added to your statuses`);
+  }
+  const mx=itemUsesMax(it);
+  if(mx>0){it.uses.used=Math.min(mx,num(it.uses.used)+1);lines.push(`${mx-num(it.uses.used)} of ${mx} uses left`);}
+  if(u.consume){
+    const left=Math.max(0,itemQty(it)-1);
+    if(left<=0){
+      /* The last one is gone, so the row goes with it — a "×0" line still
+         offering Use is worse than removing it. Its linked attack goes too,
+         exactly as deleting the item by hand does. */
+      character.inventory=character.inventory.filter(x=>x.id!==it.id);
+      character.attacks=(character.attacks||[]).filter(a=>a.itemId!==it.id);
+      lines.push("That was the last one — removed from your inventory");
+    }else{it.qty=left;lines.push(`${left} left`);}
+  }
+  renderInventory();renderStatuses();renderAttacks();recompute();scheduleSave();
+  restSummary("Used "+(it.name||"item"),lines.length?lines:["Nothing to apply — this item has no effect set."],"");
+}
+/* The healing prompt. Both halves of the ask live here: tap Roll and the app
+   rolls it, or type what you rolled at the table. ONE number path either way —
+   the box holds the DICE total and the flat bonus is added once, so the two
+   answers can't disagree about whether the +2 is already in. */
+function openItemUsePrompt(it,u,p){
+  const diceTxt=diceExprDice(p), modTxt=p.mod?(p.mod<0?` − ${Math.abs(p.mod)}`:` + ${p.mod}`):"";
+  openModal("Use "+(it.name||"item"),`
+    <p class="hint">Heals <b>${esc(diceExprText(p))}</b>${u.status?` and applies <b>${esc(u.status)}</b>`:""}.</p>
+    <div class="field"><label class="f">What the dice came up (${esc(diceTxt)})</label>
+      <input id="iuRoll" type="number" min="0" inputmode="numeric" placeholder="total on the dice"></div>
+    <p class="hint" id="iuPrev"></p>
+    <div class="m-actions"><button class="tbtn" id="iuCancel">Cancel</button>
+      <button class="tbtn" id="iuRollBtn">Roll for me</button>
+      <button class="tbtn primary" id="iuGo">Apply</button></div>`);
+  const box=document.getElementById("iuRoll"), prev=document.getElementById("iuPrev"), go=document.getElementById("iuGo");
+  let note="";
+  const total=()=>Math.max(0,num(box.value)+p.mod);
+  const sync=()=>{
+    const raw=String(box.value).trim();
+    go.disabled=(raw==="");
+    prev.textContent=raw===""
+      ? `Roll ${diceTxt} at the table and type the total, or let the app roll it.`
+      : (note?note+" — ":"")+`heals ${total()} HP (${num(box.value)}${modTxt})`;
+  };
+  box.addEventListener("input",()=>{note="";sync();});
+  document.getElementById("iuRollBtn").addEventListener("click",()=>{
+    const r=rollDiceExpr(p);
+    box.value=r.total-p.mod;
+    note="rolled "+r.faces.join(", ");
+    sync();
+  });
+  document.getElementById("iuCancel").addEventListener("click",closeModal);
+  go.addEventListener("click",()=>{
+    if(String(box.value).trim()==="")return;
+    applyItemUse(it,u,total(),note);
+  });
+  sync();
+}
 /* ---- spell editor ---- */
+/* The condition names offered by every box that asks for a status — the status
+   editor, and the item editor's "applies when used". One list, so the two can't
+   drift; `id` is a parameter because two datalists with the same id on one page
+   is a silent no-op for the second. */
+const STATUS_CONDSET=new Set(["blinded","charmed","deafened","exhaustion","frightened","grappled","incapacitated","invisible","paralyzed","petrified","poisoned","prone","restrained","stunned","unconscious","bloodied","concentration","surprised"]);
+function statusTermList(){
+  return [...new Set(allGlossary().filter(g=>g.cond||STATUS_CONDSET.has(String(g.term||"").trim().toLowerCase())).map(g=>g.term).filter(Boolean))];
+}
+function statusDatalistHTML(id){
+  const terms=statusTermList();
+  return terms.length?`<datalist id="${id}">${terms.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>`:"";
+}
 function openStatusForm(existing){
   const s=existing||{id:uid(),name:"",description:"",effects:[],active:true};
-  const CONDSET=new Set(["blinded","charmed","deafened","exhaustion","frightened","grappled","incapacitated","invisible","paralyzed","petrified","poisoned","prone","restrained","stunned","unconscious","bloodied","concentration","surprised"]);
-  const terms=[...new Set(allGlossary().filter(g=>g.cond||CONDSET.has(String(g.term||"").trim().toLowerCase())).map(g=>g.term).filter(Boolean))];
-  const dl=terms.length?`<datalist id="statusTerms">${terms.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>`:"";
+  const dl=statusDatalistHTML("statusTerms");
   openModal(existing?"Edit status":"New status",`
     <div class="field"><label class="f">Condition / status</label><input id="stName" list="statusTerms" value="${esc(s.name)}" placeholder="Poisoned, Grappled, Blessed…">${dl}
       <p class="hint">If the name matches a glossary or rules entry, it becomes tappable to show the rule.</p></div>

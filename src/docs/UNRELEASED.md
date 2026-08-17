@@ -28,4 +28,9 @@ Bullets below this line — leave the heading in place.
 
 ## Pending
 
-_Nothing yet._
+- Items can now be used. Anything with limited uses gets a Use button and a row of pips in your
+  inventory, and those uses come back on a short or a long rest — or never, if you would rather track
+  them yourself. An item can heal you and apply a status when it is used, and using one up reduces the
+  quantity. Healing asks whether you rolled the dice at the table or want the app to roll them, and
+  either way the result goes straight onto your hit points. Healing potions from a rules pack already
+  know what they heal, so they work without being set up.

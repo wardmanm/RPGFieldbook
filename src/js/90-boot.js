@@ -128,6 +128,10 @@ function wire(){
     if((m=t.closest("[data-edit-item]")))return openItemForm(character.inventory.find(x=>x.id===m.dataset.editItem));
     if((m=t.closest("[data-del-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.delItem);if(it){const hasAtk=character.attacks.some(a=>a.itemId===it.id);if(confirm(`Delete “${it.name}”?${hasAtk?" Its linked attack will be removed too.":""}`)){character.inventory=character.inventory.filter(x=>x.id!==it.id);character.attacks=character.attacks.filter(a=>a.itemId!==it.id);renderInventory();renderAttacks();recompute();scheduleSave();}}return;}
     if((m=t.closest("[data-toggle-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.toggleItem);if(it){it.equipped=!it.equipped;renderInventory();recompute();scheduleSave();}return;}
+    if((m=t.closest("[data-useitem]")))return useItem(m.dataset.useitem);
+    /* Same "click pip i" semantics the feature and hit-dice pips have: tapping
+       the pip that is currently the last spent one gives that use back. */
+    if((m=t.closest("[data-iuse]"))){const it=character.inventory.find(x=>x.id===m.dataset.iuse);if(it&&it.uses){const i=num(m.dataset.i);it.uses.used=(num(it.uses.used)===i)?i-1:i;renderInventory();scheduleSave();}return;}
     // spells
     if((m=t.closest("[data-edit-spell]")))return openSpellForm(character.spells.find(x=>x.id===m.dataset.editSpell));
     if((m=t.closest("[data-view-spell]")))return openSpellView(character.spells.find(x=>x.id===m.dataset.viewSpell));
