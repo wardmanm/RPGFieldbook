@@ -16,6 +16,7 @@ const {X, bootError, fragments} = loadApp([
   'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
   'spellLevelTally', 'spellAllotment', 'cantripsKnown',
   'descHTML', 'highlight', 'mergeRules', 'resetRules',
+  'attackDamageStr', 'extraDamageList', 'damagePartStr',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -819,5 +820,80 @@ X.mergeRules({keywords: [{term: 'Dodge', text: 'A defensive action.'}]}, 'probe'
      bold.indexOf('&lt;span') === -1, bold);
 }
 X.resetRules();
+
+// ---------- attack damage lines, including additional damage types
+// The sheet row, the breakdown modal and the print sheet all format damage
+// through attackDamageStr, so these assertions cover all three.
+{
+  const S = X.attackDamageStr, L = X.extraDamageList, P = X.damagePartStr;
+
+  // the shape every attack saved before this feature has: no extraDamage key
+  const plain = {damageDice: '1d8', damageType: 'slashing'};
+  ck('an old attack with no extras formats exactly as before',
+     S(plain, 3) === '1d8 +3 slashing', S(plain, 3));
+  ck('...and with no bonus', S(plain, 0) === '1d8 slashing', S(plain, 0));
+  ck('a negative bonus keeps its sign', S(plain, -1) === '1d8 -1 slashing', S(plain, -1));
+  ck('an empty attack is an empty line, not stray spaces', S({}, 0) === '', JSON.stringify(S({}, 0)));
+  ck('a null attack is safe', S(null, 3) === '');
+
+  // the feature: a sword that also deals poison
+  const poisoned = {damageDice: '1d8', damageType: 'slashing',
+                    extraDamage: [{dice: '1d6', type: 'poison'}]};
+  ck('an extra damage type is appended with a plus',
+     S(poisoned, 3) === '1d8 +3 slashing + 1d6 poison', S(poisoned, 3));
+  ck('the bonus lands on the main damage only, never on an extra',
+     S(poisoned, 3).indexOf('1d6 +3') === -1, S(poisoned, 3));
+  ck('several extras all show',
+     S({damageDice: '1d8', damageType: 'slashing',
+        extraDamage: [{dice: '1d6', type: 'fire'}, {dice: '2d4', type: 'necrotic'}]}, 0)
+     === '1d8 slashing + 1d6 fire + 2d4 necrotic');
+
+  // a save spell's row passes bonus 0 — extras must still print
+  ck('a save attack shows its extras with no bonus',
+     S({damageDice: '8d6', damageType: 'fire', extraDamage: [{dice: '1d4', type: 'radiant'}]}, 0)
+     === '8d6 fire + 1d4 radiant');
+
+  // half-filled rows are usable: dice with no type, or a type with no dice
+  ck('an extra with dice but no type still shows',
+     S({damageDice: '1d8', extraDamage: [{dice: '1d6'}]}, 0) === '1d8 + 1d6');
+  ck('an extra with a type but no dice still shows',
+     S({damageDice: '1d8', extraDamage: [{type: 'poison'}]}, 0) === '1d8 + poison');
+  ck('an extra with a main die missing leads with the extra',
+     S({extraDamage: [{dice: '1d6', type: 'fire'}]}, 0) === '1d6 fire');
+
+  // rubbish must not produce a stray " + " or throw
+  ck('a wholly empty extra row is dropped',
+     S({damageDice: '1d8', extraDamage: [{dice: '', type: ''}]}, 0) === '1d8');
+  ck('a null entry in the list is dropped',
+     S({damageDice: '1d8', extraDamage: [null, {dice: '1d6', type: 'fire'}]}, 0) === '1d8 + 1d6 fire');
+  ck('extraDamage that is not an array is ignored, not thrown on',
+     S({damageDice: '1d8', extraDamage: '1d6 fire'}, 0) === '1d8');
+  ck('surrounding whitespace is trimmed off an extra',
+     S({damageDice: '1d8', extraDamage: [{dice: '  1d6 ', type: ' fire '}]}, 0) === '1d8 + 1d6 fire');
+  ck('numbers survive being typed into the boxes',
+     S({damageDice: '1d8', extraDamage: [{dice: 6, type: 'fire'}]}, 0) === '1d8 + 6 fire');
+
+  ck('extraDamageList is empty for an attack that has none', L({damageDice: '1d8'}).length === 0);
+  ck('extraDamageList normalises to trimmed strings',
+     JSON.stringify(L({extraDamage: [{dice: ' 1d6 '}]})) === '[{"dice":"1d6","type":""}]',
+     JSON.stringify(L({extraDamage: [{dice: ' 1d6 '}]})));
+  ck('damagePartStr with nothing at all is empty', P('', '', 0) === '');
+}
+
+// the field must survive a save -> load round-trip untouched
+{
+  const c = X.blankChar();
+  c.attacks = [{id: 'a1', name: 'Flame Tongue', damageDice: '1d8', damageType: 'slashing',
+                extraDamage: [{dice: '2d6', type: 'fire'}]},
+               {id: 'a2', name: 'Club', damageDice: '1d4', damageType: 'bludgeoning'}];
+  const back = X.migrate(JSON.parse(JSON.stringify(c)));
+  ck('migrate keeps extraDamage on the attack',
+     JSON.stringify(back.attacks[0].extraDamage) === '[{"dice":"2d6","type":"fire"}]',
+     JSON.stringify(back.attacks[0]));
+  ck('...and does not invent one on an attack without it',
+     back.attacks[1].extraDamage === undefined, JSON.stringify(back.attacks[1]));
+  ck('a blank character starts with no attacks at all',
+     Array.isArray(X.blankChar().attacks) && X.blankChar().attacks.length === 0);
+}
 
 ck.done();

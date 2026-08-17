@@ -31,3 +31,8 @@ Bullets below this line — leave the heading in place.
 - The Tables tab has moved onto the Rules tab, so there is one less tab to scroll past. Reference
   Tables now sits underneath the glossary on the Rules tab, with the same filter box and the same
   list — and tapping a highlighted table name anywhere in the app still opens it where you are.
+- Attacks can now carry additional damage types. A sword that deals 1d8 slashing and 1d6 poison is
+  one attack: add as many extra dice as you need in the attack form, and they show on the sheet, in
+  the to-hit breakdown and on the printed sheet. Extras roll on their own — the ability modifier and
+  any damage bonuses stay on the main damage.
+- Rules pack names containing an ampersand no longer show their escape code in the glossary heading.
