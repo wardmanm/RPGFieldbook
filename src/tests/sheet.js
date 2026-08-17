@@ -14,6 +14,8 @@ const {X, bootError, fragments} = loadApp([
   'capacityFor', 'sizeOptionsHTML', 'invSection',
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
   'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
+  'FEAT_KINDS', 'featKindDef', 'featPickList', 'featPickKind', 'featPickPrereq',
+  'featPickName', 'featPickStoredName', 'featPickGroup', 'addPickedFeature', 'updResolve',
   'spellLevelTally', 'spellAllotment', 'cantripsKnown',
   'descHTML', 'highlight', 'mergeRules', 'resetRules',
   'attackDamageStr', 'extraDamageList', 'damagePartStr',
@@ -895,5 +897,103 @@ X.resetRules();
   ck('a blank character starts with no attacks at all',
      Array.isArray(X.blankChar().attacks) && X.blankChar().attacks.length === 0);
 }
+/* ================= feats & traits: what the picker offers, and what it adds ===
+   The browser itself is DOM, but everything it decides is in these functions:
+   which category a feat is, what its prerequisite says, what the sheet ends up
+   calling it, and — the part that matters six months later — that the record it
+   writes still resolves back to its rules entry. */
+X.character = X.blankChar();
+X.resetRules();
+X.mergeRules({system: 'Probe', feats: [
+  {name: 'Alert', description: 'Origin feat\nYou gain a +5 bonus to Initiative.',
+   effects: [{target: 'init', value: 5}]},
+  {name: 'Grappler', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nYou have advantage.'},
+  {name: 'Archery', description: 'Fighting Style feat · Prerequisite: Fighting Style feature\n+2 to ranged attack rolls.'},
+  {name: 'Boon of Combat Prowess', description: 'Epic Boon · Prerequisite: Level 19+\nYou never miss.'},
+  {name: 'Aerial Expert', description: 'Origin Feat (Prerequisite: Glide trait)\nYou glide well.'},
+  {name: 'Dragon Fear', description: 'Prerequisite: Dragonborn\nYou can roar.'},
+  {name: 'Glide', description: 'You are more at home in the trees than on the ground.'},
+], features: [
+  {name: 'Glide', description: 'You can glide when you fall.', source: 'Ancestry'},
+  {name: 'Darkvision', description: 'You see in the dark.'},
+]}, 'probe.json');
+
+const picks = X.featPickList();
+const pick = (k, n) => picks.find(w => w.k === k && w.e.name === n);
+ck('the picker offers feats AND traits, which no chooser did before',
+   picks.length === 9 && picks.filter(w => w.k === 'feat').length === 7, picks.length);
+ck('a feat and a trait of the same name stay two rows',
+   pick('feat', 'Glide') && pick('trait', 'Glide') &&
+   pick('feat', 'Glide').id !== pick('trait', 'Glide').id);
+
+// ---------- the category line the converter writes as the first line
+[['Alert', 'origin'], ['Aerial Expert', 'origin'], ['Grappler', 'general'],
+ ['Archery', 'style'], ['Boon of Combat Prowess', 'boon'],
+ ['Dragon Fear', 'feat'], ['Glide', 'feat']].forEach(([n, k]) => {
+  ck(n + ' is a "' + k + '"', X.featPickKind(pick('feat', n)) === k, X.featPickKind(pick('feat', n)));
+});
+ck('a 2014-era feat with no category line is simply a Feat',
+   X.featKindDef(X.featPickKind(pick('feat', 'Dragon Fear'))).label === 'Feat');
+ck('a trait is a trait whatever its text says',
+   X.featPickKind(pick('trait', 'Glide')) === 'trait' &&
+   X.featPickKind(pick('trait', 'Darkvision')) === 'trait');
+ck('every kind has a group heading', X.FEAT_KINDS.every(k => !!k.group && !!k.label));
+
+// ---------- headings: feats by category, loose traits by what they actually are
+ck('a feat heads its category', X.featPickGroup(pick('feat', 'Alert')) === 'Origin Feats' &&
+   X.featPickGroup(pick('feat', 'Boon of Combat Prowess')) === 'Epic Boons');
+ck('a trait heads its own source — the Invocations/Maneuvers/Infusions split',
+   X.featPickGroup(pick('trait', 'Glide')) === 'Ancestry', X.featPickGroup(pick('trait', 'Glide')));
+ck('...and falls back to one bucket when it has none',
+   X.featPickGroup(pick('trait', 'Darkvision')) === 'Traits');
+
+// ---------- prerequisites: first line only, and the filter depends on it
+ck('a middot prerequisite is read',
+   X.featPickPrereq(pick('feat', 'Grappler')) === 'Level 4+ and Strength 13+',
+   X.featPickPrereq(pick('feat', 'Grappler')));
+ck('a bare prerequisite line is read too',
+   X.featPickPrereq(pick('feat', 'Dragon Fear')) === 'Dragonborn');
+ck('the parenthesised Humblewood form loses its bracket',
+   X.featPickPrereq(pick('feat', 'Aerial Expert')) === 'Glide trait',
+   X.featPickPrereq(pick('feat', 'Aerial Expert')));
+ck('a feat with no prerequisite reports none',
+   X.featPickPrereq(pick('feat', 'Alert')) === '' && X.featPickPrereq(pick('trait', 'Glide')) === '');
+// prose in the body must not be mistaken for a gate — this is a filter, not a rules engine
+ck('"prerequisite" deeper in the text is ignored',
+   X.featPickPrereq({k: 'feat', e: {description: 'Origin feat\nIgnore any prerequisite: none.'}}) === '');
+
+// ---------- adding: a feat is stored exactly as grantFeatDef stores one
+const added = X.addPickedFeature(pick('feat', 'Alert'));
+ck('a feat is named the way a granted feat is', added.name === 'Feat: Alert', added.name);
+ck('...and carries its effects', JSON.stringify(added.effects) === '[{"target":"init","value":5}]');
+ck('...and is stamped against the feats category',
+   added.src && added.src.cat === 'feats' && added.src.name === 'Alert', added.src);
+ck('...so the update tool finds its definition again',
+   X.updResolve(added, 'feature').def === X.rules.feats.find(f => f.name === 'Alert'));
+ck('a picked feat gets no origin, so changing species cannot delete it',
+   added.origin === null && X.featGroupLabel(added) === 'Other');
+
+const tr = X.addPickedFeature(pick('trait', 'Glide'));
+ck('a trait keeps its own name', tr.name === 'Glide');
+ck('...and its own source badge', tr.source === 'Ancestry');
+ck('...and is stamped against the features category',
+   tr.src && tr.src.cat === 'features' && tr.src.name === 'Glide', tr.src);
+ck('...and resolves back too',
+   X.updResolve(tr, 'feature').def === X.rules.features.find(f => f.name === 'Glide'));
+ck('the same-named FEAT is still addable beside it',
+   !!X.addPickedFeature(pick('feat', 'Glide')) && X.character.features.length === 3,
+   X.character.features.map(f => f.name));
+
+// ---------- picking something you already have is a misclick, not a second copy
+ck('adding a feat twice is refused', X.addPickedFeature(pick('feat', 'Alert')) === null);
+ck('...and nothing is pushed', X.character.features.length === 3);
+ck('...which is exactly what the row badge warns about',
+   X.featPickStoredName(pick('feat', 'Alert')) === 'Feat: Alert' &&
+   X.featPickStoredName(pick('trait', 'Darkvision')) === 'Darkvision');
+
+// a pack that loaded nothing must not offer an empty browser
+X.resetRules();
+ck('no rules loaded, nothing to pick', X.featPickList().length === 0);
+X.character = X.blankChar();
 
 ck.done();

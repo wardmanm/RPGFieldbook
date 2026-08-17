@@ -51,7 +51,7 @@ function wire(){
     // slot bubbles
     if((m=t.closest(".slot .b"))){const lv=num(m.dataset.slot),i=num(m.dataset.i);const s=character.slots[lv];s.used=(s.used===i)?i-1:i;renderSlotBubbles();scheduleSave();return;}
     // features
-    if((m=t.closest("[data-add]"))){const w=m.dataset.add;({feature:openFeatureForm,item:browseItems,status:openStatusForm,familiar:openFamiliarForm,attack:openAttackForm,spell:browseSpells}[w]||openSpellForm)();return;}
+    if((m=t.closest("[data-add]"))){const w=m.dataset.add;({feature:browseFeatures,item:browseItems,status:openStatusForm,familiar:openFamiliarForm,attack:openAttackForm,spell:browseSpells}[w]||openSpellForm)();return;}
     if((m=t.closest("[data-atk-info]")))return openAttackBreakdown(m.dataset.atkInfo);
     if((m=t.closest("[data-edit-attack]")))return openAttackForm(character.attacks.find(x=>x.id===m.dataset.editAttack));
     if((m=t.closest("[data-del-attack]"))){const a=character.attacks.find(x=>x.id===m.dataset.delAttack);if(a&&confirm(`Delete “${a.name}”?`)){character.attacks=character.attacks.filter(x=>x.id!==a.id);renderAttacks();scheduleSave();}return;}
