@@ -169,12 +169,27 @@ cmd_rm() {
   rm -f "$path/.venv" "$path/_conversion-data" "$path/.claude/settings.local.json"
   rmdir "$path/.claude" 2>/dev/null || true
 
+  # dist/fieldbook.html is a BUILD ARTIFACT and branches deliberately never commit
+  # it — so "built to verify" is the normal end state of every worktree, and git
+  # counts that modification as a reason to refuse. Restore it (it regenerates
+  # from src/ in a second) rather than making --force the routine answer, which
+  # would blunt the guard that still has to catch real uncommitted source.
+  git -C "$path" checkout -- dist/fieldbook.html 2>/dev/null || true
+
   git worktree remove "$path" || die "worktree has uncommitted work — commit it, or discard with: git worktree remove --force $path"
   if [ -n "$branch" ] && [ "$branch" != "HEAD" ]; then
-    if git branch -d "$branch" 2>/dev/null; then
-      printf '  %sremoved%s worktree and branch %s\n' "$GRN" "$OFF" "$branch"
+    # `git branch -d` measures "merged" against the branch's UPSTREAM, and these
+    # track origin/main — so work already merged into a LOCAL main that has not
+    # been pushed reads as unmerged and the branch survives with a misleading
+    # message. Ask the question that actually matters instead: is every commit on
+    # this branch already contained in main?
+    if git merge-base --is-ancestor "$branch" main 2>/dev/null; then
+      git branch -D "$branch" >/dev/null 2>&1
+      printf '  %sremoved%s worktree and branch %s %s(merged into main)%s\n' \
+        "$GRN" "$OFF" "$branch" "$DIM" "$OFF"
     else
-      printf '  %sremoved worktree; branch %s kept (unmerged)%s\n' "$YEL" "$branch" "$OFF"
+      printf '  %sremoved worktree; branch %s kept — it has commits main does not%s\n' \
+        "$YEL" "$branch" "$OFF"
       printf '  %sdelete it anyway with: git branch -D %s%s\n' "$DIM" "$branch" "$OFF"
     fi
   fi
