@@ -37,9 +37,16 @@ find_gh() {
   return 1
 }
 
+# sed -E (ERE), NOT `\+`. `\+` is a GNU extension: BSD sed on macOS reads
+# `[^a-z0-9]\+` as "one non-alphanumeric followed by a literal +", which matches
+# nothing — so an issue title's spaces survived into the branch name and
+# `git worktree add` rejected it. -E is understood by both BSD and GNU sed.
 slugify() {
-  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' \
-    | sed -e 's/[^a-z0-9]\+/-/g' -e 's/^-//' -e 's/-$//' | cut -c1-40
+  printf '%s' "$1" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed -E -e 's/[^a-z0-9]+/-/g' -e 's/^-+//' -e 's/-+$//' \
+    | cut -c1-40 \
+    | sed -E 's/-+$//'
 }
 
 # `merge=ours` in .gitattributes is inert without a driver — git ships union and
@@ -54,15 +61,35 @@ cmd_add() {
   [ -n "$num" ] || die "usage: wt.sh add <issue-number> [slug]"
   case "$num" in (*[!0-9]*) die "issue number must be digits: $num";; esac
 
-  if [ -z "$slug" ] && gh=$(find_gh); then
-    title=$("$gh" issue view "$num" --json title -q .title 2>/dev/null || true)
-    [ -n "$title" ] && slug=$(slugify "$title")
-    [ -n "$title" ] && printf '%sissue %s:%s %s\n' "$DIM" "$num" "$OFF" "$title"
+  # Falling back to a generic slug is fine, but doing it SILENTLY is not: you end
+  # up with issue/30-work and no idea the title lookup failed. GitHub's API 503s
+  # often enough that this matters.
+  if [ -z "$slug" ]; then
+    if gh=$(find_gh); then
+      title=$("$gh" issue view "$num" --json title -q .title 2>/dev/null || true)
+      if [ -n "$title" ]; then
+        slug=$(slugify "$title")
+        printf '%sissue %s:%s %s\n' "$DIM" "$num" "$OFF" "$title"
+      else
+        printf '%scould not read issue %s from GitHub (API down, or no such issue).%s\n' \
+          "$YEL" "$num" "$OFF"
+        printf '%s  naming the branch generically — or ^C and: wt.sh add %s my-slug%s\n' \
+          "$DIM" "$num" "$OFF"
+      fi
+    else
+      printf '%sgh not found — naming the branch generically%s\n' "$YEL" "$OFF"
+    fi
   fi
   [ -n "$slug" ] || slug="work"
 
   branch="issue/${num}-${slug}"
   path="$WT_ROOT/$num"
+
+  # Belt and braces: whatever slugify produced, refuse before git does. A bad
+  # ref name should fail here with the name in the message, not as a `fatal:`
+  # from `git worktree add` after the worktree machinery has already started.
+  git check-ref-format --branch "$branch" >/dev/null 2>&1 \
+    || die "not a valid branch name: $branch  (pass an explicit slug: wt.sh add $num my-slug)"
 
   [ -e "$path" ] && die "$path already exists — ./scripts/wt.sh rm $num first"
   git show-ref --verify --quiet "refs/heads/$branch" \

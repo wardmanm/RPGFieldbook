@@ -127,6 +127,14 @@ which is the behaviour worth keeping. Discard it deliberately with
   `/_conversion-data` with no slash. Get this wrong and `git add -A` in a worktree commits two broken
   symlinks into the repo.
 - **`wt.sh rm` refusing forever.** Same root cause — see section 6.
+- **`\+` in `sed` is a GNU extension.** `slugify` used `s/[^a-z0-9]\+/-/g`, which BSD sed on macOS
+  reads as "one non-alphanumeric followed by a literal `+`" — matching nothing. Issue titles kept
+  their spaces and `git worktree add` rejected the branch name. Use `sed -E` with `+`; both BSD and
+  GNU understand it. `wt.sh` now also runs `git check-ref-format --branch` before creating anything,
+  so a bad name fails with the name in the message.
+- **A generic `issue/<n>-work` branch means the title lookup failed**, usually a GitHub API 503.
+  `wt.sh` says so now rather than falling back silently. Pass a slug explicitly to skip the lookup:
+  `wt.sh add 30 additional-damage-types-to-attacks`.
 - **`gh` missing from non-login shells.** Homebrew's `brew shellenv` lives in `~/.zprofile`, which
   only login shells read, so `/opt/homebrew/bin` can be absent from a spawned shell. `wt.sh` resolves
   `gh` by looking in the usual places rather than trusting `PATH`.
