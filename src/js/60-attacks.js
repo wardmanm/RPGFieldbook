@@ -33,6 +33,24 @@ function attackDamageStr(a,bonus){
     .concat(extraDamageList(a).map(d=>damagePartStr(d.dice,d.type,0)))
     .filter(Boolean).join(" + ");
 }
+/* ---- what an attack is LINKED to ----
+   The attack form rebuilds its record from the boxes, so any field the form does
+   not ask about is dropped unless it is carried across — the same trap the item
+   and feature editors already guard against, and every one of these is invisible
+   when it goes:
+     itemId   the inventory item this attack came from. Lose it and the next
+              rules-pack update finds no attack for the item, calls
+              addAttackForItem() and the player gets a DUPLICATE row.
+     spellId  the same link for a spell, and what the Cast button reads.
+     source   "spell", which is what makes the row show Cast instead of Edit.
+     save     the {ability} block that makes a spell-save row print its DC
+              rather than a to-hit number.
+   Pure, so the round trip is assertable without a DOM. */
+const ATTACK_LINK_FIELDS=["itemId","spellId","source","save"];
+function carryAttackLinks(prev,rec){
+  if(prev&&rec)ATTACK_LINK_FIELDS.forEach(k=>{if(prev[k]!==undefined&&prev[k]!==null)rec[k]=prev[k];});
+  return rec;
+}
 /* ---- spell casting, attacks, and active spells ---- */
 function spellDC(){const c=contributions();const sa=character.spellAbility;if(!sa)return null;return 8+pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2);}
 function spellAtkBonus(){const c=contributions();const sa=character.spellAbility;if(!sa)return null;return pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2);}
@@ -206,6 +224,7 @@ function openAttackForm(existing){
     /* omitted when empty, so an attack that has no extras carries no field —
        the shape an older save already has, and what migrate round-trips */
     const xd=readAttackXDmg();if(xd.length)rec.extraDamage=xd;
+    carryAttackLinks(a,rec);
     const i=character.attacks.findIndex(x=>x.id===a.id);if(i>=0)character.attacks[i]=rec;else character.attacks.push(rec);
     closeModal();renderAttacks();scheduleSave();
   });

@@ -22,7 +22,7 @@ const {X, bootError, fragments} = loadApp([
   'invItemHTML', 'itemUseLine', 'itemUsesRowHTML', 'uid',
   'spellLevelTally', 'spellAllotment', 'cantripsKnown',
   'descHTML', 'highlight', 'mergeRules', 'resetRules',
-  'attackDamageStr', 'extraDamageList', 'damagePartStr',
+  'attackDamageStr', 'extraDamageList', 'damagePartStr', 'carryAttackLinks',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -900,6 +900,35 @@ X.resetRules();
      back.attacks[1].extraDamage === undefined, JSON.stringify(back.attacks[1]));
   ck('a blank character starts with no attacks at all',
      Array.isArray(X.blankChar().attacks) && X.blankChar().attacks.length === 0);
+}
+
+// ---------- editing an attack must not unlink it from its item or spell
+// The attack form rebuilds the record from its boxes, so the links the form
+// never shows have to be carried across by hand. The bug this encodes: an edited
+// weapon attack lost its itemId, so the next rules-pack update found no attack
+// for the item and added a SECOND one.
+{
+  const C = X.carryAttackLinks;
+  const edited = () => ({id: 'a1', name: 'Longsword', kind: 'melee', damageDice: '1d8'});
+
+  const fromItem = C({id: 'a1', name: 'Longsword', itemId: 'it7'}, edited());
+  ck('an edited attack keeps the item it came from', fromItem.itemId === 'it7', JSON.stringify(fromItem));
+
+  const fresh = C({id: 'a2', name: '', kind: 'melee'}, edited());
+  ck('a fresh attack still has no itemId', fresh.itemId === undefined, JSON.stringify(fresh));
+  ck('...and no spellId, so nothing invents a link', fresh.spellId === undefined);
+
+  const spellAtk = C({id: 'a3', spellId: 's1', source: 'spell', save: {ability: 'dex'}}, edited());
+  ck('a spell attack keeps its spell link', spellAtk.spellId === 's1' && spellAtk.source === 'spell');
+  ck('...and its save block, which is what prints the DC',
+     JSON.stringify(spellAtk.save) === '{"ability":"dex"}');
+
+  const typed = C({id: 'a4', itemId: 'it7'}, {id: 'a4', name: 'Longsword +1', itemId: undefined});
+  ck('a link is restored even when the rebuilt record set it undefined', typed.itemId === 'it7');
+  ck('carrying links does not touch what the player just typed',
+     typed.name === 'Longsword +1');
+  ck('a record with no previous version is returned unchanged',
+     JSON.stringify(C(null, edited())) === JSON.stringify(edited()));
 }
 /* ================= feats & traits: what the picker offers, and what it adds ===
    The browser itself is DOM, but everything it decides is in these functions:

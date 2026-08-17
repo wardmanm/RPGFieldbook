@@ -1128,6 +1128,13 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('fav is not a rules-owned field on either kind',
      /feature:\["description","effects","uses","cost"\]/.test(js) &&
      /item:\["description","effects","cost","weight","weapon"\]/.test(js));
+  // The attack form has the same shape and lost the same way: it rebuilt the
+  // record from its boxes and dropped itemId, so an edited weapon attack came
+  // unlinked from its inventory item and the next pack update added a duplicate
+  // row beside it. The carry itself is asserted in sheet.js; this is the wiring.
+  const atkSave = (js.match(/const rec=\{id:a\.id,name:document\.getElementById\("aName"\)[\s\S]{0,2000}?character\.attacks\[i\]=rec/) || [''])[0];
+  ck('the attack form carries the links its boxes never show',
+     /carryAttackLinks\(a,rec\);/.test(atkSave), atkSave.slice(-300));
 
   // ---------- the browse footer, and the per-level count
   // The Add button was laid out PAST the right edge of the screen with no way to

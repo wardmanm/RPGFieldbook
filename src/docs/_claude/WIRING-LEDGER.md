@@ -2768,3 +2768,16 @@ printed sheet.
 
 Sheet suite is +76 checks (1280 total). CSS gained `.tbtn:disabled`, which also fixes the coin
 adjuster's Apply button looking enabled while it was not.
+## Editing an attack kept its links (2026-08-17)
+
+`openAttackForm()` rebuilt its record from the form boxes and dropped everything the form does not
+ask about. `carryAttackLinks(prev,rec)` in `src/js/60-attacks.js` copies the four across —
+`itemId`, `spellId`, `source`, `save` — and the save handler calls it. Pure, so the round trip is
+asserted without a DOM (7 checks in `src/tests/sheet.js`), with one source guard in
+`rules-data.js` that the form actually calls it, next to the identical guards on the feature form.
+
+The visible damage was the duplicate: `updResyncAttack()` looks an attack up by `itemId`, found
+none on an edited weapon, and called `addAttackForItem()` — so a pack update grew a second row.
+**Deliberately NOT answered here:** whether a resync may overwrite a player-edited attack.
+`72-char-update.js` is untouched; it still rebuilds the row wholesale from the item, which is now
+reachable again for edited attacks. That is the open design call the previous ledger entry flagged.

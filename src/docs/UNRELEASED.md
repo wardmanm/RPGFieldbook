@@ -43,6 +43,9 @@ Bullets below this line — leave the heading in place.
   (origin, general, fighting style, epic boon), by pack, or to only what has no prerequisite, and
   preview any entry before you add it. Anything already on your sheet is marked. Typing your own
   feature by hand is still there, behind the Custom button.
+- Editing an attack no longer breaks its link to the weapon it came from. Renaming or tweaking a
+  weapon attack used to quietly detach it from the item in your inventory, and the next time you
+  updated your rules packs you were given a second copy of the same attack.
 - The picker's Add button now reads "Add 1 item" rather than "Add 1 items" when you have ticked exactly one.
 - Items can now be used. Anything with limited uses gets a Use button and a row of pips in your
   inventory, and those uses come back on a short or a long rest — or never, if you would rather track
