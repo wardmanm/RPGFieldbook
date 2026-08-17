@@ -99,8 +99,19 @@ cmd_add() {
   ensure_config
   git fetch --quiet origin || printf '%sfetch failed — branching from local main%s\n' "$YEL" "$OFF"
 
-  local base="origin/main"
-  git rev-parse --verify --quiet "$base" >/dev/null || base="main"
+  # Base on LOCAL main, not origin/main. Merging a batch of issues and then
+  # opening the next worktree before pushing is the normal rhythm here, and
+  # branching from origin/main in that window silently omits everything just
+  # merged — the new branch then rebuilds or conflicts with work that is already
+  # done. Local main is never behind origin (a merge would have to happen first),
+  # so this is the strictly better base. Say so when the two differ, because the
+  # branch then carries commits nobody else has yet.
+  local base="main" ahead
+  git rev-parse --verify --quiet "$base" >/dev/null || base="origin/main"
+  ahead=$(git rev-list --count origin/main.."$base" 2>/dev/null || echo 0)
+  if [ "${ahead:-0}" -gt 0 ]; then
+    printf '%sbasing on local main — %s commit(s) not yet pushed%s\n' "$DIM" "$ahead" "$OFF"
+  fi
 
   mkdir -p "$WT_ROOT"
   git worktree add -b "$branch" "$path" "$base" || die "git worktree add failed"
