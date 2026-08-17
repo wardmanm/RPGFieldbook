@@ -92,7 +92,7 @@ and why.
 **Layout.** Build outputs live in `dist/`, not the repo root:
 
 ```
-src/   fieldbook.template.html · manifest.json · js/ (26 fragments) · css/ (7) · html/ (7) · tests/ · docs/
+src/   fieldbook.template.html · manifest.json · js/ (26 fragments) · css/ (7) · html/ (6) · tests/ · docs/
 dist/  fieldbook.html (tracked) · fieldbook-v<version>.zip · <system>_full.json · .buildstamp (all ignored)
 ```
 

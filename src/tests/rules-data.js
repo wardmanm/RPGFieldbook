@@ -601,12 +601,12 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     .map(s => /data-tab="([a-z]+)"/.exec(s)[1]);
   const panels = (t.match(/class="tabpanel(?: active)?" id="tab-([a-z]+)"/g) || [])
     .map(s => /id="tab-([a-z]+)"/.exec(s)[1]);
-  ck('there are seven tabs', tabs.length === 7, tabs);
+  ck('there are six tabs', tabs.length === 6, tabs);
   ck('every tab has a panel', tabs.every(n => panels.indexOf(n) >= 0), tabs.filter(n => panels.indexOf(n) < 0));
   ck('every panel has a tab', panels.every(n => tabs.indexOf(n) >= 0), panels.filter(n => tabs.indexOf(n) < 0));
   ck('exactly one tab starts active', (t.match(/class="tab active"/g) || []).length === 1);
   ck('every tab carries a glyph and a word',
-     (t.match(/class="tabicon"/g) || []).length === 7 && (t.match(/class="tlbl"/g) || []).length === 7);
+     (t.match(/class="tabicon"/g) || []).length === 6 && (t.match(/class="tlbl"/g) || []).length === 6);
   // buildToc() reads the tab button's textContent for its heading, so a <title>
   // inside the icon would end up in the flyout
   ck('no tab icon carries a title element', !/<svg class="tabicon"[^>]*>\s*<title/.test(t));

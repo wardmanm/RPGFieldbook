@@ -561,8 +561,9 @@ appear in the app's **Tables** tab, and any description that carries a `[Table: 
 - Keys beginning with `_` are **extractor internals and must not appear in a shipped pack**. The
   Humblewood extractor strips them on write.
 - **`owner`** / **`ownerKind`** — which entity the table came from. `ownerKind` is one of
-  `class`, `subclass`, `spell`, `item`, `feat`, `background`, `rule`; it groups the Tables tab and
-  lets a class or subclass view show a chip for its own table even when no prose anchor exists.
+  `class`, `subclass`, `spell`, `item`, `feat`, `background`, `rule`; it groups the Reference
+  Tables card on the Rules tab and lets a class or subclass view show a chip for its own table
+  even when no prose anchor exists.
 - Rolling is **not** performed in-app — a `1d100` column is just text (`"01-02"`), so players roll
   their own dice.
 - Tables are **reference data only**: nothing here is written to a character, so adding or removing

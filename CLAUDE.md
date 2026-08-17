@@ -43,7 +43,7 @@ src/                    THE SOURCE OF TRUTH — edit here, never the built file
   fieldbook.template.html  the page SHELL — top bar, tab bar, home, modal; three markers:
                         /*@@CSS@@*/, <!--@@HTML@@--> and //@@JS@@
   manifest.json         the authoritative concatenation ORDER for html/, js/ and css/
-  html/*.html           7 fragments, one tab panel each, spliced into <div class="page">
+  html/*.html           6 fragments, one tab panel each, spliced into <div class="page">
   js/*.js               26 fragments, concatenated into the single <script>
   css/*.css             7 fragments, concatenated into the single <style>
   tests/                THE TEST SUITES — run with ./src/tests/run.sh (dev)

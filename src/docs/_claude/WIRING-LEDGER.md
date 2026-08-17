@@ -2631,3 +2631,32 @@ still blocks removal, which is the behaviour worth keeping.
 Verified end to end in a throwaway worktree: full suite passes inside it (1213 checks), the hooks are
 inherited (`core.hooksPath` is shared config and a relative path resolves per working tree), and a
 build there produced its own `dist/fieldbook.html` without touching main's.
+
+## Done — Tables folded into the Rules tab (issue #32)
+
+Seven tabs became six. The Reference Tables card moved verbatim out of `src/html/50-tables.html`
+into `src/html/40-rules.html`, below Glossary & Rules, and the fragment was deleted along with its
+`src/manifest.json` entry and the `data-tab="tables"` button in `src/fieldbook.template.html`.
+
+**No JS changed.** Every id the renderer and the boot wiring reach for (`tablesList`,
+`tablesSearch`, `tablesRulesFiles`, `tablesImport`) came along with the card, so `renderTables()`,
+the filter listener, the file input and the import link are untouched. `selectTab()` and
+`buildToc()` are generic over `data-tab` / `.tabpanel`, so neither needed a change either — the ToC
+flyout now lists both Rules cards, which is what replaces the lost tab as a way in.
+
+**`NOTE_SECTIONS` was never involved:** there was no `tables` note id, so no saved `secNotes` key
+can be orphaned. The registry is still 19 sections and the 19 `data-note` cards are all elsewhere.
+
+Test assertions changed, and why:
+- `rules-data.js` `'there are seven tabs' / tabs.length === 7` → `'there are six tabs' / === 6`.
+  The count IS the thing the issue changes; the name was reworded so it can't lie.
+- the same block's glyph-and-word check, `tabicon`/`tlbl` counts 7 → 6, for the same reason.
+The two-way tab↔panel checks were left alone and are what actually prove the removal is complete:
+a leftover panel or a leftover button would fail one of them.
+
+`docs.js` reads the html count from the manifest, so `CLAUDE.md` (`html/*.html  6 fragments`) and
+ADR-001 (`html/ (6)`) were updated with it. `README.md`'s Tables section was folded into Rules;
+`docs/rules-schema.md` and `docs/README-converter.md` no longer name a Tables tab.
+
+Fragment prefixes were NOT renumbered — `60-notes.html` keeps its name. The manifest is the
+authoritative order, the prefixes are only a reading aid, and renaming would have been pure churn.

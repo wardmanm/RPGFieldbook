@@ -115,7 +115,7 @@ silently trims the book. It has already cost 4-of-16 backgrounds, 339-of-391 spe
 Every converter lifts those out into a **separate tables pack** and leaves a `[Table: Name]`
 anchor in the description where the table used to sit; the app renders that anchor as a chip
 that opens the table, and as plain text if no tables pack is loaded. Each table records the
-entity it came from (`owner` / `ownerKind`), so the Tables tab can group them and a class view
+entity it came from (`owner` / `ownerKind`), so the Rules tab can group them and a class view
 can link to its own progression table.
 
 ```bash
