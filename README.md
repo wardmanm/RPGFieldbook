@@ -239,17 +239,17 @@ tappable links here so you can read a reminder without leaving the page.
 
 ### 📚 Rules
 
-A searchable glossary of conditions and rules terms. It shows entries from any rules pack you've
-loaded, plus any personal terms or house rules you add yourself. If nothing's loaded, there's a
-handy **Import rules files** link.
+Two cards, both fed by the rules packs you've loaded.
 
-### 📋 Tables
+**Glossary & Rules** is a searchable glossary of conditions and rules terms. It shows entries from
+any rules pack you've loaded, plus any personal terms or house rules you add yourself. If nothing's
+loaded, there's a handy **Import rules files** link.
 
-Every reference table in the rules you've loaded, in one searchable list — roll tables, class
-level progressions, background personality/ideal/bond/flaw tables, and the lookup tables the rules
-keep pointing you at.
+**Reference Tables** lists every reference table in the rules you've loaded, in one searchable
+list — roll tables, class level progressions, background personality/ideal/bond/flaw tables, and
+the lookup tables the rules keep pointing you at.
 
-You mostly won't need to come here, because the tables come to you: wherever a spell, feat, item or
+You mostly won't need to scroll down to the tables, because they come to you: wherever a spell, feat, item or
 class feature mentions one by name, that name is highlighted in the text. Tap it and the table opens
 right there, without losing your place. Species, backgrounds and subclasses also link to their own
 tables from their info panels.
