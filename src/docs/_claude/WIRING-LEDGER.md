@@ -2631,3 +2631,46 @@ still blocks removal, which is the behaviour worth keeping.
 Verified end to end in a throwaway worktree: full suite passes inside it (1213 checks), the hooks are
 inherited (`core.hooksPath` is shared config and a relative path resolves per working tree), and a
 build there produced its own `dist/fieldbook.html` without touching main's.
+
+## Feats and traits are searchable — issue #31 (2026-08-17)
+
+`browseFeatures()` in `src/js/85-browse.js`, wired to `data-add="feature"` in `90-boot.js` (one map
+entry: `feature:openFeatureForm` → `feature:browseFeatures`). It is `openBrowse()` with the same
+config shape as `browseItems`/`browseSpells`, so no new UI pattern and no new CSS.
+
+**What was actually missing.** The only chooser was the feature form's "Insert from rules pack"
+select, and it reads `rules.features` alone — so it offered the loose traits and **not one feat**.
+117 feats across XPHB/Humblewood/XGE/TCE were reachable only by typing them out. Loose traits are not
+a rump either: 105 of them (Tasha's 76, Xanathar's 22, homebrew 7).
+
+**Two categories, one picker.** Entries are wrapped `{k:"feat"|"trait", e:def, id}` rather than
+concatenated: Humblewood ships `Glide` as both a feat and a trait, they add in different shapes, and
+`_id` alone would not say which list a row came from.
+
+- A feat is stored the way `grantFeatDef` stores one — `"Feat: <name>"`, stamped
+  `stampSrc(copy, def, "feature", "feats")` — so a picked feat and a granted feat are the same record
+  to `72-char-update.js`. A trait keeps its own name and stamps against `"features"`, which is a
+  category `updCandidates` can resolve; `addFeatureFromDef`'s own stamp leaves `cat:""` and would
+  fall through to the name-only legacy path.
+- **No origin select.** Items use it for provenance, but `feature.origin` is structural: it drives
+  `featGroupLabel` and, more to the point, `removeFeaturesWhere(f=>f.origin.kind==="race" && ...)`.
+  Browse origins carry `detail`, not `name`, so they would never match those predicates — but the
+  field is load-bearing for clean revert and is not worth borrowing for a label. Picked entries get
+  `origin:null` and land in "Other", exactly as the feature form has always left them. Asserted.
+- Duplicates are refused by stored name (browseSpells' behaviour), and the row already carries the
+  "added" badge. Repeatable-feat ASI comes through the level-up choice path, not this browser.
+- Feats carry no category field; the converter writes it as the FIRST LINE ("Origin feat",
+  "General feat · Prerequisite: Level 4+"). `featPickKind` reads that line only — 2014-era books
+  have no such line and classify as plain "Feat" (35 of 117). `featPickPrereq` likewise reads only
+  the first line, or the body's prose would gate half the list.
+- Traits group by their own `source`, not into one bucket: 30 contiguous headings over 222 entries
+  (Eldritch Invocation 28, Artificer Infusion 16, Battle Master Maneuver 7…). `sort` therefore keys
+  kind → group → name, since `openBrowse` emits a heading whenever the group string changes.
+
+Facets: Type (the six kinds present), Pack (only when more than one source is loaded), and a
+"No prerequisite" toggle. Search covers the description text, which is the question this browser
+exists to answer.
+
+47 checks in `src/tests/sheet.js`, including a `updResolve` round trip both ways. Full suite 1247.
+Deliberately not done: no skill-choice prompt for feats that carry one (`grantFeatDef` only offers
+those when an origin sid exists, and picked feats have no origin).

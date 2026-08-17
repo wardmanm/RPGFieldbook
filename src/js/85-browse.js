@@ -169,6 +169,116 @@ function browseSpells(){
   });
 }
 
+/* ================= feats & traits =================
+   One thing to the player, two categories in the data: `rules.feats` holds
+   feats, and the traits a pack ships loose sit in `rules.features`. The only
+   way in used to be the feature form's "Insert from rules pack" select — every
+   trait in one unsearchable dropdown, and not a single FEAT in it, because
+   that select reads `rules.features` alone. Both are browsable here.
+
+   Entries are wrapped as {k,e} rather than merged: a feat and a trait can share
+   a name (Humblewood's "Glide" is both), and the two are added in different
+   shapes, so they must stay distinguishable all the way through the picker.
+
+   A feat is stored the way grantFeatDef stores one — named "Feat: <name>" and
+   stamped against the `feats` category — so a feat picked here and a feat your
+   background granted are the same kind of record to the rules-update tool. */
+const FEAT_KINDS=[
+  {key:"origin", label:"Origin feat",         group:"Origin Feats",         re:/^\s*origin\s+feats?\b/i},
+  {key:"general",label:"General feat",        group:"General Feats",        re:/^\s*general\s+feats?\b/i},
+  {key:"style",  label:"Fighting Style feat", group:"Fighting Style Feats", re:/^\s*fighting\s+style\s+feats?\b/i},
+  {key:"boon",   label:"Epic Boon",           group:"Epic Boons",           re:/^\s*epic\s+boons?\b/i},
+  {key:"feat",   label:"Feat",                group:"Feats",                re:null},
+  {key:"trait",  label:"Trait",               group:"Traits",               re:null}
+];
+function featKindDef(key){return FEAT_KINDS.find(k=>k.key===key)||FEAT_KINDS[FEAT_KINDS.length-2];}
+/* every feat and trait the loaded packs carry, in one pickable list */
+function featPickList(){
+  const out=[];
+  (rules.feats||[]).forEach(e=>{if(e&&e.name)out.push({k:"feat",e,id:"feat:"+(e._id||e.name)});});
+  (rules.features||[]).forEach(e=>{if(e&&e.name)out.push({k:"trait",e,id:"trait:"+(e._id||e.name)});});
+  return out;
+}
+/* The category line the converter writes as the FIRST line of a feat's text
+   ("Origin feat", "General feat · Prerequisite: Level 4+"). A 2014-era book
+   (Xanathar's, Tasha's) has no such line — those feats are simply "Feat". */
+function featPickHead(w){return String((w&&w.e&&w.e.description)||"").split("\n")[0];}
+function featPickKind(w){
+  if(!w)return "feat";
+  if(w.k!=="feat")return "trait";
+  const h=featPickHead(w), hit=FEAT_KINDS.find(k=>k.re&&k.re.test(h));
+  return hit?hit.key:"feat";
+}
+/* Read only the first line: the body of a feat is full of the word
+   "prerequisite" in prose, and this is a filter, not a rules engine. */
+function featPickPrereq(w){
+  const m=featPickHead(w).match(/prerequisites?:\s*([^\n]+)/i);
+  return m?m[1].trim().replace(/[)\s.]+$/,""):"";
+}
+/* The heading a row sits under. Feats group by category; a loose trait groups
+   by its own `source`, because that is what those packs actually are — 76 of
+   Tasha's traits are Eldritch Invocations, Battle Master Maneuvers and
+   Artificer Infusions, and one flat "Traits" bucket would bury the lot. */
+function featPickGroup(w){
+  const k=featPickKind(w);
+  return k==="trait"?(String(w.e.source||"").trim()||"Traits"):featKindDef(k).group;
+}
+function featPickName(w){return dispName(w.e,w.k==="feat"?"feats":"features");}
+/* what the sheet calls it once added — the "Feat: X" wrapper grantFeatDef uses */
+function featPickStoredName(w){return w.k==="feat"?("Feat: "+(w.e.name||"Feat")):(w.e.name||"Trait");}
+function featPickHas(nm){return (character.features||[]).some(f=>String(f.name||"").trim().toLowerCase()===String(nm||"").trim().toLowerCase());}
+/* Add one picked entry. Returns the record, or null if the sheet already has
+   it — picking something you have is a misclick far more often than it is a
+   deliberate second copy, which is also why the row shows an "added" badge. */
+function addPickedFeature(w){
+  if(!w||!w.e)return null;
+  const e=w.e, nm=featPickStoredName(w);
+  if(featPickHas(nm))return null;
+  addFeatureFromDef({name:nm,description:e.description||"",effects:Array.isArray(e.effects)?e.effects:[],
+                     uses:e.uses,cost:e.cost,source:e.source||""},null);
+  const added=character.features[character.features.length-1];
+  /* re-stamp against the real entry: addFeatureFromDef only saw the object
+     built above, which has no pack and — for a feat — the wrong name */
+  if(added)stampSrc(added,e,"feature",w.k==="feat"?"feats":"features");
+  return added||null;
+}
+function browseFeatures(){
+  const list=featPickList();
+  if(!list.length)return openFeatureForm();
+  const present=FEAT_KINDS.filter(k=>list.some(w=>featPickKind(w)===k.key));
+  const srcs=[...new Set(list.map(w=>String(w.e._source||"")).filter(Boolean))].sort();
+  const facets=[{key:"kind",label:"Type",type:"multi",
+                 options:present.map(k=>({value:k.key,label:k.label})),
+                 match:(w,a)=>a.has(featPickKind(w))}];
+  /* only worth a row of pills once more than one pack is loaded */
+  if(srcs.length>1)facets.push({key:"pack",label:"Pack",type:"multi",
+    options:srcs.map(s=>({value:s.toLowerCase(),label:s})),
+    match:(w,a)=>a.has(String(w.e._source||"").toLowerCase())});
+  facets.push({key:"noreq",label:"No prerequisite",type:"toggle",match:w=>!featPickPrereq(w)});
+  openBrowse({
+    noun:"feats & traits", items:list, id:w=>w.id,
+    /* the description too: "which feat gives me advantage on saves" is the
+       question this browser exists to answer, and the list is small enough */
+    search:w=>`${w.e.name} ${w.e.source||""} ${w.e.description||""}`,
+    row:w=>{const p=featPickPrereq(w);
+      return {title:featPickName(w),tag:p?(p.length>30?p.slice(0,29)+"…":p):(w.e._source||"")};},
+    /* group order first, then the heading, then the name — the list is rendered
+       in this order and a heading is emitted whenever it changes, so anything
+       sharing a heading has to be adjacent */
+    sort:(a,b)=>FEAT_KINDS.findIndex(k=>k.key===featPickKind(a))-FEAT_KINDS.findIndex(k=>k.key===featPickKind(b))
+      ||featPickGroup(a).localeCompare(featPickGroup(b))
+      ||String(a.e.name||"").localeCompare(String(b.e.name||"")),
+    group:featPickGroup,
+    added:w=>featPickHas(featPickStoredName(w)),
+    preview:w=>{const bits=[w.k==="trait"?(String(w.e.source||"").trim()||"Trait"):featKindDef(featPickKind(w)).label,
+                            w.e._source||""].filter(Boolean);
+      openModal(featPickName(w),`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(bits.join(" · "))}</p><div class="desc">${descHTML(w.e.description||"—")}</div>`);},
+    onCustom:()=>openFeatureForm(),
+    facets,
+    onAdd:entries=>{entries.forEach(addPickedFeature);renderFeatures();recompute();scheduleSave();}
+  });
+}
+
 /* ---- glossary editor ---- */
 function openGlossForm(existing){
   const g=existing||{id:uid(),term:"",type:"text",text:"",image:null};

@@ -28,4 +28,10 @@ Bullets below this line — leave the heading in place.
 
 ## Pending
 
-_Nothing yet._
+- **Adding a feature now searches the rules packs for feats and traits.** The Add button on Features
+  and Traits opens the same full-screen search the spell and item lists use, covering every feat your
+  packs carry and the loose traits they ship — Eldritch Invocations, Battle Master Maneuvers,
+  Artificer Infusions and the rest. Search by name or by what the text says, filter by type
+  (origin, general, fighting style, epic boon), by pack, or to only what has no prerequisite, and
+  preview any entry before you add it. Anything already on your sheet is marked. Typing your own
+  feature by hand is still there, behind the Custom button.
