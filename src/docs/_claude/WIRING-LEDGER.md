@@ -2888,11 +2888,19 @@ own attack look hand-edited and it would never resync again); and `openAttackFor
 `a.genFp` across, so a save that changed nothing is still comparable and a real edit reads as an
 edit rather than as unknowable.
 
-**Deliberately outside the fingerprint:** `proficient`, `addAbilityDamage`, `extraDamage`, the id and
-the links. They are the player's on either path — but note that a rebuild regenerates `proficient`
-and `addAbilityDamage` as `true`, so a player who ONLY unticked one of those is classed untouched and
-loses that tick on a resync. That is no worse than the old behaviour (which lost everything), and
-widening the fingerprint instead would freeze the row against all future pack changes.
+**The fingerprint covers every field the generator sets, `proficient` and `addAbilityDamage`
+included.** They were left out first, on the reasoning that they are "the player's either way" — but
+`addAttackForItem` hardcodes both to `true`, so a player who ONLY unticked one (a weapon they are not
+proficient with, a thrown weapon that adds no modifier) was classed untouched and had the tick put
+back by the next resync. That is the override this guard exists to prevent.
+
+The worry about widening it — that the row would freeze against all future pack changes — does not
+survive contact: a row nobody has touched still matches its stamp and still rebuilds, and a row the
+player HAS touched is precisely the one to leave alone. Widening only makes the "edited" test
+complete.
+
+**Still outside, correctly:** `extraDamage`, the id, and the links back to the item or spell. The
+generator never sets those, so they cannot indicate an edit either way.
 
 `genFp` is optional and additive: `migrate` preserves it with no code, old saves have none and land
 in the `null` branch. 18 checks in `src/tests/char-update.js` (R7 covers all three branches, the

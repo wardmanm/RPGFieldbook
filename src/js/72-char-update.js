@@ -180,15 +180,24 @@ function updEdited(copy,kind){
    rebuild it. What it needs is the other half of stampSrc's answer — was this
    row left exactly as we generated it, or did the player make it theirs?
 
-   `genFp` is one hash over the fields addAttackForItem() derives from the item.
-   Everything else on the row is the player's either way: `proficient` and
-   `addAbilityDamage`, the extras they added, its id, and the links back to the
-   item or spell. Optional and additive — an attack saved before this existed has
-   no genFp, which reads as *unknowable*, and updResyncAttack leaves those alone.
+   `genFp` is one hash over EVERY field addAttackForItem() sets from the item —
+   including `proficient` and `addAbilityDamage`, which it hardcodes to true.
+   Those two are ticks the player flips deliberately (a weapon they are not
+   proficient with, a thrown weapon that adds no modifier), so leaving them out
+   classed such a row as untouched and let a resync silently put the tick back.
+   Widening the hash does not freeze anything extra: a row nobody has touched
+   still matches, and one the player HAS touched is exactly what must be left
+   alone.
+
+   What stays out is what the generator never sets: the extras the player added,
+   the row's id, and the links back to the item or spell. Optional and additive —
+   an attack saved before this existed has no genFp, which reads as *unknowable*,
+   and updResyncAttack leaves those alone too.
 
    Deliberately a single hash, not an fpMap: nothing needs to know WHICH field
    moved, only whether any did. */
-const ATK_GEN_FIELDS=["name","kind","ability","atkMisc","damageDice","damageType","dmgMisc","notes"];
+const ATK_GEN_FIELDS=["name","kind","ability","proficient","atkMisc","damageDice",
+                      "damageType","dmgMisc","addAbilityDamage","notes"];
 function atkGenFp(atk){
   const o={};(ATK_GEN_FIELDS).forEach(f=>{o[f]=atk?atk[f]:undefined;});
   return fpHash(o);

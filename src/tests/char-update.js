@@ -372,10 +372,23 @@ ck('R7 an untouched attack is still rebuilt', X.character.attacks[0].damageDice=
 ck('R7 ...and re-stamped, so it stays comparable next time',
    X.updAtkEdited(X.character.attacks[0])===false, X.character.attacks[0]);
 
-// what the fingerprint covers, and what it deliberately does not
+// what the fingerprint covers, and what it deliberately does not.
+// The two ticks are IN it: unticking proficiency on a weapon you are not
+// proficient with is a deliberate edit, and a resync putting it back is exactly
+// the override this guard exists to prevent.
 cl=armClub(); atk=X.character.attacks[0];
-atk.proficient=false; atk.addAbilityDamage=false; atk.extraDamage=[{dice:'1d6',type:'fire'}];
-ck('R7 the fields only the player owns are outside the fingerprint',
+atk.proficient=false;
+ck('R7 unticking proficiency counts as an edit', X.updAtkEdited(atk)===true);
+cl=armClub(); atk=X.character.attacks[0];
+atk.addAbilityDamage=false;
+ck('R7 unticking the ability-damage box counts as an edit', X.updAtkEdited(atk)===true);
+ck('R7 ...so a resync leaves it alone', (X.applyUpdates(X.diffCharacter().rows),
+   X.character.attacks[0].addAbilityDamage===false), X.character.attacks[0]);
+
+// the generator never sets these, so they stay out
+cl=armClub(); atk=X.character.attacks[0];
+atk.extraDamage=[{dice:'1d6',type:'fire'}];
+ck('R7 fields the generator never sets are outside the fingerprint',
    X.updAtkEdited(atk)===false, X.ATK_GEN_FIELDS);
 atk.notes='Thrown, range 20/60';
 ck('R7 a change to a generated field IS an edit', X.updAtkEdited(atk)===true);
