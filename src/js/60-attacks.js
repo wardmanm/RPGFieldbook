@@ -275,7 +275,10 @@ function renderGloss(){
   const rk=allrk.filter(g=>match(g.term));
   if(allrk.length){
     const h=document.createElement("div");h.className="spell-h";
-    h.textContent=`From rules pack${rules.name?" · "+esc(rules.name):""} (${rk.length})`;el.appendChild(h);
+    /* NO esc() here: textContent assigns a literal string, so escaping first
+       double-encodes — a pack called "D&D 2024" rendered as "D&amp;D 2024".
+       textContent is already safe; esc() belongs with innerHTML, not this. */
+    h.textContent=`From rules pack${rules.name?" · "+rules.name:""} (${rk.length})`;el.appendChild(h);
     if(!rk.length)el.insertAdjacentHTML("beforeend",`<div class="empty">No matches.</div>`);
     rk.slice(0,CAP).forEach(g=>{
       const d=document.createElement("div");d.className="item";

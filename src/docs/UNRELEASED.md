@@ -32,3 +32,4 @@ Bullets below this line — leave the heading in place.
   one attack: add as many extra dice as you need in the attack form, and they show on the sheet, in
   the to-hit breakdown and on the printed sheet. Extras roll on their own — the ability modifier and
   any damage bonuses stay on the main damage.
+- Rules pack names containing an ampersand no longer show their escape code in the glossary heading.
