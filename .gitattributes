@@ -4,3 +4,18 @@
 * text=auto eol=lf
 
 *.zip binary
+
+# ---- parallel worktrees ----
+# Several issues are worked at once, one worktree each, then merged back. These
+# two files are append-only logs that EVERY branch adds to, so a plain 3-way
+# merge conflicts on every single merge after the first — on lines that do not
+# actually disagree. `union` keeps both sides.
+src/docs/UNRELEASED.md            merge=union
+src/docs/_claude/WIRING-LEDGER.md merge=union
+
+# Safety net, and it should never fire: feature branches carry src-only diffs
+# and never commit the artifact. If one does, keeping ours and rebuilding is the
+# only sane resolution — a 473 KB generated file has no meaningful 3-way merge.
+# Needs a driver definition, which scripts/wt.sh sets:
+#   git config merge.ours.driver true
+dist/fieldbook.html               merge=ours

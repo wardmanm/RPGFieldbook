@@ -53,6 +53,7 @@ src/                    THE SOURCE OF TRUTH — edit here, never the built file
   docs/                 DEV DOCS — deliberately excluded from the zip
     UNRELEASED.md       running notebook of changes since the last release — ADD TO THIS
     RELEASING.md        how to cut and publish a release, and what CI refuses
+    WORKTREES.md        working several issues at once in parallel worktrees
     ADR-001-source-split.md  why the source is split and how the build works
     _claude/            AGENT CONTEXT — working memory and reference, not for humans
       WIRING-LEDGER.md    running log of what's been done + what's deferred — READ THIS
@@ -95,6 +96,7 @@ scripts/
   gen-changelog.js      regenerates docs/CHANGELOG.md                  (dev)
   release.js            bumps APP_VERSION + folds in UNRELEASED.md     (dev)
   release-notes.js      slices one version out of the changelog for the release body
+  wt.sh                 add/list/rm parallel issue worktrees            (dev)
 ```
 
 **Anything added under `docs/` ships.** The zip's `docs/` is an allowlist of exactly three files;
@@ -134,6 +136,17 @@ and `scripts/*` — no build logic lives in it, so it can't drift from what CI r
 **Tests: `./src/tests/run.sh`** (across seven suites; `humblewood-verbatim` adds 129 more locally and
 skips cleanly without `.venv` and the PDFs). The `docs` suite asserts the counts and filenames these
 notes quote, so this file can't drift from the code again without a test going red.
+
+**Parallel worktrees (`scripts/wt.sh`).** Several issues at once, one worktree each, in
+`.claude/worktrees/<issue>/` (ignored, so `git status` on main stays clean). `wt.sh add <n> [slug]`
+branches `issue/<n>-<slug>` from `origin/main`, symlinks `.venv` and `_conversion-data` in, and copies
+`settings.local.json`; `wt.sh rm <n>` tears both down. **Branches carry src-only diffs — build in a
+worktree to verify, but never commit `dist/fieldbook.html`.** Merges then never conflict on a 473 KB
+generated file, and one `./build.sh` on main after merging produces the single correct artifact.
+`.gitattributes` gives `UNRELEASED.md` and `WIRING-LEDGER.md` `merge=union`, because every branch
+appends to both and a plain 3-way merge conflicts on every one. Schedule issues by which fragments
+they touch: `src/html/*` is one file per tab, so tab-level UI work is disjoint by construction.
+**Full procedure, scheduling rules and failure modes: `src/docs/WORKTREES.md`.**
 
 **Git hooks (`.githooks/`, opt-in).** `./dev.sh` menu `h` sets `core.hooksPath` — one install covers
 the main checkout and every worktree, since a relative `core.hooksPath` resolves against whichever

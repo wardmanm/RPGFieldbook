@@ -2602,3 +2602,32 @@ Not in CI, on purpose: validating `ci.yml` from inside `ci.yml` is tautological 
 the workflow to start the job, so a malformed one never runs. And `build.sh` is executed by CI and
 `release.yml`, so an `npx` call there would put a network dependency into a script that otherwise
 needs only node, python3 and bash. The YAML check skips cleanly with no npx and no network.
+
+## Worktree bootstrap (2026-08-17)
+
+`scripts/wt.sh add|list|rm`, worktrees in `.claude/worktrees/<issue>/`. Branch `issue/<n>-<slug>`,
+slug pulled from the issue title via `gh` when available. Symlinks `.venv` and `_conversion-data`
+in (102 MB and 461 MB — copying them per worktree is not an option) and copies
+`settings.local.json` so agents do not re-trigger answered permission prompts.
+
+**`.gitattributes` gained `merge=union`** on `src/docs/UNRELEASED.md` and `WIRING-LEDGER.md`. Verified
+in a scratch repo: two branches each appending a bullet merge with both bullets and no conflict.
+Without it every merge after the first conflicts on lines that do not disagree. `dist/fieldbook.html`
+gets `merge=ours` as a dead-man's switch (branches are src-only, so it should never fire); the driver
+itself is `git config merge.ours.driver true`, which `wt.sh` sets idempotently — `ours` is not one of
+git's built-in attribute drivers, unlike `union` and `binary`.
+
+**Bug found by testing, not by reading:** `.gitignore` had `.venv/` and `/_conversion-data/` WITH
+trailing slashes. A trailing slash matches a directory, and `wt.sh` creates SYMLINKS, which git sees
+as files — so both came out untracked rather than ignored, and an agent running `git add -A` in a
+worktree would have committed two broken symlinks into the repo. Fixed by dropping the slashes;
+proved in a scratch repo that the old patterns leave them untracked and the new ones ignore them.
+
+**Second bug from the same test:** `wt.sh rm` could never remove its own worktree, because the
+symlinks and copied settings that `add` creates are exactly the "modified or untracked files" that
+`git worktree remove` refuses on. `rm` now deletes what `add` created first. Genuine uncommitted work
+still blocks removal, which is the behaviour worth keeping.
+
+Verified end to end in a throwaway worktree: full suite passes inside it (1213 checks), the hooks are
+inherited (`core.hooksPath` is shared config and a relative path resolves per working tree), and a
+build there produced its own `dist/fieldbook.html` without touching main's.

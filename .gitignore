@@ -14,7 +14,10 @@ npm-debug.log*
 # Python
 __pycache__/
 *.pyc
-.venv/
+# No trailing slash: scripts/wt.sh symlinks these into each worktree, and a
+# symlink is a FILE to git — `.venv/` would not match it, leaving an untracked
+# symlink that `git add -A` would happily commit as a broken path.
+.venv
 venv/
 
 # Editor / OS
@@ -32,5 +35,5 @@ Thumbs.db
 /_app.js
 
 # Data for conversion (large source PDFs and 5e-tools dumps)
-/_conversion-data/
+/_conversion-data
 .playwright-mcp/
