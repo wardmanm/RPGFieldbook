@@ -104,6 +104,12 @@ html[data-theme="dark"] .tbtn.primary{color:#20160a}
 /* destructive action — reads as a warning before it is pressed, not after */
 .tbtn.danger{color:var(--brick);border-color:var(--brick)}
 .tbtn.danger:hover{background:color-mix(in srgb,var(--brick) 14%,transparent)}
+/* Modal buttons that wait for a valid entry — Apply in the coin adjuster and in
+   the item-use prompt both set .disabled, which until now looked identical to a
+   button that simply did nothing when pressed. */
+.tbtn:disabled{opacity:.45;cursor:default}
+.tbtn:disabled:hover{background:var(--field)}
+.tbtn.primary:disabled:hover{background:var(--accent)}
 .tbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
 .savestate{font-family:var(--head);font-size:11px;letter-spacing:.06em;color:var(--ink-soft);min-width:70px;text-align:right}
 .savestate.on{color:var(--accent)}
@@ -843,7 +849,6 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
   <button class="tab" data-tab="story" aria-label="Story"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21z"/></svg><span class="tlbl">Story</span></button>
   <button class="tab" data-tab="notes" aria-label="Notes"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg><span class="tlbl">Notes</span></button>
   <button class="tab" data-tab="rules" aria-label="Rules"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/><path d="M9 8h6"/></svg><span class="tlbl">Rules</span></button>
-  <button class="tab" data-tab="tables" aria-label="Tables"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14.5h18M9 9v11"/></svg><span class="tlbl">Tables</span></button>
   <button class="tab-toc" id="btnToc" title="Jump to a section" aria-label="Table of contents">☰</button>
 </div>
 <div class="toc-back" id="tocBack"></div>
@@ -1083,11 +1088,6 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         <input type="file" id="glossRulesFiles" accept="application/json,.json" multiple class="hidefile">
         <div id="glossList"></div>
       </div>
-    </div>
-  </section>
-
-  <section class="tabpanel" id="tab-tables">
-    <div class="stack">
       <div class="card">
         <div class="label">Reference Tables<span class="grow"></span></div>
         <p class="hint">Tables lifted out of your rules pack — roll tables, class progressions, and the lookup tables the rules text refers to. Where a description mentions one, tap the highlighted name to open it here.</p>
@@ -1991,6 +1991,47 @@ function invSection(it){
   return "Loot";
 }
 const INV_ORDER=["Weapons","Armor","Consumables","Magic Items","Tools","Gear","Loot"];
+/* ---- using an item ----
+   What drinking, reading or activating this item does. An explicit `use` block
+   the player configured wins; failing that a consumable is READ from its own
+   text, which is the same "auto-infer unless the player said otherwise" rule
+   detectSpellAttack follows for spells — and it is what makes a potion added
+   through the item browser usable without anyone editing it first. `off` is how
+   "no, this one is not usable" is recorded against a detected default, so
+   clearing the boxes sticks. */
+function itemUse(it){
+  const u=it&&it.use;
+  if(u&&u.off)return null;
+  if(u&&(u.heal||u.status||u.consume))return u;
+  return detectItemUse(it);
+}
+/* Deliberately narrow. Only consumables are read, and only the one phrase every
+   healing potion in the 2024 data uses ("regains 2d4 + 2 Hit Points"), so a
+   wand that "regains 1d3 expended charges" is not mistaken for a heal. */
+function detectItemUse(it){
+  if(!it||invSection(it)!=="Consumables")return null;
+  const m=/\bregains?\s+(\d+d\d+(?:\s*[+-]\s*\d+)?|\d+)\s+(?:hit points|hp)\b/i.exec(String(it.description||""));
+  if(!m)return null;
+  return {heal:m[1].replace(/\s+/g,""),consume:true};
+}
+function itemUsesMax(it){return (it&&it.uses)?usesMax(it):0;}
+function itemUsable(it){return !!(itemUse(it)||itemUsesMax(it)>0);}
+/* One line saying what Use will do, so nothing about it is hidden behind the
+   button. Prose, not effect chips — none of it is a numeric modifier. */
+function itemUseLine(it){
+  const u=itemUse(it);if(!u)return "";
+  const bits=[];
+  if(u.heal)bits.push(`Heals ${u.heal}`);
+  if(u.status)bits.push(`Applies ${u.status}`);
+  if(u.consume)bits.push("uses one up");
+  return bits.length?`<div class="use-cost">${esc(bits.join(" · "))}</div>`:"";
+}
+function itemUsesRowHTML(it){
+  const mx=itemUsesMax(it);if(!mx)return "";
+  const used=num(it.uses.used),per=it.uses.per;
+  let pips="";for(let i=1;i<=mx;i++)pips+=`<button class="use-b ${i<=used?"used":""}" data-iuse="${it.id}" data-i="${i}" aria-label="Use"></button>`;
+  return `<div class="use-row"><span class="use-lbl">Uses${(per&&per!=="none")?` · per ${esc(per)} rest`:""}</span><span class="use-pips">${pips}</span></div>`;
+}
 function invItemHTML(it){
   const ic=!!invCol().items[it.id];
   return `<div class="item fitem"><div class="top">
@@ -2001,11 +2042,12 @@ function invItemHTML(it){
         ${originBadge(itemOrigin(it),"data-orig-item",it.id)}
         ${fnum(it.cost)?`<span class="qty" title="Cost each">${esc(fmtGp(it.cost))}</span>`:""}
         ${itemWeight(it)?`<span class="qty" title="Weight each">${esc(fmtWt(it.weight))}</span>`:""}
+        ${itemUsable(it)?`<button class="use-go" data-useitem="${it.id}">Use</button>`:""}
         ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${it.id}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
         <button class="icon" data-edit-item="${it.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-item="${it.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
-      ${ic?"":`${it.description?`<div class="desc">${highlight(it.description)}</div>`:""}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
+      ${ic?"":`${it.description?`<div class="desc">${highlight(it.description)}</div>`:""}${itemUseLine(it)}${itemUsesRowHTML(it)}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
 }
 /* The carried-weight badge in the Inventory card header. Hidden entirely when
    encumbrance is off — the weight itself still shows in the totals row, so an
@@ -2968,6 +3010,28 @@ function attackNumbers(a){
   const dmgBonus=(a.addAbilityDamage?abil:0)+num(a.dmgMisc)+dmgFx;
   return {toHit,dmgBonus,atkFx,dmgFx,abilName,kind,pb,abil};
 }
+/* ---- damage lines ----
+   An attack's damage is one main die expression plus any number of ADDITIONAL
+   damage types (`a.extraDamage`, an optional array of {dice,type}) — a sword
+   that deals 1d8 slashing and 1d6 poison. The field is optional: an attack
+   saved before it existed has no `extraDamage` and formats exactly as before.
+   Only the MAIN part takes the computed bonus (ability modifier, manual extra,
+   damage effects); an extra type is its own die roll and gets none of it.
+   Pure — the sheet, the breakdown modal and the print sheet all read these. */
+function extraDamageList(a){
+  const l=(a&&Array.isArray(a.extraDamage))?a.extraDamage:[];
+  return l.map(d=>({dice:String((d&&d.dice)||"").trim(),type:String((d&&d.type)||"").trim()}))
+          .filter(d=>d.dice||d.type);
+}
+function damagePartStr(dice,type,bonus){
+  return (String(dice||"")+(bonus?` ${fmt(bonus)}`:"")+(type?` ${String(type)}`:"")).trim();
+}
+function attackDamageStr(a,bonus){
+  if(!a)return "";
+  return [damagePartStr(a.damageDice,a.damageType,bonus)]
+    .concat(extraDamageList(a).map(d=>damagePartStr(d.dice,d.type,0)))
+    .filter(Boolean).join(" + ");
+}
 /* ---- spell casting, attacks, and active spells ---- */
 function spellDC(){const c=contributions();const sa=character.spellAbility;if(!sa)return null;return 8+pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2);}
 function spellAtkBonus(){const c=contributions();const sa=character.spellAbility;if(!sa)return null;return pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2);}
@@ -3080,7 +3144,7 @@ function renderAttacks(){
   character.attacks.forEach(a=>{
     const ic=!!atkCol().items[a.id], isSpell=a.source==="spell", save=a.save;
     const n=attackNumbers(a);
-    const dmg=((a.damageDice||"")+((!save&&n.dmgBonus)?` ${fmt(n.dmgBonus)}`:"")+(a.damageType?` ${a.damageType}`:"")).trim();
+    const dmg=attackDamageStr(a,save?0:n.dmgBonus);
     const typeLabel=save?"Spell save":(isSpell?`Spell · ${n.kind==="ranged"?"Ranged":"Melee"}`:(n.kind==="ranged"?"Ranged":"Melee"));
     const dc=spellDC();
     const hitCell=save?`<span class="atk-hit">DC ${dc!=null?dc:"—"} ${esc((save.ability||"").toUpperCase())}</span>`
@@ -3098,6 +3162,21 @@ function renderAttacks(){
     el.appendChild(d);
   });
 }
+/* one editable {dice,type} row in the attack form's "Additional damage types" list */
+function attackXDmgRowHTML(d){
+  return `<div class="xdmg-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <input class="xdDice" value="${esc((d&&d.dice)||"")}" placeholder="1d6" style="flex:0 0 34%" aria-label="Extra damage dice">
+      <input class="xdType" value="${esc((d&&d.type)||"")}" placeholder="poison" style="flex:1" aria-label="Extra damage type">
+      <button type="button" class="icon danger xdDel" aria-label="Remove damage type"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+    </div>`;
+}
+function readAttackXDmg(){
+  const wrap=document.getElementById("aXDmg");if(!wrap)return [];
+  return Array.prototype.map.call(wrap.querySelectorAll(".xdmg-row"),r=>({
+    dice:(r.querySelector(".xdDice").value||"").trim(),
+    type:(r.querySelector(".xdType").value||"").trim()
+  })).filter(d=>d.dice||d.type);
+}
 function openAttackForm(existing){
   const a=existing||{id:uid(),name:"",kind:"melee",ability:"str",proficient:true,atkMisc:"",damageDice:"",addAbilityDamage:true,dmgMisc:"",damageType:"",notes:""};
   const abilOpts=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"],["finesse","Finesse (best of STR/DEX)"],["none","None"]];
@@ -3109,13 +3188,23 @@ function openAttackForm(existing){
     <label class="opt" id="aProf"><input type="checkbox" ${a.proficient?"checked":""}>Proficient (add proficiency bonus)</label>
     <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="aDice" value="${esc(a.damageDice)}" placeholder="1d8"></div>
       <div class="field"><label class="f">Damage type</label><input id="aType" value="${esc(a.damageType)}" placeholder="piercing"></div></div>
+    <div class="field"><label class="f">Additional damage types</label>
+      <div id="aXDmg">${extraDamageList(a).map(attackXDmgRowHTML).join("")}</div>
+      <button type="button" class="tbtn" id="aXAdd" style="padding:4px 10px;min-height:auto">+ Add damage type</button>
+      <p class="hint" style="margin:6px 0 0">A second die rolled with this attack — 1d6 poison on a sword. Extras roll on their own; the ability modifier and any bonuses below stay on the main damage.</p></div>
     <div class="field"><label class="f">Extra damage</label><input id="aDmgMisc" type="number" value="${esc(a.dmgMisc)}" placeholder="0"></div>
     <label class="opt" id="aAddAbil"><input type="checkbox" ${a.addAbilityDamage?"checked":""}>Add ability modifier to damage</label>
     <div class="field"><label class="f">Notes</label><input id="aNotes" value="${esc(a.notes||"")}" placeholder="Range 80/320, versatile…"></div>
     <div class="m-actions"><button class="tbtn" id="aCancel">Cancel</button><button class="tbtn primary" id="aSave">${existing?"Save":"Add"}</button></div>`);
   document.getElementById("aCancel").addEventListener("click",closeModal);
+  const xw=document.getElementById("aXDmg"),xa=document.getElementById("aXAdd");
+  if(xa)xa.addEventListener("click",()=>{xw.insertAdjacentHTML("beforeend",attackXDmgRowHTML({}));});
+  if(xw)xw.addEventListener("click",ev=>{const b=ev.target.closest(".xdDel");if(b&&b.parentNode)b.parentNode.remove();});
   document.getElementById("aSave").addEventListener("click",()=>{
     const rec={id:a.id,name:document.getElementById("aName").value.trim()||"Attack",kind:document.getElementById("aKind").value,ability:document.getElementById("aAbil").value,proficient:document.querySelector("#aProf input").checked,atkMisc:document.getElementById("aAtkMisc").value,damageDice:document.getElementById("aDice").value.trim(),damageType:document.getElementById("aType").value.trim(),dmgMisc:document.getElementById("aDmgMisc").value,addAbilityDamage:document.querySelector("#aAddAbil input").checked,notes:document.getElementById("aNotes").value.trim()};
+    /* omitted when empty, so an attack that has no extras carries no field —
+       the shape an older save already has, and what migrate round-trips */
+    const xd=readAttackXDmg();if(xd.length)rec.extraDamage=xd;
     const i=character.attacks.findIndex(x=>x.id===a.id);if(i>=0)character.attacks[i]=rec;else character.attacks.push(rec);
     closeModal();renderAttacks();scheduleSave();
   });
@@ -3130,11 +3219,14 @@ function openAttackBreakdown(id){
   if(num(a.atkMisc))b+=row("Extra to-hit (manual)",num(a.atkMisc));
   c.filter(x=>x.target==="attack"||x.target==="attack."+n.kind).forEach(x=>b+=row(x.source,x.value));
   b+=`<div style="display:flex;justify-content:space-between;border-top:2px solid var(--line);margin-top:6px;padding-top:6px"><b>To hit</b><b>${fmt(n.toHit)}</b></div>`;
-  b+=`<p style="margin:12px 0 4px"><b>Damage:</b> ${esc(a.damageDice||"—")}${n.dmgBonus?` ${fmt(n.dmgBonus)}`:""}${a.damageType?" "+esc(a.damageType):""}</p>`;
+  b+=`<p style="margin:12px 0 4px"><b>Damage:</b> ${esc(attackDamageStr(a,n.dmgBonus)||"—")}</p>`;
   const dc=c.filter(x=>x.target==="damage"||x.target==="damage."+n.kind);
   if(a.addAbilityDamage&&n.abilName)b+=row(n.abilName+" modifier",n.abil);
   if(num(a.dmgMisc))b+=row("Extra damage (manual)",num(a.dmgMisc));
   dc.forEach(x=>b+=row(x.source,x.value));
+  /* extras are their own dice and take none of the bonuses above — say so */
+  const xd=extraDamageList(a);
+  if(xd.length)b+=`<p class="hint" style="margin:8px 0 0">Rolled separately, with no modifiers: ${esc(xd.map(d=>damagePartStr(d.dice,d.type,0)).join(", "))}</p>`;
   openModal(a.name||"Attack",b);
 }
 function renderSpells(){
@@ -3182,7 +3274,10 @@ function renderGloss(){
   const rk=allrk.filter(g=>match(g.term));
   if(allrk.length){
     const h=document.createElement("div");h.className="spell-h";
-    h.textContent=`From rules pack${rules.name?" · "+esc(rules.name):""} (${rk.length})`;el.appendChild(h);
+    /* NO esc() here: textContent assigns a literal string, so escaping first
+       double-encodes — a pack called "D&D 2024" rendered as "D&amp;D 2024".
+       textContent is already safe; esc() belongs with innerHTML, not this. */
+    h.textContent=`From rules pack${rules.name?" · "+rules.name:""} (${rk.length})`;el.appendChild(h);
     if(!rk.length)el.insertAdjacentHTML("beforeend",`<div class="empty">No matches.</div>`);
     rk.slice(0,CAP).forEach(g=>{
       const d=document.createElement("div");d.className="item";
@@ -3220,6 +3315,15 @@ function resetFeatureUses(kinds){
   let n=0;(character.features||[]).forEach(f=>{if(f.uses&&kinds.includes(f.uses.per||"")){if(f.uses.used){n++;}f.uses.used=0;}});
   return n;
 }
+/* Items recover their limited uses on a rest exactly as features do, and carry
+   the same {max, per, used} shape so usesMax() and the pips read both without a
+   second implementation. `per:"none"` is a charge that no rest brings back (a
+   wand recharging at dawn is not a rest) — it is left alone here, and the
+   player taps its pips to reset it. */
+function resetItemUses(kinds){
+  let n=0;(character.inventory||[]).forEach(it=>{if(it.uses&&kinds.includes(it.uses.per||"")){if(it.uses.used){n++;}it.uses.used=0;}});
+  return n;
+}
 function longRest(){
   const c=contributions();
   const effMax=effMaxHP(c), hadMax=effMax>0;
@@ -3229,9 +3333,10 @@ function longRest(){
   let slotsBack=0;for(let lv=1;lv<=9;lv++){if(character.slots[lv]){slotsBack+=character.slots[lv].used||0;character.slots[lv].used=0;}}
   const hdBack=recoverHitDice();
   const featBack=resetFeatureUses(["short","long"]);
+  const itemBack=resetItemUses(["short","long"]);
   const resBack=resetResources(["short","long"]);
   renderHP();
-  renderDeath();renderFeatures();recompute();scheduleSave();
+  renderDeath();renderFeatures();renderInventory();recompute();scheduleSave();
   const lines=[
     hadMax?`Current HP restored to ${effMax}`:"HP unchanged — set a Max HP first",
     "Temporary HP cleared",
@@ -3240,6 +3345,7 @@ function longRest(){
   ];
   if(hitDicePool().length)lines.push(hdBack?`${hdBack} Hit ${hdBack===1?"Die":"Dice"} recovered (half your total)`:"Hit Dice already full");
   if(featBack)lines.push(`${featBack} feature use tracker${featBack===1?"":"s"} reset`);
+  if(itemBack)lines.push(`${itemBack} item use tracker${itemBack===1?"":"s"} reset`);
   if(resBack)lines.push(`${resBack} resource${resBack===1?"":"s"} restored`);
   renderResources();
   restSummary("Long rest complete",lines,"");
@@ -3248,9 +3354,10 @@ function shortRest(){
   const wl=warlockLevel();let pactBack=0,pactMsg="";
   if(wl>0){const p=PACT[Math.min(20,wl)];if(p&&character.slots[p[1]]){const before=character.slots[p[1]].used||0;character.slots[p[1]].used=Math.max(0,before-p[0]);pactBack=before-character.slots[p[1]].used;pactMsg=pactBack?`${pactBack} pact slot${pactBack===1?"":"s"} recovered (level ${p[1]})`:"Pact slots already full";}}
   const featBack=resetFeatureUses(["short"]);
+  const itemBack=resetItemUses(["short"]);
   const resBack=resetResources(["short"]);
-  renderFeatures();renderResources();recompute();scheduleSave();
-  const lines=[];if(pactMsg)lines.push(pactMsg);if(featBack)lines.push(`${featBack} short-rest feature tracker${featBack===1?"":"s"} reset`);if(resBack)lines.push(`${resBack} short-rest resource${resBack===1?"":"s"} restored`);
+  renderFeatures();renderInventory();renderResources();recompute();scheduleSave();
+  const lines=[];if(pactMsg)lines.push(pactMsg);if(featBack)lines.push(`${featBack} short-rest feature tracker${featBack===1?"":"s"} reset`);if(itemBack)lines.push(`${itemBack} short-rest item tracker${itemBack===1?"":"s"} reset`);if(resBack)lines.push(`${resBack} short-rest resource${resBack===1?"":"s"} restored`);
   restSummary("Short rest",lines.length?lines:["No resources auto-recover on a short rest for this character."],"Spend Hit Dice from the Rest & Recovery card to heal. Regular spell slots return on a long rest, not a short one.");
 }
 /* ---- hit dice pool (derived from class hit die × level) ---- */
@@ -3354,6 +3461,55 @@ function rollHitDie(die){
   renderHP();
   renderHitDice();recompute();scheduleSave();
   restSummary("Hit die spent — "+die,[`Rolled ${roll} ${conMod>=0?"+":"−"} ${Math.abs(conMod)} CON = ${heal} HP`,`Current HP: ${character.hp.cur}`],"");
+}
+/* ---- dice expressions (item healing) ----
+   Parsing is kept apart from rolling on purpose: parseDiceExpr is pure and
+   total, so every accepted and rejected spelling can be asserted, and
+   rollDiceExpr is the only part that touches Math.random.
+   Accepts what a player would actually type — "2d4+2", "1d8", "d6", "10",
+   "1d4 + 1d6" — and returns null for anything else rather than guessing. A
+   mis-read expression would hand out the wrong hit points silently, so the item
+   editor refuses to save one instead. */
+function parseDiceExpr(str){
+  const s=String(str==null?"":str).toLowerCase().replace(/[−–—]/g,"-").replace(/\s+/g,"");
+  if(!s||!/^[+-]?(\d*d\d+|\d+)([+-](\d*d\d+|\d+))*$/.test(s))return null;
+  const parts=s.match(/[+-]?(?:\d*d\d+|\d+)/g)||[];
+  const dice=[];let mod=0;
+  for(const p of parts){
+    const sign=p.charAt(0)==="-"?-1:1, body=p.replace(/^[+-]/,""), m=/^(\d*)d(\d+)$/.exec(body);
+    if(m){
+      const n=(m[1]===""?1:parseInt(m[1],10)), sides=parseInt(m[2],10);
+      /* A typo like 999d999 is not a heal anyone meant; refusing is better than
+         rolling for a second and returning a number nobody can check. */
+      if(n<1||n>100||sides<2||sides>1000)return null;
+      dice.push({n,sides,sign});
+    }else mod+=sign*parseInt(body,10);
+  }
+  return {dice,mod};
+}
+/* Just the dice half, written back out — the label on the "what did you roll"
+   box, so the player is told which dice to pick up. */
+function diceExprDice(p){
+  if(!p||!p.dice.length)return "";
+  return p.dice.map((d,i)=>(i?(d.sign<0?" - ":" + "):(d.sign<0?"-":""))+d.n+"d"+d.sides).join("");
+}
+function diceExprText(p){
+  if(!p)return "";
+  const d=diceExprDice(p);
+  if(!d)return String(p.mod);
+  return d+(p.mod?(p.mod<0?" - "+Math.abs(p.mod):" + "+p.mod):"");
+}
+/* Roll every group, keeping the individual faces so the summary can show its
+   working — "rolled 3, 4 + 2 = 9" is checkable at the table; a bare 9 is not. */
+function rollDiceExpr(p){
+  if(!p)return null;
+  const rolls=[];let total=p.mod;
+  p.dice.forEach(d=>{
+    const values=[];
+    for(let i=0;i<d.n;i++){const v=1+Math.floor(Math.random()*d.sides);values.push(v);total+=v*d.sign;}
+    rolls.push({n:d.n,sides:d.sides,sign:d.sign,values});
+  });
+  return {rolls,total,faces:rolls.reduce((a,r)=>a.concat(r.values),[])};
 }
 function recoverHitDice(){
   const pool=hitDicePool(), totalHD=pool.reduce((a,p)=>a+p.total,0);
@@ -4053,7 +4209,7 @@ function printSheet(){
   const vit=[["AC",g("acDisp")],["Initiative",g("initDisp")],["Speed",g("speedDisp")],["Size",charSize()],["Prof. Bonus",fmt(pb)],["Passive Perc.",g("passDisp")],["HP",hp],["Hit Dice",hd]].map(([l,v])=>`<span class="p-stat">${l}: <b>${esc(v)||"—"}</b></span>`).join("");
   const saves=ABIL.map(([k,lbl])=>`<span class="p-line">${effSaveProf(k)>0?"●":"○"} ${lbl} <span class="p-mark">${esc(g("save-"+k))}</span></span>`).join("");
   const skills=SKILLS.map(([k,lbl,ab])=>{const l=effSkill(k),mk=l>=2?"◆":(l>=1?"●":"○");return `<span class="p-line">${mk} ${lbl} (${ab.toUpperCase()}) <span class="p-mark">${esc(g("skill-"+k))}</span></span>`;}).join("");
-  const atkRows=(character.attacks||[]).map(a=>{const n=attackNumbers(a);const save=a.save;const dmg=printStrip(((a.damageDice||"")+((!save&&n.dmgBonus)?` ${fmt(n.dmgBonus)}`:"")+(a.damageType?` ${a.damageType}`:"")).trim());const typ=save?"Spell save":(a.source==="spell"?("Spell "+(n.kind==="ranged"?"Ranged":"Melee")):(n.kind==="ranged"?"Ranged":"Melee"));const hit=save?("DC "+(spellDC()!=null?spellDC():"—")+" "+String(save.ability||"").toUpperCase()):fmt(n.toHit);return `<tr><td>${esc(a.name||"Attack")}</td><td>${esc(typ)}</td><td>${esc(hit)}</td><td>${esc(dmg)||"—"}</td><td>${esc(printStrip(a.notes||""))}</td></tr>`;}).join("");
+  const atkRows=(character.attacks||[]).map(a=>{const n=attackNumbers(a);const save=a.save;const dmg=printStrip(attackDamageStr(a,save?0:n.dmgBonus));const typ=save?"Spell save":(a.source==="spell"?("Spell "+(n.kind==="ranged"?"Ranged":"Melee")):(n.kind==="ranged"?"Ranged":"Melee"));const hit=save?("DC "+(spellDC()!=null?spellDC():"—")+" "+String(save.ability||"").toUpperCase()):fmt(n.toHit);return `<tr><td>${esc(a.name||"Attack")}</td><td>${esc(typ)}</td><td>${esc(hit)}</td><td>${esc(dmg)||"—"}</td><td>${esc(printStrip(a.notes||""))}</td></tr>`;}).join("");
   const attacks=atkRows?`<table class="p-t"><tr><th>Attack</th><th>Type</th><th>To Hit</th><th>Damage</th><th>Notes</th></tr>${atkRows}</table>`:"";
   const res=(character.resources||[]).map(r=>`<span class="p-stat">${esc(r.name)}: <b>${num(r.cur)}/${num(r.max)}</b></span>`).join("");
   const stat=(character.statuses||[]).map(s=>esc(s.name||s.term||"")).filter(Boolean).join(", ");
@@ -4847,6 +5003,11 @@ function openItemForm(existing){
   const it=existing||{id:uid(),name:"",qty:1,description:"",effects:[],equipped:false};
   const lib=(rules.items||[]);
   const w=it.weapon||{};
+  /* itemUse(), not it.use: a potion that has never been edited has its healing
+     READ from its description, and the form has to show what the Use button is
+     already doing — otherwise saving any other change would quietly turn it off
+     (an empty box saves as "explicitly nothing"). */
+  const use=itemUse(it)||{};
   const abilOpts=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"],["finesse","Finesse (best of STR/DEX)"],["none","None"]];
   openModal(existing?"Edit item":"New item",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="iLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${i}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
@@ -4867,18 +5028,32 @@ function openItemForm(existing){
       <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="iWDice" value="${esc(w.dice||"")}" placeholder="1d8"></div>
         <div class="field"><label class="f">Damage type</label><input id="iWType" value="${esc(w.damageType||"")}" placeholder="slashing"></div></div>
     </div>
+    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="iUses" type="number" min="0" value="${itemUsesMax(it)||""}" placeholder="0"></div>
+      <div class="field"><label class="f">Resets on</label><select id="iUsesPer">${[["long","Long rest"],["short","Short rest"],["none","Never (manual)"]].map(([v,l])=>`<option value="${v}"${((it.uses&&it.uses.per)||"long")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
+    <div class="g2"><div class="field"><label class="f">Healing when used</label><input id="iHeal" value="${esc(use.heal||"")}" placeholder="2d4+2" autocomplete="off"></div>
+      <div class="field"><label class="f">Status applied when used</label><input id="iStatus" list="itemStatusTerms" value="${esc(use.status||"")}" placeholder="Poisoned, Blessed…" autocomplete="off">${statusDatalistHTML("itemStatusTerms")}</div></div>
+    <label class="equip ${use.consume?"on":""}" id="iConsume" style="font-size:12px"><span class="box"></span>Using one up reduces the quantity</label>
+    <p class="hint">A potion read from the rules pack fills these in for you. Anything with uses or an effect here gets a <b>Use</b> button in your inventory; healing asks whether you rolled it or the app should.</p>
     <div class="m-actions"><button class="tbtn" id="iCancel">Cancel</button><button class="tbtn primary" id="iSave">${existing?"Save":"Add"}</button></div>`);
   let equipped=!!it.equipped;
   const eq=document.getElementById("iEquip");eq.addEventListener("click",()=>{equipped=!equipped;eq.classList.toggle("on",equipped)});
   let isWeapon=!!it.weapon;
   const wtog=document.getElementById("iIsWeapon"), wfields=document.getElementById("iWeaponFields");
   wtog.addEventListener("click",()=>{isWeapon=!isWeapon;wtog.classList.toggle("on",isWeapon);wfields.style.display=isWeapon?"":"none";});
+  let consume=!!use.consume;
+  const ctog=document.getElementById("iConsume");ctog.addEventListener("click",()=>{consume=!consume;ctog.classList.toggle("on",consume)});
   const fxWrap=document.getElementById("iFx");
   document.getElementById("iAddFx").addEventListener("click",()=>fxWrap.insertAdjacentHTML("beforeend",fxRow(null)));
   fxWrap.addEventListener("click",e=>{const d=e.target.closest(".fx-del");if(d)d.closest(".fxrow").remove()});
   const libSel=document.getElementById("iLib");
   if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;const wg=fnum(x.weight);if(wg)document.getElementById("iWeight").value=wg;fxWrap.innerHTML=fxEditorRows(x.effects);
-    if(x.weapon){isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}});
+    if(x.weapon){isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}
+    /* Read the healing out of what was just inserted, the same way the
+       inventory would if this were saved untouched — so the boxes agree with
+       the Use button the player is about to get. */
+    const du=detectItemUse({description:x.description||"",category:x.category,type:x.type,sectionOverride:document.getElementById("iCategory").value});
+    document.getElementById("iHeal").value=(du&&du.heal)||"";
+    consume=!!(du&&du.consume);ctog.classList.toggle("on",consume);});
   document.getElementById("iCancel").addEventListener("click",closeModal);
   const iOrig=document.getElementById("iOrigin"),iOrigW=document.getElementById("iOrigDetWrap"),iOrigD=document.getElementById("iOrigDet");
   if(iOrig)iOrig.addEventListener("change",()=>{const d=originDef(iOrig.value);iOrigW.style.display=iOrig.value?"":"none";if(d&&iOrigD)iOrigD.placeholder=d.ph||"place, who, etc.";});
@@ -4899,6 +5074,25 @@ function openItemForm(existing){
     if(it.src)rec.src=it.src;
     const dice=document.getElementById("iWDice").value.trim();
     if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(it.weapon&&it.weapon.notes)||""};if(it.weapon&&it.weapon.atkMisc!=null)rec.weapon.atkMisc=it.weapon.atkMisc;if(it.weapon&&it.weapon.dmgMisc!=null)rec.weapon.dmgMisc=it.weapon.dmgMisc;}
+    /* Limited uses and what Use does. Last, because detectItemUse() below reads
+       the FINISHED record — its section depends on the weapon flag set above.
+       `used` is the player's own number and survives an edit, clamped in case
+       the maximum came down. */
+    const um=Math.max(0,num(document.getElementById("iUses").value));
+    if(um>0)rec.uses={max:um,per:document.getElementById("iUsesPer").value,used:Math.min(num(it.uses&&it.uses.used),um)};
+    const heal=document.getElementById("iHeal").value.trim(), stName=document.getElementById("iStatus").value.trim();
+    if(heal&&!parseDiceExpr(heal)){alert(`“${heal}” isn't dice this app can roll. Try 2d4+2, 1d8, or a plain number.`);return;}
+    if(heal||stName||consume){
+      rec.use={};
+      if(heal)rec.use.heal=heal;
+      if(stName)rec.use.status=stName;
+      if(consume)rec.use.consume=true;
+    }else if(detectItemUse(rec)){
+      /* The boxes were cleared against a use this app would otherwise READ back
+         out of the description. Record the refusal, or the next render puts it
+         straight back and clearing it could never stick. */
+      rec.use={off:true};
+    }
     const i=character.inventory.findIndex(x=>x.id===it.id);if(i>=0)character.inventory[i]=rec;else character.inventory.push(rec);
     syncItemAttack(rec);
     closeModal();renderInventory();renderAttacks();recompute();scheduleSave();
@@ -4920,12 +5114,119 @@ function syncItemAttack(item){
     delete item.attackId;
   }
 }
+/* ---- using an item ----
+   The Use button on an inventory row. Everything it can do is optional and
+   independent: spend one of the item's limited uses, heal, apply a status, use
+   one up. Healing is the only part that has to ASK, because the roll may have
+   happened on the table — that path opens a prompt; everything else applies at
+   once. */
+function useItem(id){
+  const it=(character.inventory||[]).find(x=>x.id===id);if(!it)return;
+  const u=itemUse(it)||{}, mx=itemUsesMax(it);
+  if(mx>0&&num(it.uses.used)>=mx){alert(`No uses of “${it.name}” left — rest to recover.`);return;}
+  if(u.consume&&itemQty(it)<1){alert(`No “${it.name}” left to use.`);return;}
+  const p=u.heal?parseDiceExpr(u.heal):null;
+  if(p&&p.dice.length)return openItemUsePrompt(it,u,p);
+  applyItemUse(it,u,p?p.mod:0,"");
+}
+/* A missing quantity means one, everywhere — an item added without one is not
+   an item you have none of. */
+function itemQty(it){return (it&&it.qty!=null&&it.qty!=="")?num(it.qty):1;}
+/* Add a status by NAME, the way a potion grants one. An existing status of the
+   same name is switched back on rather than duplicated — two "Poisoned" rows
+   would both claim to be the truth. Returns what happened, for the summary. */
+function addStatusByName(name){
+  const nm=String(name||"").trim();if(!nm)return "";
+  const ex=(character.statuses||[]).find(s=>String(s.name||"").toLowerCase()===nm.toLowerCase());
+  if(ex){const was=ex.active!==false;ex.active=true;return was?"already":"reactivated";}
+  character.statuses.push({id:uid(),name:nm,description:"",effects:[],active:true});
+  return "added";
+}
+/* Do it, then say exactly what happened — the healing lands on hit points and
+   the status lands on another tab, so a silent apply leaves the player hunting
+   for the change. */
+function applyItemUse(it,u,heal,note){
+  const lines=[];
+  if(heal>0){
+    adjustHP(heal);renderHP();
+    lines.push((note?note+" — ":"")+`healed ${heal} HP · now ${num(character.hp.cur)}${effMaxHP()?" / "+effMaxHP():""}`);
+  }
+  if(u.status){
+    const what=addStatusByName(u.status);
+    lines.push(what==="already"?`${u.status} was already active`
+      :what==="reactivated"?`${u.status} switched back on`
+      :`${u.status} added to your statuses`);
+  }
+  const mx=itemUsesMax(it);
+  if(mx>0){it.uses.used=Math.min(mx,num(it.uses.used)+1);lines.push(`${mx-num(it.uses.used)} of ${mx} uses left`);}
+  if(u.consume){
+    const left=Math.max(0,itemQty(it)-1);
+    if(left<=0){
+      /* The last one is gone, so the row goes with it — a "×0" line still
+         offering Use is worse than removing it. Its linked attack goes too,
+         exactly as deleting the item by hand does. */
+      character.inventory=character.inventory.filter(x=>x.id!==it.id);
+      character.attacks=(character.attacks||[]).filter(a=>a.itemId!==it.id);
+      lines.push("That was the last one — removed from your inventory");
+    }else{it.qty=left;lines.push(`${left} left`);}
+  }
+  renderInventory();renderStatuses();renderAttacks();recompute();scheduleSave();
+  restSummary("Used "+(it.name||"item"),lines.length?lines:["Nothing to apply — this item has no effect set."],"");
+}
+/* The healing prompt. Both halves of the ask live here: tap Roll and the app
+   rolls it, or type what you rolled at the table. ONE number path either way —
+   the box holds the DICE total and the flat bonus is added once, so the two
+   answers can't disagree about whether the +2 is already in. */
+function openItemUsePrompt(it,u,p){
+  const diceTxt=diceExprDice(p), modTxt=p.mod?(p.mod<0?` − ${Math.abs(p.mod)}`:` + ${p.mod}`):"";
+  openModal("Use "+(it.name||"item"),`
+    <p class="hint">Heals <b>${esc(diceExprText(p))}</b>${u.status?` and applies <b>${esc(u.status)}</b>`:""}.</p>
+    <div class="field"><label class="f">What the dice came up (${esc(diceTxt)})</label>
+      <input id="iuRoll" type="number" min="0" inputmode="numeric" placeholder="total on the dice"></div>
+    <p class="hint" id="iuPrev"></p>
+    <div class="m-actions"><button class="tbtn" id="iuCancel">Cancel</button>
+      <button class="tbtn" id="iuRollBtn">Roll for me</button>
+      <button class="tbtn primary" id="iuGo">Apply</button></div>`);
+  const box=document.getElementById("iuRoll"), prev=document.getElementById("iuPrev"), go=document.getElementById("iuGo");
+  let note="";
+  const total=()=>Math.max(0,num(box.value)+p.mod);
+  const sync=()=>{
+    const raw=String(box.value).trim();
+    go.disabled=(raw==="");
+    prev.textContent=raw===""
+      ? `Roll ${diceTxt} at the table and type the total, or let the app roll it.`
+      : (note?note+" — ":"")+`heals ${total()} HP (${num(box.value)}${modTxt})`;
+  };
+  box.addEventListener("input",()=>{note="";sync();});
+  document.getElementById("iuRollBtn").addEventListener("click",()=>{
+    const r=rollDiceExpr(p);
+    box.value=r.total-p.mod;
+    note="rolled "+r.faces.join(", ");
+    sync();
+  });
+  document.getElementById("iuCancel").addEventListener("click",closeModal);
+  go.addEventListener("click",()=>{
+    if(String(box.value).trim()==="")return;
+    applyItemUse(it,u,total(),note);
+  });
+  sync();
+}
 /* ---- spell editor ---- */
+/* The condition names offered by every box that asks for a status — the status
+   editor, and the item editor's "applies when used". One list, so the two can't
+   drift; `id` is a parameter because two datalists with the same id on one page
+   is a silent no-op for the second. */
+const STATUS_CONDSET=new Set(["blinded","charmed","deafened","exhaustion","frightened","grappled","incapacitated","invisible","paralyzed","petrified","poisoned","prone","restrained","stunned","unconscious","bloodied","concentration","surprised"]);
+function statusTermList(){
+  return [...new Set(allGlossary().filter(g=>g.cond||STATUS_CONDSET.has(String(g.term||"").trim().toLowerCase())).map(g=>g.term).filter(Boolean))];
+}
+function statusDatalistHTML(id){
+  const terms=statusTermList();
+  return terms.length?`<datalist id="${id}">${terms.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>`:"";
+}
 function openStatusForm(existing){
   const s=existing||{id:uid(),name:"",description:"",effects:[],active:true};
-  const CONDSET=new Set(["blinded","charmed","deafened","exhaustion","frightened","grappled","incapacitated","invisible","paralyzed","petrified","poisoned","prone","restrained","stunned","unconscious","bloodied","concentration","surprised"]);
-  const terms=[...new Set(allGlossary().filter(g=>g.cond||CONDSET.has(String(g.term||"").trim().toLowerCase())).map(g=>g.term).filter(Boolean))];
-  const dl=terms.length?`<datalist id="statusTerms">${terms.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>`:"";
+  const dl=statusDatalistHTML("statusTerms");
   openModal(existing?"Edit status":"New status",`
     <div class="field"><label class="f">Condition / status</label><input id="stName" list="statusTerms" value="${esc(s.name)}" placeholder="Poisoned, Grappled, Blessed…">${dl}
       <p class="hint">If the name matches a glossary or rules entry, it becomes tappable to show the rule.</p></div>
@@ -5072,8 +5373,11 @@ function openBrowse(cfg){
       el.classList.toggle("over",!!(b&&b.over));
     });
   }
+  /* cfg.noun1 is the spelled-out singular, not a de-pluralised noun: stripping an
+     "s" would turn "feats & traits" into "feats & trait". Kept out of foot() so
+     the body stays inside the proximity guard rules-data.js puts on it. */
   function foot(){const n=st.sel.size,b=document.getElementById("brAdd"),c=document.getElementById("brCount");
-    if(b){b.disabled=!n;b.textContent=n?`Add ${n} ${cfg.noun||""}`:`Add ${cfg.noun||""}`;}
+    if(b){b.disabled=!n;b.textContent=n?`Add ${n} ${(n===1&&cfg.noun1)||cfg.noun||""}`:`Add ${cfg.noun||""}`;}
     if(c)c.textContent=`${lastCount} result${lastCount===1?"":"s"}${n?` · ${n} selected`:""}`;
     paintGroupBadges();}
   function renderList(){
@@ -5126,7 +5430,7 @@ function browseItems(){
   const rars=[...new Set(lib.map(rarOf))].sort((a,b)=>RAR.indexOf(a)-RAR.indexOf(b)).map(r=>({value:r.toLowerCase(),label:r}));
   const meta=itemMetaLine;   /* shared with the update diff — see 25-origins-items.js */
   openBrowse({
-    noun:"items", items:lib, id:x=>x._id||x.name,
+    noun:"items", noun1:"item", items:lib, id:x=>x._id||x.name,
     search:x=>`${x.name} ${x.type||""} ${x.category||""} ${x.rarity||""}`,
     row:x=>({title:x.name,tag:(x.rarity&&x.rarity!=="Mundane")?x.rarity:(x.cost||"")}),
     sort:(a,b)=>String(catOf(a)).localeCompare(String(catOf(b)))||String(a.name||"").localeCompare(String(b.name||"")),
@@ -5165,7 +5469,7 @@ function browseSpells(){
   const schoolOpts=[...new Set(lib.map(schoolOf).filter(Boolean))].sort().map(s=>({value:s.toLowerCase(),label:s}));
   const defClasses=myCl.filter(c=>classOpts.some(o=>o.value===c));
   openBrowse({
-    noun:"spells", items:lib, id:x=>x._id||x.name,
+    noun:"spells", noun1:"spell", items:lib, id:x=>x._id||x.name,
     search:x=>`${x.name} ${x.meta||""} ${clsOf(x).join(" ")}`,
     row:x=>({title:dispName(x,"spells"),tag:schoolOf(x)}),
     sort:(a,b)=>num(a.level)-num(b.level)||String(a.name||"").localeCompare(String(b.name||"")),
@@ -5201,6 +5505,116 @@ function browseSpells(){
       {key:"conc",label:"Concentration",type:"toggle",match:e=>/concentration/i.test(e.meta||"")}
     ],
     onAdd:(entries,og)=>{entries.forEach(x=>{if(character.spells.some(s=>String(s.name||"").toLowerCase()===String(x.name||"").toLowerCase()))return;const sp={id:uid(),name:x.name,level:num(x.level),meta:x.meta||"",text:x.text||"",prepared:false,granted:og?grantedFromOrigin(og.kind):"",origin:og||null};detectSpellAttack(sp);stampSrc(sp,x,"spell","spells");character.spells.push(sp);syncSpellAttack(sp);});renderSpells();renderAttacks();scheduleSave();}
+  });
+}
+
+/* ================= feats & traits =================
+   One thing to the player, two categories in the data: `rules.feats` holds
+   feats, and the traits a pack ships loose sit in `rules.features`. The only
+   way in used to be the feature form's "Insert from rules pack" select — every
+   trait in one unsearchable dropdown, and not a single FEAT in it, because
+   that select reads `rules.features` alone. Both are browsable here.
+
+   Entries are wrapped as {k,e} rather than merged: a feat and a trait can share
+   a name (Humblewood's "Glide" is both), and the two are added in different
+   shapes, so they must stay distinguishable all the way through the picker.
+
+   A feat is stored the way grantFeatDef stores one — named "Feat: <name>" and
+   stamped against the `feats` category — so a feat picked here and a feat your
+   background granted are the same kind of record to the rules-update tool. */
+const FEAT_KINDS=[
+  {key:"origin", label:"Origin feat",         group:"Origin Feats",         re:/^\s*origin\s+feats?\b/i},
+  {key:"general",label:"General feat",        group:"General Feats",        re:/^\s*general\s+feats?\b/i},
+  {key:"style",  label:"Fighting Style feat", group:"Fighting Style Feats", re:/^\s*fighting\s+style\s+feats?\b/i},
+  {key:"boon",   label:"Epic Boon",           group:"Epic Boons",           re:/^\s*epic\s+boons?\b/i},
+  {key:"feat",   label:"Feat",                group:"Feats",                re:null},
+  {key:"trait",  label:"Trait",               group:"Traits",               re:null}
+];
+function featKindDef(key){return FEAT_KINDS.find(k=>k.key===key)||FEAT_KINDS[FEAT_KINDS.length-2];}
+/* every feat and trait the loaded packs carry, in one pickable list */
+function featPickList(){
+  const out=[];
+  (rules.feats||[]).forEach(e=>{if(e&&e.name)out.push({k:"feat",e,id:"feat:"+(e._id||e.name)});});
+  (rules.features||[]).forEach(e=>{if(e&&e.name)out.push({k:"trait",e,id:"trait:"+(e._id||e.name)});});
+  return out;
+}
+/* The category line the converter writes as the FIRST line of a feat's text
+   ("Origin feat", "General feat · Prerequisite: Level 4+"). A 2014-era book
+   (Xanathar's, Tasha's) has no such line — those feats are simply "Feat". */
+function featPickHead(w){return String((w&&w.e&&w.e.description)||"").split("\n")[0];}
+function featPickKind(w){
+  if(!w)return "feat";
+  if(w.k!=="feat")return "trait";
+  const h=featPickHead(w), hit=FEAT_KINDS.find(k=>k.re&&k.re.test(h));
+  return hit?hit.key:"feat";
+}
+/* Read only the first line: the body of a feat is full of the word
+   "prerequisite" in prose, and this is a filter, not a rules engine. */
+function featPickPrereq(w){
+  const m=featPickHead(w).match(/prerequisites?:\s*([^\n]+)/i);
+  return m?m[1].trim().replace(/[)\s.]+$/,""):"";
+}
+/* The heading a row sits under. Feats group by category; a loose trait groups
+   by its own `source`, because that is what those packs actually are — 76 of
+   Tasha's traits are Eldritch Invocations, Battle Master Maneuvers and
+   Artificer Infusions, and one flat "Traits" bucket would bury the lot. */
+function featPickGroup(w){
+  const k=featPickKind(w);
+  return k==="trait"?(String(w.e.source||"").trim()||"Traits"):featKindDef(k).group;
+}
+function featPickName(w){return dispName(w.e,w.k==="feat"?"feats":"features");}
+/* what the sheet calls it once added — the "Feat: X" wrapper grantFeatDef uses */
+function featPickStoredName(w){return w.k==="feat"?("Feat: "+(w.e.name||"Feat")):(w.e.name||"Trait");}
+function featPickHas(nm){return (character.features||[]).some(f=>String(f.name||"").trim().toLowerCase()===String(nm||"").trim().toLowerCase());}
+/* Add one picked entry. Returns the record, or null if the sheet already has
+   it — picking something you have is a misclick far more often than it is a
+   deliberate second copy, which is also why the row shows an "added" badge. */
+function addPickedFeature(w){
+  if(!w||!w.e)return null;
+  const e=w.e, nm=featPickStoredName(w);
+  if(featPickHas(nm))return null;
+  addFeatureFromDef({name:nm,description:e.description||"",effects:Array.isArray(e.effects)?e.effects:[],
+                     uses:e.uses,cost:e.cost,source:e.source||""},null);
+  const added=character.features[character.features.length-1];
+  /* re-stamp against the real entry: addFeatureFromDef only saw the object
+     built above, which has no pack and — for a feat — the wrong name */
+  if(added)stampSrc(added,e,"feature",w.k==="feat"?"feats":"features");
+  return added||null;
+}
+function browseFeatures(){
+  const list=featPickList();
+  if(!list.length)return openFeatureForm();
+  const present=FEAT_KINDS.filter(k=>list.some(w=>featPickKind(w)===k.key));
+  const srcs=[...new Set(list.map(w=>String(w.e._source||"")).filter(Boolean))].sort();
+  const facets=[{key:"kind",label:"Type",type:"multi",
+                 options:present.map(k=>({value:k.key,label:k.label})),
+                 match:(w,a)=>a.has(featPickKind(w))}];
+  /* only worth a row of pills once more than one pack is loaded */
+  if(srcs.length>1)facets.push({key:"pack",label:"Pack",type:"multi",
+    options:srcs.map(s=>({value:s.toLowerCase(),label:s})),
+    match:(w,a)=>a.has(String(w.e._source||"").toLowerCase())});
+  facets.push({key:"noreq",label:"No prerequisite",type:"toggle",match:w=>!featPickPrereq(w)});
+  openBrowse({
+    noun:"feats & traits", noun1:"feat or trait", items:list, id:w=>w.id,
+    /* the description too: "which feat gives me advantage on saves" is the
+       question this browser exists to answer, and the list is small enough */
+    search:w=>`${w.e.name} ${w.e.source||""} ${w.e.description||""}`,
+    row:w=>{const p=featPickPrereq(w);
+      return {title:featPickName(w),tag:p?(p.length>30?p.slice(0,29)+"…":p):(w.e._source||"")};},
+    /* group order first, then the heading, then the name — the list is rendered
+       in this order and a heading is emitted whenever it changes, so anything
+       sharing a heading has to be adjacent */
+    sort:(a,b)=>FEAT_KINDS.findIndex(k=>k.key===featPickKind(a))-FEAT_KINDS.findIndex(k=>k.key===featPickKind(b))
+      ||featPickGroup(a).localeCompare(featPickGroup(b))
+      ||String(a.e.name||"").localeCompare(String(b.e.name||"")),
+    group:featPickGroup,
+    added:w=>featPickHas(featPickStoredName(w)),
+    preview:w=>{const bits=[w.k==="trait"?(String(w.e.source||"").trim()||"Trait"):featKindDef(featPickKind(w)).label,
+                            w.e._source||""].filter(Boolean);
+      openModal(featPickName(w),`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(bits.join(" · "))}</p><div class="desc">${descHTML(w.e.description||"—")}</div>`);},
+    onCustom:()=>openFeatureForm(),
+    facets,
+    onAdd:entries=>{entries.forEach(addPickedFeature);renderFeatures();recompute();scheduleSave();}
   });
 }
 
@@ -6140,7 +6554,7 @@ function wire(){
     // slot bubbles
     if((m=t.closest(".slot .b"))){const lv=num(m.dataset.slot),i=num(m.dataset.i);const s=character.slots[lv];s.used=(s.used===i)?i-1:i;renderSlotBubbles();scheduleSave();return;}
     // features
-    if((m=t.closest("[data-add]"))){const w=m.dataset.add;({feature:openFeatureForm,item:browseItems,status:openStatusForm,familiar:openFamiliarForm,attack:openAttackForm,spell:browseSpells}[w]||openSpellForm)();return;}
+    if((m=t.closest("[data-add]"))){const w=m.dataset.add;({feature:browseFeatures,item:browseItems,status:openStatusForm,familiar:openFamiliarForm,attack:openAttackForm,spell:browseSpells}[w]||openSpellForm)();return;}
     if((m=t.closest("[data-atk-info]")))return openAttackBreakdown(m.dataset.atkInfo);
     if((m=t.closest("[data-edit-attack]")))return openAttackForm(character.attacks.find(x=>x.id===m.dataset.editAttack));
     if((m=t.closest("[data-del-attack]"))){const a=character.attacks.find(x=>x.id===m.dataset.delAttack);if(a&&confirm(`Delete “${a.name}”?`)){character.attacks=character.attacks.filter(x=>x.id!==a.id);renderAttacks();scheduleSave();}return;}
@@ -6217,6 +6631,10 @@ function wire(){
     if((m=t.closest("[data-edit-item]")))return openItemForm(character.inventory.find(x=>x.id===m.dataset.editItem));
     if((m=t.closest("[data-del-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.delItem);if(it){const hasAtk=character.attacks.some(a=>a.itemId===it.id);if(confirm(`Delete “${it.name}”?${hasAtk?" Its linked attack will be removed too.":""}`)){character.inventory=character.inventory.filter(x=>x.id!==it.id);character.attacks=character.attacks.filter(a=>a.itemId!==it.id);renderInventory();renderAttacks();recompute();scheduleSave();}}return;}
     if((m=t.closest("[data-toggle-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.toggleItem);if(it){it.equipped=!it.equipped;renderInventory();recompute();scheduleSave();}return;}
+    if((m=t.closest("[data-useitem]")))return useItem(m.dataset.useitem);
+    /* Same "click pip i" semantics the feature and hit-dice pips have: tapping
+       the pip that is currently the last spent one gives that use back. */
+    if((m=t.closest("[data-iuse]"))){const it=character.inventory.find(x=>x.id===m.dataset.iuse);if(it&&it.uses){const i=num(m.dataset.i);it.uses.used=(num(it.uses.used)===i)?i-1:i;renderInventory();scheduleSave();}return;}
     // spells
     if((m=t.closest("[data-edit-spell]")))return openSpellForm(character.spells.find(x=>x.id===m.dataset.editSpell));
     if((m=t.closest("[data-view-spell]")))return openSpellView(character.spells.find(x=>x.id===m.dataset.viewSpell));
