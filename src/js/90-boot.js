@@ -70,8 +70,11 @@ function wire(){
     if((m=t.closest("[data-info-class]")))return openClassInfo(m.dataset.infoClass);
     // statuses
     if((m=t.closest("[data-edit-status]")))return openStatusForm(character.statuses.find(x=>x.id===m.dataset.editStatus));
-    if((m=t.closest("[data-del-status]"))){const s=character.statuses.find(x=>x.id===m.dataset.delStatus);if(s&&confirm(`Remove “${s.name}”?`)){character.statuses=character.statuses.filter(x=>x.id!==s.id);renderStatuses();recompute();scheduleSave();}return;}
-    if((m=t.closest("[data-toggle-status]"))){const s=character.statuses.find(x=>x.id===m.dataset.toggleStatus);if(s){s.active=s.active===false;renderStatuses();recompute();scheduleSave();}return;}
+    /* A concentration condition is the same fact as its Active Spells row, so
+       removing or clearing it ends the spell — said in the prompt, because a
+       concentration spell is not something the sheet can give back. */
+    if((m=t.closest("[data-del-status]"))){const s=character.statuses.find(x=>x.id===m.dataset.delStatus);const ca=(s&&s.concId)?concActiveSpell():null;if(s&&confirm(ca?`Remove “${s.name}”? ${ca.name} ends too.`:`Remove “${s.name}”?`)){if(s.concId)endConcentration();character.statuses=character.statuses.filter(x=>x.id!==s.id);renderStatuses();renderActiveSpells();recompute();scheduleSave();}return;}
+    if((m=t.closest("[data-toggle-status]"))){const s=character.statuses.find(x=>x.id===m.dataset.toggleStatus);if(s){if(s.concId&&s.active!==false){if(!endConcFromStatus())return;}else s.active=s.active===false;renderStatuses();renderActiveSpells();recompute();scheduleSave();}return;}
     // familiars
     if((m=t.closest("[data-edit-familiar]")))return openFamiliarForm(character.familiars.find(x=>x.id===m.dataset.editFamiliar));
     if((m=t.closest("[data-del-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.delFamiliar);if(f&&confirm(`Delete “${f.name}”?`)){character.familiars=character.familiars.filter(x=>x.id!==f.id);renderFamiliars();recompute();scheduleSave();}return;}
@@ -135,7 +138,7 @@ function wire(){
     // spells
     if((m=t.closest("[data-edit-spell]")))return openSpellForm(character.spells.find(x=>x.id===m.dataset.editSpell));
     if((m=t.closest("[data-view-spell]")))return openSpellView(character.spells.find(x=>x.id===m.dataset.viewSpell));
-    if((m=t.closest("[data-del-spell]"))){const s=character.spells.find(x=>x.id===m.dataset.delSpell);if(s&&confirm(`Delete “${s.name}”?`)){character.spells=character.spells.filter(x=>x.id!==s.id);character.attacks=character.attacks.filter(a=>a.spellId!==s.id);character.activeSpells=(character.activeSpells||[]).filter(a=>a.spellId!==s.id);renderSpells();renderAttacks();renderActiveSpells();scheduleSave();}return;}
+    if((m=t.closest("[data-del-spell]"))){const s=character.spells.find(x=>x.id===m.dataset.delSpell);if(s&&confirm(`Delete “${s.name}”?`)){character.spells=character.spells.filter(x=>x.id!==s.id);character.attacks=character.attacks.filter(a=>a.spellId!==s.id);character.activeSpells=(character.activeSpells||[]).filter(a=>a.spellId!==s.id);syncConcStatus();renderSpells();renderAttacks();renderActiveSpells();renderStatuses();scheduleSave();}return;}
     if((m=t.closest("[data-cast-spell]")))return castSpell(m.dataset.castSpell);
     if((m=t.closest("[data-atkitem]"))){const id=m.dataset.atkitem,ac=atkCol();ac.items[id]=!ac.items[id];renderAttacks();scheduleSave();return;}
     if((m=t.closest("[data-round]")))return advanceRound(num(m.dataset.round));

@@ -381,8 +381,15 @@ function openStatusForm(existing){
   document.getElementById("stCancel").addEventListener("click",closeModal);
   document.getElementById("stSave").addEventListener("click",()=>{
     const rec={id:s.id,name:document.getElementById("stName").value.trim()||"Status",description:document.getElementById("stDesc").value,effects:collectFx(fxWrap),active};
+    /* rec is rebuilt from the form, so the link to the spell being concentrated
+       on has to be carried across — lose it and the condition stops ending the
+       spell, and nothing on screen says why. */
+    if(s.concId)rec.concId=s.concId;
     const i=character.statuses.findIndex(x=>x.id===s.id);if(i>=0)character.statuses[i]=rec;else character.statuses.push(rec);
-    closeModal();renderStatuses();recompute();scheduleSave();
+    /* Unticking "Active now" on a concentration condition IS ending it, the same
+       as clearing it on the sheet — so the spell ends with it. */
+    if(rec.concId&&!active)endConcentration();
+    closeModal();renderStatuses();renderActiveSpells();recompute();scheduleSave();
   });
 }
 function openFamiliarForm(existing){

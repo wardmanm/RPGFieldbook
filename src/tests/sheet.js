@@ -5,7 +5,7 @@
 const {loadApp, makeCheck} = require('./harness');
 
 const ck = makeCheck();
-const {X, bootError, fragments} = loadApp([
+const {X, state, bootError, fragments} = loadApp([
   'signedEntry', 'signedDelta', 'num', 'fnum', 'fmtWt', 'fmtGp', 'blankChar', 'migrate',
   'clampHP', 'effMaxHP', 'adjustHP', 'applyHPInput', 'renderHP', 'hpBand', 'hdStyle',
   'itemWeight', 'itemWeightTotal', 'coinsWeight', 'carriedWeight',
@@ -24,6 +24,8 @@ const {X, bootError, fragments} = loadApp([
   'descHTML', 'highlight', 'mergeRules', 'resetRules',
   'attackDamageStr', 'extraDamageList', 'damagePartStr', 'carryAttackLinks',
   'syncSpellAttack', 'detectSpellAttack',
+  'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
+  'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1265,6 +1267,139 @@ function charWith(inv, hp) {
      JSON.stringify(back.inventory[0].use) === JSON.stringify(it.use));
   const off = X.migrate(JSON.parse(JSON.stringify(X.migrate({inventory: [{id: 'x', use: {off: true}}]}))));
   ck('...including an explicit "not usable"', off.inventory[0].use.off === true);
+}
+
+/* ================= the Concentrating condition (issue #37) ===================
+   Concentration is stored once — as the active spell — and the condition mirrors
+   it. Both directions are asserted here: casting puts the condition on the
+   sheet, and clearing the condition ends the spell. The third case is the one
+   that goes wrong quietly: the spell ending by some OTHER route (replaced,
+   expired, deleted) must not leave the condition stranded. */
+{
+  const caster = (spells) => {
+    const c = X.blankChar();
+    c.spellAbility = 'wis';
+    for (let L = 1; L <= 9; L++) c.slots[L] = {total: 3, used: 0};
+    c.spells = spells;
+    X.character = c;
+    return c;
+  };
+  const bless = {id: 'sp1', name: 'Bless', level: 1, conc: true, duration: '1 minute'};
+  const hex = {id: 'sp2', name: 'Hex', level: 1, conc: true, duration: '1 hour'};
+  const shield = {id: 'sp3', name: 'Shield', level: 1, conc: false, duration: '1 round'};
+  const st = () => X.character.statuses;
+  const conc = () => X.concStatusRow();
+
+  // ---------- casting a concentration spell adds the condition
+  caster([bless, hex, shield]);
+  X.castSpell('sp1');
+  ck('casting a concentration spell puts it on Active Spells',
+     X.character.activeSpells.length === 1 && X.character.activeSpells[0].conc === true);
+  ck('...and adds the Concentrating condition', st().length === 1 && st()[0].name === 'Concentrating');
+  ck('...linked to that spell, not matched by name',
+     conc() && conc().concId === X.character.activeSpells[0].id, JSON.stringify(st()));
+  ck('...saying which spell it is', /Bless/.test(conc().description), conc().description);
+  ck('...active, so the sheet shows it as held', conc().active === true);
+  ck('the condition carries no effects — concentration is prose, not a number',
+     Array.isArray(conc().effects) && conc().effects.length === 0);
+
+  // ---------- a non-concentration spell adds nothing
+  X.castSpell('sp3');
+  ck('a timed spell that needs no concentration adds no condition',
+     st().length === 1 && X.character.activeSpells.length === 2);
+
+  // ---------- a second concentration spell replaces the first, condition and all
+  state.confirm = true;
+  X.castSpell('sp2');
+  ck('concentrating on a second spell drops the first',
+     X.character.activeSpells.filter(a => a.conc).length === 1);
+  ck('...leaves exactly one Concentrating condition',
+     st().filter(s => s.name === 'Concentrating').length === 1);
+  ck('...re-pointed at the new spell',
+     conc().concId === X.character.activeSpells.find(a => a.conc).id);
+  ck('...and re-described, so it never names the spell that ended',
+     /Hex/.test(conc().description) && !/Bless/.test(conc().description), conc().description);
+
+  // ---------- ending the spell from Active Spells clears the condition
+  X.endActiveSpell(X.character.activeSpells.find(a => a.conc).id);
+  ck('ending the active spell removes the condition, never strands it',
+     X.concStatusRow() === null && st().length === 0);
+  ck('...and leaves the other active spell alone', X.character.activeSpells.length === 1);
+
+  // ---------- the other direction: clearing the condition ends the spell
+  caster([bless]);
+  X.castSpell('sp1');
+  const ended = X.endConcentration();
+  ck('clearing the condition ends the spell it was linked to',
+     !!ended && ended.name === 'Bless' && X.character.activeSpells.length === 0);
+  ck('...and takes the condition with it', st().length === 0);
+
+  // ---------- and it asks first, because a lost spell cannot be given back
+  caster([bless]);
+  X.castSpell('sp1');
+  state.confirm = false;
+  ck('saying no to the prompt changes nothing', X.endConcFromStatus() === false
+     && X.character.activeSpells.length === 1 && st().length === 1);
+  state.confirm = true;
+  ck('saying yes ends both', X.endConcFromStatus() === true
+     && X.character.activeSpells.length === 0 && st().length === 0);
+
+  // ---------- the spell running out of time
+  caster([bless]);
+  X.castSpell('sp1');
+  X.bumpActive(X.character.activeSpells[0], 600);   // 1 minute, well past
+  ck('a spell that reaches its duration takes the condition with it',
+     X.character.activeSpells.length === 0 && st().length === 0);
+
+  // ---------- a stranded link is reconciled, not left showing
+  caster([bless]);
+  X.character.statuses = [{id: 'x1', name: 'Concentrating', description: 'on something', effects: [], active: true, concId: 'gone'}];
+  X.syncConcStatus();
+  ck('a condition whose spell is no longer running is removed on sync', st().length === 0);
+
+  // ---------- a sheet saved mid-concentration before this existed gains the condition
+  caster([bless]);
+  X.character.activeSpells = [{id: 'act9', spellId: 'sp1', name: 'Bless', level: 1, conc: true, elapsedSec: 0, durationSec: 60}];
+  X.syncConcStatus();
+  ck('an older sheet still concentrating gains the condition on load',
+     st().length === 1 && conc().concId === 'act9');
+
+  // ---------- a hand-typed "Concentrating" is adopted, not duplicated
+  caster([bless]);
+  X.character.statuses = [{id: 'own', name: 'Concentrating', description: 'my own note', effects: [], active: true}];
+  X.castSpell('sp1');
+  ck('a status the player typed is adopted rather than doubled',
+     st().length === 1 && st()[0].id === 'own');
+  ck('...gaining the link', st()[0].concId === X.character.activeSpells[0].id);
+  ck('...and keeping the note the player wrote', st()[0].description === 'my own note');
+
+  // ---------- syncing repeatedly is a no-op, not a pile of rows
+  X.syncConcStatus(); X.syncConcStatus();
+  ck('reconciling twice adds nothing', st().length === 1);
+
+  // ---------- other statuses are never touched
+  caster([bless]);
+  X.character.statuses = [{id: 'p', name: 'Poisoned', description: '', effects: [], active: true}];
+  X.castSpell('sp1');
+  ck('an unrelated status survives casting', st().length === 2 && st()[0].name === 'Poisoned');
+  X.endConcentration();
+  ck('...and survives the concentration ending', st().length === 1 && st()[0].name === 'Poisoned');
+
+  // ---------- save -> load
+  caster([bless]);
+  X.castSpell('sp1');
+  const back = X.migrate(JSON.parse(JSON.stringify(X.character)));
+  ck('the link survives a save and load',
+     back.statuses[0].concId === back.activeSpells[0].id, JSON.stringify(back.statuses));
+  ck('a blank character has no statuses and nothing to concentrate on',
+     X.blankChar().statuses.length === 0 && X.blankChar().activeSpells.length === 0);
+
+  // ---------- an old status without the field is left entirely alone
+  const old = X.migrate({statuses: [{id: 's', name: 'Prone', active: true}]});
+  ck('a status saved before the field exists has no link, and still loads',
+     old.statuses[0].concId === undefined && old.statuses[0].name === 'Prone');
+
+  X.character = X.blankChar();
 }
 
 ck.done();

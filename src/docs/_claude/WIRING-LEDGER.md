@@ -2811,3 +2811,36 @@ save, and the pack-insert handler clears it: every other box then describes the 
 **Seen, not fixed:** `openSpellForm`'s save drops `s.src`, the same family as the attack-form bug
 above — an edited spell stops being recognisable to `72-char-update.js` and falls back to matching
 by name. Out of scope here; wants its own issue.
+## The Concentrating condition — issue #37 (2026-08-17)
+
+Casting a concentration spell adds a **Concentrating** status; clearing or removing that status ends
+the spell. Machinery in `src/js/60-attacks.js`: `syncConcStatus()`, `endConcentration()`,
+`endConcFromStatus()`, `concActiveSpell()`, `concStatusRow()`, `CONC_STATUS_NAME`.
+
+**One fact, one store.** Concentration lives on the active spell (`a.conc`, already there); the
+status is a MIRROR carrying `s.concId` = that active spell's id. Nothing is matched by name, so a
+"Concentrating" a player typed themselves is never mistaken for this one — and nothing has to be
+kept in agreement between two records that can both claim to be true.
+
+**A reconcile, not add/remove.** `syncConcStatus()` makes the statuses match whatever concentration
+spell is running: re-point and re-describe if there is one, delete the linked row if there is not.
+That is what stops the condition being STRANDED when the spell ends by a route the adding code never
+saw — a second concentration spell replacing it (`castSpell`), the duration elapsing (`maybeExpire`,
+which now redraws statuses itself so every `bumpActive` caller is covered), the spell being deleted
+(`90-boot.js`), or an older sheet that was mid-concentration before any of this existed
+(`renderAll()` calls it before anything draws).
+
+**The other direction** is three handlers: `data-del-status` (prompt names the spell that ends),
+`data-toggle-status` (asks via `endConcFromStatus`, because a lost concentration spell cannot be
+given back), and the status form's save — which also had to carry `concId` across, since it rebuilds
+its record from the boxes, and treats unticking "Active now" as ending it.
+
+- **No effects.** Concentration's rules are prose — a Constitution save when you take damage, one at
+  a time. Effects are numeric-only, so the row carries `effects: []`.
+- `concId` is optional and additive: `migrate` preserves it with no code, `blankChar` needs nothing,
+  and a status saved before it loads untouched. Asserted both ways.
+- A hand-typed "Concentrating" is ADOPTED rather than duplicated (addStatusByName's precedent), and
+  keeps the note the player wrote — only a row this code created is re-described.
+
+29 checks in `src/tests/sheet.js` (the first coverage `castSpell` has had) and 7 wiring guards in
+`rules-data.js` for the handlers the stub DOM cannot click. Suite 1399.

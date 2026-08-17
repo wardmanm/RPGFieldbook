@@ -112,6 +112,55 @@ function promptSpellAttack(sp,atLevel){
   body+=`<p class="hint">Cast at level ${atLevel||sp.level}. Roll the dice at your table.</p><div class="m-actions"><button class="tbtn primary" id="okAtk">OK</button></div>`;
   openModal("Cast "+sp.name,body);const b=document.getElementById("okAtk");if(b)b.addEventListener("click",closeModal);
 }
+/* ---- the Concentrating condition ----
+   Concentration is one fact wearing two faces: a row on Active Spells and a
+   condition in Statuses. It is STORED once — as the active spell — and the
+   status mirrors it, rather than two records that can drift apart. `s.concId`
+   holds the active spell's id and is the only thing read, so a "Concentrating"
+   a player typed themselves is never mistaken for this one.
+   Both directions are wired, and the mirror is a full reconcile rather than a
+   pair of add/remove calls: that is what stops the condition being stranded when
+   the spell ends by some other route — a second concentration spell replacing
+   it, its duration running out, or the spell being deleted.
+   No effects. Concentration's rules are prose (a Constitution save when you take
+   damage, one spell at a time); effects are numeric-only. */
+const CONC_STATUS_NAME="Concentrating";
+function concActiveSpell(){return (character.activeSpells||[]).find(a=>a&&a.conc)||null;}
+function concStatusRow(){return (character.statuses||[]).find(s=>s&&s.concId)||null;}
+function concStatusDesc(act){return `Concentrating on ${act.name}${num(act.level)?` (level ${num(act.level)})`:""}. Clearing this condition ends the spell.`;}
+function syncConcStatus(){
+  if(!Array.isArray(character.statuses))character.statuses=[];
+  const act=concActiveSpell();
+  let row=concStatusRow();
+  /* Adopt a hand-typed "Concentrating" instead of adding a second one — two rows
+     both claiming to be the truth is exactly what addStatusByName avoids. Its
+     own notes are left alone; only a row this code wrote is re-described. */
+  const adopted=!act||row?null:character.statuses.find(s=>s&&String(s.name||"").trim().toLowerCase()===CONC_STATUS_NAME.toLowerCase());
+  if(adopted)row=adopted;
+  if(act&&row){
+    const mine=!adopted;
+    row.concId=act.id;row.name=CONC_STATUS_NAME;row.active=true;
+    if(mine||!String(row.description||"").trim())row.description=concStatusDesc(act);
+  }else if(act){
+    character.statuses.push({id:uid(),name:CONC_STATUS_NAME,description:concStatusDesc(act),effects:[],active:true,concId:act.id});
+  }else if(row)character.statuses=character.statuses.filter(s=>s!==row);
+  return concStatusRow();
+}
+/* The other direction: the condition is cleared or removed, so the spell ends.
+   Returns the spell that ended, for the caller to say so. */
+function endConcentration(){
+  const act=concActiveSpell();
+  if(act)character.activeSpells=(character.activeSpells||[]).filter(a=>a.id!==act.id);
+  character.statuses=(character.statuses||[]).filter(s=>!(s&&s.concId));
+  return act;
+}
+/* Asked once, because a concentration spell lost to a stray tap is not something
+   the sheet can give back. False means the player said no and nothing changed. */
+function endConcFromStatus(){
+  const act=concActiveSpell();
+  if(act&&!confirm(`End concentration on ${act.name}? The spell ends too.`))return false;
+  endConcentration();return true;
+}
 function castSpell(spellId){
   const sp=(character.spells||[]).find(x=>x.id===spellId);if(!sp)return;
   const lvl=num(sp.level), pick=pickSlotLevel(lvl);
@@ -124,16 +173,22 @@ function castSpell(spellId){
   if(pick&&pick.level>0){const S=character.slots[pick.level];S.used=Math.min(num(S.total),num(S.used)+1);}
   const durSec=spellDurationSec(sp), timed=conc||(durSec!=null&&durSec>0);
   if(timed){if(!character.activeSpells)character.activeSpells=[];character.activeSpells.push({id:uid(),spellId:sp.id,name:sp.name,level:(pick?pick.level:lvl),conc:conc,durationSec:(durSec!=null?durSec:null),elapsedSec:0,castAt:Date.now()});}
-  renderSlotBubbles();renderActiveSpells();scheduleSave();
-  toast(`Cast ${sp.name}`+((pick&&pick.level>0)?` · level ${pick.level} slot`:(lvl===0?" · cantrip":""))+(timed?" · active":""));
+  if(conc)syncConcStatus();
+  renderSlotBubbles();renderActiveSpells();renderStatuses();scheduleSave();
+  toast(`Cast ${sp.name}`+((pick&&pick.level>0)?` · level ${pick.level} slot`:(lvl===0?" · cantrip":""))+(conc?" · concentrating":(timed?" · active":"")));
   if(sp.atkType==="attack"||sp.atkType==="save")promptSpellAttack(sp,pick?pick.level:lvl);
 }
-function endActiveSpell(id){character.activeSpells=(character.activeSpells||[]).filter(a=>a.id!==id);renderActiveSpells();scheduleSave();}
+function endActiveSpell(id){character.activeSpells=(character.activeSpells||[]).filter(a=>a.id!==id);syncConcStatus();renderActiveSpells();renderStatuses();scheduleSave();}
 function bumpActive(a,deltaSec){a.elapsedSec=Math.max(0,num(a.elapsedSec)+deltaSec);maybeExpire(a);}
 function maybeExpire(a){
   if(a.durationSec!=null&&a.durationSec>0&&a.elapsedSec>=a.durationSec&&!a.expiredPrompted){
     a.expiredPrompted=true;
-    if(confirm(`${a.name} has reached its duration (${fmtElapsed(a.durationSec)}). End it?`))character.activeSpells=character.activeSpells.filter(x=>x.id!==a.id);
+    /* the spell ending here is the "some other route" the condition must not be
+       stranded by, so the mirror is reconciled and redrawn on the spot */
+    if(confirm(`${a.name} has reached its duration (${fmtElapsed(a.durationSec)}). End it?`)){
+      character.activeSpells=character.activeSpells.filter(x=>x.id!==a.id);
+      syncConcStatus();renderStatuses();
+    }
   }
   if(a.durationSec!=null&&a.elapsedSec<a.durationSec)a.expiredPrompted=false;
 }

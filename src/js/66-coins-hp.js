@@ -247,6 +247,11 @@ function renderAll(){
      from the rules pool, not the character, so loading a sheet with rules
      already cached has to draw them. Leaving it out meant the Tables tab was
      blank after a refresh until you typed in its filter box. */
+  /* Before anything draws: the Concentrating condition mirrors the active spell,
+     and a sheet saved before that existed — or one whose spell was ended in some
+     way the mirror never saw — reconciles on load rather than showing a
+     condition for a spell that isn't running. */
+  syncConcStatus();
   renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderNoteIcons();renderNotes();renderAllRT();recompute();
 }
 
