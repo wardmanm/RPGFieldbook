@@ -2736,3 +2736,35 @@ exists to answer.
 47 checks in `src/tests/sheet.js`, including a `updResolve` round trip both ways. Full suite 1247.
 Deliberately not done: no skill-choice prompt for feats that carry one (`grantFeatDef` only offers
 those when an origin sid exists, and picked feats have no origin).
+## Item uses (issue #25, 2026-08-17)
+
+Items gained the same limited-use machinery features have, plus a Use button that can heal, apply a
+status and consume a charge or a unit.
+
+**One shape, not a second one.** `it.uses = {max, per, used}` is byte-for-byte the feature shape, so
+`usesMax()` reads both and `72-char-update.js` already preserves `uses.used` across a pack update
+(`uses` is not in `UPD_FIELDS.item`, so a pack can never write it either). `resetItemUses(kinds)` in
+`65-resources.js` mirrors `resetFeatureUses` and is called from `longRest` (short+long) and
+`shortRest` (short); `per:"none"` is a charge no rest returns, and the pips are how it is reset.
+
+**What Use does is `it.use = {heal, status, consume}` — and it is INFERRED when absent.**
+`detectItemUse()` reads "regains 2d4 + 2 Hit Points" out of a Consumables-section item, which is how a
+potion added through the item browser (`85-browse.js`, owned by another issue and untouched) is usable
+with no setup. Precedence copies `detectSpellAttack`: explicit wins, and `use:{off:true}` is written
+when the player clears the boxes against a use that would otherwise be re-read from the description —
+without that flag, clearing it could never stick. Detection is deliberately narrow: it requires the
+Consumables section AND "hit points", so "regains 1d3 expended charges" is not mistaken for a heal.
+
+**Dice.** `parseDiceExpr` is pure and total, `rollDiceExpr` is the only thing touching `Math.random` —
+that split is what makes the accepted/rejected spellings assertable (26 checks). The item editor
+refuses to save an expression the parser rejects rather than storing a heal that silently does
+nothing. The prompt holds the DICE total in its box and adds the flat bonus once, so "I rolled it" and
+"roll it for me" cannot disagree about whether the +2 is already in.
+
+**Not done, on purpose:** no auto-detection of charges ("this wand has 7 charges") — the phrasing
+varies far more than the healing line and a wrong guess is worse than a blank box; no status REMOVAL
+on use (Elixir of Health cures conditions), which wants a list and a different UI; no use info on the
+printed sheet.
+
+Sheet suite is +76 checks (1280 total). CSS gained `.tbtn:disabled`, which also fixes the coin
+adjuster's Apply button looking enabled while it was not.

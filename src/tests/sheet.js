@@ -16,6 +16,10 @@ const {X, bootError, fragments} = loadApp([
   'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
   'FEAT_KINDS', 'featKindDef', 'featPickList', 'featPickKind', 'featPickPrereq',
   'featPickName', 'featPickStoredName', 'featPickGroup', 'addPickedFeature', 'updResolve',
+  'parseDiceExpr', 'rollDiceExpr', 'diceExprText', 'diceExprDice',
+  'detectItemUse', 'itemUse', 'itemUsable', 'itemUsesMax', 'itemQty',
+  'addStatusByName', 'applyItemUse', 'useItem', 'resetItemUses', 'longRest',
+  'invItemHTML', 'itemUseLine', 'itemUsesRowHTML', 'uid',
   'spellLevelTally', 'spellAllotment', 'cantripsKnown',
   'descHTML', 'highlight', 'mergeRules', 'resetRules',
   'attackDamageStr', 'extraDamageList', 'damagePartStr',
@@ -995,5 +999,172 @@ ck('...which is exactly what the row badge warns about',
 X.resetRules();
 ck('no rules loaded, nothing to pick', X.featPickList().length === 0);
 X.character = X.blankChar();
+/* ================= item uses ================= */
+
+// A dice expression is what the player TYPES, so the parser has to accept the
+// spellings people actually use and reject everything else outright — a
+// mis-read heal hands out the wrong hit points and nothing on screen says so.
+const P = X.parseDiceExpr;
+ck('2d4+2 parses', JSON.stringify(P('2d4+2')) === JSON.stringify({dice: [{n: 2, sides: 4, sign: 1}], mod: 2}),
+   JSON.stringify(P('2d4+2')));
+ck('spaces are ignored', JSON.stringify(P('2d4 + 2')) === JSON.stringify(P('2d4+2')));
+ck('a bare die means one of them', P('d6').dice[0].n === 1 && P('d6').dice[0].sides === 6);
+ck('1d8 has no modifier', P('1d8').mod === 0);
+ck('a flat number is dice-free', P('10').dice.length === 0 && P('10').mod === 10);
+ck('a negative modifier is kept', P('2d4-1').mod === -1);
+ck('two dice groups both survive', P('1d4+1d6').dice.length === 2);
+ck('a unicode minus reads as a minus', P('2d4−1').mod === -1);
+['', '   ', 'abc', '2d', 'd', '2x4', '1d4+', '+', '2.5d4', '1d4 fire', '0d6', '2d1', '200d6']
+  .forEach(bad => ck('rejects ' + JSON.stringify(bad), P(bad) === null, JSON.stringify(P(bad))));
+
+ck('diceExprText writes the whole expression back', X.diceExprText(P('2d4+2')) === '2d4 + 2',
+   X.diceExprText(P('2d4+2')));
+ck('...a flat heal is just the number', X.diceExprText(P('10')) === '10');
+ck('diceExprDice is the part you pick up', X.diceExprDice(P('2d4+2')) === '2d4');
+ck('...and is empty when there are no dice', X.diceExprDice(P('10')) === '');
+
+// The roll is the only part that touches Math.random, so it is asserted by
+// bounds rather than by value — 300 rolls of 2d4+2 must all land in 4..10.
+{
+  const p = P('2d4+2');
+  let lo = 99, hi = -99, badFaces = 0;
+  for (let i = 0; i < 300; i++) {
+    const r = X.rollDiceExpr(p);
+    lo = Math.min(lo, r.total); hi = Math.max(hi, r.total);
+    if (r.faces.length !== 2 || r.faces.some(v => v < 1 || v > 4)) badFaces++;
+  }
+  ck('every 2d4+2 roll is within 4..10', lo >= 4 && hi <= 10, lo + '..' + hi);
+  ck('...and shows its working: two d4 faces each time', badFaces === 0, badFaces);
+  ck('a flat expression rolls to itself', X.rollDiceExpr(P('7')).total === 7);
+}
+
+// ---------- reading a potion out of its own text
+const potion = {name: 'Potion of Healing', category: 'Potion',
+  description: 'The creature that drinks the magical red fluid in this vial regains 2d4 + 2 Hit Points.'};
+ck('a healing potion is read from its description',
+   JSON.stringify(X.detectItemUse(potion)) === JSON.stringify({heal: '2d4+2', consume: true}),
+   JSON.stringify(X.detectItemUse(potion)));
+ck('a flat heal is read too',
+   X.detectItemUse({category: 'Potion', description: 'You regain 15 Hit Points.'}).heal === '15');
+// The trap: "regains 1d3 expended charges" is the same verb and is NOT a heal.
+ck('recharging charges is not healing',
+   X.detectItemUse({category: 'Potion', description: 'The wand regains 1d3 expended charges daily at dawn'}) === null);
+ck('a wondrous item is never auto-read',
+   X.detectItemUse({category: 'Wondrous Item', description: 'you can regain 2d4 + 2 Hit Points'}) === null);
+ck('nothing is read out of an empty item', X.detectItemUse({}) === null && X.detectItemUse(null) === null);
+
+// ---------- what the player set beats what we inferred, and "off" sticks
+ck('an explicit use wins over the detected one',
+   X.itemUse(Object.assign({use: {heal: '1d4'}}, potion)).heal === '1d4');
+ck('use.off means not usable, against a detected default',
+   X.itemUse(Object.assign({use: {off: true}}, potion)) === null);
+ck('an unedited potion falls back to detection', X.itemUse(potion).heal === '2d4+2');
+ck('a rope is not usable', X.itemUsable({name: 'Rope', category: 'Gear'}) === false);
+ck('a potion is usable with no configuration at all', X.itemUsable(potion) === true);
+ck('limited uses alone make an item usable',
+   X.itemUsable({name: 'Wand', category: 'Wand', uses: {max: 3, per: 'long', used: 0}}) === true);
+ck('itemUsesMax reads the same shape features use',
+   X.itemUsesMax({uses: {max: 3, per: 'long', used: 1}}) === 3 && X.itemUsesMax({}) === 0);
+ck('a missing quantity means one', X.itemQty({}) === 1 && X.itemQty({qty: ''}) === 1);
+ck('...but a real zero is zero', X.itemQty({qty: 0}) === 0 && X.itemQty({qty: 3}) === 3);
+ck('the Use button only appears on a usable item',
+   X.invItemHTML(Object.assign({id: 'p1'}, potion)).indexOf('data-useitem="p1"') > -1 &&
+   X.invItemHTML({id: 'r1', name: 'Rope', category: 'Gear'}).indexOf('data-useitem') === -1);
+ck('the uses pips carry the item id',
+   X.itemUsesRowHTML({id: 'w1', uses: {max: 2, per: 'short', used: 1}}).indexOf('data-iuse="w1"') > -1);
+
+// ---------- applying a use
+function charWith(inv, hp) {
+  const c = X.migrate({inventory: inv, hp: Object.assign({cur: 5, max: 20, temp: ''}, hp || {})});
+  X.character = c;
+  return c;
+}
+{
+  const it = {id: 'i1', name: 'Potion of Healing', qty: 2, category: 'Potion', use: {heal: '2d4+2', consume: true}};
+  charWith([it]);
+  X.applyItemUse(it, it.use, 9, 'rolled 3, 4');
+  ck('healing from an item lands on current HP', X.character.hp.cur === 14, X.character.hp.cur);
+  ck('...and one is used up', X.character.inventory[0].qty === 1);
+  X.applyItemUse(it, it.use, 3, '');
+  ck('the last one is removed from the inventory', X.character.inventory.length === 0,
+     JSON.stringify(X.character.inventory));
+  ck('...after healing for it', X.character.hp.cur === 17);
+}
+{
+  const it = {id: 'i2', name: 'Wand of Sparks', category: 'Wand', uses: {max: 3, per: 'long', used: 0}};
+  charWith([it]);
+  X.applyItemUse(it, {}, 0, '');
+  ck('a limited use is spent', X.character.inventory[0].uses.used === 1);
+  X.applyItemUse(it, {}, 0, '');
+  X.applyItemUse(it, {}, 0, '');
+  ck('...and never past the maximum', X.character.inventory[0].uses.used === 3);
+  ck('spending uses does not remove the item', X.character.inventory.length === 1);
+}
+{
+  const it = {id: 'i3', name: 'Draught of Fury', category: 'Potion', use: {status: 'Poisoned'}};
+  charWith([it]);
+  X.applyItemUse(it, it.use, 0, '');
+  ck('a status named by the item is added', X.character.statuses.length === 1 &&
+     X.character.statuses[0].name === 'Poisoned' && X.character.statuses[0].active === true);
+  X.applyItemUse(it, it.use, 0, '');
+  ck('using it again does not duplicate the status', X.character.statuses.length === 1);
+  X.character.statuses[0].active = false;
+  ck('a cleared status is switched back on, not re-added',
+     X.addStatusByName('poisoned') === 'reactivated' && X.character.statuses.length === 1 &&
+     X.character.statuses[0].active === true);
+  ck('an empty name adds nothing',
+     X.addStatusByName('  ') === '' && X.character.statuses.length === 1);
+}
+// A flat heal has nothing to roll, so useItem applies it without a prompt.
+{
+  const it = {id: 'i4', name: 'Bandage', category: 'Consumable', use: {heal: '5', consume: true}, qty: 1};
+  charWith([it]);
+  X.useItem('i4');
+  ck('a heal with no dice applies straight away', X.character.hp.cur === 10, X.character.hp.cur);
+  ck('...and consumes the item', X.character.inventory.length === 0);
+}
+// Out of uses: nothing moves.
+{
+  const it = {id: 'i5', name: 'Spent Wand', category: 'Wand', uses: {max: 1, per: 'long', used: 1}};
+  charWith([it]);
+  X.useItem('i5');
+  ck('an item with no uses left changes nothing', X.character.inventory[0].uses.used === 1 &&
+     X.character.hp.cur === 5);
+}
+
+// ---------- rests give item uses back, on the same terms features get them
+{
+  charWith([
+    {id: 'a', name: 'Long', uses: {max: 2, per: 'long', used: 2}},
+    {id: 'b', name: 'Short', uses: {max: 2, per: 'short', used: 1}},
+    {id: 'c', name: 'Never', uses: {max: 2, per: 'none', used: 2}},
+    {id: 'd', name: 'Plain'},
+  ]);
+  const inv = () => X.character.inventory;
+  ck('a short rest returns only short-rest uses', X.resetItemUses(['short']) === 1 &&
+     inv()[1].uses.used === 0 && inv()[0].uses.used === 2);
+  ck('...and leaves a manual-only charge alone', inv()[2].uses.used === 2);
+  ck('a long rest returns both', X.resetItemUses(['short', 'long']) === 1 && inv()[0].uses.used === 0);
+  ck('...still leaving the manual-only charge', inv()[2].uses.used === 2);
+  ck('nothing to reset counts as nothing', X.resetItemUses(['short', 'long']) === 0);
+}
+{
+  charWith([{id: 'a', name: 'Wand', uses: {max: 2, per: 'long', used: 2}}]);
+  X.longRest();
+  ck('longRest itself resets item uses', X.character.inventory[0].uses.used === 0);
+}
+
+// ---------- a save→load round trip must not drop any of it
+{
+  const it = {id: 'i9', name: 'Potion', qty: 3, category: 'Potion',
+    uses: {max: 2, per: 'short', used: 1}, use: {heal: '2d4+2', status: 'Blessed', consume: true}};
+  const back = X.migrate(JSON.parse(JSON.stringify(X.migrate({inventory: [it]}))));
+  ck('item uses survive a save and load',
+     JSON.stringify(back.inventory[0].uses) === JSON.stringify(it.uses));
+  ck('...and so does what using it does',
+     JSON.stringify(back.inventory[0].use) === JSON.stringify(it.use));
+  const off = X.migrate(JSON.parse(JSON.stringify(X.migrate({inventory: [{id: 'x', use: {off: true}}]}))));
+  ck('...including an explicit "not usable"', off.inventory[0].use.off === true);
+}
 
 ck.done();

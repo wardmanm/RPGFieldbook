@@ -52,6 +52,47 @@ function invSection(it){
   return "Loot";
 }
 const INV_ORDER=["Weapons","Armor","Consumables","Magic Items","Tools","Gear","Loot"];
+/* ---- using an item ----
+   What drinking, reading or activating this item does. An explicit `use` block
+   the player configured wins; failing that a consumable is READ from its own
+   text, which is the same "auto-infer unless the player said otherwise" rule
+   detectSpellAttack follows for spells — and it is what makes a potion added
+   through the item browser usable without anyone editing it first. `off` is how
+   "no, this one is not usable" is recorded against a detected default, so
+   clearing the boxes sticks. */
+function itemUse(it){
+  const u=it&&it.use;
+  if(u&&u.off)return null;
+  if(u&&(u.heal||u.status||u.consume))return u;
+  return detectItemUse(it);
+}
+/* Deliberately narrow. Only consumables are read, and only the one phrase every
+   healing potion in the 2024 data uses ("regains 2d4 + 2 Hit Points"), so a
+   wand that "regains 1d3 expended charges" is not mistaken for a heal. */
+function detectItemUse(it){
+  if(!it||invSection(it)!=="Consumables")return null;
+  const m=/\bregains?\s+(\d+d\d+(?:\s*[+-]\s*\d+)?|\d+)\s+(?:hit points|hp)\b/i.exec(String(it.description||""));
+  if(!m)return null;
+  return {heal:m[1].replace(/\s+/g,""),consume:true};
+}
+function itemUsesMax(it){return (it&&it.uses)?usesMax(it):0;}
+function itemUsable(it){return !!(itemUse(it)||itemUsesMax(it)>0);}
+/* One line saying what Use will do, so nothing about it is hidden behind the
+   button. Prose, not effect chips — none of it is a numeric modifier. */
+function itemUseLine(it){
+  const u=itemUse(it);if(!u)return "";
+  const bits=[];
+  if(u.heal)bits.push(`Heals ${u.heal}`);
+  if(u.status)bits.push(`Applies ${u.status}`);
+  if(u.consume)bits.push("uses one up");
+  return bits.length?`<div class="use-cost">${esc(bits.join(" · "))}</div>`:"";
+}
+function itemUsesRowHTML(it){
+  const mx=itemUsesMax(it);if(!mx)return "";
+  const used=num(it.uses.used),per=it.uses.per;
+  let pips="";for(let i=1;i<=mx;i++)pips+=`<button class="use-b ${i<=used?"used":""}" data-iuse="${it.id}" data-i="${i}" aria-label="Use"></button>`;
+  return `<div class="use-row"><span class="use-lbl">Uses${(per&&per!=="none")?` · per ${esc(per)} rest`:""}</span><span class="use-pips">${pips}</span></div>`;
+}
 function invItemHTML(it){
   const ic=!!invCol().items[it.id];
   return `<div class="item fitem"><div class="top">
@@ -62,11 +103,12 @@ function invItemHTML(it){
         ${originBadge(itemOrigin(it),"data-orig-item",it.id)}
         ${fnum(it.cost)?`<span class="qty" title="Cost each">${esc(fmtGp(it.cost))}</span>`:""}
         ${itemWeight(it)?`<span class="qty" title="Weight each">${esc(fmtWt(it.weight))}</span>`:""}
+        ${itemUsable(it)?`<button class="use-go" data-useitem="${it.id}">Use</button>`:""}
         ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${it.id}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
         <button class="icon" data-edit-item="${it.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-item="${it.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
-      ${ic?"":`${it.description?`<div class="desc">${highlight(it.description)}</div>`:""}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
+      ${ic?"":`${it.description?`<div class="desc">${highlight(it.description)}</div>`:""}${itemUseLine(it)}${itemUsesRowHTML(it)}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
 }
 /* The carried-weight badge in the Inventory card header. Hidden entirely when
    encumbrance is off — the weight itself still shows in the totals row, so an

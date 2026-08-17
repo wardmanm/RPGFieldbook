@@ -12,6 +12,15 @@ function resetFeatureUses(kinds){
   let n=0;(character.features||[]).forEach(f=>{if(f.uses&&kinds.includes(f.uses.per||"")){if(f.uses.used){n++;}f.uses.used=0;}});
   return n;
 }
+/* Items recover their limited uses on a rest exactly as features do, and carry
+   the same {max, per, used} shape so usesMax() and the pips read both without a
+   second implementation. `per:"none"` is a charge that no rest brings back (a
+   wand recharging at dawn is not a rest) — it is left alone here, and the
+   player taps its pips to reset it. */
+function resetItemUses(kinds){
+  let n=0;(character.inventory||[]).forEach(it=>{if(it.uses&&kinds.includes(it.uses.per||"")){if(it.uses.used){n++;}it.uses.used=0;}});
+  return n;
+}
 function longRest(){
   const c=contributions();
   const effMax=effMaxHP(c), hadMax=effMax>0;
@@ -21,9 +30,10 @@ function longRest(){
   let slotsBack=0;for(let lv=1;lv<=9;lv++){if(character.slots[lv]){slotsBack+=character.slots[lv].used||0;character.slots[lv].used=0;}}
   const hdBack=recoverHitDice();
   const featBack=resetFeatureUses(["short","long"]);
+  const itemBack=resetItemUses(["short","long"]);
   const resBack=resetResources(["short","long"]);
   renderHP();
-  renderDeath();renderFeatures();recompute();scheduleSave();
+  renderDeath();renderFeatures();renderInventory();recompute();scheduleSave();
   const lines=[
     hadMax?`Current HP restored to ${effMax}`:"HP unchanged — set a Max HP first",
     "Temporary HP cleared",
@@ -32,6 +42,7 @@ function longRest(){
   ];
   if(hitDicePool().length)lines.push(hdBack?`${hdBack} Hit ${hdBack===1?"Die":"Dice"} recovered (half your total)`:"Hit Dice already full");
   if(featBack)lines.push(`${featBack} feature use tracker${featBack===1?"":"s"} reset`);
+  if(itemBack)lines.push(`${itemBack} item use tracker${itemBack===1?"":"s"} reset`);
   if(resBack)lines.push(`${resBack} resource${resBack===1?"":"s"} restored`);
   renderResources();
   restSummary("Long rest complete",lines,"");
@@ -40,9 +51,10 @@ function shortRest(){
   const wl=warlockLevel();let pactBack=0,pactMsg="";
   if(wl>0){const p=PACT[Math.min(20,wl)];if(p&&character.slots[p[1]]){const before=character.slots[p[1]].used||0;character.slots[p[1]].used=Math.max(0,before-p[0]);pactBack=before-character.slots[p[1]].used;pactMsg=pactBack?`${pactBack} pact slot${pactBack===1?"":"s"} recovered (level ${p[1]})`:"Pact slots already full";}}
   const featBack=resetFeatureUses(["short"]);
+  const itemBack=resetItemUses(["short"]);
   const resBack=resetResources(["short"]);
-  renderFeatures();renderResources();recompute();scheduleSave();
-  const lines=[];if(pactMsg)lines.push(pactMsg);if(featBack)lines.push(`${featBack} short-rest feature tracker${featBack===1?"":"s"} reset`);if(resBack)lines.push(`${resBack} short-rest resource${resBack===1?"":"s"} restored`);
+  renderFeatures();renderInventory();renderResources();recompute();scheduleSave();
+  const lines=[];if(pactMsg)lines.push(pactMsg);if(featBack)lines.push(`${featBack} short-rest feature tracker${featBack===1?"":"s"} reset`);if(itemBack)lines.push(`${itemBack} short-rest item tracker${itemBack===1?"":"s"} reset`);if(resBack)lines.push(`${resBack} short-rest resource${resBack===1?"":"s"} restored`);
   restSummary("Short rest",lines.length?lines:["No resources auto-recover on a short rest for this character."],"Spend Hit Dice from the Rest & Recovery card to heal. Regular spell slots return on a long rest, not a short one.");
 }
 /* ---- hit dice pool (derived from class hit die × level) ---- */
@@ -146,6 +158,55 @@ function rollHitDie(die){
   renderHP();
   renderHitDice();recompute();scheduleSave();
   restSummary("Hit die spent — "+die,[`Rolled ${roll} ${conMod>=0?"+":"−"} ${Math.abs(conMod)} CON = ${heal} HP`,`Current HP: ${character.hp.cur}`],"");
+}
+/* ---- dice expressions (item healing) ----
+   Parsing is kept apart from rolling on purpose: parseDiceExpr is pure and
+   total, so every accepted and rejected spelling can be asserted, and
+   rollDiceExpr is the only part that touches Math.random.
+   Accepts what a player would actually type — "2d4+2", "1d8", "d6", "10",
+   "1d4 + 1d6" — and returns null for anything else rather than guessing. A
+   mis-read expression would hand out the wrong hit points silently, so the item
+   editor refuses to save one instead. */
+function parseDiceExpr(str){
+  const s=String(str==null?"":str).toLowerCase().replace(/[−–—]/g,"-").replace(/\s+/g,"");
+  if(!s||!/^[+-]?(\d*d\d+|\d+)([+-](\d*d\d+|\d+))*$/.test(s))return null;
+  const parts=s.match(/[+-]?(?:\d*d\d+|\d+)/g)||[];
+  const dice=[];let mod=0;
+  for(const p of parts){
+    const sign=p.charAt(0)==="-"?-1:1, body=p.replace(/^[+-]/,""), m=/^(\d*)d(\d+)$/.exec(body);
+    if(m){
+      const n=(m[1]===""?1:parseInt(m[1],10)), sides=parseInt(m[2],10);
+      /* A typo like 999d999 is not a heal anyone meant; refusing is better than
+         rolling for a second and returning a number nobody can check. */
+      if(n<1||n>100||sides<2||sides>1000)return null;
+      dice.push({n,sides,sign});
+    }else mod+=sign*parseInt(body,10);
+  }
+  return {dice,mod};
+}
+/* Just the dice half, written back out — the label on the "what did you roll"
+   box, so the player is told which dice to pick up. */
+function diceExprDice(p){
+  if(!p||!p.dice.length)return "";
+  return p.dice.map((d,i)=>(i?(d.sign<0?" - ":" + "):(d.sign<0?"-":""))+d.n+"d"+d.sides).join("");
+}
+function diceExprText(p){
+  if(!p)return "";
+  const d=diceExprDice(p);
+  if(!d)return String(p.mod);
+  return d+(p.mod?(p.mod<0?" - "+Math.abs(p.mod):" + "+p.mod):"");
+}
+/* Roll every group, keeping the individual faces so the summary can show its
+   working — "rolled 3, 4 + 2 = 9" is checkable at the table; a bare 9 is not. */
+function rollDiceExpr(p){
+  if(!p)return null;
+  const rolls=[];let total=p.mod;
+  p.dice.forEach(d=>{
+    const values=[];
+    for(let i=0;i<d.n;i++){const v=1+Math.floor(Math.random()*d.sides);values.push(v);total+=v*d.sign;}
+    rolls.push({n:d.n,sides:d.sides,sign:d.sign,values});
+  });
+  return {rolls,total,faces:rolls.reduce((a,r)=>a.concat(r.values),[])};
 }
 function recoverHitDice(){
   const pool=hitDicePool(), totalHD=pool.reduce((a,p)=>a+p.total,0);
