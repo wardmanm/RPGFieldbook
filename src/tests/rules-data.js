@@ -1135,6 +1135,16 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const atkSave = (js.match(/const rec=\{id:a\.id,name:document\.getElementById\("aName"\)[\s\S]{0,2000}?character\.attacks\[i\]=rec/) || [''])[0];
   ck('the attack form carries the links its boxes never show',
      /carryAttackLinks\(a,rec\);/.test(atkSave), atkSave.slice(-300));
+  // A spell's attack row is rebuilt from the spell, so extra damage types have to
+  // be asked for on the SPELL — offered by the same shared control the attack
+  // form uses, and read back into the record it saves.
+  ck('the spell form offers the additional damage types list',
+     /xDmgFieldHTML\("sXDmg",s,/.test(js) && /wireXDmgField\("sXDmg"\)/.test(js));
+  ck('...and both forms build that list from one function',
+     /xDmgFieldHTML\("aXDmg",a,/.test(js) && /wireXDmgField\("aXDmg"\)/.test(js));
+  const spellSave = (js.match(/const rec=\{id:s\.id,name:document\.getElementById\("sName"\)[\s\S]{0,2000}?character\.spells\[i\]=rec/) || [''])[0];
+  ck('a saved spell keeps the extras that were typed into it',
+     /readXDmg\("sXDmg"\);if\(sxd\.length\)rec\.extraDamage=sxd;/.test(spellSave), spellSave.slice(-300));
 
   // ---------- the browse footer, and the per-level count
   // The Add button was laid out PAST the right edge of the screen with no way to

@@ -46,6 +46,9 @@ Bullets below this line — leave the heading in place.
 - Editing an attack no longer breaks its link to the weapon it came from. Renaming or tweaking a
   weapon attack used to quietly detach it from the item in your inventory, and the next time you
   updated your rules packs you were given a second copy of the same attack.
+- Spells can now carry additional damage types, the same way attacks do. Add as many extra dice as
+  the spell needs in the spell form and they show on the attack row it creates, in the cast dialog
+  and on the printed sheet. Extras roll on their own.
 - The picker's Add button now reads "Add 1 item" rather than "Add 1 items" when you have ticked exactly one.
 - Items can now be used. Anything with limited uses gets a Use button and a row of pips in your
   inventory, and those uses come back on a short or a long rest — or never, if you would rather track

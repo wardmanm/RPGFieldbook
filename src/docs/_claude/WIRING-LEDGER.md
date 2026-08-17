@@ -2781,3 +2781,33 @@ none on an edited weapon, and called `addAttackForItem()` — so a pack update g
 **Deliberately NOT answered here:** whether a resync may overwrite a player-edited attack.
 `72-char-update.js` is untouched; it still rebuilds the row wholesale from the item, which is now
 reachable again for edited attacks. That is the open design call the previous ledger entry flagged.
+## Spells carry their own additional damage types (2026-08-17)
+
+#30 gave attacks `extraDamage`, but a spell's attack row is REBUILT from the spell by
+`syncSpellAttack()` every time and has no Edit button, so a spell that deals two damage types had
+nowhere to say so. The field therefore belongs to the SPELL, in the identical `{dice,type}` shape:
+`sp.extraDamage` → copied onto the row it builds, absent when empty.
+
+One control, two forms. `xDmgFieldHTML(id,rec,hint)` / `wireXDmgField(id)` / `readXDmg(id)` /
+`clearXDmgField(id)` in `60-attacks.js` are the attack form's row list, generalised on its element
+id (`readAttackXDmg()` is gone; nothing else called it). `id` is a parameter for the reason
+`statusDatalistHTML` takes one — two elements sharing an id is a silent no-op for the second. The
+spell form's list sits inside `#sAtkFields`, so it appears only once the spell IS an attack or a
+save, and the pack-insert handler clears it: every other box then describes the spell just picked.
+
+- **No auto-detection.** `detectSpellAttack` still reads only one `NdN <type> damage` phrase and is
+  untouched; "explicit setting wins" is unchanged. A second type is phrased far too many ways for a
+  guess to be better than a blank box.
+- `promptSpellAttack` now formats its Damage line through `attackDamageStr`, so the cast dialog and
+  the sheet row cannot promise different damage.
+- `UPD_FIELDS.spell` is `level/meta/text`, so a pack update can never clobber the player's extras.
+- **`getElementById("literal")` in a form is checked by rules-data.js** against ids the app renders.
+  A generated id (`id="${id}"`) is not "declared", so the one literal lookup left — clearing the
+  list on pack-insert — had to become `clearXDmgField(id)`. That guard is worth keeping honest.
+
+20 checks in `src/tests/sheet.js` (first coverage `syncSpellAttack` has had), 3 wiring guards in
+`rules-data.js`. Suite 1363.
+
+**Seen, not fixed:** `openSpellForm`'s save drops `s.src`, the same family as the attack-form bug
+above — an edited spell stops being recognisable to `72-char-update.js` and falls back to matching
+by name. Out of scope here; wants its own issue.

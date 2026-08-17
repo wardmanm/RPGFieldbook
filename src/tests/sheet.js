@@ -23,6 +23,7 @@ const {X, bootError, fragments} = loadApp([
   'spellLevelTally', 'spellAllotment', 'cantripsKnown',
   'descHTML', 'highlight', 'mergeRules', 'resetRules',
   'attackDamageStr', 'extraDamageList', 'damagePartStr', 'carryAttackLinks',
+  'syncSpellAttack', 'detectSpellAttack',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -929,6 +930,76 @@ X.resetRules();
      typed.name === 'Longsword +1');
   ck('a record with no previous version is returned unchanged',
      JSON.stringify(C(null, edited())) === JSON.stringify(edited()));
+}
+
+// ---------- a spell's own additional damage types
+// A spell's attack row is rebuilt from the spell every time (which is why it has
+// Cast where a weapon has Edit), so extras had nowhere to live and a spell that
+// dealt two damage types could not say so. The field is on the SPELL now, in the
+// same {dice,type} shape, and syncSpellAttack carries it onto the row.
+{
+  const c = X.blankChar();
+  c.spellAbility = 'int';
+  X.character = c;
+  const row = () => X.character.attacks[0];
+
+  const bolt = {id: 'sp1', name: 'Fire Bolt', atkType: 'attack', atkKind: 'ranged',
+                dice: '1d10', damageType: 'fire',
+                extraDamage: [{dice: '1d6', type: 'radiant'}]};
+  X.syncSpellAttack(bolt);
+  ck('a spell attack row is created', X.character.attacks.length === 1 && row().spellId === 'sp1');
+  ck('the spell carries its extra damage onto the row',
+     JSON.stringify(row().extraDamage) === '[{"dice":"1d6","type":"radiant"}]', JSON.stringify(row()));
+  ck('...and the row formats both types',
+     X.attackDamageStr(row(), 0) === '1d10 fire + 1d6 radiant', X.attackDamageStr(row(), 0));
+
+  const save = {id: 'sp2', name: 'Ice Knife', atkType: 'save', saveAbility: 'dex',
+                dice: '2d6', damageType: 'cold', extraDamage: [{dice: '1d10', type: 'piercing'}]};
+  X.syncSpellAttack(save);
+  const srow = X.character.attacks.find(a => a.spellId === 'sp2');
+  ck('a save spell carries its extras too',
+     JSON.stringify(srow.extraDamage) === '[{"dice":"1d10","type":"piercing"}]', JSON.stringify(srow));
+  ck('...and still prints its save block', JSON.stringify(srow.save) === '{"ability":"dex"}');
+
+  // the shape every spell saved before this has
+  X.syncSpellAttack({id: 'sp3', name: 'Sacred Flame', atkType: 'save', saveAbility: 'dex', dice: '1d8', damageType: 'radiant'});
+  const plain = X.character.attacks.find(a => a.spellId === 'sp3');
+  ck('a spell with no extras produces a row with no extraDamage key',
+     plain.extraDamage === undefined, JSON.stringify(plain));
+  ck('...and formats exactly as it did before', X.attackDamageStr(plain, 0) === '1d8 radiant');
+
+  // rubbish on the spell must not reach the row as a stray " + "
+  X.syncSpellAttack({id: 'sp4', name: 'Bad', atkType: 'attack', dice: '1d4', extraDamage: [{dice: '', type: ''}]});
+  ck('an empty extra row on a spell is dropped, not carried',
+     X.character.attacks.find(a => a.spellId === 'sp4').extraDamage === undefined);
+
+  // re-syncing rebuilds the row: the extras must come back with it, and only once
+  X.syncSpellAttack(bolt);
+  ck('re-syncing a spell leaves exactly one row for it',
+     X.character.attacks.filter(a => a.spellId === 'sp1').length === 1);
+  ck('...still carrying its extras',
+     JSON.stringify(X.character.attacks.find(a => a.spellId === 'sp1').extraDamage)
+     === '[{"dice":"1d6","type":"radiant"}]');
+
+  // a spell that stops being an attack takes its row with it
+  X.syncSpellAttack({id: 'sp1', name: 'Fire Bolt', atkType: '', extraDamage: [{dice: '1d6', type: 'radiant'}]});
+  ck('a spell that is not an attack has no row at all',
+     X.character.attacks.filter(a => a.spellId === 'sp1').length === 0);
+
+  // detection is untouched: an explicit setting still wins over the text
+  const explicit = {atkType: '', text: 'make a ranged spell attack'};
+  X.detectSpellAttack(explicit);
+  ck('"not an attack" still sticks against the spell text', explicit.atkType === '');
+
+  // and the field survives a save -> load round trip on the spell
+  const c2 = X.blankChar();
+  c2.spells = [{id: 'sp1', name: 'Fire Bolt', level: 0, extraDamage: [{dice: '1d6', type: 'radiant'}]},
+               {id: 'sp2', name: 'Light', level: 0}];
+  const back2 = X.migrate(JSON.parse(JSON.stringify(c2)));
+  ck('migrate keeps extraDamage on the spell',
+     JSON.stringify(back2.spells[0].extraDamage) === '[{"dice":"1d6","type":"radiant"}]');
+  ck('...and does not invent one on a spell without it', back2.spells[1].extraDamage === undefined);
+  X.character = X.blankChar();
 }
 /* ================= feats & traits: what the picker offers, and what it adds ===
    The browser itself is DOM, but everything it decides is in these functions:

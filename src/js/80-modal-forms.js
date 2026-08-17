@@ -438,6 +438,7 @@ function openSpellForm(existing){
       </div>
       <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="sDice" value="${esc(s.dice||"")}" placeholder="8d6"></div>
         <div class="field"><label class="f">Damage type</label><input id="sDmgType" value="${esc(s.damageType||"")}" placeholder="fire"></div></div>
+      ${xDmgFieldHTML("sXDmg",s,"A second die rolled with this spell — 1d6 radiant alongside its fire. Extras roll on their own, and show on the attack row this spell creates.")}
     </div>
     <div class="g2"><label class="equip ${(s.conc!=null?s.conc:/concentration/i.test(s.meta||""))?"on":""}" id="sConc" style="font-size:12px;align-self:end"><span class="box"></span>Concentration</label>
       <div class="field"><label class="f">Duration</label><input id="sDur" value="${esc(s.duration||metaDuration(s.meta)||"")}" placeholder="1 minute / 10 rounds / Instantaneous"></div></div>
@@ -445,6 +446,7 @@ function openSpellForm(existing){
     <div class="m-actions"><button class="tbtn" id="sCancel">Cancel</button><button class="tbtn primary" id="sSave">${existing?"Save":"Add"}</button></div>`);
   let prep=!!s.prepared;const p=document.getElementById("sPrep");p.addEventListener("click",()=>{prep=!prep;p.classList.toggle("on",prep)});
   let conc=(s.conc!=null?!!s.conc:/concentration/i.test(s.meta||""));const cc=document.getElementById("sConc");if(cc)cc.addEventListener("click",()=>{conc=!conc;cc.classList.toggle("on",conc)});
+  wireXDmgField("sXDmg");
   const sAtk=document.getElementById("sAtkType");
   if(sAtk)sAtk.addEventListener("change",()=>{const v=sAtk.value;document.getElementById("sAtkFields").style.display=v?"":"none";document.getElementById("sKindWrap").style.display=v==="save"?"none":"";document.getElementById("sSaveWrap").style.display=v==="save"?"":"none";});
   const libSel=document.getElementById("sLib"),only=document.getElementById("sOnlyClass");
@@ -457,6 +459,9 @@ function openSpellForm(existing){
     if(tmp.saveAbility)document.getElementById("sSaveAbil").value=tmp.saveAbility;
     if(tmp.dice)document.getElementById("sDice").value=tmp.dice;
     if(tmp.damageType)document.getElementById("sDmgType").value=tmp.damageType;
+    /* every other box now describes the spell just picked, so extras typed
+       against the previous one would be attributed to this spell instead */
+    clearXDmgField("sXDmg");
     document.getElementById("sDur").value=x.duration||metaDuration(x.meta)||"";});
   document.getElementById("sCancel").addEventListener("click",closeModal);
   document.getElementById("sSave").addEventListener("click",()=>{
@@ -465,6 +470,9 @@ function openSpellForm(existing){
     const atkType=document.getElementById("sAtkType").value;
     const rec={id:s.id,name:document.getElementById("sName").value.trim()||"Spell",level:num(document.getElementById("sLevel").value),meta:document.getElementById("sMeta").value.trim(),text:document.getElementById("sText").value,prepared:prep,granted:grantedFromOrigin(ok),origin:origin,
       atkType:atkType,atkKind:document.getElementById("sAtkKind").value,saveAbility:document.getElementById("sSaveAbil").value,dice:document.getElementById("sDice").value.trim(),damageType:document.getElementById("sDmgType").value.trim(),conc:conc,duration:document.getElementById("sDur").value.trim()};
+    /* omitted when empty, so a spell with no extras carries no field — the shape
+       an older save already has, and what syncSpellAttack reads back */
+    const sxd=readXDmg("sXDmg");if(sxd.length)rec.extraDamage=sxd;
     const i=character.spells.findIndex(x=>x.id===s.id);if(i>=0)character.spells[i]=rec;else character.spells.push(rec);
     syncSpellAttack(rec);
     closeModal();renderSpells();renderAttacks();scheduleSave();
