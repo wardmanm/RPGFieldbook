@@ -1145,6 +1145,11 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const spellSave = (js.match(/const rec=\{id:s\.id,name:document\.getElementById\("sName"\)[\s\S]{0,2000}?character\.spells\[i\]=rec/) || [''])[0];
   ck('a saved spell keeps the extras that were typed into it',
      /readXDmg\("sXDmg"\);if\(sxd\.length\)rec\.extraDamage=sxd;/.test(spellSave), spellSave.slice(-300));
+  // spell is the third kind in UPD_FIELDS and its form lost the stamp the same
+  // way the feature and item forms did. Conditional, so a hand-typed spell still
+  // carries no src at all rather than an undefined one.
+  ck('editing a spell keeps the src stamp the update tool reads',
+     /if\(s\.src\)rec\.src=s\.src;/.test(spellSave), spellSave.slice(-300));
 
   // ---------- the Concentrating condition, on the side the stub DOM cannot click
   // The reconcile itself is asserted in sheet.js. These are the three handlers

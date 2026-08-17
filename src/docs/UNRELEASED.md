@@ -46,6 +46,9 @@ Bullets below this line — leave the heading in place.
 - Editing an attack no longer breaks its link to the weapon it came from. Renaming or tweaking a
   weapon attack used to quietly detach it from the item in your inventory, and the next time you
   updated your rules packs you were given a second copy of the same attack.
+- Editing a spell no longer detaches it from the rules pack it came from. Changing so much as its
+  wording used to leave the update tool guessing by name, so it could no longer tell a pack revision
+  from something you had deliberately written yourself.
 - Spells can now carry additional damage types, the same way attacks do. Add as many extra dice as
   the spell needs in the spell form and they show on the attack row it creates, in the cast dialog
   and on the printed sheet. Extras roll on their own.

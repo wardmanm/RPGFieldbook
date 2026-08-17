@@ -2844,3 +2844,21 @@ its record from the boxes, and treats unticking "Active now" as ending it.
 
 29 checks in `src/tests/sheet.js` (the first coverage `castSpell` has had) and 7 wiring guards in
 `rules-data.js` for the handlers the stub DOM cannot click. Suite 1399.
+
+## Editing a spell kept its rules-update stamp (2026-08-17)
+
+`openSpellForm()`'s save handler rebuilds `rec` from the boxes and assigned it over the spell, so
+`s.src` went with everything else the form does not ask about. Spell is the third kind in
+`UPD_FIELDS`, and its two siblings already guarded this — feature (`if(f.src)rec.src=f.src;`) and
+item (`if(it.src)rec.src=it.src;`) — so the fix is the same one line, `if(s.src)rec.src=s.src;`,
+placed beside the extra-damage carry.
+
+What it cost while it was missing: `updResolve()` fell through to the name-only path, so every
+edited spell matched `loose`, `updEdited()` returned `null` (unknowable) and the row came back
+`edited:true` and unticked — and a same-named spell in a second loaded pack made it `ambiguous`
+instead of resolving by pack.
+
+Six checks in `src/tests/char-update.js` against the real `updResolve`/`updEdited` (stamped resolves
+exactly and its edit is detected; stamp deleted → loose + `null`; a hand-typed spell has no `src` and
+reports `unmatched`), plus one source guard in `rules-data.js` on the existing `spellSave` slice,
+next to the identical feature/item guards. Suite 1406.

@@ -160,6 +160,31 @@ ck('edited copy flagged', r&&r.edited===true, r);
 ck('edited copy NOT ticked by default', r&&r.apply===false);
 ck('edited copy still offered', r&&r.type==='changed');
 
+// ---------- an edited spell must keep its stamp
+// openSpellForm rebuilds its record from the form boxes, and dropped `src` — so
+// editing one word of a spell threw away the only thing that ties the copy to
+// the pack it came from. What that costs is asserted here; that the form
+// actually carries it is a source guard in rules-data.js.
+c=setup();
+const eSp=addBrowseSpell('Bless');
+eSp.text='My own wording.';                    /* the player edits it */
+ck('a stamped spell resolves to the pack it came from',
+   X.updResolve(eSp,'spell').def!==undefined && !X.updResolve(eSp,'spell').loose,
+   X.updResolve(eSp,'spell'));
+ck('...and the edit is DETECTED rather than unknowable', X.updEdited(eSp,'spell')===true);
+const lostSp=JSON.parse(JSON.stringify(eSp)); delete lostSp.src;   /* what the bug produced */
+ck('a spell that lost its stamp falls back to matching by name',
+   X.updResolve(lostSp,'spell').loose===true, X.updResolve(lostSp,'spell'));
+ck('...and its edit becomes unknowable', X.updEdited(lostSp,'spell')===null);
+// a spell typed in by hand has no stamp to keep, and none is invented for it
+c=setup();
+const ownSp={id:'own',name:'Tess’s Trick',level:1,meta:'',text:'Mine.',prepared:false};
+X.character.spells.push(ownSp);
+ck('a hand-made spell carries no src at all', ownSp.src===undefined);
+ck('...and is reported as unmatched, not silently adopted',
+   (X.diffCharacter().rows.find(x=>x.name===ownSp.name)||{}).type==='unmatched',
+   X.diffCharacter().rows.map(x=>x.name+':'+x.type));
+
 // ---------- ambiguity: same name in two packs
 c=setup();
 X.mergeRules({system:'Homebrew',feats:[{name:'Alert',description:'Homebrew alert.'}]},'hb.json');

@@ -480,6 +480,12 @@ function openSpellForm(existing){
     /* omitted when empty, so a spell with no extras carries no field — the shape
        an older save already has, and what syncSpellAttack reads back */
     const sxd=readXDmg("sXDmg");if(sxd.length)rec.extraDamage=sxd;
+    /* rec is rebuilt from the form, so anything the form doesn't ask about has
+       to be carried across explicitly — and the src stamp is invisible when it
+       goes: it is what the rules-update tool reads to tell "the pack changed"
+       from "the player edited this". The feature and item editors guard the
+       same way. */
+    if(s.src)rec.src=s.src;
     const i=character.spells.findIndex(x=>x.id===s.id);if(i>=0)character.spells[i]=rec;else character.spells.push(rec);
     syncSpellAttack(rec);
     closeModal();renderSpells();renderAttacks();scheduleSave();
