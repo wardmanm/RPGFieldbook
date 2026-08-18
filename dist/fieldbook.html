@@ -269,6 +269,11 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 .fghead .cnt{font-family:var(--head);font-size:12px;font-weight:600;color:var(--ink-soft);flex:none}
 /* the Settings badge keeps its far-right position; only counts move inward */
 .fgcount{font-family:var(--head);font-size:11px;font-weight:700;color:var(--ink-soft);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:1px 8px;flex:none;margin-left:auto}
+/* The two Rules-tab headings are toggles. The caret is the same one the group
+   heads use, so a shut section reads the same way everywhere in the app. */
+.rules-head{cursor:pointer;user-select:none}
+.rules-head .fcaret{stroke:var(--accent)}
+.rules-head .cnt{font-family:var(--head);font-size:12px;font-weight:600;color:var(--ink-soft);flex:none}
 .fcaret{width:14px;height:14px;flex:none;stroke:var(--ink-soft);fill:none;stroke-width:2.5;transform:rotate(90deg);transition:transform .12s}
 .fcaret.c{transform:rotate(0deg)}
 .fitoggle{background:transparent;border:0;cursor:pointer;padding:0 2px;display:inline-flex;align-items:center;flex:none;color:var(--ink-soft)}
@@ -1105,18 +1110,22 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
   <section class="tabpanel" id="tab-rules">
     <div class="stack">
       <div class="card">
-        <div class="label">Glossary &amp; Rules <button class="add" id="btnAddGloss"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+        <div class="label rules-head" data-rulessec="gloss" role="button" tabindex="0" aria-expanded="true"><svg class="fcaret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Glossary &amp; Rules <span class="cnt" id="glossCount"></span> <button class="add" id="btnAddGloss"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+        <div data-rulesbody="gloss">
         <p class="hint">Terms here (plus any from a loaded rules pack) become tappable ❧ wherever they appear in your notes, features, spells, and item descriptions. Manage rule sources in Settings.</p>
         <input id="glossSearch" placeholder="Filter terms…" autocomplete="off" style="margin-bottom:10px">
         <input type="file" id="glossRulesFiles" accept="application/json,.json" multiple class="hidefile">
         <div id="glossList"></div>
+        </div>
       </div>
       <div class="card">
-        <div class="label">Reference Tables<span class="grow"></span></div>
+        <div class="label rules-head" data-rulessec="tables" role="button" tabindex="0" aria-expanded="true"><svg class="fcaret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Reference Tables <span class="cnt" id="tablesCount"></span><span class="grow"></span></div>
+        <div data-rulesbody="tables">
         <p class="hint">Tables lifted out of your rules pack — roll tables, class progressions, and the lookup tables the rules text refers to. Where a description mentions one, tap the highlighted name to open it here.</p>
         <input id="tablesSearch" placeholder="Filter tables…" autocomplete="off" style="margin-bottom:10px">
         <input type="file" id="tablesRulesFiles" accept="application/json,.json" multiple class="hidefile">
         <div id="tablesList"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -4103,7 +4112,7 @@ function renderAll(){
      way the mirror never saw — reconciles on load rather than showing a
      condition for a spell that isn't running. */
   syncConcStatus();
-  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderNoteIcons();renderNotes();renderAllRT();recompute();
+  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderRulesSections();renderNoteIcons();renderNotes();renderAllRT();recompute();
 }
 
 /* ================= persistence ================= */
@@ -6029,6 +6038,48 @@ function openGlossForm(existing){
   });
 }
 
+/* ---- the two Rules-tab sections collapse, and START collapsed ----
+   Both lists are long — the glossary alone is 132 entries with a pack loaded —
+   and Reference Tables sits underneath it, so reaching the tables meant
+   scrolling past all of it.
+
+   Stored as a COLLAPSE map in settings, exactly like the Settings sections and
+   for the same reason: an absent key means "never touched", so the default can
+   be closed today without freezing anyone who has since opened one. It lives in
+   SETTINGS rather than on the character because the glossary and tables come
+   from the rules packs, which are global — collapsing them on one character and
+   finding them open on the next would be the surprising behaviour.
+
+   `open` is the default for a section nobody has touched. */
+const RULES_SECS=[{k:"gloss",open:false},{k:"tables",open:false}];
+function rulesSecDef(k){return RULES_SECS.find(s=>s.k===k)||null;}
+function rulesSecOpen(k){
+  const c=(settings&&settings.rulesCollapse&&typeof settings.rulesCollapse==="object"&&!Array.isArray(settings.rulesCollapse))?settings.rulesCollapse:{};
+  if(k in c)return !c[k];
+  const d=rulesSecDef(k);return d?d.open:true;
+}
+function setRulesSecOpen(k,open){
+  if(!settings.rulesCollapse||typeof settings.rulesCollapse!=="object"||Array.isArray(settings.rulesCollapse))settings.rulesCollapse={};
+  settings.rulesCollapse[k]=!open;
+  saveSettings();
+}
+/* Paint both sections from the stored state. Counts go in the heading so a shut
+   section still says what is inside it — the reason you would open it. */
+function renderRulesSections(){
+  const counts={gloss:(allGlossary()||[]).length,tables:(allTables()||[]).length};
+  RULES_SECS.forEach(({k})=>{
+    const head=document.querySelector(`[data-rulessec="${k}"]`),
+          body=document.querySelector(`[data-rulesbody="${k}"]`);
+    if(!head||!body)return;
+    const open=rulesSecOpen(k);
+    body.style.display=open?"":"none";
+    head.setAttribute("aria-expanded",open?"true":"false");
+    const car=head.querySelector(".fcaret");if(car)car.classList.toggle("c",!open);
+    const cnt=document.getElementById(k==="gloss"?"glossCount":"tablesCount");
+    if(cnt)cnt.textContent=counts[k]?`(${counts[k]})`:"";
+  });
+}
+function toggleRulesSec(k){setRulesSecOpen(k,!rulesSecOpen(k));renderRulesSections();}
 /* ================= rules tables =================
    Tables come from a rules pack as their own category (see rules-schema §6.11).
    The converter lifts each table out of the prose it lived in and leaves a
@@ -6590,7 +6641,7 @@ function rulesStatusText(){
 function updateRulesStatus(msg,cls){const el=document.getElementById("rulesStatus");if(el){el.textContent=msg||rulesStatusText();el.className="status "+(cls||"");}}
 /* renderNotes is here because notes run through highlight() too — editing the
    glossary changes how every note reads. */
-function refreshRulesUI(){renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderAllRT();}
+function refreshRulesUI(){renderRulesSections();renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderAllRT();}
 const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
 /* display names for a category — one map, used by both the group summary and
    the headings in the loaded-data list */
@@ -7060,6 +7111,10 @@ function wire(){
        derived. Same as the inventory star above, and unlike the On/Off toggle
        below, which does change what the effects engine sees. */
     if((m=t.closest("[data-fav-feature]"))){const f=character.features.find(x=>x.id===m.dataset.favFeature);if(f){f.fav=!f.fav;renderFeatures();scheduleSave();}return;}
+    /* The glossary header contains its own "+ Add" button, so a bare closest()
+       here would toggle the section every time you reached for it. Anything
+       interactive inside the heading keeps its own click. */
+    if((m=t.closest("[data-rulessec]"))&&!t.closest("button, input, select, a, [role=button]:not([data-rulessec])")){toggleRulesSec(m.dataset.rulessec);return;}
     if((m=t.closest("[data-fav-attack]"))){const a=character.attacks.find(x=>x.id===m.dataset.favAttack);if(a){a.fav=!a.fav;renderAttacks();scheduleSave();}return;}
     if((m=t.closest("[data-fgroup]"))){const g=m.dataset.fgroup,fc=featCol();fc.groups[g]=!fc.groups[g];renderFeatures();scheduleSave();return;}
     if((m=t.closest("[data-edit-feature]")))return openFeatureForm(character.features.find(x=>x.id===m.dataset.editFeature));
