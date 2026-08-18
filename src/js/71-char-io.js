@@ -16,6 +16,20 @@ function loadRulesCacheAsync(){
     return true;
   }).catch(()=>false);
 }
+/* Weapons only became equippable in this version. Every weapon on every sheet
+   written before it is stored equipped:false — not as a decision, but because
+   there was no control to make one — so gating attacks on that flag would empty
+   the Attacks card of every character in existence.
+   Equip them once, and record that it happened. The FLAG is what makes this
+   safe to run on every load: without it, a weapon the player deliberately
+   unequips would be re-equipped on the next open, forever. */
+function migrateWeaponEquip(c){
+  if(!c||c.wpnEquipInit)return 0;
+  let n=0;
+  (c.inventory||[]).forEach(it=>{ if(it&&it.weapon&&!it.equipped){it.equipped=true;n++;} });
+  c.wpnEquipInit=1;
+  return n;
+}
 function migrate(s){
   s=s||{};
   const base=blankChar(), blank=blankChar();
@@ -38,6 +52,8 @@ function migrate(s){
   ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
+  /* AFTER the list guards above, so it can rely on inventory being an array. */
+  migrateWeaponEquip(base);
   return base;
 }
 function exportChar(){

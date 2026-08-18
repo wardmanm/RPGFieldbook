@@ -141,7 +141,22 @@ function itemArmor(it){
   if(/\+\s*dex/i.test(desc)){const cap=desc.match(/max\s*(\d+)/i);dexCap=cap?num(cap[1]):null;} // null = uncapped (light)
   return {kind:"body",base:num(m[1]),dexCap};
 }
-function isEquippable(it){return !!((it.effects&&it.effects.length)||itemArmor(it));}
+/* A weapon is equippable on its own merit — carrying it is the thing that puts
+   its attack on the sheet. Before this, only effects or armor made an item
+   equippable, so 52 of the 64 pack weapons had no Equip control at all. */
+function isEquippable(it){return !!((it.effects&&it.effects.length)||itemArmor(it)||(it&&it.weapon));}
+/* Should this attack row be on the sheet right now?
+   Only rows derived from an inventory item follow the equipped state. A
+   hand-made attack has no item to equip, and a spell's row is governed by the
+   spell. An ORPHAN — an itemId whose item has since been deleted — keeps
+   showing: there is no Equip control left anywhere that could bring it back, so
+   hiding it would bury the row with no way to recover it. */
+function attackVisible(a,inv){
+  if(!a||!a.itemId)return true;
+  const it=(inv||character.inventory||[]).find(x=>x.id===a.itemId);
+  if(!it)return true;
+  return !!it.equipped;
+}
 /* AC base from equipped armor (base + capped Dex) + shields; falls back to manual or 10+Dex */
 function armorAC(c){
   const dex=Math.floor((abilFinal("dex",c)-10)/2);

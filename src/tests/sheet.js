@@ -27,6 +27,7 @@ const {X, state, bootError, fragments} = loadApp([
   'richHTML', 'richInline', 'noteHTML',
   'itemArmor', 'armorAC', 'armorKindOf', 'ARMOR_DEXCAP', 'isEquippable', 'contributions',
   'featGroups', 'FEAT_FAV', 'ATK_FAV', 'atkCol', 'featCol', 'statusRowHTML', 'concStatusRow',
+  'attackVisible', 'migrateWeaponEquip',
   'syncSpellAttack', 'detectSpellAttack',
   'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
@@ -482,6 +483,57 @@ ck('a nonsense override is ignored', sec({category: 'Gear', sectionOverride: 'No
   ck('an inactive status still renders, marked as cleared',
      !/on-status/.test(X.statusRowHTML({id:'x', name:'Prone', active:false})));
   X.character = X.blankChar();
+}
+
+/* ===== a weapon's attack follows whether you are carrying it =================
+   Rows are hidden, never removed: unequipping must not throw away an attack the
+   player tuned, and re-equipping has to bring it back exactly. */
+{
+  const inv = [
+    {id:'i1', name:'Longsword', weapon:{dice:'1d8'}, equipped:true},
+    {id:'i2', name:'Greataxe',  weapon:{dice:'1d12'}, equipped:false},
+  ];
+  const V = a => X.attackVisible(a, inv);
+
+  ck('an equipped weapon shows its attack', V({id:'a1', itemId:'i1'}) === true);
+  ck('an unequipped weapon does not', V({id:'a2', itemId:'i2'}) === false);
+  ck('a hand-made attack has no item and always shows', V({id:'a3', name:'Unarmed'}) === true);
+  ck('a spell attack is governed by the spell, not an item',
+     V({id:'a4', spellId:'s1', source:'spell'}) === true);
+  /* the item is gone, so there is no Equip control anywhere that could bring
+     this back — hiding it would bury the row for good */
+  ck('an orphaned attack keeps showing', V({id:'a5', itemId:'deleted'}) === true);
+
+  // a weapon is equippable on its own now; before, only effects or armor did it
+  ck('a plain weapon is equippable', X.isEquippable({name:'Club', weapon:{dice:'1d4'}}));
+  ck('...and a plain non-weapon still is not', !X.isEquippable({name:'Rope'}));
+
+  /* ---- the one-time migration ----
+     Every weapon written before this version is stored equipped:false, not as a
+     decision but because there was no control to make one. */
+  const old = {inventory:[
+    {id:'i1', name:'Sword', weapon:{dice:'1d8'}, equipped:false},
+    {id:'i2', name:'Rope'},                                   // not a weapon
+    {id:'i3', name:'Bow', weapon:{dice:'1d6'}, equipped:true}, // already equipped
+  ]};
+  const n = X.migrateWeaponEquip(old);
+  ck('it equips the weapons that were never given the choice', n === 1, n);
+  ck('...leaves a non-weapon alone', !old.inventory[1].equipped);
+  ck('...and does not disturb one already equipped', old.inventory[2].equipped === true);
+  ck('...marking the sheet so it cannot run twice', old.wpnEquipInit === 1);
+
+  /* the flag is the whole point: without it, a weapon the player deliberately
+     unequips would be re-equipped on the next load, forever */
+  old.inventory[0].equipped = false;
+  ck('a later unequip survives the next load', X.migrateWeaponEquip(old) === 0 && !old.inventory[0].equipped);
+
+  /* blankChar must NOT pre-set the flag: migrate() builds its result FROM
+     blankChar, so marking it there made every old sheet look already-migrated
+     and skipped silently. */
+  ck('blankChar does not pre-mark the flag', X.blankChar().wpnEquipInit === undefined);
+  ck('...so migrate() actually runs it on an old sheet',
+     X.migrate({abilities:{}, inventory:[{id:'x', name:'Axe', weapon:{dice:'1d12'}, equipped:false}]})
+      .inventory[0].equipped === true);
 }
 
 /* ================= carried weight and encumbrance ================= */

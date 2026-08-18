@@ -3130,3 +3130,36 @@ and leaves the section exactly as it was.
 Counts sit in the headings (`(154)`, `(174)`) so a shut section still says what is inside — the
 reason you would open it — matching the inventory count style. Repainted from `refreshRulesUI()` so a
 pack load updates them, and from `renderAll()` so loading a sheet with cached rules draws them at all.
+
+## Weapons equip, and their attacks follow (2026-08-18)
+
+`isEquippable` was `effects || armor`, so **52 of the 64 pack weapons had no Equip control at all** —
+only the 12 magic ones with effects did. A weapon is now equippable on its own, and `attackVisible()`
+gates a row on the equipped state of the item it came from.
+
+**Hidden, never removed.** Unequipping must not throw away an attack the player has tuned. Verified
+in the browser: an attack renamed "Club of Smiting" with edited dice vanished on unequip and came
+back byte-identical on re-equip.
+
+**Only item-derived rows follow the flag.** A hand-made attack has no item to equip; a spell's row is
+governed by the spell. An ORPHAN — an `itemId` whose item was deleted — keeps showing, because there
+is no Equip control left anywhere that could bring it back, so hiding it would bury the row for good.
+Same reasoning `dropDamagelessSpellRows` uses for its orphans.
+
+**The migration is the whole risk, and it needed a flag.** Every weapon on every pre-existing sheet is
+stored `equipped:false` — not a decision, but because no control existed to make one. Gating on that
+would have emptied the Attacks card of every character in existence. `migrateWeaponEquip()` equips
+them once and records `wpnEquipInit`. The flag is load-bearing: without it, a weapon the player
+deliberately unequips would be re-equipped on the very next load, forever.
+
+**A trap the test caught before it shipped:** the flag was first set in `blankChar()`, which felt
+right — a new sheet has nothing to migrate. But `migrate()` BUILDS its result from `blankChar()`, so
+every old sheet arrived already carrying the flag and the migration was skipped silently. blankChar
+no longer sets it; a new character gets it on its first save→load with an empty inventory, which is a
+no-op. There is now an explicit assertion that blankChar does NOT pre-mark it.
+
+**Newly added weapons arrive equipped** (`equipped:!!x.weapon` in the browse onAdd). Adding a sword
+and seeing no attack appear would be the obvious next complaint.
+
+The empty state says which of the two situations you are in: "Nothing equipped" when rows exist but
+none are shown, the original "No attacks yet" when there are genuinely none.

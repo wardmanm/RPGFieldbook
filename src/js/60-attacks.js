@@ -296,15 +296,23 @@ function renderActiveSpells(){
 }
 function renderAttacks(){
   const el=document.getElementById("attackList");if(!el)return;
+  /* Rows are HIDDEN, never removed: unequipping a weapon must not throw away the
+     attack you tuned, and re-equipping has to bring it back exactly. */
+  const shown=(character.attacks||[]).filter(a=>attackVisible(a));
   const caBtn=document.getElementById("atkCollapseAll");
-  if(caBtn)caBtn.style.display=character.attacks.length?"inline-flex":"none";
-  if(!character.attacks.length){el.innerHTML=`<div class="empty">No attacks yet. Add a weapon or unarmed strike — to-hit and damage are computed from ability, proficiency, and any effects (e.g. the Archery feat adds to ranged attacks). Tap a to-hit to see the breakdown.</div>`;return;}
+  if(caBtn)caBtn.style.display=shown.length?"inline-flex":"none";
+  if(!shown.length){
+    const stowed=(character.attacks||[]).length>0;
+    el.innerHTML=stowed
+      ? `<div class="empty">Nothing equipped. Equip a weapon in your inventory and its attack appears here.</div>`
+      : `<div class="empty">No attacks yet. Add a weapon or unarmed strike — to-hit and damage are computed from ability, proficiency, and any effects (e.g. the Archery feat adds to ranged attacks). Tap a to-hit to see the breakdown.</div>`;
+    return;}
   el.innerHTML="";
   const caLbl=document.getElementById("atkCollapseLbl");
-  if(caLbl)caLbl.textContent=character.attacks.some(a=>!atkCol().items[a.id])?"Collapse all":"Expand all";
+  if(caLbl)caLbl.textContent=shown.some(a=>!atkCol().items[a.id])?"Collapse all":"Expand all";
   /* Favorites first, in the order they were added — the list is short and hand
      built, so leaving it unsorted keeps the row where the player put it. */
-  const favs=character.attacks.filter(a=>a.fav), rest=character.attacks.filter(a=>!a.fav);
+  const favs=shown.filter(a=>a.fav), rest=shown.filter(a=>!a.fav);
   const rows=(list)=>list.forEach(a=>{
     const ic=!!atkCol().items[a.id], isSpell=a.source==="spell", save=a.save;
     const n=attackNumbers(a);
