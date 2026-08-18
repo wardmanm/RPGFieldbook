@@ -231,8 +231,13 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 /* NOT .rt-view: that is white-space:pre-wrap, which would double every newline
    now that the blocks are real elements. */
 .n-body{font-size:15px;line-height:1.6;word-break:break-word;margin-top:6px}
-.n-body p{margin:0 0 8px}
-.n-body p:last-child,.n-body>*:last-child{margin-bottom:0}
+/* Every surface that renders rich text, not just the Notes card: the same
+   grammar now reaches descriptions, the Story fields and the modals, and a
+   <p> outside these selectors would pick up the browser's 1em margins. */
+.n-body p,.desc p,.rt-view p{margin:0 0 8px}
+.n-body p:last-child,.n-body>*:last-child,
+.desc p:last-child,.desc>*:last-child,
+.rt-view p:last-child,.rt-view>*:last-child{margin-bottom:0}
 .n-h{font-family:var(--head);font-weight:800;letter-spacing:.05em;color:var(--ink);margin:10px 0 4px}
 .n-h1{font-size:16px}.n-h2{font-size:15px}
 .n-h3,.n-h4,.n-h5,.n-h6{font-size:14px;color:var(--ink-soft)}
@@ -240,7 +245,9 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 .n-ul li,.n-ol li{margin:2px 0}
 .n-q{margin:0 0 8px;padding:2px 0 2px 10px;border-left:3px solid var(--hair);color:var(--ink-soft)}
 .n-hr{border:0;border-top:1px solid var(--hair);margin:10px 0}
-.n-body code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--field);
+/* `code` only ever reaches the DOM from our own renderer, so styling the
+   element itself is safe and saves repeating this per surface. */
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--field);
   border:1px solid var(--hair);border-radius:4px;padding:0 4px}
 .n-when{font-family:var(--head);font-size:11px;color:var(--ink-soft);flex:none}
 .n-jump{font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.02em;text-align:left}
@@ -565,7 +572,9 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .orig-b:hover{color:var(--accent);border-color:var(--accent)}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:var(--accent);color:#fff;padding:10px 18px;border-radius:12px;font-family:var(--head);font-size:14px;letter-spacing:.02em;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:9999;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none;max-width:80vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.item .desc{font-size:15px;line-height:1.5;margin-top:5px;white-space:pre-wrap;word-break:break-word}
+/* NOT white-space:pre-wrap any more: richHTML() turns newlines into real <br>
+   elements, and keeping both doubled every line break. */
+.item .desc{font-size:15px;line-height:1.5;margin-top:5px;word-break:break-word}
 .item .fx{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px}
 .chip{font-family:var(--head);font-size:10px;letter-spacing:.03em;padding:3px 7px;border-radius:99px;
   background:color-mix(in srgb,var(--accent-2) 16%,transparent);color:var(--accent-2);text-transform:uppercase;font-weight:700}
@@ -639,7 +648,8 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
   background:none;border:0;cursor:pointer;padding:5px 7px;border-radius:6px;display:inline-flex;gap:5px;align-items:center;text-transform:uppercase}
 .editbtn:hover{background:color-mix(in srgb,var(--accent-2) 14%,transparent)}
 .editbtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2}
-.rt-view{font-size:16px;line-height:1.6;white-space:pre-wrap;word-break:break-word;min-height:22px}
+/* pre-wrap removed with the same reasoning as .item .desc above. */
+.rt-view{font-size:16px;line-height:1.6;word-break:break-word;min-height:22px}
 .rt-view.empty{font-style:italic;color:var(--ink-soft)}
 .kw{color:var(--accent-2);font-weight:600;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;
   text-underline-offset:3px;border-radius:3px}
@@ -1501,20 +1511,13 @@ function highlight(text){
    rule would pair up the unpaired footnote markers already in the Humblewood
    data ("divert power*", "cymatic sight*", "Spells marked with an asterisk (*)")
    and italicise everything between them. `**` cannot match a lone `*`. */
-/* Indexed private-use delimiters, written as ESCAPES not literals: an invisible
-   byte in source is the thing .editorconfig and the byte-exact build exist to
-   guard against, and a whitespace cleanup would eat it silently. Distinct from
-   TBL_MARK (E000) and the note holds (E001-E003), so the passes cannot collide.
-   Indexed rather than one repeating mark because the chips are restored by
-   identity — a bare sentinel would let the restore regex match ordinary prose. */
-const DESC_H0="\uE00A", DESC_H1="\uE00B";
-function descHTML(text){
-  const hold=[];
-  let s=highlight(text);
-  s=s.replace(/<[^>]+>/g,m=>{hold.push(m);return DESC_H0+(hold.length-1).toString(36)+DESC_H1;});
-  s=s.replace(/\*\*([^*]+)\*\*/g,(m,c)=>"<strong>"+c+"</strong>");
-  return s.replace(new RegExp(DESC_H0+"([0-9a-z]+)"+DESC_H1,"g"),(m,k)=>hold[parseInt(k,36)]||"");
-}
+/* Kept as the name every description call site already uses; the grammar now
+   lives in ONE place (richHTML, src/js/87-notes.js) so a field cannot quietly
+   support less formatting than the field beside it. The single-asterisk hazard
+   the note above describes is handled in the rule itself: emphasis can no longer
+   OPEN on an asterisk followed by a space, so the Humblewood footnote markers
+   stay literal. */
+function descHTML(text){ return richHTML(text); }
 
 /* ================= rich text (bio + proficiencies) ================= */
 const editing={};
@@ -1529,7 +1532,7 @@ function renderRT(key){
     ta.addEventListener("input",()=>{character[key]=ta.value;scheduleSave()});
   }else{
     if(toggle)toggle.textContent="Edit";
-    host.innerHTML=val.trim()?`<div class="rt-view">${highlight(val)}</div>`:`<div class="rt-view empty">Nothing yet — tap Edit.</div>`;
+    host.innerHTML=val.trim()?`<div class="rt-view">${richHTML(val)}</div>`:`<div class="rt-view empty">Nothing yet — tap Edit.</div>`;
   }
 }
 function renderAllRT(){["proficiencies",...BIO.map(b=>b[0])].forEach(renderRT)}
@@ -2047,7 +2050,7 @@ function invItemHTML(it){
         <button class="icon" data-edit-item="${it.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-item="${it.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
-      ${ic?"":`${it.description?`<div class="desc">${highlight(it.description)}</div>`:""}${itemUseLine(it)}${itemUsesRowHTML(it)}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
+      ${ic?"":`${it.description?`<div class="desc">${richHTML(it.description)}</div>`:""}${itemUseLine(it)}${itemUsesRowHTML(it)}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
 }
 /* The carried-weight badge in the Inventory card header. Hidden entirely when
    encumbrance is off — the weight itself still shows in the totals row, so an
@@ -2131,7 +2134,7 @@ function renderStatuses(){
         <button class="icon" data-edit-status="${s.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-status="${s.id}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
-      ${s.description?`<div class="desc">${highlight(s.description)}</div>`:""}
+      ${s.description?`<div class="desc">${richHTML(s.description)}</div>`:""}
       ${on?fxChips(s.effects):fxChips(s.effects).replace(/class="chip"/g,'class="chip off"')}`;
     el.appendChild(d);
   });
@@ -2156,7 +2159,7 @@ function renderFamiliars(){
         <button class="icon danger" data-del-familiar="${f.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${stats?`<div class="desc" style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em">${stats}</div>`:""}
-      ${f.description?`<div class="desc">${highlight(f.description)}</div>`:""}
+      ${f.description?`<div class="desc">${richHTML(f.description)}</div>`:""}
       ${(f.effects&&f.effects.length)?(on?fxChips(f.effects):fxChips(f.effects).replace(/class="chip"/g,'class="chip off"')):""}`;
     el.appendChild(d);
   });
@@ -2468,7 +2471,7 @@ function openRaceInfo(name){
     if(obj.speed)s+=`<p><b>Speed:</b> ${esc(obj.speed)}</p>`;
     if(obj.proficiencies)s+=`<p><b>Proficiencies:</b> ${esc(obj.proficiencies)}</p>`;
     if(obj.languages)s+=`<p><b>Languages:</b> ${esc(obj.languages)}</p>`;
-    (obj.traits||[]).forEach(t=>s+=`<p style="border-top:1px dotted var(--hair);padding-top:8px"><b>${esc(t.name)}.</b> ${highlight(t.description||"")}</p>`);
+    (obj.traits||[]).forEach(t=>s+=`<p style="border-top:1px dotted var(--hair);padding-top:8px"><b>${esc(t.name)}.</b> ${richInline(t.description||"")}</p>`);
     return s;
   };
   let b=`<p>${esc(d.description||"")}</p>`+(d.category?`<p class="hint">${esc(d.category)}</p>`:"")+sect(d);
@@ -2573,7 +2576,7 @@ function openBackgroundInfo(name){
   if(d.tools)b+=`<p><b>Tool Proficiencies:</b> ${esc(d.tools)}</p>`;
   if(d.languages)b+=`<p><b>Languages:</b> ${esc(d.languages)}</p>`;
   if(d.equipment)b+=`<p><b>Equipment:</b> ${esc(d.equipment)}</p>`;
-  if(d.feature&&d.feature.name)b+=`<p style="border-top:1px dotted var(--hair);padding-top:8px"><b>${esc(d.feature.name)}.</b> ${highlight(d.feature.description||"")}</p>`;
+  if(d.feature&&d.feature.name)b+=`<p style="border-top:1px dotted var(--hair);padding-top:8px"><b>${esc(d.feature.name)}.</b> ${richInline(d.feature.description||"")}</p>`;
   /* Suggested-characteristic and specialty tables are owned by the background,
      so they link from here rather than needing an anchor in the prose. */
   b+=tableChipsHTML(d.name,"background");
@@ -2787,7 +2790,7 @@ function openSubclassInfo(className,subName){
   if(sc.levels)Object.keys(sc.levels).map(Number).sort((a,b)=>a-b).forEach(L=>{
     const lv=sc.levels[String(L)],here=entry&&num(entry.level)>=L;
     b+=`<div style="border-top:1px dotted var(--hair);padding-top:8px;margin-top:8px"><b style="${here?"color:var(--accent)":""}">Level ${L}${here?" — gained":""}</b>`;
-    (lv.traits||[]).forEach(t=>b+=`<p style="margin:4px 0"><b>${esc(t.name)}.</b> ${descHTML(t.description||"")}</p>`);
+    (lv.traits||[]).forEach(t=>b+=`<p style="margin:4px 0"><b>${esc(t.name)}.</b> ${richInline(t.description||"")}</p>`);
     (lv.choices||[]).forEach(ch=>b+=`<p class="hint" style="margin:3px 0">▸ Choose: ${esc(ch.label||ch.type)}</p>`);
     b+=`</div>`;
   });
@@ -2811,7 +2814,7 @@ function openClassInfo(name){
   if(d.levels)Object.keys(d.levels).map(Number).sort((x,y)=>x-y).forEach(L=>{
     const lv=d.levels[String(L)],here=entry&&num(entry.level)===L;
     b+=`<div style="border-top:1px dotted var(--hair);padding-top:8px;margin-top:8px"><b style="${here?"color:var(--accent)":""}">Level ${L}${here?" — current":""}</b>`;
-    (lv.traits||[]).forEach(t=>b+=`<p style="margin:4px 0"><b>${esc(t.name)}.</b> ${descHTML(t.description||"")}</p>`);
+    (lv.traits||[]).forEach(t=>b+=`<p style="margin:4px 0"><b>${esc(t.name)}.</b> ${richInline(t.description||"")}</p>`);
     (lv.choices||[]).forEach(ch=>b+=`<p class="hint" style="margin:3px 0">▸ Choose: ${esc(ch.label||ch.type)}</p>`);
     if(lv.spells)b+=`<p class="hint" style="margin:3px 0;color:var(--accent-2)">✦ Spells: ${esc(lv.spells.note||("up to "+lv.spells.known+" known"))}</p>`;
     b+=`</div>`;
@@ -5582,7 +5585,7 @@ function openSpellForm(existing){
     closeModal();renderSpells();renderAttacks();scheduleSave();
   });
 }
-function openSpellView(s){openModal(s.name,`${s.meta?`<p style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em">${esc((s.level===0?"Cantrip":"Level "+s.level))} · ${esc(s.meta)}</p>`:""}<p>${highlight(s.text||"—")}</p>`);}
+function openSpellView(s){openModal(s.name,`${s.meta?`<p style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em">${esc((s.level===0?"Cantrip":"Level "+s.level))} · ${esc(s.meta)}</p>`:""}<div class="desc">${richHTML(s.text||"—")}</div>`);}
 
 /* ================= reusable full-screen browse/filter picker ================= */
 function closeBrowse(){const h=document.getElementById("browse");if(h)h.classList.remove("show");}
@@ -5686,7 +5689,7 @@ function browseItems(){
     sort:(a,b)=>String(catOf(a)).localeCompare(String(catOf(b)))||String(a.name||"").localeCompare(String(b.name||"")),
     group:x=>catOf(x),
     added:x=>character.inventory.some(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase()),
-    preview:x=>openModal(x.name,`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(meta(x))}</p><p>${highlight(x.description||"—")}</p>`),
+    preview:x=>openModal(x.name,`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(meta(x))}</p><div class="desc">${richHTML(x.description||"—")}</div>`),
     onCustom:()=>openItemForm(),
     originSelect:true,
     costInput:true,
@@ -6071,8 +6074,15 @@ function noteInline(raw){
   s=s.replace(/`([^`]+)`/g,(m,c)=>P("<code>"+c+"</code>"));    /* first, so no emphasis inside code */
   s=s.replace(/\*\*([^*]+)\*\*/g,(m,c)=>"<strong>"+c+"</strong>");
   /* the (^|[^*]) guard is what makes an unmatched delimiter inert rather than
-     eating the rest of the line */
-  s=s.replace(/(^|[^*])\*([^*]+)\*/g,(m,a,c)=>a+"<em>"+c+"</em>");
+     eating the rest of the line.
+
+     The content must also START and END with a non-space. That is what keeps
+     the footnote markers in the Humblewood data inert: "you learn the divert
+     power* spell … cymatic sight* without" has two LONE asterisks, and the old
+     rule paired them and italicised the sentence between. An asterisk followed
+     by a space cannot open emphasis, so a footnote marker can only ever be a
+     closing delimiter — and two closers never pair. */
+  s=s.replace(/(^|[^*])\*([^\s*](?:[^*]*[^\s*])?)\*/g,(m,a,c)=>a+"<em>"+c+"</em>");
   s=s.split(NOTE_LB).join("<br>");
   for(let i=0;i<8&&s.indexOf(NOTE_H0)>=0;i++)
     s=s.replace(new RegExp(NOTE_H0+"([0-9a-z]+)"+NOTE_H1,"g"),(m,key)=>hold[parseInt(key,36)]||"");
@@ -6126,6 +6136,30 @@ function noteHTML(text){
     out.push(`<p>${noteInline(ls.join(NOTE_LB))}</p>`);
   }
   return out.join("");
+}
+/* ---- the same grammar, for every field OUTSIDE the Notes card ----
+   noteHTML() is left exactly as it is: the Notes card styles its output through
+   `.n-body p`, and changing it would move nineteen cards to fix a bug elsewhere.
+
+   richHTML() unwraps a LONE paragraph. Hundreds of `.desc` slots currently
+   receive bare inline text, and `<p>` outside `.n-body` picks up the browser's
+   1em margins — so wrapping them would space out every item, status and feature
+   in the app to gain nothing. A single paragraph comes back inline and looks
+   exactly as it does today, plus line breaks and emphasis. Blocks appear only
+   when the player actually types a list, heading or quote. */
+function richHTML(text){
+  const h=noteHTML(text);
+  const m=/^<p>([\s\S]*)<\/p>$/.exec(h);
+  return (m&&m[1].indexOf("<p>")<0)?m[1]:h;
+}
+/* Inline only — no paragraphs, lists or headings, ever. For run-in headings:
+   `<p><b>Trait.</b> description…</p>` in the class, species and background
+   panels. A block element there would nest inside that <p>, which the parser
+   closes early, and the layout comes apart. Newlines still become <br>. */
+function richInline(text){
+  const src=String(text==null?"":text).replace(/\r\n?/g,"\n").replace(NOTE_SENTINELS,"");
+  if(!src.trim())return "";
+  return noteInline(src.split("\n").join(NOTE_LB));
 }
 /* The hover preview is PLAIN TEXT, not noteHTML(): a hover card full of tappable
    chips is a trap — you reach for the chip and the card disappears — and
