@@ -1810,7 +1810,22 @@ function itemArmor(it){
   if(/\+\s*dex/i.test(desc)){const cap=desc.match(/max\s*(\d+)/i);dexCap=cap?num(cap[1]):null;} // null = uncapped (light)
   return {kind:"body",base:num(m[1]),dexCap};
 }
-function isEquippable(it){return !!((it.effects&&it.effects.length)||itemArmor(it));}
+/* A weapon is equippable on its own merit — carrying it is the thing that puts
+   its attack on the sheet. Before this, only effects or armor made an item
+   equippable, so 52 of the 64 pack weapons had no Equip control at all. */
+function isEquippable(it){return !!((it.effects&&it.effects.length)||itemArmor(it)||(it&&it.weapon));}
+/* Should this attack row be on the sheet right now?
+   Only rows derived from an inventory item follow the equipped state. A
+   hand-made attack has no item to equip, and a spell's row is governed by the
+   spell. An ORPHAN — an itemId whose item has since been deleted — keeps
+   showing: there is no Equip control left anywhere that could bring it back, so
+   hiding it would bury the row with no way to recover it. */
+function attackVisible(a,inv){
+  if(!a||!a.itemId)return true;
+  const it=(inv||character.inventory||[]).find(x=>x.id===a.itemId);
+  if(!it)return true;
+  return !!it.equipped;
+}
 /* AC base from equipped armor (base + capped Dex) + shields; falls back to manual or 10+Dex */
 function armorAC(c){
   const dex=Math.floor((abilFinal("dex",c)-10)/2);
@@ -3356,15 +3371,23 @@ function renderActiveSpells(){
 }
 function renderAttacks(){
   const el=document.getElementById("attackList");if(!el)return;
+  /* Rows are HIDDEN, never removed: unequipping a weapon must not throw away the
+     attack you tuned, and re-equipping has to bring it back exactly. */
+  const shown=(character.attacks||[]).filter(a=>attackVisible(a));
   const caBtn=document.getElementById("atkCollapseAll");
-  if(caBtn)caBtn.style.display=character.attacks.length?"inline-flex":"none";
-  if(!character.attacks.length){el.innerHTML=`<div class="empty">No attacks yet. Add a weapon or unarmed strike — to-hit and damage are computed from ability, proficiency, and any effects (e.g. the Archery feat adds to ranged attacks). Tap a to-hit to see the breakdown.</div>`;return;}
+  if(caBtn)caBtn.style.display=shown.length?"inline-flex":"none";
+  if(!shown.length){
+    const stowed=(character.attacks||[]).length>0;
+    el.innerHTML=stowed
+      ? `<div class="empty">Nothing equipped. Equip a weapon in your inventory and its attack appears here.</div>`
+      : `<div class="empty">No attacks yet. Add a weapon or unarmed strike — to-hit and damage are computed from ability, proficiency, and any effects (e.g. the Archery feat adds to ranged attacks). Tap a to-hit to see the breakdown.</div>`;
+    return;}
   el.innerHTML="";
   const caLbl=document.getElementById("atkCollapseLbl");
-  if(caLbl)caLbl.textContent=character.attacks.some(a=>!atkCol().items[a.id])?"Collapse all":"Expand all";
+  if(caLbl)caLbl.textContent=shown.some(a=>!atkCol().items[a.id])?"Collapse all":"Expand all";
   /* Favorites first, in the order they were added — the list is short and hand
      built, so leaving it unsorted keeps the row where the player put it. */
-  const favs=character.attacks.filter(a=>a.fav), rest=character.attacks.filter(a=>!a.fav);
+  const favs=shown.filter(a=>a.fav), rest=shown.filter(a=>!a.fav);
   const rows=(list)=>list.forEach(a=>{
     const ic=!!atkCol().items[a.id], isSpell=a.source==="spell", save=a.save;
     const n=attackNumbers(a);
@@ -4427,6 +4450,20 @@ function loadRulesCacheAsync(){
     return true;
   }).catch(()=>false);
 }
+/* Weapons only became equippable in this version. Every weapon on every sheet
+   written before it is stored equipped:false — not as a decision, but because
+   there was no control to make one — so gating attacks on that flag would empty
+   the Attacks card of every character in existence.
+   Equip them once, and record that it happened. The FLAG is what makes this
+   safe to run on every load: without it, a weapon the player deliberately
+   unequips would be re-equipped on the next open, forever. */
+function migrateWeaponEquip(c){
+  if(!c||c.wpnEquipInit)return 0;
+  let n=0;
+  (c.inventory||[]).forEach(it=>{ if(it&&it.weapon&&!it.equipped){it.equipped=true;n++;} });
+  c.wpnEquipInit=1;
+  return n;
+}
 function migrate(s){
   s=s||{};
   const base=blankChar(), blank=blankChar();
@@ -4449,6 +4486,8 @@ function migrate(s){
   ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
+  /* AFTER the list guards above, so it can rely on inventory being an array. */
+  migrateWeaponEquip(base);
   return base;
 }
 function exportChar(){
@@ -5836,7 +5875,7 @@ function browseItems(){
       {key:"rar",label:"Rarity",type:"multi",options:rars,match:(e,a)=>a.has(rarOf(e).toLowerCase())},
       {key:"attune",label:"Needs attunement",type:"toggle",match:e=>!!e.attune}
     ],
-    onAdd:(entries,og,costOverride)=>{entries.forEach(x=>{const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());if(ex){ex.qty=num(ex.qty)+1;return;}const m=meta(x);const it={id:uid(),name:x.name,qty:1,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:false};if(og)it.origin=og;const c=(costOverride!=null?costOverride:costToGp(x.cost));if(c!=null)it.cost=c;const wg=fnum(x.weight);if(wg)it.weight=wg;if(x.category)it.category=x.category;if(x.type)it.type=x.type;if(x.weapon)it.weapon=x.weapon;stampSrc(it,x,"item","items","browse");character.inventory.push(it);if(it.weapon)addAttackForItem(it);});renderInventory();renderAttacks();recompute();scheduleSave();}
+    onAdd:(entries,og,costOverride)=>{entries.forEach(x=>{const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());if(ex){ex.qty=num(ex.qty)+1;return;}const m=meta(x);const it={id:uid(),name:x.name,qty:1,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:!!x.weapon};if(og)it.origin=og;const c=(costOverride!=null?costOverride:costToGp(x.cost));if(c!=null)it.cost=c;const wg=fnum(x.weight);if(wg)it.weight=wg;if(x.category)it.category=x.category;if(x.type)it.type=x.type;if(x.weapon)it.weapon=x.weapon;stampSrc(it,x,"item","items","browse");character.inventory.push(it);if(it.weapon)addAttackForItem(it);});renderInventory();renderAttacks();recompute();scheduleSave();}
   });
 }
 /* create an Attacks & Weapons entry linked to a weapon inventory item */
