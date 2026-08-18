@@ -1,3 +1,15 @@
+/* The four shapes the AC formula comes in, and the Dex each one adds. Light
+   takes all of it, Medium caps it, Heavy takes none — dexCap null means
+   uncapped, 0 means none, a number caps it. A shield is a flat bonus instead. */
+const ARMOR_KINDS=[["light","Light — adds all Dex"],["medium","Medium — adds Dex, capped"],
+                   ["heavy","Heavy — adds no Dex"],["shield","Shield — flat bonus"]];
+const ARMOR_DEXCAP={light:null,medium:2,heavy:0};
+/* which kind a parsed body armor looks like, so a pack item opens on the right one */
+function armorKindOf(a){
+  if(!a||a.kind==="shield")return "shield";
+  if(a.dexCap==null)return "light";
+  return num(a.dexCap)>0?"medium":"heavy";
+}
 /* ---- origin designators: where an item/spell came from, + when it was added ---- */
 const ORIGIN_KINDS=[
   {k:"class",     ltr:"C", label:"Class",              ph:"class name"},

@@ -3009,3 +3009,34 @@ divider becomes an em dash. Chips are unwrapped to their own words after renderi
 applied to the SOURCE, never the rendered HTML, which would cut tags in half. Tests assert the two
 invariants directly: no block element and nothing interactive can reach the preview, for several
 inputs.
+
+## Armor is a field now, not an incantation (2026-08-18)
+
+**What was actually happening:** `itemArmor()` prefers a structured `it.armor` object, but **not one
+of the 31 armor items in any pack carries one** — every single one states its AC in the DESCRIPTION
+("AC 15 + Dex modifier (max 2)") and is parsed. So armor worked, invisibly, on prose.
+
+Three consequences, in increasing severity:
+- A custom item COULD be armor, but only by typing the exact incantation. Verified: `AC 12 + Dex
+  modifier` → light, `(max 2)` → medium, `AC 16` → heavy, `AC +2 (Shield)` → shield. Nothing in the
+  UI said so.
+- The shield branch keys off TYPE or NAME containing "shield", so a `Buckler` described as `AC +2`
+  returned null — no AC, and `isEquippable` false, so it could not even be worn.
+- The item form did not carry `it.armor` across a save. Latent only because nothing wrote it, and the
+  same family as the attack `itemId` and spell `src` drops.
+
+**Now:** an Armor toggle beside the Weapon one — kind (light/medium/heavy/shield), base AC, and a Max
+Dex box that follows the kind unless overridden. Writes the structured field, carries an existing one
+when the toggle is off, and prefills from `itemArmor(it)` so a pack item opens showing `Medium ·
+AC 15 · Max Dex 2`. Inserting from the rules pack fills it the same way, so the prose becomes fields
+at the moment of insertion.
+
+**The consequence to remember:** once an item has the structured field, it beats the description. An
+item saved through this form stops caring what its description says about AC. That is deliberate —
+explicit over prose, the same way `weapon` already behaves — but it means editing "AC 11" to "AC 14"
+in the text of such an item does nothing.
+
+`ARMOR_KINDS`, `ARMOR_DEXCAP` and `armorKindOf()` live in `25-origins-items.js` beside the other item
+helpers. Shield swaps which boxes exist rather than showing a base and a Dex cap that mean nothing to
+it. Browser-verified: Half Plate opened prefilled, saved to a structured field, AC 14 → 17 on equip
+(15 + min(Dex 4, cap 2)), and a hand-made Buckler as a Shield kind took it to 19.

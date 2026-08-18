@@ -25,6 +25,7 @@ const {X, state, bootError, fragments} = loadApp([
   'attackDamageStr', 'extraDamageList', 'damagePartStr', 'carryAttackLinks',
   'spellHasDamage', 'spellDamageFromText', 'spellDamageBackfill', 'dropDamagelessSpellRows',
   'richHTML', 'richInline', 'noteHTML',
+  'itemArmor', 'armorAC', 'armorKindOf', 'ARMOR_DEXCAP', 'isEquippable', 'contributions',
   'syncSpellAttack', 'detectSpellAttack',
   'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
@@ -355,6 +356,61 @@ ck('"Adventuring Gear" does not match on the ring in adventuring',
 // the player's own choice beats all of it
 ck('an explicit section override wins', sec({category: 'Gear', sectionOverride: 'Tools'}) === 'Tools');
 ck('a nonsense override is ignored', sec({category: 'Gear', sectionOverride: 'Nowhere'}) === 'Gear');
+
+/* ================= armor: the structured field and the prose it replaces =====
+   No pack item carries an `armor` object — all 31 state their AC in the
+   DESCRIPTION, which itemArmor() parses. The item form now writes the
+   structured field, so an item saved through it stops depending on wording. */
+{
+  const A = X.itemArmor;
+
+  // what the pack actually ships, parsed out of prose
+  ck('light armor reads as uncapped Dex',
+     JSON.stringify(A({name:'Leather Armor', type:'Light Armor', description:'AC 11 + Dex modifier'}))
+     === '{"kind":"body","base":11,"dexCap":null}');
+  ck('medium armor reads its cap',
+     A({name:'Half Plate', type:'Medium Armor', description:'AC 15 + Dex modifier (max 2)'}).dexCap === 2);
+  ck('heavy armor adds no Dex',
+     A({name:'Chain Mail', type:'Heavy Armor', description:'AC 16'}).dexCap === 0);
+
+  // the structured field wins, which is the point of writing it
+  ck('an explicit armor field beats the description',
+     A({description:'AC 11 + Dex modifier', armor:{kind:'body',base:18,dexCap:0}}).base === 18);
+
+  /* The gap that made custom armor unusable: a shield only registered if its
+     TYPE or NAME said "shield", so a Buckler described as "AC +2" was not armor
+     at all — not even equippable. An explicit kind does not care what it is called. */
+  ck('a Buckler described as "AC +2" is still not read from prose',
+     A({name:'Buckler', description:'AC +2'}) === null);
+  ck('...but an explicit shield kind works whatever it is called',
+     JSON.stringify(A({name:'Buckler', armor:{kind:'shield',bonus:2}})) === '{"kind":"shield","bonus":2}');
+  ck('...and that makes it equippable', X.isEquippable({name:'Buckler', armor:{kind:'shield',bonus:2}}));
+
+  // the kind a parsed armor opens on in the form
+  ck('a parsed light armor opens on Light', X.armorKindOf({kind:'body',base:11,dexCap:null}) === 'light');
+  ck('a parsed medium armor opens on Medium', X.armorKindOf({kind:'body',base:15,dexCap:2}) === 'medium');
+  ck('a parsed heavy armor opens on Heavy', X.armorKindOf({kind:'body',base:16,dexCap:0}) === 'heavy');
+  ck('a shield opens on Shield', X.armorKindOf({kind:'shield',bonus:2}) === 'shield');
+  ck('the kinds carry the Dex each one adds',
+     X.ARMOR_DEXCAP.light === null && X.ARMOR_DEXCAP.medium === 2 && X.ARMOR_DEXCAP.heavy === 0);
+
+  /* AC maths through the real computation, with a Dex the caps actually bite.
+     armorAC takes the CONTRIBUTIONS list, not the character — it hands that
+     straight to abilFinal, which filters it. */
+  X.character = X.blankChar();
+  X.character.abilities.dex = 18;                       // +4
+  const ac = () => X.armorAC(X.contributions()).base;
+  const wear = a => { X.character.inventory = [{id:'a1', name:'W', equipped:true, armor:a}]; return ac(); };
+  ck('light armor takes all of a +4 Dex', wear({kind:'body',base:11,dexCap:null}) === 15, wear({kind:'body',base:11,dexCap:null}));
+  ck('medium armor caps it at 2', wear({kind:'body',base:15,dexCap:2}) === 17);
+  ck('heavy armor takes none of it', wear({kind:'body',base:16,dexCap:0}) === 16);
+  X.character.inventory = [{id:'a1',name:'W',equipped:true,armor:{kind:'body',base:16,dexCap:0}},
+                           {id:'a2',name:'S',equipped:true,armor:{kind:'shield',bonus:2}}];
+  ck('a shield stacks on top', ac() === 18, ac());
+  X.character.inventory = [{id:'a1',name:'W',equipped:false,armor:{kind:'body',base:18,dexCap:0}}];
+  ck('unequipped armor does nothing', ac() === 14, ac());   // 10 + 4 Dex
+  X.character = X.blankChar();
+}
 
 /* ================= carried weight and encumbrance ================= */
 
