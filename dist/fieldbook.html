@@ -1640,6 +1640,18 @@ function renderFeatures(){
 }
 function invCol(){if(!character.invCollapse||typeof character.invCollapse!=="object")character.invCollapse={items:{}};if(!character.invCollapse.items)character.invCollapse.items={};if(!character.invCollapse.sections)character.invCollapse.sections={};return character.invCollapse;}
 function atkCol(){if(!character.atkCollapse||typeof character.atkCollapse!=="object")character.atkCollapse={items:{}};if(!character.atkCollapse.items)character.atkCollapse.items={};return character.atkCollapse;}
+/* The four shapes the AC formula comes in, and the Dex each one adds. Light
+   takes all of it, Medium caps it, Heavy takes none — dexCap null means
+   uncapped, 0 means none, a number caps it. A shield is a flat bonus instead. */
+const ARMOR_KINDS=[["light","Light — adds all Dex"],["medium","Medium — adds Dex, capped"],
+                   ["heavy","Heavy — adds no Dex"],["shield","Shield — flat bonus"]];
+const ARMOR_DEXCAP={light:null,medium:2,heavy:0};
+/* which kind a parsed body armor looks like, so a pack item opens on the right one */
+function armorKindOf(a){
+  if(!a||a.kind==="shield")return "shield";
+  if(a.dexCap==null)return "light";
+  return num(a.dexCap)>0?"medium":"heavy";
+}
 /* ---- origin designators: where an item/spell came from, + when it was added ---- */
 const ORIGIN_KINDS=[
   {k:"class",     ltr:"C", label:"Class",              ph:"class name"},
@@ -5231,6 +5243,14 @@ function openItemForm(existing){
   const it=existing||{id:uid(),name:"",qty:1,description:"",effects:[],equipped:false};
   const lib=(rules.items||[]);
   const w=it.weapon||{};
+  /* itemArmor(), not it.armor: pack armor carries no structured field at all —
+     all 31 entries state their AC in the DESCRIPTION ("AC 15 + Dex modifier
+     (max 2)"), which itemArmor() parses. Prefilling from the parsed value is
+     what makes the hidden formula visible, and saving turns it into the
+     structured field, which itemArmor() prefers from then on. */
+  const arm=itemArmor(it);
+  const armKind=arm?(arm.kind==="shield"?"shield":armorKindOf(arm)):"light";
+  const armDex=arm&&arm.kind==="body"?(arm.dexCap==null?"":String(arm.dexCap)):"";
   /* itemUse(), not it.use: a potion that has never been edited has its healing
      READ from its description, and the form has to show what the Use button is
      already doing — otherwise saving any other change would quietly turn it off
@@ -5256,6 +5276,14 @@ function openItemForm(existing){
       <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="iWDice" value="${esc(w.dice||"")}" placeholder="1d8"></div>
         <div class="field"><label class="f">Damage type</label><input id="iWType" value="${esc(w.damageType||"")}" placeholder="slashing"></div></div>
     </div>
+    <label class="equip ${arm?"on":""}" id="iIsArmor" style="font-size:12px;margin-top:8px"><span class="box"></span>Armor (set the AC it gives)</label>
+    <div id="iArmorFields" style="${arm?"":"display:none"}">
+      <div class="g2"><div class="field"><label class="f">Kind</label><select id="iAKind">${ARMOR_KINDS.map(([v,l])=>`<option value="${v}"${armKind===v?" selected":""}>${l}</option>`).join("")}</select></div>
+        <div class="field" id="iABaseWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Base AC</label><input id="iABase" type="number" min="0" value="${arm&&arm.kind==="body"?num(arm.base):""}" placeholder="11"></div>
+        <div class="field" id="iABonusWrap" style="${armKind==="shield"?"":"display:none"}"><label class="f">AC bonus</label><input id="iABonus" type="number" min="0" value="${arm&&arm.kind==="shield"?num(arm.bonus||2):2}" placeholder="2"></div></div>
+      <div class="field" id="iADexWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Max Dex added</label><input id="iADex" value="${armDex}" placeholder="none" autocomplete="off"></div>
+      <p class="hint">Light adds all your Dex, Medium caps it (usually 2), Heavy adds none. Leave <b>Max Dex</b> as the kind sets it unless the item says otherwise — type a number, or <b>none</b>.</p>
+    </div>
     <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="iUses" type="number" min="0" value="${itemUsesMax(it)||""}" placeholder="0"></div>
       <div class="field"><label class="f">Resets on</label><select id="iUsesPer">${[["long","Long rest"],["short","Short rest"],["none","Never (manual)"]].map(([v,l])=>`<option value="${v}"${((it.uses&&it.uses.per)||"long")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
     <div class="g2"><div class="field"><label class="f">Healing when used</label><input id="iHeal" value="${esc(use.heal||"")}" placeholder="2d4+2" autocomplete="off"></div>
@@ -5268,6 +5296,22 @@ function openItemForm(existing){
   let isWeapon=!!it.weapon;
   const wtog=document.getElementById("iIsWeapon"), wfields=document.getElementById("iWeaponFields");
   wtog.addEventListener("click",()=>{isWeapon=!isWeapon;wtog.classList.toggle("on",isWeapon);wfields.style.display=isWeapon?"":"none";});
+  let isArmor=!!arm;
+  const atog=document.getElementById("iIsArmor"), afields=document.getElementById("iArmorFields");
+  const aKind=document.getElementById("iAKind"), aDexW=document.getElementById("iADexWrap"),
+        aBaseW=document.getElementById("iABaseWrap"), aBonusW=document.getElementById("iABonusWrap");
+  /* A shield is a flat bonus, not a base + Dex, so it swaps which boxes exist
+     rather than showing three that do not apply to it. */
+  function armSync(setDex){
+    const k=aKind.value, sh=k==="shield";
+    aBaseW.style.display=sh?"none":"";
+    aBonusW.style.display=sh?"":"none";
+    aDexW.style.display=sh?"none":"";
+    if(setDex&&!sh){const d=ARMOR_DEXCAP[k];document.getElementById("iADex").value=(d==null?"":String(d));}
+  }
+  atog.addEventListener("click",()=>{isArmor=!isArmor;atog.classList.toggle("on",isArmor);afields.style.display=isArmor?"":"none";});
+  aKind.addEventListener("change",()=>armSync(true));
+  armSync(false);
   let consume=!!use.consume;
   const ctog=document.getElementById("iConsume");ctog.addEventListener("click",()=>{consume=!consume;ctog.classList.toggle("on",consume)});
   const fxWrap=document.getElementById("iFx");
@@ -5276,6 +5320,17 @@ function openItemForm(existing){
   const libSel=document.getElementById("iLib");
   if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;const wg=fnum(x.weight);if(wg)document.getElementById("iWeight").value=wg;fxWrap.innerHTML=fxEditorRows(x.effects);
     if(x.weapon){isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}
+    /* Read the AC out of what was just inserted, exactly as the sheet would —
+       pack armor states it in prose, so this is where that prose becomes fields. */
+    const ax=itemArmor({name:x.name,description:x.description||"",category:x.category,type:x.type});
+    isArmor=!!ax;atog.classList.toggle("on",isArmor);afields.style.display=isArmor?"":"none";
+    if(ax){
+      aKind.value=ax.kind==="shield"?"shield":armorKindOf(ax);
+      armSync(false);
+      if(ax.kind==="shield")document.getElementById("iABonus").value=num(ax.bonus||2);
+      else{document.getElementById("iABase").value=num(ax.base);
+           document.getElementById("iADex").value=ax.dexCap==null?"":String(ax.dexCap);}
+    }
     /* Read the healing out of what was just inserted, the same way the
        inventory would if this were saved untouched — so the boxes agree with
        the Use button the player is about to get. */
@@ -5301,6 +5356,20 @@ function openItemForm(existing){
     if(it.fav)rec.fav=it.fav;
     if(it.src)rec.src=it.src;
     const dice=document.getElementById("iWDice").value.trim();
+    /* The structured field is what itemArmor() prefers, so saving here is what
+       frees the item from depending on its description wording. Carried when the
+       toggle is off so an untouched item keeps what it had — the same drop that
+       cost attacks their itemId. */
+    if(isArmor){
+      const k=aKind.value;
+      if(k==="shield"){rec.armor={kind:"shield",bonus:Math.max(0,num(document.getElementById("iABonus").value)||0)};}
+      else{
+        const raw=document.getElementById("iADex").value.trim();
+        /* blank means "as the kind says"; "none" and 0 both mean no Dex at all */
+        const dexCap=raw===""?ARMOR_DEXCAP[k]:(/^(none|-)$/i.test(raw)?0:Math.max(0,num(raw)));
+        rec.armor={kind:"body",base:Math.max(0,num(document.getElementById("iABase").value)||0),dexCap};
+      }
+    }else if(it.armor)rec.armor=it.armor;
     if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(it.weapon&&it.weapon.notes)||""};if(it.weapon&&it.weapon.atkMisc!=null)rec.weapon.atkMisc=it.weapon.atkMisc;if(it.weapon&&it.weapon.dmgMisc!=null)rec.weapon.dmgMisc=it.weapon.dmgMisc;}
     /* Limited uses and what Use does. Last, because detectItemUse() below reads
        the FINISHED record — its section depends on the weapon flag set above.
