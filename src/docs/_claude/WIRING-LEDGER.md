@@ -2906,3 +2906,49 @@ generator never sets those, so they cannot indicate an edit either way.
 in the `null` branch. 18 checks in `src/tests/char-update.js` (R7 covers all three branches, the
 no-duplicate guarantee on both leave-alone paths, the re-stamp on rebuild, and the migrate round
 trip) plus 4 wiring guards in `rules-data.js`. Suite 1424.
+
+## Spell rows in Attacks need damage, and the damage detector was under-reading (2026-08-18)
+
+**Why:** 270 spell rows across the five packs, **104 of them with no damage** — Cause Fear, Charm
+Person, Command. A save row with no damage repeats the Spell Save DC already on the Spellcasting
+card, so it was a name in a list you scan mid-combat for numbers.
+
+**The rule is per atkType, not blanket.** `syncSpellAttack` now returns early for a `save` spell with
+no damage (`spellHasDamage`: main dice or extras). An **attack** spell always keeps its row — the
+to-hit is the number and nothing else on the sheet shows it. Measured: 270 rows → 178, 92 dropped.
+Only 5 attack rows had no damage and every one of them was either a detection miss (Chromatic Orb)
+or a spell that makes a weapon you roll separately (Flame Blade, Mordenkainen's Sword, Magic Stone).
+
+**The detector was the more interesting half.** `(\d+d\d+)\s+(\w+)\s+damage` cannot read
+`10d6 + 40 force damage` — it tries to read `+` as the damage type — so Disintegrate and Finger of
+Death carried a bare DC. Widened to allow the flat bonus inside the dice group, plus a **type-less
+fallback** for `3d6 damage of the chosen type`, where the type is the player's to pick (Dragon's
+Breath, Conjure Elemental, Illusory Dragon, Chromatic Orb): fill the dice, leave the type blank
+rather than invent one.
+
+**What stops the fallback over-reaching:** `damage` must follow the dice IMMEDIATELY. That is what
+rejects Ray of Enfeeblement's *"subtracts 1d8 from all its damage rolls"* — a penalty applied to
+someone else's damage, which a looser pattern would have shown as this spell's own. Checked all 12
+spells the fallback newly matches: 6 get no row at all (Elemental Weapon, Absorb Elements and other
+"an extra Nd_ damage" riders), so filling their dice is invisible; of the 6 that do get a row, 5 are
+unambiguously the spell's own damage.
+
+**Existing sheets needed a nudge.** A stored spell already has `atkType`, so `detectSpellAttack`
+returns early and never revisits it — Disintegrate would have lost its row to the new rule rather
+than gained its damage. `spellDamageBackfill()` runs from `ensureSpellAttacks()` and re-runs the
+extraction ALONE for spells with a type but no dice. Additive by construction: it cannot change
+`atkType` and cannot overwrite a value the player typed.
+
+**Deferred:** Delayed Blast Fireball (*"base damage is 12d6"*) and Glyph of Warding (*"5d8 Acid,
+Cold, Fire, Lightning, or Thunder damage"*) are still unread — both need their own shape, and
+neither is worth a pattern that risks the false positives above.
+
+**The rule alone was not enough for existing sheets, and only browser QA showed it.** The unit tests
+all passed and a fresh character behaved perfectly, but a sheet saved before the change kept its
+damage-free rows: `syncSpellAttack` is what applies the rule, and for a spell you never edit it never
+runs again. `spellDamageBackfill` only re-synced the spells it FILLED, so Disintegrate healed itself
+while Cause Fear sat there with `Damage —`. `dropDamagelessSpellRows()` sweeps them once from
+`ensureSpellAttacks()`. Targeted, not a blanket re-sync: rebuilding every row would hand each one a
+new uid and throw away the collapse state on rows that were already correct. It leaves orphan rows
+(a `spellId` with no spell) alone — those are not this rule's to judge.
+

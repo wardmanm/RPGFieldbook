@@ -68,3 +68,6 @@ Bullets below this line — leave the heading in place.
   quantity. Healing asks whether you rolled the dice at the table or want the app to roll them, and
   either way the result goes straight onto your hit points. Healing potions from a rules pack already
   know what they heal, so they work without being set up.
+- Attacks & Weapons now lists a spell only when it has damage to roll. A spell that just imposes a saving throw with no damage no longer takes up a row there — its save DC is on the Spells tab. Spells you attack with still appear either way, because the to-hit is the number you need.
+- Fixed the damage on spells written as "10d6 + 40 force damage" or "3d6 damage of the chosen type" — Disintegrate, Finger of Death, Chromatic Orb, Dragon's Breath and others were showing no damage at all. Existing characters pick this up the next time the sheet is opened.
+

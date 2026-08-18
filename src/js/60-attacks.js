@@ -73,6 +73,38 @@ function pickSlotLevel(lvl){if(lvl<=0)return {level:0,upcast:false};if(freeSlots
 function fmtElapsed(sec){sec=num(sec);const r=Math.round(sec/6);if(sec<60)return `${r} rd (${sec}s)`;if(sec<3600){const m=Math.floor(sec/60),s=sec%60;return `${m}m${s?` ${s}s`:""}`;}const h=Math.floor(sec/3600);return `${h}h ${Math.floor((sec%3600)/60)}m`;}
 /* keep spell-attack entries in sync with a spell's attack fields */
 const _ABIL_NAME={strength:"str",dexterity:"dex",constitution:"con",intelligence:"int",wisdom:"wis",charisma:"cha"};
+/* Pull the damage out of a spell's text. Split from detectSpellAttack so the
+   load-time backfill can reuse it — see spellDamageBackfill below.
+
+   The flat bonus has to be part of the dice group: "10d6 + 40 force damage" is
+   how Disintegrate, Finger of Death and Delayed Blast Fireball are written, and
+   a pattern that stopped at the dice read the "+" as the damage TYPE and matched
+   nothing. Nine damage-dealing save spells showed a bare DC because of it.
+
+   Only ever FILLS a blank — an explicit value the player typed always wins. */
+function spellDamageFromText(sp){
+  const txt=(sp.text||"")+" "+(sp.meta||"");
+  let dice="",type="";
+  const d=txt.match(/(\d+d\d+(?:\s*\+\s*\d+)?)\s+(\w+)\s+damage/i);
+  if(d){dice=d[1];type=d[2].toLowerCase();}
+  else{
+    /* Fallback: dice with NO type word, because the type is the player's to pick
+       — "3d6 damage of the chosen type" (Dragon's Breath, Conjure Elemental,
+       Illusory Dragon, Chromatic Orb). Fill the dice and leave the type blank
+       rather than inventing one.
+
+       "damage" must follow the dice IMMEDIATELY. That is what rejects Ray of
+       Enfeeblement's "subtracts 1d8 from all its damage rolls" — a penalty to
+       someone else's damage, which a looser pattern would show as this spell's. */
+    const t=txt.match(/(\d+d\d+(?:\s*\+\s*\d+)?)\s+damage\b/i);
+    if(t)dice=t[1];
+  }
+  if(!dice)return false;
+  let filled=false;
+  if(!sp.dice){sp.dice=dice.replace(/\s*\+\s*/," + ");filled=true;}
+  if(type&&!sp.damageType){sp.damageType=type;filled=true;}
+  return filled;
+}
 /* infer attack/save + damage from a library spell's text when not explicitly set */
 function detectSpellAttack(sp){
   if(sp.atkType!==undefined)return;
@@ -80,9 +112,38 @@ function detectSpellAttack(sp){
   let m=txt.match(/make a (ranged|melee) spell attack/i);
   if(m){sp.atkType="attack";sp.atkKind=m[1].toLowerCase();}
   else{const s=txt.match(/\b(strength|dexterity|constitution|intelligence|wisdom|charisma) saving throw/i);sp.atkType=s?"save":"";if(s)sp.saveAbility=_ABIL_NAME[s[1].toLowerCase()];}
-  if(sp.atkType){const d=txt.match(/(\d+d\d+)\s+(\w+)\s+damage/i);if(d){if(!sp.dice)sp.dice=d[1];if(!sp.damageType)sp.damageType=d[2].toLowerCase();}}
+  if(sp.atkType)spellDamageFromText(sp);
 }
-function ensureSpellAttacks(){(character.spells||[]).forEach(sp=>{if(sp.atkType===undefined){detectSpellAttack(sp);syncSpellAttack(sp);}});}
+/* A sheet saved before the pattern was widened already has atkType set, so
+   detectSpellAttack returns early and never revisits it — Disintegrate would
+   lose its row to the damage rule rather than gain its damage. Re-run the
+   extraction alone for spells that have a type but no dice. Additive by
+   construction: it cannot change atkType and cannot overwrite a typed value. */
+function spellDamageBackfill(){
+  let n=0;
+  (character.spells||[]).forEach(sp=>{
+    if(!sp.atkType||(sp.dice||"").trim())return;
+    if(spellDamageFromText(sp)){syncSpellAttack(sp);n++;}
+  });
+  return n;
+}
+/* The damage rule only bites when syncSpellAttack RUNS, so a sheet saved before
+   it existed keeps its damage-free save rows until something happens to touch
+   that spell — which for a spell you never edit is never. Sweep them once on
+   load. Targeted rather than re-syncing every spell: a blanket rebuild would
+   hand every row a new uid and lose the collapse state on rows that are fine. */
+function dropDamagelessSpellRows(){
+  const spells=character.spells||[];
+  const before=(character.attacks||[]).length;
+  character.attacks=(character.attacks||[]).filter(a=>{
+    if(!a.spellId)return true;
+    const sp=spells.find(s=>s.id===a.spellId);
+    if(!sp)return true;                       /* orphan row — not ours to judge */
+    return !(sp.atkType==="save"&&!spellHasDamage(sp));
+  });
+  return before-character.attacks.length;
+}
+function ensureSpellAttacks(){(character.spells||[]).forEach(sp=>{if(sp.atkType===undefined){detectSpellAttack(sp);syncSpellAttack(sp);}});spellDamageBackfill();dropDamagelessSpellRows();}
 let _toastT=null;
 function toast(msg){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";document.body.appendChild(el);}el.textContent=msg;el.classList.add("show");clearTimeout(_toastT);_toastT=setTimeout(()=>el.classList.remove("show"),1900);}
 /* A spell's attack row is REBUILT from the spell every time, never edited on the
@@ -91,9 +152,20 @@ function toast(msg){let el=document.getElementById("toast");if(!el){el=document.
    two damage types carries its own `extraDamage`, in the identical {dice,type}
    shape attacks use, and it is copied over here. Optional and absent when
    empty, so a spell saved before this reads back exactly as it did. */
+/* Does this spell deal damage the row could show? Main dice or extras — either
+   earns a line. */
+function spellHasDamage(sp){
+  return !!((sp&&sp.dice||"").trim()) || extraDamageList(sp).length>0;
+}
 function syncSpellAttack(sp){
   character.attacks=(character.attacks||[]).filter(a=>a.spellId!==sp.id);
   const xd=extraDamageList(sp);
+  /* A SAVE spell earns a row only if it deals damage. Without damage the row
+     repeats the Spell Save DC already on the Spellcasting card and adds a name
+     to a list you scan mid-combat for numbers — 99 of them across the packs
+     (Cause Fear, Charm Person, Command). An ATTACK spell always keeps its row:
+     the to-hit is the number, and it is nowhere else on the sheet. */
+  if(sp.atkType==="save"&&!spellHasDamage(sp))return;
   if(sp.atkType==="attack"){
     character.attacks.push({id:uid(),spellId:sp.id,source:"spell",name:sp.name,kind:(sp.atkKind==="melee"?"melee":"ranged"),ability:character.spellAbility||"none",proficient:true,addAbilityDamage:false,atkMisc:"",damageDice:sp.dice||"",damageType:sp.damageType||"",dmgMisc:"",notes:sp.atkNote||""});
   }else if(sp.atkType==="save"){

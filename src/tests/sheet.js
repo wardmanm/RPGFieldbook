@@ -23,6 +23,7 @@ const {X, state, bootError, fragments} = loadApp([
   'spellLevelTally', 'spellAllotment', 'cantripsKnown',
   'descHTML', 'highlight', 'mergeRules', 'resetRules',
   'attackDamageStr', 'extraDamageList', 'damagePartStr', 'carryAttackLinks',
+  'spellHasDamage', 'spellDamageFromText', 'spellDamageBackfill', 'dropDamagelessSpellRows',
   'syncSpellAttack', 'detectSpellAttack',
   'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
@@ -974,6 +975,92 @@ X.resetRules();
   X.syncSpellAttack({id: 'sp4', name: 'Bad', atkType: 'attack', dice: '1d4', extraDamage: [{dice: '', type: ''}]});
   ck('an empty extra row on a spell is dropped, not carried',
      X.character.attacks.find(a => a.spellId === 'sp4').extraDamage === undefined);
+
+  /* ---------- a save spell earns a row only if it deals damage ----------
+     A damage-free save row repeats the Spell Save DC already on the
+     Spellcasting card, and 92 of them across the packs buried the rows that
+     carry numbers. An ATTACK spell keeps its row either way: the to-hit is the
+     number, and nothing else on the sheet shows it. */
+  const rowsFor = id => X.character.attacks.filter(a => a.spellId === id).length;
+
+  X.syncSpellAttack({id: 'nd1', name: 'Cause Fear', atkType: 'save', saveAbility: 'wis'});
+  ck('a save spell with no damage gets no row', rowsFor('nd1') === 0);
+
+  X.syncSpellAttack({id: 'nd2', name: 'Hold Person', atkType: 'save', saveAbility: 'wis', dice: '   '});
+  ck('...whitespace is not damage', rowsFor('nd2') === 0);
+
+  X.syncSpellAttack({id: 'nd3', name: 'Fireball', atkType: 'save', saveAbility: 'dex', dice: '8d6', damageType: 'fire'});
+  ck('a save spell WITH damage keeps its row', rowsFor('nd3') === 1);
+
+  X.syncSpellAttack({id: 'nd4', name: 'Odd', atkType: 'save', saveAbility: 'dex',
+                     extraDamage: [{dice: '1d6', type: 'fire'}]});
+  ck('...extras alone are damage enough', rowsFor('nd4') === 1);
+
+  X.syncSpellAttack({id: 'nd5', name: 'Flame Blade', atkType: 'attack', atkKind: 'melee'});
+  ck('an attack spell with no damage KEEPS its row', rowsFor('nd5') === 1,
+     JSON.stringify(X.character.attacks.filter(a => a.spellId === 'nd5')));
+
+  // a row that no longer qualifies is removed when the spell is re-synced
+  X.syncSpellAttack({id: 'nd3', name: 'Fireball', atkType: 'save', saveAbility: 'dex'});
+  ck('losing its damage removes the row on the next sync', rowsFor('nd3') === 0);
+
+  /* ---------- reading damage out of spell text ---------- */
+  const dmg = t => { const o = {text: t}; X.spellDamageFromText(o); return (o.dice || '') + '|' + (o.damageType || ''); };
+  ck('a flat bonus is part of the dice, not the type',
+     dmg('takes 10d6 + 40 force damage') === '10d6 + 40|force', dmg('takes 10d6 + 40 force damage'));
+  ck('the plain form still reads as it did', dmg('takes 8d6 fire damage') === '8d6|fire');
+  ck('a player-chosen type fills the dice and leaves the type blank',
+     dmg('taking 3d6 damage of the chosen type') === '3d6|');
+  /* the one construction a looser pattern would get wrong */
+  ck('a penalty to someone else\'s damage is not this spell\'s damage',
+     dmg('it subtracts 1d8 from all its damage rolls') === '|');
+  ck('an explicit value is never overwritten', (() => {
+    const o = {text: 'takes 8d6 fire damage', dice: '1d4', damageType: 'cold'};
+    X.spellDamageFromText(o); return o.dice === '1d4' && o.damageType === 'cold';
+  })());
+
+  /* ---------- the load-time backfill ----------
+     A sheet saved before the pattern was widened has atkType set, so
+     detectSpellAttack returns early and never revisits it. */
+  X.character.spells = [
+    {id: 'bf1', name: 'Disintegrate', atkType: 'save', saveAbility: 'dex', text: 'takes 10d6 + 40 force damage'},
+    {id: 'bf2', name: 'Charm Person', atkType: 'save', saveAbility: 'wis', text: 'no damage here'},
+    {id: 'bf3', name: 'Mine', atkType: 'save', saveAbility: 'dex', dice: '1d4', text: 'takes 8d6 fire damage'},
+  ];
+  X.character.attacks = [];
+  const filled = X.spellDamageBackfill();
+  ck('the backfill fills a blank from the text', X.character.spells[0].dice === '10d6 + 40');
+  ck('...and gives that spell its row back', rowsFor('bf1') === 1);
+  ck('...leaves a genuinely damage-free spell alone',
+     !X.character.spells[1].dice && rowsFor('bf2') === 0);
+  ck('...and never overwrites what the player typed', X.character.spells[2].dice === '1d4');
+  ck('...reporting how many it touched', filled === 1, filled);
+
+  /* The rule only bites when syncSpellAttack runs, so a sheet saved before it
+     existed keeps its damage-free rows until something touches that spell —
+     which for a spell you never edit is never. Swept once on load. */
+  X.character.spells = [
+    {id: 'sw1', name: 'Cause Fear', atkType: 'save', saveAbility: 'wis', text: 'no damage'},
+    {id: 'sw2', name: 'Fireball', atkType: 'save', saveAbility: 'dex', dice: '8d6', damageType: 'fire'},
+    {id: 'sw3', name: 'Flame Blade', atkType: 'attack', atkKind: 'melee'},
+  ];
+  X.character.attacks = [
+    {id: 'r1', spellId: 'sw1', source: 'spell', name: 'Cause Fear', save: {ability: 'wis'}, damageDice: ''},
+    {id: 'r2', spellId: 'sw2', source: 'spell', name: 'Fireball', save: {ability: 'dex'}, damageDice: '8d6'},
+    {id: 'r3', spellId: 'sw3', source: 'spell', name: 'Flame Blade', kind: 'melee', damageDice: ''},
+    {id: 'r4', name: 'Longsword', itemId: 'i1', damageDice: '1d8'},
+    {id: 'r5', spellId: 'gone', source: 'spell', name: 'Orphan', save: {ability: 'dex'}, damageDice: ''},
+  ];
+  const swept = X.dropDamagelessSpellRows();
+  const left = X.character.attacks.map(a => a.id).join(',');
+  ck('the sweep drops a stored damage-free save row', swept === 1, swept);
+  ck('...keeps the save row that has damage', left.indexOf('r2') >= 0);
+  ck('...keeps an attack spell row with no damage', left.indexOf('r3') >= 0);
+  ck('...never touches a weapon row', left.indexOf('r4') >= 0);
+  ck('...and leaves an orphan row alone rather than judging it', left.indexOf('r5') >= 0, left);
+  ck('...keeping the ids of the rows it spares', left === 'r2,r3,r4,r5', left);
+
+  X.character.spells = []; X.character.attacks = [];
 
   // re-syncing rebuilds the row: the extras must come back with it, and only once
   X.syncSpellAttack(bolt);
