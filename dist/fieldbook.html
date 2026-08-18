@@ -258,8 +258,17 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 .fgroup{margin-bottom:12px}
 .fghead{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 2px;border-bottom:1.5px solid var(--line);margin:0 0 8px;user-select:none}
 .fghead:hover .fgname{color:var(--accent-2)}
-.fgname{font-family:var(--head);font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:var(--ink);flex:1;min-width:0;overflow-wrap:anywhere}
-.fgcount{font-family:var(--head);font-size:11px;font-weight:700;color:var(--ink-soft);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:1px 8px;flex:none}
+/* flex:0 1 auto, NOT flex:1 — the count has to sit beside the title the way the
+   inventory section heads do. flex:1 stretched the name across the header and
+   shoved the (N) to the far right. It can still shrink, so a long group name
+   wraps rather than pushing the count off the row. */
+.fgname{font-family:var(--head);font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:var(--accent);flex:0 1 auto;min-width:0;overflow-wrap:anywhere}
+/* Counts in a group header match the inventory section heads — plain, dim,
+   parenthesised. .fgcount stays a PILL for the Settings badges, which carry
+   text like "12 entries" rather than a number. */
+.fghead .cnt{font-family:var(--head);font-size:12px;font-weight:600;color:var(--ink-soft);flex:none}
+/* the Settings badge keeps its far-right position; only counts move inward */
+.fgcount{font-family:var(--head);font-size:11px;font-weight:700;color:var(--ink-soft);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:1px 8px;flex:none;margin-left:auto}
 .fcaret{width:14px;height:14px;flex:none;stroke:var(--ink-soft);fill:none;stroke-width:2.5;transform:rotate(90deg);transition:transform .12s}
 .fcaret.c{transform:rotate(0deg)}
 .fitoggle{background:transparent;border:0;cursor:pointer;padding:0 2px;display:inline-flex;align-items:center;flex:none;color:var(--ink-soft)}
@@ -1005,7 +1014,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         </div>
 
         <div class="card" data-note="attacks">
-          <div class="label">Attacks &amp; Weapons <button class="add" data-add="attack"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div class="label">Attacks &amp; Weapons <button class="add" data-add="attack"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="atkCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="atkCollapseLbl">Collapse all</span></button></div>
           <div id="attackList"></div>
         </div>
 
@@ -1015,7 +1024,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         </div>
 
         <div class="card" data-note="features">
-          <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="featCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="featCollapseLbl">Collapse all</span></button></div>
           <div id="featureList"></div>
         </div>
 
@@ -1607,6 +1616,8 @@ function useFeature(id){
    is keyed by label, so this doubles as the collapse key — exactly how
    invCollapse.sections holds "★ Favorites". */
 const FEAT_FAV="★ Favorites";
+/* attacks reuse the same label, so the two lists read as one idea */
+const ATK_FAV="★ Favorites";
 /* Split the feature list into the groups the list renders, in order. Favourites
    are MOVED, not copied — the origin groups are built from non-favourites only,
    the same partition renderInventory does. Sorted by name like inventory's
@@ -1628,11 +1639,14 @@ function featGroups(list){
 function renderFeatures(){
   const el=document.getElementById("featureList");
   const list=character.features||[];
+  const caBtn=document.getElementById("featCollapseAll"), caLbl=document.getElementById("featCollapseLbl");
+  if(caBtn)caBtn.style.display=list.length?"inline-flex":"none";
+  if(caLbl)caLbl.textContent=featGroups(list).some(g=>!featCol().groups[g.label])?"Collapse all":"Expand all";
   if(!list.length){el.innerHTML=`<div class="empty">No features yet. Add ancestry traits, class features, or feats — attach effects to auto-adjust stats.</div>`;return;}
   let html="";
   featGroups(list).forEach(grp=>{
     const gc=!!featCol().groups[grp.label];
-    html+=`<div class="fgroup"><div class="fghead" data-fgroup="${esc(grp.label)}"><svg class="fcaret ${gc?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg><span class="fgname">${esc(grp.label)}</span><span class="fgcount">${grp.items.length}</span></div>`;
+    html+=`<div class="fgroup"><div class="fghead" data-fgroup="${esc(grp.label)}"><svg class="fcaret ${gc?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg><span class="fgname">${esc(grp.label)}</span><span class="cnt">(${grp.items.length})</span></div>`;
     if(!gc)grp.items.forEach(f=>{html+=featItemHTML(f);});
     html+=`</div>`;
   });
@@ -3310,9 +3324,16 @@ function renderActiveSpells(){
 }
 function renderAttacks(){
   const el=document.getElementById("attackList");if(!el)return;
+  const caBtn=document.getElementById("atkCollapseAll");
+  if(caBtn)caBtn.style.display=character.attacks.length?"inline-flex":"none";
   if(!character.attacks.length){el.innerHTML=`<div class="empty">No attacks yet. Add a weapon or unarmed strike — to-hit and damage are computed from ability, proficiency, and any effects (e.g. the Archery feat adds to ranged attacks). Tap a to-hit to see the breakdown.</div>`;return;}
   el.innerHTML="";
-  character.attacks.forEach(a=>{
+  const caLbl=document.getElementById("atkCollapseLbl");
+  if(caLbl)caLbl.textContent=character.attacks.some(a=>!atkCol().items[a.id])?"Collapse all":"Expand all";
+  /* Favorites first, in the order they were added — the list is short and hand
+     built, so leaving it unsorted keeps the row where the player put it. */
+  const favs=character.attacks.filter(a=>a.fav), rest=character.attacks.filter(a=>!a.fav);
+  const rows=(list)=>list.forEach(a=>{
     const ic=!!atkCol().items[a.id], isSpell=a.source==="spell", save=a.save;
     const n=attackNumbers(a);
     const dmg=attackDamageStr(a,save?0:n.dmgBonus);
@@ -3323,6 +3344,7 @@ function renderAttacks(){
     const d=document.createElement("div");d.className="item fitem";
     d.innerHTML=`<div class="top">
         <button class="fitoggle" data-atkitem="${a.id}" aria-label="Collapse"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="fav ${a.fav?"on":""}" data-fav-attack="${a.id}" aria-label="Favorite" title="Favorite">${a.fav?"★":"☆"}</button>
         <span class="nm">${esc(a.name||"Attack")}</span>
         <span class="qty">${typeLabel}</span>
         ${hitCell}
@@ -3332,6 +3354,21 @@ function renderAttacks(){
       ${ic?"":`<div class="desc" style="font-family:var(--head);font-size:13px;letter-spacing:.02em;color:var(--ink-soft)">Damage <b class="${!save&&n.dmgFx?"fx-on":""}" style="${!save&&n.dmgFx?"":"color:var(--ink)"}">${esc(dmg)||"—"}</b>${a.notes?` · ${esc(a.notes)}`:""}</div>`}`;
     el.appendChild(d);
   });
+  /* The heading only appears when there is something to separate — a lone
+     "★ Favorites" over an otherwise empty list is noise, and so is a bare
+     heading over every attack when nothing is starred. */
+  if(favs.length){
+    const h=document.createElement("div");h.className="inv-sec-head";h.dataset.atksec=ATK_FAV;
+    h.innerHTML=`${esc(ATK_FAV)} <span class="cnt">(${favs.length})</span>`;
+    el.appendChild(h);
+    rows(favs);
+    if(rest.length){
+      const h2=document.createElement("div");h2.className="inv-sec-head";h2.dataset.atksec="Other";
+      h2.innerHTML=`Attacks <span class="cnt">(${rest.length})</span>`;
+      el.appendChild(h2);
+    }
+  }
+  rows(rest);
 }
 /* one editable {dice,type} row in an "Additional damage types" list */
 function attackXDmgRowHTML(d){
@@ -6315,7 +6352,7 @@ function notesHTML(){
     const open=noteGroupOpen(tab);
     html+=`<div class="fgroup"><div class="fghead" data-notegroup="${tab}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
       `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`+
-      `<span class="fgname">${esc(NOTE_TABS[tab]||tab)}</span><span class="fgcount">${defs.length}</span></div>`+
+      `<span class="fgname">${esc(NOTE_TABS[tab]||tab)}</span><span class="cnt">(${defs.length})</span></div>`+
       `<div class="notesec-body" data-notegroupbody="${tab}"${open?"":` style="display:none"`}>`+
       defs.map(noteEntryHTML).join("")+`</div></div>`;
   });
@@ -7000,6 +7037,7 @@ function wire(){
        derived. Same as the inventory star above, and unlike the On/Off toggle
        below, which does change what the effects engine sees. */
     if((m=t.closest("[data-fav-feature]"))){const f=character.features.find(x=>x.id===m.dataset.favFeature);if(f){f.fav=!f.fav;renderFeatures();scheduleSave();}return;}
+    if((m=t.closest("[data-fav-attack]"))){const a=character.attacks.find(x=>x.id===m.dataset.favAttack);if(a){a.fav=!a.fav;renderAttacks();scheduleSave();}return;}
     if((m=t.closest("[data-fgroup]"))){const g=m.dataset.fgroup,fc=featCol();fc.groups[g]=!fc.groups[g];renderFeatures();scheduleSave();return;}
     if((m=t.closest("[data-edit-feature]")))return openFeatureForm(character.features.find(x=>x.id===m.dataset.editFeature));
     if((m=t.closest("[data-del-feature]"))){const f=character.features.find(x=>x.id===m.dataset.delFeature);if(f&&confirm(`Delete “${f.name}”?`)){character.features=character.features.filter(x=>x.id!==f.id);renderFeatures();recompute();scheduleSave();}return;}
@@ -7095,6 +7133,10 @@ function wire(){
     if(b){e.preventDefault();b.select();}
   });
   document.getElementById("invCollapseAll").addEventListener("click",()=>{const ic=invCol();const anyOpen=character.inventory.some(it=>!ic.items[it.id]);character.inventory.forEach(it=>{ic.items[it.id]=anyOpen;});renderInventory();scheduleSave();});
+  /* Same shape as the inventory one: if anything is open, shut everything;
+     otherwise open everything. The label follows in the render. */
+  document.getElementById("atkCollapseAll").addEventListener("click",()=>{const c=atkCol();const anyOpen=character.attacks.some(a=>!c.items[a.id]);character.attacks.forEach(a=>{c.items[a.id]=anyOpen;});renderAttacks();scheduleSave();});
+  document.getElementById("featCollapseAll").addEventListener("click",()=>{const c=featCol();const gs=featGroups(character.features||[]).map(g=>g.label);const anyOpen=gs.some(g=>!c.groups[g]);gs.forEach(g=>{c.groups[g]=anyOpen;});renderFeatures();scheduleSave();});
   // ---- home screen ----
   document.getElementById("homeCog").addEventListener("click",()=>{homeForceSetup=!homeForceSetup;renderHome();});
   document.getElementById("homeBack").addEventListener("click",()=>{if(activeId)hideHome();});
