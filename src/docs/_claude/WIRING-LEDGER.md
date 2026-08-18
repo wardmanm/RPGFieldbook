@@ -3040,3 +3040,31 @@ in the text of such an item does nothing.
 helpers. Shield swaps which boxes exist rather than showing a base and a Dex cap that mean nothing to
 it. Browser-verified: Half Plate opened prefilled, saved to a structured field, AC 14 → 17 on equip
 (15 + min(Dex 4, cap 2)), and a hand-made Buckler as a Shield kind took it to 19.
+
+## Consistency pass: favorites, collapse-all, group headings (2026-08-18)
+
+Four asks, all "make it look like Inventory".
+
+**Attacks can be favorited.** They had no `fav` and no sections at all — one flat list. Now a star per
+row, `ATK_FAV` sharing FEAT_FAV's exact label so the two read as one idea, and a `★ Favorites`
+heading. The headings appear ONLY when something is starred: a lone "Favorites" over the whole list,
+or a bare "Attacks" heading when nothing is starred, is noise. Favorites are left in insertion order
+rather than sorted — the list is short and hand-built, so the row stays where it was put.
+
+**Collapse-all on Attacks and Features.** Three lists carry collapse state (`invCol`, `atkCol`,
+`featCol`); only Inventory had the control. Same markup, same derived label — "Collapse all" while
+anything is open, "Expand all" once everything is shut — and the button hides itself on an empty
+list. Spells and Statuses have no collapse state, so they were left alone rather than given one.
+
+**Group headings.** `.fgname` was `var(--ink)`; Inventory and Spells use `var(--accent)`. Changed at
+the shared rule, so Features, the Notes groups and the Settings sections all match — the owner chose
+consistency over scoping it to Features.
+
+**Two things the blanket change would have got wrong:**
+- `.fgcount` is not always a count. Settings passes a BADGE through it — "12 entries", "unnamed" —
+  which would read absurdly in brackets. So counts moved to `.cnt` (the inventory class, plain and
+  parenthesised) and `.fgcount` kept its pill for badges.
+- `.fgname` was `flex:1`, which stretched the title across the header and shoved the count to the far
+  right — not "next to the heading like inventory" at all. Now `flex:0 1 auto` so the count sits
+  beside it (measured: 8px gap), and `.fgcount` gained `margin-left:auto` so the Settings badge stays
+  right-aligned where it reads correctly.

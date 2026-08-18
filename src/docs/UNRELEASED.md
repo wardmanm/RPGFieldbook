@@ -73,4 +73,7 @@ Bullets below this line — leave the heading in place.
 - Formatting now works everywhere you can type, not just in section notes. Bold, italics, `code`, bullet and numbered lists, headings, quotes and rules all render in your Story fields (Appearance, Backstory, Notes and the rest), in item, feature, status and spell descriptions, and in the preview panels. Line breaks you type are finally kept.
 - The little preview that pops up from a section's note icon now shows your formatting instead of flattening it. Bold, italics and `code` render, a bullet shows as a bullet, and line breaks are kept. Rules terms stay plain there on purpose — the preview disappears when you reach for them.
 - The item editor can now set the armour an item gives. Pick Light, Medium, Heavy or Shield and the base AC, and the sheet works out the Dex it adds. Armour from a rules pack opens with its numbers already filled in, so you can see the formula that was only ever hidden in the description — and a piece of armour you invent yourself now works exactly like one from the book.
+- Attacks and weapons can be favourited now, the same as items and features — starred ones gather at the top of the list.
+- Attacks & Weapons and Features & Traits gained the Collapse all / Expand all button that Inventory already had.
+- Group headings across the app now match the Inventory and Spells ones: the same colour, with the count in brackets beside the heading.
 

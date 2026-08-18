@@ -296,9 +296,16 @@ function renderActiveSpells(){
 }
 function renderAttacks(){
   const el=document.getElementById("attackList");if(!el)return;
+  const caBtn=document.getElementById("atkCollapseAll");
+  if(caBtn)caBtn.style.display=character.attacks.length?"inline-flex":"none";
   if(!character.attacks.length){el.innerHTML=`<div class="empty">No attacks yet. Add a weapon or unarmed strike — to-hit and damage are computed from ability, proficiency, and any effects (e.g. the Archery feat adds to ranged attacks). Tap a to-hit to see the breakdown.</div>`;return;}
   el.innerHTML="";
-  character.attacks.forEach(a=>{
+  const caLbl=document.getElementById("atkCollapseLbl");
+  if(caLbl)caLbl.textContent=character.attacks.some(a=>!atkCol().items[a.id])?"Collapse all":"Expand all";
+  /* Favorites first, in the order they were added — the list is short and hand
+     built, so leaving it unsorted keeps the row where the player put it. */
+  const favs=character.attacks.filter(a=>a.fav), rest=character.attacks.filter(a=>!a.fav);
+  const rows=(list)=>list.forEach(a=>{
     const ic=!!atkCol().items[a.id], isSpell=a.source==="spell", save=a.save;
     const n=attackNumbers(a);
     const dmg=attackDamageStr(a,save?0:n.dmgBonus);
@@ -309,6 +316,7 @@ function renderAttacks(){
     const d=document.createElement("div");d.className="item fitem";
     d.innerHTML=`<div class="top">
         <button class="fitoggle" data-atkitem="${a.id}" aria-label="Collapse"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="fav ${a.fav?"on":""}" data-fav-attack="${a.id}" aria-label="Favorite" title="Favorite">${a.fav?"★":"☆"}</button>
         <span class="nm">${esc(a.name||"Attack")}</span>
         <span class="qty">${typeLabel}</span>
         ${hitCell}
@@ -318,6 +326,21 @@ function renderAttacks(){
       ${ic?"":`<div class="desc" style="font-family:var(--head);font-size:13px;letter-spacing:.02em;color:var(--ink-soft)">Damage <b class="${!save&&n.dmgFx?"fx-on":""}" style="${!save&&n.dmgFx?"":"color:var(--ink)"}">${esc(dmg)||"—"}</b>${a.notes?` · ${esc(a.notes)}`:""}</div>`}`;
     el.appendChild(d);
   });
+  /* The heading only appears when there is something to separate — a lone
+     "★ Favorites" over an otherwise empty list is noise, and so is a bare
+     heading over every attack when nothing is starred. */
+  if(favs.length){
+    const h=document.createElement("div");h.className="inv-sec-head";h.dataset.atksec=ATK_FAV;
+    h.innerHTML=`${esc(ATK_FAV)} <span class="cnt">(${favs.length})</span>`;
+    el.appendChild(h);
+    rows(favs);
+    if(rest.length){
+      const h2=document.createElement("div");h2.className="inv-sec-head";h2.dataset.atksec="Other";
+      h2.innerHTML=`Attacks <span class="cnt">(${rest.length})</span>`;
+      el.appendChild(h2);
+    }
+  }
+  rows(rest);
 }
 /* one editable {dice,type} row in an "Additional damage types" list */
 function attackXDmgRowHTML(d){

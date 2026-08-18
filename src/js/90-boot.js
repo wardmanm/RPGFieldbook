@@ -121,6 +121,7 @@ function wire(){
        derived. Same as the inventory star above, and unlike the On/Off toggle
        below, which does change what the effects engine sees. */
     if((m=t.closest("[data-fav-feature]"))){const f=character.features.find(x=>x.id===m.dataset.favFeature);if(f){f.fav=!f.fav;renderFeatures();scheduleSave();}return;}
+    if((m=t.closest("[data-fav-attack]"))){const a=character.attacks.find(x=>x.id===m.dataset.favAttack);if(a){a.fav=!a.fav;renderAttacks();scheduleSave();}return;}
     if((m=t.closest("[data-fgroup]"))){const g=m.dataset.fgroup,fc=featCol();fc.groups[g]=!fc.groups[g];renderFeatures();scheduleSave();return;}
     if((m=t.closest("[data-edit-feature]")))return openFeatureForm(character.features.find(x=>x.id===m.dataset.editFeature));
     if((m=t.closest("[data-del-feature]"))){const f=character.features.find(x=>x.id===m.dataset.delFeature);if(f&&confirm(`Delete “${f.name}”?`)){character.features=character.features.filter(x=>x.id!==f.id);renderFeatures();recompute();scheduleSave();}return;}
@@ -216,6 +217,10 @@ function wire(){
     if(b){e.preventDefault();b.select();}
   });
   document.getElementById("invCollapseAll").addEventListener("click",()=>{const ic=invCol();const anyOpen=character.inventory.some(it=>!ic.items[it.id]);character.inventory.forEach(it=>{ic.items[it.id]=anyOpen;});renderInventory();scheduleSave();});
+  /* Same shape as the inventory one: if anything is open, shut everything;
+     otherwise open everything. The label follows in the render. */
+  document.getElementById("atkCollapseAll").addEventListener("click",()=>{const c=atkCol();const anyOpen=character.attacks.some(a=>!c.items[a.id]);character.attacks.forEach(a=>{c.items[a.id]=anyOpen;});renderAttacks();scheduleSave();});
+  document.getElementById("featCollapseAll").addEventListener("click",()=>{const c=featCol();const gs=featGroups(character.features||[]).map(g=>g.label);const anyOpen=gs.some(g=>!c.groups[g]);gs.forEach(g=>{c.groups[g]=anyOpen;});renderFeatures();scheduleSave();});
   // ---- home screen ----
   document.getElementById("homeCog").addEventListener("click",()=>{homeForceSetup=!homeForceSetup;renderHome();});
   document.getElementById("homeBack").addEventListener("click",()=>{if(activeId)hideHome();});

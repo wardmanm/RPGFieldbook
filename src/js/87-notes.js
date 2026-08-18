@@ -265,7 +265,7 @@ function notesHTML(){
     const open=noteGroupOpen(tab);
     html+=`<div class="fgroup"><div class="fghead" data-notegroup="${tab}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
       `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`+
-      `<span class="fgname">${esc(NOTE_TABS[tab]||tab)}</span><span class="fgcount">${defs.length}</span></div>`+
+      `<span class="fgname">${esc(NOTE_TABS[tab]||tab)}</span><span class="cnt">(${defs.length})</span></div>`+
       `<div class="notesec-body" data-notegroupbody="${tab}"${open?"":` style="display:none"`}>`+
       defs.map(noteEntryHTML).join("")+`</div></div>`;
   });

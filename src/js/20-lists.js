@@ -68,6 +68,8 @@ function useFeature(id){
    is keyed by label, so this doubles as the collapse key — exactly how
    invCollapse.sections holds "★ Favorites". */
 const FEAT_FAV="★ Favorites";
+/* attacks reuse the same label, so the two lists read as one idea */
+const ATK_FAV="★ Favorites";
 /* Split the feature list into the groups the list renders, in order. Favourites
    are MOVED, not copied — the origin groups are built from non-favourites only,
    the same partition renderInventory does. Sorted by name like inventory's
@@ -89,11 +91,14 @@ function featGroups(list){
 function renderFeatures(){
   const el=document.getElementById("featureList");
   const list=character.features||[];
+  const caBtn=document.getElementById("featCollapseAll"), caLbl=document.getElementById("featCollapseLbl");
+  if(caBtn)caBtn.style.display=list.length?"inline-flex":"none";
+  if(caLbl)caLbl.textContent=featGroups(list).some(g=>!featCol().groups[g.label])?"Collapse all":"Expand all";
   if(!list.length){el.innerHTML=`<div class="empty">No features yet. Add ancestry traits, class features, or feats — attach effects to auto-adjust stats.</div>`;return;}
   let html="";
   featGroups(list).forEach(grp=>{
     const gc=!!featCol().groups[grp.label];
-    html+=`<div class="fgroup"><div class="fghead" data-fgroup="${esc(grp.label)}"><svg class="fcaret ${gc?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg><span class="fgname">${esc(grp.label)}</span><span class="fgcount">${grp.items.length}</span></div>`;
+    html+=`<div class="fgroup"><div class="fghead" data-fgroup="${esc(grp.label)}"><svg class="fcaret ${gc?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg><span class="fgname">${esc(grp.label)}</span><span class="cnt">(${grp.items.length})</span></div>`;
     if(!gc)grp.items.forEach(f=>{html+=featItemHTML(f);});
     html+=`</div>`;
   });

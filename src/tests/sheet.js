@@ -26,6 +26,7 @@ const {X, state, bootError, fragments} = loadApp([
   'spellHasDamage', 'spellDamageFromText', 'spellDamageBackfill', 'dropDamagelessSpellRows',
   'richHTML', 'richInline', 'noteHTML',
   'itemArmor', 'armorAC', 'armorKindOf', 'ARMOR_DEXCAP', 'isEquippable', 'contributions',
+  'featGroups', 'FEAT_FAV', 'ATK_FAV', 'atkCol', 'featCol',
   'syncSpellAttack', 'detectSpellAttack',
   'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
@@ -409,6 +410,46 @@ ck('a nonsense override is ignored', sec({category: 'Gear', sectionOverride: 'No
   ck('a shield stacks on top', ac() === 18, ac());
   X.character.inventory = [{id:'a1',name:'W',equipped:false,armor:{kind:'body',base:18,dexCap:0}}];
   ck('unequipped armor does nothing', ac() === 14, ac());   // 10 + 4 Dex
+  X.character = X.blankChar();
+}
+
+/* ================= favorites and collapse, consistently ======================
+   Inventory set the pattern: a star per row, a "★ Favorites" group above the
+   rest, and one control that shuts everything or opens everything. Attacks and
+   Features now read the same way. */
+{
+  ck('attacks and features share one favorites label', X.ATK_FAV === X.FEAT_FAV);
+
+  // features already grouped; assert the shape attacks was made to match
+  const g = X.featGroups([
+    {id:'f1', name:'Zeta', fav:true},
+    {id:'f2', name:'Alpha', fav:true},
+    {id:'f3', name:'Plain'},
+  ]);
+  ck('favorites come first', g[0].label === X.FEAT_FAV, g.map(x => x.label));
+  ck('...sorted by name inside the group', g[0].items.map(i => i.name).join() === 'Alpha,Zeta');
+  ck('...and the rest keep their own grouping', g.length === 2 && g[1].items.length === 1);
+  ck('no favorites means no favorites heading',
+     X.featGroups([{id:'f1', name:'Only'}]).every(x => x.label !== X.FEAT_FAV));
+
+  /* The collapse-all label is derived, not stored: "Collapse all" while anything
+     is open, "Expand all" once everything is shut. Getting this backwards is the
+     easy mistake, so pin the derivation both ways. */
+  X.character = X.blankChar();
+  X.character.attacks = [{id:'a1', name:'One'}, {id:'a2', name:'Two'}];
+  const atkLbl = () => X.character.attacks.some(a => !X.atkCol().items[a.id]) ? 'Collapse all' : 'Expand all';
+  ck('all open reads Collapse all', atkLbl() === 'Collapse all');
+  X.atkCol().items.a1 = true;
+  ck('one still open reads Collapse all', atkLbl() === 'Collapse all');
+  X.atkCol().items.a2 = true;
+  ck('all shut reads Expand all', atkLbl() === 'Expand all');
+
+  X.character = X.blankChar();
+  X.character.features = [{id:'f1', name:'A'}, {id:'f2', name:'B', fav:true}];
+  const featLbl = () => X.featGroups(X.character.features).some(g2 => !X.featCol().groups[g2.label]) ? 'Collapse all' : 'Expand all';
+  ck('features start on Collapse all', featLbl() === 'Collapse all');
+  X.featGroups(X.character.features).forEach(g2 => { X.featCol().groups[g2.label] = true; });
+  ck('...and read Expand all once every group is shut', featLbl() === 'Expand all');
   X.character = X.blankChar();
 }
 

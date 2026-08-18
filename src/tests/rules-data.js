@@ -669,7 +669,10 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('groups appear in registry-tab order',
      h.indexOf('>Sheet<') < h.indexOf('>Inventory<'), h.replace(/<[^>]+>/g, '|').slice(0, 200));
   ck('a tab with no notes gets no group', !h.includes('>Spells<'));
-  ck('the group count is the number of notes in it', h.includes('<span class="fgcount">2</span>'));
+  /* Counts read like the inventory section heads now — parenthesised, plain.
+     .fgcount is still the PILL, kept for the Settings badges ("12 entries"),
+     which are text and would read wrongly in brackets. */
+  ck('the group count is the number of notes in it', h.includes('<span class="cnt">(2)</span>'), h.slice(0, 160));
   ck('each note renders its body', h.includes('<p>a</p>') && h.includes('<p>c</p>'));
   ck('each note offers a jump back to its section', h.includes('data-notejump="vitals"'));
 
