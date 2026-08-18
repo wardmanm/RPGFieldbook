@@ -180,17 +180,37 @@ function richInline(text){
   if(!src.trim())return "";
   return noteInline(src.split("\n").join(NOTE_LB));
 }
-/* The hover preview is PLAIN TEXT, not noteHTML(): a hover card full of tappable
-   chips is a trap — you reach for the chip and the card disappears — and
-   interactive elements can't legally nest inside the button it lives in. */
+/* The preview lives INSIDE the note button, which constrains it more than it
+   first looks: a <button>'s content model is PHRASING content, so <p>, <ul> and
+   <li> are illegal there whatever they contain — not merely the tappable chips.
+   <strong>, <em>, <code> and <br> are phrasing, legal, and the whole point of
+   having typed the markers, so the preview renders those and represents the
+   block markers instead of dropping them: a bullet becomes "• ", a heading loses
+   its hashes, a quote its angle. The old preview flattened everything to one
+   line, which is why a note reading "**bold**" and "- bullet" previewed as
+   "bold bulleted" with no sign either marker had done anything.
+
+   Chips are unwrapped to their own words afterwards. They are role="button"
+   tabindex="0" — illegal inside a button, and a tappable target on a hover card
+   is a trap anyway: you reach for it and the card is gone.
+
+   Truncate the SOURCE, never the rendered HTML, which would cut tags in half. */
 function notePreview(text,max){
-  const s=String(text==null?"":text)
-    .replace(NOTE_SENTINELS,"")
-    .replace(/^ {0,3}(#{1,6} +|[-*+] +|\d{1,9}[.)] +|> ?)/gm,"")
-    .replace(/[*`]/g,"")
-    .replace(/\s+/g," ").trim();
   const n=max||180;
-  return esc(s.length>n?s.slice(0,n).trim()+"…":s);
+  let src=String(text==null?"":text).replace(NOTE_SENTINELS,"").replace(/\r\n?/g,"\n").trim();
+  let cut=false;
+  if(src.replace(/\s+/g," ").length>n){src=src.slice(0,n).replace(/\s+\S*$/,"");cut=true;}
+  const lines=src.split("\n").map(l=>l
+    .replace(/^ {0,3}#{1,6} +/,"")                    /* heading: keep the words */
+    .replace(/^ {0,3}> ?/,"")                         /* quote */
+    .replace(/^ {0,3}([-*+]) +/,"\u2022 ")            /* bullet -> • */
+    .replace(/^ {0,3}(\d{1,9})[.)] +/,"$1. ")         /* keep the number */
+    .replace(/^ {0,3}([-*_])(?: *\1){2,} *$/,"\u2014")/* divider -> em dash */
+  );
+  let html=richInline(lines.join("\n"));
+  for(let i=0;i<8&&/<span[^>]*role="button"/.test(html);i++)
+    html=html.replace(/<span[^>]*role="button"[^>]*>([\s\S]*?)<\/span>/g,"$1");
+  return cut?html+"\u2026":html;
 }
 
 /* ================= the icon on each section heading ================= */

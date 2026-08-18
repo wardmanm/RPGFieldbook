@@ -2991,3 +2991,21 @@ un-scoped so they reach every rich surface; `code` is styled on the element beca
 enters the DOM from our own renderer.
 
 **Removed:** `DESC_H0`/`DESC_H1`, dead once `descHTML` stopped holding chips itself.
+
+**Follow-up the same day: the hover preview.** The note CARD was rendering correctly all along — what
+was being looked at was `notePreview()`, the popup inside the note button, which deliberately stripped
+every marker and flattened to one line. A note reading `**bold**` / `- bullet` previewed as
+"bold bulleted", with no sign either marker had done anything.
+
+The old comment gave two reasons, and only one survives scrutiny — but a third, harder one replaces
+it. A `<button>`'s content model is PHRASING content, so `<p>`, `<ul>` and `<li>` are illegal inside
+it however inert they are; that rules out block markup regardless of the chip question. The chips are
+separately illegal (`role="button"` inside a button) and are a genuine trap on a hover card — you
+reach for one and the card is gone.
+
+So the preview now renders what IS phrasing — `<strong>`, `<em>`, `<code>`, `<br>` — and REPRESENTS
+the block markers rather than dropping them: a bullet becomes "• ", a heading loses its hashes, a
+divider becomes an em dash. Chips are unwrapped to their own words after rendering. Truncation is
+applied to the SOURCE, never the rendered HTML, which would cut tags in half. Tests assert the two
+invariants directly: no block element and nothing interactive can reach the preview, for several
+inputs.

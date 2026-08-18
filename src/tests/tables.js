@@ -239,11 +239,30 @@ ck('an unmatched backtick is literal', md('`foo').includes('`foo'));
   ck('a note of ' + JSON.stringify(v) + ' renders nothing', md(v) === '');
 });
 
-// ---------- the hover preview is plain text, deliberately
+/* ---------- the hover preview: formatted, but PHRASING content only
+   It lives inside the note <button>, whose content model is phrasing — so <p>,
+   <ul> and <li> are illegal there however harmless they look, and the chips are
+   role="button", which cannot nest in a button either. Emphasis is legal, and is
+   the whole reason someone typed the markers. */
 const pv = X.notePreview;
-ck('the preview strips block markers', pv('# Title\n- one\n- two') === 'Title one two', pv('# Title\n- one\n- two'));
-ck('the preview strips inline markers', pv('**b** and `c`') === 'b and c');
-ck('the preview collapses whitespace', pv('a\n\n\n   b') === 'a b');
+ck('the preview renders emphasis rather than dropping it',
+   pv('**b** and `c`') === '<strong>b</strong> and <code>c</code>', pv('**b** and `c`'));
+ck('a bullet is shown as one, not silently swallowed',
+   pv('- one\n- two') === '\u2022 one<br>\u2022 two', pv('- one\n- two'));
+ck('a heading keeps its words and loses its hashes',
+   pv('# Title\nbody') === 'Title<br>body', pv('# Title\nbody'));
+ck('a numbered item keeps its number', pv('1. first') === '1. first', pv('1. first'));
+ck('a divider becomes a dash, not nothing', pv('---') === '\u2014', pv('---'));
+
+/* the invariant that matters: nothing here may be a block or interactive, or the
+   markup is invalid inside the button and the chip is a trap on a hover card */
+['# H\n- a\n- b\n> q\n---\n1. n', '**b**\n\nsecond', 'plain'].forEach(src => {
+  const out = pv(src);
+  ck('no block element reaches the preview: ' + JSON.stringify(src.slice(0, 14)),
+     !/<(p|div|ul|ol|li|hr|blockquote)\b/.test(out), out);
+  ck('...and nothing interactive: ' + JSON.stringify(src.slice(0, 14)),
+     !/role="button"|tabindex=/.test(out), out);
+});
 ck('the preview escapes, since it goes in an attribute-adjacent span',
    pv('<img>') === '&lt;img&gt;');
 ck('the preview is capped and ellipsised', pv('x'.repeat(400)).length < 220 && pv('x'.repeat(400)).endsWith('…'));
