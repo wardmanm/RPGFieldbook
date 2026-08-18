@@ -2,18 +2,22 @@
   <section class="tabpanel" id="tab-rules">
     <div class="stack">
       <div class="card">
-        <div class="label">Glossary &amp; Rules <button class="add" id="btnAddGloss"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+        <div class="label rules-head" data-rulessec="gloss" role="button" tabindex="0" aria-expanded="true"><svg class="fcaret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Glossary &amp; Rules <span class="cnt" id="glossCount"></span> <button class="add" id="btnAddGloss"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+        <div data-rulesbody="gloss">
         <p class="hint">Terms here (plus any from a loaded rules pack) become tappable ❧ wherever they appear in your notes, features, spells, and item descriptions. Manage rule sources in Settings.</p>
         <input id="glossSearch" placeholder="Filter terms…" autocomplete="off" style="margin-bottom:10px">
         <input type="file" id="glossRulesFiles" accept="application/json,.json" multiple class="hidefile">
         <div id="glossList"></div>
+        </div>
       </div>
       <div class="card">
-        <div class="label">Reference Tables<span class="grow"></span></div>
+        <div class="label rules-head" data-rulessec="tables" role="button" tabindex="0" aria-expanded="true"><svg class="fcaret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Reference Tables <span class="cnt" id="tablesCount"></span><span class="grow"></span></div>
+        <div data-rulesbody="tables">
         <p class="hint">Tables lifted out of your rules pack — roll tables, class progressions, and the lookup tables the rules text refers to. Where a description mentions one, tap the highlighted name to open it here.</p>
         <input id="tablesSearch" placeholder="Filter tables…" autocomplete="off" style="margin-bottom:10px">
         <input type="file" id="tablesRulesFiles" accept="application/json,.json" multiple class="hidefile">
         <div id="tablesList"></div>
+        </div>
       </div>
     </div>
   </section>

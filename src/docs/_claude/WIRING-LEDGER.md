@@ -3106,3 +3106,27 @@ top (`+=`), because `casterLevel()` deliberately does not count warlock levels. 
 Worth knowing if it comes up again: multiclass merges pact slots into the same pool (Wizard 3 /
 Warlock 3 reads L1:4 L2:4). Real 5e tracks them separately because pact slots return on a short rest.
 That IS a simplification, and a different question from the one asked.
+
+## The two Rules-tab sections fold, and start folded (2026-08-18)
+
+Glossary & Rules is 154 entries with packs loaded and Reference Tables sits underneath it, so reaching
+a table meant scrolling past all of it. Both headings are toggles now and both default to shut; the
+whole tab fits on one screen.
+
+**Stored as a COLLAPSE map in `settings`, deliberately copying the Settings-sections idiom** — an
+absent key means "never touched", so shut-by-default today does not freeze a player who opens one
+tomorrow. Verified across a reload: the opened section came back open, the untouched one came back
+shut, and only the touched key was written (`{tables:false}`).
+
+**In settings, NOT on the character.** The glossary and tables come from the rules packs, which are
+global — folding them on one character and finding them open on the next would be the surprising
+behaviour.
+
+**The trap that needed a guard:** the glossary heading contains its own "+ Add" button, so a bare
+`closest("[data-rulessec]")` toggled the section every time you reached for it. The handler now
+ignores clicks that land on anything interactive inside the heading. Verified: Add opens its dialog
+and leaves the section exactly as it was.
+
+Counts sit in the headings (`(154)`, `(174)`) so a shut section still says what is inside — the
+reason you would open it — matching the inventory count style. Repainted from `refreshRulesUI()` so a
+pack load updates them, and from `renderAll()` so loading a sheet with cached rules draws them at all.

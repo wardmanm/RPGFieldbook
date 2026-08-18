@@ -18,6 +18,7 @@ const {X, state, bootError, fragments} = loadApp([
   'SET_SECTIONS','setSecDef','setSecOpen','setSecHTML','rulesEntryCount','settings',
   'NOTE_SECTIONS','NOTE_TABS','noteDef','getNote','noteText','hasNote','saveNote',
   'noteGroupOpen','notesHTML','noteBtnHTML','noteEntryHTML','esc',
+  'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1352,6 +1353,41 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const inert = new Set(['srcList', 'rulesData', 'rulesStatus', 'encHint', 'setSections']);
   const unwired = [...declared].filter(k => !used.has(k) && !inert.has(k));
   ck('every control it renders is wired up somewhere', unwired.length === 0, unwired);
+}
+
+/* ================= the Rules tab sections start collapsed ====================
+   Both lists are long and Reference Tables sits under the glossary, so reaching
+   the tables meant scrolling past 132 entries. Stored as a COLLAPSE map in
+   settings — like the Settings sections — so an absent key means "never
+   touched" and the default can be closed without freezing a later choice. */
+{
+  const S = X.settings;
+  S.rulesCollapse = {};
+  ck('both sections start collapsed', !X.rulesSecOpen('gloss') && !X.rulesSecOpen('tables'));
+  ck('every declared section defaults closed', X.RULES_SECS.every(d => d.open === false), X.RULES_SECS);
+
+  X.setRulesSecOpen('gloss', true);
+  ck('opening one is remembered', X.rulesSecOpen('gloss') === true);
+  ck('...and does not open the other', X.rulesSecOpen('tables') === false);
+  ck('...stored as a COLLAPSE flag, so the key means "touched"',
+     S.rulesCollapse.gloss === false, JSON.stringify(S.rulesCollapse));
+
+  X.setRulesSecOpen('gloss', false);
+  ck('shutting it again is remembered too',
+     X.rulesSecOpen('gloss') === false && S.rulesCollapse.gloss === true);
+
+  /* the reason for the collapse-map shape: a player who has opened a section
+     must not have it slammed shut by a later change of default */
+  S.rulesCollapse = {gloss: false};
+  ck('an explicit choice survives, whatever the default says', X.rulesSecOpen('gloss') === true);
+  ck('...while an untouched section still follows the default', X.rulesSecOpen('tables') === false);
+
+  // junk in settings must not throw or wedge the tab shut
+  S.rulesCollapse = null;
+  ck('a missing map falls back to the defaults', X.rulesSecOpen('gloss') === false);
+  S.rulesCollapse = ['not', 'a', 'map'];
+  ck('an array is ignored rather than trusted', X.rulesSecOpen('tables') === false);
+  S.rulesCollapse = {};
 }
 
 ck.done();

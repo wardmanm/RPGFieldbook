@@ -121,6 +121,10 @@ function wire(){
        derived. Same as the inventory star above, and unlike the On/Off toggle
        below, which does change what the effects engine sees. */
     if((m=t.closest("[data-fav-feature]"))){const f=character.features.find(x=>x.id===m.dataset.favFeature);if(f){f.fav=!f.fav;renderFeatures();scheduleSave();}return;}
+    /* The glossary header contains its own "+ Add" button, so a bare closest()
+       here would toggle the section every time you reached for it. Anything
+       interactive inside the heading keeps its own click. */
+    if((m=t.closest("[data-rulessec]"))&&!t.closest("button, input, select, a, [role=button]:not([data-rulessec])")){toggleRulesSec(m.dataset.rulessec);return;}
     if((m=t.closest("[data-fav-attack]"))){const a=character.attacks.find(x=>x.id===m.dataset.favAttack);if(a){a.fav=!a.fav;renderAttacks();scheduleSave();}return;}
     if((m=t.closest("[data-fgroup]"))){const g=m.dataset.fgroup,fc=featCol();fc.groups[g]=!fc.groups[g];renderFeatures();scheduleSave();return;}
     if((m=t.closest("[data-edit-feature]")))return openFeatureForm(character.features.find(x=>x.id===m.dataset.editFeature));

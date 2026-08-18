@@ -77,4 +77,5 @@ Bullets below this line — leave the heading in place.
 - Attacks & Weapons and Features & Traits gained the Collapse all / Expand all button that Inventory already had.
 - Group headings across the app now match the Inventory and Spells ones: the same colour, with the count in brackets beside the heading.
 - The Concentrating condition now also shows on the Spells tab, just above Active Spells, so you can see what you would drop before casting the next one. It is the same row as on the Sheet — clearing it from either place ends the spell.
+- Glossary & Rules and Reference Tables on the Rules tab now fold away, and both start folded — the tables are reachable without scrolling past the whole glossary. Each heading shows how many entries are inside, and whichever you leave open stays open next time.
 

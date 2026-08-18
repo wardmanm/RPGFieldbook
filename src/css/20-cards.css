@@ -81,6 +81,11 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 .fghead .cnt{font-family:var(--head);font-size:12px;font-weight:600;color:var(--ink-soft);flex:none}
 /* the Settings badge keeps its far-right position; only counts move inward */
 .fgcount{font-family:var(--head);font-size:11px;font-weight:700;color:var(--ink-soft);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:1px 8px;flex:none;margin-left:auto}
+/* The two Rules-tab headings are toggles. The caret is the same one the group
+   heads use, so a shut section reads the same way everywhere in the app. */
+.rules-head{cursor:pointer;user-select:none}
+.rules-head .fcaret{stroke:var(--accent)}
+.rules-head .cnt{font-family:var(--head);font-size:12px;font-weight:600;color:var(--ink-soft);flex:none}
 .fcaret{width:14px;height:14px;flex:none;stroke:var(--ink-soft);fill:none;stroke-width:2.5;transform:rotate(90deg);transition:transform .12s}
 .fcaret.c{transform:rotate(0deg)}
 .fitoggle{background:transparent;border:0;cursor:pointer;padding:0 2px;display:inline-flex;align-items:center;flex:none;color:var(--ink-soft)}

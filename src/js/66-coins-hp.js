@@ -252,6 +252,6 @@ function renderAll(){
      way the mirror never saw — reconciles on load rather than showing a
      condition for a spell that isn't running. */
   syncConcStatus();
-  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderNoteIcons();renderNotes();renderAllRT();recompute();
+  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderRulesSections();renderNoteIcons();renderNotes();renderAllRT();recompute();
 }
 

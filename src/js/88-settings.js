@@ -175,7 +175,7 @@ function rulesStatusText(){
 function updateRulesStatus(msg,cls){const el=document.getElementById("rulesStatus");if(el){el.textContent=msg||rulesStatusText();el.className="status "+(cls||"");}}
 /* renderNotes is here because notes run through highlight() too — editing the
    glossary changes how every note reads. */
-function refreshRulesUI(){renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderAllRT();}
+function refreshRulesUI(){renderRulesSections();renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderAllRT();}
 const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
 /* display names for a category — one map, used by both the group summary and
    the headings in the loaded-data list */

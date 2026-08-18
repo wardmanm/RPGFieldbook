@@ -1,3 +1,45 @@
+/* ---- the two Rules-tab sections collapse, and START collapsed ----
+   Both lists are long — the glossary alone is 132 entries with a pack loaded —
+   and Reference Tables sits underneath it, so reaching the tables meant
+   scrolling past all of it.
+
+   Stored as a COLLAPSE map in settings, exactly like the Settings sections and
+   for the same reason: an absent key means "never touched", so the default can
+   be closed today without freezing anyone who has since opened one. It lives in
+   SETTINGS rather than on the character because the glossary and tables come
+   from the rules packs, which are global — collapsing them on one character and
+   finding them open on the next would be the surprising behaviour.
+
+   `open` is the default for a section nobody has touched. */
+const RULES_SECS=[{k:"gloss",open:false},{k:"tables",open:false}];
+function rulesSecDef(k){return RULES_SECS.find(s=>s.k===k)||null;}
+function rulesSecOpen(k){
+  const c=(settings&&settings.rulesCollapse&&typeof settings.rulesCollapse==="object"&&!Array.isArray(settings.rulesCollapse))?settings.rulesCollapse:{};
+  if(k in c)return !c[k];
+  const d=rulesSecDef(k);return d?d.open:true;
+}
+function setRulesSecOpen(k,open){
+  if(!settings.rulesCollapse||typeof settings.rulesCollapse!=="object"||Array.isArray(settings.rulesCollapse))settings.rulesCollapse={};
+  settings.rulesCollapse[k]=!open;
+  saveSettings();
+}
+/* Paint both sections from the stored state. Counts go in the heading so a shut
+   section still says what is inside it — the reason you would open it. */
+function renderRulesSections(){
+  const counts={gloss:(allGlossary()||[]).length,tables:(allTables()||[]).length};
+  RULES_SECS.forEach(({k})=>{
+    const head=document.querySelector(`[data-rulessec="${k}"]`),
+          body=document.querySelector(`[data-rulesbody="${k}"]`);
+    if(!head||!body)return;
+    const open=rulesSecOpen(k);
+    body.style.display=open?"":"none";
+    head.setAttribute("aria-expanded",open?"true":"false");
+    const car=head.querySelector(".fcaret");if(car)car.classList.toggle("c",!open);
+    const cnt=document.getElementById(k==="gloss"?"glossCount":"tablesCount");
+    if(cnt)cnt.textContent=counts[k]?`(${counts[k]})`:"";
+  });
+}
+function toggleRulesSec(k){setRulesSecOpen(k,!rulesSecOpen(k));renderRulesSections();}
 /* ================= rules tables =================
    Tables come from a rules pack as their own category (see rules-schema §6.11).
    The converter lifts each table out of the prose it lived in and leaves a
