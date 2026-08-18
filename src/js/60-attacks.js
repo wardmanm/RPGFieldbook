@@ -33,6 +33,24 @@ function attackDamageStr(a,bonus){
     .concat(extraDamageList(a).map(d=>damagePartStr(d.dice,d.type,0)))
     .filter(Boolean).join(" + ");
 }
+/* ---- what an attack is LINKED to ----
+   The attack form rebuilds its record from the boxes, so any field the form does
+   not ask about is dropped unless it is carried across — the same trap the item
+   and feature editors already guard against, and every one of these is invisible
+   when it goes:
+     itemId   the inventory item this attack came from. Lose it and the next
+              rules-pack update finds no attack for the item, calls
+              addAttackForItem() and the player gets a DUPLICATE row.
+     spellId  the same link for a spell, and what the Cast button reads.
+     source   "spell", which is what makes the row show Cast instead of Edit.
+     save     the {ability} block that makes a spell-save row print its DC
+              rather than a to-hit number.
+   Pure, so the round trip is assertable without a DOM. */
+const ATTACK_LINK_FIELDS=["itemId","spellId","source","save"];
+function carryAttackLinks(prev,rec){
+  if(prev&&rec)ATTACK_LINK_FIELDS.forEach(k=>{if(prev[k]!==undefined&&prev[k]!==null)rec[k]=prev[k];});
+  return rec;
+}
 /* ---- spell casting, attacks, and active spells ---- */
 function spellDC(){const c=contributions();const sa=character.spellAbility;if(!sa)return null;return 8+pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2);}
 function spellAtkBonus(){const c=contributions();const sa=character.spellAbility;if(!sa)return null;return pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2);}
@@ -67,21 +85,81 @@ function detectSpellAttack(sp){
 function ensureSpellAttacks(){(character.spells||[]).forEach(sp=>{if(sp.atkType===undefined){detectSpellAttack(sp);syncSpellAttack(sp);}});}
 let _toastT=null;
 function toast(msg){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";document.body.appendChild(el);}el.textContent=msg;el.classList.add("show");clearTimeout(_toastT);_toastT=setTimeout(()=>el.classList.remove("show"),1900);}
+/* A spell's attack row is REBUILT from the spell every time, never edited on the
+   sheet — which is why the row has a Cast button where a weapon has Edit. So
+   anything the row can show has to be a field on the SPELL: a spell that deals
+   two damage types carries its own `extraDamage`, in the identical {dice,type}
+   shape attacks use, and it is copied over here. Optional and absent when
+   empty, so a spell saved before this reads back exactly as it did. */
 function syncSpellAttack(sp){
   character.attacks=(character.attacks||[]).filter(a=>a.spellId!==sp.id);
+  const xd=extraDamageList(sp);
   if(sp.atkType==="attack"){
     character.attacks.push({id:uid(),spellId:sp.id,source:"spell",name:sp.name,kind:(sp.atkKind==="melee"?"melee":"ranged"),ability:character.spellAbility||"none",proficient:true,addAbilityDamage:false,atkMisc:"",damageDice:sp.dice||"",damageType:sp.damageType||"",dmgMisc:"",notes:sp.atkNote||""});
   }else if(sp.atkType==="save"){
     character.attacks.push({id:uid(),spellId:sp.id,source:"spell",name:sp.name,save:{ability:sp.saveAbility||"dex"},damageDice:sp.dice||"",damageType:sp.damageType||"",notes:sp.atkNote||""});
   }
+  if(xd.length){const row=character.attacks[character.attacks.length-1];if(row&&row.spellId===sp.id)row.extraDamage=xd;}
 }
 function promptSpellAttack(sp,atLevel){
   let body="";
   if(sp.atkType==="attack"){const b=spellAtkBonus();body=`<p><b>Spell attack:</b> ${b!=null?fmt(b):"—"} to hit (${sp.atkKind==="melee"?"melee":"ranged"})</p>`;}
   else if(sp.atkType==="save"){const dc=spellDC();body=`<p><b>Save DC:</b> ${dc!=null?dc:"—"} ${esc((sp.saveAbility||"").toUpperCase())}</p>`;}
-  if(sp.dice)body+=`<p><b>Damage:</b> ${esc(sp.dice)}${sp.damageType?` ${esc(sp.damageType)}`:""}</p>`;
+  /* the same line the attack row shows, extras and all — one formatter, so the
+     dialog cannot promise different damage from the sheet behind it */
+  const dmg=attackDamageStr({damageDice:sp.dice,damageType:sp.damageType,extraDamage:sp.extraDamage},0);
+  if(dmg)body+=`<p><b>Damage:</b> ${esc(dmg)}</p>`;
   body+=`<p class="hint">Cast at level ${atLevel||sp.level}. Roll the dice at your table.</p><div class="m-actions"><button class="tbtn primary" id="okAtk">OK</button></div>`;
   openModal("Cast "+sp.name,body);const b=document.getElementById("okAtk");if(b)b.addEventListener("click",closeModal);
+}
+/* ---- the Concentrating condition ----
+   Concentration is one fact wearing two faces: a row on Active Spells and a
+   condition in Statuses. It is STORED once — as the active spell — and the
+   status mirrors it, rather than two records that can drift apart. `s.concId`
+   holds the active spell's id and is the only thing read, so a "Concentrating"
+   a player typed themselves is never mistaken for this one.
+   Both directions are wired, and the mirror is a full reconcile rather than a
+   pair of add/remove calls: that is what stops the condition being stranded when
+   the spell ends by some other route — a second concentration spell replacing
+   it, its duration running out, or the spell being deleted.
+   No effects. Concentration's rules are prose (a Constitution save when you take
+   damage, one spell at a time); effects are numeric-only. */
+const CONC_STATUS_NAME="Concentrating";
+function concActiveSpell(){return (character.activeSpells||[]).find(a=>a&&a.conc)||null;}
+function concStatusRow(){return (character.statuses||[]).find(s=>s&&s.concId)||null;}
+function concStatusDesc(act){return `Concentrating on ${act.name}${num(act.level)?` (level ${num(act.level)})`:""}. Clearing this condition ends the spell.`;}
+function syncConcStatus(){
+  if(!Array.isArray(character.statuses))character.statuses=[];
+  const act=concActiveSpell();
+  let row=concStatusRow();
+  /* Adopt a hand-typed "Concentrating" instead of adding a second one — two rows
+     both claiming to be the truth is exactly what addStatusByName avoids. Its
+     own notes are left alone; only a row this code wrote is re-described. */
+  const adopted=!act||row?null:character.statuses.find(s=>s&&String(s.name||"").trim().toLowerCase()===CONC_STATUS_NAME.toLowerCase());
+  if(adopted)row=adopted;
+  if(act&&row){
+    const mine=!adopted;
+    row.concId=act.id;row.name=CONC_STATUS_NAME;row.active=true;
+    if(mine||!String(row.description||"").trim())row.description=concStatusDesc(act);
+  }else if(act){
+    character.statuses.push({id:uid(),name:CONC_STATUS_NAME,description:concStatusDesc(act),effects:[],active:true,concId:act.id});
+  }else if(row)character.statuses=character.statuses.filter(s=>s!==row);
+  return concStatusRow();
+}
+/* The other direction: the condition is cleared or removed, so the spell ends.
+   Returns the spell that ended, for the caller to say so. */
+function endConcentration(){
+  const act=concActiveSpell();
+  if(act)character.activeSpells=(character.activeSpells||[]).filter(a=>a.id!==act.id);
+  character.statuses=(character.statuses||[]).filter(s=>!(s&&s.concId));
+  return act;
+}
+/* Asked once, because a concentration spell lost to a stray tap is not something
+   the sheet can give back. False means the player said no and nothing changed. */
+function endConcFromStatus(){
+  const act=concActiveSpell();
+  if(act&&!confirm(`End concentration on ${act.name}? The spell ends too.`))return false;
+  endConcentration();return true;
 }
 function castSpell(spellId){
   const sp=(character.spells||[]).find(x=>x.id===spellId);if(!sp)return;
@@ -95,16 +173,22 @@ function castSpell(spellId){
   if(pick&&pick.level>0){const S=character.slots[pick.level];S.used=Math.min(num(S.total),num(S.used)+1);}
   const durSec=spellDurationSec(sp), timed=conc||(durSec!=null&&durSec>0);
   if(timed){if(!character.activeSpells)character.activeSpells=[];character.activeSpells.push({id:uid(),spellId:sp.id,name:sp.name,level:(pick?pick.level:lvl),conc:conc,durationSec:(durSec!=null?durSec:null),elapsedSec:0,castAt:Date.now()});}
-  renderSlotBubbles();renderActiveSpells();scheduleSave();
-  toast(`Cast ${sp.name}`+((pick&&pick.level>0)?` · level ${pick.level} slot`:(lvl===0?" · cantrip":""))+(timed?" · active":""));
+  if(conc)syncConcStatus();
+  renderSlotBubbles();renderActiveSpells();renderStatuses();scheduleSave();
+  toast(`Cast ${sp.name}`+((pick&&pick.level>0)?` · level ${pick.level} slot`:(lvl===0?" · cantrip":""))+(conc?" · concentrating":(timed?" · active":"")));
   if(sp.atkType==="attack"||sp.atkType==="save")promptSpellAttack(sp,pick?pick.level:lvl);
 }
-function endActiveSpell(id){character.activeSpells=(character.activeSpells||[]).filter(a=>a.id!==id);renderActiveSpells();scheduleSave();}
+function endActiveSpell(id){character.activeSpells=(character.activeSpells||[]).filter(a=>a.id!==id);syncConcStatus();renderActiveSpells();renderStatuses();scheduleSave();}
 function bumpActive(a,deltaSec){a.elapsedSec=Math.max(0,num(a.elapsedSec)+deltaSec);maybeExpire(a);}
 function maybeExpire(a){
   if(a.durationSec!=null&&a.durationSec>0&&a.elapsedSec>=a.durationSec&&!a.expiredPrompted){
     a.expiredPrompted=true;
-    if(confirm(`${a.name} has reached its duration (${fmtElapsed(a.durationSec)}). End it?`))character.activeSpells=character.activeSpells.filter(x=>x.id!==a.id);
+    /* the spell ending here is the "some other route" the condition must not be
+       stranded by, so the mirror is reconciled and redrawn on the spot */
+    if(confirm(`${a.name} has reached its duration (${fmtElapsed(a.durationSec)}). End it?`)){
+      character.activeSpells=character.activeSpells.filter(x=>x.id!==a.id);
+      syncConcStatus();renderStatuses();
+    }
   }
   if(a.durationSec!=null&&a.elapsedSec<a.durationSec)a.expiredPrompted=false;
 }
@@ -163,7 +247,7 @@ function renderAttacks(){
     el.appendChild(d);
   });
 }
-/* one editable {dice,type} row in the attack form's "Additional damage types" list */
+/* one editable {dice,type} row in an "Additional damage types" list */
 function attackXDmgRowHTML(d){
   return `<div class="xdmg-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
       <input class="xdDice" value="${esc((d&&d.dice)||"")}" placeholder="1d6" style="flex:0 0 34%" aria-label="Extra damage dice">
@@ -171,8 +255,26 @@ function attackXDmgRowHTML(d){
       <button type="button" class="icon danger xdDel" aria-label="Remove damage type"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
     </div>`;
 }
-function readAttackXDmg(){
-  const wrap=document.getElementById("aXDmg");if(!wrap)return [];
+/* The whole repeatable list, as markup and as wiring, so the attack form and the
+   spell form offer the SAME control: a spell's extras reach the sheet through
+   syncSpellAttack, so anything the two could disagree about would show up as an
+   attack row that doesn't match the spell it came from. `id` is a parameter
+   because two elements sharing one id on a page is a silent no-op for the
+   second — the same reason statusDatalistHTML() takes one. */
+function xDmgFieldHTML(id,rec,hint){
+  return `<div class="field"><label class="f">Additional damage types</label>
+      <div id="${id}">${extraDamageList(rec).map(attackXDmgRowHTML).join("")}</div>
+      <button type="button" class="tbtn" id="${id}Add" style="padding:4px 10px;min-height:auto">+ Add damage type</button>
+      <p class="hint" style="margin:6px 0 0">${esc(hint)}</p></div>`;
+}
+function wireXDmgField(id){
+  const xw=document.getElementById(id),xa=document.getElementById(id+"Add");
+  if(xa)xa.addEventListener("click",()=>{xw.insertAdjacentHTML("beforeend",attackXDmgRowHTML({}));});
+  if(xw)xw.addEventListener("click",ev=>{const b=ev.target.closest(".xdDel");if(b&&b.parentNode)b.parentNode.remove();});
+}
+function clearXDmgField(id){const xw=document.getElementById(id);if(xw)xw.innerHTML="";}
+function readXDmg(id){
+  const wrap=document.getElementById(id);if(!wrap)return [];
   return Array.prototype.map.call(wrap.querySelectorAll(".xdmg-row"),r=>({
     dice:(r.querySelector(".xdDice").value||"").trim(),
     type:(r.querySelector(".xdType").value||"").trim()
@@ -189,23 +291,23 @@ function openAttackForm(existing){
     <label class="opt" id="aProf"><input type="checkbox" ${a.proficient?"checked":""}>Proficient (add proficiency bonus)</label>
     <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="aDice" value="${esc(a.damageDice)}" placeholder="1d8"></div>
       <div class="field"><label class="f">Damage type</label><input id="aType" value="${esc(a.damageType)}" placeholder="piercing"></div></div>
-    <div class="field"><label class="f">Additional damage types</label>
-      <div id="aXDmg">${extraDamageList(a).map(attackXDmgRowHTML).join("")}</div>
-      <button type="button" class="tbtn" id="aXAdd" style="padding:4px 10px;min-height:auto">+ Add damage type</button>
-      <p class="hint" style="margin:6px 0 0">A second die rolled with this attack — 1d6 poison on a sword. Extras roll on their own; the ability modifier and any bonuses below stay on the main damage.</p></div>
+    ${xDmgFieldHTML("aXDmg",a,"A second die rolled with this attack — 1d6 poison on a sword. Extras roll on their own; the ability modifier and any bonuses below stay on the main damage.")}
     <div class="field"><label class="f">Extra damage</label><input id="aDmgMisc" type="number" value="${esc(a.dmgMisc)}" placeholder="0"></div>
     <label class="opt" id="aAddAbil"><input type="checkbox" ${a.addAbilityDamage?"checked":""}>Add ability modifier to damage</label>
     <div class="field"><label class="f">Notes</label><input id="aNotes" value="${esc(a.notes||"")}" placeholder="Range 80/320, versatile…"></div>
     <div class="m-actions"><button class="tbtn" id="aCancel">Cancel</button><button class="tbtn primary" id="aSave">${existing?"Save":"Add"}</button></div>`);
   document.getElementById("aCancel").addEventListener("click",closeModal);
-  const xw=document.getElementById("aXDmg"),xa=document.getElementById("aXAdd");
-  if(xa)xa.addEventListener("click",()=>{xw.insertAdjacentHTML("beforeend",attackXDmgRowHTML({}));});
-  if(xw)xw.addEventListener("click",ev=>{const b=ev.target.closest(".xdDel");if(b&&b.parentNode)b.parentNode.remove();});
+  wireXDmgField("aXDmg");
   document.getElementById("aSave").addEventListener("click",()=>{
     const rec={id:a.id,name:document.getElementById("aName").value.trim()||"Attack",kind:document.getElementById("aKind").value,ability:document.getElementById("aAbil").value,proficient:document.querySelector("#aProf input").checked,atkMisc:document.getElementById("aAtkMisc").value,damageDice:document.getElementById("aDice").value.trim(),damageType:document.getElementById("aType").value.trim(),dmgMisc:document.getElementById("aDmgMisc").value,addAbilityDamage:document.querySelector("#aAddAbil input").checked,notes:document.getElementById("aNotes").value.trim()};
     /* omitted when empty, so an attack that has no extras carries no field —
        the shape an older save already has, and what migrate round-trips */
-    const xd=readAttackXDmg();if(xd.length)rec.extraDamage=xd;
+    const xd=readXDmg("aXDmg");if(xd.length)rec.extraDamage=xd;
+    carryAttackLinks(a,rec);
+    /* Carry the generated-fields fingerprint too, so this save is COMPARED
+       against it rather than becoming unknowable: a save that changed nothing
+       still resyncs with its item, and a real edit reads as an edit. */
+    if(a.genFp)rec.genFp=a.genFp;
     const i=character.attacks.findIndex(x=>x.id===a.id);if(i>=0)character.attacks[i]=rec;else character.attacks.push(rec);
     closeModal();renderAttacks();scheduleSave();
   });

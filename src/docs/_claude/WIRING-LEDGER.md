@@ -2768,3 +2768,141 @@ printed sheet.
 
 Sheet suite is +76 checks (1280 total). CSS gained `.tbtn:disabled`, which also fixes the coin
 adjuster's Apply button looking enabled while it was not.
+## Editing an attack kept its links (2026-08-17)
+
+`openAttackForm()` rebuilt its record from the form boxes and dropped everything the form does not
+ask about. `carryAttackLinks(prev,rec)` in `src/js/60-attacks.js` copies the four across —
+`itemId`, `spellId`, `source`, `save` — and the save handler calls it. Pure, so the round trip is
+asserted without a DOM (7 checks in `src/tests/sheet.js`), with one source guard in
+`rules-data.js` that the form actually calls it, next to the identical guards on the feature form.
+
+The visible damage was the duplicate: `updResyncAttack()` looks an attack up by `itemId`, found
+none on an edited weapon, and called `addAttackForItem()` — so a pack update grew a second row.
+**Deliberately NOT answered here:** whether a resync may overwrite a player-edited attack.
+`72-char-update.js` is untouched; it still rebuilds the row wholesale from the item, which is now
+reachable again for edited attacks. That is the open design call the previous ledger entry flagged.
+## Spells carry their own additional damage types (2026-08-17)
+
+#30 gave attacks `extraDamage`, but a spell's attack row is REBUILT from the spell by
+`syncSpellAttack()` every time and has no Edit button, so a spell that deals two damage types had
+nowhere to say so. The field therefore belongs to the SPELL, in the identical `{dice,type}` shape:
+`sp.extraDamage` → copied onto the row it builds, absent when empty.
+
+One control, two forms. `xDmgFieldHTML(id,rec,hint)` / `wireXDmgField(id)` / `readXDmg(id)` /
+`clearXDmgField(id)` in `60-attacks.js` are the attack form's row list, generalised on its element
+id (`readAttackXDmg()` is gone; nothing else called it). `id` is a parameter for the reason
+`statusDatalistHTML` takes one — two elements sharing an id is a silent no-op for the second. The
+spell form's list sits inside `#sAtkFields`, so it appears only once the spell IS an attack or a
+save, and the pack-insert handler clears it: every other box then describes the spell just picked.
+
+- **No auto-detection.** `detectSpellAttack` still reads only one `NdN <type> damage` phrase and is
+  untouched; "explicit setting wins" is unchanged. A second type is phrased far too many ways for a
+  guess to be better than a blank box.
+- `promptSpellAttack` now formats its Damage line through `attackDamageStr`, so the cast dialog and
+  the sheet row cannot promise different damage.
+- `UPD_FIELDS.spell` is `level/meta/text`, so a pack update can never clobber the player's extras.
+- **`getElementById("literal")` in a form is checked by rules-data.js** against ids the app renders.
+  A generated id (`id="${id}"`) is not "declared", so the one literal lookup left — clearing the
+  list on pack-insert — had to become `clearXDmgField(id)`. That guard is worth keeping honest.
+
+20 checks in `src/tests/sheet.js` (first coverage `syncSpellAttack` has had), 3 wiring guards in
+`rules-data.js`. Suite 1363.
+
+**Seen, not fixed:** `openSpellForm`'s save drops `s.src`, the same family as the attack-form bug
+above — an edited spell stops being recognisable to `72-char-update.js` and falls back to matching
+by name. Out of scope here; wants its own issue.
+## The Concentrating condition — issue #37 (2026-08-17)
+
+Casting a concentration spell adds a **Concentrating** status; clearing or removing that status ends
+the spell. Machinery in `src/js/60-attacks.js`: `syncConcStatus()`, `endConcentration()`,
+`endConcFromStatus()`, `concActiveSpell()`, `concStatusRow()`, `CONC_STATUS_NAME`.
+
+**One fact, one store.** Concentration lives on the active spell (`a.conc`, already there); the
+status is a MIRROR carrying `s.concId` = that active spell's id. Nothing is matched by name, so a
+"Concentrating" a player typed themselves is never mistaken for this one — and nothing has to be
+kept in agreement between two records that can both claim to be true.
+
+**A reconcile, not add/remove.** `syncConcStatus()` makes the statuses match whatever concentration
+spell is running: re-point and re-describe if there is one, delete the linked row if there is not.
+That is what stops the condition being STRANDED when the spell ends by a route the adding code never
+saw — a second concentration spell replacing it (`castSpell`), the duration elapsing (`maybeExpire`,
+which now redraws statuses itself so every `bumpActive` caller is covered), the spell being deleted
+(`90-boot.js`), or an older sheet that was mid-concentration before any of this existed
+(`renderAll()` calls it before anything draws).
+
+**The other direction** is three handlers: `data-del-status` (prompt names the spell that ends),
+`data-toggle-status` (asks via `endConcFromStatus`, because a lost concentration spell cannot be
+given back), and the status form's save — which also had to carry `concId` across, since it rebuilds
+its record from the boxes, and treats unticking "Active now" as ending it.
+
+- **No effects.** Concentration's rules are prose — a Constitution save when you take damage, one at
+  a time. Effects are numeric-only, so the row carries `effects: []`.
+- `concId` is optional and additive: `migrate` preserves it with no code, `blankChar` needs nothing,
+  and a status saved before it loads untouched. Asserted both ways.
+- A hand-typed "Concentrating" is ADOPTED rather than duplicated (addStatusByName's precedent), and
+  keeps the note the player wrote — only a row this code created is re-described.
+
+29 checks in `src/tests/sheet.js` (the first coverage `castSpell` has had) and 7 wiring guards in
+`rules-data.js` for the handlers the stub DOM cannot click. Suite 1399.
+
+## Editing a spell kept its rules-update stamp (2026-08-17)
+
+`openSpellForm()`'s save handler rebuilds `rec` from the boxes and assigned it over the spell, so
+`s.src` went with everything else the form does not ask about. Spell is the third kind in
+`UPD_FIELDS`, and its two siblings already guarded this — feature (`if(f.src)rec.src=f.src;`) and
+item (`if(it.src)rec.src=it.src;`) — so the fix is the same one line, `if(s.src)rec.src=s.src;`,
+placed beside the extra-damage carry.
+
+What it cost while it was missing: `updResolve()` fell through to the name-only path, so every
+edited spell matched `loose`, `updEdited()` returned `null` (unknowable) and the row came back
+`edited:true` and unticked — and a same-named spell in a second loaded pack made it `ambiguous`
+instead of resolving by pack.
+
+Six checks in `src/tests/char-update.js` against the real `updResolve`/`updEdited` (stamped resolves
+exactly and its edit is detected; stamp deleted → loose + `null`; a hand-typed spell has no `src` and
+reports `unmatched`), plus one source guard in `rules-data.js` on the existing `spellSave` slice,
+next to the identical feature/item guards. Suite 1406.
+
+## A resync no longer overwrites a player-edited attack (2026-08-17)
+
+This is the open design call the previous two entries flagged, and the owner's answer is: **if the
+player has edited the attack, do not override it. They did that for a reason.**
+
+`updResyncAttack()` spliced the row out and rebuilt it from the item, so any edit went silently and
+with nothing to undo it. Attacks carry no `src` — nothing resolves them back to a pack, only the ITEM
+can regenerate them — so the missing half was "was this row left exactly as we generated it?".
+
+`genFp` (72-char-update.js) is ONE `fpHash` over `ATK_GEN_FIELDS` — name, kind, ability, atkMisc,
+damageDice, damageType, dmgMisc, notes: the fields `addAttackForItem()` derives from the item. A
+single hash, not an `fpMap`: nothing needs to know which field moved. `updAtkEdited()` is
+three-valued and mirrors `updEdited()` exactly — `null` when there is no stamp — and only `false`
+may be rebuilt:
+
+- `false` still as generated → rebuild, keeping the id so collapse state survives
+- `true`  player edited it   → leave it
+- `null`  no stamp (pre-1.5) → unknowable → leave it
+
+Three places touch the stamp: `addAttackForItem()` stamps at generation; `syncItemAttack()`
+re-stamps when editing the ITEM rewrites the row in place (without this, editing a weapon makes its
+own attack look hand-edited and it would never resync again); and `openAttackForm()`'s save carries
+`a.genFp` across, so a save that changed nothing is still comparable and a real edit reads as an
+edit rather than as unknowable.
+
+**The fingerprint covers every field the generator sets, `proficient` and `addAbilityDamage`
+included.** They were left out first, on the reasoning that they are "the player's either way" — but
+`addAttackForItem` hardcodes both to `true`, so a player who ONLY unticked one (a weapon they are not
+proficient with, a thrown weapon that adds no modifier) was classed untouched and had the tick put
+back by the next resync. That is the override this guard exists to prevent.
+
+The worry about widening it — that the row would freeze against all future pack changes — does not
+survive contact: a row nobody has touched still matches its stamp and still rebuilds, and a row the
+player HAS touched is precisely the one to leave alone. Widening only makes the "edited" test
+complete.
+
+**Still outside, correctly:** `extraDamage`, the id, and the links back to the item or spell. The
+generator never sets those, so they cannot indicate an edit either way.
+
+`genFp` is optional and additive: `migrate` preserves it with no code, old saves have none and land
+in the `null` branch. 18 checks in `src/tests/char-update.js` (R7 covers all three branches, the
+no-duplicate guarantee on both leave-alone paths, the re-stamp on rebuild, and the migrate round
+trip) plus 4 wiring guards in `rules-data.js`. Suite 1424.

@@ -1128,6 +1128,60 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('fav is not a rules-owned field on either kind',
      /feature:\["description","effects","uses","cost"\]/.test(js) &&
      /item:\["description","effects","cost","weight","weapon"\]/.test(js));
+  // The attack form has the same shape and lost the same way: it rebuilt the
+  // record from its boxes and dropped itemId, so an edited weapon attack came
+  // unlinked from its inventory item and the next pack update added a duplicate
+  // row beside it. The carry itself is asserted in sheet.js; this is the wiring.
+  const atkSave = (js.match(/const rec=\{id:a\.id,name:document\.getElementById\("aName"\)[\s\S]{0,2000}?character\.attacks\[i\]=rec/) || [''])[0];
+  ck('the attack form carries the links its boxes never show',
+     /carryAttackLinks\(a,rec\);/.test(atkSave), atkSave.slice(-300));
+  // …and the generated-fields fingerprint with them. Drop it and every edited
+  // attack becomes "unknowable" instead of "edited" — same outcome for the
+  // resync, but a save that changed nothing would never resync again.
+  ck('...and the fingerprint that says whether it was ever edited',
+     /if\(a\.genFp\)rec\.genFp=a\.genFp;/.test(atkSave), atkSave.slice(-300));
+  // The two places that WRITE an attack from an item must (re-)baseline it, or
+  // the row looks hand-edited and the update tool stops resyncing it forever.
+  ck('a generated attack is stamped where it is generated',
+     /stampAtkGen\(atk\);\s*character\.attacks\.push\(atk\);/.test(js));
+  ck('...and re-stamped when editing the item rewrites it in place',
+     /stampAtkGen\(existing\);/.test(js));
+  // A spell's attack row is rebuilt from the spell, so extra damage types have to
+  // be asked for on the SPELL — offered by the same shared control the attack
+  // form uses, and read back into the record it saves.
+  ck('the spell form offers the additional damage types list',
+     /xDmgFieldHTML\("sXDmg",s,/.test(js) && /wireXDmgField\("sXDmg"\)/.test(js));
+  ck('...and both forms build that list from one function',
+     /xDmgFieldHTML\("aXDmg",a,/.test(js) && /wireXDmgField\("aXDmg"\)/.test(js));
+  const spellSave = (js.match(/const rec=\{id:s\.id,name:document\.getElementById\("sName"\)[\s\S]{0,2000}?character\.spells\[i\]=rec/) || [''])[0];
+  ck('a saved spell keeps the extras that were typed into it',
+     /readXDmg\("sXDmg"\);if\(sxd\.length\)rec\.extraDamage=sxd;/.test(spellSave), spellSave.slice(-300));
+  // spell is the third kind in UPD_FIELDS and its form lost the stamp the same
+  // way the feature and item forms did. Conditional, so a hand-typed spell still
+  // carries no src at all rather than an undefined one.
+  ck('editing a spell keeps the src stamp the update tool reads',
+     /if\(s\.src\)rec\.src=s\.src;/.test(spellSave), spellSave.slice(-300));
+
+  // ---------- the Concentrating condition, on the side the stub DOM cannot click
+  // The reconcile itself is asserted in sheet.js. These are the three handlers
+  // that make the link work in the OTHER direction — clear the condition and the
+  // spell must end — plus the load-time reconcile, without which a sheet saved
+  // mid-concentration shows a condition for a spell that is not running.
+  const delStatus = (js.match(/data-del-status[\s\S]{0,600}?return;\}/) || [''])[0];
+  ck('removing a concentration condition ends the spell',
+     /if\(s\.concId\)endConcentration\(\);/.test(delStatus), delStatus.slice(0, 300));
+  ck('...and the prompt says the spell ends', /ends too\./.test(delStatus));
+  const togStatus = (js.match(/data-toggle-status[\s\S]{0,600}?return;\}/) || [''])[0];
+  ck('clearing it on the sheet ends the spell too, after asking',
+     /if\(s\.concId&&s\.active!==false\)\{if\(!endConcFromStatus\(\)\)return;\}/.test(togStatus), togStatus.slice(0, 300));
+  const stSave = (js.match(/const rec=\{id:s\.id,name:document\.getElementById\("stName"\)[\s\S]{0,1200}?scheduleSave\(\);/) || [''])[0];
+  ck('the status form keeps the link to the spell', /if\(s\.concId\)rec\.concId=s\.concId;/.test(stSave), stSave.slice(-300));
+  ck('...and unticking Active there ends the spell as well',
+     /if\(rec\.concId&&!active\)endConcentration\(\);/.test(stSave));
+  ck('a spell deleted outright takes its condition with it',
+     /activeSpells\|\|\[\]\)\.filter\(a=>a\.spellId!==s\.id\);syncConcStatus\(\);/.test(js));
+  ck('the mirror is reconciled on load, before anything draws',
+     /syncConcStatus\(\);\s*renderPortrait\(\)/.test(js));
 
   // ---------- the browse footer, and the per-level count
   // The Add button was laid out PAST the right edge of the screen with no way to

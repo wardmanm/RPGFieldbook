@@ -43,6 +43,24 @@ Bullets below this line — leave the heading in place.
   (origin, general, fighting style, epic boon), by pack, or to only what has no prerequisite, and
   preview any entry before you add it. Anything already on your sheet is marked. Typing your own
   feature by hand is still there, behind the Custom button.
+- Editing an attack no longer breaks its link to the weapon it came from. Renaming or tweaking a
+  weapon attack used to quietly detach it from the item in your inventory, and the next time you
+  updated your rules packs you were given a second copy of the same attack.
+- Editing a spell no longer detaches it from the rules pack it came from. Changing so much as its
+  wording used to leave the update tool guessing by name, so it could no longer tell a pack revision
+  from something you had deliberately written yourself.
+- Updating your rules packs no longer overwrites an attack you had edited. A weapon's attack row used
+  to be rebuilt from the item every time, so a renamed attack or a damage die you had adjusted was
+  quietly thrown away. Attacks you have changed are now left as you left them, and so are attacks
+  from before this version, where there is no way to tell. Untouched ones still follow the weapon.
+- Spells can now carry additional damage types, the same way attacks do. Add as many extra dice as
+  the spell needs in the spell form and they show on the attack row it creates, in the cast dialog
+  and on the printed sheet. Extras roll on their own.
+- Casting a spell that needs concentration now adds a Concentrating condition to your statuses,
+  naming the spell you are holding. The two are the same thing: clear or remove the condition and
+  the spell ends, and ending the spell on Active Spells clears the condition. Concentrating on
+  something else, letting a spell run out of time, or deleting it all keep the two in step, so you
+  are never left holding a condition for a spell that is no longer running.
 - The picker's Add button now reads "Add 1 item" rather than "Add 1 items" when you have ticked exactly one.
 - Items can now be used. Anything with limited uses gets a Use button and a row of pips in your
   inventory, and those uses come back on a short or a long rest — or never, if you would rather track

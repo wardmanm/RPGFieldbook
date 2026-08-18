@@ -5,7 +5,7 @@
 const {loadApp, makeCheck} = require('./harness');
 
 const ck = makeCheck();
-const {X, bootError, fragments} = loadApp([
+const {X, state, bootError, fragments} = loadApp([
   'signedEntry', 'signedDelta', 'num', 'fnum', 'fmtWt', 'fmtGp', 'blankChar', 'migrate',
   'clampHP', 'effMaxHP', 'adjustHP', 'applyHPInput', 'renderHP', 'hpBand', 'hdStyle',
   'itemWeight', 'itemWeightTotal', 'coinsWeight', 'carriedWeight',
@@ -22,7 +22,10 @@ const {X, bootError, fragments} = loadApp([
   'invItemHTML', 'itemUseLine', 'itemUsesRowHTML', 'uid',
   'spellLevelTally', 'spellAllotment', 'cantripsKnown',
   'descHTML', 'highlight', 'mergeRules', 'resetRules',
-  'attackDamageStr', 'extraDamageList', 'damagePartStr',
+  'attackDamageStr', 'extraDamageList', 'damagePartStr', 'carryAttackLinks',
+  'syncSpellAttack', 'detectSpellAttack',
+  'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
+  'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -901,6 +904,105 @@ X.resetRules();
   ck('a blank character starts with no attacks at all',
      Array.isArray(X.blankChar().attacks) && X.blankChar().attacks.length === 0);
 }
+
+// ---------- editing an attack must not unlink it from its item or spell
+// The attack form rebuilds the record from its boxes, so the links the form
+// never shows have to be carried across by hand. The bug this encodes: an edited
+// weapon attack lost its itemId, so the next rules-pack update found no attack
+// for the item and added a SECOND one.
+{
+  const C = X.carryAttackLinks;
+  const edited = () => ({id: 'a1', name: 'Longsword', kind: 'melee', damageDice: '1d8'});
+
+  const fromItem = C({id: 'a1', name: 'Longsword', itemId: 'it7'}, edited());
+  ck('an edited attack keeps the item it came from', fromItem.itemId === 'it7', JSON.stringify(fromItem));
+
+  const fresh = C({id: 'a2', name: '', kind: 'melee'}, edited());
+  ck('a fresh attack still has no itemId', fresh.itemId === undefined, JSON.stringify(fresh));
+  ck('...and no spellId, so nothing invents a link', fresh.spellId === undefined);
+
+  const spellAtk = C({id: 'a3', spellId: 's1', source: 'spell', save: {ability: 'dex'}}, edited());
+  ck('a spell attack keeps its spell link', spellAtk.spellId === 's1' && spellAtk.source === 'spell');
+  ck('...and its save block, which is what prints the DC',
+     JSON.stringify(spellAtk.save) === '{"ability":"dex"}');
+
+  const typed = C({id: 'a4', itemId: 'it7'}, {id: 'a4', name: 'Longsword +1', itemId: undefined});
+  ck('a link is restored even when the rebuilt record set it undefined', typed.itemId === 'it7');
+  ck('carrying links does not touch what the player just typed',
+     typed.name === 'Longsword +1');
+  ck('a record with no previous version is returned unchanged',
+     JSON.stringify(C(null, edited())) === JSON.stringify(edited()));
+}
+
+// ---------- a spell's own additional damage types
+// A spell's attack row is rebuilt from the spell every time (which is why it has
+// Cast where a weapon has Edit), so extras had nowhere to live and a spell that
+// dealt two damage types could not say so. The field is on the SPELL now, in the
+// same {dice,type} shape, and syncSpellAttack carries it onto the row.
+{
+  const c = X.blankChar();
+  c.spellAbility = 'int';
+  X.character = c;
+  const row = () => X.character.attacks[0];
+
+  const bolt = {id: 'sp1', name: 'Fire Bolt', atkType: 'attack', atkKind: 'ranged',
+                dice: '1d10', damageType: 'fire',
+                extraDamage: [{dice: '1d6', type: 'radiant'}]};
+  X.syncSpellAttack(bolt);
+  ck('a spell attack row is created', X.character.attacks.length === 1 && row().spellId === 'sp1');
+  ck('the spell carries its extra damage onto the row',
+     JSON.stringify(row().extraDamage) === '[{"dice":"1d6","type":"radiant"}]', JSON.stringify(row()));
+  ck('...and the row formats both types',
+     X.attackDamageStr(row(), 0) === '1d10 fire + 1d6 radiant', X.attackDamageStr(row(), 0));
+
+  const save = {id: 'sp2', name: 'Ice Knife', atkType: 'save', saveAbility: 'dex',
+                dice: '2d6', damageType: 'cold', extraDamage: [{dice: '1d10', type: 'piercing'}]};
+  X.syncSpellAttack(save);
+  const srow = X.character.attacks.find(a => a.spellId === 'sp2');
+  ck('a save spell carries its extras too',
+     JSON.stringify(srow.extraDamage) === '[{"dice":"1d10","type":"piercing"}]', JSON.stringify(srow));
+  ck('...and still prints its save block', JSON.stringify(srow.save) === '{"ability":"dex"}');
+
+  // the shape every spell saved before this has
+  X.syncSpellAttack({id: 'sp3', name: 'Sacred Flame', atkType: 'save', saveAbility: 'dex', dice: '1d8', damageType: 'radiant'});
+  const plain = X.character.attacks.find(a => a.spellId === 'sp3');
+  ck('a spell with no extras produces a row with no extraDamage key',
+     plain.extraDamage === undefined, JSON.stringify(plain));
+  ck('...and formats exactly as it did before', X.attackDamageStr(plain, 0) === '1d8 radiant');
+
+  // rubbish on the spell must not reach the row as a stray " + "
+  X.syncSpellAttack({id: 'sp4', name: 'Bad', atkType: 'attack', dice: '1d4', extraDamage: [{dice: '', type: ''}]});
+  ck('an empty extra row on a spell is dropped, not carried',
+     X.character.attacks.find(a => a.spellId === 'sp4').extraDamage === undefined);
+
+  // re-syncing rebuilds the row: the extras must come back with it, and only once
+  X.syncSpellAttack(bolt);
+  ck('re-syncing a spell leaves exactly one row for it',
+     X.character.attacks.filter(a => a.spellId === 'sp1').length === 1);
+  ck('...still carrying its extras',
+     JSON.stringify(X.character.attacks.find(a => a.spellId === 'sp1').extraDamage)
+     === '[{"dice":"1d6","type":"radiant"}]');
+
+  // a spell that stops being an attack takes its row with it
+  X.syncSpellAttack({id: 'sp1', name: 'Fire Bolt', atkType: '', extraDamage: [{dice: '1d6', type: 'radiant'}]});
+  ck('a spell that is not an attack has no row at all',
+     X.character.attacks.filter(a => a.spellId === 'sp1').length === 0);
+
+  // detection is untouched: an explicit setting still wins over the text
+  const explicit = {atkType: '', text: 'make a ranged spell attack'};
+  X.detectSpellAttack(explicit);
+  ck('"not an attack" still sticks against the spell text', explicit.atkType === '');
+
+  // and the field survives a save -> load round trip on the spell
+  const c2 = X.blankChar();
+  c2.spells = [{id: 'sp1', name: 'Fire Bolt', level: 0, extraDamage: [{dice: '1d6', type: 'radiant'}]},
+               {id: 'sp2', name: 'Light', level: 0}];
+  const back2 = X.migrate(JSON.parse(JSON.stringify(c2)));
+  ck('migrate keeps extraDamage on the spell',
+     JSON.stringify(back2.spells[0].extraDamage) === '[{"dice":"1d6","type":"radiant"}]');
+  ck('...and does not invent one on a spell without it', back2.spells[1].extraDamage === undefined);
+  X.character = X.blankChar();
+}
 /* ================= feats & traits: what the picker offers, and what it adds ===
    The browser itself is DOM, but everything it decides is in these functions:
    which category a feat is, what its prerequisite says, what the sheet ends up
@@ -1165,6 +1267,139 @@ function charWith(inv, hp) {
      JSON.stringify(back.inventory[0].use) === JSON.stringify(it.use));
   const off = X.migrate(JSON.parse(JSON.stringify(X.migrate({inventory: [{id: 'x', use: {off: true}}]}))));
   ck('...including an explicit "not usable"', off.inventory[0].use.off === true);
+}
+
+/* ================= the Concentrating condition (issue #37) ===================
+   Concentration is stored once — as the active spell — and the condition mirrors
+   it. Both directions are asserted here: casting puts the condition on the
+   sheet, and clearing the condition ends the spell. The third case is the one
+   that goes wrong quietly: the spell ending by some OTHER route (replaced,
+   expired, deleted) must not leave the condition stranded. */
+{
+  const caster = (spells) => {
+    const c = X.blankChar();
+    c.spellAbility = 'wis';
+    for (let L = 1; L <= 9; L++) c.slots[L] = {total: 3, used: 0};
+    c.spells = spells;
+    X.character = c;
+    return c;
+  };
+  const bless = {id: 'sp1', name: 'Bless', level: 1, conc: true, duration: '1 minute'};
+  const hex = {id: 'sp2', name: 'Hex', level: 1, conc: true, duration: '1 hour'};
+  const shield = {id: 'sp3', name: 'Shield', level: 1, conc: false, duration: '1 round'};
+  const st = () => X.character.statuses;
+  const conc = () => X.concStatusRow();
+
+  // ---------- casting a concentration spell adds the condition
+  caster([bless, hex, shield]);
+  X.castSpell('sp1');
+  ck('casting a concentration spell puts it on Active Spells',
+     X.character.activeSpells.length === 1 && X.character.activeSpells[0].conc === true);
+  ck('...and adds the Concentrating condition', st().length === 1 && st()[0].name === 'Concentrating');
+  ck('...linked to that spell, not matched by name',
+     conc() && conc().concId === X.character.activeSpells[0].id, JSON.stringify(st()));
+  ck('...saying which spell it is', /Bless/.test(conc().description), conc().description);
+  ck('...active, so the sheet shows it as held', conc().active === true);
+  ck('the condition carries no effects — concentration is prose, not a number',
+     Array.isArray(conc().effects) && conc().effects.length === 0);
+
+  // ---------- a non-concentration spell adds nothing
+  X.castSpell('sp3');
+  ck('a timed spell that needs no concentration adds no condition',
+     st().length === 1 && X.character.activeSpells.length === 2);
+
+  // ---------- a second concentration spell replaces the first, condition and all
+  state.confirm = true;
+  X.castSpell('sp2');
+  ck('concentrating on a second spell drops the first',
+     X.character.activeSpells.filter(a => a.conc).length === 1);
+  ck('...leaves exactly one Concentrating condition',
+     st().filter(s => s.name === 'Concentrating').length === 1);
+  ck('...re-pointed at the new spell',
+     conc().concId === X.character.activeSpells.find(a => a.conc).id);
+  ck('...and re-described, so it never names the spell that ended',
+     /Hex/.test(conc().description) && !/Bless/.test(conc().description), conc().description);
+
+  // ---------- ending the spell from Active Spells clears the condition
+  X.endActiveSpell(X.character.activeSpells.find(a => a.conc).id);
+  ck('ending the active spell removes the condition, never strands it',
+     X.concStatusRow() === null && st().length === 0);
+  ck('...and leaves the other active spell alone', X.character.activeSpells.length === 1);
+
+  // ---------- the other direction: clearing the condition ends the spell
+  caster([bless]);
+  X.castSpell('sp1');
+  const ended = X.endConcentration();
+  ck('clearing the condition ends the spell it was linked to',
+     !!ended && ended.name === 'Bless' && X.character.activeSpells.length === 0);
+  ck('...and takes the condition with it', st().length === 0);
+
+  // ---------- and it asks first, because a lost spell cannot be given back
+  caster([bless]);
+  X.castSpell('sp1');
+  state.confirm = false;
+  ck('saying no to the prompt changes nothing', X.endConcFromStatus() === false
+     && X.character.activeSpells.length === 1 && st().length === 1);
+  state.confirm = true;
+  ck('saying yes ends both', X.endConcFromStatus() === true
+     && X.character.activeSpells.length === 0 && st().length === 0);
+
+  // ---------- the spell running out of time
+  caster([bless]);
+  X.castSpell('sp1');
+  X.bumpActive(X.character.activeSpells[0], 600);   // 1 minute, well past
+  ck('a spell that reaches its duration takes the condition with it',
+     X.character.activeSpells.length === 0 && st().length === 0);
+
+  // ---------- a stranded link is reconciled, not left showing
+  caster([bless]);
+  X.character.statuses = [{id: 'x1', name: 'Concentrating', description: 'on something', effects: [], active: true, concId: 'gone'}];
+  X.syncConcStatus();
+  ck('a condition whose spell is no longer running is removed on sync', st().length === 0);
+
+  // ---------- a sheet saved mid-concentration before this existed gains the condition
+  caster([bless]);
+  X.character.activeSpells = [{id: 'act9', spellId: 'sp1', name: 'Bless', level: 1, conc: true, elapsedSec: 0, durationSec: 60}];
+  X.syncConcStatus();
+  ck('an older sheet still concentrating gains the condition on load',
+     st().length === 1 && conc().concId === 'act9');
+
+  // ---------- a hand-typed "Concentrating" is adopted, not duplicated
+  caster([bless]);
+  X.character.statuses = [{id: 'own', name: 'Concentrating', description: 'my own note', effects: [], active: true}];
+  X.castSpell('sp1');
+  ck('a status the player typed is adopted rather than doubled',
+     st().length === 1 && st()[0].id === 'own');
+  ck('...gaining the link', st()[0].concId === X.character.activeSpells[0].id);
+  ck('...and keeping the note the player wrote', st()[0].description === 'my own note');
+
+  // ---------- syncing repeatedly is a no-op, not a pile of rows
+  X.syncConcStatus(); X.syncConcStatus();
+  ck('reconciling twice adds nothing', st().length === 1);
+
+  // ---------- other statuses are never touched
+  caster([bless]);
+  X.character.statuses = [{id: 'p', name: 'Poisoned', description: '', effects: [], active: true}];
+  X.castSpell('sp1');
+  ck('an unrelated status survives casting', st().length === 2 && st()[0].name === 'Poisoned');
+  X.endConcentration();
+  ck('...and survives the concentration ending', st().length === 1 && st()[0].name === 'Poisoned');
+
+  // ---------- save -> load
+  caster([bless]);
+  X.castSpell('sp1');
+  const back = X.migrate(JSON.parse(JSON.stringify(X.character)));
+  ck('the link survives a save and load',
+     back.statuses[0].concId === back.activeSpells[0].id, JSON.stringify(back.statuses));
+  ck('a blank character has no statuses and nothing to concentrate on',
+     X.blankChar().statuses.length === 0 && X.blankChar().activeSpells.length === 0);
+
+  // ---------- an old status without the field is left entirely alone
+  const old = X.migrate({statuses: [{id: 's', name: 'Prone', active: true}]});
+  ck('a status saved before the field exists has no link, and still loads',
+     old.statuses[0].concId === undefined && old.statuses[0].name === 'Prone');
+
+  X.character = X.blankChar();
 }
 
 ck.done();
