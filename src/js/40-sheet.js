@@ -108,7 +108,7 @@ function invItemHTML(it){
         <button class="icon" data-edit-item="${it.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-item="${it.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
-      ${ic?"":`${it.description?`<div class="desc">${highlight(it.description)}</div>`:""}${itemUseLine(it)}${itemUsesRowHTML(it)}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
+      ${ic?"":`${it.description?`<div class="desc">${richHTML(it.description)}</div>`:""}${itemUseLine(it)}${itemUsesRowHTML(it)}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
 }
 /* The carried-weight badge in the Inventory card header. Hidden entirely when
    encumbrance is off — the weight itself still shows in the totals row, so an
@@ -192,7 +192,7 @@ function renderStatuses(){
         <button class="icon" data-edit-status="${s.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-status="${s.id}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
-      ${s.description?`<div class="desc">${highlight(s.description)}</div>`:""}
+      ${s.description?`<div class="desc">${richHTML(s.description)}</div>`:""}
       ${on?fxChips(s.effects):fxChips(s.effects).replace(/class="chip"/g,'class="chip off"')}`;
     el.appendChild(d);
   });
@@ -217,7 +217,7 @@ function renderFamiliars(){
         <button class="icon danger" data-del-familiar="${f.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${stats?`<div class="desc" style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em">${stats}</div>`:""}
-      ${f.description?`<div class="desc">${highlight(f.description)}</div>`:""}
+      ${f.description?`<div class="desc">${richHTML(f.description)}</div>`:""}
       ${(f.effects&&f.effects.length)?(on?fxChips(f.effects):fxChips(f.effects).replace(/class="chip"/g,'class="chip off"')):""}`;
     el.appendChild(d);
   });

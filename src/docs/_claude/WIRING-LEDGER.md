@@ -2952,3 +2952,42 @@ while Cause Fear sat there with `Damage —`. `dropDamagelessSpellRows()` sweeps
 new uid and throw away the collapse state on rows that were already correct. It leaves orphan rows
 (a `spellId` with no spell) alone — those are not this rule's to judge.
 
+
+## One rich-text grammar for every field (2026-08-18)
+
+**The bug behind the request:** three renderers, three capabilities. `highlight()` for the Story/bio
+fields — no markup at all, and no line breaks either. `descHTML()` for every description — `**bold**`
+only. `noteHTML()` for section notes — the whole grammar. So the field literally called **Notes** on
+the Story tab was the one that formatted nothing, while the *section* notes formatted everything.
+68% of pack descriptions contain newlines that `descHTML` rendered as a run-on blob.
+
+**Now:** `richHTML()` and `richInline()` sit beside `noteHTML()` in `87-notes.js`; `descHTML()` is
+kept as the name the call sites use and delegates. One grammar, one escape-first ordering.
+
+**`richHTML` unwraps a LONE paragraph.** Hundreds of `.desc` slots receive bare inline text today,
+and a `<p>` outside `.n-body` picks up the browser's 1em margins — wrapping them would have spaced
+out every item, status and feature in the app to gain nothing. Blocks appear only when the player
+actually types a list, heading or quote.
+
+**`richInline` exists for run-in headings.** `<p><b>Trait.</b> description…</p>` in the class, species
+and background panes: a block element there nests inside that `<p>`, the parser closes it early and
+the layout comes apart. Those four sites take the inline-only renderer. A guard asserts no run-in
+pane is left calling a block renderer.
+
+**The hazard the old comment warned about was real, and is now fixed at the root.** `descHTML` was
+bold-only *because* single-asterisk emphasis paired the footnote markers in the Humblewood data
+("divert power*", "cymatic sight*"). Verified still live: 415 asterisks in that pack, and exactly one
+string italicised a whole sentence between two lone markers. Rather than keep italics out of
+descriptions forever, the rule now requires the emphasis content to START and END with a non-space —
+so an asterisk followed by a space cannot OPEN emphasis, and a footnote marker can only ever be a
+closing delimiter. Two closers never pair. Re-checked over **19,156 strings across all five packs:
+zero spurious italics, zero spurious blocks.**
+
+**CSS had to move with it.** `.item .desc` and `.rt-view` dropped `white-space:pre-wrap` — keeping it
+alongside real `<br>` elements would have doubled every line break. `.m-body p` KEEPS its pre-wrap
+and is fine: the renderer consumes newlines into `<br>`, so no raw newline survives for pre-wrap to
+render twice (verified in the browser, not assumed). `.n-body p` margins and the `code` style were
+un-scoped so they reach every rich surface; `code` is styled on the element because it only ever
+enters the DOM from our own renderer.
+
+**Removed:** `DESC_H0`/`DESC_H1`, dead once `descHTML` stopped holding chips itself.

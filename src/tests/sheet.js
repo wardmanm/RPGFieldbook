@@ -24,6 +24,7 @@ const {X, state, bootError, fragments} = loadApp([
   'descHTML', 'highlight', 'mergeRules', 'resetRules',
   'attackDamageStr', 'extraDamageList', 'damagePartStr', 'carryAttackLinks',
   'spellHasDamage', 'spellDamageFromText', 'spellDamageBackfill', 'dropDamagelessSpellRows',
+  'richHTML', 'richInline', 'noteHTML',
   'syncSpellAttack', 'detectSpellAttack',
   'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
@@ -791,8 +792,27 @@ ck('a run-in heading keeps its prose beside it',
    X.descHTML('**Mobile.** Your gadget can move.') === '<strong>Mobile.</strong> Your gadget can move.');
 ck('several in one string all convert',
    (X.descHTML('**A** x **B** y').match(/<strong>/g) || []).length === 2);
-ck('newlines are left alone — the CSS renders them',
-   X.descHTML('one\ntwo').indexOf('\n') > -1);
+/* Newlines are REAL <br> elements now. .item .desc and .rt-view dropped their
+   white-space:pre-wrap in the same change — keeping both doubled every break. */
+ck('a newline becomes a real line break', X.descHTML('one\ntwo') === 'one<br>two');
+ck('...and a lone paragraph comes back unwrapped, so .desc spacing is unchanged',
+   X.descHTML('just prose').indexOf('<p>') === -1, X.descHTML('just prose'));
+ck('...while a real block still produces block markup',
+   /n-ul/.test(X.descHTML('- one\n- two')), X.descHTML('- one\n- two'));
+ck('two paragraphs stay two paragraphs',
+   (X.richHTML('one\n\ntwo').match(/<p>/g) || []).length === 2);
+
+/* Run-in headings sit inside a <p>; a block element there nests illegally. */
+ck('richInline never emits a block, whatever it is given',
+   !/<p>|<ul|<ol|n-h|n-hr|n-q/.test(X.richInline('# Heading\n- bullet\n> quote\n---')),
+   X.richInline('# Heading\n- bullet\n> quote\n---'));
+ck('...but still does emphasis and line breaks',
+   X.richInline('**b** *i* `c`\nnext') === '<strong>b</strong> <em>i</em> <code>c</code><br>next',
+   X.richInline('**b** *i* `c`\nnext'));
+
+/* the whole point of the change: every surface gets the same grammar */
+ck('italic works in descriptions now', X.descHTML('*slanted*') === '<em>slanted</em>');
+ck('code works in descriptions now', X.descHTML('`typed`') === '<code>typed</code>');
 
 // The footnote asterisks that are ALREADY in the Humblewood data. A single *
 // must stay literal: this is why descHTML is bold-only and not noteInline.

@@ -43,8 +43,13 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 /* NOT .rt-view: that is white-space:pre-wrap, which would double every newline
    now that the blocks are real elements. */
 .n-body{font-size:15px;line-height:1.6;word-break:break-word;margin-top:6px}
-.n-body p{margin:0 0 8px}
-.n-body p:last-child,.n-body>*:last-child{margin-bottom:0}
+/* Every surface that renders rich text, not just the Notes card: the same
+   grammar now reaches descriptions, the Story fields and the modals, and a
+   <p> outside these selectors would pick up the browser's 1em margins. */
+.n-body p,.desc p,.rt-view p{margin:0 0 8px}
+.n-body p:last-child,.n-body>*:last-child,
+.desc p:last-child,.desc>*:last-child,
+.rt-view p:last-child,.rt-view>*:last-child{margin-bottom:0}
 .n-h{font-family:var(--head);font-weight:800;letter-spacing:.05em;color:var(--ink);margin:10px 0 4px}
 .n-h1{font-size:16px}.n-h2{font-size:15px}
 .n-h3,.n-h4,.n-h5,.n-h6{font-size:14px;color:var(--ink-soft)}
@@ -52,7 +57,9 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 .n-ul li,.n-ol li{margin:2px 0}
 .n-q{margin:0 0 8px;padding:2px 0 2px 10px;border-left:3px solid var(--hair);color:var(--ink-soft)}
 .n-hr{border:0;border-top:1px solid var(--hair);margin:10px 0}
-.n-body code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--field);
+/* `code` only ever reaches the DOM from our own renderer, so styling the
+   element itself is safe and saves repeating this per surface. */
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--field);
   border:1px solid var(--hair);border-radius:4px;padding:0 4px}
 .n-when{font-family:var(--head);font-size:11px;color:var(--ink-soft);flex:none}
 .n-jump{font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.02em;text-align:left}

@@ -141,7 +141,7 @@ function openRaceInfo(name){
     if(obj.speed)s+=`<p><b>Speed:</b> ${esc(obj.speed)}</p>`;
     if(obj.proficiencies)s+=`<p><b>Proficiencies:</b> ${esc(obj.proficiencies)}</p>`;
     if(obj.languages)s+=`<p><b>Languages:</b> ${esc(obj.languages)}</p>`;
-    (obj.traits||[]).forEach(t=>s+=`<p style="border-top:1px dotted var(--hair);padding-top:8px"><b>${esc(t.name)}.</b> ${highlight(t.description||"")}</p>`);
+    (obj.traits||[]).forEach(t=>s+=`<p style="border-top:1px dotted var(--hair);padding-top:8px"><b>${esc(t.name)}.</b> ${richInline(t.description||"")}</p>`);
     return s;
   };
   let b=`<p>${esc(d.description||"")}</p>`+(d.category?`<p class="hint">${esc(d.category)}</p>`:"")+sect(d);

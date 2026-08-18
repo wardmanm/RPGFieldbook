@@ -91,7 +91,7 @@ function openBackgroundInfo(name){
   if(d.tools)b+=`<p><b>Tool Proficiencies:</b> ${esc(d.tools)}</p>`;
   if(d.languages)b+=`<p><b>Languages:</b> ${esc(d.languages)}</p>`;
   if(d.equipment)b+=`<p><b>Equipment:</b> ${esc(d.equipment)}</p>`;
-  if(d.feature&&d.feature.name)b+=`<p style="border-top:1px dotted var(--hair);padding-top:8px"><b>${esc(d.feature.name)}.</b> ${highlight(d.feature.description||"")}</p>`;
+  if(d.feature&&d.feature.name)b+=`<p style="border-top:1px dotted var(--hair);padding-top:8px"><b>${esc(d.feature.name)}.</b> ${richInline(d.feature.description||"")}</p>`;
   /* Suggested-characteristic and specialty tables are owned by the background,
      so they link from here rather than needing an anchor in the prose. */
   b+=tableChipsHTML(d.name,"background");

@@ -1306,17 +1306,30 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     });
     ck('no description is broken mid-sentence', walls.length === 0, walls.slice(0, 4));
   }
-  // bold is rendered by descHTML, not highlight — and only where it is needed
-  ck('descHTML is bold-only, so lone footnote asterisks stay literal',
-     /function descHTML\(text\)\{[\s\S]{0,400}\\\*\\\*\(\[\^\*\]\+\)\\\*\\\*/.test(js) &&
-     !/function descHTML\(text\)\{[\s\S]{0,400}<em>/.test(js));
-  ck('...and holds highlight\'s own chips aside while it runs',
-     /function descHTML\(text\)\{[\s\S]{0,300}<\[\^>\]\+>\/g/.test(js));
-  ck('the feature card and class info panes use it',
-     /class="desc">\$\{descHTML\(f\.description\)\}/.test(js) &&
-     (js.match(/\$\{descHTML\(t\.description\|\|""\)\}/g) || []).length === 2);
-  ck('the sentinels are written as escapes, not invisible bytes',
-     /const DESC_H0="\\uE00A", DESC_H1="\\uE00B"/.test(js));
+  /* One grammar for every field. descHTML is kept as the name the description
+     call sites use, but it delegates — a field cannot quietly support less
+     formatting than the field beside it. */
+  ck('descHTML delegates rather than carrying its own grammar',
+     /function descHTML\(text\)\{ return richHTML\(text\); \}/.test(js));
+  ck('richHTML unwraps a lone paragraph, so .desc spacing is unchanged',
+     /function richHTML\(text\)\{[\s\S]{0,200}\^<p>/.test(js));
+  ck('emphasis cannot OPEN on an asterisk followed by a space',
+     /\\\*\(\[\^\\s\*\]/.test(js));
+  ck('noteInline still holds highlight\'s own chips aside before markup runs',
+     /function noteInline\(raw\)\{[\s\S]{0,300}<\[\^>\]\+>\/g/.test(js));
+
+  /* Run-in headings ("<b>Trait.</b> text…") sit INSIDE a <p>. A block element
+     there nests illegally and the parser closes the paragraph early, so the
+     species, background and class panes take the inline-only renderer. */
+  ck('the block surfaces use richHTML',
+     /class="desc">\$\{richHTML\(it\.description\)\}/.test(js) &&
+     /class="desc">\$\{richHTML\(f\.description\)\}/.test(js) &&
+     /class="rt-view">\$\{richHTML\(val\)\}/.test(js));
+  ck('the run-in panes use richInline, never a block renderer',
+     (js.match(/\$\{richInline\(t\.description\|\|""\)\}<\/p>/g) || []).length === 3 &&
+     /\$\{richInline\(d\.feature\.description\|\|""\)\}<\/p>/.test(js));
+  ck('no run-in pane is left calling a block renderer',
+     !/<b>\$\{esc\(t\.name\)\}\.<\/b> \$\{(richHTML|descHTML|noteHTML)\(/.test(js));
 }
 
 // ---------- Settings modal: every control is still wired

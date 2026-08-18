@@ -145,7 +145,9 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .orig-b:hover{color:var(--accent);border-color:var(--accent)}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:var(--accent);color:#fff;padding:10px 18px;border-radius:12px;font-family:var(--head);font-size:14px;letter-spacing:.02em;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:9999;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none;max-width:80vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.item .desc{font-size:15px;line-height:1.5;margin-top:5px;white-space:pre-wrap;word-break:break-word}
+/* NOT white-space:pre-wrap any more: richHTML() turns newlines into real <br>
+   elements, and keeping both doubled every line break. */
+.item .desc{font-size:15px;line-height:1.5;margin-top:5px;word-break:break-word}
 .item .fx{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px}
 .chip{font-family:var(--head);font-size:10px;letter-spacing:.03em;padding:3px 7px;border-radius:99px;
   background:color-mix(in srgb,var(--accent-2) 16%,transparent);color:var(--accent-2);text-transform:uppercase;font-weight:700}
@@ -219,7 +221,8 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
   background:none;border:0;cursor:pointer;padding:5px 7px;border-radius:6px;display:inline-flex;gap:5px;align-items:center;text-transform:uppercase}
 .editbtn:hover{background:color-mix(in srgb,var(--accent-2) 14%,transparent)}
 .editbtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2}
-.rt-view{font-size:16px;line-height:1.6;white-space:pre-wrap;word-break:break-word;min-height:22px}
+/* pre-wrap removed with the same reasoning as .item .desc above. */
+.rt-view{font-size:16px;line-height:1.6;word-break:break-word;min-height:22px}
 .rt-view.empty{font-style:italic;color:var(--ink-soft)}
 .kw{color:var(--accent-2);font-weight:600;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;
   text-underline-offset:3px;border-radius:3px}

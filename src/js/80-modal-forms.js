@@ -495,5 +495,5 @@ function openSpellForm(existing){
     closeModal();renderSpells();renderAttacks();scheduleSave();
   });
 }
-function openSpellView(s){openModal(s.name,`${s.meta?`<p style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em">${esc((s.level===0?"Cantrip":"Level "+s.level))} · ${esc(s.meta)}</p>`:""}<p>${highlight(s.text||"—")}</p>`);}
+function openSpellView(s){openModal(s.name,`${s.meta?`<p style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em">${esc((s.level===0?"Cantrip":"Level "+s.level))} · ${esc(s.meta)}</p>`:""}<div class="desc">${richHTML(s.text||"—")}</div>`);}
 

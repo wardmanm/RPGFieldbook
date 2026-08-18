@@ -93,8 +93,15 @@ function noteInline(raw){
   s=s.replace(/`([^`]+)`/g,(m,c)=>P("<code>"+c+"</code>"));    /* first, so no emphasis inside code */
   s=s.replace(/\*\*([^*]+)\*\*/g,(m,c)=>"<strong>"+c+"</strong>");
   /* the (^|[^*]) guard is what makes an unmatched delimiter inert rather than
-     eating the rest of the line */
-  s=s.replace(/(^|[^*])\*([^*]+)\*/g,(m,a,c)=>a+"<em>"+c+"</em>");
+     eating the rest of the line.
+
+     The content must also START and END with a non-space. That is what keeps
+     the footnote markers in the Humblewood data inert: "you learn the divert
+     power* spell … cymatic sight* without" has two LONE asterisks, and the old
+     rule paired them and italicised the sentence between. An asterisk followed
+     by a space cannot open emphasis, so a footnote marker can only ever be a
+     closing delimiter — and two closers never pair. */
+  s=s.replace(/(^|[^*])\*([^\s*](?:[^*]*[^\s*])?)\*/g,(m,a,c)=>a+"<em>"+c+"</em>");
   s=s.split(NOTE_LB).join("<br>");
   for(let i=0;i<8&&s.indexOf(NOTE_H0)>=0;i++)
     s=s.replace(new RegExp(NOTE_H0+"([0-9a-z]+)"+NOTE_H1,"g"),(m,key)=>hold[parseInt(key,36)]||"");
@@ -148,6 +155,30 @@ function noteHTML(text){
     out.push(`<p>${noteInline(ls.join(NOTE_LB))}</p>`);
   }
   return out.join("");
+}
+/* ---- the same grammar, for every field OUTSIDE the Notes card ----
+   noteHTML() is left exactly as it is: the Notes card styles its output through
+   `.n-body p`, and changing it would move nineteen cards to fix a bug elsewhere.
+
+   richHTML() unwraps a LONE paragraph. Hundreds of `.desc` slots currently
+   receive bare inline text, and `<p>` outside `.n-body` picks up the browser's
+   1em margins — so wrapping them would space out every item, status and feature
+   in the app to gain nothing. A single paragraph comes back inline and looks
+   exactly as it does today, plus line breaks and emphasis. Blocks appear only
+   when the player actually types a list, heading or quote. */
+function richHTML(text){
+  const h=noteHTML(text);
+  const m=/^<p>([\s\S]*)<\/p>$/.exec(h);
+  return (m&&m[1].indexOf("<p>")<0)?m[1]:h;
+}
+/* Inline only — no paragraphs, lists or headings, ever. For run-in headings:
+   `<p><b>Trait.</b> description…</p>` in the class, species and background
+   panels. A block element there would nest inside that <p>, which the parser
+   closes early, and the layout comes apart. Newlines still become <br>. */
+function richInline(text){
+  const src=String(text==null?"":text).replace(/\r\n?/g,"\n").replace(NOTE_SENTINELS,"");
+  if(!src.trim())return "";
+  return noteInline(src.split("\n").join(NOTE_LB));
 }
 /* The hover preview is PLAIN TEXT, not noteHTML(): a hover card full of tappable
    chips is a trap — you reach for the chip and the card disappears — and

@@ -100,7 +100,7 @@ function browseItems(){
     sort:(a,b)=>String(catOf(a)).localeCompare(String(catOf(b)))||String(a.name||"").localeCompare(String(b.name||"")),
     group:x=>catOf(x),
     added:x=>character.inventory.some(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase()),
-    preview:x=>openModal(x.name,`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(meta(x))}</p><p>${highlight(x.description||"—")}</p>`),
+    preview:x=>openModal(x.name,`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(meta(x))}</p><div class="desc">${richHTML(x.description||"—")}</div>`),
     onCustom:()=>openItemForm(),
     originSelect:true,
     costInput:true,

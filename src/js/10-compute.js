@@ -101,20 +101,13 @@ function highlight(text){
    rule would pair up the unpaired footnote markers already in the Humblewood
    data ("divert power*", "cymatic sight*", "Spells marked with an asterisk (*)")
    and italicise everything between them. `**` cannot match a lone `*`. */
-/* Indexed private-use delimiters, written as ESCAPES not literals: an invisible
-   byte in source is the thing .editorconfig and the byte-exact build exist to
-   guard against, and a whitespace cleanup would eat it silently. Distinct from
-   TBL_MARK (E000) and the note holds (E001-E003), so the passes cannot collide.
-   Indexed rather than one repeating mark because the chips are restored by
-   identity — a bare sentinel would let the restore regex match ordinary prose. */
-const DESC_H0="\uE00A", DESC_H1="\uE00B";
-function descHTML(text){
-  const hold=[];
-  let s=highlight(text);
-  s=s.replace(/<[^>]+>/g,m=>{hold.push(m);return DESC_H0+(hold.length-1).toString(36)+DESC_H1;});
-  s=s.replace(/\*\*([^*]+)\*\*/g,(m,c)=>"<strong>"+c+"</strong>");
-  return s.replace(new RegExp(DESC_H0+"([0-9a-z]+)"+DESC_H1,"g"),(m,k)=>hold[parseInt(k,36)]||"");
-}
+/* Kept as the name every description call site already uses; the grammar now
+   lives in ONE place (richHTML, src/js/87-notes.js) so a field cannot quietly
+   support less formatting than the field beside it. The single-asterisk hazard
+   the note above describes is handled in the rule itself: emphasis can no longer
+   OPEN on an asterisk followed by a space, so the Humblewood footnote markers
+   stay literal. */
+function descHTML(text){ return richHTML(text); }
 
 /* ================= rich text (bio + proficiencies) ================= */
 const editing={};
@@ -129,7 +122,7 @@ function renderRT(key){
     ta.addEventListener("input",()=>{character[key]=ta.value;scheduleSave()});
   }else{
     if(toggle)toggle.textContent="Edit";
-    host.innerHTML=val.trim()?`<div class="rt-view">${highlight(val)}</div>`:`<div class="rt-view empty">Nothing yet — tap Edit.</div>`;
+    host.innerHTML=val.trim()?`<div class="rt-view">${richHTML(val)}</div>`:`<div class="rt-view empty">Nothing yet — tap Edit.</div>`;
   }
 }
 function renderAllRT(){["proficiencies",...BIO.map(b=>b[0])].forEach(renderRT)}
