@@ -3068,3 +3068,41 @@ consistency over scoping it to Features.
   right — not "next to the heading like inventory" at all. Now `flex:0 1 auto` so the count sits
   beside it (measured: 8px gap), and `.fgcount` gained `margin-left:auto` so the Settings badge stays
   right-aligned where it reads correctly.
+
+## Concentrating, mirrored onto the Spells tab (2026-08-18)
+
+A `#concCard` above Active Spells — that is where you are looking when you cast the next spell, and
+it is the card that tells you what you would be dropping.
+
+**One row markup, two places.** `statusRowHTML(s)` was extracted out of `renderStatuses` and is used
+by both. The controls are delegated from `document`, so the toggle, edit and delete work unchanged
+from the Spells tab; verified by deleting from the new card and watching the condition, the Active
+Spells row and the Sheet's Statuses card all clear together. Writing a second, nearly-identical row
+would have been the obvious shortcut and the obvious thing to drift.
+
+**The mirror redraws from inside `renderStatuses()`**, not from its own callers. It is a view of the
+same statuses, so tying it to that render is what stops the two showing different things — no caller
+has to remember to update both.
+
+It finds its row with `concStatusRow()`, which matches on `concId`, never on the name — so a status
+a player typed "Concentrating" themselves is not mistaken for the real one. Asserted.
+
+## Spell slots on level-up: reported as a bug, is the rule (2026-08-18)
+
+Reported: casters gain new slots but lose the old ones — a Warlock reaching level 3 loses its level 1
+slots. Measured across the progression instead of patching:
+
+    Warlock  1 L1:1 · 2 L1:2 · 3 L2:2 · 5 L3:2 · 7 L4:2 · 9 L5:2 · 11 L5:3
+    Wizard   1 L1:2 · 2 L1:3 · 3 L1:4 L2:2 · 5 L1:4 L2:3 L3:2
+
+That is Pact Magic: the Warlock table gives a fixed number of slots that are ALL the same level, and
+that level is the highest unlocked — a level 3 Warlock genuinely has two 2nd-level slots and no
+1st-level ones. Every row matches the PHB table, including the step to 3 slots at 11. Full, half and
+third casters keep every lower level, so there is no general "replace instead of add" fault.
+
+`autoSlots()` is written to match: the SLOTS_FULL table is assigned by level, then PACT is ADDED on
+top (`+=`), because `casterLevel()` deliberately does not count warlock levels. Left alone.
+
+Worth knowing if it comes up again: multiclass merges pact slots into the same pool (Wizard 3 /
+Warlock 3 reads L1:4 L2:4). Real 5e tracks them separately because pact slots return on a short rest.
+That IS a simplification, and a different question from the one asked.

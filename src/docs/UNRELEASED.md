@@ -76,4 +76,5 @@ Bullets below this line — leave the heading in place.
 - Attacks and weapons can be favourited now, the same as items and features — starred ones gather at the top of the list.
 - Attacks & Weapons and Features & Traits gained the Collapse all / Expand all button that Inventory already had.
 - Group headings across the app now match the Inventory and Spells ones: the same colour, with the count in brackets beside the heading.
+- The Concentrating condition now also shows on the Spells tab, just above Active Spells, so you can see what you would drop before casting the next one. It is the same row as on the Sheet — clearing it from either place ends the spell.
 

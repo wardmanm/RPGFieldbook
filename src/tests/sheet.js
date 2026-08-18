@@ -26,7 +26,7 @@ const {X, state, bootError, fragments} = loadApp([
   'spellHasDamage', 'spellDamageFromText', 'spellDamageBackfill', 'dropDamagelessSpellRows',
   'richHTML', 'richInline', 'noteHTML',
   'itemArmor', 'armorAC', 'armorKindOf', 'ARMOR_DEXCAP', 'isEquippable', 'contributions',
-  'featGroups', 'FEAT_FAV', 'ATK_FAV', 'atkCol', 'featCol',
+  'featGroups', 'FEAT_FAV', 'ATK_FAV', 'atkCol', 'featCol', 'statusRowHTML', 'concStatusRow',
   'syncSpellAttack', 'detectSpellAttack',
   'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
@@ -450,6 +450,37 @@ ck('a nonsense override is ignored', sec({category: 'Gear', sectionOverride: 'No
   ck('features start on Collapse all', featLbl() === 'Collapse all');
   X.featGroups(X.character.features).forEach(g2 => { X.featCol().groups[g2.label] = true; });
   ck('...and read Expand all once every group is shut', featLbl() === 'Expand all');
+  X.character = X.blankChar();
+}
+
+/* ===== the Concentrating condition is mirrored onto the Spells tab ===========
+   One row markup, two places. The controls are delegated from document, so the
+   same buttons work wherever the row is drawn — which is why the markup is
+   shared rather than written twice and left to drift. */
+{
+  X.character = X.blankChar();
+  ck('nothing to mirror when not concentrating', X.concStatusRow() === null);
+
+  X.character.statuses = [
+    {id:'s1', name:'Poisoned', active:true},
+    {id:'s2', name:'Concentrating', active:true, concId:'act1', description:'Concentrating on Hex (level 1).'},
+  ];
+  const row = X.concStatusRow();
+  ck('the mirror finds the concentration row by its link, not its name',
+     row && row.id === 's2', row && row.id);
+  ck('...and a status the player named "Concentrating" themselves is not mistaken for it', (() => {
+    X.character.statuses = [{id:'s3', name:'Concentrating', active:true}];   // no concId
+    return X.concStatusRow() === null;
+  })());
+
+  X.character.statuses = [{id:'s2', name:'Concentrating', active:true, concId:'act1', description:'On Hex.'}];
+  const html = X.statusRowHTML(X.concStatusRow());
+  ck('the shared row carries the same controls in both places',
+     /data-toggle-status="s2"/.test(html) && /data-edit-status="s2"/.test(html) && /data-del-status="s2"/.test(html), html.slice(0, 120));
+  ck('...and renders its description through the rich renderer',
+     html.includes('On Hex.'));
+  ck('an inactive status still renders, marked as cleared',
+     !/on-status/.test(X.statusRowHTML({id:'x', name:'Prone', active:false})));
   X.character = X.blankChar();
 }
 
