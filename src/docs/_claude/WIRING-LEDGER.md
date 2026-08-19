@@ -3163,3 +3163,96 @@ and seeing no attack appear would be the obvious next complaint.
 
 The empty state says which of the two situations you are in: "Nothing equipped" when rows exist but
 none are shown, the original "No attacks yet" when there are genuinely none.
+
+## Screenshot validation for UI changes, and a Windows test-runner fix
+
+**Screenshots are now producible here**, which CLAUDE.md previously said outright they were not.
+Headless Chrome driven over the DevTools Protocol renders `dist/fieldbook.html` from `file://` with
+no npm dependencies at all — Node 26 ships `fetch` and `WebSocket`, and Chrome is installed. Spawn
+with `--headless=new --remote-debugging-port`, attach a flat session, navigate, seed state through
+`Runtime.evaluate`, capture with `captureBeyondViewport`. This matters because the repo has no
+`package.json`, and pulling in Playwright to take a picture would have been the wrong trade.
+
+Mike asked that **every PR and every merge affecting the UI carry screenshot validation of each
+update** — before and after for changes to existing UI. Check 4 in CLAUDE.md now says so, and the old
+"you cannot click the UI here" wording is gone. Interactive QA is still his: a screenshot proves a
+render, not a behavior.
+
+**Two traps, both found by taking a screenshot that looked wrong.** Tab names are lowercase —
+`selectTab("Sheet")` throws nothing, matches no panel, deactivates all of them, and produces an
+intact top bar over a completely empty body. That is precisely the failure class the whole test suite
+cannot see. And `newCharacter(name, system)` takes `"dnd"`/`"humblewood"`, deriving the skin, so
+themed CSS work wants both.
+
+**`src/tests/run.sh` was silently failing both Python suites on Windows.** It probed with
+`command -v python3`, which succeeds — resolving to the Microsoft Store alias stub in WindowsApps that
+prints "Python was not found" and exits non-zero. The fallback to `python` therefore never fired on a
+machine with a working Python 3.12. It now probes by running `"$PY" -c ""`. converter went from
+FAILED to 105 checks; the full suite is 7/7, 1524 checks, with humblewood-verbatim skipping cleanly
+for want of `.venv`.
+
+**Superseded within the hour: the mechanism is the Playwright MCP server, not hand-rolled CDP.**
+Mike asked for the MCP specifically, so `.mcp.json` now registers `@playwright/mcp` at project scope
+and CLAUDE.md check 4 points at `browser_navigate` / `browser_evaluate` /
+`browser_take_screenshot`. Three bits of that config are load-bearing rather than decorative:
+`--allow-unrestricted-file-access`, because the server blocks `file://` navigation by default and
+this entire app is a `file://` URL; `cmd /c npx`, because stdio servers are spawned without a shell
+on Windows where npx is `npx.cmd`; and `--browser chrome`, which reuses installed Chrome instead of
+downloading Chromium. The version is pinned deliberately — `@latest` would re-resolve on every
+session start, which is both a network dependency and an unannounced upgrade.
+
+Verified end to end before being written down: driving the server over raw stdio JSON-RPC navigated
+to the artifact, ran `newCharacter`, and captured a 1280x2008 full-page PNG of the Sheet tab. Worth
+knowing for next time: a relative `filename` writes the PNG relative to CWD, not `--output-dir`.
+Check 5 changed too — Playwright clicks, hovers and drags, so interactive changes should now be
+*driven* here, with the owner's pass reserved for real browsers, sizes, touch and print.
+
+## Emblems for classes, ancestries and backgrounds
+
+78 icons from game-icons.net, one per class, ancestry/race and background across all five packs.
+Subclasses deliberately get none — they are the second half of a class chip, and a second emblem
+there competes with the first.
+
+**The icon map ships in the app, not in `data/`, and that was the whole architectural question.**
+Three independent reasons, any one of which is sufficient: `data/5e2024`, `data/xanathars` and
+`data/tashas` are converter OUTPUT and `convert.py` `_write()` overwrites whole files with no merge;
+byte-for-byte reproduction of `data/5e2024/` is the gate on converter changes; and `release.js`
+bumps a system dataVersion from `git diff -- data/<dir>`, so a cosmetic feature would have told every
+player to re-download five rules packs. Instead `src/icons/icons.json` is hand-authored and
+`scripts/fetch-icons.js` generates `src/js/05-icons.js` from it.
+
+**The generated fragment IS the vendored artwork** — no `.svg` files are kept. Committing 78 SVGs
+plus a second offline generator buys nothing, because the only drift that can actually happen is
+"someone edited the map and forgot to re-fetch", and that is detectable from the fragment alone: the
+slug set in `icons.json` must equal the keys of `GAME_ICONS`. The docs suite asserts exactly that,
+and its failure message names the command to run. Verified it fails when it should before trusting
+it.
+
+**Generation is NOT wired into `build.sh`.** CI asserts the build changes no tracked file; a
+build-time fetch would turn that into a network-dependent byte-equality check against GitHub.
+
+**Emblems are keyed by NAME, never `_id`** — a character stores its class/ancestry/background as a
+plain string, so the emblem resolves with no rules pack loaded at all. The class-info screenshot was
+taken on exactly that path. An unmapped name yields `""`; a per-kind fallback was considered and
+rejected, because a wrong-but-present emblem on someone's homebrew is worse than none.
+
+**Two things the screenshots caught that nothing else would have.** The Settings credits paragraphs
+rendered as a stair-step, because `.m-body p` is `white-space:pre-wrap` and a wrapped source line
+keeps its newline and indentation — every existing hint in that file is one long line for this exact
+reason. And `selectTab` takes lowercase names, so an early probe produced an intact top bar over a
+completely empty body while throwing nothing.
+
+**`openModal` gained an optional third argument** and assigns `mIcon.innerHTML=icon||""`
+UNCONDITIONALLY. Guarding it behind `if(icon)` would leak a class emblem into the next spell modal;
+there is now an explicit regression check that opens a plain modal straight after an emblem one.
+
+CC BY 3.0 needs the artists named, the licence named and linked, AND a statement that the work was
+changed (we strip the background square and drop the fill). All three are in Settings and in README
+section 10. In-app matters because `fieldbook.html` is shared as a lone file that no README follows.
+`ICON_ARTISTS` is generated from what is actually vendored, so the credit cannot drift.
+
+The artifact went 533,207 -> 681,252 bytes, +27.8%. There is no size gate; coordinate rounding was
+considered and rejected (~15% saving, and arc-flag digits are position-sensitive).
+
+Also widened `.githooks/checks.sh` `check_json` from `^(data/.*|src/manifest)\.json$` to `src/.*`,
+which previously left `src/icons/icons.json` validated by nothing until the fetcher ran.

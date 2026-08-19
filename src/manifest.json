@@ -18,6 +18,7 @@
   ],
   "js": [
     "src/js/00-constants.js",
+    "src/js/05-icons.js",
     "src/js/10-compute.js",
     "src/js/20-lists.js",
     "src/js/25-origins-items.js",

@@ -202,6 +202,13 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .cr-chip:hover{border-color:var(--accent-2)}
 .cr-chip .cr-k{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;flex:none}
 .cr-chip .cr-n{font-family:var(--head);font-weight:700;flex:1;letter-spacing:.02em;font-size:15px;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+/* game-icons emblems (see src/icons/icons.json). These are FILLED silhouettes on
+   a 512 viewBox — the opposite of every other icon in this file, which are 24x24
+   outlines with fill:none (.icon svg below). Both properties are stated on each
+   so neither convention can leak into the other. Colour rides currentColor, so
+   both skins and both modes work with no further rules. */
+.gicon{width:22px;height:22px;flex:none;display:block;fill:currentColor;stroke:none;color:var(--ink-soft)}
+.cr-chip:hover .gicon{color:var(--accent)}
 .opt{display:flex;align-items:center;gap:9px;margin:5px 0;font-size:15px;cursor:pointer}
 .opt input{width:auto;min-height:auto;margin:0}
 /* A locked option — either already granted elsewhere, or shut off because the

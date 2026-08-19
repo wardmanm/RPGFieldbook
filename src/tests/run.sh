@@ -18,8 +18,12 @@ FILTER="${1:-}"
 # humblewood tables) while dist/ still holds the older pack.
 node scripts/bundle-rules.js >/dev/null || { echo "bundling failed"; exit 1; }
 
+# Probe by RUNNING it, not by existence. Windows ships a python3 stub in
+# WindowsApps that resolves fine under `command -v`, then prints "Python was not
+# found" and exits non-zero — which silently failed both Python suites on a box
+# with a perfectly good `python` on PATH.
 PY=python3
-command -v python3 >/dev/null 2>&1 || PY=python
+"$PY" -c '' >/dev/null 2>&1 || PY=python
 
 SUITES="converter tables rules-data sheet char-update docs humblewood-verbatim"
 TOTAL=0

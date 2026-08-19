@@ -132,7 +132,7 @@ function removeRace(doRender){
 }
 function openRaceInfo(name){
   const d=findRaceDef(name);
-  if(!d){openModal(name,`<p class="hint">No rules data loaded for this ${raceTerm().toLowerCase()} — it was added as a custom name.</p>`);return;}
+  if(!d){openModal(name,`<p class="hint">No rules data loaded for this ${raceTerm().toLowerCase()} — it was added as a custom name.</p>`,iconSVG("races",name,"lg"));return;}
   const cur=character.race&&character.race.subrace;
   const sect=(obj)=>{
     let s="";
@@ -150,6 +150,6 @@ function openRaceInfo(name){
   (d.subraces||[]).forEach(sd=>{
     b+=`<div style="border-top:2px solid var(--line);margin-top:10px;padding-top:8px"><b style="${cur===sd.name?"color:var(--accent)":""}">${esc(sd.name)}${cur===sd.name?" — selected":""}</b>${sd.description?`<p class="hint" style="margin:4px 0">${esc(sd.description)}</p>`:""}${sect(sd)}</div>`;
   });
-  openModal(name,b);
+  openModal(name,b,iconSVG("races",name,"lg"));
 }
 

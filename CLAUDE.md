@@ -44,7 +44,9 @@ src/                    THE SOURCE OF TRUTH — edit here, never the built file
                         /*@@CSS@@*/, <!--@@HTML@@--> and //@@JS@@
   manifest.json         the authoritative concatenation ORDER for html/, js/ and css/
   html/*.html           6 fragments, one tab panel each, spliced into <div class="page">
-  js/*.js               26 fragments, concatenated into the single <script>
+  js/*.js               27 fragments, concatenated into the single <script>
+  icons/icons.json      HAND-AUTHORED emblem map, name → game-icons.net slug;
+                          scripts/fetch-icons.js turns it into js/05-icons.js
   css/*.css             7 fragments, concatenated into the single <style>
   tests/                THE TEST SUITES — run with ./src/tests/run.sh (dev)
     harness.js          loads the app the way the build concatenates it
@@ -183,10 +185,32 @@ change must eventually pass these checks, and `./build.sh` runs all of them:
 3. **Logic tests:** for any pure function you touch (version compare, cost/duration parsing, AC math,
    inventory sectioning, `migrate` round-trip, etc.), write a quick Node check and run it. These are
    the one part you *should* run unprompted — they are throwaway scripts in the scratchpad that touch
-   nothing tracked, and the next two checks can't be automated:
-4. **Browser smoke-test is the owner's job.** You cannot click the UI here. When a change affects
-   interactive DOM behavior, say so plainly and list what to verify in a browser — don't claim it's
-   fully tested.
+   nothing tracked.
+4. **Screenshot validation — REQUIRED for any UI-affecting change.** Use the **Playwright MCP
+   server**, registered in `.mcp.json` at the repo root: `browser_navigate` to the
+   `file:///…/dist/fieldbook.html` URL, seed state with `browser_evaluate`, then
+   `browser_take_screenshot` with `fullPage: true`. **Every PR and every merge that changes what a
+   tab renders ships with a screenshot of each affected tab** — before *and* after when it is a
+   change to existing UI. No screenshot, no claim that the UI works.
+   - **Two flags in `.mcp.json` are load-bearing, not decoration.**
+     `--allow-unrestricted-file-access`: Playwright MCP **blocks `file://` navigation by default**,
+     and this whole app is a `file://` URL, so without it every capture fails. `cmd /c npx`: stdio
+     servers are spawned without a shell on Windows, where `npx` is `npx.cmd`, so a bare `npx` dies
+     with ENOENT. `--browser chrome` reuses the installed Chrome rather than downloading Chromium,
+     and the server version is pinned — bump it deliberately, not silently via `@latest`.
+   - A **relative** `filename` writes the PNG relative to the CWD, *not* to `--output-dir`.
+   - Tab names are **lowercase** (`selectTab("sheet")`). A wrong name matches no panel, deactivates
+     all of them, and renders a blank body that still looks like a working app — exactly the failure
+     a screenshot catches and a passing test suite does not.
+   - `newCharacter(name, system)` takes `"dnd"` or `"humblewood"`; it renders and hides the home
+     screen, so it is the one-line way into a sheet. Skin follows the system, so shoot both when a
+     change touches themed CSS.
+5. **Interactive QA — now partly yours, still finally the owner's.** Playwright also clicks, hovers,
+   drags, fills and presses keys, so an interactive change should be *driven*, not just rendered:
+   click the thing, then screenshot the result. What it does not cover is real browsers at real
+   sizes, touch, print output, and anything depending on the owner's own saved characters. State
+   plainly what you drove and what you did not — a driven flow is evidence, not a substitute for his
+   pass, and "screenshot attached" is never the same claim as "fully tested".
 
 Do not ship partial patches. Diagnose the root cause fully and fix it completely; bugs caught in play
 (e.g. a spell missing from attacks, armor not equippable) are blocking.

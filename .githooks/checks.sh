@@ -107,7 +107,7 @@ check_manifest_tracked() {
 
 check_json() {
   local files bad=0 f
-  files=$(printf '%s\n' "$@" | grep -E '^(data/.*|src/manifest)\.json$' || true)
+  files=$(printf '%s\n' "$@" | grep -E '^(data/.*|src/.*)\.json$' || true)
   [ -n "$files" ] || { skip_msg "json (no data touched)"; return 0; }
   for f in $files; do
     [ -f "$f" ] || continue

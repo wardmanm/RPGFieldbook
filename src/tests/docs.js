@@ -151,4 +151,75 @@ if (dvm) {
   }
 }
 
+// ---------- game-icons emblems: the hand-authored map vs the generated fragment
+// The load-bearing one is key parity. It is what goes red when someone edits
+// icons.json and forgets to re-run the fetcher, which is the ONLY drift that can
+// actually happen offline.
+{
+  const iconMap = JSON.parse(read('src/icons/icons.json'));
+  const frag = read('src/js/05-icons.js');
+  const KINDS = ['classes', 'races', 'backgrounds'];
+
+  ck('05-icons.js is marked generated', /GENERATED, DO NOT EDIT/.test(frag));
+  ck('icons.json has no subclasses block (subclasses get no emblem)', !iconMap.subclasses);
+
+  const wanted = new Set();
+  KINDS.forEach(k => Object.values(iconMap[k] || {}).forEach(v => wanted.add(v)));
+  const got = new Set([...frag.matchAll(/^"([a-z0-9-]+\/[a-z0-9-]+)":"/gm)].map(m => m[1]));
+  const missing = [...wanted].filter(s => !got.has(s));
+  const extra = [...got].filter(s => !wanted.has(s));
+  ck('every icons.json slug is vendored in 05-icons.js — else run: node scripts/fetch-icons.js',
+     missing.length === 0, missing.join(', '));
+  ck('05-icons.js vendors nothing icons.json no longer asks for — else run: node scripts/fetch-icons.js',
+     extra.length === 0, extra.join(', '));
+
+  // Every name reaches ICON_MAP, lower-cased, under its own kind.
+  KINDS.forEach(k => {
+    const m = new RegExp('"' + k + '":{([^}]*)}').exec(frag);
+    ck('05-icons.js has an ICON_MAP.' + k + ' block', !!m);
+    if (!m) return;
+    Object.keys(iconMap[k] || {}).forEach(name =>
+      ck('ICON_MAP.' + k + ' carries "' + name + '"',
+         m[1].includes('"' + name.trim().toLowerCase() + '":')));
+  });
+
+  // The invariant that licenses interpolating d without esc() in iconSVG().
+  const bad = [...frag.matchAll(/^"[a-z0-9-]+\/[a-z0-9-]+":"([^"]*)"/gm)]
+    .map(m => m[1]).filter(d => !/^[-0-9.,eE MmLlHhVvCcSsQqTtAaZz]+$/.test(d));
+  ck('every vendored glyph is pure SVG path data', bad.length === 0, bad.length + ' bad');
+  ck('no vendored glyph is the black background square',
+     !/"M0 0h512v512H0z"/.test(frag));
+
+  // Coverage: every class/ancestry/background that actually ships has an emblem.
+  // This is the check that fires when a future pack adds a race and nobody
+  // notices it renders bare. A data-only change CAN go red here — that is the
+  // point, and the fix is one line in src/icons/icons.json.
+  const DIRS = ['5e2024', 'humblewood', 'xanathars', 'tashas', 'homebrew'];
+  const FILES = { classes: 'classes.json', races: 'races.json', backgrounds: 'backgrounds.json' };
+  KINDS.forEach(kind => {
+    const have = new Set(Object.keys(iconMap[kind] || {}).map(n => n.trim().toLowerCase()));
+    const unmapped = [];
+    DIRS.forEach(dir => {
+      let parsed;
+      try { parsed = JSON.parse(read('data/' + dir + '/' + FILES[kind])); } catch { return; }
+      (parsed[kind] || []).forEach(e => {
+        if (e && e.name && !have.has(String(e.name).trim().toLowerCase()))
+          unmapped.push(dir + '/' + e.name);
+      });
+    });
+    ck('every shipped ' + { classes: 'class', races: 'race', backgrounds: 'background' }[kind] +
+       ' has an emblem in icons.json', unmapped.length === 0, unmapped.join(', '));
+  });
+
+  // CC BY 3.0: name the artists, name and link the licence, say it was changed.
+  ck('README credits game-icons.net', readme.includes('game-icons.net'));
+  ck('README names the CC BY 3.0 licence', readme.includes('CC BY 3.0'));
+  ck('README links the licence deed', readme.includes('creativecommons.org/licenses/by/3.0'));
+  ck('README says the icons were changed', /background square was removed/i.test(readme));
+  const settings = read('src/js/88-settings.js');
+  ck('the app itself credits the artists', /ICON_ARTISTS/.test(settings));
+  ck('the app names the licence', /CC BY 3.0/.test(settings));
+  ck('the app says the icons were changed', /background square was removed/i.test(settings));
+}
+
 ck.done();

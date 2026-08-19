@@ -9,6 +9,11 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 .modal>*{position:relative}
 .m-head{display:flex;align-items:center;gap:10px;padding:16px 18px 8px;flex:none}
 .m-title{font-family:var(--display);font-weight:900;font-size:23px;flex:1;line-height:1;text-transform:uppercase;letter-spacing:.3px}
+/* :empty matters — .m-head has gap:10px, so an empty slot would still indent
+   the title of every modal that has no emblem. */
+.m-icon{flex:none;display:flex;align-items:center}
+.m-icon:empty{display:none}
+.m-icon .gicon.lg{width:30px;height:30px;color:var(--accent)}
 .m-body{padding:6px 18px 18px;overflow-y:auto;flex:1 1 auto;-webkit-overflow-scrolling:touch}
 .m-body p{margin:0 0 10px;line-height:1.6;white-space:pre-wrap}
 .m-body img{width:100%;border-radius:8px;border:2px solid var(--line);display:block}

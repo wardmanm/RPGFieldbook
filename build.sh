@@ -175,7 +175,7 @@ const zip=process.argv[2];
 const names=execFileSync("unzip",["-Z1",zip],{encoding:"utf8"})
   .split("\n").map(s=>s.replace(/^\.\//,"")).filter(Boolean);
 // ^src\/ already covers src/tests/ — the audience rule does that work for us.
-const banned=names.filter(n=>/^src\/|^CLAUDE\.md$|^build\.sh$|^dev\.sh$|^\.|WIRING-LEDGER|ADR-\d|UNRELEASED|RELEASING|build-html\.js|gen-changelog\.js|release(-notes)?\.js|bundle-rules\.js|extract-humblewood\.py/.test(n));
+const banned=names.filter(n=>/^src\/|^CLAUDE\.md$|^build\.sh$|^dev\.sh$|^\.|WIRING-LEDGER|ADR-\d|UNRELEASED|RELEASING|build-html\.js|gen-changelog\.js|release(-notes)?\.js|bundle-rules\.js|fetch-icons\.js|extract-humblewood\.py/.test(n));
 // data/ must hold ONLY the bundled packs — a stray per-category file means the
 // zip stopped matching what README section 9 promises.
 const dataFiles=names.filter(n=>/^data\/.+/.test(n));

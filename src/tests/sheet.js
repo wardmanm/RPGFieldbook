@@ -22,6 +22,7 @@ const {X, state, bootError, fragments} = loadApp([
   'invItemHTML', 'itemUseLine', 'itemUsesRowHTML', 'uid',
   'spellLevelTally', 'spellAllotment', 'cantripsKnown',
   'descHTML', 'highlight', 'mergeRules', 'resetRules',
+  'iconSVG', 'iconSlug', 'GAME_ICONS', 'ICON_MAP',
   'attackDamageStr', 'extraDamageList', 'damagePartStr', 'carryAttackLinks',
   'spellHasDamage', 'spellDamageFromText', 'spellDamageBackfill', 'dropDamagelessSpellRows',
   'richHTML', 'richInline', 'noteHTML',
@@ -1687,6 +1688,39 @@ function charWith(inv, hp) {
      old.statuses[0].concId === undefined && old.statuses[0].name === 'Prone');
 
   X.character = X.blankChar();
+}
+
+/* ---------- game-icons emblems ----------
+   The emblem is looked up by NAME, never by _id, so it must resolve with NO
+   rules pack loaded at all — that is the whole reason it is keyed this way. */
+{
+  const svg = X.iconSVG('races', 'Elf');
+  ck('a mapped name yields an svg', /^<svg /.test(svg), svg.slice(0, 40));
+  ck('the emblem carries the .gicon class', /class="gicon"/.test(svg));
+  ck('the emblem uses the 512 viewBox', /viewBox="0 0 512 512"/.test(svg));
+  ck('the emblem is hidden from assistive tech', /aria-hidden="true"/.test(svg));
+  ck('the emblem is not focusable', /focusable="false"/.test(svg));
+  ck('no upstream white fill survives', !/fill="#fff"/.test(svg));
+  ck('no background square survives', !svg.includes('M0 0h512v512H0z'));
+
+  ck('lookup is case-insensitive', X.iconSVG('races', 'elf') === svg);
+  ck('lookup trims', X.iconSVG('races', '  Elf  ') === svg);
+  ck('a modifier class is appended', /class="gicon lg"/.test(X.iconSVG('races', 'Elf', 'lg')));
+
+  ck('an unmapped custom name yields nothing', X.iconSVG('classes', 'Rune Knight of Nowhere') === '');
+  ck('a blank name yields nothing', X.iconSVG('classes', '') === '');
+  ck('a null name yields nothing', X.iconSVG('classes', null) === '');
+  ck('subclasses deliberately have no emblems', X.iconSVG('subclasses', 'Champion') === '');
+  ck('an unknown kind yields nothing', X.iconSVG('nonsense', 'Elf') === '');
+
+  ck('all three kinds are mapped',
+     ['classes', 'races', 'backgrounds'].every(k => Object.keys(X.ICON_MAP[k] || {}).length > 0));
+  const dangling = [];
+  Object.entries(X.ICON_MAP).forEach(([k, m]) =>
+    Object.entries(m).forEach(([n, slug]) => { if (!X.GAME_ICONS[slug]) dangling.push(k + '.' + n); }));
+  ck('no ICON_MAP entry points at a missing glyph', dangling.length === 0, dangling.join(', '));
+  ck('every ICON_MAP key is already lower-case',
+     Object.values(X.ICON_MAP).every(m => Object.keys(m).every(n => n === n.toLowerCase())));
 }
 
 ck.done();

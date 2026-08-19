@@ -2,6 +2,27 @@
 function findRaceDef(n){return ruleById("races",n);}
 function findClassDef(n){return ruleById("classes",n);}
 function findFeatDef(n){return ruleById("feats",n);}
+/* Emblems (game-icons.net, CC BY 3.0) — the map is src/icons/icons.json, and
+   GAME_ICONS/ICON_MAP are generated into 05-icons.js from it.
+
+   Keyed by NAME, not _id, and deliberately so: a character stores its class,
+   ancestry and background as plain strings, so the emblem still draws when no
+   rules pack is loaded at all. Lower-cased to match keyOf() in 89-rules-merge.
+
+   An unmapped name returns "" — a custom or homebrew class simply gets no
+   emblem and the chip renders exactly as it did before. A per-kind fallback was
+   considered and rejected: a wrong-but-present emblem on someone's homebrew is
+   worse than none.
+
+   `d` is interpolated WITHOUT esc(), which is safe because fetch-icons.js
+   validates every path against the SVG path-data charset before writing it —
+   the name is only ever a lookup key and never reaches the output. */
+function iconSlug(kind,name){return (ICON_MAP[kind]||{})[String(name||"").trim().toLowerCase()]||"";}
+function iconSVG(kind,name,cls){
+  const d=GAME_ICONS[iconSlug(kind,name)];
+  if(!d)return "";
+  return `<svg class="gicon${cls?" "+cls:""}" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path d="${d}"/></svg>`;
+}
 /* subclasses available for a class = the class's own subclasses + any standalone
    entries in the "subclasses" category whose class matches (so add-on packs can
    attach subclasses to an existing class without duplicating the whole class).
@@ -140,12 +161,12 @@ function renderClassRace(){
     const parts=[];
     if(character.race&&character.race.name){
       const rn=character.race.name+(character.race.subrace?` · ${character.race.subrace}`:"");
-      parts.push(`<div class="cr-chip" data-info-race="${esc(character.race.name)}"><span class="cr-k">${raceTerm()}</span><span class="cr-n">${esc(rn)}</span><button class="icon danger" data-del-race="1" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
+      parts.push(`<div class="cr-chip" data-info-race="${esc(character.race.name)}">${iconSVG("races",character.race.name)}<span class="cr-k">${raceTerm()}</span><span class="cr-n">${esc(rn)}</span><button class="icon danger" data-del-race="1" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
     }else{
       parts.push(`<button class="mini" data-add-race style="margin-bottom:8px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add ${raceTerm().toLowerCase()}</button>`);
     }
     if(character.bg&&character.bg.name){
-      parts.push(`<div class="cr-chip" data-info-bg="${esc(character.bg.name)}"><span class="cr-k">Background</span><span class="cr-n">${esc(character.bg.name)}</span><button class="icon danger" data-del-bg="1" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
+      parts.push(`<div class="cr-chip" data-info-bg="${esc(character.bg.name)}">${iconSVG("backgrounds",character.bg.name)}<span class="cr-k">Background</span><span class="cr-n">${esc(character.bg.name)}</span><button class="icon danger" data-del-bg="1" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
     }else{
       parts.push(`<button class="mini" data-add-bg><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add background</button>`);
     }
@@ -154,7 +175,7 @@ function renderClassRace(){
   if(cb){
     const parts=[];
     (character.classes||[]).forEach((c,idx)=>{
-      parts.push(`<div class="cr-chip" data-info-class="${esc(c.name)}"><span class="cr-k">Class</span><span class="cr-n">${esc(c.name)} ${num(c.level)}${c.subclass?` · ${esc(c.subclass)}`:""}</span><button class="icon danger" data-del-class="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
+      parts.push(`<div class="cr-chip" data-info-class="${esc(c.name)}">${iconSVG("classes",c.name)}<span class="cr-k">Class</span><span class="cr-n">${esc(c.name)} ${num(c.level)}${c.subclass?` · ${esc(c.subclass)}`:""}</span><button class="icon danger" data-del-class="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
     });
     parts.push(`<button class="mini" data-add-class><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add class</button>`);
     if(!(rules.races||[]).length&&!(rules.classes||[]).length)parts.push(`<p class="hint" style="margin-top:8px">Load a rules pack with <b>races</b> and <b>classes</b> (Settings → Rules) to auto-apply traits and stats. Custom names work too, without auto data.</p>`);

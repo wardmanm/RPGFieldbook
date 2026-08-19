@@ -10,7 +10,11 @@ const modal=document.getElementById("modal");
    dismissals below go through dismissModal(). */
 let _dismissGuard=null;
 function setDismissGuard(fn){_dismissGuard=fn;}
-function openModal(title,html){_dismissGuard=null;document.getElementById("mTitle").textContent=title;document.getElementById("mBody").innerHTML=html;modal.classList.add("open");}
+/* `icon` is optional emblem markup for the header (iconSVG()). It is assigned
+   UNCONDITIONALLY, never guarded behind `if(icon)`: ~30 call sites pass nothing,
+   and they must CLEAR the slot, or a class emblem leaks into the next spell
+   modal that opens. The title stays textContent — it is player data. */
+function openModal(title,html,icon){_dismissGuard=null;document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");}
 function closeModal(){_dismissGuard=null;modal.classList.remove("open");document.getElementById("mBody").innerHTML="";}
 function dismissModal(){
   if(_dismissGuard){const msg=_dismissGuard();if(msg&&!confirm(msg))return;}

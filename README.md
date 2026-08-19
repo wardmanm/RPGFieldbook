@@ -19,6 +19,7 @@ This guide is written for everyone, including non-technical folks. Take it a sec
 7. [Settings & themes](#7-settings--themes)
 8. [Troubleshooting & FAQ](#8-troubleshooting--faq)
 9. [What's in the download](#9-whats-in-the-download)
+10. [Credits & licences](#10-credits--licences)
 
 ---
 
@@ -410,5 +411,20 @@ scripts/            ← convert.py (plus overlay.json and class-resources.json, 
 
 **To play, you only ever need `fieldbook.html`.** The `data` files make the pickers and
 auto-math available, and the `docs`/`scripts` folders are optional extras for the curious.
+
+## 10. Credits & licences
+
+Fieldbook itself is MIT-licensed — see `LICENSE`.
+
+**Icons.** The emblems beside each class, ancestry and background come from
+[game-icons.net](https://game-icons.net), by Caro Asercion, DarkZaitzev, Delapouite, Lorc
+and Skoll, used under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Each icon
+has been changed: its original black background square was removed, and its colour now
+follows your chosen theme. Which icon came from whom is recorded in
+`src/icons/icons.json` in the source repository, and the same credit appears in the app
+under **Settings → Credits & licences**.
+
+**Rules content** is not distributed with the app. You load it yourself, from files you
+supply, and it keeps whatever terms it came with.
 
 Have fun out there. 🌿

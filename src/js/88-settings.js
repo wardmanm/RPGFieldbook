@@ -13,7 +13,11 @@ const SET_SECTIONS=[
   {k:"appearance",title:"Appearance",       open:true},
   {k:"character", title:"This character",   open:true},
   {k:"rules",     title:"Rules data",       open:false},
-  {k:"backup",    title:"Characters & backup",open:false}
+  {k:"backup",    title:"Characters & backup",open:false},
+  /* Attribution for the game-icons.net emblems. Folded shut by default — it is
+     a legal notice, not a control — but it must be IN THE APP, because
+     fieldbook.html is routinely shared as a lone file that no README follows. */
+  {k:"credits",   title:"Credits & licences",open:false}
 ];
 function setSecDef(k){return SET_SECTIONS.find(s=>s.k===k)||null;}
 /* stored as COLLAPSE (true = closed) so an absent key means "first run", and the
@@ -91,12 +95,26 @@ function openSettings(){
       <input type="file" id="fileSettings" accept="application/json,.json" class="hidefile">
     </div>
     <p class="hint" style="margin-top:6px">Export saves your appearance settings <b>and</b> all loaded rules data to one JSON file; import restores both.</p>`;
+  /* CC BY 3.0 obliges us to name the artists, name and link the licence, and say
+     that the work was changed — hence the last sentence, which is not decorative.
+     ICON_ARTISTS is generated from the icons actually vendored (05-icons.js), so
+     this list cannot drift from what ships. The links are dead offline; the
+     artists' names and the licence name are plain text on purpose. */
+  /* Each <p> is ONE line on purpose: .m-body p is white-space:pre-wrap, so a
+     wrapped source line renders its newline and indentation literally. */
+  const secCredits=`
+    <p class="hint">Fieldbook itself is MIT-licensed. It includes one third-party work:</p>
+    <div class="field"><label class="f">Icons</label>
+      <p class="hint">The emblems beside each class, ${raceTerm().toLowerCase()} and background are from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, by ${ICON_ARTISTS.map(esc).join(", ")}. Used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Each icon has been changed: its background square was removed and its colour now follows your theme.</p></div>
+    <div class="field"><label class="f">Rules content</label>
+      <p class="hint">Rules data is not part of the app — you load it yourself, from files you supply, and it keeps whatever terms it came with.</p></div>`;
   const n=rulesEntryCount();
   openModal("Settings",`<div id="setSections">`+
     setSecHTML("appearance",secAppearance)+
     (secCharacter?setSecHTML("character",secCharacter,character.name||"unnamed"):"")+
     setSecHTML("rules",secRules,n?n+" entries":"none loaded")+
     setSecHTML("backup",secBackup)+
+    setSecHTML("credits",secCredits)+
     `</div>`);
   /* Delegated from a wrapper INSIDE the modal body, not from #mBody itself:
      #mBody survives every open, so a listener bound to it would stack up one

@@ -212,7 +212,7 @@ function openSubclassInfo(className,subName){
 }
 function openClassInfo(name){
   const d=findClassDef(name),entry=(character.classes||[]).find(c=>c.name.toLowerCase()===name.toLowerCase());
-  if(!d){openModal(name,`<p class="hint">No rules data loaded for this class — it was added as a custom name.</p>`);return;}
+  if(!d){openModal(name,`<p class="hint">No rules data loaded for this class — it was added as a custom name.</p>`,iconSVG("classes",name,"lg"));return;}
   let b=`<p>${esc(d.description||"")}</p>`;
   const meta=[d.hitDie?("Hit die "+d.hitDie):"",d.spellcasting?("Spellcasting "+d.spellcasting.toUpperCase()):"",d.savingThrows?("Saves "+d.savingThrows.map(x=>x.toUpperCase()).join("/")):""].filter(Boolean).join(" · ");
   if(meta)b+=`<p class="hint"><b>${esc(meta)}</b></p>`;
@@ -233,6 +233,6 @@ function openClassInfo(name){
     if(lv.spells)b+=`<p class="hint" style="margin:3px 0;color:var(--accent-2)">✦ Spells: ${esc(lv.spells.note||("up to "+lv.spells.known+" known"))}</p>`;
     b+=`</div>`;
   });
-  openModal(name+(entry?` ${num(entry.level)}`:""),b);
+  openModal(name+(entry?` ${num(entry.level)}`:""),b,iconSVG("classes",name,"lg"));
 }
 

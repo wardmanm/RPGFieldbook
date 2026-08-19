@@ -80,3 +80,7 @@ Bullets below this line — leave the heading in place.
 - Glossary & Rules and Reference Tables on the Rules tab now fold away, and both start folded — the tables are reachable without scrolling past the whole glossary. Each heading shows how many entries are inside, and whichever you leave open stays open next time.
 - Weapons can be equipped like armour, and Attacks & Weapons now lists only what you are actually carrying. Unequip a weapon and its attack steps aside; equip it again and the attack comes back exactly as you left it, edits and all. Weapons already on your sheet are equipped for you the first time you open it, so nothing disappears.
 
+- Classes, ancestries and backgrounds now carry an emblem on the sheet, on their chips and at the
+  top of their info panel. Emblems come from game-icons.net and are credited under the new Settings
+  section, Credits & licences. Custom or homebrew names simply show no emblem, and nothing else
+  about the chips changed.

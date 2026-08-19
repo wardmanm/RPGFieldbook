@@ -83,7 +83,7 @@ function removeBackground(doRender){
 }
 function openBackgroundInfo(name){
   const d=findBackgroundDef(name);
-  if(!d){openModal(name,`<p class="hint">No rules data loaded for this background — it was added as a custom name.</p>`);return;}
+  if(!d){openModal(name,`<p class="hint">No rules data loaded for this background — it was added as a custom name.</p>`,iconSVG("backgrounds",name,"lg"));return;}
   let b=`<p>${esc(d.description||"")}</p>`;
   b+=`<p><b>Ability Scores:</b> ${(d.abilityScores||[]).map(a=>a.toUpperCase()).join(", ")}</p>`;
   b+=`<p><b>Feat:</b> ${esc(bgFeatList(d).join(" or "))}</p>`;
@@ -97,5 +97,5 @@ function openBackgroundInfo(name){
   b+=tableChipsHTML(d.name,"background");
   const cur=character.bg;
   if(cur&&cur.name===d.name){const bits=[];if(cur.feat)bits.push("Feat: "+cur.feat);if(cur.abils)bits.push(cur.abils.map(e=>e.target.split(".")[1].toUpperCase()+" "+fmt(e.value)).join(", "));if(bits.length)b+=`<p class="hint" style="border-top:2px solid var(--line);margin-top:8px;padding-top:8px">Your choices — ${esc(bits.join(" · "))}</p>`;}
-  openModal(d.name,b);
+  openModal(d.name,b,iconSVG("backgrounds",d.name,"lg"));
 }
