@@ -13,6 +13,7 @@ const {X, state, bootError, fragments} = loadApp([
   'encSpeed', 'encTierNote', 'contributions', 'inventoryTotal', 'SIZES', 'SIZE_CARRY',
   'capacityFor', 'sizeOptionsHTML', 'invSection',
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
+  'statStyle', 'statGroupHTML', 'statGroupsHTML', 'ABIL',
   'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
   'FEAT_KINDS', 'featKindDef', 'featPickList', 'featPickKind', 'featPickPrereq',
   'featPickName', 'featPickStoredName', 'featPickGroup', 'addPickedFeature', 'updResolve',
@@ -325,6 +326,45 @@ ck('the fallback agrees with the default', (() => {
 })());
 ck('a chosen style survives a round-trip',
    X.migrate(JSON.parse(JSON.stringify(X.migrate({id: 'k', hdStyle: 'dice'})))).hdStyle === 'dice');
+
+/* ---- the ability/skill layout ----
+   Two looks over ONE set of ids, chosen per character. statStyle() resolves
+   anything it does not recognise to classic — the same value blankChar defaults
+   to — so an older sheet needs no migration and does not move under the player. */
+ck('a new character defaults to classic', X.blankChar().statStyle === 'classic');
+X.character.statStyle = 'grouped';  ck('grouped is honoured', X.statStyle() === 'grouped');
+X.character.statStyle = 'classic';  ck('classic is honoured', X.statStyle() === 'classic');
+X.character.statStyle = 'nonsense'; ck('an unknown layout falls back', X.statStyle() === 'classic');
+delete X.character.statStyle;       ck('a missing layout falls back too', X.statStyle() === 'classic');
+ck('a sheet saved before the layouts existed reads as classic',
+   X.migrate({id: 'old4'}).statStyle === 'classic');
+ck('the fallback agrees with the default', (() => {
+  delete X.character.statStyle; return X.statStyle() === X.blankChar().statStyle;
+})());
+ck('a chosen layout survives a round-trip',
+   X.migrate(JSON.parse(JSON.stringify(X.migrate({id: 'k', statStyle: 'grouped'})))).statStyle === 'grouped');
+
+/* The grouped markup must emit every hook recompute() finds by id or attribute.
+   Get one wrong and that number just stops updating — nothing throws, and the
+   harness has no DOM, so these string assertions are the only guard there is. */
+const gHTML = X.statGroupsHTML();
+ck('every ability keeps its modifier id and its breakdown hook',
+   X.ABIL.every(([k]) => gHTML.includes(`id="mod-${k}"`) && gHTML.includes(`data-stat="ability.${k}"`)));
+ck('every score box keeps its data-path and its recompute trigger',
+   X.ABIL.every(([k]) => gHTML.includes(`data-path="character.abilities.${k}"`)) &&
+   (gHTML.match(/data-recompute/g) || []).length === 6);
+ck('every save keeps its id, its dot and its breakdown hook',
+   X.ABIL.every(([k]) => gHTML.includes(`id="save-${k}"`) && gHTML.includes(`data-save="${k}"`) &&
+                         gHTML.includes(`data-stat="save.${k}"`)));
+ck('every skill appears exactly once — a duplicate id updates one and strands the other',
+   X.SKILLS.every(([k]) => (gHTML.match(new RegExp(`id="skill-${k}"`, 'g')) || []).length === 1));
+ck('...under the ability that governs it',
+   X.SKILLS.every(([k, , ab]) => X.statGroupHTML(ab, ab.toUpperCase()).includes(`id="skill-${k}"`)));
+ck('Constitution gets a saving throw and no skills',
+   X.statGroupHTML('con', 'CON').includes('id="save-con"') &&
+   !/data-skill=/.test(X.statGroupHTML('con', 'CON')));
+ck('the breakdown modal is reachable from all thirty numbers',
+   (gHTML.match(/data-stat="/g) || []).length === X.ABIL.length * 2 + X.SKILLS.length);
 
 /* ================= inventory filing =================
    invSection() reads category/type. Nothing used to copy those onto an item, so

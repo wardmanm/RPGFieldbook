@@ -52,10 +52,14 @@
           <div class="abilities" id="abilities"></div>
         </div>
 
-        <div class="card" data-note="skills">
+        <!-- id AFTER data-note, deliberately: the notes test counts the literal
+             `<div class="card" data-note="` prefix to assert 19 cards, so an id
+             placed first hides this card from the count. Same reason #familiarCard
+             above does it. buildStats() hides this card in the grouped layout. -->
+        <div class="card" data-note="skills" id="skillsCard">
           <div class="label">Skills <span class="grow"></span></div>
           <div class="skills" id="skills"></div>
-          <div class="legend">
+          <div class="legend" id="statLegend">
             <b><i></i>None</b><b><i class="p"></i>Proficient</b><b><i class="e"></i>Expertise</b>
             <b style="color:var(--ink-soft)">Tap dot to cycle</b>
           </div>

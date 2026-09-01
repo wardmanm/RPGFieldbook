@@ -133,6 +133,34 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .legend i.p{background:var(--accent-2)}
 .legend i.e{background:var(--accent-2);box-shadow:0 0 0 2px var(--panel),0 0 0 3px var(--line)}
 
+/* grouped layout (statStyle "grouped") — the six ability boxes stacked in one
+   column, each with its saving throw and the skills that ability governs beside
+   it. Placed AFTER .srow on purpose: these rules override it at equal
+   specificity, so source order is load-bearing. The rows reuse .srow rather than
+   restating the dot/value/label rhythm, so the two looks cannot drift apart. */
+/* #abilities is itself a 3-column grid (see .abilities above) and .agroups is
+   its child, so without this the whole grouped block is squeezed into one third
+   of the card and every skill label wraps. Span all three tracks instead of
+   fighting the parent's display. */
+.agroups{grid-column:1/-1;display:grid;gap:12px}
+.agroup{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:start}
+.agroup .ability{padding:8px 6px 9px}
+.agroup .alist{min-width:0}
+.agroup .srow{padding:5px 2px}
+.agroup .srow:last-child{border-bottom:none}
+/* .srow .lbl is flex:1 for the classic two-column card, where it should push the
+   row out. Here it would strand the Expert marker against the far right edge, so
+   the label takes only the width it needs and the marker sits beside it. */
+.agroup .srow .lbl{flex:0 1 auto}
+.agroup .svrow .lbl{font-family:var(--head);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.agroup .anone{font-size:12px;color:var(--ink-soft);padding:5px 2px;font-style:italic}
+/* Expertise is marked straight off the dot's data-lvl, which recompute() already
+   writes — no JS runs for this, which is what keeps the feature display-only. */
+.agroup .exp{display:none;margin-left:8px;font-family:var(--head);font-size:9px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--accent-2)}
+.agroup .dot[data-lvl="2"]~.exp{display:inline}
+@media(max-width:600px){.agroup{grid-template-columns:84px minmax(0,1fr);gap:9px}}
+
 /* structured list items */
 .item{position:relative;background:var(--field);border-radius:8px;padding:10px 12px;margin-bottom:9px}
 .item::before{content:"";position:absolute;inset:1px;border:2px solid var(--line);border-radius:9px;pointer-events:none;opacity:.85}

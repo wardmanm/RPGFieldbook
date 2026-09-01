@@ -41,7 +41,7 @@ function blankChar(){
     features:[], inventory:[], statuses:[], familiars:[], glossary:[],
     featCollapse:{groups:{},items:{}}, invCollapse:{items:{}}, atkCollapse:{items:{}}, hdUsed:{}, resources:[],
     activeSpells:[], combatRound:0, grantGold:{},
-    size:"", encumbrance:"none", coinWeight:true, hpColor:true, hdStyle:"full",
+    size:"", encumbrance:"none", coinWeight:true, hpColor:true, hdStyle:"full", statStyle:"classic",
     /* Notes pinned to a section of the sheet, keyed by NOTE_SECTIONS id.
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
        above), and this is a different thing entirely. */
@@ -141,8 +141,44 @@ function effSkill(key){return Math.max(character.skills[key]||0, grantedProf("sk
 function effSaveProf(key){return (character.saves[key]?1:0) || grantedProf("save",key);}
 
 /* ================= build static bits ================= */
+
+/* ---- statStyle: two layouts over ONE set of ids ----
+   "classic" is the two-card look; "grouped" stacks each ability with the saves
+   and skills it governs. BOTH emit the same #mod-x / #save-x / #skill-x ids and
+   the same .dot[data-save] / .dot[data-skill] / data-stat attributes, because
+   recompute() finds every number by id and every dot by attribute. Change an id
+   in one layout and that number silently stops updating — nothing throws, and
+   the harness has no DOM to catch it, which is why statGroupsHTML() is a pure
+   string the test suite asserts against directly.
+   Anything unrecognised resolves to classic, the same value blankChar defaults
+   to, so an older sheet lands on the look a new character gets and the setting
+   needs no migration of its own. */
+function statStyle(){return character.statStyle==="grouped"?"grouped":"classic";}
+
+/* One ability and the rows it governs. No values are filled in here: recompute()
+   paints every one of them afterwards, and the "Expert" marker is pure CSS off
+   the dot's data-lvl, which recompute already writes. That is what keeps this a
+   display change that touches no rules code. */
+function statGroupHTML(k,l){
+  const rows=SKILLS.filter(([,,ab])=>ab===k).map(([sk,sl])=>
+    `<div class="srow"><button class="dot" data-skill="${sk}" aria-label="${sl} proficiency"></button>`+
+    `<span class="val" data-stat="skill.${sk}" id="skill-${sk}">+0</span>`+
+    `<span class="lbl">${sl}</span><span class="exp">Expert</span></div>`).join("");
+  return `<div class="agroup"><div class="ability"><div class="n">${l}</div>`+
+    `<div class="m" data-stat="ability.${k}" id="mod-${k}">+0</div>`+
+    `<input type="number" data-path="character.abilities.${k}" data-recompute aria-label="${l} score"></div>`+
+    `<div class="alist">`+
+      `<div class="srow svrow"><button class="dot" data-save="${k}" aria-label="${l} save proficiency"></button>`+
+      `<span class="val" data-stat="save.${k}" id="save-${k}">+0</span>`+
+      `<span class="lbl">Saving Throws</span></div>`+
+      (rows||`<div class="anone">No skills use ${l}</div>`)+
+    `</div></div>`;
+}
+function statGroupsHTML(){return `<div class="agroups">`+ABIL.map(([k,l])=>statGroupHTML(k,l)).join("")+`</div>`;}
+
 function buildAbilities(){
   const el=document.getElementById("abilities");el.innerHTML="";
+  if(statStyle()==="grouped"){el.innerHTML=statGroupsHTML();return;}
   ABIL.forEach(([k,l])=>{
     const d=document.createElement("div");d.className="ability";
     d.innerHTML=`<div class="n">${l}</div>
@@ -154,11 +190,36 @@ function buildAbilities(){
 }
 function buildSkills(){
   const el=document.getElementById("skills");el.innerHTML="";
+  /* MUST clear and return, not merely hide the card: leaving the classic rows in
+     place puts a second #skill-perception in the document. getElementById takes
+     the first in document order, so the visible grouped copy would keep updating
+     while the hidden one rots — and print reads by id too. */
+  if(statStyle()==="grouped")return;
   SKILLS.forEach(([k,l,ab])=>{
     const r=document.createElement("div");r.className="srow";
     r.innerHTML=`<button class="dot" data-skill="${k}" aria-label="${l} proficiency"></button><span class="val" data-stat="skill.${k}" id="skill-${k}">+0</span><span class="lbl">${l} <span class="ab">${ab}</span></span>`;
     el.appendChild(r);
   });
+}
+/* One legend, MOVED between the two cards rather than duplicated in JS — a second
+   copy of the markup would drift from the template's. It is appended to the CARD,
+   never to #abilities, because buildAbilities() clears that container and would
+   delete the node outright, after which placeLegend() would find nothing forever. */
+function placeLegend(){
+  const lg=document.getElementById("statLegend");if(!lg)return;
+  const host=document.querySelector(`[data-note="${statStyle()==="grouped"?"abilities":"skills"}"]`);
+  if(host&&lg.parentNode!==host)host.appendChild(lg);
+}
+
+/* The single entry point for both layouts. Markup only — no numbers: renderAll()
+   calls this FIRST, then refills the score boxes from [data-path] and repaints
+   everything through recompute(). The Skills card is hidden, never removed: the
+   note registry, the 19-card template guard and the label guard all require it to
+   stay in the document (same reason #familiarCard is hidden, not dropped). */
+function buildStats(){
+  buildAbilities();buildSkills();placeLegend();
+  const sc=document.getElementById("skillsCard");
+  if(sc)sc.style.display=statStyle()==="grouped"?"none":"";
 }
 function buildDeath(){
   ["succ","fail"].forEach(kind=>{

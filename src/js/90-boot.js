@@ -265,7 +265,7 @@ function boot(){
      at all. */
   try{const rr=readRulesCacheString(localStorage.getItem(K_RULES));if(rr)rules=Object.assign(rules,JSON.parse(rr));}catch(e){}
   reindexRules();recomputeDups();
-  buildAbilities();buildSkills();buildDeath();buildSlots();buildBio();
+  buildStats();buildDeath();buildSlots();buildBio();
   wire();applyTheme();
   migrateOldChar();
   const lib=libLoad();
