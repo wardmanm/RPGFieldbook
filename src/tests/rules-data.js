@@ -1195,14 +1195,33 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the browse footer wraps rather than pushing controls off the edge',
      /\.browse-foot\{[^}]*flex-wrap:wrap/.test(cardsCss),
      (cardsCss.match(/\.browse-foot\{[^}]*\}/) || [''])[0]);
+  // The select is now wrapped in a labelled .br-f cell, so width:auto has to land
+  // on the SELECT itself — the wrapper is a flex item and would size fine either
+  // way. This is still the same fix for the same global width:100%.
   ck('the origin select overrides the global width:100%',
-     /\.br-origin\{[^}]*width:auto/.test(cardsCss), (cardsCss.match(/\.br-origin\{[^}]*\}/) || [''])[0]);
+     /\.br-origin select\{[^}]*width:auto/.test(cardsCss),
+     (cardsCss.match(/\.br-origin select\{[^}]*\}/) || [''])[0]);
   ck('...and can shrink, which flex-shrink:0 prevented',
      /\.br-origin\{[^}]*flex:1 1 /.test(cardsCss));
   ck('the global rule this fights is still there (the fix depends on it)',
      /input,select,textarea\{width:100%/.test(cardsCss));
+  // the class moved to the wrapper when the controls gained labels; what matters
+  // is unchanged — the flex behaviour is in the stylesheet, not inline on the tag
   ck('the footer controls carry classes, not the inline flex that caused it',
-     !/id="brOrigin"[^>]*style="flex:/.test(js) && /id="brOrigin" class="br-origin"/.test(js));
+     !/id="brOrigin"[^>]*style="flex:/.test(js) && /class="br-f br-origin"/.test(js));
+  // the inline style block these carried set a 10px radius and a 1px border,
+  // fighting the global 6px/1.5px and making the footer a different shape from
+  // every other field in the app
+  ck('...and no longer restate the global input styling inline',
+     !/id="brOrigin"[^>]*style="/.test(js) && !/id="brOrigDet"[^>]*style="/.test(js) &&
+     !/id="brCost"[^>]*style="/.test(js));
+  // a detail typed with the kind left at "— none —" was silently dropped on Add,
+  // because the origin object is only built when there IS a kind
+  ck('the detail box starts disabled and follows the chosen kind',
+     /id="brOrigDet"[^>]*disabled/.test(js) &&
+     /function syncOrigDet\(\)\{[\s\S]{0,320}?od\.disabled=!os\.value/.test(js));
+  ck('every footer control is labelled',
+     /for="brOrigin"/.test(js) && /for="brOrigDet"/.test(js) && /for="brCost"/.test(js));
   ck('the Add button can share a row or drop to its own',
      /\.browse-foot \.tbtn\{flex:1 1 /.test(cardsCss));
 
@@ -1213,8 +1232,10 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /class="brgroup"\$\{cfg\.groupBadge\?` data-brg=/.test(js));
   ck('the badges repaint from foot(), which is what makes the count live',
      /function foot\(\)\{[\s\S]{0,400}?paintGroupBadges\(\);\}/.test(js));
+  // still true, just no longer the only statement in the branch — the same
+  // handler now also enables/disables the detail box
   ck('changing the origin repaints too — it decides whether picks count',
-     /brOrigin"\)paintGroupBadges\(\)/.test(js));
+     /brOrigin"\)\{syncOrigDet\(\);paintGroupBadges\(\);\}/.test(js));
   ck('the badge shares the Spells tab pill rather than inventing a second look',
      /\.spell-count,\.brgcount\{/.test(css('40-spells-coins.css')));
   ck('the group heading is flex, so the pill can sit right',

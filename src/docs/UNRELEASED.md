@@ -28,4 +28,11 @@ Bullets below this line — leave the heading in place.
 
 ## Pending
 
-_Nothing yet._
+- Tidied up setting an item's **origin**. In the item finder the three controls along the bottom now
+  carry labels — Origin, Detail, Cost (gp) — and match the shape of every other field in the app
+  instead of being slightly rounder and thinner. On the item form, Origin and Origin detail now sit
+  side by side like Cost and Weight above them, with a line explaining what the detail is for, and
+  the form no longer jumps around when you pick an origin.
+- Fixed: typing an origin detail in the item finder without choosing an origin first threw the text
+  away when you tapped Add. The detail box now stays greyed out until you pick an origin, and its
+  hint follows what you picked — "at (place)" for Purchased, "from (who)" for a Gift.

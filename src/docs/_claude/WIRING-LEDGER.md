@@ -71,6 +71,37 @@ the gold.
   refine names or item data if you want them linked.
 
 
+## Done — item origin UX pass (issue #14)
+
+A polish pass on the origin controls added in the two entries below, plus the two defects that were
+sitting in the same code.
+
+- **The browse footer stopped restating the global input styling inline.** Each of the three controls
+  carried `border-radius:10px; border:1px solid var(--hair); min-height:40px`, which fought
+  `input,select,textarea` (6px / 1.5px / 42px) in `20-cards.css` — so the footer was visibly a
+  different shape and border weight from every other field in the app. They are now labelled `.br-f`
+  cells (Origin / Detail / Cost (gp)) inheriting the global rule. `width:auto` had to move from the
+  wrapper to `.br-origin select`, which is where it actually does its job now.
+- **A typed origin detail with no kind chosen was silently discarded.** `og` is only built when
+  `os.value` is truthy, and the detail input was always enabled, so the text just vanished on Add.
+  It now starts `disabled` and `syncOrigDet()` enables it, clears stale text and sets a per-kind
+  placeholder — the same behaviour the item form has.
+- **`originOptionsHTML`'s `includeClass` parameter was dead and is gone.** The item form passed
+  `false` meaning "hide Class". Implementing that as written would have been a bug: class grants tag
+  their items `kind:"class"` via `originFromSid`, so hiding the option makes a class-granted item's
+  own origin unselectable — and unrenderable — the moment you edit it. Deleted rather than honoured.
+- **The item form's Origin pair now matches the spell form**: a `.g2` row with a `hint` under it. The
+  detail box is DISABLED rather than hidden when there is no kind — hiding it re-flowed the lower
+  half of an already long form on every dropdown change.
+
+`origin` stays out of `UPD_FIELDS` (character-local, must survive a rules update). Verified by
+driving the browser: add with origin+cost applies both and paints the badge; an edit round-trip
+preserves `category`, `type`, `cost`, `origin` (including its `at`) and the `src` provenance stamp;
+at 380px the footer wraps and the Add button stays fully on screen.
+
+The origin helpers had **no unit coverage at all**, which is how both defects survived —
+`ORIGIN_KINDS`, `originLabel`, `originFromSid`, `itemOrigin`, `originOptionsHTML` now have it.
+
 ## Done — origin designators & item cost (this pass)
 
 - **Origin designator** on every item and spell: a small clickable badge (letter) showing where it

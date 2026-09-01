@@ -228,11 +228,22 @@ html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
    that cannot fit drops to the next line instead of off the edge. Scoped to the
    footer, not to spells, because the item browser has the same footer plus a
    cost input and was worse. */
-.browse-foot{display:flex;flex-wrap:wrap;gap:10px;padding:10px 0;border-top:1px solid var(--hair)}
+/* Each control is now a labelled .br-f cell rather than a bare input carrying a
+   private inline style block. Those inline styles set a 10px radius and a 1px
+   border, which fought the global input rule (6px / 1.5px) and made the footer
+   visibly a different shape from every other field in the app; dropping them is
+   the whole point, so do not reintroduce sizing here. The flex behaviour that
+   keeps Add on screen moves to the wrapper — width:auto on the SELECT still has
+   to stay, for the reason above. */
+.browse-foot{display:flex;flex-wrap:wrap;gap:10px;padding:10px 0;border-top:1px solid var(--hair);align-items:end}
 .browse-foot .tbtn{flex:1 1 120px}
-.br-origin{flex:1 1 130px;min-width:0;width:auto}
-.br-origdet{flex:1 1 90px;min-width:70px}
-.br-cost{flex:0 1 84px;min-width:64px}
+.br-f{display:flex;flex-direction:column;min-width:0}
+.br-f .f{margin-bottom:3px}
+.br-f select,.br-f input{min-height:42px}
+.br-origin{flex:1 1 140px;width:auto}
+.br-origin select{width:auto;min-width:0}
+.br-origdet{flex:1 1 120px;min-width:90px}
+.br-cost{flex:0 1 96px;min-width:76px}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 
 /* portrait */

@@ -63,14 +63,26 @@ function openBrowse(cfg){
       ${st.showFilters?`<div class="browse-facets">${facetHTML()}${fc?`<button class="fpill clear" id="brClearF" style="align-self:flex-start">Clear all</button>`:""}</div>`:sumHTML()}
       <div class="browse-count" id="brCount"></div>
       <div class="browse-list" id="brList"></div>
-      <div class="browse-foot">${cfg.originSelect?`<select id="brOrigin" class="br-origin" style="min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 8px">${originOptionsHTML(null,cfg.originSelect==="spell")}</select><input id="brOrigDet" class="br-origdet" placeholder="origin detail" style="min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 10px">`:""}${cfg.costInput?`<input id="brCost" class="br-cost" type="number" min="0" step="0.01" placeholder="cost gp" title="Overrides the item's listed price; blank uses the price from the rules data" style="min-height:40px;border-radius:10px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:0 8px">`:""}<button class="tbtn primary" id="brAdd" disabled></button></div>
+      <div class="browse-foot">${cfg.originSelect?`<div class="br-f br-origin"><label class="f" for="brOrigin">Origin</label><select id="brOrigin">${originOptionsHTML(null)}</select></div><div class="br-f br-origdet"><label class="f" for="brOrigDet">Detail</label><input id="brOrigDet" placeholder="place, who, etc." disabled></div>`:""}${cfg.costInput?`<div class="br-f br-cost"><label class="f" for="brCost">Cost (gp)</label><input id="brCost" type="number" min="0" step="0.01" placeholder="listed" title="Overrides the item's listed price; blank uses the price from the rules data"></div>`:""}<button class="tbtn primary" id="brAdd" disabled></button></div>
     </div>`;renderList();}
   function clearAll(){(cfg.facets||[]).forEach(f=>{st.facets[f.key]=f.type==="toggle"?false:new Set();});}
   /* The origin applies to the whole batch, so changing it changes whether the
      picks count — repaint the headings. */
+  /* The detail box only means anything once a kind is chosen — and a detail typed
+     with the kind left at "— none —" used to be dropped on Add without a word,
+     because the origin object is only built when there IS a kind. Disabling it
+     until then makes that impossible rather than merely unlikely, and matches
+     what the item form does. */
+  function syncOrigDet(){
+    const os=document.getElementById("brOrigin"),od=document.getElementById("brOrigDet");
+    if(!os||!od)return;
+    const d=originDef(os.value);
+    od.disabled=!os.value;if(!os.value)od.value="";
+    od.placeholder=(d&&d.ph)||"place, who, etc.";
+  }
   host.oninput=e=>{if(e.target.id==="brSearch"){st.q=e.target.value;renderList();}
-    else if(e.target.id==="brOrigin")paintGroupBadges();};
-  host.onchange=e=>{if(e.target.id==="brOrigin")paintGroupBadges();};
+    else if(e.target.id==="brOrigin"){syncOrigDet();paintGroupBadges();}};
+  host.onchange=e=>{if(e.target.id==="brOrigin"){syncOrigDet();paintGroupBadges();}};
   host.onclick=e=>{let m;
     if(e.target.closest("#brClose"))return closeBrowse();
     if(e.target.closest("#brFilters")){st.showFilters=!st.showFilters;render();return;}
