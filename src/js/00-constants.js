@@ -164,7 +164,7 @@ function statGroupHTML(k,l){
     `<div class="srow"><button class="dot" data-skill="${sk}" aria-label="${sl} proficiency"></button>`+
     `<span class="val" data-stat="skill.${sk}" id="skill-${sk}">+0</span>`+
     `<span class="lbl">${sl}</span><span class="exp">Expert</span></div>`).join("");
-  return `<div class="agroup"><div class="ability"><div class="n">${l}</div>`+
+  return `<div class="agroup"><div class="ability ahead"><div class="n">${l}</div>`+
     `<div class="m" data-stat="ability.${k}" id="mod-${k}">+0</div>`+
     `<input type="number" data-path="character.abilities.${k}" data-recompute aria-label="${l} score"></div>`+
     `<div class="alist">`+

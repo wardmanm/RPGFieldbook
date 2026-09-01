@@ -29,7 +29,7 @@ Bullets below this line — leave the heading in place.
 ## Pending
 
 - New **Skills display** choice in Settings, under This character. **Classic** is the layout you have
-  now — Ability Scores and Skills as two cards, skills listed A to Z. **By ability** stacks each
-  ability with its saving throw and the skills that ability governs beside it, and folds the Skills
-  card away. It is a display choice only: every number means exactly the same thing in both, and each
-  character remembers its own setting.
+  now — Ability Scores and Skills as two cards, skills listed A to Z. **By ability** puts the six
+  abilities in a grid, three across, each heading the saving throw and the skills that ability
+  governs, and folds the Skills card away. It is a display choice only: every number means exactly
+  the same thing in both, and each character remembers its own setting.

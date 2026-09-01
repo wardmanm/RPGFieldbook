@@ -76,8 +76,17 @@ the gold.
 Two looks over ONE set of ids, chosen per character (`character.statStyle`, "classic" | "grouped"),
 mirroring the `hdStyle` pattern beat for beat: `blankChar` default, a resolver whose fallback agrees
 with that default (so no migration), pure string builders, a `.seg` control in Settings → This
-character. Grouped stacks each ability with its saving throw and the skills that ability governs;
-the Skills card is HIDDEN, not removed.
+character. Grouped lays the six abilities out three across and two down, each a compact header over
+its saving throw and the skills it governs; the Skills card is HIDDEN, not removed.
+
+**The first cut was a single vertical column and it was rejected on sight — worth remembering why.**
+Every row stretched the full width of the card with a two-word label in it, so the block read as
+mostly air, and the ability sat in a tall box to the LEFT of a list that for STR is one row. Fixed by
+(a) three across, two down — the same rhythm the classic `.abilities` grid already uses, (b) turning
+the ability into a compact header ROW over its skills (name, modifier, score on one line) instead of
+a column beside them, and (c) tightening the row padding and moving the dotted rule to
+`.srow + .srow`, so it separates rows rather than boxing each one. Card height went from taller than
+the viewport to 448px. None of this was visible in the DOM assertions — only in a screenshot.
 
 **Three things that are not obvious and cost real time:**
 
