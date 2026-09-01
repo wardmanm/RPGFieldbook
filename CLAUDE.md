@@ -98,6 +98,7 @@ scripts/
   gen-changelog.js      regenerates docs/CHANGELOG.md                  (dev)
   release.js            bumps APP_VERSION + folds in UNRELEASED.md     (dev)
   release-notes.js      slices one version out of the changelog for the release body
+  playwright-mcp.js     cross-platform launcher for the screenshot MCP  (dev)
   wt.sh                 add/list/rm parallel issue worktrees            (dev)
 ```
 
@@ -192,12 +193,21 @@ change must eventually pass these checks, and `./build.sh` runs all of them:
    `browser_take_screenshot` with `fullPage: true`. **Every PR and every merge that changes what a
    tab renders ships with a screenshot of each affected tab** — before *and* after when it is a
    change to existing UI. No screenshot, no claim that the UI works.
-   - **Two flags in `.mcp.json` are load-bearing, not decoration.**
-     `--allow-unrestricted-file-access`: Playwright MCP **blocks `file://` navigation by default**,
-     and this whole app is a `file://` URL, so without it every capture fails. `cmd /c npx`: stdio
-     servers are spawned without a shell on Windows, where `npx` is `npx.cmd`, so a bare `npx` dies
-     with ENOENT. `--browser chrome` reuses the installed Chrome rather than downloading Chromium,
-     and the server version is pinned — bump it deliberately, not silently via `@latest`.
+   - **`.mcp.json` spawns `node scripts/playwright-mcp.js`, and the flags live in that launcher.**
+     The config used to run `cmd /c npx` directly, which is Windows-only — on a Mac it dies with
+     `Executable not found in $PATH: cmd`. `.mcp.json` has no per-platform conditionals, so the
+     choice moved into a launcher: **Windows needs `cmd /c` because stdio servers are spawned
+     without a shell there and `npx` is `npx.cmd`, a batch script, which dies with ENOENT; macOS and
+     Linux need a bare `npx` because it is a real executable and there is no `cmd`.** `node` is a
+     real binary everywhere, so that is what `.mcp.json` always spawns.
+   - **`--allow-unrestricted-file-access` is load-bearing, not decoration.** Playwright MCP **blocks
+     `file://` navigation by default**, and this whole app is a `file://` URL, so without it every
+     capture fails. `--browser chrome` reuses the installed Chrome rather than downloading Chromium,
+     and the server version is pinned in the launcher — bump it deliberately, not silently via
+     `@latest`. The output dir is `os.tmpdir()`, not a hardcoded path from whoever set it up last.
+   - **A plugin-provided Playwright server is not a substitute.** One may well be connected, but it
+     does not carry `--allow-unrestricted-file-access`, so it refuses `file://` outright — which
+     rules out the only URL this app has.
    - A **relative** `filename` writes the PNG relative to the CWD, *not* to `--output-dir`.
    - Tab names are **lowercase** (`selectTab("sheet")`). A wrong name matches no panel, deactivates
      all of them, and renders a blank body that still looks like a working app — exactly the failure
