@@ -44,7 +44,7 @@ src/                    THE SOURCE OF TRUTH — edit here, never the built file
                         /*@@CSS@@*/, <!--@@HTML@@--> and //@@JS@@
   manifest.json         the authoritative concatenation ORDER for html/, js/ and css/
   html/*.html           6 fragments, one tab panel each, spliced into <div class="page">
-  js/*.js               27 fragments, concatenated into the single <script>
+  js/*.js               28 fragments, concatenated into the single <script>
   icons/icons.json      HAND-AUTHORED emblem map, name → game-icons.net slug;
                           scripts/fetch-icons.js turns it into js/05-icons.js
   css/*.css             7 fragments, concatenated into the single <style>

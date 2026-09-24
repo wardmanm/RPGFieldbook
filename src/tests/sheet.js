@@ -35,6 +35,8 @@ const {X, state, bootError, fragments} = loadApp([
   'syncSpellAttack', 'detectSpellAttack',
   'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
+  'COMBAT_DEFAULTS', 'inCombat', 'combatSectionsOf', 'withCombatSection', 'moveCombatSection',
+  'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1808,6 +1810,77 @@ function charWith(inv, hp) {
   ck('no ICON_MAP entry points at a missing glyph', dangling.length === 0, dangling.join(', '));
   ck('every ICON_MAP key is already lower-case',
      Object.values(X.ICON_MAP).every(m => Object.keys(m).every(n => n === n.toLowerCase())));
+}
+
+/* ---- combat view: which sections, in what order, and combat state ----
+   Design: src/docs/specs/2026-09-24-combat-view-design.md §3. */
+{
+  const D = ['vitals', 'statuses', 'attacks', 'resources', 'slots', 'activespells'];
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+  ck('the defaults are the six sheet-order sections', same(X.COMBAT_DEFAULTS, D));
+  ck('a new character gets the defaults', same(X.blankChar().combatSections, D));
+  ck('...as its own copy, so editing one character cannot edit the defaults', (() => {
+    X.blankChar().combatSections.push('coins'); return same(X.blankChar().combatSections, D);
+  })());
+  ck('a new character is not in combat',
+     X.blankChar().combatActive === false && X.blankChar().combatRound === 0);
+
+  ck('a missing list resolves to the defaults', same(X.combatSectionsOf({}), D));
+  ck('null and a string resolve to the defaults too',
+     same(X.combatSectionsOf({combatSections: null}), D) &&
+     same(X.combatSectionsOf({combatSections: 'attacks'}), D));
+  ck('unknown keys, non-strings and repeats are dropped; order is kept',
+     same(X.combatSectionsOf({combatSections: ['attacks', 'nope', 7, 'vitals', 'attacks']}),
+          ['attacks', 'vitals']));
+  ck('an EMPTY list is a real choice and stays empty', same(X.combatSectionsOf({combatSections: []}), []));
+  ck('the resolver never hands back the stored array itself', (() => {
+    const c = {combatSections: ['coins']}; return X.combatSectionsOf(c) !== c.combatSections;
+  })());
+
+  ck('adding appends at the end', same(X.withCombatSection(['vitals'], 'coins', true), ['vitals', 'coins']));
+  ck('adding one already there changes nothing', same(X.withCombatSection(['vitals'], 'vitals', true), ['vitals']));
+  ck('removing keeps the rest in order',
+     same(X.withCombatSection(['vitals', 'coins', 'attacks'], 'coins', false), ['vitals', 'attacks']));
+  ck('removing one that is not there changes nothing',
+     same(X.withCombatSection(['vitals'], 'coins', false), ['vitals']));
+
+  ck('first to last', same(X.moveCombatSection(['a', 'b', 'c'], 0, 2), ['b', 'c', 'a']));
+  ck('last to first', same(X.moveCombatSection(['a', 'b', 'c'], 2, 0), ['c', 'a', 'b']));
+  ck('a target past the end lands last', same(X.moveCombatSection(['a', 'b', 'c'], 0, 9), ['b', 'c', 'a']));
+  ck('a source out of range changes nothing', same(X.moveCombatSection(['a', 'b'], 5, 0), ['a', 'b']));
+  ck('a one-item list is left alone', same(X.moveCombatSection(['a'], 0, 0), ['a']));
+  ck('moving never edits the list it was given', (() => {
+    const l = ['a', 'b']; X.moveCombatSection(l, 0, 1); return same(l, ['a', 'b']);
+  })());
+
+  ck('only a real true means in combat',
+     X.inCombat({combatActive: true}) && !X.inCombat({combatActive: 'true'}) &&
+     !X.inCombat({}) && !X.inCombat(null));
+  const c = X.blankChar(); c.combatRound = 5;
+  c.activeSpells = [{id: 'h', name: 'Haste', conc: true, durationSec: 60, elapsedSec: 30}];
+  X.combatStart(c);
+  ck('Start combat begins at round 1 whatever the old counter said',
+     c.combatActive === true && c.combatRound === 1);
+  c.combatRound = 7;
+  const r = X.combatEnd(c);
+  ck('End combat stops it and resets the round', c.combatActive === false && c.combatRound === 0);
+  ck('...counting the round being ended as finished', r.rounds === 7 && r.sec === 42);
+  ck('...and leaves active spells running', c.activeSpells.length === 1 && c.activeSpells[0].elapsedSec === 30);
+
+  ck('in-game time counts from the start of round 1',
+     X.combatElapsedSec({combatRound: 1}) === 0 && X.combatElapsedSec({combatRound: 3}) === 12 &&
+     X.combatElapsedSec({combatRound: 0}) === 0);
+  [[0, '0 sec'], [12, '12 sec'], [60, '1 min'], [66, '1 min 6 sec'], [3600, '1 hr'], [3840, '1 hr 4 min']]
+    .forEach(([s, want]) => ck(`${s} s reads "${want}"`, X.fmtCombatTime(s) === want, X.fmtCombatTime(s)));
+
+  const saved = X.migrate(JSON.parse(JSON.stringify(X.migrate(
+    {id: 'cv1', combatSections: ['coins', 'attacks'], combatActive: true, combatRound: 4}))));
+  ck('a save → load round trip keeps the list, its order and the combat state',
+     same(saved.combatSections, ['coins', 'attacks']) && saved.combatActive === true && saved.combatRound === 4);
+  const old = X.migrate({id: 'cv-old'});
+  ck('a sheet saved before the combat view is not in combat and gets the defaults',
+     !X.inCombat(old) && same(X.combatSectionsOf(old), D));
 }
 
 ck.done();
