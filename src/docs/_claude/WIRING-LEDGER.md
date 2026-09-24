@@ -3393,3 +3393,60 @@ Deliberately NOT added: a docs-suite check for a heading with no blank line abov
 do drop that line where two appended sections meet (twice during this integration), but an ATX
 heading interrupts a paragraph in CommonMark and renders correctly, so it is cosmetic — and the
 docs suite is explicitly not a prose linter. Six such headings already exist in this file.
+
+## Done — the combat view (issues #9, #10, #11)
+
+A full-screen view, opened from crossed swords in the tab bar, holding any of the 19 sections — the
+REAL cards, moved into `#cvList` with a hidden `[data-cvhome]` marker left at home, and moved back on
+close. Copies would duplicate every id (the #17 `#skill-perception` bug). A tracker in its header
+(Start, ◀ ▶, End) drives the existing `advanceRound()`. Closing the view never ends combat.
+Spec: `src/docs/specs/2026-09-24-combat-view-design.md`; plan: `src/docs/plans/2026-09-24-combat-view.md`.
+
+Things that are not obvious and would be easy to undo by accident:
+
+- **`COMBAT_DEFAULTS` lives in `00-constants.js`**, not `87-combat.js`: `blankChar()` reads it at load,
+  when a later fragment's `const` is still in its TDZ.
+- **`combatActive` is its own flag.** The Active Spells card has always moved `combatRound`, so
+  deriving "in combat" from `round > 0` would drop old sheets into a fight on update.
+- **The Esc listener is registered in the CAPTURE phase.** The modal's Esc handler runs first
+  otherwise, shuts the modal, and the same keypress then closes the view behind it.
+- **A drag never moves the dragged card** — moving an element can drop its pointer capture — so its
+  neighbours hop over it instead, and the order is read back off the DOM on release.
+- **`renderFamiliars()` now clears its list before its early return**: the view shows that card even
+  when empty, and the stale last familiar would have shown with it.
+- **`src/tests/docs.js` has two icon lists**: `KINDS` (everything vendored, now including `ui`) and
+  `DATA_KINDS` (the three whose names ship in `data/`, for the coverage check).
+- `selectTab()` closes the view first, so a note link never lands on a tab with its cards missing.
+
+Known and accepted: Active Spells, Familiars and Skills (in By ability mode) are hidden on their own
+tab when empty, so their toggle can only be reached once they have content. Inside the view that
+toggle can only REMOVE a card — so once Active Spells is taken out of the view it cannot be put back
+until a spell is running. Open question for Mike: a toast Undo, or an add-list in the view's ☰.
+The item finder has no Esc of its own, so with the finder open over the view Esc leaves both open.
+
+Final-review fixes, where the reason is not obvious from the code:
+
+- **`inert` on `.topbar`, `.tabbar` and `.page` while the view is open** (`cvInert`): `aria-modal` does
+  not stop Tab, which reached invisible controls behind the view. The modal, the item finder, the ☰
+  flyout and the toast must stay OUTSIDE those three or they go dead over the view.
+- **`renderCombatHeader()` captures the focused button's id before repainting** and refocuses it after,
+  falling back when it is gone or disabled (◀ at round 1 → ▶, Start → ▶, End → Start). The repaint
+  replaces every button, so without this ▶ lost focus on each press.
+- **A toggle click repaints that one button in place** (`paintCombatToggle`); `outerHTML` dropped its
+  focus. `renderCombatToggles()` stays the path for `renderAll()`.
+- **`#combatView #familiarCard{order:0}`**: 10-chrome.css's ≤820px `order:1` is not scoped to the
+  sheet, and in the view's flex column it pinned Familiars last whatever the saved order.
+- **The round is announced from `#cvLive` in the template**, outside `#cvHead`: a live region that is
+  replaced on every repaint is never announced.
+- **Phone widths**: ≤400px the pill shows swords + number only and tabs are 42px, so the pinned group
+  fits beside six tabs at 360px; ≤480px the header's spacer becomes a full-width row break, giving
+  two rows with End at the far right of row 2.
+- **"Is this card showing?" is `cvCardShown()`, computed style** — not the inline style (the view's
+  CSS overrides `#activeSpellCard`'s inline `display:none`) and not `offsetParent` (`fillCombatView()`
+  runs before the view is shown). The empty hint and the drag both use it; a drag hops a hidden card
+  along with the next shown one, since its zero height can never be passed.
+- **A drag also ends on `lostpointercapture`, heard on the DOCUMENT**: if the grip is detached
+  mid-drag the browser fires it there, not at the grip, and pointerup never arrives. It follows every
+  normal pointerup too, so `done` is guarded against running twice.
+- **The grip's hit box is 40×40** from padding cancelled by negative margins, so the glyph and the
+  heading height do not move; its left edge sits exactly on the card's edge.

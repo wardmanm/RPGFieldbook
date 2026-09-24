@@ -35,6 +35,10 @@ const {X, state, bootError, fragments} = loadApp([
   'syncSpellAttack', 'detectSpellAttack',
   'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
+  'COMBAT_DEFAULTS', 'inCombat', 'combatSectionsOf', 'withCombatSection', 'moveCombatSection',
+  'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
+  'combatToggleHTML', 'combatToggleText', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
+  'combatGripHTML', 'moveCombatCard',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1808,6 +1812,181 @@ function charWith(inv, hp) {
   ck('no ICON_MAP entry points at a missing glyph', dangling.length === 0, dangling.join(', '));
   ck('every ICON_MAP key is already lower-case',
      Object.values(X.ICON_MAP).every(m => Object.keys(m).every(n => n === n.toLowerCase())));
+}
+
+/* ---- combat view: which sections, in what order, and combat state ----
+   Design: src/docs/specs/2026-09-24-combat-view-design.md §3. */
+{
+  const D = ['vitals', 'statuses', 'attacks', 'resources', 'slots', 'activespells'];
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+  ck('the defaults are the six sheet-order sections', same(X.COMBAT_DEFAULTS, D));
+  ck('a new character gets the defaults', same(X.blankChar().combatSections, D));
+  ck('...as its own copy, so editing one character cannot edit the defaults', (() => {
+    X.blankChar().combatSections.push('coins'); return same(X.blankChar().combatSections, D);
+  })());
+  ck('a new character is not in combat',
+     X.blankChar().combatActive === false && X.blankChar().combatRound === 0);
+
+  ck('a missing list resolves to the defaults', same(X.combatSectionsOf({}), D));
+  ck('null and a string resolve to the defaults too',
+     same(X.combatSectionsOf({combatSections: null}), D) &&
+     same(X.combatSectionsOf({combatSections: 'attacks'}), D));
+  ck('unknown keys, non-strings and repeats are dropped; order is kept',
+     same(X.combatSectionsOf({combatSections: ['attacks', 'nope', 7, 'vitals', 'attacks']}),
+          ['attacks', 'vitals']));
+  ck('an EMPTY list is a real choice and stays empty', same(X.combatSectionsOf({combatSections: []}), []));
+  ck('the resolver never hands back the stored array itself', (() => {
+    const c = {combatSections: ['coins']}; return X.combatSectionsOf(c) !== c.combatSections;
+  })());
+
+  ck('adding appends at the end', same(X.withCombatSection(['vitals'], 'coins', true), ['vitals', 'coins']));
+  ck('adding one already there changes nothing', same(X.withCombatSection(['vitals'], 'vitals', true), ['vitals']));
+  ck('removing keeps the rest in order',
+     same(X.withCombatSection(['vitals', 'coins', 'attacks'], 'coins', false), ['vitals', 'attacks']));
+  ck('removing one that is not there changes nothing',
+     same(X.withCombatSection(['vitals'], 'coins', false), ['vitals']));
+
+  ck('first to last', same(X.moveCombatSection(['a', 'b', 'c'], 0, 2), ['b', 'c', 'a']));
+  ck('last to first', same(X.moveCombatSection(['a', 'b', 'c'], 2, 0), ['c', 'a', 'b']));
+  ck('a target past the end lands last', same(X.moveCombatSection(['a', 'b', 'c'], 0, 9), ['b', 'c', 'a']));
+  ck('a source out of range changes nothing', same(X.moveCombatSection(['a', 'b'], 5, 0), ['a', 'b']));
+  ck('a one-item list is left alone', same(X.moveCombatSection(['a'], 0, 0), ['a']));
+  ck('moving never edits the list it was given', (() => {
+    const l = ['a', 'b']; X.moveCombatSection(l, 0, 1); return same(l, ['a', 'b']);
+  })());
+
+  ck('only a real true means in combat',
+     X.inCombat({combatActive: true}) && !X.inCombat({combatActive: 'true'}) &&
+     !X.inCombat({}) && !X.inCombat(null));
+  const c = X.blankChar(); c.combatRound = 5;
+  c.activeSpells = [{id: 'h', name: 'Haste', conc: true, durationSec: 60, elapsedSec: 30}];
+  X.combatStart(c);
+  ck('Start combat begins at round 1 whatever the old counter said',
+     c.combatActive === true && c.combatRound === 1);
+  c.combatRound = 7;
+  const r = X.combatEnd(c);
+  ck('End combat stops it and resets the round', c.combatActive === false && c.combatRound === 0);
+  ck('...counting the round being ended as finished', r.rounds === 7 && r.sec === 42);
+  ck('...and leaves active spells running', c.activeSpells.length === 1 && c.activeSpells[0].elapsedSec === 30);
+
+  ck('in-game time counts from the start of round 1',
+     X.combatElapsedSec({combatRound: 1}) === 0 && X.combatElapsedSec({combatRound: 3}) === 12 &&
+     X.combatElapsedSec({combatRound: 0}) === 0);
+  [[0, '0 sec'], [12, '12 sec'], [60, '1 min'], [66, '1 min 6 sec'], [3600, '1 hr'], [3840, '1 hr 4 min']]
+    .forEach(([s, want]) => ck(`${s} s reads "${want}"`, X.fmtCombatTime(s) === want, X.fmtCombatTime(s)));
+
+  const saved = X.migrate(JSON.parse(JSON.stringify(X.migrate(
+    {id: 'cv1', combatSections: ['coins', 'attacks'], combatActive: true, combatRound: 4}))));
+  ck('a save → load round trip keeps the list, its order and the combat state',
+     same(saved.combatSections, ['coins', 'attacks']) && saved.combatActive === true && saved.combatRound === 4);
+  const old = X.migrate({id: 'cv-old'});
+  ck('a sheet saved before the combat view is not in combat and gets the defaults',
+     !X.inCombat(old) && same(X.combatSectionsOf(old), D));
+}
+
+/* ---- rounds: in combat the floor is round 1 ---- */
+{
+  const bless = () => ({id: 'b', name: 'Bless', level: 1, conc: true, durationSec: 60, elapsedSec: 0});
+  const c = X.blankChar(); c.activeSpells = [bless()]; X.character = c; X.combatStart(c);
+  X.advanceRound(1);
+  ck('next round moves the round on', c.combatRound === 2);
+  ck('...and every active spell gains 6 seconds', c.activeSpells[0].elapsedSec === 6);
+  X.advanceRound(-1);
+  ck('previous round takes them back off', c.combatRound === 1 && c.activeSpells[0].elapsedSec === 0);
+  c.activeSpells[0].elapsedSec = 12;
+  X.advanceRound(-1);
+  ck('in combat, previous at round 1 moves nothing — not the round, not the spells',
+     c.combatRound === 1 && c.activeSpells[0].elapsedSec === 12);
+
+  const o = X.blankChar(); o.activeSpells = [bless()]; o.activeSpells[0].elapsedSec = 12; X.character = o;
+  X.advanceRound(-1);
+  ck('out of combat nothing changes: the round floors at 0 and spells still step back',
+     o.combatRound === 0 && o.activeSpells[0].elapsedSec === 6);
+}
+
+ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').includes('<path d="M'));
+
+/* ---- the tab-bar button ---- */
+{
+  const idle = X.combatButtonHTML({combatActive: false, combatRound: 4});
+  ck('idle, the button is the crossed swords alone', idle.includes('<svg') && !/Rd/.test(idle));
+  const on = X.combatButtonHTML({combatActive: true, combatRound: 3});
+  ck('in combat it carries the round, reading "Rd 3"',
+     on.includes('<svg') && on.replace(/<svg[\s\S]*<\/svg>/, '').replace(/<[^>]+>/g, '') === 'Rd 3');
+  // A phone-width tab bar hides the word and keeps the number (45-combat.css),
+  // so "Rd " must be its own element and the number must sit outside it.
+  ck('"Rd " is its own span, so a phone can drop it and keep the number',
+     on.includes('<span class="cv-rd"><span class="cv-rdw">Rd </span>3</span>'));
+}
+
+/* ---- the per-card toggle, and the view's header ---- */
+{
+  const off = X.combatToggleHTML('attacks', false), on = X.combatToggleHTML('attacks', true);
+  ck('the toggle carries its section and its state',
+     off.includes('data-combatbtn="attacks"') && off.includes('aria-pressed="false"') &&
+     on.includes('aria-pressed="true"') && on.includes('class="cvbtn on"') && off.includes('class="cvbtn"'));
+  ck('it says what it will do, and to which card',
+     off.includes('Add to combat view — Attacks &amp; Weapons') &&
+     on.includes('Remove from combat view — Attacks &amp; Weapons'));
+  ck('it wears the crossed swords', off.includes('class="gicon cvicon"'));
+  // paintCombatToggle() repaints a clicked toggle in place from the same text,
+  // so the two can never say different things.
+  const tOff = X.combatToggleText('attacks', false), tOn = X.combatToggleText('attacks', true);
+  ck('the in-place repaint says what the markup says',
+     tOff.title === 'Add to combat view' && tOn.title === 'Remove from combat view' &&
+     tOn.label === 'Remove from combat view — Attacks & Weapons' &&
+     on.includes('title="Remove from combat view"'));
+  const h = X.combatHeaderHTML({combatActive: false, combatRound: 0});
+  ck('the header can always close, and says combat keeps going',
+     h.includes('id="cvClose"') && /combat keeps going/.test(h));
+  ck('the header has its own ☰', h.includes('id="cvToc"'));
+}
+
+/* ---- the tracker in the view's header ---- */
+{
+  const idle = X.combatHeaderHTML({combatActive: false, combatRound: 5});
+  ck('out of combat the header offers Start combat, and no arrows or End',
+     idle.includes('id="cvStart"') && !idle.includes('id="cvNext"') && !idle.includes('id="cvEnd"'));
+  const r3 = X.combatHeaderHTML({combatActive: true, combatRound: 3});
+  ck('in combat: round, in-game time, both arrows and End — and no Start',
+     r3.includes('Round <b>3</b><span class="cv-sep"> · </span><span class="cv-time">12 sec</span>') &&
+     r3.includes('id="cvPrev"') && r3.includes('id="cvNext"') &&
+     r3.includes('id="cvEnd"') && !r3.includes('id="cvStart"'));
+  ck('the repainted header is no live region — #cvLive in the shell is',
+     !/aria-live/.test(r3) && !/aria-live/.test(idle));
+  ck('◀ is live after round 1', !/id="cvPrev"[^>]*disabled/.test(r3));
+  ck('◀ is disabled at round 1',
+     /id="cvPrev"[^>]*disabled/.test(X.combatHeaderHTML({combatActive: true, combatRound: 1})));
+  ck('End sits apart from the arrows',
+     r3.indexOf('id="cvNext"') < r3.indexOf('class="grow"') && r3.indexOf('class="grow"') < r3.indexOf('id="cvEnd"'));
+  ck('the header can still close and still has ☰', r3.includes('id="cvClose"') && r3.includes('id="cvToc"'));
+
+  const c = X.blankChar(); c.combatRound = 4; X.character = c;
+  X.startCombatNow();
+  ck('Start combat, from the header, begins at round 1', X.inCombat(c) && c.combatRound === 1);
+  c.combatRound = 7; state.confirm = false;
+  ck('End combat asks first, naming the round',
+     X.endCombatAsk() === false && state.lastConfirm === 'End combat at round 7?');
+  ck('...and saying no leaves the fight running', X.inCombat(c) && c.combatRound === 7);
+  state.confirm = true;
+  ck('saying yes ends it', X.endCombatAsk() === true && !X.inCombat(c) && c.combatRound === 0);
+}
+
+/* ---- arranging ---- */
+{
+  const g = X.combatGripHTML('vitals');
+  ck('the grip is a real button, named for its card and its keys',
+     g.startsWith('<button') && g.includes('data-cvgrip="vitals"') && /Move Vitals — ↑ and ↓/.test(g));
+  const c = X.blankChar(); X.character = c;
+  X.moveCombatCard('vitals', 1);
+  ck('↓ moves a section one place later', JSON.stringify(c.combatSections.slice(0, 2)) === '["statuses","vitals"]');
+  X.moveCombatCard('vitals', -1);
+  ck('↑ moves it back', c.combatSections[0] === 'vitals');
+  X.moveCombatCard('vitals', -1);
+  ck('↑ at the top does nothing', c.combatSections[0] === 'vitals' && c.combatSections.length === 6);
+  X.moveCombatCard('coins', 1);
+  ck('a section not in the view cannot be moved', c.combatSections.indexOf('coins') < 0);
 }
 
 ck.done();

@@ -19,6 +19,11 @@ const FX_LABEL={};fxTargets().forEach(([l,t])=>FX_LABEL[t]=l);
 
 /* ================= state ================= */
 function uid(){return Math.random().toString(36).slice(2,9)}
+/* The combat view's starting sections, in sheet order. Lives HERE rather than in
+   87-combat.js because blankChar() runs at load (`let character=blankChar()`
+   below), long before a later fragment's const exists — ADR-001's TDZ rule. */
+const COMBAT_DEFAULTS=["vitals","statuses","attacks","resources","slots","activespells"];
+
 /* appVersion is the app version this character was last RECONCILED against — not
    "last saved with". It stays "" here on purpose: this function is called at top
    level on the line below, before 30-version.js has run, so touching APP_VERSION
@@ -40,7 +45,10 @@ function blankChar(){
     spellAbility:"", slots:{}, spells:[], attacks:[], race:null, bg:null, classes:[], grants:[],
     features:[], inventory:[], statuses:[], familiars:[], glossary:[],
     featCollapse:{groups:{},items:{}}, invCollapse:{items:{}}, atkCollapse:{items:{}}, hdUsed:{}, resources:[],
-    activeSpells:[], combatRound:0, grantGold:{},
+    /* The combat view (87-combat.js). combatActive is its own flag, NOT
+       combatRound>0: the Active Spells card has always moved the round, so plenty
+       of sheets carry a round with no fight behind it. */
+    activeSpells:[], combatRound:0, combatActive:false, combatSections:COMBAT_DEFAULTS.slice(), grantGold:{},
     size:"", encumbrance:"none", coinWeight:true, hpColor:true, hdStyle:"full", statStyle:"classic",
     /* Notes pinned to a section of the sheet, keyed by NOTE_SECTIONS id.
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO

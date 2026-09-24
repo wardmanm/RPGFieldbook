@@ -2,6 +2,9 @@
    top of the page, but jumping to a note wants that note's card — so the scroll
    is the caller's decision, not this function's. */
 function selectTab(name){
+  /* Leaving for a tab means leaving the combat view first: it sends the cards
+     home, or a note link would land on a tab with its cards missing. */
+  closeCombatView();
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
   document.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+name));
   closeToc();
@@ -10,6 +13,10 @@ function selectTab(name){
    rather than assumed. Shared by the table of contents and the notes jump. */
 function scrollToCard(el){
   if(!el)return;
+  /* In the combat view the card sits in #cvBody, which scrolls on its own under a
+     header that is not the tab bar. */
+  const box=el.closest("#cvBody");
+  if(box){box.scrollTo({top:Math.max(0,el.getBoundingClientRect().top-box.getBoundingClientRect().top+box.scrollTop-10),behavior:"smooth"});return;}
   const tb=document.querySelector(".tabbar");
   const off=(tb?tb.getBoundingClientRect().height:48)+10;
   const y=el.getBoundingClientRect().top+window.scrollY-off;
@@ -17,8 +24,10 @@ function scrollToCard(el){
 }
 function buildToc(){
   const fly=document.getElementById("tocFly");if(!fly)return;
-  const panel=document.querySelector(".tabpanel.active");
-  const tabBtn=document.querySelector(".tab.active");const tabName=tabBtn?tabBtn.textContent.trim():"Sections";
+  /* With the combat view open, ☰ lists the view's cards, not the tab behind it. */
+  const inView=combatViewOpen();
+  const panel=inView?document.getElementById("cvList"):document.querySelector(".tabpanel.active");
+  const tabBtn=document.querySelector(".tab.active");const tabName=inView?"Combat":(tabBtn?tabBtn.textContent.trim():"Sections");
   const items=[];
   if(panel)panel.querySelectorAll(".card > .label, .inv-sec-head").forEach(node=>{
     const target=node.classList.contains("inv-sec-head")?node:node.closest(".card");
@@ -33,7 +42,9 @@ function buildToc(){
   fly.innerHTML=`<h4>${esc(tabName)}</h4>`+(items.length?"":`<p class="hint" style="padding:6px">No sections here.</p>`);
   items.forEach(it=>{const a=document.createElement("a");a.textContent=it.t;if(it.sub)a.style.paddingLeft="20px";a.addEventListener("click",()=>{closeToc();scrollToCard(it.target);});fly.appendChild(a);});
 }
-function openToc(){buildToc();const tb=document.querySelector(".tabbar");const top=tb?Math.max(0,Math.round(tb.getBoundingClientRect().bottom)):0;const fly=document.getElementById("tocFly"),back=document.getElementById("tocBack");if(fly)fly.style.top=top+"px";if(back)back.style.top=top+"px";if(fly)fly.classList.add("open");if(back)back.classList.add("open");}
+/* In the combat view the flyout hangs under the view's header, not the tab bar
+   the view covers. */
+function openToc(){buildToc();const tb=combatViewOpen()?document.getElementById("cvHead"):document.querySelector(".tabbar");const top=tb?Math.max(0,Math.round(tb.getBoundingClientRect().bottom)):0;const fly=document.getElementById("tocFly"),back=document.getElementById("tocBack");if(fly)fly.style.top=top+"px";if(back)back.style.top=top+"px";if(fly)fly.classList.add("open");if(back)back.classList.add("open");}
 function closeToc(){const f=document.getElementById("tocFly"),b=document.getElementById("tocBack");if(f)f.classList.remove("open");if(b)b.classList.remove("open");}
 function invSection(it){
   const ov=String(it.sectionOverride||"").trim();
@@ -222,8 +233,10 @@ function renderFamiliars(){
   const has=character.familiars.length>0;
   card.style.display=has?"":"none";
   link.style.display=has?"none":"";
-  if(!has)return;
+  /* Cleared BEFORE the early return: the combat view shows this card even when it
+     is empty, and a list still holding the last familiar removed would show it. */
   const el=document.getElementById("familiarList");el.innerHTML="";
+  if(!has)return;
   character.familiars.forEach(f=>{
     const on=!!f.active;
     const stats=[f.ac!==""&&f.ac!=null?`AC ${esc(f.ac)}`:"",(f.hp&&(f.hp.max!==""&&f.hp.max!=null))?`HP ${esc(f.hp.cur||0)}/${esc(f.hp.max)}`:"",f.speed?`Speed ${esc(f.speed)}`:""].filter(Boolean).join(" · ");

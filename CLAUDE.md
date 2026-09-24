@@ -44,10 +44,10 @@ src/                    THE SOURCE OF TRUTH — edit here, never the built file
                         /*@@CSS@@*/, <!--@@HTML@@--> and //@@JS@@
   manifest.json         the authoritative concatenation ORDER for html/, js/ and css/
   html/*.html           6 fragments, one tab panel each, spliced into <div class="page">
-  js/*.js               27 fragments, concatenated into the single <script>
+  js/*.js               28 fragments, concatenated into the single <script>
   icons/icons.json      HAND-AUTHORED emblem map, name → game-icons.net slug;
                           scripts/fetch-icons.js turns it into js/05-icons.js
-  css/*.css             7 fragments, concatenated into the single <style>
+  css/*.css             8 fragments, concatenated into the single <style>
   tests/                THE TEST SUITES — run with ./src/tests/run.sh (dev)
     harness.js          loads the app the way the build concatenates it
     converter.py · tables.js · rules-data.js · sheet.js · char-update.js · docs.js
@@ -57,6 +57,8 @@ src/                    THE SOURCE OF TRUTH — edit here, never the built file
     RELEASING.md        how to cut and publish a release, and what CI refuses
     WORKTREES.md        working several issues at once in parallel worktrees
     ADR-001-source-split.md  why the source is split and how the build works
+    specs/              one design spec per feature, written and approved before any plan
+    plans/              the implementation plans that execute those specs
     _claude/            AGENT CONTEXT — working memory and reference, not for humans
       WIRING-LEDGER.md    running log of what's been done + what's deferred — READ THIS
       HUMBLEWOOD-PLAYTESTS.md  what each playtest packet adds, and what supersedes what

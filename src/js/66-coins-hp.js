@@ -259,5 +259,8 @@ function renderAll(){
      condition for a spell that isn't running. */
   syncConcStatus();
   renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderRulesSections();renderNoteIcons();renderNotes();renderAllRT();recompute();
+  /* LAST: the combat toggles sit beside the note buttons drawn above, and an open
+     combat view refills from THIS character — every character switch ends here. */
+  syncCombatView();
 }
 

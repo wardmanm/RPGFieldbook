@@ -1463,4 +1463,24 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   S.rulesCollapse = {};
 }
 
+// ---------- the combat view's shell: a tab-bar button, and a view outside every tab
+{
+  const t = loadHTML();
+  const tools = t.indexOf('<div class="tab-tools">'), combat = t.indexOf('id="btnCombat"'),
+        toc = t.indexOf('id="btnToc"'), page = t.indexOf('<div class="page">'),
+        view = t.indexOf('id="combatView"');
+  ck('the combat button sits in the pinned tab-bar group, before ☰',
+     tools >= 0 && tools < combat && combat < toc);
+  ck('the combat view is outside the page, so no tab panel owns it', view >= 0 && view < page);
+  ck('the view has its header, its scroller, its empty hint and its list',
+     ['id="cvHead"', 'id="cvBody"', 'id="cvEmpty"', 'id="cvList"'].every(s => t.includes(s)));
+  ck('the view ships holding no cards — they are moved in at runtime',
+     !/class="card"/.test(t.slice(view, page)));
+  // #cvHead is repainted whole, and a replaced live region is never announced.
+  const live = t.indexOf('id="cvLive"'), head = t.indexOf('id="cvHead"');
+  ck('the round\'s live region is in the view but outside its repainted header',
+     live > view && live < page && !/id="cvLive"/.test(t.slice(head, t.indexOf('</div>', head))) &&
+     /<p [^>]*id="cvLive" aria-live="polite"/.test(t));
+}
+
 ck.done();

@@ -265,9 +265,14 @@ function maybeExpire(a){
   if(a.durationSec!=null&&a.elapsedSec<a.durationSec)a.expiredPrompted=false;
 }
 function advanceRound(dir){
-  character.combatRound=Math.max(0,num(character.combatRound)+dir);
+  /* In combat the floor is round 1, Start combat's round. A step that cannot move
+     the round must not move the spells either, or ◀ at round 1 would quietly take
+     6 seconds off every active spell. Out of combat, exactly as before. */
+  const cur=num(character.combatRound);
+  if(inCombat(character)&&cur+dir<1)return;
+  character.combatRound=Math.max(0,cur+dir);
   (character.activeSpells||[]).slice().forEach(a=>bumpActive(a,dir*6));
-  renderActiveSpells();scheduleSave();
+  renderActiveSpells();renderCombatChrome();scheduleSave();
 }
 function renderActiveSpells(){
   const card=document.getElementById("activeSpellCard"),el=document.getElementById("activeSpellList");

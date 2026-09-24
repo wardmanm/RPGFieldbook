@@ -14,6 +14,7 @@
     "src/css/30-sheet.css",
     "src/css/35-tables.css",
     "src/css/40-spells-coins.css",
+    "src/css/45-combat.css",
     "src/css/50-modal.css"
   ],
   "js": [
@@ -41,6 +42,7 @@
     "src/js/85-browse.js",
     "src/js/86-tables.js",
     "src/js/87-notes.js",
+    "src/js/87-combat.js",
     "src/js/88-settings.js",
     "src/js/89-rules-merge.js",
     "src/js/90-boot.js"
