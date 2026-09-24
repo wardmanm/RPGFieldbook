@@ -19,16 +19,16 @@ const FX_LABEL={};fxTargets().forEach(([l,t])=>FX_LABEL[t]=l);
 
 /* ================= state ================= */
 function uid(){return Math.random().toString(36).slice(2,9)}
-/* appVersion is the app version this character was last RECONCILED against — not
-   "last saved with". It stays "" here on purpose: this function is called at top
-   level on the line below, before 30-version.js has run, so touching APP_VERSION
-   from here would be a TDZ ReferenceError and the app would never boot.
-   newCharacter() stamps the real version; "" means "never checked". */
 /* The combat view's starting sections, in sheet order. Lives HERE rather than in
    87-combat.js because blankChar() runs at load (`let character=blankChar()`
    below), long before a later fragment's const exists — ADR-001's TDZ rule. */
 const COMBAT_DEFAULTS=["vitals","statuses","attacks","resources","slots","activespells"];
 
+/* appVersion is the app version this character was last RECONCILED against — not
+   "last saved with". It stays "" here on purpose: this function is called at top
+   level on the line below, before 30-version.js has run, so touching APP_VERSION
+   from here would be a TDZ ReferenceError and the app would never boot.
+   newCharacter() stamps the real version; "" means "never checked". */
 function blankChar(){
   const c={id:uid(),appVersion:"",system:"humblewood",name:"",class:"",ancestry:"",background:"",alignment:"",xp:"",level:1,
     ac:"",init:"",speed:"",hitdice:"",hdManual:false,inspiration:false,

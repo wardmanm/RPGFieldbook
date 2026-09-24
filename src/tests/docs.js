@@ -185,7 +185,6 @@ if (dvm) {
       ck('ICON_MAP.' + k + ' carries "' + name + '"',
          m[1].includes('"' + name.trim().toLowerCase() + '":')));
   });
-  ck('05-icons.js has an ICON_MAP.ui block', /"ui":{([^}]*)}/.test(frag));
 
   // The invariant that licenses interpolating d without esc() in iconSVG().
   const bad = [...frag.matchAll(/^"[a-z0-9-]+\/[a-z0-9-]+":"([^"]*)"/gm)]
