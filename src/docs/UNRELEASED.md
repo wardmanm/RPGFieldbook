@@ -65,3 +65,5 @@ Bullets below this line — leave the heading in place.
   card) now look exactly like the ones in Features & Traits — a clear line with a little space before
   the first item, instead of a faint line with the item jammed against it. The arrow on an open
   inventory section now points down, as it does everywhere else, instead of sideways.
+- Every search and filter box now has a **×** to clear it — the item, spell and feature browsers,
+  and the Glossary and Tables filters on the Rules tab. It appears once you've typed something.

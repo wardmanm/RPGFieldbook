@@ -1545,4 +1545,22 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the inventory caret is drawn like the Features one', !!featCaret && invCaret === featCaret, [featCaret, invCaret]);
 }
 
+// ---------- every search / filter box has a clear button (issue #49)
+// One component: a .searchbox wrapping the input and a .search-clear button,
+// shown only while there is text (pure CSS, off :placeholder-shown), which empties
+// the box and re-runs its filter through the same input event typing sends.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const css = manifest.css.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const html = loadHTML();
+  const boxed = (src, id) => new RegExp('<div class="searchbox[^"]*"[^>]*>\\s*<input id="' + id + '"[^>]*placeholder="[^"]+"[^>]*>\\s*<button type="button" class="search-clear" aria-label="[^"]+"').test(src);
+  ck('the glossary filter has its clear button', boxed(html, 'glossSearch'));
+  ck('the tables filter has its clear button', boxed(html, 'tablesSearch'));
+  ck('the finder search (items, spells, features) has its clear button', boxed(js, 'brSearch'));
+  ck('the × shows only while there is text', /\.searchbox input:placeholder-shown ?\+ ?\.search-clear\{display:none\}/.test(css));
+  ck('the × empties the box and re-runs its filter the way typing does',
+     /closest\("\.search-clear"\)[\s\S]{0,200}?value="";[\s\S]{0,80}?dispatchEvent\(new Event\("input",\{bubbles:true\}\)\)/.test(js));
+}
+
 ck.done();

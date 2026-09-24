@@ -66,7 +66,7 @@ function openBrowse(cfg){
   function writeFoot(k){const put=(id,val)=>{const e=document.getElementById(id);if(e&&val!=null)e.value=val;};put("brOrigin",k.origin);syncOrigDet();if(k.origin)put("brOrigDet",k.det);put("brQty",k.qty);put("brCost",k.cost);}
   function render(){const keep=st.drawn?readFoot():null;const fc=activeChips().length;
     host.innerHTML=`<div class="browse-inner">
-      <div class="browse-head"><input id="brSearch" placeholder="Search ${esc(cfg.noun||"")}…" value="${esc(st.q)}" autocomplete="off"><button class="tbtn ${st.showFilters?"primary":""}" id="brFilters">Filters${fc?` · ${fc}`:""}</button>${cfg.onCustom?`<button class="tbtn" id="brCustom">+ Custom</button>`:""}<button class="tbtn" id="brClose">Close</button></div>
+      <div class="browse-head"><div class="searchbox"><input id="brSearch" placeholder="Search ${esc(cfg.noun||"")}…" value="${esc(st.q)}" autocomplete="off"><button type="button" class="search-clear" aria-label="Clear the search" title="Clear">×</button></div><button class="tbtn ${st.showFilters?"primary":""}" id="brFilters">Filters${fc?` · ${fc}`:""}</button>${cfg.onCustom?`<button class="tbtn" id="brCustom">+ Custom</button>`:""}<button class="tbtn" id="brClose">Close</button></div>
       ${st.showFilters?`<div class="browse-facets">${facetHTML()}${fc?`<button class="fpill clear" id="brClearF" style="align-self:flex-start">Clear all</button>`:""}</div>`:sumHTML()}
       <div class="browse-count" id="brCount"></div>
       <div class="browse-list" id="brList"></div>
