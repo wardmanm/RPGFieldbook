@@ -52,9 +52,11 @@ function modalTakeFocus(wasOpen){
   const mb=document.getElementById("mBody"),fold=mb?mb.getBoundingClientRect().bottom:Infinity;
   const f=fine&&[...box.querySelectorAll(MODAL_FOCUS_FIELDS)].find(x=>!x.disabled&&!x.readOnly&&x.offsetParent!==null&&x.getBoundingClientRect().top<fold);
   (f||box).focus({preventScroll:true});
-  /* Caret at the end: focus() leaves it at the start, so typing into an edited
-     name would prefix it. Number inputs refuse selection ranges — hence the try. */
-  if(f&&f.value)try{f.setSelectionRange(f.value.length,f.value.length);}catch(e){}
+  /* Caret at the end of a one-line box: focus() leaves it at the start, so typing
+     into an edited name would prefix it. Not a textarea — a long note's end is off
+     screen, and the first key would jump there. Number inputs refuse selection
+     ranges, hence the try. */
+  if(f&&f.tagName==="INPUT"&&f.value)try{f.setSelectionRange(f.value.length,f.value.length);}catch(e){}
 }
 function modalGiveBackFocus(){
   _modalInert.forEach(el=>{el.inert=false;});_modalInert=[];
