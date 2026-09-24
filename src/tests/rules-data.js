@@ -971,6 +971,58 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      const seg = (js.match(/id="segHdStyle"[\s\S]{0,400}/) || [''])[0];
      return ['full', 'condensed', 'dice'].every(v => seg.includes(`"${v}"`));
   })());
+
+  // ---- the two ability/skill layouts
+  // Pure string builders, not DOM building: the harness has no DOM, so this is
+  // the only way the id contract can be asserted at all (see sheet.js).
+  ck('the grouped layout has its own pure builders',
+     /function statGroupHTML\(/.test(js) && /function statGroupsHTML\(/.test(js));
+  ck('both builders pick on the style', (() => {
+     const a = (js.match(/function buildAbilities\(\)\{[\s\S]*?\n\}/) || [''])[0];
+     const k = (js.match(/function buildSkills\(\)\{[\s\S]*?\n\}/) || [''])[0];
+     return /statStyle\(\)/.test(a) && /statGroupsHTML/.test(a) && /statStyle\(\)/.test(k);
+  })());
+  // the grouped path must EMPTY #skills and return, or #skill-perception exists
+  // twice; getElementById takes the first and the hidden copy silently rots
+  ck('the grouped path clears the classic skill list',
+     /const el=document\.getElementById\("skills"\);el\.innerHTML="";[\s\S]{0,420}?if\(statStyle\(\)==="grouped"\)return;/.test(js));
+  ck('an unrecognised layout falls back to classic',
+     /function statStyle\(\)\{[\s\S]{0,160}?:"classic"/.test(js));
+  ck('...and blankChar defaults to the same thing', /statStyle:"classic"/.test(js));
+  ck('the layout picker is per character, in the settings modal',
+     /id="segStatStyle"/.test(js) && /character\.statStyle=b\.dataset\.statstyle/.test(js));
+  ck('both layouts are offered by name', (() => {
+     const seg = (js.match(/id="segStatStyle"[\s\S]{0,400}/) || [''])[0];
+     return ['classic', 'grouped'].every(v => seg.includes(`"${v}"`));
+  })());
+  // the layout is per CHARACTER, so LOADING one has to rebuild it. Building only
+  // at boot left a grouped sheet drawing classic after a character swap.
+  ck('renderAll rebuilds the layout', (() => {
+     const r = (js.match(/function renderAll\(\)\{[\s\S]*?\n\}/) || [''])[0];
+     return /buildStats\(\);/.test(r);
+  })());
+  // ...and FIRST: the rebuild blanks the six score inputs, and the [data-path]
+  // loop below it is what refills them
+  ck('...before the data-path loop refills the score boxes', (() => {
+     const r = (js.match(/function renderAll\(\)\{[\s\S]*?\n\}/) || [''])[0];
+     return r.indexOf('buildStats()') >= 0 &&
+            r.indexOf('buildStats()') < r.indexOf('querySelectorAll("[data-path]")');
+  })());
+  // the Skills card is HIDDEN, never removed: the note registry, the 19-card
+  // template guard and the label guard all need it to stay in the document
+  ck('the Skills card is hidden by id, and the id sits after data-note',
+     /getElementById\("skillsCard"\)/.test(js) &&
+     loadHTML().includes('<div class="card" data-note="skills" id="skillsCard"'));
+  // one legend, moved between the cards — a second copy in JS would drift from
+  // the template's
+  ck('the legend is moved, not duplicated',
+     /function placeLegend\(/.test(js) && !/class="legend"/.test(js));
+  // expertise is marked straight off the dot's data-lvl, which recompute already
+  // writes — that is what keeps this a display change with no rules code touched
+  ck('expertise is marked from the dot, not from JS',
+     /\.agroup \.dot\[data-lvl="2"\]~\.exp\{display:/.test(sheetCss));
+  ck('the grouped rows reuse .srow rather than restating it',
+     /\.agroup \.srow\{/.test(sheetCss) && /\.srow\{display:flex/.test(sheetCss));
   // the dice style's token is the control: unspent rolls, spent goes back
   ck('the dice tokens are wired', /closest\("\[data-hddie\]"\)/.test(js));
   ck('...and tapping an unspent die rolls it',

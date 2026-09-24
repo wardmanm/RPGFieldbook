@@ -102,6 +102,54 @@ at 380px the footer wraps and the Add button stays fully on screen.
 The origin helpers had **no unit coverage at all**, which is how both defects survived —
 `ORIGIN_KINDS`, `originLabel`, `originFromSid`, `itemOrigin`, `originOptionsHTML` now have it.
 
+
+## Done — the ability/skill layout choice (issue #17)
+
+Two looks over ONE set of ids, chosen per character (`character.statStyle`, "classic" | "grouped"),
+mirroring the `hdStyle` pattern beat for beat: `blankChar` default, a resolver whose fallback agrees
+with that default (so no migration), pure string builders, a `.seg` control in Settings → This
+character. Grouped lays the six abilities out three across and two down, each a compact header over
+its saving throw and the skills it governs; the Skills card is HIDDEN, not removed.
+
+**The first cut was a single vertical column and it was rejected on sight — worth remembering why.**
+Every row stretched the full width of the card with a two-word label in it, so the block read as
+mostly air, and the ability sat in a tall box to the LEFT of a list that for STR is one row. Fixed by
+(a) three across, two down — the same rhythm the classic `.abilities` grid already uses, (b) turning
+the ability into a compact header ROW over its skills (name, modifier, score on one line) instead of
+a column beside them, and (c) tightening the row padding and moving the dotted rule to
+`.srow + .srow`, so it separates rows rather than boxing each one. Card height went from taller than
+the viewport to 448px. None of this was visible in the DOM assertions — only in a screenshot.
+
+**Three things that are not obvious and cost real time:**
+
+- **The hook is `renderAll()`, not the settings handler.** `buildAbilities`/`buildSkills` only ever
+  ran at boot, but the setting is per character and every swap path — `loadCharById`, `newCharacter`,
+  import, settings-import — ends in `renderAll()`. Building only on toggle meant loading a grouped
+  sheet over a classic one kept the classic markup forever. `buildStats()` is now `renderAll()`'s
+  FIRST statement: it must precede the `[data-path]` loop, because the rebuild blanks the six score
+  inputs that the loop refills, and `recompute()` at the end repaints every number.
+- **`buildSkills()` must clear `#skills` and return in grouped mode**, not merely let the card be
+  hidden. Leaving the classic rows puts a second `#skill-perception` in the document;
+  `getElementById` takes the first in document order, so the visible copy keeps updating while the
+  hidden one rots — and print reads by id too. Guarded by a test asserting each skill id appears
+  exactly once.
+- **`.agroups` needs `grid-column:1/-1`.** `#abilities` is itself `repeat(3,1fr)`, so the grouped
+  block rendered into one third of the card with every skill label wrapped. Caught by a screenshot,
+  not by any test — the suite has no DOM and no layout.
+
+The Skills card keeps `data-note="skills"` with `id` placed AFTER it, because `rules-data.js` counts
+the literal `<div class="card" data-note="` prefix to assert 19 cards. The legend is one node MOVED
+between the cards, appended to the card (never to `#abilities`, which gets cleared). Expertise is
+marked by CSS off the dot's `data-lvl`, which `recompute()` already writes — no JS, which is what
+keeps the whole feature display-only.
+
+**Known gap, shipped deliberately:** in grouped mode the Skills card is hidden, so its note button is
+invisible, and the Notes tab only lists sections that already HAVE a note. A player who never wrote a
+Skills note cannot start one while in grouped mode. Existing notes stay listed and editable, and
+`jumpToNote` degrades to scroll-to-top. Mitigating it means hosting a second note button in the
+Abilities label, which is worse UI than the gap.
+
+
 ## Done — origin designators & item cost (this pass)
 
 - **Origin designator** on every item and spell: a small clickable badge (letter) showing where it

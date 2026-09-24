@@ -59,6 +59,12 @@ function openSettings(){
     <p class="hint" id="encHint">${esc(encSettingsHint())}</p>
     <div class="toggle"><div><div class="t-lbl">Coins count as weight</div><div class="t-sub">50 coins to the pound, the way the rules have it.</div></div><button class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight"></button></div>
     <div class="toggle"><div><div class="t-lbl">Colour current HP</div><div class="t-sub">Amber at half your maximum, red at a quarter.</div></div><button class="switch ${character.hpColor!==false?"on":""}" id="swHpColor"></button></div>
+    <div class="field"><label class="f">Skills display</label>
+      <div class="seg" id="segStatStyle">
+        ${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>
+          `<button data-statstyle="${v}" class="${statStyle()===v?"on":""}">${l}</button>`).join("")}
+      </div>
+      <p class="hint">Classic keeps Ability Scores and Skills as two cards, skills listed A to Z. By ability stacks each ability with its saving throw and the skills it governs, and folds the Skills card away. Display only — every number means the same thing either way.</p></div>
     <div class="field"><label class="f">Hit Dice display</label>
       <div class="seg" id="segHdStyle">
         ${[["full","Full"],["condensed","Condensed"],["dice","Dice"]].map(([v,l])=>
@@ -154,6 +160,10 @@ function openSettings(){
   {const s=document.getElementById("setEnc");if(s)s.addEventListener("change",()=>{character.encumbrance=s.value;encSettingsChanged();});}
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
   {const b=document.getElementById("swHpColor");if(b)b.addEventListener("click",()=>{character.hpColor=(character.hpColor===false);b.classList.toggle("on",character.hpColor!==false);renderHP();scheduleSave();});}
+  /* renderAll(), not buildStats(): the rebuild blanks the six score inputs, and
+     only renderAll refills them from [data-path] and then repaints through
+     recompute(). Calling the builder alone leaves blank boxes and a wall of +0. */
+  {const g=document.getElementById("segStatStyle");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-statstyle]");if(!b)return;character.statStyle=b.dataset.statstyle;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderAll();scheduleSave();});}
   {const g=document.getElementById("segHdStyle");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-hdstyle]");if(!b)return;character.hdStyle=b.dataset.hdstyle;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderHitDice();scheduleSave();});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);

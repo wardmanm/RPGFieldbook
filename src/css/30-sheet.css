@@ -133,6 +133,52 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .legend i.p{background:var(--accent-2)}
 .legend i.e{background:var(--accent-2);box-shadow:0 0 0 2px var(--panel),0 0 0 3px var(--line)}
 
+/* grouped layout (statStyle "grouped") — the six ability boxes stacked in one
+   column, each with its saving throw and the skills that ability governs beside
+   it. Placed AFTER .srow on purpose: these rules override it at equal
+   specificity, so source order is load-bearing. The rows reuse .srow rather than
+   restating the dot/value/label rhythm, so the two looks cannot drift apart. */
+/* #abilities is itself a 3-column grid (see .abilities above) and .agroups is
+   its child, so without this the whole grouped block is squeezed into one third
+   of the card and every skill label wraps. Span all three tracks instead of
+   fighting the parent's display. */
+.agroups{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px}
+/* Three across, two down — the same rhythm as the classic .abilities grid above.
+   A single vertical stack stretched every row the full width of the card, which
+   left each skill label marooned beside a wall of empty space. */
+.agroup{min-width:0}
+
+/* The ability is a compact HEADER over its rows, not a tall box beside them:
+   name, modifier and score on one line. As a left-hand column it was ~5 rows
+   tall next to a list that can be a single row (STR), which is what made the
+   block read as mostly air. It keeps the .ability skin so the panel, the rough
+   border and the fx-on marker all still apply. */
+.agroup .ahead{display:flex;align-items:center;gap:8px;padding:5px 9px;text-align:left}
+.agroup .ahead .n{font-size:11px;color:var(--ink-soft);flex:none}
+.agroup .ahead .m{font-size:22px;margin:0;flex:1}
+.agroup .ahead input{width:52px;flex:none;min-height:30px;padding:3px 4px;font-size:14px}
+
+.agroup .alist{min-width:0;margin-top:4px}
+/* Tighter than the classic card's rows, and the dotted rule only BETWEEN rows —
+   at this density a border on every row read as a list of separate things
+   rather than one stat block. */
+.agroup .srow{padding:2px 2px;gap:7px;border-bottom:none}
+.agroup .srow + .srow{border-top:1px dotted var(--hair)}
+.agroup .srow .val{font-size:15px;width:28px}
+.agroup .srow .lbl{flex:0 1 auto;font-size:14px}
+.agroup .svrow .lbl{font-family:var(--head);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-soft)}
+.agroup .anone{font-size:12px;color:var(--ink-soft);padding:3px 2px;font-style:italic}
+.agroup .dot{width:17px;height:17px;border-width:2px}
+/* Expertise is marked straight off the dot's data-lvl, which recompute() already
+   writes — no JS runs for this, which is what keeps the feature display-only. */
+.agroup .exp{display:none;margin-left:6px;font-family:var(--head);font-size:9px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--accent-2)}
+.agroup .dot[data-lvl="2"]~.exp{display:inline}
+/* Three columns need real width; step down rather than truncate skill names. */
+@media(max-width:900px){.agroups{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.agroups{grid-template-columns:minmax(0,1fr)}}
+
 /* structured list items */
 .item{position:relative;background:var(--field);border-radius:8px;padding:10px 12px;margin-bottom:9px}
 .item::before{content:"";position:absolute;inset:1px;border:2px solid var(--line);border-radius:9px;pointer-events:none;opacity:.85}

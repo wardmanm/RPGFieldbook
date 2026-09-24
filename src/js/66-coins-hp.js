@@ -241,6 +241,12 @@ function applyHPInput(inp){
   return true;
 }
 function renderAll(){
+  /* FIRST, before the [data-path] loop below: the ability/skill layout is a
+     per-character setting, and the builders otherwise only ran at boot — so
+     loading a grouped sheet over a classic one kept the classic markup forever.
+     It has to precede the loop because rebuilding blanks the six score inputs
+     that the loop refills, and recompute() at the end repaints every number. */
+  buildStats();
   renderCoins();renderHP();   /* neither is data-path, so neither is in the loop below */
   document.querySelectorAll("[data-path]").forEach(inp=>{const v=get({character},inp.dataset.path);inp.value=(v===null||v===undefined)?"":v});
   /* renderTables belongs here for the same reason renderGloss does: both draw

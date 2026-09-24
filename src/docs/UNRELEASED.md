@@ -36,3 +36,8 @@ Bullets below this line — leave the heading in place.
 - Fixed: typing an origin detail in the item finder without choosing an origin first threw the text
   away when you tapped Add. The detail box now stays greyed out until you pick an origin, and its
   hint follows what you picked — "at (place)" for Purchased, "from (who)" for a Gift.
+- New **Skills display** choice in Settings, under This character. **Classic** is the layout you have
+  now — Ability Scores and Skills as two cards, skills listed A to Z. **By ability** puts the six
+  abilities in a grid, three across, each heading the saving throw and the skills that ability
+  governs, and folds the Skills card away. It is a display choice only: every number means exactly
+  the same thing in both, and each character remembers its own setting.
