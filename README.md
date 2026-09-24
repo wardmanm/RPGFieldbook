@@ -187,7 +187,9 @@ on any item to pin it to a **Favorites** section at the very top. The section ta
 you scroll, and the **☰** button in the tab bar opens a jump-to-section list for the current tab.
 
 
-- **Equipment & Inventory:** add gear from the built-in browser or make your own. Items can be
+- **Equipment & Inventory:** add gear from the built-in browser or make your own. In the browser,
+  set **Qty** at the bottom to add several at once — five torches in one go, rather than one and
+  then editing the number. Items can be
   **collapsed** to keep the list tidy (tap the little arrow, or **Collapse all / Expand all**).
   Equip items that give bonuses and your stats update automatically.
 - **Coins:** tracks your money, with an **Auto-convert** button that rolls loose change up into

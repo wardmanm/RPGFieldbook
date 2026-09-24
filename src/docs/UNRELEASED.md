@@ -53,3 +53,7 @@ Bullets below this line — leave the heading in place.
   the on-screen keyboard stays out of the way. Tab stays inside the window instead of wandering onto
   the page behind, and when it closes you are back where you were. Screen readers now announce each
   window by its title, and read out the short messages that appear at the bottom of the screen.
+- Adding gear from the item browser now has a **Qty** box beside Origin and Cost. Set it to add
+  several of each ticked item at once; if you already carry that item, they join the same stack.
+  Any cost you type is still the price of one. Changing a filter while you pick no longer resets
+  Origin, Qty or Cost.
