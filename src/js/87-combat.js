@@ -236,20 +236,36 @@ function closeCombatView(){
 function cvInert(on){
   document.querySelectorAll(".topbar,.tabbar,.page").forEach(el=>{if(on)el.setAttribute("inert","");else el.removeAttribute("inert");});
 }
-function toggleCombatSection(k){
+/* viaKey: the click came from Enter/Space (event.detail 0), not a pointer. */
+function toggleCombatSection(k,viaKey){
   const def=noteDef(k);if(!def)return;
   const cur=combatSectionsOf(character), on=!cur.includes(k), at=cur.indexOf(k), who=character.id;
+  const fromView=!on&&cvOpen&&!!document.querySelector(`#cvList [data-combatbtn="${k}"]`);
   character.combatSections=withCombatSection(cur,k,on);
   if(cvOpen){if(on)fillCombatView();else{sendCardHome(k);renderCombatEmpty();}}
   paintCombatToggle(k,on);scheduleSave();
   if(on){toast("Added "+noteTitle(def)+" to the combat view");return;}
   /* Removing is one tap, and Active Spells and Familiars hide themselves on their
      tab when empty — so their toggle cannot bring them back. The Undo can. */
-  toast("Removed "+noteTitle(def)+" from the combat view",{label:"Undo",run:()=>undoCombatRemove(k,at,who)});
+  const undo=toast("Removed "+noteTitle(def)+" from the combat view",{label:"Undo",
+    run:e=>undoCombatRemove(k,at,who,!!e&&e.detail===0),
+    back:fromView?()=>(cvOpen?cvFocusAfter(at):null):null});
+  /* The pressed toggle just went home with its card, and keyboard focus with it.
+     Inside the view, land the keyboard on the Undo instead: Enter puts the card
+     back, and Tab or Esc returns to the card that took its place. */
+  if(viaKey&&fromView&&undo)undo.focus();
+}
+/* Where the keyboard goes after a removal from the view: the grip of the card
+   that now fills the gap, else the last card's, else ✕. */
+function cvFocusAfter(at){
+  const cards=[...document.querySelectorAll("#cvList > .card")].filter(cvCardShown);
+  const c=cards[Math.min(at,cards.length-1)];
+  return (c&&c.querySelector("[data-cvgrip]"))||document.getElementById("cvClose");
 }
 /* Back in the place it was taken from. `who` guards a toast that outlived a
-   character switch: its Undo belongs to the character it was shown for. */
-function undoCombatRemove(k,at,who){
+   character switch: its Undo belongs to the character it was shown for. After a
+   keyboard Undo, focus goes to the restored card's own toggle. */
+function undoCombatRemove(k,at,who,viaKey){
   if(!character||character.id!==who)return;
   const cur=combatSectionsOf(character);if(cur.includes(k))return;
   const list=insertCombatSection(cur,k,at);
@@ -258,6 +274,7 @@ function undoCombatRemove(k,at,who){
   if(cvOpen){fillCombatView();setCombatOrder(list);}else scheduleSave();
   paintCombatToggle(k,true);
   toast(noteTitle(noteDef(k))+" is back in the combat view");
+  if(viaKey){const b=document.querySelector(`[data-combatbtn="${k}"]`);if(b)b.focus();}
 }
 
 /* Everything that shows combat state repaints through here. The round moves from

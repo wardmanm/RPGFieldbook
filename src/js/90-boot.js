@@ -121,7 +121,7 @@ function wire(){
     if(t.closest("#cvPrev"))return advanceRound(-1);
     if(t.closest("#cvNext"))return advanceRound(1);
     if(t.closest("#cvEnd"))return endCombatAsk();
-    if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn);
+    if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn,e.detail===0);
     if(t.closest("#btnToc"))return openToc();
     if(t.closest("#tocBack"))return closeToc();
     if((m=t.closest("[data-fitem]"))){const id=m.dataset.fitem,fc=featCol();fc.items[id]=!fc.items[id];renderFeatures();scheduleSave();return;}
@@ -180,6 +180,8 @@ function wire(){
   document.addEventListener("keydown",e=>{
     if(e.key!=="Escape"||!combatViewOpen())return;
     if(modal.classList.contains("open"))return;
+    /* Focus on a toast's Undo: its own Esc sends the keyboard back into the view. */
+    {const ts=document.getElementById("toast");if(ts&&ts.contains(document.activeElement))return;}
     const br=document.getElementById("browse");if(br&&br.classList.contains("show"))return;
     const fly=document.getElementById("tocFly");if(fly&&fly.classList.contains("open")){closeToc();return;}
     closeCombatView();
