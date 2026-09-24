@@ -3514,5 +3514,10 @@ finder only via `cfg.qtyInput`) that applies to every ticked item, like Origin a
 - The Add button reads "Add 2 items ×3" when Qty is above 1; `oninput` on `#brQty` repaints it.
 - `foot()`'s comment sits ABOVE the function: rules-data.js asserts `paintGroupBadges();` within 400
   characters of `function foot(){`.
+- **A finder redraw keeps the footer.** Filters, a facet chip and Clear all re-render the whole finder;
+  `render()` now reads Origin, its detail, Qty and Cost first (`readFoot`) and puts them back after
+  (`writeFoot`, which re-runs `syncOrigDet()` before restoring the detail). Only after the first draw —
+  `st.drawn` lives in the per-`openBrowse()` state — so a reopened finder still starts clean. Origin
+  and Cost had always reset on a redraw; Qty only made it noticeable.
 - Ammunition is sold in bundles ("Arrows (20)"), so Qty 2 is two bundles. Unpacking bundles belongs to
   the ammo issues (#6–#8), not here.

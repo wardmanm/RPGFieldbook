@@ -1494,4 +1494,20 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the toast live region ships in the page, empty', /<div id="toast" class="toast" role="status"><\/div>/.test(t));
 }
 
+// ---------- a finder redraw keeps what the player set in its footer
+// Filters, a facet chip and Clear all re-render the whole finder, footer included.
+// Origin, its detail, Qty and Cost must come through that — but only within one
+// session: `st` is per openBrowse(), so a reopened finder still starts clean.
+{
+  const js = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8')).js
+    .map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  ck('a redraw reads the footer before rebuilding it, but only after the first draw',
+     /function render\(\)\{const keep=st\.drawn\?readFoot\(\):null;/.test(js));
+  ck('...and puts it back straight after', /host\.innerHTML=[\s\S]{0,4000}?if\(keep\)writeFoot\(keep\);st\.drawn=true;renderList\(\);\}/.test(js));
+  ck('the footer it carries is Origin, its detail, Qty and Cost',
+     ['brOrigin', 'brOrigDet', 'brQty', 'brCost'].every(id => new RegExp('function readFoot\\(\\)[^\\n]*"' + id + '"').test(js)));
+  ck('restoring Origin re-syncs the detail box before its text goes back',
+     /function writeFoot\(k\)\{[^\n]*put\("brOrigin",k\.origin\);syncOrigDet\(\);if\(k\.origin\)put\("brOrigDet",k\.det\);/.test(js));
+}
+
 ck.done();

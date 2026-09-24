@@ -58,14 +58,20 @@ function openBrowse(cfg){
       html+=`<div class="brgroup"${cfg.groupBadge?` data-brg="${esc(key)}"`:""}>${esc(g)}${cfg.groupBadge?`<span class="brgcount" data-brgc></span>`:""}</div>`;lg=g;}}html+=rowHTML(e);});
     L.innerHTML=html;foot();
   }
-  function render(){const fc=activeChips().length;
+  /* A redraw (Filters, a facet chip, Clear all) rebuilds the footer too, so carry
+     over what the player already set there — or ticking a filter would quietly
+     put Origin, Qty and Cost back to their defaults. Only after the first draw:
+     `st` is per openBrowse(), so a reopened finder still starts clean. */
+  function readFoot(){const v=id=>{const e=document.getElementById(id);return e?e.value:null;};return {origin:v("brOrigin"),det:v("brOrigDet"),qty:v("brQty"),cost:v("brCost")};}
+  function writeFoot(k){const put=(id,val)=>{const e=document.getElementById(id);if(e&&val!=null)e.value=val;};put("brOrigin",k.origin);syncOrigDet();if(k.origin)put("brOrigDet",k.det);put("brQty",k.qty);put("brCost",k.cost);}
+  function render(){const keep=st.drawn?readFoot():null;const fc=activeChips().length;
     host.innerHTML=`<div class="browse-inner">
       <div class="browse-head"><input id="brSearch" placeholder="Search ${esc(cfg.noun||"")}…" value="${esc(st.q)}" autocomplete="off"><button class="tbtn ${st.showFilters?"primary":""}" id="brFilters">Filters${fc?` · ${fc}`:""}</button>${cfg.onCustom?`<button class="tbtn" id="brCustom">+ Custom</button>`:""}<button class="tbtn" id="brClose">Close</button></div>
       ${st.showFilters?`<div class="browse-facets">${facetHTML()}${fc?`<button class="fpill clear" id="brClearF" style="align-self:flex-start">Clear all</button>`:""}</div>`:sumHTML()}
       <div class="browse-count" id="brCount"></div>
       <div class="browse-list" id="brList"></div>
       <div class="browse-foot">${cfg.originSelect?`<div class="br-f br-origin"><label class="f" for="brOrigin">Origin</label><select id="brOrigin">${originOptionsHTML(null)}</select></div><div class="br-f br-origdet"><label class="f" for="brOrigDet">Detail</label><input id="brOrigDet" placeholder="place, who, etc." disabled></div>`:""}${cfg.qtyInput?`<div class="br-f br-qty"><label class="f" for="brQty">Qty</label><input id="brQty" type="number" min="1" max="999" step="1" value="1" inputmode="numeric" title="How many of each ticked item"></div>`:""}${cfg.costInput?`<div class="br-f br-cost"><label class="f" for="brCost">Cost (gp)</label><input id="brCost" type="number" min="0" step="0.01" placeholder="listed" title="Overrides the item's listed price; blank uses the price from the rules data"></div>`:""}<button class="tbtn primary" id="brAdd" disabled></button></div>
-    </div>`;renderList();}
+    </div>`;if(keep)writeFoot(keep);st.drawn=true;renderList();}
   function clearAll(){(cfg.facets||[]).forEach(f=>{st.facets[f.key]=f.type==="toggle"?false:new Set();});}
   /* The origin applies to the whole batch, so changing it changes whether the
      picks count — repaint the headings. */
