@@ -17,7 +17,11 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      # Depth 2, because a PR is checked out as a merge commit whose FIRST parent
+      # is the base tip — so HEAD^1..HEAD is exactly what the PR changes.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -62,11 +66,36 @@ jobs:
             }})("data");
             console.log(n+" data files parse");'
 
-      # CLAUDE.md: keep this OUT of build.sh (whose job is to FIX staleness) and
-      # use it as the CI gate instead. A stale committed artifact is what turns
-      # into an unreproducible release.
-      - name: dist/fieldbook.html is not stale
-        run: node scripts/build-html.js --check
+      # A worktree branch carries a src-only diff and never commits the artifact
+      # (src/docs/WORKTREES.md), so on its PR the committed dist/ is stale BY
+      # DESIGN. Failing that here also skipped every step below — tests included
+      # — so a src-only PR got no real CI at all. Such a PR is built here instead,
+      # exactly as integration will build it. A PR that DOES commit the artifact,
+      # and every push to main, still has to commit a fresh one.
+      - name: Does this change commit the artifact?
+        id: art
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = pull_request ] && git diff --quiet HEAD^1 HEAD -- dist/fieldbook.html; then
+            echo "srconly=true" >> "$GITHUB_OUTPUT"
+            echo "src-only PR: the artifact is built here, not checked"
+          else
+            echo "srconly=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # CLAUDE.md: keep the check OUT of build.sh (whose job is to FIX staleness)
+      # and use it as the CI gate instead. A stale committed artifact is what
+      # turns into an unreproducible release.
+      - name: dist/fieldbook.html is current
+        env:
+          SRC_ONLY: ${{ steps.art.outputs.srconly }}
+        run: |
+          if [ "$SRC_ONLY" = true ]; then
+            node scripts/build-html.js
+          else
+            node scripts/build-html.js --check
+          fi
 
       - name: Rules packs bundle cleanly
         run: node scripts/bundle-rules.js
@@ -91,9 +120,15 @@ jobs:
       - name: Full build + zip allowlist
         run: ./build.sh
 
+      # On a src-only PR the artifact was rebuilt above on purpose; every OTHER
+      # tracked file (docs/CHANGELOG.md, say) must still come out unchanged.
       - name: The build changed no tracked file
+        env:
+          SRC_ONLY: ${{ steps.art.outputs.srconly }}
         run: |
-          if ! git diff --exit-code --stat; then
+          skip=()
+          [ "$SRC_ONLY" = true ] && skip=(':(exclude)dist/fieldbook.html')
+          if ! git diff --exit-code --stat -- . "${skip[@]}"; then
             echo "::error::Building modified tracked files — commit the rebuilt artifact."
             exit 1
           fi
