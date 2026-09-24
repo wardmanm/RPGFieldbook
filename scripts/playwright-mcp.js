@@ -14,6 +14,12 @@
  * `node` is a real binary on all three, so `.mcp.json` can always spawn THIS,
  * and the platform choice moves here where it can be expressed.
  *
+ * The path in `.mcp.json` is RELATIVE on purpose. `${CLAUDE_PROJECT_DIR}` is a
+ * hook variable: it is not set when `.mcp.json` is read, so it reached node as
+ * literal text and the server never started on any platform. Stdio servers are
+ * spawned with the project root as their working directory, which is all a
+ * relative path needs.
+ *
  * It is a transparent passthrough: stdio is inherited, so the MCP protocol runs
  * between Claude Code and the server exactly as if it had been spawned directly.
  */
