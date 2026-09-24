@@ -189,8 +189,13 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .item .qty{font-family:var(--head);font-size:12px;color:var(--ink-soft)}
 .orig-b{font:600 10px/1 var(--head);min-width:17px;height:17px;padding:0 4px;border-radius:9px;border:1px solid var(--hair);background:var(--panel);color:var(--ink-soft);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .orig-b:hover{color:var(--accent);border-color:var(--accent)}
-.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:var(--accent);color:#fff;padding:10px 18px;border-radius:12px;font-family:var(--head);font-size:14px;letter-spacing:.02em;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:9999;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none;max-width:80vw;text-align:center}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:var(--accent);color:#fff;padding:10px 18px;border-radius:12px;font-family:var(--head);font-size:14px;letter-spacing:.02em;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:9999;opacity:0;transition:opacity .18s,transform .18s,visibility 0s .18s;visibility:hidden;pointer-events:none;max-width:80vw;text-align:center}
+.toast.show{opacity:1;visibility:visible;transition:opacity .18s,transform .18s;transform:translateX(-50%) translateY(0)}
+/* visibility flips only after the fade, so a hidden toast's Undo can be neither
+   clicked nor tabbed to. The toast ignores the pointer; its button does not. */
+.toast .toast-act{pointer-events:auto;margin-left:10px;background:none;border:1.5px solid rgba(255,255,255,.85);
+  color:#fff;border-radius:8px;padding:3px 11px;font:inherit;font-weight:700;letter-spacing:.04em;cursor:pointer}
+.toast .toast-act:hover,.toast .toast-act:focus-visible{background:rgba(255,255,255,.2);outline:none}
 /* NOT white-space:pre-wrap any more: richHTML() turns newlines into real <br>
    elements, and keeping both doubled every line break. */
 .item .desc{font-size:15px;line-height:1.5;margin-top:5px;word-break:break-word}

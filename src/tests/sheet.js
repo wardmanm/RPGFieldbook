@@ -39,6 +39,7 @@ const {X, state, bootError, fragments} = loadApp([
   'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
   'combatToggleHTML', 'combatToggleText', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
   'combatGripHTML', 'moveCombatCard',
+  'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1987,6 +1988,33 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('↑ at the top does nothing', c.combatSections[0] === 'vitals' && c.combatSections.length === 6);
   X.moveCombatCard('coins', 1);
   ck('a section not in the view cannot be moved', c.combatSections.indexOf('coins') < 0);
+}
+
+/* ---- removing a section offers Undo, and Undo puts it back where it was ----
+   Active Spells and Familiars hide themselves on their tab when empty, so their
+   toggle cannot bring them back — the Undo on the removal toast is the way back. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  ck('insert puts a section back at its old place', same(X.insertCombatSection(['a', 'c'], 'b', 1), ['a', 'b', 'c']));
+  ck('...clamps a stale position to the end', same(X.insertCombatSection(['a'], 'b', 9), ['a', 'b']));
+  ck('...never adds a second copy', same(X.insertCombatSection(['a', 'b'], 'b', 0), ['a', 'b']));
+  ck('...and never edits the list it was given', (() => {
+    const l = ['a']; X.insertCombatSection(l, 'b', 0); return same(l, ['a']);
+  })());
+
+  const c = X.blankChar(); X.character = c;
+  X.toggleCombatSection('attacks');
+  ck('removing takes the section out', !c.combatSections.includes('attacks'));
+  X.undoCombatRemove('attacks', 2, c.id);
+  ck('Undo puts it back in the same place', same(c.combatSections, X.COMBAT_DEFAULTS));
+  X.undoCombatRemove('attacks', 2, c.id);
+  ck('a second Undo changes nothing', same(c.combatSections, X.COMBAT_DEFAULTS));
+
+  X.toggleCombatSection('activespells');
+  const other = X.blankChar(); other.combatSections = ['vitals']; X.character = other;
+  X.undoCombatRemove('activespells', 5, c.id);
+  ck('an Undo that outlived a character switch does nothing to the new character',
+     same(other.combatSections, ['vitals']) && !c.combatSections.includes('activespells'));
 }
 
 ck.done();

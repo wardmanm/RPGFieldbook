@@ -3450,3 +3450,19 @@ Final-review fixes, where the reason is not obvious from the code:
   normal pointerup too, so `done` is guarded against running twice.
 - **The grip's hit box is 40×40** from padding cancelled by negative margins, so the glyph and the
   heading height do not move; its left edge sits exactly on the card's edge.
+
+## Combat view: Undo on removal
+
+Closes the gap the combat-view entry left open: Active Spells and Familiars hide themselves on their
+tab when empty, so once removed from the view their toggle was unreachable until they had content.
+Removing any section now toasts an **Undo** that reinserts it at its old index
+(`insertCombatSection`, pure and tested) and, with the view open, re-lays the cards in that order.
+
+- **`toast(msg, action)` gained an optional `{label, run}`.** The other three callers are unchanged.
+  With an action the toast stays 6 s, and re-arms a second at a time while it is hovered or its button
+  has focus — `hideToast(true)` is the only immediate close.
+- **A hidden toast is `visibility:hidden`, flipped only after the fade** (`visibility 0s .18s`). Before,
+  hidden meant `opacity:0` alone, which left an Undo button tabbable and clickable while invisible.
+  The toast itself stays `pointer-events:none`; only its button takes the pointer.
+- **`role="status"` on the toast**, so screen readers announce every toast now — they never did.
+- **The Undo carries the character id** it was shown for and does nothing after a character switch.

@@ -267,7 +267,8 @@ just the sections you chose, from any tab. Everything in it works exactly as it 
 - **Choosing sections.** Every section heading has a small crossed-swords button beside its note
   icon. It lights up when that section is in the combat view; tap it to add or remove the section.
   You start with Vitals, Statuses & Conditions, Attacks & Weapons, Resources, Spell Slots and
-  Active Spells.
+  Active Spells. Take one out by mistake and the message that confirms it has an **Undo**, which
+  puts it back where it was.
 - **Arranging them.** Inside the combat view, drag a section by the **⋮⋮** grip at the left of its
   heading. With a keyboard, move to the grip and press **↑** or **↓** to move the section one place.
   Your order is saved with the character.

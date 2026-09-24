@@ -263,3 +263,7 @@ Where the code differs from the text above, and why:
   number (the `aria-label` still reads "round N"), and the tabs narrow to 42px, so the pinned group
   never covers Rules. At 480px and below the header is two rows — ✕ · title · ☰, then ◀ round ▶ with
   End (or Start) at the far right — and the time stacks under the round.
+- **Undo on removal** (decided after build, not in §5). Removing a section — from its tab or from
+  inside the view — shows a toast with an **Undo** that puts it back at its old position. It closes
+  the gap where Active Spells and Familiars, hidden on their tab when empty, could not be toggled back.
+  The toast gained an optional action for it; see the ledger.

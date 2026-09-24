@@ -46,4 +46,5 @@ Bullets below this line — leave the heading in place.
   heading and arranged by dragging. Everything works there exactly as it does on its own tab.
   **Start combat** counts rounds and in-game time and moves your active spells along each round.
   Close the view to look something up and combat keeps going — the button shows the round, and one
-  tap brings you back. **End combat** is its own button.
+  tap brings you back. **End combat** is its own button. Take a card out by mistake and the message
+  that confirms it has an **Undo**.

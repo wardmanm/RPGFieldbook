@@ -25,6 +25,14 @@ function withCombatSection(list,k,on){
   if(on)return list.includes(k)?list.slice():list.concat([k]);
   return list.filter(x=>x!==k);
 }
+/* Undo's half of withCombatSection: back where it was, not at the end. A stale
+   position clamps; a section already there is left alone. */
+function insertCombatSection(list,k,at){
+  if(list.includes(k))return list.slice();
+  const out=list.slice();
+  out.splice(Math.max(0,Math.min(out.length,at)),0,k);
+  return out;
+}
 /* `to` is where the section ends up. Never edits the list it was given. */
 function moveCombatSection(list,from,to){
   const out=list.slice();
@@ -217,11 +225,26 @@ function cvInert(on){
 }
 function toggleCombatSection(k){
   const def=noteDef(k);if(!def)return;
-  const cur=combatSectionsOf(character), on=!cur.includes(k);
+  const cur=combatSectionsOf(character), on=!cur.includes(k), at=cur.indexOf(k), who=character.id;
   character.combatSections=withCombatSection(cur,k,on);
   if(cvOpen){if(on)fillCombatView();else{sendCardHome(k);renderCombatEmpty();}}
   paintCombatToggle(k,on);scheduleSave();
-  toast((on?"Added ":"Removed ")+noteTitle(def)+(on?" to":" from")+" the combat view");
+  if(on){toast("Added "+noteTitle(def)+" to the combat view");return;}
+  /* Removing is one tap, and Active Spells and Familiars hide themselves on their
+     tab when empty — so their toggle cannot bring them back. The Undo can. */
+  toast("Removed "+noteTitle(def)+" from the combat view",{label:"Undo",run:()=>undoCombatRemove(k,at,who)});
+}
+/* Back in the place it was taken from. `who` guards a toast that outlived a
+   character switch: its Undo belongs to the character it was shown for. */
+function undoCombatRemove(k,at,who){
+  if(!character||character.id!==who)return;
+  const cur=combatSectionsOf(character);if(cur.includes(k))return;
+  const list=insertCombatSection(cur,k,at);
+  character.combatSections=list;
+  /* fill appends the card at the end; the re-lay puts it back in its place */
+  if(cvOpen){fillCombatView();setCombatOrder(list);}else scheduleSave();
+  paintCombatToggle(k,true);
+  toast(noteTitle(noteDef(k))+" is back in the combat view");
 }
 
 /* Everything that shows combat state repaints through here. The round moves from
