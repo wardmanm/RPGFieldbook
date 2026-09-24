@@ -3256,3 +3256,19 @@ considered and rejected (~15% saving, and arc-flag digits are position-sensitive
 
 Also widened `.githooks/checks.sh` `check_json` from `^(data/.*|src/manifest)\.json$` to `src/.*`,
 which previously left `src/icons/icons.json` validated by nothing until the fetcher ran.
+
+## Fixed — the screenshot MCP never connected after the cross-platform launcher
+
+PR #42 moved `.mcp.json` from `cmd /c npx` to `node ${CLAUDE_PROJECT_DIR}/scripts/playwright-mcp.js`.
+**The launcher was right; the path to it never resolved.** `CLAUDE_PROJECT_DIR` is a hook variable
+and is not in the environment when `.mcp.json` is read, so node received the literal text and
+failed with `Cannot find module '…/RPGFieldbook/${CLAUDE_PROJECT_DIR}/scripts/playwright-mcp.js'` —
+every session from 2 Sep on. It passed review because it was verified by running the launcher by
+hand, which never exercises the variable. The arg is now plain `scripts/playwright-mcp.js`: the
+same log proves stdio servers start with the project root as their CWD.
+
+**Where the real error lives:** `/mcp` only ever says "Connection closed". The server's stderr is in
+`~/Library/Caches/claude-cli-nodejs/<project-path>/mcp-logs-playwright/*.jsonl`. Read that first.
+
+Worktrees branched before PR #42 still carry the old `cmd /c` config and no launcher, so a session
+rooted in one of them cannot take screenshots until the branch is rebased onto main.
