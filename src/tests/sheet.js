@@ -41,6 +41,7 @@ const {X, state, bootError, fragments} = loadApp([
   'combatGripHTML', 'moveCombatCard',
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
+  'finderQty', 'addLibraryItems',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2069,6 +2070,41 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('no opener, no selector', X.openerSelector(null) === null);
   ck('a quote in a hook value cannot break the selector',
      X.openerSelector(el('', {'data-x': 'a"b'})) === '[data-x="a\\"b"]');
+}
+
+/* ---- the item finder's quantity (issue #50) ----
+   One Qty box for everything ticked, like Origin and Cost. A new item arrives as
+   one stack of N; one already carried gains N. Cost stays the price of ONE —
+   inventoryTotal() already multiplies by the quantity. */
+{
+  [['3', 3], [7, 7], ['', 1], [null, 1], ['0', 1], ['-2', 1], ['abc', 1], ['2.7', 2], ['5000', 999]]
+    .forEach(([raw, want]) => ck(`Qty ${JSON.stringify(raw)} counts as ${want}`, X.finderQty(raw) === want, X.finderQty(raw)));
+
+  const c = X.blankChar(); X.character = c;
+  const torch = {name: 'Torch', category: 'Adventuring Gear', cost: '1 cp', weight: 1, description: 'Light.'};
+  X.addLibraryItems([torch], null, null, 3);
+  const t = () => c.inventory.filter(i => i.name === 'Torch');
+  ck('a new item arrives as one stack of N', t().length === 1 && t()[0].qty === 3);
+  ck('...priced per item, not per stack', t()[0].cost === 0.01);
+  X.addLibraryItems([torch], null, null, 2);
+  ck('an item already carried gains N, with no second entry', t().length === 1 && t()[0].qty === 5);
+  X.addLibraryItems([{name: 'torch'}], null, null, undefined);
+  ck('the same name in another case is the same stack, and no Qty means 1', t().length === 1 && t()[0].qty === 6);
+
+  const rope = {name: 'Rope', cost: '1 gp'}, oil = {name: 'Oil', cost: '1 sp'};
+  X.addLibraryItems([rope, oil], {kind: 'purchased', detail: 'market'}, 4, 2);
+  const r = c.inventory.find(i => i.name === 'Rope'), o = c.inventory.find(i => i.name === 'Oil');
+  ck('every ticked item gets the same quantity', r.qty === 2 && o.qty === 2);
+  ck('a typed Cost is the price of one of each', r.cost === 4 && o.cost === 4);
+  ck('the origin applies to each new stack', r.origin && r.origin.kind === 'purchased' && o.origin.detail === 'market');
+
+  const sword = {name: 'Longsword', category: 'Weapon', cost: '15 gp',
+    weapon: {kind: 'melee', ability: 'str', dice: '1d8', damageType: 'slashing'}};
+  const atkBefore = c.attacks.length;
+  X.addLibraryItems([sword], null, null, 3);
+  const s = c.inventory.find(i => i.name === 'Longsword');
+  ck('three weapons are one stack of three with one linked attack',
+     s.qty === 3 && c.attacks.length === atkBefore + 1 && s.attackId === c.attacks[c.attacks.length - 1].id);
 }
 
 ck.done();

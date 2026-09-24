@@ -40,8 +40,9 @@ function openBrowse(cfg){
   /* cfg.noun1 is the spelled-out singular, not a de-pluralised noun: stripping an
      "s" would turn "feats & traits" into "feats & trait". Kept out of foot() so
      the body stays inside the proximity guard rules-data.js puts on it. */
-  function foot(){const n=st.sel.size,b=document.getElementById("brAdd"),c=document.getElementById("brCount");
-    if(b){b.disabled=!n;b.textContent=n?`Add ${n} ${(n===1&&cfg.noun1)||cfg.noun||""}`:`Add ${cfg.noun||""}`;}
+  /* ×3 on the Add button when Qty is above 1, so what Add will do is on it. */
+  function foot(){const n=st.sel.size,b=document.getElementById("brAdd"),c=document.getElementById("brCount"),oq=document.getElementById("brQty"),q=oq?finderQty(oq.value):1;
+    if(b){b.disabled=!n;b.textContent=n?`Add ${n} ${(n===1&&cfg.noun1)||cfg.noun||""}${q>1?` ×${q}`:""}`:`Add ${cfg.noun||""}`;}
     if(c)c.textContent=`${lastCount} result${lastCount===1?"":"s"}${n?` · ${n} selected`:""}`;
     paintGroupBadges();}
   function renderList(){
@@ -63,7 +64,7 @@ function openBrowse(cfg){
       ${st.showFilters?`<div class="browse-facets">${facetHTML()}${fc?`<button class="fpill clear" id="brClearF" style="align-self:flex-start">Clear all</button>`:""}</div>`:sumHTML()}
       <div class="browse-count" id="brCount"></div>
       <div class="browse-list" id="brList"></div>
-      <div class="browse-foot">${cfg.originSelect?`<div class="br-f br-origin"><label class="f" for="brOrigin">Origin</label><select id="brOrigin">${originOptionsHTML(null)}</select></div><div class="br-f br-origdet"><label class="f" for="brOrigDet">Detail</label><input id="brOrigDet" placeholder="place, who, etc." disabled></div>`:""}${cfg.costInput?`<div class="br-f br-cost"><label class="f" for="brCost">Cost (gp)</label><input id="brCost" type="number" min="0" step="0.01" placeholder="listed" title="Overrides the item's listed price; blank uses the price from the rules data"></div>`:""}<button class="tbtn primary" id="brAdd" disabled></button></div>
+      <div class="browse-foot">${cfg.originSelect?`<div class="br-f br-origin"><label class="f" for="brOrigin">Origin</label><select id="brOrigin">${originOptionsHTML(null)}</select></div><div class="br-f br-origdet"><label class="f" for="brOrigDet">Detail</label><input id="brOrigDet" placeholder="place, who, etc." disabled></div>`:""}${cfg.qtyInput?`<div class="br-f br-qty"><label class="f" for="brQty">Qty</label><input id="brQty" type="number" min="1" max="999" step="1" value="1" inputmode="numeric" title="How many of each ticked item"></div>`:""}${cfg.costInput?`<div class="br-f br-cost"><label class="f" for="brCost">Cost (gp)</label><input id="brCost" type="number" min="0" step="0.01" placeholder="listed" title="Overrides the item's listed price; blank uses the price from the rules data"></div>`:""}<button class="tbtn primary" id="brAdd" disabled></button></div>
     </div>`;renderList();}
   function clearAll(){(cfg.facets||[]).forEach(f=>{st.facets[f.key]=f.type==="toggle"?false:new Set();});}
   /* The origin applies to the whole batch, so changing it changes whether the
@@ -81,6 +82,7 @@ function openBrowse(cfg){
     od.placeholder=(d&&d.ph)||"place, who, etc.";
   }
   host.oninput=e=>{if(e.target.id==="brSearch"){st.q=e.target.value;renderList();}
+    else if(e.target.id==="brQty")foot();
     else if(e.target.id==="brOrigin"){syncOrigDet();paintGroupBadges();}};
   host.onchange=e=>{if(e.target.id==="brOrigin"){syncOrigDet();paintGroupBadges();}};
   host.onclick=e=>{let m;
@@ -92,10 +94,22 @@ function openBrowse(cfg){
     if((m=e.target.closest("[data-brinfo]"))){const e2=(cfg.items||[]).find(x=>idOf(x)===m.dataset.brinfo);if(e2&&cfg.preview)cfg.preview(e2);return;}
     if((m=e.target.closest("[data-facet]"))){const set=st.facets[m.dataset.facet];if(set.has(m.dataset.val))set.delete(m.dataset.val);else set.add(m.dataset.val);render();return;}
     if((m=e.target.closest("[data-toggle]"))){st.facets[m.dataset.toggle]=!st.facets[m.dataset.toggle];render();return;}
-    if(e.target.closest("#brAdd")){const chosen=(cfg.items||[]).filter(x=>st.sel.has(idOf(x)));const os=document.getElementById("brOrigin"),od=document.getElementById("brOrigDet"),oc=document.getElementById("brCost");const og=(os&&os.value)?{kind:os.value,detail:(od?od.value.trim():""),at:Date.now()}:null;const costOverride=(oc&&oc.value!=="")?num(oc.value):null;if(chosen.length&&cfg.onAdd)cfg.onAdd(chosen,og,costOverride);closeBrowse();return;}
+    if(e.target.closest("#brAdd")){const chosen=(cfg.items||[]).filter(x=>st.sel.has(idOf(x)));const os=document.getElementById("brOrigin"),od=document.getElementById("brOrigDet"),oc=document.getElementById("brCost");const og=(os&&os.value)?{kind:os.value,detail:(od?od.value.trim():""),at:Date.now()}:null;const costOverride=(oc&&oc.value!=="")?num(oc.value):null;const oq=document.getElementById("brQty"),qty=oq?finderQty(oq.value):1;if(chosen.length&&cfg.onAdd)cfg.onAdd(chosen,og,costOverride,qty);closeBrowse();return;}
     if((m=e.target.closest("[data-row]"))){const id=m.dataset.row;if(st.sel.has(id))st.sel.delete(id);else st.sel.add(id);m.classList.toggle("sel",st.sel.has(id));const mk=m.querySelector(".brk");if(mk)mk.textContent=st.sel.has(id)?"✓":(added((cfg.items||[]).find(x=>idOf(x)===id))?"•":"");foot();return;}
   };
   render();host.classList.add("show");const si=document.getElementById("brSearch");if(si)si.focus();
+}
+/* The item finder's Qty box (issue #50). Anything that is not a whole number of
+   at least 1 — blank, 0, negative, text — counts as 1; decimals round down; 999
+   is the cap. */
+function finderQty(v){const n=Math.floor(Number(v));return Number.isFinite(n)&&n>=1?Math.min(999,n):1;}
+/* Library entries into the inventory, N of each. Stacks by name: an item already
+   carried gains N rather than a second row — what the finder always did with 1.
+   Cost is the price of ONE (inventoryTotal() multiplies by qty), and a weapon gets
+   one linked attack however many are added. No rendering, so the suite can call it. */
+function addLibraryItems(entries,og,costOverride,qty){
+  const n=finderQty(qty);
+  entries.forEach(x=>{const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());if(ex){ex.qty=num(ex.qty)+n;return;}const m=itemMetaLine(x);const it={id:uid(),name:x.name,qty:n,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:!!x.weapon};if(og)it.origin=og;const c=(costOverride!=null?costOverride:costToGp(x.cost));if(c!=null)it.cost=c;const wg=fnum(x.weight);if(wg)it.weight=wg;if(x.category)it.category=x.category;if(x.type)it.type=x.type;if(x.weapon)it.weapon=x.weapon;stampSrc(it,x,"item","items","browse");character.inventory.push(it);if(it.weapon)addAttackForItem(it);});
 }
 function browseItems(){
   const lib=rules.items||[];
@@ -121,7 +135,8 @@ function browseItems(){
       {key:"rar",label:"Rarity",type:"multi",options:rars,match:(e,a)=>a.has(rarOf(e).toLowerCase())},
       {key:"attune",label:"Needs attunement",type:"toggle",match:e=>!!e.attune}
     ],
-    onAdd:(entries,og,costOverride)=>{entries.forEach(x=>{const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());if(ex){ex.qty=num(ex.qty)+1;return;}const m=meta(x);const it={id:uid(),name:x.name,qty:1,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:!!x.weapon};if(og)it.origin=og;const c=(costOverride!=null?costOverride:costToGp(x.cost));if(c!=null)it.cost=c;const wg=fnum(x.weight);if(wg)it.weight=wg;if(x.category)it.category=x.category;if(x.type)it.type=x.type;if(x.weapon)it.weapon=x.weapon;stampSrc(it,x,"item","items","browse");character.inventory.push(it);if(it.weapon)addAttackForItem(it);});renderInventory();renderAttacks();recompute();scheduleSave();}
+    qtyInput:true,
+    onAdd:(entries,og,costOverride,qty)=>{addLibraryItems(entries,og,costOverride,qty);renderInventory();renderAttacks();recompute();scheduleSave();}
   });
 }
 /* create an Attacks & Weapons entry linked to a weapon inventory item */

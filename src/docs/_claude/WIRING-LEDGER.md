@@ -3499,3 +3499,20 @@ The four items parked after the combat view merged, all fixed on `feat/combat-vi
   START with `_dismissGuard=null;` — rules-data.js asserts the literal prefix.
 - **The toast is in the template** (`<div id="toast" role="status">`), empty from load: a live region
   created and filled in the same moment is not announced. The Undo's focus ring is a real outline.
+
+## Done — a quantity in the item finder (issue #50)
+
+The item form always had a Quantity box; the gap was the rules-pack **item finder**, which added one of
+each ticked item. It now has a **Qty** cell in its footer (`#brQty`, between Detail and Cost, item
+finder only via `cfg.qtyInput`) that applies to every ticked item, like Origin and Cost do.
+
+- **`addLibraryItems(entries, og, costOverride, qty)`** is the old inline `onAdd` body, lifted out of
+  `browseItems()` so the suite can call it. It stacks by name exactly as before, with N for 1: a new
+  item is one stack of N, one already carried gains N. The cost stays per item (`inventoryTotal()`
+  multiplies by qty), and a weapon still gets ONE linked attack however many are added.
+- **`finderQty(v)`**: blank, 0, negative or text → 1; decimals floor; cap 999.
+- The Add button reads "Add 2 items ×3" when Qty is above 1; `oninput` on `#brQty` repaints it.
+- `foot()`'s comment sits ABOVE the function: rules-data.js asserts `paintGroupBadges();` within 400
+  characters of `function foot(){`.
+- Ammunition is sold in bundles ("Arrows (20)"), so Qty 2 is two bundles. Unpacking bundles belongs to
+  the ammo issues (#6–#8), not here.

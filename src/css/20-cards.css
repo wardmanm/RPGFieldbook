@@ -244,6 +244,7 @@ html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
 .br-origin select{width:auto;min-width:0}
 .br-origdet{flex:1 1 120px;min-width:90px}
 .br-cost{flex:0 1 96px;min-width:76px}
+.br-qty{flex:0 1 72px;min-width:62px}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 
 /* portrait */
