@@ -184,6 +184,16 @@ function wire(){
     const fly=document.getElementById("tocFly");if(fly&&fly.classList.contains("open")){closeToc();return;}
     closeCombatView();
   },true);
+  /* Arranging the combat view: the grip is the only drag handle. */
+  document.addEventListener("pointerdown",e=>{
+    const g=e.target.closest&&e.target.closest("[data-cvgrip]");
+    if(g&&e.button===0)startCombatDrag(e,g);
+  });
+  document.addEventListener("keydown",e=>{
+    const g=e.target.closest&&e.target.closest("[data-cvgrip]");
+    if(!g||(e.key!=="ArrowUp"&&e.key!=="ArrowDown"))return;
+    e.preventDefault();moveCombatCard(g.dataset.cvgrip,e.key==="ArrowUp"?-1:1);
+  });
   /* These five are markup that moves around, and wire() has no try/catch: a bare
      getElementById(...).addEventListener on a renamed id throws HERE and every
      listener registered after it — coins, HP, theme, settings, the home screen —

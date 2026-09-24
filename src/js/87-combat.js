@@ -112,12 +112,15 @@ function fillCombatView(){
   combatSectionsOf(character).forEach(k=>{
     const card=combatCard(k);if(!card||card.closest("#combatView"))return;
     const home=document.createElement("span");home.hidden=true;home.dataset.cvhome=k;
-    card.before(home);list.appendChild(card);
+    card.before(home);list.appendChild(card);addGrip(card,k);
   });
   renderCombatEmpty();
 }
+/* Out: the grip comes off, so no tab ever shows one, and the card takes its
+   marker's place — exactly where it was. */
 function sendCardHome(k){
   const home=document.querySelector(`[data-cvhome="${k}"]`),card=combatCard(k);
+  if(card)removeGrip(card);
   if(home&&card)home.replaceWith(card);else if(home)home.remove();
 }
 function emptyCombatView(){document.querySelectorAll("[data-cvhome]").forEach(h=>sendCardHome(h.dataset.cvhome));}
@@ -201,4 +204,55 @@ function endCombatAsk(){
   renderActiveSpells();renderCombatChrome();scheduleSave();
   toast(`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`);
   return true;
+}
+
+/* ---- arranging ----
+   Inside the view only, each card heading gets a grip. The grip is a real
+   <button>: focused, ↑ and ↓ move its card one place — the path for anyone
+   without a mouse or touch. */
+function combatGripHTML(k){
+  const t=noteTitle(noteDef(k));
+  return `<button class="cv-grip" data-cvgrip="${esc(k)}" aria-label="Move ${esc(t)} — ↑ and ↓ move it one place" title="Drag to move">`+
+    `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></button>`;
+}
+function addGrip(card,k){const l=card.querySelector(".label");if(l&&!l.querySelector("[data-cvgrip]"))l.insertAdjacentHTML("afterbegin",combatGripHTML(k));}
+function removeGrip(card){const g=card.querySelector("[data-cvgrip]");if(g)g.remove();}
+/* The saved order is the truth; the view is re-laid from it. */
+function setCombatOrder(list){
+  character.combatSections=list;
+  const box=document.getElementById("cvList");
+  if(box)list.forEach(k=>{const c=combatCard(k);if(c&&c.parentNode===box)box.appendChild(c);});
+  scheduleSave();
+}
+function moveCombatCard(k,delta){
+  const list=combatSectionsOf(character),from=list.indexOf(k),to=from+delta;
+  if(from<0||to<0||to>=list.length)return;
+  setCombatOrder(moveCombatSection(list,from,to));
+  const g=document.querySelector(`[data-cvgrip="${k}"]`);if(g)g.focus();
+}
+/* Pointer events, not HTML5 drag-and-drop, which is unreliable on phones. The
+   dragged card is NEVER moved itself — moving an element can drop its pointer
+   capture mid-drag — so its NEIGHBOURS hop over it instead. Near the view's top
+   or bottom edge the view scrolls. The order is read back off the DOM on release. */
+function startCombatDrag(e,grip){
+  const card=grip.closest(".card"),list=document.getElementById("cvList"),body=document.getElementById("cvBody");
+  if(!card||!list||!body||card.parentNode!==list)return;
+  e.preventDefault();
+  try{grip.setPointerCapture(e.pointerId);}catch(err){}
+  card.classList.add("cv-dragging");
+  const mid=el=>{const r=el.getBoundingClientRect();return r.top+r.height/2;};
+  const move=ev=>{
+    const y=ev.clientY,prev=card.previousElementSibling,next=card.nextElementSibling;
+    if(prev&&y<mid(prev))list.insertBefore(prev,card.nextSibling);
+    else if(next&&y>mid(next))list.insertBefore(next,card);
+    const b=body.getBoundingClientRect();
+    if(y<b.top+48)body.scrollTop-=14;else if(y>b.bottom-48)body.scrollTop+=14;
+  };
+  const done=()=>{
+    grip.removeEventListener("pointermove",move);grip.removeEventListener("pointerup",done);grip.removeEventListener("pointercancel",done);
+    card.classList.remove("cv-dragging");
+    const shown=[...list.querySelectorAll(":scope > .card[data-note]")].map(c=>c.dataset.note);
+    setCombatOrder(shown.concat(combatSectionsOf(character).filter(k=>!shown.includes(k))));
+  };
+  grip.addEventListener("pointermove",move);grip.addEventListener("pointerup",done);grip.addEventListener("pointercancel",done);
 }

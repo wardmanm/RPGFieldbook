@@ -56,3 +56,13 @@ html.cv-lock,html.cv-lock body{overflow:hidden}
 .cv-round{font-family:var(--head);font-size:14px;min-width:9.5em;text-align:center;color:var(--ink)}
 .cv-round b{font-size:18px}
 .cv-head .tbtn[disabled]{opacity:.4;cursor:default}
+
+/* ---- arranging ----
+   Only the grip starts a drag, so touch-action:none sits on the grip ALONE — a
+   finger anywhere else on a card still scrolls the view. */
+.cv-grip{flex:none;background:none;border:0;padding:4px 2px;margin:-4px 0 -4px -6px;cursor:grab;
+  color:var(--ink-soft);touch-action:none;display:inline-flex;align-items:center}
+.cv-grip svg{width:16px;height:16px;fill:currentColor}
+.cv-grip:hover,.cv-grip:focus-visible{color:var(--accent-2)}
+.cv-grip:active{cursor:grabbing}
+.cv-dragging{box-shadow:0 16px 36px rgba(0,0,0,.30);outline:2px dashed var(--accent);outline-offset:3px}

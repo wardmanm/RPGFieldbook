@@ -38,6 +38,7 @@ const {X, state, bootError, fragments} = loadApp([
   'COMBAT_DEFAULTS', 'inCombat', 'combatSectionsOf', 'withCombatSection', 'moveCombatSection',
   'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
   'combatToggleHTML', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
+  'combatGripHTML', 'moveCombatCard',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1955,6 +1956,22 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('...and saying no leaves the fight running', X.inCombat(c) && c.combatRound === 7);
   state.confirm = true;
   ck('saying yes ends it', X.endCombatAsk() === true && !X.inCombat(c) && c.combatRound === 0);
+}
+
+/* ---- arranging ---- */
+{
+  const g = X.combatGripHTML('vitals');
+  ck('the grip is a real button, named for its card and its keys',
+     g.startsWith('<button') && g.includes('data-cvgrip="vitals"') && /Move Vitals — ↑ and ↓/.test(g));
+  const c = X.blankChar(); X.character = c;
+  X.moveCombatCard('vitals', 1);
+  ck('↓ moves a section one place later', JSON.stringify(c.combatSections.slice(0, 2)) === '["statuses","vitals"]');
+  X.moveCombatCard('vitals', -1);
+  ck('↑ moves it back', c.combatSections[0] === 'vitals');
+  X.moveCombatCard('vitals', -1);
+  ck('↑ at the top does nothing', c.combatSections[0] === 'vitals' && c.combatSections.length === 6);
+  X.moveCombatCard('coins', 1);
+  ck('a section not in the view cannot be moved', c.combatSections.indexOf('coins') < 0);
 }
 
 ck.done();
