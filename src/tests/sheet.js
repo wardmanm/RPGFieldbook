@@ -12,6 +12,8 @@ const {X, state, bootError, fragments} = loadApp([
   'sizeName', 'sizeLabel', 'charSize', 'carryCapacity', 'encMode', 'encState',
   'encSpeed', 'encTierNote', 'contributions', 'inventoryTotal', 'SIZES', 'SIZE_CARRY',
   'capacityFor', 'sizeOptionsHTML', 'invSection',
+  'ORIGIN_KINDS', 'originDef', 'originLabel', 'originLetter', 'originFromSid',
+  'itemOrigin', 'originOptionsHTML', 'grantedFromOrigin', 'originFromGranted',
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
   'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
   'FEAT_KINDS', 'featKindDef', 'featPickList', 'featPickKind', 'featPickPrereq',
@@ -359,6 +361,51 @@ ck('"Adventuring Gear" does not match on the ring in adventuring',
 // the player's own choice beats all of it
 ck('an explicit section override wins', sec({category: 'Gear', sectionOverride: 'Tools'}) === 'Tools');
 ck('a nonsense override is ignored', sec({category: 'Gear', sectionOverride: 'Nowhere'}) === 'Gear');
+
+/* ================= item origin =================
+   Where a thing came from: {kind, detail, at}, kind drawn from a fixed
+   vocabulary. None of this had unit coverage, which is how a dead parameter and
+   a silently-dropped detail both survived in it. */
+ck('every origin kind has a letter and a label',
+   X.ORIGIN_KINDS.every(o => o.k && o.ltr && o.label));
+ck('origin kinds are unique', new Set(X.ORIGIN_KINDS.map(o => o.k)).size === X.ORIGIN_KINDS.length);
+ck('the label is just the kind when there is no detail',
+   X.originLabel({kind: 'purchased'}) === 'Purchased');
+ck('...and gains the detail when there is one',
+   X.originLabel({kind: 'purchased', detail: 'Waterdeep'}) === 'Purchased — Waterdeep');
+// grants tag their items from the provenance sid, which is why the item form
+// must offer Class: a class-granted item's own origin is kind:"class"
+ck('a class grant becomes a class origin',
+   X.originFromSid('class:Fighter').kind === 'class' &&
+   X.originFromSid('class:Fighter').detail === 'Fighter');
+ck('a background grant becomes a background origin',
+   X.originFromSid('bg:Soldier').kind === 'background');
+ck('an ancestry grant becomes an ancestry origin',
+   X.originFromSid('race:Elf').kind === 'race');
+ck('a subclass sid has no origin of its own', X.originFromSid('subclass:Fighter:Champion') === null);
+ck('no sid, no origin', X.originFromSid('') === null && X.originFromSid(undefined) === null);
+// the Class option must be offered, or editing a class-granted item cannot show
+// its own origin back to you
+ck('the option list offers every kind, Class included',
+   X.ORIGIN_KINDS.every(o => X.originOptionsHTML(null).includes(`value="${o.k}"`)));
+ck('...and a none option, selected when there is no origin',
+   /<option value=""\s+selected>/.test(X.originOptionsHTML(null)));
+ck('the current kind comes back selected',
+   X.originOptionsHTML({kind: 'gift'}).includes('value="gift" selected'));
+// a legacy item has no origin object at all, only the grant field
+ck('a legacy granted item still gets a badge',
+   X.itemOrigin({grant: 'bg:Sage'}).kind === 'background');
+ck('an explicit origin wins over the grant',
+   X.itemOrigin({grant: 'bg:Sage', origin: {kind: 'found'}}).kind === 'found');
+ck('an item from nowhere has no origin', !X.itemOrigin({name: 'Rock'}));
+// origin is character-local: a rules update must never touch it
+ck('origin survives a save and load round-trip', (() => {
+  const c = X.migrate({id: 'o1', items: [{id: 'i1', name: 'Blade',
+    origin: {kind: 'reward', detail: 'the duke', at: 123}}]});
+  const back = X.migrate(JSON.parse(JSON.stringify(c)));
+  return back.items[0].origin.kind === 'reward' && back.items[0].origin.detail === 'the duke' &&
+         back.items[0].origin.at === 123;
+})());
 
 /* ================= armor: the structured field and the prose it replaces =====
    No pack item carries an `armor` object — all 31 state their AC in the

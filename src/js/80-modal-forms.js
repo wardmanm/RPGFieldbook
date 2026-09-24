@@ -167,8 +167,9 @@ function openItemForm(existing){
     <div class="field"><label class="f">Category</label><select id="iCategory"><option value=""${!it.sectionOverride?" selected":""}>Automatic (${esc(invSection(it))})</option>${INV_ORDER.map(sname=>`<option value="${sname}"${it.sectionOverride===sname?" selected":""}>${sname}</option>`).join("")}</select></div>
     <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${it.cost!=null&&it.cost!==""?fnum(it.cost):""}" placeholder="0"></div>
       <div class="field"><label class="f">Weight each (lb, optional)</label><input id="iWeight" type="number" min="0" step="0.01" value="${it.weight!=null&&it.weight!==""?fnum(it.weight):""}" placeholder="0"></div></div>
-    <div class="field"><label class="f">Origin</label><select id="iOrigin">${originOptionsHTML(it.origin,false)}</select></div>
-    <div class="field" id="iOrigDetWrap" style="${it.origin?"":"display:none"}"><label class="f">Origin detail</label><input id="iOrigDet" value="${esc((it.origin&&it.origin.detail)||"")}" placeholder="${esc((it.origin&&originDef(it.origin.kind)&&originDef(it.origin.kind).ph)||"place, who, etc.")}"></div>
+    <div class="g2"><div class="field"><label class="f">Origin</label><select id="iOrigin">${originOptionsHTML(it.origin)}</select></div>
+      <div class="field"><label class="f">Origin detail</label><input id="iOrigDet" value="${esc((it.origin&&it.origin.detail)||"")}" placeholder="${esc((it.origin&&originDef(it.origin.kind)&&originDef(it.origin.kind).ph)||"place, who, etc.")}"${it.origin?"":" disabled"}></div></div>
+    <p class="hint">Where this came from. It shows as a small letter badge on the item row — tap it for the full origin and the date you added it. The detail is free text, and what it means follows the origin: a place for Purchased or Found, a person for Gift or Traded.</p>
     <div class="field"><label class="f">Effects while equipped</label><div id="iFx">${fxEditorRows(it.effects)}</div><button class="fx-add" id="iAddFx">+ Add effect</button></div>
     <label class="equip ${it.equipped?"on":""}" id="iEquip" style="font-size:12px"><span class="box"></span>Equipped (apply effects now)</label>
     <label class="equip ${it.weapon?"on":""}" id="iIsWeapon" style="font-size:12px;margin-top:8px"><span class="box"></span>Weapon (create a linked attack)</label>
@@ -240,8 +241,14 @@ function openItemForm(existing){
     document.getElementById("iHeal").value=(du&&du.heal)||"";
     consume=!!(du&&du.consume);ctog.classList.toggle("on",consume);});
   document.getElementById("iCancel").addEventListener("click",closeModal);
-  const iOrig=document.getElementById("iOrigin"),iOrigW=document.getElementById("iOrigDetWrap"),iOrigD=document.getElementById("iOrigDet");
-  if(iOrig)iOrig.addEventListener("change",()=>{const d=originDef(iOrig.value);iOrigW.style.display=iOrig.value?"":"none";if(d&&iOrigD)iOrigD.placeholder=d.ph||"place, who, etc.";});
+  /* The detail box is DISABLED rather than hidden when there is no origin kind.
+     Hiding it re-flowed the whole lower half of an already long form every time
+     the dropdown moved; disabling keeps the row's height stable and still makes
+     it obvious the field is not in play. The placeholder tracks the kind, so the
+     same box reads "at (place)" for Purchased and "from (who)" for Gift. */
+  const iOrig=document.getElementById("iOrigin"),iOrigD=document.getElementById("iOrigDet");
+  if(iOrig)iOrig.addEventListener("change",()=>{const d=originDef(iOrig.value);
+    if(iOrigD){iOrigD.disabled=!iOrig.value;if(!iOrig.value)iOrigD.value="";iOrigD.placeholder=(d&&d.ph)||"place, who, etc.";}});
   document.getElementById("iSave").addEventListener("click",()=>{
     const rec={id:it.id,name:document.getElementById("iName").value.trim()||"Item",qty:num(document.getElementById("iQty").value)||1,description:document.getElementById("iDesc").value,effects:collectFx(fxWrap),equipped};
     const so=document.getElementById("iCategory").value;if(so)rec.sectionOverride=so;
@@ -498,7 +505,7 @@ function openSpellForm(existing){
       <div class="field"><label class="f">Level</label><select id="sLevel">${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}"${num(s.level)===n?" selected":""}>${n===0?"Cantrip":"Level "+n}</option>`).join("")}</select></div></div>
     <div class="field"><label class="f">Meta (casting time, components…)</label><input id="sMeta" value="${esc(s.meta||"")}" placeholder="1 action · V,S · 60 ft"></div>
     <div class="field"><label class="f">Description</label><textarea id="sText">${esc(s.text||"")}</textarea></div>
-    <div class="g2"><div class="field"><label class="f">Origin</label><select id="sOrigin">${originOptionsHTML(s.origin||originFromGranted(s.granted)||{kind:"class"},true)}</select></div>
+    <div class="g2"><div class="field"><label class="f">Origin</label><select id="sOrigin">${originOptionsHTML(s.origin||originFromGranted(s.granted)||{kind:"class"})}</select></div>
       <div class="field"><label class="f">Origin detail</label><input id="sOrigDet" value="${esc((s.origin&&s.origin.detail)||"")}" placeholder="place, who, etc."></div></div>
     <p class="hint">Class/none counts toward your allotment; every other origin is treated as granted and excluded.</p>
     <div class="field"><label class="f">This spell is</label>

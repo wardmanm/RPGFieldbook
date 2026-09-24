@@ -36,7 +36,11 @@ function itemOrigin(it){return it.origin||originFromSid(it.grant);}
 function spellOrigin(s){return s.origin||originFromGranted(s.granted);}
 function originBadge(o,attr,id){if(!o)return "";const t=esc(originLabel(o)+(o.at?" · added "+new Date(o.at).toLocaleDateString():""));return `<button class="orig-b" ${attr}="${id}" title="${t}" aria-label="Origin: ${t}">${esc(originLetter(o))}</button>`;}
 function openOriginInfo(o){if(!o){openModal("Origin",`<p class="hint">No origin recorded. Edit this to set where it came from.</p>`);return;}openModal("Origin",`<p><b>${esc(originLabel(o))}</b></p><p class="hint">Added: ${esc(o.at?new Date(o.at).toLocaleString():"—")}</p>`);}
-function originOptionsHTML(cur,includeClass){const none=`<option value=""${!cur?" selected":""}>— none —</option>`;return none+ORIGIN_KINDS.map(x=>`<option value="${x.k}"${cur&&cur.kind===x.k?" selected":""}>${esc(x.label)}</option>`).join("");}
+/* No `includeClass` flag: the item form used to pass false meaning "hide Class",
+   but class grants tag their items kind:"class" via originFromSid, so hiding it
+   would make a class-granted item's own origin unselectable — and unrenderable —
+   the moment you edited it. The parameter was never read anyway. */
+function originOptionsHTML(cur){const none=`<option value=""${!cur?" selected":""}>— none —</option>`;return none+ORIGIN_KINDS.map(x=>`<option value="${x.k}"${cur&&cur.kind===x.k?" selected":""}>${esc(x.label)}</option>`).join("");}
 /* The presentation line browse folds into an added item's description. Shared,
    not inlined, because the update diff must reproduce the SAME transform — an
    item copy is not field-identical to its rules entry, and comparing a copy
