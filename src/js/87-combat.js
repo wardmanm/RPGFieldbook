@@ -122,12 +122,19 @@ function sendCardHome(k){
 }
 function emptyCombatView(){document.querySelectorAll("[data-cvhome]").forEach(h=>sendCardHome(h.dataset.cvhome));}
 
-/* ✕ · title · ☰ — Task 6 adds the tracker. */
+/* ✕ · title · tracker · (space) · Start or End · ☰. End sits past the spacer,
+   well away from the arrows, so a hurried tap on ▶ cannot hit it. */
 function combatHeaderHTML(c){
-  return `<button class="tbtn" id="cvClose" aria-label="Close the combat view — combat keeps going" title="Close (combat keeps going)">✕</button>`+
-    `<span class="cv-title">${iconSVG("ui","Combat")}Combat</span>`+
-    `<span class="grow"></span>`+
-    `<button class="tbtn" id="cvToc" aria-label="Jump to a section" title="Jump to a section">☰</button>`;
+  const close=`<button class="tbtn" id="cvClose" aria-label="Close the combat view — combat keeps going" title="Close (combat keeps going)">✕</button>`;
+  const title=`<span class="cv-title">${iconSVG("ui","Combat")}Combat</span>`;
+  const toc=`<button class="tbtn" id="cvToc" aria-label="Jump to a section" title="Jump to a section">☰</button>`;
+  if(!inCombat(c))return close+title+`<span class="grow"></span><button class="tbtn primary" id="cvStart">Start combat</button>`+toc;
+  const r=num(c.combatRound);
+  return close+title+
+    `<span class="cv-track"><button class="tbtn" id="cvPrev" aria-label="Previous round"${r<=1?" disabled":""}>◀</button>`+
+    `<span class="cv-round" aria-live="polite">Round <b>${r}</b> · ${fmtCombatTime(combatElapsedSec(c))}</span>`+
+    `<button class="tbtn" id="cvNext" aria-label="Next round">▶</button></span>`+
+    `<span class="grow"></span><button class="tbtn danger" id="cvEnd">End combat</button>`+toc;
 }
 function renderCombatHeader(){const h=document.getElementById("cvHead");if(h)h.innerHTML=combatHeaderHTML(character);}
 
@@ -182,4 +189,16 @@ function syncCombatView(){
     if(body)body.scrollTop=keep;
   }
   renderCombatToggles();renderCombatChrome();
+}
+
+/* ---- the tracker ---- */
+function startCombatNow(){combatStart(character);renderActiveSpells();renderCombatChrome();scheduleSave();}
+/* Asked first: the round count is the one thing here a stray tap would lose. */
+function endCombatAsk(){
+  const r=num(character.combatRound);
+  if(!confirm(`End combat at round ${r}?`))return false;
+  const s=combatEnd(character);
+  renderActiveSpells();renderCombatChrome();scheduleSave();
+  toast(`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`);
+  return true;
 }

@@ -117,6 +117,10 @@ function wire(){
     if(t.closest("#btnCombat"))return combatViewOpen()?closeCombatView():openCombatView();
     if(t.closest("#cvClose"))return closeCombatView();
     if(t.closest("#cvToc"))return openToc();
+    if(t.closest("#cvStart"))return startCombatNow();
+    if(t.closest("#cvPrev"))return advanceRound(-1);
+    if(t.closest("#cvNext"))return advanceRound(1);
+    if(t.closest("#cvEnd"))return endCombatAsk();
     if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn);
     if(t.closest("#btnToc"))return openToc();
     if(t.closest("#tocBack"))return closeToc();

@@ -37,7 +37,7 @@ const {X, state, bootError, fragments} = loadApp([
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
   'COMBAT_DEFAULTS', 'inCombat', 'combatSectionsOf', 'withCombatSection', 'moveCombatSection',
   'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
-  'combatToggleHTML', 'combatHeaderHTML',
+  'combatToggleHTML', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1928,6 +1928,33 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('the header can always close, and says combat keeps going',
      h.includes('id="cvClose"') && /combat keeps going/.test(h));
   ck('the header has its own ☰', h.includes('id="cvToc"'));
+}
+
+/* ---- the tracker in the view's header ---- */
+{
+  const idle = X.combatHeaderHTML({combatActive: false, combatRound: 5});
+  ck('out of combat the header offers Start combat, and no arrows or End',
+     idle.includes('id="cvStart"') && !idle.includes('id="cvNext"') && !idle.includes('id="cvEnd"'));
+  const r3 = X.combatHeaderHTML({combatActive: true, combatRound: 3});
+  ck('in combat: round, in-game time, both arrows and End — and no Start',
+     /Round <b>3<\/b> · 12 sec/.test(r3) && r3.includes('id="cvPrev"') && r3.includes('id="cvNext"') &&
+     r3.includes('id="cvEnd"') && !r3.includes('id="cvStart"'));
+  ck('◀ is live after round 1', !/id="cvPrev"[^>]*disabled/.test(r3));
+  ck('◀ is disabled at round 1',
+     /id="cvPrev"[^>]*disabled/.test(X.combatHeaderHTML({combatActive: true, combatRound: 1})));
+  ck('End sits apart from the arrows',
+     r3.indexOf('id="cvNext"') < r3.indexOf('class="grow"') && r3.indexOf('class="grow"') < r3.indexOf('id="cvEnd"'));
+  ck('the header can still close and still has ☰', r3.includes('id="cvClose"') && r3.includes('id="cvToc"'));
+
+  const c = X.blankChar(); c.combatRound = 4; X.character = c;
+  X.startCombatNow();
+  ck('Start combat, from the header, begins at round 1', X.inCombat(c) && c.combatRound === 1);
+  c.combatRound = 7; state.confirm = false;
+  ck('End combat asks first, naming the round',
+     X.endCombatAsk() === false && state.lastConfirm === 'End combat at round 7?');
+  ck('...and saying no leaves the fight running', X.inCombat(c) && c.combatRound === 7);
+  state.confirm = true;
+  ck('saying yes ends it', X.endCombatAsk() === true && !X.inCombat(c) && c.combatRound === 0);
 }
 
 ck.done();

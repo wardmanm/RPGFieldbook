@@ -50,3 +50,9 @@ html.cv-lock,html.cv-lock body{overflow:hidden}
 #combatView #activeSpellCard,#combatView #familiarCard{display:block!important}
 #combatView #activeSpellList:empty::before,#combatView #familiarList:empty::before{
   content:"None right now.";display:block;font-style:italic;color:var(--ink-soft);font-size:14px}
+
+/* ---- the tracker ---- */
+.cv-track{display:inline-flex;align-items:center;gap:6px}
+.cv-round{font-family:var(--head);font-size:14px;min-width:9.5em;text-align:center;color:var(--ink)}
+.cv-round b{font-size:18px}
+.cv-head .tbtn[disabled]{opacity:.4;cursor:default}
