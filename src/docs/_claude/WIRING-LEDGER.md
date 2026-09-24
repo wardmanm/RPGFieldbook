@@ -3466,3 +3466,27 @@ Removing any section now toasts an **Undo** that reinserts it at its old index
   The toast itself stays `pointer-events:none`; only its button takes the pointer.
 - **`role="status"` on the toast**, so screen readers announce every toast now — they never did.
 - **The Undo carries the character id** it was shown for and does nothing after a character switch.
+
+## Combat view follow-ups, and focus for the general modal
+
+The four items parked after the combat view merged, all fixed on `feat/combat-view-undo`:
+
+- **↑/↓ past hidden sections.** `stepCombatSection(list, k, delta, shown)` (pure, tested) moves past
+  the next shown section and any hidden ones between, which is the order dragging already produced.
+  `moveCombatCard` treats a card as hidden only when it sits in the view and computes `display:none`.
+- **Header breakpoint 480 → 640px.** Measured, not guessed: the one-row header needs ~610px in combat
+  (60px tall from 641px up), and from 481 to 600 it wrapped wherever it ran out of room. The rule that
+  stacks the time under the round stays at 480.
+- **Keyboard removal lands on the Undo.** `toggleCombatSection(k, viaKey)` — `viaKey` is the click's
+  `event.detail === 0` (Enter/Space) — focuses the toast's Undo when the removed card was in the view.
+  `toast()` returns that button and takes `action.back()`: Tab or Esc from the Undo hides the toast and
+  goes to the grip of the card that filled the gap (`cvFocusAfter`), else ✕. The combat view's
+  capture-phase Esc yields while focus is in the toast. A keyboard Undo focuses the restored toggle.
+- **The general modal takes focus.** `modalTakeFocus(wasOpen)` / `modalGiveBackFocus()` in
+  80-modal-forms.js: on open every other `<body>` child goes inert (the toast stays reachable), focus
+  goes to the first field with `(pointer:fine)` and to the dialog itself on touch (a field would raise
+  the on-screen keyboard for every form); on close only the elements the modal inerted are released —
+  so the combat view's inert survives a dialog over it — and focus returns to the opener if it is
+  still in the document and not inert, else to ✕ when the combat view is open. `openModal` called
+  while already open (a content swap) keeps the original opener. `openModal` must still START with
+  `_dismissGuard=null;` — rules-data.js asserts the literal prefix.

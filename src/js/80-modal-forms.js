@@ -14,8 +14,33 @@ function setDismissGuard(fn){_dismissGuard=fn;}
    UNCONDITIONALLY, never guarded behind `if(icon)`: ~30 call sites pass nothing,
    and they must CLEAR the slot, or a class emblem leaks into the next spell
    modal that opens. The title stays textContent — it is player data. */
-function openModal(title,html,icon){_dismissGuard=null;document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");}
-function closeModal(){_dismissGuard=null;modal.classList.remove("open");document.getElementById("mBody").innerHTML="";}
+function openModal(title,html,icon){_dismissGuard=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
+function closeModal(){_dismissGuard=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
+/* ---- focus ----
+   A dialog takes the keyboard with it. On open, every other child of <body> goes
+   inert (the toast stays reachable) and focus moves in: to the first field with a
+   mouse or keyboard, to the dialog itself on touch, where focusing a field would
+   throw up the on-screen keyboard for every form. On close, focus returns to what
+   opened it. Only elements WE made inert are released, so the combat view's own
+   inert on the page survives a dialog opened over it. `wasOpen`: openModal is
+   also called to swap content in place, which must keep the original opener. */
+let _modalOpener=null,_modalInert=[];
+function modalTakeFocus(wasOpen){
+  if(!wasOpen){
+    const a=document.activeElement;_modalOpener=(a&&a!==document.body&&!modal.contains(a))?a:null;
+    [...document.body.children].forEach(el=>{if(el===modal||el.id==="toast"||el.tagName==="SCRIPT"||el.inert)return;el.inert=true;_modalInert.push(el);});
+  }
+  const box=modal.querySelector(".modal");if(!box)return;
+  const fine=window.matchMedia&&window.matchMedia("(pointer:fine)").matches;
+  const f=fine&&[...box.querySelectorAll("input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled])")].find(x=>x.offsetParent!==null);
+  (f||box).focus({preventScroll:true});
+}
+function modalGiveBackFocus(){
+  _modalInert.forEach(el=>{el.inert=false;});_modalInert=[];
+  const o=_modalOpener;_modalOpener=null;
+  if(o&&o.isConnected&&!o.closest("[inert]"))o.focus({preventScroll:true});
+  else if(combatViewOpen()){const c=document.getElementById("cvClose");if(c)c.focus();}
+}
 function dismissModal(){
   if(_dismissGuard){const msg=_dismissGuard();if(msg&&!confirm(msg))return;}
   closeModal();

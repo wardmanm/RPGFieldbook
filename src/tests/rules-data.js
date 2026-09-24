@@ -1483,4 +1483,13 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /<p [^>]*id="cvLive" aria-live="polite"/.test(t));
 }
 
+// ---------- the general modal can take focus, and is named by its title
+{
+  const t = loadHTML();
+  const m = /<div class="modal"[^>]*>/.exec(t);
+  ck('the modal dialog is focusable (tabindex -1) so openModal can move focus into it',
+     !!m && /\btabindex="-1"/.test(m[0]) && /role="dialog"/.test(m[0]));
+  ck('the modal dialog is named by its title', !!m && /aria-labelledby="mTitle"/.test(m[0]) && t.includes('id="mTitle"'));
+}
+
 ck.done();
