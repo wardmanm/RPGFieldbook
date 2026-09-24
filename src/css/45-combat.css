@@ -26,11 +26,13 @@ html.cv-lock,html.cv-lock body{overflow:hidden}
 .cv-head{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px clamp(10px,2vw,18px);
   background:var(--paper-2);border-bottom:2px solid var(--line)}
 .cv-head .grow{flex:1}
-/* Phone width: two rows, whatever the state. Row 1 is ✕ · title · ☰; the spacer
+/* Up to 640px: two rows, whatever the state. Row 1 is ✕ · title · ☰; the spacer
    becomes a full-width row break; row 2 is the tracker with Start/End pushed to
    the far right — End well clear of ◀ ▶, and in the spot Start held. Tab order
-   stays the markup's (✕, tracker, End, ☰). */
-@media(max-width:480px){
+   stays the markup's (✕, tracker, End, ☰). 640, not a phone width: the one-row
+   header needs ~610px in combat, and between the two it wrapped wherever it ran
+   out of room — End under ✕, or ☰ alone on a second row. */
+@media(max-width:640px){
   .cv-head{row-gap:0}
   #cvToc{order:1;margin-left:auto}
   .cv-head .grow{order:2;flex:0 0 100%;height:0;margin-top:8px}

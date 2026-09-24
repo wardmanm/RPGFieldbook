@@ -145,7 +145,23 @@ function dropDamagelessSpellRows(){
 }
 function ensureSpellAttacks(){(character.spells||[]).forEach(sp=>{if(sp.atkType===undefined){detectSpellAttack(sp);syncSpellAttack(sp);}});spellDamageBackfill();dropDamagelessSpellRows();}
 let _toastT=null;
-function toast(msg){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";document.body.appendChild(el);}el.textContent=msg;el.classList.add("show");clearTimeout(_toastT);_toastT=setTimeout(()=>el.classList.remove("show"),1900);}
+/* An optional action ({label, run}) adds one button — the combat view's Undo —
+   and makes the toast something to reach, not just read: it stays 6 s, and longer
+   while the pointer is on it or its button has focus. role="status" lets a screen
+   reader hear it. It lives outside .page, so the combat view's inert leaves it
+   reachable. */
+function toast(msg,action){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";el.setAttribute("role","status");document.body.appendChild(el);}
+  el.textContent=msg;let b=null;
+  if(action){b=document.createElement("button");b.type="button";b.className="toast-act";b.textContent=action.label;b.addEventListener("click",e=>{hideToast(true);action.run(e);});
+    /* action.back(): where the keyboard returns when it leaves the button by Tab
+       or Esc — the player was put here on purpose, and the button sits at the very
+       end of the page, so plain Tab order would lose their place. */
+    if(action.back)b.addEventListener("keydown",e=>{if(e.key!=="Tab"&&e.key!=="Escape")return;const t=action.back();if(!t)return;e.preventDefault();hideToast(true);t.focus();});
+    el.append(" ",b);}
+  el.classList.add("show");clearTimeout(_toastT);_toastT=setTimeout(hideToast,action?6000:1900);return b;}
+function hideToast(now){const el=document.getElementById("toast");if(!el)return;
+  if(!now&&(el.matches(":hover")||el.contains(document.activeElement))){_toastT=setTimeout(hideToast,1000);return;}
+  clearTimeout(_toastT);el.classList.remove("show");}
 /* A spell's attack row is REBUILT from the spell every time, never edited on the
    sheet — which is why the row has a Cast button where a weapon has Edit. So
    anything the row can show has to be a field on the SPELL: a spell that deals

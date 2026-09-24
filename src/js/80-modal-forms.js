@@ -14,8 +14,68 @@ function setDismissGuard(fn){_dismissGuard=fn;}
    UNCONDITIONALLY, never guarded behind `if(icon)`: ~30 call sites pass nothing,
    and they must CLEAR the slot, or a class emblem leaks into the next spell
    modal that opens. The title stays textContent — it is player data. */
-function openModal(title,html,icon){_dismissGuard=null;document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");}
-function closeModal(){_dismissGuard=null;modal.classList.remove("open");document.getElementById("mBody").innerHTML="";}
+function openModal(title,html,icon){_dismissGuard=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
+function closeModal(){_dismissGuard=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
+/* ---- focus ----
+   A dialog takes the keyboard with it. On open, every other child of <body> goes
+   inert (the toast stays reachable) and focus moves in: to the first field with a
+   mouse or keyboard, to the dialog itself on touch, where focusing a field would
+   throw up the on-screen keyboard for every form. On close, focus returns to what
+   opened it. Only elements WE made inert are released, so the combat view's own
+   inert on the page survives a dialog opened over it. `wasOpen`: openModal is
+   also called to swap content in place, which must keep the original opener. */
+let _modalOpener=null,_modalOpenerSel=null,_modalInert=[];
+/* What auto-focus may land on: text entry, nothing else. NEVER a <select> — the
+   item, feature and spell forms open on a rules-pack picker, and type-ahead on a
+   focused picker rewrites the whole form with one keystroke. Nor a checkbox,
+   radio or file input: a stray key would toggle or open them. */
+const MODAL_FOCUS_FIELDS="input:not([type]),input[type=text],input[type=search],input[type=number],input[type=email],input[type=url],input[type=tel],textarea";
+/* How to find the opener again after a Save re-renders the list it sat in: its
+   id, else its first data-* hook. Quotes and backslashes are escaped. */
+function openerSelector(el){
+  if(!el)return null;
+  const q=v=>String(v).replace(/["\\]/g,"\\$&");
+  if(el.id)return `[id="${q(el.id)}"]`;
+  const a=[...(el.attributes||[])].find(x=>/^data-/.test(x.name));
+  return a?`[${a.name}="${q(a.value)}"]`:null;
+}
+function modalTakeFocus(wasOpen){
+  if(!wasOpen){
+    const a=document.activeElement;_modalOpener=(a&&a!==document.body&&!modal.contains(a))?a:null;
+    _modalOpenerSel=openerSelector(_modalOpener);
+    [...document.body.children].forEach(el=>{if(el===modal||el.id==="toast"||el.tagName==="SCRIPT"||el.inert)return;el.inert=true;_modalInert.push(el);});
+  }
+  const box=modal.querySelector(".modal");if(!box)return;
+  const fine=window.matchMedia&&window.matchMedia("(pointer:fine)").matches;
+  /* The first text box on the first screenful: a long dialog (Settings) starts at
+     its top rather than scrolled to a field halfway down. */
+  const mb=document.getElementById("mBody"),fold=mb?mb.getBoundingClientRect().bottom:Infinity;
+  const f=fine&&[...box.querySelectorAll(MODAL_FOCUS_FIELDS)].find(x=>!x.disabled&&!x.readOnly&&x.offsetParent!==null&&x.getBoundingClientRect().top<fold);
+  (f||box).focus({preventScroll:true});
+  /* Caret at the end of a one-line box: focus() leaves it at the start, so typing
+     into an edited name would prefix it. Not a textarea — a long note's end is off
+     screen, and the first key would jump there. Number inputs refuse selection
+     ranges, hence the try. */
+  if(f&&f.tagName==="INPUT"&&f.value)try{f.setSelectionRange(f.value.length,f.value.length);}catch(e){}
+}
+function modalGiveBackFocus(){
+  _modalInert.forEach(el=>{el.inert=false;});_modalInert=[];
+  /* A combat view that opened under the dialog keeps its own inert on the page. */
+  if(combatViewOpen())cvInert(true);
+  const o=_modalOpener,sel=_modalOpenerSel;_modalOpener=_modalOpenerSel=null;
+  const usable=el=>!!el&&el.isConnected&&!el.closest("[inert]")&&el.getClientRects().length>0;
+  if(usable(o))o.focus({preventScroll:true});
+  /* A Save usually re-renders the opener's list straight after closing, taking
+     focus with it. So look again once it has: the same hook if it is still
+     unique, else ✕ in the combat view. Left alone if focus already went
+     somewhere real — into a second dialog, say. */
+  setTimeout(()=>{
+    const a=document.activeElement;if(a&&a!==document.body)return;
+    const hits=sel?document.querySelectorAll(sel):[];
+    if(hits.length===1&&usable(hits[0])){hits[0].focus({preventScroll:true});return;}
+    if(combatViewOpen()){const c=document.getElementById("cvClose");if(c)c.focus();}
+  },0);
+}
 function dismissModal(){
   if(_dismissGuard){const msg=_dismissGuard();if(msg&&!confirm(msg))return;}
   closeModal();

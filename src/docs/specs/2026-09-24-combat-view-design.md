@@ -261,5 +261,15 @@ Where the code differs from the text above, and why:
   outside the header that is repainted.
 - **Phone widths.** At 400px and below the tab-bar pill drops "Rd" and shows the swords and the
   number (the `aria-label` still reads "round N"), and the tabs narrow to 42px, so the pinned group
-  never covers Rules. At 480px and below the header is two rows — ✕ · title · ☰, then ◀ round ▶ with
-  End (or Start) at the far right — and the time stacks under the round.
+  never covers Rules. At 640px and below the header is two rows — ✕ · title · ☰, then ◀ round ▶ with
+  End (or Start) at the far right — because the one-row header needs about 610px in combat. At
+  480px and below the time also stacks under the round.
+- **↑/↓ skip hidden sections.** A section hidden in the view (Skills in By ability mode) keeps its
+  slot, and the arrow keys step past it together with the next shown one, as dragging does.
+- **Keyboard removal lands on the Undo.** Removing a card from inside the view with Enter/Space
+  focuses the toast's Undo: Enter restores it and focuses its toggle; Tab or Esc returns to the grip
+  of the card that filled the gap.
+- **Undo on removal** (decided after build, not in §5). Removing a section — from its tab or from
+  inside the view — shows a toast with an **Undo** that puts it back at its old position. It closes
+  the gap where Active Spells and Familiars, hidden on their tab when empty, could not be toggled back.
+  The toast gained an optional action for it; see the ledger.

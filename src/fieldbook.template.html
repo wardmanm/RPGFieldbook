@@ -105,10 +105,13 @@
     </div>
   </div>
 </div>
-<div class="backdrop" id="modal"><div class="modal" role="dialog" aria-modal="true">
+<div class="backdrop" id="modal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle" tabindex="-1">
   <div class="m-head"><span class="m-icon" id="mIcon"></span><div class="m-title" id="mTitle"></div><button class="close" id="mClose" aria-label="Close">×</button></div>
   <div class="m-body" id="mBody"></div>
 </div></div>
+<!-- The toast (toast() in 60-attacks.js). In the page from load, empty, because a
+     live region created and filled in the same moment is not announced. -->
+<div id="toast" class="toast" role="status"></div>
 
 <script>
 //@@JS@@

@@ -39,6 +39,8 @@ const {X, state, bootError, fragments} = loadApp([
   'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
   'combatToggleHTML', 'combatToggleText', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
   'combatGripHTML', 'moveCombatCard',
+  'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
+  'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1987,6 +1989,86 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('↑ at the top does nothing', c.combatSections[0] === 'vitals' && c.combatSections.length === 6);
   X.moveCombatCard('coins', 1);
   ck('a section not in the view cannot be moved', c.combatSections.indexOf('coins') < 0);
+}
+
+/* ---- removing a section offers Undo, and Undo puts it back where it was ----
+   Active Spells and Familiars hide themselves on their tab when empty, so their
+   toggle cannot bring them back — the Undo on the removal toast is the way back. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  ck('insert puts a section back at its old place', same(X.insertCombatSection(['a', 'c'], 'b', 1), ['a', 'b', 'c']));
+  ck('...clamps a stale position to the end', same(X.insertCombatSection(['a'], 'b', 9), ['a', 'b']));
+  ck('...never adds a second copy', same(X.insertCombatSection(['a', 'b'], 'b', 0), ['a', 'b']));
+  ck('...and never edits the list it was given', (() => {
+    const l = ['a']; X.insertCombatSection(l, 'b', 0); return same(l, ['a']);
+  })());
+
+  const c = X.blankChar(); X.character = c;
+  X.toggleCombatSection('attacks');
+  ck('removing takes the section out', !c.combatSections.includes('attacks'));
+  X.undoCombatRemove('attacks', 2, c.id);
+  ck('Undo puts it back in the same place', same(c.combatSections, X.COMBAT_DEFAULTS));
+  X.undoCombatRemove('attacks', 2, c.id);
+  ck('a second Undo changes nothing', same(c.combatSections, X.COMBAT_DEFAULTS));
+
+  X.toggleCombatSection('activespells');
+  const other = X.blankChar(); other.combatSections = ['vitals']; X.character = other;
+  X.undoCombatRemove('activespells', 5, c.id);
+  ck('an Undo that outlived a character switch does nothing to the new character',
+     same(other.combatSections, ['vitals']) && !c.combatSections.includes('activespells'));
+}
+
+/* ---- ↑/↓ step past the next SHOWN section ----
+   Skills in By ability mode is hidden in the view but keeps its slot; an arrow
+   press that only swapped with it would look like nothing happened. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const all = () => true, noSkills = k => k !== 'skills';
+  ck('↑ moves one place when nothing is hidden', same(X.stepCombatSection(['a', 'b', 'c'], 'b', -1, all), ['b', 'a', 'c']));
+  ck('↓ moves one place when nothing is hidden', same(X.stepCombatSection(['a', 'b', 'c'], 'b', 1, all), ['a', 'c', 'b']));
+  ck('↑ passes a hidden section and the shown one above it',
+     same(X.stepCombatSection(['vitals', 'skills', 'attacks'], 'attacks', -1, noSkills), ['attacks', 'vitals', 'skills']));
+  ck('↓ passes a hidden section and the shown one below it',
+     same(X.stepCombatSection(['attacks', 'skills', 'vitals'], 'attacks', 1, noSkills), ['skills', 'vitals', 'attacks']));
+  ck('with only hidden sections above, ↑ changes nothing',
+     same(X.stepCombatSection(['skills', 'attacks'], 'attacks', -1, noSkills), ['skills', 'attacks']));
+  ck('the ends change nothing',
+     same(X.stepCombatSection(['a', 'b'], 'a', -1, all), ['a', 'b']) && same(X.stepCombatSection(['a', 'b'], 'b', 1, all), ['a', 'b']));
+  ck('a section not in the list changes nothing', same(X.stepCombatSection(['a'], 'z', 1, all), ['a']));
+  ck('stepping never edits the list it was given', (() => {
+    const l = ['a', 'b']; X.stepCombatSection(l, 'a', 1, all); return same(l, ['a', 'b']);
+  })());
+}
+
+/* ---- after a keyboard removal, Tab/Esc go to the next SHOWN card ----
+   Worked out from the shown cards before the removal, so a hidden Skills card in
+   the saved order cannot shift it onto the wrong grip. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  ck('the card that followed it, then the one before',
+     same(X.cvNeighbours(['vitals', 'attacks', 'resources'], 'attacks'), ['resources', 'vitals']));
+  ck('the last card has only the one before', same(X.cvNeighbours(['vitals', 'attacks'], 'attacks'), [null, 'vitals']));
+  ck('the first card has only the one after', same(X.cvNeighbours(['attacks', 'vitals'], 'attacks'), ['vitals', null]));
+  ck('a lone card has neither', same(X.cvNeighbours(['vitals'], 'vitals'), [null, null]));
+  ck('a card not shown has neither', same(X.cvNeighbours(['vitals'], 'skills'), [null, null]));
+}
+
+/* ---- dialogs: what auto-focus may pick, and how the opener is found again ---- */
+{
+  const F = X.MODAL_FOCUS_FIELDS;
+  ck('dialog auto-focus never picks a dropdown — type-ahead on the rules-pack picker rewrote the whole form',
+     !/select/.test(F));
+  ck('...nor a checkbox, radio or file input', !/checkbox|radio|file/.test(F));
+  ck('...but does pick text boxes and text areas',
+     F.includes('input:not([type])') && F.includes('input[type=text]') && F.includes('textarea'));
+  const el = (id, attrs) => ({id, attributes: Object.entries(attrs || {}).map(([name, value]) => ({name, value}))});
+  ck('an opener with an id is found again by it', X.openerSelector(el('btnSettings')) === '[id="btnSettings"]');
+  ck('...otherwise by its first data-* hook',
+     X.openerSelector(el('', {class: 'add', 'data-edit-attack': 'a1'})) === '[data-edit-attack="a1"]');
+  ck('...and one with neither has no way back', X.openerSelector(el('', {class: 'x'})) === null);
+  ck('no opener, no selector', X.openerSelector(null) === null);
+  ck('a quote in a hook value cannot break the selector',
+     X.openerSelector(el('', {'data-x': 'a"b'})) === '[data-x="a\\"b"]');
 }
 
 ck.done();

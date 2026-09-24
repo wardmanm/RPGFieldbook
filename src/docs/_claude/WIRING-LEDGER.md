@@ -3450,3 +3450,52 @@ Final-review fixes, where the reason is not obvious from the code:
   normal pointerup too, so `done` is guarded against running twice.
 - **The grip's hit box is 40×40** from padding cancelled by negative margins, so the glyph and the
   heading height do not move; its left edge sits exactly on the card's edge.
+
+## Combat view: Undo on removal
+
+Closes the gap the combat-view entry left open: Active Spells and Familiars hide themselves on their
+tab when empty, so once removed from the view their toggle was unreachable until they had content.
+Removing any section now toasts an **Undo** that reinserts it at its old index
+(`insertCombatSection`, pure and tested) and, with the view open, re-lays the cards in that order.
+
+- **`toast(msg, action)` gained an optional `{label, run}`.** The other three callers are unchanged.
+  With an action the toast stays 6 s, and re-arms a second at a time while it is hovered or its button
+  has focus — `hideToast(true)` is the only immediate close.
+- **A hidden toast is `visibility:hidden`, flipped only after the fade** (`visibility 0s .18s`). Before,
+  hidden meant `opacity:0` alone, which left an Undo button tabbable and clickable while invisible.
+  The toast itself stays `pointer-events:none`; only its button takes the pointer.
+- **`role="status"` on the toast**, so screen readers announce every toast now — they never did.
+- **The Undo carries the character id** it was shown for and does nothing after a character switch.
+
+## Combat view follow-ups, and focus for the general modal
+
+The four items parked after the combat view merged, all fixed on `feat/combat-view-undo`:
+
+- **↑/↓ past hidden sections.** `stepCombatSection(list, k, delta, shown)` (pure, tested) moves past
+  the next shown section and any hidden ones between, which is the order dragging already produced.
+  `moveCombatCard` treats a card as hidden only when it sits in the view and computes `display:none`.
+- **Header breakpoint 480 → 640px.** Measured, not guessed: the one-row header needs ~610px in combat
+  (60px tall from 641px up), and from 481 to 600 it wrapped wherever it ran out of room. The rule that
+  stacks the time under the round stays at 480.
+- **Keyboard removal lands on the Undo.** `toggleCombatSection(k, viaKey)` — `viaKey` is the click's
+  `event.detail === 0` (Enter/Space) — focuses the toast's Undo when the removed card was in the view.
+  `toast()` returns that button and takes `action.back()`: Tab or Esc from the Undo hides the toast and
+  goes to the grip of the next SHOWN card, recorded before the removal (`cvNeighbours`,
+  pure and tested — the saved order can hold a hidden Skills card), else the one before, else ✕. The combat view's
+  capture-phase Esc yields while focus is in the toast. A keyboard Undo focuses the restored toggle.
+- **The general modal takes focus.** `modalTakeFocus(wasOpen)` / `modalGiveBackFocus()` in
+  80-modal-forms.js: on open every other `<body>` child goes inert (the toast stays reachable).
+  Focus goes to the first TEXT field on the first screenful with `(pointer:fine)`, else to the dialog
+  itself — always the dialog on touch, where a field would raise the on-screen keyboard.
+  **`MODAL_FOCUS_FIELDS` must never include `select`** (a test guards it): the item, feature and spell
+  forms open on a rules-pack picker, and type-ahead on a focused picker rewrote the whole form with one
+  keystroke — "t" turned an edited "My Sword" into a Torch, effects and all. Caught in review.
+  On close only the elements the modal inerted are released, and `cvInert(true)` is re-applied if the
+  combat view is open; `cvInert(false)` while a dialog is open hands the page to the dialog instead of
+  releasing it. Focus returns to the opener if it is still usable; because a Save usually re-renders
+  the opener's list right after closing, a `setTimeout 0` looks again by `openerSelector` (its id, else
+  its first data-* hook — used only if it matches exactly one element), else ✕ in the combat view.
+  `openModal` called while open (a content swap) keeps the original opener. `openModal` must still
+  START with `_dismissGuard=null;` — rules-data.js asserts the literal prefix.
+- **The toast is in the template** (`<div id="toast" role="status">`), empty from load: a live region
+  created and filled in the same moment is not announced. The Undo's focus ring is a real outline.

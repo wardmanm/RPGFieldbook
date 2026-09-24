@@ -25,6 +25,27 @@ function withCombatSection(list,k,on){
   if(on)return list.includes(k)?list.slice():list.concat([k]);
   return list.filter(x=>x!==k);
 }
+/* Undo's half of withCombatSection: back where it was, not at the end. A stale
+   position clamps; a section already there is left alone. */
+function insertCombatSection(list,k,at){
+  if(list.includes(k))return list.slice();
+  const out=list.slice();
+  out.splice(Math.max(0,Math.min(out.length,at)),0,k);
+  return out;
+}
+/* ↑/↓: past the next SHOWN section, and any hidden ones between. Skills in By
+   ability mode is hidden in the view but keeps its slot, and an arrow press that
+   only swapped with it would look like nothing happened. The hidden ones stay
+   with the shown neighbour, as they do when dragging. */
+function stepCombatSection(list,k,delta,shown){
+  const from=list.indexOf(k);if(from<0)return list.slice();
+  let i=from+delta;
+  while(i>=0&&i<list.length&&!shown(list[i]))i+=delta;
+  if(i<0||i>=list.length)return list.slice();
+  const out=list.filter(x=>x!==k);
+  out.splice(out.indexOf(list[i])+(delta>0?1:0),0,k);
+  return out;
+}
 /* `to` is where the section ends up. Never edits the list it was given. */
 function moveCombatSection(list,from,to){
   const out=list.slice();
@@ -213,15 +234,57 @@ function closeCombatView(){
    reach while the view is open. The modal, the item finder, the ☰ flyout and the
    toast all sit OUTSIDE these three, so they keep working over the view. */
 function cvInert(on){
-  document.querySelectorAll(".topbar,.tabbar,.page").forEach(el=>{if(on)el.setAttribute("inert","");else el.removeAttribute("inert");});
+  document.querySelectorAll(".topbar,.tabbar,.page").forEach(el=>{
+    if(on){el.setAttribute("inert","");return;}
+    /* The view closing under an open dialog: the page stays inert beneath the
+       dialog, which now owns it and releases it when it closes. */
+    if(modal.classList.contains("open")){if(!_modalInert.includes(el))_modalInert.push(el);return;}
+    el.removeAttribute("inert");
+  });
 }
-function toggleCombatSection(k){
+/* viaKey: the click came from Enter/Space (event.detail 0), not a pointer. */
+function toggleCombatSection(k,viaKey){
   const def=noteDef(k);if(!def)return;
-  const cur=combatSectionsOf(character), on=!cur.includes(k);
+  const cur=combatSectionsOf(character), on=!cur.includes(k), at=cur.indexOf(k), who=character.id;
+  const fromView=!on&&cvOpen&&!!document.querySelector(`#cvList [data-combatbtn="${k}"]`);
+  /* Its shown neighbours, read before it leaves: the saved order can hold a
+     hidden card (Skills in By ability mode) that must not count as the next one. */
+  const [nextK,prevK]=fromView?cvNeighbours([...document.querySelectorAll("#cvList > .card")].filter(cvCardShown).map(c=>c.dataset.note),k):[null,null];
   character.combatSections=withCombatSection(cur,k,on);
   if(cvOpen){if(on)fillCombatView();else{sendCardHome(k);renderCombatEmpty();}}
   paintCombatToggle(k,on);scheduleSave();
-  toast((on?"Added ":"Removed ")+noteTitle(def)+(on?" to":" from")+" the combat view");
+  if(on){toast("Added "+noteTitle(def)+" to the combat view");return;}
+  /* Removing is one tap, and Active Spells and Familiars hide themselves on their
+     tab when empty — so their toggle cannot bring them back. The Undo can. */
+  const undo=toast("Removed "+noteTitle(def)+" from the combat view",{label:"Undo",
+    run:e=>undoCombatRemove(k,at,who,!!e&&e.detail===0),
+    back:fromView?()=>(cvOpen?cvReturnFocus(nextK,prevK):null):null});
+  /* The pressed toggle just went home with its card, and keyboard focus with it.
+     Inside the view, land the keyboard on the Undo instead: Enter puts the card
+     back, and Tab or Esc returns to the card that took its place. */
+  if(viaKey&&fromView&&undo)undo.focus();
+}
+/* [next, prev] among the SHOWN cards, each null when there is none. */
+function cvNeighbours(keys,k){const i=keys.indexOf(k);return i<0?[null,null]:[keys[i+1]||null,i>0?keys[i-1]:null];}
+/* Where the keyboard goes after a removal from the view: the grip of the card
+   that followed it, else of the one before, else ✕. */
+function cvReturnFocus(nextK,prevK){
+  for(const x of [nextK,prevK]){const g=x&&document.querySelector(`#cvList [data-cvgrip="${x}"]`);if(g)return g;}
+  return document.getElementById("cvClose");
+}
+/* Back in the place it was taken from. `who` guards a toast that outlived a
+   character switch: its Undo belongs to the character it was shown for. After a
+   keyboard Undo, focus goes to the restored card's own toggle. */
+function undoCombatRemove(k,at,who,viaKey){
+  if(!character||character.id!==who)return;
+  const cur=combatSectionsOf(character);if(cur.includes(k))return;
+  const list=insertCombatSection(cur,k,at);
+  character.combatSections=list;
+  /* fill appends the card at the end; the re-lay puts it back in its place */
+  if(cvOpen){fillCombatView();setCombatOrder(list);}else scheduleSave();
+  paintCombatToggle(k,true);
+  toast(noteTitle(noteDef(k))+" is back in the combat view");
+  if(viaKey){const b=document.querySelector(`[data-combatbtn="${k}"]`);if(b)b.focus();}
 }
 
 /* Everything that shows combat state repaints through here. The round moves from
@@ -275,9 +338,11 @@ function setCombatOrder(list){
   scheduleSave();
 }
 function moveCombatCard(k,delta){
-  const list=combatSectionsOf(character),from=list.indexOf(k),to=from+delta;
-  if(from<0||to<0||to>=list.length)return;
-  setCombatOrder(moveCombatSection(list,from,to));
+  const list=combatSectionsOf(character);
+  /* A card is skipped only when it sits in the view and does not show there. */
+  const next=stepCombatSection(list,k,delta,x=>{const c=combatCard(x);return !c||!c.closest("#combatView")||cvCardShown(c);});
+  if(next.join()===list.join())return;
+  setCombatOrder(next);
   const g=document.querySelector(`[data-cvgrip="${k}"]`);if(g)g.focus();
 }
 /* Pointer events, not HTML5 drag-and-drop, which is unreliable on phones. The
