@@ -24,3 +24,29 @@ html.cv-lock,html.cv-lock body{overflow:hidden}
 .cv-list{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)}
 .cv-empty{max-width:780px;margin:24px auto;text-align:center}
 .cv-empty .gicon{display:inline-block;width:16px;height:16px;vertical-align:-3px;color:var(--accent)}
+
+/* ---- the header title ---- */
+.cv-title{display:inline-flex;align-items:center;gap:7px;font-family:var(--head);font-weight:700;
+  text-transform:uppercase;letter-spacing:.12em;font-size:14px;color:var(--ink)}
+.cv-title .gicon{width:20px;height:20px;color:var(--accent)}
+
+/* ---- the per-card toggle, beside the note button ----
+   The .notebtn state language: faint when off, accent when on. It takes the
+   margin-left:auto that parks the pair at the far right; the note button then
+   sits flush beside it. */
+.label .cvbtn{background:none;border:0;cursor:pointer;padding:3px 4px;color:var(--hair);
+  display:inline-flex;align-items:center;flex:none;margin-left:auto}
+.label .cvbtn.on{color:var(--accent)}
+.label .cvbtn:hover,.label .cvbtn:focus-visible{color:var(--accent-2)}
+.label .cvbtn + .notebtn{margin-left:0}
+.cvbtn .cvicon{width:16px;height:16px;color:currentColor}
+
+/* ---- cards that hide themselves when empty ----
+   Active Spells and Familiars vanish from their tab when they have nothing to
+   show. In the view a vanished card reads as a bug, so here they show, with a
+   line saying so; !important beats the inline display:none their renderers
+   write. NOT #skillsCard — in By ability mode its rows live in the Abilities
+   card, and an empty Skills card here would be the bug. */
+#combatView #activeSpellCard,#combatView #familiarCard{display:block!important}
+#combatView #activeSpellList:empty::before,#combatView #familiarList:empty::before{
+  content:"None right now.";display:block;font-style:italic;color:var(--ink-soft);font-size:14px}

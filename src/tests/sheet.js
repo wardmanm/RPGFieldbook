@@ -37,6 +37,7 @@ const {X, state, bootError, fragments} = loadApp([
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
   'COMBAT_DEFAULTS', 'inCombat', 'combatSectionsOf', 'withCombatSection', 'moveCombatSection',
   'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
+  'combatToggleHTML', 'combatHeaderHTML',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1911,6 +1912,22 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('idle, the button is the crossed swords alone', idle.includes('<svg') && !/Rd/.test(idle));
   const on = X.combatButtonHTML({combatActive: true, combatRound: 3});
   ck('in combat it carries the round', on.includes('<svg') && on.includes('Rd 3'));
+}
+
+/* ---- the per-card toggle, and the view's header ---- */
+{
+  const off = X.combatToggleHTML('attacks', false), on = X.combatToggleHTML('attacks', true);
+  ck('the toggle carries its section and its state',
+     off.includes('data-combatbtn="attacks"') && off.includes('aria-pressed="false"') &&
+     on.includes('aria-pressed="true"') && on.includes('class="cvbtn on"') && off.includes('class="cvbtn"'));
+  ck('it says what it will do, and to which card',
+     off.includes('Add to combat view — Attacks &amp; Weapons') &&
+     on.includes('Remove from combat view — Attacks &amp; Weapons'));
+  ck('it wears the crossed swords', off.includes('class="gicon cvicon"'));
+  const h = X.combatHeaderHTML({combatActive: false, combatRound: 0});
+  ck('the header can always close, and says combat keeps going',
+     h.includes('id="cvClose"') && /combat keeps going/.test(h));
+  ck('the header has its own ☰', h.includes('id="cvToc"'));
 }
 
 ck.done();

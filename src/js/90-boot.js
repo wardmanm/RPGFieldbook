@@ -114,6 +114,10 @@ function wire(){
     if((m=t.closest("[data-invitem]"))){const id=m.dataset.invitem,ic=invCol();ic.items[id]=!ic.items[id];renderInventory();scheduleSave();return;}
     if((m=t.closest("[data-fav-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.favItem);if(it){it.fav=!it.fav;renderInventory();scheduleSave();}return;}
     if((m=t.closest("[data-invsec]"))){const s=invCol().sections;s[m.dataset.invsec]=!s[m.dataset.invsec];renderInventory();scheduleSave();return;}
+    if(t.closest("#btnCombat"))return combatViewOpen()?closeCombatView():openCombatView();
+    if(t.closest("#cvClose"))return closeCombatView();
+    if(t.closest("#cvToc"))return openToc();
+    if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn);
     if(t.closest("#btnToc"))return openToc();
     if(t.closest("#tocBack"))return closeToc();
     if((m=t.closest("[data-fitem]"))){const id=m.dataset.fitem,fc=featCol();fc.items[id]=!fc.items[id];renderFeatures();scheduleSave();return;}
@@ -165,6 +169,17 @@ function wire(){
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
   });
+  /* Esc closes the combat view only when it is the top layer. CAPTURE phase, so
+     this runs BEFORE the modal's own Esc handler (80-modal-forms.js) shuts the
+     modal — otherwise one Esc would close the modal and the view behind it. The
+     item finder has no Esc of its own, so over the view Esc leaves both open. */
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape"||!combatViewOpen())return;
+    if(modal.classList.contains("open"))return;
+    const br=document.getElementById("browse");if(br&&br.classList.contains("show"))return;
+    const fly=document.getElementById("tocFly");if(fly&&fly.classList.contains("open")){closeToc();return;}
+    closeCombatView();
+  },true);
   /* These five are markup that moves around, and wire() has no try/catch: a bare
      getElementById(...).addEventListener on a renamed id throws HERE and every
      listener registered after it — coins, HP, theme, settings, the home screen —
