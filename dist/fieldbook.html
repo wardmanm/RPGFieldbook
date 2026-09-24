@@ -646,8 +646,16 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .item .qty{font-family:var(--head);font-size:12px;color:var(--ink-soft)}
 .orig-b{font:600 10px/1 var(--head);min-width:17px;height:17px;padding:0 4px;border-radius:9px;border:1px solid var(--hair);background:var(--panel);color:var(--ink-soft);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .orig-b:hover{color:var(--accent);border-color:var(--accent)}
-.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:var(--accent);color:#fff;padding:10px 18px;border-radius:12px;font-family:var(--head);font-size:14px;letter-spacing:.02em;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:9999;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none;max-width:80vw;text-align:center}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:var(--accent);color:#fff;padding:10px 18px;border-radius:12px;font-family:var(--head);font-size:14px;letter-spacing:.02em;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:9999;opacity:0;transition:opacity .18s,transform .18s,visibility 0s .18s;visibility:hidden;pointer-events:none;max-width:80vw;text-align:center}
+.toast.show{opacity:1;visibility:visible;transition:opacity .18s,transform .18s;transform:translateX(-50%) translateY(0)}
+/* visibility flips only after the fade, so a hidden toast's Undo can be neither
+   clicked nor tabbed to. The toast ignores the pointer; its button does not. */
+.toast .toast-act{pointer-events:auto;margin-left:10px;background:none;border:1.5px solid rgba(255,255,255,.85);
+  color:#fff;border-radius:8px;padding:3px 11px;font:inherit;font-weight:700;letter-spacing:.04em;cursor:pointer}
+.toast .toast-act:hover{background:rgba(255,255,255,.2)}
+/* A real ring: the keyboard is sent here on purpose, and a faint wash on honey
+   or brick is too little to see. */
+.toast .toast-act:focus-visible{background:rgba(255,255,255,.2);outline:2px solid #fff;outline-offset:2px}
 /* NOT white-space:pre-wrap any more: richHTML() turns newlines into real <br>
    elements, and keeping both doubled every line break. */
 .item .desc{font-size:15px;line-height:1.5;margin-top:5px;word-break:break-word}
@@ -847,11 +855,13 @@ html.cv-lock,html.cv-lock body{overflow:hidden}
 .cv-head{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px clamp(10px,2vw,18px);
   background:var(--paper-2);border-bottom:2px solid var(--line)}
 .cv-head .grow{flex:1}
-/* Phone width: two rows, whatever the state. Row 1 is ✕ · title · ☰; the spacer
+/* Up to 640px: two rows, whatever the state. Row 1 is ✕ · title · ☰; the spacer
    becomes a full-width row break; row 2 is the tracker with Start/End pushed to
    the far right — End well clear of ◀ ▶, and in the spot Start held. Tab order
-   stays the markup's (✕, tracker, End, ☰). */
-@media(max-width:480px){
+   stays the markup's (✕, tracker, End, ☰). 640, not a phone width: the one-row
+   header needs ~610px in combat, and between the two it wrapped wherever it ran
+   out of room — End under ✕, or ☰ alone on a second row. */
+@media(max-width:640px){
   .cv-head{row-gap:0}
   #cvToc{order:1;margin-left:auto}
   .cv-head .grow{order:2;flex:0 0 100%;height:0;margin-top:8px}
@@ -932,6 +942,9 @@ html.cv-lock,html.cv-lock body{overflow:hidden}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .modal{background:var(--panel);border-radius:12px;box-shadow:var(--shadow);width:min(560px,100%);max-height:90dvh;overflow:hidden;position:relative;display:flex;flex-direction:column}
 .modal::before{content:"";position:absolute;inset:2px;border:2.5px solid var(--line);border-radius:13px;pointer-events:none}
+/* Focus lands on the dialog itself on touch (see modalTakeFocus); it is a
+   container, not a control, so no ring. */
+.modal:focus{outline:none}
 html[data-rough="on"] .modal::before{filter:url(#rough)}
 .modal>*{position:relative}
 .m-head{display:flex;align-items:center;gap:10px;padding:16px 18px 8px;flex:none}
@@ -1382,10 +1395,13 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
     </div>
   </div>
 </div>
-<div class="backdrop" id="modal"><div class="modal" role="dialog" aria-modal="true">
+<div class="backdrop" id="modal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle" tabindex="-1">
   <div class="m-head"><span class="m-icon" id="mIcon"></span><div class="m-title" id="mTitle"></div><button class="close" id="mClose" aria-label="Close">×</button></div>
   <div class="m-body" id="mBody"></div>
 </div></div>
+<!-- The toast (toast() in 60-attacks.js). In the page from load, empty, because a
+     live region created and filled in the same moment is not announced. -->
+<div id="toast" class="toast" role="status"></div>
 
 <script>
 "use strict";
@@ -3738,7 +3754,23 @@ function dropDamagelessSpellRows(){
 }
 function ensureSpellAttacks(){(character.spells||[]).forEach(sp=>{if(sp.atkType===undefined){detectSpellAttack(sp);syncSpellAttack(sp);}});spellDamageBackfill();dropDamagelessSpellRows();}
 let _toastT=null;
-function toast(msg){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";document.body.appendChild(el);}el.textContent=msg;el.classList.add("show");clearTimeout(_toastT);_toastT=setTimeout(()=>el.classList.remove("show"),1900);}
+/* An optional action ({label, run}) adds one button — the combat view's Undo —
+   and makes the toast something to reach, not just read: it stays 6 s, and longer
+   while the pointer is on it or its button has focus. role="status" lets a screen
+   reader hear it. It lives outside .page, so the combat view's inert leaves it
+   reachable. */
+function toast(msg,action){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";el.setAttribute("role","status");document.body.appendChild(el);}
+  el.textContent=msg;let b=null;
+  if(action){b=document.createElement("button");b.type="button";b.className="toast-act";b.textContent=action.label;b.addEventListener("click",e=>{hideToast(true);action.run(e);});
+    /* action.back(): where the keyboard returns when it leaves the button by Tab
+       or Esc — the player was put here on purpose, and the button sits at the very
+       end of the page, so plain Tab order would lose their place. */
+    if(action.back)b.addEventListener("keydown",e=>{if(e.key!=="Tab"&&e.key!=="Escape")return;const t=action.back();if(!t)return;e.preventDefault();hideToast(true);t.focus();});
+    el.append(" ",b);}
+  el.classList.add("show");clearTimeout(_toastT);_toastT=setTimeout(hideToast,action?6000:1900);return b;}
+function hideToast(now){const el=document.getElementById("toast");if(!el)return;
+  if(!now&&(el.matches(":hover")||el.contains(document.activeElement))){_toastT=setTimeout(hideToast,1000);return;}
+  clearTimeout(_toastT);el.classList.remove("show");}
 /* A spell's attack row is REBUILT from the spell every time, never edited on the
    sheet — which is why the row has a Cast button where a weapon has Edit. So
    anything the row can show has to be a field on the SPELL: a spell that deals
@@ -5756,8 +5788,68 @@ function setDismissGuard(fn){_dismissGuard=fn;}
    UNCONDITIONALLY, never guarded behind `if(icon)`: ~30 call sites pass nothing,
    and they must CLEAR the slot, or a class emblem leaks into the next spell
    modal that opens. The title stays textContent — it is player data. */
-function openModal(title,html,icon){_dismissGuard=null;document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");}
-function closeModal(){_dismissGuard=null;modal.classList.remove("open");document.getElementById("mBody").innerHTML="";}
+function openModal(title,html,icon){_dismissGuard=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
+function closeModal(){_dismissGuard=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
+/* ---- focus ----
+   A dialog takes the keyboard with it. On open, every other child of <body> goes
+   inert (the toast stays reachable) and focus moves in: to the first field with a
+   mouse or keyboard, to the dialog itself on touch, where focusing a field would
+   throw up the on-screen keyboard for every form. On close, focus returns to what
+   opened it. Only elements WE made inert are released, so the combat view's own
+   inert on the page survives a dialog opened over it. `wasOpen`: openModal is
+   also called to swap content in place, which must keep the original opener. */
+let _modalOpener=null,_modalOpenerSel=null,_modalInert=[];
+/* What auto-focus may land on: text entry, nothing else. NEVER a <select> — the
+   item, feature and spell forms open on a rules-pack picker, and type-ahead on a
+   focused picker rewrites the whole form with one keystroke. Nor a checkbox,
+   radio or file input: a stray key would toggle or open them. */
+const MODAL_FOCUS_FIELDS="input:not([type]),input[type=text],input[type=search],input[type=number],input[type=email],input[type=url],input[type=tel],textarea";
+/* How to find the opener again after a Save re-renders the list it sat in: its
+   id, else its first data-* hook. Quotes and backslashes are escaped. */
+function openerSelector(el){
+  if(!el)return null;
+  const q=v=>String(v).replace(/["\\]/g,"\\$&");
+  if(el.id)return `[id="${q(el.id)}"]`;
+  const a=[...(el.attributes||[])].find(x=>/^data-/.test(x.name));
+  return a?`[${a.name}="${q(a.value)}"]`:null;
+}
+function modalTakeFocus(wasOpen){
+  if(!wasOpen){
+    const a=document.activeElement;_modalOpener=(a&&a!==document.body&&!modal.contains(a))?a:null;
+    _modalOpenerSel=openerSelector(_modalOpener);
+    [...document.body.children].forEach(el=>{if(el===modal||el.id==="toast"||el.tagName==="SCRIPT"||el.inert)return;el.inert=true;_modalInert.push(el);});
+  }
+  const box=modal.querySelector(".modal");if(!box)return;
+  const fine=window.matchMedia&&window.matchMedia("(pointer:fine)").matches;
+  /* The first text box on the first screenful: a long dialog (Settings) starts at
+     its top rather than scrolled to a field halfway down. */
+  const mb=document.getElementById("mBody"),fold=mb?mb.getBoundingClientRect().bottom:Infinity;
+  const f=fine&&[...box.querySelectorAll(MODAL_FOCUS_FIELDS)].find(x=>!x.disabled&&!x.readOnly&&x.offsetParent!==null&&x.getBoundingClientRect().top<fold);
+  (f||box).focus({preventScroll:true});
+  /* Caret at the end of a one-line box: focus() leaves it at the start, so typing
+     into an edited name would prefix it. Not a textarea — a long note's end is off
+     screen, and the first key would jump there. Number inputs refuse selection
+     ranges, hence the try. */
+  if(f&&f.tagName==="INPUT"&&f.value)try{f.setSelectionRange(f.value.length,f.value.length);}catch(e){}
+}
+function modalGiveBackFocus(){
+  _modalInert.forEach(el=>{el.inert=false;});_modalInert=[];
+  /* A combat view that opened under the dialog keeps its own inert on the page. */
+  if(combatViewOpen())cvInert(true);
+  const o=_modalOpener,sel=_modalOpenerSel;_modalOpener=_modalOpenerSel=null;
+  const usable=el=>!!el&&el.isConnected&&!el.closest("[inert]")&&el.getClientRects().length>0;
+  if(usable(o))o.focus({preventScroll:true});
+  /* A Save usually re-renders the opener's list straight after closing, taking
+     focus with it. So look again once it has: the same hook if it is still
+     unique, else ✕ in the combat view. Left alone if focus already went
+     somewhere real — into a second dialog, say. */
+  setTimeout(()=>{
+    const a=document.activeElement;if(a&&a!==document.body)return;
+    const hits=sel?document.querySelectorAll(sel):[];
+    if(hits.length===1&&usable(hits[0])){hits[0].focus({preventScroll:true});return;}
+    if(combatViewOpen()){const c=document.getElementById("cvClose");if(c)c.focus();}
+  },0);
+}
 function dismissModal(){
   if(_dismissGuard){const msg=_dismissGuard();if(msg&&!confirm(msg))return;}
   closeModal();
@@ -7085,6 +7177,27 @@ function withCombatSection(list,k,on){
   if(on)return list.includes(k)?list.slice():list.concat([k]);
   return list.filter(x=>x!==k);
 }
+/* Undo's half of withCombatSection: back where it was, not at the end. A stale
+   position clamps; a section already there is left alone. */
+function insertCombatSection(list,k,at){
+  if(list.includes(k))return list.slice();
+  const out=list.slice();
+  out.splice(Math.max(0,Math.min(out.length,at)),0,k);
+  return out;
+}
+/* ↑/↓: past the next SHOWN section, and any hidden ones between. Skills in By
+   ability mode is hidden in the view but keeps its slot, and an arrow press that
+   only swapped with it would look like nothing happened. The hidden ones stay
+   with the shown neighbour, as they do when dragging. */
+function stepCombatSection(list,k,delta,shown){
+  const from=list.indexOf(k);if(from<0)return list.slice();
+  let i=from+delta;
+  while(i>=0&&i<list.length&&!shown(list[i]))i+=delta;
+  if(i<0||i>=list.length)return list.slice();
+  const out=list.filter(x=>x!==k);
+  out.splice(out.indexOf(list[i])+(delta>0?1:0),0,k);
+  return out;
+}
 /* `to` is where the section ends up. Never edits the list it was given. */
 function moveCombatSection(list,from,to){
   const out=list.slice();
@@ -7273,15 +7386,57 @@ function closeCombatView(){
    reach while the view is open. The modal, the item finder, the ☰ flyout and the
    toast all sit OUTSIDE these three, so they keep working over the view. */
 function cvInert(on){
-  document.querySelectorAll(".topbar,.tabbar,.page").forEach(el=>{if(on)el.setAttribute("inert","");else el.removeAttribute("inert");});
+  document.querySelectorAll(".topbar,.tabbar,.page").forEach(el=>{
+    if(on){el.setAttribute("inert","");return;}
+    /* The view closing under an open dialog: the page stays inert beneath the
+       dialog, which now owns it and releases it when it closes. */
+    if(modal.classList.contains("open")){if(!_modalInert.includes(el))_modalInert.push(el);return;}
+    el.removeAttribute("inert");
+  });
 }
-function toggleCombatSection(k){
+/* viaKey: the click came from Enter/Space (event.detail 0), not a pointer. */
+function toggleCombatSection(k,viaKey){
   const def=noteDef(k);if(!def)return;
-  const cur=combatSectionsOf(character), on=!cur.includes(k);
+  const cur=combatSectionsOf(character), on=!cur.includes(k), at=cur.indexOf(k), who=character.id;
+  const fromView=!on&&cvOpen&&!!document.querySelector(`#cvList [data-combatbtn="${k}"]`);
+  /* Its shown neighbours, read before it leaves: the saved order can hold a
+     hidden card (Skills in By ability mode) that must not count as the next one. */
+  const [nextK,prevK]=fromView?cvNeighbours([...document.querySelectorAll("#cvList > .card")].filter(cvCardShown).map(c=>c.dataset.note),k):[null,null];
   character.combatSections=withCombatSection(cur,k,on);
   if(cvOpen){if(on)fillCombatView();else{sendCardHome(k);renderCombatEmpty();}}
   paintCombatToggle(k,on);scheduleSave();
-  toast((on?"Added ":"Removed ")+noteTitle(def)+(on?" to":" from")+" the combat view");
+  if(on){toast("Added "+noteTitle(def)+" to the combat view");return;}
+  /* Removing is one tap, and Active Spells and Familiars hide themselves on their
+     tab when empty — so their toggle cannot bring them back. The Undo can. */
+  const undo=toast("Removed "+noteTitle(def)+" from the combat view",{label:"Undo",
+    run:e=>undoCombatRemove(k,at,who,!!e&&e.detail===0),
+    back:fromView?()=>(cvOpen?cvReturnFocus(nextK,prevK):null):null});
+  /* The pressed toggle just went home with its card, and keyboard focus with it.
+     Inside the view, land the keyboard on the Undo instead: Enter puts the card
+     back, and Tab or Esc returns to the card that took its place. */
+  if(viaKey&&fromView&&undo)undo.focus();
+}
+/* [next, prev] among the SHOWN cards, each null when there is none. */
+function cvNeighbours(keys,k){const i=keys.indexOf(k);return i<0?[null,null]:[keys[i+1]||null,i>0?keys[i-1]:null];}
+/* Where the keyboard goes after a removal from the view: the grip of the card
+   that followed it, else of the one before, else ✕. */
+function cvReturnFocus(nextK,prevK){
+  for(const x of [nextK,prevK]){const g=x&&document.querySelector(`#cvList [data-cvgrip="${x}"]`);if(g)return g;}
+  return document.getElementById("cvClose");
+}
+/* Back in the place it was taken from. `who` guards a toast that outlived a
+   character switch: its Undo belongs to the character it was shown for. After a
+   keyboard Undo, focus goes to the restored card's own toggle. */
+function undoCombatRemove(k,at,who,viaKey){
+  if(!character||character.id!==who)return;
+  const cur=combatSectionsOf(character);if(cur.includes(k))return;
+  const list=insertCombatSection(cur,k,at);
+  character.combatSections=list;
+  /* fill appends the card at the end; the re-lay puts it back in its place */
+  if(cvOpen){fillCombatView();setCombatOrder(list);}else scheduleSave();
+  paintCombatToggle(k,true);
+  toast(noteTitle(noteDef(k))+" is back in the combat view");
+  if(viaKey){const b=document.querySelector(`[data-combatbtn="${k}"]`);if(b)b.focus();}
 }
 
 /* Everything that shows combat state repaints through here. The round moves from
@@ -7335,9 +7490,11 @@ function setCombatOrder(list){
   scheduleSave();
 }
 function moveCombatCard(k,delta){
-  const list=combatSectionsOf(character),from=list.indexOf(k),to=from+delta;
-  if(from<0||to<0||to>=list.length)return;
-  setCombatOrder(moveCombatSection(list,from,to));
+  const list=combatSectionsOf(character);
+  /* A card is skipped only when it sits in the view and does not show there. */
+  const next=stepCombatSection(list,k,delta,x=>{const c=combatCard(x);return !c||!c.closest("#combatView")||cvCardShown(c);});
+  if(next.join()===list.join())return;
+  setCombatOrder(next);
   const g=document.querySelector(`[data-cvgrip="${k}"]`);if(g)g.focus();
 }
 /* Pointer events, not HTML5 drag-and-drop, which is unreliable on phones. The
@@ -8053,7 +8210,7 @@ function wire(){
     if(t.closest("#cvPrev"))return advanceRound(-1);
     if(t.closest("#cvNext"))return advanceRound(1);
     if(t.closest("#cvEnd"))return endCombatAsk();
-    if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn);
+    if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn,e.detail===0);
     if(t.closest("#btnToc"))return openToc();
     if(t.closest("#tocBack"))return closeToc();
     if((m=t.closest("[data-fitem]"))){const id=m.dataset.fitem,fc=featCol();fc.items[id]=!fc.items[id];renderFeatures();scheduleSave();return;}
@@ -8112,6 +8269,8 @@ function wire(){
   document.addEventListener("keydown",e=>{
     if(e.key!=="Escape"||!combatViewOpen())return;
     if(modal.classList.contains("open"))return;
+    /* Focus on a toast's Undo: its own Esc sends the keyboard back into the view. */
+    {const ts=document.getElementById("toast");if(ts&&ts.contains(document.activeElement))return;}
     const br=document.getElementById("browse");if(br&&br.classList.contains("show"))return;
     const fly=document.getElementById("tocFly");if(fly&&fly.classList.contains("open")){closeToc();return;}
     closeCombatView();
