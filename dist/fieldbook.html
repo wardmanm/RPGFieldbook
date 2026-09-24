@@ -161,10 +161,6 @@ html[data-tabs="icons"] .tabicon{display:block}
 .toc-back.open{opacity:1;pointer-events:auto}
 .fav{background:none;border:0;cursor:pointer;font-size:15px;line-height:1;color:var(--hair);padding:0 2px}
 .fav.on{color:var(--accent)}
-.inv-sec-head{display:flex;align-items:center;gap:8px;font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:var(--accent);cursor:pointer;padding:10px 2px 6px;margin-top:6px;border-bottom:1px solid var(--hair);user-select:none}
-.inv-sec-head .fcaret{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.5;transition:transform .15s}
-.inv-sec-head .fcaret.c{transform:rotate(-90deg)}
-.inv-sec-head .cnt{color:var(--ink-soft);font-weight:600}
 
 /* ================= Layout ================= */
 .page{max-width:1160px;margin:0 auto;padding:clamp(12px,2.4vw,22px)}
@@ -211,6 +207,17 @@ label.f{display:block;font-family:var(--head);font-size:10px;letter-spacing:.1em
 input,select,textarea{width:100%;font-family:var(--body);font-size:16px;color:var(--ink);
   background:var(--field);border:1.5px solid var(--hair);border-radius:6px;padding:9px 10px;min-height:42px}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-2);outline-offset:1px;background:var(--field-focus)}
+/* A search or filter box with a × to clear it (issue #49): the Rules tab's two
+   filters and every finder's search. The × shows only while there is text —
+   :placeholder-shown is true exactly when the box is empty, so no script tracks
+   it; every box using this has a placeholder for that reason. */
+.searchbox{position:relative}
+.searchbox input{padding-right:40px}
+.search-clear{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;
+  border-radius:6px;background:none;color:var(--ink-soft);font-size:20px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.search-clear:hover,.search-clear:focus-visible{color:var(--accent-2);background:color-mix(in srgb,var(--ink-soft) 12%,transparent)}
+.searchbox input:placeholder-shown + .search-clear{display:none}
 textarea{min-height:90px;resize:vertical;line-height:1.5}
 .field{margin-bottom:11px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -261,7 +268,18 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 .n-flash::before{border-color:var(--accent);transition:border-color .3s}
 
 .fgroup{margin-bottom:12px}
-.fghead{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 2px;border-bottom:1.5px solid var(--line);margin:0 0 8px;user-select:none}
+/* One section heading for every list inside a card: the Features & Traits
+   groups, the inventory sections and the Attacks card's Favorites/Attacks split
+   (issue #51). They share the line, the gap before the first item, and — through
+   the shared .fcaret below — the caret. The inventory ones used to have a faint
+   1px rule with the first item flush against it. */
+.fghead,.inv-sec-head{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 2px;border-bottom:1.5px solid var(--line);margin:0 0 8px;user-select:none}
+/* The inventory/attack heads carry their text directly rather than in .fgname,
+   so they take its look here; and a gap above each section after the first,
+   the way .fgroup spaces the feature groups. */
+.inv-sec-head{font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:var(--accent);margin-top:12px}
+.inv-sec-head:first-child{margin-top:0}
+.inv-sec-head .cnt{color:var(--ink-soft);font-weight:600}
 .fghead:hover .fgname{color:var(--accent-2)}
 /* flex:0 1 auto, NOT flex:1 — the count has to sit beside the title the way the
    inventory section heads do. flex:1 stretched the name across the header and
@@ -389,7 +407,7 @@ html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
 .browse.show{display:flex}
 .browse-inner{width:100%;max-width:760px;margin:0 auto;display:flex;flex-direction:column;height:100%;padding:14px 14px 0}
 .browse-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-bottom:10px}
-.browse-head input{flex:1 1 200px;min-width:0}
+.browse-head .searchbox{flex:1 1 200px;min-width:0}
 .browse-head .tbtn{flex:none}
 .browse-facets{display:flex;flex-direction:column;gap:7px;padding:2px 0 10px}
 .brsum{display:flex;flex-wrap:wrap;gap:6px;padding:0 0 8px}
@@ -578,8 +596,12 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .death .c.succ.on{background:var(--accent-2)}
 
 /* skills */
-.skills{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
-@media(max-width:600px){.skills{grid-template-columns:1fr}}
+/* Read DOWN each column, then across (issue #56): a plain two-column grid fills
+   row by row, so the alphabet ran left-right-left-right. --skill-rows is half the
+   list rounded up, set by buildSkills(); 9 is the fallback for the standard 18.
+   DOM order stays alphabetical, so Tab still walks the list A to Z. */
+.skills{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(var(--skill-rows,9),auto);grid-auto-flow:column;gap:0 20px}
+@media(max-width:600px){.skills{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}}
 .srow{display:flex;align-items:center;gap:9px;padding:6px 2px;border-bottom:1px dotted var(--hair)}
 .srow .val{font-family:var(--display);font-weight:900;font-size:16px;width:32px;text-align:center}
 .srow .lbl{flex:1;font-size:15px}
@@ -1330,7 +1352,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         <div class="label rules-head" data-rulessec="gloss" role="button" tabindex="0" aria-expanded="true"><svg class="fcaret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Glossary &amp; Rules <span class="cnt" id="glossCount"></span> <button class="add" id="btnAddGloss"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
         <div data-rulesbody="gloss">
         <p class="hint">Terms here (plus any from a loaded rules pack) become tappable ❧ wherever they appear in your notes, features, spells, and item descriptions. Manage rule sources in Settings.</p>
-        <input id="glossSearch" placeholder="Filter terms…" autocomplete="off" style="margin-bottom:10px">
+        <div class="searchbox" style="margin-bottom:10px"><input id="glossSearch" placeholder="Filter terms…" autocomplete="off"><button type="button" class="search-clear" aria-label="Clear the filter" title="Clear">×</button></div>
         <input type="file" id="glossRulesFiles" accept="application/json,.json" multiple class="hidefile">
         <div id="glossList"></div>
         </div>
@@ -1339,7 +1361,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         <div class="label rules-head" data-rulessec="tables" role="button" tabindex="0" aria-expanded="true"><svg class="fcaret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Reference Tables <span class="cnt" id="tablesCount"></span><span class="grow"></span></div>
         <div data-rulesbody="tables">
         <p class="hint">Tables lifted out of your rules pack — roll tables, class progressions, and the lookup tables the rules text refers to. Where a description mentions one, tap the highlighted name to open it here.</p>
-        <input id="tablesSearch" placeholder="Filter tables…" autocomplete="off" style="margin-bottom:10px">
+        <div class="searchbox" style="margin-bottom:10px"><input id="tablesSearch" placeholder="Filter tables…" autocomplete="off"><button type="button" class="search-clear" aria-label="Clear the filter" title="Clear">×</button></div>
         <input type="file" id="tablesRulesFiles" accept="application/json,.json" multiple class="hidefile">
         <div id="tablesList"></div>
         </div>
@@ -1615,6 +1637,8 @@ function buildSkills(){
     r.innerHTML=`<button class="dot" data-skill="${k}" aria-label="${l} proficiency"></button><span class="val" data-stat="skill.${k}" id="skill-${k}">+0</span><span class="lbl">${l} <span class="ab">${ab}</span></span>`;
     el.appendChild(r);
   });
+  /* The grid fills down each column; this many rows per column (see .skills). */
+  if(el.style&&el.style.setProperty)el.style.setProperty("--skill-rows",Math.ceil(SKILLS.length/2));
 }
 /* One legend, MOVED between the two cards rather than duplicated in JS — a second
    copy of the markup would drift from the template's. It is appended to the CARD,
@@ -2675,8 +2699,10 @@ function renderInventory(){
   const renderSec=(title,items,sorter)=>{
     if(!items.length)return;
     const collapsed=!!sc[title];
+    /* The caret is drawn pointing right, like the Features one: the shared .fcaret
+       turns it down when open. A down-drawn path turned 90° more pointed LEFT (#51). */
     const head=document.createElement("div");head.className="inv-sec-head";head.dataset.invsec=title;
-    head.innerHTML=`<svg class="fcaret ${collapsed?"c":""}" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>${esc(title)} <span class="cnt">(${items.length})</span>`;
+    head.innerHTML=`<svg class="fcaret ${collapsed?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>${esc(title)} <span class="cnt">(${items.length})</span>`;
     el.appendChild(head);
     if(!collapsed)items.slice().sort(sorter).forEach(it=>{const w=document.createElement("div");w.innerHTML=invItemHTML(it);el.appendChild(w.firstElementChild);});
   };
@@ -4526,8 +4552,11 @@ function convertCoins(){
 }
 const COIN_ALL=[["cp","CP","Copper"],["sp","SP","Silver"],["ep","EP","Electrum"],
                 ["gp","GP","Gold"],["pp","PP","Platinum"]];
-/* Electrum is a D&D-only oddity; Humblewood doesn't use it. */
-function coinKeys(){return (character.system==="dnd")?["cp","sp","ep","gp","pp"]:["cp","sp","gp"];}
+/* The DISPLAY order — the Coins card and the Adjust coins window — high to low,
+   the way a purse is read and the printout already runs (issue #48). The coin
+   maths keeps its own lists, so order here is presentation only. Electrum is a
+   D&D-only oddity; Humblewood doesn't use it. */
+function coinKeys(){return (character.system==="dnd")?["pp","gp","ep","sp","cp"]:["gp","sp","cp"];}
 
 /* What a signed-entry box — coins, HP — should become, given what was typed.
      "12"  -> set to 12          "+10" -> add           "-5" -> spend
@@ -6468,7 +6497,7 @@ function openBrowse(cfg){
   function writeFoot(k){const put=(id,val)=>{const e=document.getElementById(id);if(e&&val!=null)e.value=val;};put("brOrigin",k.origin);syncOrigDet();if(k.origin)put("brOrigDet",k.det);put("brQty",k.qty);put("brCost",k.cost);}
   function render(){const keep=st.drawn?readFoot():null;const fc=activeChips().length;
     host.innerHTML=`<div class="browse-inner">
-      <div class="browse-head"><input id="brSearch" placeholder="Search ${esc(cfg.noun||"")}…" value="${esc(st.q)}" autocomplete="off"><button class="tbtn ${st.showFilters?"primary":""}" id="brFilters">Filters${fc?` · ${fc}`:""}</button>${cfg.onCustom?`<button class="tbtn" id="brCustom">+ Custom</button>`:""}<button class="tbtn" id="brClose">Close</button></div>
+      <div class="browse-head"><div class="searchbox"><input id="brSearch" placeholder="Search ${esc(cfg.noun||"")}…" value="${esc(st.q)}" autocomplete="off"><button type="button" class="search-clear" aria-label="Clear the search" title="Clear">×</button></div><button class="tbtn ${st.showFilters?"primary":""}" id="brFilters">Filters${fc?` · ${fc}`:""}</button>${cfg.onCustom?`<button class="tbtn" id="brCustom">+ Custom</button>`:""}<button class="tbtn" id="brClose">Close</button></div>
       ${st.showFilters?`<div class="browse-facets">${facetHTML()}${fc?`<button class="fpill clear" id="brClearF" style="align-self:flex-start">Clear all</button>`:""}</div>`:sumHTML()}
       <div class="browse-count" id="brCount"></div>
       <div class="browse-list" id="brList"></div>
@@ -8225,6 +8254,10 @@ function wire(){
     if((m=t.closest("[data-invitem]"))){const id=m.dataset.invitem,ic=invCol();ic.items[id]=!ic.items[id];renderInventory();scheduleSave();return;}
     if((m=t.closest("[data-fav-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.favItem);if(it){it.fav=!it.fav;renderInventory();scheduleSave();}return;}
     if((m=t.closest("[data-invsec]"))){const s=invCol().sections;s[m.dataset.invsec]=!s[m.dataset.invsec];renderInventory();scheduleSave();return;}
+    /* The × in a search box (issue #49): empty it, re-run its filter through the
+       same input event typing sends — every box's own listener does the rest — and
+       leave the cursor in the box. */
+    if((m=t.closest(".search-clear"))){const i=m.parentNode.querySelector("input");if(i){i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.focus();}return;}
     if(t.closest("#btnCombat"))return combatViewOpen()?closeCombatView():openCombatView();
     if(t.closest("#cvClose"))return closeCombatView();
     if(t.closest("#cvToc"))return openToc();
