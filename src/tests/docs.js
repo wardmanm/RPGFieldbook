@@ -158,7 +158,10 @@ if (dvm) {
 {
   const iconMap = JSON.parse(read('src/icons/icons.json'));
   const frag = read('src/js/05-icons.js');
-  const KINDS = ['classes', 'races', 'backgrounds'];
+  const KINDS = ['classes', 'races', 'backgrounds', 'ui'];
+  /* Only these three name things that ship in data/. "ui" is app chrome, so the
+     coverage check below must not go looking for a data file for it. */
+  const DATA_KINDS = ['classes', 'races', 'backgrounds'];
 
   ck('05-icons.js is marked generated', /GENERATED, DO NOT EDIT/.test(frag));
   ck('icons.json has no subclasses block (subclasses get no emblem)', !iconMap.subclasses);
@@ -182,6 +185,7 @@ if (dvm) {
       ck('ICON_MAP.' + k + ' carries "' + name + '"',
          m[1].includes('"' + name.trim().toLowerCase() + '":')));
   });
+  ck('05-icons.js has an ICON_MAP.ui block', /"ui":{([^}]*)}/.test(frag));
 
   // The invariant that licenses interpolating d without esc() in iconSVG().
   const bad = [...frag.matchAll(/^"[a-z0-9-]+\/[a-z0-9-]+":"([^"]*)"/gm)]
@@ -196,7 +200,7 @@ if (dvm) {
   // point, and the fix is one line in src/icons/icons.json.
   const DIRS = ['5e2024', 'humblewood', 'xanathars', 'tashas', 'homebrew'];
   const FILES = { classes: 'classes.json', races: 'races.json', backgrounds: 'backgrounds.json' };
-  KINDS.forEach(kind => {
+  DATA_KINDS.forEach(kind => {
     const have = new Set(Object.keys(iconMap[kind] || {}).map(n => n.trim().toLowerCase()));
     const unmapped = [];
     DIRS.forEach(dir => {

@@ -32,10 +32,11 @@ const DRY = process.argv.includes("--dry-run");
 
 const die = (m) => { console.error("fetch-icons: " + m); process.exit(1); };
 
-/* The three kinds that get emblems. Subclasses deliberately do NOT — they are
-   the second line of a class chip, and an emblem there would compete with the
-   class's own. Keep this in step with the `kind` argument of iconSVG(). */
-const KINDS = ["classes", "races", "backgrounds"];
+/* The kinds that get emblems, plus "ui" for app chrome (the combat view's
+   button). Subclasses deliberately do NOT — they are the second line of a class
+   chip, and an emblem there would compete with the class's own. Keep this in
+   step with the `kind` argument of iconSVG(), and with KINDS in src/tests/docs.js. */
+const KINDS = ["classes", "races", "backgrounds", "ui"];
 
 /* Folder name -> display name for the credits block. Everything else is just
    the hyphenated folder title-cased, which is right for the vast majority. */

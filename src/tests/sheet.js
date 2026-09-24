@@ -1903,4 +1903,6 @@ function charWith(inv, hp) {
      o.combatRound === 0 && o.activeSpells[0].elapsedSec === 6);
 }
 
+ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').includes('<path d="M'));
+
 ck.done();

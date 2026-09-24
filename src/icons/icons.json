@@ -1,5 +1,5 @@
 {
-  "_readme": "Hand-authored emblem map: entity NAME -> \"<artist>/<icon>\" from https://github.com/game-icons/icons (master branch), CC BY 3.0. The artist folder is also the attribution, so there is no second list to keep in sync. After editing, regenerate the shipped fragment with: node scripts/fetch-icons.js — src/js/05-icons.js is generated and committed, and src/tests/docs.js goes red if it drifts from this file. Two entities may share a slug; it is downloaded once. Subclasses deliberately have no emblem.",
+  "_readme": "Hand-authored emblem map: entity NAME -> \"<artist>/<icon>\" from https://github.com/game-icons/icons (master branch), CC BY 3.0. The artist folder is also the attribution, so there is no second list to keep in sync. After editing, regenerate the shipped fragment with: node scripts/fetch-icons.js — src/js/05-icons.js is generated and committed, and src/tests/docs.js goes red if it drifts from this file. Two entities may share a slug; it is downloaded once. Subclasses deliberately have no emblem. The \"ui\" block is app chrome, not a rules entity: \"Combat\" is the combat view's button.",
 
   "classes": {
     "Artificer": "lorc/gear-hammer",
@@ -91,5 +91,9 @@
     "Warrenborn": "delapouite/hobbit-dwelling",
     "Wind-Touched": "lorc/feather",
     "Wonderstruck": "lorc/star-swirl"
+  },
+
+  "ui": {
+    "Combat": "lorc/crossed-swords"
   }
 }

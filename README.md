@@ -416,7 +416,8 @@ auto-math available, and the `docs`/`scripts` folders are optional extras for th
 
 Fieldbook itself is MIT-licensed — see `LICENSE`.
 
-**Icons.** The emblems beside each class, ancestry and background come from
+**Icons.** The emblems beside each class, ancestry and background, and the crossed swords on the
+combat button, come from
 [game-icons.net](https://game-icons.net), by Caro Asercion, DarkZaitzev, Delapouite, Lorc
 and Skoll, used under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Each icon
 has been changed: its original black background square was removed, and its colour now
