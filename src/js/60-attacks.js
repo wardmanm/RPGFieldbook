@@ -272,7 +272,7 @@ function advanceRound(dir){
   if(inCombat(character)&&cur+dir<1)return;
   character.combatRound=Math.max(0,cur+dir);
   (character.activeSpells||[]).slice().forEach(a=>bumpActive(a,dir*6));
-  renderActiveSpells();scheduleSave();
+  renderActiveSpells();renderCombatChrome();scheduleSave();
 }
 function renderActiveSpells(){
   const card=document.getElementById("activeSpellCard"),el=document.getElementById("activeSpellList");

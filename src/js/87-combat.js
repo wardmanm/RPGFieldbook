@@ -54,3 +54,23 @@ function fmtCombatTime(sec){
   const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60);
   return h+" hr"+(m?" "+m+" min":"");
 }
+
+/* ---- the tab-bar button ----
+   Idle: the crossed swords alone. In combat: highlighted, with the round, so it
+   reads from any tab while you look something up. */
+function combatButtonHTML(c){
+  return iconSVG("ui","Combat")+(inCombat(c)?`<span class="cv-rd">Rd ${num(c.combatRound)}</span>`:"");
+}
+function renderCombatButton(){
+  const b=document.getElementById("btnCombat");if(!b)return;
+  const on=inCombat(character), l=on?`Combat view — round ${num(character.combatRound)}`:"Combat view";
+  b.innerHTML=combatButtonHTML(character);
+  b.classList.toggle("on",on);
+  b.setAttribute("aria-label",l);b.title=l;
+}
+/* Everything that shows combat state repaints through here. The round moves from
+   three places — the view's arrows, the Active Spells card's own buttons, and
+   Start/End — so none of them can disagree. */
+function renderCombatChrome(){renderCombatButton();}
+/* The last thing renderAll() does. */
+function syncCombatView(){renderCombatChrome();}

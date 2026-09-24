@@ -49,18 +49,19 @@ html[data-theme="dark"] .tbtn.primary{color:#20160a}
 @media(max-width:860px){.tab .tlbl{display:none}.tabicon{display:block}}
 html[data-tabs="icons"] .tab .tlbl{display:none}
 html[data-tabs="icons"] .tabicon{display:block}
-/* Very narrow: let the bar scroll rather than crushing the glyphs. .tab-toc's
-   margin-left:auto collapses to nothing in a scroll container, so it has to be
-   pinned instead or it scrolls off the end. */
+/* Very narrow: let the bar scroll rather than crushing the glyphs. .tab-tools'
+   margin-left:auto collapses to nothing in a scroll container, so the group — the
+   combat button and ☰ — is pinned instead, or it scrolls off the end. */
 @media(max-width:400px){
   .tabbar{overflow-x:auto;scrollbar-width:none}
   .tabbar::-webkit-scrollbar{display:none}
   .tab{flex:0 0 auto;min-width:46px}
-  .tab-toc{position:sticky;right:0;background:var(--paper-2)}
+  .tab-tools{position:sticky;right:0;background:var(--paper-2)}
 }
 .tab.active{color:var(--ink);border-bottom-color:var(--accent)}
 .tab:hover{color:var(--ink)}
-.tab-toc{flex:0 0 auto;margin-left:auto;background:none;border:0;color:var(--ink-soft);cursor:pointer;padding:0 12px;min-height:48px;display:inline-flex;align-items:center;font-size:18px}
+.tab-tools{flex:0 0 auto;margin-left:auto;display:flex;align-items:center}
+.tab-toc{flex:0 0 auto;background:none;border:0;color:var(--ink-soft);cursor:pointer;padding:0 12px;min-height:48px;display:inline-flex;align-items:center;font-size:18px}
 .tab-toc:hover{color:var(--accent)}
 .toc-fly{position:fixed;top:0;right:0;bottom:0;width:min(78vw,280px);background:var(--paper);border-left:2px solid var(--line);box-shadow:-8px 0 28px rgba(0,0,0,.22);z-index:60;transform:translateX(100%);transition:transform .22s ease;overflow:auto;padding:14px}
 .toc-fly.open{transform:none}

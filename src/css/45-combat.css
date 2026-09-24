@@ -1,0 +1,26 @@
+/* ================= Combat view =================
+   The tab-bar button and the full-screen view. The cards inside keep their own
+   styles — they are the real cards, moved here by 87-combat.js. */
+.tab-combat{flex:0 0 auto;background:none;border:0;color:var(--ink-soft);cursor:pointer;padding:0 8px;min-height:48px;
+  display:inline-flex;align-items:center;gap:5px;font-family:var(--head);font-weight:700;font-size:12px;
+  letter-spacing:.06em;text-transform:uppercase}
+.tab-combat .gicon{width:20px;height:20px;color:currentColor}
+.tab-combat:hover{color:var(--accent)}
+/* In combat: a filled pill, readable from any tab while you look something up. */
+.tab-combat.on{color:var(--paper);background:var(--accent);border-radius:8px;min-height:32px;margin:0 2px;padding:0 9px}
+.tab-combat.on:hover{color:var(--paper);filter:brightness(1.08)}
+
+/* Above the tab bar (40), below the ☰ flyout (55/60), the item finder (70),
+   modals (80) and toasts — so Cast, Use and Edit open over it as anywhere else. */
+.cview{position:fixed;inset:0;z-index:50;background:var(--paper);display:none;flex-direction:column}
+.cview.open{display:flex}
+html.cv-lock,html.cv-lock body{overflow:hidden}
+.cv-head{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px clamp(10px,2vw,18px);
+  background:var(--paper-2);border-bottom:2px solid var(--line)}
+.cv-head .grow{flex:1}
+/* The view scrolls itself; the page behind it stays put. */
+.cv-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:clamp(12px,2.4vw,22px)}
+/* One column as wide as the sheet's main column: drag order IS reading order. */
+.cv-list{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)}
+.cv-empty{max-width:780px;margin:24px auto;text-align:center}
+.cv-empty .gicon{display:inline-block;width:16px;height:16px;vertical-align:-3px;color:var(--accent)}

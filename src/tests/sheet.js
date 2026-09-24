@@ -36,7 +36,7 @@ const {X, state, bootError, fragments} = loadApp([
   'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
   'COMBAT_DEFAULTS', 'inCombat', 'combatSectionsOf', 'withCombatSection', 'moveCombatSection',
-  'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound',
+  'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1904,5 +1904,13 @@ function charWith(inv, hp) {
 }
 
 ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').includes('<path d="M'));
+
+/* ---- the tab-bar button ---- */
+{
+  const idle = X.combatButtonHTML({combatActive: false, combatRound: 4});
+  ck('idle, the button is the crossed swords alone', idle.includes('<svg') && !/Rd/.test(idle));
+  const on = X.combatButtonHTML({combatActive: true, combatRound: 3});
+  ck('in combat it carries the round', on.includes('<svg') && on.includes('Rd 3'));
+}
 
 ck.done();

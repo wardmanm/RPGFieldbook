@@ -47,7 +47,7 @@ src/                    THE SOURCE OF TRUTH — edit here, never the built file
   js/*.js               28 fragments, concatenated into the single <script>
   icons/icons.json      HAND-AUTHORED emblem map, name → game-icons.net slug;
                           scripts/fetch-icons.js turns it into js/05-icons.js
-  css/*.css             7 fragments, concatenated into the single <style>
+  css/*.css             8 fragments, concatenated into the single <style>
   tests/                THE TEST SUITES — run with ./src/tests/run.sh (dev)
     harness.js          loads the app the way the build concatenates it
     converter.py · tables.js · rules-data.js · sheet.js · char-update.js · docs.js
