@@ -1525,4 +1525,24 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /@media\(max-width:600px\)\{\.skills\{[^}]*grid-template-columns:1fr;[^}]*grid-auto-flow:row/.test(css));
 }
 
+// ---------- one section heading for Inventory, Attacks and Features (issue #51)
+// Inventory sections (and the Attacks card's split) had a faint 1px rule with the
+// first item flush against it, and a caret drawn pointing DOWN that the shared
+// .fcaret rule then turned another 90° — open sections pointed left. They now
+// share the Features & Traits head: same line, same gap, same caret.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const css = manifest.css.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const shared = /\.fghead,\.inv-sec-head\{([^}]*)\}/.exec(css);
+  ck('inventory section heads share the Features group-head rule', !!shared);
+  ck('...a solid 1.5px line, with a gap before the first item',
+     !!shared && /border-bottom:1\.5px solid var\(--line\)/.test(shared[1]) && /margin:0 0 8px/.test(shared[1]));
+  ck('no inventory-only caret rotation is left to fight the shared one',
+     !/\.inv-sec-head \.fcaret/.test(css));
+  const featCaret = (/class="fghead"[^`]*?<svg class="fcaret[^>]*><path d="([^"]+)"/.exec(js) || [])[1];
+  const invCaret = (/head\.className="inv-sec-head"[\s\S]{0,200}?<svg class="fcaret[^>]*><path d="([^"]+)"/.exec(js) || [])[1];
+  ck('the inventory caret is drawn like the Features one', !!featCaret && invCaret === featCaret, [featCaret, invCaret]);
+}
+
 ck.done();

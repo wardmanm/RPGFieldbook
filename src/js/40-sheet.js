@@ -178,8 +178,10 @@ function renderInventory(){
   const renderSec=(title,items,sorter)=>{
     if(!items.length)return;
     const collapsed=!!sc[title];
+    /* The caret is drawn pointing right, like the Features one: the shared .fcaret
+       turns it down when open. A down-drawn path turned 90° more pointed LEFT (#51). */
     const head=document.createElement("div");head.className="inv-sec-head";head.dataset.invsec=title;
-    head.innerHTML=`<svg class="fcaret ${collapsed?"c":""}" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>${esc(title)} <span class="cnt">(${items.length})</span>`;
+    head.innerHTML=`<svg class="fcaret ${collapsed?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>${esc(title)} <span class="cnt">(${items.length})</span>`;
     el.appendChild(head);
     if(!collapsed)items.slice().sort(sorter).forEach(it=>{const w=document.createElement("div");w.innerHTML=invItemHTML(it);el.appendChild(w.firstElementChild);});
   };

@@ -61,3 +61,7 @@ Bullets below this line — leave the heading in place.
   Humblewood — on the Coins card and in the Adjust coins window, the same order the printout uses.
 - Fixed: in the Classic layout the skills now read down each column — Acrobatics to Investigation on
   the left, Medicine to Survival on the right — instead of zig-zagging across the two columns.
+- Fixed: the section headings in your inventory (and the Favorites / Attacks split on the Attacks
+  card) now look exactly like the ones in Features & Traits — a clear line with a little space before
+  the first item, instead of a faint line with the item jammed against it. The arrow on an open
+  inventory section now points down, as it does everywhere else, instead of sideways.

@@ -68,7 +68,18 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 .n-flash::before{border-color:var(--accent);transition:border-color .3s}
 
 .fgroup{margin-bottom:12px}
-.fghead{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 2px;border-bottom:1.5px solid var(--line);margin:0 0 8px;user-select:none}
+/* One section heading for every list inside a card: the Features & Traits
+   groups, the inventory sections and the Attacks card's Favorites/Attacks split
+   (issue #51). They share the line, the gap before the first item, and — through
+   the shared .fcaret below — the caret. The inventory ones used to have a faint
+   1px rule with the first item flush against it. */
+.fghead,.inv-sec-head{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 2px;border-bottom:1.5px solid var(--line);margin:0 0 8px;user-select:none}
+/* The inventory/attack heads carry their text directly rather than in .fgname,
+   so they take its look here; and a gap above each section after the first,
+   the way .fgroup spaces the feature groups. */
+.inv-sec-head{font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:var(--accent);margin-top:12px}
+.inv-sec-head:first-child{margin-top:0}
+.inv-sec-head .cnt{color:var(--ink-soft);font-weight:600}
 .fghead:hover .fgname{color:var(--accent-2)}
 /* flex:0 1 auto, NOT flex:1 — the count has to sit beside the title the way the
    inventory section heads do. flex:1 stretched the name across the header and
