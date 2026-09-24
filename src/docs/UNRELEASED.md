@@ -59,3 +59,5 @@ Bullets below this line — leave the heading in place.
   Origin, Qty or Cost.
 - Fixed: coins now read from most to least valuable — PP, GP, EP, SP, CP in D&D and GP, SP, CP in
   Humblewood — on the Coins card and in the Adjust coins window, the same order the printout uses.
+- Fixed: in the Classic layout the skills now read down each column — Acrobatics to Investigation on
+  the left, Medicine to Survival on the right — instead of zig-zagging across the two columns.

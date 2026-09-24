@@ -120,8 +120,12 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .death .c.succ.on{background:var(--accent-2)}
 
 /* skills */
-.skills{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
-@media(max-width:600px){.skills{grid-template-columns:1fr}}
+/* Read DOWN each column, then across (issue #56): a plain two-column grid fills
+   row by row, so the alphabet ran left-right-left-right. --skill-rows is half the
+   list rounded up, set by buildSkills(); 9 is the fallback for the standard 18.
+   DOM order stays alphabetical, so Tab still walks the list A to Z. */
+.skills{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(var(--skill-rows,9),auto);grid-auto-flow:column;gap:0 20px}
+@media(max-width:600px){.skills{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}}
 .srow{display:flex;align-items:center;gap:9px;padding:6px 2px;border-bottom:1px dotted var(--hair)}
 .srow .val{font-family:var(--display);font-weight:900;font-size:16px;width:32px;text-align:center}
 .srow .lbl{flex:1;font-size:15px}

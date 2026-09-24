@@ -1510,4 +1510,19 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /function writeFoot\(k\)\{[^\n]*put\("brOrigin",k\.origin\);syncOrigDet\(\);if\(k\.origin\)put\("brOrigDet",k\.det\);/.test(js));
 }
 
+// ---------- Classic skills read DOWN each column, then across (issue #56)
+// A two-column grid fills row by row, so the alphabet ran left-right-left-right.
+// Column flow with half the skills (rounded up) per column reads Acrobatics …
+// Investigation down the left and Medicine … Survival down the right.
+{
+  const css = fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8');
+  const cjs = fs.readFileSync(path.join(ROOT, 'src/js/00-constants.js'), 'utf8');
+  ck('the Classic skills grid fills down each column',
+     /\.skills\{[^}]*grid-auto-flow:column/.test(css) && /\.skills\{[^}]*grid-template-rows:repeat\(var\(--skill-rows,9\),auto\)/.test(css));
+  ck('...with half the skills, rounded up, per column',
+     /function buildSkills\(\)\{[\s\S]*?--skill-rows",Math\.ceil\(SKILLS\.length\/2\)[\s\S]*?\n\}/.test(cjs));
+  ck('a phone keeps one column, in the same order',
+     /@media\(max-width:600px\)\{\.skills\{[^}]*grid-template-columns:1fr;[^}]*grid-auto-flow:row/.test(css));
+}
+
 ck.done();
