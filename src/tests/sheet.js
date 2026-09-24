@@ -42,6 +42,7 @@ const {X, state, bootError, fragments} = loadApp([
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
   'finderQty', 'addLibraryItems',
+  'coinKeys',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2105,6 +2106,16 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   const s = c.inventory.find(i => i.name === 'Longsword');
   ck('three weapons are one stack of three with one linked attack',
      s.qty === 3 && c.attacks.length === atkBefore + 1 && s.attackId === c.attacks[c.attacks.length - 1].id);
+}
+
+/* ---- coins read high to low (issue #48) ----
+   The Coins card and the Adjust coins window both lay the boxes out in
+   coinKeys() order; the printout already ran PP → CP. */
+{
+  X.character = X.blankChar(); X.character.system = 'dnd';
+  ck('D&D coins read high to low: PP GP EP SP CP', JSON.stringify(X.coinKeys()) === '["pp","gp","ep","sp","cp"]', X.coinKeys());
+  X.character.system = 'humblewood';
+  ck('Humblewood coins read high to low: GP SP CP', JSON.stringify(X.coinKeys()) === '["gp","sp","cp"]', X.coinKeys());
 }
 
 ck.done();

@@ -57,3 +57,5 @@ Bullets below this line — leave the heading in place.
   several of each ticked item at once; if you already carry that item, they join the same stack.
   Any cost you type is still the price of one. Changing a filter while you pick no longer resets
   Origin, Qty or Cost.
+- Fixed: coins now read from most to least valuable — PP, GP, EP, SP, CP in D&D and GP, SP, CP in
+  Humblewood — on the Coins card and in the Adjust coins window, the same order the printout uses.

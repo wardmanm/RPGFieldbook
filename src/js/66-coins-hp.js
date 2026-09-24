@@ -87,8 +87,11 @@ function convertCoins(){
 }
 const COIN_ALL=[["cp","CP","Copper"],["sp","SP","Silver"],["ep","EP","Electrum"],
                 ["gp","GP","Gold"],["pp","PP","Platinum"]];
-/* Electrum is a D&D-only oddity; Humblewood doesn't use it. */
-function coinKeys(){return (character.system==="dnd")?["cp","sp","ep","gp","pp"]:["cp","sp","gp"];}
+/* The DISPLAY order — the Coins card and the Adjust coins window — high to low,
+   the way a purse is read and the printout already runs (issue #48). The coin
+   maths keeps its own lists, so order here is presentation only. Electrum is a
+   D&D-only oddity; Humblewood doesn't use it. */
+function coinKeys(){return (character.system==="dnd")?["pp","gp","ep","sp","cp"]:["gp","sp","cp"];}
 
 /* What a signed-entry box — coins, HP — should become, given what was typed.
      "12"  -> set to 12          "+10" -> add           "-5" -> spend
