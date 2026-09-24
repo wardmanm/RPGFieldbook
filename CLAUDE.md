@@ -199,7 +199,11 @@ change must eventually pass these checks, and `./build.sh` runs all of them:
      choice moved into a launcher: **Windows needs `cmd /c` because stdio servers are spawned
      without a shell there and `npx` is `npx.cmd`, a batch script, which dies with ENOENT; macOS and
      Linux need a bare `npx` because it is a real executable and there is no `cmd`.** `node` is a
-     real binary everywhere, so that is what `.mcp.json` always spawns.
+     real binary everywhere, so that is what `.mcp.json` always spawns. **The launcher path is
+     relative on purpose** — `${CLAUDE_PROJECT_DIR}` is not set when `.mcp.json` is read, reaches
+     node as literal text, and fails with `Cannot find module '…/${CLAUDE_PROJECT_DIR}/…'`. When the
+     server won't connect, read `~/Library/Caches/claude-cli-nodejs/<project>/mcp-logs-playwright/`
+     — it holds the server's real stderr, which `/mcp` only reports as "Connection closed".
    - **`--allow-unrestricted-file-access` is load-bearing, not decoration.** Playwright MCP **blocks
      `file://` navigation by default**, and this whole app is a `file://` URL, so without it every
      capture fails. `--browser chrome` reuses the installed Chrome rather than downloading Chromium,
