@@ -36,7 +36,7 @@ const {X, state, bootError, fragments} = loadApp([
   'castSpell', 'endActiveSpell', 'bumpActive', 'spellIsConc',
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
   'COMBAT_DEFAULTS', 'inCombat', 'combatSectionsOf', 'withCombatSection', 'moveCombatSection',
-  'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime',
+  'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1881,6 +1881,26 @@ function charWith(inv, hp) {
   const old = X.migrate({id: 'cv-old'});
   ck('a sheet saved before the combat view is not in combat and gets the defaults',
      !X.inCombat(old) && same(X.combatSectionsOf(old), D));
+}
+
+/* ---- rounds: in combat the floor is round 1 ---- */
+{
+  const bless = () => ({id: 'b', name: 'Bless', level: 1, conc: true, durationSec: 60, elapsedSec: 0});
+  const c = X.blankChar(); c.activeSpells = [bless()]; X.character = c; X.combatStart(c);
+  X.advanceRound(1);
+  ck('next round moves the round on', c.combatRound === 2);
+  ck('...and every active spell gains 6 seconds', c.activeSpells[0].elapsedSec === 6);
+  X.advanceRound(-1);
+  ck('previous round takes them back off', c.combatRound === 1 && c.activeSpells[0].elapsedSec === 0);
+  c.activeSpells[0].elapsedSec = 12;
+  X.advanceRound(-1);
+  ck('in combat, previous at round 1 moves nothing — not the round, not the spells',
+     c.combatRound === 1 && c.activeSpells[0].elapsedSec === 12);
+
+  const o = X.blankChar(); o.activeSpells = [bless()]; o.activeSpells[0].elapsedSec = 12; X.character = o;
+  X.advanceRound(-1);
+  ck('out of combat nothing changes: the round floors at 0 and spells still step back',
+     o.combatRound === 0 && o.activeSpells[0].elapsedSec === 6);
 }
 
 ck.done();
