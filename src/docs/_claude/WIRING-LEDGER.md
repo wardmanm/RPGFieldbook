@@ -3373,3 +3373,23 @@ same log proves stdio servers start with the project root as their CWD.
 
 Worktrees branched before PR #42 still carry the old `cmd /c` config and no launcher, so a session
 rooted in one of them cannot take screenshots until the branch is rebased onto main.
+
+## WORKTREES.md: integrate one branch per merge
+
+Integrating #44/#45 with the documented `git merge --no-ff A B` stopped with conflict markers in
+both `UNRELEASED.md` and this ledger, despite `merge=union`. An octopus merge merges each file with a
+plain 3-way merge and never reads the attribute; a two-way `git merge` and `git rebase` do.
+Reproduced in a scratch repo on git 2.50 before writing it down. GitHub ignores the attribute too, so
+once `main` moves, every PR that appended to these files reports a conflict — and gets no CI run —
+until `main` is merged into the branch locally.
+
+WORKTREES.md sections 1 and 5 now merge one branch per command, section 4 says which merges honour
+union and which don't, section 5 has the PR route (push, merge `main` in locally on a conflict,
+still integrate locally), and section 8 no longer claims a conflict can only mean a missing
+`.gitattributes`. Also corrected: section 1 showed `wt.sh rm 41 43`, but `rm` takes ONE issue number
+and would have silently removed only the first.
+
+Deliberately NOT added: a docs-suite check for a heading with no blank line above it. Union merges
+do drop that line where two appended sections meet (twice during this integration), but an ATX
+heading interrupts a paragraph in CommonMark and renders correctly, so it is cosmetic — and the
+docs suite is explicitly not a prose linter. Six such headings already exist in this file.

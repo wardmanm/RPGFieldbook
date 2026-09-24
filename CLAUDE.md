@@ -147,7 +147,9 @@ branches `issue/<n>-<slug>` from `origin/main`, symlinks `.venv` and `_conversio
 worktree to verify, but never commit `dist/fieldbook.html`.** Merges then never conflict on a 473 KB
 generated file, and one `./build.sh` on main after merging produces the single correct artifact.
 `.gitattributes` gives `UNRELEASED.md` and `WIRING-LEDGER.md` `merge=union`, because every branch
-appends to both and a plain 3-way merge conflicts on every one. Schedule issues by which fragments
+appends to both and a plain 3-way merge conflicts on every one. **Only a local one-branch merge (or
+rebase) reads that attribute** — an octopus `git merge A B` and GitHub both ignore it and conflict,
+so integrate one branch per `git merge`. Schedule issues by which fragments
 they touch: `src/html/*` is one file per tab, so tab-level UI work is disjoint by construction.
 **Full procedure, scheduling rules and failure modes: `src/docs/WORKTREES.md`.**
 

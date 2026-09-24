@@ -15,10 +15,12 @@ the player bundle by the audience rule).
 ./scripts/wt.sh add 43
 ./scripts/wt.sh list
 # …agents work…
-git merge --no-ff issue/41-… issue/43-…
+git merge --no-ff issue/41-…      # ONE BRANCH PER MERGE — never `git merge A B` (section 4)
+git merge --no-ff issue/43-…
 ./build.sh                        # ONE build produces the one correct artifact
 # browser QA, commit the artifact, push
-./scripts/wt.sh rm 41 43
+./scripts/wt.sh rm 41             # one issue number per call
+./scripts/wt.sh rm 43
 ```
 
 `wt.sh add <n> [slug]` creates `.claude/worktrees/<n>/` on branch `issue/<n>-<slug>`, based on your
@@ -78,7 +80,21 @@ rather than resolving conflicts afterwards.
 issue adds to. A plain 3-way merge conflicts on every merge after the first, on lines that do not
 actually disagree.
 
-`.gitattributes` gives both `merge=union`, which keeps both sides. Nothing to do by hand.
+`.gitattributes` gives both `merge=union`, which keeps both sides. Nothing to do by hand — **as long
+as the merge is one that reads the attribute**:
+
+- **A local two-way `git merge` (and `git rebase`) honours it.** That is the only kind section 5 uses.
+- **An octopus merge — `git merge A B` — does NOT.** It merges each file with a plain 3-way merge,
+  so both files conflict as if the attribute were absent. Merge one branch at a time.
+- **GitHub does NOT either** — not for the merge button, and not for the "can this PR merge?" check.
+  Once `main` has moved, every PR that appended to these files shows as conflicting, and GitHub runs
+  no CI on a conflicting PR. Section 5 has the fix.
+
+Union is only correct because both files are **append-only**: on a real conflict it keeps both
+versions, so a branch that *edits* an existing line comes out with the old and new line side by
+side, silently. Add new entries; don't rewrite old ones on a branch. It can also drop the blank line
+where two appended sections meet — harmless, since a heading still renders, but tidy it in the merge
+commit if you notice.
 
 `dist/fieldbook.html` also carries `merge=ours` as a dead-man's switch — if a branch commits the
 artifact despite section 2, keeping ours and rebuilding is the only sane resolution. That attribute
@@ -94,12 +110,27 @@ git config merge.ours.driver true    # `ours` is not built in; `union` and `bina
 
 ```bash
 git switch main
-git merge --no-ff issue/41-… issue/43-…
+git merge --no-ff issue/41-…      # one branch per merge, so the union attribute applies
+git merge --no-ff issue/43-…
 ./build.sh && ./src/tests/run.sh
 ```
 
 Then browser-QA the result, commit the rebuilt `dist/fieldbook.html`, and push. `pre-push` will stop
 you if the artifact is stale or a suite fails.
+
+**If you want PRs as well** (for review, or for CI's verdict on each issue before integrating): push
+the branch and open the PR. CI builds the artifact itself for a PR that doesn't commit one, so a
+src-only branch gets the full job — tests included. If GitHub then reports a conflict, it is almost
+always the two union files (section 4); merge `main` into the branch *locally* and push:
+
+```bash
+git -C .claude/worktrees/41 merge --no-edit origin/main   # union applies here; GitHub's merge ignores it
+git -C .claude/worktrees/41 push
+```
+
+Integrate with the local merges above even so, not GitHub's merge button: the button merges src with
+no rebuild, so `main` goes stale and its CI fails. Pushing the local merge marks each PR merged and
+closes the issues its body names.
 
 Add one `UNRELEASED.md` bullet per player-visible change — the union merge means each branch can add
 its own and they all survive. Cutting a release stays a separate, deliberate act (`RELEASING.md`).
@@ -152,6 +183,12 @@ which is the behaviour worth keeping. Discard it deliberately with
   `main`. Branches tracking `origin/main` therefore read as "unmerged" when their work sits in an
   unpushed local `main`. `wt.sh rm` asks `git merge-base --is-ancestor <branch> main` instead, which
   is the question that actually matters.
+- **The documented octopus merge conflicted on both union files** (#44/#45). Sections 1 and 5 said
+  `git merge --no-ff A B`; an octopus merge ignores `merge=union` (section 4), so `UNRELEASED.md` and
+  the ledger both stopped with conflict markers. Aborted and merged one branch at a time, which
+  resolved both untouched. The same pair of PRs also showed as conflicting on GitHub, for the same
+  reason; merging `main` into each branch locally cleared it. Reproduced in a scratch repo on git
+  2.50: octopus conflicts, one-at-a-time merges and `git rebase` both come out clean.
 
 ---
 
@@ -160,7 +197,9 @@ which is the behaviour worth keeping. Discard it deliberately with
 - Don't commit `dist/fieldbook.html` on a feature branch (section 2).
 - Don't let an agent cut a release, bump `APP_VERSION`, or push a tag. Releases are the owner's, and
   pushing the tag is what publishes.
-- Don't hand-resolve a conflict in `UNRELEASED.md` or the ledger — if you are seeing one, the
-  `merge=union` attribute is missing or `.gitattributes` was not checked out.
+- Don't hand-resolve a conflict in `UNRELEASED.md` or the ledger. If you are seeing one, the merge
+  is one that ignores `merge=union` — an octopus merge, or GitHub (section 4) — or `.gitattributes`
+  was not checked out. Abort and redo it as a local one-branch merge.
+- Don't merge several branches in one `git merge` command (section 4).
 - Don't create worktrees outside `.claude/worktrees/`; anywhere else in the repo is not gitignored and
   will show up in `git status` and in `git ls-files` sweeps.
