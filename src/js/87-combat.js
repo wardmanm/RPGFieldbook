@@ -234,13 +234,22 @@ function closeCombatView(){
    reach while the view is open. The modal, the item finder, the ☰ flyout and the
    toast all sit OUTSIDE these three, so they keep working over the view. */
 function cvInert(on){
-  document.querySelectorAll(".topbar,.tabbar,.page").forEach(el=>{if(on)el.setAttribute("inert","");else el.removeAttribute("inert");});
+  document.querySelectorAll(".topbar,.tabbar,.page").forEach(el=>{
+    if(on){el.setAttribute("inert","");return;}
+    /* The view closing under an open dialog: the page stays inert beneath the
+       dialog, which now owns it and releases it when it closes. */
+    if(modal.classList.contains("open")){if(!_modalInert.includes(el))_modalInert.push(el);return;}
+    el.removeAttribute("inert");
+  });
 }
 /* viaKey: the click came from Enter/Space (event.detail 0), not a pointer. */
 function toggleCombatSection(k,viaKey){
   const def=noteDef(k);if(!def)return;
   const cur=combatSectionsOf(character), on=!cur.includes(k), at=cur.indexOf(k), who=character.id;
   const fromView=!on&&cvOpen&&!!document.querySelector(`#cvList [data-combatbtn="${k}"]`);
+  /* Its shown neighbours, read before it leaves: the saved order can hold a
+     hidden card (Skills in By ability mode) that must not count as the next one. */
+  const [nextK,prevK]=fromView?cvNeighbours([...document.querySelectorAll("#cvList > .card")].filter(cvCardShown).map(c=>c.dataset.note),k):[null,null];
   character.combatSections=withCombatSection(cur,k,on);
   if(cvOpen){if(on)fillCombatView();else{sendCardHome(k);renderCombatEmpty();}}
   paintCombatToggle(k,on);scheduleSave();
@@ -249,18 +258,19 @@ function toggleCombatSection(k,viaKey){
      tab when empty — so their toggle cannot bring them back. The Undo can. */
   const undo=toast("Removed "+noteTitle(def)+" from the combat view",{label:"Undo",
     run:e=>undoCombatRemove(k,at,who,!!e&&e.detail===0),
-    back:fromView?()=>(cvOpen?cvFocusAfter(at):null):null});
+    back:fromView?()=>(cvOpen?cvReturnFocus(nextK,prevK):null):null});
   /* The pressed toggle just went home with its card, and keyboard focus with it.
      Inside the view, land the keyboard on the Undo instead: Enter puts the card
      back, and Tab or Esc returns to the card that took its place. */
   if(viaKey&&fromView&&undo)undo.focus();
 }
+/* [next, prev] among the SHOWN cards, each null when there is none. */
+function cvNeighbours(keys,k){const i=keys.indexOf(k);return i<0?[null,null]:[keys[i+1]||null,i>0?keys[i-1]:null];}
 /* Where the keyboard goes after a removal from the view: the grip of the card
-   that now fills the gap, else the last card's, else ✕. */
-function cvFocusAfter(at){
-  const cards=[...document.querySelectorAll("#cvList > .card")].filter(cvCardShown);
-  const c=cards[Math.min(at,cards.length-1)];
-  return (c&&c.querySelector("[data-cvgrip]"))||document.getElementById("cvClose");
+   that followed it, else of the one before, else ✕. */
+function cvReturnFocus(nextK,prevK){
+  for(const x of [nextK,prevK]){const g=x&&document.querySelector(`#cvList [data-cvgrip="${x}"]`);if(g)return g;}
+  return document.getElementById("cvClose");
 }
 /* Back in the place it was taken from. `who` guards a toast that outlived a
    character switch: its Undo belongs to the character it was shown for. After a

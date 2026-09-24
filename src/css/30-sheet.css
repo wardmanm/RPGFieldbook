@@ -195,7 +195,10 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
    clicked nor tabbed to. The toast ignores the pointer; its button does not. */
 .toast .toast-act{pointer-events:auto;margin-left:10px;background:none;border:1.5px solid rgba(255,255,255,.85);
   color:#fff;border-radius:8px;padding:3px 11px;font:inherit;font-weight:700;letter-spacing:.04em;cursor:pointer}
-.toast .toast-act:hover,.toast .toast-act:focus-visible{background:rgba(255,255,255,.2);outline:none}
+.toast .toast-act:hover{background:rgba(255,255,255,.2)}
+/* A real ring: the keyboard is sent here on purpose, and a faint wash on honey
+   or brick is too little to see. */
+.toast .toast-act:focus-visible{background:rgba(255,255,255,.2);outline:2px solid #fff;outline-offset:2px}
 /* NOT white-space:pre-wrap any more: richHTML() turns newlines into real <br>
    elements, and keeping both doubled every line break. */
 .item .desc{font-size:15px;line-height:1.5;margin-top:5px;word-break:break-word}

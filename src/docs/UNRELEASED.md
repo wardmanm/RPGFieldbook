@@ -48,8 +48,8 @@ Bullets below this line — leave the heading in place.
   Close the view to look something up and combat keeps going — the button shows the round, and one
   tap brings you back. **End combat** is its own button. Take a card out by mistake and the message
   that confirms it has an **Undo**.
-- Pop-up windows now work properly from the keyboard. When one opens, the cursor moves into it (on a
-  touch screen it doesn't, so the on-screen keyboard stays out of the way); Tab stays inside it
-  instead of wandering onto the page behind; and when it closes you are back on the button that
-  opened it. Screen readers now announce each window by its title, and read out the short messages
-  that appear at the bottom of the screen.
+- Pop-up windows now work properly from the keyboard. When one opens, the cursor goes to its first
+  text box, or to the window itself if it has none — and on a touch screen always to the window, so
+  the on-screen keyboard stays out of the way. Tab stays inside the window instead of wandering onto
+  the page behind, and when it closes you are back where you were. Screen readers now announce each
+  window by its title, and read out the short messages that appear at the bottom of the screen.

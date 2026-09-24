@@ -40,6 +40,7 @@ const {X, state, bootError, fragments} = loadApp([
   'combatToggleHTML', 'combatToggleText', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
   'combatGripHTML', 'moveCombatCard',
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
+  'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2037,6 +2038,37 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('stepping never edits the list it was given', (() => {
     const l = ['a', 'b']; X.stepCombatSection(l, 'a', 1, all); return same(l, ['a', 'b']);
   })());
+}
+
+/* ---- after a keyboard removal, Tab/Esc go to the next SHOWN card ----
+   Worked out from the shown cards before the removal, so a hidden Skills card in
+   the saved order cannot shift it onto the wrong grip. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  ck('the card that followed it, then the one before',
+     same(X.cvNeighbours(['vitals', 'attacks', 'resources'], 'attacks'), ['resources', 'vitals']));
+  ck('the last card has only the one before', same(X.cvNeighbours(['vitals', 'attacks'], 'attacks'), [null, 'vitals']));
+  ck('the first card has only the one after', same(X.cvNeighbours(['attacks', 'vitals'], 'attacks'), ['vitals', null]));
+  ck('a lone card has neither', same(X.cvNeighbours(['vitals'], 'vitals'), [null, null]));
+  ck('a card not shown has neither', same(X.cvNeighbours(['vitals'], 'skills'), [null, null]));
+}
+
+/* ---- dialogs: what auto-focus may pick, and how the opener is found again ---- */
+{
+  const F = X.MODAL_FOCUS_FIELDS;
+  ck('dialog auto-focus never picks a dropdown — type-ahead on the rules-pack picker rewrote the whole form',
+     !/select/.test(F));
+  ck('...nor a checkbox, radio or file input', !/checkbox|radio|file/.test(F));
+  ck('...but does pick text boxes and text areas',
+     F.includes('input:not([type])') && F.includes('input[type=text]') && F.includes('textarea'));
+  const el = (id, attrs) => ({id, attributes: Object.entries(attrs || {}).map(([name, value]) => ({name, value}))});
+  ck('an opener with an id is found again by it', X.openerSelector(el('btnSettings')) === '[id="btnSettings"]');
+  ck('...otherwise by its first data-* hook',
+     X.openerSelector(el('', {class: 'add', 'data-edit-attack': 'a1'})) === '[data-edit-attack="a1"]');
+  ck('...and one with neither has no way back', X.openerSelector(el('', {class: 'x'})) === null);
+  ck('no opener, no selector', X.openerSelector(null) === null);
+  ck('a quote in a hook value cannot break the selector',
+     X.openerSelector(el('', {'data-x': 'a"b'})) === '[data-x="a\\"b"]');
 }
 
 ck.done();

@@ -1490,6 +1490,8 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the modal dialog is focusable (tabindex -1) so openModal can move focus into it',
      !!m && /\btabindex="-1"/.test(m[0]) && /role="dialog"/.test(m[0]));
   ck('the modal dialog is named by its title', !!m && /aria-labelledby="mTitle"/.test(m[0]) && t.includes('id="mTitle"'));
+  // A live region created and filled in the same moment is not announced; this one exists from load.
+  ck('the toast live region ships in the page, empty', /<div id="toast" class="toast" role="status"><\/div>/.test(t));
 }
 
 ck.done();

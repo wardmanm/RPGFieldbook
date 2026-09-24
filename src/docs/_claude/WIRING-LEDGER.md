@@ -3480,13 +3480,22 @@ The four items parked after the combat view merged, all fixed on `feat/combat-vi
 - **Keyboard removal lands on the Undo.** `toggleCombatSection(k, viaKey)` — `viaKey` is the click's
   `event.detail === 0` (Enter/Space) — focuses the toast's Undo when the removed card was in the view.
   `toast()` returns that button and takes `action.back()`: Tab or Esc from the Undo hides the toast and
-  goes to the grip of the card that filled the gap (`cvFocusAfter`), else ✕. The combat view's
+  goes to the grip of the next SHOWN card, recorded before the removal (`cvNeighbours`,
+  pure and tested — the saved order can hold a hidden Skills card), else the one before, else ✕. The combat view's
   capture-phase Esc yields while focus is in the toast. A keyboard Undo focuses the restored toggle.
 - **The general modal takes focus.** `modalTakeFocus(wasOpen)` / `modalGiveBackFocus()` in
-  80-modal-forms.js: on open every other `<body>` child goes inert (the toast stays reachable), focus
-  goes to the first field with `(pointer:fine)` and to the dialog itself on touch (a field would raise
-  the on-screen keyboard for every form); on close only the elements the modal inerted are released —
-  so the combat view's inert survives a dialog over it — and focus returns to the opener if it is
-  still in the document and not inert, else to ✕ when the combat view is open. `openModal` called
-  while already open (a content swap) keeps the original opener. `openModal` must still START with
-  `_dismissGuard=null;` — rules-data.js asserts the literal prefix.
+  80-modal-forms.js: on open every other `<body>` child goes inert (the toast stays reachable).
+  Focus goes to the first TEXT field on the first screenful with `(pointer:fine)`, else to the dialog
+  itself — always the dialog on touch, where a field would raise the on-screen keyboard.
+  **`MODAL_FOCUS_FIELDS` must never include `select`** (a test guards it): the item, feature and spell
+  forms open on a rules-pack picker, and type-ahead on a focused picker rewrote the whole form with one
+  keystroke — "t" turned an edited "My Sword" into a Torch, effects and all. Caught in review.
+  On close only the elements the modal inerted are released, and `cvInert(true)` is re-applied if the
+  combat view is open; `cvInert(false)` while a dialog is open hands the page to the dialog instead of
+  releasing it. Focus returns to the opener if it is still usable; because a Save usually re-renders
+  the opener's list right after closing, a `setTimeout 0` looks again by `openerSelector` (its id, else
+  its first data-* hook — used only if it matches exactly one element), else ✕ in the combat view.
+  `openModal` called while open (a content swap) keeps the original opener. `openModal` must still
+  START with `_dismissGuard=null;` — rules-data.js asserts the literal prefix.
+- **The toast is in the template** (`<div id="toast" role="status">`), empty from load: a live region
+  created and filled in the same moment is not announced. The Undo's focus ring is a real outline.
