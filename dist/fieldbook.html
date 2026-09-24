@@ -134,18 +134,23 @@ html[data-theme="dark"] .tbtn.primary{color:#20160a}
 @media(max-width:860px){.tab .tlbl{display:none}.tabicon{display:block}}
 html[data-tabs="icons"] .tab .tlbl{display:none}
 html[data-tabs="icons"] .tabicon{display:block}
-/* Very narrow: let the bar scroll rather than crushing the glyphs. .tab-toc's
-   margin-left:auto collapses to nothing in a scroll container, so it has to be
-   pinned instead or it scrolls off the end. */
+/* Very narrow: let the bar scroll rather than crushing the glyphs. .tab-tools'
+   margin-left:auto collapses to nothing in a scroll container, so the group — the
+   combat button and ☰ — is pinned instead, or it scrolls off the end. */
 @media(max-width:400px){
-  .tabbar{overflow-x:auto;scrollbar-width:none}
+  .tabbar{overflow-x:auto;scrollbar-width:none;padding:0 4px}
   .tabbar::-webkit-scrollbar{display:none}
-  .tab{flex:0 0 auto;min-width:46px}
-  .tab-toc{position:sticky;right:0;background:var(--paper-2)}
+  .tab{flex:0 0 auto;min-width:42px}
+  .tab-tools{position:sticky;right:0;background:var(--paper-2)}
+  /* Sized so six tabs and the group fit at 360px with the round pill showing
+     (45-combat.css) — pinned over the bar, anything wider covers Rules.
+     .tab-tools .tab-toc, because the plain .tab-toc rule comes later. */
+  .tab-tools .tab-toc{padding:0 10px}
 }
 .tab.active{color:var(--ink);border-bottom-color:var(--accent)}
 .tab:hover{color:var(--ink)}
-.tab-toc{flex:0 0 auto;margin-left:auto;background:none;border:0;color:var(--ink-soft);cursor:pointer;padding:0 12px;min-height:48px;display:inline-flex;align-items:center;font-size:18px}
+.tab-tools{flex:0 0 auto;margin-left:auto;display:flex;align-items:center}
+.tab-toc{flex:0 0 auto;background:none;border:0;color:var(--ink-soft);cursor:pointer;padding:0 12px;min-height:48px;display:inline-flex;align-items:center;font-size:18px}
 .tab-toc:hover{color:var(--accent)}
 .toc-fly{position:fixed;top:0;right:0;bottom:0;width:min(78vw,280px);background:var(--paper);border-left:2px solid var(--line);box-shadow:-8px 0 28px rgba(0,0,0,.22);z-index:60;transform:translateX(100%);transition:transform .22s ease;overflow:auto;padding:14px}
 .toc-fly.open{transform:none}
@@ -814,6 +819,112 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .coin input{text-align:center;font-weight:700}
 
 .coin-hint{margin:8px 0 0;text-align:center}
+/* ================= Combat view =================
+   The tab-bar button and the full-screen view. The cards inside keep their own
+   styles — they are the real cards, moved here by 87-combat.js. */
+.tab-combat{flex:0 0 auto;background:none;border:0;color:var(--ink-soft);cursor:pointer;padding:0 8px;min-height:48px;
+  display:inline-flex;align-items:center;gap:5px;font-family:var(--head);font-weight:700;font-size:12px;
+  letter-spacing:.06em;text-transform:uppercase}
+.tab-combat .gicon{width:20px;height:20px;color:currentColor}
+.tab-combat:hover{color:var(--accent)}
+/* In combat: a filled pill, readable from any tab while you look something up. */
+.tab-combat.on{color:var(--paper);background:var(--accent);border-radius:8px;min-height:32px;margin:0 2px;padding:0 9px}
+.tab-combat.on:hover{color:var(--paper);filter:brightness(1.08)}
+/* ≤400px the tab bar scrolls with this group pinned over its end (10-chrome.css),
+   so the pill must fit beside all six tabs or it covers Rules: swords and the
+   number only. The aria-label still reads "round N". */
+@media(max-width:400px){
+  .tab-combat{padding:0 6px}
+  .tab-combat.on{padding:0 6px;gap:3px;margin:0 1px}
+  .tab-combat .cv-rdw{display:none}
+}
+
+/* Above the tab bar (40), below the ☰ flyout (55/60), the item finder (70),
+   modals (80) and toasts — so Cast, Use and Edit open over it as anywhere else. */
+.cview{position:fixed;inset:0;z-index:50;background:var(--paper);display:none;flex-direction:column}
+.cview.open{display:flex}
+html.cv-lock,html.cv-lock body{overflow:hidden}
+.cv-head{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px clamp(10px,2vw,18px);
+  background:var(--paper-2);border-bottom:2px solid var(--line)}
+.cv-head .grow{flex:1}
+/* Phone width: two rows, whatever the state. Row 1 is ✕ · title · ☰; the spacer
+   becomes a full-width row break; row 2 is the tracker with Start/End pushed to
+   the far right — End well clear of ◀ ▶, and in the spot Start held. Tab order
+   stays the markup's (✕, tracker, End, ☰). */
+@media(max-width:480px){
+  .cv-head{row-gap:0}
+  #cvToc{order:1;margin-left:auto}
+  .cv-head .grow{order:2;flex:0 0 100%;height:0;margin-top:8px}
+  .cv-track{order:3}
+  #cvStart,#cvEnd{order:4;margin-left:auto}
+}
+/* The view scrolls itself; the page behind it stays put. */
+.cv-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:clamp(12px,2.4vw,22px)}
+/* One column as wide as the sheet's main column: drag order IS reading order. */
+.cv-list{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)}
+.cv-empty{max-width:780px;margin:24px auto;text-align:center}
+.cv-empty .gicon{display:inline-block;width:16px;height:16px;vertical-align:-3px;color:var(--accent)}
+
+/* ---- the header title ---- */
+.cv-title{display:inline-flex;align-items:center;gap:7px;font-family:var(--head);font-weight:700;
+  text-transform:uppercase;letter-spacing:.12em;font-size:14px;color:var(--ink)}
+.cv-title .gicon{width:20px;height:20px;color:var(--accent)}
+
+/* ---- the per-card toggle, beside the note button ----
+   The .notebtn state language: faint when off, accent when on. It takes the
+   margin-left:auto that parks the pair at the far right; the note button then
+   sits flush beside it. */
+.label .cvbtn{background:none;border:0;cursor:pointer;padding:3px 4px;color:var(--hair);
+  display:inline-flex;align-items:center;flex:none;margin-left:auto}
+.label .cvbtn.on{color:var(--accent)}
+.label .cvbtn:hover,.label .cvbtn:focus-visible{color:var(--accent-2)}
+.label .cvbtn + .notebtn{margin-left:0}
+.cvbtn .cvicon{width:16px;height:16px;color:currentColor}
+
+/* ---- cards that hide themselves when empty ----
+   Active Spells and Familiars vanish from their tab when they have nothing to
+   show. In the view a vanished card reads as a bug, so here they show, with a
+   line saying so; !important beats the inline display:none their renderers
+   write. NOT #skillsCard — in By ability mode its rows live in the Abilities
+   card, and an empty Skills card here would be the bug. */
+#combatView #activeSpellCard,#combatView #familiarCard{display:block!important}
+/* ≤820px the sheet sinks Familiars to the end with order:1 (10-chrome.css), and
+   that rule is not scoped to the sheet: in this flex column it would pin the card
+   last whatever the saved order, so dragging it would seem to do nothing. */
+#combatView #familiarCard{order:0}
+/* The portrait box is square at its card's width; at the view's 780px it would
+   fill the screen. Capped at the sidebar width it was drawn for. */
+#combatView .portrait{max-width:320px;margin-inline:auto}
+#combatView #activeSpellList:empty::before,#combatView #familiarList:empty::before{
+  content:"None right now.";display:block;font-style:italic;color:var(--ink-soft);font-size:14px}
+
+/* ---- the tracker ---- */
+.cv-track{display:inline-flex;align-items:center;gap:6px}
+.cv-round{font-family:var(--head);font-size:14px;min-width:9.5em;text-align:center;color:var(--ink)}
+.cv-round b{font-size:18px}
+/* Phone width: the time stacks under the round, so the tracker and End share
+   row 2 even at 360px. After the rule above, which it overrides. */
+@media(max-width:480px){
+  .cv-round{min-width:6em;line-height:1.15}
+  .cv-round .cv-sep{display:none}
+  .cv-round .cv-time{display:block;font-size:12px;color:var(--ink-soft)}
+}
+.cv-head .tbtn[disabled]{opacity:.4;cursor:default}
+/* The round's live region (the template): read aloud, never seen. */
+.cv-live{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* ---- arranging ----
+   Only the grip starts a drag, so touch-action:none sits on the grip ALONE — a
+   finger anywhere else on a card still scrolls the view. It is the only touch
+   handle, so its hit box is 40×40: the padding grows it and the matching negative
+   margins cancel it out, so the glyph and the heading do not move. The left
+   reaches exactly to the card's edge (15px padding + the glyph's 4px outdent). */
+.cv-grip{flex:none;background:none;border:0;padding:12px 13px 12px 11px;margin:-12px -11px -12px -15px;cursor:grab;
+  color:var(--ink-soft);touch-action:none;display:inline-flex;align-items:center}
+.cv-grip svg{width:16px;height:16px;fill:currentColor}
+.cv-grip:hover,.cv-grip:focus-visible{color:var(--accent-2)}
+.cv-grip:active{cursor:grabbing}
+.cv-dragging{box-shadow:0 16px 36px rgba(0,0,0,.30);outline:2px dashed var(--accent);outline-offset:3px}
 /* ================= Modal ================= */
 .backdrop{position:fixed;inset:0;background:rgba(10,8,5,.62);backdrop-filter:blur(3px);
   display:none;align-items:center;justify-content:center;padding:14px;z-index:80}
@@ -942,10 +1053,29 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
   <button class="tab" data-tab="story" aria-label="Story"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21z"/></svg><span class="tlbl">Story</span></button>
   <button class="tab" data-tab="notes" aria-label="Notes"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg><span class="tlbl">Notes</span></button>
   <button class="tab" data-tab="rules" aria-label="Rules"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/><path d="M9 8h6"/></svg><span class="tlbl">Rules</span></button>
-  <button class="tab-toc" id="btnToc" title="Jump to a section" aria-label="Table of contents">☰</button>
+  <!-- One pinned group: below 400px the bar scrolls sideways (10-chrome.css), and
+       both of these must stay on screen. #btnCombat is painted by
+       renderCombatButton() in 87-combat.js — empty until the first render. -->
+  <div class="tab-tools">
+    <button class="tab-combat" id="btnCombat" title="Combat view" aria-label="Combat view"></button>
+    <button class="tab-toc" id="btnToc" title="Jump to a section" aria-label="Table of contents">☰</button>
+  </div>
 </div>
 <div class="toc-back" id="tocBack"></div>
 <nav class="toc-fly" id="tocFly" aria-label="Sections"></nav>
+<!-- The combat view (87-combat.js). It owns only its header: the cards in #cvList
+     are MOVED here from their tabs while it is open. A direct child of <body>, so
+     the print CSS's body>*:not(#printArea) already hides it. -->
+<div class="cview" id="combatView" role="dialog" aria-modal="true" aria-label="Combat view">
+  <div class="cv-head" id="cvHead"></div>
+  <!-- OUTSIDE #cvHead, which is repainted whole: a live region that is replaced
+       is never announced. setCombatLive() writes the round here. -->
+  <p class="cv-live" id="cvLive" aria-live="polite"></p>
+  <div class="cv-body" id="cvBody">
+    <p class="hint cv-empty" id="cvEmpty" hidden></p>
+    <div class="cv-list" id="cvList"></div>
+  </div>
+</div>
 
 <div class="page">
   <!-- ============ SHEET TAB ============ -->
@@ -1279,6 +1409,11 @@ const FX_LABEL={};fxTargets().forEach(([l,t])=>FX_LABEL[t]=l);
 
 /* ================= state ================= */
 function uid(){return Math.random().toString(36).slice(2,9)}
+/* The combat view's starting sections, in sheet order. Lives HERE rather than in
+   87-combat.js because blankChar() runs at load (`let character=blankChar()`
+   below), long before a later fragment's const exists — ADR-001's TDZ rule. */
+const COMBAT_DEFAULTS=["vitals","statuses","attacks","resources","slots","activespells"];
+
 /* appVersion is the app version this character was last RECONCILED against — not
    "last saved with". It stays "" here on purpose: this function is called at top
    level on the line below, before 30-version.js has run, so touching APP_VERSION
@@ -1300,7 +1435,10 @@ function blankChar(){
     spellAbility:"", slots:{}, spells:[], attacks:[], race:null, bg:null, classes:[], grants:[],
     features:[], inventory:[], statuses:[], familiars:[], glossary:[],
     featCollapse:{groups:{},items:{}}, invCollapse:{items:{}}, atkCollapse:{items:{}}, hdUsed:{}, resources:[],
-    activeSpells:[], combatRound:0, grantGold:{},
+    /* The combat view (87-combat.js). combatActive is its own flag, NOT
+       combatRound>0: the Active Spells card has always moved the round, so plenty
+       of sheets carry a round with no fight behind it. */
+    activeSpells:[], combatRound:0, combatActive:false, combatSections:COMBAT_DEFAULTS.slice(), grantGold:{},
     size:"", encumbrance:"none", coinWeight:true, hpColor:true, hdStyle:"full", statStyle:"classic",
     /* Notes pinned to a section of the sheet, keyed by NOTE_SECTIONS id.
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
@@ -1629,6 +1767,7 @@ const GAME_ICONS={
 "lorc/butterfly":"M222.97 43.094l-17.72 5.937c18.246 54.362 27.075 112.164 24.406 174.47l-.875 20.5 16.032-12.78c47.213-37.597 81.827-86.216 102.282-146.095l-17.688-6.063c-17.04 49.88-44.08 90.906-80.656 124.22.156-56.652-8.915-109.937-25.78-160.188zM53.812 51.22C51.09 160.79 110.03 244.245 208.75 273c2.573-110.1-55.144-193.608-154.938-221.78zm335.156 150.374c-58.436-.03-115.656 25.943-163.5 76.094 90.775 49.848 192.148 32.407 268.217-47.563-34.172-19.135-69.658-28.513-104.718-28.53zM136.936 277.03c-52.45.582-94.1 32.36-116.687 91.25 82.336 33.03 151.56 4.26 182.72-77.374-23.333-9.574-45.51-14.102-66.032-13.875zm81.97 19.47c-37.76 80.056-8.793 149.03 75.343 183.094 37.786-80.46 9.994-149.316-75.344-183.094z",
 "lorc/cat":"M463.46 37.008l-30.694 50.738-7.043-2.28c-27.146-8.797-71.525-7.15-97.6.11L321.22 87.5l-28.68-48.543c-33.63 69.254-32.264 117.56-14.79 148.574 18.71 33.208 57.378 49.09 99.117 48.574 48.743-.606 88.968-19.665 107.035-54.194 16.918-32.332 15.684-80.456-20.443-144.902zM323.935 137.594c18.45.1 29.36 15.338 31.462 36.644-37.11 17.91-53.963 3.398-61.173-26.545 11.382-7.063 21.324-10.144 29.71-10.1zm109.26 0c8.385-.045 18.328 3.036 29.71 10.1-7.21 29.942-24.064 44.454-61.174 26.544 2.104-21.306 13.014-36.545 31.463-36.644zm-293.553 50.96c-1.226-.01-2.446-.003-3.66.018-30.175.536-56.142 10.59-75.743 26.574-43.444 35.43-57.27 100.752-12.824 166.192 20.293 33.995 44.432 54.24 70.797 64.187 32.85 12.395 66.655 8.823 99.94 4.114 33.284-4.71 65.854-10.63 96.896-8.42 31.04 2.212 62.09 10.18 90.505 41.165 19.374 21.125 46.887-1.627 23.82-24.156-35.024-34.207-72.527-47.42-109.377-50.04-36.85-2.62-72.2 4.698-104.207 9.228-32.007 4.53-60.272 6.552-84.558-2.61-14.39-5.43-28.308-14.802-41.55-31.142h351.744c13.673-52.293 14.867-106.368 1.873-142.072-19.765 8.49-42.412 12.9-66.2 13.197h-.002c-29.85.37-59.458-6.925-82.907-22.823-4.647 3.012-9.407 6.23-14.292 9.685l-5.734 4.057-5.49-4.382c-46.63-37.2-91.028-52.48-129.03-52.773z",
 "lorc/compass":"M203.97 23l-18.032 4.844 11.656 43.468c-25.837 8.076-50.32 21.653-71.594 40.75L94.53 80.594l-13.218 13.22 31.376 31.374c-19.467 21.125-33.414 45.53-41.813 71.343l-42.313-11.343-4.843 18.063 42.25 11.313c-6.057 27.3-6.157 55.656-.345 83L23.72 308.78l4.843 18.064 41.812-11.22c6.693 21.225 17.114 41.525 31.25 59.876l-29.97 52.688-16.81 29.593 29.56-16.842 52.657-29.97c18.41 14.216 38.784 24.69 60.094 31.407l-11.22 41.844 18.033 4.81 11.218-41.905c27.345 5.808 55.698 5.686 83-.375l11.312 42.28 18.063-4.81-11.344-42.376c25.812-8.4 50.217-22.315 71.342-41.78l31.375 31.373 13.22-13.218-31.47-31.47c19.09-21.266 32.643-45.738 40.72-71.563l43.53 11.657 4.813-18.063-43.625-11.686c5.68-27.044 5.576-55.06-.344-82.063l43.97-11.78-4.813-18.063L440.908 197c-6.73-20.866-17.08-40.79-31.032-58.844l29.97-52.656 16.842-29.563-29.593 16.844-52.656 29.97c-17.998-13.875-37.874-24.198-58.657-30.906l11.783-44L309.5 23l-11.78 43.97c-27-5.925-55.02-6.05-82.064-.376L203.97 23zm201.56 85L297.25 298.313l-.75.437-40.844-40.875-148.72 148.72-2.186 1.25 109.125-191.75 41.78 41.78L405.532 108zm-149.686 10.594c21.858 0 43.717 5.166 63.594 15.47l-116.625 66.342-2.22 1.28-1.28 2.22-66.25 116.406c-26.942-52.04-18.616-117.603 25.03-161.25 26.99-26.988 62.38-40.468 97.75-40.468zm122.72 74.594c26.994 52.054 18.67 117.672-25.002 161.343-43.66 43.662-109.263 52.005-161.312 25.033l116.438-66.282 2.25-1.25 1.25-2.25 66.375-116.592z",
+"lorc/crossed-swords":"M19.75 14.438c59.538 112.29 142.51 202.35 232.28 292.718l3.626 3.75.063-.062c21.827 21.93 44.04 43.923 66.405 66.25-18.856 14.813-38.974 28.2-59.938 40.312l28.532 28.53 68.717-68.717c42.337 27.636 76.286 63.646 104.094 105.81l28.064-28.06c-42.47-27.493-79.74-60.206-106.03-103.876l68.936-68.938-28.53-28.53c-11.115 21.853-24.413 42.015-39.47 60.593-43.852-43.8-86.462-85.842-130.125-125.47-.224-.203-.432-.422-.656-.625C183.624 122.75 108.515 63.91 19.75 14.437zm471.875 0c-83.038 46.28-154.122 100.78-221.97 161.156l22.814 21.562 56.81-56.812 13.22 13.187-56.438 56.44 24.594 23.186c61.802-66.92 117.6-136.92 160.97-218.72zm-329.53 125.906l200.56 200.53c-4.36 4.443-8.84 8.793-13.405 13.032L148.875 153.53l13.22-13.186zm-76.69 113.28l-28.5 28.532 68.907 68.906c-26.29 43.673-63.53 76.414-106 103.907l28.063 28.06c27.807-42.164 61.758-78.174 104.094-105.81l68.718 68.717 28.53-28.53c-20.962-12.113-41.08-25.5-59.937-40.313 17.865-17.83 35.61-35.433 53.157-52.97l-24.843-25.655-55.47 55.467c-4.565-4.238-9.014-8.62-13.374-13.062l55.844-55.844-24.53-25.374c-18.28 17.856-36.602 36.06-55.158 54.594-15.068-18.587-28.38-38.758-39.5-60.625z",
 "lorc/crown":"M408.256 119.46l-37.7 52.165 19.57 44.426 34.8-37.214-16.67-59.375zm86.074 12.513L384.44 249.498 334.01 135.02l-75.162 132.947-86.948-131.78-33.334 114.122L17.922 132.83l39.3 127.6c1.945-.348 3.94-.54 5.98-.54 18.812 0 34.26 15.452 34.26 34.262 0 13.823-8.346 25.822-20.235 31.22l5.337 17.33c12.425 25.466 71.863 45.152 176.582 47.206 110.805 2.174 178.12-17.54 189.854-47.207h-.002l4.357-20.26c-16.836-2.114-30.02-16.612-30.02-33.986 0-18.81 15.45-34.262 34.263-34.262 3.513 0 6.91.54 10.11 1.54l26.622-123.762zm-391.77 2.04l1.22 56.337 25.56 24.89 9.592-32.842-36.37-48.386zm150.585 2.91l-24.483 51.36 28.955 43.885 24.922-44.08-29.395-51.166zm204.453 135.962c-8.712 0-15.575 6.862-15.575 15.572 0 8.71 6.863 15.574 15.575 15.574s15.572-6.863 15.572-15.573-6.86-15.572-15.572-15.572zM63.2 278.58c-8.71 0-15.573 6.864-15.573 15.574s6.862 15.573 15.574 15.573c8.713 0 15.573-6.862 15.573-15.573 0-8.71-6.86-15.574-15.572-15.574zm130.33 17.842c18.812 0 34.26 15.45 34.26 34.262 0 18.81-15.448 34.26-34.26 34.26-18.813 0-34.262-15.45-34.262-34.26s15.45-34.262 34.26-34.262zm131.234 0c18.812 0 34.26 15.45 34.26 34.262 0 18.81-15.448 34.26-34.26 34.26-18.813 0-34.262-15.45-34.262-34.26s15.45-34.262 34.262-34.262zm-131.235 18.69c-8.713 0-15.573 6.86-15.573 15.572 0 8.71 6.86 15.574 15.572 15.574 8.71 0 15.572-6.864 15.572-15.574s-6.86-15.573-15.573-15.573zm131.234 0c-8.712 0-15.573 6.86-15.573 15.572 0 8.71 6.862 15.574 15.574 15.574s15.574-6.864 15.574-15.574-6.862-15.573-15.574-15.573z",
 "lorc/dna1":"M121.844 18.22c-10.248 46.5-5.753 86.598 7.562 121 31.722 35.503 74.78 60.367 119.5 84.405-15.144-14.727-29.5-29.294-41.97-44.188h72.94c5.318-6.197 10.267-12.425 14.812-18.687H192.5c-4.946-7.035-9.397-14.18-13.25-21.5-2.036-3.867-3.926-7.78-5.656-11.75h140.594c2.73-6.087 5.032-12.27 6.875-18.688h-154.22c-3.453-12.16-5.326-25.127-5.218-39.437h164.25c-.176-5.948-.708-12.168-1.656-18.72H162.843c1.202-10.093 3.29-20.866 6.437-32.436h-47.436zm216.03 0c10.033 36.836 9.616 65.44 2.47 90.593h-.156c-3.215 13.34-8.158 25.723-14.375 37.53-15.708 29.833-40.195 56.197-67.094 82.532 12.75 6.806 25.567 13.607 38.25 20.625 26.73-26.167 52.8-54.185 71.03-88.813 20.463-38.87 29.83-85.945 17.375-142.468h-47.5zm-129 253.81c-20.338 21.212-39.452 44.344-53.936 71.69-21.326 40.26-31.11 89.958-19.438 149.467h45.625c-5.036-22.15-6.48-42.845-5.03-62 .458-7.468 1.38-14.606 2.75-21.468H179c1.278-6.435 2.896-12.663 4.813-18.69.024-.07.038-.145.062-.217 3.025-9.47 6.796-18.44 11.188-26.875 14.96-28.73 35.86-51.34 56.5-71.813-14.107-6.74-28.446-13.326-42.688-20.094zm47.595 22.47c14.437 14.55 27.88 29.196 39.186 44.563h-61.812c-4.798 5.982-9.337 12.195-13.53 18.687h87.75c1.445 2.45 2.832 4.94 4.155 7.438 4.388 8.287 8.147 16.85 11.155 25.843H203.5c-2.184 5.98-4.007 12.218-5.47 18.69h130.314c2.428 12.173 3.525 25.21 2.937 39.436H194.19c.137 6.05.58 12.28 1.375 18.688h134.062c-1.072 8.062-2.65 16.496-4.75 25.344h46.813c9.533-48.618 4.736-90.682-8.97-126.407-28.443-31.848-66.276-52.97-106.25-72.28z",
 "lorc/dragon-head":"M200.947 18.686c-6.98.087-14.64.774-22.85 1.9 27.57 20.468 51.098 45.25 67.594 70.527 1.66 0 3.312.012 4.958.047 18.066.39 35.487 2.906 53.217 7.2-15.695-28.457-29.935-50.19-47.45-63.22-13.817-10.278-30.063-16.168-52.52-16.454-.967-.013-1.95-.013-2.948 0zm-91.66 22.96c-.73-.002-1.46.006-2.195.022-14.045.31-29.36 3.92-46.86 11.13 56.18 18.807 106.985 50.468 133.907 83.585 18.377-5.13 29.44-14.72 36.454-28.817C195.84 78.18 168.118 56.19 140.65 46.96c-10.168-3.418-20.433-5.306-31.363-5.315zm-.203 52.786c-39.42 6.758-74.73 31.854-87.822 74.19v322.345h212.73C100.352 442.58 61.19 206.49 187.115 230.104c5.838-14.164 9.92-28.027 11.018-41.465l18.627 1.522c-1.684 20.592-8.828 40.49-18.033 59.943-.732 2.035-1.472 4.12-2.186 6.063 32.842 85.24 113.77 160.69 169.495 168.197.915.033 1.905-.002 2.953-.09 17.016 1.035 35.86-4.222 52.21-22.304l7.984-8.83-10.473-5.658c-6.507-3.515-14.29-7.094-18.167-10.925-1.938-1.916-2.793-3.47-3.074-5.194-.282-1.725-.13-4.227 2.23-8.578l10.673-19.656-21.484 6.222c-6.304 1.825-17.305-3.032-23.224-10.71-2.96-3.84-4.408-7.907-4.387-10.843.02-2.938.72-5.125 4.747-8.05l19.453-14.125-23.884-2.72c-9.974-1.137-16.37-6.658-19.17-12.294-2.802-5.634-2.312-10.084 1.375-13.31l12.204-10.677-15.358-5.205c-6.717-2.276-10.296-7.555-10.357-10.633-.028-1.373.238-2.666 1.843-4.476 10.93-2.39 21.258-.45 28.088 6.374 6.154 6.146 8.35 15.128 6.977 24.832 8.55-2.254 16.985-1.616 24.112 2.494 9.34 5.387 14.647 15.692 15.67 27.965 15.212-10.132 32.152-12.725 45.262-5.164 15.467 8.92 21.36 29.513 16.805 51.75 23.992-33.355 34.588-75.717 5.617-120.43-46.726-4.442-81.693-30.676-93.293-67.64-5.026-16.016-21.284-28.67-42-37.904l-.08.217c-29.74-10.823-55.575-17.35-82.604-18.733l.08.155c-2.294-.093-4.56-.16-6.762-.172-9.537 22.874-28.662 39.9-57.436 46.054l-5.906 1.262-3.576-4.864c-14.216-19.33-41.23-40.452-74.002-58.074zm156.215 65.26c27.927-.073 44.874 11.617 42.09 44.45-35.844 3.39-51.933-16.683-63.074-42.632 7.507-1.155 14.538-1.8 20.983-1.817zm48.407 66.363c3.708.07 7.14.994 10.014 2.812-1.51 1.102-2.898 2.28-4.16 3.543-5.246 5.24-8.087 12.122-7.956 18.742.183 9.322 5.27 17.184 12.68 22.56-3.14 8.103-2.452 17.455 1.407 25.22 3.813 7.668 10.54 14.273 19.302 18.398-1.445 3.366-2.375 6.862-2.4 10.33-.062 8.407 3.38 16.042 8.273 22.39 6.792 8.81 16.862 15.936 28.026 17.91-.183 2.18-.204 4.333.133 6.407 1.05 6.444 4.515 11.66 8.38 15.48 3.41 3.37 7.19 5.892 10.798 7.993-6.345 4.792-12.414 7.056-18.618 7.79-6.515-7.937-9.71-19.084-9.41-31.454-11.767 6.177-24.21 7.156-34.12 1.44-14.668-8.46-19.393-29.036-13.187-50.33-11.336 2.77-22.13.92-29.187-6.132-8.875-8.865-9.535-23.626-3.094-37.95-3.676-.615-6.963-2.166-9.525-4.725-8.808-8.798-5.773-26.09 6.776-38.626 7.843-7.835 17.546-11.957 25.87-11.8z",
@@ -1740,6 +1879,9 @@ const ICON_MAP={
 "wayfarer":"lorc/boots",
 "wind-touched":"lorc/feather",
 "wonderstruck":"lorc/star-swirl"
+},
+"ui":{
+"combat":"lorc/crossed-swords"
 }
 };
 const ICON_ARTISTS=["Caro Asercion","DarkZaitzev","Delapouite","Lorc","Skoll"];
@@ -2340,6 +2482,9 @@ function openChangelog(){
    top of the page, but jumping to a note wants that note's card — so the scroll
    is the caller's decision, not this function's. */
 function selectTab(name){
+  /* Leaving for a tab means leaving the combat view first: it sends the cards
+     home, or a note link would land on a tab with its cards missing. */
+  closeCombatView();
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
   document.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+name));
   closeToc();
@@ -2348,6 +2493,10 @@ function selectTab(name){
    rather than assumed. Shared by the table of contents and the notes jump. */
 function scrollToCard(el){
   if(!el)return;
+  /* In the combat view the card sits in #cvBody, which scrolls on its own under a
+     header that is not the tab bar. */
+  const box=el.closest("#cvBody");
+  if(box){box.scrollTo({top:Math.max(0,el.getBoundingClientRect().top-box.getBoundingClientRect().top+box.scrollTop-10),behavior:"smooth"});return;}
   const tb=document.querySelector(".tabbar");
   const off=(tb?tb.getBoundingClientRect().height:48)+10;
   const y=el.getBoundingClientRect().top+window.scrollY-off;
@@ -2355,8 +2504,10 @@ function scrollToCard(el){
 }
 function buildToc(){
   const fly=document.getElementById("tocFly");if(!fly)return;
-  const panel=document.querySelector(".tabpanel.active");
-  const tabBtn=document.querySelector(".tab.active");const tabName=tabBtn?tabBtn.textContent.trim():"Sections";
+  /* With the combat view open, ☰ lists the view's cards, not the tab behind it. */
+  const inView=combatViewOpen();
+  const panel=inView?document.getElementById("cvList"):document.querySelector(".tabpanel.active");
+  const tabBtn=document.querySelector(".tab.active");const tabName=inView?"Combat":(tabBtn?tabBtn.textContent.trim():"Sections");
   const items=[];
   if(panel)panel.querySelectorAll(".card > .label, .inv-sec-head").forEach(node=>{
     const target=node.classList.contains("inv-sec-head")?node:node.closest(".card");
@@ -2371,7 +2522,9 @@ function buildToc(){
   fly.innerHTML=`<h4>${esc(tabName)}</h4>`+(items.length?"":`<p class="hint" style="padding:6px">No sections here.</p>`);
   items.forEach(it=>{const a=document.createElement("a");a.textContent=it.t;if(it.sub)a.style.paddingLeft="20px";a.addEventListener("click",()=>{closeToc();scrollToCard(it.target);});fly.appendChild(a);});
 }
-function openToc(){buildToc();const tb=document.querySelector(".tabbar");const top=tb?Math.max(0,Math.round(tb.getBoundingClientRect().bottom)):0;const fly=document.getElementById("tocFly"),back=document.getElementById("tocBack");if(fly)fly.style.top=top+"px";if(back)back.style.top=top+"px";if(fly)fly.classList.add("open");if(back)back.classList.add("open");}
+/* In the combat view the flyout hangs under the view's header, not the tab bar
+   the view covers. */
+function openToc(){buildToc();const tb=combatViewOpen()?document.getElementById("cvHead"):document.querySelector(".tabbar");const top=tb?Math.max(0,Math.round(tb.getBoundingClientRect().bottom)):0;const fly=document.getElementById("tocFly"),back=document.getElementById("tocBack");if(fly)fly.style.top=top+"px";if(back)back.style.top=top+"px";if(fly)fly.classList.add("open");if(back)back.classList.add("open");}
 function closeToc(){const f=document.getElementById("tocFly"),b=document.getElementById("tocBack");if(f)f.classList.remove("open");if(b)b.classList.remove("open");}
 function invSection(it){
   const ov=String(it.sectionOverride||"").trim();
@@ -2560,8 +2713,10 @@ function renderFamiliars(){
   const has=character.familiars.length>0;
   card.style.display=has?"":"none";
   link.style.display=has?"none":"";
-  if(!has)return;
+  /* Cleared BEFORE the early return: the combat view shows this card even when it
+     is empty, and a list still holding the last familiar removed would show it. */
   const el=document.getElementById("familiarList");el.innerHTML="";
+  if(!has)return;
   character.familiars.forEach(f=>{
     const on=!!f.active;
     const stats=[f.ac!==""&&f.ac!=null?`AC ${esc(f.ac)}`:"",(f.hp&&(f.hp.max!==""&&f.hp.max!=null))?`HP ${esc(f.hp.cur||0)}/${esc(f.hp.max)}`:"",f.speed?`Speed ${esc(f.speed)}`:""].filter(Boolean).join(" · ");
@@ -3703,9 +3858,14 @@ function maybeExpire(a){
   if(a.durationSec!=null&&a.elapsedSec<a.durationSec)a.expiredPrompted=false;
 }
 function advanceRound(dir){
-  character.combatRound=Math.max(0,num(character.combatRound)+dir);
+  /* In combat the floor is round 1, Start combat's round. A step that cannot move
+     the round must not move the spells either, or ◀ at round 1 would quietly take
+     6 seconds off every active spell. Out of combat, exactly as before. */
+  const cur=num(character.combatRound);
+  if(inCombat(character)&&cur+dir<1)return;
+  character.combatRound=Math.max(0,cur+dir);
   (character.activeSpells||[]).slice().forEach(a=>bumpActive(a,dir*6));
-  renderActiveSpells();scheduleSave();
+  renderActiveSpells();renderCombatChrome();scheduleSave();
 }
 function renderActiveSpells(){
   const card=document.getElementById("activeSpellCard"),el=document.getElementById("activeSpellList");
@@ -4505,6 +4665,9 @@ function renderAll(){
      condition for a spell that isn't running. */
   syncConcStatus();
   renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderRulesSections();renderNoteIcons();renderNotes();renderAllRT();recompute();
+  /* LAST: the combat toggles sit beside the note buttons drawn above, and an open
+     combat view refills from THIS character — every character switch ends here. */
+  syncCombatView();
 }
 
 /* ================= persistence ================= */
@@ -6895,6 +7058,326 @@ function openNoteEditor(k){
     closeModal();renderNoteIcons();renderNotes();scheduleSave();
   });
 }
+/* ================= combat view =================
+   A full-screen view of the sections the player picked from any tab. They are
+   the REAL cards, moved in while the view is open and back to a hidden marker
+   at home when it closes: copies would duplicate every id (the #17 bug, where
+   the visible copy updates and the hidden one rots), and a purpose-built
+   dashboard would re-implement every section's controls. Closing the view never
+   ends combat. Design: src/docs/specs/2026-09-24-combat-view-design.md
+
+   The pure half comes first — no DOM — so src/tests/sheet.js can assert it. */
+
+/* Only a real true: a hand-edited file saying "true" is not a fight. */
+function inCombat(c){return !!c&&c.combatActive===true;}
+
+/* Not an array means "never chosen" and gets the defaults. An EMPTY array is a
+   real choice (the player took everything out) and stays empty. Unknown keys and
+   repeats are dropped, so an old or hand-edited file cannot put a card in twice. */
+function combatSectionsOf(c){
+  const raw=c&&c.combatSections;
+  if(!Array.isArray(raw))return COMBAT_DEFAULTS.slice();
+  const known=new Set(NOTE_SECTIONS.map(s=>s.k)),out=[];
+  raw.forEach(k=>{if(typeof k==="string"&&known.has(k)&&!out.includes(k))out.push(k);});
+  return out;
+}
+function withCombatSection(list,k,on){
+  if(on)return list.includes(k)?list.slice():list.concat([k]);
+  return list.filter(x=>x!==k);
+}
+/* `to` is where the section ends up. Never edits the list it was given. */
+function moveCombatSection(list,from,to){
+  const out=list.slice();
+  if(from<0||from>=out.length)return out;
+  const [k]=out.splice(from,1);
+  out.splice(Math.max(0,Math.min(out.length,to)),0,k);
+  return out;
+}
+
+/* Start always means round 1, even over a round the Active Spells card left
+   behind. Active spells are not touched: their time moves only when rounds do. */
+function combatStart(c){c.combatActive=true;c.combatRound=1;}
+/* The summary counts the round being ended as finished (round 7 → 7 rounds,
+   42 sec), while the header shows the time at the START of the current round
+   (combatElapsedSec: round 7 → 36 sec). Both on purpose — don't "fix" one to
+   match the other. */
+function combatEnd(c){
+  const rounds=Math.max(0,num(c.combatRound));
+  c.combatActive=false;c.combatRound=0;
+  return {rounds,sec:rounds*6};
+}
+function combatElapsedSec(c){return Math.max(0,num(c&&c.combatRound)-1)*6;}
+function fmtCombatTime(sec){
+  sec=Math.max(0,Math.floor(num(sec)));
+  if(sec<60)return sec+" sec";
+  if(sec<3600){const m=Math.floor(sec/60),s=sec%60;return m+" min"+(s?" "+s+" sec":"");}
+  const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60);
+  return h+" hr"+(m?" "+m+" min":"");
+}
+
+/* ---- the tab-bar button ----
+   Idle: the crossed swords alone. In combat: highlighted, with the round, so it
+   reads from any tab while you look something up. "Rd " is its own span so a
+   phone-width tab bar can drop it and keep the number (45-combat.css); the
+   aria-label still says "round N". */
+function combatButtonHTML(c){
+  return iconSVG("ui","Combat")+(inCombat(c)?`<span class="cv-rd"><span class="cv-rdw">Rd </span>${num(c.combatRound)}</span>`:"");
+}
+function renderCombatButton(){
+  const b=document.getElementById("btnCombat");if(!b)return;
+  const on=inCombat(character), l=on?`Combat view — round ${num(character.combatRound)}`:"Combat view";
+  b.innerHTML=combatButtonHTML(character);
+  b.classList.toggle("on",on);
+  b.setAttribute("aria-label",l);b.title=l;
+}
+/* ================= the DOM layer ================= */
+/* Session only, never saved: whether the view is open, where it and the page
+   were scrolled, and whose cards those were. A reload starts closed; combat
+   itself is saved on the character. */
+let cvOpen=false, cvScroll=0, cvPageScroll=0, cvCharId=null;
+function combatViewOpen(){return cvOpen;}
+
+/* Found fresh every time, never cached: a card re-rendered while it sat in the
+   view must still be the one that goes home. */
+function combatCard(k){return document.querySelector(`.card[data-note="${k}"]`);}
+
+/* What the toggle says: the title is the action, the aria-label adds the card. */
+function combatToggleText(k,on){
+  const l=(on?"Remove from":"Add to")+" combat view";
+  return {title:l,label:l+" — "+noteTitle(noteDef(k))};
+}
+function combatToggleHTML(k,on){
+  const t=combatToggleText(k,on);
+  return `<button class="cvbtn${on?" on":""}" data-combatbtn="${esc(k)}" aria-pressed="${on?"true":"false"}" aria-label="${esc(t.label)}" title="${t.title}">`+
+    iconSVG("ui","Combat","cvicon")+`</button>`;
+}
+/* A click repaints the one button in place. Replacing it (outerHTML) would drop
+   keyboard focus from the button the player just pressed. */
+function paintCombatToggle(k,on){
+  const b=document.querySelector(`[data-combatbtn="${k}"]`);if(!b)return;
+  const t=combatToggleText(k,on);
+  b.classList.toggle("on",on);b.setAttribute("aria-pressed",on?"true":"false");
+  b.setAttribute("aria-label",t.label);b.title=t.title;
+}
+/* Mirrors renderNoteIcons(): idempotent, replaces only its own button, and never
+   label.innerHTML += — that re-parses the label and destroys #starBtn, #encPill
+   and #roundNum. It goes just before the note button, which parks itself at the
+   far right with margin-left:auto. */
+function renderCombatToggles(){
+  const on=new Set(combatSectionsOf(character));
+  NOTE_SECTIONS.forEach(def=>{
+    const card=combatCard(def.k);if(!card)return;
+    const label=card.querySelector(".label");if(!label)return;
+    const html=combatToggleHTML(def.k,on.has(def.k)), old=label.querySelector("[data-combatbtn]");
+    if(old){old.outerHTML=html;return;}
+    const note=label.querySelector("[data-notebtn]");
+    if(note)note.insertAdjacentHTML("beforebegin",html);else label.insertAdjacentHTML("beforeend",html);
+  });
+}
+/* Whether a card in the view actually shows. Computed style, not the inline one:
+   the view's CSS overrides #activeSpellCard's inline display:none, but not the
+   Skills card's in By ability mode. Not offsetParent either — fillCombatView()
+   runs before the view itself is shown. */
+function cvCardShown(card){return getComputedStyle(card).display!=="none";}
+function renderCombatEmpty(){
+  const e=document.getElementById("cvEmpty");if(!e)return;
+  e.innerHTML=`Add sections with the ${iconSVG("ui","Combat")} button on any card.`;
+  e.hidden=[...document.querySelectorAll("#cvList .card")].some(cvCardShown);
+}
+/* In: a hidden marker takes each card's place at home and the card goes to the
+   end of the list, so cards arrive in the saved order. Cards already in the view
+   are skipped, which makes this safe to call again to add one. */
+function fillCombatView(){
+  const list=document.getElementById("cvList");if(!list)return;
+  combatSectionsOf(character).forEach(k=>{
+    const card=combatCard(k);if(!card||card.closest("#combatView"))return;
+    const home=document.createElement("span");home.hidden=true;home.dataset.cvhome=k;
+    card.before(home);list.appendChild(card);addGrip(card,k);
+  });
+  renderCombatEmpty();
+}
+/* Out: the grip comes off, so no tab ever shows one, and the card takes its
+   marker's place — exactly where it was. */
+function sendCardHome(k){
+  const home=document.querySelector(`[data-cvhome="${k}"]`),card=combatCard(k);
+  if(card)removeGrip(card);
+  if(home&&card)home.replaceWith(card);else if(home)home.remove();
+}
+function emptyCombatView(){document.querySelectorAll("[data-cvhome]").forEach(h=>sendCardHome(h.dataset.cvhome));}
+
+/* ✕ · title · tracker · (space) · Start or End · ☰. End sits past the spacer,
+   well away from the arrows, so a hurried tap on ▶ cannot hit it. On a phone
+   CSS re-flows the same markup into two rows. The time has its own spans so it
+   can stack under the round there. No aria-live here: this is repainted, and a
+   live region that is replaced is never announced — #cvLive is. */
+function combatHeaderHTML(c){
+  const close=`<button class="tbtn" id="cvClose" aria-label="Close the combat view — combat keeps going" title="Close (combat keeps going)">✕</button>`;
+  const title=`<span class="cv-title">${iconSVG("ui","Combat")}Combat</span>`;
+  const toc=`<button class="tbtn" id="cvToc" aria-label="Jump to a section" title="Jump to a section">☰</button>`;
+  if(!inCombat(c))return close+title+`<span class="grow"></span><button class="tbtn primary" id="cvStart">Start combat</button>`+toc;
+  const r=num(c.combatRound);
+  return close+title+
+    `<span class="cv-track"><button class="tbtn" id="cvPrev" aria-label="Previous round"${r<=1?" disabled":""}>◀</button>`+
+    `<span class="cv-round">Round <b>${r}</b><span class="cv-sep"> · </span><span class="cv-time">${fmtCombatTime(combatElapsedSec(c))}</span></span>`+
+    `<button class="tbtn" id="cvNext" aria-label="Next round">▶</button></span>`+
+    `<span class="grow"></span><button class="tbtn danger" id="cvEnd">End combat</button>`+toc;
+}
+/* Repainting replaces every button, so focus is carried across by id. When that
+   button is gone or disabled — ◀ at round 1, Start once combat starts, End once
+   it ends — focus goes where the next press is most likely. */
+function renderCombatHeader(){
+  const h=document.getElementById("cvHead");if(!h)return;
+  const a=document.activeElement,had=a&&a.id&&h.contains(a)?a.id:"";
+  h.innerHTML=combatHeaderHTML(character);
+  if(inCombat(character))setCombatLive("Round "+num(character.combatRound));
+  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart"};
+  for(let id=had,i=0;id&&i<4;id=instead[id],i++){
+    const b=document.getElementById(id);
+    if(b&&!b.disabled){b.focus();break;}
+  }
+}
+/* The one live region, never repainted, so a screen reader hears each change. */
+function setCombatLive(t){const l=document.getElementById("cvLive");if(l&&l.textContent!==t)l.textContent=t;}
+
+function openCombatView(){
+  if(cvOpen)return;
+  const view=document.getElementById("combatView"),body=document.getElementById("cvBody");
+  if(!view||!body)return;
+  closeToc();
+  if(character.id!==cvCharId){cvCharId=character.id;cvScroll=0;}
+  cvPageScroll=window.scrollY;
+  fillCombatView();
+  document.documentElement.classList.add("cv-lock");
+  view.classList.add("open");cvOpen=true;
+  cvInert(true);
+  setCombatLive("");   // no stale "Combat ended…" from another fight or character
+  renderCombatHeader();
+  body.scrollTop=cvScroll;
+  const x=document.getElementById("cvClose");if(x)x.focus();
+}
+/* Closing NEVER ends combat — End combat is its own button. */
+function closeCombatView(){
+  if(!cvOpen)return;
+  const view=document.getElementById("combatView"),body=document.getElementById("cvBody");
+  if(body)cvScroll=body.scrollTop;
+  closeToc();
+  emptyCombatView();
+  if(view)view.classList.remove("open");
+  document.documentElement.classList.remove("cv-lock");
+  cvOpen=false;cvInert(false);
+  window.scrollTo({top:cvPageScroll});
+  const b=document.getElementById("btnCombat");if(b)b.focus({preventScroll:true});
+}
+/* The view is aria-modal, but that alone does not stop Tab: the page behind it
+   stays focusable, invisibly. inert takes the top bar, tab bar and page out of
+   reach while the view is open. The modal, the item finder, the ☰ flyout and the
+   toast all sit OUTSIDE these three, so they keep working over the view. */
+function cvInert(on){
+  document.querySelectorAll(".topbar,.tabbar,.page").forEach(el=>{if(on)el.setAttribute("inert","");else el.removeAttribute("inert");});
+}
+function toggleCombatSection(k){
+  const def=noteDef(k);if(!def)return;
+  const cur=combatSectionsOf(character), on=!cur.includes(k);
+  character.combatSections=withCombatSection(cur,k,on);
+  if(cvOpen){if(on)fillCombatView();else{sendCardHome(k);renderCombatEmpty();}}
+  paintCombatToggle(k,on);scheduleSave();
+  toast((on?"Added ":"Removed ")+noteTitle(def)+(on?" to":" from")+" the combat view");
+}
+
+/* Everything that shows combat state repaints through here. The round moves from
+   three places — the view's arrows, the Active Spells card's own buttons, and
+   Start/End — so none of them can disagree. */
+function renderCombatChrome(){renderCombatButton();if(cvOpen)renderCombatHeader();}
+/* The last thing renderAll() does — and every character switch ends in
+   renderAll(). An open view re-lays itself from THIS character's list, keeping
+   its scroll for the same character; another character's remembered scroll is
+   dropped, since it belonged to other cards. */
+function syncCombatView(){
+  const switched=character.id!==cvCharId;
+  if(switched){cvCharId=character.id;cvScroll=0;}
+  if(cvOpen){
+    const body=document.getElementById("cvBody"),keep=(!switched&&body)?body.scrollTop:0;
+    emptyCombatView();fillCombatView();
+    if(body)body.scrollTop=keep;
+  }
+  renderCombatToggles();renderCombatChrome();
+}
+
+/* ---- the tracker ---- */
+function startCombatNow(){combatStart(character);renderActiveSpells();renderCombatChrome();scheduleSave();}
+/* Asked first: the round count is the one thing here a stray tap would lose. */
+function endCombatAsk(){
+  const r=num(character.combatRound);
+  if(!confirm(`End combat at round ${r}?`))return false;
+  const s=combatEnd(character);
+  renderActiveSpells();renderCombatChrome();scheduleSave();
+  const msg=`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`;
+  toast(msg);setCombatLive(msg);
+  return true;
+}
+
+/* ---- arranging ----
+   Inside the view only, each card heading gets a grip. The grip is a real
+   <button>: focused, ↑ and ↓ move its card one place — the path for anyone
+   without a mouse or touch. */
+function combatGripHTML(k){
+  const t=noteTitle(noteDef(k));
+  return `<button class="cv-grip" data-cvgrip="${esc(k)}" aria-label="Move ${esc(t)} — ↑ and ↓ move it one place" title="Drag to move">`+
+    `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></button>`;
+}
+function addGrip(card,k){const l=card.querySelector(".label");if(l&&!l.querySelector("[data-cvgrip]"))l.insertAdjacentHTML("afterbegin",combatGripHTML(k));}
+function removeGrip(card){const g=card.querySelector("[data-cvgrip]");if(g)g.remove();}
+/* The saved order is the truth; the view is re-laid from it. */
+function setCombatOrder(list){
+  character.combatSections=list;
+  const box=document.getElementById("cvList");
+  if(box)list.forEach(k=>{const c=combatCard(k);if(c&&c.parentNode===box)box.appendChild(c);});
+  scheduleSave();
+}
+function moveCombatCard(k,delta){
+  const list=combatSectionsOf(character),from=list.indexOf(k),to=from+delta;
+  if(from<0||to<0||to>=list.length)return;
+  setCombatOrder(moveCombatSection(list,from,to));
+  const g=document.querySelector(`[data-cvgrip="${k}"]`);if(g)g.focus();
+}
+/* Pointer events, not HTML5 drag-and-drop, which is unreliable on phones. The
+   dragged card is NEVER moved itself — moving an element can drop its pointer
+   capture mid-drag — so its NEIGHBOURS hop over it instead. A hidden card (Skills
+   in By ability mode) has no height to pass, so it is never the neighbour: it
+   hops along with the next shown one. Near the view's top or bottom edge the
+   view scrolls. The order is read back off the DOM on release. */
+function startCombatDrag(e,grip){
+  const card=grip.closest(".card"),list=document.getElementById("cvList"),body=document.getElementById("cvBody");
+  if(!card||!list||!body||card.parentNode!==list)return;
+  e.preventDefault();
+  try{grip.setPointerCapture(e.pointerId);}catch(err){}
+  card.classList.add("cv-dragging");
+  const mid=el=>{const r=el.getBoundingClientRect();return r.top+r.height/2;};
+  const shownSib=(el,dir)=>{do el=el[dir];while(el&&!cvCardShown(el));return el;};
+  const run=(a,b)=>{const out=[];for(let x=a;x;x=x.nextElementSibling){out.push(x);if(x===b)break;}return out;};
+  const move=ev=>{
+    const y=ev.clientY,prev=shownSib(card,"previousElementSibling"),next=shownSib(card,"nextElementSibling");
+    if(prev&&y<mid(prev))card.after(...run(prev,card.previousElementSibling));
+    else if(next&&y>mid(next))card.before(...run(card.nextElementSibling,next));
+    const b=body.getBoundingClientRect();
+    if(y<b.top+48)body.scrollTop-=14;else if(y>b.bottom-48)body.scrollTop+=14;
+  };
+  /* lostpointercapture ends it too. If the grip is detached mid-drag (a
+     re-render), pointerup never reaches it and the browser fires this at the
+     DOCUMENT, so it is heard there. It also follows every pointerup, hence `over`. */
+  let over=false;
+  const lost=ev=>{if(ev.pointerId===e.pointerId)done();};
+  const done=()=>{
+    if(over)return;over=true;
+    grip.removeEventListener("pointermove",move);grip.removeEventListener("pointerup",done);grip.removeEventListener("pointercancel",done);
+    document.removeEventListener("lostpointercapture",lost);
+    card.classList.remove("cv-dragging");
+    const shown=[...list.querySelectorAll(":scope > .card[data-note]")].map(c=>c.dataset.note);
+    setCombatOrder(shown.concat(combatSectionsOf(character).filter(k=>!shown.includes(k))));
+  };
+  grip.addEventListener("pointermove",move);grip.addEventListener("pointerup",done);grip.addEventListener("pointercancel",done);
+  document.addEventListener("lostpointercapture",lost);
+}
 /* ================= settings modal =================
    The modal grew a control at a time until it was one long scroll, so it is
    grouped into collapsible sections. They reuse the feature-list idiom
@@ -7008,7 +7491,7 @@ function openSettings(){
   const secCredits=`
     <p class="hint">Fieldbook itself is MIT-licensed. It includes one third-party work:</p>
     <div class="field"><label class="f">Icons</label>
-      <p class="hint">The emblems beside each class, ${raceTerm().toLowerCase()} and background are from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, by ${ICON_ARTISTS.map(esc).join(", ")}. Used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Each icon has been changed: its background square was removed and its colour now follows your theme.</p></div>
+      <p class="hint">The emblems beside each class, ${raceTerm().toLowerCase()} and background, and the crossed swords on the combat button, are from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, by ${ICON_ARTISTS.map(esc).join(", ")}. Used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Each icon has been changed: its background square was removed and its colour now follows your theme.</p></div>
     <div class="field"><label class="f">Rules content</label>
       <p class="hint">Rules data is not part of the app — you load it yourself, from files you supply, and it keeps whatever terms it came with.</p></div>`;
   const n=rulesEntryCount();
@@ -7563,6 +8046,14 @@ function wire(){
     if((m=t.closest("[data-invitem]"))){const id=m.dataset.invitem,ic=invCol();ic.items[id]=!ic.items[id];renderInventory();scheduleSave();return;}
     if((m=t.closest("[data-fav-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.favItem);if(it){it.fav=!it.fav;renderInventory();scheduleSave();}return;}
     if((m=t.closest("[data-invsec]"))){const s=invCol().sections;s[m.dataset.invsec]=!s[m.dataset.invsec];renderInventory();scheduleSave();return;}
+    if(t.closest("#btnCombat"))return combatViewOpen()?closeCombatView():openCombatView();
+    if(t.closest("#cvClose"))return closeCombatView();
+    if(t.closest("#cvToc"))return openToc();
+    if(t.closest("#cvStart"))return startCombatNow();
+    if(t.closest("#cvPrev"))return advanceRound(-1);
+    if(t.closest("#cvNext"))return advanceRound(1);
+    if(t.closest("#cvEnd"))return endCombatAsk();
+    if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn);
     if(t.closest("#btnToc"))return openToc();
     if(t.closest("#tocBack"))return closeToc();
     if((m=t.closest("[data-fitem]"))){const id=m.dataset.fitem,fc=featCol();fc.items[id]=!fc.items[id];renderFeatures();scheduleSave();return;}
@@ -7613,6 +8104,27 @@ function wire(){
     /* the notes-tab group headers are role="button" tabindex="0", so they owe
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
+  });
+  /* Esc closes the combat view only when it is the top layer. CAPTURE phase, so
+     this runs BEFORE the modal's own Esc handler (80-modal-forms.js) shuts the
+     modal — otherwise one Esc would close the modal and the view behind it. The
+     item finder has no Esc of its own, so over the view Esc leaves both open. */
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape"||!combatViewOpen())return;
+    if(modal.classList.contains("open"))return;
+    const br=document.getElementById("browse");if(br&&br.classList.contains("show"))return;
+    const fly=document.getElementById("tocFly");if(fly&&fly.classList.contains("open")){closeToc();return;}
+    closeCombatView();
+  },true);
+  /* Arranging the combat view: the grip is the only drag handle. */
+  document.addEventListener("pointerdown",e=>{
+    const g=e.target.closest&&e.target.closest("[data-cvgrip]");
+    if(g&&e.button===0)startCombatDrag(e,g);
+  });
+  document.addEventListener("keydown",e=>{
+    const g=e.target.closest&&e.target.closest("[data-cvgrip]");
+    if(!g||(e.key!=="ArrowUp"&&e.key!=="ArrowDown"))return;
+    e.preventDefault();moveCombatCard(g.dataset.cvgrip,e.key==="ArrowUp"?-1:1);
   });
   /* These five are markup that moves around, and wire() has no try/catch: a bare
      getElementById(...).addEventListener on a renamed id throws HERE and every
