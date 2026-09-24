@@ -280,6 +280,9 @@ old line — and then create it from the tag, at that moment: `git switch -c rel
 
 `.github/workflows/ci.yml` runs the mechanical checks on every push and PR, including
 `build-html.js --check`. A stale committed artifact fails CI *before* it can become a bad release.
+The one exception is a PR that does not touch `dist/fieldbook.html` — a worktree branch's src-only
+diff — which CI builds instead of checking. Failing it there skipped the tests too, so those PRs
+got no real CI at all.
 
 **Full procedure, failure modes and rollback: `src/docs/RELEASING.md`.**
 

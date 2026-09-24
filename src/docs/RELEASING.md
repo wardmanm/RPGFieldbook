@@ -157,7 +157,7 @@ fires, the fix is in your working copy, not in the workflow.
 | JS / Python / shell syntax | Fast fail before anything else runs. |
 | `manifest.json` matches `src/` on disk | Adding a fragment without listing it is the classic mistake. |
 | Every `data/**/*.json` parses | A broken pack is invisible until a player imports it. |
-| **`build-html.js --check`** | `dist/fieldbook.html` is tracked; a stale one is what turns into an unreproducible release. Kept out of `build.sh` on purpose — that script's job is to *fix* staleness, CI's job is to *notice* it. |
+| **`build-html.js --check`** | `dist/fieldbook.html` is tracked; a stale one is what turns into an unreproducible release. Kept out of `build.sh` on purpose — that script's job is to *fix* staleness, CI's job is to *notice* it. **Except on a PR that doesn't touch the artifact** — a worktree branch's src-only diff — where CI *builds* it instead, so every step below still runs. Such a PR merged with GitHub's button leaves `main` stale, and `main`'s own CI then fails here: merge locally, build, commit (`WORKTREES.md` §5). |
 | `bundle-rules.js` | The per-system packs still merge without a name collision. |
 | `./src/tests/run.sh` | The suites. Also run by the release workflow, because `ci.yml` triggers only on pushes to `main` and would otherwise be skipped entirely by a tag. |
 | Byte hygiene | A stripped final newline or a CRLF changes the shipped app. |

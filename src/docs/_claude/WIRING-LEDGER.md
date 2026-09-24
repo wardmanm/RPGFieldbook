@@ -3256,3 +3256,25 @@ considered and rejected (~15% saving, and arc-flag digits are position-sensitive
 
 Also widened `.githooks/checks.sh` `check_json` from `^(data/.*|src/manifest)\.json$` to `src/.*`,
 which previously left `src/icons/icons.json` validated by nothing until the fetcher ran.
+
+## CI builds a src-only PR instead of failing it
+
+The worktree flow says branches never commit `dist/fieldbook.html`, and `ci.yml` said every PR's
+committed artifact must be fresh. Both were true, so every worktree PR (#44, #45) failed at
+`build-html.js --check` — and because that step fails the job, **tests, byte hygiene and the full
+build were skipped**. A src-only PR got syntax checks and nothing else.
+
+Skipping the check on PRs would not have been enough: `rules-data.js` asserts the assembled markup
+appears byte-for-byte in `dist/fieldbook.html`, so any PR touching `src/html/` would then fail the
+tests against the stale committed artifact instead. The fix BUILDS the artifact on a PR whose diff
+does not touch it (checkout `fetch-depth: 2`; a PR is a merge commit whose first parent is the base,
+so `git diff HEAD^1 HEAD -- dist/fieldbook.html` is exactly "did this PR commit it"). The final "build
+changed no tracked file" step excludes the artifact on those PRs only, so generated docs are still
+held to it. A PR that commits the artifact, and every push to `main`, keeps the strict `--check`.
+
+`build-html.js` will overwrite in CI because its hand-edit guard accepts an artifact equal to HEAD's.
+Merging a src-only PR with GitHub's button still leaves `main` stale, and `main`'s CI then says so —
+the right alarm; WORKTREES.md §5's local merge-then-build remains the way in.
+
+A PR's CI runs the workflow from its merge commit, so existing PRs pick this up only on a new run
+against the updated base (push, or close and reopen), not from "Re-run jobs".
