@@ -3393,3 +3393,31 @@ Deliberately NOT added: a docs-suite check for a heading with no blank line abov
 do drop that line where two appended sections meet (twice during this integration), but an ATX
 heading interrupts a paragraph in CommonMark and renders correctly, so it is cosmetic — and the
 docs suite is explicitly not a prose linter. Six such headings already exist in this file.
+
+## Done — the combat view (issues #9, #10, #11)
+
+A full-screen view, opened from crossed swords in the tab bar, holding any of the 19 sections — the
+REAL cards, moved into `#cvList` with a hidden `[data-cvhome]` marker left at home, and moved back on
+close. Copies would duplicate every id (the #17 `#skill-perception` bug). A tracker in its header
+(Start, ◀ ▶, End) drives the existing `advanceRound()`. Closing the view never ends combat.
+Spec: `src/docs/specs/2026-09-24-combat-view-design.md`; plan: `src/docs/plans/2026-09-24-combat-view.md`.
+
+Things that are not obvious and would be easy to undo by accident:
+
+- **`COMBAT_DEFAULTS` lives in `00-constants.js`**, not `87-combat.js`: `blankChar()` reads it at load,
+  when a later fragment's `const` is still in its TDZ.
+- **`combatActive` is its own flag.** The Active Spells card has always moved `combatRound`, so
+  deriving "in combat" from `round > 0` would drop old sheets into a fight on update.
+- **The Esc listener is registered in the CAPTURE phase.** The modal's Esc handler runs first
+  otherwise, shuts the modal, and the same keypress then closes the view behind it.
+- **A drag never moves the dragged card** — moving an element can drop its pointer capture — so its
+  neighbours hop over it instead, and the order is read back off the DOM on release.
+- **`renderFamiliars()` now clears its list before its early return**: the view shows that card even
+  when empty, and the stale last familiar would have shown with it.
+- **`src/tests/docs.js` has two icon lists**: `KINDS` (everything vendored, now including `ui`) and
+  `DATA_KINDS` (the three whose names ship in `data/`, for the coverage check).
+- `selectTab()` closes the view first, so a note link never lands on a tab with its cards missing.
+
+Known and accepted: Active Spells, Familiars and Skills (in By ability mode) are hidden on their own
+tab when empty, so their toggle can only be reached once they have content — or from inside the view.
+The item finder has no Esc of its own, so with the finder open over the view Esc leaves both open.

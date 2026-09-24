@@ -41,3 +41,9 @@ Bullets below this line — leave the heading in place.
   abilities in a grid, three across, each heading the saving throw and the skills that ability
   governs, and folds the Skills card away. It is a display choice only: every number means exactly
   the same thing in both, and each character remembers its own setting.
+- New **combat view**. Tap the crossed swords in the tab bar to open a full-screen view of just the
+  sections you need in a fight — any card from any tab, added with the crossed-swords button in its
+  heading and arranged by dragging. Everything works there exactly as it does on its own tab.
+  **Start combat** counts rounds and in-game time and moves your active spells along each round.
+  Close the view to look something up and combat keeps going — the button shows the round, and one
+  tap brings you back. **End combat** is its own button.

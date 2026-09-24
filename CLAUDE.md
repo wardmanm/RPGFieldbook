@@ -57,6 +57,8 @@ src/                    THE SOURCE OF TRUTH — edit here, never the built file
     RELEASING.md        how to cut and publish a release, and what CI refuses
     WORKTREES.md        working several issues at once in parallel worktrees
     ADR-001-source-split.md  why the source is split and how the build works
+    specs/              one design spec per feature, written and approved before any plan
+    plans/              the implementation plans that execute those specs
     _claude/            AGENT CONTEXT — working memory and reference, not for humans
       WIRING-LEDGER.md    running log of what's been done + what's deferred — READ THIS
       HUMBLEWOOD-PLAYTESTS.md  what each playtest packet adds, and what supersedes what
