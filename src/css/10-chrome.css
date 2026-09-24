@@ -76,10 +76,6 @@ html[data-tabs="icons"] .tabicon{display:block}
 .toc-back.open{opacity:1;pointer-events:auto}
 .fav{background:none;border:0;cursor:pointer;font-size:15px;line-height:1;color:var(--hair);padding:0 2px}
 .fav.on{color:var(--accent)}
-.inv-sec-head{display:flex;align-items:center;gap:8px;font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:var(--accent);cursor:pointer;padding:10px 2px 6px;margin-top:6px;border-bottom:1px solid var(--hair);user-select:none}
-.inv-sec-head .fcaret{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.5;transition:transform .15s}
-.inv-sec-head .fcaret.c{transform:rotate(-90deg)}
-.inv-sec-head .cnt{color:var(--ink-soft);font-weight:600}
 
 /* ================= Layout ================= */
 .page{max-width:1160px;margin:0 auto;padding:clamp(12px,2.4vw,22px)}

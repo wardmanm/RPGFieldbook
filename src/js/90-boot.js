@@ -114,6 +114,10 @@ function wire(){
     if((m=t.closest("[data-invitem]"))){const id=m.dataset.invitem,ic=invCol();ic.items[id]=!ic.items[id];renderInventory();scheduleSave();return;}
     if((m=t.closest("[data-fav-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.favItem);if(it){it.fav=!it.fav;renderInventory();scheduleSave();}return;}
     if((m=t.closest("[data-invsec]"))){const s=invCol().sections;s[m.dataset.invsec]=!s[m.dataset.invsec];renderInventory();scheduleSave();return;}
+    /* The × in a search box (issue #49): empty it, re-run its filter through the
+       same input event typing sends — every box's own listener does the rest — and
+       leave the cursor in the box. */
+    if((m=t.closest(".search-clear"))){const i=m.parentNode.querySelector("input");if(i){i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.focus();}return;}
     if(t.closest("#btnCombat"))return combatViewOpen()?closeCombatView():openCombatView();
     if(t.closest("#cvClose"))return closeCombatView();
     if(t.closest("#cvToc"))return openToc();

@@ -3521,3 +3521,26 @@ finder only via `cfg.qtyInput`) that applies to every ticked item, like Origin a
   and Cost had always reset on a redraw; Qty only made it noticeable.
 - Ammunition is sold in bundles ("Arrows (20)"), so Qty 2 is two bundles. Unpacking bundles belongs to
   the ammo issues (#6–#8), not here.
+
+## Four small fixes: coins, skills, section heads, search boxes (#48, #56, #51, #49)
+
+- **#48 coins high to low.** `coinKeys()` is display order only (the Coins card and the Adjust coins
+  window); `convertCoins()` and the weight maths keep their own lists, and the printout already ran
+  PP → CP. It now returns PP GP EP SP CP (D&D) / GP SP CP (Humblewood).
+- **#56 Classic skills read down each column.** A two-column grid fills row by row. `.skills` now uses
+  `grid-auto-flow:column` with `grid-template-rows:repeat(var(--skill-rows,9),auto)`, and
+  `buildSkills()` sets `--skill-rows` to half the list rounded up (guarded, the harness's stub has no
+  `style.setProperty`). DOM order is unchanged, so Tab still walks A→Z; under 600px it is one column.
+- **#51 one section heading.** `.fghead,.inv-sec-head` share one rule in 20-cards.css — a solid 1.5px
+  `var(--line)` rule and an 8px gap — covering Features & Traits, the inventory sections and the
+  Attacks card's Favorites/Attacks split. The inventory caret was drawn pointing DOWN, then turned 90°
+  more by the shared `.fcaret`, so open sections pointed left; it is now drawn like the Features caret
+  and the inventory-only rotation override is gone. `.inv-sec-head` keeps its name: `buildToc()` and
+  the `[data-invsec]`/`[data-atksec]` handlers depend on it.
+- **#49 a clear button in every search box.** `.searchbox` wraps the input and a `.search-clear`
+  button: the Rules tab's glossary and tables filters, and `#brSearch`, which the item, spell and
+  feature finders all share. The × shows only while there is text — `:placeholder-shown`, so every box
+  using the component must keep a placeholder. The click empties the box and dispatches the same
+  `input` event typing sends, so each box's own listener re-runs its filter unchanged.
+- Seen while checking, not fixed: at phone width an attack row's name runs into its type label
+  behind the to-hit pill, and a feature row's name crowds its source tag. Pre-existing.

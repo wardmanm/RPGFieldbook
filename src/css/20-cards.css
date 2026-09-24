@@ -18,6 +18,17 @@ label.f{display:block;font-family:var(--head);font-size:10px;letter-spacing:.1em
 input,select,textarea{width:100%;font-family:var(--body);font-size:16px;color:var(--ink);
   background:var(--field);border:1.5px solid var(--hair);border-radius:6px;padding:9px 10px;min-height:42px}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-2);outline-offset:1px;background:var(--field-focus)}
+/* A search or filter box with a × to clear it (issue #49): the Rules tab's two
+   filters and every finder's search. The × shows only while there is text —
+   :placeholder-shown is true exactly when the box is empty, so no script tracks
+   it; every box using this has a placeholder for that reason. */
+.searchbox{position:relative}
+.searchbox input{padding-right:40px}
+.search-clear{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;
+  border-radius:6px;background:none;color:var(--ink-soft);font-size:20px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.search-clear:hover,.search-clear:focus-visible{color:var(--accent-2);background:color-mix(in srgb,var(--ink-soft) 12%,transparent)}
+.searchbox input:placeholder-shown + .search-clear{display:none}
 textarea{min-height:90px;resize:vertical;line-height:1.5}
 .field{margin-bottom:11px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -68,7 +79,18 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 .n-flash::before{border-color:var(--accent);transition:border-color .3s}
 
 .fgroup{margin-bottom:12px}
-.fghead{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 2px;border-bottom:1.5px solid var(--line);margin:0 0 8px;user-select:none}
+/* One section heading for every list inside a card: the Features & Traits
+   groups, the inventory sections and the Attacks card's Favorites/Attacks split
+   (issue #51). They share the line, the gap before the first item, and — through
+   the shared .fcaret below — the caret. The inventory ones used to have a faint
+   1px rule with the first item flush against it. */
+.fghead,.inv-sec-head{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 2px;border-bottom:1.5px solid var(--line);margin:0 0 8px;user-select:none}
+/* The inventory/attack heads carry their text directly rather than in .fgname,
+   so they take its look here; and a gap above each section after the first,
+   the way .fgroup spaces the feature groups. */
+.inv-sec-head{font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:var(--accent);margin-top:12px}
+.inv-sec-head:first-child{margin-top:0}
+.inv-sec-head .cnt{color:var(--ink-soft);font-weight:600}
 .fghead:hover .fgname{color:var(--accent-2)}
 /* flex:0 1 auto, NOT flex:1 — the count has to sit beside the title the way the
    inventory section heads do. flex:1 stretched the name across the header and
@@ -196,7 +218,7 @@ html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
 .browse.show{display:flex}
 .browse-inner{width:100%;max-width:760px;margin:0 auto;display:flex;flex-direction:column;height:100%;padding:14px 14px 0}
 .browse-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-bottom:10px}
-.browse-head input{flex:1 1 200px;min-width:0}
+.browse-head .searchbox{flex:1 1 200px;min-width:0}
 .browse-head .tbtn{flex:none}
 .browse-facets{display:flex;flex-direction:column;gap:7px;padding:2px 0 10px}
 .brsum{display:flex;flex-wrap:wrap;gap:6px;padding:0 0 8px}

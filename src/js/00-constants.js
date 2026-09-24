@@ -208,6 +208,8 @@ function buildSkills(){
     r.innerHTML=`<button class="dot" data-skill="${k}" aria-label="${l} proficiency"></button><span class="val" data-stat="skill.${k}" id="skill-${k}">+0</span><span class="lbl">${l} <span class="ab">${ab}</span></span>`;
     el.appendChild(r);
   });
+  /* The grid fills down each column; this many rows per column (see .skills). */
+  if(el.style&&el.style.setProperty)el.style.setProperty("--skill-rows",Math.ceil(SKILLS.length/2));
 }
 /* One legend, MOVED between the two cards rather than duplicated in JS — a second
    copy of the markup would drift from the template's. It is appended to the CARD,

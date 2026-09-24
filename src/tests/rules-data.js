@@ -1510,4 +1510,57 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /function writeFoot\(k\)\{[^\n]*put\("brOrigin",k\.origin\);syncOrigDet\(\);if\(k\.origin\)put\("brOrigDet",k\.det\);/.test(js));
 }
 
+// ---------- Classic skills read DOWN each column, then across (issue #56)
+// A two-column grid fills row by row, so the alphabet ran left-right-left-right.
+// Column flow with half the skills (rounded up) per column reads Acrobatics …
+// Investigation down the left and Medicine … Survival down the right.
+{
+  const css = fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8');
+  const cjs = fs.readFileSync(path.join(ROOT, 'src/js/00-constants.js'), 'utf8');
+  ck('the Classic skills grid fills down each column',
+     /\.skills\{[^}]*grid-auto-flow:column/.test(css) && /\.skills\{[^}]*grid-template-rows:repeat\(var\(--skill-rows,9\),auto\)/.test(css));
+  ck('...with half the skills, rounded up, per column',
+     /function buildSkills\(\)\{[\s\S]*?--skill-rows",Math\.ceil\(SKILLS\.length\/2\)[\s\S]*?\n\}/.test(cjs));
+  ck('a phone keeps one column, in the same order',
+     /@media\(max-width:600px\)\{\.skills\{[^}]*grid-template-columns:1fr;[^}]*grid-auto-flow:row/.test(css));
+}
+
+// ---------- one section heading for Inventory, Attacks and Features (issue #51)
+// Inventory sections (and the Attacks card's split) had a faint 1px rule with the
+// first item flush against it, and a caret drawn pointing DOWN that the shared
+// .fcaret rule then turned another 90° — open sections pointed left. They now
+// share the Features & Traits head: same line, same gap, same caret.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const css = manifest.css.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const shared = /\.fghead,\.inv-sec-head\{([^}]*)\}/.exec(css);
+  ck('inventory section heads share the Features group-head rule', !!shared);
+  ck('...a solid 1.5px line, with a gap before the first item',
+     !!shared && /border-bottom:1\.5px solid var\(--line\)/.test(shared[1]) && /margin:0 0 8px/.test(shared[1]));
+  ck('no inventory-only caret rotation is left to fight the shared one',
+     !/\.inv-sec-head \.fcaret/.test(css));
+  const featCaret = (/class="fghead"[^`]*?<svg class="fcaret[^>]*><path d="([^"]+)"/.exec(js) || [])[1];
+  const invCaret = (/head\.className="inv-sec-head"[\s\S]{0,200}?<svg class="fcaret[^>]*><path d="([^"]+)"/.exec(js) || [])[1];
+  ck('the inventory caret is drawn like the Features one', !!featCaret && invCaret === featCaret, [featCaret, invCaret]);
+}
+
+// ---------- every search / filter box has a clear button (issue #49)
+// One component: a .searchbox wrapping the input and a .search-clear button,
+// shown only while there is text (pure CSS, off :placeholder-shown), which empties
+// the box and re-runs its filter through the same input event typing sends.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const css = manifest.css.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const html = loadHTML();
+  const boxed = (src, id) => new RegExp('<div class="searchbox[^"]*"[^>]*>\\s*<input id="' + id + '"[^>]*placeholder="[^"]+"[^>]*>\\s*<button type="button" class="search-clear" aria-label="[^"]+"').test(src);
+  ck('the glossary filter has its clear button', boxed(html, 'glossSearch'));
+  ck('the tables filter has its clear button', boxed(html, 'tablesSearch'));
+  ck('the finder search (items, spells, features) has its clear button', boxed(js, 'brSearch'));
+  ck('the × shows only while there is text', /\.searchbox input:placeholder-shown ?\+ ?\.search-clear\{display:none\}/.test(css));
+  ck('the × empties the box and re-runs its filter the way typing does',
+     /closest\("\.search-clear"\)[\s\S]{0,200}?value="";[\s\S]{0,80}?dispatchEvent\(new Event\("input",\{bubbles:true\}\)\)/.test(js));
+}
+
 ck.done();

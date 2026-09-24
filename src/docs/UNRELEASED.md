@@ -57,3 +57,13 @@ Bullets below this line — leave the heading in place.
   several of each ticked item at once; if you already carry that item, they join the same stack.
   Any cost you type is still the price of one. Changing a filter while you pick no longer resets
   Origin, Qty or Cost.
+- Fixed: coins now read from most to least valuable — PP, GP, EP, SP, CP in D&D and GP, SP, CP in
+  Humblewood — on the Coins card and in the Adjust coins window, the same order the printout uses.
+- Fixed: in the Classic layout the skills now read down each column — Acrobatics to Investigation on
+  the left, Medicine to Survival on the right — instead of zig-zagging across the two columns.
+- Fixed: the section headings in your inventory (and the Favorites / Attacks split on the Attacks
+  card) now look exactly like the ones in Features & Traits — a clear line with a little space before
+  the first item, instead of a faint line with the item jammed against it. The arrow on an open
+  inventory section now points down, as it does everywhere else, instead of sideways.
+- Every search and filter box now has a **×** to clear it — the item, spell and feature browsers,
+  and the Glossary and Tables filters on the Rules tab. It appears once you've typed something.
