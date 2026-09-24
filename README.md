@@ -258,6 +258,26 @@ tables from their info panels.
 Tables arrive with your rules packs, so if you don't see any, import a pack. Descriptions still read
 perfectly well without them.
 
+### ⚔️ Combat view
+
+Mid-fight, the things you need — HP, conditions, attacks, spell slots — are spread across several
+tabs. Tap the **crossed swords** in the tab bar, beside **☰**, and a full-screen view opens holding
+just the sections you chose, from any tab. Everything in it works exactly as it does on its own tab.
+
+- **Choosing sections.** Every section heading has a small crossed-swords button beside its note
+  icon. It lights up when that section is in the combat view; tap it to add or remove the section.
+  You start with Vitals, Statuses & Conditions, Attacks & Weapons, Resources, Spell Slots and
+  Active Spells.
+- **Arranging them.** Inside the combat view, drag a section by the **⋮⋮** grip at the left of its
+  heading. With a keyboard, move to the grip and press **↑** or **↓** to move the section one place.
+  Your order is saved with the character.
+- **Keeping track of the fight.** **Start combat** begins at round 1. **◀** and **▶** step back and
+  forward a round and show the time passed in the game — six seconds a round — and your active
+  spells' timers move along with them. **End combat** is its own button, and asks before it ends
+  anything.
+- **Looking something up.** Close the view with **✕** and combat keeps going: the crossed-swords
+  button shows the round on every tab, and one tap brings you back to where you were.
+
 ### 🖨️ Printing or saving a PDF
 
 Tap the **Print** button (the printer icon in the top bar) to get a clean, printer-friendly

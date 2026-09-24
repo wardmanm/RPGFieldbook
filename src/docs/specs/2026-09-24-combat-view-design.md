@@ -1,6 +1,7 @@
 # Combat view — design
 
-**Status:** approved in conversation, awaiting review of this write-up · 2026-09-24
+**Status:** implemented on branch `issue/9-combat-view` · 2026-09-24 — see [As built](#as-built) for where
+the code differs from this text
 **Issues:** #9 (the feature), #10 (template + styles), #11 (per-section "add to combat view") — one
 branch, `issue/9-combat-view`, closes all three. #10 and #11 touch the same code and cannot be tested
 apart, so they are not split across worktrees.
@@ -238,3 +239,27 @@ For `src/docs/UNRELEASED.md`:
 >   **Start combat** counts rounds and in-game time and moves your active spells along each round.
 >   Close the view to look something up and combat keeps going — the button shows the round, and one
 >   tap brings you back. **End combat** is its own button.
+
+## As built
+
+Where the code differs from the text above, and why:
+
+- **`COMBAT_DEFAULTS` lives in `00-constants.js`**, not `87-combat.js` (§4). `blankChar()` reads it at
+  load (`let character=blankChar()`), when a later fragment's `const` is still in its TDZ (ADR-001).
+- **`buildToc()` and `scrollToCard()` take no root or scroller** (§4). Both branch on
+  `combatViewOpen()`: ☰ lists `#cvList`'s cards, and a card inside `#cvBody` scrolls that box, not the
+  window.
+- **The item finder has no Esc of its own** (§7), so with the finder open over the view, Esc leaves
+  both open. Adding Esc to the finder was out of scope.
+- **The page behind is `inert` while the view is open** — `.topbar`, `.tabbar` and `.page`. `aria-modal`
+  alone did not stop Tab reaching invisible controls. The modal, the item finder, the ☰ flyout and
+  the toast sit outside those three and keep working.
+- **Focus.** Opening focuses ✕; closing returns focus to the tab-bar button. A header repaint keeps
+  focus on the same button, or falls back when it is gone or disabled: ◀ at round 1 → ▶, Start → ▶,
+  End → Start. A toggle click repaints only that button in place (§5 says so; the first build
+  replaced it and dropped focus). The round is announced from one persistent live region, `#cvLive`,
+  outside the header that is repainted.
+- **Phone widths.** At 400px and below the tab-bar pill drops "Rd" and shows the swords and the
+  number (the `aria-label` still reads "round N"), and the tabs narrow to 42px, so the pinned group
+  never covers Rules. At 480px and below the header is two rows — ✕ · title · ☰, then ◀ round ▶ with
+  End (or Start) at the far right — and the time stacks under the round.
