@@ -1476,6 +1476,11 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      ['id="cvHead"', 'id="cvBody"', 'id="cvEmpty"', 'id="cvList"'].every(s => t.includes(s)));
   ck('the view ships holding no cards — they are moved in at runtime',
      !/class="card"/.test(t.slice(view, page)));
+  // #cvHead is repainted whole, and a replaced live region is never announced.
+  const live = t.indexOf('id="cvLive"'), head = t.indexOf('id="cvHead"');
+  ck('the round\'s live region is in the view but outside its repainted header',
+     live > view && live < page && !/id="cvLive"/.test(t.slice(head, t.indexOf('</div>', head))) &&
+     /<p [^>]*id="cvLive" aria-live="polite"/.test(t));
 }
 
 ck.done();

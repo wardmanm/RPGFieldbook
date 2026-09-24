@@ -53,10 +53,14 @@ html[data-tabs="icons"] .tabicon{display:block}
    margin-left:auto collapses to nothing in a scroll container, so the group — the
    combat button and ☰ — is pinned instead, or it scrolls off the end. */
 @media(max-width:400px){
-  .tabbar{overflow-x:auto;scrollbar-width:none}
+  .tabbar{overflow-x:auto;scrollbar-width:none;padding:0 4px}
   .tabbar::-webkit-scrollbar{display:none}
-  .tab{flex:0 0 auto;min-width:46px}
+  .tab{flex:0 0 auto;min-width:42px}
   .tab-tools{position:sticky;right:0;background:var(--paper-2)}
+  /* Sized so six tabs and the group fit at 360px with the round pill showing
+     (45-combat.css) — pinned over the bar, anything wider covers Rules.
+     .tab-tools .tab-toc, because the plain .tab-toc rule comes later. */
+  .tab-tools .tab-toc{padding:0 10px}
 }
 .tab.active{color:var(--ink);border-bottom-color:var(--accent)}
 .tab:hover{color:var(--ink)}

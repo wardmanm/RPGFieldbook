@@ -9,6 +9,14 @@
 /* In combat: a filled pill, readable from any tab while you look something up. */
 .tab-combat.on{color:var(--paper);background:var(--accent);border-radius:8px;min-height:32px;margin:0 2px;padding:0 9px}
 .tab-combat.on:hover{color:var(--paper);filter:brightness(1.08)}
+/* ≤400px the tab bar scrolls with this group pinned over its end (10-chrome.css),
+   so the pill must fit beside all six tabs or it covers Rules: swords and the
+   number only. The aria-label still reads "round N". */
+@media(max-width:400px){
+  .tab-combat{padding:0 6px}
+  .tab-combat.on{padding:0 6px;gap:3px;margin:0 1px}
+  .tab-combat .cv-rdw{display:none}
+}
 
 /* Above the tab bar (40), below the ☰ flyout (55/60), the item finder (70),
    modals (80) and toasts — so Cast, Use and Edit open over it as anywhere else. */
@@ -18,6 +26,17 @@ html.cv-lock,html.cv-lock body{overflow:hidden}
 .cv-head{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px clamp(10px,2vw,18px);
   background:var(--paper-2);border-bottom:2px solid var(--line)}
 .cv-head .grow{flex:1}
+/* Phone width: two rows, whatever the state. Row 1 is ✕ · title · ☰; the spacer
+   becomes a full-width row break; row 2 is the tracker with Start/End pushed to
+   the far right — End well clear of ◀ ▶, and in the spot Start held. Tab order
+   stays the markup's (✕, tracker, End, ☰). */
+@media(max-width:480px){
+  .cv-head{row-gap:0}
+  #cvToc{order:1;margin-left:auto}
+  .cv-head .grow{order:2;flex:0 0 100%;height:0;margin-top:8px}
+  .cv-track{order:3}
+  #cvStart,#cvEnd{order:4;margin-left:auto}
+}
 /* The view scrolls itself; the page behind it stays put. */
 .cv-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:clamp(12px,2.4vw,22px)}
 /* One column as wide as the sheet's main column: drag order IS reading order. */
@@ -48,6 +67,13 @@ html.cv-lock,html.cv-lock body{overflow:hidden}
    write. NOT #skillsCard — in By ability mode its rows live in the Abilities
    card, and an empty Skills card here would be the bug. */
 #combatView #activeSpellCard,#combatView #familiarCard{display:block!important}
+/* ≤820px the sheet sinks Familiars to the end with order:1 (10-chrome.css), and
+   that rule is not scoped to the sheet: in this flex column it would pin the card
+   last whatever the saved order, so dragging it would seem to do nothing. */
+#combatView #familiarCard{order:0}
+/* The portrait box is square at its card's width; at the view's 780px it would
+   fill the screen. Capped at the sidebar width it was drawn for. */
+#combatView .portrait{max-width:320px;margin-inline:auto}
 #combatView #activeSpellList:empty::before,#combatView #familiarList:empty::before{
   content:"None right now.";display:block;font-style:italic;color:var(--ink-soft);font-size:14px}
 
@@ -55,12 +81,24 @@ html.cv-lock,html.cv-lock body{overflow:hidden}
 .cv-track{display:inline-flex;align-items:center;gap:6px}
 .cv-round{font-family:var(--head);font-size:14px;min-width:9.5em;text-align:center;color:var(--ink)}
 .cv-round b{font-size:18px}
+/* Phone width: the time stacks under the round, so the tracker and End share
+   row 2 even at 360px. After the rule above, which it overrides. */
+@media(max-width:480px){
+  .cv-round{min-width:6em;line-height:1.15}
+  .cv-round .cv-sep{display:none}
+  .cv-round .cv-time{display:block;font-size:12px;color:var(--ink-soft)}
+}
 .cv-head .tbtn[disabled]{opacity:.4;cursor:default}
+/* The round's live region (the template): read aloud, never seen. */
+.cv-live{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 
 /* ---- arranging ----
    Only the grip starts a drag, so touch-action:none sits on the grip ALONE — a
-   finger anywhere else on a card still scrolls the view. */
-.cv-grip{flex:none;background:none;border:0;padding:4px 2px;margin:-4px 0 -4px -6px;cursor:grab;
+   finger anywhere else on a card still scrolls the view. It is the only touch
+   handle, so its hit box is 40×40: the padding grows it and the matching negative
+   margins cancel it out, so the glyph and the heading do not move. The left
+   reaches exactly to the card's edge (15px padding + the glyph's 4px outdent). */
+.cv-grip{flex:none;background:none;border:0;padding:12px 13px 12px 11px;margin:-12px -11px -12px -15px;cursor:grab;
   color:var(--ink-soft);touch-action:none;display:inline-flex;align-items:center}
 .cv-grip svg{width:16px;height:16px;fill:currentColor}
 .cv-grip:hover,.cv-grip:focus-visible{color:var(--accent-2)}

@@ -37,7 +37,7 @@ const {X, state, bootError, fragments} = loadApp([
   'syncConcStatus', 'endConcentration', 'endConcFromStatus', 'concActiveSpell', 'concStatusRow',
   'COMBAT_DEFAULTS', 'inCombat', 'combatSectionsOf', 'withCombatSection', 'moveCombatSection',
   'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
-  'combatToggleHTML', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
+  'combatToggleHTML', 'combatToggleText', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
   'combatGripHTML', 'moveCombatCard',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
@@ -1912,7 +1912,12 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   const idle = X.combatButtonHTML({combatActive: false, combatRound: 4});
   ck('idle, the button is the crossed swords alone', idle.includes('<svg') && !/Rd/.test(idle));
   const on = X.combatButtonHTML({combatActive: true, combatRound: 3});
-  ck('in combat it carries the round', on.includes('<svg') && on.includes('Rd 3'));
+  ck('in combat it carries the round, reading "Rd 3"',
+     on.includes('<svg') && on.replace(/<svg[\s\S]*<\/svg>/, '').replace(/<[^>]+>/g, '') === 'Rd 3');
+  // A phone-width tab bar hides the word and keeps the number (45-combat.css),
+  // so "Rd " must be its own element and the number must sit outside it.
+  ck('"Rd " is its own span, so a phone can drop it and keep the number',
+     on.includes('<span class="cv-rd"><span class="cv-rdw">Rd </span>3</span>'));
 }
 
 /* ---- the per-card toggle, and the view's header ---- */
@@ -1925,6 +1930,13 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
      off.includes('Add to combat view — Attacks &amp; Weapons') &&
      on.includes('Remove from combat view — Attacks &amp; Weapons'));
   ck('it wears the crossed swords', off.includes('class="gicon cvicon"'));
+  // paintCombatToggle() repaints a clicked toggle in place from the same text,
+  // so the two can never say different things.
+  const tOff = X.combatToggleText('attacks', false), tOn = X.combatToggleText('attacks', true);
+  ck('the in-place repaint says what the markup says',
+     tOff.title === 'Add to combat view' && tOn.title === 'Remove from combat view' &&
+     tOn.label === 'Remove from combat view — Attacks & Weapons' &&
+     on.includes('title="Remove from combat view"'));
   const h = X.combatHeaderHTML({combatActive: false, combatRound: 0});
   ck('the header can always close, and says combat keeps going',
      h.includes('id="cvClose"') && /combat keeps going/.test(h));
@@ -1938,8 +1950,11 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
      idle.includes('id="cvStart"') && !idle.includes('id="cvNext"') && !idle.includes('id="cvEnd"'));
   const r3 = X.combatHeaderHTML({combatActive: true, combatRound: 3});
   ck('in combat: round, in-game time, both arrows and End — and no Start',
-     /Round <b>3<\/b> · 12 sec/.test(r3) && r3.includes('id="cvPrev"') && r3.includes('id="cvNext"') &&
+     r3.includes('Round <b>3</b><span class="cv-sep"> · </span><span class="cv-time">12 sec</span>') &&
+     r3.includes('id="cvPrev"') && r3.includes('id="cvNext"') &&
      r3.includes('id="cvEnd"') && !r3.includes('id="cvStart"'));
+  ck('the repainted header is no live region — #cvLive in the shell is',
+     !/aria-live/.test(r3) && !/aria-live/.test(idle));
   ck('◀ is live after round 1', !/id="cvPrev"[^>]*disabled/.test(r3));
   ck('◀ is disabled at round 1',
      /id="cvPrev"[^>]*disabled/.test(X.combatHeaderHTML({combatActive: true, combatRound: 1})));

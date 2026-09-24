@@ -57,9 +57,11 @@ function fmtCombatTime(sec){
 
 /* ---- the tab-bar button ----
    Idle: the crossed swords alone. In combat: highlighted, with the round, so it
-   reads from any tab while you look something up. */
+   reads from any tab while you look something up. "Rd " is its own span so a
+   phone-width tab bar can drop it and keep the number (45-combat.css); the
+   aria-label still says "round N". */
 function combatButtonHTML(c){
-  return iconSVG("ui","Combat")+(inCombat(c)?`<span class="cv-rd">Rd ${num(c.combatRound)}</span>`:"");
+  return iconSVG("ui","Combat")+(inCombat(c)?`<span class="cv-rd"><span class="cv-rdw">Rd </span>${num(c.combatRound)}</span>`:"");
 }
 function renderCombatButton(){
   const b=document.getElementById("btnCombat");if(!b)return;
@@ -79,10 +81,23 @@ function combatViewOpen(){return cvOpen;}
    view must still be the one that goes home. */
 function combatCard(k){return document.querySelector(`.card[data-note="${k}"]`);}
 
+/* What the toggle says: the title is the action, the aria-label adds the card. */
+function combatToggleText(k,on){
+  const l=(on?"Remove from":"Add to")+" combat view";
+  return {title:l,label:l+" — "+noteTitle(noteDef(k))};
+}
 function combatToggleHTML(k,on){
-  const t=noteTitle(noteDef(k)), l=(on?"Remove from":"Add to")+" combat view";
-  return `<button class="cvbtn${on?" on":""}" data-combatbtn="${esc(k)}" aria-pressed="${on?"true":"false"}" aria-label="${l} — ${esc(t)}" title="${l}">`+
+  const t=combatToggleText(k,on);
+  return `<button class="cvbtn${on?" on":""}" data-combatbtn="${esc(k)}" aria-pressed="${on?"true":"false"}" aria-label="${esc(t.label)}" title="${t.title}">`+
     iconSVG("ui","Combat","cvicon")+`</button>`;
+}
+/* A click repaints the one button in place. Replacing it (outerHTML) would drop
+   keyboard focus from the button the player just pressed. */
+function paintCombatToggle(k,on){
+  const b=document.querySelector(`[data-combatbtn="${k}"]`);if(!b)return;
+  const t=combatToggleText(k,on);
+  b.classList.toggle("on",on);b.setAttribute("aria-pressed",on?"true":"false");
+  b.setAttribute("aria-label",t.label);b.title=t.title;
 }
 /* Mirrors renderNoteIcons(): idempotent, replaces only its own button, and never
    label.innerHTML += — that re-parses the label and destroys #starBtn, #encPill
@@ -99,10 +114,15 @@ function renderCombatToggles(){
     if(note)note.insertAdjacentHTML("beforebegin",html);else label.insertAdjacentHTML("beforeend",html);
   });
 }
+/* Whether a card in the view actually shows. Computed style, not the inline one:
+   the view's CSS overrides #activeSpellCard's inline display:none, but not the
+   Skills card's in By ability mode. Not offsetParent either — fillCombatView()
+   runs before the view itself is shown. */
+function cvCardShown(card){return getComputedStyle(card).display!=="none";}
 function renderCombatEmpty(){
   const e=document.getElementById("cvEmpty");if(!e)return;
   e.innerHTML=`Add sections with the ${iconSVG("ui","Combat")} button on any card.`;
-  e.hidden=!!document.querySelector("#cvList .card");
+  e.hidden=[...document.querySelectorAll("#cvList .card")].some(cvCardShown);
 }
 /* In: a hidden marker takes each card's place at home and the card goes to the
    end of the list, so cards arrive in the saved order. Cards already in the view
@@ -126,7 +146,10 @@ function sendCardHome(k){
 function emptyCombatView(){document.querySelectorAll("[data-cvhome]").forEach(h=>sendCardHome(h.dataset.cvhome));}
 
 /* ✕ · title · tracker · (space) · Start or End · ☰. End sits past the spacer,
-   well away from the arrows, so a hurried tap on ▶ cannot hit it. */
+   well away from the arrows, so a hurried tap on ▶ cannot hit it. On a phone
+   CSS re-flows the same markup into two rows. The time has its own spans so it
+   can stack under the round there. No aria-live here: this is repainted, and a
+   live region that is replaced is never announced — #cvLive is. */
 function combatHeaderHTML(c){
   const close=`<button class="tbtn" id="cvClose" aria-label="Close the combat view — combat keeps going" title="Close (combat keeps going)">✕</button>`;
   const title=`<span class="cv-title">${iconSVG("ui","Combat")}Combat</span>`;
@@ -135,11 +158,26 @@ function combatHeaderHTML(c){
   const r=num(c.combatRound);
   return close+title+
     `<span class="cv-track"><button class="tbtn" id="cvPrev" aria-label="Previous round"${r<=1?" disabled":""}>◀</button>`+
-    `<span class="cv-round" aria-live="polite">Round <b>${r}</b> · ${fmtCombatTime(combatElapsedSec(c))}</span>`+
+    `<span class="cv-round">Round <b>${r}</b><span class="cv-sep"> · </span><span class="cv-time">${fmtCombatTime(combatElapsedSec(c))}</span></span>`+
     `<button class="tbtn" id="cvNext" aria-label="Next round">▶</button></span>`+
     `<span class="grow"></span><button class="tbtn danger" id="cvEnd">End combat</button>`+toc;
 }
-function renderCombatHeader(){const h=document.getElementById("cvHead");if(h)h.innerHTML=combatHeaderHTML(character);}
+/* Repainting replaces every button, so focus is carried across by id. When that
+   button is gone or disabled — ◀ at round 1, Start once combat starts, End once
+   it ends — focus goes where the next press is most likely. */
+function renderCombatHeader(){
+  const h=document.getElementById("cvHead");if(!h)return;
+  const a=document.activeElement,had=a&&a.id&&h.contains(a)?a.id:"";
+  h.innerHTML=combatHeaderHTML(character);
+  if(inCombat(character))setCombatLive("Round "+num(character.combatRound));
+  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart"};
+  for(let id=had,i=0;id&&i<4;id=instead[id],i++){
+    const b=document.getElementById(id);
+    if(b&&!b.disabled){b.focus();break;}
+  }
+}
+/* The one live region, never repainted, so a screen reader hears each change. */
+function setCombatLive(t){const l=document.getElementById("cvLive");if(l&&l.textContent!==t)l.textContent=t;}
 
 function openCombatView(){
   if(cvOpen)return;
@@ -151,8 +189,11 @@ function openCombatView(){
   fillCombatView();
   document.documentElement.classList.add("cv-lock");
   view.classList.add("open");cvOpen=true;
+  cvInert(true);
+  setCombatLive("");   // no stale "Combat ended…" from another fight or character
   renderCombatHeader();
   body.scrollTop=cvScroll;
+  const x=document.getElementById("cvClose");if(x)x.focus();
 }
 /* Closing NEVER ends combat — End combat is its own button. */
 function closeCombatView(){
@@ -163,15 +204,23 @@ function closeCombatView(){
   emptyCombatView();
   if(view)view.classList.remove("open");
   document.documentElement.classList.remove("cv-lock");
-  cvOpen=false;
+  cvOpen=false;cvInert(false);
   window.scrollTo({top:cvPageScroll});
+  const b=document.getElementById("btnCombat");if(b)b.focus({preventScroll:true});
+}
+/* The view is aria-modal, but that alone does not stop Tab: the page behind it
+   stays focusable, invisibly. inert takes the top bar, tab bar and page out of
+   reach while the view is open. The modal, the item finder, the ☰ flyout and the
+   toast all sit OUTSIDE these three, so they keep working over the view. */
+function cvInert(on){
+  document.querySelectorAll(".topbar,.tabbar,.page").forEach(el=>{if(on)el.setAttribute("inert","");else el.removeAttribute("inert");});
 }
 function toggleCombatSection(k){
   const def=noteDef(k);if(!def)return;
   const cur=combatSectionsOf(character), on=!cur.includes(k);
   character.combatSections=withCombatSection(cur,k,on);
   if(cvOpen){if(on)fillCombatView();else{sendCardHome(k);renderCombatEmpty();}}
-  renderCombatToggles();scheduleSave();
+  paintCombatToggle(k,on);scheduleSave();
   toast((on?"Added ":"Removed ")+noteTitle(def)+(on?" to":" from")+" the combat view");
 }
 
@@ -202,7 +251,8 @@ function endCombatAsk(){
   if(!confirm(`End combat at round ${r}?`))return false;
   const s=combatEnd(character);
   renderActiveSpells();renderCombatChrome();scheduleSave();
-  toast(`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`);
+  const msg=`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`;
+  toast(msg);setCombatLive(msg);
   return true;
 }
 
@@ -232,8 +282,10 @@ function moveCombatCard(k,delta){
 }
 /* Pointer events, not HTML5 drag-and-drop, which is unreliable on phones. The
    dragged card is NEVER moved itself — moving an element can drop its pointer
-   capture mid-drag — so its NEIGHBOURS hop over it instead. Near the view's top
-   or bottom edge the view scrolls. The order is read back off the DOM on release. */
+   capture mid-drag — so its NEIGHBOURS hop over it instead. A hidden card (Skills
+   in By ability mode) has no height to pass, so it is never the neighbour: it
+   hops along with the next shown one. Near the view's top or bottom edge the
+   view scrolls. The order is read back off the DOM on release. */
 function startCombatDrag(e,grip){
   const card=grip.closest(".card"),list=document.getElementById("cvList"),body=document.getElementById("cvBody");
   if(!card||!list||!body||card.parentNode!==list)return;
@@ -241,18 +293,28 @@ function startCombatDrag(e,grip){
   try{grip.setPointerCapture(e.pointerId);}catch(err){}
   card.classList.add("cv-dragging");
   const mid=el=>{const r=el.getBoundingClientRect();return r.top+r.height/2;};
+  const shownSib=(el,dir)=>{do el=el[dir];while(el&&!cvCardShown(el));return el;};
+  const run=(a,b)=>{const out=[];for(let x=a;x;x=x.nextElementSibling){out.push(x);if(x===b)break;}return out;};
   const move=ev=>{
-    const y=ev.clientY,prev=card.previousElementSibling,next=card.nextElementSibling;
-    if(prev&&y<mid(prev))list.insertBefore(prev,card.nextSibling);
-    else if(next&&y>mid(next))list.insertBefore(next,card);
+    const y=ev.clientY,prev=shownSib(card,"previousElementSibling"),next=shownSib(card,"nextElementSibling");
+    if(prev&&y<mid(prev))card.after(...run(prev,card.previousElementSibling));
+    else if(next&&y>mid(next))card.before(...run(card.nextElementSibling,next));
     const b=body.getBoundingClientRect();
     if(y<b.top+48)body.scrollTop-=14;else if(y>b.bottom-48)body.scrollTop+=14;
   };
+  /* lostpointercapture ends it too. If the grip is detached mid-drag (a
+     re-render), pointerup never reaches it and the browser fires this at the
+     DOCUMENT, so it is heard there. It also follows every pointerup, hence `over`. */
+  let over=false;
+  const lost=ev=>{if(ev.pointerId===e.pointerId)done();};
   const done=()=>{
+    if(over)return;over=true;
     grip.removeEventListener("pointermove",move);grip.removeEventListener("pointerup",done);grip.removeEventListener("pointercancel",done);
+    document.removeEventListener("lostpointercapture",lost);
     card.classList.remove("cv-dragging");
     const shown=[...list.querySelectorAll(":scope > .card[data-note]")].map(c=>c.dataset.note);
     setCombatOrder(shown.concat(combatSectionsOf(character).filter(k=>!shown.includes(k))));
   };
   grip.addEventListener("pointermove",move);grip.addEventListener("pointerup",done);grip.addEventListener("pointercancel",done);
+  document.addEventListener("lostpointercapture",lost);
 }
