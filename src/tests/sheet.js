@@ -39,7 +39,7 @@ const {X, state, bootError, fragments} = loadApp([
   'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
   'combatToggleHTML', 'combatToggleText', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
   'combatGripHTML', 'moveCombatCard',
-  'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove',
+  'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2015,6 +2015,28 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   X.undoCombatRemove('activespells', 5, c.id);
   ck('an Undo that outlived a character switch does nothing to the new character',
      same(other.combatSections, ['vitals']) && !c.combatSections.includes('activespells'));
+}
+
+/* ---- ↑/↓ step past the next SHOWN section ----
+   Skills in By ability mode is hidden in the view but keeps its slot; an arrow
+   press that only swapped with it would look like nothing happened. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const all = () => true, noSkills = k => k !== 'skills';
+  ck('↑ moves one place when nothing is hidden', same(X.stepCombatSection(['a', 'b', 'c'], 'b', -1, all), ['b', 'a', 'c']));
+  ck('↓ moves one place when nothing is hidden', same(X.stepCombatSection(['a', 'b', 'c'], 'b', 1, all), ['a', 'c', 'b']));
+  ck('↑ passes a hidden section and the shown one above it',
+     same(X.stepCombatSection(['vitals', 'skills', 'attacks'], 'attacks', -1, noSkills), ['attacks', 'vitals', 'skills']));
+  ck('↓ passes a hidden section and the shown one below it',
+     same(X.stepCombatSection(['attacks', 'skills', 'vitals'], 'attacks', 1, noSkills), ['skills', 'vitals', 'attacks']));
+  ck('with only hidden sections above, ↑ changes nothing',
+     same(X.stepCombatSection(['skills', 'attacks'], 'attacks', -1, noSkills), ['skills', 'attacks']));
+  ck('the ends change nothing',
+     same(X.stepCombatSection(['a', 'b'], 'a', -1, all), ['a', 'b']) && same(X.stepCombatSection(['a', 'b'], 'b', 1, all), ['a', 'b']));
+  ck('a section not in the list changes nothing', same(X.stepCombatSection(['a'], 'z', 1, all), ['a']));
+  ck('stepping never edits the list it was given', (() => {
+    const l = ['a', 'b']; X.stepCombatSection(l, 'a', 1, all); return same(l, ['a', 'b']);
+  })());
 }
 
 ck.done();

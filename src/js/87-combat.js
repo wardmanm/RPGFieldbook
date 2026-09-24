@@ -33,6 +33,19 @@ function insertCombatSection(list,k,at){
   out.splice(Math.max(0,Math.min(out.length,at)),0,k);
   return out;
 }
+/* ↑/↓: past the next SHOWN section, and any hidden ones between. Skills in By
+   ability mode is hidden in the view but keeps its slot, and an arrow press that
+   only swapped with it would look like nothing happened. The hidden ones stay
+   with the shown neighbour, as they do when dragging. */
+function stepCombatSection(list,k,delta,shown){
+  const from=list.indexOf(k);if(from<0)return list.slice();
+  let i=from+delta;
+  while(i>=0&&i<list.length&&!shown(list[i]))i+=delta;
+  if(i<0||i>=list.length)return list.slice();
+  const out=list.filter(x=>x!==k);
+  out.splice(out.indexOf(list[i])+(delta>0?1:0),0,k);
+  return out;
+}
 /* `to` is where the section ends up. Never edits the list it was given. */
 function moveCombatSection(list,from,to){
   const out=list.slice();
@@ -298,9 +311,11 @@ function setCombatOrder(list){
   scheduleSave();
 }
 function moveCombatCard(k,delta){
-  const list=combatSectionsOf(character),from=list.indexOf(k),to=from+delta;
-  if(from<0||to<0||to>=list.length)return;
-  setCombatOrder(moveCombatSection(list,from,to));
+  const list=combatSectionsOf(character);
+  /* A card is skipped only when it sits in the view and does not show there. */
+  const next=stepCombatSection(list,k,delta,x=>{const c=combatCard(x);return !c||!c.closest("#combatView")||cvCardShown(c);});
+  if(next.join()===list.join())return;
+  setCombatOrder(next);
   const g=document.querySelector(`[data-cvgrip="${k}"]`);if(g)g.focus();
 }
 /* Pointer events, not HTML5 drag-and-drop, which is unreliable on phones. The
