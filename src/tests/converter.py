@@ -432,8 +432,9 @@ bml3 = cls['subclasses']['Battle Master']['levels']['3']
 ck('a 2024 subclass carries its picker beside its traits',
    bml3.get('traits') and bml3.get('choices') and bml3['choices'][0]['label'] == 'Maneuvers: choose 3', bml3)
 cls0 = C.convert_classes([_tmpjson(bmfile)])['classes'][0]
-ck('no optional features given: no picker, and nothing else changes',
-   'choices' not in cls0['subclasses']['Battle Master']['levels']['3'], cls0)
+ck('no optional features given: no maneuver picker',
+   not any(str(c.get('label', '')).startswith('Maneuvers')
+           for c in cls0['subclasses']['Battle Master']['levels']['3'].get('choices', [])), cls0)
 
 # A 2024 subclass opens with an italic tagline. The description picker took the
 # first line over 40 characters, so the taglines of 41+ (eight of them — Psi
@@ -455,6 +456,47 @@ ss['subclass'][0]['optionalfeatureProgression'] = [{'name': 'Fighting Style', 'f
 gs = C.convert_subclasses([_tmpjson(ss)], book=XGE, tables=[], optfeats=OF)['subclasses']
 ck('a supplement subclass carries its picker too, beside its traits',
    gs and gs[0]['levels']['3'].get('traits') and gs[0]['levels']['3'].get('choices') and gs[0]['levels']['3']['choices'][0]['from'][0]['name'] == 'Dueling', gs)
+
+# ---- 20. what an option spends, subclass resources, Student of War, the library
+ck('a maneuver spends a Superiority Die from the pool the sheet tracks',
+   C._optfeat_cost({'consumes': {'name': 'Superiority Die'}}) == {'resource': 'Superiority Dice', 'amount': 1},
+   C._optfeat_cost({'consumes': {'name': 'Superiority Die'}}))
+ck('an amount is kept, and the pool name is the tracked one',
+   C._optfeat_cost({'consumes': {'name': 'Sorcery Point', 'amount': 2}}) == {'resource': 'Sorcery Points', 'amount': 2})
+ck('an unknown pool keeps its own name', C._optfeat_cost({'consumes': {'name': 'Arcane Shot'}})['resource'] == 'Arcane Shot')
+ck('nothing consumed, no cost', C._optfeat_cost({}) is None)
+OFC = [{'name': 'Parry', 'source': 'XPHB', 'featureType': ['MV:B'], 'entries': ['x'], 'consumes': {'name': 'Superiority Die'}}]
+pc = C._optfeat_choices([{'name': 'Maneuvers', 'featureType': ['MV:B'], 'progression': {'3': 3}}], OFC, 'XPHB')
+ck('a picked maneuver carries its cost', pc[3][0]['from'][0].get('cost') == {'resource': 'Superiority Dice', 'amount': 1}, pc)
+
+bm2 = json.loads(json.dumps(bmfile))
+bm2['class'][0]['startingProficiencies'] = {'skills': [{'choose': {'count': 2, 'from': ['athletics', 'history', 'insight']}}]}
+bm2['subclassFeature'].append({'name': 'Student of War', 'source': 'XPHB', 'level': 3, 'subclassShortName': 'Battle Master',
+                               'className': 'Fighter', 'entries': ['You gain proficiency with one type of Artisan\'s Tools.']})
+bm2['subclass'][0]['subclassFeatures'].append('Student of War|Fighter|XPHB|Battle Master|XPHB|3')
+res = {'Fighter/Battle Master': [{'name': 'Superiority Dice', 'per': 'short', 'max': {'byLevel': [0, 0, 4]}}]}
+bmc = C.convert_classes([_tmpjson(bm2)], optfeats=OFC, resources=res)['classes'][0]
+bms = bmc['subclasses']['Battle Master']
+ck('a subclass takes its resources from class-resources.json ("Class/Subclass")',
+   bms.get('resources') == res['Fighter/Battle Master'], bms.get('resources'))
+ck('...and the class does not', 'resources' not in bmc, bmc.get('resources'))
+ch3 = bms['levels']['3']['choices']
+sk = [c for c in ch3 if c['type'] == 'skill']
+ck('Student of War asks for one skill from the Fighter\'s own level-1 list',
+   len(sk) == 1 and sk[0]['choose'] == 1 and sk[0]['from'] == ['Athletics', 'History', 'Insight'], sk)
+tl = [c for c in ch3 if c['type'] == 'option' and 'Tools' in c['label']]
+ck("...and one type of Artisan's Tools, all 17", len(tl) == 1 and len(tl[0]['from']) == 17 and tl[0]['choose'] == 1, tl)
+ck('...after the maneuvers, in book order', [c['type'] for c in ch3] == ['option', 'skill', 'option'], [c['label'] if 'label' in c else c['type'] for c in ch3])
+
+ss3 = json.loads(json.dumps(_scfile())); ss3['subclassFeature'][0]['source'] = 'XGE'
+g3 = C.convert_subclasses([_tmpjson(ss3)], book=XGE, tables=[],
+                          resources={'Rogue/Scout': [{'name': 'Tricks', 'per': 'short', 'max': 2}]})['subclasses']
+ck('a supplement subclass takes its resources too', g3 and g3[0].get('resources') == [{'name': 'Tricks', 'per': 'short', 'max': 2}], g3)
+
+lib = C._optfeat_features(OFC + [{'name': 'Quickened Spell', 'source': 'XPHB', 'featureType': ['MM'], 'entries': ['y'],
+                                   'consumes': {'name': 'Sorcery Point', 'amount': 2}}])
+ck('library entries are labelled by kind', sorted(x['source'] for x in lib) == ['Battle Master Maneuver', 'Metamagic'], lib)
+ck('...and carry their cost too', all(x.get('cost') for x in lib), lib)
 
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])

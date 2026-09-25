@@ -291,6 +291,29 @@ FIGHTING_STYLES = [
     {"name":"Two-Weapon Fighting","description":"Add your ability modifier to the off-hand attack's damage."},
     {"name":"Unarmed Fighting","description":"Your unarmed strikes deal more damage and can hurt a grappled creature."},
 ]
+# Choices a subclass states only in prose, which the source carries no data for.
+# Hand-listed like FIGHTING_STYLES, keyed (class, subclass, source) so another
+# printing is never touched. Student of War: "one type of Artisan's Tools of your
+# choice, and ... one skill of your choice from the skills available to Fighters
+# at level 1" — the skill list is the class's own, read at conversion time.
+ARTISANS_TOOLS = ["Alchemist's Supplies", "Brewer's Supplies", "Calligrapher's Supplies",
+                  "Carpenter's Tools", "Cartographer's Tools", "Cobbler's Tools", "Cook's Utensils",
+                  "Glassblower's Tools", "Jeweler's Tools", "Leatherworker's Tools", "Mason's Tools",
+                  "Painter's Supplies", "Potter's Tools", "Smith's Tools", "Tinker's Tools",
+                  "Weaver's Tools", "Woodcarver's Tools"]
+
+def _prose_choices(cls, sub, src, class_skills):
+    """-> {level: [choice]} for the (class, subclass, source) listed here."""
+    if (cls, sub, src) == ('Fighter', 'Battle Master', 'XPHB'):
+        out = []
+        if class_skills:
+            out.append({'type': 'skill', 'choose': 1, 'from': list(class_skills)})
+        out.append({'type': 'option', 'label': "Student of War: one type of Artisan's Tools", 'choose': 1,
+                    'from': [{'name': t, 'description': 'You have proficiency with %s (Student of War).' % t}
+                             for t in ARTISANS_TOOLS]})
+        return {3: out}
+    return {}
+
 CLASS_BLURB = {
     'Barbarian':'A fierce warrior who channels primal rage.',
     'Bard':'An inspiring magician whose power echoes the music of creation.',
@@ -363,7 +386,7 @@ def pick_2024_preferred(entries, name_key='name'):
 _XPHB_NAMES = {
     'items': 'D&D 2024 Items', 'backgrounds': 'D&D 2024 Backgrounds',
     'classes': 'XPHB Classes (2024)', 'races': 'D&D 2024 Species',
-    'tables': 'XPHB Tables',
+    'tables': 'XPHB Tables', 'features': 'D&D 2024 Options',
 }
 
 class Book:
@@ -1071,8 +1094,14 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
             for lvl, chs in _optfeat_choices(sc.get('optionalfeatureProgression'), optfeats,
                                              sc.get('source') or src, overlay, tables).items():
                 slevels.setdefault(lvl, {}).setdefault('choices', []).extend(chs)
+            class_skills = next((c.get('from') for c in levels.get(1, {}).get('choices', [])
+                                 if c.get('type') == 'skill'), [])
+            for lvl, chs in _prose_choices(entry['name'], sc['name'], sc.get('source'), class_skills).items():
+                slevels.setdefault(lvl, {}).setdefault('choices', []).extend(chs)
             SD['description'] = desc
             SD['levels'] = {str(k): slevels[k] for k in sorted(slevels)}
+            if resources.get(entry['name'] + '/' + sc['name']):
+                SD['resources'] = resources[entry['name'] + '/' + sc['name']]
             if tables is not None:
                 _class_tables(sc, sc['name'], 'subclass', tables)
             subs[sc['name']] = SD
@@ -1136,7 +1165,8 @@ def _subclass_levels(sc, sfidx, resolver, tables, src):
             desc = _sub_blurb(sf)
     return slevels, desc
 
-def convert_subclasses(paths, book=None, tables=None, skip_classes=(), optfeats=None, overlay=None, **_):
+def convert_subclasses(paths, book=None, tables=None, skip_classes=(), optfeats=None, overlay=None,
+                       resources=None, **_):
     """Subclasses a supplement adds to classes the player already has, as
     standalone `subclasses` records that attach by class name (schema §6.5).
 
@@ -1204,6 +1234,8 @@ def convert_subclasses(paths, book=None, tables=None, skip_classes=(), optfeats=
         if sc.get('spellcastingAbility'):
             rec['spellcasting'] = sc['spellcastingAbility']
         rec['levels'] = {str(k): slevels[k] for k in sorted(slevels)}
+        if (resources or {}).get(sc['className'] + '/' + sc['name']):
+            rec['resources'] = resources[sc['className'] + '/' + sc['name']]
         if tables is not None:
             _class_tables(sc, sc['name'], 'subclass', tables)
         out.append(rec)
@@ -1289,17 +1321,37 @@ def _optfeat_desc(f, tables=None):
     lead = ('Prerequisite: ' + pr) if pr else ''
     return ((lead + '\n' if lead else '') + body).strip()
 
-def convert_optional_features(path, book=None, tables=None, overlay=None, **_):
-    d = json.load(open(path, encoding='utf-8'))
-    chosen = pick_sources(d.get('optionalfeature', []), book)
+# 5e-tools names what an option spends in the singular ("Superiority Die"); the
+# sheet's Use button spends from a resource matched by NAME, and the trackers are
+# named as the book names the pool. Anything not listed keeps its own name.
+_CONSUMES_AS = {'superiority die': 'Superiority Dice', 'sorcery point': 'Sorcery Points'}
+
+def _optfeat_cost(f):
+    """{'resource', 'amount'} for an option that spends from a pool, else None —
+    the feature it becomes gets a Use button that spends it."""
+    c = f.get('consumes') if isinstance(f.get('consumes'), dict) else None
+    if not c or not c.get('name'):
+        return None
+    nm = str(c['name'])
+    return {'resource': _CONSUMES_AS.get(nm.lower(), nm), 'amount': int(c.get('amount') or 1)}
+
+def _optfeat_features(chosen, tables=None, overlay=None):
+    """Library entries (the "Traits" a player can add by hand), one per option."""
     out = []
     for f in chosen:
         rec = {'name': f['name'], 'source': _oft_label(f.get('featureType')),
                'description': _optfeat_desc(f, tables)}
+        cost = _optfeat_cost(f)
+        if cost:
+            rec['cost'] = cost
         apply_overlay(f['name'], rec, overlay or {})
         out.append(rec)
     out.sort(key=lambda x: (x['source'], x['name']))
     return out
+
+def convert_optional_features(path, book=None, tables=None, overlay=None, **_):
+    d = json.load(open(path, encoding='utf-8'))
+    return _optfeat_features(pick_sources(d.get('optionalfeature', []), book), tables, overlay)
 
 # ---------------------------------------------------------------- option pickers
 # A class or subclass that grants options says how many in
@@ -1370,6 +1422,9 @@ def _optfeat_choices(progressions, optfeats, src, overlay=None, tables=None):
                     rec = {'name': f['name'], 'description': _optfeat_desc(f, tables)}
                     if _optfeat_repeatable(f):
                         rec['repeatable'] = True
+                    cost = _optfeat_cost(f)
+                    if cost:
+                        rec['cost'] = cost
                     recs.append(apply_overlay(f['name'], rec, overlay or {}))
                 out.setdefault(lvl, []).append({
                     'type': 'option', 'label': '%s: choose %d%s' % (p.get('name') or 'Options', n, ' more' if prev else ''),
@@ -1755,12 +1810,12 @@ def _run_supplement(a):
     else:
         # Classes the book prints in full carry their own subclasses nested, so
         # the standalone subclasses file must skip them or they ship twice.
+        cres = load_class_resources(os.path.join(here, 'data', 'class-resources.json'))
         if only:
-            cres = load_class_resources(os.path.join(here, 'data', 'class-resources.json'))
             emit(convert_classes(classfiles, overlay=overlay, resources=cres, tables=tbls,
                                  book=bk, only=only, optfeats=ofs), 'classes', 'classes')
         emit(convert_subclasses(classfiles, book=bk, tables=tbls, skip_classes=skip,
-                                optfeats=ofs, overlay=overlay),
+                                optfeats=ofs, overlay=overlay, resources=cres),
              'subclasses', 'subclasses')
 
     feats_out = (convert_optional_features(optf[0], book=bk, tables=tbls) if optf else []) \
@@ -1883,6 +1938,11 @@ def main():
         optf = need('optional features', 'optionalfeatures.json')
         ofs = load_optfeats(optf[0]) if optf else []
         if classfiles: _write(convert_classes(classfiles, overlay=overlay, include_legacy=a.include_legacy, resources=cres, tables=tbls, optfeats=ofs), os.path.join(outdir, 'classes.json'))
+        # the same options as library entries, so a player can swap one ("each time
+        # you learn new maneuvers, you can also replace one"). 2024 printings only:
+        # pick_2024_preferred would backfill 2014-only invocations into the core pack.
+        xphb = [f for f in ofs if f.get('source') == 'XPHB']
+        if xphb: _write(_pack(None, 'features', _optfeat_features(xphb, tables=tbls, overlay=overlay), stem='features', version=1), os.path.join(outdir, 'features.json'))
         _write_tables(tbls, os.path.join(outdir, 'tables.json'))
         if problems:
             print('\n  %d WARNING(S) — output is incomplete:' % len(problems))

@@ -156,7 +156,7 @@ function addClass(name,lvl){
   const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
-  if(choices.length||notes.length){_equipQueue=_eq;runChoices(name,choices,notes);}
+  if(choices.length||notes.length)runChoices(name,choices,notes,_eq);
   else runExtraChoices(_eq);
 }
 function removeClass(idx){

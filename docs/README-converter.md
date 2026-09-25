@@ -42,7 +42,8 @@ python convert.py races      races.json                              -o races.js
   `items-magic.json`;
 - it falls back to the repo's `data/overlay.json` and `data/class-resources.json` when they aren't
   in the input dir — without those you lose the Archery/Defense effects and the Rage/Focus/Sorcery
-  trackers;
+  trackers. A `class-resources.json` key may name a subclass as `"Class/Subclass"`
+  (`"Fighter/Battle Master"` → Superiority Dice); `supplement` reads those too;
 - it **warns loudly** for anything it can't find and prints a summary at the end, rather than
   silently writing nothing;
 - classes with no hit die (the TCE sidekicks) are skipped with a note instead of aborting the run.
@@ -109,6 +110,10 @@ silently trims the book. It has already cost 4-of-16 backgrounds, 339-of-391 spe
 - **glossary** → `{ "keywords": [...] }` — rules-glossary terms (Advantage, Cover, Difficult Terrain…), the same category `conditions` writes to, so the two merge in the app.
 - **backgrounds** → `{ "backgrounds": [...] }` — the 16 XPHB backgrounds: ability scores, feat, skill and tool proficiencies, equipment and its structured `equipmentGrants`.
 - **items** → `{ "items": [...] }` — reads **both** item files and writes two packs: base gear and magic items. Between them the largest output the converter produces.
+- **features** → `{ "features": [...] }` — written by `all` from `optionalfeatures.json`: the 58
+  XPHB maneuvers, invocations and metamagic as library entries, so a player can add or swap one by
+  hand. XPHB printings only. An option that spends from a pool (a Superiority Die, Sorcery Points)
+  carries a `cost`, and so does the same option inside a class's level-up picker.
 - **tables** → `{ "tables": [...] }` — see below. Written to `tables.json` by `all`, or to the path given by `--tables` on a single subcommand.
 
 ## Tables

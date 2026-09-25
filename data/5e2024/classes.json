@@ -2431,83 +2431,253 @@
                   "from": [
                     {
                       "name": "Ambush",
-                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition."
+                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Bait and Switch",
-                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled."
+                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Commander's Strike",
-                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit."
+                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Commanding Presence",
-                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll."
+                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Disarming Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Distracting Strike",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Evasive Footwork",
-                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn."
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Feinting Attack",
-                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll."
+                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Goading Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Lunging Attack",
-                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll."
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Maneuvering Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Menacing Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Parry",
-                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice)."
+                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice).",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Precision Attack",
-                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit."
+                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Pushing Attack",
-                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you."
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Rally",
-                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down)."
+                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down).",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Riposte",
-                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage."
+                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Sweeping Attack",
-                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack."
+                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Tactical Assessment",
-                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check."
+                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Trip Attack",
-                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition."
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "skill",
+                  "choose": 1,
+                  "from": [
+                    "Acrobatics",
+                    "Animal Handling",
+                    "Athletics",
+                    "History",
+                    "Insight",
+                    "Intimidation",
+                    "Persuasion",
+                    "Perception",
+                    "Survival"
+                  ]
+                },
+                {
+                  "type": "option",
+                  "label": "Student of War: one type of Artisan's Tools",
+                  "choose": 1,
+                  "from": [
+                    {
+                      "name": "Alchemist's Supplies",
+                      "description": "You have proficiency with Alchemist's Supplies (Student of War)."
+                    },
+                    {
+                      "name": "Brewer's Supplies",
+                      "description": "You have proficiency with Brewer's Supplies (Student of War)."
+                    },
+                    {
+                      "name": "Calligrapher's Supplies",
+                      "description": "You have proficiency with Calligrapher's Supplies (Student of War)."
+                    },
+                    {
+                      "name": "Carpenter's Tools",
+                      "description": "You have proficiency with Carpenter's Tools (Student of War)."
+                    },
+                    {
+                      "name": "Cartographer's Tools",
+                      "description": "You have proficiency with Cartographer's Tools (Student of War)."
+                    },
+                    {
+                      "name": "Cobbler's Tools",
+                      "description": "You have proficiency with Cobbler's Tools (Student of War)."
+                    },
+                    {
+                      "name": "Cook's Utensils",
+                      "description": "You have proficiency with Cook's Utensils (Student of War)."
+                    },
+                    {
+                      "name": "Glassblower's Tools",
+                      "description": "You have proficiency with Glassblower's Tools (Student of War)."
+                    },
+                    {
+                      "name": "Jeweler's Tools",
+                      "description": "You have proficiency with Jeweler's Tools (Student of War)."
+                    },
+                    {
+                      "name": "Leatherworker's Tools",
+                      "description": "You have proficiency with Leatherworker's Tools (Student of War)."
+                    },
+                    {
+                      "name": "Mason's Tools",
+                      "description": "You have proficiency with Mason's Tools (Student of War)."
+                    },
+                    {
+                      "name": "Painter's Supplies",
+                      "description": "You have proficiency with Painter's Supplies (Student of War)."
+                    },
+                    {
+                      "name": "Potter's Tools",
+                      "description": "You have proficiency with Potter's Tools (Student of War)."
+                    },
+                    {
+                      "name": "Smith's Tools",
+                      "description": "You have proficiency with Smith's Tools (Student of War)."
+                    },
+                    {
+                      "name": "Tinker's Tools",
+                      "description": "You have proficiency with Tinker's Tools (Student of War)."
+                    },
+                    {
+                      "name": "Weaver's Tools",
+                      "description": "You have proficiency with Weaver's Tools (Student of War)."
+                    },
+                    {
+                      "name": "Woodcarver's Tools",
+                      "description": "You have proficiency with Woodcarver's Tools (Student of War)."
                     }
                   ]
                 }
@@ -2528,83 +2698,163 @@
                   "from": [
                     {
                       "name": "Ambush",
-                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition."
+                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Bait and Switch",
-                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled."
+                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Commander's Strike",
-                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit."
+                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Commanding Presence",
-                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll."
+                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Disarming Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Distracting Strike",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Evasive Footwork",
-                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn."
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Feinting Attack",
-                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll."
+                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Goading Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Lunging Attack",
-                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll."
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Maneuvering Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Menacing Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Parry",
-                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice)."
+                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice).",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Precision Attack",
-                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit."
+                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Pushing Attack",
-                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you."
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Rally",
-                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down)."
+                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down).",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Riposte",
-                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage."
+                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Sweeping Attack",
-                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack."
+                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Tactical Assessment",
-                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check."
+                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Trip Attack",
-                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition."
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     }
                   ]
                 }
@@ -2625,83 +2875,163 @@
                   "from": [
                     {
                       "name": "Ambush",
-                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition."
+                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Bait and Switch",
-                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled."
+                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Commander's Strike",
-                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit."
+                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Commanding Presence",
-                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll."
+                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Disarming Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Distracting Strike",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Evasive Footwork",
-                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn."
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Feinting Attack",
-                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll."
+                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Goading Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Lunging Attack",
-                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll."
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Maneuvering Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Menacing Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Parry",
-                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice)."
+                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice).",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Precision Attack",
-                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit."
+                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Pushing Attack",
-                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you."
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Rally",
-                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down)."
+                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down).",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Riposte",
-                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage."
+                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Sweeping Attack",
-                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack."
+                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Tactical Assessment",
-                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check."
+                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Trip Attack",
-                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition."
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     }
                   ]
                 }
@@ -2722,83 +3052,163 @@
                   "from": [
                     {
                       "name": "Ambush",
-                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition."
+                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Bait and Switch",
-                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled."
+                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Commander's Strike",
-                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit."
+                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Commanding Presence",
-                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll."
+                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Disarming Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Distracting Strike",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Evasive Footwork",
-                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn."
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Feinting Attack",
-                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll."
+                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Goading Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Lunging Attack",
-                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll."
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Maneuvering Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Menacing Attack",
-                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn."
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Parry",
-                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice)."
+                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice).",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Precision Attack",
-                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit."
+                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Pushing Attack",
-                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you."
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Rally",
-                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down)."
+                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down).",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Riposte",
-                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage."
+                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Sweeping Attack",
-                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack."
+                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Tactical Assessment",
-                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check."
+                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     },
                     {
                       "name": "Trip Attack",
-                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition."
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition.",
+                      "cost": {
+                        "resource": "Superiority Dice",
+                        "amount": 1
+                      }
                     }
                   ]
                 }
@@ -2812,7 +3222,37 @@
                 }
               ]
             }
-          }
+          },
+          "resources": [
+            {
+              "name": "Superiority Dice",
+              "per": "short",
+              "max": {
+                "byLevel": [
+                  0,
+                  0,
+                  4,
+                  4,
+                  4,
+                  4,
+                  5,
+                  5,
+                  5,
+                  5,
+                  5,
+                  5,
+                  5,
+                  5,
+                  6,
+                  6,
+                  6,
+                  6,
+                  6,
+                  6
+                ]
+              }
+            }
+          ]
         },
         "Champion": {
           "description": "A Champion focuses on the development of martial prowess in a relentless pursuit of victory. Champions combine rigorous training with physical excellence to deal devastating blows, withstand peril, and garner glory. Whether in athletic contests or bloody battle, Champions strive for the crown of the victor.",
@@ -5167,43 +5607,83 @@
               "from": [
                 {
                   "name": "Careful Spell",
-                  "description": "When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save."
+                  "description": "When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Distant Spell",
-                  "description": "When you cast a spell that has a range of at least 5 feet, you can spend 1 Sorcery Point to double the spell's range. Or when you cast a spell that has a range of Touch, you can spend 1 Sorcery Point to make the spell's range 30 feet."
+                  "description": "When you cast a spell that has a range of at least 5 feet, you can spend 1 Sorcery Point to double the spell's range. Or when you cast a spell that has a range of Touch, you can spend 1 Sorcery Point to make the spell's range 30 feet.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Empowered Spell",
-                  "description": "When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one), and you must use the new rolls.\nYou can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell."
+                  "description": "When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one), and you must use the new rolls.\nYou can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Extended Spell",
-                  "description": "When you cast a spell that has a duration of 1 minute or longer, you can spend 1 Sorcery Point to double its duration to a maximum duration of 24 hours.\nIf the affected spell requires Concentration, you have Advantage on any saving throw you make to maintain that Concentration."
+                  "description": "When you cast a spell that has a duration of 1 minute or longer, you can spend 1 Sorcery Point to double its duration to a maximum duration of 24 hours.\nIf the affected spell requires Concentration, you have Advantage on any saving throw you make to maintain that Concentration.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Heightened Spell",
-                  "description": "When you cast a spell that forces a creature to make a saving throw, you can spend 2 Sorcery Points to give one target of the spell Disadvantage on saves against the spell."
+                  "description": "When you cast a spell that forces a creature to make a saving throw, you can spend 2 Sorcery Points to give one target of the spell Disadvantage on saves against the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 2
+                  }
                 },
                 {
                   "name": "Quickened Spell",
-                  "description": "When you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can't modify a spell in this way if you've already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way."
+                  "description": "When you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can't modify a spell in this way if you've already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 2
+                  }
                 },
                 {
                   "name": "Seeking Spell",
-                  "description": "If you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll.\nYou can use Seeking Spell even if you've already used a different Metamagic option during the casting of the spell."
+                  "description": "If you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll.\nYou can use Seeking Spell even if you've already used a different Metamagic option during the casting of the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Subtle Spell",
-                  "description": "When you cast a spell, you can spend 1 Sorcery Point to cast it without any Verbal, Somatic, or Material components, except Material components that are consumed by the spell or that have a cost specified in the spell."
+                  "description": "When you cast a spell, you can spend 1 Sorcery Point to cast it without any Verbal, Somatic, or Material components, except Material components that are consumed by the spell or that have a cost specified in the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Transmuted Spell",
-                  "description": "When you cast a spell that deals a type of damage from the following list, you can spend 1 Sorcery Point to change that damage type to one of the other listed types: Acid, Cold, Fire, Lightning, Poison, Thunder."
+                  "description": "When you cast a spell that deals a type of damage from the following list, you can spend 1 Sorcery Point to change that damage type to one of the other listed types: Acid, Cold, Fire, Lightning, Poison, Thunder.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Twinned Spell",
-                  "description": "When you cast a spell, such as Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1."
+                  "description": "When you cast a spell, such as Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 }
               ]
             }
@@ -5290,43 +5770,83 @@
               "from": [
                 {
                   "name": "Careful Spell",
-                  "description": "When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save."
+                  "description": "When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Distant Spell",
-                  "description": "When you cast a spell that has a range of at least 5 feet, you can spend 1 Sorcery Point to double the spell's range. Or when you cast a spell that has a range of Touch, you can spend 1 Sorcery Point to make the spell's range 30 feet."
+                  "description": "When you cast a spell that has a range of at least 5 feet, you can spend 1 Sorcery Point to double the spell's range. Or when you cast a spell that has a range of Touch, you can spend 1 Sorcery Point to make the spell's range 30 feet.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Empowered Spell",
-                  "description": "When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one), and you must use the new rolls.\nYou can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell."
+                  "description": "When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one), and you must use the new rolls.\nYou can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Extended Spell",
-                  "description": "When you cast a spell that has a duration of 1 minute or longer, you can spend 1 Sorcery Point to double its duration to a maximum duration of 24 hours.\nIf the affected spell requires Concentration, you have Advantage on any saving throw you make to maintain that Concentration."
+                  "description": "When you cast a spell that has a duration of 1 minute or longer, you can spend 1 Sorcery Point to double its duration to a maximum duration of 24 hours.\nIf the affected spell requires Concentration, you have Advantage on any saving throw you make to maintain that Concentration.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Heightened Spell",
-                  "description": "When you cast a spell that forces a creature to make a saving throw, you can spend 2 Sorcery Points to give one target of the spell Disadvantage on saves against the spell."
+                  "description": "When you cast a spell that forces a creature to make a saving throw, you can spend 2 Sorcery Points to give one target of the spell Disadvantage on saves against the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 2
+                  }
                 },
                 {
                   "name": "Quickened Spell",
-                  "description": "When you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can't modify a spell in this way if you've already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way."
+                  "description": "When you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can't modify a spell in this way if you've already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 2
+                  }
                 },
                 {
                   "name": "Seeking Spell",
-                  "description": "If you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll.\nYou can use Seeking Spell even if you've already used a different Metamagic option during the casting of the spell."
+                  "description": "If you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll.\nYou can use Seeking Spell even if you've already used a different Metamagic option during the casting of the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Subtle Spell",
-                  "description": "When you cast a spell, you can spend 1 Sorcery Point to cast it without any Verbal, Somatic, or Material components, except Material components that are consumed by the spell or that have a cost specified in the spell."
+                  "description": "When you cast a spell, you can spend 1 Sorcery Point to cast it without any Verbal, Somatic, or Material components, except Material components that are consumed by the spell or that have a cost specified in the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Transmuted Spell",
-                  "description": "When you cast a spell that deals a type of damage from the following list, you can spend 1 Sorcery Point to change that damage type to one of the other listed types: Acid, Cold, Fire, Lightning, Poison, Thunder."
+                  "description": "When you cast a spell that deals a type of damage from the following list, you can spend 1 Sorcery Point to change that damage type to one of the other listed types: Acid, Cold, Fire, Lightning, Poison, Thunder.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Twinned Spell",
-                  "description": "When you cast a spell, such as Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1."
+                  "description": "When you cast a spell, such as Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 }
               ]
             }
@@ -5379,43 +5899,83 @@
               "from": [
                 {
                   "name": "Careful Spell",
-                  "description": "When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save."
+                  "description": "When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Distant Spell",
-                  "description": "When you cast a spell that has a range of at least 5 feet, you can spend 1 Sorcery Point to double the spell's range. Or when you cast a spell that has a range of Touch, you can spend 1 Sorcery Point to make the spell's range 30 feet."
+                  "description": "When you cast a spell that has a range of at least 5 feet, you can spend 1 Sorcery Point to double the spell's range. Or when you cast a spell that has a range of Touch, you can spend 1 Sorcery Point to make the spell's range 30 feet.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Empowered Spell",
-                  "description": "When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one), and you must use the new rolls.\nYou can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell."
+                  "description": "When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one), and you must use the new rolls.\nYou can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Extended Spell",
-                  "description": "When you cast a spell that has a duration of 1 minute or longer, you can spend 1 Sorcery Point to double its duration to a maximum duration of 24 hours.\nIf the affected spell requires Concentration, you have Advantage on any saving throw you make to maintain that Concentration."
+                  "description": "When you cast a spell that has a duration of 1 minute or longer, you can spend 1 Sorcery Point to double its duration to a maximum duration of 24 hours.\nIf the affected spell requires Concentration, you have Advantage on any saving throw you make to maintain that Concentration.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Heightened Spell",
-                  "description": "When you cast a spell that forces a creature to make a saving throw, you can spend 2 Sorcery Points to give one target of the spell Disadvantage on saves against the spell."
+                  "description": "When you cast a spell that forces a creature to make a saving throw, you can spend 2 Sorcery Points to give one target of the spell Disadvantage on saves against the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 2
+                  }
                 },
                 {
                   "name": "Quickened Spell",
-                  "description": "When you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can't modify a spell in this way if you've already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way."
+                  "description": "When you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can't modify a spell in this way if you've already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 2
+                  }
                 },
                 {
                   "name": "Seeking Spell",
-                  "description": "If you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll.\nYou can use Seeking Spell even if you've already used a different Metamagic option during the casting of the spell."
+                  "description": "If you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll.\nYou can use Seeking Spell even if you've already used a different Metamagic option during the casting of the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Subtle Spell",
-                  "description": "When you cast a spell, you can spend 1 Sorcery Point to cast it without any Verbal, Somatic, or Material components, except Material components that are consumed by the spell or that have a cost specified in the spell."
+                  "description": "When you cast a spell, you can spend 1 Sorcery Point to cast it without any Verbal, Somatic, or Material components, except Material components that are consumed by the spell or that have a cost specified in the spell.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Transmuted Spell",
-                  "description": "When you cast a spell that deals a type of damage from the following list, you can spend 1 Sorcery Point to change that damage type to one of the other listed types: Acid, Cold, Fire, Lightning, Poison, Thunder."
+                  "description": "When you cast a spell that deals a type of damage from the following list, you can spend 1 Sorcery Point to change that damage type to one of the other listed types: Acid, Cold, Fire, Lightning, Poison, Thunder.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 },
                 {
                   "name": "Twinned Spell",
-                  "description": "When you cast a spell, such as Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1."
+                  "description": "When you cast a spell, such as Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1.",
+                  "cost": {
+                    "resource": "Sorcery Points",
+                    "amount": 1
+                  }
                 }
               ]
             }
