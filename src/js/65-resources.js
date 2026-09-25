@@ -121,7 +121,7 @@ function hdCondensedHTML(pool){
   }).join("")+`</div>`;
 }
 /* FULL — a boxed cell per die size, speaking the same language as the Vitals
-   strip and the Hit Points panel it now sits under. */
+   strip and the Hit Points panel. */
 function hdFullHTML(pool){
   return `<div class="hd-boxes">`+pool.map(p=>{
     const left=p.total-p.used;
@@ -231,6 +231,17 @@ function resolveResMax(rd, level, c){
   }
   return 0;
 }
+/* The die a pool's points ARE, when they are dice: Superiority Dice are d8,
+   d10 from level 10 and d12 from 18 while their COUNT follows its own table, so
+   the two cannot share `max`. Same shapes as max — a byLevel array of sides, or
+   a fixed die written 8 or "d8" — and "" for a pool that is just points. */
+function resolveResDie(rd, level){
+  const d=rd&&rd.die;if(d==null)return "";
+  let n=0;
+  if(typeof d==="number"||typeof d==="string")n=num(String(d).replace(/^d/i,""));
+  else if(Array.isArray(d.byLevel)){const i=Math.max(0,Math.min(level,d.byLevel.length)-1);n=num(d.byLevel[i]);}
+  return n>0?"d"+n:"";
+}
 function syncResources(){
   if(!Array.isArray(character.resources))character.resources=[];
   const c=contributions(), seen=new Set();
@@ -238,12 +249,13 @@ function syncResources(){
     (defs||[]).forEach(rd=>{
       if(!rd||!rd.name)return;
       const key=srcKind+":"+srcName+":"+String(rd.name).toLowerCase();
-      const max=resolveResMax(rd, level, c);
+      const max=resolveResMax(rd, level, c), die=resolveResDie(rd, level);
       let r=character.resources.find(x=>x.key===key);
       if(max<=0){if(r)character.resources=character.resources.filter(x=>x!==r);return;}
       seen.add(key);
-      if(!r){character.resources.push({id:uid(),key,name:rd.name,max,cur:max,per:rd.per||"long",auto:true,source:srcName});}
+      if(!r){r={id:uid(),key,name:rd.name,max,cur:max,per:rd.per||"long",auto:true,source:srcName};character.resources.push(r);}
       else{r.name=rd.name;r.max=max;r.per=rd.per||"long";r.auto=true;r.source=srcName;if(num(r.cur)>max)r.cur=max;}
+      if(die)r.die=die;else delete r.die;
     });
   }
   (character.classes||[]).forEach(cl=>{
@@ -260,7 +272,7 @@ function renderResources(){
   el.innerHTML=list.map(r=>{
     const cur=num(r.cur),max=num(r.max);
     return `<div class="res">
-      <div class="res-main"><div class="res-name">${esc(r.name||"Resource")}${r.auto?`<span class="res-auto" title="Managed by ${esc(r.source||"class")}">auto</span>`:""}</div><div class="res-sub">${r.per&&r.per!=="none"?`resets on ${esc(r.per)} rest`:"manual reset"}</div></div>
+      <div class="res-main"><div class="res-name">${esc(r.name||"Resource")}${r.die?`<span class="res-die" title="Each is a ${esc(r.die)}">${esc(r.die)}</span>`:""}${r.auto?`<span class="res-auto" title="Managed by ${esc(r.source||"class")}">auto</span>`:""}</div><div class="res-sub">${r.per&&r.per!=="none"?`resets on ${esc(r.per)} rest`:"manual reset"}</div></div>
       <button class="res-btn" data-res-dec="${r.id}" aria-label="Spend one">−</button>
       <div class="res-val"><b>${cur}</b><span>/${max}</span></div>
       <button class="res-btn" data-res-inc="${r.id}" aria-label="Gain one">+</button>

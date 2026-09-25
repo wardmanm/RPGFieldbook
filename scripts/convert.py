@@ -367,10 +367,15 @@ def pick_2024_preferred(entries, name_key='name'):
 
     NB: `basicRules2024` selects only the *free* rules subset. Filtering on it
     alone silently trims the book — it has already cost us backgrounds (4 of 16)
-    and spells (339 of 391). Source is the filter; the flags only backfill."""
+    and spells (339 of 391). Source is the filter; the flags only backfill.
+
+    The free 2024 subset is marked by EITHER flag: `srd52` (SRD 5.2) too. 5e-tools
+    v2.36.1 moved the 2024 Cloak of Invisibility from basicRules2024 to srd52
+    alone, and reading only the first flag dropped it from the pack."""
     xphb = [e for e in entries if e.get('source') == 'XPHB']
     names = {e[name_key] for e in xphb}
-    two4 = [e for e in entries if e.get('basicRules2024') is True and e[name_key] not in names]
+    two4 = [e for e in entries if (e.get('basicRules2024') is True or e.get('srd52') is True)
+            and e[name_key] not in names]
     names |= {e[name_key] for e in two4}
     legacy = [e for e in entries if e.get('basicRules') is True and e[name_key] not in names]
     return xphb + two4 + legacy

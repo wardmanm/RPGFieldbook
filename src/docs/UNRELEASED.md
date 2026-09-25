@@ -49,6 +49,15 @@ Bullets below this line — leave the heading in place.
   that spends a die, and Metamagic spends Sorcery Points the same way. Arcane Archers get an Arcane
   Shot tracker. Student of War now asks for its skill (from the Fighter's list) and its artisan's
   tools.
+- **The combat view is now a tab.** The crossed swords in the tab bar open it as a Combat tab
+  instead of a screen over everything else, so the other tabs stay one tap away in the middle of a
+  fight. It works the same way: the same sections, the same round tracker (which now stays in view
+  as you scroll), dragging to rearrange, and Undo. ✕ or a second tap on the swords takes you back
+  to the tab you came from.
+- **Hit Dice are back in Rest & Recovery**, under the Short Rest and Long Rest buttons, instead of
+  under Hit Points. They are spent on a short rest and come back on a long one, and Vitals — which
+  the combat view shows by default — keeps just your hit points.
+- **The Superiority Dice tracker shows its die**: d8, d10 from level 10 and d12 from level 18.
 - **Swap a maneuver, invocation or Metamagic option by hand.** The D&D 2024 pack now carries all
   of them in Add feature, so you can replace one you know when the rules let you: delete the old
   one and add the new one.

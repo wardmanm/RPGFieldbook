@@ -51,20 +51,6 @@
 </div>
 <div class="toc-back" id="tocBack"></div>
 <nav class="toc-fly" id="tocFly" aria-label="Sections"></nav>
-<!-- The combat view (87-combat.js). It owns only its header: the cards in #cvList
-     are MOVED here from their tabs while it is open. A direct child of <body>, so
-     the print CSS's body>*:not(#printArea) already hides it. -->
-<div class="cview" id="combatView" role="dialog" aria-modal="true" aria-label="Combat view">
-  <div class="cv-head" id="cvHead"></div>
-  <!-- OUTSIDE #cvHead, which is repainted whole: a live region that is replaced
-       is never announced. setCombatLive() writes the round here. -->
-  <p class="cv-live" id="cvLive" aria-live="polite"></p>
-  <div class="cv-body" id="cvBody">
-    <p class="hint cv-empty" id="cvEmpty" hidden></p>
-    <div class="cv-list" id="cvList"></div>
-  </div>
-</div>
-
 <div class="page">
 <!--@@HTML@@-->
 </div>

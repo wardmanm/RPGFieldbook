@@ -47,9 +47,9 @@ html[data-rough="on"] .vbox::before{filter:url(#rough)}
 .hpwrap::before{content:"";position:absolute;inset:1px;border:2.5px solid var(--brick);border-radius:10px;pointer-events:none}
 html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .hpwrap>*{position:relative}
-/* One heading shape for the two stacked panels in Vitals, so Hit Points and Hit
-   Dice read as a pair. Only the colour differs — brick is the HP box's own frame
-   colour, and repeating it below would flatten the two into one. */
+/* One heading shape for the Hit Points and Hit Dice panels, so the two read as
+   the same kind of thing though they sit in different cards. Only the colour
+   differs — brick is the HP box's own frame colour. */
 .hp-title,.hd-title{font-family:var(--head);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11px;text-align:center;margin-bottom:9px}
 .hp-title{color:var(--brick)}
 /* the heading carries the auto/manual pill, so it is a centred flex row rather

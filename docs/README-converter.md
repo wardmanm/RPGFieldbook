@@ -24,7 +24,7 @@ running one subcommand at a time.
 
 ```bash
 # everything, in one go — this is the normal way
-python convert.py all _conversion-data/5etools-v2.33.2 -o data/5e2024
+python convert.py all _conversion-data/5etools-v2.36.1 -o data/5e2024
 
 # or one category at a time
 python convert.py conditions conditionsdiseases.json                 -o conditions.json
@@ -59,7 +59,7 @@ as sources (a manifest with `include: [...]` also works).
 `supplement`, which selects by `source` code instead and writes its own pack folder:
 
 ```bash
-python convert.py supplement _conversion-data/5etools-v2.33.2 -o data/xanathars \
+python convert.py supplement _conversion-data/5etools-v2.36.1 -o data/xanathars \
   --book XGE --system XGE --pack-name "Xanathar's Guide to Everything" \
   --exclude-systems humblewood --avoid-table-names data/5e2024/tables.json \
   --note "…2014-era content, converted as published…"
@@ -125,7 +125,7 @@ entity it came from (`owner` / `ownerKind`), so the Rules tab can group them and
 can link to its own progression table.
 
 ```bash
-python convert.py all _conversion-data/5etools-v2.33.2 -o data/5e2024   # writes tables.json too
+python convert.py all _conversion-data/5etools-v2.36.1 -o data/5e2024   # writes tables.json too
 python convert.py spells spells-xphb.json -o spells.json --tables tables.json
 ```
 

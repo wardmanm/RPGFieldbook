@@ -178,6 +178,13 @@ ck('non-basic XPHB kept', 'XphbNotBasic' in got, got)
 ck('basic-rules backfilled', 'BasicOnly' in got and 'LegacyOnly' in got, got)
 ck('XPHB wins over dup legacy name', got.count('InXphb') == 1, got)
 ck('non-XPHB non-basic excluded', 'Unrelated' not in got, got)
+# 5e-tools v2.36.1 moved the 2024 Cloak of Invisibility from basicRules2024 to
+# srd52 alone; reading only the first flag silently dropped it from the pack.
+sr = [e['name'] + '|' + e['source'] for e in C.pick_2024_preferred([
+    {"name": "Cloak", "source": "XDMG", "srd52": True},
+    {"name": "Cloak", "source": "DMG", "basicRules": True},       # the 2014 printing must not win
+    {"name": "Unflagged", "source": "XDMG"}])]
+ck('an SRD 5.2 entry counts as the free 2024 subset', sr == ['Cloak|XDMG'], sr)
 
 # ---- 12. races: speed, skills, lineage parsing
 ck('speed int', C._race_speed(30) == '30 ft', C._race_speed(30))

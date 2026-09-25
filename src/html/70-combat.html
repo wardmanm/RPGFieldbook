@@ -1,0 +1,18 @@
+  <!-- ============ COMBAT TAB ============ -->
+  <!-- Opened from the crossed swords in the tab bar; it has no word tab of its
+       own. It owns only its header: the cards in #cvList are MOVED here from
+       their tabs while this tab is showing, and sent home when another tab is
+       picked (87-combat.js). It was a full-screen overlay until that covered
+       the tabs a player wanted to glance at mid-fight. -->
+  <section class="tabpanel" id="tab-combat">
+    <div class="cview" id="combatView" aria-label="Combat view">
+      <div class="cv-head" id="cvHead"></div>
+      <!-- OUTSIDE #cvHead, which is repainted whole: a live region that is
+           replaced is never announced. setCombatLive() writes the round here. -->
+      <p class="cv-live" id="cvLive" aria-live="polite"></p>
+      <div class="cv-body" id="cvBody">
+        <p class="hint cv-empty" id="cvEmpty" hidden></p>
+        <div class="cv-list" id="cvList"></div>
+      </div>
+    </div>
+  </section>

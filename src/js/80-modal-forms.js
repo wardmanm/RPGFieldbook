@@ -60,8 +60,6 @@ function modalTakeFocus(wasOpen){
 }
 function modalGiveBackFocus(){
   _modalInert.forEach(el=>{el.inert=false;});_modalInert=[];
-  /* A combat view that opened under the dialog keeps its own inert on the page. */
-  if(combatViewOpen())cvInert(true);
   const o=_modalOpener,sel=_modalOpenerSel;_modalOpener=_modalOpenerSel=null;
   const usable=el=>!!el&&el.isConnected&&!el.closest("[inert]")&&el.getClientRects().length>0;
   if(usable(o))o.focus({preventScroll:true});

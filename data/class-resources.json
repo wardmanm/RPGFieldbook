@@ -2,6 +2,7 @@
   "Barbarian": [ { "name": "Rage",           "per": "long",  "max": { "byLevel": [2,2,3,3,3,4,4,4,4,4,5,5,5,5,5,5,6,6,6,6] } } ],
   "Monk":      [ { "name": "Focus Points",   "per": "short", "max": { "byLevel": [0,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20] } } ],
   "Sorcerer":  [ { "name": "Sorcery Points", "per": "long",  "max": { "byLevel": [0,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20] } } ],
-  "Fighter/Battle Master": [ { "name": "Superiority Dice", "per": "short", "max": { "byLevel": [0,0,4,4,4,4,5,5,5,5,5,5,5,5,6,6,6,6,6,6] } } ],
+  "Fighter/Battle Master": [ { "name": "Superiority Dice", "per": "short", "max": { "byLevel": [0,0,4,4,4,4,5,5,5,5,5,5,5,5,6,6,6,6,6,6] },
+                                                                          "die": { "byLevel": [0,0,8,8,8,8,8,8,8,10,10,10,10,10,10,10,10,12,12,12] } } ],
   "Fighter/Arcane Archer": [ { "name": "Arcane Shot",      "per": "short", "max": { "byLevel": [0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2] } } ]
 }

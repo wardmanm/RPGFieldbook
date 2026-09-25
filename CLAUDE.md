@@ -43,7 +43,7 @@ src/                    THE SOURCE OF TRUTH — edit here, never the built file
   fieldbook.template.html  the page SHELL — top bar, tab bar, home, modal; three markers:
                         /*@@CSS@@*/, <!--@@HTML@@--> and //@@JS@@
   manifest.json         the authoritative concatenation ORDER for html/, js/ and css/
-  html/*.html           6 fragments, one tab panel each, spliced into <div class="page">
+  html/*.html           7 fragments, one tab panel each, spliced into <div class="page">
   js/*.js               28 fragments, concatenated into the single <script>
   icons/icons.json      HAND-AUTHORED emblem map, name → game-icons.net slug;
                           scripts/fetch-icons.js turns it into js/05-icons.js
@@ -347,6 +347,8 @@ got no real CI at all.
   and spells now filter on `source == "XPHB"` instead. The same trim was then found and fixed in
   **feats** (17 vs 77), **items** (78 vs 99) and **magic items** (440 vs 528). **Assume any converter
   path you touch has it too** and check the count against the full XPHB source before believing it.
+  The free subset is marked by **`basicRules2024` or `srd52`**: 5e-tools v2.36.1 moved the 2024
+  Cloak of Invisibility to `srd52` alone, and reading one flag dropped it from the pack.
 - Spells only get `class` tags when `--sources sources.json` is provided; the 5e-tools spell file has
   no per-spell class data.
 - New Humblewood content is folded into the existing consolidated files, not new per-packet files.
@@ -360,7 +362,7 @@ gate on any converter change — if `data/5e2024/` moves, `release.js` bumps XPH
 and every player is told to re-download a pack that didn't really change. Check it first and last:
 
 ```bash
-python3 scripts/convert.py all _conversion-data/5etools-v2.33.2 -o /tmp/chk && diff -r /tmp/chk data/5e2024
+python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk data/5e2024
 ```
 
 Three traps, all of which produce output that looks entirely correct:

@@ -1,7 +1,7 @@
 /* ================= Combat view =================
-   The tab-bar button and the full-screen view. The cards inside keep their own
-   styles — they are the real cards, moved here by 87-combat.js. */
-.tab-combat{flex:0 0 auto;background:none;border:0;color:var(--ink-soft);cursor:pointer;padding:0 8px;min-height:48px;
+   The tab-bar button and the combat tab. The cards inside keep their own styles
+   — they are the real cards, moved here by 87-combat.js. */
+.tab-combat{flex:0 0 auto;background:none;border:0;border-bottom:3px solid transparent;color:var(--ink-soft);cursor:pointer;padding:0 8px;min-height:48px;
   display:inline-flex;align-items:center;gap:5px;font-family:var(--head);font-weight:700;font-size:12px;
   letter-spacing:.06em;text-transform:uppercase}
 .tab-combat .gicon{width:20px;height:20px;color:currentColor}
@@ -9,6 +9,11 @@
 /* In combat: a filled pill, readable from any tab while you look something up. */
 .tab-combat.on{color:var(--paper);background:var(--accent);border-radius:8px;min-height:32px;margin:0 2px;padding:0 9px}
 .tab-combat.on:hover{color:var(--paper);filter:brightness(1.08)}
+/* Its tab is the one showing: the underline every tab wears. In combat the
+   button is already a pill, so the pill takes a ring instead — an underline
+   under a pill reads as a second, separate mark. */
+.tab-combat.active{color:var(--ink);border-bottom-color:var(--accent)}
+.tab-combat.on.active{border-bottom-color:transparent;box-shadow:0 0 0 2px var(--paper-2),0 0 0 4px var(--accent)}
 /* ≤400px the tab bar scrolls with this group pinned over its end (10-chrome.css),
    so the pill must fit beside all six tabs or it covers Rules: swords and the
    number only. The aria-label still reads "round N". */
@@ -18,13 +23,14 @@
   .tab-combat .cv-rdw{display:none}
 }
 
-/* Above the tab bar (40), below the ☰ flyout (55/60), the item finder (70),
-   modals (80) and toasts — so Cast, Use and Edit open over it as anywhere else. */
-.cview{position:fixed;inset:0;z-index:50;background:var(--paper);display:none;flex-direction:column}
-.cview.open{display:flex}
-html.cv-lock,html.cv-lock body{overflow:hidden}
-.cv-head{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px clamp(10px,2vw,18px);
-  background:var(--paper-2);border-bottom:2px solid var(--line)}
+/* A tab like the others: .tabpanel shows and hides it, and the page scrolls it.
+   The header sticks just under the sticky tab bar (--cv-top is that bar's
+   measured height, cvStickyTop()), so the round and its arrows stay in reach
+   down a long list of cards. Below the tab bar (40) and the ☰ flyout. */
+.cview{display:flex;flex-direction:column}
+.cv-head{position:sticky;top:var(--cv-top,48px);z-index:30;display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+  padding:8px clamp(10px,2vw,18px);background:var(--paper-2);border:2px solid var(--line);border-top:0;
+  border-radius:0 0 10px 10px;max-width:780px;width:100%;margin:calc(-1*clamp(12px,2.4vw,22px)) auto 0;box-sizing:border-box}
 .cv-head .grow{flex:1}
 /* Up to 640px: two rows, whatever the state. Row 1 is ✕ · title · ☰; the spacer
    becomes a full-width row break; row 2 is the tracker with Start/End pushed to
@@ -39,8 +45,8 @@ html.cv-lock,html.cv-lock body{overflow:hidden}
   .cv-track{order:3}
   #cvStart,#cvEnd{order:4;margin-left:auto}
 }
-/* The view scrolls itself; the page behind it stays put. */
-.cv-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:clamp(12px,2.4vw,22px)}
+/* The page scrolls the tab; the body only spaces the list from the header. */
+.cv-body{padding-top:clamp(12px,2.4vw,22px)}
 /* One column as wide as the sheet's main column: drag order IS reading order. */
 .cv-list{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)}
 .cv-empty{max-width:780px;margin:24px auto;text-align:center}

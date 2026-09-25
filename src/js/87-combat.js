@@ -1,7 +1,9 @@
 /* ================= combat view =================
-   A full-screen view of the sections the player picked from any tab. They are
-   the REAL cards, moved in while the view is open and back to a hidden marker
-   at home when it closes: copies would duplicate every id (the #17 bug, where
+   A tab of the sections the player picked from any tab, opened from the crossed
+   swords in the tab bar. It was a full-screen overlay until, in play, that
+   covered the tabs a player wanted to glance at. They are the REAL cards, moved
+   in while the tab shows and back to a hidden marker at home when another tab is
+   picked: copies would duplicate every id (the #17 bug, where
    the visible copy updates and the hidden one rots), and a purpose-built
    dashboard would re-implement every section's controls. Closing the view never
    ends combat. Design: src/docs/specs/2026-09-24-combat-view-design.md
@@ -92,10 +94,11 @@ function renderCombatButton(){
   b.setAttribute("aria-label",l);b.title=l;
 }
 /* ================= the DOM layer ================= */
-/* Session only, never saved: whether the view is open, where it and the page
-   were scrolled, and whose cards those were. A reload starts closed; combat
-   itself is saved on the character. */
-let cvOpen=false, cvScroll=0, cvPageScroll=0, cvCharId=null;
+/* Session only, never saved: whether the combat tab is showing, where it and the
+   tab it was opened from were scrolled, which tab that was, and whose cards
+   these are. A reload starts on the sheet; combat itself is saved on the
+   character. */
+let cvOpen=false, cvScroll=0, cvPageScroll=0, cvCharId=null, cvPrevTab="sheet";
 function combatViewOpen(){return cvOpen;}
 
 /* Found fresh every time, never cached: a card re-rendered while it sat in the
@@ -200,47 +203,48 @@ function renderCombatHeader(){
 /* The one live region, never repainted, so a screen reader hears each change. */
 function setCombatLive(t){const l=document.getElementById("cvLive");if(l&&l.textContent!==t)l.textContent=t;}
 
+/* Called by selectTab("combat"), which has already shown the panel. */
 function openCombatView(){
   if(cvOpen)return;
-  const view=document.getElementById("combatView"),body=document.getElementById("cvBody");
-  if(!view||!body)return;
+  if(!document.getElementById("combatView"))return;
   closeToc();
   if(character.id!==cvCharId){cvCharId=character.id;cvScroll=0;}
-  cvPageScroll=window.scrollY;
   fillCombatView();
-  document.documentElement.classList.add("cv-lock");
-  view.classList.add("open");cvOpen=true;
-  cvInert(true);
+  cvOpen=true;
   setCombatLive("");   // no stale "Combat ended…" from another fight or character
   renderCombatHeader();
-  body.scrollTop=cvScroll;
-  const x=document.getElementById("cvClose");if(x)x.focus();
+  cvStickyTop();
 }
-/* Closing NEVER ends combat — End combat is its own button. */
+/* Called by selectTab() for any other tab, BEFORE that tab is shown. Leaving the
+   tab NEVER ends combat — End combat is its own button. */
 function closeCombatView(){
   if(!cvOpen)return;
-  const view=document.getElementById("combatView"),body=document.getElementById("cvBody");
-  if(body)cvScroll=body.scrollTop;
+  cvScroll=window.scrollY;
   closeToc();
   emptyCombatView();
-  if(view)view.classList.remove("open");
-  document.documentElement.classList.remove("cv-lock");
-  cvOpen=false;cvInert(false);
-  window.scrollTo({top:cvPageScroll});
-  const b=document.getElementById("btnCombat");if(b)b.focus({preventScroll:true});
+  cvOpen=false;
 }
-/* The view is aria-modal, but that alone does not stop Tab: the page behind it
-   stays focusable, invisibly. inert takes the top bar, tab bar and page out of
-   reach while the view is open. The modal, the item finder, the ☰ flyout and the
-   toast all sit OUTSIDE these three, so they keep working over the view. */
-function cvInert(on){
-  document.querySelectorAll(".topbar,.tabbar,.page").forEach(el=>{
-    if(on){el.setAttribute("inert","");return;}
-    /* The view closing under an open dialog: the page stays inert beneath the
-       dialog, which now owns it and releases it when it closes. */
-    if(modal.classList.contains("open")){if(!_modalInert.includes(el))_modalInert.push(el);return;}
-    el.removeAttribute("inert");
-  });
+/* The swords, from any tab: the combat tab, scrolled where it was left. The
+   page scroll of the tab it came from is kept for leaveCombatTab(). */
+function enterCombatTab(){
+  cvPageScroll=window.scrollY;
+  selectTab("combat");
+  window.scrollTo({top:cvScroll});
+}
+/* ✕, or the swords again: back to the tab it was opened from, where it was —
+   what closing the overlay used to do. Picking another tab goes there instead,
+   like any tab. */
+function leaveCombatTab(){
+  const back=cvPrevTab||"sheet";
+  selectTab(back);
+  window.scrollTo({top:cvPageScroll});
+  const t=document.querySelector(`.tab[data-tab="${back}"]`);if(t)t.focus({preventScroll:true});
+}
+/* The header sticks under the tab bar, whose height moves with the skin, the
+   width and the icon-tabs setting — so it is measured, not assumed. */
+function cvStickyTop(){
+  const tb=document.querySelector(".tabbar"),v=document.getElementById("combatView");
+  if(tb&&v)v.style.setProperty("--cv-top",Math.round(tb.getBoundingClientRect().height)+"px");
 }
 /* viaKey: the click came from Enter/Space (event.detail 0), not a pointer. */
 function toggleCombatSection(k,viaKey){
@@ -299,9 +303,8 @@ function syncCombatView(){
   const switched=character.id!==cvCharId;
   if(switched){cvCharId=character.id;cvScroll=0;}
   if(cvOpen){
-    const body=document.getElementById("cvBody"),keep=(!switched&&body)?body.scrollTop:0;
     emptyCombatView();fillCombatView();
-    if(body)body.scrollTop=keep;
+    if(switched)window.scrollTo({top:0});
   }
   renderCombatToggles();renderCombatChrome();
 }
@@ -349,11 +352,12 @@ function moveCombatCard(k,delta){
    dragged card is NEVER moved itself — moving an element can drop its pointer
    capture mid-drag — so its NEIGHBOURS hop over it instead. A hidden card (Skills
    in By ability mode) has no height to pass, so it is never the neighbour: it
-   hops along with the next shown one. Near the view's top or bottom edge the
-   view scrolls. The order is read back off the DOM on release. */
+   hops along with the next shown one. Near the top (just under the sticky
+   header) or the bottom of the window, the page scrolls. The order is read back
+   off the DOM on release. */
 function startCombatDrag(e,grip){
-  const card=grip.closest(".card"),list=document.getElementById("cvList"),body=document.getElementById("cvBody");
-  if(!card||!list||!body||card.parentNode!==list)return;
+  const card=grip.closest(".card"),list=document.getElementById("cvList"),head=document.getElementById("cvHead");
+  if(!card||!list||card.parentNode!==list)return;
   e.preventDefault();
   try{grip.setPointerCapture(e.pointerId);}catch(err){}
   card.classList.add("cv-dragging");
@@ -364,8 +368,8 @@ function startCombatDrag(e,grip){
     const y=ev.clientY,prev=shownSib(card,"previousElementSibling"),next=shownSib(card,"nextElementSibling");
     if(prev&&y<mid(prev))card.after(...run(prev,card.previousElementSibling));
     else if(next&&y>mid(next))card.before(...run(card.nextElementSibling,next));
-    const b=body.getBoundingClientRect();
-    if(y<b.top+48)body.scrollTop-=14;else if(y>b.bottom-48)body.scrollTop+=14;
+    const top=head?head.getBoundingClientRect().bottom:0;
+    if(y<top+48)window.scrollBy(0,-14);else if(y>window.innerHeight-48)window.scrollBy(0,14);
   };
   /* lostpointercapture ends it too. If the grip is detached mid-drag (a
      re-render), pointerup never reaches it and the browser fires this at the

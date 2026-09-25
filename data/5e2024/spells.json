@@ -276,7 +276,7 @@
       "name": "Sorcerous Burst",
       "level": 0,
       "meta": "Evocation · 1 action · 120 feet · V, S · Instantaneous",
-      "text": "You cast sorcerous energy at one creature or object within range. Make a ranged attack roll against the target. On a hit, the target takes 1d8 damage of a type you choose: Acid, Cold, Fire, Lightning, Poison, Psychic, or Thunder.\nIf you roll an 8 on a d8 for this spell, you can roll another d8, and add it to the damage. When you cast this spell, the maximum number of these d8s you can add to the spell's damage equals your spellcasting ability modifier.\nCantrip Upgrade: The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8).",
+      "text": "You cast sorcerous energy at one creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d8 damage of a type you choose: Acid, Cold, Fire, Lightning, Poison, Psychic, or Thunder.\nIf you roll an 8 on a d8 for this spell, you can roll another d8, and add it to the damage. When you cast this spell, the maximum number of these d8s you can add to the spell's damage equals your spellcasting ability modifier.\nCantrip Upgrade: The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8).",
       "class": [
         "Sorcerer"
       ]
@@ -1362,7 +1362,7 @@
     {
       "name": "Gust of Wind",
       "level": 2,
-      "meta": "Evocation · 1 action · Self · V, S, M · Concentration, up to 1 minute",
+      "meta": "Evocation · 1 action · Self (60-foot Line) · V, S, M · Concentration, up to 1 minute",
       "text": "A Line of strong wind 60 feet long and 10 feet wide blasts from you in a direction you choose for the duration. Each creature in the Line must succeed on a Strength saving throw or be pushed 15 feet away from you in a direction following the Line. A creature that ends its turn in the Line must make the same save.\nAny creature in the Line must spend 2 feet of movement for every 1 foot it moves when moving closer to you.\nThe gust disperses gas or vapor, and it extinguishes candles and similar unprotected flames in the area. It causes protected flames, such as those of lanterns, to dance wildly and has a 50 percent chance to extinguish them.\nAs a Bonus Action on your later turns, you can change the direction in which the Line blasts from you.\nMaterial: a legume seed.",
       "class": [
         "Druid",
@@ -3565,7 +3565,7 @@
     {
       "name": "Transport via Plants",
       "level": 6,
-      "meta": "Conjuration · 1 action · 10 feet · V, S · 10 minutes",
+      "meta": "Conjuration · 1 action · 10 feet · V, S · 1 minute",
       "text": "This spell creates a magical link between a Large or larger inanimate plant within range and another plant, at any distance, on the same plane of existence. You must have seen or touched the destination plant at least once before. For the duration, any creature can step into the target plant and exit from the destination plant by using 5 feet of movement.",
       "class": [
         "Druid"
