@@ -924,12 +924,19 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('unlocking focuses the Max box',
      /data-hplock[\s\S]{0,340}getElementById\("hpMax"\)[\s\S]{0,90}focus\(\)/.test(js));
   ck('the padlock does not ask for confirmation', !/data-hplock[\s\S]{0,340}confirm\(/.test(js));
-  // the automatic writers go to the model, not through the box: only doLevelUp
-  // may touch the flag, and only to clear it
+  // the automatic writers go to the model, not through the box, and never touch
+  // the flag. Gaining levels clears it (the fallback for a dismissed HP step);
+  // the HP step alone may set it again, and only to restore what it found (#58).
   const cls = fs.readFileSync(path.join(ROOT, 'src/js/56-class.js'), 'utf8');
-  ck('56-class.js touches the lock exactly once', (cls.match(/hp\.locked/g) || []).length === 1);
-  ck('...in doLevelUp, and only to clear it',
+  const fnBody = n => (cls.match(new RegExp('function ' + n + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}')) || [''])[0];
+  ck('the seed, re-sync and un-seed never touch the lock',
+     ['seedLevel1HP', 'resyncLevel1HP', 'removeClass'].every(n => fnBody(n) && !/hp\.locked/.test(fnBody(n))));
+  ck('doLevelUp clears the lock',
      /function doLevelUp\(\)\{[\s\S]*?character\.hp\.locked=false;renderHP\(\)/.test(cls));
+  ck('...and reads it for the HP step BEFORE clearing it',
+     /const hp=hpChoice\([^)]*\);[\s\S]{0,800}character\.hp\.locked=false/.test(fnBody('doLevelUp')));
+  ck('the only re-lock is the HP step restoring what it found',
+     (cls.match(/hp\.locked=true/g) || []).length === 1 && /if\(ch\._wasLocked\)character\.hp\.locked=true/.test(fnBody('commitHPChoice')));
   ck('the seed and the un-seed still write hp.max directly (they bypass the lock)',
      /character\.hp\.max=hp;/.test(cls) && /character\.hp\.max=now;/.test(cls) && /character\.hp\.max="";/.test(cls));
 
