@@ -1,12 +1,12 @@
 /* ---- app version & changelog (bump APP_VERSION + add a CHANGELOG entry on every fieldbook.html change) ---- */
-const APP_VERSION="1.7.0";
+const APP_VERSION="1.7.1";
 /* The release in which each system's RULES DATA last changed, keyed by the
    `system` field its pack carries. Owned by scripts/release.js, which bumps a
    system only when its data/<dir>/ actually changed since the previous tag —
    so the app can tell "you need the new app" from "you also need new data".
    scripts/bundle-rules.js stamps each pack with its own value as `dataVersion`;
    dataStatus() compares what a player loaded against these. Never hand-edit. */
-const DATA_VERSIONS={"XPHB":"1.4.0","Humblewood":"1.5.0","XGE":"1.5.0","TCE":"1.5.0","Homebrew":"1.5.0"};
+const DATA_VERSIONS={"XPHB":"1.7.1","Humblewood":"1.7.1","XGE":"1.7.1","TCE":"1.7.1","Homebrew":"1.5.0"};
 /* Set this to your GitHub "owner/repo" to enable the update badge. Leave "" to disable.
    The badge appears when a GitHub Release with a newer tag (e.g. v1.2.0) exists, and links
    to that release's page (attach fieldbook.html to the release so players can download it). */
@@ -40,6 +40,20 @@ function showUpdatePill(){
   el.style.display="inline-flex";
 }
 const CHANGELOG=[
+  {v:"1.7.1", date:"2026-09-25", notes:[
+    "**Levelling up now asks for your hit points.** Every level-up window starts with a Hit Points box: leave it blank to take the average, type what you rolled at the table, or tap Roll for me. It shows its working (the die, your Constitution modifier and your new maximum), and on Done the hit points are added to both your maximum and your current HP. The level where you pick a subclass used to be the easiest place to forget them; that is fixed. Multiclassing into a new class asks too, using that class's hit die. If you close the window without pressing Done, Max HP is left unlocked so you can type the total yourself.",
+    "**Subclass choices now show their descriptions** in the level-up window, the same way the Change subclass window already did, so you are no longer picking from a bare list of names.",
+    "**Battle Masters now choose their maneuvers**, Sorcerers their Metamagic, Warlocks their Eldritch Invocations and Artificers their infusions, at the levels the rules give them. Arcane Archers (arcane shots), Rune Knights (runes) and the College of Swords (fighting style) get the same. Only the options you qualify for at that level are offered. The ones you already know are shown as yours rather than offered twice, except invocations the rules let you take again. The chosen options go on your sheet as features. Re-download the D&D 2024, Xanathar's and Tasha's packs to get the pickers.",
+    "**Battle Masters get their Superiority Dice tracker** on the Resources card: four dice, five at level 7 and six at 15, refilled on a short or long rest. Each maneuver you pick has a Use button that spends a die, and Metamagic spends Sorcery Points the same way. Arcane Archers get an Arcane Shot tracker. Student of War now asks for its skill (from the Fighter's list) and its artisan's tools.",
+    "**The combat view is now a tab.** The crossed swords in the tab bar open it as a Combat tab instead of a screen over everything else, so the other tabs stay one tap away in the middle of a fight. It works the same way: the same sections, the same round tracker (which now stays in view as you scroll), dragging to rearrange, and Undo. ✕ or a second tap on the swords takes you back to the tab you came from.",
+    "**Hit Dice are back in Rest & Recovery**, under the Short Rest and Long Rest buttons, instead of under Hit Points. They are spent on a short rest and come back on a long one, and Vitals — which the combat view shows by default — keeps just your hit points.",
+    "**The Superiority Dice tracker shows its die**: d8, d10 from level 10 and d12 from level 18.",
+    "**Swap a maneuver, invocation or Metamagic option by hand.** The D&D 2024 pack now carries all of them in Add feature, so you can replace one you know when the rules let you: delete the old one and add the new one.",
+    "**Fixed: the starting-equipment picker could turn up after a later level-up.** If you closed the Add class window without pressing Done, the class's starting equipment used to appear after your next level-up instead of being dropped with the rest of that window's picks.",
+    "**Fixed: the Gadgeteer's Engineer path had the wrong feature text.** Crafty Components now lists the Engineer's two components, Quick Shield and Multitool, instead of the end of Magic Item Hacking, which is whole again. Several Gadgeteer features no longer end in stray fragments of picture captions, the class description is no longer cut off mid-sentence, and both paths now have their own introductions from the playtest. Re-download the Humblewood pack to get these.",
+    "**Fixed: subclass descriptions.** Eight D&D 2024 subclasses (among them Psi Warrior, Thief and Hunter) showed only their one-line motto as a description. Four Humblewood subclasses had their feature table run into theirs. A subclass printed in two packs no longer shows its pack name twice.",
+    "**Tap your subclass on the class card to read about it.** The subclass name beside your class is now its own link, straight to its description and features, instead of sitting two taps deep inside the class window."
+  ]},
   {v:"1.7.0", date:"2026-09-24", notes:[
     "Tidied up setting an item's **origin**. In the item finder the controls along the bottom now carry labels — Origin, Detail, Cost (gp) — and match the shape of every other field in the app instead of being slightly rounder and thinner. On the item form, Origin and Origin detail now sit side by side like Cost and Weight above them, with a line explaining what the detail is for, and the form no longer jumps around when you pick an origin.",
     "Fixed: typing an origin detail in the item finder without choosing an origin first threw the text away when you tapped Add. The detail box now stays greyed out until you pick an origin, and its hint follows what you picked — \"at (place)\" for Purchased, \"from (who)\" for a Gift.",
