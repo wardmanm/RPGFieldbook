@@ -37,6 +37,22 @@ Bullets below this line — leave the heading in place.
   HP is left unlocked so you can type the total yourself.
 - **Subclass choices now show their descriptions** in the level-up window, the same way the Change
   subclass window already did, so you are no longer picking from a bare list of names.
+- **Battle Masters now choose their maneuvers**, Sorcerers their Metamagic, Warlocks their
+  Eldritch Invocations and Artificers their infusions, at the levels the rules give them. Arcane
+  Archers (arcane shots), Rune Knights (runes) and the College of Swords (fighting style) get the
+  same. Only the options you qualify for at that level are offered. The ones you already know are
+  shown as yours rather than offered twice, except invocations the rules let you take again. The
+  chosen options go on your sheet as features. Re-download the D&D 2024, Xanathar's and Tasha's
+  packs to get the pickers.
+- **Fixed: the Gadgeteer's Engineer path had the wrong feature text.** Crafty Components now lists
+  the Engineer's two components, Quick Shield and Multitool, instead of the end of Magic Item
+  Hacking, which is whole again. Several Gadgeteer features no longer end in stray fragments of
+  picture captions, the class description is no longer cut off mid-sentence, and both paths now
+  have their own introductions from the playtest. Re-download the Humblewood pack to get these.
+- **Fixed: subclass descriptions.** Eight D&D 2024 subclasses (among them Psi Warrior, Thief and
+  Hunter) showed only their one-line motto as a description. Four Humblewood subclasses had their
+  feature table run into theirs. A subclass printed in two packs no longer shows its pack name
+  twice.
 - **Tap your subclass on the class card to read about it.** The subclass name beside your class is
   now its own link, straight to its description and features, instead of sitting two taps deep
   inside the class window.

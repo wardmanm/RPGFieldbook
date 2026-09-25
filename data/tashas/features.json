@@ -65,7 +65,7 @@
     {
       "name": "Replicate Magic Item",
       "source": "Artificer Infusion",
-      "description": "Using this infusion, you replicate a particular magic item. You can learn this infusion multiple times; each time you do so, choose a magic item that you can make with it, picking from the Replicable Items tables below. A table's title tells you the level you must be in the class to choose an item from the table. Alternatively, you can choose the magic item from among the common magic items in the game, not including potions or scrolls.\nIn the tables, an item's entry tells you whether the item requires attunement. See the item's description in the Dungeon Master's Guide for more information about it, including the type of object required for its making.\n[Table: Replicable Items (2nd-Level Artificer)]\n[Table: Replicable Items (6th-Level Artificer)]\n[Table: Replicable Items (10th-Level Artificer)]\n[Table: Replicable Items (14th-Level Artificer)]"
+      "description": "Using this infusion, you replicate a particular magic item. You can learn this infusion multiple times; each time you do so, choose a magic item that you can make with it, picking from the Replicable Items tables below. A table's title tells you the level you must be in the class to choose an item from the table. Alternatively, you can choose the magic item from among the common magic items in the game, not including potions or scrolls.\nIn the tables, an item's entry tells you whether the item requires attunement. See the item's description in the Dungeon Master's Guide for more information about it, including the type of object required for its making.\n[Table: Replicable Items (2nd-Level Artificer) (TCE)]\n[Table: Replicable Items (6th-Level Artificer) (TCE)]\n[Table: Replicable Items (10th-Level Artificer) (TCE)]\n[Table: Replicable Items (14th-Level Artificer) (TCE)]"
     },
     {
       "name": "Repulsion Shield",
@@ -370,7 +370,7 @@
     {
       "name": "Sorcerer: Metamagic Options",
       "source": "Sorcerer (Optional Class Feature)",
-      "description": "Level 3.\n3rd-level sorcerer optional feature\nWhen you choose Metamagic options, you have access to the following additional options."
+      "description": "Level 3.\n3rd-level sorcerer optional feature\nWhen you choose Metamagic options, you have access to the following additional options.\n• Seeking Spell\n• Transmuted Spell"
     },
     {
       "name": "Sorcerer: Sorcerous Versatility",

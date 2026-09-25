@@ -72,6 +72,51 @@
               "name": "Infuse Item",
               "description": "2nd-level artificer feature\nYou've gained the ability to imbue mundane items with certain magical infusions, turning those objects into magic items.\nInfusions Known: When you gain this feature, pick four artificer infusions to learn, choosing from the \"Artificer Infusions\" section at the end of the class's description. You learn additional infusions of your choice when you reach certain levels in this class, as shown in the Infusions Known column of the Artificer table. Whenever you gain a level in this class, you can replace one of the artificer infusions you learned with a new one.\nArtificer Infusions: Artificers have invented numerous magical infusions, extraordinary processes that rapidly create magic items. To many, artificers seem like wonderworkers, accomplishing in hours what others need weeks to complete. The description of each of the following infusions details the type of item that can receive it, along with whether the resulting magic item requires attunement. Some infusions specify a minimum artificer level. You can't learn such an infusion until you are at least that level. Unless an infusion's description says otherwise, you can't learn an infusion more than once.\nInfusing an Item: Whenever you finish a long rest, you can touch a nonmagical object and imbue it with one of your artificer infusions, turning it into a magic item. An infusion works on only certain kinds of objects, as specified in the infusion's description. If the item requires attunement, you can attune yourself to it the instant you infuse the item. If you decide to attune to the item later, you must do so using the normal process for attunement (see \"Attunement\" in chapter 7 of the Dungeon Master's Guide). Your infusion remains in an item indefinitely, but when you die, the infusion vanishes after a number of days have passed equal to your Intelligence modifier (minimum of 1 day). The infusion also vanishes if you give up your knowledge of the infusion for another one. You can infuse more than one nonmagical object at the end of a long rest; the maximum number of objects appears in the Infused Items column of the Artificer table. You must touch each of the objects, and each of your infusions can be in only one object at a time. Moreover, no object can bear more than one of your infusions at a time. If you try to exceed your maximum number of infusions, the oldest infusion immediately ends, and then the new infusion applies. If an infusion ends on an item that contains other things, like a bag of holding, its contents harmlessly appear in and around its space."
             }
+          ],
+          "choices": [
+            {
+              "type": "option",
+              "label": "Infusions: choose 4",
+              "choose": 4,
+              "from": [
+                {
+                  "name": "Armor of Magical Strength",
+                  "description": "Prerequisite: A suit of armor (requires attunement)\nThis armor has 6 charges. The wearer can expend the armor's charges in the following ways:\n• When the wearer makes a Strength check or a Strength saving throw, it can expend 1 charge to add a bonus to the roll equal to its Intelligence modifier.\n• If the creature would be knocked prone, it can use its reaction to expend 1 charge to avoid being knocked prone.\nThe armor regains 1d6 expended charges daily at dawn."
+                },
+                {
+                  "name": "Enhanced Arcane Focus",
+                  "description": "Prerequisite: A rod, staff, or wand (requires attunement)\nWhile holding this item, a creature gains a +1 bonus to spell attack rolls. In addition, the creature ignores 3 when making a spell attack.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Enhanced Defense",
+                  "description": "Prerequisite: A suit of armor or a shield\nA creature gains a +1 bonus to Armor Class while wearing (armor) or wielding (shield) the infused item.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Enhanced Weapon",
+                  "description": "Prerequisite: A simple or martial weapon\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Homunculus Servant",
+                  "description": "Prerequisite: A gem or crystal worth at least 100 gp\nYou learn intricate methods for magically creating a special homunculus that serves you. The item you infuse serves as the creature's heart, around which the creature's body instantly forms.\nYou determine the homunculus's appearance. Some artificers prefer mechanical-looking birds, whereas some like winged vials or miniature, animate cauldrons.\nThe homunculus is friendly to you and your companions, and it obeys your commands. See this creature's game statistics in the Homunculus Servant stat block, which uses your proficiency bonus (PB) in several places.\nIn combat, the homunculus shares your initiative count, but it takes its turn immediately after yours. It can move and use its reaction on its own, but the only action it takes on its turn is the Dodge action, unless you take a bonus action on your turn to command it to take another action. That action can be one in its stat block or some other action. If you are incapacitated, the homunculus can take any action of its choice, not just Dodge.\nThe homunculus regains 2d6 hit points if the mending spell is cast on it. If you or the homunculus dies, it vanishes, leaving its heart in its space."
+                },
+                {
+                  "name": "Mind Sharpener",
+                  "description": "Prerequisite: A suit of armor or robes\nThe infused item can send a jolt to the wearer to refocus their mind. The item has 4 charges. When the wearer fails a Constitution saving throw to maintain concentration on a spell, the wearer can use its reaction to expend 1 of the item's charges to succeed instead. The item regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Repeating Shot",
+                  "description": "Prerequisite: A simple or martial weapon with the ammunition property (requires attunement)\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it when it's used to make a ranged attack, and it ignores the loading property if it has it.\nIf the weapon lacks ammunition, it produces its own, automatically creating one piece of magic ammunition when the wielder makes a ranged attack with it. The ammunition created by the weapon vanishes the instant after it hits or misses a target."
+                },
+                {
+                  "name": "Replicate Magic Item",
+                  "description": "Using this infusion, you replicate a particular magic item. You can learn this infusion multiple times; each time you do so, choose a magic item that you can make with it, picking from the Replicable Items tables below. A table's title tells you the level you must be in the class to choose an item from the table. Alternatively, you can choose the magic item from among the common magic items in the game, not including potions or scrolls.\nIn the tables, an item's entry tells you whether the item requires attunement. See the item's description in the Dungeon Master's Guide for more information about it, including the type of object required for its making.\n[Table: Replicable Items (2nd-Level Artificer)]\n[Table: Replicable Items (6th-Level Artificer)]\n[Table: Replicable Items (10th-Level Artificer)]\n[Table: Replicable Items (14th-Level Artificer)]"
+                },
+                {
+                  "name": "Returning Weapon",
+                  "description": "Prerequisite: A simple or martial weapon with the thrown property\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it, and it returns to the wielder's hand immediately after it is used to make a ranged attack."
+                }
+              ]
+            }
           ]
         },
         "3": {
@@ -101,6 +146,71 @@
               "name": "Tool Expertise",
               "description": "6th-level artificer feature\nYour proficiency bonus is now doubled for any ability check you make that uses your proficiency with a tool."
             }
+          ],
+          "choices": [
+            {
+              "type": "option",
+              "label": "Infusions: choose 2 more",
+              "choose": 2,
+              "from": [
+                {
+                  "name": "Armor of Magical Strength",
+                  "description": "Prerequisite: A suit of armor (requires attunement)\nThis armor has 6 charges. The wearer can expend the armor's charges in the following ways:\n• When the wearer makes a Strength check or a Strength saving throw, it can expend 1 charge to add a bonus to the roll equal to its Intelligence modifier.\n• If the creature would be knocked prone, it can use its reaction to expend 1 charge to avoid being knocked prone.\nThe armor regains 1d6 expended charges daily at dawn."
+                },
+                {
+                  "name": "Boots of the Winding Path",
+                  "description": "Prerequisite: Level 6 Artificer and A pair of boots (requires attunement)\nWhile wearing these boots, a creature can teleport up to 15 feet as a bonus action to an unoccupied space the creature can see. The creature must have occupied that space at some point during the current turn."
+                },
+                {
+                  "name": "Enhanced Arcane Focus",
+                  "description": "Prerequisite: A rod, staff, or wand (requires attunement)\nWhile holding this item, a creature gains a +1 bonus to spell attack rolls. In addition, the creature ignores 3 when making a spell attack.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Enhanced Defense",
+                  "description": "Prerequisite: A suit of armor or a shield\nA creature gains a +1 bonus to Armor Class while wearing (armor) or wielding (shield) the infused item.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Enhanced Weapon",
+                  "description": "Prerequisite: A simple or martial weapon\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Homunculus Servant",
+                  "description": "Prerequisite: A gem or crystal worth at least 100 gp\nYou learn intricate methods for magically creating a special homunculus that serves you. The item you infuse serves as the creature's heart, around which the creature's body instantly forms.\nYou determine the homunculus's appearance. Some artificers prefer mechanical-looking birds, whereas some like winged vials or miniature, animate cauldrons.\nThe homunculus is friendly to you and your companions, and it obeys your commands. See this creature's game statistics in the Homunculus Servant stat block, which uses your proficiency bonus (PB) in several places.\nIn combat, the homunculus shares your initiative count, but it takes its turn immediately after yours. It can move and use its reaction on its own, but the only action it takes on its turn is the Dodge action, unless you take a bonus action on your turn to command it to take another action. That action can be one in its stat block or some other action. If you are incapacitated, the homunculus can take any action of its choice, not just Dodge.\nThe homunculus regains 2d6 hit points if the mending spell is cast on it. If you or the homunculus dies, it vanishes, leaving its heart in its space."
+                },
+                {
+                  "name": "Mind Sharpener",
+                  "description": "Prerequisite: A suit of armor or robes\nThe infused item can send a jolt to the wearer to refocus their mind. The item has 4 charges. When the wearer fails a Constitution saving throw to maintain concentration on a spell, the wearer can use its reaction to expend 1 of the item's charges to succeed instead. The item regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Radiant Weapon",
+                  "description": "Prerequisite: Level 6 Artificer and A simple or martial weapon (requires attunement)\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it. While holding it, the wielder can take a bonus action to cause it to shed bright light in a 30-foot radius and dim light for an additional 30 feet. The wielder can extinguish the light as a bonus action.\nThe weapon has 4 charges. As a reaction immediately after being hit by an attack, the wielder can expend 1 charge and cause the attacker to be blinded until the end of the attacker's next turn, unless the attacker succeeds on a Constitution saving throw against your spell save DC. The weapon regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Repeating Shot",
+                  "description": "Prerequisite: A simple or martial weapon with the ammunition property (requires attunement)\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it when it's used to make a ranged attack, and it ignores the loading property if it has it.\nIf the weapon lacks ammunition, it produces its own, automatically creating one piece of magic ammunition when the wielder makes a ranged attack with it. The ammunition created by the weapon vanishes the instant after it hits or misses a target."
+                },
+                {
+                  "name": "Replicate Magic Item",
+                  "description": "Using this infusion, you replicate a particular magic item. You can learn this infusion multiple times; each time you do so, choose a magic item that you can make with it, picking from the Replicable Items tables below. A table's title tells you the level you must be in the class to choose an item from the table. Alternatively, you can choose the magic item from among the common magic items in the game, not including potions or scrolls.\nIn the tables, an item's entry tells you whether the item requires attunement. See the item's description in the Dungeon Master's Guide for more information about it, including the type of object required for its making.\n[Table: Replicable Items (2nd-Level Artificer)]\n[Table: Replicable Items (6th-Level Artificer)]\n[Table: Replicable Items (10th-Level Artificer)]\n[Table: Replicable Items (14th-Level Artificer)]"
+                },
+                {
+                  "name": "Repulsion Shield",
+                  "description": "Prerequisite: Level 6 Artificer and A shield (requires attunement)\nA creature gains a +1 bonus to Armor Class while wielding this shield.\nThe shield has 4 charges. While holding it, the wielder can use a reaction immediately after being hit by a melee attack to expend 1 of the shield's charges and push the attacker up to 15 feet away. The shield regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Resistant Armor",
+                  "description": "Prerequisite: Level 6 Artificer and A suit of armor (requires attunement)\nWhile wearing this armor, a creature has resistance to one of the following damage types, which you choose when you infuse the item: acid, cold, fire, force, lightning, necrotic, poison, psychic, radiant, or thunder."
+                },
+                {
+                  "name": "Returning Weapon",
+                  "description": "Prerequisite: A simple or martial weapon with the thrown property\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it, and it returns to the wielder's hand immediately after it is used to make a ranged attack."
+                },
+                {
+                  "name": "Spell-Refueling Ring",
+                  "description": "Prerequisite: Level 6 Artificer and A ring (requires attunement)\nWhile wearing this ring, the creature can recover one expended spell slot as an action. The recovered slot can be of 3rd level or lower. Once used, the ring can't be used again until the next dawn."
+                }
+              ]
+            }
           ]
         },
         "7": {
@@ -123,6 +233,75 @@
             {
               "name": "Magic Item Adept",
               "description": "10th-level artificer feature\nYou've achieved a profound understanding of how to use and make magic items:\n• You can attune to up to four magic items at once.\n• If you craft a magic item with a rarity of common or uncommon, it takes you a quarter of the normal time, and it costs you half as much of the usual gold."
+            }
+          ],
+          "choices": [
+            {
+              "type": "option",
+              "label": "Infusions: choose 2 more",
+              "choose": 2,
+              "from": [
+                {
+                  "name": "Armor of Magical Strength",
+                  "description": "Prerequisite: A suit of armor (requires attunement)\nThis armor has 6 charges. The wearer can expend the armor's charges in the following ways:\n• When the wearer makes a Strength check or a Strength saving throw, it can expend 1 charge to add a bonus to the roll equal to its Intelligence modifier.\n• If the creature would be knocked prone, it can use its reaction to expend 1 charge to avoid being knocked prone.\nThe armor regains 1d6 expended charges daily at dawn."
+                },
+                {
+                  "name": "Boots of the Winding Path",
+                  "description": "Prerequisite: Level 6 Artificer and A pair of boots (requires attunement)\nWhile wearing these boots, a creature can teleport up to 15 feet as a bonus action to an unoccupied space the creature can see. The creature must have occupied that space at some point during the current turn."
+                },
+                {
+                  "name": "Enhanced Arcane Focus",
+                  "description": "Prerequisite: A rod, staff, or wand (requires attunement)\nWhile holding this item, a creature gains a +1 bonus to spell attack rolls. In addition, the creature ignores 3 when making a spell attack.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Enhanced Defense",
+                  "description": "Prerequisite: A suit of armor or a shield\nA creature gains a +1 bonus to Armor Class while wearing (armor) or wielding (shield) the infused item.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Enhanced Weapon",
+                  "description": "Prerequisite: A simple or martial weapon\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Helm of Awareness",
+                  "description": "Prerequisite: Level 10 Artificer and A helmet (requires attunement)\nWhile wearing this helmet, a creature has advantage on initiative rolls. In addition, the wearer can't be surprised, provided it isn't incapacitated."
+                },
+                {
+                  "name": "Homunculus Servant",
+                  "description": "Prerequisite: A gem or crystal worth at least 100 gp\nYou learn intricate methods for magically creating a special homunculus that serves you. The item you infuse serves as the creature's heart, around which the creature's body instantly forms.\nYou determine the homunculus's appearance. Some artificers prefer mechanical-looking birds, whereas some like winged vials or miniature, animate cauldrons.\nThe homunculus is friendly to you and your companions, and it obeys your commands. See this creature's game statistics in the Homunculus Servant stat block, which uses your proficiency bonus (PB) in several places.\nIn combat, the homunculus shares your initiative count, but it takes its turn immediately after yours. It can move and use its reaction on its own, but the only action it takes on its turn is the Dodge action, unless you take a bonus action on your turn to command it to take another action. That action can be one in its stat block or some other action. If you are incapacitated, the homunculus can take any action of its choice, not just Dodge.\nThe homunculus regains 2d6 hit points if the mending spell is cast on it. If you or the homunculus dies, it vanishes, leaving its heart in its space."
+                },
+                {
+                  "name": "Mind Sharpener",
+                  "description": "Prerequisite: A suit of armor or robes\nThe infused item can send a jolt to the wearer to refocus their mind. The item has 4 charges. When the wearer fails a Constitution saving throw to maintain concentration on a spell, the wearer can use its reaction to expend 1 of the item's charges to succeed instead. The item regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Radiant Weapon",
+                  "description": "Prerequisite: Level 6 Artificer and A simple or martial weapon (requires attunement)\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it. While holding it, the wielder can take a bonus action to cause it to shed bright light in a 30-foot radius and dim light for an additional 30 feet. The wielder can extinguish the light as a bonus action.\nThe weapon has 4 charges. As a reaction immediately after being hit by an attack, the wielder can expend 1 charge and cause the attacker to be blinded until the end of the attacker's next turn, unless the attacker succeeds on a Constitution saving throw against your spell save DC. The weapon regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Repeating Shot",
+                  "description": "Prerequisite: A simple or martial weapon with the ammunition property (requires attunement)\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it when it's used to make a ranged attack, and it ignores the loading property if it has it.\nIf the weapon lacks ammunition, it produces its own, automatically creating one piece of magic ammunition when the wielder makes a ranged attack with it. The ammunition created by the weapon vanishes the instant after it hits or misses a target."
+                },
+                {
+                  "name": "Replicate Magic Item",
+                  "description": "Using this infusion, you replicate a particular magic item. You can learn this infusion multiple times; each time you do so, choose a magic item that you can make with it, picking from the Replicable Items tables below. A table's title tells you the level you must be in the class to choose an item from the table. Alternatively, you can choose the magic item from among the common magic items in the game, not including potions or scrolls.\nIn the tables, an item's entry tells you whether the item requires attunement. See the item's description in the Dungeon Master's Guide for more information about it, including the type of object required for its making.\n[Table: Replicable Items (2nd-Level Artificer)]\n[Table: Replicable Items (6th-Level Artificer)]\n[Table: Replicable Items (10th-Level Artificer)]\n[Table: Replicable Items (14th-Level Artificer)]"
+                },
+                {
+                  "name": "Repulsion Shield",
+                  "description": "Prerequisite: Level 6 Artificer and A shield (requires attunement)\nA creature gains a +1 bonus to Armor Class while wielding this shield.\nThe shield has 4 charges. While holding it, the wielder can use a reaction immediately after being hit by a melee attack to expend 1 of the shield's charges and push the attacker up to 15 feet away. The shield regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Resistant Armor",
+                  "description": "Prerequisite: Level 6 Artificer and A suit of armor (requires attunement)\nWhile wearing this armor, a creature has resistance to one of the following damage types, which you choose when you infuse the item: acid, cold, fire, force, lightning, necrotic, poison, psychic, radiant, or thunder."
+                },
+                {
+                  "name": "Returning Weapon",
+                  "description": "Prerequisite: A simple or martial weapon with the thrown property\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it, and it returns to the wielder's hand immediately after it is used to make a ranged attack."
+                },
+                {
+                  "name": "Spell-Refueling Ring",
+                  "description": "Prerequisite: Level 6 Artificer and A ring (requires attunement)\nWhile wearing this ring, the creature can recover one expended spell slot as an action. The recovered slot can be of 3rd level or lower. Once used, the ring can't be used again until the next dawn."
+                }
+              ]
             }
           ],
           "spells": {
@@ -151,6 +330,79 @@
               "description": "14th-level artificer feature\nYour skill with magic items deepens:\n• You can attune to up to five magic items at once.\n• You ignore all class, race, spell, and level requirements on attuning to or using a magic item."
             }
           ],
+          "choices": [
+            {
+              "type": "option",
+              "label": "Infusions: choose 2 more",
+              "choose": 2,
+              "from": [
+                {
+                  "name": "Arcane Propulsion Armor",
+                  "description": "Prerequisite: Level 14 Artificer and A suit of armor (requires attunement)\nThe wearer of this armor gains these benefits:\n• The wearer's walking speed increases by 5 feet.\n• The armor includes gauntlets, each of which is a magic melee weapon that can be wielded only when the hand is holding nothing. The wearer is proficient with the gauntlets, and each one deals 1d8 force damage on a hit and has the thrown property, with a normal range of 20 feet and a long range of 60 feet. When thrown, the gauntlet detaches and flies at the attack's target, then immediately returns to the wearer and reattaches.\n• The armor can't be removed against the wearer's will.\n• If the wearer is missing any limbs, the armor replaces those limbs—hands, arms, feet, legs, or similar appendages. The replacements function identically to the body parts they replace."
+                },
+                {
+                  "name": "Armor of Magical Strength",
+                  "description": "Prerequisite: A suit of armor (requires attunement)\nThis armor has 6 charges. The wearer can expend the armor's charges in the following ways:\n• When the wearer makes a Strength check or a Strength saving throw, it can expend 1 charge to add a bonus to the roll equal to its Intelligence modifier.\n• If the creature would be knocked prone, it can use its reaction to expend 1 charge to avoid being knocked prone.\nThe armor regains 1d6 expended charges daily at dawn."
+                },
+                {
+                  "name": "Boots of the Winding Path",
+                  "description": "Prerequisite: Level 6 Artificer and A pair of boots (requires attunement)\nWhile wearing these boots, a creature can teleport up to 15 feet as a bonus action to an unoccupied space the creature can see. The creature must have occupied that space at some point during the current turn."
+                },
+                {
+                  "name": "Enhanced Arcane Focus",
+                  "description": "Prerequisite: A rod, staff, or wand (requires attunement)\nWhile holding this item, a creature gains a +1 bonus to spell attack rolls. In addition, the creature ignores 3 when making a spell attack.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Enhanced Defense",
+                  "description": "Prerequisite: A suit of armor or a shield\nA creature gains a +1 bonus to Armor Class while wearing (armor) or wielding (shield) the infused item.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Enhanced Weapon",
+                  "description": "Prerequisite: A simple or martial weapon\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Helm of Awareness",
+                  "description": "Prerequisite: Level 10 Artificer and A helmet (requires attunement)\nWhile wearing this helmet, a creature has advantage on initiative rolls. In addition, the wearer can't be surprised, provided it isn't incapacitated."
+                },
+                {
+                  "name": "Homunculus Servant",
+                  "description": "Prerequisite: A gem or crystal worth at least 100 gp\nYou learn intricate methods for magically creating a special homunculus that serves you. The item you infuse serves as the creature's heart, around which the creature's body instantly forms.\nYou determine the homunculus's appearance. Some artificers prefer mechanical-looking birds, whereas some like winged vials or miniature, animate cauldrons.\nThe homunculus is friendly to you and your companions, and it obeys your commands. See this creature's game statistics in the Homunculus Servant stat block, which uses your proficiency bonus (PB) in several places.\nIn combat, the homunculus shares your initiative count, but it takes its turn immediately after yours. It can move and use its reaction on its own, but the only action it takes on its turn is the Dodge action, unless you take a bonus action on your turn to command it to take another action. That action can be one in its stat block or some other action. If you are incapacitated, the homunculus can take any action of its choice, not just Dodge.\nThe homunculus regains 2d6 hit points if the mending spell is cast on it. If you or the homunculus dies, it vanishes, leaving its heart in its space."
+                },
+                {
+                  "name": "Mind Sharpener",
+                  "description": "Prerequisite: A suit of armor or robes\nThe infused item can send a jolt to the wearer to refocus their mind. The item has 4 charges. When the wearer fails a Constitution saving throw to maintain concentration on a spell, the wearer can use its reaction to expend 1 of the item's charges to succeed instead. The item regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Radiant Weapon",
+                  "description": "Prerequisite: Level 6 Artificer and A simple or martial weapon (requires attunement)\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it. While holding it, the wielder can take a bonus action to cause it to shed bright light in a 30-foot radius and dim light for an additional 30 feet. The wielder can extinguish the light as a bonus action.\nThe weapon has 4 charges. As a reaction immediately after being hit by an attack, the wielder can expend 1 charge and cause the attacker to be blinded until the end of the attacker's next turn, unless the attacker succeeds on a Constitution saving throw against your spell save DC. The weapon regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Repeating Shot",
+                  "description": "Prerequisite: A simple or martial weapon with the ammunition property (requires attunement)\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it when it's used to make a ranged attack, and it ignores the loading property if it has it.\nIf the weapon lacks ammunition, it produces its own, automatically creating one piece of magic ammunition when the wielder makes a ranged attack with it. The ammunition created by the weapon vanishes the instant after it hits or misses a target."
+                },
+                {
+                  "name": "Replicate Magic Item",
+                  "description": "Using this infusion, you replicate a particular magic item. You can learn this infusion multiple times; each time you do so, choose a magic item that you can make with it, picking from the Replicable Items tables below. A table's title tells you the level you must be in the class to choose an item from the table. Alternatively, you can choose the magic item from among the common magic items in the game, not including potions or scrolls.\nIn the tables, an item's entry tells you whether the item requires attunement. See the item's description in the Dungeon Master's Guide for more information about it, including the type of object required for its making.\n[Table: Replicable Items (2nd-Level Artificer)]\n[Table: Replicable Items (6th-Level Artificer)]\n[Table: Replicable Items (10th-Level Artificer)]\n[Table: Replicable Items (14th-Level Artificer)]"
+                },
+                {
+                  "name": "Repulsion Shield",
+                  "description": "Prerequisite: Level 6 Artificer and A shield (requires attunement)\nA creature gains a +1 bonus to Armor Class while wielding this shield.\nThe shield has 4 charges. While holding it, the wielder can use a reaction immediately after being hit by a melee attack to expend 1 of the shield's charges and push the attacker up to 15 feet away. The shield regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Resistant Armor",
+                  "description": "Prerequisite: Level 6 Artificer and A suit of armor (requires attunement)\nWhile wearing this armor, a creature has resistance to one of the following damage types, which you choose when you infuse the item: acid, cold, fire, force, lightning, necrotic, poison, psychic, radiant, or thunder."
+                },
+                {
+                  "name": "Returning Weapon",
+                  "description": "Prerequisite: A simple or martial weapon with the thrown property\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it, and it returns to the wielder's hand immediately after it is used to make a ranged attack."
+                },
+                {
+                  "name": "Spell-Refueling Ring",
+                  "description": "Prerequisite: Level 6 Artificer and A ring (requires attunement)\nWhile wearing this ring, the creature can recover one expended spell slot as an action. The recovered slot can be of 3rd level or lower. Once used, the ring can't be used again until the next dawn."
+                }
+              ]
+            }
+          ],
           "spells": {
             "note": "You can now have Cantrips Known: 4."
           }
@@ -167,6 +419,79 @@
             {
               "name": "Magic Item Master",
               "description": "18th-level artificer feature\nYou can now attune to up to six magic items at once."
+            }
+          ],
+          "choices": [
+            {
+              "type": "option",
+              "label": "Infusions: choose 2 more",
+              "choose": 2,
+              "from": [
+                {
+                  "name": "Arcane Propulsion Armor",
+                  "description": "Prerequisite: Level 14 Artificer and A suit of armor (requires attunement)\nThe wearer of this armor gains these benefits:\n• The wearer's walking speed increases by 5 feet.\n• The armor includes gauntlets, each of which is a magic melee weapon that can be wielded only when the hand is holding nothing. The wearer is proficient with the gauntlets, and each one deals 1d8 force damage on a hit and has the thrown property, with a normal range of 20 feet and a long range of 60 feet. When thrown, the gauntlet detaches and flies at the attack's target, then immediately returns to the wearer and reattaches.\n• The armor can't be removed against the wearer's will.\n• If the wearer is missing any limbs, the armor replaces those limbs—hands, arms, feet, legs, or similar appendages. The replacements function identically to the body parts they replace."
+                },
+                {
+                  "name": "Armor of Magical Strength",
+                  "description": "Prerequisite: A suit of armor (requires attunement)\nThis armor has 6 charges. The wearer can expend the armor's charges in the following ways:\n• When the wearer makes a Strength check or a Strength saving throw, it can expend 1 charge to add a bonus to the roll equal to its Intelligence modifier.\n• If the creature would be knocked prone, it can use its reaction to expend 1 charge to avoid being knocked prone.\nThe armor regains 1d6 expended charges daily at dawn."
+                },
+                {
+                  "name": "Boots of the Winding Path",
+                  "description": "Prerequisite: Level 6 Artificer and A pair of boots (requires attunement)\nWhile wearing these boots, a creature can teleport up to 15 feet as a bonus action to an unoccupied space the creature can see. The creature must have occupied that space at some point during the current turn."
+                },
+                {
+                  "name": "Enhanced Arcane Focus",
+                  "description": "Prerequisite: A rod, staff, or wand (requires attunement)\nWhile holding this item, a creature gains a +1 bonus to spell attack rolls. In addition, the creature ignores 3 when making a spell attack.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Enhanced Defense",
+                  "description": "Prerequisite: A suit of armor or a shield\nA creature gains a +1 bonus to Armor Class while wearing (armor) or wielding (shield) the infused item.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Enhanced Weapon",
+                  "description": "Prerequisite: A simple or martial weapon\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it.\nThe bonus increases to +2 when you reach 10th level in this class."
+                },
+                {
+                  "name": "Helm of Awareness",
+                  "description": "Prerequisite: Level 10 Artificer and A helmet (requires attunement)\nWhile wearing this helmet, a creature has advantage on initiative rolls. In addition, the wearer can't be surprised, provided it isn't incapacitated."
+                },
+                {
+                  "name": "Homunculus Servant",
+                  "description": "Prerequisite: A gem or crystal worth at least 100 gp\nYou learn intricate methods for magically creating a special homunculus that serves you. The item you infuse serves as the creature's heart, around which the creature's body instantly forms.\nYou determine the homunculus's appearance. Some artificers prefer mechanical-looking birds, whereas some like winged vials or miniature, animate cauldrons.\nThe homunculus is friendly to you and your companions, and it obeys your commands. See this creature's game statistics in the Homunculus Servant stat block, which uses your proficiency bonus (PB) in several places.\nIn combat, the homunculus shares your initiative count, but it takes its turn immediately after yours. It can move and use its reaction on its own, but the only action it takes on its turn is the Dodge action, unless you take a bonus action on your turn to command it to take another action. That action can be one in its stat block or some other action. If you are incapacitated, the homunculus can take any action of its choice, not just Dodge.\nThe homunculus regains 2d6 hit points if the mending spell is cast on it. If you or the homunculus dies, it vanishes, leaving its heart in its space."
+                },
+                {
+                  "name": "Mind Sharpener",
+                  "description": "Prerequisite: A suit of armor or robes\nThe infused item can send a jolt to the wearer to refocus their mind. The item has 4 charges. When the wearer fails a Constitution saving throw to maintain concentration on a spell, the wearer can use its reaction to expend 1 of the item's charges to succeed instead. The item regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Radiant Weapon",
+                  "description": "Prerequisite: Level 6 Artificer and A simple or martial weapon (requires attunement)\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it. While holding it, the wielder can take a bonus action to cause it to shed bright light in a 30-foot radius and dim light for an additional 30 feet. The wielder can extinguish the light as a bonus action.\nThe weapon has 4 charges. As a reaction immediately after being hit by an attack, the wielder can expend 1 charge and cause the attacker to be blinded until the end of the attacker's next turn, unless the attacker succeeds on a Constitution saving throw against your spell save DC. The weapon regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Repeating Shot",
+                  "description": "Prerequisite: A simple or martial weapon with the ammunition property (requires attunement)\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it when it's used to make a ranged attack, and it ignores the loading property if it has it.\nIf the weapon lacks ammunition, it produces its own, automatically creating one piece of magic ammunition when the wielder makes a ranged attack with it. The ammunition created by the weapon vanishes the instant after it hits or misses a target."
+                },
+                {
+                  "name": "Replicate Magic Item",
+                  "description": "Using this infusion, you replicate a particular magic item. You can learn this infusion multiple times; each time you do so, choose a magic item that you can make with it, picking from the Replicable Items tables below. A table's title tells you the level you must be in the class to choose an item from the table. Alternatively, you can choose the magic item from among the common magic items in the game, not including potions or scrolls.\nIn the tables, an item's entry tells you whether the item requires attunement. See the item's description in the Dungeon Master's Guide for more information about it, including the type of object required for its making.\n[Table: Replicable Items (2nd-Level Artificer)]\n[Table: Replicable Items (6th-Level Artificer)]\n[Table: Replicable Items (10th-Level Artificer)]\n[Table: Replicable Items (14th-Level Artificer)]"
+                },
+                {
+                  "name": "Repulsion Shield",
+                  "description": "Prerequisite: Level 6 Artificer and A shield (requires attunement)\nA creature gains a +1 bonus to Armor Class while wielding this shield.\nThe shield has 4 charges. While holding it, the wielder can use a reaction immediately after being hit by a melee attack to expend 1 of the shield's charges and push the attacker up to 15 feet away. The shield regains 1d4 expended charges daily at dawn."
+                },
+                {
+                  "name": "Resistant Armor",
+                  "description": "Prerequisite: Level 6 Artificer and A suit of armor (requires attunement)\nWhile wearing this armor, a creature has resistance to one of the following damage types, which you choose when you infuse the item: acid, cold, fire, force, lightning, necrotic, poison, psychic, radiant, or thunder."
+                },
+                {
+                  "name": "Returning Weapon",
+                  "description": "Prerequisite: A simple or martial weapon with the thrown property\nThis magic weapon grants a +1 bonus to attack and damage rolls made with it, and it returns to the wielder's hand immediately after it is used to make a ranged attack."
+                },
+                {
+                  "name": "Spell-Refueling Ring",
+                  "description": "Prerequisite: Level 6 Artificer and A ring (requires attunement)\nWhile wearing this ring, the creature can recover one expended spell slot as an action. The recovered slot can be of 3rd level or lower. Once used, the ring can't be used again until the next dawn."
+                }
+              ]
             }
           ]
         },
@@ -621,7 +946,7 @@
           }
         },
         "Path of the World Tree": {
-          "description": "Trace the Roots and Branches of the Multiverse",
+          "description": "Barbarians who follow the Path of the World Tree connect with the cosmic tree Yggdrasil through their Rage. This tree grows among the Outer Planes, connecting them to each other and the Material Plane. These Barbarians draw on the tree's magic for vitality and as a means of dimensional travel.",
           "levels": {
             "3": {
               "traits": [
@@ -1647,7 +1972,7 @@
       },
       "subclasses": {
         "Circle of the Land": {
-          "description": "Celebrate Connection to the Natural World",
+          "description": "The Circle of the Land comprises mystics and sages who safeguard ancient knowledge and rites. These Druids meet within sacred circles of trees or standing stones to whisper primal secrets in Druidic. The circle's wisest members preside as the chief priests of their communities.",
           "levels": {
             "3": {
               "traits": [
@@ -2095,7 +2420,96 @@
               "traits": [
                 {
                   "name": "Battle Master",
-                  "description": "Master Sophisticated Battle Maneuvers\nBattle Masters are students of the art of battle, learning martial techniques passed down through generations. The most accomplished Battle Masters are well-rounded figures who combine their carefully honed combat skills with academic study in the fields of history, theory, and the arts.\nCombat Superiority: Your experience on the battlefield has refined your fighting techniques. You learn maneuvers that are fueled by special dice called Superiority Dice. Maneuvers: You learn three maneuvers of your choice from the \"Maneuvers Options\" section later in this subclass's description. Many maneuvers enhance an attack in some way. You can use only one maneuver per attack. You learn two additional maneuvers of your choice when you reach Fighter levels 7, 10, and 15. Each time you learn new maneuvers, you can also replace one maneuver you know with a different one. Superiority Dice: You have four Superiority Dice, which are d8. A Superiority Die is expended when you use it. You regain all expended Superiority Dice when you finish a Short or Long Rest. You gain an additional Superiority Die when you reach Fighter levels 7 (five dice total) and 15 (six dice total). Saving Throws: If a maneuver requires a saving throw, the DC equals 8 plus your Strength or Dexterity modifier (your choice) and Proficiency Bonus.\nStudent of War: You gain proficiency with one type of Artisan's Tools of your choice, and you gain proficiency in one skill of your choice from the skills available to Fighters at level 1.\nManeuver Options: The maneuvers are presented here in alphabetical order."
+                  "description": "Master Sophisticated Battle Maneuvers\nBattle Masters are students of the art of battle, learning martial techniques passed down through generations. The most accomplished Battle Masters are well-rounded figures who combine their carefully honed combat skills with academic study in the fields of history, theory, and the arts.\nCombat Superiority: Your experience on the battlefield has refined your fighting techniques. You learn maneuvers that are fueled by special dice called Superiority Dice. Maneuvers: You learn three maneuvers of your choice from the \"Maneuvers Options\" section later in this subclass's description. Many maneuvers enhance an attack in some way. You can use only one maneuver per attack. You learn two additional maneuvers of your choice when you reach Fighter levels 7, 10, and 15. Each time you learn new maneuvers, you can also replace one maneuver you know with a different one. Superiority Dice: You have four Superiority Dice, which are d8. A Superiority Die is expended when you use it. You regain all expended Superiority Dice when you finish a Short or Long Rest. You gain an additional Superiority Die when you reach Fighter levels 7 (five dice total) and 15 (six dice total). Saving Throws: If a maneuver requires a saving throw, the DC equals 8 plus your Strength or Dexterity modifier (your choice) and Proficiency Bonus.\nStudent of War: You gain proficiency with one type of Artisan's Tools of your choice, and you gain proficiency in one skill of your choice from the skills available to Fighters at level 1.\nManeuver Options: The maneuvers are presented here in alphabetical order. • Ambush\n• Bait and Switch\n• Commander's Strike\n• Commanding Presence\n• Disarming Attack\n• Distracting Strike\n• Evasive Footwork\n• Feinting Attack\n• Goading Attack\n• Lunging Attack\n• Maneuvering Attack\n• Menacing Attack\n• Parry\n• Precision Attack\n• Pushing Attack\n• Rally\n• Riposte\n• Sweeping Attack\n• Tactical Assessment\n• Trip Attack"
+                }
+              ],
+              "choices": [
+                {
+                  "type": "option",
+                  "label": "Maneuvers: choose 3",
+                  "choose": 3,
+                  "from": [
+                    {
+                      "name": "Ambush",
+                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition."
+                    },
+                    {
+                      "name": "Bait and Switch",
+                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled."
+                    },
+                    {
+                      "name": "Commander's Strike",
+                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit."
+                    },
+                    {
+                      "name": "Commanding Presence",
+                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll."
+                    },
+                    {
+                      "name": "Disarming Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space."
+                    },
+                    {
+                      "name": "Distracting Strike",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn."
+                    },
+                    {
+                      "name": "Evasive Footwork",
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn."
+                    },
+                    {
+                      "name": "Feinting Attack",
+                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll."
+                    },
+                    {
+                      "name": "Goading Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn."
+                    },
+                    {
+                      "name": "Lunging Attack",
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll."
+                    },
+                    {
+                      "name": "Maneuvering Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack."
+                    },
+                    {
+                      "name": "Menacing Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn."
+                    },
+                    {
+                      "name": "Parry",
+                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice)."
+                    },
+                    {
+                      "name": "Precision Attack",
+                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit."
+                    },
+                    {
+                      "name": "Pushing Attack",
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you."
+                    },
+                    {
+                      "name": "Rally",
+                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down)."
+                    },
+                    {
+                      "name": "Riposte",
+                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage."
+                    },
+                    {
+                      "name": "Sweeping Attack",
+                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack."
+                    },
+                    {
+                      "name": "Tactical Assessment",
+                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check."
+                    },
+                    {
+                      "name": "Trip Attack",
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition."
+                    }
+                  ]
                 }
               ]
             },
@@ -2105,6 +2519,95 @@
                   "name": "Know Your Enemy",
                   "description": "As a Bonus Action, you can discern certain strengths and weaknesses of a creature you can see within 30 feet of yourself; you know whether that creature has any Immunities, Resistances, or Vulnerabilities, and if the creature has any, you know what they are.\nOnce you use this feature, you can't do so again until you finish a Long Rest. You can also restore a use of the feature by expending one Superiority Die (no action required)."
                 }
+              ],
+              "choices": [
+                {
+                  "type": "option",
+                  "label": "Maneuvers: choose 2 more",
+                  "choose": 2,
+                  "from": [
+                    {
+                      "name": "Ambush",
+                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition."
+                    },
+                    {
+                      "name": "Bait and Switch",
+                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled."
+                    },
+                    {
+                      "name": "Commander's Strike",
+                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit."
+                    },
+                    {
+                      "name": "Commanding Presence",
+                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll."
+                    },
+                    {
+                      "name": "Disarming Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space."
+                    },
+                    {
+                      "name": "Distracting Strike",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn."
+                    },
+                    {
+                      "name": "Evasive Footwork",
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn."
+                    },
+                    {
+                      "name": "Feinting Attack",
+                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll."
+                    },
+                    {
+                      "name": "Goading Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn."
+                    },
+                    {
+                      "name": "Lunging Attack",
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll."
+                    },
+                    {
+                      "name": "Maneuvering Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack."
+                    },
+                    {
+                      "name": "Menacing Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn."
+                    },
+                    {
+                      "name": "Parry",
+                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice)."
+                    },
+                    {
+                      "name": "Precision Attack",
+                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit."
+                    },
+                    {
+                      "name": "Pushing Attack",
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you."
+                    },
+                    {
+                      "name": "Rally",
+                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down)."
+                    },
+                    {
+                      "name": "Riposte",
+                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage."
+                    },
+                    {
+                      "name": "Sweeping Attack",
+                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack."
+                    },
+                    {
+                      "name": "Tactical Assessment",
+                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check."
+                    },
+                    {
+                      "name": "Trip Attack",
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition."
+                    }
+                  ]
+                }
               ]
             },
             "10": {
@@ -2113,6 +2616,95 @@
                   "name": "Improved Combat Superiority",
                   "description": "Your Superiority Die becomes a d10."
                 }
+              ],
+              "choices": [
+                {
+                  "type": "option",
+                  "label": "Maneuvers: choose 2 more",
+                  "choose": 2,
+                  "from": [
+                    {
+                      "name": "Ambush",
+                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition."
+                    },
+                    {
+                      "name": "Bait and Switch",
+                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled."
+                    },
+                    {
+                      "name": "Commander's Strike",
+                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit."
+                    },
+                    {
+                      "name": "Commanding Presence",
+                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll."
+                    },
+                    {
+                      "name": "Disarming Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space."
+                    },
+                    {
+                      "name": "Distracting Strike",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn."
+                    },
+                    {
+                      "name": "Evasive Footwork",
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn."
+                    },
+                    {
+                      "name": "Feinting Attack",
+                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll."
+                    },
+                    {
+                      "name": "Goading Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn."
+                    },
+                    {
+                      "name": "Lunging Attack",
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll."
+                    },
+                    {
+                      "name": "Maneuvering Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack."
+                    },
+                    {
+                      "name": "Menacing Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn."
+                    },
+                    {
+                      "name": "Parry",
+                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice)."
+                    },
+                    {
+                      "name": "Precision Attack",
+                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit."
+                    },
+                    {
+                      "name": "Pushing Attack",
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you."
+                    },
+                    {
+                      "name": "Rally",
+                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down)."
+                    },
+                    {
+                      "name": "Riposte",
+                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage."
+                    },
+                    {
+                      "name": "Sweeping Attack",
+                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack."
+                    },
+                    {
+                      "name": "Tactical Assessment",
+                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check."
+                    },
+                    {
+                      "name": "Trip Attack",
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition."
+                    }
+                  ]
+                }
               ]
             },
             "15": {
@@ -2120,6 +2712,95 @@
                 {
                   "name": "Relentless",
                   "description": "Once per turn, when you use a maneuver, you can roll 1d8 and use the number rolled instead of expending a Superiority Die."
+                }
+              ],
+              "choices": [
+                {
+                  "type": "option",
+                  "label": "Maneuvers: choose 2 more",
+                  "choose": 2,
+                  "from": [
+                    {
+                      "name": "Ambush",
+                      "description": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you have the Incapacitated condition."
+                    },
+                    {
+                      "name": "Bait and Switch",
+                      "description": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and doesn't have the Incapacitated condition. This movement doesn't provoke Opportunity Attacks.\nRoll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled."
+                    },
+                    {
+                      "name": "Commander's Strike",
+                      "description": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. When you do so, choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit."
+                    },
+                    {
+                      "name": "Commanding Presence",
+                      "description": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add that die to the roll."
+                    },
+                    {
+                      "name": "Disarming Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to disarm the target. Add the Superiority Die roll to the attack's damage roll. The target must succeed on a Strength saving throw or drop one object of your choice that it's holding, with the object landing in its space."
+                    },
+                    {
+                      "name": "Distracting Strike",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to distract the target. Add the Superiority Die roll to the attack's damage roll. The next attack roll against the target by an attacker other than you has Advantage if the attack is made before the start of your next turn."
+                    },
+                    {
+                      "name": "Evasive Footwork",
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. You also roll the die and add the number rolled to your AC until the start of your next turn."
+                    },
+                    {
+                      "name": "Feinting Attack",
+                      "description": "As a Bonus Action, you can expend one Superiority Die to feint, choosing one creature within 5 feet of yourself as your target. You have Advantage on your next attack roll against that target this turn. If that attack hits, add the Superiority Die to the attack's damage roll."
+                    },
+                    {
+                      "name": "Goading Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn."
+                    },
+                    {
+                      "name": "Lunging Attack",
+                      "description": "As a Bonus Action, you can expend one Superiority Die and take the Dash action. If you move at least 5 feet in a straight line immediately before hitting with a melee attack as part of the Attack action on this turn, you can add the Superiority Die to the attack's damage roll."
+                    },
+                    {
+                      "name": "Maneuvering Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to maneuver one of your comrades into another position. Add the Superiority Die roll to the attack's damage roll, and choose a willing creature who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking an Opportunity Attack from the target of your attack."
+                    },
+                    {
+                      "name": "Menacing Attack",
+                      "description": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have the Frightened condition until the end of your next turn."
+                    },
+                    {
+                      "name": "Parry",
+                      "description": "When another creature damages you with a melee attack roll, you can take a Reaction and expend one Superiority Die to reduce the damage by the number you roll on your Superiority Die plus your Strength or Dexterity modifier (your choice)."
+                    },
+                    {
+                      "name": "Precision Attack",
+                      "description": "When you miss with an attack roll, you can expend one Superiority Die, roll that die, and add it to the attack roll, potentially causing the attack to hit."
+                    },
+                    {
+                      "name": "Pushing Attack",
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to drive the target back. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you."
+                    },
+                    {
+                      "name": "Rally",
+                      "description": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally of yours within 30 feet of yourself who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll plus half your Fighter level (round down)."
+                    },
+                    {
+                      "name": "Riposte",
+                      "description": "When a creature misses you with a melee attack roll, you can take a Reaction and expend one Superiority Die to make a melee attack roll with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage."
+                    },
+                    {
+                      "name": "Sweeping Attack",
+                      "description": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your Superiority Die. The damage is of the same type dealt by the original attack."
+                    },
+                    {
+                      "name": "Tactical Assessment",
+                      "description": "When you make an Intelligence (History or Investigation) check or a Wisdom (Insight) check, you can expend one Superiority Die and add that die to the ability check."
+                    },
+                    {
+                      "name": "Trip Attack",
+                      "description": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die and add the die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or have the Prone condition."
+                    }
+                  ]
                 }
               ]
             },
@@ -2225,7 +2906,7 @@
           }
         },
         "Psi Warrior": {
-          "description": "Augment Physical Might with Psionic Power",
+          "description": "Psi Warriors awaken the power of their minds to augment their physical might. They harness this psionic power to infuse their weapon strikes, lash out with telekinetic energy, and create barriers of mental force.",
           "levels": {
             "3": {
               "traits": [
@@ -2532,7 +3213,7 @@
           }
         },
         "Warrior of Shadow": {
-          "description": "Harness Shadow Power for Stealth and Subterfuge",
+          "description": "Warriors of Shadow practice stealth and subterfuge, harnessing the power of the Shadowfell. They are at home in darkness, able to draw gloom around themselves to hide, leap from shadow to shadow, and take on a wraithlike form.",
           "levels": {
             "3": {
               "traits": [
@@ -2569,7 +3250,7 @@
           }
         },
         "Warrior of the Elements": {
-          "description": "Wield Strikes and Bursts of Elemental Power",
+          "description": "Warriors of the Elements tap into the power of the Elemental Planes. Harnessing their supernatural focus, these Monks momentarily tame the energy of the Elemental Chaos to empower themselves in and out of battle.",
           "levels": {
             "3": {
               "traits": [
@@ -3979,7 +4660,7 @@
           }
         },
         "Hunter": {
-          "description": "Protect Nature and People from Destruction",
+          "description": "You stalk prey in the wilds and elsewhere, using your abilities as a Hunter to protect nature and people everywhere from forces that would destroy them.",
           "levels": {
             "3": {
               "traits": [
@@ -4357,7 +5038,7 @@
           }
         },
         "Thief": {
-          "description": "Hunt for Treasure as a Classic Adventurer",
+          "description": "A mix of burglar, treasure hunter, and explorer, you are the epitome of an adventurer. In addition to improving your agility and stealth, you gain abilities useful for delving into ruins and getting maximum benefit from the magic items you find there.",
           "levels": {
             "3": {
               "traits": [
@@ -4475,7 +5156,56 @@
             },
             {
               "name": "Metamagic Options",
-              "description": "The following options are available to your Metamagic feature. The options are presented in alphabetical order."
+              "description": "The following options are available to your Metamagic feature. The options are presented in alphabetical order.\n• Careful Spell\n• Distant Spell\n• Empowered Spell\n• Extended Spell\n• Heightened Spell\n• Quickened Spell\n• Seeking Spell\n• Subtle Spell\n• Transmuted Spell\n• Twinned Spell"
+            }
+          ],
+          "choices": [
+            {
+              "type": "option",
+              "label": "Metamagic: choose 2",
+              "choose": 2,
+              "from": [
+                {
+                  "name": "Careful Spell",
+                  "description": "When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save."
+                },
+                {
+                  "name": "Distant Spell",
+                  "description": "When you cast a spell that has a range of at least 5 feet, you can spend 1 Sorcery Point to double the spell's range. Or when you cast a spell that has a range of Touch, you can spend 1 Sorcery Point to make the spell's range 30 feet."
+                },
+                {
+                  "name": "Empowered Spell",
+                  "description": "When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one), and you must use the new rolls.\nYou can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell."
+                },
+                {
+                  "name": "Extended Spell",
+                  "description": "When you cast a spell that has a duration of 1 minute or longer, you can spend 1 Sorcery Point to double its duration to a maximum duration of 24 hours.\nIf the affected spell requires Concentration, you have Advantage on any saving throw you make to maintain that Concentration."
+                },
+                {
+                  "name": "Heightened Spell",
+                  "description": "When you cast a spell that forces a creature to make a saving throw, you can spend 2 Sorcery Points to give one target of the spell Disadvantage on saves against the spell."
+                },
+                {
+                  "name": "Quickened Spell",
+                  "description": "When you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can't modify a spell in this way if you've already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way."
+                },
+                {
+                  "name": "Seeking Spell",
+                  "description": "If you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll.\nYou can use Seeking Spell even if you've already used a different Metamagic option during the casting of the spell."
+                },
+                {
+                  "name": "Subtle Spell",
+                  "description": "When you cast a spell, you can spend 1 Sorcery Point to cast it without any Verbal, Somatic, or Material components, except Material components that are consumed by the spell or that have a cost specified in the spell."
+                },
+                {
+                  "name": "Transmuted Spell",
+                  "description": "When you cast a spell that deals a type of damage from the following list, you can spend 1 Sorcery Point to change that damage type to one of the other listed types: Acid, Cold, Fire, Lightning, Poison, Thunder."
+                },
+                {
+                  "name": "Twinned Spell",
+                  "description": "When you cast a spell, such as Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1."
+                }
+              ]
             }
           ],
           "spells": {
@@ -4552,6 +5282,55 @@
               "description": "Because your magic flows from within you, you can alter your spells to suit your needs; you gain two Metamagic options of your choice from the \"Metamagic Options\" section later in this class's description.\nYou can use only one Metamagic option on a spell when you cast it, unless otherwise noted in one of those options.\nWhenever you gain a Sorcerer level, you can replace one of your Metamagic options with one you don't know."
             }
           ],
+          "choices": [
+            {
+              "type": "option",
+              "label": "Metamagic: choose 2 more",
+              "choose": 2,
+              "from": [
+                {
+                  "name": "Careful Spell",
+                  "description": "When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save."
+                },
+                {
+                  "name": "Distant Spell",
+                  "description": "When you cast a spell that has a range of at least 5 feet, you can spend 1 Sorcery Point to double the spell's range. Or when you cast a spell that has a range of Touch, you can spend 1 Sorcery Point to make the spell's range 30 feet."
+                },
+                {
+                  "name": "Empowered Spell",
+                  "description": "When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one), and you must use the new rolls.\nYou can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell."
+                },
+                {
+                  "name": "Extended Spell",
+                  "description": "When you cast a spell that has a duration of 1 minute or longer, you can spend 1 Sorcery Point to double its duration to a maximum duration of 24 hours.\nIf the affected spell requires Concentration, you have Advantage on any saving throw you make to maintain that Concentration."
+                },
+                {
+                  "name": "Heightened Spell",
+                  "description": "When you cast a spell that forces a creature to make a saving throw, you can spend 2 Sorcery Points to give one target of the spell Disadvantage on saves against the spell."
+                },
+                {
+                  "name": "Quickened Spell",
+                  "description": "When you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can't modify a spell in this way if you've already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way."
+                },
+                {
+                  "name": "Seeking Spell",
+                  "description": "If you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll.\nYou can use Seeking Spell even if you've already used a different Metamagic option during the casting of the spell."
+                },
+                {
+                  "name": "Subtle Spell",
+                  "description": "When you cast a spell, you can spend 1 Sorcery Point to cast it without any Verbal, Somatic, or Material components, except Material components that are consumed by the spell or that have a cost specified in the spell."
+                },
+                {
+                  "name": "Transmuted Spell",
+                  "description": "When you cast a spell that deals a type of damage from the following list, you can spend 1 Sorcery Point to change that damage type to one of the other listed types: Acid, Cold, Fire, Lightning, Poison, Thunder."
+                },
+                {
+                  "name": "Twinned Spell",
+                  "description": "When you cast a spell, such as Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1."
+                }
+              ]
+            }
+          ],
           "spells": {
             "note": "You can now have Cantrips: 6; Prepared Spells: 15."
           }
@@ -4590,6 +5369,55 @@
             {
               "name": "Metamagic",
               "description": "Because your magic flows from within you, you can alter your spells to suit your needs; you gain two Metamagic options of your choice from the \"Metamagic Options\" section later in this class's description.\nYou can use only one Metamagic option on a spell when you cast it, unless otherwise noted in one of those options.\nWhenever you gain a Sorcerer level, you can replace one of your Metamagic options with one you don't know."
+            }
+          ],
+          "choices": [
+            {
+              "type": "option",
+              "label": "Metamagic: choose 2 more",
+              "choose": 2,
+              "from": [
+                {
+                  "name": "Careful Spell",
+                  "description": "When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save."
+                },
+                {
+                  "name": "Distant Spell",
+                  "description": "When you cast a spell that has a range of at least 5 feet, you can spend 1 Sorcery Point to double the spell's range. Or when you cast a spell that has a range of Touch, you can spend 1 Sorcery Point to make the spell's range 30 feet."
+                },
+                {
+                  "name": "Empowered Spell",
+                  "description": "When you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one), and you must use the new rolls.\nYou can use Empowered Spell even if you've already used a different Metamagic option during the casting of the spell."
+                },
+                {
+                  "name": "Extended Spell",
+                  "description": "When you cast a spell that has a duration of 1 minute or longer, you can spend 1 Sorcery Point to double its duration to a maximum duration of 24 hours.\nIf the affected spell requires Concentration, you have Advantage on any saving throw you make to maintain that Concentration."
+                },
+                {
+                  "name": "Heightened Spell",
+                  "description": "When you cast a spell that forces a creature to make a saving throw, you can spend 2 Sorcery Points to give one target of the spell Disadvantage on saves against the spell."
+                },
+                {
+                  "name": "Quickened Spell",
+                  "description": "When you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can't modify a spell in this way if you've already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way."
+                },
+                {
+                  "name": "Seeking Spell",
+                  "description": "If you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll.\nYou can use Seeking Spell even if you've already used a different Metamagic option during the casting of the spell."
+                },
+                {
+                  "name": "Subtle Spell",
+                  "description": "When you cast a spell, you can spend 1 Sorcery Point to cast it without any Verbal, Somatic, or Material components, except Material components that are consumed by the spell or that have a cost specified in the spell."
+                },
+                {
+                  "name": "Transmuted Spell",
+                  "description": "When you cast a spell that deals a type of damage from the following list, you can spend 1 Sorcery Point to change that damage type to one of the other listed types: Acid, Cold, Fire, Lightning, Poison, Thunder."
+                },
+                {
+                  "name": "Twinned Spell",
+                  "description": "When you cast a spell, such as Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell's effective level by 1."
+                }
+              ]
             }
           ],
           "spells": {
@@ -4868,6 +5696,33 @@
                 "Nature",
                 "Religion"
               ]
+            },
+            {
+              "type": "option",
+              "label": "Eldritch Invocations: choose 1",
+              "choose": 1,
+              "from": [
+                {
+                  "name": "Armor of Shadows",
+                  "description": "You can cast Mage Armor on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Eldritch Mind",
+                  "description": "You have Advantage on Constitution saving throws that you make to maintain Concentration."
+                },
+                {
+                  "name": "Pact of the Blade",
+                  "description": "As a Bonus Action, you can conjure a pact weapon in your hand—a Simple or Martial Melee weapon of your choice with which you bond—or create a bond with a magic weapon you touch; you can't bond with a magic weapon if someone else is attuned to it or another Warlock is bonded with it. Until the bond ends, you have proficiency with the weapon, and you can use it as a Spellcasting Focus.\nWhenever you attack with the bonded weapon, you can use your Charisma modifier for the attack and damage rolls instead of using Strength or Dexterity; and you can cause the weapon to deal Necrotic, Psychic, or Radiant damage or its normal damage type.\nYour bond with the weapon ends if you use this feature's Bonus Action again, if the weapon is more than 5 feet away from you for 1 minute or more, or if you die. A conjured weapon disappears when the bond ends."
+                },
+                {
+                  "name": "Pact of the Chain",
+                  "description": "You learn the Find Familiar spell and can cast it as a Magic action without expending a spell slot.\nWhen you cast the spell, you choose one of the normal forms for your familiar or one of the following special forms: Imp, Pseudodragon, Quasit, Skeleton, Slaad Tadpole, Sphinx of Wonder, Sprite, or Venomous Snake (see appendix B for the familiar's stat block).\nAdditionally, when you take the Attack action, you can forgo one of your own attacks to allow your familiar to make one attack of its own with its Reaction."
+                },
+                {
+                  "name": "Pact of the Tome",
+                  "description": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die.\nCantrips and Rituals: When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class's spell list, and they must be spells you don't already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you.\nSpellcasting Focus: You can use the book as a Spellcasting Focus."
+                }
+              ]
             }
           ],
           "traits": [
@@ -4881,7 +5736,7 @@
             },
             {
               "name": "Eldritch Invocation Options",
-              "description": "Eldritch Invocation options appear in alphabetical order."
+              "description": "Eldritch Invocation options appear in alphabetical order.\n• Agonizing Blast\n• Armor of Shadows\n• Ascendant Step\n• Devil's Sight\n• Devouring Blade\n• Eldritch Mind\n• Eldritch Smite\n• Eldritch Spear\n• Fiendish Vigor\n• Gaze of Two Minds\n• Gift of the Depths\n• Gift of the Protectors\n• Investment of the Chain Master\n• Lessons of the First Ones\n• Lifedrinker\n• Mask of Many Faces\n• Master of Myriad Forms\n• Misty Visions\n• One with Shadows\n• Otherworldly Leap\n• Pact of the Blade\n• Pact of the Chain\n• Pact of the Tome\n• Repelling Blast\n• Thirsting Blade\n• Visions of Distant Realms\n• Whispers of the Grave\n• Witch Sight"
             }
           ],
           "spells": {
@@ -4893,6 +5748,75 @@
             {
               "name": "Magical Cunning",
               "description": "You can perform an esoteric rite for 1 minute. At the end of it, you regain expended Pact Magic spell slots but no more than a number equal to half your maximum (round up). Once you use this feature, you can't do so again until you finish a Long Rest."
+            }
+          ],
+          "choices": [
+            {
+              "type": "option",
+              "label": "Eldritch Invocations: choose 2 more",
+              "choose": 2,
+              "from": [
+                {
+                  "name": "Agonizing Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Armor of Shadows",
+                  "description": "You can cast Mage Armor on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Devil's Sight",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can see normally in Dim Light and Darkness—both magical and nonmagical—within 120 feet of yourself."
+                },
+                {
+                  "name": "Eldritch Mind",
+                  "description": "You have Advantage on Constitution saving throws that you make to maintain Concentration."
+                },
+                {
+                  "name": "Eldritch Spear",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Fiendish Vigor",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast False Life on yourself without expending a spell slot. When you cast the spell with this feature, you don't roll the die for the Temporary Hit Points; you automatically get the highest number on the die."
+                },
+                {
+                  "name": "Lessons of the First Ones",
+                  "description": "Prerequisite: Level 2 Warlock\nYou have received knowledge from an elder entity of the multiverse, allowing you to gain one Origin feat of your choice.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different Origin feat.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Mask of Many Faces",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Disguise Self without expending a spell slot."
+                },
+                {
+                  "name": "Misty Visions",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Silent Image without expending a spell slot."
+                },
+                {
+                  "name": "Otherworldly Leap",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Jump on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Pact of the Blade",
+                  "description": "As a Bonus Action, you can conjure a pact weapon in your hand—a Simple or Martial Melee weapon of your choice with which you bond—or create a bond with a magic weapon you touch; you can't bond with a magic weapon if someone else is attuned to it or another Warlock is bonded with it. Until the bond ends, you have proficiency with the weapon, and you can use it as a Spellcasting Focus.\nWhenever you attack with the bonded weapon, you can use your Charisma modifier for the attack and damage rolls instead of using Strength or Dexterity; and you can cause the weapon to deal Necrotic, Psychic, or Radiant damage or its normal damage type.\nYour bond with the weapon ends if you use this feature's Bonus Action again, if the weapon is more than 5 feet away from you for 1 minute or more, or if you die. A conjured weapon disappears when the bond ends."
+                },
+                {
+                  "name": "Pact of the Chain",
+                  "description": "You learn the Find Familiar spell and can cast it as a Magic action without expending a spell slot.\nWhen you cast the spell, you choose one of the normal forms for your familiar or one of the following special forms: Imp, Pseudodragon, Quasit, Skeleton, Slaad Tadpole, Sphinx of Wonder, Sprite, or Venomous Snake (see appendix B for the familiar's stat block).\nAdditionally, when you take the Attack action, you can forgo one of your own attacks to allow your familiar to make one attack of its own with its Reaction."
+                },
+                {
+                  "name": "Pact of the Tome",
+                  "description": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die.\nCantrips and Rituals: When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class's spell list, and they must be spells you don't already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you.\nSpellcasting Focus: You can use the book as a Spellcasting Focus."
+                },
+                {
+                  "name": "Repelling Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock|Spell Attack=M;R;O', 'Entry': 'A Warlock Cantrip That Deals Damage Via An Attack Roll', 'Entrysummary': 'Warlock Cantrip That Deals Damage Via An Attack Roll'} spell\nChoose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                }
+              ]
             }
           ],
           "spells": {
@@ -4921,6 +5845,107 @@
           }
         },
         "5": {
+          "choices": [
+            {
+              "type": "option",
+              "label": "Eldritch Invocations: choose 2 more",
+              "choose": 2,
+              "from": [
+                {
+                  "name": "Agonizing Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Armor of Shadows",
+                  "description": "You can cast Mage Armor on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Ascendant Step",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Levitate on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Devil's Sight",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can see normally in Dim Light and Darkness—both magical and nonmagical—within 120 feet of yourself."
+                },
+                {
+                  "name": "Eldritch Mind",
+                  "description": "You have Advantage on Constitution saving throws that you make to maintain Concentration."
+                },
+                {
+                  "name": "Eldritch Smite",
+                  "description": "Prerequisite: Level 5 Warlock\nOnce per turn when you hit a creature with your pact weapon, you can expend a Pact Magic spell slot to deal an extra 1d8 Force damage to the target, plus another 1d8 per level of the spell slot, and you can give the target the Prone condition if it is Huge or smaller."
+                },
+                {
+                  "name": "Eldritch Spear",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Fiendish Vigor",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast False Life on yourself without expending a spell slot. When you cast the spell with this feature, you don't roll the die for the Temporary Hit Points; you automatically get the highest number on the die."
+                },
+                {
+                  "name": "Gaze of Two Minds",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can use a Bonus Action to touch a willing creature and perceive through its senses until the end of your next turn. As long as the creature is on the same plane of existence as you, you can take a Bonus Action on subsequent turns to maintain this connection, extending the duration until the end of your next turn. The connection ends if you don't maintain it in this way.\nWhile perceiving through the other creature's senses, you benefit from any special senses possessed by that creature, and you can cast spells as if you were in your space or the other creature's space if the two of you are within 60 feet of each other."
+                },
+                {
+                  "name": "Gift of the Depths",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can breathe underwater, and you gain a Swim Speed equal to your Speed.\nYou can also cast Water Breathing once without expending a spell slot. You regain the ability to cast it in this way again when you finish a Long Rest."
+                },
+                {
+                  "name": "Investment of the Chain Master",
+                  "description": "Prerequisite: Level 5 Warlock\nWhen you cast Find Familiar, you infuse the summoned familiar with a measure of your eldritch power, granting the creature the following benefits.\nAerial or Aquatic: The familiar gains either a Fly Speed or a Swim Speed (your choice) of 40 feet.\nQuick Attack: As a Bonus Action, you can command the familiar to take the Attack action.\nNecrotic or Radiant Damage: Whenever the familiar deals Bludgeoning, Piercing, or Slashing damage, you can make it deal Necrotic or Radiant damage instead.\nYour Save DC: If the familiar forces a creature to make a saving throw, it uses your spell save DC.\nResistance: When the familiar takes damage, you can take a Reaction to grant it Resistance against that damage."
+                },
+                {
+                  "name": "Lessons of the First Ones",
+                  "description": "Prerequisite: Level 2 Warlock\nYou have received knowledge from an elder entity of the multiverse, allowing you to gain one Origin feat of your choice.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different Origin feat.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Mask of Many Faces",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Disguise Self without expending a spell slot."
+                },
+                {
+                  "name": "Master of Myriad Forms",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Alter Self without expending a spell slot."
+                },
+                {
+                  "name": "Misty Visions",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Silent Image without expending a spell slot."
+                },
+                {
+                  "name": "One with Shadows",
+                  "description": "Prerequisite: Level 5 Warlock\nWhile you're in an area of Dim Light or Darkness, you can cast Invisibility on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Otherworldly Leap",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Jump on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Pact of the Blade",
+                  "description": "As a Bonus Action, you can conjure a pact weapon in your hand—a Simple or Martial Melee weapon of your choice with which you bond—or create a bond with a magic weapon you touch; you can't bond with a magic weapon if someone else is attuned to it or another Warlock is bonded with it. Until the bond ends, you have proficiency with the weapon, and you can use it as a Spellcasting Focus.\nWhenever you attack with the bonded weapon, you can use your Charisma modifier for the attack and damage rolls instead of using Strength or Dexterity; and you can cause the weapon to deal Necrotic, Psychic, or Radiant damage or its normal damage type.\nYour bond with the weapon ends if you use this feature's Bonus Action again, if the weapon is more than 5 feet away from you for 1 minute or more, or if you die. A conjured weapon disappears when the bond ends."
+                },
+                {
+                  "name": "Pact of the Chain",
+                  "description": "You learn the Find Familiar spell and can cast it as a Magic action without expending a spell slot.\nWhen you cast the spell, you choose one of the normal forms for your familiar or one of the following special forms: Imp, Pseudodragon, Quasit, Skeleton, Slaad Tadpole, Sphinx of Wonder, Sprite, or Venomous Snake (see appendix B for the familiar's stat block).\nAdditionally, when you take the Attack action, you can forgo one of your own attacks to allow your familiar to make one attack of its own with its Reaction."
+                },
+                {
+                  "name": "Pact of the Tome",
+                  "description": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die.\nCantrips and Rituals: When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class's spell list, and they must be spells you don't already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you.\nSpellcasting Focus: You can use the book as a Spellcasting Focus."
+                },
+                {
+                  "name": "Repelling Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock|Spell Attack=M;R;O', 'Entry': 'A Warlock Cantrip That Deals Damage Via An Attack Roll', 'Entrysummary': 'Warlock Cantrip That Deals Damage Via An Attack Roll'} spell\nChoose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Thirsting Blade",
+                  "description": "Prerequisite: Level 5 Warlock\nYou gain the Extra Attack feature for your pact weapon only. With that feature, you can attack twice with the weapon instead of once when you take the Attack action on your turn."
+                }
+              ]
+            }
+          ],
           "spells": {
             "note": "You can now have Prepared Spells: 6."
           }
@@ -4931,6 +5956,111 @@
           }
         },
         "7": {
+          "choices": [
+            {
+              "type": "option",
+              "label": "Eldritch Invocations: choose 1 more",
+              "choose": 1,
+              "from": [
+                {
+                  "name": "Agonizing Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Armor of Shadows",
+                  "description": "You can cast Mage Armor on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Ascendant Step",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Levitate on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Devil's Sight",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can see normally in Dim Light and Darkness—both magical and nonmagical—within 120 feet of yourself."
+                },
+                {
+                  "name": "Eldritch Mind",
+                  "description": "You have Advantage on Constitution saving throws that you make to maintain Concentration."
+                },
+                {
+                  "name": "Eldritch Smite",
+                  "description": "Prerequisite: Level 5 Warlock\nOnce per turn when you hit a creature with your pact weapon, you can expend a Pact Magic spell slot to deal an extra 1d8 Force damage to the target, plus another 1d8 per level of the spell slot, and you can give the target the Prone condition if it is Huge or smaller."
+                },
+                {
+                  "name": "Eldritch Spear",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Fiendish Vigor",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast False Life on yourself without expending a spell slot. When you cast the spell with this feature, you don't roll the die for the Temporary Hit Points; you automatically get the highest number on the die."
+                },
+                {
+                  "name": "Gaze of Two Minds",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can use a Bonus Action to touch a willing creature and perceive through its senses until the end of your next turn. As long as the creature is on the same plane of existence as you, you can take a Bonus Action on subsequent turns to maintain this connection, extending the duration until the end of your next turn. The connection ends if you don't maintain it in this way.\nWhile perceiving through the other creature's senses, you benefit from any special senses possessed by that creature, and you can cast spells as if you were in your space or the other creature's space if the two of you are within 60 feet of each other."
+                },
+                {
+                  "name": "Gift of the Depths",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can breathe underwater, and you gain a Swim Speed equal to your Speed.\nYou can also cast Water Breathing once without expending a spell slot. You regain the ability to cast it in this way again when you finish a Long Rest."
+                },
+                {
+                  "name": "Investment of the Chain Master",
+                  "description": "Prerequisite: Level 5 Warlock\nWhen you cast Find Familiar, you infuse the summoned familiar with a measure of your eldritch power, granting the creature the following benefits.\nAerial or Aquatic: The familiar gains either a Fly Speed or a Swim Speed (your choice) of 40 feet.\nQuick Attack: As a Bonus Action, you can command the familiar to take the Attack action.\nNecrotic or Radiant Damage: Whenever the familiar deals Bludgeoning, Piercing, or Slashing damage, you can make it deal Necrotic or Radiant damage instead.\nYour Save DC: If the familiar forces a creature to make a saving throw, it uses your spell save DC.\nResistance: When the familiar takes damage, you can take a Reaction to grant it Resistance against that damage."
+                },
+                {
+                  "name": "Lessons of the First Ones",
+                  "description": "Prerequisite: Level 2 Warlock\nYou have received knowledge from an elder entity of the multiverse, allowing you to gain one Origin feat of your choice.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different Origin feat.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Mask of Many Faces",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Disguise Self without expending a spell slot."
+                },
+                {
+                  "name": "Master of Myriad Forms",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Alter Self without expending a spell slot."
+                },
+                {
+                  "name": "Misty Visions",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Silent Image without expending a spell slot."
+                },
+                {
+                  "name": "One with Shadows",
+                  "description": "Prerequisite: Level 5 Warlock\nWhile you're in an area of Dim Light or Darkness, you can cast Invisibility on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Otherworldly Leap",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Jump on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Pact of the Blade",
+                  "description": "As a Bonus Action, you can conjure a pact weapon in your hand—a Simple or Martial Melee weapon of your choice with which you bond—or create a bond with a magic weapon you touch; you can't bond with a magic weapon if someone else is attuned to it or another Warlock is bonded with it. Until the bond ends, you have proficiency with the weapon, and you can use it as a Spellcasting Focus.\nWhenever you attack with the bonded weapon, you can use your Charisma modifier for the attack and damage rolls instead of using Strength or Dexterity; and you can cause the weapon to deal Necrotic, Psychic, or Radiant damage or its normal damage type.\nYour bond with the weapon ends if you use this feature's Bonus Action again, if the weapon is more than 5 feet away from you for 1 minute or more, or if you die. A conjured weapon disappears when the bond ends."
+                },
+                {
+                  "name": "Pact of the Chain",
+                  "description": "You learn the Find Familiar spell and can cast it as a Magic action without expending a spell slot.\nWhen you cast the spell, you choose one of the normal forms for your familiar or one of the following special forms: Imp, Pseudodragon, Quasit, Skeleton, Slaad Tadpole, Sphinx of Wonder, Sprite, or Venomous Snake (see appendix B for the familiar's stat block).\nAdditionally, when you take the Attack action, you can forgo one of your own attacks to allow your familiar to make one attack of its own with its Reaction."
+                },
+                {
+                  "name": "Pact of the Tome",
+                  "description": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die.\nCantrips and Rituals: When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class's spell list, and they must be spells you don't already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you.\nSpellcasting Focus: You can use the book as a Spellcasting Focus."
+                },
+                {
+                  "name": "Repelling Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock|Spell Attack=M;R;O', 'Entry': 'A Warlock Cantrip That Deals Damage Via An Attack Roll', 'Entrysummary': 'Warlock Cantrip That Deals Damage Via An Attack Roll'} spell\nChoose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Thirsting Blade",
+                  "description": "Prerequisite: Level 5 Warlock\nYou gain the Extra Attack feature for your pact weapon only. With that feature, you can attack twice with the weapon instead of once when you take the Attack action on your turn."
+                },
+                {
+                  "name": "Whispers of the Grave",
+                  "description": "Prerequisite: Level 7 Warlock\nYou can cast Speak with Dead without expending a spell slot."
+                }
+              ]
+            }
+          ],
           "spells": {
             "note": "You can now have Prepared Spells: 8."
           }
@@ -4950,6 +6080,123 @@
             {
               "name": "Contact Patron",
               "description": "In the past, you usually contacted your patron through intermediaries. Now you can communicate directly; you always have the Contact Other Plane spell prepared. With this feature, you can cast the spell without expending a spell slot to contact your patron, and you automatically succeed on the spell's saving throw.\nOnce you cast the spell with this feature, you can't do so in this way again until you finish a Long Rest."
+            }
+          ],
+          "choices": [
+            {
+              "type": "option",
+              "label": "Eldritch Invocations: choose 1 more",
+              "choose": 1,
+              "from": [
+                {
+                  "name": "Agonizing Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Armor of Shadows",
+                  "description": "You can cast Mage Armor on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Ascendant Step",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Levitate on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Devil's Sight",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can see normally in Dim Light and Darkness—both magical and nonmagical—within 120 feet of yourself."
+                },
+                {
+                  "name": "Eldritch Mind",
+                  "description": "You have Advantage on Constitution saving throws that you make to maintain Concentration."
+                },
+                {
+                  "name": "Eldritch Smite",
+                  "description": "Prerequisite: Level 5 Warlock\nOnce per turn when you hit a creature with your pact weapon, you can expend a Pact Magic spell slot to deal an extra 1d8 Force damage to the target, plus another 1d8 per level of the spell slot, and you can give the target the Prone condition if it is Huge or smaller."
+                },
+                {
+                  "name": "Eldritch Spear",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Fiendish Vigor",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast False Life on yourself without expending a spell slot. When you cast the spell with this feature, you don't roll the die for the Temporary Hit Points; you automatically get the highest number on the die."
+                },
+                {
+                  "name": "Gaze of Two Minds",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can use a Bonus Action to touch a willing creature and perceive through its senses until the end of your next turn. As long as the creature is on the same plane of existence as you, you can take a Bonus Action on subsequent turns to maintain this connection, extending the duration until the end of your next turn. The connection ends if you don't maintain it in this way.\nWhile perceiving through the other creature's senses, you benefit from any special senses possessed by that creature, and you can cast spells as if you were in your space or the other creature's space if the two of you are within 60 feet of each other."
+                },
+                {
+                  "name": "Gift of the Depths",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can breathe underwater, and you gain a Swim Speed equal to your Speed.\nYou can also cast Water Breathing once without expending a spell slot. You regain the ability to cast it in this way again when you finish a Long Rest."
+                },
+                {
+                  "name": "Gift of the Protectors",
+                  "description": "Prerequisite: Level 9 Warlock\nA new page appears in your Book of Shadows when you conjure it. With your permission, a creature can take an action to write its name on that page, which can contain a number of names equal to your Charisma modifier (minimum of one name).\nWhen any creature whose name is on the page is reduced to 0 Hit Points but not killed outright, the creature magically drops to 1 Hit Point instead. Once this magic is triggered, no creature can benefit from it until you finish a Long Rest.\nAs a Magic action, you can erase a name on the page by touching it."
+                },
+                {
+                  "name": "Investment of the Chain Master",
+                  "description": "Prerequisite: Level 5 Warlock\nWhen you cast Find Familiar, you infuse the summoned familiar with a measure of your eldritch power, granting the creature the following benefits.\nAerial or Aquatic: The familiar gains either a Fly Speed or a Swim Speed (your choice) of 40 feet.\nQuick Attack: As a Bonus Action, you can command the familiar to take the Attack action.\nNecrotic or Radiant Damage: Whenever the familiar deals Bludgeoning, Piercing, or Slashing damage, you can make it deal Necrotic or Radiant damage instead.\nYour Save DC: If the familiar forces a creature to make a saving throw, it uses your spell save DC.\nResistance: When the familiar takes damage, you can take a Reaction to grant it Resistance against that damage."
+                },
+                {
+                  "name": "Lessons of the First Ones",
+                  "description": "Prerequisite: Level 2 Warlock\nYou have received knowledge from an elder entity of the multiverse, allowing you to gain one Origin feat of your choice.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different Origin feat.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Lifedrinker",
+                  "description": "Prerequisite: Level 9 Warlock\nOnce per turn when you hit a creature with your pact weapon, you can deal an extra 1d6 Necrotic, Psychic, or Radiant damage (your choice) to the creature, and you can expend one of your Hit Point Dice to roll it and regain a number of Hit Points equal to the roll plus your Constitution modifier (minimum of 1 Hit Point)."
+                },
+                {
+                  "name": "Mask of Many Faces",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Disguise Self without expending a spell slot."
+                },
+                {
+                  "name": "Master of Myriad Forms",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Alter Self without expending a spell slot."
+                },
+                {
+                  "name": "Misty Visions",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Silent Image without expending a spell slot."
+                },
+                {
+                  "name": "One with Shadows",
+                  "description": "Prerequisite: Level 5 Warlock\nWhile you're in an area of Dim Light or Darkness, you can cast Invisibility on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Otherworldly Leap",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Jump on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Pact of the Blade",
+                  "description": "As a Bonus Action, you can conjure a pact weapon in your hand—a Simple or Martial Melee weapon of your choice with which you bond—or create a bond with a magic weapon you touch; you can't bond with a magic weapon if someone else is attuned to it or another Warlock is bonded with it. Until the bond ends, you have proficiency with the weapon, and you can use it as a Spellcasting Focus.\nWhenever you attack with the bonded weapon, you can use your Charisma modifier for the attack and damage rolls instead of using Strength or Dexterity; and you can cause the weapon to deal Necrotic, Psychic, or Radiant damage or its normal damage type.\nYour bond with the weapon ends if you use this feature's Bonus Action again, if the weapon is more than 5 feet away from you for 1 minute or more, or if you die. A conjured weapon disappears when the bond ends."
+                },
+                {
+                  "name": "Pact of the Chain",
+                  "description": "You learn the Find Familiar spell and can cast it as a Magic action without expending a spell slot.\nWhen you cast the spell, you choose one of the normal forms for your familiar or one of the following special forms: Imp, Pseudodragon, Quasit, Skeleton, Slaad Tadpole, Sphinx of Wonder, Sprite, or Venomous Snake (see appendix B for the familiar's stat block).\nAdditionally, when you take the Attack action, you can forgo one of your own attacks to allow your familiar to make one attack of its own with its Reaction."
+                },
+                {
+                  "name": "Pact of the Tome",
+                  "description": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die.\nCantrips and Rituals: When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class's spell list, and they must be spells you don't already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you.\nSpellcasting Focus: You can use the book as a Spellcasting Focus."
+                },
+                {
+                  "name": "Repelling Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock|Spell Attack=M;R;O', 'Entry': 'A Warlock Cantrip That Deals Damage Via An Attack Roll', 'Entrysummary': 'Warlock Cantrip That Deals Damage Via An Attack Roll'} spell\nChoose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Thirsting Blade",
+                  "description": "Prerequisite: Level 5 Warlock\nYou gain the Extra Attack feature for your pact weapon only. With that feature, you can attack twice with the weapon instead of once when you take the Attack action on your turn."
+                },
+                {
+                  "name": "Visions of Distant Realms",
+                  "description": "Prerequisite: Level 9 Warlock\nYou can cast Arcane Eye without expending a spell slot."
+                },
+                {
+                  "name": "Whispers of the Grave",
+                  "description": "Prerequisite: Level 7 Warlock\nYou can cast Speak with Dead without expending a spell slot."
+                }
+              ]
             }
           ],
           "spells": {
@@ -4976,6 +6223,125 @@
           "choices": [
             {
               "type": "asi"
+            },
+            {
+              "type": "option",
+              "label": "Eldritch Invocations: choose 1 more",
+              "choose": 1,
+              "from": [
+                {
+                  "name": "Agonizing Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Armor of Shadows",
+                  "description": "You can cast Mage Armor on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Ascendant Step",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Levitate on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Devil's Sight",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can see normally in Dim Light and Darkness—both magical and nonmagical—within 120 feet of yourself."
+                },
+                {
+                  "name": "Devouring Blade",
+                  "description": "Prerequisite: Level 12 Warlock\nThe Extra Attack of your Thirsting Blade invocation confers two extra attacks rather than one."
+                },
+                {
+                  "name": "Eldritch Mind",
+                  "description": "You have Advantage on Constitution saving throws that you make to maintain Concentration."
+                },
+                {
+                  "name": "Eldritch Smite",
+                  "description": "Prerequisite: Level 5 Warlock\nOnce per turn when you hit a creature with your pact weapon, you can expend a Pact Magic spell slot to deal an extra 1d8 Force damage to the target, plus another 1d8 per level of the spell slot, and you can give the target the Prone condition if it is Huge or smaller."
+                },
+                {
+                  "name": "Eldritch Spear",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Fiendish Vigor",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast False Life on yourself without expending a spell slot. When you cast the spell with this feature, you don't roll the die for the Temporary Hit Points; you automatically get the highest number on the die."
+                },
+                {
+                  "name": "Gaze of Two Minds",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can use a Bonus Action to touch a willing creature and perceive through its senses until the end of your next turn. As long as the creature is on the same plane of existence as you, you can take a Bonus Action on subsequent turns to maintain this connection, extending the duration until the end of your next turn. The connection ends if you don't maintain it in this way.\nWhile perceiving through the other creature's senses, you benefit from any special senses possessed by that creature, and you can cast spells as if you were in your space or the other creature's space if the two of you are within 60 feet of each other."
+                },
+                {
+                  "name": "Gift of the Depths",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can breathe underwater, and you gain a Swim Speed equal to your Speed.\nYou can also cast Water Breathing once without expending a spell slot. You regain the ability to cast it in this way again when you finish a Long Rest."
+                },
+                {
+                  "name": "Gift of the Protectors",
+                  "description": "Prerequisite: Level 9 Warlock\nA new page appears in your Book of Shadows when you conjure it. With your permission, a creature can take an action to write its name on that page, which can contain a number of names equal to your Charisma modifier (minimum of one name).\nWhen any creature whose name is on the page is reduced to 0 Hit Points but not killed outright, the creature magically drops to 1 Hit Point instead. Once this magic is triggered, no creature can benefit from it until you finish a Long Rest.\nAs a Magic action, you can erase a name on the page by touching it."
+                },
+                {
+                  "name": "Investment of the Chain Master",
+                  "description": "Prerequisite: Level 5 Warlock\nWhen you cast Find Familiar, you infuse the summoned familiar with a measure of your eldritch power, granting the creature the following benefits.\nAerial or Aquatic: The familiar gains either a Fly Speed or a Swim Speed (your choice) of 40 feet.\nQuick Attack: As a Bonus Action, you can command the familiar to take the Attack action.\nNecrotic or Radiant Damage: Whenever the familiar deals Bludgeoning, Piercing, or Slashing damage, you can make it deal Necrotic or Radiant damage instead.\nYour Save DC: If the familiar forces a creature to make a saving throw, it uses your spell save DC.\nResistance: When the familiar takes damage, you can take a Reaction to grant it Resistance against that damage."
+                },
+                {
+                  "name": "Lessons of the First Ones",
+                  "description": "Prerequisite: Level 2 Warlock\nYou have received knowledge from an elder entity of the multiverse, allowing you to gain one Origin feat of your choice.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different Origin feat.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Lifedrinker",
+                  "description": "Prerequisite: Level 9 Warlock\nOnce per turn when you hit a creature with your pact weapon, you can deal an extra 1d6 Necrotic, Psychic, or Radiant damage (your choice) to the creature, and you can expend one of your Hit Point Dice to roll it and regain a number of Hit Points equal to the roll plus your Constitution modifier (minimum of 1 Hit Point)."
+                },
+                {
+                  "name": "Mask of Many Faces",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Disguise Self without expending a spell slot."
+                },
+                {
+                  "name": "Master of Myriad Forms",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Alter Self without expending a spell slot."
+                },
+                {
+                  "name": "Misty Visions",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Silent Image without expending a spell slot."
+                },
+                {
+                  "name": "One with Shadows",
+                  "description": "Prerequisite: Level 5 Warlock\nWhile you're in an area of Dim Light or Darkness, you can cast Invisibility on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Otherworldly Leap",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Jump on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Pact of the Blade",
+                  "description": "As a Bonus Action, you can conjure a pact weapon in your hand—a Simple or Martial Melee weapon of your choice with which you bond—or create a bond with a magic weapon you touch; you can't bond with a magic weapon if someone else is attuned to it or another Warlock is bonded with it. Until the bond ends, you have proficiency with the weapon, and you can use it as a Spellcasting Focus.\nWhenever you attack with the bonded weapon, you can use your Charisma modifier for the attack and damage rolls instead of using Strength or Dexterity; and you can cause the weapon to deal Necrotic, Psychic, or Radiant damage or its normal damage type.\nYour bond with the weapon ends if you use this feature's Bonus Action again, if the weapon is more than 5 feet away from you for 1 minute or more, or if you die. A conjured weapon disappears when the bond ends."
+                },
+                {
+                  "name": "Pact of the Chain",
+                  "description": "You learn the Find Familiar spell and can cast it as a Magic action without expending a spell slot.\nWhen you cast the spell, you choose one of the normal forms for your familiar or one of the following special forms: Imp, Pseudodragon, Quasit, Skeleton, Slaad Tadpole, Sphinx of Wonder, Sprite, or Venomous Snake (see appendix B for the familiar's stat block).\nAdditionally, when you take the Attack action, you can forgo one of your own attacks to allow your familiar to make one attack of its own with its Reaction."
+                },
+                {
+                  "name": "Pact of the Tome",
+                  "description": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die.\nCantrips and Rituals: When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class's spell list, and they must be spells you don't already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you.\nSpellcasting Focus: You can use the book as a Spellcasting Focus."
+                },
+                {
+                  "name": "Repelling Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock|Spell Attack=M;R;O', 'Entry': 'A Warlock Cantrip That Deals Damage Via An Attack Roll', 'Entrysummary': 'Warlock Cantrip That Deals Damage Via An Attack Roll'} spell\nChoose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Thirsting Blade",
+                  "description": "Prerequisite: Level 5 Warlock\nYou gain the Extra Attack feature for your pact weapon only. With that feature, you can attack twice with the weapon instead of once when you take the Attack action on your turn."
+                },
+                {
+                  "name": "Visions of Distant Realms",
+                  "description": "Prerequisite: Level 9 Warlock\nYou can cast Arcane Eye without expending a spell slot."
+                },
+                {
+                  "name": "Whispers of the Grave",
+                  "description": "Prerequisite: Level 7 Warlock\nYou can cast Speak with Dead without expending a spell slot."
+                }
+              ]
             }
           ]
         },
@@ -4995,6 +6361,131 @@
             {
               "name": "Mystic Arcanum",
               "description": "You gain a level 8 Warlock Spell of your choice."
+            }
+          ],
+          "choices": [
+            {
+              "type": "option",
+              "label": "Eldritch Invocations: choose 1 more",
+              "choose": 1,
+              "from": [
+                {
+                  "name": "Agonizing Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Armor of Shadows",
+                  "description": "You can cast Mage Armor on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Ascendant Step",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Levitate on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Devil's Sight",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can see normally in Dim Light and Darkness—both magical and nonmagical—within 120 feet of yourself."
+                },
+                {
+                  "name": "Devouring Blade",
+                  "description": "Prerequisite: Level 12 Warlock\nThe Extra Attack of your Thirsting Blade invocation confers two extra attacks rather than one."
+                },
+                {
+                  "name": "Eldritch Mind",
+                  "description": "You have Advantage on Constitution saving throws that you make to maintain Concentration."
+                },
+                {
+                  "name": "Eldritch Smite",
+                  "description": "Prerequisite: Level 5 Warlock\nOnce per turn when you hit a creature with your pact weapon, you can expend a Pact Magic spell slot to deal an extra 1d8 Force damage to the target, plus another 1d8 per level of the spell slot, and you can give the target the Prone condition if it is Huge or smaller."
+                },
+                {
+                  "name": "Eldritch Spear",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Fiendish Vigor",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast False Life on yourself without expending a spell slot. When you cast the spell with this feature, you don't roll the die for the Temporary Hit Points; you automatically get the highest number on the die."
+                },
+                {
+                  "name": "Gaze of Two Minds",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can use a Bonus Action to touch a willing creature and perceive through its senses until the end of your next turn. As long as the creature is on the same plane of existence as you, you can take a Bonus Action on subsequent turns to maintain this connection, extending the duration until the end of your next turn. The connection ends if you don't maintain it in this way.\nWhile perceiving through the other creature's senses, you benefit from any special senses possessed by that creature, and you can cast spells as if you were in your space or the other creature's space if the two of you are within 60 feet of each other."
+                },
+                {
+                  "name": "Gift of the Depths",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can breathe underwater, and you gain a Swim Speed equal to your Speed.\nYou can also cast Water Breathing once without expending a spell slot. You regain the ability to cast it in this way again when you finish a Long Rest."
+                },
+                {
+                  "name": "Gift of the Protectors",
+                  "description": "Prerequisite: Level 9 Warlock\nA new page appears in your Book of Shadows when you conjure it. With your permission, a creature can take an action to write its name on that page, which can contain a number of names equal to your Charisma modifier (minimum of one name).\nWhen any creature whose name is on the page is reduced to 0 Hit Points but not killed outright, the creature magically drops to 1 Hit Point instead. Once this magic is triggered, no creature can benefit from it until you finish a Long Rest.\nAs a Magic action, you can erase a name on the page by touching it."
+                },
+                {
+                  "name": "Investment of the Chain Master",
+                  "description": "Prerequisite: Level 5 Warlock\nWhen you cast Find Familiar, you infuse the summoned familiar with a measure of your eldritch power, granting the creature the following benefits.\nAerial or Aquatic: The familiar gains either a Fly Speed or a Swim Speed (your choice) of 40 feet.\nQuick Attack: As a Bonus Action, you can command the familiar to take the Attack action.\nNecrotic or Radiant Damage: Whenever the familiar deals Bludgeoning, Piercing, or Slashing damage, you can make it deal Necrotic or Radiant damage instead.\nYour Save DC: If the familiar forces a creature to make a saving throw, it uses your spell save DC.\nResistance: When the familiar takes damage, you can take a Reaction to grant it Resistance against that damage."
+                },
+                {
+                  "name": "Lessons of the First Ones",
+                  "description": "Prerequisite: Level 2 Warlock\nYou have received knowledge from an elder entity of the multiverse, allowing you to gain one Origin feat of your choice.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different Origin feat.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Lifedrinker",
+                  "description": "Prerequisite: Level 9 Warlock\nOnce per turn when you hit a creature with your pact weapon, you can deal an extra 1d6 Necrotic, Psychic, or Radiant damage (your choice) to the creature, and you can expend one of your Hit Point Dice to roll it and regain a number of Hit Points equal to the roll plus your Constitution modifier (minimum of 1 Hit Point)."
+                },
+                {
+                  "name": "Mask of Many Faces",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Disguise Self without expending a spell slot."
+                },
+                {
+                  "name": "Master of Myriad Forms",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Alter Self without expending a spell slot."
+                },
+                {
+                  "name": "Misty Visions",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Silent Image without expending a spell slot."
+                },
+                {
+                  "name": "One with Shadows",
+                  "description": "Prerequisite: Level 5 Warlock\nWhile you're in an area of Dim Light or Darkness, you can cast Invisibility on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Otherworldly Leap",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Jump on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Pact of the Blade",
+                  "description": "As a Bonus Action, you can conjure a pact weapon in your hand—a Simple or Martial Melee weapon of your choice with which you bond—or create a bond with a magic weapon you touch; you can't bond with a magic weapon if someone else is attuned to it or another Warlock is bonded with it. Until the bond ends, you have proficiency with the weapon, and you can use it as a Spellcasting Focus.\nWhenever you attack with the bonded weapon, you can use your Charisma modifier for the attack and damage rolls instead of using Strength or Dexterity; and you can cause the weapon to deal Necrotic, Psychic, or Radiant damage or its normal damage type.\nYour bond with the weapon ends if you use this feature's Bonus Action again, if the weapon is more than 5 feet away from you for 1 minute or more, or if you die. A conjured weapon disappears when the bond ends."
+                },
+                {
+                  "name": "Pact of the Chain",
+                  "description": "You learn the Find Familiar spell and can cast it as a Magic action without expending a spell slot.\nWhen you cast the spell, you choose one of the normal forms for your familiar or one of the following special forms: Imp, Pseudodragon, Quasit, Skeleton, Slaad Tadpole, Sphinx of Wonder, Sprite, or Venomous Snake (see appendix B for the familiar's stat block).\nAdditionally, when you take the Attack action, you can forgo one of your own attacks to allow your familiar to make one attack of its own with its Reaction."
+                },
+                {
+                  "name": "Pact of the Tome",
+                  "description": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die.\nCantrips and Rituals: When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class's spell list, and they must be spells you don't already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you.\nSpellcasting Focus: You can use the book as a Spellcasting Focus."
+                },
+                {
+                  "name": "Repelling Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock|Spell Attack=M;R;O', 'Entry': 'A Warlock Cantrip That Deals Damage Via An Attack Roll', 'Entrysummary': 'Warlock Cantrip That Deals Damage Via An Attack Roll'} spell\nChoose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Thirsting Blade",
+                  "description": "Prerequisite: Level 5 Warlock\nYou gain the Extra Attack feature for your pact weapon only. With that feature, you can attack twice with the weapon instead of once when you take the Attack action on your turn."
+                },
+                {
+                  "name": "Visions of Distant Realms",
+                  "description": "Prerequisite: Level 9 Warlock\nYou can cast Arcane Eye without expending a spell slot."
+                },
+                {
+                  "name": "Whispers of the Grave",
+                  "description": "Prerequisite: Level 7 Warlock\nYou can cast Speak with Dead without expending a spell slot."
+                },
+                {
+                  "name": "Witch Sight",
+                  "description": "Prerequisite: Level 15 Warlock\nYou have Truesight with a range of 30 feet."
+                }
+              ]
             }
           ],
           "spells": {
@@ -5018,6 +6509,133 @@
           "spells": {
             "note": "You can now have Prepared Spells: 14."
           }
+        },
+        "18": {
+          "choices": [
+            {
+              "type": "option",
+              "label": "Eldritch Invocations: choose 1 more",
+              "choose": 1,
+              "from": [
+                {
+                  "name": "Agonizing Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Armor of Shadows",
+                  "description": "You can cast Mage Armor on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Ascendant Step",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Levitate on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Devil's Sight",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can see normally in Dim Light and Darkness—both magical and nonmagical—within 120 feet of yourself."
+                },
+                {
+                  "name": "Devouring Blade",
+                  "description": "Prerequisite: Level 12 Warlock\nThe Extra Attack of your Thirsting Blade invocation confers two extra attacks rather than one."
+                },
+                {
+                  "name": "Eldritch Mind",
+                  "description": "You have Advantage on Constitution saving throws that you make to maintain Concentration."
+                },
+                {
+                  "name": "Eldritch Smite",
+                  "description": "Prerequisite: Level 5 Warlock\nOnce per turn when you hit a creature with your pact weapon, you can expend a Pact Magic spell slot to deal an extra 1d8 Force damage to the target, plus another 1d8 per level of the spell slot, and you can give the target the Prone condition if it is Huge or smaller."
+                },
+                {
+                  "name": "Eldritch Spear",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Fiendish Vigor",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast False Life on yourself without expending a spell slot. When you cast the spell with this feature, you don't roll the die for the Temporary Hit Points; you automatically get the highest number on the die."
+                },
+                {
+                  "name": "Gaze of Two Minds",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can use a Bonus Action to touch a willing creature and perceive through its senses until the end of your next turn. As long as the creature is on the same plane of existence as you, you can take a Bonus Action on subsequent turns to maintain this connection, extending the duration until the end of your next turn. The connection ends if you don't maintain it in this way.\nWhile perceiving through the other creature's senses, you benefit from any special senses possessed by that creature, and you can cast spells as if you were in your space or the other creature's space if the two of you are within 60 feet of each other."
+                },
+                {
+                  "name": "Gift of the Depths",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can breathe underwater, and you gain a Swim Speed equal to your Speed.\nYou can also cast Water Breathing once without expending a spell slot. You regain the ability to cast it in this way again when you finish a Long Rest."
+                },
+                {
+                  "name": "Gift of the Protectors",
+                  "description": "Prerequisite: Level 9 Warlock\nA new page appears in your Book of Shadows when you conjure it. With your permission, a creature can take an action to write its name on that page, which can contain a number of names equal to your Charisma modifier (minimum of one name).\nWhen any creature whose name is on the page is reduced to 0 Hit Points but not killed outright, the creature magically drops to 1 Hit Point instead. Once this magic is triggered, no creature can benefit from it until you finish a Long Rest.\nAs a Magic action, you can erase a name on the page by touching it."
+                },
+                {
+                  "name": "Investment of the Chain Master",
+                  "description": "Prerequisite: Level 5 Warlock\nWhen you cast Find Familiar, you infuse the summoned familiar with a measure of your eldritch power, granting the creature the following benefits.\nAerial or Aquatic: The familiar gains either a Fly Speed or a Swim Speed (your choice) of 40 feet.\nQuick Attack: As a Bonus Action, you can command the familiar to take the Attack action.\nNecrotic or Radiant Damage: Whenever the familiar deals Bludgeoning, Piercing, or Slashing damage, you can make it deal Necrotic or Radiant damage instead.\nYour Save DC: If the familiar forces a creature to make a saving throw, it uses your spell save DC.\nResistance: When the familiar takes damage, you can take a Reaction to grant it Resistance against that damage."
+                },
+                {
+                  "name": "Lessons of the First Ones",
+                  "description": "Prerequisite: Level 2 Warlock\nYou have received knowledge from an elder entity of the multiverse, allowing you to gain one Origin feat of your choice.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different Origin feat.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Lifedrinker",
+                  "description": "Prerequisite: Level 9 Warlock\nOnce per turn when you hit a creature with your pact weapon, you can deal an extra 1d6 Necrotic, Psychic, or Radiant damage (your choice) to the creature, and you can expend one of your Hit Point Dice to roll it and regain a number of Hit Points equal to the roll plus your Constitution modifier (minimum of 1 Hit Point)."
+                },
+                {
+                  "name": "Mask of Many Faces",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Disguise Self without expending a spell slot."
+                },
+                {
+                  "name": "Master of Myriad Forms",
+                  "description": "Prerequisite: Level 5 Warlock\nYou can cast Alter Self without expending a spell slot."
+                },
+                {
+                  "name": "Misty Visions",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Silent Image without expending a spell slot."
+                },
+                {
+                  "name": "One with Shadows",
+                  "description": "Prerequisite: Level 5 Warlock\nWhile you're in an area of Dim Light or Darkness, you can cast Invisibility on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Otherworldly Leap",
+                  "description": "Prerequisite: Level 2 Warlock\nYou can cast Jump on yourself without expending a spell slot."
+                },
+                {
+                  "name": "Pact of the Blade",
+                  "description": "As a Bonus Action, you can conjure a pact weapon in your hand—a Simple or Martial Melee weapon of your choice with which you bond—or create a bond with a magic weapon you touch; you can't bond with a magic weapon if someone else is attuned to it or another Warlock is bonded with it. Until the bond ends, you have proficiency with the weapon, and you can use it as a Spellcasting Focus.\nWhenever you attack with the bonded weapon, you can use your Charisma modifier for the attack and damage rolls instead of using Strength or Dexterity; and you can cause the weapon to deal Necrotic, Psychic, or Radiant damage or its normal damage type.\nYour bond with the weapon ends if you use this feature's Bonus Action again, if the weapon is more than 5 feet away from you for 1 minute or more, or if you die. A conjured weapon disappears when the bond ends."
+                },
+                {
+                  "name": "Pact of the Chain",
+                  "description": "You learn the Find Familiar spell and can cast it as a Magic action without expending a spell slot.\nWhen you cast the spell, you choose one of the normal forms for your familiar or one of the following special forms: Imp, Pseudodragon, Quasit, Skeleton, Slaad Tadpole, Sphinx of Wonder, Sprite, or Venomous Snake (see appendix B for the familiar's stat block).\nAdditionally, when you take the Attack action, you can forgo one of your own attacks to allow your familiar to make one attack of its own with its Reaction."
+                },
+                {
+                  "name": "Pact of the Tome",
+                  "description": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die.\nCantrips and Rituals: When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class's spell list, and they must be spells you don't already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you.\nSpellcasting Focus: You can use the book as a Spellcasting Focus."
+                },
+                {
+                  "name": "Repelling Blast",
+                  "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock|Spell Attack=M;R;O', 'Entry': 'A Warlock Cantrip That Deals Damage Via An Attack Roll', 'Entrysummary': 'Warlock Cantrip That Deals Damage Via An Attack Roll'} spell\nChoose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+                  "repeatable": true
+                },
+                {
+                  "name": "Thirsting Blade",
+                  "description": "Prerequisite: Level 5 Warlock\nYou gain the Extra Attack feature for your pact weapon only. With that feature, you can attack twice with the weapon instead of once when you take the Attack action on your turn."
+                },
+                {
+                  "name": "Visions of Distant Realms",
+                  "description": "Prerequisite: Level 9 Warlock\nYou can cast Arcane Eye without expending a spell slot."
+                },
+                {
+                  "name": "Whispers of the Grave",
+                  "description": "Prerequisite: Level 7 Warlock\nYou can cast Speak with Dead without expending a spell slot."
+                },
+                {
+                  "name": "Witch Sight",
+                  "description": "Prerequisite: Level 15 Warlock\nYou have Truesight with a range of 30 feet."
+                }
+              ]
+            }
+          ]
         },
         "19": {
           "traits": [
@@ -5152,7 +6770,7 @@
           }
         },
         "Great Old One Patron": {
-          "description": "Unearth Forbidden Lore of Ineffable Beings",
+          "description": "When you choose this subclass, you might bind yourself to an unspeakable being from the Far Realm or an elder god—a being such as Tharizdun, the Chained God; Zargon, the Returner; Hadar, the Dark Hunger; or Great Cthulhu. Or you might invoke several entities without yoking yourself to one. The motives of these beings are incomprehensible, and the Great Old One might be indifferent to your existence. But the secrets you've learned nevertheless allow you to draw strange magic from it.",
           "levels": {
             "3": {
               "traits": [

@@ -82,7 +82,7 @@ function choiceFieldHTML(ch,ci,d){
     inner=`<label class="f">${esc(ch.label||"Choose a subclass")}</label>`+from.map(n=>{
       const sc=subMap[n]||{};
       return `<label class="opt" style="align-items:flex-start"><input type="radio" name="sub-${ci}" data-sub-opt value="${esc(n)}"><span><b>${esc(n)}</b>`+
-        `${sc._source?` <span class="hint">(${esc(sc._source)})</span>`:""}`+
+        `${subSourceTag(n,sc)?` <span class="hint">(${esc(subSourceTag(n,sc))})</span>`:""}`+
         `${sc.description?`<span class="hint" style="display:block;margin:2px 0 0">${esc(sc.description)}</span>`:""}</span></label>`;
     }).join("");
   }else if(t==="hp"){
@@ -113,12 +113,22 @@ function choiceFieldHTML(ch,ci,d){
        choose:1 today, so the checkbox half is dead code — but it is the same
        uncapped bug the moment a choose:2 option ships, so it gets the same
        treatment rather than waiting to be rediscovered. */
-    if(!single)chooseAttr=` data-choose="${effectiveChoose(choose,from.length,0)}"`;
+    /* Maneuvers, invocations and metamagic come back at later levels from the
+       same list (#60), so an option already on the sheet is shown as yours and
+       not offered twice — ticked and data-fixed like a granted skill, or just
+       disabled in a radio group, where a tick would read as this level's pick.
+       Matched by name, the only thing a sheet feature shares with its option.
+       `repeatable` (four 2024 invocations) stays open. */
+    const owned=from.map(o=>!o.repeatable&&(character.features||[]).some(f=>String(f.name||"").toLowerCase()===String(o.name||"").toLowerCase()));
+    const have=owned.filter(Boolean).length,target=effectiveChoose(choose,from.length,have);
+    if(!single)chooseAttr=` data-choose="${target}"`;
     inner=`<label class="f">${esc(ch.label||("Choose "+choose))}`+
-      (single?"":` — <span data-chcount>0 of ${effectiveChoose(choose,from.length,0)} chosen</span>`)+
+      (have?` <span style="color:var(--ink-soft);font-weight:400">(${have} already yours)</span>`:"")+
+      (single?"":` — <span data-chcount>0 of ${target} chosen</span>`)+
       `</label>`+from.map((o,i)=>{
       const fx=(o.effects||[]).map(e=>`${FX_LABEL[e.target]||e.target} ${fmt(num(e.value))}`).join(", ");
-      return `<label class="opt" style="align-items:flex-start"><input type="${single?"radio":"checkbox"}" ${single?`name="opt-${ci}"`:""} data-opt-i="${i}"><span><b>${esc(o.name||("Option "+(i+1)))}</b>${o.description?` — ${esc(o.description)}`:""}${fx?` <span style="color:var(--accent-2)">(${esc(fx)})</span>`:""}</span></label>`;
+      const fixed=owned[i]?(single?" disabled":" checked disabled data-fixed"):"";
+      return `<label class="opt" style="align-items:flex-start"><input type="${single?"radio":"checkbox"}" ${single?`name="opt-${ci}"`:""} data-opt-i="${i}"${fixed}><span><b>${esc(o.name||("Option "+(i+1)))}</b>${owned[i]?" (already yours)":""}${o.description?` — ${esc(o.description)}`:""}${fx?` <span style="color:var(--accent-2)">(${esc(fx)})</span>`:""}</span></label>`;
     }).join("");
   }else{
     inner=`<p class="hint">${esc(ch.label||ch.note||"A choice is available at your table.")}</p>`;
@@ -203,7 +213,7 @@ function gatherChoices(){
     else if(t==="subclass"){const r=div.querySelector('[data-sub-opt]:checked');out.push({type:"subclass",name:r?r.value:null});}
     else if(t==="asi"){const mode=(div.querySelector('[data-asi-mode]:checked')||{}).value||"2";out.push({type:"asi",mode,a:div.querySelector('[data-asi-a]').value,b:div.querySelector('[data-asi-b]').value});}
     else if(t==="feat"){const sel=div.querySelector('[data-feat-opt]');out.push({type:"feat",name:sel?sel.value:""});}
-    else if(t==="option")out.push({type:"option",ci:num(div.dataset.ci),sid:div.dataset.sid||"",idxs:Array.from(div.querySelectorAll('[data-opt-i]:checked')).map(cb=>num(cb.dataset.optI))});
+    else if(t==="option")out.push({type:"option",ci:num(div.dataset.ci),sid:div.dataset.sid||"",idxs:Array.from(div.querySelectorAll('[data-opt-i]:checked:not(:disabled)')).map(cb=>num(cb.dataset.optI))});
     else if(t==="hp"){const b=div.querySelector('[data-hp-dice]');out.push({type:"hp",ci:num(div.dataset.ci),dice:b?String(b.value).trim():""});}
   });
   return out;

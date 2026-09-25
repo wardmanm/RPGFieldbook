@@ -15,6 +15,7 @@ From the 5e-tools GitHub data repo (or the site's `data/` folder):
 - `spells/spells-xphb.json`
 - `spells/sources.json` (spell → class mapping)
 - `class/class-*.json` (one per class)
+- `optionalfeatures.json` (maneuvers, invocations, metamagic, infusions — the level-up pickers)
 
 `all` finds these itself inside an unpacked 5e-tools dump; you only need the individual paths when
 running one subcommand at a time.
@@ -103,7 +104,7 @@ silently trims the book. It has already cost 4-of-16 backgrounds, 339-of-391 spe
 - **conditions** → `{ "keywords": [...] }` — 2024 conditions/statuses, plus any 2014 ones with no 2024 version.
 - **feats** → `{ "feats": [...] }` — category + prerequisite line, then flattened text; effects from the overlay.
 - **spells** → `{ "spells": [...] }` — `meta` (school · time · range · components · duration) + flattened text + higher-level/material; with `--sources`, each spell is tagged with its 2024 `class` list.
-- **classes** → `{ "classes": [...] }` — hit die, saves, level-1 skill choice, spellcasting ability, per-level traits, ASIs as `asi` choices, subclass choice at the right level, Fighting Style as an `option` choice, and each XPHB subclass. Caster classes also get per-level "prepared/known spells" notes read from the class table.
+- **classes** → `{ "classes": [...] }` — hit die, saves, level-1 skill choice, spellcasting ability, per-level traits, ASIs as `asi` choices, subclass choice at the right level, Fighting Style as an `option` choice, and each XPHB subclass. With `optionalfeatures.json`, a class or subclass that learns options gets an `option` choice at every level where its count rises ("Maneuvers: choose 2 more"), listing only the options whose level prerequisite that level meets. Caster classes also get per-level "prepared/known spells" notes read from the class table.
 - **races** → `{ "races": [...] }` — the 10 XPHB species, with speed, traits, and skill choices. 2024 lineages (Elf, Gnome, Goliath, Tiefling) come from `_versions` and become `subraces`; Dragonborn's ancestry is template-only in the source, so its picks are read off the Draconic Ancestry table. No `abilityScores` — 2024 puts ability increases on backgrounds.
 - **glossary** → `{ "keywords": [...] }` — rules-glossary terms (Advantage, Cover, Difficult Terrain…), the same category `conditions` writes to, so the two merge in the app.
 - **backgrounds** → `{ "backgrounds": [...] }` — the 16 XPHB backgrounds: ability scores, feat, skill and tool proficiencies, equipment and its structured `equipmentGrants`.
@@ -157,6 +158,7 @@ Add your own entries. Valid effect targets: `ac`, `init`, `speed`, `hp.max`, `pr
 ## Useful flags (classes)
 - `--include-legacy` — also include non-XPHB subclasses (TCE, XGE, …). Off by default to keep the ruleset edition-consistent; turning it on mixes 2014 subclasses into the 2024 chassis.
 - `--no-spell-notes` — skip the per-level prepared/known-spells notes.
+- `--optfeatures PATH` — `optionalfeatures.json`, for the Battle Master, Sorcerer, Warlock and Artificer option pickers. `all` and `supplement` find it themselves; without it those classes still convert, with no pickers.
 - `--tables PATH` *(any subcommand)* — also write that source's lifted tables to `PATH`. `all` always writes `tables.json`.
 - `--overlay PATH` / `--resources PATH` *(incl. `all`)* — point at the hand-authored inputs explicitly. `all` looks in the input dir then `data/`, so you rarely need these.
 

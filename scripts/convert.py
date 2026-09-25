@@ -244,6 +244,14 @@ def flatten(entries):
                 if sub is not None and ref not in _REFSEEN:
                     _REFSEEN.add(ref)       # a feature must not inline itself
                     walk({'name': sub.get('name'), 'entries': sub.get('entries', [])})
+            elif t == 'refOptionalfeature':
+                # Maneuvers, invocations, metamagic... The picker carries them in
+                # full (_optfeat_choices); the prose only has to say what they are.
+                # Dropping them left "presented here in alphabetical order." with
+                # nothing after it.
+                nm = strip_tags(str(node.get('optionalfeature') or '').split('|')[0])
+                if nm:
+                    lines.append('• ' + nm)
             elif t in ('image', 'gallery'):
                 pass
             elif t == 'entries' or 'entries' in node:
@@ -923,7 +931,7 @@ def _ref_str(ref):
     return ref.get('classFeature') if isinstance(ref, dict) else ref
 
 def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True, resources=None,
-                    tables=None, book=None, only=None, **_):
+                    tables=None, book=None, only=None, optfeats=None, **_):
     overlay = overlay or {}
     resources = resources or {}
     bk = _bk(book)
@@ -1020,6 +1028,10 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
             if not cf: continue
             with table_ctx(tables, entry['name'], 'class'), ref_ctx(_resolve_ref):
                 addtrait(lvl, {'name': name, 'description': flatten(cf.get('entries', []))})
+        for lvl, chs in _optfeat_choices(entry.get('optionalfeatureProgression'), optfeats, src,
+                                         overlay, tables).items():
+            for ch in chs:
+                addchoice(lvl, ch)
         if sub_level:
             addchoice(sub_level, {'type': 'subclass', 'label': sub_title})
 
@@ -1055,9 +1067,10 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
                     slevels.setdefault(lvl, {}).setdefault('traits', []).append(
                         {'name': nm, 'description': flatten(sf.get('entries', []))})
                 if not desc:
-                    for e in sf.get('entries', []):
-                        if isinstance(e, str) and len(strip_tags(e)) > 40:
-                            desc = strip_tags(e); break
+                    desc = _sub_blurb(sf)
+            for lvl, chs in _optfeat_choices(sc.get('optionalfeatureProgression'), optfeats,
+                                             sc.get('source') or src, overlay, tables).items():
+                slevels.setdefault(lvl, {}).setdefault('choices', []).extend(chs)
             SD['description'] = desc
             SD['levels'] = {str(k): slevels[k] for k in sorted(slevels)}
             if tables is not None:
@@ -1079,6 +1092,18 @@ def _sub_ref_str(ref):
     if isinstance(ref, dict):
         return ref.get('subclassFeature') or ref.get('classFeature')
     return ref
+
+_TAGLINE = re.compile(r'^\s*\{@i [^{}]*\}\s*$')
+
+def _sub_blurb(sf):
+    """A subclass's description: the first real paragraph of its first feature.
+    Not the italic tagline a 2024 subclass opens with — "{@i Augment Physical
+    Might with Psionic Power}" is 41 characters, over the length floor, and was
+    shipped as the whole description of eight subclasses."""
+    for e in sf.get('entries', []):
+        if isinstance(e, str) and not _TAGLINE.match(e) and len(strip_tags(e)) > 40:
+            return strip_tags(e)
+    return ''
 
 def _subclass_levels(sc, sfidx, resolver, tables, src):
     """Shared with convert_classes' nested build: features by level, plus the
@@ -1108,12 +1133,10 @@ def _subclass_levels(sc, sfidx, resolver, tables, src):
             slevels.setdefault(lvl, {}).setdefault('traits', []).append(
                 {'name': nm, 'description': flatten(sf.get('entries', []))})
         if not desc:
-            for e in sf.get('entries', []):
-                if isinstance(e, str) and len(strip_tags(e)) > 40:
-                    desc = strip_tags(e); break
+            desc = _sub_blurb(sf)
     return slevels, desc
 
-def convert_subclasses(paths, book=None, tables=None, skip_classes=(), **_):
+def convert_subclasses(paths, book=None, tables=None, skip_classes=(), optfeats=None, overlay=None, **_):
     """Subclasses a supplement adds to classes the player already has, as
     standalone `subclasses` records that attach by class name (schema §6.5).
 
@@ -1168,6 +1191,10 @@ def convert_subclasses(paths, book=None, tables=None, skip_classes=(), **_):
                 return None
 
         slevels, desc = _subclass_levels(sc, sfidx, _resolve_ref, tables, src)
+        # the subclass's OWN book picks the printing (XGE, TCE), not classSource (PHB)
+        for lvl, chs in _optfeat_choices(sc.get('optionalfeatureProgression'), optfeats,
+                                         sc.get('source') or src, overlay, tables).items():
+            slevels.setdefault(lvl, {}).setdefault('choices', []).extend(chs)
         if not slevels:
             # Never drop one quietly — a featureless subclass means the ref format
             # changed, and silence is how 35 empty stubs would have looked fine.
@@ -1252,21 +1279,109 @@ def _render_optfeat_prereq(pr):
         if parts: alts.append(' and '.join(parts))
     return ' or '.join(alts)
 
+def _optfeat_desc(f, tables=None):
+    """An option's text with its prerequisite in front. Shared by the library
+    entries below and the level-up pickers, so the two can never word the same
+    option differently."""
+    pr = _render_optfeat_prereq(f.get('prerequisite'))
+    with table_ctx(tables, f['name'], 'feat'):
+        body = flatten(f.get('entries', []))
+    lead = ('Prerequisite: ' + pr) if pr else ''
+    return ((lead + '\n' if lead else '') + body).strip()
+
 def convert_optional_features(path, book=None, tables=None, overlay=None, **_):
     d = json.load(open(path, encoding='utf-8'))
     chosen = pick_sources(d.get('optionalfeature', []), book)
     out = []
     for f in chosen:
-        pr = _render_optfeat_prereq(f.get('prerequisite'))
-        with table_ctx(tables, f['name'], 'feat'):
-            body = flatten(f.get('entries', []))
-        lead = ('Prerequisite: ' + pr) if pr else ''
         rec = {'name': f['name'], 'source': _oft_label(f.get('featureType')),
-               'description': ((lead + '\n' if lead else '') + body).strip()}
+               'description': _optfeat_desc(f, tables)}
         apply_overlay(f['name'], rec, overlay or {})
         out.append(rec)
     out.sort(key=lambda x: (x['source'], x['name']))
     return out
+
+# ---------------------------------------------------------------- option pickers
+# A class or subclass that grants options says how many in
+# `optionalfeatureProgression`: a running TOTAL per level, as a {level: total}
+# map or a 20-long list. Each rise becomes a level-up `option` choice asking for
+# the rise — Battle Master 3 at 3 then 2 more at 7, 10 and 15. The options are
+# inlined in every choice rather than referenced: the app's option picker needs
+# no new code for it, and a player on an older app gets the picker from the
+# re-downloaded pack alone. It costs ~150 KB across the packs.
+def _prog_totals(prog):
+    if isinstance(prog, list):
+        return {i + 1: int(v or 0) for i, v in enumerate(prog)}
+    if isinstance(prog, dict):
+        return {int(k): int(v or 0) for k, v in prog.items()}
+    return {}
+
+def _optfeat_level(f):
+    """The class level an option needs, 0 for none. Prerequisite blocks are
+    ALTERNATIVES, so a block with no level means none is needed. Only the level
+    can be judged at the moment of choosing; a pact or a known spell stays in the
+    description for the player."""
+    blocks = [b for b in (f.get('prerequisite') or []) if isinstance(b, dict)]
+    if not blocks:
+        return 0
+    lvls = []
+    for b in blocks:
+        lv = b.get('level')
+        if isinstance(lv, dict):
+            lv = lv.get('level')
+        lvls.append(lv if isinstance(lv, int) else 0)
+    return min(lvls)
+
+def _optfeat_repeatable(f):
+    """5e-tools has no flag for it; the book prints a "Repeatable" subsection
+    (four 2024 invocations). The picker offers these again once taken."""
+    def walk(n):
+        if isinstance(n, dict):
+            return n.get('name') == 'Repeatable' or walk(n.get('entries'))
+        if isinstance(n, list):
+            return any(walk(x) for x in n)
+        return False
+    return walk(f.get('entries'))
+
+def _pick_optfeats(optfeats, types, src):
+    """The options of these feature types, from the printing the class or
+    subclass itself comes from. NEVER mixed: 5e-tools files every edition's
+    maneuvers under MV:B, and a 2024 Battle Master offered the 2014 Parry beside
+    its own would look entirely correct. A 2014 book with no printing of its own
+    (College of Swords' Dueling and Two-Weapon Fighting) takes the PHB's."""
+    types = set(types or [])
+    pool = [f for f in optfeats or [] if types & set(f.get('featureType') or [])]
+    return [f for f in pool if f.get('source') == src] or [f for f in pool if f.get('source') == 'PHB']
+
+def _optfeat_choices(progressions, optfeats, src, overlay=None, tables=None):
+    """-> {level: [option choice]}, empty when nothing applies."""
+    out = {}
+    for p in progressions or []:
+        pool = _pick_optfeats(optfeats, p.get('featureType'), src)
+        if not pool:
+            continue
+        prev = 0
+        totals = _prog_totals(p.get('progression'))
+        for lvl in sorted(totals):
+            n = totals[lvl] - prev
+            if n > 0:
+                recs = []
+                for f in sorted((f for f in pool if _optfeat_level(f) <= lvl), key=lambda f: f['name']):
+                    rec = {'name': f['name'], 'description': _optfeat_desc(f, tables)}
+                    if _optfeat_repeatable(f):
+                        rec['repeatable'] = True
+                    recs.append(apply_overlay(f['name'], rec, overlay or {}))
+                out.setdefault(lvl, []).append({
+                    'type': 'option', 'label': '%s: choose %d%s' % (p.get('name') or 'Options', n, ' more' if prev else ''),
+                    'choose': n, 'from': recs})
+            prev = max(prev, totals[lvl])
+    return out
+
+def load_optfeats(path):
+    """optionalfeatures.json -> its records, [] when absent (no picker)."""
+    if not path or not os.path.exists(path):
+        return []
+    return json.load(open(path, encoding='utf-8')).get('optionalfeature', [])
 
 def convert_class_features(paths, book=None, tables=None, skip_classes=(), **_):
     """Tasha's "Optional Class Features" — per-class additions and replacements
@@ -1630,6 +1745,10 @@ def _run_supplement(a):
         emit(convert_spells(spellfile, sources=srcs[0] if srcs else None, tables=tbls, book=bk),
              'spells', 'spells')
 
+    optf = _find_in(d, 'optionalfeatures.json')
+    if not optf: warn('no optionalfeatures.json found')
+    ofs = load_optfeats(optf[0]) if optf else []
+
     classfiles = _find_in(d, 'class-*.json')
     if not classfiles:
         warn('no class-*.json found')
@@ -1639,12 +1758,11 @@ def _run_supplement(a):
         if only:
             cres = load_class_resources(os.path.join(here, 'data', 'class-resources.json'))
             emit(convert_classes(classfiles, overlay=overlay, resources=cres, tables=tbls,
-                                 book=bk, only=only), 'classes', 'classes')
-        emit(convert_subclasses(classfiles, book=bk, tables=tbls, skip_classes=skip),
+                                 book=bk, only=only, optfeats=ofs), 'classes', 'classes')
+        emit(convert_subclasses(classfiles, book=bk, tables=tbls, skip_classes=skip,
+                                optfeats=ofs, overlay=overlay),
              'subclasses', 'subclasses')
 
-    optf = _find_in(d, 'optionalfeatures.json')
-    if not optf: warn('no optionalfeatures.json found')
     feats_out = (convert_optional_features(optf[0], book=bk, tables=tbls) if optf else []) \
         + (convert_class_features(classfiles, book=bk, tables=tbls, skip_classes=skip) if classfiles else [])
     emit(_pack(bk, 'features', feats_out, stem='features', version=1), 'features', 'features')
@@ -1671,6 +1789,8 @@ def main():
         p.add_argument('--no-spell-notes', action='store_true')
         p.add_argument('--tables', metavar='PATH',
                        help='also write the tables lifted out of this source to PATH')
+        p.add_argument('--optfeatures', metavar='PATH',
+                       help='(classes) optionalfeatures.json, for the maneuver/invocation/metamagic pickers')
     pa = sub.add_parser('all'); pa.add_argument('dir'); pa.add_argument('-o', '--out', required=True)
     pa.add_argument('--overlay'); pa.add_argument('--resources')
     pa.add_argument('--include-legacy', action='store_true')
@@ -1758,7 +1878,11 @@ def main():
         if spells: _write(convert_spells(spells[0], sources=srcs[0] if srcs else None, tables=tbls), os.path.join(outdir, 'spells.json'))
         classfiles = find('class-*.json')
         if not classfiles: warn('no class-*.json found')
-        if classfiles: _write(convert_classes(classfiles, overlay=overlay, include_legacy=a.include_legacy, resources=cres, tables=tbls), os.path.join(outdir, 'classes.json'))
+        # maneuvers, invocations, metamagic, infusions — without it the classes
+        # still convert, but with no option pickers, so say so
+        optf = need('optional features', 'optionalfeatures.json')
+        ofs = load_optfeats(optf[0]) if optf else []
+        if classfiles: _write(convert_classes(classfiles, overlay=overlay, include_legacy=a.include_legacy, resources=cres, tables=tbls, optfeats=ofs), os.path.join(outdir, 'classes.json'))
         _write_tables(tbls, os.path.join(outdir, 'tables.json'))
         if problems:
             print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
@@ -1789,7 +1913,8 @@ def main():
         for pat in a.inputs:
             files.extend(sorted(glob.glob(pat)) if any(ch in pat for ch in '*?[') else [pat])
         _write(convert_classes(files, overlay=overlay, include_legacy=a.include_legacy,
-                               spell_notes=not a.no_spell_notes, tables=tbls), a.out)
+                               spell_notes=not a.no_spell_notes, tables=tbls,
+                               optfeats=load_optfeats(a.optfeatures)), a.out)
     if a.tables:
         _write_tables(tbls, a.tables)
 

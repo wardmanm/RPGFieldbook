@@ -101,4 +101,24 @@ if bad:
     print("\nUNEXPECTED non-verbatim (%d):" % len(bad))
     for lbl,_,pct in sorted(bad,key=lambda r:r[2]): print("   %-52s %s%%" % (lbl[:52],pct))
     print("\nFAILURES: %d" % len(bad)); sys.exit(1)
+
+# The Gadgeteer and its paths come from the Nov 2024 packet, not this book, and
+# that packet's page 5 and page 10 are banded (see pt_clips) — so the reference
+# is the packet read the way the extractor reads it. Two traits are ours: the
+# tier upgrades the class TABLE implies but no paragraph states.
+pk=[p for p in eh.PACKETS if p["date"]=="2024-11"][0]
+if os.path.exists(os.path.join(eh.PT_DIR,pk["file"])):
+    pref=eh.vb_norm(eh.pt_reference(fitz.open(os.path.join(eh.PT_DIR,pk["file"])),pk))
+    gd=json.load(open("data/humblewood/classes.json"))
+    gf=[("class/Gadgeteer",gd["classes"][0]["description"])]
+    for o in gd["classes"]+gd["subclasses"]:
+        if o is not gd["classes"][0]: gf.append(("path/"+o["name"],o.get("description")))
+        for lv,b in (o.get("levels") or {}).items():
+            for t in b.get("traits") or []:
+                if t["name"]!="Component Tier Upgrade": gf.append(("%s L%s·%s"%(o["name"],lv,t["name"]),t.get("description")))
+    gbad=[l for l,txt in gf if len(eh.vb_norm(txt))>=25 and eh.vb_norm(txt) not in pref]
+    print("GADGETEER VERBATIM: %d / %d" % (len(gf)-len(gbad),len(gf)))
+    if gbad:
+        print("\nFAILURES: %s" % ", ".join(gbad)); sys.exit(1)
+    ok+=len(gf)
 print("ALL PASSED (%d)" % ok)
