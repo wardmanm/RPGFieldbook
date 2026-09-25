@@ -153,6 +153,17 @@
       "effects": []
     },
     {
+      "name": "Amulet of the Planes",
+      "system": "XPHB",
+      "category": "Wondrous Item",
+      "type": "Wondrous Item",
+      "rarity": "Very Rare",
+      "weight": 1,
+      "attune": true,
+      "description": "While wearing this amulet, you can take a Magic action to name a location that you are familiar with on another plane of existence. Then make a DC 15 Intelligence (Arcana) check. On a successful check, you cast Plane Shift. On a failed check, you and each creature and object within 15 feet of you travel to a random destination determined by rolling 1d100 and consulting the following table.\n[Table: Amulet of the Planes Table]",
+      "effects": []
+    },
+    {
       "name": "Animated Shield",
       "system": "XPHB",
       "category": "Armor",
@@ -219,6 +230,16 @@
           "value": 2
         }
       ]
+    },
+    {
+      "name": "Assassin's Blood",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "150 gp",
+      "description": "A creature subjected to Assassin's Blood makes a DC 10 Constitution saving throw. On a failed save, the creature takes 6 (1d12) Poison damage and has the Poisoned condition for 24 hours. On a successful save, the creature takes half as much damage only",
+      "effects": []
     },
     {
       "name": "Backpack",
@@ -417,7 +438,7 @@
       "type": "Wondrous Item",
       "rarity": "Rare",
       "attune": true,
-      "description": "While wearing this belt, you gain the following benefits:\nDwarvish: You know Dwarvish.\nFriend of Dwarvenkind: You have Advantage on Charisma (Persuasion) checks made to interact with dwarves and duergar.\nToughness: Your Constitution increases by 2, to a maximum of 20. In addition, while attuned to the belt, you have a 50 percent chance each day at dawn of growing a full beard if you can grow one, or a thicker beard if you already have one. If you aren't a dwarf or duergar, you gain the following additional benefits while wearing the belt:\nDarkvision: You have Darkvision with a range of 60 feet.\nResilience: You have Resistance to Poison damage. You also have Advantage on saving throws you make to avoid or end the Poisoned condition",
+      "description": "While wearing this belt, you gain the following benefits:\nDwarvish: You know Dwarvish.\nFriend of Dwarvenkind: You have Advantage on Charisma (Persuasion) checks made to interact with dwarves and duergar.\nToughness: Your Constitution increases by 2, to a maximum of 20.\n• In addition, while attuned to the belt, you have a 50 percent chance each day at dawn of growing a full beard if you can grow one, or a thicker beard if you already have one.\n• If you aren't a dwarf or duergar, you gain the following additional benefits while wearing the belt:\nDarkvision: You have Darkvision with a range of 60 feet.\nResilience: You have Resistance to Poison damage. You also have Advantage on saving throws you make to avoid or end the Poisoned condition",
       "effects": []
     },
     {
@@ -737,6 +758,16 @@
       "effects": []
     },
     {
+      "name": "Burnt Othur Fumes",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "500 gp",
+      "description": "A creature subjected to Burnt Othur Fumes must succeed on a DC 13 Constitution saving throw or take 10 (3d6) Poison damage, and it must repeat the save at the start of each of its turns. On each successive failed save, the creature takes 3 (1d6) Poison damage. After three successful saves, the poison ends",
+      "effects": []
+    },
+    {
       "name": "Caltrop",
       "system": "XPHB",
       "category": "Gear",
@@ -1037,7 +1068,7 @@
       "type": "Wondrous Item",
       "rarity": "Legendary",
       "attune": true,
-      "description": "This cloak has 3 charges and regains 1d3 expended charges daily at dawn. While wearing the cloak, you can take a Magic action to pull its hood over your head and expend 1 charge to give yourself the Invisible condition for 1 hour. The effect ends early if you pull the hood down (no action required) or cease wearing the hood",
+      "description": "This cloak has 3 charges and regains 1d3 expended charges daily at dawn. While wearing the cloak, you can take a Magic action to pull its hood over your head and expend 1 charge to give yourself the Invisible condition for 1 hour. The effect ends early if you pull the hood down (no action required) or cease wearing the cloak",
       "effects": []
     },
     {
@@ -1243,7 +1274,7 @@
       "rarity": "Very Rare",
       "weight": 3,
       "attune": true,
-      "description": "The typical crystal ball, a very rare item, is about 6 inches in diameter. While touching it, you can cast the Scrying spell (save DC 17) with it",
+      "description": "While touching this crystal orb, you can cast Scrying (save DC 17) with it",
       "effects": []
     },
     {
@@ -1584,6 +1615,16 @@
       "weight": 58.5,
       "cost": "40 gp",
       "description": "An Entertainer's Pack contains the following items: Backpack, Bedroll, Bell, Bullseye Lantern, 3 Costumes, Mirror, 8 flasks of Oil, 9 days of Rations, Tinderbox, and Waterskin",
+      "effects": []
+    },
+    {
+      "name": "Essence of Ether",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "300 gp",
+      "description": "A creature subjected to Essence of Ether must succeed on a DC 15 Constitution saving throw or have the Poisoned condition for 8 hours. The creature also has the Unconscious condition while Poisoned in this way. The creature wakes up if it takes damage or if another creature takes an action to shake it awake",
       "effects": []
     },
     {
@@ -2154,7 +2195,7 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Rare",
-      "description": "Base item: Horn. You can take a Magic action to blow this horn. In response, warrior spirits from the plane of Ysgard appear in unoccupied spaces within 60 feet of you. Each spirit uses the Berserker stat block and returns to Ysgard after 1 hour or when it drops to 0 Hit Points. The spirits look like living, breathing warriors, and they have Immunity to the Charmed and Frightened conditions. Once you use the horn, it can't be used again until 7 days have passed.\nA brass horn summons 3 Berserkers. To use the brass horn, you must have Proficiency with all Simple weapons.\nIf you blow the horn without meeting its requirement, the summoned Berserkers attack you. If you meet the requirement, they are Friendly to you and your allies and follow your commands",
+      "description": "Base item: Horn. You can take a Magic action to blow this horn. In response, warrior spirits from the plane of Ysgard appear in unoccupied spaces within 60 feet of you. Each spirit uses the Berserker stat block and returns to Ysgard after 1 hour or when it drops to 0 Hit Points. The spirits look like living, breathing warriors, and they have Immunity to the Charmed and Frightened conditions. Once you use the horn, it can't be used again until 7 days have passed.\nA brass horn summons 3 Berserkers. To meet the requirements of the brass horn, you must have Proficiency with all Simple weapons.\nIf you blow the horn without meeting its requirement, the summoned Berserkers attack you. If you meet the requirement, they are Friendly to you and your allies and follow your commands",
       "effects": []
     },
     {
@@ -2163,7 +2204,7 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Very Rare",
-      "description": "Base item: Horn. You can take a Magic action to blow this horn. In response, warrior spirits from the plane of Ysgard appear in unoccupied spaces within 60 feet of you. Each spirit uses the Berserker stat block and returns to Ysgard after 1 hour or when it drops to 0 Hit Points. The spirits look like living, breathing warriors, and they have Immunity to the Charmed and Frightened conditions. Once you use the horn, it can't be used again until 7 days have passed.\nA bronze horn summons 4 Berserkers. To use the bronze horn, you must have training with all Medium armor.\nIf you blow the horn without meeting its requirement, the summoned Berserkers attack you. If you meet the requirement, they are Friendly to you and your allies and follow your commands",
+      "description": "Base item: Horn. You can take a Magic action to blow this horn. In response, warrior spirits from the plane of Ysgard appear in unoccupied spaces within 60 feet of you. Each spirit uses the Berserker stat block and returns to Ysgard after 1 hour or when it drops to 0 Hit Points. The spirits look like living, breathing warriors, and they have Immunity to the Charmed and Frightened conditions. Once you use the horn, it can't be used again until 7 days have passed.\nA bronze horn summons 4 Berserkers. To meet the requirements of the bronze horn, you must have training with all Medium armor.\nIf you blow the horn without meeting its requirement, the summoned Berserkers attack you. If you meet the requirement, they are Friendly to you and your allies and follow your commands",
       "effects": []
     },
     {
@@ -2172,7 +2213,7 @@
       "category": "Wondrous Item",
       "type": "Wondrous Item",
       "rarity": "Legendary",
-      "description": "Base item: Horn. You can take a Magic action to blow this horn. In response, warrior spirits from the plane of Ysgard appear in unoccupied spaces within 60 feet of you. Each spirit uses the Berserker stat block and returns to Ysgard after 1 hour or when it drops to 0 Hit Points. The spirits look like living, breathing warriors, and they have Immunity to the Charmed and Frightened conditions. Once you use the horn, it can't be used again until 7 days have passed.\nA iron horn summons 5 Berserkers. To use the iron horn, you must have Proficiency with all Martial weapons.\nIf you blow the horn without meeting its requirement, the summoned Berserkers attack you. If you meet the requirement, they are Friendly to you and your allies and follow your commands",
+      "description": "Base item: Horn. You can take a Magic action to blow this horn. In response, warrior spirits from the plane of Ysgard appear in unoccupied spaces within 60 feet of you. Each spirit uses the Berserker stat block and returns to Ysgard after 1 hour or when it drops to 0 Hit Points. The spirits look like living, breathing warriors, and they have Immunity to the Charmed and Frightened conditions. Once you use the horn, it can't be used again until 7 days have passed.\nAn iron horn summons 5 Berserkers. To meet the requirements of the iron horn, you must have Proficiency with all Martial weapons.\nIf you blow the horn without meeting its requirement, the summoned Berserkers attack you. If you meet the requirement, they are Friendly to you and your allies and follow your commands",
       "effects": []
     },
     {
@@ -2661,6 +2702,24 @@
       }
     },
     {
+      "name": "Mace of Terror",
+      "system": "XPHB",
+      "category": "Weapon",
+      "type": "Simple Melee Weapon",
+      "rarity": "Rare",
+      "weight": 4,
+      "attune": true,
+      "description": "Damage 1d6 bludgeoning · Mastery: Sap · Base item: Mace. This magic weapon has 3 charges and regains 1d3 expended charges daily at dawn. While holding the weapon, you can take a Magic action and expend 1 charge to release a wave of terror from it. Each creature of your choice within 30 feet of you must succeed on a DC 15 Wisdom saving throw or have the Frightened condition for 1 minute. While Frightened in this way, a creature must spend its turns trying to move as far away from you as it can, and it can't make Opportunity Attacks. For its action, it can use only the Dash action or try to escape from an effect that prevents it from moving. If it has nowhere it can move, the creature can take the Dodge action. At the end of each of its turns, a creature repeats the save, ending the effect on itself on a success",
+      "effects": [],
+      "weapon": {
+        "kind": "melee",
+        "dice": "1d6",
+        "damageType": "bludgeoning",
+        "ability": "str",
+        "notes": "Mastery: Sap"
+      }
+    },
+    {
       "name": "Magnifying Glass",
       "system": "XPHB",
       "category": "Gear",
@@ -2668,6 +2727,16 @@
       "rarity": "Mundane",
       "cost": "100 gp",
       "description": "A Magnifying Glass grants Advantage on any ability check made to appraise or inspect a highly detailed item. Lighting a fire with a Magnifying Glass requires light as bright as sunlight to focus, tinder to ignite, and about 5 minutes for the fire to ignite",
+      "effects": []
+    },
+    {
+      "name": "Malice",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "250 gp",
+      "description": "A creature subjected to Malice must succeed on a DC 15 Constitution saving throw or have the Poisoned condition for 1 hour. The creature also has the Blinded condition while Poisoned in this way",
       "effects": []
     },
     {
@@ -2822,6 +2891,16 @@
       "weight": 1,
       "cost": "2 sp",
       "description": "This tin box contains a cup and simple cutlery. The box clamps together, and one side can be used as a cooking pan and the other as a plate or shallow bowl",
+      "effects": []
+    },
+    {
+      "name": "Midnight Tears",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "1500 gp",
+      "description": "A creature that ingests Midnight Tears suffers no effect until the stroke of midnight. Any effect that ends the Poisoned condition neutralizes this poison. If the poison hasn't been neutralized before midnight, the creature makes a DC 17 Constitution saving throw, taking 31 (9d6) Poison damage on a failed save or half as much damage on a successful one",
       "effects": []
     },
     {
@@ -3001,6 +3080,16 @@
       "effects": []
     },
     {
+      "name": "Oil of Taggit",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "400 gp",
+      "description": "A creature subjected to Oil of Taggit must succeed on a DC 13 Constitution saving throw or have the Poisoned condition for 24 hours. The creature also has the Unconscious condition while Poisoned in this way. It wakes up if it takes damage",
+      "effects": []
+    },
+    {
       "name": "Orb of Dragonkind",
       "system": "XPHB",
       "category": "Wondrous Item",
@@ -3028,6 +3117,16 @@
       "rarity": "Mundane",
       "weight": 15,
       "cost": "5 gp",
+      "effects": []
+    },
+    {
+      "name": "Pale Tincture",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "250 gp",
+      "description": "A creature subjected to Pale Tincture must succeed on a DC 16 Constitution saving throw or take 3 (1d6) Poison damage and have the Poisoned condition. The Poisoned creature repeats the save every 24 hours, taking 3 (1d6) Poison damage on a failed save. The damage the poison deals can't be healed by any means while the creature remains Poisoned. After seven successful saves against the poison, the creature is no longer Poisoned",
       "effects": []
     },
     {
@@ -3690,6 +3789,16 @@
       }
     },
     {
+      "name": "Purple Worm Poison",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "2000 gp",
+      "description": "A creature subjected to Purple Worm Poison makes a DC 21 Constitution saving throw, taking 35 (10d6) Poison damage on a failed save or half as much damage on a successful one",
+      "effects": []
+    },
+    {
       "name": "Quaal's Feather Token, Anchor",
       "system": "XPHB",
       "category": "Wondrous Item",
@@ -3794,7 +3903,7 @@
       "type": "Wondrous Item",
       "rarity": "Uncommon",
       "weight": 2,
-      "description": "Each of the quiver's three compartments connects to an extradimensional space that allows the quiver to hold numerous items while never weighing more than 2 pounds. The shortest compartment can hold up to 60 Arrows, Bolts, or similar objects. The midsize compartment holds up to 18 Javelins or similar objects. The longest compartment holds up to 6 long objects, such as bows, Quarterstaff's, or Spears.\nYou can draw any item the quiver contains as if doing so from a regular quiver or scabbard",
+      "description": "Each of the quiver's three compartments connects to an extradimensional space that allows the quiver to hold numerous items while never weighing more than 2 pounds. The shortest compartment can hold up to 60 Arrows, Bolts, or similar objects. The midsize compartment holds up to 18 Javelins or similar objects. The longest compartment holds up to 6 long objects, such as bows, Quarterstaffs, or Spears.\nYou can draw any item the quiver contains as if doing so from a regular quiver or scabbard",
       "effects": []
     },
     {
@@ -4396,7 +4505,6 @@
       "rarity": "Legendary",
       "weight": 2,
       "attune": true,
-      "attuneNote": "by a cleric, druid, or paladin",
       "description": "The rod has 5 charges. While you hold it, you can cast one of the following spells from it: Heal (expends 1 charge) or Resurrection (expends 5 charges).\nThe rod regains 1 expended charge daily at dawn. If you expend the last charge, roll 1d20. On a 1, the rod disappears in a harmless burst of radiance",
       "effects": []
     },
@@ -4592,6 +4700,16 @@
       "rarity": "Uncommon",
       "weight": 6,
       "description": "AC +2 (Shield) · Base item: Shield. While holding this Shield, you have Advantage on Initiative rolls and Wisdom (Perception) checks. The Shield is emblazoned with a symbol of an eye",
+      "effects": []
+    },
+    {
+      "name": "Serpent Venom",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "200 gp",
+      "description": "A creature subjected to Serpent Venom must succeed on a DC 11 Constitution saving throw, taking 10 (3d6) Poison damage on a failed save or half as much damage on a successful one",
       "effects": []
     },
     {
@@ -5072,7 +5190,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 20 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you gain a +2 bonus to Armor Class, saving throws, and spell attack rolls.\nSpells: While holding the staff , you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Power Table]\nRegaining Charges: The staff regains 2d8 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff retains its +2 bonus to attack rolls and damage rolls but loses all other properties. On a 20, the staff regains 1d8 + 2 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 4 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 20 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you gain a +2 bonus to Armor Class, saving throws, and spell attack rolls.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Power Table]\nRegaining Charges: The staff regains 2d8 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff retains its +2 bonus to attack rolls and damage rolls but loses all other properties. On a 20, the staff regains 1d8 + 2 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 4 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
       "effects": [
         {
           "target": "ac",
@@ -5159,7 +5277,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a bard, cleric, druid, sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 10 charges.\nInsect Cloud: While holding the staff , you can take a Magic action and expend 1 charge to cause a swarm of harmless flying insects to fill a 30-foot Emanation originating from you. The insects remain for 10 minutes, making the area Heavily Obscured for creatures other than you. A strong wind (like that created by Gust of Wind) disperses the swarm and ends the effect.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC and spell attack modifier. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Swarming Insects Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, a swarm of insects consumes and destroys the staff, then disperses",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 10 charges.\nInsect Cloud: While holding the staff, you can take a Magic action and expend 1 charge to cause a swarm of harmless flying insects to fill a 30-foot Emanation originating from you. The insects remain for 10 minutes, making the area Heavily Obscured for creatures other than you. A strong wind (like that created by Gust of Wind) disperses the swarm and ends the effect.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC and spell attack modifier. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Swarming Insects Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, a swarm of insects consumes and destroys the staff, then disperses",
       "effects": [],
       "weapon": {
         "kind": "melee",
@@ -5178,7 +5296,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 50 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls.\nSpell Absorption: While holding the staff , you have Advantage on saving throws against spells. In addition, you can take a Reaction when another creature casts a spell that targets only you. If you do, the staff absorbs the magic of the spell, canceling its effect and gaining a number of charges equal to the absorbed spell's level. However, if doing so brings the staff's total number of charges above 50, the staff explodes as if you activated its Retributive Strike (see below).\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Magi Table]\nRegaining Charges: The staff regains 4d6 + 2 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 20, the staff regains 1d12 + 1 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 6 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 50 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls.\nSpell Absorption: While holding the staff, you have Advantage on saving throws against spells. In addition, you can take a Reaction when another creature casts a spell that targets only you. If you do, the staff absorbs the magic of the spell, canceling its effect and gaining a number of charges equal to the absorbed spell's level. However, if doing so brings the staff's total number of charges above 50, the staff explodes as if you activated its Retributive Strike (see below).\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Magi Table]\nRegaining Charges: The staff regains 4d6 + 2 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 20, the staff regains 1d12 + 1 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 6 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
       "effects": [
         {
           "target": "attack",
@@ -5285,7 +5403,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a cleric, druid, or warlock",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 3 charges and regains 1d3 expended charges daily at dawn.\nThe staff can be wielded as a magic Quarterstaff. On a hit, it deals damage as a normal Quarterstaff , and you can expend 1 charge to deal an extra 2d10 Necrotic damage to the target and force it to make a DC 15 Constitution saving throw. On a failed save, the target has Disadvantage for 1 hour on any ability check or saving throw that uses Strength or Constitution",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 3 charges and regains 1d3 expended charges daily at dawn.\nThe staff can be wielded as a magic Quarterstaff. On a hit, it deals damage as a normal Quarterstaff, and you can expend 1 charge to deal an extra 2d10 Necrotic damage to the target and force it to make a DC 15 Constitution saving throw. On a failed save, the target has Disadvantage for 1 hour on any ability check or saving throw that uses Strength or Constitution",
       "effects": [],
       "weapon": {
         "kind": "melee",
@@ -5536,6 +5654,16 @@
       "effects": []
     },
     {
+      "name": "Torpor",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "600 gp",
+      "description": "A creature subjected to Torpor poison must succeed on a DC 15 Constitution saving throw or have the Poisoned condition for 4d6 hours. The creature's Speed is halved while the creature is Poisoned in this way",
+      "effects": []
+    },
+    {
       "name": "Totem",
       "system": "XPHB",
       "category": "Focus",
@@ -5580,6 +5708,16 @@
       "type": "Adventuring Gear",
       "rarity": "Mundane",
       "description": "When you make your character, you can roll once on the Trinkets table to gain a Tiny trinket, a simple item lightly touched by mystery. The DM might also use this table. It can help stock a room in a dungeon or fill a creature's pockets.\n[Table: Trinkets]",
+      "effects": []
+    },
+    {
+      "name": "Truth Serum",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "150 gp",
+      "description": "A creature subjected to Truth Serum must succeed on a DC 11 Constitution saving throw or have the Poisoned condition for 1 hour. The Poisoned creature can't knowingly communicate a lie",
       "effects": []
     },
     {
@@ -5857,6 +5995,16 @@
       "rarity": "Rare",
       "attune": true,
       "description": "While wearing this cloak, you can take a Magic action to turn the cloak into a pair of wings on your back. The wings lasts for 1 hour or until you end the effect early as a Magic action. The wings give you a Fly Speed of 60 feet. If you are aloft when the wings disappear, you fall. When the wings disappear, you can't use them again for 1d12 hours",
+      "effects": []
+    },
+    {
+      "name": "Wyvern Poison",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "1200 gp",
+      "description": "A creature subjected to Wyvern Poison makes a DC 14 Constitution saving throw, taking 24 (7d6) Poison damage on a failed save or half as much damage on a successful one",
       "effects": []
     },
     {

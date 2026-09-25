@@ -107,11 +107,17 @@
             </div>
             <div id="maxNote" style="text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px">Item / feature bonuses to Max HP appear here</div>
           </div>
-          <!-- Hit Dice reads as the second half of the Hit Points panel, not as
-               a rest fixture: they are the same resource seen twice, and
-               spending one writes straight into the box above. A SIBLING of
-               .hpwrap, never a child — nesting would put it inside the brick
-               ::before overlay and make one frame enclose both.
+        </div>
+
+        <div class="card" data-note="rest">
+          <div class="label">Rest &amp; Recovery <span class="grow"></span></div>
+          <div class="rest-row">
+            <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
+            <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
+          </div>
+          <!-- Hit Dice sit under the rests they belong to: spent on a short rest,
+               half back on a long one. (For 1.7.0 they were stacked under Hit
+               Points in Vitals, which put them in the combat view by default.)
                Nothing may be inserted between #hdWrap and .hd-grid, or inside
                it: .hd-row is display:contents and hands its four cells straight
                to that grid, which is the only reason a multiclass pool lines up
@@ -125,14 +131,6 @@
               <input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly aria-label="Hit Dice">
             </div>
             <div class="hd-wrap" id="hdWrap"></div>
-          </div>
-        </div>
-
-        <div class="card" data-note="rest">
-          <div class="label">Rest &amp; Recovery <span class="grow"></span></div>
-          <div class="rest-row">
-            <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
-            <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
           </div>
         </div>
 

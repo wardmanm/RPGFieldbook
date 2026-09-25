@@ -118,8 +118,8 @@ function wire(){
        same input event typing sends — every box's own listener does the rest — and
        leave the cursor in the box. */
     if((m=t.closest(".search-clear"))){const i=m.parentNode.querySelector("input");if(i){i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.focus();}return;}
-    if(t.closest("#btnCombat"))return combatViewOpen()?closeCombatView():openCombatView();
-    if(t.closest("#cvClose"))return closeCombatView();
+    if(t.closest("#btnCombat"))return combatViewOpen()?leaveCombatTab():enterCombatTab();
+    if(t.closest("#cvClose"))return leaveCombatTab();
     if(t.closest("#cvToc"))return openToc();
     if(t.closest("#cvStart"))return startCombatNow();
     if(t.closest("#cvPrev"))return advanceRound(-1);
@@ -177,19 +177,10 @@ function wire(){
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
   });
-  /* Esc closes the combat view only when it is the top layer. CAPTURE phase, so
-     this runs BEFORE the modal's own Esc handler (80-modal-forms.js) shuts the
-     modal — otherwise one Esc would close the modal and the view behind it. The
-     item finder has no Esc of its own, so over the view Esc leaves both open. */
-  document.addEventListener("keydown",e=>{
-    if(e.key!=="Escape"||!combatViewOpen())return;
-    if(modal.classList.contains("open"))return;
-    /* Focus on a toast's Undo: its own Esc sends the keyboard back into the view. */
-    {const ts=document.getElementById("toast");if(ts&&ts.contains(document.activeElement))return;}
-    const br=document.getElementById("browse");if(br&&br.classList.contains("show"))return;
-    const fly=document.getElementById("tocFly");if(fly&&fly.classList.contains("open")){closeToc();return;}
-    closeCombatView();
-  },true);
+  /* The combat tab's header sticks under the tab bar, whose height changes with
+     the width (labels become icons at 860px). No Esc handler: the view is a tab
+     now, not a layer over the page, and Esc is not how you leave a tab. */
+  window.addEventListener("resize",()=>{if(combatViewOpen())cvStickyTop();});
   /* Arranging the combat view: the grip is the only drag handle. */
   document.addEventListener("pointerdown",e=>{
     const g=e.target.closest&&e.target.closest("[data-cvgrip]");

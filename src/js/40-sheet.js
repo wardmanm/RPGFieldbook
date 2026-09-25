@@ -2,23 +2,26 @@
    top of the page, but jumping to a note wants that note's card — so the scroll
    is the caller's decision, not this function's. */
 function selectTab(name){
-  /* Leaving for a tab means leaving the combat view first: it sends the cards
-     home, or a note link would land on a tab with its cards missing. */
-  closeCombatView();
+  /* The combat view is a tab whose cards belong to the OTHER tabs. Leaving it
+     sends them home first, or a note link would land on a tab with its cards
+     missing; entering it remembers where it came from, for ✕. */
+  const was=(document.querySelector(".tabpanel.active")||{id:"tab-sheet"}).id.replace(/^tab-/,"");
+  if(name!=="combat")closeCombatView();
+  else if(was!=="combat")cvPrevTab=was;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
   document.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+name));
+  /* its button is an icon beside ☰, not a .tab */
+  const cb=document.getElementById("btnCombat");if(cb)cb.classList.toggle("active",name==="combat");
+  if(name==="combat")openCombatView();
   closeToc();
 }
 /* Scroll a card to just under the sticky tab bar, whose height is measured live
    rather than assumed. Shared by the table of contents and the notes jump. */
 function scrollToCard(el){
   if(!el)return;
-  /* In the combat view the card sits in #cvBody, which scrolls on its own under a
-     header that is not the tab bar. */
-  const box=el.closest("#cvBody");
-  if(box){box.scrollTo({top:Math.max(0,el.getBoundingClientRect().top-box.getBoundingClientRect().top+box.scrollTop-10),behavior:"smooth"});return;}
-  const tb=document.querySelector(".tabbar");
-  const off=(tb?tb.getBoundingClientRect().height:48)+10;
+  /* In the combat tab its own header sticks under the tab bar, so clear both. */
+  const tb=document.querySelector(".tabbar"),ch=el.closest("#combatView")&&document.getElementById("cvHead");
+  const off=(tb?tb.getBoundingClientRect().height:48)+(ch?ch.getBoundingClientRect().height:0)+10;
   const y=el.getBoundingClientRect().top+window.scrollY-off;
   window.scrollTo({top:Math.max(0,y),behavior:"smooth"});
 }

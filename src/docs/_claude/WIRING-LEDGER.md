@@ -3672,3 +3672,36 @@ text.
 
 Remaining: the Superiority Die SIZE (d8 → d10 → d12) is prose, not on the tracker; Rune Knight
 runes are per-rune uses, not a pool, and have no tracker.
+
+## 5e-tools v2.36.1, Superiority Die size, Hit Dice back to Rest, the combat view as a tab
+
+**v2.36.1.** `_conversion-data/5etools-v2.36.1` (renamed from `5eTools` so dev.sh's
+`5etools-*` glob finds it); CLAUDE.md's gate and README-converter now name it, and the gate passes.
+Upstream moved the 2024 **Cloak of Invisibility** from `basicRules2024` to `srd52` alone, so
+`pick_2024_preferred` now backfills on EITHER flag. Measured before committing to it: across the
+whole 2024 pack that adds only more of the free 2024 subset — 14 XDMG magic items (poisons, Amulet
+of the Planes, Mace of Terror), 3 diseases (Cackle Fever, Sewer Plague, Sight Rot), 1 table — and
+removes nothing. The rest of the move is upstream correction: +Reach (glossary); 11 magic items
+(Horn of Valhalla errata, Crystal Ball reworded, whitespace); Sorcerous Burst, Gust of Wind,
+Transport via Plants; XGE Power Word Pain gains Bard. Classes, options, feats, backgrounds, species
+and both supplements' subclasses were byte-identical.
+
+**Die size.** A resource may carry `die` (`{byLevel:[sides…]}` or a fixed `8`/`"d8"`), resolved
+per level by `resolveResDie()` in syncResources and shown as a badge beside the name (body font —
+the heading face set it in small caps, "D10"). Battle Master's comes from class-resources.json.
+
+**Hit Dice → Rest & Recovery** (owner's call, reversing 1.7.0): in Vitals they rode into the
+combat view by default, between the player and the hit points. `.hd-box` moved whole, under the
+rest buttons; its markup rules (nothing between #hdWrap and .hd-grid) are unchanged.
+
+**Combat view → a tab** (owner's call, after play: the overlay covered the tabs). `#tab-combat` is
+`src/html/70-combat.html` (manifest, CLAUDE.md and ADR counts now 7) holding the same `#combatView`,
+so every `#combatView …` rule and `closest("#combatView")` still resolves. `selectTab("combat")`
+fills it, any other tab empties it first; `enterCombatTab()`/`leaveCombatTab()` carry the scroll
+(selectTab itself never scrolls, on purpose) and ✕ / a second tap on the swords return to the tab
+it came from (`cvPrevTab`). Removed with the overlay: position:fixed, `html.cv-lock`, `cvInert` and
+the modal's re-inert hand-off, `aria-modal`, and the capture-phase Esc — Esc is not how you leave
+a tab. The header is sticky at `--cv-top`, the tab bar's MEASURED height (cvStickyTop, on open and
+resize); a drag now scrolls the window near the header's bottom edge or the window's. The swords
+button takes `.active` (underline, or a ring when it is already the in-combat pill).
+The overlay's spec (src/docs/specs/2026-09-24-combat-view-design.md) is historical now.

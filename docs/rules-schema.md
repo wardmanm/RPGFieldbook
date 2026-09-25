@@ -336,6 +336,9 @@ card, scales its **max** with class level, and refills on the matching rest.
   - `{ "formula": "<abbr>" }` — an ability modifier (min 1), e.g. `"cha"` → CHA modifier;
     supports an offset like `"cha+1"`.
   - a plain number.
+- **`die`** *(optional)* — for a pool whose points are dice, the die size, shown beside its name
+  on the sheet: `{ "byLevel": [ … ] }` of sides (Superiority Dice: `8` → `10` at level 10 →
+  `12` at 18), or a fixed `8` / `"d8"`. The count still comes from `max`.
 
 Auto resources are managed (max locked, shown with an "auto" badge); players can still spend/
 gain and reset them, and add their own manual resources on the sheet. When generating with

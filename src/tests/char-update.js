@@ -16,6 +16,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag','runChoices',
+  'syncResources','resolveResDie',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -820,6 +821,28 @@ ck('no module-level equipment queue is left to leak',
 ck("the class window's Done hands its own queue to commitChoices",
    /function runChoices\(className,choices,notes,eq\)[\s\S]*?commitChoices\(className,sel,eq\)/.test(
      fs.readFileSync(path.join(__dirname,'../js/58-choices.js'),'utf8')));
+
+// ---------- the die a pool's points are (Superiority Dice d8 -> d10 -> d12)
+ck('a pool with no die has none', X.resolveResDie({name:'Rage'},5)==='');
+ck('a die by level', X.resolveResDie({die:{byLevel:[0,0,8,8,8,8,8,8,8,10]}},10)==='d10');
+ck('...absent below the level it starts', X.resolveResDie({die:{byLevel:[0,0,8]}},2)==='');
+ck('...and the last entry holds past the end', X.resolveResDie({die:{byLevel:[0,0,8,12]}},20)==='d12');
+ck('a fixed die, written either way', X.resolveResDie({die:8},1)==='d8' && X.resolveResDie({die:'d6'},1)==='d6');
+{
+  const BM=[{name:'Fighter',hitDie:'d10',subclasses:{'Battle Master':{description:'x',levels:{},
+    resources:[{name:'Superiority Dice',per:'short',max:{byLevel:[0,0,4,4,4,4,5,5,5,5,5,5,5,5,6,6,6,6,6,6]},
+               die:{byLevel:[0,0,8,8,8,8,8,8,8,10,10,10,10,10,10,10,10,12,12,12]}}]}}}];
+  hpSetup(BM); X.character.classes=[{name:'Fighter',level:3,subclass:'Battle Master'}];
+  X.syncResources();
+  const sd=()=>X.character.resources.find(r=>r.name==='Superiority Dice');
+  ck('the tracker knows its die: d8 at 3', sd()&&sd().die==='d8'&&sd().max===4, sd());
+  X.character.classes[0].level=10; X.syncResources();
+  ck('...d10 at 10, and the count moves separately', sd().die==='d10'&&sd().max===5, sd());
+  X.character.classes[0].level=18; X.syncResources();
+  ck('...d12 at 18', sd().die==='d12'&&sd().max===6, sd());
+  sd().cur=2; X.syncResources();
+  ck('re-syncing never refills what the player spent', sd().cur===2);
+}
 
 // Multiclassing into a new class is gaining a level too, with the NEW die.
 hpSetup(CLS); X.addClass('Fighter',1); X.addClass('Wizard',1);

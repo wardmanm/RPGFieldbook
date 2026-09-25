@@ -604,7 +604,9 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     .map(s => /id="tab-([a-z]+)"/.exec(s)[1]);
   ck('there are six tabs', tabs.length === 6, tabs);
   ck('every tab has a panel', tabs.every(n => panels.indexOf(n) >= 0), tabs.filter(n => panels.indexOf(n) < 0));
-  ck('every panel has a tab', panels.every(n => tabs.indexOf(n) >= 0), panels.filter(n => tabs.indexOf(n) < 0));
+  // the combat panel's tab is the crossed swords beside ☰, not a word tab
+  ck('every panel has a tab', panels.every(n => tabs.indexOf(n) >= 0 || (n === 'combat' && /id="btnCombat"/.test(t))),
+     panels.filter(n => tabs.indexOf(n) < 0));
   ck('exactly one tab starts active', (t.match(/class="tab active"/g) || []).length === 1);
   ck('every tab carries a glyph and a word',
      (t.match(/class="tabicon"/g) || []).length === 6 && (t.match(/class="tlbl"/g) || []).length === 6);
@@ -850,22 +852,23 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the star sits in the Vitals label row',
      ((vitals.match(/<div class="label">[\s\S]*?<\/div>/) || [''])[0]).includes('id="starBtn"'));
 
-  // Vitals owns Hit Points AND Hit Dice, stacked, so the two read as one pair —
-  // spending a hit die writes straight into the box above it. Rest & Recovery
-  // keeps only the rests, and keeps existing because it is a data-note anchor.
+  // Hit Dice live in Rest & Recovery, under the rest buttons: they are spent on
+  // a short rest and come back on a long one. They sat in Vitals for one release
+  // (1.7.0), which put them in the combat view by default, between the player
+  // and the hit points they were watching. Vitals keeps exactly the hit points.
   const hd = ['hitdiceInput', 'data-hdmode', 'hdWrap'];
-  const owned = ['data-hp="cur"', 'data-hp="max"', 'data-hp="temp"', 'id="deathFail"', 'data-hplock'].concat(hd);
-  ck('Vitals owns HP, the death saves, the padlock and all of hit dice',
+  const owned = ['data-hp="cur"', 'data-hp="max"', 'data-hp="temp"', 'id="deathFail"', 'data-hplock'];
+  ck('Vitals owns HP, the death saves and the padlock',
      owned.every(s => vitals.includes(s)), owned.filter(s => !vitals.includes(s)));
+  ck('...and no hit dice', !hd.some(s => vitals.includes(s)), hd.filter(s => vitals.includes(s)));
   ck('Rest & Recovery keeps both rest buttons',
      rest.includes('id="btnShortRest"') && rest.includes('id="btnLongRest"'));
-  ck('...and no hit dice is left behind in it',
-     !hd.some(s => rest.includes(s)) && !/data-hp=/.test(rest), rest);
+  ck('...and owns all of hit dice', hd.every(s => rest.includes(s)), hd.filter(s => !rest.includes(s)));
+  ck('...under the rest buttons', rest.indexOf('id="hdWrap"') > rest.indexOf('id="btnLongRest"'));
+  ck('...and no hit points', !/data-hp=/.test(rest), rest);
   ck('hit dice is written once, not in two cards',
      (t.match(/id="hitdiceInput"/g) || []).length === 1 &&
      (t.match(/id="hdWrap"/g) || []).length === 1);
-  ck('the hit-dice panel sits BELOW the HP panel, not inside it',
-     vitals.indexOf('id="hdWrap"') > vitals.indexOf('id="maxNote"') && !hpwrap.includes('id="hdWrap"'));
 
   // .hd-row is display:contents feeding .hd-grid's repeat(4,max-content): the
   // row hands its four cells straight to that grid, which is the only reason a
@@ -886,11 +889,11 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // the rule existing is not the same as the panel wearing it
   ck('both panels actually carry a heading',
      /<div class="hp-title">Hit Points<\/div>/.test(hpwrap) &&
-     /<div class="hd-title">Hit Dice[\s\S]{0,200}?<\/div>/.test(vitals));
+     /<div class="hd-title">Hit Dice[\s\S]{0,200}?<\/div>/.test(rest));
   // the auto/manual pill rides ON the heading — alone on its own line it read as
   // an orphaned control and cost a whole row of the panel's height
   ck('the auto/manual pill sits on the Hit Dice heading',
-     /<div class="hd-title">Hit Dice <button class="hd-mode" data-hdmode/.test(vitals));
+     /<div class="hd-title">Hit Dice <button class="hd-mode" data-hdmode/.test(rest));
   // anchored at a line start so it matches the STANDALONE rule, not the shared
   // `.hp-title,.hd-title{...}` one, whose body has no colour at all
   ck('the hit-dice heading is not brick (that is the HP panel\'s colour)',
@@ -1497,24 +1500,51 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   S.rulesCollapse = {};
 }
 
-// ---------- the combat view's shell: a tab-bar button, and a view outside every tab
+// ---------- the combat view is a TAB: its icon in the tab bar, its panel in the page
+// It was a full-screen overlay; in play that covered the tabs a player wanted to
+// glance at, so it became a tab with the same header, cards and arranging.
 {
   const t = loadHTML();
   const tools = t.indexOf('<div class="tab-tools">'), combat = t.indexOf('id="btnCombat"'),
         toc = t.indexOf('id="btnToc"'), page = t.indexOf('<div class="page">'),
-        view = t.indexOf('id="combatView"');
+        panel = t.indexOf('id="tab-combat"'), view = t.indexOf('id="combatView"');
   ck('the combat button sits in the pinned tab-bar group, before ☰',
      tools >= 0 && tools < combat && combat < toc);
-  ck('the combat view is outside the page, so no tab panel owns it', view >= 0 && view < page);
-  ck('the view has its header, its scroller, its empty hint and its list',
+  ck('the combat view is a tab panel inside the page', page >= 0 && page < panel && panel < view,
+     {page, panel, view});
+  ck('...and no longer a modal dialog over it',
+     !/id="combatView"[^>]*(aria-modal|role="dialog")/.test(t) && !/class="cview[^"]*"[^>]*aria-modal/.test(t));
+  ck('the view has its header, its body, its empty hint and its list',
      ['id="cvHead"', 'id="cvBody"', 'id="cvEmpty"', 'id="cvList"'].every(s => t.includes(s)));
+  const panelEnd = t.indexOf('</section>', panel);
   ck('the view ships holding no cards — they are moved in at runtime',
-     !/class="card"/.test(t.slice(view, page)));
+     !/class="card"/.test(t.slice(panel, panelEnd)));
   // #cvHead is repainted whole, and a replaced live region is never announced.
   const live = t.indexOf('id="cvLive"'), head = t.indexOf('id="cvHead"');
   ck('the round\'s live region is in the view but outside its repainted header',
-     live > view && live < page && !/id="cvLive"/.test(t.slice(head, t.indexOf('</div>', head))) &&
+     live > view && live < panelEnd && !/id="cvLive"/.test(t.slice(head, t.indexOf('</div>', head))) &&
      /<p [^>]*id="cvLive" aria-live="polite"/.test(t));
+
+  const cjs = fs.readFileSync(path.join(ROOT, 'src/js/87-combat.js'), 'utf8');
+  const sheetJs = fs.readFileSync(path.join(ROOT, 'src/js/40-sheet.js'), 'utf8');
+  const bootJs = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+  const combatCss = fs.readFileSync(path.join(ROOT, 'src/css/45-combat.css'), 'utf8');
+  ck('selecting the combat tab fills the view', /function selectTab\(name\)\{[\s\S]*?if\(name==="combat"\)openCombatView\(\)/.test(sheetJs));
+  ck('...and any other tab sends the cards home first',
+     /function selectTab\(name\)\{[\s\S]*?if\(name!=="combat"\)closeCombatView\(\)/.test(sheetJs));
+  ck('the swords button opens the tab, and leaves it from inside',
+     /closest\("#btnCombat"\)\)return combatViewOpen\(\)\?leaveCombatTab\(\):enterCombatTab\(\)/.test(bootJs) &&
+     /function enterCombatTab\(\)\{[\s\S]*?selectTab\("combat"\)/.test(cjs));
+  ck('✕ leaves the tab too, back where it came from', /closest\("#cvClose"\)\)return leaveCombatTab\(\)/.test(bootJs));
+  // the overlay's machinery: a tab must leave the tab bar and the page usable
+  ck('nothing makes the tab bar or page inert for the combat view',
+     !/cvInert/.test(cjs + bootJs + fs.readFileSync(path.join(ROOT, 'src/js/80-modal-forms.js'), 'utf8')));
+  ck('no scroll lock and no fixed full-screen layer',
+     !/cv-lock/.test(cjs + combatCss) && !/\.cview\{[^}]*position:fixed/.test(combatCss));
+  ck('no Esc that closes a tab', !/Escape"\|\|!combatViewOpen\(\)/.test(bootJs));
+  ck('the header sticks under the tab bar', /\.cv-head\{[^}]*position:sticky/.test(combatCss));
+  ck('the swords button shows when its tab is the one open',
+     /btnCombat[\s\S]{0,120}classList\.toggle\("active",name==="combat"\)/.test(sheetJs) && /\.tab-combat\.active/.test(combatCss));
 }
 
 // ---------- the general modal can take focus, and is named by its title
