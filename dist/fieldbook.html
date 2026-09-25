@@ -2946,6 +2946,14 @@ function runExtraChoices(pending){
   });
 }
 
+/* The subclass is its own button (#61). The chip opens the CLASS, and the
+   subclass's description sat behind a small link inside that window, two taps
+   deep. [data-sub-info] is matched before [data-info-class] in the click
+   handler, so it wins inside the chip. */
+function classChipHTML(c,idx){
+  const sub=c.subclass?` · <button type="button" class="linkbtn link" data-sub-info="${esc(c.name)}|${esc(c.subclass)}" title="About ${esc(c.subclass)}">${esc(c.subclass)}</button>`:"";
+  return `<div class="cr-chip" data-info-class="${esc(c.name)}">${iconSVG("classes",c.name)}<span class="cr-k">Class</span><span class="cr-n">${esc(c.name)} ${num(c.level)}${sub}</span><button class="icon danger" data-del-class="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
+}
 function renderClassRace(){
   const rb=document.getElementById("raceBgBox"), cb=document.getElementById("classBox");
   if(rb){
@@ -2965,9 +2973,7 @@ function renderClassRace(){
   }
   if(cb){
     const parts=[];
-    (character.classes||[]).forEach((c,idx)=>{
-      parts.push(`<div class="cr-chip" data-info-class="${esc(c.name)}">${iconSVG("classes",c.name)}<span class="cr-k">Class</span><span class="cr-n">${esc(c.name)} ${num(c.level)}${c.subclass?` · ${esc(c.subclass)}`:""}</span><button class="icon danger" data-del-class="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
-    });
+    (character.classes||[]).forEach((c,idx)=>parts.push(classChipHTML(c,idx)));
     parts.push(`<button class="mini" data-add-class><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add class</button>`);
     if(!(rules.races||[]).length&&!(rules.classes||[]).length)parts.push(`<p class="hint" style="margin-top:8px">Load a rules pack with <b>races</b> and <b>classes</b> (Settings → Rules) to auto-apply traits and stats. Custom names work too, without auto data.</p>`);
     cb.innerHTML=parts.join("");
@@ -3276,6 +3282,59 @@ function level1HP(d){
   const die=hitDieMax(d);
   return die?Math.max(1,die+modOf(character.abilities.con)):0;
 }
+/* ---- hit points on a level-up (#58) ----
+   From level 2 on, each level is a roll of the hit die or its fixed value —
+   half the die plus one — with the CON modifier added, and never less than 1.
+   There used to be no prompt for it at all: levelling only unlocked the Max
+   box, so on a subclass level the choice modal was the only thing on screen and
+   the hit points were simply forgotten. The step is a synthesized {type:"hp"}
+   choice, so it rides the level's own modal, Done and commitChoices() — which is
+   what lets a subclass pick, whose selectSubclass() opens a modal of its own,
+   no longer lose it. */
+function hpFixed(die){return die>0?Math.floor(die/2)+1:0;}
+/* `dice` is what the dice came up, or blank/null to take the fixed value. With
+   several levels at once (multiclassing in above level 1) CON is added once per
+   level and the floor is 1 per level. */
+function hpGain(die,levels,dice,conMod){
+  const n=Math.max(1,num(levels)||1);
+  const t=(dice==null||String(dice).trim()==="")?n*hpFixed(die):num(dice);
+  return Math.max(n,t+n*num(conMod));
+}
+/* The line under the box, showing its working — "Average 6 + 2 CON = 8 HP" is
+   checkable at the table; a bare 8 is not. Pure: the caller passes CON and the
+   current maximum in, so it can be asserted without a sheet. */
+function hpGainText(ch,raw,conMod,maxNow,note){
+  const die=num(ch.die),n=Math.max(1,num(ch.levels)||1),avg=String(raw==null?"":raw).trim()==="";
+  const dice=avg?n*hpFixed(die):num(raw),gain=hpGain(die,n,avg?null:raw,conMod),c=num(conMod);
+  const con=(c<0?" − ":" + ")+(n>1?n+"×":"")+Math.abs(c)+" CON";
+  return (note?note+" — ":"")+(avg?"Average ":"")+dice+con+" = "+gain+" HP · Max HP "+num(maxNow)+" → "+(num(maxNow)+gain);
+}
+/* CON as it stands right now, items and ASIs included. abilFinal like
+   rollHitDie(), not level1HP()'s bare score: this number is spent the moment it
+   is computed and never re-derived, and an ASI lives in an effect, not the score. */
+function conModNow(){return Math.floor((abilFinal("con",contributions())-10)/2);}
+/* Called BEFORE the level-up unlocks the box, so it can remember whether to
+   lock it again once the app has written the new total. */
+function hpChoice(d,levels,L,cls){
+  return {type:"hp",die:hitDieMax(d),levels:Math.max(1,num(levels)||1),cls,_level:L,_wasLocked:character.hp.locked!==false};
+}
+/* Returns the hit points added, 0 if none. A class with no hit die in the
+   loaded rules has no fixed value to fall back on, so blank there means "I'll
+   type it into Max myself" — and the box the level-up unlocked stays unlocked
+   for exactly that. */
+function commitHPChoice(ch,raw){
+  const die=num(ch.die),blank=String(raw==null?"":raw).trim()==="";
+  if(!die&&blank)return 0;
+  const gain=die?hpGain(die,ch.levels,blank?null:raw,conModNow()):Math.max(0,num(raw));
+  if(gain<=0)return 0;
+  const was=num(character.hp.max);
+  character.hp.max=was+gain;
+  character.hp.cur=num(character.hp.cur)+gain;
+  if(ch._wasLocked)character.hp.locked=true;
+  clampHP();renderHP();
+  toast(`Max HP ${was} → ${was+gain} (+${gain})`);
+  return gain;
+}
 /* Level 1 with a single class has no roll and no choice: max HP is the hit
    die's maximum plus your Constitution modifier. Filled in on the player's
    behalf, but ONLY over a blank — a number they typed is theirs, and this must
@@ -3325,6 +3384,10 @@ function addClass(name,lvl){
   let choices=[],notes=[];const _eq=[];
   if(d)applyEquipGrants(d.equipmentGrants,"class:"+name,_eq);
   for(let L=1;L<=lvl;L++){const res=applyClassLevel(entry,d,L);choices=choices.concat(res.choices);notes=notes.concat(res.notes);}
+  /* A second class is levels GAINED, with the new class's die, so it asks for
+     hit points exactly as a level-up does. The first class is character
+     creation: seedLevel1HP() handles level 1, and above that the player types it. */
+  if(character.classes.length>1){choices=[hpChoice(d,lvl,lvl,name)].concat(choices);character.hp.locked=false;renderHP();}
   entry.level=lvl;
   character.level=totalLevel();
   seedLevel1HP(d);
@@ -3362,15 +3425,16 @@ function doLevelUp(){
     const newL=num(entry.level)+1;if(newL>20){alert(entry.name+" is already level 20.");return;}
     entry.level=newL;
     const res=applyClassLevel(entry,d,newL);
-    /* Levelling is the one moment Max HP legitimately changes and the app
-       cannot compute it — from level 2 on it is a roll (or the average) only
-       the player knows. Hand the box back rather than making them fight a
-       padlock, and leave it open: re-locking mid-edit would be worse.
+    const hp=hpChoice(d,1,newL,entry.name);   /* before the unlock below: it remembers the lock */
+    /* Levelling is the one moment Max HP legitimately changes. The HP step in
+       the modal writes the new total and puts the lock back as it was; the box
+       is opened here anyway as the fallback, so a player who dismisses the
+       modal can still type it rather than fighting a padlock.
        renderHP explicitly, because recompute() does not call it. */
     character.hp.locked=false;renderHP();
     character.level=totalLevel();const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
     renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
-    runChoices(entry.name,res.choices,res.notes);
+    runChoices(entry.name,[hp].concat(res.choices),res.notes);
   };
   if(character.classes.length===1){proceed(0);return;}
   openModal("Level up — which class?",character.classes.map((c,i)=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvlclass="${i}">${esc(c.name)} ${num(c.level)} → ${num(c.level)+1}</button>`).join("")+`<div class="m-actions"><button class="tbtn" id="luCancel">Cancel</button></div>`);
@@ -3546,8 +3610,27 @@ function choiceFieldHTML(ch,ci,d){
         return `<label class="opt"><input type="checkbox" data-skill-opt="${esc(o.key||"")}" ${o.have?"checked disabled data-fixed":""}>${esc(o.nm)}${esc(why)}</label>`;
       }).join("");
   }else if(t==="subclass"){
-    const from=ch.from||(d?Object.keys(subclassesFor(d)):[]);
-    inner=`<label class="f">${esc(ch.label||"Choose a subclass")}</label>`+from.map(n=>`<label class="opt"><input type="radio" name="sub-${ci}" data-sub-opt value="${esc(n)}">${esc(n)}</label>`).join("");
+    /* Each with its pack and description, as the Change-subclass chooser shows
+       them: a bare list of names asked the player to pick blind (#59). */
+    const subMap=d?subclassesFor(d):{},from=ch.from||Object.keys(subMap);
+    inner=`<label class="f">${esc(ch.label||"Choose a subclass")}</label>`+from.map(n=>{
+      const sc=subMap[n]||{};
+      return `<label class="opt" style="align-items:flex-start"><input type="radio" name="sub-${ci}" data-sub-opt value="${esc(n)}"><span><b>${esc(n)}</b>`+
+        `${sc._source?` <span class="hint">(${esc(sc._source)})</span>`:""}`+
+        `${sc.description?`<span class="hint" style="display:block;margin:2px 0 0">${esc(sc.description)}</span>`:""}</span></label>`;
+    }).join("");
+  }else if(t==="hp"){
+    /* The box holds the DICE total only; CON is added once, in hpGain(), so a
+       roll and a typed number can't disagree about whether it is already in.
+       Blank takes the average, so a player who rolls at the table types, and
+       one who doesn't just presses Done. */
+    const die=num(ch.die),n=Math.max(1,num(ch.levels)||1),dice=n+"d"+die;
+    inner=die
+      ?`<label class="f">Hit points — roll ${dice}, or take the average</label>`+
+        `<div style="display:flex;gap:8px;align-items:center"><input type="number" min="0" inputmode="numeric" data-hp-dice placeholder="${n*hpFixed(die)} (average)" aria-label="What the ${dice} came up — blank takes the average" style="flex:1">`+
+        `<button class="tbtn" type="button" data-hp-roll>Roll for me</button></div><p class="hint" data-hp-prev style="margin:6px 0 0"></p>`
+      :`<label class="f">Hit points gained</label><input type="number" min="0" inputmode="numeric" data-hp-dice placeholder="hit points gained" aria-label="Hit points gained">`+
+        `<p class="hint" style="margin:6px 0 0">${esc(ch.cls||"This class")} has no hit die in the loaded rules — type what you gained, or leave it blank and set Max yourself.</p>`;
   }else if(t==="asi"){
     inner=`<label class="f">Ability Score Improvement</label>
       <div style="display:flex;gap:14px;margin-bottom:6px"><label class="opt" style="margin:0"><input type="radio" name="asimode-${ci}" data-asi-mode value="2" checked>+2 to one</label><label class="opt" style="margin:0"><input type="radio" name="asimode-${ci}" data-asi-mode value="1">+1 to two</label></div>
@@ -3600,11 +3683,35 @@ function runChoices(className,choices,notes){
      past it, which is the opposite of the point. Registered after openModal,
      because openModal clears the guard on every open. */
   armChoiceDismissGuard();
+  wireHPChoice();
   document.getElementById("chDone").addEventListener("click",()=>{
     const warn=choiceShortfall(choiceBlocks());
     if(warn&&!confirm(warn))return;
     const sel=gatherChoices();closeModal();commitChoices(className,sel);
   });
+}
+/* The HP block's live working and its Roll button. */
+function wireHPChoice(){
+  document.querySelectorAll('.choice[data-ctype="hp"]').forEach(div=>{
+    const ch=_activeChoices[num(div.dataset.ci)],box=div.querySelector("[data-hp-dice]"),
+          prev=div.querySelector("[data-hp-prev]"),btn=div.querySelector("[data-hp-roll]");
+    if(!ch||!box||!prev)return;
+    let note="";
+    const sync=()=>{prev.textContent=hpGainText(ch,box.value,conModNow(),character.hp.max,note);};
+    box.addEventListener("input",()=>{note="";sync();});
+    if(btn)btn.addEventListener("click",()=>{
+      const r=rollDiceExpr({dice:[{n:Math.max(1,num(ch.levels)||1),sides:num(ch.die),sign:1}],mod:0});
+      box.value=r.total;note="Rolled "+r.faces.join(", ");sync();
+    });
+    sync();
+  });
+}
+/* Would dismissing throw away hit points? Only when there is something to add:
+   a die to take the average of, or a number typed for a class without one. */
+function hpPending(){
+  const div=document.querySelector('.choice[data-ctype="hp"]');if(!div)return false;
+  const box=div.querySelector("[data-hp-dice]");
+  return !!(div.querySelector("[data-hp-roll]")||(box&&String(box.value).trim()!==""));
 }
 /* Shared by both choice modals. The message differs from Done's: here the picks
    are about to be thrown away, not merely left short. */
@@ -3613,9 +3720,13 @@ function armChoiceDismissGuard(){
     const blocks=choiceBlocks();
     const picked=blocks.reduce((a,b)=>a+num(b.picked),0);
     const short=choiceShortfall(blocks);
-    if(!short&&!picked)return "";                 /* nothing to lose */
+    const hp=hpPending();
+    /* Hit points alone are not lost for good — the level-up left Max unlocked —
+       so they get their own, milder question rather than "no way to reopen". */
+    if(!short&&!picked)return hp?"Close without adding this level's hit points?\n\nMax HP is unlocked, so you can type the new total yourself.":"";
     return (picked?"Closing will discard the picks you have made.":"You have not made your picks yet.")+
-      "\n\nThere is no way to reopen this later — you would have to remove and re-add it.\n\nClose anyway?";
+      "\n\nThere is no way to reopen this later — you would have to remove and re-add it."+
+      (hp?"\n\nThis level's hit points will not be added either.":"")+"\n\nClose anyway?";
   });
 }
 function gatherChoices(){
@@ -3627,6 +3738,7 @@ function gatherChoices(){
     else if(t==="asi"){const mode=(div.querySelector('[data-asi-mode]:checked')||{}).value||"2";out.push({type:"asi",mode,a:div.querySelector('[data-asi-a]').value,b:div.querySelector('[data-asi-b]').value});}
     else if(t==="feat"){const sel=div.querySelector('[data-feat-opt]');out.push({type:"feat",name:sel?sel.value:""});}
     else if(t==="option")out.push({type:"option",ci:num(div.dataset.ci),sid:div.dataset.sid||"",idxs:Array.from(div.querySelectorAll('[data-opt-i]:checked')).map(cb=>num(cb.dataset.optI))});
+    else if(t==="hp"){const b=div.querySelector('[data-hp-dice]');out.push({type:"hp",ci:num(div.dataset.ci),dice:b?String(b.value).trim():""});}
   });
   return out;
 }
@@ -3638,6 +3750,7 @@ function commitChoices(className,selections){
     else if(sel.type==="subclass"){if(sel.name)pendingSub=sel.name;}
     else if(sel.type==="asi"){const fx=sel.mode==="2"?[{target:"ability."+sel.a,value:2}]:[{target:"ability."+sel.a,value:1},{target:"ability."+sel.b,value:1}];addFeatureFromDef({name:"Ability Score Improvement",description:"Gained from leveling "+className+".",effects:fx},{kind:"class",class:className,level:entry?entry.level:null});}
     else if(sel.type==="feat"){if(sel.name)grantFeatDef(sel.name,{kind:"class",class:className,level:entry?entry.level:null},_featPending);}
+    else if(sel.type==="hp"){const ch=_activeChoices[sel.ci];if(ch&&ch.type==="hp")commitHPChoice(ch,sel.dice);}
     else if(sel.type==="option"){const ch=_activeChoices[sel.ci];if(ch&&Array.isArray(ch.from))sel.idxs.forEach(i=>{const o=ch.from[i];if(o)addFeatureFromDef({name:o.name,description:o.description||"",effects:o.effects||[],skills:o.skills,saves:o.saves},sidToOrigin(sel.sid,ch._level));});}
   });
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
