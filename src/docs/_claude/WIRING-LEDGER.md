@@ -3645,3 +3645,30 @@ Still open: Battle Master's Superiority Dice have no tracker and Student of War 
 maneuver can't be swapped from the library, because the 2024 pack ships no `features.json`. Small
 in-feature tables (Magic Item Hacking's rarity costs, Spell Emulator's tiers) still read as flat
 text.
+
+## Battle Master follow-ups: dice, Student of War, a 2024 options library, the equipment leak
+
+- **Option costs.** 5e-tools `consumes` becomes `cost` on every option (`_optfeat_cost`), in the
+  pickers and in the library alike. The singular source name is mapped to the tracker's
+  (`_CONSUMES_AS`: Superiority Die → Superiority Dice, Sorcery Point → Sorcery Points), because
+  `useFeature()` spends from a resource matched by NAME. `commitChoices()` now passes `cost` into
+  `addFeatureFromDef()`; before, a picked option's cost was dropped.
+- **Subclass trackers** come from `class-resources.json` keys `"Class/Subclass"` (Battle Master
+  Superiority Dice 4/5/6, Arcane Archer's Arcane Shot 2), in both the 2024 converter and
+  `supplement`, which now always loads that file. The app always supported `resources` on a
+  subclass; nothing had ever supplied them.
+- **Student of War** is `_prose_choices()`, keyed (class, subclass, source) and hand-listed like
+  FIGHTING_STYLES, because the source carries no data for it: a `skill` choice from the class's
+  own level-1 list (read at conversion time) and an `option` over the 17 XPHB artisan's tools.
+  The tool lands as a feature, not in the free-text Proficiencies box, so it reverts with the
+  subclass.
+- **`data/5e2024/features.json`** is new: the 58 XPHB options as library entries, named "D&D 2024
+  Options". XPHB only — `pick_2024_preferred` would have backfilled 2014-only invocations. The
+  finder shows "Ambush (XPHB)" beside "Ambush (TCE)".
+- **`_equipQueue` is gone.** The starting-equipment picker is passed to `runChoices(…, eq)` and on
+  to its own Done → `commitChoices(…, eq)`. As a module global it outlived a dismissed Add class
+  window and fired after the next level-up's Done. char-update.js spies on `runExtraChoices`
+  through the vm context (`ctx`) to prove it.
+
+Remaining: the Superiority Die SIZE (d8 → d10 → d12) is prose, not on the tracker; Rune Knight
+runes are per-rune uses, not a pool, and have no tracker.

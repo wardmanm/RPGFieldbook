@@ -188,7 +188,11 @@ reach that level.
 - **`feat`** — pick any feat; optional `from: [names]` restricts the list.
 - **`subclass`** — pick the class's subclass (see §6.5). `label` optional.
 - **`option`** — generic pick where each option can carry its own `effects` (fighting styles,
-  signature choices, etc.). `from` is a list of `{name, description, effects?}`.
+  signature choices, maneuvers, invocations, etc.). `from` is a list of `{name, description,
+  effects?, cost?, repeatable?}`. Each pick becomes a feature on the sheet; `cost`
+  (`{resource, amount}`, as on a feature — §6.9) gives it a Use button that spends from that
+  resource. An option the sheet already has (matched by name) is shown as yours and not offered
+  again, unless it is `repeatable: true`. `choose` above 1 gives checkboxes, capped at `choose`.
 
 ---
 
@@ -336,7 +340,8 @@ card, scales its **max** with class level, and refills on the matching rest.
 Auto resources are managed (max locked, shown with an "auto" badge); players can still spend/
 gain and reset them, and add their own manual resources on the sheet. When generating with
 `convert.py`, XPHB class resources live in a hand-editable **`class-resources.json`** overlay
-(keyed by class name) that the converter applies — mirroring `overlay.json` for feats.
+(keyed by class name, or `"Class/Subclass"` for a subclass, e.g. `"Fighter/Battle Master"`) that
+the converter applies — mirroring `overlay.json` for feats.
 
 ### 6.4 `backgrounds` (2024 style)
 

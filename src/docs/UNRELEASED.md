@@ -44,6 +44,17 @@ Bullets below this line — leave the heading in place.
   shown as yours rather than offered twice, except invocations the rules let you take again. The
   chosen options go on your sheet as features. Re-download the D&D 2024, Xanathar's and Tasha's
   packs to get the pickers.
+- **Battle Masters get their Superiority Dice tracker** on the Resources card: four dice, five at
+  level 7 and six at 15, refilled on a short or long rest. Each maneuver you pick has a Use button
+  that spends a die, and Metamagic spends Sorcery Points the same way. Arcane Archers get an Arcane
+  Shot tracker. Student of War now asks for its skill (from the Fighter's list) and its artisan's
+  tools.
+- **Swap a maneuver, invocation or Metamagic option by hand.** The D&D 2024 pack now carries all
+  of them in Add feature, so you can replace one you know when the rules let you: delete the old
+  one and add the new one.
+- **Fixed: the starting-equipment picker could turn up after a later level-up.** If you closed
+  the Add class window without pressing Done, the class's starting equipment used to appear after
+  your next level-up instead of being dropped with the rest of that window's picks.
 - **Fixed: the Gadgeteer's Engineer path had the wrong feature text.** Crafty Components now lists
   the Engineer's two components, Quick Shield and Multitool, instead of the end of Magic Item
   Hacking, which is whole again. Several Gadgeteer features no longer end in stray fragments of

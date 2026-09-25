@@ -5,7 +5,7 @@ const fs = require('fs'), path = require('path');
 const {loadApp, makeCheck} = require('./harness');
 
 const ck = makeCheck();
-const {X, state, store, bootError, fragments} = loadApp([
+const {X, ctx, state, store, bootError, fragments} = loadApp([
   'APP_VERSION','RULE_CATS','cmpVer','blankChar','migrate',
   'fpHash','fpMap','fpNorm','stampSrc','restampSrc',
   'updProject','updEdited','itemMetaLine','costToGp','addAttackForItem','findClassDef',
@@ -15,7 +15,7 @@ const {X, state, store, bootError, fragments} = loadApp([
   'addClass','removeClass','doLevelUp','hitDieMax','level1HP','resyncLevel1HP','modOf',
   'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
-  'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag',
+  'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag','runChoices',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -778,6 +778,48 @@ ck('gatherChoices never re-grants a fixed option',
 ck('a reprint keyed with its pack is not tagged twice', X.subSourceTag('Psi Warrior (TCE)',{_source:'TCE'})==='');
 ck('...but an ordinary subclass still shows its pack', X.subSourceTag('Battle Master',{_source:'XPHB'})==='XPHB');
 ck('...and one with no pack shows nothing', X.subSourceTag('Engineer',{})==='');
+
+// A picked maneuver spends a Superiority Die: its cost must reach the sheet, or
+// the feature has no Use button and the tracker is never touched.
+{
+  hpSetup(CLS); X.addClass('Fighter',3);
+  X.runChoices('Fighter',[{type:'option',label:'Maneuvers: choose 3',choose:3,_level:3,_sid:'subclass:Fighter:Battle Master',
+    from:[{name:'Parry',description:'Reduce the damage.',cost:{resource:'Superiority Dice',amount:1}},{name:'Rally',description:'Temp HP.'}]}],[]);
+  X.commitChoices('Fighter',[{type:'option',ci:0,sid:'subclass:Fighter:Battle Master',idxs:[0,1]}]);
+  const parry=X.character.features.find(f=>f.name==='Parry'), rally=X.character.features.find(f=>f.name==='Rally');
+  ck('a picked option keeps what it spends', parry&&parry.cost&&parry.cost.resource==='Superiority Dice'&&parry.cost.amount===1, parry);
+  ck('...and one that spends nothing has no cost', rally&&!rally.cost, rally);
+  ck('...and both belong to the subclass, so they revert with it', parry&&parry.origin&&parry.origin.subclass==='Battle Master');
+}
+
+// The starting-equipment picker belongs to the Add class window that queued it.
+// It used to sit in a module global, so closing that window without Done left it
+// queued, and it popped up after the NEXT level-up's Done instead.
+{
+  const EQ=[{name:'Fighter',hitDie:'d10',
+    equipmentGrants:[{label:'Starting equipment',choose:[{items:[{name:'Rope'}]},{gold:10}]}],
+    levels:{'1':{choices:[{type:'skill',choose:1,from:['Athletics','History']}]}}}];
+  hpSetup(EQ);
+  const real=ctx.runExtraChoices; let got=null;
+  ctx.runExtraChoices=p=>{got=p;};
+  try{
+    X.addClass('Fighter',1);                 /* opens the class window (skills), queues equipment */
+    /* ...which the player closes without Done. Then they level up and press Done: */
+    X.doLevelUp(); got=null;
+    X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''}]);
+    ck('a dismissed window does not leak its equipment picker into the next level-up',
+       !(got||[]).some(x=>x&&x.kind==='equip'), got);
+    /* and a window that IS completed still hands its own picker on */
+    hpSetup(EQ); got=null;
+    X.commitChoices('Fighter',[],[{kind:'equip',sid:'class:Fighter',label:'Starting equipment',options:[{gold:10}]}]);
+    ck('...while a completed window still hands its picker on', (got||[]).some(x=>x&&x.kind==='equip'), got);
+  }finally{ctx.runExtraChoices=real;}
+}
+ck('no module-level equipment queue is left to leak',
+   !/_equipQueue/.test(fragments.map(f=>fs.readFileSync(path.join(__dirname,'../..',f),'utf8')).join('\n')));
+ck("the class window's Done hands its own queue to commitChoices",
+   /function runChoices\(className,choices,notes,eq\)[\s\S]*?commitChoices\(className,sel,eq\)/.test(
+     fs.readFileSync(path.join(__dirname,'../js/58-choices.js'),'utf8')));
 
 // Multiclassing into a new class is gaining a level too, with the NEW die.
 hpSetup(CLS); X.addClass('Fighter',1); X.addClass('Wizard',1);

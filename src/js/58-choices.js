@@ -136,7 +136,6 @@ function choiceFieldHTML(ch,ci,d){
   return `<div class="choice" data-ci="${ci}" data-ctype="${esc(t||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
 }
 let _activeChoices=[];
-let _equipQueue=[];
 function sidToOrigin(sid,level){
   const p=String(sid||"").split(":");
   if(p[0]==="class")return {kind:"class",class:p[1],level};
@@ -144,7 +143,12 @@ function sidToOrigin(sid,level){
   if(p[0]==="race")return {kind:"race",name:p[1]};
   return {kind:"class",class:"",level};
 }
-function runChoices(className,choices,notes){
+/* `eq` is the starting-equipment picker a new class queues behind its choices.
+   It travels with THIS window to its own Done: it used to wait in a module
+   global, so closing the window without Done left it queued, and it popped up
+   after the next level-up instead. Dismissed now, it goes with the window —
+   which the dismiss guard already warns about. */
+function runChoices(className,choices,notes,eq){
   if((!choices||!choices.length)&&(!notes||!notes.length))return;
   _activeChoices=choices||[];
   const d=findClassDef(className);
@@ -163,7 +167,7 @@ function runChoices(className,choices,notes){
   document.getElementById("chDone").addEventListener("click",()=>{
     const warn=choiceShortfall(choiceBlocks());
     if(warn&&!confirm(warn))return;
-    const sel=gatherChoices();closeModal();commitChoices(className,sel);
+    const sel=gatherChoices();closeModal();commitChoices(className,sel,eq);
   });
 }
 /* The HP block's live working and its Roll button. */
@@ -218,7 +222,7 @@ function gatherChoices(){
   });
   return out;
 }
-function commitChoices(className,selections){
+function commitChoices(className,selections,eq){
   const entry=character.classes.find(c=>c.name===className);
   let pendingSub=null;const _featPending=[];
   selections.forEach(sel=>{
@@ -227,11 +231,10 @@ function commitChoices(className,selections){
     else if(sel.type==="asi"){const fx=sel.mode==="2"?[{target:"ability."+sel.a,value:2}]:[{target:"ability."+sel.a,value:1},{target:"ability."+sel.b,value:1}];addFeatureFromDef({name:"Ability Score Improvement",description:"Gained from leveling "+className+".",effects:fx},{kind:"class",class:className,level:entry?entry.level:null});}
     else if(sel.type==="feat"){if(sel.name)grantFeatDef(sel.name,{kind:"class",class:className,level:entry?entry.level:null},_featPending);}
     else if(sel.type==="hp"){const ch=_activeChoices[sel.ci];if(ch&&ch.type==="hp")commitHPChoice(ch,sel.dice);}
-    else if(sel.type==="option"){const ch=_activeChoices[sel.ci];if(ch&&Array.isArray(ch.from))sel.idxs.forEach(i=>{const o=ch.from[i];if(o)addFeatureFromDef({name:o.name,description:o.description||"",effects:o.effects||[],skills:o.skills,saves:o.saves},sidToOrigin(sel.sid,ch._level));});}
+    else if(sel.type==="option"){const ch=_activeChoices[sel.ci];if(ch&&Array.isArray(ch.from))sel.idxs.forEach(i=>{const o=ch.from[i];if(o)addFeatureFromDef({name:o.name,description:o.description||"",effects:o.effects||[],skills:o.skills,saves:o.saves,cost:o.cost},sidToOrigin(sel.sid,ch._level));});}
   });
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
   if(pendingSub)selectSubclass(className,pendingSub);
-  const _eq=_equipQueue;_equipQueue=[];
-  runExtraChoices(_featPending.concat(_eq));
+  runExtraChoices(_featPending.concat(eq||[]));
 }
 
