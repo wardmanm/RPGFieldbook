@@ -3544,3 +3544,51 @@ finder only via `cfg.qtyInput`) that applies to every ticked item, like Origin a
   `input` event typing sends, so each box's own listener re-runs its filter unchanged.
 - Seen while checking, not fixed: at phone width an attack row's name runs into its type label
   behind the to-hit pill, and a feature row's name crowds its source tag. Pre-existing.
+
+## Subclass bugs from 1.7.0 (#58, #59, #60, #61) — app half done, data half waiting on sources
+
+**#58 hit points on level-up.** There was never an HP prompt at any level — `doLevelUp()` only
+unlocked the Max box. The report ("the subclass level doesn't prompt") read the subclass modal as
+the thing that hid it. Every level-up now carries a synthesized `{type:"hp"}` choice, prepended to
+the level's own choices, so it rides the same modal, `gatherChoices()` and `commitChoices()` — which
+is what keeps it from being lost when `selectSubclass()` opens a modal of its own. Pure helpers in
+56-class.js: `hpFixed` (die/2+1), `hpGain` (dice + CON per level, floor 1 per level), `hpGainText`
+(the working shown under the box). The box holds the DICE total only; blank = the fixed value.
+
+- **The lock.** `hpChoice()` records `_wasLocked` BEFORE `doLevelUp()` clears it; the commit puts it
+  back only if it was locked. The clear stays as the fallback for a dismissed modal. rules-data.js's
+  old "56-class.js touches the lock exactly once" guard now states what it was protecting: seed,
+  re-sync and un-seed never touch it, and the only re-lock is the HP step restoring what it found.
+- **CON is `abilFinal`, not `modOf(score)`** (`conModNow()`): an ASI lives in an effect, and this
+  number is spent once, never re-derived — the `rollHitDie()` argument, not `level1HP()`'s.
+- **Multiclassing** (`addClass` when a class already exists) asks for `lvl` levels of the new die.
+  The first class at level > 1 is character creation and still asks nothing (unchanged).
+- A class with no hit die in the rules gets a bare "hit points gained" box; blank there applies
+  nothing and leaves the box unlocked.
+- Dismissing with only HP at stake asks a milder question than the picks guard (`hpPending()`),
+  because Max is unlocked — the "no way to reopen" wording would be false.
+
+**#59 (app half)** the level-up subclass radios now carry pack + description, as `chooseSubclass()`
+already did. **#61** `classChipHTML()` (50-classrace.js) makes the subclass a `linkbtn link` button
+with `data-sub-info`, which the click handler matches before `data-info-class`.
+
+**Still open — needs `_conversion-data/` and `.venv` on this machine (Mike is copying them over):**
+- **#60 is systemic.** `flatten()` drops `refOptionalfeature` nodes (the `options` block recurses,
+  each ref has no `entries` and vanishes), and the `all` (2024) path never reads
+  `optionalfeatures.json`. Battle Master maneuvers, Sorcerer Metamagic options and Warlock Eldritch
+  Invocation options all end at "…presented in alphabetical order." with nothing after. Agreed fix:
+  all three as real "choose N" option choices at their levels (maneuvers 3/7/10/15, metamagic
+  2/10/17, invocations per the Warlock table). Changes `data/5e2024/`, so XPHB's `DATA_VERSIONS`
+  bump is legitimate this time.
+- **#59 data.** Magic Item Hacking (Gadgeteer L14) stops at its table; the rest of it is inside
+  Engineer's "Crafty Components", whose real text (the two special components) is missing.
+  "Make More With Less" carries the FIZZAR path intro; Fizzar's Arcane Specialization / Elemental
+  Overload end in sidebar fragments ("A Fiz Enhan", "zzar's Wearable nced Gauntlets"). The
+  Gadgeteer class description is cut off mid-sentence ("Another might build a").
+- Seen once the picker showed descriptions: **Scofflaw**'s description ends with its feature table
+  run into the prose ("Intimi3rd dating Banter 7th Misdirection…"); **Psi Warrior**'s is only its
+  tagline.
+
+**Found while testing, not fixed:** dismissing the choices modal after Add class leaves
+`_equipQueue` populated, so the class's starting-equipment picker pops up after the NEXT level-up's
+Done. Pre-existing, independent of #58.

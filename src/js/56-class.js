@@ -44,6 +44,59 @@ function level1HP(d){
   const die=hitDieMax(d);
   return die?Math.max(1,die+modOf(character.abilities.con)):0;
 }
+/* ---- hit points on a level-up (#58) ----
+   From level 2 on, each level is a roll of the hit die or its fixed value —
+   half the die plus one — with the CON modifier added, and never less than 1.
+   There used to be no prompt for it at all: levelling only unlocked the Max
+   box, so on a subclass level the choice modal was the only thing on screen and
+   the hit points were simply forgotten. The step is a synthesized {type:"hp"}
+   choice, so it rides the level's own modal, Done and commitChoices() — which is
+   what lets a subclass pick, whose selectSubclass() opens a modal of its own,
+   no longer lose it. */
+function hpFixed(die){return die>0?Math.floor(die/2)+1:0;}
+/* `dice` is what the dice came up, or blank/null to take the fixed value. With
+   several levels at once (multiclassing in above level 1) CON is added once per
+   level and the floor is 1 per level. */
+function hpGain(die,levels,dice,conMod){
+  const n=Math.max(1,num(levels)||1);
+  const t=(dice==null||String(dice).trim()==="")?n*hpFixed(die):num(dice);
+  return Math.max(n,t+n*num(conMod));
+}
+/* The line under the box, showing its working — "Average 6 + 2 CON = 8 HP" is
+   checkable at the table; a bare 8 is not. Pure: the caller passes CON and the
+   current maximum in, so it can be asserted without a sheet. */
+function hpGainText(ch,raw,conMod,maxNow,note){
+  const die=num(ch.die),n=Math.max(1,num(ch.levels)||1),avg=String(raw==null?"":raw).trim()==="";
+  const dice=avg?n*hpFixed(die):num(raw),gain=hpGain(die,n,avg?null:raw,conMod),c=num(conMod);
+  const con=(c<0?" − ":" + ")+(n>1?n+"×":"")+Math.abs(c)+" CON";
+  return (note?note+" — ":"")+(avg?"Average ":"")+dice+con+" = "+gain+" HP · Max HP "+num(maxNow)+" → "+(num(maxNow)+gain);
+}
+/* CON as it stands right now, items and ASIs included. abilFinal like
+   rollHitDie(), not level1HP()'s bare score: this number is spent the moment it
+   is computed and never re-derived, and an ASI lives in an effect, not the score. */
+function conModNow(){return Math.floor((abilFinal("con",contributions())-10)/2);}
+/* Called BEFORE the level-up unlocks the box, so it can remember whether to
+   lock it again once the app has written the new total. */
+function hpChoice(d,levels,L,cls){
+  return {type:"hp",die:hitDieMax(d),levels:Math.max(1,num(levels)||1),cls,_level:L,_wasLocked:character.hp.locked!==false};
+}
+/* Returns the hit points added, 0 if none. A class with no hit die in the
+   loaded rules has no fixed value to fall back on, so blank there means "I'll
+   type it into Max myself" — and the box the level-up unlocked stays unlocked
+   for exactly that. */
+function commitHPChoice(ch,raw){
+  const die=num(ch.die),blank=String(raw==null?"":raw).trim()==="";
+  if(!die&&blank)return 0;
+  const gain=die?hpGain(die,ch.levels,blank?null:raw,conModNow()):Math.max(0,num(raw));
+  if(gain<=0)return 0;
+  const was=num(character.hp.max);
+  character.hp.max=was+gain;
+  character.hp.cur=num(character.hp.cur)+gain;
+  if(ch._wasLocked)character.hp.locked=true;
+  clampHP();renderHP();
+  toast(`Max HP ${was} → ${was+gain} (+${gain})`);
+  return gain;
+}
 /* Level 1 with a single class has no roll and no choice: max HP is the hit
    die's maximum plus your Constitution modifier. Filled in on the player's
    behalf, but ONLY over a blank — a number they typed is theirs, and this must
@@ -93,6 +146,10 @@ function addClass(name,lvl){
   let choices=[],notes=[];const _eq=[];
   if(d)applyEquipGrants(d.equipmentGrants,"class:"+name,_eq);
   for(let L=1;L<=lvl;L++){const res=applyClassLevel(entry,d,L);choices=choices.concat(res.choices);notes=notes.concat(res.notes);}
+  /* A second class is levels GAINED, with the new class's die, so it asks for
+     hit points exactly as a level-up does. The first class is character
+     creation: seedLevel1HP() handles level 1, and above that the player types it. */
+  if(character.classes.length>1){choices=[hpChoice(d,lvl,lvl,name)].concat(choices);character.hp.locked=false;renderHP();}
   entry.level=lvl;
   character.level=totalLevel();
   seedLevel1HP(d);
@@ -130,15 +187,16 @@ function doLevelUp(){
     const newL=num(entry.level)+1;if(newL>20){alert(entry.name+" is already level 20.");return;}
     entry.level=newL;
     const res=applyClassLevel(entry,d,newL);
-    /* Levelling is the one moment Max HP legitimately changes and the app
-       cannot compute it — from level 2 on it is a roll (or the average) only
-       the player knows. Hand the box back rather than making them fight a
-       padlock, and leave it open: re-locking mid-edit would be worse.
+    const hp=hpChoice(d,1,newL,entry.name);   /* before the unlock below: it remembers the lock */
+    /* Levelling is the one moment Max HP legitimately changes. The HP step in
+       the modal writes the new total and puts the lock back as it was; the box
+       is opened here anyway as the fallback, so a player who dismisses the
+       modal can still type it rather than fighting a padlock.
        renderHP explicitly, because recompute() does not call it. */
     character.hp.locked=false;renderHP();
     character.level=totalLevel();const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
     renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
-    runChoices(entry.name,res.choices,res.notes);
+    runChoices(entry.name,[hp].concat(res.choices),res.notes);
   };
   if(character.classes.length===1){proceed(0);return;}
   openModal("Level up — which class?",character.classes.map((c,i)=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvlclass="${i}">${esc(c.name)} ${num(c.level)} → ${num(c.level)+1}</button>`).join("")+`<div class="m-actions"><button class="tbtn" id="luCancel">Cancel</button></div>`);

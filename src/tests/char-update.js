@@ -15,6 +15,7 @@ const {X, state, store, bootError, fragments} = loadApp([
   'addClass','removeClass','doLevelUp','hitDieMax','level1HP','resyncLevel1HP','modOf',
   'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
+  'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -670,6 +671,96 @@ ck('a locked box does not block the clean un-seed', X.character.hp.max==='', X.c
 hpSetup(CLS); X.addClass('Rogue',1); X.character.hp.locked=true; X.doLevelUp();
 ck('levelling up unlocks Max HP so the new total can be typed', X.character.hp.locked===false);
 ck('...and actually levelled', X.num(X.character.classes[0].level)===2);
+
+// ---------- the hit-point step on every level-up (#58)
+// There was never an HP prompt: levelling only unlocked the box, so the choice
+// modal a subclass level opens was all the player saw and the hit points were
+// forgotten. Every level-up now carries a synthesized {type:"hp"} choice that
+// rides the same modal and commit as the level's other picks.
+ck('fixed HP is half the die plus one', X.hpFixed(6)===4 && X.hpFixed(8)===5 && X.hpFixed(10)===6 && X.hpFixed(12)===7);
+ck('fixed HP is 0 with no die', X.hpFixed(0)===0);
+ck('blank dice take the fixed value, plus CON', X.hpGain(10,1,null,2)===8 && X.hpGain(10,1,'',2)===8);
+ck('a typed roll replaces the fixed value', X.hpGain(10,1,'3',2)===5);
+ck('never less than 1 hit point a level', X.hpGain(6,1,'1',-3)===1 && X.hpGain(6,2,'2',-3)===2);
+ck('several levels add CON once per level', X.hpGain(6,3,null,1)===15);
+
+ck('the average reads as working, not a bare number',
+   X.hpGainText({die:10,levels:1},'',2,20,'')==='Average 6 + 2 CON = 8 HP · Max HP 20 → 28',
+   X.hpGainText({die:10,levels:1},'',2,20,''));
+ck('a negative CON reads as a minus',
+   X.hpGainText({die:8,levels:1},'4',-1,9,'')==='4 − 1 CON = 3 HP · Max HP 9 → 12',
+   X.hpGainText({die:8,levels:1},'4',-1,9,''));
+ck('a roll says it was rolled',
+   X.hpGainText({die:8,levels:1},'4',0,9,'Rolled 4').indexOf('Rolled 4 — 4 + 0 CON = 4 HP')===0,
+   X.hpGainText({die:8,levels:1},'4',0,9,'Rolled 4'));
+ck('several levels show CON per level',
+   X.hpGainText({die:6,levels:3},'',1,10,'')==='Average 12 + 3×1 CON = 15 HP · Max HP 10 → 25',
+   X.hpGainText({die:6,levels:3},'',1,10,''));
+
+{
+  const h=X.choiceFieldHTML({type:'hp',die:10,levels:1,cls:'Fighter',_level:4},0,null);
+  ck('the HP block is a .choice the gatherer reads', /data-ctype="hp"/.test(h) && /data-hp-dice/.test(h), h);
+  ck('...names the die to pick up', /1d10/.test(h), h);
+  ck('...and offers the average as the default', /placeholder="6 \(average\)"/.test(h), h);
+  const n=X.choiceFieldHTML({type:'hp',die:0,levels:1,cls:'Homebrewer',_level:2},0,null);
+  ck('a class with no hit die still asks, with no average to offer',
+     /data-hp-dice/.test(n) && !/average/.test(n), n);
+}
+
+// Taking the average: max AND current go up, and the lock is put back the way
+// the player had it — the unlock is only the fallback for a dismissed prompt.
+hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=true; X.doLevelUp();
+X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''}]);
+ck('the average lands on max HP', X.num(X.character.hp.max)===16, X.character.hp.max);
+ck('...and on current HP', X.num(X.character.hp.cur)===16, X.character.hp.cur);
+ck('...and the box is locked again, as it was before levelling', X.character.hp.locked===true);
+
+hpSetup(CLS,14); X.addClass('Fighter',1); X.doLevelUp();
+X.commitChoices('Fighter',[{type:'hp',ci:0,dice:'3'}]);
+ck('a typed roll adds CON once', X.num(X.character.hp.max)===12+5, X.character.hp.max);
+
+hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=false; X.doLevelUp();
+X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''}]);
+ck('a box the player had unlocked stays unlocked', X.character.hp.locked===false);
+
+hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.cur=3; X.doLevelUp();
+X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''}]);
+ck('a hurt character gains the same hit points on top', X.num(X.character.hp.cur)===9, X.character.hp.cur);
+
+// A custom class has no die: blank means "I'll type it", a number is the total.
+hpSetup(CLS); X.addClass('Homebrewer',1); X.character.hp.max=12; X.character.hp.cur=12;
+X.character.hp.locked=true; X.doLevelUp();
+X.commitChoices('Homebrewer',[{type:'hp',ci:0,dice:''}]);
+ck('no die and nothing typed changes nothing', X.num(X.character.hp.max)===12, X.character.hp.max);
+ck('...and leaves the box unlocked to type into', X.character.hp.locked===false);
+X.doLevelUp(); X.commitChoices('Homebrewer',[{type:'hp',ci:0,dice:'7'}]);
+ck('no die and a number typed adds exactly that', X.num(X.character.hp.max)===19, X.character.hp.max);
+
+// THE #58 regression: the subclass level. HP must land even though the same
+// Done also picks a subclass, which opens a second modal of its own.
+{
+  const F=[{name:'Fighter',hitDie:'d10',levels:{'3':{choices:[{type:'subclass',label:'Fighter Subclass'}]}},
+            subclasses:{'Battle Master':{description:'Students of war.',levels:{'3':{traits:[{name:'Combat Superiority'}]}}}}}];
+  hpSetup(F); X.addClass('Fighter',2); X.character.hp.max=20; X.character.hp.cur=20; X.doLevelUp();
+  X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''},{type:'subclass',name:'Battle Master'}]);
+  ck('a subclass level still gains its hit points', X.num(X.character.hp.max)===26, X.character.hp.max);
+  ck('...and still takes the subclass', X.character.classes[0].subclass==='Battle Master');
+  ck('...with its features', X.character.features.some(f=>f.name==='Combat Superiority'));
+  const s=X.choiceFieldHTML({type:'subclass',label:'Fighter Subclass'},1,X.findClassDef('Fighter'));
+  ck('the level-up subclass picker shows each description (#59)', /Students of war\./.test(s), s);
+}
+
+// Multiclassing into a new class is gaining a level too, with the NEW die.
+hpSetup(CLS); X.addClass('Fighter',1); X.addClass('Wizard',1);
+X.commitChoices('Wizard',[{type:'hp',ci:0,dice:''}]);
+ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.max)===14, X.character.hp.max);
+
+// #61: the subclass on the class chip is its own way into the subclass window
+ck('the class chip links its subclass',
+   /data-sub-info="Fighter\|Battle Master"/.test(X.classChipHTML({name:'Fighter',level:3,subclass:'Battle Master'},0)),
+   X.classChipHTML({name:'Fighter',level:3,subclass:'Battle Master'},0));
+ck('...and a chip with no subclass has no link',
+   !/data-sub-info/.test(X.classChipHTML({name:'Fighter',level:2,subclass:null},0)));
 
 // ---------- item weight is rules-owned, like cost
 c=setup();
