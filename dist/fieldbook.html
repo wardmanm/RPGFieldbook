@@ -315,7 +315,7 @@ input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
    rendered outside it, because a grid item spanning every column feeds that
    column's sizing and stretched the Roll buttons to the width of a sentence. */
 .hd-grid{display:grid;grid-template-columns:repeat(4,max-content);justify-content:center;align-items:center;gap:6px 10px}
-/* The Hit Dice field and its pool, stacked under the Hit Points panel in Vitals.
+/* The Hit Dice field and its pool, under the rest buttons in Rest & Recovery.
    Same inset ::before as .hpwrap — and for the reason the old comment here got
    wrong once the two became neighbours: a real CSS border takes no filter, so on
    the rough skin .hpwrap wobbled and this did not; and a border sits outside the
@@ -397,6 +397,7 @@ html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
 .res-main{flex:1;min-width:0}
 .res-name{font-weight:700;display:flex;align-items:center;gap:6px;overflow-wrap:anywhere}
 .res-auto{font-family:var(--head);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:0 6px}
+.res-die{font-family:var(--body);font-size:13px;font-weight:700;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:6px;padding:0 5px;line-height:1.5}
 .res-sub{font-family:var(--head);font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em}
 .res-btn{width:28px;height:28px;flex:none;border:1.5px solid var(--line);background:var(--field);border-radius:7px;cursor:pointer;font-size:17px;font-weight:700;line-height:1;color:var(--ink)}
 .res-btn:hover{border-color:var(--accent-2)}
@@ -523,9 +524,9 @@ html[data-rough="on"] .vbox::before{filter:url(#rough)}
 .hpwrap::before{content:"";position:absolute;inset:1px;border:2.5px solid var(--brick);border-radius:10px;pointer-events:none}
 html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .hpwrap>*{position:relative}
-/* One heading shape for the two stacked panels in Vitals, so Hit Points and Hit
-   Dice read as a pair. Only the colour differs — brick is the HP box's own frame
-   colour, and repeating it below would flatten the two into one. */
+/* One heading shape for the Hit Points and Hit Dice panels, so the two read as
+   the same kind of thing though they sit in different cards. Only the colour
+   differs — brick is the HP box's own frame colour. */
 .hp-title,.hd-title{font-family:var(--head);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11px;text-align:center;margin-bottom:9px}
 .hp-title{color:var(--brick)}
 /* the heading carries the auto/manual pill, so it is a centred flex row rather
@@ -851,9 +852,9 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 
 .coin-hint{margin:8px 0 0;text-align:center}
 /* ================= Combat view =================
-   The tab-bar button and the full-screen view. The cards inside keep their own
-   styles — they are the real cards, moved here by 87-combat.js. */
-.tab-combat{flex:0 0 auto;background:none;border:0;color:var(--ink-soft);cursor:pointer;padding:0 8px;min-height:48px;
+   The tab-bar button and the combat tab. The cards inside keep their own styles
+   — they are the real cards, moved here by 87-combat.js. */
+.tab-combat{flex:0 0 auto;background:none;border:0;border-bottom:3px solid transparent;color:var(--ink-soft);cursor:pointer;padding:0 8px;min-height:48px;
   display:inline-flex;align-items:center;gap:5px;font-family:var(--head);font-weight:700;font-size:12px;
   letter-spacing:.06em;text-transform:uppercase}
 .tab-combat .gicon{width:20px;height:20px;color:currentColor}
@@ -861,6 +862,11 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 /* In combat: a filled pill, readable from any tab while you look something up. */
 .tab-combat.on{color:var(--paper);background:var(--accent);border-radius:8px;min-height:32px;margin:0 2px;padding:0 9px}
 .tab-combat.on:hover{color:var(--paper);filter:brightness(1.08)}
+/* Its tab is the one showing: the underline every tab wears. In combat the
+   button is already a pill, so the pill takes a ring instead — an underline
+   under a pill reads as a second, separate mark. */
+.tab-combat.active{color:var(--ink);border-bottom-color:var(--accent)}
+.tab-combat.on.active{border-bottom-color:transparent;box-shadow:0 0 0 2px var(--paper-2),0 0 0 4px var(--accent)}
 /* ≤400px the tab bar scrolls with this group pinned over its end (10-chrome.css),
    so the pill must fit beside all six tabs or it covers Rules: swords and the
    number only. The aria-label still reads "round N". */
@@ -870,13 +876,14 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
   .tab-combat .cv-rdw{display:none}
 }
 
-/* Above the tab bar (40), below the ☰ flyout (55/60), the item finder (70),
-   modals (80) and toasts — so Cast, Use and Edit open over it as anywhere else. */
-.cview{position:fixed;inset:0;z-index:50;background:var(--paper);display:none;flex-direction:column}
-.cview.open{display:flex}
-html.cv-lock,html.cv-lock body{overflow:hidden}
-.cv-head{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px clamp(10px,2vw,18px);
-  background:var(--paper-2);border-bottom:2px solid var(--line)}
+/* A tab like the others: .tabpanel shows and hides it, and the page scrolls it.
+   The header sticks just under the sticky tab bar (--cv-top is that bar's
+   measured height, cvStickyTop()), so the round and its arrows stay in reach
+   down a long list of cards. Below the tab bar (40) and the ☰ flyout. */
+.cview{display:flex;flex-direction:column}
+.cv-head{position:sticky;top:var(--cv-top,48px);z-index:30;display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+  padding:8px clamp(10px,2vw,18px);background:var(--paper-2);border:2px solid var(--line);border-top:0;
+  border-radius:0 0 10px 10px;max-width:780px;width:100%;margin:calc(-1*clamp(12px,2.4vw,22px)) auto 0;box-sizing:border-box}
 .cv-head .grow{flex:1}
 /* Up to 640px: two rows, whatever the state. Row 1 is ✕ · title · ☰; the spacer
    becomes a full-width row break; row 2 is the tracker with Start/End pushed to
@@ -891,8 +898,8 @@ html.cv-lock,html.cv-lock body{overflow:hidden}
   .cv-track{order:3}
   #cvStart,#cvEnd{order:4;margin-left:auto}
 }
-/* The view scrolls itself; the page behind it stays put. */
-.cv-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:clamp(12px,2.4vw,22px)}
+/* The page scrolls the tab; the body only spaces the list from the header. */
+.cv-body{padding-top:clamp(12px,2.4vw,22px)}
 /* One column as wide as the sheet's main column: drag order IS reading order. */
 .cv-list{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)}
 .cv-empty{max-width:780px;margin:24px auto;text-align:center}
@@ -1099,20 +1106,6 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 </div>
 <div class="toc-back" id="tocBack"></div>
 <nav class="toc-fly" id="tocFly" aria-label="Sections"></nav>
-<!-- The combat view (87-combat.js). It owns only its header: the cards in #cvList
-     are MOVED here from their tabs while it is open. A direct child of <body>, so
-     the print CSS's body>*:not(#printArea) already hides it. -->
-<div class="cview" id="combatView" role="dialog" aria-modal="true" aria-label="Combat view">
-  <div class="cv-head" id="cvHead"></div>
-  <!-- OUTSIDE #cvHead, which is repainted whole: a live region that is replaced
-       is never announced. setCombatLive() writes the round here. -->
-  <p class="cv-live" id="cvLive" aria-live="polite"></p>
-  <div class="cv-body" id="cvBody">
-    <p class="hint cv-empty" id="cvEmpty" hidden></p>
-    <div class="cv-list" id="cvList"></div>
-  </div>
-</div>
-
 <div class="page">
   <!-- ============ SHEET TAB ============ -->
   <section class="tabpanel active" id="tab-sheet">
@@ -1223,11 +1216,17 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
             </div>
             <div id="maxNote" style="text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px">Item / feature bonuses to Max HP appear here</div>
           </div>
-          <!-- Hit Dice reads as the second half of the Hit Points panel, not as
-               a rest fixture: they are the same resource seen twice, and
-               spending one writes straight into the box above. A SIBLING of
-               .hpwrap, never a child — nesting would put it inside the brick
-               ::before overlay and make one frame enclose both.
+        </div>
+
+        <div class="card" data-note="rest">
+          <div class="label">Rest &amp; Recovery <span class="grow"></span></div>
+          <div class="rest-row">
+            <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
+            <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
+          </div>
+          <!-- Hit Dice sit under the rests they belong to: spent on a short rest,
+               half back on a long one. (For 1.7.0 they were stacked under Hit
+               Points in Vitals, which put them in the combat view by default.)
                Nothing may be inserted between #hdWrap and .hd-grid, or inside
                it: .hd-row is display:contents and hands its four cells straight
                to that grid, which is the only reason a multiclass pool lines up
@@ -1241,14 +1240,6 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
               <input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly aria-label="Hit Dice">
             </div>
             <div class="hd-wrap" id="hdWrap"></div>
-          </div>
-        </div>
-
-        <div class="card" data-note="rest">
-          <div class="label">Rest &amp; Recovery <span class="grow"></span></div>
-          <div class="rest-row">
-            <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
-            <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
           </div>
         </div>
 
@@ -1377,6 +1368,25 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         <div class="label">Section Notes <span class="grow"></span></div>
         <p class="hint">Everything you've jotted against a section of your sheet, gathered here. Tap a heading to jump back to where it belongs.</p>
         <div id="notesList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COMBAT TAB ============ -->
+  <!-- Opened from the crossed swords in the tab bar; it has no word tab of its
+       own. It owns only its header: the cards in #cvList are MOVED here from
+       their tabs while this tab is showing, and sent home when another tab is
+       picked (87-combat.js). It was a full-screen overlay until that covered
+       the tabs a player wanted to glance at mid-fight. -->
+  <section class="tabpanel" id="tab-combat">
+    <div class="cview" id="combatView" aria-label="Combat view">
+      <div class="cv-head" id="cvHead"></div>
+      <!-- OUTSIDE #cvHead, which is repainted whole: a live region that is
+           replaced is never announced. setCombatLive() writes the round here. -->
+      <p class="cv-live" id="cvLive" aria-live="polite"></p>
+      <div class="cv-body" id="cvBody">
+        <p class="hint cv-empty" id="cvEmpty" hidden></p>
+        <div class="cv-list" id="cvList"></div>
       </div>
     </div>
   </section>
@@ -2535,23 +2545,26 @@ function openChangelog(){
    top of the page, but jumping to a note wants that note's card — so the scroll
    is the caller's decision, not this function's. */
 function selectTab(name){
-  /* Leaving for a tab means leaving the combat view first: it sends the cards
-     home, or a note link would land on a tab with its cards missing. */
-  closeCombatView();
+  /* The combat view is a tab whose cards belong to the OTHER tabs. Leaving it
+     sends them home first, or a note link would land on a tab with its cards
+     missing; entering it remembers where it came from, for ✕. */
+  const was=(document.querySelector(".tabpanel.active")||{id:"tab-sheet"}).id.replace(/^tab-/,"");
+  if(name!=="combat")closeCombatView();
+  else if(was!=="combat")cvPrevTab=was;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
   document.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+name));
+  /* its button is an icon beside ☰, not a .tab */
+  const cb=document.getElementById("btnCombat");if(cb)cb.classList.toggle("active",name==="combat");
+  if(name==="combat")openCombatView();
   closeToc();
 }
 /* Scroll a card to just under the sticky tab bar, whose height is measured live
    rather than assumed. Shared by the table of contents and the notes jump. */
 function scrollToCard(el){
   if(!el)return;
-  /* In the combat view the card sits in #cvBody, which scrolls on its own under a
-     header that is not the tab bar. */
-  const box=el.closest("#cvBody");
-  if(box){box.scrollTo({top:Math.max(0,el.getBoundingClientRect().top-box.getBoundingClientRect().top+box.scrollTop-10),behavior:"smooth"});return;}
-  const tb=document.querySelector(".tabbar");
-  const off=(tb?tb.getBoundingClientRect().height:48)+10;
+  /* In the combat tab its own header sticks under the tab bar, so clear both. */
+  const tb=document.querySelector(".tabbar"),ch=el.closest("#combatView")&&document.getElementById("cvHead");
+  const off=(tb?tb.getBoundingClientRect().height:48)+(ch?ch.getBoundingClientRect().height:0)+10;
   const y=el.getBoundingClientRect().top+window.scrollY-off;
   window.scrollTo({top:Math.max(0,y),behavior:"smooth"});
 }
@@ -4429,7 +4442,7 @@ function hdCondensedHTML(pool){
   }).join("")+`</div>`;
 }
 /* FULL — a boxed cell per die size, speaking the same language as the Vitals
-   strip and the Hit Points panel it now sits under. */
+   strip and the Hit Points panel. */
 function hdFullHTML(pool){
   return `<div class="hd-boxes">`+pool.map(p=>{
     const left=p.total-p.used;
@@ -4539,6 +4552,17 @@ function resolveResMax(rd, level, c){
   }
   return 0;
 }
+/* The die a pool's points ARE, when they are dice: Superiority Dice are d8,
+   d10 from level 10 and d12 from 18 while their COUNT follows its own table, so
+   the two cannot share `max`. Same shapes as max — a byLevel array of sides, or
+   a fixed die written 8 or "d8" — and "" for a pool that is just points. */
+function resolveResDie(rd, level){
+  const d=rd&&rd.die;if(d==null)return "";
+  let n=0;
+  if(typeof d==="number"||typeof d==="string")n=num(String(d).replace(/^d/i,""));
+  else if(Array.isArray(d.byLevel)){const i=Math.max(0,Math.min(level,d.byLevel.length)-1);n=num(d.byLevel[i]);}
+  return n>0?"d"+n:"";
+}
 function syncResources(){
   if(!Array.isArray(character.resources))character.resources=[];
   const c=contributions(), seen=new Set();
@@ -4546,12 +4570,13 @@ function syncResources(){
     (defs||[]).forEach(rd=>{
       if(!rd||!rd.name)return;
       const key=srcKind+":"+srcName+":"+String(rd.name).toLowerCase();
-      const max=resolveResMax(rd, level, c);
+      const max=resolveResMax(rd, level, c), die=resolveResDie(rd, level);
       let r=character.resources.find(x=>x.key===key);
       if(max<=0){if(r)character.resources=character.resources.filter(x=>x!==r);return;}
       seen.add(key);
-      if(!r){character.resources.push({id:uid(),key,name:rd.name,max,cur:max,per:rd.per||"long",auto:true,source:srcName});}
+      if(!r){r={id:uid(),key,name:rd.name,max,cur:max,per:rd.per||"long",auto:true,source:srcName};character.resources.push(r);}
       else{r.name=rd.name;r.max=max;r.per=rd.per||"long";r.auto=true;r.source=srcName;if(num(r.cur)>max)r.cur=max;}
+      if(die)r.die=die;else delete r.die;
     });
   }
   (character.classes||[]).forEach(cl=>{
@@ -4568,7 +4593,7 @@ function renderResources(){
   el.innerHTML=list.map(r=>{
     const cur=num(r.cur),max=num(r.max);
     return `<div class="res">
-      <div class="res-main"><div class="res-name">${esc(r.name||"Resource")}${r.auto?`<span class="res-auto" title="Managed by ${esc(r.source||"class")}">auto</span>`:""}</div><div class="res-sub">${r.per&&r.per!=="none"?`resets on ${esc(r.per)} rest`:"manual reset"}</div></div>
+      <div class="res-main"><div class="res-name">${esc(r.name||"Resource")}${r.die?`<span class="res-die" title="Each is a ${esc(r.die)}">${esc(r.die)}</span>`:""}${r.auto?`<span class="res-auto" title="Managed by ${esc(r.source||"class")}">auto</span>`:""}</div><div class="res-sub">${r.per&&r.per!=="none"?`resets on ${esc(r.per)} rest`:"manual reset"}</div></div>
       <button class="res-btn" data-res-dec="${r.id}" aria-label="Spend one">−</button>
       <div class="res-val"><b>${cur}</b><span>/${max}</span></div>
       <button class="res-btn" data-res-inc="${r.id}" aria-label="Gain one">+</button>
@@ -5249,7 +5274,7 @@ function printSheet(){
   const skills=SKILLS.map(([k,lbl,ab])=>{const l=effSkill(k),mk=l>=2?"◆":(l>=1?"●":"○");return `<span class="p-line">${mk} ${lbl} (${ab.toUpperCase()}) <span class="p-mark">${esc(g("skill-"+k))}</span></span>`;}).join("");
   const atkRows=(character.attacks||[]).map(a=>{const n=attackNumbers(a);const save=a.save;const dmg=printStrip(attackDamageStr(a,save?0:n.dmgBonus));const typ=save?"Spell save":(a.source==="spell"?("Spell "+(n.kind==="ranged"?"Ranged":"Melee")):(n.kind==="ranged"?"Ranged":"Melee"));const hit=save?("DC "+(spellDC()!=null?spellDC():"—")+" "+String(save.ability||"").toUpperCase()):fmt(n.toHit);return `<tr><td>${esc(a.name||"Attack")}</td><td>${esc(typ)}</td><td>${esc(hit)}</td><td>${esc(dmg)||"—"}</td><td>${esc(printStrip(a.notes||""))}</td></tr>`;}).join("");
   const attacks=atkRows?`<table class="p-t"><tr><th>Attack</th><th>Type</th><th>To Hit</th><th>Damage</th><th>Notes</th></tr>${atkRows}</table>`:"";
-  const res=(character.resources||[]).map(r=>`<span class="p-stat">${esc(r.name)}: <b>${num(r.cur)}/${num(r.max)}</b></span>`).join("");
+  const res=(character.resources||[]).map(r=>`<span class="p-stat">${esc(r.name)}${r.die?" ("+esc(r.die)+")":""}: <b>${num(r.cur)}/${num(r.max)}</b></span>`).join("");
   const stat=(character.statuses||[]).map(s=>esc(s.name||s.term||"")).filter(Boolean).join(", ");
   const feats=(character.features||[]).filter(f=>f.enabled!==false).map(f=>`<div class="p-item"><b>${esc(f.name)}</b>${f.source?`<span class="p-src">${esc(f.source)}</span>`:""}${f.uses&&usesMax(f)?` <span class="p-stat">(${usesMax(f)}/${esc(f.uses.per||"long")})</span>`:""}${f.description?`<div>${esc(printStrip(f.description))}</div>`:""}</div>`).join("");
   const byLv={};(character.spells||[]).forEach(s=>{(byLv[num(s.level)]=byLv[num(s.level)]||[]).push(s);});
@@ -6006,8 +6031,6 @@ function modalTakeFocus(wasOpen){
 }
 function modalGiveBackFocus(){
   _modalInert.forEach(el=>{el.inert=false;});_modalInert=[];
-  /* A combat view that opened under the dialog keeps its own inert on the page. */
-  if(combatViewOpen())cvInert(true);
   const o=_modalOpener,sel=_modalOpenerSel;_modalOpener=_modalOpenerSel=null;
   const usable=el=>!!el&&el.isConnected&&!el.closest("[inert]")&&el.getClientRects().length>0;
   if(usable(o))o.focus({preventScroll:true});
@@ -7344,9 +7367,11 @@ function openNoteEditor(k){
   });
 }
 /* ================= combat view =================
-   A full-screen view of the sections the player picked from any tab. They are
-   the REAL cards, moved in while the view is open and back to a hidden marker
-   at home when it closes: copies would duplicate every id (the #17 bug, where
+   A tab of the sections the player picked from any tab, opened from the crossed
+   swords in the tab bar. It was a full-screen overlay until, in play, that
+   covered the tabs a player wanted to glance at. They are the REAL cards, moved
+   in while the tab shows and back to a hidden marker at home when another tab is
+   picked: copies would duplicate every id (the #17 bug, where
    the visible copy updates and the hidden one rots), and a purpose-built
    dashboard would re-implement every section's controls. Closing the view never
    ends combat. Design: src/docs/specs/2026-09-24-combat-view-design.md
@@ -7437,10 +7462,11 @@ function renderCombatButton(){
   b.setAttribute("aria-label",l);b.title=l;
 }
 /* ================= the DOM layer ================= */
-/* Session only, never saved: whether the view is open, where it and the page
-   were scrolled, and whose cards those were. A reload starts closed; combat
-   itself is saved on the character. */
-let cvOpen=false, cvScroll=0, cvPageScroll=0, cvCharId=null;
+/* Session only, never saved: whether the combat tab is showing, where it and the
+   tab it was opened from were scrolled, which tab that was, and whose cards
+   these are. A reload starts on the sheet; combat itself is saved on the
+   character. */
+let cvOpen=false, cvScroll=0, cvPageScroll=0, cvCharId=null, cvPrevTab="sheet";
 function combatViewOpen(){return cvOpen;}
 
 /* Found fresh every time, never cached: a card re-rendered while it sat in the
@@ -7545,47 +7571,48 @@ function renderCombatHeader(){
 /* The one live region, never repainted, so a screen reader hears each change. */
 function setCombatLive(t){const l=document.getElementById("cvLive");if(l&&l.textContent!==t)l.textContent=t;}
 
+/* Called by selectTab("combat"), which has already shown the panel. */
 function openCombatView(){
   if(cvOpen)return;
-  const view=document.getElementById("combatView"),body=document.getElementById("cvBody");
-  if(!view||!body)return;
+  if(!document.getElementById("combatView"))return;
   closeToc();
   if(character.id!==cvCharId){cvCharId=character.id;cvScroll=0;}
-  cvPageScroll=window.scrollY;
   fillCombatView();
-  document.documentElement.classList.add("cv-lock");
-  view.classList.add("open");cvOpen=true;
-  cvInert(true);
+  cvOpen=true;
   setCombatLive("");   // no stale "Combat ended…" from another fight or character
   renderCombatHeader();
-  body.scrollTop=cvScroll;
-  const x=document.getElementById("cvClose");if(x)x.focus();
+  cvStickyTop();
 }
-/* Closing NEVER ends combat — End combat is its own button. */
+/* Called by selectTab() for any other tab, BEFORE that tab is shown. Leaving the
+   tab NEVER ends combat — End combat is its own button. */
 function closeCombatView(){
   if(!cvOpen)return;
-  const view=document.getElementById("combatView"),body=document.getElementById("cvBody");
-  if(body)cvScroll=body.scrollTop;
+  cvScroll=window.scrollY;
   closeToc();
   emptyCombatView();
-  if(view)view.classList.remove("open");
-  document.documentElement.classList.remove("cv-lock");
-  cvOpen=false;cvInert(false);
-  window.scrollTo({top:cvPageScroll});
-  const b=document.getElementById("btnCombat");if(b)b.focus({preventScroll:true});
+  cvOpen=false;
 }
-/* The view is aria-modal, but that alone does not stop Tab: the page behind it
-   stays focusable, invisibly. inert takes the top bar, tab bar and page out of
-   reach while the view is open. The modal, the item finder, the ☰ flyout and the
-   toast all sit OUTSIDE these three, so they keep working over the view. */
-function cvInert(on){
-  document.querySelectorAll(".topbar,.tabbar,.page").forEach(el=>{
-    if(on){el.setAttribute("inert","");return;}
-    /* The view closing under an open dialog: the page stays inert beneath the
-       dialog, which now owns it and releases it when it closes. */
-    if(modal.classList.contains("open")){if(!_modalInert.includes(el))_modalInert.push(el);return;}
-    el.removeAttribute("inert");
-  });
+/* The swords, from any tab: the combat tab, scrolled where it was left. The
+   page scroll of the tab it came from is kept for leaveCombatTab(). */
+function enterCombatTab(){
+  cvPageScroll=window.scrollY;
+  selectTab("combat");
+  window.scrollTo({top:cvScroll});
+}
+/* ✕, or the swords again: back to the tab it was opened from, where it was —
+   what closing the overlay used to do. Picking another tab goes there instead,
+   like any tab. */
+function leaveCombatTab(){
+  const back=cvPrevTab||"sheet";
+  selectTab(back);
+  window.scrollTo({top:cvPageScroll});
+  const t=document.querySelector(`.tab[data-tab="${back}"]`);if(t)t.focus({preventScroll:true});
+}
+/* The header sticks under the tab bar, whose height moves with the skin, the
+   width and the icon-tabs setting — so it is measured, not assumed. */
+function cvStickyTop(){
+  const tb=document.querySelector(".tabbar"),v=document.getElementById("combatView");
+  if(tb&&v)v.style.setProperty("--cv-top",Math.round(tb.getBoundingClientRect().height)+"px");
 }
 /* viaKey: the click came from Enter/Space (event.detail 0), not a pointer. */
 function toggleCombatSection(k,viaKey){
@@ -7644,9 +7671,8 @@ function syncCombatView(){
   const switched=character.id!==cvCharId;
   if(switched){cvCharId=character.id;cvScroll=0;}
   if(cvOpen){
-    const body=document.getElementById("cvBody"),keep=(!switched&&body)?body.scrollTop:0;
     emptyCombatView();fillCombatView();
-    if(body)body.scrollTop=keep;
+    if(switched)window.scrollTo({top:0});
   }
   renderCombatToggles();renderCombatChrome();
 }
@@ -7694,11 +7720,12 @@ function moveCombatCard(k,delta){
    dragged card is NEVER moved itself — moving an element can drop its pointer
    capture mid-drag — so its NEIGHBOURS hop over it instead. A hidden card (Skills
    in By ability mode) has no height to pass, so it is never the neighbour: it
-   hops along with the next shown one. Near the view's top or bottom edge the
-   view scrolls. The order is read back off the DOM on release. */
+   hops along with the next shown one. Near the top (just under the sticky
+   header) or the bottom of the window, the page scrolls. The order is read back
+   off the DOM on release. */
 function startCombatDrag(e,grip){
-  const card=grip.closest(".card"),list=document.getElementById("cvList"),body=document.getElementById("cvBody");
-  if(!card||!list||!body||card.parentNode!==list)return;
+  const card=grip.closest(".card"),list=document.getElementById("cvList"),head=document.getElementById("cvHead");
+  if(!card||!list||card.parentNode!==list)return;
   e.preventDefault();
   try{grip.setPointerCapture(e.pointerId);}catch(err){}
   card.classList.add("cv-dragging");
@@ -7709,8 +7736,8 @@ function startCombatDrag(e,grip){
     const y=ev.clientY,prev=shownSib(card,"previousElementSibling"),next=shownSib(card,"nextElementSibling");
     if(prev&&y<mid(prev))card.after(...run(prev,card.previousElementSibling));
     else if(next&&y>mid(next))card.before(...run(card.nextElementSibling,next));
-    const b=body.getBoundingClientRect();
-    if(y<b.top+48)body.scrollTop-=14;else if(y>b.bottom-48)body.scrollTop+=14;
+    const top=head?head.getBoundingClientRect().bottom:0;
+    if(y<top+48)window.scrollBy(0,-14);else if(y>window.innerHeight-48)window.scrollBy(0,14);
   };
   /* lostpointercapture ends it too. If the grip is detached mid-drag (a
      re-render), pointerup never reaches it and the browser fires this at the
@@ -8400,8 +8427,8 @@ function wire(){
        same input event typing sends — every box's own listener does the rest — and
        leave the cursor in the box. */
     if((m=t.closest(".search-clear"))){const i=m.parentNode.querySelector("input");if(i){i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.focus();}return;}
-    if(t.closest("#btnCombat"))return combatViewOpen()?closeCombatView():openCombatView();
-    if(t.closest("#cvClose"))return closeCombatView();
+    if(t.closest("#btnCombat"))return combatViewOpen()?leaveCombatTab():enterCombatTab();
+    if(t.closest("#cvClose"))return leaveCombatTab();
     if(t.closest("#cvToc"))return openToc();
     if(t.closest("#cvStart"))return startCombatNow();
     if(t.closest("#cvPrev"))return advanceRound(-1);
@@ -8459,19 +8486,10 @@ function wire(){
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
   });
-  /* Esc closes the combat view only when it is the top layer. CAPTURE phase, so
-     this runs BEFORE the modal's own Esc handler (80-modal-forms.js) shuts the
-     modal — otherwise one Esc would close the modal and the view behind it. The
-     item finder has no Esc of its own, so over the view Esc leaves both open. */
-  document.addEventListener("keydown",e=>{
-    if(e.key!=="Escape"||!combatViewOpen())return;
-    if(modal.classList.contains("open"))return;
-    /* Focus on a toast's Undo: its own Esc sends the keyboard back into the view. */
-    {const ts=document.getElementById("toast");if(ts&&ts.contains(document.activeElement))return;}
-    const br=document.getElementById("browse");if(br&&br.classList.contains("show"))return;
-    const fly=document.getElementById("tocFly");if(fly&&fly.classList.contains("open")){closeToc();return;}
-    closeCombatView();
-  },true);
+  /* The combat tab's header sticks under the tab bar, whose height changes with
+     the width (labels become icons at 860px). No Esc handler: the view is a tab
+     now, not a layer over the page, and Esc is not how you leave a tab. */
+  window.addEventListener("resize",()=>{if(combatViewOpen())cvStickyTop();});
   /* Arranging the combat view: the grip is the only drag handle. */
   document.addEventListener("pointerdown",e=>{
     const g=e.target.closest&&e.target.closest("[data-cvgrip]");
