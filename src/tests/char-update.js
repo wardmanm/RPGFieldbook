@@ -15,7 +15,7 @@ const {X, state, store, bootError, fragments} = loadApp([
   'addClass','removeClass','doLevelUp','hitDieMax','level1HP','resyncLevel1HP','modOf',
   'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
-  'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML',
+  'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -749,6 +749,35 @@ ck('no die and a number typed adds exactly that', X.num(X.character.hp.max)===19
   const s=X.choiceFieldHTML({type:'subclass',label:'Fighter Subclass'},1,X.findClassDef('Fighter'));
   ck('the level-up subclass picker shows each description (#59)', /Students of war\./.test(s), s);
 }
+
+// ---------- option pickers that come back (#60)
+// Maneuvers, invocations and metamagic are offered again at every later level
+// from the same list, so what the sheet already has must not be offered twice.
+{
+  hpSetup(CLS); X.addClass('Fighter',1);
+  X.character.features.push({id:'m1',name:'Parry',description:'',effects:[]});
+  const man={type:'option',label:'Maneuvers: choose 2 more',choose:2,
+             from:[{name:'Parry'},{name:'Riposte'},{name:'Rally'},{name:'Agonizing Blast',repeatable:true}]};
+  const h=X.choiceFieldHTML(man,0,null);
+  const row=n=>(h.match(new RegExp('<input[^>]*>[^<]*<span><b>'+n+'</b>'))||[''])[0];
+  ck('an option already on the sheet is ticked and fixed', /checked disabled data-fixed/.test(row('Parry')), row('Parry'));
+  ck('...and says so', /Parry<\/b>[^<]*\(already yours\)/.test(h), h);
+  ck('a new option is open', !/disabled/.test(row('Riposte')), row('Riposte'));
+  ck('the count still asks for the full rise', /data-choose="2"/.test(h), h);
+  X.character.features.push({id:'m2',name:'Agonizing Blast',description:'',effects:[]});
+  ck('a repeatable option stays open once taken',
+     !/disabled/.test((X.choiceFieldHTML(man,0,null).match(/<input[^>]*>[^<]*<span><b>Agonizing Blast<\/b>/)||[''])[0]));
+  const one=X.choiceFieldHTML({type:'option',label:'Eldritch Invocations: choose 1 more',choose:1,from:[{name:'Parry'},{name:'Rally'}]},0,null);
+  ck('a single-pick list disables an owned option without ticking it',
+     /type="radio"[^>]*disabled/.test((one.match(/<input[^>]*>[^<]*<span><b>Parry<\/b>/)||[''])[0])
+     && !/checked/.test((one.match(/<input[^>]*>[^<]*<span><b>Parry<\/b>/)||[''])[0]), one);
+}
+ck('gatherChoices never re-grants a fixed option',
+   /t==="option"[^\n]*\[data-opt-i\]:checked:not\(:disabled\)/.test(fs.readFileSync(path.join(__dirname,'../js/58-choices.js'),'utf8')));
+
+ck('a reprint keyed with its pack is not tagged twice', X.subSourceTag('Psi Warrior (TCE)',{_source:'TCE'})==='');
+ck('...but an ordinary subclass still shows its pack', X.subSourceTag('Battle Master',{_source:'XPHB'})==='XPHB');
+ck('...and one with no pack shows nothing', X.subSourceTag('Engineer',{})==='');
 
 // Multiclassing into a new class is gaining a level too, with the NEW die.
 hpSetup(CLS); X.addClass('Fighter',1); X.addClass('Wizard',1);

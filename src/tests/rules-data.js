@@ -1338,6 +1338,33 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     ck('a run-in heading keeps its prose beside it',
        /\n\*\*Remote Control\.\*\* Your gadget moves/.test(frames.description));
   }
+  // ---------- Gadgeteer paths: nothing bleeds across a feature (#59)
+  // Page 10 of the packet is two layouts stacked, and page 11 starts a path
+  // mid-column; read as plain columns, the tail of Magic Item Hacking became the
+  // Engineer's Crafty Components, its two components went to Masterpiece, and
+  // Make More With Less swallowed the Fizzar introduction. Art captions cut in
+  // half by the column clip ended three more features.
+  {
+    const hw = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/humblewood/classes.json'), 'utf8'));
+    const all = [];
+    (hw.classes || []).concat(hw.subclasses || []).forEach(o => Object.entries(o.levels || {}).forEach(([L, lv]) =>
+      (lv.traits || []).forEach(t => all.push({owner: o.name, L, name: t.name, d: t.description || ''}))));
+    const t = (owner, n) => (all.find(x => x.owner === owner && x.name === n) || {}).d || '';
+    ck('Magic Item Hacking keeps its whole text', /end your Magic Item hacking on it/.test(t('Gadgeteer', 'Magic Item Hacking')));
+    ck("the Engineer's Crafty Components are its two components",
+       /\*\*Quick Shield\*\*/.test(t('Engineer', 'Crafty Components')) && /\*\*Multitool\*\*/.test(t('Engineer', 'Crafty Components')));
+    ck('...and not Magic Item Hacking', !/attune/.test(t('Engineer', 'Crafty Components')));
+    ck('Masterpiece ends at Masterpiece', !/Quick Shield|Multitool/.test(t('Gadgeteer', 'Masterpiece')));
+    ck('no feature carries a path heading',
+       all.every(x => !/\*\*(ENGINEER|FIZZAR)\*\*/.test(x.d)), all.filter(x => /\*\*(ENGINEER|FIZZAR)\*\*/.test(x.d)).map(x => x.name));
+    ck('no feature ends in an art caption',
+       all.every(x => !/(A Fiz|Enhan|Gauntlets|Concept Art|Grabber)"?$/.test(x.d.trim())),
+       all.filter(x => /(A Fiz|Enhan|Gauntlets|Concept Art|Grabber)$/.test(x.d.trim())).map(x => x.name));
+    ck('the Gadgeteer description is whole', /studying the world around them for inspiration\.$/.test(
+       ((hw.classes || []).find(c => c.name === 'Gadgeteer') || {}).description || ''));
+    ck('each path has its own introduction',
+       (hw.subclasses || []).every(s => (s.description || '').length > 150), (hw.subclasses || []).map(s => s.name + ':' + (s.description || '').length));
+  }
   // A lineage packet must not claim the species description — Feb 2025's Webpaw
   // section was overwriting the mustel intro, which made the extractor
   // non-idempotent and would have churned this file on every run.

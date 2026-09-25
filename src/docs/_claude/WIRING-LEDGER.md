@@ -3592,3 +3592,56 @@ with `data-sub-info`, which the click handler matches before `data-info-class`.
 **Found while testing, not fixed:** dismissing the choices modal after Add class leaves
 `_equipQueue` populated, so the class's starting-equipment picker pops up after the NEXT level-up's
 Done. Pre-existing, independent of #58.
+
+## #60 option pickers, and the #59 data half — done
+
+**#60, converter.** `flatten()` dropped every `refOptionalfeature`, and `all` never read
+`optionalfeatures.json`. Now `_optfeat_choices()` turns each `optionalfeatureProgression` (a running
+TOTAL per level, as a map or a 20-long list) into an `option` choice at every rise, asking for the
+rise, from options whose level prerequisite that level meets. Seven places, not three: Battle
+Master, Sorcerer, Warlock, Artificer (2024 pack); Arcane Archer, College of Swords (XGE); Rune Knight
+(TCE). Decisions that would be easy to undo:
+
+- **Options are INLINED in every choice**, ~150 KB across the packs (classes.json 385 → 552 KB,
+  pretty-printed). A shared reference would be ~5× smaller but needs app code and cross-pack
+  filtering; inline needs none, and an older app gets the pickers from the re-downloaded pack alone.
+- **One printing only** (`_pick_optfeats`): 5e-tools files every edition's maneuvers under MV:B, so
+  a 2024 Battle Master would otherwise be offered the 2014 Parry too. A 2014 book with no printing
+  of its own falls back to the PHB's (College of Swords' Dueling / Two-Weapon Fighting).
+- **`repeatable`** is derived from a "Repeatable" subsection (5e-tools has no flag): four 2024
+  invocations. The app's option picker marks anything already on the sheet (matched by feature
+  name) as "already yours" — ticked + `data-fixed` for checkboxes, just disabled for radios, where
+  a tick would read as this level's pick — except repeatables. `gatherChoices()` now skips
+  `:disabled` options, the same as skills.
+- The Artificer's Replicate Magic Item infusion brought four tables into the 2024 pack; the TCE
+  pack, regenerated with `--avoid-table-names`, now suffixes its copies " (TCE)".
+- `_sub_blurb()` skips a `{@i …}` tagline: at 41+ characters eight 2024 taglines passed the >40
+  floor and shipped as the whole subclass description.
+- **Source dump is 5e-tools v2.36.1** (`_conversion-data/5eTools/`, not `5etools-v2.33.2`). Every
+  file written here reproduced byte for byte from it before the change; `glossary`, `items-magic`
+  and `spells` (2024) and `spells` (XGE) do NOT (upstream: +Reach, −Cloak of Invisibility, 11 magic
+  items, 3 spells), so they were left as shipped. Moving to 2.36.1 is a separate call. dev.sh globs
+  `_conversion-data/5etools-*` and will not find `5eTools`.
+
+**#59, extractor.** Nov 2024 packet pages 5 and 10 are BANDED — one section ends part-way down both
+columns and the next starts underneath — so column-first reading poured Magic Item Hacking's tail
+into Crafty Components and the Engineer's components into Masterpiece. `pt_clips()` reads a page in
+`bands` as stacked bands, each left then right, and `pt_reference()` reads through it too (p5 has
+three: editorial, class intro, table). Also: a path heading closes a block (Make More With Less had
+swallowed the Fizzar intro); Trattatello ≤10pt is furniture (art captions — it also cleaned
+Brightfang, Pexian and Corsair text; the core book uses the face at 14–18pt, left alone); the
+paths' descriptions are now the packet's own; the core book's four subclass descriptions stop at
+their features table (`FEATURES_TABLE_HEADS`, description only — domain-spell tables inside features
+share the header); `pt_reference()` drops titles (a split title's second half sat mid-paragraph).
+Gate before the change: all three write modes reproduced `data/humblewood/` exactly; after it, the
+core verbatim suite is unchanged (129) and every Gadgeteer field is verbatim (36/36, new check).
+The master PDF sits flat in `Rulebooks/`; a symlink at `Rulebooks/HumblewoodMaster-V1.04/` gives the
+extractor and its test the path they expect.
+
+`subSourceTag()`: a reprint keyed "Psi Warrior (TCE)" was tagged again, "(TCE) (TCE)", in both
+subclass pickers.
+
+Still open: Battle Master's Superiority Dice have no tracker and Student of War no picker; a
+maneuver can't be swapped from the library, because the 2024 pack ships no `features.json`. Small
+in-feature tables (Magic Item Hacking's rarity costs, Spell Emulator's tiers) still read as flat
+text.

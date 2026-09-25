@@ -348,6 +348,12 @@ def classify(font, size):
     # display face at body size, and was being collected as prose
     if "P22Aragon" in font:                   return "footer"
     if "Montserrat" in font:                  return "footer"
+    # Art captions ("Map of Firnveldt", "A Fizzar's Wearable: Enhanced
+    # Gauntlets"). Full width under a picture, so the column clip cuts them in
+    # half and each half ended the prose above it in its column — "…gadgets you
+    # are wearing. A Fiz Enhan". Only the SMALL sizes: the core book sets its
+    # chapter titles and pull quotes in the same face at 14-18pt.
+    if "Trattatello" in font and sz <= 10:    return "footer"
     if "Humblescratch" in font:               return "tagline"
     if "HumbleBullet" in font:                return "bullet"
     if "Bold" in font and "Italic" in font and sz <= 11:  return "trait"
@@ -621,6 +627,18 @@ def extract_backgrounds(doc, skip):
     return out
 
 
+# The header cell of a subclass's own features table ("Fighter Level" |
+# "Feature"). That table sits between the introduction and the first feature,
+# and is not in SPECS (it only repeats subclasses.json's levels), so nothing
+# skipped its band and the introduction ran on into it: Scofflaw's read "...no
+# such thing as a bad win. Fighter Level Feature Bonus Proficiency, Brutal
+# Brawler, Intimi3rd dating Banter...". It ends the DESCRIPTION only — the same
+# header also opens domain-spell tables inside features, which must stay.
+FEATURES_TABLE_HEADS = {c + " Level" for c in (
+    "Artificer", "Barbarian", "Bard", "Cleric", "Druid", "Fighter", "Monk",
+    "Paladin", "Ranger", "Rogue", "Sorcerer", "Warlock", "Wizard")}
+
+
 def extract_subclasses(doc, skip, problems_out=None):
     problems_out = problems_out if problems_out is not None else []
     st = doc_stream(doc, PAGES["subclasses"], skip)
@@ -631,7 +649,8 @@ def extract_subclasses(doc, skip, problems_out=None):
         t = text.strip()
         if style == "sub" and t in known:
             cur = t
-            desc, _tr, i = parse_entity(st, i + 1, stop_styles=("head", "title", "sub"))
+            desc, _tr, i = parse_entity(st, i + 1, stop_styles=("head", "title", "sub"),
+                                        stop_texts=FEATURES_TABLE_HEADS)
             out[cur] = {"description": desc, "levels": {}}
             continue
         if style == "head" and cur:
@@ -792,6 +811,10 @@ PACKETS = [
 
     dict(date="2024-11", file="HWP_Playtest_November2024.pdf", first=5,
          # p3 reprints Seeta as a recap — `first` already excludes it
+         # p5: a full-width editorial, then the class intro, then the
+         # full-width Gadgeteer Table; p10: the last class features above the
+         # Gadgeteer Paths. See pt_clips().
+         bands={5: [113, 330.4], 10: [450]},
          classes=[dict(name="Gadgeteer", title="New Class: Gadgeteer",
                        paths_title="Gadgeteer Paths",
                        paths=[dict(name="Engineer", head="ENGINEER"),
@@ -923,6 +946,27 @@ def dropcap_repair(spans):
     return [s for s in out if s not in caps]
 
 
+def pt_clips(page, packet, pno):
+    """(side, clip) for one page, in reading order: left column, then right.
+
+    A page in the packet's `bands` is layouts stacked: one section ending
+    part-way down BOTH columns, and the next starting under it. Each cut (a y)
+    starts a new band, and each band is read left then right. Read as plain columns instead, the end of
+    the upper section pours into the start of the lower one — which is how the
+    last three paragraphs of Magic Item Hacking became the Engineer's Crafty
+    Components, and the Engineer's two components landed in Masterpiece.
+    pt_reference() reads through this too, so the verbatim check sees the page
+    in the same order the extraction does.
+    """
+    cuts = (packet.get("bands") or {}).get(pno) or []
+    r = page.rect
+    ys = [r.y0] + sorted(cuts) + [r.y1]
+    for y0, y1 in zip(ys, ys[1:]):
+        for side in ("L", "R"):
+            c = side_clip(page, side)
+            yield side, fitz.Rect(c.x0, y0, c.x1, y1)
+
+
 def pt_stream(doc, packet, bold_traits=False):
     """Content-page span stream for a packet, front matter excluded.
 
@@ -937,8 +981,8 @@ def pt_stream(doc, packet, bold_traits=False):
     st = []
     for pno in range(packet["first"], len(doc) + 1):
         page = doc[pno - 1]
-        for side in ("L", "R"):
-            for sp in dropcap_repair(styled_spans(page, side_clip(page, side))):
+        for side, clip in pt_clips(page, packet, pno):
+            for sp in dropcap_repair(styled_spans(page, clip)):
                 style = sp[5]
                 if bold_traits and style == "label" and \
                         re.match(r"^[A-Z][A-Za-z'’()/ -]{2,34}\.$", sp[4].strip()):
@@ -1305,9 +1349,12 @@ def pt_reference(doc, packet):
     parts = []
     for pno in range(packet["first"], len(doc) + 1):
         page = doc[pno - 1]
-        for side in ("L", "R"):
-            for sp in dropcap_repair(styled_spans(page, side_clip(page, side))):
-                if sp[5] in ("footer", "tagline"):
+        for _side, clip in pt_clips(page, packet, pno):
+            for sp in dropcap_repair(styled_spans(page, clip)):
+                # titles too: no prose field ever contains one, and a title the
+                # column clip split leaves its second half mid-paragraph (the
+                # Gadgeteer's "eer" between the two halves of its introduction)
+                if sp[5] in ("footer", "tagline", "title"):
                     continue
                 parts.append(sp[4])
     t = re.sub(r"\s+", " ", " ".join(parts))
@@ -1386,7 +1433,7 @@ def pt_named_blocks(st, wanted, style_want, problems, where):
     return out
 
 
-def pt_all_subs(st):
+def pt_all_subs(st, stop_heads=()):
     """Every subsection block in a packet, as name -> body.
 
     Used for the Gadgeteer, whose 27 class features and 12 path features are all
@@ -1396,6 +1443,10 @@ def pt_all_subs(st):
     """
     out, name, buf = {}, None, []
     prev = None                       # the style before this one, for the tagline test
+    # A path's own heading ("ENGINEER", "FIZZAR") is a head like a frame name, so
+    # it would be kept INSIDE the block above it: Make More With Less gained the
+    # whole Fizzar introduction.
+    stops = {_letters(h) for h in stop_heads}
     def close():
         if name and name not in out:
             out[name] = flush(buf)
@@ -1406,7 +1457,8 @@ def pt_all_subs(st):
             name, buf = t, []
             prev = style
             continue
-        if style in ("title",) or is_table_start(style, t):
+        if style in ("title",) or is_table_start(style, t) or \
+                (style == "head" and _letters(t) in stops):
             close(); name, buf = None, []
             prev = style
             continue
@@ -1465,7 +1517,8 @@ def pt_extract(packet, problems):
                                        "%s feats" % packet["date"])
     if packet.get("classes"):
         st = pt_stream(doc, packet)
-        got["blocks"] = pt_all_subs(st)
+        got["blocks"] = pt_all_subs(st, [pth["head"] for spec in packet["classes"]
+                                         for pth in spec.get("paths") or []])
         for spec in packet["classes"]:
             anchor = spec["title"]
             s2 = merge_split_anchor(st, anchor)
@@ -1475,8 +1528,18 @@ def pt_extract(packet, problems):
                 problems.append("class %s: heading %r not found" % (spec["name"], anchor))
                 continue
             desc, _tr, _j = parse_entity(s2, k + 1, stop_styles=("head", "title", "sub"))
+            # each path's own introduction: the body under its heading, up to
+            # its first feature
+            paths = {}
+            for pth in spec.get("paths") or []:
+                h = next((n for n, x in enumerate(s2) if x[4] == "head"
+                          and _letters(x[3]) == _letters(pth["head"])), None)
+                if h is None:
+                    problems.append("path %s: heading %r not found" % (pth["name"], pth["head"]))
+                    continue
+                paths[pth["name"]], _t, _j = parse_entity(s2, h + 1, stop_styles=("head", "title", "sub"))
             got["classes"].append({"name": spec["name"], "description": desc,
-                                   "_spec": spec})
+                                   "paths": paths, "_spec": spec})
     for kind in ("races", "subclasses", "backgrounds", "classes"):
         for spec in packet.get(kind) or []:
             bold = bool(spec.get("bold_traits"))
@@ -1863,6 +1926,8 @@ def pt_write(problems):
                 if sub is None:
                     problems.append("path %s: not in classes.json" % pth["name"])
                     continue
+                if c["paths"].get(pth["name"]):
+                    take(sub, "description", c["paths"][pth["name"]], "path/" + pth["name"])
                 targets.append((sub, "path/" + pth["name"]))
             for tgt, w in targets:
                 for lvl, blk in (tgt.get("levels") or {}).items():

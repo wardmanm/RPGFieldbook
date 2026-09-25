@@ -361,6 +361,101 @@ ck('non-colliding names are untouched under reservation',
    sink3[0]['name'] == 'Gloom Stalker Spells', sink3[0]['name'])
 ck('reservation is scoped — the 2024 run sees none', C._SUFFIX == '' and not C._RESERVED)
 
+# ---- 19. option pickers from optionalfeatureProgression (#60)
+# 5e-tools lists maneuvers, invocations and metamagic as refOptionalfeature
+# nodes, which flatten() dropped — the prose ended at "presented here in
+# alphabetical order." and no picker existed. Three shipped 2024 classes, the
+# Artificer, and three supplement subclasses were all hit.
+refs = [{'name': 'Maneuver Options', 'entries': ['The maneuvers are presented here in alphabetical order.',
+         {'type': 'options', 'count': 3, 'entries': [
+             {'type': 'refOptionalfeature', 'optionalfeature': 'Ambush|XPHB'},
+             {'type': 'refOptionalfeature', 'optionalfeature': 'Parry|XPHB'}]}]}]
+ftxt = C.flatten(refs)
+ck('a referenced option is named, not dropped', 'Ambush' in ftxt and 'Parry' in ftxt, ftxt)
+ck('...as a bullet, like a list item', '• Ambush' in ftxt and '• Parry' in ftxt, ftxt)
+ck('...without its source suffix', '|XPHB' not in ftxt, ftxt)
+
+ck('progression map -> totals', C._prog_totals({'3': 3, '7': 5}) == {3: 3, 7: 5})
+ck('progression list -> totals by level', C._prog_totals([1, 3, 3])[2] == 3 and C._prog_totals([1, 3, 3])[1] == 1)
+
+OF = [
+    {'name': 'Ambush', 'source': 'XPHB', 'featureType': ['MV:B'], 'entries': ['Add the die to Stealth.']},
+    {'name': 'Parry', 'source': 'XPHB', 'featureType': ['MV:B'], 'entries': ['Reduce the damage.']},
+    {'name': 'Parry', 'source': 'PHB', 'featureType': ['MV:B'], 'entries': ['2014 wording.']},
+    {'name': 'Late Trick', 'source': 'XPHB', 'featureType': ['MV:B'], 'entries': ['Later.'],
+     'prerequisite': [{'level': {'level': 7, 'class': {'name': 'Fighter'}}}]},
+    {'name': 'Agonizing Blast', 'source': 'XPHB', 'featureType': ['EI'],
+     'entries': ['Add CHA.', {'type': 'entries', 'name': 'Repeatable', 'entries': ['Again.']}]},
+    {'name': 'Dueling', 'source': 'PHB', 'featureType': ['FS:F', 'FS:B'], 'entries': ['+2 damage.']},
+]
+bm = C._optfeat_choices([{'name': 'Maneuvers', 'featureType': ['MV:B'], 'progression': {'3': 3, '7': 5}}], OF, 'XPHB')
+ck('a choice at each level the total rises', sorted(bm) == [3, 7], sorted(bm))
+c3, c7 = bm[3][0], bm[7][0]
+ck('the choice is an option picker', c3['type'] == 'option', c3)
+ck('it asks for the rise, not the total', c3['choose'] == 3 and c7['choose'] == 2, (c3['choose'], c7['choose']))
+ck('the label says how many, and "more" after the first',
+   c3['label'] == 'Maneuvers: choose 3' and c7['label'] == 'Maneuvers: choose 2 more', (c3['label'], c7['label']))
+n3 = [o['name'] for o in c3['from']]
+ck('only the printing the class comes from — no 2014 Parry beside the 2024 one',
+   n3.count('Parry') == 1 and all('2014' not in o['description'] for o in c3['from']), c3['from'])
+ck('an option whose level prerequisite is unmet is not offered yet', 'Late Trick' not in n3, n3)
+ck('...and is offered once it is met', 'Late Trick' in [o['name'] for o in c7['from']], c7['from'])
+ck('the prerequisite is stated in the description',
+   [o for o in c7['from'] if o['name'] == 'Late Trick'][0]['description'].startswith('Prerequisite: Level 7 Fighter'))
+ck('options are alphabetical', n3 == sorted(n3), n3)
+
+ei = C._optfeat_choices([{'name': 'Eldritch Invocations', 'featureType': ['EI'], 'progression': [1, 3]}], OF, 'XPHB')
+ck('a list progression works the same', ei[1][0]['choose'] == 1 and ei[2][0]['choose'] == 2, ei)
+ck('a repeatable option is flagged, so the picker can offer it again',
+   ei[1][0]['from'][0].get('repeatable') is True, ei[1][0]['from'][0])
+ck('a normal option is not', not bm[3][0]['from'][0].get('repeatable'), bm[3][0]['from'][0])
+
+sw = C._optfeat_choices([{'name': 'Fighting Style', 'featureType': ['FS:B'], 'progression': {'3': 1}}], OF, 'XGE')
+ck("a 2014 book with no printing of its own falls back to the PHB's (College of Swords)",
+   [o['name'] for o in sw[3][0]['from']] == ['Dueling'], sw)
+ck('no options of the type at all emits nothing, not an empty picker',
+   C._optfeat_choices([{'name': 'Runes', 'featureType': ['RN'], 'progression': {'3': 2}}], OF, 'TCE') == {})
+
+# wired through both converters: nested 2024 subclasses and standalone supplement ones
+bmfile = {'class': [{'name': 'Fighter', 'source': 'XPHB', 'hd': {'faces': 10}, 'classFeatures': []}],
+          'classFeature': [],
+          'subclass': [{'name': 'Battle Master', 'shortName': 'Battle Master', 'className': 'Fighter',
+                        'source': 'XPHB', 'classSource': 'XPHB',
+                        'subclassFeatures': ['Combat Superiority|Fighter|XPHB|Battle Master|XPHB|3'],
+                        'optionalfeatureProgression': [{'name': 'Maneuvers', 'featureType': ['MV:B'],
+                                                        'progression': {'3': 3}}]}],
+          'subclassFeature': [{'name': 'Combat Superiority', 'source': 'XPHB', 'level': 3,
+                               'subclassShortName': 'Battle Master', 'className': 'Fighter',
+                               'entries': ['You learn maneuvers fueled by Superiority Dice, long enough.']}]}
+cls = C.convert_classes([_tmpjson(bmfile)], optfeats=OF)['classes'][0]
+bml3 = cls['subclasses']['Battle Master']['levels']['3']
+ck('a 2024 subclass carries its picker beside its traits',
+   bml3.get('traits') and bml3.get('choices') and bml3['choices'][0]['label'] == 'Maneuvers: choose 3', bml3)
+cls0 = C.convert_classes([_tmpjson(bmfile)])['classes'][0]
+ck('no optional features given: no picker, and nothing else changes',
+   'choices' not in cls0['subclasses']['Battle Master']['levels']['3'], cls0)
+
+# A 2024 subclass opens with an italic tagline. The description picker took the
+# first line over 40 characters, so the taglines of 41+ (eight of them — Psi
+# Warrior, Thief, Hunter...) became the whole description.
+tagfile = json.loads(json.dumps(bmfile))
+tagfile['subclassFeature'][0]['entries'] = ['{@i Augment Physical Might with Psionic Power}',
+                                            'Psi Warriors awaken the power of their minds to augment their might.']
+tsd = C.convert_classes([_tmpjson(tagfile)])['classes'][0]['subclasses']['Battle Master']['description']
+ck('an italic tagline is never taken as the description', tsd.startswith('Psi Warriors awaken'), tsd)
+ts2 = json.loads(json.dumps(_scfile()))
+ts2['subclassFeature'][0]['source'] = 'XGE'   # section 14 mutates the shared _SC_FEAT to TCE
+ts2['subclassFeature'][0]['entries'] = ['{@i Augment Physical Might with Psionic Power}', 'A long enough description line to be picked as the blurb.']
+g2 = C.convert_subclasses([_tmpjson(ts2)], book=XGE, tables=[])['subclasses']
+ck('...in the supplement path too', g2 and g2[0]['description'].startswith('A long enough'), g2)
+
+ss = json.loads(json.dumps(_scfile()))
+ss['subclassFeature'][0]['source'] = 'XGE'
+ss['subclass'][0]['optionalfeatureProgression'] = [{'name': 'Fighting Style', 'featureType': ['FS:B'], 'progression': {'3': 1}}]
+gs = C.convert_subclasses([_tmpjson(ss)], book=XGE, tables=[], optfeats=OF)['subclasses']
+ck('a supplement subclass carries its picker too, beside its traits',
+   gs and gs[0]['levels']['3'].get('traits') and gs[0]['levels']['3'].get('choices') and gs[0]['levels']['3']['choices'][0]['from'][0]['name'] == 'Dueling', gs)
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

@@ -1420,6 +1420,274 @@
       "ownerKind": "feat"
     },
     {
+      "name": "Replicable Items (10th-Level Artificer)",
+      "cols": [
+        "Magic Item",
+        "Attunement"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Boots of striding and springing",
+          "Yes"
+        ],
+        [
+          "Boots of the Winterlands",
+          "Yes"
+        ],
+        [
+          "Bracers of archery",
+          "Yes"
+        ],
+        [
+          "Brooch of shielding",
+          "Yes"
+        ],
+        [
+          "Cloak of protection",
+          "Yes"
+        ],
+        [
+          "Eyes of the eagle",
+          "Yes"
+        ],
+        [
+          "Gauntlets of ogre power",
+          "Yes"
+        ],
+        [
+          "Gloves of missile snaring",
+          "Yes"
+        ],
+        [
+          "Gloves of swimming and climbing",
+          "Yes"
+        ],
+        [
+          "Hat of disguise",
+          "Yes"
+        ],
+        [
+          "Headband of intellect",
+          "Yes"
+        ],
+        [
+          "Helm of telepathy",
+          "Yes"
+        ],
+        [
+          "Medallion of thoughts",
+          "Yes"
+        ],
+        [
+          "Necklace of adaptation",
+          "Yes"
+        ],
+        [
+          "Periapt of wound closure",
+          "Yes"
+        ],
+        [
+          "Pipes of the sewers",
+          "Yes"
+        ],
+        [
+          "Quiver of Ehlonna",
+          "No"
+        ],
+        [
+          "Ring of jumping",
+          "Yes"
+        ],
+        [
+          "Ring of mind shielding",
+          "Yes"
+        ],
+        [
+          "Slippers of spider climbing",
+          "Yes"
+        ],
+        [
+          "Ventilating lungs (detailed in chapter 5)",
+          "Yes"
+        ],
+        [
+          "Winged boots",
+          "Yes"
+        ]
+      ],
+      "caption": "Replicable Items (10th-Level Artificer)",
+      "owner": "Replicate Magic Item",
+      "ownerKind": "feat"
+    },
+    {
+      "name": "Replicable Items (14th-Level Artificer)",
+      "cols": [
+        "Magic Item",
+        "Attunement"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Amulet of health",
+          "Yes"
+        ],
+        [
+          "Arcane propulsion arm (detailed in chapter 5)",
+          "Yes"
+        ],
+        [
+          "Belt of hill giant strength",
+          "Yes"
+        ],
+        [
+          "Boots of levitation",
+          "Yes"
+        ],
+        [
+          "Boots of speed",
+          "Yes"
+        ],
+        [
+          "Bracers of defense",
+          "Yes"
+        ],
+        [
+          "Cloak of the bat",
+          "Yes"
+        ],
+        [
+          "Dimensional shackles",
+          "No"
+        ],
+        [
+          "Gem of seeing",
+          "Yes"
+        ],
+        [
+          "Horn of blasting",
+          "No"
+        ],
+        [
+          "Ring of free action",
+          "Yes"
+        ],
+        [
+          "Ring of protection",
+          "Yes"
+        ],
+        [
+          "Ring of the ram",
+          "Yes"
+        ]
+      ],
+      "caption": "Replicable Items (14th-Level Artificer)",
+      "owner": "Replicate Magic Item",
+      "ownerKind": "feat"
+    },
+    {
+      "name": "Replicable Items (2nd-Level Artificer)",
+      "cols": [
+        "Magic Item",
+        "Attunement"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Alchemy jug",
+          "No"
+        ],
+        [
+          "Bag of holding",
+          "No"
+        ],
+        [
+          "Cap of water breathing",
+          "No"
+        ],
+        [
+          "Goggles of night",
+          "No"
+        ],
+        [
+          "Rope of climbing",
+          "No"
+        ],
+        [
+          "Sending stones",
+          "No"
+        ],
+        [
+          "Wand of magic detection",
+          "No"
+        ],
+        [
+          "Wand of secrets",
+          "No"
+        ]
+      ],
+      "caption": "Replicable Items (2nd-Level Artificer)",
+      "owner": "Replicate Magic Item",
+      "ownerKind": "feat"
+    },
+    {
+      "name": "Replicable Items (6th-Level Artificer)",
+      "cols": [
+        "Magic Item",
+        "Attunement"
+      ],
+      "align": [
+        "left",
+        "center"
+      ],
+      "rows": [
+        [
+          "Boots of elvenkind",
+          "No"
+        ],
+        [
+          "Cloak of elvenkind",
+          "Yes"
+        ],
+        [
+          "Cloak of the manta ray",
+          "No"
+        ],
+        [
+          "Eyes of charming",
+          "Yes"
+        ],
+        [
+          "Gloves of thievery",
+          "No"
+        ],
+        [
+          "Lantern of revealing",
+          "No"
+        ],
+        [
+          "Pipes of haunting",
+          "No"
+        ],
+        [
+          "Ring of water walking",
+          "No"
+        ]
+      ],
+      "caption": "Replicable Items (6th-Level Artificer)",
+      "owner": "Replicate Magic Item",
+      "ownerKind": "feat"
+    },
+    {
       "name": "Apparatus of Kwalish Levers",
       "cols": [
         "Lever",

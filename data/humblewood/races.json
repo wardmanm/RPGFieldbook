@@ -1520,7 +1520,7 @@
             },
             {
               "name": "Strong Claws",
-              "description": "You gain proficiency in the Athletics skill and have advantage on skill checks made to climb or dig. Brightfang"
+              "description": "You gain proficiency in the Athletics skill and have advantage on skill checks made to climb or dig."
             }
           ]
         },
@@ -1575,7 +1575,7 @@
         },
         {
           "name": "Origin",
-          "description": "Choose either the swamp pexian or cave pexian origin option. Cave Pexian Concept Art."
+          "description": "Choose either the swamp pexian or cave pexian origin option."
         }
       ],
       "subraces": [

@@ -46,6 +46,10 @@ function subclassesFor(d){
   });
   return out;
 }
+/* The pack tag shown beside a subclass's name, or "" when subclassesFor()
+   already put it IN the name — a reprint is keyed "Psi Warrior (TCE)", and
+   tagging that again read "Psi Warrior (TCE) (TCE)". */
+function subSourceTag(n,sc){const s=sc&&sc._source;return s&&!String(n).endsWith("("+s+")")?s:"";}
 function totalLevel(){return (character.classes||[]).reduce((a,c)=>a+num(c.level),0)||num(character.level)||1;}
 function addFeatureFromDef(t,origin){
   const feat={id:uid(),name:t.name||"Trait",source:t.source||(origin&&(origin.class||origin.name))||"",description:t.description||"",effects:Array.isArray(t.effects)?t.effects:[],enabled:true,origin:origin||null};
