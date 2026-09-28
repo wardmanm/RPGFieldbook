@@ -31,6 +31,9 @@
           ]
         }
       ],
+      "multiclass": {
+        "proficiencies": "Light armor, Medium armor, Shields, Thieves' tools, Tinker's tools"
+      },
       "levels": {
         "1": {
           "choices": [
@@ -696,6 +699,9 @@
           ]
         }
       ],
+      "multiclass": {
+        "proficiencies": "Shields, Martial weapons"
+      },
       "levels": {
         "1": {
           "choices": [
@@ -1089,6 +1095,35 @@
           ]
         }
       ],
+      "multiclass": {
+        "choices": [
+          {
+            "type": "skill",
+            "choose": 1,
+            "from": [
+              "Athletics",
+              "Acrobatics",
+              "Sleight of Hand",
+              "Stealth",
+              "Arcana",
+              "History",
+              "Investigation",
+              "Nature",
+              "Religion",
+              "Animal Handling",
+              "Insight",
+              "Medicine",
+              "Perception",
+              "Survival",
+              "Deception",
+              "Intimidation",
+              "Performance",
+              "Persuasion"
+            ]
+          }
+        ],
+        "proficiencies": "Light armor, one Musical Instrument of your choice"
+      },
       "levels": {
         "1": {
           "traits": [
@@ -1431,6 +1466,9 @@
           ]
         }
       ],
+      "multiclass": {
+        "proficiencies": "Light armor, Medium armor, Shields"
+      },
       "levels": {
         "1": {
           "choices": [
@@ -1777,6 +1815,9 @@
           ]
         }
       ],
+      "multiclass": {
+        "proficiencies": "Light armor, Shields"
+      },
       "levels": {
         "1": {
           "choices": [
@@ -2188,6 +2229,9 @@
           ]
         }
       ],
+      "multiclass": {
+        "proficiencies": "Light armor, Medium armor, Shields, Martial weapons"
+      },
       "levels": {
         "1": {
           "choices": [
@@ -3450,6 +3494,7 @@
           ]
         }
       ],
+      "multiclass": {},
       "levels": {
         "1": {
           "choices": [
@@ -4295,6 +4340,9 @@
           ]
         }
       ],
+      "multiclass": {
+        "proficiencies": "Light armor, Medium armor, Shields, Martial weapons"
+      },
       "levels": {
         "1": {
           "choices": [
@@ -4750,6 +4798,25 @@
           ]
         }
       ],
+      "multiclass": {
+        "choices": [
+          {
+            "type": "skill",
+            "choose": 1,
+            "from": [
+              "Animal Handling",
+              "Athletics",
+              "Insight",
+              "Investigation",
+              "Nature",
+              "Perception",
+              "Stealth",
+              "Survival"
+            ]
+          }
+        ],
+        "proficiencies": "Light armor, Medium armor, Shields, Martial weapons"
+      },
       "levels": {
         "1": {
           "choices": [
@@ -5211,6 +5278,27 @@
           ]
         }
       ],
+      "multiclass": {
+        "choices": [
+          {
+            "type": "skill",
+            "choose": 1,
+            "from": [
+              "Acrobatics",
+              "Athletics",
+              "Deception",
+              "Insight",
+              "Intimidation",
+              "Investigation",
+              "Perception",
+              "Persuasion",
+              "Sleight of Hand",
+              "Stealth"
+            ]
+          }
+        ],
+        "proficiencies": "Light armor, Thieves' Tools"
+      },
       "levels": {
         "1": {
           "choices": [
@@ -5578,6 +5666,7 @@
           ]
         }
       ],
+      "multiclass": {},
       "levels": {
         "1": {
           "choices": [
@@ -6265,6 +6354,9 @@
           ]
         }
       ],
+      "multiclass": {
+        "proficiencies": "Light armor"
+      },
       "levels": {
         "1": {
           "choices": [
@@ -7437,6 +7529,7 @@
           ]
         }
       ],
+      "multiclass": {},
       "levels": {
         "1": {
           "choices": [

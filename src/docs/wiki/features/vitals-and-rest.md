@@ -54,15 +54,20 @@ is Max plus any `hp.max` effects; `#maxNote` shows the effective maximum when an
 `.hp-lock.open`); `applyHPInput()` refuses Max again, because `readOnly` does not stop a paste.
 Tapping the padlock toggles it with no confirm, and focuses Max when opening. A level-up opens it;
 the level's hit-points step puts it back as it was ([Character building](character-building.md)).
-Adding a second class opens it too.
+Adding a second class opens it too, and so does a first class that starts above level 1.
 
 **The level-1 seed.** `level1HP(d)` is max(1, hit die + CON modifier), with CON read by `modOf()`
 from the typed score; it returns 0 for a die it cannot parse. `seedLevel1HP()` writes it to Max
-(and to Current if that is blank) when the sheet has exactly one class at total level 1 **and** Max
-is blank. `resyncLevel1HP(prevCon)` runs on every CON keystroke: while there is one class at level 1
+(and to Current if that is blank) when the class being added is the sheet's only one **and** Max is
+blank, whatever level it starts at, and returns whether it wrote. A first class that starts above
+level 1 then opens its window with the level-up hit-points step for levels 2..N (so "roll 2d10" for
+a level-3 Fighter), whose `hint` says level 1 is already counted; the step is offered only on top
+of a seed, never over a Max the player typed first. A second class never seeds: its levels get the
+same step with its own die ([Character building](character-building.md)).
+`resyncLevel1HP(prevCon)` runs on every CON keystroke: while there is one class at level 1
 and Max still holds what the *previous* CON would have produced, it rewrites Max for the new CON and
-keeps a full Current full. `removeClass()` blanks Max (and Current) only if Max still equals the
-seed.
+keeps a full Current full. `removeClass()` blanks Max (and Current) only when the class removed is
+the only one, at level 1, and Max still equals the seed.
 
 **Colour bands.** `hpBand()` returns `hp-warn` at or below 50% of `effMaxHP()` and `hp-danger` at or
 below 25%; nothing when no maximum is set or `character.hpColor` is `false` (Settings → This
@@ -136,6 +141,10 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
   hence `text` with `inputmode="tel"`.
 - **Adding CON to the seed without `resyncLevel1HP()` was a regression**: seed at CON 10, type 16,
   and Max no longer equals what `removeClass()` recomputes, so a d10's HP survives onto a d6.
+- **A character created above level 1 had no hit points.** The seed was gated on *total* level 1
+  and nothing asked for the levels above it, so a first class added at level 3 left Max and Current
+  blank; a Wizard added next then read "Max HP 0 → 4". The old test asserted exactly that
+  ("starting above level 1 does not seed HP") and was inverted with the fix (#66).
 - **`bumpHP` once had no floor** (holding − went to −7), and an `applyHPInput()` guard written as
   `k in character.hp` would have let a `data-hp="locked"` hook write a boolean.
 - **`recompute()` does not call `renderHP()`**, so anything that changes the lock renders it itself.
@@ -157,6 +166,7 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
 | CON in the level-1 seed | `modOf()` of the typed score | `abilFinal()`: effects change minutes later and the un-seed match would fail silently |
 | CON when spending a hit die | `abilFinal()` | Harmonising with the seed: the value is consumed at once and never re-derived |
 | Tracking CON edits after the seed | Stateless: recompute what the previous CON would have written and match it | A new character field: no migration surface, and an old sheet upgrades on its first CON edit |
+| A first class that starts above level 1 | Seed level 1, then the level-up HP step for levels 2..N (average by default) | No hit points at all, as before #66; or several dice boxes, one per level — the one box already takes a total and "Roll for me" rolls all of them |
 | Temp HP in the colour bands | Excluded | Included: it sits above the maximum and could read healthy while the real pool is empty |
 | The amber band's colour | A new `--warn` token | `--accent`: equals `--brick` on the classic skin, so the two bands would match |
 | Default Hit Dice look | Full (owner's call): it speaks the same language as the Vitals strip and the HP panel, at the cost of height | — |
@@ -173,6 +183,10 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
   so a custom ancestry reads 0 plus effects. Swapping ancestry keeps the first one's speed and size
   ([Character building](character-building.md)).
 - The level-1 resync stops at level 2 by design; from there Max is a total the app never computed.
+- `removeClass()` un-seeds only a level-1 class. A first class added at level 3 and then removed
+  keeps the Max its window added (seed plus levels 2–3), as a levelled-up class always has, so
+  re-adding a different class does not seed over it. Recording what the app wrote per class would
+  close this; not done.
 - See [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -188,3 +202,5 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
   Dice looks. → ledger L2105
 - 2026-09-25 — every level-up asks for hit points. → ledger L3548, #58
 - 2026-09-25 — Hit Dice back in Rest & Recovery, reversing their move into Vitals. → ledger L3676
+- 2026-09-28 — a first class that starts above level 1 is seeded and asks for levels 2..N; it used
+  to get no hit points at all. → ledger L3886, #66

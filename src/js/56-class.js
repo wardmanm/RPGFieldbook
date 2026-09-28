@@ -8,7 +8,9 @@ function openAddClass(){
     <div id="classPrev"></div>
     <div class="m-actions"><button class="tbtn" id="cCancel">Cancel</button><button class="tbtn primary" id="cAdd">Add</button></div>`);
   const sel=document.getElementById("classSel"),prev=document.getElementById("classPrev");
-  if(sel)sel.addEventListener("change",()=>{const d=sel.value?findClassDef(sel.value):null;prev.innerHTML=d?`<p class="hint">${esc(d.description||"")}</p>${classSummary(d)}`:"";});
+  /* With a class already on the sheet this is a multiclass add, and the "Saves"
+     in the summary would promise what it no longer grants (#66). */
+  if(sel)sel.addEventListener("change",()=>{const d=sel.value?findClassDef(sel.value):null;prev.innerHTML=d?`<p class="hint">${esc(d.description||"")}</p>${classSummary(d)}${character.classes.length?`<p class="hint">${esc(multiclassNote(d))}</p>`:""}`:"";});
   document.getElementById("cCancel").addEventListener("click",closeModal);
   document.getElementById("cAdd").addEventListener("click",()=>{const raw=(sel&&sel.value)||document.getElementById("classCustom").value.trim();if(!raw){alert("Pick or name a class.");return;}const cd=findClassDef(raw);const name=cd?cd.name:raw;const lvl=Math.max(1,Math.min(20,num(document.getElementById("classLvl").value)||1));closeModal();addClass(name,lvl);});
 }
@@ -77,8 +79,10 @@ function hpGainText(ch,raw,conMod,maxNow,note){
 function conModNow(){return Math.floor((abilFinal("con",contributions())-10)/2);}
 /* Called BEFORE the level-up unlocks the box, so it can remember whether to
    lock it again once the app has written the new total. */
-function hpChoice(d,levels,L,cls){
-  return {type:"hp",die:hitDieMax(d),levels:Math.max(1,num(levels)||1),cls,_level:L,_wasLocked:character.hp.locked!==false};
+function hpChoice(d,levels,L,cls,hint){
+  const ch={type:"hp",die:hitDieMax(d),levels:Math.max(1,num(levels)||1),cls,_level:L,_wasLocked:character.hp.locked!==false};
+  if(hint)ch.hint=hint;
+  return ch;
 }
 /* Returns the hit points added, 0 if none. A class with no hit die in the
    loaded rules has no fixed value to fall back on, so blank there means "I'll
@@ -97,21 +101,25 @@ function commitHPChoice(ch,raw){
   toast(`Max HP ${was} → ${was+gain} (+${gain})`);
   return gain;
 }
-/* Level 1 with a single class has no roll and no choice: max HP is the hit
+/* Level 1 of the first class has no roll and no choice: max HP is the hit
    die's maximum plus your Constitution modifier. Filled in on the player's
    behalf, but ONLY over a blank — a number they typed is theirs, and this must
-   never overwrite it.
+   never overwrite it. Fires for a first class at ANY starting level: it used to
+   stop at total level 1, so a character created at level 3 got no hit points at
+   all (#66). addClass() then asks for levels 2..N like a level-up. Returns
+   whether it wrote, because that step is only offered on top of a seed.
    CON is read from the SCORE, not abilFinal(): contributions() folds in
    equipped items, active statuses and summoned familiars, and this number has
    to be re-derivable unchanged minutes later by removeClass(). An effect that
    should raise max HP has its own target ("hp.max") and layers on top. */
 function seedLevel1HP(d){
   const hp=level1HP(d);
-  if(!hp||character.classes.length!==1||totalLevel()!==1)return;
-  if(num(character.hp.max))return;
+  if(!hp||character.classes.length!==1)return false;
+  if(num(character.hp.max))return false;
   character.hp.max=hp;
   if(!num(character.hp.cur))character.hp.cur=hp;
   renderHP();
+  return true;
 }
 /* Entering CON after picking the class is the normal order for a lot of
    players, and the seeded number would otherwise be stale forever — worse, it
@@ -134,25 +142,75 @@ function resyncLevel1HP(prevCon){
   if(full)character.hp.cur=now;
   clampHP();renderHP();
 }
+/* Saving throws come from the FIRST class only. Returns the keys it newly
+   granted, so a caller can say what changed. */
+function grantClassSaves(d,name){
+  const sid="class:"+name,got=[];
+  if(d&&Array.isArray(d.savingThrows))d.savingThrows.forEach(k=>{
+    if(character.saves[k]===undefined)return;
+    if(!(character.grants||[]).some(g=>g.sid===sid&&g.type==="save"&&g.key===k))got.push(k);
+    grantProf(sid,"save",k,1);
+  });
+  return got;
+}
+/* ---- multiclassing (#66) ----
+   Only the first class is character creation. A class taken beside another
+   grants no saving throws and no starting equipment or gold, and of its
+   starting proficiencies only what the pack's `multiclass` block lists — one
+   skill for a Bard, Ranger or Rogue, none for a Wizard. Its level-1 FEATURES
+   (Fighting Style, Spellcasting, …) still arrive, and its levels gain hit points
+   like any level-up. A pack with no `multiclass` block is not guessed at: no
+   class skills are offered, and the window says the pack doesn't list them.
+   A level-1 `skill` choice on the class itself is its starting proficiencies:
+   the converter writes one there from startingProficiencies and nothing else,
+   and the Gadgeteer's hand-authored one is the same list. */
+function multiclassChoices(d,sid){
+  const mc=d&&d.multiclass;
+  return (mc&&Array.isArray(mc.choices)?mc.choices:[]).map(ch=>({...ch,_level:1,_sid:sid}));
+}
+function multiclassNote(d){
+  if(!d)return "";
+  const head=`${d.name} as an extra class: no saving throws and no starting equipment — those come from your first class.`;
+  const mc=d.multiclass;
+  if(!mc||typeof mc!=="object")return head+` This rules pack doesn't list what multiclassing into ${d.name} grants, so no class skills are offered; add any proficiencies you gain yourself.`;
+  const bits=[];
+  if(mc.proficiencies)bits.push(String(mc.proficiencies));
+  const n=(Array.isArray(mc.choices)?mc.choices:[]).filter(c=>c&&c.type==="skill").reduce((a,c)=>a+(num(c.choose)||1),0);
+  if(n)bits.push(n===1?"one skill (below)":n+" skills (below)");
+  return head+(bits.length?" You gain: "+bits.join(", ")+".":" It grants no other proficiencies.");
+}
 function addClass(name,lvl){
   const d=findClassDef(name);
+  const first=!character.classes.length,sid="class:"+name;
   const entry={name,level:0,subclass:null};
   character.classes.push(entry);
   if(d){
-    if(Array.isArray(d.savingThrows))d.savingThrows.forEach(k=>{if(character.saves[k]!==undefined)grantProf("class:"+name,"save",k,1);});
-    (d.skills||[]).forEach(nm=>{const k=skillKey(nm);if(k)grantProf("class:"+name,"skill",k,1);});
+    if(first){
+      grantClassSaves(d,name);
+      (d.skills||[]).forEach(nm=>{const k=skillKey(nm);if(k)grantProf(sid,"skill",k,1);});
+    }
     if(d.spellcasting&&!character.spellAbility)character.spellAbility=d.spellcasting;
   }
   let choices=[],notes=[];const _eq=[];
-  if(d)applyEquipGrants(d.equipmentGrants,"class:"+name,_eq);
+  if(d&&first)applyEquipGrants(d.equipmentGrants,sid,_eq);
   for(let L=1;L<=lvl;L++){const res=applyClassLevel(entry,d,L);choices=choices.concat(res.choices);notes=notes.concat(res.notes);}
-  /* A second class is levels GAINED, with the new class's die, so it asks for
-     hit points exactly as a level-up does. The first class is character
-     creation: seedLevel1HP() handles level 1, and above that the player types it. */
-  if(character.classes.length>1){choices=[hpChoice(d,lvl,lvl,name)].concat(choices);character.hp.locked=false;renderHP();}
+  if(d&&!first){
+    choices=multiclassChoices(d,sid).concat(choices.filter(ch=>!(ch.type==="skill"&&ch._level===1&&ch._sid===sid)));
+    notes=[multiclassNote(d)].concat(notes);
+  }
   entry.level=lvl;
   character.level=totalLevel();
-  seedLevel1HP(d);
+  /* Hit points. A second class is levels GAINED, with the new class's die, so
+     it asks exactly as a level-up does. The first class is character creation:
+     level 1 is seeded (the full die + CON), and a first class that starts above
+     level 1 then asks for levels 2..N the same way — but only on top of a seed,
+     never on a Max the player already typed. hpChoice() before the unlock: it
+     remembers the lock. */
+  if(!first){choices=[hpChoice(d,lvl,lvl,name)].concat(choices);character.hp.locked=false;renderHP();}
+  else if(seedLevel1HP(d)&&lvl>1){
+    choices=[hpChoice(d,lvl-1,lvl,name,`Level 1 is already in Max HP: the full ${d.hitDie} plus CON. This is levels 2–${lvl}.`)].concat(choices);
+    character.hp.locked=false;renderHP();
+  }
   const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
@@ -176,6 +234,15 @@ function removeClass(idx){
   removeGrants(g=>g.sid==="class:"+c.name||g.sid.indexOf("subclass:"+c.name+":")===0);
   revertEquipmentGrants("class:"+c.name);
   character.classes.splice(idx,1);
+  /* Saving throws came from the class just removed if it was the first. The
+     one now first takes its own, tagged to it so they leave with it — without
+     this a Fighter/Wizard who drops Fighter has no save proficiencies at all.
+     Its first-class skills and starting equipment are creation choices and are
+     not re-offered; the toast says so. */
+  if(idx===0&&character.classes.length){
+    const nf=character.classes[0],got=grantClassSaves(findClassDef(nf.name),nf.name);
+    if(got.length)toast(`${nf.name} is now your first class, so it grants its saving throws (${got.map(k=>k.toUpperCase()).join(", ")}). Its starting skills and equipment are not added.`);
+  }
   character.level=totalLevel();const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   renderClassRace();renderFeatures();recompute();scheduleSave();
 }

@@ -16,7 +16,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag','runChoices',
-  'syncResources','resolveResDie','openModal','dismissModal','skillKey',
+  'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -555,8 +555,12 @@ ck('level 1 also starts at full HP', X.num(X.character.hp.cur)===8, X.character.
 hpSetup(CLS); X.character.hp.max=5; X.addClass('Rogue',1);
 ck('a number the player typed is never overwritten', X.num(X.character.hp.max)===5);
 
+/* A first class that starts above level 1 used to get no hit points at all:
+   the seed only fired at total level 1, and the levels above it asked nothing.
+   Level 1 is still the full die + CON; levels 2..N ride the level's own HP step
+   (#66, found alongside it). The step itself is asserted in the #66 block. */
 hpSetup(CLS); X.addClass('Fighter',3);
-ck('starting above level 1 does not seed HP', !X.num(X.character.hp.max), X.character.hp.max);
+ck('starting above level 1 still seeds level 1', X.num(X.character.hp.max)===10, X.character.hp.max);
 
 hpSetup(CLS); X.addClass('Fighter',1); X.addClass('Wizard',1);
 ck('multiclassing does not re-seed from the second die', X.num(X.character.hp.max)===10,
@@ -942,6 +946,129 @@ ck('a fixed die, written either way', X.resolveResDie({die:8},1)==='d8' && X.res
 hpSetup(CLS); X.addClass('Fighter',1); X.addClass('Wizard',1);
 X.commitChoices('Wizard',[{type:'hp',ci:0,dice:''}]);
 ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.max)===14, X.character.hp.max);
+
+// ---------- multiclassing grants a subset (#66)
+// Only the FIRST class is character creation. A class added beside another
+// grants no saving throws and no starting equipment or gold, and only the
+// proficiencies the 2024 multiclassing table lists (Rogue: one skill; Wizard:
+// none). Its level-1 FEATURES still arrive, and its levels gain hit points like
+// any later level. Run against the real 2024 pack, not a fixture: the bug was
+// in what a real class's data turned into on the sheet.
+{
+  const PACK=JSON.parse(fs.readFileSync(path.join(__dirname,'../../data/5e2024/classes.json'),'utf8'));
+  const mcSetup=(con,extra)=>{
+    c=setup(); X.resetRules(); X.mergeRules(PACK,'5e2024_full.json');
+    if(extra)X.mergeRules({classes:extra},'test');
+    X.character.classes=[]; X.character.level=1; X.character.hp.max=''; X.character.hp.cur='';
+    X.character.abilities.con=(con==null)?10:con;
+  };
+  /* Spy on both windows the add can open, and still run the real ones —
+     commitChoices() reads the _activeChoices the real runChoices() sets. */
+  const realRC=ctx.runChoices, realRX=ctx.runExtraChoices;
+  let rc=[], rx=[];
+  ctx.runChoices=function(){rc.push(Array.prototype.slice.call(arguments));return realRC.apply(null,arguments);};
+  ctx.runExtraChoices=function(){rx.push(Array.prototype.slice.call(arguments));return realRX.apply(null,arguments);};
+  const reset=()=>{rc=[];rx=[];};
+  const win=()=>rc[rc.length-1]||[];                       /* [className, choices, notes, eq] */
+  const choicesOf=()=>win()[1]||[];
+  const notesOf=()=>(win()[2]||[]).join(' ');
+  const saves=sid=>(X.character.grants||[]).filter(g=>g.sid===sid&&g.type==='save').map(g=>g.key).sort().join(',');
+  const eqQueued=sid=>rc.concat(rx).some(call=>call.some(a=>Array.isArray(a)&&a.some(x=>x&&x.kind==='equip'&&x.sid===sid)));
+  const skillCh=()=>choicesOf().filter(x=>x.type==='skill');
+  try{
+    /* ---- the first class: unchanged */
+    mcSetup(); reset(); X.addClass('Fighter',1);
+    ck('#66 the first class grants its saving throws', saves('class:Fighter')==='con,str', saves('class:Fighter'));
+    ck('#66 ...queues its starting-equipment picker', eqQueued('class:Fighter'), rc.concat(rx));
+    ck('#66 ...offers its full level-1 skill choice', skillCh().length===1&&skillCh()[0].choose===2, skillCh());
+    ck('#66 ...seeds level-1 hit points and asks for none', X.num(X.character.hp.max)===10&&!choicesOf().some(x=>x.type==='hp'),
+       [X.character.hp.max,choicesOf().map(x=>x.type)]);
+
+    /* ---- a second class */
+    reset(); X.addClass('Wizard',1);
+    ck('#66 a second class grants NO saving throws', saves('class:Wizard')==='', saves('class:Wizard'));
+    ck('#66 ...the first class keeps its own', saves('class:Fighter')==='con,str', saves('class:Fighter'));
+    ck('#66 ...queues NO starting equipment', !eqQueued('class:Wizard'), rc.concat(rx));
+    ck('#66 ...grants no gold', !(X.character.grantGold||{})['class:Wizard'], X.character.grantGold);
+    ck('#66 ...offers no Wizard skills (multiclassing into Wizard grants none)', skillCh().length===0, skillCh());
+    ck('#66 ...does not re-seed Max HP from the new die', X.num(X.character.hp.max)===10, X.character.hp.max);
+    ck('#66 ...asks for its hit points like a level-up', choicesOf()[0]&&choicesOf()[0].type==='hp'&&choicesOf()[0].die===6&&choicesOf()[0].levels===1,
+       choicesOf()[0]);
+    ck('#66 ...still gets its level-1 features', X.character.features.some(f=>f.name==='Arcane Recovery'&&f.origin&&f.origin.class==='Wizard'));
+    ck('#66 ...and says why there are no saves or equipment', /saving throws/i.test(notesOf())&&/equipment/i.test(notesOf()), notesOf());
+    X.commitChoices('Wizard',[{type:'hp',ci:0,dice:''}]);
+    ck('#66 ...its hit points average like any later level', X.num(X.character.hp.max)===14, X.character.hp.max);
+
+    /* ---- removing the second class reverts only what it added */
+    X.removeClass(1);
+    ck('#66 removing the second class keeps the first class\'s saves', saves('class:Fighter')==='con,str');
+    ck('#66 ...takes its features', !X.character.features.some(f=>f.origin&&f.origin.class==='Wizard'));
+    ck('#66 ...and leaves no Wizard grant behind', !X.character.grants.some(g=>g.sid.indexOf('Wizard')>=0), X.character.grants);
+
+    /* ---- the multiclass skill subset, from the pack's multiclass data */
+    mcSetup(); X.addClass('Fighter',1); reset(); X.addClass('Rogue',1);
+    ck('#66 a multiclass Rogue offers ONE skill, not four', skillCh().length===1&&skillCh()[0].choose===1, skillCh());
+    ck('#66 ...from the Rogue\'s own list', skillCh()[0]&&skillCh()[0].from.indexOf('Stealth')>=0&&skillCh()[0].from.indexOf('Arcana')<0,
+       skillCh()[0]);
+    ck('#66 ...granted to the class, so it reverts with it', skillCh()[0]&&skillCh()[0]._sid==='class:Rogue', skillCh()[0]);
+    ck('#66 ...and names what else it trains', /Thieves' Tools/i.test(notesOf())&&/Light armor/i.test(notesOf()), notesOf());
+    ck('#66 ...still no saves', saves('class:Rogue')==='');
+    mcSetup(); X.addClass('Fighter',1); reset(); X.addClass('Bard',1);
+    ck('#66 a multiclass Bard offers one skill of any', skillCh().length===1&&skillCh()[0].choose===1&&skillCh()[0].from.length===18, skillCh());
+    mcSetup(); X.addClass('Wizard',1); reset(); X.addClass('Fighter',1);
+    ck('#66 a multiclass Fighter keeps its level-1 Fighting Style', choicesOf().some(x=>x.type==='option'&&/Fighting Style/.test(x.label||'')),
+       choicesOf().map(x=>x.type+':'+(x.label||'')));
+    ck('#66 ...but offers no skills', skillCh().length===0, skillCh());
+
+    /* ---- a pack that says nothing about multiclassing: no invented table */
+    mcSetup(null,[{name:'Tinker',hitDie:'d8',savingThrows:['int','con'],
+      equipmentGrants:[{items:[{name:'Rope'}],gold:10}],
+      levels:{'1':{traits:[{name:'Gizmo'}],choices:[{type:'skill',choose:2,from:['Arcana','History','Nature']}]}}}]);
+    X.addClass('Fighter',1); reset(); X.addClass('Tinker',1);
+    ck('#66 a class with no multiclass data offers no class skills', skillCh().length===0, skillCh());
+    ck('#66 ...and says the pack does not list them', /does(n't| not) list/i.test(notesOf()), notesOf());
+    ck('#66 ...a FIXED equipment block is not applied either', !X.character.inventory.some(i=>i.grant==='class:Tinker')&&!(X.character.grantGold||{})['class:Tinker'],
+       [X.character.inventory.map(i=>i.name+'/'+i.grant),X.character.grantGold]);
+    ck('#66 ...nor its saves', saves('class:Tinker')==='');
+    ck('#66 ...but its features arrive', X.character.features.some(f=>f.name==='Gizmo'));
+    mcSetup(null,[{name:'Tinker',hitDie:'d8',savingThrows:['int','con'],equipmentGrants:[{items:[{name:'Rope'}],gold:10}],levels:{}}]);
+    X.addClass('Tinker',1);
+    ck('#66 ...while as a FIRST class the same fixed block still lands', X.character.inventory.some(i=>i.grant==='class:Tinker')&&X.num(X.character.grantGold['class:Tinker'])===10,
+       [X.character.inventory.map(i=>i.name+'/'+i.grant),X.character.grantGold]);
+
+    /* ---- removing the FIRST class while another remains: the remaining class
+       is now the first, so it takes that class's saving throws — tagged to it,
+       so they revert with it. Its skills and equipment are not re-offered. */
+    mcSetup(); X.addClass('Fighter',1); X.addClass('Wizard',1);
+    X.removeClass(0);
+    ck('#66 removing the first class drops its saves', saves('class:Fighter')==='', saves('class:Fighter'));
+    ck('#66 ...and the remaining class takes its own', saves('class:Wizard')==='int,wis', saves('class:Wizard'));
+    ck('#66 ...and nothing else of the removed class stays', !X.character.grants.some(g=>g.sid.indexOf('Fighter')>=0)&&!X.character.features.some(f=>f.origin&&f.origin.class==='Fighter'));
+    X.removeClass(0);
+    ck('#66 ...which then revert with it', !X.character.grants.some(g=>g.type==='save'), X.character.grants);
+
+    /* ---- the first class above level 1 gets every level's hit points */
+    mcSetup(); reset(); X.character.hp.locked=true; X.addClass('Fighter',3);
+    const hp=choicesOf()[0]||{};
+    ck('#66 a first class at level 3 seeds level 1', X.num(X.character.hp.max)===10, X.character.hp.max);
+    ck('#66 ...and asks for levels 2-3 in its window', hp.type==='hp'&&hp.die===10&&hp.levels===2, hp);
+    ck('#66 ...with the level shown as 3', win()[1]&&win()[1][0]._level===3);
+    X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''}]);
+    ck('#66 ...taking the average: 10 + 2×6 = 22', X.num(X.character.hp.max)===22&&X.num(X.character.hp.cur)===22,
+       X.character.hp.max+'/'+X.character.hp.cur);
+    ck('#66 ...and the box is locked again, as it was', X.character.hp.locked===true);
+    mcSetup(14); reset(); X.addClass('Fighter',3); X.commitChoices('Fighter',[{type:'hp',ci:0,dice:'9'}]);
+    ck('#66 ...a typed roll adds CON per level: 12 + 9 + 2×2 = 25', X.num(X.character.hp.max)===25, X.character.hp.max);
+    mcSetup(); X.character.hp.max=30; reset(); X.addClass('Fighter',3);
+    ck('#66 ...and the step says level 1 is already counted', /Level 1 is already in Max HP/.test(hp.hint||'')&&
+       X.choiceFieldHTML(hp,0,null).indexOf('Level 1 is already in Max HP')>0, hp.hint);
+    ck('#66 a class the table says gains nothing says so', /no other proficiencies/.test(X.multiclassNote(X.findClassDef('Wizard'))),
+       X.multiclassNote(X.findClassDef('Wizard')));
+    ck('#66 ...and a custom class has no note to give', X.multiclassNote(null)==='');
+    ck('#66 ...a Max the player typed first is theirs: no seed, no step',
+       X.num(X.character.hp.max)===30&&!choicesOf().some(x=>x.type==='hp'), [X.character.hp.max,choicesOf().map(x=>x.type)]);
+  }finally{ctx.runChoices=realRC;ctx.runExtraChoices=realRX;}
+}
 
 // #61: the subclass on the class chip is its own way into the subclass window
 ck('the class chip links its subclass',

@@ -12,7 +12,8 @@ background or drop a class without hand-cleaning the sheet.
 `applyEquipGrants()`, `revertEquipmentGrants()`, `grantFeatDef()`, `runExtraChoices()` in
 `50-classrace.js`; `applyRace()`, `removeRace()` in `52-race.js`; `applyBackground()`,
 `removeBackground()` in `54-background.js`; `addClass()`, `applyClassLevel()`, `removeClass()`,
-`selectSubclass()`, `doLevelDown()`, `seedLevel1HP()` in `56-class.js`; `runChoices()`,
+`grantClassSaves()`, `multiclassChoices()`, `selectSubclass()`, `doLevelDown()`, `seedLevel1HP()` in
+`56-class.js`; `runChoices()`,
 `commitChoices()`, `sidToOrigin()` in `58-choices.js`; `originFromSid()`, `itemOrigin()`,
 `costToGp()` in `25-origins-items.js`; `syncResources()` in `65-resources.js` · **Tests:**
 `char-update.js` (grant and revert, `grantItemByName()` called for real, the pending equipment
@@ -28,7 +29,7 @@ picker travelling with its window, the order the choice windows open in), `sheet
 |---|---|
 | `race:<Name>` | `applyRace()`, and the ancestry's traits and skill choices |
 | `bg:<Name>` | `applyBackground()` |
-| `class:<Name>` | `addClass()`, class-level choices |
+| `class:<Name>` | `addClass()` (saves, skills and equipment only for the first class), class-level choices, a multiclass's `multiclass` skill choice |
 | `subclass:<Class>:<Sub>` | subclass-level choices and traits |
 
 `originSid()` derives a sid from a feature's `origin`, and `sidToOrigin()` goes the other way for a
@@ -58,9 +59,9 @@ never touches a proficiency the player set by hand, and the stat breakdown names
 `uses` and `cost`, re-stamps it against the real feat entry (the wrapper has no pack and the wrong
 name), and queues the feat's skill `choices`.
 
-**Equipment.** `equipmentGrants` is read on races, backgrounds and classes, the latter when the
-class is added. A fixed block applies at once through `applyEquipOption()`. A `choose` block is
-queued as a pending picker. `grantItemByName()` matches the loaded item list by name,
+**Equipment.** `equipmentGrants` is read on races, backgrounds and classes — a class's only when
+it is the character's first (#66): a multiclass add grants no equipment and no gold. A fixed block
+applies at once through `applyEquipOption()`. A `choose` block is queued as a pending picker. `grantItemByName()` matches the loaded item list by name,
 case-insensitively, and copies `description`, `effects`, `weapon`, `weight`, `category`, `type` and
 **`cost` through `costToGp()`**, because the pack stores cost as a display string ("2 gp") and the
 sheet as a gp number. It stamps the copy, and a weapon gets its attack. An unmatched name becomes a
@@ -80,9 +81,17 @@ or else to `runExtraChoices()`. A dismissed window hands it on too, so a class a
 always gets its equipment picker. The flow is on
 [Character building](../features/character-building.md).
 
+**The first class grants what a multiclass does not.** Saving throws, fixed class skills,
+starting equipment and gold, and the full level-1 skill choice come only from the class added while
+none was on the sheet. A later class gets its level-1 features and the pack's `multiclass` skill
+choice, all under its own `class:<Name>` sid, so removing it reverts exactly that. The table of who
+gets what is in [Character building](../features/character-building.md).
+
 **Removal and swapping.** `removeRace()`, `removeBackground()` and `removeClass()` each remove the
 features by origin, the proficiencies by sid, and the equipment and gold by sid. `removeClass()`
-also removes every `subclass:<Class>:` grant and un-seeds the level-1 HP. `applyRace()` and
+also removes every `subclass:<Class>:` grant and un-seeds the level-1 HP. Removing the first class
+while another remains hands the saving throws on: the class now first gets its own through
+`grantClassSaves()`, under its own sid, so they revert with it in turn. `applyRace()` and
 `applyBackground()` remove the previous one first. Changing a subclass removes the old subclass's
 features and grants before applying the new one.
 
@@ -90,6 +99,9 @@ features and grants before applying the new one.
 
 - **Every grant carries its source, and every source has a revert.** A new kind of grant needs
   both, or the source can no longer be removed cleanly.
+- **A multiclass add never grants what only the first class may**: no saves, no equipment, no gold,
+  and no class-level-1 skill choice beyond the pack's `multiclass` block. Characters saved before
+  this rule keep what their second class granted; `migrate()` does not strip it.
 - **Revert never touches what the player owns:** an item without that `grant`, a proficiency the
   player set, a Max HP they typed, or gold beyond what that sid added.
 - **`feature.origin` is structural.** It drives the revert predicates and `featGroupLabel()`.
@@ -138,6 +150,9 @@ features and grants before applying the new one.
 | Which CON the level-1 HP seed reads | `modOf()` of the score | `abilFinal()`: effects move under it, so un-equipping an item between add and remove silently stops the revert (L2035) |
 | Where the starting-equipment picker waits | Passed with its window to its own Done, or on from its dismissal | A module global: it outlived a dismissed window and fired after the next level-up (L3649). Dropped with a dismissed window: a class already on the sheet lost its equipment (L3847) |
 | Where Student of War's tool proficiency goes | A feature | The free-text Proficiencies box: it would not revert with the subclass (L3649) |
+| Which class grants saves, equipment and gold | The first class only; a multiclass gets the pack's `multiclass` subset | Every `addClass()`: the 2024 multiclass rules give neither (L3886, #66) |
+| Removing the first class while another remains | The new first class takes its saving throws, under its own sid | Leaving the sheet with no save proficiencies (L3886) |
+| Stripping extra grants from multiclass characters saved earlier | No: `migrate()` is untouched | Retroactive strip: it would silently change sheets players have been playing (L3886) |
 
 ## Open
 
@@ -148,8 +163,12 @@ features and grants before applying the new one.
   proficiencies and languages, background tools and languages), `speed` and `size` (seeded only when
   empty), `spellAbility` (set by a class or subclass), and the legacy `ancestry` and `background`
   strings.
-- **Class starting equipment fires on every `addClass()`,** a multiclass add included, although
-  2024 rules give none for multiclassing.
+- **Multiclass characters saved before #66 keep the extra grants.** Their second class carries its
+  saving throws, full skill picks and starting equipment under its sid. They revert if that class is
+  removed; nothing strips them on load, by design.
+- **Armor, weapon and tool training is not a grant** for any class — the first class's is only in
+  its data, a multiclass's only in the window's note — so none of it reverts because none of it is
+  applied.
 - A class's gold alternative is granted as the average of its dice, not a roll.
 
 See [Known issues](../roadmap/known-issues.md).
@@ -165,3 +184,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-14 — The level-1 HP seed includes CON and re-syncs, so its clean revert keeps landing. → ledger L2035
 - 2026-09-25 — `_equipQueue` is removed, and option costs are forwarded. → ledger L3649
 - 2026-09-28 — Choice windows open one at a time; the queue behind a window travels with it and survives its dismissal. → ledger L3847, #63
+- 2026-09-28 — Only the first class grants saves, starting equipment and gold; a multiclass gets the pack's `multiclass` subset, and removing the first class hands its saves on. → ledger L3886, #66

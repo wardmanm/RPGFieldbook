@@ -566,6 +566,26 @@ lib = C._optfeat_features(OFC + [{'name': 'Quickened Spell', 'source': 'XPHB', '
 ck('library entries are labelled by kind', sorted(x['source'] for x in lib) == ['Battle Master Maneuver', 'Metamagic'], lib)
 ck('...and carry their cost too', all(x.get('cost') for x in lib), lib)
 
+# ---- 21. multiclassing (#66): what a class grants as a SECOND class
+mcf = json.loads(json.dumps(bmfile))
+mcf['class'][0]['multiclassing'] = {'proficienciesGained': {
+    'skills': [{'choose': {'from': ['stealth', 'sleight of hand'], 'count': 1}}],
+    'tools': ["{@item Thieves' Tools|XPHB}"], 'armor': ['light', 'shield'], 'weapons': ['martial']}}
+mc = C.convert_classes([_tmpjson(mcf)])['classes'][0].get('multiclass')
+ck('multiclass skills become a level-choice-shaped skill choice',
+   mc and mc.get('choices') == [{'type': 'skill', 'choose': 1, 'from': ['Stealth', 'Sleight of Hand']}], mc)
+ck('...and armor, weapon and tool training one display string',
+   mc and mc.get('proficiencies') == "Light armor, Shields, Martial weapons, Thieves' Tools", mc)
+mcf['class'][0]['multiclassing'] = {'proficienciesGained': {'tools': ['Choose one {@item Musical Instrument|XPHB}']}}
+mcb = C.convert_classes([_tmpjson(mcf)])['classes'][0].get('multiclass')
+ck('"Choose one X" reads as "one X of your choice"', mcb == {'proficiencies': 'one Musical Instrument of your choice'}, mcb)
+mcf['class'][0]['multiclassing'] = {}
+ck('a class the table says gains nothing carries an empty block, not none',
+   C.convert_classes([_tmpjson(mcf)])['classes'][0].get('multiclass') == {})
+del mcf['class'][0]['multiclassing']
+ck('...and a source with no multiclassing entry carries no block at all',
+   'multiclass' not in C.convert_classes([_tmpjson(mcf)])['classes'][0])
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

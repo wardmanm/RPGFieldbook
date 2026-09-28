@@ -91,8 +91,11 @@ function choiceFieldHTML(ch,ci,d){
        Blank takes the average, so a player who rolls at the table types, and
        one who doesn't just presses Done. */
     const die=num(ch.die),n=Math.max(1,num(ch.levels)||1),dice=n+"d"+die;
+    /* `hint`: a first class added above level 1 asks for levels 2..N only —
+       level 1 was seeded — and "roll 2d10" for a level-3 Fighter needs saying why. */
     inner=die
       ?`<label class="f">Hit points — roll ${dice}, or take the average</label>`+
+        (ch.hint?`<p class="hint" style="margin:0 0 6px">${esc(ch.hint)}</p>`:"")+
         `<div style="display:flex;gap:8px;align-items:center"><input type="number" min="0" inputmode="numeric" data-hp-dice placeholder="${n*hpFixed(die)} (average)" aria-label="What the ${dice} came up — blank takes the average" style="flex:1">`+
         `<button class="tbtn" type="button" data-hp-roll>Roll for me</button></div><p class="hint" data-hp-prev style="margin:6px 0 0"></p>`
       :`<label class="f">Hit points gained</label><input type="number" min="0" inputmode="numeric" data-hp-dice placeholder="hit points gained" aria-label="Hit points gained">`+
