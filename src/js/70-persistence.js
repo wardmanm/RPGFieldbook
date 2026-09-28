@@ -63,7 +63,9 @@ function scheduleSave(){
     }catch(e){lsOK=false;if(el){el.textContent="Use Save ↑";el.className="savestate";}}
   },500);
 }
-function saveSettings(){try{localStorage.setItem(K_SET,JSON.stringify(settings))}catch(e){}}
+/* Returns "" or why the write was refused (storageWhy). Most callers are one
+   toggle and still ignore it; Import settings reports it. */
+function saveSettings(){try{localStorage.setItem(K_SET,JSON.stringify(settings));return "";}catch(e){return storageWhy(e);}}
 
 /* ================= the rules cache =================
    The rules pool outgrew localStorage. Five packs merge to ~2.3 MILLION

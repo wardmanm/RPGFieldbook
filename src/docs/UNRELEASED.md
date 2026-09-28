@@ -51,3 +51,8 @@ Bullets below this line — leave the heading in place.
 - Images and text from imported character files, rules packs and settings files are now handled
   safely. A portrait or glossary picture is shown only when the picture itself is stored in the
   file, which is how Fieldbook has always saved them, so your own pictures are unaffected.
+- Settings → Import settings no longer swaps out the rules you have loaded without asking. When the
+  settings file carries rules and you already have some loaded, it shows what the file has and what
+  you have, names any pack that replacing would unload, and lets you keep your rules and import just
+  the settings, or replace them. It then tells you what it did, and rules from a settings file are
+  now loaded the same way as an imported rules file.

@@ -20,6 +20,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'NOTE_SECTIONS','NOTE_TABS','noteDef','getNote','noteText','hasNote','saveNote',
   'noteGroupOpen','notesHTML','noteBtnHTML','noteEntryHTML','esc',
   'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings',
+  'openSettings', 'highlight', 'rulesStatusText', 'rulesBadge', 'dispName',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1800,7 +1801,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const run = async () => { calls = []; await X.fetchAllRules(); await new Promise(r => setImmediate(r)); };
   const cache = () => store[X.K_RULES];
   const cached = () => JSON.parse(X.readRulesCacheString(cache()) || '{}');
-  const names = (r, cat, src) => ((r || X.rules)[cat] || []).filter(e => !src || e._source === src).map(e => e.name).sort();
+  const names = (r, cat, src) => { const a = (r || X.rules)[cat]; return (Array.isArray(a) ? a : []).filter(e => e && (!src || e._source === src)).map(e => e.name).sort(); };
   const badge = () => { const n = X.rulesEntryCount(); return n ? n + ' entries' : 'none loaded'; };
   // a file-imported rulebook, cached the way an import leaves it
   const seedFilePack = () => {
@@ -1981,4 +1982,260 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   state.confirm = true;
   X.clearAllRules();
   ck('the Rules data chip follows Clear all', chip.textContent === 'none loaded', chip.textContent);
+
+  /* ================= Import settings asks before replacing loaded rules (#70) ==========
+     Export settings writes {_type:"fieldbook-settings", settings, rules}: the WHOLE pool as
+     it stood that day. Import settings assigned that `rules` wholesale — no question, no
+     validation — so every pack imported or fetched since the export vanished without a
+     word, and a malformed one (a keyword with `name` for `term`) broke every render after.
+
+     Driven through the real Settings → Import settings handler: the file input's change
+     listener, a FileReader that answers at once, and the question's buttons clicked. */
+  {
+    const writes = [];                               // every modal body the app drew, in order
+    const mBody = {set innerHTML(v) { writes.push(String(v)); }, get innerHTML() { return writes[writes.length - 1] || ''; }};
+    const impStatus = {textContent: '', className: ''};
+    const rulesDataEl = {innerHTML: '', addEventListener() {}};
+    let hooks = {};                                  // id -> {event: handler}
+    const hookEl = id => ({value: '', click() {}, addEventListener: (t, f) => { (hooks[id] = hooks[id] || {})[t] = f; }});
+    const HOOKED = new Set(['fileSettings', 'setImpKeep', 'setImpReplace', 'setImpCancel']);
+    const getById2 = ctx.document.getElementById;
+    ctx.document.getElementById = id => id === 'mBody' ? mBody : id === 'setImpStatus' ? impStatus
+      : id === 'rulesData' ? rulesDataEl : HOOKED.has(id) ? hookEl(id) : getById2(id);
+    ctx.FileReader = class { readAsText(f) { this.result = f.text; if (this.onload) this.onload(); } };
+    const alerts = [];
+    ctx.alert = m => { alerts.push(m); };
+    const settle = () => new Promise(r => setImmediate(r));
+    const importFile = async obj => {
+      hooks = {}; writes.length = 0; impStatus.textContent = ''; impStatus.className = '';
+      X.openSettings();
+      const h = hooks.fileSettings && hooks.fileSettings.change;
+      if (!h) throw new Error('Import settings has no change handler on #fileSettings');
+      h({target: {files: [{name: 'fieldbook-settings.json', text: typeof obj === 'string' ? obj : JSON.stringify(obj)}], value: ''}});
+      await settle();
+    };
+    const click = async id => { const h = hooks[id] && hooks[id].click; if (h) h({}); await settle(); return !!h; };
+    const question = () => writes.find(w => /id="setImpReplace"/.test(w)) || '';
+    const asked = () => !!question();
+    const settingsFile = (rules, s) => ({_type: 'fieldbook-settings', settings: s || {skin: 'classic'}, rules});
+
+    // the day of the export: an older copy of the 2024 rulebook from a file, plus a fetched pack
+    X.resetRules();
+    X.mergeRules({system: 'XPHB', rulebook: true, dataVersion: '1.0.0', classes: [{name: 'Wizard'}],
+                  spells: [{name: 'Fireball'}], keywords: [{term: 'Blinded', text: 'Cannot see.'}]}, '5e2024_full.json');
+    X.mergeRules({system: 'Homebrew', spells: [{name: 'Zap'}]}, null, HB);
+    const OLD = JSON.parse(JSON.stringify(X.rules));   // what Export settings wrote: the pool, stamps and all
+    const OLD_N = X.rulesEntryCount();
+    // ...and since then: a newer rulebook, and a homebrew file the settings file has never seen
+    const seedNow = () => {
+      X.character = X.blankChar();
+      Object.assign(X.settings, {skin: 'humblewood', theme: 'light', rough: true});
+      X.resetRules();
+      X.mergeRules({system: 'XPHB', rulebook: true, dataVersion: '1.1.0', classes: [{name: 'Wizard'}],
+                    spells: [{name: 'Fireball'}, {name: 'Shield'}, {name: 'Mage Armor'}]}, '5e2024_full.json');
+      X.mergeRules({system: 'Mine', feats: [{name: 'Lucky Break'}]}, 'my-homebrew.json');
+      state.quotaFull = false;
+      X.saveRulesCache();
+    };
+
+    // ---- (a) declining keeps every loaded pack; only the settings come in
+    seedNow();
+    const poolA = JSON.stringify(X.rules), cacheA = cache();
+    await importFile(settingsFile(OLD));
+    ck('import settings: a file carrying rules asks before touching them', asked(), writes.length);
+    ck('import settings: nothing is replaced while the question is open', JSON.stringify(X.rules) === poolA, names(null, 'spells'));
+    await click('setImpKeep');
+    ck('keep: a pack imported after the export survives', names(null, 'feats').join() === 'Lucky Break', names(null, 'feats'));
+    ck('keep: the loaded pool is exactly as it was', JSON.stringify(X.rules) === poolA, names(null, 'spells'));
+    ck('keep: the cache is exactly as it was', cache() === cacheA);
+    ck('keep: the settings ARE imported', X.settings.skin === 'classic', X.settings.skin);
+    ck('keep: the status line says the rules were kept', /unchanged/i.test(impStatus.textContent) && /\bok\b/.test(impStatus.className),
+       [impStatus.textContent, impStatus.className]);
+
+    // ---- (c) the question says what the file carries, what is loaded, and what replacing loses
+    {
+      const q = question();
+      ck('the question names the pack replacing would unload', /my-homebrew\.json/.test(q) && /unload/i.test(q), q);
+      ck('...counts what the file carries', new RegExp('\\b' + OLD_N + ' entries').test(q) && /\bHomebrew\b/.test(q), q);
+      ck('...and what is loaded now', new RegExp('\\b' + X.rulesEntryCount() + ' entries').test(q), q);
+      ck('...shows each copy\'s data version, so a downgrade is visible', /v1\.0\.0/.test(q) && /v1\.1\.0/.test(q), q);
+      ck('...and says replacing puts back an older copy of a pack in both', /older copy of 5e2024_full\.json/.test(q), q);
+      ck('...offers keeping the rules as well as replacing them, and cancelling',
+         /id="setImpKeep"/.test(q) && /id="setImpCancel"/.test(q) && /Keep my rules/.test(q) && /Replace my rules/.test(q), q);
+      ck('...says characters are not affected', /characters are not affected/i.test(q), q);
+    }
+
+    // ---- (b) accepting replaces the pool — normalised through the merge path, cached, and shown
+    seedNow();
+    {
+      const dirty = JSON.parse(JSON.stringify(OLD));
+      dirty.keywords[0].id = 'kw-from-the-file';
+      dirty.spells.push(Object.assign({}, dirty.spells[0], {_id: 'r999', text: 'a second copy'}));   // same source + name twice
+      await importFile(settingsFile(dirty));
+      chip.textContent = 'STALE';
+      await click('setImpReplace');
+    }
+    ck('replace: the pool is the file\'s', names(null, 'spells').join() === 'Fireball,Zap' && names(null, 'feats').join() === '',
+       [names(null, 'spells'), names(null, 'feats')]);
+    ck('replace: normalised — a same source + name pair is one entry, as a file import leaves it',
+       (X.rules.spells || []).filter(e => e.name === 'Fireball').length === 1, (X.rules.spells || []).map(e => e.name));
+    ck('replace: normalised — keyword ids are the app\'s, not the file\'s',
+       (X.rules.keywords || []).length === 1 && X.rules.keywords[0].id !== 'kw-from-the-file', X.rules.keywords);
+    {
+      const ids = X.RULE_CATS.flatMap(c => (X.rules[c] || []).map(e => e._id));
+      ck('replace: normalised — every entry re-indexed', ids.every((id, i) => id === 'r' + i), ids);
+    }
+    ck('replace: provenance survives — the rulebook is still listed under its file, with its version',
+       X.loadedRulesGroups().some(g => g.isFile && g.label === '5e2024_full.json' && g.rulebook && g.dataVersion === '1.0.0'),
+       X.loadedRulesGroups());
+    ck('replace: ...and the fetched pack keeps its URL, so Fetch all still replaces it',
+       (X.rules.spells || []).filter(e => e.name === 'Zap').every(e => e._url === HB) && names(null, 'spells', 'Homebrew').join() === 'Zap');
+    ck('replace: the cache holds the new pool', names(cached(), 'spells').join() === 'Fireball,Zap' && names(cached(), 'feats').join() === '',
+       names(cached(), 'spells'));
+    ck('replace: the settings are imported too', X.settings.skin === 'classic');
+    ck('replace: the status line says the rules were replaced, with the new count',
+       /replaced/i.test(impStatus.textContent) && impStatus.textContent.includes(X.rulesEntryCount() + ' entries'), impStatus.textContent);
+    ck('replace: the Rules data chip follows the new pool', chip.textContent === badge(), [chip.textContent, badge()]);
+    ck('replace: the loaded-data list is redrawn', /5e2024_full\.json/.test(rulesDataEl.innerHTML) && !/my-homebrew\.json/.test(rulesDataEl.innerHTML));
+    ck('replace: Settings reopens on the new pool', writes.length > 0 && writes[writes.length - 1].includes(X.rulesStatusText()) &&
+       writes[writes.length - 1].includes('>' + X.rulesBadge() + '<'));
+
+    // ---- (d) a settings file with no rules never asks and never touches the pool
+    for (const [what, file] of [
+      ['no rules key', {_type: 'fieldbook-settings', settings: {skin: 'classic'}}],
+      ['exported with nothing loaded', settingsFile({name: '', version: 1, keywords: [], items: [], features: [], spells: [], races: [],
+        classes: [], feats: [], tables: [], requires: {}, _dups: {}})],
+      ['the oldest shape, a bare settings object', {skin: 'classic', theme: 'dark', rough: false}],
+    ]) {
+      seedNow();
+      const pool = JSON.stringify(X.rules), c0 = cache();
+      await importFile(file);
+      ck('no rules (' + what + '): never asks', !asked());
+      ck('no rules (' + what + '): never touches the pool or the cache', JSON.stringify(X.rules) === pool && cache() === c0,
+         names(null, 'spells'));
+      ck('no rules (' + what + '): the settings are imported', X.settings.skin === 'classic', X.settings.skin);
+      ck('no rules (' + what + '): the status line says so', /imported/i.test(impStatus.textContent), impStatus.textContent);
+    }
+
+    // ---- the reported repro: a keyword with `name` for `term` replaced the 2024 pack, then broke every render
+    seedNow();
+    {
+      const pool = JSON.stringify(X.rules), c0 = cache();
+      await importFile(settingsFile({keywords: [{name: 'Settings-file term', desc: '…'}]}));
+      ck('unreadable rules: nothing in them loads, so there is nothing to ask', !asked());
+      ck('unreadable rules: the pool and the cache are untouched', JSON.stringify(X.rules) === pool && cache() === c0,
+         [names(null, 'spells'), X.rules.keywords]);
+      ck('unreadable rules: the settings are still imported', X.settings.skin === 'classic');
+      ck('unreadable rules: the status line says the rules could not be read', /couldn't be read/i.test(impStatus.textContent),
+         impStatus.textContent);
+    }
+
+    // ---- malformed rules: whatever loads must leave `rules` in a shape every renderer can take
+    seedNow();
+    await importFile(settingsFile({
+      name: {not: 'a string'}, requires: 'junk', _dups: 7,
+      keywords: [{name: 'Settings-file term', desc: '…'}, null, 'a string', 42, {term: 'Real Term', text: 'ok'}],
+      spells: 'oops', classes: {not: 'an array'}, races: null,
+      items: [null, 5, ['nested'], {name: 'Rope', _source: 'Kit'}],
+      tables: [{name: 'Odd Table', cols: ['a'], rows: [['1']]}],
+    }));
+    ck('malformed: it asks, since part of it is readable', asked());
+    ck('malformed: ...and the question says some of it could not be loaded', /7 entries in it couldn(?:'|&#39;|&#x27;)t be loaded/i.test(question()), question());
+    await click('setImpReplace');
+    ck('malformed: every category is an array of objects',
+       X.RULE_CATS.every(c => X.rules[c] === undefined || (Array.isArray(X.rules[c]) &&
+         X.rules[c].every(e => e && typeof e === 'object' && !Array.isArray(e)))),
+       X.RULE_CATS.map(c => [c, Array.isArray(X.rules[c]) ? X.rules[c].length : typeof X.rules[c]]));
+    ck('malformed: a keyword with no term is dropped, not loaded to break every render',
+       Array.isArray(X.rules.keywords) && X.rules.keywords.map(k => k && k.term).join() === 'Real Term', X.rules.keywords);
+    ck('malformed: what could be read is loaded', names(null, 'items').join() === 'Rope' && names(null, 'tables').join() === 'Odd Table');
+    ck('malformed: the pool\'s name and requires keep their types',
+       typeof X.rules.name === 'string' && X.rules.requires && typeof X.rules.requires === 'object' && !Array.isArray(X.rules.requires),
+       [X.rules.name, X.rules.requires]);
+    {
+      let threw = null;
+      try { X.highlight('Real Term and a Rope'); X.rulesDataHTML(); X.rulesStatusText(); X.missingSummary(); X.dispName(X.rules.items[0], 'items'); }
+      catch (e) { threw = String(e && e.message || e); }
+      ck('malformed: rendering still works afterwards', threw === null, threw);
+    }
+
+    // ---- nothing loaded: nothing to lose, so the file's rules load without a question
+    X.resetRules(); X.saveRulesCache();
+    await importFile(settingsFile(OLD));
+    ck('nothing loaded: the file\'s rules load without asking', !asked() && names(null, 'spells').join() === 'Fireball,Zap',
+       names(null, 'spells'));
+    ck('nothing loaded: ...and are cached', names(cached(), 'spells').join() === 'Fireball,Zap');
+    ck('nothing loaded: ...and the status line says what came in',
+       /rules/i.test(impStatus.textContent) && impStatus.textContent.includes(OLD_N + ' entries'), impStatus.textContent);
+
+    // ---- Cancel imports nothing at all
+    seedNow();
+    {
+      const pool = JSON.stringify(X.rules);
+      await importFile(settingsFile(OLD));
+      await click('setImpCancel');
+      ck('cancel: neither the settings nor the rules change', JSON.stringify(X.rules) === pool && X.settings.skin === 'humblewood',
+         X.settings.skin);
+    }
+
+    // ---- a refused cache write says so on the line the player is reading
+    seedNow();
+    await importFile(settingsFile(OLD));
+    state.quotaFull = true;
+    await click('setImpReplace');
+    state.quotaFull = false;
+    ck('a refused cache write is reported beside Import settings',
+       X.rulesCacheWarning() !== '' && impStatus.textContent.includes(X.rulesCacheWarning()) && /\berr\b/.test(impStatus.className),
+       [impStatus.textContent, impStatus.className]);
+    ck('...and so is the refused settings write', /settings imported for this session only/i.test(impStatus.textContent),
+       impStatus.textContent);
+    ck('...while the file\'s rules stay loaded for this session', names(null, 'spells').join() === 'Fireball,Zap');
+    X.saveRulesCache();
+
+    // ---- a refused settings write is reported on its own, too (Keep writes no cache)
+    seedNow();
+    await importFile(settingsFile(OLD));
+    state.quotaFull = true;
+    await click('setImpKeep');
+    state.quotaFull = false;
+    ck('keep: a refused settings write is reported, and in red',
+       /for this session only/i.test(impStatus.textContent) && /storage is full/i.test(impStatus.textContent) &&
+       /\berr\b/.test(impStatus.className), [impStatus.textContent, impStatus.className]);
+
+    // ---- export → import round trip: every pack comes back as it was
+    seedNow();
+    X.mergeRules({system: 'TCE', excludeSystems: ['humblewood'], races: [{name: 'Custom Lineage'}],
+                  requires: [{file: 'x.json', spells: ['Nope']}]}, 'tashas.json');
+    X.mergeRules({system: 'Homebrew', spells: [{name: 'Zap'}]}, null, HB);
+    X.mergeRules({system: 'XPHB', rulebook: true, dataVersion: '1.1.0', spells: [{name: 'Bless'}]}, '5e2024_full.json');   // appended after Zap
+    {
+      const exported = JSON.parse(JSON.stringify({_type: 'fieldbook-settings', settings: X.settings, rules: X.rules}));
+      const groups = JSON.stringify(X.loadedRulesGroups());
+      const order = () => X.RULE_CATS.map(c => (X.rules[c] || []).map(e => (e._source || '') + ':' + (e.name || e.term)).join('|')).join('/');
+      const orderBefore = order(), reqBefore = JSON.stringify(X.rules.requires);
+      X.mergeRules({system: 'Late', spells: [{name: 'Late Spell'}]}, 'late.json');
+      await importFile(exported);
+      await click('setImpReplace');
+      ck('round trip: every pack comes back under its heading, with its count and version',
+         JSON.stringify(X.loadedRulesGroups()) === groups, X.loadedRulesGroups().map(g => g.label + ':' + g.count));
+      ck('round trip: the order within every category is kept', order() === orderBefore, [order(), orderBefore]);
+      ck('round trip: excludeSystems survives', (X.rules.races || []).some(r => r.name === 'Custom Lineage' &&
+         JSON.stringify(r._excludeSystems) === '["humblewood"]'));
+      ck('round trip: requires survives', JSON.stringify(X.rules.requires) === reqBefore, [X.rules.requires, reqBefore]);
+    }
+
+    // ---- not a settings file: refused, and nothing changes
+    seedNow();
+    {
+      const pool = JSON.stringify(X.rules), set0 = JSON.stringify(X.settings);
+      alerts.length = 0;
+      await importFile('{ not json');
+      ck('not JSON: refused with a message', alerts.length === 1 && JSON.stringify(X.rules) === pool && JSON.stringify(X.settings) === set0, alerts);
+      await importFile({system: 'XPHB', spells: [{name: 'Oops'}]});
+      ck('a rules pack picked by mistake: refused, not written into settings',
+         alerts.length === 2 && !('spells' in X.settings) && JSON.stringify(X.settings) === set0 && JSON.stringify(X.rules) === pool,
+         [alerts, Object.keys(X.settings)]);
+    }
+    ctx.document.getElementById = getById2;
+  }
 })().then(() => ck.done(), e => { ck('the Fetch all checks ran to the end', false, String(e && e.stack || e)); ck.done(); });

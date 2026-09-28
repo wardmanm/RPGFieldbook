@@ -64,6 +64,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Duplicates inside a folder** — Mirror `mergeRules()`, and report them
 - **Where `overlay.json` and `class-resources.json` live** — The `data/` root
 - **What Fetch all does to what is loaded** — Each source that arrives whole replaces only what it loaded last time (`_url`); nothing else changes
+- **How a settings file's pool is loaded** — Rebuilt through `mergeRules()`, one run of same-provenance entries at a time (`poolFromExport()`)
 - **The Artificer and Mystic in the core pack** — Leave them, labelled `XPHB`
 
 ### [Grants & provenance](architecture/grants-and-provenance.md)
@@ -275,6 +276,10 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where the changelog lives** — Embedded in `30-version.js`, keeping the single-file offline design; `docs/CHANGELOG.md` is generated from it so the two cannot drift
 - **Where icon credits live** — In Settings
 - **Where the Download link may point** — A `https://github.com/` page from the response, else the releases page
+- **How Import settings asks about loaded rules** — A window with three answers: Cancel, Keep my rules, Replace my rules
+- **When Import settings asks** — Only when the file carries readable rules and some are loaded
+- **A settings file with an empty pool** — Treated as carrying no rules
+- **Where an import's outcome is shown** — A status line beside the Import button
 
 ## UI
 

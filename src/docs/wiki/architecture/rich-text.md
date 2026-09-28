@@ -92,7 +92,8 @@ A click, Enter or Space on `.kw` opens the glossary entry, and on `.tblref` open
 
 **4. Attribute values and images.** Prose is one way in; the markup around it is the other. A
 template literal assigned to innerHTML carries ids, names, dice and numbers from a character file, a
-rules pack or a settings file (Settings → Import assigns `rules` wholesale), and a raw `"` in any of
+rules pack or a settings file (its pool is rebuilt through `mergeRules()`, which gives keywords
+fresh ids but keeps every other value the file had), and a raw `"` in any of
 them closes its attribute. So every `${…}` inside a quoted attribute value is `esc(…)` of the whole
 expression, or a ternary whose two results are literals (`${on?"on":""}`), whatever the value looks
 like. An `<img>` built from data comes only from `imgHTML(u, alt)`, which returns `""` unless
@@ -212,3 +213,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-15 — Italics-as-structure is rejected for other Humblewood extracts, and a data scan for mid-sentence breaks becomes a test. → ledger L2538
 - 2026-08-18 — One grammar for every field: `richHTML()` and `richInline()` arrive, `descHTML()` delegates, emphasis needs non-space at both ends, and the note preview renders phrasing markup. → ledger L3035
 - 2026-09-28 — Every attribute interpolation is `esc()`'d and every image goes through `imgHTML()` (data: URLs only), both guarded; the audit's other raw values fixed. → ledger L3940
+- 2026-09-28 — A settings file's pool no longer goes in raw: it is rebuilt through `mergeRules()`, so its keyword ids are the app's. → ledger L3984, #70

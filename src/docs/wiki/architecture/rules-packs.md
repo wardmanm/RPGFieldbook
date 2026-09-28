@@ -10,7 +10,7 @@ covers what the app does with packs.
 
 **Code:** `mergeRules()`, `srcLabel()`, `keyOf()`, `reindexRules()`, `recomputeDups()`,
 `dispName()`, `ruleById()`, `resetRules()`, `importRulesFiles()`, `fetchAllRules()`,
-`fetchRulesFrom()`, `applyFetchedSource()`, `missingRequirements()`, `requiresStatusHTML()`,
+`fetchRulesFrom()`, `applyFetchedSource()`, `poolFromExport()`, `missingRequirements()`, `requiresStatusHTML()`,
 `missingSummary()`, `rulesDataHTML()`, `renderRulesData()` in `89-rules-merge.js`;
 `loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `pruneRequires()`, `clearAllRules()`,
 `dataStatus()`, `dataStatusHTML()`, `refreshRulesUI()`, `rulesBadge()` in `88-settings.js`; `systemOf()`, `racesForCharacter()` in `52-race.js`; `findRaceDef()`,
@@ -18,7 +18,8 @@ covers what the app does with packs.
 `30-version.js`; `bundle()` and `dataVersions()` in `scripts/bundle-rules.js`; `dataChangedSince()`
 in `scripts/release.js` · **Data:** `data/<dir>/*.json` → `dist/<dir>_full.json` · **Tests:**
 `rules-data.js` (bundle ≡ individual files, the three data states, every shipped pack agrees with
-`DATA_VERSIONS`, missing requirements, Fetch all keeping what is loaded), `tables.js`, `docs.js` (`DATA_VERSIONS` is flat JSON,
+`DATA_VERSIONS`, missing requirements, Fetch all keeping what is loaded, a settings file's pool
+rebuilt and round-tripped), `tables.js`, `docs.js` (`DATA_VERSIONS` is flat JSON,
 X.Y.Z, and every system maps to a data dir) · **See also:** [Converter](../data/converter.md),
 [Supplements](../data/supplements.md), [Homebrew](../data/homebrew.md),
 [Settings & updates](../features/settings-and-updates.md), [Rich text](rich-text.md)
@@ -65,6 +66,20 @@ and never at boot. **Fetching never loses what is loaded:**
    declaration follows its fresh copy, unless a file import shares the label.
 5. The cache is saved once. A refused save is written into the status line, on top of the red line
    above the list (see [Storage](storage.md)).
+
+A **settings file** (Settings → Import settings) is the third way in. It carries a whole pool, the
+one Export settings saved, and replaces the loaded pool only if the player says so (see
+[Settings & updates](../features/settings-and-updates.md)). `poolFromExport()` rebuilds that pool
+through `mergeRules()` on a scratch pool, never assigning it as it came. Each run of consecutive
+entries that share their provenance is merged as one pack. The entry's stamps go back in as the
+pack fields `mergeRules()` reads: `_source` as `system`, `_rulebook`, `_dataVersion`,
+`_excludeSystems`, the pool's `requires` for that label, and `_file` or `_url` as the file name or
+URL. So every group, version badge, `requires` declaration and `_url` comes back as it was, and so
+does the order within each category, which name lookups take the first match from. Keywords get
+fresh ids, repeats collapse, and non-arrays and entries without a name are dropped, exactly as for
+a file. Only a non-object is filtered before the merge, so whatever `mergeRules()` learns to read,
+a settings file gets too. The live pool is swapped out for that synchronous call alone and put back
+in a `finally`.
 
 **`mergeRules(obj, fileName)`:**
 
@@ -157,6 +172,9 @@ files).
 - **Fetching never loses what is loaded.** A source replaces only the entries stamped with its own
   `_url`, and only once all of it has arrived. A run where nothing arrives writes neither the pool
   nor the cache. Never reset the pool ahead of a network call.
+- **Every load goes through `mergeRules()`.** Nothing assigns `rules` a pool the app did not build,
+  a settings file's included (`poolFromExport()`). Boot is the exception, and it restores only the
+  app's own cache.
 - **Missing-dependency verdicts are computed, not stored.** Only the declaration persists, since
   boot never re-runs `mergeRules()`.
 - **`rules` is persisted whole, so it stays plain JSON** (see [Storage](storage.md)).
@@ -191,6 +209,10 @@ files).
   pool for the next launch. The status line said "Kept what loaded" directly above "No rules data
   loaded", and the Settings chip still counted 2151 entries, because nothing redrew it after
   `openSettings()`.
+- **A settings file's pool went in raw** (#70). Import settings ran `rules=p.rules`: no question, so
+  packs loaded since the export were lost, and no validation, so a keyword with `name` for `term`
+  broke `highlight()` on every render and a category that was not an array broke the next
+  re-index. → L3984
 - **`fetchAllRules()` never refreshed the loaded-data list**, so its chips stayed stale after a URL
   fetch. It now calls `renderRulesData()`.
 - **Clear all** once had no confirmation and did not refresh the list.
@@ -212,6 +234,7 @@ files).
 | Duplicates inside a folder | Mirror `mergeRules()`, and report them | Silent dedupe: `Net` is a real duplicate that someone should see (L625) |
 | Where `overlay.json` and `class-resources.json` live | The `data/` root | Inside a system folder: the bundler globs those, and they are converter inputs, not packs (L625) |
 | What Fetch all does to what is loaded | Each source that arrives whole replaces only what it loaded last time (`_url`); nothing else changes | Reset first (the old way): discarded file imports, and cached an empty pool when offline. Confirming before the reset: still loses everything when the fetch fails. Replacing by label: a file import sharing the label would go (L3797) |
+| How a settings file's pool is loaded | Rebuilt through `mergeRules()`, one run of same-provenance entries at a time (`poolFromExport()`) | Assigning it as it came: nothing validated it (#70). Merging it as one pack: every entry would be relabelled with one source and file, losing groups, versions and `_url`. Grouping by provenance rather than runs: reorders categories, and name lookups take the first match (L3984) |
 | The Artificer and Mystic in the core pack | Leave them, labelled `XPHB` | Dropping them: moves `data/5e2024/`, bumps XPHB for everyone, and strands Artificer players without Tasha's (L1816) |
 
 ## Open
@@ -239,3 +262,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-14 — The Homebrew pack arrives, with structural and declared missing-dependency reporting. → ledger L1883
 - 2026-08-14 — The merged pool's cache moves to IndexedDB. → ledger L1950
 - 2026-09-28 — Fetch all no longer resets the pool: a source replaces only what it loaded (`_url`), a failed run changes nothing, and the Settings chip follows the pool. → ledger L3797, #65
+- 2026-09-28 — A settings file's pool is rebuilt through `mergeRules()` (`poolFromExport()`), keeping provenance and order, and replaces the loaded one only when the player says so. → ledger L3984, #70

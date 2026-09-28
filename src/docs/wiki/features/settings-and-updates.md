@@ -9,13 +9,16 @@ this build expects — and backup of settings and rules.
 **Code:** `SET_SECTIONS`, `setSecOpen()`, `setSecHTML()`, `openSettings()`, `encSettingsHint()`,
 `rulesStatusText()`, `updateRulesStatus()`, `refreshRulesUI()`, `loadedRulesGroups()`,
 `removeRulesGroup()`, `clearAllRules()`, `dataStatus()`, `dataStatusHTML()`, `rulesCacheWarning()`,
-`rulesBadge()` in `88-settings.js` · `renderSrcRows()`, `renderRulesData()`, `rulesDataHTML()`,
-`fetchAllRules()`, `fetchRulesFrom()`, `applyFetchedSource()`, `importRulesFiles()`,
-`downloadRulesTemplates()`, `requiresStatusHTML()` in `89-rules-merge.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
+`rulesBadge()`, `SETTINGS_KEYS`, `foldLegacySettings()`, `readSettingsFile()`, `importSettings()`,
+`rulesPackSummary()`, `settingsImportQuestionHTML()`, `askSettingsImport()`,
+`finishSettingsImport()`, `settingsImportStatus()` in `88-settings.js` · `renderSrcRows()`,
+`renderRulesData()`, `rulesDataHTML()`, `fetchAllRules()`, `fetchRulesFrom()`,
+`applyFetchedSource()`, `importRulesFiles()`, `poolFromExport()`, `downloadRulesTemplates()`,
+`requiresStatusHTML()` in `89-rules-merge.js` · `saveSettings()` in `70-persistence.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
 `checkForUpdate()`, `showUpdatePill()`, `updBannerHTML()`, `openChangelog()` in `30-version.js` ·
 `boot()`, `wire()` in `90-boot.js` · `release.js`, `gen-changelog.js`, `bundle-rules.js` in `scripts/`
-· **Tests:** `rules-data.js` (the modal's ids both ways, the fold state, `dataStatus()`, Fetch all
-and the header chip),
+· **Tests:** `rules-data.js` (the modal's ids both ways, the fold state, `dataStatus()`, Fetch all,
+the header chip, and Import settings driven through its real handler),
 `char-update.js` (`cmpVer()`, `updBannerHTML()`) · **See also:**
 [Rules packs](../architecture/rules-packs.md), [Storage](../architecture/storage.md),
 [Rules-update tool](rules-update-tool.md), [Theming & icons](../ui/theming-and-icons.md),
@@ -34,7 +37,8 @@ list's `.fgroup` / `.fghead` / `.fcaret`:
 - **Rules data** — badged with the entry count (`rulesBadge()`, redrawn by every `renderRulesData()`
   so it follows imports, fetches, removals and Clear all while the modal is open): sources, the
   loaded-data list, and the status line.
-- **Characters & backup** — the character library, and Export / Import settings.
+- **Characters & backup** — the character library, Export / Import settings, and the status line
+  that says what an import did (`#setImpStatus`).
 - **Credits & licences** — the game-icons.net attribution CC BY 3.0 requires, in the app because
   `fieldbook.html` travels as a lone file; see [Theming & icons](../ui/theming-and-icons.md).
 
@@ -74,9 +78,37 @@ quiet "v*X*"; no stamp or no entry for that system is **unknown** and shows noth
 `DATA_VERSIONS` records the release in which each system's data last changed, bumped by `release.js`
 only when that `data/<dir>/` moved; `bundle-rules.js` stamps each pack.
 
-**Export / Import settings** writes `{_type:"fieldbook-settings", settings, rules}` — appearance *and*
-every loaded pack — and reads that or a bare settings object back, re-indexing and re-caching the
-rules and re-rendering.
+**Export settings** writes `{_type:"fieldbook-settings", settings, rules}`: the whole `settings`
+object *and* the whole rules pool as it stands, every entry with its provenance stamps. The shape
+has not changed since the first commit.
+
+**Import settings** never replaces loaded rules without asking. `readSettingsFile()` takes that
+shape, or the older bare settings object. A bare object must carry at least one of `SETTINGS_KEYS`,
+so a rules pack or a character chosen by mistake is refused ("Not a valid settings file.") rather
+than written into `settings`. The file's pool is rebuilt through `mergeRules()` by
+`poolFromExport()` (see [Rules packs](../architecture/rules-packs.md)). It is never assigned as it
+came. Then:
+
+- **The file carries no readable rules** (no `rules` key, an empty pool, or nothing in it that
+  loads): the settings import, nothing is asked, and the pool and the cache are untouched. The status
+  says whether the rules were absent or could not be read.
+- **Nothing is loaded yet:** the file's rules load with the settings, unasked, because nothing can be
+  lost.
+- **Otherwise it asks** (`askSettingsImport()`), in a window with three answers, like the
+  character-import clash. **Cancel** changes nothing and returns to Settings, as ✕ and Escape do.
+  **Keep my rules** imports the settings only. **Replace my rules** imports both. The window
+  (`settingsImportQuestionHTML()`) shows the file's rules and the loaded ones, each as "N packs, M
+  entries" with every pack's count and data version. It then says in red what replacing loses:
+  each loaded pack the file does not have, and any it would put back an older copy of. It says
+  characters are not affected either way.
+
+`finishSettingsImport()` applies the answer. It runs `foldLegacySettings()` (the first builds'
+`rulesUrl` joins `rulesSources`, as at boot), saves, and redraws what boot redraws after loading the
+cache: `refreshRulesUI()`, `renderAll()` and `renderHome()`. Then it reopens Settings, which brings a
+fresh rules status line, Rules data chip and loaded-data list. What happened is written on the
+status line beside the Import button, because the rules status line sits in the Rules data section,
+which is usually folded shut. A refused settings write ("Settings imported for this session only:
+…") and a refused cache write both land on that line.
 
 **The version button and changelog.** `#btnVer` reads `v` + `APP_VERSION` and opens
 `openChangelog()`: a modal titled with the version, listing every `CHANGELOG` entry. The array is
@@ -111,6 +143,9 @@ otherwise, because it becomes an `<a href>`.
   `APP_VERSION` must only ever rise or the update check breaks.
 - **Fetch all never loses what is loaded**, and a run where nothing arrives says "nothing changed"
   and writes neither the pool nor the cache. It is offline-first: failing is the expected case.
+- **Import settings never replaces loaded rules unasked**, and the rules a settings file carries go
+  through `mergeRules()` like every other load. A file with no readable rules never asks and never
+  touches the pool or the cache. Dismissing the question changes nothing.
 - **Credits paragraphs stay one source line each**: `.m-body p` is `white-space:pre-wrap`, so a wrapped
   line renders its newline and indent.
 
@@ -125,6 +160,9 @@ otherwise, because it becomes an `<a href>`.
 - **Hiding `#btnVer` would have stranded "What's new"**, the changelog's only entry point. → L1779
 - **The status line lied.** Offline, Fetch all emptied the pool and then said "Kept what loaded"
   directly above "No rules data loaded", while the section chip still counted 2151 entries. → L3797
+- **Import settings emptied the pool without a word** (#70). It ran `rules=p.rules`, so every pack
+  imported or fetched since the export went, and a keyword with `name` for `term` went in raw and
+  broke every render after. → L3984
 - **The badge first needs a release newer than the app**, and an unauthenticated call to a private
   repo 404s, and the `r.ok` guard turns that into a silent no-op. → L527
 
@@ -142,6 +180,10 @@ otherwise, because it becomes an `<a href>`.
 | Where the changelog lives | Embedded in `30-version.js`, keeping the single-file offline design; `docs/CHANGELOG.md` is generated from it so the two cannot drift | — |
 | Where icon credits live | In Settings | Only in the README: the app is routinely shared as a lone file no README follows |
 | Where the Download link may point | A `https://github.com/` page from the response, else the releases page | Whatever `html_url` holds: it becomes an `<a href>`, and a `javascript:` there would run on click (L3940) |
+| How Import settings asks about loaded rules | A window with three answers: Cancel, Keep my rules, Replace my rules | `confirm()`: OK/Cancel carries two outcomes, and making Cancel mean "settings only" would have Cancel import something (L3984) |
+| When Import settings asks | Only when the file carries readable rules and some are loaded | Always: a question with nothing to lose is noise. Never: the #70 bug (L3984) |
+| A settings file with an empty pool | Treated as carrying no rules | Replacing with it: that silently unloads everything, which is Clear all's job and it confirms (L3984) |
+| Where an import's outcome is shown | A status line beside the Import button | The rules status line: it sits in the Rules data section, usually folded shut. A toast: a failed save must not vanish (L3984) |
 
 ## Open
 
@@ -150,6 +192,11 @@ otherwise, because it becomes an `<a href>`.
 - The header comment of `30-version.js` still says to bump `APP_VERSION` and add a `CHANGELOG` entry on
   every change; the UPDATE_REPO comment still describes the badge linking to the release page.
 - The update check runs once per load.
+- **Import settings offers keep or replace, not merge.** Adding the file's packs to what is loaded
+  was not built; the player can import the files themselves instead.
+- **Import settings replaces `settings.rulesSources` with the file's list**, like every other
+  setting in it. Sources added since the export are dropped from the list; what they fetched stays
+  loaded unless the player chooses Replace my rules.
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -165,3 +212,4 @@ otherwise, because it becomes an `<a href>`.
 - 2026-08-18 — Credits & licences section for the icon attribution. → ledger L3289
 - 2026-09-28 — Fetch all keeps what is loaded, says when nothing changed, and the Rules data chip follows the pool. → ledger L3797, #65
 - 2026-09-28 — The pack name in the rules status line is escaped; the Download link only takes a github.com page. → ledger L3940
+- 2026-09-28 — Import settings asks before replacing loaded rules, rebuilds the file's pool through `mergeRules()`, and says what it did. → ledger L3984, #70
