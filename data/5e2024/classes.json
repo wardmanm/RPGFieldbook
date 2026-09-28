@@ -1126,6 +1126,32 @@
       },
       "levels": {
         "1": {
+          "choices": [
+            {
+              "type": "skill",
+              "choose": 3,
+              "from": [
+                "Acrobatics",
+                "Animal Handling",
+                "Arcana",
+                "Athletics",
+                "Deception",
+                "History",
+                "Insight",
+                "Intimidation",
+                "Investigation",
+                "Medicine",
+                "Nature",
+                "Perception",
+                "Performance",
+                "Persuasion",
+                "Religion",
+                "Sleight of Hand",
+                "Stealth",
+                "Survival"
+              ]
+            }
+          ],
           "traits": [
             {
               "name": "Bardic Inspiration",

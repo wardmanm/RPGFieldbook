@@ -334,6 +334,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How options reach the level-up picker** — Inlined in every choice (~150 KB across the packs)
 - **Which printing of an option a class offers** — The class's own source only, falling back to PHB for a 2014 book with none
 - **How a bundle dedupes** — Exactly as `mergeRules()` does, and every duplicate printed
+- **How a skill-proficiency list is read** — One reader, `_skill_profs()`, for species, a class's starting skills and its multiclass skills; `{"any": N}` is a choice of N from all 18 skills (#67)
 - **Where a class's multiclass proficiencies come from** — 5e-tools `multiclassing`, carried as an optional `multiclass` block; `{}` kept, absent when the source has none
 
 ### [Supplements](data/supplements.md)

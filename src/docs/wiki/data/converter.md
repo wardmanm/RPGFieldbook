@@ -9,7 +9,8 @@ page is what that file does not say: what must not move, and the traps that have
 
 **Code:** `main()`, `pick_2024_preferred()`, `pick_sources()`, `flatten()`, `table_ctx()`,
 `ref_ctx()`, `_register()`, `_cell_text()`, `_dice_text()`, `_cell_miss_warnings()`,
-`_class_tables()`, `convert_classes()`, `_multiclass()`, `_optfeat_choices()`, `convert_races()`,
+`_class_tables()`, `convert_classes()`, `_skill_profs()`, `_multiclass()`, `_optfeat_choices()`,
+`convert_races()`,
 `_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in `scripts/bundle-rules.js`;
 `dataChangedSince()` in `scripts/release.js`; `mergeRules()` in `89-rules-merge.js`;
 `DATA_VERSIONS` in `30-version.js`; `RULE_CATS` in `88-settings.js` ·
@@ -78,6 +79,15 @@ singular pool name mapped to the tracker's name by `_CONSUMES_AS`). `all` also w
 options as library entries in `features.json`. Student of War, which the source states only in
 prose, comes from `_prose_choices()`, keyed by (class, subclass, source).
 
+**Skill proficiencies: one reader.** `_skill_profs()` reads every 5e-tools skill-proficiency list
+the converter meets: a species' `skillProficiencies` (through `_race_skills()`), a class's
+`startingProficiencies.skills` and its multiclass skills. A bare name or `{"perception": true}` is a
+fixed skill; `{"choose": {"from", "count"}}` becomes a `skill` choice of `count` from that list;
+`{"any": N}` becomes a choice of N from all 18 skills, alphabetical. Anything else is handed back
+for the caller to report. A class's starting skills become its level-1 `skill` choice (Rogue:
+choose 4 of 10; Bard: choose 3 of all 18), which is what `addClass()` offers a first class, or its
+fixed `skills`.
+
 **Multiclassing.** `_multiclass()` reads a class's `multiclassing.proficienciesGained` into an
 optional `multiclass` block: skills as a level-choice-shaped `skill` choice, armor, weapon and tool
 training as one `proficiencies` string ("Light armor, Thieves' Tools"; "Choose one X" becomes "one
@@ -120,7 +130,10 @@ has no `DATA_VERSIONS` entry.
   a dev-only script (the Humblewood extractor is the precedent).
 - **Never quiet.** A missing input warns; a supplement category with nothing in it writes no file
   and says so; a subclass that resolves no features is listed in a `WARNING`, and so is every
-  table cell `_cell_text()` could not read. Every bug on this page was a silent skip first.
+  table cell `_cell_text()` could not read; a starting or multiclass skill entry `_skill_profs()`
+  cannot read is a `note:`. Every bug on this page was a silent skip first.
+- **One skill reader.** Species, class starting skills and multiclass skills all go through
+  `_skill_profs()`. A second parser at a call site is how the Bard lost its skills.
 - **Anchors only when a sink is collecting.** With no sink, a table is dropped with no anchor: an
   anchor with nothing behind it reads worse than the old silent drop.
 - **Table names are unique and global.** They are the merge key in the app and the only thing an
@@ -167,6 +180,12 @@ has no `DATA_VERSIONS` entry.
   Rage Damage as the string `'+2'`. Guard: the fixtures now copy real cells from the dump, an
   unread cell is a `WARNING`, and `tables.js` fails on any shipped column that is blank in every
   row and pins the 2024 values.
+- **A skill shape one reader knew and another did not (#67).** The species reader turned
+  `{"any": N}` into a choice from the start; the class path had its own loop that read only
+  `choose` and bare names, and dropped the Bard's `{"any": 3}` without a word. The 2024 Bard shipped
+  with no level-1 skill choice, so a first-class Bard was offered no skills. It is the only `any`
+  among the dump's 27 class starting-skill lists. Guard: one reader, `converter.py` pins the real
+  Bard shape, and `rules-data.js` fails on any class in any pack that starts with no skills.
 - **A tagline as a description.** `_sub_blurb()` takes a subclass's first paragraph over 40
   characters; eight 2024 italic taglines are 41+ and shipped as the whole description. It now skips
   a paragraph that is only `{@i …}`.
@@ -197,6 +216,7 @@ has no `DATA_VERSIONS` entry.
 | How options reach the level-up picker | Inlined in every choice (~150 KB across the packs) | A shared reference: ~5× smaller, but needs app code and cross-pack filtering; inline needs none, and an older app gets pickers from a re-downloaded pack alone |
 | Which printing of an option a class offers | The class's own source only, falling back to PHB for a 2014 book with none | Mixing printings: a 2024 Battle Master would be offered the 2014 Parry too |
 | How a bundle dedupes | Exactly as `mergeRules()` does, and every duplicate printed | Silent dedupe: the `Net` duplicate would vanish unreported; the promise is that a bundle equals its files |
+| How a skill-proficiency list is read | One reader, `_skill_profs()`, for species, a class's starting skills and its multiclass skills; `{"any": N}` is a choice of N from all 18 skills (#67) | A loop per call site: the class path's own read only `choose` and silently dropped the Bard's "any 3", while the species reader had understood it all along |
 | Where a class's multiclass proficiencies come from | 5e-tools `multiclassing`, carried as an optional `multiclass` block; `{}` kept, absent when the source has none | A table in the app: homebrew and Humblewood classes would get a silent guess, and the rules text belongs in the pack (#66) |
 
 ## Open
@@ -237,3 +257,4 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-25 — Source dump moved to 5e-tools v2.36.1; `srd52` backfill. → ledger L3676
 - 2026-09-28 — Class tables keep their `dice`, `bonus` and `bonusSpeed` cells; Bard and Rogue Features tables (105 → 107); an unreadable cell is a `WARNING`. → ledger L3761, #64
 - 2026-09-28 — `_multiclass()`: classes carry an optional `multiclass` block; `data/5e2024/` moved by that key alone. → ledger L3886, #66
+- 2026-09-28 — `_skill_profs()`: one skill reader for species, starting and multiclass skills; the Bard's "any 3" is a level-1 choice of 3 from 18, the one hunk `data/5e2024/` moved by. → ledger L3985, #67
