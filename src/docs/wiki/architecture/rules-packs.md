@@ -8,10 +8,11 @@ the global `rules`, which is cached across reloads (see [Storage](storage.md)) a
 name. The pack format itself is [rules-schema](../../../../docs/rules-schema.md), so this page
 covers what the app does with packs.
 
-**Code:** `mergeRules()`, `srcLabel()`, `keyOf()`, `reindexRules()`, `recomputeDups()`,
+**Code:** `mergeRules()`, `srcLabel()`, `keyOf()`, `ruleName()`, `reindexRules()`, `tidyRules()`, `tidyRule()`,
+`skippedSummary()`, `recomputeDups()`,
 `dispName()`, `ruleById()`, `resetRules()`, `importRulesFiles()`, `fetchAllRules()`,
 `fetchRulesFrom()`, `applyFetchedSource()`, `poolFromExport()`, `missingRequirements()`, `requiresStatusHTML()`,
-`missingSummary()`, `rulesDataHTML()`, `renderRulesData()` in `89-rules-merge.js`;
+`missingSummary()`, `rulesDataHTML()`, `renderRulesData()` in `89-rules-merge.js`; `glossRepair()` in `00-constants.js`;
 `loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `pruneRequires()`, `clearAllRules()`,
 `dataStatus()`, `dataStatusHTML()`, `refreshRulesUI()`, `rulesBadge()` in `88-settings.js`; `systemOf()`, `racesForCharacter()` in `52-race.js`; `findRaceDef()`,
 `findClassDef()`, `subclassesFor()` in `50-classrace.js`; `DATA_VERSIONS` and `cmpVer()` in
@@ -19,7 +20,8 @@ covers what the app does with packs.
 in `scripts/release.js` · **Data:** `data/<dir>/*.json` → `dist/<dir>_full.json` · **Tests:**
 `rules-data.js` (bundle ≡ individual files, the three data states, every shipped pack agrees with
 `DATA_VERSIONS`, missing requirements, Fetch all keeping what is loaded, a settings file's pool
-rebuilt and round-tripped), `tables.js`, `docs.js` (`DATA_VERSIONS` is flat JSON,
+rebuilt and round-tripped, entries with no name skipped and reported), `sheet.js` (a wholesale pool
+full of junk, tidied and rendered), `tables.js`, `docs.js` (`DATA_VERSIONS` is flat JSON,
 X.Y.Z, and every system maps to a data dir) · **See also:** [Converter](../data/converter.md),
 [Supplements](../data/supplements.md), [Homebrew](../data/homebrew.md),
 [Settings & updates](../features/settings-and-updates.md), [Rich text](rich-text.md)
@@ -65,7 +67,8 @@ and never at boot. **Fetching never loses what is loaded:**
    serving goes. Entries from files, and from sources that failed, are not touched. Its `requires`
    declaration follows its fresh copy, unless a file import shares the label.
 5. The cache is saved once. A refused save is written into the status line, on top of the red line
-   above the list (see [Storage](storage.md)).
+   above the list (see [Storage](storage.md)). So are the entries the sources' packs had with no name
+   (`skippedSummary()`), as for a file import.
 
 A **settings file** (Settings → Import settings) is the third way in. It carries a whole pool, the
 one Export settings saved, and replaces the loaded pool only if the player says so (see
@@ -89,21 +92,34 @@ in a `finally`.
   fetch, `mergeRules(obj, null, url)`, the source URL from Settings rather than an include under
   it). Any `_file`/`_url` the pack itself carried is dropped first: provenance is the merge's to
   record, so a file can never be deleted by a later fetch.
+- **An entry nothing could reach is skipped, and counted.** `ruleName()` is an entry's name (a
+  keyword's `term`) as text: a non-blank string, or a number, which becomes text. An entry that is
+  not an object or has none is skipped, and `mergeRules()` returns the count per category.
 - Each entry is keyed by source + `keyOf()` (a lower-cased name, or `term` for keywords, or
   `class|name` for subclasses). **The same source and name replaces the entry in place**, which is
   how re-importing a pack updates it. The same name from a *different* source is kept beside it,
   and `dispName()` shows it as "Name (SRC)" using `rules._dups`.
 - Keywords are rebuilt from a fixed set of fields (`term`, `type`, `text`, `image`, `cond`) with a
-  fresh `id`. Every other entry is a shallow copy of what the pack had.
+  fresh `id`, after `glossRepair()`: a keyword written `{name, description}`, the way every other
+  category is, reads as its term and text. Every other entry is a shallow copy of what the pack had.
 - `requires` is stored per source in `rules.requires`.
 - Then `reindexRules()` gives every entry a positional `_id` (`r0`, `r1`, …), and
   `recomputeDups()` rebuilds the duplicate sets.
 
 After the last file, the importer saves the cache, calls `refreshRulesUI()` and
 `renderRulesData()`, and writes one status line, with `missingSummary()` appended when something is
-missing. `renderRulesData()` also refreshes the Settings "Rules data" header chip through
+missing and `skippedSummary()` when entries were skipped ("Skipped 2 glossary entries with no
+term."), in red for either. `renderRulesData()` also refreshes the Settings "Rules data" header chip through
 `rulesBadge()`, because every path that changes the pool calls it. **Boot never merges.** It restores the already-merged pool from the cache and rebuilds
 only `_id` and `_dups`.
+
+**The pool is made safe on every change.** `reindexRules()` runs `tidyRules()` before it numbers
+anything, and every path that changes the pool ends in `reindexRules()`: a merge, a fetch, a
+removal, Settings → Import (which assigns `rules` wholesale, never through `mergeRules()`), and both
+cache restores. A category that is not a list becomes an empty one; `tidyRule()` drops an entry
+with no `ruleName()`, turns a numeric name into text, and gives a keyword the glossary aliases and an
+id if it has none. It returns what it dropped per category, for a caller to report; none does yet,
+so a settings file's unusable entries go without a message.
 
 **Lookups are by name.** `ruleById(kind, idOrName)` matches an `_id` or a `keyOf()` name.
 `findRaceDef()` and `findClassDef()` are thin wrappers over it. A character stores names, and the
@@ -166,8 +182,12 @@ files).
   is never hidden.
 - **A same-named subclass from another pack never takes the existing key,** or loading a supplement
   would rewrite subclasses that characters had already chosen.
+- **Every pool entry is an object with a name** (keywords: a term) that is text, whatever path
+  loaded it (`tidyRules()` in `reindexRules()`), so a reader of the pool may treat `name` (`term`)
+  as a non-blank string. A new path that changes the pool must end in `reindexRules()`.
+- **An entry a pack can't use is said on the status line,** never dropped in silence.
 - **The bundle equals the individual files.** Any change to `mergeRules()` keying needs the same
-  change in `bundle-rules.js`, and `RULE_CATS` (`88-settings.js`), `mergeRules()`'s category map
+  change in `bundle-rules.js` (a keyword with no term keys by its `name` in both), and `RULE_CATS` (`88-settings.js`), `mergeRules()`'s category map
   and the bundler's `CATS` must stay in step.
 - **Fetching never loses what is loaded.** A source replaces only the entries stamped with its own
   `_url`, and only once all of it has arrived. A run where nothing arrives writes neither the pool
@@ -216,6 +236,11 @@ files).
 - **`fetchAllRules()` never refreshed the loaded-data list**, so its chips stayed stale after a URL
   fetch. It now calls `renderRulesData()`.
 - **Clear all** once had no confirmation and did not refresh the list.
+- **A settings file's pool never went through `mergeRules()`** (#71), so a keyword with no term,
+  a `null` in any category or a category that was not a list reached the renderers as it was: the
+  glossary pass threw, and so did `reindexRules()` itself (`x._id=` on a `null`). A keyword whose
+  term was a number, or a spell whose name was, passed `mergeRules()` too, since `keyOf()` stringifies.
+  Hence the tidy on every change rather than in one import handler.
 - **`requires` cannot name a subclass.** `ruleById()` matches `keyOf()`, which is `class|name` for
   subclasses, so a plain subclass name in `requires` always reports missing. No shipped pack
   declares one. Found by reading the code.
@@ -235,6 +260,9 @@ files).
 | Where `overlay.json` and `class-resources.json` live | The `data/` root | Inside a system folder: the bundler globs those, and they are converter inputs, not packs (L625) |
 | What Fetch all does to what is loaded | Each source that arrives whole replaces only what it loaded last time (`_url`); nothing else changes | Reset first (the old way): discarded file imports, and cached an empty pool when offline. Confirming before the reset: still loses everything when the fetch fails. Replacing by label: a file import sharing the label would go (L3797) |
 | How a settings file's pool is loaded | Rebuilt through `mergeRules()`, one run of same-provenance entries at a time (`poolFromExport()`) | Assigning it as it came: nothing validated it (#70). Merging it as one pack: every entry would be relabelled with one source and file, losing groups, versions and `_url`. Grouping by provenance rather than runs: reorders categories, and name lookups take the first match (L4134) |
+| An entry a pack has with no name | Skip it, count it, and say so on the status line | Dropping it silently (the old way): the author never learns why it is missing. A chip on its loaded-data row, as missing dependencies get: skipped entries are not in the pool to compute from, so it would need a stored count per source with its own pruning (L4206) |
+| Where a wholesale pool is made safe | `tidyRules()`, run by `reindexRules()` | In the Settings import handler: misses both cache restores. In every reader: hundreds of sites, and the next one written would not know (L4206) |
+| A keyword written `{name, description}` | Read as its term and text | Skipping it: every other category is written that way, and it is plainly a term (L4206) |
 | The Artificer and Mystic in the core pack | Leave them, labelled `XPHB` | Dropping them: moves `data/5e2024/`, bumps XPHB for everyone, and strands Artificer players without Tasha's (L1816) |
 
 ## Open
@@ -249,6 +277,8 @@ files).
 - The Artificer and Mystic are 2014/UA content labelled `XPHB` in the core pack.
 - The header comment on `scripts/release.js`'s data-version block says it leaves versions alone
   when tags are unavailable. The code bumps every system in that case.
+- **A settings file's unusable entries are dropped without a message.** `reindexRules()` returns
+  the counts, but the Settings import handler (being rewritten in #70) does not report them yet.
 - `rules.features` is a manual picker library, so invocations and pact boons shipped as features
   cannot attach themselves to a character.
 
@@ -263,3 +293,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-14 — The merged pool's cache moves to IndexedDB. → ledger L1950
 - 2026-09-28 — Fetch all no longer resets the pool: a source replaces only what it loaded (`_url`), a failed run changes nothing, and the Settings chip follows the pool. → ledger L3797, #65
 - 2026-09-28 — A settings file's pool is rebuilt through `mergeRules()` (`poolFromExport()`), keeping provenance and order, and replaces the loaded one only when the player says so. → ledger L4134, #70
+- 2026-09-28 — Entries with no name are skipped and reported at import and fetch; `reindexRules()` tidies the pool on every path; keywords written `{name, description}` load. → ledger L4206, #71

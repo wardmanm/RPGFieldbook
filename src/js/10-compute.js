@@ -66,12 +66,18 @@ function highlight(text){
   const tbls=[];
   const src=String(text||"").replace(/\[Table:\s*([^\]]+)\]/g,(m,nm)=>{tbls.push(nm.trim());return TBL_MARK;});
   let escd=esc(src);
-  const terms=allGlossary().map(g=>g.term).filter(Boolean).sort((a,b)=>b.length-a.length);
-  if(terms.length){
-    const pat=terms.map(t=>escReg(esc(t))).join("|");
+  /* Keyed by the ESCAPED term, lower-cased: the pass runs over escaped text, so
+     a match is looked up in the same form it was found in. Comparing it with the
+     raw term instead (unescaping only &amp;) left "Hunter's Mark" a chip with
+     no id. The first entry per key wins: pack keywords, then the player's own.
+     glossTerm(), never `.term`: an entry with no term threw here (#71). */
+  const byKey=new Map();
+  allGlossary().forEach(g=>{const t=glossTerm(g);if(!t)return;const k=esc(t).toLowerCase();if(!byKey.has(k))byKey.set(k,g);});
+  if(byKey.size){
+    const pat=[...byKey.keys()].sort((a,b)=>b.length-a.length).map(escReg).join("|");
     const re=new RegExp("\\b("+pat+")\\b","gi");
     escd=escd.replace(re,m=>{
-      const g=allGlossary().find(x=>x.term.toLowerCase()===m.toLowerCase().replace(/&amp;/g,"&"));
+      const g=byKey.get(m.toLowerCase());
       return `<span class="kw" data-gid="${esc(g?g.id:"")}" role="button" tabindex="0">${m}</span>`;
     });
   }

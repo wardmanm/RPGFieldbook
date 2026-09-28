@@ -101,10 +101,12 @@ modal.addEventListener("change",e=>{
 
 function openGlossView(g){
   /* g is a pack keyword or the character's own entry — either way someone
-     else's file, so the image goes through imgHTML() */
-  const img=g.type==="image"?imgHTML(g.image,g.term):"";
+     else's file, so the image goes through imgHTML(), and it may have no term
+     (#71). Nothing at all is a stale id from a handler's find(). */
+  if(!g||typeof g!=="object")return;
+  const img=g.type==="image"?imgHTML(g.image,glossTerm(g)):"";
   let body= g.type==="image"? (img||(g.image?`<p><em>This image isn't stored in the file itself, so it isn't shown.</em></p>`:`<p><em>No image attached.</em></p>`)) : `<p>${esc(g.text||"—")}</p>`;
-  openModal(g.term,body);
+  openModal(glossTerm(g)||"Glossary entry",body);
 }
 /* ---- size picker (the Size box in Vitals) ----
    The same control Settings offers, put where the stat is shown. Size is a
@@ -499,7 +501,7 @@ function openItemUsePrompt(it,u,p){
    is a silent no-op for the second. */
 const STATUS_CONDSET=new Set(["blinded","charmed","deafened","exhaustion","frightened","grappled","incapacitated","invisible","paralyzed","petrified","poisoned","prone","restrained","stunned","unconscious","bloodied","concentration","surprised"]);
 function statusTermList(){
-  return [...new Set(allGlossary().filter(g=>g.cond||STATUS_CONDSET.has(String(g.term||"").trim().toLowerCase())).map(g=>g.term).filter(Boolean))];
+  return [...new Set(allGlossary().filter(g=>{const t=glossTerm(g);return t&&(g.cond||STATUS_CONDSET.has(t.toLowerCase()));}).map(glossTerm))];
 }
 function statusDatalistHTML(id){
   const terms=statusTermList();
@@ -563,10 +565,10 @@ function openFamiliarForm(existing){
 function openSpellForm(existing){
   const s=existing||{id:uid(),name:"",level:0,prepared:false,meta:"",text:""};
   const lib=(rules.spells||[]);
-  const myCl=(character.classes||[]).map(c=>(c.name||"").toLowerCase());
+  const myCl=(character.classes||[]).map(c=>String(c.name||"").toLowerCase());
   const clsOf=x=>x.class?(Array.isArray(x.class)?x.class:[x.class]):[];
   const matches=x=>{const c=clsOf(x);return !c.length||c.some(n=>myCl.includes(String(n).toLowerCase()));};
-  const libOpts=lib.slice().sort((a,b)=>num(a.level)-num(b.level)||(a.name||"").localeCompare(b.name||"")).map(x=>`<option value="${esc(x._id||x.name)}" data-lv="${esc(num(x.level))}" data-cls="${esc(clsOf(x).join("|").toLowerCase())}" data-mine="${matches(x)?1:0}">${esc(dispName(x,"spells"))} (${num(x.level)===0?"cantrip":"lv "+num(x.level)})${clsOf(x).length?" · "+esc(clsOf(x).join("/")):""}</option>`).join("");
+  const libOpts=lib.slice().sort((a,b)=>num(a.level)-num(b.level)||String(a.name||"").localeCompare(String(b.name||""))).map(x=>`<option value="${esc(x._id||x.name)}" data-lv="${esc(num(x.level))}" data-cls="${esc(clsOf(x).join("|").toLowerCase())}" data-mine="${matches(x)?1:0}">${esc(dispName(x,"spells"))} (${num(x.level)===0?"cantrip":"lv "+num(x.level)})${clsOf(x).length?" · "+esc(clsOf(x).join("/")):""}</option>`).join("");
   const caster=hasCasterClass(), mx=maxCastableLevel();
   openModal(existing?"Edit spell":"New spell",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="sLib"><option value="">—</option>${libOpts}</select>

@@ -50,6 +50,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where a new character is stamped** — `newCharacter()`
 - **Where the Max HP lock lives** — `hp.locked`, inside `hp`
 - **The section-notes field** — `secNotes`
+- **List items that are not objects** — Dropped: `null`, strings, numbers
+- **A player's glossary entry with no term** — Kept, given an id if it lacks one, listed as "(no term)"
+- **A player's glossary entry written `{name, description}`** — Read as its term and text, originals kept
 - **Pre-equip-era weapons** — Equip them once, recorded by `wpnEquipInit`
 
 ### [Rules packs](architecture/rules-packs.md)
@@ -65,6 +68,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where `overlay.json` and `class-resources.json` live** — The `data/` root
 - **What Fetch all does to what is loaded** — Each source that arrives whole replaces only what it loaded last time (`_url`); nothing else changes
 - **How a settings file's pool is loaded** — Rebuilt through `mergeRules()`, one run of same-provenance entries at a time (`poolFromExport()`)
+- **An entry a pack has with no name** — Skip it, count it, and say so on the status line
+- **Where a wholesale pool is made safe** — `tidyRules()`, run by `reindexRules()`
+- **A keyword written `{name, description}`** — Read as its term and text
 - **The Artificer and Mystic in the core pack** — Leave them, labelled `XPHB`
 
 ### [Grants & provenance](architecture/grants-and-provenance.md)
@@ -98,6 +104,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Which attribute values are escaped** — All of them, checked mechanically
 - **Which image sources load** — data: URLs only, any media type
 - **How the guard finds attribute values** — A tokenizer over `src/js`
+- **How a match finds its glossary entry** — One map per call, keyed by the escaped, lower-cased term
+- **A glossary entry with no usable term** — Never matched: `glossTerm()` gives "" for anything but a string
 
 ## Features
 

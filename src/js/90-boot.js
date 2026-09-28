@@ -164,10 +164,10 @@ function wire(){
     if((m=t.closest("[data-active-sec]"))){const a=(character.activeSpells||[]).find(x=>x.id===m.dataset.activeSec);if(a){const v=prompt("Add how many seconds?","6");if(v!=null){bumpActive(a,num(v));renderActiveSpells();scheduleSave();}}return;}
     if((m=t.closest("[data-prep]"))){const s=character.spells.find(x=>x.id===m.dataset.prep);if(s){s.prepared=!s.prepared;renderSpells();scheduleSave();}return;}
     // glossary
-    if((m=t.closest("[data-view-gloss]")))return openGlossView(character.glossary.find(x=>x.id===m.dataset.viewGloss));
-    if((m=t.closest("[data-view-gloss-rk]")))return openGlossView((rules.keywords||[]).find(x=>(x._id||x.term)===m.dataset.viewGlossRk));
-    if((m=t.closest("[data-edit-gloss]")))return openGlossForm(character.glossary.find(x=>x.id===m.dataset.editGloss));
-    if((m=t.closest("[data-del-gloss]"))){const g=character.glossary.find(x=>x.id===m.dataset.delGloss);if(g&&confirm(`Delete “${g.term}”?`)){character.glossary=character.glossary.filter(x=>x.id!==g.id);renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();}return;}
+    if((m=t.closest("[data-view-gloss]")))return openGlossView(character.glossary.find(x=>x&&x.id===m.dataset.viewGloss));
+    if((m=t.closest("[data-view-gloss-rk]")))return openGlossView((rules.keywords||[]).find(x=>x&&(x._id||x.term)===m.dataset.viewGlossRk));
+    if((m=t.closest("[data-edit-gloss]")))return openGlossForm(character.glossary.find(x=>x&&x.id===m.dataset.editGloss));
+    if((m=t.closest("[data-del-gloss]"))){const g=character.glossary.find(x=>x&&x.id===m.dataset.delGloss);if(g&&confirm(`Delete “${glossTerm(g)||"this entry"}”?`)){character.glossary=character.glossary.filter(x=>x!==g);renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();}return;}
   });
   document.addEventListener("keydown",e=>{
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;

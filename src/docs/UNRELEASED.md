@@ -60,3 +60,8 @@ Bullets below this line — leave the heading in place.
   you have, names any pack that replacing would unload, and lets you keep your rules and import just
   the settings, or replace them. It then tells you what it did, and rules from a settings file are
   now loaded the same way as an imported rules file.
+- A glossary entry with no term, whether in a rules pack, a settings file or a character file, no
+  longer stops the sheet from drawing. Your own entries without a term are kept and listed on the
+  Rules tab as "(no term)", so you can give them one or delete them, and importing or fetching rules
+  now tells you when it skipped entries that have no name. Terms with an apostrophe, like Hunter's
+  Mark, now open their entry when tapped, and a rules table with no rows no longer breaks the sheet.

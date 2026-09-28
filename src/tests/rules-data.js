@@ -250,6 +250,59 @@ ck('clear-all confirmed empties rules', X.clearAllRules()===true && (X.rules.spe
 ck('clear-all leaves character intact', X.character.name==='Tess' && X.character.inventory.length===1);
 ck('clear-all on empty pool is a no-op', X.clearAllRules()===false);
 
+// ---------- an entry with no name never reaches the pool, and the import says so (#71)
+// mergeRules() dropped a keyword with no `term` (and any entry with no `name`)
+// without a word; a non-object keyword threw. A term or name that was a NUMBER
+// was kept as a number, and the first `.toLowerCase()` on it stopped the render.
+{
+  X.resetRules();
+  let sk = null, mErr = null;
+  try {
+    sk = X.mergeRules({system: 'HB',
+      keywords: [{name: 'Aliased', description: 'from description'}, {text: 'no term'}, null, {term: 20, text: 'n'}, {term: '  '}],
+      spells: [{}, null, 'Fireball', {name: 7}, {name: '  '}, {name: 'Ok'}]}, 'hb.json');
+  } catch (e) { mErr = e; }
+  ck('#71 mergeRules copes with entries that have no name, or are not objects', !mErr, mErr && String(mErr));
+  const kw = (X.rules.keywords || []).map(k => k.term);
+  const al = (X.rules.keywords || []).find(k => k.term === 'Aliased');
+  ck('#71 a keyword written {name, description} is read as its term and text',
+     !!al && al.text === 'from description', X.rules.keywords);
+  ck('#71 a numeric term or name is kept, as text',
+     kw.includes('20') && (X.rules.spells || []).some(s => s.name === '7'), [kw, X.rules.spells]);
+  ck('#71 nothing without a usable name reaches the pool',
+     kw.length === 2 && (X.rules.spells || []).map(s => s.name).sort().join() === '7,Ok', [kw, X.rules.spells]);
+  ck('#71 mergeRules returns what it skipped, per category',
+     !!sk && sk.keywords === 3 && sk.spells === 4 && Object.keys(sk).length === 2, sk);
+  const clean = X.mergeRules({system: 'HB', spells: [{name: 'Fine'}]}, 'ok.json');
+  ck('#71 ...and nothing for a clean pack', !!clean && Object.keys(clean).length === 0, clean);
+  const summ = typeof ctx.skippedSummary === 'function' ? ctx.skippedSummary : () => 'no skippedSummary()';
+  ck('#71 the summary names each category, singular and plural',
+     /3 glossary entries/.test(summ({keywords: 3, spells: 1})) && /1 spell\b/.test(summ({keywords: 3, spells: 1}))
+       && /1 glossary entry\b/.test(summ({keywords: 1})), summ({keywords: 3, spells: 1}));
+  ck('#71 ...and is empty when nothing was skipped', summ({}) === '' && summ(null) === '', summ({}));
+
+  /* the file import writes it on the status line the player is reading */
+  const status = {textContent: '', className: ''};
+  const getById = ctx.document.getElementById;
+  const hadFR = 'FileReader' in ctx;
+  ctx.document.getElementById = id => id === 'rulesStatus' ? status : getById(id);
+  ctx.FileReader = function () { this.readAsText = f => { this.result = f.text; this.onload && this.onload(); }; };
+  X.resetRules();
+  ctx.importRulesFiles([{name: 'hb.json', text: JSON.stringify({system: 'HB',
+    keywords: [{text: 'no term'}, {term: 'Kept'}], spells: [{level: 1}, {name: 'Zap'}]})}]);
+  ck('#71 importing a file says what it skipped',
+     /skipped/i.test(status.textContent) && /1 glossary entry/.test(status.textContent) && /1 spell/.test(status.textContent),
+     status.textContent);
+  ck('#71 ...and the rest of it loaded', (X.rules.keywords || []).length === 1 && (X.rules.spells || []).length === 1);
+  X.resetRules();
+  ctx.importRulesFiles([{name: 'ok.json', text: JSON.stringify({system: 'HB', spells: [{name: 'Zap'}]})}]);
+  ck('#71 ...and a clean file says nothing about skipping', !/skipped/i.test(status.textContent) && /\bok\b/.test(status.className),
+     [status.textContent, status.className]);
+  ctx.document.getElementById = getById;
+  if (!hadFR) delete ctx.FileReader;
+  X.resetRules();
+}
+
 // ---------- bundle round-trip: bundle == importing every file individually
 function entrySet(r){
   const o={};
@@ -2096,6 +2149,16 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('...while the fetched pack stays loaded for this session', names(null, 'spells', 'Homebrew').join() === 'Zap');
   X.saveRulesCache();
 
+  // ---- #71: a fetched pack's unusable entries are reported, not silently dropped
+  seedFilePack();
+  X.settings.rulesSources = [HB];
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}, {text: 'no name'}], keywords: [{text: 'no term'}]}};
+  await run();
+  ck('#71 fetch-all: the usable entries arrive', names(null, 'spells', 'Homebrew').join() === 'Zap', names(null, 'spells'));
+  ck('#71 fetch-all: the status line says what was skipped',
+     /skipped/i.test(status.textContent) && /1 glossary entry/.test(status.textContent) && /1 spell/.test(status.textContent),
+     status.textContent);
+
   // ---- the Rules data chip follows every change to the pool, not only Fetch all
   chip.textContent = 'STALE';
   state.confirm = true;
@@ -2236,11 +2299,22 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
       ck('no rules (' + what + '): the status line says so', /imported/i.test(impStatus.textContent), impStatus.textContent);
     }
 
-    // ---- the reported repro: a keyword with `name` for `term` replaced the 2024 pack, then broke every render
+    // ---- the reported repro: a keyword with `name` for `term` replaced the 2024 pack, then broke
+    // every render. Since #71 that shape is read as a term (`name` is how every other category is
+    // written), so it is READABLE rules — and readable rules over a loaded pool must be asked about.
     seedNow();
     {
       const pool = JSON.stringify(X.rules), c0 = cache();
       await importFile(settingsFile({keywords: [{name: 'Settings-file term', desc: '…'}]}));
+      ck('the reported repro: its keyword is read as a term, so it asks before replacing', asked(), question());
+      await click('setImpCancel');
+      ck('the reported repro: Cancel leaves the pool and the cache untouched', JSON.stringify(X.rules) === pool && cache() === c0);
+    }
+    // ---- rules with nothing readable in them: a keyword with neither term nor name
+    seedNow();
+    {
+      const pool = JSON.stringify(X.rules), c0 = cache();
+      await importFile(settingsFile({keywords: [{text: 'An entry with no term at all'}]}));
       ck('unreadable rules: nothing in them loads, so there is nothing to ask', !asked());
       ck('unreadable rules: the pool and the cache are untouched', JSON.stringify(X.rules) === pool && cache() === c0,
          [names(null, 'spells'), X.rules.keywords]);
@@ -2253,7 +2327,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     seedNow();
     await importFile(settingsFile({
       name: {not: 'a string'}, requires: 'junk', _dups: 7,
-      keywords: [{name: 'Settings-file term', desc: '…'}, null, 'a string', 42, {term: 'Real Term', text: 'ok'}],
+      keywords: [{text: 'no term, no name'}, null, 'a string', 42, {term: 'Real Term', text: 'ok'}],
       spells: 'oops', classes: {not: 'an array'}, races: null,
       items: [null, 5, ['nested'], {name: 'Rope', _source: 'Kit'}],
       tables: [{name: 'Odd Table', cols: ['a'], rows: [['1']]}],

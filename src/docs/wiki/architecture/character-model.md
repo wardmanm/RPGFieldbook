@@ -6,14 +6,15 @@ character **without losing a field**, including fields this build has never hear
 `JSON.stringify(character)` and every load is `migrate(JSON.parse(…))`. Backward compatibility
 comes from keeping that loop lossless: a sheet saved by any version must still open.
 
-**Code:** `blankChar()`, `statStyle()` in `00-constants.js`; `migrate()`, `migrateWeaponEquip()`,
+**Code:** `blankChar()`, `statStyle()`, `glossRepair()` in `00-constants.js`; `migrate()`, `migrateWeaponEquip()`,
 `exportChar()`, `importChar()`, `finishImport()` in `71-char-io.js`; `newCharacter()`,
 `loadCharById()` in `75-home-theme.js`; `charNeedsUpdate()` in `72-char-update.js`;
 `markCharChecked()` in `73-char-update-ui.js`; read-time guards `featCol()`, `invCol()`, `atkCol()`
 in `20-lists.js`, `hdStyle()` in `65-resources.js`, `encMode()` in `25-origins-items.js`,
 `noteMap()` in `87-notes.js`, `combatSectionsOf()` in `87-combat.js` · **Tests:** `char-update.js`
 (the stamp is preserved and never advanced; unknown fields survive), `tables.js` (the round trip is
-idempotent), `sheet.js` (sub-key defaults arrive through `migrate()`) · **See also:**
+idempotent), `sheet.js` (sub-key defaults arrive through `migrate()`; malformed glossary entries and
+junk list items, repaired, idempotent, and rendered) · **See also:**
 [Storage](storage.md), [Rules-update tool](../features/rules-update-tool.md),
 [Story & notes](../features/story-and-notes.md), [Build & source split](build-and-source-split.md)
 
@@ -46,13 +47,21 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    when the saved value is a plain object. That fills missing **sub-keys**, which is how every old
    sheet gained `hp.locked:true` with no migration code at all.
 4. `coins` maps the legacy Humblewood keys (`km`, `sm`, `em`, `gm`, `pm`) onto `cp`…`pp`.
-5. The list fields are forced to arrays and the map fields to plain objects. `race`/`bg` become
-   `null` unless they are plain objects.
-6. `migrateWeaponEquip()` runs last. It is a one-time fix, recorded by `wpnEquipInit`, that equips
+5. The list fields are forced to arrays **of objects**: `null` (what JSON writes for a hole or an
+   `undefined`) and bare strings or numbers are dropped. The map fields are forced to plain
+   objects, and `race`/`bg` become `null` unless they are plain objects.
+6. Each glossary entry is repaired, never dropped: `glossRepair()` fills an absent or blank `term`
+   from `name` and an absent `text` from `description` (the other categories' field names, kept as
+   they were), a numeric term becomes text, and an entry with no id gets one from `uid()` (a numeric
+   id becomes text), so the Rules tab's Edit and Delete can find it. One with no term at all stays,
+   listed there as "(no term)" and never matched (see [Rich text](rich-text.md)).
+7. `migrateWeaponEquip()` runs last. It is a one-time fix, recorded by `wpnEquipInit`, that equips
    every weapon on a sheet saved before weapons could be equipped.
 
-**It is shallow on purpose.** Nothing inside a list item or a map value is shape-checked. The code
-that reads those values guards them instead: `noteMap()`, `featCol()`, `invCol()`, `atkCol()` and
+**It is shallow on purpose.** Beyond each list item being an object, and the glossary repair
+above, nothing inside a list item or a map value is shape-checked. The code that reads those values
+guards them instead (a class, spell or status whose `name` is missing or a number is turned into
+text before it is compared or sorted): `noteMap()`, `featCol()`, `invCol()`, `atkCol()` and
 `combatSectionsOf()` each accept a missing or wrong-typed value. Resolvers such as `statStyle()`,
 `hdStyle()` and `encMode()` fall back to exactly the value `blankChar()` defaults to, so an old
 sheet lands on the new-character look and the setting needs no migration of its own.
@@ -86,6 +95,11 @@ notes map, keyed by `NOTE_SECTIONS` id (not by heading, which gets reworded). Ea
 - **A one-time migration flag is never set in `blankChar()`.** `migrate()` builds its result
   *from* `blankChar()`, so a flag set there arrives on every old sheet already marked done, and the
   migration silently never runs.
+- **After `migrate()`, every item of a list field is an object.** A `null` throws on the first
+  field read and, in strict mode, a string throws on the first write (`renderSpells()` normalises
+  `level`, `detectSpellAttack()` sets `atkType`), and either blanks the sheet.
+- **A glossary entry that is an object is never dropped,** whatever its shape: it is the player's.
+  Repairs only add (`glossRepair()`), and an id is only given where there is none.
 - **`migrate()` never advances `appVersion`.**
 - **`migrate()` is idempotent** (asserted): migrating a migrated sheet changes nothing.
 - **The character stays plain JSON:** no `Set`, `Map`, function or `undefined` that has to
@@ -119,6 +133,9 @@ notes map, keyed by `NOTE_SECTIONS` id (not by heading, which gets reworded). Ea
 | Where a new character is stamped | `newCharacter()` | `blankChar()`: it runs at top level before `30-version.js` defines `APP_VERSION`, a TDZ white screen (L702) |
 | Where the Max HP lock lives | `hp.locked`, inside `hp` | A top-level `hpLocked`: inside `hp`, `migrate()`'s sub-key fill gives every old sheet the default for free (L2105) |
 | The section-notes field | `secNotes` | Reusing `notes`: already the Story tab's bio field, so merging breaks that tab silently (L1497) |
+| List items that are not objects | Dropped: `null`, strings, numbers | Kept: no screen can show one and each stopped the render. Dropping only `null`: a bare string in `spells` still threw on the first write in strict mode (L4206) |
+| A player's glossary entry with no term | Kept, given an id if it lacks one, listed as "(no term)" | Dropped: the player's own data, gone silently. Left without an id: Edit and Delete can't reach it (L4206) |
+| A player's glossary entry written `{name, description}` | Read as its term and text, originals kept | Leaving it termless: those are the names every other category uses, so the intent is plain (L4206) |
 | Pre-equip-era weapons | Equip them once, recorded by `wpnEquipInit` | Gating attacks on `equipped` with no migration: empties every existing Attacks card. Running it on every load: re-equips a weapon the player unequipped (L3213) |
 
 ## Open
@@ -135,3 +152,4 @@ notes map, keyed by `NOTE_SECTIONS` id (not by heading, which gets reworded). Ea
 - 2026-08-14 — `hp.locked` goes inside `hp`, so the sub-key fill migrates it. → ledger L2105
 - 2026-08-18 — `migrateWeaponEquip()` and its flag, which was first set in `blankChar()` by mistake. → ledger L3213
 - 2026-09-01 — `statStyle` is added as a per-character setting whose resolver needs no migration. → ledger L106, #17
+- 2026-09-28 — `migrate()` keeps only objects in list fields, and repairs glossary entries (aliases, an id) without dropping any. → ledger L4206, #71

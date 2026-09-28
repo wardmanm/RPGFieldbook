@@ -43,6 +43,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
   'finderQty', 'addLibraryItems',
   'coinKeys',
+  'RULE_CATS', 'reindexRules', 'recomputeDups',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2337,6 +2338,181 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
     spellAbility: 'wis', slots: Object.assign(X.blankChar().slots, {1: {total: '2' + P, used: 0}})}))));
   run('the print sheet\'s spell-slot line', () => ctx.printSheet(), false);
   ck('...which still prints a real slot count', /L1: 2\/2/.test(capture(() => ctx.printSheet()).html));
+
+  /* ---- a glossary entry with no term never breaks the sheet (#71)
+     highlight() looked each chip up with allGlossary().find(x=>x.term.toLowerCase()…),
+     and nearly every render runs text through highlight(). ONE keyword or
+     glossary entry without a term — a hand-written pack, a settings file (which
+     restores `rules` wholesale, never through mergeRules), an imported
+     character — threw a TypeError, and every render after it stopped: the
+     features list, the Add class window, the lot.
+     The READERS are tested first, with the pool and the character set directly
+     so no boundary repair can hide a reader that still assumes a term. The
+     malformed entries come FIRST, because find() stopped at the first match and
+     a well-formed entry ahead of them hid the bug. */
+  const renders = (label, fn) => {
+    const res = capture(fn);
+    ck('#71 ' + label + ' — renders without throwing', !res.err,
+       res.err && String(res.err.stack || res.err).split('\n').slice(0, 3).join(' | '));
+    return res.html;
+  };
+  const badKeywords = () => [{name: 'Mangled', desc: 'no term at all'}, {term: 5, text: 'a number'},
+    {term: {x: 1}, text: 'an object'}, {term: '   ', text: 'only spaces'}, null, 'Grappled', ['Grappled'],
+    {id: 'kw1', term: 'Grappled', type: 'text', text: 'Speed 0.', cond: true}];
+  const badOwn = () => [{id: 'own0', type: 'text', text: 'mine, and it has no term'}, null, 'Doom', {id: 'own2', term: ['x']},
+    {id: 'own1', term: 'Hexed', type: 'text', text: 'mine'}, {id: 'own3', term: "Hunter's Mark", type: 'text', text: 'quarry'}];
+  const seedMalformed = () => {
+    X.rules = {name: 'Wholesale', keywords: badKeywords(), items: [], features: [], spells: [], races: [],
+               classes: [], feats: [], tables: []};
+    X.character = X.blankChar();      /* no migrate(): the readers must cope on their own */
+    X.character.system = 'dnd';
+    Object.assign(X.character, {
+      proficiencies: 'Grappled and Hexed.', glossary: badOwn(),
+      statuses: [{id: 's1', name: 'Grappled', active: true, effects: []}, {id: 's2', name: 7, active: true, effects: []},
+                 {id: 's3', active: true, effects: []}],
+      features: [{id: 'f1', name: 'Tough', description: 'While Grappled you are Hexed.', effects: []}],
+      spells: [{id: 'sp1', name: 'Hex', level: 1, text: 'The target is Hexed.'}],
+      secNotes: {abilities: {text: 'Grappled **and** Hexed', at: 0}},
+    });
+  };
+  seedMalformed();
+  let hl = null, hlErr = null;
+  try { hl = ctx.highlight('Grappled and Hexed, then Hunter\'s Mark.'); } catch (e) { hlErr = e; }
+  ck('#71 highlight() survives keywords and entries with no term', !hlErr, hlErr && String(hlErr));
+  ck('#71 ...and still chips a pack term', /<span class="kw" data-gid="kw1"[^>]*>Grappled<\/span>/.test(hl || ''), hl);
+  ck('#71 ...and the player\'s own term', /<span class="kw" data-gid="own1"[^>]*>Hexed<\/span>/.test(hl || ''), hl);
+  ck('#71 a term with an apostrophe opens its own entry (its chip had no id)',
+     /<span class="kw" data-gid="own3"[^>]*>Hunter&#39;s Mark<\/span>/.test(hl || ''), hl);
+  hl = null; try { hl = ctx.highlight('a b c'); } catch (e) { hl = String(e); }
+  ck('#71 a term of only spaces does not turn every space into a chip', hl === 'a b c', hl);
+  renders('Features & Traits', () => ctx.renderFeatures());
+  renders('Inventory', () => ctx.renderInventory());
+  renders('the spell list', () => ctx.renderSpells());
+  const stHtml = renders('Statuses (a status named after a keyword, one named 7, one with no name)', () => ctx.renderStatuses());
+  ck('#71 a status named after a keyword is still a chip', /data-gid="kw1"[^>]*>Grappled</.test(stHtml), stHtml.slice(0, 400));
+  renders('Story fields and Proficiencies', () => ctx.renderAllRT());
+  renders('the Notes tab', () => ctx.renderNotes());
+  renders('the Rules tab section counts', () => ctx.renderRulesSections());
+  const gl = renders('the Rules tab glossary', () => ctx.renderGloss());
+  ck('#71 the player\'s entry with no term is still listed, so it can be fixed',
+     /data-edit-gloss="own0"/.test(gl) && /data-del-gloss="own0"/.test(gl) && /no term/i.test(gl), gl.slice(0, 600));
+  ck('#71 ...and so is the one whose term is not text', /data-edit-gloss="own2"/.test(gl), gl.slice(0, 600));
+  renders('the glossary view of an entry with no term', () => ctx.openGlossView(X.character.glossary[0]));
+  renders('the glossary view of nothing (a stale id)', () => ctx.openGlossView(undefined));
+  renders('the glossary editor on an entry with no term', () => ctx.openGlossForm(X.character.glossary[0]));
+  renders('the status editor (its condition list comes from keywords)', () => ctx.openStatusForm());
+  let stl = null; try { stl = ctx.statusTermList(); } catch (e) { stl = String(e); }
+  ck('#71 the condition list offers the good terms, all of them text',
+     Array.isArray(stl) && stl.includes('Grappled') && stl.every(t => typeof t === 'string' && t.trim() === t && t), stl);
+  renders('the item editor (its "applies" list comes from keywords)', () => ctx.openItemForm());
+  renders('the print sheet', () => ctx.printSheet());
+  renders('the Add class window', () => ctx.openAddClass());
+  renders('class, ancestry and background chips', () => ctx.renderClassRace());
+
+  /* ---- the character's boundary: migrate() keeps the player's entries (#71)
+     A glossary entry is the player's own data, so migrate() never drops one
+     that is an object — whatever its shape. It repairs only what lets the
+     player reach it: the other categories' field names, read as the glossary's
+     (name → term, description → text), and an id, without which the Rules
+     tab's Edit and Delete cannot find it. What goes is what is not an object:
+     `null` (JSON's hole or undefined) and bare strings or numbers, which carry
+     no field of an entry and threw on the first read or (strict mode) write. */
+  {
+    const file = {abilities: {}, glossary: [
+      {id: 'g0', text: 'no term, kept'}, null, 'Doom', {term: 'NoId', text: 'x'},
+      {id: 'g2', name: 'Aliased', description: 'from description', extra: 'kept'},
+      {id: 'g3', term: 20, text: 'a number'}, {id: 9, term: 'NumId'}],
+      features: [null, {id: 'f', name: 'Kept'}], inventory: [null, 'Rope', 3], spells: [null, 'Hex', {id: 's', name: 'Hex'}]};
+    let m = null, err = null;
+    try { m = X.migrate(JSON.parse(JSON.stringify(file))); } catch (e) { err = e; }
+    ck('#71 migrate() copes with a malformed glossary', !err, err && String(err));
+    const g = (m && m.glossary) || [];
+    const byId = id => g.find(x => x && x.id === id);
+    ck('#71 migrate() keeps every glossary object, the one with no term included',
+       g.length === 5 && !!byId('g0') && byId('g0').text === 'no term, kept', g);
+    ck('#71 ...drops the null and the bare string', g.every(x => x && typeof x === 'object'), g);
+    ck('#71 ...gives an entry with no id one, so Edit and Delete can reach it',
+       g.every(x => x && typeof x.id === 'string' && x.id), g.map(x => x && x.id));
+    ck('#71 ...keeps a numeric id, as text', g.some(x => x && x.id === '9' && x.term === 'NumId'), g.map(x => x && x.id));
+    const al = byId('g2') || {};
+    ck('#71 ...reads name/description as term/text, and keeps both originals',
+       al.term === 'Aliased' && al.text === 'from description' && al.name === 'Aliased' && al.description === 'from description' && al.extra === 'kept', al);
+    ck('#71 ...turns a numeric term into text', (byId('g3') || {}).term === '20', byId('g3'));
+    ck('#71 migrate() drops null and bare-value list items everywhere, and keeps the rest',
+       m && m.features.length === 1 && m.features[0].name === 'Kept' && m.inventory.length === 0 && m.spells.length === 1,
+       m && [m.features, m.inventory, m.spells]);
+    const again = m && X.migrate(JSON.parse(JSON.stringify(m)));
+    ck('#71 ...and is still idempotent', !!m && JSON.stringify(again) === JSON.stringify(m));
+    /* and the migrated sheet renders, the entry with no term listed for fixing */
+    X.character = m || X.blankChar();
+    const gl2 = renders('the Rules tab glossary after migrate()', () => ctx.renderGloss());
+    ck('#71 the entry with no term is listed after migrate() too', /data-edit-gloss="g0"/.test(gl2), gl2.slice(0, 400));
+    let h2 = null; try { h2 = ctx.highlight('Aliased'); } catch (e) { h2 = String(e); }
+    ck('#71 an aliased entry chips once migrated', /data-gid="g2"/.test(h2 || ''), h2);
+    /* every list holding a null, a bare string and an array: once migrated, the
+       whole sheet draws (a string in `spells` threw on the first write to it) */
+    const junkLists = Object.assign(X.blankChar(), {system: 'dnd'});
+    ['features', 'inventory', 'statuses', 'familiars', 'spells', 'attacks', 'activeSpells', 'glossary',
+     'classes', 'grants', 'resources'].forEach(k => { junkLists[k] = [null, 'str', 7, ['arr'], {}]; });
+    X.character = X.migrate(JSON.parse(JSON.stringify(junkLists)));
+    renders('the whole sheet from a file whose lists hold null, text and numbers (renderAll)', () => ctx.renderAll());
+    renders('the print sheet from that file', () => ctx.printSheet());
+  }
+
+  /* ---- the pool's boundary: whatever arrives, reindexRules() leaves it renderable
+     A settings file restores `rules` wholesale and the cache restores it as
+     saved; neither goes through mergeRules(), but both end in reindexRules().
+     Any category, not only keywords: a race, class or spell with no name, or a
+     non-object, reached code that calls .toLowerCase() on it or sets `_id`. */
+  {
+    const junk = () => [null, 'text', ['arr'], {}, {name: '   '}, {name: {x: 1}}];
+    const pool = {name: 'Wholesale'};
+    X.RULE_CATS.forEach(c => { pool[c] = junk(); });
+    pool.keywords.push({name: 'Mangled', description: 'aliased'}, {term: 'Grappled', text: 'Speed 0.', cond: true});
+    pool.spells.push({name: 7, level: 1}, {name: 'Hex', level: 1, class: ['Warlock']});
+    pool.classes.push({name: 'Fighter', hitDie: 'd10', levels: {}});
+    pool.races.push({name: 'Elf'});
+    pool.backgrounds.push({name: 'Acolyte'});
+    pool.items.push({name: 'Rope'});
+    pool.feats.push({name: 'Alert'});
+    pool.features.push({name: 'Tough'});
+    pool.subclasses.push({name: 'Champion', class: 'Fighter'});
+    pool.tables.push({name: 'Rowless'}, {name: 'Ragged', cols: 'not a list', rows: ['not a row', ['1', '2']]});
+    X.rules = JSON.parse(JSON.stringify(pool));
+    let err = null;
+    try { X.reindexRules(); X.recomputeDups(); } catch (e) { err = e; }
+    ck('#71 reindexRules() copes with a wholesale pool full of junk', !err, err && String(err));
+    const kw = (X.rules.keywords || []).map(k => k && k.term);
+    ck('#71 ...keeps the usable keywords, the aliased one included', kw.join('|') === 'Mangled|Grappled', kw);
+    ck('#71 ...drops every entry with no usable name, in every category',
+       X.RULE_CATS.every(c => (X.rules[c] || []).every(e => e && typeof e === 'object' && !Array.isArray(e)
+         && typeof (c === 'keywords' ? e.term : e.name) === 'string' && (c === 'keywords' ? e.term : e.name).trim())),
+       X.RULE_CATS.map(c => c + ':' + (X.rules[c] || []).length));
+    ck('#71 ...keeps a spell named 7, as text', (X.rules.spells || []).some(s => s && s.name === '7'), X.rules.spells);
+    ck('#71 ...gives a keyword without an id one, so its chip opens it',
+       (X.rules.keywords || []).every(k => k && typeof k.id === 'string' && k.id));
+    X.rules.classes = 'not a list';
+    try { X.reindexRules(); } catch (e) { err = e; }
+    ck('#71 ...and turns a category that is not a list into an empty one', !err && Array.isArray(X.rules.classes), X.rules.classes);
+    X.rules = JSON.parse(JSON.stringify(pool));
+    try { X.reindexRules(); X.recomputeDups(); } catch (e) { /* reported above */ }
+    X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {system: 'dnd',
+      classes: [{name: 'Fighter', level: 1}, {level: 1}, {name: 5, level: 1}], race: {name: 'Elf'}, bg: {name: 'Acolyte'},
+      proficiencies: 'Grappled, Mangled.', spells: [{id: 'h', name: 'Hex', level: 1}]}))));
+    renders('the whole sheet over a tidied pool (renderAll)', () => ctx.renderAll());
+    renders('Settings and its loaded-data list', () => ctx.openSettings());
+    renders('the Add class window over a tidied pool', () => ctx.openAddClass());
+    renders('the Add ancestry window', () => ctx.openAddRace());
+    renders('the Add background window', () => ctx.openAddBackground());
+    renders('the feat picker', () => ctx.browseFeatures());
+    renders('the item picker', () => ctx.browseItems());
+    renders('the spell picker', () => ctx.browseSpells());
+    renders('the class window, with classes that have no name', () => ctx.openClassInfo('Fighter'));
+    renders('the Reference Tables list (a table with no rows, one with ragged rows)', () => ctx.renderTables());
+    renders('a table with no rows', () => ctx.openTableByName('Rowless'));
+    renders('a table whose cols and rows are not lists', () => ctx.openTableByName('Ragged'));
+    renders('the print sheet over a tidied pool', () => ctx.printSheet());
+  }
 
   Object.assign(doc, saved);
   if (!hadFR) delete ctx.FileReader;

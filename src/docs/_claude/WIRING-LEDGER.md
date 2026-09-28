@@ -4203,3 +4203,69 @@ Noticed, not changed: a keyword whose `term` is a non-string (a number, an objec
 Importing settings still replaces `settings.rulesSources` wholesale with the file's list, which is
 what importing settings means. A third answer, merging the file's packs into what is loaded, was
 not built; whether it is wanted is Mike's call.
+## A glossary entry without a term no longer breaks the sheet (#71, 2026-09-28)
+
+**The bug.** `highlight()` looked each chip up with `allGlossary().find(x=>x.term.toLowerCase()…)`,
+and `allGlossary()` is the pack's keywords plus `character.glossary`. One entry with no `term` (or a
+`null`, or a number) threw a TypeError, and because nearly every render runs text through
+`highlight()`, every render after it stopped: features, the Add class window, the lot. It only
+threw when the bad entry came *before* the term being matched, since `find()` stops at the first
+hit. `mergeRules()` already dropped a keyword with no term (silently), so the reachable paths were a
+settings file (Settings → Import assigns `rules` wholesale), the cache restoring such a pool, a
+keyword whose term was a number (kept as a number by the merge), and an imported character's own
+glossary. Pages: [Rich text](../wiki/architecture/rich-text.md),
+[Rules packs](../wiki/architecture/rules-packs.md),
+[Character model](../wiki/architecture/character-model.md),
+[Rules & tables](../wiki/features/rules-and-tables.md).
+
+**Readers.** `glossTerm(g)` (00-constants.js) is the only way a term is read: a trimmed string, or
+"" for anything else. `allGlossary()` returns objects only. `highlight()` builds one map keyed by
+the escaped, lower-cased term and looks each match up in it, which also fixes a second bug: the old
+lookup unescaped only `&amp;`, so a term with an apostrophe ("Hunter's Mark") was a chip with an
+empty `data-gid` that opened nothing. `statusTitle()` (a status name of 7 or none threw too),
+`statusTermList()`, `renderGloss()`, `openGlossView()` (and a stale id passing it nothing),
+`openGlossForm()` and the view/edit/delete handlers in `90-boot.js` all go through it. A term of
+only spaces used to become `\b( )\b` and chip every space; trimmed, it matches nothing. The
+player's own entry with no term is listed on the Rules tab as "(no term)" with Edit and Delete.
+
+**Boundaries.**
+- *Packs:* `mergeRules()` skips any entry that is not an object or has no usable name
+  (`ruleName()`: a non-blank string, or a number, which becomes text), counts it per category, and
+  returns the counts. `importRulesFiles()` and `fetchAllRules()` (via `applyFetchedSource()`) add
+  `skippedSummary()` to the status line ("Skipped 2 glossary entries with no term."), in red. A
+  keyword written `{name, description}`, as every other category is, is read as its term and text
+  (`glossRepair()`), keeping the originals; `bundle-rules.js` keys it the same way and now reports
+  entries with no name, like duplicates.
+- *The pool:* `reindexRules()` runs `tidyRules()` first. Every path that changes the pool ends in
+  it (merge, fetch, removal, a settings file, both cache restores), so a wholesale pool is repaired
+  or pruned the same way without touching the Settings import handler (#70 is rewriting it):
+  non-list categories become empty, unusable entries go, numeric names become text, keywords get
+  the aliases and an id. It returns what it dropped, for a caller to report; nothing does yet.
+- *Characters:* `migrate()` keeps only objects in the eleven list fields: `null` (JSON's hole or
+  undefined) and bare strings or numbers carry no field of an entry and threw on the first read or,
+  in strict mode, the first write (`detectSpellAttack()` sets `atkType`). Glossary entries that are
+  objects are never dropped: `glossRepair()` fills an absent term/text from name/description, and an
+  entry with no id gets one (a numeric id becomes text), so Edit and Delete can reach it.
+
+**Same failure class, other categories** (audited by running every renderer and picker over a
+wholesale pool with junk in each category, a character with junk in each list, and named-but-bare
+entries): a table with no `rows` stopped `renderTables()`, which `renderAll()` calls — `tableRows()`
+and `tableCols()` now read rows, a non-list row and cols safely; a class on the character with no
+name or a numeric one threw in `classCasterKind()`, `warlockLevel()`, `openClassInfo()` and
+`openSpellForm()`; a numeric spell name in `renderSpells()`' sort; `keyOf()` and `ruleById()` on a
+`null`. All fixed.
+
+**Tests.** `sheet.js` 861 → 909: the readers with an untidied pool and an unmigrated character
+(malformed entries first), the renderers and editors through the recorder DOM, `migrate()`'s
+repair and idempotence, a sheet whose every list holds junk through `renderAll()`, and a junk pool
+through `reindexRules()`, Settings, every picker and the tables. `rules-data.js` 594 → 607:
+`mergeRules()`'s skips, aliases and counts, the summary's wording, and the status line after a file
+import and after Fetch all. Against the unfixed source all 48 new `sheet.js` checks failed, most
+with the reported TypeError, and 10 of the 13 in `rules-data.js` (the other three guard what must
+not change). The five merged shipped packs are identical before and after (ids aside), and the
+bundles are byte-identical.
+
+Noticed, not changed: `openClassInfo()` still assumes a pack class's `spellcasting` is a string and
+`savingThrows` a list; the glossary editor's Save still replaces the whole entry, so fields other
+than term/type/text/image are dropped when a player edits one (the aliases' content survives,
+having been copied into term/text).
