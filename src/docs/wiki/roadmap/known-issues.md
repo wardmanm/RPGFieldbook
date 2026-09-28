@@ -20,17 +20,16 @@ Known behaviour that is accepted for now.
   not by level, so there is nothing per-level to revert. Removing the class reverts all of it, and
   race and background choices revert fully. → ledger L2571, and
   [Grants & provenance](../architecture/grants-and-provenance.md)
-- **A subclass's own level choices can be replaced by the next modal — this one bites.**
-  `commitChoices()` calls `selectSubclass()`, which opens the subclass's level-choice modal, then
-  immediately `runExtraChoices()` for pending feats and starting equipment, and `openModal()` replaces
-  the first. Reproduced in the test harness: add Fighter at starting level 3 and pick Battle Master —
-  the modal goes "Fighter — Level 3", then "Choose", and the Maneuvers and Student of War picks are
-  never offered. Any class taken at level 3 or higher with a choice-bearing subclass is exposed. The
-  ledger recorded only the latent feat-plus-subclass form of this race; removing `_equipQueue` (L3649)
-  widened it.
-  → ledger L2571, and [Character building](../features/character-building.md)
-- **Class starting equipment is granted on every `addClass()`**, a multiclass add included. 2024 RAW
-  gives none when multiclassing. → ledger L42
+- **Hit points don't leave with a class above level 1.** Removing a class clears only the level-1
+  seed: a first class added at level 3 and then removed keeps its levels 2–3, and removing a
+  multiclass class keeps the hit points its levels added — the same as a class levelled up in play.
+  → ledger L3886, and [Vitals & rest](../features/vitals-and-rest.md)
+- **Multiclass ability prerequisites** (e.g. INT 13 for a Wizard) are neither carried by the pack nor
+  enforced. → ledger L3886
+- **A fetched source's packs stay until removed by hand** once the source is taken out of the list,
+  and a pack fetched before `_url` stamping keeps any entry its source has since dropped (a re-fetch
+  replaces the rest by name). Both follow from Fetch all never discarding what it didn't replace.
+  → ledger L3797, and [Rules packs](../architecture/rules-packs.md)
 - **A class's gold alternative is the average of its dice**, not a roll (`_dice_avg_gold()` in
   `convert.py`). → ledger L42
 - **Granted items match the item list by exact name only** (`grantItemByName()`). Anything else is added
@@ -116,21 +115,23 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 
 ### Likely bugs a player can hit
 
-- **Class progression tables lose dice and bonus cells.** `_cell_text()` in `convert.py` can't render
-  5e-tools `{"type":"dice"}` or `{"type":"bonus"}` cells. The shipped Barbarian Features table has a
-  blank Rage Damage column, Monk's has blank Martial Arts and Unarmored Movement, and Bard and Rogue
-  have no Features table at all. This has been true since tables first shipped. Ledger L533 and
-  README-converter say those columns are recovered; the converter test passes only because its
-  synthetic table writes Rage Damage as the string `'+2'`. → [Converter](../data/converter.md)
-- **Fetch all can wipe the rules pool.** `fetchAllRules()` calls `resetRules()` before fetching, with no
-  confirmation, so packs imported from files are discarded. If the fetch fails (offline, say), what
-  gets cached is whatever that run loaded. → [Rules packs](../architecture/rules-packs.md)
+- **A first-class Bard gets no skill picks.** The 2024 data says "any 3", which the converter doesn't
+  turn into a choice. Fixing it moves the 2024 pack. → ledger L3886, and [Converter](../data/converter.md)
+- **Some formula text is dropped from prose.** `flatten()` skips `abilityDc` and `abilityAttackMod`
+  nodes, so Xanathar's Arcane Shot "save DC is calculated as follows:" ends with nothing, and the core
+  pack's Artificer loses its spell save DC and attack-modifier formulas. Fixing it moves
+  `xanathars/subclasses.json` and `5e2024/classes.json`. → ledger L3761, and [Converter](../data/converter.md)
+- **A choice window is titled by its first choice's level:** a Fighter added at 3 opens as
+  "Fighter — Level 1" although the window holds the level-3 subclass pick. → ledger L3847, and
+  [Character building](../features/character-building.md)
+- **The Gadgeteer's level-1 "Proficiencies" trait** still arrives on a multiclass add and lists saving
+  throws as text, so it can read as if it grants them (Humblewood publishes no multiclass rules).
+  → ledger L3886
+- **"Import settings" replaces the whole rules pool without asking.** → ledger L3797, and
+  [Settings & updates](../features/settings-and-updates.md)
 - **Glossary pop-ups show raw table anchors.** `openGlossView()` renders the entry with `esc()` only, so
   the `[Table: Carrying Capacity]`-style anchors in the 2024, Xanathar's and Tasha's glossaries appear
   as literal text. → [Rich text](../architecture/rich-text.md)
-- **Adding a multiclass grants its saving throws.** `addClass()` grants the class's save proficiencies
-  on every add. The multiclass rules give none. (The starting-equipment half of this is under
-  Limitations.) → [Character building](../features/character-building.md)
 - **Removing a source does not revert everything it seeded**: text appended to `proficiencies`, the
   seeded `speed` and `size`, `spellAbility`, and the legacy `ancestry`/`background` strings. Because
   `applyRace()` fills speed and size only when they are empty, *swapping* ancestry keeps the old ones.
@@ -195,6 +196,10 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   the font stacks fall back to local serifs. → [Theming & icons](../ui/theming-and-icons.md)
 - `boot()` and `renderHome()` call `localStorage.getItem` outside a `try`, so a browser that throws on
   storage access would stop boot **(unverified)**. → [Storage](../architecture/storage.md)
+- **Import, remove and Clear all still write a green status line synchronously.** When the rules
+  cache can't be saved (no IndexedDB, quota), the refusal shows only in the red line above the pack
+  list, not on the status line — Fetch all now reports it in both. → ledger L3797, and
+  [Storage](../architecture/storage.md)
 
 ### Latent: no shipped data triggers these yet
 
@@ -208,6 +213,14 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 
 ### Tooling
 
+- **Subclass tables are never read.** Subclasses carry `subclassTableGroups`, but `_class_tables()`
+  reads `classTableGroups`. Nothing is lost today (the shipped subclass tables are spell columns it
+  would skip, or already in prose), but a new one would be missed. → ledger L3761
+- **A table cell with both `roll` and `entry` prints only the roll** (the DMG, BMT and LLK deck
+  printings — no shipped pack). → ledger L3761
+- **Warlock Features keeps its "Spell Slots" and "Slot Level" columns**, although the converter's
+  decision is to skip spell-slot columns. Needs a call: Pact Magic is not the slot table the decision
+  was about. → ledger L3761, and [Converter](../data/converter.md)
 - **`convert.py --resources` doesn't work as documented.** The `classes` subcommand accepts it and
   ignores it. `supplement` always reads `data/class-resources.json`, and silently gets nothing if the
   file is missing. → [Converter](../data/converter.md)
@@ -270,6 +283,22 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   - L3676 says Hit Dice moving back to Rest "reverses 1.7.0", but the move under Hit Points shipped
     in v1.5.0.
 
+### Decisions made while fixing #63–#66 — for Mike to confirm
+
+Each is recorded, with its reason, in the page's Decisions table; each is easy to reverse.
+
+- **Dismissing a choice window still opens the windows queued behind it** — including the starting
+  equipment after dismissing the first Add-class window, which used to open nothing. Chosen because
+  the alternative loses things silently. → ledger L3847, [Character building](../features/character-building.md)
+- **Removing the first class while another remains hands saving throws to the new first class**
+  (tagged to it, with a toast); its starting skills and equipment are not re-offered. → ledger L3886,
+  [Grants & provenance](../architecture/grants-and-provenance.md)
+- **Multiclass characters saved before #66 are not changed** — they keep a second class's saves,
+  skills and gear; removing that class still reverts them. → ledger L3886
+- **Fetch all adds no confirmation dialog**, since nothing is lost unless a fresh copy replaces it; a
+  fetched pack with the same system and entry names as a file import replaces those entries, as
+  re-importing the file would. → ledger L3797, [Rules packs](../architecture/rules-packs.md)
+
 ## Verified NOT gaps (do not fix)
 
 These look like missing features. Each was checked and is right as it stands.
@@ -318,3 +347,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-25 — #60 option pickers and the #59 Gadgeteer, Scofflaw and Psi Warrior text fixed. → ledger L3596, #59, #60
 - 2026-09-25 — Superiority Dice tracker, Student of War picker, the 2024 options library, and the `_equipQueue` leak fixed. → ledger L3649
 - 2026-09-25 — Superiority Die size on the tracker; the 5e-tools v2.36.1 move done. → ledger L3676
+- 2026-09-28 — Fixed and removed: class tables' dice and bonus cells (#64), Fetch all discarding packs (#65), subclass choices replaced by the equipment picker (#63), multiclass saves and starting equipment (#66) — and a first class above level 1 now gets its hit points. New items from that work added. → ledger L3761, L3797, L3847, L3886
