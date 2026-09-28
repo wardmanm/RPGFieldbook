@@ -79,7 +79,9 @@ when `legacy` is set, which is every non-default book.
 **Magic weapons.** A supplement's weapons carry the 2014 PHB's bare codes (`"L"`, `"V"`) and the
 book defines none of them. `supplement` loads the dump's `items-base.json` into the item index, as
 `all` does, and `convert_items()` names them from it: Xanathar's three staves read "Versatile 1d8",
-Tasha's Moon Sickles "Light". Resolution and the warning: [Converter](converter.md).
+Tasha's Moon Sickles "Light". Tasha's four `+N` weapons (three Moon Sickles, Baba Yaga's Pestle)
+carry the bonus on the weapon and no `attack`/`damage` effect, like the core pack's. Resolution, the
+warning and the bonus rule: [Converter](converter.md).
 
 **Table names.** `--avoid-table-names PACK.json` reads the core pack's table names and, inside
 `reserved_names()`, `_register()` appends `" (XGE)"` / `" (TCE)"` to any table that would reuse one.
@@ -172,3 +174,4 @@ and missing-dependency reporting: [Rules packs](../architecture/rules-packs.md).
 - 2026-09-28 — Xanathar's 17 downtime tables carry their footnotes; `tables.json` was the only file to move. → ledger L4273, #73
 - 2026-09-28 — Text `flatten()` had dropped is restored: Xanathar's Arcane Shot save DC; Tasha's Path of the Beast Bite, Claws and Tail, College of Creation motes, Circle of Stars omens, Custom Lineage traits and Luba's Tarokka Weal and Woe. → ledger L4025, #68
 - 2026-09-28 — Magic weapons name their properties from the core `items-base.json`: Xanathar's three staves, Tasha's three Moon Sickles and Baba Yaga's Pestle. → ledger L4327, #72
+- 2026-09-28 — Tasha's six `bonusWeapon` items lose their `attack`/`damage` effects: the four weapons keep the bonus on the weapon, the Eldritch Claw Tattoo and Baba Yaga's Mortar and Pestle in prose. → ledger L4392, #74

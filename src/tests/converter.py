@@ -981,6 +981,69 @@ for label, argv, outfile in (
        w.get('notes') in ('Light', 'Range 20/60 · Finesse, Light, Thrown · Mastery: Nick'), got.get('error') or w)
 shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True)
 
+# ---- 26. a +N weapon's bonus is the weapon's own, and counts once (#74)
+# 5e-tools' bonusWeapon (and bonusWeaponAttack / bonusWeaponDamage) means rolls
+# made with a weapon, nearly always one weapon. convert_items() writes it onto
+# the item's weapon as atkMisc/dmgMisc; _item_effects() ALSO wrote it as global
+# `attack`/`damage` effects, so attackNumbers() added it twice on the weapon's
+# own row and once on every other attack, spell rows included, while it was
+# equipped. The fixtures above are the real Dagger of Venom, Dwarven Thrower,
+# Sun Blade, Staff of Power and Tasha's +1 Moon Sickle.
+for label, pack, name, n in (('core', ib_magic, 'Dagger of Venom', 1), ('core', ib_magic, 'Dwarven Thrower', 3),
+                             ('core', ib_magic, 'Sun Blade', 2), ('core', ib_magic, 'Staff of Power', 2),
+                             ('TCE', ib_tce, '+1 Moon Sickle', 1)):
+    e = pack.get(name, {})
+    ck('#74 %s %s carries +%d on its own weapon, to hit and to damage' % (label, name, n),
+       e.get('weapon', {}).get('atkMisc') == n and e.get('weapon', {}).get('dmgMisc') == n, e.get('weapon'))
+    ck('#74 ...and %s has no attack or damage effect, which would reach every other attack' % name,
+       e.get('effects') == [], e.get('effects'))
+# The same field on an item that is not a weapon is scoped just as narrowly --
+# bows only, one coated weapon, unarmed strikes, the rod's own mace form -- and
+# no effect target can say "only that weapon", so it stays in the prose. Real
+# shapes from the v2.36.1 dump, loot tables and all but the first entry trimmed.
+NONWEAPON = [
+    {"name": "Bracers of Archery", "source": "XDMG", "page": 240, "srd52": True, "basicRules2024": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "grantsProficiency": True, "bonusWeaponDamage": "+2",
+     "entries": ["While wearing these bracers, you have proficiency with the {@item Longbow|XPHB} and {@item Shortbow|XPHB}, and you gain a +2 bonus to damage rolls made with such weapons."]},
+    {"name": "Rod of Lordly Might", "source": "XDMG", "page": 300, "srd52": True, "basicRules2024": True, "type": "RD|XDMG", "rarity": "legendary", "reqAttune": True, "weight": 2, "bonusWeapon": "+3", "light": [{"bright": 40, "dim": 80}],
+     "entries": ["This rod has a flanged head, and it functions as a magic Mace that grants a +3 bonus to attack rolls and damage rolls made with it."]},
+    {"name": "Oil of Sharpness", "source": "XDMG", "page": 282, "srd52": True, "basicRules2024": True, "referenceSources": ["DrDe-BtS"], "type": "P|XPHB", "rarity": "very rare", "weight": 0.5, "bonusWeapon": "+3",
+     "entries": ["One vial of this oil can coat one Melee weapon or twenty pieces of ammunition, but only ammunition and Melee weapons that are nonmagical and deal Slashing or Piercing damage are affected."]},
+    {"name": "Eldritch Claw Tattoo", "source": "TCE", "page": 126, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "tattoo": True, "bonusWeapon": "+1",
+     "entries": [{"type": "entries", "name": "Magical Strikes", "entries": ["While the tattoo is on your skin, your unarmed strikes are considered magical for the purpose of overcoming immunity and resistance to nonmagical attacks, and you gain a +1 bonus to attack and damage rolls with them."]}]},
+    {"name": "Baba Yaga's Mortar and Pestle", "source": "TCE", "page": 121, "rarity": "artifact", "reqAttune": True, "wondrous": True, "bonusWeapon": "+3",
+     "entries": ["The creations of the immortal hag Baba Yaga defy the laws of mortal magic."]},
+    # the control: a bonus that really is global stays an effect
+    {"name": "Ring of Protection", "source": "XDMG", "page": 294, "srd52": True, "basicRules2024": True, "type": "RG|XDMG", "rarity": "rare", "reqAttune": True, "bonusAc": "+1", "bonusSavingThrow": "+1", "classFeatures": ["replicate magic item|artificer|efa|2|efa"],
+     "entries": ["You gain a +1 bonus to {@variantrule Armor Class|XPHB} and saving throws while wearing this ring."]},
+]
+_nwf = _tmpjson({'item': NONWEAPON})
+with C.statblock_ctx(C.load_item_index(IB_BASEFILE, _nwf)):
+    nw = dict(_by_name(C.convert_items(_nwf)), **_by_name(C.convert_items(_nwf, book=TCE)))
+for name, needle in (('Bracers of Archery', '+2 bonus to damage rolls made with such weapons'),
+                     ('Rod of Lordly Might', '+3 bonus to attack rolls and damage rolls made with it'),
+                     ('Oil of Sharpness', 'coat one Melee weapon'),
+                     ('Eldritch Claw Tattoo', '+1 bonus to attack and damage rolls with them'),
+                     ("Baba Yaga's Mortar and Pestle", 'defy the laws of mortal magic')):
+    e = nw.get(name, {})
+    ck('#74 %s: its weapon-only bonus is not an effect on every attack' % name,
+       name in nw and e.get('effects') == [] and 'weapon' not in e, e.get('effects'))
+    ck('#74 ...and %s\'s prose still states it' % name, needle in e.get('description', ''), e.get('description', '')[:120])
+ring = nw.get('Ring of Protection', {})
+ck('#74 a Ring of Protection keeps its AC and saving-throw effects',
+   ring.get('effects') == [{'target': 'ac', 'value': 1}] + [{'target': 'save.' + a, 'value': 1}
+                                                              for a in ('str', 'dex', 'con', 'int', 'wis', 'cha')],
+   ring.get('effects'))
+ck('#74 _item_effects() never turns a weapon bonus into an effect',
+   C._item_effects({'bonusWeapon': '+2', 'bonusWeaponAttack': '+1', 'bonusWeaponDamage': '+1'}) == [],
+   C._item_effects({'bonusWeapon': '+2', 'bonusWeaponAttack': '+1', 'bonusWeaponDamage': '+1'}))
+# ...while a weapon's split bonus still lands on the weapon, each half on its own box
+_split = dict(IB_MAGIC[0], name='Split Dagger', bonusWeapon=None, bonusWeaponAttack='+2', bonusWeaponDamage='+1')
+with C.statblock_ctx(C.load_item_index(IB_BASEFILE)):
+    sp = C.convert_items(_tmpjson({'item': [_split]}))['items'][0]
+ck('#74 a split attack/damage bonus lands on the weapon, each half in its own box',
+   sp.get('weapon', {}).get('atkMisc') == 2 and sp.get('weapon', {}).get('dmgMisc') == 1 and sp.get('effects') == [],
+   [sp.get('weapon'), sp.get('effects')])
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

@@ -10,7 +10,7 @@ page is what that file does not say: what must not move, and the traps that have
 **Code:** `main()`, `pick_2024_preferred()`, `pick_sources()`, `flatten()`, `table_ctx()`,
 `ref_ctx()`, `_register()`, `_norm_table()`, `_cell_text()`, `_dice_text()`, `_cell_miss_warnings()`,
 `_formula_text()`, `_attr_choose()`, `_full_stop()`, `statblock_ctx()`, `load_item_index()`,
-`_statblock_text()`, `_item_traits()`, `_entry_miss_warnings()`, `convert_items()`, `_weapon_defs()`,
+`_statblock_text()`, `_item_traits()`, `_entry_miss_warnings()`, `convert_items()`, `_item_effects()`, `_weapon_defs()`,
 `_weapon_refs()`, `_weapon_miss_warnings()`, `_class_tables()`, `convert_classes()`,
 `_skill_profs()`, `_multiclass()`, `_optfeat_choices()`, `convert_races()`,
 `_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in `scripts/bundle-rules.js`;
@@ -110,6 +110,16 @@ magic weapon attacks as its base weapon does. A code nothing defines is printed 
 recorded in `_WEAPON_MISSES` with the items carrying it; `_weapon_miss_warnings()` reports each at
 the end of `all`, `supplement` and every single subcommand. Every code in the v2.36.1 dump resolves.
 
+**A weapon's bonus is the weapon's.** 5e-tools' `bonusWeapon` (or the split `bonusWeaponAttack` /
+`bonusWeaponDamage`) becomes `weapon.atkMisc` / `dmgMisc`, which the item's attack row reads once.
+`_item_effects()` writes only the bonuses that apply to the whole character while the item is
+equipped: `bonusAc` as `ac` and `bonusSavingThrow` as the six `save.*`. It never turns a weapon
+bonus into an `attack`/`damage` effect, which would reach every attack. On an item with no weapon
+(Bracers of Archery, Rod of Lordly Might, Oil of Sharpness; Tasha's Eldritch Claw Tattoo and Baba
+Yaga's Mortar and Pestle) the bonus is scoped to one weapon, bows or unarmed strikes, which no
+effect target can express, so it stays in the prose. The packs ship 15 `+N` weapons: 11 core, 4
+Tasha's.
+
 **Option pickers.** `_optfeat_choices()` reads a class or subclass's `optionalfeatureProgression`
 (a running total per level, as a map or a 20-long list) and emits an `option` choice at every
 level the total rises, asking for the rise ("Maneuvers: choose 2 more"), offering only options whose
@@ -176,6 +186,10 @@ has no `DATA_VERSIONS` entry.
 - **Weapon codes are named from the whole run's definitions, never from the file being converted.**
   The magic-item file uses codes it does not define. One resolver, `_weapon_refs()`, for items and
   statblocks alike.
+- **A weapon bonus is never an effect.** It lives on the weapon as `atkMisc`/`dmgMisc`; an item's
+  `attack`/`damage` effect applies to every attack while it is equipped. `rules-data.js` fails on
+  any pack item carrying one, with an (empty) allowlist for an item whose bonus truly reaches every
+  attack.
 - **One skill reader.** Species, class starting skills and multiclass skills all go through
   `_skill_profs()`. A second parser at a call site is how the Bard lost its skills.
 - **Anchors only when a sink is collecting.** With no sink, a table is dropped with no anchor: an
@@ -255,6 +269,14 @@ has no `DATA_VERSIONS` entry.
   runs real shapes through the index, `rules-data.js` fails on any bare code or repr in a shipped
   weapon and on any magic weapon that drifts from its named base weapon's dice, kind, properties or
   finesse, and an unnamed code is a `WARNING`.
+- **A +N weapon counted its bonus twice (#74).** `convert_items()` wrote `bonusWeapon` onto the
+  weapon and `_item_effects()` also wrote it as `attack` and `damage` effects. `attackNumbers()`
+  adds both, so a +1 Dagger of Venom's row read +2, and the effects gave every other attack, spell
+  rows included, +1 while it was equipped. Five non-weapon items leaked the same way (Bracers of
+  Archery's +2 reached melee and spell damage). Every weapon check passed: the weapon half was
+  right. 20 items across two packs; only `effects` moved. Guard: `converter.py` runs the real
+  shapes, `rules-data.js` fails on any pack item with an `attack`/`damage` effect, and `sheet.js`
+  and `char-update.js` read the shipped Dagger of Venom's numbers.
 - **A tagline as a description.** `_sub_blurb()` takes a subclass's first paragraph over 40
   characters; eight 2024 italic taglines are 41+ and shipped as the whole description. It now skips
   a paragraph that is only `{@i …}`.
@@ -297,6 +319,8 @@ has no `DATA_VERSIONS` entry.
 | A weapon property or mastery code nothing defines | Printed as the code, counted with its items, and a `WARNING` at the end of every run (#72) | Passing it through quietly: the original bug. Failing the run: as for cells and nodes |
 | A reference carrying a note (`{uid, note}`) | "Name (note)" in the notes and the description, the Psychic Blade's long mastery note included (#72) | Dropping the note: loses rules text ("unless mounted"; Vex "doesn't count against" the mastery limit), and the statblock already printed it |
 | A single `items` run on the magic-item file | Index the `items-base.json` beside it (#72) | Warning only: a player running `items items.json` would get codes and a finesse weapon attacking with Strength |
+| Where a `+N` weapon's bonus goes (#74) | On the weapon, `atkMisc`/`dmgMisc`, and never as an effect | Global `attack`/`damage` effects: they reach every attack, spell rows included, and doubled the weapon's own. The effects alone: the bonus would also reach every other attack |
+| A weapon bonus on an item that is not a weapon (#74) | Kept in the prose; no effect | `attack`/`damage` effects: Bracers of Archery's +2 reached melee and spell damage. `damage.ranged` for the Bracers: still crossbows, darts and ranged spells. Owner may revisit |
 
 ## Open
 
@@ -305,11 +329,11 @@ has no `DATA_VERSIONS` entry.
   dump: the XPHB groups are Eldritch Knight's and Arcane Trickster's spell counts, which it would
   skip, and Psi Warrior's and Soulknife's die size and number, which their prose "Energy Dice"
   tables already carry. It would miss a new one.
-- **A `+N` magic weapon's bonus counts twice.** `_item_effects()` turns `bonusWeapon` into global
-  `attack` and `damage` effects, and `convert_items()` also writes it as `weapon.atkMisc` and
-  `dmgMisc`. `attackNumbers()` adds both to the weapon's own row, and the effects add +N to every
-  other attack while the item is equipped. 15 weapons: 11 core, 4 Tasha's. Seen during #72; see
-  [Attacks & damage](../features/attacks-and-damage.md).
+- **A conditional `bonusAc` is written as a global `ac` effect.** Quarterstaff of the Acrobat's
+  +5 is a Reaction against one attack, once per rest, but equipping it reads AC +5 at all times.
+  Seen during #74, not fixed.
+- **`bonusSpellAttack` is not read.** The Moon Sickles' and Staff of Power's bonus to spell attacks
+  reaches neither the Spellcasting card nor spell rows. Seen during #74.
 - **Only item statblocks resolve.** Another tag (creature, hazard…) keeps its name and warns. None
   reaches the converter in the v2.36.1 dump, and a single subcommand other than `items` has no item
   index at all, so `classes` alone warns once for the Soulknife.
@@ -344,3 +368,4 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-28 — `flatten()` writes formula lines, one-`entry` list items and item statblocks, which it had dropped (28 nodes across three packs); an unknown node type is a `WARNING`. → ledger L4025, #68
 - 2026-09-28 — `_norm_table()` carries a table's `footnotes`; `_register()` compares them; `data/xanathars/tables.json` gains 17, the only file that moved. → ledger L4273, #73
 - 2026-09-28 — Weapon property and mastery codes are named from `items-base.json` through the item index (`_weapon_refs()`): 30 weapons across three packs, four magic weapons now `finesse`; an unnamed code is a `WARNING`. → ledger L4327, #72
+- 2026-09-28 — A weapon bonus is never an effect (`_item_effects()`): 15 `+N` weapons count it once, on their own row, and five non-weapon items keep it in their prose; only `effects` moved, on 20 items in two packs. → ledger L4392, #74

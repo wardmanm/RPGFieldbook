@@ -103,8 +103,9 @@ the inventory and recompute, because coins have weight.
   rules-update tool compares copies against pack entries.
 - **`invSection()`'s alternations are word-bounded.** They are load-bearing, not tidy — see Traps.
 - **Every rebuild-from-form save carries what the form does not ask about**: `category`, `type`,
-  `grant`, `attackId`, `fav`, `src`, an untouched `armor`, and `uses.used` (clamped). Losing `src` sends
-  the rules-update tool down its name-only legacy path.
+  `grant`, `attackId`, `fav`, `src`, an untouched `armor`, `uses.used` (clamped), and a weapon's
+  `notes`, `atkMisc` and `dmgMisc` (from the pack entry just inserted, else the item's own). Losing
+  `src` sends the rules-update tool down its name-only legacy path.
 - **`itemMetaLine()` is frozen.** It is shared with `updProject()`; changing its output flips the
   description fingerprint of every browse-added item on every sheet. A test pins its exact output.
 - **Cost on the sheet is a number**; the pack's is a string. Every copy path parses with `costToGp()`
@@ -134,6 +135,9 @@ the inventory and recompute, because coins have weight.
   flagged every stamped item; no baseline is now not a change. → L1361
 - **`type=number` rejects a leading `+`**, and iOS's numeric keypad has no sign keys. → L1143
 - **A finder redraw reset the footer** (Origin and Cost always had; Qty made it noticeable). → L3503
+- **Insert from rules pack dropped a weapon's `+N`** and its notes: the form carried
+  `atkMisc`/`dmgMisc`/`notes` only from the item being edited. A pack effect that double-counted the
+  bonus hid it; when #74 removed the effect, the inserted Dagger of Venom would have had no +1. → L4392
 - **The inventory caret pointed left when open**: drawn down, then rotated again by the shared
   `.fcaret`. → L3525
 
@@ -154,8 +158,9 @@ the inventory and recompute, because coins have weight.
 ## Open
 
 - **Insert from rules pack in the item form** copies name, description, cost, weight, effects,
-  weapon, armor and healing, but not `category`, `type` or a `src` stamp — so the item files by
-  inference and the rules-update tool can only match it by name. The finder does all three.
+  weapon (its notes and `+N` included), armor and healing, but not `category`, `type` or a `src`
+  stamp — so the item files by inference and the rules-update tool can only match it by name. The
+  finder does all three.
 - Stacking by name ignores the batch's origin and cost for an item already carried.
 - Ammunition comes in bundles ("Arrows (20)"); unpacking belongs to #6–#8.
 - Use does not remove conditions (Elixir of Health) and prints nothing on the sheet.
@@ -177,3 +182,4 @@ the inventory and recompute, because coins have weight.
 - 2026-09-01 — Origin controls polished; a detail with no kind can no longer be lost. → ledger L74, #14
 - 2026-09-24 — Qty in the item finder; the footer survives a redraw. → ledger L3503, #50
 - 2026-09-24 — Coins high to low; one section-heading style; a clear button in the finder's search. → ledger L3525, #48, #51, #49
+- 2026-09-28 — Insert from rules pack keeps a weapon's `+N` and notes. → ledger L4392, #74

@@ -89,6 +89,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **What an effect can express** — Numeric modifiers only (`{target, value}`)
 - **How `uses.max` scales** — A number, `byLevel`, or a `formula` re-resolved at render
 - **Where encumbrance applies** — After the effects, outside the engine
+- **A bonus scoped to one weapon (#74)** — The weapon's `atkMisc`/`dmgMisc`, or prose on an item with no weapon
 
 ### [Rich text](architecture/rich-text.md)
 
@@ -185,6 +186,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Heal old sheets' damage-free rows** — A targeted sweep, `dropDamagelessSpellRows()`
 - **What happens to a weapon's attack on unequip?** — Hidden
 - **Order of starred attacks** — Insertion order
+- **Should `attackNumbers()` skip the effects of the item that owns the row? (#74)** — No: effects are global, a weapon's own bonus is its `atkMisc`/`dmgMisc`, and the packs are fixed
 
 ### [Class resources](features/class-resources.md)
 
@@ -362,6 +364,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **A weapon property or mastery code nothing defines** — Printed as the code, counted with its items, and a `WARNING` at the end of every run (#72)
 - **A reference carrying a note (`{uid, note}`)** — "Name (note)" in the notes and the description (#72)
 - **A single `items` run on the magic-item file** — Index the `items-base.json` beside it (#72)
+- **Where a `+N` weapon's bonus goes (#74)** — On the weapon, `atkMisc`/`dmgMisc`, and never as an effect
+- **A weapon bonus on an item that is not a weapon (#74)** — Kept in the prose; no effect
 
 ### [Supplements](data/supplements.md)
 

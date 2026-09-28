@@ -17,6 +17,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'grantItemByName',
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag','runChoices',
   'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote',
+  'attackNumbers','addLibraryItems',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -398,6 +399,74 @@ ck('R7 the stamp is optional, so an old save loads untouched',
    X.migrate({abilities:{},attacks:[{id:'a1',name:'Club'}]}).attacks[0].genFp===undefined);
 ck('R7 ...and a stamped one round-trips',
    X.migrate({abilities:{},attacks:[{id:'a1',name:'Club',genFp:'abc'}]}).attacks[0].genFp==='abc');
+
+/* #74 — a pack weapon whose bonus used to count twice. The old packs wrote a
+   +N weapon's bonus as weapon.atkMisc/dmgMisc AND as global attack/damage
+   effects; the fixed pack drops the effects. A sheet holds a COPY, so it keeps
+   the effects until the rules-update tool rewrites them — never on load. What it
+   must offer: exactly `effects`, ticked for an untouched copy, and applying it
+   must leave the weapon, the attack row and the player's numbers alone. The
+   "new" entry is read from the shipped pack, so this fails until the pack is
+   fixed; the "old" one is that entry with the effects it used to carry. */
+{
+  const shipped=JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','5e2024','items-magic.json'),'utf8'))
+    .items.find(x=>x.name==='Dagger of Venom');
+  const clubDef={name:'Club',description:'A club.',cost:'1 sp',category:'Weapon',type:'Simple Melee Weapon',weight:2,
+                 weapon:{kind:'melee',dice:'1d4',damageType:'bludgeoning',ability:'str',notes:''}};
+  const oldDef=Object.assign(JSON.parse(JSON.stringify(shipped)),
+                             {effects:[{target:'attack',value:1},{target:'damage',value:1}]});
+  const oldSheet=()=>{
+    X.resetRules(); X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(oldDef)),clubDef]},'5e.json');
+    const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.name='Vex';
+    ch.abilities.str=10; ch.abilities.dex=16; ch.level=1;
+    X.character=ch; X.activeId=ch.id;
+    X.addLibraryItems(X.rules.items.slice(),null,null,1);         /* the item finder, both equipped */
+    return ch;
+  };
+  const fixPack=()=>{ X.resetRules(); X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(shipped)),clubDef]},'5e.json'); };
+  const dagOf=ch=>ch.inventory.find(i=>i.name==='Dagger of Venom');
+  const rowOf=(ch,nm)=>ch.attacks.find(a=>a.name===nm);
+
+  let ch=oldSheet(), dag=dagOf(ch);
+  ck('#74 an old sheet shows the bug: the dagger +7, the Club +3',
+     X.attackNumbers(rowOf(ch,'Dagger of Venom')).toHit===7&&X.attackNumbers(rowOf(ch,'Club')).toHit===3,
+     [X.attackNumbers(rowOf(ch,'Dagger of Venom')),X.attackNumbers(rowOf(ch,'Club'))]);
+  ch.inventory.forEach(i=>{i.qty=2;i.fav=true;});                  /* the player's own numbers */
+  const atkId=rowOf(ch,'Dagger of Venom').id;
+  fixPack();
+  let rows=X.diffCharacter().rows, row=rows.find(r=>r.name==='Dagger of Venom');
+  ck('#74 the fixed pack is offered as one changed row: effects, and nothing else',
+     !!row&&row.type==='changed'&&row.fields.join()==='effects', rows.map(r=>r.name+':'+r.type+':'+r.fields));
+  ck('#74 ...ticked, since nobody edited the copy', !!row&&row.apply===true&&row.edited===false, row&&[row.apply,row.edited]);
+  ck('#74 ...and the Club is not offered at all', !rows.some(r=>r.name==='Club'), rows.map(r=>r.name));
+  X.applyUpdates(row?[row]:[]);
+  ck('#74 applying it removes the double-counted effects', Array.isArray(dag.effects)&&dag.effects.length===0, dag.effects);
+  ck('#74 ...keeps the weapon\'s own +1', dag.weapon.atkMisc===1&&dag.weapon.dmgMisc===1, dag.weapon);
+  ck('#74 ...touches none of the player\'s numbers', dag.equipped===true&&dag.qty===2&&dag.fav===true, dag);
+  ck('#74 ...keeps the attack row (same id, one row)',
+     ch.attacks.filter(a=>a.itemId===dag.id).length===1&&rowOf(ch,'Dagger of Venom').id===atkId);
+  ck('#74 ...and the sheet now reads the dagger +6 and the Club +2',
+     X.attackNumbers(rowOf(ch,'Dagger of Venom')).toHit===6&&X.attackNumbers(rowOf(ch,'Club')).toHit===2,
+     [X.attackNumbers(rowOf(ch,'Dagger of Venom')),X.attackNumbers(rowOf(ch,'Club'))]);
+  ck('#74 ...and nothing is offered again', !X.diffCharacter().rows.some(r=>r.name==='Dagger of Venom'),
+     X.diffCharacter().rows.map(r=>r.name+':'+r.fields));
+
+  /* a copy the player edited is offered, but not ticked: an update never guesses */
+  ch=oldSheet(); dag=dagOf(ch); dag.description+=' Mine now.';
+  fixPack();
+  row=X.diffCharacter().rows.find(r=>r.name==='Dagger of Venom');
+  ck('#74 an edited copy is offered unticked, flagged as edited', !!row&&row.apply===false&&row.edited===true,
+     row&&[row.apply,row.edited,row.fields]);
+  X.applyUpdates(row?[row]:[]);                                    /* the player ticks it anyway */
+  ck('#74 ...and ticking it writes only the effects, keeping their wording',
+     dag.effects.length===0&&/ Mine now\.$/.test(dag.description), [dag.effects,dag.description.slice(-20)]);
+
+  /* nothing touches a saved character on load */
+  ch=oldSheet();
+  const m=X.migrate(JSON.parse(JSON.stringify(ch)));
+  ck('#74 migrate() leaves the old effects on a saved copy', dagOf(m).effects.length===2, dagOf(m).effects);
+  X.resetRules();
+}
 
 // R3 — multiclass: two classes granting a same-named trait
 c=setup();

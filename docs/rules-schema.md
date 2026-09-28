@@ -472,12 +472,16 @@ the converter applies — mirroring `overlay.json` for feats.
 
   `kind` is `"melee"` or `"ranged"`; `ability` is the ability the attack uses (`str`/`dex`/…,
   `"finesse"` for the better of STR and DEX, or `"none"`); `dice` is the damage dice;
-  `damageType` is free text. `notes`, `atkMisc` and `dmgMisc` are optional — the last two are flat
-  modifiers added to the roll, for a `+1` weapon that has no other effect. Without a `weapon` object
-  an item is just inventory, however weapon-like its description reads.
+  `damageType` is free text. `notes`, `atkMisc` and `dmgMisc` are optional — the last two are the
+  weapon's own flat bonus to hit and to damage, added to this weapon's attack only. A `+1` weapon's
+  `+1` goes here, **not** in `effects`: an effect would add it to every attack, and twice to this
+  one. Without a `weapon` object an item is just inventory, however weapon-like its description reads.
 - **`effects`** apply **while equipped** (e.g. a Ring of Protection: `{"target":"ac","value":1}`). Base
   gear/armor usually have none — the app doesn't replace base AC from an effect; that lives in the
-  `description` or the `armor` object. Weapon damage comes from `weapon`, not from `effects`.
+  `description` or the `armor` object. Weapon damage comes from `weapon`, not from `effects`. An
+  `attack` or `damage` effect adds to **every** attack the character makes, spells included, so use
+  it only for a bonus that really does; a bonus for one weapon (or only bows) belongs on that
+  weapon, or in the `description`.
   `equipped`, `qty` and `sectionOverride` (which inventory section to file it under) are set
   per-character when the item is added, not in the pack.
 - **`weight`** is a **number of pounds, per unit** — not per stack. It is copied onto the character's

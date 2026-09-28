@@ -95,7 +95,10 @@ shows a receipt naming where the backup is.
 A changed row writes **only the fields the pack changed**, deep-copied from the projection (a field
 the projection lacks is removed from the copy), puts back `uses.used`, and re-baselines both
 fingerprints (`restampSrc()`) so the row is not offered again. A weapon then gets
-`updResyncAttack()`. `applyUpdates()` re-syncs spell attacks for just the spells it rewrote.
+`updResyncAttack()`. `applyUpdates()` re-syncs spell attacks for just the spells it rewrote. This is
+how a pack correction reaches a saved sheet, and nothing else does: `migrate()` never rewrites a
+copy. #74's `+N` weapons, for one, are offered as "effects changed" and applying it writes
+`effects: []` and nothing else, leaving the weapon's `atkMisc` and its attack row as they were.
 
 **Attacks.** An attack generated from a weapon is not a copy of a rules entry and has no `src`; only
 its item can rebuild it. Instead it carries `genFp`, one `fpHash()` over `ATK_GEN_FIELDS` — every
@@ -193,3 +196,4 @@ state survives. Attack mechanics: [Attacks & damage](attacks-and-damage.md).
   → ledger L1116
 - 2026-08-17 — the spell form keeps its `src` stamp. → ledger L2927
 - 2026-08-17 — a resync leaves a player-edited attack alone (`genFp`). → ledger L2945
+- 2026-09-28 — the pack fix for double-counted weapon bonuses reaches sheets as an `effects`-only row. → ledger L4392, #74

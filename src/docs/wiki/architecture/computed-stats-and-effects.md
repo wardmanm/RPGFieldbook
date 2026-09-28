@@ -97,6 +97,9 @@ fixed `8`/`"d8"`).
   spell", the expertise cases (Gallus "Communal", Sun Touched "Intimidation") and player-choice
   ability boosts on feats (Sun Touched, Moonlit) all stay as prose or glossary. That is correct,
   not a gap, so do not "fix" it.
+- **An effect is global to its target.** An equipped item's `attack` or `damage` effect reaches every
+  attack row, spell rows included, so a bonus scoped to one weapon is not an effect: a weapon's own
+  `+N` is its `atkMisc`/`dmgMisc`, and a bonus for bows or unarmed strikes stays prose (#74).
 - **Base values never have effects baked in.** A typed score, Max HP, AC or speed is the base, and
   effects layer on top at read time. That is what lets an effect come off again. It is also why the
   level-1 HP seed reads the bare CON score (see [Grants & provenance](grants-and-provenance.md)).
@@ -131,6 +134,7 @@ fixed `8`/`"d8"`).
 | What an effect can express | Numeric modifiers only (`{target, value}`) | Modelling advantage, resistance, senses and alternate speeds as effects: they stay prose or glossary, verified NOT gaps (L2581, CLAUDE.md) |
 | How `uses.max` scales | A number, `byLevel`, or a `formula` re-resolved at render | — (L16) |
 | Where encumbrance applies | After the effects, outside the engine | As a speed effect: two outcomes replace speed and one is not numeric (code comment, `10-compute.js`) |
+| A bonus scoped to one weapon (#74) | The weapon's `atkMisc`/`dmgMisc`, or prose on an item with no weapon | An `attack`/`damage` effect: it reaches every row, and on a weapon it doubled the row's own `atkMisc` |
 
 ## Open
 
@@ -149,3 +153,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-11 — Encumbrance is applied to speed after the effects. → ledger L1361
 - 2026-09-01 — Two stat layouts over one set of ids. → ledger L106, #17
 - 2026-09-25 — Resource pools gain a die size resolved per level. → ledger L3676
+- 2026-09-28 — A weapon's bonus is not an effect: the packs' `+N` weapons no longer add to every attack while equipped. → ledger L4392, #74

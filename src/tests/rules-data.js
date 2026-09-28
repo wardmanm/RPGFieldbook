@@ -547,6 +547,42 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
      &&dov.it.weapon.ability==='finesse', dov&&dov.it.weapon);
 }
 
+// ---------- shipped data: a +N weapon's bonus counts once, on its own attack (#74)
+// convert.py wrote 5e-tools' bonusWeapon twice: as the weapon's own atkMisc /
+// dmgMisc, and as global `attack`/`damage` effects on the item. attackNumbers()
+// adds both on the weapon's row (+2N), and an effect applies to EVERY attack
+// while the item is equipped, spell rows included. Every bonusWeapon that
+// reaches a pack is scoped to one weapon (or bows, or unarmed strikes), and no
+// effect target can say that, so no item in any pack carries an attack or damage
+// effect. A pack item whose bonus truly reaches every attack would be named
+// here deliberately — there is none today.
+{
+  const ALL_ATTACKS_OK=[];
+  const items=[];
+  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+    fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
+      (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[])
+        .forEach(it=>items.push({where:d+'/'+f,it}));
+    }));
+  const atkDmg=it=>(it.effects||[]).filter(e=>/^(attack|damage)(\.|$)/.test(String(e&&e.target)));
+  const dbl=items.filter(({it})=>it.weapon&&(it.weapon.atkMisc||it.weapon.dmgMisc)&&atkDmg(it).length);
+  ck('#74 no weapon carries its bonus both on the weapon and as an attack/damage effect', dbl.length===0,
+     dbl.map(({where,it})=>where+' '+it.name+': '+JSON.stringify(atkDmg(it))));
+  const global=items.filter(({it})=>atkDmg(it).length&&!ALL_ATTACKS_OK.includes(it.name));
+  ck('#74 no pack item adds to every attack while equipped', global.length===0,
+     global.map(({where,it})=>where+' '+it.name+': '+JSON.stringify(atkDmg(it))));
+  // the bonus is not lost on the way: it is on the weapon, where attackNumbers() reads it once
+  const plus=items.filter(({it})=>it.weapon&&it.weapon.atkMisc);
+  ck('#74 the packs still ship +N weapons (11 core, 4 Tasha\'s)',
+     plus.filter(x=>x.where.startsWith('5e2024/')).length===11&&plus.filter(x=>x.where.startsWith('tashas/')).length===4,
+     plus.map(({where,it})=>where+' '+it.name));
+  [['Dagger of Venom',1],['Sun Blade',2],['Dwarven Thrower',3],['+3 Moon Sickle',3],["Baba Yaga's Pestle",3]]
+    .forEach(([name,n])=>{
+      const w=(items.find(({it})=>it.name===name)||{it:{}}).it.weapon||{};
+      ck('#74 '+name+' carries +'+n+' on its own weapon', w.atkMisc===n&&w.dmgMisc===n, w);
+    });
+}
+
 // ---------- subclassesFor: a supplement must not overwrite a 2024 subclass
 // The map is keyed by NAME because that is what character.classes[].subclass
 // stores. The 2024 PHB reprinted seven XGE/TCE subclasses, so a bare last-wins
