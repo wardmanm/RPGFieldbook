@@ -106,7 +106,7 @@ current one (that would break the in-app update check).
 | `fieldbook.html` | Players who just want the app. This is the whole thing. |
 | `fieldbook-v<V>.zip` | The player bundle — app, README, rules packs, docs, converter. |
 | GitHub's own `Source code (zip)` / `(tar.gz)` | Attached automatically from the tag — we don't build or upload a source archive. |
-| `5e2024_full.json`, `humblewood_full.json` | Rules packs on their own, for someone updating data without re-downloading the app. |
+| `5e2024_full.json`, `humblewood_full.json`, `xanathars_full.json`, `tashas_full.json`, `homebrew_full.json` | Rules packs on their own, for someone updating data without re-downloading the app. |
 
 The release body is that version's section of `docs/CHANGELOG.md`, sliced out by
 `scripts/release-notes.js`.
@@ -115,7 +115,7 @@ The release body is that version's section of `docs/CHANGELOG.md`, sliced out by
 
 ## 1a. Building without releasing
 
-A plain `./build.sh` is the everyday build: it validates everything and produces both zips at the
+A plain `./build.sh` is the everyday build: it validates everything and produces the player zip at the
 **current** `APP_VERSION`, and never touches the version or the notebook.
 
 ```bash

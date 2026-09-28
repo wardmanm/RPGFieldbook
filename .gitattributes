@@ -12,6 +12,10 @@
 # actually disagree. `union` keeps both sides.
 src/docs/UNRELEASED.md            merge=union
 src/docs/_claude/WIRING-LEDGER.md merge=union
+# The wiki's catalog: branches only add lines to it. Wiki PAGES are deliberately
+# not union-merged — two branches rewriting one paragraph must conflict, or both
+# versions would be kept silently.
+src/docs/wiki/index.md            merge=union
 
 # Safety net, and it should never fire: feature branches carry src-only diffs
 # and never commit the artifact. If one does, keeping ours and rebuilding is the

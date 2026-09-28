@@ -96,6 +96,12 @@ side, silently. Add new entries; don't rewrite old ones on a branch. It can also
 where two appended sections meet — harmless, since a heading still renders, but tidy it in the merge
 commit if you notice.
 
+**The wiki adds two consequences.** `src/docs/wiki/index.md` is union-merged too (branches only add
+lines to it); wiki *pages* are not, because two branches rewriting one paragraph must conflict.
+And wiki History lines cite ledger entries by heading line number, so after a union merge the
+second branch's entry has moved and its citations point at the wrong line. The `docs` suite fails
+on exactly that — re-point those `L<n>` in the merge commit.
+
 `dist/fieldbook.html` also carries `merge=ours` as a dead-man's switch — if a branch commits the
 artifact despite section 2, keeping ours and rebuilding is the only sane resolution. That attribute
 needs a driver definition, which `wt.sh` sets idempotently:
