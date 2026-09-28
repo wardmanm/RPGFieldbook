@@ -60,7 +60,8 @@ the number: traits, grants and choices stay.
 **Subclass.** Either a `subclass` choice at the class's level, or Choose/Change in the class info
 window (`chooseSubclass()`), which shows each with its pack and description. `selectSubclass()`
 removes every subclass-origin feature of that class and the old subclass's grants, then applies each
-subclass level up to the current one and opens their choices. `subclassesFor()` merges the class's
+subclass level up to the current one and opens their choices, carrying whatever waits behind that
+window (see below). `subclassesFor()` merges the class's
 own subclasses with standalone `subclasses` entries naming it; a same-named entry from a *different*
 pack is keyed "Name (PACK)" and offered alongside, and `subSourceTag()` tags the rest.
 
@@ -80,15 +81,26 @@ budget, but it never asks for more than remain. The target is written as `data-c
 `.choice` wrapper; a `change` listener on the modal calls `syncChoiceLimits()`, which disables the
 unticked boxes once the block is full and re-enables them off `data-fixed`, never off `checked`. On
 Done, `choiceShortfall(choiceBlocks())` warns about unmade picks; `gatherChoices()` reads only
-checked, **enabled** boxes; `commitChoices()` grants, renders, then opens the subclass (if one was
-picked) and `runExtraChoices()` for a picked feat's skill choices and the new class's
-starting-equipment picker.
+checked, **enabled** boxes; `commitChoices()` grants, renders, then opens the next window.
+
+**One window at a time.** There is one modal, so a window opens only once the one before it is
+finished. The windows go: the class's level choices, then the picked subclass's own level choices
+(Battle Master's maneuvers and Student of War), then one "Choose" window from `runExtraChoices()`
+with the skill choices of any feat picked on the way and the new class's starting-equipment picker.
+What waits behind a window is a `pending` list in `runExtraChoices()`'s shape, and it travels with
+the window: `runChoices(…, pending)` → its Done → `commitChoices(…, pending)`, which adds this
+window's feat skill choices and hands the lot to `selectSubclass(…, next)` when a subclass was
+picked, otherwise to `runExtraChoices()`. `runChoices()` with nothing to show (Champion at 3 has no
+picks) passes the queue straight on.
 
 **Dismissing.** Closing wipes `#mBody` and a chooser cannot be reopened. `armChoiceDismissGuard()`
 registers a guard (via `setDismissGuard()`) that ✕, a backdrop click and Escape all consult through
 `dismissModal()`: it warns that picks will be discarded, or asks a milder question when only hit
-points are at stake (`hpPending()`), since Max is unlocked. `openModal()` and `closeModal()` clear
-the guard, so an ordinary form's Escape stays instant.
+points are at stake (`hpPending()`), since Max is unlocked. The guard also carries the window's
+`pending` as `then`, so a dismissed window still opens the ones queued behind it: dismissing costs
+that window's own picks, never the starting equipment of a class already on the sheet.
+`openModal()` and `closeModal()` clear the guard and `then`, so an ordinary form's Escape stays
+instant and a queue never outlives its window.
 
 **Option lists and the library.** Maneuvers (Battle Master), Metamagic, Eldritch Invocations and
 Artificer infusions — and in the supplements Arcane Archer shots, College of Swords styles and Rune
@@ -119,8 +131,9 @@ they are built: [Converter](../data/converter.md).
   then clears `hp.locked` as the fallback for a dismissed modal.
 - **`commitChoices()` passes `cost` into `addFeatureFromDef()`.** A picked maneuver's Use button
   spends a Superiority Die only because the cost survives this hop.
-- **The starting-equipment picker travels with its own window** (`runChoices(…, eq)` →
-  `commitChoices(…, eq)`), never a module global.
+- **One choice window at a time, and the queue travels with it** (`runChoices(…, pending)` →
+  `commitChoices(…, pending)` → `selectSubclass(…, next)`, or the guard's `then` on a dismissal).
+  A Done opens at most one window. The queue never waits in a module global.
 - **`character.classes[].subclass` stores the `subclassesFor()` key**, so a supplement must never be
   allowed to take an existing key from another pack.
 
@@ -137,12 +150,12 @@ they are built: [Converter](../data/converter.md).
   it popped up after the next level-up's Done. Found with #58, removed in the Battle Master pass;
   `char-update.js` spies on `runExtraChoices` through the vm context to prove the picker now travels
   with the window.
-- **Two modals can race.** `commitChoices()` opens the subclass's modal and then
-  `runExtraChoices()`, and `openModal()` replaces the body and clears the guard. So a subclass with
-  its own choices (Battle Master at 3) is replaced by the starting-equipment picker when a class is
-  added at or above its subclass level — every 2024 class has an equipment choice. The ledger
-  (L2571) recorded only the narrower feat-plus-subclass case. Traced in the code; not reproduced in
-  a browser.
+- **Two windows opened at once (#63).** `commitChoices()` used to open the subclass's window and
+  then, in the same step, `runExtraChoices()`, and `openModal()` replaced the first window and
+  cleared its guard. A Fighter added at 3 as a Battle Master was never offered maneuvers, and every
+  2024 class has an equipment choice, so any choice-bearing subclass taken at a starting level was
+  exposed. The ledger (L2571) had recorded only the narrower feat-plus-subclass case. `char-update.js`
+  now drives the real 2024 Fighter through the whole flow and asserts the order of the windows.
 - **"(TCE) (TCE)".** A reprint already keyed "Psi Warrior (TCE)" was tagged again in both subclass
   pickers; `subSourceTag()` now skips a tag already in the name.
 - **Not everything reverts.** Tools and languages go into the free-text Proficiencies box and stay
@@ -164,6 +177,8 @@ they are built: [Converter](../data/converter.md).
 | Species from the other system | Filtered out of the picker only | Filtering `findRaceDef()`: an imported cross-system ancestry would lose its traits |
 | An option already on the sheet | Ticked and `data-fixed` in checkboxes; just disabled in radios | A tick in a radio group, which reads as this level's pick |
 | Where the equipment picker waits | Passed to `runChoices()` and on to its own Done | A module global: it outlived a dismissed window |
+| When a picked subclass has choices of its own | Its window opens first; feat skill choices and the equipment picker wait behind it | Opening each window as soon as it is known: one modal, so the last one opened replaced the subclass's picks (#63) |
+| What a dismissed choice window does with the windows behind it | Hands them on (`then`) | Drops them with it: a notes-only subclass window arms no warning, so Escape would silently cost a class already on the sheet its equipment |
 | Student of War's tool | An `option` that becomes a feature | The free-text Proficiencies box: it would not revert with the subclass |
 
 ## Open
@@ -177,8 +192,10 @@ they are built: [Converter](../data/converter.md).
   `grantFeatDef()` only queues those when there is an origin sid.
 - Level-down keeps everything, and class-level feat skill choices revert with the class, not the
   level: [Grants & provenance](../architecture/grants-and-provenance.md).
-- The modal race above, and the unreverted Proficiencies text, speed and size. See
+- The unreverted Proficiencies text, speed and size. See
   [Known issues](../roadmap/known-issues.md).
+- `runChoices()` titles a window with the level of its first choice, so Add class at level 3 opens
+  as "Fighter — Level 1" even though it holds the level-3 subclass pick too.
 
 ## History
 
@@ -194,3 +211,5 @@ they are built: [Converter](../data/converter.md).
   marked, `repeatable` honoured, `gatherChoices()` skips disabled. → ledger L3596, #60
 - 2026-09-25 — option costs, Student of War, the 2024 options library; `_equipQueue` removed.
   → ledger L3649
+- 2026-09-28 — choice windows open one at a time: the subclass's own picks before feat skill
+  choices and the equipment picker, and a dismissed window hands its queue on. → ledger L3847, #63

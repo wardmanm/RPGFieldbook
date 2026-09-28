@@ -16,7 +16,7 @@ background or drop a class without hand-cleaning the sheet.
 `commitChoices()`, `sidToOrigin()` in `58-choices.js`; `originFromSid()`, `itemOrigin()`,
 `costToGp()` in `25-origins-items.js`; `syncResources()` in `65-resources.js` · **Tests:**
 `char-update.js` (grant and revert, `grantItemByName()` called for real, the pending equipment
-picker travelling with its window), `sheet.js` (`invSection()` filing) · **See also:** [Character building](../features/character-building.md),
+picker travelling with its window, the order the choice windows open in), `sheet.js` (`invSection()` filing) · **See also:** [Character building](../features/character-building.md),
 [Inventory](../features/inventory.md), [Class resources](../features/class-resources.md),
 [Rules-update tool](../features/rules-update-tool.md)
 
@@ -72,9 +72,13 @@ item's origin badge (C, B or A) comes from `originFromSid()`.
 Class and subclass level choices go through `runChoices()` → `commitChoices()`: skills to the
 choice's sid, an ASI as a feature, a feat through `grantFeatDef()`, an option through
 `addFeatureFromDef()` with `sidToOrigin()` (so it reverts with its class or subclass) and its
-`cost` forwarded. A picked subclass is applied by `selectSubclass()` after the rest. The class's
-starting-equipment picker is passed **with the window** as `eq`, from `runChoices()` to its own Done
-to `commitChoices()`, which hands it to `runExtraChoices()`.
+`cost` forwarded. A picked subclass is applied by `selectSubclass()` after the rest, and its own
+window opens before anything else queued. What waits behind a window (the class's starting-equipment
+picker, and the skill choices of feats picked on the way) is passed **with the window** as `pending`,
+from `runChoices()` to its own Done to `commitChoices()`, which hands it on to the subclass's window
+or else to `runExtraChoices()`. A dismissed window hands it on too, so a class already on the sheet
+always gets its equipment picker. The flow is on
+[Character building](../features/character-building.md).
 
 **Removal and swapping.** `removeRace()`, `removeBackground()` and `removeClass()` each remove the
 features by origin, the proficiencies by sid, and the equipment and gold by sid. `removeClass()`
@@ -101,7 +105,8 @@ features and grants before applying the new one.
 - **The level-1 HP seed reads CON with `modOf()` on the score, not `abilFinal()`.** Effects come
   and go (un-equip a cloak), and the seed has to be recomputable unchanged when the class is
   removed. `resyncLevel1HP()` re-seeds when CON is edited so the match keeps landing.
-- **The pending equipment picker travels with its window.** Never park it in a module global.
+- **What waits behind a choice window travels with it, and one window opens at a time.** Never park
+  the queue in a module global, and never open a second window from a Done that already opened one.
 
 ## Traps
 
@@ -116,6 +121,9 @@ features and grants before applying the new one.
   `_equipQueue`. Closing an Add-class window without Done left it queued, and it popped up after the
   *next* level-up's Done. `char-update.js` now spies on `runExtraChoices()` through the vm context to
   prove it travels with its window.
+- **A subclass's own choices were lost (#63).** `commitChoices()` opened the subclass's window and,
+  in the same step, the equipment picker, which replaced it. Fighter 3 as a Battle Master was never
+  offered maneuvers or Student of War. The queue now waits behind the subclass's window.
 - **A picked option's cost was dropped:** `commitChoices()` did not pass `cost` into
   `addFeatureFromDef()`. It does now, because `useFeature()` spends from a resource matched by name.
 - **Free-text proficiencies do not revert.** That is why Student of War's tool lands as a feature
@@ -128,17 +136,11 @@ features and grants before applying the new one.
 | How grants are undone | Provenance-tracked clean revert | — (L42) |
 | How an origin's content is updated from a newer pack | Per feature, spell and item | Remove-then-add: replays from level 1 and destroys choices the app keeps no record of (L702) |
 | Which CON the level-1 HP seed reads | `modOf()` of the score | `abilFinal()`: effects move under it, so un-equipping an item between add and remove silently stops the revert (L2035) |
-| Where the starting-equipment picker waits | Passed with its window to its own Done | A module global: it outlived a dismissed window and fired after the next level-up (L3649) |
+| Where the starting-equipment picker waits | Passed with its window to its own Done, or on from its dismissal | A module global: it outlived a dismissed window and fired after the next level-up (L3649). Dropped with a dismissed window: a class already on the sheet lost its equipment (L3847) |
 | Where Student of War's tool proficiency goes | A feature | The free-text Proficiencies box: it would not revert with the subclass (L3649) |
 
 ## Open
 
-- **A subclass's own choices can be lost when a class is added at level 3 or higher.**
-  `commitChoices()` calls `selectSubclass()`, which opens that subclass's level-choice window
-  (Battle Master's maneuvers and Student of War, say), and then immediately calls
-  `runExtraChoices()` with the starting-equipment picker. `openModal()` replaces the window, so the
-  subclass picks are never offered. Reproduced in the harness: the windows open as "Fighter — Level
-  3" and then "Choose". A feat skill choice at the same level races the same way.
 - **Level-down keeps everything.** `doLevelDown()` lowers the number and nothing else: traits,
   grants, choices and HP stay. The grant model does not key by class level, so a class-level choice
   reverts when the class is removed but not per level. Race and background choices revert fully.
@@ -162,3 +164,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-11 — Granted items carry cost, category and type, and `invSection()` gains word boundaries. → ledger L1444
 - 2026-08-14 — The level-1 HP seed includes CON and re-syncs, so its clean revert keeps landing. → ledger L2035
 - 2026-09-25 — `_equipQueue` is removed, and option costs are forwarded. → ledger L3649
+- 2026-09-28 — Choice windows open one at a time; the queue behind a window travels with it and survives its dismissal. → ledger L3847, #63

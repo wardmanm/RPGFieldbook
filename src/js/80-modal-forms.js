@@ -7,15 +7,19 @@ const modal=document.getElementById("modal");
    form Escape IS cancel and must stay instant.
    The check cannot live inside closeModal(): every Done handler calls that too,
    and would then have to answer its own prompt. Only the three user-initiated
-   dismissals below go through dismissModal(). */
-let _dismissGuard=null;
-function setDismissGuard(fn){_dismissGuard=fn;}
+   dismissals below go through dismissModal().
+   `then` is what a dismissed window hands on: the choice windows still queued
+   behind it (#63). It belongs to THIS window, like the guard — every open and
+   close clears both — so it can never fire after some later window, which is
+   how the old module-level equipment queue leaked. Done hands the queue on itself. */
+let _dismissGuard=null,_dismissThen=null;
+function setDismissGuard(fn,then){_dismissGuard=fn;_dismissThen=then||null;}
 /* `icon` is optional emblem markup for the header (iconSVG()). It is assigned
    UNCONDITIONALLY, never guarded behind `if(icon)`: ~30 call sites pass nothing,
    and they must CLEAR the slot, or a class emblem leaks into the next spell
    modal that opens. The title stays textContent — it is player data. */
-function openModal(title,html,icon){_dismissGuard=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
-function closeModal(){_dismissGuard=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
+function openModal(title,html,icon){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
+function closeModal(){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
 /* ---- focus ----
    A dialog takes the keyboard with it. On open, every other child of <body> goes
    inert (the toast stays reachable) and focus moves in: to the first field with a
@@ -76,7 +80,7 @@ function modalGiveBackFocus(){
 }
 function dismissModal(){
   if(_dismissGuard){const msg=_dismissGuard();if(msg&&!confirm(msg))return;}
-  closeModal();
+  const then=_dismissThen;closeModal();if(then)then();
 }
 document.getElementById("mClose").addEventListener("click",dismissModal);
 modal.addEventListener("click",e=>{if(e.target===modal)dismissModal()});

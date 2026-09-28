@@ -32,3 +32,7 @@ Bullets below this line — leave the heading in place.
   reach a source (offline, or blocked by the site) it leaves your loaded rules exactly as they were
   and says so, instead of emptying them for the next launch. Each source it does reach replaces
   only what it loaded last time, and the Rules data count in Settings now stays up to date.
+- Taking a class at level 3 or higher no longer skips your subclass's own choices. Pick Battle
+  Master and you are now asked for your Maneuvers and Student of War before the starting equipment,
+  and a feat's skill choices wait their turn too. Closing one of these windows no longer loses the
+  starting-equipment choice that comes after it.

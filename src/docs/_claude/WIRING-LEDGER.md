@@ -3844,3 +3844,42 @@ calls `ck.done()` itself): 49 checks, 29 of which failed before the fix, and eac
 mutation-checked (removing it turns a check red). Entries fetched before this change carry no
 `_url`; a re-fetch still replaces them by name, and only an entry the source has since dropped
 lingers, removable from Loaded data.
+## Choice windows open one at a time: a subclass's picks before the equipment picker (#63, 2026-09-28)
+
+**The bug.** Add a Fighter at level 3 and pick Battle Master: Maneuvers and Student of War were never
+offered. The class window's Done ran `commitChoices()`, which opened the subclass's own window
+(`selectSubclass()` → `runChoices()`) and then, in the same step, `runExtraChoices()` for feat skill
+choices and the starting-equipment picker. There is one modal, so `openModal()` replaced the subclass
+window and cleared its guard. Every 2024 class has an equipment choice, so any class added at or
+above its subclass level with a choice-bearing subclass lost those picks. The feat-plus-subclass
+race recorded under "Known minor limitations" was the same bug.
+
+**Root cause: sequencing.** Two windows opened at once. Removing `_equipQueue` handed the equipment
+picker to the class window's Done, and that Done then opened both.
+
+**Fix: one window at a time. What waits behind a window travels with it.** `pending` (the shape
+`runExtraChoices()` takes: equipment pickers and feat skill choices) goes `runChoices(…, pending)` →
+its Done → `commitChoices(…, pending)` → if a subclass was picked, `selectSubclass(…, next)` →
+`runChoices(…, next)`, else `runExtraChoices(next)`. `runChoices()` with nothing to show passes the
+queue straight on (Champion at 3), so `addClass()` lost its own `else`.
+
+**Dismissing.** `setDismissGuard(fn, then)`: `then` is what a dismissed window hands on, and
+`dismissModal()` runs it after `closeModal()`. Every `openModal()`/`closeModal()` clears it with the
+guard, so it lives exactly as long as its window, and no module global comes back. Decision: a
+dismissed choice window still hands its queue on. That costs the window's own picks (the guard says
+so), not the gear of a class that is already on the sheet. Rejected: dropping the queue with the
+window, as the L3649 comment said. A notes-only subclass window arms no warning, so Escape would have
+cost the class its equipment without a word. Dismissing the Add-class window now also still offers
+the equipment picker.
+
+**Tests.** `char-update.js` drives the real 2024 Fighter through the real flow. The only doubles are
+the ones the stubbed DOM forces: the picks (`gatherChoices`) and the Done buttons. `openModal` is
+recorded and still runs. The checks cover the window order, the subclass picks landing as Battle
+Master's, a subclass with no picks going straight on, dismissal handing on, a replaced window not
+leaking its queue, and a feat and a subclass at one level. 5 failed before the fix, and each part of
+the fix was mutation-tested. `rules-data.js`'s arm-count regex now allows the argument.
+
+Pages: [character building](../wiki/features/character-building.md),
+[grants & provenance](../wiki/architecture/grants-and-provenance.md), [shell](../wiki/ui/shell.md),
+[2.0](../wiki/roadmap/2.0.md), [testing](../wiki/process/testing.md); `decisions.md`. Known issues are reconciled
+at merge.

@@ -16,7 +16,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag','runChoices',
-  'syncResources','resolveResDie',
+  'syncResources','resolveResDie','openModal','dismissModal','skillKey',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -819,8 +819,102 @@ ck('...and one with no pack shows nothing', X.subSourceTag('Engineer',{})==='');
 ck('no module-level equipment queue is left to leak',
    !/_equipQueue/.test(fragments.map(f=>fs.readFileSync(path.join(__dirname,'../..',f),'utf8')).join('\n')));
 ck("the class window's Done hands its own queue to commitChoices",
-   /function runChoices\(className,choices,notes,eq\)[\s\S]*?commitChoices\(className,sel,eq\)/.test(
+   /function runChoices\(className,choices,notes,pending\)[\s\S]*?commitChoices\(className,sel,pending\)/.test(
      fs.readFileSync(path.join(__dirname,'../js/58-choices.js'),'utf8')));
+
+// ---------- #63: every choice window is shown, one after another
+// Add a Fighter at level 3 and pick Battle Master: the subclass's own window
+// (Maneuvers, Student of War) opened and was at once replaced by the
+// starting-equipment picker, because commitChoices() opened both and there is
+// only one modal. Driven with the REAL 2024 Fighter and the real flow: addClass,
+// runChoices, commitChoices, selectSubclass, runExtraChoices, dismissModal. The
+// DOM is stubbed, so the only doubles are the ones it forces — the player's
+// picks (gatherChoices) and the Done buttons, captured so the test can press
+// them. openModal is only recorded; it still runs.
+{
+  const pack=JSON.parse(fs.readFileSync(path.join(__dirname,'../../data/5e2024/classes.json'),'utf8'));
+  const real={open:ctx.openModal,gather:ctx.gatherChoices,byId:ctx.document.getElementById};
+  let shown=[],done={},picks=[];
+  ctx.openModal=(t,h,i)=>{shown.push({title:t,html:String(h)});return real.open(t,h,i);};
+  ctx.gatherChoices=()=>picks;
+  ctx.document.getElementById=id=>(id==='chDone'||id==='xchDone')
+    ?{addEventListener:(ev,fn)=>{done[id]=fn;}}:real.byId(id);
+  /* Press a window's Done with these picks: whatever it opens is what came next. */
+  const press=(id,sel)=>{picks=sel;const fn=done[id];done[id]=null;const from=shown.length;if(fn)fn();return shown.slice(from);};
+  const fresh=classes=>{
+    hpSetup(classes);shown=[];done={};picks=[];
+    X.mergeRules({feats:[{name:'Skilled',description:'Three skills.',
+      choices:[{type:'skill',choose:3,from:['Arcana','History','Nature','Religion']}]}]},'test-feats');
+  };
+  const equip=w=>!!w&&/data-ctype="equip"/.test(w.html);
+  const maneuvers=w=>!!w&&/Maneuvers: choose 3/.test(w.html)&&/Student of War/.test(w.html);
+  try{
+    fresh(pack.classes);
+    X.addClass('Fighter',3);
+    ck('#63 adding a Fighter at 3 opens the class window first', shown.length===1&&/Fighter Subclass/.test(shown[0].html),
+       shown.map(w=>w.title));
+    let next=press('chDone',[{type:'subclass',name:'Battle Master'}]);
+    ck('#63 picking Battle Master opens its own window next: Maneuvers and Student of War',
+       next.length>=1&&maneuvers(next[0]), next.map(w=>w.title));
+    ck('#63 ...and nothing replaces it: the equipment picker waits behind it',
+       next.length===1&&!equip(next[next.length-1]), next.map(w=>w.title));
+    const bm='subclass:Fighter:Battle Master',ath=X.skillKey('Athletics');
+    next=press('chDone',[{type:'option',ci:0,sid:bm,idxs:[0,1,2]},{type:'skill',sid:bm,keys:[ath]},
+                         {type:'option',ci:2,sid:bm,idxs:[0]}]);
+    const mine=n=>X.character.features.find(f=>f.name===n&&f.origin&&f.origin.subclass==='Battle Master');
+    ck('#63 the maneuvers picked in that window are on the sheet, as Battle Master\'s',
+       !!(mine('Ambush')&&mine('Bait and Switch')&&mine("Commander's Strike")),
+       X.character.features.map(f=>f.name));
+    ck('#63 ...and Student of War\'s skill and tool too',
+       X.character.grants.some(g=>g.sid===bm&&g.type==='skill'&&g.key===ath)&&!!mine("Alchemist's Supplies"),
+       X.character.grants);
+    ck('#63 then the starting-equipment picker, last', next.length===1&&equip(next[0]), next.map(w=>w.title));
+    ck('#63 ...and its Done opens nothing more', press('xchDone',[]).length===0);
+
+    // A subclass with nothing to choose at that level hands the queue straight on.
+    fresh(pack.classes); X.addClass('Fighter',3);
+    next=press('chDone',[{type:'subclass',name:'Champion'}]);
+    ck('#63 a subclass with no picks goes straight to the equipment picker',
+       next.length===1&&equip(next[0]), next.map(w=>w.title));
+
+    // Dismissing the subclass window costs its own picks (the guard says so), not
+    // the class's starting equipment: the class is already on the sheet.
+    fresh(pack.classes); X.addClass('Fighter',3);
+    press('chDone',[{type:'subclass',name:'Battle Master'}]);
+    let from=shown.length; X.dismissModal();
+    ck('#63 dismissing the subclass window still offers the starting equipment',
+       shown.length===from+1&&equip(shown[from]), shown.slice(from).map(w=>w.title));
+    from=shown.length; X.dismissModal();
+    ck('#63 ...and dismissing that opens nothing more', shown.length===from);
+
+    // What waits behind a window belongs to THAT window: another window taking
+    // the modal drops it, so it cannot fire after some later dismissal (the
+    // _equipQueue leak, through the new route).
+    fresh(pack.classes); X.addClass('Fighter',3);
+    press('chDone',[{type:'subclass',name:'Battle Master'}]);
+    X.openModal('Something else','<p>unrelated</p>');
+    from=shown.length; X.dismissModal();
+    ck('#63 a window replaced by another does not leak its queue into that one\'s dismissal',
+       shown.length===from, shown.slice(from).map(w=>w.title));
+
+    // L2571: a feat with a skill choice and a subclass at the same level raced
+    // the same way. The feat's skills and the equipment come after the subclass.
+    fresh([{name:'Tester',hitDie:'d8',
+      equipmentGrants:[{label:'Starting equipment',choose:[{gold:10},{items:[{name:'Rope'}]}]}],
+      levels:{'1':{choices:[{type:'feat',label:'Origin feat',from:['Skilled']},{type:'subclass',label:'Tester Subclass'}]}},
+      subclasses:{'Path of Tests':{description:'x',levels:{'1':{choices:[{type:'option',label:'Pick a knack',choose:1,
+        from:[{name:'Knack',description:'A knack.'}]}]}}}}}]);
+    X.addClass('Tester',1);
+    next=press('chDone',[{type:'feat',name:'Skilled'},{type:'subclass',name:'Path of Tests'}]);
+    ck('#63 feat + subclass at one level: the subclass window comes first, alone',
+       next.length===1&&/Pick a knack/.test(next[0].html), next.map(w=>w.title));
+    next=press('chDone',[{type:'option',ci:0,sid:'subclass:Tester:Path of Tests',idxs:[0]}]);
+    ck('#63 ...then one window with the feat\'s skills and the equipment',
+       next.length===1&&/Feat: Skilled/.test(next[0].html)&&/data-skill-opt/.test(next[0].html)&&equip(next[0]),
+       next.map(w=>w.title));
+    ck('#63 ...and the knack was kept', X.character.features.some(f=>f.name==='Knack'));
+  }finally{ctx.openModal=real.open;ctx.gatherChoices=real.gather;ctx.document.getElementById=real.byId;}
+}
 
 // ---------- the die a pool's points are (Superiority Dice d8 -> d10 -> d12)
 ck('a pool with no die has none', X.resolveResDie({name:'Rage'},5)==='');

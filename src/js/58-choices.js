@@ -143,13 +143,19 @@ function sidToOrigin(sid,level){
   if(p[0]==="race")return {kind:"race",name:p[1]};
   return {kind:"class",class:"",level};
 }
-/* `eq` is the starting-equipment picker a new class queues behind its choices.
-   It travels with THIS window to its own Done: it used to wait in a module
-   global, so closing the window without Done left it queued, and it popped up
-   after the next level-up instead. Dismissed now, it goes with the window —
-   which the dismiss guard already warns about. */
-function runChoices(className,choices,notes,eq){
-  if((!choices||!choices.length)&&(!notes||!notes.length))return;
+/* `pending` is what waits behind this window, in runExtraChoices()'s shape: a
+   new class's starting-equipment picker, and the skill choices of feats picked
+   in an earlier window. There is ONE modal, so a window may only open once the
+   one before it is finished — opening two at once is how Battle Master's
+   maneuvers were replaced by the equipment picker before anyone saw them (#63).
+   So the queue travels with the window: to its Done (commitChoices), or, if the
+   player dismisses it, on to the next window (setDismissGuard's `then`) —
+   dismissing costs this window's own picks, which the guard warns about, not
+   the gear of a class that is already on the sheet. It used to wait in a module
+   global instead, which outlived a dismissed window and popped up after the
+   NEXT level-up. With nothing to show, it goes straight on. */
+function runChoices(className,choices,notes,pending){
+  if((!choices||!choices.length)&&(!notes||!notes.length)){runExtraChoices(pending);return;}
   _activeChoices=choices||[];
   const d=findClassDef(className);
   let body="";
@@ -162,12 +168,12 @@ function runChoices(className,choices,notes,eq){
      discards EVERY pick with no way to reopen the chooser — the easiest way
      past it, which is the opposite of the point. Registered after openModal,
      because openModal clears the guard on every open. */
-  armChoiceDismissGuard();
+  armChoiceDismissGuard(pending);
   wireHPChoice();
   document.getElementById("chDone").addEventListener("click",()=>{
     const warn=choiceShortfall(choiceBlocks());
     if(warn&&!confirm(warn))return;
-    const sel=gatherChoices();closeModal();commitChoices(className,sel,eq);
+    const sel=gatherChoices();closeModal();commitChoices(className,sel,pending);
   });
 }
 /* The HP block's live working and its Roll button. */
@@ -194,8 +200,10 @@ function hpPending(){
   return !!(div.querySelector("[data-hp-roll]")||(box&&String(box.value).trim()!==""));
 }
 /* Shared by both choice modals. The message differs from Done's: here the picks
-   are about to be thrown away, not merely left short. */
-function armChoiceDismissGuard(){
+   are about to be thrown away, not merely left short. `pending` — the windows
+   queued behind this one — still opens after a dismissal (see runChoices). */
+function armChoiceDismissGuard(pending){
+  const then=(pending&&pending.length)?()=>runExtraChoices(pending):null;
   setDismissGuard(()=>{
     const blocks=choiceBlocks();
     const picked=blocks.reduce((a,b)=>a+num(b.picked),0);
@@ -207,7 +215,7 @@ function armChoiceDismissGuard(){
     return (picked?"Closing will discard the picks you have made.":"You have not made your picks yet.")+
       "\n\nThere is no way to reopen this later — you would have to remove and re-add it."+
       (hp?"\n\nThis level's hit points will not be added either.":"")+"\n\nClose anyway?";
-  });
+  },then);
 }
 function gatherChoices(){
   const out=[];
@@ -222,7 +230,8 @@ function gatherChoices(){
   });
   return out;
 }
-function commitChoices(className,selections,eq){
+/* `pending` is the queue this window's Done was handed (see runChoices). */
+function commitChoices(className,selections,pending){
   const entry=character.classes.find(c=>c.name===className);
   let pendingSub=null;const _featPending=[];
   selections.forEach(sel=>{
@@ -234,7 +243,13 @@ function commitChoices(className,selections,eq){
     else if(sel.type==="option"){const ch=_activeChoices[sel.ci];if(ch&&Array.isArray(ch.from))sel.idxs.forEach(i=>{const o=ch.from[i];if(o)addFeatureFromDef({name:o.name,description:o.description||"",effects:o.effects||[],skills:o.skills,saves:o.saves,cost:o.cost},sidToOrigin(sel.sid,ch._level));});}
   });
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
-  if(pendingSub)selectSubclass(className,pendingSub);
-  runExtraChoices(_featPending.concat(eq||[]));
+  /* One window at a time (#63). A picked subclass opens its own level choices,
+     so everything still waiting — the queue this window was handed, plus the
+     skill choices of any feat just picked — goes behind THAT window instead of
+     opening now and replacing it. A feat and a subclass at one level raced the
+     same way (ledger L2571). */
+  const next=(pending||[]).concat(_featPending);
+  if(pendingSub)selectSubclass(className,pendingSub,next);
+  else runExtraChoices(next);
 }
 

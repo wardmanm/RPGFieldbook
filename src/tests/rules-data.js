@@ -1135,7 +1135,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('opening any modal clears the guard', /function openModal\([^)]*\)\{_dismissGuard=null;/.test(js));
   ck('closing clears it too', /function closeModal\(\)\{_dismissGuard=null;/.test(js));
   ck('both choosers arm the guard after opening',
-     (js.match(/armChoiceDismissGuard\(\);/g) || []).length === 2);
+     (js.match(/armChoiceDismissGuard\(\w*\);/g) || []).length === 2);
 
   // ---------- the spell "prepared" box
   // It is a <button>, so it takes UA padding (1px 6px) and inherits no font. On
