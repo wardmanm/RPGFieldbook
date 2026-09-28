@@ -161,3 +161,4 @@ and missing-dependency reporting: [Rules packs](../architecture/rules-packs.md).
 - 2026-09-25 — Option pickers for Arcane Archer, College of Swords and Rune Knight; Tasha's Artificer tables suffixed. → ledger L3596, #60
 - 2026-09-25 — `supplement` reads `class-resources.json`: Arcane Archer's Arcane Shot tracker. → ledger L3649
 - 2026-09-25 — Moved to the v2.36.1 dump: XGE's Power Word Pain gains Bard; both packs' subclasses unchanged. → ledger L3676
+- 2026-09-28 — Text `flatten()` had dropped is restored: Xanathar's Arcane Shot save DC; Tasha's Path of the Beast Bite, Claws and Tail, College of Creation motes, Circle of Stars omens, Custom Lineage traits and Luba's Tarokka Weal and Woe. → ledger L3985, #68

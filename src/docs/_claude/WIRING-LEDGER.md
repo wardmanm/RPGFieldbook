@@ -3981,3 +3981,65 @@ checks failed before the fix; each of the 11 text-content fixes was reverted in 
 
 Noticed, not changed: `runChoices()` still double-escapes its modal title (known issue); a portrait
 is still stored at full size.
+
+## Formula lines, one-entry list items and embedded stat blocks kept in rules text (#68, 2026-09-28)
+
+**Root cause.** `flatten()` had a branch for each 5e-tools node type it knew and fell through
+anything else with no output and no word. Instrumented over all three runs (core `all`, XGE and
+TCE `supplement`), four types reached it and were dropped, 28 nodes in all:
+
+- `abilityDc` (3) and `abilityAttackMod` (2): the core pack's Artificer (its TCE printing) lost its
+  spell save DC and spell attack modifier, the UA Mystic its discipline DC and attack modifier, and
+  Xanathar's Arcane Archer read "your Arcane Shot save DC is calculated as follows:" and stopped.
+- `item` with a singular `entry` in place of `entries` (22): the core pack's Cackle Fever and Sewer
+  Plague symptoms; in Tasha's, Customizing Your Origin's seven traits, Luba's Tarokka of Souls'
+  Weal and Woe, Path of the Beast's Bite, Claws and Tail, College of Creation's three mote
+  effects, and Circle of Stars' Weal (even) and Woe (odd).
+- `statblock` (1): the 2024 Soulknife's Psychic Blades says "The magic blade has the following
+  traits:", and the traits are an item embedded by reference.
+
+`image` (3, Xanathar's) is skipped on purpose and stays skipped: it carries no rules text.
+
+**Fix.** Formula lines are worded as 5e-tools' renderer words them (`_formula_text()`,
+`_attr_choose()`): "Spell save DC = 8 + your proficiency bonus + your Intelligence modifier",
+"Maneuver save DC = … your Strength or Dexterity modifier (your choice)", with `abilityGeneric`
+alongside. Checked against its current `render.js` and `parser.js` (fetched): `_renderAbilityDc`
+has two wordings picked by the reader's style switcher, the "classic" one above and "8 +
+Intelligence modifier + Proficiency Bonus". Every source that uses these nodes in the files the
+converter reads is PHB, XGE, TCE or UA, never XPHB, and those books print the classic wording.
+Each formula ends with a full stop, because a named subsection's blocks join with spaces and the
+Artificer's two lines otherwise ran together. An `entry` reads as `entries: [entry]`, the same
+"Name: text" as its `entries` twin. An item `statblock` resolves through `load_item_index()` over
+`items-base.json` and `items.json`, which `all` and `supplement` find themselves, and renders as
+"Psychic Blade: Simple Melee Weapon · Damage 1d6 psychic · Range 60/120 ft · Properties: Finesse,
+Thrown · Mastery: Vex (…)", the wording `convert_items()` gives a base weapon. An unresolved one
+keeps its name and is counted. Any other node type is counted in `_ENTRY_MISSES`, and
+`_entry_miss_warnings()` reports it at the end of `all`, `supplement` and every single subcommand,
+since prose is flattened with or without `--tables`. A single `classes` run has no item files, so
+it warns once for the Soulknife's statblock. Page: [converter](../wiki/data/converter.md).
+
+**Data.** Pure insertions, checked string by string: identical structure, and every changed string
+differs from the committed one only by inserted text. Core `classes.json` (Artificer, Mystic,
+Rogue → Soulknife) and `conditions.json` (Cackle Fever, Sewer Plague); Xanathar's
+`subclasses.json` (Arcane Archer); Tasha's `glossary.json` (Customizing Your Origin),
+`items-magic.json` (Luba's Tarokka of Souls) and `subclasses.json` (Path of the Beast, College of
+Creation, Circle of Stars). Every other file of the three packs regenerates byte for byte, and no
+run prints a WARNING. A data-only change, so no UNRELEASED bullet. The 5e2024, XGE and TCE
+`DATA_VERSIONS` all move at the next release, correctly.
+
+**Guards.** `converter.py` 165 → 191: node shapes copied from the dump (Arcane Shot, the Artificer's
+Spellcasting Ability, the Battle Master's two attributes, Cackle Fever, the Psychic Blade node,
+item and properties), `abilityGeneric` from `book-xdmg.json` and `renderdemo.json`, an unknown type
+counted and warned, and the WARNING printed by a single subcommand, `all` and `supplement` run on a
+two-file dump. `rules-data.js` 594 → 606: one pin per dropped shape in the shipped packs.
+
+**Seen, not fixed** (separate causes):
+
+- `convert_items()` reads property names from the file it converts, and only `items-base.json`
+  has the `itemProperty` table. So 28 magic weapons (20 core, 5 Tasha's, 3 Xanathar's) print
+  abbreviations ("Properties: F, L, T" on the Dagger of Venom). Since "Finesse" is then never in
+  the list, a finesse magic weapon gets `weapon.ability: "str"` where its base weapon has
+  `"finesse"`. The shipped Psychic Blade item also prints its `{uid, note}` mastery as
+  "{'uid': 'Vex".
+- `_norm_table()` drops a table's `footnotes`: 17 Xanathar's downtime tables whose rows carry a
+  `*` pointing at "Might involve a rival" or "Halved for a consumable item".

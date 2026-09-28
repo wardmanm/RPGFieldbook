@@ -586,6 +586,146 @@ del mcf['class'][0]['multiclassing']
 ck('...and a source with no multiclassing entry carries no block at all',
    'multiclass' not in C.convert_classes([_tmpjson(mcf)])['classes'][0])
 
+# ---- 22. entry nodes flatten() used to drop (#68)
+# flatten() fell through any node type it had no branch for, silently. Four
+# carried text a player needs: the save-DC and attack-modifier formulas, list
+# items written with a singular `entry`, and an embedded stat block. Every shape
+# below is copied from the v2.36.1 dump (long prose trimmed where noted).
+
+# XGE Arcane Archer, "Arcane Shot Options" (class-fighter.json subclassFeature)
+AA_OPTS = ["The Arcane Shot feature lets you choose options for it at certain levels. The options are presented here in alphabetical order. They are all magical effects, and each one is associated with one of the schools of magic.",
+           "If an option requires a saving throw, your Arcane Shot save DC is calculated as follows:",
+           {"type": "abilityDc", "name": "Arcane Shot", "attributes": ["int"]},
+           {"type": "options", "count": 2, "entries": [
+               {"type": "refOptionalfeature", "optionalfeature": "Banishing Arrow|XGE"},
+               {"type": "refOptionalfeature", "optionalfeature": "Beguiling Arrow|XGE"}]}]
+aa = C.flatten(AA_OPTS)
+ck('abilityDc renders the save DC formula (Arcane Shot)',
+   'Arcane Shot save DC = 8 + your proficiency bonus + your Intelligence modifier.' in aa, aa)
+ck('...right after the sentence that promises it',
+   'calculated as follows:\nArcane Shot save DC = 8' in aa, aa)
+ck('...and the options still follow it', aa.endswith('• Banishing Arrow\n• Beguiling Arrow'), aa)
+
+# TCE Artificer, "Spellcasting" -> "Spellcasting Ability" (class-artificer.json classFeature)
+ART_SC = {"type": "entries", "name": "Spellcasting Ability", "entries": [
+    "Intelligence is your spellcasting ability for your artificer spells; your understanding of the theory behind magic allows you to wield these spells with superior skill. You use your Intelligence whenever an artificer spell refers to your spellcasting ability. In addition, you use your Intelligence modifier when setting the saving throw DC for an artificer spell you cast and when making an attack roll with one.",
+    {"type": "abilityDc", "name": "Spell", "attributes": ["int"]},
+    {"type": "abilityAttackMod", "name": "Spell", "attributes": ["int"]}]}
+art = C.flatten([ART_SC])
+ck('abilityDc: Artificer spell save DC',
+   'Spell save DC = 8 + your proficiency bonus + your Intelligence modifier.' in art, art)
+ck('abilityAttackMod: Artificer spell attack modifier',
+   'Spell attack modifier = your proficiency bonus + your Intelligence modifier.' in art, art)
+# a named subsection joins its blocks with spaces, so an unterminated formula
+# would run into the next one: "…Intelligence modifier Spell attack modifier = …"
+ck('...each formula ends its sentence, so the two do not run together',
+   art.endswith('attack roll with one. Spell save DC = 8 + your proficiency bonus + your Intelligence '
+                'modifier. Spell attack modifier = your proficiency bonus + your Intelligence modifier.'), art)
+
+# PHB Battle Master, "Combat Superiority" (class-fighter.json): two attributes
+BM_ST = {"type": "entries", "entries": [{"type": "entries", "name": "Saving Throws", "entries": [
+    "Some of your maneuvers require your target to make a saving throw to resist the maneuver's effects. The saving throw DC is calculated as follows:",
+    {"type": "abilityDc", "name": "Maneuver", "attributes": ["str", "dex"]}]}]}
+bm = C.flatten([BM_ST])
+ck('several attributes join as 5e-tools does: "X or Y modifier (your choice)"',
+   bm.endswith('Maneuver save DC = 8 + your proficiency bonus + your Strength or Dexterity modifier (your choice).'), bm)
+# book-xphb.json writes the generic caster as "spellcasting"
+ck('the "spellcasting" attribute reads "spellcasting ability modifier"',
+   C.flatten([{"type": "abilityAttackMod", "name": "Spell", "attributes": ["spellcasting"]}])
+   == 'Spell attack modifier = your proficiency bonus + your spellcasting ability modifier.')
+# abilityGeneric, the third of the family (book-xdmg.json, book-phb.json)
+ck('abilityGeneric: "Name = text"',
+   C.flatten([{"type": "abilityGeneric", "name": "DC", "page": 29, "text": "8 + ability modifier + Proficiency Bonus"}])
+   == 'DC = 8 + ability modifier + Proficiency Bonus.')
+ck('abilityGeneric: text alone',
+   C.flatten([{"type": "abilityGeneric", "text": "10 + all modifiers that normally apply to the check"}])
+   == '10 + all modifiers that normally apply to the check.')
+ck('abilityGeneric: attributes follow the text (renderdemo.json)',
+   C.flatten([{"type": "abilityGeneric", "name": "Initiative", "text": "10 - your power level + somebody else's",
+               "attributes": ["dex", "str"]}])
+   == "Initiative = 10 - your power level + somebody else's Dexterity or Strength modifier (your choice).")
+
+# XDMG Cackle Fever (conditionsdiseases.json): list items with a SINGULAR entry
+CACKLE = ["Cheaply made potions and elixirs are sometimes tainted by Cackle Fever, which affects Humanoids only (gnomes are strangely immune). A creature suffers the following effects {@dice 1d4} days after infection:",
+          {"type": "list", "style": "list-hang-notitle", "items": [
+              {"type": "item", "name": "Fever", "entry": "The creature gains 1 {@condition Exhaustion|XPHB} level, which lasts until the contagion ends on the creature."},
+              {"type": "item", "name": "Uncontrollable Laughter", "entry": "While the creature has the {@condition Exhaustion|XPHB} condition, the creature makes a {@dc 13} Constitution saving throw each time it takes damage other than Psychic damage."}]}]
+cf = C.flatten(CACKLE)
+ck('an item with a singular entry is kept (Cackle Fever)',
+   'days after infection:\nFever: The creature gains 1 Exhaustion level, which lasts until the contagion ends on the creature.\n'
+   'Uncontrollable Laughter: While the creature has the Exhaustion condition, the creature makes a DC 13' in cf, cf)
+one = {"type": "item", "name": "Bite", "entry": "It deals {@damage 1d8} piercing damage on a hit."}
+ck('...and reads exactly as the same item written with `entries`',
+   C.flatten([one]) == C.flatten([{"type": "item", "name": "Bite", "entries": [one['entry']]}]) == 'Bite: It deals 1d8 piercing damage on a hit.',
+   C.flatten([one]))
+
+# XPHB Soulknife, "Psychic Blades" (class-rogue.json): the traits are a statblock
+PB_FEAT = ["You can manifest shimmering blades of psychic energy. Whenever you take the {@action Attack|XPHB} action or make an {@action Opportunity Attack|XPHB}, you can manifest a {@item Psychic Blade|XPHB} in your free hand and make the attack with that blade. The magic blade has the following traits:",
+           {"type": "statblock", "tag": "item", "name": "Psychic Blade", "source": "XPHB"},
+           "The blade vanishes immediately after it hits or misses its target, and it leaves no mark if it deals damage."]
+PB_ITEM = {"name": "Psychic Blade", "source": "XPHB", "page": 136, "type": "M", "rarity": "none",
+           "weaponCategory": "simple", "property": ["F|XPHB", "T|XPHB"],
+           "mastery": [{"uid": "Vex|XPHB", "note": "you can use this property, and it doesn't count against the number of properties you can use with Weapon Mastery"}],
+           "range": "60/120", "dmg1": "1d6", "dmgType": "Y"}
+# items-base.json itemProperty, prose trimmed: only the abbreviation and name matter
+PB_PROPS = [{"abbreviation": "F", "source": "XPHB", "page": 213, "entries": [{"type": "entries", "name": "Finesse", "entries": ["…"]}]},
+            {"abbreviation": "T", "source": "XPHB", "page": 214, "template": "{{prop_name}} ({{item.range}} ft.)",
+             "entries": [{"type": "entries", "name": "Thrown", "entries": ["…"]}]}]
+PB_TRAITS = ("Psychic Blade: Simple Melee Weapon · Damage 1d6 psychic · Range 60/120 ft · "
+             "Properties: Finesse, Thrown · Mastery: Vex (you can use this property, and it doesn't count "
+             "against the number of properties you can use with Weapon Mastery).")
+with C.statblock_ctx(C.load_item_index(_tmpjson({'itemProperty': PB_PROPS, 'baseitem': []}),
+                                       _tmpjson({'item': [PB_ITEM]}))):
+    C._ENTRY_MISSES.clear()
+    pb = C.flatten(PB_FEAT)
+    ck('a statblock embeds the item it names (Psychic Blade)',
+       'has the following traits:\n' + PB_TRAITS + '\nThe blade vanishes' in pb, pb)
+    ck('...and a resolved statblock is not a miss', not C._ENTRY_MISSES, dict(C._ENTRY_MISSES))
+    # a statblock whose item is not in the index names it, and is reported
+    ck('an unresolvable statblock falls back to its name',
+       C.flatten([{"type": "statblock", "tag": "item", "name": "Nowhere Blade", "source": "XPHB"}]) == 'Nowhere Blade.')
+    ck('...and is counted', C._ENTRY_MISSES.get('statblock') == 1, dict(C._ENTRY_MISSES))
+C._ENTRY_MISSES.clear()
+# with no index at all (a single subcommand), the same fallback — not silence
+ck('no item index: the statblock still names what it embeds',
+   C.flatten(PB_FEAT[1:2]) == 'Psychic Blade.' and C._ENTRY_MISSES.get('statblock') == 1, dict(C._ENTRY_MISSES))
+
+# every shape above, known and handled, counts nothing
+C._ENTRY_MISSES.clear()
+for shape in (AA_OPTS, [ART_SC], [BM_ST], CACKLE, [one]):
+    C.flatten(shape)
+ck('handled node types are not misses', not C._ENTRY_MISSES, dict(C._ENTRY_MISSES))
+# images are deliberately skipped: they carry no rules text
+ck('an image is skipped without a warning',
+   C.flatten(["A.", {"type": "image", "href": {"type": "internal", "path": "x.webp"}}]) == 'A.' and not C._ENTRY_MISSES,
+   dict(C._ENTRY_MISSES))
+
+# the NEXT unknown type must not vanish the way these four did
+ck('an unknown node type renders nothing...', C.flatten(["A.", {"type": "someFutureNode", "text": "lost"}]) == 'A.')
+ck('...but is counted by type', C._ENTRY_MISSES.get('someFutureNode') == 1, dict(C._ENTRY_MISSES))
+said = []
+C._entry_miss_warnings(said.append)
+ck('...and reported as a WARNING naming the type', len(said) == 1 and "'someFutureNode'" in said[0], said)
+C._ENTRY_MISSES.clear()
+
+# ...at the end of every kind of run, not only when a tables sink is collecting
+import subprocess, shutil
+CONV = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'scripts', 'convert.py')
+_odd = {'condition': [{'name': 'Odd', 'source': 'XPHB', 'entries': ['A.', {'type': 'someFutureNode'}]}]}
+_dump = tempfile.mkdtemp()
+json.dump(_odd, open(os.path.join(_dump, 'conditionsdiseases.json'), 'w'))
+json.dump({'variantrule': [{'name': 'Odd', 'source': 'XGE', 'entries': ['A.', {'type': 'someFutureNode'}]}]},
+          open(os.path.join(_dump, 'variantrules.json'), 'w'))
+_out = tempfile.mkdtemp()
+for label, argv in (('a single subcommand', ['conditions', os.path.join(_dump, 'conditionsdiseases.json'),
+                                             '-o', os.path.join(_out, 'c.json')]),
+                    ('all', ['all', _dump, '-o', os.path.join(_out, 'all')]),
+                    ('supplement', ['supplement', _dump, '-o', os.path.join(_out, 'sup'), '--book', 'XGE'])):
+    r = subprocess.run([sys.executable, CONV] + argv, capture_output=True, text=True)
+    ck('%s warns about an unknown entry node' % label,
+       "WARNING: 1 entry node(s) of type 'someFutureNode'" in r.stdout, r.stdout[-600:] + r.stderr[-300:])
+shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True)
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)
