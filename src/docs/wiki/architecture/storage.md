@@ -12,7 +12,7 @@ write is how five loaded packs quietly came back as two.
 `lzwCompress()`, `lzwDecompress()`, `readRulesCacheString()`, `cacheBytes()` in
 `70-persistence.js`; `loadRulesCacheAsync()`, `finishImport()` in `71-char-io.js`;
 `loadCharById()`, `newCharacter()`, `deleteCharacter()`, `migrateOldChar()` in `75-home-theme.js`;
-`rulesCacheWarning()` in `88-settings.js`; `boot()` in `90-boot.js` · **Tests:** `rules-data.js`
+`rulesCacheWarning()`, `finishSettingsImport()` in `88-settings.js`; `boot()` in `90-boot.js` · **Tests:** `rules-data.js`
 (the fallback, the loud path, the LZW round trips), `char-update.js` (backup semantics and the index
 read-back) · **See also:** [Character model](character-model.md), [Rules packs](rules-packs.md),
 [Home & characters](../features/home-and-characters.md),
@@ -61,9 +61,15 @@ It returns a promise of the error string. When the promise settles it reports th
 `updateRulesStatus()` and re-renders the loaded-data list, where `rulesCacheWarning()` puts the
 message in red above the list. The callers have usually drawn their status line already by then,
 which is why the report is asynchronous. `fetchAllRules()` waits for that promise and writes the
-error into its own status line. A fetch that brought nothing does not save at all: the pool did not
+error into its own status line, and `finishSettingsImport()` does the same on the Import settings
+line. A fetch that brought nothing does not save at all: the pool did not
 change, so the cache already matches it, and overwriting it is how an offline Fetch all used to
 leave the next launch with no rules (see [Rules packs](rules-packs.md)).
+
+**Settings** are one `localStorage` key, written whole by `saveSettings()` after every change.
+It returns `""`, or why the write was refused (`storageWhy()`). The toggles ignore that, since each
+one is re-saved at the next change. Import settings reports it: "Settings imported for this
+session only: …".
 
 **Every IndexedDB call is timed out.** `idbOpen()` and each `idbTx()` go through `idbTimeout()`,
 which rejects after `IDB_TIMEOUT` (4000 ms). A missing or throwing IndexedDB rejects at once. A
@@ -88,9 +94,11 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
 ## Rules that must hold
 
 - **No silent storage writes.** A new write either reports failure on a surface the player sees
-  (the save chip, a returned error, the red loaded-data line) or has a recorded reason not to.
-- **Never save a pool you did not mean to change.** A failed network call leaves the cache alone. The
-  paths that already comply are autosave, `backupCharacter()` and `saveRulesCache()`.
+  (the save chip, a returned error, the red loaded-data line, a status line) or has a recorded
+  reason not to. The paths that already comply are autosave, `backupCharacter()`,
+  `saveRulesCache()`, and Import settings for both of its writes.
+- **Never save a pool you did not mean to change.** A failed network call leaves the cache alone, and
+  so does Import settings unless the player chooses to replace the rules.
 - **Every IndexedDB request goes through `idbOpen()`/`idbTx()`,** so the timeout covers it.
 - **Boot reads the `localStorage` rules copy synchronously, before first paint.** Browsers that
   refuse IndexedDB have no other copy.
@@ -138,7 +146,8 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
 ## Open
 
 - **Some writes still fail silently.** `finishImport()`, `newCharacter()` and `migrateOldChar()`
-  wrap their `localStorage.setItem` in an empty `catch`, as do `libSave()` and `saveSettings()`.
+  wrap their `localStorage.setItem` in an empty `catch`, as does `libSave()`. `saveSettings()`
+  returns why it was refused, but only Import settings reports it.
   `migrateOldChar()` then deletes the legacy key even if the copy did not land. An import into a
   full store stays active in memory with nothing said, and the failure shows only when the next
   edit's autosave fails.
@@ -163,3 +172,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-14 — The rules cache moves to IndexedDB after five loaded packs reload as two, and a refused save now says so. → ledger L1950
 - 2026-08-14 — Every IndexedDB call gets a 4 s timeout, and the `localStorage` fallback gains LZW compression. → ledger L1993
 - 2026-09-28 — Fetch all saves only a pool it changed, and reports a refused save on its status line. → ledger L3797, #65
+- 2026-09-28 — `saveSettings()` returns why a write was refused; Import settings reports that and a refused cache write beside its button, and writes the cache only when the player replaces the rules. → ledger L4134, #70

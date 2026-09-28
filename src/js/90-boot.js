@@ -282,8 +282,7 @@ function wire(){
 function boot(){
   const noSettings=!localStorage.getItem(K_SET);
   try{const s=localStorage.getItem(K_SET);if(s)settings=Object.assign(settings,JSON.parse(s));}catch(e){}
-  if(!Array.isArray(settings.rulesSources))settings.rulesSources=[];
-  if(settings.rulesUrl){if(!settings.rulesSources.includes(settings.rulesUrl))settings.rulesSources.push(settings.rulesUrl);delete settings.rulesUrl;saveSettings();}
+  if(foldLegacySettings())saveSettings();
   /* localStorage first and synchronously, so the sheet draws with rules already
      in hand. It is now only the FALLBACK store and the migration source — the
      IndexedDB copy is authoritative and is hydrated over the top a tick later

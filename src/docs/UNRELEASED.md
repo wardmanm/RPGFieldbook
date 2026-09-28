@@ -55,3 +55,8 @@ Bullets below this line — leave the heading in place.
   adding a Fighter at level 3 opens as "Fighter — Levels 1–3" instead of naming only one of them. A
   class whose name contains an ampersand or an apostrophe now shows its name correctly in that
   window's title, rather than as symbol codes.
+- Settings → Import settings no longer swaps out the rules you have loaded without asking. When the
+  settings file carries rules and you already have some loaded, it shows what the file has and what
+  you have, names any pack that replacing would unload, and lets you keep your rules and import just
+  the settings, or replace them. It then tells you what it did, and rules from a settings file are
+  now loaded the same way as an imported rules file.

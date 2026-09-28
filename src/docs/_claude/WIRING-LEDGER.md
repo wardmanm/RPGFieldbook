@@ -4131,3 +4131,75 @@ need a display name separate from the `className` the flow keys on.
 
 Pages: [character building](../wiki/features/character-building.md), [shell](../wiki/ui/shell.md),
 [rich text](../wiki/architecture/rich-text.md); `decisions.md`. Known issues are reconciled at merge.
+## Import settings asks before replacing loaded rules (#70, 2026-09-28)
+
+**Root cause.** Settings → Characters & backup → Import settings read the file and ran
+`rules=p.rules` whenever the file had a `rules` object. It asked nothing and checked nothing, so every
+pack imported or fetched since the export vanished without a word, and the empty or older pool was
+cached for the next launch. Reproduced in a browser on main: with the 2024 pack loaded (15 classes,
+391 spells, 136 keywords), importing `{"_type":"fieldbook-settings","settings":{"skin":"classic"},
+"rules":{"keywords":[{"name":"Settings-file term","desc":"…"}]}}` left 0 classes, 0 spells and 1
+keyword, with no dialog. That keyword has `name` where `term` belongs, and it went in raw, so
+`highlight()` threw on every render after (the term-less keyword itself is #71, fixed separately).
+Pages: [Settings & updates](../wiki/features/settings-and-updates.md),
+[Rules packs](../wiki/architecture/rules-packs.md), [Storage](../wiki/architecture/storage.md).
+
+**What a settings file carries.** Export settings has always written `{_type:"fieldbook-settings",
+settings, rules}` (unchanged since the first commit): the whole `settings` object and the whole
+merged pool as it stood that day, every entry stamped with `_id`, `_source`, `_file` or `_url`,
+`_rulebook`, `_dataVersion` and `_excludeSystems`, plus `name`, `version`, `requires`, and `_dups`,
+whose Sets serialise to `{}`. Older pools lack `_url`, `requires`, `tables`, `backgrounds` and
+`subclasses`. Before the wrapper a settings file was the bare settings object, which may still
+carry the first builds' single `rulesUrl`.
+
+**The flow now.**
+- `readSettingsFile()` sorts the file into settings and rules. A bare object must carry at least
+  one known settings key (`SETTINGS_KEYS`), so a rules pack or character chosen by mistake is
+  refused instead of being written into `settings` key by key. JSON that won't parse, and a file
+  with neither usable settings nor usable rules, get "Not a valid settings file."
+- **The rules go through `mergeRules()`**: `poolFromExport()` (89-rules-merge.js) rebuilds the
+  saved pool on a scratch pool, one run of consecutive same-provenance entries at a time, handing
+  each entry's stamps back in as the pack fields `mergeRules()` reads. Keywords get fresh ids,
+  duplicates collapse, `_id`/`_dups` are rebuilt, and non-arrays and entries with no name are dropped.
+  Provenance, `requires` and the order within each category come back exactly: all five shipped
+  packs (2162 entries) round-trip entry for entry, in 14 ms. Only non-objects are filtered before the
+  merge, so whatever `mergeRules()` learns to read (#71), settings files get too. The live pool is
+  swapped out only for that synchronous call and put back in a `finally`.
+- **The question** (`askSettingsImport()`), only when the file carries readable rules *and* some are
+  loaded. It is a window with three answers, like the character-import clash: **Cancel** (nothing
+  changes, back to Settings; ✕ and Escape do the same), **Keep my rules** (settings only, primary),
+  **Replace my rules** (danger). It shows both sides as "N packs, M entries" with each pack's count
+  and data version, then in red what replacing loses: every loaded pack the file does not have, and
+  any it would put back an older copy of (`cmpVer()`). It says characters are not affected.
+- No rules in the file (no key, an empty pool, or nothing readable): the settings import, the pool
+  and the cache are untouched, and nothing is asked. Nothing loaded yet: the file's rules load
+  without a question, since nothing can be lost.
+- `finishSettingsImport()` applies the answer, saves, and redraws what loading the cache at boot
+  redraws (`refreshRulesUI()`, `renderAll()`, `renderHome()`), then reopens Settings. That brings a
+  fresh rules status line, the Rules data chip and the loaded-data list. It writes what happened on a
+  new status line beside the Import button (`#setImpStatus`), because the rules status line lives in
+  the Rules data section, which is usually folded shut.
+- **Both writes report a refusal there.** `saveSettings()` now returns `storageWhy()` (callers that
+  ignore it are unchanged), giving "Settings imported for this session only: your browser's storage
+  is full…". The cache write's error is appended when `saveRulesCache()` settles.
+- `foldLegacySettings()` holds what boot did inline (`rulesSources` forced to an array, `rulesUrl`
+  folded into it), so an imported old file arrives in the same shape. `boot()` calls it.
+
+**Why a window, not `confirm()`.** There are three outcomes. OK/Cancel can only carry two, and
+making Cancel mean "import the settings but keep my rules" would have Cancel import something.
+Dismissal is the safe answer either way: nothing changes.
+
+Tests: `rules-data.js` drives the real handler (the `#fileSettings` change listener, a FileReader
+stub, and the question's buttons), 63 checks. On the unfixed code 38 of them fail, including the
+reported repro ("Cannot read properties of undefined (reading 'toLowerCase')" from `highlight()`).
+Sixteen mutations were each caught (no question, raw pool, dropped `_url`/`dataVersion`/
+`excludeSystems`/`requires`, run order lost, live pool not restored, no cache save, unreported cache
+or settings failure, lost/older packs unnamed, Settings not reopened, non-objects not filtered, no
+key check on a bare object). The `try` around `readSettingsFile()` is defensive: no JSON input can
+reach it once non-objects are filtered.
+
+Noticed, not changed: a keyword whose `term` is a non-string (a number, an object) still passes
+`mergeRules()` and would break `highlight()` from any load path; that is #71's to settle.
+Importing settings still replaces `settings.rulesSources` wholesale with the file's list, which is
+what importing settings means. A third answer, merging the file's packs into what is loaded, was
+not built; whether it is wanted is Mike's call.

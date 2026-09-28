@@ -366,7 +366,8 @@ there you can:
 - **Manage rules data:** import files, see a list of everything currently loaded (grouped by
   file), and remove any piece you no longer want.
 - **Back up everything:** **Export / Import settings** saves your appearance settings *and* all
-  loaded rules to a single file — handy for moving your whole setup to another device.
+  loaded rules to a single file — handy for moving your whole setup to another device. Importing
+  asks before it replaces rules you already have loaded.
 - **Toggle the hand-drawn borders** on or off (turn off for a plainer look or on slower devices).
 - **Icon tabs:** the tab bar switches from words to icons on its own when the screen is narrow;
   turn this on to get icons at any size.

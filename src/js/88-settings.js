@@ -102,7 +102,8 @@ function openSettings(){
       <button class="tbtn" id="btnImportSettings">Import settings</button>
       <input type="file" id="fileSettings" accept="application/json,.json" class="hidefile">
     </div>
-    <p class="hint" style="margin-top:6px">Export saves your appearance settings <b>and</b> all loaded rules data to one JSON file; import restores both.</p>`;
+    <div class="status" id="setImpStatus"></div>
+    <p class="hint" style="margin-top:6px">Export saves your appearance settings <b>and</b> all loaded rules data to one JSON file. Import restores the settings, and asks before it replaces the rules you have loaded.</p>`;
   /* CC BY 3.0 obliges us to name the artists, name and link the licence, and say
      that the work was changed — hence the last sentence, which is not decorative.
      ICON_ARTISTS is generated from the icons actually vendored (05-icons.js), so
@@ -172,11 +173,7 @@ function openSettings(){
   document.getElementById("fileRules").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
   document.getElementById("btnExportSettings").addEventListener("click",()=>dl(new Blob([JSON.stringify({_type:"fieldbook-settings",settings,rules},null,2)],{type:"application/json"}),"fieldbook-settings.json"));
   document.getElementById("btnImportSettings").addEventListener("click",()=>document.getElementById("fileSettings").click());
-  document.getElementById("fileSettings").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const p=JSON.parse(r.result);
-      if(p&&(p.settings||p.rules)){ if(p.settings)settings=Object.assign(settings,p.settings); if(p.rules&&typeof p.rules==="object"){rules=p.rules;reindexRules();recomputeDups();saveRulesCache();} }
-      else { settings=Object.assign(settings,p); }
-      applyTheme();saveSettings();refreshRulesUI();renderAll();closeModal();openSettings();
-    }catch(err){alert("Not a valid settings file.")}};r.readAsText(f);e.target.value="";});
+  document.getElementById("fileSettings").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{let p=null;try{p=JSON.parse(r.result);}catch(err){}importSettings(p);};r.readAsText(f);e.target.value="";});
 }
 /* One line under the Size/Encumbrance selects: what you're carrying right now,
    against what this character can carry. Answers "what does this setting
@@ -193,6 +190,111 @@ function encSettingsChanged(){
   if(s&&s.options.length)s.options[0].textContent="From ancestry ("+(raceDefSize()||"Medium")+")";
   renderInventory();recompute();scheduleSave();
 }
+/* ================= Import settings (#70) =================
+   Export settings has always written {_type:"fieldbook-settings", settings,
+   rules}: the appearance settings AND the whole rules pool as it stood that
+   day. A settings file from before the wrapper is the bare settings object, and
+   that still imports.
+
+   Import used to assign the file's `rules` wholesale, unasked and unvalidated,
+   so every pack imported or fetched since the export vanished without a word.
+   Now the file's pool is rebuilt through mergeRules() (poolFromExport), and
+   replacing what is loaded is the player's call. There are three answers, so
+   it is a window like the character-import clash, not a confirm(): OK/Cancel
+   cannot say "import the settings but keep my rules" without making Cancel
+   import something. Nothing is lost, so nothing is asked, when the file brings
+   no rules or none are loaded yet. */
+const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCollapse","tabIcons"];
+/* What boot does to settings from an older build, shared with Import settings
+   so an old file arrives in the same shape: the first builds' single `rulesUrl`
+   joins the sources list. True when that changed something worth saving. */
+function foldLegacySettings(){
+  if(!Array.isArray(settings.rulesSources))settings.rulesSources=[];
+  if(!settings.rulesUrl)return false;
+  if(!settings.rulesSources.includes(settings.rulesUrl))settings.rulesSources.push(settings.rulesUrl);
+  delete settings.rulesUrl;
+  return true;
+}
+/* The parsed file -> {settings, pool, used, skipped}, or null when it is not a
+   settings file at all. A bare object must carry some setting, or a rules pack
+   or character picked by mistake would be written into settings key by key. */
+function readSettingsFile(p){
+  const isObj=o=>!!o&&typeof o==="object"&&!Array.isArray(o);
+  if(!isObj(p))return null;
+  const wrapped=p._type==="fieldbook-settings"||!!p.settings||!!p.rules;
+  if(!wrapped&&!SETTINGS_KEYS.some(k=>k in p))return null;
+  const set=wrapped?(isObj(p.settings)?p.settings:null):p;
+  const built=(wrapped&&p.rules)?poolFromExport(p.rules):{pool:null,used:0,skipped:0};
+  if(!set&&!built.used)return null;
+  return {settings:set,pool:built.used?built.pool:null,used:built.used,skipped:built.skipped};
+}
+function importSettings(p){
+  let imp=null;try{imp=readSettingsFile(p);}catch(e){}
+  if(!imp){alert("Not a valid settings file.");return;}
+  if(!imp.pool||!rulesEntryCount()){finishSettingsImport(imp,!!imp.pool);return;}
+  askSettingsImport(imp);
+}
+function rulesPackSummary(groups){
+  const n=groups.reduce((a,g)=>a+g.count,0);
+  return `${groups.length} pack${groups.length===1?"":"s"}, ${n} entr${n===1?"y":"ies"}`;
+}
+/* The question names both sides, each pack with its count and data version,
+   then what replacing would lose: every loaded pack the file does not have, and
+   any it would put back an older copy of. Each <p> is one source line, because
+   .m-body p is white-space:pre-wrap. */
+function settingsImportQuestionHTML(imp){
+  const file=loadedRulesGroups(imp.pool),now=loadedRulesGroups();
+  const inFile={};file.forEach(g=>{inFile[g.key]=g;});
+  const list=gs=>gs.map(g=>g.label+" ("+g.count+(g.dataVersion?", v"+g.dataVersion:"")+")").join(" · ");
+  const lost=now.filter(g=>!inFile[g.key]);
+  const older=now.filter(g=>{const f=inFile[g.key];return f&&f.dataVersion&&g.dataVersion&&cmpVer(f.dataVersion,g.dataVersion)<0;});
+  const loss=[];
+  if(lost.length)loss.push(`unloads ${lost.length===1?"1 pack":lost.length+" packs"} the file doesn't have: ${lost.map(g=>g.label).join(", ")}`);
+  if(older.length)loss.push(`puts back an older copy of ${older.map(g=>g.label+" (v"+inFile[g.key].dataVersion+"; v"+g.dataVersion+" is loaded)").join(", ")}`);
+  const skipped=imp.skipped?` ${imp.skipped} entr${imp.skipped===1?"y":"ies"} in it couldn't be loaded and would be left out.`:"";
+  return `<p>This settings file also carries rules data, saved when it was exported. Import the settings and keep the rules you have loaded now, or replace them with the file's copy.</p>`+
+    `<div class="field"><label class="f">In the file</label><p class="hint"><b>${esc(rulesPackSummary(file))}</b>: ${esc(list(file))}.${esc(skipped)}</p></div>`+
+    `<div class="field"><label class="f">Loaded now</label><p class="hint"><b>${esc(rulesPackSummary(now))}</b>: ${esc(list(now))}.</p></div>`+
+    (loss.length?`<p class="status err">Replacing ${esc(loss.join(", and "))}.</p>`:"")+
+    `<p class="hint">Your characters are not affected either way.</p>`+
+    `<div class="m-actions" style="flex-wrap:wrap;gap:8px"><button class="tbtn" id="setImpCancel">Cancel</button><button class="tbtn primary" id="setImpKeep">Keep my rules</button><button class="tbtn danger" id="setImpReplace">Replace my rules</button></div>`;
+}
+function askSettingsImport(imp){
+  openModal("Import settings",settingsImportQuestionHTML(imp));
+  const back=()=>{openSettings();settingsImportStatus("Import cancelled. Nothing changed.","");};
+  /* ✕, Escape and a click outside go back to Settings too, having changed nothing */
+  setDismissGuard(null,back);
+  document.getElementById("setImpCancel").addEventListener("click",()=>{closeModal();back();});
+  document.getElementById("setImpKeep").addEventListener("click",()=>finishSettingsImport(imp,false));
+  document.getElementById("setImpReplace").addEventListener("click",()=>finishSettingsImport(imp,true));
+}
+/* Apply the answer, redraw everything that shows settings or rules, and say
+   what happened beside the Import button: the rules status line sits in the
+   Rules data section, which is usually folded shut. Both writes report a
+   refusal there (storage rule); the cache's arrives asynchronously. */
+function finishSettingsImport(imp,replace){
+  const had=rulesEntryCount();
+  const swap=!!(replace&&imp.pool);
+  const what=imp.pool?rulesPackSummary(loadedRulesGroups(imp.pool)):"";
+  if(imp.settings){Object.assign(settings,imp.settings);foldLegacySettings();}
+  const setErr=imp.settings?saveSettings():"";
+  let saving=Promise.resolve("");
+  if(swap){rules=imp.pool;reindexRules();recomputeDups();saving=saveRulesCache();}
+  applyTheme();refreshRulesUI();renderAll();renderHome();
+  closeModal();openSettings();
+  const miss=swap?missingSummary():"";
+  let msg=!imp.settings?"This file carries no settings.":
+    setErr?`Settings imported for this session only: ${setErr}, so they won't be there next time you open Fieldbook.`:"Settings imported.";
+  if(swap)msg+=(had?" Your rules were replaced with the file's: ":" Loaded the rules data it carries: ")+what+"."+
+    (imp.skipped?` ${imp.skipped} entr${imp.skipped===1?"y":"ies"} in it couldn't be loaded and were left out.`:"")+miss;
+  else if(imp.pool)msg+=` Your loaded rules are unchanged; the file's copy (${what}) was not loaded.`;
+  else if(imp.skipped)msg+=" The rules data in it couldn't be read, so your loaded rules are unchanged.";
+  else msg+=" It carries no rules data, so your loaded rules are unchanged.";
+  const cls=(setErr||(swap&&(imp.skipped||miss))||(!imp.pool&&imp.skipped))?"err":"ok";
+  settingsImportStatus(msg,cls);
+  return saving.then(err=>{if(err){renderRulesData();settingsImportStatus(msg+" "+err,"err");}return err;});
+}
+function settingsImportStatus(msg,cls){const el=document.getElementById("setImpStatus");if(el){el.textContent=msg;el.className="status "+(cls||"");}}
 /* A pack that is loaded but could not be SAVED is the one state the loaded-data
    list can't show on a row: the entry is there, it just won't come back. Say it
    above the list, in red, rather than letting a reload quietly undo the import. */
@@ -210,9 +312,10 @@ const RULE_CATS=["keywords","features","items","spells","races","classes","feats
    the headings in the loaded-data list */
 const CAT_NAMES={keywords:"Glossary",features:"Traits",items:"Items",spells:"Spells",races:"Species",classes:"Classes",feats:"Feats",backgrounds:"Backgrounds",subclasses:"Subclasses",tables:"Tables"};
 function catName(c){return CAT_NAMES[c]||c;}
-function loadedRulesGroups(){
-  const groups={};
-  RULE_CATS.forEach(cat=>(rules[cat]||[]).forEach(e=>{
+/* `pool` defaults to the loaded one; Import settings passes a settings file's */
+function loadedRulesGroups(pool){
+  const p=pool||rules,groups={};
+  RULE_CATS.forEach(cat=>(p[cat]||[]).forEach(e=>{
     const isFile=!!e._file, label=e._file||(e._source||"Unknown");
     const key=(isFile?"f:":"s:")+label;
     if(!groups[key])groups[key]={key,label,isFile,source:e._source||"",rulebook:!!e._rulebook,dataVersion:e._dataVersion||"",count:0,cats:{}};

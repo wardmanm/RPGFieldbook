@@ -165,6 +165,72 @@ function mergeRules(obj,fileName,url){
   reindexRules();
   recomputeDups();
 }
+/* Rebuild a pool that was saved whole (a settings file's `rules`: the merged
+   pool as it stood the day Export settings ran) through mergeRules(), the path
+   every other load takes. Import settings used to assign it to `rules` as it
+   came (#70), so nothing checked it: a keyword with `name` for `term` went in
+   and broke every render, and a category that wasn't an array broke the next
+   re-index.
+
+   Each run of consecutive entries that share their provenance is merged as one
+   pack, with that provenance handed back in the fields mergeRules reads
+   (`system`, `rulebook`, `dataVersion`, `excludeSystems`, `requires`, the file
+   name or URL). So the loaded-data list, the version badges and Fetch all's
+   `_url` replacement come back as they were, and so does the order within each
+   category, which name lookups take the first match from.
+
+   What survives is mergeRules' decision, not this function's: only a
+   non-object is dropped here, since no pack can hold one and a null keyword
+   would throw. So when mergeRules learns to read something new, settings
+   files get it too.
+
+   It builds on a scratch pool. The live one is swapped out only for this
+   synchronous call and put back even if a merge throws. Returns {pool, used,
+   skipped}: how many entries survived, and how many of those offered did not
+   (not an object, no name, or a repeat of one already in it). */
+function poolFromExport(saved){
+  const isObj=o=>!!o&&typeof o==="object"&&!Array.isArray(o);
+  const STAMPS=["_id","_source","_file","_url","_rulebook","_dataVersion","_excludeSystems"];
+  const live=rules;
+  let offered=0;
+  resetRules();
+  try{
+    if(isObj(saved)){
+      if(typeof saved.name==="string")rules.name=saved.name;
+      const req=isObj(saved.requires)?saved.requires:{};
+      RULE_CATS.forEach(cat=>{
+        /* the same features-or-traits choice mergeRules makes */
+        const arr=(cat==="features"&&!Array.isArray(saved.features))?saved.traits:saved[cat];
+        if(!Array.isArray(arr))return;
+        offered+=arr.length;
+        let run=null;
+        const flush=()=>{if(run)mergeRules(run.pack,run.file,run.url);run=null;};
+        arr.forEach(e=>{
+          if(!isObj(e))return;
+          const file=(typeof e._file==="string"&&e._file)||null;
+          const url=(typeof e._url==="string"&&e._url)||null;
+          const pack={system:typeof e._source==="string"?e._source:""};
+          if(e._rulebook)pack.rulebook=true;
+          if(e._dataVersion)pack.dataVersion=e._dataVersion;
+          if(Array.isArray(e._excludeSystems))pack.excludeSystems=e._excludeSystems;
+          const key=JSON.stringify([pack.system,file,url,!!pack.rulebook,pack.dataVersion||"",pack.excludeSystems||null]);
+          if(!run||run.key!==key){
+            flush();
+            if(Array.isArray(req[srcLabel(pack)]))pack.requires=req[srcLabel(pack)];
+            pack[cat]=[];
+            run={key,file,url,pack};
+          }
+          /* the pack fields above carry these; mergeRules stamps them afresh */
+          const c=Object.assign({},e);STAMPS.forEach(k=>{delete c[k];});
+          run.pack[cat].push(c);
+        });
+        flush();
+      });
+    }
+    const used=RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);
+    return {pool:rules,used,skipped:Math.max(0,offered-used)};
+  }finally{rules=live;}
+}
 /* assign an HTML-safe unique id to every rule entry (used as <option> values and
    for lookups). Must NOT contain characters the HTML parser mangles — notably a
    null byte, which the parser turns into U+FFFD inside attribute values. */
