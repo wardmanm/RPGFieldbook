@@ -10,15 +10,15 @@ covers what the app does with packs.
 
 **Code:** `mergeRules()`, `srcLabel()`, `keyOf()`, `reindexRules()`, `recomputeDups()`,
 `dispName()`, `ruleById()`, `resetRules()`, `importRulesFiles()`, `fetchAllRules()`,
-`fetchRulesFrom()`, `missingRequirements()`, `requiresStatusHTML()`, `missingSummary()`,
-`rulesDataHTML()` in `89-rules-merge.js`; `loadedRulesGroups()`, `rulesBucket()`,
-`removeRulesGroup()`, `clearAllRules()`, `dataStatus()`, `dataStatusHTML()`, `refreshRulesUI()` in
-`88-settings.js`; `systemOf()`, `racesForCharacter()` in `52-race.js`; `findRaceDef()`,
+`fetchRulesFrom()`, `applyFetchedSource()`, `missingRequirements()`, `requiresStatusHTML()`,
+`missingSummary()`, `rulesDataHTML()`, `renderRulesData()` in `89-rules-merge.js`;
+`loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `pruneRequires()`, `clearAllRules()`,
+`dataStatus()`, `dataStatusHTML()`, `refreshRulesUI()`, `rulesBadge()` in `88-settings.js`; `systemOf()`, `racesForCharacter()` in `52-race.js`; `findRaceDef()`,
 `findClassDef()`, `subclassesFor()` in `50-classrace.js`; `DATA_VERSIONS` and `cmpVer()` in
 `30-version.js`; `bundle()` and `dataVersions()` in `scripts/bundle-rules.js`; `dataChangedSince()`
 in `scripts/release.js` · **Data:** `data/<dir>/*.json` → `dist/<dir>_full.json` · **Tests:**
 `rules-data.js` (bundle ≡ individual files, the three data states, every shipped pack agrees with
-`DATA_VERSIONS`, missing requirements), `tables.js`, `docs.js` (`DATA_VERSIONS` is flat JSON,
+`DATA_VERSIONS`, missing requirements, Fetch all keeping what is loaded), `tables.js`, `docs.js` (`DATA_VERSIONS` is flat JSON,
 X.Y.Z, and every system maps to a data dir) · **See also:** [Converter](../data/converter.md),
 [Supplements](../data/supplements.md), [Homebrew](../data/homebrew.md),
 [Settings & updates](../features/settings-and-updates.md), [Rich text](rich-text.md)
@@ -45,16 +45,35 @@ to every character.
 **Getting packs in.** `importRulesFiles()` handles the file picker, reached from Settings, the home
 screen, and the import links on the Rules tab. `fetchAllRules()` handles the player's own source
 URLs from Settings → **Fetch all**. That is the only rules fetch the app makes; it runs on the button
-and never at boot. Before fetching it calls `resetRules()`, then fetches each URL in order with
-`cache:"no-store"`. Through `fetchRulesFrom()` it follows any `include` array relative to the URL
-(so a manifest pulls in its files), and a `seen` set stops loops. On a failure it keeps what loaded
-and says to import files instead if the app is offline or CORS-blocked.
+and never at boot. **Fetching never loses what is loaded:**
+
+1. Each source URL is fetched in order with `cache:"no-store"`. `fetchRulesFrom()` follows any
+   `include` array relative to the URL (so a manifest pulls in its files) and **collects** the packs
+   without merging them. A per-source `seen` set stops loops, and a per-run memo means a URL listed
+   twice, or included by two sources, is still requested once. Every error names its file
+   (`b.json: HTTP 404`, `not a rules file` for a `null` or array body).
+2. A source counts only if all of it arrived, with at least one rule in it. One failed include
+   fails the whole source, and so does an answer with no rules in it (`{}`, an error object), which
+   would otherwise read as "this source now serves nothing" and wipe what it loaded.
+3. Nothing arrived: the pool and the cache are left exactly as they were, and the status line says
+   "…so nothing changed", names each failed file, and suggests importing files if offline or
+   CORS-blocked.
+4. Otherwise each source that arrived goes through `applyFetchedSource()`, in list order: merge its
+   packs stamped with its `_url`, then drop that source's old entries the merge did not replace. An
+   entry it still serves is replaced in place, so a re-fetch never doubles anything. One it stopped
+   serving goes. Entries from files, and from sources that failed, are not touched. Its `requires`
+   declaration follows its fresh copy, unless a file import shares the label.
+5. The cache is saved once. A refused save is written into the status line, on top of the red line
+   above the list (see [Storage](storage.md)).
 
 **`mergeRules(obj, fileName)`:**
 
 - The source label is `srcLabel()`: `obj.system`, else `obj.name`, else `"Rules"`. Every entry is
-  stamped `_source`, plus `_file` (file imports), `_rulebook`, `_dataVersion` and
-  `_excludeSystems` when the pack carries them.
+  stamped `_source`, plus `_rulebook`, `_dataVersion` and `_excludeSystems` when the pack carries
+  them. Where it came from is `_file` (a file import, `mergeRules(obj, fileName)`) or `_url` (a
+  fetch, `mergeRules(obj, null, url)`, the source URL from Settings rather than an include under
+  it). Any `_file`/`_url` the pack itself carried is dropped first: provenance is the merge's to
+  record, so a file can never be deleted by a later fetch.
 - Each entry is keyed by source + `keyOf()` (a lower-cased name, or `term` for keywords, or
   `class|name` for subclasses). **The same source and name replaces the entry in place**, which is
   how re-importing a pack updates it. The same name from a *different* source is kept beside it,
@@ -67,7 +86,8 @@ and says to import files instead if the app is offline or CORS-blocked.
 
 After the last file, the importer saves the cache, calls `refreshRulesUI()` and
 `renderRulesData()`, and writes one status line, with `missingSummary()` appended when something is
-missing. **Boot never merges.** It restores the already-merged pool from the cache and rebuilds
+missing. `renderRulesData()` also refreshes the Settings "Rules data" header chip through
+`rulesBadge()`, because every path that changes the pool calls it. **Boot never merges.** It restores the already-merged pool from the cache and rebuilds
 only `_id` and `_dups`.
 
 **Lookups are by name.** `ruleById(kind, idOrName)` matches an `_id` or a `keyOf()` name.
@@ -83,8 +103,9 @@ added beside the existing one as "Gloom Stalker (XGE)", and the existing key is 
 **The loaded-data list** (Settings and the home screen). `loadedRulesGroups()` groups entries by
 `_file` (file imports) or `_source` (fetched), and `rulesBucket()` files each group under Rulebook,
 its single category, or Mixed. Each row carries the pack's version badge (`dataStatusHTML()`), its
-missing-content chip (`requiresStatusHTML()`) and a delete button (`removeRulesGroup()`, which also
-drops a source's `requires` once none of its entries remain). `clearAllRules()` confirms with
+missing-content chip (`requiresStatusHTML()`) and a delete button (`removeRulesGroup()`). After a
+removal, `pruneRequires()` drops a source's `requires` once none of its entries remain; the fetch
+uses it too. Fetched entries group by label, whatever URL they came from. `clearAllRules()` confirms with
 counts and says plainly that characters are not affected: `resetRules()` touches only the pool.
 
 **Missing dependencies.** `missingRequirements(src)` is a pure function of `rules`, called at
@@ -133,6 +154,9 @@ files).
 - **The bundle equals the individual files.** Any change to `mergeRules()` keying needs the same
   change in `bundle-rules.js`, and `RULE_CATS` (`88-settings.js`), `mergeRules()`'s category map
   and the bundler's `CATS` must stay in step.
+- **Fetching never loses what is loaded.** A source replaces only the entries stamped with its own
+  `_url`, and only once all of it has arrived. A run where nothing arrives writes neither the pool
+  nor the cache. Never reset the pool ahead of a network call.
 - **Missing-dependency verdicts are computed, not stored.** Only the declaration persists, since
   boot never re-runs `mergeRules()`.
 - **`rules` is persisted whole, so it stays plain JSON** (see [Storage](storage.md)).
@@ -162,6 +186,11 @@ files).
   so the red "missing" chip and the amber "update available" chip look identical there. Hence the
   `!` glyph. `CAT_ONE` spells out singulars, because stripping a trailing `s` with `.replace(/s$/,"")`
   produced "classe".
+- **Fetch all emptied the pool offline** (#65). It called `resetRules()` before fetching, so every
+  file-imported pack went the moment the button was pressed, and its `catch` then cached the empty
+  pool for the next launch. The status line said "Kept what loaded" directly above "No rules data
+  loaded", and the Settings chip still counted 2151 entries, because nothing redrew it after
+  `openSettings()`.
 - **`fetchAllRules()` never refreshed the loaded-data list**, so its chips stayed stale after a URL
   fetch. It now calls `renderRulesData()`.
 - **Clear all** once had no confirmation and did not refresh the list.
@@ -182,13 +211,17 @@ files).
 | A pack with no `dataVersion` | `unknown`, no badge | Flagging it stale: a false alarm on someone's own content (L1323) |
 | Duplicates inside a folder | Mirror `mergeRules()`, and report them | Silent dedupe: `Net` is a real duplicate that someone should see (L625) |
 | Where `overlay.json` and `class-resources.json` live | The `data/` root | Inside a system folder: the bundler globs those, and they are converter inputs, not packs (L625) |
+| What Fetch all does to what is loaded | Each source that arrives whole replaces only what it loaded last time (`_url`); nothing else changes | Reset first (the old way): discarded file imports, and cached an empty pool when offline. Confirming before the reset: still loses everything when the fetch fails. Replacing by label: a file import sharing the label would go (L3797) |
 | The Artificer and Mystic in the core pack | Leave them, labelled `XPHB` | Dropping them: moves `data/5e2024/`, bumps XPHB for everyone, and strands Artificer players without Tasha's (L1816) |
 
 ## Open
 
-- **Fetch all wipes file-imported packs.** `fetchAllRules()` calls `resetRules()` first, with no
-  confirmation. A player who imported packs from files and also has one source URL loses the file
-  imports when they press it.
+- **Removing a source URL does not unload its packs.** They stay until removed under Loaded data.
+  The reset used to clear them at the next Fetch all.
+- **Entries fetched before `_url` existed** carry no mark of their URL. A re-fetch replaces them by
+  name, but one the source has since dropped lingers until removed under Loaded data.
+- A fetched pack with the same `system` and entry names as a file-imported one replaces those
+  entries, as re-importing the file would. That is the source + name keying, not a fetch rule.
 - `requires` entries under `subclasses` can never match (see Traps).
 - The Artificer and Mystic are 2014/UA content labelled `XPHB` in the core pack.
 - The header comment on `scripts/release.js`'s data-version block says it leaves versions alone
@@ -205,3 +238,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-14 — Xanathar's and Tasha's arrive as supplements, with `excludeSystems`, reprinted subclasses offered side by side, and table names suffixed. → ledger L1816
 - 2026-08-14 — The Homebrew pack arrives, with structural and declared missing-dependency reporting. → ledger L1883
 - 2026-08-14 — The merged pool's cache moves to IndexedDB. → ledger L1950
+- 2026-09-28 — Fetch all no longer resets the pool: a source replaces only what it loaded (`_url`), a failed run changes nothing, and the Settings chip follows the pool. → ledger L3797, #65

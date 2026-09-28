@@ -60,7 +60,10 @@ offer it as a download. A dropped index write removes the orphaned blob.
 It returns a promise of the error string. When the promise settles it reports through
 `updateRulesStatus()` and re-renders the loaded-data list, where `rulesCacheWarning()` puts the
 message in red above the list. The callers have usually drawn their status line already by then,
-which is why the report is asynchronous.
+which is why the report is asynchronous. `fetchAllRules()` waits for that promise and writes the
+error into its own status line. A fetch that brought nothing does not save at all: the pool did not
+change, so the cache already matches it, and overwriting it is how an offline Fetch all used to
+leave the next launch with no rules (see [Rules packs](rules-packs.md)).
 
 **Every IndexedDB call is timed out.** `idbOpen()` and each `idbTx()` go through `idbTimeout()`,
 which rejects after `IDB_TIMEOUT` (4000 ms). A missing or throwing IndexedDB rejects at once. A
@@ -85,7 +88,8 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
 ## Rules that must hold
 
 - **No silent storage writes.** A new write either reports failure on a surface the player sees
-  (the save chip, a returned error, the red loaded-data line) or has a recorded reason not to. The
+  (the save chip, a returned error, the red loaded-data line) or has a recorded reason not to.
+- **Never save a pool you did not mean to change.** A failed network call leaves the cache alone. The
   paths that already comply are autosave, `backupCharacter()` and `saveRulesCache()`.
 - **Every IndexedDB request goes through `idbOpen()`/`idbTx()`,** so the timeout covers it.
 - **Boot reads the `localStorage` rules copy synchronously, before first paint.** Browsers that
@@ -158,3 +162,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-10 — Backups return `{id, copy}` / `{error, copy}`, and the index write is verified by reading it back. → ledger L1116
 - 2026-08-14 — The rules cache moves to IndexedDB after five loaded packs reload as two, and a refused save now says so. → ledger L1950
 - 2026-08-14 — Every IndexedDB call gets a 4 s timeout, and the `localStorage` fallback gains LZW compression. → ledger L1993
+- 2026-09-28 — Fetch all saves only a pool it changed, and reports a refused save on its status line. → ledger L3797, #65

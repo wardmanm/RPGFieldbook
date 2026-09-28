@@ -8,13 +8,14 @@ this build expects — and backup of settings and rules.
 
 **Code:** `SET_SECTIONS`, `setSecOpen()`, `setSecHTML()`, `openSettings()`, `encSettingsHint()`,
 `rulesStatusText()`, `updateRulesStatus()`, `refreshRulesUI()`, `loadedRulesGroups()`,
-`removeRulesGroup()`, `clearAllRules()`, `dataStatus()`, `dataStatusHTML()`, `rulesCacheWarning()` in
-`88-settings.js` · `renderSrcRows()`, `renderRulesData()`, `rulesDataHTML()`, `fetchAllRules()`,
-`fetchRulesFrom()`, `importRulesFiles()`, `downloadRulesTemplates()`, `requiresStatusHTML()` in
-`89-rules-merge.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
+`removeRulesGroup()`, `clearAllRules()`, `dataStatus()`, `dataStatusHTML()`, `rulesCacheWarning()`,
+`rulesBadge()` in `88-settings.js` · `renderSrcRows()`, `renderRulesData()`, `rulesDataHTML()`,
+`fetchAllRules()`, `fetchRulesFrom()`, `applyFetchedSource()`, `importRulesFiles()`,
+`downloadRulesTemplates()`, `requiresStatusHTML()` in `89-rules-merge.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
 `checkForUpdate()`, `showUpdatePill()`, `updBannerHTML()`, `openChangelog()` in `30-version.js` ·
 `boot()`, `wire()` in `90-boot.js` · `release.js`, `gen-changelog.js`, `bundle-rules.js` in `scripts/`
-· **Tests:** `rules-data.js` (the modal's ids both ways, the fold state, `dataStatus()`),
+· **Tests:** `rules-data.js` (the modal's ids both ways, the fold state, `dataStatus()`, Fetch all
+and the header chip),
 `char-update.js` (`cmpVer()`, `updBannerHTML()`) · **See also:**
 [Rules packs](../architecture/rules-packs.md), [Storage](../architecture/storage.md),
 [Rules-update tool](rules-update-tool.md), [Theming & icons](../ui/theming-and-icons.md),
@@ -30,7 +31,9 @@ list's `.fgroup` / `.fghead` / `.fcaret`:
 - **This character** — only when a character is open, badged with its name: size, encumbrance (with a
   live "carrying X of Y" hint), coins count as weight, colour current HP, skills display, Hit Dice
   display, and the rules-update check with the version the sheet was last checked against.
-- **Rules data** — badged with the entry count: sources, the loaded-data list, and the status line.
+- **Rules data** — badged with the entry count (`rulesBadge()`, redrawn by every `renderRulesData()`
+  so it follows imports, fetches, removals and Clear all while the modal is open): sources, the
+  loaded-data list, and the status line.
 - **Characters & backup** — the character library, and Export / Import settings.
 - **Credits & licences** — the game-icons.net attribution CC BY 3.0 requires, in the app because
   `fieldbook.html` travels as a lone file; see [Theming & icons](../ui/theming-and-icons.md).
@@ -42,10 +45,17 @@ Headers are `role="button"` with Enter/Space. The delegated listener is bound to
 is rebuilt on every open.
 
 **Rules sources.** `settings.rulesSources` is a list of URLs, edited in place. **Fetch all** runs
-`fetchAllRules()`: it resets the pool, fetches each URL in turn (`cache:"no-store"`), follows a
-manifest's `include` list relative to its URL (`fetchRulesFrom()`, cycle-guarded), merges, saves the
-cache and reports; on an error it keeps what loaded and suggests importing files, since offline or
-CORS is the likely cause. Nothing fetches on its own — only this button. **Import files** merges each
+`fetchAllRules()`, which never loses what is loaded. It fetches each URL in turn
+(`cache:"no-store"`), following a manifest's `include` list relative to its URL (`fetchRulesFrom()`,
+cycle-guarded), and merges nothing until a source has arrived whole. Each source that did replaces
+the packs it loaded last time (`applyFetchedSource()`). One that failed keeps its previous packs, and
+files imported by hand are never touched. The status line says which: "Fetched.", "Fetched 1 of 2
+sources. Couldn't fetch b.json: HTTP 404, so what it loaded before is kept.", or, when nothing
+arrived, "Couldn't fetch … so nothing changed", with the pool and the cache left exactly as they
+were. Offline or CORS is the likely cause, so a failure suggests importing files. A cache save that
+is refused is reported on the same line. Nothing fetches on its own — only this button, and the
+sources hint says it needs a connection. The mechanics are in
+[Rules packs](../architecture/rules-packs.md). **Import files** merges each
 chosen file under its file name (`importRulesFiles()`); **Get templates** downloads a manifest and one
 example file per category; **Clear all** confirms, says characters are unaffected, and empties the
 pool. A legacy `settings.rulesUrl` is folded into the list at boot.
@@ -97,6 +107,8 @@ on in its tooltip. The pill is a `<button>` that opens the same changelog, which
   silence.
 - **Never hand-edit `APP_VERSION`, `DATA_VERSIONS` or `CHANGELOG`**; `release.js` owns all three, and
   `APP_VERSION` must only ever rise or the update check breaks.
+- **Fetch all never loses what is loaded**, and a run where nothing arrives says "nothing changed"
+  and writes neither the pool nor the cache. It is offline-first: failing is the expected case.
 - **Credits paragraphs stay one source line each**: `.m-body p` is `white-space:pre-wrap`, so a wrapped
   line renders its newline and indent.
 
@@ -109,6 +121,8 @@ on in its tooltip. The pill is a `<button>` that opens the same changelog, which
   after it to the far end. It was downstream of the spacer, not misplaced; now it takes the version
   button's slot and the same margin. → L1779
 - **Hiding `#btnVer` would have stranded "What's new"**, the changelog's only entry point. → L1779
+- **The status line lied.** Offline, Fetch all emptied the pool and then said "Kept what loaded"
+  directly above "No rules data loaded", while the section chip still counted 2151 entries. → L3797
 - **The badge first needs a release newer than the app**, and an unauthenticated call to a private
   repo 404s, and the `r.ok` guard turns that into a silent no-op. → L527
 
@@ -128,10 +142,8 @@ on in its tooltip. The pill is a `<button>` that opens the same changelog, which
 
 ## Open
 
-- **Fetch all replaces the whole pool**, packs imported from files included: `fetchAllRules()` calls
-  `resetRules()` before fetching, and on a failure saves whatever that run loaded — offline, that is
-  nothing. The sources hint's "Fetched when online, cached for offline" also suggests an automatic
-  fetch that does not exist. Seen in the code; not checked in a browser.
+- **Removing a source URL does not unload what it fetched.** Its packs stay until removed under
+  Loaded data (see [Rules packs](../architecture/rules-packs.md)).
 - The header comment of `30-version.js` still says to bump `APP_VERSION` and add a `CHANGELOG` entry on
   every change; the UPDATE_REPO comment still describes the badge linking to the release page.
 - The update check runs once per load.
@@ -148,3 +160,4 @@ on in its tooltip. The pill is a `<button>` that opens the same changelog, which
 - 2026-08-11 — The update pill replaces the version button and opens the changelog. → ledger L1779
 - 2026-08-14 — The "! N missing" chip for packs whose dependencies are not loaded. → ledger L1883
 - 2026-08-18 — Credits & licences section for the icon attribution. → ledger L3289
+- 2026-09-28 — Fetch all keeps what is loaded, says when nothing changed, and the Rules data chip follows the pool. → ledger L3797, #65

@@ -3794,3 +3794,53 @@ are spell columns it would skip, or Psi Warrior/Soulknife die data their prose "
 already carry), but it would not pick up a new one. And `flatten()` drops
 `abilityDc`/`abilityAttackMod` prose nodes, so Xanathar's "your Arcane Shot save DC is calculated
 as follows:" ends with nothing.
+## Fetch all no longer discards imported packs or empties the cache (#65, 2026-09-28)
+
+**Root cause.** `fetchAllRules()` called `resetRules()` *before* fetching, with no confirmation, so
+every pack imported from a file was gone the moment the button was pressed; its `catch` then ran
+`saveRulesCache()` on whatever that run had loaded. Reproduced in a browser on main: the 5e2024
+pack imported from a file (15 classes, 551 spells, 251 tables), one unreachable source URL, Fetch
+all → 0 classes, 0 spells, 0 tables, the empty pool cached for the next launch, and the status line
+reading "Couldn't finish (Failed to fetch). Kept what loaded…" directly above "No rules data
+loaded." The Settings "Rules data" header still said 2151 entries: `openSettings()` draws that chip
+once and nothing refreshed it.
+
+**The contract now** ([Rules packs](../wiki/architecture/rules-packs.md),
+[Settings & updates](../wiki/features/settings-and-updates.md)):
+
+- **Fetching never loses what is loaded.** Every source is fetched in full (its `include`s too)
+  before anything merges. `fetchRulesFrom()` now collects packs instead of merging them.
+- **Where an entry came from is stamped on it.** `mergeRules(obj, fileName, url)` adds `_url` (the
+  source URL from Settings, not an include under it) the way it adds `_file`, and clears any stray
+  `_file`/`_url` the pack itself carried, so a file can never be deleted by some later fetch.
+- **A source that arrives whole replaces what it loaded last time** (`applyFetchedSource()`): merge
+  first, so an entry it still serves is replaced in place and never doubled, then drop that source's
+  old entries the merge did not replace, so one it stopped serving goes. Nothing else is touched.
+  Its `requires` declaration follows its fresh copy unless a file import shares the label.
+- **A source that fails in any part keeps its previous packs.** A manifest is one source: one 404
+  include keeps the whole pack as it was. An answer with no rules in it (`{}`, an error object)
+  counts as a failure, not as "this source now serves nothing".
+- **A run where nothing arrives changes neither the pool nor the cache**, and the status line says
+  "…so nothing changed", names each failed file, and suggests importing files.
+- **The cache write is reported on the status line** when it is refused, not only in the red line
+  above the list. A fully failed run does not write at all, since the pool did not change.
+- **The Rules data chip follows the pool**: `renderRulesData()`, which every path that changes the
+  pool already calls, now refreshes it through `rulesBadge()`.
+- No new network behaviour: still only on the button, still `cache:"no-store"`, still in order; a
+  source listed twice, or a file two sources both include, is still fetched once.
+
+Other changes on the way: `pruneRequires()` is shared by `removeRulesGroup()` and the fetch; every
+fetch error names its file ("b.json: HTTP 404", "offline-pack.json: Failed to fetch", "not a rules
+file" for a `null` or array body, which used to throw inside `mergeRules()`); the sources hint no
+longer claims rules are "Fetched when online", which suggested a fetch nobody makes.
+
+**Behaviour change to know about:** removing a URL from the sources list no longer unloads its
+packs at the next Fetch all (the reset used to). Unload them in Loaded data. A fetched pack whose
+`system` and entry names match a file-imported one replaces those entries, as re-importing the file
+would — same source and name is the same entry.
+
+Tests: `rules-data.js` gained a Fetch all block, the suite's first asynchronous one (it runs last and
+calls `ck.done()` itself): 49 checks, 29 of which failed before the fix, and each new guard was
+mutation-checked (removing it turns a check red). Entries fetched before this change carry no
+`_url`; a re-fetch still replaces them by name, and only an entry the source has since dropped
+lingers, removable from Loaded data.

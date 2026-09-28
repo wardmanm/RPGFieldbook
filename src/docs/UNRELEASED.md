@@ -28,4 +28,7 @@ Bullets below this line — leave the heading in place.
 
 ## Pending
 
-_Nothing yet._
+- Settings → Fetch all no longer throws away rules you imported from files, and when it can't
+  reach a source (offline, or blocked by the site) it leaves your loaded rules exactly as they were
+  and says so, instead of emptying them for the next launch. Each source it does reach replaces
+  only what it loaded last time, and the Rules data count in Settings now stays up to date.
