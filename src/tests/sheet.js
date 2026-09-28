@@ -41,7 +41,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'combatGripHTML', 'moveCombatCard',
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
-  'finderQty', 'addLibraryItems',
+  'finderQty', 'addLibraryItems', 'attackNumbers',
   'coinKeys',
   'RULE_CATS', 'reindexRules', 'recomputeDups',
 ]);
@@ -2119,6 +2119,73 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('Humblewood coins read high to low: GP SP CP', JSON.stringify(X.coinKeys()) === '["gp","sp","cp"]', X.coinKeys());
 }
 
+/* ---- a pack's +N weapon adds its bonus once, to its own attack (#74) ----
+   Read from the SHIPPED packs and added the way the item finder adds them. The
+   packs used to carry the bonus twice — on the weapon (atkMisc/dmgMisc) and as
+   global attack/damage effects on the item — so the Dagger of Venom's own row
+   read +2 over its base, and every other attack, spell rows included, gained +1
+   while it was equipped. attackNumbers() is right to add both: a weapon's own
+   bonus and an equipped item's effect are different things. The data was wrong. */
+{
+  const pack = (dir, f) => JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', dir, f), 'utf8')).items;
+  const core = pack('5e2024', 'items.json'), magic = pack('5e2024', 'items-magic.json'), tce = pack('tashas', 'items-magic.json');
+  const def = (list, name) => list.find(x => x.name === name);
+  const c = X.blankChar(); X.character = c;
+  c.abilities.str = 10; c.abilities.dex = 16; c.level = 1;                    /* STR +0, DEX +3, PB +2 */
+  X.addLibraryItems([def(magic, 'Dagger of Venom'), def(core, 'Club')], null, null, 1);
+  c.attacks.push({id: 'fb', name: 'Fire Bolt', kind: 'ranged', ability: 'int', proficient: true, atkMisc: '', dmgMisc: '',
+                  damageDice: '1d10', damageType: 'fire', addAbilityDamage: false, spellId: 's1', source: 'spell'});
+  const row = name => c.attacks.find(a => a.name === name);
+  const dagger = c.inventory.find(i => i.name === 'Dagger of Venom');
+  ck('#74 the Dagger of Venom arrives equipped, with its attack', !!dagger && dagger.equipped === true && !!row('Dagger of Venom'));
+  let n = X.attackNumbers(row('Dagger of Venom'));
+  ck('#74 its own row adds its +1 once: DEX 3 + PB 2 + 1 = +6 to hit', n.toHit === 6, n);
+  ck('#74 ...and 3 + 1 = +4 to damage', n.dmgBonus === 4, n);
+  ck('#74 ...none of it from an effect', n.atkFx === 0 && n.dmgFx === 0, n);
+  n = X.attackNumbers(row('Club'));
+  ck('#74 a Club beside it is untouched: STR 0 + PB 2 = +2 to hit, +0 damage', n.toHit === 2 && n.dmgBonus === 0, n);
+  n = X.attackNumbers(row('Fire Bolt'));
+  ck('#74 ...and so is a spell row: INT 0 + PB 2 = +2', n.toHit === 2 && n.dmgBonus === 0, n);
+  dagger.equipped = false;
+  ck('#74 unequipping the dagger changes no other row',
+     X.attackNumbers(row('Club')).toHit === 2 && X.attackNumbers(row('Fire Bolt')).toHit === 2);
+  /* Tasha's: a STR weapon, so the +3 reads on its own */
+  const c2 = X.blankChar(); X.character = c2;
+  c2.abilities.str = 10; c2.abilities.dex = 10; c2.level = 1;
+  X.addLibraryItems([def(tce, '+3 Moon Sickle'), def(core, 'Club')], null, null, 1);
+  n = X.attackNumbers(c2.attacks.find(a => a.name === '+3 Moon Sickle'));
+  ck('#74 Tasha\'s +3 Moon Sickle: PB 2 + 3 = +5 to hit, +3 damage', n.toHit === 5 && n.dmgBonus === 3, n);
+  n = X.attackNumbers(c2.attacks.find(a => a.name === 'Club'));
+  ck('#74 ...and its Club stays at +2', n.toHit === 2 && n.dmgBonus === 0, n);
+  X.character = X.blankChar();
+}
+
+/* ---- a Dart uses the better of STR and DEX, and is still a ranged attack (#75) ----
+   The shipped Dart, added through the finder. The pack gave every ranged weapon
+   "dex", ignoring Finesse, so a strong thrower's Dart used the weaker score.
+   attackNumbers() already reads "finesse" the same way for any kind; the row's
+   kind stays ranged, so a ranged-only effect (Archery) still applies. */
+{
+  const core = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', '5e2024', 'items.json'), 'utf8')).items;
+  const dartDef = core.find(x => x.name === 'Dart');
+  const withDart = (str, dex) => {
+    const c = X.blankChar(); X.character = c;
+    c.abilities.str = str; c.abilities.dex = dex; c.level = 1;
+    X.addLibraryItems([dartDef], null, null, 10);
+    return c.attacks.find(a => a.name === 'Dart');
+  };
+  let row = withDart(18, 12), n = X.attackNumbers(row);
+  ck('#75 a strong thrower\'s Dart uses STR: STR 4 + PB 2 = +6 to hit, +4 damage',
+     n.abilName === 'STR' && n.toHit === 6 && n.dmgBonus === 4, n);
+  ck('#75 ...and is still a ranged attack', row.kind === 'ranged' && n.kind === 'ranged', [row.kind, n.kind]);
+  row = withDart(10, 16); n = X.attackNumbers(row);
+  ck('#75 a nimble one\'s uses DEX: DEX 3 + PB 2 = +5 to hit, +3 damage',
+     n.abilName === 'DEX' && n.toHit === 5 && n.dmgBonus === 3, n);
+  X.character.features.push({id: 'arch', name: 'Archery', effects: [{target: 'attack.ranged', value: 2}], enabled: true});
+  ck('#75 ...and a ranged-only effect still reaches it (Archery +2 → +7)', X.attackNumbers(row).toHit === 7, X.attackNumbers(row));
+  X.character = X.blankChar();
+}
+
 /* ---- imported files and packs render inert ----
    A character file, a rules pack and a settings file (which carries a whole
    `rules` object) are all written by someone else, and all reach the page
@@ -2512,6 +2579,47 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
     renders('a table with no rows', () => ctx.openTableByName('Rowless'));
     renders('a table whose cols and rows are not lists', () => ctx.openTableByName('Ragged'));
     renders('the print sheet over a tidied pool', () => ctx.printSheet());
+  }
+
+  /* ---- the item form's "Insert from rules pack" keeps a weapon's own bonus (#74)
+     The form asks for a weapon's kind, ability, dice and type and nothing else,
+     and carried atkMisc/dmgMisc/notes only from the item being EDITED — so a
+     new item filled from the pack's Dagger of Venom got no +1 on the weapon.
+     That hid while the pack also wrote the +1 as a global effect (which the
+     insert does copy); with the effect gone, the dagger would have had no bonus
+     at all. Driven through the form itself, with the real shipped entry. */
+  {
+    const magic = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', '5e2024', 'items-magic.json'), 'utf8')).items;
+    X.resetRules();
+    X.mergeRules({system: 'XPHB', items: [magic.find(x => x.name === 'Dagger of Venom')]}, 'x.json');
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    X.character.abilities.str = 10; X.character.abilities.dex = 16; X.character.level = 1;
+    const res = capture(() => {
+      ctx.openItemForm();
+      el('iLib').value = '0'; fire('iLib', 'change');
+      fire('iSave', 'click');
+    });
+    ck('#74 the item form saves an inserted pack weapon', !res.err && X.character.inventory.length === 1,
+       res.err && String(res.err.stack || res.err).split('\n').slice(0, 3).join(' | '));
+    const iw = (X.character.inventory[0] || {}).weapon || {};
+    ck('#74 ...keeping the weapon\'s own +1, to hit and to damage', iw.atkMisc === 1 && iw.dmgMisc === 1, iw);
+    ck('#74 ...and its range and properties', iw.notes === 'Range 20/60 · Finesse, Light, Thrown · Mastery: Nick', iw);
+    const ia = X.character.attacks.find(a => a.itemId === (X.character.inventory[0] || {}).id);
+    ck('#74 ...so its attack reads DEX 3 + PB 2 + 1 = +6, as the finder\'s does',
+       !!ia && X.attackNumbers(ia).toHit === 6, ia && X.attackNumbers(ia));
+    /* editing it again, with nothing inserted, still carries what it has (the
+       recorder DOM does not read values back out of the markup, so the boxes
+       the form would show are filled in by hand) */
+    const again = capture(() => {
+      ctx.openItemForm(X.character.inventory[0]);
+      [['iName', 'Dagger of Venom'], ['iWKind', 'melee'], ['iWAbil', 'finesse'], ['iWDice', '1d4'], ['iWType', 'piercing']]
+        .forEach(([id, v]) => { el(id).value = v; });
+      fire('iSave', 'click');
+    });
+    const iw2 = (X.character.inventory[0] || {}).weapon || {};
+    ck('#74 re-saving the item keeps the bonus and notes', !again.err && iw2.atkMisc === 1 && iw2.dmgMisc === 1
+       && iw2.notes === iw.notes, again.err ? String(again.err) : iw2);
+    X.resetRules();
   }
 
   Object.assign(doc, saved);

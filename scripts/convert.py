@@ -730,12 +730,15 @@ def _ival(x):
     except Exception: return 0
 
 def _item_effects(it):
+    """The item's bonuses that apply to the whole character while it is equipped.
+    Never bonusWeapon, bonusWeaponAttack or bonusWeaponDamage: in 5e-tools those
+    are rolls made with a weapon -- nearly always one (the item itself, a coated
+    weapon, bows, unarmed strikes) -- and an `attack`/`damage` effect reaches
+    every attack, spell rows included. A weapon carries its bonus as
+    weapon.atkMisc/dmgMisc (see convert_items()); anything else keeps it in its
+    prose (#74)."""
     fx = []
     if it.get('bonusAc'): fx.append(('ac', _ival(it['bonusAc'])))
-    if it.get('bonusWeapon'):
-        v = _ival(it['bonusWeapon']); fx += [('attack', v), ('damage', v)]
-    if it.get('bonusWeaponAttack'): fx.append(('attack', _ival(it['bonusWeaponAttack'])))
-    if it.get('bonusWeaponDamage'): fx.append(('damage', _ival(it['bonusWeaponDamage'])))
     if it.get('bonusSavingThrow'):
         v = _ival(it['bonusSavingThrow']); fx += [('save.' + a, v) for a in ('str','dex','con','int','wis','cha')]
     return [{'target': t, 'value': v} for t, v in fx if v]
@@ -789,8 +792,10 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
             ms = _refs_text(_weapon_refs(it.get('mastery'), masteries, 'mastery', it['name']))
             if ms: bits.append('Mastery: ' + ', '.join(ms))
             kind = 'ranged' if tcode == 'R' else 'melee'
+            # Finesse is the choice of STR or DEX for a melee OR a ranged attack
+            # (a Dart), so it is asked first; only then does a ranged weapon use DEX (#75).
             finesse = any(nm == 'Finesse' for nm, _note in named)
-            ability = 'dex' if kind == 'ranged' else ('finesse' if finesse else 'str')
+            ability = 'finesse' if finesse else ('dex' if kind == 'ranged' else 'str')
             nb = []
             if it.get('range'): nb.append('Range ' + it['range'])
             if it.get('dmg2'): nb.append('Versatile ' + it['dmg2'])

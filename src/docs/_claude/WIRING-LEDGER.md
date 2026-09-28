@@ -4388,3 +4388,113 @@ turns `bonusWeapon` into global `attack` and `damage` effects, and `convert_item
 as `weapon.atkMisc`/`dmgMisc`. `attackNumbers()` adds both on the weapon's own row, and the effects
 add +N to every other attack while it is equipped. 15 weapons: 11 core (Dagger of Venom, Sun Blade,
 Staff of Power, …) and 4 Tasha's. Seen in the scratch harness above.
+
+## A +N weapon's bonus counts once, on its own attack (#74, 2026-09-28)
+
+**Root cause.** `convert_items()` writes a weapon's 5e-tools `bonusWeapon` (or `bonusWeaponAttack` /
+`bonusWeaponDamage`) onto the weapon as `atkMisc`/`dmgMisc`, and `_item_effects()` *also* turned it
+into `attack`/`damage` effects on the item. `attackNumbers()` adds a row's `atkMisc` and every live
+`attack`/`attack.<kind>` effect, and an equipped item's effects are live for every row. So a +1
+Dagger of Venom read +2 on its own row (STR 10, DEX 16, level 1: +7 to hit, +5 damage for +6/+4),
+and every other attack, spell rows included, gained +1 while it was equipped. `attackNumbers()` did
+the arithmetic right; the data said the bonus twice.
+
+**The one representation.** Every `bonusWeapon*` that reaches a pack is scoped to one weapon: the
+item itself (the 15 weapons), the Rod of Lordly Might's own mace form, the one weapon Oil of
+Sharpness coats, the bows Bracers of Archery name, the Eldritch Claw Tattoo's unarmed strikes, and
+the pestle of Baba Yaga's Mortar and Pestle. Of the 274 dump entries carrying it, the broadest are
+Deck of Wonder's Champion card (weapon attacks only) and Banner of the Krig Rune (inside its area);
+none reaches every attack, and no effect target can say "only this weapon" (`attack`, `.melee`,
+`.ranged` are the only scopes). So
+`_item_effects()` never emits it: a weapon carries it as `atkMisc`/`dmgMisc`, where the attack row
+reads it once, and anything else keeps it in its prose, as the numeric-only rule keeps every other
+conditional. `bonusAc` and `bonusSavingThrow` stay effects; they are global. The Archery fighting
+style's `attack.ranged` (from `overlay.json`) is untouched.
+
+**Data.** Only `effects` moved, on 20 items. Core `items-magic.json` 14: the 11 weapons (Dagger of
+Venom, Dwarven Thrower, Mace of Smiting, Quarterstaff of the Acrobat, Scimitar of Speed, Staff of
+Power, Staff of Striking, Staff of the Magi, Staff of the Woodlands, Staff of Thunder and
+Lightning, Sun Blade) and Bracers of Archery (`damage` +2), Oil of Sharpness and Rod of Lordly
+Might (+3). Tasha's `items-magic.json` 6: the three Moon Sickles and Baba Yaga's Pestle, and Baba
+Yaga's Mortar and Pestle and the Eldritch Claw Tattoo. Quarterstaff of the Acrobat keeps `ac` +5
+and Staff of Power `ac` and six `save.*` +2. Checked field by field; every other file of the three
+packs regenerates byte for byte; Xanathar's has none and did not move. The 15 weapons keep their
+`atkMisc`/`dmgMisc` unchanged.
+
+**App.** The item form's *Insert from rules pack* filled kind, ability, dice and type and carried
+`atkMisc`, `dmgMisc` and `notes` only from the item being edited, so an inserted +N weapon got no
+bonus on the weapon. That hid while the pack also wrote the bonus as an effect (which the insert
+copies); with the effect gone the inserted dagger would have had no bonus at all. `openItemForm()`
+now carries them from `wFrom`, the pack weapon last inserted, else the edited item's own, so the
+inserted weapon also gets its range and properties notes. One UNRELEASED bullet.
+
+**`attackNumbers()` is not changed.** Skipping the owning item's own effects on its row would fix
+only half of an old sheet (the +1 on every other attack stays), and would make an effect the player
+typed on a weapon mean one thing on its row and another everywhere else. An effect on an equipped
+item is global by definition; the data now says so.
+
+**Existing characters** hold copies with the effects. `effects` is in `UPD_FIELDS.item`, so the
+rules-update tool shows a stamped copy as "effects changed", ticked unless the player edited the
+item; applying it writes `effects: []` and nothing else, the weapon keeps its `atkMisc`, the attack
+row keeps its id, and qty/equipped/fav are untouched. An edited copy is offered unticked; a legacy
+or form-inserted copy (no `src`) is offered unticked by name, and there `weapon` differs too, so
+applying it also gives the weapon its `atkMisc` and rebuilds an untouched row. `migrate()` changes
+nothing. The prompt appears when a sheet's `appVersion` is behind, so the next release nudges; until
+then Settings → This character → Rules updates offers it.
+
+**Guards.** `converter.py` 236 → 259: the real Dagger of Venom, Dwarven Thrower, Sun Blade, Staff of
+Power and +1 Moon Sickle carry the bonus on the weapon and no effect; the five non-weapon shapes
+from the dump carry no effect and keep their prose; a Ring of Protection keeps AC and saves; a
+split attack/damage bonus lands in each box; 12 failed first. `rules-data.js` +8 over every pack:
+no weapon carries its bonus both ways, no pack item carries any `attack`/`damage` effect (an
+explicit allowlist, empty, for one that truly reaches every attack), 11 + 4 +N weapons still ship,
+five pinned bonuses; two failed first. `sheet.js` +14: the shipped Dagger of Venom added through
+the finder reads +6/+4 and a Club and a Fire Bolt row beside it +2 (seven failed first, reproducing
++7/+5 and +3), Tasha's +3 Moon Sickle, and the item form driven through Insert and Save keeping the
++1 and notes (four failed first). `char-update.js` +13: an old sheet reproduces the bug, the fixed
+shipped entry is offered as exactly `effects`, ticked, and applying it gives +6 and +2; an edited
+copy is unticked; `migrate()` leaves the effects (six failed first). Pages:
+[converter](../wiki/data/converter.md), [attacks & damage](../wiki/features/attacks-and-damage.md),
+[computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
+[rules-update tool](../wiki/features/rules-update-tool.md), [inventory](../wiki/features/inventory.md),
+[supplements](../wiki/data/supplements.md).
+
+**Seen, not fixed.** Quarterstaff of the Acrobat's `ac` +5 is `bonusAc`, and in the book it is a
+Reaction against one attack, once per rest, so an equipped staff reads AC +5 all the time. The Moon
+Sickles' and Staff of Power's spell-attack bonus (`bonusSpellAttack`) is not read at all.
+
+## Finesse ranged weapons can use STR or DEX (#75, 2026-09-28)
+
+**Root cause.** `convert_items()` chose `weapon.ability` by asking "ranged?" first: `'dex' if kind ==
+'ranged' else ('finesse' if finesse else 'str')`. Finesse is the choice of STR or DEX for a melee
+*or* a ranged attack, so the Dart (Finesse, Thrown; a ranged weapon in 2024) shipped `"dex"`, and a
+STR 18 / DEX 12 thrower's Dart read +3 where the rules give +6. Now Finesse is asked first:
+`finesse`, else `dex` for a ranged weapon, else `str`.
+
+**Scope.** The Dart is the only ranged Finesse weapon in any pack. In the whole v2.36.1 dump the
+others are the 2014 Dart (not converted), IDRotF's Iron Ball and PotA's Seeker Dart (adventure
+books, never converted). No magic weapon is ranged, and Tasha's and Xanathar's weapons are all
+melee, so the supplements do not move.
+
+**Data.** One line: `data/5e2024/items.json`, the Dart's `weapon.ability` `"dex"` → `"finesse"`.
+Its description, notes and kind are unchanged, and every other file of the three packs
+regenerates byte for byte.
+
+**In the app, nothing to change.** `attackNumbers()` reads `finesse` the same way whatever the
+row's `kind` (the better of STR and DEX, DEX on a tie), and `kind` stays `ranged`, so
+`attack.ranged` effects (Archery) still reach it; the attack form, the item form, the breakdown
+and the print sheet treat the two fields independently. An existing sheet's Dart is a copy: the
+rules-update tool offers "weapon changed", ticked when the item is unedited, and applying it gives
+the item `finesse` and rebuilds its attack row, same id, only if the player never touched it; a
+row they edited keeps its ability. `migrate()` changes nothing.
+
+**Guards.** `converter.py` 259 → 264: the real XPHB Dart attacks with `finesse` and stays ranged
+with its notes; a Net (ranged, no Finesse) keeps `dex`; a Dagger keeps `finesse`; a Warhammer
+`str`; one failed first. `rules-data.js`: #72's "every melee weapon listing Finesse attacks with
+finesse" now covers every weapon, melee or ranged, plus "a ranged weapon without Finesse attacks
+with DEX" and a Dart pin (709 checks; two failed first). `sheet.js` +4: the shipped Dart through the
+finder uses STR for STR 18 / DEX 12 (+6) and DEX for DEX 16 (+5), stays ranged and takes Archery's
++2 (one failed first). `char-update.js` +6: an old sheet's Dart is offered as "weapon" changed,
+ticked; applying it rebuilds the untouched row with `finesse` (+6); an edited row is left alone
+(four failed first). Pages: [converter](../wiki/data/converter.md),
+[attacks & damage](../wiki/features/attacks-and-damage.md).

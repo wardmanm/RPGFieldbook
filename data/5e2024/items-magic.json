@@ -632,12 +632,7 @@
       "rarity": "Uncommon",
       "attune": true,
       "description": "While wearing these bracers, you have proficiency with the Longbow and Shortbow, and you gain a +2 bonus to damage rolls made with such weapons",
-      "effects": [
-        {
-          "target": "damage",
-          "value": 2
-        }
-      ]
+      "effects": []
     },
     {
       "name": "Bracers of Defense",
@@ -1347,16 +1342,7 @@
       "rarity": "Rare",
       "weight": 1,
       "description": "Damage 1d4 piercing · Range 20/60 ft · Properties: Finesse, Light, Thrown · Mastery: Nick · Base item: Dagger. You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon.\nYou can take a Bonus Action to magically coat the blade with poison. The poison remains for 1 minute or until an attack using this weapon hits a creature. That creature must succeed on a DC 15 Constitution saving throw or take 2d10 Poison damage and have the Poisoned condition for 1 minute. The weapon can't be used this way again until the next dawn",
-      "effects": [
-        {
-          "target": "attack",
-          "value": 1
-        },
-        {
-          "target": "damage",
-          "value": 1
-        }
-      ],
+      "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d4",
@@ -1512,16 +1498,7 @@
       "attune": true,
       "attuneNote": "by a Dwarf or a Creature Attuned to a Belt of Dwarvenkind",
       "description": "Damage 1d8 bludgeoning (Versatile 1d10) · Range 20/60 ft · Properties: Thrown, Versatile · Mastery: Push · Base item: Warhammer. You gain a +3 bonus to attack rolls and damage rolls made with this magic weapon. It has Thrown with a normal range of 20 feet and a long range of 60 feet. When you hit with a ranged attack using this weapon, it deals an extra 1d8 Force damage, or an extra 2d8 Force damage if the target is a Giant. Immediately after hitting or missing, the weapon flies back to your hand",
-      "effects": [
-        {
-          "target": "attack",
-          "value": 3
-        },
-        {
-          "target": "damage",
-          "value": 3
-        }
-      ],
+      "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d8",
@@ -2681,16 +2658,7 @@
       "rarity": "Rare",
       "weight": 4,
       "description": "Damage 1d6 bludgeoning · Mastery: Sap · Base item: Mace. You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon. The bonus increases to +3 when you use the weapon to attack a Construct.\nWhen you roll a 20 on an attack roll made with this weapon, the target takes an extra 7 Bludgeoning damage, or 14 Bludgeoning damage if it's a Construct. If a Construct has 25 Hit Points or fewer after taking this damage, it is destroyed",
-      "effects": [
-        {
-          "target": "attack",
-          "value": 1
-        },
-        {
-          "target": "damage",
-          "value": 1
-        }
-      ],
+      "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
@@ -3058,16 +3026,7 @@
       "rarity": "Very Rare",
       "weight": 0.5,
       "description": "One vial of this oil can coat one Melee weapon or twenty pieces of ammunition, but only ammunition and Melee weapons that are nonmagical and deal Slashing or Piercing damage are affected. Applying the oil takes 1 minute, after which the oil magically seeps into whatever it coats, turning the coated weapon into a +3 Weapon or the coated ammunition into +3 Ammunition.\nThis clear, gelatinous oil sparkles with tiny, ultrathin silver shards",
-      "effects": [
-        {
-          "target": "attack",
-          "value": 3
-        },
-        {
-          "target": "damage",
-          "value": 3
-        }
-      ]
+      "effects": []
     },
     {
       "name": "Oil of Slipperiness",
@@ -3865,14 +3824,6 @@
         {
           "target": "ac",
           "value": 5
-        },
-        {
-          "target": "attack",
-          "value": 2
-        },
-        {
-          "target": "damage",
-          "value": 2
         }
       ],
       "weapon": {
@@ -4486,16 +4437,7 @@
       "weight": 2,
       "attune": true,
       "description": "This rod has a flanged head, and it functions as a magic Mace that grants a +3 bonus to attack rolls and damage rolls made with it. The rod has properties associated with six different buttons that are set in a row along the haft. It has three other properties as well, detailed below.\nButtons: You can press one of the following buttons as a Bonus Action; a button's effect lasts until you push a different button or until you push the same button again, which causes the rod to revert to its normal form: Button 1: A fiery blade sprouts from the end opposite the rod's flanged head. The flames shed Bright Light in a 40-foot radius and Dim Light for an additional 40 feet, and the blade functions as a magic Longsword or Shortsword (your choice) that deals an extra 2d6 Fire damage on a hit.\nButton 2: The rod's flanged head folds down and two crescent-shaped blades spring out, transforming the rod into a magic Battleaxe that grants a +3 bonus to attack rolls and damage rolls made with it.\nButton 3: The rod's flanged head folds down, a spear point springs from the rod's tip, and the rod's handle lengthens into a 6-foot haft, transforming the rod into a magic Spear that grants a +3 bonus to attack rolls and damage rolls made with it.\nButton 4: The rod transforms into a climbing pole up to 50 feet long (you specify the length), though the rod's buttons remain within your reach. In surfaces as hard as granite, a spike at the bottom and three hooks at the top anchor the pole. Horizontal bars 3 inches long fold out from the sides, 1 foot apart, forming a ladder. The pole can bear up to 4,000 pounds. More weight or lack of solid anchoring causes the rod to revert to its normal form.\nButton 5: The rod transforms into a handheld battering ram and grants its user a +10 bonus to Strength (Athletics) checks made to break through doors, barricades, and other barriers.\nButton 6: The rod assumes or remains in its normal form and indicates magnetic north. (Nothing happens if this function of the rod is used in a location that has no magnetic north.) The rod also gives you knowledge of your approximate depth beneath the ground or your height above it.\nDrain Life: When you hit a creature with a melee attack using the rod, you can force the target to make a DC 17 Constitution saving throw. On a failed save, the target takes an extra 4d6 Necrotic damage, and you regain a number of Hit Points equal to half that Necrotic damage. Once used, this property can't be used again until the next dawn.\nParalyze: When you hit a creature with a melee attack using the rod, you can force the target to make a DC 17 Constitution saving throw. On a failed save, the target has the Paralyzed condition for 1 minute. The target repeats the save at the end of each of its turns, ending the effect on a success. Once used, this property can't be used again until the next dawn.\nTerrify: While holding the rod, you can take a Magic action to force each creature you can see within 30 feet of yourself to make a DC 17 Wisdom saving throw. On a failed save, a target has the Frightened condition for 1 minute. A Frightened target repeats the save at the end of each of its turns, ending the effect on itself on a success. Once used, this property can't be used again until the next dawn",
-      "effects": [
-        {
-          "target": "attack",
-          "value": 3
-        },
-        {
-          "target": "damage",
-          "value": 3
-        }
-      ]
+      "effects": []
     },
     {
       "name": "Rod of Resurrection",
@@ -4654,16 +4596,7 @@
       "weight": 3,
       "attune": true,
       "description": "Damage 1d6 slashing · Properties: Finesse, Light · Mastery: Nick · Base item: Scimitar. You gain a +2 bonus to attack rolls and damage rolls made with this magic weapon. In addition, you can make one attack with it as a Bonus Action on each of your turns",
-      "effects": [
-        {
-          "target": "attack",
-          "value": 2
-        },
-        {
-          "target": "damage",
-          "value": 2
-        }
-      ],
+      "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
@@ -5197,14 +5130,6 @@
           "value": 2
         },
         {
-          "target": "attack",
-          "value": 2
-        },
-        {
-          "target": "damage",
-          "value": 2
-        },
-        {
           "target": "save.str",
           "value": 2
         },
@@ -5248,16 +5173,7 @@
       "weight": 4,
       "attune": true,
       "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff can be wielded as a magic Quarterstaff that grants a +3 bonus to attack rolls and damage rolls made with it.\nThe staff has 10 charges. When you hit with a melee attack using it, you can expend up to 3 charges. For each charge you expend, the target takes an extra 1d6 Force damage.\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff becomes a nonmagical Quarterstaff",
-      "effects": [
-        {
-          "target": "attack",
-          "value": 3
-        },
-        {
-          "target": "damage",
-          "value": 3
-        }
-      ],
+      "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
@@ -5297,16 +5213,7 @@
       "attune": true,
       "attuneNote": "by a sorcerer, warlock, or wizard",
       "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 50 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls.\nSpell Absorption: While holding the staff, you have Advantage on saving throws against spells. In addition, you can take a Reaction when another creature casts a spell that targets only you. If you do, the staff absorbs the magic of the spell, canceling its effect and gaining a number of charges equal to the absorbed spell's level. However, if doing so brings the staff's total number of charges above 50, the staff explodes as if you activated its Retributive Strike (see below).\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Magi Table]\nRegaining Charges: The staff regains 4d6 + 2 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 20, the staff regains 1d12 + 1 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 6 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
-      "effects": [
-        {
-          "target": "attack",
-          "value": 2
-        },
-        {
-          "target": "damage",
-          "value": 2
-        }
-      ],
+      "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
@@ -5345,16 +5252,7 @@
       "attune": true,
       "attuneNote": "by a druid",
       "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 6 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you have a +2 bonus to spell attack rolls.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Woodlands Table]\nTree Form: You can take a Magic action to plant one end of the staff in earth in an unoccupied space and expend 1 charge to transform the staff into a healthy tree. The tree is 60 feet tall and has a 5-foot-diameter trunk, and its branches at the top spread out in a 20-foot radius. The tree appears ordinary but radiates a faint aura of Transmutation magic that can be discerned with the Detect Magic spell. While touching the tree and using a Magic action, you return the staff to its normal form. Any creature in the tree falls when the tree reverts to a staff.\nRegaining Charges: The staff regains 1d6 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff loses its properties and becomes a nonmagical Quarterstaff",
-      "effects": [
-        {
-          "target": "attack",
-          "value": 2
-        },
-        {
-          "target": "damage",
-          "value": 2
-        }
-      ],
+      "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
@@ -5374,16 +5272,7 @@
       "weight": 4,
       "attune": true,
       "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. It also has the following additional properties. Once one of these properties is used, it can't be used again until the next dawn.\nLightning: When you hit with a melee attack using the staff, you can cause the target to take an extra 2d6 Lightning damage (no action required).\nThunder: When you hit with a melee attack using the staff, you can cause the staff to emit a crack of thunder audible out to 300 feet (no action required). The target you hit must succeed on a DC 17 Constitution saving throw or have the Stunned condition until the end of your next turn.\nThunder and Lightning: Immediately after you hit with a melee attack using the staff, you can take a Bonus Action to use the Lightning and Thunder properties (see above) at the same time. Doing so doesn't expend the daily use of those properties, only the use of this one.\nLightning Strike: You can take a Magic action to cause a bolt of lightning to leap from the staff's tip in a Line that is 5 feet wide and 120 feet long. Each creature in that Line makes a DC 17 Dexterity saving throw, taking 9d6 Lightning damage on a failed save or half as much damage on a successful one.\nThunderclap: You can take a Magic action to cause the staff to produce a thunderclap audible out to 600 feet. Every creature within a 60-foot Emanation originating from you makes a DC 17 Constitution saving throw. On a failed save, a creature takes 2d6 Thunder damage and has the Deafened condition for 1 minute. On a successful save, a creature takes half as much damage only",
-      "effects": [
-        {
-          "target": "attack",
-          "value": 2
-        },
-        {
-          "target": "damage",
-          "value": 2
-        }
-      ],
+      "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
@@ -5486,16 +5375,7 @@
       "weight": 3,
       "attune": true,
       "description": "Damage 1d8 radiant (Versatile 1d10) · Properties: Finesse, Versatile · Mastery: Sap · Base item: Longsword. This item appears to be a sword hilt.\nBlade of Radiance: While grasping the hilt, you can take a Bonus Action to cause a blade of pure radiance to spring into existence or make the blade disappear. While the blade exists, this magic weapon functions as a Longsword with Finesse. If you are proficient with Longswords or Shortswords, you are proficient with the Sun Blade. You gain a +2 bonus to attack rolls and damage rolls made with this weapon, which deals Radiant damage instead of Slashing damage. When you hit an Undead with it, that target takes an extra 1d8 Radiant damage.\nSunlight: The sword's luminous blade emits Bright Light in a 15-foot radius and Dim Light for an additional 15 feet. The light is sunlight. While the blade persists, you can take a Magic action to expand or reduce its radius of Bright Light and Dim Light by 5 feet each, to a maximum of 30 feet each or a minimum of 10 feet each",
-      "effects": [
-        {
-          "target": "attack",
-          "value": 2
-        },
-        {
-          "target": "damage",
-          "value": 2
-        }
-      ],
+      "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d8",

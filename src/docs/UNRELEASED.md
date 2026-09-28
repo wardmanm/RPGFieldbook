@@ -69,3 +69,5 @@ Bullets below this line — leave the heading in place.
   some entries with an asterisk, and the note it points to, such as "Might involve a rival" or
   "Halved for a consumable item like a potion or scroll", now appears below the table.
   Re-download the Xanathar's Guide pack to get them.
+- A magic weapon added with the item editor's "Insert from rules pack" now keeps its +1, +2 or +3,
+  and its range and properties, on the attack it creates.

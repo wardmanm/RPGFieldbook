@@ -270,6 +270,12 @@ function openItemForm(existing){
   let equipped=!!it.equipped;
   const eq=document.getElementById("iEquip");eq.addEventListener("click",()=>{equipped=!equipped;eq.classList.toggle("on",equipped)});
   let isWeapon=!!it.weapon;
+  /* The weapon the fields were last filled from: the pack entry just inserted,
+     else the item being edited. The form asks only for kind, ability, dice and
+     type, so the rest — its notes and its own magic bonus (atkMisc/dmgMisc, the
+     +1 on a Dagger of Venom) — is carried from here. Carrying it from the edited
+     item alone gave an inserted +N weapon no bonus at all (#74). */
+  let wFrom=it.weapon||null;
   const wtog=document.getElementById("iIsWeapon"), wfields=document.getElementById("iWeaponFields");
   wtog.addEventListener("click",()=>{isWeapon=!isWeapon;wtog.classList.toggle("on",isWeapon);wfields.style.display=isWeapon?"":"none";});
   let isArmor=!!arm;
@@ -295,7 +301,7 @@ function openItemForm(existing){
   fxWrap.addEventListener("click",e=>{const d=e.target.closest(".fx-del");if(d)d.closest(".fxrow").remove()});
   const libSel=document.getElementById("iLib");
   if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;const wg=fnum(x.weight);if(wg)document.getElementById("iWeight").value=wg;fxWrap.innerHTML=fxEditorRows(x.effects);
-    if(x.weapon){isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}
+    if(x.weapon){wFrom=x.weapon;isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}
     /* Read the AC out of what was just inserted, exactly as the sheet would —
        pack armor states it in prose, so this is where that prose becomes fields. */
     const ax=itemArmor({name:x.name,description:x.description||"",category:x.category,type:x.type});
@@ -352,7 +358,7 @@ function openItemForm(existing){
         rec.armor={kind:"body",base:Math.max(0,num(document.getElementById("iABase").value)||0),dexCap};
       }
     }else if(it.armor)rec.armor=it.armor;
-    if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(it.weapon&&it.weapon.notes)||""};if(it.weapon&&it.weapon.atkMisc!=null)rec.weapon.atkMisc=it.weapon.atkMisc;if(it.weapon&&it.weapon.dmgMisc!=null)rec.weapon.dmgMisc=it.weapon.dmgMisc;}
+    if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(wFrom&&wFrom.notes)||""};if(wFrom&&wFrom.atkMisc!=null)rec.weapon.atkMisc=wFrom.atkMisc;if(wFrom&&wFrom.dmgMisc!=null)rec.weapon.dmgMisc=wFrom.dmgMisc;}
     /* Limited uses and what Use does. Last, because detectItemUse() below reads
        the FINISHED record — its section depends on the weapon flag set above.
        `used` is the player's own number and survives an edit, clamped in case

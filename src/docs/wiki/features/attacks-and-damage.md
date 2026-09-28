@@ -27,8 +27,10 @@ damageType, dmgMisc, addAbilityDamage, notes}`, plus optional `extraDamage`, `fa
 DEX, labelled DEX on a tie; `none` is 0). To-hit is that modifier, plus the proficiency bonus when
 `proficient`, plus `atkMisc`, plus the `attack` and `attack.<kind>` effects. The damage bonus is the
 modifier when `addAbilityDamage`, plus `dmgMisc`, plus the `damage` and `damage.<kind>` effects.
-`kind` is melee unless it says ranged. Tapping a to-hit opens `openAttackBreakdown()`, which lists every
-source by name.
+`kind` is melee unless it says ranged. `atkMisc`/`dmgMisc` belong to this row alone; an effect
+applies to every row while its source is live, so a magic weapon's own `+N` is its row's
+`atkMisc`/`dmgMisc` and never an effect. Tapping a to-hit opens `openAttackBreakdown()`, which lists
+every source by name.
 
 **The damage line.** `attackDamageStr(a, bonus)` builds `dice bonus type` for the main part and one
 `dice type` per `extraDamage` entry (`{dice, type}` — a sword's 1d8 slashing *and* 1d6 poison),
@@ -49,10 +51,15 @@ proficient, ability damage on, `itemId` set, and a `genFp` stamp. It is reached 
 (`addLibraryItems()` — one attack however many are added), starting equipment (`grantItemByName()`,
 see [Grants & provenance](../architecture/grants-and-provenance.md)) and the item form, whose save
 runs `syncItemAttack()`: update the linked row in place and re-stamp it, create one if missing, or
-delete it when the Weapon box is unticked. The form keeps `weapon` only when damage dice are given.
+delete it when the Weapon box is unticked. The form keeps `weapon` only when damage dice are given,
+and asks only for kind, ability, dice and type: the weapon's `notes`, `atkMisc` and `dmgMisc` are
+carried from `wFrom`, the pack weapon last put in by *Insert from rules pack*, else the item's own.
 Deleting the item deletes its row (the confirm says so), and so does using up the last of a
-consumable. A pack weapon's `ability` comes from the converter: `finesse` for a melee weapon whose
-properties include Finesse, `dex` for a ranged one, else `str`. Its `notes` ("Range 20/60 ·
+consumable. A pack weapon's `ability` comes from the converter: `finesse` for any weapon whose
+properties include Finesse, melee or ranged (a Dart), else `dex` for a ranged one and `str` for a
+melee one. `ability` and `kind` are independent: a Dart row is `finesse` and `ranged`, so it takes
+the better of STR and DEX and still gets `attack.ranged` effects. A `+N` pack weapon carries its
+bonus as `atkMisc`/`dmgMisc` and no `attack`/`damage` effect. Its `notes` ("Range 20/60 ·
 Finesse, Light, Thrown · Mastery: Nick") are copied onto the row as text; nothing parses them.
 
 **Equipping.** `isEquippable()` is true for effects, armor *or* a weapon. `attackVisible(a)` gates only
@@ -131,6 +138,17 @@ longer allows, leaving orphan rows alone.
   arithmetic right on the wrong field. Fixed in the packs, not the app; an existing sheet gets the
   corrected weapon through the rules-update tool, which rebuilds the row only if it was never
   edited. See [Converter](../data/converter.md). → L4327
+- **A +N weapon counted its bonus twice (#74).** The packs wrote it on the weapon *and* as global
+  `attack`/`damage` effects on the item: the +1 Dagger of Venom's row read +2, and every other row,
+  spell rows included, +1 while it was equipped. `attackNumbers()` was right to add both, so it is
+  unchanged; the packs no longer carry the effects. The item form's Insert had carried the weapon's
+  `atkMisc` only from the item being edited, which the effect had hidden; it now carries it from the
+  inserted entry too. An existing sheet gets the fix through the rules-update tool, as "effects
+  changed". → L4392
+- **A Dart could only use DEX (#75).** The converter gave every ranged weapon `dex` and never
+  asked about Finesse. Fixed in the pack; `attackNumbers()` already read `finesse` for any kind. An
+  existing Dart reaches `finesse` through the rules-update tool, and its row is rebuilt only if it
+  was never edited. → L4466
 - **Every literal-id `getElementById` lookup in a form is checked by `rules-data.js`** against the
   ids the app renders; a generated id is not "declared", which is why clearing the spell form's list
   goes through `clearXDmgField()`. → L2863
@@ -146,6 +164,7 @@ longer allows, leaving orphan rows alone.
 | Heal old sheets' damage-free rows | A targeted sweep, `dropDamagelessSpellRows()` | A blanket re-sync: new uids, collapse state lost on rows that were fine |
 | What happens to a weapon's attack on unequip? | Hidden | Removed: throws away an attack the player tuned |
 | Order of starred attacks | Insertion order | Sorting: the list is short and hand-built, so a row stays where it was put |
+| Should `attackNumbers()` skip the effects of the item that owns the row? (#74) | No: effects are global, a weapon's own bonus is its `atkMisc`/`dmgMisc`, and the packs are fixed | Skipping them: fixes only the weapon's own row on an old sheet (every other row keeps the +N), and makes an effect the player typed on a weapon mean one thing on its row and another on the rest |
 
 ## Open
 
@@ -153,10 +172,6 @@ longer allows, leaving orphan rows alone.
   `damage`/`damage.<kind>` effects to spell rows too, while the Spellcasting card and the cast dialog
   (`spellAtkBonus()`, damage bonus 0) do not — with an Archery-style `attack.ranged` effect, a Fire
   Bolt row reads 2 higher than the dialog. Verified in the code, not in a browser.
-- **A `+N` magic weapon's bonus counts twice.** The pack gives it both `weapon.atkMisc`/`dmgMisc`
-  and global `attack`/`damage` effects, so its own row adds +N twice and every other attack,
-  spell rows included, gains +N while it is equipped: a +1 Dagger of Venom's row adds +2 to hit and
-  to damage. 15 pack weapons (11 core, 4 Tasha's). A converter fix, not made yet; seen in #72.
 - **Only the finder adds weapons equipped.** `grantItemByName()` and a new item from the form start
   `equipped:false`, so their attack is hidden until equipped. A brand-new character's starting weapons
   are equipped by `migrateWeaponEquip()` on its first reload; one granted after that is not.
@@ -185,3 +200,5 @@ longer allows, leaving orphan rows alone.
 - 2026-08-18 — Attacks gain favourites and Collapse all. → ledger L3123
 - 2026-08-18 — Weapons are equippable; their rows follow the equipped state; `migrateWeaponEquip()`. → ledger L3213
 - 2026-09-28 — Pack magic weapons carry their properties' names and a finesse one attacks with `finesse`; the rules-update tool offers the fix to existing sheets. → ledger L4327, #72
+- 2026-09-28 — A `+N` pack weapon adds its bonus once, to its own row, and nothing to other rows; the item form's Insert keeps a weapon's bonus and notes. → ledger L4392, #74
+- 2026-09-28 — A ranged Finesse weapon (the Dart) attacks with the better of STR and DEX. → ledger L4466, #75
