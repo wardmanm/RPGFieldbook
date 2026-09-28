@@ -87,7 +87,7 @@ function printSheet(){
     const items=byLv[L].sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(s=>`<span class="p-line">${s.prepared?"◆":"○"} ${esc(s.name)}${s.granted?` (${esc(s.granted)})`:""}</span>`).join("");
     return `<div class="p-item"><b>${L===0?"Cantrips":"Level "+L}</b><div class="p-grid">${items}</div></div>`;
   }).join("");
-  const slotSummary=[];for(let i=1;i<=9;i++){const s=character.slots[i];if(s&&s.total)slotSummary.push(`L${i}: ${s.total-(s.used||0)}/${s.total}`);}
+  const slotSummary=[];for(let i=1;i<=9;i++){const s=character.slots[i];if(s&&num(s.total))slotSummary.push(`L${i}: ${num(s.total)-num(s.used)}/${num(s.total)}`);}
   const inv=(character.inventory||[]).map(it=>`<div class="p-item"><b>${esc(it.name)}</b>${num(it.qty)>1?` ×${num(it.qty)}`:""}${it.equipped?" (equipped)":""}${it.description?`<div>${esc(printStrip(it.description)).replace(/\n/g,"<br>")}</div>`:""}</div>`).join("");
   const coins=["pp","gp","ep","sp","cp"].map(k=>num(character.coins[k])?`${num(character.coins[k])} ${k.toUpperCase()}`:"").filter(Boolean).join(" · ");
   const bio=BIO.map(([k,lbl])=>character[k]?`<div class="p-item"><b>${lbl}</b><div>${esc(printStrip(character[k])).replace(/\n/g,"<br>")}</div></div>`:"").join("");

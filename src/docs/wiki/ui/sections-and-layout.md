@@ -145,9 +145,11 @@ summoned: `contributions()` adds them when `active` is true, labelled with the f
 
 The first sidebar card (`data-note="portrait"`) holds the image plus name, alignment, XP, level and
 proficiency bonus. Add image opens a file input. `FileReader` turns the file into a data URL stored
-as `character.portraitImg`, at full size with no downscaling, and `renderPortrait()` draws it as an
-`<img>` in a square, `object-fit:cover` frame. The field is optional and not in `blankChar()`;
-`migrate()` keeps it because it keeps every field.
+as `character.portraitImg`, at full size with no downscaling, and `renderPortrait()` draws it through
+`imgHTML()` as an `<img>` in a square, `object-fit:cover` frame. An imported file controls that
+string, so it is escaped and must be a data: URL; anything else (a web address, javascript:) shows
+the "No portrait yet" placeholder instead. See [Rich text](../architecture/rich-text.md). The field is
+optional and not in `blankChar()`; `migrate()` keeps it because it keeps every field.
 
 ## Rules that must hold
 
@@ -226,8 +228,7 @@ as `character.portraitImg`, at full size with no downscaling, and `renderPortrai
   feature row's name crowds its source tag (seen at L3525, pre-existing).
 - Active Spells, Familiars and Skills (in the grouped layout) are hidden when empty, so their note
   button and combat toggle are unreachable until they have content (L3397).
-- `renderPortrait()` puts `character.portraitImg` into `src` without escaping, and an imported file
-  controls that string. A portrait is also stored at full size, against the localStorage quota.
+- A portrait is stored at full size, against the localStorage quota.
 - More: [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -242,3 +243,4 @@ as `character.portraitImg`, at full size with no downscaling, and `renderPortrai
 - 2026-09-24 — The combat view keys its section list on the registry ids. → ledger L3397, #9, #10, #11
 - 2026-09-24 — One section-heading rule for `.fghead` and `.inv-sec-head`; the inventory caret redrawn; a clear button in every search box. → ledger L3525, #51, #49
 - 2026-09-25 — Hit Dice move from Vitals into Rest & Recovery. → ledger L3676
+- 2026-09-28 — The portrait is escaped and drawn only from a data: URL. → ledger L3940

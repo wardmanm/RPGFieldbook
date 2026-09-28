@@ -103,7 +103,7 @@ function hdStyle(){const s=character.hdStyle;return (s==="condensed"||s==="dice"
    separate pips, because there the dice ARE the pips. */
 function hdPips(p){
   let h="";
-  for(let i=1;i<=p.total;i++)h+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${p.die}" data-i="${i}" aria-label="${p.die} number ${i}${i<=p.used?" (spent)":""}"></button>`;
+  for(let i=1;i<=p.total;i++)h+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${esc(p.die)}" data-i="${esc(i)}" aria-label="${esc(p.die)} number ${esc(i)}${i<=p.used?" (spent)":""}"></button>`;
   return h;
 }
 /* CONDENSED — one line per die size. The rows get their own grid container so
@@ -115,9 +115,9 @@ function hdPips(p){
 function hdCondensedHTML(pool){
   return `<div class="hd-grid">`+pool.map(p=>{
     const left=p.total-p.used;
-    return `<div class="hd-row"><span class="hd-die">${p.die}</span><span class="hd-pips">${hdPips(p)}</span>`+
-      `<span class="hd-left${left?"":" out"}" title="${left} of ${p.total} left">${left}/${p.total}</span>`+
-      `<button class="hd-roll" data-hdroll="${p.die}" ${left?"":"disabled"} title="Spend one ${p.die} and heal">Roll</button></div>`;
+    return `<div class="hd-row"><span class="hd-die">${esc(p.die)}</span><span class="hd-pips">${hdPips(p)}</span>`+
+      `<span class="hd-left${left?"":" out"}" title="${esc(left)} of ${esc(p.total)} left">${left}/${p.total}</span>`+
+      `<button class="hd-roll" data-hdroll="${esc(p.die)}" ${left?"":"disabled"} title="Spend one ${esc(p.die)} and heal">Roll</button></div>`;
   }).join("")+`</div>`;
 }
 /* FULL — a boxed cell per die size, speaking the same language as the Vitals
@@ -125,10 +125,10 @@ function hdCondensedHTML(pool){
 function hdFullHTML(pool){
   return `<div class="hd-boxes">`+pool.map(p=>{
     const left=p.total-p.used;
-    return `<div class="hd-cell"><div class="hd-cd">${p.die}</div>`+
+    return `<div class="hd-cell"><div class="hd-cd">${esc(p.die)}</div>`+
       `<div class="hd-cv">${left}<small> / ${p.total}</small></div>`+
       `<div class="hd-pips">${hdPips(p)}</div>`+
-      `<button class="hd-roll" data-hdroll="${p.die}" ${left?"":"disabled"} title="Spend one ${p.die} and heal">Roll</button></div>`;
+      `<button class="hd-roll" data-hdroll="${esc(p.die)}" ${left?"":"disabled"} title="Spend one ${esc(p.die)} and heal">Roll</button></div>`;
   }).join("")+`</div>`;
 }
 /* DICE — every die is its own token, so the die size, the pip and the count
@@ -140,9 +140,9 @@ function hdDiceHTML(pool){
   return `<div class="hd-dice">`+pool.map(p=>
     `<div class="hd-drow">`+Array.from({length:p.total},(_,i)=>{
       const spent=i<p.used;
-      return `<button class="hd-d${spent?" spent":""}" data-hddie="${p.die}" data-i="${i+1}"`+
-        ` title="${spent?"Spent — tap to put it back":"Tap to spend this "+p.die+" and heal"}"`+
-        ` aria-label="${p.die}${spent?", spent":""}">${p.die.slice(1)}</button>`;
+      return `<button class="hd-d${spent?" spent":""}" data-hddie="${esc(p.die)}" data-i="${esc(i+1)}"`+
+        ` title="${esc(spent?"Spent — tap to put it back":"Tap to spend this "+p.die+" and heal")}"`+
+        ` aria-label="${esc(p.die)}${spent?", spent":""}">${esc(p.die.slice(1))}</button>`;
     }).join("")+`</div>`).join("")+
     `</div><p class="hint hd-foot">Tap a die to spend it and heal</p>`;
 }
@@ -273,11 +273,11 @@ function renderResources(){
     const cur=num(r.cur),max=num(r.max);
     return `<div class="res">
       <div class="res-main"><div class="res-name">${esc(r.name||"Resource")}${r.die?`<span class="res-die" title="Each is a ${esc(r.die)}">${esc(r.die)}</span>`:""}${r.auto?`<span class="res-auto" title="Managed by ${esc(r.source||"class")}">auto</span>`:""}</div><div class="res-sub">${r.per&&r.per!=="none"?`resets on ${esc(r.per)} rest`:"manual reset"}</div></div>
-      <button class="res-btn" data-res-dec="${r.id}" aria-label="Spend one">−</button>
+      <button class="res-btn" data-res-dec="${esc(r.id)}" aria-label="Spend one">−</button>
       <div class="res-val"><b>${cur}</b><span>/${max}</span></div>
-      <button class="res-btn" data-res-inc="${r.id}" aria-label="Gain one">+</button>
-      <button class="icon" data-res-reset="${r.id}" title="Restore to full"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/></svg></button>
-      ${r.auto?"":`<button class="icon" data-res-edit="${r.id}" aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="icon danger" data-res-del="${r.id}" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`}
+      <button class="res-btn" data-res-inc="${esc(r.id)}" aria-label="Gain one">+</button>
+      <button class="icon" data-res-reset="${esc(r.id)}" title="Restore to full"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/></svg></button>
+      ${r.auto?"":`<button class="icon" data-res-edit="${esc(r.id)}" aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="icon danger" data-res-del="${esc(r.id)}" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`}
     </div>`;
   }).join("");
 }
@@ -285,7 +285,7 @@ function openResourceForm(existing){
   const r=existing||{id:uid(),name:"",max:1,cur:1,per:"long",auto:false};
   openModal(existing?"Edit resource":"New resource",`
     <div class="field"><label class="f">Name</label><input id="rName" value="${esc(r.name||"")}" placeholder="e.g. Sorcery Points" autocomplete="off"></div>
-    <div class="g2"><div class="field"><label class="f">Max</label><input id="rMax" type="number" min="0" value="${num(r.max)||""}" placeholder="0"></div>
+    <div class="g2"><div class="field"><label class="f">Max</label><input id="rMax" type="number" min="0" value="${esc(num(r.max)||"")}" placeholder="0"></div>
       <div class="field"><label class="f">Resets on</label><select id="rPer"><option value="long"${r.per==="long"?" selected":""}>Long rest</option><option value="short"${r.per==="short"?" selected":""}>Short rest</option><option value="none"${r.per==="none"?" selected":""}>Manual only</option></select></div></div>
     <div class="m-actions"><button class="tbtn" id="rCancel">Cancel</button><button class="tbtn primary" id="rSave">${existing?"Save":"Add"}</button></div>`);
   document.getElementById("rCancel").addEventListener("click",closeModal);

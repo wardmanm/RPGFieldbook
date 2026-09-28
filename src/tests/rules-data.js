@@ -1628,6 +1628,145 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /closest\("\.search-clear"\)[\s\S]{0,200}?value="";[\s\S]{0,80}?dispatchEvent\(new Event\("input",\{bubbles:true\}\)\)/.test(js));
 }
 
+// ---------- every value interpolated into an HTML attribute is esc()'d
+// A character file, a rules pack and the settings file all reach the page
+// through template literals assigned to innerHTML. An unescaped value inside
+// an attribute can close the quote and add an event handler — script in the
+// app's origin, where every character lives. Three image sources were exactly
+// that. The rule is deliberately total rather than "only untrusted values",
+// because which values are untrusted is not something a regex can see: a list
+// item's `id` looks like app data and comes straight from an imported file.
+//
+// So: every ${…} that sits inside a quoted attribute value must be esc(…) of
+// the whole expression, or a ternary whose two results are literals (the
+// condition can be anything; only a literal ever reaches the markup). A
+// CSS attribute selector — `[data-x="${k}"]`, for querySelector — is not
+// markup and is skipped. An unquoted `attr=${…}` is never allowed. Every image
+// source must also pass safeImgSrc(), which refuses anything but a data: URL.
+//
+// NOT covered, by design: a ${…} in TAG position that emits raw markup on
+// purpose (`<option${sel?" selected":""}>`, `${chooseAttr}`), and text between
+// tags. The behavioural tests in sheet.js render a hostile character and pack
+// through every renderer for those.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  /* A small JS scanner: strings, comments, regex literals, and template
+     literals nested to any depth. For every ${…} it yields the expression and
+     the static text of its own template before it, with earlier ${…} replaced
+     by \u0000 so their contents cannot fake or hide a quote. A regex over the
+     raw source cannot do this — `class="a ${x?"b":"c"} ${y}"` defeats it —
+     and a template in 87-notes.js holds a regex containing backticks. */
+  function templateInterps(src) {
+    const out = []; let i = 0; const n = src.length;
+    const KW = new Set(['return', 'typeof', 'case', 'do', 'else', 'in', 'of', 'void', 'delete',
+                        'new', 'throw', 'instanceof', 'yield', 'await']);
+    const quoted = q => { i++; while (i < n && src[i] !== q) { if (src[i] === '\\') i++; i++; } i++; };
+    const regex = () => {
+      const s = i; i++; let cls = false;
+      while (i < n) {
+        const c = src[i];
+        if (c === '\\') { i += 2; continue; }
+        if (c === '\n') { i = s + 1; return; }
+        if (c === '[') cls = true; else if (c === ']') cls = false;
+        else if (c === '/' && !cls) { i++; while (/[a-z]/i.test(src[i] || '')) i++; return; }
+        i++;
+      }
+    };
+    function code(untilBrace) {
+      let depth = 0, prev = '', word = '';
+      while (i < n) {
+        const c = src[i];
+        if (c === '/' && src[i + 1] === '/') { while (i < n && src[i] !== '\n') i++; continue; }
+        if (c === '/' && src[i + 1] === '*') { i = src.indexOf('*/', i + 2) + 2; continue; }
+        if (c === '"' || c === "'") { quoted(c); prev = 'a'; word = ''; continue; }
+        if (c === '`') { template(); prev = 'a'; word = ''; continue; }
+        if (/[A-Za-z_$]/.test(c)) { const s = i; while (i < n && /[\w$]/.test(src[i])) i++; word = src.slice(s, i); prev = 'a'; continue; }
+        if (/[0-9]/.test(c)) { while (i < n && /[\w.]/.test(src[i])) i++; prev = 'a'; word = ''; continue; }
+        if (c === '/' && (prev === '' || /[(,=:[!&|?{};+\-*%<>~^]/.test(prev) || KW.has(word))) { regex(); prev = 'a'; word = ''; continue; }
+        if (c === '{') depth++;
+        if (c === '}') { if (untilBrace && depth === 0) return; depth--; }
+        if (!/\s/.test(c)) { prev = c; word = ''; }
+        i++;
+      }
+    }
+    function template() {
+      i++; let text = '';
+      while (i < n) {
+        const c = src[i];
+        if (c === '\\') { text += src[i] + src[i + 1]; i += 2; continue; }
+        if (c === '`') { i++; return; }
+        if (c === '$' && src[i + 1] === '{') {
+          i += 2; const s = i; code(true);
+          out.push({expr: src.slice(s, i).trim(), before: text, at: s});
+          i++; text += '\u0000'; continue;
+        }
+        text += c; i++;
+      }
+    }
+    code(false);
+    return out;
+  }
+  /* Inside a quoted attribute value: the last `="` (or `='`) with no closing
+     quote of the same kind after it. Returns null outside one. */
+  function attrOf(before) {
+    const m = /([^\s=]*)\s*=\s*(["'])((?:(?!\2)[^])*)$/.exec(before);
+    if (!m) return null;
+    /* `[data-x="…"]` and `[${name}="…"]` are selectors for querySelector */
+    const selector = /\[[\w\u0000-]*$/.test(before.slice(0, m.index + m[1].length));
+    return {name: m[1].replace(/^[<\u0000]+/, ''), selector};
+  }
+  const wholeCall = (e, fn) => {
+    if (!e.startsWith(fn + '(')) return false;
+    let d = 0;
+    for (let j = fn.length; j < e.length; j++) {
+      if (e[j] === '(') d++;
+      else if (e[j] === ')') { d--; if (d === 0) return j === e.length - 1; }
+    }
+    return false;
+  };
+  /* cond ? literal : literal, where cond has no top-level ? or : of its own —
+     `a ? b : c ? "x" : "y"` can yield b, so a ternary in the condition is only
+     accepted inside parentheses. */
+  const LIT = String.raw`(?:"[^"]*"|'[^']*'|-?\d+)`;
+  const litTernary = e => {
+    const m = new RegExp(String.raw`^([\s\S]+?)\?\s*` + LIT + String.raw`\s*:\s*` + LIT + '$').exec(e);
+    if (!m) return false;
+    let c = m[1].replace(/"[^"]*"|'[^']*'/g, '""');
+    while (/\([^()]*\)/.test(c)) c = c.replace(/\([^()]*\)/g, '0');
+    return !/[?:]/.test(c);
+  };
+  let seen = 0; const raw = [], badSrc = [], unquoted = [];
+  manifest.js.forEach(f => {
+    const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    templateInterps(src).forEach(p => {
+      const where = f.replace(/^src\/js\//, '') + ':' + src.slice(0, p.at).split('\n').length;
+      if (/[\w-]=$/.test(p.before) && !/\[[\w-]*=$/.test(p.before)) unquoted.push(where + ' ' + p.expr);
+      const a = attrOf(p.before);
+      if (!a || a.selector) return;
+      seen++;
+      if (!wholeCall(p.expr, 'esc') && !litTernary(p.expr)) raw.push(where + ' ' + a.name + '=${' + p.expr + '}');
+      if (/^src$/i.test(a.name) && !/^esc\(safeImgSrc\(/.test(p.expr)) badSrc.push(where + ' ' + p.expr);
+    });
+  });
+  ck('the attribute scan is looking at something', seen > 300, seen);
+  ck('every value interpolated into an HTML attribute is esc()\'d (or a literal-only ternary)',
+     raw.length === 0, raw.slice(0, 40).concat(raw.length > 40 ? ['…and ' + (raw.length - 40) + ' more'] : []));
+  ck('every image src passes through esc(safeImgSrc(…))', badSrc.length === 0, badSrc);
+  ck('no attribute value is interpolated unquoted', unquoted.length === 0, unquoted);
+  // the scanner itself, on the shapes that defeat a plain regex
+  const probe = templateInterps('const s=x.replace(/`[^`]*`/g,"");const t=`<b class="a ${c?"x":"y"} ${id}" title=\'${esc(t)}\'>${y}</b>`;');
+  ck('scanner: a regex holding backticks is not a template', probe.length === 4, probe.map(p => p.expr));
+  ck('scanner: a value after an earlier ${…} in the same attribute is still in it',
+     !!probe[1] && !!attrOf(probe[1].before) && attrOf(probe[1].before).name === 'class');
+  ck('scanner: text between tags is not an attribute', !!probe[3] && attrOf(probe[3].before) === null);
+  ck('scanner: a CSS attribute selector is recognised as one, its name interpolated or not',
+     attrOf(templateInterps('q(`.dot[data-save="${k}"]`)')[0].before).selector === true &&
+     attrOf(templateInterps('q(`[${a.name}="${v}"]`)')[1].before).selector === true);
+  ck('literal ternary: accepted only when nothing but a literal can come out',
+     litTernary('a?"on":""') && litTernary('(s.conc!=null?s.conc:/x/i.test(m))?"on":""') &&
+     !litTernary('a?b:c?"x":"y"') && !litTernary('a?"x":b'));
+}
+
 /* ================= Fetch all never loses what is loaded (issue #65) ===========
    fetchAllRules() used to call resetRules() BEFORE fetching, so every pack
    imported from a file was discarded, and when the fetch then failed (offline,

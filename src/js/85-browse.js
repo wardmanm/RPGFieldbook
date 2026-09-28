@@ -14,9 +14,9 @@ function openBrowse(cfg){
   }
   function activeChips(){const out=[];(cfg.facets||[]).forEach(f=>{if(f.type==="toggle"){if(st.facets[f.key])out.push({key:f.key,toggle:1,label:f.label});}else{st.facets[f.key].forEach(v=>{const o=(f.options||[]).find(o=>String(o.value)===v);out.push({key:f.key,val:v,label:o?o.label:v});});}});return out;}
   function facetHTML(){return (cfg.facets||[]).map(f=>{
-    if(f.type==="toggle")return `<div class="fgrp"><span class="flbl">&nbsp;</span><button class="fpill ${st.facets[f.key]?"on":""}" data-toggle="${f.key}">${esc(f.label)}</button></div>`;
+    if(f.type==="toggle")return `<div class="fgrp"><span class="flbl">&nbsp;</span><button class="fpill ${st.facets[f.key]?"on":""}" data-toggle="${esc(f.key)}">${esc(f.label)}</button></div>`;
     const a=st.facets[f.key];
-    return `<div class="fgrp"><span class="flbl">${esc(f.label)}</span>${f.options.map(o=>`<button class="fpill ${a.has(String(o.value))?"on":""}" data-facet="${f.key}" data-val="${esc(String(o.value))}">${esc(o.label)}</button>`).join("")}</div>`;
+    return `<div class="fgrp"><span class="flbl">${esc(f.label)}</span>${f.options.map(o=>`<button class="fpill ${a.has(String(o.value))?"on":""}" data-facet="${esc(f.key)}" data-val="${esc(String(o.value))}">${esc(o.label)}</button>`).join("")}</div>`;
   }).join("");}
   function sumHTML(){const ch=activeChips();if(!ch.length)return "";return `<div class="brsum">${ch.map(c=>`<button class="fpill on" data-rm="${esc(c.key)}" data-rmv="${esc(c.val||"")}" data-rmt="${c.toggle?1:0}">${esc(c.label)} ✕</button>`).join("")}<button class="fpill clear" id="brClear">Clear</button></div>`;}
   function rowHTML(e){const id=idOf(e),sel=st.sel.has(id),ad=added(e),r=cfg.row(e);
@@ -326,7 +326,7 @@ function openGlossForm(existing){
     <div class="field"><label class="f">Type</label><select id="gType"><option value="text"${g.type==="text"?" selected":""}>Text</option><option value="image"${g.type==="image"?" selected":""}>Rules image</option></select></div>
     <div class="field" id="gTextWrap"><label class="f">Explanation</label><textarea id="gText">${esc(g.text||"")}</textarea></div>
     <div class="field" id="gImgWrap" style="display:none"><label class="f">Rules image</label>
-      <div class="drop" id="gDrop"><span>Tap to choose a screenshot or photo</span>${g.image?`<img src="${g.image}">`:""}<input type="file" id="gFile" accept="image/*" class="hidefile"></div></div>
+      <div class="drop" id="gDrop"><span>Tap to choose a screenshot or photo</span>${imgHTML(g.image)}<input type="file" id="gFile" accept="image/*" class="hidefile"></div></div>
     <div class="m-actions"><button class="tbtn" id="gCancel">Cancel</button><button class="tbtn primary" id="gSave">${existing?"Save":"Add"}</button></div>`);
   let img=g.image||null;
   const type=document.getElementById("gType"),tw=document.getElementById("gTextWrap"),iw=document.getElementById("gImgWrap");
@@ -334,7 +334,7 @@ function openGlossForm(existing){
   type.addEventListener("change",sync);sync();
   const drop=document.getElementById("gDrop"),file=document.getElementById("gFile");
   drop.addEventListener("click",e=>{if(e.target!==file)file.click()});
-  file.addEventListener("change",()=>{const f=file.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{img=r.result;drop.innerHTML=`<span>Image ready — tap to replace</span><img src="${img}">`;drop.appendChild(file)};r.readAsDataURL(f)});
+  file.addEventListener("change",()=>{const f=file.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{img=r.result;drop.innerHTML=`<span>Image ready — tap to replace</span>${imgHTML(img)}`;drop.appendChild(file)};r.readAsDataURL(f)});
   document.getElementById("gCancel").addEventListener("click",closeModal);
   document.getElementById("gSave").addEventListener("click",()=>{
     const term=document.getElementById("gTerm").value.trim();if(!term){alert("Give the entry a term.");return;}

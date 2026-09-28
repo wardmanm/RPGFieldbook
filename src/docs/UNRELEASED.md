@@ -48,3 +48,6 @@ Bullets below this line — leave the heading in place.
   level 3 used to leave Max HP blank. Level 1 is now filled in — the full hit die plus your
   Constitution modifier — and the class window asks for the levels above it: take the average, type
   what you rolled, or tap Roll for me.
+- Images and text from imported character files, rules packs and settings files are now handled
+  safely. A portrait or glossary picture is shown only when the picture itself is stored in the
+  file, which is how Fieldbook has always saved them, so your own pictures are unaffected.

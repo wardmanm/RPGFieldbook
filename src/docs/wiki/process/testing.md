@@ -40,8 +40,8 @@ it after a build.
 |---|---|
 | `converter.py` | `scripts/convert.py` on real-shaped fixtures: table extraction and naming, class progression tables built from cells copied out of the dump (`dice`, `bonus`, `bonusSpeed`), the XPHB selection with its free-subset backfill, races, supplement source selection, the `_copy` subclass dedupe, optional features, cross-pack table-name collisions, option pickers from `optionalfeatureProgression`, option costs, subclass resources, Student of War |
 | `tables.js` | `tableHTML()` structure and escaping, the `[Table: X]` anchor pass through `highlight()`, the tables rules category, `migrate()` round-trip, the shipped-table defects (non-empty `cols`, no `_` keys, row widths, unique names, owners, no column blank in every row) and the 2024 class-table values, and `noteHTML()`, whose safety argument is that pipeline |
-| `rules-data.js` | Species filtering by system and `excludeSystems`, missing-dependency reporting, the rules cache never failing silently and its LZW fallback, Settings bucketing and clear-all, **the bundle round-trip** (a bundle equals importing each file), supplement packs, `DATA_VERSIONS` staleness. It also holds the markup guards: the note registry, the tab bar, every `getElementById` target existing app-wide, the Vitals structure, every Settings control still wired, the combat tab, and the byte-pin of `src/html` against the built file |
-| `sheet.js` | The pure functions the sheet leans on: signed coin/HP entry, temp HP, weight and encumbrance, size, origins, "choose N" budgets, stat layouts, feature grouping and the feat picker, dice expressions, item uses, spell allotments, rich text, emblems, attack damage strings, armor and AC, concentration, the combat view's pure helpers, modal focus |
+| `rules-data.js` | Species filtering by system and `excludeSystems`, missing-dependency reporting, the rules cache never failing silently and its LZW fallback, Settings bucketing and clear-all, **the bundle round-trip** (a bundle equals importing each file), supplement packs, `DATA_VERSIONS` staleness. It also holds the markup guards: the note registry, the tab bar, every `getElementById` target existing app-wide, the Vitals structure, every Settings control still wired, the combat tab, the byte-pin of `src/html` against the built file, and **every attribute value in `src/js` `esc()`'d** (a small tokenizer, not a regex; see [Rich text](../architecture/rich-text.md)) |
+| `sheet.js` | The pure functions the sheet leans on: signed coin/HP entry, temp HP, weight and encumbrance, size, origins, "choose N" budgets, stat layouts, feature grouping and the feat picker, dice expressions, item uses, spell allotments, rich text, emblems, attack damage strings, armor and AC, concentration, the combat view's pure helpers, modal focus; and **a hostile character, pack and keyword id through 40 renderers**, none of which may emit the payload raw |
 | `char-update.js` | The version stamp and the rules-update tool: fingerprints, diff classification, apply keeping character-local state, backups, gating, the R1–R5 regressions; plus level-1 HP seeding, the level-up HP step, option pickers, resource dice, starting-equipment grants, and the order the choice windows open in, driven through the real flow with the 2024 Fighter |
 | `docs.js` | Doc claims as assertions (below) |
 | `humblewood-verbatim.py` | Humblewood core prose is word-for-word the book; Gadgeteer prose too. Needs `.venv` (pymupdf) and the source PDF; **prints `SKIP` and exits 0 without them** |
@@ -61,7 +61,12 @@ it after a build.
   answer replaces `ctx.fetch` (the `rules-data.js` Fetch all block answers from a route table).
   Top-level `let`/`const` are not context properties, so a suite names what it needs and gets it
   back on one object. `rules`, `character`, `activeId` and `updateAvailable` get accessors, so they
-  can be written.
+  can be written. Function declarations *are* context properties, so `ctx.fnName` reaches one
+  without naming it, and a function that does not exist yet is `undefined` rather than a load
+  failure.
+  To assert what a renderer writes, swap `ctx.document.getElementById` and `createElement` for
+  recording elements that log every innerHTML / outerHTML / insertAdjacentHTML write, and restore
+  them after; `sheet.js`'s hostile-file block does this.
 - **`loadHTML`** assembles the page body the way the build does: `src/html` fragments joined with
   `""` and **spliced** into the template at `<!--@@HTML@@-->`.
 - **`makeCheck`** is the whole assertion library. It prints `PASS`/`FAIL` per check, and `done`
@@ -196,3 +201,4 @@ written before `src/tests/` existed was lost along with its scratchpad.
 - 2026-09-28 — Class-table fixtures copied from the dump; `tables.js` rejects an all-blank column and pins the 2024 class values. → ledger L3761, #64
 - 2026-09-28 — The harness `fetch` is replaceable per suite, and the first asynchronous checks run last and call `done` themselves. → ledger L3797, #65
 - 2026-09-28 — `char-update.js` drives the choice windows through the real flow, pressing Done through captured handlers. → ledger L3847, #63
+- 2026-09-28 — The attribute-escaping guard, and recording elements for asserting what renderers write. → ledger L3940

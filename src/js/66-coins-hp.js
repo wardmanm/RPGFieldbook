@@ -1,7 +1,9 @@
 /* portrait */
 function renderPortrait(){
   const el=document.getElementById("portrait");
-  el.innerHTML=character.portraitImg?`<img src="${character.portraitImg}" alt="Portrait">`:`<div class="ph">No portrait yet</div>`;
+  /* the portrait comes from the character file, so it goes through imgHTML():
+     escaped, and data: URLs only. Anything refused shows the placeholder. */
+  el.innerHTML=imgHTML(character.portraitImg,"Portrait")||`<div class="ph">No portrait yet</div>`;
 }
 
 let _adjWired=false,_adjSync=null;
@@ -12,9 +14,9 @@ function openCoinAdjust(){
   const keys=coinKeys();
   const rows=keys.map(k=>{
     const d=COIN_ALL.find(x=>x[0]===k);
-    return `<div class="coin"><label title="${d[2]}">${d[1]}</label>
-      <input type="text" inputmode="tel" data-adj="${k}" placeholder="0"
-             aria-label="Adjust ${d[2]} — e.g. 10 to gain, -5 to spend"></div>`;
+    return `<div class="coin"><label title="${esc(d[2])}">${d[1]}</label>
+      <input type="text" inputmode="tel" data-adj="${esc(k)}" placeholder="0"
+             aria-label="Adjust ${esc(d[2])} — e.g. 10 to gain, -5 to spend"></div>`;
   }).join("");
   openModal("Adjust coins",`
     <p class="hint">How many of each you gained. Use a minus to spend: <b>-5</b>.</p>
@@ -139,9 +141,9 @@ function renderCoins(){
   el.innerHTML=coinKeys().map(k=>{
     const d=COIN_ALL.find(x=>x[0]===k);
     const v=(character.coins&&character.coins[k]!=null)?character.coins[k]:"";
-    return `<div class="coin"><label title="${d[2]}">${d[1]}</label>`+
-      `<input type="text" inputmode="tel" data-coin="${k}" value="${esc(v)}" placeholder="0" `+
-      `aria-label="${d[2]} — type a number, or +10 / -5 to adjust"></div>`;
+    return `<div class="coin"><label title="${esc(d[2])}">${d[1]}</label>`+
+      `<input type="text" inputmode="tel" data-coin="${esc(k)}" value="${esc(v)}" placeholder="0" `+
+      `aria-label="${esc(d[2])} — type a number, or +10 / -5 to adjust"></div>`;
   }).join("");
 }
 /* Commit one coin box. Returns false if the entry made no sense. */

@@ -14,14 +14,15 @@ function findFeatDef(n){return ruleById("feats",n);}
    considered and rejected: a wrong-but-present emblem on someone's homebrew is
    worse than none.
 
-   `d` is interpolated WITHOUT esc(), which is safe because fetch-icons.js
-   validates every path against the SVG path-data charset before writing it —
-   the name is only ever a lookup key and never reaches the output. */
+   `d` cannot carry markup — fetch-icons.js validates every path against the
+   SVG path-data charset before writing it, and the name is only ever a lookup
+   key — but it is esc()'d all the same: every attribute value is, so the guard
+   in rules-data.js can check that without a list of exceptions to maintain. */
 function iconSlug(kind,name){return (ICON_MAP[kind]||{})[String(name||"").trim().toLowerCase()]||"";}
 function iconSVG(kind,name,cls){
   const d=GAME_ICONS[iconSlug(kind,name)];
   if(!d)return "";
-  return `<svg class="gicon${cls?" "+cls:""}" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path d="${d}"/></svg>`;
+  return `<svg class="gicon${esc(cls?" "+cls:"")}" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path d="${esc(d)}"/></svg>`;
 }
 /* subclasses available for a class = the class's own subclasses + any standalone
    entries in the "subclasses" category whose class matches (so add-on packs can
@@ -136,8 +137,8 @@ function runExtraChoices(pending){
   let body="",ci=0;
   skills.forEach(x=>{body+=`<p class="hint" style="color:var(--accent-2);font-size:13px;margin:6px 0 0">✦ ${esc(x.label||"Choose")}</p>`+choiceFieldHTML(x.ch,ci++,null);});
   equips.forEach((x,ei)=>{
-    body+=`<div class="choice" data-ctype="equip" data-eqi="${ei}" style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px"><label class="f">${esc(x.label||"Starting equipment")}</label>`+
-      x.options.map((o,oi)=>`<label class="opt" style="align-items:flex-start"><input type="radio" name="eq-${ei}" data-eq-opt="${oi}" ${oi===0?"checked":""}><span>${esc(equipOptLabel(o))}</span></label>`).join("")+`</div>`;
+    body+=`<div class="choice" data-ctype="equip" data-eqi="${esc(ei)}" style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px"><label class="f">${esc(x.label||"Starting equipment")}</label>`+
+      x.options.map((o,oi)=>`<label class="opt" style="align-items:flex-start"><input type="radio" name="eq-${esc(ei)}" data-eq-opt="${esc(oi)}" ${oi===0?"checked":""}><span>${esc(equipOptLabel(o))}</span></label>`).join("")+`</div>`;
   });
   body+=`<div class="m-actions"><button class="tbtn primary" id="xchDone">Done</button></div>`;
   openModal("Choose",body);
@@ -165,7 +166,7 @@ function runExtraChoices(pending){
    handler, so it wins inside the chip. */
 function classChipHTML(c,idx){
   const sub=c.subclass?` · <button type="button" class="linkbtn link" data-sub-info="${esc(c.name)}|${esc(c.subclass)}" title="About ${esc(c.subclass)}">${esc(c.subclass)}</button>`:"";
-  return `<div class="cr-chip" data-info-class="${esc(c.name)}">${iconSVG("classes",c.name)}<span class="cr-k">Class</span><span class="cr-n">${esc(c.name)} ${num(c.level)}${sub}</span><button class="icon danger" data-del-class="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
+  return `<div class="cr-chip" data-info-class="${esc(c.name)}">${iconSVG("classes",c.name)}<span class="cr-k">Class</span><span class="cr-n">${esc(c.name)} ${num(c.level)}${sub}</span><button class="icon danger" data-del-class="${esc(idx)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
 }
 function renderClassRace(){
   const rb=document.getElementById("raceBgBox"), cb=document.getElementById("classBox");

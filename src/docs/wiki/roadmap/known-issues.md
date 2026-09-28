@@ -175,13 +175,6 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   inventory section heads can't be focused at all. The Attacks card's `data-atksec` headings look
   clickable but have no handler. → [Sections & layout](../ui/sections-and-layout.md)
 
-### Security
-
-- **Three image `src` attributes are interpolated without `esc()`**: `character.portraitImg` in
-  `renderPortrait()`, a keyword's `image` in `openGlossView()`, and the glossary form preview in
-  `85-browse.js`. A crafted character file or rules pack could inject an `onerror` handler.
-  → [Rich text](../architecture/rich-text.md)
-
 ### Breaks of a non-negotiable
 
 - **Silent storage writes (constraint 2).** `libSave()`, `saveSettings()`, `newCharacter()`,
@@ -348,3 +341,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-25 — Superiority Dice tracker, Student of War picker, the 2024 options library, and the `_equipQueue` leak fixed. → ledger L3649
 - 2026-09-25 — Superiority Die size on the tracker; the 5e-tools v2.36.1 move done. → ledger L3676
 - 2026-09-28 — Fixed and removed: class tables' dice and bonus cells (#64), Fetch all discarding packs (#65), subclass choices replaced by the equipment picker (#63), multiclass saves and starting equipment (#66) — and a first class above level 1 now gets its hit points. New items from that work added. → ledger L3761, L3797, L3847, L3886
+- 2026-09-28 — Fixed and removed: image sources and every other attribute value from a file are escaped, images load only from data: URLs, and a guard test enforces it. → ledger L3940

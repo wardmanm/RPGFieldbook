@@ -5,7 +5,7 @@
 const {loadApp, makeCheck} = require('./harness');
 
 const ck = makeCheck();
-const {X, state, bootError, fragments} = loadApp([
+const {X, ctx, state, bootError, fragments} = loadApp([
   'signedEntry', 'signedDelta', 'num', 'fnum', 'fmtWt', 'fmtGp', 'blankChar', 'migrate',
   'clampHP', 'effMaxHP', 'adjustHP', 'applyHPInput', 'renderHP', 'hpBand', 'hdStyle',
   'itemWeight', 'itemWeightTotal', 'coinsWeight', 'carriedWeight',
@@ -2116,6 +2116,233 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('D&D coins read high to low: PP GP EP SP CP', JSON.stringify(X.coinKeys()) === '["pp","gp","ep","sp","cp"]', X.coinKeys());
   X.character.system = 'humblewood';
   ck('Humblewood coins read high to low: GP SP CP', JSON.stringify(X.coinKeys()) === '["gp","sp","cp"]', X.coinKeys());
+}
+
+/* ---- imported files and packs render inert ----
+   A character file, a rules pack and a settings file (which carries a whole
+   `rules` object) are all written by someone else, and all reach the page
+   through innerHTML. Three image sources went into <img src="…"> unescaped, so
+   a crafted value could close the attribute and add an onerror handler — script
+   in the app's origin, where every saved character lives. The audit that
+   followed found list-item ids, a glossary id, pack ability keys, a class's hit
+   die, the pack name and a few numbers-that-weren't going in raw as well.
+
+   The harness DOM swallows innerHTML, so for these tests getElementById and
+   createElement hand out RECORDERS that log every innerHTML / outerHTML /
+   insertAdjacentHTML write. Each renderer then runs against a hostile
+   character and pack, and must (a) not throw, (b) actually put the payload on
+   the page — escaped — so the check is not vacuous, and (c) never emit it raw.
+   rules-data.js holds the static half: every attribute interpolation esc()'d. */
+{
+  const noop = () => {};
+  const log = [];
+  let byId = {};
+  function rec(id) {
+    const t = {
+      id: id || '', value: '', checked: false, disabled: false, readOnly: false, hidden: false,
+      textContent: '', innerHTML: '', title: '', placeholder: '',
+      style: {setProperty: noop}, dataset: {}, children: [], options: [], selectedOptions: [], files: [],
+      parentNode: null, offsetParent: null, _on: {},
+      classList: {toggle: noop, add: noop, remove: noop, contains: () => false},
+      appendChild: c => c, insertAdjacentHTML: (pos, h) => { log.push(String(h)); },
+      addEventListener: (type, fn) => { (t._on[type] = t._on[type] || []).push(fn); },
+      querySelector: () => null, querySelectorAll: () => [], closest: () => null,
+      getBoundingClientRect: () => ({top: 0, bottom: 0, left: 0, right: 0, height: 0, width: 0}),
+      setAttribute: noop, removeAttribute: noop, focus: noop, remove: noop, replaceWith: noop,
+      contains: () => false, click: noop, dispatchEvent: noop,
+    };
+    return new Proxy(t, {
+      get: (o, k) => k === 'firstElementChild' ? rec() : (k in o ? o[k] : noop),
+      /* textContent reads back as a string, as the DOM's does — printSheet trims it */
+      set: (o, k, v) => { if (k === 'innerHTML' || k === 'outerHTML') log.push(String(v)); o[k] = k === 'textContent' ? String(v) : v; return true; },
+    });
+  }
+  const el = id => byId[id] || (byId[id] = rec(id));
+  const fire = (id, type, ev) => (el(id)._on[type] || []).forEach(fn => fn(ev || {target: el(id)}));
+  const doc = ctx.document;
+  const saved = {getElementById: doc.getElementById, createElement: doc.createElement, body: doc.body};
+  doc.getElementById = el;
+  doc.createElement = () => rec();
+  doc.body = rec('body');
+  /* The upload path: a FileReader that hands back whatever data URL the test
+     put on the fake file, the way readAsDataURL would. */
+  const hadFR = 'FileReader' in ctx;
+  ctx.FileReader = function () {
+    this.readAsDataURL = f => { this.result = f.url; this.onload && this.onload(); };
+    this.readAsText = f => { this.result = f.text; this.onload && this.onload(); };
+  };
+  function capture(fn) {
+    log.length = 0; byId = {};
+    let err = null;
+    try { fn(); } catch (e) { err = e; }
+    return {html: log.join('\n'), err};
+  }
+
+  /* One payload for text and attributes alike: it closes either quote, ends the
+     tag and opens an element. Escaped, `<i` becomes `&lt;i`, so a raw
+     `<i data-pwn` anywhere means something went in unescaped. */
+  const P = 'PWN"\'><i data-pwn=1>';
+  const ON = '" onerror="alert(1)';          /* the attribute breakout the issue named */
+  const RAW = /<i data-pwn/i, HANDLER = /\son\w+\s*=\s*["']?alert/i, REACHED = /&lt;i data-pwn=1&gt;/;
+  const inert = (name, r, reach) => {
+    ck(name + ' — renders without throwing', !r.err, r.err && String(r.err.stack || r.err).split('\n').slice(0, 3).join(' | '));
+    if (reach !== false) ck(name + ' — the payload reaches the page, escaped', REACHED.test(r.html) || /&quot; onerror=&quot;/.test(r.html), r.html.slice(0, 300));
+    ck(name + ' — nothing from the file is emitted raw', !RAW.test(r.html) && !HANDLER.test(r.html),
+       (r.html.match(/.{0,80}(<i data-pwn|\son\w+\s*=\s*["']?alert).{0,40}/i) || [''])[0]);
+  };
+
+  // ---- safeImgSrc: data: URLs only
+  const S = ctx.safeImgSrc;
+  ck('safeImgSrc exists', typeof S === 'function');
+  if (typeof S === 'function') {
+    ck('safeImgSrc keeps a data: image URL', S('data:image/png;base64,iVBORw0KGgo=') === 'data:image/png;base64,iVBORw0KGgo=');
+    ck('safeImgSrc keeps a data: URL whatever its media type (FileReader writes octet-stream for an untyped file)',
+       S('data:application/octet-stream;base64,AAAA') === 'data:application/octet-stream;base64,AAAA');
+    ck('safeImgSrc trims, and the scheme is case-blind', S('  DATA:image/gif;base64,R0lG ') === 'DATA:image/gif;base64,R0lG');
+    ck('safeImgSrc refuses javascript:', S('javascript:alert(1)') === '' && S(' JaVaScRiPt:alert(1)') === '');
+    ck('safeImgSrc refuses the network (offline-first: no request the player did not ask for)',
+       S('https://example.com/p.png') === '' && S('http://example.com/p.png') === '' && S('//example.com/p.png') === '');
+    ck('safeImgSrc refuses a relative path, blob: and file:', S('img/p.png') === '' && S('blob:null/1') === '' && S('file:///etc/passwd') === '');
+    ck('safeImgSrc refuses a non-string', S(null) === '' && S(undefined) === '' && S({}) === '' && S(42) === '');
+  }
+
+  // ---- the portrait
+  const withPortrait = v => { X.character = X.blankChar(); X.character.portraitImg = v; return capture(() => ctx.renderPortrait()); };
+  let r = withPortrait('data:image/png;base64,iVBORw0KGgo=');
+  ck('a normal portrait still renders', !r.err && r.html === '<img src="data:image/png;base64,iVBORw0KGgo=" alt="Portrait">', r.html);
+  r = withPortrait('data:image/png;base64,AA' + ON + ' x="' + P);
+  inert('a portrait that tries to close its src attribute', r);
+  ck('...and is still the image it claims to be', /^<img src="data:image\/png;base64,AA&quot; onerror=&quot;/.test(r.html), r.html);
+  r = withPortrait('javascript:alert(1)');
+  ck('a javascript: portrait is not rendered as an image', !r.err && !/<img/i.test(r.html) && /No portrait yet/.test(r.html), r.html);
+  r = withPortrait('https://example.com/me.png');
+  ck('a network portrait is not fetched', !r.err && !/<img/i.test(r.html), r.html);
+  r = withPortrait(null);
+  ck('no portrait: the placeholder, as before', !r.err && /No portrait yet/.test(r.html), r.html);
+
+  // ---- a glossary image: the view, the form, and the upload preview
+  X.rules = {name: '', keywords: [], items: [], features: [], spells: [], races: [], classes: [], feats: [], tables: []};
+  X.character = X.blankChar();
+  const gHostile = {id: 'g1', term: 'Pwnterm', type: 'image', text: '', image: 'data:image/png;base64,AA' + ON + ' x="' + P};
+  r = capture(() => ctx.openGlossView(gHostile));
+  inert('a glossary image that tries to close its src attribute (view)', r);
+  r = capture(() => ctx.openGlossView({id: 'g2', term: 'Js', type: 'image', image: 'javascript:alert(1)'}));
+  ck('a javascript: glossary image is not rendered', !r.err && !/<img/i.test(r.html), r.html);
+  r = capture(() => ctx.openGlossView({id: 'g3', term: 'Net', type: 'image', image: 'https://example.com/cover.png'}));
+  ck('a pack image on the network is not fetched', !r.err && !/<img/i.test(r.html), r.html);
+  r = capture(() => ctx.openGlossView({id: 'g4', term: 'Cover', type: 'image', image: 'data:image/png;base64,iVBORw0KGgo='}));
+  ck('a normal glossary image still renders', !r.err && /<img src="data:image\/png;base64,iVBORw0KGgo=" alt="Cover">/.test(r.html), r.html);
+  r = capture(() => ctx.openGlossForm(gHostile));
+  inert('a glossary image that tries to close its src attribute (edit form)', r);
+  r = capture(() => {
+    ctx.openGlossForm({id: 'g5', term: 'Up', type: 'image', text: '', image: null});
+    el('gFile').files = [{url: 'data:image/png;base64,AA' + ON + ' x="' + P}];
+    fire('gFile', 'change');
+  });
+  inert('a picked file whose data URL tries to close the preview\'s src attribute', r);
+
+  // ---- a hostile character, through every renderer
+  X.resetRules();
+  X.mergeRules({name: 'Pack ' + P, system: 'Hostile',
+    keywords: [{term: 'Pwnkw', type: 'image', image: 'https://example.com/x.png'}],
+    classes: [{name: 'Hostile', hitDie: 'd8' + P, savingThrows: ['dex' + P], spellcasting: 'int' + P,
+               levels: {1: {traits: [{name: P, description: P}]}}, subclasses: {['Sub' + P]: {description: P}}}],
+    races: [{name: 'HRace', description: P, abilityScores: {['str' + P]: 2},
+             abilityChoice: {eligible: ['dex' + P], modes: ['2-1']}}],
+    backgrounds: [{name: 'HBg', description: P, abilityScores: ['wis' + P], feat: ['Alert', P],
+                   skills: [P], tools: P, languages: P, equipment: P}],
+  }, 'hostile.json');
+  /* a settings file restores `rules` wholesale, keyword ids included */
+  X.rules.keywords[0].id = P;
+  const hostile = X.blankChar();
+  Object.assign(hostile, {
+    id: 'hostile', name: P, portraitImg: 'data:image/png;base64,AA' + ON + ' x="' + P,
+    classes: [{name: 'Hostile', level: 2, subclass: 'Sub' + P}, {name: P, level: 1, subclass: P}],
+    race: {name: 'HRace', subrace: P}, bg: {name: 'HBg'},
+    proficiencies: 'Pwnterm and Pwnkw, ' + P, appearance: P, notes: P,
+    features: [{id: P, name: P, source: P, description: P, effects: [{target: 'ac', value: 1}],
+                uses: {max: 2, per: P, used: 1}, cost: {resource: P, amount: 1}, enabled: true,
+                origin: {kind: 'class', class: P}}],
+    inventory: [{id: P, name: P, qty: 2, description: P, cost: 1, weight: 1, equipped: true,
+                 effects: [{target: 'ac', value: 1}], origin: {kind: 'custom', detail: P, at: 0},
+                 uses: {max: 2, per: P, used: 0}, armor: {kind: 'body', base: P, dexCap: P},
+                 weapon: {kind: 'melee', dice: P, damageType: P}, use: {heal: '1d4', status: P},
+                 sectionOverride: P}],
+    statuses: [{id: P, name: P, description: P, effects: [], active: true},
+               {id: 'st2', name: 'Pwnterm', description: '', effects: [], active: true}],
+    familiars: [{id: P, name: P, kind: P, ac: P, hp: {cur: P, max: P}, speed: P, description: P, effects: [], active: true}],
+    attacks: [{id: P, name: P, kind: 'melee', ability: 'str', proficient: true, damageDice: P, damageType: P, notes: P},
+              {id: 'a2', spellId: P, source: 'spell', name: P, save: {ability: P}, damageDice: P, notes: P}],
+    spells: [{id: P, name: P, level: '0' + P, prepared: true, meta: P, text: P, atkType: 'attack',
+              dice: '1d6', damageType: P, granted: P, origin: {kind: 'custom', detail: P}}],
+    activeSpells: [{id: P, spellId: P, name: P, level: P, conc: true, durationSec: 60, elapsedSec: 6}],
+    glossary: [{id: P, term: 'Pwnterm', type: 'image', text: P, image: 'data:image/png;base64,AA' + ON + ' x="' + P}],
+    resources: [{id: P, name: P, max: 3, cur: 1, per: P, die: P, auto: false, source: P}],
+    slots: Object.assign(X.blankChar().slots, {1: {total: P, used: 0}}),
+    coins: {cp: P, sp: 0, gp: 1, pp: 0, ep: 0},
+    secNotes: {abilities: {text: P, at: 0}},
+  });
+  X.character = X.migrate(JSON.parse(JSON.stringify(hostile)));   /* the import path */
+  X.activeId = 'hostile';
+  const C = () => X.character;
+  const run = (name, fn, reach) => inert(name, capture(fn), reach);
+  run('the portrait', () => ctx.renderPortrait());
+  run('class, ancestry and background chips', () => ctx.renderClassRace());
+  run('Features & Traits', () => ctx.renderFeatures());
+  run('Inventory', () => ctx.renderInventory());
+  run('Statuses', () => ctx.renderStatuses());
+  run('Familiars', () => ctx.renderFamiliars());
+  run('Attacks & Weapons', () => ctx.renderAttacks());
+  run('Active Spells', () => ctx.renderActiveSpells());
+  run('the spell list', () => ctx.renderSpells());
+  run('the Rules tab glossary', () => ctx.renderGloss());
+  run('Resources', () => ctx.renderResources());
+  ['full', 'condensed', 'dice'].forEach(s => {
+    C().hdStyle = s;
+    run('Hit Dice from a pack\'s hit die (' + s + ')', () => ctx.renderHitDice());
+  });
+  run('Story fields and Proficiencies (glossary chips)', () => ctx.renderAllRT());
+  run('the Notes tab', () => ctx.renderNotes());
+  run('the Coins card', () => ctx.renderCoins());
+  run('the print sheet', () => ctx.printSheet());
+  run('a glossary entry of the character\'s own', () => ctx.openGlossView(C().glossary[0]));
+  run('the pack\'s image keyword, whose id a settings file sets', () => ctx.renderAllRT());
+  run('the item editor (structured armor from the file)', () => ctx.openItemForm(C().inventory[0]));
+  run('the feature editor', () => ctx.openFeatureForm(C().features[0]));
+  run('the spell editor', () => ctx.openSpellForm(C().spells[0]));
+  run('the spell view', () => ctx.openSpellView(C().spells[0]));
+  run('the attack editor', () => ctx.openAttackForm(C().attacks[0]));
+  run('the to-hit breakdown', () => ctx.openAttackBreakdown(P));
+  run('the resource editor', () => ctx.openResourceForm(C().resources[0]));
+  run('the status editor', () => ctx.openStatusForm(C().statuses[0]));
+  run('the familiar editor', () => ctx.openFamiliarForm(C().familiars[0]));
+  run('the origin badge\'s window', () => ctx.openOriginInfo(C().inventory[0].origin));
+  /* A fresh copy: renderSpells() above rewrote s.level to a number in place,
+     which is also why this one is hard to reach from the UI after renderAll(). */
+  run('casting a cantrip whose level is not a number', () => ctx.promptSpellAttack(Object.assign({}, C().spells[0], {level: '0' + P}), 0));
+  run('the class window (a pack\'s saves, spellcasting and subclasses)', () => ctx.openClassInfo('Hostile'));
+  run('the ancestry window (a pack\'s ability keys)', () => ctx.openRaceInfo('HRace'));
+  run('the background window (a pack\'s ability list)', () => ctx.openBackgroundInfo('HBg'));
+  run('Add ancestry, after picking the pack\'s species', () => {
+    ctx.openAddRace(); el('raceSel').value = X.rules.races[0]._id; fire('raceSel', 'change');
+  });
+  run('Add background, after picking the pack\'s background', () => {
+    ctx.openAddBackground(); el('bgSel').value = X.rules.backgrounds[0]._id; fire('bgSel', 'change');
+  });
+  run('Settings (the pack\'s name in the status line)', () => ctx.openSettings());
+  /* Slot totals survive recompute() only on a sheet with a spellcasting ability
+     and no caster class — autoSlots() rewrites them otherwise — and the print
+     sheet's slot line printed them as they came. */
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {
+    spellAbility: 'wis', slots: Object.assign(X.blankChar().slots, {1: {total: '2' + P, used: 0}})}))));
+  run('the print sheet\'s spell-slot line', () => ctx.printSheet(), false);
+  ck('...which still prints a real slot count', /L1: 2\/2/.test(capture(() => ctx.printSheet()).html));
+
+  Object.assign(doc, saved);
+  if (!hadFR) delete ctx.FileReader;
+  X.activeId = null;
+  X.character = X.blankChar();
+  X.resetRules();
 }
 
 ck.done();

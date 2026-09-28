@@ -104,23 +104,23 @@ function itemUseLine(it){
 function itemUsesRowHTML(it){
   const mx=itemUsesMax(it);if(!mx)return "";
   const used=num(it.uses.used),per=it.uses.per;
-  let pips="";for(let i=1;i<=mx;i++)pips+=`<button class="use-b ${i<=used?"used":""}" data-iuse="${it.id}" data-i="${i}" aria-label="Use"></button>`;
+  let pips="";for(let i=1;i<=mx;i++)pips+=`<button class="use-b ${i<=used?"used":""}" data-iuse="${esc(it.id)}" data-i="${esc(i)}" aria-label="Use"></button>`;
   return `<div class="use-row"><span class="use-lbl">Uses${(per&&per!=="none")?` · per ${esc(per)} rest`:""}</span><span class="use-pips">${pips}</span></div>`;
 }
 function invItemHTML(it){
   const ic=!!invCol().items[it.id];
   return `<div class="item fitem"><div class="top">
-        <button class="fitoggle" data-invitem="${it.id}" aria-label="Collapse item"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button class="fav ${it.fav?"on":""}" data-fav-item="${it.id}" aria-label="Favorite" title="Favorite">${it.fav?"★":"☆"}</button>
+        <button class="fitoggle" data-invitem="${esc(it.id)}" aria-label="Collapse item"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="fav ${it.fav?"on":""}" data-fav-item="${esc(it.id)}" aria-label="Favorite" title="Favorite">${it.fav?"★":"☆"}</button>
         <span class="nm">${esc(it.name||"Item")}</span>
         ${it.qty&&num(it.qty)!==1?`<span class="qty">×${num(it.qty)}</span>`:""}
         ${originBadge(itemOrigin(it),"data-orig-item",it.id)}
         ${fnum(it.cost)?`<span class="qty" title="Cost each">${esc(fmtGp(it.cost))}</span>`:""}
         ${itemWeight(it)?`<span class="qty" title="Weight each">${esc(fmtWt(it.weight))}</span>`:""}
-        ${itemUsable(it)?`<button class="use-go" data-useitem="${it.id}">Use</button>`:""}
-        ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${it.id}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
-        <button class="icon" data-edit-item="${it.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-item="${it.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        ${itemUsable(it)?`<button class="use-go" data-useitem="${esc(it.id)}">Use</button>`:""}
+        ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${esc(it.id)}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
+        <button class="icon" data-edit-item="${esc(it.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-item="${esc(it.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${ic?"":`${it.description?`<div class="desc">${richHTML(it.description)}</div>`:""}${itemUseLine(it)}${itemUsesRowHTML(it)}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
 }
@@ -142,7 +142,7 @@ function renderEncPill(st){
    string so the empty-inventory branch can show it too: a character carrying
    nothing but 900 gold coins is still carrying 18 lb. */
 function invTotalsHTML(){
-  const row=(label,val,cls)=>`<div class="item"><div class="top"><span class="nm">${label}</span><span style="flex:1"></span><b${cls?` class="${cls}"`:""}>${val}</b></div></div>`;
+  const row=(label,val,cls)=>`<div class="item"><div class="top"><span class="nm">${label}</span><span style="flex:1"></span><b${cls?` class="${esc(cls)}"`:""}>${val}</b></div></div>`;
   let h="";
   const total=inventoryTotal();
   if(total>0)h+=row("Total value",esc(fmtGp(total)));
@@ -194,7 +194,7 @@ function renderInventory(){
 }
 function statusTitle(name){
   const g=allGlossary().find(x=>x.term.toLowerCase()===(name||"").toLowerCase());
-  return g?`<span class="kw" data-gid="${g.id}" role="button" tabindex="0">${esc(name)}</span>`:esc(name||"Status");
+  return g?`<span class="kw" data-gid="${esc(g.id)}" role="button" tabindex="0">${esc(name)}</span>`:esc(name||"Status");
 }
 /* ONE row, two places: the Statuses card on the Sheet, and the Concentrating
    mirror on the Spells tab. The controls are delegated from document, so the
@@ -205,9 +205,9 @@ function statusRowHTML(s){
   const on=s.active!==false;
   return `<div class="item${on?" on-status":""}"><div class="top">
         <span class="nm">${statusTitle(s.name)}</span>
-        <span class="equip ${on?"on":""}" data-toggle-status="${s.id}"><span class="box"></span>${on?"Active":"Cleared"}</span>
-        <button class="icon" data-edit-status="${s.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-status="${s.id}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        <span class="equip ${on?"on":""}" data-toggle-status="${esc(s.id)}"><span class="box"></span>${on?"Active":"Cleared"}</span>
+        <button class="icon" data-edit-status="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-status="${esc(s.id)}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${s.description?`<div class="desc">${richHTML(s.description)}</div>`:""}
       ${on?fxChips(s.effects):fxChips(s.effects).replace(/class="chip"/g,'class="chip off"')}</div>`;
@@ -249,9 +249,9 @@ function renderFamiliars(){
     d.innerHTML=`<div class="top">
         <span class="nm">${esc(f.name||"Familiar")}</span>
         ${f.kind?`<span class="qty">${esc(f.kind)}</span>`:""}
-        <span class="fam-state ${on?"on":"off"}" data-toggle-familiar="${f.id}">${on?"● Summoned":"○ Dismissed"}</span>
-        <button class="icon" data-edit-familiar="${f.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-familiar="${f.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        <span class="fam-state ${on?"on":"off"}" data-toggle-familiar="${esc(f.id)}">${on?"● Summoned":"○ Dismissed"}</span>
+        <button class="icon" data-edit-familiar="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-familiar="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${stats?`<div class="desc" style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em">${stats}</div>`:""}
       ${f.description?`<div class="desc">${richHTML(f.description)}</div>`:""}

@@ -94,7 +94,10 @@ modal.addEventListener("change",e=>{
 });
 
 function openGlossView(g){
-  let body= g.type==="image"? (g.image?`<img src="${g.image}" alt="${esc(g.term)}">`:`<p><em>No image attached.</em></p>`) : `<p>${esc(g.text||"—")}</p>`;
+  /* g is a pack keyword or the character's own entry — either way someone
+     else's file, so the image goes through imgHTML() */
+  const img=g.type==="image"?imgHTML(g.image,g.term):"";
+  let body= g.type==="image"? (img||(g.image?`<p><em>This image isn't stored in the file itself, so it isn't shown.</em></p>`:`<p><em>No image attached.</em></p>`)) : `<p>${esc(g.text||"—")}</p>`;
   openModal(g.term,body);
 }
 /* ---- size picker (the Size box in Vitals) ----
@@ -154,8 +157,8 @@ function fxEditorRows(effects){
   return (effects||[]).map(e=>fxRow(e)).join("");
 }
 function fxRow(e){
-  const opts=fxTargets().map(([l,t])=>`<option value="${t}"${e&&e.target===t?" selected":""}>${l}</option>`).join("");
-  return `<div class="fxrow"><select class="fx-t">${opts}</select><input class="fx-v" type="number" value="${e?num(e.value):1}"><button class="icon danger fx-del" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+  const opts=fxTargets().map(([l,t])=>`<option value="${esc(t)}"${e&&e.target===t?" selected":""}>${l}</option>`).join("");
+  return `<div class="fxrow"><select class="fx-t">${opts}</select><input class="fx-v" type="number" value="${esc(e?num(e.value):1)}"><button class="icon danger fx-del" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
 }
 function collectFx(scope){
   return Array.from(scope.querySelectorAll(".fxrow")).map(r=>({target:r.querySelector(".fx-t").value,value:num(r.querySelector(".fx-v").value)})).filter(e=>e.value!==0);
@@ -166,14 +169,14 @@ function openFeatureForm(existing){
   const f=existing||{id:uid(),name:"",source:"",description:"",effects:[],enabled:true};
   const lib=(rules.features||[]);
   openModal(existing?"Edit feature":"New feature",`
-    ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="fLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${i}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
+    ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="fLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
     <div class="field"><label class="f">Name</label><input id="fName" value="${esc(f.name)}"></div>
     <div class="field"><label class="f">Source (optional)</label><input id="fSrc" value="${esc(f.source||"")}" placeholder="Ancestry, Class, Feat…"></div>
     <div class="field"><label class="f">Description</label><textarea id="fDesc">${esc(f.description||"")}</textarea></div>
     <div class="field"><label class="f">Effects on stats</label><div id="fFx">${fxEditorRows(f.effects)}</div><button class="fx-add" id="fAddFx">+ Add effect</button></div>
-    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="fUses" type="number" min="0" value="${num(f.uses&&usesMax(f))||""}" placeholder="0"></div>
+    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="fUses" type="number" min="0" value="${esc(num(f.uses&&usesMax(f))||"")}" placeholder="0"></div>
       <div class="field"><label class="f">Resets on</label><select id="fUsesPer"><option value="long"${(f.uses&&f.uses.per)!=="short"?" selected":""}>Long rest</option><option value="short"${(f.uses&&f.uses.per)==="short"?" selected":""}>Short rest</option></select></div></div>
-    <div class="g2"><div class="field"><label class="f">Cost per use (0 = none)</label><input id="fCost" type="number" min="0" value="${num(f.cost&&f.cost.amount)||""}" placeholder="0"></div>
+    <div class="g2"><div class="field"><label class="f">Cost per use (0 = none)</label><input id="fCost" type="number" min="0" value="${esc(num(f.cost&&f.cost.amount)||"")}" placeholder="0"></div>
       <div class="field"><label class="f">From resource</label><input id="fCostRes" list="resNamesDL" value="${esc(f.cost&&f.cost.resource||"")}" placeholder="e.g. Scrap" autocomplete="off"></div></div>
     <datalist id="resNamesDL">${(character.resources||[]).map(r=>`<option value="${esc(r.name)}"></option>`).join("")}</datalist>
     <div class="m-actions"><button class="tbtn" id="fCancel">Cancel</button><button class="tbtn primary" id="fSave">${existing?"Save":"Add"}</button></div>`);
@@ -222,13 +225,13 @@ function openItemForm(existing){
   const use=itemUse(it)||{};
   const abilOpts=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"],["finesse","Finesse (best of STR/DEX)"],["none","None"]];
   openModal(existing?"Edit item":"New item",`
-    ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="iLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${i}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
+    ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="iLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
     <div class="g2"><div class="field"><label class="f">Name</label><input id="iName" value="${esc(it.name)}"></div>
-      <div class="field"><label class="f">Quantity</label><input id="iQty" type="number" min="1" value="${num(it.qty)||1}"></div></div>
+      <div class="field"><label class="f">Quantity</label><input id="iQty" type="number" min="1" value="${esc(num(it.qty)||1)}"></div></div>
     <div class="field"><label class="f">Description</label><textarea id="iDesc">${esc(it.description||"")}</textarea></div>
-    <div class="field"><label class="f">Category</label><select id="iCategory"><option value=""${!it.sectionOverride?" selected":""}>Automatic (${esc(invSection(it))})</option>${INV_ORDER.map(sname=>`<option value="${sname}"${it.sectionOverride===sname?" selected":""}>${sname}</option>`).join("")}</select></div>
-    <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${it.cost!=null&&it.cost!==""?fnum(it.cost):""}" placeholder="0"></div>
-      <div class="field"><label class="f">Weight each (lb, optional)</label><input id="iWeight" type="number" min="0" step="0.01" value="${it.weight!=null&&it.weight!==""?fnum(it.weight):""}" placeholder="0"></div></div>
+    <div class="field"><label class="f">Category</label><select id="iCategory"><option value=""${!it.sectionOverride?" selected":""}>Automatic (${esc(invSection(it))})</option>${INV_ORDER.map(sname=>`<option value="${esc(sname)}"${it.sectionOverride===sname?" selected":""}>${sname}</option>`).join("")}</select></div>
+    <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${esc(it.cost!=null&&it.cost!==""?fnum(it.cost):"")}" placeholder="0"></div>
+      <div class="field"><label class="f">Weight each (lb, optional)</label><input id="iWeight" type="number" min="0" step="0.01" value="${esc(it.weight!=null&&it.weight!==""?fnum(it.weight):"")}" placeholder="0"></div></div>
     <div class="g2"><div class="field"><label class="f">Origin</label><select id="iOrigin">${originOptionsHTML(it.origin)}</select></div>
       <div class="field"><label class="f">Origin detail</label><input id="iOrigDet" value="${esc((it.origin&&it.origin.detail)||"")}" placeholder="${esc((it.origin&&originDef(it.origin.kind)&&originDef(it.origin.kind).ph)||"place, who, etc.")}"${it.origin?"":" disabled"}></div></div>
     <p class="hint">Where this came from. It shows as a small letter badge on the item row — tap it for the full origin and the date you added it. The detail is free text, and what it means follows the origin: a place for Purchased or Found, a person for Gift or Traded.</p>
@@ -237,20 +240,20 @@ function openItemForm(existing){
     <label class="equip ${it.weapon?"on":""}" id="iIsWeapon" style="font-size:12px;margin-top:8px"><span class="box"></span>Weapon (create a linked attack)</label>
     <div id="iWeaponFields" style="${it.weapon?"":"display:none"}">
       <div class="g2"><div class="field"><label class="f">Type</label><select id="iWKind"><option value="melee"${w.kind!=="ranged"?" selected":""}>Melee</option><option value="ranged"${w.kind==="ranged"?" selected":""}>Ranged</option></select></div>
-        <div class="field"><label class="f">Ability</label><select id="iWAbil">${abilOpts.map(([v,l])=>`<option value="${v}"${(w.ability||"str")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
+        <div class="field"><label class="f">Ability</label><select id="iWAbil">${abilOpts.map(([v,l])=>`<option value="${esc(v)}"${(w.ability||"str")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
       <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="iWDice" value="${esc(w.dice||"")}" placeholder="1d8"></div>
         <div class="field"><label class="f">Damage type</label><input id="iWType" value="${esc(w.damageType||"")}" placeholder="slashing"></div></div>
     </div>
     <label class="equip ${arm?"on":""}" id="iIsArmor" style="font-size:12px;margin-top:8px"><span class="box"></span>Armor (set the AC it gives)</label>
     <div id="iArmorFields" style="${arm?"":"display:none"}">
-      <div class="g2"><div class="field"><label class="f">Kind</label><select id="iAKind">${ARMOR_KINDS.map(([v,l])=>`<option value="${v}"${armKind===v?" selected":""}>${l}</option>`).join("")}</select></div>
-        <div class="field" id="iABaseWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Base AC</label><input id="iABase" type="number" min="0" value="${arm&&arm.kind==="body"?num(arm.base):""}" placeholder="11"></div>
-        <div class="field" id="iABonusWrap" style="${armKind==="shield"?"":"display:none"}"><label class="f">AC bonus</label><input id="iABonus" type="number" min="0" value="${arm&&arm.kind==="shield"?num(arm.bonus||2):2}" placeholder="2"></div></div>
-      <div class="field" id="iADexWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Max Dex added</label><input id="iADex" value="${armDex}" placeholder="none" autocomplete="off"></div>
+      <div class="g2"><div class="field"><label class="f">Kind</label><select id="iAKind">${ARMOR_KINDS.map(([v,l])=>`<option value="${esc(v)}"${armKind===v?" selected":""}>${l}</option>`).join("")}</select></div>
+        <div class="field" id="iABaseWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Base AC</label><input id="iABase" type="number" min="0" value="${esc(arm&&arm.kind==="body"?num(arm.base):"")}" placeholder="11"></div>
+        <div class="field" id="iABonusWrap" style="${armKind==="shield"?"":"display:none"}"><label class="f">AC bonus</label><input id="iABonus" type="number" min="0" value="${esc(arm&&arm.kind==="shield"?num(arm.bonus||2):2)}" placeholder="2"></div></div>
+      <div class="field" id="iADexWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Max Dex added</label><input id="iADex" value="${esc(armDex)}" placeholder="none" autocomplete="off"></div>
       <p class="hint">Light adds all your Dex, Medium caps it (usually 2), Heavy adds none. Leave <b>Max Dex</b> as the kind sets it unless the item says otherwise — type a number, or <b>none</b>.</p>
     </div>
-    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="iUses" type="number" min="0" value="${itemUsesMax(it)||""}" placeholder="0"></div>
-      <div class="field"><label class="f">Resets on</label><select id="iUsesPer">${[["long","Long rest"],["short","Short rest"],["none","Never (manual)"]].map(([v,l])=>`<option value="${v}"${((it.uses&&it.uses.per)||"long")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
+    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="iUses" type="number" min="0" value="${esc(itemUsesMax(it)||"")}" placeholder="0"></div>
+      <div class="field"><label class="f">Resets on</label><select id="iUsesPer">${[["long","Long rest"],["short","Short rest"],["none","Never (manual)"]].map(([v,l])=>`<option value="${esc(v)}"${((it.uses&&it.uses.per)||"long")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
     <div class="g2"><div class="field"><label class="f">Healing when used</label><input id="iHeal" value="${esc(use.heal||"")}" placeholder="2d4+2" autocomplete="off"></div>
       <div class="field"><label class="f">Status applied when used</label><input id="iStatus" list="itemStatusTerms" value="${esc(use.status||"")}" placeholder="Poisoned, Blessed…" autocomplete="off">${statusDatalistHTML("itemStatusTerms")}</div></div>
     <label class="equip ${use.consume?"on":""}" id="iConsume" style="font-size:12px"><span class="box"></span>Using one up reduces the quantity</label>
@@ -494,7 +497,7 @@ function statusTermList(){
 }
 function statusDatalistHTML(id){
   const terms=statusTermList();
-  return terms.length?`<datalist id="${id}">${terms.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>`:"";
+  return terms.length?`<datalist id="${esc(id)}">${terms.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>`:"";
 }
 function openStatusForm(existing){
   const s=existing||{id:uid(),name:"",description:"",effects:[],active:true};
@@ -557,14 +560,14 @@ function openSpellForm(existing){
   const myCl=(character.classes||[]).map(c=>(c.name||"").toLowerCase());
   const clsOf=x=>x.class?(Array.isArray(x.class)?x.class:[x.class]):[];
   const matches=x=>{const c=clsOf(x);return !c.length||c.some(n=>myCl.includes(String(n).toLowerCase()));};
-  const libOpts=lib.slice().sort((a,b)=>num(a.level)-num(b.level)||(a.name||"").localeCompare(b.name||"")).map(x=>`<option value="${esc(x._id||x.name)}" data-lv="${num(x.level)}" data-cls="${esc(clsOf(x).join("|").toLowerCase())}" data-mine="${matches(x)?1:0}">${esc(dispName(x,"spells"))} (${num(x.level)===0?"cantrip":"lv "+num(x.level)})${clsOf(x).length?" · "+esc(clsOf(x).join("/")):""}</option>`).join("");
+  const libOpts=lib.slice().sort((a,b)=>num(a.level)-num(b.level)||(a.name||"").localeCompare(b.name||"")).map(x=>`<option value="${esc(x._id||x.name)}" data-lv="${esc(num(x.level))}" data-cls="${esc(clsOf(x).join("|").toLowerCase())}" data-mine="${matches(x)?1:0}">${esc(dispName(x,"spells"))} (${num(x.level)===0?"cantrip":"lv "+num(x.level)})${clsOf(x).length?" · "+esc(clsOf(x).join("/")):""}</option>`).join("");
   const caster=hasCasterClass(), mx=maxCastableLevel();
   openModal(existing?"Edit spell":"New spell",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="sLib"><option value="">—</option>${libOpts}</select>
       ${myCl.length?`<label class="opt" style="margin-top:8px"><input type="checkbox" id="sOnlyClass" ${caster?"checked":""}>Only my class's castable spells${caster&&mx?` (up to level ${mx})`:""}</label>`:""}
       <p class="hint">Filtered to spells your class can cast at your level. Untick to browse everything — picking outside your class is allowed.</p></div>`:""}
     <div class="g2"><div class="field"><label class="f">Name</label><input id="sName" value="${esc(s.name)}"></div>
-      <div class="field"><label class="f">Level</label><select id="sLevel">${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}"${num(s.level)===n?" selected":""}>${n===0?"Cantrip":"Level "+n}</option>`).join("")}</select></div></div>
+      <div class="field"><label class="f">Level</label><select id="sLevel">${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${esc(n)}"${num(s.level)===n?" selected":""}>${n===0?"Cantrip":"Level "+n}</option>`).join("")}</select></div></div>
     <div class="field"><label class="f">Meta (casting time, components…)</label><input id="sMeta" value="${esc(s.meta||"")}" placeholder="1 action · V,S · 60 ft"></div>
     <div class="field"><label class="f">Description</label><textarea id="sText">${esc(s.text||"")}</textarea></div>
     <div class="g2"><div class="field"><label class="f">Origin</label><select id="sOrigin">${originOptionsHTML(s.origin||originFromGranted(s.granted)||{kind:"class"})}</select></div>
@@ -575,7 +578,7 @@ function openSpellForm(existing){
     <div id="sAtkFields" style="${s.atkType?"":"display:none"}">
       <div class="g2">
         <div class="field" id="sKindWrap" style="${s.atkType==="save"?"display:none":""}"><label class="f">Attack kind</label><select id="sAtkKind"><option value="ranged"${s.atkKind!=="melee"?" selected":""}>Ranged spell attack</option><option value="melee"${s.atkKind==="melee"?" selected":""}>Melee spell attack</option></select></div>
-        <div class="field" id="sSaveWrap" style="${s.atkType==="save"?"":"display:none"}"><label class="f">Saving throw</label><select id="sSaveAbil">${ABIL.map(([k,l])=>`<option value="${k}"${(s.saveAbility||"dex")===k?" selected":""}>${l}</option>`).join("")}</select></div>
+        <div class="field" id="sSaveWrap" style="${s.atkType==="save"?"":"display:none"}"><label class="f">Saving throw</label><select id="sSaveAbil">${ABIL.map(([k,l])=>`<option value="${esc(k)}"${(s.saveAbility||"dex")===k?" selected":""}>${l}</option>`).join("")}</select></div>
       </div>
       <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="sDice" value="${esc(s.dice||"")}" placeholder="8d6"></div>
         <div class="field"><label class="f">Damage type</label><input id="sDmgType" value="${esc(s.damageType||"")}" placeholder="fire"></div></div>

@@ -3937,3 +3937,47 @@ at merge.
   [grants & provenance](../wiki/architecture/grants-and-provenance.md),
   [vitals & rest](../wiki/features/vitals-and-rest.md), [converter](../wiki/data/converter.md),
   [decisions](../wiki/decisions.md).
+## Escaping image sources and every attribute value that comes from a file (2026-09-28)
+
+**The report.** Three `<img src>` values went into innerHTML unescaped: `character.portraitImg`
+(`renderPortrait()`), a keyword's `image` (`openGlossView()`), and the glossary form's preview,
+both for a stored image and just after a file is picked (`openGlossForm()`). A character file or a
+rules pack could close the attribute and add a handler. Page: [Rich text](../wiki/architecture/rich-text.md).
+
+**The audit** covered every `${…}` in every `src/js` template literal and every innerHTML /
+outerHTML / insertAdjacentHTML sink, asking where each value comes from: a character file, a rules
+pack, a settings file (Settings → Import assigns `rules` wholesale, keyword ids included), the
+network, or app constants. 353 interpolations sit inside quoted attribute values, 175 of them raw.
+The ones fed from outside, all fixed:
+- character file: list-item ids in `data-*` hooks (features, items, statuses, familiars, attacks and
+  their `spellId`, spells, active spells, resources, glossary); a glossary id in `data-gid`
+  (`highlight()`, `statusTitle()`); an item's structured `armor.dexCap` in the item editor; an
+  active spell's `level`; a cantrip's `level` in `promptSpellAttack()` (not reachable once
+  `renderSpells()` has rewritten `s.level` to a number, fixed anyway); slot totals on the print
+  sheet (they survive `autoSlots()` only with a spellcasting ability and no caster class).
+- rules pack: `abilityChoice.eligible` and `abilityScores` keys (Add ancestry, the ancestry window),
+  a background's `abilityScores` (Add background, the background window), a class's `hitDie` (all
+  three Hit Dice styles, attributes and text), the pack `name` in the Settings status line.
+- network: the update link was already escaped; it now takes only a `https://github.com/` page.
+
+**Image scheme.** `safeImgSrc()` (00-constants.js) passes data: URLs only, and `imgHTML()` is the one
+place an `<img>` is built from data. Nothing legitimate is refused: portraits and glossary images are
+only ever written by `FileReader.readAsDataURL`, rules-schema §6.1 documents `image` as a data URL,
+and no shipped pack has an image at all. A web address is refused too, because it would be a network
+request beyond the rules fetch and the update check. Any media type passes (FileReader writes
+`application/octet-stream` for an untyped file). A refused portrait shows the placeholder; a refused
+glossary image says it isn't stored in the file.
+
+**The guard.** `rules-data.js` scans `src/js` with a small tokenizer (strings, comments, regex
+literals, nested templates) and requires every `${…}` inside a quoted attribute value to be `esc(…)`
+of the whole expression or a ternary whose results are literals; CSS attribute selectors are skipped,
+unquoted interpolation is refused, and every `src` must be `esc(safeImgSrc(…))`. The rule is total on
+purpose: which values are untrusted is not visible to a regex. 167 sites were wrapped mechanically;
+most are constants, where `esc()` is the identity. `sheet.js` covers what the scan cannot see (text
+between tags, markup emitted in tag position): getElementById/createElement return recorders that
+log every HTML write, and a hostile character, pack and keyword id go through 40 renderers and
+editors, each asserted to run, to show the payload escaped, and never to emit it raw. 43 of those
+checks failed before the fix; each of the 11 text-content fixes was reverted in turn and caught.
+
+Noticed, not changed: `runChoices()` still double-escapes its modal title (known issue); a portrait
+is still stored at full size.
