@@ -86,7 +86,10 @@ in order and no cell carries text bled from a neighbouring column, and keeps a b
 characteristic tables or none. `--write` strips every underscore-prefixed key (the `_region` band
 `write_prose()` needs in memory), refuses a table with no `cols`, and refuses duplicate names.
 `add_anchors()` turns a named reference ("…the Bandit Specialty table") into `[Table: …]` in place;
-unnamed references are left alone and the app's owner chips (`tableChipsHTML()`) cover them.
+unnamed references are left alone and the app's owner chips (`tableChipsHTML()`) cover them. The
+extractor writes no `footnotes` (schema §6.11): the book's one starred table, Night Domain Spells,
+explains its `*` in a line printed after the table ("Spells marked with an asterisk (*) can be
+found in this book."), and that line stays in the feature prose right after the table's anchor.
 
 ## Rules that must hold
 
@@ -163,6 +166,7 @@ unnamed references are left alone and the app's owner chips (`tableChipsHTML()`)
 | March 2024 (Fizzar as a class) | Excluded | Extracting: superseded in full by November 2024; would add a dead class |
 | A background whose characteristic tables only partly verify | Ship all four or none | Shipping the good ones: a Flaw table with no Ideal table reads as "the book has no Ideals" |
 | Where the Gadgeteer's layout is fixed | In the extractor | In the data: the next run reverts a hand edit |
+| Night Domain Spells' asterisk note (#73) | Left in the feature prose, where the book prints it after the table; no `footnotes` | Moving it into `footnotes`: the prose must match the book (the verbatim suite), and the line already sits beside the table's anchor |
 
 ## Open
 
@@ -208,3 +212,4 @@ unnamed references are left alone and the app's owner chips (`tableChipsHTML()`)
 - 2026-08-18 — `descHTML()` delegates to `richHTML()`, one grammar for every field. → ledger L3035
 - 2026-09-25 — #59 reported: Gadgeteer, Engineer and Fizzar text bled across features. → ledger L3548, #59
 - 2026-09-25 — #59 fixed: banded pages, captions as furniture, `FEATURES_TABLE_HEADS`. → ledger L3596, #59
+- 2026-09-28 — Table `footnotes` exist (#73); the extractor needs none, since the one starred table's note is already in the prose. → ledger L4135, #73

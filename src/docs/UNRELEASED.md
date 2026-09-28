@@ -55,3 +55,7 @@ Bullets below this line — leave the heading in place.
   adding a Fighter at level 3 opens as "Fighter — Levels 1–3" instead of naming only one of them. A
   class whose name contains an ampersand or an apostrophe now shows its name correctly in that
   window's title, rather than as symbol codes.
+- Reference tables now show their footnotes underneath. Xanathar's Guide's downtime tables mark
+  some entries with an asterisk, and the note it points to, such as "Might involve a rival" or
+  "Halved for a consumable item like a potion or scroll", now appears below the table.
+  Re-download the Xanathar's Guide pack to get them.

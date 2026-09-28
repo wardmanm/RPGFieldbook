@@ -333,7 +333,8 @@ def _register(tbl, sink):
     if sink is None:
         return tbl['name']
     for t in sink:
-        if t['cols'] == tbl['cols'] and t['rows'] == tbl['rows']:
+        if (t['cols'] == tbl['cols'] and t['rows'] == tbl['rows']
+                and t.get('footnotes') == tbl.get('footnotes')):
             return t['name']            # same table captured already — reuse it
     if _SUFFIX and tbl['name'] in _RESERVED:
         tbl['name'] = tbl['name'] + _SUFFIX
@@ -368,6 +369,13 @@ def _norm_table(node, name=None, owner=None, kind=None):
     caption = strip_tags(str(node.get('caption') or '')) if node.get('caption') else ''
     nm = name or caption or ((owner or _OWNER[0]) + ' Table').strip() or 'Table'
     tbl = {'name': nm, 'cols': cols, 'align': [_align(s) for s in styles], 'rows': rows}
+    # What a row's or label's "*" points at ("*Might involve a rival"). The
+    # entries are rendered exactly as cells are; the "*" stays, since it is
+    # what pairs the note with its mark. Dropping these left 17 Xanathar's
+    # downtime tables with marks that pointed at nothing (#73).
+    notes = [n for n in (_cell_text(f) for f in (node.get('footnotes') or [])) if n]
+    if notes:
+        tbl['footnotes'] = notes
     if caption:
         tbl['caption'] = caption
     ownr = owner if owner is not None else _OWNER[0]

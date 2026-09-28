@@ -23,3 +23,7 @@ table.rtbl tbody tr:nth-child(even){background:color-mix(in srgb,var(--ink) 4%,t
 table.rtbl tbody tr:last-child td{border-bottom:0}
 /* roll/level columns read as a fixed gutter, not a wrapping text column */
 table.rtbl td:first-child{white-space:nowrap;font-family:var(--head);font-weight:700}
+/* a table's footnotes ("*Might involve a rival"): tucked under the box they
+   annotate, smaller and softer than the cells, and wrapping at any width */
+.tbl-notes{margin:-4px 2px 10px;font-size:13px;line-height:1.45;color:var(--ink-soft)}
+.tbl-notes p{margin:0 0 2px}

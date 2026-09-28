@@ -122,7 +122,9 @@ Every converter lifts those out into a **separate tables pack** and leaves a `[T
 anchor in the description where the table used to sit; the app renders that anchor as a chip
 that opens the table, and as plain text if no tables pack is loaded. Each table records the
 entity it came from (`owner` / `ownerKind`), so the Rules tab can group them and a class view
-can link to its own progression table.
+can link to its own progression table. A table's footnotes — what a `*` in a row or column label
+points at, such as Xanathar's "Might involve a rival" — travel with it as `footnotes`, and the app
+shows them under the table.
 
 ```bash
 python convert.py all _conversion-data/5etools-v2.36.1 -o data/5e2024   # writes tables.json too

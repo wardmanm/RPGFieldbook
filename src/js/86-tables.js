@@ -64,7 +64,12 @@ function tableHTML(t){
   const cols=t.cols||[];
   const head=cols.some(c=>c!=="")?`<thead><tr>${cols.map((c,i)=>`<th${a(i)}>${esc(c)}</th>`).join("")}</tr></thead>`:"";
   const body=t.rows.map(r=>`<tr>${r.map((c,i)=>`<td${a(i)}>${esc(c)}</td>`).join("")}</tr>`).join("");
-  return `<div class="tbl-wrap"><table class="rtbl">${head}<tbody>${body}</tbody></table></div>`;
+  /* footnotes (schema §6.11, optional): what a "*" in a row or label points at.
+     Escaped exactly as a cell is, and set OUTSIDE the scroll box so a wide d100
+     table never carries its notes off-screen. None → the markup is unchanged. */
+  const notes=(Array.isArray(t.footnotes)?t.footnotes:[]).map(f=>f==null?"":String(f).trim()).filter(Boolean);
+  const foot=notes.length?`<div class="tbl-notes">${notes.map(f=>`<p>${esc(f)}</p>`).join("")}</div>`:"";
+  return `<div class="tbl-wrap"><table class="rtbl">${head}<tbody>${body}</tbody></table></div>${foot}`;
 }
 function tableMeta(t){
   const bits=[];
