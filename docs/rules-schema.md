@@ -481,7 +481,9 @@ the converter applies — mirroring `overlay.json` for feats.
   `description` or the `armor` object. Weapon damage comes from `weapon`, not from `effects`. An
   `attack` or `damage` effect adds to **every** attack the character makes, spells included, so use
   it only for a bonus that really does; a bonus for one weapon (or only bows) belongs on that
-  weapon, or in the `description`.
+  weapon, or in the `description`. Likewise an effect is on for as long as the item is equipped, so
+  give one only for a bonus that holds all that time: a bonus for one moment ("as a Reaction, +5 AC
+  against the triggering attack", "+2 AC against ranged attacks") belongs in the `description`.
   `equipped`, `qty` and `sectionOverride` (which inventory section to file it under) are set
   per-character when the item is added, not in the pack.
 - **`weight`** is a **number of pounds, per unit** — not per stack. It is copied onto the character's

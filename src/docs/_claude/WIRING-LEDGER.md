@@ -4498,3 +4498,69 @@ finder uses STR for STR 18 / DEX 12 (+6) and DEX for DEX 16 (+5), stays ranged a
 ticked; applying it rebuilds the untouched row with `finesse` (+6); an edited row is left alone
 (four failed first). Pages: [converter](../wiki/data/converter.md),
 [attacks & damage](../wiki/features/attacks-and-damage.md).
+
+## Conditional AC and saving-throw bonuses on items are not standing effects (#76, 2026-09-28)
+
+**Root cause.** `_item_effects()` wrote every 5e-tools `bonusAc` as an `ac` effect and every
+`bonusSavingThrow` as the six `save.*`. Those fields are search-filter tags: 5e-tools sets them
+whether the book gives the bonus all the time or only in a moment. An effect applies whenever the
+item is equipped, so Quarterstaff of the Acrobat's Attack Deflection (a Reaction, +5 AC against the
+triggering attack, once per Short or Long Rest) read AC +5 at all times: DEX 14, level 1, AC 12
+became 17 on equipping it.
+
+**No data rule exists.** 102 dump entries carry one field or both. The only keys the five
+conditional pack items have that no standing XDMG one does are `light`, `range` and
+`modifySpeed`, each incidental; the conditional Arrow-Catching Shield and the standing Shield of the
+Cavalier both carry `"ac": 2, "bonusAc": "+2"`; `charges` marks neither (Staff of Power has 20 and a
+standing +2, Scarab of Protection 12 and a standing +1). So the converter reads the text. `_bonus_reading()` finds the sentence stating the bonus ("+N bonus to … Armor Class/AC",
+"+N bonus to … saving throws" as a list or alone, never one named save), takes it up to the end of
+the bonus's own clause (a later ", you have Advantage on saving throws against …" is another
+benefit), sets aside the conditions an equipped item always meets ("while wearing / holding /
+wielding / carrying", "while … is on your person", "while … orbits your head"), and calls it
+conditional if any of reaction, when, whenever, if, unless, until, against, while, as long as, for
+every, allies, creature(s), once, each time remains. No sentence at all (a table row, another
+wording) is not an effect either. Every bonus kept out of the effects is recorded and printed as a
+`note:` at the end of `all`, `supplement` and `items`, with the words that decided it.
+`_item_bonus_text()` expands `{#itemEntry …}` for this reading only, through the item index, which
+now also carries `items-base.json`'s `itemEntry` templates: the ten Dragon Scale Mails state their
++1 nowhere else. Their descriptions still print the tag (seen, not fixed: 54 pack items do, the
+Dragon Scale Mails, Ioun Stones, Potions and Rings of Resistance, and Tasha's Absorbing Tattoos).
+
+**The reviewed list.** Standing, and unchanged: the ten Dragon Scale Mails (+1), Cloak of Protection
+and Ring of Protection (+1 AC and saves), Glamoured Studded Leather, Ioun Stone of Protection and
+Scarab of Protection (+1), Shield of the Cavalier (+2, on top of its shield +2), Staff of Power (+2
+AC and saves), Robe of Stars and Stone of Good Luck (+1 saves). Conditional, now prose only:
+Quarterstaff of the Acrobat (+5: "When", "Reaction", "against"), Arrow-Catching Shield (+2 "against
+ranged attack rolls"; its shield +2 still comes from its armor line), Bracers of Defense (+2 "if you
+are wearing no armor and using no Shield"), Rod of Alertness (+1 AC and saves "While in that Bright
+Light, you and your allies", an aura planted once per dawn), and Tasha's Teeth of Dahlver-Nar (+2
+from one implanted tooth, a table row; no sentence). Xanathar's has none.
+
+**Data.** Only `effects` moved, on those five items: `data/5e2024/items-magic.json` four, and
+`data/tashas/items-magic.json` one. Checked field by field; every other file of the three packs
+regenerates byte for byte.
+
+**The Reaction is not a tracked use.** No pack item carries `uses` and 5e-tools has no field for a
+per-rest property; one would mean a special case for this staff or a text rule reaching every
+"can't be used again until the next dawn" in the dump, and one `uses` pool per item cannot hold the
+staff's several properties. It stays in the description; a player can add uses by hand.
+
+**Existing characters** hold copies. `effects` is in `UPD_FIELDS.item`, so the rules-update tool
+offers a stamped copy of each as "effects changed", ticked when unedited; applying it writes
+`effects: []` and nothing else (the staff keeps its weapon, `atkMisc` 2 and its attack row; qty,
+equipped and fav untouched), and AC returns to 12. `migrate()` changes nothing.
+
+**Guards.** `converter.py` 264 → 304: the five conditional shapes and nine standing ones, real from
+the dump, through `convert_items()`; the reader on the phrasings it must not misread (a later
+clause's "against", one named save, "until the start of your next turn", no sentence); the
+recorded list and its notes; `items`, `all` and `supplement` runs each print the note and read the
+Dragon Scale Mail through its template. 20 failed first. `rules-data.js` +12: every `ac`/`save.*`
+effect in any pack is on the reviewed standing list, every listed one still ships, and the five
+conditional items carry none and still state their bonus; six failed first. `sheet.js` +9, read off
+the ids `recompute()` paints: the shipped staff leaves AC 12, the Arrow-Catching Shield adds only
+its shield +2, Bracers and Rod add nothing, a Cloak still adds +1 AC and saves; four failed first.
+`char-update.js` +7: an old sheet reads 17, the fix is offered as exactly `effects`, ticked, and
+applying it gives 12; `migrate()` leaves it; three failed first. Pages:
+[converter](../wiki/data/converter.md), [armor & AC](../wiki/features/armor-and-ac.md),
+[computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
+[rules-update tool](../wiki/features/rules-update-tool.md).

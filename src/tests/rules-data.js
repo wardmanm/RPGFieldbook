@@ -590,6 +590,67 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
     });
 }
 
+// ---------- shipped data: only a standing bonus is an AC or saving-throw effect (#76)
+// 5e-tools' bonusAc / bonusSavingThrow tag a bonus whether the book gives it all
+// the time or only in a moment, and convert.py wrote every one as a standing
+// effect: Quarterstaff of the Acrobat's once-per-rest Reaction read AC +5 while
+// equipped. The converter now reads the sentence that states the bonus. This is
+// the REVIEWED list of its result: every item in every pack allowed an `ac` or
+// `save.*` effect, each read by hand ("while you wear…", "while holding…", "on
+// your person", "orbits your head", or no condition at all), and the ones kept
+// in prose. A dump upgrade that moves either list fails here and gets read again.
+{
+  const STANDING={
+    'Black Dragon Scale Mail':'ac+1','Blue Dragon Scale Mail':'ac+1','Brass Dragon Scale Mail':'ac+1',
+    'Bronze Dragon Scale Mail':'ac+1','Copper Dragon Scale Mail':'ac+1','Gold Dragon Scale Mail':'ac+1',
+    'Green Dragon Scale Mail':'ac+1','Red Dragon Scale Mail':'ac+1','Silver Dragon Scale Mail':'ac+1',
+    'White Dragon Scale Mail':'ac+1',                      /* "While wearing this armor, you gain a +1 bonus to AC" */
+    'Cloak of Protection':'ac+1 saves+1','Ring of Protection':'ac+1 saves+1',
+    'Glamoured Studded Leather':'ac+1','Ioun Stone, Protection':'ac+1',
+    'Scarab of Protection':'ac+1',                         /* its Defense; the charges are Preservation's */
+    'Shield of the Cavalier':'ac+2',                       /* on top of its armor line's shield +2 */
+    'Staff of Power':'ac+2 saves+2',
+    'Robe of Stars':'saves+1','Stone of Good Luck':'saves+1',
+  };
+  const CONDITIONAL=[
+    ['5e2024','Quarterstaff of the Acrobat','Reaction to twirl the weapon around you, gaining a +5 bonus to your Armor Class against the triggering attack'],
+    ['5e2024','Arrow-Catching Shield','+2 bonus to Armor Class against ranged attack rolls'],
+    ['5e2024','Bracers of Defense','+2 bonus to Armor Class if you are wearing no armor and using no Shield'],
+    ['5e2024','Rod of Alertness','While in that Bright Light, you and your allies gain a +1 bonus to Armor Class and saving throws'],
+    ['tashas','Teeth of Dahlver-Nar','[Table: Teeth of Dahlver-Nar]'],
+  ];
+  const SIX=['str','dex','con','int','wis','cha'];
+  const items=[];
+  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+    fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
+      (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[])
+        .forEach(it=>items.push({dir:d,where:d+'/'+f,it}));
+    }));
+  const summary=it=>{
+    const fx=(it.effects||[]).filter(e=>/^(ac|save\.)/.test(String(e&&e.target)));
+    const ac=fx.filter(e=>e.target==='ac'), sv=fx.filter(e=>e.target.startsWith('save.'));
+    const out=[];
+    if(ac.length)out.push(ac.map(e=>'ac+'+e.value).join(' '));
+    if(sv.length)out.push(sv.length===6&&SIX.every(a=>sv.some(e=>e.target==='save.'+a&&e.value===sv[0].value))
+      ?'saves+'+sv[0].value:'partial saves '+JSON.stringify(sv));
+    return out.join(' ');
+  };
+  const got={};
+  items.forEach(({where,it})=>{const s=summary(it);if(s)got[it.name]=s;});
+  const extra=Object.keys(got).filter(n=>STANDING[n]!==got[n]);
+  const missing=Object.keys(STANDING).filter(n=>got[n]!==STANDING[n]);
+  ck('#76 every AC or saving-throw effect in the packs is a reviewed standing bonus', extra.length===0,
+     extra.map(n=>n+': '+got[n]));
+  ck('#76 ...and every reviewed standing bonus still ships as one', missing.length===0,
+     missing.map(n=>n+': want '+STANDING[n]+', got '+(got[n]||'nothing')));
+  CONDITIONAL.forEach(([dir,name,needle])=>{
+    const e=(items.find(x=>x.dir===dir&&x.it.name===name)||{}).it;
+    ck('#76 '+name+' carries no standing effect', !!e&&(e.effects||[]).length===0, e&&e.effects);
+    ck('#76 ...and still states its bonus in its text', !!e&&(e.description||'').includes(needle),
+       e?(e.description||'').slice(0,120):'no item named '+name);
+  });
+}
+
 // ---------- subclassesFor: a supplement must not overwrite a 2024 subclass
 // The map is keyed by NAME because that is what character.classes[].subclass
 // stores. The 2024 PHB reprinted seven XGE/TCE subclasses, so a bare last-wins

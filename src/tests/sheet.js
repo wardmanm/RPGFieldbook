@@ -41,7 +41,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'combatGripHTML', 'moveCombatCard',
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
-  'finderQty', 'addLibraryItems', 'attackNumbers',
+  'finderQty', 'addLibraryItems', 'attackNumbers', 'recompute',
   'coinKeys',
   'RULE_CATS', 'reindexRules', 'recomputeDups',
 ]);
@@ -2183,6 +2183,62 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
      n.abilName === 'DEX' && n.toHit === 5 && n.dmgBonus === 3, n);
   X.character.features.push({id: 'arch', name: 'Archery', effects: [{target: 'attack.ranged', value: 2}], enabled: true});
   ck('#75 ...and a ranged-only effect still reaches it (Archery +2 → +7)', X.attackNumbers(row).toHit === 7, X.attackNumbers(row));
+  X.character = X.blankChar();
+}
+
+/* The numbers recompute() actually paints, read off the ids it writes. The
+   harness DOM swallows every write; this swaps in a recorder for the named ids
+   for one recompute() and hands back their text. */
+const painted = ids => {
+  const got = {}, real = ctx.document.getElementById;
+  const el = () => ({textContent: '', classList: {toggle: () => {}, add: () => {}, remove: () => {}, contains: () => false}});
+  ctx.document.getElementById = id => ids.includes(id) ? (got[id] = got[id] || el()) : real(id);
+  try { X.recompute(); } finally { ctx.document.getElementById = real; }
+  const o = {}; ids.forEach(i => { o[i] = got[i] ? String(got[i].textContent) : undefined; }); return o;
+};
+const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', dir, f), 'utf8')).items;
+
+/* ---- a bonus the book gives only in a moment does not raise AC (#76) ----
+   The SHIPPED items, added the way the item finder adds them. Quarterstaff of
+   the Acrobat's +5 is a Reaction against one attack, once per rest, and the
+   pack wrote it as a standing `ac` effect, so equipping the staff read AC +5 at
+   all times. The Arrow-Catching Shield's extra +2 is against ranged attacks
+   only; its ordinary +2 as a shield still counts. The Cloak of Protection is the
+   control: its +1 is standing and still applies. */
+{
+  const magic = shippedItems('5e2024', 'items-magic.json');
+  const def = name => magic.find(x => x.name === name);
+  const fresh = () => { const c = X.blankChar(); X.character = c; c.abilities.dex = 14; c.level = 1; return c; };  /* 10 + DEX 2 */
+  let c = fresh();
+  ck('#76 unarmoured AC is 10 + DEX 2 = 12', painted(['acDisp']).acDisp === '12', painted(['acDisp']));
+  X.addLibraryItems([def('Quarterstaff of the Acrobat')], null, null, 1);
+  const staff = c.inventory.find(i => i.name === 'Quarterstaff of the Acrobat');
+  ck('#76 the Quarterstaff of the Acrobat arrives equipped', !!staff && staff.equipped === true, staff && staff.equipped);
+  ck('#76 ...and leaves AC at 12, not 17', painted(['acDisp']).acDisp === '12', painted(['acDisp']));
+  ck('#76 ...its Reaction still in its description',
+     /Reaction to twirl the weapon around you, gaining a \+5 bonus to your Armor Class against the triggering attack/.test(staff.description || ''));
+  const row = c.attacks.find(a => a.name === 'Quarterstaff of the Acrobat');
+  ck('#76 ...and its own +2 still on its attack: STR 0 + PB 2 + 2 = +4', !!row && X.attackNumbers(row).toHit === 4, row && X.attackNumbers(row));
+  c = fresh();
+  X.addLibraryItems([def('Arrow-Catching Shield')], null, null, 1);
+  c.inventory[0].equipped = true;
+  ck('#76 the Arrow-Catching Shield adds its shield +2 only: 12 + 2 = 14', painted(['acDisp']).acDisp === '14', painted(['acDisp']));
+  c = fresh();
+  X.addLibraryItems([def('Bracers of Defense')], null, null, 1);
+  c.inventory[0].equipped = true;
+  ck('#76 Bracers of Defense leave AC at 12 (their +2 needs no armor and no shield, which the sheet does not test)',
+     painted(['acDisp']).acDisp === '12', painted(['acDisp']));
+  c = fresh();
+  X.addLibraryItems([def('Rod of Alertness')], null, null, 1);
+  c.inventory[0].equipped = true;
+  ck('#76 the Rod of Alertness adds nothing to AC or saves: its aura needs planting',
+     painted(['acDisp']).acDisp === '12' && painted(['save-dex'])['save-dex'] === '+2',
+     painted(['acDisp', 'save-dex']));
+  c = fresh();
+  X.addLibraryItems([def('Cloak of Protection')], null, null, 1);
+  c.inventory[0].equipped = true;
+  ck('#76 the control: a Cloak of Protection still gives +1 AC (13) and +1 to saves (DEX +3)',
+     painted(['acDisp']).acDisp === '13' && painted(['save-dex'])['save-dex'] === '+3', painted(['acDisp', 'save-dex']));
   X.character = X.blankChar();
 }
 

@@ -48,7 +48,13 @@ effects.
 
 **Magic armor.** The base comes from the armor line; the magic bonus must be an `ac` **effect** on
 the item (`{target:"ac", value:1}`), like a Ring of Protection or the Defense fighting style.
-Effects are numeric modifiers and never set a base.
+Effects are numeric modifiers and never set a base. An effect is on whenever its item is equipped,
+so a pack item carries one only for a bonus the book gives all the time (a Dragon Scale Mail's +1,
+the Shield of the Cavalier's extra +2). A momentary one stays in the description and never touches
+the number: Quarterstaff of the Acrobat's Reaction (+5 against one attack), the Arrow-Catching
+Shield's +2 against ranged attacks (its ordinary shield +2 still counts, from its armor line), the
+Bracers of Defense's +2 when unarmored, the Rod of Alertness's planted aura. See
+[Converter](../data/converter.md) for how the packs tell them apart.
 
 **The item form's Armor toggle.** Beside the Weapon one: Kind, Base AC and Max Dex (which follows the
 kind unless typed; blank = as the kind says, `none` or 0 = no Dex), or for a shield an AC bonus
@@ -70,6 +76,9 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 - **`dexCap` is three-valued**: `null` uncapped, `0` none, a number caps it. A falsy test collapses
   light into heavy.
 - **Dex is the final modifier**, including ability effects, so AC tracks a DEX-raising item.
+- **An `ac` effect is a standing bonus.** It applies whenever its item is equipped, with no way to
+  say "against this attack" or "while unarmored", so a bonus that holds only sometimes is prose
+  (#76). `rules-data.js` holds the reviewed list of every pack item allowed one.
 
 ## Traps
 
@@ -79,6 +88,11 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 - **A Buckler described as `AC +2` is not armor** to the parser: the shield branch keys off "shield"
   in the type or name, and `AC\s*(\d+)` does not match `+2`. It had no AC and no Equip control. The
   form's Shield kind is the fix. → L3092
+- **A Reaction that read as AC +5 (#76).** The packs wrote every 5e-tools `bonusAc` as an `ac`
+  effect, conditional or not, so equipping Quarterstaff of the Acrobat read AC 17 for AC 12, and
+  four other items (Arrow-Catching Shield, Bracers of Defense, Rod of Alertness, Tasha's Teeth of
+  Dahlver-Nar) added bonuses the book gives only in a moment. `armorAC()` and `recompute()` were
+  right; the data was not. An existing sheet gets the fix through the rules-update tool. → L4502
 - **Armor had empty `effects`, so it never showed Equip** and never touched AC, until
   `isEquippable()` learned to ask `itemArmor()`. → L239
 
@@ -89,12 +103,17 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 | Structured field or description when both exist | The field wins — explicit over prose, as `weapon` already behaves | — |
 | How a custom item becomes armor | An Armor toggle writing the structured field | Typing the description incantation: nothing in the UI said so |
 | What the shield kind shows | A bonus box instead of Base AC and Max Dex | Showing all three: two of them mean nothing for a shield |
+| A pack item's AC bonus that holds only sometimes (#76) | Prose in the description, no `ac` effect | An `ac` effect: on at all times while equipped, so a once-per-rest Reaction read as +5 AC |
 
 ## Open
 
 - **Nothing on the sheet sets `character.ac`.** The Armor Class box is a display that opens the
   breakdown; `armorAC()` honours a manual value only when a saved or imported character carries one.
   Unarmored Defense and similar need an `ac` effect instead.
+- **Bracers of Defense add nothing on their own.** Their +2 needs no armor and no shield, which
+  `armorAC()` already knows (`hasArmor`, `shield`), but an effect cannot be scoped to it, so it is
+  prose (#76); an unarmored wearer adds an `ac` +2 effect by hand. A scoped target like
+  `attack.ranged` would do it; owner's call.
 - **Shields stack**, one bonus per equipped shield; the rules allow one.
 - **A manual `character.ac` gets the shield bonus added**, which double-counts if the typed value
   already included it.
@@ -109,3 +128,4 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 - 2026-08-07 — Armor equips and drives AC: base + capped Dex + shields + `ac` effects, parsed from the description. → ledger L239
 - 2026-08-18 — The item form's Armor toggle writes a structured `armor` field; the form carries it across saves. → ledger L3092
 - 2026-08-18 — Weapons became equippable too; `isEquippable()` is effects, armor or a weapon. → ledger L3213
+- 2026-09-28 — A pack item's `ac` effect is a standing bonus only; five conditional ones (Quarterstaff of the Acrobat among them) stay in the description. → ledger L4502, #76

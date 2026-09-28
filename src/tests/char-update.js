@@ -17,7 +17,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'grantItemByName',
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag','runChoices',
   'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote',
-  'attackNumbers','addLibraryItems',
+  'attackNumbers','addLibraryItems','contributions','sumFx','armorAC',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -506,6 +506,46 @@ ck('R7 ...and a stamped one round-trips',
   X.applyUpdates(row?[row]:[]);
   ck('#75 an attack the player edited is left as they set it', ch.attacks.length===1&&ch.attacks[0].ability==='str',
      ch.attacks);
+  X.resetRules();
+}
+
+/* #76 — Quarterstaff of the Acrobat shipped its once-per-rest Reaction (+5 AC
+   against one attack) as a standing `ac` effect. The fixed pack carries no
+   effect; a sheet holds a COPY, so it keeps the +5 until the rules-update tool
+   rewrites it, never on load. The "new" entry is the shipped one, so this fails
+   until the pack is fixed; the "old" one is that entry with the effect it used
+   to carry. AC is read the way recompute() paints it: armorAC() + `ac` effects. */
+{
+  const shipped=JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','5e2024','items-magic.json'),'utf8'))
+    .items.find(x=>x.name==='Quarterstaff of the Acrobat');
+  const oldDef=Object.assign(JSON.parse(JSON.stringify(shipped)),{effects:[{target:'ac',value:5}]});
+  const acNow=()=>{const c=X.contributions();return X.armorAC(c).base+X.sumFx('ac',c);};
+  const oldSheet=()=>{
+    X.resetRules(); X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(oldDef))]},'5e.json');
+    const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.abilities.dex=14; ch.level=1;
+    X.character=ch; X.activeId=ch.id;
+    X.addLibraryItems(X.rules.items.slice(),null,null,1);           /* the item finder: equipped */
+    return ch;
+  };
+  const fix=()=>{ X.resetRules(); X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(shipped))]},'5e.json'); };
+  let ch=oldSheet(), st=ch.inventory[0];
+  ck('#76 an old sheet shows the bug: the staff equipped reads AC 17 (12 + 5)', st.equipped===true&&acNow()===17, acNow());
+  st.qty=1; st.fav=true; const atkId=ch.attacks[0].id;
+  fix();
+  let row=X.diffCharacter().rows.find(r=>r.name==='Quarterstaff of the Acrobat');
+  ck('#76 the fixed pack is offered as one changed row: effects, and nothing else',
+     !!row&&row.type==='changed'&&row.fields.join()==='effects', X.diffCharacter().rows.map(r=>r.name+':'+r.type+':'+r.fields));
+  ck('#76 ...ticked, since nobody edited the copy', !!row&&row.apply===true&&row.edited===false, row&&[row.apply,row.edited]);
+  X.applyUpdates(row?[row]:[]);
+  ck('#76 applying it removes the standing +5', Array.isArray(st.effects)&&st.effects.length===0&&acNow()===12, [st.effects,acNow()]);
+  ck('#76 ...keeps the weapon\'s own +2 and the player\'s numbers',
+     st.weapon.atkMisc===2&&st.weapon.dmgMisc===2&&st.equipped===true&&st.qty===1&&st.fav===true, st);
+  ck('#76 ...and the same attack row, still +4 to hit (STR 0 + PB 2 + 2)',
+     ch.attacks.length===1&&ch.attacks[0].id===atkId&&X.attackNumbers(ch.attacks[0]).toHit===4, ch.attacks);
+  ch=oldSheet();
+  const m=X.migrate(JSON.parse(JSON.stringify(ch)));
+  ck('#76 migrate() leaves the old effect on a saved copy', m.inventory[0].effects.length===1&&m.inventory[0].effects[0].value===5,
+     m.inventory[0].effects);
   X.resetRules();
 }
 

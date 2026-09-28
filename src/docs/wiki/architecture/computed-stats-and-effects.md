@@ -100,6 +100,11 @@ fixed `8`/`"d8"`).
 - **An effect is global to its target.** An equipped item's `attack` or `damage` effect reaches every
   attack row, spell rows included, so a bonus scoped to one weapon is not an effect: a weapon's own
   `+N` is its `atkMisc`/`dmgMisc`, and a bonus for bows or unarmed strikes stays prose (#74).
+- **An effect is always on while its source is live.** Nothing can say "against one attack", "once
+  per rest" or "while unarmored", so a bonus the book gives only in a moment is prose, not an effect:
+  Quarterstaff of the Acrobat's Reaction, the Arrow-Catching Shield's +2 against ranged attacks, the
+  Rod of Alertness's planted aura (#76). The packs read the book's sentence to decide; see
+  [Converter](../data/converter.md).
 - **Base values never have effects baked in.** A typed score, Max HP, AC or speed is the base, and
   effects layer on top at read time. That is what lets an effect come off again. It is also why the
   level-1 HP seed reads the bare CON score (see [Grants & provenance](grants-and-provenance.md)).
@@ -135,6 +140,7 @@ fixed `8`/`"d8"`).
 | How `uses.max` scales | A number, `byLevel`, or a `formula` re-resolved at render | — (L16) |
 | Where encumbrance applies | After the effects, outside the engine | As a speed effect: two outcomes replace speed and one is not numeric (code comment, `10-compute.js`) |
 | A bonus scoped to one weapon (#74) | The weapon's `atkMisc`/`dmgMisc`, or prose on an item with no weapon | An `attack`/`damage` effect: it reaches every row, and on a weapon it doubled the row's own `atkMisc` |
+| A bonus that holds only in a moment (#76) | Prose, like advantage and resistance | An effect: it is on whenever the source is live, so a once-per-rest Reaction read as +5 AC all day |
 
 ## Open
 
@@ -154,3 +160,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-01 — Two stat layouts over one set of ids. → ledger L106, #17
 - 2026-09-25 — Resource pools gain a die size resolved per level. → ledger L3676
 - 2026-09-28 — A weapon's bonus is not an effect: the packs' `+N` weapons no longer add to every attack while equipped. → ledger L4392, #74
+- 2026-09-28 — An effect is a standing bonus: the packs' conditional AC and saving-throw bonuses stay prose. → ledger L4502, #76
