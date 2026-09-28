@@ -9,8 +9,9 @@ page is what that file does not say: what must not move, and the traps that have
 
 **Code:** `main()`, `pick_2024_preferred()`, `pick_sources()`, `flatten()`, `table_ctx()`,
 `ref_ctx()`, `_register()`, `_cell_text()`, `_dice_text()`, `_cell_miss_warnings()`,
-`_class_tables()`, `convert_classes()`, `_skill_profs()`, `_multiclass()`, `_optfeat_choices()`,
-`convert_races()`,
+`_formula_text()`, `_attr_choose()`, `_full_stop()`, `statblock_ctx()`, `load_item_index()`,
+`_statblock_text()`, `_item_traits()`, `_entry_miss_warnings()`, `_class_tables()`, `convert_classes()`,
+`_skill_profs()`, `_multiclass()`, `_optfeat_choices()`, `convert_races()`,
 `_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in `scripts/bundle-rules.js`;
 `dataChangedSince()` in `scripts/release.js`; `mergeRules()` in `89-rules-merge.js`;
 `DATA_VERSIONS` in `30-version.js`; `RULE_CATS` in `88-settings.js` ·
@@ -69,6 +70,23 @@ Attack). A dict cell it cannot read comes back blank **and** is counted in `_CEL
 `flatten()` resolves and inlines it, with a seen-set so a feature cannot inline itself.
 `refOptionalfeature` nodes become a bullet naming the option; the options themselves reach the
 sheet through the pickers below.
+
+**Formulas, one-entry items and stat blocks are written out.** `flatten()` writes the book's
+centred formula lines (`abilityDc`, `abilityAttackMod`, `abilityGeneric`) through
+`_formula_text()`, worded as 5e-tools' classic renderer words them: "Spell save DC = 8 + your
+proficiency bonus + your Intelligence modifier", "Spell attack modifier = your proficiency bonus +
+your Intelligence modifier", and several abilities as "Strength or Dexterity modifier (your
+choice)" (`_attr_choose()`). `_full_stop()` ends each with a full stop, because a named subsection
+joins its blocks with spaces. A list item carrying one `entry` instead of `entries` reads exactly
+as its `entries` twin, "Name: text". A `statblock` embeds another entity by reference:
+`_statblock_text()` resolves an item one through the index `load_item_index()` builds from
+`items-base.json` and `items.json`. `all` and `supplement` set that index themselves;
+`statblock_ctx()` sets it in a test. `_item_traits()` then writes the item's stat line in the
+wording `convert_items()` gives a base weapon. The one statblock in the converted books is the 2024
+Soulknife's Psychic Blade. `image` and `gallery` are skipped on purpose. Any other node renders
+nothing **and** is counted in `_ENTRY_MISSES`, and so is a statblock that does not resolve (it keeps
+its name). `_entry_miss_warnings()` reports each type as a `WARNING` at the end of `all`,
+`supplement` and every single subcommand. No run on the v2.36.1 dump reports one today.
 
 **Option pickers.** `_optfeat_choices()` reads a class or subclass's `optionalfeatureProgression`
 (a running total per level, as a map or a 20-long list) and emits an `option` choice at every
@@ -130,8 +148,9 @@ has no `DATA_VERSIONS` entry.
   a dev-only script (the Humblewood extractor is the precedent).
 - **Never quiet.** A missing input warns; a supplement category with nothing in it writes no file
   and says so; a subclass that resolves no features is listed in a `WARNING`, and so is every
-  table cell `_cell_text()` could not read; a starting or multiclass skill entry `_skill_profs()`
-  cannot read is a `note:`. Every bug on this page was a silent skip first.
+  table cell `_cell_text()` could not read and every entry node `flatten()` could not render; a
+  starting or multiclass skill entry `_skill_profs()` cannot read is a `note:`. Every bug on this
+  page was a silent skip first.
 - **One skill reader.** Species, class starting skills and multiclass skills all go through
   `_skill_profs()`. A second parser at a call site is how the Bard lost its skills.
 - **Anchors only when a sink is collecting.** With no sink, a table is dropped with no anchor: an
@@ -171,7 +190,14 @@ has no `DATA_VERSIONS` entry.
 - **Dropped structure.** `flatten()` once discarded every table, then every `ref*Feature` node (579
   in the class files of the v2.36.1 dump, and the real reason Wild Magic Surge was missing), then
   every `refOptionalfeature` ("…presented in alphabetical order." with nothing
-  after). Guard: `converter.py` covers each node type.
+  after). Then, until #68, four more types, 28 nodes across the three packs: `abilityDc` and
+  `abilityAttackMod` (the Artificer's spell save DC; "your Arcane Shot save DC is calculated as
+  follows:" and nothing), list items with a singular `entry` (Path of the Beast's Bite, Claws and
+  Tail; Cackle Fever's symptoms), and `statblock` (the Soulknife's "The magic blade has the
+  following traits:" and nothing). Each fix was one node type at a time, because a node with no
+  branch vanished without a word. Guard: `converter.py` covers each node type with shapes copied
+  from the dump, `rules-data.js` pins one text per shape in the shipped packs, and an unknown type
+  is now a `WARNING`.
 - **Blank class columns, and whole tables gone.** `_cell_text()` once read only strings, numbers,
   `roll` and `entries`, and returned `''` for anything else without a word. Barbarian's Rage Damage
   and Monk's Martial Arts and Unarmored Movement shipped blank from the first table release until
@@ -218,6 +244,10 @@ has no `DATA_VERSIONS` entry.
 | How a bundle dedupes | Exactly as `mergeRules()` does, and every duplicate printed | Silent dedupe: the `Net` duplicate would vanish unreported; the promise is that a bundle equals its files |
 | How a skill-proficiency list is read | One reader, `_skill_profs()`, for species, a class's starting skills and its multiclass skills; `{"any": N}` is a choice of N from all 18 skills (#67) | A loop per call site: the class path's own read only `choose` and silently dropped the Bard's "any 3", while the species reader had understood it all along |
 | Where a class's multiclass proficiencies come from | 5e-tools `multiclassing`, carried as an optional `multiclass` block; `{}` kept, absent when the source has none | A table in the app: homebrew and Humblewood classes would get a silent guess, and the rules text belongs in the pack (#66) |
+| An entry node `flatten()` cannot render | Nothing rendered, counted, and a `WARNING` at the end of every run (#68) | Silently nothing: how four node types hid until #68. Failing the run: as for cells, a newer dump would yield no pack at all over one node |
+| How formula lines are worded | 5e-tools' "classic" wording: "8 + your proficiency bonus + your Intelligence modifier" (#68) | Its other wording, "8 + Intelligence modifier + Proficiency Bonus": in 5e-tools a reader's style preference, not a printing. Every source using these nodes in the converted files (PHB, XGE, TCE, UA) prints the classic one; no XPHB entry uses them |
+| Whether a formula line ends with a full stop | Yes, though the book prints none (#68) | As printed: a named subsection joins its blocks with spaces, so the Artificer's two formulas ran together ("…Intelligence modifier Spell attack modifier = …") |
+| A `statblock`, an entity embedded by reference | Resolved from the dump's item files and written as the item's stat line (#68) | Its name alone: "…has the following traits: Psychic Blade." reads like a sentence that lost its content. Skipping it: the original bug |
 
 ## Open
 
@@ -226,10 +256,18 @@ has no `DATA_VERSIONS` entry.
   dump: the XPHB groups are Eldritch Knight's and Arcane Trickster's spell counts, which it would
   skip, and Psi Warrior's and Soulknife's die size and number, which their prose "Energy Dice"
   tables already carry. It would miss a new one.
-- **`abilityDc` and `abilityAttackMod` prose nodes are dropped** by `flatten()`: Xanathar's "your
-  Arcane Shot save DC is calculated as follows:" ends there, and the core pack's Artificer (its TCE
-  printing) loses its spell save DC and attack modifier formulas. Seen while scanning for #64; they
-  are prose, not table cells.
+- **Magic weapons print property abbreviations, and a finesse one attacks with Strength.**
+  `convert_items()` reads property names from the file it converts, and only `items-base.json` has
+  the `itemProperty` table. So 28 magic weapons (20 core, 5 Tasha's, 3 Xanathar's) read
+  "Properties: F, L, T" (the Dagger of Venom), and, "Finesse" never being in the list, get
+  `weapon.ability: "str"` where the base weapon has `"finesse"`. The shipped Psychic Blade item
+  prints its `{uid, note}` mastery as "{'uid': 'Vex". The Soulknife's own text is right: its
+  statblock is rendered by `_item_traits()`, which has both files. Seen during #68.
+- **Table `footnotes` are dropped** by `_norm_table()`: 17 Xanathar's downtime tables whose rows
+  carry a `*` pointing at "Might involve a rival" or "Halved for a consumable item".
+- **Only item statblocks resolve.** Another tag (creature, hazard…) keeps its name and warns. None
+  reaches the converter in the v2.36.1 dump, and a single subcommand has no item index at all, so
+  `classes` alone warns once for the Soulknife.
 - **A cell carrying both `roll` and `entry` prints only the roll.** Only the DMG, BMT and LLK decks
   (Deck of Many Things, Deck of Illusions…) use it, and no pack ships those printings; the 2024
   decks have a different shape.
@@ -258,3 +296,4 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-28 — Class tables keep their `dice`, `bonus` and `bonusSpeed` cells; Bard and Rogue Features tables (105 → 107); an unreadable cell is a `WARNING`. → ledger L3761, #64
 - 2026-09-28 — `_multiclass()`: classes carry an optional `multiclass` block; `data/5e2024/` moved by that key alone. → ledger L3886, #66
 - 2026-09-28 — `_skill_profs()`: one skill reader for species, starting and multiclass skills; the Bard's "any 3" is a level-1 choice of 3 from 18, the one hunk `data/5e2024/` moved by. → ledger L3985, #67
+- 2026-09-28 — `flatten()` writes formula lines, one-`entry` list items and item statblocks, which it had dropped (28 nodes across three packs); an unknown node type is a `WARNING`. → ledger L4025, #68

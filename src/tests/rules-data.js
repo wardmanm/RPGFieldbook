@@ -412,6 +412,37 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
   });
 }
 
+// ---------- shipped data: text convert.py's flatten() used to drop (#68)
+// A 5e-tools node type flatten() had no branch for vanished without a word:
+// "your Arcane Shot save DC is calculated as follows:" and then nothing. The
+// converter fixtures prove the renderer; these prove the packs players load
+// were regenerated with it, one pin per dropped shape.
+{
+  const pins=[
+    ['5e2024','classes.json','classes','Artificer','Spell save DC = 8 + your proficiency bonus + your Intelligence modifier.'],
+    ['5e2024','classes.json','classes','Artificer','Spell attack modifier = your proficiency bonus + your Intelligence modifier.'],
+    ['5e2024','classes.json','classes','Mystic','Discipline save DC = 8 + your proficiency bonus + your Intelligence modifier.'],
+    ['5e2024','classes.json','classes','Rogue','has the following traits: Psychic Blade: Simple Melee Weapon · Damage 1d6 psychic'],
+    ['5e2024','conditions.json','keywords','Cackle Fever','Fever: The creature gains 1 Exhaustion level'],
+    ['5e2024','conditions.json','keywords','Sewer Plague','Restlessness: While the creature has any Exhaustion levels'],
+    ['xanathars','subclasses.json','subclasses','Arcane Archer','Arcane Shot save DC = 8 + your proficiency bonus + your Intelligence modifier.'],
+    ['tashas','subclasses.json','subclasses','Path of the Beast','Bite: Your mouth transforms'],
+    ['tashas','subclasses.json','subclasses','College of Creation','Saving Throw: Immediately after'],
+    ['tashas','subclasses.json','subclasses','Circle of Stars','Weal (even): Whenever a creature'],
+    ['tashas','glossary.json','keywords','Customizing Your Origin','Languages: You can speak, read, and write Common'],
+    ['tashas','items-magic.json','items',"Luba's Tarokka of Souls",'Woe: The creature has disadvantage'],
+  ];
+  const cache={};
+  pins.forEach(([dir,f,cat,name,needle])=>{
+    const k=dir+'/'+f;
+    cache[k]=cache[k]||JSON.parse(fs.readFileSync(path.join('data',dir,f),'utf8'))[cat]||[];
+    const e=cache[k].find(x=>x.name===name||x.term===name);
+    // JSON.stringify: the text sits at different depths per category
+    ck(k+' '+name+' carries "'+needle.slice(0,40)+'…"', !!e&&JSON.stringify(e).includes(needle),
+       e?'not found in its text':'no entry named '+name);
+  });
+}
+
 // ---------- subclassesFor: a supplement must not overwrite a 2024 subclass
 // The map is keyed by NAME because that is what character.classes[].subclass
 // stores. The 2024 PHB reprinted seven XGE/TCE subclasses, so a bare last-wins

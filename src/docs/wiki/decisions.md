@@ -336,6 +336,10 @@ When a page gains a Decisions row, add its line here under that page.
 - **How a bundle dedupes** — Exactly as `mergeRules()` does, and every duplicate printed
 - **How a skill-proficiency list is read** — One reader, `_skill_profs()`, for species, a class's starting skills and its multiclass skills; `{"any": N}` is a choice of N from all 18 skills (#67)
 - **Where a class's multiclass proficiencies come from** — 5e-tools `multiclassing`, carried as an optional `multiclass` block; `{}` kept, absent when the source has none
+- **An entry node `flatten()` cannot render** — Nothing rendered, counted, and a `WARNING` at the end of every run (#68)
+- **How formula lines are worded** — 5e-tools' "classic" wording, "8 + your proficiency bonus + your Intelligence modifier" (#68)
+- **Whether a formula line ends with a full stop** — Yes, though the book prints none (#68)
+- **A `statblock`, an entity embedded by reference** — Resolved from the dump's item files and written as the item's stat line (#68)
 
 ### [Supplements](data/supplements.md)
 

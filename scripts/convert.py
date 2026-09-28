@@ -172,6 +172,133 @@ def _cell_miss_warnings(warn):
     for typ, n in sorted(_CELL_MISSES.items()):
         warn('%d table cell(s) of type %r rendered blank — _cell_text() cannot read them' % (n, typ))
 
+# Entry nodes flatten() could not render, by type. It used to fall through any
+# node it had no branch for without a word, which is how the Arcane Shot and
+# Artificer save-DC formulas, the Path of the Beast's Bite, Claws and Tail, and
+# the Soulknife's Psychic Blade traits all shipped missing (#68).
+_ENTRY_MISSES = collections.Counter()
+
+def _entry_miss_warnings(warn):
+    for typ, n in sorted(_ENTRY_MISSES.items()):
+        warn('%d entry node(s) of type %r missing from the rules text — flatten() could not render them'
+             % (n, typ))
+
+def _full_stop(s):
+    """End a display line as a sentence. flatten() joins a named subsection's
+    blocks with spaces, so the book's stand-alone formula line would otherwise
+    run into the next one: '…Intelligence modifier Spell attack modifier = …'."""
+    s = s.rstrip()
+    return s if not s or s[-1] in '.!?' else s + '.'
+
+def _attr_choose(attrs):
+    """5e-tools' Parser.attrChooseToFull: one ability reads 'Intelligence
+    modifier', several 'Strength or Dexterity modifier (your choice)'. The 2024
+    book's generic caster, 'spellcasting', reads 'spellcasting ability modifier'."""
+    full = [ABIL_FULL.get(str(a).strip(), str(a).strip()) for a in attrs]
+    if len(full) == 1:
+        return '%s%s modifier' % (full[0], ' ability' if str(attrs[0]).strip() == 'spellcasting' else '')
+    return '%s modifier (your choice)' % ' or '.join(full)
+
+def _formula_text(node):
+    """abilityDc / abilityAttackMod / abilityGeneric: the book's centred formula
+    lines ("Spell save DC = 8 + your proficiency bonus + your Intelligence
+    modifier"). Worded as 5e-tools' 'classic' style renders them, which is how
+    every source the converter meets them in (PHB, XGE, TCE, UA) prints them;
+    5e-tools' other wording is a reader preference, not a printing."""
+    t = node.get('type')
+    name = strip_tags(str(node.get('name') or ''))
+    attrs = node.get('attributes') or []
+    s = ''
+    if t == 'abilityGeneric':
+        s = strip_tags(str(node.get('text') or ''))
+        if attrs:
+            s = (s + ' ' + _attr_choose(attrs)).strip()
+        if name and s:
+            s = '%s = %s' % (name, s)
+    elif name and attrs:
+        if t == 'abilityDc':
+            s = '%s save DC = 8 + your proficiency bonus + your %s' % (name, _attr_choose(attrs))
+        else:
+            s = '%s attack modifier = your proficiency bonus + your %s' % (name, _attr_choose(attrs))
+    if not s:
+        _ENTRY_MISSES[str(t)] += 1      # a shape we cannot word — say so
+    return _full_stop(s)
+
+# ---------------------------------------------------------------- statblocks
+# {"type":"statblock","tag":"item","name":…,"source":…} embeds another entity
+# by reference; 5e-tools loads and renders it in place. The 2024 Soulknife's
+# "The magic blade has the following traits:" is followed by nothing else, so
+# dropping the node dropped the Psychic Blade's damage, properties and mastery.
+_SB_INDEX = None   # (items by (name, source), property names by abbreviation)
+
+@contextlib.contextmanager
+def statblock_ctx(index):
+    global _SB_INDEX
+    prev = _SB_INDEX
+    _SB_INDEX = index
+    try:
+        yield
+    finally:
+        _SB_INDEX = prev
+
+def load_item_index(*paths):
+    """Items from 5e-tools item files (items-base.json, items.json), keyed by
+    (lower-case name, SOURCE), plus weapon property names by abbreviation."""
+    items, props = {}, {}
+    for p in paths:
+        if not p:
+            continue
+        d = json.load(open(p, encoding='utf-8'))
+        for e in d.get('itemProperty', []):
+            ab = e.get('abbreviation'); ent = e.get('entries') or [{}]
+            nm = ent[0].get('name') if isinstance(ent[0], dict) else None
+            if ab and nm: props[ab] = nm
+        for it in (d.get('baseitem') or []) + (d.get('item') or []):
+            if isinstance(it, dict) and it.get('name'):
+                items[(str(it['name']).lower(), str(it.get('source') or '').upper())] = it
+    return items, props
+
+def _item_traits(it, props):
+    """An embedded item's stat line, worded the way convert_items() words a base
+    weapon ('Damage 1d4 piercing · Range 20/60 ft · Properties: … · Mastery: …')
+    and headed by its type, then its own prose if it has any."""
+    tcode = _abbr(it.get('type', ''))
+    bits = []
+    if it.get('weapon') or it.get('dmg1'):
+        wc = str(it.get('weaponCategory') or '').capitalize()
+        kind = {'M': 'Melee Weapon', 'R': 'Ranged Weapon'}.get(tcode, '')
+        bits.append((wc + ' ' + (kind or 'Weapon')).strip())
+        if it.get('dmg1'):
+            seg = 'Damage %s %s' % (it['dmg1'], _DMG.get(it.get('dmgType', ''), it.get('dmgType', '')))
+            if it.get('dmg2'): seg += ' (Versatile %s)' % it['dmg2']
+            bits.append(seg.strip())
+        if it.get('range'): bits.append('Range %s ft' % it['range'])
+        pr = [props.get(_abbr(p), _abbr(p)) for p in (it.get('property') or [])]
+        if pr: bits.append('Properties: ' + ', '.join(pr))
+        ms = []
+        for m in it.get('mastery') or []:
+            uid, note = (m.get('uid'), m.get('note')) if isinstance(m, dict) else (m, None)
+            ms.append(_abbr(uid) + (' (%s)' % strip_tags(note) if note else ''))
+        if ms: bits.append('Mastery: ' + ', '.join(ms))
+    elif _ITYPES.get(tcode):
+        bits.append(_ITYPES[tcode])
+    line = ' · '.join(bits)
+    prose = flatten(it.get('entries') or [])
+    return (_full_stop(line) + ' ' + prose) if line and prose else (line or prose)
+
+def _statblock_text(node):
+    """An item statblock resolves through the index; anything else, or an item
+    the index lacks, keeps its name and is reported at the end of the run."""
+    name = strip_tags(str(node.get('displayName') or node.get('name') or ''))
+    it = None
+    if node.get('tag') == 'item' and _SB_INDEX:
+        it = _SB_INDEX[0].get((str(node.get('name') or '').lower(), str(node.get('source') or '').upper()))
+    if it is None:
+        _ENTRY_MISSES['statblock'] += 1
+        return _full_stop(name)
+    traits = _item_traits(it, _SB_INDEX[1])
+    return _full_stop('%s: %s' % (name, traits) if traits else name)
+
 def _align(style):
     s = str(style or '')
     if 'text-center' in s:
@@ -252,7 +379,9 @@ def _norm_table(node, name=None, owner=None, kind=None):
 def flatten(entries):
     """Flatten a 5e-tools 'entries' tree into readable plain text.
     Named subsections render as 'Name: text'; lists as bullets; tables are
-    lifted into the active table sink and replaced by a "[Table: Name]" anchor."""
+    lifted into the active table sink and replaced by a "[Table: Name]" anchor.
+    A node type with no branch here renders nothing and is counted in
+    _ENTRY_MISSES, which the run reports as a WARNING."""
     lines = []
     def walk(node):
         if isinstance(node, str):
@@ -288,15 +417,27 @@ def flatten(entries):
                 nm = strip_tags(str(node.get('optionalfeature') or '').split('|')[0])
                 if nm:
                     lines.append('• ' + nm)
+            elif t in ('abilityDc', 'abilityAttackMod', 'abilityGeneric'):
+                lines.append(_formula_text(node))
+            elif t == 'statblock':
+                lines.append(_statblock_text(node))
             elif t in ('image', 'gallery'):
-                pass
-            elif t == 'entries' or 'entries' in node:
+                pass                    # pictures: no rules text to keep
+            elif t == 'entries' or 'entries' in node or 'entry' in node:
+                # a list item may carry one `entry` in place of `entries`
+                # (Cackle Fever's symptoms, Path of the Beast's Bite, Claws and
+                # Tail) and reads exactly the same
+                ents = node['entries'] if 'entries' in node else ([node['entry']] if 'entry' in node else [])
                 name = node.get('name')
                 if name:
-                    sub = [strip_tags(x) if isinstance(x, str) else flatten([x]) for x in node.get('entries', [])]
+                    sub = [strip_tags(x) if isinstance(x, str) else flatten([x]) for x in ents]
                     lines.append(strip_tags(name) + ': ' + ' '.join(s for s in sub if s))
                 else:
-                    walk(node.get('entries', []))
+                    walk(ents)
+            else:
+                _ENTRY_MISSES[str(t)] += 1
+        elif node is not None:
+            _ENTRY_MISSES['(%s)' % type(node).__name__] += 1
     walk(entries)
     return '\n'.join(l for l in lines if l)
 
@@ -1849,7 +1990,9 @@ def _run_supplement(a):
             print('  using overlay: %s' % cand); ov = cand; break
     overlay = load_overlay(ov)
 
-    global _RESERVED, _SUFFIX
+    global _RESERVED, _SUFFIX, _SB_INDEX
+    # items an entry embeds as a statblock resolve against the dump's item files
+    _SB_INDEX = load_item_index(*(_find_in(d, 'items-base.json')[:1] + _find_in(d, 'items.json')[:1]))
     if a.avoid_table_names:
         try:
             other = json.load(open(a.avoid_table_names, encoding='utf-8')).get('tables') or []
@@ -1923,6 +2066,7 @@ def _run_supplement(a):
 
     _write_tables(tbls, os.path.join(outdir, 'tables.json'), book=bk)
     _cell_miss_warnings(warn)
+    _entry_miss_warnings(warn)
     if problems:
         print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
         for p in problems:
@@ -2011,6 +2155,9 @@ def main():
         cres = load_class_resources(helper(a.resources, 'class-resources.json', 'class resources') or '')
 
         tbls = []       # every converter lifts its tables into this one pack
+        # items an entry embeds as a statblock (the Soulknife's Psychic Blade)
+        global _SB_INDEX
+        _SB_INDEX = load_item_index(*(find('items-base*.json')[:1] + find('items.json')[:1]))
         cond = need('conditions', '*condition*.json', 'conditionsdiseases.json')
         if cond: _write(convert_conditions(cond[0], tables=tbls), os.path.join(outdir, 'conditions.json'))
         gloss = need('glossary', '*variantrule*.json', 'variantrules.json')
@@ -2045,6 +2192,7 @@ def main():
         if xphb: _write(_pack(None, 'features', _optfeat_features(xphb, tables=tbls, overlay=overlay), stem='features', version=1), os.path.join(outdir, 'features.json'))
         _write_tables(tbls, os.path.join(outdir, 'tables.json'))
         _cell_miss_warnings(warn)
+        _entry_miss_warnings(warn)
         if problems:
             print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
             for p in problems:
@@ -2079,6 +2227,8 @@ def main():
     if a.tables:
         _write_tables(tbls, a.tables)
         _cell_miss_warnings(lambda msg: print('  WARNING: ' + msg))
+    # prose is flattened with or without a tables sink, so this one always runs
+    _entry_miss_warnings(lambda msg: print('  WARNING: ' + msg))
 
 if __name__ == '__main__':
     sys.exit(main() or 0)

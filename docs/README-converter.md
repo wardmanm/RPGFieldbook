@@ -144,6 +144,15 @@ inlined; before, they were dropped along with the whole referenced feature. This
 lose the **Wild Magic Surge** table — three later Sorcerer features cited a table that had never
 made it into the data.
 
+**Formulas, list items and stat blocks.** Three more kinds of entry carry text the book prints,
+and all three are written into the description: the formula lines ("Spell save DC = 8 + your
+proficiency bonus + your Intelligence modifier"), list items with a single `entry` (Cackle Fever's
+symptoms, Path of the Beast's Bite, Claws and Tail), and `statblock` entries that embed an item by
+reference (the Soulknife's Psychic Blade). A stat block is looked up in `items-base.json` and
+`items.json`, which `all` and `supplement` find themselves; a single subcommand has neither, so it
+keeps just the item's name and warns. Any kind of entry the converter does not know is reported
+as a `WARNING` at the end of the run, rather than dropped without a word.
+
 ## The overlay (`overlay.json`)
 5e-tools stores mechanical bonuses (e.g. "Archery gives +2 to ranged attacks") only as prose.
 The overlay adds the machine-readable effects the sheet applies automatically. It's keyed by
