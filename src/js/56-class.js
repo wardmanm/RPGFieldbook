@@ -199,7 +199,7 @@ function doLevelUp(){
     runChoices(entry.name,[hp].concat(res.choices),res.notes);
   };
   if(character.classes.length===1){proceed(0);return;}
-  openModal("Level up — which class?",character.classes.map((c,i)=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvlclass="${i}">${esc(c.name)} ${num(c.level)} → ${num(c.level)+1}</button>`).join("")+`<div class="m-actions"><button class="tbtn" id="luCancel">Cancel</button></div>`);
+  openModal("Level up — which class?",character.classes.map((c,i)=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvlclass="${esc(i)}">${esc(c.name)} ${num(c.level)} → ${num(c.level)+1}</button>`).join("")+`<div class="m-actions"><button class="tbtn" id="luCancel">Cancel</button></div>`);
   document.getElementById("luCancel").addEventListener("click",closeModal);
   document.querySelectorAll("[data-lvlclass]").forEach(b=>b.addEventListener("click",()=>{const i=num(b.dataset.lvlclass);closeModal();proceed(i);}));
 }
@@ -216,7 +216,7 @@ function doLevelDown(){
   const eligible=character.classes.map((c,i)=>({c,i})).filter(o=>num(o.c.level)>1);
   if(!eligible.length){alert("All classes are at level 1. To remove one, use the ✕ on the class.");return;}
   if(eligible.length===1){proceed(eligible[0].i);return;}
-  openModal("Level down — which class?",eligible.map(o=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvldown="${o.i}">${esc(o.c.name)} ${num(o.c.level)} → ${num(o.c.level)-1}</button>`).join("")+`<p class="hint">This only reduces the class's level. Traits, proficiencies, and choices you've already gained are kept.</p><div class="m-actions"><button class="tbtn" id="ldCancel">Cancel</button></div>`);
+  openModal("Level down — which class?",eligible.map(o=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvldown="${esc(o.i)}">${esc(o.c.name)} ${num(o.c.level)} → ${num(o.c.level)-1}</button>`).join("")+`<p class="hint">This only reduces the class's level. Traits, proficiencies, and choices you've already gained are kept.</p><div class="m-actions"><button class="tbtn" id="ldCancel">Cancel</button></div>`);
   document.getElementById("ldCancel").addEventListener("click",closeModal);
   document.querySelectorAll("[data-lvldown]").forEach(b=>b.addEventListener("click",()=>{const i=num(b.dataset.lvldown);closeModal();proceed(i);}));
 }

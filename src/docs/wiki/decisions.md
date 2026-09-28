@@ -90,6 +90,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **What a note preview can contain** — Phrasing markup, block markers represented, chips unwrapped
 - **Markdown links** — Not supported
 - **Extending the Gadgeteer's italic fix to every Humblewood extract** — Only the positional tagline rule
+- **Which attribute values are escaped** — All of them, checked mechanically
+- **Which image sources load** — data: URLs only, any media type
+- **How the guard finds attribute values** — A tokenizer over `src/js`
 
 ## Features
 
@@ -260,6 +263,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **The pill's element** — A `<button>`
 - **Where the changelog lives** — Embedded in `30-version.js`, keeping the single-file offline design; `docs/CHANGELOG.md` is generated from it so the two cannot drift
 - **Where icon credits live** — In Settings
+- **Where the Download link may point** — A `https://github.com/` page from the response, else the releases page
 
 ## UI
 

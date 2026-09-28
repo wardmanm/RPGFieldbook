@@ -112,7 +112,7 @@ function combatToggleText(k,on){
 }
 function combatToggleHTML(k,on){
   const t=combatToggleText(k,on);
-  return `<button class="cvbtn${on?" on":""}" data-combatbtn="${esc(k)}" aria-pressed="${on?"true":"false"}" aria-label="${esc(t.label)}" title="${t.title}">`+
+  return `<button class="cvbtn${on?" on":""}" data-combatbtn="${esc(k)}" aria-pressed="${on?"true":"false"}" aria-label="${esc(t.label)}" title="${esc(t.title)}">`+
     iconSVG("ui","Combat","cvicon")+`</button>`;
 }
 /* A click repaints the one button in place. Replacing it (outerHTML) would drop

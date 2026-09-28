@@ -53,7 +53,7 @@ function openAddRace(){
     <div class="m-actions"><button class="tbtn" id="rCancel">Cancel</button><button class="tbtn primary" id="rAdd">Add</button></div>`);
   const sel=document.getElementById("raceSel"),prev=document.getElementById("racePrev"),subWrap=document.getElementById("subWrap"),subSel=document.getElementById("subSel"),abilBox=document.getElementById("raceAbil");
   function raceAbilCfg(){const d=sel&&sel.value?findRaceDef(sel.value):null;if(!d)return null;const sub=(d.subraces||[]).find(s=>s.name===(subSel&&subSel.value));return (sub&&sub.abilityChoice)||d.abilityChoice||null;}
-  function abilOpts(cfg){const elig=(cfg&&cfg.eligible&&cfg.eligible.length)?cfg.eligible:ABIL.map(([k])=>k);return elig.map(k=>`<option value="${k}">${k.toUpperCase()}</option>`).join("");}
+  function abilOpts(cfg){const elig=(cfg&&cfg.eligible&&cfg.eligible.length)?cfg.eligible:ABIL.map(([k])=>k);return elig.map(k=>`<option value="${esc(k)}">${esc(String(k).toUpperCase())}</option>`).join("");}
   function drawRaceAbil(){
     if(!abilBox)return;const cfg=raceAbilCfg();
     if(!cfg){abilBox.innerHTML="";return;}
@@ -136,7 +136,7 @@ function openRaceInfo(name){
   const cur=character.race&&character.race.subrace;
   const sect=(obj)=>{
     let s="";
-    if(obj.abilityScores)s+=`<p><b>Ability increase:</b> ${Object.entries(obj.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", ")}</p>`;
+    if(obj.abilityScores)s+=`<p><b>Ability increase:</b> ${esc(Object.entries(obj.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", "))}</p>`;
     if(obj.size)s+=`<p><b>Size:</b> ${esc(sizeLabel(obj.size))}</p>`;
     if(obj.speed)s+=`<p><b>Speed:</b> ${esc(obj.speed)}</p>`;
     if(obj.proficiencies)s+=`<p><b>Proficiencies:</b> ${esc(obj.proficiencies)}</p>`;

@@ -72,7 +72,7 @@ function highlight(text){
     const re=new RegExp("\\b("+pat+")\\b","gi");
     escd=escd.replace(re,m=>{
       const g=allGlossary().find(x=>x.term.toLowerCase()===m.toLowerCase().replace(/&amp;/g,"&"));
-      return `<span class="kw" data-gid="${g?g.id:""}" role="button" tabindex="0">${m}</span>`;
+      return `<span class="kw" data-gid="${esc(g?g.id:"")}" role="button" tabindex="0">${m}</span>`;
     });
   }
   if(!tbls.length)return escd;
@@ -117,7 +117,7 @@ function renderRT(key){
   const toggle=document.querySelector(`[data-edit="${key}"] span`);
   if(editing[key]){
     if(toggle)toggle.textContent="Done";
-    host.innerHTML=`<textarea data-rt="${key}">${esc(val)}</textarea>`;
+    host.innerHTML=`<textarea data-rt="${esc(key)}">${esc(val)}</textarea>`;
     const ta=host.querySelector("textarea");ta.focus();
     ta.addEventListener("input",()=>{character[key]=ta.value;scheduleSave()});
   }else{

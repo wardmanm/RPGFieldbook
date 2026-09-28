@@ -130,7 +130,7 @@ function noteHTML(text){
     if(!l.trim()){i++;continue;}
     if(isHr(l)){out.push(`<hr class="n-hr">`);i++;continue;}   /* before bullets: "* * *" is a rule */
     const h=isH(l);
-    if(h){const lv=h[1].length;out.push(`<div class="n-h n-h${lv}">${noteInline(h[2])}</div>`);i++;continue;}
+    if(h){const lv=h[1].length;out.push(`<div class="n-h n-h${esc(lv)}">${noteInline(h[2])}</div>`);i++;continue;}
     if(isUl(l)){
       const items=[];
       while(i<lines.length&&isUl(lines[i])&&!isHr(lines[i])){items.push(lines[i].replace(/^ {0,3}[-*+] +/,""));i++;}
@@ -140,7 +140,7 @@ function noteHTML(text){
     if(o){
       const start=parseInt(o[1],10)||1, items=[];
       while(i<lines.length&&isOl(lines[i])){items.push(lines[i].replace(/^ {0,3}\d{1,9}[.)] +/,""));i++;}
-      out.push(`<ol class="n-ol"${start!==1?` start="${start}"`:""}>`+items.map(t=>`<li>${noteInline(t)}</li>`).join("")+`</ol>`);continue;
+      out.push(`<ol class="n-ol"${start!==1?` start="${esc(start)}"`:""}>`+items.map(t=>`<li>${noteInline(t)}</li>`).join("")+`</ol>`);continue;
     }
     if(isQ(l)){
       const ls=[];
@@ -216,7 +216,7 @@ function notePreview(text,max){
 /* ================= the icon on each section heading ================= */
 function noteBtnHTML(def){
   const has=hasNote(def.k), t=noteTitle(def);
-  return `<button class="notebtn${has?" on":""}" data-notebtn="${def.k}" aria-label="${has?"Edit note":"Add a note"} — ${esc(t)}" title="${has?"Edit note":"Add a note"}">`+
+  return `<button class="notebtn${has?" on":""}" data-notebtn="${esc(def.k)}" aria-label="${has?"Edit note":"Add a note"} — ${esc(t)}" title="${has?"Edit note":"Add a note"}">`+
     `<svg class="noteicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>`+
     (has?`<span class="n-pop">${notePreview(noteText(def.k))}</span>`:"")+
     `</button>`;
@@ -246,10 +246,10 @@ function toggleNoteGroup(tab){
 function noteEntryHTML(def){
   const n=getNote(def.k), when=noteWhen(n);
   return `<div class="item"><div class="top">`+
-    `<button class="linkbtn n-jump" data-notejump="${def.k}">${esc(noteTitle(def))}</button>`+
+    `<button class="linkbtn n-jump" data-notejump="${esc(def.k)}">${esc(noteTitle(def))}</button>`+
     `<span style="flex:1"></span>`+
     (when?`<span class="n-when">${esc(when)}</span>`:"")+
-    `<button class="icon" data-noteedit="${def.k}" aria-label="Edit note"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`+
+    `<button class="icon" data-noteedit="${esc(def.k)}" aria-label="Edit note"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`+
     `</div><div class="n-body">${noteHTML(noteText(def.k))}</div></div>`;
 }
 /* Pure, so the group order, counts, collapse state and empty state are all
@@ -263,10 +263,10 @@ function notesHTML(){
     if(!defs.length)return;
     any=true;
     const open=noteGroupOpen(tab);
-    html+=`<div class="fgroup"><div class="fghead" data-notegroup="${tab}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
+    html+=`<div class="fgroup"><div class="fghead" data-notegroup="${esc(tab)}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
       `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`+
       `<span class="fgname">${esc(NOTE_TABS[tab]||tab)}</span><span class="cnt">(${defs.length})</span></div>`+
-      `<div class="notesec-body" data-notegroupbody="${tab}"${open?"":` style="display:none"`}>`+
+      `<div class="notesec-body" data-notegroupbody="${esc(tab)}"${open?"":` style="display:none"`}>`+
       defs.map(noteEntryHTML).join("")+`</div></div>`;
   });
   return any?html:`<div class="empty">No notes yet. Tap the note icon beside any section heading to jot something down — it will show up here.</div>`;

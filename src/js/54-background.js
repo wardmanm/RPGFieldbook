@@ -18,8 +18,8 @@ function openAddBackground(){
       <div class="field"><label class="f">Ability scores (${esc(abils.join(", "))})</label>
         <div class="seg" id="bgMode"><button type="button" data-m="2-1" class="on">+2 / +1</button><button type="button" data-m="1-1-1">+1 / +1 / +1</button></div></div>
       <div class="g2" id="bg21">
-        <div class="field"><label class="f">+2 to</label><select id="bgA2">${(d.abilityScores||[]).map(a=>`<option value="${a}">${a.toUpperCase()}</option>`).join("")}</select></div>
-        <div class="field"><label class="f">+1 to</label><select id="bgA1">${(d.abilityScores||[]).map(a=>`<option value="${a}">${a.toUpperCase()}</option>`).join("")}</select></div>
+        <div class="field"><label class="f">+2 to</label><select id="bgA2">${(d.abilityScores||[]).map(a=>`<option value="${esc(a)}">${esc(String(a).toUpperCase())}</option>`).join("")}</select></div>
+        <div class="field"><label class="f">+1 to</label><select id="bgA1">${(d.abilityScores||[]).map(a=>`<option value="${esc(a)}">${esc(String(a).toUpperCase())}</option>`).join("")}</select></div>
       </div>
       ${feats.length>1?`<div class="field"><label class="f">Feat</label><select id="bgFeat">${feats.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("")}</select></div>`:(feats.length?`<p class="hint">Feat: <b>${esc(feats[0])}</b></p>`:"")}
       <p class="hint">Also grants: ${esc((d.skills||[]).join(", "))}${d.tools?" · "+esc(d.tools):""}${d.languages?" · "+esc(d.languages):""}</p>`;
@@ -85,7 +85,7 @@ function openBackgroundInfo(name){
   const d=findBackgroundDef(name);
   if(!d){openModal(name,`<p class="hint">No rules data loaded for this background — it was added as a custom name.</p>`,iconSVG("backgrounds",name,"lg"));return;}
   let b=`<p>${esc(d.description||"")}</p>`;
-  b+=`<p><b>Ability Scores:</b> ${(d.abilityScores||[]).map(a=>a.toUpperCase()).join(", ")}</p>`;
+  b+=`<p><b>Ability Scores:</b> ${esc((d.abilityScores||[]).map(a=>String(a).toUpperCase()).join(", "))}</p>`;
   b+=`<p><b>Feat:</b> ${esc(bgFeatList(d).join(" or "))}</p>`;
   if(d.skills)b+=`<p><b>Skill Proficiencies:</b> ${esc(d.skills.join(", "))}</p>`;
   if(d.tools)b+=`<p><b>Tool Proficiencies:</b> ${esc(d.tools)}</p>`;

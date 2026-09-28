@@ -83,6 +83,21 @@ const SIZE_CARRY={Tiny:0.5,Small:1,Medium:1,Large:2,Huge:2,Gargantuan:2};
 function modOf(score){return Math.floor((num(score)-10)/2)}
 function fmt(n){return (n>=0?"+":"")+n}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+/* The only image source the app will load: a data: URL. Portraits and glossary
+   images are written by FileReader.readAsDataURL, and a pack's keyword `image`
+   is documented as a data URL (rules-schema §6.1), so nothing real is refused.
+   Refused: javascript:, a relative path, and any web address — an image from the
+   network is a request the player never made, and the rules fetch and the update
+   check are meant to be the app's only network calls. Any media type passes,
+   because FileReader labels an untyped file application/octet-stream and an <img>
+   runs no script whatever it holds. This decides WHAT may load; esc() at the
+   attribute still decides that it stays inside its quotes. */
+function safeImgSrc(u){const s=typeof u==="string"?u.trim():"";return /^data:/i.test(s)?s:"";}
+/* Every <img> the app builds from data comes from here, "" when refused. */
+function imgHTML(u,alt){
+  if(!safeImgSrc(u))return "";
+  return `<img src="${esc(safeImgSrc(u))}"`+(alt==null?"":` alt="${esc(alt)}"`)+`>`;
+}
 function escReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
 function get(o,p){return p.split(".").reduce((a,k)=>a&&a[k],o)}
 function setP(o,p,v){const ks=p.split(".");const last=ks.pop();let t=o;ks.forEach(k=>t=t[k]);t[last]=v}
@@ -169,15 +184,15 @@ function statStyle(){return character.statStyle==="grouped"?"grouped":"classic";
    display change that touches no rules code. */
 function statGroupHTML(k,l){
   const rows=SKILLS.filter(([,,ab])=>ab===k).map(([sk,sl])=>
-    `<div class="srow"><button class="dot" data-skill="${sk}" aria-label="${sl} proficiency"></button>`+
-    `<span class="val" data-stat="skill.${sk}" id="skill-${sk}">+0</span>`+
+    `<div class="srow"><button class="dot" data-skill="${esc(sk)}" aria-label="${esc(sl)} proficiency"></button>`+
+    `<span class="val" data-stat="skill.${esc(sk)}" id="skill-${esc(sk)}">+0</span>`+
     `<span class="lbl">${sl}</span><span class="exp">Expert</span></div>`).join("");
   return `<div class="agroup"><div class="ability ahead"><div class="n">${l}</div>`+
-    `<div class="m" data-stat="ability.${k}" id="mod-${k}">+0</div>`+
-    `<input type="number" data-path="character.abilities.${k}" data-recompute aria-label="${l} score"></div>`+
+    `<div class="m" data-stat="ability.${esc(k)}" id="mod-${esc(k)}">+0</div>`+
+    `<input type="number" data-path="character.abilities.${esc(k)}" data-recompute aria-label="${esc(l)} score"></div>`+
     `<div class="alist">`+
-      `<div class="srow svrow"><button class="dot" data-save="${k}" aria-label="${l} save proficiency"></button>`+
-      `<span class="val" data-stat="save.${k}" id="save-${k}">+0</span>`+
+      `<div class="srow svrow"><button class="dot" data-save="${esc(k)}" aria-label="${esc(l)} save proficiency"></button>`+
+      `<span class="val" data-stat="save.${esc(k)}" id="save-${esc(k)}">+0</span>`+
       `<span class="lbl">Saving Throws</span></div>`+
       (rows||`<div class="anone">No skills use ${l}</div>`)+
     `</div></div>`;
@@ -190,9 +205,9 @@ function buildAbilities(){
   ABIL.forEach(([k,l])=>{
     const d=document.createElement("div");d.className="ability";
     d.innerHTML=`<div class="n">${l}</div>
-      <div class="m" data-stat="ability.${k}" id="mod-${k}">+0</div>
-      <input type="number" data-path="character.abilities.${k}" data-recompute aria-label="${l} score">
-      <div class="save"><button class="dot" data-save="${k}" aria-label="${l} save proficiency"></button><span class="sv" data-stat="save.${k}" id="save-${k}">+0</span><span style="font-family:var(--head);font-size:9px;color:var(--ink-soft)">SAVE</span></div>`;
+      <div class="m" data-stat="ability.${esc(k)}" id="mod-${esc(k)}">+0</div>
+      <input type="number" data-path="character.abilities.${esc(k)}" data-recompute aria-label="${esc(l)} score">
+      <div class="save"><button class="dot" data-save="${esc(k)}" aria-label="${esc(l)} save proficiency"></button><span class="sv" data-stat="save.${esc(k)}" id="save-${esc(k)}">+0</span><span style="font-family:var(--head);font-size:9px;color:var(--ink-soft)">SAVE</span></div>`;
     el.appendChild(d);
   });
 }
@@ -205,7 +220,7 @@ function buildSkills(){
   if(statStyle()==="grouped")return;
   SKILLS.forEach(([k,l,ab])=>{
     const r=document.createElement("div");r.className="srow";
-    r.innerHTML=`<button class="dot" data-skill="${k}" aria-label="${l} proficiency"></button><span class="val" data-stat="skill.${k}" id="skill-${k}">+0</span><span class="lbl">${l} <span class="ab">${ab}</span></span>`;
+    r.innerHTML=`<button class="dot" data-skill="${esc(k)}" aria-label="${esc(l)} proficiency"></button><span class="val" data-stat="skill.${esc(k)}" id="skill-${esc(k)}">+0</span><span class="lbl">${l} <span class="ab">${ab}</span></span>`;
     el.appendChild(r);
   });
   /* The grid fills down each column; this many rows per column (see .skills). */
@@ -241,8 +256,8 @@ function buildSlots(){
   const el=document.getElementById("slotGrid");el.innerHTML="";
   for(let lv=1;lv<=9;lv++){
     const s=document.createElement("div");s.className="slot";
-    s.innerHTML=`<div class="lv">Level ${lv}</div><div class="bub" id="bub-${lv}"></div>
-      <div class="cfg">Total <input type="number" min="0" max="12" data-slot="${lv}" aria-label="Level ${lv} total slots"></div>`;
+    s.innerHTML=`<div class="lv">Level ${lv}</div><div class="bub" id="bub-${esc(lv)}"></div>
+      <div class="cfg">Total <input type="number" min="0" max="12" data-slot="${esc(lv)}" aria-label="Level ${esc(lv)} total slots"></div>`;
     el.appendChild(s);
   }
 }
@@ -250,7 +265,7 @@ function buildBio(){
   const host=document.getElementById("bioStack");host.innerHTML="";
   BIO.forEach(([key,title])=>{
     const c=document.createElement("div");c.className="card";
-    c.innerHTML=`<div class="label">${title} <span class="grow"></span><button class="editbtn" data-edit="${key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Edit</span></button></div><div id="rt-${key}"></div>`;
+    c.innerHTML=`<div class="label">${title} <span class="grow"></span><button class="editbtn" data-edit="${esc(key)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Edit</span></button></div><div id="rt-${esc(key)}"></div>`;
     host.appendChild(c);
   });
 }

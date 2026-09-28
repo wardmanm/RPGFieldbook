@@ -34,13 +34,15 @@ function originFromGranted(g){if(!g)return null;const m={Feat:"feat",Background:
 function grantedFromOrigin(k){const m={"class":"",feat:"Feat",background:"Background",race:"Ancestry",item:"Item"};return (k in m)?m[k]:(k?"Other":"");}
 function itemOrigin(it){return it.origin||originFromSid(it.grant);}
 function spellOrigin(s){return s.origin||originFromGranted(s.granted);}
-function originBadge(o,attr,id){if(!o)return "";const t=esc(originLabel(o)+(o.at?" · added "+new Date(o.at).toLocaleDateString():""));return `<button class="orig-b" ${attr}="${id}" title="${t}" aria-label="Origin: ${t}">${esc(originLetter(o))}</button>`;}
+/* `attr` is always a literal data-* name from the caller; `id` is the item's or
+   spell's own id, which an imported file controls, so it is escaped like the rest. */
+function originBadge(o,attr,id){if(!o)return "";const t=originLabel(o)+(o.at?" · added "+new Date(o.at).toLocaleDateString():"");return `<button class="orig-b" ${attr}="${esc(id)}" title="${esc(t)}" aria-label="${esc("Origin: "+t)}">${esc(originLetter(o))}</button>`;}
 function openOriginInfo(o){if(!o){openModal("Origin",`<p class="hint">No origin recorded. Edit this to set where it came from.</p>`);return;}openModal("Origin",`<p><b>${esc(originLabel(o))}</b></p><p class="hint">Added: ${esc(o.at?new Date(o.at).toLocaleString():"—")}</p>`);}
 /* No `includeClass` flag: the item form used to pass false meaning "hide Class",
    but class grants tag their items kind:"class" via originFromSid, so hiding it
    would make a class-granted item's own origin unselectable — and unrenderable —
    the moment you edited it. The parameter was never read anyway. */
-function originOptionsHTML(cur){const none=`<option value=""${!cur?" selected":""}>— none —</option>`;return none+ORIGIN_KINDS.map(x=>`<option value="${x.k}"${cur&&cur.kind===x.k?" selected":""}>${esc(x.label)}</option>`).join("");}
+function originOptionsHTML(cur){const none=`<option value=""${!cur?" selected":""}>— none —</option>`;return none+ORIGIN_KINDS.map(x=>`<option value="${esc(x.k)}"${cur&&cur.kind===x.k?" selected":""}>${esc(x.label)}</option>`).join("");}
 /* The presentation line browse folds into an added item's description. Shared,
    not inlined, because the update diff must reproduce the SAME transform — an
    item copy is not field-identical to its rules entry, and comparing a copy
@@ -98,7 +100,7 @@ function charSize(){return character.size||raceDefSize()||"Medium";}
    to rather than leaving you to guess. */
 function sizeOptionsHTML(cur){
   return `<option value=""${!cur?" selected":""}>From ancestry (${esc(raceDefSize()||"Medium")})</option>`+
-    SIZES.map(s=>`<option value="${s}"${cur===s?" selected":""}>${s}</option>`).join("");
+    SIZES.map(s=>`<option value="${esc(s)}"${cur===s?" selected":""}>${s}</option>`).join("");
 }
 /* split from carryCapacity so the size picker can PREVIEW what a size would give
    you before you commit to it */

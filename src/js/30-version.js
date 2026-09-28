@@ -22,8 +22,11 @@ function checkForUpdate(){
     .then(r=>r.ok?r.json():null)
     .then(rel=>{
       if(!rel||!rel.tag_name||cmpVer(rel.tag_name,APP_VERSION)<=0)return;
+      /* the link becomes an <a href>, so only a github.com page is taken from
+         the response; anything else falls back to the releases page */
+      const page=String(rel.html_url||"");
       updateAvailable={ver:String(rel.tag_name).replace(/^v/i,""),
-                       url:rel.html_url||`https://github.com/${UPDATE_REPO}/releases/latest`};
+                       url:/^https:\/\/github\.com\//i.test(page)?page:`https://github.com/${UPDATE_REPO}/releases/latest`};
       showUpdatePill();
     }).catch(()=>{});
 }

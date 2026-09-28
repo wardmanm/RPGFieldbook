@@ -118,11 +118,13 @@ the plain name the character stores, so emblems draw with no rules pack loaded. 
 `--accent` and 30px in a modal header (via the third argument of `openModal()`), and the button's
 own colour on the combat swords.
 
-**Why `d` is interpolated without `esc()`.** Every glyph was checked against the path-data charset
-(`[-0-9.,eE MmLlHhVvCcSsQqTtAaZz]`) before it was written, and `docs.js` re-checks the committed
-fragment against the same charset. The name never reaches the output (it is only a lookup key), and
-`kind` only selects a map. The third argument, a class name, is also unescaped, and every caller
-passes a literal (`"lg"`, `"cvicon"`).
+**`d` cannot carry markup, and is escaped anyway.** Every glyph was checked against the path-data
+charset (`[-0-9.,eE MmLlHhVvCcSsQqTtAaZz]`) before it was written, and `docs.js` re-checks the
+committed fragment against the same charset. The name never reaches the output (it is only a lookup
+key), and `kind` only selects a map. Both `d` and the third argument, a class name every caller
+passes as a literal (`"lg"`, `"cvicon"`), still go through `esc()`, where it is the identity: every
+attribute value in `src/js` is escaped, so the guard needs no list of exceptions (see
+[Rich text](../architecture/rich-text.md)).
 
 ### The licence
 
@@ -216,3 +218,4 @@ removed".
 - 2026-08-14 — `--warn` added to all four palettes for the current-HP colour bands. → ledger L2212
 - 2026-08-18 — Emblems: 78 game-icons.net glyphs through `icons.json` → `fetch-icons.js` → `05-icons.js`, credited in Settings and README §10. → ledger L3289
 - 2026-09-24 — A `ui` kind for the combat button's crossed swords; `docs.js` splits `KINDS` from `DATA_KINDS`. → ledger L3397, #9, #10, #11
+- 2026-09-28 — The emblem's path and class are `esc()`'d like every other attribute value. → ledger L3761

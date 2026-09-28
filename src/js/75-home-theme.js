@@ -67,7 +67,7 @@ function renderHome(){
       /* behind = made before this app version, so the update tool has something
          to offer. "" (never stamped) counts as behind. */
       const behind=cmpVer(m.appVersion||"0.0.0",APP_VERSION)<0;
-      const ver=`<span class="verbadge${behind?" old":""}" title="${behind?"Last checked against v"+esc(m.appVersion||"an earlier version")+" — updates may be available":"Up to date with v"+esc(APP_VERSION)}">v${esc(m.appVersion||"?")}</span>`;
+      const ver=`<span class="verbadge${behind?" old":""}" title="${esc(behind?"Last checked against v"+(m.appVersion||"an earlier version")+" — updates may be available":"Up to date with v"+APP_VERSION)}">v${esc(m.appVersion||"?")}</span>`;
       return `<div class="hcard">
         <button class="hcard-load" data-load="${esc(m.id)}"><span class="hcard-name">${esc(m.name||"Unnamed")}</span><span class="hcard-meta"><span class="sysbadge ${m.system==="dnd"?"dnd":"hbw"}">${badge}</span> ${ver} ${esc(fmtWhen(m.updated))}</span></button>
         <button class="hcard-star ${auto?"on":""}" data-autoload="${esc(m.id)}" title="${auto?"Autoload on":"Set as autoload"}">${auto?"★":"☆"}</button>

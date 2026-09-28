@@ -197,7 +197,7 @@ function promptSpellAttack(sp,atLevel){
      dialog cannot promise different damage from the sheet behind it */
   const dmg=attackDamageStr({damageDice:sp.dice,damageType:sp.damageType,extraDamage:sp.extraDamage},0);
   if(dmg)body+=`<p><b>Damage:</b> ${esc(dmg)}</p>`;
-  body+=`<p class="hint">Cast at level ${atLevel||sp.level}. Roll the dice at your table.</p><div class="m-actions"><button class="tbtn primary" id="okAtk">OK</button></div>`;
+  body+=`<p class="hint">Cast at level ${esc(atLevel||sp.level)}. Roll the dice at your table.</p><div class="m-actions"><button class="tbtn primary" id="okAtk">OK</button></div>`;
   openModal("Cast "+sp.name,body);const b=document.getElementById("okAtk");if(b)b.addEventListener("click",closeModal);
 }
 /* ---- the Concentrating condition ----
@@ -301,17 +301,17 @@ function renderActiveSpells(){
     const timeTxt=fmtElapsed(a.elapsedSec)+((a.durationSec!=null&&a.durationSec>0)?` / ${fmtElapsed(a.durationSec)}`:"");
     return `<div class="item${exp?" on-status":""}"><div class="top">
         <span class="nm">${esc(a.name)}</span>
-        ${a.level?`<span class="qty">Lv ${a.level}</span>`:""}
+        ${a.level?`<span class="qty">Lv ${esc(a.level)}</span>`:""}
         ${a.conc?`<span class="orig-b" title="Concentration">C</span>`:""}
         <span class="qty" title="Elapsed / duration">${esc(timeTxt)}</span>
         ${exp?`<span class="qty" style="color:var(--danger,#c0392b)">expired</span>`:""}
         <span style="flex:1"></span>
-        <button class="icon danger" data-active-end="${a.id}" aria-label="End">✕</button>
+        <button class="icon danger" data-active-end="${esc(a.id)}" aria-label="End">✕</button>
       </div>
       <div class="use-row"><span class="use-lbl">Elapsed time</span>
-        <button class="tbtn" data-active-tick="${a.id}" data-sec="-6" style="padding:3px 8px;min-height:auto">− rd</button>
-        <button class="tbtn" data-active-tick="${a.id}" data-sec="6" style="padding:3px 8px;min-height:auto">+ rd</button>
-        <button class="tbtn" data-active-sec="${a.id}" style="padding:3px 8px;min-height:auto">+ sec…</button>
+        <button class="tbtn" data-active-tick="${esc(a.id)}" data-sec="-6" style="padding:3px 8px;min-height:auto">− rd</button>
+        <button class="tbtn" data-active-tick="${esc(a.id)}" data-sec="6" style="padding:3px 8px;min-height:auto">+ rd</button>
+        <button class="tbtn" data-active-sec="${esc(a.id)}" style="padding:3px 8px;min-height:auto">+ sec…</button>
       </div></div>`;
   }).join("");
 }
@@ -341,16 +341,16 @@ function renderAttacks(){
     const typeLabel=save?"Spell save":(isSpell?`Spell · ${n.kind==="ranged"?"Ranged":"Melee"}`:(n.kind==="ranged"?"Ranged":"Melee"));
     const dc=spellDC();
     const hitCell=save?`<span class="atk-hit">DC ${dc!=null?dc:"—"} ${esc((save.ability||"").toUpperCase())}</span>`
-                       :`<span class="atk-hit ${n.atkFx?"fx-on":""}" data-atk-info="${a.id}">${fmt(n.toHit)} to hit</span>`;
+                       :`<span class="atk-hit ${n.atkFx?"fx-on":""}" data-atk-info="${esc(a.id)}">${fmt(n.toHit)} to hit</span>`;
     const d=document.createElement("div");d.className="item fitem";
     d.innerHTML=`<div class="top">
-        <button class="fitoggle" data-atkitem="${a.id}" aria-label="Collapse"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button class="fav ${a.fav?"on":""}" data-fav-attack="${a.id}" aria-label="Favorite" title="Favorite">${a.fav?"★":"☆"}</button>
+        <button class="fitoggle" data-atkitem="${esc(a.id)}" aria-label="Collapse"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="fav ${a.fav?"on":""}" data-fav-attack="${esc(a.id)}" aria-label="Favorite" title="Favorite">${a.fav?"★":"☆"}</button>
         <span class="nm">${esc(a.name||"Attack")}</span>
         <span class="qty">${typeLabel}</span>
         ${hitCell}
-        ${isSpell?`<button class="tbtn" data-cast-spell="${a.spellId}" style="padding:3px 8px;min-height:auto">Cast</button>`:`<button class="icon" data-edit-attack="${a.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`}
-        <button class="icon danger" data-del-attack="${a.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        ${isSpell?`<button class="tbtn" data-cast-spell="${esc(a.spellId)}" style="padding:3px 8px;min-height:auto">Cast</button>`:`<button class="icon" data-edit-attack="${esc(a.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`}
+        <button class="icon danger" data-del-attack="${esc(a.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${ic?"":`<div class="desc" style="font-family:var(--head);font-size:13px;letter-spacing:.02em;color:var(--ink-soft)">Damage <b class="${!save&&n.dmgFx?"fx-on":""}" style="${!save&&n.dmgFx?"":"color:var(--ink)"}">${esc(dmg)||"—"}</b>${a.notes?` · ${esc(a.notes)}`:""}</div>`}`;
     el.appendChild(d);
@@ -387,8 +387,8 @@ function attackXDmgRowHTML(d){
    second — the same reason statusDatalistHTML() takes one. */
 function xDmgFieldHTML(id,rec,hint){
   return `<div class="field"><label class="f">Additional damage types</label>
-      <div id="${id}">${extraDamageList(rec).map(attackXDmgRowHTML).join("")}</div>
-      <button type="button" class="tbtn" id="${id}Add" style="padding:4px 10px;min-height:auto">+ Add damage type</button>
+      <div id="${esc(id)}">${extraDamageList(rec).map(attackXDmgRowHTML).join("")}</div>
+      <button type="button" class="tbtn" id="${esc(id)}Add" style="padding:4px 10px;min-height:auto">+ Add damage type</button>
       <p class="hint" style="margin:6px 0 0">${esc(hint)}</p></div>`;
 }
 function wireXDmgField(id){
@@ -410,7 +410,7 @@ function openAttackForm(existing){
   openModal(existing?"Edit attack":"New attack",`
     <div class="g2"><div class="field"><label class="f">Name</label><input id="aName" value="${esc(a.name)}" placeholder="Shortbow"></div>
       <div class="field"><label class="f">Type</label><select id="aKind"><option value="melee"${a.kind!=="ranged"?" selected":""}>Melee</option><option value="ranged"${a.kind==="ranged"?" selected":""}>Ranged</option></select></div></div>
-    <div class="g2"><div class="field"><label class="f">Ability</label><select id="aAbil">${abilOpts.map(([v,l])=>`<option value="${v}"${a.ability===v?" selected":""}>${l}</option>`).join("")}</select></div>
+    <div class="g2"><div class="field"><label class="f">Ability</label><select id="aAbil">${abilOpts.map(([v,l])=>`<option value="${esc(v)}"${a.ability===v?" selected":""}>${l}</option>`).join("")}</select></div>
       <div class="field"><label class="f">Extra to-hit</label><input id="aAtkMisc" type="number" value="${esc(a.atkMisc)}" placeholder="0"></div></div>
     <label class="opt" id="aProf"><input type="checkbox" ${a.proficient?"checked":""}>Proficient (add proficiency bonus)</label>
     <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="aDice" value="${esc(a.damageDice)}" placeholder="1d8"></div>
@@ -476,13 +476,13 @@ function renderSpells(){
     el.appendChild(h);
     items.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).forEach(s=>{
       const r=document.createElement("div");r.className="spell";
-      r.innerHTML=`<button class="pin ${s.prepared?"on":""}" data-prep="${s.id}" aria-label="Prepared" aria-pressed="${s.prepared?"true":"false"}" title="${s.prepared?"Prepared — tap to unprepare":"Not prepared — tap to prepare"}"></button>
-        <span class="nm" data-view-spell="${s.id}">${esc(s.name||"Spell")}</span>
+      r.innerHTML=`<button class="pin ${s.prepared?"on":""}" data-prep="${esc(s.id)}" aria-label="Prepared" aria-pressed="${s.prepared?"true":"false"}" title="${s.prepared?"Prepared — tap to unprepare":"Not prepared — tap to prepare"}"></button>
+        <span class="nm" data-view-spell="${esc(s.id)}">${esc(s.name||"Spell")}</span>
         ${(s.origin||s.granted)?originBadge(spellOrigin(s),"data-orig-spell",s.id):""}
         ${s.meta?`<span class="meta">${esc(s.meta)}</span>`:""}
-        <button class="tbtn" data-cast-spell="${s.id}" style="padding:3px 8px;min-height:auto">Cast</button>
-        <button class="icon" data-edit-spell="${s.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-spell="${s.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`;
+        <button class="tbtn" data-cast-spell="${esc(s.id)}" style="padding:3px 8px;min-height:auto">Cast</button>
+        <button class="icon" data-edit-spell="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-spell="${esc(s.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`;
       el.appendChild(r);
     });
   });
@@ -521,9 +521,9 @@ function renderGloss(){
   mine.forEach(g=>{
     const d=document.createElement("div");d.className="item";
     d.innerHTML=`<div class="top"><span class="nm">${esc(g.term)}</span><span class="chip">${g.type==="image"?"Image":"Text"}</span>
-      <button class="icon" data-view-gloss="${g.id}" aria-label="Preview"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-      <button class="icon" data-edit-gloss="${g.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-      <button class="icon danger" data-del-gloss="${g.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
+      <button class="icon" data-view-gloss="${esc(g.id)}" aria-label="Preview"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button class="icon" data-edit-gloss="${esc(g.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+      <button class="icon danger" data-del-gloss="${esc(g.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
     el.appendChild(d);
   });
 }

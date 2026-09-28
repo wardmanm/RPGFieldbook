@@ -28,4 +28,6 @@ Bullets below this line — leave the heading in place.
 
 ## Pending
 
-_Nothing yet._
+- Images and text from imported character files, rules packs and settings files are now handled
+  safely. A portrait or glossary picture is shown only when the picture itself is stored in the
+  file, which is how Fieldbook has always saved them, so your own pictures are unaffected.

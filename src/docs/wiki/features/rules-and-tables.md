@@ -34,6 +34,9 @@ shared `.searchbox` with a × clear button.
 type to filter") and "Your entries", each row with a preview; the player's own entries also have Edit
 and Delete. `openGlossForm()` makes an entry of type Text or Rules image (a screenshot stored as a
 data URL); a term is required. With no pack loaded the list opens on an Import rules files prompt.
+An image entry, the player's or a pack's, is drawn through `imgHTML()`: escaped, and only from a
+data: URL, the form rules-schema §6.1 documents. A pack image given as a web address is not fetched;
+the entry says the image isn't stored in the file. See [Rich text](../architecture/rich-text.md).
 
 **Glossary chips.** `highlight()` escapes the text, then wraps every glossary term — longest first,
 whole word, any case — in a `.kw` chip (`role="button"`, `tabindex="0"`). A click, Enter or Space on
@@ -128,3 +131,4 @@ a table opened from a spell preview replaces it.
 - 2026-08-17 — The Tables tab folded into the Rules tab. → ledger L2714, #32
 - 2026-08-18 — Both Rules sections fold, start shut, and show counts. → ledger L3189
 - 2026-09-24 — A × clear button in both filter boxes. → ledger L3525, #49
+- 2026-09-28 — Glossary images are escaped and shown only from data: URLs; the glossary id in a chip is escaped. → ledger L3761

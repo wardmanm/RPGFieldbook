@@ -79,7 +79,9 @@ the built file by `gen-changelog.js` on every build — see [RELEASING](../../RE
 error. A tag newer by `cmpVer()` (a `v` prefix ignored, three numeric parts) sets `updateAvailable`
 and `showUpdatePill()` hides `#btnVer` and shows `#updatePill` — "↑ v*X*", with the version you are
 on in its tooltip. The pill is a `<button>` that opens the same changelog, which then leads with
-`updBannerHTML()`: the new version and a Download link to the release page.
+`updBannerHTML()`: the new version and a Download link to the release page. The link is the
+response's `html_url` only when that is a `https://github.com/` page, and the repo's releases page
+otherwise, because it becomes an `<a href>`.
 
 ## Rules that must hold
 
@@ -125,6 +127,7 @@ on in its tooltip. The pill is a `<button>` that opens the same changelog, which
 | The pill's element | A `<button>` | An `<a>` with a live `href` that `preventDefault`s: a lie about what it does |
 | Where the changelog lives | Embedded in `30-version.js`, keeping the single-file offline design; `docs/CHANGELOG.md` is generated from it so the two cannot drift | — |
 | Where icon credits live | In Settings | Only in the README: the app is routinely shared as a lone file no README follows |
+| Where the Download link may point | A `https://github.com/` page from the response, else the releases page | Whatever `html_url` holds: it becomes an `<a href>`, and a `javascript:` there would run on click (L3761) |
 
 ## Open
 
@@ -148,3 +151,4 @@ on in its tooltip. The pill is a `<button>` that opens the same changelog, which
 - 2026-08-11 — The update pill replaces the version button and opens the changelog. → ledger L1779
 - 2026-08-14 — The "! N missing" chip for packs whose dependencies are not loaded. → ledger L1883
 - 2026-08-18 — Credits & licences section for the icon attribution. → ledger L3289
+- 2026-09-28 — The pack name in the rules status line is escaped; the Download link only takes a github.com page. → ledger L3761

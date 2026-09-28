@@ -66,7 +66,7 @@ function choiceFieldHTML(ch,ci,d){
     });
     const granted=opts.filter(o=>o.have).length;
     const target=effectiveChoose(ch.choose,opts.length,granted);
-    chooseAttr=` data-choose="${target}"`;
+    chooseAttr=` data-choose="${esc(target)}"`;
     inner=`<label class="f">Choose ${target} skill(s)`+
       (granted?` <span style="color:var(--ink-soft);font-weight:400">(${granted} already yours)</span>`:"")+
       ` — <span data-chcount>0 of ${target} chosen</span></label>`+
@@ -81,7 +81,7 @@ function choiceFieldHTML(ch,ci,d){
     const subMap=d?subclassesFor(d):{},from=ch.from||Object.keys(subMap);
     inner=`<label class="f">${esc(ch.label||"Choose a subclass")}</label>`+from.map(n=>{
       const sc=subMap[n]||{};
-      return `<label class="opt" style="align-items:flex-start"><input type="radio" name="sub-${ci}" data-sub-opt value="${esc(n)}"><span><b>${esc(n)}</b>`+
+      return `<label class="opt" style="align-items:flex-start"><input type="radio" name="sub-${esc(ci)}" data-sub-opt value="${esc(n)}"><span><b>${esc(n)}</b>`+
         `${subSourceTag(n,sc)?` <span class="hint">(${esc(subSourceTag(n,sc))})</span>`:""}`+
         `${sc.description?`<span class="hint" style="display:block;margin:2px 0 0">${esc(sc.description)}</span>`:""}</span></label>`;
     }).join("");
@@ -93,14 +93,14 @@ function choiceFieldHTML(ch,ci,d){
     const die=num(ch.die),n=Math.max(1,num(ch.levels)||1),dice=n+"d"+die;
     inner=die
       ?`<label class="f">Hit points — roll ${dice}, or take the average</label>`+
-        `<div style="display:flex;gap:8px;align-items:center"><input type="number" min="0" inputmode="numeric" data-hp-dice placeholder="${n*hpFixed(die)} (average)" aria-label="What the ${dice} came up — blank takes the average" style="flex:1">`+
+        `<div style="display:flex;gap:8px;align-items:center"><input type="number" min="0" inputmode="numeric" data-hp-dice placeholder="${esc(n*hpFixed(die))} (average)" aria-label="What the ${esc(dice)} came up — blank takes the average" style="flex:1">`+
         `<button class="tbtn" type="button" data-hp-roll>Roll for me</button></div><p class="hint" data-hp-prev style="margin:6px 0 0"></p>`
       :`<label class="f">Hit points gained</label><input type="number" min="0" inputmode="numeric" data-hp-dice placeholder="hit points gained" aria-label="Hit points gained">`+
         `<p class="hint" style="margin:6px 0 0">${esc(ch.cls||"This class")} has no hit die in the loaded rules — type what you gained, or leave it blank and set Max yourself.</p>`;
   }else if(t==="asi"){
     inner=`<label class="f">Ability Score Improvement</label>
-      <div style="display:flex;gap:14px;margin-bottom:6px"><label class="opt" style="margin:0"><input type="radio" name="asimode-${ci}" data-asi-mode value="2" checked>+2 to one</label><label class="opt" style="margin:0"><input type="radio" name="asimode-${ci}" data-asi-mode value="1">+1 to two</label></div>
-      <div class="g2"><select data-asi-a>${ABIL.map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select><select data-asi-b>${ABIL.map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>`;
+      <div style="display:flex;gap:14px;margin-bottom:6px"><label class="opt" style="margin:0"><input type="radio" name="asimode-${esc(ci)}" data-asi-mode value="2" checked>+2 to one</label><label class="opt" style="margin:0"><input type="radio" name="asimode-${esc(ci)}" data-asi-mode value="1">+1 to two</label></div>
+      <div class="g2"><select data-asi-a>${ABIL.map(([k,l])=>`<option value="${esc(k)}">${l}</option>`).join("")}</select><select data-asi-b>${ABIL.map(([k,l])=>`<option value="${esc(k)}">${l}</option>`).join("")}</select></div>`;
   }else if(t==="feat"){
     if(ch.from){
       inner=`<label class="f">${esc(ch.label||"Feat")}</label><select data-feat-opt><option value="">— none —</option>${ch.from.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")}</select>`;
@@ -121,19 +121,19 @@ function choiceFieldHTML(ch,ci,d){
        `repeatable` (four 2024 invocations) stays open. */
     const owned=from.map(o=>!o.repeatable&&(character.features||[]).some(f=>String(f.name||"").toLowerCase()===String(o.name||"").toLowerCase()));
     const have=owned.filter(Boolean).length,target=effectiveChoose(choose,from.length,have);
-    if(!single)chooseAttr=` data-choose="${target}"`;
+    if(!single)chooseAttr=` data-choose="${esc(target)}"`;
     inner=`<label class="f">${esc(ch.label||("Choose "+choose))}`+
       (have?` <span style="color:var(--ink-soft);font-weight:400">(${have} already yours)</span>`:"")+
       (single?"":` — <span data-chcount>0 of ${target} chosen</span>`)+
       `</label>`+from.map((o,i)=>{
       const fx=(o.effects||[]).map(e=>`${FX_LABEL[e.target]||e.target} ${fmt(num(e.value))}`).join(", ");
       const fixed=owned[i]?(single?" disabled":" checked disabled data-fixed"):"";
-      return `<label class="opt" style="align-items:flex-start"><input type="${single?"radio":"checkbox"}" ${single?`name="opt-${ci}"`:""} data-opt-i="${i}"${fixed}><span><b>${esc(o.name||("Option "+(i+1)))}</b>${owned[i]?" (already yours)":""}${o.description?` — ${esc(o.description)}`:""}${fx?` <span style="color:var(--accent-2)">(${esc(fx)})</span>`:""}</span></label>`;
+      return `<label class="opt" style="align-items:flex-start"><input type="${single?"radio":"checkbox"}" ${single?`name="opt-${esc(ci)}"`:""} data-opt-i="${esc(i)}"${fixed}><span><b>${esc(o.name||("Option "+(i+1)))}</b>${owned[i]?" (already yours)":""}${o.description?` — ${esc(o.description)}`:""}${fx?` <span style="color:var(--accent-2)">(${esc(fx)})</span>`:""}</span></label>`;
     }).join("");
   }else{
     inner=`<p class="hint">${esc(ch.label||ch.note||"A choice is available at your table.")}</p>`;
   }
-  return `<div class="choice" data-ci="${ci}" data-ctype="${esc(t||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
+  return `<div class="choice" data-ci="${esc(ci)}" data-ctype="${esc(t||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
 }
 let _activeChoices=[];
 function sidToOrigin(sid,level){

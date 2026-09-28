@@ -30,10 +30,10 @@ function setSecOpen(k){
 function setSecHTML(k,body,badge){
   const d=setSecDef(k);if(!d)return "";
   const open=setSecOpen(k);
-  return `<div class="fgroup"><div class="fghead" data-setsec="${k}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
+  return `<div class="fgroup"><div class="fghead" data-setsec="${esc(k)}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
     `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`+
     `<span class="fgname">${esc(d.title)}</span>${badge?`<span class="fgcount">${esc(badge)}</span>`:""}</div>`+
-    `<div class="setsec-body" data-setsecbody="${k}"${open?"":` style="display:none"`}>${body}</div></div>`;
+    `<div class="setsec-body" data-setsecbody="${esc(k)}"${open?"":` style="display:none"`}>${body}</div></div>`;
 }
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
 function openSettings(){
@@ -55,20 +55,20 @@ function openSettings(){
     <div class="g2"><div class="field"><label class="f">Size</label>
         <select id="setSize">${sizeOptionsHTML(character.size)}</select></div>
       <div class="field"><label class="f">Encumbrance</label>
-        <select id="setEnc">${[["none","Off — show weight only"],["standard","Standard (capacity, push/drag)"],["variant","Variant (encumbered tiers)"]].map(([v,l])=>`<option value="${v}"${encMode()===v?" selected":""}>${esc(l)}</option>`).join("")}</select></div></div>
+        <select id="setEnc">${[["none","Off — show weight only"],["standard","Standard (capacity, push/drag)"],["variant","Variant (encumbered tiers)"]].map(([v,l])=>`<option value="${esc(v)}"${encMode()===v?" selected":""}>${esc(l)}</option>`).join("")}</select></div></div>
     <p class="hint" id="encHint">${esc(encSettingsHint())}</p>
     <div class="toggle"><div><div class="t-lbl">Coins count as weight</div><div class="t-sub">50 coins to the pound, the way the rules have it.</div></div><button class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight"></button></div>
     <div class="toggle"><div><div class="t-lbl">Colour current HP</div><div class="t-sub">Amber at half your maximum, red at a quarter.</div></div><button class="switch ${character.hpColor!==false?"on":""}" id="swHpColor"></button></div>
     <div class="field"><label class="f">Skills display</label>
       <div class="seg" id="segStatStyle">
         ${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>
-          `<button data-statstyle="${v}" class="${statStyle()===v?"on":""}">${l}</button>`).join("")}
+          `<button data-statstyle="${esc(v)}" class="${statStyle()===v?"on":""}">${l}</button>`).join("")}
       </div>
       <p class="hint">Classic keeps Ability Scores and Skills as two cards, skills listed A to Z. By ability stacks each ability with its saving throw and the skills it governs, and folds the Skills card away. Display only — every number means the same thing either way.</p></div>
     <div class="field"><label class="f">Hit Dice display</label>
       <div class="seg" id="segHdStyle">
         ${[["full","Full"],["condensed","Condensed"],["dice","Dice"]].map(([v,l])=>
-          `<button data-hdstyle="${v}" class="${hdStyle()===v?"on":""}">${l}</button>`).join("")}
+          `<button data-hdstyle="${esc(v)}" class="${hdStyle()===v?"on":""}">${l}</button>`).join("")}
       </div>
       <p class="hint">Full boxes each die size like a stat; Condensed is one tight line per size; Dice draws every die as a token you tap to spend. Only Full and Condensed let you mark a die spent without healing.</p></div>
     <div class="field" style="margin-top:12px"><label class="f">Rules updates</label>
@@ -86,7 +86,7 @@ function openSettings(){
         <button class="tbtn" id="btnRulesTemplate">Get templates</button>
         <button class="tbtn danger" id="btnClearRules" style="margin-left:auto">Clear all</button>
       </div>
-      <div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${rulesStatusText()}</div>
+      <div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${esc(rulesStatusText())}</div>
       <input type="file" id="fileRules" accept="application/json,.json" multiple class="hidefile">
     </div>
     <div class="field" style="margin-top:6px"><label class="f">Loaded rules data</label>

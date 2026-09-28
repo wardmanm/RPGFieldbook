@@ -6,15 +6,19 @@ a rules pack shipped it: escape everything, then add the tappable glossary and t
 **The order is the security argument.** After `esc()` the only angle brackets left are tags the app
 wrote itself, which makes it safe to hold those tags aside while the markdown regexes run over the
 rest. One grammar serves every field, so no field quietly supports less formatting than the one
-beside it.
+beside it. The same argument covers the markup the app builds around that prose: **every value
+interpolated into an HTML attribute is `esc()`'d**, and every image source is a data: URL, both
+checked mechanically.
 
-**Code:** `esc()`, `escReg()`, `allGlossary()` in `00-constants.js`; `highlight()`, `descHTML()`,
+**Code:** `esc()`, `escReg()`, `safeImgSrc()`, `imgHTML()`, `allGlossary()` in `00-constants.js`; `highlight()`, `descHTML()`,
 `renderRT()` in `10-compute.js`; `findTable()`, `tableHTML()`, `openTableByName()`,
 `tableChipsHTML()` in `86-tables.js`; `noteInline()`, `noteHTML()`, `richHTML()`, `richInline()`,
 `notePreview()` in `87-notes.js`; `printSheet()`, `printStrip()` in `71-char-io.js`;
 `refreshRulesUI()` in `88-settings.js` · **Tests:** `tables.js` (escaping, forged placeholders,
-chips inside markdown), `sheet.js` (the renderers, no sentinel leaks), `rules-data.js` (run-in panes
-call `richInline()`, no mid-sentence breaks in Humblewood prose) ·
+chips inside markdown), `sheet.js` (the renderers, no sentinel leaks; a hostile character, pack and
+keyword id through 40 renderers), `rules-data.js` (every attribute interpolation `esc()`'d, every
+image through `safeImgSrc()`; run-in panes call `richInline()`, no mid-sentence breaks in
+Humblewood prose) ·
 **See also:** [Story & notes](../features/story-and-notes.md),
 [Rules & tables](../features/rules-and-tables.md), [Humblewood](../data/humblewood.md),
 [Build & source split](build-and-source-split.md)
@@ -81,9 +85,22 @@ A click, Enter or Space on `.kw` opens the glossary entry, and on `.tblref` open
 | Feature, item, status and familiar descriptions; browse previews; the spell view | `richHTML()` / `descHTML()` |
 | Trait lines in the class, subclass, species and background panes | `richInline()` |
 | A note's hover preview | `notePreview()` |
-| Glossary entry view (`openGlossView()`) | `esc()` only; line breaks come from `.m-body p`'s `pre-wrap` |
+| Glossary entry view (`openGlossView()`) | `esc()` only; line breaks come from `.m-body p`'s `pre-wrap`. An image entry goes through `imgHTML()` |
+| The portrait (`renderPortrait()`), the glossary form's preview (`openGlossForm()`) | `imgHTML()` |
 | Table cells (`tableHTML()`) | `esc()` only |
 | Print (`printSheet()`) | `esc()` plus `printStrip()` for 5e-tools `{@tag …}`; markdown markers print as typed |
+
+**4. Attribute values and images.** Prose is one way in; the markup around it is the other. A
+template literal assigned to innerHTML carries ids, names, dice and numbers from a character file, a
+rules pack or a settings file (Settings → Import assigns `rules` wholesale), and a raw `"` in any of
+them closes its attribute. So every `${…}` inside a quoted attribute value is `esc(…)` of the whole
+expression, or a ternary whose two results are literals (`${on?"on":""}`), whatever the value looks
+like. An `<img>` built from data comes only from `imgHTML(u, alt)`, which returns `""` unless
+`safeImgSrc(u)` accepts it: a data: URL of any media type, trimmed, scheme matched case-blind.
+Everything else is refused: javascript:, relative paths, and web addresses, which would be a network
+request beyond the rules fetch and the update check. Portraits and glossary images are only ever
+written by `FileReader.readAsDataURL`, so nothing real is refused. A refused portrait shows the
+placeholder; a refused glossary image says it isn't stored in the file.
 
 **CSS follows the renderer.** `.item .desc` and `.rt-view` no longer set `white-space:pre-wrap`,
 because with real `<br>` elements that would double every break. `.m-body p` keeps it, which is
@@ -97,8 +114,17 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
   runs `esc()` before anything else. Running markdown *before* the glossary pass is unsafe the
   other way: a term such as "strong" would match inside a `<strong>` just written. Running it after
   without holding the tags lets a `*` inside a `data-tbl` attribute be eaten.
-- **Every attribute value `highlight()` writes is `esc()`'d.** A raw `>` inside an inserted tag
-  would break the exact `/<[^>]+>/g` hold.
+- **Every attribute value `highlight()` writes is `esc()`'d**, the glossary id in `data-gid`
+  included. A raw `>` inside an inserted tag would break the exact `/<[^>]+>/g` hold.
+- **Every `${…}` inside a quoted HTML attribute value in `src/js` is `esc(…)` of the whole
+  expression, or a ternary that can only yield a literal** (asserted over all of `src/js`, about
+  350 sites). No exceptions list: constants are escaped too, where `esc()` is the identity. A CSS
+  attribute selector built for `querySelector` (`[data-x="${k}"]`) is not markup and is exempt; an
+  unquoted `attr=${…}` is refused.
+- **Every image source is `esc(safeImgSrc(…))`**, which in practice means every `<img>` comes from
+  `imgHTML()` (asserted).
+- **Text between tags that comes from a file is `esc()`'d or goes through a renderer above.** The
+  scan cannot see this; the hostile-character renders in `sheet.js` do.
 - **Sentinels live in U+E000–U+E00F and are written as escapes** (`""`,
   `String.fromCharCode(0xE001)`), never as literal characters. Invisible bytes in source are one
   whitespace cleanup away from changing behaviour, and the build is byte-exact. The strip in
@@ -136,6 +162,20 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
   (checked for this page).
 - **A known loss:** `**Hit** Points` loses its *Hit Points* chip, because the asterisks break
   `\b(term)\b`. That is inherent to escaping first and matching second.
+- **Ids look like app data and are not.** They come from `uid()` when the app makes a row, and
+  straight from the file when a character is imported. Forty-odd `data-*` hooks carried them raw,
+  and `highlight()`'s own `data-gid` did too, while this page claimed every attribute it wrote was
+  escaped. That is why the rule is total rather than "escape the untrusted ones".
+- **Three image sources were raw** (portrait, glossary view, glossary form) until the rule above;
+  the same audit found pack ability keys, a class's hit die, the pack name in Settings and a few
+  numbers-that-weren't going in raw as well (ledger L3761).
+- **A regex over the source cannot find attribute values.** `class="a ${x?"b":"c"} ${id}"` hides the
+  second value behind the first one's quotes, and `87-notes.js` has a regex literal full of
+  backticks. The guard in `rules-data.js` is a small tokenizer (strings, comments, regex literals,
+  nested templates) for that reason; it tests itself on both shapes.
+- **Renderers rewrite what they draw.** `renderSpells()` sets `s.level=num(s.level)` in place and
+  `autoSlots()` rewrites slot totals, so a hostile value can be defused by an earlier render. The
+  behavioural tests give each sink a fresh value.
 
 ## Decisions
 
@@ -150,14 +190,14 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
 | What a note preview can contain | Phrasing markup, block markers represented, chips unwrapped | Flattening to one line: markers vanished with no sign they worked. Block markup: illegal inside a `<button>` (L3035) |
 | Markdown links | Not supported | Links: they point at a network in an offline-first app, and read confusingly beside `[Table: X]` (L1504) |
 | Extending the Gadgeteer's italic fix to every Humblewood extract | Only the positional tagline rule | A blanket `prereq` rule: italics also mark inline spell names, so it breaks sentences (L2538) |
+| Which attribute values are escaped | All of them, checked mechanically | Only the untrusted ones: not checkable by a scan, and ids, which look internal, come from the file (L3761) |
+| Which image sources load | data: URLs only, any media type | Also `https:` for pack images: a network request beyond the two the app makes, the schema says data URL, and no shipped pack has an image. `data:image/` only: FileReader labels an untyped file octet-stream, and an `<img>` runs no script whatever it holds (L3761) |
+| How the guard finds attribute values | A tokenizer over `src/js` | A regex over the source: defeated by an earlier `${…}` holding quotes, and by a regex literal holding backticks (L3761) |
 
 ## Open
 
-- **Two image URLs bypass the escape.** `openGlossView()` puts a keyword's `image` into
-  `<img src="…">` unescaped, as does the portrait (`character.portraitImg`) and the glossary form's
-  preview. Both values can come from outside: a rules pack's keyword `image`, or an imported
-  character file. A crafted value can close the attribute and add an event handler. Found by
-  reading the code, not exploited.
+- The attribute rule does not reach markup emitted in **tag position** on purpose
+  (`<option${sel?" selected":""}>`, `${chooseAttr}`), which only the behavioural tests cover.
 - The comment block above `descHTML()` in `10-compute.js` still describes the old bold-only
   renderer, and a comment in `20-cards.css` still says `.rt-view` is `pre-wrap`. Both are stale.
 - `tables.js` holds four literal private-use characters, in the strings and one regex of its
@@ -171,3 +211,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-15 — `descHTML()` becomes `highlight()` plus `**bold**` only, for Gadgeteer run-in headings. → ledger L2519
 - 2026-08-15 — Italics-as-structure is rejected for other Humblewood extracts, and a data scan for mid-sentence breaks becomes a test. → ledger L2538
 - 2026-08-18 — One grammar for every field: `richHTML()` and `richInline()` arrive, `descHTML()` delegates, emphasis needs non-space at both ends, and the note preview renders phrasing markup. → ledger L3035
+- 2026-09-28 — Every attribute interpolation is `esc()`'d and every image goes through `imgHTML()` (data: URLs only), both guarded; the audit's other raw values fixed. → ledger L3761

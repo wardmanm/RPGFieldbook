@@ -7,7 +7,7 @@ function updRowHTML(r,i){
     :r.edited?`<span class="chip">you edited this</span>`:"";
   const dis=(r.type==="unmatched"||r.type==="ambiguous")?" disabled":"";
   return `<label class="opt" style="align-items:flex-start">
-    <input type="checkbox" data-upd="${i}"${r.apply?" checked":""}${dis}>
+    <input type="checkbox" data-upd="${esc(i)}"${r.apply?" checked":""}${dis}>
     <span><b>${esc(r.name||"—")}</b> ${tag}
       <span class="hint" style="display:block">${esc(r.why)}${r.pack?" · "+esc(r.pack):""}</span></span></label>`;
 }
