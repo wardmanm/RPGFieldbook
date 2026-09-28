@@ -51,3 +51,8 @@ Bullets below this line — leave the heading in place.
 - Images and text from imported character files, rules packs and settings files are now handled
   safely. A portrait or glossary picture is shown only when the picture itself is stored in the
   file, which is how Fieldbook has always saved them, so your own pictures are unaffected.
+- A glossary entry with no term, whether in a rules pack, a settings file or a character file, no
+  longer stops the sheet from drawing. Your own entries without a term are kept and listed on the
+  Rules tab as "(no term)", so you can give them one or delete them, and importing or fetching rules
+  now tells you when it skipped entries that have no name. Terms with an apostrophe, like Hunter's
+  Mark, now open their entry when tapped, and a rules table with no rows no longer breaks the sheet.

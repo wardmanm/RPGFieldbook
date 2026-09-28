@@ -7,9 +7,9 @@ chip wherever it appears in the app, and every `[Table: Name]` anchor the conver
 becomes a chip that opens that table in place.
 
 **Code:** `renderGloss()` in `60-attacks.js` · `openGlossForm()` in `85-browse.js` ·
-`openGlossView()` in `80-modal-forms.js` · `allGlossary()` in `00-constants.js` · `highlight()` in
+`openGlossView()` in `80-modal-forms.js` · `allGlossary()`, `glossTerm()` in `00-constants.js` · `highlight()` in
 `10-compute.js` · `RULES_SECS`, `rulesSecOpen()`, `setRulesSecOpen()`, `renderRulesSections()`,
-`toggleRulesSec()`, `allTables()`, `findTable()`, `tablesFor()`, `tableHTML()`, `openTableView()`,
+`toggleRulesSec()`, `allTables()`, `tableRows()`, `tableCols()`, `findTable()`, `tablesFor()`, `tableHTML()`, `openTableView()`,
 `openTableByName()`, `renderTables()`, `tableChipsHTML()` in `86-tables.js` · `refreshRulesUI()`,
 `RULE_CATS` in `88-settings.js` · `mergeRules()`, `reindexRules()` in `89-rules-merge.js` · markup
 `src/html/40-rules.html` · **Data:** each pack's `tables.json`;
@@ -32,7 +32,9 @@ shared `.searchbox` with a × clear button.
 **The glossary.** `allGlossary()` is the rules pack's `keywords` plus `character.glossary`.
 `renderGloss()` lists "From rules pack · *pack name*" (the first 150 matches, then "…and N more —
 type to filter") and "Your entries", each row with a preview; the player's own entries also have Edit
-and Delete. `openGlossForm()` makes an entry of type Text or Rules image (a screenshot stored as a
+and Delete. Every term is read through `glossTerm()`: a pack keyword with no term is not listed (the
+pool drops those, see [Rules packs](../architecture/rules-packs.md)), and a player's entry with none
+is listed as "(no term)", so it can be given one or deleted; it never becomes a chip. `openGlossForm()` makes an entry of type Text or Rules image (a screenshot stored as a
 data URL); a term is required. With no pack loaded the list opens on an Import rules files prompt.
 An image entry, the player's or a pack's, is drawn through `imgHTML()`: escaped, and only from a
 data: URL, the form rules-schema §6.1 documents. A pack image given as a web address is not fetched;
@@ -50,7 +52,9 @@ table is `{name, cols, align, rows, owner, ownerKind}`, optionally `caption` and
 (class, subclass, race, spell, item, feat, background, rule, then Other) and sorts by name; with none
 loaded it shows an Import rules files prompt. `openTableView()` opens the modal: owner, kind and row
 count, then `tableHTML()` — a header from `cols` (omitted when every label is empty), per-column
-`align`, and every cell escaped.
+`align`, and every cell escaped. Rows and columns are read through `tableRows()` and `tableCols()`,
+which give lists whatever the pack wrote: a table with no `rows` counts as 0 rows and says it has
+none, and a row that is not a list is one cell.
 
 **Anchors.** The converter lifts each table out of the prose it lived in and leaves `[Table: Name]`
 in its place. `highlight()` lifts the anchors out **before** escaping and before the glossary pass
@@ -100,6 +104,9 @@ a table opened from a spell preview replaces it.
   Every table check passed, since the rows were the right width. → L3761
 - **The Tables tab was blank on load.** `renderTables()` was in `refreshRulesUI()` but not
   `renderAll()`, so tables drew only after an import or a keystroke in the filter. → L1581
+- **A table with no `rows` stopped every render** (#71). `renderTables()` read `t.rows.length`,
+  and it runs in `renderAll()`, so one hand-written table without rows failed the whole sheet the
+  way a keyword without a term did. `mergeRules()` checks only the name. → L3985
 - **The glossary heading's + Add toggled the section** every time it was pressed, until the handler
   learned to ignore interactive children. → L3189
 
@@ -138,3 +145,4 @@ a table opened from a spell preview replaces it.
 - 2026-09-24 — A × clear button in both filter boxes. → ledger L3525, #49
 - 2026-09-28 — Class progression tables carry their dice and bonus cells; Bard and Rogue Features tables; `tables.js` rejects an all-blank column. → ledger L3761, #64
 - 2026-09-28 — Glossary images are escaped and shown only from data: URLs; the glossary id in a chip is escaped. → ledger L3940
+- 2026-09-28 — A player's entry with no term is listed as "(no term)"; tables are read through `tableRows()`/`tableCols()`, so a table with no rows no longer stops the sheet. → ledger L3985, #71

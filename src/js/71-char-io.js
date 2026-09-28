@@ -48,7 +48,20 @@ function migrate(s){
   base.coins=Object.assign({},blank.coins);
   if(s.coins&&typeof s.coins==="object"){const map={cp:"cp",sp:"sp",ep:"ep",gp:"gp",pp:"pp",km:"cp",sm:"sp",em:"ep",gm:"gp",pm:"pp"};Object.keys(s.coins).forEach(k=>{if(map[k]&&s.coins[k]!==undefined&&s.coins[k]!=="")base.coins[map[k]]=s.coins[k];});}
   // Guarantee list fields are arrays and map fields are plain objects.
-  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources"].forEach(k=>{ if(!Array.isArray(base[k]))base[k]=[]; });
+  /* Every list holds entry objects, and only objects are kept (#71). `null` is
+     what JSON writes for a hole or an undefined; a bare string or number has no
+     field an entry is made of, so nothing any screen could show is lost. Kept,
+     either one stopped the render: the first read of a field on null throws,
+     and in strict mode so does the first write to a string (renderSpells()
+     normalises `level`, detectSpellAttack() sets `atkType`). */
+  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources"].forEach(k=>{ base[k]=Array.isArray(base[k])?base[k].filter(x=>x!==null&&typeof x==="object"):[]; });
+  /* The player's own glossary entries are theirs, so none is dropped for its
+     shape (#71). Each gets what makes it reachable: the other categories' field
+     names read as the glossary's (glossRepair), and an id, without which the
+     Rules tab's Edit and Delete cannot find it. One with no term is kept and
+     listed there as "(no term)"; glossTerm() skips it for matching. */
+  base.glossary.forEach(g=>{ if(!g||typeof g!=="object"||Array.isArray(g))return; glossRepair(g);
+    if(typeof g.id==="number")g.id=String(g.id); else if(typeof g.id!=="string"||!g.id)g.id=uid(); });
   ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;

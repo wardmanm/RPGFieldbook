@@ -322,7 +322,7 @@ function browseFeatures(){
 function openGlossForm(existing){
   const g=existing||{id:uid(),term:"",type:"text",text:"",image:null};
   openModal(existing?"Edit entry":"New glossary entry",`
-    <div class="field"><label class="f">Term</label><input id="gTerm" value="${esc(g.term)}" placeholder="Frightened, Fireball, House rule…"></div>
+    <div class="field"><label class="f">Term</label><input id="gTerm" value="${esc(glossTerm(g))}" placeholder="Frightened, Fireball, House rule…"></div>
     <div class="field"><label class="f">Type</label><select id="gType"><option value="text"${g.type==="text"?" selected":""}>Text</option><option value="image"${g.type==="image"?" selected":""}>Rules image</option></select></div>
     <div class="field" id="gTextWrap"><label class="f">Explanation</label><textarea id="gText">${esc(g.text||"")}</textarea></div>
     <div class="field" id="gImgWrap" style="display:none"><label class="f">Rules image</label>
@@ -339,7 +339,7 @@ function openGlossForm(existing){
   document.getElementById("gSave").addEventListener("click",()=>{
     const term=document.getElementById("gTerm").value.trim();if(!term){alert("Give the entry a term.");return;}
     const rec={id:g.id,term,type:type.value,text:document.getElementById("gText").value,image:img};
-    const i=character.glossary.findIndex(x=>x.id===g.id);if(i>=0)character.glossary[i]=rec;else character.glossary.push(rec);
+    const i=character.glossary.findIndex(x=>x&&x.id===g.id);if(i>=0)character.glossary[i]=rec;else character.glossary.push(rec);
     closeModal();renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();
   });
 }

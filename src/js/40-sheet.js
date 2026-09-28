@@ -193,7 +193,9 @@ function renderInventory(){
   el.insertAdjacentHTML("beforeend",invTotalsHTML());
 }
 function statusTitle(name){
-  const g=allGlossary().find(x=>x.term.toLowerCase()===(name||"").toLowerCase());
+  /* a status name is from the file too: 7, or nothing, must not throw (#71) */
+  const k=String(name??"").trim().toLowerCase();
+  const g=k?allGlossary().find(x=>glossTerm(x).toLowerCase()===k):null;
   return g?`<span class="kw" data-gid="${esc(g.id)}" role="button" tabindex="0">${esc(name)}</span>`:esc(name||"Status");
 }
 /* ONE row, two places: the Statuses card on the Sheet, and the Concentrating

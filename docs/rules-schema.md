@@ -198,6 +198,11 @@ reach that level.
 
 ## 6. Category schemas
 
+Every entry needs a **`name`** (a keyword: its **`term`**), as text; a number is read as text. An
+entry without one can't be found by anything, so it is skipped when the pack is imported or fetched,
+and the status line says how many were skipped in each category. The rest of the pack loads as
+normal.
+
 ### 6.1 `keywords` — glossary terms, conditions & statuses
 
 ```json
@@ -205,6 +210,8 @@ reach that level.
 { "term": "Half Cover", "type": "image", "image": "data:image/png;base64,…" }
 ```
 
+- `term` is required. A keyword written the way the other categories are, with `name` and
+  `description`, is read as its `term` and `text`.
 - `type`: `"text"` (with `text`) or `"image"` (with `image` as a data URL).
 - **`cond: true`** marks the entry as a condition/status so it appears in the sheet's
   **Statuses & Conditions** picker. Plain rules terms omit it (they still show in the Rules tab

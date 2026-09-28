@@ -10,13 +10,14 @@ beside it. The same argument covers the markup the app builds around that prose:
 interpolated into an HTML attribute is `esc()`'d**, and every image source is a data: URL, both
 checked mechanically.
 
-**Code:** `esc()`, `escReg()`, `safeImgSrc()`, `imgHTML()`, `allGlossary()` in `00-constants.js`; `highlight()`, `descHTML()`,
+**Code:** `esc()`, `escReg()`, `safeImgSrc()`, `imgHTML()`, `allGlossary()`, `glossTerm()`, `glossRepair()` in `00-constants.js`; `highlight()`, `descHTML()`,
 `renderRT()` in `10-compute.js`; `findTable()`, `tableHTML()`, `openTableByName()`,
 `tableChipsHTML()` in `86-tables.js`; `noteInline()`, `noteHTML()`, `richHTML()`, `richInline()`,
 `notePreview()` in `87-notes.js`; `printSheet()`, `printStrip()` in `71-char-io.js`;
 `refreshRulesUI()` in `88-settings.js` · **Tests:** `tables.js` (escaping, forged placeholders,
 chips inside markdown), `sheet.js` (the renderers, no sentinel leaks; a hostile character, pack and
-keyword id through 40 renderers), `rules-data.js` (every attribute interpolation `esc()`'d, every
+keyword id through 40 renderers; glossary entries with no term, and junk in every list and
+category, through the renderers and pickers), `rules-data.js` (every attribute interpolation `esc()`'d, every
 image through `safeImgSrc()`; run-in panes call `richInline()`, no mid-sentence breaks in
 Humblewood prose) ·
 **See also:** [Story & notes](../features/story-and-notes.md),
@@ -31,9 +32,13 @@ Humblewood prose) ·
    the name raw. This happens before escaping, so the name stays exact for the lookup, and before
    the glossary pass, which would otherwise chew through a table name like "Damage Types".
 2. `esc()` the rest (`& < > " '`).
-3. The glossary pass. Every term in `allGlossary()` (pack keywords plus the character's own
-   glossary) is escaped, regex-escaped, and sorted longest first into one case-insensitive
-   `\b(…)\b` pattern. Each hit becomes `<span class="kw" data-gid=… role="button" tabindex="0">`.
+3. The glossary pass. Every entry in `allGlossary()` (pack keywords, then the character's own
+   glossary; objects only) that has a term is keyed by that term escaped and lower-cased, the first
+   entry per key winning. A term is read only through `glossTerm()`: a trimmed string, and "" (no
+   term, never matched) for anything else. The keys, regex-escaped and longest first, make one
+   case-insensitive `\b(…)\b` pattern. Each hit is looked up in the map by its own lower-cased
+   text, which is already in escaped form, and becomes
+   `<span class="kw" data-gid=… role="button" tabindex="0">`.
 4. Put the anchors back in order. A name `findTable()` resolves becomes
    `<span class="tblref" data-tbl=…>`. Otherwise it reads as plain prose, "the Name table", so no
    dead chip appears when no tables pack is loaded.
@@ -114,6 +119,10 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
   runs `esc()` before anything else. Running markdown *before* the glossary pass is unsafe the
   other way: a term such as "strong" would match inside a `<strong>` just written. Running it after
   without holding the tags lets a `*` inside a `data-tbl` attribute be eaten.
+- **A glossary term is read only through `glossTerm()`**, never `.term`. Entries come from files
+  (a pack, a settings file, an imported character), so one can have no term, a number, or be
+  `null`, and every render runs through `highlight()`: one reader that assumes a term blanks the
+  sheet (asserted with the malformed entries first, since a `find()` stops at the first match).
 - **Every attribute value `highlight()` writes is `esc()`'d**, the glossary id in `data-gid`
   included. A raw `>` inside an inserted tag would break the exact `/<[^>]+>/g` hold.
 - **Every `${…}` inside a quoted HTML attribute value in `src/js` is `esc(…)` of the whole
@@ -160,6 +169,13 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
   were rewritten as escapes. The test that asserted the escape form went with `descHTML()`'s own
   sentinels, so nothing guards this now. `src/js/` has no literal private-use characters today
   (checked for this page).
+- **One entry with no term blanked the sheet** (#71). The chip lookup was
+  `allGlossary().find(x=>x.term.toLowerCase()…)`, so a keyword or player's entry without a term
+  threw a TypeError inside `highlight()`, and everything drawn after it (features, the Add class
+  window) failed. It hid behind `find()`: the bad entry only threw when it came before the matched
+  one. The same lookup compared the escaped match with the raw term, unescaping only `&amp;`, so a
+  term with an apostrophe ("Hunter's Mark") was a chip with an empty `data-gid` that opened nothing.
+  A term of only spaces compiled to `\b( )\b` and chipped every space between words.
 - **A known loss:** `**Hit** Points` loses its *Hit Points* chip, because the asterisks break
   `\b(term)\b`. That is inherent to escaping first and matching second.
 - **Ids look like app data and are not.** They come from `uid()` when the app makes a row, and
@@ -193,6 +209,8 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
 | Which attribute values are escaped | All of them, checked mechanically | Only the untrusted ones: not checkable by a scan, and ids, which look internal, come from the file (L3940) |
 | Which image sources load | data: URLs only, any media type | Also `https:` for pack images: a network request beyond the two the app makes, the schema says data URL, and no shipped pack has an image. `data:image/` only: FileReader labels an untyped file octet-stream, and an `<img>` runs no script whatever it holds (L3940) |
 | How the guard finds attribute values | A tokenizer over `src/js` | A regex over the source: defeated by an earlier `${…}` holding quotes, and by a regex literal holding backticks (L3940) |
+| How a match finds its glossary entry | One map per call, keyed by the escaped, lower-cased term | `find()` per match against the raw term: threw on an entry with no term, left an apostrophe's chip with no id, and scanned the whole glossary per hit (L3985) |
+| A glossary entry with no usable term | Never matched: `glossTerm()` gives "" for anything but a string | `String()` at read time: an object would match "[object Object]". Repairs happen once, at the boundaries (`glossRepair()`: a number becomes text, `name` fills a missing term), not in every reader (L3985) |
 
 ## Open
 
@@ -212,3 +230,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-15 — Italics-as-structure is rejected for other Humblewood extracts, and a data scan for mid-sentence breaks becomes a test. → ledger L2538
 - 2026-08-18 — One grammar for every field: `richHTML()` and `richInline()` arrive, `descHTML()` delegates, emphasis needs non-space at both ends, and the note preview renders phrasing markup. → ledger L3035
 - 2026-09-28 — Every attribute interpolation is `esc()`'d and every image goes through `imgHTML()` (data: URLs only), both guarded; the audit's other raw values fixed. → ledger L3940
+- 2026-09-28 — Terms are read only through `glossTerm()`, so an entry with no term can't break a render; the glossary pass looks matches up in a map keyed by the escaped term, which also gives apostrophe terms their id. → ledger L3985, #71

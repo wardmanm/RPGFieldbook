@@ -474,7 +474,7 @@ function renderSpells(){
        casting deliberately does not check it. */
     h.innerHTML=`<span class="prep-cap" title="The box on each row marks a spell you have prepared">Prep</span><span>${lv===0?"Cantrips":"Level "+lv}</span><span class="spell-count ${over?"over":""}" title="${allot>0?"Added / available":"Added"}${granted?" · +granted (feat/background), not counted":""}">${countTxt}</span>`;
     el.appendChild(h);
-    items.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).forEach(s=>{
+    items.sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""))).forEach(s=>{
       const r=document.createElement("div");r.className="spell";
       r.innerHTML=`<button class="pin ${s.prepared?"on":""}" data-prep="${esc(s.id)}" aria-label="Prepared" aria-pressed="${s.prepared?"true":"false"}" title="${s.prepared?"Prepared — tap to unprepare":"Not prepared — tap to prepare"}"></button>
         <span class="nm" data-view-spell="${esc(s.id)}">${esc(s.name||"Spell")}</span>
@@ -493,12 +493,16 @@ function renderGloss(){
   const q=(si?si.value:"").trim().toLowerCase();
   const match=t=>!q||String(t).toLowerCase().includes(q);
   const CAP=150;
-  const allrk=rules.keywords||[];
+  /* glossTerm(), never `.term` (#71). A pack keyword with no term can't be
+     reached from anywhere, so it isn't listed; the pool drops those anyway
+     (tidyRules). The player's own entry with no term IS listed — it is theirs,
+     and Edit is how it gets one. */
+  const allrk=(Array.isArray(rules.keywords)?rules.keywords:[]).filter(g=>glossTerm(g));
   const anyRules=RULE_CATS.some(c=>(rules[c]||[]).length);
   if(!anyRules){
     el.insertAdjacentHTML("beforeend",`<div class="empty" style="line-height:1.7">No rules pack loaded yet. <button class="linkbtn" id="glossImport">Import rules files</button> to add conditions, spells, feats, backgrounds, and more — or manage sources in Settings.</div>`);
   }
-  const rk=allrk.filter(g=>match(g.term));
+  const rk=allrk.filter(g=>match(glossTerm(g)));
   if(allrk.length){
     const h=document.createElement("div");h.className="spell-h";
     /* NO esc() here: textContent assigns a literal string, so escaping first
@@ -514,13 +518,15 @@ function renderGloss(){
     });
     if(rk.length>CAP)el.insertAdjacentHTML("beforeend",`<div class="empty">…and ${rk.length-CAP} more — type to filter.</div>`);
   }
-  const mine=character.glossary.filter(g=>match(g.term)).sort((a,b)=>a.term.localeCompare(b.term));
+  const own=(Array.isArray(character.glossary)?character.glossary:[]).filter(g=>g&&typeof g==="object"&&!Array.isArray(g));
+  const mine=own.filter(g=>match(glossTerm(g))).sort((a,b)=>glossTerm(a).localeCompare(glossTerm(b)));
   const h2=document.createElement("div");h2.className="spell-h";h2.textContent=`Your entries (${mine.length})`;el.appendChild(h2);
-  if(!character.glossary.length){el.insertAdjacentHTML("beforeend",`<div class="empty">None yet — add campaign-specific terms or house rules here.</div>`);return;}
+  if(!own.length){el.insertAdjacentHTML("beforeend",`<div class="empty">None yet — add campaign-specific terms or house rules here.</div>`);return;}
   if(!mine.length){el.insertAdjacentHTML("beforeend",`<div class="empty">No matches.</div>`);return;}
   mine.forEach(g=>{
     const d=document.createElement("div");d.className="item";
-    d.innerHTML=`<div class="top"><span class="nm">${esc(g.term)}</span><span class="chip">${g.type==="image"?"Image":"Text"}</span>
+    const t=glossTerm(g);
+    d.innerHTML=`<div class="top"><span class="nm">${t?esc(t):`<em title="This entry has no term, so it never shows up in your text. Edit it to give it one.">(no term)</em>`}</span><span class="chip">${g.type==="image"?"Image":"Text"}</span>
       <button class="icon" data-view-gloss="${esc(g.id)}" aria-label="Preview"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
       <button class="icon" data-edit-gloss="${esc(g.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
       <button class="icon danger" data-del-gloss="${esc(g.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;

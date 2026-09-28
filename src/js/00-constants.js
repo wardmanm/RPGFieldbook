@@ -101,7 +101,36 @@ function imgHTML(u,alt){
 function escReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
 function get(o,p){return p.split(".").reduce((a,k)=>a&&a[k],o)}
 function setP(o,p,v){const ks=p.split(".");const last=ks.pop();let t=o;ks.forEach(k=>t=t[k]);t[last]=v}
-function allGlossary(){return [...(rules.keywords||[]).map(k=>({...k,_locked:true})), ...character.glossary]}
+/* Glossary entries all come from files: a pack's keywords, a settings file
+   (which restores `rules` wholesale, never through mergeRules), the player's
+   own glossary in an imported character. So an entry can arrive with no term,
+   a term that is not text, or not be an object at all. highlight() once read
+   `x.term.toLowerCase()`, and one such entry threw on every render (#71).
+   Every reader asks glossTerm() instead of touching `.term`; "" means "nothing
+   to match on", and such an entry is never a chip or a condition. */
+function glossTerm(g){return g&&typeof g==="object"&&typeof g.term==="string"?g.term.trim():"";}
+/* The boundary repair, shared by mergeRules(), the pool's tidyRules() and
+   migrate(). Every other category names an entry `name` and describes it in
+   `description`, so a keyword written that way is plainly a term and its text:
+   read them as such, keeping the originals. A numeric term becomes text. It
+   fills only an absent or blank term and an absent text, never replaces one;
+   changes the entry in place and returns it. */
+function glossRepair(g){
+  if(!g||typeof g!=="object"||Array.isArray(g))return g;
+  const txt=v=>typeof v==="string"?v:(typeof v==="number"&&Number.isFinite(v)?String(v):"");
+  if((g.term==null||(typeof g.term==="string"&&!g.term.trim()))&&txt(g.name).trim())g.term=txt(g.name);
+  else if(typeof g.term==="number"&&Number.isFinite(g.term))g.term=String(g.term);
+  if(g.text==null&&typeof g.description==="string")g.text=g.description;
+  return g;
+}
+/* Pack keywords first, then the player's own. Objects only; an entry with no
+   term is still returned (the Rules tab lists the player's so it can be fixed,
+   and counts it), so a caller that matches on terms must go through glossTerm(). */
+function allGlossary(){
+  const obj=g=>g&&typeof g==="object"&&!Array.isArray(g);
+  const rk=Array.isArray(rules.keywords)?rules.keywords:[], mine=Array.isArray(character.glossary)?character.glossary:[];
+  return [...rk.filter(obj).map(k=>({...k,_locked:true})), ...mine.filter(obj)];
+}
 
 /* ================= fingerprints =================
    Value hashes used by the character/rules update tool (72-char-update.js) to
@@ -282,7 +311,7 @@ const CASTER_FULL=new Set(["bard","cleric","druid","sorcerer","wizard"]);
 const CASTER_HALF=new Set(["paladin","ranger","artificer"]);
 const THIRD_SUB=new Set(["eldritch knight","arcane trickster"]);
 function classCasterKind(c){
-  const n=(c.name||"").toLowerCase();
+  const n=String(c.name||"").toLowerCase();
   if(n==="warlock")return "pact";
   if(CASTER_FULL.has(n))return "full";
   if(CASTER_HALF.has(n))return "half";
@@ -292,7 +321,7 @@ function classCasterKind(c){
 }
 function hasCasterClass(){return (character.classes||[]).some(c=>classCasterKind(c));}
 function casterLevel(){let lvl=0;(character.classes||[]).forEach(c=>{const L=num(c.level),k=classCasterKind(c);if(k==="full")lvl+=L;else if(k==="half")lvl+=Math.floor(L/2);else if(k==="third")lvl+=Math.floor(L/3);});return lvl;}
-function warlockLevel(){let wl=0;(character.classes||[]).forEach(c=>{if((c.name||"").toLowerCase()==="warlock")wl+=num(c.level);});return wl;}
+function warlockLevel(){let wl=0;(character.classes||[]).forEach(c=>{if(String(c.name||"").toLowerCase()==="warlock")wl+=num(c.level);});return wl;}
 let slotsAuto=false;
 function autoSlots(){
   if(!hasCasterClass()){

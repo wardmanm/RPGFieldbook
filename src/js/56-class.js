@@ -339,7 +339,7 @@ function openSubclassInfo(className,subName){
   openModal(subName,b);
 }
 function openClassInfo(name){
-  const d=findClassDef(name),entry=(character.classes||[]).find(c=>c.name.toLowerCase()===name.toLowerCase());
+  const d=findClassDef(name),entry=(character.classes||[]).find(c=>String(c.name||"").toLowerCase()===String(name||"").toLowerCase());
   if(!d){openModal(name,`<p class="hint">No rules data loaded for this class — it was added as a custom name.</p>`,iconSVG("classes",name,"lg"));return;}
   let b=`<p>${esc(d.description||"")}</p>`;
   const meta=[d.hitDie?("Hit die "+d.hitDie):"",d.spellcasting?("Spellcasting "+d.spellcasting.toUpperCase()):"",d.savingThrows?("Saves "+d.savingThrows.map(x=>x.toUpperCase()).join("/")):""].filter(Boolean).join(" · ");

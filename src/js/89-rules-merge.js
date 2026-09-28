@@ -119,7 +119,59 @@ function renderSrcRows(){
   host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${esc(i)}"><button class="icon danger" data-src-del="${esc(i)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
 }
 function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{}};}
-function keyOf(x,kind){return kind==="subclasses"?(String(x.class||"")+"|"+String(x.name||"")).trim().toLowerCase():String(kind==="keywords"?(x.term||""):(x.name||"")).trim().toLowerCase();}
+/* An entry's name (a keyword's term) as text, or "" when it has none that can
+   be shown: not an object, no name, only spaces, or not text. A number is a
+   name written without quotes, so it counts. Every picker, lookup and chip
+   reaches an entry by this, so one without it is unreachable, and the first
+   `.toLowerCase()` or `x._id=` on it stopped the render (#71). */
+function ruleName(x,kind){
+  if(!x||typeof x!=="object"||Array.isArray(x))return "";
+  const v=kind==="keywords"?x.term:x.name;
+  return typeof v==="string"?v.trim():(typeof v==="number"&&Number.isFinite(v)?String(v):"");
+}
+/* Repair one pool entry in place, or say it cannot be kept. A keyword gets the
+   glossary's aliases (glossRepair) and an id if it has none, since its chip
+   opens it by id; a numeric name becomes text. */
+function tidyRule(x,kind){
+  if(kind==="keywords")glossRepair(x);
+  const nm=ruleName(x,kind);if(!nm)return false;
+  const f=kind==="keywords"?"term":"name";
+  if(typeof x[f]!=="string")x[f]=nm;
+  if(kind==="keywords"&&(typeof x.id!=="string"||!x.id))x.id=typeof x.id==="number"?String(x.id):uid();
+  return true;
+}
+/* Make the pool safe to render, whatever put it there (#71). mergeRules()
+   screens what it merges, but a settings file restores `rules` wholesale and
+   the cache hands back whatever was saved, and neither goes through it. Every
+   path that changes the pool ends in reindexRules(), so it runs this first. A
+   category that is not a list becomes an empty one, and an entry that
+   tidyRule() cannot keep is dropped: nothing could reach it, and it broke
+   everything that could. Returns how many entries it dropped, per category. */
+function tidyRules(){
+  const dropped={};
+  RULE_CATS.forEach(kind=>{
+    const arr=rules[kind];
+    if(arr==null)return;
+    if(!Array.isArray(arr)){rules[kind]=[];return;}
+    const keep=arr.filter(x=>tidyRule(x,kind));
+    if(keep.length!==arr.length){dropped[kind]=arr.length-keep.length;rules[kind]=keep;}
+  });
+  return dropped;
+}
+/* The status-line sentence for entries a load could not use, "" for none.
+   Said where the player is looking when they import, like missingSummary(). */
+const CAT_MANY={keywords:"glossary entries"};
+function skippedSummary(sk){
+  const cats=RULE_CATS.filter(c=>sk&&sk[c]>0);
+  if(!cats.length)return "";
+  const n=cats.reduce((a,c)=>a+sk[c],0);
+  const parts=cats.map(c=>sk[c]+" "+(sk[c]===1?(CAT_ONE[c]||c):(CAT_MANY[c]||catName(c).toLowerCase())));
+  /* a keyword is named by its `term` (rules-schema §6.1), everything else by `name` */
+  const what=cats.every(c=>c==="keywords")?"no term":(sk.keywords?"no name or term":"no name");
+  return cats.length===1?` Skipped ${parts[0]} with ${what}.`:` Skipped ${n} entries with ${what}: ${parts.join(", ")}.`;
+}
+function addSkipped(into,sk){Object.keys(sk||{}).forEach(c=>{into[c]=(into[c]||0)+sk[c];});return into;}
+function keyOf(x,kind){if(!x||typeof x!=="object")return "";return kind==="subclasses"?(String(x.class||"")+"|"+String(x.name||"")).trim().toLowerCase():String(kind==="keywords"?(x.term||""):(x.name||"")).trim().toLowerCase();}
 /* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules.
    Where it came from is stamped on every entry: `_file` for a file import, `_url`
    (the source URL from Settings, not an include under it) for a fetch. `_url` is
@@ -144,36 +196,48 @@ function mergeRules(obj,fileName,url){
     rules.requires[srcLabel(obj)]=obj.requires;
   }
   const cats={keywords:obj.keywords,features:traitArr,items:obj.items,spells:obj.spells,races:obj.races,classes:obj.classes,feats:obj.feats,backgrounds:obj.backgrounds,subclasses:obj.subclasses,tables:obj.tables};
+  /* What this pack had that nothing could reach (#71): counted, returned, and
+     said on the status line by the importer, rather than dropped in silence. */
+  const skipped={};
   Object.keys(cats).forEach(kind=>{
     const arr=cats[kind];if(!Array.isArray(arr))return;
     /* key by SOURCE + name: re-loading the same source replaces its own entries,
        but a same-named entry from a different source is kept (both shown, annotated). */
     const map=new Map((rules[kind]||[]).map(x=>[(x._source||"")+"\u0000"+keyOf(x,kind),x]));
     arr.forEach(raw=>{
-      const base=(kind==="keywords")?{id:uid(),term:raw.term||"",type:raw.type==="image"?"image":"text",text:raw.text||"",image:raw.image||null,cond:!!raw.cond}:Object.assign({},raw);
+      const kw=kind==="keywords"&&raw&&typeof raw==="object"?glossRepair(Object.assign({},raw)):null;
+      if(!ruleName(kw||raw,kind)){skipped[kind]=(skipped[kind]||0)+1;return;}
+      const base=kw?{id:uid(),term:ruleName(kw,kind),type:kw.type==="image"?"image":"text",text:kw.text||"",image:kw.image||null,cond:!!kw.cond}:Object.assign({},raw);
+      if(typeof base.name==="number")base.name=String(base.name);
       /* provenance is the merge's to record, never the pack's: a stray `_url` in
          a file would let some later fetch delete it */
       delete base._file;delete base._url;
       base._source=src;if(fileName)base._file=fileName;if(url)base._url=url;if(obj.rulebook)base._rulebook=1;
       if(obj.dataVersion)base._dataVersion=obj.dataVersion;
       if(excl&&excl.length)base._excludeSystems=excl;
-      const nm=keyOf(base,kind);if(!nm)return;
+      const nm=keyOf(base,kind);if(!nm){skipped[kind]=(skipped[kind]||0)+1;return;}
       map.set(src+"\u0000"+nm,base);
     });
     rules[kind]=Array.from(map.values());
   });
   reindexRules();
   recomputeDups();
+  return skipped;
 }
 /* assign an HTML-safe unique id to every rule entry (used as <option> values and
    for lookups). Must NOT contain characters the HTML parser mangles — notably a
-   null byte, which the parser turns into U+FFFD inside attribute values. */
+   null byte, which the parser turns into U+FFFD inside attribute values.
+   Every path that changes the pool ends here — a merge, a fetch, a removal, a
+   settings file, the cache at boot — which is why the pool is tidied here first
+   (#71). Returns what the tidy dropped, per category, for a caller to report. */
 let _ruleSeq=0;
 function reindexRules(){
+  const dropped=tidyRules();
   _ruleSeq=0;
   RULE_CATS.forEach(kind=>{
     (rules[kind]||[]).forEach(x=>{x._id="r"+(_ruleSeq++);});
   });
+  return dropped;
 }
 /* names that appear in more than one source within a category → shown annotated */
 function recomputeDups(){
@@ -191,8 +255,8 @@ function dispName(entry,kind){
   return dset.has(String(nm).trim().toLowerCase())?`${nm} (${entry._source||"?"})`:nm;
 }
 function ruleById(kind,idOrName){
-  const arr=rules[kind]||[];
-  return arr.find(x=>x._id===idOrName)||arr.find(x=>keyOf(x,kind)===String(idOrName||"").trim().toLowerCase());
+  const arr=Array.isArray(rules[kind])?rules[kind]:[];
+  return arr.find(x=>x&&x._id===idOrName)||arr.find(x=>keyOf(x,kind)===String(idOrName||"").trim().toLowerCase());
 }
 /* Fetch a URL and follow any "include":[...] (a manifest) relative to it,
    collecting every pack into `out` in order. Nothing is merged here: the caller
@@ -234,9 +298,11 @@ function applyFetchedSource(url,packs){
   if(rules.requires)new Set(packs.map(srcLabel)).forEach(l=>{
     if(RULE_CATS.every(c=>(rules[c]||[]).every(e=>(e._source||"")!==l||old.has(e))))delete rules.requires[l];
   });
-  packs.forEach(p=>mergeRules(p,null,url));
+  const skipped={};
+  packs.forEach(p=>addSkipped(skipped,mergeRules(p,null,url)));
   RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
   pruneRequires();reindexRules();recomputeDups();
+  return skipped;
 }
 /* Settings → Fetch all. Fetching NEVER loses what is loaded (#65): this used to
    resetRules() first, which discarded every pack imported from a file, and when
@@ -270,14 +336,16 @@ function fetchAllRules(){
         updateRulesStatus(`Couldn't fetch ${why}, so nothing changed. ${rulesStatusText()}${tail}`,"err");
         return;
       }
-      ok.forEach(r=>applyFetchedSource(r.url,r.packs));
+      const skipped={};
+      ok.forEach(r=>addSkipped(skipped,applyFetchedSource(r.url,r.packs)));
+      const sk=skippedSummary(skipped);
       const saving=saveRulesCache();
       refreshRulesUI();renderRulesData();
       const head=bad.length
         ? `Fetched ${ok.length} of ${results.length} sources. Couldn't fetch ${why}, so what ${bad.length>1?"they":"it"} loaded before is kept. `
         : "Fetched. ";
       const m=missingSummary();
-      updateRulesStatus(head+rulesStatusText()+m+(bad.length?tail:""),(bad.length||m)?"err":"ok");
+      updateRulesStatus(head+rulesStatusText()+m+sk+(bad.length?tail:""),(bad.length||m||sk)?"err":"ok");
       /* the cache write is reported HERE, on the line the player is reading, not
          only in the red line above the list (storage rule: a write that does not
          land says so) */
@@ -286,11 +354,11 @@ function fetchAllRules(){
 }
 /* import one or many files; each is merged so you can load traits.json, spells.json, … separately */
 function importRulesFiles(files){
-  const list=Array.from(files);let ok=0,bad=0;
+  const list=Array.from(files);let ok=0,bad=0;const skipped={};
   (function next(i){
-    if(i>=list.length){const m=missingSummary();saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus(`Merged ${ok} file(s)${bad?", "+bad+" failed":""}. `+rulesStatusText()+m,(bad||m)?"err":"ok");return;}
+    if(i>=list.length){const m=missingSummary(),sk=skippedSummary(skipped);saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus(`Merged ${ok} file(s)${bad?", "+bad+" failed":""}. `+rulesStatusText()+m+sk,(bad||m||sk)?"err":"ok");return;}
     const r=new FileReader();
-    r.onload=()=>{try{mergeRules(JSON.parse(r.result),list[i].name);ok++;}catch(e){bad++;}next(i+1);};
+    r.onload=()=>{try{addSkipped(skipped,mergeRules(JSON.parse(r.result),list[i].name));ok++;}catch(e){bad++;}next(i+1);};
     r.onerror=()=>{bad++;next(i+1);};
     r.readAsText(list[i]);
   })(0);

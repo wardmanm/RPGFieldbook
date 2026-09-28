@@ -45,7 +45,12 @@ function toggleRulesSec(k){setRulesSecOpen(k,!rulesSecOpen(k));renderRulesSectio
    The converter lifts each table out of the prose it lived in and leaves a
    "[Table: Name]" anchor behind; highlight() turns that into a tappable chip.
    Everything here is read-only reference material — no character state. */
-function allTables(){return rules.tables||[]}
+function allTables(){return Array.isArray(rules.tables)?rules.tables:[]}
+/* A table's rows and columns as lists, whatever the pack wrote. renderTables()
+   runs in renderAll(), so a table with no `rows` stopped every render, the same
+   way a keyword with no term did (#71). A row that is not a list is one cell. */
+function tableRows(t){return (t&&Array.isArray(t.rows)?t.rows:[]).map(r=>Array.isArray(r)?r:[r]);}
+function tableCols(t){return t&&Array.isArray(t.cols)?t.cols:[];}
 function findTable(name){
   const n=String(name||"").trim().toLowerCase();
   if(!n)return null;
@@ -59,17 +64,19 @@ function tablesFor(name,kind){
   return allTables().filter(t=>String(t.owner||"").trim().toLowerCase()===n&&(!kind||t.ownerKind===kind));
 }
 function tableHTML(t){
-  if(!t||!Array.isArray(t.rows)||!t.rows.length)return `<p class="hint">This table has no rows.</p>`;
-  const al=t.align||[],a=i=>al[i]==="center"?" style=\"text-align:center\"":(al[i]==="right"?" style=\"text-align:right\"":"");
-  const cols=t.cols||[];
+  const rows=tableRows(t);
+  if(!rows.length)return `<p class="hint">This table has no rows.</p>`;
+  const al=Array.isArray(t.align)?t.align:[],a=i=>al[i]==="center"?" style=\"text-align:center\"":(al[i]==="right"?" style=\"text-align:right\"":"");
+  const cols=tableCols(t);
   const head=cols.some(c=>c!=="")?`<thead><tr>${cols.map((c,i)=>`<th${a(i)}>${esc(c)}</th>`).join("")}</tr></thead>`:"";
-  const body=t.rows.map(r=>`<tr>${r.map((c,i)=>`<td${a(i)}>${esc(c)}</td>`).join("")}</tr>`).join("");
+  const body=rows.map(r=>`<tr>${r.map((c,i)=>`<td${a(i)}>${esc(c)}</td>`).join("")}</tr>`).join("");
   return `<div class="tbl-wrap"><table class="rtbl">${head}<tbody>${body}</tbody></table></div>`;
 }
 function tableMeta(t){
   const bits=[];
   if(t.owner)bits.push(t.owner+(t.ownerKind?" ("+t.ownerKind+")":""));
-  bits.push(t.rows.length+" row"+(t.rows.length===1?"":"s"));
+  const n=tableRows(t).length;
+  bits.push(n+" row"+(n===1?"":"s"));
   return bits.join(" · ");
 }
 function openTableView(t){
@@ -88,7 +95,7 @@ function renderTables(){
   const q=(si?si.value:"").trim().toLowerCase();
   const list=allTables().filter(t=>{
     if(!q)return true;
-    return (String(t.name||"")+" "+String(t.owner||"")+" "+(t.cols||[]).join(" ")).toLowerCase().includes(q);
+    return (String(t.name||"")+" "+String(t.owner||"")+" "+tableCols(t).join(" ")).toLowerCase().includes(q);
   });
   el.innerHTML="";
   if(!allTables().length){
@@ -106,7 +113,7 @@ function renderTables(){
     const h=document.createElement("div");h.className="spell-h";h.textContent=`${label} (${arr.length})`;el.appendChild(h);
     arr.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))).forEach(t=>{
       const d=document.createElement("div");d.className="item";
-      d.innerHTML=`<div class="top"><span class="nm">${esc(dispName(t,"tables"))}</span><span class="chip">${esc(String(t.rows.length))} rows</span>
+      d.innerHTML=`<div class="top"><span class="nm">${esc(dispName(t,"tables"))}</span><span class="chip">${esc(String(tableRows(t).length))} rows</span>
         <button class="icon" data-view-table="${esc(t.name)}" aria-label="View table"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
         ${t.owner?`<div class="desc hint">From ${esc(t.owner)}</div>`:""}`;
       el.appendChild(d);
