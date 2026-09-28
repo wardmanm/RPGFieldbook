@@ -1767,6 +1767,74 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      !litTernary('a?b:c?"x":"y"') && !litTernary('a?"x":b'));
 }
 
+// ---------- a modal title is plain text, never esc()'d (#69)
+// openModal() sets its title as textContent — it holds class, spell and pack
+// names, so it is never parsed as markup. An esc()'d title therefore shows its
+// entities: runChoices() titled a class "Tom &amp; Jerry&#39;s". The body is the
+// HTML half and callers escape it; the title is passed exactly as written. The
+// behavioural half (what reaches #mTitle) is in char-update.js.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  /* The text of a call's FIRST argument: up to the first comma or closing
+     bracket at depth 0, with strings and templates (and their ${…}) skipped
+     whole, so a comma inside one does not end it. */
+  function firstArg(src, i) {
+    const s = i, n = src.length;
+    const quoted = q => { i++; while (i < n && src[i] !== q) { if (src[i] === '\\') i++; i++; } i++; };
+    const template = () => {
+      i++;
+      while (i < n && src[i] !== '`') {
+        if (src[i] === '\\') { i += 2; continue; }
+        if (src[i] === '$' && src[i + 1] === '{') {
+          i += 2; let d = 1;
+          while (i < n && d) {
+            const c = src[i];
+            if (c === '"' || c === "'") { quoted(c); continue; }
+            if (c === '`') { template(); continue; }
+            if (c === '{') d++; else if (c === '}') d--;
+            i++;
+          }
+          continue;
+        }
+        i++;
+      }
+      i++;
+    };
+    let depth = 0;
+    while (i < n) {
+      const c = src[i];
+      if (c === '"' || c === "'") { quoted(c); continue; }
+      if (c === '`') { template(); continue; }
+      if ('([{'.includes(c)) depth++;
+      else if (')]}'.includes(c)) { if (!depth) break; depth--; }
+      else if (c === ',' && !depth) break;
+      i++;
+    }
+    return src.slice(s, i).trim();
+  }
+  const calls = [], escaped = [];
+  manifest.js.forEach(f => {
+    const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    const re = /(^|[^\w$.])openModal\(/g; let m;
+    while ((m = re.exec(src))) {
+      if (/function\s*$/.test(src.slice(Math.max(0, m.index - 12), m.index + m[1].length))) continue;
+      const t = firstArg(src, m.index + m[0].length);
+      if (!t) continue;                                   // "openModal()" in a comment
+      const where = f.replace(/^src\/js\//, '') + ':' + src.slice(0, m.index).split('\n').length;
+      calls.push(where + ' ' + t);
+      if (/\besc\(|&(amp|lt|gt|quot|#39);/.test(t)) escaped.push(where + ' ' + t);
+    }
+  });
+  ck('the title scan is looking at something', calls.length >= 45, calls.length);
+  ck('no openModal() title is esc()\'d — the title is text, set as textContent', escaped.length === 0, escaped);
+  const probe = 'openModal(`${a}, ${esc(b)} — x`,`<p>${esc(c)}</p>`)';
+  ck('title scan: a comma inside a template does not end the title',
+     firstArg(probe, 'openModal('.length) === '`${a}, ${esc(b)} — x`', firstArg(probe, 'openModal('.length));
+  ck('openModal() writes the title as textContent (the contract the scan rests on)',
+     /function openModal\(title,html,icon\)\{[^}]*getElementById\("mTitle"\)\.textContent=title;/.test(
+       fs.readFileSync(path.join(ROOT, 'src/js/80-modal-forms.js'), 'utf8')));
+}
+
 /* ================= Fetch all never loses what is loaded (issue #65) ===========
    fetchAllRules() used to call resetRules() BEFORE fetching, so every pack
    imported from a file was discarded, and when the fetch then failed (offline,

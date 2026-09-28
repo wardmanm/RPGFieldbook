@@ -11,7 +11,8 @@ so removing the source takes it back out; that mechanism is
 `doLevelDown()`, `selectSubclass()`, `chooseSubclass()`, `hpChoice()`, `commitHPChoice()`,
 `seedLevel1HP()`, `grantClassSaves()`, `multiclassChoices()`, `multiclassNote()` in
 `56-class.js`; `choiceFieldHTML()`, `runChoices()`, `gatherChoices()`, `commitChoices()`,
-`effectiveChoose()`, `choiceShortfall()`, `armChoiceDismissGuard()` in `58-choices.js`;
+`effectiveChoose()`, `choiceShortfall()`, `armChoiceDismissGuard()`, `choiceWindowTitle()`,
+`choiceLevelSpan()`, `choiceNoteText()` in `58-choices.js`;
 `openAddRace()`, `applyRace()`, `racesForCharacter()` in `52-race.js`; `openAddBackground()`,
 `applyBackground()` in `54-background.js`; `subclassesFor()`, `addFeatureFromDef()`,
 `grantFeatDef()`, `runExtraChoices()`, `classChipHTML()` in `50-classrace.js`; `dismissModal()`,
@@ -99,6 +100,15 @@ unticked boxes once the block is full and re-enables them off `data-fixed`, neve
 Done, `choiceShortfall(choiceBlocks())` warns about unmade picks; `gatherChoices()` reads only
 checked, **enabled** boxes; `commitChoices()` grants, renders, then opens the next window.
 
+**The window's title** names the levels the window holds, read off its contents by
+`choiceWindowTitle()`. Every choice and every spell note carries the `_level` it was collected at
+(notes as `{text, _level}`, read by `choiceNoteText()`), and an HP step covers `levels` levels ending
+at its own. One level reads "Fighter — Level 4"; several read "Fighter — Levels 1–3". Add class at 3
+holds the level-1 skills, the HP for levels 2–3 and the level-3 subclass; a multiclass added at 3 has
+an HP step for 1–3; Change subclass at 10 re-asks Battle Master's picks from 3, 7 and 10. A window
+with nothing levelled in it (a plain-text note alone) names the class and no level. The name goes in
+as written, because the title is text ([Shell](../ui/shell.md)).
+
 **One window at a time.** There is one modal, so a window opens only once the one before it is
 finished. The windows go: the class's level choices, then the picked subclass's own level choices
 (Battle Master's maneuvers and Student of War), then one "Choose" window from `runExtraChoices()`
@@ -150,6 +160,9 @@ they are built: [Converter](../data/converter.md).
 - **One choice window at a time, and the queue travels with it** (`runChoices(…, pending)` →
   `commitChoices(…, pending)` → `selectSubclass(…, next)`, or the guard's `then` on a dismissal).
   A Done opens at most one window. The queue never waits in a module global.
+- **Every choice and level note a window shows carries `_level`.** The title is derived from them,
+  never passed in, so a new source of choices or notes that leaves `_level` off drops out of the
+  title's span.
 - **`character.classes[].subclass` stores the `subclassesFor()` key**, so a supplement must never be
   allowed to take an existing key from another pack.
 - **The first class is `character.classes[0]`**, the one added while the list was empty. Classes
@@ -183,6 +196,10 @@ they are built: [Converter](../data/converter.md).
   equipment and gold, and the full "choose 2" skills to a second class exactly as to the first, so a
   Fighter who took a Wizard level gained INT and WIS saves, a spellbook kit and 55 gp (#66). The HP
   path had always told the two apart, which is why only it was right.
+- **One level in the title of a window holding three (#69).** The title took the first choice's
+  `_level`, so Add class at 3 said "Level 3" or "Level 1" depending on which block led, and spell
+  notes carried no level at all. It also `esc()`'d the class name, which `openModal()` writes as
+  text, so `&` showed as `&amp;`.
 - **"(TCE) (TCE)".** A reprint already keyed "Psi Warrior (TCE)" was tagged again in both subclass
   pickers; `subSourceTag()` now skips a tag already in the name.
 - **Not everything reverts.** Tools and languages go into the free-text Proficiencies box and stay
@@ -211,6 +228,7 @@ they are built: [Converter](../data/converter.md).
 | A class with no `multiclass` data, added as a second class | No class skills, and a note that the pack does not list them | A multiclass table in the app: rules text belongs in the pack, and a guess would be silently wrong for homebrew |
 | Removing the first class while another remains | The class now first takes its own saving throws, with a toast | Leaving the saves off: the sheet would have no save proficiencies at all (owner may reverse) |
 | Hit points for a first class that starts above level 1 | Seed level 1, then an HP step for levels 2..N in the same window | None at all, as before: a level-3 character was created with no hit points |
+| What a choice window's title names (#69) | The span of levels its choices and notes carry, an HP step's own span included; no level when nothing carries one | The first choice's level: whichever block led decided it. A level the caller passes: a second source that can disagree with what the window shows |
 
 ## Open
 
@@ -226,10 +244,11 @@ they are built: [Converter](../data/converter.md).
   `grantFeatDef()` only queues those when there is an origin sid.
 - Level-down keeps everything, and class-level feat skill choices revert with the class, not the
   level: [Grants & provenance](../architecture/grants-and-provenance.md).
+- A picked subclass's own window carries the class name, like the window before it, so the two
+  can share a title ("Fighter — Level 3" twice). Naming the subclass there needs a display name
+  apart from the `className` the flow keys on.
 - The unreverted Proficiencies text, speed and size. See
   [Known issues](../roadmap/known-issues.md).
-- `runChoices()` titles a window with the level of its first choice, so Add class at level 3 opens
-  as "Fighter — Level 1" even though it holds the level-3 subclass pick too.
 
 ## History
 
@@ -250,3 +269,5 @@ they are built: [Converter](../data/converter.md).
 - 2026-09-28 — only the first class grants saving throws, starting equipment and its full skill
   choice; a multiclass gets the pack's `multiclass` subset and a note. A first class above level 1
   gets its hit points. → ledger L3886, #66
+- 2026-09-28 — a choice window's title names the span of levels it holds, from its choices and
+  notes, and shows the class name as written. → ledger L3985, #69

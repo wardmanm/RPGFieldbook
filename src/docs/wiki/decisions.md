@@ -127,6 +127,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **A class with no `multiclass` data, added as a second class** — No class skills, and a note that the pack does not list them
 - **Removing the first class while another remains** — The class now first takes its own saving throws, with a toast
 - **Hit points for a first class that starts above level 1** — Seed level 1, then an HP step for levels 2..N in the same window
+- **What a choice window's title names (#69)** — The span of levels its choices and notes carry, an HP step's own span included; no level when nothing carries one
 
 ### [Abilities & skills](features/abilities-and-skills.md)
 
@@ -290,6 +291,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **A tap on a finder row** — Updates that row and the footer in place
 - **The off-screen Add button** — `width:auto` on the origin select, `flex-wrap` as a safety net
 - **Markup that moves, in `wire()`** — A local `on()` that skips a missing id
+- **The modal title's contract (#69)** — Plain text, set as `textContent`; callers never escape it
 
 ### [Sections & layout](ui/sections-and-layout.md)
 

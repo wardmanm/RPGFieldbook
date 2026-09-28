@@ -14,19 +14,22 @@ function openAddClass(){
   document.getElementById("cCancel").addEventListener("click",closeModal);
   document.getElementById("cAdd").addEventListener("click",()=>{const raw=(sel&&sel.value)||document.getElementById("classCustom").value.trim();if(!raw){alert("Pick or name a class.");return;}const cd=findClassDef(raw);const name=cd?cd.name:raw;const lvl=Math.max(1,Math.min(20,num(document.getElementById("classLvl").value)||1));closeModal();addClass(name,lvl);});
 }
+/* One level's traits (applied now) and its choices and spell notes (returned
+   for the window). Choices and notes both carry `_level`: the window's title is
+   the span of the levels they came from (choiceWindowTitle(), #69). */
 function applyClassLevel(entry,d,L){
   let choices=[],notes=[];
   if(d&&d.levels){
     const lv=d.levels[String(L)]||{};
     (lv.traits||[]).forEach(t=>addFeatureFromDef(t,{kind:"class",class:entry.name,level:L}));
     (Array.isArray(lv.choices)?lv.choices:[]).forEach(ch=>choices.push({...ch,_level:L,_sid:"class:"+entry.name}));
-    if(lv.spells){const n=lv.spells.note||(lv.spells.known!=null?`You can now know up to ${lv.spells.known} ${d.name} spell(s). Add them via Spells → Add.`:null);if(n)notes.push(n);}
+    if(lv.spells){const n=lv.spells.note||(lv.spells.known!=null?`You can now know up to ${lv.spells.known} ${d.name} spell(s). Add them via Spells → Add.`:null);if(n)notes.push({text:n,_level:L});}
     const subs=subclassesFor(d);
     if(entry.subclass&&subs[entry.subclass]&&subs[entry.subclass].levels){
       const sl=subs[entry.subclass].levels[String(L)]||{};
       (sl.traits||[]).forEach(t=>addFeatureFromDef(t,{kind:"class",class:entry.name,level:L,subclass:entry.subclass}));
       (Array.isArray(sl.choices)?sl.choices:[]).forEach(ch=>choices.push({...ch,_level:L,_sid:"subclass:"+entry.name+":"+entry.subclass}));
-      if(sl.spells){const n=sl.spells.note||(sl.spells.known!=null?`You can know up to ${sl.spells.known} ${entry.subclass} spell(s).`:null);if(n)notes.push(n);}
+      if(sl.spells){const n=sl.spells.note||(sl.spells.known!=null?`You can know up to ${sl.spells.known} ${entry.subclass} spell(s).`:null);if(n)notes.push({text:n,_level:L});}
     }
   }
   return {choices,notes};
@@ -306,7 +309,7 @@ function selectSubclass(className,subName,pending){
       const lv=sc.levels[String(L)];
       (lv.traits||[]).forEach(t=>addFeatureFromDef(t,{kind:"class",class:className,level:L,subclass:subName}));
       (Array.isArray(lv.choices)?lv.choices:[]).forEach(ch=>choices.push({...ch,_level:L,_sid:"subclass:"+className+":"+subName}));
-      if(lv.spells){const n=lv.spells.note||(lv.spells.known!=null?`You can know up to ${lv.spells.known} ${subName} spell(s).`:null);if(n)notes.push(n);}
+      if(lv.spells){const n=lv.spells.note||(lv.spells.known!=null?`You can know up to ${lv.spells.known} ${subName} spell(s).`:null);if(n)notes.push({text:n,_level:L});}
     });
   }
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
