@@ -245,6 +245,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **An anchor with no table sink active (converter)** — Keep the old silent drop
 - **Spell-slot columns in class tables** — Skipped
 - **Where tables are browsed** — A card under the glossary on the Rules tab (#32)
+- **Where a table's footnotes render (#73)** — Under the table, outside its scroll box, escaped like a cell
 
 ### [Combat view](features/combat-view.md)
 
@@ -345,6 +346,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Spell-slot columns in class tables** — Skipped
 - **A table cell `_cell_text()` cannot read** — Blank, counted, and a `WARNING` at the end of the run (#64)
 - **How typed class-table cells print** — As the book prints them: `+2`, `1d6`, `+10 ft.`, `—` for a speed bonus of 0
+- **A table's footnotes (#73)** — An optional `footnotes` list on the table, each rendered by `_cell_text()`, with its `*` kept
+- **Whether identical-table reuse compares footnotes (#73)** — Yes: cols, rows and footnotes
 - **Where `overlay.json` and `class-resources.json` live** — At the `data/` root; in the zip, beside `convert.py`
 - **How options reach the level-up picker** — Inlined in every choice (~150 KB across the packs)
 - **Which printing of an option a class offers** — The class's own source only, falling back to PHB for a 2014 book with none
@@ -382,6 +385,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **March 2024 (Fizzar as a class)** — Excluded
 - **A background whose characteristic tables only partly verify** — Ship all four or none
 - **Where the Gadgeteer's layout is fixed** — In the extractor
+- **Night Domain Spells' asterisk note (#73)** — Left in the feature prose, where the book prints it after the table; no `footnotes`
 
 ### [Homebrew](data/homebrew.md)
 

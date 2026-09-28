@@ -4269,3 +4269,57 @@ Noticed, not changed: `openClassInfo()` still assumes a pack class's `spellcasti
 `savingThrows` a list; the glossary editor's Save still replaces the whole entry, so fields other
 than term/type/text/image are dropped when a player edits one (the aliases' content survives,
 having been copied into term/text).
+
+## Tables keep their footnotes (#73, 2026-09-28)
+
+**The bug.** 17 Xanathar's downtime tables mark entries with `*`, and the notes the marks point at
+never reached the pack: "Might involve a rival" under 14 complication tables, and "Halved for a
+consumable item like a potion or scroll" under Magic Item Price, Magic Item Base Prices and Magic
+Item Crafting Time and Cost (whose price column's label carries the mark). Seen during #68.
+
+**Root cause.** 5e-tools carries a table's footnotes on the table node itself, as `footnotes`, an
+array of entries (in the v2.36.1 dump, 35 nodes, every one a plain string with its `*`).
+`_norm_table()` read `rows`, `colLabels`, `colStyles` and `caption` and nothing else, and the
+schema had no field for them, so the app had nothing to show.
+
+**Where footnotes occur** in the files the converter reads: the XGE downtime rules (17 tables, all
+shipped), AI's franchise rules (11), DMG's Selling Magic Items (1), the DMG and BMT decks (2), EFA's
+Artificer plan tables (3) and FRHoF's Knowledge Domain Spells (1). No pack selects those last 18
+printings (the core Artificer is TCE's, whose plan tables have none; the decks are XDMG's), so the
+core and Tasha's packs gain none. `classTableGroups` never carry them. **Humblewood** needs nothing:
+its one starred table, Night Domain Spells, explains the mark in a line the book prints after the
+table ("Spells marked with an asterisk (*) can be found in this book."), which the extractor
+already keeps verbatim in the feature prose beside the table's anchor, where the verbatim suite
+holds it. The extractor was not changed.
+
+**Fix.** Converter: `_norm_table()` renders each footnote through `_cell_text()`, the cells' own
+path (a string de-tagged, an `entries` object flattened), keeps the `*`, drops blank ones, and
+writes `footnotes` after `rows` only when any remain. `_register()`'s identical-table reuse now
+compares footnotes too, so a footnoted table cannot be folded into an unfootnoted twin and lose
+them (no such pair exists in the three packs today). App: `tableHTML()` writes each footnote as a
+`<p>` in a `.tbl-notes` block after the table's scroll box, so a wide table cannot scroll its notes
+out of view, each through `esc()` exactly as a cell is. With no footnotes the markup is byte for
+byte what it was. CSS in `35-tables.css`. Schema §6.11 documents the optional field;
+README-converter says tables carry it.
+
+**Data.** `data/xanathars/tables.json` +51 lines, none removed: 17 `footnotes` arrays. Checked
+table by table with the key taken out: same 74 names in the same order, identical content and key
+order, same wrapper. Every other file of the three packs regenerates byte for byte, `data/5e2024/`
+included, and no run prints a WARNING. XGE's `DATA_VERSIONS` moves at the next release, correctly:
+Xanathar's players re-download that pack to see the notes.
+
+**Tests.** `converter.py` 199 → 210: the real Crime Complications and Magic Item Price nodes from
+the dump, key order, no key when there are none or the list is empty, tags and an `entries`
+footnote rendered as cells are, the reuse rule both ways, and `convert_glossary()` end to end. 7
+failed before the fix. `tables.js` 157 → 182: a table without footnotes renders exactly the
+pre-change string (pinned), footnotes follow the scroll box escaped, the shipped XGE packs carry 17
+(Crime Complications, Magic Item Price and the three carousing tables pinned) and the shipped Crime
+Complications renders its note; for every pack, `footnotes` is a non-empty list of strings and no
+table has a `*` without one (Night Domain Spells exempt, with the reason). 9 failed before the fix.
+Mutation-checked: an unescaped footnote fails `tables.js` (the attribute guard in `rules-data.js`
+cannot see it, as it is not an attribute); dropping the footnote comparison from `_register()`
+fails `converter.py`.
+
+Pages: [rules & tables](../wiki/features/rules-and-tables.md),
+[converter](../wiki/data/converter.md), [supplements](../wiki/data/supplements.md),
+[humblewood](../wiki/data/humblewood.md); `decisions.md`. Known issues are reconciled at merge.

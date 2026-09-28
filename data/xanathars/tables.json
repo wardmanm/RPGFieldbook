@@ -347,6 +347,9 @@
           "A competitor spreads rumors that your work is shoddy and prone to failure.*"
         ]
       ],
+      "footnotes": [
+        "*Might involve a rival"
+      ],
       "caption": "Crafting Complications",
       "owner": "Downtime Activity: Crafting an Item",
       "ownerKind": "rule"
@@ -394,6 +397,9 @@
           "8",
           "Your victim asks one of your adventuring companions to solve the crime."
         ]
+      ],
+      "footnotes": [
+        "*Might involve a rival"
       ],
       "caption": "Crime Complications",
       "owner": "Downtime Activity: Crime",
@@ -517,6 +523,9 @@
           "6",
           "A high-stakes gambler comes to town and insists that you take part in a game."
         ]
+      ],
+      "footnotes": [
+        "*Might involve a rival"
       ],
       "caption": "Gambling Complications",
       "owner": "Downtime Activity: Gambling",
@@ -788,6 +797,9 @@
           "Everyone is calling you by some weird, embarrassing nickname, like Puddle Drinker or Bench Slayer, and no one will say why.*"
         ]
       ],
+      "footnotes": [
+        "*Might involve a rival"
+      ],
       "caption": "Lower-Class Carousing Complications",
       "owner": "Downtime Activity: Carousing",
       "ownerKind": "rule"
@@ -823,6 +835,9 @@
           "Legendary",
           "200,000 gp"
         ]
+      ],
+      "footnotes": [
+        "*Halved for a consumable item like a potion or scroll"
       ],
       "caption": "Magic Item Base Prices",
       "owner": "Downtime Activity: Selling a Magic Item",
@@ -866,6 +881,9 @@
           "50",
           "100,000 gp"
         ]
+      ],
+      "footnotes": [
+        "*Halved for a consumable item like a potion or scroll"
       ],
       "caption": "Magic Item Crafting Time and Cost",
       "owner": "Downtime Activity: Crafting an Item",
@@ -967,6 +985,9 @@
           "2d6 × 25,000 gp"
         ]
       ],
+      "footnotes": [
+        "*Halved for a consumable item like a potion or scroll"
+      ],
       "caption": "Magic Item Price",
       "owner": "Downtime Activity: Buying a Magic Item",
       "ownerKind": "rule"
@@ -1031,6 +1052,9 @@
           "The party's enemies spread rumors that the item is an artifact of evil.*"
         ]
       ],
+      "footnotes": [
+        "*Might involve a rival"
+      ],
       "caption": "Magic Item Purchase Complications",
       "owner": "Downtime Activity: Buying a Magic Item",
       "ownerKind": "rule"
@@ -1070,6 +1094,9 @@
           "6",
           "The buyer is murdered before the sale is finalized.*"
         ]
+      ],
+      "footnotes": [
+        "*Might involve a rival"
       ],
       "caption": "Magic Item Sale Complications",
       "owner": "Downtime Activity: Selling a Magic Item",
@@ -1206,6 +1233,9 @@
           "You spent an additional 100 gp trying to impress people."
         ]
       ],
+      "footnotes": [
+        "*Might involve a rival"
+      ],
       "caption": "Middle-Class Carousing Complications",
       "owner": "Downtime Activity: Carousing",
       "ownerKind": "rule"
@@ -1317,6 +1347,9 @@
           "6",
           "You accidentally deliver a near-fatal wound to a foe."
         ]
+      ],
+      "footnotes": [
+        "*Might involve a rival"
       ],
       "caption": "Pit Fighting Complications",
       "owner": "Downtime Activity: Pit Fighting",
@@ -1557,6 +1590,9 @@
           "You accidentally discover that an important person in the temple is a fiend worshiper."
         ]
       ],
+      "footnotes": [
+        "*Might involve a rival"
+      ],
       "caption": "Religious Service Complications",
       "owner": "Downtime Activity: Religious Service",
       "ownerKind": "rule"
@@ -1596,6 +1632,9 @@
           "6",
           "You uncovered useful lore, but only by promising to complete a dangerous task in return."
         ]
+      ],
+      "footnotes": [
+        "*Might involve a rival"
       ],
       "caption": "Research Complications",
       "owner": "Downtime Activity: Research",
@@ -1764,6 +1803,9 @@
           "6",
           "A thief attempts to break into your workroom.*"
         ]
+      ],
+      "footnotes": [
+        "*Might involve a rival"
       ],
       "caption": "Scribe a Scroll Complications",
       "owner": "Downtime Activity: Scribing a Spell Scroll",
@@ -1994,6 +2036,9 @@
           "Your teacher asks for help dealing with a threat."
         ]
       ],
+      "footnotes": [
+        "*Might involve a rival"
+      ],
       "caption": "Training Complications",
       "owner": "Downtime Activity: Training",
       "ownerKind": "rule"
@@ -2041,6 +2086,9 @@
           "8",
           "You spent an additional 500 gp trying to impress people."
         ]
+      ],
+      "footnotes": [
+        "*Might involve a rival"
       ],
       "caption": "Upper-Class Carousing Complications",
       "owner": "Downtime Activity: Carousing",
@@ -2193,6 +2241,9 @@
           "6",
           "You gain a reputation for laziness (unjustified or not, as you choose), giving you disadvantage on checks made for this downtime activity for the next six workweeks you devote to it.*"
         ]
+      ],
+      "footnotes": [
+        "*Might involve a rival"
       ],
       "caption": "Work Complications",
       "owner": "Downtime Activity: Work",

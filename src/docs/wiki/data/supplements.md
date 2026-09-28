@@ -49,6 +49,9 @@ Current counts, asserted file by file in `rules-data.js`:
 | XGE | 22 | 43 | 15 | — | 95 | 31 | 22 | 74 |
 | TCE | 3 | 84 | 15 | 1 (Custom Lineage) | 21 | 26 | 76 | 37 |
 
+17 of Xanathar's tables, every one a downtime table, carry `footnotes` ("Might involve a rival",
+"Halved for a consumable item like a potion or scroll"); `tables.js` pins them. Tasha's has none.
+
 **Subclasses stand alone.** A supplement's subclasses are `subclasses` records that attach to a
 class by name (schema §6.5), not nested in a class. `convert_subclasses()` drops every `_copy`
 record, resolves features through `_subclass_levels()` (a 7-part feature UID names the feature's
@@ -161,4 +164,5 @@ and missing-dependency reporting: [Rules packs](../architecture/rules-packs.md).
 - 2026-09-25 — Option pickers for Arcane Archer, College of Swords and Rune Knight; Tasha's Artificer tables suffixed. → ledger L3596, #60
 - 2026-09-25 — `supplement` reads `class-resources.json`: Arcane Archer's Arcane Shot tracker. → ledger L3649
 - 2026-09-25 — Moved to the v2.36.1 dump: XGE's Power Word Pain gains Bard; both packs' subclasses unchanged. → ledger L3676
+- 2026-09-28 — Xanathar's 17 downtime tables carry their footnotes; `tables.json` was the only file to move. → ledger L4273, #73
 - 2026-09-28 — Text `flatten()` had dropped is restored: Xanathar's Arcane Shot save DC; Tasha's Path of the Beast Bite, Claws and Tail, College of Creation motes, Circle of Stars omens, Custom Lineage traits and Luba's Tarokka Weal and Woe. → ledger L4025, #68

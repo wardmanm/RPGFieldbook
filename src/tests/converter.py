@@ -770,6 +770,76 @@ for label, argv in (('a single subcommand', ['conditions', os.path.join(_dump, '
        "WARNING: 1 entry node(s) of type 'someFutureNode'" in r.stdout, r.stdout[-600:] + r.stderr[-300:])
 shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True)
 
+# ---- 24. a table's footnotes ship with it (#73)
+# 5e-tools hangs a table's footnotes off the node as `footnotes`, an array of
+# entries. _norm_table() read rows, colLabels, colStyles and caption and nothing
+# else, so 17 Xanathar's downtime tables shipped rows marked * with nothing
+# saying what the mark meant. Both nodes are copied whole from the v2.36.1 dump
+# (variantrules.json, XGE "Downtime Activity: Crime" and "...: Buying a Magic Item").
+CRIME = {"type": "table", "caption": "Crime Complications", "colLabels": ["d8", "Complication"],
+         "colStyles": ["col-2 text-center", "col-10"],
+         "rows": [["1", "A bounty equal to your earnings is offered for information about your crime.*"],
+                  ["2", "An unknown person contacts you, threatening to reveal your crime if you don't render a service.*"],
+                  ["3", "Your victim is financially ruined by your crime."],
+                  ["4", "Someone who knows of your crime has been arrested on an unrelated matter.*"],
+                  ["5", "Your loot is a single, easily identified item that you can't fence in this region."],
+                  ["6", "You robbed someone who was under a local crime lord's protection, and who now wants revenge."],
+                  ["7", "Your victim calls in a favor from a guard, doubling the efforts to solve the case."],
+                  ["8", "Your victim asks one of your adventuring companions to solve the crime."]],
+         "footnotes": ["*Might involve a rival"]}
+PRICE = {"type": "table", "caption": "Magic Item Price", "colLabels": ["Rarity", "Asking Price*"],
+         "colStyles": ["col-5", "col-7 text-right"],
+         "rows": [["Common", "({@dice 1d6 + 1}) × 10 gp"], ["Uncommon", "{@dice 1d6 × 100} gp"],
+                  ["Rare", "{@dice 2d10 × 1,000} gp"], ["Very rare", "({@dice 1d4 + 1}) × 10,000 gp"],
+                  ["Legendary", "{@dice 2d6 × 25,000} gp"]],
+         "footnotes": ["*Halved for a consumable item like a potion or scroll"]}
+fsink = []
+with C.table_ctx(fsink, 'Downtime Activity: Crime', 'rule'):
+    ftxt = C.flatten(["You might commit a crime.", CRIME, PRICE])
+fc, fp = fsink[0], fsink[1]
+ck('#73 a table keeps its footnotes', fc.get('footnotes') == ['*Might involve a rival'], fc.get('footnotes'))
+ck('#73 ...and the rows keep the * they point from',
+   fc['rows'][0][1].endswith('crime.*') and not fc['rows'][2][1].endswith('*'), fc['rows'])
+ck('#73 a footnote for a starred column label', fp.get('footnotes') == ['*Halved for a consumable item like a potion or scroll']
+   and fp['cols'] == ['Rarity', 'Asking Price*'], [fp['cols'], fp.get('footnotes')])
+ck('#73 footnotes sit after the rows, before the caption',
+   list(fc) == ['name', 'cols', 'align', 'rows', 'footnotes', 'caption', 'owner', 'ownerKind'], list(fc))
+ck('#73 the anchors are unchanged', ftxt.endswith('[Table: Crime Complications]\n[Table: Magic Item Price]'), ftxt)
+ck('#73 a table with no footnotes gains no key', 'footnotes' not in sink3[0] and 'footnotes' not in s4[0], sink3[0])
+fe = []
+with C.table_ctx(fe, 'X', 'rule'):
+    C.flatten([dict(CRIME, footnotes=[])])
+ck('#73 an empty footnotes list gains no key', 'footnotes' not in fe[0], fe[0])
+
+# Footnotes are entries, like cells: the same text path de-tags a string and
+# flattens an entries object. Blank ones are dropped rather than shipped empty.
+ftag = {"type": "table", "colLabels": ["Item"], "rows": [["Potion of Healing*"]],
+        "footnotes": ["*See the {@item Potion of Healing|XDMG} entry.",
+                      {"type": "entries", "entries": ["Roll {@dice 1d4} {@b more}."]}, "", "   "]}
+ft = []
+with C.table_ctx(ft, 'X', 'rule'):
+    C.flatten([ftag])
+ck('#73 footnote tags are rendered the way cell tags are',
+   ft[0].get('footnotes') == ['*See the Potion of Healing entry.', 'Roll 1d4 more.'], ft[0].get('footnotes'))
+
+# The identical-table reuse in _register() must not merge a footnoted table into
+# an unfootnoted twin: the second would lose its footnotes (or gain the first's).
+fd = []
+with C.table_ctx(fd, 'X', 'rule'):
+    C.flatten([dict(CRIME, footnotes=None)]); C.flatten([CRIME]); C.flatten([CRIME])
+ck('#73 a twin that differs only in its footnotes is not reused',
+   [t.get('footnotes') for t in fd] == [None, ['*Might involve a rival']], [t.get('footnotes') for t in fd])
+ck('#73 ...and a true duplicate still is', len(fd) == 2, len(fd))
+
+# end to end through the glossary path, the one Xanathar's downtime tables take
+fg = []
+_vr = _tmpjson({'variantrule': [{'name': 'Downtime Activity: Crime', 'source': 'XGE',
+                                 'entries': ['You might commit a crime.', CRIME]}]})
+C.convert_glossary(_vr, tables=fg, book=XGE)
+ck('#73 a supplement rule\'s table ships its footnotes',
+   len(fg) == 1 and fg[0].get('footnotes') == ['*Might involve a rival'] and fg[0].get('owner') == 'Downtime Activity: Crime',
+   fg)
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

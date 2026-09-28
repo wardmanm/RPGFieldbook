@@ -8,7 +8,7 @@ import. The player-facing how-to is [README-converter](../../../../docs/README-c
 page is what that file does not say: what must not move, and the traps that have already shipped.
 
 **Code:** `main()`, `pick_2024_preferred()`, `pick_sources()`, `flatten()`, `table_ctx()`,
-`ref_ctx()`, `_register()`, `_cell_text()`, `_dice_text()`, `_cell_miss_warnings()`,
+`ref_ctx()`, `_register()`, `_norm_table()`, `_cell_text()`, `_dice_text()`, `_cell_miss_warnings()`,
 `_formula_text()`, `_attr_choose()`, `_full_stop()`, `statblock_ctx()`, `load_item_index()`,
 `_statblock_text()`, `_item_traits()`, `_entry_miss_warnings()`, `_class_tables()`, `convert_classes()`,
 `_skill_profs()`, `_multiclass()`, `_optfeat_choices()`, `convert_races()`,
@@ -49,8 +49,12 @@ it in `spells/`); the spell file itself has no per-spell class data.
 **Tables are lifted, not dropped.** While an entity is flattened inside `table_ctx()`, every
 5e-tools `table` or `tableGroup` node is normalised by `_norm_table()` to
 `{name, cols, align, rows, owner, ownerKind}` and appended to one sink, and the prose gets a
-`[Table: Name]` anchor at the exact spot. `_register()` reuses an identical table and suffixes a
-colliding name `" (2)"`, because the name is the app's merge key and the anchor's only handle.
+`[Table: Name]` anchor at the exact spot. A node's `footnotes` (what a `*` in a row or label points
+at) become a `footnotes` list after `rows`, each rendered through `_cell_text()` exactly as a cell
+is, the `*` kept and blank ones dropped; a table with none gets no key. In the v2.36.1 dump only
+Xanathar's 17 downtime tables reach a pack with footnotes. `_register()` reuses a table identical
+in cols, rows and footnotes, and suffixes a colliding name `" (2)"`, because the name is the app's
+merge key and the anchor's only handle.
 `_class_tables()` turns `classTableGroups` into one Level-indexed `"<Class> Features"` table,
 skipping spell-slot groups and the cantrip/prepared/known count columns, and suppressing a table
 left with nothing but its Level column. Eleven of the twelve 2024 classes get one; the Wizard's
@@ -206,6 +210,12 @@ has no `DATA_VERSIONS` entry.
   Rage Damage as the string `'+2'`. Guard: the fixtures now copy real cells from the dump, an
   unread cell is a `WARNING`, and `tables.js` fails on any shipped column that is blank in every
   row and pins the 2024 values.
+- **Marks that pointed at nothing (#73).** `_norm_table()` read `rows`, `colLabels`, `colStyles`
+  and `caption` and nothing else, so 17 Xanathar's downtime tables shipped rows marked `*` without
+  the "Might involve a rival" or "Halved for a consumable item" they point at. Every table check
+  passed: the rows were right, only the note under them was missing. Guard: `converter.py` copies
+  two of those nodes from the dump, and `tables.js` fails on any shipped table with a `*` and no
+  footnotes.
 - **A skill shape one reader knew and another did not (#67).** The species reader turned
   `{"any": N}` into a choice from the start; the class path had its own loop that read only
   `choose` and bare names, and dropped the Bard's `{"any": 3}` without a word. The 2024 Bard shipped
@@ -238,6 +248,8 @@ has no `DATA_VERSIONS` entry.
 | Spell-slot columns in class tables | Skipped | Kept: the app derives slots by level, and a 10-column grid swamps a phone |
 | A table cell `_cell_text()` cannot read | Blank, counted, and a `WARNING` at the end of the run (#64) | Silently blank: how Rage Damage and four other columns hid for months. Failing the run: a player on a newer dump would get no pack at all over one cell |
 | How typed class-table cells print | As the book prints them: `+2`, `1d6`, `+10 ft.`, `—` for a speed bonus of 0 | The bare number (`2`, `10`): a Rage Damage of `2` and an Unarmored Movement of `10` read as a count, not a bonus |
+| A table's footnotes (#73) | An optional `footnotes` list on the table, each rendered by `_cell_text()`, with its `*` kept | Appending them to the owner's prose: the note belongs under the table it annotates, not in a glossary entry a screen away. Stripping the `*`: it is what pairs a note with the rows it marks |
+| Whether identical-table reuse compares footnotes (#73) | Yes: cols, rows and footnotes | Cols and rows only: a footnoted table met after an unfootnoted twin would be folded into it and lose its notes |
 | Where `overlay.json` and `class-resources.json` live | At the `data/` root; in the zip, beside `convert.py` | In a system folder: the bundler would sweep them into a pack |
 | How options reach the level-up picker | Inlined in every choice (~150 KB across the packs) | A shared reference: ~5× smaller, but needs app code and cross-pack filtering; inline needs none, and an older app gets pickers from a re-downloaded pack alone |
 | Which printing of an option a class offers | The class's own source only, falling back to PHB for a 2014 book with none | Mixing printings: a 2024 Battle Master would be offered the 2014 Parry too |
@@ -263,8 +275,6 @@ has no `DATA_VERSIONS` entry.
   `weapon.ability: "str"` where the base weapon has `"finesse"`. The shipped Psychic Blade item
   prints its `{uid, note}` mastery as "{'uid': 'Vex". The Soulknife's own text is right: its
   statblock is rendered by `_item_traits()`, which has both files. Seen during #68.
-- **Table `footnotes` are dropped** by `_norm_table()`: 17 Xanathar's downtime tables whose rows
-  carry a `*` pointing at "Might involve a rival" or "Halved for a consumable item".
 - **Only item statblocks resolve.** Another tag (creature, hazard…) keeps its name and warns. None
   reaches the converter in the v2.36.1 dump, and a single subcommand has no item index at all, so
   `classes` alone warns once for the Soulknife.
@@ -297,3 +307,4 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-28 — `_multiclass()`: classes carry an optional `multiclass` block; `data/5e2024/` moved by that key alone. → ledger L3886, #66
 - 2026-09-28 — `_skill_profs()`: one skill reader for species, starting and multiclass skills; the Bard's "any 3" is a level-1 choice of 3 from 18, the one hunk `data/5e2024/` moved by. → ledger L3985, #67
 - 2026-09-28 — `flatten()` writes formula lines, one-`entry` list items and item statblocks, which it had dropped (28 nodes across three packs); an unknown node type is a `WARNING`. → ledger L4025, #68
+- 2026-09-28 — `_norm_table()` carries a table's `footnotes`; `_register()` compares them; `data/xanathars/tables.json` gains 17, the only file that moved. → ledger L4273, #73

@@ -48,6 +48,25 @@ ck('no rows -> hint not table', /class="hint"/.test(X.tableHTML({name: 'e', cols
 ck('null table -> hint', /class="hint"/.test(X.tableHTML(null)));
 ck('blank cols -> no thead', !/<thead>/.test(X.tableHTML({name: 'x', cols: ['', ''], rows: [['1', '2']]})));
 
+// ---- footnotes (#73): under the table, escaped like a cell, and nothing at all without them
+// A table with no footnotes must render byte for byte as it did before they existed.
+const PLAIN_T = '<div class="tbl-wrap"><table class="rtbl"><thead><tr><th style="text-align:center">1d100</th><th>Effect</th></tr></thead>'
+  + '<tbody><tr><td style="text-align:center">01-02</td><td>Roll again</td></tr><tr><td style="text-align:center">03-04</td>'
+  + '<td>You cast Fireball</td></tr></tbody></table></div>';
+ck('#73 a table without footnotes renders exactly as before', X.tableHTML(T) === PLAIN_T, X.tableHTML(T));
+ck('#73 an empty footnotes list renders exactly as before', X.tableHTML(Object.assign({}, T, {footnotes: []})) === PLAIN_T);
+ck('#73 blank footnotes render nothing', X.tableHTML(Object.assign({}, T, {footnotes: ['', '  ', null]})) === PLAIN_T);
+const FT = Object.assign({}, T, {footnotes: ['*Might involve a rival', '<img src=x onerror=alert(1)> & "q"']});
+const fh = X.tableHTML(FT);
+ck('#73 the table itself is unchanged', fh.startsWith(PLAIN_T), fh);
+ck('#73 footnotes follow the table, outside its scroll box',
+   fh.slice(PLAIN_T.length).startsWith('<div class="tbl-notes">'), fh.slice(PLAIN_T.length));
+ck('#73 one line per footnote, in order',
+   /<p>\*Might involve a rival<\/p><p>[^<]*<\/p><\/div>$/.test(fh), fh.slice(PLAIN_T.length));
+ck('#73 a footnote is escaped like a cell', !/<img/.test(fh) && /&lt;img src=x onerror=alert\(1\)&gt; &amp; &quot;q&quot;/.test(fh), fh.slice(PLAIN_T.length));
+ck('#73 no rows -> still the hint, footnotes or not',
+   /class="hint"/.test(X.tableHTML({name: 'e', cols: [], rows: [], footnotes: ['*x']})));
+
 // ---- the [Table: X] anchor pass
 X.character = X.blankChar();
 X.rules.keywords = [];
@@ -158,7 +177,42 @@ const ROOT = path.join(__dirname, '..', '..');
     .filter(([t, c, i]) => (t.rows || []).length && t.rows.every(r => !String(r[i] ?? '').trim()))
     .map(([t, c]) => t.name + ' / ' + (c || '(unlabelled)'));
   ck(sys + ': no column is blank in every row', hollow.length === 0, hollow.slice(0, 6));
+
+  // footnotes are optional; when present, a non-empty list of non-empty strings
+  const badNotes = tables.filter(t => 'footnotes' in t && !(Array.isArray(t.footnotes) && t.footnotes.length
+    && t.footnotes.every(f => typeof f === 'string' && f.trim()))).map(t => t.name);
+  ck(sys + ': footnotes, where present, are non-empty strings', badNotes.length === 0, badNotes);
+
+  // a * in a table points at a footnote; one with nothing to point at is the
+  // #73 bug. Night Domain Spells' line ("Spells marked with an asterisk (*) can
+  // be found in this book.") is printed after the table and kept verbatim in
+  // the feature prose beside its anchor, where the verbatim suite holds it.
+  const EXPLAINED_IN_PROSE = ['Night Domain Spells'];
+  const orphan = tables.filter(t => !EXPLAINED_IN_PROSE.includes(t.name) && !(t.footnotes || []).length
+    && [t.cols || [], ...(t.rows || [])].some(r => r.some(c => /\*/.test(String(c))))).map(t => t.name);
+  ck(sys + ': every * in a table has a footnote to point at', orphan.length === 0, orphan.slice(0, 6));
 });
+
+// ---- Xanathar's downtime tables carry their footnotes (#73)
+{
+  const xge = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'xanathars', 'tables.json'), 'utf8')).tables;
+  const noted = xge.filter(t => (t.footnotes || []).length);
+  ck('#73 xanathars: 17 tables carry footnotes', noted.length === 17, noted.map(t => t.name));
+  ck('#73 xanathars: every footnoted table is a downtime one',
+     noted.every(t => /^Downtime Activity: /.test(t.owner)), noted.map(t => t.owner));
+  const fnOf = n => JSON.stringify((xge.find(t => t.name === n) || {}).footnotes);
+  ck('#73 Crime Complications: "Might involve a rival"', fnOf('Crime Complications') === '["*Might involve a rival"]', fnOf('Crime Complications'));
+  ck('#73 Magic Item Price: "Halved for a consumable item"',
+     fnOf('Magic Item Price') === '["*Halved for a consumable item like a potion or scroll"]', fnOf('Magic Item Price'));
+  ck('#73 all three carousing tables',
+     ['Lower', 'Middle', 'Upper'].every(k => fnOf(k + '-Class Carousing Complications') === '["*Might involve a rival"]'));
+  // and the shipped table renders it, escaped, under the rows
+  const crime = xge.find(t => t.name === 'Crime Complications');
+  const ch = crime ? X.tableHTML(crime) : '';
+  ck('#73 the shipped Crime Complications renders its footnote under the table',
+     /<\/table><\/div><div class="tbl-notes"><p>\*Might involve a rival<\/p><\/div>$/.test(ch), ch.slice(-160));
+  ck('#73 ...and its rows keep their marks', (ch.match(/\*<\/td>/g) || []).length === 3, ch.match(/\*<\/td>/g));
+}
 
 // ---- the 2024 class progression tables, pinned to the book (#64)
 // 5e-tools writes these cells as {"type":"dice"}, {"type":"bonus"} and

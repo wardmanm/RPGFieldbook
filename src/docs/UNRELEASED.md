@@ -65,3 +65,7 @@ Bullets below this line — leave the heading in place.
   Rules tab as "(no term)", so you can give them one or delete them, and importing or fetching rules
   now tells you when it skipped entries that have no name. Terms with an apostrophe, like Hunter's
   Mark, now open their entry when tapped, and a rules table with no rows no longer breaks the sheet.
+- Reference tables now show their footnotes underneath. Xanathar's Guide's downtime tables mark
+  some entries with an asterisk, and the note it points to, such as "Might involve a rival" or
+  "Halved for a consumable item like a potion or scroll", now appears below the table.
+  Re-download the Xanathar's Guide pack to get them.
