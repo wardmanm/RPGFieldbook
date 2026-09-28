@@ -117,8 +117,29 @@ def _roll_text(roll):
         return f(hi if lo is None else lo)
     return f(lo) if int(lo) == int(hi) else '%s-%s' % (f(lo), f(hi))
 
+def _dice_text(cell):
+    """{"type":"dice","toRoll":[{"number":1,"faces":6}]} -> '1d6', as 5e-tools
+    prints it. Parts join with '+'; a modifier shows unless hideModifier."""
+    parts = []
+    for r in cell.get('toRoll') or []:
+        if isinstance(r, dict) and r.get('faces'):
+            s = '%dd%d' % (int(r.get('number') or 1), int(r['faces']))
+            if r.get('modifier') and not r.get('hideModifier'):
+                s += '%+d' % int(r['modifier'])
+            parts.append(s)
+    return '+'.join(parts)
+
+# Dict cells _cell_text() could not render, by type. A cell it does not know
+# comes back '' — which is how Rage Damage, Martial Arts, Unarmored Movement,
+# the Bardic Die and Sneak Attack all shipped blank or missing (#64). The run
+# reports these as WARNINGs rather than let the next new shape do the same.
+_CELL_MISSES = collections.Counter()
+
 def _cell_text(cell):
-    """A table cell in 5e-tools may be a string, a number, a roll spec or entries."""
+    """A table cell in 5e-tools may be a string, a number, a roll spec, entries,
+    or a typed value. The typed ones live in class tables (classTableGroups):
+    'bonus' (Rage Damage), 'bonusSpeed' (Unarmored Movement) and 'dice'
+    (Martial Arts, Bardic Die, Sneak Attack)."""
     if isinstance(cell, bool) or cell is None:
         return ''
     if isinstance(cell, (int, float)):
@@ -128,13 +149,28 @@ def _cell_text(cell):
     if isinstance(cell, list):
         return ' '.join(x for x in (_cell_text(c) for c in cell) if x)
     if isinstance(cell, dict):
+        typ = cell.get('type')
         if isinstance(cell.get('roll'), dict):
             return _roll_text(cell['roll'])
         if 'entry' in cell:
             return flatten([cell['entry']]).replace('\n', ' ')
         if 'entries' in cell:
             return flatten(cell['entries']).replace('\n', ' ')
+        if typ == 'bonus' and isinstance(cell.get('value'), int):
+            return '%+d' % cell['value']                  # 2 -> '+2'
+        if typ == 'bonusSpeed' and isinstance(cell.get('value'), int):
+            # the book prints a dash where there is no bonus yet (Monk level 1)
+            return '%+d ft.' % cell['value'] if cell['value'] else '—'
+        if typ == 'dice':
+            txt = _dice_text(cell)
+            if txt:
+                return txt
+        _CELL_MISSES[str(typ)] += 1
     return ''
+
+def _cell_miss_warnings(warn):
+    for typ, n in sorted(_CELL_MISSES.items()):
+        warn('%d table cell(s) of type %r rendered blank — _cell_text() cannot read them' % (n, typ))
 
 def _align(style):
     s = str(style or '')
@@ -1828,6 +1864,7 @@ def _run_supplement(a):
     emit(_pack(bk, 'features', feats_out, stem='features', version=1), 'features', 'features')
 
     _write_tables(tbls, os.path.join(outdir, 'tables.json'), book=bk)
+    _cell_miss_warnings(warn)
     if problems:
         print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
         for p in problems:
@@ -1949,6 +1986,7 @@ def main():
         xphb = [f for f in ofs if f.get('source') == 'XPHB']
         if xphb: _write(_pack(None, 'features', _optfeat_features(xphb, tables=tbls, overlay=overlay), stem='features', version=1), os.path.join(outdir, 'features.json'))
         _write_tables(tbls, os.path.join(outdir, 'tables.json'))
+        _cell_miss_warnings(warn)
         if problems:
             print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
             for p in problems:
@@ -1982,6 +2020,7 @@ def main():
                                optfeats=load_optfeats(a.optfeatures)), a.out)
     if a.tables:
         _write_tables(tbls, a.tables)
+        _cell_miss_warnings(lambda msg: print('  WARNING: ' + msg))
 
 if __name__ == '__main__':
     sys.exit(main() or 0)

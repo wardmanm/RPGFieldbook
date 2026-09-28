@@ -63,8 +63,9 @@ a table opened from a spell preview replaces it.
 
 - **`cols` is the key.** `tableHTML()` reads nothing else; a table written with `columns` renders
   without a header and looks perfectly correct in the JSON. `tables.js` asserts, for every pack: a
-  non-empty `cols`, no underscore-prefixed keys, every row as wide as `cols`, unique names, and an
-  `owner` and `ownerKind` on each.
+  non-empty `cols`, no underscore-prefixed keys, every row as wide as `cols`, unique names, an
+  `owner` and `ownerKind` on each, and no column blank in every row. It also pins the 2024 class
+  progression values (Rage Damage, Martial Arts, Unarmored Movement, Bardic Die, Sneak Attack).
 - **Names are the merge key and the anchor target.** They must be unique within a pack, and because
   `findTable()` is global, collisions across packs are resolved at conversion time
   (`--avoid-table-names` — see [Supplements](../data/supplements.md)).
@@ -90,6 +91,10 @@ a table opened from a spell preview replaces it.
 - **Right row count, wrong pixels.** Two Humblewood characteristic tables had six rows numbered 1–6
   and had still absorbed words from the neighbouring column. The builder now requires die faces 1..n
   in order and rejects bled text; a clean count is not proof. → L1103
+- **Right header, empty column.** Barbarian Features shipped a Rage Damage header over 20 blank
+  cells, Monk Features two such columns, and Bard and Rogue had no Features table at all: the
+  converter could not read 5e-tools' typed `dice`/`bonus` cells and dropped them without a word.
+  Every table check passed, since the rows were the right width. → L3761
 - **The Tables tab was blank on load.** `renderTables()` was in `refreshRulesUI()` but not
   `renderAll()`, so tables drew only after an import or a keystroke in the filter. → L1581
 - **The glossary heading's + Add toggled the section** every time it was pressed, until the handler
@@ -128,3 +133,4 @@ a table opened from a spell preview replaces it.
 - 2026-08-17 — The Tables tab folded into the Rules tab. → ledger L2714, #32
 - 2026-08-18 — Both Rules sections fold, start shut, and show counts. → ledger L3189
 - 2026-09-24 — A × clear button in both filter boxes. → ledger L3525, #49
+- 2026-09-28 — Class progression tables carry their dice and bonus cells; Bard and Rogue Features tables; `tables.js` rejects an all-blank column. → ledger L3761, #64

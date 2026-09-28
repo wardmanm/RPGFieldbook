@@ -38,8 +38,8 @@ it after a build.
 
 | Suite | What it guards |
 |---|---|
-| `converter.py` | `scripts/convert.py` on real-shaped fixtures: table extraction and naming, the XPHB selection with its free-subset backfill, races, supplement source selection, the `_copy` subclass dedupe, optional features, cross-pack table-name collisions, option pickers from `optionalfeatureProgression`, option costs, subclass resources, Student of War |
-| `tables.js` | `tableHTML()` structure and escaping, the `[Table: X]` anchor pass through `highlight()`, the tables rules category, `migrate()` round-trip, the shipped-table defects (non-empty `cols`, no `_` keys, row widths, unique names, owners), and `noteHTML()`, whose safety argument is that pipeline |
+| `converter.py` | `scripts/convert.py` on real-shaped fixtures: table extraction and naming, class progression tables built from cells copied out of the dump (`dice`, `bonus`, `bonusSpeed`), the XPHB selection with its free-subset backfill, races, supplement source selection, the `_copy` subclass dedupe, optional features, cross-pack table-name collisions, option pickers from `optionalfeatureProgression`, option costs, subclass resources, Student of War |
+| `tables.js` | `tableHTML()` structure and escaping, the `[Table: X]` anchor pass through `highlight()`, the tables rules category, `migrate()` round-trip, the shipped-table defects (non-empty `cols`, no `_` keys, row widths, unique names, owners, no column blank in every row) and the 2024 class-table values, and `noteHTML()`, whose safety argument is that pipeline |
 | `rules-data.js` | Species filtering by system and `excludeSystems`, missing-dependency reporting, the rules cache never failing silently and its LZW fallback, Settings bucketing and clear-all, **the bundle round-trip** (a bundle equals importing each file), supplement packs, `DATA_VERSIONS` staleness. It also holds the markup guards: the note registry, the tab bar, every `getElementById` target existing app-wide, the Vitals structure, every Settings control still wired, the combat tab, and the byte-pin of `src/html` against the built file |
 | `sheet.js` | The pure functions the sheet leans on: signed coin/HP entry, temp HP, weight and encumbrance, size, origins, "choose N" budgets, stat layouts, feature grouping and the feat picker, dice expressions, item uses, spell allotments, rich text, emblems, attack damage strings, armor and AC, concentration, the combat view's pure helpers, modal focus |
 | `char-update.js` | The version stamp and the rules-update tool: fingerprints, diff classification, apply keeping character-local state, backups, gating, the R1–R5 regressions; plus level-1 HP seeding, the level-up HP step, option pickers, resource dice, starting-equipment grants |
@@ -149,6 +149,10 @@ written before `src/tests/` existed was lost along with its scratchpad.
   the class. Mutation-testing the guards found it.
 - **Invisible to every test: `columns` instead of `cols`.** Sixteen tables shipped headerless while the
   JSON looked right. `tables.js` asserts `cols` on every shipped table now.
+- **A fixture kinder than the data.** `converter.py` wrote Rage Damage as the string `'+2'`; 5e-tools
+  writes `{"type":"bonus","value":2}`, which the converter could not read. The test passed while the
+  shipped column was blank and Bard and Rogue had no table at all (#64). Copy fixture cells out of
+  the dump, not from memory of what they look like.
 - **Green units, broken saved sheets.** A damage-detection rule passed every unit test and worked on a
   fresh character, but sheets saved before the change kept their damage-less spell rows. Only browser
   QA showed it. Test against data that predates the change.
@@ -185,3 +189,4 @@ written before `src/tests/` existed was lost along with its scratchpad.
 - 2026-08-17 — `loadHTML` splices the markup; `block` throws on unbalanced markup; the byte-pin assertion. → ledger L2592
 - 2026-08-18 — Saved sheets kept damage-less spell rows that only browser QA caught. → ledger L2989
 - 2026-08-18 — `run.sh` probes Python by running it, fixing both Python suites on Windows. → ledger L3246
+- 2026-09-28 — Class-table fixtures copied from the dump; `tables.js` rejects an all-blank column and pins the 2024 class values. → ledger L3761, #64

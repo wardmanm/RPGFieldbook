@@ -312,6 +312,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Which flags mark the free 2024 subset** — `basicRules2024` **or** `srd52`
 - **A table found with no sink collecting** — Drop it, emit no anchor
 - **Spell-slot columns in class tables** — Skipped
+- **A table cell `_cell_text()` cannot read** — Blank, counted, and a `WARNING` at the end of the run (#64)
+- **How typed class-table cells print** — As the book prints them: `+2`, `1d6`, `+10 ft.`, `—` for a speed bonus of 0
 - **Where `overlay.json` and `class-resources.json` live** — At the `data/` root; in the zip, beside `convert.py`
 - **How options reach the level-up picker** — Inlined in every choice (~150 KB across the packs)
 - **Which printing of an option a class offers** — The class's own source only, falling back to PHB for a 2014 book with none

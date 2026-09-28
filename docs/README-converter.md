@@ -130,10 +130,13 @@ python convert.py spells spells-xphb.json -o spells.json --tables tables.json
 ```
 
 `all` collects every source's tables into a single `tables.json`. Class progression tables capture
-**every** column of `classTableGroups` — Rage Damage, Weapon Mastery, Bardic Die and the rest — not
-just the cantrip/prepared-spell counts that become per-level notes. Spell-slot columns are skipped
-because the app already derives slots by level. Roll ranges render as text (`01-02`); the app does
-not roll for you.
+the columns of `classTableGroups` — Rage Damage, Martial Arts, Bardic Die, Sneak Attack, Weapon
+Mastery and the rest — with dice and bonuses printed as the book prints them (`1d6`, `+2`,
+`+10 ft.`). The cantrip and prepared-spell counts become per-level notes instead, and spell-slot
+columns are skipped because the app already derives slots by level, so a class with no other
+column (the Wizard) gets no table. Roll ranges render as text (`01-02`); the app does not roll for
+you. A table cell the converter cannot read is reported as a `WARNING` at the end of the run
+rather than left blank without a word.
 
 **Referenced features.** A class/subclass feature's entries can point at a sibling feature
 (`{"type":"refSubclassFeature", …}`) instead of containing it. Those references are resolved and
