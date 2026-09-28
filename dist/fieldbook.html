@@ -1522,6 +1522,21 @@ const SIZE_CARRY={Tiny:0.5,Small:1,Medium:1,Large:2,Huge:2,Gargantuan:2};
 function modOf(score){return Math.floor((num(score)-10)/2)}
 function fmt(n){return (n>=0?"+":"")+n}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+/* The only image source the app will load: a data: URL. Portraits and glossary
+   images are written by FileReader.readAsDataURL, and a pack's keyword `image`
+   is documented as a data URL (rules-schema §6.1), so nothing real is refused.
+   Refused: javascript:, a relative path, and any web address — an image from the
+   network is a request the player never made, and the rules fetch and the update
+   check are meant to be the app's only network calls. Any media type passes,
+   because FileReader labels an untyped file application/octet-stream and an <img>
+   runs no script whatever it holds. This decides WHAT may load; esc() at the
+   attribute still decides that it stays inside its quotes. */
+function safeImgSrc(u){const s=typeof u==="string"?u.trim():"";return /^data:/i.test(s)?s:"";}
+/* Every <img> the app builds from data comes from here, "" when refused. */
+function imgHTML(u,alt){
+  if(!safeImgSrc(u))return "";
+  return `<img src="${esc(safeImgSrc(u))}"`+(alt==null?"":` alt="${esc(alt)}"`)+`>`;
+}
 function escReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
 function get(o,p){return p.split(".").reduce((a,k)=>a&&a[k],o)}
 function setP(o,p,v){const ks=p.split(".");const last=ks.pop();let t=o;ks.forEach(k=>t=t[k]);t[last]=v}
@@ -1608,15 +1623,15 @@ function statStyle(){return character.statStyle==="grouped"?"grouped":"classic";
    display change that touches no rules code. */
 function statGroupHTML(k,l){
   const rows=SKILLS.filter(([,,ab])=>ab===k).map(([sk,sl])=>
-    `<div class="srow"><button class="dot" data-skill="${sk}" aria-label="${sl} proficiency"></button>`+
-    `<span class="val" data-stat="skill.${sk}" id="skill-${sk}">+0</span>`+
+    `<div class="srow"><button class="dot" data-skill="${esc(sk)}" aria-label="${esc(sl)} proficiency"></button>`+
+    `<span class="val" data-stat="skill.${esc(sk)}" id="skill-${esc(sk)}">+0</span>`+
     `<span class="lbl">${sl}</span><span class="exp">Expert</span></div>`).join("");
   return `<div class="agroup"><div class="ability ahead"><div class="n">${l}</div>`+
-    `<div class="m" data-stat="ability.${k}" id="mod-${k}">+0</div>`+
-    `<input type="number" data-path="character.abilities.${k}" data-recompute aria-label="${l} score"></div>`+
+    `<div class="m" data-stat="ability.${esc(k)}" id="mod-${esc(k)}">+0</div>`+
+    `<input type="number" data-path="character.abilities.${esc(k)}" data-recompute aria-label="${esc(l)} score"></div>`+
     `<div class="alist">`+
-      `<div class="srow svrow"><button class="dot" data-save="${k}" aria-label="${l} save proficiency"></button>`+
-      `<span class="val" data-stat="save.${k}" id="save-${k}">+0</span>`+
+      `<div class="srow svrow"><button class="dot" data-save="${esc(k)}" aria-label="${esc(l)} save proficiency"></button>`+
+      `<span class="val" data-stat="save.${esc(k)}" id="save-${esc(k)}">+0</span>`+
       `<span class="lbl">Saving Throws</span></div>`+
       (rows||`<div class="anone">No skills use ${l}</div>`)+
     `</div></div>`;
@@ -1629,9 +1644,9 @@ function buildAbilities(){
   ABIL.forEach(([k,l])=>{
     const d=document.createElement("div");d.className="ability";
     d.innerHTML=`<div class="n">${l}</div>
-      <div class="m" data-stat="ability.${k}" id="mod-${k}">+0</div>
-      <input type="number" data-path="character.abilities.${k}" data-recompute aria-label="${l} score">
-      <div class="save"><button class="dot" data-save="${k}" aria-label="${l} save proficiency"></button><span class="sv" data-stat="save.${k}" id="save-${k}">+0</span><span style="font-family:var(--head);font-size:9px;color:var(--ink-soft)">SAVE</span></div>`;
+      <div class="m" data-stat="ability.${esc(k)}" id="mod-${esc(k)}">+0</div>
+      <input type="number" data-path="character.abilities.${esc(k)}" data-recompute aria-label="${esc(l)} score">
+      <div class="save"><button class="dot" data-save="${esc(k)}" aria-label="${esc(l)} save proficiency"></button><span class="sv" data-stat="save.${esc(k)}" id="save-${esc(k)}">+0</span><span style="font-family:var(--head);font-size:9px;color:var(--ink-soft)">SAVE</span></div>`;
     el.appendChild(d);
   });
 }
@@ -1644,7 +1659,7 @@ function buildSkills(){
   if(statStyle()==="grouped")return;
   SKILLS.forEach(([k,l,ab])=>{
     const r=document.createElement("div");r.className="srow";
-    r.innerHTML=`<button class="dot" data-skill="${k}" aria-label="${l} proficiency"></button><span class="val" data-stat="skill.${k}" id="skill-${k}">+0</span><span class="lbl">${l} <span class="ab">${ab}</span></span>`;
+    r.innerHTML=`<button class="dot" data-skill="${esc(k)}" aria-label="${esc(l)} proficiency"></button><span class="val" data-stat="skill.${esc(k)}" id="skill-${esc(k)}">+0</span><span class="lbl">${l} <span class="ab">${ab}</span></span>`;
     el.appendChild(r);
   });
   /* The grid fills down each column; this many rows per column (see .skills). */
@@ -1680,8 +1695,8 @@ function buildSlots(){
   const el=document.getElementById("slotGrid");el.innerHTML="";
   for(let lv=1;lv<=9;lv++){
     const s=document.createElement("div");s.className="slot";
-    s.innerHTML=`<div class="lv">Level ${lv}</div><div class="bub" id="bub-${lv}"></div>
-      <div class="cfg">Total <input type="number" min="0" max="12" data-slot="${lv}" aria-label="Level ${lv} total slots"></div>`;
+    s.innerHTML=`<div class="lv">Level ${lv}</div><div class="bub" id="bub-${esc(lv)}"></div>
+      <div class="cfg">Total <input type="number" min="0" max="12" data-slot="${esc(lv)}" aria-label="Level ${esc(lv)} total slots"></div>`;
     el.appendChild(s);
   }
 }
@@ -1689,7 +1704,7 @@ function buildBio(){
   const host=document.getElementById("bioStack");host.innerHTML="";
   BIO.forEach(([key,title])=>{
     const c=document.createElement("div");c.className="card";
-    c.innerHTML=`<div class="label">${title} <span class="grow"></span><button class="editbtn" data-edit="${key}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Edit</span></button></div><div id="rt-${key}"></div>`;
+    c.innerHTML=`<div class="label">${title} <span class="grow"></span><button class="editbtn" data-edit="${esc(key)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Edit</span></button></div><div id="rt-${esc(key)}"></div>`;
     host.appendChild(c);
   });
 }
@@ -2010,7 +2025,7 @@ function highlight(text){
     const re=new RegExp("\\b("+pat+")\\b","gi");
     escd=escd.replace(re,m=>{
       const g=allGlossary().find(x=>x.term.toLowerCase()===m.toLowerCase().replace(/&amp;/g,"&"));
-      return `<span class="kw" data-gid="${g?g.id:""}" role="button" tabindex="0">${m}</span>`;
+      return `<span class="kw" data-gid="${esc(g?g.id:"")}" role="button" tabindex="0">${m}</span>`;
     });
   }
   if(!tbls.length)return escd;
@@ -2055,7 +2070,7 @@ function renderRT(key){
   const toggle=document.querySelector(`[data-edit="${key}"] span`);
   if(editing[key]){
     if(toggle)toggle.textContent="Done";
-    host.innerHTML=`<textarea data-rt="${key}">${esc(val)}</textarea>`;
+    host.innerHTML=`<textarea data-rt="${esc(key)}">${esc(val)}</textarea>`;
     const ta=host.querySelector("textarea");ta.focus();
     ta.addEventListener("input",()=>{character[key]=ta.value;scheduleSave()});
   }else{
@@ -2084,14 +2099,14 @@ function featItemHTML(f){
   const hasCost=f.cost&&num(f.cost.amount)>0, hasUses=f.uses&&usesMax(f)>0;
   return `<div class="item fitem">
       <div class="top">
-        <button class="fitoggle" data-fitem="${f.id}" aria-label="Collapse item"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button class="fav ${f.fav?"on":""}" data-fav-feature="${f.id}" aria-label="Favorite" title="Favorite">${f.fav?"★":"☆"}</button>
+        <button class="fitoggle" data-fitem="${esc(f.id)}" aria-label="Collapse item"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="fav ${f.fav?"on":""}" data-fav-feature="${esc(f.id)}" aria-label="Favorite" title="Favorite">${f.fav?"★":"☆"}</button>
         <span class="nm">${esc(f.name||"Feature")}</span>
         ${f.source?`<span class="qty">${esc(f.source)}</span>`:""}
-        ${(hasCost||hasUses)?`<button class="use-go" data-usefeat="${f.id}">Use</button>`:""}
-        <span class="equip ${on?"on":""}" data-toggle-feature="${f.id}"><span class="box"></span>${on?"On":"Off"}</span>
-        <button class="icon" data-edit-feature="${f.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-feature="${f.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        ${(hasCost||hasUses)?`<button class="use-go" data-usefeat="${esc(f.id)}">Use</button>`:""}
+        <span class="equip ${on?"on":""}" data-toggle-feature="${esc(f.id)}"><span class="box"></span>${on?"On":"Off"}</span>
+        <button class="icon" data-edit-feature="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-feature="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${ic?"":`${f.description?`<div class="desc">${descHTML(f.description)}</div>`:""}${hasCost?`<div class="use-cost">Costs ${num(f.cost.amount)} ${esc(f.cost.resource||"resource")} per use</div>`:""}${hasUses?usesRowHTML(f):""}${on?fxChips(f.effects):fxChips(f.effects).replace(/class="chip"/g,'class="chip off"')}`}
     </div>`;
@@ -2113,7 +2128,7 @@ function usesMax(f){
   return num(m);
 }
 function usesRowHTML(f){
-  const u=f.uses,mx=usesMax(f);let pips="";for(let i=1;i<=mx;i++)pips+=`<button class="use-b ${i<=(u.used||0)?"used":""}" data-fuse="${f.id}" data-i="${i}" aria-label="Use"></button>`;
+  const u=f.uses,mx=usesMax(f);let pips="";for(let i=1;i<=mx;i++)pips+=`<button class="use-b ${i<=(u.used||0)?"used":""}" data-fuse="${esc(f.id)}" data-i="${esc(i)}" aria-label="Use"></button>`;
   return `<div class="use-row"><span class="use-lbl">Uses${u.per?` · per ${esc(u.per)} rest`:""}</span><span class="use-pips">${pips}</span></div>`;
 }
 function useFeature(id){
@@ -2209,13 +2224,15 @@ function originFromGranted(g){if(!g)return null;const m={Feat:"feat",Background:
 function grantedFromOrigin(k){const m={"class":"",feat:"Feat",background:"Background",race:"Ancestry",item:"Item"};return (k in m)?m[k]:(k?"Other":"");}
 function itemOrigin(it){return it.origin||originFromSid(it.grant);}
 function spellOrigin(s){return s.origin||originFromGranted(s.granted);}
-function originBadge(o,attr,id){if(!o)return "";const t=esc(originLabel(o)+(o.at?" · added "+new Date(o.at).toLocaleDateString():""));return `<button class="orig-b" ${attr}="${id}" title="${t}" aria-label="Origin: ${t}">${esc(originLetter(o))}</button>`;}
+/* `attr` is always a literal data-* name from the caller; `id` is the item's or
+   spell's own id, which an imported file controls, so it is escaped like the rest. */
+function originBadge(o,attr,id){if(!o)return "";const t=originLabel(o)+(o.at?" · added "+new Date(o.at).toLocaleDateString():"");return `<button class="orig-b" ${attr}="${esc(id)}" title="${esc(t)}" aria-label="${esc("Origin: "+t)}">${esc(originLetter(o))}</button>`;}
 function openOriginInfo(o){if(!o){openModal("Origin",`<p class="hint">No origin recorded. Edit this to set where it came from.</p>`);return;}openModal("Origin",`<p><b>${esc(originLabel(o))}</b></p><p class="hint">Added: ${esc(o.at?new Date(o.at).toLocaleString():"—")}</p>`);}
 /* No `includeClass` flag: the item form used to pass false meaning "hide Class",
    but class grants tag their items kind:"class" via originFromSid, so hiding it
    would make a class-granted item's own origin unselectable — and unrenderable —
    the moment you edited it. The parameter was never read anyway. */
-function originOptionsHTML(cur){const none=`<option value=""${!cur?" selected":""}>— none —</option>`;return none+ORIGIN_KINDS.map(x=>`<option value="${x.k}"${cur&&cur.kind===x.k?" selected":""}>${esc(x.label)}</option>`).join("");}
+function originOptionsHTML(cur){const none=`<option value=""${!cur?" selected":""}>— none —</option>`;return none+ORIGIN_KINDS.map(x=>`<option value="${esc(x.k)}"${cur&&cur.kind===x.k?" selected":""}>${esc(x.label)}</option>`).join("");}
 /* The presentation line browse folds into an added item's description. Shared,
    not inlined, because the update diff must reproduce the SAME transform — an
    item copy is not field-identical to its rules entry, and comparing a copy
@@ -2273,7 +2290,7 @@ function charSize(){return character.size||raceDefSize()||"Medium";}
    to rather than leaving you to guess. */
 function sizeOptionsHTML(cur){
   return `<option value=""${!cur?" selected":""}>From ancestry (${esc(raceDefSize()||"Medium")})</option>`+
-    SIZES.map(s=>`<option value="${s}"${cur===s?" selected":""}>${s}</option>`).join("");
+    SIZES.map(s=>`<option value="${esc(s)}"${cur===s?" selected":""}>${s}</option>`).join("");
 }
 /* split from carryCapacity so the size picker can PREVIEW what a size would give
    you before you commit to it */
@@ -2372,8 +2389,11 @@ function checkForUpdate(){
     .then(r=>r.ok?r.json():null)
     .then(rel=>{
       if(!rel||!rel.tag_name||cmpVer(rel.tag_name,APP_VERSION)<=0)return;
+      /* the link becomes an <a href>, so only a github.com page is taken from
+         the response; anything else falls back to the releases page */
+      const page=String(rel.html_url||"");
       updateAvailable={ver:String(rel.tag_name).replace(/^v/i,""),
-                       url:rel.html_url||`https://github.com/${UPDATE_REPO}/releases/latest`};
+                       url:/^https:\/\/github\.com\//i.test(page)?page:`https://github.com/${UPDATE_REPO}/releases/latest`};
       showUpdatePill();
     }).catch(()=>{});
 }
@@ -2661,23 +2681,23 @@ function itemUseLine(it){
 function itemUsesRowHTML(it){
   const mx=itemUsesMax(it);if(!mx)return "";
   const used=num(it.uses.used),per=it.uses.per;
-  let pips="";for(let i=1;i<=mx;i++)pips+=`<button class="use-b ${i<=used?"used":""}" data-iuse="${it.id}" data-i="${i}" aria-label="Use"></button>`;
+  let pips="";for(let i=1;i<=mx;i++)pips+=`<button class="use-b ${i<=used?"used":""}" data-iuse="${esc(it.id)}" data-i="${esc(i)}" aria-label="Use"></button>`;
   return `<div class="use-row"><span class="use-lbl">Uses${(per&&per!=="none")?` · per ${esc(per)} rest`:""}</span><span class="use-pips">${pips}</span></div>`;
 }
 function invItemHTML(it){
   const ic=!!invCol().items[it.id];
   return `<div class="item fitem"><div class="top">
-        <button class="fitoggle" data-invitem="${it.id}" aria-label="Collapse item"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button class="fav ${it.fav?"on":""}" data-fav-item="${it.id}" aria-label="Favorite" title="Favorite">${it.fav?"★":"☆"}</button>
+        <button class="fitoggle" data-invitem="${esc(it.id)}" aria-label="Collapse item"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="fav ${it.fav?"on":""}" data-fav-item="${esc(it.id)}" aria-label="Favorite" title="Favorite">${it.fav?"★":"☆"}</button>
         <span class="nm">${esc(it.name||"Item")}</span>
         ${it.qty&&num(it.qty)!==1?`<span class="qty">×${num(it.qty)}</span>`:""}
         ${originBadge(itemOrigin(it),"data-orig-item",it.id)}
         ${fnum(it.cost)?`<span class="qty" title="Cost each">${esc(fmtGp(it.cost))}</span>`:""}
         ${itemWeight(it)?`<span class="qty" title="Weight each">${esc(fmtWt(it.weight))}</span>`:""}
-        ${itemUsable(it)?`<button class="use-go" data-useitem="${it.id}">Use</button>`:""}
-        ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${it.id}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
-        <button class="icon" data-edit-item="${it.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-item="${it.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        ${itemUsable(it)?`<button class="use-go" data-useitem="${esc(it.id)}">Use</button>`:""}
+        ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${esc(it.id)}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
+        <button class="icon" data-edit-item="${esc(it.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-item="${esc(it.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${ic?"":`${it.description?`<div class="desc">${richHTML(it.description)}</div>`:""}${itemUseLine(it)}${itemUsesRowHTML(it)}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
 }
@@ -2699,7 +2719,7 @@ function renderEncPill(st){
    string so the empty-inventory branch can show it too: a character carrying
    nothing but 900 gold coins is still carrying 18 lb. */
 function invTotalsHTML(){
-  const row=(label,val,cls)=>`<div class="item"><div class="top"><span class="nm">${label}</span><span style="flex:1"></span><b${cls?` class="${cls}"`:""}>${val}</b></div></div>`;
+  const row=(label,val,cls)=>`<div class="item"><div class="top"><span class="nm">${label}</span><span style="flex:1"></span><b${cls?` class="${esc(cls)}"`:""}>${val}</b></div></div>`;
   let h="";
   const total=inventoryTotal();
   if(total>0)h+=row("Total value",esc(fmtGp(total)));
@@ -2751,7 +2771,7 @@ function renderInventory(){
 }
 function statusTitle(name){
   const g=allGlossary().find(x=>x.term.toLowerCase()===(name||"").toLowerCase());
-  return g?`<span class="kw" data-gid="${g.id}" role="button" tabindex="0">${esc(name)}</span>`:esc(name||"Status");
+  return g?`<span class="kw" data-gid="${esc(g.id)}" role="button" tabindex="0">${esc(name)}</span>`:esc(name||"Status");
 }
 /* ONE row, two places: the Statuses card on the Sheet, and the Concentrating
    mirror on the Spells tab. The controls are delegated from document, so the
@@ -2762,9 +2782,9 @@ function statusRowHTML(s){
   const on=s.active!==false;
   return `<div class="item${on?" on-status":""}"><div class="top">
         <span class="nm">${statusTitle(s.name)}</span>
-        <span class="equip ${on?"on":""}" data-toggle-status="${s.id}"><span class="box"></span>${on?"Active":"Cleared"}</span>
-        <button class="icon" data-edit-status="${s.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-status="${s.id}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        <span class="equip ${on?"on":""}" data-toggle-status="${esc(s.id)}"><span class="box"></span>${on?"Active":"Cleared"}</span>
+        <button class="icon" data-edit-status="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-status="${esc(s.id)}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${s.description?`<div class="desc">${richHTML(s.description)}</div>`:""}
       ${on?fxChips(s.effects):fxChips(s.effects).replace(/class="chip"/g,'class="chip off"')}</div>`;
@@ -2806,9 +2826,9 @@ function renderFamiliars(){
     d.innerHTML=`<div class="top">
         <span class="nm">${esc(f.name||"Familiar")}</span>
         ${f.kind?`<span class="qty">${esc(f.kind)}</span>`:""}
-        <span class="fam-state ${on?"on":"off"}" data-toggle-familiar="${f.id}">${on?"● Summoned":"○ Dismissed"}</span>
-        <button class="icon" data-edit-familiar="${f.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-familiar="${f.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        <span class="fam-state ${on?"on":"off"}" data-toggle-familiar="${esc(f.id)}">${on?"● Summoned":"○ Dismissed"}</span>
+        <button class="icon" data-edit-familiar="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-familiar="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${stats?`<div class="desc" style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em">${stats}</div>`:""}
       ${f.description?`<div class="desc">${richHTML(f.description)}</div>`:""}
@@ -2832,14 +2852,15 @@ function findFeatDef(n){return ruleById("feats",n);}
    considered and rejected: a wrong-but-present emblem on someone's homebrew is
    worse than none.
 
-   `d` is interpolated WITHOUT esc(), which is safe because fetch-icons.js
-   validates every path against the SVG path-data charset before writing it —
-   the name is only ever a lookup key and never reaches the output. */
+   `d` cannot carry markup — fetch-icons.js validates every path against the
+   SVG path-data charset before writing it, and the name is only ever a lookup
+   key — but it is esc()'d all the same: every attribute value is, so the guard
+   in rules-data.js can check that without a list of exceptions to maintain. */
 function iconSlug(kind,name){return (ICON_MAP[kind]||{})[String(name||"").trim().toLowerCase()]||"";}
 function iconSVG(kind,name,cls){
   const d=GAME_ICONS[iconSlug(kind,name)];
   if(!d)return "";
-  return `<svg class="gicon${cls?" "+cls:""}" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path d="${d}"/></svg>`;
+  return `<svg class="gicon${esc(cls?" "+cls:"")}" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path d="${esc(d)}"/></svg>`;
 }
 /* subclasses available for a class = the class's own subclasses + any standalone
    entries in the "subclasses" category whose class matches (so add-on packs can
@@ -2954,8 +2975,8 @@ function runExtraChoices(pending){
   let body="",ci=0;
   skills.forEach(x=>{body+=`<p class="hint" style="color:var(--accent-2);font-size:13px;margin:6px 0 0">✦ ${esc(x.label||"Choose")}</p>`+choiceFieldHTML(x.ch,ci++,null);});
   equips.forEach((x,ei)=>{
-    body+=`<div class="choice" data-ctype="equip" data-eqi="${ei}" style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px"><label class="f">${esc(x.label||"Starting equipment")}</label>`+
-      x.options.map((o,oi)=>`<label class="opt" style="align-items:flex-start"><input type="radio" name="eq-${ei}" data-eq-opt="${oi}" ${oi===0?"checked":""}><span>${esc(equipOptLabel(o))}</span></label>`).join("")+`</div>`;
+    body+=`<div class="choice" data-ctype="equip" data-eqi="${esc(ei)}" style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px"><label class="f">${esc(x.label||"Starting equipment")}</label>`+
+      x.options.map((o,oi)=>`<label class="opt" style="align-items:flex-start"><input type="radio" name="eq-${esc(ei)}" data-eq-opt="${esc(oi)}" ${oi===0?"checked":""}><span>${esc(equipOptLabel(o))}</span></label>`).join("")+`</div>`;
   });
   body+=`<div class="m-actions"><button class="tbtn primary" id="xchDone">Done</button></div>`;
   openModal("Choose",body);
@@ -2983,7 +3004,7 @@ function runExtraChoices(pending){
    handler, so it wins inside the chip. */
 function classChipHTML(c,idx){
   const sub=c.subclass?` · <button type="button" class="linkbtn link" data-sub-info="${esc(c.name)}|${esc(c.subclass)}" title="About ${esc(c.subclass)}">${esc(c.subclass)}</button>`:"";
-  return `<div class="cr-chip" data-info-class="${esc(c.name)}">${iconSVG("classes",c.name)}<span class="cr-k">Class</span><span class="cr-n">${esc(c.name)} ${num(c.level)}${sub}</span><button class="icon danger" data-del-class="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
+  return `<div class="cr-chip" data-info-class="${esc(c.name)}">${iconSVG("classes",c.name)}<span class="cr-k">Class</span><span class="cr-n">${esc(c.name)} ${num(c.level)}${sub}</span><button class="icon danger" data-del-class="${esc(idx)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
 }
 function renderClassRace(){
   const rb=document.getElementById("raceBgBox"), cb=document.getElementById("classBox");
@@ -3066,7 +3087,7 @@ function openAddRace(){
     <div class="m-actions"><button class="tbtn" id="rCancel">Cancel</button><button class="tbtn primary" id="rAdd">Add</button></div>`);
   const sel=document.getElementById("raceSel"),prev=document.getElementById("racePrev"),subWrap=document.getElementById("subWrap"),subSel=document.getElementById("subSel"),abilBox=document.getElementById("raceAbil");
   function raceAbilCfg(){const d=sel&&sel.value?findRaceDef(sel.value):null;if(!d)return null;const sub=(d.subraces||[]).find(s=>s.name===(subSel&&subSel.value));return (sub&&sub.abilityChoice)||d.abilityChoice||null;}
-  function abilOpts(cfg){const elig=(cfg&&cfg.eligible&&cfg.eligible.length)?cfg.eligible:ABIL.map(([k])=>k);return elig.map(k=>`<option value="${k}">${k.toUpperCase()}</option>`).join("");}
+  function abilOpts(cfg){const elig=(cfg&&cfg.eligible&&cfg.eligible.length)?cfg.eligible:ABIL.map(([k])=>k);return elig.map(k=>`<option value="${esc(k)}">${esc(String(k).toUpperCase())}</option>`).join("");}
   function drawRaceAbil(){
     if(!abilBox)return;const cfg=raceAbilCfg();
     if(!cfg){abilBox.innerHTML="";return;}
@@ -3149,7 +3170,7 @@ function openRaceInfo(name){
   const cur=character.race&&character.race.subrace;
   const sect=(obj)=>{
     let s="";
-    if(obj.abilityScores)s+=`<p><b>Ability increase:</b> ${Object.entries(obj.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", ")}</p>`;
+    if(obj.abilityScores)s+=`<p><b>Ability increase:</b> ${esc(Object.entries(obj.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", "))}</p>`;
     if(obj.size)s+=`<p><b>Size:</b> ${esc(sizeLabel(obj.size))}</p>`;
     if(obj.speed)s+=`<p><b>Speed:</b> ${esc(obj.speed)}</p>`;
     if(obj.proficiencies)s+=`<p><b>Proficiencies:</b> ${esc(obj.proficiencies)}</p>`;
@@ -3186,8 +3207,8 @@ function openAddBackground(){
       <div class="field"><label class="f">Ability scores (${esc(abils.join(", "))})</label>
         <div class="seg" id="bgMode"><button type="button" data-m="2-1" class="on">+2 / +1</button><button type="button" data-m="1-1-1">+1 / +1 / +1</button></div></div>
       <div class="g2" id="bg21">
-        <div class="field"><label class="f">+2 to</label><select id="bgA2">${(d.abilityScores||[]).map(a=>`<option value="${a}">${a.toUpperCase()}</option>`).join("")}</select></div>
-        <div class="field"><label class="f">+1 to</label><select id="bgA1">${(d.abilityScores||[]).map(a=>`<option value="${a}">${a.toUpperCase()}</option>`).join("")}</select></div>
+        <div class="field"><label class="f">+2 to</label><select id="bgA2">${(d.abilityScores||[]).map(a=>`<option value="${esc(a)}">${esc(String(a).toUpperCase())}</option>`).join("")}</select></div>
+        <div class="field"><label class="f">+1 to</label><select id="bgA1">${(d.abilityScores||[]).map(a=>`<option value="${esc(a)}">${esc(String(a).toUpperCase())}</option>`).join("")}</select></div>
       </div>
       ${feats.length>1?`<div class="field"><label class="f">Feat</label><select id="bgFeat">${feats.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("")}</select></div>`:(feats.length?`<p class="hint">Feat: <b>${esc(feats[0])}</b></p>`:"")}
       <p class="hint">Also grants: ${esc((d.skills||[]).join(", "))}${d.tools?" · "+esc(d.tools):""}${d.languages?" · "+esc(d.languages):""}</p>`;
@@ -3253,7 +3274,7 @@ function openBackgroundInfo(name){
   const d=findBackgroundDef(name);
   if(!d){openModal(name,`<p class="hint">No rules data loaded for this background — it was added as a custom name.</p>`,iconSVG("backgrounds",name,"lg"));return;}
   let b=`<p>${esc(d.description||"")}</p>`;
-  b+=`<p><b>Ability Scores:</b> ${(d.abilityScores||[]).map(a=>a.toUpperCase()).join(", ")}</p>`;
+  b+=`<p><b>Ability Scores:</b> ${esc((d.abilityScores||[]).map(a=>String(a).toUpperCase()).join(", "))}</p>`;
   b+=`<p><b>Feat:</b> ${esc(bgFeatList(d).join(" or "))}</p>`;
   if(d.skills)b+=`<p><b>Skill Proficiencies:</b> ${esc(d.skills.join(", "))}</p>`;
   if(d.tools)b+=`<p><b>Tool Proficiencies:</b> ${esc(d.tools)}</p>`;
@@ -3277,7 +3298,9 @@ function openAddClass(){
     <div id="classPrev"></div>
     <div class="m-actions"><button class="tbtn" id="cCancel">Cancel</button><button class="tbtn primary" id="cAdd">Add</button></div>`);
   const sel=document.getElementById("classSel"),prev=document.getElementById("classPrev");
-  if(sel)sel.addEventListener("change",()=>{const d=sel.value?findClassDef(sel.value):null;prev.innerHTML=d?`<p class="hint">${esc(d.description||"")}</p>${classSummary(d)}`:"";});
+  /* With a class already on the sheet this is a multiclass add, and the "Saves"
+     in the summary would promise what it no longer grants (#66). */
+  if(sel)sel.addEventListener("change",()=>{const d=sel.value?findClassDef(sel.value):null;prev.innerHTML=d?`<p class="hint">${esc(d.description||"")}</p>${classSummary(d)}${character.classes.length?`<p class="hint">${esc(multiclassNote(d))}</p>`:""}`:"";});
   document.getElementById("cCancel").addEventListener("click",closeModal);
   document.getElementById("cAdd").addEventListener("click",()=>{const raw=(sel&&sel.value)||document.getElementById("classCustom").value.trim();if(!raw){alert("Pick or name a class.");return;}const cd=findClassDef(raw);const name=cd?cd.name:raw;const lvl=Math.max(1,Math.min(20,num(document.getElementById("classLvl").value)||1));closeModal();addClass(name,lvl);});
 }
@@ -3346,8 +3369,10 @@ function hpGainText(ch,raw,conMod,maxNow,note){
 function conModNow(){return Math.floor((abilFinal("con",contributions())-10)/2);}
 /* Called BEFORE the level-up unlocks the box, so it can remember whether to
    lock it again once the app has written the new total. */
-function hpChoice(d,levels,L,cls){
-  return {type:"hp",die:hitDieMax(d),levels:Math.max(1,num(levels)||1),cls,_level:L,_wasLocked:character.hp.locked!==false};
+function hpChoice(d,levels,L,cls,hint){
+  const ch={type:"hp",die:hitDieMax(d),levels:Math.max(1,num(levels)||1),cls,_level:L,_wasLocked:character.hp.locked!==false};
+  if(hint)ch.hint=hint;
+  return ch;
 }
 /* Returns the hit points added, 0 if none. A class with no hit die in the
    loaded rules has no fixed value to fall back on, so blank there means "I'll
@@ -3366,21 +3391,25 @@ function commitHPChoice(ch,raw){
   toast(`Max HP ${was} → ${was+gain} (+${gain})`);
   return gain;
 }
-/* Level 1 with a single class has no roll and no choice: max HP is the hit
+/* Level 1 of the first class has no roll and no choice: max HP is the hit
    die's maximum plus your Constitution modifier. Filled in on the player's
    behalf, but ONLY over a blank — a number they typed is theirs, and this must
-   never overwrite it.
+   never overwrite it. Fires for a first class at ANY starting level: it used to
+   stop at total level 1, so a character created at level 3 got no hit points at
+   all (#66). addClass() then asks for levels 2..N like a level-up. Returns
+   whether it wrote, because that step is only offered on top of a seed.
    CON is read from the SCORE, not abilFinal(): contributions() folds in
    equipped items, active statuses and summoned familiars, and this number has
    to be re-derivable unchanged minutes later by removeClass(). An effect that
    should raise max HP has its own target ("hp.max") and layers on top. */
 function seedLevel1HP(d){
   const hp=level1HP(d);
-  if(!hp||character.classes.length!==1||totalLevel()!==1)return;
-  if(num(character.hp.max))return;
+  if(!hp||character.classes.length!==1)return false;
+  if(num(character.hp.max))return false;
   character.hp.max=hp;
   if(!num(character.hp.cur))character.hp.cur=hp;
   renderHP();
+  return true;
 }
 /* Entering CON after picking the class is the normal order for a lot of
    players, and the seeded number would otherwise be stale forever — worse, it
@@ -3403,30 +3432,79 @@ function resyncLevel1HP(prevCon){
   if(full)character.hp.cur=now;
   clampHP();renderHP();
 }
+/* Saving throws come from the FIRST class only. Returns the keys it newly
+   granted, so a caller can say what changed. */
+function grantClassSaves(d,name){
+  const sid="class:"+name,got=[];
+  if(d&&Array.isArray(d.savingThrows))d.savingThrows.forEach(k=>{
+    if(character.saves[k]===undefined)return;
+    if(!(character.grants||[]).some(g=>g.sid===sid&&g.type==="save"&&g.key===k))got.push(k);
+    grantProf(sid,"save",k,1);
+  });
+  return got;
+}
+/* ---- multiclassing (#66) ----
+   Only the first class is character creation. A class taken beside another
+   grants no saving throws and no starting equipment or gold, and of its
+   starting proficiencies only what the pack's `multiclass` block lists — one
+   skill for a Bard, Ranger or Rogue, none for a Wizard. Its level-1 FEATURES
+   (Fighting Style, Spellcasting, …) still arrive, and its levels gain hit points
+   like any level-up. A pack with no `multiclass` block is not guessed at: no
+   class skills are offered, and the window says the pack doesn't list them.
+   A level-1 `skill` choice on the class itself is its starting proficiencies:
+   the converter writes one there from startingProficiencies and nothing else,
+   and the Gadgeteer's hand-authored one is the same list. */
+function multiclassChoices(d,sid){
+  const mc=d&&d.multiclass;
+  return (mc&&Array.isArray(mc.choices)?mc.choices:[]).map(ch=>({...ch,_level:1,_sid:sid}));
+}
+function multiclassNote(d){
+  if(!d)return "";
+  const head=`${d.name} as an extra class: no saving throws and no starting equipment — those come from your first class.`;
+  const mc=d.multiclass;
+  if(!mc||typeof mc!=="object")return head+` This rules pack doesn't list what multiclassing into ${d.name} grants, so no class skills are offered; add any proficiencies you gain yourself.`;
+  const bits=[];
+  if(mc.proficiencies)bits.push(String(mc.proficiencies));
+  const n=(Array.isArray(mc.choices)?mc.choices:[]).filter(c=>c&&c.type==="skill").reduce((a,c)=>a+(num(c.choose)||1),0);
+  if(n)bits.push(n===1?"one skill (below)":n+" skills (below)");
+  return head+(bits.length?" You gain: "+bits.join(", ")+".":" It grants no other proficiencies.");
+}
 function addClass(name,lvl){
   const d=findClassDef(name);
+  const first=!character.classes.length,sid="class:"+name;
   const entry={name,level:0,subclass:null};
   character.classes.push(entry);
   if(d){
-    if(Array.isArray(d.savingThrows))d.savingThrows.forEach(k=>{if(character.saves[k]!==undefined)grantProf("class:"+name,"save",k,1);});
-    (d.skills||[]).forEach(nm=>{const k=skillKey(nm);if(k)grantProf("class:"+name,"skill",k,1);});
+    if(first){
+      grantClassSaves(d,name);
+      (d.skills||[]).forEach(nm=>{const k=skillKey(nm);if(k)grantProf(sid,"skill",k,1);});
+    }
     if(d.spellcasting&&!character.spellAbility)character.spellAbility=d.spellcasting;
   }
   let choices=[],notes=[];const _eq=[];
-  if(d)applyEquipGrants(d.equipmentGrants,"class:"+name,_eq);
+  if(d&&first)applyEquipGrants(d.equipmentGrants,sid,_eq);
   for(let L=1;L<=lvl;L++){const res=applyClassLevel(entry,d,L);choices=choices.concat(res.choices);notes=notes.concat(res.notes);}
-  /* A second class is levels GAINED, with the new class's die, so it asks for
-     hit points exactly as a level-up does. The first class is character
-     creation: seedLevel1HP() handles level 1, and above that the player types it. */
-  if(character.classes.length>1){choices=[hpChoice(d,lvl,lvl,name)].concat(choices);character.hp.locked=false;renderHP();}
+  if(d&&!first){
+    choices=multiclassChoices(d,sid).concat(choices.filter(ch=>!(ch.type==="skill"&&ch._level===1&&ch._sid===sid)));
+    notes=[multiclassNote(d)].concat(notes);
+  }
   entry.level=lvl;
   character.level=totalLevel();
-  seedLevel1HP(d);
+  /* Hit points. A second class is levels GAINED, with the new class's die, so
+     it asks exactly as a level-up does. The first class is character creation:
+     level 1 is seeded (the full die + CON), and a first class that starts above
+     level 1 then asks for levels 2..N the same way — but only on top of a seed,
+     never on a Max the player already typed. hpChoice() before the unlock: it
+     remembers the lock. */
+  if(!first){choices=[hpChoice(d,lvl,lvl,name)].concat(choices);character.hp.locked=false;renderHP();}
+  else if(seedLevel1HP(d)&&lvl>1){
+    choices=[hpChoice(d,lvl-1,lvl,name,`Level 1 is already in Max HP: the full ${d.hitDie} plus CON. This is levels 2–${lvl}.`)].concat(choices);
+    character.hp.locked=false;renderHP();
+  }
   const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
-  if(choices.length||notes.length)runChoices(name,choices,notes,_eq);
-  else runExtraChoices(_eq);
+  runChoices(name,choices,notes,_eq);   /* with nothing to show, it opens the equipment picker itself */
 }
 function removeClass(idx){
   const c=character.classes[idx];if(!c)return;
@@ -3446,6 +3524,15 @@ function removeClass(idx){
   removeGrants(g=>g.sid==="class:"+c.name||g.sid.indexOf("subclass:"+c.name+":")===0);
   revertEquipmentGrants("class:"+c.name);
   character.classes.splice(idx,1);
+  /* Saving throws came from the class just removed if it was the first. The
+     one now first takes its own, tagged to it so they leave with it — without
+     this a Fighter/Wizard who drops Fighter has no save proficiencies at all.
+     Its first-class skills and starting equipment are creation choices and are
+     not re-offered; the toast says so. */
+  if(idx===0&&character.classes.length){
+    const nf=character.classes[0],got=grantClassSaves(findClassDef(nf.name),nf.name);
+    if(got.length)toast(`${nf.name} is now your first class, so it grants its saving throws (${got.map(k=>k.toUpperCase()).join(", ")}). Its starting skills and equipment are not added.`);
+  }
   character.level=totalLevel();const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   renderClassRace();renderFeatures();recompute();scheduleSave();
 }
@@ -3468,7 +3555,7 @@ function doLevelUp(){
     runChoices(entry.name,[hp].concat(res.choices),res.notes);
   };
   if(character.classes.length===1){proceed(0);return;}
-  openModal("Level up — which class?",character.classes.map((c,i)=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvlclass="${i}">${esc(c.name)} ${num(c.level)} → ${num(c.level)+1}</button>`).join("")+`<div class="m-actions"><button class="tbtn" id="luCancel">Cancel</button></div>`);
+  openModal("Level up — which class?",character.classes.map((c,i)=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvlclass="${esc(i)}">${esc(c.name)} ${num(c.level)} → ${num(c.level)+1}</button>`).join("")+`<div class="m-actions"><button class="tbtn" id="luCancel">Cancel</button></div>`);
   document.getElementById("luCancel").addEventListener("click",closeModal);
   document.querySelectorAll("[data-lvlclass]").forEach(b=>b.addEventListener("click",()=>{const i=num(b.dataset.lvlclass);closeModal();proceed(i);}));
 }
@@ -3485,12 +3572,16 @@ function doLevelDown(){
   const eligible=character.classes.map((c,i)=>({c,i})).filter(o=>num(o.c.level)>1);
   if(!eligible.length){alert("All classes are at level 1. To remove one, use the ✕ on the class.");return;}
   if(eligible.length===1){proceed(eligible[0].i);return;}
-  openModal("Level down — which class?",eligible.map(o=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvldown="${o.i}">${esc(o.c.name)} ${num(o.c.level)} → ${num(o.c.level)-1}</button>`).join("")+`<p class="hint">This only reduces the class's level. Traits, proficiencies, and choices you've already gained are kept.</p><div class="m-actions"><button class="tbtn" id="ldCancel">Cancel</button></div>`);
+  openModal("Level down — which class?",eligible.map(o=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvldown="${esc(o.i)}">${esc(o.c.name)} ${num(o.c.level)} → ${num(o.c.level)-1}</button>`).join("")+`<p class="hint">This only reduces the class's level. Traits, proficiencies, and choices you've already gained are kept.</p><div class="m-actions"><button class="tbtn" id="ldCancel">Cancel</button></div>`);
   document.getElementById("ldCancel").addEventListener("click",closeModal);
   document.querySelectorAll("[data-lvldown]").forEach(b=>b.addEventListener("click",()=>{const i=num(b.dataset.lvldown);closeModal();proceed(i);}));
 }
-/* ---- subclasses ---- */
-function selectSubclass(className,subName){
+/* ---- subclasses ----
+   `pending` is what waits behind the subclass's own window (the class window's
+   starting-equipment picker and feat skill choices, #63); runChoices() carries
+   it to that window's Done, or straight on when the subclass has nothing to
+   choose at these levels. */
+function selectSubclass(className,subName,pending){
   const entry=character.classes.find(c=>c.name===className);if(!entry)return;
   const d=findClassDef(className);
   const oldSub=entry.subclass;
@@ -3509,7 +3600,7 @@ function selectSubclass(className,subName){
     });
   }
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
-  runChoices(className,choices,notes);
+  runChoices(className,choices,notes,pending);
 }
 function chooseSubclass(className){
   const d=findClassDef(className);const subMap=subclassesFor(d);const subs=Object.keys(subMap);
@@ -3631,7 +3722,7 @@ function choiceFieldHTML(ch,ci,d){
     });
     const granted=opts.filter(o=>o.have).length;
     const target=effectiveChoose(ch.choose,opts.length,granted);
-    chooseAttr=` data-choose="${target}"`;
+    chooseAttr=` data-choose="${esc(target)}"`;
     inner=`<label class="f">Choose ${target} skill(s)`+
       (granted?` <span style="color:var(--ink-soft);font-weight:400">(${granted} already yours)</span>`:"")+
       ` — <span data-chcount>0 of ${target} chosen</span></label>`+
@@ -3646,7 +3737,7 @@ function choiceFieldHTML(ch,ci,d){
     const subMap=d?subclassesFor(d):{},from=ch.from||Object.keys(subMap);
     inner=`<label class="f">${esc(ch.label||"Choose a subclass")}</label>`+from.map(n=>{
       const sc=subMap[n]||{};
-      return `<label class="opt" style="align-items:flex-start"><input type="radio" name="sub-${ci}" data-sub-opt value="${esc(n)}"><span><b>${esc(n)}</b>`+
+      return `<label class="opt" style="align-items:flex-start"><input type="radio" name="sub-${esc(ci)}" data-sub-opt value="${esc(n)}"><span><b>${esc(n)}</b>`+
         `${subSourceTag(n,sc)?` <span class="hint">(${esc(subSourceTag(n,sc))})</span>`:""}`+
         `${sc.description?`<span class="hint" style="display:block;margin:2px 0 0">${esc(sc.description)}</span>`:""}</span></label>`;
     }).join("");
@@ -3656,16 +3747,19 @@ function choiceFieldHTML(ch,ci,d){
        Blank takes the average, so a player who rolls at the table types, and
        one who doesn't just presses Done. */
     const die=num(ch.die),n=Math.max(1,num(ch.levels)||1),dice=n+"d"+die;
+    /* `hint`: a first class added above level 1 asks for levels 2..N only —
+       level 1 was seeded — and "roll 2d10" for a level-3 Fighter needs saying why. */
     inner=die
       ?`<label class="f">Hit points — roll ${dice}, or take the average</label>`+
-        `<div style="display:flex;gap:8px;align-items:center"><input type="number" min="0" inputmode="numeric" data-hp-dice placeholder="${n*hpFixed(die)} (average)" aria-label="What the ${dice} came up — blank takes the average" style="flex:1">`+
+        (ch.hint?`<p class="hint" style="margin:0 0 6px">${esc(ch.hint)}</p>`:"")+
+        `<div style="display:flex;gap:8px;align-items:center"><input type="number" min="0" inputmode="numeric" data-hp-dice placeholder="${esc(n*hpFixed(die))} (average)" aria-label="What the ${esc(dice)} came up — blank takes the average" style="flex:1">`+
         `<button class="tbtn" type="button" data-hp-roll>Roll for me</button></div><p class="hint" data-hp-prev style="margin:6px 0 0"></p>`
       :`<label class="f">Hit points gained</label><input type="number" min="0" inputmode="numeric" data-hp-dice placeholder="hit points gained" aria-label="Hit points gained">`+
         `<p class="hint" style="margin:6px 0 0">${esc(ch.cls||"This class")} has no hit die in the loaded rules — type what you gained, or leave it blank and set Max yourself.</p>`;
   }else if(t==="asi"){
     inner=`<label class="f">Ability Score Improvement</label>
-      <div style="display:flex;gap:14px;margin-bottom:6px"><label class="opt" style="margin:0"><input type="radio" name="asimode-${ci}" data-asi-mode value="2" checked>+2 to one</label><label class="opt" style="margin:0"><input type="radio" name="asimode-${ci}" data-asi-mode value="1">+1 to two</label></div>
-      <div class="g2"><select data-asi-a>${ABIL.map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select><select data-asi-b>${ABIL.map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>`;
+      <div style="display:flex;gap:14px;margin-bottom:6px"><label class="opt" style="margin:0"><input type="radio" name="asimode-${esc(ci)}" data-asi-mode value="2" checked>+2 to one</label><label class="opt" style="margin:0"><input type="radio" name="asimode-${esc(ci)}" data-asi-mode value="1">+1 to two</label></div>
+      <div class="g2"><select data-asi-a>${ABIL.map(([k,l])=>`<option value="${esc(k)}">${l}</option>`).join("")}</select><select data-asi-b>${ABIL.map(([k,l])=>`<option value="${esc(k)}">${l}</option>`).join("")}</select></div>`;
   }else if(t==="feat"){
     if(ch.from){
       inner=`<label class="f">${esc(ch.label||"Feat")}</label><select data-feat-opt><option value="">— none —</option>${ch.from.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")}</select>`;
@@ -3686,19 +3780,19 @@ function choiceFieldHTML(ch,ci,d){
        `repeatable` (four 2024 invocations) stays open. */
     const owned=from.map(o=>!o.repeatable&&(character.features||[]).some(f=>String(f.name||"").toLowerCase()===String(o.name||"").toLowerCase()));
     const have=owned.filter(Boolean).length,target=effectiveChoose(choose,from.length,have);
-    if(!single)chooseAttr=` data-choose="${target}"`;
+    if(!single)chooseAttr=` data-choose="${esc(target)}"`;
     inner=`<label class="f">${esc(ch.label||("Choose "+choose))}`+
       (have?` <span style="color:var(--ink-soft);font-weight:400">(${have} already yours)</span>`:"")+
       (single?"":` — <span data-chcount>0 of ${target} chosen</span>`)+
       `</label>`+from.map((o,i)=>{
       const fx=(o.effects||[]).map(e=>`${FX_LABEL[e.target]||e.target} ${fmt(num(e.value))}`).join(", ");
       const fixed=owned[i]?(single?" disabled":" checked disabled data-fixed"):"";
-      return `<label class="opt" style="align-items:flex-start"><input type="${single?"radio":"checkbox"}" ${single?`name="opt-${ci}"`:""} data-opt-i="${i}"${fixed}><span><b>${esc(o.name||("Option "+(i+1)))}</b>${owned[i]?" (already yours)":""}${o.description?` — ${esc(o.description)}`:""}${fx?` <span style="color:var(--accent-2)">(${esc(fx)})</span>`:""}</span></label>`;
+      return `<label class="opt" style="align-items:flex-start"><input type="${single?"radio":"checkbox"}" ${single?`name="opt-${esc(ci)}"`:""} data-opt-i="${esc(i)}"${fixed}><span><b>${esc(o.name||("Option "+(i+1)))}</b>${owned[i]?" (already yours)":""}${o.description?` — ${esc(o.description)}`:""}${fx?` <span style="color:var(--accent-2)">(${esc(fx)})</span>`:""}</span></label>`;
     }).join("");
   }else{
     inner=`<p class="hint">${esc(ch.label||ch.note||"A choice is available at your table.")}</p>`;
   }
-  return `<div class="choice" data-ci="${ci}" data-ctype="${esc(t||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
+  return `<div class="choice" data-ci="${esc(ci)}" data-ctype="${esc(t||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
 }
 let _activeChoices=[];
 function sidToOrigin(sid,level){
@@ -3708,13 +3802,19 @@ function sidToOrigin(sid,level){
   if(p[0]==="race")return {kind:"race",name:p[1]};
   return {kind:"class",class:"",level};
 }
-/* `eq` is the starting-equipment picker a new class queues behind its choices.
-   It travels with THIS window to its own Done: it used to wait in a module
-   global, so closing the window without Done left it queued, and it popped up
-   after the next level-up instead. Dismissed now, it goes with the window —
-   which the dismiss guard already warns about. */
-function runChoices(className,choices,notes,eq){
-  if((!choices||!choices.length)&&(!notes||!notes.length))return;
+/* `pending` is what waits behind this window, in runExtraChoices()'s shape: a
+   new class's starting-equipment picker, and the skill choices of feats picked
+   in an earlier window. There is ONE modal, so a window may only open once the
+   one before it is finished — opening two at once is how Battle Master's
+   maneuvers were replaced by the equipment picker before anyone saw them (#63).
+   So the queue travels with the window: to its Done (commitChoices), or, if the
+   player dismisses it, on to the next window (setDismissGuard's `then`) —
+   dismissing costs this window's own picks, which the guard warns about, not
+   the gear of a class that is already on the sheet. It used to wait in a module
+   global instead, which outlived a dismissed window and popped up after the
+   NEXT level-up. With nothing to show, it goes straight on. */
+function runChoices(className,choices,notes,pending){
+  if((!choices||!choices.length)&&(!notes||!notes.length)){runExtraChoices(pending);return;}
   _activeChoices=choices||[];
   const d=findClassDef(className);
   let body="";
@@ -3727,12 +3827,12 @@ function runChoices(className,choices,notes,eq){
      discards EVERY pick with no way to reopen the chooser — the easiest way
      past it, which is the opposite of the point. Registered after openModal,
      because openModal clears the guard on every open. */
-  armChoiceDismissGuard();
+  armChoiceDismissGuard(pending);
   wireHPChoice();
   document.getElementById("chDone").addEventListener("click",()=>{
     const warn=choiceShortfall(choiceBlocks());
     if(warn&&!confirm(warn))return;
-    const sel=gatherChoices();closeModal();commitChoices(className,sel,eq);
+    const sel=gatherChoices();closeModal();commitChoices(className,sel,pending);
   });
 }
 /* The HP block's live working and its Roll button. */
@@ -3759,8 +3859,10 @@ function hpPending(){
   return !!(div.querySelector("[data-hp-roll]")||(box&&String(box.value).trim()!==""));
 }
 /* Shared by both choice modals. The message differs from Done's: here the picks
-   are about to be thrown away, not merely left short. */
-function armChoiceDismissGuard(){
+   are about to be thrown away, not merely left short. `pending` — the windows
+   queued behind this one — still opens after a dismissal (see runChoices). */
+function armChoiceDismissGuard(pending){
+  const then=(pending&&pending.length)?()=>runExtraChoices(pending):null;
   setDismissGuard(()=>{
     const blocks=choiceBlocks();
     const picked=blocks.reduce((a,b)=>a+num(b.picked),0);
@@ -3772,7 +3874,7 @@ function armChoiceDismissGuard(){
     return (picked?"Closing will discard the picks you have made.":"You have not made your picks yet.")+
       "\n\nThere is no way to reopen this later — you would have to remove and re-add it."+
       (hp?"\n\nThis level's hit points will not be added either.":"")+"\n\nClose anyway?";
-  });
+  },then);
 }
 function gatherChoices(){
   const out=[];
@@ -3787,7 +3889,8 @@ function gatherChoices(){
   });
   return out;
 }
-function commitChoices(className,selections,eq){
+/* `pending` is the queue this window's Done was handed (see runChoices). */
+function commitChoices(className,selections,pending){
   const entry=character.classes.find(c=>c.name===className);
   let pendingSub=null;const _featPending=[];
   selections.forEach(sel=>{
@@ -3799,8 +3902,14 @@ function commitChoices(className,selections,eq){
     else if(sel.type==="option"){const ch=_activeChoices[sel.ci];if(ch&&Array.isArray(ch.from))sel.idxs.forEach(i=>{const o=ch.from[i];if(o)addFeatureFromDef({name:o.name,description:o.description||"",effects:o.effects||[],skills:o.skills,saves:o.saves,cost:o.cost},sidToOrigin(sel.sid,ch._level));});}
   });
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
-  if(pendingSub)selectSubclass(className,pendingSub);
-  runExtraChoices(_featPending.concat(eq||[]));
+  /* One window at a time (#63). A picked subclass opens its own level choices,
+     so everything still waiting — the queue this window was handed, plus the
+     skill choices of any feat just picked — goes behind THAT window instead of
+     opening now and replacing it. A feat and a subclass at one level raced the
+     same way (ledger L2571). */
+  const next=(pending||[]).concat(_featPending);
+  if(pendingSub)selectSubclass(className,pendingSub,next);
+  else runExtraChoices(next);
 }
 
 /* ============ Attacks ============ */
@@ -4002,7 +4111,7 @@ function promptSpellAttack(sp,atLevel){
      dialog cannot promise different damage from the sheet behind it */
   const dmg=attackDamageStr({damageDice:sp.dice,damageType:sp.damageType,extraDamage:sp.extraDamage},0);
   if(dmg)body+=`<p><b>Damage:</b> ${esc(dmg)}</p>`;
-  body+=`<p class="hint">Cast at level ${atLevel||sp.level}. Roll the dice at your table.</p><div class="m-actions"><button class="tbtn primary" id="okAtk">OK</button></div>`;
+  body+=`<p class="hint">Cast at level ${esc(atLevel||sp.level)}. Roll the dice at your table.</p><div class="m-actions"><button class="tbtn primary" id="okAtk">OK</button></div>`;
   openModal("Cast "+sp.name,body);const b=document.getElementById("okAtk");if(b)b.addEventListener("click",closeModal);
 }
 /* ---- the Concentrating condition ----
@@ -4106,17 +4215,17 @@ function renderActiveSpells(){
     const timeTxt=fmtElapsed(a.elapsedSec)+((a.durationSec!=null&&a.durationSec>0)?` / ${fmtElapsed(a.durationSec)}`:"");
     return `<div class="item${exp?" on-status":""}"><div class="top">
         <span class="nm">${esc(a.name)}</span>
-        ${a.level?`<span class="qty">Lv ${a.level}</span>`:""}
+        ${a.level?`<span class="qty">Lv ${esc(a.level)}</span>`:""}
         ${a.conc?`<span class="orig-b" title="Concentration">C</span>`:""}
         <span class="qty" title="Elapsed / duration">${esc(timeTxt)}</span>
         ${exp?`<span class="qty" style="color:var(--danger,#c0392b)">expired</span>`:""}
         <span style="flex:1"></span>
-        <button class="icon danger" data-active-end="${a.id}" aria-label="End">✕</button>
+        <button class="icon danger" data-active-end="${esc(a.id)}" aria-label="End">✕</button>
       </div>
       <div class="use-row"><span class="use-lbl">Elapsed time</span>
-        <button class="tbtn" data-active-tick="${a.id}" data-sec="-6" style="padding:3px 8px;min-height:auto">− rd</button>
-        <button class="tbtn" data-active-tick="${a.id}" data-sec="6" style="padding:3px 8px;min-height:auto">+ rd</button>
-        <button class="tbtn" data-active-sec="${a.id}" style="padding:3px 8px;min-height:auto">+ sec…</button>
+        <button class="tbtn" data-active-tick="${esc(a.id)}" data-sec="-6" style="padding:3px 8px;min-height:auto">− rd</button>
+        <button class="tbtn" data-active-tick="${esc(a.id)}" data-sec="6" style="padding:3px 8px;min-height:auto">+ rd</button>
+        <button class="tbtn" data-active-sec="${esc(a.id)}" style="padding:3px 8px;min-height:auto">+ sec…</button>
       </div></div>`;
   }).join("");
 }
@@ -4146,16 +4255,16 @@ function renderAttacks(){
     const typeLabel=save?"Spell save":(isSpell?`Spell · ${n.kind==="ranged"?"Ranged":"Melee"}`:(n.kind==="ranged"?"Ranged":"Melee"));
     const dc=spellDC();
     const hitCell=save?`<span class="atk-hit">DC ${dc!=null?dc:"—"} ${esc((save.ability||"").toUpperCase())}</span>`
-                       :`<span class="atk-hit ${n.atkFx?"fx-on":""}" data-atk-info="${a.id}">${fmt(n.toHit)} to hit</span>`;
+                       :`<span class="atk-hit ${n.atkFx?"fx-on":""}" data-atk-info="${esc(a.id)}">${fmt(n.toHit)} to hit</span>`;
     const d=document.createElement("div");d.className="item fitem";
     d.innerHTML=`<div class="top">
-        <button class="fitoggle" data-atkitem="${a.id}" aria-label="Collapse"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button class="fav ${a.fav?"on":""}" data-fav-attack="${a.id}" aria-label="Favorite" title="Favorite">${a.fav?"★":"☆"}</button>
+        <button class="fitoggle" data-atkitem="${esc(a.id)}" aria-label="Collapse"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="fav ${a.fav?"on":""}" data-fav-attack="${esc(a.id)}" aria-label="Favorite" title="Favorite">${a.fav?"★":"☆"}</button>
         <span class="nm">${esc(a.name||"Attack")}</span>
         <span class="qty">${typeLabel}</span>
         ${hitCell}
-        ${isSpell?`<button class="tbtn" data-cast-spell="${a.spellId}" style="padding:3px 8px;min-height:auto">Cast</button>`:`<button class="icon" data-edit-attack="${a.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`}
-        <button class="icon danger" data-del-attack="${a.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        ${isSpell?`<button class="tbtn" data-cast-spell="${esc(a.spellId)}" style="padding:3px 8px;min-height:auto">Cast</button>`:`<button class="icon" data-edit-attack="${esc(a.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`}
+        <button class="icon danger" data-del-attack="${esc(a.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${ic?"":`<div class="desc" style="font-family:var(--head);font-size:13px;letter-spacing:.02em;color:var(--ink-soft)">Damage <b class="${!save&&n.dmgFx?"fx-on":""}" style="${!save&&n.dmgFx?"":"color:var(--ink)"}">${esc(dmg)||"—"}</b>${a.notes?` · ${esc(a.notes)}`:""}</div>`}`;
     el.appendChild(d);
@@ -4192,8 +4301,8 @@ function attackXDmgRowHTML(d){
    second — the same reason statusDatalistHTML() takes one. */
 function xDmgFieldHTML(id,rec,hint){
   return `<div class="field"><label class="f">Additional damage types</label>
-      <div id="${id}">${extraDamageList(rec).map(attackXDmgRowHTML).join("")}</div>
-      <button type="button" class="tbtn" id="${id}Add" style="padding:4px 10px;min-height:auto">+ Add damage type</button>
+      <div id="${esc(id)}">${extraDamageList(rec).map(attackXDmgRowHTML).join("")}</div>
+      <button type="button" class="tbtn" id="${esc(id)}Add" style="padding:4px 10px;min-height:auto">+ Add damage type</button>
       <p class="hint" style="margin:6px 0 0">${esc(hint)}</p></div>`;
 }
 function wireXDmgField(id){
@@ -4215,7 +4324,7 @@ function openAttackForm(existing){
   openModal(existing?"Edit attack":"New attack",`
     <div class="g2"><div class="field"><label class="f">Name</label><input id="aName" value="${esc(a.name)}" placeholder="Shortbow"></div>
       <div class="field"><label class="f">Type</label><select id="aKind"><option value="melee"${a.kind!=="ranged"?" selected":""}>Melee</option><option value="ranged"${a.kind==="ranged"?" selected":""}>Ranged</option></select></div></div>
-    <div class="g2"><div class="field"><label class="f">Ability</label><select id="aAbil">${abilOpts.map(([v,l])=>`<option value="${v}"${a.ability===v?" selected":""}>${l}</option>`).join("")}</select></div>
+    <div class="g2"><div class="field"><label class="f">Ability</label><select id="aAbil">${abilOpts.map(([v,l])=>`<option value="${esc(v)}"${a.ability===v?" selected":""}>${l}</option>`).join("")}</select></div>
       <div class="field"><label class="f">Extra to-hit</label><input id="aAtkMisc" type="number" value="${esc(a.atkMisc)}" placeholder="0"></div></div>
     <label class="opt" id="aProf"><input type="checkbox" ${a.proficient?"checked":""}>Proficient (add proficiency bonus)</label>
     <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="aDice" value="${esc(a.damageDice)}" placeholder="1d8"></div>
@@ -4281,13 +4390,13 @@ function renderSpells(){
     el.appendChild(h);
     items.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).forEach(s=>{
       const r=document.createElement("div");r.className="spell";
-      r.innerHTML=`<button class="pin ${s.prepared?"on":""}" data-prep="${s.id}" aria-label="Prepared" aria-pressed="${s.prepared?"true":"false"}" title="${s.prepared?"Prepared — tap to unprepare":"Not prepared — tap to prepare"}"></button>
-        <span class="nm" data-view-spell="${s.id}">${esc(s.name||"Spell")}</span>
+      r.innerHTML=`<button class="pin ${s.prepared?"on":""}" data-prep="${esc(s.id)}" aria-label="Prepared" aria-pressed="${s.prepared?"true":"false"}" title="${s.prepared?"Prepared — tap to unprepare":"Not prepared — tap to prepare"}"></button>
+        <span class="nm" data-view-spell="${esc(s.id)}">${esc(s.name||"Spell")}</span>
         ${(s.origin||s.granted)?originBadge(spellOrigin(s),"data-orig-spell",s.id):""}
         ${s.meta?`<span class="meta">${esc(s.meta)}</span>`:""}
-        <button class="tbtn" data-cast-spell="${s.id}" style="padding:3px 8px;min-height:auto">Cast</button>
-        <button class="icon" data-edit-spell="${s.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-spell="${s.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`;
+        <button class="tbtn" data-cast-spell="${esc(s.id)}" style="padding:3px 8px;min-height:auto">Cast</button>
+        <button class="icon" data-edit-spell="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger" data-del-spell="${esc(s.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`;
       el.appendChild(r);
     });
   });
@@ -4326,9 +4435,9 @@ function renderGloss(){
   mine.forEach(g=>{
     const d=document.createElement("div");d.className="item";
     d.innerHTML=`<div class="top"><span class="nm">${esc(g.term)}</span><span class="chip">${g.type==="image"?"Image":"Text"}</span>
-      <button class="icon" data-view-gloss="${g.id}" aria-label="Preview"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-      <button class="icon" data-edit-gloss="${g.id}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-      <button class="icon danger" data-del-gloss="${g.id}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
+      <button class="icon" data-view-gloss="${esc(g.id)}" aria-label="Preview"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button class="icon" data-edit-gloss="${esc(g.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+      <button class="icon danger" data-del-gloss="${esc(g.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
     el.appendChild(d);
   });
 }
@@ -4438,7 +4547,7 @@ function hdStyle(){const s=character.hdStyle;return (s==="condensed"||s==="dice"
    separate pips, because there the dice ARE the pips. */
 function hdPips(p){
   let h="";
-  for(let i=1;i<=p.total;i++)h+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${p.die}" data-i="${i}" aria-label="${p.die} number ${i}${i<=p.used?" (spent)":""}"></button>`;
+  for(let i=1;i<=p.total;i++)h+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${esc(p.die)}" data-i="${esc(i)}" aria-label="${esc(p.die)} number ${esc(i)}${i<=p.used?" (spent)":""}"></button>`;
   return h;
 }
 /* CONDENSED — one line per die size. The rows get their own grid container so
@@ -4450,9 +4559,9 @@ function hdPips(p){
 function hdCondensedHTML(pool){
   return `<div class="hd-grid">`+pool.map(p=>{
     const left=p.total-p.used;
-    return `<div class="hd-row"><span class="hd-die">${p.die}</span><span class="hd-pips">${hdPips(p)}</span>`+
-      `<span class="hd-left${left?"":" out"}" title="${left} of ${p.total} left">${left}/${p.total}</span>`+
-      `<button class="hd-roll" data-hdroll="${p.die}" ${left?"":"disabled"} title="Spend one ${p.die} and heal">Roll</button></div>`;
+    return `<div class="hd-row"><span class="hd-die">${esc(p.die)}</span><span class="hd-pips">${hdPips(p)}</span>`+
+      `<span class="hd-left${left?"":" out"}" title="${esc(left)} of ${esc(p.total)} left">${left}/${p.total}</span>`+
+      `<button class="hd-roll" data-hdroll="${esc(p.die)}" ${left?"":"disabled"} title="Spend one ${esc(p.die)} and heal">Roll</button></div>`;
   }).join("")+`</div>`;
 }
 /* FULL — a boxed cell per die size, speaking the same language as the Vitals
@@ -4460,10 +4569,10 @@ function hdCondensedHTML(pool){
 function hdFullHTML(pool){
   return `<div class="hd-boxes">`+pool.map(p=>{
     const left=p.total-p.used;
-    return `<div class="hd-cell"><div class="hd-cd">${p.die}</div>`+
+    return `<div class="hd-cell"><div class="hd-cd">${esc(p.die)}</div>`+
       `<div class="hd-cv">${left}<small> / ${p.total}</small></div>`+
       `<div class="hd-pips">${hdPips(p)}</div>`+
-      `<button class="hd-roll" data-hdroll="${p.die}" ${left?"":"disabled"} title="Spend one ${p.die} and heal">Roll</button></div>`;
+      `<button class="hd-roll" data-hdroll="${esc(p.die)}" ${left?"":"disabled"} title="Spend one ${esc(p.die)} and heal">Roll</button></div>`;
   }).join("")+`</div>`;
 }
 /* DICE — every die is its own token, so the die size, the pip and the count
@@ -4475,9 +4584,9 @@ function hdDiceHTML(pool){
   return `<div class="hd-dice">`+pool.map(p=>
     `<div class="hd-drow">`+Array.from({length:p.total},(_,i)=>{
       const spent=i<p.used;
-      return `<button class="hd-d${spent?" spent":""}" data-hddie="${p.die}" data-i="${i+1}"`+
-        ` title="${spent?"Spent — tap to put it back":"Tap to spend this "+p.die+" and heal"}"`+
-        ` aria-label="${p.die}${spent?", spent":""}">${p.die.slice(1)}</button>`;
+      return `<button class="hd-d${spent?" spent":""}" data-hddie="${esc(p.die)}" data-i="${esc(i+1)}"`+
+        ` title="${esc(spent?"Spent — tap to put it back":"Tap to spend this "+p.die+" and heal")}"`+
+        ` aria-label="${esc(p.die)}${spent?", spent":""}">${esc(p.die.slice(1))}</button>`;
     }).join("")+`</div>`).join("")+
     `</div><p class="hint hd-foot">Tap a die to spend it and heal</p>`;
 }
@@ -4608,11 +4717,11 @@ function renderResources(){
     const cur=num(r.cur),max=num(r.max);
     return `<div class="res">
       <div class="res-main"><div class="res-name">${esc(r.name||"Resource")}${r.die?`<span class="res-die" title="Each is a ${esc(r.die)}">${esc(r.die)}</span>`:""}${r.auto?`<span class="res-auto" title="Managed by ${esc(r.source||"class")}">auto</span>`:""}</div><div class="res-sub">${r.per&&r.per!=="none"?`resets on ${esc(r.per)} rest`:"manual reset"}</div></div>
-      <button class="res-btn" data-res-dec="${r.id}" aria-label="Spend one">−</button>
+      <button class="res-btn" data-res-dec="${esc(r.id)}" aria-label="Spend one">−</button>
       <div class="res-val"><b>${cur}</b><span>/${max}</span></div>
-      <button class="res-btn" data-res-inc="${r.id}" aria-label="Gain one">+</button>
-      <button class="icon" data-res-reset="${r.id}" title="Restore to full"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/></svg></button>
-      ${r.auto?"":`<button class="icon" data-res-edit="${r.id}" aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="icon danger" data-res-del="${r.id}" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`}
+      <button class="res-btn" data-res-inc="${esc(r.id)}" aria-label="Gain one">+</button>
+      <button class="icon" data-res-reset="${esc(r.id)}" title="Restore to full"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/></svg></button>
+      ${r.auto?"":`<button class="icon" data-res-edit="${esc(r.id)}" aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="icon danger" data-res-del="${esc(r.id)}" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`}
     </div>`;
   }).join("");
 }
@@ -4620,7 +4729,7 @@ function openResourceForm(existing){
   const r=existing||{id:uid(),name:"",max:1,cur:1,per:"long",auto:false};
   openModal(existing?"Edit resource":"New resource",`
     <div class="field"><label class="f">Name</label><input id="rName" value="${esc(r.name||"")}" placeholder="e.g. Sorcery Points" autocomplete="off"></div>
-    <div class="g2"><div class="field"><label class="f">Max</label><input id="rMax" type="number" min="0" value="${num(r.max)||""}" placeholder="0"></div>
+    <div class="g2"><div class="field"><label class="f">Max</label><input id="rMax" type="number" min="0" value="${esc(num(r.max)||"")}" placeholder="0"></div>
       <div class="field"><label class="f">Resets on</label><select id="rPer"><option value="long"${r.per==="long"?" selected":""}>Long rest</option><option value="short"${r.per==="short"?" selected":""}>Short rest</option><option value="none"${r.per==="none"?" selected":""}>Manual only</option></select></div></div>
     <div class="m-actions"><button class="tbtn" id="rCancel">Cancel</button><button class="tbtn primary" id="rSave">${existing?"Save":"Add"}</button></div>`);
   document.getElementById("rCancel").addEventListener("click",closeModal);
@@ -4647,7 +4756,9 @@ function renderSlotBubbles(){
 /* portrait */
 function renderPortrait(){
   const el=document.getElementById("portrait");
-  el.innerHTML=character.portraitImg?`<img src="${character.portraitImg}" alt="Portrait">`:`<div class="ph">No portrait yet</div>`;
+  /* the portrait comes from the character file, so it goes through imgHTML():
+     escaped, and data: URLs only. Anything refused shows the placeholder. */
+  el.innerHTML=imgHTML(character.portraitImg,"Portrait")||`<div class="ph">No portrait yet</div>`;
 }
 
 let _adjWired=false,_adjSync=null;
@@ -4658,9 +4769,9 @@ function openCoinAdjust(){
   const keys=coinKeys();
   const rows=keys.map(k=>{
     const d=COIN_ALL.find(x=>x[0]===k);
-    return `<div class="coin"><label title="${d[2]}">${d[1]}</label>
-      <input type="text" inputmode="tel" data-adj="${k}" placeholder="0"
-             aria-label="Adjust ${d[2]} — e.g. 10 to gain, -5 to spend"></div>`;
+    return `<div class="coin"><label title="${esc(d[2])}">${d[1]}</label>
+      <input type="text" inputmode="tel" data-adj="${esc(k)}" placeholder="0"
+             aria-label="Adjust ${esc(d[2])} — e.g. 10 to gain, -5 to spend"></div>`;
   }).join("");
   openModal("Adjust coins",`
     <p class="hint">How many of each you gained. Use a minus to spend: <b>-5</b>.</p>
@@ -4785,9 +4896,9 @@ function renderCoins(){
   el.innerHTML=coinKeys().map(k=>{
     const d=COIN_ALL.find(x=>x[0]===k);
     const v=(character.coins&&character.coins[k]!=null)?character.coins[k]:"";
-    return `<div class="coin"><label title="${d[2]}">${d[1]}</label>`+
-      `<input type="text" inputmode="tel" data-coin="${k}" value="${esc(v)}" placeholder="0" `+
-      `aria-label="${d[2]} — type a number, or +10 / -5 to adjust"></div>`;
+    return `<div class="coin"><label title="${esc(d[2])}">${d[1]}</label>`+
+      `<input type="text" inputmode="tel" data-coin="${esc(k)}" value="${esc(v)}" placeholder="0" `+
+      `aria-label="${esc(d[2])} — type a number, or +10 / -5 to adjust"></div>`;
   }).join("");
 }
 /* Commit one coin box. Returns false if the entry made no sense. */
@@ -5296,7 +5407,7 @@ function printSheet(){
     const items=byLv[L].sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(s=>`<span class="p-line">${s.prepared?"◆":"○"} ${esc(s.name)}${s.granted?` (${esc(s.granted)})`:""}</span>`).join("");
     return `<div class="p-item"><b>${L===0?"Cantrips":"Level "+L}</b><div class="p-grid">${items}</div></div>`;
   }).join("");
-  const slotSummary=[];for(let i=1;i<=9;i++){const s=character.slots[i];if(s&&s.total)slotSummary.push(`L${i}: ${s.total-(s.used||0)}/${s.total}`);}
+  const slotSummary=[];for(let i=1;i<=9;i++){const s=character.slots[i];if(s&&num(s.total))slotSummary.push(`L${i}: ${num(s.total)-num(s.used)}/${num(s.total)}`);}
   const inv=(character.inventory||[]).map(it=>`<div class="p-item"><b>${esc(it.name)}</b>${num(it.qty)>1?` ×${num(it.qty)}`:""}${it.equipped?" (equipped)":""}${it.description?`<div>${esc(printStrip(it.description)).replace(/\n/g,"<br>")}</div>`:""}</div>`).join("");
   const coins=["pp","gp","ep","sp","cp"].map(k=>num(character.coins[k])?`${num(character.coins[k])} ${k.toUpperCase()}`:"").filter(Boolean).join(" · ");
   const bio=BIO.map(([k,lbl])=>character[k]?`<div class="p-item"><b>${lbl}</b><div>${esc(printStrip(character[k])).replace(/\n/g,"<br>")}</div></div>`:"").join("");
@@ -5735,7 +5846,7 @@ function updRowHTML(r,i){
     :r.edited?`<span class="chip">you edited this</span>`:"";
   const dis=(r.type==="unmatched"||r.type==="ambiguous")?" disabled":"";
   return `<label class="opt" style="align-items:flex-start">
-    <input type="checkbox" data-upd="${i}"${r.apply?" checked":""}${dis}>
+    <input type="checkbox" data-upd="${esc(i)}"${r.apply?" checked":""}${dis}>
     <span><b>${esc(r.name||"—")}</b> ${tag}
       <span class="hint" style="display:block">${esc(r.why)}${r.pack?" · "+esc(r.pack):""}</span></span></label>`;
 }
@@ -5933,7 +6044,7 @@ function renderHome(){
       /* behind = made before this app version, so the update tool has something
          to offer. "" (never stamped) counts as behind. */
       const behind=cmpVer(m.appVersion||"0.0.0",APP_VERSION)<0;
-      const ver=`<span class="verbadge${behind?" old":""}" title="${behind?"Last checked against v"+esc(m.appVersion||"an earlier version")+" — updates may be available":"Up to date with v"+esc(APP_VERSION)}">v${esc(m.appVersion||"?")}</span>`;
+      const ver=`<span class="verbadge${behind?" old":""}" title="${esc(behind?"Last checked against v"+(m.appVersion||"an earlier version")+" — updates may be available":"Up to date with v"+APP_VERSION)}">v${esc(m.appVersion||"?")}</span>`;
       return `<div class="hcard">
         <button class="hcard-load" data-load="${esc(m.id)}"><span class="hcard-name">${esc(m.name||"Unnamed")}</span><span class="hcard-meta"><span class="sysbadge ${m.system==="dnd"?"dnd":"hbw"}">${badge}</span> ${ver} ${esc(fmtWhen(m.updated))}</span></button>
         <button class="hcard-star ${auto?"on":""}" data-autoload="${esc(m.id)}" title="${auto?"Autoload on":"Set as autoload"}">${auto?"★":"☆"}</button>
@@ -5992,15 +6103,19 @@ const modal=document.getElementById("modal");
    form Escape IS cancel and must stay instant.
    The check cannot live inside closeModal(): every Done handler calls that too,
    and would then have to answer its own prompt. Only the three user-initiated
-   dismissals below go through dismissModal(). */
-let _dismissGuard=null;
-function setDismissGuard(fn){_dismissGuard=fn;}
+   dismissals below go through dismissModal().
+   `then` is what a dismissed window hands on: the choice windows still queued
+   behind it (#63). It belongs to THIS window, like the guard — every open and
+   close clears both — so it can never fire after some later window, which is
+   how the old module-level equipment queue leaked. Done hands the queue on itself. */
+let _dismissGuard=null,_dismissThen=null;
+function setDismissGuard(fn,then){_dismissGuard=fn;_dismissThen=then||null;}
 /* `icon` is optional emblem markup for the header (iconSVG()). It is assigned
    UNCONDITIONALLY, never guarded behind `if(icon)`: ~30 call sites pass nothing,
    and they must CLEAR the slot, or a class emblem leaks into the next spell
    modal that opens. The title stays textContent — it is player data. */
-function openModal(title,html,icon){_dismissGuard=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
-function closeModal(){_dismissGuard=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
+function openModal(title,html,icon){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
+function closeModal(){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
 /* ---- focus ----
    A dialog takes the keyboard with it. On open, every other child of <body> goes
    inert (the toast stays reachable) and focus moves in: to the first field with a
@@ -6061,7 +6176,7 @@ function modalGiveBackFocus(){
 }
 function dismissModal(){
   if(_dismissGuard){const msg=_dismissGuard();if(msg&&!confirm(msg))return;}
-  closeModal();
+  const then=_dismissThen;closeModal();if(then)then();
 }
 document.getElementById("mClose").addEventListener("click",dismissModal);
 modal.addEventListener("click",e=>{if(e.target===modal)dismissModal()});
@@ -6075,7 +6190,10 @@ modal.addEventListener("change",e=>{
 });
 
 function openGlossView(g){
-  let body= g.type==="image"? (g.image?`<img src="${g.image}" alt="${esc(g.term)}">`:`<p><em>No image attached.</em></p>`) : `<p>${esc(g.text||"—")}</p>`;
+  /* g is a pack keyword or the character's own entry — either way someone
+     else's file, so the image goes through imgHTML() */
+  const img=g.type==="image"?imgHTML(g.image,g.term):"";
+  let body= g.type==="image"? (img||(g.image?`<p><em>This image isn't stored in the file itself, so it isn't shown.</em></p>`:`<p><em>No image attached.</em></p>`)) : `<p>${esc(g.text||"—")}</p>`;
   openModal(g.term,body);
 }
 /* ---- size picker (the Size box in Vitals) ----
@@ -6135,8 +6253,8 @@ function fxEditorRows(effects){
   return (effects||[]).map(e=>fxRow(e)).join("");
 }
 function fxRow(e){
-  const opts=fxTargets().map(([l,t])=>`<option value="${t}"${e&&e.target===t?" selected":""}>${l}</option>`).join("");
-  return `<div class="fxrow"><select class="fx-t">${opts}</select><input class="fx-v" type="number" value="${e?num(e.value):1}"><button class="icon danger fx-del" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+  const opts=fxTargets().map(([l,t])=>`<option value="${esc(t)}"${e&&e.target===t?" selected":""}>${l}</option>`).join("");
+  return `<div class="fxrow"><select class="fx-t">${opts}</select><input class="fx-v" type="number" value="${esc(e?num(e.value):1)}"><button class="icon danger fx-del" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
 }
 function collectFx(scope){
   return Array.from(scope.querySelectorAll(".fxrow")).map(r=>({target:r.querySelector(".fx-t").value,value:num(r.querySelector(".fx-v").value)})).filter(e=>e.value!==0);
@@ -6147,14 +6265,14 @@ function openFeatureForm(existing){
   const f=existing||{id:uid(),name:"",source:"",description:"",effects:[],enabled:true};
   const lib=(rules.features||[]);
   openModal(existing?"Edit feature":"New feature",`
-    ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="fLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${i}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
+    ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="fLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
     <div class="field"><label class="f">Name</label><input id="fName" value="${esc(f.name)}"></div>
     <div class="field"><label class="f">Source (optional)</label><input id="fSrc" value="${esc(f.source||"")}" placeholder="Ancestry, Class, Feat…"></div>
     <div class="field"><label class="f">Description</label><textarea id="fDesc">${esc(f.description||"")}</textarea></div>
     <div class="field"><label class="f">Effects on stats</label><div id="fFx">${fxEditorRows(f.effects)}</div><button class="fx-add" id="fAddFx">+ Add effect</button></div>
-    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="fUses" type="number" min="0" value="${num(f.uses&&usesMax(f))||""}" placeholder="0"></div>
+    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="fUses" type="number" min="0" value="${esc(num(f.uses&&usesMax(f))||"")}" placeholder="0"></div>
       <div class="field"><label class="f">Resets on</label><select id="fUsesPer"><option value="long"${(f.uses&&f.uses.per)!=="short"?" selected":""}>Long rest</option><option value="short"${(f.uses&&f.uses.per)==="short"?" selected":""}>Short rest</option></select></div></div>
-    <div class="g2"><div class="field"><label class="f">Cost per use (0 = none)</label><input id="fCost" type="number" min="0" value="${num(f.cost&&f.cost.amount)||""}" placeholder="0"></div>
+    <div class="g2"><div class="field"><label class="f">Cost per use (0 = none)</label><input id="fCost" type="number" min="0" value="${esc(num(f.cost&&f.cost.amount)||"")}" placeholder="0"></div>
       <div class="field"><label class="f">From resource</label><input id="fCostRes" list="resNamesDL" value="${esc(f.cost&&f.cost.resource||"")}" placeholder="e.g. Scrap" autocomplete="off"></div></div>
     <datalist id="resNamesDL">${(character.resources||[]).map(r=>`<option value="${esc(r.name)}"></option>`).join("")}</datalist>
     <div class="m-actions"><button class="tbtn" id="fCancel">Cancel</button><button class="tbtn primary" id="fSave">${existing?"Save":"Add"}</button></div>`);
@@ -6203,13 +6321,13 @@ function openItemForm(existing){
   const use=itemUse(it)||{};
   const abilOpts=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"],["finesse","Finesse (best of STR/DEX)"],["none","None"]];
   openModal(existing?"Edit item":"New item",`
-    ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="iLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${i}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
+    ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="iLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
     <div class="g2"><div class="field"><label class="f">Name</label><input id="iName" value="${esc(it.name)}"></div>
-      <div class="field"><label class="f">Quantity</label><input id="iQty" type="number" min="1" value="${num(it.qty)||1}"></div></div>
+      <div class="field"><label class="f">Quantity</label><input id="iQty" type="number" min="1" value="${esc(num(it.qty)||1)}"></div></div>
     <div class="field"><label class="f">Description</label><textarea id="iDesc">${esc(it.description||"")}</textarea></div>
-    <div class="field"><label class="f">Category</label><select id="iCategory"><option value=""${!it.sectionOverride?" selected":""}>Automatic (${esc(invSection(it))})</option>${INV_ORDER.map(sname=>`<option value="${sname}"${it.sectionOverride===sname?" selected":""}>${sname}</option>`).join("")}</select></div>
-    <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${it.cost!=null&&it.cost!==""?fnum(it.cost):""}" placeholder="0"></div>
-      <div class="field"><label class="f">Weight each (lb, optional)</label><input id="iWeight" type="number" min="0" step="0.01" value="${it.weight!=null&&it.weight!==""?fnum(it.weight):""}" placeholder="0"></div></div>
+    <div class="field"><label class="f">Category</label><select id="iCategory"><option value=""${!it.sectionOverride?" selected":""}>Automatic (${esc(invSection(it))})</option>${INV_ORDER.map(sname=>`<option value="${esc(sname)}"${it.sectionOverride===sname?" selected":""}>${sname}</option>`).join("")}</select></div>
+    <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${esc(it.cost!=null&&it.cost!==""?fnum(it.cost):"")}" placeholder="0"></div>
+      <div class="field"><label class="f">Weight each (lb, optional)</label><input id="iWeight" type="number" min="0" step="0.01" value="${esc(it.weight!=null&&it.weight!==""?fnum(it.weight):"")}" placeholder="0"></div></div>
     <div class="g2"><div class="field"><label class="f">Origin</label><select id="iOrigin">${originOptionsHTML(it.origin)}</select></div>
       <div class="field"><label class="f">Origin detail</label><input id="iOrigDet" value="${esc((it.origin&&it.origin.detail)||"")}" placeholder="${esc((it.origin&&originDef(it.origin.kind)&&originDef(it.origin.kind).ph)||"place, who, etc.")}"${it.origin?"":" disabled"}></div></div>
     <p class="hint">Where this came from. It shows as a small letter badge on the item row — tap it for the full origin and the date you added it. The detail is free text, and what it means follows the origin: a place for Purchased or Found, a person for Gift or Traded.</p>
@@ -6218,20 +6336,20 @@ function openItemForm(existing){
     <label class="equip ${it.weapon?"on":""}" id="iIsWeapon" style="font-size:12px;margin-top:8px"><span class="box"></span>Weapon (create a linked attack)</label>
     <div id="iWeaponFields" style="${it.weapon?"":"display:none"}">
       <div class="g2"><div class="field"><label class="f">Type</label><select id="iWKind"><option value="melee"${w.kind!=="ranged"?" selected":""}>Melee</option><option value="ranged"${w.kind==="ranged"?" selected":""}>Ranged</option></select></div>
-        <div class="field"><label class="f">Ability</label><select id="iWAbil">${abilOpts.map(([v,l])=>`<option value="${v}"${(w.ability||"str")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
+        <div class="field"><label class="f">Ability</label><select id="iWAbil">${abilOpts.map(([v,l])=>`<option value="${esc(v)}"${(w.ability||"str")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
       <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="iWDice" value="${esc(w.dice||"")}" placeholder="1d8"></div>
         <div class="field"><label class="f">Damage type</label><input id="iWType" value="${esc(w.damageType||"")}" placeholder="slashing"></div></div>
     </div>
     <label class="equip ${arm?"on":""}" id="iIsArmor" style="font-size:12px;margin-top:8px"><span class="box"></span>Armor (set the AC it gives)</label>
     <div id="iArmorFields" style="${arm?"":"display:none"}">
-      <div class="g2"><div class="field"><label class="f">Kind</label><select id="iAKind">${ARMOR_KINDS.map(([v,l])=>`<option value="${v}"${armKind===v?" selected":""}>${l}</option>`).join("")}</select></div>
-        <div class="field" id="iABaseWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Base AC</label><input id="iABase" type="number" min="0" value="${arm&&arm.kind==="body"?num(arm.base):""}" placeholder="11"></div>
-        <div class="field" id="iABonusWrap" style="${armKind==="shield"?"":"display:none"}"><label class="f">AC bonus</label><input id="iABonus" type="number" min="0" value="${arm&&arm.kind==="shield"?num(arm.bonus||2):2}" placeholder="2"></div></div>
-      <div class="field" id="iADexWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Max Dex added</label><input id="iADex" value="${armDex}" placeholder="none" autocomplete="off"></div>
+      <div class="g2"><div class="field"><label class="f">Kind</label><select id="iAKind">${ARMOR_KINDS.map(([v,l])=>`<option value="${esc(v)}"${armKind===v?" selected":""}>${l}</option>`).join("")}</select></div>
+        <div class="field" id="iABaseWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Base AC</label><input id="iABase" type="number" min="0" value="${esc(arm&&arm.kind==="body"?num(arm.base):"")}" placeholder="11"></div>
+        <div class="field" id="iABonusWrap" style="${armKind==="shield"?"":"display:none"}"><label class="f">AC bonus</label><input id="iABonus" type="number" min="0" value="${esc(arm&&arm.kind==="shield"?num(arm.bonus||2):2)}" placeholder="2"></div></div>
+      <div class="field" id="iADexWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Max Dex added</label><input id="iADex" value="${esc(armDex)}" placeholder="none" autocomplete="off"></div>
       <p class="hint">Light adds all your Dex, Medium caps it (usually 2), Heavy adds none. Leave <b>Max Dex</b> as the kind sets it unless the item says otherwise — type a number, or <b>none</b>.</p>
     </div>
-    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="iUses" type="number" min="0" value="${itemUsesMax(it)||""}" placeholder="0"></div>
-      <div class="field"><label class="f">Resets on</label><select id="iUsesPer">${[["long","Long rest"],["short","Short rest"],["none","Never (manual)"]].map(([v,l])=>`<option value="${v}"${((it.uses&&it.uses.per)||"long")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
+    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="iUses" type="number" min="0" value="${esc(itemUsesMax(it)||"")}" placeholder="0"></div>
+      <div class="field"><label class="f">Resets on</label><select id="iUsesPer">${[["long","Long rest"],["short","Short rest"],["none","Never (manual)"]].map(([v,l])=>`<option value="${esc(v)}"${((it.uses&&it.uses.per)||"long")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
     <div class="g2"><div class="field"><label class="f">Healing when used</label><input id="iHeal" value="${esc(use.heal||"")}" placeholder="2d4+2" autocomplete="off"></div>
       <div class="field"><label class="f">Status applied when used</label><input id="iStatus" list="itemStatusTerms" value="${esc(use.status||"")}" placeholder="Poisoned, Blessed…" autocomplete="off">${statusDatalistHTML("itemStatusTerms")}</div></div>
     <label class="equip ${use.consume?"on":""}" id="iConsume" style="font-size:12px"><span class="box"></span>Using one up reduces the quantity</label>
@@ -6475,7 +6593,7 @@ function statusTermList(){
 }
 function statusDatalistHTML(id){
   const terms=statusTermList();
-  return terms.length?`<datalist id="${id}">${terms.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>`:"";
+  return terms.length?`<datalist id="${esc(id)}">${terms.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>`:"";
 }
 function openStatusForm(existing){
   const s=existing||{id:uid(),name:"",description:"",effects:[],active:true};
@@ -6538,14 +6656,14 @@ function openSpellForm(existing){
   const myCl=(character.classes||[]).map(c=>(c.name||"").toLowerCase());
   const clsOf=x=>x.class?(Array.isArray(x.class)?x.class:[x.class]):[];
   const matches=x=>{const c=clsOf(x);return !c.length||c.some(n=>myCl.includes(String(n).toLowerCase()));};
-  const libOpts=lib.slice().sort((a,b)=>num(a.level)-num(b.level)||(a.name||"").localeCompare(b.name||"")).map(x=>`<option value="${esc(x._id||x.name)}" data-lv="${num(x.level)}" data-cls="${esc(clsOf(x).join("|").toLowerCase())}" data-mine="${matches(x)?1:0}">${esc(dispName(x,"spells"))} (${num(x.level)===0?"cantrip":"lv "+num(x.level)})${clsOf(x).length?" · "+esc(clsOf(x).join("/")):""}</option>`).join("");
+  const libOpts=lib.slice().sort((a,b)=>num(a.level)-num(b.level)||(a.name||"").localeCompare(b.name||"")).map(x=>`<option value="${esc(x._id||x.name)}" data-lv="${esc(num(x.level))}" data-cls="${esc(clsOf(x).join("|").toLowerCase())}" data-mine="${matches(x)?1:0}">${esc(dispName(x,"spells"))} (${num(x.level)===0?"cantrip":"lv "+num(x.level)})${clsOf(x).length?" · "+esc(clsOf(x).join("/")):""}</option>`).join("");
   const caster=hasCasterClass(), mx=maxCastableLevel();
   openModal(existing?"Edit spell":"New spell",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="sLib"><option value="">—</option>${libOpts}</select>
       ${myCl.length?`<label class="opt" style="margin-top:8px"><input type="checkbox" id="sOnlyClass" ${caster?"checked":""}>Only my class's castable spells${caster&&mx?` (up to level ${mx})`:""}</label>`:""}
       <p class="hint">Filtered to spells your class can cast at your level. Untick to browse everything — picking outside your class is allowed.</p></div>`:""}
     <div class="g2"><div class="field"><label class="f">Name</label><input id="sName" value="${esc(s.name)}"></div>
-      <div class="field"><label class="f">Level</label><select id="sLevel">${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}"${num(s.level)===n?" selected":""}>${n===0?"Cantrip":"Level "+n}</option>`).join("")}</select></div></div>
+      <div class="field"><label class="f">Level</label><select id="sLevel">${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${esc(n)}"${num(s.level)===n?" selected":""}>${n===0?"Cantrip":"Level "+n}</option>`).join("")}</select></div></div>
     <div class="field"><label class="f">Meta (casting time, components…)</label><input id="sMeta" value="${esc(s.meta||"")}" placeholder="1 action · V,S · 60 ft"></div>
     <div class="field"><label class="f">Description</label><textarea id="sText">${esc(s.text||"")}</textarea></div>
     <div class="g2"><div class="field"><label class="f">Origin</label><select id="sOrigin">${originOptionsHTML(s.origin||originFromGranted(s.granted)||{kind:"class"})}</select></div>
@@ -6556,7 +6674,7 @@ function openSpellForm(existing){
     <div id="sAtkFields" style="${s.atkType?"":"display:none"}">
       <div class="g2">
         <div class="field" id="sKindWrap" style="${s.atkType==="save"?"display:none":""}"><label class="f">Attack kind</label><select id="sAtkKind"><option value="ranged"${s.atkKind!=="melee"?" selected":""}>Ranged spell attack</option><option value="melee"${s.atkKind==="melee"?" selected":""}>Melee spell attack</option></select></div>
-        <div class="field" id="sSaveWrap" style="${s.atkType==="save"?"":"display:none"}"><label class="f">Saving throw</label><select id="sSaveAbil">${ABIL.map(([k,l])=>`<option value="${k}"${(s.saveAbility||"dex")===k?" selected":""}>${l}</option>`).join("")}</select></div>
+        <div class="field" id="sSaveWrap" style="${s.atkType==="save"?"":"display:none"}"><label class="f">Saving throw</label><select id="sSaveAbil">${ABIL.map(([k,l])=>`<option value="${esc(k)}"${(s.saveAbility||"dex")===k?" selected":""}>${l}</option>`).join("")}</select></div>
       </div>
       <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="sDice" value="${esc(s.dice||"")}" placeholder="8d6"></div>
         <div class="field"><label class="f">Damage type</label><input id="sDmgType" value="${esc(s.damageType||"")}" placeholder="fire"></div></div>
@@ -6624,9 +6742,9 @@ function openBrowse(cfg){
   }
   function activeChips(){const out=[];(cfg.facets||[]).forEach(f=>{if(f.type==="toggle"){if(st.facets[f.key])out.push({key:f.key,toggle:1,label:f.label});}else{st.facets[f.key].forEach(v=>{const o=(f.options||[]).find(o=>String(o.value)===v);out.push({key:f.key,val:v,label:o?o.label:v});});}});return out;}
   function facetHTML(){return (cfg.facets||[]).map(f=>{
-    if(f.type==="toggle")return `<div class="fgrp"><span class="flbl">&nbsp;</span><button class="fpill ${st.facets[f.key]?"on":""}" data-toggle="${f.key}">${esc(f.label)}</button></div>`;
+    if(f.type==="toggle")return `<div class="fgrp"><span class="flbl">&nbsp;</span><button class="fpill ${st.facets[f.key]?"on":""}" data-toggle="${esc(f.key)}">${esc(f.label)}</button></div>`;
     const a=st.facets[f.key];
-    return `<div class="fgrp"><span class="flbl">${esc(f.label)}</span>${f.options.map(o=>`<button class="fpill ${a.has(String(o.value))?"on":""}" data-facet="${f.key}" data-val="${esc(String(o.value))}">${esc(o.label)}</button>`).join("")}</div>`;
+    return `<div class="fgrp"><span class="flbl">${esc(f.label)}</span>${f.options.map(o=>`<button class="fpill ${a.has(String(o.value))?"on":""}" data-facet="${esc(f.key)}" data-val="${esc(String(o.value))}">${esc(o.label)}</button>`).join("")}</div>`;
   }).join("");}
   function sumHTML(){const ch=activeChips();if(!ch.length)return "";return `<div class="brsum">${ch.map(c=>`<button class="fpill on" data-rm="${esc(c.key)}" data-rmv="${esc(c.val||"")}" data-rmt="${c.toggle?1:0}">${esc(c.label)} ✕</button>`).join("")}<button class="fpill clear" id="brClear">Clear</button></div>`;}
   function rowHTML(e){const id=idOf(e),sel=st.sel.has(id),ad=added(e),r=cfg.row(e);
@@ -6936,7 +7054,7 @@ function openGlossForm(existing){
     <div class="field"><label class="f">Type</label><select id="gType"><option value="text"${g.type==="text"?" selected":""}>Text</option><option value="image"${g.type==="image"?" selected":""}>Rules image</option></select></div>
     <div class="field" id="gTextWrap"><label class="f">Explanation</label><textarea id="gText">${esc(g.text||"")}</textarea></div>
     <div class="field" id="gImgWrap" style="display:none"><label class="f">Rules image</label>
-      <div class="drop" id="gDrop"><span>Tap to choose a screenshot or photo</span>${g.image?`<img src="${g.image}">`:""}<input type="file" id="gFile" accept="image/*" class="hidefile"></div></div>
+      <div class="drop" id="gDrop"><span>Tap to choose a screenshot or photo</span>${imgHTML(g.image)}<input type="file" id="gFile" accept="image/*" class="hidefile"></div></div>
     <div class="m-actions"><button class="tbtn" id="gCancel">Cancel</button><button class="tbtn primary" id="gSave">${existing?"Save":"Add"}</button></div>`);
   let img=g.image||null;
   const type=document.getElementById("gType"),tw=document.getElementById("gTextWrap"),iw=document.getElementById("gImgWrap");
@@ -6944,7 +7062,7 @@ function openGlossForm(existing){
   type.addEventListener("change",sync);sync();
   const drop=document.getElementById("gDrop"),file=document.getElementById("gFile");
   drop.addEventListener("click",e=>{if(e.target!==file)file.click()});
-  file.addEventListener("change",()=>{const f=file.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{img=r.result;drop.innerHTML=`<span>Image ready — tap to replace</span><img src="${img}">`;drop.appendChild(file)};r.readAsDataURL(f)});
+  file.addEventListener("change",()=>{const f=file.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{img=r.result;drop.innerHTML=`<span>Image ready — tap to replace</span>${imgHTML(img)}`;drop.appendChild(file)};r.readAsDataURL(f)});
   document.getElementById("gCancel").addEventListener("click",closeModal);
   document.getElementById("gSave").addEventListener("click",()=>{
     const term=document.getElementById("gTerm").value.trim();if(!term){alert("Give the entry a term.");return;}
@@ -7207,7 +7325,7 @@ function noteHTML(text){
     if(!l.trim()){i++;continue;}
     if(isHr(l)){out.push(`<hr class="n-hr">`);i++;continue;}   /* before bullets: "* * *" is a rule */
     const h=isH(l);
-    if(h){const lv=h[1].length;out.push(`<div class="n-h n-h${lv}">${noteInline(h[2])}</div>`);i++;continue;}
+    if(h){const lv=h[1].length;out.push(`<div class="n-h n-h${esc(lv)}">${noteInline(h[2])}</div>`);i++;continue;}
     if(isUl(l)){
       const items=[];
       while(i<lines.length&&isUl(lines[i])&&!isHr(lines[i])){items.push(lines[i].replace(/^ {0,3}[-*+] +/,""));i++;}
@@ -7217,7 +7335,7 @@ function noteHTML(text){
     if(o){
       const start=parseInt(o[1],10)||1, items=[];
       while(i<lines.length&&isOl(lines[i])){items.push(lines[i].replace(/^ {0,3}\d{1,9}[.)] +/,""));i++;}
-      out.push(`<ol class="n-ol"${start!==1?` start="${start}"`:""}>`+items.map(t=>`<li>${noteInline(t)}</li>`).join("")+`</ol>`);continue;
+      out.push(`<ol class="n-ol"${start!==1?` start="${esc(start)}"`:""}>`+items.map(t=>`<li>${noteInline(t)}</li>`).join("")+`</ol>`);continue;
     }
     if(isQ(l)){
       const ls=[];
@@ -7293,7 +7411,7 @@ function notePreview(text,max){
 /* ================= the icon on each section heading ================= */
 function noteBtnHTML(def){
   const has=hasNote(def.k), t=noteTitle(def);
-  return `<button class="notebtn${has?" on":""}" data-notebtn="${def.k}" aria-label="${has?"Edit note":"Add a note"} — ${esc(t)}" title="${has?"Edit note":"Add a note"}">`+
+  return `<button class="notebtn${has?" on":""}" data-notebtn="${esc(def.k)}" aria-label="${has?"Edit note":"Add a note"} — ${esc(t)}" title="${has?"Edit note":"Add a note"}">`+
     `<svg class="noteicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>`+
     (has?`<span class="n-pop">${notePreview(noteText(def.k))}</span>`:"")+
     `</button>`;
@@ -7323,10 +7441,10 @@ function toggleNoteGroup(tab){
 function noteEntryHTML(def){
   const n=getNote(def.k), when=noteWhen(n);
   return `<div class="item"><div class="top">`+
-    `<button class="linkbtn n-jump" data-notejump="${def.k}">${esc(noteTitle(def))}</button>`+
+    `<button class="linkbtn n-jump" data-notejump="${esc(def.k)}">${esc(noteTitle(def))}</button>`+
     `<span style="flex:1"></span>`+
     (when?`<span class="n-when">${esc(when)}</span>`:"")+
-    `<button class="icon" data-noteedit="${def.k}" aria-label="Edit note"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`+
+    `<button class="icon" data-noteedit="${esc(def.k)}" aria-label="Edit note"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`+
     `</div><div class="n-body">${noteHTML(noteText(def.k))}</div></div>`;
 }
 /* Pure, so the group order, counts, collapse state and empty state are all
@@ -7340,10 +7458,10 @@ function notesHTML(){
     if(!defs.length)return;
     any=true;
     const open=noteGroupOpen(tab);
-    html+=`<div class="fgroup"><div class="fghead" data-notegroup="${tab}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
+    html+=`<div class="fgroup"><div class="fghead" data-notegroup="${esc(tab)}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
       `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`+
       `<span class="fgname">${esc(NOTE_TABS[tab]||tab)}</span><span class="cnt">(${defs.length})</span></div>`+
-      `<div class="notesec-body" data-notegroupbody="${tab}"${open?"":` style="display:none"`}>`+
+      `<div class="notesec-body" data-notegroupbody="${esc(tab)}"${open?"":` style="display:none"`}>`+
       defs.map(noteEntryHTML).join("")+`</div></div>`;
   });
   return any?html:`<div class="empty">No notes yet. Tap the note icon beside any section heading to jot something down — it will show up here.</div>`;
@@ -7494,7 +7612,7 @@ function combatToggleText(k,on){
 }
 function combatToggleHTML(k,on){
   const t=combatToggleText(k,on);
-  return `<button class="cvbtn${on?" on":""}" data-combatbtn="${esc(k)}" aria-pressed="${on?"true":"false"}" aria-label="${esc(t.label)}" title="${t.title}">`+
+  return `<button class="cvbtn${on?" on":""}" data-combatbtn="${esc(k)}" aria-pressed="${on?"true":"false"}" aria-label="${esc(t.label)}" title="${esc(t.title)}">`+
     iconSVG("ui","Combat","cvicon")+`</button>`;
 }
 /* A click repaints the one button in place. Replacing it (outerHTML) would drop
@@ -7801,12 +7919,14 @@ function setSecOpen(k){
 function setSecHTML(k,body,badge){
   const d=setSecDef(k);if(!d)return "";
   const open=setSecOpen(k);
-  return `<div class="fgroup"><div class="fghead" data-setsec="${k}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
+  return `<div class="fgroup"><div class="fghead" data-setsec="${esc(k)}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
     `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`+
     `<span class="fgname">${esc(d.title)}</span>${badge?`<span class="fgcount">${esc(badge)}</span>`:""}</div>`+
-    `<div class="setsec-body" data-setsecbody="${k}"${open?"":` style="display:none"`}>${body}</div></div>`;
+    `<div class="setsec-body" data-setsecbody="${esc(k)}"${open?"":` style="display:none"`}>${body}</div></div>`;
 }
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
+/* the "Rules data" header badge; renderRulesData() keeps it current after the modal opens */
+function rulesBadge(){const n=rulesEntryCount();return n?n+" entries":"none loaded";}
 function openSettings(){
   const secAppearance=`
     <div class="field"><label class="f">Skin</label>
@@ -7826,20 +7946,20 @@ function openSettings(){
     <div class="g2"><div class="field"><label class="f">Size</label>
         <select id="setSize">${sizeOptionsHTML(character.size)}</select></div>
       <div class="field"><label class="f">Encumbrance</label>
-        <select id="setEnc">${[["none","Off — show weight only"],["standard","Standard (capacity, push/drag)"],["variant","Variant (encumbered tiers)"]].map(([v,l])=>`<option value="${v}"${encMode()===v?" selected":""}>${esc(l)}</option>`).join("")}</select></div></div>
+        <select id="setEnc">${[["none","Off — show weight only"],["standard","Standard (capacity, push/drag)"],["variant","Variant (encumbered tiers)"]].map(([v,l])=>`<option value="${esc(v)}"${encMode()===v?" selected":""}>${esc(l)}</option>`).join("")}</select></div></div>
     <p class="hint" id="encHint">${esc(encSettingsHint())}</p>
     <div class="toggle"><div><div class="t-lbl">Coins count as weight</div><div class="t-sub">50 coins to the pound, the way the rules have it.</div></div><button class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight"></button></div>
     <div class="toggle"><div><div class="t-lbl">Colour current HP</div><div class="t-sub">Amber at half your maximum, red at a quarter.</div></div><button class="switch ${character.hpColor!==false?"on":""}" id="swHpColor"></button></div>
     <div class="field"><label class="f">Skills display</label>
       <div class="seg" id="segStatStyle">
         ${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>
-          `<button data-statstyle="${v}" class="${statStyle()===v?"on":""}">${l}</button>`).join("")}
+          `<button data-statstyle="${esc(v)}" class="${statStyle()===v?"on":""}">${l}</button>`).join("")}
       </div>
       <p class="hint">Classic keeps Ability Scores and Skills as two cards, skills listed A to Z. By ability stacks each ability with its saving throw and the skills it governs, and folds the Skills card away. Display only — every number means the same thing either way.</p></div>
     <div class="field"><label class="f">Hit Dice display</label>
       <div class="seg" id="segHdStyle">
         ${[["full","Full"],["condensed","Condensed"],["dice","Dice"]].map(([v,l])=>
-          `<button data-hdstyle="${v}" class="${hdStyle()===v?"on":""}">${l}</button>`).join("")}
+          `<button data-hdstyle="${esc(v)}" class="${hdStyle()===v?"on":""}">${l}</button>`).join("")}
       </div>
       <p class="hint">Full boxes each die size like a stat; Condensed is one tight line per size; Dice draws every die as a token you tap to spend. Only Full and Condensed let you mark a die spent without healing.</p></div>
     <div class="field" style="margin-top:12px"><label class="f">Rules updates</label>
@@ -7848,7 +7968,7 @@ function openSettings(){
     </div>`:"";
   const secRules=`
     <div class="field"><label class="f">Rules sources</label>
-      <p class="hint">Load one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. Fetched when online, cached for offline.</p>
+      <p class="hint">Load one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. <b>Fetch all</b> needs a connection: each source it reaches replaces what it loaded last time, anything it can't reach keeps what it had, and files you imported are never touched. What is loaded stays saved for offline use.</p>
       <div id="srcList"></div>
       <div style="display:flex;gap:7px;margin-top:4px"><input id="newSrc" placeholder="https://…/spells.json"><button class="tbtn" id="addSrc">Add</button></div>
       <div class="m-actions" style="justify-content:flex-start;margin-top:8px">
@@ -7857,7 +7977,7 @@ function openSettings(){
         <button class="tbtn" id="btnRulesTemplate">Get templates</button>
         <button class="tbtn danger" id="btnClearRules" style="margin-left:auto">Clear all</button>
       </div>
-      <div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${rulesStatusText()}</div>
+      <div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${esc(rulesStatusText())}</div>
       <input type="file" id="fileRules" accept="application/json,.json" multiple class="hidefile">
     </div>
     <div class="field" style="margin-top:6px"><label class="f">Loaded rules data</label>
@@ -7885,11 +8005,10 @@ function openSettings(){
       <p class="hint">The emblems beside each class, ${raceTerm().toLowerCase()} and background, and the crossed swords on the combat button, are from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, by ${ICON_ARTISTS.map(esc).join(", ")}. Used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Each icon has been changed: its background square was removed and its colour now follows your theme.</p></div>
     <div class="field"><label class="f">Rules content</label>
       <p class="hint">Rules data is not part of the app — you load it yourself, from files you supply, and it keeps whatever terms it came with.</p></div>`;
-  const n=rulesEntryCount();
   openModal("Settings",`<div id="setSections">`+
     setSecHTML("appearance",secAppearance)+
     (secCharacter?setSecHTML("character",secCharacter,character.name||"unnamed"):"")+
-    setSecHTML("rules",secRules,n?n+" entries":"none loaded")+
+    setSecHTML("rules",secRules,rulesBadge())+
     setSecHTML("backup",secBackup)+
     setSecHTML("credits",secCredits)+
     `</div>`);
@@ -8002,12 +8121,15 @@ function rulesBucket(g){
 function removeRulesGroup(key){
   const g=loadedRulesGroups().find(x=>x.key===key);if(!g)return;
   RULE_CATS.forEach(cat=>{if(!rules[cat])return;rules[cat]=rules[cat].filter(e=> g.isFile ? e._file!==g.label : (e._file?true:(e._source||"Unknown")!==g.label));});
-  /* drop a source's `requires` once none of its entries are left, so the
-     persisted object doesn't accumulate declarations for packs that are gone */
+  pruneRequires();
+  reindexRules();recomputeDups();saveRulesCache();refreshRulesUI();renderAll();renderRulesData();updateRulesStatus(rulesStatusText(),"ok");
+}
+/* drop a source's `requires` once none of its entries are left, so the
+   persisted object doesn't accumulate declarations for packs that are gone */
+function pruneRequires(){
   if(rules.requires)Object.keys(rules.requires).forEach(src=>{
     if(!RULE_CATS.some(c=>(rules[c]||[]).some(e=>(e._source||"")===src)))delete rules.requires[src];
   });
-  reindexRules();recomputeDups();saveRulesCache();refreshRulesUI();renderAll();renderRulesData();updateRulesStatus(rulesStatusText(),"ok");
 }
 /* Unload every rules pack. Destructive and irreversible without re-importing,
    so it always confirms — and it says characters are safe, because "clear data"
@@ -8155,17 +8277,26 @@ function rulesDataHTML(){
 function renderRulesData(){
   const html=rulesDataHTML();
   ["rulesData","homeRulesData"].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=html;});
+  /* The Settings "Rules data" header counts the pool. It is drawn once by
+     openSettings(), so without this it kept the count from when the modal
+     opened, whatever an import, fetch, remove or clear did afterwards. Every
+     path that changes the pool ends here, which is why the refresh lives here. */
+  const chip=document.querySelector('[data-setsec="rules"] .fgcount');
+  if(chip)chip.textContent=rulesBadge();
 }
 function renderSrcRows(){
   const host=document.getElementById("srcList");if(!host)return;
   const srcs=settings.rulesSources||[];
-  host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${i}"><button class="icon danger" data-src-del="${i}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
+  host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${esc(i)}"><button class="icon danger" data-src-del="${esc(i)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
 }
 function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{}};}
 function keyOf(x,kind){return kind==="subclasses"?(String(x.class||"")+"|"+String(x.name||"")).trim().toLowerCase():String(kind==="keywords"?(x.term||""):(x.name||"")).trim().toLowerCase();}
-/* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules */
+/* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules.
+   Where it came from is stamped on every entry: `_file` for a file import, `_url`
+   (the source URL from Settings, not an include under it) for a fetch. `_url` is
+   what lets the next Fetch all replace exactly what that source loaded before. */
 function srcLabel(obj){return String(obj.system||obj.name||"Rules").trim();}
-function mergeRules(obj,fileName){
+function mergeRules(obj,fileName,url){
   if(obj.name&&!rules.name)rules.name=obj.name;
   const src=srcLabel(obj);
   const traitArr=Array.isArray(obj.features)?obj.features:(Array.isArray(obj.traits)?obj.traits:null);
@@ -8191,7 +8322,10 @@ function mergeRules(obj,fileName){
     const map=new Map((rules[kind]||[]).map(x=>[(x._source||"")+"\u0000"+keyOf(x,kind),x]));
     arr.forEach(raw=>{
       const base=(kind==="keywords")?{id:uid(),term:raw.term||"",type:raw.type==="image"?"image":"text",text:raw.text||"",image:raw.image||null,cond:!!raw.cond}:Object.assign({},raw);
-      base._source=src;if(fileName)base._file=fileName;if(obj.rulebook)base._rulebook=1;
+      /* provenance is the merge's to record, never the pack's: a stray `_url` in
+         a file would let some later fetch delete it */
+      delete base._file;delete base._url;
+      base._source=src;if(fileName)base._file=fileName;if(url)base._url=url;if(obj.rulebook)base._rulebook=1;
       if(obj.dataVersion)base._dataVersion=obj.dataVersion;
       if(excl&&excl.length)base._excludeSystems=excl;
       const nm=keyOf(base,kind);if(!nm)return;
@@ -8231,27 +8365,95 @@ function ruleById(kind,idOrName){
   const arr=rules[kind]||[];
   return arr.find(x=>x._id===idOrName)||arr.find(x=>keyOf(x,kind)===String(idOrName||"").trim().toLowerCase());
 }
-/* fetch a URL, merge it, and follow any "include":[...] references (a manifest) relative to that URL */
-function fetchRulesFrom(url,seen){
-  if(seen.has(url))return Promise.resolve();
+/* Fetch a URL and follow any "include":[...] (a manifest) relative to it,
+   collecting every pack into `out` in order. Nothing is merged here: the caller
+   merges a source only once ALL of it has arrived. `seen` stops a loop within
+   one source; `memo` holds each URL's request for the whole run, so a file two
+   sources both include is still fetched once. Every error names its file. */
+function fetchRulesFrom(url,seen,out,memo){
+  if(seen.has(url))return Promise.resolve(out);
   seen.add(url);
-  return fetch(url,{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error((url.split("/").pop()||url)+" → "+r.status);return r.json();})
-    .then(obj=>{
-      mergeRules(obj);
-      const inc=Array.isArray(obj.include)?obj.include:[];
-      return inc.reduce((p,ref)=>p.then(()=>fetchRulesFrom(new URL(ref,url).href,seen)),Promise.resolve());
-    });
+  const file=url.split("/").pop()||url;
+  if(!memo.has(url)){
+    memo.set(url,fetch(url,{cache:"no-store"})
+      .then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+      .then(obj=>{if(!obj||typeof obj!=="object"||Array.isArray(obj))throw new Error("not a rules file");return obj;})
+      .catch(e=>{throw new Error(file+": "+((e&&e.message)||e));}));
+  }
+  return memo.get(url).then(obj=>{
+    out.push(obj);
+    const inc=Array.isArray(obj.include)?obj.include:[];
+    return inc.reduce((p,ref)=>p.then(()=>{
+      let next;try{next=new URL(ref,url).href;}catch(e){throw new Error(file+": can't resolve include "+ref);}
+      return fetchRulesFrom(next,seen,out,memo);
+    }),Promise.resolve());
+  }).then(()=>out);
 }
+/* Swap in what one source just delivered for what it delivered last time.
+   Merge first, then drop that source's old entries the merge did not replace:
+   an entry it still serves is replaced in place (mergeRules keys on source +
+   name), one it no longer serves goes, and nothing it did not load is touched.
+   Synchronous, so a file import or a removal made while the fetch was in flight
+   is seen here rather than overwritten. */
+function applyFetchedSource(url,packs){
+  const old=new Set();
+  RULE_CATS.forEach(c=>(rules[c]||[]).forEach(e=>{if(e._url===url)old.add(e);}));
+  /* A `requires` declaration is kept per LABEL, and mergeRules only ever sets
+     one. If this source alone owns a label, its fresh copy decides the
+     declaration, so a pack that stopped declaring one doesn't keep a false
+     "missing" chip. A label shared with a file import keeps it. */
+  if(rules.requires)new Set(packs.map(srcLabel)).forEach(l=>{
+    if(RULE_CATS.every(c=>(rules[c]||[]).every(e=>(e._source||"")!==l||old.has(e))))delete rules.requires[l];
+  });
+  packs.forEach(p=>mergeRules(p,null,url));
+  RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
+  pruneRequires();reindexRules();recomputeDups();
+}
+/* Settings → Fetch all. Fetching NEVER loses what is loaded (#65): this used to
+   resetRules() first, which discarded every pack imported from a file, and when
+   the fetch then failed it cached the empty pool over the good one.
+
+   Every source is fetched in full before anything is merged. A source that
+   arrives whole replaces the packs it loaded last time; one that fails in any
+   part keeps them; a run where nothing arrives changes neither the pool nor the
+   cache, and says so. Offline is the expected case, not an edge. Returns a
+   promise for the tests; the button ignores it. */
 function fetchAllRules(){
-  const srcs=(settings.rulesSources||[]).map(s=>s.trim()).filter(Boolean);
-  if(!srcs.length){updateRulesStatus("Add at least one source URL first.","err");return;}
+  const srcs=[...new Set((settings.rulesSources||[]).map(s=>String(s||"").trim()).filter(Boolean))];
+  if(!srcs.length){updateRulesStatus("Add at least one source URL first.","err");return Promise.resolve();}
   updateRulesStatus(`Fetching ${srcs.length} source${srcs.length>1?"s":""}…`,"");
-  resetRules();const seen=new Set();
-  srcs.reduce((p,u)=>p.then(()=>fetchRulesFrom(u,seen)),Promise.resolve())
-    /* renderRulesData() was missing here: a fetch refreshed the sheet but left the
-       loaded-data list — and now its missing-content chips — showing the old state. */
-    .then(()=>{const m=missingSummary();saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus("Fetched. "+rulesStatusText()+m,m?"err":"ok");})
-    .catch(err=>{saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus("Couldn't finish ("+err.message+"). Kept what loaded; if offline or CORS-blocked, import files instead.","err");});
+  const memo=new Map(),results=[];
+  /* a 200 with no rules in it ({} or an error object) is a failure, not "this
+     source now serves nothing" — otherwise it would wipe what the source loaded */
+  const cats=["keywords","features","traits","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
+  const hasRules=o=>cats.some(c=>Array.isArray(o[c])&&o[c].length);
+  return srcs.reduce((p,u)=>p.then(()=>fetchRulesFrom(u,new Set(),[],memo)
+      .then(packs=>{if(!packs.some(hasRules))throw new Error((u.split("/").pop()||u)+": no rules in it");return packs;})
+      .then(packs=>{results.push({url:u,packs});},err=>{results.push({url:u,err:(err&&err.message)||String(err)});})),
+    Promise.resolve())
+    .then(()=>{
+      const ok=results.filter(r=>!r.err),bad=results.filter(r=>r.err);
+      const why=bad.map(r=>r.err).join("; ");
+      const tail=" If you're offline or the site blocks it (CORS), import the files instead.";
+      if(!ok.length){
+        /* nothing to save: the pool is untouched, so the cache already matches it */
+        renderRulesData();
+        updateRulesStatus(`Couldn't fetch ${why}, so nothing changed. ${rulesStatusText()}${tail}`,"err");
+        return;
+      }
+      ok.forEach(r=>applyFetchedSource(r.url,r.packs));
+      const saving=saveRulesCache();
+      refreshRulesUI();renderRulesData();
+      const head=bad.length
+        ? `Fetched ${ok.length} of ${results.length} sources. Couldn't fetch ${why}, so what ${bad.length>1?"they":"it"} loaded before is kept. `
+        : "Fetched. ";
+      const m=missingSummary();
+      updateRulesStatus(head+rulesStatusText()+m+(bad.length?tail:""),(bad.length||m)?"err":"ok");
+      /* the cache write is reported HERE, on the line the player is reading, not
+         only in the red line above the list (storage rule: a write that does not
+         land says so) */
+      return saving.then(err=>{if(err){renderRulesData();updateRulesStatus(head+err,"err");}});
+    });
 }
 /* import one or many files; each is merged so you can load traits.json, spells.json, … separately */
 function importRulesFiles(files){
