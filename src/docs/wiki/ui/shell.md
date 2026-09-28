@@ -12,9 +12,9 @@ buttons, the toast, and the wiring in `90-boot.js` that binds all of it once at 
 `modalGiveBackFocus()`, `openerSelector()` in `80-modal-forms.js` · `openBrowse()`, `closeBrowse()`
 in `85-browse.js` · `wire()`, `boot()` in `90-boot.js` · `toast()` in `60-attacks.js` ·
 `showUpdatePill()` in `30-version.js` · `10-chrome.css`, `50-modal.css` ·
-**Tests:** `rules-data.js` (tab bar, dismissals, ToC visibility, combat tab), `sheet.js`
-(`MODAL_FOCUS_FIELDS`, `openerSelector()`, `finderQty()`), `char-update.js` (what a dismissal
-hands on) ·
+**Tests:** `rules-data.js` (tab bar, dismissals, ToC visibility, combat tab, no escaped modal
+title), `sheet.js` (`MODAL_FOCUS_FIELDS`, `openerSelector()`, `finderQty()`), `char-update.js`
+(what a dismissal hands on, what a choice window writes to `#mTitle`) ·
 **See also:** [Sections & layout](sections-and-layout.md), [Theming & icons](theming-and-icons.md),
 [Combat view](../features/combat-view.md), [Build & source split](../architecture/build-and-source-split.md),
 [Screenshot QA](../process/screenshot-qa.md)
@@ -88,10 +88,12 @@ Rules tab's two cards, `#concCard`) are listed too.
 One `#modal` backdrop holds `.modal` (`role="dialog"`, `aria-modal`, `tabindex="-1"`) with
 `#mIcon`, `#mTitle`, `#mClose` and `#mBody`.
 
-- `openModal()` (title, html, icon) clears the dismiss guard and its `then`, sets the title as `textContent`
-  (it is player data), sets `#mIcon` to the icon or `""` on **every** call, puts the HTML into
-  `#mBody` as `innerHTML` (callers escape), shows the dialog and calls `modalTakeFocus()`. Calling it
-  while open swaps the content in place.
+- `openModal()` (title, html, icon) clears the dismiss guard and its `then`, sets the title as
+  `textContent`, sets `#mIcon` to the icon or `""` on **every** call, puts the HTML into `#mBody` as
+  `innerHTML`, shows the dialog and calls `modalTakeFocus()`. Calling it while open swaps the content
+  in place. **The title is plain text and the body is markup:** a title holds class, spell, item and
+  pack names, and callers pass it exactly as written, never `esc()`'d; they escape what goes into
+  the body.
 - `closeModal()` clears the guard and its `then`, hides the dialog, empties `#mBody` and gives
   focus back.
 - **Dismissal.** ×, a backdrop click and Escape (a document `keydown` bound at load in
@@ -204,7 +206,8 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
   `then` before `closeModal()` clears it.
 - **`#mIcon` is assigned on every open.** No test guards this.
 - **The modal title is `textContent`, the body is `innerHTML`.** Callers escape the body and must
-  not escape the title.
+  not escape the title. `rules-data.js` pins the assignment and reads every `openModal()` call's
+  first argument, refusing `esc(` or an entity in it.
 - **`MODAL_FOCUS_FIELDS` never includes `select`**, checkbox, radio or file (asserted in `sheet.js`).
 - **`modalGiveBackFocus()` releases only what `modalTakeFocus()` made inert.**
 - **Never bind a listener to `#mBody` or `#browse` with `addEventListener`.** Both are reused, so
@@ -236,6 +239,8 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - **A finder redraw reset the footer.** Filters and facet chips re-render everything, which quietly
   put Origin and Cost back to defaults. Qty made it noticeable (L3503).
 - **Five unguarded lookups in `wire()`** pointed at Vitals markup that a restructure moved (L1666).
+- **An escaped title shows its entities.** `runChoices()` passed `esc(className)`, so a class named
+  with `&` or `'` read `&amp;` or `&#39;` in the header. It was the only one of 52 calls (L4086).
 
 ## Decisions
 
@@ -251,6 +256,7 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 | A tap on a finder row | Updates that row and the footer in place | Re-rendering: it throws away the scroll position and redraws 400+ rows per tap |
 | The off-screen Add button | `width:auto` on the origin select, `flex-wrap` as a safety net | `overflow-x:hidden` on `.browse`: hides a recurrence instead of preventing one |
 | Markup that moves, in `wire()` | A local `on()` that skips a missing id | — (reason: one dead button is a far better failure than every later listener unbound) |
+| The modal title's contract (#69) | Plain text, set as `textContent`; callers never escape it | `innerHTML` with callers escaping: 51 of 52 calls already passed plain text and a header needs no markup, so every call would change and any one that forgot would be an injection point |
 
 ## Open
 
@@ -259,8 +265,6 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
   leave both open (L3397). The flyout has no Escape either.
 - **Two comments still describe the combat view's `inert`**, which went when the view became a tab
   (L3676): the focus comment above `modalTakeFocus()` and the one above `toast()`.
-- `runChoices()` passes an `esc()`'d class name as the modal title, which `openModal()` sets as
-  `textContent`, so a name containing `&` or `'` would show as an entity.
 - The tab bar is buttons with `aria-label`s, not an ARIA tablist.
 - More: [Known issues](../roadmap/known-issues.md).
 
@@ -282,3 +286,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-09-24 — A clear button in every search box, `#brSearch` included. → ledger L3525, #49
 - 2026-09-25 — The combat view becomes a tab; `cvInert`, `aria-modal` and its capture-phase Esc are removed. → ledger L3676
 - 2026-09-28 — `setDismissGuard()` takes `then`, what a dismissed window hands on; `dismissModal()` runs it after closing. → ledger L3847, #63
+- 2026-09-28 — The title contract is stated and guarded: plain text, never `esc()`'d; `runChoices()`, the one caller that escaped, no longer does. → ledger L4086, #69

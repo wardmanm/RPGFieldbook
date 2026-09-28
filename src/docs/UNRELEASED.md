@@ -51,3 +51,7 @@ Bullets below this line — leave the heading in place.
 - Images and text from imported character files, rules packs and settings files are now handled
   safely. A portrait or glossary picture is shown only when the picture itself is stored in the
   file, which is how Fieldbook has always saved them, so your own pictures are unaffected.
+- The choices window you get when adding or levelling up a class now names the levels it covers:
+  adding a Fighter at level 3 opens as "Fighter — Levels 1–3" instead of naming only one of them. A
+  class whose name contains an ampersand or an apostrophe now shows its name correctly in that
+  window's title, rather than as symbol codes.

@@ -14,10 +14,16 @@ const modal=document.getElementById("modal");
    how the old module-level equipment queue leaked. Done hands the queue on itself. */
 let _dismissGuard=null,_dismissThen=null;
 function setDismissGuard(fn,then){_dismissGuard=fn;_dismissThen=then||null;}
-/* `icon` is optional emblem markup for the header (iconSVG()). It is assigned
-   UNCONDITIONALLY, never guarded behind `if(icon)`: ~30 call sites pass nothing,
-   and they must CLEAR the slot, or a class emblem leaks into the next spell
-   modal that opens. The title stays textContent — it is player data. */
+/* `title` is plain TEXT, set as textContent: it holds class, spell, item and
+   pack names, so it is never parsed as markup. Callers pass it exactly as
+   written and never esc() it — an escaped title shows its entities, as
+   runChoices()'s "Tom &amp; Jerry" did (#69). `html` is the body and IS markup:
+   callers escape what goes into it. rules-data.js asserts both that this
+   assignment stays textContent and that no call site escapes a title.
+   `icon` is optional emblem markup for the header (iconSVG()). It is assigned
+   UNCONDITIONALLY, never guarded behind `if(icon)`: all but six of the ~50 call
+   sites pass nothing, and they must CLEAR the slot, or a class emblem leaks into
+   the next spell modal that opens. */
 function openModal(title,html,icon){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
 function closeModal(){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
 /* ---- focus ----

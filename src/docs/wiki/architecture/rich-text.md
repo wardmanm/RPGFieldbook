@@ -88,6 +88,7 @@ A click, Enter or Space on `.kw` opens the glossary entry, and on `.tblref` open
 | Glossary entry view (`openGlossView()`) | `esc()` only; line breaks come from `.m-body p`'s `pre-wrap`. An image entry goes through `imgHTML()` |
 | The portrait (`renderPortrait()`), the glossary form's preview (`openGlossForm()`) | `imgHTML()` |
 | Table cells (`tableHTML()`) | `esc()` only |
+| A modal's title (`openModal()`) | None: it is set as `textContent`, so it is passed as written and never `esc()`'d, or its entities show ([Shell](../ui/shell.md)) |
 | Print (`printSheet()`) | `esc()` plus `printStrip()` for 5e-tools `{@tag …}`; markdown markers print as typed |
 
 **4. Attribute values and images.** Prose is one way in; the markup around it is the other. A
@@ -212,3 +213,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-15 — Italics-as-structure is rejected for other Humblewood extracts, and a data scan for mid-sentence breaks becomes a test. → ledger L2538
 - 2026-08-18 — One grammar for every field: `richHTML()` and `richInline()` arrive, `descHTML()` delegates, emphasis needs non-space at both ends, and the note preview renders phrasing markup. → ledger L3035
 - 2026-09-28 — Every attribute interpolation is `esc()`'d and every image goes through `imgHTML()` (data: URLs only), both guarded; the audit's other raw values fixed. → ledger L3940
+- 2026-09-28 — A modal title is text, never `esc()`'d (guarded); the one escaped title fixed. → ledger L4086, #69

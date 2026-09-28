@@ -920,6 +920,85 @@ ck("the class window's Done hands its own queue to commitChoices",
   }finally{ctx.openModal=real.open;ctx.gatherChoices=real.gather;ctx.document.getElementById=real.byId;}
 }
 
+// ---------- #69: a choice window's title names the levels it holds, as written
+// runChoices() titled every window "<class> — Level <first choice's level>", so a
+// Fighter added at 3 opened as "Level 3" (or "Level 1") over picks that ran from
+// level 1 to the level-3 subclass. And it passed the class name through esc()
+// into a title openModal() sets as TEXT, so "&" and "'" showed as entities. What
+// is checked is what reaches the title element: openModal() runs for real and
+// #mTitle is a recorder. The real 2024 pack, through the real flow.
+{
+  const pack=JSON.parse(fs.readFileSync(path.join(__dirname,'../../data/5e2024/classes.json'),'utf8'));
+  const real={byId:ctx.document.getElementById,gather:ctx.gatherChoices};
+  let writes=[],done={},picks=[];
+  const mTitle={set textContent(v){writes.push({text:String(v)});},get textContent(){return '';},
+                set innerHTML(v){writes.push({html:String(v)});},get innerHTML(){return '';}};
+  /* What the player reads in the header: text as written, or markup the way a
+     browser would show it — so a contract change cannot pass by accident. */
+  const decode=h=>h.replace(/<[^>]*>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+    .replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
+  const shown=()=>writes.map(w=>'text' in w?w.text:decode(w.html));
+  ctx.gatherChoices=()=>picks;
+  ctx.document.getElementById=id=>id==='mTitle'?mTitle
+    :(id==='chDone'||id==='xchDone')?{addEventListener:(ev,fn)=>{done[id]=fn;}}:real.byId(id);
+  const press=(id,sel)=>{picks=sel;const fn=done[id];done[id]=null;const from=writes.length;if(fn)fn();return shown().slice(from);};
+  const fresh=extra=>{hpSetup(pack.classes);if(extra)X.mergeRules({classes:extra},'test-69');writes=[];done={};picks=[];};
+  const at=(name,level,subclass)=>{X.character.classes=[{name,level,subclass:subclass||null}];X.character.level=level;writes=[];};
+  try{
+    fresh(); X.addClass('Fighter',3);
+    ck('#69 a Fighter added at 3: its window names the levels it holds', shown()[0]==='Fighter — Levels 1–3', shown());
+    let next=press('chDone',[{type:'subclass',name:'Battle Master'}]);
+    ck('#69 ...the Battle Master window after it holds level 3 alone', next[0]==='Fighter — Level 3', next);
+
+    fresh(); at('Fighter',3); X.doLevelUp();
+    ck('#69 a single-level level-up says "Level N"', shown()[0]==='Fighter — Level 4', shown());
+    fresh(); at('Fighter',2); X.doLevelUp();
+    ck('#69 ...including the level that brings the subclass', shown()[0]==='Fighter — Level 3', shown());
+
+    fresh(); at('Fighter',10,'Champion'); ctx.selectSubclass('Fighter','Battle Master');
+    ck('#69 changing subclass at 10: its own window spans the subclass levels it re-asks',
+       shown()[0]==='Fighter — Levels 3–10', shown());
+
+    fresh(); X.addClass('Fighter',1);
+    ck('#69 a first class at level 1 says "Level 1"', shown()[0]==='Fighter — Level 1', shown());
+    writes=[]; X.addClass('Wizard',3);
+    ck('#69 a multiclass added at 3: its HP step covers 1-3, and the title says so',
+       shown()[0]==='Wizard — Levels 1–3', shown());
+    fresh(); X.addClass('Fighter',1); writes=[]; X.addClass('Wizard',1);
+    ck('#69 ...and a multiclass added at 1 says "Level 1"', shown()[0]==='Wizard — Level 1', shown());
+
+    /* The 2024 Bard has no level-1 choice (known issue), so at 3 its only
+       level-1 content is the Spellcasting note — which counts: the window shows it. */
+    fresh(); X.addClass('Bard',3);
+    ck('#69 a Bard added at 3: the level-1 spell note counts as held', shown()[0]==='Bard — Levels 1–3', shown());
+    fresh(); X.addClass('Bard',1);
+    ck('#69 ...and a notes-only window at level 1 says "Level 1"', shown()[0]==='Bard — Level 1', shown());
+
+    const odd="Tom & Jerry's <Brawler>";
+    fresh([{name:odd,hitDie:'d8',levels:{'1':{choices:[{type:'skill',choose:1,from:['Athletics','History']}]}}}]);
+    X.addClass(odd,1);
+    ck('#69 a class name with & \' and < shows as written, not as entities', shown()[0]===odd+' — Level 1', shown());
+    ck('#69 ...because the title is written as text, never markup', writes.length>0&&writes.every(w=>'text' in w), writes);
+  }finally{ctx.gatherChoices=real.gather;ctx.document.getElementById=real.byId;}
+}
+/* The rule itself, without the flow: a window spans the levels its choices and
+   notes carry; an HP step covers `levels` levels ending at its own. */
+{
+  const T=(n,c,notes)=>typeof ctx.choiceWindowTitle==='function'?ctx.choiceWindowTitle(n,c,notes):'(no choiceWindowTitle)';
+  ck('#69 title: one level', T('Rogue',[{type:'asi',_level:4},{type:'hp',levels:1,_level:4}])==='Rogue — Level 4',
+     T('Rogue',[{type:'asi',_level:4},{type:'hp',levels:1,_level:4}]));
+  ck('#69 title: the HP step\'s own span counts', T('Rogue',[{type:'hp',levels:3,_level:3}])==='Rogue — Levels 1–3',
+     T('Rogue',[{type:'hp',levels:3,_level:3}]));
+  ck('#69 title: whichever choice comes first', T('Rogue',[{type:'subclass',_level:3},{type:'skill',_level:1}])==='Rogue — Levels 1–3',
+     T('Rogue',[{type:'subclass',_level:3},{type:'skill',_level:1}]));
+  ck('#69 title: a note with a level counts', T('Rogue',[{type:'subclass',_level:3}],[{text:'x',_level:2}])==='Rogue — Levels 2–3',
+     T('Rogue',[{type:'subclass',_level:3}],[{text:'x',_level:2}]));
+  ck('#69 title: nothing with a level names no level', T('Rogue',[],['A plain note.'])==='Rogue',
+     T('Rogue',[],['A plain note.']));
+  ck('#69 title: the name is not escaped', T("A&B's",[{type:'asi',_level:4}])==="A&B's — Level 4",
+     T("A&B's",[{type:'asi',_level:4}]));
+}
+
 // ---------- the die a pool's points are (Superiority Dice d8 -> d10 -> d12)
 ck('a pool with no die has none', X.resolveResDie({name:'Rage'},5)==='');
 ck('a die by level', X.resolveResDie({die:{byLevel:[0,0,8,8,8,8,8,8,8,10]}},10)==='d10');
@@ -971,7 +1050,7 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
   const reset=()=>{rc=[];rx=[];};
   const win=()=>rc[rc.length-1]||[];                       /* [className, choices, notes, eq] */
   const choicesOf=()=>win()[1]||[];
-  const notesOf=()=>(win()[2]||[]).join(' ');
+  const notesOf=()=>(win()[2]||[]).map(n=>typeof n==='string'?n:(n&&n.text)||'').join(' ');   /* a note is text, or {text,_level} */
   const saves=sid=>(X.character.grants||[]).filter(g=>g.sid===sid&&g.type==='save').map(g=>g.key).sort().join(',');
   const eqQueued=sid=>rc.concat(rx).some(call=>call.some(a=>Array.isArray(a)&&a.some(x=>x&&x.kind==='equip'&&x.sid===sid)));
   const skillCh=()=>choicesOf().filter(x=>x.type==='skill');

@@ -4083,3 +4083,51 @@ two-file dump. `rules-data.js` 594 → 606: one pin per dropped shape in the shi
   "{'uid': 'Vex".
 - `_norm_table()` drops a table's `footnotes`: 17 Xanathar's downtime tables whose rows carry a
   `*` pointing at "Might involve a rival" or "Halved for a consumable item".
+## Choice windows name the levels they hold, and titles show names as written (#69, 2026-09-28)
+
+**The bug, two halves.** (1) `runChoices()` titled every choice window `<class> — Level <n>` with
+`n` the FIRST choice's `_level`, falling back to the class's level. One window can hold several
+levels, so the title named whichever block happened to lead: a Fighter added at 3 opened as "Level 3"
+(the #66 HP step leads, and carries level 3) over picks running from the level-1 skills to the
+level-3 subclass, and as "Level 1" whenever a level-1 choice led. A multiclass Wizard added at 3 said
+"Level 3" over an HP step for levels 1–3; Change subclass at 10 said "Level 3" over maneuvers from
+3, 7 and 10. (2) It passed the class name through `esc()`, but `openModal()` sets the title as
+`textContent`, so `&` and `'` showed as `&amp;` and `&#39;`.
+
+**Root causes.** (1) The title came from one element, not from the window's contents, and spell notes
+carried no level at all. (2) A contract mismatch: `openModal()` has always written the title as text
+(its comment said so), and this one caller escaped as if it were markup. The audit found it was the
+only one: all 52 `openModal()` calls were read; 51 pass plain text (names included: `name`, `d.name`,
+`subName`, `sp.name`, `g.term`, `t.name`, `featPickName()`, `noteTitle()`, …), which is right.
+
+**Fix.** `choiceWindowTitle(className, choices, notes)` in `58-choices.js`, pure: the span of the
+`_level`s its choices and notes carry, an HP step covering `levels` levels ending at its own (2..N for
+a first class above level 1, 1..N for a multiclass). One level → "Fighter — Level 4"; several →
+"Fighter — Levels 1–3" (en dash). Nothing with a level → the class name alone, rather than a guessed
+level. `applyClassLevel()` and `selectSubclass()` now push spell notes as `{text, _level}`
+(`choiceNoteText()` reads either shape; `multiclassNote()` stays a plain string, since it is about the
+class, not a level). The title is passed unescaped. So every caller gets a correct title from the same
+rule: `addClass()` at 1 and above, `doLevelUp()`, `selectSubclass()`'s own window, multiclass adds.
+
+**The contract, settled: modal titles are plain text.** `openModal()`'s comment now says so: the title
+is `textContent`, callers pass names as written and never `esc()` them; `html` is the markup half and
+callers escape it. Rejected: switching the title to `innerHTML` with callers escaping. It would mean
+escaping 51 correct call sites for a header that never needs markup, and any one that forgot would
+be an injection point. The attribute-escaping guard is untouched: titles are not attributes.
+
+**Tests.** `char-update.js` +18: the real 2024 pack through the real flow with `#mTitle` replaced by a
+recorder (what the player reads, decoded if it were ever markup): Fighter at 3 → "Levels 1–3", then
+Battle Master's window → "Level 3"; level-ups 3→4 and 2→3; Change subclass to Battle Master at 10 →
+"Levels 3–10"; multiclass Wizard at 3 and at 1; Bard at 3 (its level-1 spell note counts) and at 1
+(notes only); a class named `Tom & Jerry's <Brawler>` shown as written and written as text; six on
+the pure helper. 11 failed before the fix. `rules-data.js` +4: a scanner reads every `openModal()`
+call's first argument (strings and templates skipped whole) and refuses `esc(` or an entity in it,
+and pins the `textContent` assignment; it failed on `58-choices.js` before the fix. Mutation-checked:
+untagged notes fail the Bard pair; re-adding `esc()` fails both suites.
+
+Noticed, not changed: the subclass's own window carries the class name ("Fighter — Level 3") like the
+class window before it, so two windows in a row can share a title. Naming the subclass there would
+need a display name separate from the `className` the flow keys on.
+
+Pages: [character building](../wiki/features/character-building.md), [shell](../wiki/ui/shell.md),
+[rich text](../wiki/architecture/rich-text.md); `decisions.md`. Known issues are reconciled at merge.

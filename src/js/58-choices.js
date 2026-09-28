@@ -139,6 +139,33 @@ function choiceFieldHTML(ch,ci,d){
   return `<div class="choice" data-ci="${esc(ci)}" data-ctype="${esc(t||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
 }
 let _activeChoices=[];
+/* ---- a choice window's title (#69) ----
+   One window can hold several levels: a class added at 3 asks for its level-1
+   skills, the hit points for levels 2-3 and the level-3 subclass together. So
+   the title names the span of what is IN the window, read off the choices and
+   notes themselves — "Fighter — Level 4", "Fighter — Levels 1–3". Each carries
+   the `_level` it was collected at; an HP step covers `levels` levels ending at
+   its own (2..N for a first class above level 1, 1..N for a multiclass). It
+   used to be the FIRST choice's level, i.e. whichever block happened to lead.
+   Nothing with a level (a plain-text note): no level is named, not guessed.
+   A note is a string, or {text,_level} when a class or subclass level wrote it.
+   Plain text throughout: openModal() sets the title as textContent, so the class
+   name goes in as written — esc() here once showed "Tom &amp; Jerry". DOM-free. */
+function choiceNoteText(n){return (n&&typeof n==="object")?String(n.text??""):String(n??"");}
+function choiceLevelSpan(choices,notes){
+  let lo=0,hi=0;
+  (choices||[]).concat(notes||[]).forEach(x=>{
+    const L=num(x&&x._level);if(L<1)return;
+    const from=x.type==="hp"?Math.max(1,L-Math.max(1,num(x.levels))+1):L;
+    if(!lo||from<lo)lo=from;
+    if(L>hi)hi=L;
+  });
+  return hi?{lo,hi}:null;
+}
+function choiceWindowTitle(className,choices,notes){
+  const s=choiceLevelSpan(choices,notes),name=String(className??"");
+  return s?name+" — "+(s.lo===s.hi?"Level "+s.hi:"Levels "+s.lo+"–"+s.hi):name;
+}
 function sidToOrigin(sid,level){
   const p=String(sid||"").split(":");
   if(p[0]==="class")return {kind:"class",class:p[1],level};
@@ -162,11 +189,10 @@ function runChoices(className,choices,notes,pending){
   _activeChoices=choices||[];
   const d=findClassDef(className);
   let body="";
-  (notes||[]).forEach(n=>body+=`<p class="hint" style="color:var(--accent-2);font-size:14px">✦ ${esc(n)}</p>`);
+  (notes||[]).forEach(n=>body+=`<p class="hint" style="color:var(--accent-2);font-size:14px">✦ ${esc(choiceNoteText(n))}</p>`);
   (choices||[]).forEach((ch,ci)=>body+=choiceFieldHTML(ch,ci,d));
   body+=`<div class="m-actions"><button class="tbtn primary" id="chDone">Done</button></div>`;
-  const lvl=(choices&&choices[0]&&choices[0]._level)||(character.classes.find(c=>c.name===className)||{}).level||"";
-  openModal(`${esc(className)} — Level ${lvl}`,body);
+  openModal(choiceWindowTitle(className,choices,notes),body);
   /* Guard the dismissals too. A Done-only warning would make Escape — which
      discards EVERY pick with no way to reopen the chooser — the easiest way
      past it, which is the opposite of the point. Registered after openModal,
