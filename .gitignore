@@ -21,7 +21,13 @@ __pycache__/
 venv/
 
 # Editor / OS
-.claude/
+# `.claude/*`, not `.claude/`: the trailing-slash form stops git descending into
+# the directory, so no `!` rule beneath it can ever take effect. Project skills
+# are tracked so every clone and every worktree gets them; worktrees, QA
+# screenshots and settings.local.json stay ignored. build.sh bans dot-paths from
+# the player zip, so a skill cannot ship.
+.claude/*
+!.claude/skills/
 .DS_Store
 Thumbs.db
 .vscode/

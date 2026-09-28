@@ -2,7 +2,7 @@
 
 Running list of wiring cleanup. Items move to **Done** as they're handled.
 
-Last updated after the app-fix pass (feat uses/cost forwarding, uses.max formula, trait/feat skill-choices).
+**Since 2026-09-28 this is the log, not the reference:** how each part works now lives in the wiki, [src/docs/wiki/](../wiki/index.md), checked against the code. Append only — the wiki cites this file by line number.
 
 ---
 
@@ -3705,3 +3705,55 @@ a tab. The header is sticky at `--cv-top`, the tab bar's MEASURED height (cvStic
 resize); a drag now scrolls the window near the header's bottom edge or the window's. The swords
 button takes `.active` (underline, or a ring when it is already the in-combat pill).
 The overlay's spec (src/docs/specs/2026-09-24-combat-view-design.md) is historical now.
+
+## The wiki: the reference compiled out of this ledger (2026-09-28)
+
+**This file is now the log; the reference is [src/docs/wiki/](../wiki/index.md).** 38 topic pages
+(architecture, features, ui, data, process, roadmap) say how Fieldbook works *now*, each with the
+invariants a refactor must keep, the traps that already bit, a Decisions table, and a History whose
+lines point back here by L-number. Spec: `src/docs/specs/2026-09-28-living-wiki-design.md`.
+Every `##`/`###` section above is cited by at least one page. New entries here get shorter: what
+changed and why, and a link to the page that now describes it.
+
+- **Compiled by checking the code, not by trusting this file.** Six agents, one per page group, each
+  told the code wins where the ledger disagrees. Later entries supersede earlier ones often enough
+  that replaying this log was the problem the wiki exists to fix.
+- **It found things.** ~40 discrepancies, triaged into
+  [known-issues](../wiki/roadmap/known-issues.md) §"Found while compiling the wiki". The ones that
+  matter most: a subclass's level choices are replaced by the starting-equipment picker (Fighter 3 +
+  Battle Master never offers maneuvers — reproduced in the harness); class progression tables
+  lose their dice/bonus cells (`_cell_text()`), so Barbarian's Rage Damage is blank and Bard/Rogue
+  have no Features table; `fetchAllRules()` resets the pool first, discarding file imports; three
+  image `src` attributes skip `esc()`; five `setItem` calls still sit in empty `catch`es; the
+  template loads Google Fonts. None fixed here — the wiki records them, Mike triages.
+- **Mechanical drift check.** `src/tests/docs.js` gained a wiki section: every page listed in
+  `index.md`, every link resolves, every `name()` a page cites is defined in `src/js`/`scripts`, every
+  fragment it cites is in `manifest.json`, every JS fragment is cited by a topic page, and the
+  overview's code map names every fragment. History and Decisions sections (and `decisions.md`) are
+  exempt from the existence checks — they legitimately name things that were renamed or rejected.
+  Proved by planting a probe page with each defect: all five checks fired. A sixth check: every
+  `L<n>` a page cites must be a heading line in this file — so inserting a line near the top of the
+  ledger (tried: all 38 pages go red) can't silently re-point every citation. `docs` suite 157 → 349.
+- **The `wiki` skill** (`.claude/skills/wiki/SKILL.md`): ingest / query / lint, the page template,
+  and the contract the test enforces. **`.gitignore` was `.claude/`, which made a tracked skill
+  impossible** — the trailing-slash form stops git descending, so no `!` rule can re-include
+  anything. Now `.claude/*` + `!.claude/skills/`; worktrees, `qa/` and `settings.local.json` stay
+  ignored (checked with `git check-ignore`), and `build.sh`'s `^\.` ban keeps it out of the zip.
+- **CLAUDE.md 422 → ~155 lines.** Rules and conventions only; the reference moved to pages, and it
+  imports the index with `@src/docs/wiki/index.md`. Every paragraph that left was checked to exist on
+  a page first (one gap found and filled: Humblewood content folds into the consolidated files). The
+  stale claims it carried (two zips, four packs, `git commit -am`, "humblewood-verbatim adds 129")
+  went with it. RELEASING.md's "both zips" and two-pack attachment table fixed.
+- `index.md` is `merge=union` like this file; pages are not — two branches rewriting one paragraph
+  must conflict. **Consequence for worktrees:** a union merge appends a branch's entry here after
+  whatever `main` added meanwhile, so its heading moves and that branch's History citations go
+  stale. The L-number check fails on it; re-point in the merge commit (skill, CLAUDE.md, WORKTREES §4).
+- **Skill test** (writing-skills' RED/GREEN, one scenario, two fresh subagents): wrap up "starred
+  items now show in Favorites *and* their own section, #71" without touching the repo. With only the
+  new CLAUDE.md, the agent already found all three affected pages, flipped the Decisions row and
+  the register, and wrote the ledger entry and UNRELEASED bullet — the CLAUDE.md rule plus
+  self-describing pages do most of the work. With the skill it also caught two stale code comments
+  and one History line the baseline missed. Both hit the same real flaw: the skill said "ledger
+  entry last", but History cites its line number, so it has to come first. Fixed in the skill,
+  CLAUDE.md and the index header.
+- Dev docs only: no app change, no UNRELEASED bullet, no rebuild.

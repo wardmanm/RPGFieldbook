@@ -1,0 +1,130 @@
+# Rules & tables
+
+The Rules tab: **Glossary & Rules** (every term from the loaded packs plus the player's own entries)
+and **Reference Tables** (roll tables, class progressions and the lookup tables rules prose points
+at). Neither is character data. Their real reach is elsewhere: every glossary term becomes a tappable
+chip wherever it appears in the app, and every `[Table: Name]` anchor the converter left in the prose
+becomes a chip that opens that table in place.
+
+**Code:** `renderGloss()` in `60-attacks.js` · `openGlossForm()` in `85-browse.js` ·
+`openGlossView()` in `80-modal-forms.js` · `allGlossary()` in `00-constants.js` · `highlight()` in
+`10-compute.js` · `RULES_SECS`, `rulesSecOpen()`, `setRulesSecOpen()`, `renderRulesSections()`,
+`toggleRulesSec()`, `allTables()`, `findTable()`, `tablesFor()`, `tableHTML()`, `openTableView()`,
+`openTableByName()`, `renderTables()`, `tableChipsHTML()` in `86-tables.js` · `refreshRulesUI()`,
+`RULE_CATS` in `88-settings.js` · `mergeRules()`, `reindexRules()` in `89-rules-merge.js` · markup
+`src/html/40-rules.html` · **Data:** each pack's `tables.json`;
+[rules-schema §6.11](../../../../docs/rules-schema.md) · **Tests:** `tables.js`, `rules-data.js` ·
+**See also:** [Rich text](../architecture/rich-text.md), [Rules packs](../architecture/rules-packs.md),
+[Converter](../data/converter.md), [Supplements](../data/supplements.md),
+[Humblewood](../data/humblewood.md)
+
+## How it works
+
+**Two folding sections.** Each card heading is a toggle (`data-rulessec`, `role="button"`, with
+`aria-expanded` and a caret) over a body (`data-rulesbody`), and carries its count — `(154)` — so a
+shut section still says what is inside. Both start shut. State is a collapse map in
+`settings.rulesCollapse`, where an absent key means "never touched" and falls back to `RULES_SECS`'
+default. `renderRulesSections()` paints both, from `renderAll()` (a sheet loaded with cached rules)
+and from `refreshRulesUI()` (a pack load). A click that lands on anything interactive inside the
+heading — the glossary's + Add — keeps its own meaning and does not toggle. Both filter boxes are the
+shared `.searchbox` with a × clear button.
+
+**The glossary.** `allGlossary()` is the rules pack's `keywords` plus `character.glossary`.
+`renderGloss()` lists "From rules pack · *pack name*" (the first 150 matches, then "…and N more —
+type to filter") and "Your entries", each row with a preview; the player's own entries also have Edit
+and Delete. `openGlossForm()` makes an entry of type Text or Rules image (a screenshot stored as a
+data URL); a term is required. With no pack loaded the list opens on an Import rules files prompt.
+
+**Glossary chips.** `highlight()` escapes the text, then wraps every glossary term — longest first,
+whole word, any case — in a `.kw` chip (`role="button"`, `tabindex="0"`). A click, Enter or Space on
+one opens `openGlossView()`. Saving or deleting an entry redraws the features, inventory and Story
+text, because it changes how they read.
+
+**Tables.** `rules.tables` is merged like every category (`mergeRules()`: keyed by source + name, so
+re-loading a pack replaces its own and a same-named table from another pack is kept beside it). A
+table is `{name, cols, align, rows, owner, ownerKind}`, optionally `caption` and `source`.
+`renderTables()` filters on name, owner and column labels, groups by `ownerKind` in `TBL_KINDS` order
+(class, subclass, race, spell, item, feat, background, rule, then Other) and sorts by name; with none
+loaded it shows an Import rules files prompt. `openTableView()` opens the modal: owner, kind and row
+count, then `tableHTML()` — a header from `cols` (omitted when every label is empty), per-column
+`align`, and every cell escaped.
+
+**Anchors.** The converter lifts each table out of the prose it lived in and leaves `[Table: Name]`
+in its place. `highlight()` lifts the anchors out **before** escaping and before the glossary pass
+(behind `TBL_MARK`, a private-use placeholder), then restores each one as a `.tblref` chip if
+`findTable()` resolves it, or as the plain words "the *Name* table" if not. `findTable()` matches the
+exact name, ignoring case and surrounding space, across every loaded pack, first match wins.
+`tableChipsHTML(name, kind)` (through `tablesFor()`) adds an entity's own tables to the class,
+subclass, species and background info panes even when no prose anchors them. Any `.tblref` opens
+`openTableByName()`; a name no loaded pack has gets a short explanation. The modal is a singleton, so
+a table opened from a spell preview replaces it.
+
+## Rules that must hold
+
+- **`cols` is the key.** `tableHTML()` reads nothing else; a table written with `columns` renders
+  without a header and looks perfectly correct in the JSON. `tables.js` asserts, for every pack: a
+  non-empty `cols`, no underscore-prefixed keys, every row as wide as `cols`, unique names, and an
+  `owner` and `ownerKind` on each.
+- **Names are the merge key and the anchor target.** They must be unique within a pack, and because
+  `findTable()` is global, collisions across packs are resolved at conversion time
+  (`--avoid-table-names` — see [Supplements](../data/supplements.md)).
+- **The anchor pass runs before `esc()` and before the glossary pass**, or a term like "Damage Types"
+  is matched inside a table name and corrupts the markup. See [Rich text](../architecture/rich-text.md).
+- **An unresolved anchor reads as prose, never a dead chip** — the tables pack is optional.
+- **Every renderer `refreshRulesUI()` calls must also be called by `renderAll()`.** A surface that
+  redraws when the rules change must also draw when the app starts with rules already cached. A test
+  asserts the invariant, not the name.
+- **One category list.** `RULE_CATS` drives `reindexRules()`, `recomputeDups()` and the loaded-data
+  list. Both functions once carried their own hardcoded copy, which would have left tables without an
+  `_id`; four copies of one list is a bug generator.
+- **Tables are reference only**: nothing is written to a character, so loading or removing a tables
+  pack never changes a saved sheet.
+
+## Traps
+
+- **Every table was silently discarded** by the converter (`flatten()` had `pass` for tables), and so
+  was every referenced feature — which is why Wild Magic Surge was missing while two features still
+  cited it. The shipped data was full of dangling "see the table" prose. → L533
+- **16 of 35 Humblewood tables rendered headerless** (`columns`, not `cols`), and 19 shipped the
+  extractor's `_region` marker. Neither was visible to any test. → L1219
+- **Right row count, wrong pixels.** Two Humblewood characteristic tables had six rows numbered 1–6
+  and had still absorbed words from the neighbouring column. The builder now requires die faces 1..n
+  in order and rejects bled text; a clean count is not proof. → L1103
+- **The Tables tab was blank on load.** `renderTables()` was in `refreshRulesUI()` but not
+  `renderAll()`, so tables drew only after an import or a keystroke in the filter. → L1581
+- **The glossary heading's + Add toggled the section** every time it was pressed, until the handler
+  learned to ignore interactive children. → L3189
+
+## Decisions
+
+| Question | Decision | Rejected, and why |
+|---|---|---|
+| Where the fold state lives | `settings`, as a collapse map | On the character: the glossary and tables come from global packs, so folding on one sheet and finding them open on the next would surprise |
+| Default fold state | Both shut; an absent key means untouched | Open: reaching a table meant scrolling past 154 glossary entries |
+| An anchor whose table is not loaded | The words "the *Name* table" | A chip: it would open nothing, and the tables pack is a separate optional download |
+| An anchor with no table sink active (converter) | Keep the old silent drop | Emitting an anchor: one with no table behind it is worse than the drop |
+| Spell-slot columns in class tables | Skipped | Kept: the app derives slots by level, and a 10-column grid swamps a phone |
+| Where tables are browsed | A card under the glossary on the Rules tab (#32) | Their own tab: one more tab to scroll past (changelog) |
+
+## Open
+
+- **Glossary popups ignore anchors and markup.** `openGlossView()` renders the entry with `esc()`
+  only, so the 5e2024 glossary's `[Table: Carrying Capacity]`, `[Table: Damage Types]` and others
+  (and Xanathar's and Tasha's) show as literal bracketed text rather than chips. Seen in the code and
+  data; not checked in a browser.
+- [rules-schema §6.11](../../../../docs/rules-schema.md) still opens with "the app's **Tables** tab",
+  says ragged rows are padded (the converter pads; `tableHTML()` does not), and leaves `race` out of
+  the `ownerKind` list that `TBL_KINDS` groups by.
+- Rolling is not done in the app; a `1d100` column is text.
+- Small tables inside a feature (Magic Item Hacking's rarity costs) still read as flat text.
+- More in [Known issues](../roadmap/known-issues.md).
+
+## History
+
+- 2026-08-10 — The converter recovers tables and referenced features; `tables` category; a Tables tab; anchors in `highlight()`. → ledger L533
+- 2026-08-10 — Humblewood table extraction checks die faces and bled cells. → ledger L1103
+- 2026-08-10 — `cols` not `columns`; underscore keys stripped; `tables.js` guards the shipped data. → ledger L1219
+- 2026-08-11 — `renderAll()` draws the tables; the refresh/load invariant test. → ledger L1581
+- 2026-08-17 — The Tables tab folded into the Rules tab. → ledger L2714, #32
+- 2026-08-18 — Both Rules sections fold, start shut, and show counts. → ledger L3189
+- 2026-09-24 — A × clear button in both filter boxes. → ledger L3525, #49

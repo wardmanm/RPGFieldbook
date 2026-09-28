@@ -225,4 +225,89 @@ if (dvm) {
   ck('the app says the icons were changed', /background square was removed/i.test(settings));
 }
 
+// ---------- the wiki (src/docs/wiki/) — see src/docs/specs/2026-09-28-living-wiki-design.md §7
+// Facts only, like everything above: a page is listed, its links resolve, the
+// code it names exists, and no JS fragment goes undocumented. Wrong PROSE is
+// the wiki skill's lint pass, not this.
+{
+  const WIKI = 'src/docs/wiki';
+  const walk = d => fs.readdirSync(path.join(ROOT, d), { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? walk(d + '/' + e.name) : e.name.endsWith('.md') ? [d + '/' + e.name] : []);
+  const pages = walk(WIKI).sort();
+  const text = Object.fromEntries(pages.map(p => [p, read(p)]));
+  // Example links and calls inside code are illustrations, not claims.
+  const prose = s => s.replace(/^```[\s\S]*?^```/gm, '');
+  const outsideSpans = s => prose(s).replace(/`[^`\n]*`/g, '');
+  const spans = s => [...prose(s).matchAll(/`([^`\n]+)`/g)].map(m => m[1]);
+  // History records names that have since changed, and Decisions records names
+  // that were rejected — neither is a claim that the name exists now.
+  const current = s => s.split(/^(?=## )/m).filter(sec => !/^## (History|Decisions)\b/.test(sec)).join('');
+
+  const INDEX = WIKI + '/index.md';
+  ck('the wiki has an index', pages.includes(INDEX));
+  const linksOf = p => [...outsideSpans(text[p]).matchAll(/\]\(([^)\s]+)\)/g)].map(m => m[1])
+    .filter(h => !/^[a-z]+:/i.test(h) && !h.startsWith('#'))
+    .map(h => path.posix.normalize(path.posix.join(path.posix.dirname(p), h.split('#')[0])));
+
+  if (pages.includes(INDEX)) {
+    const listed = new Set(linksOf(INDEX));
+    const unlisted = pages.filter(p => p !== INDEX && !listed.has(p));
+    ck('every wiki page is listed in index.md', unlisted.length === 0, unlisted);
+  }
+  pages.forEach(p => {
+    const dead = [...new Set(linksOf(p).filter(t => !fs.existsSync(path.join(ROOT, t))))];
+    ck('wiki ' + p.slice(WIKI.length + 1) + ': every link resolves', dead.length === 0, dead);
+    ck('wiki ' + p.slice(WIKI.length + 1) + ': no [[wikilinks]]', !/\[\[[^\]]+\]\]/.test(outsideSpans(text[p])));
+  });
+
+  // Every function the app and its tooling define — `name()` on a page must be one.
+  const srcFiles = manifest.js.concat(fs.readdirSync(path.join(ROOT, 'scripts'))
+    .filter(f => /\.(js|py)$/.test(f)).map(f => 'scripts/' + f));
+  const defined = new Set();
+  srcFiles.forEach(f => {
+    const s = read(f);
+    for (const m of s.matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g)) defined.add(m[1]);
+    for (const m of s.matchAll(/\b([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\b|\([^()]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)/g)) defined.add(m[1]);
+    for (const m of s.matchAll(/^[ \t]*(?:def|class)\s+([A-Za-z_]\w*)/gm)) defined.add(m[1]);
+  });
+  const fragNames = new Set(['js', 'css', 'html'].flatMap(k => manifest[k]).map(p => path.posix.basename(p)));
+  // decisions.md is the register of every page's Decisions rows, so it is
+  // exempt for the same reason those sections are. Its links are still checked.
+  const REGISTER = WIKI + '/decisions.md';
+  pages.filter(p => p !== REGISTER).forEach(p => {
+    const cur = spans(current(text[p]));
+    const calls = cur.map(s => /^([A-Za-z_$][\w$]*)\([^)]*\)$/.exec(s)).filter(Boolean).map(m => m[1]);
+    const missing = [...new Set(calls.filter(n => !defined.has(n)))];
+    ck('wiki ' + p.slice(WIKI.length + 1) + ': every name() it cites is defined in src/js or scripts',
+       missing.length === 0, missing);
+    const frags = cur.flatMap(s => [...s.matchAll(/\b\d\d-[a-z0-9-]+\.(?:js|css|html)\b/g)].map(m => m[0]));
+    const gone = [...new Set(frags.filter(f => !fragNames.has(f)))];
+    ck('wiki ' + p.slice(WIKI.length + 1) + ': every fragment it cites is in manifest.json',
+       gone.length === 0, gone);
+  });
+
+  // Pages cite the ledger by heading line ("→ ledger L2893"). That only works
+  // while the ledger is append-only: one line inserted near the top would
+  // silently re-point every citation below it.
+  const ledger = read('src/docs/_claude/WIRING-LEDGER.md').split('\n');
+  pages.forEach(p => {
+    const off = [...new Set([...text[p].matchAll(/\bL(\d{2,})\b/g)].map(m => +m[1]))]
+      .filter(n => !/^#/.test(ledger[n - 1] || ''));
+    ck('wiki ' + p.slice(WIKI.length + 1) + ': every ledger L-number is a ledger heading',
+       off.length === 0, off.map(n => 'L' + n));
+  });
+
+  // Coverage. A topic page must cite every JS fragment — the overview's code
+  // map alone would satisfy this trivially, so it doesn't count here; it has its
+  // own check that it maps every fragment of every kind.
+  const OVERVIEW = WIKI + '/overview.md';
+  const topical = pages.filter(p => p !== INDEX && p !== OVERVIEW).map(p => text[p]).join('\n');
+  const uncovered = manifest.js.map(p => path.posix.basename(p)).filter(f => !topical.includes(f));
+  ck('every JS fragment is cited by some wiki topic page', uncovered.length === 0, uncovered);
+  if (pages.includes(OVERVIEW)) {
+    const unmapped = [...fragNames].filter(f => !text[OVERVIEW].includes(f));
+    ck("overview.md's code map names every fragment in manifest.json", unmapped.length === 0, unmapped);
+  }
+}
+
 ck.done();
