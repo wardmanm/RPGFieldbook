@@ -51,7 +51,7 @@ on the sheet:
 |---|---|---|
 | Saving throws | the class's `savingThrows`, via `grantClassSaves()` | none |
 | Fixed class `skills` | granted | none |
-| Level-1 `skill` choice | offered in full ("choose 2") | replaced by the pack's `multiclass.choices` (`multiclassChoices()`): one skill for a Bard, Ranger or Rogue, none for most; nothing if the class has no `multiclass` block |
+| Level-1 `skill` choice | offered in full ("choose 2"; a Bard chooses 3 from all 18) | replaced by the pack's `multiclass.choices` (`multiclassChoices()`): one skill for a Bard, Ranger or Rogue, none for most; nothing if the class has no `multiclass` block |
 | Other level-1 choices, traits, spells | yes | yes (Fighting Style, invocations, Spellcasting) |
 | Starting equipment and gold | `equipmentGrants`, fixed blocks at once and a picker after the window | none |
 | Hit points | level 1 seeded by `seedLevel1HP()`; a class starting above level 1 then asks for levels 2..N in the window | an HP step for all its levels, with its own die |
@@ -183,6 +183,11 @@ they are built: [Converter](../data/converter.md).
   equipment and gold, and the full "choose 2" skills to a second class exactly as to the first, so a
   Fighter who took a Wizard level gained INT and WIS saves, a spellbook kit and 55 gp (#66). The HP
   path had always told the two apart, which is why only it was right.
+- **A first-class Bard had no skill picks (#67).** The 2024 Bard's starting skills are "any 3",
+  which the converter dropped, so the pack gave it no level-1 `skill` choice and this window offered
+  nothing. The app was right; the data was empty. Fixed in the converter
+  ([Converter](../data/converter.md)); `char-update.js` drives a first-class Bard through the real
+  pack, and `rules-data.js` fails on any class in any pack that starts with no skills.
 - **"(TCE) (TCE)".** A reprint already keyed "Psi Warrior (TCE)" was tagged again in both subclass
   pickers; `subSourceTag()` now skips a tag already in the name.
 - **Not everything reverts.** Tools and languages go into the free-text Proficiencies box and stay
@@ -250,3 +255,5 @@ they are built: [Converter](../data/converter.md).
 - 2026-09-28 — only the first class grants saving throws, starting equipment and its full skill
   choice; a multiclass gets the pack's `multiclass` subset and a note. A first class above level 1
   gets its hit points. → ledger L3886, #66
+- 2026-09-28 — a first-class Bard chooses 3 skills from all 18: the pack now carries the level-1
+  choice the converter used to drop. No app change. → ledger L3985, #67

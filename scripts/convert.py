@@ -738,14 +738,11 @@ def _multiclass(entry, warnings):
         return None
     pg = mc.get('proficienciesGained') or {}
     out = {}
-    choices = []
-    for item in pg.get('skills', []):
-        if isinstance(item, dict) and isinstance(item.get('choose'), dict):
-            ch = item['choose']
-            choices.append({'type': 'skill', 'choose': ch.get('count', 1),
-                            'from': [sk(x) for x in ch.get('from', [])]})
-        else:
-            warnings.append(f"{entry['name']}: multiclass skill {item!r} not converted")
+    # The block has no fixed-skill list (the app reads only `choices`), so a
+    # fixed skill here is as unconverted as an unknown shape, and says so.
+    fixed, choices, missed = _skill_profs(pg.get('skills', []))
+    for item in missed + fixed:
+        warnings.append(f"{entry['name']}: multiclass skill {item!r} not converted")
     if choices:
         out['choices'] = choices
     prof = []
@@ -1100,13 +1097,12 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
         def addtrait(n, t): L(n).setdefault('traits', []).append(t)
         def addchoice(n, c): L(n).setdefault('choices', []).append(c)
 
-        fixedskills = []
-        for item in entry.get('startingProficiencies', {}).get('skills', []):
-            if isinstance(item, dict) and 'choose' in item:
-                ch = item['choose']
-                addchoice(1, {'type': 'skill', 'choose': ch.get('count', 1), 'from': [sk(x) for x in ch.get('from', [])]})
-            elif isinstance(item, str):
-                fixedskills.append(sk(item))
+        # A first class's skills: the level-1 choice addClass() offers, or fixed ones.
+        fixedskills, skchoices, missed = _skill_profs(entry.get('startingProficiencies', {}).get('skills', []))
+        for ch in skchoices:
+            addchoice(1, ch)
+        for m in missed:
+            warnings.append(f"{entry['name']}: starting skill {m!r} not converted")
         if fixedskills: C['skills'] = fixedskills
         eg = _equip_grants_class(entry.get('startingEquipment'))
         if eg:
@@ -1604,21 +1600,39 @@ def _race_size(sz):
         return ''
     return names[0] if len(names) == 1 else names
 
-def _race_skills(sp):
-    """-> (fixed skill names, choice blocks). The app supports both (52-race.js)."""
-    fixed, choices = [], []
-    for block in sp or []:
+def _skill_profs(blocks):
+    """5e-tools skill proficiencies -> (fixed skill names, choice blocks, entries not read).
+
+    The one reader for a species' skillProficiencies, a class's starting skills and
+    its multiclass skills, so a shape understood in one is understood in all:
+    `{"perception": true}` or a bare name is fixed, `{"choose": {"from", "count"}}`
+    picks `count` from that list, and `{"any": N}` picks N from all 18 skills (the
+    Bard's "any three", the 2024 Human's Skillful). Anything else comes back in the
+    third list for the caller to warn about: the class path once read only `choose`
+    and dropped the Bard's `any` without a word (#67)."""
+    fixed, choices, missed = [], [], []
+    for block in blocks or []:
+        if isinstance(block, str):
+            fixed.append(sk(block))
+            continue
         if not isinstance(block, dict):
+            missed.append(block)
             continue
         for k, v in block.items():
-            if k == 'choose' and isinstance(v, dict):
-                frm = [sk(x) for x in v.get('from', [])]
-                if frm:
-                    choices.append({'type': 'skill', 'choose': int(v.get('count', 1)), 'from': frm})
-            elif k == 'any':
+            if k == 'choose' and isinstance(v, dict) and v.get('from'):
+                choices.append({'type': 'skill', 'choose': int(v.get('count', 1)),
+                                'from': [sk(x) for x in v['from']]})
+            elif k == 'any' and str(v).isdigit() and int(v) > 0:
                 choices.append({'type': 'skill', 'choose': int(v), 'from': sorted(SKMAP.values())})
             elif v is True:
                 fixed.append(sk(k))
+            else:
+                missed.append({k: v})   # an odd `any` too: reported, never a crash
+    return fixed, choices, missed
+
+def _race_skills(sp):
+    """-> (fixed skill names, choice blocks). The app supports both (52-race.js)."""
+    fixed, choices, _ = _skill_profs(sp)
     return fixed, choices
 
 _LINEAGE_WORDS = (' Lineage', ' Ancestry', ' Legacy')

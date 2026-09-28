@@ -586,6 +586,50 @@ del mcf['class'][0]['multiclassing']
 ck('...and a source with no multiclassing entry carries no block at all',
    'multiclass' not in C.convert_classes([_tmpjson(mcf)])['classes'][0])
 
+# ---- 22. a first class's "any N" skills (#67)
+# The 2024 Bard's starting skills are `{"any": 3}`: three of the player's choice
+# from all 18. The class path read only `choose` and bare names, dropped this
+# without a word, and a first-class Bard was offered no skills at all. The Bard
+# below is the real one, copied from the v2.36.1 dump (class-bard.json, XPHB).
+import io, contextlib
+ALL18 = sorted(C.SKMAP.values())
+bardf = {'class': [{'name': 'Bard', 'source': 'XPHB', 'hd': {'number': 1, 'faces': 8}, 'classFeatures': [],
+    'startingProficiencies': {'skills': [{'any': 3}], 'weapons': ['simple'],
+        'tools': ['Choose three {@item Musical Instrument|XPHB|Musical Instruments}'],
+        'toolProficiencies': [{'anyMusicalInstrument': 3}], 'armor': ['light'], 'armorProficiencies': [{'light': True}]},
+    'multiclassing': {'proficienciesGained': {'skills': [{'choose': {'from': [
+        'athletics', 'acrobatics', 'sleight of hand', 'stealth', 'arcana', 'history', 'investigation', 'nature',
+        'religion', 'animal handling', 'insight', 'medicine', 'perception', 'survival', 'deception', 'intimidation',
+        'performance', 'persuasion'], 'count': 1}}],
+        'tools': ['Choose one {@item Musical Instrument|XPHB}'], 'toolProficiencies': [{'anyMusicalInstrument': 1}],
+        'armor': ['light'], 'armorProficiencies': [{'light': True}]}}}],
+    'classFeature': []}
+bard = C.convert_classes([_tmpjson(bardf)])['classes'][0]
+b1 = [c for c in bard.get('levels', {}).get('1', {}).get('choices', []) if c['type'] == 'skill']
+ck('#67 a Bard\'s "any 3" becomes a level-1 skill choice', len(b1) == 1, bard.get('levels'))
+ck('#67 ...of three, from all 18 skills',
+   b1 == [{'type': 'skill', 'choose': 3, 'from': ALL18}] and len(ALL18) == 18, b1)
+ck('#67 ...and no fixed skills', 'skills' not in bard, bard.get('skills'))
+ck('#67 ...while the multiclass block keeps its own one skill',
+   [(c['choose'], len(c['from'])) for c in bard['multiclass'].get('choices', [])] == [(1, 18)], bard.get('multiclass'))
+ck('#67 one reader: a species\' "any 3" is the same choice',
+   C._race_skills([{'any': 3}]) == ([], b1), C._race_skills([{'any': 3}]))
+mcany = json.loads(json.dumps(bardf))
+mcany['class'][0]['multiclassing'] = {'proficienciesGained': {'skills': [{'any': 1}]}}
+ck('#67 ...and a multiclass "any 1" reads the same way, not as a warning',
+   C.convert_classes([_tmpjson(mcany)])['classes'][0]['multiclass'] == {'choices': [{'type': 'skill', 'choose': 1, 'from': ALL18}]},
+   C.convert_classes([_tmpjson(mcany)])['classes'][0].get('multiclass'))
+# A skill entry the reader does not know is said out loud, never dropped quietly:
+# that silence is what hid this bug.
+odd = json.loads(json.dumps(bardf))
+odd['class'][0]['startingProficiencies']['skills'] = [{'anyFromList': 2}]
+err = io.StringIO()
+with contextlib.redirect_stderr(err):
+    oddc = C.convert_classes([_tmpjson(odd)])['classes'][0]
+ck('#67 an unknown starting-skill entry is a note, not a silent skip',
+   'Bard' in err.getvalue() and 'anyFromList' in err.getvalue() and 'starting skill' in err.getvalue(), err.getvalue())
+ck('#67 ...and invents no choice for it', not oddc.get('levels', {}).get('1', {}).get('choices'), oddc.get('levels'))
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

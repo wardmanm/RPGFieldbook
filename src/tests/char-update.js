@@ -1015,6 +1015,24 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
     ck('#66 ...still no saves', saves('class:Rogue')==='');
     mcSetup(); X.addClass('Fighter',1); reset(); X.addClass('Bard',1);
     ck('#66 a multiclass Bard offers one skill of any', skillCh().length===1&&skillCh()[0].choose===1&&skillCh()[0].from.length===18, skillCh());
+    ck('#67 ...and not its first-class three as well', !skillCh().some(x=>x.choose===3), skillCh());
+
+    /* ---- #67: the Bard as a FIRST class. The 2024 data says "any 3", which the
+       converter used to drop, so this window offered no skills at all. */
+    mcSetup(); reset(); X.addClass('Bard',1);
+    const bsk=skillCh()[0]||{};
+    ck('#67 a first-class Bard offers a level-1 skill choice', skillCh().length===1, choicesOf().map(x=>x.type));
+    ck('#67 ...of three', bsk.choose===3, bsk);
+    ck('#67 ...from all 18 skills, every one a skill the sheet knows',
+       Array.isArray(bsk.from)&&bsk.from.length===18&&new Set(bsk.from.map(X.skillKey).filter(Boolean)).size===18, bsk.from);
+    ck('#67 ...granted to the class, so it reverts with it', bsk._sid==='class:Bard', bsk);
+    ck('#67 ...and the window says choose 3', /data-choose="3"/.test(X.choiceFieldHTML(bsk,0,null)), X.choiceFieldHTML(bsk,0,null).slice(0,200));
+    const bkeys=['Arcana','Deception','Survival'].map(X.skillKey);
+    X.commitChoices('Bard',[{type:'skill',sid:'class:Bard',keys:bkeys}]);
+    ck('#67 ...the three picked are the Bard\'s',
+       bkeys.every(k=>X.character.grants.some(g=>g.sid==='class:Bard'&&g.type==='skill'&&g.key===k)), X.character.grants);
+    X.removeClass(0);
+    ck('#67 ...and leave with it', !X.character.grants.some(g=>g.sid==='class:Bard'&&g.type==='skill'), X.character.grants);
     mcSetup(); X.addClass('Wizard',1); reset(); X.addClass('Fighter',1);
     ck('#66 a multiclass Fighter keeps its level-1 Fighting Style', choicesOf().some(x=>x.type==='option'&&/Fighting Style/.test(x.label||'')),
        choicesOf().map(x=>x.type+':'+(x.label||'')));

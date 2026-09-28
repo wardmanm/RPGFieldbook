@@ -3981,3 +3981,44 @@ checks failed before the fix; each of the 11 text-content fixes was reverted in 
 
 Noticed, not changed: `runChoices()` still double-escapes its modal title (known issue); a portrait
 is still stored at full size.
+
+## A first-class Bard chooses its three skills (#67, 2026-09-28)
+
+- **Root cause.** The 2024 Bard's `startingProficiencies.skills` is `[{"any": 3}]`: three skills of
+  the player's choice from all 18. `convert_classes()` read that list itself and knew only
+  `{"choose": …}` and bare names, so it dropped the entry without a word. `data/5e2024/classes.json`
+  shipped the Bard with no level-1 `skill` choice and no fixed `skills`, and `addClass()` had nothing
+  to offer a first-class Bard. The app was never wrong: it offers whatever level-1 choices a class
+  carries. Found while compiling the wiki (known-issues, citing L3886).
+- **One reader.** `_skill_profs()` in `convert.py` now reads every 5e-tools skill-proficiency list:
+  a bare name or `{"perception": true}` is fixed, `choose` picks `count` from its list, `any` picks N
+  from all 18 skills (alphabetical, as the species' "any" always was), and anything else comes back
+  for the caller to warn about. The species reader (`_race_skills()`, which already understood `any`)
+  is now a wrapper over it; the class's starting skills and `_multiclass()` call it too, so a shape
+  understood in one place is understood in all three. An unread starting-skill entry is now a
+  `note:` line; a multiclass one already was, and still is for a fixed skill, which that block
+  cannot carry.
+- **Every "any" entry.** The v2.36.1 dump's class files hold 30 class entries, 27 with starting
+  skills (the three TCE sidekicks have none). Only the Bard uses `any` (PHB and XPHB, both
+  `{"any": 3}`); the other 25 are a `choose`, and all 7 `multiclassing` skill entries are too. The core pack takes the XPHB Bard. Neither supplement emits
+  classes: Xanathar's prints none and Tasha's skips the Artificer. Humblewood's Gadgeteer (choose 4
+  of 8) is extracted, not converted.
+- **Byte gate.** HEAD's converter reproduces `data/5e2024/` exactly; the new one differs only in
+  `classes.json`, by one hunk: the Bard's `levels["1"].choices`, a `skill` choice of 3 from the 18.
+  `data/xanathars/` and `data/tashas/` regenerate byte for byte (Tasha's `races.json` goes through
+  the shared reader unchanged). XPHB's `DATA_VERSIONS` will move at the next release, correctly: a
+  player on the old pack keeps a Bard with no skill picks until they re-download it.
+- **Multiclassing is unchanged.** A Bard added beside another class still gets its `multiclass`
+  choice (one of 18) in place of the new level-1 three, because `addClass()` drops a class's own
+  level-1 `skill` choice on a multiclass add.
+- **Not changed, noticed.** No class in the pack carries its first-class armor, weapon or tool
+  training (the Bard's three Musical Instruments, a Fighter's heavy armor): `convert_classes()` reads
+  only `skills` from `startingProficiencies`, and nothing else writes it. Character building and
+  grants & provenance say the first class's training "is only in its data"; it is in no data at all.
+- Tests: `converter.py` 165 → 173 (the real Bard shape; the species and multiclass readings agree;
+  an unknown entry is a note), `char-update.js` 319 → 327 (the real pack: a first-class Bard offers
+  choose 3 of 18, grants them to `class:Bard` and reverts them; a multiclass Bard still one),
+  `rules-data.js` 594 → 599 (every class in every pack starts with skills, fixed or chosen, each a
+  skill the sheet knows). Eleven failed before the fix. Data-only for players: no UNRELEASED note.
+- Pages: [converter](../wiki/data/converter.md),
+  [character building](../wiki/features/character-building.md), [decisions](../wiki/decisions.md).

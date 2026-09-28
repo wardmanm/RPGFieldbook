@@ -19,7 +19,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'SET_SECTIONS','setSecDef','setSecOpen','setSecHTML','rulesEntryCount','settings',
   'NOTE_SECTIONS','NOTE_TABS','noteDef','getNote','noteText','hasNote','saveNote',
   'noteGroupOpen','notesHTML','noteBtnHTML','noteEntryHTML','esc',
-  'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings',
+  'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings', 'skillKey',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1368,6 +1368,26 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
        ((hw.classes || []).find(c => c.name === 'Gadgeteer') || {}).description || ''));
     ck('each path has its own introduction',
        (hw.subclasses || []).every(s => (s.description || '').length > 150), (hw.subclasses || []).map(s => s.name + ':' + (s.description || '').length));
+  }
+  // ---------- every shipped class starts with its skills (#67)
+  // A class's first-level skills are its fixed `skills` or a level-1 `skill`
+  // choice — the one addClass() offers a first class. The converter dropped the
+  // 2024 Bard's "any 3", so it shipped with neither and a first-class Bard was
+  // offered no skills. Every class in every pack, each name one the sheet knows.
+  {
+    const dirs = fs.readdirSync(path.join(ROOT, 'data'))
+      .filter(d => fs.existsSync(path.join(ROOT, 'data', d, 'classes.json')));
+    ck('class packs found', dirs.includes('5e2024') && dirs.includes('humblewood'), dirs);
+    dirs.forEach(dir => {
+      const cls = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', dir, 'classes.json'), 'utf8')).classes || [];
+      const l1 = c => ((((c.levels || {})['1'] || {}).choices) || []).filter(x => x.type === 'skill');
+      const bare = cls.filter(c => !(c.skills || []).length && !l1(c).length);
+      ck(dir + ': every class starts with skills, fixed or chosen', bare.length === 0, bare.map(c => c.name));
+      const unknown = [];
+      cls.forEach(c => (c.skills || []).concat(...l1(c).map(x => x.from || []))
+        .forEach(n => { if (!X.skillKey(n)) unknown.push(c.name + ': ' + n); }));
+      ck(dir + ': ...and every one is a skill the sheet knows', unknown.length === 0, unknown);
+    });
   }
   // A lineage packet must not claim the species description — Feb 2025's Webpaw
   // section was overwriting the mustel intro, which made the extractor
