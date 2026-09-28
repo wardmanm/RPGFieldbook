@@ -51,7 +51,9 @@ see [Grants & provenance](../architecture/grants-and-provenance.md)) and the ite
 runs `syncItemAttack()`: update the linked row in place and re-stamp it, create one if missing, or
 delete it when the Weapon box is unticked. The form keeps `weapon` only when damage dice are given.
 Deleting the item deletes its row (the confirm says so), and so does using up the last of a
-consumable.
+consumable. A pack weapon's `ability` comes from the converter: `finesse` for a melee weapon whose
+properties include Finesse, `dex` for a ranged one, else `str`. Its `notes` ("Range 20/60 ·
+Finesse, Light, Thrown · Mastery: Nick") are copied onto the row as text; nothing parses them.
 
 **Equipping.** `isEquippable()` is true for effects, armor *or* a weapon. `attackVisible(a)` gates only
 rows with an `itemId` whose item still exists, on that item's `equipped`; hand-made rows and spell rows
@@ -123,6 +125,12 @@ longer allows, leaving orphan rows alone.
   by the next resync. → L2945
 - **Three copies of the damage expression** (row, breakdown, print); the print one had already
   drifted. → L2742
+- **Magic weapons attacked with Strength (#72).** The converter named properties only from the
+  file it was converting, so a finesse magic weapon (Dagger of Venom, Scimitar of Speed, Sun Blade,
+  the Psychic Blade item) shipped `ability: "str"` and notes reading "F, L, T". The app did the
+  arithmetic right on the wrong field. Fixed in the packs, not the app; an existing sheet gets the
+  corrected weapon through the rules-update tool, which rebuilds the row only if it was never
+  edited. See [Converter](../data/converter.md). → L4135
 - **Every literal-id `getElementById` lookup in a form is checked by `rules-data.js`** against the
   ids the app renders; a generated id is not "declared", which is why clearing the spell form's list
   goes through `clearXDmgField()`. → L2863
@@ -145,6 +153,10 @@ longer allows, leaving orphan rows alone.
   `damage`/`damage.<kind>` effects to spell rows too, while the Spellcasting card and the cast dialog
   (`spellAtkBonus()`, damage bonus 0) do not — with an Archery-style `attack.ranged` effect, a Fire
   Bolt row reads 2 higher than the dialog. Verified in the code, not in a browser.
+- **A `+N` magic weapon's bonus counts twice.** The pack gives it both `weapon.atkMisc`/`dmgMisc`
+  and global `attack`/`damage` effects, so its own row adds +N twice and every other attack,
+  spell rows included, gains +N while it is equipped: a +1 Dagger of Venom's row adds +2 to hit and
+  to damage. 15 pack weapons (11 core, 4 Tasha's). A converter fix, not made yet; seen in #72.
 - **Only the finder adds weapons equipped.** `grantItemByName()` and a new item from the form start
   `equipped:false`, so their attack is hidden until equipped. A brand-new character's starting weapons
   are equipped by `migrateWeaponEquip()` on its first reload; one granted after that is not.
@@ -172,3 +184,4 @@ longer allows, leaving orphan rows alone.
 - 2026-08-18 — Damage-free save spells lose their row; detector reads flat bonuses and typeless damage. → ledger L2989
 - 2026-08-18 — Attacks gain favourites and Collapse all. → ledger L3123
 - 2026-08-18 — Weapons are equippable; their rows follow the equipped state; `migrateWeaponEquip()`. → ledger L3213
+- 2026-09-28 — Pack magic weapons carry their properties' names and a finesse one attacks with `finesse`; the rules-update tool offers the fix to existing sheets. → ledger L4135, #72

@@ -73,6 +73,11 @@ EFA, PHB and TCE; the default run still reads `class` from XPHB and EFA only. Ev
 **Prerequisites.** `_render_prereq()` renders the `race` and `proficiency` prerequisite shapes only
 when `legacy` is set, which is every non-default book.
 
+**Magic weapons.** A supplement's weapons carry the 2014 PHB's bare codes (`"L"`, `"V"`) and the
+book defines none of them. `supplement` loads the dump's `items-base.json` into the item index, as
+`all` does, and `convert_items()` names them from it: Xanathar's three staves read "Versatile 1d8",
+Tasha's Moon Sickles "Light". Resolution and the warning: [Converter](converter.md).
+
 **Table names.** `--avoid-table-names PACK.json` reads the core pack's table names and, inside
 `reserved_names()`, `_register()` appends `" (XGE)"` / `" (TCE)"` to any table that would reuse one.
 The prose anchor is written from `_register()`'s return value, so it follows the rename. Today 12
@@ -162,3 +167,4 @@ and missing-dependency reporting: [Rules packs](../architecture/rules-packs.md).
 - 2026-09-25 — `supplement` reads `class-resources.json`: Arcane Archer's Arcane Shot tracker. → ledger L3649
 - 2026-09-25 — Moved to the v2.36.1 dump: XGE's Power Word Pain gains Bard; both packs' subclasses unchanged. → ledger L3676
 - 2026-09-28 — Text `flatten()` had dropped is restored: Xanathar's Arcane Shot save DC; Tasha's Path of the Beast Bite, Claws and Tail, College of Creation motes, Circle of Stars omens, Custom Lineage traits and Luba's Tarokka Weal and Woe. → ledger L4025, #68
+- 2026-09-28 — Magic weapons name their properties from the core `items-base.json`: Xanathar's three staves, Tasha's three Moon Sickles and Baba Yaga's Pestle. → ledger L4135, #72

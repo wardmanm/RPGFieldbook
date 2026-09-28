@@ -463,8 +463,8 @@ the converter applies — mirroring `overlay.json` for feats.
               "notes": "Versatile (1d10)", "atkMisc": 0, "dmgMisc": 0 }
   ```
 
-  `kind` is `"melee"` or `"ranged"`; `ability` is the ability the attack uses (`str`/`dex`/…, and
-  finesse weapons should name the one the character will actually want); `dice` is the damage dice;
+  `kind` is `"melee"` or `"ranged"`; `ability` is the ability the attack uses (`str`/`dex`/…,
+  `"finesse"` for the better of STR and DEX, or `"none"`); `dice` is the damage dice;
   `damageType` is free text. `notes`, `atkMisc` and `dmgMisc` are optional — the last two are flat
   modifiers added to the roll, for a `+1` weapon that has no other effect. Without a `weapon` object
   an item is just inventory, however weapon-like its description reads.

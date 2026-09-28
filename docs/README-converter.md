@@ -109,7 +109,7 @@ silently trims the book. It has already cost 4-of-16 backgrounds, 339-of-391 spe
 - **races** → `{ "races": [...] }` — the 10 XPHB species, with speed, traits, and skill choices. 2024 lineages (Elf, Gnome, Goliath, Tiefling) come from `_versions` and become `subraces`; Dragonborn's ancestry is template-only in the source, so its picks are read off the Draconic Ancestry table. No `abilityScores` — 2024 puts ability increases on backgrounds.
 - **glossary** → `{ "keywords": [...] }` — rules-glossary terms (Advantage, Cover, Difficult Terrain…), the same category `conditions` writes to, so the two merge in the app.
 - **backgrounds** → `{ "backgrounds": [...] }` — the 16 XPHB backgrounds: ability scores, feat, skill and tool proficiencies, equipment and its structured `equipmentGrants`.
-- **items** → `{ "items": [...] }` — reads **both** item files and writes two packs: base gear and magic items. Between them the largest output the converter produces.
+- **items** → `{ "items": [...] }` — reads **both** item files and writes two packs: base gear and magic items. Between them the largest output the converter produces. A weapon's properties and mastery are written by name ("Finesse, Light, Thrown · Mastery: Nick"), and a Finesse melee weapon gets `"ability": "finesse"`. The names are defined only in `items-base.json`, so converting the magic-item file on its own with `items` reads the `items-base.json` beside it. A code with no definition is printed as it stands and reported as a `WARNING` at the end of the run.
 - **features** → `{ "features": [...] }` — written by `all` from `optionalfeatures.json`: the 58
   XPHB maneuvers, invocations and metamagic as library entries, so a player can add or swap one by
   hand. XPHB printings only. An option that spends from a pool (a Superiority Die, Sorcery Points)
@@ -149,9 +149,9 @@ and all three are written into the description: the formula lines ("Spell save D
 proficiency bonus + your Intelligence modifier"), list items with a single `entry` (Cackle Fever's
 symptoms, Path of the Beast's Bite, Claws and Tail), and `statblock` entries that embed an item by
 reference (the Soulknife's Psychic Blade). A stat block is looked up in `items-base.json` and
-`items.json`, which `all` and `supplement` find themselves; a single subcommand has neither, so it
-keeps just the item's name and warns. Any kind of entry the converter does not know is reported
-as a `WARNING` at the end of the run, rather than dropped without a word.
+`items.json`, which `all` and `supplement` find themselves; a single subcommand other than `items`
+has neither, so it keeps just the item's name and warns. Any kind of entry the converter does not
+know is reported as a `WARNING` at the end of the run, rather than dropped without a word.
 
 ## The overlay (`overlay.json`)
 5e-tools stores mechanical bonuses (e.g. "Archery gives +2 to ranged attacks") only as prose.

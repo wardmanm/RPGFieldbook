@@ -61,7 +61,7 @@
       "weight": 2,
       "attune": true,
       "attuneNote": "by a druid or ranger",
-      "description": "Damage 1d4 slashing · Properties: L · Base item: Sickle. This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +1 bonus to attack and damage rolls made with it, and you gain a +1 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.\nWhen you cast a spell that restores hit points, you can roll a d4 and add the number rolled to the amount of hit points restored, provided you are holding the sickle",
+      "description": "Damage 1d4 slashing · Properties: Light · Base item: Sickle. This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +1 bonus to attack and damage rolls made with it, and you gain a +1 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.\nWhen you cast a spell that restores hit points, you can roll a d4 and add the number rolled to the amount of hit points restored, provided you are holding the sickle",
       "effects": [
         {
           "target": "attack",
@@ -77,7 +77,7 @@
         "dice": "1d4",
         "damageType": "slashing",
         "ability": "str",
-        "notes": "L",
+        "notes": "Light",
         "atkMisc": 1,
         "dmgMisc": 1
       }
@@ -149,7 +149,7 @@
       "weight": 2,
       "attune": true,
       "attuneNote": "by a druid or ranger",
-      "description": "Damage 1d4 slashing · Properties: L · Base item: Sickle. This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +2 bonus to attack and damage rolls made with it, and you gain a +2 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.\nWhen you cast a spell that restores hit points, you can roll a d4 and add the number rolled to the amount of hit points restored, provided you are holding the sickle",
+      "description": "Damage 1d4 slashing · Properties: Light · Base item: Sickle. This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +2 bonus to attack and damage rolls made with it, and you gain a +2 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.\nWhen you cast a spell that restores hit points, you can roll a d4 and add the number rolled to the amount of hit points restored, provided you are holding the sickle",
       "effects": [
         {
           "target": "attack",
@@ -165,7 +165,7 @@
         "dice": "1d4",
         "damageType": "slashing",
         "ability": "str",
-        "notes": "L",
+        "notes": "Light",
         "atkMisc": 2,
         "dmgMisc": 2
       }
@@ -237,7 +237,7 @@
       "weight": 2,
       "attune": true,
       "attuneNote": "by a druid or ranger",
-      "description": "Damage 1d4 slashing · Properties: L · Base item: Sickle. This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +3 bonus to attack and damage rolls made with it, and you gain a +3 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.\nWhen you cast a spell that restores hit points, you can roll a d4 and add the number rolled to the amount of hit points restored, provided you are holding the sickle",
+      "description": "Damage 1d4 slashing · Properties: Light · Base item: Sickle. This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +3 bonus to attack and damage rolls made with it, and you gain a +3 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.\nWhen you cast a spell that restores hit points, you can roll a d4 and add the number rolled to the amount of hit points restored, provided you are holding the sickle",
       "effects": [
         {
           "target": "attack",
@@ -253,7 +253,7 @@
         "dice": "1d4",
         "damageType": "slashing",
         "ability": "str",
-        "notes": "L",
+        "notes": "Light",
         "atkMisc": 3,
         "dmgMisc": 3
       }
@@ -355,7 +355,7 @@
       "rarity": "Artifact",
       "weight": 4,
       "attune": true,
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Base item: Quarterstaff. The pestle is a 6-inch-long, worn wooden tool. Once during your turn while you are holding the pestle, you can extend it into a quarterstaff or shrink it back into a pestle (no action required). As a quarterstaff, the pestle is a magic weapon that grants a +3 bonus to attack and damage rolls made with it.\nThe pestle has 12 charges. When you hit with a melee attack using the pestle, you can expend up to 3 of its charges to deal an extra 1d8 force damage for each charge expended. The pestle regains all expended charges daily at dawn",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Base item: Quarterstaff. The pestle is a 6-inch-long, worn wooden tool. Once during your turn while you are holding the pestle, you can extend it into a quarterstaff or shrink it back into a pestle (no action required). As a quarterstaff, the pestle is a magic weapon that grants a +3 bonus to attack and damage rolls made with it.\nThe pestle has 12 charges. When you hit with a melee attack using the pestle, you can expend up to 3 of its charges to deal an extra 1d8 force damage for each charge expended. The pestle regains all expended charges daily at dawn",
       "effects": [
         {
           "target": "attack",
@@ -371,7 +371,7 @@
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V",
+        "notes": "Versatile 1d8",
         "atkMisc": 3,
         "dmgMisc": 3
       }

@@ -313,14 +313,14 @@
       "type": "Simple Weapon",
       "rarity": "Common",
       "weight": 4,
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V. If you place an object weighing no more than 1 pound (such as a shard of crystal, an egg, or a stone) above the tip of the staff while holding it, the object floats an inch from the staff's tip and remains there until it is removed or until the staff is no longer in your possession. The staff can have up to three such objects floating over its tip at any given time. While holding the staff, you can make one or more of the objects slowly spin or turn in place",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile. If you place an object weighing no more than 1 pound (such as a shard of crystal, an egg, or a stone) above the tip of the staff while holding it, the object floats an inch from the staff's tip and remains there until it is removed or until the staff is no longer in your possession. The staff can have up to three such objects floating over its tip at any given time. While holding the staff, you can make one or more of the objects slowly spin or turn in place",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V"
+        "notes": "Versatile 1d8"
       }
     },
     {
@@ -330,14 +330,14 @@
       "type": "Simple Weapon",
       "rarity": "Common",
       "weight": 4,
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V. This wooden staff is decorated with bird carvings. It has 10 charges. While holding it, you can use an action to expend 1 charge from the staff and cause it to create one of the following sounds out to a range of 60 feet: a finch's chirp, a raven's caw, a duck's quack, a chicken's cluck, a goose's honk, a loon's call, a turkey's gobble, a seagull's cry, an owl's hoot, or an eagle's shriek.\nThe staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 1, the staff explodes in a harmless cloud of bird feathers and is lost forever",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile. This wooden staff is decorated with bird carvings. It has 10 charges. While holding it, you can use an action to expend 1 charge from the staff and cause it to create one of the following sounds out to a range of 60 feet: a finch's chirp, a raven's caw, a duck's quack, a chicken's cluck, a goose's honk, a loon's call, a turkey's gobble, a seagull's cry, an owl's hoot, or an eagle's shriek.\nThe staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 1, the staff explodes in a harmless cloud of bird feathers and is lost forever",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V"
+        "notes": "Versatile 1d8"
       }
     },
     {
@@ -347,14 +347,14 @@
       "type": "Simple Weapon",
       "rarity": "Common",
       "weight": 4,
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V. This wooden staff has 10 charges. While holding it, you can use an action to expend 1 charge from the staff and cause a flower to sprout from a patch of earth or soil within 5 feet of you, or from the staff itself. Unless you choose a specific kind of flower, the staff creates a mild-scented daisy. The flower is harmless and nonmagical, and it grows or withers as a normal flower would. The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 1, the staff turns into flower petals and is lost forever",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile. This wooden staff has 10 charges. While holding it, you can use an action to expend 1 charge from the staff and cause a flower to sprout from a patch of earth or soil within 5 feet of you, or from the staff itself. Unless you choose a specific kind of flower, the staff creates a mild-scented daisy. The flower is harmless and nonmagical, and it grows or withers as a normal flower would. The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 1, the staff turns into flower petals and is lost forever",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V"
+        "notes": "Versatile 1d8"
       }
     },
     {

@@ -770,6 +770,147 @@ for label, argv in (('a single subcommand', ['conditions', os.path.join(_dump, '
        "WARNING: 1 entry node(s) of type 'someFutureNode'" in r.stdout, r.stdout[-600:] + r.stderr[-300:])
 shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True)
 
+# ---- 24. magic weapons name their properties and mastery (#72)
+# Only items-base.json defines what "F|XPHB" or "Nick|XPHB" means. The magic-item
+# file carries the codes (copied from the base weapon) and no definitions, so
+# reading names from the file being converted printed "Properties: F, L, T" on
+# the Dagger of Venom -- and, "Finesse" never being in the list, gave it
+# ability "str" where the Dagger has "finesse". Shapes copied from the v2.36.1
+# dump; prose, loot tables and reference lists trimmed.
+IB_PROPS = [
+    {"abbreviation": "2H", "source": "XPHB", "template": "{{prop_name}}", "entries": [{"type": "entries", "name": "Two-Handed", "entries": ["…"]}]},
+    {"abbreviation": "F", "source": "XPHB", "template": "{{prop_name}}", "entries": [{"type": "entries", "name": "Finesse", "entries": ["…"]}]},
+    {"abbreviation": "H", "source": "XPHB", "template": "{{prop_name}}", "entries": [{"type": "entries", "name": "Heavy", "entries": ["…"]}]},
+    {"abbreviation": "L", "source": "PHB", "template": "{{prop_name_lower}}", "entries": [{"type": "entries", "name": "Light", "entries": ["…"]}]},
+    {"abbreviation": "L", "source": "XPHB", "template": "{{prop_name}}", "entries": [{"type": "entries", "name": "Light", "entries": ["…"]}]},
+    {"abbreviation": "R", "source": "XPHB", "template": "{{prop_name}}", "entries": [{"type": "entries", "name": "Reach", "entries": ["…"]}]},
+    # the one definition with no entries: its name is a top-level key
+    {"name": "special", "abbreviation": "S", "source": "PHB", "template": "{{prop_name_lower}}"},
+    {"abbreviation": "T", "source": "XPHB", "template": "{{prop_name}} ({{item.range}} ft.)", "entries": [{"type": "entries", "name": "Thrown", "entries": ["…"]}]},
+    {"abbreviation": "V", "source": "XPHB", "template": "{{prop_name}} ({{item.dmg2}})", "entries": [{"type": "entries", "name": "Versatile", "entries": ["…"]}]},
+]
+IB_MASTERY = [{"name": n, "source": "XPHB", "entries": ["…"]} for n in ('Nick', 'Push', 'Sap', 'Topple', 'Vex')]
+IB_BASE = [
+    {"name": "Dagger", "source": "XPHB", "page": 215, "srd52": True, "basicRules2024": True, "edition": "one", "type": "M|XPHB", "rarity": "none", "weight": 1, "value": 200, "weaponCategory": "simple", "property": ["F|XPHB", "L|XPHB", "T|XPHB"], "mastery": ["Nick|XPHB"], "range": "20/60", "dmg1": "1d4", "dmgType": "P", "dagger": True, "weapon": True},
+    {"name": "Warhammer", "source": "XPHB", "page": 215, "srd52": True, "basicRules2024": True, "edition": "one", "type": "M|XPHB", "rarity": "none", "weight": 5, "value": 1500, "weaponCategory": "martial", "property": ["V|XPHB"], "mastery": ["Push|XPHB"], "dmg1": "1d8", "dmgType": "B", "dmg2": "1d10", "hammer": True, "weapon": True},
+    # a property carrying a note, the only object-shaped one in the dump
+    {"name": "Lance", "source": "XPHB", "page": 215, "srd52": True, "basicRules2024": True, "edition": "one", "type": "M|XPHB", "rarity": "none", "weight": 6, "value": 1000, "weaponCategory": "martial", "property": ["H|XPHB", "R|XPHB", {"uid": "2H|XPHB", "note": "unless mounted"}], "mastery": ["Topple|XPHB"], "dmg1": "1d10", "dmgType": "P", "lance": True, "weapon": True},
+    # the 2014 Net ships (XPHB reprinted it as gear), with the name-only "S"
+    {"name": "Net", "source": "PHB", "page": 149, "basicRules": True, "edition": "classic", "type": "R", "rarity": "none", "weight": 3, "value": 100, "weaponCategory": "martial", "property": ["S", "T"], "range": "5/15", "net": True, "weapon": True},
+]
+IB_MAGIC = [
+    {"name": "Dagger of Venom", "source": "XDMG", "page": 248, "srd52": True, "basicRules2024": True, "baseItem": "dagger|xphb", "type": "M|XPHB", "rarity": "rare", "weight": 1, "weaponCategory": "simple", "property": ["F|XPHB", "L|XPHB", "T|XPHB"], "mastery": ["Nick|XPHB"], "range": "20/60", "dmg1": "1d4", "dmgType": "P", "bonusWeapon": "+1"},
+    # versatile, and adds Thrown and a range to its Warhammer
+    {"name": "Dwarven Thrower", "source": "XDMG", "page": 256, "srd52": True, "basicRules2024": True, "baseItem": "warhammer|xphb", "type": "M|XPHB", "rarity": "very rare", "reqAttune": "by a Dwarf or a Creature Attuned to a {@item Belt of Dwarvenkind|XDMG}", "weight": 5, "weaponCategory": "martial", "property": ["T|XPHB", "V|XPHB"], "mastery": ["Push|XPHB"], "range": "20/60", "dmg1": "1d8", "dmgType": "B", "dmg2": "1d10", "bonusWeapon": "+3"},
+    # finesse where its Longsword is not
+    {"name": "Sun Blade", "source": "XDMG", "page": 312, "srd52": True, "basicRules2024": True, "baseItem": "longsword|xphb", "type": "M|XPHB", "rarity": "rare", "reqAttune": True, "weight": 3, "weaponCategory": "martial", "property": ["F|XPHB", "V|XPHB"], "mastery": ["Sap|XPHB"], "dmg1": "1d8", "dmgType": "R", "dmg2": "1d10", "bonusWeapon": "+2"},
+    # no base item at all: a staff is its own quarterstaff
+    {"name": "Staff of Power", "source": "XDMG", "page": 308, "srd52": True, "basicRules2024": True, "type": "M|XPHB", "rarity": "very rare", "reqAttune": "by a sorcerer, warlock, or wizard", "weight": 4, "weaponCategory": "simple", "property": ["V|XPHB"], "mastery": ["Topple|XPHB"], "dmg1": "1d6", "dmgType": "B", "dmg2": "1d8", "bonusWeapon": "+2", "staff": True},
+    PB_ITEM,    # the object-shaped mastery: {"uid": "Vex|XPHB", "note": …}
+    # Tasha's: a bare 2014 code with no source at all
+    {"name": "+1 Moon Sickle", "source": "TCE", "page": 133, "baseItem": "sickle|PHB", "type": "M", "rarity": "uncommon", "reqAttune": "by a druid or ranger", "weight": 2, "weaponCategory": "simple", "property": ["L"], "dmg1": "1d4", "dmgType": "S", "bonusWeapon": "+1"},
+]
+IB_BASEFILE = _tmpjson({'itemProperty': IB_PROPS, 'itemMastery': IB_MASTERY, 'baseitem': IB_BASE})
+IB_MAGICFILE = _tmpjson({'item': IB_MAGIC})
+TCE = C.Book(codes=['TCE'], system='TCE')
+def _by_name(pack): return {x['name']: x for x in pack['items']}
+
+C._WEAPON_MISSES.clear()
+with C.statblock_ctx(C.load_item_index(IB_BASEFILE, IB_MAGICFILE)):      # as `all` and `supplement` set it
+    ib_base = _by_name(C.convert_items(IB_BASEFILE))
+    ib_magic = _by_name(C.convert_items(IB_MAGICFILE))
+    ib_tce = _by_name(C.convert_items(IB_MAGICFILE, book=TCE))
+dov = ib_magic.get('Dagger of Venom', {})
+ck('Dagger of Venom names its properties and mastery',
+   dov.get('weapon', {}).get('notes') == 'Range 20/60 · Finesse, Light, Thrown · Mastery: Nick', dov.get('weapon'))
+ck('...and attacks with finesse, as the Dagger does', dov.get('weapon', {}).get('ability') == 'finesse', dov.get('weapon'))
+ck('...its description reads the same names',
+   dov.get('description', '').startswith('Damage 1d4 piercing · Range 20/60 ft · Properties: Finesse, Light, '
+                                         'Thrown · Mastery: Nick · Base item: Dagger'), dov.get('description'))
+_dg = ib_base.get('Dagger', {}).get('weapon', {})
+ck('...and its weapon is the base Dagger\'s, plus only its +1',
+   {k: v for k, v in dov.get('weapon', {}).items() if k not in ('atkMisc', 'dmgMisc')} == _dg
+   and dov['weapon'].get('atkMisc') == 1 and dov['weapon'].get('dmgMisc') == 1, (dov.get('weapon'), _dg))
+dt = ib_magic.get('Dwarven Thrower', {}).get('weapon', {})
+ck('a versatile magic weapon: the Versatile dice once, not again as a bare "V"',
+   dt.get('notes') == 'Range 20/60 · Versatile 1d10 · Thrown · Mastery: Push', dt)
+ck('...and it keeps Strength, as its Warhammer does',
+   dt.get('ability') == 'str' == ib_base.get('Warhammer', {}).get('weapon', {}).get('ability'), dt)
+ck('the Sun Blade\'s own Finesse makes it a finesse weapon',
+   ib_magic.get('Sun Blade', {}).get('weapon', {}).get('ability') == 'finesse', ib_magic.get('Sun Blade'))
+ck('a staff with no base item names Versatile too (Staff of Power)',
+   ib_magic.get('Staff of Power', {}).get('weapon', {}).get('notes') == 'Versatile 1d8 · Mastery: Topple',
+   ib_magic.get('Staff of Power', {}).get('weapon'))
+pbw = ib_magic.get('Psychic Blade', {}).get('weapon', {})
+ck('an object-shaped mastery reads as the statblock reads it, note and all (Psychic Blade)',
+   pbw.get('notes') == 'Range 60/120 · Finesse, Thrown · Mastery: Vex (you can use this property, and it '
+                       "doesn't count against the number of properties you can use with Weapon Mastery)", pbw)
+ck('...not the dict\'s repr', '{' not in json.dumps(ib_magic.get('Psychic Blade', {}).get('description', '')) and
+   "'uid'" not in pbw.get('notes', ''), ib_magic.get('Psychic Blade'))
+ck('...and attacks with finesse', pbw.get('ability') == 'finesse', pbw)
+ms = ib_tce.get('+1 Moon Sickle', {})
+ck('a bare 2014 code resolves as well (Tasha\'s +1 Moon Sickle: "L")',
+   ms.get('weapon', {}).get('notes') == 'Light' and 'Properties: Light · Base item: Sickle' in ms.get('description', ''), ms)
+ck('an object-shaped property keeps its note (Lance)',
+   ib_base.get('Lance', {}).get('weapon', {}).get('notes') == 'Heavy, Reach, Two-Handed (unless mounted) · Mastery: Topple',
+   ib_base.get('Lance', {}).get('weapon'))
+ck('a definition whose name is a top-level key resolves (Net: "S")',
+   ib_base.get('Net', {}).get('weapon', {}).get('notes') == 'Range 5/15 · Special, Thrown', ib_base.get('Net', {}).get('weapon'))
+ck('every code in the fixtures resolved: nothing to warn about', not C._WEAPON_MISSES, dict(C._WEAPON_MISSES))
+
+# the statblock reads the same definitions through the same resolver
+with C.statblock_ctx(C.load_item_index(IB_BASEFILE, IB_MAGICFILE)):
+    ck('the Soulknife statblock still reads exactly as before',
+       C.flatten(PB_FEAT[1:2]) == PB_TRAITS, C.flatten(PB_FEAT[1:2]))
+
+# a code nothing defines is printed as it stands AND reported, never passed through quietly
+WOBBLE = {"name": "Wobbling Blade", "source": "XDMG", "srd52": True, "type": "M|XPHB", "rarity": "rare",
+          "weaponCategory": "martial", "property": ["F|XPHB", "Zz|XPHB"], "mastery": ["Wobble|XPHB"],
+          "dmg1": "1d8", "dmgType": "S"}
+C._WEAPON_MISSES.clear()
+with C.statblock_ctx(C.load_item_index(IB_BASEFILE)):
+    wb = C.convert_items(_tmpjson({'item': [WOBBLE]}))['items'][0]['weapon']
+ck('an unknown property or mastery code is printed as the code', wb.get('notes') == 'Finesse, Zz · Mastery: Wobble', wb)
+ck('...and counted with the item it is on',
+   C._WEAPON_MISSES.get(('property', 'Zz')) == {'Wobbling Blade'} and C._WEAPON_MISSES.get(('mastery', 'Wobble')) == {'Wobbling Blade'},
+   dict(C._WEAPON_MISSES))
+said = []
+C._weapon_miss_warnings(said.append)
+ck('...and reported as one WARNING per code, naming the item',
+   len(said) == 2 and any("'Zz'" in s and 'Wobbling Blade' in s for s in said), said)
+# with no definitions at all -- the magic file alone -- every code is a miss, not a silent pass
+C._WEAPON_MISSES.clear()
+C.convert_items(IB_MAGICFILE)
+ck('no definitions: the Dagger of Venom\'s codes are all reported',
+   all(('property', c) in C._WEAPON_MISSES for c in ('F', 'L', 'T')) and ('mastery', 'Nick') in C._WEAPON_MISSES,
+   dict(C._WEAPON_MISSES))
+C._WEAPON_MISSES.clear()
+
+# ...at the end of every kind of run that converts items
+_dump = tempfile.mkdtemp()
+json.dump({'itemProperty': IB_PROPS, 'itemMastery': IB_MASTERY, 'baseitem': IB_BASE},
+          open(os.path.join(_dump, 'items-base.json'), 'w'))
+json.dump({'item': IB_MAGIC + [WOBBLE, dict(WOBBLE, source='TCE')]}, open(os.path.join(_dump, 'items.json'), 'w'))
+_out = tempfile.mkdtemp()
+for label, argv, outfile in (
+        ('`items` on the magic file, items-base.json beside it',
+         ['items', os.path.join(_dump, 'items.json'), '-o', os.path.join(_out, 'i.json')], 'i.json'),
+        ('all', ['all', _dump, '-o', os.path.join(_out, 'all')], os.path.join('all', 'items-magic.json')),
+        ('supplement', ['supplement', _dump, '-o', os.path.join(_out, 'sup'), '--book', 'TCE'],
+         os.path.join('sup', 'items-magic.json'))):
+    r = subprocess.run([sys.executable, CONV] + argv, capture_output=True, text=True)
+    ck('%s warns about the unknown code' % label,
+       "WARNING: weapon property 'Zz'" in r.stdout and 'Wobbling Blade' in r.stdout, r.stdout[-800:] + r.stderr[-300:])
+    try:
+        got = _by_name(json.load(open(os.path.join(_out, outfile), encoding='utf-8')))
+    except (OSError, ValueError) as e:
+        got = {'error': str(e)}
+    want = 'Moon Sickle' if label == 'supplement' else 'Dagger of Venom'
+    w = next((v.get('weapon', {}) for k, v in got.items() if want in k), {})
+    ck('%s names the known codes' % label,
+       w.get('notes') in ('Light', 'Range 20/60 · Finesse, Light, Thrown · Mastery: Nick'), got.get('error') or w)
+shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True)
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

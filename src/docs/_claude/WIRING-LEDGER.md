@@ -4131,3 +4131,68 @@ need a display name separate from the `className` the flow keys on.
 
 Pages: [character building](../wiki/features/character-building.md), [shell](../wiki/ui/shell.md),
 [rich text](../wiki/architecture/rich-text.md); `decisions.md`. Known issues are reconciled at merge.
+
+## Magic weapons take their base weapon's property names and attack ability (#72, 2026-09-28)
+
+**Root cause.** `convert_items()` named weapon properties from the `itemProperty` list of the file it
+was converting, and masteries by chopping `"Nick|XPHB"` at the bar. Only `items-base.json` defines
+properties (`itemProperty`, 27) and masteries (`itemMastery`, 8); `items.json` copies each base
+weapon's codes onto its magic weapons and defines none. So every magic weapon printed its codes
+("Properties: F, L, T"), and because `ability` is `"finesse"` only when "Finesse" is in the named
+list, a finesse magic weapon attacked with Strength. Two object-shaped references printed Python's
+repr: the Psychic Blade's mastery `{uid: "Vex|XPHB", note}` ("{'uid': 'Vex") and, in the *base*
+pack, the Lance's `{uid: "2H|XPHB", note: "unless mounted"}`. The 2014 `S` property is the one
+definition with no `entries`, only a top-level `name: "special"`, so the base Net printed "S" too.
+Checked first: the dump's magic weapons already inline every base field (dice, damage type, range,
+`dmg2`, category), and the only differences from their base weapon are deliberate (Sun Blade adds
+Finesse and radiant damage; Dwarven Thrower and Quarterstaff of the Acrobat add Thrown and a
+range). Naming was the whole bug; nothing needed merging from the base weapon.
+
+**Fix.** `_weapon_defs()` reads both lists from one file (a property by its first entry's name,
+else its top-level `name`, first letter capitalised); `load_item_index()` now returns
+`(items, props, masteries)`. `convert_items()` starts from that index (set by `all` and
+`supplement`, which already loaded it for #68's statblocks) and adds its own file's definitions.
+One resolver, `_weapon_refs()`, serves `convert_items()` and `_item_traits()`: it takes `"F"`,
+`"F|XPHB"` or `{uid, note}`, names a property by abbreviation and a mastery by name, and renders a
+note as "Two-Handed (unless mounted)". A code nothing defines is printed as it stands and recorded
+in `_WEAPON_MISSES` with the items carrying it; `_weapon_miss_warnings()` reports each as a
+`WARNING` at the end of `all`, `supplement` and every single subcommand. The single `items`
+subcommand indexes the `items-base.json` beside its input, so `items items.json` now names what
+`all` names. Every code in the v2.36.1 dump resolves; no run warns.
+
+**Data.** Only `description` (its Properties and Mastery segments) and `weapon` (`notes`, and
+`ability` on four) of weapon items moved; checked field by field against the committed files. 30
+items: core `items-magic.json` 21 (Dagger of Venom, Psychic Blade, Scimitar of Speed and Sun Blade
+`str` → `finesse`; Dwarven Thrower, Javelin of Lightning, Quarterstaff of the Acrobat, Thunderous
+Greatclub, Trident of Fish Command and 12 staves renamed only), core `items.json` 2 (Lance, Net),
+Xanathar's 3 staves, Tasha's 4 (three Moon Sickles, Baba Yaga's Pestle; Devotee's Censer has no
+properties and did not move). A versatile weapon's notes also lose the stray code: "Versatile 1d8 ·
+V" becomes "Versatile 1d8", as the base Quarterstaff reads. Every other file of the three packs
+regenerates byte for byte, `classes.json` included (the Soulknife statblock reads as before). A
+data-only change, so no UNRELEASED bullet; the 5e2024, XGE and TCE `DATA_VERSIONS` move at the
+next release, correctly.
+
+**In the app.** Nothing parses weapon notes: `addAttackForItem()` copies `notes` into the attack row
+and `ability` drives `attackNumbers()`. Existing characters keep their copies until the
+rules-update tool runs: `weapon` and `description` are in `UPD_FIELDS.item`, so a stamped copy
+shows "description, weapon changed", ticked unless the player edited the item. Applying it rewrites
+both and `updResyncAttack()` rebuilds the linked attack with `finesse` only if the player never
+touched it; an edited attack keeps `str`. Driven in a scratch harness with the old and new Dagger
+of Venom (STR 8, DEX 18: to-hit 3 → 8). Nothing changes a saved character on load.
+
+**Guards.** `converter.py` 199 → 225: real shapes from the dump (Dagger of Venom against the base
+Dagger, Dwarven Thrower, Sun Blade, Staff of Power, the Psychic Blade's mastery object, Tasha's bare
+`"L"`, the Lance's property object, the Net's `S`), an unknown code printed and warned, a
+definition-less run reporting every code, and the WARNING from `items`, `all` and `supplement` on a
+two-file dump; 24 of the 26 failed before the fix. `rules-data.js` 615 → 621 over every pack: no
+bare code or repr in any weapon's notes or description, every melee weapon listing Finesse attacks
+with finesse, and every magic weapon keeps its named base weapon's dice, kind, properties and
+finesse; three failed before. Mutation-checked: setting two abilities back to `str` fails both
+finesse guards. Pages: [converter](../wiki/data/converter.md),
+[supplements](../wiki/data/supplements.md), [attacks & damage](../wiki/features/attacks-and-damage.md).
+
+**Seen, not fixed** (separate cause): a `+N` magic weapon's bonus counts twice. `_item_effects()`
+turns `bonusWeapon` into global `attack` and `damage` effects, and `convert_items()` also writes it
+as `weapon.atkMisc`/`dmgMisc`. `attackNumbers()` adds both on the weapon's own row, and the effects
+add +N to every other attack while it is equipped. 15 weapons: 11 core (Dagger of Venom, Sun Blade,
+Staff of Power, …) and 4 Tasha's. Seen in the scratch harness above.
