@@ -156,8 +156,7 @@ function addClass(name,lvl){
   const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
-  if(choices.length||notes.length)runChoices(name,choices,notes,_eq);
-  else runExtraChoices(_eq);
+  runChoices(name,choices,notes,_eq);   /* with nothing to show, it opens the equipment picker itself */
 }
 function removeClass(idx){
   const c=character.classes[idx];if(!c)return;
@@ -220,8 +219,12 @@ function doLevelDown(){
   document.getElementById("ldCancel").addEventListener("click",closeModal);
   document.querySelectorAll("[data-lvldown]").forEach(b=>b.addEventListener("click",()=>{const i=num(b.dataset.lvldown);closeModal();proceed(i);}));
 }
-/* ---- subclasses ---- */
-function selectSubclass(className,subName){
+/* ---- subclasses ----
+   `pending` is what waits behind the subclass's own window (the class window's
+   starting-equipment picker and feat skill choices, #63); runChoices() carries
+   it to that window's Done, or straight on when the subclass has nothing to
+   choose at these levels. */
+function selectSubclass(className,subName,pending){
   const entry=character.classes.find(c=>c.name===className);if(!entry)return;
   const d=findClassDef(className);
   const oldSub=entry.subclass;
@@ -240,7 +243,7 @@ function selectSubclass(className,subName){
     });
   }
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
-  runChoices(className,choices,notes);
+  runChoices(className,choices,notes,pending);
 }
 function chooseSubclass(className){
   const d=findClassDef(className);const subMap=subclassesFor(d);const subs=Object.keys(subMap);

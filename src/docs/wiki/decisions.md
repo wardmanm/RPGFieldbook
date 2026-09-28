@@ -70,7 +70,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How grants are undone** — Provenance-tracked clean revert
 - **How an origin's content is updated from a newer pack** — Per feature, spell and item
 - **Which CON the level-1 HP seed reads** — `modOf()` of the score
-- **Where the starting-equipment picker waits** — Passed with its window to its own Done
+- **Where the starting-equipment picker waits** — Passed with its window to its own Done, or on from its dismissal
 - **Where Student of War's tool proficiency goes** — A feature
 
 ### [Computed stats & effects](architecture/computed-stats-and-effects.md)
@@ -113,6 +113,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Species from the other system** — Filtered out of the picker only
 - **An option already on the sheet** — Ticked and `data-fixed` in checkboxes; just disabled in radios
 - **Where the equipment picker waits** — Passed to `runChoices()` and on to its own Done
+- **When a picked subclass has choices of its own** — Its window opens first; feat skill choices and the equipment picker wait behind it
+- **What a dismissed choice window does with the windows behind it** — Hands them on (`then`)
 - **Student of War's tool** — An `option` that becomes a feature
 
 ### [Abilities & skills](features/abilities-and-skills.md)
@@ -268,6 +270,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Does `selectTab()` scroll?** — No. The caller decides: the tab bar goes to the top, a note jump to its card
 - **Where does the dismissal guard live?** — `dismissModal()`, in front of the three user dismissals only
 - **Which modals get a guard?** — Only one that stands to lose something (the choice pickers)
+- **Where a dismissed window's follow-up lives** — With its guard, as `then`, cleared by every open and close
 - **Where does auto-focus land?** — The first text box on the first screenful with a fine pointer; the dialog itself on touch
 - **The emblem slot in the header** — Assigned on every open
 - **Where the toast lives** — In the template, empty from load

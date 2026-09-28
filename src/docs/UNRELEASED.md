@@ -28,4 +28,7 @@ Bullets below this line — leave the heading in place.
 
 ## Pending
 
-_Nothing yet._
+- Taking a class at level 3 or higher no longer skips your subclass's own choices. Pick Battle
+  Master and you are now asked for your Maneuvers and Student of War before the starting equipment,
+  and a feat's skill choices wait their turn too. Closing one of these windows no longer loses the
+  starting-equipment choice that comes after it.

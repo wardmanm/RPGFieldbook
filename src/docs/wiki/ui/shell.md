@@ -13,7 +13,8 @@ buttons, the toast, and the wiring in `90-boot.js` that binds all of it once at 
 in `85-browse.js` · `wire()`, `boot()` in `90-boot.js` · `toast()` in `60-attacks.js` ·
 `showUpdatePill()` in `30-version.js` · `10-chrome.css`, `50-modal.css` ·
 **Tests:** `rules-data.js` (tab bar, dismissals, ToC visibility, combat tab), `sheet.js`
-(`MODAL_FOCUS_FIELDS`, `openerSelector()`, `finderQty()`) ·
+(`MODAL_FOCUS_FIELDS`, `openerSelector()`, `finderQty()`), `char-update.js` (what a dismissal
+hands on) ·
 **See also:** [Sections & layout](sections-and-layout.md), [Theming & icons](theming-and-icons.md),
 [Combat view](../features/combat-view.md), [Build & source split](../architecture/build-and-source-split.md),
 [Screenshot QA](../process/screenshot-qa.md)
@@ -87,16 +88,23 @@ Rules tab's two cards, `#concCard`) are listed too.
 One `#modal` backdrop holds `.modal` (`role="dialog"`, `aria-modal`, `tabindex="-1"`) with
 `#mIcon`, `#mTitle`, `#mClose` and `#mBody`.
 
-- `openModal()` (title, html, icon) clears the dismiss guard, sets the title as `textContent`
+- `openModal()` (title, html, icon) clears the dismiss guard and its `then`, sets the title as `textContent`
   (it is player data), sets `#mIcon` to the icon or `""` on **every** call, puts the HTML into
   `#mBody` as `innerHTML` (callers escape), shows the dialog and calls `modalTakeFocus()`. Calling it
   while open swaps the content in place.
-- `closeModal()` clears the guard, hides the dialog, empties `#mBody` and gives focus back.
+- `closeModal()` clears the guard and its `then`, hides the dialog, empties `#mBody` and gives
+  focus back.
 - **Dismissal.** ×, a backdrop click and Escape (a document `keydown` bound at load in
   `80-modal-forms.js`) all go to `dismissModal()`. If a guard is set, it returns a message and the
   close waits on a `confirm` prompt. Done and Save handlers call `closeModal()` directly. Only
   the "choose N" pickers arm a guard, via `armChoiceDismissGuard()` after `openModal()`
   ([Character building](../features/character-building.md)).
+- **What a dismissal hands on.** `setDismissGuard(fn, then)` may also register `then`, and
+  `dismissModal()` runs it after `closeModal()`. The choice windows use it to open the windows still
+  queued behind them, so a dismissed window costs only its own picks. Because every open and close
+  clears it, `then` lives exactly as long as its window. The second window opens the way a Done's
+  follow-up does, and `modalGiveBackFocus()`'s deferred look leaves focus alone once it is inside
+  that window.
 - **Focus in.** On a fresh open, `modalTakeFocus()` records the opener (the focused element, unless
   it is `<body>` or inside the dialog) and `openerSelector()` for it. It makes every other `<body>`
   child `inert` except the dialog, `#toast`, scripts and anything already inert, and remembers
@@ -190,8 +198,10 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
   `button`/`svg`/`input`/`select` or carry `.grow`/`.add`/`.cnt`/`.enc-pill`, or its text leaks into
   the flyout entry. The note preview is a `<span>` inside the note button for this reason.
 - **`openModal()` begins `_dismissGuard=null;`.** `rules-data.js` asserts that literal prefix, and
-  that `closeModal()` clears it too. A guard is armed after `openModal()`, never before. The three
-  user dismissals go through `dismissModal()`.
+  that `closeModal()` clears it too. Both also clear `_dismissThen`, so a dismissal's follow-up
+  never fires for a later window (`char-update.js` checks this by behaviour). A guard is armed after
+  `openModal()`, never before. The three user dismissals go through `dismissModal()`, which reads
+  `then` before `closeModal()` clears it.
 - **`#mIcon` is assigned on every open.** No test guards this.
 - **The modal title is `textContent`, the body is `innerHTML`.** Callers escape the body and must
   not escape the title.
@@ -234,6 +244,7 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 | Does `selectTab()` scroll? | No. The caller decides: the tab bar goes to the top, a note jump to its card | Scrolling inside it: a note jump would fight its own tab switch |
 | Where does the dismissal guard live? | `dismissModal()`, in front of the three user dismissals only | Inside `closeModal()`: every Done handler calls it and would have to answer its own prompt |
 | Which modals get a guard? | Only one that stands to lose something (the choice pickers) | A guard everywhere: for an ordinary form Escape is cancel and must stay instant |
+| Where a dismissed window's follow-up lives | With its guard, as `then`, cleared by every open and close | A module global: the old equipment queue outlived its window and fired after the next level-up (L3649) |
 | Where does auto-focus land? | The first text box on the first screenful with a fine pointer; the dialog itself on touch | A field on touch: it raises the on-screen keyboard for every form. A `<select>`: type-ahead rewrote the form |
 | The emblem slot in the header | Assigned on every open | Behind `if(icon)`: all but six of the ~50 call sites pass nothing and must clear it, or a class emblem leaks into the next modal |
 | Where the toast lives | In the template, empty from load | Created on demand: a live region created and filled in the same moment is not announced |
@@ -270,3 +281,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-09-24 — The item finder gains Qty, and a redraw keeps the footer. → ledger L3503, #50
 - 2026-09-24 — A clear button in every search box, `#brSearch` included. → ledger L3525, #49
 - 2026-09-25 — The combat view becomes a tab; `cvInert`, `aria-modal` and its capture-phase Esc are removed. → ledger L3676
+- 2026-09-28 — `setDismissGuard()` takes `then`, what a dismissed window hands on; `dismissModal()` runs it after closing. → ledger L3761, #63

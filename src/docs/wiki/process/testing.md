@@ -42,7 +42,7 @@ it after a build.
 | `tables.js` | `tableHTML()` structure and escaping, the `[Table: X]` anchor pass through `highlight()`, the tables rules category, `migrate()` round-trip, the shipped-table defects (non-empty `cols`, no `_` keys, row widths, unique names, owners), and `noteHTML()`, whose safety argument is that pipeline |
 | `rules-data.js` | Species filtering by system and `excludeSystems`, missing-dependency reporting, the rules cache never failing silently and its LZW fallback, Settings bucketing and clear-all, **the bundle round-trip** (a bundle equals importing each file), supplement packs, `DATA_VERSIONS` staleness. It also holds the markup guards: the note registry, the tab bar, every `getElementById` target existing app-wide, the Vitals structure, every Settings control still wired, the combat tab, and the byte-pin of `src/html` against the built file |
 | `sheet.js` | The pure functions the sheet leans on: signed coin/HP entry, temp HP, weight and encumbrance, size, origins, "choose N" budgets, stat layouts, feature grouping and the feat picker, dice expressions, item uses, spell allotments, rich text, emblems, attack damage strings, armor and AC, concentration, the combat view's pure helpers, modal focus |
-| `char-update.js` | The version stamp and the rules-update tool: fingerprints, diff classification, apply keeping character-local state, backups, gating, the R1–R5 regressions; plus level-1 HP seeding, the level-up HP step, option pickers, resource dice, starting-equipment grants |
+| `char-update.js` | The version stamp and the rules-update tool: fingerprints, diff classification, apply keeping character-local state, backups, gating, the R1–R5 regressions; plus level-1 HP seeding, the level-up HP step, option pickers, resource dice, starting-equipment grants, and the order the choice windows open in, driven through the real flow with the 2024 Fighter |
 | `docs.js` | Doc claims as assertions (below) |
 | `humblewood-verbatim.py` | Humblewood core prose is word-for-word the book; Gadgeteer prose too. Needs `.venv` (pymupdf) and the source PDF; **prints `SKIP` and exits 0 without them** |
 
@@ -185,3 +185,4 @@ written before `src/tests/` existed was lost along with its scratchpad.
 - 2026-08-17 — `loadHTML` splices the markup; `block` throws on unbalanced markup; the byte-pin assertion. → ledger L2592
 - 2026-08-18 — Saved sheets kept damage-less spell rows that only browser QA caught. → ledger L2989
 - 2026-08-18 — `run.sh` probes Python by running it, fixing both Python suites on Windows. → ledger L3246
+- 2026-09-28 — `char-update.js` drives the choice windows through the real flow, pressing Done through captured handlers. → ledger L3761, #63
