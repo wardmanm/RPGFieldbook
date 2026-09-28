@@ -150,7 +150,47 @@ const ROOT = path.join(__dirname, '..', '..');
 
   ck(sys + ': every table declares an owner and kind',
      tables.every(t => t.owner && t.ownerKind), tables.filter(t => !t.owner || !t.ownerKind).map(t => t.name).slice(0, 4));
+
+  // a column with a label and nothing under it is a column whose cells the
+  // converter could not render — Rage Damage, Martial Arts and Unarmored
+  // Movement shipped that way for months (#64), and passed every check above
+  const hollow = tables.flatMap(t => (t.cols || []).map((c, i) => [t, c, i]))
+    .filter(([t, c, i]) => (t.rows || []).length && t.rows.every(r => !String(r[i] ?? '').trim()))
+    .map(([t, c]) => t.name + ' / ' + (c || '(unlabelled)'));
+  ck(sys + ': no column is blank in every row', hollow.length === 0, hollow.slice(0, 6));
 });
+
+// ---- the 2024 class progression tables, pinned to the book (#64)
+// 5e-tools writes these cells as {"type":"dice"}, {"type":"bonus"} and
+// {"type":"bonusSpeed"}. When the converter could not render them, the columns
+// shipped blank — and Bard and Rogue, whose only non-spell column is dice,
+// lost their tables entirely, which no blank-column check can see.
+{
+  const all = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', '5e2024', 'tables.json'), 'utf8')).tables;
+  const cell = (name, col, level) => {
+    const t = all.find(x => x.name === name);
+    if (!t) return undefined;
+    const row = t.rows.find(r => r[0] === String(level));
+    return row ? row[t.cols.indexOf(col)] : undefined;
+  };
+  ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock']
+    .forEach(c => ck('5e2024: ' + c + ' Features table ships', all.some(t => t.name === c + ' Features')));
+  ck('5e2024: Rage Damage +2 / +3 / +4',
+     [1, 9, 16].map(l => cell('Barbarian Features', 'Rage Damage', l)).join() === '+2,+3,+4',
+     [1, 9, 16].map(l => cell('Barbarian Features', 'Rage Damage', l)));
+  ck('5e2024: Martial Arts 1d6 … 1d12',
+     [1, 5, 11, 17].map(l => cell('Monk Features', 'Martial Arts', l)).join() === '1d6,1d8,1d10,1d12',
+     [1, 5, 11, 17].map(l => cell('Monk Features', 'Martial Arts', l)));
+  ck('5e2024: Unarmored Movement — then +10 ft. … +30 ft.',
+     [1, 2, 18].map(l => cell('Monk Features', 'Unarmored Movement', l)).join() === '—,+10 ft.,+30 ft.',
+     [1, 2, 18].map(l => cell('Monk Features', 'Unarmored Movement', l)));
+  ck('5e2024: Bardic Die 1d6 … 1d12',
+     [1, 5, 10, 15].map(l => cell('Bard Features', 'Bardic Die', l)).join() === '1d6,1d8,1d10,1d12',
+     [1, 5, 10, 15].map(l => cell('Bard Features', 'Bardic Die', l)));
+  ck('5e2024: Sneak Attack 1d6 … 10d6',
+     [1, 3, 19].map(l => cell('Rogue Features', 'Sneak Attack', l)).join() === '1d6,2d6,10d6',
+     [1, 3, 19].map(l => cell('Rogue Features', 'Sneak Attack', l)));
+}
 
 /* ================= section-note markdown =================
    noteHTML() renders the player's own words, so it is the one place in the app

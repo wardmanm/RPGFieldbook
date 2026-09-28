@@ -8,10 +8,11 @@ import. The player-facing how-to is [README-converter](../../../../docs/README-c
 page is what that file does not say: what must not move, and the traps that have already shipped.
 
 **Code:** `main()`, `pick_2024_preferred()`, `pick_sources()`, `flatten()`, `table_ctx()`,
-`ref_ctx()`, `_register()`, `_class_tables()`, `convert_classes()`, `_optfeat_choices()`,
-`convert_races()`, `_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in
-`scripts/bundle-rules.js`; `dataChangedSince()` in `scripts/release.js`; `mergeRules()` in
-`89-rules-merge.js`; `DATA_VERSIONS` in `30-version.js`; `RULE_CATS` in `88-settings.js` ·
+`ref_ctx()`, `_register()`, `_cell_text()`, `_dice_text()`, `_cell_miss_warnings()`,
+`_class_tables()`, `convert_classes()`, `_optfeat_choices()`, `convert_races()`, `_pack()`,
+`_write()` in `scripts/convert.py`; `bundle()` in `scripts/bundle-rules.js`; `dataChangedSince()`
+in `scripts/release.js`; `mergeRules()` in `89-rules-merge.js`; `DATA_VERSIONS` in
+`30-version.js`; `RULE_CATS` in `88-settings.js` ·
 **Data:** `data/5e2024/*.json`, `data/overlay.json`, `data/class-resources.json`,
 `_conversion-data/5etools-v2.36.1/` (gitignored) · **Tests:** `converter.py`, `rules-data.js`,
 `tables.js` · **See also:** [Supplements](supplements.md), [Rules packs](../architecture/rules-packs.md),
@@ -40,7 +41,7 @@ the glossary and species go through it via `pick_sources()`. `convert_background
 
 **Current output** (counted from `data/5e2024/`): 16 backgrounds, 14 classes, 21 conditions,
 77 feats, 58 features, 115 glossary terms, 99 items, 542 magic items, 10 species, 391 spells,
-105 tables. Spells carry a `class` list only when `--sources sources.json` is supplied (`all` finds
+107 tables. Spells carry a `class` list only when `--sources sources.json` is supplied (`all` finds
 it in `spells/`); the spell file itself has no per-spell class data.
 
 **Tables are lifted, not dropped.** While an entity is flattened inside `table_ctx()`, every
@@ -50,8 +51,17 @@ it in `spells/`); the spell file itself has no per-spell class data.
 colliding name `" (2)"`, because the name is the app's merge key and the anchor's only handle.
 `_class_tables()` turns `classTableGroups` into one Level-indexed `"<Class> Features"` table,
 skipping spell-slot groups and the cantrip/prepared/known count columns, and suppressing a table
-left with nothing but its Level column. `all` writes the sink as `tables.json`; a single
-subcommand does so only with `--tables PATH`. How the app renders them: [Rules & tables](../features/rules-and-tables.md).
+left with nothing but its Level column. Eleven of the twelve 2024 classes get one; the Wizard's
+columns are all spell counts. `all` writes the sink as `tables.json`; a single subcommand does so
+only with `--tables PATH`.
+
+**Cells are rendered as the book prints them.** `_cell_text()` de-tags strings, prints a `roll` as
+text (`01-02`), flattens `entry`/`entries`, and renders the three typed values 5e-tools uses, all
+in `classTableGroups`: `bonus` as `+2` (Rage Damage), `bonusSpeed` as `+10 ft.`, or `—` for 0
+(Unarmored Movement), and `dice` as `1d6` through `_dice_text()` (Martial Arts, Bardic Die, Sneak
+Attack). A dict cell it cannot read comes back blank **and** is counted in `_CELL_MISSES`;
+`_cell_miss_warnings()` turns the count into a `WARNING` at the end of `all`, `supplement` and a
+`--tables` run. How the app renders them: [Rules & tables](../features/rules-and-tables.md).
 
 **References are inlined.** A class or subclass feature can point at a sibling feature
 (`refClassFeature` / `refSubclassFeature`) instead of containing it. Inside `ref_ctx()`,
@@ -101,8 +111,8 @@ has no `DATA_VERSIONS` entry.
 - **Stdlib only.** `convert.py` ships to players. Anything needing a third-party library belongs in
   a dev-only script (the Humblewood extractor is the precedent).
 - **Never quiet.** A missing input warns; a supplement category with nothing in it writes no file
-  and says so; a subclass that resolves no features is listed in a `WARNING`. Every bug on this page
-  was a silent skip first.
+  and says so; a subclass that resolves no features is listed in a `WARNING`, and so is every
+  table cell `_cell_text()` could not read. Every bug on this page was a silent skip first.
 - **Anchors only when a sink is collecting.** With no sink, a table is dropped with no anchor: an
   anchor with nothing behind it reads worse than the old silent drop.
 - **Table names are unique and global.** They are the merge key in the app and the only thing an
@@ -141,6 +151,14 @@ has no `DATA_VERSIONS` entry.
   in the class files of the v2.36.1 dump, and the real reason Wild Magic Surge was missing), then
   every `refOptionalfeature` ("…presented in alphabetical order." with nothing
   after). Guard: `converter.py` covers each node type.
+- **Blank class columns, and whole tables gone.** `_cell_text()` once read only strings, numbers,
+  `roll` and `entries`, and returned `''` for anything else without a word. Barbarian's Rage Damage
+  and Monk's Martial Arts and Unarmored Movement shipped blank from the first table release until
+  #64, and Bard and Rogue lost their Features tables outright: a dice column was all they had, so
+  the Level-only guard suppressed them. `converter.py` passed throughout, because its fixture wrote
+  Rage Damage as the string `'+2'`. Guard: the fixtures now copy real cells from the dump, an
+  unread cell is a `WARNING`, and `tables.js` fails on any shipped column that is blank in every
+  row and pins the 2024 values.
 - **A tagline as a description.** `_sub_blurb()` takes a subclass's first paragraph over 40
   characters; eight 2024 italic taglines are 41+ and shipped as the whole description. It now skips
   a paragraph that is only `{@i …}`.
@@ -165,6 +183,8 @@ has no `DATA_VERSIONS` entry.
 | Which flags mark the free 2024 subset | `basicRules2024` **or** `srd52` | One flag: v2.36.1 moved the Cloak of Invisibility to `srd52` alone. Measured first: across the pack the change only adds free-subset entries and removes nothing |
 | A table found with no sink collecting | Drop it, emit no anchor | An anchor: a dangling anchor is worse than the silent drop it would replace |
 | Spell-slot columns in class tables | Skipped | Kept: the app derives slots by level, and a 10-column grid swamps a phone |
+| A table cell `_cell_text()` cannot read | Blank, counted, and a `WARNING` at the end of the run (#64) | Silently blank: how Rage Damage and four other columns hid for months. Failing the run: a player on a newer dump would get no pack at all over one cell |
+| How typed class-table cells print | As the book prints them: `+2`, `1d6`, `+10 ft.`, `—` for a speed bonus of 0 | The bare number (`2`, `10`): a Rage Damage of `2` and an Unarmored Movement of `10` read as a count, not a bonus |
 | Where `overlay.json` and `class-resources.json` live | At the `data/` root; in the zip, beside `convert.py` | In a system folder: the bundler would sweep them into a pack |
 | How options reach the level-up picker | Inlined in every choice (~150 KB across the packs) | A shared reference: ~5× smaller, but needs app code and cross-pack filtering; inline needs none, and an older app gets pickers from a re-downloaded pack alone |
 | Which printing of an option a class offers | The class's own source only, falling back to PHB for a 2014 book with none | Mixing printings: a 2024 Battle Master would be offered the 2014 Parry too |
@@ -172,16 +192,18 @@ has no `DATA_VERSIONS` entry.
 
 ## Open
 
-- **Class progression tables lose their dice and bonus columns.** `_cell_text()` renders strings,
-  numbers, `roll` and `entry`/`entries` cells; 5e-tools writes `classTableGroups` cells such as
-  Rage Damage as `{"type":"bonus","value":2}` and Bardic Die, Martial Arts and Sneak Attack as
-  `{"type":"dice","toRoll":[…]}`, and those come back empty. Result in `data/5e2024/tables.json`,
-  unchanged since tables first shipped: Barbarian Features has a blank Rage Damage column, Monk
-  Features blank Martial Arts and Unarmored Movement, and Bard and Rogue have no Features table at
-  all (left with only a Level column, so suppressed). `converter.py` passes because its synthetic
-  class table writes Rage Damage as the string `'+2'`. Fixing it moves `data/5e2024/`, so it is a
-  data release. Prose tables in the dump carry no such cells (scanned), so only class tables are
-  affected.
+- **Subclass table groups are never read.** A subclass carries `subclassTableGroups`, not
+  `classTableGroups`, so `_class_tables()` on a subclass returns nothing. Harmless in the v2.36.1
+  dump: the XPHB groups are Eldritch Knight's and Arcane Trickster's spell counts, which it would
+  skip, and Psi Warrior's and Soulknife's die size and number, which their prose "Energy Dice"
+  tables already carry. It would miss a new one.
+- **`abilityDc` and `abilityAttackMod` prose nodes are dropped** by `flatten()`: Xanathar's "your
+  Arcane Shot save DC is calculated as follows:" ends there, and the core pack's Artificer (its TCE
+  printing) loses its spell save DC and attack modifier formulas. Seen while scanning for #64; they
+  are prose, not table cells.
+- **A cell carrying both `roll` and `entry` prints only the roll.** Only the DMG, BMT and LLK decks
+  (Deck of Many Things, Deck of Illusions…) use it, and no pack ships those printings; the 2024
+  decks have a different shape.
 - The Artificer and the UA Mystic sit in `data/5e2024/classes.json` under the `XPHB` stamp; see
   [Supplements](supplements.md).
 - `convert.py` looks for its helper files in the dump and in `<repo>/data/`, never beside itself,
@@ -204,3 +226,4 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-25 — Option pickers across seven classes and subclasses; `_sub_blurb()` skips taglines. → ledger L3596, #60
 - 2026-09-25 — Option `cost`, `"Class/Subclass"` trackers, Student of War, `features.json`. → ledger L3649
 - 2026-09-25 — Source dump moved to 5e-tools v2.36.1; `srd52` backfill. → ledger L3676
+- 2026-09-28 — Class tables keep their `dice`, `bonus` and `bonusSpeed` cells; Bard and Rogue Features tables (105 → 107); an unreadable cell is a `WARNING`. → ledger L3761, #64

@@ -3757,3 +3757,40 @@ changed and why, and a link to the page that now describes it.
   entry last", but History cites its line number, so it has to come first. Fixed in the skill,
   CLAUDE.md and the index header.
 - Dev docs only: no app change, no UNRELEASED bullet, no rebuild.
+
+## Class progression tables keep their dice and bonus cells (#64, 2026-09-28)
+
+**Root cause.** 5e-tools writes some `classTableGroups` cells as typed objects, and `_cell_text()`
+rendered strings, numbers, `roll` and `entry`/`entries` only; anything else came back `''`,
+silently. Scanned from the v2.36.1 dump, every table the converter reads uses exactly three such
+shapes, all in class tables: `{"type":"bonus"}` (Rage Damage), `{"type":"bonusSpeed"}` (Unarmored
+Movement, `0` at Monk level 1) and `{"type":"dice","toRoll":[{number,faces}]}` (Martial Arts,
+Bardic Die, Sneak Attack). **Bard and Rogue were dropped, not blanked**: once the spell columns are
+skipped, a dice column is all they have, so `_class_tables()`'s guard against a Level-only table
+suppressed them. `converter.py` passed because its synthetic Barbarian wrote Rage Damage as `'+2'`.
+Wrong since tables first shipped (888c4be).
+
+**Fix.** `_cell_text()` renders them the way the book prints them: `+2`, `1d6`/`10d6`
+(`_dice_text()`), `+10 ft.`, and `—` for a speed bonus of 0. A dict cell it still cannot read is
+counted in `_CELL_MISSES` and reported as a `WARNING` by `all`, `supplement` and `--tables`
+(`_cell_miss_warnings()`), so the next new shape cannot hide the same way.
+
+**Data.** `data/5e2024/tables.json` only: 105 → 107 tables (+Bard Features, +Rogue Features, 20 rows
+each) and 60 blank cells filled (Barbarian Rage Damage, Monk Martial Arts and Unarmored Movement,
+20 each). No non-blank cell and no other table moved; every other 5e2024 file, and Xanathar's and
+Tasha's in full, regenerate byte for byte (they convert no class progression table). A data
+change, so no UNRELEASED bullet; the release bumps 5e2024's `DATA_VERSIONS` itself.
+
+**Guards.** `converter.py` now builds Barbarian, Monk, Bard and Rogue tables from cells copied out
+of the dump. `tables.js` asserts, for every pack, that no column is blank in every row (only these
+two tables ever were), and pins the 2024 values: eleven Features tables (Wizard has none), Rage
+Damage +2/+3/+4, Martial Arts 1d6…1d12, Unarmored Movement —/+10 ft.…+30 ft., Bardic Die, Sneak
+Attack 1d6…10d6. Pages: [converter](../wiki/data/converter.md),
+[rules & tables](../wiki/features/rules-and-tables.md).
+
+**Seen, not fixed** (separate causes): subclasses carry `subclassTableGroups`, not
+`classTableGroups`, so `_class_tables()` on a subclass is a no-op — harmless today (the XPHB groups
+are spell columns it would skip, or Psi Warrior/Soulknife die data their prose "Energy Dice" tables
+already carry), but it would not pick up a new one. And `flatten()` drops
+`abilityDc`/`abilityAttackMod` prose nodes, so Xanathar's "your Arcane Shot save DC is calculated
+as follows:" ends with nothing.

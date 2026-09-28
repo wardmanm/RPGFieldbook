@@ -89,9 +89,17 @@ ck('empty table -> no record', s6 == [], s6)
 ck('empty table -> no anchor', '[Table:' not in txt6, txt6)
 
 # ---- 8. class progression table: the columns _spell_notes ignores
+# Every cell below is copied from the v2.36.1 dump (class-*.json, XPHB). 5e-tools
+# writes these columns as TYPED objects, not strings: {"type":"bonus"} (Rage
+# Damage), {"type":"bonusSpeed"} (Unarmored Movement) and {"type":"dice"}
+# (Martial Arts, Bardic Die, Sneak Attack). This test once wrote Rage Damage as
+# the string '+2' and passed while the shipped column was blank (#64).
+D6 = {"type": "dice", "toRoll": [{"number": 1, "faces": 6}], "rollable": True}
 barb = {"name": "Barbarian", "classTableGroups": [
   {"colLabels": ["Rages", "Rage Damage", "Weapon Mastery"],
-   "rows": [[2, "+2", 2], [3, "+2", 2], [3, "+2", 3]]},
+   "rows": [["2", {"type": "bonus", "value": 2}, "2"],
+            ["2", {"type": "bonus", "value": 2}, "2"],
+            ["3", {"type": "bonus", "value": 2}, "2"]]},
   {"title": "Spell Slots per Spell Level", "colLabels": ["1st", "2nd"], "rows": [[2, 0], [3, 0], [4, 2]]},
 ]}
 s7 = []
@@ -101,19 +109,72 @@ ck('Level column first', bt['cols'][0] == 'Level', bt['cols'])
 ck('Rage Damage recovered', 'Rage Damage' in bt['cols'], bt['cols'])
 ck('Weapon Mastery recovered', 'Weapon Mastery' in bt['cols'], bt['cols'])
 ck('slot group skipped', '1st' not in bt['cols'], bt['cols'])
-ck('rows level-indexed', bt['rows'][0] == ['1', '2', '+2', '2'], bt['rows'][0])
+ck('rows level-indexed, bonus cell rendered +2', bt['rows'][0] == ['1', '2', '+2', '2'], bt['rows'][0])
 ck('row count = levels', len(bt['rows']) == 3, len(bt['rows']))
 ck('registered in sink', s7 and s7[0] is bt, s7)
 
-# spellcaster: cantrip/prepared columns skipped, others kept
+# Monk: dice and bonusSpeed side by side; a bonusSpeed of 0 is the book's dash
+monk = {"name": "Monk", "classTableGroups": [
+  {"colLabels": ["Martial Arts", "Focus Points", "Unarmored Movement"],
+   "rows": [[D6, 0, {"type": "bonusSpeed", "value": 0}],
+            [D6, 2, {"type": "bonusSpeed", "value": 10}],
+            [D6, 3, {"type": "bonusSpeed", "value": 10}],
+            [D6, 4, {"type": "bonusSpeed", "value": 10}],
+            [{"type": "dice", "toRoll": [{"number": 1, "faces": 8}], "rollable": True}, 5,
+             {"type": "bonusSpeed", "value": 10}]]},
+]}
+mk = C._class_tables(monk, 'Monk', 'class', [])
+ck('Martial Arts dice rendered', [r[1] for r in mk['rows']] == ['1d6', '1d6', '1d6', '1d6', '1d8'], mk['rows'])
+ck('Unarmored Movement 0 -> dash', mk['rows'][0][3] == '—', mk['rows'][0])
+ck('Unarmored Movement +10 ft.', mk['rows'][1][3] == '+10 ft.', mk['rows'][1])
+ck('Focus Points 0 kept as a number', mk['rows'][0][2] == '0', mk['rows'][0])
+
+# spellcaster: cantrip/prepared columns skipped, others kept. The real labels
+# carry {@filter} tags, and the Bardic Die is the only column that survives —
+# so while dice cells rendered blank the whole table was suppressed (#64).
 bard = {"name": "Bard", "classTableGroups": [
-  {"colLabels": ["Cantrips Known", "Prepared Spells", "Bardic Die"],
-   "rows": [[2, 4, "d6"], [2, 5, "d6"]]},
+  {"colLabels": ["Bardic Die", "{@filter Cantrips|spells|level=0|class=bard}",
+                 "{@filter Prepared Spells|spells|level=!0|class=bard}"],
+   "rows": [[D6, 2, 4], [D6, 2, 5]]},
 ]}
 s8 = []
 bd = C._class_tables(bard, 'Bard', 'class', s8)
-ck('Bardic Die recovered', bd['cols'] == ['Level', 'Bardic Die'], bd['cols'])
-ck('cantrips col skipped', 'Cantrips Known' not in bd['cols'], bd['cols'])
+ck('Bard table not suppressed', bd is not None and s8 and s8[0] is bd, s8)
+ck('Bardic Die recovered', bd and bd['cols'] == ['Level', 'Bardic Die'], bd and bd['cols'])
+ck('Bardic Die rendered', bd and bd['rows'] == [['1', '1d6'], ['2', '1d6']], bd and bd['rows'])
+ck('cantrips col skipped', bd and 'Cantrips' not in bd['cols'], bd and bd['cols'])
+
+# Rogue: Sneak Attack is the only column at all
+rogue = {"name": "Rogue", "classTableGroups": [
+  {"colLabels": ["Sneak Attack"],
+   "rows": [[D6], [D6], [{"type": "dice", "toRoll": [{"number": 2, "faces": 6}], "rollable": True}]]},
+]}
+rg = C._class_tables(rogue, 'Rogue', 'class', [])
+ck('Rogue table not suppressed', rg is not None, rg)
+ck('Sneak Attack rendered', rg and [r[1] for r in rg['rows']] == ['1d6', '1d6', '2d6'], rg and rg['rows'])
+
+# the cell renderer on its own, for each typed shape the dump uses in a table
+ck('bonus cell', C._cell_text({"type": "bonus", "value": 3}) == '+3', C._cell_text({"type": "bonus", "value": 3}))
+ck('negative bonus keeps its sign', C._cell_text({"type": "bonus", "value": -1}) == '-1',
+   C._cell_text({"type": "bonus", "value": -1}))
+ck('bonusSpeed cell', C._cell_text({"type": "bonusSpeed", "value": 30}) == '+30 ft.',
+   C._cell_text({"type": "bonusSpeed", "value": 30}))
+ck('dice cell', C._cell_text({"type": "dice", "toRoll": [{"number": 10, "faces": 6}], "rollable": True}) == '10d6')
+# the multi-part shape from 5e-tools' renderdemo.json, plus a shown modifier
+demo = {"type": "dice", "toRoll": [{"number": 1, "faces": 4}, {"number": 2, "faces": 7, "modifier": 0},
+                                   {"number": 3, "faces": 10, "modifier": 2, "hideModifier": True}]}
+ck('multi-part dice, hidden modifier', C._cell_text(demo) == '1d4+2d7+3d10', C._cell_text(demo))
+ck('dice modifier shown', C._cell_text({"type": "dice", "toRoll": [{"number": 1, "faces": 6, "modifier": 2}]}) == '1d6+2')
+
+# a typed cell the renderer does not know must not vanish quietly — the blank
+# columns above hid for months because this path returned '' and said nothing
+C._CELL_MISSES.clear()
+ck('unknown typed cell -> blank', C._cell_text({"type": "abilityDc", "name": "Spell"}) == '')
+ck('...and a dice cell with nothing to roll', C._cell_text({"type": "dice"}) == '')
+said = []
+C._cell_miss_warnings(said.append)
+ck('...each type is reported as a WARNING', len(said) == 2 and "'abilityDc'" in said[0] and "'dice'" in said[1], said)
+C._CELL_MISSES.clear()
 
 # a class with only slot/spell columns yields no table rather than a bare Level column
 empty_cls = {"name": "Wizard", "classTableGroups": [
