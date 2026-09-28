@@ -115,20 +115,18 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 
 ### Likely bugs a player can hit
 
-- **A first-class Bard gets no skill picks.** The 2024 data says "any 3", which the converter doesn't
-  turn into a choice. Fixing it moves the 2024 pack. → ledger L3886, and [Converter](../data/converter.md)
-- **Some formula text is dropped from prose.** `flatten()` skips `abilityDc` and `abilityAttackMod`
-  nodes, so Xanathar's Arcane Shot "save DC is calculated as follows:" ends with nothing, and the core
-  pack's Artificer loses its spell save DC and attack-modifier formulas. Fixing it moves
-  `xanathars/subclasses.json` and `5e2024/classes.json`. → ledger L3761, and [Converter](../data/converter.md)
-- **A choice window is titled by its first choice's level:** a Fighter added at 3 opens as
-  "Fighter — Level 1" although the window holds the level-3 subclass pick. → ledger L3847, and
+- **No class carries its first-class armor, weapon or tool training** in any pack:
+  `convert_classes()` reads only `skills` from `startingProficiencies`, so a Bard's three Musical
+  Instruments or a Fighter's armor training never reach the sheet. → ledger L3985, and
+  [Converter](../data/converter.md)
+- **A subclass's own window shares the title of the window before it**, so "Fighter — Level 3" can
+  appear twice in a row (class choices, then Battle Master's). → ledger L4086, and
   [Character building](../features/character-building.md)
+- **The glossary editor's Save replaces the whole entry**, so fields it doesn't show are dropped when
+  a player edits an entry that has them. → ledger L4206
 - **The Gadgeteer's level-1 "Proficiencies" trait** still arrives on a multiclass add and lists saving
   throws as text, so it can read as if it grants them (Humblewood publishes no multiclass rules).
   → ledger L3886
-- **"Import settings" replaces the whole rules pool without asking.** → ledger L3797, and
-  [Settings & updates](../features/settings-and-updates.md)
 - **Glossary pop-ups show raw table anchors.** `openGlossView()` renders the entry with `esc()` only, so
   the `[Table: Carrying Capacity]`-style anchors in the 2024, Xanathar's and Tasha's glossaries appear
   as literal text. → [Rich text](../architecture/rich-text.md)
@@ -163,8 +161,6 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 - **Changing the skin rewrites `character.system`** (coins, the ancestry list) with no warning, and the
   New-character hint "All loaded rules stay available either way" is false for ancestries, which
   `racesForCharacter()` filters by system. → [Theming & icons](../ui/theming-and-icons.md)
-- **`runChoices()` double-escapes its modal title** (`esc()` on a name that `openModal()` sets through
-  `textContent`), so a class name containing `&` or `'` shows as an entity. → [Shell](../ui/shell.md)
 - **Print includes hidden attacks**: `printSheet()` prints the attacks of unequipped weapons.
   → [Attacks & damage](../features/attacks-and-damage.md)
 
@@ -196,6 +192,8 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 
 ### Latent: no shipped data triggers these yet
 
+- `openClassInfo()` assumes a pack class's `spellcasting` is a string and `savingThrows` a list;
+  a hand-written pack with other shapes would break the class info window. → ledger L4206
 - `requires` cannot name a subclass: `missingRequirements()` looks it up through `ruleById()`, whose
   subclass key is `class|name`. → [Rules packs](../architecture/rules-packs.md)
 - `usesMax()` reads `byLevel` by total character level; `resolveResMax()` uses the class's own level.
@@ -292,6 +290,29 @@ Each is recorded, with its reason, in the page's Decisions table; each is easy t
   fetched pack with the same system and entry names as a file import replaces those entries, as
   re-importing the file would. → ledger L3797, [Rules packs](../architecture/rules-packs.md)
 
+### Decisions made while fixing #67–#73 — for Mike to confirm
+
+Each is recorded, with its reason, in the page's Decisions table; each is easy to reverse.
+
+- **Existing Bards are not fixed automatically.** The rules-update tool compares traits, not
+  choices, so a Bard made before #67 is not offered its missing skills: tick them by hand, or remove
+  and re-add the class after re-importing the 2024 pack. → ledger L3985
+- **Import settings asks in a window with three buttons** (Cancel · Keep my rules · Replace my rules,
+  Keep as the default), rather than the browser's OK/Cancel dialog, because there are three outcomes. There is no
+  "merge" option; a file with an empty pool counts as carrying no rules; the sources list is still
+  replaced wholesale; and a bare settings object with no known key is refused as "not a settings
+  file". → ledger L4134, [Settings & updates](../features/settings-and-updates.md)
+- **`migrate()` drops non-object values from a character's lists** (a `null`, a bare string or
+  number), silently, because they can't be shown and can crash a render; glossary objects are never
+  dropped. → ledger L4206, [Character model](../architecture/character-model.md)
+- **A keyword written `{name, description}` loads as its term and text** (`desc` is not an alias);
+  pack entries with no usable name are skipped and counted on the status line, not shown as a chip
+  in Loaded data, and a settings file's unusable entries are dropped without a message. → ledger
+  L4206, [Rules packs](../architecture/rules-packs.md)
+- **Magic weapons take their names from the base weapon data, not a copy of the base weapon's
+  fields** — the dump's magic weapons already carry every base field. → ledger L4327,
+  [Converter](../data/converter.md)
+
 ## Verified NOT gaps (do not fix)
 
 These look like missing features. Each was checked and is right as it stands.
@@ -342,3 +363,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-25 — Superiority Die size on the tracker; the 5e-tools v2.36.1 move done. → ledger L3676
 - 2026-09-28 — Fixed and removed: class tables' dice and bonus cells (#64), Fetch all discarding packs (#65), subclass choices replaced by the equipment picker (#63), multiclass saves and starting equipment (#66) — and a first class above level 1 now gets its hit points. New items from that work added. → ledger L3761, L3797, L3847, L3886
 - 2026-09-28 — Fixed and removed: image sources and every other attribute value from a file are escaped, images load only from data: URLs, and a guard test enforces it. → ledger L3940
+- 2026-09-28 — Fixed and removed: first-class Bard skills (#67), dropped formula text (#68), the choice-window title's level and double escape (#69), Import settings replacing rules silently (#70); also fixed and never listed here: a glossary entry without a term breaking the sheet (#71), magic weapon property names and finesse (#72), table footnotes (#73). New items from that work added. → ledger L3985, L4025, L4086, L4134, L4206, L4273, L4327
