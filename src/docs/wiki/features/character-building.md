@@ -8,14 +8,16 @@ so removing the source takes it back out; that mechanism is
 [Grants & provenance](../architecture/grants-and-provenance.md). This page is the player-facing flow.
 
 **Code:** `openAddClass()`, `addClass()`, `applyClassLevel()`, `removeClass()`, `doLevelUp()`,
-`doLevelDown()`, `selectSubclass()`, `chooseSubclass()`, `hpChoice()`, `commitHPChoice()` in
+`doLevelDown()`, `selectSubclass()`, `chooseSubclass()`, `hpChoice()`, `commitHPChoice()`,
+`seedLevel1HP()`, `grantClassSaves()`, `multiclassChoices()`, `multiclassNote()` in
 `56-class.js`; `choiceFieldHTML()`, `runChoices()`, `gatherChoices()`, `commitChoices()`,
 `effectiveChoose()`, `choiceShortfall()`, `armChoiceDismissGuard()` in `58-choices.js`;
 `openAddRace()`, `applyRace()`, `racesForCharacter()` in `52-race.js`; `openAddBackground()`,
 `applyBackground()` in `54-background.js`; `subclassesFor()`, `addFeatureFromDef()`,
 `grantFeatDef()`, `runExtraChoices()`, `classChipHTML()` in `50-classrace.js`; `dismissModal()`,
 `setDismissGuard()` in `80-modal-forms.js` · **Data:** `choices` on class, subclass and race
-levels, per [rules-schema](../../../../docs/rules-schema.md) §5; `data/5e2024/features.json` ·
+levels, per [rules-schema](../../../../docs/rules-schema.md) §5; a class's `multiclass` block,
+§6.3; `data/5e2024/features.json` ·
 **Tests:** `sheet.js`, `char-update.js`, `rules-data.js` · **See also:**
 [Vitals & rest](vitals-and-rest.md), [Class resources](class-resources.md),
 [Features & traits](features-and-traits.md), [Converter](../data/converter.md)
@@ -40,12 +42,26 @@ tools and languages. `applyBackground()` adds the ability feature, the skill gra
 languages to Proficiencies.
 
 **Class.** `openAddClass()` takes a pack class or a custom name and a starting level (1–20).
-`addClass()` grants the class's saving throws and fixed skills, sets the spellcasting ability if
-none is set, applies `equipmentGrants`, and runs `applyClassLevel()` for every level up to the
-starting one — traits become features, `choices` and spell notes collect — then opens one choice
-modal for all of them. A **second** class also gets a hit-points step for its levels and unlocks
-Max HP; the first class is character creation, where `seedLevel1HP()` handles level 1 and anything
-higher is the player's to type ([Vitals & rest](vitals-and-rest.md)). The class chip
+`addClass()` sets the spellcasting ability if none is set and runs `applyClassLevel()` for every
+level up to the starting one — traits become features, `choices` and spell notes collect — then
+opens one choice modal for all of them. What else it grants depends on whether a class is already
+on the sheet:
+
+| | First class (none on the sheet yet) | Any later class (multiclass) |
+|---|---|---|
+| Saving throws | the class's `savingThrows`, via `grantClassSaves()` | none |
+| Fixed class `skills` | granted | none |
+| Level-1 `skill` choice | offered in full ("choose 2") | replaced by the pack's `multiclass.choices` (`multiclassChoices()`): one skill for a Bard, Ranger or Rogue, none for most; nothing if the class has no `multiclass` block |
+| Other level-1 choices, traits, spells | yes | yes (Fighting Style, invocations, Spellcasting) |
+| Starting equipment and gold | `equipmentGrants`, fixed blocks at once and a picker after the window | none |
+| Hit points | level 1 seeded by `seedLevel1HP()`; a class starting above level 1 then asks for levels 2..N in the window | an HP step for all its levels, with its own die |
+| A note in the window | — | `multiclassNote()`: no saves or equipment, and what it gains (`multiclass.proficiencies` and the skill count), or that the pack does not list it |
+
+The Add class preview shows the same note once a class is on the sheet, so its "Saves" line is not
+read as a promise. Armor, weapon and tool training is text in either case: the first class's lives
+in its data only, and a multiclass's is shown in the note, never tracked. Removing the **first**
+class while another remains makes that one first: it takes its saving throws, tagged to it, with a
+toast, and nothing else is re-offered. The class chip
 (`classChipHTML()`) opens the class; its subclass is a separate link button (`data-sub-info`), matched
 before `data-info-class` so it wins inside the chip.
 
@@ -123,6 +139,13 @@ they are built: [Converter](../data/converter.md).
   `commitChoices(…, eq)`), never a module global.
 - **`character.classes[].subclass` stores the `subclassesFor()` key**, so a supplement must never be
   allowed to take an existing key from another pack.
+- **The first class is `character.classes[0]`**, the one added while the list was empty. Classes
+  are only ever pushed and spliced, never reordered; anything that reorders them would move the
+  saving throws' owner without moving the grants.
+- **A class's own level-1 `skill` choice is its starting proficiencies**, and that is what a
+  multiclass add drops. The converter writes nothing else there, and the Gadgeteer's hand-authored
+  one is the same list. A class feature that grants a skill at level 1 must use a trait's `skills`
+  or an `option`, or a multiclass add will drop it too.
 
 ## Traps
 
@@ -139,10 +162,15 @@ they are built: [Converter](../data/converter.md).
   with the window.
 - **Two modals can race.** `commitChoices()` opens the subclass's modal and then
   `runExtraChoices()`, and `openModal()` replaces the body and clears the guard. So a subclass with
-  its own choices (Battle Master at 3) is replaced by the starting-equipment picker when a class is
-  added at or above its subclass level — every 2024 class has an equipment choice. The ledger
+  its own choices (Battle Master at 3) is replaced by the starting-equipment picker when a first
+  class is added at or above its subclass level — every 2024 class has an equipment choice; a
+  multiclass add has none since #66. The ledger
   (L2571) recorded only the narrower feat-plus-subclass case. Traced in the code; not reproduced in
   a browser.
+- **Every class add was character creation.** `addClass()` granted saving throws, starting
+  equipment and gold, and the full "choose 2" skills to a second class exactly as to the first, so a
+  Fighter who took a Wizard level gained INT and WIS saves, a spellbook kit and 55 gp (#66). The HP
+  path had always told the two apart, which is why only it was right.
 - **"(TCE) (TCE)".** A reprint already keyed "Psi Warrior (TCE)" was tagged again in both subclass
   pickers; `subSourceTag()` now skips a tag already in the name.
 - **Not everything reverts.** Tools and languages go into the free-text Proficiencies box and stay
@@ -165,14 +193,21 @@ they are built: [Converter](../data/converter.md).
 | An option already on the sheet | Ticked and `data-fixed` in checkboxes; just disabled in radios | A tick in a radio group, which reads as this level's pick |
 | Where the equipment picker waits | Passed to `runChoices()` and on to its own Done | A module global: it outlived a dismissed window |
 | Student of War's tool | An `option` that becomes a feature | The free-text Proficiencies box: it would not revert with the subclass |
+| What a multiclass add grants (#66) | Level-1 features and non-skill choices, the pack's `multiclass` skills, an HP step; no saves, no equipment or gold | Everything, as for the first class: 2024 multiclassing gives neither saves nor equipment, and only a subset of skills |
+| A class with no `multiclass` data, added as a second class | No class skills, and a note that the pack does not list them | A multiclass table in the app: rules text belongs in the pack, and a guess would be silently wrong for homebrew |
+| Removing the first class while another remains | The class now first takes its own saving throws, with a toast | Leaving the saves off: the sheet would have no save proficiencies at all (owner may reverse) |
+| Hit points for a first class that starts above level 1 | Seed level 1, then an HP step for levels 2..N in the same window | None at all, as before: a level-3 character was created with no hit points |
 
 ## Open
 
 - An `asi` choice offers +2 / +1+1 only. [rules-schema](../../../../docs/rules-schema.md) §5 says
   "or a feat instead"; the app has no such branch.
-- Class starting equipment and saving-throw proficiencies are applied on every `addClass()`,
-  multiclass included, where the 2024 rules give neither. Gold alternatives use the average, not a
-  roll.
+- A class's gold alternative uses the average of its dice, not a roll.
+- The Humblewood Gadgeteer has no `multiclass` data (no Humblewood source defines it), so a
+  multiclass Gadgeteer is offered no class skills and told so. The pack's Artificer carries TCE's
+  2014 multiclass row, because that is the printing the pack holds.
+- A first class added above level 1 and then removed keeps the Max HP its window added; the un-seed
+  only recognises a level-1 seed ([Vitals & rest](vitals-and-rest.md)).
 - A feat picked from the Features & Traits browser gets no skill-choice prompt:
   `grantFeatDef()` only queues those when there is an origin sid.
 - Level-down keeps everything, and class-level feat skill choices revert with the class, not the
@@ -194,3 +229,6 @@ they are built: [Converter](../data/converter.md).
   marked, `repeatable` honoured, `gatherChoices()` skips disabled. → ledger L3596, #60
 - 2026-09-25 — option costs, Student of War, the 2024 options library; `_equipQueue` removed.
   → ledger L3649
+- 2026-09-28 — only the first class grants saving throws, starting equipment and its full skill
+  choice; a multiclass gets the pack's `multiclass` subset and a note. A first class above level 1
+  gets its hit points. → ledger L3761, #66

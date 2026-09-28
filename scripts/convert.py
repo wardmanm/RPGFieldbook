@@ -685,6 +685,47 @@ def _equip_grants_bg(se):
                 out.append({'choose': opts})
     return out or None
 
+_MC_ARMOR = {'light': 'Light armor', 'medium': 'Medium armor', 'heavy': 'Heavy armor', 'shield': 'Shields'}
+_MC_WEAPONS = {'simple': 'Simple weapons', 'martial': 'Martial weapons'}
+
+def _multiclass(entry, warnings):
+    """5e-tools multiclassing.proficienciesGained -> the class's optional
+    `multiclass` block: what a character gains by taking this class as a SECOND
+    (or later) class, which is only a subset of the first class's proficiencies.
+    Skills become a choice in the level-choice shape, so the app can offer it in
+    place of the level-1 one; armor, weapon and tool training become a display
+    string, as a race's `proficiencies` is. None when the source has no
+    multiclassing entry at all, so the app can tell "gains nothing" ({}, the
+    Monk, Sorcerer and Wizard) from "the pack doesn't say" (absent)."""
+    mc = entry.get('multiclassing')
+    if not isinstance(mc, dict):
+        return None
+    pg = mc.get('proficienciesGained') or {}
+    out = {}
+    choices = []
+    for item in pg.get('skills', []):
+        if isinstance(item, dict) and isinstance(item.get('choose'), dict):
+            ch = item['choose']
+            choices.append({'type': 'skill', 'choose': ch.get('count', 1),
+                            'from': [sk(x) for x in ch.get('from', [])]})
+        else:
+            warnings.append(f"{entry['name']}: multiclass skill {item!r} not converted")
+    if choices:
+        out['choices'] = choices
+    prof = []
+    for a in pg.get('armor', []):
+        prof.append(_MC_ARMOR.get(a, strip_tags(a)) if isinstance(a, str) else strip_tags(str(a.get('full') or '')))
+    for w in pg.get('weapons', []):
+        prof.append(_MC_WEAPONS.get(w, strip_tags(w)) if isinstance(w, str) else strip_tags(str(w.get('full') or '')))
+    for t in pg.get('tools', []):
+        t = strip_tags(t) if isinstance(t, str) else ''
+        t = re.sub(r'^Choose one (.+)$', r'one \1 of your choice', t)
+        prof.append(t[:1].upper() + t[1:] if not t.startswith('one ') else t)
+    prof = [p for p in prof if p]
+    if prof:
+        out['proficiencies'] = ', '.join(prof)
+    return out
+
 def _equip_grants_class(se):
     """5e-tools class startingEquipment -> equipmentGrants (items package vs gold alternative)."""
     if not se or not isinstance(se, dict):
@@ -1034,6 +1075,9 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
         eg = _equip_grants_class(entry.get('startingEquipment'))
         if eg:
             C['equipmentGrants'] = eg
+        mc = _multiclass(entry, warnings)
+        if mc is not None:
+            C['multiclass'] = mc
 
         sub_level = None; sub_title = entry.get('subclassTitle', 'Subclass')
         for ref in entry.get('classFeatures', []):

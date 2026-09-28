@@ -311,6 +311,26 @@ increase in the Add-ancestry dialog, the way backgrounds do:
 - **`subclasses`** may be an inline object `{ "Name": { levels… } }`, **but the preferred
   pattern** is to put subclasses in the top-level `subclasses` array (§6.5) so add-on packs can
   attach subclasses without redefining the class.
+- **`multiclass`** *(optional)* — what the class grants when it is taken as a **second (or later)**
+  class. Only a character's **first** class grants its `savingThrows`, its `equipmentGrants` and
+  its level-1 `skill` choice; a class added beside another gets none of those, and gets this block
+  instead. Its level-1 features, spells and other choices still apply as normal.
+
+  ```json
+  "multiclass": {
+    "choices": [ { "type": "skill", "choose": 1, "from": ["Acrobatics","Athletics","Deception","Stealth"] } ],
+    "proficiencies": "Light armor, Thieves' Tools"
+  }
+  ```
+
+  - **`choices`** — same shape as a level's (§5). They are offered in place of the class's level-1
+    `skill` choice.
+  - **`proficiencies`** — armor, weapon and tool training, as display text. It is shown to the
+    player when the class is added; it is not tracked on the sheet.
+  - An **empty** block (`"multiclass": {}`) means the class grants nothing extra as a multiclass
+    (the 2024 Monk, Sorcerer and Wizard). **Leaving the field out** means the pack does not say:
+    the app then offers no class skills on a multiclass add and tells the player so, rather than
+    guessing.
 
 #### Class/subclass resources (auto trackers)
 

@@ -8,7 +8,7 @@ import. The player-facing how-to is [README-converter](../../../../docs/README-c
 page is what that file does not say: what must not move, and the traps that have already shipped.
 
 **Code:** `main()`, `pick_2024_preferred()`, `pick_sources()`, `flatten()`, `table_ctx()`,
-`ref_ctx()`, `_register()`, `_class_tables()`, `convert_classes()`, `_optfeat_choices()`,
+`ref_ctx()`, `_register()`, `_class_tables()`, `convert_classes()`, `_multiclass()`, `_optfeat_choices()`,
 `convert_races()`, `_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in
 `scripts/bundle-rules.js`; `dataChangedSince()` in `scripts/release.js`; `mergeRules()` in
 `89-rules-merge.js`; `DATA_VERSIONS` in `30-version.js`; `RULE_CATS` in `88-settings.js` ·
@@ -67,6 +67,14 @@ prints a "Repeatable" subsection, and a `cost` from 5e-tools `consumes` (`_optfe
 singular pool name mapped to the tracker's name by `_CONSUMES_AS`). `all` also writes the 58 XPHB
 options as library entries in `features.json`. Student of War, which the source states only in
 prose, comes from `_prose_choices()`, keyed by (class, subclass, source).
+
+**Multiclassing.** `_multiclass()` reads a class's `multiclassing.proficienciesGained` into an
+optional `multiclass` block: skills as a level-choice-shaped `skill` choice, armor, weapon and tool
+training as one `proficiencies` string ("Light armor, Thieves' Tools"; "Choose one X" becomes "one
+X of your choice"). A class whose entry is `{}` (Monk, Sorcerer, Wizard) gets `"multiclass": {}`;
+one with no entry (the UA Mystic) gets no key, so the app can tell "gains nothing" from "not
+said". The pack's Artificer is the TCE printing and carries TCE's row. What the app does with it:
+[Character building](../features/character-building.md); the shape: rules-schema §6.3.
 
 **Hand-authored inputs.** `data/overlay.json` (`byName`: Archery, Defense) adds numeric `effects`
 to feats and fighting-style options by name, via `apply_overlay()`. `data/class-resources.json`
@@ -169,6 +177,7 @@ has no `DATA_VERSIONS` entry.
 | How options reach the level-up picker | Inlined in every choice (~150 KB across the packs) | A shared reference: ~5× smaller, but needs app code and cross-pack filtering; inline needs none, and an older app gets pickers from a re-downloaded pack alone |
 | Which printing of an option a class offers | The class's own source only, falling back to PHB for a 2014 book with none | Mixing printings: a 2024 Battle Master would be offered the 2014 Parry too |
 | How a bundle dedupes | Exactly as `mergeRules()` does, and every duplicate printed | Silent dedupe: the `Net` duplicate would vanish unreported; the promise is that a bundle equals its files |
+| Where a class's multiclass proficiencies come from | 5e-tools `multiclassing`, carried as an optional `multiclass` block; `{}` kept, absent when the source has none | A table in the app: homebrew and Humblewood classes would get a silent guess, and the rules text belongs in the pack (#66) |
 
 ## Open
 
@@ -204,3 +213,4 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-25 — Option pickers across seven classes and subclasses; `_sub_blurb()` skips taglines. → ledger L3596, #60
 - 2026-09-25 — Option `cost`, `"Class/Subclass"` trackers, Student of War, `features.json`. → ledger L3649
 - 2026-09-25 — Source dump moved to 5e-tools v2.36.1; `srd52` backfill. → ledger L3676
+- 2026-09-28 — `_multiclass()`: classes carry an optional `multiclass` block; `data/5e2024/` moved by that key alone. → ledger L3761, #66

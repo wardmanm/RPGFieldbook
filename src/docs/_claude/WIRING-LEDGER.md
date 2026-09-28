@@ -3757,3 +3757,58 @@ changed and why, and a link to the page that now describes it.
   entry last", but History cites its line number, so it has to come first. Fixed in the skill,
   CLAUDE.md and the index header.
 - Dev docs only: no app change, no UNRELEASED bullet, no rebuild.
+
+## A second class grants no saving throws or starting equipment (#66, 2026-09-28)
+
+- **Root cause.** `addClass()` treated every add as character creation: it granted the class's
+  `savingThrows`, applied its `equipmentGrants` (items and gold) and offered its full level-1 skill
+  choice whether or not a class was already on the sheet. The 2024 multiclassing rules give a second
+  class none of those — only the subset in the PHB's multiclass table. The HP path already told the
+  two apart (`seedLevel1HP()` needed exactly one class; a second class got the #58 HP step), so the
+  level-1 seed was never re-applied from the second die.
+- **The rule now.** The first class is the add made while `character.classes` is empty. Only it
+  grants saving throws (`grantClassSaves()`), fixed class `skills`, and starting equipment and gold.
+  A multiclass add still gets every level-1 feature, spell note and non-skill choice (a Fighter's
+  Fighting Style, a Warlock's invocation), but its class-level-1 `skill` choice is replaced by the
+  pack's `multiclass.choices` (`multiclassChoices()`), and the window opens with a note
+  (`multiclassNote()`): no saves or equipment, and what it gains — the `multiclass.proficiencies`
+  text plus the skill count. The Add class preview shows the same note once a class is on the sheet.
+  A class with no `multiclass` block is not guessed at: no class skills, and the note says the pack
+  does not list them.
+- **The data exists.** Every 5e-tools XPHB class carries `multiclassing.proficienciesGained` (Monk,
+  Sorcerer and Wizard as `{}`). `convert.py` `_multiclass()` turns it into an optional per-class
+  `multiclass` block — skills as a §5 skill choice, armor/weapon/tool training as one display string
+  — documented in rules-schema §6.3 and README-converter. Byte gate: the HEAD converter reproduces
+  `data/5e2024/` exactly; the new one differs only in `classes.json`, only by that key (checked key by
+  key, key order of everything else unchanged). Bard, Ranger, Rogue: one skill; Monk, Sorcerer,
+  Wizard: `{}`. The pack's Artificer is the TCE printing, so it carries TCE's 2014 row (Thieves' and
+  Tinker's tools, no skill); the UA Mystic has none. XPHB's `DATA_VERSIONS` will move at the next
+  release, correctly: an old pack degrades to the "does not list" note.
+- **Humblewood.** The Gadgeteer has no `multiclass` block, and none of the 30 Humblewood PDFs in
+  `_conversion-data/Rulebooks` mentions multiclassing (searched with PyMuPDF). A multiclass Gadgeteer
+  therefore gets no class skills and the note. Its level-1 "Proficiencies" trait still lists its
+  saving throws as prose, as it does for a first-class Gadgeteer.
+- **Removing the first class while another remains.** The class now first takes its own saving
+  throws, tagged to its sid so they leave with it, and a toast says so; its first-class skills and
+  starting equipment are not re-offered. Without this, a Fighter/Wizard who dropped Fighter had no
+  save proficiencies at all. An owner call: the alternative is to leave the saves off and only say so.
+- **Separately — not a multiclass bug: a first class added above level 1 got no hit points.** Found
+  by the coordinator in a browser (Add Fighter at starting level 3 → Max and Current blank).
+  `seedLevel1HP()` stopped at total level 1, and nothing asked for levels 2..N. The seed now fires
+  for the first class at any starting level (still only over a blank Max), and the window opens with
+  the #58 HP step for levels 2..N — average by default, a typed roll, or Roll for me — carrying a
+  `hint` that level 1 is already counted. A Max the player typed before adding gets neither.
+  `removeClass()`'s un-seed is unchanged (level 1 only), so a first class added at level 3 and then
+  removed keeps its Max — as a levelled-up one always has.
+- **Existing saves are untouched.** `migrate()` is not changed: a multiclass character saved before
+  this keeps the saving throws, skills and equipment its second class granted, and removing that
+  class still reverts them (they carry its sid). The fix changes what a NEW add does.
+- Tests: `char-update.js` 260 → 305, run against the real `data/5e2024/classes.json` (Fighter then
+  Wizard, Rogue, Bard; Wizard then Fighter; a fixture class with no `multiclass` and a fixed
+  equipment block; first-class removal; a first class at level 3 at CON 10 and 14, and over a typed
+  Max). The old "starting above level 1 does not seed HP" check asserted the HP bug and was
+  inverted. `converter.py` 143 → 148.
+- Pages: [character building](../wiki/features/character-building.md),
+  [grants & provenance](../wiki/architecture/grants-and-provenance.md),
+  [vitals & rest](../wiki/features/vitals-and-rest.md), [converter](../wiki/data/converter.md),
+  [decisions](../wiki/decisions.md).

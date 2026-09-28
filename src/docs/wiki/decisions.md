@@ -72,6 +72,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **Which CON the level-1 HP seed reads** — `modOf()` of the score
 - **Where the starting-equipment picker waits** — Passed with its window to its own Done
 - **Where Student of War's tool proficiency goes** — A feature
+- **Which class grants saves, equipment and gold** — The first class only; a multiclass gets the pack's `multiclass` subset
+- **Removing the first class while another remains** — The new first class takes its saving throws, under its own sid
+- **Stripping extra grants from multiclass characters saved earlier** — No: `migrate()` is untouched
 
 ### [Computed stats & effects](architecture/computed-stats-and-effects.md)
 
@@ -114,6 +117,10 @@ When a page gains a Decisions row, add its line here under that page.
 - **An option already on the sheet** — Ticked and `data-fixed` in checkboxes; just disabled in radios
 - **Where the equipment picker waits** — Passed to `runChoices()` and on to its own Done
 - **Student of War's tool** — An `option` that becomes a feature
+- **What a multiclass add grants (#66)** — Level-1 features and non-skill choices, the pack's `multiclass` skills, an HP step; no saves, no equipment or gold
+- **A class with no `multiclass` data, added as a second class** — No class skills, and a note that the pack does not list them
+- **Removing the first class while another remains** — The class now first takes its own saving throws, with a toast
+- **Hit points for a first class that starts above level 1** — Seed level 1, then an HP step for levels 2..N in the same window
 
 ### [Abilities & skills](features/abilities-and-skills.md)
 
@@ -140,6 +147,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where the Hit Dice sit** — Rest & Recovery, under the rest buttons
 - **Death saves filling outward** — CSS `row-reverse` off `data-kind="fail"`
 - **Size on tap** — A chooser
+- **A first class that starts above level 1** — Seed level 1, then the level-up HP step for levels 2..N (average by default)
 
 ### [Conditions & concentration](features/conditions-and-concentration.md)
 
@@ -316,6 +324,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How options reach the level-up picker** — Inlined in every choice (~150 KB across the packs)
 - **Which printing of an option a class offers** — The class's own source only, falling back to PHB for a 2014 book with none
 - **How a bundle dedupes** — Exactly as `mergeRules()` does, and every duplicate printed
+- **Where a class's multiclass proficiencies come from** — 5e-tools `multiclassing`, carried as an optional `multiclass` block; `{}` kept, absent when the source has none
 
 ### [Supplements](data/supplements.md)
 
