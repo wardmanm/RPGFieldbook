@@ -115,6 +115,11 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 
 ### Likely bugs a player can hit
 
+- **Quarterstaff of the Acrobat adds +5 AC all the time while equipped** (#76). Its `bonusAc` is a
+  once-per-rest Reaction against one attack, but the converter makes it a standing `ac` effect.
+  → ledger L4392, and [Converter](../data/converter.md)
+- **Items' spell-attack bonuses are never applied** (#77): the Moon Sickles and the Staff of Power
+  carry `bonusSpellAttack`, which the converter doesn't read. → ledger L4392
 - **No class carries its first-class armor, weapon or tool training** in any pack:
   `convert_classes()` reads only `skills` from `startingProficiencies`, so a Bard's three Musical
   Instruments or a Fighter's armor training never reach the sheet. → ledger L3985, and
@@ -312,6 +317,11 @@ Each is recorded, with its reason, in the page's Decisions table; each is easy t
 - **Magic weapons take their names from the base weapon data, not a copy of the base weapon's
   fields** — the dump's magic weapons already carry every base field. → ledger L4327,
   [Converter](../data/converter.md)
+- **A weapon bonus on a non-weapon item lives only in its description** (#74). Bracers of Archery,
+  Oil of Sharpness, the Rod of Lordly Might, the Eldritch Claw Tattoo and Baba Yaga's Mortar and
+  Pestle no longer add an automatic bonus: the old global effect reached every attack, and no effect
+  target can say "bows only". The player types it on the weapon's extra-damage box instead.
+  → ledger L4392, [Attacks & damage](../features/attacks-and-damage.md)
 
 ## Verified NOT gaps (do not fix)
 
@@ -364,3 +374,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-28 — Fixed and removed: class tables' dice and bonus cells (#64), Fetch all discarding packs (#65), subclass choices replaced by the equipment picker (#63), multiclass saves and starting equipment (#66) — and a first class above level 1 now gets its hit points. New items from that work added. → ledger L3761, L3797, L3847, L3886
 - 2026-09-28 — Fixed and removed: image sources and every other attribute value from a file are escaped, images load only from data: URLs, and a guard test enforces it. → ledger L3940
 - 2026-09-28 — Fixed and removed: first-class Bard skills (#67), dropped formula text (#68), the choice-window title's level and double escape (#69), Import settings replacing rules silently (#70); also fixed and never listed here: a glossary entry without a term breaking the sheet (#71), magic weapon property names and finesse (#72), table footnotes (#73). New items from that work added. → ledger L3985, L4025, L4086, L4134, L4206, L4273, L4327
+- 2026-09-28 — A +N weapon's bonus counted twice (#74) and ranged finesse weapons couldn't use STR (#75): both fixed, never listed here. Quarterstaff of the Acrobat's AC (#76) and items' spell-attack bonuses (#77) added. → ledger L4392, L4466
