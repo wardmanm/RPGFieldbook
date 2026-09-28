@@ -796,6 +796,10 @@ table.rtbl tbody tr:nth-child(even){background:color-mix(in srgb,var(--ink) 4%,t
 table.rtbl tbody tr:last-child td{border-bottom:0}
 /* roll/level columns read as a fixed gutter, not a wrapping text column */
 table.rtbl td:first-child{white-space:nowrap;font-family:var(--head);font-weight:700}
+/* a table's footnotes ("*Might involve a rival"): tucked under the box they
+   annotate, smaller and softer than the cells, and wrapping at any width */
+.tbl-notes{margin:-4px 2px 10px;font-size:13px;line-height:1.45;color:var(--ink-soft)}
+.tbl-notes p{margin:0 0 2px}
 /* spell slots */
 .slotgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
 @media(max-width:600px){.slotgrid{grid-template-columns:repeat(2,1fr)}}
@@ -1540,7 +1544,36 @@ function imgHTML(u,alt){
 function escReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
 function get(o,p){return p.split(".").reduce((a,k)=>a&&a[k],o)}
 function setP(o,p,v){const ks=p.split(".");const last=ks.pop();let t=o;ks.forEach(k=>t=t[k]);t[last]=v}
-function allGlossary(){return [...(rules.keywords||[]).map(k=>({...k,_locked:true})), ...character.glossary]}
+/* Glossary entries all come from files: a pack's keywords, a settings file
+   (which restores `rules` wholesale, never through mergeRules), the player's
+   own glossary in an imported character. So an entry can arrive with no term,
+   a term that is not text, or not be an object at all. highlight() once read
+   `x.term.toLowerCase()`, and one such entry threw on every render (#71).
+   Every reader asks glossTerm() instead of touching `.term`; "" means "nothing
+   to match on", and such an entry is never a chip or a condition. */
+function glossTerm(g){return g&&typeof g==="object"&&typeof g.term==="string"?g.term.trim():"";}
+/* The boundary repair, shared by mergeRules(), the pool's tidyRules() and
+   migrate(). Every other category names an entry `name` and describes it in
+   `description`, so a keyword written that way is plainly a term and its text:
+   read them as such, keeping the originals. A numeric term becomes text. It
+   fills only an absent or blank term and an absent text, never replaces one;
+   changes the entry in place and returns it. */
+function glossRepair(g){
+  if(!g||typeof g!=="object"||Array.isArray(g))return g;
+  const txt=v=>typeof v==="string"?v:(typeof v==="number"&&Number.isFinite(v)?String(v):"");
+  if((g.term==null||(typeof g.term==="string"&&!g.term.trim()))&&txt(g.name).trim())g.term=txt(g.name);
+  else if(typeof g.term==="number"&&Number.isFinite(g.term))g.term=String(g.term);
+  if(g.text==null&&typeof g.description==="string")g.text=g.description;
+  return g;
+}
+/* Pack keywords first, then the player's own. Objects only; an entry with no
+   term is still returned (the Rules tab lists the player's so it can be fixed,
+   and counts it), so a caller that matches on terms must go through glossTerm(). */
+function allGlossary(){
+  const obj=g=>g&&typeof g==="object"&&!Array.isArray(g);
+  const rk=Array.isArray(rules.keywords)?rules.keywords:[], mine=Array.isArray(character.glossary)?character.glossary:[];
+  return [...rk.filter(obj).map(k=>({...k,_locked:true})), ...mine.filter(obj)];
+}
 
 /* ================= fingerprints =================
    Value hashes used by the character/rules update tool (72-char-update.js) to
@@ -1721,7 +1754,7 @@ const CASTER_FULL=new Set(["bard","cleric","druid","sorcerer","wizard"]);
 const CASTER_HALF=new Set(["paladin","ranger","artificer"]);
 const THIRD_SUB=new Set(["eldritch knight","arcane trickster"]);
 function classCasterKind(c){
-  const n=(c.name||"").toLowerCase();
+  const n=String(c.name||"").toLowerCase();
   if(n==="warlock")return "pact";
   if(CASTER_FULL.has(n))return "full";
   if(CASTER_HALF.has(n))return "half";
@@ -1731,7 +1764,7 @@ function classCasterKind(c){
 }
 function hasCasterClass(){return (character.classes||[]).some(c=>classCasterKind(c));}
 function casterLevel(){let lvl=0;(character.classes||[]).forEach(c=>{const L=num(c.level),k=classCasterKind(c);if(k==="full")lvl+=L;else if(k==="half")lvl+=Math.floor(L/2);else if(k==="third")lvl+=Math.floor(L/3);});return lvl;}
-function warlockLevel(){let wl=0;(character.classes||[]).forEach(c=>{if((c.name||"").toLowerCase()==="warlock")wl+=num(c.level);});return wl;}
+function warlockLevel(){let wl=0;(character.classes||[]).forEach(c=>{if(String(c.name||"").toLowerCase()==="warlock")wl+=num(c.level);});return wl;}
 let slotsAuto=false;
 function autoSlots(){
   if(!hasCasterClass()){
@@ -2019,12 +2052,18 @@ function highlight(text){
   const tbls=[];
   const src=String(text||"").replace(/\[Table:\s*([^\]]+)\]/g,(m,nm)=>{tbls.push(nm.trim());return TBL_MARK;});
   let escd=esc(src);
-  const terms=allGlossary().map(g=>g.term).filter(Boolean).sort((a,b)=>b.length-a.length);
-  if(terms.length){
-    const pat=terms.map(t=>escReg(esc(t))).join("|");
+  /* Keyed by the ESCAPED term, lower-cased: the pass runs over escaped text, so
+     a match is looked up in the same form it was found in. Comparing it with the
+     raw term instead (unescaping only &amp;) left "Hunter's Mark" a chip with
+     no id. The first entry per key wins: pack keywords, then the player's own.
+     glossTerm(), never `.term`: an entry with no term threw here (#71). */
+  const byKey=new Map();
+  allGlossary().forEach(g=>{const t=glossTerm(g);if(!t)return;const k=esc(t).toLowerCase();if(!byKey.has(k))byKey.set(k,g);});
+  if(byKey.size){
+    const pat=[...byKey.keys()].sort((a,b)=>b.length-a.length).map(escReg).join("|");
     const re=new RegExp("\\b("+pat+")\\b","gi");
     escd=escd.replace(re,m=>{
-      const g=allGlossary().find(x=>x.term.toLowerCase()===m.toLowerCase().replace(/&amp;/g,"&"));
+      const g=byKey.get(m.toLowerCase());
       return `<span class="kw" data-gid="${esc(g?g.id:"")}" role="button" tabindex="0">${m}</span>`;
     });
   }
@@ -2770,7 +2809,9 @@ function renderInventory(){
   el.insertAdjacentHTML("beforeend",invTotalsHTML());
 }
 function statusTitle(name){
-  const g=allGlossary().find(x=>x.term.toLowerCase()===(name||"").toLowerCase());
+  /* a status name is from the file too: 7, or nothing, must not throw (#71) */
+  const k=String(name??"").trim().toLowerCase();
+  const g=k?allGlossary().find(x=>glossTerm(x).toLowerCase()===k):null;
   return g?`<span class="kw" data-gid="${esc(g.id)}" role="button" tabindex="0">${esc(name)}</span>`:esc(name||"Status");
 }
 /* ONE row, two places: the Statuses card on the Sheet, and the Concentrating
@@ -3304,19 +3345,22 @@ function openAddClass(){
   document.getElementById("cCancel").addEventListener("click",closeModal);
   document.getElementById("cAdd").addEventListener("click",()=>{const raw=(sel&&sel.value)||document.getElementById("classCustom").value.trim();if(!raw){alert("Pick or name a class.");return;}const cd=findClassDef(raw);const name=cd?cd.name:raw;const lvl=Math.max(1,Math.min(20,num(document.getElementById("classLvl").value)||1));closeModal();addClass(name,lvl);});
 }
+/* One level's traits (applied now) and its choices and spell notes (returned
+   for the window). Choices and notes both carry `_level`: the window's title is
+   the span of the levels they came from (choiceWindowTitle(), #69). */
 function applyClassLevel(entry,d,L){
   let choices=[],notes=[];
   if(d&&d.levels){
     const lv=d.levels[String(L)]||{};
     (lv.traits||[]).forEach(t=>addFeatureFromDef(t,{kind:"class",class:entry.name,level:L}));
     (Array.isArray(lv.choices)?lv.choices:[]).forEach(ch=>choices.push({...ch,_level:L,_sid:"class:"+entry.name}));
-    if(lv.spells){const n=lv.spells.note||(lv.spells.known!=null?`You can now know up to ${lv.spells.known} ${d.name} spell(s). Add them via Spells → Add.`:null);if(n)notes.push(n);}
+    if(lv.spells){const n=lv.spells.note||(lv.spells.known!=null?`You can now know up to ${lv.spells.known} ${d.name} spell(s). Add them via Spells → Add.`:null);if(n)notes.push({text:n,_level:L});}
     const subs=subclassesFor(d);
     if(entry.subclass&&subs[entry.subclass]&&subs[entry.subclass].levels){
       const sl=subs[entry.subclass].levels[String(L)]||{};
       (sl.traits||[]).forEach(t=>addFeatureFromDef(t,{kind:"class",class:entry.name,level:L,subclass:entry.subclass}));
       (Array.isArray(sl.choices)?sl.choices:[]).forEach(ch=>choices.push({...ch,_level:L,_sid:"subclass:"+entry.name+":"+entry.subclass}));
-      if(sl.spells){const n=sl.spells.note||(sl.spells.known!=null?`You can know up to ${sl.spells.known} ${entry.subclass} spell(s).`:null);if(n)notes.push(n);}
+      if(sl.spells){const n=sl.spells.note||(sl.spells.known!=null?`You can know up to ${sl.spells.known} ${entry.subclass} spell(s).`:null);if(n)notes.push({text:n,_level:L});}
     }
   }
   return {choices,notes};
@@ -3596,7 +3640,7 @@ function selectSubclass(className,subName,pending){
       const lv=sc.levels[String(L)];
       (lv.traits||[]).forEach(t=>addFeatureFromDef(t,{kind:"class",class:className,level:L,subclass:subName}));
       (Array.isArray(lv.choices)?lv.choices:[]).forEach(ch=>choices.push({...ch,_level:L,_sid:"subclass:"+className+":"+subName}));
-      if(lv.spells){const n=lv.spells.note||(lv.spells.known!=null?`You can know up to ${lv.spells.known} ${subName} spell(s).`:null);if(n)notes.push(n);}
+      if(lv.spells){const n=lv.spells.note||(lv.spells.known!=null?`You can know up to ${lv.spells.known} ${subName} spell(s).`:null);if(n)notes.push({text:n,_level:L});}
     });
   }
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
@@ -3629,7 +3673,7 @@ function openSubclassInfo(className,subName){
   openModal(subName,b);
 }
 function openClassInfo(name){
-  const d=findClassDef(name),entry=(character.classes||[]).find(c=>c.name.toLowerCase()===name.toLowerCase());
+  const d=findClassDef(name),entry=(character.classes||[]).find(c=>String(c.name||"").toLowerCase()===String(name||"").toLowerCase());
   if(!d){openModal(name,`<p class="hint">No rules data loaded for this class — it was added as a custom name.</p>`,iconSVG("classes",name,"lg"));return;}
   let b=`<p>${esc(d.description||"")}</p>`;
   const meta=[d.hitDie?("Hit die "+d.hitDie):"",d.spellcasting?("Spellcasting "+d.spellcasting.toUpperCase()):"",d.savingThrows?("Saves "+d.savingThrows.map(x=>x.toUpperCase()).join("/")):""].filter(Boolean).join(" · ");
@@ -3795,6 +3839,33 @@ function choiceFieldHTML(ch,ci,d){
   return `<div class="choice" data-ci="${esc(ci)}" data-ctype="${esc(t||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
 }
 let _activeChoices=[];
+/* ---- a choice window's title (#69) ----
+   One window can hold several levels: a class added at 3 asks for its level-1
+   skills, the hit points for levels 2-3 and the level-3 subclass together. So
+   the title names the span of what is IN the window, read off the choices and
+   notes themselves — "Fighter — Level 4", "Fighter — Levels 1–3". Each carries
+   the `_level` it was collected at; an HP step covers `levels` levels ending at
+   its own (2..N for a first class above level 1, 1..N for a multiclass). It
+   used to be the FIRST choice's level, i.e. whichever block happened to lead.
+   Nothing with a level (a plain-text note): no level is named, not guessed.
+   A note is a string, or {text,_level} when a class or subclass level wrote it.
+   Plain text throughout: openModal() sets the title as textContent, so the class
+   name goes in as written — esc() here once showed "Tom &amp; Jerry". DOM-free. */
+function choiceNoteText(n){return (n&&typeof n==="object")?String(n.text??""):String(n??"");}
+function choiceLevelSpan(choices,notes){
+  let lo=0,hi=0;
+  (choices||[]).concat(notes||[]).forEach(x=>{
+    const L=num(x&&x._level);if(L<1)return;
+    const from=x.type==="hp"?Math.max(1,L-Math.max(1,num(x.levels))+1):L;
+    if(!lo||from<lo)lo=from;
+    if(L>hi)hi=L;
+  });
+  return hi?{lo,hi}:null;
+}
+function choiceWindowTitle(className,choices,notes){
+  const s=choiceLevelSpan(choices,notes),name=String(className??"");
+  return s?name+" — "+(s.lo===s.hi?"Level "+s.hi:"Levels "+s.lo+"–"+s.hi):name;
+}
 function sidToOrigin(sid,level){
   const p=String(sid||"").split(":");
   if(p[0]==="class")return {kind:"class",class:p[1],level};
@@ -3818,11 +3889,10 @@ function runChoices(className,choices,notes,pending){
   _activeChoices=choices||[];
   const d=findClassDef(className);
   let body="";
-  (notes||[]).forEach(n=>body+=`<p class="hint" style="color:var(--accent-2);font-size:14px">✦ ${esc(n)}</p>`);
+  (notes||[]).forEach(n=>body+=`<p class="hint" style="color:var(--accent-2);font-size:14px">✦ ${esc(choiceNoteText(n))}</p>`);
   (choices||[]).forEach((ch,ci)=>body+=choiceFieldHTML(ch,ci,d));
   body+=`<div class="m-actions"><button class="tbtn primary" id="chDone">Done</button></div>`;
-  const lvl=(choices&&choices[0]&&choices[0]._level)||(character.classes.find(c=>c.name===className)||{}).level||"";
-  openModal(`${esc(className)} — Level ${lvl}`,body);
+  openModal(choiceWindowTitle(className,choices,notes),body);
   /* Guard the dismissals too. A Done-only warning would make Escape — which
      discards EVERY pick with no way to reopen the chooser — the easiest way
      past it, which is the opposite of the point. Registered after openModal,
@@ -4388,7 +4458,7 @@ function renderSpells(){
        casting deliberately does not check it. */
     h.innerHTML=`<span class="prep-cap" title="The box on each row marks a spell you have prepared">Prep</span><span>${lv===0?"Cantrips":"Level "+lv}</span><span class="spell-count ${over?"over":""}" title="${allot>0?"Added / available":"Added"}${granted?" · +granted (feat/background), not counted":""}">${countTxt}</span>`;
     el.appendChild(h);
-    items.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).forEach(s=>{
+    items.sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""))).forEach(s=>{
       const r=document.createElement("div");r.className="spell";
       r.innerHTML=`<button class="pin ${s.prepared?"on":""}" data-prep="${esc(s.id)}" aria-label="Prepared" aria-pressed="${s.prepared?"true":"false"}" title="${s.prepared?"Prepared — tap to unprepare":"Not prepared — tap to prepare"}"></button>
         <span class="nm" data-view-spell="${esc(s.id)}">${esc(s.name||"Spell")}</span>
@@ -4407,12 +4477,16 @@ function renderGloss(){
   const q=(si?si.value:"").trim().toLowerCase();
   const match=t=>!q||String(t).toLowerCase().includes(q);
   const CAP=150;
-  const allrk=rules.keywords||[];
+  /* glossTerm(), never `.term` (#71). A pack keyword with no term can't be
+     reached from anywhere, so it isn't listed; the pool drops those anyway
+     (tidyRules). The player's own entry with no term IS listed — it is theirs,
+     and Edit is how it gets one. */
+  const allrk=(Array.isArray(rules.keywords)?rules.keywords:[]).filter(g=>glossTerm(g));
   const anyRules=RULE_CATS.some(c=>(rules[c]||[]).length);
   if(!anyRules){
     el.insertAdjacentHTML("beforeend",`<div class="empty" style="line-height:1.7">No rules pack loaded yet. <button class="linkbtn" id="glossImport">Import rules files</button> to add conditions, spells, feats, backgrounds, and more — or manage sources in Settings.</div>`);
   }
-  const rk=allrk.filter(g=>match(g.term));
+  const rk=allrk.filter(g=>match(glossTerm(g)));
   if(allrk.length){
     const h=document.createElement("div");h.className="spell-h";
     /* NO esc() here: textContent assigns a literal string, so escaping first
@@ -4428,13 +4502,15 @@ function renderGloss(){
     });
     if(rk.length>CAP)el.insertAdjacentHTML("beforeend",`<div class="empty">…and ${rk.length-CAP} more — type to filter.</div>`);
   }
-  const mine=character.glossary.filter(g=>match(g.term)).sort((a,b)=>a.term.localeCompare(b.term));
+  const own=(Array.isArray(character.glossary)?character.glossary:[]).filter(g=>g&&typeof g==="object"&&!Array.isArray(g));
+  const mine=own.filter(g=>match(glossTerm(g))).sort((a,b)=>glossTerm(a).localeCompare(glossTerm(b)));
   const h2=document.createElement("div");h2.className="spell-h";h2.textContent=`Your entries (${mine.length})`;el.appendChild(h2);
-  if(!character.glossary.length){el.insertAdjacentHTML("beforeend",`<div class="empty">None yet — add campaign-specific terms or house rules here.</div>`);return;}
+  if(!own.length){el.insertAdjacentHTML("beforeend",`<div class="empty">None yet — add campaign-specific terms or house rules here.</div>`);return;}
   if(!mine.length){el.insertAdjacentHTML("beforeend",`<div class="empty">No matches.</div>`);return;}
   mine.forEach(g=>{
     const d=document.createElement("div");d.className="item";
-    d.innerHTML=`<div class="top"><span class="nm">${esc(g.term)}</span><span class="chip">${g.type==="image"?"Image":"Text"}</span>
+    const t=glossTerm(g);
+    d.innerHTML=`<div class="top"><span class="nm">${t?esc(t):`<em title="This entry has no term, so it never shows up in your text. Edit it to give it one.">(no term)</em>`}</span><span class="chip">${g.type==="image"?"Image":"Text"}</span>
       <button class="icon" data-view-gloss="${esc(g.id)}" aria-label="Preview"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
       <button class="icon" data-edit-gloss="${esc(g.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
       <button class="icon danger" data-del-gloss="${esc(g.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
@@ -5089,7 +5165,9 @@ function scheduleSave(){
     }catch(e){lsOK=false;if(el){el.textContent="Use Save ↑";el.className="savestate";}}
   },500);
 }
-function saveSettings(){try{localStorage.setItem(K_SET,JSON.stringify(settings))}catch(e){}}
+/* Returns "" or why the write was refused (storageWhy). Most callers are one
+   toggle and still ignore it; Import settings reports it. */
+function saveSettings(){try{localStorage.setItem(K_SET,JSON.stringify(settings));return "";}catch(e){return storageWhy(e);}}
 
 /* ================= the rules cache =================
    The rules pool outgrew localStorage. Five packs merge to ~2.3 MILLION
@@ -5368,7 +5446,20 @@ function migrate(s){
   base.coins=Object.assign({},blank.coins);
   if(s.coins&&typeof s.coins==="object"){const map={cp:"cp",sp:"sp",ep:"ep",gp:"gp",pp:"pp",km:"cp",sm:"sp",em:"ep",gm:"gp",pm:"pp"};Object.keys(s.coins).forEach(k=>{if(map[k]&&s.coins[k]!==undefined&&s.coins[k]!=="")base.coins[map[k]]=s.coins[k];});}
   // Guarantee list fields are arrays and map fields are plain objects.
-  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources"].forEach(k=>{ if(!Array.isArray(base[k]))base[k]=[]; });
+  /* Every list holds entry objects, and only objects are kept (#71). `null` is
+     what JSON writes for a hole or an undefined; a bare string or number has no
+     field an entry is made of, so nothing any screen could show is lost. Kept,
+     either one stopped the render: the first read of a field on null throws,
+     and in strict mode so does the first write to a string (renderSpells()
+     normalises `level`, detectSpellAttack() sets `atkType`). */
+  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources"].forEach(k=>{ base[k]=Array.isArray(base[k])?base[k].filter(x=>x!==null&&typeof x==="object"):[]; });
+  /* The player's own glossary entries are theirs, so none is dropped for its
+     shape (#71). Each gets what makes it reachable: the other categories' field
+     names read as the glossary's (glossRepair), and an id, without which the
+     Rules tab's Edit and Delete cannot find it. One with no term is kept and
+     listed there as "(no term)"; glossTerm() skips it for matching. */
+  base.glossary.forEach(g=>{ if(!g||typeof g!=="object"||Array.isArray(g))return; glossRepair(g);
+    if(typeof g.id==="number")g.id=String(g.id); else if(typeof g.id!=="string"||!g.id)g.id=uid(); });
   ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
@@ -6110,10 +6201,16 @@ const modal=document.getElementById("modal");
    how the old module-level equipment queue leaked. Done hands the queue on itself. */
 let _dismissGuard=null,_dismissThen=null;
 function setDismissGuard(fn,then){_dismissGuard=fn;_dismissThen=then||null;}
-/* `icon` is optional emblem markup for the header (iconSVG()). It is assigned
-   UNCONDITIONALLY, never guarded behind `if(icon)`: ~30 call sites pass nothing,
-   and they must CLEAR the slot, or a class emblem leaks into the next spell
-   modal that opens. The title stays textContent — it is player data. */
+/* `title` is plain TEXT, set as textContent: it holds class, spell, item and
+   pack names, so it is never parsed as markup. Callers pass it exactly as
+   written and never esc() it — an escaped title shows its entities, as
+   runChoices()'s "Tom &amp; Jerry" did (#69). `html` is the body and IS markup:
+   callers escape what goes into it. rules-data.js asserts both that this
+   assignment stays textContent and that no call site escapes a title.
+   `icon` is optional emblem markup for the header (iconSVG()). It is assigned
+   UNCONDITIONALLY, never guarded behind `if(icon)`: all but six of the ~50 call
+   sites pass nothing, and they must CLEAR the slot, or a class emblem leaks into
+   the next spell modal that opens. */
 function openModal(title,html,icon){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
 function closeModal(){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
 /* ---- focus ----
@@ -6191,10 +6288,12 @@ modal.addEventListener("change",e=>{
 
 function openGlossView(g){
   /* g is a pack keyword or the character's own entry — either way someone
-     else's file, so the image goes through imgHTML() */
-  const img=g.type==="image"?imgHTML(g.image,g.term):"";
+     else's file, so the image goes through imgHTML(), and it may have no term
+     (#71). Nothing at all is a stale id from a handler's find(). */
+  if(!g||typeof g!=="object")return;
+  const img=g.type==="image"?imgHTML(g.image,glossTerm(g)):"";
   let body= g.type==="image"? (img||(g.image?`<p><em>This image isn't stored in the file itself, so it isn't shown.</em></p>`:`<p><em>No image attached.</em></p>`)) : `<p>${esc(g.text||"—")}</p>`;
-  openModal(g.term,body);
+  openModal(glossTerm(g)||"Glossary entry",body);
 }
 /* ---- size picker (the Size box in Vitals) ----
    The same control Settings offers, put where the stat is shown. Size is a
@@ -6358,6 +6457,12 @@ function openItemForm(existing){
   let equipped=!!it.equipped;
   const eq=document.getElementById("iEquip");eq.addEventListener("click",()=>{equipped=!equipped;eq.classList.toggle("on",equipped)});
   let isWeapon=!!it.weapon;
+  /* The weapon the fields were last filled from: the pack entry just inserted,
+     else the item being edited. The form asks only for kind, ability, dice and
+     type, so the rest — its notes and its own magic bonus (atkMisc/dmgMisc, the
+     +1 on a Dagger of Venom) — is carried from here. Carrying it from the edited
+     item alone gave an inserted +N weapon no bonus at all (#74). */
+  let wFrom=it.weapon||null;
   const wtog=document.getElementById("iIsWeapon"), wfields=document.getElementById("iWeaponFields");
   wtog.addEventListener("click",()=>{isWeapon=!isWeapon;wtog.classList.toggle("on",isWeapon);wfields.style.display=isWeapon?"":"none";});
   let isArmor=!!arm;
@@ -6383,7 +6488,7 @@ function openItemForm(existing){
   fxWrap.addEventListener("click",e=>{const d=e.target.closest(".fx-del");if(d)d.closest(".fxrow").remove()});
   const libSel=document.getElementById("iLib");
   if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;const wg=fnum(x.weight);if(wg)document.getElementById("iWeight").value=wg;fxWrap.innerHTML=fxEditorRows(x.effects);
-    if(x.weapon){isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}
+    if(x.weapon){wFrom=x.weapon;isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}
     /* Read the AC out of what was just inserted, exactly as the sheet would —
        pack armor states it in prose, so this is where that prose becomes fields. */
     const ax=itemArmor({name:x.name,description:x.description||"",category:x.category,type:x.type});
@@ -6440,7 +6545,7 @@ function openItemForm(existing){
         rec.armor={kind:"body",base:Math.max(0,num(document.getElementById("iABase").value)||0),dexCap};
       }
     }else if(it.armor)rec.armor=it.armor;
-    if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(it.weapon&&it.weapon.notes)||""};if(it.weapon&&it.weapon.atkMisc!=null)rec.weapon.atkMisc=it.weapon.atkMisc;if(it.weapon&&it.weapon.dmgMisc!=null)rec.weapon.dmgMisc=it.weapon.dmgMisc;}
+    if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(wFrom&&wFrom.notes)||""};if(wFrom&&wFrom.atkMisc!=null)rec.weapon.atkMisc=wFrom.atkMisc;if(wFrom&&wFrom.dmgMisc!=null)rec.weapon.dmgMisc=wFrom.dmgMisc;}
     /* Limited uses and what Use does. Last, because detectItemUse() below reads
        the FINISHED record — its section depends on the weapon flag set above.
        `used` is the player's own number and survives an edit, clamped in case
@@ -6589,7 +6694,7 @@ function openItemUsePrompt(it,u,p){
    is a silent no-op for the second. */
 const STATUS_CONDSET=new Set(["blinded","charmed","deafened","exhaustion","frightened","grappled","incapacitated","invisible","paralyzed","petrified","poisoned","prone","restrained","stunned","unconscious","bloodied","concentration","surprised"]);
 function statusTermList(){
-  return [...new Set(allGlossary().filter(g=>g.cond||STATUS_CONDSET.has(String(g.term||"").trim().toLowerCase())).map(g=>g.term).filter(Boolean))];
+  return [...new Set(allGlossary().filter(g=>{const t=glossTerm(g);return t&&(g.cond||STATUS_CONDSET.has(t.toLowerCase()));}).map(glossTerm))];
 }
 function statusDatalistHTML(id){
   const terms=statusTermList();
@@ -6653,10 +6758,10 @@ function openFamiliarForm(existing){
 function openSpellForm(existing){
   const s=existing||{id:uid(),name:"",level:0,prepared:false,meta:"",text:""};
   const lib=(rules.spells||[]);
-  const myCl=(character.classes||[]).map(c=>(c.name||"").toLowerCase());
+  const myCl=(character.classes||[]).map(c=>String(c.name||"").toLowerCase());
   const clsOf=x=>x.class?(Array.isArray(x.class)?x.class:[x.class]):[];
   const matches=x=>{const c=clsOf(x);return !c.length||c.some(n=>myCl.includes(String(n).toLowerCase()));};
-  const libOpts=lib.slice().sort((a,b)=>num(a.level)-num(b.level)||(a.name||"").localeCompare(b.name||"")).map(x=>`<option value="${esc(x._id||x.name)}" data-lv="${esc(num(x.level))}" data-cls="${esc(clsOf(x).join("|").toLowerCase())}" data-mine="${matches(x)?1:0}">${esc(dispName(x,"spells"))} (${num(x.level)===0?"cantrip":"lv "+num(x.level)})${clsOf(x).length?" · "+esc(clsOf(x).join("/")):""}</option>`).join("");
+  const libOpts=lib.slice().sort((a,b)=>num(a.level)-num(b.level)||String(a.name||"").localeCompare(String(b.name||""))).map(x=>`<option value="${esc(x._id||x.name)}" data-lv="${esc(num(x.level))}" data-cls="${esc(clsOf(x).join("|").toLowerCase())}" data-mine="${matches(x)?1:0}">${esc(dispName(x,"spells"))} (${num(x.level)===0?"cantrip":"lv "+num(x.level)})${clsOf(x).length?" · "+esc(clsOf(x).join("/")):""}</option>`).join("");
   const caster=hasCasterClass(), mx=maxCastableLevel();
   openModal(existing?"Edit spell":"New spell",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="sLib"><option value="">—</option>${libOpts}</select>
@@ -7050,7 +7155,7 @@ function browseFeatures(){
 function openGlossForm(existing){
   const g=existing||{id:uid(),term:"",type:"text",text:"",image:null};
   openModal(existing?"Edit entry":"New glossary entry",`
-    <div class="field"><label class="f">Term</label><input id="gTerm" value="${esc(g.term)}" placeholder="Frightened, Fireball, House rule…"></div>
+    <div class="field"><label class="f">Term</label><input id="gTerm" value="${esc(glossTerm(g))}" placeholder="Frightened, Fireball, House rule…"></div>
     <div class="field"><label class="f">Type</label><select id="gType"><option value="text"${g.type==="text"?" selected":""}>Text</option><option value="image"${g.type==="image"?" selected":""}>Rules image</option></select></div>
     <div class="field" id="gTextWrap"><label class="f">Explanation</label><textarea id="gText">${esc(g.text||"")}</textarea></div>
     <div class="field" id="gImgWrap" style="display:none"><label class="f">Rules image</label>
@@ -7067,7 +7172,7 @@ function openGlossForm(existing){
   document.getElementById("gSave").addEventListener("click",()=>{
     const term=document.getElementById("gTerm").value.trim();if(!term){alert("Give the entry a term.");return;}
     const rec={id:g.id,term,type:type.value,text:document.getElementById("gText").value,image:img};
-    const i=character.glossary.findIndex(x=>x.id===g.id);if(i>=0)character.glossary[i]=rec;else character.glossary.push(rec);
+    const i=character.glossary.findIndex(x=>x&&x.id===g.id);if(i>=0)character.glossary[i]=rec;else character.glossary.push(rec);
     closeModal();renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();
   });
 }
@@ -7119,7 +7224,12 @@ function toggleRulesSec(k){setRulesSecOpen(k,!rulesSecOpen(k));renderRulesSectio
    The converter lifts each table out of the prose it lived in and leaves a
    "[Table: Name]" anchor behind; highlight() turns that into a tappable chip.
    Everything here is read-only reference material — no character state. */
-function allTables(){return rules.tables||[]}
+function allTables(){return Array.isArray(rules.tables)?rules.tables:[]}
+/* A table's rows and columns as lists, whatever the pack wrote. renderTables()
+   runs in renderAll(), so a table with no `rows` stopped every render, the same
+   way a keyword with no term did (#71). A row that is not a list is one cell. */
+function tableRows(t){return (t&&Array.isArray(t.rows)?t.rows:[]).map(r=>Array.isArray(r)?r:[r]);}
+function tableCols(t){return t&&Array.isArray(t.cols)?t.cols:[];}
 function findTable(name){
   const n=String(name||"").trim().toLowerCase();
   if(!n)return null;
@@ -7133,17 +7243,24 @@ function tablesFor(name,kind){
   return allTables().filter(t=>String(t.owner||"").trim().toLowerCase()===n&&(!kind||t.ownerKind===kind));
 }
 function tableHTML(t){
-  if(!t||!Array.isArray(t.rows)||!t.rows.length)return `<p class="hint">This table has no rows.</p>`;
-  const al=t.align||[],a=i=>al[i]==="center"?" style=\"text-align:center\"":(al[i]==="right"?" style=\"text-align:right\"":"");
-  const cols=t.cols||[];
+  const rows=tableRows(t);
+  if(!rows.length)return `<p class="hint">This table has no rows.</p>`;
+  const al=Array.isArray(t.align)?t.align:[],a=i=>al[i]==="center"?" style=\"text-align:center\"":(al[i]==="right"?" style=\"text-align:right\"":"");
+  const cols=tableCols(t);
   const head=cols.some(c=>c!=="")?`<thead><tr>${cols.map((c,i)=>`<th${a(i)}>${esc(c)}</th>`).join("")}</tr></thead>`:"";
-  const body=t.rows.map(r=>`<tr>${r.map((c,i)=>`<td${a(i)}>${esc(c)}</td>`).join("")}</tr>`).join("");
-  return `<div class="tbl-wrap"><table class="rtbl">${head}<tbody>${body}</tbody></table></div>`;
+  const body=rows.map(r=>`<tr>${r.map((c,i)=>`<td${a(i)}>${esc(c)}</td>`).join("")}</tr>`).join("");
+  /* footnotes (schema §6.11, optional): what a "*" in a row or label points at.
+     Escaped exactly as a cell is, and set OUTSIDE the scroll box so a wide d100
+     table never carries its notes off-screen. None → the markup is unchanged. */
+  const notes=(Array.isArray(t.footnotes)?t.footnotes:[]).map(f=>f==null?"":String(f).trim()).filter(Boolean);
+  const foot=notes.length?`<div class="tbl-notes">${notes.map(f=>`<p>${esc(f)}</p>`).join("")}</div>`:"";
+  return `<div class="tbl-wrap"><table class="rtbl">${head}<tbody>${body}</tbody></table></div>${foot}`;
 }
 function tableMeta(t){
   const bits=[];
   if(t.owner)bits.push(t.owner+(t.ownerKind?" ("+t.ownerKind+")":""));
-  bits.push(t.rows.length+" row"+(t.rows.length===1?"":"s"));
+  const n=tableRows(t).length;
+  bits.push(n+" row"+(n===1?"":"s"));
   return bits.join(" · ");
 }
 function openTableView(t){
@@ -7162,7 +7279,7 @@ function renderTables(){
   const q=(si?si.value:"").trim().toLowerCase();
   const list=allTables().filter(t=>{
     if(!q)return true;
-    return (String(t.name||"")+" "+String(t.owner||"")+" "+(t.cols||[]).join(" ")).toLowerCase().includes(q);
+    return (String(t.name||"")+" "+String(t.owner||"")+" "+tableCols(t).join(" ")).toLowerCase().includes(q);
   });
   el.innerHTML="";
   if(!allTables().length){
@@ -7180,7 +7297,7 @@ function renderTables(){
     const h=document.createElement("div");h.className="spell-h";h.textContent=`${label} (${arr.length})`;el.appendChild(h);
     arr.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))).forEach(t=>{
       const d=document.createElement("div");d.className="item";
-      d.innerHTML=`<div class="top"><span class="nm">${esc(dispName(t,"tables"))}</span><span class="chip">${esc(String(t.rows.length))} rows</span>
+      d.innerHTML=`<div class="top"><span class="nm">${esc(dispName(t,"tables"))}</span><span class="chip">${esc(String(tableRows(t).length))} rows</span>
         <button class="icon" data-view-table="${esc(t.name)}" aria-label="View table"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
         ${t.owner?`<div class="desc hint">From ${esc(t.owner)}</div>`:""}`;
       el.appendChild(d);
@@ -7991,7 +8108,8 @@ function openSettings(){
       <button class="tbtn" id="btnImportSettings">Import settings</button>
       <input type="file" id="fileSettings" accept="application/json,.json" class="hidefile">
     </div>
-    <p class="hint" style="margin-top:6px">Export saves your appearance settings <b>and</b> all loaded rules data to one JSON file; import restores both.</p>`;
+    <div class="status" id="setImpStatus"></div>
+    <p class="hint" style="margin-top:6px">Export saves your appearance settings <b>and</b> all loaded rules data to one JSON file. Import restores the settings, and asks before it replaces the rules you have loaded.</p>`;
   /* CC BY 3.0 obliges us to name the artists, name and link the licence, and say
      that the work was changed — hence the last sentence, which is not decorative.
      ICON_ARTISTS is generated from the icons actually vendored (05-icons.js), so
@@ -8061,11 +8179,7 @@ function openSettings(){
   document.getElementById("fileRules").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
   document.getElementById("btnExportSettings").addEventListener("click",()=>dl(new Blob([JSON.stringify({_type:"fieldbook-settings",settings,rules},null,2)],{type:"application/json"}),"fieldbook-settings.json"));
   document.getElementById("btnImportSettings").addEventListener("click",()=>document.getElementById("fileSettings").click());
-  document.getElementById("fileSettings").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const p=JSON.parse(r.result);
-      if(p&&(p.settings||p.rules)){ if(p.settings)settings=Object.assign(settings,p.settings); if(p.rules&&typeof p.rules==="object"){rules=p.rules;reindexRules();recomputeDups();saveRulesCache();} }
-      else { settings=Object.assign(settings,p); }
-      applyTheme();saveSettings();refreshRulesUI();renderAll();closeModal();openSettings();
-    }catch(err){alert("Not a valid settings file.")}};r.readAsText(f);e.target.value="";});
+  document.getElementById("fileSettings").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{let p=null;try{p=JSON.parse(r.result);}catch(err){}importSettings(p);};r.readAsText(f);e.target.value="";});
 }
 /* One line under the Size/Encumbrance selects: what you're carrying right now,
    against what this character can carry. Answers "what does this setting
@@ -8082,6 +8196,111 @@ function encSettingsChanged(){
   if(s&&s.options.length)s.options[0].textContent="From ancestry ("+(raceDefSize()||"Medium")+")";
   renderInventory();recompute();scheduleSave();
 }
+/* ================= Import settings (#70) =================
+   Export settings has always written {_type:"fieldbook-settings", settings,
+   rules}: the appearance settings AND the whole rules pool as it stood that
+   day. A settings file from before the wrapper is the bare settings object, and
+   that still imports.
+
+   Import used to assign the file's `rules` wholesale, unasked and unvalidated,
+   so every pack imported or fetched since the export vanished without a word.
+   Now the file's pool is rebuilt through mergeRules() (poolFromExport), and
+   replacing what is loaded is the player's call. There are three answers, so
+   it is a window like the character-import clash, not a confirm(): OK/Cancel
+   cannot say "import the settings but keep my rules" without making Cancel
+   import something. Nothing is lost, so nothing is asked, when the file brings
+   no rules or none are loaded yet. */
+const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCollapse","tabIcons"];
+/* What boot does to settings from an older build, shared with Import settings
+   so an old file arrives in the same shape: the first builds' single `rulesUrl`
+   joins the sources list. True when that changed something worth saving. */
+function foldLegacySettings(){
+  if(!Array.isArray(settings.rulesSources))settings.rulesSources=[];
+  if(!settings.rulesUrl)return false;
+  if(!settings.rulesSources.includes(settings.rulesUrl))settings.rulesSources.push(settings.rulesUrl);
+  delete settings.rulesUrl;
+  return true;
+}
+/* The parsed file -> {settings, pool, used, skipped}, or null when it is not a
+   settings file at all. A bare object must carry some setting, or a rules pack
+   or character picked by mistake would be written into settings key by key. */
+function readSettingsFile(p){
+  const isObj=o=>!!o&&typeof o==="object"&&!Array.isArray(o);
+  if(!isObj(p))return null;
+  const wrapped=p._type==="fieldbook-settings"||!!p.settings||!!p.rules;
+  if(!wrapped&&!SETTINGS_KEYS.some(k=>k in p))return null;
+  const set=wrapped?(isObj(p.settings)?p.settings:null):p;
+  const built=(wrapped&&p.rules)?poolFromExport(p.rules):{pool:null,used:0,skipped:0};
+  if(!set&&!built.used)return null;
+  return {settings:set,pool:built.used?built.pool:null,used:built.used,skipped:built.skipped};
+}
+function importSettings(p){
+  let imp=null;try{imp=readSettingsFile(p);}catch(e){}
+  if(!imp){alert("Not a valid settings file.");return;}
+  if(!imp.pool||!rulesEntryCount()){finishSettingsImport(imp,!!imp.pool);return;}
+  askSettingsImport(imp);
+}
+function rulesPackSummary(groups){
+  const n=groups.reduce((a,g)=>a+g.count,0);
+  return `${groups.length} pack${groups.length===1?"":"s"}, ${n} entr${n===1?"y":"ies"}`;
+}
+/* The question names both sides, each pack with its count and data version,
+   then what replacing would lose: every loaded pack the file does not have, and
+   any it would put back an older copy of. Each <p> is one source line, because
+   .m-body p is white-space:pre-wrap. */
+function settingsImportQuestionHTML(imp){
+  const file=loadedRulesGroups(imp.pool),now=loadedRulesGroups();
+  const inFile={};file.forEach(g=>{inFile[g.key]=g;});
+  const list=gs=>gs.map(g=>g.label+" ("+g.count+(g.dataVersion?", v"+g.dataVersion:"")+")").join(" · ");
+  const lost=now.filter(g=>!inFile[g.key]);
+  const older=now.filter(g=>{const f=inFile[g.key];return f&&f.dataVersion&&g.dataVersion&&cmpVer(f.dataVersion,g.dataVersion)<0;});
+  const loss=[];
+  if(lost.length)loss.push(`unloads ${lost.length===1?"1 pack":lost.length+" packs"} the file doesn't have: ${lost.map(g=>g.label).join(", ")}`);
+  if(older.length)loss.push(`puts back an older copy of ${older.map(g=>g.label+" (v"+inFile[g.key].dataVersion+"; v"+g.dataVersion+" is loaded)").join(", ")}`);
+  const skipped=imp.skipped?` ${imp.skipped} entr${imp.skipped===1?"y":"ies"} in it couldn't be loaded and would be left out.`:"";
+  return `<p>This settings file also carries rules data, saved when it was exported. Import the settings and keep the rules you have loaded now, or replace them with the file's copy.</p>`+
+    `<div class="field"><label class="f">In the file</label><p class="hint"><b>${esc(rulesPackSummary(file))}</b>: ${esc(list(file))}.${esc(skipped)}</p></div>`+
+    `<div class="field"><label class="f">Loaded now</label><p class="hint"><b>${esc(rulesPackSummary(now))}</b>: ${esc(list(now))}.</p></div>`+
+    (loss.length?`<p class="status err">Replacing ${esc(loss.join(", and "))}.</p>`:"")+
+    `<p class="hint">Your characters are not affected either way.</p>`+
+    `<div class="m-actions" style="flex-wrap:wrap;gap:8px"><button class="tbtn" id="setImpCancel">Cancel</button><button class="tbtn primary" id="setImpKeep">Keep my rules</button><button class="tbtn danger" id="setImpReplace">Replace my rules</button></div>`;
+}
+function askSettingsImport(imp){
+  openModal("Import settings",settingsImportQuestionHTML(imp));
+  const back=()=>{openSettings();settingsImportStatus("Import cancelled. Nothing changed.","");};
+  /* ✕, Escape and a click outside go back to Settings too, having changed nothing */
+  setDismissGuard(null,back);
+  document.getElementById("setImpCancel").addEventListener("click",()=>{closeModal();back();});
+  document.getElementById("setImpKeep").addEventListener("click",()=>finishSettingsImport(imp,false));
+  document.getElementById("setImpReplace").addEventListener("click",()=>finishSettingsImport(imp,true));
+}
+/* Apply the answer, redraw everything that shows settings or rules, and say
+   what happened beside the Import button: the rules status line sits in the
+   Rules data section, which is usually folded shut. Both writes report a
+   refusal there (storage rule); the cache's arrives asynchronously. */
+function finishSettingsImport(imp,replace){
+  const had=rulesEntryCount();
+  const swap=!!(replace&&imp.pool);
+  const what=imp.pool?rulesPackSummary(loadedRulesGroups(imp.pool)):"";
+  if(imp.settings){Object.assign(settings,imp.settings);foldLegacySettings();}
+  const setErr=imp.settings?saveSettings():"";
+  let saving=Promise.resolve("");
+  if(swap){rules=imp.pool;reindexRules();recomputeDups();saving=saveRulesCache();}
+  applyTheme();refreshRulesUI();renderAll();renderHome();
+  closeModal();openSettings();
+  const miss=swap?missingSummary():"";
+  let msg=!imp.settings?"This file carries no settings.":
+    setErr?`Settings imported for this session only: ${setErr}, so they won't be there next time you open Fieldbook.`:"Settings imported.";
+  if(swap)msg+=(had?" Your rules were replaced with the file's: ":" Loaded the rules data it carries: ")+what+"."+
+    (imp.skipped?` ${imp.skipped} entr${imp.skipped===1?"y":"ies"} in it couldn't be loaded and were left out.`:"")+miss;
+  else if(imp.pool)msg+=` Your loaded rules are unchanged; the file's copy (${what}) was not loaded.`;
+  else if(imp.skipped)msg+=" The rules data in it couldn't be read, so your loaded rules are unchanged.";
+  else msg+=" It carries no rules data, so your loaded rules are unchanged.";
+  const cls=(setErr||(swap&&(imp.skipped||miss))||(!imp.pool&&imp.skipped))?"err":"ok";
+  settingsImportStatus(msg,cls);
+  return saving.then(err=>{if(err){renderRulesData();settingsImportStatus(msg+" "+err,"err");}return err;});
+}
+function settingsImportStatus(msg,cls){const el=document.getElementById("setImpStatus");if(el){el.textContent=msg;el.className="status "+(cls||"");}}
 /* A pack that is loaded but could not be SAVED is the one state the loaded-data
    list can't show on a row: the entry is there, it just won't come back. Say it
    above the list, in red, rather than letting a reload quietly undo the import. */
@@ -8099,9 +8318,10 @@ const RULE_CATS=["keywords","features","items","spells","races","classes","feats
    the headings in the loaded-data list */
 const CAT_NAMES={keywords:"Glossary",features:"Traits",items:"Items",spells:"Spells",races:"Species",classes:"Classes",feats:"Feats",backgrounds:"Backgrounds",subclasses:"Subclasses",tables:"Tables"};
 function catName(c){return CAT_NAMES[c]||c;}
-function loadedRulesGroups(){
-  const groups={};
-  RULE_CATS.forEach(cat=>(rules[cat]||[]).forEach(e=>{
+/* `pool` defaults to the loaded one; Import settings passes a settings file's */
+function loadedRulesGroups(pool){
+  const p=pool||rules,groups={};
+  RULE_CATS.forEach(cat=>(p[cat]||[]).forEach(e=>{
     const isFile=!!e._file, label=e._file||(e._source||"Unknown");
     const key=(isFile?"f:":"s:")+label;
     if(!groups[key])groups[key]={key,label,isFile,source:e._source||"",rulebook:!!e._rulebook,dataVersion:e._dataVersion||"",count:0,cats:{}};
@@ -8290,7 +8510,59 @@ function renderSrcRows(){
   host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${esc(i)}"><button class="icon danger" data-src-del="${esc(i)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
 }
 function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{}};}
-function keyOf(x,kind){return kind==="subclasses"?(String(x.class||"")+"|"+String(x.name||"")).trim().toLowerCase():String(kind==="keywords"?(x.term||""):(x.name||"")).trim().toLowerCase();}
+/* An entry's name (a keyword's term) as text, or "" when it has none that can
+   be shown: not an object, no name, only spaces, or not text. A number is a
+   name written without quotes, so it counts. Every picker, lookup and chip
+   reaches an entry by this, so one without it is unreachable, and the first
+   `.toLowerCase()` or `x._id=` on it stopped the render (#71). */
+function ruleName(x,kind){
+  if(!x||typeof x!=="object"||Array.isArray(x))return "";
+  const v=kind==="keywords"?x.term:x.name;
+  return typeof v==="string"?v.trim():(typeof v==="number"&&Number.isFinite(v)?String(v):"");
+}
+/* Repair one pool entry in place, or say it cannot be kept. A keyword gets the
+   glossary's aliases (glossRepair) and an id if it has none, since its chip
+   opens it by id; a numeric name becomes text. */
+function tidyRule(x,kind){
+  if(kind==="keywords")glossRepair(x);
+  const nm=ruleName(x,kind);if(!nm)return false;
+  const f=kind==="keywords"?"term":"name";
+  if(typeof x[f]!=="string")x[f]=nm;
+  if(kind==="keywords"&&(typeof x.id!=="string"||!x.id))x.id=typeof x.id==="number"?String(x.id):uid();
+  return true;
+}
+/* Make the pool safe to render, whatever put it there (#71). mergeRules()
+   screens what it merges, but a settings file restores `rules` wholesale and
+   the cache hands back whatever was saved, and neither goes through it. Every
+   path that changes the pool ends in reindexRules(), so it runs this first. A
+   category that is not a list becomes an empty one, and an entry that
+   tidyRule() cannot keep is dropped: nothing could reach it, and it broke
+   everything that could. Returns how many entries it dropped, per category. */
+function tidyRules(){
+  const dropped={};
+  RULE_CATS.forEach(kind=>{
+    const arr=rules[kind];
+    if(arr==null)return;
+    if(!Array.isArray(arr)){rules[kind]=[];return;}
+    const keep=arr.filter(x=>tidyRule(x,kind));
+    if(keep.length!==arr.length){dropped[kind]=arr.length-keep.length;rules[kind]=keep;}
+  });
+  return dropped;
+}
+/* The status-line sentence for entries a load could not use, "" for none.
+   Said where the player is looking when they import, like missingSummary(). */
+const CAT_MANY={keywords:"glossary entries"};
+function skippedSummary(sk){
+  const cats=RULE_CATS.filter(c=>sk&&sk[c]>0);
+  if(!cats.length)return "";
+  const n=cats.reduce((a,c)=>a+sk[c],0);
+  const parts=cats.map(c=>sk[c]+" "+(sk[c]===1?(CAT_ONE[c]||c):(CAT_MANY[c]||catName(c).toLowerCase())));
+  /* a keyword is named by its `term` (rules-schema §6.1), everything else by `name` */
+  const what=cats.every(c=>c==="keywords")?"no term":(sk.keywords?"no name or term":"no name");
+  return cats.length===1?` Skipped ${parts[0]} with ${what}.`:` Skipped ${n} entries with ${what}: ${parts.join(", ")}.`;
+}
+function addSkipped(into,sk){Object.keys(sk||{}).forEach(c=>{into[c]=(into[c]||0)+sk[c];});return into;}
+function keyOf(x,kind){if(!x||typeof x!=="object")return "";return kind==="subclasses"?(String(x.class||"")+"|"+String(x.name||"")).trim().toLowerCase():String(kind==="keywords"?(x.term||""):(x.name||"")).trim().toLowerCase();}
 /* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules.
    Where it came from is stamped on every entry: `_file` for a file import, `_url`
    (the source URL from Settings, not an include under it) for a fetch. `_url` is
@@ -8315,36 +8587,114 @@ function mergeRules(obj,fileName,url){
     rules.requires[srcLabel(obj)]=obj.requires;
   }
   const cats={keywords:obj.keywords,features:traitArr,items:obj.items,spells:obj.spells,races:obj.races,classes:obj.classes,feats:obj.feats,backgrounds:obj.backgrounds,subclasses:obj.subclasses,tables:obj.tables};
+  /* What this pack had that nothing could reach (#71): counted, returned, and
+     said on the status line by the importer, rather than dropped in silence. */
+  const skipped={};
   Object.keys(cats).forEach(kind=>{
     const arr=cats[kind];if(!Array.isArray(arr))return;
     /* key by SOURCE + name: re-loading the same source replaces its own entries,
        but a same-named entry from a different source is kept (both shown, annotated). */
     const map=new Map((rules[kind]||[]).map(x=>[(x._source||"")+"\u0000"+keyOf(x,kind),x]));
     arr.forEach(raw=>{
-      const base=(kind==="keywords")?{id:uid(),term:raw.term||"",type:raw.type==="image"?"image":"text",text:raw.text||"",image:raw.image||null,cond:!!raw.cond}:Object.assign({},raw);
+      const kw=kind==="keywords"&&raw&&typeof raw==="object"?glossRepair(Object.assign({},raw)):null;
+      if(!ruleName(kw||raw,kind)){skipped[kind]=(skipped[kind]||0)+1;return;}
+      const base=kw?{id:uid(),term:ruleName(kw,kind),type:kw.type==="image"?"image":"text",text:kw.text||"",image:kw.image||null,cond:!!kw.cond}:Object.assign({},raw);
+      if(typeof base.name==="number")base.name=String(base.name);
       /* provenance is the merge's to record, never the pack's: a stray `_url` in
          a file would let some later fetch delete it */
       delete base._file;delete base._url;
       base._source=src;if(fileName)base._file=fileName;if(url)base._url=url;if(obj.rulebook)base._rulebook=1;
       if(obj.dataVersion)base._dataVersion=obj.dataVersion;
       if(excl&&excl.length)base._excludeSystems=excl;
-      const nm=keyOf(base,kind);if(!nm)return;
+      const nm=keyOf(base,kind);if(!nm){skipped[kind]=(skipped[kind]||0)+1;return;}
       map.set(src+"\u0000"+nm,base);
     });
     rules[kind]=Array.from(map.values());
   });
   reindexRules();
   recomputeDups();
+  return skipped;
+}
+/* Rebuild a pool that was saved whole (a settings file's `rules`: the merged
+   pool as it stood the day Export settings ran) through mergeRules(), the path
+   every other load takes. Import settings used to assign it to `rules` as it
+   came (#70), so nothing checked it: a keyword with `name` for `term` went in
+   and broke every render, and a category that wasn't an array broke the next
+   re-index.
+
+   Each run of consecutive entries that share their provenance is merged as one
+   pack, with that provenance handed back in the fields mergeRules reads
+   (`system`, `rulebook`, `dataVersion`, `excludeSystems`, `requires`, the file
+   name or URL). So the loaded-data list, the version badges and Fetch all's
+   `_url` replacement come back as they were, and so does the order within each
+   category, which name lookups take the first match from.
+
+   What survives is mergeRules' decision, not this function's: only a
+   non-object is dropped here, since no pack can hold one and a null keyword
+   would throw. So when mergeRules learns to read something new, settings
+   files get it too.
+
+   It builds on a scratch pool. The live one is swapped out only for this
+   synchronous call and put back even if a merge throws. Returns {pool, used,
+   skipped}: how many entries survived, and how many of those offered did not
+   (not an object, no name, or a repeat of one already in it). */
+function poolFromExport(saved){
+  const isObj=o=>!!o&&typeof o==="object"&&!Array.isArray(o);
+  const STAMPS=["_id","_source","_file","_url","_rulebook","_dataVersion","_excludeSystems"];
+  const live=rules;
+  let offered=0;
+  resetRules();
+  try{
+    if(isObj(saved)){
+      if(typeof saved.name==="string")rules.name=saved.name;
+      const req=isObj(saved.requires)?saved.requires:{};
+      RULE_CATS.forEach(cat=>{
+        /* the same features-or-traits choice mergeRules makes */
+        const arr=(cat==="features"&&!Array.isArray(saved.features))?saved.traits:saved[cat];
+        if(!Array.isArray(arr))return;
+        offered+=arr.length;
+        let run=null;
+        const flush=()=>{if(run)mergeRules(run.pack,run.file,run.url);run=null;};
+        arr.forEach(e=>{
+          if(!isObj(e))return;
+          const file=(typeof e._file==="string"&&e._file)||null;
+          const url=(typeof e._url==="string"&&e._url)||null;
+          const pack={system:typeof e._source==="string"?e._source:""};
+          if(e._rulebook)pack.rulebook=true;
+          if(e._dataVersion)pack.dataVersion=e._dataVersion;
+          if(Array.isArray(e._excludeSystems))pack.excludeSystems=e._excludeSystems;
+          const key=JSON.stringify([pack.system,file,url,!!pack.rulebook,pack.dataVersion||"",pack.excludeSystems||null]);
+          if(!run||run.key!==key){
+            flush();
+            if(Array.isArray(req[srcLabel(pack)]))pack.requires=req[srcLabel(pack)];
+            pack[cat]=[];
+            run={key,file,url,pack};
+          }
+          /* the pack fields above carry these; mergeRules stamps them afresh */
+          const c=Object.assign({},e);STAMPS.forEach(k=>{delete c[k];});
+          run.pack[cat].push(c);
+        });
+        flush();
+      });
+    }
+    const used=RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);
+    return {pool:rules,used,skipped:Math.max(0,offered-used)};
+  }finally{rules=live;}
 }
 /* assign an HTML-safe unique id to every rule entry (used as <option> values and
    for lookups). Must NOT contain characters the HTML parser mangles — notably a
-   null byte, which the parser turns into U+FFFD inside attribute values. */
+   null byte, which the parser turns into U+FFFD inside attribute values.
+   Every path that changes the pool ends here — a merge, a fetch, a removal, a
+   settings file, the cache at boot — which is why the pool is tidied here first
+   (#71). Returns what the tidy dropped, per category, for a caller to report. */
 let _ruleSeq=0;
 function reindexRules(){
+  const dropped=tidyRules();
   _ruleSeq=0;
   RULE_CATS.forEach(kind=>{
     (rules[kind]||[]).forEach(x=>{x._id="r"+(_ruleSeq++);});
   });
+  return dropped;
 }
 /* names that appear in more than one source within a category → shown annotated */
 function recomputeDups(){
@@ -8362,8 +8712,8 @@ function dispName(entry,kind){
   return dset.has(String(nm).trim().toLowerCase())?`${nm} (${entry._source||"?"})`:nm;
 }
 function ruleById(kind,idOrName){
-  const arr=rules[kind]||[];
-  return arr.find(x=>x._id===idOrName)||arr.find(x=>keyOf(x,kind)===String(idOrName||"").trim().toLowerCase());
+  const arr=Array.isArray(rules[kind])?rules[kind]:[];
+  return arr.find(x=>x&&x._id===idOrName)||arr.find(x=>keyOf(x,kind)===String(idOrName||"").trim().toLowerCase());
 }
 /* Fetch a URL and follow any "include":[...] (a manifest) relative to it,
    collecting every pack into `out` in order. Nothing is merged here: the caller
@@ -8405,9 +8755,11 @@ function applyFetchedSource(url,packs){
   if(rules.requires)new Set(packs.map(srcLabel)).forEach(l=>{
     if(RULE_CATS.every(c=>(rules[c]||[]).every(e=>(e._source||"")!==l||old.has(e))))delete rules.requires[l];
   });
-  packs.forEach(p=>mergeRules(p,null,url));
+  const skipped={};
+  packs.forEach(p=>addSkipped(skipped,mergeRules(p,null,url)));
   RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
   pruneRequires();reindexRules();recomputeDups();
+  return skipped;
 }
 /* Settings → Fetch all. Fetching NEVER loses what is loaded (#65): this used to
    resetRules() first, which discarded every pack imported from a file, and when
@@ -8441,14 +8793,16 @@ function fetchAllRules(){
         updateRulesStatus(`Couldn't fetch ${why}, so nothing changed. ${rulesStatusText()}${tail}`,"err");
         return;
       }
-      ok.forEach(r=>applyFetchedSource(r.url,r.packs));
+      const skipped={};
+      ok.forEach(r=>addSkipped(skipped,applyFetchedSource(r.url,r.packs)));
+      const sk=skippedSummary(skipped);
       const saving=saveRulesCache();
       refreshRulesUI();renderRulesData();
       const head=bad.length
         ? `Fetched ${ok.length} of ${results.length} sources. Couldn't fetch ${why}, so what ${bad.length>1?"they":"it"} loaded before is kept. `
         : "Fetched. ";
       const m=missingSummary();
-      updateRulesStatus(head+rulesStatusText()+m+(bad.length?tail:""),(bad.length||m)?"err":"ok");
+      updateRulesStatus(head+rulesStatusText()+m+sk+(bad.length?tail:""),(bad.length||m||sk)?"err":"ok");
       /* the cache write is reported HERE, on the line the player is reading, not
          only in the red line above the list (storage rule: a write that does not
          land says so) */
@@ -8457,11 +8811,11 @@ function fetchAllRules(){
 }
 /* import one or many files; each is merged so you can load traits.json, spells.json, … separately */
 function importRulesFiles(files){
-  const list=Array.from(files);let ok=0,bad=0;
+  const list=Array.from(files);let ok=0,bad=0;const skipped={};
   (function next(i){
-    if(i>=list.length){const m=missingSummary();saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus(`Merged ${ok} file(s)${bad?", "+bad+" failed":""}. `+rulesStatusText()+m,(bad||m)?"err":"ok");return;}
+    if(i>=list.length){const m=missingSummary(),sk=skippedSummary(skipped);saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus(`Merged ${ok} file(s)${bad?", "+bad+" failed":""}. `+rulesStatusText()+m+sk,(bad||m||sk)?"err":"ok");return;}
     const r=new FileReader();
-    r.onload=()=>{try{mergeRules(JSON.parse(r.result),list[i].name);ok++;}catch(e){bad++;}next(i+1);};
+    r.onload=()=>{try{addSkipped(skipped,mergeRules(JSON.parse(r.result),list[i].name));ok++;}catch(e){bad++;}next(i+1);};
     r.onerror=()=>{bad++;next(i+1);};
     r.readAsText(list[i]);
   })(0);
@@ -8689,10 +9043,10 @@ function wire(){
     if((m=t.closest("[data-active-sec]"))){const a=(character.activeSpells||[]).find(x=>x.id===m.dataset.activeSec);if(a){const v=prompt("Add how many seconds?","6");if(v!=null){bumpActive(a,num(v));renderActiveSpells();scheduleSave();}}return;}
     if((m=t.closest("[data-prep]"))){const s=character.spells.find(x=>x.id===m.dataset.prep);if(s){s.prepared=!s.prepared;renderSpells();scheduleSave();}return;}
     // glossary
-    if((m=t.closest("[data-view-gloss]")))return openGlossView(character.glossary.find(x=>x.id===m.dataset.viewGloss));
-    if((m=t.closest("[data-view-gloss-rk]")))return openGlossView((rules.keywords||[]).find(x=>(x._id||x.term)===m.dataset.viewGlossRk));
-    if((m=t.closest("[data-edit-gloss]")))return openGlossForm(character.glossary.find(x=>x.id===m.dataset.editGloss));
-    if((m=t.closest("[data-del-gloss]"))){const g=character.glossary.find(x=>x.id===m.dataset.delGloss);if(g&&confirm(`Delete “${g.term}”?`)){character.glossary=character.glossary.filter(x=>x.id!==g.id);renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();}return;}
+    if((m=t.closest("[data-view-gloss]")))return openGlossView(character.glossary.find(x=>x&&x.id===m.dataset.viewGloss));
+    if((m=t.closest("[data-view-gloss-rk]")))return openGlossView((rules.keywords||[]).find(x=>x&&(x._id||x.term)===m.dataset.viewGlossRk));
+    if((m=t.closest("[data-edit-gloss]")))return openGlossForm(character.glossary.find(x=>x&&x.id===m.dataset.editGloss));
+    if((m=t.closest("[data-del-gloss]"))){const g=character.glossary.find(x=>x&&x.id===m.dataset.delGloss);if(g&&confirm(`Delete “${glossTerm(g)||"this entry"}”?`)){character.glossary=character.glossary.filter(x=>x!==g);renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();}return;}
   });
   document.addEventListener("keydown",e=>{
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
@@ -8807,8 +9161,7 @@ function wire(){
 function boot(){
   const noSettings=!localStorage.getItem(K_SET);
   try{const s=localStorage.getItem(K_SET);if(s)settings=Object.assign(settings,JSON.parse(s));}catch(e){}
-  if(!Array.isArray(settings.rulesSources))settings.rulesSources=[];
-  if(settings.rulesUrl){if(!settings.rulesSources.includes(settings.rulesUrl))settings.rulesSources.push(settings.rulesUrl);delete settings.rulesUrl;saveSettings();}
+  if(foldLegacySettings())saveSettings();
   /* localStorage first and synchronously, so the sheet draws with rules already
      in hand. It is now only the FALLBACK store and the migration source — the
      IndexedDB copy is authoritative and is hydrated over the top a tick later
