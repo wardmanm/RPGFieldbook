@@ -1044,6 +1044,25 @@ ck('#74 a split attack/damage bonus lands on the weapon, each half in its own bo
    sp.get('weapon', {}).get('atkMisc') == 2 and sp.get('weapon', {}).get('dmgMisc') == 1 and sp.get('effects') == [],
    [sp.get('weapon'), sp.get('effects')])
 
+# ---- 27. a ranged finesse weapon uses the better of STR and DEX (#75)
+# Finesse lets an attack use STR or DEX whether it is a melee or a ranged
+# attack; the ability test asked "ranged?" first and gave every ranged weapon
+# "dex", so a Dart (Finesse, Thrown) could never use Strength. The real XPHB
+# Dart, beside the fixtures' Net (ranged, no Finesse) and Dagger (melee).
+DART = {"name": "Dart", "source": "XPHB", "page": 215, "srd52": True, "basicRules2024": True, "edition": "one", "type": "R|XPHB", "rarity": "none", "weight": 0.25, "value": 5, "weaponCategory": "simple", "property": ["F|XPHB", "T|XPHB"], "mastery": ["Vex|XPHB"], "range": "20/60", "dmg1": "1d4", "dmgType": "P", "weapon": True, "hasFluffImages": True}
+_dartf = _tmpjson({'itemProperty': IB_PROPS, 'itemMastery': IB_MASTERY, 'baseitem': IB_BASE + [DART]})
+with C.statblock_ctx(C.load_item_index(_dartf)):
+    dpack = _by_name(C.convert_items(_dartf))
+dw = dpack.get('Dart', {}).get('weapon', {})
+ck('#75 a Dart attacks with finesse, the better of STR and DEX', dw.get('ability') == 'finesse', dw)
+ck('#75 ...and is still a ranged weapon with its range and properties',
+   dw.get('kind') == 'ranged' and dw.get('notes') == 'Range 20/60 · Finesse, Thrown · Mastery: Vex', dw)
+ck('#75 a ranged weapon without Finesse still uses DEX (Net)',
+   dpack.get('Net', {}).get('weapon', {}).get('ability') == 'dex', dpack.get('Net', {}).get('weapon'))
+ck('#75 a melee finesse weapon is unchanged (Dagger)', dpack.get('Dagger', {}).get('weapon', {}).get('ability') == 'finesse')
+ck('#75 a melee weapon without Finesse still uses STR (Warhammer)',
+   dpack.get('Warhammer', {}).get('weapon', {}).get('ability') == 'str')
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

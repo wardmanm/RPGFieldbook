@@ -4462,3 +4462,39 @@ copy is unticked; `migrate()` leaves the effects (six failed first). Pages:
 **Seen, not fixed.** Quarterstaff of the Acrobat's `ac` +5 is `bonusAc`, and in the book it is a
 Reaction against one attack, once per rest, so an equipped staff reads AC +5 all the time. The Moon
 Sickles' and Staff of Power's spell-attack bonus (`bonusSpellAttack`) is not read at all.
+
+## Finesse ranged weapons can use STR or DEX (#75, 2026-09-28)
+
+**Root cause.** `convert_items()` chose `weapon.ability` by asking "ranged?" first: `'dex' if kind ==
+'ranged' else ('finesse' if finesse else 'str')`. Finesse is the choice of STR or DEX for a melee
+*or* a ranged attack, so the Dart (Finesse, Thrown; a ranged weapon in 2024) shipped `"dex"`, and a
+STR 18 / DEX 12 thrower's Dart read +3 where the rules give +6. Now Finesse is asked first:
+`finesse`, else `dex` for a ranged weapon, else `str`.
+
+**Scope.** The Dart is the only ranged Finesse weapon in any pack. In the whole v2.36.1 dump the
+others are the 2014 Dart (not converted), IDRotF's Iron Ball and PotA's Seeker Dart (adventure
+books, never converted). No magic weapon is ranged, and Tasha's and Xanathar's weapons are all
+melee, so the supplements do not move.
+
+**Data.** One line: `data/5e2024/items.json`, the Dart's `weapon.ability` `"dex"` → `"finesse"`.
+Its description, notes and kind are unchanged, and every other file of the three packs
+regenerates byte for byte.
+
+**In the app, nothing to change.** `attackNumbers()` reads `finesse` the same way whatever the
+row's `kind` (the better of STR and DEX, DEX on a tie), and `kind` stays `ranged`, so
+`attack.ranged` effects (Archery) still reach it; the attack form, the item form, the breakdown
+and the print sheet treat the two fields independently. An existing sheet's Dart is a copy: the
+rules-update tool offers "weapon changed", ticked when the item is unedited, and applying it gives
+the item `finesse` and rebuilds its attack row, same id, only if the player never touched it; a
+row they edited keeps its ability. `migrate()` changes nothing.
+
+**Guards.** `converter.py` 259 → 264: the real XPHB Dart attacks with `finesse` and stays ranged
+with its notes; a Net (ranged, no Finesse) keeps `dex`; a Dagger keeps `finesse`; a Warhammer
+`str`; one failed first. `rules-data.js`: #72's "every melee weapon listing Finesse attacks with
+finesse" now covers every weapon, melee or ranged, plus "a ranged weapon without Finesse attacks
+with DEX" and a Dart pin (709 checks; two failed first). `sheet.js` +4: the shipped Dart through the
+finder uses STR for STR 18 / DEX 12 (+6) and DEX for DEX 16 (+5), stays ranged and takes Archery's
++2 (one failed first). `char-update.js` +6: an old sheet's Dart is offered as "weapon" changed,
+ticked; applying it rebuilds the untouched row with `finesse` (+6); an edited row is left alone
+(four failed first). Pages: [converter](../wiki/data/converter.md),
+[attacks & damage](../wiki/features/attacks-and-damage.md).

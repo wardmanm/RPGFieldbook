@@ -468,6 +468,47 @@ ck('R7 ...and a stamped one round-trips',
   X.resetRules();
 }
 
+/* #75 — the Dart shipped ability "dex": the converter gave every ranged weapon
+   DEX and ignored Finesse. An existing sheet's Dart is a copy, so the fix
+   reaches it only through the tool: the item's `weapon` changed, and its
+   untouched attack row is rebuilt with "finesse"; a row the player edited
+   keeps what they set. The "new" Dart is the shipped one, so this fails until
+   the pack is fixed. */
+{
+  const dartNew=JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','5e2024','items.json'),'utf8'))
+    .items.find(x=>x.name==='Dart');
+  const dartOld=JSON.parse(JSON.stringify(dartNew)); dartOld.weapon.ability='dex';
+  const sheetWith=def=>{
+    X.resetRules(); X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(def))]},'5e.json');
+    const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.abilities.str=18; ch.abilities.dex=12; ch.level=1;
+    X.character=ch; X.activeId=ch.id;
+    X.addLibraryItems(X.rules.items.slice(),null,null,10);
+    return ch;
+  };
+  const fix=()=>{ X.resetRules(); X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(dartNew))]},'5e.json'); };
+  let ch=sheetWith(dartOld), row0=ch.attacks[0];
+  ck('#75 an old sheet\'s Dart uses DEX even for a strong thrower', X.attackNumbers(row0).abilName==='DEX'
+     &&X.attackNumbers(row0).toHit===3, X.attackNumbers(row0));
+  const id0=row0.id; ch.inventory[0].qty=7;
+  fix();
+  let row=X.diffCharacter().rows.find(r=>r.name==='Dart');
+  ck('#75 the fixed Dart is offered as its weapon changing, ticked', !!row&&row.fields.join()==='weapon'&&row.apply===true,
+     X.diffCharacter().rows.map(r=>r.name+':'+r.fields+':'+r.apply));
+  X.applyUpdates(row?[row]:[]);
+  ck('#75 applying it gives the item finesse', ch.inventory[0].weapon.ability==='finesse'&&ch.inventory[0].qty===7, ch.inventory[0]);
+  ck('#75 ...and rebuilds its untouched attack with finesse, same id, still ranged',
+     ch.attacks.length===1&&ch.attacks[0].id===id0&&ch.attacks[0].ability==='finesse'&&ch.attacks[0].kind==='ranged', ch.attacks);
+  ck('#75 ...so the strong thrower now uses STR: +6', X.attackNumbers(ch.attacks[0]).toHit===6, X.attackNumbers(ch.attacks[0]));
+  /* an attack the player already fixed by hand, or otherwise tuned, is theirs */
+  ch=sheetWith(dartOld); ch.attacks[0].ability='str';
+  fix();
+  row=X.diffCharacter().rows.find(r=>r.name==='Dart');
+  X.applyUpdates(row?[row]:[]);
+  ck('#75 an attack the player edited is left as they set it', ch.attacks.length===1&&ch.attacks[0].ability==='str',
+     ch.attacks);
+  X.resetRules();
+}
+
 // R3 — multiclass: two classes granting a same-named trait
 c=setup();
 X.mergeRules({system:'XPHB',classes:[

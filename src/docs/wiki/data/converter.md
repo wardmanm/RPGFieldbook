@@ -104,9 +104,9 @@ one file; a property is named by its first entry, or, for the 2014 `S`, by its t
 `items-base.json` beside its input. One resolver, `_weapon_refs()`, serves `convert_items()` and
 `_item_traits()`: a reference is `"F"`, `"F|XPHB"` or `{uid, note}`, a property is looked up by
 abbreviation and a mastery by name, and a note prints in brackets ("Two-Handed (unless mounted)",
-the Psychic Blade's "Vex (you can use this property, …)"). `weapon.ability` is `"finesse"` for a
-melee weapon whose named properties include Finesse, `"dex"` for a ranged one, else `"str"`, so a
-magic weapon attacks as its base weapon does. A code nothing defines is printed as it stands and
+the Psychic Blade's "Vex (you can use this property, …)"). `weapon.ability` is `"finesse"` for any
+weapon whose named properties include Finesse, melee or ranged (the Dart), else `"dex"` for a ranged
+weapon and `"str"` for a melee one, so a magic weapon attacks as its base weapon does. A code nothing defines is printed as it stands and
 recorded in `_WEAPON_MISSES` with the items carrying it; `_weapon_miss_warnings()` reports each at
 the end of `all`, `supplement` and every single subcommand. Every code in the v2.36.1 dump resolves.
 
@@ -277,6 +277,10 @@ has no `DATA_VERSIONS` entry.
   right. 20 items across two packs; only `effects` moved. Guard: `converter.py` runs the real
   shapes, `rules-data.js` fails on any pack item with an `attack`/`damage` effect, and `sheet.js`
   and `char-update.js` read the shipped Dagger of Venom's numbers.
+- **A ranged Finesse weapon could only use DEX (#75).** The ability test asked "ranged?" before
+  "Finesse?", so the Dart, the one ranged Finesse weapon in any pack, shipped `"dex"`. #72's guard
+  checked Finesse on melee weapons only, and passed. Guard: `converter.py` pins the real Dart, and
+  `rules-data.js` checks Finesse on every weapon, melee or ranged.
 - **A tagline as a description.** `_sub_blurb()` takes a subclass's first paragraph over 40
   characters; eight 2024 italic taglines are 41+ and shipped as the whole description. It now skips
   a paragraph that is only `{@i …}`.
@@ -319,6 +323,7 @@ has no `DATA_VERSIONS` entry.
 | A weapon property or mastery code nothing defines | Printed as the code, counted with its items, and a `WARNING` at the end of every run (#72) | Passing it through quietly: the original bug. Failing the run: as for cells and nodes |
 | A reference carrying a note (`{uid, note}`) | "Name (note)" in the notes and the description, the Psychic Blade's long mastery note included (#72) | Dropping the note: loses rules text ("unless mounted"; Vex "doesn't count against" the mastery limit), and the statblock already printed it |
 | A single `items` run on the magic-item file | Index the `items-base.json` beside it (#72) | Warning only: a player running `items items.json` would get codes and a finesse weapon attacking with Strength |
+| A ranged weapon with Finesse (#75) | `finesse`, the better of STR and DEX, as for a melee one | `dex` for every ranged weapon: Finesse is the choice of either ability for a melee or a ranged attack, so a strong character's Dart used the weaker score |
 | Where a `+N` weapon's bonus goes (#74) | On the weapon, `atkMisc`/`dmgMisc`, and never as an effect | Global `attack`/`damage` effects: they reach every attack, spell rows included, and doubled the weapon's own. The effects alone: the bonus would also reach every other attack |
 | A weapon bonus on an item that is not a weapon (#74) | Kept in the prose; no effect | `attack`/`damage` effects: Bracers of Archery's +2 reached melee and spell damage. `damage.ranged` for the Bracers: still crossbows, darts and ranged spells. Owner may revisit |
 
@@ -369,3 +374,4 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-28 — `_norm_table()` carries a table's `footnotes`; `_register()` compares them; `data/xanathars/tables.json` gains 17, the only file that moved. → ledger L4273, #73
 - 2026-09-28 — Weapon property and mastery codes are named from `items-base.json` through the item index (`_weapon_refs()`): 30 weapons across three packs, four magic weapons now `finesse`; an unnamed code is a `WARNING`. → ledger L4327, #72
 - 2026-09-28 — A weapon bonus is never an effect (`_item_effects()`): 15 `+N` weapons count it once, on their own row, and five non-weapon items keep it in their prose; only `effects` moved, on 20 items in two packs. → ledger L4392, #74
+- 2026-09-28 — Finesse is asked before "ranged?": the Dart attacks with `finesse`; one line of `items.json` moved. → ledger L4466, #75

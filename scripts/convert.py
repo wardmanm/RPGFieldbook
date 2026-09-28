@@ -792,8 +792,10 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
             ms = _refs_text(_weapon_refs(it.get('mastery'), masteries, 'mastery', it['name']))
             if ms: bits.append('Mastery: ' + ', '.join(ms))
             kind = 'ranged' if tcode == 'R' else 'melee'
+            # Finesse is the choice of STR or DEX for a melee OR a ranged attack
+            # (a Dart), so it is asked first; only then does a ranged weapon use DEX (#75).
             finesse = any(nm == 'Finesse' for nm, _note in named)
-            ability = 'dex' if kind == 'ranged' else ('finesse' if finesse else 'str')
+            ability = 'finesse' if finesse else ('dex' if kind == 'ranged' else 'str')
             nb = []
             if it.get('range'): nb.append('Range ' + it['range'])
             if it.get('dmg2'): nb.append('Versatile ' + it['dmg2'])

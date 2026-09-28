@@ -523,11 +523,18 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
     ||/[{}]|'uid'/.test(it.weapon.notes||'')||/Mastery: \{/.test(it.description||''));
   ck('no weapon prints a property code or an object\'s repr, in its notes or its description',
      bad.length===0, bad.map(({where,it})=>where+' '+it.name+': '+it.weapon.notes));
-  // a melee weapon that lists Finesse attacks with finesse (a ranged one uses DEX regardless)
-  const noFinesse=weapons.filter(({it})=>it.weapon.kind!=='ranged'&&propsOf(it.weapon.notes).includes('Finesse')
-    &&it.weapon.ability!=='finesse');
-  ck('every melee weapon listing Finesse attacks with finesse', noFinesse.length===0,
-     noFinesse.map(({where,it})=>where+' '+it.name+': '+it.weapon.ability));
+  // a weapon that lists Finesse attacks with finesse, melee or ranged: Finesse is
+  // the choice of STR or DEX for either (#75 — the Dart shipped "dex")
+  const noFinesse=weapons.filter(({it})=>propsOf(it.weapon.notes).includes('Finesse')&&it.weapon.ability!=='finesse');
+  ck('every weapon listing Finesse attacks with finesse, melee or ranged', noFinesse.length===0,
+     noFinesse.map(({where,it})=>where+' '+it.name+' ('+it.weapon.kind+'): '+it.weapon.ability));
+  const rangedNoFinesse=weapons.filter(({it})=>it.weapon.kind==='ranged'&&!propsOf(it.weapon.notes).includes('Finesse')
+    &&it.weapon.ability!=='dex');
+  ck('#75 a ranged weapon without Finesse still attacks with DEX', rangedNoFinesse.length===0,
+     rangedNoFinesse.map(({where,it})=>where+' '+it.name+': '+it.weapon.ability));
+  const dart=weapons.find(({it})=>it.name==='Dart');
+  ck('#75 the Dart is a ranged weapon that attacks with finesse',
+     !!dart&&dart.it.weapon.kind==='ranged'&&dart.it.weapon.ability==='finesse', dart&&dart.it.weapon);
   // a magic weapon against the base weapon its description names ("Base item: Dagger")
   const base={};
   JSON.parse(fs.readFileSync(path.join('data','5e2024','items.json'),'utf8')).items

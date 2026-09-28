@@ -2160,6 +2160,32 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   X.character = X.blankChar();
 }
 
+/* ---- a Dart uses the better of STR and DEX, and is still a ranged attack (#75) ----
+   The shipped Dart, added through the finder. The pack gave every ranged weapon
+   "dex", ignoring Finesse, so a strong thrower's Dart used the weaker score.
+   attackNumbers() already reads "finesse" the same way for any kind; the row's
+   kind stays ranged, so a ranged-only effect (Archery) still applies. */
+{
+  const core = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', '5e2024', 'items.json'), 'utf8')).items;
+  const dartDef = core.find(x => x.name === 'Dart');
+  const withDart = (str, dex) => {
+    const c = X.blankChar(); X.character = c;
+    c.abilities.str = str; c.abilities.dex = dex; c.level = 1;
+    X.addLibraryItems([dartDef], null, null, 10);
+    return c.attacks.find(a => a.name === 'Dart');
+  };
+  let row = withDart(18, 12), n = X.attackNumbers(row);
+  ck('#75 a strong thrower\'s Dart uses STR: STR 4 + PB 2 = +6 to hit, +4 damage',
+     n.abilName === 'STR' && n.toHit === 6 && n.dmgBonus === 4, n);
+  ck('#75 ...and is still a ranged attack', row.kind === 'ranged' && n.kind === 'ranged', [row.kind, n.kind]);
+  row = withDart(10, 16); n = X.attackNumbers(row);
+  ck('#75 a nimble one\'s uses DEX: DEX 3 + PB 2 = +5 to hit, +3 damage',
+     n.abilName === 'DEX' && n.toHit === 5 && n.dmgBonus === 3, n);
+  X.character.features.push({id: 'arch', name: 'Archery', effects: [{target: 'attack.ranged', value: 2}], enabled: true});
+  ck('#75 ...and a ranged-only effect still reaches it (Archery +2 → +7)', X.attackNumbers(row).toHit === 7, X.attackNumbers(row));
+  X.character = X.blankChar();
+}
+
 /* ---- imported files and packs render inert ----
    A character file, a rules pack and a settings file (which carries a whole
    `rules` object) are all written by someone else, and all reach the page

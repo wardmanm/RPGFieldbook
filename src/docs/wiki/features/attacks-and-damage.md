@@ -55,9 +55,11 @@ delete it when the Weapon box is unticked. The form keeps `weapon` only when dam
 and asks only for kind, ability, dice and type: the weapon's `notes`, `atkMisc` and `dmgMisc` are
 carried from `wFrom`, the pack weapon last put in by *Insert from rules pack*, else the item's own.
 Deleting the item deletes its row (the confirm says so), and so does using up the last of a
-consumable. A pack weapon's `ability` comes from the converter: `finesse` for a melee weapon whose
-properties include Finesse, `dex` for a ranged one, else `str`. A `+N` pack weapon carries its bonus
-as `atkMisc`/`dmgMisc` and no `attack`/`damage` effect. Its `notes` ("Range 20/60 ·
+consumable. A pack weapon's `ability` comes from the converter: `finesse` for any weapon whose
+properties include Finesse, melee or ranged (a Dart), else `dex` for a ranged one and `str` for a
+melee one. `ability` and `kind` are independent: a Dart row is `finesse` and `ranged`, so it takes
+the better of STR and DEX and still gets `attack.ranged` effects. A `+N` pack weapon carries its
+bonus as `atkMisc`/`dmgMisc` and no `attack`/`damage` effect. Its `notes` ("Range 20/60 ·
 Finesse, Light, Thrown · Mastery: Nick") are copied onto the row as text; nothing parses them.
 
 **Equipping.** `isEquippable()` is true for effects, armor *or* a weapon. `attackVisible(a)` gates only
@@ -143,6 +145,10 @@ longer allows, leaving orphan rows alone.
   `atkMisc` only from the item being edited, which the effect had hidden; it now carries it from the
   inserted entry too. An existing sheet gets the fix through the rules-update tool, as "effects
   changed". → L4392
+- **A Dart could only use DEX (#75).** The converter gave every ranged weapon `dex` and never
+  asked about Finesse. Fixed in the pack; `attackNumbers()` already read `finesse` for any kind. An
+  existing Dart reaches `finesse` through the rules-update tool, and its row is rebuilt only if it
+  was never edited. → L4466
 - **Every literal-id `getElementById` lookup in a form is checked by `rules-data.js`** against the
   ids the app renders; a generated id is not "declared", which is why clearing the spell form's list
   goes through `clearXDmgField()`. → L2863
@@ -195,3 +201,4 @@ longer allows, leaving orphan rows alone.
 - 2026-08-18 — Weapons are equippable; their rows follow the equipped state; `migrateWeaponEquip()`. → ledger L3213
 - 2026-09-28 — Pack magic weapons carry their properties' names and a finesse one attacks with `finesse`; the rules-update tool offers the fix to existing sheets. → ledger L4327, #72
 - 2026-09-28 — A `+N` pack weapon adds its bonus once, to its own row, and nothing to other rows; the item form's Insert keeps a weapon's bonus and notes. → ledger L4392, #74
+- 2026-09-28 — A ranged Finesse weapon (the Dart) attacks with the better of STR and DEX. → ledger L4466, #75

@@ -303,7 +303,7 @@
         "kind": "ranged",
         "dice": "1d4",
         "damageType": "piercing",
-        "ability": "dex",
+        "ability": "finesse",
         "notes": "Range 20/60 · Finesse, Thrown · Mastery: Vex"
       }
     },

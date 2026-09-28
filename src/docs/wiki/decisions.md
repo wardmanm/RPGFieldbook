@@ -364,6 +364,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **A weapon property or mastery code nothing defines** — Printed as the code, counted with its items, and a `WARNING` at the end of every run (#72)
 - **A reference carrying a note (`{uid, note}`)** — "Name (note)" in the notes and the description (#72)
 - **A single `items` run on the magic-item file** — Index the `items-base.json` beside it (#72)
+- **A ranged weapon with Finesse (#75)** — `finesse`, the better of STR and DEX, as for a melee one
 - **Where a `+N` weapon's bonus goes (#74)** — On the weapon, `atkMisc`/`dmgMisc`, and never as an effect
 - **A weapon bonus on an item that is not a weapon (#74)** — Kept in the prose; no effect
 
