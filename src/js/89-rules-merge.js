@@ -106,6 +106,12 @@ function rulesDataHTML(){
 function renderRulesData(){
   const html=rulesDataHTML();
   ["rulesData","homeRulesData"].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=html;});
+  /* The Settings "Rules data" header counts the pool. It is drawn once by
+     openSettings(), so without this it kept the count from when the modal
+     opened, whatever an import, fetch, remove or clear did afterwards. Every
+     path that changes the pool ends here, which is why the refresh lives here. */
+  const chip=document.querySelector('[data-setsec="rules"] .fgcount');
+  if(chip)chip.textContent=rulesBadge();
 }
 function renderSrcRows(){
   const host=document.getElementById("srcList");if(!host)return;
@@ -114,9 +120,12 @@ function renderSrcRows(){
 }
 function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{}};}
 function keyOf(x,kind){return kind==="subclasses"?(String(x.class||"")+"|"+String(x.name||"")).trim().toLowerCase():String(kind==="keywords"?(x.term||""):(x.name||"")).trim().toLowerCase();}
-/* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules */
+/* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules.
+   Where it came from is stamped on every entry: `_file` for a file import, `_url`
+   (the source URL from Settings, not an include under it) for a fetch. `_url` is
+   what lets the next Fetch all replace exactly what that source loaded before. */
 function srcLabel(obj){return String(obj.system||obj.name||"Rules").trim();}
-function mergeRules(obj,fileName){
+function mergeRules(obj,fileName,url){
   if(obj.name&&!rules.name)rules.name=obj.name;
   const src=srcLabel(obj);
   const traitArr=Array.isArray(obj.features)?obj.features:(Array.isArray(obj.traits)?obj.traits:null);
@@ -142,7 +151,10 @@ function mergeRules(obj,fileName){
     const map=new Map((rules[kind]||[]).map(x=>[(x._source||"")+"\u0000"+keyOf(x,kind),x]));
     arr.forEach(raw=>{
       const base=(kind==="keywords")?{id:uid(),term:raw.term||"",type:raw.type==="image"?"image":"text",text:raw.text||"",image:raw.image||null,cond:!!raw.cond}:Object.assign({},raw);
-      base._source=src;if(fileName)base._file=fileName;if(obj.rulebook)base._rulebook=1;
+      /* provenance is the merge's to record, never the pack's: a stray `_url` in
+         a file would let some later fetch delete it */
+      delete base._file;delete base._url;
+      base._source=src;if(fileName)base._file=fileName;if(url)base._url=url;if(obj.rulebook)base._rulebook=1;
       if(obj.dataVersion)base._dataVersion=obj.dataVersion;
       if(excl&&excl.length)base._excludeSystems=excl;
       const nm=keyOf(base,kind);if(!nm)return;
@@ -182,27 +194,95 @@ function ruleById(kind,idOrName){
   const arr=rules[kind]||[];
   return arr.find(x=>x._id===idOrName)||arr.find(x=>keyOf(x,kind)===String(idOrName||"").trim().toLowerCase());
 }
-/* fetch a URL, merge it, and follow any "include":[...] references (a manifest) relative to that URL */
-function fetchRulesFrom(url,seen){
-  if(seen.has(url))return Promise.resolve();
+/* Fetch a URL and follow any "include":[...] (a manifest) relative to it,
+   collecting every pack into `out` in order. Nothing is merged here: the caller
+   merges a source only once ALL of it has arrived. `seen` stops a loop within
+   one source; `memo` holds each URL's request for the whole run, so a file two
+   sources both include is still fetched once. Every error names its file. */
+function fetchRulesFrom(url,seen,out,memo){
+  if(seen.has(url))return Promise.resolve(out);
   seen.add(url);
-  return fetch(url,{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error((url.split("/").pop()||url)+" → "+r.status);return r.json();})
-    .then(obj=>{
-      mergeRules(obj);
-      const inc=Array.isArray(obj.include)?obj.include:[];
-      return inc.reduce((p,ref)=>p.then(()=>fetchRulesFrom(new URL(ref,url).href,seen)),Promise.resolve());
-    });
+  const file=url.split("/").pop()||url;
+  if(!memo.has(url)){
+    memo.set(url,fetch(url,{cache:"no-store"})
+      .then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+      .then(obj=>{if(!obj||typeof obj!=="object"||Array.isArray(obj))throw new Error("not a rules file");return obj;})
+      .catch(e=>{throw new Error(file+": "+((e&&e.message)||e));}));
+  }
+  return memo.get(url).then(obj=>{
+    out.push(obj);
+    const inc=Array.isArray(obj.include)?obj.include:[];
+    return inc.reduce((p,ref)=>p.then(()=>{
+      let next;try{next=new URL(ref,url).href;}catch(e){throw new Error(file+": can't resolve include "+ref);}
+      return fetchRulesFrom(next,seen,out,memo);
+    }),Promise.resolve());
+  }).then(()=>out);
 }
+/* Swap in what one source just delivered for what it delivered last time.
+   Merge first, then drop that source's old entries the merge did not replace:
+   an entry it still serves is replaced in place (mergeRules keys on source +
+   name), one it no longer serves goes, and nothing it did not load is touched.
+   Synchronous, so a file import or a removal made while the fetch was in flight
+   is seen here rather than overwritten. */
+function applyFetchedSource(url,packs){
+  const old=new Set();
+  RULE_CATS.forEach(c=>(rules[c]||[]).forEach(e=>{if(e._url===url)old.add(e);}));
+  /* A `requires` declaration is kept per LABEL, and mergeRules only ever sets
+     one. If this source alone owns a label, its fresh copy decides the
+     declaration, so a pack that stopped declaring one doesn't keep a false
+     "missing" chip. A label shared with a file import keeps it. */
+  if(rules.requires)new Set(packs.map(srcLabel)).forEach(l=>{
+    if(RULE_CATS.every(c=>(rules[c]||[]).every(e=>(e._source||"")!==l||old.has(e))))delete rules.requires[l];
+  });
+  packs.forEach(p=>mergeRules(p,null,url));
+  RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
+  pruneRequires();reindexRules();recomputeDups();
+}
+/* Settings → Fetch all. Fetching NEVER loses what is loaded (#65): this used to
+   resetRules() first, which discarded every pack imported from a file, and when
+   the fetch then failed it cached the empty pool over the good one.
+
+   Every source is fetched in full before anything is merged. A source that
+   arrives whole replaces the packs it loaded last time; one that fails in any
+   part keeps them; a run where nothing arrives changes neither the pool nor the
+   cache, and says so. Offline is the expected case, not an edge. Returns a
+   promise for the tests; the button ignores it. */
 function fetchAllRules(){
-  const srcs=(settings.rulesSources||[]).map(s=>s.trim()).filter(Boolean);
-  if(!srcs.length){updateRulesStatus("Add at least one source URL first.","err");return;}
+  const srcs=[...new Set((settings.rulesSources||[]).map(s=>String(s||"").trim()).filter(Boolean))];
+  if(!srcs.length){updateRulesStatus("Add at least one source URL first.","err");return Promise.resolve();}
   updateRulesStatus(`Fetching ${srcs.length} source${srcs.length>1?"s":""}…`,"");
-  resetRules();const seen=new Set();
-  srcs.reduce((p,u)=>p.then(()=>fetchRulesFrom(u,seen)),Promise.resolve())
-    /* renderRulesData() was missing here: a fetch refreshed the sheet but left the
-       loaded-data list — and now its missing-content chips — showing the old state. */
-    .then(()=>{const m=missingSummary();saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus("Fetched. "+rulesStatusText()+m,m?"err":"ok");})
-    .catch(err=>{saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus("Couldn't finish ("+err.message+"). Kept what loaded; if offline or CORS-blocked, import files instead.","err");});
+  const memo=new Map(),results=[];
+  /* a 200 with no rules in it ({} or an error object) is a failure, not "this
+     source now serves nothing" — otherwise it would wipe what the source loaded */
+  const cats=["keywords","features","traits","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
+  const hasRules=o=>cats.some(c=>Array.isArray(o[c])&&o[c].length);
+  return srcs.reduce((p,u)=>p.then(()=>fetchRulesFrom(u,new Set(),[],memo)
+      .then(packs=>{if(!packs.some(hasRules))throw new Error((u.split("/").pop()||u)+": no rules in it");return packs;})
+      .then(packs=>{results.push({url:u,packs});},err=>{results.push({url:u,err:(err&&err.message)||String(err)});})),
+    Promise.resolve())
+    .then(()=>{
+      const ok=results.filter(r=>!r.err),bad=results.filter(r=>r.err);
+      const why=bad.map(r=>r.err).join("; ");
+      const tail=" If you're offline or the site blocks it (CORS), import the files instead.";
+      if(!ok.length){
+        /* nothing to save: the pool is untouched, so the cache already matches it */
+        renderRulesData();
+        updateRulesStatus(`Couldn't fetch ${why}, so nothing changed. ${rulesStatusText()}${tail}`,"err");
+        return;
+      }
+      ok.forEach(r=>applyFetchedSource(r.url,r.packs));
+      const saving=saveRulesCache();
+      refreshRulesUI();renderRulesData();
+      const head=bad.length
+        ? `Fetched ${ok.length} of ${results.length} sources. Couldn't fetch ${why}, so what ${bad.length>1?"they":"it"} loaded before is kept. `
+        : "Fetched. ";
+      const m=missingSummary();
+      updateRulesStatus(head+rulesStatusText()+m+(bad.length?tail:""),(bad.length||m)?"err":"ok");
+      /* the cache write is reported HERE, on the line the player is reading, not
+         only in the red line above the list (storage rule: a write that does not
+         land says so) */
+      return saving.then(err=>{if(err){renderRulesData();updateRulesStatus(head+err,"err");}});
+    });
 }
 /* import one or many files; each is merged so you can load traits.json, spells.json, … separately */
 function importRulesFiles(files){

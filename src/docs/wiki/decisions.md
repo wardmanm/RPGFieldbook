@@ -63,6 +63,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **A pack with no `dataVersion`** — `unknown`, no badge
 - **Duplicates inside a folder** — Mirror `mergeRules()`, and report them
 - **Where `overlay.json` and `class-resources.json` live** — The `data/` root
+- **What Fetch all does to what is loaded** — Each source that arrives whole replaces only what it loaded last time (`_url`); nothing else changes
 - **The Artificer and Mystic in the core pack** — Leave them, labelled `XPHB`
 
 ### [Grants & provenance](architecture/grants-and-provenance.md)

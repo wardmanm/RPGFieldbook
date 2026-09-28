@@ -6,7 +6,8 @@ const fs = require('fs'), path = require('path');
 const {loadApp, loadHTML, makeCheck, ROOT} = require('./harness');
 
 const ck = makeCheck();
-const {X, state, bootError, fragments} = loadApp([
+const {X, ctx, store, state, bootError, fragments} = loadApp([
+  'fetchAllRules','K_RULES',
   'RULE_CATS','systemOf','racesForCharacter','raceOptions','findRaceDef',
   'subclassesFor','findClassDef',
   'missingRequirements','requiresStatusHTML','missingSummary',
@@ -1627,4 +1628,218 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /closest\("\.search-clear"\)[\s\S]{0,200}?value="";[\s\S]{0,80}?dispatchEvent\(new Event\("input",\{bubbles:true\}\)\)/.test(js));
 }
 
-ck.done();
+/* ================= Fetch all never loses what is loaded (issue #65) ===========
+   fetchAllRules() used to call resetRules() BEFORE fetching, so every pack
+   imported from a file was discarded, and when the fetch then failed (offline,
+   CORS) it saved whatever that run had loaded — nothing — over the cache. The
+   next launch had no rules, and the status line said "Kept what loaded".
+
+   The contract now: a source that arrives whole replaces the packs IT loaded
+   last time (and only those); a source that fails leaves its previous packs in
+   place; a run where nothing arrives changes neither the pool nor the cache, and
+   says so. Asynchronous, so it runs last and calls ck.done() itself.
+
+   The harness's fetch rejects (offline); these checks swap in one that answers
+   from `routes` and records every request. */
+(async () => {
+  ctx.URL = URL;                                    // fetchRulesFrom resolves includes with it
+  let routes = {}, calls = [];
+  ctx.fetch = (url, opts) => {
+    calls.push({url, cache: opts && opts.cache});
+    if (!(url in routes)) return Promise.reject(new TypeError('Failed to fetch'));
+    const r = routes[url];
+    if (r && r.__status) return Promise.resolve({ok: false, status: r.__status, json: () => Promise.reject(new Error('no body'))});
+    return Promise.resolve({ok: true, status: 200, json: () => Promise.resolve(JSON.parse(JSON.stringify(r)))});
+  };
+  // the status line and the Settings "Rules data" header chip, readable
+  const status = {textContent: '', className: ''};
+  const chip = {textContent: 'STALE'};
+  const getById = ctx.document.getElementById;
+  ctx.document.getElementById = id => id === 'rulesStatus' ? status : getById(id);
+  ctx.document.querySelector = sel => /data-setsec="rules"/.test(sel) && /fgcount/.test(sel) ? chip : null;
+  // drain every microtask the fetch chain queues, whether or not it returns a promise
+  const run = async () => { calls = []; await X.fetchAllRules(); await new Promise(r => setImmediate(r)); };
+  const cache = () => store[X.K_RULES];
+  const cached = () => JSON.parse(X.readRulesCacheString(cache()) || '{}');
+  const names = (r, cat, src) => ((r || X.rules)[cat] || []).filter(e => !src || e._source === src).map(e => e.name).sort();
+  const badge = () => { const n = X.rulesEntryCount(); return n ? n + ' entries' : 'none loaded'; };
+  // a file-imported rulebook, cached the way an import leaves it
+  const seedFilePack = () => {
+    X.character = X.blankChar();
+    X.resetRules();
+    X.mergeRules({system: 'XPHB', rulebook: true, classes: [{name: 'Wizard'}],
+                  spells: [{name: 'Fireball'}, {name: 'Shield'}]}, '5e2024_full.json');
+    state.quotaFull = false;
+    X.saveRulesCache();
+  };
+  const HB = 'https://example.test/homebrew.json', OFF = 'http://127.0.0.1:9/offline-pack.json';
+
+  // ---- (b) offline: a run where nothing arrives changes nothing
+  seedFilePack();
+  X.settings.rulesSources = [OFF];
+  routes = {};
+  const poolBefore = JSON.stringify(X.rules), cacheBefore = cache();
+  chip.textContent = 'STALE';
+  await run();
+  ck('fetch-all offline: the pool is exactly as it was', JSON.stringify(X.rules) === poolBefore,
+     names(null, 'spells'));
+  ck('fetch-all offline: the file-imported pack is still loaded',
+     names(null, 'spells').join() === 'Fireball,Shield' && names(null, 'classes').join() === 'Wizard');
+  ck('fetch-all offline: the cache is exactly as it was', cache() === cacheBefore);
+  ck('fetch-all offline: the status line says nothing changed', /nothing changed/i.test(status.textContent), status.textContent);
+  ck('fetch-all offline: ...and no longer claims it "kept what loaded"', !/kept what loaded/i.test(status.textContent), status.textContent);
+  ck('fetch-all offline: ...names the source that failed', /offline-pack\.json/.test(status.textContent), status.textContent);
+  ck('fetch-all offline: ...points at importing files instead', /import/i.test(status.textContent), status.textContent);
+  ck('fetch-all offline: ...in red', /\berr\b/.test(status.className), status.className);
+  ck('fetch-all offline: the Rules data chip counts what is loaded', chip.textContent === badge(), [chip.textContent, badge()]);
+  ck('fetch-all offline: one request, uncached', calls.length === 1 && calls[0].cache === 'no-store', calls);
+
+  // ---- (a) a file-imported pack survives a successful fetch of another source
+  seedFilePack();
+  X.settings.rulesSources = [HB];
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap', text: 'v1'}, {name: 'Fizzle'}]}};
+  chip.textContent = 'STALE';
+  await run();
+  ck('fetch-all: the fetched pack is merged', names(null, 'spells', 'Homebrew').join() === 'Fizzle,Zap',
+     names(null, 'spells', 'Homebrew'));
+  ck('fetch-all: a pack imported from a FILE survives it',
+     names(null, 'spells', 'XPHB').join() === 'Fireball,Shield' && names(null, 'classes').join() === 'Wizard',
+     names(null, 'spells'));
+  ck('fetch-all: ...still listed under its file in Loaded data',
+     X.loadedRulesGroups().some(g => g.isFile && g.label === '5e2024_full.json'));
+  ck('fetch-all: the cache holds both the file pack and the fetched one',
+     names(cached(), 'spells').join() === 'Fireball,Fizzle,Shield,Zap', names(cached(), 'spells'));
+  ck('fetch-all: the status line reports success', /^Fetched/.test(status.textContent) && /\bok\b/.test(status.className),
+     [status.textContent, status.className]);
+  ck('fetch-all: the Rules data chip counts the new pool', chip.textContent === badge() && badge() === '5 entries',
+     [chip.textContent, badge()]);
+
+  // ---- (c) re-fetching a source replaces its own packs, without duplicates
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap', text: 'v2'}, {name: 'Bolt'}]}};
+  await run();
+  const zaps = (X.rules.spells || []).filter(e => e.name === 'Zap');
+  ck('re-fetch: an entry it still serves is replaced, not doubled', zaps.length === 1 && zaps[0].text === 'v2', zaps);
+  ck('re-fetch: an entry it no longer serves is gone', !names(null, 'spells').includes('Fizzle'), names(null, 'spells'));
+  ck('re-fetch: a new entry arrives', names(null, 'spells', 'Homebrew').join() === 'Bolt,Zap', names(null, 'spells', 'Homebrew'));
+  ck('re-fetch: the file pack is untouched', names(null, 'spells', 'XPHB').join() === 'Fireball,Shield');
+  ck('re-fetch: the pool has exactly 4 spells', (X.rules.spells || []).length === 4, names(null, 'spells'));
+  ck('re-fetch: the cache agrees', names(cached(), 'spells').join() === 'Bolt,Fireball,Shield,Zap', names(cached(), 'spells'));
+  // a pack fetched before this fix carries no mark of its URL; same names still replace in place
+  X.mergeRules({system: 'Homebrew', spells: [{name: 'Bolt', text: 'old'}]});
+  await run();
+  ck('re-fetch: an older fetched copy is replaced by name, not doubled',
+     (X.rules.spells || []).filter(e => e.name === 'Bolt').length === 1);
+
+  // ---- a source that fails keeps what it loaded last time; the others refresh
+  const EX = 'https://example.test/extras.json';
+  seedFilePack();
+  X.settings.rulesSources = [HB, EX];
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]},
+            [EX]: {system: 'Extras', items: [{name: 'Rope of Doom'}]}};
+  await run();
+  ck('two sources: both arrive', names(null, 'items').join() === 'Rope of Doom' && names(null, 'spells', 'Homebrew').join() === 'Zap');
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}, {name: 'Bolt'}]}};   // extras.json is now unreachable
+  await run();
+  ck('one fails: the one that arrived is refreshed', names(null, 'spells', 'Homebrew').join() === 'Bolt,Zap');
+  ck('one fails: the one that failed keeps its previous pack', names(null, 'items').join() === 'Rope of Doom', names(null, 'items'));
+  ck('one fails: the file pack is untouched', names(null, 'spells', 'XPHB').join() === 'Fireball,Shield');
+  ck('one fails: the cache keeps the failed source\'s pack', names(cached(), 'items').join() === 'Rope of Doom');
+  ck('one fails: the status line names it and says it was kept',
+     /extras\.json/.test(status.textContent) && /kept/i.test(status.textContent) && /\berr\b/.test(status.className),
+     [status.textContent, status.className]);
+  // same name from two sources under one label: the later source still wins
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap', text: 'first'}]},
+            [EX]: {system: 'Homebrew', spells: [{name: 'Zap', text: 'second'}]}};
+  await run();
+  ck('later sources still win on name clashes',
+     (X.rules.spells || []).filter(e => e.name === 'Zap').map(e => e.text).join() === 'second');
+  X.settings.rulesSources = [HB, HB + ' '];
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
+  await run();
+  ck('a source listed twice is fetched once', calls.length === 1, calls);
+
+  // ---- a manifest is one source: its includes arrive together or not at all
+  const MAN = 'https://example.test/pack/manifest.json', A = 'https://example.test/pack/a.json', B = 'https://example.test/pack/b.json';
+  seedFilePack();
+  X.settings.rulesSources = [MAN];
+  routes = {[MAN]: {name: 'Pack', include: ['a.json', 'b.json']},
+            [A]: {system: 'Pack', spells: [{name: 'Alpha'}], include: ['manifest.json']},   // a loop
+            [B]: {system: 'Pack', feats: [{name: 'Beta'}]}};
+  await run();
+  ck('manifest: its includes are followed relative to it', names(null, 'spells', 'Pack').join() === 'Alpha' && names(null, 'feats').join() === 'Beta');
+  ck('manifest: a loop is fetched once per URL', calls.length === 3, calls.map(c => c.url));
+  routes[B] = {__status: 404};
+  await run();
+  ck('manifest: one include failing keeps the whole pack as it was',
+     names(null, 'feats').join() === 'Beta' && names(null, 'spells', 'Pack').join() === 'Alpha', [names(null, 'feats'), names(null, 'spells')]);
+  ck('manifest: ...and says which file failed', /b\.json/.test(status.textContent) && /404/.test(status.textContent), status.textContent);
+  routes = {[MAN]: {name: 'Pack', include: ['a.json']}, [A]: {system: 'Pack', spells: [{name: 'Alpha'}]}};
+  await run();
+  ck('manifest: an include it drops is dropped on the next fetch', names(null, 'feats').join() === '', names(null, 'feats'));
+  ck('manifest: the file pack is untouched throughout', names(null, 'spells', 'XPHB').join() === 'Fireball,Shield');
+
+  // ---- a response that is not a rules file fails the source; it is not half-merged
+  seedFilePack();
+  X.settings.rulesSources = [HB];
+  routes = {[HB]: null};
+  const before2 = JSON.stringify(X.rules), cache2 = cache();
+  await run();
+  ck('a null body changes nothing', JSON.stringify(X.rules) === before2 && cache() === cache2);
+  ck('...and is reported', /homebrew\.json/.test(status.textContent) && /\berr\b/.test(status.className), status.textContent);
+  // a 200 with no rules in it is a failure too, not "this source now serves nothing"
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
+  await run();
+  routes = {[HB]: {message: 'Not Found'}};
+  await run();
+  ck('an answer with no rules in it keeps what the source loaded', names(null, 'spells', 'Homebrew').join() === 'Zap',
+     names(null, 'spells'));
+  ck('...and says why', /no rules in it/.test(status.textContent), status.textContent);
+
+  // ---- an include that cannot even be turned into a URL names its file too
+  X.settings.rulesSources = [HB];
+  routes = {[HB]: {system: 'Homebrew', include: ['http://[bad']}};
+  await run();
+  ck('an unresolvable include fails the source, naming the file',
+     /homebrew\.json/.test(status.textContent) && /nothing changed/i.test(status.textContent), status.textContent);
+
+  // ---- provenance is the merge's to stamp: a stray _url in a FILE never lets a fetch delete it
+  seedFilePack();
+  X.mergeRules({system: 'Homebrew', spells: [{name: 'Hex', _url: HB}]}, 'mine.json');
+  X.settings.rulesSources = [HB];
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
+  await run();
+  ck('a file entry carrying a stray _url survives a fetch of that URL', names(null, 'spells').includes('Hex'), names(null, 'spells'));
+
+  // ---- `requires` follows the source's fresh copy, unless a file shares its label
+  seedFilePack();
+  X.settings.rulesSources = [HB];
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}], requires: [{file: 'x.json', spells: ['Nope']}]}};
+  await run();
+  ck('requires: a fetched declaration is stored', !!(X.rules.requires || {}).Homebrew);
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
+  await run();
+  ck('requires: a source that stops declaring it loses it (no false "missing" chip)',
+     !(X.rules.requires || {}).Homebrew && X.missingRequirements('Homebrew').length === 0, X.rules.requires);
+  X.mergeRules({system: 'Homebrew', spells: [{name: 'Hex'}], requires: [{file: 'x.json', spells: ['Nope']}]}, 'mine.json');
+  await run();
+  ck('requires: a declaration a file import shares is kept', !!(X.rules.requires || {}).Homebrew, X.rules.requires);
+
+  // ---- the cache write reflects the new pool, and a refused one says so
+  seedFilePack();
+  X.settings.rulesSources = [HB];
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
+  state.quotaFull = true;
+  await run();
+  state.quotaFull = false;
+  ck('a refused cache write is reported on the status line',
+     X.rulesCacheWarning() !== '' && status.textContent.includes(X.rulesCacheWarning()) && /\berr\b/.test(status.className),
+     [status.textContent, X.rulesCacheWarning()]);
+  ck('...while the fetched pack stays loaded for this session', names(null, 'spells', 'Homebrew').join() === 'Zap');
+  X.saveRulesCache();
+
+  // ---- the Rules data chip follows every change to the pool, not only Fetch all
+  chip.textContent = 'STALE';
+  state.confirm = true;
+  X.clearAllRules();
+  ck('the Rules data chip follows Clear all', chip.textContent === 'none loaded', chip.textContent);
+})().then(() => ck.done(), e => { ck('the Fetch all checks ran to the end', false, String(e && e.stack || e)); ck.done(); });

@@ -36,6 +36,8 @@ function setSecHTML(k,body,badge){
     `<div class="setsec-body" data-setsecbody="${k}"${open?"":` style="display:none"`}>${body}</div></div>`;
 }
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
+/* the "Rules data" header badge; renderRulesData() keeps it current after the modal opens */
+function rulesBadge(){const n=rulesEntryCount();return n?n+" entries":"none loaded";}
 function openSettings(){
   const secAppearance=`
     <div class="field"><label class="f">Skin</label>
@@ -77,7 +79,7 @@ function openSettings(){
     </div>`:"";
   const secRules=`
     <div class="field"><label class="f">Rules sources</label>
-      <p class="hint">Load one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. Fetched when online, cached for offline.</p>
+      <p class="hint">Load one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. <b>Fetch all</b> needs a connection: each source it reaches replaces what it loaded last time, anything it can't reach keeps what it had, and files you imported are never touched. What is loaded stays saved for offline use.</p>
       <div id="srcList"></div>
       <div style="display:flex;gap:7px;margin-top:4px"><input id="newSrc" placeholder="https://…/spells.json"><button class="tbtn" id="addSrc">Add</button></div>
       <div class="m-actions" style="justify-content:flex-start;margin-top:8px">
@@ -114,11 +116,10 @@ function openSettings(){
       <p class="hint">The emblems beside each class, ${raceTerm().toLowerCase()} and background, and the crossed swords on the combat button, are from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, by ${ICON_ARTISTS.map(esc).join(", ")}. Used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Each icon has been changed: its background square was removed and its colour now follows your theme.</p></div>
     <div class="field"><label class="f">Rules content</label>
       <p class="hint">Rules data is not part of the app — you load it yourself, from files you supply, and it keeps whatever terms it came with.</p></div>`;
-  const n=rulesEntryCount();
   openModal("Settings",`<div id="setSections">`+
     setSecHTML("appearance",secAppearance)+
     (secCharacter?setSecHTML("character",secCharacter,character.name||"unnamed"):"")+
-    setSecHTML("rules",secRules,n?n+" entries":"none loaded")+
+    setSecHTML("rules",secRules,rulesBadge())+
     setSecHTML("backup",secBackup)+
     setSecHTML("credits",secCredits)+
     `</div>`);
@@ -231,12 +232,15 @@ function rulesBucket(g){
 function removeRulesGroup(key){
   const g=loadedRulesGroups().find(x=>x.key===key);if(!g)return;
   RULE_CATS.forEach(cat=>{if(!rules[cat])return;rules[cat]=rules[cat].filter(e=> g.isFile ? e._file!==g.label : (e._file?true:(e._source||"Unknown")!==g.label));});
-  /* drop a source's `requires` once none of its entries are left, so the
-     persisted object doesn't accumulate declarations for packs that are gone */
+  pruneRequires();
+  reindexRules();recomputeDups();saveRulesCache();refreshRulesUI();renderAll();renderRulesData();updateRulesStatus(rulesStatusText(),"ok");
+}
+/* drop a source's `requires` once none of its entries are left, so the
+   persisted object doesn't accumulate declarations for packs that are gone */
+function pruneRequires(){
   if(rules.requires)Object.keys(rules.requires).forEach(src=>{
     if(!RULE_CATS.some(c=>(rules[c]||[]).some(e=>(e._source||"")===src)))delete rules.requires[src];
   });
-  reindexRules();recomputeDups();saveRulesCache();refreshRulesUI();renderAll();renderRulesData();updateRulesStatus(rulesStatusText(),"ok");
 }
 /* Unload every rules pack. Destructive and irreversible without re-importing,
    so it always confirms — and it says characters are safe, because "clear data"

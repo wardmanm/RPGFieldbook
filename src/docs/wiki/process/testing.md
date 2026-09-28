@@ -57,13 +57,17 @@ it after a build.
 - **`loadApp`** concatenates every `src/js` fragment **in `src/manifest.json` order, minus
   `90-boot.js`** (which calls `boot()` at load) and evaluates the result in a `vm` context. The DOM is
   a no-op proxy. `localStorage` is real, with a quota switch so the "storage refused" path can be
-  reached, and `confirm` is scriptable. Top-level `let`/`const` are not context properties, so a
-  suite names what it needs and gets it back on one object. `rules`, `character`, `activeId` and
-  `updateAvailable` get accessors, so they can be written.
+  reached, and `confirm` is scriptable. `fetch` rejects, as if offline; a suite that needs a network
+  answer replaces `ctx.fetch` (the `rules-data.js` Fetch all block answers from a route table).
+  Top-level `let`/`const` are not context properties, so a suite names what it needs and gets it
+  back on one object. `rules`, `character`, `activeId` and `updateAvailable` get accessors, so they
+  can be written.
 - **`loadHTML`** assembles the page body the way the build does: `src/html` fragments joined with
   `""` and **spliced** into the template at `<!--@@HTML@@-->`.
 - **`makeCheck`** is the whole assertion library. It prints `PASS`/`FAIL` per check, and `done`
-  prints the last line `run.sh` parses and sets the exit code.
+  prints the last line `run.sh` parses and sets the exit code. `done` exits the process, so
+  asynchronous checks go at the end of a suite and call it themselves once they settle, as the
+  Fetch all block in `rules-data.js` does.
 
 ### The docs suite
 
@@ -185,3 +189,4 @@ written before `src/tests/` existed was lost along with its scratchpad.
 - 2026-08-17 — `loadHTML` splices the markup; `block` throws on unbalanced markup; the byte-pin assertion. → ledger L2592
 - 2026-08-18 — Saved sheets kept damage-less spell rows that only browser QA caught. → ledger L2989
 - 2026-08-18 — `run.sh` probes Python by running it, fixing both Python suites on Windows. → ledger L3246
+- 2026-09-28 — The harness `fetch` is replaceable per suite, and the first asynchronous checks run last and call `done` themselves. → ledger L3761, #65
