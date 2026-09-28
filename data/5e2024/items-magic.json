@@ -1346,7 +1346,7 @@
       "type": "Simple Melee Weapon",
       "rarity": "Rare",
       "weight": 1,
-      "description": "Damage 1d4 piercing · Range 20/60 ft · Properties: F, L, T · Mastery: Nick · Base item: Dagger. You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon.\nYou can take a Bonus Action to magically coat the blade with poison. The poison remains for 1 minute or until an attack using this weapon hits a creature. That creature must succeed on a DC 15 Constitution saving throw or take 2d10 Poison damage and have the Poisoned condition for 1 minute. The weapon can't be used this way again until the next dawn",
+      "description": "Damage 1d4 piercing · Range 20/60 ft · Properties: Finesse, Light, Thrown · Mastery: Nick · Base item: Dagger. You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon.\nYou can take a Bonus Action to magically coat the blade with poison. The poison remains for 1 minute or until an attack using this weapon hits a creature. That creature must succeed on a DC 15 Constitution saving throw or take 2d10 Poison damage and have the Poisoned condition for 1 minute. The weapon can't be used this way again until the next dawn",
       "effects": [
         {
           "target": "attack",
@@ -1361,8 +1361,8 @@
         "kind": "melee",
         "dice": "1d4",
         "damageType": "piercing",
-        "ability": "str",
-        "notes": "Range 20/60 · F, L, T · Mastery: Nick",
+        "ability": "finesse",
+        "notes": "Range 20/60 · Finesse, Light, Thrown · Mastery: Nick",
         "atkMisc": 1,
         "dmgMisc": 1
       }
@@ -1511,7 +1511,7 @@
       "weight": 5,
       "attune": true,
       "attuneNote": "by a Dwarf or a Creature Attuned to a Belt of Dwarvenkind",
-      "description": "Damage 1d8 bludgeoning (Versatile 1d10) · Range 20/60 ft · Properties: T, V · Mastery: Push · Base item: Warhammer. You gain a +3 bonus to attack rolls and damage rolls made with this magic weapon. It has Thrown with a normal range of 20 feet and a long range of 60 feet. When you hit with a ranged attack using this weapon, it deals an extra 1d8 Force damage, or an extra 2d8 Force damage if the target is a Giant. Immediately after hitting or missing, the weapon flies back to your hand",
+      "description": "Damage 1d8 bludgeoning (Versatile 1d10) · Range 20/60 ft · Properties: Thrown, Versatile · Mastery: Push · Base item: Warhammer. You gain a +3 bonus to attack rolls and damage rolls made with this magic weapon. It has Thrown with a normal range of 20 feet and a long range of 60 feet. When you hit with a ranged attack using this weapon, it deals an extra 1d8 Force damage, or an extra 2d8 Force damage if the target is a Giant. Immediately after hitting or missing, the weapon flies back to your hand",
       "effects": [
         {
           "target": "attack",
@@ -1527,7 +1527,7 @@
         "dice": "1d8",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Range 20/60 · Versatile 1d10 · T, V · Mastery: Push",
+        "notes": "Range 20/60 · Versatile 1d10 · Thrown · Mastery: Push",
         "atkMisc": 3,
         "dmgMisc": 3
       }
@@ -2536,14 +2536,14 @@
       "type": "Simple Melee Weapon",
       "rarity": "Uncommon",
       "weight": 2,
-      "description": "Damage 1d6 piercing · Range 30/120 ft · Properties: T · Mastery: Slow · Base item: Javelin. Each time you make an attack roll with this magic weapon and hit, you can have it deal Lightning damage instead of Piercing damage.\nLightning Bolt: When you throw this weapon at a target no farther than 120 feet from you, you can forgo making a ranged attack roll and instead turn the weapon into a bolt of lightning. This bolt forms a 5-foot-wide Line between you and the target. The target and each other creature in the Line (excluding you) makes a DC 13 Dexterity saving throw, taking 4d6 Lightning damage on a failed save or half as much damage on a successful one. Immediately after dealing this damage, the weapon reappears in your hand. This property can't be used again until the next dawn",
+      "description": "Damage 1d6 piercing · Range 30/120 ft · Properties: Thrown · Mastery: Slow · Base item: Javelin. Each time you make an attack roll with this magic weapon and hit, you can have it deal Lightning damage instead of Piercing damage.\nLightning Bolt: When you throw this weapon at a target no farther than 120 feet from you, you can forgo making a ranged attack roll and instead turn the weapon into a bolt of lightning. This bolt forms a 5-foot-wide Line between you and the target. The target and each other creature in the Line (excluding you) makes a DC 13 Dexterity saving throw, taking 4d6 Lightning damage on a failed save or half as much damage on a successful one. Immediately after dealing this damage, the weapon reappears in your hand. This property can't be used again until the next dawn",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "piercing",
         "ability": "str",
-        "notes": "Range 30/120 · T · Mastery: Slow"
+        "notes": "Range 30/120 · Thrown · Mastery: Slow"
       }
     },
     {
@@ -3778,14 +3778,14 @@
       "category": "Weapon",
       "type": "Simple Melee Weapon",
       "rarity": "Mundane",
-      "description": "Damage 1d6 psychic · Range 60/120 ft · Properties: F, T · Mastery: {'uid': 'Vex",
+      "description": "Damage 1d6 psychic · Range 60/120 ft · Properties: Finesse, Thrown · Mastery: Vex (you can use this property, and it doesn't count against the number of properties you can use with Weapon Mastery)",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "psychic",
-        "ability": "str",
-        "notes": "Range 60/120 · F, T · Mastery: {'uid': 'Vex"
+        "ability": "finesse",
+        "notes": "Range 60/120 · Finesse, Thrown · Mastery: Vex (you can use this property, and it doesn't count against the number of properties you can use with Weapon Mastery)"
       }
     },
     {
@@ -3860,7 +3860,7 @@
       "rarity": "Very Rare",
       "weight": 4,
       "attune": true,
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Range 30/120 ft · Properties: T, V · Mastery: Topple · Base item: Quarterstaff. You have a +2 bonus to attack rolls and damage rolls made with this magic weapon.\nWhile holding this weapon, you can cause it to emit green Dim Light out to 10 feet, either as a Bonus Action or after you roll Initiative, or you can extinguish the light as a Bonus Action.\nWhile holding this weapon, you can take a Bonus Action to alter its form, turning it into a 6-inch rod (for ease of storage) or a 10-foot pole, or reverting it a Quarterstaff; the weapon will elongate only as far as the surrounding space allows.\nIn certain forms, the weapon has the following additional properties.\nAcrobatic Assist (Quarterstaff and 10-Foot Pole Forms Only): While holding this weapon, you have Advantage on Dexterity (Acrobatics) checks.\nAttack Deflection (Quarterstaff Form Only): When you are hit by an attack while holding the weapon, you can take a Reaction to twirl the weapon around you, gaining a +5 bonus to your Armor Class against the triggering attack, potentially causing the attack to miss you. You can't use this property again until you finish a Short or Long Rest.\nRanged Weapon (Quarterstaff Form Only): This weapon has Thrown with a normal range of 30 feet and a long range of 120 feet. Immediately after you make a ranged attack with the weapon, it flies back to your hand",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Range 30/120 ft · Properties: Thrown, Versatile · Mastery: Topple · Base item: Quarterstaff. You have a +2 bonus to attack rolls and damage rolls made with this magic weapon.\nWhile holding this weapon, you can cause it to emit green Dim Light out to 10 feet, either as a Bonus Action or after you roll Initiative, or you can extinguish the light as a Bonus Action.\nWhile holding this weapon, you can take a Bonus Action to alter its form, turning it into a 6-inch rod (for ease of storage) or a 10-foot pole, or reverting it a Quarterstaff; the weapon will elongate only as far as the surrounding space allows.\nIn certain forms, the weapon has the following additional properties.\nAcrobatic Assist (Quarterstaff and 10-Foot Pole Forms Only): While holding this weapon, you have Advantage on Dexterity (Acrobatics) checks.\nAttack Deflection (Quarterstaff Form Only): When you are hit by an attack while holding the weapon, you can take a Reaction to twirl the weapon around you, gaining a +5 bonus to your Armor Class against the triggering attack, potentially causing the attack to miss you. You can't use this property again until you finish a Short or Long Rest.\nRanged Weapon (Quarterstaff Form Only): This weapon has Thrown with a normal range of 30 feet and a long range of 120 feet. Immediately after you make a ranged attack with the weapon, it flies back to your hand",
       "effects": [
         {
           "target": "ac",
@@ -3880,7 +3880,7 @@
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Range 30/120 · Versatile 1d8 · T, V · Mastery: Topple",
+        "notes": "Range 30/120 · Versatile 1d8 · Thrown · Mastery: Topple",
         "atkMisc": 2,
         "dmgMisc": 2
       }
@@ -4653,7 +4653,7 @@
       "rarity": "Very Rare",
       "weight": 3,
       "attune": true,
-      "description": "Damage 1d6 slashing · Properties: F, L · Mastery: Nick · Base item: Scimitar. You gain a +2 bonus to attack rolls and damage rolls made with this magic weapon. In addition, you can make one attack with it as a Bonus Action on each of your turns",
+      "description": "Damage 1d6 slashing · Properties: Finesse, Light · Mastery: Nick · Base item: Scimitar. You gain a +2 bonus to attack rolls and damage rolls made with this magic weapon. In addition, you can make one attack with it as a Bonus Action on each of your turns",
       "effects": [
         {
           "target": "attack",
@@ -4668,8 +4668,8 @@
         "kind": "melee",
         "dice": "1d6",
         "damageType": "slashing",
-        "ability": "str",
-        "notes": "F, L · Mastery: Nick",
+        "ability": "finesse",
+        "notes": "Finesse, Light · Mastery: Nick",
         "atkMisc": 2,
         "dmgMisc": 2
       }
@@ -5114,14 +5114,14 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a bard, cleric, druid, sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 10 charges. While holding the staff, you can use any of its properties:\nCast Spell: You can expend 1 of the staff's charges to cast Charm Person, Command, or Comprehend Languages from it using your spell save DC.\nReflect Enchantment: If you succeed on a saving throw against an Enchantment spell that targets only you, you can take a Reaction to expend 1 charge from the staff and turn the spell back on its caster as if you had cast the spell.\nResist Enchantment: If you fail a saving throw against an Enchantment spell that targets only you, you can turn your failed save into a successful one. You can't use this property of the staff again until the next dawn.\nRegaining Charges: The staff regains 1d8 + 2 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff crumbles to dust and is destroyed",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 10 charges. While holding the staff, you can use any of its properties:\nCast Spell: You can expend 1 of the staff's charges to cast Charm Person, Command, or Comprehend Languages from it using your spell save DC.\nReflect Enchantment: If you succeed on a saving throw against an Enchantment spell that targets only you, you can take a Reaction to expend 1 charge from the staff and turn the spell back on its caster as if you had cast the spell.\nResist Enchantment: If you fail a saving throw against an Enchantment spell that targets only you, you can turn your failed save into a successful one. You can't use this property of the staff again until the next dawn.\nRegaining Charges: The staff regains 1d8 + 2 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff crumbles to dust and is destroyed",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple"
+        "notes": "Versatile 1d8 · Mastery: Topple"
       }
     },
     {
@@ -5133,14 +5133,14 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a druid, sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. You have Resistance to Fire damage while you hold this staff.\nSpells: The staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Fire Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff crumbles into cinders and is destroyed",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. You have Resistance to Fire damage while you hold this staff.\nSpells: The staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Fire Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff crumbles into cinders and is destroyed",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple"
+        "notes": "Versatile 1d8 · Mastery: Topple"
       }
     },
     {
@@ -5152,14 +5152,14 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a druid, sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. You have Resistance to Cold damage while you hold this staff.\nSpells: The staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Frost Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff turns to water and is destroyed",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. You have Resistance to Cold damage while you hold this staff.\nSpells: The staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Frost Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff turns to water and is destroyed",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple"
+        "notes": "Versatile 1d8 · Mastery: Topple"
       }
     },
     {
@@ -5171,14 +5171,14 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a bard, cleric, or druid",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spellcasting ability modifier. The table indicates how many charges you must expend to cast the spell.\n[Table: Staff of Healing Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff vanishes in a flash of light, lost forever",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 10 charges. While holding the staff, you can cast one of the spells on the following table from it, using your spellcasting ability modifier. The table indicates how many charges you must expend to cast the spell.\n[Table: Staff of Healing Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff vanishes in a flash of light, lost forever",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple"
+        "notes": "Versatile 1d8 · Mastery: Topple"
       }
     },
     {
@@ -5190,7 +5190,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 20 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you gain a +2 bonus to Armor Class, saving throws, and spell attack rolls.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Power Table]\nRegaining Charges: The staff regains 2d8 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff retains its +2 bonus to attack rolls and damage rolls but loses all other properties. On a 20, the staff regains 1d8 + 2 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 4 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 20 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you gain a +2 bonus to Armor Class, saving throws, and spell attack rolls.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Power Table]\nRegaining Charges: The staff regains 2d8 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff retains its +2 bonus to attack rolls and damage rolls but loses all other properties. On a 20, the staff regains 1d8 + 2 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 4 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
       "effects": [
         {
           "target": "ac",
@@ -5234,7 +5234,7 @@
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple",
+        "notes": "Versatile 1d8 · Mastery: Topple",
         "atkMisc": 2,
         "dmgMisc": 2
       }
@@ -5247,7 +5247,7 @@
       "rarity": "Very Rare",
       "weight": 4,
       "attune": true,
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff can be wielded as a magic Quarterstaff that grants a +3 bonus to attack rolls and damage rolls made with it.\nThe staff has 10 charges. When you hit with a melee attack using it, you can expend up to 3 charges. For each charge you expend, the target takes an extra 1d6 Force damage.\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff becomes a nonmagical Quarterstaff",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff can be wielded as a magic Quarterstaff that grants a +3 bonus to attack rolls and damage rolls made with it.\nThe staff has 10 charges. When you hit with a melee attack using it, you can expend up to 3 charges. For each charge you expend, the target takes an extra 1d6 Force damage.\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff becomes a nonmagical Quarterstaff",
       "effects": [
         {
           "target": "attack",
@@ -5263,7 +5263,7 @@
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple",
+        "notes": "Versatile 1d8 · Mastery: Topple",
         "atkMisc": 3,
         "dmgMisc": 3
       }
@@ -5277,14 +5277,14 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a bard, cleric, druid, sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 10 charges.\nInsect Cloud: While holding the staff, you can take a Magic action and expend 1 charge to cause a swarm of harmless flying insects to fill a 30-foot Emanation originating from you. The insects remain for 10 minutes, making the area Heavily Obscured for creatures other than you. A strong wind (like that created by Gust of Wind) disperses the swarm and ends the effect.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC and spell attack modifier. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Swarming Insects Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, a swarm of insects consumes and destroys the staff, then disperses",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 10 charges.\nInsect Cloud: While holding the staff, you can take a Magic action and expend 1 charge to cause a swarm of harmless flying insects to fill a 30-foot Emanation originating from you. The insects remain for 10 minutes, making the area Heavily Obscured for creatures other than you. A strong wind (like that created by Gust of Wind) disperses the swarm and ends the effect.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC and spell attack modifier. The table indicates how many charges you must expend to cast the spell. [Table: Staff of Swarming Insects Table]\nRegaining Charges: The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, a swarm of insects consumes and destroys the staff, then disperses",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple"
+        "notes": "Versatile 1d8 · Mastery: Topple"
       }
     },
     {
@@ -5296,7 +5296,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a sorcerer, warlock, or wizard",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 50 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls.\nSpell Absorption: While holding the staff, you have Advantage on saving throws against spells. In addition, you can take a Reaction when another creature casts a spell that targets only you. If you do, the staff absorbs the magic of the spell, canceling its effect and gaining a number of charges equal to the absorbed spell's level. However, if doing so brings the staff's total number of charges above 50, the staff explodes as if you activated its Retributive Strike (see below).\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Magi Table]\nRegaining Charges: The staff regains 4d6 + 2 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 20, the staff regains 1d12 + 1 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 6 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 50 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls.\nSpell Absorption: While holding the staff, you have Advantage on saving throws against spells. In addition, you can take a Reaction when another creature casts a spell that targets only you. If you do, the staff absorbs the magic of the spell, canceling its effect and gaining a number of charges equal to the absorbed spell's level. However, if doing so brings the staff's total number of charges above 50, the staff explodes as if you activated its Retributive Strike (see below).\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Magi Table]\nRegaining Charges: The staff regains 4d6 + 2 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 20, the staff regains 1d12 + 1 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 6 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
       "effects": [
         {
           "target": "attack",
@@ -5312,7 +5312,7 @@
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple",
+        "notes": "Versatile 1d8 · Mastery: Topple",
         "atkMisc": 2,
         "dmgMisc": 2
       }
@@ -5325,14 +5325,14 @@
       "rarity": "Uncommon",
       "weight": 4,
       "attune": true,
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. As a Magic action, you can throw this staff so that it lands in an unoccupied space within 10 feet of you, causing the staff to become a Giant Constrictor Snake in that space. The snake is under your control and shares your Initiative count, taking its turn immediately after yours.\nOn your turn, you can mentally command the snake (no action required) if it is within 60 feet of you and you don't have the Incapacitated condition. You decide what action the snake takes and where it moves during its turn, or you can issue it a general command, such as to attack your enemies or guard a location. Absent commands from you, the snake defends itself.\nAs a Bonus Action, you can command the snake to revert to staff form in its current space, and you can't use the staff's property again for 1 hour. If the snake is reduced to 0 Hit Points, it dies and reverts to its staff form; the staff then shatters and is destroyed. If the snake reverts to staff form before losing all its Hit Points, it regains all of them",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. As a Magic action, you can throw this staff so that it lands in an unoccupied space within 10 feet of you, causing the staff to become a Giant Constrictor Snake in that space. The snake is under your control and shares your Initiative count, taking its turn immediately after yours.\nOn your turn, you can mentally command the snake (no action required) if it is within 60 feet of you and you don't have the Incapacitated condition. You decide what action the snake takes and where it moves during its turn, or you can issue it a general command, such as to attack your enemies or guard a location. Absent commands from you, the snake defends itself.\nAs a Bonus Action, you can command the snake to revert to staff form in its current space, and you can't use the staff's property again for 1 hour. If the snake is reduced to 0 Hit Points, it dies and reverts to its staff form; the staff then shatters and is destroyed. If the snake reverts to staff form before losing all its Hit Points, it regains all of them",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple"
+        "notes": "Versatile 1d8 · Mastery: Topple"
       }
     },
     {
@@ -5344,7 +5344,7 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a druid",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 6 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you have a +2 bonus to spell attack rolls.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Woodlands Table]\nTree Form: You can take a Magic action to plant one end of the staff in earth in an unoccupied space and expend 1 charge to transform the staff into a healthy tree. The tree is 60 feet tall and has a 5-foot-diameter trunk, and its branches at the top spread out in a 20-foot radius. The tree appears ordinary but radiates a faint aura of Transmutation magic that can be discerned with the Detect Magic spell. While touching the tree and using a Magic action, you return the staff to its normal form. Any creature in the tree falls when the tree reverts to a staff.\nRegaining Charges: The staff regains 1d6 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff loses its properties and becomes a nonmagical Quarterstaff",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 6 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you have a +2 bonus to spell attack rolls.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Woodlands Table]\nTree Form: You can take a Magic action to plant one end of the staff in earth in an unoccupied space and expend 1 charge to transform the staff into a healthy tree. The tree is 60 feet tall and has a 5-foot-diameter trunk, and its branches at the top spread out in a 20-foot radius. The tree appears ordinary but radiates a faint aura of Transmutation magic that can be discerned with the Detect Magic spell. While touching the tree and using a Magic action, you return the staff to its normal form. Any creature in the tree falls when the tree reverts to a staff.\nRegaining Charges: The staff regains 1d6 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff loses its properties and becomes a nonmagical Quarterstaff",
       "effects": [
         {
           "target": "attack",
@@ -5360,7 +5360,7 @@
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple",
+        "notes": "Versatile 1d8 · Mastery: Topple",
         "atkMisc": 2,
         "dmgMisc": 2
       }
@@ -5373,7 +5373,7 @@
       "rarity": "Very Rare",
       "weight": 4,
       "attune": true,
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. It also has the following additional properties. Once one of these properties is used, it can't be used again until the next dawn.\nLightning: When you hit with a melee attack using the staff, you can cause the target to take an extra 2d6 Lightning damage (no action required).\nThunder: When you hit with a melee attack using the staff, you can cause the staff to emit a crack of thunder audible out to 300 feet (no action required). The target you hit must succeed on a DC 17 Constitution saving throw or have the Stunned condition until the end of your next turn.\nThunder and Lightning: Immediately after you hit with a melee attack using the staff, you can take a Bonus Action to use the Lightning and Thunder properties (see above) at the same time. Doing so doesn't expend the daily use of those properties, only the use of this one.\nLightning Strike: You can take a Magic action to cause a bolt of lightning to leap from the staff's tip in a Line that is 5 feet wide and 120 feet long. Each creature in that Line makes a DC 17 Dexterity saving throw, taking 9d6 Lightning damage on a failed save or half as much damage on a successful one.\nThunderclap: You can take a Magic action to cause the staff to produce a thunderclap audible out to 600 feet. Every creature within a 60-foot Emanation originating from you makes a DC 17 Constitution saving throw. On a failed save, a creature takes 2d6 Thunder damage and has the Deafened condition for 1 minute. On a successful save, a creature takes half as much damage only",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. It also has the following additional properties. Once one of these properties is used, it can't be used again until the next dawn.\nLightning: When you hit with a melee attack using the staff, you can cause the target to take an extra 2d6 Lightning damage (no action required).\nThunder: When you hit with a melee attack using the staff, you can cause the staff to emit a crack of thunder audible out to 300 feet (no action required). The target you hit must succeed on a DC 17 Constitution saving throw or have the Stunned condition until the end of your next turn.\nThunder and Lightning: Immediately after you hit with a melee attack using the staff, you can take a Bonus Action to use the Lightning and Thunder properties (see above) at the same time. Doing so doesn't expend the daily use of those properties, only the use of this one.\nLightning Strike: You can take a Magic action to cause a bolt of lightning to leap from the staff's tip in a Line that is 5 feet wide and 120 feet long. Each creature in that Line makes a DC 17 Dexterity saving throw, taking 9d6 Lightning damage on a failed save or half as much damage on a successful one.\nThunderclap: You can take a Magic action to cause the staff to produce a thunderclap audible out to 600 feet. Every creature within a 60-foot Emanation originating from you makes a DC 17 Constitution saving throw. On a failed save, a creature takes 2d6 Thunder damage and has the Deafened condition for 1 minute. On a successful save, a creature takes half as much damage only",
       "effects": [
         {
           "target": "attack",
@@ -5389,7 +5389,7 @@
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple",
+        "notes": "Versatile 1d8 · Mastery: Topple",
         "atkMisc": 2,
         "dmgMisc": 2
       }
@@ -5403,14 +5403,14 @@
       "weight": 4,
       "attune": true,
       "attuneNote": "by a cleric, druid, or warlock",
-      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: V · Mastery: Topple. This staff has 3 charges and regains 1d3 expended charges daily at dawn.\nThe staff can be wielded as a magic Quarterstaff. On a hit, it deals damage as a normal Quarterstaff, and you can expend 1 charge to deal an extra 2d10 Necrotic damage to the target and force it to make a DC 15 Constitution saving throw. On a failed save, the target has Disadvantage for 1 hour on any ability check or saving throw that uses Strength or Constitution",
+      "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 3 charges and regains 1d3 expended charges daily at dawn.\nThe staff can be wielded as a magic Quarterstaff. On a hit, it deals damage as a normal Quarterstaff, and you can expend 1 charge to deal an extra 2d10 Necrotic damage to the target and force it to make a DC 15 Constitution saving throw. On a failed save, the target has Disadvantage for 1 hour on any ability check or saving throw that uses Strength or Constitution",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "Versatile 1d8 · V · Mastery: Topple"
+        "notes": "Versatile 1d8 · Mastery: Topple"
       }
     },
     {
@@ -5485,7 +5485,7 @@
       "rarity": "Rare",
       "weight": 3,
       "attune": true,
-      "description": "Damage 1d8 radiant (Versatile 1d10) · Properties: F, V · Mastery: Sap · Base item: Longsword. This item appears to be a sword hilt.\nBlade of Radiance: While grasping the hilt, you can take a Bonus Action to cause a blade of pure radiance to spring into existence or make the blade disappear. While the blade exists, this magic weapon functions as a Longsword with Finesse. If you are proficient with Longswords or Shortswords, you are proficient with the Sun Blade. You gain a +2 bonus to attack rolls and damage rolls made with this weapon, which deals Radiant damage instead of Slashing damage. When you hit an Undead with it, that target takes an extra 1d8 Radiant damage.\nSunlight: The sword's luminous blade emits Bright Light in a 15-foot radius and Dim Light for an additional 15 feet. The light is sunlight. While the blade persists, you can take a Magic action to expand or reduce its radius of Bright Light and Dim Light by 5 feet each, to a maximum of 30 feet each or a minimum of 10 feet each",
+      "description": "Damage 1d8 radiant (Versatile 1d10) · Properties: Finesse, Versatile · Mastery: Sap · Base item: Longsword. This item appears to be a sword hilt.\nBlade of Radiance: While grasping the hilt, you can take a Bonus Action to cause a blade of pure radiance to spring into existence or make the blade disappear. While the blade exists, this magic weapon functions as a Longsword with Finesse. If you are proficient with Longswords or Shortswords, you are proficient with the Sun Blade. You gain a +2 bonus to attack rolls and damage rolls made with this weapon, which deals Radiant damage instead of Slashing damage. When you hit an Undead with it, that target takes an extra 1d8 Radiant damage.\nSunlight: The sword's luminous blade emits Bright Light in a 15-foot radius and Dim Light for an additional 15 feet. The light is sunlight. While the blade persists, you can take a Magic action to expand or reduce its radius of Bright Light and Dim Light by 5 feet each, to a maximum of 30 feet each or a minimum of 10 feet each",
       "effects": [
         {
           "target": "attack",
@@ -5500,8 +5500,8 @@
         "kind": "melee",
         "dice": "1d8",
         "damageType": "radiant",
-        "ability": "str",
-        "notes": "Versatile 1d10 · F, V · Mastery: Sap",
+        "ability": "finesse",
+        "notes": "Versatile 1d10 · Finesse · Mastery: Sap",
         "atkMisc": 2,
         "dmgMisc": 2
       }
@@ -5591,14 +5591,14 @@
       "rarity": "Very Rare",
       "weight": 10,
       "attune": true,
-      "description": "Damage 1d8 bludgeoning · Properties: 2H · Mastery: Push · Base item: Greatclub. While you are attuned to this magic weapon, your Strength is 20 unless your Strength is already equal to or greater than that score. The weapon deals an extra 1d8 Thunder damage to any creature it hits and an extra 3d8 Thunder damage to objects it hits that aren't being worn or carried.\nThe weapon has the following additional properties.\nClap of Thunder: As a Magic action, you can strike the weapon against a hard surface to create a loud clap of thunder audible out to 300 feet. You also create a 30-foot Cone of thunderous energy. Each creature in the Cone must succeed on a DC 15 Strength saving throw or have the Prone condition. Nonmagical objects in the Cone that aren't being worn or carried take 3d8 Thunder damage.\nEarthquake: As a Magic action, you can strike the weapon against the ground to create an intense seismic disturbance in a 50-foot-radius circle centered on the point of impact. Structures in contact with the ground in that area take 50 Bludgeoning damage, and each creature on the ground in that area must succeed on a DC 20 Dexterity saving throw or have the Prone condition. If that creature is also Concentrating, it must succeed on a DC 20 Constitution saving throw or its Concentration is broken. In addition, you can cause a 30-foot-deep, 10-foot-wide fissure to open up on the ground anywhere in the area. Any creature on a spot where the fissure opens must make a DC 20 Dexterity saving throw, falling into the fissure on a failed save or moving with the fissure's edge on a successful one. Any structure on a spot where the fissure opens collapses into the fissure. Once you use this property, it can't be used again until the next dawn",
+      "description": "Damage 1d8 bludgeoning · Properties: Two-Handed · Mastery: Push · Base item: Greatclub. While you are attuned to this magic weapon, your Strength is 20 unless your Strength is already equal to or greater than that score. The weapon deals an extra 1d8 Thunder damage to any creature it hits and an extra 3d8 Thunder damage to objects it hits that aren't being worn or carried.\nThe weapon has the following additional properties.\nClap of Thunder: As a Magic action, you can strike the weapon against a hard surface to create a loud clap of thunder audible out to 300 feet. You also create a 30-foot Cone of thunderous energy. Each creature in the Cone must succeed on a DC 15 Strength saving throw or have the Prone condition. Nonmagical objects in the Cone that aren't being worn or carried take 3d8 Thunder damage.\nEarthquake: As a Magic action, you can strike the weapon against the ground to create an intense seismic disturbance in a 50-foot-radius circle centered on the point of impact. Structures in contact with the ground in that area take 50 Bludgeoning damage, and each creature on the ground in that area must succeed on a DC 20 Dexterity saving throw or have the Prone condition. If that creature is also Concentrating, it must succeed on a DC 20 Constitution saving throw or its Concentration is broken. In addition, you can cause a 30-foot-deep, 10-foot-wide fissure to open up on the ground anywhere in the area. Any creature on a spot where the fissure opens must make a DC 20 Dexterity saving throw, falling into the fissure on a failed save or moving with the fissure's edge on a successful one. Any structure on a spot where the fissure opens collapses into the fissure. Once you use this property, it can't be used again until the next dawn",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d8",
         "damageType": "bludgeoning",
         "ability": "str",
-        "notes": "2H · Mastery: Push"
+        "notes": "Two-Handed · Mastery: Push"
       }
     },
     {
@@ -5691,14 +5691,14 @@
       "rarity": "Uncommon",
       "weight": 4,
       "attune": true,
-      "description": "Damage 1d8 piercing (Versatile 1d10) · Range 20/60 ft · Properties: T, V · Mastery: Topple · Base item: Trident. This magic weapon has 3 charges, and it regains 1d3 expended charges daily at dawn. While you carry it, you can expend 1 charge to cast Dominate Beast (save DC 15) from it on a Beast that has a Swim Speed",
+      "description": "Damage 1d8 piercing (Versatile 1d10) · Range 20/60 ft · Properties: Thrown, Versatile · Mastery: Topple · Base item: Trident. This magic weapon has 3 charges, and it regains 1d3 expended charges daily at dawn. While you carry it, you can expend 1 charge to cast Dominate Beast (save DC 15) from it on a Beast that has a Swim Speed",
       "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d8",
         "damageType": "piercing",
         "ability": "str",
-        "notes": "Range 20/60 · Versatile 1d10 · T, V · Mastery: Topple"
+        "notes": "Range 20/60 · Versatile 1d10 · Thrown · Mastery: Topple"
       }
     },
     {

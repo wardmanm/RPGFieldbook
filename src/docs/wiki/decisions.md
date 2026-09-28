@@ -358,6 +358,10 @@ When a page gains a Decisions row, add its line here under that page.
 - **How formula lines are worded** — 5e-tools' "classic" wording, "8 + your proficiency bonus + your Intelligence modifier" (#68)
 - **Whether a formula line ends with a full stop** — Yes, though the book prints none (#68)
 - **A `statblock`, an entity embedded by reference** — Resolved from the dump's item files and written as the item's stat line (#68)
+- **Where a magic weapon's property and mastery names come from** — The run's item index (`items-base.json`'s `itemProperty` and `itemMastery`), through one resolver shared with statblocks (#72)
+- **A weapon property or mastery code nothing defines** — Printed as the code, counted with its items, and a `WARNING` at the end of every run (#72)
+- **A reference carrying a note (`{uid, note}`)** — "Name (note)" in the notes and the description (#72)
+- **A single `items` run on the magic-item file** — Index the `items-base.json` beside it (#72)
 
 ### [Supplements](data/supplements.md)
 

@@ -10,7 +10,8 @@ page is what that file does not say: what must not move, and the traps that have
 **Code:** `main()`, `pick_2024_preferred()`, `pick_sources()`, `flatten()`, `table_ctx()`,
 `ref_ctx()`, `_register()`, `_norm_table()`, `_cell_text()`, `_dice_text()`, `_cell_miss_warnings()`,
 `_formula_text()`, `_attr_choose()`, `_full_stop()`, `statblock_ctx()`, `load_item_index()`,
-`_statblock_text()`, `_item_traits()`, `_entry_miss_warnings()`, `_class_tables()`, `convert_classes()`,
+`_statblock_text()`, `_item_traits()`, `_entry_miss_warnings()`, `convert_items()`, `_weapon_defs()`,
+`_weapon_refs()`, `_weapon_miss_warnings()`, `_class_tables()`, `convert_classes()`,
 `_skill_profs()`, `_multiclass()`, `_optfeat_choices()`, `convert_races()`,
 `_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in `scripts/bundle-rules.js`;
 `dataChangedSince()` in `scripts/release.js`; `mergeRules()` in `89-rules-merge.js`;
@@ -92,6 +93,23 @@ nothing **and** is counted in `_ENTRY_MISSES`, and so is a statblock that does n
 its name). `_entry_miss_warnings()` reports each type as a `WARNING` at the end of `all`,
 `supplement` and every single subcommand. No run on the v2.36.1 dump reports one today.
 
+**Weapon properties and masteries are named from their definitions.** Only `items-base.json`
+defines them: `itemProperty` (27, keyed by abbreviation, several per code across PHB/XPHB/DMG/XDMG,
+all named alike) and `itemMastery` (8). `items.json` copies each base weapon's codes, and every
+other weapon field, onto its magic weapons and defines none. `_weapon_defs()` reads both lists from
+one file; a property is named by its first entry, or, for the 2014 `S`, by its top-level `name`
+("special", printed "Special"). `load_item_index()` returns `(items, props, masteries)`, and
+`convert_items()` starts from that index and adds its own file's definitions. `all` and
+`supplement` set the index once per run; the single `items` subcommand indexes the
+`items-base.json` beside its input. One resolver, `_weapon_refs()`, serves `convert_items()` and
+`_item_traits()`: a reference is `"F"`, `"F|XPHB"` or `{uid, note}`, a property is looked up by
+abbreviation and a mastery by name, and a note prints in brackets ("Two-Handed (unless mounted)",
+the Psychic Blade's "Vex (you can use this property, …)"). `weapon.ability` is `"finesse"` for a
+melee weapon whose named properties include Finesse, `"dex"` for a ranged one, else `"str"`, so a
+magic weapon attacks as its base weapon does. A code nothing defines is printed as it stands and
+recorded in `_WEAPON_MISSES` with the items carrying it; `_weapon_miss_warnings()` reports each at
+the end of `all`, `supplement` and every single subcommand. Every code in the v2.36.1 dump resolves.
+
 **Option pickers.** `_optfeat_choices()` reads a class or subclass's `optionalfeatureProgression`
 (a running total per level, as a map or a 20-long list) and emits an `option` choice at every
 level the total rises, asking for the rise ("Maneuvers: choose 2 more"), offering only options whose
@@ -152,9 +170,12 @@ has no `DATA_VERSIONS` entry.
   a dev-only script (the Humblewood extractor is the precedent).
 - **Never quiet.** A missing input warns; a supplement category with nothing in it writes no file
   and says so; a subclass that resolves no features is listed in a `WARNING`, and so is every
-  table cell `_cell_text()` could not read and every entry node `flatten()` could not render; a
-  starting or multiclass skill entry `_skill_profs()` cannot read is a `note:`. Every bug on this
-  page was a silent skip first.
+  table cell `_cell_text()` could not read, every entry node `flatten()` could not render and every
+  weapon property or mastery code no definition names; a starting or multiclass skill entry
+  `_skill_profs()` cannot read is a `note:`. Every bug on this page was a silent skip first.
+- **Weapon codes are named from the whole run's definitions, never from the file being converted.**
+  The magic-item file uses codes it does not define. One resolver, `_weapon_refs()`, for items and
+  statblocks alike.
 - **One skill reader.** Species, class starting skills and multiclass skills all go through
   `_skill_profs()`. A second parser at a call site is how the Bard lost its skills.
 - **Anchors only when a sink is collecting.** With no sink, a table is dropped with no anchor: an
@@ -222,6 +243,18 @@ has no `DATA_VERSIONS` entry.
   with no level-1 skill choice, so a first-class Bard was offered no skills. It is the only `any`
   among the dump's 27 class starting-skill lists. Guard: one reader, `converter.py` pins the real
   Bard shape, and `rules-data.js` fails on any class in any pack that starts with no skills.
+- **Codes defined in one file, used in another (#72).** `convert_items()` named properties from
+  the file it was converting, and only `items-base.json` has the table. Every magic weapon printed
+  codes ("Properties: F, L, T" on the Dagger of Venom), and since `ability` asks whether "Finesse"
+  is in the named list, the Dagger of Venom, Scimitar of Speed, Sun Blade and Psychic Blade
+  attacked with Strength: 30 weapons across three packs, 4 with the wrong ability. Object-shaped
+  references printed Python's repr ("{'uid': 'Vex" on the Psychic Blade, "{'uid': '2H" on the
+  Lance), and the 2014 `S`, whose only name is a top-level key, printed "S" on the Net. Base
+  weapons named everything else, because they come from the one file that has the table. Guard:
+  `converter.py`
+  runs real shapes through the index, `rules-data.js` fails on any bare code or repr in a shipped
+  weapon and on any magic weapon that drifts from its named base weapon's dice, kind, properties or
+  finesse, and an unnamed code is a `WARNING`.
 - **A tagline as a description.** `_sub_blurb()` takes a subclass's first paragraph over 40
   characters; eight 2024 italic taglines are 41+ and shipped as the whole description. It now skips
   a paragraph that is only `{@i …}`.
@@ -260,6 +293,10 @@ has no `DATA_VERSIONS` entry.
 | How formula lines are worded | 5e-tools' "classic" wording: "8 + your proficiency bonus + your Intelligence modifier" (#68) | Its other wording, "8 + Intelligence modifier + Proficiency Bonus": in 5e-tools a reader's style preference, not a printing. Every source using these nodes in the converted files (PHB, XGE, TCE, UA) prints the classic one; no XPHB entry uses them |
 | Whether a formula line ends with a full stop | Yes, though the book prints none (#68) | As printed: a named subsection joins its blocks with spaces, so the Artificer's two formulas ran together ("…Intelligence modifier Spell attack modifier = …") |
 | A `statblock`, an entity embedded by reference | Resolved from the dump's item files and written as the item's stat line (#68) | Its name alone: "…has the following traits: Psychic Blade." reads like a sentence that lost its content. Skipping it: the original bug |
+| Where a magic weapon's property and mastery names come from | The run's item index, `items-base.json`'s `itemProperty` and `itemMastery`, through one resolver shared with statblocks (#72) | Merging the base weapon's fields into the magic one: the dump already inlines them, and a magic weapon deliberately differs (Sun Blade adds Finesse). A name table in `convert.py`: 5e-tools defines the codes, and a copy goes stale silently |
+| A weapon property or mastery code nothing defines | Printed as the code, counted with its items, and a `WARNING` at the end of every run (#72) | Passing it through quietly: the original bug. Failing the run: as for cells and nodes |
+| A reference carrying a note (`{uid, note}`) | "Name (note)" in the notes and the description, the Psychic Blade's long mastery note included (#72) | Dropping the note: loses rules text ("unless mounted"; Vex "doesn't count against" the mastery limit), and the statblock already printed it |
+| A single `items` run on the magic-item file | Index the `items-base.json` beside it (#72) | Warning only: a player running `items items.json` would get codes and a finesse weapon attacking with Strength |
 
 ## Open
 
@@ -268,16 +305,14 @@ has no `DATA_VERSIONS` entry.
   dump: the XPHB groups are Eldritch Knight's and Arcane Trickster's spell counts, which it would
   skip, and Psi Warrior's and Soulknife's die size and number, which their prose "Energy Dice"
   tables already carry. It would miss a new one.
-- **Magic weapons print property abbreviations, and a finesse one attacks with Strength.**
-  `convert_items()` reads property names from the file it converts, and only `items-base.json` has
-  the `itemProperty` table. So 28 magic weapons (20 core, 5 Tasha's, 3 Xanathar's) read
-  "Properties: F, L, T" (the Dagger of Venom), and, "Finesse" never being in the list, get
-  `weapon.ability: "str"` where the base weapon has `"finesse"`. The shipped Psychic Blade item
-  prints its `{uid, note}` mastery as "{'uid': 'Vex". The Soulknife's own text is right: its
-  statblock is rendered by `_item_traits()`, which has both files. Seen during #68.
+- **A `+N` magic weapon's bonus counts twice.** `_item_effects()` turns `bonusWeapon` into global
+  `attack` and `damage` effects, and `convert_items()` also writes it as `weapon.atkMisc` and
+  `dmgMisc`. `attackNumbers()` adds both to the weapon's own row, and the effects add +N to every
+  other attack while the item is equipped. 15 weapons: 11 core, 4 Tasha's. Seen during #72; see
+  [Attacks & damage](../features/attacks-and-damage.md).
 - **Only item statblocks resolve.** Another tag (creature, hazard…) keeps its name and warns. None
-  reaches the converter in the v2.36.1 dump, and a single subcommand has no item index at all, so
-  `classes` alone warns once for the Soulknife.
+  reaches the converter in the v2.36.1 dump, and a single subcommand other than `items` has no item
+  index at all, so `classes` alone warns once for the Soulknife.
 - **A cell carrying both `roll` and `entry` prints only the roll.** Only the DMG, BMT and LLK decks
   (Deck of Many Things, Deck of Illusions…) use it, and no pack ships those printings; the 2024
   decks have a different shape.
@@ -308,3 +343,4 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-28 — `_skill_profs()`: one skill reader for species, starting and multiclass skills; the Bard's "any 3" is a level-1 choice of 3 from 18, the one hunk `data/5e2024/` moved by. → ledger L3985, #67
 - 2026-09-28 — `flatten()` writes formula lines, one-`entry` list items and item statblocks, which it had dropped (28 nodes across three packs); an unknown node type is a `WARNING`. → ledger L4025, #68
 - 2026-09-28 — `_norm_table()` carries a table's `footnotes`; `_register()` compares them; `data/xanathars/tables.json` gains 17, the only file that moved. → ledger L4273, #73
+- 2026-09-28 — Weapon property and mastery codes are named from `items-base.json` through the item index (`_weapon_refs()`): 30 weapons across three packs, four magic weapons now `finesse`; an unnamed code is a `WARNING`. → ledger L4327, #72

@@ -497,6 +497,56 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
   });
 }
 
+// ---------- shipped data: every weapon names its properties, and attacks as its base weapon does (#72)
+// Only items-base.json defines the 5e-tools property codes, and convert.py once
+// read names from the file it was converting, so the magic weapons printed
+// "F, L, T" and — "Finesse" never being in the list — attacked with Strength
+// where their base weapon uses finesse. A bare code, or a Python dict's repr
+// from an object-shaped reference, is how that looks in a pack.
+{
+  const weapons=[];
+  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+    fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
+      (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[])
+        .forEach(it=>{if(it.weapon)weapons.push({where:d+'/'+f,it});});
+    }));
+  ck('the packs ship weapons to check', weapons.length>=70, weapons.length);
+  // "Range 20/60 · Versatile 1d10 · Finesse, Light · Mastery: Nick" -> the property names
+  const propsOf=notes=>String(notes||'').split(' · ').filter(s=>s&&!/^(Range |Mastery: )/.test(s))
+    .flatMap(s=>/^Versatile \S+$/.test(s)?['Versatile']:s.split(', '))
+    .map(p=>p.replace(/ \(.*\)$/,''));
+  const CODE=/^[A-Z0-9][A-Za-z0-9]{0,2}$/;   // F, L, 2H, AF, RLD, Vst: never a property's name
+  const bareCode=w=>propsOf(w.notes).filter(p=>CODE.test(p));
+  const descProps=it=>{const m=/Properties: ([^·]*?)(?: · |\. |$)/.exec(it.description||'');
+    return m?m[1].split(', ').map(p=>p.replace(/ \(.*\)$/,'')):[];};
+  const bad=weapons.filter(({it})=>bareCode(it.weapon).length||descProps(it).some(p=>CODE.test(p))
+    ||/[{}]|'uid'/.test(it.weapon.notes||'')||/Mastery: \{/.test(it.description||''));
+  ck('no weapon prints a property code or an object\'s repr, in its notes or its description',
+     bad.length===0, bad.map(({where,it})=>where+' '+it.name+': '+it.weapon.notes));
+  // a melee weapon that lists Finesse attacks with finesse (a ranged one uses DEX regardless)
+  const noFinesse=weapons.filter(({it})=>it.weapon.kind!=='ranged'&&propsOf(it.weapon.notes).includes('Finesse')
+    &&it.weapon.ability!=='finesse');
+  ck('every melee weapon listing Finesse attacks with finesse', noFinesse.length===0,
+     noFinesse.map(({where,it})=>where+' '+it.name+': '+it.weapon.ability));
+  // a magic weapon against the base weapon its description names ("Base item: Dagger")
+  const base={};
+  JSON.parse(fs.readFileSync(path.join('data','5e2024','items.json'),'utf8')).items
+    .forEach(it=>{if(it.weapon)base[it.name.toLowerCase()]=it;});
+  const based=weapons.map(x=>Object.assign({b:base[((/Base item: ([^·.]+)/.exec(x.it.description||'')||[])[1]||'')
+    .trim().toLowerCase()]},x)).filter(x=>x.b);
+  ck('magic weapons name base weapons the core pack has', based.length>=12, based.length);
+  const offBase=based.filter(({it,b})=>(b.weapon.ability==='finesse'&&it.weapon.ability!=='finesse')
+    ||it.weapon.dice!==b.weapon.dice||it.weapon.kind!==b.weapon.kind
+    ||propsOf(b.weapon.notes).some(p=>!propsOf(it.weapon.notes).includes(p)));
+  ck('every magic weapon keeps its base weapon\'s dice, kind, properties and finesse',
+     offBase.length===0, offBase.map(({where,it,b})=>where+' '+it.name+' ('+b.name+'): '+it.weapon.ability+' | '
+       +it.weapon.notes+'  vs  '+b.weapon.ability+' | '+b.weapon.notes));
+  const dov=weapons.find(({it})=>it.name==='Dagger of Venom');
+  ck('the Dagger of Venom reads Finesse, Light, Thrown and attacks with finesse',
+     !!dov&&dov.it.weapon.notes==='Range 20/60 · Finesse, Light, Thrown · Mastery: Nick'
+     &&dov.it.weapon.ability==='finesse', dov&&dov.it.weapon);
+}
+
 // ---------- subclassesFor: a supplement must not overwrite a 2024 subclass
 // The map is keyed by NAME because that is what character.classes[].subclass
 // stores. The 2024 PHB reprinted seven XGE/TCE subclasses, so a bare last-wins

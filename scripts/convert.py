@@ -229,10 +229,13 @@ def _formula_text(node):
 # by reference; 5e-tools loads and renders it in place. The 2024 Soulknife's
 # "The magic blade has the following traits:" is followed by nothing else, so
 # dropping the node dropped the Psychic Blade's damage, properties and mastery.
-_SB_INDEX = None   # (items by (name, source), property names by abbreviation)
+# The same index names weapon properties and masteries for convert_items() (#72).
+_SB_INDEX = None   # (items by (name, source), property names by abbreviation, mastery names)
 
 @contextlib.contextmanager
 def statblock_ctx(index):
+    """Set the run's item index (load_item_index()) for statblocks and for
+    convert_items()'s property and mastery names."""
     global _SB_INDEX
     prev = _SB_INDEX
     _SB_INDEX = index
@@ -241,24 +244,69 @@ def statblock_ctx(index):
     finally:
         _SB_INDEX = prev
 
+def _weapon_defs(d):
+    """Weapon property names by abbreviation, and mastery names by lower-case
+    name, from one 5e-tools item file. Only items-base.json has the lists
+    (`itemProperty`, `itemMastery`); items.json uses the same codes on its magic
+    weapons and defines none of them. A property is named by its first entry,
+    except the 2014 "S", whose only name is a top-level "special"."""
+    props, masteries = {}, {}
+    for e in d.get('itemProperty', []):
+        ab = e.get('abbreviation'); ent = e.get('entries') or [{}]
+        nm = (ent[0].get('name') if isinstance(ent[0], dict) else None) or e.get('name')
+        if ab and nm: props[ab] = nm[:1].upper() + nm[1:]
+    for e in d.get('itemMastery', []):
+        if e.get('name'): masteries[str(e['name']).lower()] = e['name']
+    return props, masteries
+
 def load_item_index(*paths):
     """Items from 5e-tools item files (items-base.json, items.json), keyed by
-    (lower-case name, SOURCE), plus weapon property names by abbreviation."""
-    items, props = {}, {}
+    (lower-case name, SOURCE), plus the property and mastery names they define."""
+    items, props, masteries = {}, {}, {}
     for p in paths:
         if not p:
             continue
         d = json.load(open(p, encoding='utf-8'))
-        for e in d.get('itemProperty', []):
-            ab = e.get('abbreviation'); ent = e.get('entries') or [{}]
-            nm = ent[0].get('name') if isinstance(ent[0], dict) else None
-            if ab and nm: props[ab] = nm
+        pr, ms = _weapon_defs(d)
+        props.update(pr); masteries.update(ms)
         for it in (d.get('baseitem') or []) + (d.get('item') or []):
             if isinstance(it, dict) and it.get('name'):
                 items[(str(it['name']).lower(), str(it.get('source') or '').upper())] = it
-    return items, props
+    return items, props, masteries
 
-def _item_traits(it, props):
+# Weapon property and mastery codes nothing defines, as (kind, code) -> the items
+# carrying them. convert_items() once named properties only from the file it was
+# converting, so every magic weapon printed "F, L, T" and a finesse one attacked
+# with Strength (#72). A code still unnamed is printed as it stands AND reported
+# at the end of the run.
+_WEAPON_MISSES = collections.defaultdict(set)
+
+def _weapon_refs(refs, names, kind, item):
+    """Property or mastery references -> [(name, note)]. A reference is "F",
+    "F|XPHB" or {"uid": "2H|XPHB", "note": "unless mounted"}; a property is named
+    by its abbreviation, a mastery by its own name."""
+    out = []
+    for r in refs or []:
+        uid, note = (r.get('uid'), r.get('note')) if isinstance(r, dict) else (r, None)
+        code = _abbr(uid or '')
+        if not code:
+            continue
+        nm = names.get(code if kind == 'property' else code.lower())
+        if not nm:
+            _WEAPON_MISSES[(kind, code)].add(str(item))
+            nm = code
+        out.append((nm, strip_tags(str(note)) if note else ''))
+    return out
+
+def _refs_text(pairs):
+    return ['%s (%s)' % (nm, note) if note else nm for nm, note in pairs]
+
+def _weapon_miss_warnings(warn):
+    for (kind, code), items in sorted(_WEAPON_MISSES.items()):
+        warn('weapon %s %r has no definition — printed as the bare code on %d item(s): %s'
+             % (kind, code, len(items), ', '.join(sorted(items))))
+
+def _item_traits(it, index):
     """An embedded item's stat line, worded the way convert_items() words a base
     weapon ('Damage 1d4 piercing · Range 20/60 ft · Properties: … · Mastery: …')
     and headed by its type, then its own prose if it has any."""
@@ -273,12 +321,9 @@ def _item_traits(it, props):
             if it.get('dmg2'): seg += ' (Versatile %s)' % it['dmg2']
             bits.append(seg.strip())
         if it.get('range'): bits.append('Range %s ft' % it['range'])
-        pr = [props.get(_abbr(p), _abbr(p)) for p in (it.get('property') or [])]
+        pr = _refs_text(_weapon_refs(it.get('property'), index[1], 'property', it.get('name')))
         if pr: bits.append('Properties: ' + ', '.join(pr))
-        ms = []
-        for m in it.get('mastery') or []:
-            uid, note = (m.get('uid'), m.get('note')) if isinstance(m, dict) else (m, None)
-            ms.append(_abbr(uid) + (' (%s)' % strip_tags(note) if note else ''))
+        ms = _refs_text(_weapon_refs(it.get('mastery'), index[2], 'mastery', it.get('name')))
         if ms: bits.append('Mastery: ' + ', '.join(ms))
     elif _ITYPES.get(tcode):
         bits.append(_ITYPES[tcode])
@@ -296,7 +341,7 @@ def _statblock_text(node):
     if it is None:
         _ENTRY_MISSES['statblock'] += 1
         return _full_stop(name)
-    traits = _item_traits(it, _SB_INDEX[1])
+    traits = _item_traits(it, _SB_INDEX)
     return _full_stop('%s: %s' % (name, traits) if traits else name)
 
 def _align(style):
@@ -711,11 +756,12 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
     for e in d.get('itemType', []):
         ab, nm = e.get('abbreviation'), e.get('name')
         if ab and nm: types[ab] = nm
-    props = {}
-    for e in d.get('itemProperty', []):
-        ab = e.get('abbreviation'); ent = e.get('entries') or [{}]
-        nm = ent[0].get('name') if isinstance(ent[0], dict) else None
-        if ab and nm: props[ab] = nm
+    # Property and mastery names. items-base.json defines them and items.json only
+    # uses them, so the run's item index (load_item_index(), set by `all`,
+    # `supplement` and `items`) supplies what this file lacks (#72).
+    props, masteries = (dict(_SB_INDEX[1]), dict(_SB_INDEX[2])) if _SB_INDEX else ({}, {})
+    own_props, own_masteries = _weapon_defs(d)
+    props.update(own_props); masteries.update(own_masteries)
     src = d.get('baseitem') if d.get('baseitem') else d.get('item', [])
     out = []
     keep = {id(e) for e in pick_sources(src, book)}
@@ -737,13 +783,13 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
                 if it.get('dmg2'): seg += ' (Versatile %s)' % it['dmg2']
                 bits.append(seg)
             if it.get('range'): bits.append('Range %s ft' % it['range'])
-            pr = [props.get(_abbr(p), _abbr(p)) for p in (it.get('property') or [])]
-            pr = [p for p in pr if p and p != 'None']
+            named = _weapon_refs(it.get('property'), props, 'property', it['name'])
+            pr = [p for p in _refs_text(named) if p and p != 'None']
             if pr: bits.append('Properties: ' + ', '.join(pr))
-            ms = [_abbr(m) for m in (it.get('mastery') or [])]
+            ms = _refs_text(_weapon_refs(it.get('mastery'), masteries, 'mastery', it['name']))
             if ms: bits.append('Mastery: ' + ', '.join(ms))
             kind = 'ranged' if tcode == 'R' else 'melee'
-            finesse = 'Finesse' in pr
+            finesse = any(nm == 'Finesse' for nm, _note in named)
             ability = 'dex' if kind == 'ranged' else ('finesse' if finesse else 'str')
             nb = []
             if it.get('range'): nb.append('Range ' + it['range'])
@@ -2073,6 +2119,7 @@ def _run_supplement(a):
     emit(_pack(bk, 'features', feats_out, stem='features', version=1), 'features', 'features')
 
     _write_tables(tbls, os.path.join(outdir, 'tables.json'), book=bk)
+    _weapon_miss_warnings(warn)
     _cell_miss_warnings(warn)
     _entry_miss_warnings(warn)
     if problems:
@@ -2199,6 +2246,7 @@ def main():
         xphb = [f for f in ofs if f.get('source') == 'XPHB']
         if xphb: _write(_pack(None, 'features', _optfeat_features(xphb, tables=tbls, overlay=overlay), stem='features', version=1), os.path.join(outdir, 'features.json'))
         _write_tables(tbls, os.path.join(outdir, 'tables.json'))
+        _weapon_miss_warnings(warn)
         _cell_miss_warnings(warn)
         _entry_miss_warnings(warn)
         if problems:
@@ -2218,7 +2266,14 @@ def main():
     elif a.cmd == 'backgrounds':
         _write(convert_backgrounds(a.inputs[0], tables=tbls), a.out)
     elif a.cmd == 'items':
-        _write(convert_items(a.inputs[0], tables=tbls), a.out)
+        # items-base.json alone defines the property and mastery codes; the magic
+        # file only uses them, so index the one beside it too, as `all` does (#72)
+        base = os.path.join(os.path.dirname(os.path.abspath(a.inputs[0])), 'items-base.json')
+        paths = [base] if os.path.exists(base) else []
+        if os.path.abspath(a.inputs[0]) != base:
+            paths.append(a.inputs[0])
+        with statblock_ctx(load_item_index(*paths)):
+            _write(convert_items(a.inputs[0], tables=tbls), a.out)
     elif a.cmd == 'races':
         _write(convert_races(a.inputs[0], overlay=overlay, tables=tbls), a.out)
     elif a.cmd == 'feats':
@@ -2232,6 +2287,7 @@ def main():
         _write(convert_classes(files, overlay=overlay, include_legacy=a.include_legacy,
                                spell_notes=not a.no_spell_notes, tables=tbls,
                                optfeats=load_optfeats(a.optfeatures)), a.out)
+    _weapon_miss_warnings(lambda msg: print('  WARNING: ' + msg))
     if a.tables:
         _write_tables(tbls, a.tables)
         _cell_miss_warnings(lambda msg: print('  WARNING: ' + msg))
