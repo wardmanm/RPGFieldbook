@@ -1504,4 +1504,29 @@ ck('itemMetaLine still ends with the weight',
    X.itemMetaLine({type:'Adventuring Gear',cost:'1 gp',weight:5})==='Adventuring Gear · 1 gp · 5 lb',
    X.itemMetaLine({type:'Adventuring Gear',cost:'1 gp',weight:5}));
 
+/* ---- a refused write says so, and keeps saying so (#81) ----
+   Autosave used to change one small label in a title bar that scrolls away, so
+   an hour of session notes could go unsaved with nothing else said. */
+{
+  X.character = X.blankChar(); X.character.name = 'Saver'; X.activeId = X.character.id;
+  ck('#81 a write that lands reports nothing', ctx.saveNow() === '');
+  ck('#81 ...and stores the character', JSON.parse(store[X.charKey(X.activeId)]).name === 'Saver');
+  state.quotaFull = true;
+  const why = ctx.saveNow();
+  ck('#81 a refused write says why, in words a player can act on', /storage is full/.test(why), why);
+  ctx.showSaveResult(why);
+  ck('#81 the warning goes up with the reason', /storage is full/.test(ctx.saveError()));
+  ck('#81 the warning says what to do about it', /Save this character to a file/.test(ctx.saveWarnText(why)), ctx.saveWarnText(why));
+  ck('#81 libSave says why it was refused', /storage is full/.test(ctx.libSave(X.libLoad())));
+  ctx.retrySave();
+  ck('#81 Try again while storage is still full keeps the warning up', /storage is full/.test(ctx.saveError()));
+  state.quotaFull = false;
+  ck('#81 libSave says nothing when the write lands', ctx.libSave(X.libLoad()) === '');
+  ctx.retrySave();
+  ck('#81 Try again once there is room clears the warning', ctx.saveError() === '');
+  const a = X.activeId; X.activeId = null;
+  ck('#81 with no character open there is nothing to save', ctx.saveNow() === '');
+  X.activeId = a;
+}
+
 ck.done();

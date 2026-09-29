@@ -55,6 +55,16 @@
 <!--@@HTML@@-->
 </div>
 
+<!-- A write the browser refused (#81): says so, and stays until one lands
+     (showSaveResult() in 70-persistence.js). Fixed to the foot of the window,
+     so it shows on every tab without covering the sticky tab bar or the combat
+     tab's header. -->
+<div class="save-warn" id="saveWarn" role="alert" hidden>
+  <span id="saveWarnMsg"></span>
+  <button class="tbtn" id="saveWarnFile">Save to file</button>
+  <button class="tbtn" id="saveWarnRetry">Try again</button>
+</div>
+
 <!-- generic modal -->
 <div class="home" id="home" style="display:none">
   <div class="home-inner">

@@ -202,6 +202,9 @@ function wire(){
   on("hpMinus","click",()=>bumpHP(-1));
   on("btnLongRest","click",longRest);
   on("btnShortRest","click",shortRest);
+  /* the refused-write strip (#81) */
+  on("saveWarnFile","click",exportChar);
+  on("saveWarnRetry","click",retrySave);
   document.getElementById("addResource").addEventListener("click",()=>openResourceForm());
   /* clampHP owns both bounds and adjustHP owns the temp-HP-first rule. Every
      part a damage path needs lives in 65-resources.js, where the harness can
@@ -301,7 +304,6 @@ function boot(){
     character.glossary=seedGlossary();renderAll();
     showHome();
   }
-  if(!lsOK){const ss=document.getElementById("savestate");if(ss)ss.textContent="Use Save ↑";}
   /* After the first paint, not before it: the rules cache lives in IndexedDB now
      and reading it is async. Everything above already drew with whatever
      localStorage had (usually nothing, once migrated), and this replaces it. */

@@ -28,6 +28,19 @@ html[data-theme="dark"] .tbtn.primary{color:#20160a}
 .tbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
 .savestate{font-family:var(--head);font-size:11px;letter-spacing:.06em;color:var(--ink-soft);min-width:70px;text-align:right}
 .savestate.on{color:var(--accent)}
+.savestate.bad{color:var(--brick);font-weight:700}
+/* A write the browser refused (#81). Fixed to the foot of the window so it shows
+   on every tab without fighting the sticky tab bar or the combat header. The
+   body makes room for it and a toast rises above it. The body's class is
+   .saving-failed, NOT .save-warn, which would pull the strip's own rule onto
+   the body. */
+.save-warn{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;
+  padding:10px clamp(10px,3vw,22px) calc(10px + env(safe-area-inset-bottom));background:var(--paper);color:var(--ink);
+  border-top:3px solid var(--brick);box-shadow:0 -6px 20px rgba(0,0,0,.18);font-family:var(--body);font-size:15px}
+.save-warn[hidden]{display:none}
+.save-warn>span{flex:1 1 240px;min-width:0}
+body.saving-failed{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+body.saving-failed .toast{bottom:130px}
 .verbtn{align-self:center;margin-right:auto;font-family:var(--head);font-size:10px;letter-spacing:.06em;color:var(--ink-soft);background:none;border:1px solid var(--hair);border-radius:20px;padding:2px 9px;cursor:pointer}
 .verbtn:hover{color:var(--accent);border-color:var(--accent)}
 /* Takes over the version button's slot — same margin-right:auto, so it sits

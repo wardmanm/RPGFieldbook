@@ -1,18 +1,20 @@
 /* ================= persistence ================= */
 const K_CHAR="hw-fb-char", K_SET="hw-fb-settings", K_RULES="hw-fb-rules", K_LIB="hw-fb-library";
-let saveTimer=null, lsOK=true, activeId=null;
+let saveTimer=null, saveErr="", activeId=null;
 function charKey(id){return "hw-fb-c-"+id;}
 function libLoad(){try{const s=localStorage.getItem(K_LIB);if(s)return JSON.parse(s);}catch(e){}return {autoload:null,index:[]};}
-function libSave(lib){try{localStorage.setItem(K_LIB,JSON.stringify(lib));}catch(e){}}
-function libTouch(){ // update the active character's index entry (name/system/version/updated)
-  if(!activeId)return;
+/* "" or why the write was refused (storageWhy). backupCharacter() ignores it and
+   reads the index back instead; autosave reports it (#81). */
+function libSave(lib){try{localStorage.setItem(K_LIB,JSON.stringify(lib));return "";}catch(e){return storageWhy(e);}}
+function libTouch(){ // update the active character's index entry (name/system/version/updated); "" or why it failed
+  if(!activeId)return "";
   const lib=libLoad();
   /* appVersion rides on the index so the home cards can badge it without
      reading (and parsing) every character blob */
   const meta={id:activeId,name:character.name||"Unnamed",system:character.system||"humblewood",appVersion:character.appVersion||"",updated:Date.now()};
   const i=lib.index.findIndex(x=>x.id===activeId);
   if(i>=0)lib.index[i]=meta;else lib.index.push(meta);
-  libSave(lib);
+  return libSave(lib);
 }
 /* Why localStorage said no, in words a player can act on. The browser's own
    message ("QuotaExceededError") tells them nothing about what to do. */
@@ -53,16 +55,31 @@ function backupCharacter(ch,tag){
   }
   return {id:copy.id,copy};
 }
+/* The write behind autosave, lifted out of scheduleSave() so the harness —
+   which never runs a setTimeout — can reach it. "" or why it failed (#81). */
+function saveNow(){
+  if(!activeId)return "";
+  try{localStorage.setItem(charKey(activeId),JSON.stringify(character));}catch(e){return storageWhy(e);}
+  return libTouch();
+}
 function scheduleSave(){
   const el=document.getElementById("savestate");if(el){el.textContent="Saving…";el.className="savestate";}
-  clearTimeout(saveTimer);saveTimer=setTimeout(()=>{
-    try{
-      if(activeId)localStorage.setItem(charKey(activeId),JSON.stringify(character));
-      libTouch();
-      if(el){el.textContent="Autosaved";el.className="savestate on";}
-    }catch(e){lsOK=false;if(el){el.textContent="Use Save ↑";el.className="savestate";}}
-  },500);
+  clearTimeout(saveTimer);saveTimer=setTimeout(()=>showSaveResult(saveNow()),500);
 }
+/* A refused write used to change this one label, in a title bar that scrolls
+   away (#81). Now it also raises #saveWarn, fixed to the foot of the window on
+   every tab, and keeps it up until a write lands. */
+function showSaveResult(why){
+  saveErr=why||"";
+  const el=document.getElementById("savestate");
+  if(el){el.textContent=saveErr?"Not saved":"Autosaved";el.className="savestate "+(saveErr?"bad":"on");}
+  const m=document.getElementById("saveWarnMsg");if(m)m.textContent=saveErr?saveWarnText(saveErr):"";
+  const w=document.getElementById("saveWarn");if(w)w.hidden=!saveErr;
+  document.body.classList.toggle("saving-failed",!!saveErr);
+}
+function saveWarnText(why){return "Not saved — "+why+". Save this character to a file so nothing is lost.";}
+function saveError(){return saveErr;}
+function retrySave(){clearTimeout(saveTimer);showSaveResult(saveNow());}
 /* Returns "" or why the write was refused (storageWhy). Most callers are one
    toggle and still ignore it; Import settings reports it. */
 function saveSettings(){try{localStorage.setItem(K_SET,JSON.stringify(settings));return "";}catch(e){return storageWhy(e);}}
