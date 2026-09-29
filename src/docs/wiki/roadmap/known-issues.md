@@ -115,11 +115,11 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 
 ### Likely bugs a player can hit
 
-- **Quarterstaff of the Acrobat adds +5 AC all the time while equipped** (#76). Its `bonusAc` is a
-  once-per-rest Reaction against one attack, but the converter makes it a standing `ac` effect.
-  → ledger L4392, and [Converter](../data/converter.md)
-- **Items' spell-attack bonuses are never applied** (#77): the Moon Sickles and the Staff of Power
-  carry `bonusSpellAttack`, which the converter doesn't read. → ledger L4392
+- **54 item descriptions show a raw `{#itemEntry …}` tag** (#78) where a shared text template belongs:
+  the Dragon Scale Mails, Ioun Stones, Potions and Rings of Resistance, the Absorbing Tattoos.
+  → ledger L4502, and [Converter](../data/converter.md)
+- **Stone of Good Luck and Ioun Stone of Mastery bonuses are never applied** (#79): +1 to ability
+  checks and +1 proficiency bonus are not read. → ledger L4502
 - **No class carries its first-class armor, weapon or tool training** in any pack:
   `convert_classes()` reads only `skills` from `startingProficiencies`, so a Bard's three Musical
   Instruments or a Fighter's armor training never reach the sheet. → ledger L3985, and
@@ -322,6 +322,14 @@ Each is recorded, with its reason, in the page's Decisions table; each is easy t
   Pestle no longer add an automatic bonus: the old global effect reached every attack, and no effect
   target can say "bows only". The player types it on the weapon's extra-damage box instead.
   → ledger L4392, [Attacks & damage](../features/attacks-and-damage.md)
+- **Conditional AC and save bonuses stay in the description** (#76), decided by a text rule over the
+  sentence that states each bonus plus a reviewed list pinned in the tests. Bracers of Defense is one
+  of the five: its +2 needs no armor and no shield, so an unarmored monk loses the automatic +2 once
+  the update is applied. The Quarterstaff's once-per-rest Reaction is description, not a tracked use.
+  → ledger L4502, [Armor & AC](../features/armor-and-ac.md)
+- **A spell bonus limited to one class's spells applies to the character's single spellcasting**
+  (#77) — exact for a single-class caster; a multiclass caster's other class gets it too. → ledger
+  L4568, [Spells](../features/spells.md)
 
 ## Verified NOT gaps (do not fix)
 
@@ -375,3 +383,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-28 — Fixed and removed: image sources and every other attribute value from a file are escaped, images load only from data: URLs, and a guard test enforces it. → ledger L3940
 - 2026-09-28 — Fixed and removed: first-class Bard skills (#67), dropped formula text (#68), the choice-window title's level and double escape (#69), Import settings replacing rules silently (#70); also fixed and never listed here: a glossary entry without a term breaking the sheet (#71), magic weapon property names and finesse (#72), table footnotes (#73). New items from that work added. → ledger L3985, L4025, L4086, L4134, L4206, L4273, L4327
 - 2026-09-28 — A +N weapon's bonus counted twice (#74) and ranged finesse weapons couldn't use STR (#75): both fixed, never listed here. Quarterstaff of the Acrobat's AC (#76) and items' spell-attack bonuses (#77) added. → ledger L4392, L4466
+- 2026-09-28 — Fixed and removed: the Quarterstaff of the Acrobat's standing +5 AC (#76) and items' unread spell-attack bonuses (#77). Added #78 (raw item-entry tags) and #79 (unread Stone of Good Luck / Ioun Stone of Mastery bonuses). → ledger L4502, L4568
