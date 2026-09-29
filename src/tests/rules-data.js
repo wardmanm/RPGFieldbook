@@ -702,6 +702,35 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
       .forEach(f=>walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f)));
   ck('#77 every effect target in every pack is one fxTargets() lists', bad.length===0, bad.slice(0,10));
   ck('#77 ...and the spell targets are among them', known.has('spell.attack')&&known.has('spell.dc'), [...known].slice(-4));
+  ck('#79 ...and so is `check`, every ability check', known.has('check'), [...known].filter(t=>!/^(ability|save|skill)\./.test(t)));
+}
+
+// ---------- shipped data: a standing bonus to ability checks or proficiency is an effect (#79)
+// 5e-tools' bonusAbilityCheck and bonusProficiencyBonus were never read: the Stone
+// of Good Luck's +1 to ability checks and the Ioun Stone of Mastery's +1
+// proficiency bonus changed no number. The REVIEWED list of every `check` and
+// `profBonus` effect in any file of any pack, each read by hand: "while this
+// polished agate is on your person", "while this pale green prism orbits your
+// head". A dump upgrade that moves it fails here and gets read again.
+{
+  const WANT={'5e2024/items-magic.json Stone of Good Luck':'check+1','5e2024/items-magic.json Ioun Stone, Mastery':'profBonus+1'};
+  const got={};
+  const walk=(n,where)=>{
+    if(Array.isArray(n))return n.forEach(x=>walk(x,where));
+    if(!n||typeof n!=='object')return;
+    if(Array.isArray(n.effects))n.effects.forEach(e=>{ if(e&&(e.target==='check'||e.target==='profBonus')){
+      const k=where+' '+(n.name||n.term||'?'); got[k]=(got[k]?got[k]+' ':'')+e.target+(e.value>=0?'+':'')+e.value; } });
+    Object.keys(n).forEach(k=>walk(n[k],where));
+  };
+  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+    fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json'))
+      .forEach(f=>walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f)));
+  const wrong=[...new Set(Object.keys(got).concat(Object.keys(WANT)))].filter(k=>got[k]!==WANT[k]);
+  ck('#79 exactly the reviewed items carry an ability-check or proficiency-bonus effect (2)', wrong.length===0,
+     wrong.map(k=>k+': want '+(WANT[k]||'none')+', got '+(got[k]||'none')));
+  const stone=JSON.parse(fs.readFileSync(path.join('data','5e2024','items-magic.json'),'utf8')).items.find(x=>x.name==='Stone of Good Luck');
+  ck('#79 the Stone of Good Luck keeps its +1 to all six saves beside it',
+     !!stone&&['str','dex','con','int','wis','cha'].every(a=>stone.effects.some(e=>e.target==='save.'+a&&e.value===1)), stone&&stone.effects);
 }
 
 // ---------- shipped data: no 5e-tools template or tag reaches a player (#78)
@@ -754,6 +783,9 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
      (/[^\n]*id="dcDisp"[^\n]*/.exec(t)||[''])[0].trim());
   ck('#77 the spell attack is tappable: data-stat="spell.attack"', /<div class="big" data-stat="spell\.attack" id="satkDisp">/.test(t),
      (/[^\n]*id="satkDisp"[^\n]*/.exec(t)||[''])[0].trim());
+  // an item can raise the proficiency bonus now (the Ioun Stone of Mastery), so it says where from (#79)
+  ck('#79 the proficiency bonus is tappable: data-stat="profBonus"', /<div class="big" data-stat="profBonus" id="pbDisp">/.test(t),
+     (/[^\n]*id="pbDisp"[^\n]*/.exec(t)||[''])[0].trim());
 }
 
 // ---------- subclassesFor: a supplement must not overwrite a 2024 subclass

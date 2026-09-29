@@ -857,8 +857,8 @@ def _ival(x):
 
 # ---------------------------------------------------------------- item bonuses
 # 5e-tools tags an item's bonusAc / bonusSavingThrow / bonusSpellAttack /
-# bonusSpellSaveDc for its search filters, whether the book gives the bonus all
-# the time or only in a moment. An effect
+# bonusSpellSaveDc / bonusAbilityCheck / bonusProficiencyBonus for its search
+# filters, whether the book gives the bonus all the time or only in a moment. An effect
 # applies whenever the item is equipped, so a conditional one written as an
 # effect is simply wrong: Quarterstaff of the Acrobat's +5 is a Reaction against
 # one attack, once per rest, and read AC +5 at all times; the Arrow-Catching
@@ -883,6 +883,14 @@ _BONUS_PHRASES = {
                      r'\bspell attack (?:bonus|modifier)\b' + _BONUS_MID + r'\bincreases? by %d\b'],
     'spell.dc': [_BONUS_LEAD + _BONUS_MID + r'\b(?:spell save DCs?|spell saving throw DCs?|saving throw DCs?)\b',
                  r'\bspell save DC\b' + _BONUS_MID + r'\bincreases? by %d\b'],
+    # every ability check (#79): "ability checks" alone or in a list, as for saves -- never
+    # one named check ("Wisdom (Perception) checks") and never checks narrowed to a
+    # tool or a use ("ability checks made with thieves' tools")
+    'checks': [_BONUS_LEAD + r'(?:' + _BONUS_MID + r'(?:,|\band|\ball|\bto)\s+)?ability checks\b'
+               r'(?!\s+(?:made|using|with|involving|that|to|for|in|of)\b)'],
+    # the Ioun Stone of Mastery's "Your Proficiency Bonus increases by 1" (#79)
+    'profBonus': [r'\bProficiency Bonus\b' + _BONUS_MID + r'\bincreases? by %d\b',
+                  _BONUS_LEAD + _BONUS_MID + r'\bProficiency Bonus\b'],
 }
 # the conditions an equipped item always meets
 _BONUS_HELD = re.compile(
@@ -898,7 +906,8 @@ _BONUS_CLAUSE_END = re.compile(r"[,;]| and (?:you|can|to)\b")
 _SENTENCES = re.compile(r'(?<=[.!?])\s+|\n')
 
 def _bonus_reading(text, key, n):
-    """How `text` states a +n bonus to `key` ('ac', 'saves', 'spell.attack', 'spell.dc'):
+    """How `text` states a +n bonus to `key` ('ac', 'saves', 'spell.attack', 'spell.dc',
+    'checks', 'profBonus'):
     (True, '')                  standing -- the sentence names no condition beyond
                                 wearing, holding or carrying the item;
     (False, words)              conditional -- `words` are what made it so;
@@ -925,7 +934,10 @@ _BONUS_PROSE = []
 _BONUS_FIELDS = (('bonusAc', 'ac', ('ac',)),
                  ('bonusSavingThrow', 'saves', tuple('save.' + a for a in ('str', 'dex', 'con', 'int', 'wis', 'cha'))),
                  ('bonusSpellAttack', 'spell.attack', ('spell.attack',)),
-                 ('bonusSpellSaveDc', 'spell.dc', ('spell.dc',)))
+                 ('bonusSpellSaveDc', 'spell.dc', ('spell.dc',)),
+                 # every ability check, and the proficiency bonus (#79)
+                 ('bonusAbilityCheck', 'checks', ('check',)),
+                 ('bonusProficiencyBonus', 'profBonus', ('profBonus',)))
 
 def _bonus_prose_notes(say):
     by = collections.OrderedDict()
@@ -937,7 +949,8 @@ def _bonus_prose_notes(say):
 def _item_effects(it, prose=''):
     """The item's bonuses that apply to the whole character while it is equipped:
     bonusAc as `ac`, bonusSavingThrow as the six `save.*`, bonusSpellAttack as
-    `spell.attack` and bonusSpellSaveDc as `spell.dc` (#77), each only when its
+    `spell.attack` and bonusSpellSaveDc as `spell.dc` (#77), bonusAbilityCheck as
+    `check` and bonusProficiencyBonus as `profBonus` (#79), each only when its
     sentence in `prose` states it standing (_bonus_reading(), #76); the rest are
     recorded in _BONUS_PROSE and stay in the prose. `prose` is the flattened
     description, shared templates written out (#78): the ten Dragon Scale Mails

@@ -79,3 +79,10 @@ Bullets below this line — leave the heading in place.
   Spell save DC are also new choices in the effect editor, for any item or feature of your own.
   Re-download the D&D 2024 and Tasha's packs, then review rules updates for a character that
   already has one of these items.
+- A worn Stone of Good Luck now adds its +1 to every skill, to initiative and to passive
+  Perception, as well as to your saving throws, and an Ioun Stone of Mastery now raises your
+  Proficiency Bonus, and with it everything you are proficient in. Tapping a skill, initiative or an
+  ability score shows the stone's bonus to ability checks, and the Proficiency Bonus can now be
+  tapped to see where it comes from. Ability checks is also a new choice in the effect editor, for
+  any item or feature of your own. Re-download the D&D 2024 pack, then review rules updates for a
+  character that already has one of these items.

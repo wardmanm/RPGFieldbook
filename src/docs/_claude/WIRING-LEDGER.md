@@ -4685,3 +4685,70 @@ texts; eight failed first. `char-update.js` +8: an old sheet's ring and mail are
 `description` only, ticked, and applying gives the book's text under the meta line with AC
 unchanged; `migrate()` leaves the tag; four failed first. Pages:
 [converter](../wiki/data/converter.md), [rules-update tool](../wiki/features/rules-update-tool.md).
+
+## Stone of Good Luck and Ioun Stone of Mastery bonuses apply (#79, 2026-09-29)
+
+**Root cause, two halves.** The converter never read 5e-tools' `bonusAbilityCheck` or
+`bonusProficiencyBonus`, so the Stone of Good Luck carried only its saving-throw half (six `save.*`
++1) and the Ioun Stone of Mastery no effect at all; and the app had no target for "every ability
+check", only one `skill.<k>` per skill. `profBonus` already existed and `pbValue()` already fed every
+consumer (saves, skills, attacks, spell DC and attack, passive Perception, print).
+
+**Enumerated.** In the three packs `bonusAbilityCheck` is on the Stone of Good Luck alone and
+`bonusProficiencyBonus` on the Ioun Stone of Mastery alone (the dump's others are the 2014 printings
+and the Stone of Ill Luck's −2, none converted). Both read standing through #76's sentence reader:
+"While this polished agate is on your person, you gain a +1 bonus to ability checks and saving
+throws"; "Your Proficiency Bonus increases by 1 while this pale green prism orbits your head". The
+reader gains two phrases: "+N bonus to … ability checks" alone or in a list, never one named check
+("Wisdom (Perception) checks") and never checks narrowed to a tool or use ("… made with thieves'
+tools"); and "Proficiency Bonus … increases by N". Other fields the converter ignores, seen and left:
+`bonusSavingThrowConcentration` (no pack item); `ability`, on 29 core items, is either `static`
+(Belts of Giant Strength, Gauntlets of Ogre Power, Headband of Intellect, Amulet of Health, the
+Giant Strength potions: the score *becomes* N, not an addition), a +2 "to a maximum of 20" (six
+Ioun Stones, Belt of Dwarvenkind: a cap no flat effect can hold), a permanent +2 to score and
+maximum (the Manuals and Tomes: read once, typed into the base score), or a choice (Deck of Many
+Things); `modifySpeed`, on 11 core items and Tasha's Teeth of Dahlver-Nar, multiplies, sets or
+copies walking speed or grants another mode (Boots of Speed, Boots of Striding and Springing, Winged
+Boots…), none a flat walking bonus. All stay prose, as before.
+
+**A `check` target.** `fxTargets()` gains "Ability checks" (`check`). `recompute()` adds it to every
+skill total and marks each, to initiative (a Dexterity check, typed or derived) and to passive
+Perception (10 + the Perception check); not to an ability modifier, which attacks, saves, AC and
+spell DCs also read, and not to saves, which the stone raises through its own `save.*`.
+`openStatBreakdown()` lists it by source, "Stone of Good Luck (ability checks)", on a skill and on
+initiative, and on an ability as what a plain check with that score alone adds, apart from the
+score. Print reads the painted numbers, so it follows. Expressing the stone as 18 `skill.*` and an
+`init` effect instead was rejected: 25 chips on one item, no way to name a plain ability check, and
+nothing a player could add for "+1 to all checks" in one row.
+
+**The proficiency bonus box** is marked `.fx-on` when a `profBonus` effect applies, like every other
+effect-touched number, and carries `data-stat="profBonus"`, so a tap opens its breakdown: "Level N:
++2" and each contribution by source. Until now no pack item raised it.
+
+**Data.** Only `effects` moved, on two items in `data/5e2024/items-magic.json`: the Stone of Good
+Luck gains `check` +1 after its six saves, the Ioun Stone of Mastery `[]` → `profBonus` +1. Every
+other file of the three packs regenerates byte for byte. `data/overlay.json`'s `_comment` lists
+the effect targets again in full (it had missed `spell.attack`/`spell.dc` since #77); it is not in a
+system folder, so no pack's data version moves.
+
+**Existing characters** hold copies. `effects` is in `UPD_FIELDS.item`, so the rules-update tool
+offers each as "effects changed", ticked when unedited; applying writes the new `effects` and
+nothing else: a WIS 16 level-1 caster wearing both goes from no check bonus, PB +2 and DC 13 to +1
+on every check, PB +3 and DC 14, the stone keeps its six saves, and equipped, qty and fav are
+untouched. `migrate()` changes nothing. An older app given the new pack sums no `check` and shows
+the chip as its raw name. One UNRELEASED bullet.
+
+**Guards.** `converter.py` 341 → 352: the real Stone of Good Luck and Ioun Stone of Mastery, the
+reader on both wordings and on one named check, a tool-narrowed check and two "until"s, and the
+Stone of Ill Luck's penalty kept in prose and noted; nine failed first (one the #76 check whose
+expected effects the stone now extends). `sheet.js` +22, off the ids `recompute()` paints: the
+shipped stone worn raises all 18 skills, initiative (typed or not) and passive Perception by 1 and
+marks them, each save by 1 (not 2), and moves no modifier, PB, AC, spell number or attack; the
+three breakdowns name it; the Ioun Stone makes PB +3, marked, and everything proficient follows
+while nothing else does; 11 failed first. `rules-data.js` +4: the reviewed list of `check` and
+`profBonus` effects over every file of every pack, `check` among `fxTargets()`, and the PB box
+tappable; three failed first. `char-update.js` +7: the fix is offered as exactly `effects`,
+ticked, applying gives check +1 and PB +3; three failed first. Pages:
+[computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
+[abilities & skills](../wiki/features/abilities-and-skills.md), [converter](../wiki/data/converter.md),
+[rules-update tool](../wiki/features/rules-update-tool.md).

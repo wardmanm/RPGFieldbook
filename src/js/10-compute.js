@@ -4,7 +4,10 @@ function recompute(){
   character.level=totalLevel();
   const ld=document.getElementById("levelDisp");if(ld)ld.textContent=Math.max(1,num(character.level));
   const pb=pbValue(c);
-  document.getElementById("pbDisp").textContent=fmt(pb);
+  const pbEl=document.getElementById("pbDisp");pbEl.textContent=fmt(pb);mark(pbEl,!!sumFx("profBonus",c));
+  /* a bonus to every ability check (#79): each skill, initiative and passive
+     Perception take it; the modifiers, saves and everything else do not */
+  const ckFx=sumFx("check",c);
   ABIL.forEach(([k])=>{
     const fin=abilFinal(k,c), m=Math.floor((fin-10)/2), buff=sumFx("ability."+k,c);
     const me=document.getElementById("mod-"+k);
@@ -17,13 +20,13 @@ function recompute(){
   const mods={};ABIL.forEach(([k])=>mods[k]=Math.floor((abilFinal(k,c)-10)/2));
   SKILLS.forEach(([k,,ab])=>{
     const lvl=effSkill(k), skFx=sumFx("skill."+k,c);
-    const t=mods[ab]+(lvl>0?pb:0)+(lvl>1?pb:0)+skFx;
-    const e=document.getElementById("skill-"+k);if(e){e.textContent=fmt(t);mark(e,!!skFx||!!grantedProf("skill",k));}
+    const t=mods[ab]+(lvl>0?pb:0)+(lvl>1?pb:0)+skFx+ckFx;
+    const e=document.getElementById("skill-"+k);if(e){e.textContent=fmt(t);mark(e,!!skFx||!!ckFx||!!grantedProf("skill",k));}
     const d=document.querySelector(`.dot[data-skill="${k}"]`);if(d){d.dataset.lvl=lvl;d.dataset.granted=(!(character.skills[k]||0)&&grantedProf("skill",k))?1:0;}
   });
   const acBase=armorAC(c).base, acFx=sumFx("ac",c);
   const acEl=document.getElementById("acDisp");acEl.textContent=acBase+acFx;mark(acEl,!!acFx);
-  const initBase=character.init===""?mods.dex:num(character.init), initFx=sumFx("init",c);
+  const initBase=character.init===""?mods.dex:num(character.init), initFx=sumFx("init",c)+ckFx;
   const initEl=document.getElementById("initDisp");initEl.textContent=fmt(initBase+initFx);mark(initEl,!!initFx);
   const spFx=sumFx("speed",c), spBase=num(character.speed)+spFx;
   /* encumbrance is applied last and outside the effects engine on purpose: two of
@@ -35,7 +38,7 @@ function recompute(){
      the same "this isn't the default" signal the other Vitals boxes use */
   const szEl=document.getElementById("sizeDisp");
   if(szEl){szEl.textContent=charSize();mark(szEl,!!character.size);}
-  const pv=mods.wis+(effSkill("perception")>0?pb:0)+(effSkill("perception")>1?pb:0)+sumFx("skill.perception",c);
+  const pv=mods.wis+(effSkill("perception")>0?pb:0)+(effSkill("perception")>1?pb:0)+sumFx("skill.perception",c)+ckFx;
   document.getElementById("passDisp").textContent=10+pv;
   const hpFx=sumFx("hp.max",c);
   const mn=document.getElementById("maxNote");

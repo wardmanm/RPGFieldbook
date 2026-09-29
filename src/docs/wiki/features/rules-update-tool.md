@@ -103,7 +103,8 @@ copy. #74's `+N` weapons, for one, are offered as "effects changed" and applying
 them) reach a sheet the same way, and the staff's AC drops back by 5; so do #77's 28 items that
 gain `spell.attack` / `spell.dc`, raising the Spellcasting numbers once applied. #78's 54 items
 whose text was a `{#itemEntry …}` tag are offered as "description changed", and applying writes
-the book's text, under the finder's meta line for a finder-added copy, and nothing else.
+the book's text, under the finder's meta line for a finder-added copy, and nothing else. #79's Stone
+of Good Luck and Ioun Stone of Mastery arrive as "effects changed": `check` +1 and `profBonus` +1.
 
 **Attacks.** An attack generated from a weapon is not a copy of a rules entry and has no `src`; only
 its item can rebuild it. Instead it carries `genFp`, one `fpHash()` over `ATK_GEN_FIELDS` — every
@@ -205,3 +206,4 @@ state survives. Attack mechanics: [Attacks & damage](attacks-and-damage.md).
 - 2026-09-28 — so does the fix for conditional AC and saving-throw bonuses. → ledger L4502, #76
 - 2026-09-28 — and items' new spell attack and spell save DC effects. → ledger L4568, #77
 - 2026-09-29 — and the 54 item descriptions that were a template tag, as a `description`-only row. → ledger L4634, #78
+- 2026-09-29 — and the Stone of Good Luck's and Ioun Stone of Mastery's new effects. → ledger L4689, #79

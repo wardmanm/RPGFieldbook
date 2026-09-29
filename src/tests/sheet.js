@@ -2347,6 +2347,89 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   X.character = X.blankChar();
 }
 
+/* ---- a bonus to every ability check, and to the proficiency bonus (#79) ----
+   The Stone of Good Luck's +1 to ability checks and the Ioun Stone of Mastery's
+   +1 proficiency bonus reached no number: 5e-tools' bonusAbilityCheck and
+   bonusProficiencyBonus were never read, and the app had no target for "every
+   ability check". `check` reaches every skill, initiative (a Dexterity check)
+   and passive Perception (10 + the Perception check), and nothing else: not the
+   ability modifiers, which attacks, saves, AC and spell DCs read, and not saves,
+   which the stone raises through its own save.* effects. The SHIPPED items,
+   added through the finder and worn by hand (neither is a weapon). */
+{
+  const magic = shippedItems('5e2024', 'items-magic.json'), core = shippedItems('5e2024', 'items.json');
+  const def = (list, name) => list.find(x => x.name === name);
+  const SK = X.SKILLS.map(([k]) => 'skill-' + k), MODS = X.ABIL.map(([k]) => 'mod-' + k), SAVES = X.ABIL.map(([k]) => 'save-' + k);
+  const IDS = SK.concat(MODS, SAVES, ['initDisp', 'passDisp', 'pbDisp', 'acDisp', 'dcDisp', 'satkDisp']);
+  const T = X.fxTargets().map(([l, t]) => t);
+  ck('#79 the effect editor offers Ability checks', T.includes('check') && X.FX_LABEL.check === 'Ability checks',
+     [T.filter(t => !/^(ability|save|skill)\./.test(t)), X.FX_LABEL.check]);
+
+  let c = X.blankChar(); X.character = c; c.level = 1; c.spellAbility = 'wis';
+  Object.assign(c.abilities, {str: 10, dex: 14, con: 10, int: 10, wis: 12, cha: 8});
+  c.skills.perception = 1; c.skills.stealth = 2;                      /* proficient; expertise */
+  X.addLibraryItems([def(magic, 'Stone of Good Luck'), def(core, 'Club')], null, null, 1);
+  const stone = c.inventory.find(i => i.name === 'Stone of Good Luck');
+  const club = () => X.attackNumbers(c.attacks.find(a => a.name === 'Club'));
+  const clubBefore = club().toHit;
+  const before = painted(IDS), n = s => Number(String(s).replace('+', ''));
+  ck('#79 the base: Stealth +6 (DEX 2 + PB 2 x2), Perception +3, initiative +2, passive 13',
+     before['skill-stealth'] === '+6' && before['skill-perception'] === '+3' && before.initDisp === '+2' && before.passDisp === '13', before);
+  ck('#79 the Stone of Good Luck arrives unworn: nothing moves', !!stone && stone.equipped === false
+     && JSON.stringify(painted(IDS)) === JSON.stringify(before), stone && stone.equipped);
+  stone.equipped = true;
+  const after = painted(IDS), fx = painted.fx;
+  const up = ids => ids.filter(i => n(after[i]) !== n(before[i]) + 1);
+  ck('#79 worn, every one of the 18 skills is 1 higher', up(SK).length === 0, up(SK).map(i => i + ' ' + before[i] + ' -> ' + after[i]));
+  ck('#79 ...and each is marked as changed by an effect', SK.every(i => fx[i]), SK.filter(i => !fx[i]));
+  ck('#79 initiative is 1 higher (+3), marked: it is a Dexterity check', after.initDisp === '+3' && fx.initDisp, [after.initDisp, fx.initDisp]);
+  ck('#79 passive Perception is 1 higher (14): 10 + the Perception check', after.passDisp === '14', after.passDisp);
+  ck('#79 each save is 1 higher, from the stone\'s own saving-throw bonus only (not +2)', up(SAVES).length === 0,
+     up(SAVES).map(i => i + ' ' + before[i] + ' -> ' + after[i]));
+  ck('#79 the ability modifiers do not move, and are not marked: a check bonus is not the modifier',
+     MODS.every(i => after[i] === before[i] && !fx[i]), MODS.map(i => i + ' ' + before[i] + ' -> ' + after[i] + (fx[i] ? ' marked' : '')));
+  ck('#79 nor do the proficiency bonus, AC, spell save DC or spell attack',
+     ['pbDisp', 'acDisp', 'dcDisp', 'satkDisp'].every(i => after[i] === before[i]), ['pbDisp', 'acDisp', 'dcDisp', 'satkDisp'].map(i => before[i] + ' -> ' + after[i]));
+  ck('#79 nor an attack roll (the Club stays ' + clubBefore + ')', club().toHit === clubBefore, club());
+  let m = shownModal(() => X.openStatBreakdown('skill.stealth'));
+  ck('#79 tapping Stealth names the stone and its +1', /Stone of Good Luck[^<]*<\/span><b>\+1</.test(m.b), m.b.slice(0, 600));
+  m = shownModal(() => X.openStatBreakdown('init'));
+  ck('#79 ...and so does tapping initiative', /Stone of Good Luck[^<]*<\/span><b>\+1</.test(m.b), m.b.slice(0, 600));
+  m = shownModal(() => X.openStatBreakdown('ability.dex'));
+  ck('#79 tapping DEX names it as what a plain Dexterity check adds, not as a score change',
+     /ability check/i.test(m.b) && /Stone of Good Luck[^<]*<\/span><b>\+1</.test(m.b) && /Base score 14/.test(m.b), m.b.slice(0, 600));
+  c.init = '5';
+  ck('#79 a typed initiative takes it too: 5 + 1 = +6', painted(['initDisp']).initDisp === '+6', painted(['initDisp']));
+  c.init = '';
+  stone.equipped = false;
+  ck('#79 taken off, every number is back', JSON.stringify(painted(IDS)) === JSON.stringify(before));
+
+  /* the Ioun Stone of Mastery: +1 proficiency bonus, so everything proficient follows */
+  c = X.blankChar(); X.character = c; c.level = 1; c.spellAbility = 'wis';
+  Object.assign(c.abilities, {str: 10, dex: 10, con: 10, int: 10, wis: 16, cha: 10});
+  c.skills.perception = 1; c.saves.wis = true;
+  X.addLibraryItems([def(magic, 'Ioun Stone, Mastery'), def(core, 'Club')], null, null, 1);
+  const ioun = c.inventory.find(i => i.name === 'Ioun Stone, Mastery');
+  const b2 = painted(IDS);
+  ck('#79 the base: PB +2, Perception +5, WIS save +5, passive 15, DC 13, spell attack +5, Club +2',
+     b2.pbDisp === '+2' && b2['skill-perception'] === '+5' && b2['save-wis'] === '+5' && b2.passDisp === '15'
+     && b2.dcDisp === '13' && b2.satkDisp === '+5' && club().toHit === 2, [b2, club().toHit]);
+  ioun.equipped = true;
+  const a2 = painted(IDS), fx2 = painted.fx;
+  ck('#79 worn, the Ioun Stone of Mastery makes the proficiency bonus +3, marked', a2.pbDisp === '+3' && fx2.pbDisp, [a2.pbDisp, fx2.pbDisp]);
+  ck('#79 ...and everything proficient follows: Perception +6, WIS save +6, passive 16, DC 14, spell attack +6, Club +3',
+     a2['skill-perception'] === '+6' && a2['save-wis'] === '+6' && a2.passDisp === '16' && a2.dcDisp === '14'
+     && a2.satkDisp === '+6' && club().toHit === 3, [a2, club().toHit]);
+  ck('#79 ...while what is not proficient stays: Arcana +0, the STR save +0, initiative +0',
+     a2['skill-arcana'] === '+0' && a2['save-str'] === '+0' && a2.initDisp === '+0', [a2['skill-arcana'], a2['save-str'], a2.initDisp]);
+  m = shownModal(() => X.openStatBreakdown('profBonus'));
+  ck('#79 tapping the proficiency bonus shows the level\'s +2 and names the stone',
+     m.t === 'Proficiency Bonus breakdown' && /Level 1: \+2/.test(m.b) && /Ioun Stone, Mastery<\/span><b>\+1</.test(m.b), m);
+  ioun.equipped = false;
+  ck('#79 taken off, the proficiency bonus is +2 again, unmarked', painted(['pbDisp']).pbDisp === '+2' && !painted.fx.pbDisp);
+  X.character = X.blankChar();
+}
+
 /* ---- imported files and packs render inert ----
    A character file, a rules pack and a settings file (which carries a whole
    `rules` object) are all written by someone else, and all reach the page

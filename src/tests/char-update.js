@@ -643,6 +643,47 @@ ck('R7 ...and a stamped one round-trips',
   X.resetRules();
 }
 
+/* #79 — the Stone of Good Luck's +1 to ability checks and the Ioun Stone of
+   Mastery's +1 proficiency bonus reached no number. A sheet's copies carry the
+   old effects (the stone's six saves only; the Ioun Stone none) until the
+   rules-update tool rewrites them: `effects` changed, ticked when untouched, and
+   applying it raises a skill and the proficiency bonus and touches nothing the
+   player owns. The "new" entries are the shipped ones, so this fails until the
+   pack carries the effects; the "old" ones are those entries without them. */
+{
+  const read=name=>JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','5e2024','items-magic.json'),'utf8')).items.find(x=>x.name===name);
+  const stoneNew=read('Stone of Good Luck'), iounNew=read('Ioun Stone, Mastery');
+  const strip=d=>Object.assign(JSON.parse(JSON.stringify(d)),{effects:(d.effects||[]).filter(e=>e.target!=='check'&&e.target!=='profBonus')});
+  const load=(...defs)=>{ X.resetRules(); X.mergeRules({system:'XPHB',items:defs.map(d=>JSON.parse(JSON.stringify(d)))},'5e.json'); };
+  load(strip(stoneNew),strip(iounNew));
+  const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.level=1; ch.abilities.wis=16; ch.spellAbility='wis';
+  X.character=ch; X.activeId=ch.id;
+  X.addLibraryItems(X.rules.items.slice(),null,null,1);
+  ch.inventory.forEach(i=>{i.equipped=true;i.fav=true;});
+  const pb=()=>{const c=X.contributions();return 2+X.sumFx('profBonus',c);};
+  const checkFx=()=>X.sumFx('check',X.contributions());
+  ck('#79 an old sheet: both worn, no check bonus and PB +2, DC 13',
+     ch.inventory.length===2&&checkFx()===0&&pb()===2&&X.spellDC()===13, [checkFx(),pb(),X.spellDC()]);
+  load(stoneNew,iounNew);
+  const rows=X.diffCharacter().rows.filter(r=>r.name==='Stone of Good Luck'||r.name==='Ioun Stone, Mastery');
+  ck('#79 the fixed pack offers both, each as one changed row: effects, and nothing else',
+     rows.length===2&&rows.every(r=>r.type==='changed'&&r.fields.join()==='effects'), X.diffCharacter().rows.map(r=>r.name+':'+r.fields));
+  ck('#79 ...ticked, since nobody edited the copies', rows.length===2&&rows.every(r=>r.apply===true&&r.edited===false),
+     rows.map(r=>[r.apply,r.edited]));
+  X.applyUpdates(rows);
+  const stone=ch.inventory.find(i=>i.name==='Stone of Good Luck');
+  ck('#79 applying them gives +1 to ability checks and PB +3, so DC 14',
+     checkFx()===1&&pb()===3&&X.spellDC()===14, [checkFx(),pb(),X.spellDC()]);
+  ck('#79 ...the stone keeps its six saving-throw bonuses', stone.effects.filter(e=>/^save\./.test(e.target)).length===6, stone.effects);
+  ck('#79 ...and touches none of the player\'s numbers', ch.inventory.every(i=>i.equipped&&i.fav&&i.qty===1), ch.inventory);
+  load(strip(stoneNew),strip(iounNew));
+  const old=X.blankChar(); X.character=old; X.addLibraryItems(X.rules.items.slice(),null,null,1);
+  const m=X.migrate(JSON.parse(JSON.stringify(old)));
+  ck('#79 migrate() adds nothing to a saved copy',
+     m.inventory.every(i=>!(i.effects||[]).some(e=>e.target==='check'||e.target==='profBonus')), m.inventory.map(i=>i.effects));
+  X.resetRules();
+}
+
 // R3 — multiclass: two classes granting a same-named trait
 c=setup();
 X.mergeRules({system:'XPHB',classes:[

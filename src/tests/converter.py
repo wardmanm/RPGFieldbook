@@ -1122,7 +1122,9 @@ ck('#76 the Arrow-Catching Shield is still a +2 shield: its armor line, which AC
    b76.get('Arrow-Catching Shield', {}).get('description', '').startswith('AC +2 (Shield)'),
    b76.get('Arrow-Catching Shield', {}).get('description', '')[:40])
 for name, want in (('Cloak of Protection', _fx(1, 1)), ('Scarab of Protection', _fx(1)), ('Shield of the Cavalier', _fx(2)),
-                   ('Stone of Good Luck', _fx(0, 1)), ('Robe of Stars', _fx(0, 1)), ('Glamoured Studded Leather', _fx(1)),
+                   # its +1 to ability checks is #79's `check`
+                   ('Stone of Good Luck', _fx(0, 1) + [{'target': 'check', 'value': 1}]),
+                   ('Robe of Stars', _fx(0, 1)), ('Glamoured Studded Leather', _fx(1)),
                    ('Ioun Stone, Protection', _fx(1)), ('Black Dragon Scale Mail', _fx(1))):
     ck('#76 %s: a standing bonus stays an effect' % name, b76.get(name, {}).get('effects') == want, b76.get(name, {}).get('effects'))
 sop = [e for e in b76.get('Staff of Power', {}).get('effects', []) if e['target'] == 'ac' or e['target'].startswith('save.')]
@@ -1367,6 +1369,59 @@ for label, argv, outfile, fine, want in (
     ck('#78 %s writes %s out from its template' % (label, fine), want in got.get(fine, {}).get('description', ''),
        got.get('error') or got.get(fine))
 shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True)
+
+# ---- 31. a standing bonus to ability checks or to the proficiency bonus (#79)
+# 5e-tools tags the Stone of Good Luck's "+1 bonus to ability checks" as
+# bonusAbilityCheck and the Ioun Stone of Mastery's "Your Proficiency Bonus
+# increases by 1" as bonusProficiencyBonus, and convert.py read neither: the
+# stone's saving-throw half was an effect, its check half nothing, and the Ioun
+# Stone changed no number at all. They become `check` (every ability check:
+# skills, initiative, passive Perception) and `profBonus`, through the same
+# sentence reader as AC and saves (#76), so a bonus the book conditions stays
+# prose. The fixtures are the real XDMG entries above.
+_BP = getattr(C, '_BONUS_PROSE', None)
+if _BP is not None: _BP.clear()
+_b79 = _tmpjson({'item': [x for x in B76_STANDING if x['name'] == 'Stone of Good Luck']
+                         + [x for x in B78_ITEMS if x['name'] == 'Ioun Stone, Mastery']})
+with C.statblock_ctx(C.load_item_index(_b78base, _b79)):
+    b79 = _by_name(C.convert_items(_b79))
+ck('#79 Stone of Good Luck: +1 to all six saves and +1 to ability checks, "while this polished agate is on your person"',
+   b79.get('Stone of Good Luck', {}).get('effects') == _fx(0, 1) + [{'target': 'check', 'value': 1}],
+   b79.get('Stone of Good Luck', {}).get('effects'))
+ck('#79 Ioun Stone, Mastery: +1 proficiency bonus, "while this pale green prism orbits your head"',
+   b79.get('Ioun Stone, Mastery', {}).get('effects') == [{'target': 'profBonus', 'value': 1}],
+   b79.get('Ioun Stone, Mastery', {}).get('effects'))
+ck('#79 both are standing: nothing kept in prose', not (_BP or []), list(_BP or []))
+# the reader, on the wordings it must read and the ones it must not
+ck('#79 "+1 bonus to ability checks and saving throws" is a standing check bonus',
+   rd('While this polished agate is on your person, you gain a +1 bonus to ability checks and saving throws.', 'checks', 1)[0] is True,
+   rd('While this polished agate is on your person, you gain a +1 bonus to ability checks and saving throws.', 'checks', 1))
+ck('#79 one named check is not every check ("+5 bonus to Wisdom (Perception) checks")',
+   rd('You gain a +5 bonus to Wisdom (Perception) checks.', 'checks', 5)[0] is None,
+   rd('You gain a +5 bonus to Wisdom (Perception) checks.', 'checks', 5))
+ck('#79 checks narrowed to a tool are not every check ("ability checks made with thieves\' tools")',
+   rd("You gain a +2 bonus to ability checks made with thieves' tools.", 'checks', 2)[0] is not True,
+   rd("You gain a +2 bonus to ability checks made with thieves' tools.", 'checks', 2))
+ck('#79 a check bonus that lasts "until" something is conditional',
+   rd('You gain a +1 bonus to ability checks until the end of your next turn.', 'checks', 1)[0] is False,
+   rd('You gain a +1 bonus to ability checks until the end of your next turn.', 'checks', 1))
+ck('#79 "Your Proficiency Bonus increases by 1 while this … orbits your head" is standing',
+   rd('Your Proficiency Bonus increases by 1 while this pale green prism orbits your head.', 'profBonus', 1)[0] is True,
+   rd('Your Proficiency Bonus increases by 1 while this pale green prism orbits your head.', 'profBonus', 1))
+ck('#79 a proficiency bonus that lasts "until" a rest is conditional',
+   rd('Your Proficiency Bonus increases by 1 until you finish a Long Rest.', 'profBonus', 1)[0] is False,
+   rd('Your Proficiency Bonus increases by 1 until you finish a Long Rest.', 'profBonus', 1))
+# the Stone of Ill Luck's "-2 penalty" (an adventure's, never converted) is no bonus: prose, and said
+if _BP is not None: _BP.clear()
+ILL = {"name": "Stone of Ill Luck", "source": "XDMG", "srd52": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True,
+       "bonusSavingThrow": "-2", "bonusAbilityCheck": "-2",
+       "entries": ["While this polished agate is on your person, you take a \u22122 penalty to ability checks and saving throws."]}
+with C.statblock_ctx(C.load_item_index(_b78base)):
+    ill = C.convert_items(_tmpjson({'item': [ILL]}))['items'][0]
+ck('#79 a penalty no sentence states as a bonus is not an effect', ill.get('effects') == [], ill.get('effects'))
+ck('#79 ...and is noted, field by field', sorted(f for n, f, v, why in (_BP or [])) == ['bonusAbilityCheck', 'bonusSavingThrow'],
+   list(_BP or []))
+if _BP is not None: _BP.clear()
 
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
