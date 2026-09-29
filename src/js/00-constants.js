@@ -15,6 +15,11 @@ function fxTargets(){
   g.push(["Spell attack","spell.attack"],["Spell save DC","spell.dc"]);
   ABIL.forEach(([k,l])=>g.push([l+" score","ability."+k]));
   ABIL.forEach(([k,l])=>g.push([l+" save","save."+k]));
+  /* every ability check (a Stone of Good Luck): recompute() adds it to each
+     skill, to initiative (a Dexterity check) and to passive Perception, and the
+     ability breakdown lists it for a plain check. Never the ability modifier,
+     which attacks, saves, AC and spell DCs also read. */
+  g.push(["Ability checks","check"]);
   SKILLS.forEach(([k,l])=>g.push([l+" skill","skill."+k]));
   return g;
 }

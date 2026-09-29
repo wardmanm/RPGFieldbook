@@ -702,6 +702,78 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
       .forEach(f=>walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f)));
   ck('#77 every effect target in every pack is one fxTargets() lists', bad.length===0, bad.slice(0,10));
   ck('#77 ...and the spell targets are among them', known.has('spell.attack')&&known.has('spell.dc'), [...known].slice(-4));
+  ck('#79 ...and so is `check`, every ability check', known.has('check'), [...known].filter(t=>!/^(ability|save|skill)\./.test(t)));
+}
+
+// ---------- shipped data: a standing bonus to ability checks or proficiency is an effect (#79)
+// 5e-tools' bonusAbilityCheck and bonusProficiencyBonus were never read: the Stone
+// of Good Luck's +1 to ability checks and the Ioun Stone of Mastery's +1
+// proficiency bonus changed no number. The REVIEWED list of every `check` and
+// `profBonus` effect in any file of any pack, each read by hand: "while this
+// polished agate is on your person", "while this pale green prism orbits your
+// head". A dump upgrade that moves it fails here and gets read again.
+{
+  const WANT={'5e2024/items-magic.json Stone of Good Luck':'check+1','5e2024/items-magic.json Ioun Stone, Mastery':'profBonus+1'};
+  const got={};
+  const walk=(n,where)=>{
+    if(Array.isArray(n))return n.forEach(x=>walk(x,where));
+    if(!n||typeof n!=='object')return;
+    if(Array.isArray(n.effects))n.effects.forEach(e=>{ if(e&&(e.target==='check'||e.target==='profBonus')){
+      const k=where+' '+(n.name||n.term||'?'); got[k]=(got[k]?got[k]+' ':'')+e.target+(e.value>=0?'+':'')+e.value; } });
+    Object.keys(n).forEach(k=>walk(n[k],where));
+  };
+  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+    fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json'))
+      .forEach(f=>walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f)));
+  const wrong=[...new Set(Object.keys(got).concat(Object.keys(WANT)))].filter(k=>got[k]!==WANT[k]);
+  ck('#79 exactly the reviewed items carry an ability-check or proficiency-bonus effect (2)', wrong.length===0,
+     wrong.map(k=>k+': want '+(WANT[k]||'none')+', got '+(got[k]||'none')));
+  const stone=JSON.parse(fs.readFileSync(path.join('data','5e2024','items-magic.json'),'utf8')).items.find(x=>x.name==='Stone of Good Luck');
+  ck('#79 the Stone of Good Luck keeps its +1 to all six saves beside it',
+     !!stone&&['str','dex','con','int','wis','cha'].every(a=>stone.effects.some(e=>e.target==='save.'+a&&e.value===1)), stone&&stone.effects);
+}
+
+// ---------- shipped data: no 5e-tools template or tag reaches a player (#78)
+// 5e-tools writes shared item text as "{#itemEntry Name|SRC}" and fills
+// "{{item.resist}}" from the item; its inline tags are "{@tag …}" and magic
+// variants use "{=prop}". convert.py passed the first through as text, so 54
+// items read the tag where the book's words belong. Every string, at any depth,
+// in every file of every pack — a new shape would reach players the same way.
+{
+  const TPL=/\{#[^{}]*\}|\{\{[^{}]*\}\}|\{=[^{}]*\}|\{@[^{}]*\}/;
+  const bad=[];
+  const walk=(n,where,name)=>{
+    if(typeof n==='string'){const m=TPL.exec(n);if(m)bad.push(where+' '+name+': '+m[0]);return;}
+    if(Array.isArray(n))return n.forEach(x=>walk(x,where,name));
+    if(!n||typeof n!=='object')return;
+    const nm=n.name||n.term||name;
+    Object.keys(n).forEach(k=>walk(n[k],where,nm));
+  };
+  let files=0;
+  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+    fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
+      files++; walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f,'?');
+    }));
+  ck('#78 the packs have files to scan', files>=30, files);
+  ck('#78 no pack carries 5e-tools template text: no {#…}, {{…}}, {=…} or {@…}', bad.length===0,
+     bad.length+' strings, e.g. '+JSON.stringify(bad.slice(0,6)));
+  // the families that shipped the tag now read the book's words, filled from the item
+  const pins=[
+    ['5e2024','Black Dragon Scale Mail','you have Resistance to Acid damage'],
+    ['5e2024','Silver Dragon Scale Mail','the closest silver dragon within 30 miles'],
+    ['5e2024','Ring of Acid Resistance','You have Resistance to Acid damage while wearing this ring. The ring is set with pearl'],
+    ['5e2024','Potion of Thunder Resistance','When you drink this potion, you have Resistance to Thunder damage for 1 hour'],
+    ['5e2024','Ioun Stone, Mastery','Roughly marble sized, Ioun Stones are named after Ioun'],
+    ['tashas','Radiant Absorbing Tattoo','emphasize one color (gold).'],
+    ['tashas','Radiant Absorbing Tattoo','Damage Absorption: When you take radiant damage'],
+  ];
+  const magic={};
+  pins.forEach(([d,name,needle])=>{
+    magic[d]=magic[d]||JSON.parse(fs.readFileSync(path.join('data',d,'items-magic.json'),'utf8')).items;
+    const e=magic[d].find(x=>x.name===name);
+    ck('#78 '+d+' '+name+' reads "'+needle.slice(0,48)+'…"', !!e&&(e.description||'').includes(needle),
+       e?(e.description||'').slice(0,160):'no item named '+name);
+  });
 }
 
 // ---------- the Spellcasting card's numbers open their breakdown, as AC does (#77)
@@ -711,6 +783,9 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
      (/[^\n]*id="dcDisp"[^\n]*/.exec(t)||[''])[0].trim());
   ck('#77 the spell attack is tappable: data-stat="spell.attack"', /<div class="big" data-stat="spell\.attack" id="satkDisp">/.test(t),
      (/[^\n]*id="satkDisp"[^\n]*/.exec(t)||[''])[0].trim());
+  // an item can raise the proficiency bonus now (the Ioun Stone of Mastery), so it says where from (#79)
+  ck('#79 the proficiency bonus is tappable: data-stat="profBonus"', /<div class="big" data-stat="profBonus" id="pbDisp">/.test(t),
+     (/[^\n]*id="pbDisp"[^\n]*/.exec(t)||[''])[0].trim());
 }
 
 // ---------- subclassesFor: a supplement must not overwrite a 2024 subclass

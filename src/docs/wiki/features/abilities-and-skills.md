@@ -26,15 +26,20 @@ seeded level-1 Max HP — the input handler grabs the previous score before the 
 ([Vitals & rest](vitals-and-rest.md)).
 
 **Proficiency bonus** is `pbValue()`: 2 + ⌊(level − 1) / 4⌋ with the level clamped to 1–20, plus any
-`profBonus` effect. The level is the sum of class levels.
+`profBonus` effect (an Ioun Stone of Mastery). The level is the sum of class levels. The box is
+marked `fx-on` when an effect applies, and a tap opens its breakdown ("Level N: +2", then each
+source).
 
 **Saves.** The dot toggles `character.saves[k]` (a boolean). `effSaveProf()` is that OR a `save`
 grant; the value is modifier + (proficient ? PB : 0) + `save.<k>` effects.
 
 **Skills.** The dot cycles `character.skills[k]` 0 → 1 → 2 → 0: none, proficient, expertise.
 `effSkill()` is the higher of that and the best `skill` grant, and the value is modifier + PB (from
-level 1) + PB again (at 2) + `skill.<k>` effects. Passive Perception in Vitals is 10 + WIS modifier
-+ the same proficiency terms + `skill.perception` effects.
+level 1) + PB again (at 2) + `skill.<k>` effects + `check` effects, a bonus to every ability check
+(a Stone of Good Luck). Passive Perception in Vitals is 10 + WIS modifier + the same proficiency
+terms + `skill.perception` and `check` effects. Initiative takes `check` too: it is a Dexterity
+check. The ability modifier does not: a plain ability check is the modifier plus the `check` lines
+its breakdown lists apart from the score.
 
 **What the sheet shows.** `recompute()` writes `data-lvl` (the effective level) onto each dot, and
 `data-granted="1"` when the proficiency comes from a grant while the manual level is 0 — CSS draws
@@ -102,6 +107,7 @@ character → Skills display (Classic / By ability), which calls `renderAll()`.
 | How the setting avoids a migration | A resolver whose fallback equals the `blankChar()` default, as `hdStyle` does | — |
 | How expertise is marked in grouped mode | CSS off the dot's `data-lvl` | — |
 | The Skills note button, hidden in grouped mode | Shipped as a known gap | A second note button in the Abilities label: worse UI than the gap |
+| Where a bonus to plain ability checks shows (#79) | The ability's breakdown, apart from the score; the modifier box is unchanged and unmarked | Adding it to the modifier: attacks, saves and AC read that number. A "check" number in each ability box: new UI for one pack item. Owner may revisit |
 
 ## Open
 
@@ -116,3 +122,4 @@ character → Skills display (Classic / By ability), which calls `renderAll()`.
 - 2026-09-01 — the ability/skill layout choice: Classic or By ability, per character.
   → ledger L106, #17
 - 2026-09-24 — Classic skills read down each column rather than across. → ledger L3525, #56
+- 2026-09-29 — `check` effects reach every skill, initiative and passive Perception; the proficiency bonus is marked and tappable. → ledger L4689, #79

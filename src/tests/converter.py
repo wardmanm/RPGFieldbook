@@ -1122,15 +1122,18 @@ ck('#76 the Arrow-Catching Shield is still a +2 shield: its armor line, which AC
    b76.get('Arrow-Catching Shield', {}).get('description', '').startswith('AC +2 (Shield)'),
    b76.get('Arrow-Catching Shield', {}).get('description', '')[:40])
 for name, want in (('Cloak of Protection', _fx(1, 1)), ('Scarab of Protection', _fx(1)), ('Shield of the Cavalier', _fx(2)),
-                   ('Stone of Good Luck', _fx(0, 1)), ('Robe of Stars', _fx(0, 1)), ('Glamoured Studded Leather', _fx(1)),
+                   # its +1 to ability checks is #79's `check`
+                   ('Stone of Good Luck', _fx(0, 1) + [{'target': 'check', 'value': 1}]),
+                   ('Robe of Stars', _fx(0, 1)), ('Glamoured Studded Leather', _fx(1)),
                    ('Ioun Stone, Protection', _fx(1)), ('Black Dragon Scale Mail', _fx(1))):
     ck('#76 %s: a standing bonus stays an effect' % name, b76.get(name, {}).get('effects') == want, b76.get(name, {}).get('effects'))
 sop = [e for e in b76.get('Staff of Power', {}).get('effects', []) if e['target'] == 'ac' or e['target'].startswith('save.')]
 ck('#76 Staff of Power: its standing AC and saving-throw bonus stay effects', sop == _fx(2, 2), sop)
 ck('#76 a bonus stated only in an embedded {#itemEntry} template is read from it (Dragon Scale Mail)',
    b76.get('Black Dragon Scale Mail', {}).get('effects') == _fx(1), b76.get('Black Dragon Scale Mail', {}).get('effects'))
-ck('#76 ...though its description is left exactly as before',
-   b76.get('Black Dragon Scale Mail', {}).get('description', '').endswith('{#itemEntry Dragon Scale Mail|XDMG}'),
+ck('#78 ...and its description carries the template\'s text, not the tag',
+   '+1 bonus to Armor Class' in b76.get('Black Dragon Scale Mail', {}).get('description', '')
+   and '{#' not in b76.get('Black Dragon Scale Mail', {}).get('description', ''),
    b76.get('Black Dragon Scale Mail', {}).get('description', '')[-60:])
 
 # The reader itself, on the sentences above and the shapes it must not misread.
@@ -1242,6 +1245,182 @@ ck('#77 a spell bonus the book conditions is not an effect (the 2014 Talisman: "
       'attack rolls while you wear or hold it.', 'spell.attack', 2))
 ck('#77 a weapon\'s "+2 bonus to attack rolls" is not a spell attack bonus',
    rd('You have a +2 bonus to attack rolls and damage rolls made with this magic weapon.', 'spell.attack', 2)[0] is None)
+if _BP is not None: _BP.clear()
+
+# ---- 30. an item's shared text template is written out (#78)
+# 5e-tools shares one text among a family of items: the item's entries carry
+# "{#itemEntry Name|SRC}", items-base.json's `itemEntry` list holds the template,
+# and "{{item.resist}}" / "{{getFullImmRes item.resist}}" / "{{item.detail1}}" in
+# it are filled from the item's own fields. flatten() passed the tag through as
+# text, so 54 pack items (the Dragon Scale Mails, Ioun Stones, Potions and Rings
+# of Resistance, Tasha's Absorbing Tattoos) read "{#itemEntry Ring of Resistance|
+# XDMG}" where the book's text belongs. Real shapes from the v2.36.1 dump.
+B78_ENTRIES = B76_ENTRIES + [
+    {"name": "Absorbing Tattoo", "source": "TCE", "entriesTemplate": ["Produced by a special needle, this magic tattoo features designs that emphasize one color ({{item.detail1}}).", {"type": "entries", "name": "Tattoo Attunement", "entries": ["To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin.", "If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space."]}, {"type": "entries", "name": "Damage Resistance", "entries": ["While the tattoo is on your skin, you have resistance to {{item.resist}} damage."]}, {"type": "entries", "name": "Damage Absorption", "entries": ["When you take {{item.resist}} damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn."]}]},
+    {"name": "Potion of Resistance", "source": "XDMG", "entriesTemplate": ["When you drink this potion, you have {@variantrule Resistance|XPHB} to {{getFullImmRes item.resist}} damage for 1 hour."]},
+    {"name": "Ring of Resistance", "source": "DMG", "entriesTemplate": ["You have resistance to {{item.resist}} damage while wearing this ring. The ring is set with {{item.detail1}}."]},
+    {"name": "Ring of Resistance", "source": "XDMG", "entriesTemplate": ["You have {@variantrule Resistance|XPHB} to {{getFullImmRes item.resist}} damage while wearing this ring. The ring is set with {{item.detail1}}."]},
+]
+B78_ITEMS = [
+    {"name": "Ring of Acid Resistance", "source": "XDMG", "page": 294, "srd52": True, "basicRules2024": True, "referenceSources": ["DrDe-BtS"], "type": "RG|XDMG", "resist": ["acid"], "detail1": "pearl", "rarity": "rare", "hasRefs": True, "entries": ["{#itemEntry Ring of Resistance|XDMG}"]},
+    # the 2014 printing names no source in its tag: the DMG, as in 5e-tools
+    {"name": "Ring of Acid Resistance", "source": "DMG", "page": 192, "srd": True, "basicRules": True, "referenceSources": ["CM", "GotSF"], "reprintedAs": ["Ring of Acid Resistance|XDMG"], "type": "RG|DMG", "resist": ["acid"], "detail1": "pearl", "tier": "major", "rarity": "rare", "reqAttune": True, "hasRefs": True, "entries": ["{#itemEntry Ring of Resistance}"]},
+    {"name": "Potion of Fire Resistance", "source": "XDMG", "page": 289, "srd52": True, "basicRules2024": True, "type": "P|XPHB", "resist": ["fire"], "rarity": "uncommon", "weight": 0.5, "hasRefs": True, "entries": ["{#itemEntry Potion of Resistance|XDMG}"], "miscTags": ["CNS"]},
+    {"name": "Acid Absorbing Tattoo", "source": "TCE", "page": 119, "resist": ["acid"], "detail1": "green", "rarity": "very rare", "reqAttune": True, "wondrous": True, "tattoo": True, "hasRefs": True, "entries": ["{#itemEntry Absorbing Tattoo|TCE}"]},
+    {"name": "Ioun Stone, Mastery", "source": "XDMG", "page": 273, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": True, "wondrous": True, "bonusProficiencyBonus": "+1", "hasRefs": True, "entries": ["{#itemEntry Ioun Stone|XDMG}", "Your {@variantrule Proficiency|XPHB|Proficiency Bonus} increases by 1 while this pale green prism orbits your head."], "lootTables": ["Arcana - Legendary|XDMG"], "hasFluffImages": True},
+    [x for x in B76_STANDING if x['name'] == 'Black Dragon Scale Mail'][0],
+]
+_b78base = _tmpjson({'itemProperty': IB_PROPS, 'itemMastery': IB_MASTERY, 'baseitem': IB_BASE, 'itemEntry': B78_ENTRIES})
+_b78magic = _tmpjson({'item': B78_ITEMS})
+_TM = getattr(C, '_TEMPLATE_MISSES', None)
+if _TM is not None: _TM.clear()
+DMG = C.Book(codes=['DMG'], system='DMG')
+with C.statblock_ctx(C.load_item_index(_b78base, _b78magic)):
+    b78 = _by_name(C.convert_items(_b78magic))
+    b78t = _by_name(C.convert_items(_b78magic, book=TCE))
+    b78d = _by_name(C.convert_items(_b78magic, book=DMG))
+    b78sb = C._statblock_text({'type': 'statblock', 'tag': 'item', 'name': 'Ring of Acid Resistance', 'source': 'XDMG'})
+desc = lambda pack, n: pack.get(n, {}).get('description', '')
+ck('#78 Ring of Acid Resistance reads the template, its damage type in the 2024 book\'s capitals',
+   desc(b78, 'Ring of Acid Resistance') == 'You have Resistance to Acid damage while wearing this ring. The ring is set with pearl',
+   desc(b78, 'Ring of Acid Resistance'))
+ck('#78 Potion of Fire Resistance reads the template',
+   desc(b78, 'Potion of Fire Resistance') == 'When you drink this potion, you have Resistance to Fire damage for 1 hour',
+   desc(b78, 'Potion of Fire Resistance'))
+ck('#78 a tag naming no source is the DMG\'s template, "{{item.resist}}" printed as the item has it (2014 ring)',
+   desc(b78d, 'Ring of Acid Resistance') == 'You have resistance to acid damage while wearing this ring. The ring is set with pearl',
+   desc(b78d, 'Ring of Acid Resistance'))
+_bdsm = desc(b78, 'Black Dragon Scale Mail')
+ck('#78 Black Dragon Scale Mail: its armor line, then the template, filled with its type and its colour',
+   _bdsm.startswith('AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales')
+   and '\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath '
+       'weapons of Dragons, and you have Resistance to Acid damage.\n' in _bdsm
+   and 'the closest black dragon within 30 miles' in _bdsm and _bdsm.endswith('until the next dawn'), _bdsm)
+ck('#78 ...and it still reads its +1 AC from that text', b78.get('Black Dragon Scale Mail', {}).get('effects') == _fx(1),
+   b78.get('Black Dragon Scale Mail', {}).get('effects'))
+_tat = desc(b78t, 'Acid Absorbing Tattoo')
+ck('#78 Acid Absorbing Tattoo: the template\'s named sections, as flatten() writes any others',
+   _tat.startswith('Produced by a special needle, this magic tattoo features designs that emphasize one color (green).\n'
+                   'Tattoo Attunement: To attune to this item')
+   and '\nDamage Resistance: While the tattoo is on your skin, you have resistance to acid damage.\n' in _tat
+   and '\nDamage Absorption: When you take acid damage, you can use your reaction' in _tat, _tat)
+_ism = desc(b78, 'Ioun Stone, Mastery')
+ck('#78 Ioun Stone, Mastery: the four shared paragraphs, then its own',
+   _ism.startswith('Roughly marble sized, Ioun Stones are named after Ioun') and _ism.count('\n') == 4
+   and _ism.endswith('\nYour Proficiency Bonus increases by 1 while this pale green prism orbits your head'), _ism)
+ck('#78 an embedded item statblock reads its template too',
+   'Resistance to Acid damage' in b78sb and '{' not in b78sb, b78sb)
+ck('#78 no template text is left in any of them',
+   not [n for p in (b78, b78t, b78d) for n, e in p.items() if '{#' in e.get('description', '') or '{{' in e.get('description', '')])
+ck('#78 ...and nothing to warn about', _TM is not None and not _TM, dict(_TM) if _TM is not None else 'no _TEMPLATE_MISSES')
+
+# never quiet: a template the dump lacks, a value the item lacks, a tag inside a sentence
+B78_BAD = [
+    {"name": "Ring of Nothing", "source": "XDMG", "srd52": True, "type": "RG|XDMG", "rarity": "rare", "hasRefs": True,
+     "entries": ["{#itemEntry Ring of Nothing|XDMG}"]},
+    {"name": "Ring of Blank Resistance", "source": "XDMG", "srd52": True, "type": "RG|XDMG", "rarity": "rare", "hasRefs": True,
+     "entries": ["{#itemEntry Ring of Resistance|XDMG}"]},
+    {"name": "Ring of Asides", "source": "XDMG", "srd52": True, "type": "RG|XDMG", "rarity": "rare",
+     "entries": ["As for {#itemEntry Ring of Resistance|XDMG}, but cold."]},
+]
+if _TM is not None: _TM.clear()
+with C.statblock_ctx(C.load_item_index(_b78base)):
+    b78b = _by_name(C.convert_items(_tmpjson({'item': B78_BAD})))
+ck('#78 a template the dump lacks is printed as the tag', desc(b78b, 'Ring of Nothing') == '{#itemEntry Ring of Nothing|XDMG}',
+   desc(b78b, 'Ring of Nothing'))
+ck('#78 a placeholder the item has no value for is printed as it stands',
+   '{{getFullImmRes item.resist}}' in desc(b78b, 'Ring of Blank Resistance') and '{{item.detail1}}' in desc(b78b, 'Ring of Blank Resistance'),
+   desc(b78b, 'Ring of Blank Resistance'))
+_tmk = {t: set(v) for (t, why), v in (_TM or {}).items()}
+ck('#78 ...and each is counted with its item',
+   _tmk.get('{#itemEntry Ring of Nothing|XDMG}') == {'Ring of Nothing'}
+   and _tmk.get('{{getFullImmRes item.resist}}') == {'Ring of Blank Resistance'}
+   and _tmk.get('{{item.detail1}}') == {'Ring of Blank Resistance'}
+   and _tmk.get('{#itemEntry Ring of Resistance|XDMG}') == {'Ring of Asides'}, _tmk)
+said = []
+getattr(C, '_template_miss_warnings', lambda warn: None)(said.append)
+ck('#78 ...and reported as one WARNING per text, naming the item and why',
+   len(said) == 4 and any('Ring of Nothing' in s and '{#itemEntry Ring of Nothing|XDMG}' in s for s in said)
+   and any('Ring of Blank Resistance' in s and '{{item.detail1}}' in s for s in said), said)
+if _TM is not None: _TM.clear()
+
+# ...at the end of every kind of run that converts items, and in the file's own line
+_dump = tempfile.mkdtemp()
+json.dump({'itemProperty': IB_PROPS, 'itemMastery': IB_MASTERY, 'baseitem': IB_BASE, 'itemEntry': B78_ENTRIES},
+          open(os.path.join(_dump, 'items-base.json'), 'w'))
+json.dump({'item': B78_ITEMS + B78_BAD[:1] + [dict(B78_BAD[0], source='TCE')]}, open(os.path.join(_dump, 'items.json'), 'w'))
+_out = tempfile.mkdtemp()
+for label, argv, outfile, fine, want in (
+        ('`items`', ['items', os.path.join(_dump, 'items.json'), '-o', os.path.join(_out, 'i.json')], 'i.json',
+         'Ring of Acid Resistance', 'You have Resistance to Acid damage'),
+        ('all', ['all', _dump, '-o', os.path.join(_out, 'all')], os.path.join('all', 'items-magic.json'),
+         'Ring of Acid Resistance', 'You have Resistance to Acid damage'),
+        ('supplement', ['supplement', _dump, '-o', os.path.join(_out, 'sup'), '--book', 'TCE'],
+         os.path.join('sup', 'items-magic.json'), 'Acid Absorbing Tattoo', 'you have resistance to acid damage')):
+    r = subprocess.run([sys.executable, CONV] + argv, capture_output=True, text=True)
+    ck('#78 %s warns about the template it could not find' % label,
+       'WARNING:' in r.stdout and '{#itemEntry Ring of Nothing|XDMG}' in r.stdout and 'Ring of Nothing' in r.stdout,
+       r.stdout[-800:] + r.stderr[-300:])
+    ck('#78 %s counts it in the file\'s own line too' % label, 'unresolved' in r.stdout, r.stdout[-600:])
+    try:
+        got = _by_name(json.load(open(os.path.join(_out, outfile), encoding='utf-8')))
+    except (OSError, ValueError) as e:
+        got = {'error': str(e)}
+    ck('#78 %s writes %s out from its template' % (label, fine), want in got.get(fine, {}).get('description', ''),
+       got.get('error') or got.get(fine))
+shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True)
+
+# ---- 31. a standing bonus to ability checks or to the proficiency bonus (#79)
+# 5e-tools tags the Stone of Good Luck's "+1 bonus to ability checks" as
+# bonusAbilityCheck and the Ioun Stone of Mastery's "Your Proficiency Bonus
+# increases by 1" as bonusProficiencyBonus, and convert.py read neither: the
+# stone's saving-throw half was an effect, its check half nothing, and the Ioun
+# Stone changed no number at all. They become `check` (every ability check:
+# skills, initiative, passive Perception) and `profBonus`, through the same
+# sentence reader as AC and saves (#76), so a bonus the book conditions stays
+# prose. The fixtures are the real XDMG entries above.
+_BP = getattr(C, '_BONUS_PROSE', None)
+if _BP is not None: _BP.clear()
+_b79 = _tmpjson({'item': [x for x in B76_STANDING if x['name'] == 'Stone of Good Luck']
+                         + [x for x in B78_ITEMS if x['name'] == 'Ioun Stone, Mastery']})
+with C.statblock_ctx(C.load_item_index(_b78base, _b79)):
+    b79 = _by_name(C.convert_items(_b79))
+ck('#79 Stone of Good Luck: +1 to all six saves and +1 to ability checks, "while this polished agate is on your person"',
+   b79.get('Stone of Good Luck', {}).get('effects') == _fx(0, 1) + [{'target': 'check', 'value': 1}],
+   b79.get('Stone of Good Luck', {}).get('effects'))
+ck('#79 Ioun Stone, Mastery: +1 proficiency bonus, "while this pale green prism orbits your head"',
+   b79.get('Ioun Stone, Mastery', {}).get('effects') == [{'target': 'profBonus', 'value': 1}],
+   b79.get('Ioun Stone, Mastery', {}).get('effects'))
+ck('#79 both are standing: nothing kept in prose', not (_BP or []), list(_BP or []))
+# the reader, on the wordings it must read and the ones it must not
+ck('#79 "+1 bonus to ability checks and saving throws" is a standing check bonus',
+   rd('While this polished agate is on your person, you gain a +1 bonus to ability checks and saving throws.', 'checks', 1)[0] is True,
+   rd('While this polished agate is on your person, you gain a +1 bonus to ability checks and saving throws.', 'checks', 1))
+ck('#79 one named check is not every check ("+5 bonus to Wisdom (Perception) checks")',
+   rd('You gain a +5 bonus to Wisdom (Perception) checks.', 'checks', 5)[0] is None,
+   rd('You gain a +5 bonus to Wisdom (Perception) checks.', 'checks', 5))
+ck('#79 checks narrowed to a tool are not every check ("ability checks made with thieves\' tools")',
+   rd("You gain a +2 bonus to ability checks made with thieves' tools.", 'checks', 2)[0] is not True,
+   rd("You gain a +2 bonus to ability checks made with thieves' tools.", 'checks', 2))
+ck('#79 a check bonus that lasts "until" something is conditional',
+   rd('You gain a +1 bonus to ability checks until the end of your next turn.', 'checks', 1)[0] is False,
+   rd('You gain a +1 bonus to ability checks until the end of your next turn.', 'checks', 1))
+ck('#79 "Your Proficiency Bonus increases by 1 while this … orbits your head" is standing',
+   rd('Your Proficiency Bonus increases by 1 while this pale green prism orbits your head.', 'profBonus', 1)[0] is True,
+   rd('Your Proficiency Bonus increases by 1 while this pale green prism orbits your head.', 'profBonus', 1))
+ck('#79 a proficiency bonus that lasts "until" a rest is conditional',
+   rd('Your Proficiency Bonus increases by 1 until you finish a Long Rest.', 'profBonus', 1)[0] is False,
+   rd('Your Proficiency Bonus increases by 1 until you finish a Long Rest.', 'profBonus', 1))
+# the Stone of Ill Luck's "-2 penalty" (an adventure's, never converted) is no bonus: prose, and said
+if _BP is not None: _BP.clear()
+ILL = {"name": "Stone of Ill Luck", "source": "XDMG", "srd52": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True,
+       "bonusSavingThrow": "-2", "bonusAbilityCheck": "-2",
+       "entries": ["While this polished agate is on your person, you take a \u22122 penalty to ability checks and saving throws."]}
+with C.statblock_ctx(C.load_item_index(_b78base)):
+    ill = C.convert_items(_tmpjson({'item': [ILL]}))['items'][0]
+ck('#79 a penalty no sentence states as a bonus is not an effect', ill.get('effects') == [], ill.get('effects'))
+ck('#79 ...and is noted, field by field', sorted(f for n, f, v, why in (_BP or [])) == ['bonusAbilityCheck', 'bonusSavingThrow'],
+   list(_BP or []))
 if _BP is not None: _BP.clear()
 
 print()

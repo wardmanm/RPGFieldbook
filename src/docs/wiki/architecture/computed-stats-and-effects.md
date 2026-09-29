@@ -43,6 +43,7 @@ dropdown:
 | `spell.attack`, `spell.dc` | the spell attack bonus and the spell save DC, through `spellAtkBonus()` / `spellDC()` |
 | `ability.<abil>` | the ability *score* (so the modifier and everything using it follow) |
 | `save.<abil>`, `skill.<skill>` | that save or skill |
+| `check` | every ability check: each skill, initiative and passive Perception; never an ability modifier or a save |
 
 `collectFx()` drops a zero-valued row when an effect is saved.
 
@@ -50,17 +51,17 @@ dropdown:
 `pbValue(c)`, `armorAC(c)`), then in order:
 
 - sets `character.level` from the classes, and computes the proficiency bonus as
-  `2 + floor((level−1)/4)` plus `profBonus` effects;
+  `2 + floor((level−1)/4)` plus `profBonus` effects, marking the box when one applies;
 - for each ability: score + `ability.x` effects gives the modifier, and the save adds the
   proficiency bonus if proficient (the player's own dot or a grant) plus `save.x` effects;
 - for each skill: modifier + proficiency bonus (level ≥ 1) + proficiency bonus again (expertise) +
-  `skill.x` effects;
+  `skill.x` effects + `check` effects;
 - AC is `armorAC(c).base` plus `ac` effects. Initiative is the typed value, or the DEX modifier when
-  blank, plus `init` effects;
+  blank, plus `init` and `check` effects (initiative is a Dexterity check);
 - speed is the typed speed plus `speed` effects, **then** encumbrance through `encSpeed()`, which is
   applied last and outside the engine;
-- passive Perception is 10 + WIS + proficiency + `skill.perception` effects. The Max HP note shows
-  typed Max + `hp.max` effects;
+- passive Perception is 10 + WIS + proficiency + `skill.perception` and `check` effects, the
+  Perception check's own bonus. The Max HP note shows typed Max + `hp.max` effects;
 - spell save DC is `spellDC(c)`, 8 + proficiency + ability modifier + `spell.dc` effects, and spell
   attack is `spellAtkBonus(c)`, proficiency + modifier + `spell.attack` effects, each marked when an
   effect applies ("—" with no spellcasting ability);
@@ -70,7 +71,9 @@ dropdown:
 
 A number an effect or a grant changed gets `.fx-on` through `mark()`. Tapping any `data-stat` number
 opens `openStatBreakdown()`, which lists the base, the grant that supplied a proficiency, and each
-contribution by source name.
+contribution by source name. On a skill and on initiative that includes each `check` contribution,
+named "(ability checks)"; on an ability it lists them apart from the score, as what a plain check
+with that ability adds. The proficiency bonus shows "Level N: +2" as its base.
 
 **Elsewhere, the same pattern:** `attackNumbers(a)` (the better of STR/DEX for finesse, proficiency
 if set, `atkMisc`, `attack` + `attack.<kind>` effects, and `spell.attack` on a spell attack row
@@ -109,6 +112,9 @@ fixed `8`/`"d8"`).
   Quarterstaff of the Acrobat's Reaction, the Arrow-Catching Shield's +2 against ranged attacks, the
   Rod of Alertness's planted aura (#76). The packs read the book's sentence to decide; see
   [Converter](../data/converter.md).
+- **`check` never reaches an ability modifier.** The modifier also feeds attacks, saves, AC, spell
+  DCs and `usesMax()` formulas, so a bonus to checks there would leak into all of them. A plain
+  ability check reads the modifier plus the `check` lines in its breakdown.
 - **Base values never have effects baked in.** A typed score, Max HP, AC or speed is the base, and
   effects layer on top at read time. That is what lets an effect come off again. It is also why the
   level-1 HP seed reads the bare CON score (see [Grants & provenance](grants-and-provenance.md)).
@@ -149,6 +155,8 @@ fixed `8`/`"d8"`).
 | A bonus that holds only in a moment (#76) | Prose, like advantage and resistance | An effect: it is on whenever the source is live, so a once-per-rest Reaction read as +5 AC all day |
 | Where an item's spell attack and DC bonus goes (#77) | Two numeric targets, `spell.attack` and `spell.dc`, read by `spellAtkBonus()`/`spellDC()` | Reusing `attack`: it reaches every weapon row, so a Wand of the War Mage would make a sword more accurate. Prose: a flat bonus to one number is exactly what an effect is |
 | A spell bonus the book limits to one class's spells (#77) | Applied to the character's one spellcasting; the class stays in the description | Prose: all 18 of Tasha's focuses and sickles would do nothing for the casters they were made for. Exact only for a single-class caster; a multiclass one's other class reads it too. Owner may revisit |
+| A bonus to every ability check (#79) | One `check` target, added to each skill, initiative and passive Perception | 18 `skill.*` and an `init` effect on the item: 25 chips on one stone, no way to name a plain ability check, and no one-row way for a player to add "+1 to all checks". Owner may revisit |
+| Where a plain ability check's bonus shows (#79) | In the ability's breakdown, apart from the score; the modifier box stays the modifier, unmarked | Adding it to the modifier box: attacks, saves, AC and spell DCs read the modifier. A separate "check" number beside each ability: new UI for one pack item. Owner may revisit |
 
 ## Open
 
@@ -170,3 +178,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — A weapon's bonus is not an effect: the packs' `+N` weapons no longer add to every attack while equipped. → ledger L4392, #74
 - 2026-09-28 — An effect is a standing bonus: the packs' conditional AC and saving-throw bonuses stay prose. → ledger L4502, #76
 - 2026-09-28 — `spell.attack` and `spell.dc` targets; `spellDC()`/`spellAtkBonus()` add them and the card paints through them. → ledger L4568, #77
+- 2026-09-29 — a `check` target reaches every skill, initiative and passive Perception; the proficiency bonus is marked and tappable. → ledger L4689, #79

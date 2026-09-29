@@ -519,7 +519,7 @@
       "rarity": "Very Rare",
       "weight": 45,
       "attune": true,
-      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}",
+      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath weapons of Dragons, and you have Resistance to Acid damage.\nAdditionally, you can focus your senses as a Magic action to discern the distance and direction to the closest black dragon within 30 miles of yourself. This action can't be used again until the next dawn",
       "effects": [
         {
           "target": "ac",
@@ -557,7 +557,7 @@
       "rarity": "Very Rare",
       "weight": 45,
       "attune": true,
-      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}",
+      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath weapons of Dragons, and you have Resistance to Lightning damage.\nAdditionally, you can focus your senses as a Magic action to discern the distance and direction to the closest blue dragon within 30 miles of yourself. This action can't be used again until the next dawn",
       "effects": [
         {
           "target": "ac",
@@ -662,7 +662,7 @@
       "rarity": "Very Rare",
       "weight": 45,
       "attune": true,
-      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}",
+      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath weapons of Dragons, and you have Resistance to Fire damage.\nAdditionally, you can focus your senses as a Magic action to discern the distance and direction to the closest brass dragon within 30 miles of yourself. This action can't be used again until the next dawn",
       "effects": [
         {
           "target": "ac",
@@ -696,7 +696,7 @@
       "rarity": "Very Rare",
       "weight": 45,
       "attune": true,
-      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}",
+      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath weapons of Dragons, and you have Resistance to Lightning damage.\nAdditionally, you can focus your senses as a Magic action to discern the distance and direction to the closest bronze dragon within 30 miles of yourself. This action can't be used again until the next dawn",
       "effects": [
         {
           "target": "ac",
@@ -1197,7 +1197,7 @@
       "rarity": "Very Rare",
       "weight": 45,
       "attune": true,
-      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}",
+      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath weapons of Dragons, and you have Resistance to Acid damage.\nAdditionally, you can focus your senses as a Magic action to discern the distance and direction to the closest copper dragon within 30 miles of yourself. This action can't be used again until the next dawn",
       "effects": [
         {
           "target": "ac",
@@ -1971,7 +1971,7 @@
       "rarity": "Very Rare",
       "weight": 45,
       "attune": true,
-      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}",
+      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath weapons of Dragons, and you have Resistance to Fire damage.\nAdditionally, you can focus your senses as a Magic action to discern the distance and direction to the closest gold dragon within 30 miles of yourself. This action can't be used again until the next dawn",
       "effects": [
         {
           "target": "ac",
@@ -1998,7 +1998,7 @@
       "rarity": "Very Rare",
       "weight": 45,
       "attune": true,
-      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}",
+      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath weapons of Dragons, and you have Resistance to Poison damage.\nAdditionally, you can focus your senses as a Magic action to discern the distance and direction to the closest green dragon within 30 miles of yourself. This action can't be used again until the next dawn",
       "effects": [
         {
           "target": "ac",
@@ -2301,7 +2301,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nWhile this pale lavender ellipsoid orbits your head, you can take a Reaction to cancel a spell of level 4 or lower cast by a creature you can see. A canceled spell has no effect, and any resources used to cast it are wasted. Once the stone has canceled 20 levels of spells, it burns out, turns dull gray, and loses its magic",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nWhile this pale lavender ellipsoid orbits your head, you can take a Reaction to cancel a spell of level 4 or lower cast by a creature you can see. A canceled spell has no effect, and any resources used to cast it are wasted. Once the stone has canceled 20 levels of spells, it burns out, turns dull gray, and loses its magic",
       "effects": []
     },
     {
@@ -2311,7 +2311,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nYour Dexterity increases by 2, to a maximum of 20, while this deep-red sphere orbits your head",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nYour Dexterity increases by 2, to a maximum of 20, while this deep-red sphere orbits your head",
       "effects": []
     },
     {
@@ -2321,7 +2321,7 @@
       "type": "Wondrous Item",
       "rarity": "Rare",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nWhile this dark-blue rhomboid orbits your head, you have Advantage on Initiative rolls and Wisdom (Perception) checks",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nWhile this dark-blue rhomboid orbits your head, you have Advantage on Initiative rolls and Wisdom (Perception) checks",
       "effects": []
     },
     {
@@ -2331,7 +2331,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nYour Constitution increases by 2, to a maximum of 20, while this pink rhomboid orbits your head",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nYour Constitution increases by 2, to a maximum of 20, while this pink rhomboid orbits your head",
       "effects": []
     },
     {
@@ -2341,7 +2341,7 @@
       "type": "Wondrous Item",
       "rarity": "Legendary",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nWhile this marbled lavender and green ellipsoid orbits your head, you can take a Reaction to cancel a spell of level 8 or lower cast by a creature you can see. A canceled spell has no effect, and any resources used to cast it are wasted. Once the stone has canceled 20 levels of spells, it burns out, turns dull gray, and loses its magic",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nWhile this marbled lavender and green ellipsoid orbits your head, you can take a Reaction to cancel a spell of level 8 or lower cast by a creature you can see. A canceled spell has no effect, and any resources used to cast it are wasted. Once the stone has canceled 20 levels of spells, it burns out, turns dull gray, and loses its magic",
       "effects": []
     },
     {
@@ -2351,7 +2351,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nYour Wisdom increases by 2, to a maximum of 20, while this incandescent blue sphere orbits your head",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nYour Wisdom increases by 2, to a maximum of 20, while this incandescent blue sphere orbits your head",
       "effects": []
     },
     {
@@ -2361,7 +2361,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nYour Intelligence increases by 2, to a maximum of 20, while this marbled scarlet and blue sphere orbits your head",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nYour Intelligence increases by 2, to a maximum of 20, while this marbled scarlet and blue sphere orbits your head",
       "effects": []
     },
     {
@@ -2371,7 +2371,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nYour Charisma increases by 2, to a maximum of 20, while this marbled pink and green sphere orbits your head",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nYour Charisma increases by 2, to a maximum of 20, while this marbled pink and green sphere orbits your head",
       "effects": []
     },
     {
@@ -2381,8 +2381,13 @@
       "type": "Wondrous Item",
       "rarity": "Legendary",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nYour Proficiency Bonus increases by 1 while this pale green prism orbits your head",
-      "effects": []
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nYour Proficiency Bonus increases by 1 while this pale green prism orbits your head",
+      "effects": [
+        {
+          "target": "profBonus",
+          "value": 1
+        }
+      ]
     },
     {
       "name": "Ioun Stone, Protection",
@@ -2391,7 +2396,7 @@
       "type": "Wondrous Item",
       "rarity": "Rare",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nYou gain a +1 bonus to Armor Class while this dusty-rose prism orbits your head",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nYou gain a +1 bonus to Armor Class while this dusty-rose prism orbits your head",
       "effects": [
         {
           "target": "ac",
@@ -2406,7 +2411,7 @@
       "type": "Wondrous Item",
       "rarity": "Legendary",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nYou regain 15 Hit Points at the end of each hour this pearly white spindle orbits your head if you have at least 1 Hit Point",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nYou regain 15 Hit Points at the end of each hour this pearly white spindle orbits your head if you have at least 1 Hit Point",
       "effects": []
     },
     {
@@ -2416,7 +2421,7 @@
       "type": "Wondrous Item",
       "rarity": "Rare",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nThis vibrant purple prism stores spells cast into it, holding them until you use them. The stone can store up to 4 levels of spells at a time. When found, it contains 1d4 levels of stored spells chosen by the DM.\nAny creature can cast a spell of level 1 through 4 into the stone by touching it as the spell is cast. The spell has no effect, other than to be stored in the stone. If the stone can't hold the spell, the spell is expended without effect. The level of the slot used to cast the spell determines how much space it uses.\nWhile this stone orbits your head, you can cast any spell stored in it. The spell uses the slot level, spell save DC, spell attack bonus, and spellcasting ability of the original caster but is otherwise treated as if you cast the spell. The spell cast from the stone is no longer stored in it, freeing up space",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nThis vibrant purple prism stores spells cast into it, holding them until you use them. The stone can store up to 4 levels of spells at a time. When found, it contains 1d4 levels of stored spells chosen by the DM.\nAny creature can cast a spell of level 1 through 4 into the stone by touching it as the spell is cast. The spell has no effect, other than to be stored in the stone. If the stone can't hold the spell, the spell is expended without effect. The level of the slot used to cast the spell determines how much space it uses.\nWhile this stone orbits your head, you can cast any spell stored in it. The spell uses the slot level, spell save DC, spell attack bonus, and spellcasting ability of the original caster but is otherwise treated as if you cast the spell. The spell cast from the stone is no longer stored in it, freeing up space",
       "effects": []
     },
     {
@@ -2426,7 +2431,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nYour Strength increases by 2, to a maximum of 20, while this pale blue rhomboid orbits your head",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nYour Strength increases by 2, to a maximum of 20, while this pale blue rhomboid orbits your head",
       "effects": []
     },
     {
@@ -2436,7 +2441,7 @@
       "type": "Wondrous Item",
       "rarity": "Rare",
       "attune": true,
-      "description": "{#itemEntry Ioun Stone|XDMG}\nYou don't need to eat or drink while this clear spindle orbits your head",
+      "description": "Roughly marble sized, Ioun Stones are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of Ioun Stones exist, each type a distinct combination of shape and color.\nWhen you take a Magic action to toss an Ioun Stone into the air, the stone orbits your head at a distance of 1d3 feet, conferring its benefit to you while doing so. You can have up to three Ioun Stones orbiting your head at the same time.\nEach Ioun Stone orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.\nAs a Utilize action, you can seize and stow any number of Ioun Stones orbiting your head. If your Attunement to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it.\nYou don't need to eat or drink while this clear spindle orbits your head",
       "effects": []
     },
     {
@@ -3360,7 +3365,7 @@
       "type": "Potion",
       "rarity": "Uncommon",
       "weight": 0.5,
-      "description": "{#itemEntry Potion of Resistance|XDMG}",
+      "description": "When you drink this potion, you have Resistance to Acid damage for 1 hour",
       "effects": []
     },
     {
@@ -3410,7 +3415,7 @@
       "type": "Potion",
       "rarity": "Uncommon",
       "weight": 0.5,
-      "description": "{#itemEntry Potion of Resistance|XDMG}",
+      "description": "When you drink this potion, you have Resistance to Cold damage for 1 hour",
       "effects": []
     },
     {
@@ -3440,7 +3445,7 @@
       "type": "Potion",
       "rarity": "Uncommon",
       "weight": 0.5,
-      "description": "{#itemEntry Potion of Resistance|XDMG}",
+      "description": "When you drink this potion, you have Resistance to Fire damage for 1 hour",
       "effects": []
     },
     {
@@ -3460,7 +3465,7 @@
       "type": "Potion",
       "rarity": "Uncommon",
       "weight": 0.5,
-      "description": "{#itemEntry Potion of Resistance|XDMG}",
+      "description": "When you drink this potion, you have Resistance to Force damage for 1 hour",
       "effects": []
     },
     {
@@ -3561,7 +3566,7 @@
       "type": "Potion",
       "rarity": "Uncommon",
       "weight": 0.5,
-      "description": "{#itemEntry Potion of Resistance|XDMG}",
+      "description": "When you drink this potion, you have Resistance to Lightning damage for 1 hour",
       "effects": []
     },
     {
@@ -3591,7 +3596,7 @@
       "type": "Potion",
       "rarity": "Uncommon",
       "weight": 0.5,
-      "description": "{#itemEntry Potion of Resistance|XDMG}",
+      "description": "When you drink this potion, you have Resistance to Necrotic damage for 1 hour",
       "effects": []
     },
     {
@@ -3611,7 +3616,7 @@
       "type": "Potion",
       "rarity": "Uncommon",
       "weight": 0.5,
-      "description": "{#itemEntry Potion of Resistance|XDMG}",
+      "description": "When you drink this potion, you have Resistance to Poison damage for 1 hour",
       "effects": []
     },
     {
@@ -3621,7 +3626,7 @@
       "type": "Potion",
       "rarity": "Uncommon",
       "weight": 0.5,
-      "description": "{#itemEntry Potion of Resistance|XDMG}",
+      "description": "When you drink this potion, you have Resistance to Psychic damage for 1 hour",
       "effects": []
     },
     {
@@ -3631,7 +3636,7 @@
       "type": "Potion",
       "rarity": "Uncommon",
       "weight": 0.5,
-      "description": "{#itemEntry Potion of Resistance|XDMG}",
+      "description": "When you drink this potion, you have Resistance to Radiant damage for 1 hour",
       "effects": []
     },
     {
@@ -3691,7 +3696,7 @@
       "type": "Potion",
       "rarity": "Uncommon",
       "weight": 0.5,
-      "description": "{#itemEntry Potion of Resistance|XDMG}",
+      "description": "When you drink this potion, you have Resistance to Thunder damage for 1 hour",
       "effects": []
     },
     {
@@ -3887,7 +3892,7 @@
       "rarity": "Very Rare",
       "weight": 45,
       "attune": true,
-      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}",
+      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath weapons of Dragons, and you have Resistance to Fire damage.\nAdditionally, you can focus your senses as a Magic action to discern the distance and direction to the closest red dragon within 30 miles of yourself. This action can't be used again until the next dawn",
       "effects": [
         {
           "target": "ac",
@@ -3932,7 +3937,7 @@
       "category": "Ring",
       "type": "Ring",
       "rarity": "Rare",
-      "description": "{#itemEntry Ring of Resistance|XDMG}",
+      "description": "You have Resistance to Acid damage while wearing this ring. The ring is set with pearl",
       "effects": []
     },
     {
@@ -3950,7 +3955,7 @@
       "category": "Ring",
       "type": "Ring",
       "rarity": "Rare",
-      "description": "{#itemEntry Ring of Resistance|XDMG}",
+      "description": "You have Resistance to Cold damage while wearing this ring. The ring is set with tourmaline",
       "effects": []
     },
     {
@@ -4029,7 +4034,7 @@
       "category": "Ring",
       "type": "Ring",
       "rarity": "Rare",
-      "description": "{#itemEntry Ring of Resistance|XDMG}",
+      "description": "You have Resistance to Fire damage while wearing this ring. The ring is set with garnet",
       "effects": []
     },
     {
@@ -4038,7 +4043,7 @@
       "category": "Ring",
       "type": "Ring",
       "rarity": "Rare",
-      "description": "{#itemEntry Ring of Resistance|XDMG}",
+      "description": "You have Resistance to Force damage while wearing this ring. The ring is set with sapphire",
       "effects": []
     },
     {
@@ -4077,7 +4082,7 @@
       "category": "Ring",
       "type": "Ring",
       "rarity": "Rare",
-      "description": "{#itemEntry Ring of Resistance|XDMG}",
+      "description": "You have Resistance to Lightning damage while wearing this ring. The ring is set with citrine",
       "effects": []
     },
     {
@@ -4096,7 +4101,7 @@
       "category": "Ring",
       "type": "Ring",
       "rarity": "Rare",
-      "description": "{#itemEntry Ring of Resistance|XDMG}",
+      "description": "You have Resistance to Necrotic damage while wearing this ring. The ring is set with jet",
       "effects": []
     },
     {
@@ -4105,7 +4110,7 @@
       "category": "Ring",
       "type": "Ring",
       "rarity": "Rare",
-      "description": "{#itemEntry Ring of Resistance|XDMG}",
+      "description": "You have Resistance to Poison damage while wearing this ring. The ring is set with amethyst",
       "effects": []
     },
     {
@@ -4153,7 +4158,7 @@
       "category": "Ring",
       "type": "Ring",
       "rarity": "Rare",
-      "description": "{#itemEntry Ring of Resistance|XDMG}",
+      "description": "You have Resistance to Psychic damage while wearing this ring. The ring is set with jade",
       "effects": []
     },
     {
@@ -4162,7 +4167,7 @@
       "category": "Ring",
       "type": "Ring",
       "rarity": "Rare",
-      "description": "{#itemEntry Ring of Resistance|XDMG}",
+      "description": "You have Resistance to Radiant damage while wearing this ring. The ring is set with topaz",
       "effects": []
     },
     {
@@ -4249,7 +4254,7 @@
       "category": "Ring",
       "type": "Ring",
       "rarity": "Rare",
-      "description": "{#itemEntry Ring of Resistance|XDMG}",
+      "description": "You have Resistance to Thunder damage while wearing this ring. The ring is set with spinel",
       "effects": []
     },
     {
@@ -4729,7 +4734,7 @@
       "rarity": "Very Rare",
       "weight": 45,
       "attune": true,
-      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}",
+      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath weapons of Dragons, and you have Resistance to Cold damage.\nAdditionally, you can focus your senses as a Magic action to discern the distance and direction to the closest silver dragon within 30 miles of yourself. This action can't be used again until the next dawn",
       "effects": [
         {
           "target": "ac",
@@ -5347,6 +5352,10 @@
         {
           "target": "save.cha",
           "value": 1
+        },
+        {
+          "target": "check",
+          "value": 1
         }
       ]
     },
@@ -5844,7 +5853,7 @@
       "rarity": "Very Rare",
       "weight": 45,
       "attune": true,
-      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}",
+      "description": "AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath weapons of Dragons, and you have Resistance to Cold damage.\nAdditionally, you can focus your senses as a Magic action to discern the distance and direction to the closest white dragon within 30 miles of yourself. This action can't be used again until the next dawn",
       "effects": [
         {
           "target": "ac",

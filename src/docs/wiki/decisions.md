@@ -93,6 +93,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **A bonus that holds only in a moment (#76)** — Prose, like advantage and resistance
 - **Where an item's spell attack and DC bonus goes (#77)** — Two numeric targets, `spell.attack` and `spell.dc`, read by `spellAtkBonus()`/`spellDC()`
 - **A spell bonus the book limits to one class's spells (#77)** — Applied to the character's one spellcasting; the class stays in the description
+- **A bonus to every ability check (#79)** — One `check` target, added to each skill, initiative and passive Perception
+- **Where a plain ability check's bonus shows (#79)** — In the ability's breakdown, apart from the score; the modifier box stays the modifier
 
 ### [Rich text](architecture/rich-text.md)
 
@@ -150,6 +152,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How the setting avoids a migration** — A resolver whose fallback equals the `blankChar()` default, as `hdStyle` does
 - **How expertise is marked in grouped mode** — CSS off the dot's `data-lvl`
 - **The Skills note button, hidden in grouped mode** — Shipped as a known gap
+- **Where a bonus to plain ability checks shows (#79)** — The ability's breakdown, apart from the score; the modifier box is unchanged
 
 ### [Vitals & rest](features/vitals-and-rest.md)
 
@@ -376,7 +379,10 @@ When a page gains a Decisions row, add its line here under that page.
 - **A bonus no sentence states (#76)** — Not an effect, and a `note:` naming it
 - **Bracers of Defense, whose +2 needs no armor and no shield (#76)** — Prose, like any conditional bonus
 - **The Quarterstaff's once-per-rest Reaction as a tracked use (#76)** — No; it stays in the description
-- **Where a `{#itemEntry}` template's text is read (#76)** — For the bonus reading only; the description keeps the tag
+- **Where a `{#itemEntry}` template's text goes (#78)** — Into the description, filled from the item as 5e-tools renders it; the bonus reader reads that same text (reverses #76's "for the bonus reading only")
+- **A template or placeholder that does not resolve (#78)** — Printed as it stands, counted with its items, and a `WARNING` at the end of every run
+- **Which ignored item fields become effects (#79)** — `bonusAbilityCheck` as `check` and `bonusProficiencyBonus` as `profBonus`; `ability` and `modifySpeed` stay prose
+- **How `{{getFullImmRes item.resist}}` prints (#78)** — Title-cased ("Acid"), as the 2024 templates call it; a raw `{{item.resist}}` prints as the item has it
 - **An item's spell attack and spell save DC bonus (#77)** — `spell.attack` / `spell.dc` effects through the same sentence reader, a named class not counting as a condition
 
 ### [Supplements](data/supplements.md)

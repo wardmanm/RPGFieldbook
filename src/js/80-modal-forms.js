@@ -135,7 +135,13 @@ function openSizePicker(){
   });
 }
 function openStatBreakdown(target){
-  const c=contributions();const contr=c.filter(x=>x.target===target);
+  const c=contributions();
+  /* a bonus to every ability check (#79) is part of each skill and of
+     initiative, so it is listed there by source; on an ability it is what a
+     plain check with that ability adds, listed apart from the score */
+  const onCheck=target.startsWith("skill.")||target==="init";
+  const ckRows=c.filter(x=>x.target==="check").map(x=>({source:x.source+" (ability checks)",value:x.value}));
+  const contr=c.filter(x=>x.target===target).concat(onCheck?ckRows:[]);
   let base="", label=FX_LABEL[target]||target, grantLines="";
   const mods={};ABIL.forEach(([k])=>mods[k]=Math.floor((abilFinal(k,c)-10)/2));const pb=pbValue(c);
   if(target.startsWith("ability.")){const k=target.split(".")[1];base=`Base score ${num(character.abilities[k])}`;}
@@ -144,10 +150,14 @@ function openStatBreakdown(target){
   else if(target==="ac"){const AB=armorAC(c);let p;if(AB.hasArmor){const cap=(AB.body.dexCap==null)?AB.dex:Math.min(AB.dex,AB.body.dexCap);p=`Armor ${AB.body.base} + DEX ${fmt(cap)}`;}else if(character.ac!=="")p=`Base AC ${num(character.ac)}`;else p=`10 + DEX ${fmt(mods.dex)}`;if(AB.shield)p+=` + Shield ${fmt(AB.shield)}`;base=p;}
   else if(target==="init")base=character.init===""?`DEX mod ${fmt(mods.dex)}`:`Base ${fmt(num(character.init))}`;
   else if(target==="speed")base=`Base ${num(character.speed)}`;
+  else if(target==="profBonus")base=`Level ${Math.max(1,num(character.level)||1)}: ${fmt(pb-sumFx("profBonus",c))}`;
   else if(target==="spell.dc"||target==="spell.attack"){const sa=character.spellAbility;base=sa?`${target==="spell.dc"?"8 + ":""}prof ${fmt(pb)} + ${sa.toUpperCase()} mod ${fmt(mods[sa])}`:"No spellcasting ability chosen";}
   let rows=`<p style="margin-bottom:6px">${esc(base)}</p>`+grantLines;
-  if(contr.length)rows+=contr.map(x=>`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(x.source)}</span><b>${fmt(x.value)}</b></div>`).join("");
-  else if(!grantLines)rows+=`<p style="color:var(--ink-soft);font-style:italic">No item, feature, or grant effects apply.</p>`;
+  const rowOf=x=>`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(x.source)}</span><b>${fmt(x.value)}</b></div>`;
+  const plainCheck=target.startsWith("ability.")&&ckRows.length;
+  if(contr.length)rows+=contr.map(rowOf).join("");
+  else if(!grantLines&&!plainCheck)rows+=`<p style="color:var(--ink-soft);font-style:italic">No item, feature, or grant effects apply.</p>`;
+  if(plainCheck)rows+=`<p class="hint" style="margin-top:6px">An ability check with this score alone, not through a skill, also adds:</p>`+ckRows.map(rowOf).join("");
   /* Encumbrance is last because it is applied last — after the numeric effects,
      and sometimes as a replacement rather than a modifier. */
   if(target==="speed"){

@@ -10,8 +10,9 @@ page is what that file does not say: what must not move, and the traps that have
 **Code:** `main()`, `pick_2024_preferred()`, `pick_sources()`, `flatten()`, `table_ctx()`,
 `ref_ctx()`, `_register()`, `_norm_table()`, `_cell_text()`, `_dice_text()`, `_cell_miss_warnings()`,
 `_formula_text()`, `_attr_choose()`, `_full_stop()`, `statblock_ctx()`, `load_item_index()`,
-`_statblock_text()`, `_item_traits()`, `_entry_miss_warnings()`, `convert_items()`, `_item_effects()`,
-`_bonus_reading()`, `_item_bonus_text()`, `_bonus_prose_notes()`, `_weapon_defs()`,
+`_statblock_text()`, `_item_traits()`, `_entry_miss_warnings()`, `_expand_item_entries()`,
+`_fill_template()`, `_full_imm_res()`, `_template_leftovers()`, `_template_miss_warnings()`,
+`convert_items()`, `_item_effects()`, `_bonus_reading()`, `_bonus_prose_notes()`, `_weapon_defs()`,
 `_weapon_refs()`, `_weapon_miss_warnings()`, `_class_tables()`, `convert_classes()`,
 `_skill_profs()`, `_multiclass()`, `_optfeat_choices()`, `convert_races()`,
 `_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in `scripts/bundle-rules.js`;
@@ -88,11 +89,29 @@ as its `entries` twin, "Name: text". A `statblock` embeds another entity by refe
 `_statblock_text()` resolves an item one through the index `load_item_index()` builds from
 `items-base.json` and `items.json`. `all` and `supplement` set that index themselves;
 `statblock_ctx()` sets it in a test. `_item_traits()` then writes the item's stat line in the
-wording `convert_items()` gives a base weapon. The one statblock in the converted books is the 2024
+wording `convert_items()` gives a base weapon, and its prose with any shared template written out
+(below). The one statblock in the converted books is the 2024
 Soulknife's Psychic Blade. `image` and `gallery` are skipped on purpose. Any other node renders
 nothing **and** is counted in `_ENTRY_MISSES`, and so is a statblock that does not resolve (it keeps
 its name). `_entry_miss_warnings()` reports each type as a `WARNING` at the end of `all`,
 `supplement` and every single subcommand. No run on the v2.36.1 dump reports one today.
+
+**Shared item text is written out.** 5e-tools gives a family of items one text: the item's
+entries carry `{#itemEntry Name|SRC}`, and `items-base.json`'s `itemEntry` list (which
+`load_item_index()` keeps, by name and source) holds the template. Before `flatten()`,
+`_expand_item_entries()` puts the template's entries where the tag stood (a tag with no source
+names the DMG's, as in 5e-tools), and `_fill_template()` fills every string in them from the item:
+`{{item.resist}}` and `{{item.detail1}}` as the item has them ("acid", "pearl"),
+`{{getFullImmRes item.resist}}` through `_full_imm_res()`, title-cased as the 2024 templates call it
+("Acid"). So a Ring of Acid Resistance reads "You have Resistance to Acid damage while wearing this
+ring. The ring is set with pearl", and a template's named entries (Tasha's "Damage Absorption")
+read "Name: text" like any other. `convert_items()` and `_item_traits()` both expand. A tag with no
+template, a placeholder with no value, and any template text still printed after `flatten()` (a
+tag inside a sentence, found by `_template_leftovers()`) stay as they stand **and** are counted in
+`_TEMPLATE_MISSES`; `_template_miss_warnings()` reports each as a `WARNING` at the end of `all`,
+`supplement` and every single subcommand. 54 pack items use a template (core: ten Dragon Scale
+Mails, 14 Ioun Stones, ten Potions and ten Rings of Resistance; Tasha's: ten Absorbing Tattoos);
+none warns on the v2.36.1 dump.
 
 **Weapon properties and masteries are named from their definitions.** Only `items-base.json`
 defines them: `itemProperty` (27, keyed by abbreviation, several per code across PHB/XPHB/DMG/XDMG,
@@ -115,7 +134,8 @@ the end of `all`, `supplement` and every single subcommand. Every code in the v2
 `bonusWeaponDamage`) becomes `weapon.atkMisc` / `dmgMisc`, which the item's attack row reads once.
 `_item_effects()` writes only the bonuses that apply to the whole character while the item is
 equipped: `bonusAc` as `ac`, `bonusSavingThrow` as the six `save.*`, `bonusSpellAttack` as
-`spell.attack` and `bonusSpellSaveDc` as `spell.dc`, each only when it is standing (below). It never turns a weapon bonus into an `attack`/`damage` effect, which would reach
+`spell.attack`, `bonusSpellSaveDc` as `spell.dc`, `bonusAbilityCheck` as `check` and
+`bonusProficiencyBonus` as `profBonus`, each only when it is standing (below). It never turns a weapon bonus into an `attack`/`damage` effect, which would reach
 every attack. On an item with no weapon
 (Bracers of Archery, Rod of Lordly Might, Oil of Sharpness; Tasha's Eldritch Claw Tattoo and Baba
 Yaga's Mortar and Pestle) the bonus is scoped to one weapon, bows or unarmed strikes, which no
@@ -123,12 +143,15 @@ effect target can express, so it stays in the prose. The packs ship 15 `+N` weap
 Tasha's.
 
 **An item's bonus is an effect only when the book gives it all the time.** 5e-tools sets
-`bonusAc`, `bonusSavingThrow`, `bonusSpellAttack` and `bonusSpellSaveDc` for its search filters
+`bonusAc`, `bonusSavingThrow`, `bonusSpellAttack`, `bonusSpellSaveDc`, `bonusAbilityCheck` and
+`bonusProficiencyBonus` for its search filters
 whether the bonus is standing or momentary, and no field tells the two apart, so `_bonus_reading()`
 reads the sentence that states it: "+N bonus to … Armor Class/AC"; "+N bonus to … saving throws"
 alone or in a list (one named save, or death saves, is not all six); "+N bonus to … spell attack
-rolls"; "+N bonus to … saving throw DC(s)" or "spell save DC"; or the Robe of the Archmagi's "Your
-spell save DC and spell attack bonus each increase by 2". A class named in it ("the saving throw
+rolls"; "+N bonus to … saving throw DC(s)" or "spell save DC"; the Robe of the Archmagi's "Your
+spell save DC and spell attack bonus each increase by 2"; "+N bonus to … ability checks" alone or in
+a list (one named check, or checks "made with" a tool, is not all of them); or "Proficiency Bonus
+increases by N". A class named in it ("the saving throw
 DCs of your druid and ranger spells") is no condition: the sheet has one spellcasting, and the class
 is the item's attunement. It reads that sentence up to the end of the bonus's own clause, sets aside
 the conditions an equipped item always meets ("while wearing / holding / wielding / carrying",
@@ -136,12 +159,15 @@ the conditions an equipped item always meets ("while wearing / holding / wieldin
 reaction, when, whenever, if, unless, until, against, while, as long as, for every, allies,
 creature(s), once or each time remains. A conditional bonus, or one no sentence states (a table
 row), stays in the prose; `_bonus_prose_notes()` prints each as a `note:` at the end of `all`,
-`supplement` and `items`, with the words that decided it. `_item_bonus_text()` first expands any
-`{#itemEntry Name|SRC}` from the templates the item index keeps (`items-base.json`'s `itemEntry`),
-for this reading only: the ten Dragon Scale Mails state their +1 nowhere else. Today 19 items keep
+`supplement` and `items`, with the words that decided it. It reads the description as written,
+shared templates included: the ten Dragon Scale Mails state their +1 only in theirs. Today 19 items keep
 standing `ac`/`save.*` effects, all core; five are prose (Quarterstaff of the Acrobat, Arrow-Catching
 Shield, Bracers of Defense, Rod of Alertness, Tasha's Teeth of Dahlver-Nar). 28 carry `spell.attack`
-and/or `spell.dc` (9 core, 19 Tasha's), every one standing.
+and/or `spell.dc` (9 core, 19 Tasha's), every one standing. Two carry the last two: the Stone of
+Good Luck `check` +1 beside its six saves, and the Ioun Stone of Mastery `profBonus` +1, both core.
+The dump's other item fields that name numbers stay prose: `ability` sets a score ("becomes 21"),
+caps it ("increases by 2, to a maximum of 20") or is a one-time increase (the Manuals and Tomes),
+and `modifySpeed` multiplies, sets or copies a speed or adds another mode; none is a flat bonus.
 
 **Option pickers.** `_optfeat_choices()` reads a class or subclass's `optionalfeatureProgression`
 (a running total per level, as a map or a 20-long list) and emits an `option` choice at every
@@ -176,7 +202,7 @@ not in a system folder, and the zip ships them in `scripts/` beside `convert.py`
 trackers: [Class resources](../features/class-resources.md).
 
 **Writing.** `_write()` dumps with `indent=2`, `ensure_ascii=False` and a final `\n`, then reports
-the entry count and any unresolved `{@` tag left in the file. `_pack()` builds the wrapper in a
+the entry count and any unresolved `{@` tag or template text (`{#`, `{{`) left in the file. `_pack()` builds the wrapper in a
 fixed key order: `system`, `name`, `version`, then `_note` and `excludeSystems` only when the book
 sets them, then the array.
 
@@ -203,8 +229,9 @@ has no `DATA_VERSIONS` entry.
   a dev-only script (the Humblewood extractor is the precedent).
 - **Never quiet.** A missing input warns; a supplement category with nothing in it writes no file
   and says so; a subclass that resolves no features is listed in a `WARNING`, and so is every
-  table cell `_cell_text()` could not read, every entry node `flatten()` could not render and every
-  weapon property or mastery code no definition names; a starting or multiclass skill entry
+  table cell `_cell_text()` could not read, every entry node `flatten()` could not render, every
+  weapon property or mastery code no definition names and every template or placeholder left
+  unexpanded; a starting or multiclass skill entry
   `_skill_profs()` cannot read is a `note:`, and so is every item bonus kept in the prose. Every
   bug on this page was a silent skip first.
 - **Weapon codes are named from the whole run's definitions, never from the file being converted.**
@@ -216,12 +243,16 @@ has no `DATA_VERSIONS` entry.
   attack.
 - **An item bonus is an effect only when its sentence states it standing.** A 5e-tools
   `bonus*` field is a filter tag, not a rule. `rules-data.js` holds the reviewed lists: every
-  `ac`/`save.*` and every `spell.*` effect in any pack must be on one, and every item on them must
+  `ac`/`save.*`, every `spell.*` and every `check`/`profBonus` effect in any pack must be on one,
+  and every item on them must
   still ship it, so a dump upgrade that moves the reader's verdict fails there and is read again by
   hand.
 - **A pack ships only targets the app adds up.** An effect whose target `fxTargets()` does not list
   is summed by nothing and changes no number, silently. `rules-data.js` fails on any such target in
   any pack, so a new target reaches the app before the packs carry it.
+- **No 5e-tools markup reaches a player.** `rules-data.js` fails on any `{#…}`, `{{…}}`, `{=…}` or
+  `{@…}` in any string of any file of any pack, and pins the template text of each family that
+  shipped the tag.
 - **One skill reader.** Species, class starting skills and multiclass skills all go through
   `_skill_profs()`. A second parser at a call site is how the Bard lost its skills.
 - **Anchors only when a sink is collecting.** With no sink, a table is dropped with no anchor: an
@@ -327,6 +358,18 @@ has no `DATA_VERSIONS` entry.
   Only `effects` moved. Guard: `converter.py` runs the real shapes and both wordings,
   `rules-data.js` holds the reviewed list and fails on any target the app does not know, and
   `sheet.js` and `char-update.js` read the painted numbers.
+- **Half a Stone of Good Luck (#79).** The converter read `bonusSavingThrow` and never
+  `bonusAbilityCheck` or `bonusProficiencyBonus`, so the stone's +1 to saves applied and its +1 to
+  checks did not, and the Ioun Stone of Mastery changed no number; the app had no target for every
+  ability check anyway. Two items; only `effects` moved. Guard: `converter.py` runs the real shapes
+  and the wordings the reader must not misread, `rules-data.js` holds the reviewed list, and
+  `sheet.js` reads every painted number the stone should and should not move.
+- **A shared text shipped as its tag (#78).** `flatten()` had no branch for `{#itemEntry …}` and
+  `strip_tags()` reads only `{@…}`, so 54 items across two packs read "{#itemEntry Ring of
+  Resistance|XDMG}" as their whole text, a Dragon Scale Mail's after its armor line. #76 found the
+  templates and read them for the bonus alone. Only `description` moved. Guard: `converter.py` runs
+  the real shapes and the three ways a template can fail, and `rules-data.js` fails on any template
+  or tag text in any pack.
 - **A tagline as a description.** `_sub_blurb()` takes a subclass's first paragraph over 40
   characters; eight 2024 italic taglines are 41+ and shipped as the whole description. It now skips
   a paragraph that is only `{@i …}`.
@@ -376,7 +419,10 @@ has no `DATA_VERSIONS` entry.
 | A bonus no sentence states (#76) | Not an effect, and a `note:` naming it | An effect: the one case in the packs, the Teeth of Dahlver-Nar, is one tooth's row among twenty |
 | Bracers of Defense, whose +2 needs no armor and no shield (#76) | Prose, like any conditional bonus | A standing `ac` effect: +2 in plate. A scoped target the sheet can test (`armorAC()` knows armor and shields), like `attack.ranged`: new app code for one pack item. Owner may revisit |
 | The Quarterstaff's once-per-rest Reaction as a tracked use (#76) | No; it stays in the description | `uses` on the item: no pack item carries any, 5e-tools has no field for a per-rest property, and one pool per item cannot hold the staff's several properties |
-| Where a `{#itemEntry}` template's text is read (#76) | For the bonus reading only; the description keeps the tag | Resolving it into the description too: a separate fix to 54 items' prose, not this one's |
+| Where a `{#itemEntry}` template's text goes (#78) | Into the description, expanded before `flatten()` and filled from the item as 5e-tools renders it; the bonus reader reads that same text | For the bonus reading only (#76): 54 items kept the tag as their text. A table of the texts in `convert.py`: 5e-tools defines them, and a copy goes stale silently |
+| A template or placeholder that does not resolve (#78) | Printed as it stands, counted with its items, and a `WARNING` at the end of every run | Dropping it: the text would vanish without a word. Failing the run: as for cells and nodes |
+| Which ignored item fields become effects (#79) | `bonusAbilityCheck` (`check`) and `bonusProficiencyBonus` (`profBonus`), through the sentence reader; `ability` and `modifySpeed` stay prose | A flat `ability.*` +2 for the capped Ioun Stones and Belt of Dwarvenkind: overshoots a score of 19 or 20. A `speed` effect for `modifySpeed`: every pack case multiplies, sets, copies or is another mode. Owner may revisit |
+| How `{{getFullImmRes item.resist}}` prints (#78) | Title-cased, "Acid", as the 2024 templates call it and the 2024 book prints damage types; a raw `{{item.resist}}` prints as the item has it, "acid" (Tasha's) | One casing for both: each template states which it wants |
 | An item's spell attack and spell save DC bonus (#77) | `spell.attack` / `spell.dc` effects through the same sentence reader, a named class not counting as a condition | Prose: 28 items, all standing, would do nothing. `attack`: reaches weapon rows. See [Computed stats & effects](../architecture/computed-stats-and-effects.md) for the class-limited case |
 
 ## Open
@@ -386,13 +432,9 @@ has no `DATA_VERSIONS` entry.
   dump: the XPHB groups are Eldritch Knight's and Arcane Trickster's spell counts, which it would
   skip, and Psi Warrior's and Soulknife's die size and number, which their prose "Energy Dice"
   tables already carry. It would miss a new one.
-- **`{#itemEntry …}` prints as the tag.** 54 pack items (core: 10 Dragon Scale Mails, 14 Ioun
-  Stones, 10 Potions and 10 Rings of Resistance; Tasha's: 10 Absorbing Tattoos) embed a shared template that `flatten()` passes through as
-  text, so their description reads "{#itemEntry Dragon Scale Mail|XDMG}" where the book's text
-  belongs. `_item_bonus_text()` reads the template for the bonus only. Seen during #76.
-- **`bonusAbilityCheck` and `bonusProficiencyBonus` are not read.** Stone of Good Luck's +1 to
-  ability checks and the Ioun Stone of Mastery's +1 proficiency bonus (a `profBonus` target exists)
-  reach nothing. Seen during #76.
+- **Item ability scores and speeds stay prose.** 5e-tools' `ability` (29 core items: the Belts of
+  Giant Strength, six Ioun Stones, the Manuals and Tomes…) and `modifySpeed` (11 core, and Tasha's
+  Teeth of Dahlver-Nar) are not read; none is a flat bonus an effect can hold (#79).
 - **Only item statblocks resolve.** Another tag (creature, hazard…) keeps its name and warns. None
   reaches the converter in the v2.36.1 dump, and a single subcommand other than `items` has no item
   index at all, so `classes` alone warns once for the Soulknife.
@@ -431,3 +473,5 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-28 — Finesse is asked before "ranged?": the Dart attacks with `finesse`; one line of `items.json` moved. → ledger L4466, #75
 - 2026-09-28 — An item's AC or saving-throw bonus is an effect only when its sentence states it standing (`_bonus_reading()`); five conditional ones stay prose, each printed as a `note:`; only `effects` moved, on five items in two packs. → ledger L4502, #76
 - 2026-09-28 — `bonusSpellAttack` and `bonusSpellSaveDc` become `spell.attack` / `spell.dc` effects; only `effects` moved, on 28 items in two packs. → ledger L4568, #77
+- 2026-09-29 — `{#itemEntry}` templates are written into the description (`_expand_item_entries()`), filled from the item; an unresolved one is a `WARNING`; only `description` moved, on 54 items in two packs. → ledger L4634, #78
+- 2026-09-29 — `bonusAbilityCheck` and `bonusProficiencyBonus` become `check` / `profBonus` effects; only `effects` moved, on two core items. → ledger L4689, #79

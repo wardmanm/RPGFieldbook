@@ -412,7 +412,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Absorbing Tattoo|TCE}",
+      "description": "Produced by a special needle, this magic tattoo features designs that emphasize one color (green).\nTattoo Attunement: To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin. If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space.\nDamage Resistance: While the tattoo is on your skin, you have resistance to acid damage.\nDamage Absorption: When you take acid damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn",
       "effects": []
     },
     {
@@ -572,7 +572,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Absorbing Tattoo|TCE}",
+      "description": "Produced by a special needle, this magic tattoo features designs that emphasize one color (blue).\nTattoo Attunement: To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin. If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space.\nDamage Resistance: While the tattoo is on your skin, you have resistance to cold damage.\nDamage Absorption: When you take cold damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn",
       "effects": []
     },
     {
@@ -739,7 +739,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Absorbing Tattoo|TCE}",
+      "description": "Produced by a special needle, this magic tattoo features designs that emphasize one color (red).\nTattoo Attunement: To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin. If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space.\nDamage Resistance: While the tattoo is on your skin, you have resistance to fire damage.\nDamage Absorption: When you take fire damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn",
       "effects": []
     },
     {
@@ -749,7 +749,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Absorbing Tattoo|TCE}",
+      "description": "Produced by a special needle, this magic tattoo features designs that emphasize one color (white).\nTattoo Attunement: To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin. If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space.\nDamage Resistance: While the tattoo is on your skin, you have resistance to force damage.\nDamage Absorption: When you take force damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn",
       "effects": []
     },
     {
@@ -836,7 +836,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Absorbing Tattoo|TCE}",
+      "description": "Produced by a special needle, this magic tattoo features designs that emphasize one color (yellow).\nTattoo Attunement: To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin. If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space.\nDamage Resistance: While the tattoo is on your skin, you have resistance to lightning damage.\nDamage Absorption: When you take lightning damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn",
       "effects": []
     },
     {
@@ -900,7 +900,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Absorbing Tattoo|TCE}",
+      "description": "Produced by a special needle, this magic tattoo features designs that emphasize one color (black).\nTattoo Attunement: To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin. If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space.\nDamage Resistance: While the tattoo is on your skin, you have resistance to necrotic damage.\nDamage Absorption: When you take necrotic damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn",
       "effects": []
     },
     {
@@ -982,7 +982,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Absorbing Tattoo|TCE}",
+      "description": "Produced by a special needle, this magic tattoo features designs that emphasize one color (violet).\nTattoo Attunement: To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin. If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space.\nDamage Resistance: While the tattoo is on your skin, you have resistance to poison damage.\nDamage Absorption: When you take poison damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn",
       "effects": []
     },
     {
@@ -1013,7 +1013,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Absorbing Tattoo|TCE}",
+      "description": "Produced by a special needle, this magic tattoo features designs that emphasize one color (silver).\nTattoo Attunement: To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin. If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space.\nDamage Resistance: While the tattoo is on your skin, you have resistance to psychic damage.\nDamage Absorption: When you take psychic damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn",
       "effects": []
     },
     {
@@ -1023,7 +1023,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Absorbing Tattoo|TCE}",
+      "description": "Produced by a special needle, this magic tattoo features designs that emphasize one color (gold).\nTattoo Attunement: To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin. If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space.\nDamage Resistance: While the tattoo is on your skin, you have resistance to radiant damage.\nDamage Absorption: When you take radiant damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn",
       "effects": []
     },
     {
@@ -1135,7 +1135,7 @@
       "type": "Wondrous Item",
       "rarity": "Very Rare",
       "attune": true,
-      "description": "{#itemEntry Absorbing Tattoo|TCE}",
+      "description": "Produced by a special needle, this magic tattoo features designs that emphasize one color (orange).\nTattoo Attunement: To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin. If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space.\nDamage Resistance: While the tattoo is on your skin, you have resistance to thunder damage.\nDamage Absorption: When you take thunder damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn",
       "effects": []
     }
   ]

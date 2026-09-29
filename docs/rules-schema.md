@@ -161,6 +161,7 @@ Removing the source (unequip, remove ancestry, etc.) reverts its effects automat
 | `ability.<abbr>` | Ability **score** (e.g. `ability.str`) |
 | `save.<abbr>` | Saving throw bonus (e.g. `save.con`) |
 | `skill.<key>` | Skill bonus (e.g. `skill.stealth`) |
+| `check` | Every ability check: each skill, Initiative and Passive Perception (not the ability modifier, not saves) |
 
 > Effects express **numeric** changes only. Non-numeric rules ("advantage on Stealth",
 > "resistance to fire") belong in the `description` text.

@@ -597,6 +597,93 @@ ck('R7 ...and a stamped one round-trips',
   X.resetRules();
 }
 
+/* #78 — 54 items shipped "{#itemEntry Ring of Resistance|XDMG}" as their whole
+   description, the 5e-tools template tag unexpanded. A sheet's copy keeps the tag
+   until the rules-update tool rewrites it: `description` changed, ticked when
+   untouched, and applying it writes the book's text under the finder's meta line
+   and nothing else. The "new" entries are the shipped ones, so this fails until
+   the packs are fixed; the "old" ones are those entries with the tag back. */
+{
+  const read=(dir,name)=>JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data',dir,'items-magic.json'),'utf8')).items.find(x=>x.name===name);
+  const ringNew=read('5e2024','Ring of Acid Resistance'), dsmNew=read('5e2024','Black Dragon Scale Mail');
+  const oldOf=(d,tag)=>Object.assign(JSON.parse(JSON.stringify(d)),{description:tag});
+  const ringOld=oldOf(ringNew,'{#itemEntry Ring of Resistance|XDMG}');
+  const dsmOld=oldOf(dsmNew,'AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}');
+  const load=(...defs)=>{ X.resetRules(); X.mergeRules({system:'XPHB',items:defs.map(d=>JSON.parse(JSON.stringify(d)))},'5e.json'); };
+  load(ringOld,dsmOld);
+  const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.abilities.dex=14; ch.level=1;
+  X.character=ch; X.activeId=ch.id;
+  X.addLibraryItems(X.rules.items.slice(),null,null,1);
+  const ring=ch.inventory.find(i=>i.name==='Ring of Acid Resistance'), dsm=ch.inventory.find(i=>i.name==='Black Dragon Scale Mail');
+  ck('#78 an old sheet shows the bug: the ring\'s text is the template tag',
+     !!ring&&/\{#itemEntry Ring of Resistance\|XDMG\}$/.test(ring.description), ring&&ring.description);
+  ring.equipped=true; ring.qty=2; ring.fav=true; dsm.equipped=true;
+  const acBefore=(()=>{const c=X.contributions();return X.armorAC(c).base+X.sumFx('ac',c);})();
+  load(ringNew,dsmNew);
+  const rows=X.diffCharacter().rows.filter(r=>r.name==='Ring of Acid Resistance'||r.name==='Black Dragon Scale Mail');
+  ck('#78 the fixed pack offers both, each as one changed row: description, and nothing else',
+     rows.length===2&&rows.every(r=>r.type==='changed'&&r.fields.join()==='description'), X.diffCharacter().rows.map(r=>r.name+':'+r.fields));
+  ck('#78 ...ticked, since nobody edited the copies', rows.length===2&&rows.every(r=>r.apply===true&&r.edited===false),
+     rows.map(r=>[r.apply,r.edited]));
+  X.applyUpdates(rows);
+  ck('#78 applying it writes the book\'s text under the finder\'s meta line',
+     ring.description==='Ring · Rare\nYou have Resistance to Acid damage while wearing this ring. The ring is set with pearl',
+     ring.description);
+  ck('#78 ...the Dragon Scale Mail\'s too, its +1 AC unchanged',
+     /\nAC 14 \+ Dex modifier \(max 2\)[^\n]*Scale Mail\. Dragon Scale Mail is made of/.test(dsm.description)
+     &&dsm.description.includes('Resistance to Acid damage')&&!dsm.description.includes('{#')
+     &&(()=>{const c=X.contributions();return X.armorAC(c).base+X.sumFx('ac',c);})()===acBefore, [dsm.description.slice(0,200),acBefore]);
+  ck('#78 ...touches none of the player\'s numbers', ring.equipped===true&&ring.qty===2&&ring.fav===true, ring);
+  ck('#78 ...and nothing is offered again', !X.diffCharacter().rows.some(r=>r.name==='Ring of Acid Resistance'),
+     X.diffCharacter().rows.map(r=>r.name+':'+r.fields));
+  load(ringOld);
+  const old=X.blankChar(); X.character=old; X.addLibraryItems(X.rules.items.slice(),null,null,1);
+  const m=X.migrate(JSON.parse(JSON.stringify(old)));
+  ck('#78 migrate() leaves the tag on a saved copy', /\{#itemEntry/.test(m.inventory[0].description), m.inventory[0].description);
+  X.resetRules();
+}
+
+/* #79 — the Stone of Good Luck's +1 to ability checks and the Ioun Stone of
+   Mastery's +1 proficiency bonus reached no number. A sheet's copies carry the
+   old effects (the stone's six saves only; the Ioun Stone none) until the
+   rules-update tool rewrites them: `effects` changed, ticked when untouched, and
+   applying it raises a skill and the proficiency bonus and touches nothing the
+   player owns. The "new" entries are the shipped ones, so this fails until the
+   pack carries the effects; the "old" ones are those entries without them. */
+{
+  const read=name=>JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','5e2024','items-magic.json'),'utf8')).items.find(x=>x.name===name);
+  const stoneNew=read('Stone of Good Luck'), iounNew=read('Ioun Stone, Mastery');
+  const strip=d=>Object.assign(JSON.parse(JSON.stringify(d)),{effects:(d.effects||[]).filter(e=>e.target!=='check'&&e.target!=='profBonus')});
+  const load=(...defs)=>{ X.resetRules(); X.mergeRules({system:'XPHB',items:defs.map(d=>JSON.parse(JSON.stringify(d)))},'5e.json'); };
+  load(strip(stoneNew),strip(iounNew));
+  const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.level=1; ch.abilities.wis=16; ch.spellAbility='wis';
+  X.character=ch; X.activeId=ch.id;
+  X.addLibraryItems(X.rules.items.slice(),null,null,1);
+  ch.inventory.forEach(i=>{i.equipped=true;i.fav=true;});
+  const pb=()=>{const c=X.contributions();return 2+X.sumFx('profBonus',c);};
+  const checkFx=()=>X.sumFx('check',X.contributions());
+  ck('#79 an old sheet: both worn, no check bonus and PB +2, DC 13',
+     ch.inventory.length===2&&checkFx()===0&&pb()===2&&X.spellDC()===13, [checkFx(),pb(),X.spellDC()]);
+  load(stoneNew,iounNew);
+  const rows=X.diffCharacter().rows.filter(r=>r.name==='Stone of Good Luck'||r.name==='Ioun Stone, Mastery');
+  ck('#79 the fixed pack offers both, each as one changed row: effects, and nothing else',
+     rows.length===2&&rows.every(r=>r.type==='changed'&&r.fields.join()==='effects'), X.diffCharacter().rows.map(r=>r.name+':'+r.fields));
+  ck('#79 ...ticked, since nobody edited the copies', rows.length===2&&rows.every(r=>r.apply===true&&r.edited===false),
+     rows.map(r=>[r.apply,r.edited]));
+  X.applyUpdates(rows);
+  const stone=ch.inventory.find(i=>i.name==='Stone of Good Luck');
+  ck('#79 applying them gives +1 to ability checks and PB +3, so DC 14',
+     checkFx()===1&&pb()===3&&X.spellDC()===14, [checkFx(),pb(),X.spellDC()]);
+  ck('#79 ...the stone keeps its six saving-throw bonuses', stone.effects.filter(e=>/^save\./.test(e.target)).length===6, stone.effects);
+  ck('#79 ...and touches none of the player\'s numbers', ch.inventory.every(i=>i.equipped&&i.fav&&i.qty===1), ch.inventory);
+  load(strip(stoneNew),strip(iounNew));
+  const old=X.blankChar(); X.character=old; X.addLibraryItems(X.rules.items.slice(),null,null,1);
+  const m=X.migrate(JSON.parse(JSON.stringify(old)));
+  ck('#79 migrate() adds nothing to a saved copy',
+     m.inventory.every(i=>!(i.effects||[]).some(e=>e.target==='check'||e.target==='profBonus')), m.inventory.map(i=>i.effects));
+  X.resetRules();
+}
+
 // R3 — multiclass: two classes granting a same-named trait
 c=setup();
 X.mergeRules({system:'XPHB',classes:[

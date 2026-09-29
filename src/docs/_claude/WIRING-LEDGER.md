@@ -4630,3 +4630,125 @@ is summed by nothing, silently), and the two card numbers are tappable; five fai
 [computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
 [spells](../wiki/features/spells.md), [attacks & damage](../wiki/features/attacks-and-damage.md),
 [converter](../wiki/data/converter.md), [rules-update tool](../wiki/features/rules-update-tool.md).
+
+## Items' shared text templates are written out (#78, 2026-09-29)
+
+**Root cause.** 5e-tools shares one text among a family of items. The item's entries carry
+`{#itemEntry Name|SRC}`, `items-base.json`'s `itemEntry` list holds the template, and its
+`{{item.resist}}`, `{{getFullImmRes item.resist}}` and `{{item.detail1}}` are filled from the item's
+own fields. `flatten()` had no branch for the tag and `strip_tags()` reads only `{@…}`, so it
+passed through as text: 54 pack items read "{#itemEntry Ring of Resistance|XDMG}" where the book's
+text belongs. #76 had already put the templates in the item index, but read them for the bonus only.
+
+**The fix.** Before `flatten()`, `_expand_item_entries()` replaces every entry that is the tag with
+the template's entries, looked up by name and source (no source means the DMG's, as in 5e-tools),
+and `_fill_template()` fills every string in them from the item: `{{item.resist}}` and
+`{{item.detail1}}` as the item has them ("acid", "pearl"), `{{getFullImmRes item.resist}}`
+title-cased the way the 2024 templates call it ("Acid"). A template's named entries (Tasha's
+"Tattoo Attunement", "Damage Resistance", "Damage Absorption") read "Name: text" like any other.
+An embedded item statblock (`_item_traits()`) takes the same path. `_item_bonus_text()` and its
+helper are gone: `_bonus_reading()` reads the description as written, which now holds the template
+text, and the ten Dragon Scale Mails' +1 AC is read from it unchanged.
+
+**Never quiet.** A tag the index has no template for, a placeholder the item has no value for, and
+any template text `flatten()` still prints (a tag inside a sentence) are printed as they stand,
+recorded in `_TEMPLATE_MISSES` with their items, and `_template_miss_warnings()` reports each as a
+`WARNING` at the end of `all`, `supplement` and every single subcommand. `_write()` now counts `{#`
+and `{{` left in a file among its "unresolved tags", as it did `{@`. The v2.36.1 dump reports none.
+
+**Other template syntax, enumerated.** Across every dump file the converter reads, the only other
+`{{…}}` are the Dragonborn `_versions` in `races.json` (`{{color}}`, `{{damageType}}`, which
+`_version_subraces()` already fills), `{{spellcasting_mod}}` in a `spells-tce.json` scaling field
+the converter does not read, and `items-base.json`'s property display templates, likewise unread.
+`{=…}` lives in `magicvariants.json` and `recipes.json`, neither converted. Before the fix the 54
+tags were the only template text in any pack; now there is none.
+
+**Data.** Only `description` moved, on exactly those 54 items: `data/5e2024/items-magic.json` 44
+(ten Dragon Scale Mails, 14 Ioun Stones, ten Potions and ten Rings of Resistance) and
+`data/tashas/items-magic.json` 10 (the Absorbing Tattoos). Names, order, key order, effects and
+every other field unchanged, checked item by item; every other file of the three packs regenerates
+byte for byte; Xanathar's has none. No UNRELEASED bullet: converter and data only.
+
+**Existing characters** hold copies. `description` is in `UPD_FIELDS.item`, so the rules-update tool
+offers each stamped copy as "description changed", ticked when unedited; applying writes the
+book's text (under the finder's meta line, for a copy added through the finder) and nothing else.
+Effects, equipped, qty and fav are untouched, so a Dragon Scale Mail keeps its AC. `migrate()`
+changes nothing; an edited copy is offered unticked.
+
+**Guards.** `converter.py` 318 → 341: real shapes from the dump (a Ring of Acid Resistance in both
+printings, a Potion of Fire Resistance, the Acid Absorbing Tattoo, the Ioun Stone of Mastery, the
+Black Dragon Scale Mail) read their templates exactly, an item statblock too, nothing warns; a
+missing template, a missing value and a tag mid-sentence are printed, counted and reported, and
+`items`, `all` and `supplement` each warn and write the text; 22 failed first. `rules-data.js` +9:
+no `{#…}`, `{{…}}`, `{=…}` or `{@…}` in any string of any file of any pack, and seven pinned
+texts; eight failed first. `char-update.js` +8: an old sheet's ring and mail are offered as
+`description` only, ticked, and applying gives the book's text under the meta line with AC
+unchanged; `migrate()` leaves the tag; four failed first. Pages:
+[converter](../wiki/data/converter.md), [rules-update tool](../wiki/features/rules-update-tool.md).
+
+## Stone of Good Luck and Ioun Stone of Mastery bonuses apply (#79, 2026-09-29)
+
+**Root cause, two halves.** The converter never read 5e-tools' `bonusAbilityCheck` or
+`bonusProficiencyBonus`, so the Stone of Good Luck carried only its saving-throw half (six `save.*`
++1) and the Ioun Stone of Mastery no effect at all; and the app had no target for "every ability
+check", only one `skill.<k>` per skill. `profBonus` already existed and `pbValue()` already fed every
+consumer (saves, skills, attacks, spell DC and attack, passive Perception, print).
+
+**Enumerated.** In the three packs `bonusAbilityCheck` is on the Stone of Good Luck alone and
+`bonusProficiencyBonus` on the Ioun Stone of Mastery alone (the dump's others are the 2014 printings
+and the Stone of Ill Luck's −2, none converted). Both read standing through #76's sentence reader:
+"While this polished agate is on your person, you gain a +1 bonus to ability checks and saving
+throws"; "Your Proficiency Bonus increases by 1 while this pale green prism orbits your head". The
+reader gains two phrases: "+N bonus to … ability checks" alone or in a list, never one named check
+("Wisdom (Perception) checks") and never checks narrowed to a tool or use ("… made with thieves'
+tools"); and "Proficiency Bonus … increases by N". Other fields the converter ignores, seen and left:
+`bonusSavingThrowConcentration` (no pack item); `ability`, on 29 core items, is either `static`
+(Belts of Giant Strength, Gauntlets of Ogre Power, Headband of Intellect, Amulet of Health, the
+Giant Strength potions: the score *becomes* N, not an addition), a +2 "to a maximum of 20" (six
+Ioun Stones, Belt of Dwarvenkind: a cap no flat effect can hold), a permanent +2 to score and
+maximum (the Manuals and Tomes: read once, typed into the base score), or a choice (Deck of Many
+Things); `modifySpeed`, on 11 core items and Tasha's Teeth of Dahlver-Nar, multiplies, sets or
+copies walking speed or grants another mode (Boots of Speed, Boots of Striding and Springing, Winged
+Boots…), none a flat walking bonus. All stay prose, as before.
+
+**A `check` target.** `fxTargets()` gains "Ability checks" (`check`). `recompute()` adds it to every
+skill total and marks each, to initiative (a Dexterity check, typed or derived) and to passive
+Perception (10 + the Perception check); not to an ability modifier, which attacks, saves, AC and
+spell DCs also read, and not to saves, which the stone raises through its own `save.*`.
+`openStatBreakdown()` lists it by source, "Stone of Good Luck (ability checks)", on a skill and on
+initiative, and on an ability as what a plain check with that score alone adds, apart from the
+score. Print reads the painted numbers, so it follows. Expressing the stone as 18 `skill.*` and an
+`init` effect instead was rejected: 25 chips on one item, no way to name a plain ability check, and
+nothing a player could add for "+1 to all checks" in one row.
+
+**The proficiency bonus box** is marked `.fx-on` when a `profBonus` effect applies, like every other
+effect-touched number, and carries `data-stat="profBonus"`, so a tap opens its breakdown: "Level N:
++2" and each contribution by source. Until now no pack item raised it.
+
+**Data.** Only `effects` moved, on two items in `data/5e2024/items-magic.json`: the Stone of Good
+Luck gains `check` +1 after its six saves, the Ioun Stone of Mastery `[]` → `profBonus` +1. Every
+other file of the three packs regenerates byte for byte. `data/overlay.json`'s `_comment` lists
+the effect targets again in full (it had missed `spell.attack`/`spell.dc` since #77); it is not in a
+system folder, so no pack's data version moves.
+
+**Existing characters** hold copies. `effects` is in `UPD_FIELDS.item`, so the rules-update tool
+offers each as "effects changed", ticked when unedited; applying writes the new `effects` and
+nothing else: a WIS 16 level-1 caster wearing both goes from no check bonus, PB +2 and DC 13 to +1
+on every check, PB +3 and DC 14, the stone keeps its six saves, and equipped, qty and fav are
+untouched. `migrate()` changes nothing. An older app given the new pack sums no `check` and shows
+the chip as its raw name. One UNRELEASED bullet.
+
+**Guards.** `converter.py` 341 → 352: the real Stone of Good Luck and Ioun Stone of Mastery, the
+reader on both wordings and on one named check, a tool-narrowed check and two "until"s, and the
+Stone of Ill Luck's penalty kept in prose and noted; nine failed first (one the #76 check whose
+expected effects the stone now extends). `sheet.js` +22, off the ids `recompute()` paints: the
+shipped stone worn raises all 18 skills, initiative (typed or not) and passive Perception by 1 and
+marks them, each save by 1 (not 2), and moves no modifier, PB, AC, spell number or attack; the
+three breakdowns name it; the Ioun Stone makes PB +3, marked, and everything proficient follows
+while nothing else does; 11 failed first. `rules-data.js` +4: the reviewed list of `check` and
+`profBonus` effects over every file of every pack, `check` among `fxTargets()`, and the PB box
+tappable; three failed first. `char-update.js` +7: the fix is offered as exactly `effects`,
+ticked, applying gives check +1 and PB +3; three failed first. Pages:
+[computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
+[abilities & skills](../wiki/features/abilities-and-skills.md), [converter](../wiki/data/converter.md),
+[rules-update tool](../wiki/features/rules-update-tool.md).
