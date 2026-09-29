@@ -932,9 +932,9 @@ X.mergeRules({system: 'XPHB', races: [{name: 'Elf'}, {name: 'Orc'}], spells: [{n
 ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCount());
 
 // ---------- section notes: the registry IS the contract
-// NOTE_SECTIONS drives the icon injection, the Notes tab's grouping and its
-// headings. If it and the template disagree, a section silently loses its icon
-// or a note becomes unreachable — with no error either way.
+// NOTE_SECTIONS drives the icon injection, the Section Notes card's grouping and
+// its headings. If it and the template disagree, a section silently loses its
+// icon or a note becomes unreachable — with no error either way.
 {
   const t = loadHTML();
   const inTemplate = (t.match(/data-note="([a-z]+)"/g) || []).map(s => s.slice(11, -1));
@@ -942,7 +942,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the registry has 19 sections', X.NOTE_SECTIONS.length === 19, X.NOTE_SECTIONS.length);
   ck('every section id is unique',
      new Set(X.NOTE_SECTIONS.map(s => s.k)).size === X.NOTE_SECTIONS.length);
-  ck('every section names a tab the Notes tab can group under',
+  ck('every section names a tab the Section Notes card can group under',
      X.NOTE_SECTIONS.every(s => s.tab in X.NOTE_TABS),
      X.NOTE_SECTIONS.filter(s => !(s.tab in X.NOTE_TABS)).map(s => s.k));
   // both directions — a registry entry with no card, and a card with no entry
@@ -1037,7 +1037,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   X.saveNote('vitals', 'Changed.');
   ck('an edit keeps the original created time', X.getNote('vitals').at === at0);
 
-  // blank means gone — otherwise the Notes tab lists empty entries forever
+  // blank means gone — otherwise the Section Notes card lists empty entries forever
   X.saveNote('vitals', '   \n  ');
   ck('saving whitespace deletes the note', X.getNote('vitals') === null && !X.hasNote('vitals'));
 

@@ -8,8 +8,8 @@
    and predates this. This feature stores `character.secNotes`. */
 
 /* The registry is the single source of truth: it drives the icon injection, the
-   Notes tab's grouping and headings, and a test that checks it against the
-   template both ways. `k` is a stable id — never derive one from a heading,
+   Section Notes card's grouping and headings, and a test that checks it against
+   the template both ways. `k` is a stable id — never derive one from a heading,
    because headings get reworded and the notes would be orphaned. */
 const NOTE_SECTIONS=[
   {k:"portrait",     tab:"sheet",     title:"Portrait"},
@@ -35,8 +35,8 @@ const NOTE_SECTIONS=[
 const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Story"};
 function noteDef(k){return NOTE_SECTIONS.find(s=>s.k===k)||null;}
 /* The ancestry heading is skin-dependent — "Race" on the classic skin — so the
-   Notes tab has to ask rather than quote the registry, or it would disagree with
-   the card it links to. */
+   Section Notes card has to ask rather than quote the registry, or it would
+   disagree with the card it links to. */
 function noteTitle(def){return (def&&def.k==="origin")?(raceTerm()+" & Background"):(def?def.title:"");}
 
 /* ---- storage, guarded ----
@@ -49,7 +49,7 @@ function noteText(k){const n=getNote(k);return n?String(n.text||""):"";}
 function hasNote(k){return !!noteText(k).trim();}
 function noteCount(tab){return NOTE_SECTIONS.filter(s=>s.tab===tab&&hasNote(s.k)).length;}
 /* Blank means no note: saving an empty box DELETES the entry, so "has a note" is
-   one truth test and the Notes tab can never list an empty one.
+   one truth test and the Section Notes card can never list an empty one.
    `at` is set once and survives every edit; `editedAt` only moves when the text
    actually changed, so re-saving without typing doesn't fake activity. */
 function saveNote(k,text){
@@ -151,7 +151,7 @@ function noteHTML(text){
     while(i<lines.length&&lines[i].trim()&&!starts(lines[i])){ls.push(lines[i]);i++;}
     /* ONE highlight() call per block, not per line: highlight() rebuilds the
        glossary list, sorts it and compiles a fresh RegExp every time, and the
-       Notes tab can render nineteen of these at once. */
+       Section Notes card can render nineteen of these at once. */
     out.push(`<p>${noteInline(ls.join(NOTE_LB))}</p>`);
   }
   return out.join("");
@@ -233,7 +233,7 @@ function renderNoteIcons(){
   });
 }
 
-/* ================= the Notes tab ================= */
+/* ================= the Section Notes card ================= */
 function noteGroupOpen(tab){
   const c=(character&&character.noteCollapse&&typeof character.noteCollapse==="object"&&!Array.isArray(character.noteCollapse))?character.noteCollapse:{};
   return !c[tab];

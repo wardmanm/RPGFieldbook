@@ -2614,7 +2614,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     run('Hit Dice from a pack\'s hit die (' + s + ')', () => ctx.renderHitDice());
   });
   run('Story fields and Proficiencies (glossary chips)', () => ctx.renderAllRT());
-  run('the Notes tab', () => ctx.renderNotes());
+  run('the Section Notes card', () => ctx.renderNotes());
   run('the Coins card', () => ctx.renderCoins());
   run('the print sheet', () => ctx.printSheet());
   run('a glossary entry of the character\'s own', () => ctx.openGlossView(C().glossary[0]));
@@ -2702,7 +2702,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const stHtml = renders('Statuses (a status named after a keyword, one named 7, one with no name)', () => ctx.renderStatuses());
   ck('#71 a status named after a keyword is still a chip', /data-gid="kw1"[^>]*>Grappled</.test(stHtml), stHtml.slice(0, 400));
   renders('Story fields and Proficiencies', () => ctx.renderAllRT());
-  renders('the Notes tab', () => ctx.renderNotes());
+  renders('the Section Notes card', () => ctx.renderNotes());
   renders('the Rules tab section counts', () => ctx.renderRulesSections());
   const gl = renders('the Rules tab glossary', () => ctx.renderGloss());
   ck('#71 the player\'s entry with no term is still listed, so it can be fixed',
