@@ -113,6 +113,19 @@ html[data-theme="dark"] .tbtn.primary{color:#20160a}
 .tbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
 .savestate{font-family:var(--head);font-size:11px;letter-spacing:.06em;color:var(--ink-soft);min-width:70px;text-align:right}
 .savestate.on{color:var(--accent)}
+.savestate.bad{color:var(--brick);font-weight:700}
+/* A write the browser refused (#81). Fixed to the foot of the window so it shows
+   on every tab without fighting the sticky tab bar or the combat header. The
+   body makes room for it and a toast rises above it. The body's class is
+   .saving-failed, NOT .save-warn, which would pull the strip's own rule onto
+   the body. */
+.save-warn{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;
+  padding:10px clamp(10px,3vw,22px) calc(10px + env(safe-area-inset-bottom));background:var(--paper);color:var(--ink);
+  border-top:3px solid var(--brick);box-shadow:0 -6px 20px rgba(0,0,0,.18);font-family:var(--body);font-size:15px}
+.save-warn[hidden]{display:none}
+.save-warn>span{flex:1 1 240px;min-width:0}
+body.saving-failed{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+body.saving-failed .toast{bottom:130px}
 .verbtn{align-self:center;margin-right:auto;font-family:var(--head);font-size:10px;letter-spacing:.06em;color:var(--ink-soft);background:none;border:1px solid var(--hair);border-radius:20px;padding:2px 9px;cursor:pointer}
 .verbtn:hover{color:var(--accent);border-color:var(--accent)}
 /* Takes over the version button's slot — same margin-right:auto, so it sits
@@ -969,6 +982,54 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .cv-grip:hover,.cv-grip:focus-visible{color:var(--accent-2)}
 .cv-grip:active{cursor:grabbing}
 .cv-dragging{box-shadow:0 16px 36px rgba(0,0,0,.30);outline:2px dashed var(--accent);outline-offset:3px}
+/* ================= the Journal tab =================
+   Only theme tokens. The page list reuses .fgroup/.fghead for its tag groups,
+   and a page renders through .n-body, the section notes' styles, so the two
+   read the same. */
+.jnl-entry{position:relative;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;width:100%;text-align:left;
+  background:var(--field);border:0;border-radius:8px;padding:9px 12px;margin-bottom:7px;cursor:pointer;font:inherit;color:var(--ink)}
+.jnl-entry::before{content:"";position:absolute;inset:1px;border:2px solid var(--line);border-radius:9px;pointer-events:none;opacity:.85}
+.jnl-entry:hover::before,.jnl-entry:focus-visible::before{border-color:var(--accent-2);opacity:1}
+.jnl-entry>*{position:relative}
+.jnl-title{font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.02em;flex:1;min-width:0;overflow-wrap:anywhere}
+.jnl-when{font-family:var(--head);font-size:11px;color:var(--ink-soft);flex:none}
+.jnl-snip{flex-basis:100%;font-size:14px;color:var(--ink-soft);overflow-wrap:anywhere}
+.jnl-snip mark{background:color-mix(in srgb,var(--accent) 38%,transparent);color:var(--ink);border-radius:3px;padding:0 1px}
+/* while searching the headers are plain text: every group is held open */
+.fghead.jnl-static{cursor:default}
+.jnl-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.jnl-bar .grow{flex:1}
+.jnl-edlbl{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.jnl-h{font-family:var(--head);font-weight:800;font-size:20px;letter-spacing:.02em;margin:0 0 4px;overflow-wrap:anywhere}
+.jnl-h:focus{outline:none}
+.jnl-h:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+.jnl-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.jnl-tag{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.jnl-tools{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 8px}
+/* ---- trackers ---- rows share the resource rows' −/+ buttons (.res-btn) */
+.trk{padding:8px 2px;border-bottom:1px dotted var(--hair)}
+.trk-group>.trk:last-child{border-bottom:0}
+.trk-top{display:flex;align-items:center;gap:8px}
+.trk-name{font-weight:700;flex:1;min-width:0;overflow-wrap:anywhere}
+.trk-prog{font-family:var(--head);font-size:12px;font-weight:700;color:var(--ink-soft);font-variant-numeric:tabular-nums;flex:none}
+.trk-ctl{display:flex;align-items:center;gap:8px;margin-top:6px}
+.trk-val{width:76px;min-height:34px;padding:4px 8px;text-align:center;font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+.trk-of{font-family:var(--head);font-size:12px;color:var(--ink-soft)}
+.trk-bar{height:6px;border-radius:99px;background:var(--field);border:1px solid var(--hair);overflow:hidden;margin-top:7px}
+.trk-bar>span{display:block;height:100%;background:var(--accent-2)}
+.trk-items{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+/* the tick: a real button, styled like the sheet's .equip box */
+.trk-tick{display:flex;align-items:flex-start;gap:8px;width:100%;text-align:left;background:none;border:0;padding:5px 2px;
+  cursor:pointer;font:inherit;color:var(--ink);border-radius:6px}
+.trk-tick:hover,.trk-tick:focus-visible{background:color-mix(in srgb,var(--accent-2) 10%,transparent)}
+.trk-tick .box{width:18px;height:18px;flex:none;border-radius:4px;border:2px solid var(--line);display:inline-grid;place-items:center;line-height:1;margin-top:2px}
+.trk-tick[aria-checked="true"] .box{background:var(--accent-2)}
+.trk-tick[aria-checked="true"] .box::after{content:"✓";color:#fff;font-size:12px;font-weight:700;line-height:1}
+.trk-tick[aria-checked="true"] .trk-it{text-decoration:line-through;color:var(--ink-soft)}
+/* a task: its name is the tick */
+.trk-top .trk-tick{flex:1;min-width:0;font-weight:700}
+.trk-closed .trk-name{color:var(--ink-soft)}
+.trk-done .fgname{color:var(--ink-soft)}
 /* ================= Modal ================= */
 .backdrop{position:fixed;inset:0;background:rgba(10,8,5,.62);backdrop-filter:blur(3px);
   display:none;align-items:center;justify-content:center;padding:14px;z-index:80}
@@ -1098,7 +1159,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
   <button class="tab" data-tab="spells" aria-label="Spells"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3l1.7 4.3L17 9l-4.3 1.7L11 15l-1.7-4.3L5 9l4.3-1.7z"/><path d="M18 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg><span class="tlbl">Spells</span></button>
   <button class="tab" data-tab="inventory" aria-label="Inventory"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5l9-4.5 9 4.5v9l-9 4.5-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/></svg><span class="tlbl">Inventory</span></button>
   <button class="tab" data-tab="story" aria-label="Story"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21z"/></svg><span class="tlbl">Story</span></button>
-  <button class="tab" data-tab="notes" aria-label="Notes"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg><span class="tlbl">Notes</span></button>
+  <button class="tab" data-tab="journal" aria-label="Journal"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="13" height="18" rx="1.5"/><path d="M4 7.5h4M4 12h4M4 16.5h4M10.5 8h5M10.5 12h5"/></svg><span class="tlbl">Journal</span></button>
   <button class="tab" data-tab="rules" aria-label="Rules"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/><path d="M9 8h6"/></svg><span class="tlbl">Rules</span></button>
   <!-- One pinned group: below 400px the bar scrolls sideways (10-chrome.css), and
        both of these must stay on screen. #btnCombat is painted by
@@ -1364,10 +1425,25 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
     </div>
   </section>
 
-  <!-- ============ NOTES TAB ============ -->
-  <!-- No data-note on this card: it collects notes, it doesn't take one. -->
-  <section class="tabpanel" id="tab-notes">
+  <!-- ============ JOURNAL TAB ============ -->
+  <!-- The player's own journal pages (87-journal.js), their trackers
+       (87-trackers.js), then the section notes gathered from every other tab
+       (87-notes.js). Only Trackers takes a section note (see it). -->
+  <section class="tabpanel" id="tab-journal">
     <div class="stack" style="max-width:820px;margin:0 auto">
+      <div class="card" id="journalCard">
+        <div class="label">Journal <button class="add" id="jnlNew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Page</button><span class="grow"></span></div>
+        <!-- the search belongs to the list: renderJournal() hides it on a page -->
+        <div id="jnlListBar"><div class="searchbox" style="margin-bottom:10px"><input id="jnlSearch" placeholder="Search your pages…" autocomplete="off"><button type="button" class="search-clear" aria-label="Clear the search" title="Clear">×</button></div></div>
+        <div id="jnlBody"></div>
+      </div>
+      <!-- The one card on this tab that takes a section note: registering it is what lets it be
+           added to the combat view (87-combat.js), to count mid-fight. renderTrackers() hides it
+           (display:none, never removed) when Settings > This character switches it off. -->
+      <div class="card" data-note="trackers" id="trackersCard">
+        <div class="label">Trackers <button class="add" id="addTracker"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Tracker</button><span class="grow"></span></div>
+        <div id="trkList"></div>
+      </div>
       <div class="card">
         <div class="label">Section Notes <span class="grow"></span></div>
         <p class="hint">Everything you've jotted against a section of your sheet, gathered here. Tap a heading to jump back to where it belongs.</p>
@@ -1375,7 +1451,6 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
       </div>
     </div>
   </section>
-
   <!-- ============ COMBAT TAB ============ -->
   <!-- Opened from the crossed swords in the tab bar; it has no word tab of its
        own. It owns only its header: the cards in #cvList are MOVED here from
@@ -1394,6 +1469,16 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
       </div>
     </div>
   </section>
+</div>
+
+<!-- A write the browser refused (#81): says so, and stays until one lands
+     (showSaveResult() in 70-persistence.js). Fixed to the foot of the window,
+     so it shows on every tab without covering the sticky tab bar or the combat
+     tab's header. -->
+<div class="save-warn" id="saveWarn" role="alert" hidden>
+  <span id="saveWarnMsg"></span>
+  <button class="tbtn" id="saveWarnFile">Save to file</button>
+  <button class="tbtn" id="saveWarnRetry">Try again</button>
 </div>
 
 <!-- generic modal -->
@@ -1505,6 +1590,13 @@ function blankChar(){
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
        above), and this is a different thing entirely. */
     secNotes:{}, noteCollapse:{},
+    /* The Journal tab's own pages (87-journal.js): [{id,title,tag,text,at,editedAt}],
+       and which of its tag groups are shut, keyed by lower-cased tag. */
+    journal:[], journalCollapse:{},
+    /* The Journal tab's trackers (87-trackers.js), which of their tag groups are
+       shut, and whether the card shows at all — read as !==false, so a sheet from
+       before it shows it. */
+    trackers:[], trackerCollapse:{}, showTrackers:true,
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);
@@ -5130,7 +5222,7 @@ function renderAll(){
      way the mirror never saw — reconciles on load rather than showing a
      condition for a spell that isn't running. */
   syncConcStatus();
-  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderRulesSections();renderNoteIcons();renderNotes();renderAllRT();recompute();
+  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderRulesSections();renderNoteIcons();renderNotes();renderJournal();renderTrackers();renderAllRT();recompute();
   /* LAST: the combat toggles sit beside the note buttons drawn above, and an open
      combat view refills from THIS character — every character switch ends here. */
   syncCombatView();
@@ -5138,19 +5230,23 @@ function renderAll(){
 
 /* ================= persistence ================= */
 const K_CHAR="hw-fb-char", K_SET="hw-fb-settings", K_RULES="hw-fb-rules", K_LIB="hw-fb-library";
-let saveTimer=null, lsOK=true, activeId=null;
+/* saveDue: an edit scheduleSave() has not written yet. The timer alone can't say
+   so — the harness never runs one, and a fired timer leaves its handle set. */
+let saveTimer=null, saveDue=false, saveErr="", activeId=null;
 function charKey(id){return "hw-fb-c-"+id;}
 function libLoad(){try{const s=localStorage.getItem(K_LIB);if(s)return JSON.parse(s);}catch(e){}return {autoload:null,index:[]};}
-function libSave(lib){try{localStorage.setItem(K_LIB,JSON.stringify(lib));}catch(e){}}
-function libTouch(){ // update the active character's index entry (name/system/version/updated)
-  if(!activeId)return;
+/* "" or why the write was refused (storageWhy). backupCharacter() ignores it and
+   reads the index back instead; autosave reports it (#81). */
+function libSave(lib){try{localStorage.setItem(K_LIB,JSON.stringify(lib));return "";}catch(e){return storageWhy(e);}}
+function libTouch(){ // update the active character's index entry (name/system/version/updated); "" or why it failed
+  if(!activeId)return "";
   const lib=libLoad();
   /* appVersion rides on the index so the home cards can badge it without
      reading (and parsing) every character blob */
   const meta={id:activeId,name:character.name||"Unnamed",system:character.system||"humblewood",appVersion:character.appVersion||"",updated:Date.now()};
   const i=lib.index.findIndex(x=>x.id===activeId);
   if(i>=0)lib.index[i]=meta;else lib.index.push(meta);
-  libSave(lib);
+  return libSave(lib);
 }
 /* Why localStorage said no, in words a player can act on. The browser's own
    message ("QuotaExceededError") tells them nothing about what to do. */
@@ -5191,15 +5287,53 @@ function backupCharacter(ch,tag){
   }
   return {id:copy.id,copy};
 }
+/* The write behind autosave, lifted out of scheduleSave() so the harness —
+   which never runs a setTimeout — can reach it. "" or why it failed (#81). */
+function saveNow(){
+  saveDue=false;
+  if(!activeId)return "";
+  try{localStorage.setItem(charKey(activeId),JSON.stringify(character));}catch(e){return storageWhy(e);}
+  return libTouch();
+}
 function scheduleSave(){
   const el=document.getElementById("savestate");if(el){el.textContent="Saving…";el.className="savestate";}
-  clearTimeout(saveTimer);saveTimer=setTimeout(()=>{
-    try{
-      if(activeId)localStorage.setItem(charKey(activeId),JSON.stringify(character));
-      libTouch();
-      if(el){el.textContent="Autosaved";el.className="savestate on";}
-    }catch(e){lsOK=false;if(el){el.textContent="Use Save ↑";el.className="savestate";}}
-  },500);
+  saveDue=true;clearTimeout(saveTimer);saveTimer=setTimeout(()=>showSaveResult(saveNow()),500);
+}
+/* A refused write used to change this one label, in a title bar that scrolls
+   away (#81). Now it also raises #saveWarn, fixed to the foot of the window on
+   every tab, and keeps it up until a write lands. */
+function showSaveResult(why){
+  saveErr=why||"";
+  const el=document.getElementById("savestate");
+  if(el){el.textContent=saveErr?"Not saved":"Autosaved";el.className="savestate "+(saveErr?"bad":"on");}
+  const m=document.getElementById("saveWarnMsg");if(m)m.textContent=saveErr?saveWarnText(saveErr):"";
+  const w=document.getElementById("saveWarn");if(w)w.hidden=!saveErr;
+  document.body.classList.toggle("saving-failed",!!saveErr);
+}
+function saveWarnText(why){return "Not saved — "+why+". Save this character to a file so nothing is lost.";}
+function saveError(){return saveErr;}
+function retrySave(){clearTimeout(saveTimer);showSaveResult(saveNow());}
+/* Before anything replaces the open character — loadCharById(), newCharacter(),
+   finishImport() — the edit still waiting on the debounce is written now, to
+   the character it belongs to, and a write that has failed is tried again.
+   Otherwise the strip went on saying "Not saved" about whichever character came
+   next, whose stored copy was current; and the switch it invited (Home, delete
+   an old character, tap the first one's card) reloaded that first character
+   from storage and silently dropped the edits it had never written (#81).
+   true to go ahead. When the write still can't land, the player is asked; No
+   leaves everything as it was and goes back to the sheet, where the strip's
+   Save to file is. With nothing waiting, it writes nothing, so a switch alone
+   never moves a card up the home screen's "updated" order. */
+function leaveCharacterOk(){
+  clearTimeout(saveTimer);
+  const due=!!activeId&&(saveDue||!!saveErr);saveDue=false;
+  if(!due)return true;
+  const why=saveNow();showSaveResult(why);
+  if(!why)return true;
+  const whose=character.name?"“"+character.name+"”'s changes":"This character's changes";
+  if(confirm(whose+" aren't saved — "+why+". Leave and lose them? Cancel, then use Save to file."))return true;
+  hideHome();
+  return false;
 }
 /* Returns "" or why the write was refused (storageWhy). Most callers are one
    toggle and still ignore it; Import settings reports it. */
@@ -5464,6 +5598,18 @@ function migrateWeaponEquip(c){
   c.wpnEquipInit=1;
   return n;
 }
+/* A row the page finds by id (Edit, Delete, a tick) needs one, and only one:
+   a number becomes text, a missing or repeated id gets a fresh uid(). Pass the
+   same `seen` to keep ids unique across several lists. Safe to run again. */
+function repairIds(list,seen){
+  const s=seen||new Set();
+  list.forEach(x=>{
+    if(typeof x.id==="number")x.id=String(x.id);
+    if(typeof x.id!=="string"||!x.id||s.has(x.id))x.id=uid();
+    s.add(x.id);
+  });
+  return list;
+}
 function migrate(s){
   s=s||{};
   const base=blankChar(), blank=blankChar();
@@ -5488,7 +5634,7 @@ function migrate(s){
      either one stopped the render: the first read of a field on null throws,
      and in strict mode so does the first write to a string (renderSpells()
      normalises `level`, detectSpellAttack() sets `atkType`). */
-  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources"].forEach(k=>{ base[k]=Array.isArray(base[k])?base[k].filter(x=>x!==null&&typeof x==="object"):[]; });
+  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources","journal","trackers"].forEach(k=>{ base[k]=Array.isArray(base[k])?base[k].filter(x=>x!==null&&typeof x==="object"):[]; });
   /* The player's own glossary entries are theirs, so none is dropped for its
      shape (#71). Each gets what makes it reachable: the other categories' field
      names read as the glossary's (glossRepair), and an id, without which the
@@ -5496,7 +5642,16 @@ function migrate(s){
      listed there as "(no term)"; glossTerm() skips it for matching. */
   base.glossary.forEach(g=>{ if(!g||typeof g!=="object"||Array.isArray(g))return; glossRepair(g);
     if(typeof g.id==="number")g.id=String(g.id); else if(typeof g.id!=="string"||!g.id)g.id=uid(); });
-  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
+  /* A page is found by its id. The list guard above lets an ARRAY through (it
+     is an object), and JSON would drop an id set on one, so each load would
+     give it a new id and migrate() would stop being idempotent. Arrays go. */
+  base.journal=repairIds(base.journal.filter(x=>!Array.isArray(x)));
+  base.trackers=repairIds(base.trackers.filter(x=>!Array.isArray(x)));
+  /* A tick is found by its item's id, and focus is put back by that id alone,
+     so items get the same repair from ONE pool across every tracker. */
+  const itemIds=new Set();
+  base.trackers.forEach(t=>{if(Array.isArray(t.items)){t.items=t.items.filter(x=>x!==null&&typeof x==="object"&&!Array.isArray(x));repairIds(t.items,itemIds);}});
+  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse","trackerCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
   /* AFTER the list guards above, so it can rely on inventory being an array. */
@@ -5555,17 +5710,26 @@ function printSheet(){
     ${feats?`<div class="p-sec">Features &amp; Traits</div><div class="p-two">${feats}</div>`:""}
     ${(inv||coins)?`<div class="p-sec">Inventory${coins?` — ${coins}`:""}</div><div class="p-two">${inv}</div>`:""}
     ${bio?`<div class="p-sec">Character</div>${bio}`:""}
-    ${secn?`<div class="p-sec">Notes</div>${secn}`:""}
+    ${secn?`<div class="p-sec">Section notes</div>${secn}`:""}
   `;
   document.getElementById("printArea").innerHTML=html;
   window.print();
 }
+/* false, with nothing touched, when the player won't leave a character whose
+   changes couldn't be saved (leaveCharacterOk()); the file is still there to
+   import again. */
 function finishImport(ch){
+  if(!leaveCharacterOk())return false;
   character=ch;activeId=ch.id;
-  try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){}
-  libTouch();settings.skin=skinForSystem(ch.system);saveSettings();applyTheme();renderAll();hideHome();
+  /* Stored first, and listed only once it is (#81): an index entry for a blob
+     that never landed is a home-screen card that opens nothing. */
+  let why="";try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){why=storageWhy(e);}
+  if(!why)why=libTouch();
+  settings.skin=skinForSystem(ch.system);saveSettings();applyTheme();renderAll();hideHome();
+  showSaveResult(why);
   /* last, so it stacks after the Replace/Copy clash modal rather than under it */
   maybePromptUpdate();
+  return true;
 }
 function importChar(file){
   const r=new FileReader();
@@ -6105,42 +6269,65 @@ function maybePromptUpdate(){
 /* ================= character library + home ================= */
 function skinForSystem(sys){return sys==="dnd"?"classic":"humblewood";}
 function systemForSkin(skin){return skin==="classic"?"dnd":"humblewood";}
+/* Every path that replaces the open character asks leaveCharacterOk() first
+   (70-persistence.js), and returns false, changing nothing, when told No. */
 function loadCharById(id){
+  /* before the read: tapping the open character's own card reads back what the
+     flush just wrote */
+  if(!leaveCharacterOk())return false;
   let raw;try{raw=localStorage.getItem(charKey(id));}catch(e){}
   if(!raw)return false;
   try{character=migrate(JSON.parse(raw));}catch(e){return false;}
   activeId=character.id||id;
   settings.skin=skinForSystem(character.system);saveSettings();applyTheme();
   renderAll();hideHome();
+  /* the sheet on screen is the one in storage, so a warning about the character
+     just left (or given up) no longer applies */
+  showSaveResult("");
   /* after the sheet is on screen, so the prompt has context behind it */
   maybePromptUpdate();
   return true;
 }
 function newCharacter(name,system){
+  if(!leaveCharacterOk())return false;
   const c=blankChar();c.system=(system==="dnd")?"dnd":"humblewood";c.name=name||"";c.glossary=seedGlossary();
   c.appVersion=APP_VERSION;   // safe here: runtime, long after 30-version.js has run
   character=c;activeId=c.id;
-  try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){}
-  libTouch();
+  /* as finishImport(): listed only once stored, and a refusal says so (#81) */
+  let why="";try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){why=storageWhy(e);}
+  if(!why)why=libTouch();
   settings.skin=skinForSystem(c.system);saveSettings();applyTheme();
   renderAll();hideHome();
+  showSaveResult(why);
+  return true;
 }
+/* Both return "" or why the library index couldn't be written (#81), and say so
+   with alert(): the home screen they run on covers the save strip, and a toast
+   fades. The blob goes only once the index stops listing it — the other order
+   leaves a card that opens nothing. */
 function deleteCharacter(id){
-  const lib=libLoad();lib.index=lib.index.filter(x=>x.id!==id);if(lib.autoload===id)lib.autoload=null;libSave(lib);
+  const lib=libLoad();lib.index=lib.index.filter(x=>x.id!==id);if(lib.autoload===id)lib.autoload=null;
+  const why=libSave(lib);
+  if(why){alert("That character couldn't be deleted — "+why+". It is still in your library.");renderHome();return why;}
   try{localStorage.removeItem(charKey(id));}catch(e){}
   if(activeId===id)activeId=null;
-  renderHome();
+  renderHome();return "";
 }
-function setAutoload(id){const lib=libLoad();lib.autoload=(lib.autoload===id)?null:id;libSave(lib);renderHome();}
+function setAutoload(id){const lib=libLoad();lib.autoload=(lib.autoload===id)?null:id;const why=libSave(lib);renderHome();if(why)alert("Couldn't change which character opens first — "+why+".");return why;}
+/* "" or why the old save could not be moved. The legacy key goes only once the
+   copy AND its index entry have landed (#81); it used to go whatever happened,
+   taking the only copy with it. */
 function migrateOldChar(){
-  const lib=libLoad();if(lib.index.length)return;
+  const lib=libLoad();if(lib.index.length)return "";
   let old=null;try{const c=localStorage.getItem(K_CHAR);if(c)old=JSON.parse(c);}catch(e){}
-  if(old&&old.abilities){
-    const ch=migrate(old);if(!ch.id)ch.id=uid();ch.system=ch.system||"humblewood";if(!ch.name)ch.name="My Character";
-    try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){}
-    lib.index.push({id:ch.id,name:ch.name,system:ch.system,updated:Date.now()});libSave(lib);
-    try{localStorage.removeItem(K_CHAR);}catch(e){}
-  }
+  if(!old||!old.abilities)return "";
+  const ch=migrate(old);if(!ch.id)ch.id=uid();ch.system=ch.system||"humblewood";if(!ch.name)ch.name="My Character";
+  try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){return storageWhy(e);}
+  lib.index.push({id:ch.id,name:ch.name,system:ch.system,updated:Date.now()});
+  const why=libSave(lib);
+  if(why){try{localStorage.removeItem(charKey(ch.id));}catch(e){}return why;}
+  try{localStorage.removeItem(K_CHAR);}catch(e){}
+  return "";
 }
 let homeForceSetup=false;
 function showHome(){renderHome();document.getElementById("home").style.display="flex";}
@@ -6264,10 +6451,11 @@ let _modalOpener=null,_modalOpenerSel=null,_modalInert=[];
    radio or file input: a stray key would toggle or open them. */
 const MODAL_FOCUS_FIELDS="input:not([type]),input[type=text],input[type=search],input[type=number],input[type=email],input[type=url],input[type=tel],textarea";
 /* How to find the opener again after a Save re-renders the list it sat in: its
-   id, else its first data-* hook. Quotes and backslashes are escaped. */
+   id, else its first data-* hook. Escaped as attrSel() escapes (87-journal.js):
+   a quote or a newline in the value would make querySelector throw. */
 function openerSelector(el){
   if(!el)return null;
-  const q=v=>String(v).replace(/["\\]/g,"\\$&");
+  const q=v=>String(v).replace(/["\\]/g,"\\$&").replace(/[\n\r\f]/g,c=>"\\"+c.charCodeAt(0).toString(16)+" ");
   if(el.id)return `[id="${q(el.id)}"]`;
   const a=[...(el.attributes||[])].find(x=>/^data-/.test(x.name));
   return a?`[${a.name}="${q(a.value)}"]`:null;
@@ -7358,8 +7546,8 @@ function tableChipsHTML(name,kind){
   return `<div class="tblchips">`+ts.map(t=>`<button type="button" class="tblref" data-tbl="${esc(t.name)}">${esc(t.name)}</button>`).join("")+`</div>`;
 }
 /* ================= section notes =================
-   A note pinned to any section of the sheet, plus the Notes tab that gathers
-   them. Notes are the player's own words, so they render markdown — and, like
+   A note pinned to any section of the sheet, plus the Section Notes card on the
+   Journal tab that gathers them. Notes are the player's own words, so they render markdown — and, like
    every other body of text in the app, they run through highlight() so glossary
    terms and [Table: X] references stay live inside them.
 
@@ -7367,8 +7555,8 @@ function tableChipsHTML(name,kind){
    and predates this. This feature stores `character.secNotes`. */
 
 /* The registry is the single source of truth: it drives the icon injection, the
-   Notes tab's grouping and headings, and a test that checks it against the
-   template both ways. `k` is a stable id — never derive one from a heading,
+   Section Notes card's grouping and headings, and a test that checks it against
+   the template both ways. `k` is a stable id — never derive one from a heading,
    because headings get reworded and the notes would be orphaned. */
 const NOTE_SECTIONS=[
   {k:"portrait",     tab:"sheet",     title:"Portrait"},
@@ -7389,13 +7577,14 @@ const NOTE_SECTIONS=[
   {k:"spells",       tab:"spells",    title:"Spells & Cantrips"},
   {k:"inventory",    tab:"inventory", title:"Equipment & Inventory"},
   {k:"coins",        tab:"inventory", title:"Coins"},
-  {k:"proficiencies",tab:"story",     title:"Proficiencies & Languages"}
+  {k:"proficiencies",tab:"story",     title:"Proficiencies & Languages"},
+  {k:"trackers",     tab:"journal",   title:"Trackers"}
 ];
-const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Story"};
+const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Story",journal:"Journal"};
 function noteDef(k){return NOTE_SECTIONS.find(s=>s.k===k)||null;}
 /* The ancestry heading is skin-dependent — "Race" on the classic skin — so the
-   Notes tab has to ask rather than quote the registry, or it would disagree with
-   the card it links to. */
+   Section Notes card has to ask rather than quote the registry, or it would
+   disagree with the card it links to. */
 function noteTitle(def){return (def&&def.k==="origin")?(raceTerm()+" & Background"):(def?def.title:"");}
 
 /* ---- storage, guarded ----
@@ -7408,7 +7597,7 @@ function noteText(k){const n=getNote(k);return n?String(n.text||""):"";}
 function hasNote(k){return !!noteText(k).trim();}
 function noteCount(tab){return NOTE_SECTIONS.filter(s=>s.tab===tab&&hasNote(s.k)).length;}
 /* Blank means no note: saving an empty box DELETES the entry, so "has a note" is
-   one truth test and the Notes tab can never list an empty one.
+   one truth test and the Section Notes card can never list an empty one.
    `at` is set once and survives every edit; `editedAt` only moves when the text
    actually changed, so re-saving without typing doesn't fake activity. */
 function saveNote(k,text){
@@ -7510,7 +7699,7 @@ function noteHTML(text){
     while(i<lines.length&&lines[i].trim()&&!starts(lines[i])){ls.push(lines[i]);i++;}
     /* ONE highlight() call per block, not per line: highlight() rebuilds the
        glossary list, sorts it and compiles a fresh RegExp every time, and the
-       Notes tab can render nineteen of these at once. */
+       Section Notes card can render nineteen of these at once. */
     out.push(`<p>${noteInline(ls.join(NOTE_LB))}</p>`);
   }
   return out.join("");
@@ -7592,7 +7781,7 @@ function renderNoteIcons(){
   });
 }
 
-/* ================= the Notes tab ================= */
+/* ================= the Section Notes card ================= */
 function noteGroupOpen(tab){
   const c=(character&&character.noteCollapse&&typeof character.noteCollapse==="object"&&!Array.isArray(character.noteCollapse))?character.noteCollapse:{};
   return !c[tab];
@@ -7644,6 +7833,10 @@ function jumpToNote(k){
   card.classList.add("n-flash");setTimeout(()=>card.classList.remove("n-flash"),1200);
 }
 
+/* The one-line formatting key, shared by every editor of this grammar: the
+   section-note editor and the journal page editor. */
+const NOTE_FMT_HINT=`<p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>`;
+
 /* ---- editor ---- */
 function openNoteEditor(k){
   const def=noteDef(k);if(!def)return;
@@ -7651,7 +7844,7 @@ function openNoteEditor(k){
   openModal("Note — "+noteTitle(def),`
     <div class="field"><label class="f">Your note</label>
       <textarea id="noteText" class="n-edit" placeholder="Anything you want to remember about this section…">${esc(noteText(k))}</textarea></div>
-    <p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>
+    ${NOTE_FMT_HINT}
     ${when?`<p class="hint">${esc(when)}</p>`:""}
     <div class="m-actions">${n?`<button class="tbtn danger" id="noteDel" style="margin-right:auto">Delete</button>`:""}<button class="tbtn" id="noteCancel">Cancel</button><button class="tbtn primary" id="noteSave">Save</button></div>`);
   const ta=document.getElementById("noteText");if(ta)ta.focus();
@@ -8051,6 +8244,617 @@ function startCombatDrag(e,grip){
   grip.addEventListener("pointermove",move);grip.addEventListener("pointerup",done);grip.addEventListener("pointercancel",done);
   document.addEventListener("lostpointercapture",lost);
 }
+/* ================= the journal =================
+   The Journal tab's own pages: a running record of the campaign — sessions,
+   the people met, quests — each with an optional tag that groups it, the dates
+   it was written and edited, and the same markdown grammar as the section notes
+   (noteHTML()). Design: src/docs/specs/2026-09-29-journal-design.md
+
+   The pure half comes first — no DOM — so src/tests/sheet.js can assert it. */
+
+/* A file can put anything in a field, so every read goes through one of these. */
+function jnlStr(v){return typeof v==="string"?v:(typeof v==="number"&&isFinite(v)?String(v):"");}
+function jnlTime(v){return typeof v==="number"&&isFinite(v)?v:0;}
+
+/* ---- tags, shared with the trackers (87-trackers.js) ----
+   A tag is the player's own word, so it is only tidied: trimmed, runs of spaces
+   collapsed. It groups by its lower-cased form, so "Quests" and "quests" are one
+   group. Untagged is the key "", which no real tag can produce. */
+function tagLabel(v){return jnlStr(v).replace(/\s+/g," ").trim();}
+function tagKey(v){return tagLabel(v).toLowerCase();}
+/* [{key, label, items}], A to Z, Untagged last. A group is labelled by the first
+   spelling met, and keeps the order it was given. */
+function groupByTag(list,tagOf){
+  const by=new Map();
+  list.forEach(x=>{
+    const l=tagLabel(tagOf(x)),k=l.toLowerCase();
+    if(!by.has(k))by.set(k,{key:k,label:l||"Untagged",items:[]});
+    by.get(k).items.push(x);
+  });
+  return [...by.values()].sort((a,b)=>(a.key==="")-(b.key==="")||a.key.localeCompare(b.key));
+}
+/* A CSS attribute selector for a value from the player. A tag can hold a quote,
+   and an id from a file a newline; either makes querySelector throw. A quote or
+   backslash takes a backslash; a newline, return or form feed, which a CSS
+   string can't hold even escaped that way, becomes its hex code and a space. */
+function attrSel(name,v){return `[${name}="${String(v).replace(/["\\]/g,"\\$&").replace(/[\n\r\f]/g,c=>"\\"+c.charCodeAt(0).toString(16)+" ")}"]`;}
+
+/* ---- the pages ----
+   migrate() keeps only objects in `journal` and repairs their ids (repairIds());
+   the fields inside are read through jnlStr()/jnlTime(), whatever a file put
+   there. These are the REAL page objects, not copies: the editor writes to them. */
+function jnlPages(c){const l=c&&c.journal;return Array.isArray(l)?l.filter(p=>p&&typeof p==="object"&&!Array.isArray(p)):[];}
+function jnlTitle(p){return jnlStr(p&&p.title).trim()||"Untitled";}
+/* Newest CREATED first, not edited: tidying an old page must not move it to the
+   top of its group. sort() is stable, so equal times keep their saved order. */
+function jnlSort(pages){return pages.slice().sort((a,b)=>jnlTime(b.at)-jnlTime(a.at));}
+
+/* ---- search ----
+   Case-blind, found with an "i" RegExp rather than by lower-casing: lower-casing
+   can change a string's LENGTH ("İ" becomes two code units), which would put the
+   highlight in the wrong place. Runs of whitespace count as one space, in the
+   query (jnlQuery()) and in the text (jnlFlat()) alike. */
+function jnlQuery(v){return jnlStr(v).replace(/\s+/g," ").trim();}
+function jnlFind(s,q){if(!q)return -1;const m=new RegExp(escReg(q),"i").exec(s);return m?m.index:-1;}
+function jnlFlat(v){return jnlStr(v).replace(NOTE_SENTINELS,"").replace(/\s+/g," ");}
+function jnlMatch(p,q){return !q||[p.title,p.tag,p.text].some(v=>jnlFind(jnlFlat(v),q)>=0);}
+/* An escaped excerpt of the text around the first match, the match in <mark>;
+   "" when only the title or the tag matched. */
+function jnlSnippet(text,q,r){
+  const s=jnlFlat(text).trim(),i=jnlFind(s,q);
+  if(i<0)return "";
+  const R=r||60,a=Math.max(0,i-R),b=Math.min(s.length,i+q.length+R);
+  return (a>0?"…":"")+esc(s.slice(a,i))+"<mark>"+esc(s.slice(i,i+q.length))+"</mark>"+esc(s.slice(i+q.length,b))+(b<s.length?"…":"");
+}
+
+/* ---- the rule a page lives by ----
+   A page exists only while its title or its text has something in it — the
+   section notes' rule (saveNote()). New page makes an in-memory draft {id, at}
+   and saves nothing; the first real keystroke adds the page, and clearing both
+   fields removes it again. So a blank page is never saved, however the player
+   leaves it: Back, another tab, another character, a reload.
+   `at` is set once, when the page is first added, and the draft keeps it, so a
+   page cleared and typed again keeps its date. `editedAt` moves only when the
+   title, tag or text actually changed. A tag on its own is not content. */
+function jnlSavePage(c,draft,fields,now){
+  if(!Array.isArray(c.journal))c.journal=[];
+  const f=fields||{},title=jnlStr(f.title).trim(),tag=tagLabel(f.tag),text=jnlStr(f.text);
+  const i=c.journal.findIndex(p=>p&&p.id===draft.id);
+  if(!title&&!text.trim()){if(i>=0)c.journal.splice(i,1);return null;}
+  if(i<0){
+    if(!draft.at)draft.at=now;
+    const p={id:draft.id,title,tag,text,at:draft.at,editedAt:now};
+    c.journal.push(p);return p;
+  }
+  const p=c.journal[i];
+  if(jnlStr(p.title)!==title||jnlStr(p.tag)!==tag||jnlStr(p.text)!==text){p.title=title;p.tag=tag;p.text=text;p.editedAt=now;}
+  if(!jnlTime(p.at))p.at=draft.at||now;
+  return p;
+}
+function jnlDeletePage(c,id){
+  const l=Array.isArray(c.journal)?c.journal:[],n=l.length;
+  c.journal=l.filter(p=>!(p&&p.id===id));
+  return c.journal.length<n;
+}
+/* Every tag in use, on pages and trackers together, so a "Quests" typed on one
+   is offered on the other. One spelling per group, A to Z. */
+function jnlTagList(c){
+  const tr=Array.isArray(c&&c.trackers)?c.trackers.filter(t=>t&&typeof t==="object"&&!Array.isArray(t)):[];
+  return groupByTag(jnlPages(c).concat(tr),x=>x.tag).filter(g=>g.key).map(g=>g.label);
+}
+/* Stored as COLLAPSE, so an absent key means open. A search opens every group:
+   a shut one would hide its matches. */
+function jnlGroupOpen(c,key,searching){
+  if(searching)return true;
+  const m=c&&c.journalCollapse;
+  return !(m&&typeof m==="object"&&!Array.isArray(m)&&m[key]);
+}
+/* The date and time in the player's own format, bold. toLocaleString never
+   writes an asterisk, so the bold cannot break. */
+function jnlStampText(d){
+  return "**"+d.toLocaleString(undefined,{weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})+"**";
+}
+/* `line` on a line of its own at the selection (replacing it), with the caret at
+   the start of the line after. Starting an edit puts the caret at the end of the
+   text, so a stamp before the player has clicked into the page lands at the end
+   rather than at 0, where a textarea's caret otherwise starts. */
+function insertLine(text,start,end,line){
+  const t=jnlStr(text),n=t.length;
+  const s=Math.max(0,Math.min(n,num(start))),e=Math.max(s,Math.min(n,num(end)));
+  const before=t.slice(0,s),after=t.slice(e);
+  const ins=(before&&!before.endsWith("\n")?"\n":"")+line+"\n";
+  return {text:before+ins+after,caret:before.length+ins.length};
+}
+
+/* ---- markup: pure strings, so the harness can assert every state ---- */
+function jnlEntryHTML(p,q){
+  const snip=q?jnlSnippet(p.text,q):"";
+  return `<button type="button" class="jnl-entry" data-jnlopen="${esc(p.id)}">`+
+    `<span class="jnl-title">${esc(jnlTitle(p))}</span>`+
+    (jnlTime(p.at)?`<span class="jnl-when">${esc(fmtWhen(jnlTime(p.at)))}</span>`:"")+
+    (snip?`<span class="jnl-snip">${snip}</span>`:"")+`</button>`;
+}
+/* The list: groups by tag, newest first inside each. While searching, every
+   group is open and its header is plain text — a toggle the search is holding
+   open would look like a dead button. */
+function journalListHTML(c,q){
+  const all=jnlPages(c);
+  if(!all.length)return `<div class="empty">No pages yet — tap + Page to start one: a session, someone you met, a quest.</div>`;
+  const hits=all.filter(p=>jnlMatch(p,q));
+  if(!hits.length)return `<div class="empty">No pages match “${esc(q)}”.</div>`;
+  return groupByTag(jnlSort(hits),p=>p.tag).map(g=>{
+    const open=jnlGroupOpen(c,g.key,!!q),name=`<span class="fgname">${esc(g.label)}</span><span class="cnt">(${g.items.length})</span>`;
+    const head=q?`<div class="fghead jnl-static">${name}</div>`:
+      `<div class="fghead" data-jnlgroup="${esc(g.key)}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
+      `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>${name}</div>`;
+    return `<div class="fgroup">${head}<div class="jnl-group"${open?"":` style="display:none"`}>`+
+      g.items.map(p=>jnlEntryHTML(p,q)).join("")+`</div></div>`;
+  }).join("");
+}
+function jnlWhen(p){return jnlTime(p.at)?noteWhen({at:jnlTime(p.at),editedAt:jnlTime(p.editedAt)}):"";}
+function journalPageHTML(p){
+  const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text));
+  return `<div class="jnl-bar"><button type="button" class="tbtn" data-jnlback>← All pages</button><span class="grow"></span>`+
+    `<button type="button" class="tbtn" data-jnledit="${esc(p.id)}">Edit</button>`+
+    `<button type="button" class="tbtn danger" data-jnldel="${esc(p.id)}">Delete</button></div>`+
+    `<h3 class="jnl-h" id="jnlHead" tabindex="-1">${esc(jnlTitle(p))}</h3>`+
+    ((tag||when)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"")+
+    (body?`<div class="n-body">${body}</div>`:`<div class="empty">Nothing written yet — tap Edit.</div>`);
+}
+/* Built ONCE per edit (renderJournal() leaves it alone after), so it can keep
+   the player's caret. Everything typed is written straight to the page. */
+function journalEditorHTML(p,tags){
+  const when=jnlWhen(p);
+  return `<div class="jnl-bar"><span class="jnl-edlbl">Editing</span><span class="grow"></span>`+
+    `<button type="button" class="tbtn primary" data-jnldone="${esc(p.id)}">Done</button></div>`+
+    `<div class="g2"><div class="field"><label class="f" for="jnlTitle">Title</label>`+
+    `<input id="jnlTitle" data-jnlfield="title" value="${esc(jnlStr(p.title))}" placeholder="e.g. Session 3 — into the Mire" autocomplete="off"></div>`+
+    `<div class="field"><label class="f" for="jnlTag">Tag</label>`+
+    `<input id="jnlTag" data-jnlfield="tag" value="${esc(tagLabel(p.tag))}" list="jnlTags" placeholder="e.g. Sessions" autocomplete="off">`+
+    `<datalist id="jnlTags">${tags.map(t=>`<option value="${esc(t)}">`).join("")}</datalist></div></div>`+
+    `<div class="field"><label class="f" for="jnlText">Page</label>`+
+    `<textarea id="jnlText" data-jnlfield="text" class="n-edit" placeholder="What happened, who you met, what to remember…">${esc(jnlStr(p.text))}</textarea></div>`+
+    `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button></div>`+
+    NOTE_FMT_HINT+(when?`<p class="hint">${esc(when)}</p>`:"");
+}
+
+/* ================= the DOM layer ================= */
+/* Session only, never saved: which page is open, whether it is being edited,
+   and the draft being edited ({id, at}; see jnlSavePage()). Keyed on the
+   character OBJECT, so a switch starts again at the list — Import → Replace
+   included, which keeps the id but swaps the sheet: keyed on the id, an editor
+   open at the time survived it, and its next keystroke wrote the old text over
+   the imported page. */
+let jnlUI={who:null,open:null,editing:false,draft:null};
+function jnlReset(){jnlUI={who:character,open:null,editing:false,draft:null};}
+function jnlSearchText(){const s=document.getElementById("jnlSearch");return jnlQuery(s?s.value:"");}
+function renderJournal(){
+  const box=document.getElementById("jnlBody");if(!box)return;
+  if(jnlUI.who!==character){jnlReset();const s=document.getElementById("jnlSearch");if(s)s.value="";}
+  const pages=jnlPages(character);
+  /* a page deleted, or gone with a reload of the rules or an import */
+  if(!jnlUI.editing&&jnlUI.open&&!pages.some(p=>p.id===jnlUI.open))jnlUI.open=null;
+  const bar=document.getElementById("jnlListBar");if(bar)bar.hidden=!!jnlUI.open;
+  if(jnlUI.editing){
+    /* Built once, when Edit is pressed, and never again while it is open:
+       renderAll() and refreshRulesUI() can run while the player types (a rules
+       fetch landing, a change in Settings), and a rebuild would take the text
+       they are typing, the caret and the focus with it. */
+    if(box.querySelector("[data-jnlfield]"))return;
+    const p=pages.find(x=>x.id===jnlUI.open)||{id:jnlUI.open,title:"",tag:"",text:""};
+    box.innerHTML=journalEditorHTML(p,jnlTagList(character));
+    return;
+  }
+  const p=jnlUI.open&&pages.find(x=>x.id===jnlUI.open);
+  box.innerHTML=p?journalPageHTML(p):journalListHTML(character,jnlSearchText());
+}
+function jnlFocus(id,atEnd){
+  const e=document.getElementById(id);if(!e||!e.focus)return;
+  e.focus({preventScroll:true});
+  if(atEnd&&typeof e.setSelectionRange==="function"){const n=String(e.value||"").length;e.setSelectionRange(n,n);}
+}
+/* A page opens where the card starts, whatever point of a long list it was
+   picked from. */
+function jnlShowCard(){
+  const c=document.getElementById("journalCard"),r=c&&c.getBoundingClientRect&&c.getBoundingClientRect();
+  if(r&&r.top<0)scrollToCard(c);
+}
+function jnlOpen(id){jnlUI.open=id;jnlUI.editing=false;jnlUI.draft=null;renderJournal();jnlShowCard();jnlFocus("jnlHead");}
+/* Back to the list, focus on the page's own entry (which scrolls it into view). */
+function jnlBack(){
+  const id=jnlUI.open;jnlUI.open=null;jnlUI.editing=false;jnlUI.draft=null;renderJournal();
+  const b=id&&document.querySelector(attrSel("data-jnlopen",id));
+  if(b&&b.focus)b.focus();else jnlShowCard();
+}
+/* Editing starts from an empty box, so renderJournal() builds a fresh editor
+   instead of keeping the one it finds. The caret goes to the END of the text:
+   that is where a timestamp lands before the player clicks into the page. */
+function jnlStartEdit(id,at,focusId){
+  jnlUI.open=id;jnlUI.editing=true;jnlUI.draft={id,at};
+  const box=document.getElementById("jnlBody");if(box)box.innerHTML="";
+  renderJournal();jnlShowCard();
+  jnlFocus(focusId,true);
+}
+function jnlNewPage(){jnlStartEdit(uid(),null,"jnlTitle");}
+function jnlEdit(id){const p=jnlPages(character).find(x=>x.id===id);if(p)jnlStartEdit(id,jnlTime(p.at)||null,"jnlText");}
+/* Done shows the page — or the list, when it was left blank and so never saved. */
+function jnlDone(){
+  const id=jnlUI.open;jnlUI.editing=false;jnlUI.draft=null;
+  const saved=jnlPages(character).some(p=>p.id===id);
+  jnlUI.open=saved?id:null;
+  renderJournal();
+  if(saved)jnlFocus("jnlHead");else jnlFocus("jnlNew");
+}
+/* Every keystroke in the editor; the page rule does the rest (jnlSavePage()). */
+function jnlInput(){
+  if(!jnlUI.editing||!jnlUI.draft)return;
+  const v=id=>{const e=document.getElementById(id);return e?e.value:"";};
+  jnlSavePage(character,jnlUI.draft,{title:v("jnlTitle"),tag:v("jnlTag"),text:v("jnlText")},Date.now());
+  scheduleSave();
+}
+function jnlDelete(id){
+  const p=jnlPages(character).find(x=>x.id===id);if(!p)return false;
+  if(!confirm(`Delete the page “${jnlTitle(p)}”? This can't be undone.`))return false;
+  jnlDeletePage(character,id);jnlUI.open=null;jnlUI.editing=false;jnlUI.draft=null;
+  renderJournal();scheduleSave();jnlFocus("jnlNew");
+  return true;
+}
+/* At the caret. The input event is what saves it, as typing does. */
+function insertJournalStamp(){
+  const ta=document.getElementById("jnlText");if(!ta)return;
+  const r=insertLine(ta.value,ta.selectionStart,ta.selectionEnd,jnlStampText(new Date()));
+  ta.value=r.text;ta.focus();ta.setSelectionRange(r.caret,r.caret);
+  ta.dispatchEvent(new Event("input",{bubbles:true}));
+}
+function toggleJnlGroup(key){
+  if(!character.journalCollapse||typeof character.journalCollapse!=="object"||Array.isArray(character.journalCollapse))character.journalCollapse={};
+  character.journalCollapse[key]=!character.journalCollapse[key];
+  renderJournal();scheduleSave();
+  const h=document.querySelector(attrSel("data-jnlgroup",key));if(h&&h.focus)h.focus();
+}
+/* ================= trackers =================
+   Counters, checklists and one-line tasks the player makes up, grouped by a tag
+   of their choosing — kills by creature type, pages of a book, the steps of a
+   quest. One that can finish can close itself when it does, into a Completed
+   list, with an Undo. Design: src/docs/specs/2026-09-29-journal-design.md §6
+
+   NOT the resource trackers on the Sheet (65-resources.js), nor the combat round
+   tracker (87-combat.js). Tags are the journal's: tagLabel(), groupByTag() in
+   87-journal.js.
+
+   The pure half comes first — no DOM — so src/tests/sheet.js can assert it. */
+
+const TRK_TYPES=[["counter","Counter"],["checklist","Checklist"],["task","Task"]];
+
+/* ---- reading one, whatever a file put there ----
+   migrate() keeps only objects in `trackers` (and in each `items`) and repairs
+   their ids; every field inside is read through these. */
+function trkList(c){const l=c&&c.trackers;return Array.isArray(l)?l.filter(t=>t&&typeof t==="object"&&!Array.isArray(t)):[];}
+function trkType(t){const v=t&&t.type;return (v==="checklist"||v==="task")?v:"counter";}
+/* A whole number, 0 or more; anything else is 0. */
+function trkInt(v){const n=Math.floor(Number(v));return isFinite(n)&&n>0?n:0;}
+function trkItems(t){const l=t&&t.items;return Array.isArray(l)?l.filter(x=>x&&typeof x==="object"&&!Array.isArray(x)):[];}
+function trkName(t){return jnlStr(t&&t.name).trim()||"Untitled";}
+function showTrackers(c){return !c||c.showTrackers!==false;}
+/* A typed count: digits only, or null to put the old value back. */
+function trkParse(v){const s=jnlStr(v).trim();return /^\d+$/.test(s)?parseInt(s,10):null;}
+
+/* ---- how far along ----
+   A counter with no goal (kills) and a checklist with no items are never
+   complete: there is nothing to finish. Only a real `true` ticks anything. */
+function trkProgress(t){
+  const ty=trkType(t);
+  if(ty==="task"){const d=t.done===true;return {done:d?1:0,total:1,pct:d?100:0,complete:d};}
+  if(ty==="checklist"){
+    const it=trkItems(t),n=it.filter(x=>x.done===true).length;
+    return {done:n,total:it.length,pct:it.length?Math.round(n*100/it.length):0,complete:it.length>0&&n===it.length};
+  }
+  const v=trkInt(t.value),g=trkInt(t.goal);
+  return {done:v,total:g,pct:g?Math.min(100,Math.round(v*100/g)):0,complete:g>0&&v>=g};
+}
+
+/* ---- the close rule, in exactly one place ----
+   A row control is applied; if that took the tracker from not done to done, and
+   Close when complete is on (the default), it closes. Returns whether it did.
+   Nothing else closes a tracker on its own: not the form, not making one, and not
+   a tap on one that was already complete — so a tracker reopened at 100% stays
+   open until it drops below and comes back. */
+function trkApply(t,change,now){
+  const was=trkProgress(t).complete;
+  change(t);
+  if(was||!trkProgress(t).complete||t.autoClose===false||t.closed===true)return false;
+  t.closed=true;t.closedAt=now;return true;
+}
+/* Never below 0; past the goal is fine ("read it twice"). */
+function trkStep(t,d,now){return trkApply(t,x=>{x.value=Math.max(0,trkInt(x.value)+d);},now);}
+function trkSetValue(t,v,now){return trkApply(t,x=>{x.value=trkInt(v);},now);}
+function trkToggleItem(t,itemId,now){return trkApply(t,x=>{const it=trkItems(x).find(i=>i.id===itemId);if(it)it.done=it.done!==true;},now);}
+function trkToggleTask(t,now){return trkApply(t,x=>{x.done=x.done!==true;},now);}
+/* By hand, from the form. No Undo: it was deliberate. Reopening leaves the
+   progress alone. */
+function trkClose(t,now){t.closed=true;t.closedAt=now;}
+function trkReopen(t){t.closed=false;delete t.closedAt;}
+/* Undo restores the tracker as it was BEFORE the tap: the tick and the close
+   together. A copy each way, so neither side can reach the other. */
+function trkSnapshot(t){return JSON.parse(JSON.stringify(t));}
+function trkRestore(c,snap){
+  const l=Array.isArray(c&&c.trackers)?c.trackers:null,i=l?l.findIndex(x=>x&&x.id===snap.id):-1;
+  if(i<0)return false;
+  l[i]=JSON.parse(JSON.stringify(snap));return true;
+}
+
+/* ---- the form's lines back into items ----
+   One line, one item. Each line takes the first unused old item with exactly its
+   text, keeping that item's id and tick, so reordering keeps every tick; a new or
+   reworded line is a new item, unticked. A leading bullet ("- ", "* ", "• ") is
+   typing habit, not part of the item. */
+function mergeChecklist(items,text){
+  const old=Array.isArray(items)?items.filter(x=>x&&typeof x==="object"):[],used=new Set();
+  return jnlStr(text).replace(/\r\n?/g,"\n").split("\n").map(l=>l.replace(/^\s*[-*+\u2022]\s+/,"").trim()).filter(Boolean).map(l=>{
+    const hit=old.find(x=>!used.has(x)&&jnlStr(x.text).trim()===l);
+    if(!hit)return {id:uid(),text:l,done:false};
+    used.add(hit);
+    return {id:(typeof hit.id==="string"&&hit.id)?hit.id:uid(),text:l,done:hit.done===true};
+  });
+}
+/* The form's fields onto a tracker. Never closes it, whatever the new goal. */
+function trkFromForm(t,f){
+  t.name=jnlStr(f.name).trim();
+  t.type=trkType({type:f.type});
+  t.tag=tagLabel(f.tag);
+  t.goal=trkInt(f.goal);
+  t.items=mergeChecklist(trkItems(t),f.items);
+  t.autoClose=f.autoClose!==false;
+  t.value=trkInt(t.value);
+  return t;
+}
+
+/* ---- the card's layout ----
+   Open trackers grouped by tag, in the order they were made; closed ones in one
+   flat list, most recently closed first. */
+function trkSplit(c){
+  const all=trkList(c);
+  return {
+    open:groupByTag(all.filter(t=>t.closed!==true),t=>t.tag),
+    closed:all.filter(t=>t.closed===true).sort((a,b)=>jnlTime(b.closedAt)-jnlTime(a.closedAt))
+  };
+}
+function trkGroupOpen(c,key){const m=c&&c.trackerCollapse;return !(m&&typeof m==="object"&&!Array.isArray(m)&&m[key]);}
+/* The ids of the open trackers drawn after `id`, in the card's order: the rest
+   of its group, then the groups below. A shut group's rows can't take focus, so
+   they are left out. Where Tab from a closing tap's Undo goes (trkAct()). */
+function trkAfter(c,id){
+  const ids=[];let seen=false;
+  trkSplit(c).open.forEach(g=>{const o=trkGroupOpen(c,g.key);g.items.forEach(t=>{if(seen&&o)ids.push(t.id);if(t.id===id)seen=true;});});
+  return ids;
+}
+
+/* ---- markup: pure strings, so the harness can assert every state ----
+   Names and items are the player's plain words: esc() only, no glossary pass. A
+   chip inside a checkbox button would be a button in a button, and every −/+
+   would pay for a highlight() of the whole card. */
+const TRK_PEN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`;
+function trkEditHTML(t){return `<button type="button" class="icon" data-trkedit="${esc(t.id)}" aria-label="${esc("Edit "+trkName(t))}" title="Edit">${TRK_PEN}</button>`;}
+/* A tick is a <button role="checkbox">: a native checkbox inside a <label> fires
+   the page's click handler twice, and the sheet's .equip spans can't be reached
+   by keyboard. `attr` is its hook, already escaped, and comes after role and
+   aria-checked so it is the button's FIRST data-* — the one focus is put back by. */
+function trkTickHTML(attr,on,label){
+  return `<button type="button" class="trk-tick" role="checkbox" aria-checked="${on?"true":"false"}" ${attr}><span class="box" aria-hidden="true"></span><span class="trk-it">${esc(label)}</span></button>`;
+}
+function trackerRowHTML(t){
+  const ty=trkType(t),pr=trkProgress(t),name=trkName(t);
+  if(ty==="task")return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top">${trkTickHTML(`data-trktask="${esc(t.id)}"`,pr.complete,name)}${trkEditHTML(t)}</div></div>`;
+  let prog="",body="";
+  if(ty==="checklist"){
+    const it=trkItems(t);
+    prog=`<span class="trk-prog">${pr.done} / ${pr.total}</span>`;
+    body=it.length?`<div class="trk-items">${it.map(i=>trkTickHTML(`data-trkitem="${esc(i.id)}"`,i.done===true,jnlStr(i.text))).join("")}</div>`:
+      `<div class="empty">No items yet — tap the pencil to add some.</div>`;
+  }else{
+    const g=trkInt(t.goal);
+    body=`<div class="trk-ctl"><button type="button" class="res-btn" data-trkdec="${esc(t.id)}" aria-label="${esc("One less — "+name)}">−</button>`+
+      `<input class="trk-val" data-trkval="${esc(t.id)}" inputmode="numeric" value="${esc(pr.done)}" aria-label="${esc(name+" — count")}">`+
+      `<button type="button" class="res-btn" data-trkinc="${esc(t.id)}" aria-label="${esc("One more — "+name)}">+</button>`+
+      (g?`<span class="trk-of">of ${esc(g)}</span>`:"")+`</div>`+
+      (g?`<div class="trk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(g)}" aria-valuenow="${esc(Math.min(pr.done,g))}" aria-label="${esc(name)}"><span style="width:${esc(pr.pct)}%"></span></div>`:"");
+  }
+  return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(name)}</span>${prog}${trkEditHTML(t)}</div>${body}</div>`;
+}
+/* In Completed: what it came to, when it closed, and the way back. */
+function trkSummary(t){
+  const ty=trkType(t),pr=trkProgress(t);
+  if(ty==="task")return "Done";
+  if(ty==="checklist")return pr.done+" / "+pr.total;
+  return trkInt(t.goal)?pr.done+" / "+trkInt(t.goal):String(pr.done);
+}
+function trackerClosedHTML(t){
+  const when=jnlTime(t.closedAt)?"Closed "+fmtWhen(jnlTime(t.closedAt)):"";
+  return `<div class="trk trk-closed" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(trkName(t))}</span>`+
+    `<span class="trk-prog">${esc(trkSummary(t))}</span>${when?`<span class="n-when">${esc(when)}</span>`:""}`+
+    `<button type="button" class="tbtn" data-trkreopen="${esc(t.id)}" aria-label="${esc("Reopen "+trkName(t))}">Reopen</button>${trkEditHTML(t)}</div></div>`;
+}
+function trackersHTML(c,completedOpen){
+  const s=trkSplit(c);
+  if(!s.open.length&&!s.closed.length)return `<div class="empty">No trackers yet. Tap + Tracker to count something — kills, pages read, the steps of a quest.</div>`;
+  const caret=o=>`<svg class="fcaret ${o?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`;
+  let h=s.open.length?s.open.map(g=>{
+    const o=trkGroupOpen(c,g.key);
+    return `<div class="fgroup"><div class="fghead" data-trkgroup="${esc(g.key)}" role="button" tabindex="0" aria-expanded="${o?"true":"false"}">`+
+      caret(o)+`<span class="fgname">${esc(g.label)}</span><span class="cnt">(${g.items.length})</span></div>`+
+      `<div class="trk-group"${o?"":` style="display:none"`}>${g.items.map(trackerRowHTML).join("")}</div></div>`;
+  }).join(""):`<div class="empty">Nothing open — everything here is done.</div>`;
+  if(s.closed.length)h+=`<div class="fgroup trk-done"><div class="fghead" data-trkcompleted role="button" tabindex="0" aria-expanded="${completedOpen?"true":"false"}">`+
+    caret(completedOpen)+`<span class="fgname">Completed</span><span class="cnt">(${s.closed.length})</span></div>`+
+    `<div class="trk-group"${completedOpen?"":` style="display:none"`}>${s.closed.map(trackerClosedHTML).join("")}</div></div>`;
+  return h;
+}
+/* Goal belongs to counters and Items to checklists; openTrackerForm() shows the
+   one the chosen type needs. Close now / Reopen and Delete only for one that
+   exists. */
+function trackerFormHTML(t,tags,isNew){
+  const ty=trkType(t),g=trkInt(t.goal),auto=t.autoClose!==false,lines=trkItems(t).map(i=>jnlStr(i.text)).join("\n");
+  return `<div class="field"><label class="f" for="tkName">Name</label><input id="tkName" value="${esc(jnlStr(t.name))}" placeholder="e.g. Goblins slain" autocomplete="off"></div>`+
+    `<div class="g2"><div class="field"><label class="f" for="tkType">Type</label><select id="tkType">`+
+      TRK_TYPES.map(([v,l])=>`<option value="${esc(v)}"${ty===v?" selected":""}>${esc(l)}</option>`).join("")+`</select></div>`+
+    `<div class="field"><label class="f" for="tkTag">Tag</label><input id="tkTag" value="${esc(tagLabel(t.tag))}" list="tkTags" placeholder="e.g. Kills" autocomplete="off">`+
+      `<datalist id="tkTags">${tags.map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div></div>`+
+    `<div class="field" data-tkfor="counter"><label class="f" for="tkGoal">Goal</label><input id="tkGoal" type="number" min="0" inputmode="numeric" value="${esc(g||"")}" placeholder="None — count forever"></div>`+
+    `<div class="field" data-tkfor="checklist"><label class="f" for="tkItems">Items, one per line</label><textarea id="tkItems" placeholder="Find the map&#10;Cross the Mire&#10;Meet Brindle">${esc(lines)}</textarea></div>`+
+    `<div class="toggle" id="tkAutoRow"><div><div class="t-lbl">Close when complete</div><div class="t-sub">Move it to Completed once it's done. You get an Undo.</div></div>`+
+      `<button type="button" class="switch ${auto?"on":""}" id="tkAuto" role="switch" aria-checked="${auto?"true":"false"}" aria-label="Close when complete"></button></div>`+
+    `<div class="m-actions">`+(isNew?"":`<button type="button" class="tbtn danger" id="tkDel" style="margin-right:auto">Delete</button>`+
+      `<button type="button" class="tbtn" id="tkCloseNow">${t.closed===true?"Reopen":"Close now"}</button>`)+
+    `<button type="button" class="tbtn" id="tkCancel">Cancel</button><button type="button" class="tbtn primary" id="tkSave">${isNew?"Add":"Save"}</button></div>`;
+}
+
+/* ================= the DOM layer ================= */
+/* Session only: whose trackers these are, and whether Completed is open. Keyed
+   on the character OBJECT, not its id: Import → Replace keeps the id and swaps
+   the whole sheet, and every switch (loadCharById(), newCharacter(),
+   finishImport()) puts a new object in `character`. */
+let trkWho=null, trkCompletedOpen=false;
+/* The card redraws whole after a tap. Focus goes back to the same control, found
+   by its first data-* hook (openerSelector()), so holding Enter on + keeps
+   counting — a button repeats on a held Enter; Space clicks once, on key-up.
+   Hidden, it stays in the DOM (the section registry's rule). */
+function renderTrackers(){
+  const el=document.getElementById("trkList");if(!el)return;
+  if(trkWho!==character){trkWho=character;trkCompletedOpen=false;}
+  const card=document.getElementById("trackersCard");if(card)card.style.display=showTrackers(character)?"":"none";
+  const a=document.activeElement,sel=(a&&el.contains&&el.contains(a))?openerSelector(a):null;
+  el.innerHTML=trackersHTML(character,trkCompletedOpen);
+  if(sel){const b=document.querySelector(sel);if(b&&b.focus)b.focus({preventScroll:true});}
+  /* Shown or hidden, it may be the only card in an open combat view, whose
+     "Add sections…" hint has to follow it. */
+  if(combatViewOpen())renderCombatEmpty();
+}
+function trkById(id){return trkList(character).find(t=>t.id===id)||null;}
+/* A typed count, written into its row where it stands: the box, the bar's value
+   and its width. The goal and the "of N" can't change from the row. false when
+   there is no row, for the caller to redraw instead. */
+function trkPatchRow(t){
+  const row=document.querySelector(attrSel("data-trk",t.id));if(!row)return false;
+  const pr=trkProgress(t),g=trkInt(t.goal);
+  const v=row.querySelector("[data-trkval]");if(v)v.value=String(pr.done);
+  const bar=row.querySelector(".trk-bar");
+  if(bar){bar.setAttribute("aria-valuenow",String(Math.min(pr.done,g)));const f=bar.querySelector("span");if(f)f.style.width=pr.pct+"%";}
+  return true;
+}
+/* One tap on a row. When it finishes a tracker set to close, the toast offers an
+   Undo of the whole tap; from the keyboard (Enter/Space, event.detail 0) focus
+   goes to that Undo, since the row it was on just left for Completed, and Tab or
+   Esc from the Undo goes on to the next tracker (trkAfter(), taken before the
+   tap, while this one still has its place).
+   `inPlace` is the count box's `change` path, which fires as the box loses
+   focus: at the mousedown on +, or at a Tab. A redraw there replaced the + under
+   the pointer, so its click never arrived, and dropped a Tab's focus to the
+   page. So unless the tap closed the tracker (its row has to leave), the row is
+   patched instead (trkPatchRow()).
+   The save is scheduled before the redraw, so nothing a redraw throws can cost
+   the player the tap. */
+function trkAct(id,fn,viaKey,inPlace){
+  const t=trkById(id);if(!t||t.closed===true)return false;
+  const snap=trkSnapshot(t),who=character,next=trkAfter(character,id);
+  const closed=fn(t,Date.now());
+  scheduleSave();
+  if(closed||!inPlace||!trkPatchRow(t))renderTrackers();
+  if(!closed)return false;
+  const undo=toast(`“${trkName(t)}” complete`,{label:"Undo",
+    run:e=>undoTrackerChange(snap,who,!!e&&e.detail===0),
+    back:()=>trkNextControl(next)});
+  if(viaKey&&undo)undo.focus();
+  return true;
+}
+/* The first control of the first of `ids` still open and on screen — the rows
+   may have moved on since the toast went up — or else + Tracker. */
+function trkNextControl(ids){
+  for(const id of ids){
+    const row=document.querySelector(".trk:not(.trk-closed)"+attrSel("data-trk",id)),f=row&&row.querySelector("button,input");
+    if(f&&f.getClientRects().length)return f;
+  }
+  return document.getElementById("addTracker");
+}
+/* `who` is the character object the toast was shown for: its Undo belongs to
+   that sheet, not to one loaded since, nor to one imported over it under the
+   same id. */
+function undoTrackerChange(snap,who,viaKey){
+  if(!character||character!==who)return false;
+  if(!trkRestore(character,snap))return false;
+  renderTrackers();scheduleSave();
+  toast(`“${trkName(snap)}” is back`);
+  if(viaKey){const b=document.querySelector(attrSel("data-trkedit",snap.id));if(b&&b.focus)b.focus();}
+  return true;
+}
+/* The count box commits on change or Enter, like the coin and HP boxes
+   (commitBox() in 90-boot.js). Anything but digits puts the old count back.
+   Returns the box, for Enter to select.
+   - A change patches the row in place (trkAct()'s `inPlace`), and a count that
+     isn't one is simply put back, in place too.
+   - Enter redraws. If it completes the tracker, its row leaves for Completed
+     and trkAct() moves focus to the toast's Undo instead. */
+function commitTrackerValue(inp,viaKey){
+  const id=inp.dataset.trkval,n=trkParse(inp.value);
+  if(n!==null)trkAct(id,(t,now)=>trkSetValue(t,n,now),!!viaKey,!viaKey);
+  else if(viaKey)renderTrackers();
+  else{const t=trkById(id);if(t)inp.value=String(trkProgress(t).done);else renderTrackers();}
+  return document.querySelector(attrSel("data-trkval",id));
+}
+function toggleTrkGroup(key){
+  if(!character.trackerCollapse||typeof character.trackerCollapse!=="object"||Array.isArray(character.trackerCollapse))character.trackerCollapse={};
+  character.trackerCollapse[key]=!character.trackerCollapse[key];
+  renderTrackers();scheduleSave();
+}
+function toggleTrkCompleted(){trkCompletedOpen=!trkCompletedOpen;renderTrackers();}
+/* Reopening moves the row from trackerClosedHTML() (data-trkreopen) back into
+   trackerRowHTML() (no such hook), so renderTrackers()'s own focus-restore has
+   nothing to find. From the keyboard, land on the tracker's edit button
+   instead — the one hook both row forms carry. */
+function reopenTracker(id,viaKey){
+  const t=trkById(id);if(!t)return;
+  trkReopen(t);renderTrackers();scheduleSave();toast(`“${trkName(t)}” reopened`);
+  if(viaKey){const b=document.querySelector(attrSel("data-trkedit",id));if(b&&b.focus)b.focus();}
+}
+function openTrackerForm(existing){
+  const isNew=!existing;
+  const t=existing||{id:uid(),name:"",type:"counter",tag:"",value:0,goal:0,items:[],done:false,autoClose:true,at:Date.now()};
+  openModal(isNew?"New tracker":"Edit tracker",trackerFormHTML(t,jnlTagList(character),isNew));
+  const $=id=>document.getElementById(id);
+  /* Goal for a counter, Items for a checklist; Close when complete only for one
+     that can complete, and a counter needs a goal for that. */
+  const sync=()=>{
+    const ty=$("tkType").value;
+    document.querySelectorAll("[data-tkfor]").forEach(f=>{f.hidden=f.dataset.tkfor!==ty;});
+    $("tkAutoRow").hidden=ty==="counter"&&!trkInt($("tkGoal").value);
+  };
+  $("tkType").addEventListener("change",sync);$("tkGoal").addEventListener("input",sync);sync();
+  $("tkAuto").addEventListener("click",e=>{const b=e.currentTarget,on=!b.classList.contains("on");b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");});
+  $("tkCancel").addEventListener("click",closeModal);
+  /* The tracker as stored NOW. The toast sits outside the modal's inert, so its
+     Undo can land while this form is open and swap the stored object for its
+     snapshot — `t` would then be a copy no longer in the list. A new tracker
+     has no stored copy: Save adds `t` itself. */
+  const cur=()=>isNew?t:trkById(t.id);
+  const fields=()=>({name:$("tkName").value,type:$("tkType").value,tag:$("tkTag").value,goal:$("tkGoal").value,
+    items:$("tkItems").value,autoClose:$("tkAuto").classList.contains("on")});
+  const done=()=>{closeModal();renderTrackers();scheduleSave();};
+  {const d=$("tkDel");if(d)d.addEventListener("click",()=>{
+    if(!confirm(`Delete the tracker “${trkName(cur()||t)}”?`))return;
+    character.trackers=trkList(character).filter(x=>x.id!==t.id);done();});}
+  /* Close now / Reopen keeps what was typed. The button does what it SAID when
+     the form opened, so an Undo in between can't turn Reopen into a close. */
+  {const b=$("tkCloseNow"),closing=t.closed!==true;if(b)b.addEventListener("click",()=>{
+    const x=cur();if(!x){closeModal();renderTrackers();return;}
+    trkFromForm(x,fields());
+    if(closing)trkClose(x,Date.now());else trkReopen(x);
+    done();});}
+  $("tkSave").addEventListener("click",()=>{
+    const x=cur();if(!x){closeModal();renderTrackers();return;}
+    trkFromForm(x,fields());
+    if(isNew){if(!Array.isArray(character.trackers))character.trackers=[];character.trackers.push(x);}
+    done();
+  });
+}
 /* ================= settings modal =================
    The modal grew a control at a time until it was one long scroll, so it is
    grouped into collapsible sections. They reuse the feature-list idiom
@@ -8114,6 +8918,7 @@ function openSettings(){
     <p class="hint" id="encHint">${esc(encSettingsHint())}</p>
     <div class="toggle"><div><div class="t-lbl">Coins count as weight</div><div class="t-sub">50 coins to the pound, the way the rules have it.</div></div><button class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight"></button></div>
     <div class="toggle"><div><div class="t-lbl">Colour current HP</div><div class="t-sub">Amber at half your maximum, red at a quarter.</div></div><button class="switch ${character.hpColor!==false?"on":""}" id="swHpColor"></button></div>
+    <div class="toggle"><div><div class="t-lbl">Trackers</div><div class="t-sub">Show the Trackers card on the Journal tab. Hiding it keeps everything you've counted.</div></div><button class="switch ${showTrackers(character)?"on":""}" id="swTrackers"></button></div>
     <div class="field"><label class="f">Skills display</label>
       <div class="seg" id="segStatStyle">
         ${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>
@@ -8215,6 +9020,7 @@ function openSettings(){
   {const s=document.getElementById("setEnc");if(s)s.addEventListener("change",()=>{character.encumbrance=s.value;encSettingsChanged();});}
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
   {const b=document.getElementById("swHpColor");if(b)b.addEventListener("click",()=>{character.hpColor=(character.hpColor===false);b.classList.toggle("on",character.hpColor!==false);renderHP();scheduleSave();});}
+  {const b=document.getElementById("swTrackers");if(b)b.addEventListener("click",()=>{character.showTrackers=!showTrackers(character);b.classList.toggle("on",character.showTrackers);renderTrackers();scheduleSave();});}
   /* renderAll(), not buildStats(): the rebuild blanks the six score inputs, and
      only renderAll refills them from [data-path] and then repaints through
      recompute(). Calling the builder alone leaves blank boxes and a wall of +0. */
@@ -8357,9 +9163,10 @@ function rulesStatusText(){
   return (k+f+i+s+r+c+t)?`Loaded${rules.name?" “"+rules.name+"”":""}: ${r} races · ${c} classes · ${k} keywords · ${f} traits · ${i} items · ${s} spells${t?" · "+t+" tables":""}.`:"No rules loaded.";
 }
 function updateRulesStatus(msg,cls){const el=document.getElementById("rulesStatus");if(el){el.textContent=msg||rulesStatusText();el.className="status "+(cls||"");}}
-/* renderNotes is here because notes run through highlight() too — editing the
-   glossary changes how every note reads. */
-function refreshRulesUI(){renderRulesSections();renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderAllRT();}
+/* renderNotes and renderJournal are here because notes and journal pages run
+   through highlight() too — editing the glossary changes how every one reads.
+   An open journal editor is left alone (renderJournal()). */
+function refreshRulesUI(){renderRulesSections();renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderJournal();renderAllRT();}
 const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
 /* display names for a category — one map, used by both the group summary and
    the headings in the loaded-data list */
@@ -8945,6 +9752,8 @@ function wire(){
   });
   // slot totals
   document.addEventListener("input",e=>{const s=e.target.closest("[data-slot]");if(!s)return;if(slotsAuto)return;const lv=num(s.dataset.slot);character.slots[lv].total=Math.max(0,num(s.value));if(character.slots[lv].used>character.slots[lv].total)character.slots[lv].used=character.slots[lv].total;renderSlotBubbles();scheduleSave();});
+  /* the journal editor writes on every keystroke (87-journal.js) */
+  document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("[data-jnlfield]"))jnlInput();});
   // clicks
   document.addEventListener("click",e=>{
     const t=e.target;
@@ -8961,6 +9770,23 @@ function wire(){
     if((m=t.closest("[data-noteedit]")))return openNoteEditor(m.dataset.noteedit);
     if((m=t.closest("[data-notejump]")))return jumpToNote(m.dataset.notejump);
     if((m=t.closest("[data-notegroup]"))){toggleNoteGroup(m.dataset.notegroup);return;}
+    // the journal (87-journal.js)
+    if((m=t.closest("[data-jnlopen]")))return jnlOpen(m.dataset.jnlopen);
+    if(t.closest("[data-jnlback]"))return jnlBack();
+    if((m=t.closest("[data-jnledit]")))return jnlEdit(m.dataset.jnledit);
+    if(t.closest("[data-jnldone]"))return jnlDone();
+    if((m=t.closest("[data-jnldel]"))){jnlDelete(m.dataset.jnldel);return;}
+    if(t.closest("[data-jnlstamp]"))return insertJournalStamp();
+    if((m=t.closest("[data-jnlgroup]"))){toggleJnlGroup(m.dataset.jnlgroup);return;}
+    // trackers (87-trackers.js). The tap's own `t` is the target, so the tracker is `x`.
+    if((m=t.closest("[data-trkdec]")))return trkAct(m.dataset.trkdec,(x,now)=>trkStep(x,-1,now),e.detail===0);
+    if((m=t.closest("[data-trkinc]")))return trkAct(m.dataset.trkinc,(x,now)=>trkStep(x,1,now),e.detail===0);
+    if((m=t.closest("[data-trkitem]"))){const r=m.closest("[data-trk]"),iid=m.dataset.trkitem;if(r)trkAct(r.dataset.trk,(x,now)=>trkToggleItem(x,iid,now),e.detail===0);return;}
+    if((m=t.closest("[data-trktask]")))return trkAct(m.dataset.trktask,(x,now)=>trkToggleTask(x,now),e.detail===0);
+    if((m=t.closest("[data-trkedit]"))){const x=trkById(m.dataset.trkedit);if(x)openTrackerForm(x);return;}
+    if((m=t.closest("[data-trkreopen]")))return reopenTracker(m.dataset.trkreopen,e.detail===0);
+    if((m=t.closest("[data-trkgroup]"))){toggleTrkGroup(m.dataset.trkgroup);return;}
+    if(t.closest("[data-trkcompleted]"))return toggleTrkCompleted();
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
     /* Max HP padlock — mirrors [data-hdmode] below, minus the confirm: switching
@@ -9102,6 +9928,9 @@ function wire(){
     /* the notes-tab group headers are role="button" tabindex="0", so they owe
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
+    {const g=e.target.closest&&e.target.closest("[data-jnlgroup]");if(g){e.preventDefault();toggleJnlGroup(g.dataset.jnlgroup);return;}}
+    {const g=e.target.closest&&e.target.closest("[data-trkgroup]");if(g){e.preventDefault();toggleTrkGroup(g.dataset.trkgroup);return;}}
+    {const g=e.target.closest&&e.target.closest("[data-trkcompleted]");if(g){e.preventDefault();toggleTrkCompleted();return;}}
   });
   /* The combat tab's header sticks under the tab bar, whose height changes with
      the width (labels become icons at 860px). No Esc handler: the view is a tab
@@ -9128,6 +9957,12 @@ function wire(){
   on("hpMinus","click",()=>bumpHP(-1));
   on("btnLongRest","click",longRest);
   on("btnShortRest","click",shortRest);
+  /* the refused-write strip (#81) */
+  on("saveWarnFile","click",exportChar);
+  on("saveWarnRetry","click",retrySave);
+  on("jnlNew","click",jnlNewPage);
+  on("jnlSearch","input",()=>renderJournal());
+  on("addTracker","click",()=>openTrackerForm());
   document.getElementById("addResource").addEventListener("click",()=>openResourceForm());
   /* clampHP owns both bounds and adjustHP owns the temp-HP-first rule. Every
      part a damage path needs lives in 65-resources.js, where the harness can
@@ -9160,17 +9995,27 @@ function wire(){
   /* Coin and HP boxes commit on change, not on input: mid-typing, "+1" is not
      yet the number you meant. Enter commits without leaving the field, and
      reselects so you can type the next delta straight away. */
-  function commitBox(t){
+  function commitBox(t,viaKey){
     if(!t||!t.closest)return null;
     const c=t.closest("[data-coin]");if(c){applyCoinInput(c);return c;}
     const h=t.closest("[data-hp]");if(h){applyHPInput(h);return h;}
+    const k=t.closest("[data-trkval]");if(k)return commitTrackerValue(k,viaKey);
     return null;
   }
   document.addEventListener("change",e=>{commitBox(e.target);});
   document.addEventListener("keydown",e=>{
     if(e.key!=="Enter")return;
-    const b=commitBox(e.target);
-    if(b){e.preventDefault();b.select();}
+    /* preventDefault() BEFORE commitBox() runs, not after: a completing
+       tracker's Enter moves focus straight to the toast's Undo (trkAct(),
+       viaKey), and a browser fires Enter's default action — a synthetic
+       click — against whatever now HAS focus, not the original target. Left
+       until after commitBox() returned (gated on there being a box left to
+       reselect, which a closed row has none of), that synthetic click landed
+       on Undo and silently reverted the very completion Enter had just made. */
+    if(!e.target.closest||!e.target.closest("[data-coin],[data-hp],[data-trkval]"))return;
+    e.preventDefault();
+    const b=commitBox(e.target,true);
+    if(b)b.select();
   });
   document.getElementById("invCollapseAll").addEventListener("click",()=>{const ic=invCol();const anyOpen=character.inventory.some(it=>!ic.items[it.id]);character.inventory.forEach(it=>{ic.items[it.id]=anyOpen;});renderInventory();scheduleSave();});
   /* Same shape as the inventory one: if anything is open, shut everything;
@@ -9218,7 +10063,9 @@ function boot(){
   reindexRules();recomputeDups();
   buildStats();buildDeath();buildSlots();buildBio();
   wire();applyTheme();
-  migrateOldChar();
+  /* No character is open yet for the strip to be about, so this one is said
+     out loud. The old save stays where it was, and the next launch tries again. */
+  {const why=migrateOldChar();if(why)alert("Your saved character couldn't be moved into the character library — "+why+". It is still stored in this browser, and Fieldbook will try again next time it opens.");}
   const lib=libLoad();
   let opened=false;
   if(lib.autoload && lib.index.some(x=>x.id===lib.autoload)){opened=loadCharById(lib.autoload);}
@@ -9227,7 +10074,6 @@ function boot(){
     character.glossary=seedGlossary();renderAll();
     showHome();
   }
-  if(!lsOK){const ss=document.getElementById("savestate");if(ss)ss.textContent="Use Save ↑";}
   /* After the first paint, not before it: the rules cache lives in IndexedDB now
      and reading it is async. Everything above already drew with whatever
      localStorage had (usually nothing, once migrated), and this replaces it. */
