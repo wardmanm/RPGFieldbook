@@ -3079,7 +3079,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
        whole sheet draws (a string in `spells` threw on the first write to it) */
     const junkLists = Object.assign(X.blankChar(), {system: 'dnd'});
     ['features', 'inventory', 'statuses', 'familiars', 'spells', 'attacks', 'activeSpells', 'glossary',
-     'classes', 'grants', 'resources', 'journal'].forEach(k => { junkLists[k] = [null, 'str', 7, ['arr'], {}]; });
+     'classes', 'grants', 'resources', 'journal', 'trackers'].forEach(k => { junkLists[k] = [null, 'str', 7, ['arr'], {}]; });
     X.character = X.migrate(JSON.parse(JSON.stringify(junkLists)));
     renders('the whole sheet from a file whose lists hold null, text and numbers (renderAll)', () => ctx.renderAll());
     renders('the print sheet from that file', () => ctx.printSheet());
