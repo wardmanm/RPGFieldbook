@@ -1,6 +1,6 @@
 # Journal — design
 
-**Status:** approved design, not yet built · 2026-09-29
+**Status:** implemented on branch `issue/39-journal` · 2026-09-29 — see [As built](#as-built)
 **Issues:** #39 (the feature), #40 (journal pages), #41 (trackers), #81 (autosave failures are silent).
 All four land on one branch, `issue/39-journal`. #40 and #41 share a tab, a fragment of markup, the
 character model and the same wiki pages, and #81 is what makes a long journal safe to write. Built in
@@ -404,3 +404,28 @@ For `src/docs/UNRELEASED.md`:
 >   character.
 > - If your browser refuses to save a change, the sheet now says so plainly — and keeps saying so
 >   until a save goes through — with a button to save the character to a file instead.
+
+## As built
+
+Where the code differs from the text above, and why:
+
+- **The save warning is fixed to the foot of the window** (§8 said under the tab bar). Under the
+  tab bar it sat where the combat tab's own sticky header sits.
+- **`insertLine()` takes no `atEnd` flag** (§4). Starting an edit puts the caret at the end of
+  the text, so "untouched → at the end" is simply "at the caret".
+- **Helpers not listed in §4:**
+  - `attrSel()`, `jnlStr()`, `jnlTime()`, `jnlTitle()`, `jnlQuery()`, `jnlFind()`, `jnlFlat()`, `jnlWhen()`, `jnlEntryHTML()`;
+  - `trkInt()`, `trkName()`, `trkParse()`, `trkFromForm()`, `trkSummary()`, `trackerClosedHTML()`, `trkById()`, `trkAct()`, `commitTrackerValue()`, `reopenTracker()`, `toggleTrkCompleted()`;
+  - `repairIds()`, and #81's `saveNow()`, `showSaveResult()`, `saveWarnText()`, `saveError()`, `retrySave()`.
+- **`migrateOldChar()` returns why it failed and `boot()` alerts**, since no character is open for
+  the strip to be about.
+- **A keyboard completion also includes typing a counter's goal into its count box and pressing
+  Enter.** The Enter keydown path threads a keyboard flag through `commitBox(t,viaKey)` →
+  `commitTrackerValue(inp,viaKey)` → `trkAct()`, so focus lands on the toast's Undo; the Enter
+  handler now calls `preventDefault()` *before* `commitBox()` for `[data-coin],[data-hp],[data-trkval]`
+  targets, because otherwise the same Enter press "clicked" the newly focused Undo and silently
+  undid the completion.
+- **A keyboard Reopen (`reopenTracker(id,viaKey)`) puts focus on the reopened tracker's edit
+  button**, since its Reopen button disappears.
+- **The print heading reads "Section notes"**; the Notes-tab wording was also swept from code
+  comments and test labels.
