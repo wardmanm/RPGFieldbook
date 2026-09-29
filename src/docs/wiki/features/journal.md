@@ -100,13 +100,18 @@ The count box commits on change or Enter through `commitTrackerValue()`, and any
 puts the old count back. Every tap goes through `trkAct()`, which snapshots the tracker, applies the
 tap, redraws and saves. If the tap closed the tracker, `trkAct()` shows a toast with **Undo**
 (`undoTrackerChange()`, guarded by the character id). A tap from the keyboard moves focus to that
-Undo. The redraw puts focus back on the same control by its first `data-*` hook, so holding Space
-on + keeps counting.
+Undo — including Enter in the count box: `commitTrackerValue()` takes a `viaKey` flag from
+`commitBox()` (90-boot.js) and threads it through to `trkAct()`, since a closed row leaves for
+Completed and has nothing left for the ordinary focus-restore to find. The redraw puts focus back
+on the same control by its first `data-*` hook otherwise, so holding Space on + keeps counting.
 
 **The form** (`openTrackerForm()`) holds Name, Type, Tag (with the tags in use), Goal for a
 counter, Items one per line for a checklist, and Close when complete. The last shows only for
 something that can complete. An existing tracker also has **Close now** (or **Reopen**) and
-**Delete**. Closed trackers show their result and closed date, with Reopen (`reopenTracker()`).
+**Delete**. Closed trackers show their result and closed date, with Reopen (`reopenTracker()`) —
+from the keyboard, Reopen moves the row from the Completed markup back into the open one, which
+carries no matching `data-*` hook either, so it lands focus on that tracker's own edit button
+instead, the one hook both forms carry.
 
 **Hidden and in combat.** Settings → This character → Trackers sets `showTrackers`, and
 `renderTrackers()` hides the card with `display:none`, keeping it in the DOM, which the section

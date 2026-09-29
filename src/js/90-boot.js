@@ -51,7 +51,7 @@ function wire(){
     if((m=t.closest("[data-trkitem]"))){const r=m.closest("[data-trk]"),iid=m.dataset.trkitem;if(r)trkAct(r.dataset.trk,(x,now)=>trkToggleItem(x,iid,now),e.detail===0);return;}
     if((m=t.closest("[data-trktask]")))return trkAct(m.dataset.trktask,(x,now)=>trkToggleTask(x,now),e.detail===0);
     if((m=t.closest("[data-trkedit]"))){const x=trkById(m.dataset.trkedit);if(x)openTrackerForm(x);return;}
-    if((m=t.closest("[data-trkreopen]")))return reopenTracker(m.dataset.trkreopen);
+    if((m=t.closest("[data-trkreopen]")))return reopenTracker(m.dataset.trkreopen,e.detail===0);
     if((m=t.closest("[data-trkgroup]"))){toggleTrkGroup(m.dataset.trkgroup);return;}
     if(t.closest("[data-trkcompleted]"))return toggleTrkCompleted();
     // death saves
@@ -262,18 +262,27 @@ function wire(){
   /* Coin and HP boxes commit on change, not on input: mid-typing, "+1" is not
      yet the number you meant. Enter commits without leaving the field, and
      reselects so you can type the next delta straight away. */
-  function commitBox(t){
+  function commitBox(t,viaKey){
     if(!t||!t.closest)return null;
     const c=t.closest("[data-coin]");if(c){applyCoinInput(c);return c;}
     const h=t.closest("[data-hp]");if(h){applyHPInput(h);return h;}
-    const k=t.closest("[data-trkval]");if(k)return commitTrackerValue(k);
+    const k=t.closest("[data-trkval]");if(k)return commitTrackerValue(k,viaKey);
     return null;
   }
   document.addEventListener("change",e=>{commitBox(e.target);});
   document.addEventListener("keydown",e=>{
     if(e.key!=="Enter")return;
-    const b=commitBox(e.target);
-    if(b){e.preventDefault();b.select();}
+    /* preventDefault() BEFORE commitBox() runs, not after: a completing
+       tracker's Enter moves focus straight to the toast's Undo (trkAct(),
+       viaKey), and a browser fires Enter's default action — a synthetic
+       click — against whatever now HAS focus, not the original target. Left
+       until after commitBox() returned (gated on there being a box left to
+       reselect, which a closed row has none of), that synthetic click landed
+       on Undo and silently reverted the very completion Enter had just made. */
+    if(!e.target.closest||!e.target.closest("[data-coin],[data-hp],[data-trkval]"))return;
+    e.preventDefault();
+    const b=commitBox(e.target,true);
+    if(b)b.select();
   });
   document.getElementById("invCollapseAll").addEventListener("click",()=>{const ic=invCol();const anyOpen=character.inventory.some(it=>!ic.items[it.id]);character.inventory.forEach(it=>{ic.items[it.id]=anyOpen;});renderInventory();scheduleSave();});
   /* Same shape as the inventory one: if anything is open, shut everything;

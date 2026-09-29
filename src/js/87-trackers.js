@@ -228,10 +228,12 @@ function undoTrackerChange(snap,who,viaKey){
 }
 /* The count box commits on change or Enter, like the coin and HP boxes
    (commitBox() in 90-boot.js). Anything but digits puts the old count back.
-   Returns the redrawn box, for Enter to select. */
-function commitTrackerValue(inp){
+   Returns the redrawn box, for Enter to select. If Enter completes the
+   tracker, its row leaves for Completed and trkAct's own focus-restore takes
+   over: it moves focus to the toast's Undo instead. */
+function commitTrackerValue(inp,viaKey){
   const id=inp.dataset.trkval,n=trkParse(inp.value);
-  if(n===null)renderTrackers();else trkAct(id,(t,now)=>trkSetValue(t,n,now),false);
+  if(n===null)renderTrackers();else trkAct(id,(t,now)=>trkSetValue(t,n,now),!!viaKey);
   return document.querySelector(attrSel("data-trkval",id));
 }
 function toggleTrkGroup(key){
@@ -240,7 +242,15 @@ function toggleTrkGroup(key){
   renderTrackers();scheduleSave();
 }
 function toggleTrkCompleted(){trkCompletedOpen=!trkCompletedOpen;renderTrackers();}
-function reopenTracker(id){const t=trkById(id);if(!t)return;trkReopen(t);renderTrackers();scheduleSave();toast(`“${trkName(t)}” reopened`);}
+/* Reopening moves the row from trackerClosedHTML() (data-trkreopen) back into
+   trackerRowHTML() (no such hook), so renderTrackers()'s own focus-restore has
+   nothing to find. From the keyboard, land on the tracker's edit button
+   instead — the one hook both row forms carry. */
+function reopenTracker(id,viaKey){
+  const t=trkById(id);if(!t)return;
+  trkReopen(t);renderTrackers();scheduleSave();toast(`“${trkName(t)}” reopened`);
+  if(viaKey){const b=document.querySelector(attrSel("data-trkedit",id));if(b&&b.focus)b.focus();}
+}
 function openTrackerForm(existing){
   const isNew=!existing;
   const t=existing||{id:uid(),name:"",type:"counter",tag:"",value:0,goal:0,items:[],done:false,autoClose:true,at:Date.now()};

@@ -2417,6 +2417,14 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ctx.reopenTracker('b');
   ck('Reopen brings it back, its count kept', c.trackers[0].closed === false && c.trackers[0].value === 300);
   ck('the combat view accepts the Trackers card', ctx.combatSectionsOf({combatSections: ['trackers']}).join() === 'trackers');
+  /* the keyboard flag threaded through commitTrackerValue()/reopenTracker() —
+     the plain harness can't see where focus lands, so this only checks the
+     flag doesn't break the underlying behaviour */
+  c.trackers[0].value = 299; c.trackers[0].closed = false;
+  ctx.commitTrackerValue({dataset: {trkval: 'b'}, value: '300'}, true);
+  ck('a keyboard Enter that completes a tracker still closes it', c.trackers[0].closed === true && c.trackers[0].value === 300);
+  ctx.reopenTracker('b', true);
+  ck('a keyboard Reopen still reopens, its count kept', c.trackers[0].closed === false && c.trackers[0].value === 300);
 }
 
 /* ---- dialogs: what auto-focus may pick, and how the opener is found again ---- */
