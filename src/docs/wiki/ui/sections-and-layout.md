@@ -13,7 +13,7 @@ search boxes. It also covers two sidebar residents, familiars and the portrait.
 `60-attacks.js` · `rulesSecOpen()`, `renderRulesSections()` in `86-tables.js` · `setSecOpen()`,
 `setSecHTML()` in `88-settings.js` · `buildStats()`, `buildBio()`, `blankChar()` in `00-constants.js`
 · `renderPortrait()` in `66-coins-hp.js` · markup in `00-sheet.html`, `10-inventory.html`,
-`20-spells.html`, `30-story.html`, `40-rules.html`, `60-notes.html`, `70-combat.html` · `10-chrome.css`,
+`20-spells.html`, `30-story.html`, `40-rules.html`, `60-journal.html`, `70-combat.html` · `10-chrome.css`,
 `20-cards.css`, `30-sheet.css` ·
 **Tests:** `rules-data.js` (registry against template, familiars layout, section heads, search boxes,
 Settings and Rules sections), `sheet.js` (`featGroups()`, the shared favourites label) ·
@@ -32,7 +32,7 @@ Settings and Rules sections), `sheet.js` (`featGroups()`, the shared favourites 
 | `20-spells.html` | `#tab-spells` | one `.stack` | spellcasting, slots, activespells, spells; plus `#concCard`, untagged ([Conditions & concentration](../features/conditions-and-concentration.md)) |
 | `30-story.html` | `#tab-story` | `.cols` | proficiencies; `#bioStack` is filled by `buildBio()` with the eight bio cards, untagged by design |
 | `40-rules.html` | `#tab-rules` | one `.stack` | none: two foldable cards ([Rules & tables](../features/rules-and-tables.md)) |
-| `60-notes.html` | `#tab-notes` | one `.stack`, centred, max 820px | none: it collects notes, it doesn't take one |
+| `60-journal.html` | `#tab-journal` | one `.stack`, centred, max 820px | none: the Section Notes card collects notes, it doesn't take one |
 | `70-combat.html` | `#tab-combat` | `.cview`: header, live region, `#cvList` | none in markup: the real cards are moved in at runtime |
 
 The panels concatenate in manifest order, which is not the tab-bar order (that lives in the
@@ -51,7 +51,7 @@ instead of above HP and Skills. It costs nothing because `.stack` carries one ru
 `data-note="k"` as the attribute right after `class="card"`. Its consumers:
 
 - **Notes.** `renderNoteIcons()` puts a note button in each card's `.label`, `notesHTML()` groups
-  the Notes tab by `tab`, and notes are stored in `character.secNotes[k]`
+  the Journal tab's Section Notes card by `tab`, and notes are stored in `character.secNotes[k]`
   ([Story & notes](../features/story-and-notes.md)).
 - **Combat view.** `combatSectionsOf()` filters the saved `combatSections` down to registry ids,
   `renderCombatToggles()` puts a toggle before the note button, and `combatCard()` looks the card up
@@ -82,7 +82,7 @@ One idiom for every foldable group inside a card or modal:
 
 The caret is drawn pointing right. `.fcaret` turns it 90° to point down (open), and `.fcaret.c`
 leaves it pointing right (shut). The users are the Features & Traits groups (`data-fgroup`), the
-Notes tab (`data-notegroup`) and the Settings sections (`data-setsec`). The inventory sections and
+Section Notes card (`data-notegroup`) and the Settings sections (`data-setsec`). The inventory sections and
 the Attacks card's Favorites / Attacks split use `.inv-sec-head`, which shares the one rule
 `.fghead,.inv-sec-head` (a solid 1.5px `--line` rule and an 8px gap) but carries its text directly
 rather than in `.fgname`. The Rules tab's two card headings are `.label.rules-head` with the same
@@ -244,3 +244,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-09-24 — One section-heading rule for `.fghead` and `.inv-sec-head`; the inventory caret redrawn; a clear button in every search box. → ledger L3525, #51, #49
 - 2026-09-25 — Hit Dice move from Vitals into Rest & Recovery. → ledger L3676
 - 2026-09-28 — The portrait is escaped and drawn only from a data: URL. → ledger L3940
+- 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39

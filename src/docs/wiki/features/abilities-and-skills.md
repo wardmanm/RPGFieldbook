@@ -111,7 +111,7 @@ character → Skills display (Classic / By ability), which calls `renderAll()`.
 
 ## Open
 
-- In grouped mode the Skills card's note button is hidden, and the Notes tab lists only sections
+- In grouped mode the Skills card's note button is hidden, and the Section Notes card lists only sections
   that already have a note, so a Skills note cannot be *started* there. Existing notes stay listed.
 - Rules content never grants expertise: a grant carries a level, but nothing supplies 2, and
   expertise features stay prose by decision (see [Known issues](../roadmap/known-issues.md)).

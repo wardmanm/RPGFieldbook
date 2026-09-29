@@ -52,7 +52,7 @@ first. Save is `exportChar()`; Load clicks the hidden `#fileLoad`, whose change 
 ### Tabs
 
 Each `.tab` carries `data-tab="<name>"` and owns a panel `#tab-<name>`. The names are lowercase:
-`sheet`, `spells`, `inventory`, `story`, `notes`, `rules`, and `combat`, whose button is
+`sheet`, `spells`, `inventory`, `story`, `journal`, `rules`, and `combat`, whose button is
 `#btnCombat` in `.tab-tools`, not a `.tab`.
 
 `selectTab()` reads which panel is active; leaving `combat` calls `closeCombatView()` first, which
@@ -287,3 +287,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-09-25 — The combat view becomes a tab; `cvInert`, `aria-modal` and its capture-phase Esc are removed. → ledger L3676
 - 2026-09-28 — `setDismissGuard()` takes `then`, what a dismissed window hands on; `dismissModal()` runs it after closing. → ledger L3847, #63
 - 2026-09-28 — The title contract is stated and guarded: plain text, never `esc()`'d; `runChoices()`, the one caller that escaped, no longer does. → ledger L4086, #69
+- 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39

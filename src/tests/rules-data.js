@@ -957,8 +957,15 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      (t.match(/data-note="[a-z]+"/g) || []).every((_, i) => true) &&
      (t.match(/<div class="card" data-note="[a-z]+"/g) || []).length === 19,
      (t.match(/<div class="card"[^>]*data-note[^>]*>/g) || []).length);
-  ck('the Notes tab itself takes no note', !/id="tab-notes"[\s\S]*?data-note=/.test(t));
-  ck('the Notes tab has the list the renderer targets', t.includes('id="notesList"'));
+  /* The Journal panel, sliced to the next panel so a card on a LATER tab can
+     neither satisfy nor break these. The regex this replaced ran on to the end
+     of the page, and would have passed vacuously once the id changed. */
+  const jAt = t.indexOf('id="tab-journal"'), jEnd = t.indexOf('<section class="tabpanel', jAt + 1);
+  const jPanel = jAt < 0 ? '' : t.slice(jAt, jEnd < 0 ? undefined : jEnd);
+  ck('the Journal tab exists', jAt >= 0);
+  ck('the Journal tab takes no note of its own', !/data-note=/.test(jPanel), jPanel.match(/data-note="[a-z]+"/g));
+  ck('the Journal tab has the list the notes renderer targets', jPanel.includes('id="notesList"'));
+  ck('nothing still calls it the Notes tab', !/id="tab-notes"|data-tab="notes"/.test(t));
 
   // registry titles must match the headings they claim to describe. `origin` is
   // excluded on purpose: that heading is skin-dependent (Race vs Ancestry), which

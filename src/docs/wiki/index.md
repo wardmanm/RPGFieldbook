@@ -39,7 +39,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 - [Spells](features/spells.md) — list and browser, prepared, slots, casting and upcast, Active Spells and rounds
 - [Inventory](features/inventory.md) — items, sections, origin and cost, the finder, weight, item uses, coins
 - [Armor & AC](features/armor-and-ac.md) — `itemArmor()`, `armorAC()`, armor kinds, shields
-- [Story & notes](features/story-and-notes.md) — the Story tab's bio fields, section notes, the Notes tab
+- [Story & notes](features/story-and-notes.md) — the Story tab's bio fields, section notes and the Section Notes card
 - [Rules & tables](features/rules-and-tables.md) — the Rules tab, glossary browse, reference tables and `cols`
 - [Combat view](features/combat-view.md) — the combat tab: real cards moved in, the tracker, Undo
 - [Rules-update tool](features/rules-update-tool.md) — finding drift between a sheet and its packs, and the three rules

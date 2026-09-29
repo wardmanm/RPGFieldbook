@@ -120,7 +120,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `80-modal-forms.js` | `openModal()` with dismiss guards and focus; the item, feature, spell, status and familiar forms | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Spells](features/spells.md) |
 | `85-browse.js` | `openBrowse()`, the full-screen finder; item, spell and feat pickers | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Spells](features/spells.md), [Features & traits](features/features-and-traits.md) |
 | `86-tables.js` | Rules-tab folding, `findTable()`, `tableHTML()` | [Rules & tables](features/rules-and-tables.md) |
-| `87-notes.js` | `NOTE_SECTIONS`, section notes, `noteHTML()`, the Notes tab | [Story & notes](features/story-and-notes.md), [Rich text](architecture/rich-text.md), [Sections & layout](ui/sections-and-layout.md) |
+| `87-notes.js` | `NOTE_SECTIONS`, section notes, `noteHTML()`, the Section Notes card | [Story & notes](features/story-and-notes.md), [Rich text](architecture/rich-text.md), [Sections & layout](ui/sections-and-layout.md) |
 | `87-combat.js` | the combat tab and tracker | [Combat view](features/combat-view.md) |
 | `88-settings.js` | the Settings modal, rules status, `dataStatus()` | [Settings & updates](features/settings-and-updates.md) |
 | `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, fetch and import of packs | [Rules packs](architecture/rules-packs.md) |
@@ -138,7 +138,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `20-spells.html` | the Spells tab | [Spells](features/spells.md) |
 | `30-story.html` | the Story tab | [Story & notes](features/story-and-notes.md) |
 | `40-rules.html` | the Rules tab | [Rules & tables](features/rules-and-tables.md) |
-| `60-notes.html` | the Notes tab | [Story & notes](features/story-and-notes.md) |
+| `60-journal.html` | the Journal tab | [Story & notes](features/story-and-notes.md) |
 | `70-combat.html` | the Combat tab | [Combat view](features/combat-view.md) |
 
 ### Glossary

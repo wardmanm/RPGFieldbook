@@ -3,7 +3,8 @@
 Two kinds of free text, easy to confuse. The **Story tab** holds the character's own writing: eight
 bio cards (Appearance through a card called **Notes**) and Proficiencies & Languages. **Section
 notes** are something else — a note pinned to any of 19 cards on the Sheet, Spells, Inventory and
-Story tabs, opened from an icon in the card's heading and gathered on the **Notes tab**. Both render
+Story tabs, opened from an icon in the card's heading and gathered in the **Section Notes** card on
+the **Journal tab**. Both render
 the same markdown-on-top-of-glossary grammar.
 
 **Code:** `BIO`, `buildBio()` in `00-constants.js` · `renderRT()`, `renderAllRT()` in
@@ -11,7 +12,7 @@ the same markdown-on-top-of-glossary grammar.
 `saveNote()`, `noteWhen()`, `noteBtnHTML()`, `notePreview()`, `renderNoteIcons()`, `notesHTML()`,
 `noteEntryHTML()`, `renderNotes()`, `toggleNoteGroup()`, `jumpToNote()`, `openNoteEditor()` in
 `87-notes.js` · `selectTab()`, `scrollToCard()` in `40-sheet.js` · markup `src/html/30-story.html`,
-`src/html/60-notes.html` · **Tests:** `rules-data.js` (registry ↔ template, storage guards, the pure
+`src/html/60-journal.html` · **Tests:** `rules-data.js` (registry ↔ template, storage guards, the pure
 renderers), `tables.js` (the markdown) · **See also:** [Rich text](../architecture/rich-text.md),
 [Character model](../architecture/character-model.md),
 [Sections & layout](../ui/sections-and-layout.md), [Shell](../ui/shell.md)
@@ -38,28 +39,29 @@ inside it. The button opens `openNoteEditor(k)`: a textarea, a one-line formatti
 Save, Cancel and (for an existing note) Delete.
 
 **Storage.** `character.secNotes` maps id → `{text, at, editedAt}`. `saveNote()` deletes the entry
-when the text is blank, so "has a note" is one truth test and the Notes tab can never list an empty
-one. `at` is set once; `editedAt` moves only when the text actually changed. Every read goes through
+when the text is blank, so "has a note" is one truth test and the Section Notes card can never list
+an empty one. `at` is set once; `editedAt` moves only when the text actually changed. Every read goes through
 `noteMap()` / `getNote()`, which tolerate a hand-edited file putting a string where a note object
 belongs — `migrate()` guards `secNotes` at the top level only.
 
 **Titles.** `noteTitle(def)` quotes the registry, except for `origin`, whose heading depends on the
-skin ("Race" or "Ancestry" & Background, via `raceTerm()`), so the Notes tab always agrees with the
-card it links to.
+skin ("Race" or "Ancestry" & Background, via `raceTerm()`), so the Section Notes card always agrees
+with the card it links to.
 
-**The Notes tab** (`#tab-notes`, whose own card deliberately has no `data-note`). `notesHTML()` groups
-the notes by tab in registry order, lists only sections that have a note, and shows an empty state
-otherwise. Each group header is a `role="button"` toggle (click, Enter or Space) stored per character
-in `noteCollapse`; a closed group still renders its notes, hidden. Each entry has a jump link, the
-added/edited dates, an edit button and the note rendered by `noteHTML()`. `jumpToNote(k)` calls
-`selectTab()` — which never scrolls — then `scrollToCard()` and flashes the card; a card that is
-hidden (`offsetParent === null`: an empty Familiars or Active Spells) scrolls to the top instead.
+**The Section Notes card** (on `#tab-journal`; the card deliberately has no `data-note`). `notesHTML()`
+groups the notes by tab in registry order, lists only sections that have a note, and shows an empty
+state otherwise. Each group header is a `role="button"` toggle (click, Enter or Space) stored per
+character in `noteCollapse`; a closed group still renders its notes, hidden. Each entry has a jump
+link, the added/edited dates, an edit button and the note rendered by `noteHTML()`. `jumpToNote(k)`
+calls `selectTab()` — which never scrolls — then `scrollToCard()` and flashes the card; a card that
+is hidden (`offsetParent === null`: an empty Familiars or Active Spells) scrolls to the top instead.
+They print under the heading "Section notes".
 
 ## Rules that must hold
 
 - **`character.notes` and `character.secNotes` are different things.** `notes` is the Story tab's
-  "Notes" bio card (`#rt-notes`); `secNotes` is the section-note map (`#tab-notes`). Merging or
-  renaming either into the other breaks the Story tab silently.
+  "Notes" bio card (`#rt-notes`); `secNotes` is the section-note map (the Journal tab's Section Notes
+  card). Merging or renaming either into the other breaks the Story tab silently.
 - **Registry ids are stable and never derived from headings.** Headings get reworded; a note keyed to
   one would be orphaned. `rules-data.js` checks the registry against the template both ways and
   counts exactly 19 `<div class="card" data-note="` cards.
@@ -114,3 +116,4 @@ hidden (`offsetParent === null`: an empty Familiars or Active Spells) scrolls to
 - 2026-08-11 — Section notes on 19 cards, stored as `secNotes`; the Notes tab; markdown over `highlight()`. → ledger L1491
 - 2026-08-18 — One rich-text grammar: the bio cards render markdown; the note preview keeps bold, italics and code. → ledger L3035
 - 2026-09-01 — The "By ability" layout hides the Skills card, and with it that card's note button. → ledger L106, #17
+- 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39

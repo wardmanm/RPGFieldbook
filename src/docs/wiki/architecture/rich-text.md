@@ -85,7 +85,7 @@ A click, Enter or Space on `.kw` opens the glossary entry, and on `.tblref` open
 
 | Surface | Renderer |
 |---|---|
-| Section notes (the Notes tab and each card's note) | `noteHTML()` |
+| Section notes (the Journal tab's Section Notes card, and each card's note) | `noteHTML()` |
 | Story bio fields and Proficiencies (`renderRT()`) | `richHTML()` |
 | Feature, item, status and familiar descriptions; browse previews; the spell view | `richHTML()` / `descHTML()` |
 | Trait lines in the class, subclass, species and background panes | `richInline()` |
@@ -143,7 +143,7 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
 - **Placeholders are indexed**, not the single repeating `TBL_MARK` idiom, because the markdown
   pass nests and ordinal restore-in-order does not hold there.
 - **One `highlight()` per block, not per line.** Each call rebuilds and sorts the glossary and
-  compiles a fresh RegExp, and the Notes tab can render nineteen notes at once.
+  compiles a fresh RegExp, and the Section Notes card can render nineteen notes at once.
 - **Run-in panes call `richInline()`, never a block renderer** (asserted).
 - **Emphasis needs non-space at both ends,** or the Humblewood footnote asterisks ("divert power\*",
   "cymatic sight\*") pair up and italicise the sentence between them.

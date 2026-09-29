@@ -1,6 +1,6 @@
 /* ================= section notes =================
-   A note pinned to any section of the sheet, plus the Notes tab that gathers
-   them. Notes are the player's own words, so they render markdown — and, like
+   A note pinned to any section of the sheet, plus the Section Notes card on the
+   Journal tab that gathers them. Notes are the player's own words, so they render markdown — and, like
    every other body of text in the app, they run through highlight() so glossary
    terms and [Table: X] references stay live inside them.
 

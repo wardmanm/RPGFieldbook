@@ -4752,3 +4752,18 @@ ticked, applying gives check +1 and PB +3; three failed first. Pages:
 [computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
 [abilities & skills](../wiki/features/abilities-and-skills.md), [converter](../wiki/data/converter.md),
 [rules-update tool](../wiki/features/rules-update-tool.md).
+
+## The Notes tab is the Journal tab (#39, 2026-09-29)
+
+The first step of #39. The tab that gathers section notes is renamed, id and all: `tab-journal`,
+`data-tab="journal"`, `src/html/60-journal.html`. Its icon is now a ringed notebook, because the
+old page glyph is the section-note button's own. Nothing is saved under a tab's name (the active
+tab is never persisted), so no character changes. The Section Notes card works as it did. Its
+printed heading reads "Section notes" now, since the Story tab has a card called Notes too.
+
+**Guard.** `rules-data.js`'s "the Notes tab takes no note" regex ran from the panel to the end of
+the page, and would have passed vacuously once the id changed. It now slices the Journal panel up
+to the next panel, and refuses a leftover `tab-notes` or `data-tab="notes"`; three failed first.
+
+Pages: [shell](../wiki/ui/shell.md), [sections & layout](../wiki/ui/sections-and-layout.md),
+[story & notes](../wiki/features/story-and-notes.md), [screenshot QA](../wiki/process/screenshot-qa.md).

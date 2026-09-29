@@ -51,7 +51,7 @@ project root as their working directory, which is all a relative path needs.
 5. For interactive changes, drive the flow (`browser_click`, `browser_type`, `browser_press_key`,
    `browser_drag`, `browser_hover`) and shoot the result.
 
-Tab names are `sheet`, `inventory`, `spells`, `story`, `rules`, `notes` and `combat`. The combat tab's
+Tab names are `sheet`, `inventory`, `spells`, `story`, `rules`, `journal` and `combat`. The combat tab's
 button is the crossed swords (`#btnCombat`), not a `.tab`.
 
 By local convention the shots go in `.claude/qa/` (gitignored) as `<issue>-before-<what>.png` and
@@ -119,3 +119,4 @@ as "fully tested".
 - 2026-08-18 — The first emblem screenshots catch the pre-wrap stair-step and the lowercase-tab trap. → ledger L3289
 - 2026-09-01 — `.mcp.json` moves to the cross-platform launcher, whose `${CLAUDE_PROJECT_DIR}` path never resolved. → ledger L3361, #42
 - 2026-09-24 — Launcher path made relative, and the server connects again. → ledger L3361
+- 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39

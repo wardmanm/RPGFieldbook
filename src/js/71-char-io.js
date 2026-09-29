@@ -121,7 +121,7 @@ function printSheet(){
     ${feats?`<div class="p-sec">Features &amp; Traits</div><div class="p-two">${feats}</div>`:""}
     ${(inv||coins)?`<div class="p-sec">Inventory${coins?` — ${coins}`:""}</div><div class="p-two">${inv}</div>`:""}
     ${bio?`<div class="p-sec">Character</div>${bio}`:""}
-    ${secn?`<div class="p-sec">Notes</div>${secn}`:""}
+    ${secn?`<div class="p-sec">Section notes</div>${secn}`:""}
   `;
   document.getElementById("printArea").innerHTML=html;
   window.print();

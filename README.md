@@ -209,15 +209,15 @@ you scroll, and the **☰** button in the tab bar opens a jump-to-section list f
 - **Add spells** from a searchable, filterable browser (by level, class, school, and more), or
   add your own.
 
-### 📝 Notes
+### 📓 Journal
 
 Every section of your sheet can hold a note — tap the small page icon beside any heading on the
 **Sheet**, **Spells**, **Inventory** or **Story** tabs. The icon lights up when there's something
 there, and hovering it shows you the note without opening it. Each note remembers when you wrote it
 and when you last changed it.
 
-The **Notes** tab gathers them all, grouped by where they came from, with a link on each that takes
-you back to that section. Notes print with your sheet.
+The **Journal** tab's **Section Notes** card gathers them all, grouped by where they came from, with
+a link on each that takes you back to that section. Section notes print with your sheet.
 
 Notes support a little formatting:
 

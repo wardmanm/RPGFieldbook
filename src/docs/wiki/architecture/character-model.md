@@ -82,7 +82,7 @@ chosen "don't ask again" for this version (`skipUpdate`).
 **`notes` and `secNotes` are different things.** `notes` is the eighth `BIO` string, the Story
 tab's "Notes" card, rendered into `#rt-notes`. It predates everything. `secNotes` is the per-section
 notes map, keyed by `NOTE_SECTIONS` id (not by heading, which gets reworded). Each value is
-`{text, at, editedAt}`, saving an empty note deletes the key, and the Notes tab is `#tab-notes`.
+`{text, at, editedAt}`, saving an empty note deletes the key, and they are gathered on the Journal tab (`#tab-journal`).
 
 ## Rules that must hold
 

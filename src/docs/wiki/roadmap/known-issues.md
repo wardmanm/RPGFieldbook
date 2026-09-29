@@ -44,7 +44,7 @@ Known behaviour that is accepted for now.
   pack, bumps XPHB's data version, and strands anyone playing an Artificer on the core pack alone.
   Tasha's skips the Artificer and its subclasses instead of shipping duplicates. → ledger L1816
 - **In the By ability ("grouped") layout a Skills note can't be started.** The Skills card is hidden,
-  and the Notes tab lists only sections that already have a note. Existing Skills notes stay editable.
+  and the Section Notes card lists only sections that already have a note. Existing Skills notes stay editable.
   Mitigating it means a second note button in the Abilities label, which is worse UI than the gap.
   → ledger L106
 - **`**Hit** Points` loses its glossary chip.** The asterisks break the `\b(term)\b` match. This is
