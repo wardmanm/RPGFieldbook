@@ -259,7 +259,8 @@ is a new, unticked item. Reordering keeps every tick.
 Whether it is expanded is session only.
 
 **Focus.** Re-rendering the card after a tap puts focus back on the same control, found by its
-unique `data-*`. So holding Space on + keeps counting.
+unique `data-*`. So holding Enter on + keeps counting. (A button clicks once on Space, at key-up,
+so a held Space does not repeat.)
 
 **Hidden.** With `showTrackers` off, the card is `display:none` and stays in the DOM, as the section
 registry requires. The ☰ flyout and the combat view skip it, as they skip the Skills card in the By
@@ -368,7 +369,7 @@ the reason from `storageWhy()`. **`libSave()`** returns its reason instead of sw
   - each type through the form; −/+ and a typed value; the bar at 0, 50 and 100%;
   - a checklist ticked to done → toast → Completed (1) → Reopen stays open; Undo; the option off
     stays open;
-  - Space held on + keeps focus; a keyboard completion focuses Undo;
+  - Enter held on + keeps counting and keeps focus; a keyboard completion focuses Undo;
   - the Settings switch hides the card and its ☰ entry, and the data survives a reload;
   - Trackers in the combat view, +1 mid-fight;
   - a character switch with the toast up.
@@ -429,3 +430,19 @@ Where the code differs from the text above, and why:
   button**, since its Reopen button disappears.
 - **The print heading reads "Section notes"**; the Notes-tab wording was also swept from code
   comments and test labels.
+- **The count box's change path patches its row in place** (`trkPatchRow()`, `trkAct()`'s
+  `inPlace` flag), and does not redraw the card. `change` fires as the box loses focus, at the
+  mousedown on + or at a Tab. A redraw there replaced the + under the pointer, so its click never
+  arrived, and it dropped a Tab's focus to the page. Enter, and a change that closes the tracker,
+  still redraw.
+- **Tab or Esc from a closing tap's Undo goes to the next tracker** (§6): the first control of the
+  next open row on screen (`trkAfter()`, `trkNextControl()`), or + Tracker when none is left.
+- **Leaving a character whose changes can't be saved asks first** (§8). `loadCharById()`,
+  `newCharacter()` and `finishImport()` call `leaveCharacterOk()`, which flushes the pending save
+  and, if it is refused, confirms before leaving. No changes nothing and shows the sheet with its
+  Save to file. A switch that goes ahead clears the strip. `deleteCharacter()` and `setAutoload()`
+  alert a refused index write.
+- **Session state and Undo key on the character object** (`jnlUI.who`, `trkWho`, the Undo's `who`),
+  not the id (§3 and §6 said "the character's id"). Import → Replace keeps the id and swaps the sheet.
+- **More helpers:** `trkAfter()`, `trkPatchRow()`, `trkNextControl()` (87-trackers.js) and
+  `leaveCharacterOk()` (70-persistence.js).

@@ -175,11 +175,10 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 
 ### Breaks of a non-negotiable
 
-- **Silent storage writes (constraint 2), narrowed.** `saveNow()` (autosave), `newCharacter()`,
-  `finishImport()` and `migrateOldChar()` all now report a refused write (#81). `saveSettings()`
-  still returns why it was refused but most callers ignore it, and `deleteCharacter()` and
-  `setAutoload()` call `libSave()` without reading its result, so a refused index write there can
-  still leave the index stale with nothing said. → [Storage](../architecture/storage.md)
+- **Silent storage writes (constraint 2), narrowed.** Every character and library write now reports
+  a refused write (#81): autosave (`saveNow()`), `newCharacter()`, `finishImport()`,
+  `migrateOldChar()`, `deleteCharacter()` and `setAutoload()`. `saveSettings()` still returns why it
+  was refused, but most of its callers ignore that. → [Storage](../architecture/storage.md)
 - **A stale rules cache can win.** If a save falls back to localStorage after IndexedDB once held the
   pool, the old IndexedDB copy is never cleared, and `loadRulesCacheAsync()` lays it over the newer
   copy on the next boot. → [Storage](../architecture/storage.md)
@@ -391,3 +390,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-29 — Fixed and removed: raw item-entry template tags in 54 descriptions (#78) and the unread Stone of Good Luck / Ioun Stone of Mastery bonuses (#79). → ledger L4634, L4689
 - 2026-09-29 — Narrowed: a refused autosave, new character, import or old-save move now reports itself (#81); `deleteCharacter()`, `setAutoload()` and most `saveSettings()` callers still don't. → ledger L4771
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
+- 2026-09-29 — Narrowed again: `deleteCharacter()` and `setAutoload()` now report a refused index write; only most `saveSettings()` callers still don't. → ledger L4856, #81

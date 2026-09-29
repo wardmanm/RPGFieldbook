@@ -39,4 +39,5 @@ Bullets below this line — leave the heading in place.
   the Trackers card to the combat view to count mid-fight, or hide it in Settings → This
   character.
 - If your browser refuses to save a change, the sheet now says so plainly — and keeps saying so
-  until a save goes through — with a button to save the character to a file instead.
+  until a save goes through — with a button to save the character to a file instead, and it asks
+  before you switch away from changes it couldn't save.

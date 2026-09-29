@@ -4852,3 +4852,61 @@ taps, a stale Undo, a typed count, Reopen, and the combat view accepting the car
 [sections & layout](../wiki/ui/sections-and-layout.md),
 [settings & updates](../wiki/features/settings-and-updates.md),
 [character model](../wiki/architecture/character-model.md).
+
+## The journal branch's final-review fixes (#39, #40, #41, #81, 2026-09-29)
+
+A whole-branch review of `issue/39-journal` found three real bugs and seven smaller ones. All fixed
+in one pass, each with a test first where the harness can see it, and driven in Chrome where it
+can't.
+
+**Leaving a character (#81, I-2).** `loadCharById()` never called `showSaveResult()`, so after a
+switch the strip still said "Not saved", now about a character whose stored copy was current. Worse,
+the switch it invited (Home, delete an old character to make room, tap the first one's card)
+reloaded that character from storage and dropped the edits it had never written. Now
+`loadCharById()`, `newCharacter()` and `finishImport()` all call `leaveCharacterOk()` first
+(`70-persistence.js`). It writes the edit still waiting on the debounce, retries a write that
+failed, and, if that still can't land, asks: "“A”'s changes aren't saved — <why>. Leave and lose
+them? Cancel, then use Save to file." No changes nothing and hides the home screen, so the strip's
+Save to file is in view. A switch that goes ahead calls `showSaveResult("")`. A new `saveDue` flag
+means a switch with nothing waiting writes nothing, so it never moves a card up the home screen's
+`updated` order. Side effect: an edit made less than 500 ms before a switch is no longer lost.
+
+**Delete and star (#81, I-3).** `deleteCharacter()` and `setAutoload()` return `libSave()`'s answer
+and `alert()` it (the home overlay covers the strip). A delete whose index write fails keeps the
+blob, so the card still opens the character.
+
+**A typed count (#41, I-1).** The count box's `change` fires as it loses focus, which happens at the
+mousedown on + or on a Tab. `trkAct()` redrew the card there, replacing the + under the pointer, so
+the click never arrived: 5, type 9, click + gave 9. It also dropped a Tab's focus to `<body>`. The
+change path now patches the row in place (`trkPatchRow()`: the box, the bar's `aria-valuenow` and
+width), and a non-number is put back in place. Enter, and a change that closes the tracker, still
+redraw.
+
+**The minors.**
+- M-1: Tab or Esc from a closing tap's Undo goes to the next open tracker's first control
+  (`trkAfter()`, taken before the tap; `trkNextControl()`), or to + Tracker when none is left.
+- M-2: `attrSel()` and `openerSelector()` escape newline, return and form feed as CSS hex escapes. A
+  raw one made `querySelector` throw, and in `trkAct()` that throw came before the save. The save
+  is now scheduled first.
+- M-3: `jnlUI.who`, `trkWho` and the Undo's `who` key on the character object, not its id.
+  Import → Replace keeps the id and swaps the sheet, so an open editor survived it and wrote the
+  old text over the imported page, and an old Undo could restore into it.
+- M-4: the tracker form's Save, Close now and Delete re-resolve the tracker by id, since a toast's
+  Undo can swap it while the form is open. Close now and Reopen keep what was typed and do what the
+  button said when the form opened.
+- M-5: `rules-data.js` checks that `#swTrackers` is drawn in This character and wired.
+- M-6: `renderTrackers()` calls `renderCombatEmpty()` with the combat view open, so hiding Trackers
+  when it is the only card there brings back the "Add sections…" hint.
+- M-7 and D-1: docs. Holding Enter on + keeps counting, but Space doesn't: a button clicks once on
+  Space's key-up. The README's "red bar" is paper edged in red. The journal page now states the
+  Enter handler's `preventDefault()`-before-`commitBox()` rule.
+
+**Guards.** `sheet.js`: the change path patches in place (a counting fake DOM), a non-number is
+put back, and Enter and a completing change redraw; `trkAfter()`; an Undo across Import → Replace;
+the editor and Completed reset on a same-id replace; the form's Close now, Reopen and Save after an
+Undo; `attrSel()`/`openerSelector()` with newlines. `char-update.js`: the flush before a switch, No
+on each of the three paths, Yes clearing the warning, and delete and star under a full quota.
+`rules-data.js`: the Trackers switch. Pages: [journal](../wiki/features/journal.md),
+[storage](../wiki/architecture/storage.md),
+[home & characters](../wiki/features/home-and-characters.md),
+[combat view](../wiki/features/combat-view.md), [known issues](../wiki/roadmap/known-issues.md).

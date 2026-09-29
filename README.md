@@ -146,8 +146,10 @@ Think of it like a video game: autosave is nice, but you still want to save your
 you quit. **When in doubt, hit Save and keep the file.**
 
 If your browser ever refuses to save — its storage is full, or it's blocking storage for this
-page — a red bar appears at the bottom of the screen and stays there until a save goes through.
-Tap **Save to file** on it to keep a copy right away, free up some space, then tap **Try again**.
+page — a bar edged in red appears at the bottom of the screen and stays there until a save goes
+through. Tap **Save to file** on it to keep a copy right away, free up some space, then tap **Try
+again**. If you open another character while it's up, Fieldbook asks before leaving the unsaved
+changes behind.
 
 You can also back up your whole setup (appearance settings **and** all loaded rules) from
 **Settings → Export settings**, and restore it later with **Import settings**.

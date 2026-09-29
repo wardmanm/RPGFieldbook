@@ -12,9 +12,11 @@ covered by [Story & notes](story-and-notes.md).
 `jnlNewPage()`, `jnlEdit()`, `jnlDone()`, `jnlInput()`, `jnlDelete()`, `insertJournalStamp()`,
 `toggleJnlGroup()` in `87-journal.js` · `TRK_TYPES`, `trkProgress()`, `trkApply()`, `trkStep()`,
 `trkSetValue()`, `trkToggleItem()`, `trkToggleTask()`, `trkClose()`, `trkReopen()`, `trkSnapshot()`,
-`trkRestore()`, `mergeChecklist()`, `trkFromForm()`, `trkSplit()`, `showTrackers()`, `renderTrackers()`,
-`trkAct()`, `undoTrackerChange()`, `commitTrackerValue()`, `openTrackerForm()`, `reopenTracker()` in
-`87-trackers.js` · `NOTE_SECTIONS` in `87-notes.js` ·
+`trkRestore()`, `mergeChecklist()`, `trkFromForm()`, `trkSplit()`, `trkAfter()`, `showTrackers()`,
+`renderTrackers()`, `trkPatchRow()`, `trkAct()`, `trkNextControl()`, `undoTrackerChange()`,
+`commitTrackerValue()`, `openTrackerForm()`, `reopenTracker()` in `87-trackers.js` ·
+`NOTE_SECTIONS` in `87-notes.js` · `openerSelector()` in `80-modal-forms.js` · `commitBox()` in
+`90-boot.js` ·
 markup `src/html/60-journal.html` · `47-journal.css` ·
 `renderAll()` in `66-coins-hp.js`, `refreshRulesUI()`, `openSettings()` in `88-settings.js` · `repairIds()`,
 `migrate()` in `71-char-io.js` · **Tests:** `sheet.js`, `rules-data.js` · **See also:**
@@ -96,22 +98,44 @@ session only. The rows:
 - a checklist is its items as `<button role="checkbox">` ticks;
 - a task is one such tick, labelled with its name.
 
+Every tap goes through `trkAct()`, which snapshots the tracker, applies the tap, schedules the save,
+then redraws. The save comes first, so nothing a redraw throws can cost the tap. The redraw puts
+focus back on the same control by its first `data-*` hook (`openerSelector()`). A button clicks
+again on each repeat of a held Enter, so holding Enter on + keeps counting. Space clicks once, on
+key-up.
+
 The count box commits on change or Enter through `commitTrackerValue()`, and anything but digits
-puts the old count back. Every tap goes through `trkAct()`, which snapshots the tracker, applies the
-tap, redraws and saves. If the tap closed the tracker, `trkAct()` shows a toast with **Undo**
-(`undoTrackerChange()`, guarded by the character id). A tap from the keyboard moves focus to that
-Undo — including Enter in the count box: `commitTrackerValue()` takes a `viaKey` flag from
-`commitBox()` (90-boot.js) and threads it through to `trkAct()`, since a closed row leaves for
-Completed and has nothing left for the ordinary focus-restore to find. The redraw puts focus back
-on the same control by its first `data-*` hook otherwise, so holding Space on + keeps counting.
+puts the stored count back. The two differ:
+
+- **change** fires as the box loses focus, which happens at the mousedown on + or on a Tab. So it
+  does not redraw. `trkAct()`'s `inPlace` flag has `trkPatchRow()` write the new count into the row
+  where it stands: the box, and the bar's `aria-valuenow` and width. A non-number is put back in
+  place too. A redraw there used to replace the + under the pointer, so its click never arrived
+  (5, type 9, click + gave 9), and it dropped a Tab's focus to the page.
+- **Enter** redraws, and `commitBox()` (`90-boot.js`) selects the new box. A change that closes the
+  tracker redraws as well, because its row has to leave for Completed.
+
+If the tap closed the tracker, `trkAct()` shows a toast with **Undo** (`undoTrackerChange()`). Its
+`who` is the character **object** the toast was shown for, so it can't act on another sheet, not
+even one imported over this one under the same id. A tap from the keyboard moves focus to that Undo,
+Enter in the count box included: `commitTrackerValue()` takes a `viaKey` flag from `commitBox()` and
+threads it through to `trkAct()`. Tab or Esc from the Undo goes on to the next tracker. `trkAfter()`
+lists the open trackers drawn after this one, taken before the tap while it still has its place,
+skipping shut groups. `trkNextControl()` returns the first control of the first of them still open
+and on screen, for the toast to focus. With none left, it returns + Tracker.
 
 **The form** (`openTrackerForm()`) holds Name, Type, Tag (with the tags in use), Goal for a
 counter, Items one per line for a checklist, and Close when complete. The last shows only for
 something that can complete. An existing tracker also has **Close now** (or **Reopen**) and
-**Delete**. Closed trackers show their result and closed date, with Reopen (`reopenTracker()`) —
-from the keyboard, Reopen moves the row from the Completed markup back into the open one, which
-carries no matching `data-*` hook either, so it lands focus on that tracker's own edit button
-instead, the one hook both forms carry.
+**Delete**. The toast sits outside the modal's inert, so its Undo can land while the form is open
+and swap the stored tracker for its snapshot. So Save, Close now and Delete act on the tracker as
+stored **now** (`trkById()`), and a new one's Save adds the form's own object. Close now and Reopen
+keep what was typed, and do what the button said when the form opened.
+
+Closed trackers show their result and closed date, with Reopen (`reopenTracker()`). From the
+keyboard, Reopen moves the row from the Completed markup back into the open one, which carries no
+matching `data-*` hook either, so it lands focus on that tracker's own edit button instead, the
+one hook both forms carry.
 
 **Hidden and in combat.** Settings → This character → Trackers sets `showTrackers`, and
 `renderTrackers()` hides the card with `display:none`, keeping it in the DOM, which the section
@@ -121,8 +145,11 @@ by the ☰ flyout and the combat view, as the Skills card is in the By ability l
 
 **The card.** `#journalCard` is the first card on the Journal tab, with **+ Page** (`#jnlNew`) in
 its heading. `renderJournal()` draws `#jnlBody` in one of three views, held in the session-only
-`jnlUI` (`{who, open, editing, draft}`, keyed on the character id, so a switch starts at the
-list and clears the search):
+`jnlUI` (`{who, open, editing, draft}`). It is keyed on the character **object**, so a switch
+starts at the list and clears the search. That includes Import → Replace, which keeps the id but
+swaps the sheet: keyed on the id, an editor open at the time survived the replace, and its next
+keystroke wrote the old text over the imported page. `trkWho` (Completed's open state) is keyed
+the same way. The three views:
 
 - **the list** (`journalListHTML()`): the search box (`#jnlSearch`), then the tag groups. Each
   page is a button (`data-jnlopen`). A group header is a `role="button"` toggle, stored in
@@ -153,12 +180,24 @@ entry in the list.
 - **Search never lower-cases to find.** A match found in a lower-cased copy sits at the wrong index
   in the original.
 - **Tags group by `tagKey()`, and a selector built from one goes through `attrSel()`.** A tag can
-  hold a quote, and that makes `querySelector` throw.
+  hold a quote, and an id from a file a newline. Either makes `querySelector` throw. `attrSel()` and
+  `openerSelector()` backslash a quote or backslash, and write a newline, return or form feed as its
+  CSS hex code and a space.
 - **`renderJournal()` never rebuilds an open editor.** It checks for a `[data-jnlfield]` in
   `#jnlBody` first. Anything that must replace the editor empties the box first, as starting an
   edit does.
 - **Only `trkApply()` closes a tracker on its own**, and only on the transition to complete. A
   second path would re-close a tracker the player just reopened.
+- **The count box's change never redraws a row that stays.** `change` fires at the mousedown on +
+  or at a Tab, and a redraw there eats the click or the focus. Only Enter and a closing change
+  redraw.
+- **The Enter handler calls `e.preventDefault()` before `commitBox()`** for `[data-coin]`,
+  `[data-hp]` and `[data-trkval]` (`90-boot.js`). A browser fires Enter's default action, a
+  synthetic click, at whatever has focus once the handler returns. A completion moves focus to the
+  toast's Undo, so without the early `e.preventDefault()` the same Enter clicked Undo and silently
+  reverted the completion it had just made.
+- **Session state keys on the character object, not its id** (`jnlUI.who`, `trkWho`, the Undo's
+  `who`). Every switch puts a new object in `character`, and Import → Replace keeps the id.
 
 ## Decisions
 
@@ -184,3 +223,4 @@ entry in the list.
 
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
+- 2026-09-29 — Review fixes: a typed count patches its row, so the + click and Tab survive; Tab from Undo goes to the next tracker; newline-safe selectors; session state and Undo keyed on the character object; the form survives an Undo and keeps what was typed. → ledger L4856, #41, #40

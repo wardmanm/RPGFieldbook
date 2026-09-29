@@ -70,8 +70,11 @@ between.
 **Layout.** One centred column. The header is sticky at `--cv-top`, the tab bar's **measured**
 height (`cvStickyTop()`, on open and resize); ≤640px it wraps to two rows and ≤480px the time stacks
 under the round. Active Spells and Familiars, which hide on their own tab when empty, always show in
-the view with "None right now."; the Skills card in "By ability" mode stays hidden. `cvCardShown()`
-tests computed style. The ☰ lists the view's cards, and `scrollToCard()` clears both the tab bar and
+the view with "None right now."; the Skills card in "By ability" mode stays hidden, and so does
+Trackers when Settings hides it. `cvCardShown()` tests computed style. `renderCombatEmpty()` shows the
+"Add sections with the … button on any card." hint when no card in the view shows. `fillCombatView()`
+and a toggle call it, and so does `renderTrackers()` while the view is open, so hiding Trackers
+when it is the only card there brings the hint back instead of leaving the view blank. The ☰ lists the view's cards, and `scrollToCard()` clears both the tab bar and
 the header.
 
 **Character switches.** `syncCombatView()` is the last thing `renderAll()` does: with the tab open it
@@ -149,3 +152,4 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-09-24 — ↑/↓ skip hidden sections; header wraps at 640px; keyboard removal lands on the Undo; the toast moves into the template. → ledger L3470
 - 2026-09-25 — The overlay becomes a tab; `inert`, the lock, `aria-modal` and its Esc are removed; Hit Dice leave Vitals for Rest & Recovery, so they no longer ride in by default. → ledger L3676
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
+- 2026-09-29 — Hiding Trackers while it is the view's only card brings back the "Add sections…" hint. → ledger L4856, #41
