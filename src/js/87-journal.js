@@ -28,8 +28,10 @@ function groupByTag(list,tagOf){
   return [...by.values()].sort((a,b)=>(a.key==="")-(b.key==="")||a.key.localeCompare(b.key));
 }
 /* A CSS attribute selector for a value from the player. A tag can hold a quote,
-   which would make querySelector throw. */
-function attrSel(name,v){return `[${name}="${String(v).replace(/["\\]/g,"\\$&")}"]`;}
+   and an id from a file a newline; either makes querySelector throw. A quote or
+   backslash takes a backslash; a newline, return or form feed, which a CSS
+   string can't hold even escaped that way, becomes its hex code and a space. */
+function attrSel(name,v){return `[${name}="${String(v).replace(/["\\]/g,"\\$&").replace(/[\n\r\f]/g,c=>"\\"+c.charCodeAt(0).toString(16)+" ")}"]`;}
 
 /* ---- the pages ----
    migrate() keeps only objects in `journal` and repairs their ids (repairIds());
@@ -173,13 +175,16 @@ function journalEditorHTML(p,tags){
 /* ================= the DOM layer ================= */
 /* Session only, never saved: which page is open, whether it is being edited,
    and the draft being edited ({id, at}; see jnlSavePage()). Keyed on the
-   character, so a switch starts again at the list. */
+   character OBJECT, so a switch starts again at the list — Import → Replace
+   included, which keeps the id but swaps the sheet: keyed on the id, an editor
+   open at the time survived it, and its next keystroke wrote the old text over
+   the imported page. */
 let jnlUI={who:null,open:null,editing:false,draft:null};
-function jnlReset(){jnlUI={who:character.id,open:null,editing:false,draft:null};}
+function jnlReset(){jnlUI={who:character,open:null,editing:false,draft:null};}
 function jnlSearchText(){const s=document.getElementById("jnlSearch");return jnlQuery(s?s.value:"");}
 function renderJournal(){
   const box=document.getElementById("jnlBody");if(!box)return;
-  if(jnlUI.who!==character.id){jnlReset();const s=document.getElementById("jnlSearch");if(s)s.value="";}
+  if(jnlUI.who!==character){jnlReset();const s=document.getElementById("jnlSearch");if(s)s.value="";}
   const pages=jnlPages(character);
   /* a page deleted, or gone with a reload of the rules or an import */
   if(!jnlUI.editing&&jnlUI.open&&!pages.some(p=>p.id===jnlUI.open))jnlUI.open=null;

@@ -1349,6 +1349,13 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /function renderHP\(\)\{[\s\S]*?getElementById\("hpCur"\)[\s\S]{0,140}classList\.toggle\("hp-warn"/.test(js));
   ck('the colour switch is in the "This character" settings section, per character',
      /id="swHpColor"/.test(js) && /character\.hpColor/.test(js));
+  // spec §11 (#41): the Trackers switch is drawn in This character and does something
+  ck('the Trackers switch is rendered in the "This character" settings section',
+     /id="swTrackers"/.test((js.match(/const secCharacter=activeId\?`[\s\S]*?`:"";/) || [''])[0]) &&
+     /showTrackers\(character\)\?"on":""\}" id="swTrackers"/.test(js));
+  ck('...and wired: a tap flips showTrackers, redraws the card and saves',
+     /getElementById\("swTrackers"\);if\(b\)b\.addEventListener\("click",\(\)=>\{character\.showTrackers=!showTrackers\(character\);[^}]*renderTrackers\(\);scheduleSave\(\);\}\)/.test(js),
+     (js.match(/.{0,40}getElementById\("swTrackers"\).{0,200}/) || [''])[0]);
 
   // ---- the three hit-dice styles
   // Each is a separate builder, so a broken one is a broken LOOK, not an error.

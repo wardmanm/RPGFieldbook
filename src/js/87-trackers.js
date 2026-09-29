@@ -106,6 +106,14 @@ function trkSplit(c){
   };
 }
 function trkGroupOpen(c,key){const m=c&&c.trackerCollapse;return !(m&&typeof m==="object"&&!Array.isArray(m)&&m[key]);}
+/* The ids of the open trackers drawn after `id`, in the card's order: the rest
+   of its group, then the groups below. A shut group's rows can't take focus, so
+   they are left out. Where Tab from a closing tap's Undo goes (trkAct()). */
+function trkAfter(c,id){
+  const ids=[];let seen=false;
+  trkSplit(c).open.forEach(g=>{const o=trkGroupOpen(c,g.key);g.items.forEach(t=>{if(seen&&o)ids.push(t.id);if(t.id===id)seen=true;});});
+  return ids;
+}
 
 /* ---- markup: pure strings, so the harness can assert every state ----
    Names and items are the player's plain words: esc() only, no glossary pass. A
@@ -187,39 +195,77 @@ function trackerFormHTML(t,tags,isNew){
 }
 
 /* ================= the DOM layer ================= */
-/* Session only: whose trackers these are, and whether Completed is open. */
+/* Session only: whose trackers these are, and whether Completed is open. Keyed
+   on the character OBJECT, not its id: Import → Replace keeps the id and swaps
+   the whole sheet, and every switch (loadCharById(), newCharacter(),
+   finishImport()) puts a new object in `character`. */
 let trkWho=null, trkCompletedOpen=false;
 /* The card redraws whole after a tap. Focus goes back to the same control, found
-   by its first data-* hook (openerSelector()), so holding Space on + keeps
-   counting. Hidden, it stays in the DOM (the section registry's rule). */
+   by its first data-* hook (openerSelector()), so holding Enter on + keeps
+   counting — a button repeats on a held Enter; Space clicks once, on key-up.
+   Hidden, it stays in the DOM (the section registry's rule). */
 function renderTrackers(){
   const el=document.getElementById("trkList");if(!el)return;
-  if(trkWho!==character.id){trkWho=character.id;trkCompletedOpen=false;}
+  if(trkWho!==character){trkWho=character;trkCompletedOpen=false;}
   const card=document.getElementById("trackersCard");if(card)card.style.display=showTrackers(character)?"":"none";
   const a=document.activeElement,sel=(a&&el.contains&&el.contains(a))?openerSelector(a):null;
   el.innerHTML=trackersHTML(character,trkCompletedOpen);
   if(sel){const b=document.querySelector(sel);if(b&&b.focus)b.focus({preventScroll:true});}
+  /* Shown or hidden, it may be the only card in an open combat view, whose
+     "Add sections…" hint has to follow it. */
+  if(combatViewOpen())renderCombatEmpty();
 }
 function trkById(id){return trkList(character).find(t=>t.id===id)||null;}
+/* A typed count, written into its row where it stands: the box, the bar's value
+   and its width. The goal and the "of N" can't change from the row. false when
+   there is no row, for the caller to redraw instead. */
+function trkPatchRow(t){
+  const row=document.querySelector(attrSel("data-trk",t.id));if(!row)return false;
+  const pr=trkProgress(t),g=trkInt(t.goal);
+  const v=row.querySelector("[data-trkval]");if(v)v.value=String(pr.done);
+  const bar=row.querySelector(".trk-bar");
+  if(bar){bar.setAttribute("aria-valuenow",String(Math.min(pr.done,g)));const f=bar.querySelector("span");if(f)f.style.width=pr.pct+"%";}
+  return true;
+}
 /* One tap on a row. When it finishes a tracker set to close, the toast offers an
    Undo of the whole tap; from the keyboard (Enter/Space, event.detail 0) focus
-   goes to that Undo, since the row it was on just left for Completed. */
-function trkAct(id,fn,viaKey){
+   goes to that Undo, since the row it was on just left for Completed, and Tab or
+   Esc from the Undo goes on to the next tracker (trkAfter(), taken before the
+   tap, while this one still has its place).
+   `inPlace` is the count box's `change` path, which fires as the box loses
+   focus: at the mousedown on +, or at a Tab. A redraw there replaced the + under
+   the pointer, so its click never arrived, and dropped a Tab's focus to the
+   page. So unless the tap closed the tracker (its row has to leave), the row is
+   patched instead (trkPatchRow()).
+   The save is scheduled before the redraw, so nothing a redraw throws can cost
+   the player the tap. */
+function trkAct(id,fn,viaKey,inPlace){
   const t=trkById(id);if(!t||t.closed===true)return false;
-  const snap=trkSnapshot(t),who=character.id;
+  const snap=trkSnapshot(t),who=character,next=trkAfter(character,id);
   const closed=fn(t,Date.now());
-  renderTrackers();scheduleSave();
+  scheduleSave();
+  if(closed||!inPlace||!trkPatchRow(t))renderTrackers();
   if(!closed)return false;
   const undo=toast(`“${trkName(t)}” complete`,{label:"Undo",
     run:e=>undoTrackerChange(snap,who,!!e&&e.detail===0),
-    back:()=>document.getElementById("addTracker")});
+    back:()=>trkNextControl(next)});
   if(viaKey&&undo)undo.focus();
   return true;
 }
-/* `who` guards a toast that outlived a character switch: its Undo belongs to the
-   character it was shown for. */
+/* The first control of the first of `ids` still open and on screen — the rows
+   may have moved on since the toast went up — or else + Tracker. */
+function trkNextControl(ids){
+  for(const id of ids){
+    const row=document.querySelector(".trk:not(.trk-closed)"+attrSel("data-trk",id)),f=row&&row.querySelector("button,input");
+    if(f&&f.getClientRects().length)return f;
+  }
+  return document.getElementById("addTracker");
+}
+/* `who` is the character object the toast was shown for: its Undo belongs to
+   that sheet, not to one loaded since, nor to one imported over it under the
+   same id. */
 function undoTrackerChange(snap,who,viaKey){
-  if(!character||character.id!==who)return false;
+  if(!character||character!==who)return false;
   if(!trkRestore(character,snap))return false;
   renderTrackers();scheduleSave();
   toast(`“${trkName(snap)}” is back`);
@@ -228,12 +274,16 @@ function undoTrackerChange(snap,who,viaKey){
 }
 /* The count box commits on change or Enter, like the coin and HP boxes
    (commitBox() in 90-boot.js). Anything but digits puts the old count back.
-   Returns the redrawn box, for Enter to select. If Enter completes the
-   tracker, its row leaves for Completed and trkAct's own focus-restore takes
-   over: it moves focus to the toast's Undo instead. */
+   Returns the box, for Enter to select.
+   - A change patches the row in place (trkAct()'s `inPlace`), and a count that
+     isn't one is simply put back, in place too.
+   - Enter redraws. If it completes the tracker, its row leaves for Completed
+     and trkAct() moves focus to the toast's Undo instead. */
 function commitTrackerValue(inp,viaKey){
   const id=inp.dataset.trkval,n=trkParse(inp.value);
-  if(n===null)renderTrackers();else trkAct(id,(t,now)=>trkSetValue(t,n,now),!!viaKey);
+  if(n!==null)trkAct(id,(t,now)=>trkSetValue(t,n,now),!!viaKey,!viaKey);
+  else if(viaKey)renderTrackers();
+  else{const t=trkById(id);if(t)inp.value=String(trkProgress(t).done);else renderTrackers();}
   return document.querySelector(attrSel("data-trkval",id));
 }
 function toggleTrkGroup(key){
@@ -266,16 +316,28 @@ function openTrackerForm(existing){
   $("tkType").addEventListener("change",sync);$("tkGoal").addEventListener("input",sync);sync();
   $("tkAuto").addEventListener("click",e=>{const b=e.currentTarget,on=!b.classList.contains("on");b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");});
   $("tkCancel").addEventListener("click",closeModal);
+  /* The tracker as stored NOW. The toast sits outside the modal's inert, so its
+     Undo can land while this form is open and swap the stored object for its
+     snapshot — `t` would then be a copy no longer in the list. A new tracker
+     has no stored copy: Save adds `t` itself. */
+  const cur=()=>isNew?t:trkById(t.id);
+  const fields=()=>({name:$("tkName").value,type:$("tkType").value,tag:$("tkTag").value,goal:$("tkGoal").value,
+    items:$("tkItems").value,autoClose:$("tkAuto").classList.contains("on")});
+  const done=()=>{closeModal();renderTrackers();scheduleSave();};
   {const d=$("tkDel");if(d)d.addEventListener("click",()=>{
-    if(!confirm(`Delete the tracker “${trkName(t)}”?`))return;
-    character.trackers=trkList(character).filter(x=>x.id!==t.id);closeModal();renderTrackers();scheduleSave();});}
-  {const b=$("tkCloseNow");if(b)b.addEventListener("click",()=>{
-    if(t.closed===true)trkReopen(t);else trkClose(t,Date.now());
-    closeModal();renderTrackers();scheduleSave();});}
+    if(!confirm(`Delete the tracker “${trkName(cur()||t)}”?`))return;
+    character.trackers=trkList(character).filter(x=>x.id!==t.id);done();});}
+  /* Close now / Reopen keeps what was typed. The button does what it SAID when
+     the form opened, so an Undo in between can't turn Reopen into a close. */
+  {const b=$("tkCloseNow"),closing=t.closed!==true;if(b)b.addEventListener("click",()=>{
+    const x=cur();if(!x){closeModal();renderTrackers();return;}
+    trkFromForm(x,fields());
+    if(closing)trkClose(x,Date.now());else trkReopen(x);
+    done();});}
   $("tkSave").addEventListener("click",()=>{
-    trkFromForm(t,{name:$("tkName").value,type:$("tkType").value,tag:$("tkTag").value,goal:$("tkGoal").value,
-      items:$("tkItems").value,autoClose:$("tkAuto").classList.contains("on")});
-    if(isNew){if(!Array.isArray(character.trackers))character.trackers=[];character.trackers.push(t);}
-    closeModal();renderTrackers();scheduleSave();
+    const x=cur();if(!x){closeModal();renderTrackers();return;}
+    trkFromForm(x,fields());
+    if(isNew){if(!Array.isArray(character.trackers))character.trackers=[];character.trackers.push(x);}
+    done();
   });
 }

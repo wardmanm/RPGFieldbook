@@ -41,10 +41,11 @@ let _modalOpener=null,_modalOpenerSel=null,_modalInert=[];
    radio or file input: a stray key would toggle or open them. */
 const MODAL_FOCUS_FIELDS="input:not([type]),input[type=text],input[type=search],input[type=number],input[type=email],input[type=url],input[type=tel],textarea";
 /* How to find the opener again after a Save re-renders the list it sat in: its
-   id, else its first data-* hook. Quotes and backslashes are escaped. */
+   id, else its first data-* hook. Escaped as attrSel() escapes (87-journal.js):
+   a quote or a newline in the value would make querySelector throw. */
 function openerSelector(el){
   if(!el)return null;
-  const q=v=>String(v).replace(/["\\]/g,"\\$&");
+  const q=v=>String(v).replace(/["\\]/g,"\\$&").replace(/[\n\r\f]/g,c=>"\\"+c.charCodeAt(0).toString(16)+" ");
   if(el.id)return `[id="${q(el.id)}"]`;
   const a=[...(el.attributes||[])].find(x=>/^data-/.test(x.name));
   return a?`[${a.name}="${q(a.value)}"]`:null;

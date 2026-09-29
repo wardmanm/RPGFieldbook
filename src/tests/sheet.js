@@ -2110,6 +2110,13 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('a group keeps the order it was given', g[1].items[0].tag === 'quests' && g[1].items[1].tag === 'Quests');
   ck('a selector for a tag with quotes cannot break querySelector',
      X.attrSel('data-x', 'Bob\'s "crew"\\') === '[data-x="Bob\'s \\"crew\\"\\\\"]', X.attrSel('data-x', 'Bob\'s "crew"\\'));
+  /* A raw newline inside a CSS string is a syntax error, and querySelector
+     throws on one: in trkAct() that throw came before scheduleSave(), so every
+     tap on a tracker whose id held a newline went unsaved. CSS escapes it as a
+     backslash, its hex code and a space. */
+  ck('a selector for an id with a newline has no raw newline in it',
+     !/[\n\r\f]/.test(X.attrSel('data-x', 'a\nb\rc\fd')) && X.attrSel('data-x', 'a\nb') === '[data-x="a\\a b"]',
+     X.attrSel('data-x', 'a\nb\rc\fd'));
 
   // order
   const pages = [{id: 'a', at: 100}, {id: 'b', at: 300}, {id: 'c', at: 200}, {id: 'd'}, {id: 'e', at: 300}];
@@ -2406,9 +2413,9 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('a closed tracker takes no more taps', ctx.trkAct('b', step(1), false) === false && c.trackers[0].value === 300);
   const before = {id: 'b', name: 'Codex', type: 'counter', value: 299, goal: 300, autoClose: true};
   X.character = X.blankChar();
-  ck('an Undo that outlived a character switch does nothing', ctx.undoTrackerChange(before, c.id, false) === false);
+  ck('an Undo that outlived a character switch does nothing', ctx.undoTrackerChange(before, c, false) === false);
   X.character = c;
-  ck('Undo puts the whole tap back', ctx.undoTrackerChange(before, c.id, false) === true &&
+  ck('Undo puts the whole tap back', ctx.undoTrackerChange(before, c, false) === true &&
      c.trackers[0].value === 299 && c.trackers[0].closed !== true);
   ctx.commitTrackerValue({dataset: {trkval: 'b'}, value: '12x'});
   ck('a typed count that is not a number changes nothing', c.trackers[0].value === 299);
@@ -2427,6 +2434,81 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('a keyboard Reopen still reopens, its count kept', c.trackers[0].closed === false && c.trackers[0].value === 300);
 }
 
+/* ---- a typed count commits in place (#41) ----
+   `change` fires as the box loses focus: at the mousedown on +, or at a Tab.
+   Redrawing the card there replaced the + under the pointer, so its click never
+   arrived (5, type 9, click + → 9, not 10), and a Tab dropped focus to the page.
+   The change path patches the row where it stands; Enter, and a change that
+   closes the tracker, still redraw. A tiny DOM: the list counts its redraws. */
+{
+  const c = X.blankChar(); X.character = c;
+  c.trackers = [{id: 'b', name: 'Codex', type: 'counter', value: 5, goal: 20, autoClose: true}];
+  const doc = ctx.document, saved = {getElementById: doc.getElementById, querySelector: doc.querySelector};
+  let draws = 0;
+  const attrs = {}, fill = {style: {}};
+  const bar = {setAttribute: (k, v) => { attrs[k] = String(v); }, querySelector: s => s === 'span' ? fill : null};
+  const box = {value: '5', dataset: {trkval: 'b'}};
+  const row = {querySelector: s => s === '[data-trkval]' ? box : s === '.trk-bar' ? bar : null};
+  const list = {set innerHTML(v) { draws++; }, get innerHTML() { return ''; }};
+  doc.getElementById = id => id === 'trkList' ? list : null;
+  doc.querySelector = s => s === '[data-trk="b"]' ? row : s === '[data-trkval="b"]' ? box : null;
+  box.value = '9';
+  ctx.commitTrackerValue(box, false);
+  ck('a typed count is stored', c.trackers[0].value === 9, c.trackers[0].value);
+  ck('...and the change that stores it leaves the card standing, so the + under the pointer still gets its click',
+     draws === 0, draws);
+  ck('...patching the row in place: the box, the bar\'s value and its width',
+     box.value === '9' && attrs['aria-valuenow'] === '9' && fill.style.width === '45%', [box.value, attrs, fill.style]);
+  box.value = 'nine';
+  ctx.commitTrackerValue(box, false);
+  ck('a typed count that is not a number puts the stored count back, in place',
+     box.value === '9' && draws === 0 && c.trackers[0].value === 9, [box.value, draws]);
+  box.value = '12';
+  ctx.commitTrackerValue(box, true);
+  ck('Enter still redraws, for its own focus rules', draws === 1 && c.trackers[0].value === 12, draws);
+  box.value = '20';
+  ctx.commitTrackerValue(box, false);
+  ck('a change that finishes the tracker redraws: its row leaves for Completed',
+     draws === 2 && c.trackers[0].closed === true, [draws, c.trackers[0]]);
+  Object.assign(doc, saved);
+}
+
+/* ---- where Tab from the Undo goes: the next tracker (#41, spec §6) ----
+   The ids drawn after the one that closed, in the card's order: the rest of its
+   group, then the groups below. A shut group's rows can't take focus. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const c = {trackers: [
+    {id: 'u1', name: 'Loose', tag: ''},
+    {id: 'b1', name: 'Codex', tag: 'Books'}, {id: 'q1', name: 'Map', tag: 'Quests'},
+    {id: 'b2', name: 'Atlas', tag: 'books'}, {id: 'k1', name: 'Goblins', tag: 'Kills'},
+    {id: 'x1', name: 'Done', tag: 'Books', closed: true}], trackerCollapse: {quests: true}};
+  const after = id => { try { return ctx.trkAfter(c, id); } catch (e) { return String(e); } };
+  ck('the trackers after one, in the card\'s order: its group, then the groups below, a shut one skipped',
+     same(after('b1'), ['b2', 'k1', 'u1']), after('b1'));
+  ck('...none after the last', same(after('u1'), []), after('u1'));
+  ck('...and none for one that is not open', same(after('x1'), []), after('x1'));
+}
+
+/* ---- an Undo belongs to the sheet it was shown for, not to its id (#41) ----
+   Import → Replace keeps the id and swaps the whole sheet, so an Undo keyed on
+   the id restored an old snapshot into the imported one. */
+{
+  const c = X.blankChar(); c.id = 'rep'; X.character = c;
+  c.trackers = [{id: 'b', name: 'Codex', type: 'counter', value: 299, goal: 300, autoClose: true}];
+  const realToast = ctx.toast; let offer = null;
+  ctx.toast = (msg, action) => { if (action) offer = action; return null; };
+  ctx.trkAct('b', (t, now) => ctx.trkStep(t, 1, now), false);
+  X.character = X.migrate(JSON.parse(JSON.stringify(c)));    /* Import → Replace: the same id, a new sheet */
+  if (offer) offer.run({detail: 1});
+  ck('an Undo from before an Import → Replace does nothing to the imported sheet',
+     !!offer && X.character.trackers[0].closed === true && X.character.trackers[0].value === 300, X.character.trackers[0]);
+  X.character = c;
+  if (offer) offer.run({detail: 1});
+  ck('...while on the sheet it was shown for, it still undoes', c.trackers[0].closed !== true && c.trackers[0].value === 299, c.trackers[0]);
+  ctx.toast = realToast;
+}
+
 /* ---- dialogs: what auto-focus may pick, and how the opener is found again ---- */
 {
   const F = X.MODAL_FOCUS_FIELDS;
@@ -2443,6 +2525,9 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('no opener, no selector', X.openerSelector(null) === null);
   ck('a quote in a hook value cannot break the selector',
      X.openerSelector(el('', {'data-x': 'a"b'})) === '[data-x="a\\"b"]');
+  ck('...nor a newline, which querySelector would throw on',
+     X.openerSelector(el('', {'data-x': 'a\nb'})) === '[data-x="a\\a b"]' && X.openerSelector(el('a\r\fb')) === '[id="a\\d \\c b"]',
+     [X.openerSelector(el('', {'data-x': 'a\nb'})), X.openerSelector(el('a\r\fb'))]);
 }
 
 /* ---- the item finder's quantity (issue #50) ----
@@ -3059,6 +3144,59 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'other'}))));
   flow = capture(() => ctx.renderJournal());
   ck('another character starts at its own list, not the page left open', /No pages yet/.test(flow.html), flow.html);
+
+  /* ---- Import → Replace keeps the id and swaps the sheet (#39, #40, #41)
+     Session state was keyed on the id, so an editor open at the time survived
+     the replace, and its next keystroke wrote the old text over the imported
+     page; Completed stayed open. It is keyed on the character object now. */
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'rep',
+    journal: [{id: 'pg', title: 'Session 1', text: 'Old words.', at: 1}]}))));
+  capture(() => ctx.renderJournal());
+  capture(() => ctx.jnlEdit('pg'));
+  const imported = X.migrate(JSON.parse(JSON.stringify(Object.assign({}, X.character, {
+    journal: [{id: 'pg', title: 'Session 1', text: 'Imported words.', at: 1}]}))));
+  X.character = imported;
+  flow = capture(() => ctx.renderJournal());
+  ck('an Import → Replace of the open character closes its editor, back at the list',
+     !flow.err && !/id="jnlText"/.test(flow.html) && /data-jnlopen="pg"/.test(flow.html), flow.html.slice(0, 300));
+  capture(() => { el('jnlText').value = 'Stale words.'; ctx.jnlInput(); });
+  ck('...so a keystroke in the old editor cannot write over the imported page',
+     imported.journal[0].text === 'Imported words.', imported.journal[0].text);
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'rep2',
+    trackers: [{id: 'd', name: 'Done', type: 'task', done: true, closed: true, closedAt: 1}]}))));
+  capture(() => ctx.renderTrackers());
+  flow = capture(() => ctx.toggleTrkCompleted());
+  const wasOpen = /data-trkcompleted[^>]*aria-expanded="true"/.test(flow.html);
+  X.character = X.migrate(JSON.parse(JSON.stringify(X.character)));
+  flow = capture(() => ctx.renderTrackers());
+  ck('...and the imported sheet starts with Completed shut, as any switch does',
+     wasOpen && /data-trkcompleted[^>]*aria-expanded="false"/.test(flow.html), flow.html.slice(0, 300));
+
+  /* ---- the tracker form keeps what was typed (#41)
+     Close now and Reopen threw the form away; and an Undo while the form was
+     open swapped the stored tracker for its snapshot, so Save wrote to an
+     object no longer in the list. The recorder DOM does not read values back
+     out of the markup, so the boxes are filled in by hand. */
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'frm',
+    trackers: [{id: 'm', name: 'Moths', type: 'counter', tag: 'Kills', value: 2, goal: 10, autoClose: true}]}))));
+  const fillForm = name => [['tkName', name], ['tkType', 'counter'], ['tkTag', 'Kills'], ['tkGoal', '12'], ['tkItems', '']]
+    .forEach(([id, v]) => { el(id).value = v; });
+  let fr = capture(() => { ctx.openTrackerForm(X.character.trackers[0]); fillForm('Moths slain'); fire('tkCloseNow', 'click'); });
+  let m0 = X.character.trackers[0];
+  ck('Close now keeps what was typed into the form',
+     !fr.err && m0.closed === true && m0.name === 'Moths slain' && m0.goal === 12, fr.err ? String(fr.err) : m0);
+  fr = capture(() => { ctx.openTrackerForm(X.character.trackers[0]); fillForm('Moths, again'); fire('tkCloseNow', 'click'); });
+  m0 = X.character.trackers[0];
+  ck('...and so does Reopen', !fr.err && m0.closed === false && m0.name === 'Moths, again', fr.err ? String(fr.err) : m0);
+  const snapM = ctx.trkSnapshot(X.character.trackers[0]);
+  fr = capture(() => {
+    ctx.openTrackerForm(X.character.trackers[0]);
+    ctx.trkRestore(X.character, snapM);          /* the toast's Undo, landing while the form is open */
+    fillForm('Moths, renamed'); fire('tkSave', 'click');
+  });
+  ck('Save after an Undo swapped the tracker still saves to the stored one',
+     !fr.err && X.character.trackers.length === 1 && X.character.trackers[0].name === 'Moths, renamed',
+     fr.err ? String(fr.err) : X.character.trackers);
 
   /* ---- a glossary entry with no term never breaks the sheet (#71)
      highlight() looked each chip up with allGlossary().find(x=>x.term.toLowerCase()…),
