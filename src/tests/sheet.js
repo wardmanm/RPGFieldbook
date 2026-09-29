@@ -46,6 +46,9 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'renderAttacks',
   'coinKeys',
   'RULE_CATS', 'reindexRules', 'recomputeDups', 'repairIds',
+  'jnlStr', 'jnlTime', 'tagLabel', 'tagKey', 'groupByTag', 'attrSel', 'jnlPages', 'jnlTitle', 'jnlSort',
+  'jnlQuery', 'jnlFind', 'jnlMatch', 'jnlSnippet', 'jnlSavePage', 'jnlDeletePage', 'jnlTagList',
+  'jnlGroupOpen', 'jnlStampText', 'insertLine',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2084,6 +2087,95 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
     const s = new Set(), l1 = [{id: 'a'}], l2 = [{id: 'a'}];
     X.repairIds(l1, s); X.repairIds(l2, s); return l1[0].id === 'a' && l2[0].id !== 'a';
   })());
+}
+
+/* ---- the journal: tags, order, search, the page rule, the stamp ----
+   Design: src/docs/specs/2026-09-29-journal-design.md §3, §5. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  // tags
+  ck('a tag is trimmed and its runs of spaces collapsed', X.tagLabel('  Side   quests ') === 'Side quests');
+  ck('it groups by its lower-cased form', X.tagKey(' Side Quests') === 'side quests');
+  ck('a missing or junk tag is untagged', X.tagLabel(undefined) === '' && X.tagLabel({}) === '' && X.tagKey(['a']) === '');
+  ck('a number from a hand-edited file is still a tag', X.tagLabel(7) === '7');
+  const g = X.groupByTag([{tag: 'quests'}, {}, {tag: 'NPCs'}, {tag: 'Quests'}, {tag: '  '}], x => x.tag);
+  ck('groups run A to Z, Untagged last', same(g.map(x => x.key), ['npcs', 'quests', '']), g.map(x => x.key));
+  ck('a group is labelled by the first spelling met', g[1].label === 'quests');
+  ck('the untagged group is labelled Untagged and holds blanks too', g[2].label === 'Untagged' && g[2].items.length === 2);
+  ck('a group keeps the order it was given', g[1].items[0].tag === 'quests' && g[1].items[1].tag === 'Quests');
+  ck('a selector for a tag with quotes cannot break querySelector',
+     X.attrSel('data-x', 'Bob\'s "crew"\\') === '[data-x="Bob\'s \\"crew\\"\\\\"]', X.attrSel('data-x', 'Bob\'s "crew"\\'));
+
+  // order
+  const pages = [{id: 'a', at: 100}, {id: 'b', at: 300}, {id: 'c', at: 200}, {id: 'd'}, {id: 'e', at: 300}];
+  ck('pages run newest created first, ties in their saved order', same(X.jnlSort(pages).map(p => p.id), ['b', 'e', 'c', 'a', 'd']));
+  ck('...without reordering the list it was given', pages[0].id === 'a');
+  ck('only page objects are pages',
+     same(X.jnlPages({journal: [null, 'x', {id: 'k'}, ['y']]}).map(p => p.id), ['k']) &&
+     same(X.jnlPages({journal: 'nope'}), []) && same(X.jnlPages(null), []));
+  ck('a page with no title reads Untitled', X.jnlTitle({title: '  '}) === 'Untitled' && X.jnlTitle({title: 'Mire'}) === 'Mire');
+
+  // search
+  const p = {title: 'Session 3', tag: 'Sessions', text: 'We  crossed\nthe **Mire** at dusk.'};
+  ck('a query is trimmed and its spaces collapsed', X.jnlQuery('  the   mire ') === 'the mire');
+  ck('search matches the title, the tag or the text', X.jnlMatch(p, 'session 3') && X.jnlMatch(p, 'SESSIONS') && X.jnlMatch(p, 'dusk'));
+  ck('...case-blind, across a line break', X.jnlMatch(p, X.jnlQuery('crossed the')));
+  ck('...and not everything', !X.jnlMatch(p, 'goblin'));
+  ck('an empty query matches every page', X.jnlMatch(p, ''));
+  ck('regex characters in a query are just characters', !X.jnlMatch(p, '.*') && X.jnlMatch({text: 'cost (5 gp)'}, '(5 gp)'));
+  const s = X.jnlSnippet(p.text, 'mire');
+  ck('a text match gets a snippet with the match marked', s.includes('<mark>Mire</mark>'), s);
+  ck('a title-only match gets no snippet', X.jnlSnippet(p.text, 'Session') === '');
+  ck('the snippet is escaped', (() => { const h = X.jnlSnippet('a <b>bold</b> mire', 'mire'); return h.includes('&lt;b&gt;') && !h.includes('<b>'); })());
+  ck('...the match inside it too', X.jnlSnippet('x <i> y', '<i>').includes('<mark>&lt;i&gt;</mark>'));
+  ck('a long text is cut either side, with an ellipsis',
+     (() => { const h = X.jnlSnippet('a'.repeat(200) + ' mire ' + 'b'.repeat(200), 'mire', 10); return h.startsWith('…') && h.endsWith('…') && h.length < 60; })());
+  ck('the match stays aligned where lower-casing would change the length',
+     X.jnlSnippet('İİİİ İİ the mire', 'mire').includes('<mark>mire</mark>'), X.jnlSnippet('İİİİ İİ the mire', 'mire'));
+  ck('the notes placeholders are stripped, so none reaches the page', !/[-]/.test(X.jnlSnippet('mirex', 'mire')));
+
+  // the page rule
+  const c = {journal: []}, draft = {id: 'n1', at: null};
+  ck('a blank draft adds nothing, even with a tag',
+     X.jnlSavePage(c, draft, {title: ' ', tag: 'Sessions', text: '\n'}, 10) === null && c.journal.length === 0);
+  const added = X.jnlSavePage(c, draft, {title: 'Session 1', tag: ' Sessions ', text: ''}, 20);
+  ck('the first real input adds the page', c.journal.length === 1 && added.id === 'n1' && added.title === 'Session 1');
+  ck('...with its tag tidied', added.tag === 'Sessions');
+  ck('...created and edited at the same moment', added.at === 20 && added.editedAt === 20);
+  X.jnlSavePage(c, draft, {title: 'Session 1', tag: 'Sessions', text: 'Mire'}, 30);
+  ck('an edit moves the edited time and keeps the created time', c.journal[0].at === 20 && c.journal[0].editedAt === 30);
+  X.jnlSavePage(c, draft, {title: 'Session 1', tag: 'Sessions', text: 'Mire'}, 40);
+  ck('saving unchanged fields does not fake an edit', c.journal[0].editedAt === 30);
+  X.jnlSavePage(c, draft, {title: '', tag: 'Sessions', text: '  '}, 50);
+  ck('clearing title and text removes the page', c.journal.length === 0);
+  X.jnlSavePage(c, draft, {title: 'Back again', tag: '', text: ''}, 60);
+  ck('typing again brings it back with its first date', c.journal.length === 1 && c.journal[0].at === 20 && c.journal[0].editedAt === 60);
+  const bad = {journal: 'nope'};
+  X.jnlSavePage(bad, {id: 'z', at: null}, {title: 'x'}, 1);
+  ck('a journal that is not a list is replaced, not written into', Array.isArray(bad.journal) && bad.journal.length === 1);
+  ck('delete removes the one page and says so', X.jnlDeletePage(c, 'n1') === true && c.journal.length === 0);
+  ck('deleting a page that is not there says so', X.jnlDeletePage(c, 'n1') === false);
+
+  // tags offered, collapse
+  const tc = {journal: [{tag: 'Quests'}, {tag: 'npcs'}, {tag: ''}, null], trackers: [{tag: 'quests'}, {tag: 'Kills'}, 'junk']};
+  ck('tags are offered from pages and trackers together, once each, A to Z',
+     same(X.jnlTagList(tc), ['Kills', 'npcs', 'Quests']), X.jnlTagList(tc));
+  ck('a group nobody shut is open', X.jnlGroupOpen({}, 'quests', false));
+  ck('a shut group is shut', !X.jnlGroupOpen({journalCollapse: {quests: true}}, 'quests', false));
+  ck('a search opens every group', X.jnlGroupOpen({journalCollapse: {quests: true}}, 'quests', true));
+  ck('a junk collapse map reads as open', ['x', null, [true]].every(m => X.jnlGroupOpen({journalCollapse: m}, 'quests', false)));
+
+  // the stamp, and where a line goes
+  const st = X.jnlStampText(new Date(2026, 8, 29, 19, 42));
+  ck('the stamp is bold', /^\*\*[^*]+\*\*$/.test(st), st);
+  ck('...one line, with the year and the minutes', !/\n/.test(st) && st.includes('2026') && st.includes('42'), st);
+  const L = '**S**';
+  ck('into an empty page: the line, then the caret on the next', same(X.insertLine('', 0, 0, L), {text: '**S**\n', caret: 6}));
+  ck('at the end of the text: on a new line', same(X.insertLine('abc', 3, 3, L), {text: 'abc\n**S**\n', caret: 10}));
+  ck('mid-line: the line is split around it', same(X.insertLine('abcdef', 3, 3, L), {text: 'abc\n**S**\ndef', caret: 10}));
+  ck('at the start of a line: no extra break before it', same(X.insertLine('abc\ndef', 4, 4, L), {text: 'abc\n**S**\ndef', caret: 10}));
+  ck('a selection is replaced', same(X.insertLine('abcd', 1, 3, L), {text: 'a\n**S**\nd', caret: 8}));
+  ck('a selection past the end clamps to it', same(X.insertLine('ab', 99, 99, L), {text: 'ab\n**S**\n', caret: 9}));
 }
 
 /* ---- dialogs: what auto-focus may pick, and how the opener is found again ---- */

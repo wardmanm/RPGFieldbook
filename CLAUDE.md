@@ -41,7 +41,7 @@ src/                     THE SOURCE OF TRUTH — edit here, never the built file
   fieldbook.template.html  the page SHELL: top bar, tab bar, ToC, home, modal
   manifest.json          the authoritative concatenation ORDER — add/remove a fragment here
   html/*.html            7 fragments, one tab panel each
-  js/*.js                28 fragments, concatenated into the single <script>
+  js/*.js                29 fragments, concatenated into the single <script>
   css/*.css              8 fragments, concatenated into the single <style>
   icons/icons.json       hand-authored emblem map → scripts/fetch-icons.js → js/05-icons.js
   tests/                 the suites — ./src/tests/run.sh
