@@ -1,6 +1,8 @@
 /* ================= persistence ================= */
 const K_CHAR="hw-fb-char", K_SET="hw-fb-settings", K_RULES="hw-fb-rules", K_LIB="hw-fb-library";
-let saveTimer=null, saveErr="", activeId=null;
+/* saveDue: an edit scheduleSave() has not written yet. The timer alone can't say
+   so — the harness never runs one, and a fired timer leaves its handle set. */
+let saveTimer=null, saveDue=false, saveErr="", activeId=null;
 function charKey(id){return "hw-fb-c-"+id;}
 function libLoad(){try{const s=localStorage.getItem(K_LIB);if(s)return JSON.parse(s);}catch(e){}return {autoload:null,index:[]};}
 /* "" or why the write was refused (storageWhy). backupCharacter() ignores it and
@@ -58,13 +60,14 @@ function backupCharacter(ch,tag){
 /* The write behind autosave, lifted out of scheduleSave() so the harness —
    which never runs a setTimeout — can reach it. "" or why it failed (#81). */
 function saveNow(){
+  saveDue=false;
   if(!activeId)return "";
   try{localStorage.setItem(charKey(activeId),JSON.stringify(character));}catch(e){return storageWhy(e);}
   return libTouch();
 }
 function scheduleSave(){
   const el=document.getElementById("savestate");if(el){el.textContent="Saving…";el.className="savestate";}
-  clearTimeout(saveTimer);saveTimer=setTimeout(()=>showSaveResult(saveNow()),500);
+  saveDue=true;clearTimeout(saveTimer);saveTimer=setTimeout(()=>showSaveResult(saveNow()),500);
 }
 /* A refused write used to change this one label, in a title bar that scrolls
    away (#81). Now it also raises #saveWarn, fixed to the foot of the window on
@@ -80,6 +83,28 @@ function showSaveResult(why){
 function saveWarnText(why){return "Not saved — "+why+". Save this character to a file so nothing is lost.";}
 function saveError(){return saveErr;}
 function retrySave(){clearTimeout(saveTimer);showSaveResult(saveNow());}
+/* Before anything replaces the open character — loadCharById(), newCharacter(),
+   finishImport() — the edit still waiting on the debounce is written now, to
+   the character it belongs to, and a write that has failed is tried again.
+   Otherwise the strip went on saying "Not saved" about whichever character came
+   next, whose stored copy was current; and the switch it invited (Home, delete
+   an old character, tap the first one's card) reloaded that first character
+   from storage and silently dropped the edits it had never written (#81).
+   true to go ahead. When the write still can't land, the player is asked; No
+   leaves everything as it was and goes back to the sheet, where the strip's
+   Save to file is. With nothing waiting, it writes nothing, so a switch alone
+   never moves a card up the home screen's "updated" order. */
+function leaveCharacterOk(){
+  clearTimeout(saveTimer);
+  const due=!!activeId&&(saveDue||!!saveErr);saveDue=false;
+  if(!due)return true;
+  const why=saveNow();showSaveResult(why);
+  if(!why)return true;
+  const whose=character.name?"“"+character.name+"”'s changes":"This character's changes";
+  if(confirm(whose+" aren't saved — "+why+". Leave and lose them? Cancel, then use Save to file."))return true;
+  hideHome();
+  return false;
+}
 /* Returns "" or why the write was refused (storageWhy). Most callers are one
    toggle and still ignore it; Import settings reports it. */
 function saveSettings(){try{localStorage.setItem(K_SET,JSON.stringify(settings));return "";}catch(e){return storageWhy(e);}}

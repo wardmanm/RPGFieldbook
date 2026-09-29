@@ -147,7 +147,11 @@ function printSheet(){
   document.getElementById("printArea").innerHTML=html;
   window.print();
 }
+/* false, with nothing touched, when the player won't leave a character whose
+   changes couldn't be saved (leaveCharacterOk()); the file is still there to
+   import again. */
 function finishImport(ch){
+  if(!leaveCharacterOk())return false;
   character=ch;activeId=ch.id;
   /* Stored first, and listed only once it is (#81): an index entry for a blob
      that never landed is a home-screen card that opens nothing. */
@@ -157,6 +161,7 @@ function finishImport(ch){
   showSaveResult(why);
   /* last, so it stacks after the Replace/Copy clash modal rather than under it */
   maybePromptUpdate();
+  return true;
 }
 function importChar(file){
   const r=new FileReader();

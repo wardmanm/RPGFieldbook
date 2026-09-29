@@ -1564,4 +1564,74 @@ ck('itemMetaLine still ends with the weight',
   store['hw-fb-library'] = lib;
 }
 
+/* ---- leaving a character whose changes could not be saved (#81) ----
+   The strip said "Not saved" about whichever character was open, so after a
+   switch it named one whose stored copy was current. And the switch it invited
+   (Home, delete an old character, tap the first one's card) reloaded that
+   character from storage, dropping the edits it had never written. Every path
+   that replaces the open character flushes the pending save first, and asks
+   before leaving one it could not save. */
+{
+  state.quotaFull = false;
+  ctx.newCharacter('Ada', 'dnd'); const aId = X.character.id;
+  ctx.newCharacter('Bram', 'dnd'); const bId = X.character.id;
+  ck('#81 leaving: two stored characters to switch between', !!store[X.charKey(aId)] && !!store[X.charKey(bId)]);
+  state.lastConfirm = null;
+  ctx.loadCharById(aId);
+  ck('#81 a switch with nothing unsaved asks nothing', state.lastConfirm === null && X.character.id === aId, state.lastConfirm);
+  X.character.name = 'Ada the Bold'; ctx.scheduleSave();   /* the debounce has not written it yet */
+  ctx.loadCharById(bId);
+  ck('#81 a switch first saves the edit the debounce had not written yet',
+     JSON.parse(store[X.charKey(aId)]).name === 'Ada the Bold' && X.character.id === bId, JSON.parse(store[X.charKey(aId)]).name);
+
+  ctx.loadCharById(aId); const a = X.character;
+  a.name = 'Ada, unsaved'; ctx.scheduleSave();
+  state.quotaFull = true; state.confirm = false; state.lastConfirm = null;
+  const stay = ctx.loadCharById(bId);
+  ck('#81 a switch away from a change that cannot be saved asks first, naming the character and why',
+     /“Ada, unsaved”'s changes aren't saved — your browser's storage is full\. Leave and lose them\?/.test(state.lastConfirm || ''),
+     state.lastConfirm);
+  ck('#81 ...and No keeps the character open and unchanged', stay === false && X.character === a && X.activeId === aId && a.name === 'Ada, unsaved');
+  ck('#81 ...with the warning up about it', /storage is full/.test(ctx.saveError()), ctx.saveError());
+  state.lastConfirm = null;
+  ck('#81 No to a new character keeps this one open too', ctx.newCharacter('Cleo', 'dnd') === false && X.character === a
+     && /Ada, unsaved/.test(state.lastConfirm || ''), state.lastConfirm);
+  const libBefore = store['hw-fb-library'];
+  ck('#81 ...and No to an import leaves everything as it was',
+     ctx.finishImport(X.migrate({name: 'Incoming', abilities: {}})) === false && X.character === a && X.activeId === aId
+     && store['hw-fb-library'] === libBefore);
+  state.confirm = true;
+  ck('#81 Yes switches', ctx.loadCharById(bId) === true && X.character.id === bId);
+  ck('#81 ...and the warning comes down: the sheet on screen is the one in storage', ctx.saveError() === '', ctx.saveError());
+  ck('#81 ...while the change Yes gave up is not in storage', JSON.parse(store[X.charKey(aId)]).name === 'Ada the Bold');
+  state.quotaFull = false;
+}
+
+/* ---- deleting a character, and starring one, are loud too (#81) ----
+   Both wrote the library index and ignored the answer. A delete that could not
+   rewrite the index went on to remove the character's data, leaving a card that
+   opens nothing. */
+{
+  state.quotaFull = false;
+  ctx.newCharacter('Doomed', 'dnd'); const dId = X.character.id;
+  const alerts = [], realAlert = ctx.alert; ctx.alert = m => { alerts.push(String(m)); };
+  state.quotaFull = true;
+  const why = ctx.deleteCharacter(dId);
+  ck('#81 a delete the library cannot record says why', /storage is full/.test(why || ''), why);
+  ck('#81 ...keeps the character listed', X.libLoad().index.some(x => x.id === dId));
+  ck('#81 ...and keeps its data, so its card still opens it', !!store[X.charKey(dId)]);
+  ck('#81 ...and says so out loud', alerts.some(m => /couldn't be deleted/.test(m) && /storage is full/.test(m)), alerts);
+  const auto0 = X.libLoad().autoload;
+  const why2 = ctx.setAutoload(dId);
+  ck('#81 a star the library cannot record says why', /storage is full/.test(why2 || ''), why2);
+  ck('#81 ...leaves which character opens first alone', X.libLoad().autoload === auto0, X.libLoad().autoload);
+  ck('#81 ...and says so out loud', alerts.some(m => /opens first/.test(m) && /storage is full/.test(m)), alerts);
+  state.quotaFull = false;
+  ck('#81 with room, the star lands and reports nothing', ctx.setAutoload(dId) === '' && X.libLoad().autoload === dId);
+  ck('#81 with room, the delete lands and reports nothing',
+     ctx.deleteCharacter(dId) === '' && !X.libLoad().index.some(x => x.id === dId) && !store[X.charKey(dId)]
+     && X.libLoad().autoload === null);
+  ctx.alert = realAlert;
+}
+
 ck.done();
