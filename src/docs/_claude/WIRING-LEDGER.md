@@ -4767,3 +4767,25 @@ to the next panel, and refuses a leftover `tab-notes` or `data-tab="notes"`; thr
 
 Pages: [shell](../wiki/ui/shell.md), [sections & layout](../wiki/ui/sections-and-layout.md),
 [story & notes](../wiki/features/story-and-notes.md), [screenshot QA](../wiki/process/screenshot-qa.md).
+
+## A refused character write says so, and keeps saying so (#81, 2026-09-29)
+
+A failed autosave only changed the `#savestate` label, in a title bar that scrolls away. The
+journal (#40) is the first unlimited long-form text a character carries, so an hour of notes could
+go unsaved with nothing else said. `scheduleSave()`'s write is now `saveNow()`, reachable from the
+tests, returning "" or `storageWhy()`'s reason. `showSaveResult()` raises `#saveWarn` with that
+reason, Save to file and Try again, and keeps it up until a write lands. The strip is fixed to the
+foot of the window, not under the tab bar as the spec said: there it would sit on the combat tab's
+own sticky header.
+
+**The other writes.** `libSave()` returns its reason instead of swallowing it. `newCharacter()` and
+`finishImport()` store first, list only once stored, and report through the strip. So a refused
+character stays playable and exportable with no home-screen card that opens nothing.
+`migrateOldChar()` kept deleting the legacy key whether or not its copy landed; it now deletes it
+only after both writes land, returns why otherwise, and `boot()` alerts. The dead `lsOK` check at
+boot is gone.
+
+**Guards.** `char-update.js`: saveNow and libSave under the full-quota switch; the warning set,
+kept by a failing Try again and cleared by a landing one; a new character, an import and an old
+save under a full store. Pages: [storage](../wiki/architecture/storage.md),
+[home & characters](../wiki/features/home-and-characters.md).

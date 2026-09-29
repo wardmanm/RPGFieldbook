@@ -128,8 +128,12 @@ function printSheet(){
 }
 function finishImport(ch){
   character=ch;activeId=ch.id;
-  try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){}
-  libTouch();settings.skin=skinForSystem(ch.system);saveSettings();applyTheme();renderAll();hideHome();
+  /* Stored first, and listed only once it is (#81): an index entry for a blob
+     that never landed is a home-screen card that opens nothing. */
+  let why="";try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){why=storageWhy(e);}
+  if(!why)why=libTouch();
+  settings.skin=skinForSystem(ch.system);saveSettings();applyTheme();renderAll();hideHome();
+  showSaveResult(why);
   /* last, so it stacks after the Replace/Copy clash modal rather than under it */
   maybePromptUpdate();
 }

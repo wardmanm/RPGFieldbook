@@ -173,10 +173,11 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 
 ### Breaks of a non-negotiable
 
-- **Silent storage writes (constraint 2).** `libSave()`, `saveSettings()`, `newCharacter()`,
-  `finishImport()` and `migrateOldChar()` each wrap `localStorage.setItem` in an empty `catch`.
-  `migrateOldChar()` then deletes the legacy key even if its copy failed to save. The main autosave,
-  `scheduleSave()`, does report failures. → [Storage](../architecture/storage.md)
+- **Silent storage writes (constraint 2), narrowed.** `saveNow()` (autosave), `newCharacter()`,
+  `finishImport()` and `migrateOldChar()` all now report a refused write (#81). `saveSettings()`
+  still returns why it was refused but most callers ignore it, and `deleteCharacter()` and
+  `setAutoload()` call `libSave()` without reading its result, so a refused index write there can
+  still leave the index stale with nothing said. → [Storage](../architecture/storage.md)
 - **A stale rules cache can win.** If a save falls back to localStorage after IndexedDB once held the
   pool, the old IndexedDB copy is never cleared, and `loadRulesCacheAsync()` lays it over the newer
   copy on the next boot. → [Storage](../architecture/storage.md)
@@ -386,3 +387,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-28 — A +N weapon's bonus counted twice (#74) and ranged finesse weapons couldn't use STR (#75): both fixed, never listed here. Quarterstaff of the Acrobat's AC (#76) and items' spell-attack bonuses (#77) added. → ledger L4392, L4466
 - 2026-09-28 — Fixed and removed: the Quarterstaff of the Acrobat's standing +5 AC (#76) and items' unread spell-attack bonuses (#77). Added #78 (raw item-entry tags) and #79 (unread Stone of Good Luck / Ioun Stone of Mastery bonuses). → ledger L4502, L4568
 - 2026-09-29 — Fixed and removed: raw item-entry template tags in 54 descriptions (#78) and the unread Stone of Good Luck / Ioun Stone of Mastery bonuses (#79). → ledger L4634, L4689
+- 2026-09-29 — Narrowed: a refused autosave, new character, import or old-save move now reports itself (#81); `deleteCharacter()`, `setAutoload()` and most `saveSettings()` callers still don't. → ledger L4771

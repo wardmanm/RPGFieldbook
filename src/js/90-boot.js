@@ -295,7 +295,9 @@ function boot(){
   reindexRules();recomputeDups();
   buildStats();buildDeath();buildSlots();buildBio();
   wire();applyTheme();
-  migrateOldChar();
+  /* No character is open yet for the strip to be about, so this one is said
+     out loud. The old save stays where it was, and the next launch tries again. */
+  {const why=migrateOldChar();if(why)alert("Your saved character couldn't be moved into the character library — "+why+". It is still stored in this browser, and Fieldbook will try again next time it opens.");}
   const lib=libLoad();
   let opened=false;
   if(lib.autoload && lib.index.some(x=>x.id===lib.autoload)){opened=loadCharById(lib.autoload);}

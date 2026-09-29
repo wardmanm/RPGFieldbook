@@ -46,7 +46,9 @@ calls `newCharacter(name, system)`: `blankChar()`, the system, `seedGlossary()`,
 stamp, a blob write, `libTouch()`, the skin switched to match the system, `renderAll()`,
 `hideHome()`. The system picks the skin and wordmark, filters the ancestry picker's species (see
 [Character building](character-building.md)) and sets which coins show; classes, spells, feats and
-items from every loaded pack stay available either way.
+items from every loaded pack stay available either way. A new or imported character that the
+browser refuses to store stays open, isn't listed until it is stored, and raises the save warning
+(see [Storage](../architecture/storage.md)).
 
 **Opening one.** A card calls `loadCharById()`: `migrate(JSON.parse(raw))`, skin from system,
 `renderAll()`, `hideHome()`, then `maybePromptUpdate()` with the sheet already behind it.
@@ -54,7 +56,10 @@ items from every loaded pack stay available either way.
 **Boot.** `boot()` runs `migrateOldChar()` — which moves a pre-library single character (`K_CHAR`,
 `hw-fb-char`) into the library, only when the index is empty — then opens the autoload character if
 its id is still indexed. Otherwise it renders an in-memory blank (glossary seeded) behind the home
-screen so the sheet underneath is valid.
+screen so the sheet underneath is valid. `migrateOldChar()` returns "" or why the move failed; the
+legacy key is removed only once both the copy and its index entry have landed, and `boot()` alerts
+on a failure — no character is open yet for the save warning strip to be about (see
+[Storage](../architecture/storage.md)).
 
 **Export.** Save (`#btnSave`) is `exportChar()`: the whole `character`, pretty-printed, downloaded
 by `dl()` as `humblewood-<name>.json`. The prefix is the same for a D&D character.
@@ -69,8 +74,9 @@ hidden `#fileLoad`, whose change handler calls `importChar(file)`:
 4. No clash → `finishImport()`. Clash → a modal: **Cancel**, **Import as copy** (a fresh `uid()`,
    name + " (copy)"), or **Replace <name>**.
 
-`finishImport()` makes it the active character, writes the blob, touches the index, switches the
-skin, renders, hides home, and calls `maybePromptUpdate()` last.
+`finishImport()` makes it the active character, writes the blob, touches the index only once that
+lands, switches the skin, renders, hides home, reports through the save warning strip, and calls
+`maybePromptUpdate()` last.
 
 **Backups.** `backupCharacter(ch, tag)` deep-copies the character under a new id, names it
 "<name> (backup <tag>)", sets `isBackup:true`, and writes the blob and an index entry **without**
@@ -104,12 +110,11 @@ exports and imports *settings and rules data* — not characters (see
 
 ## Traps
 
-- **`libSave()` swallows its own quota error.** Anything that needs to know its index write landed
-  must read it back, as `backupCharacter()` does. Autosave does not: "Autosaved" reflects the blob
-  write only, so a full quota can leave the index (and the home card) stale.
-- **`newCharacter()` and `finishImport()` write the blob inside an empty `catch`.** If that first
-  write fails, nothing says so until the next edit's autosave reports "Use Save ↑". This falls short
-  of the "a write that does not land must say so" constraint in [CLAUDE.md](../../../../CLAUDE.md).
+- **`libSave()` returns "" or why it was refused (`storageWhy()`), instead of swallowing it (#81).**
+  `saveNow()` (autosave), `newCharacter()`, `finishImport()` and `migrateOldChar()` all check it and
+  report through the save warning strip or, at boot, an alert. `deleteCharacter()` and
+  `setAutoload()` still call `libSave()` without reading the result — an index write refused there
+  can still leave the index stale with nothing said.
 - **The clash check reads storage as well as the index**, so a blob whose index entry was lost
   still prompts rather than being silently overwritten.
 - **A backup looks like any other card.** The index entry does not carry `isBackup`; only the
@@ -127,8 +132,8 @@ exports and imports *settings and rules data* — not characters (see
 
 ## Open
 
-- The empty-`catch` blob writes in `newCharacter()`, `finishImport()` and `migrateOldChar()`, and
-  the unchecked index write behind autosave, delete and the autoload star, can each fail silently.
+- **`deleteCharacter()` and `setAutoload()` still don't check `libSave()`'s result.** A refused
+  index write there can leave the index (and the home card) stale with nothing said.
   See [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -141,3 +146,4 @@ exports and imports *settings and rules data* — not characters (see
 - 2026-08-10 — `appVersion` on the library index and the card's version badge; `backupCharacter()`
   added for the update tool. → ledger L702
 - 2026-08-10 — backups return the snapshot on failure and verify the index write. → ledger L1116
+- 2026-09-29 — A refused character write raises a warning strip that stays until a save lands; new, imported and migrated characters report it too. → ledger L4771, #81

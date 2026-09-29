@@ -1529,4 +1529,39 @@ ck('itemMetaLine still ends with the weight',
   X.activeId = a;
 }
 
+/* ---- every other character write is loud too (#81) ---- */
+{
+  state.quotaFull = true;
+  ctx.newCharacter('Quota', 'dnd');
+  ck('#81 a new character that cannot be stored says so', /storage is full/.test(ctx.saveError()), ctx.saveError());
+  ck('#81 ...and is still open, to play and to save to a file', X.character.name === 'Quota' && X.activeId === X.character.id);
+  ck('#81 ...but not listed on the home screen as if it were stored', !X.libLoad().index.some(x => x.id === X.activeId));
+  state.quotaFull = false;
+  ctx.retrySave();
+  ck('#81 once there is room, Try again stores it and lists it',
+     ctx.saveError() === '' && !!store[X.charKey(X.activeId)] && X.libLoad().index.some(x => x.id === X.activeId));
+
+  state.quotaFull = true;
+  ctx.finishImport(X.migrate({name: 'Imported', abilities: {}}));
+  ck('#81 an import that cannot be stored says so', /storage is full/.test(ctx.saveError()));
+  ck('#81 ...and is not listed as if it were stored', !X.libLoad().index.some(x => x.id === X.activeId));
+  state.quotaFull = false;
+  ctx.retrySave();
+  ck('#81 ...until Try again stores it', X.libLoad().index.some(x => x.id === X.activeId));
+
+  /* the pre-library save: its key was deleted whether or not the copy landed */
+  const lib = store['hw-fb-library'];
+  store['hw-fb-library'] = JSON.stringify({autoload: null, index: []});
+  store['hw-fb-char'] = JSON.stringify({name: 'Old Timer', abilities: {str: 12}});
+  state.quotaFull = true;
+  const why = ctx.migrateOldChar();
+  ck('#81 moving an old save into a full store says why', /storage is full/.test(why), why);
+  ck('#81 ...and keeps the old save, the only copy', 'hw-fb-char' in store);
+  state.quotaFull = false;
+  ck('#81 with room, the move reports nothing', ctx.migrateOldChar() === '');
+  ck('#81 ...lists the character', JSON.parse(store['hw-fb-library']).index.some(x => x.name === 'Old Timer'));
+  ck('#81 ...and only then removes the old key', !('hw-fb-char' in store));
+  store['hw-fb-library'] = lib;
+}
+
 ck.done();

@@ -16,10 +16,12 @@ function newCharacter(name,system){
   const c=blankChar();c.system=(system==="dnd")?"dnd":"humblewood";c.name=name||"";c.glossary=seedGlossary();
   c.appVersion=APP_VERSION;   // safe here: runtime, long after 30-version.js has run
   character=c;activeId=c.id;
-  try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){}
-  libTouch();
+  /* as finishImport(): listed only once stored, and a refusal says so (#81) */
+  let why="";try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){why=storageWhy(e);}
+  if(!why)why=libTouch();
   settings.skin=skinForSystem(c.system);saveSettings();applyTheme();
   renderAll();hideHome();
+  showSaveResult(why);
 }
 function deleteCharacter(id){
   const lib=libLoad();lib.index=lib.index.filter(x=>x.id!==id);if(lib.autoload===id)lib.autoload=null;libSave(lib);
@@ -28,15 +30,20 @@ function deleteCharacter(id){
   renderHome();
 }
 function setAutoload(id){const lib=libLoad();lib.autoload=(lib.autoload===id)?null:id;libSave(lib);renderHome();}
+/* "" or why the old save could not be moved. The legacy key goes only once the
+   copy AND its index entry have landed (#81); it used to go whatever happened,
+   taking the only copy with it. */
 function migrateOldChar(){
-  const lib=libLoad();if(lib.index.length)return;
+  const lib=libLoad();if(lib.index.length)return "";
   let old=null;try{const c=localStorage.getItem(K_CHAR);if(c)old=JSON.parse(c);}catch(e){}
-  if(old&&old.abilities){
-    const ch=migrate(old);if(!ch.id)ch.id=uid();ch.system=ch.system||"humblewood";if(!ch.name)ch.name="My Character";
-    try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){}
-    lib.index.push({id:ch.id,name:ch.name,system:ch.system,updated:Date.now()});libSave(lib);
-    try{localStorage.removeItem(K_CHAR);}catch(e){}
-  }
+  if(!old||!old.abilities)return "";
+  const ch=migrate(old);if(!ch.id)ch.id=uid();ch.system=ch.system||"humblewood";if(!ch.name)ch.name="My Character";
+  try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){return storageWhy(e);}
+  lib.index.push({id:ch.id,name:ch.name,system:ch.system,updated:Date.now()});
+  const why=libSave(lib);
+  if(why){try{localStorage.removeItem(charKey(ch.id));}catch(e){}return why;}
+  try{localStorage.removeItem(K_CHAR);}catch(e){}
+  return "";
 }
 let homeForceSetup=false;
 function showHome(){renderHome();document.getElementById("home").style.display="flex";}
