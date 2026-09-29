@@ -2205,8 +2205,8 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('...opens every group, shut ones too', !/display:none/.test(hit));
   ck('...and its headers are plain, not toggles', !/data-jnlgroup/.test(hit) && /jnl-static/.test(hit));
   ck('a text match shows where it matched', hit.includes('Met <mark>Brindle</mark>.'), hit);
-  ck('no match says so, quoting the search', X.journalListHTML(c, 'goblin').includes('No pages match "goblin"'));
-  ck('...escaped', X.journalListHTML(c, '<i>').includes('"&lt;i&gt;"'));
+  ck('no match says so, quoting the search', X.journalListHTML(c, 'goblin').includes('No pages match “goblin”'));
+  ck('...escaped', X.journalListHTML(c, '<i>').includes('“&lt;i&gt;”'));
 
   const pg = X.journalPageHTML(c.journal[1]);
   ck('a page renders its text in the notes grammar', pg.includes('<strong>zorblat</strong>') && pg.includes('class="n-body"'));

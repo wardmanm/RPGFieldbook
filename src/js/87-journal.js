@@ -133,7 +133,7 @@ function journalListHTML(c,q){
   const all=jnlPages(c);
   if(!all.length)return `<div class="empty">No pages yet — tap + Page to start one: a session, someone you met, a quest.</div>`;
   const hits=all.filter(p=>jnlMatch(p,q));
-  if(!hits.length)return `<div class="empty">No pages match "${esc(q)}".</div>`;
+  if(!hits.length)return `<div class="empty">No pages match “${esc(q)}”.</div>`;
   return groupByTag(jnlSort(hits),p=>p.tag).map(g=>{
     const open=jnlGroupOpen(c,g.key,!!q),name=`<span class="fgname">${esc(g.label)}</span><span class="cnt">(${g.items.length})</span>`;
     const head=q?`<div class="fghead jnl-static">${name}</div>`:
