@@ -1130,7 +1130,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
           </div>
           <div class="g2">
             <div class="field"><label class="f">Level</label><div class="vbox" style="padding:6px"><div class="big" id="levelDisp">1</div></div></div>
-            <div class="field"><label class="f">Proficiency Bonus</label><div class="vbox" style="padding:6px"><div class="big" id="pbDisp">+2</div></div></div>
+            <div class="field"><label class="f">Proficiency Bonus</label><div class="vbox" style="padding:6px"><div class="big" data-stat="profBonus" id="pbDisp">+2</div></div></div>
           </div>
         </div>
 
@@ -1458,6 +1458,11 @@ function fxTargets(){
   g.push(["Spell attack","spell.attack"],["Spell save DC","spell.dc"]);
   ABIL.forEach(([k,l])=>g.push([l+" score","ability."+k]));
   ABIL.forEach(([k,l])=>g.push([l+" save","save."+k]));
+  /* every ability check (a Stone of Good Luck): recompute() adds it to each
+     skill, to initiative (a Dexterity check) and to passive Perception, and the
+     ability breakdown lists it for a plain check. Never the ability modifier,
+     which attacks, saves, AC and spell DCs also read. */
+  g.push(["Ability checks","check"]);
   SKILLS.forEach(([k,l])=>g.push([l+" skill","skill."+k]));
   return g;
 }
@@ -1993,7 +1998,10 @@ function recompute(){
   character.level=totalLevel();
   const ld=document.getElementById("levelDisp");if(ld)ld.textContent=Math.max(1,num(character.level));
   const pb=pbValue(c);
-  document.getElementById("pbDisp").textContent=fmt(pb);
+  const pbEl=document.getElementById("pbDisp");pbEl.textContent=fmt(pb);mark(pbEl,!!sumFx("profBonus",c));
+  /* a bonus to every ability check (#79): each skill, initiative and passive
+     Perception take it; the modifiers, saves and everything else do not */
+  const ckFx=sumFx("check",c);
   ABIL.forEach(([k])=>{
     const fin=abilFinal(k,c), m=Math.floor((fin-10)/2), buff=sumFx("ability."+k,c);
     const me=document.getElementById("mod-"+k);
@@ -2006,13 +2014,13 @@ function recompute(){
   const mods={};ABIL.forEach(([k])=>mods[k]=Math.floor((abilFinal(k,c)-10)/2));
   SKILLS.forEach(([k,,ab])=>{
     const lvl=effSkill(k), skFx=sumFx("skill."+k,c);
-    const t=mods[ab]+(lvl>0?pb:0)+(lvl>1?pb:0)+skFx;
-    const e=document.getElementById("skill-"+k);if(e){e.textContent=fmt(t);mark(e,!!skFx||!!grantedProf("skill",k));}
+    const t=mods[ab]+(lvl>0?pb:0)+(lvl>1?pb:0)+skFx+ckFx;
+    const e=document.getElementById("skill-"+k);if(e){e.textContent=fmt(t);mark(e,!!skFx||!!ckFx||!!grantedProf("skill",k));}
     const d=document.querySelector(`.dot[data-skill="${k}"]`);if(d){d.dataset.lvl=lvl;d.dataset.granted=(!(character.skills[k]||0)&&grantedProf("skill",k))?1:0;}
   });
   const acBase=armorAC(c).base, acFx=sumFx("ac",c);
   const acEl=document.getElementById("acDisp");acEl.textContent=acBase+acFx;mark(acEl,!!acFx);
-  const initBase=character.init===""?mods.dex:num(character.init), initFx=sumFx("init",c);
+  const initBase=character.init===""?mods.dex:num(character.init), initFx=sumFx("init",c)+ckFx;
   const initEl=document.getElementById("initDisp");initEl.textContent=fmt(initBase+initFx);mark(initEl,!!initFx);
   const spFx=sumFx("speed",c), spBase=num(character.speed)+spFx;
   /* encumbrance is applied last and outside the effects engine on purpose: two of
@@ -2024,7 +2032,7 @@ function recompute(){
      the same "this isn't the default" signal the other Vitals boxes use */
   const szEl=document.getElementById("sizeDisp");
   if(szEl){szEl.textContent=charSize();mark(szEl,!!character.size);}
-  const pv=mods.wis+(effSkill("perception")>0?pb:0)+(effSkill("perception")>1?pb:0)+sumFx("skill.perception",c);
+  const pv=mods.wis+(effSkill("perception")>0?pb:0)+(effSkill("perception")>1?pb:0)+sumFx("skill.perception",c)+ckFx;
   document.getElementById("passDisp").textContent=10+pv;
   const hpFx=sumFx("hp.max",c);
   const mn=document.getElementById("maxNote");
@@ -6335,7 +6343,13 @@ function openSizePicker(){
   });
 }
 function openStatBreakdown(target){
-  const c=contributions();const contr=c.filter(x=>x.target===target);
+  const c=contributions();
+  /* a bonus to every ability check (#79) is part of each skill and of
+     initiative, so it is listed there by source; on an ability it is what a
+     plain check with that ability adds, listed apart from the score */
+  const onCheck=target.startsWith("skill.")||target==="init";
+  const ckRows=c.filter(x=>x.target==="check").map(x=>({source:x.source+" (ability checks)",value:x.value}));
+  const contr=c.filter(x=>x.target===target).concat(onCheck?ckRows:[]);
   let base="", label=FX_LABEL[target]||target, grantLines="";
   const mods={};ABIL.forEach(([k])=>mods[k]=Math.floor((abilFinal(k,c)-10)/2));const pb=pbValue(c);
   if(target.startsWith("ability.")){const k=target.split(".")[1];base=`Base score ${num(character.abilities[k])}`;}
@@ -6344,10 +6358,14 @@ function openStatBreakdown(target){
   else if(target==="ac"){const AB=armorAC(c);let p;if(AB.hasArmor){const cap=(AB.body.dexCap==null)?AB.dex:Math.min(AB.dex,AB.body.dexCap);p=`Armor ${AB.body.base} + DEX ${fmt(cap)}`;}else if(character.ac!=="")p=`Base AC ${num(character.ac)}`;else p=`10 + DEX ${fmt(mods.dex)}`;if(AB.shield)p+=` + Shield ${fmt(AB.shield)}`;base=p;}
   else if(target==="init")base=character.init===""?`DEX mod ${fmt(mods.dex)}`:`Base ${fmt(num(character.init))}`;
   else if(target==="speed")base=`Base ${num(character.speed)}`;
+  else if(target==="profBonus")base=`Level ${Math.max(1,num(character.level)||1)}: ${fmt(pb-sumFx("profBonus",c))}`;
   else if(target==="spell.dc"||target==="spell.attack"){const sa=character.spellAbility;base=sa?`${target==="spell.dc"?"8 + ":""}prof ${fmt(pb)} + ${sa.toUpperCase()} mod ${fmt(mods[sa])}`:"No spellcasting ability chosen";}
   let rows=`<p style="margin-bottom:6px">${esc(base)}</p>`+grantLines;
-  if(contr.length)rows+=contr.map(x=>`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(x.source)}</span><b>${fmt(x.value)}</b></div>`).join("");
-  else if(!grantLines)rows+=`<p style="color:var(--ink-soft);font-style:italic">No item, feature, or grant effects apply.</p>`;
+  const rowOf=x=>`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(x.source)}</span><b>${fmt(x.value)}</b></div>`;
+  const plainCheck=target.startsWith("ability.")&&ckRows.length;
+  if(contr.length)rows+=contr.map(rowOf).join("");
+  else if(!grantLines&&!plainCheck)rows+=`<p style="color:var(--ink-soft);font-style:italic">No item, feature, or grant effects apply.</p>`;
+  if(plainCheck)rows+=`<p class="hint" style="margin-top:6px">An ability check with this score alone, not through a skill, also adds:</p>`+ckRows.map(rowOf).join("");
   /* Encumbrance is last because it is applied last — after the numeric effects,
      and sometimes as a replacement rather than a modifier. */
   if(target==="speed"){
