@@ -90,10 +90,11 @@ function loadApp(names) {
  * as does the byte-pin assertion in rules-data.js.
  *
  * SPLICE, not concatenate. The suites slice this string by POSITION — block()
- * walks <div>/</div> from the nearest preceding <div>, and one guard reads
- * "nothing after the Notes panel carries a data-note". Appending the fragments
- * to the end of the shell would put the panels outside <div class="page"> and
- * turn those guards into tautologies without failing.
+ * walks <div>/</div> from the nearest preceding <div>, and one guard slices the
+ * Journal panel up to the next panel and checks that Trackers is its only
+ * data-note card. Appending the fragments to the end of the shell would put
+ * the panels outside <div class="page"> and turn those guards into
+ * tautologies without failing.
  */
 const HTML_MARK = "<!--@@HTML@@-->\n";   // token PLUS its newline — see build-html.js
 

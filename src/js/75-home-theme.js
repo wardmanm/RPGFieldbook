@@ -1,42 +1,65 @@
 /* ================= character library + home ================= */
 function skinForSystem(sys){return sys==="dnd"?"classic":"humblewood";}
 function systemForSkin(skin){return skin==="classic"?"dnd":"humblewood";}
+/* Every path that replaces the open character asks leaveCharacterOk() first
+   (70-persistence.js), and returns false, changing nothing, when told No. */
 function loadCharById(id){
+  /* before the read: tapping the open character's own card reads back what the
+     flush just wrote */
+  if(!leaveCharacterOk())return false;
   let raw;try{raw=localStorage.getItem(charKey(id));}catch(e){}
   if(!raw)return false;
   try{character=migrate(JSON.parse(raw));}catch(e){return false;}
   activeId=character.id||id;
   settings.skin=skinForSystem(character.system);saveSettings();applyTheme();
   renderAll();hideHome();
+  /* the sheet on screen is the one in storage, so a warning about the character
+     just left (or given up) no longer applies */
+  showSaveResult("");
   /* after the sheet is on screen, so the prompt has context behind it */
   maybePromptUpdate();
   return true;
 }
 function newCharacter(name,system){
+  if(!leaveCharacterOk())return false;
   const c=blankChar();c.system=(system==="dnd")?"dnd":"humblewood";c.name=name||"";c.glossary=seedGlossary();
   c.appVersion=APP_VERSION;   // safe here: runtime, long after 30-version.js has run
   character=c;activeId=c.id;
-  try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){}
-  libTouch();
+  /* as finishImport(): listed only once stored, and a refusal says so (#81) */
+  let why="";try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){why=storageWhy(e);}
+  if(!why)why=libTouch();
   settings.skin=skinForSystem(c.system);saveSettings();applyTheme();
   renderAll();hideHome();
+  showSaveResult(why);
+  return true;
 }
+/* Both return "" or why the library index couldn't be written (#81), and say so
+   with alert(): the home screen they run on covers the save strip, and a toast
+   fades. The blob goes only once the index stops listing it — the other order
+   leaves a card that opens nothing. */
 function deleteCharacter(id){
-  const lib=libLoad();lib.index=lib.index.filter(x=>x.id!==id);if(lib.autoload===id)lib.autoload=null;libSave(lib);
+  const lib=libLoad();lib.index=lib.index.filter(x=>x.id!==id);if(lib.autoload===id)lib.autoload=null;
+  const why=libSave(lib);
+  if(why){alert("That character couldn't be deleted — "+why+". It is still in your library.");renderHome();return why;}
   try{localStorage.removeItem(charKey(id));}catch(e){}
   if(activeId===id)activeId=null;
-  renderHome();
+  renderHome();return "";
 }
-function setAutoload(id){const lib=libLoad();lib.autoload=(lib.autoload===id)?null:id;libSave(lib);renderHome();}
+function setAutoload(id){const lib=libLoad();lib.autoload=(lib.autoload===id)?null:id;const why=libSave(lib);renderHome();if(why)alert("Couldn't change which character opens first — "+why+".");return why;}
+/* "" or why the old save could not be moved. The legacy key goes only once the
+   copy AND its index entry have landed (#81); it used to go whatever happened,
+   taking the only copy with it. */
 function migrateOldChar(){
-  const lib=libLoad();if(lib.index.length)return;
+  const lib=libLoad();if(lib.index.length)return "";
   let old=null;try{const c=localStorage.getItem(K_CHAR);if(c)old=JSON.parse(c);}catch(e){}
-  if(old&&old.abilities){
-    const ch=migrate(old);if(!ch.id)ch.id=uid();ch.system=ch.system||"humblewood";if(!ch.name)ch.name="My Character";
-    try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){}
-    lib.index.push({id:ch.id,name:ch.name,system:ch.system,updated:Date.now()});libSave(lib);
-    try{localStorage.removeItem(K_CHAR);}catch(e){}
-  }
+  if(!old||!old.abilities)return "";
+  const ch=migrate(old);if(!ch.id)ch.id=uid();ch.system=ch.system||"humblewood";if(!ch.name)ch.name="My Character";
+  try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){return storageWhy(e);}
+  lib.index.push({id:ch.id,name:ch.name,system:ch.system,updated:Date.now()});
+  const why=libSave(lib);
+  if(why){try{localStorage.removeItem(charKey(ch.id));}catch(e){}return why;}
+  try{localStorage.removeItem(K_CHAR);}catch(e){}
+  return "";
 }
 let homeForceSetup=false;
 function showHome(){renderHome();document.getElementById("home").style.display="flex";}

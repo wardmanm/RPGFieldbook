@@ -85,7 +85,10 @@ A click, Enter or Space on `.kw` opens the glossary entry, and on `.tblref` open
 
 | Surface | Renderer |
 |---|---|
-| Section notes (the Notes tab and each card's note) | `noteHTML()` |
+| Section notes (the Journal tab's Section Notes card, and each card's note) | `noteHTML()` |
+| Journal pages (`journalPageHTML()`) | `noteHTML()` |
+| Journal search excerpts (`jnlSnippet()`), titles and tags | `esc()` only |
+| Tracker names and items (`trackerRowHTML()`) | `esc()` only: a chip inside a checkbox button would be a button in a button |
 | Story bio fields and Proficiencies (`renderRT()`) | `richHTML()` |
 | Feature, item, status and familiar descriptions; browse previews; the spell view | `richHTML()` / `descHTML()` |
 | Trait lines in the class, subclass, species and background panes | `richInline()` |
@@ -143,7 +146,7 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
 - **Placeholders are indexed**, not the single repeating `TBL_MARK` idiom, because the markdown
   pass nests and ordinal restore-in-order does not hold there.
 - **One `highlight()` per block, not per line.** Each call rebuilds and sorts the glossary and
-  compiles a fresh RegExp, and the Notes tab can render nineteen notes at once.
+  compiles a fresh RegExp, and the Section Notes card can render nineteen notes at once.
 - **Run-in panes call `richInline()`, never a block renderer** (asserted).
 - **Emphasis needs non-space at both ends,** or the Humblewood footnote asterisks ("divert power\*",
   "cymatic sight\*") pair up and italicise the sentence between them.
@@ -235,3 +238,5 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — A modal title is text, never `esc()`'d (guarded); the one escaped title fixed. → ledger L4086, #69
 - 2026-09-28 — A settings file's pool no longer goes in raw: it is rebuilt through `mergeRules()`, so its keyword ids are the app's. → ledger L4134, #70
 - 2026-09-28 — Terms are read only through `glossTerm()`, so an entry with no term can't break a render; the glossary pass looks matches up in a map keyed by the escaped term, which also gives apostrophe terms their id. → ledger L4206, #71
+- 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
+- 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41

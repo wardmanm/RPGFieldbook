@@ -1,6 +1,6 @@
 /* ================= section notes =================
-   A note pinned to any section of the sheet, plus the Notes tab that gathers
-   them. Notes are the player's own words, so they render markdown — and, like
+   A note pinned to any section of the sheet, plus the Section Notes card on the
+   Journal tab that gathers them. Notes are the player's own words, so they render markdown — and, like
    every other body of text in the app, they run through highlight() so glossary
    terms and [Table: X] references stay live inside them.
 
@@ -8,8 +8,8 @@
    and predates this. This feature stores `character.secNotes`. */
 
 /* The registry is the single source of truth: it drives the icon injection, the
-   Notes tab's grouping and headings, and a test that checks it against the
-   template both ways. `k` is a stable id — never derive one from a heading,
+   Section Notes card's grouping and headings, and a test that checks it against
+   the template both ways. `k` is a stable id — never derive one from a heading,
    because headings get reworded and the notes would be orphaned. */
 const NOTE_SECTIONS=[
   {k:"portrait",     tab:"sheet",     title:"Portrait"},
@@ -30,13 +30,14 @@ const NOTE_SECTIONS=[
   {k:"spells",       tab:"spells",    title:"Spells & Cantrips"},
   {k:"inventory",    tab:"inventory", title:"Equipment & Inventory"},
   {k:"coins",        tab:"inventory", title:"Coins"},
-  {k:"proficiencies",tab:"story",     title:"Proficiencies & Languages"}
+  {k:"proficiencies",tab:"story",     title:"Proficiencies & Languages"},
+  {k:"trackers",     tab:"journal",   title:"Trackers"}
 ];
-const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Story"};
+const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Story",journal:"Journal"};
 function noteDef(k){return NOTE_SECTIONS.find(s=>s.k===k)||null;}
 /* The ancestry heading is skin-dependent — "Race" on the classic skin — so the
-   Notes tab has to ask rather than quote the registry, or it would disagree with
-   the card it links to. */
+   Section Notes card has to ask rather than quote the registry, or it would
+   disagree with the card it links to. */
 function noteTitle(def){return (def&&def.k==="origin")?(raceTerm()+" & Background"):(def?def.title:"");}
 
 /* ---- storage, guarded ----
@@ -49,7 +50,7 @@ function noteText(k){const n=getNote(k);return n?String(n.text||""):"";}
 function hasNote(k){return !!noteText(k).trim();}
 function noteCount(tab){return NOTE_SECTIONS.filter(s=>s.tab===tab&&hasNote(s.k)).length;}
 /* Blank means no note: saving an empty box DELETES the entry, so "has a note" is
-   one truth test and the Notes tab can never list an empty one.
+   one truth test and the Section Notes card can never list an empty one.
    `at` is set once and survives every edit; `editedAt` only moves when the text
    actually changed, so re-saving without typing doesn't fake activity. */
 function saveNote(k,text){
@@ -151,7 +152,7 @@ function noteHTML(text){
     while(i<lines.length&&lines[i].trim()&&!starts(lines[i])){ls.push(lines[i]);i++;}
     /* ONE highlight() call per block, not per line: highlight() rebuilds the
        glossary list, sorts it and compiles a fresh RegExp every time, and the
-       Notes tab can render nineteen of these at once. */
+       Section Notes card can render nineteen of these at once. */
     out.push(`<p>${noteInline(ls.join(NOTE_LB))}</p>`);
   }
   return out.join("");
@@ -233,7 +234,7 @@ function renderNoteIcons(){
   });
 }
 
-/* ================= the Notes tab ================= */
+/* ================= the Section Notes card ================= */
 function noteGroupOpen(tab){
   const c=(character&&character.noteCollapse&&typeof character.noteCollapse==="object"&&!Array.isArray(character.noteCollapse))?character.noteCollapse:{};
   return !c[tab];
@@ -285,6 +286,10 @@ function jumpToNote(k){
   card.classList.add("n-flash");setTimeout(()=>card.classList.remove("n-flash"),1200);
 }
 
+/* The one-line formatting key, shared by every editor of this grammar: the
+   section-note editor and the journal page editor. */
+const NOTE_FMT_HINT=`<p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>`;
+
 /* ---- editor ---- */
 function openNoteEditor(k){
   const def=noteDef(k);if(!def)return;
@@ -292,7 +297,7 @@ function openNoteEditor(k){
   openModal("Note — "+noteTitle(def),`
     <div class="field"><label class="f">Your note</label>
       <textarea id="noteText" class="n-edit" placeholder="Anything you want to remember about this section…">${esc(noteText(k))}</textarea></div>
-    <p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>
+    ${NOTE_FMT_HINT}
     ${when?`<p class="hint">${esc(when)}</p>`:""}
     <div class="m-actions">${n?`<button class="tbtn danger" id="noteDel" style="margin-right:auto">Delete</button>`:""}<button class="tbtn" id="noteCancel">Cancel</button><button class="tbtn primary" id="noteSave">Save</button></div>`);
   const ta=document.getElementById("noteText");if(ta)ta.focus();

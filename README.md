@@ -145,6 +145,12 @@ phone reset, or certain iOS storage cleanups can **erase your characters without
 Think of it like a video game: autosave is nice, but you still want to save your own file before
 you quit. **When in doubt, hit Save and keep the file.**
 
+If your browser ever refuses to save — its storage is full, or it's blocking storage for this
+page — a bar edged in red appears at the bottom of the screen and stays there until a save goes
+through. Tap **Save to file** on it to keep a copy right away, free up some space, then tap **Try
+again**. If you open another character while it's up, Fieldbook asks before leaving the unsaved
+changes behind.
+
 You can also back up your whole setup (appearance settings **and** all loaded rules) from
 **Settings → Export settings**, and restore it later with **Import settings**.
 
@@ -209,15 +215,30 @@ you scroll, and the **☰** button in the tab bar opens a jump-to-section list f
 - **Add spells** from a searchable, filterable browser (by level, class, school, and more), or
   add your own.
 
-### 📝 Notes
+### 📓 Journal
+
+Keep a running journal of your campaign. Tap **+ Page** to start one — a session, someone you
+met, a quest, a place — and give it a tag (Sessions, NPCs, Quests…) to group it with others like
+it. Pages list newest first under their tags, and the search box finds any page by its title,
+tag or text. **Insert timestamp** drops the current date and time into the page, handy for a
+running log. Each page remembers when you started it and when you last changed it, and uses the
+same formatting as notes (below). Journal pages don't print.
+
+**Trackers** count things for you. Tap **+ Tracker** and pick a **Counter** (with a goal, like
+the 300 pages of a book, or without one, like goblins slain), a **Checklist** (the steps of a
+quest, one per line), or a **Task** (a single thing to do). Give it a tag to group it — several
+"Kills" counters, one per kind of creature, sit together. When something with a goal is done it
+moves to **Completed** (tap Undo on the message if that was a slip); switch that off per tracker,
+or close and reopen one by hand from its pencil. You can add the Trackers card to the combat
+view to count mid-fight, and hide it in **Settings → This character** if you don't use it.
 
 Every section of your sheet can hold a note — tap the small page icon beside any heading on the
 **Sheet**, **Spells**, **Inventory** or **Story** tabs. The icon lights up when there's something
 there, and hovering it shows you the note without opening it. Each note remembers when you wrote it
 and when you last changed it.
 
-The **Notes** tab gathers them all, grouped by where they came from, with a link on each that takes
-you back to that section. Notes print with your sheet.
+The **Journal** tab's **Section Notes** card gathers them all, grouped by where they came from, with
+a link on each that takes you back to that section. Section notes print with your sheet.
 
 Notes support a little formatting:
 
@@ -376,6 +397,7 @@ there you can:
   and up carry double, Tiny half). Encumbrance is off by default — weight is still tracked and
   totalled, just without penalties. There's also a switch for whether your coins count toward the
   load.
+- **Trackers** — show or hide the Trackers card on the Journal tab.
 
 **Themes:** there's a light/dark toggle in the top bar, plus a **Humblewood** or **Classic D&D**
 look. The app can also follow your device's system light/dark setting.

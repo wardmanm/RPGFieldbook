@@ -61,6 +61,7 @@ function openSettings(){
     <p class="hint" id="encHint">${esc(encSettingsHint())}</p>
     <div class="toggle"><div><div class="t-lbl">Coins count as weight</div><div class="t-sub">50 coins to the pound, the way the rules have it.</div></div><button class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight"></button></div>
     <div class="toggle"><div><div class="t-lbl">Colour current HP</div><div class="t-sub">Amber at half your maximum, red at a quarter.</div></div><button class="switch ${character.hpColor!==false?"on":""}" id="swHpColor"></button></div>
+    <div class="toggle"><div><div class="t-lbl">Trackers</div><div class="t-sub">Show the Trackers card on the Journal tab. Hiding it keeps everything you've counted.</div></div><button class="switch ${showTrackers(character)?"on":""}" id="swTrackers"></button></div>
     <div class="field"><label class="f">Skills display</label>
       <div class="seg" id="segStatStyle">
         ${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>
@@ -162,6 +163,7 @@ function openSettings(){
   {const s=document.getElementById("setEnc");if(s)s.addEventListener("change",()=>{character.encumbrance=s.value;encSettingsChanged();});}
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
   {const b=document.getElementById("swHpColor");if(b)b.addEventListener("click",()=>{character.hpColor=(character.hpColor===false);b.classList.toggle("on",character.hpColor!==false);renderHP();scheduleSave();});}
+  {const b=document.getElementById("swTrackers");if(b)b.addEventListener("click",()=>{character.showTrackers=!showTrackers(character);b.classList.toggle("on",character.showTrackers);renderTrackers();scheduleSave();});}
   /* renderAll(), not buildStats(): the rebuild blanks the six score inputs, and
      only renderAll refills them from [data-path] and then repaints through
      recompute(). Calling the builder alone leaves blank boxes and a wall of +0. */
@@ -304,9 +306,10 @@ function rulesStatusText(){
   return (k+f+i+s+r+c+t)?`Loaded${rules.name?" “"+rules.name+"”":""}: ${r} races · ${c} classes · ${k} keywords · ${f} traits · ${i} items · ${s} spells${t?" · "+t+" tables":""}.`:"No rules loaded.";
 }
 function updateRulesStatus(msg,cls){const el=document.getElementById("rulesStatus");if(el){el.textContent=msg||rulesStatusText();el.className="status "+(cls||"");}}
-/* renderNotes is here because notes run through highlight() too — editing the
-   glossary changes how every note reads. */
-function refreshRulesUI(){renderRulesSections();renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderAllRT();}
+/* renderNotes and renderJournal are here because notes and journal pages run
+   through highlight() too — editing the glossary changes how every one reads.
+   An open journal editor is left alone (renderJournal()). */
+function refreshRulesUI(){renderRulesSections();renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderJournal();renderAllRT();}
 const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
 /* display names for a category — one map, used by both the group summary and
    the headings in the loaded-data list */

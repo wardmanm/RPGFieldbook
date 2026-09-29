@@ -33,9 +33,12 @@ from the top bar's house button (`#btnHome`) and from Settings → Characters & 
   relative time from `fmtWhen()`. The badge (`.verbadge`) gains `.old` and an ↑ when
   `cmpVer(appVersion, APP_VERSION)` is negative; a sheet never stamped (`""`) counts as behind.
 - **The star** (`data-autoload`) makes that character open at boot. One at a time; tapping the lit
-  star clears it.
-- **Delete** (`data-delchar`) confirms, then `deleteCharacter()` drops the index entry and the blob,
-  clears autoload if it pointed there, and nulls `activeId` if that character was open.
+  star clears it. `setAutoload()` returns "" or why the index write was refused, and alerts it.
+- **Delete** (`data-delchar`) confirms, then `deleteCharacter()` drops the index entry and clears
+  autoload if it pointed there. Only once that index write lands does it remove the blob and null
+  `activeId` if that character was open. A refused write alerts ("That character couldn't be
+  deleted — …") and keeps both, so the card still opens the character. An alert, not the save
+  strip: the home overlay covers the strip.
 - **The setup panel** (`#homeSetup`: skin, mode, hand-drawn borders, bulk rules import, loaded data,
   Clear all) shows on first run — no saved settings, or no characters — or when the cog toggles
   `homeForceSetup`. The cog is hidden on first run; "Back to sheet" shows only when a character is
@@ -46,15 +49,29 @@ calls `newCharacter(name, system)`: `blankChar()`, the system, `seedGlossary()`,
 stamp, a blob write, `libTouch()`, the skin switched to match the system, `renderAll()`,
 `hideHome()`. The system picks the skin and wordmark, filters the ancestry picker's species (see
 [Character building](character-building.md)) and sets which coins show; classes, spells, feats and
-items from every loaded pack stay available either way.
+items from every loaded pack stay available either way. A new or imported character that the
+browser refuses to store stays open, isn't listed until it is stored, and raises the save warning
+(see [Storage](../architecture/storage.md)).
 
-**Opening one.** A card calls `loadCharById()`: `migrate(JSON.parse(raw))`, skin from system,
-`renderAll()`, `hideHome()`, then `maybePromptUpdate()` with the sheet already behind it.
+**Opening one.** A card calls `loadCharById()`: `leaveCharacterOk()`, then
+`migrate(JSON.parse(raw))`, skin from system, `renderAll()`, `hideHome()`, `showSaveResult("")`,
+then `maybePromptUpdate()` with the sheet already behind it.
+
+**Leaving one.** `loadCharById()`, `newCharacter()` and `finishImport()` all start with
+`leaveCharacterOk()` (see [Storage](../architecture/storage.md)). It writes an edit still waiting on
+the autosave debounce to the character it belongs to. If that write is refused, it asks before
+leaving: "“A”'s changes aren't saved — <why>. Leave and lose them? Cancel, then use Save to file."
+No returns false with nothing changed and shows the sheet again, where the strip's Save to file
+is. So an edit made just before a switch is saved, and freeing space then tapping the character's
+own card reloads it with its edits, not without them.
 
 **Boot.** `boot()` runs `migrateOldChar()` — which moves a pre-library single character (`K_CHAR`,
 `hw-fb-char`) into the library, only when the index is empty — then opens the autoload character if
 its id is still indexed. Otherwise it renders an in-memory blank (glossary seeded) behind the home
-screen so the sheet underneath is valid.
+screen so the sheet underneath is valid. `migrateOldChar()` returns "" or why the move failed; the
+legacy key is removed only once both the copy and its index entry have landed, and `boot()` alerts
+on a failure — no character is open yet for the save warning strip to be about (see
+[Storage](../architecture/storage.md)).
 
 **Export.** Save (`#btnSave`) is `exportChar()`: the whole `character`, pretty-printed, downloaded
 by `dl()` as `humblewood-<name>.json`. The prefix is the same for a D&D character.
@@ -69,8 +86,9 @@ hidden `#fileLoad`, whose change handler calls `importChar(file)`:
 4. No clash → `finishImport()`. Clash → a modal: **Cancel**, **Import as copy** (a fresh `uid()`,
    name + " (copy)"), or **Replace <name>**.
 
-`finishImport()` makes it the active character, writes the blob, touches the index, switches the
-skin, renders, hides home, and calls `maybePromptUpdate()` last.
+`finishImport()` asks `leaveCharacterOk()` first, then makes it the active character, writes the blob, touches the index only once that
+lands, switches the skin, renders, hides home, reports through the save warning strip, and calls
+`maybePromptUpdate()` last.
 
 **Backups.** `backupCharacter(ch, tag)` deep-copies the character under a new id, names it
 "<name> (backup <tag>)", sets `isBackup:true`, and writes the blob and an index entry **without**
@@ -87,6 +105,8 @@ exports and imports *settings and rules data* — not characters (see
 - **`migrate()` sits on every load path** — card, autoload, import, `migrateOldChar()` — and
   preserves every field. A whitelist there drops new fields on every page refresh, not only on
   import. Mechanism: [Character model](../architecture/character-model.md).
+- **Every route that makes a character active starts with `leaveCharacterOk()`**, and stops when
+  it answers false.
 - **Every route that makes a character active ends in `renderAll()`.** The ability layout, the HP
   and coin boxes (not `data-path`) and the combat view all refill there; a new route that skips it
   shows the previous character's markup.
@@ -104,12 +124,10 @@ exports and imports *settings and rules data* — not characters (see
 
 ## Traps
 
-- **`libSave()` swallows its own quota error.** Anything that needs to know its index write landed
-  must read it back, as `backupCharacter()` does. Autosave does not: "Autosaved" reflects the blob
-  write only, so a full quota can leave the index (and the home card) stale.
-- **`newCharacter()` and `finishImport()` write the blob inside an empty `catch`.** If that first
-  write fails, nothing says so until the next edit's autosave reports "Use Save ↑". This falls short
-  of the "a write that does not land must say so" constraint in [CLAUDE.md](../../../../CLAUDE.md).
+- **`libSave()` returns "" or why it was refused (`storageWhy()`), instead of swallowing it (#81).**
+  `saveNow()` (autosave), `newCharacter()`, `finishImport()` and `migrateOldChar()` check it and
+  report through the save warning strip or, at boot, an alert. `deleteCharacter()` and
+  `setAutoload()` check it and alert, since the home screen they run on covers the strip.
 - **The clash check reads storage as well as the index**, so a blob whose index entry was lost
   still prompts rather than being silently overwritten.
 - **A backup looks like any other card.** The index entry does not carry `isBackup`; only the
@@ -125,12 +143,6 @@ exports and imports *settings and rules data* — not characters (see
 | How a card knows a sheet is behind | `appVersion` rides on the library index | Reading and parsing every character blob to draw the list |
 | What a failed backup returns | `{error, copy}`, so the caller can offer the snapshot as a download | Returning `null`: every cause became the same dead-end modal, with no way on and no clue which it was |
 
-## Open
-
-- The empty-`catch` blob writes in `newCharacter()`, `finishImport()` and `migrateOldChar()`, and
-  the unchecked index write behind autosave, delete and the autoload star, can each fail silently.
-  See [Known issues](../roadmap/known-issues.md).
-
 ## History
 
 - 2026-08-07 — `migrate()` preserves every field; active spells, granted gold and attack collapse
@@ -141,3 +153,5 @@ exports and imports *settings and rules data* — not characters (see
 - 2026-08-10 — `appVersion` on the library index and the card's version badge; `backupCharacter()`
   added for the update tool. → ledger L702
 - 2026-08-10 — backups return the snapshot on failure and verify the index write. → ledger L1116
+- 2026-09-29 — A refused character write raises a warning strip that stays until a save lands; new, imported and migrated characters report it too. → ledger L4771, #81
+- 2026-09-29 — Opening, making or importing a character first saves the one left, and asks before dropping changes it can't save; delete and the star say when the library refuses them. → ledger L4856, #81

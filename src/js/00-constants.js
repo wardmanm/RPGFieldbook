@@ -62,6 +62,13 @@ function blankChar(){
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
        above), and this is a different thing entirely. */
     secNotes:{}, noteCollapse:{},
+    /* The Journal tab's own pages (87-journal.js): [{id,title,tag,text,at,editedAt}],
+       and which of its tag groups are shut, keyed by lower-cased tag. */
+    journal:[], journalCollapse:{},
+    /* The Journal tab's trackers (87-trackers.js), which of their tag groups are
+       shut, and whether the card shows at all — read as !==false, so a sheet from
+       before it shows it. */
+    trackers:[], trackerCollapse:{}, showTrackers:true,
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);

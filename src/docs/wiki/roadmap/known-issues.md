@@ -44,7 +44,7 @@ Known behaviour that is accepted for now.
   pack, bumps XPHB's data version, and strands anyone playing an Artificer on the core pack alone.
   Tasha's skips the Artificer and its subclasses instead of shipping duplicates. → ledger L1816
 - **In the By ability ("grouped") layout a Skills note can't be started.** The Skills card is hidden,
-  and the Notes tab lists only sections that already have a note. Existing Skills notes stay editable.
+  and the Section Notes card lists only sections that already have a note. Existing Skills notes stay editable.
   Mitigating it means a second note button in the Abilities label, which is worse UI than the gap.
   → ledger L106
 - **`**Hit** Points` loses its glossary chip.** The asterisks break the `\b(term)\b` match. This is
@@ -96,6 +96,8 @@ Wanted, not yet done. Each needs work, not a source.
   the verbatim text now states the limit ("can't use this feature again until you have completed a
   Long Rest"), so it needs `uses {1/long}`, not a book. → ledger L1808, and
   [Humblewood](../data/humblewood.md)
+- Journal pages and trackers don't print; trackers have no rest reset and no group totals
+  ([Journal](../features/journal.md)).
 
 ## Waiting on sources
 
@@ -173,10 +175,10 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 
 ### Breaks of a non-negotiable
 
-- **Silent storage writes (constraint 2).** `libSave()`, `saveSettings()`, `newCharacter()`,
-  `finishImport()` and `migrateOldChar()` each wrap `localStorage.setItem` in an empty `catch`.
-  `migrateOldChar()` then deletes the legacy key even if its copy failed to save. The main autosave,
-  `scheduleSave()`, does report failures. → [Storage](../architecture/storage.md)
+- **Silent storage writes (constraint 2), narrowed.** Every character and library write now reports
+  a refused write (#81): autosave (`saveNow()`), `newCharacter()`, `finishImport()`,
+  `migrateOldChar()`, `deleteCharacter()` and `setAutoload()`. `saveSettings()` still returns why it
+  was refused, but most of its callers ignore that. → [Storage](../architecture/storage.md)
 - **A stale rules cache can win.** If a save falls back to localStorage after IndexedDB once held the
   pool, the old IndexedDB copy is never cleared, and `loadRulesCacheAsync()` lays it over the newer
   copy on the next boot. → [Storage](../architecture/storage.md)
@@ -386,3 +388,6 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-28 — A +N weapon's bonus counted twice (#74) and ranged finesse weapons couldn't use STR (#75): both fixed, never listed here. Quarterstaff of the Acrobat's AC (#76) and items' spell-attack bonuses (#77) added. → ledger L4392, L4466
 - 2026-09-28 — Fixed and removed: the Quarterstaff of the Acrobat's standing +5 AC (#76) and items' unread spell-attack bonuses (#77). Added #78 (raw item-entry tags) and #79 (unread Stone of Good Luck / Ioun Stone of Mastery bonuses). → ledger L4502, L4568
 - 2026-09-29 — Fixed and removed: raw item-entry template tags in 54 descriptions (#78) and the unread Stone of Good Luck / Ioun Stone of Mastery bonuses (#79). → ledger L4634, L4689
+- 2026-09-29 — Narrowed: a refused autosave, new character, import or old-save move now reports itself (#81); `deleteCharacter()`, `setAutoload()` and most `saveSettings()` callers still don't. → ledger L4771
+- 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
+- 2026-09-29 — Narrowed again: `deleteCharacter()` and `setAutoload()` now report a refused index write; only most `saveSettings()` callers still don't. → ledger L4856, #81

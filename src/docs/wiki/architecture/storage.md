@@ -7,14 +7,15 @@ because at five packs it no longer fits in the ~5 MiB a browser gives an origin.
 page exists for: **a write that does not land must say so.** An empty `catch` around a storage
 write is how five loaded packs quietly came back as two.
 
-**Code:** `scheduleSave()`, `libLoad()`, `libSave()`, `libTouch()`, `backupCharacter()`,
-`storageWhy()`, `saveSettings()`, `saveRulesCache()`, `idbOpen()`, `idbTx()`, `idbTimeout()`,
+**Code:** `scheduleSave()`, `saveNow()`, `showSaveResult()`, `retrySave()`, `leaveCharacterOk()`,
+`libLoad()`, `libSave()`, `libTouch()`, `backupCharacter()`, `storageWhy()`, `saveSettings()`, `saveRulesCache()`, `idbOpen()`, `idbTx()`, `idbTimeout()`,
 `lzwCompress()`, `lzwDecompress()`, `readRulesCacheString()`, `cacheBytes()` in
 `70-persistence.js`; `loadRulesCacheAsync()`, `finishImport()` in `71-char-io.js`;
-`loadCharById()`, `newCharacter()`, `deleteCharacter()`, `migrateOldChar()` in `75-home-theme.js`;
+`loadCharById()`, `newCharacter()`, `deleteCharacter()`, `setAutoload()`, `migrateOldChar()` in
+`75-home-theme.js`;
 `rulesCacheWarning()`, `finishSettingsImport()` in `88-settings.js`; `boot()` in `90-boot.js` · **Tests:** `rules-data.js`
-(the fallback, the loud path, the LZW round trips), `char-update.js` (backup semantics and the index
-read-back) · **See also:** [Character model](character-model.md), [Rules packs](rules-packs.md),
+(the fallback, the loud path, the LZW round trips), `char-update.js` (backup semantics, the index
+read-back, the refused-write paths and leaving a character) · **See also:** [Character model](character-model.md), [Rules packs](rules-packs.md),
 [Home & characters](../features/home-and-characters.md),
 [Rules-update tool](../features/rules-update-tool.md)
 
@@ -31,17 +32,36 @@ read-back) · **See also:** [Character model](character-model.md), [Rules packs]
 
 **Characters.** Every edit calls `scheduleSave()`, which debounces 500 ms and then writes the active
 character's blob and refreshes its index entry through `libTouch()`. The index exists so the home
-screen can draw every card, including the `appVersion` badge, without parsing every blob. The
-`#savestate` chip reads "Saving…" and then "Autosaved". If the write throws, `lsOK` goes false and
-the chip says **Use Save ↑**, pointing the player at the file export. Every load path runs
+screen can draw every card, including the `appVersion` badge, without parsing every blob.
+`scheduleSave()` calls `saveNow()` after the debounce, which writes the blob, then the index
+(`libTouch()`), and returns "" or why a write failed (`storageWhy()`). `showSaveResult()` shows
+the answer. The `#savestate` chip reads "Saving…" and then "Autosaved", or "Not saved". A
+failure also raises `#saveWarn`, a strip fixed to the foot of the window on every tab. It gives
+the reason and offers **Save to file** (`exportChar()`) and **Try again** (`retrySave()`), and
+it stays up until a write lands. `newCharacter()` and `finishImport()` store the character first
+and list it only once it is stored, then report through the same strip. So a character that
+could not be stored is open to play and to save to a file, but has no home-screen card that
+opens nothing.
+
+**Leaving a character.** `loadCharById()`, `newCharacter()` and `finishImport()` each replace the
+open character, and each calls `leaveCharacterOk()` first. If an edit is still waiting on the
+debounce (`saveDue`, set by `scheduleSave()`), or the last write failed, it writes now, to the
+character the edit belongs to. If that write still can't land, it asks: "“A”'s changes aren't saved
+— <why>. Leave and lose them? Cancel, then use Save to file." No returns false and changes nothing.
+It also hides the home screen, so the strip's Save to file is in view. A switch that goes ahead
+calls `showSaveResult("")`, because the sheet on screen now matches storage. Before this, the strip
+went on saying "Not saved" about the next character. And the switch it invited (Home, delete an old
+character to make room, tap the first one's card) reloaded that first character from storage,
+dropping the edits it had never written. With nothing waiting, nothing is written, so a switch
+alone never moves a card up the home screen's `updated` order. Every load path runs
 `migrate()` over what it read (see [Character model](character-model.md)). The character to open at
 boot is `lib.autoload`, set from the home screen.
 
 **Backups** (the rules-update tool takes one before touching a sheet): `backupCharacter()` writes a
 deep copy under a new id with `isBackup:true` and a "(backup …)" name, adds it to the index, then
-**reads the index back**. `libSave()` swallows its own quota error, so without the read-back a
-backup could sit in storage invisible on the home screen, right after the player was told to go and
-look for it there. It returns `{id, copy}` or `{error, copy}`. `error` comes from `storageWhy()` in
+**reads the index back** rather than trusting `libSave()`'s answer. Without the read-back, a
+backup could sit in storage invisible on the home screen, right after the player was told to go
+and look for it there. It returns `{id, copy}` or `{error, copy}`. `error` comes from `storageWhy()` in
 words a player can act on, and `copy` is always the snapshot, so a caller that cannot store it can
 offer it as a download. A dropped index write removes the orphaned blob.
 
@@ -83,6 +103,12 @@ autoload. Only after that paint does `loadRulesCacheAsync()` read the IndexedDB 
 `Object.assign` it over `rules`, re-index, and re-render every surface that shows rules. Finally,
 `checkForUpdate()` runs.
 
+`migrateOldChar()` returns "" or why the move failed (`storageWhy()`); the legacy `K_CHAR` key goes
+only once the copy **and** its index entry have landed, so a refusal keeps the only copy where it
+was rather than losing it. No character is open yet at that point for the save-warning strip to be
+about, so `boot()` reports a failure with an alert instead, and says the old save is still there
+and Fieldbook will try again next launch.
+
 **The compressor** runs only on the fallback path. It is LZW over UTF-8 bytes, and the dictionary
 stops growing at 65,536 entries rather than resetting. Codes are packed **15 bits per character,
 offset by 32**, so every unit falls in [32, 32799]. That is below the surrogate range, so each one
@@ -95,8 +121,17 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
 
 - **No silent storage writes.** A new write either reports failure on a surface the player sees
   (the save chip, a returned error, the red loaded-data line, a status line) or has a recorded
-  reason not to. The paths that already comply are autosave, `backupCharacter()`,
+  reason not to. The paths that comply are autosave, a new character and an import (`saveNow()`,
+  `showSaveResult()`), leaving a character (`leaveCharacterOk()`), moving a pre-library save
+  (`migrateOldChar()`), deleting a character and changing the autoload star (`deleteCharacter()`,
+  `setAutoload()`, which alert, since the home screen covers the strip), `backupCharacter()`,
   `saveRulesCache()`, and Import settings for both of its writes.
+- **Nothing replaces the open character without `leaveCharacterOk()`.** A new path that sets
+  `character` must call it first and stop when it says no, or an unsaved edit is lost without a
+  word.
+- **A character is listed only once it is stored, and unlisted before it is removed.** An index
+  entry for a blob that never landed is a card that opens nothing. So `deleteCharacter()` removes
+  the blob only after the index write lands.
 - **Never save a pool you did not mean to change.** A failed network call leaves the cache alone, and
   so does Import settings unless the player chooses to replace the rules.
 - **Every IndexedDB request goes through `idbOpen()`/`idbTx()`,** so the timeout covers it.
@@ -145,12 +180,8 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
 
 ## Open
 
-- **Some writes still fail silently.** `finishImport()`, `newCharacter()` and `migrateOldChar()`
-  wrap their `localStorage.setItem` in an empty `catch`, as does `libSave()`. `saveSettings()`
-  returns why it was refused, but only Import settings reports it.
-  `migrateOldChar()` then deletes the legacy key even if the copy did not land. An import into a
-  full store stays active in memory with nothing said, and the failure shows only when the next
-  edit's autosave fails.
+- **`saveSettings()` returns why it was refused, but only Import settings reports it.** The toggles
+  re-save at their next change.
 - **A stale IndexedDB copy can win.** If IndexedDB held the pool once and a later save fails over to
   `localStorage`, the older IndexedDB copy is left in place, and `loadRulesCacheAsync()` lays it
   over the newer fallback copy on the next boot. Found by reading the code, not reproduced.
@@ -173,3 +204,5 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-08-14 — Every IndexedDB call gets a 4 s timeout, and the `localStorage` fallback gains LZW compression. → ledger L1993
 - 2026-09-28 — Fetch all saves only a pool it changed, and reports a refused save on its status line. → ledger L3797, #65
 - 2026-09-28 — `saveSettings()` returns why a write was refused; Import settings reports that and a refused cache write beside its button, and writes the cache only when the player replaces the rules. → ledger L4134, #70
+- 2026-09-29 — A refused character write raises a warning strip that stays until a save lands; new, imported and migrated characters report it too. → ledger L4771, #81
+- 2026-09-29 — Leaving a character flushes its pending save and asks before dropping one that can't land; delete and the autoload star report a refused index write. → ledger L4856, #81

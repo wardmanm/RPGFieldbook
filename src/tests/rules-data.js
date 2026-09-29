@@ -932,17 +932,17 @@ X.mergeRules({system: 'XPHB', races: [{name: 'Elf'}, {name: 'Orc'}], spells: [{n
 ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCount());
 
 // ---------- section notes: the registry IS the contract
-// NOTE_SECTIONS drives the icon injection, the Notes tab's grouping and its
-// headings. If it and the template disagree, a section silently loses its icon
-// or a note becomes unreachable — with no error either way.
+// NOTE_SECTIONS drives the icon injection, the Section Notes card's grouping and
+// its headings. If it and the template disagree, a section silently loses its
+// icon or a note becomes unreachable — with no error either way.
 {
   const t = loadHTML();
   const inTemplate = (t.match(/data-note="([a-z]+)"/g) || []).map(s => s.slice(11, -1));
 
-  ck('the registry has 19 sections', X.NOTE_SECTIONS.length === 19, X.NOTE_SECTIONS.length);
+  ck('the registry has 20 sections', X.NOTE_SECTIONS.length === 20, X.NOTE_SECTIONS.length);
   ck('every section id is unique',
      new Set(X.NOTE_SECTIONS.map(s => s.k)).size === X.NOTE_SECTIONS.length);
-  ck('every section names a tab the Notes tab can group under',
+  ck('every section names a tab the Section Notes card can group under',
      X.NOTE_SECTIONS.every(s => s.tab in X.NOTE_TABS),
      X.NOTE_SECTIONS.filter(s => !(s.tab in X.NOTE_TABS)).map(s => s.k));
   // both directions — a registry entry with no card, and a card with no entry
@@ -955,10 +955,23 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // .label inside it
   ck('every data-note is on a card element',
      (t.match(/data-note="[a-z]+"/g) || []).every((_, i) => true) &&
-     (t.match(/<div class="card" data-note="[a-z]+"/g) || []).length === 19,
+     (t.match(/<div class="card" data-note="[a-z]+"/g) || []).length === 20,
      (t.match(/<div class="card"[^>]*data-note[^>]*>/g) || []).length);
-  ck('the Notes tab itself takes no note', !/id="tab-notes"[\s\S]*?data-note=/.test(t));
-  ck('the Notes tab has the list the renderer targets', t.includes('id="notesList"'));
+  /* The Journal panel, sliced to the next panel so a card on a LATER tab can
+     neither satisfy nor break these. The regex this replaced ran on to the end
+     of the page, and would have passed vacuously once the id changed. */
+  const jAt = t.indexOf('id="tab-journal"'), jEnd = t.indexOf('<section class="tabpanel', jAt + 1);
+  const jPanel = jAt < 0 ? '' : t.slice(jAt, jEnd < 0 ? undefined : jEnd);
+  ck('the Journal tab exists', jAt >= 0);
+  ck('the only card on the Journal tab that takes a note is Trackers',
+     JSON.stringify(jPanel.match(/data-note="[a-z]+"/g) || []) === JSON.stringify(['data-note="trackers"']),
+     jPanel.match(/data-note="[a-z]+"/g));
+  ck('the Journal tab runs Journal, Trackers, Section Notes',
+     jPanel.indexOf('id="journalCard"') >= 0 &&
+     jPanel.indexOf('id="journalCard"') < jPanel.indexOf('data-note="trackers"') &&
+     jPanel.indexOf('data-note="trackers"') < jPanel.indexOf('id="notesList"'));
+  ck('the Journal tab has the list the notes renderer targets', jPanel.includes('id="notesList"'));
+  ck('nothing still calls it the Notes tab', !/id="tab-notes"|data-tab="notes"/.test(t));
 
   // registry titles must match the headings they claim to describe. `origin` is
   // excluded on purpose: that heading is skin-dependent (Race vs Ancestry), which
@@ -1030,7 +1043,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   X.saveNote('vitals', 'Changed.');
   ck('an edit keeps the original created time', X.getNote('vitals').at === at0);
 
-  // blank means gone — otherwise the Notes tab lists empty entries forever
+  // blank means gone — otherwise the Section Notes card lists empty entries forever
   X.saveNote('vitals', '   \n  ');
   ck('saving whitespace deletes the note', X.getNote('vitals') === null && !X.hasNote('vitals'));
 
@@ -1336,6 +1349,13 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /function renderHP\(\)\{[\s\S]*?getElementById\("hpCur"\)[\s\S]{0,140}classList\.toggle\("hp-warn"/.test(js));
   ck('the colour switch is in the "This character" settings section, per character',
      /id="swHpColor"/.test(js) && /character\.hpColor/.test(js));
+  // spec §11 (#41): the Trackers switch is drawn in This character and does something
+  ck('the Trackers switch is rendered in the "This character" settings section',
+     /id="swTrackers"/.test((js.match(/const secCharacter=activeId\?`[\s\S]*?`:"";/) || [''])[0]) &&
+     /showTrackers\(character\)\?"on":""\}" id="swTrackers"/.test(js));
+  ck('...and wired: a tap flips showTrackers, redraws the card and saves',
+     /getElementById\("swTrackers"\);if\(b\)b\.addEventListener\("click",\(\)=>\{character\.showTrackers=!showTrackers\(character\);[^}]*renderTrackers\(\);scheduleSave\(\);\}\)/.test(js),
+     (js.match(/.{0,40}getElementById\("swTrackers"\).{0,200}/) || [''])[0]);
 
   // ---- the three hit-dice styles
   // Each is a separate builder, so a broken one is a broken LOOK, not an error.
@@ -2018,6 +2038,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const boxed = (src, id) => new RegExp('<div class="searchbox[^"]*"[^>]*>\\s*<input id="' + id + '"[^>]*placeholder="[^"]+"[^>]*>\\s*<button type="button" class="search-clear" aria-label="[^"]+"').test(src);
   ck('the glossary filter has its clear button', boxed(html, 'glossSearch'));
   ck('the tables filter has its clear button', boxed(html, 'tablesSearch'));
+  ck('the journal search has its clear button', boxed(html, 'jnlSearch'));
   ck('the finder search (items, spells, features) has its clear button', boxed(js, 'brSearch'));
   ck('the × shows only while there is text', /\.searchbox input:placeholder-shown ?\+ ?\.search-clear\{display:none\}/.test(css));
   ck('the × empties the box and re-runs its filter the way typing does',

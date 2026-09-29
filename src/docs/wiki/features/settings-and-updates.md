@@ -33,7 +33,8 @@ list's `.fgroup` / `.fghead` / `.fcaret`:
   with a character open also sets its `system`.
 - **This character** — only when a character is open, badged with its name: size, encumbrance (with a
   live "carrying X of Y" hint), coins count as weight, colour current HP, skills display, Hit Dice
-  display, and the rules-update check with the version the sheet was last checked against.
+  display, whether the Journal tab shows its Trackers card, and the rules-update check with the
+  version the sheet was last checked against.
 - **Rules data** — badged with the entry count (`rulesBadge()`, redrawn by every `renderRulesData()`
   so it follows imports, fetches, removals and Clear all while the modal is open): sources, the
   loaded-data list, and the status line.
@@ -213,3 +214,4 @@ otherwise, because it becomes an `<a href>`.
 - 2026-09-28 — Fetch all keeps what is loaded, says when nothing changed, and the Rules data chip follows the pool. → ledger L3797, #65
 - 2026-09-28 — The pack name in the rules status line is escaped; the Download link only takes a github.com page. → ledger L3940
 - 2026-09-28 — Import settings asks before replacing loaded rules, rebuilds the file's pool through `mergeRules()`, and says what it did. → ledger L4134, #70
+- 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41

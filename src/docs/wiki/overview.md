@@ -120,8 +120,10 @@ name says where its first function came from, not everything it holds: `migrate(
 | `80-modal-forms.js` | `openModal()` with dismiss guards and focus; the item, feature, spell, status and familiar forms | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Spells](features/spells.md) |
 | `85-browse.js` | `openBrowse()`, the full-screen finder; item, spell and feat pickers | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Spells](features/spells.md), [Features & traits](features/features-and-traits.md) |
 | `86-tables.js` | Rules-tab folding, `findTable()`, `tableHTML()` | [Rules & tables](features/rules-and-tables.md) |
-| `87-notes.js` | `NOTE_SECTIONS`, section notes, `noteHTML()`, the Notes tab | [Story & notes](features/story-and-notes.md), [Rich text](architecture/rich-text.md), [Sections & layout](ui/sections-and-layout.md) |
+| `87-notes.js` | `NOTE_SECTIONS`, section notes, `noteHTML()`, the Section Notes card | [Story & notes](features/story-and-notes.md), [Rich text](architecture/rich-text.md), [Sections & layout](ui/sections-and-layout.md) |
 | `87-combat.js` | the combat tab and tracker | [Combat view](features/combat-view.md) |
+| `87-journal.js` | the Journal card: pages, tags, search, the page rule, the editor | [Journal](features/journal.md) |
+| `87-trackers.js` | the Trackers card: counters, checklists, tasks, the close rule | [Journal](features/journal.md) |
 | `88-settings.js` | the Settings modal, rules status, `dataStatus()` | [Settings & updates](features/settings-and-updates.md) |
 | `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, fetch and import of packs | [Rules packs](architecture/rules-packs.md) |
 | `90-boot.js` | `wire()`, `boot()` — always last | [Shell](ui/shell.md), [Build & source split](architecture/build-and-source-split.md) |
@@ -132,13 +134,14 @@ name says where its first function came from, not everything it holds: `migrate(
 | `35-tables.css` | reference tables and table anchors | [Rules & tables](features/rules-and-tables.md) |
 | `40-spells-coins.css` | spell slots, spells, coins | [Spells](features/spells.md), [Inventory](features/inventory.md) |
 | `45-combat.css` | the combat button and tab | [Combat view](features/combat-view.md) |
+| `47-journal.css` | the Journal tab | [Journal](features/journal.md) |
 | `50-modal.css` | the modal | [Shell](ui/shell.md) |
 | `00-sheet.html` | the Sheet tab | [Sections & layout](ui/sections-and-layout.md) |
 | `10-inventory.html` | the Inventory tab | [Inventory](features/inventory.md) |
 | `20-spells.html` | the Spells tab | [Spells](features/spells.md) |
 | `30-story.html` | the Story tab | [Story & notes](features/story-and-notes.md) |
 | `40-rules.html` | the Rules tab | [Rules & tables](features/rules-and-tables.md) |
-| `60-notes.html` | the Notes tab | [Story & notes](features/story-and-notes.md) |
+| `60-journal.html` | the Journal tab | [Story & notes](features/story-and-notes.md) |
 | `70-combat.html` | the Combat tab | [Combat view](features/combat-view.md) |
 
 ### Glossary
@@ -157,6 +160,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | **stamp / fingerprint** | What `stampSrc()` writes on a copied rules entry: its pack, category and per-field hashes, so the rules-update tool can tell drift from player edits |
 | **effect** | A numeric modifier `{target, value}` (AC +1, save +2, speed +5). Nothing non-numeric is an effect |
 | **BIO / notes / secNotes** | `BIO` lists the Story tab's free-text fields, of which `character.notes` is one; `character.secNotes` is the per-section notes map. Different things |
+| **tracker** | Three things: a *resource tracker* on the Sheet (`renderResources()`), the combat *round tracker* (`87-combat.js`), and the Journal tab's *trackers* (`87-trackers.js`) |
 
 ## Decisions
 
@@ -170,3 +174,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-08-07 — Moved to Claude Code: CLAUDE.md, build.sh and .gitignore added. → ledger L341
 - 2026-08-10 — Dev docs split by reader into `src/docs/` and `src/docs/_claude/`. → ledger L1302
 - 2026-09-28 — The wiki: reference compiled out of the ledger into topic pages; CLAUDE.md slimmed to the rules. → ledger L3709
+- 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41

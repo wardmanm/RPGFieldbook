@@ -45,7 +45,15 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'spellDC', 'spellAtkBonus', 'fxTargets', 'FX_LABEL', 'promptSpellAttack', 'openStatBreakdown', 'openAttackBreakdown',
   'renderAttacks',
   'coinKeys',
-  'RULE_CATS', 'reindexRules', 'recomputeDups',
+  'RULE_CATS', 'reindexRules', 'recomputeDups', 'repairIds',
+  'jnlStr', 'jnlTime', 'tagLabel', 'tagKey', 'groupByTag', 'attrSel', 'jnlPages', 'jnlTitle', 'jnlSort',
+  'jnlQuery', 'jnlFind', 'jnlMatch', 'jnlSnippet', 'jnlSavePage', 'jnlDeletePage', 'jnlTagList',
+  'jnlGroupOpen', 'jnlStampText', 'insertLine', 'journalListHTML', 'journalPageHTML', 'journalEditorHTML', 'jnlEntryHTML', 'NOTE_FMT_HINT',
+  'fmtWhen', 'noteWhen', 'jnlWhen',
+  'TRK_TYPES', 'trkList', 'trkType', 'trkInt', 'trkItems', 'trkName', 'showTrackers', 'trkParse', 'trkProgress',
+  'trkApply', 'trkStep', 'trkSetValue', 'trkToggleItem', 'trkToggleTask', 'trkClose', 'trkReopen',
+  'trkSnapshot', 'trkRestore', 'mergeChecklist', 'trkFromForm', 'trkSplit', 'trkGroupOpen',
+  'trackerRowHTML', 'trackerClosedHTML', 'trackersHTML', 'trackerFormHTML', 'trkSummary', 'trkTickHTML', 'trkEditHTML',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2058,6 +2066,449 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('a card not shown has neither', same(X.cvNeighbours(['vitals'], 'skills'), [null, null]));
 }
 
+/* ---- the journal: its fields, and what migrate() does to them ----
+   Design: src/docs/specs/2026-09-29-journal-design.md §3. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const b = X.blankChar();
+  ck('a new character has an empty journal and no shut groups', same(b.journal, []) && same(b.journalCollapse, {}));
+  ck('...each its own copy', (() => { X.blankChar().journal.push({}); return X.blankChar().journal.length === 0; })());
+  const page = {id: 'p1', title: 'Session 1', tag: 'Sessions', text: 'We met **Brindle**.', at: 100, editedAt: 200};
+  const back = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {journal: [page], journalCollapse: {sessions: true}}))));
+  ck('a save → load round trip keeps every page field', same(back.journal, [page]));
+  ck('...and the shut groups', same(back.journalCollapse, {sessions: true}));
+  const old = X.migrate({name: 'Before the journal', abilities: {}});
+  ck('a sheet saved before the journal gets an empty one', same(old.journal, []) && same(old.journalCollapse, {}));
+  const junk = X.migrate({abilities: {}, journalCollapse: 'shut',
+    journal: [null, 'text', 7, ['arr'], {title: 'kept'}, {id: 5, title: 'numbered'}, {id: 'p1'}, {id: 'p1'}]});
+  ck('only page objects survive — not an array, which the list guard lets through', junk.journal.length === 4, junk.journal);
+  ck('a page with no id gets one', typeof junk.journal[0].id === 'string' && junk.journal[0].id.length > 0);
+  ck('a numeric id becomes text', junk.journal[1].id === '5');
+  ck('a repeated id is replaced, so Edit and Delete find one page', junk.journal[2].id === 'p1' && junk.journal[3].id !== 'p1');
+  ck('a junk collapse map resets', same(junk.journalCollapse, {}));
+  ck('migrate() stays idempotent over the journal', JSON.stringify(X.migrate(JSON.parse(JSON.stringify(junk)))) === JSON.stringify(junk));
+  ck('repairIds leaves a clean list as it is', (() => { const l = [{id: 'a'}, {id: 'b'}]; X.repairIds(l); return same(l, [{id: 'a'}, {id: 'b'}]); })());
+  ck('repairIds can share one pool across lists', (() => {
+    const s = new Set(), l1 = [{id: 'a'}], l2 = [{id: 'a'}];
+    X.repairIds(l1, s); X.repairIds(l2, s); return l1[0].id === 'a' && l2[0].id !== 'a';
+  })());
+}
+
+/* ---- the journal: tags, order, search, the page rule, the stamp ----
+   Design: src/docs/specs/2026-09-29-journal-design.md §3, §5. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  // tags
+  ck('a tag is trimmed and its runs of spaces collapsed', X.tagLabel('  Side   quests ') === 'Side quests');
+  ck('it groups by its lower-cased form', X.tagKey(' Side Quests') === 'side quests');
+  ck('a missing or junk tag is untagged', X.tagLabel(undefined) === '' && X.tagLabel({}) === '' && X.tagKey(['a']) === '');
+  ck('a number from a hand-edited file is still a tag', X.tagLabel(7) === '7');
+  const g = X.groupByTag([{tag: 'quests'}, {}, {tag: 'NPCs'}, {tag: 'Quests'}, {tag: '  '}], x => x.tag);
+  ck('groups run A to Z, Untagged last', same(g.map(x => x.key), ['npcs', 'quests', '']), g.map(x => x.key));
+  ck('a group is labelled by the first spelling met', g[1].label === 'quests');
+  ck('the untagged group is labelled Untagged and holds blanks too', g[2].label === 'Untagged' && g[2].items.length === 2);
+  ck('a group keeps the order it was given', g[1].items[0].tag === 'quests' && g[1].items[1].tag === 'Quests');
+  ck('a selector for a tag with quotes cannot break querySelector',
+     X.attrSel('data-x', 'Bob\'s "crew"\\') === '[data-x="Bob\'s \\"crew\\"\\\\"]', X.attrSel('data-x', 'Bob\'s "crew"\\'));
+  /* A raw newline inside a CSS string is a syntax error, and querySelector
+     throws on one: in trkAct() that throw came before scheduleSave(), so every
+     tap on a tracker whose id held a newline went unsaved. CSS escapes it as a
+     backslash, its hex code and a space. */
+  ck('a selector for an id with a newline has no raw newline in it',
+     !/[\n\r\f]/.test(X.attrSel('data-x', 'a\nb\rc\fd')) && X.attrSel('data-x', 'a\nb') === '[data-x="a\\a b"]',
+     X.attrSel('data-x', 'a\nb\rc\fd'));
+
+  // order
+  const pages = [{id: 'a', at: 100}, {id: 'b', at: 300}, {id: 'c', at: 200}, {id: 'd'}, {id: 'e', at: 300}];
+  ck('pages run newest created first, ties in their saved order', same(X.jnlSort(pages).map(p => p.id), ['b', 'e', 'c', 'a', 'd']));
+  ck('...without reordering the list it was given', pages[0].id === 'a');
+  ck('only page objects are pages',
+     same(X.jnlPages({journal: [null, 'x', {id: 'k'}, ['y']]}).map(p => p.id), ['k']) &&
+     same(X.jnlPages({journal: 'nope'}), []) && same(X.jnlPages(null), []));
+  ck('a page with no title reads Untitled', X.jnlTitle({title: '  '}) === 'Untitled' && X.jnlTitle({title: 'Mire'}) === 'Mire');
+
+  // search
+  const p = {title: 'Session 3', tag: 'Sessions', text: 'We  crossed\nthe **Mire** at dusk.'};
+  ck('a query is trimmed and its spaces collapsed', X.jnlQuery('  the   mire ') === 'the mire');
+  ck('search matches the title, the tag or the text', X.jnlMatch(p, 'session 3') && X.jnlMatch(p, 'SESSIONS') && X.jnlMatch(p, 'dusk'));
+  ck('...case-blind, across a line break', X.jnlMatch(p, X.jnlQuery('crossed the')));
+  ck('...and not everything', !X.jnlMatch(p, 'goblin'));
+  ck('an empty query matches every page', X.jnlMatch(p, ''));
+  ck('regex characters in a query are just characters', !X.jnlMatch(p, '.*') && X.jnlMatch({text: 'cost (5 gp)'}, '(5 gp)'));
+  const s = X.jnlSnippet(p.text, 'mire');
+  ck('a text match gets a snippet with the match marked', s.includes('<mark>Mire</mark>'), s);
+  ck('a title-only match gets no snippet', X.jnlSnippet(p.text, 'Session') === '');
+  ck('the snippet is escaped', (() => { const h = X.jnlSnippet('a <b>bold</b> mire', 'mire'); return h.includes('&lt;b&gt;') && !h.includes('<b>'); })());
+  ck('...the match inside it too', X.jnlSnippet('x <i> y', '<i>').includes('<mark>&lt;i&gt;</mark>'));
+  ck('a long text is cut either side, with an ellipsis',
+     (() => { const h = X.jnlSnippet('a'.repeat(200) + ' mire ' + 'b'.repeat(200), 'mire', 10); return h.startsWith('…') && h.endsWith('…') && h.length < 60; })());
+  ck('the match stays aligned where lower-casing would change the length',
+     X.jnlSnippet('İİİİ İİ the mire', 'mire').includes('<mark>mire</mark>'), X.jnlSnippet('İİİİ İİ the mire', 'mire'));
+  ck('the notes placeholders are stripped, so none reaches the page', !/[\uE000-\uE00F]/.test(X.jnlSnippet('mire\uE001x', 'mire')));
+
+  // the page rule
+  const c = {journal: []}, draft = {id: 'n1', at: null};
+  ck('a blank draft adds nothing, even with a tag',
+     X.jnlSavePage(c, draft, {title: ' ', tag: 'Sessions', text: '\n'}, 10) === null && c.journal.length === 0);
+  const added = X.jnlSavePage(c, draft, {title: 'Session 1', tag: ' Sessions ', text: ''}, 20);
+  ck('the first real input adds the page', c.journal.length === 1 && added.id === 'n1' && added.title === 'Session 1');
+  ck('...with its tag tidied', added.tag === 'Sessions');
+  ck('...created and edited at the same moment', added.at === 20 && added.editedAt === 20);
+  X.jnlSavePage(c, draft, {title: 'Session 1', tag: 'Sessions', text: 'Mire'}, 30);
+  ck('an edit moves the edited time and keeps the created time', c.journal[0].at === 20 && c.journal[0].editedAt === 30);
+  X.jnlSavePage(c, draft, {title: 'Session 1', tag: 'Sessions', text: 'Mire'}, 40);
+  ck('saving unchanged fields does not fake an edit', c.journal[0].editedAt === 30);
+  X.jnlSavePage(c, draft, {title: '', tag: 'Sessions', text: '  '}, 50);
+  ck('clearing title and text removes the page', c.journal.length === 0);
+  X.jnlSavePage(c, draft, {title: 'Back again', tag: '', text: ''}, 60);
+  ck('typing again brings it back with its first date', c.journal.length === 1 && c.journal[0].at === 20 && c.journal[0].editedAt === 60);
+  const bad = {journal: 'nope'};
+  X.jnlSavePage(bad, {id: 'z', at: null}, {title: 'x'}, 1);
+  ck('a journal that is not a list is replaced, not written into', Array.isArray(bad.journal) && bad.journal.length === 1);
+  ck('delete removes the one page and says so', X.jnlDeletePage(c, 'n1') === true && c.journal.length === 0);
+  ck('deleting a page that is not there says so', X.jnlDeletePage(c, 'n1') === false);
+
+  // tags offered, collapse
+  const tc = {journal: [{tag: 'Quests'}, {tag: 'npcs'}, {tag: ''}, null], trackers: [{tag: 'quests'}, {tag: 'Kills'}, 'junk']};
+  ck('tags are offered from pages and trackers together, once each, A to Z',
+     same(X.jnlTagList(tc), ['Kills', 'npcs', 'Quests']), X.jnlTagList(tc));
+  ck('a group nobody shut is open', X.jnlGroupOpen({}, 'quests', false));
+  ck('a shut group is shut', !X.jnlGroupOpen({journalCollapse: {quests: true}}, 'quests', false));
+  ck('a search opens every group', X.jnlGroupOpen({journalCollapse: {quests: true}}, 'quests', true));
+  ck('a junk collapse map reads as open', ['x', null, [true]].every(m => X.jnlGroupOpen({journalCollapse: m}, 'quests', false)));
+
+  // the stamp, and where a line goes
+  const st = X.jnlStampText(new Date(2026, 8, 29, 19, 42));
+  ck('the stamp is bold', /^\*\*[^*]+\*\*$/.test(st), st);
+  ck('...one line, with the year and the minutes', !/\n/.test(st) && st.includes('2026') && st.includes('42'), st);
+  const L = '**S**';
+  ck('into an empty page: the line, then the caret on the next', same(X.insertLine('', 0, 0, L), {text: '**S**\n', caret: 6}));
+  ck('at the end of the text: on a new line', same(X.insertLine('abc', 3, 3, L), {text: 'abc\n**S**\n', caret: 10}));
+  ck('mid-line: the line is split around it', same(X.insertLine('abcdef', 3, 3, L), {text: 'abc\n**S**\ndef', caret: 10}));
+  ck('at the start of a line: no extra break before it', same(X.insertLine('abc\ndef', 4, 4, L), {text: 'abc\n**S**\ndef', caret: 10}));
+  ck('a selection is replaced', same(X.insertLine('abcd', 1, 3, L), {text: 'a\n**S**\nd', caret: 8}));
+  ck('a selection past the end clamps to it', same(X.insertLine('ab', 99, 99, L), {text: 'ab\n**S**\n', caret: 9}));
+}
+
+/* ---- the journal's markup ---- */
+{
+  const c = {journal: [], journalCollapse: {}};
+  ck('an empty journal says how to start one', /No pages yet/.test(X.journalListHTML(c, '')));
+  c.journal = [
+    {id: 'p1', title: 'Session 1', tag: 'Sessions', text: 'Met Brindle.', at: 100, editedAt: 100},
+    {id: 'p2', title: 'Brindle', tag: 'NPCs', text: 'A **zorblat** smuggler.', at: 200, editedAt: 200},
+    {id: 'p3', title: '', tag: '', text: 'Loose thought', at: 300, editedAt: 300},
+    {id: 'p4', title: 'Session 2', tag: 'sessions', text: 'Crossed the Mire.', at: 400, editedAt: 400}];
+  const h = X.journalListHTML(c, '');
+  const order = [...h.matchAll(/data-jnlopen="(\w+)"/g)].map(m => m[1]);
+  ck('groups A to Z, Untagged last, newest first inside each', JSON.stringify(order) === '["p2","p4","p1","p3"]', order);
+  ck('a group counts its pages', h.includes('<span class="cnt">(2)</span>'));
+  ck('a page with no title is listed as Untitled', /data-jnlopen="p3"><span class="jnl-title">Untitled</.test(h));
+  ck('each page is a button that opens it', /<button type="button" class="jnl-entry" data-jnlopen="p1">/.test(h));
+  ck('group headers are keyboard toggles', /data-jnlgroup="npcs" role="button" tabindex="0" aria-expanded="true"/.test(h));
+  c.journalCollapse = {npcs: true};
+  const shut = X.journalListHTML(c, '');
+  ck('a shut group hides its pages but still renders them',
+     /aria-expanded="false"/.test(shut) && /style="display:none"/.test(shut) && shut.includes('data-jnlopen="p2"'));
+  const hit = X.journalListHTML(c, 'brindle');
+  ck('a search lists only the matching pages',
+     hit.includes('data-jnlopen="p1"') && hit.includes('data-jnlopen="p2"') && !hit.includes('data-jnlopen="p4"'));
+  ck('...opens every group, shut ones too', !/display:none/.test(hit));
+  ck('...and its headers are plain, not toggles', !/data-jnlgroup/.test(hit) && /jnl-static/.test(hit));
+  ck('a text match shows where it matched', hit.includes('Met <mark>Brindle</mark>.'), hit);
+  ck('no match says so, quoting the search', X.journalListHTML(c, 'goblin').includes('No pages match “goblin”'));
+  ck('...escaped', X.journalListHTML(c, '<i>').includes('“&lt;i&gt;”'));
+
+  const pg = X.journalPageHTML(c.journal[1]);
+  ck('a page renders its text in the notes grammar', pg.includes('<strong>zorblat</strong>') && pg.includes('class="n-body"'));
+  ck('...with its title as a focusable heading', /<h3 class="jnl-h" id="jnlHead" tabindex="-1">Brindle<\/h3>/.test(pg));
+  ck('...its tag, and when it was written', pg.includes('<span class="jnl-tag">NPCs</span>') && /Added /.test(pg));
+  ck('...Back, Edit and Delete', pg.includes('data-jnlback') && pg.includes('data-jnledit="p2"') && pg.includes('data-jnldel="p2"'));
+  ck('an empty page says so', X.journalPageHTML({id: 'e', title: 'x', text: ''}).includes('Nothing written yet'));
+  ck('a page with no date shows none, not a bare "Added"', !/Added/.test(X.journalPageHTML({id: 'e', title: 'x', text: 'y'})));
+
+  const ed = X.journalEditorHTML(c.journal[1], ['NPCs', 'Sessions']);
+  ck('the editor holds the title, the tag and the text',
+     /id="jnlTitle" data-jnlfield="title" value="Brindle"/.test(ed) &&
+     /id="jnlTag" data-jnlfield="tag" value="NPCs" list="jnlTags"/.test(ed) &&
+     /data-jnlfield="text"[^>]*>A \*\*zorblat\*\* smuggler\.<\/textarea>/.test(ed));
+  ck('...offers the tags already in use', ed.includes('<option value="Sessions">'));
+  ck('...a timestamp button, Done, and the formatting key',
+     ed.includes('data-jnlstamp') && ed.includes('data-jnldone="p2"') && ed.includes(X.NOTE_FMT_HINT));
+  const evil = {id: 'x"y', title: '"><i>', tag: '"><i>', text: '</textarea><i>', at: 1};
+  const all = X.journalListHTML({journal: [evil]}, '') + X.journalListHTML({journal: [evil]}, '<i>') +
+    X.journalPageHTML(evil) + X.journalEditorHTML(evil, ['"><i>']);
+  ck('nothing a file puts in a page reaches the markup raw', !/<i>/.test(all) && !all.includes('x"y'), all.slice(0, 300));
+}
+
+/* ---- trackers: the model, progress, and the close rule ----
+   Design: src/docs/specs/2026-09-29-journal-design.md §3, §6. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const b = X.blankChar();
+  ck('a new character has no trackers, no shut groups, and shows the card',
+     same(b.trackers, []) && same(b.trackerCollapse, {}) && b.showTrackers === true);
+  const old = X.migrate({abilities: {}});
+  ck('a sheet from before trackers gets the same', same(old.trackers, []) && X.showTrackers(old));
+  ck('only a real false hides the card', !X.showTrackers({showTrackers: false}) &&
+     X.showTrackers({showTrackers: null}) && X.showTrackers({showTrackers: 'false'}) && X.showTrackers({}));
+  const t0 = {id: 't1', name: 'Goblins', type: 'counter', tag: 'Kills', value: 3, goal: 0, items: [], done: false, autoClose: true, closed: false, at: 5};
+  const back = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {trackers: [t0], trackerCollapse: {kills: true}, showTrackers: false}))));
+  ck('a save → load round trip keeps a tracker, the shut groups and the switch',
+     same(back.trackers, [t0]) && same(back.trackerCollapse, {kills: true}) && back.showTrackers === false);
+  const junk = X.migrate({abilities: {}, trackerCollapse: [],
+    trackers: [null, 'x', ['arr'], {name: 'no id', items: [null, 'y', ['arr'], {text: 'a'}, {id: 'i1', text: 'b'}]},
+               {id: 't', items: [{id: 'i1', text: 'dup'}]}, {id: 't'}]});
+  ck('only tracker objects survive', junk.trackers.length === 3);
+  ck('trackers get ids, a repeat replaced',
+     typeof junk.trackers[0].id === 'string' && junk.trackers[1].id === 't' && junk.trackers[2].id !== 't');
+  ck('only item objects survive, each with an id',
+     junk.trackers[0].items.length === 2 && junk.trackers[0].items.every(i => typeof i.id === 'string' && i.id));
+  ck('an item id is unique across every tracker', junk.trackers[1].items[0].id !== 'i1');
+  ck('a junk collapse map resets', same(junk.trackerCollapse, {}));
+  ck('migrate() stays idempotent over trackers', JSON.stringify(X.migrate(JSON.parse(JSON.stringify(junk)))) === JSON.stringify(junk));
+
+  // reading junk
+  ck('an unknown type is a counter', X.trkType({type: 'wheel'}) === 'counter' && X.trkType(null) === 'counter');
+  ck('counts are whole and never negative', X.trkInt('12') === 12 && X.trkInt(-3) === 0 && X.trkInt('abc') === 0 && X.trkInt(2.7) === 2);
+  ck('a typed count must be digits', X.trkParse(' 42 ') === 42 && X.trkParse('4x') === null && X.trkParse('-1') === null && X.trkParse('') === null);
+  ck('a tracker with no name reads Untitled', X.trkName({name: ' '}) === 'Untitled');
+
+  // progress
+  const P = t => X.trkProgress(t);
+  ck('a counter with no goal is never complete', same(P({value: 999}), {done: 999, total: 0, pct: 0, complete: false}));
+  ck('a counter with a goal counts toward it', same(P({value: 150, goal: 300}), {done: 150, total: 300, pct: 50, complete: false}));
+  ck('...is complete at its goal, and past it', P({value: 300, goal: 300}).complete && P({value: 400, goal: 300}).pct === 100);
+  ck('a checklist counts its ticks, only a real true',
+     same(P({type: 'checklist', items: [{done: true}, {done: false}, {done: 'yes'}]}), {done: 1, total: 3, pct: 33, complete: false}));
+  ck('...is complete when every item is ticked', P({type: 'checklist', items: [{done: true}]}).complete);
+  ck('...and never when it has no items', !P({type: 'checklist', items: []}).complete && !P({type: 'checklist', items: 'x'}).complete);
+  ck('a task is done or not', P({type: 'task', done: true}).complete && !P({type: 'task', done: 'true'}).complete);
+
+  // the close rule
+  const book = () => ({id: 'b', type: 'counter', value: 298, goal: 300, autoClose: true});
+  let t = book();
+  ck('a step short of the goal does not close', X.trkStep(t, 1, 10) === false && t.closed !== true && t.value === 299);
+  ck('the step that reaches it closes, with the time', X.trkStep(t, 1, 11) === true && t.closed === true && t.closedAt === 11);
+  X.trkReopen(t);
+  ck('reopening clears the close and keeps the count', t.closed === false && !('closedAt' in t) && t.value === 300);
+  ck('a reopened tracker at 100% stays open as it goes past', X.trkStep(t, 1, 12) === false && t.closed === false && t.value === 301);
+  X.trkStep(t, -5, 13);
+  ck('...and closes again only on its way back up to the goal', X.trkStep(t, 4, 14) === true && t.closed === true);
+  t = Object.assign(book(), {autoClose: false});
+  ck('with Close when complete off, it never closes itself', X.trkStep(t, 2, 15) === false && t.closed !== true);
+  t = book();
+  ck('a typed value that reaches the goal closes too', X.trkSetValue(t, '300', 16) === true && t.closed === true);
+  t = {id: 'c', type: 'checklist', items: [{id: 'x', text: 'a', done: true}, {id: 'y', text: 'b', done: false}]};
+  ck('ticking the last item closes a checklist', X.trkToggleItem(t, 'y', 17) === true && t.closed === true);
+  t = {id: 'd', type: 'task'};
+  ck('ticking a task closes it', X.trkToggleTask(t, 18) === true && t.closed === true && t.done === true);
+  ck('a step never goes below 0', (() => { const z = {value: 0}; X.trkStep(z, -1, 1); return z.value === 0; })());
+  ck('ticking an item that is not there changes nothing',
+     (() => { const z = {type: 'checklist', items: [{id: 'q', done: false}]}; return X.trkToggleItem(z, 'nope', 1) === false && z.items[0].done === false; })());
+  t = book(); X.trkClose(t, 30);
+  ck('closing by hand closes, with the time', t.closed === true && t.closedAt === 30);
+
+  // Undo
+  t = book(); const snap = X.trkSnapshot(t); const c = {trackers: [t]};
+  X.trkStep(t, 2, 20);
+  ck('Undo puts back the whole tap — the count and the close',
+     X.trkRestore(c, snap) === true && c.trackers[0].value === 298 && c.trackers[0].closed !== true);
+  ck('...as a copy, so a later change cannot reach the snapshot', c.trackers[0] !== snap);
+  ck('Undo for a tracker since deleted changes nothing', X.trkRestore({trackers: []}, snap) === false && X.trkRestore({}, snap) === false);
+
+  // the form
+  const items = [{id: 'i1', text: 'Find the map', done: true}, {id: 'i2', text: 'Cross the Mire', done: false}, {id: 'i3', text: 'Find the map', done: false}];
+  const m = X.mergeChecklist(items, 'Cross the Mire\n\n- Find the map\n  Find the map \nMeet Brindle');
+  ck('the lines become items, blanks dropped', same(m.map(x => x.text), ['Cross the Mire', 'Find the map', 'Find the map', 'Meet Brindle']));
+  ck('reordered lines keep their ids and ticks', m[0].id === 'i2' && m[1].id === 'i1' && m[1].done === true);
+  ck('a repeated line takes the next matching item', m[2].id === 'i3' && m[2].done === false);
+  ck('a leading bullet is typing habit, not text', m[1].text === 'Find the map');
+  ck('a new line is a new item, unticked', m[3].done === false && ['i1', 'i2', 'i3'].indexOf(m[3].id) < 0);
+  ck('a reworded line loses its tick', X.mergeChecklist(items, 'Find the old map')[0].done === false);
+  const f = X.trkFromForm({id: 'f', value: 7, closed: false, items}, {name: ' Read the Codex ', type: 'counter', tag: ' Books ', goal: '5', items: '', autoClose: true});
+  ck('the form tidies what it saves', f.name === 'Read the Codex' && f.tag === 'Books' && f.goal === 5 && f.autoClose === true);
+  ck('the form never closes a tracker, even one it makes complete', f.closed === false && X.trkProgress(f).complete);
+  ck('an unknown type from the form is a counter', X.trkFromForm({}, {type: 'x'}).type === 'counter');
+  ck('Close when complete is on unless the form says off',
+     X.trkFromForm({}, {}).autoClose === true && X.trkFromForm({}, {autoClose: false}).autoClose === false);
+
+  // layout
+  const L = {trackers: [
+    {id: 'k1', name: 'Goblins', tag: 'Kills'}, {id: 'q1', name: 'Map', tag: 'quests'},
+    {id: 'k2', name: 'Orcs', tag: 'kills'}, {id: 'x1', name: 'Done early', closed: true, closedAt: 5},
+    {id: 'x2', name: 'Done later', closed: true, closedAt: 9}, {id: 'u1', name: 'Loose'}]};
+  const s = X.trkSplit(L);
+  ck('open trackers group by tag, A to Z, untagged last', same(s.open.map(g => g.key), ['kills', 'quests', '']));
+  ck('...each group in the order they were made', same(s.open[0].items.map(t => t.id), ['k1', 'k2']));
+  ck('closed trackers are one list, most recently closed first', same(s.closed.map(t => t.id), ['x2', 'x1']));
+  ck('a tracker group nobody shut is open', X.trkGroupOpen({}, 'kills') && !X.trkGroupOpen({trackerCollapse: {kills: true}}, 'kills'));
+}
+
+/* ---- the trackers' markup ---- */
+{
+  ck('no trackers says how to start one', /No trackers yet/.test(X.trackersHTML({trackers: []}, false)));
+  const kills = {id: 'k1', name: 'Goblins', type: 'counter', tag: 'Kills', value: 12};
+  const book = {id: 'b1', name: 'Read the Codex', type: 'counter', tag: 'Books', value: 150, goal: 300};
+  const quest = {id: 'q1', name: 'The lost map', type: 'checklist', tag: 'Quests',
+    items: [{id: 'i1', text: 'Find the map', done: true}, {id: 'i2', text: 'Cross the Mire', done: false}]};
+  const task = {id: 't1', name: 'Pay Brindle back', type: 'task', done: false};
+  const done = {id: 'd1', name: 'Old quest', type: 'task', done: true, closed: true, closedAt: 50};
+  const r1 = X.trackerRowHTML(kills);
+  ck('a counter has −, its count in a box, and +',
+     /data-trkdec="k1"[^>]*>−</.test(r1) && /data-trkval="k1"[^>]*value="12"/.test(r1) && /data-trkinc="k1"[^>]*>\+</.test(r1));
+  ck('...each named for a screen reader', r1.includes('aria-label="One more — Goblins"'));
+  ck('...and with no goal, no bar', !r1.includes('progressbar') && !r1.includes('trk-of'));
+  const r2 = X.trackerRowHTML(book);
+  ck('a counter with a goal says how far, with a bar',
+     r2.includes('of 300') && /role="progressbar"[^>]*aria-valuemax="300" aria-valuenow="150"/.test(r2) && r2.includes('width:50%'));
+  const r3 = X.trackerRowHTML(quest);
+  ck('a checklist shows its progress and one tick per item', r3.includes('1 / 2') &&
+     /role="checkbox" aria-checked="true" data-trkitem="i1"/.test(r3) && /aria-checked="false" data-trkitem="i2"/.test(r3));
+  ck('an empty checklist says how to fill it', /No items yet/.test(X.trackerRowHTML({id: 'e', type: 'checklist', items: []})));
+  const r4 = X.trackerRowHTML(task);
+  ck('a task is one tick, labelled with its name',
+     /role="checkbox" aria-checked="false" data-trktask="t1"><span class="box" aria-hidden="true"><\/span><span class="trk-it">Pay Brindle back</.test(r4));
+  ck('every row can be edited', [r1, r2, r3, r4].every(r => /data-trkedit="/.test(r)));
+
+  const c = {trackers: [kills, book, quest, task, done], trackerCollapse: {books: true}};
+  const h = X.trackersHTML(c, false);
+  ck('open trackers are grouped by tag, A to Z, untagged last',
+     h.indexOf('>Books<') < h.indexOf('>Kills<') && h.indexOf('>Kills<') < h.indexOf('>Quests<') && h.indexOf('>Quests<') < h.indexOf('>Untagged<'));
+  ck('a shut group hides its trackers, still rendered', /data-trkgroup="books"[^>]*aria-expanded="false"/.test(h) && h.includes('data-trkdec="b1"'));
+  ck('closed trackers are in Completed, shut by default',
+     /data-trkcompleted role="button" tabindex="0" aria-expanded="false"/.test(h) &&
+     h.includes('<span class="fgname">Completed</span><span class="cnt">(1)</span>'));
+  ck('a closed tracker offers Reopen and says when it closed', h.includes('data-trkreopen="d1"') && /Closed /.test(h));
+  ck('...and has no controls to change it', !/data-trktask="d1"/.test(h));
+  ck('Completed opens when asked', /data-trkcompleted[^>]*aria-expanded="true"/.test(X.trackersHTML(c, true)));
+  ck('with everything closed, the open list says so', /Nothing open/.test(X.trackersHTML({trackers: [done]}, false)));
+  ck('what a closed tracker came to',
+     X.trkSummary(book) === '150 / 300' && X.trkSummary(kills) === '12' && X.trkSummary(quest) === '1 / 2' && X.trkSummary(task) === 'Done');
+
+  const fNew = X.trackerFormHTML({type: 'counter', autoClose: true}, ['Kills', 'Quests'], true);
+  ck('a new tracker\'s form has Add, and no Delete or Close now',
+     fNew.includes('>Add<') && !fNew.includes('id="tkDel"') && !fNew.includes('id="tkCloseNow"'));
+  ck('...offers the tags in use', fNew.includes('<option value="Quests">'));
+  ck('...has Close when complete on', /id="tkAuto" role="switch" aria-checked="true"/.test(fNew));
+  const fEd = X.trackerFormHTML(quest, [], false);
+  ck('editing: the type chosen, the items one per line',
+     /<option value="checklist" selected>/.test(fEd) && fEd.includes('>Find the map\nCross the Mire</textarea>'));
+  ck('...Delete and Close now', fEd.includes('id="tkDel"') && fEd.includes('>Close now<'));
+  ck('a closed tracker\'s form offers Reopen', X.trackerFormHTML(done, [], false).includes('>Reopen<'));
+  const evil = {id: 'x"y', name: '"><i>', type: 'checklist', tag: '"><i>', items: [{id: 'a"b', text: '<i>'}], goal: '"><i>'};
+  const all = X.trackerRowHTML(evil) + X.trackerRowHTML(Object.assign({}, evil, {type: 'counter'})) +
+    X.trackersHTML({trackers: [evil, Object.assign({}, evil, {id: 'z', closed: true, closedAt: 1})]}, true) +
+    X.trackerFormHTML(evil, ['"><i>'], false);
+  ck('nothing a file puts in a tracker reaches the markup raw',
+     !/<i>/.test(all) && !all.includes('x"y') && !all.includes('a"b'), all.slice(0, 300));
+}
+
+/* ---- trackers through their DOM layer: a tap, the close, the Undo ---- */
+{
+  const c = X.blankChar(); X.character = c;
+  c.trackers = [{id: 'b', name: 'Codex', type: 'counter', value: 299, goal: 300, autoClose: true}];
+  const step = d => (t, now) => ctx.trkStep(t, d, now);
+  ck('a tap that finishes a tracker closes it', ctx.trkAct('b', step(1), false) === true && c.trackers[0].closed === true);
+  ck('a closed tracker takes no more taps', ctx.trkAct('b', step(1), false) === false && c.trackers[0].value === 300);
+  const before = {id: 'b', name: 'Codex', type: 'counter', value: 299, goal: 300, autoClose: true};
+  X.character = X.blankChar();
+  ck('an Undo that outlived a character switch does nothing', ctx.undoTrackerChange(before, c, false) === false);
+  X.character = c;
+  ck('Undo puts the whole tap back', ctx.undoTrackerChange(before, c, false) === true &&
+     c.trackers[0].value === 299 && c.trackers[0].closed !== true);
+  ctx.commitTrackerValue({dataset: {trkval: 'b'}, value: '12x'});
+  ck('a typed count that is not a number changes nothing', c.trackers[0].value === 299);
+  ctx.commitTrackerValue({dataset: {trkval: 'b'}, value: '300'});
+  ck('a typed count that reaches the goal closes it', c.trackers[0].closed === true && c.trackers[0].value === 300);
+  ctx.reopenTracker('b');
+  ck('Reopen brings it back, its count kept', c.trackers[0].closed === false && c.trackers[0].value === 300);
+  ck('the combat view accepts the Trackers card', ctx.combatSectionsOf({combatSections: ['trackers']}).join() === 'trackers');
+  /* the keyboard flag threaded through commitTrackerValue()/reopenTracker() —
+     the plain harness can't see where focus lands, so this only checks the
+     flag doesn't break the underlying behaviour */
+  c.trackers[0].value = 299; c.trackers[0].closed = false;
+  ctx.commitTrackerValue({dataset: {trkval: 'b'}, value: '300'}, true);
+  ck('a keyboard Enter that completes a tracker still closes it', c.trackers[0].closed === true && c.trackers[0].value === 300);
+  ctx.reopenTracker('b', true);
+  ck('a keyboard Reopen still reopens, its count kept', c.trackers[0].closed === false && c.trackers[0].value === 300);
+}
+
+/* ---- a typed count commits in place (#41) ----
+   `change` fires as the box loses focus: at the mousedown on +, or at a Tab.
+   Redrawing the card there replaced the + under the pointer, so its click never
+   arrived (5, type 9, click + → 9, not 10), and a Tab dropped focus to the page.
+   The change path patches the row where it stands; Enter, and a change that
+   closes the tracker, still redraw. A tiny DOM: the list counts its redraws. */
+{
+  const c = X.blankChar(); X.character = c;
+  c.trackers = [{id: 'b', name: 'Codex', type: 'counter', value: 5, goal: 20, autoClose: true}];
+  const doc = ctx.document, saved = {getElementById: doc.getElementById, querySelector: doc.querySelector};
+  let draws = 0;
+  const attrs = {}, fill = {style: {}};
+  const bar = {setAttribute: (k, v) => { attrs[k] = String(v); }, querySelector: s => s === 'span' ? fill : null};
+  const box = {value: '5', dataset: {trkval: 'b'}};
+  const row = {querySelector: s => s === '[data-trkval]' ? box : s === '.trk-bar' ? bar : null};
+  const list = {set innerHTML(v) { draws++; }, get innerHTML() { return ''; }};
+  doc.getElementById = id => id === 'trkList' ? list : null;
+  doc.querySelector = s => s === '[data-trk="b"]' ? row : s === '[data-trkval="b"]' ? box : null;
+  box.value = '9';
+  ctx.commitTrackerValue(box, false);
+  ck('a typed count is stored', c.trackers[0].value === 9, c.trackers[0].value);
+  ck('...and the change that stores it leaves the card standing, so the + under the pointer still gets its click',
+     draws === 0, draws);
+  ck('...patching the row in place: the box, the bar\'s value and its width',
+     box.value === '9' && attrs['aria-valuenow'] === '9' && fill.style.width === '45%', [box.value, attrs, fill.style]);
+  box.value = 'nine';
+  ctx.commitTrackerValue(box, false);
+  ck('a typed count that is not a number puts the stored count back, in place',
+     box.value === '9' && draws === 0 && c.trackers[0].value === 9, [box.value, draws]);
+  box.value = '12';
+  ctx.commitTrackerValue(box, true);
+  ck('Enter still redraws, for its own focus rules', draws === 1 && c.trackers[0].value === 12, draws);
+  box.value = '20';
+  ctx.commitTrackerValue(box, false);
+  ck('a change that finishes the tracker redraws: its row leaves for Completed',
+     draws === 2 && c.trackers[0].closed === true, [draws, c.trackers[0]]);
+  Object.assign(doc, saved);
+}
+
+/* ---- where Tab from the Undo goes: the next tracker (#41, spec §6) ----
+   The ids drawn after the one that closed, in the card's order: the rest of its
+   group, then the groups below. A shut group's rows can't take focus. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const c = {trackers: [
+    {id: 'u1', name: 'Loose', tag: ''},
+    {id: 'b1', name: 'Codex', tag: 'Books'}, {id: 'q1', name: 'Map', tag: 'Quests'},
+    {id: 'b2', name: 'Atlas', tag: 'books'}, {id: 'k1', name: 'Goblins', tag: 'Kills'},
+    {id: 'x1', name: 'Done', tag: 'Books', closed: true}], trackerCollapse: {quests: true}};
+  const after = id => { try { return ctx.trkAfter(c, id); } catch (e) { return String(e); } };
+  ck('the trackers after one, in the card\'s order: its group, then the groups below, a shut one skipped',
+     same(after('b1'), ['b2', 'k1', 'u1']), after('b1'));
+  ck('...none after the last', same(after('u1'), []), after('u1'));
+  ck('...and none for one that is not open', same(after('x1'), []), after('x1'));
+}
+
+/* ---- an Undo belongs to the sheet it was shown for, not to its id (#41) ----
+   Import → Replace keeps the id and swaps the whole sheet, so an Undo keyed on
+   the id restored an old snapshot into the imported one. */
+{
+  const c = X.blankChar(); c.id = 'rep'; X.character = c;
+  c.trackers = [{id: 'b', name: 'Codex', type: 'counter', value: 299, goal: 300, autoClose: true}];
+  const realToast = ctx.toast; let offer = null;
+  ctx.toast = (msg, action) => { if (action) offer = action; return null; };
+  ctx.trkAct('b', (t, now) => ctx.trkStep(t, 1, now), false);
+  X.character = X.migrate(JSON.parse(JSON.stringify(c)));    /* Import → Replace: the same id, a new sheet */
+  if (offer) offer.run({detail: 1});
+  ck('an Undo from before an Import → Replace does nothing to the imported sheet',
+     !!offer && X.character.trackers[0].closed === true && X.character.trackers[0].value === 300, X.character.trackers[0]);
+  X.character = c;
+  if (offer) offer.run({detail: 1});
+  ck('...while on the sheet it was shown for, it still undoes', c.trackers[0].closed !== true && c.trackers[0].value === 299, c.trackers[0]);
+  ctx.toast = realToast;
+}
+
 /* ---- dialogs: what auto-focus may pick, and how the opener is found again ---- */
 {
   const F = X.MODAL_FOCUS_FIELDS;
@@ -2074,6 +2525,9 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('no opener, no selector', X.openerSelector(null) === null);
   ck('a quote in a hook value cannot break the selector',
      X.openerSelector(el('', {'data-x': 'a"b'})) === '[data-x="a\\"b"]');
+  ck('...nor a newline, which querySelector would throw on',
+     X.openerSelector(el('', {'data-x': 'a\nb'})) === '[data-x="a\\a b"]' && X.openerSelector(el('a\r\fb')) === '[id="a\\d \\c b"]',
+     [X.openerSelector(el('', {'data-x': 'a\nb'})), X.openerSelector(el('a\r\fb'))]);
 }
 
 /* ---- the item finder's quantity (issue #50) ----
@@ -2593,6 +3047,10 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     slots: Object.assign(X.blankChar().slots, {1: {total: P, used: 0}}),
     coins: {cp: P, sp: 0, gp: 1, pp: 0, ep: 0},
     secNotes: {abilities: {text: P, at: 0}},
+    journal: [{id: P, title: P, tag: P, text: P, at: 1, editedAt: 2}],
+    trackers: [{id: P, name: P, type: 'checklist', tag: P, items: [{id: P, text: P, done: true}], at: 1},
+               {id: 'tc', name: P, type: 'counter', tag: P, value: 3, goal: 5},
+               {id: 'tx', name: P, type: 'task', closed: true, closedAt: 2}],
   });
   X.character = X.migrate(JSON.parse(JSON.stringify(hostile)));   /* the import path */
   X.activeId = 'hostile';
@@ -2614,7 +3072,14 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     run('Hit Dice from a pack\'s hit die (' + s + ')', () => ctx.renderHitDice());
   });
   run('Story fields and Proficiencies (glossary chips)', () => ctx.renderAllRT());
-  run('the Notes tab', () => ctx.renderNotes());
+  run('the Section Notes card', () => ctx.renderNotes());
+  run('the Journal list', () => { el('jnlSearch').value = ''; ctx.renderJournal(); });
+  run('the Journal list, searching', () => { el('jnlSearch').value = 'PWN'; ctx.renderJournal(); });
+  run('a Journal page', () => ctx.jnlOpen(P));
+  run('the Journal editor', () => ctx.jnlEdit(P));
+  run('the Journal page again, after Done', () => ctx.jnlDone());
+  run('Trackers', () => ctx.renderTrackers());
+  run('the tracker editor', () => ctx.openTrackerForm(C().trackers[0]));
   run('the Coins card', () => ctx.renderCoins());
   run('the print sheet', () => ctx.printSheet());
   run('a glossary entry of the character\'s own', () => ctx.openGlossView(C().glossary[0]));
@@ -2649,6 +3114,89 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     spellAbility: 'wis', slots: Object.assign(X.blankChar().slots, {1: {total: '2' + P, used: 0}})}))));
   run('the print sheet\'s spell-slot line', () => ctx.printSheet(), false);
   ck('...which still prints a real slot count', /L1: 2\/2/.test(capture(() => ctx.printSheet()).html));
+
+  /* ---- the journal, driven through its DOM layer (#40) */
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'jnl'}))));
+  /* a real switch (newCharacter/loadCharById/finishImport) always calls
+     renderAll() before the player could click anything on the new character;
+     settle jnlUI here so jnlNewPage() below isn't the first render to see the
+     switch (which would otherwise reset the draft it just opened) */
+  capture(() => ctx.renderJournal());
+  let flow = capture(() => {
+    ctx.jnlNewPage();
+    el('jnlTitle').value = 'Session 9'; el('jnlText').value = 'Into the Mire.'; ctx.jnlInput();
+    ctx.jnlDone();
+  });
+  ck('New page, typed into, then Done: the page is saved',
+     !flow.err && X.character.journal.length === 1 && X.character.journal[0].title === 'Session 9', flow.err && String(flow.err));
+  ck('...and Done shows it', /id="jnlHead"[^>]*>Session 9</.test(flow.html), flow.html.slice(-300));
+  flow = capture(() => { ctx.jnlNewPage(); ctx.jnlDone(); });
+  ck('a page left blank is never saved', !flow.err && X.character.journal.length === 1);
+  ck('...and Done goes back to the list', /data-jnlopen=/.test(flow.html));
+  state.confirm = false;
+  ck('Delete asks first, naming the page, and No keeps it',
+     ctx.jnlDelete(X.character.journal[0].id) === false && X.character.journal.length === 1 &&
+     /Delete the page “Session 9”/.test(state.lastConfirm));
+  state.confirm = true;
+  ck('Yes deletes it', ctx.jnlDelete(X.character.journal[0].id) === true && X.character.journal.length === 0);
+  X.character.journal = [{id: 'k', title: 'Kept', text: 'x', at: 1}];
+  capture(() => ctx.jnlOpen('k'));
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'other'}))));
+  flow = capture(() => ctx.renderJournal());
+  ck('another character starts at its own list, not the page left open', /No pages yet/.test(flow.html), flow.html);
+
+  /* ---- Import → Replace keeps the id and swaps the sheet (#39, #40, #41)
+     Session state was keyed on the id, so an editor open at the time survived
+     the replace, and its next keystroke wrote the old text over the imported
+     page; Completed stayed open. It is keyed on the character object now. */
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'rep',
+    journal: [{id: 'pg', title: 'Session 1', text: 'Old words.', at: 1}]}))));
+  capture(() => ctx.renderJournal());
+  capture(() => ctx.jnlEdit('pg'));
+  const imported = X.migrate(JSON.parse(JSON.stringify(Object.assign({}, X.character, {
+    journal: [{id: 'pg', title: 'Session 1', text: 'Imported words.', at: 1}]}))));
+  X.character = imported;
+  flow = capture(() => ctx.renderJournal());
+  ck('an Import → Replace of the open character closes its editor, back at the list',
+     !flow.err && !/id="jnlText"/.test(flow.html) && /data-jnlopen="pg"/.test(flow.html), flow.html.slice(0, 300));
+  capture(() => { el('jnlText').value = 'Stale words.'; ctx.jnlInput(); });
+  ck('...so a keystroke in the old editor cannot write over the imported page',
+     imported.journal[0].text === 'Imported words.', imported.journal[0].text);
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'rep2',
+    trackers: [{id: 'd', name: 'Done', type: 'task', done: true, closed: true, closedAt: 1}]}))));
+  capture(() => ctx.renderTrackers());
+  flow = capture(() => ctx.toggleTrkCompleted());
+  const wasOpen = /data-trkcompleted[^>]*aria-expanded="true"/.test(flow.html);
+  X.character = X.migrate(JSON.parse(JSON.stringify(X.character)));
+  flow = capture(() => ctx.renderTrackers());
+  ck('...and the imported sheet starts with Completed shut, as any switch does',
+     wasOpen && /data-trkcompleted[^>]*aria-expanded="false"/.test(flow.html), flow.html.slice(0, 300));
+
+  /* ---- the tracker form keeps what was typed (#41)
+     Close now and Reopen threw the form away; and an Undo while the form was
+     open swapped the stored tracker for its snapshot, so Save wrote to an
+     object no longer in the list. The recorder DOM does not read values back
+     out of the markup, so the boxes are filled in by hand. */
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'frm',
+    trackers: [{id: 'm', name: 'Moths', type: 'counter', tag: 'Kills', value: 2, goal: 10, autoClose: true}]}))));
+  const fillForm = name => [['tkName', name], ['tkType', 'counter'], ['tkTag', 'Kills'], ['tkGoal', '12'], ['tkItems', '']]
+    .forEach(([id, v]) => { el(id).value = v; });
+  let fr = capture(() => { ctx.openTrackerForm(X.character.trackers[0]); fillForm('Moths slain'); fire('tkCloseNow', 'click'); });
+  let m0 = X.character.trackers[0];
+  ck('Close now keeps what was typed into the form',
+     !fr.err && m0.closed === true && m0.name === 'Moths slain' && m0.goal === 12, fr.err ? String(fr.err) : m0);
+  fr = capture(() => { ctx.openTrackerForm(X.character.trackers[0]); fillForm('Moths, again'); fire('tkCloseNow', 'click'); });
+  m0 = X.character.trackers[0];
+  ck('...and so does Reopen', !fr.err && m0.closed === false && m0.name === 'Moths, again', fr.err ? String(fr.err) : m0);
+  const snapM = ctx.trkSnapshot(X.character.trackers[0]);
+  fr = capture(() => {
+    ctx.openTrackerForm(X.character.trackers[0]);
+    ctx.trkRestore(X.character, snapM);          /* the toast's Undo, landing while the form is open */
+    fillForm('Moths, renamed'); fire('tkSave', 'click');
+  });
+  ck('Save after an Undo swapped the tracker still saves to the stored one',
+     !fr.err && X.character.trackers.length === 1 && X.character.trackers[0].name === 'Moths, renamed',
+     fr.err ? String(fr.err) : X.character.trackers);
 
   /* ---- a glossary entry with no term never breaks the sheet (#71)
      highlight() looked each chip up with allGlossary().find(x=>x.term.toLowerCase()…),
@@ -2702,7 +3250,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const stHtml = renders('Statuses (a status named after a keyword, one named 7, one with no name)', () => ctx.renderStatuses());
   ck('#71 a status named after a keyword is still a chip', /data-gid="kw1"[^>]*>Grappled</.test(stHtml), stHtml.slice(0, 400));
   renders('Story fields and Proficiencies', () => ctx.renderAllRT());
-  renders('the Notes tab', () => ctx.renderNotes());
+  renders('the Section Notes card', () => ctx.renderNotes());
   renders('the Rules tab section counts', () => ctx.renderRulesSections());
   const gl = renders('the Rules tab glossary', () => ctx.renderGloss());
   ck('#71 the player\'s entry with no term is still listed, so it can be fixed',
@@ -2764,7 +3312,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
        whole sheet draws (a string in `spells` threw on the first write to it) */
     const junkLists = Object.assign(X.blankChar(), {system: 'dnd'});
     ['features', 'inventory', 'statuses', 'familiars', 'spells', 'attacks', 'activeSpells', 'glossary',
-     'classes', 'grants', 'resources'].forEach(k => { junkLists[k] = [null, 'str', 7, ['arr'], {}]; });
+     'classes', 'grants', 'resources', 'journal', 'trackers'].forEach(k => { junkLists[k] = [null, 'str', 7, ['arr'], {}]; });
     X.character = X.migrate(JSON.parse(JSON.stringify(junkLists)));
     renders('the whole sheet from a file whose lists hold null, text and numbers (renderAll)', () => ctx.renderAll());
     renders('the print sheet from that file', () => ctx.printSheet());

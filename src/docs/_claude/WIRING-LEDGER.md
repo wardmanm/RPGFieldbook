@@ -4752,3 +4752,161 @@ ticked, applying gives check +1 and PB +3; three failed first. Pages:
 [computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
 [abilities & skills](../wiki/features/abilities-and-skills.md), [converter](../wiki/data/converter.md),
 [rules-update tool](../wiki/features/rules-update-tool.md).
+
+## The Notes tab is the Journal tab (#39, 2026-09-29)
+
+The first step of #39. The tab that gathers section notes is renamed, id and all: `tab-journal`,
+`data-tab="journal"`, `src/html/60-journal.html`. Its icon is now a ringed notebook, because the
+old page glyph is the section-note button's own. Nothing is saved under a tab's name (the active
+tab is never persisted), so no character changes. The Section Notes card works as it did. Its
+printed heading reads "Section notes" now, since the Story tab has a card called Notes too.
+
+**Guard.** `rules-data.js`'s "the Notes tab takes no note" regex ran from the panel to the end of
+the page, and would have passed vacuously once the id changed. It now slices the Journal panel up
+to the next panel, and refuses a leftover `tab-notes` or `data-tab="notes"`; three failed first.
+
+Pages: [shell](../wiki/ui/shell.md), [sections & layout](../wiki/ui/sections-and-layout.md),
+[story & notes](../wiki/features/story-and-notes.md), [screenshot QA](../wiki/process/screenshot-qa.md).
+
+## A refused character write says so, and keeps saying so (#81, 2026-09-29)
+
+A failed autosave only changed the `#savestate` label, in a title bar that scrolls away. The
+journal (#40) is the first unlimited long-form text a character carries, so an hour of notes could
+go unsaved with nothing else said. `scheduleSave()`'s write is now `saveNow()`, reachable from the
+tests, returning "" or `storageWhy()`'s reason. `showSaveResult()` raises `#saveWarn` with that
+reason, Save to file and Try again, and keeps it up until a write lands. The strip is fixed to the
+foot of the window, not under the tab bar as the spec said: there it would sit on the combat tab's
+own sticky header.
+
+**The other writes.** `libSave()` returns its reason instead of swallowing it. `newCharacter()` and
+`finishImport()` store first, list only once stored, and report through the strip. So a refused
+character stays playable and exportable with no home-screen card that opens nothing.
+`migrateOldChar()` kept deleting the legacy key whether or not its copy landed; it now deletes it
+only after both writes land, returns why otherwise, and `boot()` alerts. The dead `lsOK` check at
+boot is gone.
+
+**Guards.** `char-update.js`: saveNow and libSave under the full-quota switch; the warning set,
+kept by a failing Try again and cleared by a landing one; a new character, an import and an old
+save under a full store. Pages: [storage](../wiki/architecture/storage.md),
+[home & characters](../wiki/features/home-and-characters.md).
+
+## Journal pages (#40, 2026-09-29)
+
+The Journal tab's first card: the player's own pages, `character.journal`
+(`[{id, title, tag, text, at, editedAt}]`) with `journalCollapse`. `migrate()` guards both and
+`repairIds()` gives every page a unique string id. New fragments `87-journal.js` (pure half, then
+DOM half) and `47-journal.css`.
+
+**The rules.** A page exists only while it has a title or text (`jnlSavePage()`, the `saveNote()`
+rule), so a blank page is never saved however it is left, and nothing cleans up. Tags are trimmed,
+grouped case-blind, A to Z, Untagged last, labelled by the first spelling met, and shared with
+trackers for suggestions. Order is newest created first. Search is case-blind through an `i` RegExp,
+never by lower-casing, which can change a string's length and misplace the `<mark>`. The stamp is
+the locale's date and time in bold, on its own line at the caret, and an edit starts with the caret
+at the end.
+
+**The card.** Three views in one card (list, page, editor), in a session-only state keyed on the
+character. The editor is built once per edit, because `renderAll()`/`refreshRulesUI()` can run
+mid-typing; `renderJournal()` is in both. `NOTE_FMT_HINT` is now shared with the section-note
+editor.
+
+**Guards.** `sheet.js`: the fields, migrate and ids; tags, order, search (escaping, the Unicode
+alignment), the page rule, the stamp and `insertLine()`; the three builders, including hostile
+values; a hostile page through the list, a search, the page and the editor; New → type → Done, a
+blank page never saved, Delete asking, and a character switch resetting. `rules-data.js`: the
+search box's clear button, the card order. Pages: [journal](../wiki/features/journal.md),
+[story & notes](../wiki/features/story-and-notes.md), [rich text](../wiki/architecture/rich-text.md),
+[character model](../wiki/architecture/character-model.md),
+[sections & layout](../wiki/ui/sections-and-layout.md).
+
+## Trackers (#41, #39, 2026-09-29)
+
+The Journal tab's second card, and the end of #39. `character.trackers`
+(`[{id, name, type, tag, value, goal, items, done, autoClose, closed, closedAt, at}]`), with
+`trackerCollapse` and `showTrackers` (read as `!== false`). `migrate()` guards them and repairs
+tracker ids, and item ids from one pool across every tracker. New fragment `87-trackers.js`; its
+styles join `47-journal.css`.
+
+**The rules.** Three types: a counter with an optional goal (none, as for kills, is never
+complete), a checklist, and a task. Counts are whole, never below 0, and may pass the goal. The
+close rule is in `trkApply()` alone. It closes only on the step from not done to done, only with
+Close when complete on (the default), and never from the form or on creation, so a reopened
+tracker at 100% stays open. Undo restores a snapshot from before the tap: the tick and the close
+together, guarded by the character id. Checklist lines keep their ids and ticks through an edit
+(`mergeChecklist()`). Tracker text is plain: a glossary chip inside a checkbox button would be a
+button in a button.
+
+**The card.** Groups by tag, Completed shut at the bottom, focus put back by the pressed control's
+first `data-*` so Space held on + keeps counting. A keyboard completion lands on the toast's Undo.
+Trackers is registered section 20 (tab `journal`), so it takes a note and joins the combat view; the
+registry tests went 19 → 20, and the Journal-panel guard now expects exactly that one note card.
+Hidden (Settings → This character) means `display:none`, kept in the DOM.
+
+**Guards.** `sheet.js`: fields, migrate and ids; progress for each type with junk; the close
+rule's six cases; Undo; `mergeChecklist()`; the form never closing; layout; the builders with
+hostile values; hostile trackers through the card and the form; a tap, a closed tracker refusing
+taps, a stale Undo, a typed count, Reopen, and the combat view accepting the card.
+`rules-data.js`: 20 sections, the tab's card order, the switch wired. Pages:
+[journal](../wiki/features/journal.md), [combat view](../wiki/features/combat-view.md),
+[story & notes](../wiki/features/story-and-notes.md),
+[sections & layout](../wiki/ui/sections-and-layout.md),
+[settings & updates](../wiki/features/settings-and-updates.md),
+[character model](../wiki/architecture/character-model.md).
+
+## The journal branch's final-review fixes (#39, #40, #41, #81, 2026-09-29)
+
+A whole-branch review of `issue/39-journal` found three real bugs and seven smaller ones. All fixed
+in one pass, each with a test first where the harness can see it, and driven in Chrome where it
+can't.
+
+**Leaving a character (#81, I-2).** `loadCharById()` never called `showSaveResult()`, so after a
+switch the strip still said "Not saved", now about a character whose stored copy was current. Worse,
+the switch it invited (Home, delete an old character to make room, tap the first one's card)
+reloaded that character from storage and dropped the edits it had never written. Now
+`loadCharById()`, `newCharacter()` and `finishImport()` all call `leaveCharacterOk()` first
+(`70-persistence.js`). It writes the edit still waiting on the debounce, retries a write that
+failed, and, if that still can't land, asks: "“A”'s changes aren't saved — <why>. Leave and lose
+them? Cancel, then use Save to file." No changes nothing and hides the home screen, so the strip's
+Save to file is in view. A switch that goes ahead calls `showSaveResult("")`. A new `saveDue` flag
+means a switch with nothing waiting writes nothing, so it never moves a card up the home screen's
+`updated` order. Side effect: an edit made less than 500 ms before a switch is no longer lost.
+
+**Delete and star (#81, I-3).** `deleteCharacter()` and `setAutoload()` return `libSave()`'s answer
+and `alert()` it (the home overlay covers the strip). A delete whose index write fails keeps the
+blob, so the card still opens the character.
+
+**A typed count (#41, I-1).** The count box's `change` fires as it loses focus, which happens at the
+mousedown on + or on a Tab. `trkAct()` redrew the card there, replacing the + under the pointer, so
+the click never arrived: 5, type 9, click + gave 9. It also dropped a Tab's focus to `<body>`. The
+change path now patches the row in place (`trkPatchRow()`: the box, the bar's `aria-valuenow` and
+width), and a non-number is put back in place. Enter, and a change that closes the tracker, still
+redraw.
+
+**The minors.**
+- M-1: Tab or Esc from a closing tap's Undo goes to the next open tracker's first control
+  (`trkAfter()`, taken before the tap; `trkNextControl()`), or to + Tracker when none is left.
+- M-2: `attrSel()` and `openerSelector()` escape newline, return and form feed as CSS hex escapes. A
+  raw one made `querySelector` throw, and in `trkAct()` that throw came before the save. The save
+  is now scheduled first.
+- M-3: `jnlUI.who`, `trkWho` and the Undo's `who` key on the character object, not its id.
+  Import → Replace keeps the id and swaps the sheet, so an open editor survived it and wrote the
+  old text over the imported page, and an old Undo could restore into it.
+- M-4: the tracker form's Save, Close now and Delete re-resolve the tracker by id, since a toast's
+  Undo can swap it while the form is open. Close now and Reopen keep what was typed and do what the
+  button said when the form opened.
+- M-5: `rules-data.js` checks that `#swTrackers` is drawn in This character and wired.
+- M-6: `renderTrackers()` calls `renderCombatEmpty()` with the combat view open, so hiding Trackers
+  when it is the only card there brings back the "Add sections…" hint.
+- M-7 and D-1: docs. Holding Enter on + keeps counting, but Space doesn't: a button clicks once on
+  Space's key-up. The README's "red bar" is paper edged in red. The journal page now states the
+  Enter handler's `preventDefault()`-before-`commitBox()` rule.
+
+**Guards.** `sheet.js`: the change path patches in place (a counting fake DOM), a non-number is
+put back, and Enter and a completing change redraw; `trkAfter()`; an Undo across Import → Replace;
+the editor and Completed reset on a same-id replace; the form's Close now, Reopen and Save after an
+Undo; `attrSel()`/`openerSelector()` with newlines. `char-update.js`: the flush before a switch, No
+on each of the three paths, Yes clearing the warning, and delete and star under a full quota.
+`rules-data.js`: the Trackers switch. Pages: [journal](../wiki/features/journal.md),
+[storage](../wiki/architecture/storage.md),
+[home & characters](../wiki/features/home-and-characters.md),
+[combat view](../wiki/features/combat-view.md), [known issues](../wiki/roadmap/known-issues.md).
