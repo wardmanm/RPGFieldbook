@@ -4498,3 +4498,135 @@ finder uses STR for STR 18 / DEX 12 (+6) and DEX for DEX 16 (+5), stays ranged a
 ticked; applying it rebuilds the untouched row with `finesse` (+6); an edited row is left alone
 (four failed first). Pages: [converter](../wiki/data/converter.md),
 [attacks & damage](../wiki/features/attacks-and-damage.md).
+
+## Conditional AC and saving-throw bonuses on items are not standing effects (#76, 2026-09-28)
+
+**Root cause.** `_item_effects()` wrote every 5e-tools `bonusAc` as an `ac` effect and every
+`bonusSavingThrow` as the six `save.*`. Those fields are search-filter tags: 5e-tools sets them
+whether the book gives the bonus all the time or only in a moment. An effect applies whenever the
+item is equipped, so Quarterstaff of the Acrobat's Attack Deflection (a Reaction, +5 AC against the
+triggering attack, once per Short or Long Rest) read AC +5 at all times: DEX 14, level 1, AC 12
+became 17 on equipping it.
+
+**No data rule exists.** 102 dump entries carry one field or both. The only keys the five
+conditional pack items have that no standing XDMG one does are `light`, `range` and
+`modifySpeed`, each incidental; the conditional Arrow-Catching Shield and the standing Shield of the
+Cavalier both carry `"ac": 2, "bonusAc": "+2"`; `charges` marks neither (Staff of Power has 20 and a
+standing +2, Scarab of Protection 12 and a standing +1). So the converter reads the text. `_bonus_reading()` finds the sentence stating the bonus ("+N bonus to … Armor Class/AC",
+"+N bonus to … saving throws" as a list or alone, never one named save), takes it up to the end of
+the bonus's own clause (a later ", you have Advantage on saving throws against …" is another
+benefit), sets aside the conditions an equipped item always meets ("while wearing / holding /
+wielding / carrying", "while … is on your person", "while … orbits your head"), and calls it
+conditional if any of reaction, when, whenever, if, unless, until, against, while, as long as, for
+every, allies, creature(s), once, each time remains. No sentence at all (a table row, another
+wording) is not an effect either. Every bonus kept out of the effects is recorded and printed as a
+`note:` at the end of `all`, `supplement` and `items`, with the words that decided it.
+`_item_bonus_text()` expands `{#itemEntry …}` for this reading only, through the item index, which
+now also carries `items-base.json`'s `itemEntry` templates: the ten Dragon Scale Mails state their
++1 nowhere else. Their descriptions still print the tag (seen, not fixed: 54 pack items do, the
+Dragon Scale Mails, Ioun Stones, Potions and Rings of Resistance, and Tasha's Absorbing Tattoos).
+
+**The reviewed list.** Standing, and unchanged: the ten Dragon Scale Mails (+1), Cloak of Protection
+and Ring of Protection (+1 AC and saves), Glamoured Studded Leather, Ioun Stone of Protection and
+Scarab of Protection (+1), Shield of the Cavalier (+2, on top of its shield +2), Staff of Power (+2
+AC and saves), Robe of Stars and Stone of Good Luck (+1 saves). Conditional, now prose only:
+Quarterstaff of the Acrobat (+5: "When", "Reaction", "against"), Arrow-Catching Shield (+2 "against
+ranged attack rolls"; its shield +2 still comes from its armor line), Bracers of Defense (+2 "if you
+are wearing no armor and using no Shield"), Rod of Alertness (+1 AC and saves "While in that Bright
+Light, you and your allies", an aura planted once per dawn), and Tasha's Teeth of Dahlver-Nar (+2
+from one implanted tooth, a table row; no sentence). Xanathar's has none.
+
+**Data.** Only `effects` moved, on those five items: `data/5e2024/items-magic.json` four, and
+`data/tashas/items-magic.json` one. Checked field by field; every other file of the three packs
+regenerates byte for byte.
+
+**The Reaction is not a tracked use.** No pack item carries `uses` and 5e-tools has no field for a
+per-rest property; one would mean a special case for this staff or a text rule reaching every
+"can't be used again until the next dawn" in the dump, and one `uses` pool per item cannot hold the
+staff's several properties. It stays in the description; a player can add uses by hand.
+
+**Existing characters** hold copies. `effects` is in `UPD_FIELDS.item`, so the rules-update tool
+offers a stamped copy of each as "effects changed", ticked when unedited; applying it writes
+`effects: []` and nothing else (the staff keeps its weapon, `atkMisc` 2 and its attack row; qty,
+equipped and fav untouched), and AC returns to 12. `migrate()` changes nothing.
+
+**Guards.** `converter.py` 264 → 304: the five conditional shapes and nine standing ones, real from
+the dump, through `convert_items()`; the reader on the phrasings it must not misread (a later
+clause's "against", one named save, "until the start of your next turn", no sentence); the
+recorded list and its notes; `items`, `all` and `supplement` runs each print the note and read the
+Dragon Scale Mail through its template. 20 failed first. `rules-data.js` +12: every `ac`/`save.*`
+effect in any pack is on the reviewed standing list, every listed one still ships, and the five
+conditional items carry none and still state their bonus; six failed first. `sheet.js` +9, read off
+the ids `recompute()` paints: the shipped staff leaves AC 12, the Arrow-Catching Shield adds only
+its shield +2, Bracers and Rod add nothing, a Cloak still adds +1 AC and saves; four failed first.
+`char-update.js` +7: an old sheet reads 17, the fix is offered as exactly `effects`, ticked, and
+applying it gives 12; `migrate()` leaves it; three failed first. Pages:
+[converter](../wiki/data/converter.md), [armor & AC](../wiki/features/armor-and-ac.md),
+[computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
+[rules-update tool](../wiki/features/rules-update-tool.md).
+
+## Items' spell attack and spell save DC bonuses apply (#77, 2026-09-28)
+
+**Root cause, two halves.** The converter never read 5e-tools' `bonusSpellAttack` or
+`bonusSpellSaveDc`, so 28 pack items carried no effect for them; and the app had no effect target
+a spell bonus could use. `spellDC()` and `spellAtkBonus()` summed no effects at all, and
+`recompute()` painted the Spellcasting card from its own copy of the same two formulas. An equipped
+Staff of Power, Moon Sickle or Wand of the War Mage changed nothing a caster looks at.
+
+**Two numeric targets.** `spell.attack` and `spell.dc` join `fxTargets()` ("Spell attack", "Spell
+save DC"), so the effect editor offers them and `FX_LABEL` names their chips. They stay inside
+"effects are numeric-only": each is a flat bonus to one number. `spellDC(c)` and `spellAtkBonus(c)`
+now take the contributions optionally, as `effMaxHP()` does, and add them, and every place that
+shows either number reads those two: `recompute()` paints the card through them (and marks each
+with `.fx-on` when an effect applies), `promptSpellAttack()` (the cast window), the save rows in
+`renderAttacks()` (their DC cell marked too) and `printSheet()`. A spell attack row reads its to-hit
+through `attackNumbers()`, which adds `spell.attack` for `source: "spell"` rows only, so a weapon's
+row, the staff's or the sickle's own included, never takes it; `openAttackBreakdown()` lists it by
+source on those rows. The card's two numbers carry `data-stat="spell.dc"` / `"spell.attack"`, so a
+tap opens `openStatBreakdown()`: "8 + prof +2 + INT mod +3" (or "No spellcasting ability chosen")
+and each contribution by name, as the AC box does. `attack` was not reused: it reaches every weapon
+row, and a Wand of the War Mage does not make a sword more accurate.
+
+**The converter** reads the two fields through #76's sentence reader, with phrases for "+N bonus
+to … spell attack rolls", "+N bonus to … saving throw DC(s)" / "spell save DC", and the Robe of the
+Archmagi's "Your spell save DC and spell attack bonus each increase by 2". Every one of the 28 is
+standing ("while holding…", "while you wear or hold it"), and the run notes none. Core, 9:
++1/+2/+3 Wand of the War Mage (attack), Robe of the Archmagi (attack and DC +2), Staff of Power
+(attack +2, beside its AC and saves), Staff of the Magi, Staff of the Woodlands, Talisman of Pure
+Good and Talisman of Ultimate Evil (attack +2). Tasha's, 19: the +1/+2/+3 All-Purpose Tool, Amulet
+of the Devout, Arcane Grimoire, Bloodwell Vial, Moon Sickle and Rhythm-Maker's Drum (attack and DC),
+and Reveler's Concertina (DC +2). Xanathar's has none.
+
+**A bonus limited to one class's spells** (the Moon Sickle's "your druid and ranger spells", the
+Arcane Grimoire's "your wizard spells", and the rest of Tasha's focuses) is applied to the
+character's spellcasting. The sheet has one spellcasting ability, one DC and one attack bonus, and
+the item's attunement already requires that class, so for a single-class caster it is exact; only
+a multiclass one differs (a Druid/Wizard's Wizard spells would read the sickle's bonus too). The
+class stays in the description. Leaving these as prose would have left all 18 Tasha's focuses and sickles
+doing nothing for the casters they were made for. Owner's call to revisit.
+
+**Data.** Only `effects` moved, on the 28 items: `data/5e2024/items-magic.json` nine, and
+`data/tashas/items-magic.json` 19. Checked field by field; every other file of the three packs
+regenerates byte for byte.
+
+**Existing characters** hold copies. `effects` is in `UPD_FIELDS.item`, so the rules-update tool
+offers each stamped copy as "effects changed", ticked when unedited; applying writes the new
+`effects` and nothing else. A druid (WIS 16, level 1) with a Staff of Power and a +1 Moon Sickle
+goes from spell attack +5 / DC 13 to +8 / 14, the staff keeps its AC and saves, both weapons keep
+their rows and to-hit, and equipped and fav are untouched. `migrate()` changes nothing. An older
+app given the new packs sums neither target and shows the chip as its raw name.
+
+**Guards.** `converter.py` 304 → 318: eight real shapes (the +2 Moon Sickle, a Wand of the War
+Mage, the Robe's other wording, the Staff of the Magi's attack only, a Talisman, Reveler's DC only,
+two Tasha's focuses) and Staff of Power's three bonuses; the 2014 Talisman's "If you are a good
+cleric" read as conditional; a weapon's "+2 bonus to attack rolls" not read as a spell bonus; 11
+failed first. `sheet.js` +21, through `recompute()`, the cast window, both breakdowns and a rendered
+save row: the shipped staff gives +7 and leaves DC 13 and its own row +4, the +3 Moon Sickle DC 16
+and +8 while its row stays +5, Reveler's Concertina DC 15 only, no spellcasting ability still "—";
+13 failed first. `char-update.js` +8: the fix is offered as exactly `effects`, ticked, and applying
+it gives +8 / 14; three failed first. `rules-data.js` +9: the reviewed list of spell bonuses per
+pack, every effect target any pack ships is one `fxTargets()` lists (a target the app does not know
+is summed by nothing, silently), and the two card numbers are tappable; five failed first. Pages:
+[computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
+[spells](../wiki/features/spells.md), [attacks & damage](../wiki/features/attacks-and-damage.md),
+[converter](../wiki/data/converter.md), [rules-update tool](../wiki/features/rules-update-tool.md).

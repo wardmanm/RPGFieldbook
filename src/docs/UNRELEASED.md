@@ -71,3 +71,11 @@ Bullets below this line — leave the heading in place.
   Re-download the Xanathar's Guide pack to get them.
 - A magic weapon added with the item editor's "Insert from rules pack" now keeps its +1, +2 or +3,
   and its range and properties, on the attack it creates.
+- Items that raise your spell attack bonus or spell save DC now raise them on the sheet while
+  equipped: the Staff of Power, the Staves of the Magi and the Woodlands, the Wands of the War Mage,
+  the Robe of the Archmagi and both Talismans, and Tasha's Moon Sickles and spellcasting focuses.
+  The Spellcasting card, spell attack rows, spell save rows and the cast window all show the bonus,
+  and tapping the card's Spell save DC or Spell attack shows where it comes from. Spell attack and
+  Spell save DC are also new choices in the effect editor, for any item or feature of your own.
+  Re-download the D&D 2024 and Tasha's packs, then review rules updates for a character that
+  already has one of these items.

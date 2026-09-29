@@ -10,6 +10,9 @@ function fxTargets(){
   g.push(["Armor Class","ac"],["Initiative","init"],["Speed","speed"],["Max HP","hp.max"],["Proficiency Bonus","profBonus"]);
   g.push(["To-hit (all attacks)","attack"],["To-hit (melee)","attack.melee"],["To-hit (ranged)","attack.ranged"]);
   g.push(["Damage (all attacks)","damage"],["Damage (melee)","damage.melee"],["Damage (ranged)","damage.ranged"]);
+  /* the character's spell attack bonus and spell save DC, which spellAtkBonus()
+     and spellDC() read: a Staff of Power, a Moon Sickle, a Wand of the War Mage */
+  g.push(["Spell attack","spell.attack"],["Spell save DC","spell.dc"]);
   ABIL.forEach(([k,l])=>g.push([l+" score","ability."+k]));
   ABIL.forEach(([k,l])=>g.push([l+" save","save."+k]));
   SKILLS.forEach(([k,l])=>g.push([l+" skill","skill."+k]));

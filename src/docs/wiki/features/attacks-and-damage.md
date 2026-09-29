@@ -25,7 +25,8 @@ damageType, dmgMisc, addAbilityDamage, notes}`, plus optional `extraDamage`, `fa
 
 **The numbers.** `attackNumbers(a)` takes the ability modifier (`finesse` is the better of STR and
 DEX, labelled DEX on a tie; `none` is 0). To-hit is that modifier, plus the proficiency bonus when
-`proficient`, plus `atkMisc`, plus the `attack` and `attack.<kind>` effects. The damage bonus is the
+`proficient`, plus `atkMisc`, plus the `attack` and `attack.<kind>` effects, plus, on a spell attack
+row only, the `spell.attack` effects (a weapon's row never takes them). The damage bonus is the
 modifier when `addAbilityDamage`, plus `dmgMisc`, plus the `damage` and `damage.<kind>` effects.
 `kind` is melee unless it says ranged. `atkMisc`/`dmgMisc` belong to this row alone; an effect
 applies to every row while its source is live, so a magic weapon's own `+N` is its row's
@@ -86,7 +87,8 @@ no ability damage; a `save` spell gets `save:{ability}` and no to-hit. `sp.extra
 A save spell with no damage (`spellHasDamage()`: main dice or extras) gets **no row** — it would only
 repeat the Spell Save DC; an attack spell always does, because the to-hit appears nowhere else.
 Spell rows show **Cast** where a weapon shows Edit; `recompute()` re-points their `ability` at the
-current `spellAbility` every pass; save rows print `DC N ABILITY` from `spellDC()` with no damage bonus.
+current `spellAbility` every pass; save rows print `DC N ABILITY` from `spellDC()` with no damage
+bonus, marked when a `spell.dc` effect applies.
 
 **The damage detector.** `detectSpellAttack(sp)` runs only while `sp.atkType` is `undefined`: "make a
 ranged/melee spell attack" → attack and kind; "*Ability* saving throw" → save and `saveAbility`;
@@ -145,6 +147,10 @@ longer allows, leaving orphan rows alone.
   `atkMisc` only from the item being edited, which the effect had hidden; it now carries it from the
   inserted entry too. An existing sheet gets the fix through the rules-update tool, as "effects
   changed". → L4392
+- **An item's spell bonus reached no spell row (#77).** The packs never read `bonusSpellAttack` /
+  `bonusSpellSaveDc`, and no target could carry them; `spell.attack` and `spell.dc` now do. A Staff
+  of Power's row stays its weapon's +4: only spell rows take `spell.attack`, and `attack` was not
+  reused for it because it reaches every weapon row. → L4568
 - **A Dart could only use DEX (#75).** The converter gave every ranged weapon `dex` and never
   asked about Finesse. Fixed in the pack; `attackNumbers()` already read `finesse` for any kind. An
   existing Dart reaches `finesse` through the rules-update tool, and its row is rebuilt only if it
@@ -171,7 +177,8 @@ longer allows, leaving orphan rows alone.
 - **Spell rows pick up weapon effects.** `attackNumbers()` adds `attack`/`attack.<kind>` and
   `damage`/`damage.<kind>` effects to spell rows too, while the Spellcasting card and the cast dialog
   (`spellAtkBonus()`, damage bonus 0) do not — with an Archery-style `attack.ranged` effect, a Fire
-  Bolt row reads 2 higher than the dialog. Verified in the code, not in a browser.
+  Bolt row reads 2 higher than the dialog. `spell.attack` reaches all three alike (#77). Verified in
+  the code, not in a browser.
 - **Only the finder adds weapons equipped.** `grantItemByName()` and a new item from the form start
   `equipped:false`, so their attack is hidden until equipped. A brand-new character's starting weapons
   are equipped by `migrateWeaponEquip()` on its first reload; one granted after that is not.
@@ -202,3 +209,4 @@ longer allows, leaving orphan rows alone.
 - 2026-09-28 — Pack magic weapons carry their properties' names and a finesse one attacks with `finesse`; the rules-update tool offers the fix to existing sheets. → ledger L4327, #72
 - 2026-09-28 — A `+N` pack weapon adds its bonus once, to its own row, and nothing to other rows; the item form's Insert keeps a weapon's bonus and notes. → ledger L4392, #74
 - 2026-09-28 — A ranged Finesse weapon (the Dart) attacks with the better of STR and DEX. → ledger L4466, #75
+- 2026-09-28 — Spell attack rows take `spell.attack` effects and save rows `spell.dc`, through `spellDC()`; weapon rows take neither. → ledger L4568, #77

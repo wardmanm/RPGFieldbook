@@ -23,7 +23,8 @@ pack through a searchable browser, or typed in by hand.
 ## How it works
 
 **The tab**, top to bottom: Spellcasting (the ability select; save DC `8 + PB + mod` and spell attack
-`PB + mod`), Spell Slots, a Concentration card that mirrors the Concentrating condition
+`PB + mod`, each plus its `spell.dc` / `spell.attack` effects from `spellDC()` / `spellAtkBonus()`,
+marked when one applies; tapping either opens its breakdown, which names the item), Spell Slots, a Concentration card that mirrors the Concentrating condition
 (`renderConcCard()`, hidden unless one is running), Active Spells (hidden when empty), then Spells &
 Cantrips.
 
@@ -70,7 +71,8 @@ alert. A concentration spell (`spellIsConc()`: the explicit `conc`, else "concen
 duration) asks before replacing the one already running. Only then is the slot spent. A spell that
 concentrates or has a positive parsed duration is pushed to `activeSpells` as
 `{id, spellId, name, level, conc, durationSec, elapsedSec:0, castAt}`, the Concentrating condition is
-reconciled, a toast says what happened, and an attack or save spell opens `promptSpellAttack()`.
+reconciled, a toast says what happened, and an attack or save spell opens `promptSpellAttack()`,
+whose to-hit and DC come from `spellAtkBonus()` and `spellDC()`, effects included.
 
 **Active Spells and the round.** Each entry shows its slot level, a C for concentration, elapsed /
 duration and an "expired" flag; − rd / + rd move it 6 s, + sec… asks for seconds, ✕ ends it. The
@@ -86,6 +88,9 @@ days, seconds and "instant"; anything else (Until dispelled) is untimed.
   number seen while picking is the number you get. A guard slices `renderSpells()`'s body and checks it
   calls the tally.
 - **Prepared never gates anything** unless that is decided on purpose; today nothing reads it.
+- **One formula per spell number.** The card, the cast window, save rows and the print sheet all
+  read `spellDC()` and `spellAtkBonus()`; `recompute()` used to paint the card from its own copy of
+  the formulas. A spell attack row gets the same `spell.attack` effects through `attackNumbers()`.
 - **Explicit attack settings win** — see [Attacks & damage](attacks-and-damage.md).
 - **Every rebuild-from-form save carries `src`.** Without it `updResolve()` falls back to the name,
   every edited spell reads as unknowably edited, and a same-named spell in another pack makes it
@@ -110,6 +115,10 @@ days, seconds and "instant"; anything else (Until dispelled) is untimed.
   box, and it inherited neither font nor line-height. `.equip .box` had the same defect. Only a zoomed
   screenshot showed it. → L2345
 - **`openSpellForm()` dropped `s.src`** on save, the third member of the item/feature family. → L2927
+- **Spell bonuses from items did nothing (#77).** Nothing read an item's spell attack or spell save
+  DC bonus: the packs dropped 5e-tools' `bonusSpellAttack`/`bonusSpellSaveDc`, there was no target
+  for them, and `spellDC()`/`spellAtkBonus()` summed no effects. An equipped Staff of Power or Moon
+  Sickle changed no number on this tab. → L4568
 - **"My Warlock lost its level-1 slots" is the rule**, not a bug: Pact Magic slots are all the highest
   unlocked level. Every row of the progression matched the PHB table. → L3169
 
@@ -122,6 +131,7 @@ days, seconds and "instant"; anything else (Until dispelled) is untimed.
 | Carrying a count to a group heading | A `groupKey` / `groupBadge` hook on `openBrowse()` | Through `cfg.group`: its string is escaped, and would be stale |
 | Fixing the off-screen Add button | `width:auto` on `.br-origin`, shared by both finders | `overflow-x:hidden` on `.browse`: hides a recurrence instead of preventing one; `flex-wrap` alone: a full-width select on every screen |
 | Saying what the prepared tick means | A visible `Prep` caption, `aria-pressed` and a title | The `aria-label` alone: nobody on a phone ever sees it |
+| An item's bonus to one class's spells, such as a Moon Sickle's (#77) | Applied to the one spellcasting the sheet has; the class stays in the description | Prose: the item would do nothing for the caster it was made for. See [Computed stats & effects](../architecture/computed-stats-and-effects.md) |
 
 ## Open
 
@@ -133,8 +143,12 @@ days, seconds and "instant"; anything else (Until dispelled) is untimed.
 - No suite test names `pickSlotLevel()`, `parseDurationSec()` or `autoSlots()`; the `castSpell()` tests
   give every level free slots, so the upcast path is exercised only in the browser.
 - Casting ignores `prepared` and ritual casting; the print sheet's `◆` has no key.
-- A spell row's to-hit can disagree with the Spellcasting card — see
-  [Attacks & damage](attacks-and-damage.md).
+- A spell row's to-hit can disagree with the Spellcasting card when a weapon effect (`attack`,
+  `attack.<kind>`) applies — see [Attacks & damage](attacks-and-damage.md). `spell.attack` reaches
+  both.
+- **One spellcasting per sheet.** A multiclass caster with two spellcasting abilities has one DC and
+  one attack bonus here, so a bonus for one class's spells (a Moon Sickle's) reads on the other's
+  too.
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -148,3 +162,4 @@ days, seconds and "instant"; anything else (Until dispelled) is untimed.
 - 2026-08-17 — Casting a concentration spell adds the Concentrating condition. → ledger L2893, #37
 - 2026-08-18 — The Concentration mirror card above Active Spells. → ledger L3151
 - 2026-08-18 — Slots on level-up investigated: Pact Magic, working as the rule says. → ledger L3169
+- 2026-09-28 — Items' spell attack and spell save DC bonuses reach the card, rows, cast window and print; the card's numbers open a breakdown. → ledger L4568, #77

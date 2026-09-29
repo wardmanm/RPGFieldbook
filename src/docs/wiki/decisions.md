@@ -90,6 +90,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **How `uses.max` scales** — A number, `byLevel`, or a `formula` re-resolved at render
 - **Where encumbrance applies** — After the effects, outside the engine
 - **A bonus scoped to one weapon (#74)** — The weapon's `atkMisc`/`dmgMisc`, or prose on an item with no weapon
+- **A bonus that holds only in a moment (#76)** — Prose, like advantage and resistance
+- **Where an item's spell attack and DC bonus goes (#77)** — Two numeric targets, `spell.attack` and `spell.dc`, read by `spellAtkBonus()`/`spellDC()`
+- **A spell bonus the book limits to one class's spells (#77)** — Applied to the character's one spellcasting; the class stays in the description
 
 ### [Rich text](architecture/rich-text.md)
 
@@ -213,6 +216,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Carrying a count to a group heading** — A `groupKey` / `groupBadge` hook on `openBrowse()`
 - **Fixing the off-screen Add button** — `width:auto` on `.br-origin`, shared by both finders
 - **Saying what the prepared tick means** — A visible `Prep` caption, `aria-pressed` and a title
+- **An item's bonus to one class's spells, such as a Moon Sickle's (#77)** — Applied to the one spellcasting the sheet has; the class stays in the description
 
 ### [Inventory](features/inventory.md)
 
@@ -231,6 +235,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Structured field or description when both exist** — The field wins — explicit over prose, as `weapon` already behaves
 - **How a custom item becomes armor** — An Armor toggle writing the structured field
 - **What the shield kind shows** — A bonus box instead of Base AC and Max Dex
+- **A pack item's AC bonus that holds only sometimes (#76)** — Prose in the description, no `ac` effect
 
 ### [Story & notes](features/story-and-notes.md)
 
@@ -367,6 +372,12 @@ When a page gains a Decisions row, add its line here under that page.
 - **A ranged weapon with Finesse (#75)** — `finesse`, the better of STR and DEX, as for a melee one
 - **Where a `+N` weapon's bonus goes (#74)** — On the weapon, `atkMisc`/`dmgMisc`, and never as an effect
 - **A weapon bonus on an item that is not a weapon (#74)** — Kept in the prose; no effect
+- **Telling a standing item bonus from a conditional one (#76)** — Read the sentence that states it: standing only when nothing but wearing, holding or carrying the item conditions it
+- **A bonus no sentence states (#76)** — Not an effect, and a `note:` naming it
+- **Bracers of Defense, whose +2 needs no armor and no shield (#76)** — Prose, like any conditional bonus
+- **The Quarterstaff's once-per-rest Reaction as a tracked use (#76)** — No; it stays in the description
+- **Where a `{#itemEntry}` template's text is read (#76)** — For the bonus reading only; the description keeps the tag
+- **An item's spell attack and spell save DC bonus (#77)** — `spell.attack` / `spell.dc` effects through the same sentence reader, a named class not counting as a condition
 
 ### [Supplements](data/supplements.md)
 

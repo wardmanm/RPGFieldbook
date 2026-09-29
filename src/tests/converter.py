@@ -1063,6 +1063,187 @@ ck('#75 a melee finesse weapon is unchanged (Dagger)', dpack.get('Dagger', {}).g
 ck('#75 a melee weapon without Finesse still uses STR (Warhammer)',
    dpack.get('Warhammer', {}).get('weapon', {}).get('ability') == 'str')
 
+# ---- 28. a bonus the book gives only in a moment is not a standing effect (#76)
+# 5e-tools tags an item's bonusAc / bonusSavingThrow for its search filters,
+# whether the book gives the bonus all the time or only now and then. Written as
+# `ac` / `save.*` effects, a conditional one applied whenever the item was
+# equipped: Quarterstaff of the Acrobat's once-per-rest Reaction against one
+# attack read AC +5 at all times. No field in the dump tells the two apart (the
+# Arrow-Catching Shield's +2 against ranged attacks and the Shield of the
+# Cavalier's standing +2 have the same shape), so the converter reads the
+# sentence that states the bonus. Real shapes from the v2.36.1 dump, loot tables
+# and cross-references trimmed; a long item keeps only the entry that states it.
+B76_CONDITIONAL = [
+    {"name": "Quarterstaff of the Acrobat", "source": "XDMG", "page": 291, "srd52": True, "basicRules2024": True, "baseItem": "quarterstaff|xphb", "type": "M|XPHB", "rarity": "very rare", "reqAttune": True, "weight": 4, "weaponCategory": "simple", "property": ["T|XPHB", "V|XPHB"], "mastery": ["Topple|XPHB"], "range": "30/120", "dmg1": "1d6", "dmgType": "B", "dmg2": "1d8", "bonusWeapon": "+2", "bonusAc": "+5", "staff": True, "entries": ["You have a +2 bonus to attack rolls and damage rolls made with this magic weapon.", "While holding this weapon, you can cause it to emit green {@variantrule Dim Light|XPHB} out to 10 feet, either as a {@variantrule Bonus Action|XPHB} or after you roll {@variantrule Initiative|XPHB}, or you can extinguish the light as a {@variantrule Bonus Action|XPHB}.", "While holding this weapon, you can take a {@variantrule Bonus Action|XPHB} to alter its form, turning it into a 6-inch rod (for ease of storage) or a 10-foot pole, or reverting it a Quarterstaff; the weapon will elongate only as far as the surrounding space allows.", "In certain forms, the weapon has the following additional properties.", {"type": "entries", "name": "Acrobatic Assist (Quarterstaff and 10-Foot Pole Forms Only)", "entries": ["While holding this weapon, you have {@variantrule Advantage|XPHB} on Dexterity ({@skill Acrobatics|XPHB}) checks."]}, {"type": "entries", "name": "Attack Deflection (Quarterstaff Form Only)", "entries": ["When you are hit by an attack while holding the weapon, you can take a {@variantrule Reaction|XPHB} to twirl the weapon around you, gaining a +5 bonus to your {@variantrule Armor Class|XPHB} against the triggering attack, potentially causing the attack to miss you. You can't use this property again until you finish a {@variantrule Short Rest|XPHB|Short} or {@variantrule Long Rest|XPHB}."]}, {"type": "entries", "name": "Ranged Weapon (Quarterstaff Form Only)", "entries": ["This weapon has {@itemProperty T|XPHB|Thrown} with a normal range of 30 feet and a long range of 120 feet. Immediately after you make a ranged attack with the weapon, it flies back to your hand."]}], "light": [{"dim": 10}]},
+    {"name": "Arrow-Catching Shield", "source": "XDMG", "page": 231, "srd52": True, "basicRules2024": True, "baseItem": "shield|xphb", "type": "S|XPHB", "rarity": "rare", "reqAttune": True, "weight": 6, "ac": 2, "bonusAc": "+2", "entries": ["You gain a +2 bonus to {@variantrule Armor Class|XPHB} against ranged attack rolls while you wield this Shield. This bonus is in addition to the Shield's normal bonus to AC.", "Whenever an attacker makes a ranged attack roll against a target within 5 feet of you, you can take a {@variantrule Reaction|XPHB} to become the target of the attack instead."]},
+    {"name": "Bracers of Defense", "source": "XDMG", "page": 241, "srd52": True, "basicRules2024": True, "rarity": "rare", "reqAttune": True, "wondrous": True, "bonusAc": "+2", "entries": ["While wearing these bracers, you gain a +2 bonus to {@variantrule Armor Class|XPHB} if you are wearing no armor and using no {@item Shield|XPHB}."]},
+    {"name": "Rod of Alertness", "source": "XDMG", "page": 299, "srd52": True, "basicRules2024": True, "type": "RD|XDMG", "rarity": "very rare", "reqAttune": True, "weight": 2, "bonusAc": "+1", "bonusSavingThrow": "+1", "entries": ["This rod has the following properties.", {"type": "entries", "name": "Alertness", "entries": ["While holding the rod, you have {@variantrule Advantage|XPHB} on Wisdom ({@skill Perception|XPHB}) checks and on {@variantrule Initiative|XPHB} rolls."]}, {"type": "entries", "name": "Spells", "entries": ["While holding the rod, you can cast the following spells from it:", {"type": "list", "items": ["{@spell Detect Evil and Good|XPHB}", "{@spell Detect Magic|XPHB}", "{@spell Detect Poison and Disease|XPHB}", "{@spell See Invisibility|XPHB}"]}]}, {"type": "entries", "name": "Protective Aura", "entries": ["As a {@action Magic|XPHB} action, you can plant the haft end of the rod in the ground, whereupon the rod's head sheds {@variantrule Bright Light|XPHB} in a 60-foot radius and {@variantrule Dim Light|XPHB} for an additional 60 feet. While in that {@variantrule Bright Light|XPHB}, you and your allies gain a +1 bonus to {@variantrule Armor Class|XPHB} and saving throws and can sense the location of any {@condition Invisible|XPHB} creature that is also in the {@variantrule Bright Light|XPHB}.", "The rod's head stops glowing and the effect ends after 10 minutes or when a creature takes a {@action Magic|XPHB} action to pull the rod from the ground. Once used, this property can't be used again until the next dawn."]}], "light": [{"bright": 60, "dim": 120}]},
+]
+B76_STANDING = [
+    {"name": "Cloak of Protection", "source": "XDMG", "page": 245, "srd52": True, "basicRules2024": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "bonusAc": "+1", "bonusSavingThrow": "+1", "entries": ["You gain a +1 bonus to {@variantrule Armor Class|XPHB} and saving throws while you wear this cloak."]},
+    {"name": "Scarab of Protection", "source": "XDMG", "page": 302, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": True, "wondrous": True, "weight": 1, "bonusAc": "+1", "charges": 12, "entries": ["This beetle-shaped medallion provides three benefits while it is on your person.", {"type": "entries", "name": "Defense", "entries": ["You gain a +1 bonus to {@variantrule Armor Class|XPHB}."]}, {"type": "entries", "name": "Preservation", "entries": ["The scarab has 12 charges. If you fail a saving throw against a Necromancy spell or a harmful effect originating from an Undead, you can take a {@variantrule Reaction|XPHB} to expend 1 charge and turn the failed save into a successful one. The scarab crumbles into powder and is destroyed when its last charge is expended."]}, {"type": "entries", "name": "Spell Resistance", "entries": ["You have {@variantrule Advantage|XPHB} on saving throws against spells."]}]},
+    {"name": "Shield of the Cavalier", "source": "XDMG", "page": 304, "srd52": True, "basicRules2024": True, "baseItem": "shield|xphb", "type": "S|XPHB", "rarity": "very rare", "reqAttune": True, "weight": 6, "ac": 2, "bonusAc": "+2", "entries": ["While holding this Shield, you have a +2 bonus to {@variantrule Armor Class|XPHB}. This bonus is in addition to the Shield's normal bonus to AC."]},
+    {"name": "Stone of Good Luck", "alias": ["Luckstone"], "source": "XDMG", "page": 312, "srd52": True, "basicRules2024": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "bonusSavingThrow": "+1", "bonusAbilityCheck": "+1", "entries": ["While this polished agate is on your person, you gain a +1 bonus to ability checks and saving throws."]},
+    {"name": "Robe of Stars", "source": "XDMG", "page": 297, "srd52": True, "basicRules2024": True, "rarity": "very rare", "reqAttune": True, "wondrous": True, "bonusSavingThrow": "+1", "rechargeAmount": "{@dice 1d6}", "charges": 6, "entries": ["This black or dark-blue robe is embroidered with small white or silver stars. You gain a +1 bonus to saving throws while you wear it."]},
+    {"name": "Glamoured Studded Leather", "source": "XDMG", "page": 264, "srd52": True, "basicRules2024": True, "baseItem": "studded leather armor|xphb", "type": "LA|XPHB", "rarity": "rare", "weight": 13, "ac": 12, "bonusAc": "+1", "entries": ["While wearing this armor, you gain a +1 bonus to {@variantrule Armor Class|XPHB}. You can also take a {@variantrule Bonus Action|XPHB} to cause the armor to assume the appearance of a normal set of clothing or some other kind of armor. You decide what it looks like—including color, style, and accessories—but the armor retains its normal bulk and weight. The illusory appearance lasts until you use this property again or doff the armor."]},
+    {"name": "Ioun Stone, Protection", "source": "XDMG", "page": 273, "srd52": True, "basicRules2024": True, "rarity": "rare", "reqAttune": True, "wondrous": True, "bonusAc": "+1", "hasRefs": True, "entries": ["{#itemEntry Ioun Stone|XDMG}", "You gain a +1 bonus to {@variantrule Armor Class|XPHB} while this dusty-rose prism orbits your head."]},
+    {"name": "Black Dragon Scale Mail", "source": "XDMG", "page": 254, "srd52": True, "basicRules2024": True, "baseItem": "scale mail|xphb", "type": "MA|XPHB", "resist": ["acid"], "detail1": "black", "rarity": "very rare", "reqAttune": True, "weight": 45, "ac": 14, "bonusAc": "+1", "stealth": True, "hasRefs": True, "entries": ["{#itemEntry Dragon Scale Mail|XDMG}"]},
+    {"name": "Staff of Power", "source": "XDMG", "page": 308, "srd52": True, "basicRules2024": True, "type": "M|XPHB", "rarity": "very rare", "reqAttune": "by a sorcerer, warlock, or wizard", "reqAttuneTags": [{"class": "sorcerer"}, {"class": "warlock"}, {"class": "wizard"}], "weight": 4, "weaponCategory": "simple", "property": ["V|XPHB"], "mastery": ["Topple|XPHB"], "dmg1": "1d6", "dmgType": "B", "dmg2": "1d8", "bonusWeapon": "+2", "bonusSpellAttack": "+2", "bonusAc": "+2", "bonusSavingThrow": "+2", "recharge": "dawn", "rechargeAmount": "{@dice 2d8 + 4}", "charges": 20, "staff": True, "entries": ["This staff has 20 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you gain a +2 bonus to {@variantrule Armor Class|XPHB}, saving throws, and spell attack rolls."]},
+]
+B76_TEETH = {"name": "Teeth of Dahlver-Nar", "source": "TCE", "page": 135, "rarity": "artifact", "reqAttune": True, "wondrous": True, "bonusAc": "+2", "modifySpeed": {"static": {"fly": 30}}, "recharge": "dawn", "rechargeAmount": 8, "charges": 8, "entries": ["The Teeth of Dahlver-Nar are stories given form. They are a collection of teeth, each suggestive of wildly different origins and made from various materials. The collection rests within a leather pouch, stitched with images of heroes and whimsical creatures. Where the teeth fall, they bring legends to life.", {"type": "entries", "name": "Using the Teeth", "entries": ["While you are holding the pouch, you can use an action to draw one tooth. Roll on the Teeth of Dahlver-Nar table to determine which tooth you draw, and you can either sow the tooth or implant it (both of which are described later).", {"type": "table", "caption": "Teeth of Dahlver-Nar", "colLabels": ["d20", "Tale and Tooth", "Creatures Summoned", "Implanted Effect"], "colStyles": ["col-2 text-center", "col-2", "col-1", "col-7"], "rows": [["5", "Dooms of the Malpheggi (emerald lizardfolk fang)", "1 {@creature lizard queen||lizardfolk queen} and 4 {@creature lizardfolk}", "You gain reptilian scales, granting you a +2 bonus to your AC. Additionally, when you finish a long rest, you must succeed on a {@dc 15} Constitution saving throw or gain 1 level of {@condition exhaustion}."]]}]}]}
+# The templates two of them embed as "{#itemEntry …}": the Dragon Scale Mails'
+# bonus is stated only there.
+B76_ENTRIES = [
+    {"name": "Dragon Scale Mail", "source": "XDMG", "entriesTemplate": ["Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.", "While wearing this armor, you gain a +1 bonus to {@variantrule Armor Class|XPHB}, you have {@variantrule Advantage|XPHB} on saving throws against the breath weapons of Dragons, and you have {@variantrule Resistance|XPHB} to {{getFullImmRes item.resist}} damage.", "Additionally, you can focus your senses as a {@action Magic|XPHB} action to discern the distance and direction to the closest {{item.detail1}} dragon within 30 miles of yourself. This action can't be used again until the next dawn."]},
+    {"name": "Ioun Stone", "source": "XDMG", "entriesTemplate": ["Roughly marble sized, {@i Ioun Stones} are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of {@i Ioun Stones} exist, each type a distinct combination of shape and color.", "When you take a {@action Magic|XPHB} action to toss an {@i Ioun Stone} into the air, the stone orbits your head at a distance of {@dice 1d3} feet, conferring its benefit to you while doing so. You can have up to three {@i Ioun Stones} orbiting your head at the same time.", "Each {@i Ioun Stone} orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.", "As a {@action Utilize|XPHB} action, you can seize and stow any number of {@i Ioun Stones} orbiting your head. If your {@variantrule Attunement|XPHB} to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it."]},
+]
+_b76base = _tmpjson({'itemProperty': IB_PROPS, 'itemMastery': IB_MASTERY, 'baseitem': IB_BASE, 'itemEntry': B76_ENTRIES})
+_b76magic = _tmpjson({'item': B76_CONDITIONAL + B76_STANDING + [B76_TEETH]})
+_BP = getattr(C, '_BONUS_PROSE', None)
+if _BP is not None: _BP.clear()
+with C.statblock_ctx(C.load_item_index(_b76base, _b76magic)):
+    b76 = dict(_by_name(C.convert_items(_b76magic)), **_by_name(C.convert_items(_b76magic, book=TCE)))
+SIX = ('str', 'dex', 'con', 'int', 'wis', 'cha')
+def _fx(ac=0, sv=0):
+    return ([{'target': 'ac', 'value': ac}] if ac else []) + [{'target': 'save.' + a, 'value': sv} for a in SIX if sv]
+for name, needle in (('Quarterstaff of the Acrobat', 'you can take a Reaction to twirl the weapon around you, gaining a +5 bonus '
+                                                     'to your Armor Class against the triggering attack'),
+                     ('Arrow-Catching Shield', 'You gain a +2 bonus to Armor Class against ranged attack rolls while you wield this Shield'),
+                     ('Bracers of Defense', 'you gain a +2 bonus to Armor Class if you are wearing no armor and using no Shield'),
+                     ('Rod of Alertness', 'While in that Bright Light, you and your allies gain a +1 bonus to Armor Class and saving throws'),
+                     ('Teeth of Dahlver-Nar', 'Using the Teeth')):
+    e = b76.get(name, {})
+    ck('#76 %s: a conditional bonus is not a standing effect' % name, name in b76 and e.get('effects') == [], e.get('effects'))
+    ck('#76 ...and %s\'s prose still states it' % name, needle in e.get('description', ''), e.get('description', '')[:160])
+qa = b76.get('Quarterstaff of the Acrobat', {})
+ck('#76 the Quarterstaff keeps its own +2, on its weapon', qa.get('weapon', {}).get('atkMisc') == 2
+   and qa.get('weapon', {}).get('dmgMisc') == 2, qa.get('weapon'))
+ck('#76 the Arrow-Catching Shield is still a +2 shield: its armor line, which AC reads', 
+   b76.get('Arrow-Catching Shield', {}).get('description', '').startswith('AC +2 (Shield)'),
+   b76.get('Arrow-Catching Shield', {}).get('description', '')[:40])
+for name, want in (('Cloak of Protection', _fx(1, 1)), ('Scarab of Protection', _fx(1)), ('Shield of the Cavalier', _fx(2)),
+                   ('Stone of Good Luck', _fx(0, 1)), ('Robe of Stars', _fx(0, 1)), ('Glamoured Studded Leather', _fx(1)),
+                   ('Ioun Stone, Protection', _fx(1)), ('Black Dragon Scale Mail', _fx(1))):
+    ck('#76 %s: a standing bonus stays an effect' % name, b76.get(name, {}).get('effects') == want, b76.get(name, {}).get('effects'))
+sop = [e for e in b76.get('Staff of Power', {}).get('effects', []) if e['target'] == 'ac' or e['target'].startswith('save.')]
+ck('#76 Staff of Power: its standing AC and saving-throw bonus stay effects', sop == _fx(2, 2), sop)
+ck('#76 a bonus stated only in an embedded {#itemEntry} template is read from it (Dragon Scale Mail)',
+   b76.get('Black Dragon Scale Mail', {}).get('effects') == _fx(1), b76.get('Black Dragon Scale Mail', {}).get('effects'))
+ck('#76 ...though its description is left exactly as before',
+   b76.get('Black Dragon Scale Mail', {}).get('description', '').endswith('{#itemEntry Dragon Scale Mail|XDMG}'),
+   b76.get('Black Dragon Scale Mail', {}).get('description', '')[-60:])
+
+# The reader itself, on the sentences above and the shapes it must not misread.
+_rd = getattr(C, '_bonus_reading', None)
+def rd(text, key, n):
+    try:
+        return _rd(text, key, n) if _rd else ('no _bonus_reading',)
+    except Exception as e:          # a key the reader does not know yet is a FAIL, not a crash
+        return ('error', repr(e))
+ck('#76 "while you wear this cloak" is standing', rd('You gain a +1 bonus to Armor Class and saving throws while you wear this cloak.', 'ac', 1)[0] is True,
+   rd('You gain a +1 bonus to Armor Class and saving throws while you wear this cloak.', 'ac', 1))
+ck('#76 "while this … is on your person" and "orbits your head" are standing',
+   rd('While this polished agate is on your person, you gain a +1 bonus to ability checks and saving throws.', 'saves', 1)[0] is True
+   and rd('You gain a +1 bonus to Armor Class while this dusty-rose prism orbits your head.', 'ac', 1)[0] is True)
+ck('#76 a clause after the bonus does not taint it (Dragon Scale Mail\'s "saving throws against the breath weapons")',
+   rd('While wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath '
+      'weapons of Dragons, and you have Resistance to acid damage.', 'ac', 1)[0] is True)
+ck('#76 "against" right after the bonus narrows it', rd('You gain a +2 bonus to Armor Class against ranged attack rolls while you wield this Shield.', 'ac', 2)[:2] == (False, 'against'),
+   rd('You gain a +2 bonus to Armor Class against ranged attack rolls while you wield this Shield.', 'ac', 2))
+ck('#76 "until the start of your next turn" is conditional',
+   rd('You and all affected creatures gain a +1 bonus to AC until the start of your next turn.', 'ac', 1)[0] is False)
+ck('#76 one named save is not all six', rd('While attuned to this device, you have a +1 bonus to Intelligence saving throws.', 'saves', 1)[0] is None,
+   rd('While attuned to this device, you have a +1 bonus to Intelligence saving throws.', 'saves', 1))
+ck('#76 no sentence stating the bonus: not an effect, and said', rd('A pouch of teeth. [Table: Teeth of Dahlver-Nar]', 'ac', 2)[0] is None)
+
+# never quiet: every bonus kept out of the effects is listed, with the word that decided it
+got = sorted((n, f) for n, f, v, why in (_BP or []))
+ck('#76 the five bonuses kept in prose are recorded by item and field',
+   got == [('Arrow-Catching Shield', 'bonusAc'), ('Bracers of Defense', 'bonusAc'), ('Quarterstaff of the Acrobat', 'bonusAc'),
+           ('Rod of Alertness', 'bonusAc'), ('Rod of Alertness', 'bonusSavingThrow'), ('Teeth of Dahlver-Nar', 'bonusAc')], got)
+said = []
+getattr(C, '_bonus_prose_notes', lambda say: None)(said.append)
+ck('#76 ...and reported one line per item, naming the field and the reason',
+   len(said) == 5 and any('Quarterstaff of the Acrobat' in s and 'bonusAc +5' in s and 'reaction' in s.lower() for s in said)
+   and any('Teeth of Dahlver-Nar' in s and 'no sentence' in s for s in said), said)
+if _BP is not None: _BP.clear()
+
+# ...at the end of every kind of run that converts items
+_dump = tempfile.mkdtemp()
+json.dump({'itemProperty': IB_PROPS, 'itemMastery': IB_MASTERY, 'baseitem': IB_BASE, 'itemEntry': B76_ENTRIES},
+          open(os.path.join(_dump, 'items-base.json'), 'w'))
+json.dump({'item': B76_CONDITIONAL + B76_STANDING + [B76_TEETH]}, open(os.path.join(_dump, 'items.json'), 'w'))
+_out = tempfile.mkdtemp()
+for label, argv, outfile, who, fine in (
+        ('`items`', ['items', os.path.join(_dump, 'items.json'), '-o', os.path.join(_out, 'i.json')], 'i.json',
+         'Quarterstaff of the Acrobat', 'Black Dragon Scale Mail'),
+        ('all', ['all', _dump, '-o', os.path.join(_out, 'all')], os.path.join('all', 'items-magic.json'),
+         'Quarterstaff of the Acrobat', 'Black Dragon Scale Mail'),
+        ('supplement', ['supplement', _dump, '-o', os.path.join(_out, 'sup'), '--book', 'TCE'],
+         os.path.join('sup', 'items-magic.json'), 'Teeth of Dahlver-Nar', None)):
+    r = subprocess.run([sys.executable, CONV] + argv, capture_output=True, text=True)
+    ck('#76 %s notes the bonus it kept in prose' % label, 'note:' in r.stdout and who in r.stdout
+       and 'not an effect' in r.stdout, r.stdout[-800:] + r.stderr[-300:])
+    try:
+        got = _by_name(json.load(open(os.path.join(_out, outfile), encoding='utf-8')))
+    except (OSError, ValueError) as e:
+        got = {'error': str(e)}
+    ck('#76 %s leaves %s with no effect' % (label, who), got.get(who, {}).get('effects') == [], got.get('error') or got.get(who))
+    if fine:
+        ck('#76 %s reads the Dragon Scale Mail\'s bonus through its template' % label,
+           got.get(fine, {}).get('effects') == _fx(1), got.get(fine))
+shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True)
+
+# ---- 29. an item's spell attack and spell save DC bonus reach the sheet (#77)
+# 5e-tools' bonusSpellAttack / bonusSpellSaveDc were never read, so the Moon
+# Sickles, Staff of Power, the Wands of the War Mage and Tasha's spellcasting
+# focuses carried no effect at all. They become `spell.attack` / `spell.dc`
+# effects through the same sentence reader as AC and saves (#76). A bonus the
+# book limits to one class's spells ("of your druid and ranger spells") is
+# applied to the character's spellcasting, which is the only one the sheet has;
+# the class stays in the prose and in the item's attunement. Real shapes.
+B77 = [
+    {"name": "+2 Moon Sickle", "source": "TCE", "page": 133, "baseItem": "sickle|PHB", "type": "M", "rarity": "rare", "reqAttune": "by a druid or ranger", "weight": 2, "weaponCategory": "simple", "property": ["L"], "dmg1": "1d4", "dmgType": "S", "bonusWeapon": "+2", "bonusSpellAttack": "+2", "bonusSpellSaveDc": "+2", "focus": ["Druid", "Ranger"], "entries": ["This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +2 bonus to attack and damage rolls made with it, and you gain a +2 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.", "When you cast a spell that restores hit points, you can roll a {@dice d4} and add the number rolled to the amount of hit points restored, provided you are holding the sickle."]},
+    {"name": "+1 Wand of the War Mage", "source": "XDMG", "page": 322, "srd52": True, "basicRules2024": True, "type": "WD|XDMG", "rarity": "uncommon", "reqAttune": "by a spellcaster", "weight": 1, "bonusSpellAttack": "+1", "entries": ["While holding this wand, you gain a +1 bonus to spell attack rolls. In addition, you ignore {@variantrule Cover|XPHB|Half Cover} when making a spell attack roll."]},
+    {"name": "Robe of the Archmagi", "source": "XDMG", "page": 298, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": "by a sorcerer, warlock, or wizard", "wondrous": True, "bonusSpellAttack": "+2", "bonusSpellSaveDc": "+2", "entries": ["This elegant garment is made from exquisite cloth and adorned with runes.", "You gain these benefits while wearing the robe.", {"type": "entries", "name": "Armor", "entries": ["If you aren't wearing armor, your base {@variantrule Armor Class|XPHB} is 15 plus your Dexterity modifier."]}, {"type": "entries", "name": "Magic Resistance", "entries": ["You have {@variantrule Advantage|XPHB} on saving throws against spells and other magical effects."]}, {"type": "entries", "name": "War Mage", "entries": ["Your spell save DC and spell attack bonus each increase by 2."]}]},
+    {"name": "Staff of the Magi", "source": "XDMG", "page": 310, "srd52": True, "basicRules2024": True, "type": "M|XPHB", "rarity": "legendary", "reqAttune": "by a sorcerer, warlock, or wizard", "weight": 4, "weaponCategory": "simple", "property": ["V|XPHB"], "mastery": ["Topple|XPHB"], "dmg1": "1d6", "dmgType": "B", "dmg2": "1d8", "bonusWeapon": "+2", "bonusSpellAttack": "+2", "recharge": "dawn", "rechargeAmount": "{@dice 4d6 + 2}", "charges": 50, "staff": True, "entries": ["This staff has 50 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls."]},
+    {"name": "Talisman of Pure Good", "source": "XDMG", "page": 314, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": "by a cleric or paladin", "wondrous": True, "weight": 1, "bonusSpellAttack": "+2", "charges": 7, "entries": ["This talisman is a mighty symbol of goodness. A Fiend or an Undead that touches the talisman takes {@damage 8d6} Radiant damage and takes the damage again each time it ends its turn holding or carrying the talisman.", {"type": "entries", "name": "Holy Symbol", "entries": ["You can use the talisman as a Holy Symbol. You gain a +2 bonus to spell attack rolls while you wear or hold it."]}, {"type": "entries", "name": "Pure Rebuke", "entries": ["The talisman has 7 charges. While wearing or holding the talisman, you can take a {@action Magic|XPHB} action to expend 1 charge and target one creature you can see on the ground within 120 feet of yourself. A flaming fissure opens under the target, and the target makes a {@dc 20} Dexterity saving throw. If the target is a Fiend or an Undead, it has {@variantrule Disadvantage|XPHB} on the save. On a failed save, the target falls into the fissure and is destroyed, leaving no remains. On a successful save, the target isn't cast into the fissure but takes {@damage 4d6} Psychic damage from the ordeal. In either case, the fissure then closes, leaving no trace of its existence. When you expend the last charge, the talisman disperses into motes of golden light and is destroyed."]}]},
+    {"name": "Reveler's Concertina", "source": "TCE", "page": 134, "type": "INS", "rarity": "rare", "reqAttune": "by a bard", "wondrous": True, "bonusSpellSaveDc": "+2", "entries": ["While holding this concertina, you gain a +2 bonus to the saving throw DC of your bard spells.", "As an action, you can use the concertina to cast {@spell Otto's irresistible dance} from the item. This property of the concertina can't be used again until the next dawn."]},
+    {"name": "+1 Arcane Grimoire", "source": "TCE", "page": 120, "type": "SCF", "rarity": "uncommon", "reqAttune": "by a wizard", "wondrous": True, "weight": 3, "bonusSpellAttack": "+1", "bonusSpellSaveDc": "+1", "focus": ["Wizard"], "entries": ["While you are holding this leather-bound book, you can use it as a spellcasting focus for your wizard spells, and you gain a +1 bonus to spell attack rolls and to the saving throw DCs of your wizard spells.", "You can use this book as a spellbook. In addition, when you use your Arcane Recovery feature, you can increase the number of spell slot levels you regain by 1."]},
+    {"name": "+1 All-Purpose Tool", "source": "TCE", "page": 119, "type": "SCF", "rarity": "uncommon", "reqAttune": "by an artificer", "wondrous": True, "bonusSpellAttack": "+1", "bonusSpellSaveDc": "+1", "focus": ["Artificer"], "entries": ["This simple screwdriver can transform into a variety of tools; as an action, you can touch the item and transform it into any type of artisan's tool of your choice (see the \"Equipment\" chapter in the {@book Player's Handbook|PHB} for a list of {@item artisan's tools|PHB}). Whatever form the tool takes, you are proficient with it.", "While holding this tool, you gain a +1 bonus to the spell attack rolls and the saving throw DCs of your artificer spells.", "As an action, you can focus on the tool to channel your creative forces. Choose a cantrip that you don't know from any class list. For 8 hours, you can cast that cantrip, and it counts as an artificer cantrip for you. Once this property is used, it can't be used again until the next dawn."]},
+]
+_b77 = _tmpjson({'item': B77 + [x for x in B76_STANDING if x['name'] == 'Staff of Power']})
+_BP = getattr(C, '_BONUS_PROSE', None)
+if _BP is not None: _BP.clear()
+with C.statblock_ctx(C.load_item_index(_b76base, _b77)):
+    b77 = dict(_by_name(C.convert_items(_b77)), **_by_name(C.convert_items(_b77, book=TCE)))
+def _sp(atk=0, dc=0):
+    return ([{'target': 'spell.attack', 'value': atk}] if atk else []) + ([{'target': 'spell.dc', 'value': dc}] if dc else [])
+for name, want, why in (('+2 Moon Sickle', _sp(2, 2), '"…spell attack rolls and the saving throw DCs of your druid and ranger spells"'),
+                        ('+1 Wand of the War Mage', _sp(1), '"…a +1 bonus to spell attack rolls"'),
+                        ('Robe of the Archmagi', _sp(2, 2), '"Your spell save DC and spell attack bonus each increase by 2"'),
+                        ('Staff of the Magi', _sp(2), 'spell attack rolls only, no DC'),
+                        ('Talisman of Pure Good', _sp(2), '"…while you wear or hold it"'),
+                        ("Reveler's Concertina", _sp(0, 2), 'the DC only'),
+                        ('+1 Arcane Grimoire', _sp(1, 1), '"…and to the saving throw DCs of your wizard spells"'),
+                        ('+1 All-Purpose Tool', _sp(1, 1), '"…to the spell attack rolls and the saving throw DCs"'),
+                        ('Staff of Power', _fx(2, 2) + _sp(2), 'AC, saves and spell attack rolls, while holding it')):
+    e = b77.get(name, {})
+    ck('#77 %s: %s' % (name, why), e.get('effects') == want, e.get('effects'))
+ck('#77 the Moon Sickle keeps its own +2 on its weapon too',
+   b77.get('+2 Moon Sickle', {}).get('weapon', {}).get('atkMisc') == 2, b77.get('+2 Moon Sickle', {}).get('weapon'))
+ck('#77 ...and its class limit is still in its description',
+   'druid and ranger spells' in b77.get('+2 Moon Sickle', {}).get('description', ''), b77.get('+2 Moon Sickle', {}).get('description', '')[:200])
+ck('#77 every spell bonus here is standing: none kept in prose', not (_BP or []), list(_BP or []))
+ck('#77 a spell bonus the book conditions is not an effect (the 2014 Talisman: "If you are a good cleric or paladin")',
+   rd('If you are a good cleric or paladin, you can use the talisman as a holy symbol, and you gain a +2 bonus to spell '
+      'attack rolls while you wear or hold it.', 'spell.attack', 2)[0] is False,
+   rd('If you are a good cleric or paladin, you can use the talisman as a holy symbol, and you gain a +2 bonus to spell '
+      'attack rolls while you wear or hold it.', 'spell.attack', 2))
+ck('#77 a weapon\'s "+2 bonus to attack rolls" is not a spell attack bonus',
+   rd('You have a +2 bonus to attack rolls and damage rolls made with this magic weapon.', 'spell.attack', 2)[0] is None)
+if _BP is not None: _BP.clear()
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

@@ -5,7 +5,9 @@ function attackNumbers(a){
   if(a.ability==="finesse"){const s=Math.floor((abilFinal("str",c)-10)/2), dx=Math.floor((abilFinal("dex",c)-10)/2);abil=Math.max(s,dx);abilName=dx>=s?"DEX":"STR";}
   else if(a.ability&&a.ability!=="none"){abil=Math.floor((abilFinal(a.ability,c)-10)/2);abilName=a.ability.toUpperCase();}
   const kind=a.kind==="ranged"?"ranged":"melee";
-  const atkFx=sumFx("attack",c)+sumFx("attack."+kind,c);
+  /* a spell attack row also takes the spell attack bonus (spell.attack), as
+     spellAtkBonus() does; a weapon's row never does (#77) */
+  const atkFx=sumFx("attack",c)+sumFx("attack."+kind,c)+(a.source==="spell"&&!a.save?sumFx("spell.attack",c):0);
   const dmgFx=sumFx("damage",c)+sumFx("damage."+kind,c);
   const toHit=abil+(a.proficient?pb:0)+num(a.atkMisc)+atkFx;
   const dmgBonus=(a.addAbilityDamage?abil:0)+num(a.dmgMisc)+dmgFx;
@@ -52,8 +54,12 @@ function carryAttackLinks(prev,rec){
   return rec;
 }
 /* ---- spell casting, attacks, and active spells ---- */
-function spellDC(){const c=contributions();const sa=character.spellAbility;if(!sa)return null;return 8+pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2);}
-function spellAtkBonus(){const c=contributions();const sa=character.spellAbility;if(!sa)return null;return pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2);}
+/* The spell save DC and spell attack bonus, each with its effects (`spell.dc`,
+   `spell.attack`: an equipped Staff of Power or Moon Sickle, #77). Every place
+   that shows either reads these: the Spellcasting card (recompute()), save rows,
+   the cast dialog and the print sheet. `c` is optional, as for effMaxHP(). */
+function spellDC(c){c=c||contributions();const sa=character.spellAbility;if(!sa)return null;return 8+pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2)+sumFx("spell.dc",c);}
+function spellAtkBonus(c){c=c||contributions();const sa=character.spellAbility;if(!sa)return null;return pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2)+sumFx("spell.attack",c);}
 function parseDurationSec(str){
   if(!str)return null;const s=String(str).toLowerCase();let m;
   if(/instant/.test(s))return 0;
@@ -334,13 +340,14 @@ function renderAttacks(){
   /* Favorites first, in the order they were added — the list is short and hand
      built, so leaving it unsorted keeps the row where the player put it. */
   const favs=shown.filter(a=>a.fav), rest=shown.filter(a=>!a.fav);
+  const dcFx=sumFx("spell.dc",contributions());
   const rows=(list)=>list.forEach(a=>{
     const ic=!!atkCol().items[a.id], isSpell=a.source==="spell", save=a.save;
     const n=attackNumbers(a);
     const dmg=attackDamageStr(a,save?0:n.dmgBonus);
     const typeLabel=save?"Spell save":(isSpell?`Spell · ${n.kind==="ranged"?"Ranged":"Melee"}`:(n.kind==="ranged"?"Ranged":"Melee"));
     const dc=spellDC();
-    const hitCell=save?`<span class="atk-hit">DC ${dc!=null?dc:"—"} ${esc((save.ability||"").toUpperCase())}</span>`
+    const hitCell=save?`<span class="atk-hit${dcFx?" fx-on":""}">DC ${dc!=null?dc:"—"} ${esc((save.ability||"").toUpperCase())}</span>`
                        :`<span class="atk-hit ${n.atkFx?"fx-on":""}" data-atk-info="${esc(a.id)}">${fmt(n.toHit)} to hit</span>`;
     const d=document.createElement("div");d.className="item fitem";
     d.innerHTML=`<div class="top">
@@ -444,7 +451,8 @@ function openAttackBreakdown(id){
   b+=row((n.abilName||"No ability")+" modifier",n.abil);
   if(a.proficient)b+=row("Proficiency bonus",pb);
   if(num(a.atkMisc))b+=row("Extra to-hit (manual)",num(a.atkMisc));
-  c.filter(x=>x.target==="attack"||x.target==="attack."+n.kind).forEach(x=>b+=row(x.source,x.value));
+  const spellAtk=a.source==="spell"&&!a.save;
+  c.filter(x=>x.target==="attack"||x.target==="attack."+n.kind||(spellAtk&&x.target==="spell.attack")).forEach(x=>b+=row(x.source,x.value));
   b+=`<div style="display:flex;justify-content:space-between;border-top:2px solid var(--line);margin-top:6px;padding-top:6px"><b>To hit</b><b>${fmt(n.toHit)}</b></div>`;
   b+=`<p style="margin:12px 0 4px"><b>Damage:</b> ${esc(attackDamageStr(a,n.dmgBonus)||"—")}</p>`;
   const dc=c.filter(x=>x.target==="damage"||x.target==="damage."+n.kind);

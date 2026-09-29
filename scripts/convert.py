@@ -230,7 +230,8 @@ def _formula_text(node):
 # "The magic blade has the following traits:" is followed by nothing else, so
 # dropping the node dropped the Psychic Blade's damage, properties and mastery.
 # The same index names weapon properties and masteries for convert_items() (#72).
-_SB_INDEX = None   # (items by (name, source), property names by abbreviation, mastery names)
+_SB_INDEX = None   # (items by (name, source), property names by abbreviation, mastery names,
+                   #  itemEntry templates by (name, source))
 
 @contextlib.contextmanager
 def statblock_ctx(index):
@@ -261,8 +262,10 @@ def _weapon_defs(d):
 
 def load_item_index(*paths):
     """Items from 5e-tools item files (items-base.json, items.json), keyed by
-    (lower-case name, SOURCE), plus the property and mastery names they define."""
-    items, props, masteries = {}, {}, {}
+    (lower-case name, SOURCE), plus the property and mastery names they define,
+    plus the `itemEntry` templates an item embeds as "{#itemEntry Name|SRC}"
+    (only items-base.json has them; _item_bonus_text() reads them)."""
+    items, props, masteries, templates = {}, {}, {}, {}
     for p in paths:
         if not p:
             continue
@@ -272,7 +275,10 @@ def load_item_index(*paths):
         for it in (d.get('baseitem') or []) + (d.get('item') or []):
             if isinstance(it, dict) and it.get('name'):
                 items[(str(it['name']).lower(), str(it.get('source') or '').upper())] = it
-    return items, props, masteries
+        for e in d.get('itemEntry') or []:
+            if isinstance(e, dict) and e.get('name'):
+                templates[(str(e['name']).lower(), str(e.get('source') or '').upper())] = e.get('entriesTemplate') or []
+    return items, props, masteries, templates
 
 # Weapon property and mastery codes nothing defines, as (kind, code) -> the items
 # carrying them. convert_items() once named properties only from the file it was
@@ -729,19 +735,130 @@ def _ival(x):
     try: return int(str(x).replace('+', '').strip())
     except Exception: return 0
 
-def _item_effects(it):
-    """The item's bonuses that apply to the whole character while it is equipped.
+# ---------------------------------------------------------------- item bonuses
+# 5e-tools tags an item's bonusAc / bonusSavingThrow / bonusSpellAttack /
+# bonusSpellSaveDc for its search filters, whether the book gives the bonus all
+# the time or only in a moment. An effect
+# applies whenever the item is equipped, so a conditional one written as an
+# effect is simply wrong: Quarterstaff of the Acrobat's +5 is a Reaction against
+# one attack, once per rest, and read AC +5 at all times; the Arrow-Catching
+# Shield's +2 is against ranged attacks only; the Rod of Alertness's is an aura
+# it sheds once planted. No field in the dump tells them apart -- that Shield and
+# the Shield of the Cavalier carry the same `"bonusAc": "+2"` -- so the converter
+# reads the sentence that states the bonus (#76). It becomes an effect only when
+# that sentence names no condition beyond wearing, holding or carrying the item.
+# Anything else stays in the prose, as the numeric-only rule keeps every other
+# conditional, and the run lists it (_bonus_prose_notes()).
+_BONUS_LEAD = r'\+%d bonus to '
+_BONUS_MID = r'(?:(?!\+\d)[^.;\n])*?'   # the words between: never across another "+N" or a sentence
+_BONUS_PHRASES = {
+    'ac': [_BONUS_LEAD + _BONUS_MID + r'\b(?:Armor Class|AC)\b'],
+    # all six saves: "saving throws" alone or after a list ("AC, saving throws", "checks and
+    # saving throws", "all saving throws") -- never one named save or death saves
+    'saves': [_BONUS_LEAD + r'(?:' + _BONUS_MID + r'(?:,|\band|\ball|\bto)\s+)?saving throws\b'],
+    # "+2 bonus to spell attack rolls", or the Robe of the Archmagi's "Your spell save DC and
+    # spell attack bonus each increase by 2" (#77). "of your druid and ranger spells" is no
+    # condition: the sheet has one spellcasting ability, and the class is the attunement's
+    'spell.attack': [_BONUS_LEAD + _BONUS_MID + r'\bspell attack rolls?\b',
+                     r'\bspell attack (?:bonus|modifier)\b' + _BONUS_MID + r'\bincreases? by %d\b'],
+    'spell.dc': [_BONUS_LEAD + _BONUS_MID + r'\b(?:spell save DCs?|spell saving throw DCs?|saving throw DCs?)\b',
+                 r'\bspell save DC\b' + _BONUS_MID + r'\bincreases? by %d\b'],
+}
+# the conditions an equipped item always meets
+_BONUS_HELD = re.compile(
+    r"\bwhile (?:you (?:are )?|you're )?(?:wear(?:ing)?|hold(?:ing)?|wield(?:ing)?|carry(?:ing)?|attuned)\b"
+    r"(?: or (?:wear(?:ing)?|hold(?:ing)?|wield(?:ing)?|carry(?:ing)?))?"
+    r"|\bwhile (?:it|this|the)\b[^,;]*?\b(?:is on your person|orbits your head)", re.I)
+# ...and the words that make a bonus conditional once those are set aside
+_BONUS_CONDITION = re.compile(
+    r"\b(?:reaction|when|whenever|if|unless|until|against|while|as long as|for every|allies|creatures?|once|each time)\b", re.I)
+# where the bonus's own clause ends: the next clause is a different benefit
+# ("…+1 bonus to AC, you have Advantage on saving throws against…")
+_BONUS_CLAUSE_END = re.compile(r"[,;]| and (?:you|can|to)\b")
+_SENTENCES = re.compile(r'(?<=[.!?])\s+|\n')
+
+def _bonus_reading(text, key, n):
+    """How `text` states a +n bonus to `key` ('ac', 'saves', 'spell.attack', 'spell.dc'):
+    (True, '')                  standing -- the sentence names no condition beyond
+                                wearing, holding or carrying the item;
+    (False, words)              conditional -- `words` are what made it so;
+    (None, 'no sentence …')     nothing states it: a table row, another wording,
+                                one save named alone.
+    The span read is the sentence up to the end of the bonus's own clause, so a
+    later clause ("you have Advantage on saving throws against …") is not it."""
+    for sent in _SENTENCES.split(text or ''):
+        for pat in _BONUS_PHRASES[key]:
+            m = re.search(pat % n, sent, re.I)
+            if not m:
+                continue
+            end = _BONUS_CLAUSE_END.search(sent, m.end())
+            span = sent[:end.start() if end else len(sent)]
+            words = []
+            for w in _BONUS_CONDITION.findall(_BONUS_HELD.sub(' ', span)):
+                if w.lower() not in [x.lower() for x in words]:
+                    words.append(w)
+            return (False, ', '.join(words)) if words else (True, '')
+    return (None, 'no sentence states it')
+
+_ITEM_ENTRY_TAG = re.compile(r'\{#itemEntry ([^|}]+)(?:\|([^}]*))?\}')
+
+def _template_text(entries):
+    out = []
+    for e in entries or []:
+        if isinstance(e, str):
+            out.append(strip_tags(e))
+        elif isinstance(e, dict):
+            out.extend(_template_text(e.get('entries') or e.get('items') or []))
+    return out
+
+def _item_bonus_text(prose):
+    """The item's prose with each "{#itemEntry Name|SRC}" replaced by the
+    template's text, for _bonus_reading() only: the ten Dragon Scale Mails state
+    their +1 nowhere else. (The description still carries the tag as it stands.)"""
+    tmpl = _SB_INDEX[3] if _SB_INDEX and len(_SB_INDEX) > 3 else {}
+    def sub(m):
+        t = tmpl.get((m.group(1).strip().lower(), (m.group(2) or 'DMG').strip().upper()))
+        return '\n'.join(_template_text(t)) if t else m.group(0)
+    return _ITEM_ENTRY_TAG.sub(sub, prose or '')
+
+# (item, 5e-tools field, value, why) for every tagged bonus kept in the prose
+_BONUS_PROSE = []
+_BONUS_FIELDS = (('bonusAc', 'ac', ('ac',)),
+                 ('bonusSavingThrow', 'saves', tuple('save.' + a for a in ('str', 'dex', 'con', 'int', 'wis', 'cha'))),
+                 ('bonusSpellAttack', 'spell.attack', ('spell.attack',)),
+                 ('bonusSpellSaveDc', 'spell.dc', ('spell.dc',)))
+
+def _bonus_prose_notes(say):
+    by = collections.OrderedDict()
+    for name, field, v, why in _BONUS_PROSE:
+        by.setdefault(name, []).append('%s %+d (%s)' % (field, v, why if why.startswith('no ') else "'%s'" % why))
+    for name in sorted(by):
+        say('%s: %s kept in prose, not an effect' % (name, ', '.join(by[name])))
+
+def _item_effects(it, prose=''):
+    """The item's bonuses that apply to the whole character while it is equipped:
+    bonusAc as `ac`, bonusSavingThrow as the six `save.*`, bonusSpellAttack as
+    `spell.attack` and bonusSpellSaveDc as `spell.dc` (#77), each only when its
+    sentence in `prose` states it standing (_bonus_reading(), #76); the rest are
+    recorded in _BONUS_PROSE and stay in the prose.
     Never bonusWeapon, bonusWeaponAttack or bonusWeaponDamage: in 5e-tools those
     are rolls made with a weapon -- nearly always one (the item itself, a coated
     weapon, bows, unarmed strikes) -- and an `attack`/`damage` effect reaches
     every attack, spell rows included. A weapon carries its bonus as
     weapon.atkMisc/dmgMisc (see convert_items()); anything else keeps it in its
     prose (#74)."""
+    text = _item_bonus_text(prose)
     fx = []
-    if it.get('bonusAc'): fx.append(('ac', _ival(it['bonusAc'])))
-    if it.get('bonusSavingThrow'):
-        v = _ival(it['bonusSavingThrow']); fx += [('save.' + a, v) for a in ('str','dex','con','int','wis','cha')]
-    return [{'target': t, 'value': v} for t, v in fx if v]
+    for field, key, targets in _BONUS_FIELDS:
+        v = _ival(it.get(field))
+        if not v:
+            continue
+        standing, why = _bonus_reading(text, key, v)
+        if standing:
+            fx += [(t, v) for t in targets]
+        else:
+            _BONUS_PROSE.append((str(it.get('name') or ''), field, v, why))
+    return [{'target': t, 'value': v} for t, v in fx]
 
 def _coarse(tcode, it):
     if it.get('wondrous'): return 'Wondrous Item'
@@ -830,7 +947,7 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
                'rarity': _RAR.get(it.get('rarity', 'none'), (it.get('rarity') or 'Mundane').title()),
                'weight': it.get('weight', None), 'cost': _cost(it.get('value')),
                'attune': attune, 'attuneNote': (strip_tags(ra) if isinstance(ra, str) and ra not in ('optional',) else ''),
-               'description': desc.strip(' \u00b7.'), 'effects': _item_effects(it)}
+               'description': desc.strip(' \u00b7.'), 'effects': _item_effects(it, prose)}
         rec = {k: v for k, v in rec.items() if v not in (None, '', False)}
         rec.setdefault('effects', [])
         if weapon_data: rec['weapon'] = weapon_data
@@ -2124,6 +2241,7 @@ def _run_supplement(a):
     emit(_pack(bk, 'features', feats_out, stem='features', version=1), 'features', 'features')
 
     _write_tables(tbls, os.path.join(outdir, 'tables.json'), book=bk)
+    _bonus_prose_notes(lambda msg: print('  note: ' + msg))
     _weapon_miss_warnings(warn)
     _cell_miss_warnings(warn)
     _entry_miss_warnings(warn)
@@ -2251,6 +2369,7 @@ def main():
         xphb = [f for f in ofs if f.get('source') == 'XPHB']
         if xphb: _write(_pack(None, 'features', _optfeat_features(xphb, tables=tbls, overlay=overlay), stem='features', version=1), os.path.join(outdir, 'features.json'))
         _write_tables(tbls, os.path.join(outdir, 'tables.json'))
+        _bonus_prose_notes(lambda msg: print('  note: ' + msg))
         _weapon_miss_warnings(warn)
         _cell_miss_warnings(warn)
         _entry_miss_warnings(warn)
@@ -2292,6 +2411,7 @@ def main():
         _write(convert_classes(files, overlay=overlay, include_legacy=a.include_legacy,
                                spell_notes=not a.no_spell_notes, tables=tbls,
                                optfeats=load_optfeats(a.optfeatures)), a.out)
+    _bonus_prose_notes(lambda msg: print('  note: ' + msg))
     _weapon_miss_warnings(lambda msg: print('  WARNING: ' + msg))
     if a.tables:
         _write_tables(tbls, a.tables)

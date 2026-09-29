@@ -17,7 +17,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'grantItemByName',
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag','runChoices',
   'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote',
-  'attackNumbers','addLibraryItems',
+  'attackNumbers','addLibraryItems','contributions','sumFx','armorAC','spellDC','spellAtkBonus',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -506,6 +506,94 @@ ck('R7 ...and a stamped one round-trips',
   X.applyUpdates(row?[row]:[]);
   ck('#75 an attack the player edited is left as they set it', ch.attacks.length===1&&ch.attacks[0].ability==='str',
      ch.attacks);
+  X.resetRules();
+}
+
+/* #76 — Quarterstaff of the Acrobat shipped its once-per-rest Reaction (+5 AC
+   against one attack) as a standing `ac` effect. The fixed pack carries no
+   effect; a sheet holds a COPY, so it keeps the +5 until the rules-update tool
+   rewrites it, never on load. The "new" entry is the shipped one, so this fails
+   until the pack is fixed; the "old" one is that entry with the effect it used
+   to carry. AC is read the way recompute() paints it: armorAC() + `ac` effects. */
+{
+  const shipped=JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','5e2024','items-magic.json'),'utf8'))
+    .items.find(x=>x.name==='Quarterstaff of the Acrobat');
+  const oldDef=Object.assign(JSON.parse(JSON.stringify(shipped)),{effects:[{target:'ac',value:5}]});
+  const acNow=()=>{const c=X.contributions();return X.armorAC(c).base+X.sumFx('ac',c);};
+  const oldSheet=()=>{
+    X.resetRules(); X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(oldDef))]},'5e.json');
+    const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.abilities.dex=14; ch.level=1;
+    X.character=ch; X.activeId=ch.id;
+    X.addLibraryItems(X.rules.items.slice(),null,null,1);           /* the item finder: equipped */
+    return ch;
+  };
+  const fix=()=>{ X.resetRules(); X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(shipped))]},'5e.json'); };
+  let ch=oldSheet(), st=ch.inventory[0];
+  ck('#76 an old sheet shows the bug: the staff equipped reads AC 17 (12 + 5)', st.equipped===true&&acNow()===17, acNow());
+  st.qty=1; st.fav=true; const atkId=ch.attacks[0].id;
+  fix();
+  let row=X.diffCharacter().rows.find(r=>r.name==='Quarterstaff of the Acrobat');
+  ck('#76 the fixed pack is offered as one changed row: effects, and nothing else',
+     !!row&&row.type==='changed'&&row.fields.join()==='effects', X.diffCharacter().rows.map(r=>r.name+':'+r.type+':'+r.fields));
+  ck('#76 ...ticked, since nobody edited the copy', !!row&&row.apply===true&&row.edited===false, row&&[row.apply,row.edited]);
+  X.applyUpdates(row?[row]:[]);
+  ck('#76 applying it removes the standing +5', Array.isArray(st.effects)&&st.effects.length===0&&acNow()===12, [st.effects,acNow()]);
+  ck('#76 ...keeps the weapon\'s own +2 and the player\'s numbers',
+     st.weapon.atkMisc===2&&st.weapon.dmgMisc===2&&st.equipped===true&&st.qty===1&&st.fav===true, st);
+  ck('#76 ...and the same attack row, still +4 to hit (STR 0 + PB 2 + 2)',
+     ch.attacks.length===1&&ch.attacks[0].id===atkId&&X.attackNumbers(ch.attacks[0]).toHit===4, ch.attacks);
+  ch=oldSheet();
+  const m=X.migrate(JSON.parse(JSON.stringify(ch)));
+  ck('#76 migrate() leaves the old effect on a saved copy', m.inventory[0].effects.length===1&&m.inventory[0].effects[0].value===5,
+     m.inventory[0].effects);
+  X.resetRules();
+}
+
+/* #77 — the packs never read an item's spell attack or spell save DC bonus. A
+   sheet's copy of a Staff of Power or a Moon Sickle has none, and gets it only
+   through the rules-update tool: `effects` changed, ticked when untouched, and
+   applying it raises the Spellcasting numbers and nothing the player owns. The
+   "new" entries are the shipped ones, so this fails until the packs carry the
+   effects; the "old" ones are those entries without the spell targets. */
+{
+  const read=(dir,f,name)=>JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data',dir,f),'utf8')).items.find(x=>x.name===name);
+  const staffNew=read('5e2024','items-magic.json','Staff of Power'), sickleNew=read('tashas','items-magic.json','+1 Moon Sickle');
+  const strip=d=>Object.assign(JSON.parse(JSON.stringify(d)),{effects:(d.effects||[]).filter(e=>!/^spell\./.test(e.target))});
+  const load=(staff,sickle)=>{ X.resetRules();
+    X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(staff))]},'5e.json');
+    X.mergeRules({system:'TCE',items:[JSON.parse(JSON.stringify(sickle))]},'tce.json'); };
+  load(strip(staffNew),strip(sickleNew));
+  const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.abilities.wis=16; ch.level=1; ch.spellAbility='wis';
+  X.character=ch; X.activeId=ch.id;
+  X.addLibraryItems(X.rules.items.slice(),null,null,1);                /* both weapons: equipped */
+  ck('#77 an old sheet: the staff and the sickle equipped, spell attack +5 and DC 13, unchanged by either',
+     ch.inventory.length===2&&ch.inventory.every(i=>i.equipped)&&X.spellAtkBonus()===5&&X.spellDC()===13,
+     [ch.inventory.map(i=>i.name+':'+i.equipped),X.spellAtkBonus(),X.spellDC()]);
+  ch.inventory.forEach(i=>{i.fav=true;});
+  const ids=ch.attacks.map(a=>a.id).join();
+  load(staffNew,sickleNew);
+  const rows=X.diffCharacter().rows.filter(r=>r.name==='Staff of Power'||r.name==='+1 Moon Sickle');
+  ck('#77 the fixed packs offer both, each as one changed row: effects, and nothing else',
+     rows.length===2&&rows.every(r=>r.type==='changed'&&r.fields.join()==='effects'), X.diffCharacter().rows.map(r=>r.name+':'+r.fields));
+  ck('#77 ...ticked, since nobody edited the copies', rows.length===2&&rows.every(r=>r.apply===true&&r.edited===false),
+     rows.map(r=>[r.apply,r.edited]));
+  X.applyUpdates(rows);
+  const staff=ch.inventory.find(i=>i.name==='Staff of Power'), sickle=ch.inventory.find(i=>i.name==='+1 Moon Sickle');
+  ck('#77 applying them gives spell attack +2 +1 = +8 and DC +1 = 14', X.spellAtkBonus()===8&&X.spellDC()===14,
+     [X.spellAtkBonus(),X.spellDC(),staff.effects,sickle.effects]);
+  ck('#77 ...the staff keeps its AC and saving throws', staff.effects.filter(e=>e.target==='ac'||/^save\./.test(e.target)).length===7,
+     staff.effects);
+  ck('#77 ...touches none of the player\'s numbers and keeps both attack rows',
+     ch.inventory.every(i=>i.equipped&&i.fav)&&ch.attacks.map(a=>a.id).join()===ids, [ch.inventory, ch.attacks.map(a=>a.id)]);
+  ck('#77 ...and the weapons still attack as weapons: the sickle PB 2 + 1 = +3, the staff +4',
+     X.attackNumbers(ch.attacks.find(a=>a.name==='+1 Moon Sickle')).toHit===3
+     &&X.attackNumbers(ch.attacks.find(a=>a.name==='Staff of Power')).toHit===4,
+     ch.attacks.map(a=>a.name+':'+X.attackNumbers(a).toHit));
+  load(strip(staffNew),strip(sickleNew));
+  const old=X.blankChar(); X.character=old; X.addLibraryItems(X.rules.items.slice(),null,null,1);
+  const m=X.migrate(JSON.parse(JSON.stringify(old)));
+  ck('#77 migrate() adds nothing to a saved copy', m.inventory.every(i=>!(i.effects||[]).some(e=>/^spell\./.test(e.target))),
+     m.inventory.map(i=>i.effects));
   X.resetRules();
 }
 

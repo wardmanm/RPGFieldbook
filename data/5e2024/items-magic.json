@@ -12,7 +12,12 @@
       "attune": true,
       "attuneNote": "by a spellcaster",
       "description": "While holding this wand, you gain a +1 bonus to spell attack rolls. In addition, you ignore Half Cover when making a spell attack roll",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 1
+        }
+      ]
     },
     {
       "name": "+2 Wand of the War Mage",
@@ -24,7 +29,12 @@
       "attune": true,
       "attuneNote": "by a spellcaster",
       "description": "While holding this wand, you gain a +2 bonus to spell attack rolls. In addition, you ignore Half Cover when making a spell attack roll",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        }
+      ]
     },
     {
       "name": "+3 Wand of the War Mage",
@@ -36,7 +46,12 @@
       "attune": true,
       "attuneNote": "by a spellcaster",
       "description": "While holding this wand, you gain a +3 bonus to spell attack rolls. In addition, you ignore Half Cover when making a spell attack roll",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 3
+        }
+      ]
     },
     {
       "name": "Abacus",
@@ -224,12 +239,7 @@
       "weight": 6,
       "attune": true,
       "description": "AC +2 (Shield) · Base item: Shield. You gain a +2 bonus to Armor Class against ranged attack rolls while you wield this Shield. This bonus is in addition to the Shield's normal bonus to AC.\nWhenever an attacker makes a ranged attack roll against a target within 5 feet of you, you can take a Reaction to become the target of the attack instead",
-      "effects": [
-        {
-          "target": "ac",
-          "value": 2
-        }
-      ]
+      "effects": []
     },
     {
       "name": "Assassin's Blood",
@@ -642,12 +652,7 @@
       "rarity": "Rare",
       "attune": true,
       "description": "While wearing these bracers, you gain a +2 bonus to Armor Class if you are wearing no armor and using no Shield",
-      "effects": [
-        {
-          "target": "ac",
-          "value": 2
-        }
-      ]
+      "effects": []
     },
     {
       "name": "Brass Dragon Scale Mail",
@@ -3820,12 +3825,7 @@
       "weight": 4,
       "attune": true,
       "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Range 30/120 ft · Properties: Thrown, Versatile · Mastery: Topple · Base item: Quarterstaff. You have a +2 bonus to attack rolls and damage rolls made with this magic weapon.\nWhile holding this weapon, you can cause it to emit green Dim Light out to 10 feet, either as a Bonus Action or after you roll Initiative, or you can extinguish the light as a Bonus Action.\nWhile holding this weapon, you can take a Bonus Action to alter its form, turning it into a 6-inch rod (for ease of storage) or a 10-foot pole, or reverting it a Quarterstaff; the weapon will elongate only as far as the surrounding space allows.\nIn certain forms, the weapon has the following additional properties.\nAcrobatic Assist (Quarterstaff and 10-Foot Pole Forms Only): While holding this weapon, you have Advantage on Dexterity (Acrobatics) checks.\nAttack Deflection (Quarterstaff Form Only): When you are hit by an attack while holding the weapon, you can take a Reaction to twirl the weapon around you, gaining a +5 bonus to your Armor Class against the triggering attack, potentially causing the attack to miss you. You can't use this property again until you finish a Short or Long Rest.\nRanged Weapon (Quarterstaff Form Only): This weapon has Thrown with a normal range of 30 feet and a long range of 120 feet. Immediately after you make a ranged attack with the weapon, it flies back to your hand",
-      "effects": [
-        {
-          "target": "ac",
-          "value": 5
-        }
-      ],
+      "effects": [],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
@@ -4356,7 +4356,16 @@
       "attune": true,
       "attuneNote": "by a sorcerer, warlock, or wizard",
       "description": "This elegant garment is made from exquisite cloth and adorned with runes.\nYou gain these benefits while wearing the robe.\nArmor: If you aren't wearing armor, your base Armor Class is 15 plus your Dexterity modifier.\nMagic Resistance: You have Advantage on saving throws against spells and other magical effects.\nWar Mage: Your spell save DC and spell attack bonus each increase by 2",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        },
+        {
+          "target": "spell.dc",
+          "value": 2
+        }
+      ]
     },
     {
       "name": "Robe of Useful Items",
@@ -4397,36 +4406,7 @@
       "weight": 2,
       "attune": true,
       "description": "This rod has the following properties.\nAlertness: While holding the rod, you have Advantage on Wisdom (Perception) checks and on Initiative rolls.\nSpells: While holding the rod, you can cast the following spells from it: • Detect Evil and Good\n• Detect Magic\n• Detect Poison and Disease\n• See Invisibility\nProtective Aura: As a Magic action, you can plant the haft end of the rod in the ground, whereupon the rod's head sheds Bright Light in a 60-foot radius and Dim Light for an additional 60 feet. While in that Bright Light, you and your allies gain a +1 bonus to Armor Class and saving throws and can sense the location of any Invisible creature that is also in the Bright Light. The rod's head stops glowing and the effect ends after 10 minutes or when a creature takes a Magic action to pull the rod from the ground. Once used, this property can't be used again until the next dawn",
-      "effects": [
-        {
-          "target": "ac",
-          "value": 1
-        },
-        {
-          "target": "save.str",
-          "value": 1
-        },
-        {
-          "target": "save.dex",
-          "value": 1
-        },
-        {
-          "target": "save.con",
-          "value": 1
-        },
-        {
-          "target": "save.int",
-          "value": 1
-        },
-        {
-          "target": "save.wis",
-          "value": 1
-        },
-        {
-          "target": "save.cha",
-          "value": 1
-        }
-      ]
+      "effects": []
     },
     {
       "name": "Rod of Lordly Might",
@@ -5152,6 +5132,10 @@
         {
           "target": "save.cha",
           "value": 2
+        },
+        {
+          "target": "spell.attack",
+          "value": 2
         }
       ],
       "weapon": {
@@ -5213,7 +5197,12 @@
       "attune": true,
       "attuneNote": "by a sorcerer, warlock, or wizard",
       "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 50 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls.\nSpell Absorption: While holding the staff, you have Advantage on saving throws against spells. In addition, you can take a Reaction when another creature casts a spell that targets only you. If you do, the staff absorbs the magic of the spell, canceling its effect and gaining a number of charges equal to the absorbed spell's level. However, if doing so brings the staff's total number of charges above 50, the staff explodes as if you activated its Retributive Strike (see below).\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Magi Table]\nRegaining Charges: The staff regains 4d6 + 2 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 20, the staff regains 1d12 + 1 charges.\nRetributive Strike: You can take a Magic action to break the staff over your knee or against a solid surface. The staff is destroyed and releases its magic in an explosion that fills a 30-foot Emanation originating from itself. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take Force damage equal to 16 times the number of charges in the staff. Each other creature in the area makes a DC 17 Dexterity saving throw. On a failed save, a creature takes Force damage equal to 6 times the number of charges in the staff. On a successful save, a creature takes half as much damage",
-      "effects": [],
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        }
+      ],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
@@ -5252,7 +5241,12 @@
       "attune": true,
       "attuneNote": "by a druid",
       "description": "Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 6 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you have a +2 bonus to spell attack rolls.\nSpells: While holding the staff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell. [Table: Staff of the Woodlands Table]\nTree Form: You can take a Magic action to plant one end of the staff in earth in an unoccupied space and expend 1 charge to transform the staff into a healthy tree. The tree is 60 feet tall and has a 5-foot-diameter trunk, and its branches at the top spread out in a 20-foot radius. The tree appears ordinary but radiates a faint aura of Transmutation magic that can be discerned with the Detect Magic spell. While touching the tree and using a Magic action, you return the staff to its normal form. Any creature in the tree falls when the tree reverts to a staff.\nRegaining Charges: The staff regains 1d6 expended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff loses its properties and becomes a nonmagical Quarterstaff",
-      "effects": [],
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        }
+      ],
       "weapon": {
         "kind": "melee",
         "dice": "1d6",
@@ -5396,7 +5390,12 @@
       "attune": true,
       "attuneNote": "by a cleric or paladin",
       "description": "This talisman is a mighty symbol of goodness. A Fiend or an Undead that touches the talisman takes 8d6 Radiant damage and takes the damage again each time it ends its turn holding or carrying the talisman.\nHoly Symbol: You can use the talisman as a Holy Symbol. You gain a +2 bonus to spell attack rolls while you wear or hold it.\nPure Rebuke: The talisman has 7 charges. While wearing or holding the talisman, you can take a Magic action to expend 1 charge and target one creature you can see on the ground within 120 feet of yourself. A flaming fissure opens under the target, and the target makes a DC 20 Dexterity saving throw. If the target is a Fiend or an Undead, it has Disadvantage on the save. On a failed save, the target falls into the fissure and is destroyed, leaving no remains. On a successful save, the target isn't cast into the fissure but takes 4d6 Psychic damage from the ordeal. In either case, the fissure then closes, leaving no trace of its existence. When you expend the last charge, the talisman disperses into motes of golden light and is destroyed",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        }
+      ]
     },
     {
       "name": "Talisman of the Sphere",
@@ -5418,7 +5417,12 @@
       "weight": 1,
       "attune": true,
       "description": "This item symbolizes unrepentant evil. A creature that isn't a Fiend or an Undead that touches the talisman takes 8d6 Necrotic damage and takes the damage again each time it ends its turn holding or carrying the talisman.\nHoly Symbol: You can use the talisman as a Holy Symbol. You gain a +2 bonus to spell attack rolls while you wear or hold it.\nUltimate End: The talisman has 6 charges. While wearing or holding the talisman, you can take a Magic action to expend 1 charge and target one creature you can see on the ground within 120 feet of yourself. A flaming fissure opens under the target, and the target makes a DC 20 Dexterity saving throw. If the target is a Celestial, it has Disadvantage on the save. On a failed save, the target falls into the fissure and is destroyed, leaving no remains. On a successful save, the target isn't cast into the fissure but takes 4d6 Psychic damage from the ordeal. In either case, the fissure then closes, leaving no trace of its existence. When you expend the last charge, the talisman dissolves into foul-smelling slime and is destroyed",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        }
+      ]
     },
     {
       "name": "Tankard",
