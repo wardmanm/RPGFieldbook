@@ -1,7 +1,8 @@
 # Combat view
 
-A tab of just the sections a player needs mid-fight — any of the 19 noteable cards, from any tab, in
-an order they choose — with a round tracker in its header. It is reached from the crossed swords in
+A tab of just the sections a player needs mid-fight — any of the 20 noteable cards, the Journal
+tab's Trackers included, from any tab, in an order they choose — with a round tracker in its
+header. It is reached from the crossed swords in
 the tab bar and has no word tab of its own. The cards in it are the **real** cards, moved in while
 the tab shows and sent home when another tab is picked, so every control works exactly as it does on
 its own tab. Leaving the tab never ends combat.
@@ -127,7 +128,7 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 | Where the button lives | The sticky tab bar, before ☰ | The title bar: it scrolls away, taking the "combat running" indicator with it |
 | What a round changes | Active spells only, through `advanceRound()` | Timed conditions: filed as their own issue |
 | Start and End | Start sets round 1; End is its own button and asks; leaving never ends combat | Opening and closing as start and end: closing to look something up would end the fight |
-| Which sections | Any of the 19, six by default, drag to reorder, saved per character | Fixed sheet order; starting empty (no reason recorded) |
+| Which sections | Any of the 20, six by default, drag to reorder, saved per character | Fixed sheet order; starting empty (no reason recorded) |
 | Mechanism | Move the real cards | Copies: every id duplicated. A purpose-built dashboard: re-implements every section's controls |
 | "In combat" | `combatActive`, its own flag | `combatRound > 0`: old sheets would start in a fight |
 | Dragging | Pointer events; neighbours hop, the dragged card stays | HTML5 drag-and-drop: unreliable on phones. Moving the dragged card: can drop its pointer capture |
@@ -147,3 +148,4 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-09-24 — Undo on removal; `toast()` gains an action; toasts announce. → ledger L3454
 - 2026-09-24 — ↑/↓ skip hidden sections; header wraps at 640px; keyboard removal lands on the Undo; the toast moves into the template. → ledger L3470
 - 2026-09-25 — The overlay becomes a tab; `inert`, the lock, `aria-modal` and its Esc are removed; Hit Dice leave Vitals for Rest & Recovery, so they no longer ride in by default. → ledger L3676
+- 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41

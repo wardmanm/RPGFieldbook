@@ -2397,6 +2397,28 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
      !/<i>/.test(all) && !all.includes('x"y') && !all.includes('a"b'), all.slice(0, 300));
 }
 
+/* ---- trackers through their DOM layer: a tap, the close, the Undo ---- */
+{
+  const c = X.blankChar(); X.character = c;
+  c.trackers = [{id: 'b', name: 'Codex', type: 'counter', value: 299, goal: 300, autoClose: true}];
+  const step = d => (t, now) => ctx.trkStep(t, d, now);
+  ck('a tap that finishes a tracker closes it', ctx.trkAct('b', step(1), false) === true && c.trackers[0].closed === true);
+  ck('a closed tracker takes no more taps', ctx.trkAct('b', step(1), false) === false && c.trackers[0].value === 300);
+  const before = {id: 'b', name: 'Codex', type: 'counter', value: 299, goal: 300, autoClose: true};
+  X.character = X.blankChar();
+  ck('an Undo that outlived a character switch does nothing', ctx.undoTrackerChange(before, c.id, false) === false);
+  X.character = c;
+  ck('Undo puts the whole tap back', ctx.undoTrackerChange(before, c.id, false) === true &&
+     c.trackers[0].value === 299 && c.trackers[0].closed !== true);
+  ctx.commitTrackerValue({dataset: {trkval: 'b'}, value: '12x'});
+  ck('a typed count that is not a number changes nothing', c.trackers[0].value === 299);
+  ctx.commitTrackerValue({dataset: {trkval: 'b'}, value: '300'});
+  ck('a typed count that reaches the goal closes it', c.trackers[0].closed === true && c.trackers[0].value === 300);
+  ctx.reopenTracker('b');
+  ck('Reopen brings it back, its count kept', c.trackers[0].closed === false && c.trackers[0].value === 300);
+  ck('the combat view accepts the Trackers card', ctx.combatSectionsOf({combatSections: ['trackers']}).join() === 'trackers');
+}
+
 /* ---- dialogs: what auto-focus may pick, and how the opener is found again ---- */
 {
   const F = X.MODAL_FOCUS_FIELDS;
@@ -2933,6 +2955,9 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     coins: {cp: P, sp: 0, gp: 1, pp: 0, ep: 0},
     secNotes: {abilities: {text: P, at: 0}},
     journal: [{id: P, title: P, tag: P, text: P, at: 1, editedAt: 2}],
+    trackers: [{id: P, name: P, type: 'checklist', tag: P, items: [{id: P, text: P, done: true}], at: 1},
+               {id: 'tc', name: P, type: 'counter', tag: P, value: 3, goal: 5},
+               {id: 'tx', name: P, type: 'task', closed: true, closedAt: 2}],
   });
   X.character = X.migrate(JSON.parse(JSON.stringify(hostile)));   /* the import path */
   X.activeId = 'hostile';
@@ -2960,6 +2985,8 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   run('a Journal page', () => ctx.jnlOpen(P));
   run('the Journal editor', () => ctx.jnlEdit(P));
   run('the Journal page again, after Done', () => ctx.jnlDone());
+  run('Trackers', () => ctx.renderTrackers());
+  run('the tracker editor', () => ctx.openTrackerForm(C().trackers[0]));
   run('the Coins card', () => ctx.renderCoins());
   run('the print sheet', () => ctx.printSheet());
   run('a glossary entry of the character\'s own', () => ctx.openGlossView(C().glossary[0]));

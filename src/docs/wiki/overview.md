@@ -160,6 +160,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | **stamp / fingerprint** | What `stampSrc()` writes on a copied rules entry: its pack, category and per-field hashes, so the rules-update tool can tell drift from player edits |
 | **effect** | A numeric modifier `{target, value}` (AC +1, save +2, speed +5). Nothing non-numeric is an effect |
 | **BIO / notes / secNotes** | `BIO` lists the Story tab's free-text fields, of which `character.notes` is one; `character.secNotes` is the per-section notes map. Different things |
+| **tracker** | Three things: a *resource tracker* on the Sheet (`renderResources()`), the combat *round tracker* (`87-combat.js`), and the Journal tab's *trackers* (`87-trackers.js`) |
 
 ## Decisions
 
@@ -173,3 +174,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-08-07 — Moved to Claude Code: CLAUDE.md, build.sh and .gitignore added. → ledger L341
 - 2026-08-10 — Dev docs split by reader into `src/docs/` and `src/docs/_claude/`. → ledger L1302
 - 2026-09-28 — The wiki: reference compiled out of the ledger into topic pages; CLAUDE.md slimmed to the rules. → ledger L3709
+- 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41

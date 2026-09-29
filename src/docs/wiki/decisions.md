@@ -254,6 +254,11 @@ When a page gains a Decisions row, add its line here under that page.
 - **Page order** — Newest created first
 - **Where a blank page goes** — Never saved: a page exists only while it has a title or text
 - **Editing** — Inline, built once
+- **Tracker types** — Counter (optional goal), checklist, task
+- **Closing at 100%** — Close when complete, on by default, only on the step to complete, with an Undo of the whole tap
+- **Hiding the card** — Per character, in Settings → This character
+- **Trackers in the combat view** — A registered section, so it also takes a section note
+- **Tracker text** — Plain, `esc()` only
 
 ### [Rules & tables](features/rules-and-tables.md)
 
@@ -271,7 +276,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where the button lives** — The sticky tab bar, before ☰
 - **What a round changes** — Active spells only, through `advanceRound()`
 - **Start and End** — Start sets round 1; End is its own button and asks; leaving never ends combat
-- **Which sections** — Any of the 19, six by default, drag to reorder, saved per character
+- **Which sections** — Any of the 20, six by default, drag to reorder, saved per character
 - **Mechanism** — Move the real cards
 - **"In combat"** — `combatActive`, its own flag
 - **Dragging** — Pointer events; neighbours hop, the dragged card stays

@@ -939,7 +939,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const t = loadHTML();
   const inTemplate = (t.match(/data-note="([a-z]+)"/g) || []).map(s => s.slice(11, -1));
 
-  ck('the registry has 19 sections', X.NOTE_SECTIONS.length === 19, X.NOTE_SECTIONS.length);
+  ck('the registry has 20 sections', X.NOTE_SECTIONS.length === 20, X.NOTE_SECTIONS.length);
   ck('every section id is unique',
      new Set(X.NOTE_SECTIONS.map(s => s.k)).size === X.NOTE_SECTIONS.length);
   ck('every section names a tab the Section Notes card can group under',
@@ -955,7 +955,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // .label inside it
   ck('every data-note is on a card element',
      (t.match(/data-note="[a-z]+"/g) || []).every((_, i) => true) &&
-     (t.match(/<div class="card" data-note="[a-z]+"/g) || []).length === 19,
+     (t.match(/<div class="card" data-note="[a-z]+"/g) || []).length === 20,
      (t.match(/<div class="card"[^>]*data-note[^>]*>/g) || []).length);
   /* The Journal panel, sliced to the next panel so a card on a LATER tab can
      neither satisfy nor break these. The regex this replaced ran on to the end
@@ -963,11 +963,15 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const jAt = t.indexOf('id="tab-journal"'), jEnd = t.indexOf('<section class="tabpanel', jAt + 1);
   const jPanel = jAt < 0 ? '' : t.slice(jAt, jEnd < 0 ? undefined : jEnd);
   ck('the Journal tab exists', jAt >= 0);
-  ck('the Journal tab takes no note of its own', !/data-note=/.test(jPanel), jPanel.match(/data-note="[a-z]+"/g));
+  ck('the only card on the Journal tab that takes a note is Trackers',
+     JSON.stringify(jPanel.match(/data-note="[a-z]+"/g) || []) === JSON.stringify(['data-note="trackers"']),
+     jPanel.match(/data-note="[a-z]+"/g));
+  ck('the Journal tab runs Journal, Trackers, Section Notes',
+     jPanel.indexOf('id="journalCard"') >= 0 &&
+     jPanel.indexOf('id="journalCard"') < jPanel.indexOf('data-note="trackers"') &&
+     jPanel.indexOf('data-note="trackers"') < jPanel.indexOf('id="notesList"'));
   ck('the Journal tab has the list the notes renderer targets', jPanel.includes('id="notesList"'));
   ck('nothing still calls it the Notes tab', !/id="tab-notes"|data-tab="notes"/.test(t));
-  ck('the Journal card comes first, then Section Notes',
-     jPanel.indexOf('id="journalCard"') >= 0 && jPanel.indexOf('id="journalCard"') < jPanel.indexOf('id="notesList"'));
 
   // registry titles must match the headings they claim to describe. `origin` is
   // excluded on purpose: that heading is skin-dependent (Race vs Ancestry), which

@@ -88,6 +88,7 @@ A click, Enter or Space on `.kw` opens the glossary entry, and on `.tblref` open
 | Section notes (the Journal tab's Section Notes card, and each card's note) | `noteHTML()` |
 | Journal pages (`journalPageHTML()`) | `noteHTML()` |
 | Journal search excerpts (`jnlSnippet()`), titles and tags | `esc()` only |
+| Tracker names and items (`trackerRowHTML()`) | `esc()` only: a chip inside a checkbox button would be a button in a button |
 | Story bio fields and Proficiencies (`renderRT()`) | `richHTML()` |
 | Feature, item, status and familiar descriptions; browse previews; the spell view | `richHTML()` / `descHTML()` |
 | Trait lines in the class, subclass, species and background panes | `richInline()` |
@@ -238,3 +239,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — A settings file's pool no longer goes in raw: it is rebuilt through `mergeRules()`, so its keyword ids are the app's. → ledger L4134, #70
 - 2026-09-28 — Terms are read only through `glossTerm()`, so an entry with no term can't break a render; the glossary pass looks matches up in a map keyed by the escaped term, which also gives apostrophe terms their id. → ledger L4206, #71
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
+- 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41

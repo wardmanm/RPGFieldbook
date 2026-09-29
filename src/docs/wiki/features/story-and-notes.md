@@ -2,8 +2,8 @@
 
 Two kinds of free text, easy to confuse. The **Story tab** holds the character's own writing: eight
 bio cards (Appearance through a card called **Notes**) and Proficiencies & Languages. **Section
-notes** are something else — a note pinned to any of 19 cards on the Sheet, Spells, Inventory and
-Story tabs, opened from an icon in the card's heading and gathered in the **Section Notes** card on
+notes** are something else — a note pinned to any of 20 cards on the Sheet, Spells, Inventory,
+Story and Journal tabs, opened from an icon in the card's heading and gathered in the **Section Notes** card on
 the **Journal tab**, below the player's own journal pages ([Journal](journal.md)). Both render
 the same markdown-on-top-of-glossary grammar.
 
@@ -31,8 +31,9 @@ glossary change alters how the text reads.
 **Proficiencies & Languages** (`character.proficiencies`) sits in its own card at the top of the
 Story tab, uses the same `renderRT()`, and — unlike the bio cards — takes a section note.
 
-**Section notes.** `NOTE_SECTIONS` is the registry: 19 entries of `{k, tab, title}` — twelve on the
-Sheet, four on Spells, two on Inventory, one (Proficiencies) on Story. A card opts in with
+**Section notes.** `NOTE_SECTIONS` is the registry: 20 entries of `{k, tab, title}` — twelve on the
+Sheet, four on Spells, two on Inventory, one (Proficiencies) on Story, one (Trackers) on the
+Journal tab. A card opts in with
 `data-note="<k>"` on its `<div class="card">`. `renderNoteIcons()` puts a note button at the end of
 each such card's `.label`, lit (`.on`) when a note exists, with a hover preview (`notePreview()`)
 inside it. The button opens `openNoteEditor(k)`: a textarea, a one-line formatting key, the dates,
@@ -55,7 +56,8 @@ character in `noteCollapse`; a closed group still renders its notes, hidden. Eac
 link, the added/edited dates, an edit button and the note rendered by `noteHTML()`. `jumpToNote(k)`
 calls `selectTab()` — which never scrolls — then `scrollToCard()` and flashes the card; a card that
 is hidden (`offsetParent === null`: an empty Familiars or Active Spells) scrolls to the top instead.
-They print under the heading "Section notes".
+They print under the heading "Section notes". Its groups now include Journal, holding just
+Trackers, since that card sits on the Journal tab too ([Journal](journal.md)).
 
 ## Rules that must hold
 
@@ -64,7 +66,7 @@ They print under the heading "Section notes".
   card). Merging or renaming either into the other breaks the Story tab silently.
 - **Registry ids are stable and never derived from headings.** Headings get reworded; a note keyed to
   one would be orphaned. `rules-data.js` checks the registry against the template both ways and
-  counts exactly 19 `<div class="card" data-note="` cards.
+  counts exactly 20 `<div class="card" data-note="` cards.
 - **The note button is a `<button>` and its preview a `<span>` inside it.** `buildToc()` clones each
   `.label` and strips buttons before reading its text; a sibling preview would leak into the ☰ entry.
 - **`renderNoteIcons()` replaces only its own button** — never `label.innerHTML +=`, which re-parses
@@ -118,3 +120,4 @@ They print under the heading "Section notes".
 - 2026-09-01 — The "By ability" layout hides the Skills card, and with it that card's note button. → ledger L106, #17
 - 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
+- 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41

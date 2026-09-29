@@ -32,7 +32,7 @@ Settings and Rules sections), `sheet.js` (`featGroups()`, the shared favourites 
 | `20-spells.html` | `#tab-spells` | one `.stack` | spellcasting, slots, activespells, spells; plus `#concCard`, untagged ([Conditions & concentration](../features/conditions-and-concentration.md)) |
 | `30-story.html` | `#tab-story` | `.cols` | proficiencies; `#bioStack` is filled by `buildBio()` with the eight bio cards, untagged by design |
 | `40-rules.html` | `#tab-rules` | one `.stack` | none: two foldable cards ([Rules & tables](../features/rules-and-tables.md)) |
-| `60-journal.html` | `#tab-journal` | one `.stack`, centred, max 820px: Journal (`#journalCard`), Section Notes | none: neither card takes a section note |
+| `60-journal.html` | `#tab-journal` | one `.stack`, centred, max 820px: Journal (`#journalCard`), Trackers (`data-note="trackers"`), Section Notes | Trackers only |
 | `70-combat.html` | `#tab-combat` | `.cview`: header, live region, `#cvList` | none in markup: the real cards are moved in at runtime |
 
 The panels concatenate in manifest order, which is not the tab-bar order (that lives in the
@@ -47,7 +47,7 @@ instead of above HP and Skills. It costs nothing because `.stack` carries one ru
 
 ### The section registry
 
-`NOTE_SECTIONS` in `87-notes.js` lists 19 sections as `{k, tab, title}`. Each one's card carries
+`NOTE_SECTIONS` in `87-notes.js` lists 20 sections as `{k, tab, title}`. Each one's card carries
 `data-note="k"` as the attribute right after `class="card"`. Its consumers:
 
 - **Notes.** `renderNoteIcons()` puts a note button in each card's `.label`, `notesHTML()` groups
@@ -153,12 +153,12 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 
 ## Rules that must hold
 
-- **Registry and template agree both ways.** `rules-data.js` asserts 19 entries, unique ids, a card
+- **Registry and template agree both ways.** `rules-data.js` asserts 20 entries, unique ids, a card
   for every entry, an entry for every tagged card, no card tagged twice, and each title equal to its
   heading (except `origin`).
 - **Section ids are stable and never derived from a heading.** A note or a saved combat layout is
   keyed by `k`, and a reworded heading must not orphan it.
-- **`data-note` comes straight after `class="card"`.** The 19-card test counts the literal prefix
+- **`data-note` comes straight after `class="card"`.** The 20-card test counts the literal prefix
   `<div class="card" data-note="`, so an `id` placed first hides the card from it.
   `#familiarCard` and `#skillsCard` put their ids last for this reason.
 - **A section's card is hidden, never removed.** Familiars and Active Spells are `display:none`
@@ -246,3 +246,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-09-28 — The portrait is escaped and drawn only from a data: URL. → ledger L3940
 - 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
+- 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41

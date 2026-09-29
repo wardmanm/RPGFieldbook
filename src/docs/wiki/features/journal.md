@@ -12,9 +12,11 @@ covered by [Story & notes](story-and-notes.md).
 `jnlNewPage()`, `jnlEdit()`, `jnlDone()`, `jnlInput()`, `jnlDelete()`, `insertJournalStamp()`,
 `toggleJnlGroup()` in `87-journal.js` · `TRK_TYPES`, `trkProgress()`, `trkApply()`, `trkStep()`,
 `trkSetValue()`, `trkToggleItem()`, `trkToggleTask()`, `trkClose()`, `trkReopen()`, `trkSnapshot()`,
-`trkRestore()`, `mergeChecklist()`, `trkFromForm()`, `trkSplit()`, `showTrackers()` in `87-trackers.js` ·
+`trkRestore()`, `mergeChecklist()`, `trkFromForm()`, `trkSplit()`, `showTrackers()`, `renderTrackers()`,
+`trkAct()`, `undoTrackerChange()`, `commitTrackerValue()`, `openTrackerForm()`, `reopenTracker()` in
+`87-trackers.js` · `NOTE_SECTIONS` in `87-notes.js` ·
 markup `src/html/60-journal.html` · `47-journal.css` ·
-`renderAll()` in `66-coins-hp.js`, `refreshRulesUI()` in `88-settings.js` · `repairIds()`,
+`renderAll()` in `66-coins-hp.js`, `refreshRulesUI()`, `openSettings()` in `88-settings.js` · `repairIds()`,
 `migrate()` in `71-char-io.js` · **Tests:** `sheet.js`, `rules-data.js` · **See also:**
 [Story & notes](story-and-notes.md), [Rich text](../architecture/rich-text.md),
 [Character model](../architecture/character-model.md)
@@ -85,6 +87,33 @@ tick. A leading bullet is dropped. `migrate()` repairs item ids from one pool ac
 **Layout.** `trkSplit()` groups the open trackers by tag (A to Z, Untagged last, in the order they
 were made), and lists the closed ones newest-closed first.
 
+**The Trackers card** (`#trackersCard`) sits between the Journal and Section Notes cards, with
+**+ Tracker** (`#addTracker`) in its heading. `renderTrackers()` draws the open trackers in their
+tag groups (collapsible, stored in `trackerCollapse`), then **Completed (n)**, shut by default and
+session only. The rows:
+
+- a counter is − · a count box · +, with "of N" and a bar (`role="progressbar"`) when it has a goal;
+- a checklist is its items as `<button role="checkbox">` ticks;
+- a task is one such tick, labelled with its name.
+
+The count box commits on change or Enter through `commitTrackerValue()`, and anything but digits
+puts the old count back. Every tap goes through `trkAct()`, which snapshots the tracker, applies the
+tap, redraws and saves. If the tap closed the tracker, `trkAct()` shows a toast with **Undo**
+(`undoTrackerChange()`, guarded by the character id). A tap from the keyboard moves focus to that
+Undo. The redraw puts focus back on the same control by its first `data-*` hook, so holding Space
+on + keeps counting.
+
+**The form** (`openTrackerForm()`) holds Name, Type, Tag (with the tags in use), Goal for a
+counter, Items one per line for a checklist, and Close when complete. The last shows only for
+something that can complete. An existing tracker also has **Close now** (or **Reopen**) and
+**Delete**. Closed trackers show their result and closed date, with Reopen (`reopenTracker()`).
+
+**Hidden and in combat.** Settings → This character → Trackers sets `showTrackers`, and
+`renderTrackers()` hides the card with `display:none`, keeping it in the DOM, which the section
+registry requires. Trackers is the 20th entry in `NOTE_SECTIONS` (tab `journal`), so it takes a
+section note and can be added to the combat view like any registered card. Hidden, it is skipped
+by the ☰ flyout and the combat view, as the Skills card is in the By ability layout.
+
 **The card.** `#journalCard` is the first card on the Journal tab, with **+ Page** (`#jnlNew`) in
 its heading. `renderJournal()` draws `#jnlBody` in one of three views, held in the session-only
 `jnlUI` (`{who, open, editing, draft}`, keyed on the character id, so a switch starts at the
@@ -135,7 +164,18 @@ entry in the list.
 | Page order | Newest created first | Last edited first: the list reshuffles while you tidy. Alphabetical: a session log needs numbered titles |
 | Where a blank page goes | Never saved: a page exists only while it has a title or text | Discard on leave: a tab switch, a character switch or a reload each need their own hook, and one would be missed |
 | Editing | Inline, built once | The section notes' modal: too small for a session's worth of writing |
+| Tracker types | Counter (optional goal), checklist, task | Counter and checklist only: a one-line to-do becomes a one-item list. A separate Progress type: a counter with a goal already is one |
+| Closing at 100% | Close when complete, on by default, only on the step to complete, with an Undo of the whole tap | Offer a Close button: a tap on every completion. Always automatic: no way to keep a finished checklist in view |
+| Hiding the card | Per character, in Settings → This character | App-wide: the sheet's other display choices are per character |
+| Trackers in the combat view | A registered section, so it also takes a section note | A combat-only list beside the registry: a second list of sections to keep in step |
+| Tracker text | Plain, `esc()` only | The notes grammar: a glossary pass per tap, and a chip inside a checkbox button |
+
+## Open
+
+- Journal pages and trackers don't print. A long campaign journal could run to many pages.
+- Trackers have no reset on a rest, and a tag group shows no total.
 
 ## History
 
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
+- 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41

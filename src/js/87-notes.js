@@ -30,9 +30,10 @@ const NOTE_SECTIONS=[
   {k:"spells",       tab:"spells",    title:"Spells & Cantrips"},
   {k:"inventory",    tab:"inventory", title:"Equipment & Inventory"},
   {k:"coins",        tab:"inventory", title:"Coins"},
-  {k:"proficiencies",tab:"story",     title:"Proficiencies & Languages"}
+  {k:"proficiencies",tab:"story",     title:"Proficiencies & Languages"},
+  {k:"trackers",     tab:"journal",   title:"Trackers"}
 ];
-const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Story"};
+const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Story",journal:"Journal"};
 function noteDef(k){return NOTE_SECTIONS.find(s=>s.k===k)||null;}
 /* The ancestry heading is skin-dependent — "Race" on the classic skin — so the
    Section Notes card has to ask rather than quote the registry, or it would

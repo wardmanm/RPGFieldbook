@@ -33,5 +33,10 @@ Bullets below this line — leave the heading in place.
   dates, a button that stamps the current date and time, and the same formatting as your notes.
   Search finds any page by its title, tag or text. Your section notes are still there, further
   down.
+- New trackers on the Journal tab: counters (with or without a goal), checklists and one-line
+  tasks, grouped by a tag you choose — kills by creature type, pages of a book, steps of a quest.
+  Anything with a goal can close itself when it's done and move to Completed, with an Undo. Add
+  the Trackers card to the combat view to count mid-fight, or hide it in Settings → This
+  character.
 - If your browser refuses to save a change, the sheet now says so plainly — and keeps saying so
   until a save goes through — with a button to save the character to a file instead.

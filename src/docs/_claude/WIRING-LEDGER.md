@@ -4818,3 +4818,37 @@ search box's clear button, the card order. Pages: [journal](../wiki/features/jou
 [story & notes](../wiki/features/story-and-notes.md), [rich text](../wiki/architecture/rich-text.md),
 [character model](../wiki/architecture/character-model.md),
 [sections & layout](../wiki/ui/sections-and-layout.md).
+
+## Trackers (#41, #39, 2026-09-29)
+
+The Journal tab's second card, and the end of #39. `character.trackers`
+(`[{id, name, type, tag, value, goal, items, done, autoClose, closed, closedAt, at}]`), with
+`trackerCollapse` and `showTrackers` (read as `!== false`). `migrate()` guards them and repairs
+tracker ids, and item ids from one pool across every tracker. New fragment `87-trackers.js`; its
+styles join `47-journal.css`.
+
+**The rules.** Three types: a counter with an optional goal (none, as for kills, is never
+complete), a checklist, and a task. Counts are whole, never below 0, and may pass the goal. The
+close rule is in `trkApply()` alone. It closes only on the step from not done to done, only with
+Close when complete on (the default), and never from the form or on creation, so a reopened
+tracker at 100% stays open. Undo restores a snapshot from before the tap: the tick and the close
+together, guarded by the character id. Checklist lines keep their ids and ticks through an edit
+(`mergeChecklist()`). Tracker text is plain: a glossary chip inside a checkbox button would be a
+button in a button.
+
+**The card.** Groups by tag, Completed shut at the bottom, focus put back by the pressed control's
+first `data-*` so Space held on + keeps counting. A keyboard completion lands on the toast's Undo.
+Trackers is registered section 20 (tab `journal`), so it takes a note and joins the combat view; the
+registry tests went 19 → 20, and the Journal-panel guard now expects exactly that one note card.
+Hidden (Settings → This character) means `display:none`, kept in the DOM.
+
+**Guards.** `sheet.js`: fields, migrate and ids; progress for each type with junk; the close
+rule's six cases; Undo; `mergeChecklist()`; the form never closing; layout; the builders with
+hostile values; hostile trackers through the card and the form; a tap, a closed tracker refusing
+taps, a stale Undo, a typed count, Reopen, and the combat view accepting the card.
+`rules-data.js`: 20 sections, the tab's card order, the switch wired. Pages:
+[journal](../wiki/features/journal.md), [combat view](../wiki/features/combat-view.md),
+[story & notes](../wiki/features/story-and-notes.md),
+[sections & layout](../wiki/ui/sections-and-layout.md),
+[settings & updates](../wiki/features/settings-and-updates.md),
+[character model](../wiki/architecture/character-model.md).

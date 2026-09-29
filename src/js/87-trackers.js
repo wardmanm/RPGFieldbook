@@ -185,3 +185,87 @@ function trackerFormHTML(t,tags,isNew){
       `<button type="button" class="tbtn" id="tkCloseNow">${t.closed===true?"Reopen":"Close now"}</button>`)+
     `<button type="button" class="tbtn" id="tkCancel">Cancel</button><button type="button" class="tbtn primary" id="tkSave">${isNew?"Add":"Save"}</button></div>`;
 }
+
+/* ================= the DOM layer ================= */
+/* Session only: whose trackers these are, and whether Completed is open. */
+let trkWho=null, trkCompletedOpen=false;
+/* The card redraws whole after a tap. Focus goes back to the same control, found
+   by its first data-* hook (openerSelector()), so holding Space on + keeps
+   counting. Hidden, it stays in the DOM (the section registry's rule). */
+function renderTrackers(){
+  const el=document.getElementById("trkList");if(!el)return;
+  if(trkWho!==character.id){trkWho=character.id;trkCompletedOpen=false;}
+  const card=document.getElementById("trackersCard");if(card)card.style.display=showTrackers(character)?"":"none";
+  const a=document.activeElement,sel=(a&&el.contains&&el.contains(a))?openerSelector(a):null;
+  el.innerHTML=trackersHTML(character,trkCompletedOpen);
+  if(sel){const b=document.querySelector(sel);if(b&&b.focus)b.focus({preventScroll:true});}
+}
+function trkById(id){return trkList(character).find(t=>t.id===id)||null;}
+/* One tap on a row. When it finishes a tracker set to close, the toast offers an
+   Undo of the whole tap; from the keyboard (Enter/Space, event.detail 0) focus
+   goes to that Undo, since the row it was on just left for Completed. */
+function trkAct(id,fn,viaKey){
+  const t=trkById(id);if(!t||t.closed===true)return false;
+  const snap=trkSnapshot(t),who=character.id;
+  const closed=fn(t,Date.now());
+  renderTrackers();scheduleSave();
+  if(!closed)return false;
+  const undo=toast(`“${trkName(t)}” complete`,{label:"Undo",
+    run:e=>undoTrackerChange(snap,who,!!e&&e.detail===0),
+    back:()=>document.getElementById("addTracker")});
+  if(viaKey&&undo)undo.focus();
+  return true;
+}
+/* `who` guards a toast that outlived a character switch: its Undo belongs to the
+   character it was shown for. */
+function undoTrackerChange(snap,who,viaKey){
+  if(!character||character.id!==who)return false;
+  if(!trkRestore(character,snap))return false;
+  renderTrackers();scheduleSave();
+  toast(`“${trkName(snap)}” is back`);
+  if(viaKey){const b=document.querySelector(attrSel("data-trkedit",snap.id));if(b&&b.focus)b.focus();}
+  return true;
+}
+/* The count box commits on change or Enter, like the coin and HP boxes
+   (commitBox() in 90-boot.js). Anything but digits puts the old count back.
+   Returns the redrawn box, for Enter to select. */
+function commitTrackerValue(inp){
+  const id=inp.dataset.trkval,n=trkParse(inp.value);
+  if(n===null)renderTrackers();else trkAct(id,(t,now)=>trkSetValue(t,n,now),false);
+  return document.querySelector(attrSel("data-trkval",id));
+}
+function toggleTrkGroup(key){
+  if(!character.trackerCollapse||typeof character.trackerCollapse!=="object"||Array.isArray(character.trackerCollapse))character.trackerCollapse={};
+  character.trackerCollapse[key]=!character.trackerCollapse[key];
+  renderTrackers();scheduleSave();
+}
+function toggleTrkCompleted(){trkCompletedOpen=!trkCompletedOpen;renderTrackers();}
+function reopenTracker(id){const t=trkById(id);if(!t)return;trkReopen(t);renderTrackers();scheduleSave();toast(`“${trkName(t)}” reopened`);}
+function openTrackerForm(existing){
+  const isNew=!existing;
+  const t=existing||{id:uid(),name:"",type:"counter",tag:"",value:0,goal:0,items:[],done:false,autoClose:true,at:Date.now()};
+  openModal(isNew?"New tracker":"Edit tracker",trackerFormHTML(t,jnlTagList(character),isNew));
+  const $=id=>document.getElementById(id);
+  /* Goal for a counter, Items for a checklist; Close when complete only for one
+     that can complete, and a counter needs a goal for that. */
+  const sync=()=>{
+    const ty=$("tkType").value;
+    document.querySelectorAll("[data-tkfor]").forEach(f=>{f.hidden=f.dataset.tkfor!==ty;});
+    $("tkAutoRow").hidden=ty==="counter"&&!trkInt($("tkGoal").value);
+  };
+  $("tkType").addEventListener("change",sync);$("tkGoal").addEventListener("input",sync);sync();
+  $("tkAuto").addEventListener("click",e=>{const b=e.currentTarget,on=!b.classList.contains("on");b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");});
+  $("tkCancel").addEventListener("click",closeModal);
+  {const d=$("tkDel");if(d)d.addEventListener("click",()=>{
+    if(!confirm(`Delete the tracker “${trkName(t)}”?`))return;
+    character.trackers=trkList(character).filter(x=>x.id!==t.id);closeModal();renderTrackers();scheduleSave();});}
+  {const b=$("tkCloseNow");if(b)b.addEventListener("click",()=>{
+    if(t.closed===true)trkReopen(t);else trkClose(t,Date.now());
+    closeModal();renderTrackers();scheduleSave();});}
+  $("tkSave").addEventListener("click",()=>{
+    trkFromForm(t,{name:$("tkName").value,type:$("tkType").value,tag:$("tkTag").value,goal:$("tkGoal").value,
+      items:$("tkItems").value,autoClose:$("tkAuto").classList.contains("on")});
+    if(isNew){if(!Array.isArray(character.trackers))character.trackers=[];character.trackers.push(t);}
+    closeModal();renderTrackers();scheduleSave();
+  });
+}

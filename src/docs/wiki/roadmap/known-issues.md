@@ -96,6 +96,8 @@ Wanted, not yet done. Each needs work, not a source.
   the verbatim text now states the limit ("can't use this feature again until you have completed a
   Long Rest"), so it needs `uses {1/long}`, not a book. → ledger L1808, and
   [Humblewood](../data/humblewood.md)
+- Journal pages and trackers don't print; trackers have no rest reset and no group totals
+  ([Journal](../features/journal.md)).
 
 ## Waiting on sources
 
@@ -388,3 +390,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-28 — Fixed and removed: the Quarterstaff of the Acrobat's standing +5 AC (#76) and items' unread spell-attack bonuses (#77). Added #78 (raw item-entry tags) and #79 (unread Stone of Good Luck / Ioun Stone of Mastery bonuses). → ledger L4502, L4568
 - 2026-09-29 — Fixed and removed: raw item-entry template tags in 54 descriptions (#78) and the unread Stone of Good Luck / Ioun Stone of Mastery bonuses (#79). → ledger L4634, L4689
 - 2026-09-29 — Narrowed: a refused autosave, new character, import or old-save move now reports itself (#81); `deleteCharacter()`, `setAutoload()` and most `saveSettings()` callers still don't. → ledger L4771
+- 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41

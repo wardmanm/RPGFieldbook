@@ -45,6 +45,15 @@ function wire(){
     if((m=t.closest("[data-jnldel]"))){jnlDelete(m.dataset.jnldel);return;}
     if(t.closest("[data-jnlstamp]"))return insertJournalStamp();
     if((m=t.closest("[data-jnlgroup]"))){toggleJnlGroup(m.dataset.jnlgroup);return;}
+    // trackers (87-trackers.js). The tap's own `t` is the target, so the tracker is `x`.
+    if((m=t.closest("[data-trkdec]")))return trkAct(m.dataset.trkdec,(x,now)=>trkStep(x,-1,now),e.detail===0);
+    if((m=t.closest("[data-trkinc]")))return trkAct(m.dataset.trkinc,(x,now)=>trkStep(x,1,now),e.detail===0);
+    if((m=t.closest("[data-trkitem]"))){const r=m.closest("[data-trk]"),iid=m.dataset.trkitem;if(r)trkAct(r.dataset.trk,(x,now)=>trkToggleItem(x,iid,now),e.detail===0);return;}
+    if((m=t.closest("[data-trktask]")))return trkAct(m.dataset.trktask,(x,now)=>trkToggleTask(x,now),e.detail===0);
+    if((m=t.closest("[data-trkedit]"))){const x=trkById(m.dataset.trkedit);if(x)openTrackerForm(x);return;}
+    if((m=t.closest("[data-trkreopen]")))return reopenTracker(m.dataset.trkreopen);
+    if((m=t.closest("[data-trkgroup]"))){toggleTrkGroup(m.dataset.trkgroup);return;}
+    if(t.closest("[data-trkcompleted]"))return toggleTrkCompleted();
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
     /* Max HP padlock — mirrors [data-hdmode] below, minus the confirm: switching
@@ -187,6 +196,8 @@ function wire(){
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
     {const g=e.target.closest&&e.target.closest("[data-jnlgroup]");if(g){e.preventDefault();toggleJnlGroup(g.dataset.jnlgroup);return;}}
+    {const g=e.target.closest&&e.target.closest("[data-trkgroup]");if(g){e.preventDefault();toggleTrkGroup(g.dataset.trkgroup);return;}}
+    {const g=e.target.closest&&e.target.closest("[data-trkcompleted]");if(g){e.preventDefault();toggleTrkCompleted();return;}}
   });
   /* The combat tab's header sticks under the tab bar, whose height changes with
      the width (labels become icons at 860px). No Esc handler: the view is a tab
@@ -218,6 +229,7 @@ function wire(){
   on("saveWarnRetry","click",retrySave);
   on("jnlNew","click",jnlNewPage);
   on("jnlSearch","input",()=>renderJournal());
+  on("addTracker","click",()=>openTrackerForm());
   document.getElementById("addResource").addEventListener("click",()=>openResourceForm());
   /* clampHP owns both bounds and adjustHP owns the temp-HP-first rule. Every
      part a damage path needs lives in 65-resources.js, where the harness can
@@ -254,6 +266,7 @@ function wire(){
     if(!t||!t.closest)return null;
     const c=t.closest("[data-coin]");if(c){applyCoinInput(c);return c;}
     const h=t.closest("[data-hp]");if(h){applyHPInput(h);return h;}
+    const k=t.closest("[data-trkval]");if(k)return commitTrackerValue(k);
     return null;
   }
   document.addEventListener("change",e=>{commitBox(e.target);});
