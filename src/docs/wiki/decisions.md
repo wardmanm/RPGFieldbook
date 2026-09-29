@@ -376,7 +376,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **A bonus no sentence states (#76)** — Not an effect, and a `note:` naming it
 - **Bracers of Defense, whose +2 needs no armor and no shield (#76)** — Prose, like any conditional bonus
 - **The Quarterstaff's once-per-rest Reaction as a tracked use (#76)** — No; it stays in the description
-- **Where a `{#itemEntry}` template's text is read (#76)** — For the bonus reading only; the description keeps the tag
+- **Where a `{#itemEntry}` template's text goes (#78)** — Into the description, filled from the item as 5e-tools renders it; the bonus reader reads that same text (reverses #76's "for the bonus reading only")
+- **A template or placeholder that does not resolve (#78)** — Printed as it stands, counted with its items, and a `WARNING` at the end of every run
+- **How `{{getFullImmRes item.resist}}` prints (#78)** — Title-cased ("Acid"), as the 2024 templates call it; a raw `{{item.resist}}` prints as the item has it
 - **An item's spell attack and spell save DC bonus (#77)** — `spell.attack` / `spell.dc` effects through the same sentence reader, a named class not counting as a condition
 
 ### [Supplements](data/supplements.md)

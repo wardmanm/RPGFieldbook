@@ -704,6 +704,49 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
   ck('#77 ...and the spell targets are among them', known.has('spell.attack')&&known.has('spell.dc'), [...known].slice(-4));
 }
 
+// ---------- shipped data: no 5e-tools template or tag reaches a player (#78)
+// 5e-tools writes shared item text as "{#itemEntry Name|SRC}" and fills
+// "{{item.resist}}" from the item; its inline tags are "{@tag …}" and magic
+// variants use "{=prop}". convert.py passed the first through as text, so 54
+// items read the tag where the book's words belong. Every string, at any depth,
+// in every file of every pack — a new shape would reach players the same way.
+{
+  const TPL=/\{#[^{}]*\}|\{\{[^{}]*\}\}|\{=[^{}]*\}|\{@[^{}]*\}/;
+  const bad=[];
+  const walk=(n,where,name)=>{
+    if(typeof n==='string'){const m=TPL.exec(n);if(m)bad.push(where+' '+name+': '+m[0]);return;}
+    if(Array.isArray(n))return n.forEach(x=>walk(x,where,name));
+    if(!n||typeof n!=='object')return;
+    const nm=n.name||n.term||name;
+    Object.keys(n).forEach(k=>walk(n[k],where,nm));
+  };
+  let files=0;
+  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+    fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
+      files++; walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f,'?');
+    }));
+  ck('#78 the packs have files to scan', files>=30, files);
+  ck('#78 no pack carries 5e-tools template text: no {#…}, {{…}}, {=…} or {@…}', bad.length===0,
+     bad.length+' strings, e.g. '+JSON.stringify(bad.slice(0,6)));
+  // the families that shipped the tag now read the book's words, filled from the item
+  const pins=[
+    ['5e2024','Black Dragon Scale Mail','you have Resistance to Acid damage'],
+    ['5e2024','Silver Dragon Scale Mail','the closest silver dragon within 30 miles'],
+    ['5e2024','Ring of Acid Resistance','You have Resistance to Acid damage while wearing this ring. The ring is set with pearl'],
+    ['5e2024','Potion of Thunder Resistance','When you drink this potion, you have Resistance to Thunder damage for 1 hour'],
+    ['5e2024','Ioun Stone, Mastery','Roughly marble sized, Ioun Stones are named after Ioun'],
+    ['tashas','Radiant Absorbing Tattoo','emphasize one color (gold).'],
+    ['tashas','Radiant Absorbing Tattoo','Damage Absorption: When you take radiant damage'],
+  ];
+  const magic={};
+  pins.forEach(([d,name,needle])=>{
+    magic[d]=magic[d]||JSON.parse(fs.readFileSync(path.join('data',d,'items-magic.json'),'utf8')).items;
+    const e=magic[d].find(x=>x.name===name);
+    ck('#78 '+d+' '+name+' reads "'+needle.slice(0,48)+'…"', !!e&&(e.description||'').includes(needle),
+       e?(e.description||'').slice(0,160):'no item named '+name);
+  });
+}
+
 // ---------- the Spellcasting card's numbers open their breakdown, as AC does (#77)
 {
   const t=loadHTML();

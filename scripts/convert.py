@@ -264,7 +264,7 @@ def load_item_index(*paths):
     """Items from 5e-tools item files (items-base.json, items.json), keyed by
     (lower-case name, SOURCE), plus the property and mastery names they define,
     plus the `itemEntry` templates an item embeds as "{#itemEntry Name|SRC}"
-    (only items-base.json has them; _item_bonus_text() reads them)."""
+    (only items-base.json has them; _expand_item_entries() writes them out)."""
     items, props, masteries, templates = {}, {}, {}, {}
     for p in paths:
         if not p:
@@ -279,6 +279,125 @@ def load_item_index(*paths):
             if isinstance(e, dict) and e.get('name'):
                 templates[(str(e['name']).lower(), str(e.get('source') or '').upper())] = e.get('entriesTemplate') or []
     return items, props, masteries, templates
+
+# ---------------------------------------------------------------- item templates
+# 5e-tools shares one text among a family of items. The item's entries carry
+# "{#itemEntry Name|SRC}", items-base.json's `itemEntry` list holds the template,
+# and its "{{item.resist}}", "{{getFullImmRes item.resist}}" and "{{item.detail1}}"
+# are filled from the item's own fields. flatten() passed the tag through as
+# text, so 54 pack items -- the Dragon Scale Mails, Ioun Stones, Potions and Rings
+# of Resistance, Tasha's Absorbing Tattoos -- read "{#itemEntry Ring of
+# Resistance|XDMG}" where the book's text belongs (#78). The entries are expanded
+# before flatten() runs, the way 5e-tools renders them: the template's entries in
+# place of the tag, every string in them filled from the item. Anything that does
+# not resolve is printed as it stands AND reported at the end of the run.
+_ITEM_ENTRY_TAG = re.compile(r'\{#itemEntry ([^|}]+)(?:\|([^}]*))?\}')
+_TEMPLATE_VAR = re.compile(r'\{\{([^{}]*)\}\}')
+_TEMPLATE_LEFT = re.compile(r'\{#[^{}]*\}|\{\{[^{}]*\}\}')
+# (text, why) -> the items it was left on
+_TEMPLATE_MISSES = collections.defaultdict(set)
+
+def _template_raw(item, path):
+    """What "item.resist" names on the item, or None. Only the `item` root exists
+    in 5e-tools' applyTemplate."""
+    spl = path.split('.')
+    if spl[0] != 'item' or len(spl) < 2:
+        return None
+    v = item
+    for k in spl[1:]:
+        v = v.get(k) if isinstance(v, dict) else None
+    return v
+
+def _template_value(v):
+    """A value as it prints in the text. A one-item list (every `resist` in the
+    dump) prints its item, as JavaScript prints a one-item array."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float, str)):
+        return str(v)
+    if isinstance(v, list) and v and all(isinstance(x, str) for x in v):
+        return ', '.join(v)
+    return None
+
+def _full_imm_res(v):
+    """5e-tools' getFullImmRes as the 2024 templates call it (title case):
+    ["acid"] -> "Acid", ["acid", "cold"] -> "Acid and Cold". A shape with a note
+    or a special case is not read (None), and so reported."""
+    if not (isinstance(v, list) and v and all(isinstance(x, str) for x in v)):
+        return None
+    names = [' '.join(w[:1].upper() + w[1:] for w in x.split(' ')) for x in v]
+    return names[0] if len(names) == 1 else ', '.join(names[:-1]) + ' and ' + names[-1]
+
+def _fill_template(node, item):
+    """Every string in a template's entries with its {{…}} filled from the item;
+    `type` values are left alone, as 5e-tools' walker leaves them."""
+    name = str(item.get('name') or '')
+    def fill(s):
+        def sub(m):
+            args = m.group(1).split()
+            val = None
+            if len(args) == 1:
+                val = _template_value(_template_raw(item, args[0]))
+            elif len(args) == 2 and args[0] == 'getFullImmRes':
+                val = _full_imm_res(_template_raw(item, args[1]))
+            if val is None:
+                _TEMPLATE_MISSES[(m.group(0), 'the item has no value for it')].add(name)
+                return m.group(0)
+            return val
+        return _TEMPLATE_VAR.sub(sub, s)
+    if isinstance(node, str):
+        return fill(node)
+    if isinstance(node, list):
+        return [_fill_template(x, item) for x in node]
+    if isinstance(node, dict):
+        return {k: (v if k == 'type' else _fill_template(v, item)) for k, v in node.items()}
+    return node
+
+def _expand_item_entries(entries, item):
+    """The item's entries with every entry that is "{#itemEntry Name|SRC}" replaced
+    by that template's entries, filled from the item. A tag with no SRC names the
+    DMG's template, as in 5e-tools. The templates come from the run's item index
+    (load_item_index()); one it lacks stays as the tag, and is reported."""
+    tmpl = _SB_INDEX[3] if _SB_INDEX and len(_SB_INDEX) > 3 else {}
+    name = str(item.get('name') or '')
+    def walk(node):                 # -> the nodes that take this one's place
+        if isinstance(node, str):
+            m = _ITEM_ENTRY_TAG.fullmatch(node.strip())
+            if not m:
+                return [node]
+            t = tmpl.get((m.group(1).strip().lower(), (m.group(2) or 'DMG').strip().upper()))
+            if t is None:
+                _TEMPLATE_MISSES[(node.strip(), 'no itemEntry template of that name')].add(name)
+                return [node]
+            return _fill_template(t, item)
+        if isinstance(node, list):
+            return [[y for x in node for y in walk(x)]]
+        if isinstance(node, dict):
+            out = {}
+            for k, v in node.items():
+                if k in ('entries', 'items') and isinstance(v, list):
+                    out[k] = [y for x in v for y in walk(x)]
+                elif k == 'entry':
+                    got = walk(v)
+                    out[k] = got[0] if len(got) == 1 else {'type': 'entries', 'entries': got}
+                else:
+                    out[k] = v
+            return [out]
+        return [node]
+    return [y for x in (entries or []) for y in walk(x)]
+
+def _template_leftovers(text, item_name):
+    """Record any template text flatten() still printed -- a tag inside a
+    sentence, a placeholder outside a template -- unless it was already reported
+    for this item."""
+    for m in _TEMPLATE_LEFT.finditer(text or ''):
+        if not any(t == m.group(0) and item_name in names for (t, _w), names in _TEMPLATE_MISSES.items()):
+            _TEMPLATE_MISSES[(m.group(0), 'not a whole entry, so not expanded')].add(item_name)
+
+def _template_miss_warnings(warn):
+    for (text, why), items in sorted(_TEMPLATE_MISSES.items()):
+        warn('template text %s printed as it stands on %d item(s) (%s): %s'
+             % (text, len(items), why, ', '.join(sorted(items))))
 
 # Weapon property and mastery codes nothing defines, as (kind, code) -> the items
 # carrying them. convert_items() once named properties only from the file it was
@@ -334,7 +453,8 @@ def _item_traits(it, index):
     elif _ITYPES.get(tcode):
         bits.append(_ITYPES[tcode])
     line = ' · '.join(bits)
-    prose = flatten(it.get('entries') or [])
+    prose = flatten(_expand_item_entries(it.get('entries'), it))
+    _template_leftovers(prose, str(it.get('name') or ''))
     return (_full_stop(line) + ' ' + prose) if line and prose else (line or prose)
 
 def _statblock_text(node):
@@ -800,27 +920,6 @@ def _bonus_reading(text, key, n):
             return (False, ', '.join(words)) if words else (True, '')
     return (None, 'no sentence states it')
 
-_ITEM_ENTRY_TAG = re.compile(r'\{#itemEntry ([^|}]+)(?:\|([^}]*))?\}')
-
-def _template_text(entries):
-    out = []
-    for e in entries or []:
-        if isinstance(e, str):
-            out.append(strip_tags(e))
-        elif isinstance(e, dict):
-            out.extend(_template_text(e.get('entries') or e.get('items') or []))
-    return out
-
-def _item_bonus_text(prose):
-    """The item's prose with each "{#itemEntry Name|SRC}" replaced by the
-    template's text, for _bonus_reading() only: the ten Dragon Scale Mails state
-    their +1 nowhere else. (The description still carries the tag as it stands.)"""
-    tmpl = _SB_INDEX[3] if _SB_INDEX and len(_SB_INDEX) > 3 else {}
-    def sub(m):
-        t = tmpl.get((m.group(1).strip().lower(), (m.group(2) or 'DMG').strip().upper()))
-        return '\n'.join(_template_text(t)) if t else m.group(0)
-    return _ITEM_ENTRY_TAG.sub(sub, prose or '')
-
 # (item, 5e-tools field, value, why) for every tagged bonus kept in the prose
 _BONUS_PROSE = []
 _BONUS_FIELDS = (('bonusAc', 'ac', ('ac',)),
@@ -840,20 +939,21 @@ def _item_effects(it, prose=''):
     bonusAc as `ac`, bonusSavingThrow as the six `save.*`, bonusSpellAttack as
     `spell.attack` and bonusSpellSaveDc as `spell.dc` (#77), each only when its
     sentence in `prose` states it standing (_bonus_reading(), #76); the rest are
-    recorded in _BONUS_PROSE and stay in the prose.
+    recorded in _BONUS_PROSE and stay in the prose. `prose` is the flattened
+    description, shared templates written out (#78): the ten Dragon Scale Mails
+    state their +1 only in theirs.
     Never bonusWeapon, bonusWeaponAttack or bonusWeaponDamage: in 5e-tools those
     are rolls made with a weapon -- nearly always one (the item itself, a coated
     weapon, bows, unarmed strikes) -- and an `attack`/`damage` effect reaches
     every attack, spell rows included. A weapon carries its bonus as
     weapon.atkMisc/dmgMisc (see convert_items()); anything else keeps it in its
     prose (#74)."""
-    text = _item_bonus_text(prose)
     fx = []
     for field, key, targets in _BONUS_FIELDS:
         v = _ival(it.get(field))
         if not v:
             continue
-        standing, why = _bonus_reading(text, key, v)
+        standing, why = _bonus_reading(prose, key, v)
         if standing:
             fx += [(t, v) for t in targets]
         else:
@@ -937,7 +1037,8 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
             if it.get('stealth'): bits.append('Disadvantage on Stealth')
         if it.get('baseItem'): bits.append('Base item: ' + _abbr(it['baseItem']).title())
         with table_ctx(tables, it['name'], 'item'):
-            prose = flatten(it.get('entries', [])) if it.get('entries') else ''
+            prose = flatten(_expand_item_entries(it['entries'], it)) if it.get('entries') else ''
+        _template_leftovers(prose, it['name'])
         mech = ' \u00b7 '.join(bits)
         desc = (mech + '. ' + prose).strip() if mech and prose else (mech or prose)
         # attunement
@@ -2061,7 +2162,9 @@ def _write(obj, path):
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(obj, f, indent=2, ensure_ascii=False)
         f.write('\n')          # .editorconfig: every file ends in a newline
-    residual = open(path, encoding='utf-8').read().count('{@')
+    txt = open(path, encoding='utf-8').read()
+    # a 5e-tools {@tag}, or template text ({#itemEntry …}, {{item.resist}}) left in
+    residual = txt.count('{@') + txt.count('{#') + txt.count('{{')
     n = len(obj.get('keywords') or obj.get('feats') or obj.get('spells') or obj.get('classes')
             or obj.get('items') or obj.get('backgrounds') or obj.get('races')
             or obj.get('subclasses') or obj.get('features') or obj.get('tables') or [])
@@ -2245,6 +2348,7 @@ def _run_supplement(a):
     _weapon_miss_warnings(warn)
     _cell_miss_warnings(warn)
     _entry_miss_warnings(warn)
+    _template_miss_warnings(warn)
     if problems:
         print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
         for p in problems:
@@ -2373,6 +2477,7 @@ def main():
         _weapon_miss_warnings(warn)
         _cell_miss_warnings(warn)
         _entry_miss_warnings(warn)
+        _template_miss_warnings(warn)
         if problems:
             print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
             for p in problems:
@@ -2416,8 +2521,9 @@ def main():
     if a.tables:
         _write_tables(tbls, a.tables)
         _cell_miss_warnings(lambda msg: print('  WARNING: ' + msg))
-    # prose is flattened with or without a tables sink, so this one always runs
+    # prose is flattened with or without a tables sink, so these always run
     _entry_miss_warnings(lambda msg: print('  WARNING: ' + msg))
+    _template_miss_warnings(lambda msg: print('  WARNING: ' + msg))
 
 if __name__ == '__main__':
     sys.exit(main() or 0)

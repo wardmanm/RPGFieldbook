@@ -597,6 +597,52 @@ ck('R7 ...and a stamped one round-trips',
   X.resetRules();
 }
 
+/* #78 — 54 items shipped "{#itemEntry Ring of Resistance|XDMG}" as their whole
+   description, the 5e-tools template tag unexpanded. A sheet's copy keeps the tag
+   until the rules-update tool rewrites it: `description` changed, ticked when
+   untouched, and applying it writes the book's text under the finder's meta line
+   and nothing else. The "new" entries are the shipped ones, so this fails until
+   the packs are fixed; the "old" ones are those entries with the tag back. */
+{
+  const read=(dir,name)=>JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data',dir,'items-magic.json'),'utf8')).items.find(x=>x.name===name);
+  const ringNew=read('5e2024','Ring of Acid Resistance'), dsmNew=read('5e2024','Black Dragon Scale Mail');
+  const oldOf=(d,tag)=>Object.assign(JSON.parse(JSON.stringify(d)),{description:tag});
+  const ringOld=oldOf(ringNew,'{#itemEntry Ring of Resistance|XDMG}');
+  const dsmOld=oldOf(dsmNew,'AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}');
+  const load=(...defs)=>{ X.resetRules(); X.mergeRules({system:'XPHB',items:defs.map(d=>JSON.parse(JSON.stringify(d)))},'5e.json'); };
+  load(ringOld,dsmOld);
+  const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.abilities.dex=14; ch.level=1;
+  X.character=ch; X.activeId=ch.id;
+  X.addLibraryItems(X.rules.items.slice(),null,null,1);
+  const ring=ch.inventory.find(i=>i.name==='Ring of Acid Resistance'), dsm=ch.inventory.find(i=>i.name==='Black Dragon Scale Mail');
+  ck('#78 an old sheet shows the bug: the ring\'s text is the template tag',
+     !!ring&&/\{#itemEntry Ring of Resistance\|XDMG\}$/.test(ring.description), ring&&ring.description);
+  ring.equipped=true; ring.qty=2; ring.fav=true; dsm.equipped=true;
+  const acBefore=(()=>{const c=X.contributions();return X.armorAC(c).base+X.sumFx('ac',c);})();
+  load(ringNew,dsmNew);
+  const rows=X.diffCharacter().rows.filter(r=>r.name==='Ring of Acid Resistance'||r.name==='Black Dragon Scale Mail');
+  ck('#78 the fixed pack offers both, each as one changed row: description, and nothing else',
+     rows.length===2&&rows.every(r=>r.type==='changed'&&r.fields.join()==='description'), X.diffCharacter().rows.map(r=>r.name+':'+r.fields));
+  ck('#78 ...ticked, since nobody edited the copies', rows.length===2&&rows.every(r=>r.apply===true&&r.edited===false),
+     rows.map(r=>[r.apply,r.edited]));
+  X.applyUpdates(rows);
+  ck('#78 applying it writes the book\'s text under the finder\'s meta line',
+     ring.description==='Ring · Rare\nYou have Resistance to Acid damage while wearing this ring. The ring is set with pearl',
+     ring.description);
+  ck('#78 ...the Dragon Scale Mail\'s too, its +1 AC unchanged',
+     /\nAC 14 \+ Dex modifier \(max 2\)[^\n]*Scale Mail\. Dragon Scale Mail is made of/.test(dsm.description)
+     &&dsm.description.includes('Resistance to Acid damage')&&!dsm.description.includes('{#')
+     &&(()=>{const c=X.contributions();return X.armorAC(c).base+X.sumFx('ac',c);})()===acBefore, [dsm.description.slice(0,200),acBefore]);
+  ck('#78 ...touches none of the player\'s numbers', ring.equipped===true&&ring.qty===2&&ring.fav===true, ring);
+  ck('#78 ...and nothing is offered again', !X.diffCharacter().rows.some(r=>r.name==='Ring of Acid Resistance'),
+     X.diffCharacter().rows.map(r=>r.name+':'+r.fields));
+  load(ringOld);
+  const old=X.blankChar(); X.character=old; X.addLibraryItems(X.rules.items.slice(),null,null,1);
+  const m=X.migrate(JSON.parse(JSON.stringify(old)));
+  ck('#78 migrate() leaves the tag on a saved copy', /\{#itemEntry/.test(m.inventory[0].description), m.inventory[0].description);
+  X.resetRules();
+}
+
 // R3 — multiclass: two classes granting a same-named trait
 c=setup();
 X.mergeRules({system:'XPHB',classes:[

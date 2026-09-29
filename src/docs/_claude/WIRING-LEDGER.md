@@ -4630,3 +4630,58 @@ is summed by nothing, silently), and the two card numbers are tappable; five fai
 [computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
 [spells](../wiki/features/spells.md), [attacks & damage](../wiki/features/attacks-and-damage.md),
 [converter](../wiki/data/converter.md), [rules-update tool](../wiki/features/rules-update-tool.md).
+
+## Items' shared text templates are written out (#78, 2026-09-29)
+
+**Root cause.** 5e-tools shares one text among a family of items. The item's entries carry
+`{#itemEntry Name|SRC}`, `items-base.json`'s `itemEntry` list holds the template, and its
+`{{item.resist}}`, `{{getFullImmRes item.resist}}` and `{{item.detail1}}` are filled from the item's
+own fields. `flatten()` had no branch for the tag and `strip_tags()` reads only `{@…}`, so it
+passed through as text: 54 pack items read "{#itemEntry Ring of Resistance|XDMG}" where the book's
+text belongs. #76 had already put the templates in the item index, but read them for the bonus only.
+
+**The fix.** Before `flatten()`, `_expand_item_entries()` replaces every entry that is the tag with
+the template's entries, looked up by name and source (no source means the DMG's, as in 5e-tools),
+and `_fill_template()` fills every string in them from the item: `{{item.resist}}` and
+`{{item.detail1}}` as the item has them ("acid", "pearl"), `{{getFullImmRes item.resist}}`
+title-cased the way the 2024 templates call it ("Acid"). A template's named entries (Tasha's
+"Tattoo Attunement", "Damage Resistance", "Damage Absorption") read "Name: text" like any other.
+An embedded item statblock (`_item_traits()`) takes the same path. `_item_bonus_text()` and its
+helper are gone: `_bonus_reading()` reads the description as written, which now holds the template
+text, and the ten Dragon Scale Mails' +1 AC is read from it unchanged.
+
+**Never quiet.** A tag the index has no template for, a placeholder the item has no value for, and
+any template text `flatten()` still prints (a tag inside a sentence) are printed as they stand,
+recorded in `_TEMPLATE_MISSES` with their items, and `_template_miss_warnings()` reports each as a
+`WARNING` at the end of `all`, `supplement` and every single subcommand. `_write()` now counts `{#`
+and `{{` left in a file among its "unresolved tags", as it did `{@`. The v2.36.1 dump reports none.
+
+**Other template syntax, enumerated.** Across every dump file the converter reads, the only other
+`{{…}}` are the Dragonborn `_versions` in `races.json` (`{{color}}`, `{{damageType}}`, which
+`_version_subraces()` already fills), `{{spellcasting_mod}}` in a `spells-tce.json` scaling field
+the converter does not read, and `items-base.json`'s property display templates, likewise unread.
+`{=…}` lives in `magicvariants.json` and `recipes.json`, neither converted. Before the fix the 54
+tags were the only template text in any pack; now there is none.
+
+**Data.** Only `description` moved, on exactly those 54 items: `data/5e2024/items-magic.json` 44
+(ten Dragon Scale Mails, 14 Ioun Stones, ten Potions and ten Rings of Resistance) and
+`data/tashas/items-magic.json` 10 (the Absorbing Tattoos). Names, order, key order, effects and
+every other field unchanged, checked item by item; every other file of the three packs regenerates
+byte for byte; Xanathar's has none. No UNRELEASED bullet: converter and data only.
+
+**Existing characters** hold copies. `description` is in `UPD_FIELDS.item`, so the rules-update tool
+offers each stamped copy as "description changed", ticked when unedited; applying writes the
+book's text (under the finder's meta line, for a copy added through the finder) and nothing else.
+Effects, equipped, qty and fav are untouched, so a Dragon Scale Mail keeps its AC. `migrate()`
+changes nothing; an edited copy is offered unticked.
+
+**Guards.** `converter.py` 318 → 341: real shapes from the dump (a Ring of Acid Resistance in both
+printings, a Potion of Fire Resistance, the Acid Absorbing Tattoo, the Ioun Stone of Mastery, the
+Black Dragon Scale Mail) read their templates exactly, an item statblock too, nothing warns; a
+missing template, a missing value and a tag mid-sentence are printed, counted and reported, and
+`items`, `all` and `supplement` each warn and write the text; 22 failed first. `rules-data.js` +9:
+no `{#…}`, `{{…}}`, `{=…}` or `{@…}` in any string of any file of any pack, and seven pinned
+texts; eight failed first. `char-update.js` +8: an old sheet's ring and mail are offered as
+`description` only, ticked, and applying gives the book's text under the meta line with AC
+unchanged; `migrate()` leaves the tag; four failed first. Pages:
+[converter](../wiki/data/converter.md), [rules-update tool](../wiki/features/rules-update-tool.md).
