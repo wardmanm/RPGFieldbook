@@ -100,7 +100,8 @@ how a pack correction reaches a saved sheet, and nothing else does: `migrate()` 
 copy. #74's `+N` weapons, for one, are offered as "effects changed" and applying it writes
 `effects: []` and nothing else, leaving the weapon's `atkMisc` and its attack row as they were;
 #76's five items with a conditional AC or saving-throw bonus (Quarterstaff of the Acrobat among
-them) reach a sheet the same way, and the staff's AC drops back by 5.
+them) reach a sheet the same way, and the staff's AC drops back by 5; so do #77's 28 items that
+gain `spell.attack` / `spell.dc`, raising the Spellcasting numbers once applied.
 
 **Attacks.** An attack generated from a weapon is not a copy of a rules entry and has no `src`; only
 its item can rebuild it. Instead it carries `genFp`, one `fpHash()` over `ATK_GEN_FIELDS` — every
@@ -200,3 +201,4 @@ state survives. Attack mechanics: [Attacks & damage](attacks-and-damage.md).
 - 2026-08-17 — a resync leaves a player-edited attack alone (`genFp`). → ledger L2945
 - 2026-09-28 — the pack fix for double-counted weapon bonuses reaches sheets as an `effects`-only row. → ledger L4392, #74
 - 2026-09-28 — so does the fix for conditional AC and saving-throw bonuses. → ledger L4502, #76
+- 2026-09-28 — and items' new spell attack and spell save DC effects. → ledger L4568, #77

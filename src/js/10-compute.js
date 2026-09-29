@@ -43,9 +43,11 @@ function recompute(){
   /* guarded: recompute() is the hottest function in the app, and an unguarded
      lookup here turns a renamed id into a white screen rather than a dead star */
   {const sb=document.getElementById("starBtn");if(sb){sb.classList.toggle("on",!!character.inspiration);sb.setAttribute("aria-pressed",character.inspiration?"true":"false");}}
+  /* spellDC()/spellAtkBonus() own the formula, effects included (#77), so the
+     card cannot read differently from the cast dialog or a save row */
   const sa=character.spellAbility;
-  document.getElementById("dcDisp").textContent=sa?String(8+pb+mods[sa]):"—";
-  document.getElementById("satkDisp").textContent=sa?fmt(pb+mods[sa]):"—";
+  const dcEl=document.getElementById("dcDisp");dcEl.textContent=sa?String(spellDC(c)):"—";mark(dcEl,!!sa&&!!sumFx("spell.dc",c));
+  const satkEl=document.getElementById("satkDisp");satkEl.textContent=sa?fmt(spellAtkBonus(c)):"—";mark(satkEl,!!sa&&!!sumFx("spell.attack",c));
   renderEncPill(encSt);
   renderDeath();autoSlots();renderSlotBubbles();renderHitDice();syncResources();renderResources();
   (character.attacks||[]).forEach(a=>{if(a.source==="spell"&&!a.save)a.ability=character.spellAbility||"none";});

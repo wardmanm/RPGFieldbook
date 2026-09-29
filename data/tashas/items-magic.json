@@ -15,7 +15,16 @@
       "attune": true,
       "attuneNote": "by an artificer",
       "description": "This simple screwdriver can transform into a variety of tools; as an action, you can touch the item and transform it into any type of artisan's tool of your choice (see the \"Equipment\" chapter in the Player's Handbook for a list of artisan's tools). Whatever form the tool takes, you are proficient with it.\nWhile holding this tool, you gain a +1 bonus to the spell attack rolls and the saving throw DCs of your artificer spells.\nAs an action, you can focus on the tool to channel your creative forces. Choose a cantrip that you don't know from any class list. For 8 hours, you can cast that cantrip, and it counts as an artificer cantrip for you. Once this property is used, it can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 1
+        },
+        {
+          "target": "spell.dc",
+          "value": 1
+        }
+      ]
     },
     {
       "name": "+1 Amulet of the Devout",
@@ -27,7 +36,16 @@
       "attune": true,
       "attuneNote": "by a cleric or paladin",
       "description": "This amulet bears the symbol of a deity inlaid with precious stones or metals. While you wear the holy symbol, you gain a +1 bonus to spell attack rolls and the saving throw DCs of your spells.\nWhile you wear this amulet, you can use your Channel Divinity feature without expending one of the feature's uses. Once this property is used, it can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 1
+        },
+        {
+          "target": "spell.dc",
+          "value": 1
+        }
+      ]
     },
     {
       "name": "+1 Arcane Grimoire",
@@ -39,7 +57,16 @@
       "attune": true,
       "attuneNote": "by a wizard",
       "description": "While you are holding this leather-bound book, you can use it as a spellcasting focus for your wizard spells, and you gain a +1 bonus to spell attack rolls and to the saving throw DCs of your wizard spells.\nYou can use this book as a spellbook. In addition, when you use your Arcane Recovery feature, you can increase the number of spell slot levels you regain by 1",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 1
+        },
+        {
+          "target": "spell.dc",
+          "value": 1
+        }
+      ]
     },
     {
       "name": "+1 Bloodwell Vial",
@@ -50,7 +77,16 @@
       "attune": true,
       "attuneNote": "by a sorcerer",
       "description": "To attune to this vial, you must place a few drops of your blood into it. The vial can't be opened while your attunement to it lasts. If your attunement to the vial ends, the contained blood turns to ash. You can use the vial as a spellcasting focus for your spells while wearing or holding it, and you gain a +1 bonus to spell attack rolls and to the saving throw DCs of your sorcerer spells.\nIn addition, when you roll any Hit Dice to recover hit points while you are carrying the vial, you can regain 5 sorcery points. This property of the vial can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 1
+        },
+        {
+          "target": "spell.dc",
+          "value": 1
+        }
+      ]
     },
     {
       "name": "+1 Moon Sickle",
@@ -62,7 +98,16 @@
       "attune": true,
       "attuneNote": "by a druid or ranger",
       "description": "Damage 1d4 slashing · Properties: Light · Base item: Sickle. This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +1 bonus to attack and damage rolls made with it, and you gain a +1 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.\nWhen you cast a spell that restores hit points, you can roll a d4 and add the number rolled to the amount of hit points restored, provided you are holding the sickle",
-      "effects": [],
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 1
+        },
+        {
+          "target": "spell.dc",
+          "value": 1
+        }
+      ],
       "weapon": {
         "kind": "melee",
         "dice": "1d4",
@@ -83,7 +128,16 @@
       "attune": true,
       "attuneNote": "by a bard",
       "description": "Base item: Drum. While holding this drum, you gain a +1 bonus to spell attack rolls and to the saving throw DCs of your bard spells.\nAs an action, you can play the drum to regain one use of your Bardic Inspiration feature. This property of the drum can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 1
+        },
+        {
+          "target": "spell.dc",
+          "value": 1
+        }
+      ]
     },
     {
       "name": "+2 All-Purpose Tool",
@@ -94,7 +148,16 @@
       "attune": true,
       "attuneNote": "by an artificer",
       "description": "This simple screwdriver can transform into a variety of tools; as an action, you can touch the item and transform it into any type of artisan's tool of your choice (see the \"Equipment\" chapter in the Player's Handbook for a list of artisan's tools). Whatever form the tool takes, you are proficient with it.\nWhile holding this tool, you gain a +2 bonus to the spell attack rolls and the saving throw DCs of your artificer spells.\nAs an action, you can focus on the tool to channel your creative forces. Choose a cantrip that you don't know from any class list. For 8 hours, you can cast that cantrip, and it counts as an artificer cantrip for you. Once this property is used, it can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        },
+        {
+          "target": "spell.dc",
+          "value": 2
+        }
+      ]
     },
     {
       "name": "+2 Amulet of the Devout",
@@ -106,7 +169,16 @@
       "attune": true,
       "attuneNote": "by a cleric or paladin",
       "description": "This amulet bears the symbol of a deity inlaid with precious stones or metals. While you wear the holy symbol, you gain a +2 bonus to spell attack rolls and the saving throw DCs of your spells.\nWhile you wear this amulet, you can use your Channel Divinity feature without expending one of the feature's uses. Once this property is used, it can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        },
+        {
+          "target": "spell.dc",
+          "value": 2
+        }
+      ]
     },
     {
       "name": "+2 Arcane Grimoire",
@@ -118,7 +190,16 @@
       "attune": true,
       "attuneNote": "by a wizard",
       "description": "While you are holding this leather-bound book, you can use it as a spellcasting focus for your wizard spells, and you gain a +2 bonus to spell attack rolls and to the saving throw DCs of your wizard spells.\nYou can use this book as a spellbook. In addition, when you use your Arcane Recovery feature, you can increase the number of spell slot levels you regain by 1",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        },
+        {
+          "target": "spell.dc",
+          "value": 2
+        }
+      ]
     },
     {
       "name": "+2 Bloodwell Vial",
@@ -129,7 +210,16 @@
       "attune": true,
       "attuneNote": "by a sorcerer",
       "description": "To attune to this vial, you must place a few drops of your blood into it. The vial can't be opened while your attunement to it lasts. If your attunement to the vial ends, the contained blood turns to ash. You can use the vial as a spellcasting focus for your spells while wearing or holding it, and you gain a +2 bonus to spell attack rolls and to the saving throw DCs of your sorcerer spells.\nIn addition, when you roll any Hit Dice to recover hit points while you are carrying the vial, you can regain 5 sorcery points. This property of the vial can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        },
+        {
+          "target": "spell.dc",
+          "value": 2
+        }
+      ]
     },
     {
       "name": "+2 Moon Sickle",
@@ -141,7 +231,16 @@
       "attune": true,
       "attuneNote": "by a druid or ranger",
       "description": "Damage 1d4 slashing · Properties: Light · Base item: Sickle. This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +2 bonus to attack and damage rolls made with it, and you gain a +2 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.\nWhen you cast a spell that restores hit points, you can roll a d4 and add the number rolled to the amount of hit points restored, provided you are holding the sickle",
-      "effects": [],
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        },
+        {
+          "target": "spell.dc",
+          "value": 2
+        }
+      ],
       "weapon": {
         "kind": "melee",
         "dice": "1d4",
@@ -162,7 +261,16 @@
       "attune": true,
       "attuneNote": "by a bard",
       "description": "Base item: Drum. While holding this drum, you gain a +2 bonus to spell attack rolls and to the saving throw DCs of your bard spells.\nAs an action, you can play the drum to regain one use of your Bardic Inspiration feature. This property of the drum can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 2
+        },
+        {
+          "target": "spell.dc",
+          "value": 2
+        }
+      ]
     },
     {
       "name": "+3 All-Purpose Tool",
@@ -173,7 +281,16 @@
       "attune": true,
       "attuneNote": "by an artificer",
       "description": "This simple screwdriver can transform into a variety of tools; as an action, you can touch the item and transform it into any type of artisan's tool of your choice (see the \"Equipment\" chapter in the Player's Handbook for a list of artisan's tools). Whatever form the tool takes, you are proficient with it.\nWhile holding this tool, you gain a +3 bonus to the spell attack rolls and the saving throw DCs of your artificer spells.\nAs an action, you can focus on the tool to channel your creative forces. Choose a cantrip that you don't know from any class list. For 8 hours, you can cast that cantrip, and it counts as an artificer cantrip for you. Once this property is used, it can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 3
+        },
+        {
+          "target": "spell.dc",
+          "value": 3
+        }
+      ]
     },
     {
       "name": "+3 Amulet of the Devout",
@@ -185,7 +302,16 @@
       "attune": true,
       "attuneNote": "by a cleric or paladin",
       "description": "This amulet bears the symbol of a deity inlaid with precious stones or metals. While you wear the holy symbol, you gain a +3 bonus to spell attack rolls and the saving throw DCs of your spells.\nWhile you wear this amulet, you can use your Channel Divinity feature without expending one of the feature's uses. Once this property is used, it can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 3
+        },
+        {
+          "target": "spell.dc",
+          "value": 3
+        }
+      ]
     },
     {
       "name": "+3 Arcane Grimoire",
@@ -197,7 +323,16 @@
       "attune": true,
       "attuneNote": "by a wizard",
       "description": "While you are holding this leather-bound book, you can use it as a spellcasting focus for your wizard spells, and you gain a +3 bonus to spell attack rolls and to the saving throw DCs of your wizard spells.\nYou can use this book as a spellbook. In addition, when you use your Arcane Recovery feature, you can increase the number of spell slot levels you regain by 1",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 3
+        },
+        {
+          "target": "spell.dc",
+          "value": 3
+        }
+      ]
     },
     {
       "name": "+3 Bloodwell Vial",
@@ -208,7 +343,16 @@
       "attune": true,
       "attuneNote": "by a sorcerer",
       "description": "To attune to this vial, you must place a few drops of your blood into it. The vial can't be opened while your attunement to it lasts. If your attunement to the vial ends, the contained blood turns to ash. You can use the vial as a spellcasting focus for your spells while wearing or holding it, and you gain a +3 bonus to spell attack rolls and to the saving throw DCs of your sorcerer spells.\nIn addition, when you roll any Hit Dice to recover hit points while you are carrying the vial, you can regain 5 sorcery points. This property of the vial can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 3
+        },
+        {
+          "target": "spell.dc",
+          "value": 3
+        }
+      ]
     },
     {
       "name": "+3 Moon Sickle",
@@ -220,7 +364,16 @@
       "attune": true,
       "attuneNote": "by a druid or ranger",
       "description": "Damage 1d4 slashing · Properties: Light · Base item: Sickle. This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +3 bonus to attack and damage rolls made with it, and you gain a +3 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.\nWhen you cast a spell that restores hit points, you can roll a d4 and add the number rolled to the amount of hit points restored, provided you are holding the sickle",
-      "effects": [],
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 3
+        },
+        {
+          "target": "spell.dc",
+          "value": 3
+        }
+      ],
       "weapon": {
         "kind": "melee",
         "dice": "1d4",
@@ -241,7 +394,16 @@
       "attune": true,
       "attuneNote": "by a bard",
       "description": "Base item: Drum. While holding this drum, you gain a +3 bonus to spell attack rolls and to the saving throw DCs of your bard spells.\nAs an action, you can play the drum to regain one use of your Bardic Inspiration feature. This property of the drum can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.attack",
+          "value": 3
+        },
+        {
+          "target": "spell.dc",
+          "value": 3
+        }
+      ]
     },
     {
       "name": "Acid Absorbing Tattoo",
@@ -873,7 +1035,12 @@
       "attune": true,
       "attuneNote": "by a bard",
       "description": "While holding this concertina, you gain a +2 bonus to the saving throw DC of your bard spells.\nAs an action, you can use the concertina to cast Otto's irresistible dance from the item. This property of the concertina can't be used again until the next dawn",
-      "effects": []
+      "effects": [
+        {
+          "target": "spell.dc",
+          "value": 2
+        }
+      ]
     },
     {
       "name": "Shadowfell Brand Tattoo",

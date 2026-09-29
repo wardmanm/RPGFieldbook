@@ -17,7 +17,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'grantItemByName',
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag','runChoices',
   'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote',
-  'attackNumbers','addLibraryItems','contributions','sumFx','armorAC',
+  'attackNumbers','addLibraryItems','contributions','sumFx','armorAC','spellDC','spellAtkBonus',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -546,6 +546,54 @@ ck('R7 ...and a stamped one round-trips',
   const m=X.migrate(JSON.parse(JSON.stringify(ch)));
   ck('#76 migrate() leaves the old effect on a saved copy', m.inventory[0].effects.length===1&&m.inventory[0].effects[0].value===5,
      m.inventory[0].effects);
+  X.resetRules();
+}
+
+/* #77 — the packs never read an item's spell attack or spell save DC bonus. A
+   sheet's copy of a Staff of Power or a Moon Sickle has none, and gets it only
+   through the rules-update tool: `effects` changed, ticked when untouched, and
+   applying it raises the Spellcasting numbers and nothing the player owns. The
+   "new" entries are the shipped ones, so this fails until the packs carry the
+   effects; the "old" ones are those entries without the spell targets. */
+{
+  const read=(dir,f,name)=>JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data',dir,f),'utf8')).items.find(x=>x.name===name);
+  const staffNew=read('5e2024','items-magic.json','Staff of Power'), sickleNew=read('tashas','items-magic.json','+1 Moon Sickle');
+  const strip=d=>Object.assign(JSON.parse(JSON.stringify(d)),{effects:(d.effects||[]).filter(e=>!/^spell\./.test(e.target))});
+  const load=(staff,sickle)=>{ X.resetRules();
+    X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(staff))]},'5e.json');
+    X.mergeRules({system:'TCE',items:[JSON.parse(JSON.stringify(sickle))]},'tce.json'); };
+  load(strip(staffNew),strip(sickleNew));
+  const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.abilities.wis=16; ch.level=1; ch.spellAbility='wis';
+  X.character=ch; X.activeId=ch.id;
+  X.addLibraryItems(X.rules.items.slice(),null,null,1);                /* both weapons: equipped */
+  ck('#77 an old sheet: the staff and the sickle equipped, spell attack +5 and DC 13, unchanged by either',
+     ch.inventory.length===2&&ch.inventory.every(i=>i.equipped)&&X.spellAtkBonus()===5&&X.spellDC()===13,
+     [ch.inventory.map(i=>i.name+':'+i.equipped),X.spellAtkBonus(),X.spellDC()]);
+  ch.inventory.forEach(i=>{i.fav=true;});
+  const ids=ch.attacks.map(a=>a.id).join();
+  load(staffNew,sickleNew);
+  const rows=X.diffCharacter().rows.filter(r=>r.name==='Staff of Power'||r.name==='+1 Moon Sickle');
+  ck('#77 the fixed packs offer both, each as one changed row: effects, and nothing else',
+     rows.length===2&&rows.every(r=>r.type==='changed'&&r.fields.join()==='effects'), X.diffCharacter().rows.map(r=>r.name+':'+r.fields));
+  ck('#77 ...ticked, since nobody edited the copies', rows.length===2&&rows.every(r=>r.apply===true&&r.edited===false),
+     rows.map(r=>[r.apply,r.edited]));
+  X.applyUpdates(rows);
+  const staff=ch.inventory.find(i=>i.name==='Staff of Power'), sickle=ch.inventory.find(i=>i.name==='+1 Moon Sickle');
+  ck('#77 applying them gives spell attack +2 +1 = +8 and DC +1 = 14', X.spellAtkBonus()===8&&X.spellDC()===14,
+     [X.spellAtkBonus(),X.spellDC(),staff.effects,sickle.effects]);
+  ck('#77 ...the staff keeps its AC and saving throws', staff.effects.filter(e=>e.target==='ac'||/^save\./.test(e.target)).length===7,
+     staff.effects);
+  ck('#77 ...touches none of the player\'s numbers and keeps both attack rows',
+     ch.inventory.every(i=>i.equipped&&i.fav)&&ch.attacks.map(a=>a.id).join()===ids, [ch.inventory, ch.attacks.map(a=>a.id)]);
+  ck('#77 ...and the weapons still attack as weapons: the sickle PB 2 + 1 = +3, the staff +4',
+     X.attackNumbers(ch.attacks.find(a=>a.name==='+1 Moon Sickle')).toHit===3
+     &&X.attackNumbers(ch.attacks.find(a=>a.name==='Staff of Power')).toHit===4,
+     ch.attacks.map(a=>a.name+':'+X.attackNumbers(a).toHit));
+  load(strip(staffNew),strip(sickleNew));
+  const old=X.blankChar(); X.character=old; X.addLibraryItems(X.rules.items.slice(),null,null,1);
+  const m=X.migrate(JSON.parse(JSON.stringify(old)));
+  ck('#77 migrate() adds nothing to a saved copy', m.inventory.every(i=>!(i.effects||[]).some(e=>/^spell\./.test(e.target))),
+     m.inventory.map(i=>i.effects));
   X.resetRules();
 }
 

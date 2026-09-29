@@ -40,6 +40,7 @@ dropdown:
 | `ac`, `init`, `speed`, `hp.max`, `profBonus` | that number |
 | `attack`, `attack.melee`, `attack.ranged` | to-hit: all attacks, or melee / ranged only |
 | `damage`, `damage.melee`, `damage.ranged` | the damage bonus, likewise |
+| `spell.attack`, `spell.dc` | the spell attack bonus and the spell save DC, through `spellAtkBonus()` / `spellDC()` |
 | `ability.<abil>` | the ability *score* (so the modifier and everything using it follow) |
 | `save.<abil>`, `skill.<skill>` | that save or skill |
 
@@ -60,7 +61,9 @@ dropdown:
   applied last and outside the engine;
 - passive Perception is 10 + WIS + proficiency + `skill.perception` effects. The Max HP note shows
   typed Max + `hp.max` effects;
-- spell save DC is 8 + proficiency + ability modifier, and spell attack is proficiency + modifier;
+- spell save DC is `spellDC(c)`, 8 + proficiency + ability modifier + `spell.dc` effects, and spell
+  attack is `spellAtkBonus(c)`, proficiency + modifier + `spell.attack` effects, each marked when an
+  effect applies ("—" with no spellcasting ability);
 - then it repaints death saves, runs `autoSlots()` and `syncResources()`, repaints slots, hit dice
   and resources, sets every spell attack row to the current spellcasting ability, and redraws
   Attacks and Active Spells.
@@ -70,9 +73,10 @@ opens `openStatBreakdown()`, which lists the base, the grant that supplied a pro
 contribution by source name.
 
 **Elsewhere, the same pattern:** `attackNumbers(a)` (the better of STR/DEX for finesse, proficiency
-if set, `atkMisc`, `attack` + `attack.<kind>` effects; damage adds the modifier if
-`addAbilityDamage`, `dmgMisc`, `damage` + `damage.<kind>`), `spellDC()`/`spellAtkBonus()`, and
-`effMaxHP()`. Every HP change ends in `clampHP()`. AC's base is covered in
+if set, `atkMisc`, `attack` + `attack.<kind>` effects, and `spell.attack` on a spell attack row
+only; damage adds the modifier if `addAbilityDamage`, `dmgMisc`, `damage` + `damage.<kind>`),
+`spellDC()`/`spellAtkBonus()`, which the card, save rows, the cast window and the print sheet all
+read, and `effMaxHP()`. Every HP change ends in `clampHP()`. AC's base is covered in
 [Armor & AC](../features/armor-and-ac.md). Magic armor still needs an `ac` effect for its bonus.
 
 **Use counts that scale.** `usesMax(f)` resolves a feature's `uses.max`:
@@ -111,8 +115,10 @@ fixed `8`/`"d8"`).
 - **Encumbrance stays outside the engine,** applied after the effects: two of its outcomes
   *replace* speed (5 ft over capacity, 0 at the hard limit) and the third (disadvantage) is not a
   number.
-- **Compute `contributions()` once and pass it down.** `effMaxHP()` takes it optionally for exactly
-  this reason. The expression used to be written out in three places.
+- **Compute `contributions()` once and pass it down.** `effMaxHP()`, `spellDC()` and
+  `spellAtkBonus()` take it optionally for exactly this reason. The HP expression used to be written
+  out in three places, and the Spellcasting card had its own copy of the spell formulas, which is
+  how it missed the item bonuses (#77).
 - **`recompute()` writes to the model,** not just the DOM: `level`, slot totals, the auto resource
   pools, and the spell attack rows' ability. It does not call `renderHP()`, so callers that change
   HP render it themselves.
@@ -141,6 +147,8 @@ fixed `8`/`"d8"`).
 | Where encumbrance applies | After the effects, outside the engine | As a speed effect: two outcomes replace speed and one is not numeric (code comment, `10-compute.js`) |
 | A bonus scoped to one weapon (#74) | The weapon's `atkMisc`/`dmgMisc`, or prose on an item with no weapon | An `attack`/`damage` effect: it reaches every row, and on a weapon it doubled the row's own `atkMisc` |
 | A bonus that holds only in a moment (#76) | Prose, like advantage and resistance | An effect: it is on whenever the source is live, so a once-per-rest Reaction read as +5 AC all day |
+| Where an item's spell attack and DC bonus goes (#77) | Two numeric targets, `spell.attack` and `spell.dc`, read by `spellAtkBonus()`/`spellDC()` | Reusing `attack`: it reaches every weapon row, so a Wand of the War Mage would make a sword more accurate. Prose: a flat bonus to one number is exactly what an effect is |
+| A spell bonus the book limits to one class's spells (#77) | Applied to the character's one spellcasting; the class stays in the description | Prose: all 18 of Tasha's focuses and sickles would do nothing for the casters they were made for. Exact only for a single-class caster; a multiclass one's other class reads it too. Owner may revisit |
 
 ## Open
 
@@ -161,3 +169,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-25 — Resource pools gain a die size resolved per level. → ledger L3676
 - 2026-09-28 — A weapon's bonus is not an effect: the packs' `+N` weapons no longer add to every attack while equipped. → ledger L4392, #74
 - 2026-09-28 — An effect is a standing bonus: the packs' conditional AC and saving-throw bonuses stay prose. → ledger L4502, #76
+- 2026-09-28 — `spell.attack` and `spell.dc` targets; `spellDC()`/`spellAtkBonus()` add them and the card paints through them. → ledger L4568, #77

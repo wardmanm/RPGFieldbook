@@ -1123,8 +1123,10 @@ ck('#76 the Arrow-Catching Shield is still a +2 shield: its armor line, which AC
    b76.get('Arrow-Catching Shield', {}).get('description', '')[:40])
 for name, want in (('Cloak of Protection', _fx(1, 1)), ('Scarab of Protection', _fx(1)), ('Shield of the Cavalier', _fx(2)),
                    ('Stone of Good Luck', _fx(0, 1)), ('Robe of Stars', _fx(0, 1)), ('Glamoured Studded Leather', _fx(1)),
-                   ('Ioun Stone, Protection', _fx(1)), ('Black Dragon Scale Mail', _fx(1)), ('Staff of Power', _fx(2, 2))):
+                   ('Ioun Stone, Protection', _fx(1)), ('Black Dragon Scale Mail', _fx(1))):
     ck('#76 %s: a standing bonus stays an effect' % name, b76.get(name, {}).get('effects') == want, b76.get(name, {}).get('effects'))
+sop = [e for e in b76.get('Staff of Power', {}).get('effects', []) if e['target'] == 'ac' or e['target'].startswith('save.')]
+ck('#76 Staff of Power: its standing AC and saving-throw bonus stay effects', sop == _fx(2, 2), sop)
 ck('#76 a bonus stated only in an embedded {#itemEntry} template is read from it (Dragon Scale Mail)',
    b76.get('Black Dragon Scale Mail', {}).get('effects') == _fx(1), b76.get('Black Dragon Scale Mail', {}).get('effects'))
 ck('#76 ...though its description is left exactly as before',
@@ -1134,7 +1136,10 @@ ck('#76 ...though its description is left exactly as before',
 # The reader itself, on the sentences above and the shapes it must not misread.
 _rd = getattr(C, '_bonus_reading', None)
 def rd(text, key, n):
-    return _rd(text, key, n) if _rd else ('no _bonus_reading',)
+    try:
+        return _rd(text, key, n) if _rd else ('no _bonus_reading',)
+    except Exception as e:          # a key the reader does not know yet is a FAIL, not a crash
+        return ('error', repr(e))
 ck('#76 "while you wear this cloak" is standing', rd('You gain a +1 bonus to Armor Class and saving throws while you wear this cloak.', 'ac', 1)[0] is True,
    rd('You gain a +1 bonus to Armor Class and saving throws while you wear this cloak.', 'ac', 1))
 ck('#76 "while this … is on your person" and "orbits your head" are standing',
@@ -1188,6 +1193,56 @@ for label, argv, outfile, who, fine in (
         ck('#76 %s reads the Dragon Scale Mail\'s bonus through its template' % label,
            got.get(fine, {}).get('effects') == _fx(1), got.get(fine))
 shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True)
+
+# ---- 29. an item's spell attack and spell save DC bonus reach the sheet (#77)
+# 5e-tools' bonusSpellAttack / bonusSpellSaveDc were never read, so the Moon
+# Sickles, Staff of Power, the Wands of the War Mage and Tasha's spellcasting
+# focuses carried no effect at all. They become `spell.attack` / `spell.dc`
+# effects through the same sentence reader as AC and saves (#76). A bonus the
+# book limits to one class's spells ("of your druid and ranger spells") is
+# applied to the character's spellcasting, which is the only one the sheet has;
+# the class stays in the prose and in the item's attunement. Real shapes.
+B77 = [
+    {"name": "+2 Moon Sickle", "source": "TCE", "page": 133, "baseItem": "sickle|PHB", "type": "M", "rarity": "rare", "reqAttune": "by a druid or ranger", "weight": 2, "weaponCategory": "simple", "property": ["L"], "dmg1": "1d4", "dmgType": "S", "bonusWeapon": "+2", "bonusSpellAttack": "+2", "bonusSpellSaveDc": "+2", "focus": ["Druid", "Ranger"], "entries": ["This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +2 bonus to attack and damage rolls made with it, and you gain a +2 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.", "When you cast a spell that restores hit points, you can roll a {@dice d4} and add the number rolled to the amount of hit points restored, provided you are holding the sickle."]},
+    {"name": "+1 Wand of the War Mage", "source": "XDMG", "page": 322, "srd52": True, "basicRules2024": True, "type": "WD|XDMG", "rarity": "uncommon", "reqAttune": "by a spellcaster", "weight": 1, "bonusSpellAttack": "+1", "entries": ["While holding this wand, you gain a +1 bonus to spell attack rolls. In addition, you ignore {@variantrule Cover|XPHB|Half Cover} when making a spell attack roll."]},
+    {"name": "Robe of the Archmagi", "source": "XDMG", "page": 298, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": "by a sorcerer, warlock, or wizard", "wondrous": True, "bonusSpellAttack": "+2", "bonusSpellSaveDc": "+2", "entries": ["This elegant garment is made from exquisite cloth and adorned with runes.", "You gain these benefits while wearing the robe.", {"type": "entries", "name": "Armor", "entries": ["If you aren't wearing armor, your base {@variantrule Armor Class|XPHB} is 15 plus your Dexterity modifier."]}, {"type": "entries", "name": "Magic Resistance", "entries": ["You have {@variantrule Advantage|XPHB} on saving throws against spells and other magical effects."]}, {"type": "entries", "name": "War Mage", "entries": ["Your spell save DC and spell attack bonus each increase by 2."]}]},
+    {"name": "Staff of the Magi", "source": "XDMG", "page": 310, "srd52": True, "basicRules2024": True, "type": "M|XPHB", "rarity": "legendary", "reqAttune": "by a sorcerer, warlock, or wizard", "weight": 4, "weaponCategory": "simple", "property": ["V|XPHB"], "mastery": ["Topple|XPHB"], "dmg1": "1d6", "dmgType": "B", "dmg2": "1d8", "bonusWeapon": "+2", "bonusSpellAttack": "+2", "recharge": "dawn", "rechargeAmount": "{@dice 4d6 + 2}", "charges": 50, "staff": True, "entries": ["This staff has 50 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls."]},
+    {"name": "Talisman of Pure Good", "source": "XDMG", "page": 314, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": "by a cleric or paladin", "wondrous": True, "weight": 1, "bonusSpellAttack": "+2", "charges": 7, "entries": ["This talisman is a mighty symbol of goodness. A Fiend or an Undead that touches the talisman takes {@damage 8d6} Radiant damage and takes the damage again each time it ends its turn holding or carrying the talisman.", {"type": "entries", "name": "Holy Symbol", "entries": ["You can use the talisman as a Holy Symbol. You gain a +2 bonus to spell attack rolls while you wear or hold it."]}, {"type": "entries", "name": "Pure Rebuke", "entries": ["The talisman has 7 charges. While wearing or holding the talisman, you can take a {@action Magic|XPHB} action to expend 1 charge and target one creature you can see on the ground within 120 feet of yourself. A flaming fissure opens under the target, and the target makes a {@dc 20} Dexterity saving throw. If the target is a Fiend or an Undead, it has {@variantrule Disadvantage|XPHB} on the save. On a failed save, the target falls into the fissure and is destroyed, leaving no remains. On a successful save, the target isn't cast into the fissure but takes {@damage 4d6} Psychic damage from the ordeal. In either case, the fissure then closes, leaving no trace of its existence. When you expend the last charge, the talisman disperses into motes of golden light and is destroyed."]}]},
+    {"name": "Reveler's Concertina", "source": "TCE", "page": 134, "type": "INS", "rarity": "rare", "reqAttune": "by a bard", "wondrous": True, "bonusSpellSaveDc": "+2", "entries": ["While holding this concertina, you gain a +2 bonus to the saving throw DC of your bard spells.", "As an action, you can use the concertina to cast {@spell Otto's irresistible dance} from the item. This property of the concertina can't be used again until the next dawn."]},
+    {"name": "+1 Arcane Grimoire", "source": "TCE", "page": 120, "type": "SCF", "rarity": "uncommon", "reqAttune": "by a wizard", "wondrous": True, "weight": 3, "bonusSpellAttack": "+1", "bonusSpellSaveDc": "+1", "focus": ["Wizard"], "entries": ["While you are holding this leather-bound book, you can use it as a spellcasting focus for your wizard spells, and you gain a +1 bonus to spell attack rolls and to the saving throw DCs of your wizard spells.", "You can use this book as a spellbook. In addition, when you use your Arcane Recovery feature, you can increase the number of spell slot levels you regain by 1."]},
+    {"name": "+1 All-Purpose Tool", "source": "TCE", "page": 119, "type": "SCF", "rarity": "uncommon", "reqAttune": "by an artificer", "wondrous": True, "bonusSpellAttack": "+1", "bonusSpellSaveDc": "+1", "focus": ["Artificer"], "entries": ["This simple screwdriver can transform into a variety of tools; as an action, you can touch the item and transform it into any type of artisan's tool of your choice (see the \"Equipment\" chapter in the {@book Player's Handbook|PHB} for a list of {@item artisan's tools|PHB}). Whatever form the tool takes, you are proficient with it.", "While holding this tool, you gain a +1 bonus to the spell attack rolls and the saving throw DCs of your artificer spells.", "As an action, you can focus on the tool to channel your creative forces. Choose a cantrip that you don't know from any class list. For 8 hours, you can cast that cantrip, and it counts as an artificer cantrip for you. Once this property is used, it can't be used again until the next dawn."]},
+]
+_b77 = _tmpjson({'item': B77 + [x for x in B76_STANDING if x['name'] == 'Staff of Power']})
+_BP = getattr(C, '_BONUS_PROSE', None)
+if _BP is not None: _BP.clear()
+with C.statblock_ctx(C.load_item_index(_b76base, _b77)):
+    b77 = dict(_by_name(C.convert_items(_b77)), **_by_name(C.convert_items(_b77, book=TCE)))
+def _sp(atk=0, dc=0):
+    return ([{'target': 'spell.attack', 'value': atk}] if atk else []) + ([{'target': 'spell.dc', 'value': dc}] if dc else [])
+for name, want, why in (('+2 Moon Sickle', _sp(2, 2), '"…spell attack rolls and the saving throw DCs of your druid and ranger spells"'),
+                        ('+1 Wand of the War Mage', _sp(1), '"…a +1 bonus to spell attack rolls"'),
+                        ('Robe of the Archmagi', _sp(2, 2), '"Your spell save DC and spell attack bonus each increase by 2"'),
+                        ('Staff of the Magi', _sp(2), 'spell attack rolls only, no DC'),
+                        ('Talisman of Pure Good', _sp(2), '"…while you wear or hold it"'),
+                        ("Reveler's Concertina", _sp(0, 2), 'the DC only'),
+                        ('+1 Arcane Grimoire', _sp(1, 1), '"…and to the saving throw DCs of your wizard spells"'),
+                        ('+1 All-Purpose Tool', _sp(1, 1), '"…to the spell attack rolls and the saving throw DCs"'),
+                        ('Staff of Power', _fx(2, 2) + _sp(2), 'AC, saves and spell attack rolls, while holding it')):
+    e = b77.get(name, {})
+    ck('#77 %s: %s' % (name, why), e.get('effects') == want, e.get('effects'))
+ck('#77 the Moon Sickle keeps its own +2 on its weapon too',
+   b77.get('+2 Moon Sickle', {}).get('weapon', {}).get('atkMisc') == 2, b77.get('+2 Moon Sickle', {}).get('weapon'))
+ck('#77 ...and its class limit is still in its description',
+   'druid and ranger spells' in b77.get('+2 Moon Sickle', {}).get('description', ''), b77.get('+2 Moon Sickle', {}).get('description', '')[:200])
+ck('#77 every spell bonus here is standing: none kept in prose', not (_BP or []), list(_BP or []))
+ck('#77 a spell bonus the book conditions is not an effect (the 2014 Talisman: "If you are a good cleric or paladin")',
+   rd('If you are a good cleric or paladin, you can use the talisman as a holy symbol, and you gain a +2 bonus to spell '
+      'attack rolls while you wear or hold it.', 'spell.attack', 2)[0] is False,
+   rd('If you are a good cleric or paladin, you can use the talisman as a holy symbol, and you gain a +2 bonus to spell '
+      'attack rolls while you wear or hold it.', 'spell.attack', 2))
+ck('#77 a weapon\'s "+2 bonus to attack rolls" is not a spell attack bonus',
+   rd('You have a +2 bonus to attack rolls and damage rolls made with this magic weapon.', 'spell.attack', 2)[0] is None)
+if _BP is not None: _BP.clear()
 
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])

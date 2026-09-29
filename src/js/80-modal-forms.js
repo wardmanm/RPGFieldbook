@@ -144,6 +144,7 @@ function openStatBreakdown(target){
   else if(target==="ac"){const AB=armorAC(c);let p;if(AB.hasArmor){const cap=(AB.body.dexCap==null)?AB.dex:Math.min(AB.dex,AB.body.dexCap);p=`Armor ${AB.body.base} + DEX ${fmt(cap)}`;}else if(character.ac!=="")p=`Base AC ${num(character.ac)}`;else p=`10 + DEX ${fmt(mods.dex)}`;if(AB.shield)p+=` + Shield ${fmt(AB.shield)}`;base=p;}
   else if(target==="init")base=character.init===""?`DEX mod ${fmt(mods.dex)}`:`Base ${fmt(num(character.init))}`;
   else if(target==="speed")base=`Base ${num(character.speed)}`;
+  else if(target==="spell.dc"||target==="spell.attack"){const sa=character.spellAbility;base=sa?`${target==="spell.dc"?"8 + ":""}prof ${fmt(pb)} + ${sa.toUpperCase()} mod ${fmt(mods[sa])}`:"No spellcasting ability chosen";}
   let rows=`<p style="margin-bottom:6px">${esc(base)}</p>`+grantLines;
   if(contr.length)rows+=contr.map(x=>`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(x.source)}</span><b>${fmt(x.value)}</b></div>`).join("");
   else if(!grantLines)rows+=`<p style="color:var(--ink-soft);font-style:italic">No item, feature, or grant effects apply.</p>`;

@@ -4564,3 +4564,69 @@ applying it gives 12; `migrate()` leaves it; three failed first. Pages:
 [converter](../wiki/data/converter.md), [armor & AC](../wiki/features/armor-and-ac.md),
 [computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
 [rules-update tool](../wiki/features/rules-update-tool.md).
+
+## Items' spell attack and spell save DC bonuses apply (#77, 2026-09-28)
+
+**Root cause, two halves.** The converter never read 5e-tools' `bonusSpellAttack` or
+`bonusSpellSaveDc`, so 28 pack items carried no effect for them; and the app had no effect target
+a spell bonus could use. `spellDC()` and `spellAtkBonus()` summed no effects at all, and
+`recompute()` painted the Spellcasting card from its own copy of the same two formulas. An equipped
+Staff of Power, Moon Sickle or Wand of the War Mage changed nothing a caster looks at.
+
+**Two numeric targets.** `spell.attack` and `spell.dc` join `fxTargets()` ("Spell attack", "Spell
+save DC"), so the effect editor offers them and `FX_LABEL` names their chips. They stay inside
+"effects are numeric-only": each is a flat bonus to one number. `spellDC(c)` and `spellAtkBonus(c)`
+now take the contributions optionally, as `effMaxHP()` does, and add them, and every place that
+shows either number reads those two: `recompute()` paints the card through them (and marks each
+with `.fx-on` when an effect applies), `promptSpellAttack()` (the cast window), the save rows in
+`renderAttacks()` (their DC cell marked too) and `printSheet()`. A spell attack row reads its to-hit
+through `attackNumbers()`, which adds `spell.attack` for `source: "spell"` rows only, so a weapon's
+row, the staff's or the sickle's own included, never takes it; `openAttackBreakdown()` lists it by
+source on those rows. The card's two numbers carry `data-stat="spell.dc"` / `"spell.attack"`, so a
+tap opens `openStatBreakdown()`: "8 + prof +2 + INT mod +3" (or "No spellcasting ability chosen")
+and each contribution by name, as the AC box does. `attack` was not reused: it reaches every weapon
+row, and a Wand of the War Mage does not make a sword more accurate.
+
+**The converter** reads the two fields through #76's sentence reader, with phrases for "+N bonus
+to … spell attack rolls", "+N bonus to … saving throw DC(s)" / "spell save DC", and the Robe of the
+Archmagi's "Your spell save DC and spell attack bonus each increase by 2". Every one of the 28 is
+standing ("while holding…", "while you wear or hold it"), and the run notes none. Core, 9:
++1/+2/+3 Wand of the War Mage (attack), Robe of the Archmagi (attack and DC +2), Staff of Power
+(attack +2, beside its AC and saves), Staff of the Magi, Staff of the Woodlands, Talisman of Pure
+Good and Talisman of Ultimate Evil (attack +2). Tasha's, 19: the +1/+2/+3 All-Purpose Tool, Amulet
+of the Devout, Arcane Grimoire, Bloodwell Vial, Moon Sickle and Rhythm-Maker's Drum (attack and DC),
+and Reveler's Concertina (DC +2). Xanathar's has none.
+
+**A bonus limited to one class's spells** (the Moon Sickle's "your druid and ranger spells", the
+Arcane Grimoire's "your wizard spells", and the rest of Tasha's focuses) is applied to the
+character's spellcasting. The sheet has one spellcasting ability, one DC and one attack bonus, and
+the item's attunement already requires that class, so for a single-class caster it is exact; only
+a multiclass one differs (a Druid/Wizard's Wizard spells would read the sickle's bonus too). The
+class stays in the description. Leaving these as prose would have left all 18 Tasha's focuses and sickles
+doing nothing for the casters they were made for. Owner's call to revisit.
+
+**Data.** Only `effects` moved, on the 28 items: `data/5e2024/items-magic.json` nine, and
+`data/tashas/items-magic.json` 19. Checked field by field; every other file of the three packs
+regenerates byte for byte.
+
+**Existing characters** hold copies. `effects` is in `UPD_FIELDS.item`, so the rules-update tool
+offers each stamped copy as "effects changed", ticked when unedited; applying writes the new
+`effects` and nothing else. A druid (WIS 16, level 1) with a Staff of Power and a +1 Moon Sickle
+goes from spell attack +5 / DC 13 to +8 / 14, the staff keeps its AC and saves, both weapons keep
+their rows and to-hit, and equipped and fav are untouched. `migrate()` changes nothing. An older
+app given the new packs sums neither target and shows the chip as its raw name.
+
+**Guards.** `converter.py` 304 → 318: eight real shapes (the +2 Moon Sickle, a Wand of the War
+Mage, the Robe's other wording, the Staff of the Magi's attack only, a Talisman, Reveler's DC only,
+two Tasha's focuses) and Staff of Power's three bonuses; the 2014 Talisman's "If you are a good
+cleric" read as conditional; a weapon's "+2 bonus to attack rolls" not read as a spell bonus; 11
+failed first. `sheet.js` +21, through `recompute()`, the cast window, both breakdowns and a rendered
+save row: the shipped staff gives +7 and leaves DC 13 and its own row +4, the +3 Moon Sickle DC 16
+and +8 while its row stays +5, Reveler's Concertina DC 15 only, no spellcasting ability still "—";
+13 failed first. `char-update.js` +8: the fix is offered as exactly `effects`, ticked, and applying
+it gives +8 / 14; three failed first. `rules-data.js` +9: the reviewed list of spell bonuses per
+pack, every effect target any pack ships is one `fxTargets()` lists (a target the app does not know
+is summed by nothing, silently), and the two card numbers are tappable; five failed first. Pages:
+[computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
+[spells](../wiki/features/spells.md), [attacks & damage](../wiki/features/attacks-and-damage.md),
+[converter](../wiki/data/converter.md), [rules-update tool](../wiki/features/rules-update-tool.md).

@@ -20,7 +20,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'NOTE_SECTIONS','NOTE_TABS','noteDef','getNote','noteText','hasNote','saveNote',
   'noteGroupOpen','notesHTML','noteBtnHTML','noteEntryHTML','esc',
   'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings', 'skillKey',
-  'openSettings', 'highlight', 'rulesStatusText', 'rulesBadge', 'dispName',
+  'openSettings', 'highlight', 'rulesStatusText', 'rulesBadge', 'dispName', 'fxTargets',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -649,6 +649,68 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
     ck('#76 ...and still states its bonus in its text', !!e&&(e.description||'').includes(needle),
        e?(e.description||'').slice(0,120):'no item named '+name);
   });
+}
+
+// ---------- shipped data: an item's spell attack and spell save DC bonus is an effect (#77)
+// 5e-tools' bonusSpellAttack / bonusSpellSaveDc were never read, and the app had
+// no target for either. The REVIEWED list of every pack item carrying one, each
+// read by hand: every one is standing ("while holding…", "while you wear or hold
+// it", the Robe's "each increase by 2"). Tasha's focuses and Moon Sickles name a
+// class ("of your druid and ranger spells"); the sheet has one spellcasting
+// ability, so the bonus goes on it and the class stays in the text.
+{
+  const SPELL={
+    '5e2024':{'+1 Wand of the War Mage':'atk+1','+2 Wand of the War Mage':'atk+2','+3 Wand of the War Mage':'atk+3',
+              'Robe of the Archmagi':'atk+2 dc+2','Staff of Power':'atk+2','Staff of the Magi':'atk+2',
+              'Staff of the Woodlands':'atk+2','Talisman of Pure Good':'atk+2','Talisman of Ultimate Evil':'atk+2'},
+    'tashas':{"Reveler's Concertina":'dc+2'},
+    'xanathars':{},
+  };
+  ['All-Purpose Tool','Amulet of the Devout','Arcane Grimoire','Bloodwell Vial','Moon Sickle',"Rhythm-Maker's Drum"]
+    .forEach(n=>[1,2,3].forEach(k=>{SPELL.tashas['+'+k+' '+n]='atk+'+k+' dc+'+k;}));
+  const got={};
+  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+    fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
+      (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[]).forEach(it=>{
+        const fx=(it.effects||[]).filter(e=>/^spell\./.test(String(e&&e.target)));
+        if(fx.length)(got[d]=got[d]||{})[it.name]=fx.map(e=>(e.target==='spell.attack'?'atk':e.target==='spell.dc'?'dc':e.target)+'+'+e.value).join(' ');
+      });
+    }));
+  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>{
+    const want=SPELL[d]||{}, have=got[d]||{};
+    const wrong=Object.keys(have).filter(n=>want[n]!==have[n]).concat(Object.keys(want).filter(n=>have[n]!==want[n]));
+    ck('#77 '+d+': exactly the reviewed items carry a spell attack or spell save DC bonus ('+Object.keys(want).length+')',
+       wrong.length===0, [...new Set(wrong)].map(n=>n+': want '+(want[n]||'none')+', got '+(have[n]||'none')));
+  });
+}
+
+// ---------- shipped data: every effect a pack carries is one the app adds up (#77)
+// An effect is summed only by a reader that asks for its target by name. A target
+// fxTargets() does not list is summed by nothing, and nothing says so: the item
+// shows a chip and changes no number. Every `effects` array, at any depth.
+{
+  const known=new Set(X.fxTargets().map(([l,t])=>t));
+  const bad=[];
+  const walk=(n,where)=>{
+    if(Array.isArray(n))return n.forEach(x=>walk(x,where));
+    if(!n||typeof n!=='object')return;
+    if(Array.isArray(n.effects))n.effects.forEach(e=>{if(!e||!known.has(e.target))bad.push(where+' '+(n.name||n.term||'?')+': '+JSON.stringify(e));});
+    Object.keys(n).forEach(k=>walk(n[k],where));
+  };
+  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+    fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json'))
+      .forEach(f=>walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f)));
+  ck('#77 every effect target in every pack is one fxTargets() lists', bad.length===0, bad.slice(0,10));
+  ck('#77 ...and the spell targets are among them', known.has('spell.attack')&&known.has('spell.dc'), [...known].slice(-4));
+}
+
+// ---------- the Spellcasting card's numbers open their breakdown, as AC does (#77)
+{
+  const t=loadHTML();
+  ck('#77 the spell save DC is tappable: data-stat="spell.dc"', /<div class="big" data-stat="spell\.dc" id="dcDisp">/.test(t),
+     (/[^\n]*id="dcDisp"[^\n]*/.exec(t)||[''])[0].trim());
+  ck('#77 the spell attack is tappable: data-stat="spell.attack"', /<div class="big" data-stat="spell\.attack" id="satkDisp">/.test(t),
+     (/[^\n]*id="satkDisp"[^\n]*/.exec(t)||[''])[0].trim());
 }
 
 // ---------- subclassesFor: a supplement must not overwrite a 2024 subclass

@@ -736,8 +736,9 @@ def _ival(x):
     except Exception: return 0
 
 # ---------------------------------------------------------------- item bonuses
-# 5e-tools tags an item's bonusAc / bonusSavingThrow for its search filters,
-# whether the book gives the bonus all the time or only in a moment. An effect
+# 5e-tools tags an item's bonusAc / bonusSavingThrow / bonusSpellAttack /
+# bonusSpellSaveDc for its search filters, whether the book gives the bonus all
+# the time or only in a moment. An effect
 # applies whenever the item is equipped, so a conditional one written as an
 # effect is simply wrong: Quarterstaff of the Acrobat's +5 is a Reaction against
 # one attack, once per rest, and read AC +5 at all times; the Arrow-Catching
@@ -755,6 +756,13 @@ _BONUS_PHRASES = {
     # all six saves: "saving throws" alone or after a list ("AC, saving throws", "checks and
     # saving throws", "all saving throws") -- never one named save or death saves
     'saves': [_BONUS_LEAD + r'(?:' + _BONUS_MID + r'(?:,|\band|\ball|\bto)\s+)?saving throws\b'],
+    # "+2 bonus to spell attack rolls", or the Robe of the Archmagi's "Your spell save DC and
+    # spell attack bonus each increase by 2" (#77). "of your druid and ranger spells" is no
+    # condition: the sheet has one spellcasting ability, and the class is the attunement's
+    'spell.attack': [_BONUS_LEAD + _BONUS_MID + r'\bspell attack rolls?\b',
+                     r'\bspell attack (?:bonus|modifier)\b' + _BONUS_MID + r'\bincreases? by %d\b'],
+    'spell.dc': [_BONUS_LEAD + _BONUS_MID + r'\b(?:spell save DCs?|spell saving throw DCs?|saving throw DCs?)\b',
+                 r'\bspell save DC\b' + _BONUS_MID + r'\bincreases? by %d\b'],
 }
 # the conditions an equipped item always meets
 _BONUS_HELD = re.compile(
@@ -770,7 +778,7 @@ _BONUS_CLAUSE_END = re.compile(r"[,;]| and (?:you|can|to)\b")
 _SENTENCES = re.compile(r'(?<=[.!?])\s+|\n')
 
 def _bonus_reading(text, key, n):
-    """How `text` states a +n bonus to `key` ('ac', 'saves'):
+    """How `text` states a +n bonus to `key` ('ac', 'saves', 'spell.attack', 'spell.dc'):
     (True, '')                  standing -- the sentence names no condition beyond
                                 wearing, holding or carrying the item;
     (False, words)              conditional -- `words` are what made it so;
@@ -816,7 +824,9 @@ def _item_bonus_text(prose):
 # (item, 5e-tools field, value, why) for every tagged bonus kept in the prose
 _BONUS_PROSE = []
 _BONUS_FIELDS = (('bonusAc', 'ac', ('ac',)),
-                 ('bonusSavingThrow', 'saves', tuple('save.' + a for a in ('str', 'dex', 'con', 'int', 'wis', 'cha'))))
+                 ('bonusSavingThrow', 'saves', tuple('save.' + a for a in ('str', 'dex', 'con', 'int', 'wis', 'cha'))),
+                 ('bonusSpellAttack', 'spell.attack', ('spell.attack',)),
+                 ('bonusSpellSaveDc', 'spell.dc', ('spell.dc',)))
 
 def _bonus_prose_notes(say):
     by = collections.OrderedDict()
@@ -827,7 +837,8 @@ def _bonus_prose_notes(say):
 
 def _item_effects(it, prose=''):
     """The item's bonuses that apply to the whole character while it is equipped:
-    bonusAc as `ac`, bonusSavingThrow as the six `save.*`, each only when its
+    bonusAc as `ac`, bonusSavingThrow as the six `save.*`, bonusSpellAttack as
+    `spell.attack` and bonusSpellSaveDc as `spell.dc` (#77), each only when its
     sentence in `prose` states it standing (_bonus_reading(), #76); the rest are
     recorded in _BONUS_PROSE and stay in the prose.
     Never bonusWeapon, bonusWeaponAttack or bonusWeaponDamage: in 5e-tools those

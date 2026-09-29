@@ -156,6 +156,8 @@ Removing the source (unequip, remove ancestry, etc.) reverts its effects automat
 | `profBonus` | Proficiency Bonus |
 | `attack` / `attack.melee` / `attack.ranged` | To-hit (all / melee / ranged) |
 | `damage` / `damage.melee` / `damage.ranged` | Damage (all / melee / ranged) |
+| `spell.attack` | Spell attack bonus (the Spellcasting card, spell attack rows, the cast window) |
+| `spell.dc` | Spell save DC (the Spellcasting card, spell save rows, the cast window) |
 | `ability.<abbr>` | Ability **score** (e.g. `ability.str`) |
 | `save.<abbr>` | Saving throw bonus (e.g. `save.con`) |
 | `skill.<key>` | Skill bonus (e.g. `skill.stealth`) |

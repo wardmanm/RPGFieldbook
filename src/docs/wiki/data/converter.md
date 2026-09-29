@@ -114,8 +114,8 @@ the end of `all`, `supplement` and every single subcommand. Every code in the v2
 **A weapon's bonus is the weapon's.** 5e-tools' `bonusWeapon` (or the split `bonusWeaponAttack` /
 `bonusWeaponDamage`) becomes `weapon.atkMisc` / `dmgMisc`, which the item's attack row reads once.
 `_item_effects()` writes only the bonuses that apply to the whole character while the item is
-equipped: `bonusAc` as `ac` and `bonusSavingThrow` as the six `save.*`, each only when it is
-standing (below). It never turns a weapon bonus into an `attack`/`damage` effect, which would reach
+equipped: `bonusAc` as `ac`, `bonusSavingThrow` as the six `save.*`, `bonusSpellAttack` as
+`spell.attack` and `bonusSpellSaveDc` as `spell.dc`, each only when it is standing (below). It never turns a weapon bonus into an `attack`/`damage` effect, which would reach
 every attack. On an item with no weapon
 (Bracers of Archery, Rod of Lordly Might, Oil of Sharpness; Tasha's Eldritch Claw Tattoo and Baba
 Yaga's Mortar and Pestle) the bonus is scoped to one weapon, bows or unarmed strikes, which no
@@ -123,10 +123,14 @@ effect target can express, so it stays in the prose. The packs ship 15 `+N` weap
 Tasha's.
 
 **An item's bonus is an effect only when the book gives it all the time.** 5e-tools sets
-`bonusAc` and `bonusSavingThrow` for its search filters whether the bonus is standing or momentary,
-and no field tells the two apart, so `_bonus_reading()` reads the sentence that states it: "+N bonus
-to … Armor Class/AC", or "+N bonus to … saving throws" alone or in a list (one named save, or death
-saves, is not all six). It reads that sentence up to the end of the bonus's own clause, sets aside
+`bonusAc`, `bonusSavingThrow`, `bonusSpellAttack` and `bonusSpellSaveDc` for its search filters
+whether the bonus is standing or momentary, and no field tells the two apart, so `_bonus_reading()`
+reads the sentence that states it: "+N bonus to … Armor Class/AC"; "+N bonus to … saving throws"
+alone or in a list (one named save, or death saves, is not all six); "+N bonus to … spell attack
+rolls"; "+N bonus to … saving throw DC(s)" or "spell save DC"; or the Robe of the Archmagi's "Your
+spell save DC and spell attack bonus each increase by 2". A class named in it ("the saving throw
+DCs of your druid and ranger spells") is no condition: the sheet has one spellcasting, and the class
+is the item's attunement. It reads that sentence up to the end of the bonus's own clause, sets aside
 the conditions an equipped item always meets ("while wearing / holding / wielding / carrying",
 "while … is on your person", "while … orbits your head"), and calls the bonus conditional if any of
 reaction, when, whenever, if, unless, until, against, while, as long as, for every, allies,
@@ -136,7 +140,8 @@ row), stays in the prose; `_bonus_prose_notes()` prints each as a `note:` at the
 `{#itemEntry Name|SRC}` from the templates the item index keeps (`items-base.json`'s `itemEntry`),
 for this reading only: the ten Dragon Scale Mails state their +1 nowhere else. Today 19 items keep
 standing `ac`/`save.*` effects, all core; five are prose (Quarterstaff of the Acrobat, Arrow-Catching
-Shield, Bracers of Defense, Rod of Alertness, Tasha's Teeth of Dahlver-Nar).
+Shield, Bracers of Defense, Rod of Alertness, Tasha's Teeth of Dahlver-Nar). 28 carry `spell.attack`
+and/or `spell.dc` (9 core, 19 Tasha's), every one standing.
 
 **Option pickers.** `_optfeat_choices()` reads a class or subclass's `optionalfeatureProgression`
 (a running total per level, as a map or a 20-long list) and emits an `option` choice at every
@@ -210,9 +215,13 @@ has no `DATA_VERSIONS` entry.
   any pack item carrying one, with an (empty) allowlist for an item whose bonus truly reaches every
   attack.
 - **An item bonus is an effect only when its sentence states it standing.** A 5e-tools
-  `bonusAc`/`bonusSavingThrow` is a filter tag, not a rule. `rules-data.js` holds the reviewed
-  list: every `ac`/`save.*` effect in any pack must be on it, and every item on it must still ship
-  one, so a dump upgrade that moves the reader's verdict fails there and is read again by hand.
+  `bonus*` field is a filter tag, not a rule. `rules-data.js` holds the reviewed lists: every
+  `ac`/`save.*` and every `spell.*` effect in any pack must be on one, and every item on them must
+  still ship it, so a dump upgrade that moves the reader's verdict fails there and is read again by
+  hand.
+- **A pack ships only targets the app adds up.** An effect whose target `fxTargets()` does not list
+  is summed by nothing and changes no number, silently. `rules-data.js` fails on any such target in
+  any pack, so a new target reaches the app before the packs carry it.
 - **One skill reader.** Species, class starting skills and multiclass skills all go through
   `_skill_profs()`. A second parser at a call site is how the Bard lost its skills.
 - **Anchors only when a sink is collecting.** With no sink, a table is dropped with no anchor: an
@@ -312,6 +321,12 @@ has no `DATA_VERSIONS` entry.
   Five items across two packs; only `effects` moved. Guard: `converter.py` runs the real shapes and
   the phrasings the reader must not misread, `rules-data.js` holds the reviewed list, and
   `sheet.js` and `char-update.js` read the painted AC.
+- **Spell bonuses dropped on the way in (#77).** The converter never read `bonusSpellAttack` or
+  `bonusSpellSaveDc`, and the app had no target for them, so the Moon Sickles, Staff of Power, the
+  Wands of the War Mage and 15 more of Tasha's focuses carried nothing: 28 items across two packs.
+  Only `effects` moved. Guard: `converter.py` runs the real shapes and both wordings,
+  `rules-data.js` holds the reviewed list and fails on any target the app does not know, and
+  `sheet.js` and `char-update.js` read the painted numbers.
 - **A tagline as a description.** `_sub_blurb()` takes a subclass's first paragraph over 40
   characters; eight 2024 italic taglines are 41+ and shipped as the whole description. It now skips
   a paragraph that is only `{@i …}`.
@@ -362,6 +377,7 @@ has no `DATA_VERSIONS` entry.
 | Bracers of Defense, whose +2 needs no armor and no shield (#76) | Prose, like any conditional bonus | A standing `ac` effect: +2 in plate. A scoped target the sheet can test (`armorAC()` knows armor and shields), like `attack.ranged`: new app code for one pack item. Owner may revisit |
 | The Quarterstaff's once-per-rest Reaction as a tracked use (#76) | No; it stays in the description | `uses` on the item: no pack item carries any, 5e-tools has no field for a per-rest property, and one pool per item cannot hold the staff's several properties |
 | Where a `{#itemEntry}` template's text is read (#76) | For the bonus reading only; the description keeps the tag | Resolving it into the description too: a separate fix to 54 items' prose, not this one's |
+| An item's spell attack and spell save DC bonus (#77) | `spell.attack` / `spell.dc` effects through the same sentence reader, a named class not counting as a condition | Prose: 28 items, all standing, would do nothing. `attack`: reaches weapon rows. See [Computed stats & effects](../architecture/computed-stats-and-effects.md) for the class-limited case |
 
 ## Open
 
@@ -377,8 +393,6 @@ has no `DATA_VERSIONS` entry.
 - **`bonusAbilityCheck` and `bonusProficiencyBonus` are not read.** Stone of Good Luck's +1 to
   ability checks and the Ioun Stone of Mastery's +1 proficiency bonus (a `profBonus` target exists)
   reach nothing. Seen during #76.
-- **`bonusSpellAttack` is not read.** The Moon Sickles' and Staff of Power's bonus to spell attacks
-  reaches neither the Spellcasting card nor spell rows. Seen during #74.
 - **Only item statblocks resolve.** Another tag (creature, hazard…) keeps its name and warns. None
   reaches the converter in the v2.36.1 dump, and a single subcommand other than `items` has no item
   index at all, so `classes` alone warns once for the Soulknife.
@@ -416,3 +430,4 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-28 — A weapon bonus is never an effect (`_item_effects()`): 15 `+N` weapons count it once, on their own row, and five non-weapon items keep it in their prose; only `effects` moved, on 20 items in two packs. → ledger L4392, #74
 - 2026-09-28 — Finesse is asked before "ranged?": the Dart attacks with `finesse`; one line of `items.json` moved. → ledger L4466, #75
 - 2026-09-28 — An item's AC or saving-throw bonus is an effect only when its sentence states it standing (`_bonus_reading()`); five conditional ones stay prose, each printed as a `note:`; only `effects` moved, on five items in two packs. → ledger L4502, #76
+- 2026-09-28 — `bonusSpellAttack` and `bonusSpellSaveDc` become `spell.attack` / `spell.dc` effects; only `effects` moved, on 28 items in two packs. → ledger L4568, #77

@@ -42,6 +42,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
   'finderQty', 'addLibraryItems', 'attackNumbers', 'recompute',
+  'spellDC', 'spellAtkBonus', 'fxTargets', 'FX_LABEL', 'promptSpellAttack', 'openStatBreakdown', 'openAttackBreakdown',
+  'renderAttacks',
   'coinKeys',
   'RULE_CATS', 'reindexRules', 'recomputeDups',
 ]);
@@ -2191,10 +2193,21 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
    for one recompute() and hands back their text. */
 const painted = ids => {
   const got = {}, real = ctx.document.getElementById;
-  const el = () => ({textContent: '', classList: {toggle: () => {}, add: () => {}, remove: () => {}, contains: () => false}});
+  const el = () => { const e = {textContent: '', fx: false};
+    e.classList = {toggle: (k, on) => { if (k === 'fx-on') e.fx = !!on; }, add: () => {}, remove: () => {}, contains: () => false};
+    return e; };
   ctx.document.getElementById = id => ids.includes(id) ? (got[id] = got[id] || el()) : real(id);
   try { X.recompute(); } finally { ctx.document.getElementById = real; }
-  const o = {}; ids.forEach(i => { o[i] = got[i] ? String(got[i].textContent) : undefined; }); return o;
+  const o = {}; ids.forEach(i => { o[i] = got[i] ? String(got[i].textContent) : undefined; });
+  painted.fx = {}; ids.forEach(i => { painted.fx[i] = !!(got[i] && got[i].fx); });   /* marked .fx-on? */
+  return o;
+};
+/* what a modal would have shown: its title and body */
+const shownModal = fn => {
+  const real = ctx.openModal; let got = null;
+  ctx.openModal = (t, b) => { got = {t: String(t), b: String(b)}; };
+  try { fn(); } finally { ctx.openModal = real; }
+  return got || {t: '', b: ''};
 };
 const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', dir, f), 'utf8')).items;
 
@@ -2239,6 +2252,98 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   c.inventory[0].equipped = true;
   ck('#76 the control: a Cloak of Protection still gives +1 AC (13) and +1 to saves (DEX +3)',
      painted(['acDisp']).acDisp === '13' && painted(['save-dex'])['save-dex'] === '+3', painted(['acDisp', 'save-dex']));
+  X.character = X.blankChar();
+}
+
+/* ---- an item's spell attack and spell save DC bonus reach every number that shows them (#77) ----
+   The packs never read 5e-tools' bonusSpellAttack / bonusSpellSaveDc, and the
+   app had no effect target for either, so an equipped Staff of Power or Moon
+   Sickle changed nothing a caster looks at. Now they are `spell.attack` and
+   `spell.dc` effects, read by spellAtkBonus()/spellDC() and so by the
+   Spellcasting card, spell attack rows, save rows, the cast dialog and the
+   breakdowns, and by nothing else: a weapon's row does not take them. The
+   SHIPPED items, added through the finder. A caster with the ability at 16
+   (+3) at level 1 (PB 2): DC 13, spell attack +5. */
+{
+  const magic = shippedItems('5e2024', 'items-magic.json'), tce = shippedItems('tashas', 'items-magic.json');
+  const core = shippedItems('5e2024', 'items.json');
+  const def = (list, name) => list.find(x => x.name === name);
+  const fresh = ab => { const c = X.blankChar(); X.character = c; c.level = 1; c.abilities[ab] = 16; c.spellAbility = ab; return c; };
+  const T = X.fxTargets().map(([l, t]) => t);
+  ck('#77 the effect editor offers Spell attack and Spell save DC',
+     T.includes('spell.attack') && T.includes('spell.dc') && X.FX_LABEL['spell.attack'] === 'Spell attack'
+     && X.FX_LABEL['spell.dc'] === 'Spell save DC', [T.slice(-4), X.FX_LABEL['spell.attack'], X.FX_LABEL['spell.dc']]);
+  let c = fresh('int');
+  c.attacks.push({id: 'fb', name: 'Fire Bolt', kind: 'ranged', ability: 'int', proficient: true, atkMisc: '', dmgMisc: '',
+                  damageDice: '1d10', damageType: 'fire', addAbilityDamage: false, spellId: 's1', source: 'spell'});
+  const fireBolt = {id: 's1', name: 'Fire Bolt', level: 0, atkType: 'attack', atkKind: 'ranged', dice: '1d10', damageType: 'fire'};
+  let p = painted(['dcDisp', 'satkDisp']);
+  ck('#77 the base: DC 13, spell attack +5, unmarked', p.dcDisp === '13' && p.satkDisp === '+5' && !painted.fx.satkDisp, [p, painted.fx]);
+  X.addLibraryItems([def(magic, 'Staff of Power'), def(core, 'Club')], null, null, 1);
+  const staff = c.inventory.find(i => i.name === 'Staff of Power');
+  ck('#77 the Staff of Power arrives equipped', !!staff && staff.equipped === true);
+  p = painted(['dcDisp', 'satkDisp']);
+  ck('#77 ...and the Spellcasting card reads spell attack +7, marked', p.satkDisp === '+7' && painted.fx.satkDisp === true, [p, painted.fx]);
+  ck('#77 ...and DC 13, unmarked: the staff gives spell attack rolls only', p.dcDisp === '13' && !painted.fx.dcDisp, [p, painted.fx]);
+  ck('#77 spellAtkBonus() and spellDC() agree: 7 and 13', X.spellAtkBonus() === 7 && X.spellDC() === 13, [X.spellAtkBonus(), X.spellDC()]);
+  let n = X.attackNumbers(c.attacks.find(a => a.name === 'Fire Bolt'));
+  ck('#77 a spell attack row takes it: INT 3 + PB 2 + 2 = +7, marked', n.toHit === 7 && n.atkFx === 2, n);
+  n = X.attackNumbers(c.attacks.find(a => a.name === 'Staff of Power'));
+  ck('#77 the staff\'s own weapon row does not: STR 0 + PB 2 + 2 = +4', n.toHit === 4, n);
+  n = X.attackNumbers(c.attacks.find(a => a.name === 'Club'));
+  ck('#77 ...nor a Club: +2', n.toHit === 2, n);
+  let m = shownModal(() => X.promptSpellAttack(fireBolt, 0));
+  ck('#77 the cast dialog says +7 to hit', /Spell attack:<\/b> \+7 to hit/.test(m.b), m.b.slice(0, 120));
+  m = shownModal(() => X.openStatBreakdown('spell.attack'));
+  ck('#77 tapping the card\'s spell attack names the staff and its +2',
+     m.t === 'Spell attack breakdown' && /Staff of Power<\/span><b>\+2</.test(m.b) && /INT/.test(m.b), m);
+  m = shownModal(() => X.openAttackBreakdown('fb'));
+  ck('#77 ...and so does the Fire Bolt row\'s breakdown', /Staff of Power<\/span><b>\+2</.test(m.b), m.b.slice(0, 400));
+  staff.equipped = false;
+  p = painted(['dcDisp', 'satkDisp']);
+  ck('#77 unequipped, the card is back to +5', p.satkDisp === '+5' && X.attackNumbers(c.attacks.find(a => a.name === 'Fire Bolt')).toHit === 5, p);
+
+  /* Tasha's +3 Moon Sickle for a druid: spell attack AND DC. Its limit to
+     "your druid and ranger spells" is the item's attunement; the sheet has one
+     spellcasting ability, so the bonus goes on it. */
+  c = fresh('wis');
+  c.attacks.push({id: 'sf', name: 'Sacred Flame', spellId: 's2', source: 'spell', save: {ability: 'dex'},
+                  damageDice: '1d8', damageType: 'radiant', notes: ''});
+  X.addLibraryItems([def(tce, '+3 Moon Sickle')], null, null, 1);
+  p = painted(['dcDisp', 'satkDisp']);
+  ck('#77 a +3 Moon Sickle: DC 16 and spell attack +8, both marked',
+     p.dcDisp === '16' && p.satkDisp === '+8' && painted.fx.dcDisp && painted.fx.satkDisp, [p, painted.fx]);
+  m = shownModal(() => X.promptSpellAttack({id: 's2', name: 'Sacred Flame', level: 0, atkType: 'save', saveAbility: 'dex',
+                                            dice: '1d8', damageType: 'radiant'}, 0));
+  ck('#77 ...the cast dialog of a save spell says DC 16', /Save DC:<\/b> 16 DEX/.test(m.b), m.b.slice(0, 120));
+  ck('#77 ...and a save row prints DC 16 through spellDC()', X.spellDC() === 16, X.spellDC());
+  {
+    /* the rows renderAttacks() builds, read off the elements it creates */
+    const realC = ctx.document.createElement, realB = ctx.document.getElementById, rows = [];
+    ctx.document.createElement = () => { const e = {style: {}, dataset: {}, classList: {toggle() {}, add() {}, remove() {}}}; rows.push(e); return e; };
+    ctx.document.getElementById = id => id === 'attackList' ? {innerHTML: '', appendChild() {}, style: {}} : realB(id);
+    try { X.renderAttacks(); } finally { ctx.document.createElement = realC; ctx.document.getElementById = realB; }
+    const sf = rows.map(e => String(e.innerHTML || '')).find(h => h.includes('Sacred Flame')) || '';
+    ck('#77 ...and the Sacred Flame row shows DC 16, marked as changed by an effect',
+       /<span class="atk-hit fx-on">DC 16 DEX<\/span>/.test(sf), sf.slice(0, 600));
+  }
+  m = shownModal(() => X.openStatBreakdown('spell.dc'));
+  ck('#77 ...and tapping the DC names the sickle', m.t === 'Spell save DC breakdown' && /\+3 Moon Sickle<\/span><b>\+3</.test(m.b), m);
+  n = X.attackNumbers(c.attacks.find(a => a.name === '+3 Moon Sickle'));
+  ck('#77 ...while the sickle\'s own row is its weapon: PB 2 + 3 = +5 to hit, +3 damage', n.toHit === 5 && n.dmgBonus === 3, n);
+
+  /* Reveler's Concertina: the DC only, and not a weapon, so it is equipped by hand */
+  c = fresh('cha');
+  X.addLibraryItems([def(tce, "Reveler's Concertina")], null, null, 1);
+  c.inventory[0].equipped = true;
+  p = painted(['dcDisp', 'satkDisp']);
+  ck('#77 Reveler\'s Concertina: DC 15, spell attack still +5', p.dcDisp === '15' && p.satkDisp === '+5' && !painted.fx.satkDisp, [p, painted.fx]);
+
+  /* no spellcasting ability: nothing to add to */
+  c = fresh('int'); c.spellAbility = '';
+  X.addLibraryItems([def(magic, 'Staff of Power')], null, null, 1);
+  p = painted(['dcDisp', 'satkDisp']);
+  ck('#77 with no spellcasting ability the card still reads —', p.dcDisp === '—' && p.satkDisp === '—' && X.spellDC() === null, p);
   X.character = X.blankChar();
 }
 
