@@ -285,6 +285,10 @@ function jumpToNote(k){
   card.classList.add("n-flash");setTimeout(()=>card.classList.remove("n-flash"),1200);
 }
 
+/* The one-line formatting key, shared by every editor of this grammar: the
+   section-note editor and the journal page editor. */
+const NOTE_FMT_HINT=`<p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>`;
+
 /* ---- editor ---- */
 function openNoteEditor(k){
   const def=noteDef(k);if(!def)return;
@@ -292,7 +296,7 @@ function openNoteEditor(k){
   openModal("Note — "+noteTitle(def),`
     <div class="field"><label class="f">Your note</label>
       <textarea id="noteText" class="n-edit" placeholder="Anything you want to remember about this section…">${esc(noteText(k))}</textarea></div>
-    <p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>
+    ${NOTE_FMT_HINT}
     ${when?`<p class="hint">${esc(when)}</p>`:""}
     <div class="m-actions">${n?`<button class="tbtn danger" id="noteDel" style="margin-right:auto">Delete</button>`:""}<button class="tbtn" id="noteCancel">Cancel</button><button class="tbtn primary" id="noteSave">Save</button></div>`);
   const ta=document.getElementById("noteText");if(ta)ta.focus();

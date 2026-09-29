@@ -48,7 +48,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'RULE_CATS', 'reindexRules', 'recomputeDups', 'repairIds',
   'jnlStr', 'jnlTime', 'tagLabel', 'tagKey', 'groupByTag', 'attrSel', 'jnlPages', 'jnlTitle', 'jnlSort',
   'jnlQuery', 'jnlFind', 'jnlMatch', 'jnlSnippet', 'jnlSavePage', 'jnlDeletePage', 'jnlTagList',
-  'jnlGroupOpen', 'jnlStampText', 'insertLine',
+  'jnlGroupOpen', 'jnlStampText', 'insertLine', 'journalListHTML', 'journalPageHTML', 'journalEditorHTML', 'jnlEntryHTML', 'NOTE_FMT_HINT',
+  'fmtWhen', 'noteWhen', 'jnlWhen',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2176,6 +2177,57 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('at the start of a line: no extra break before it', same(X.insertLine('abc\ndef', 4, 4, L), {text: 'abc\n**S**\ndef', caret: 10}));
   ck('a selection is replaced', same(X.insertLine('abcd', 1, 3, L), {text: 'a\n**S**\nd', caret: 8}));
   ck('a selection past the end clamps to it', same(X.insertLine('ab', 99, 99, L), {text: 'ab\n**S**\n', caret: 9}));
+}
+
+/* ---- the journal's markup ---- */
+{
+  const c = {journal: [], journalCollapse: {}};
+  ck('an empty journal says how to start one', /No pages yet/.test(X.journalListHTML(c, '')));
+  c.journal = [
+    {id: 'p1', title: 'Session 1', tag: 'Sessions', text: 'Met Brindle.', at: 100, editedAt: 100},
+    {id: 'p2', title: 'Brindle', tag: 'NPCs', text: 'A **zorblat** smuggler.', at: 200, editedAt: 200},
+    {id: 'p3', title: '', tag: '', text: 'Loose thought', at: 300, editedAt: 300},
+    {id: 'p4', title: 'Session 2', tag: 'sessions', text: 'Crossed the Mire.', at: 400, editedAt: 400}];
+  const h = X.journalListHTML(c, '');
+  const order = [...h.matchAll(/data-jnlopen="(\w+)"/g)].map(m => m[1]);
+  ck('groups A to Z, Untagged last, newest first inside each', JSON.stringify(order) === '["p2","p4","p1","p3"]', order);
+  ck('a group counts its pages', h.includes('<span class="cnt">(2)</span>'));
+  ck('a page with no title is listed as Untitled', /data-jnlopen="p3"><span class="jnl-title">Untitled</.test(h));
+  ck('each page is a button that opens it', /<button type="button" class="jnl-entry" data-jnlopen="p1">/.test(h));
+  ck('group headers are keyboard toggles', /data-jnlgroup="npcs" role="button" tabindex="0" aria-expanded="true"/.test(h));
+  c.journalCollapse = {npcs: true};
+  const shut = X.journalListHTML(c, '');
+  ck('a shut group hides its pages but still renders them',
+     /aria-expanded="false"/.test(shut) && /style="display:none"/.test(shut) && shut.includes('data-jnlopen="p2"'));
+  const hit = X.journalListHTML(c, 'brindle');
+  ck('a search lists only the matching pages',
+     hit.includes('data-jnlopen="p1"') && hit.includes('data-jnlopen="p2"') && !hit.includes('data-jnlopen="p4"'));
+  ck('...opens every group, shut ones too', !/display:none/.test(hit));
+  ck('...and its headers are plain, not toggles', !/data-jnlgroup/.test(hit) && /jnl-static/.test(hit));
+  ck('a text match shows where it matched', hit.includes('Met <mark>Brindle</mark>.'), hit);
+  ck('no match says so, quoting the search', X.journalListHTML(c, 'goblin').includes('No pages match "goblin"'));
+  ck('...escaped', X.journalListHTML(c, '<i>').includes('"&lt;i&gt;"'));
+
+  const pg = X.journalPageHTML(c.journal[1]);
+  ck('a page renders its text in the notes grammar', pg.includes('<strong>zorblat</strong>') && pg.includes('class="n-body"'));
+  ck('...with its title as a focusable heading', /<h3 class="jnl-h" id="jnlHead" tabindex="-1">Brindle<\/h3>/.test(pg));
+  ck('...its tag, and when it was written', pg.includes('<span class="jnl-tag">NPCs</span>') && /Added /.test(pg));
+  ck('...Back, Edit and Delete', pg.includes('data-jnlback') && pg.includes('data-jnledit="p2"') && pg.includes('data-jnldel="p2"'));
+  ck('an empty page says so', X.journalPageHTML({id: 'e', title: 'x', text: ''}).includes('Nothing written yet'));
+  ck('a page with no date shows none, not a bare "Added"', !/Added/.test(X.journalPageHTML({id: 'e', title: 'x', text: 'y'})));
+
+  const ed = X.journalEditorHTML(c.journal[1], ['NPCs', 'Sessions']);
+  ck('the editor holds the title, the tag and the text',
+     /id="jnlTitle" data-jnlfield="title" value="Brindle"/.test(ed) &&
+     /id="jnlTag" data-jnlfield="tag" value="NPCs" list="jnlTags"/.test(ed) &&
+     /data-jnlfield="text"[^>]*>A \*\*zorblat\*\* smuggler\.<\/textarea>/.test(ed));
+  ck('...offers the tags already in use', ed.includes('<option value="Sessions">'));
+  ck('...a timestamp button, Done, and the formatting key',
+     ed.includes('data-jnlstamp') && ed.includes('data-jnldone="p2"') && ed.includes(X.NOTE_FMT_HINT));
+  const evil = {id: 'x"y', title: '"><i>', tag: '"><i>', text: '</textarea><i>', at: 1};
+  const all = X.journalListHTML({journal: [evil]}, '') + X.journalListHTML({journal: [evil]}, '<i>') +
+    X.journalPageHTML(evil) + X.journalEditorHTML(evil, ['"><i>']);
+  ck('nothing a file puts in a page reaches the markup raw', !/<i>/.test(all) && !all.includes('x"y'), all.slice(0, 300));
 }
 
 /* ---- dialogs: what auto-focus may pick, and how the opener is found again ---- */

@@ -117,3 +117,55 @@ function insertLine(text,start,end,line){
   const ins=(before&&!before.endsWith("\n")?"\n":"")+line+"\n";
   return {text:before+ins+after,caret:before.length+ins.length};
 }
+
+/* ---- markup: pure strings, so the harness can assert every state ---- */
+function jnlEntryHTML(p,q){
+  const snip=q?jnlSnippet(p.text,q):"";
+  return `<button type="button" class="jnl-entry" data-jnlopen="${esc(p.id)}">`+
+    `<span class="jnl-title">${esc(jnlTitle(p))}</span>`+
+    (jnlTime(p.at)?`<span class="jnl-when">${esc(fmtWhen(jnlTime(p.at)))}</span>`:"")+
+    (snip?`<span class="jnl-snip">${snip}</span>`:"")+`</button>`;
+}
+/* The list: groups by tag, newest first inside each. While searching, every
+   group is open and its header is plain text — a toggle the search is holding
+   open would look like a dead button. */
+function journalListHTML(c,q){
+  const all=jnlPages(c);
+  if(!all.length)return `<div class="empty">No pages yet — tap + Page to start one: a session, someone you met, a quest.</div>`;
+  const hits=all.filter(p=>jnlMatch(p,q));
+  if(!hits.length)return `<div class="empty">No pages match "${esc(q)}".</div>`;
+  return groupByTag(jnlSort(hits),p=>p.tag).map(g=>{
+    const open=jnlGroupOpen(c,g.key,!!q),name=`<span class="fgname">${esc(g.label)}</span><span class="cnt">(${g.items.length})</span>`;
+    const head=q?`<div class="fghead jnl-static">${name}</div>`:
+      `<div class="fghead" data-jnlgroup="${esc(g.key)}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
+      `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>${name}</div>`;
+    return `<div class="fgroup">${head}<div class="jnl-group"${open?"":` style="display:none"`}>`+
+      g.items.map(p=>jnlEntryHTML(p,q)).join("")+`</div></div>`;
+  }).join("");
+}
+function jnlWhen(p){return jnlTime(p.at)?noteWhen({at:jnlTime(p.at),editedAt:jnlTime(p.editedAt)}):"";}
+function journalPageHTML(p){
+  const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text));
+  return `<div class="jnl-bar"><button type="button" class="tbtn" data-jnlback>← All pages</button><span class="grow"></span>`+
+    `<button type="button" class="tbtn" data-jnledit="${esc(p.id)}">Edit</button>`+
+    `<button type="button" class="tbtn danger" data-jnldel="${esc(p.id)}">Delete</button></div>`+
+    `<h3 class="jnl-h" id="jnlHead" tabindex="-1">${esc(jnlTitle(p))}</h3>`+
+    ((tag||when)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"")+
+    (body?`<div class="n-body">${body}</div>`:`<div class="empty">Nothing written yet — tap Edit.</div>`);
+}
+/* Built ONCE per edit (renderJournal() leaves it alone after), so it can keep
+   the player's caret. Everything typed is written straight to the page. */
+function journalEditorHTML(p,tags){
+  const when=jnlWhen(p);
+  return `<div class="jnl-bar"><span class="jnl-edlbl">Editing</span><span class="grow"></span>`+
+    `<button type="button" class="tbtn primary" data-jnldone="${esc(p.id)}">Done</button></div>`+
+    `<div class="g2"><div class="field"><label class="f" for="jnlTitle">Title</label>`+
+    `<input id="jnlTitle" data-jnlfield="title" value="${esc(jnlStr(p.title))}" placeholder="e.g. Session 3 — into the Mire" autocomplete="off"></div>`+
+    `<div class="field"><label class="f" for="jnlTag">Tag</label>`+
+    `<input id="jnlTag" data-jnlfield="tag" value="${esc(tagLabel(p.tag))}" list="jnlTags" placeholder="e.g. Sessions" autocomplete="off">`+
+    `<datalist id="jnlTags">${tags.map(t=>`<option value="${esc(t)}">`).join("")}</datalist></div></div>`+
+    `<div class="field"><label class="f" for="jnlText">Page</label>`+
+    `<textarea id="jnlText" data-jnlfield="text" class="n-edit" placeholder="What happened, who you met, what to remember…">${esc(jnlStr(p.text))}</textarea></div>`+
+    `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button></div>`+
+    NOTE_FMT_HINT+(when?`<p class="hint">${esc(when)}</p>`:"");
+}
