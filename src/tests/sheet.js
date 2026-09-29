@@ -50,6 +50,9 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'jnlQuery', 'jnlFind', 'jnlMatch', 'jnlSnippet', 'jnlSavePage', 'jnlDeletePage', 'jnlTagList',
   'jnlGroupOpen', 'jnlStampText', 'insertLine', 'journalListHTML', 'journalPageHTML', 'journalEditorHTML', 'jnlEntryHTML', 'NOTE_FMT_HINT',
   'fmtWhen', 'noteWhen', 'jnlWhen',
+  'TRK_TYPES', 'trkList', 'trkType', 'trkInt', 'trkItems', 'trkName', 'showTrackers', 'trkParse', 'trkProgress',
+  'trkApply', 'trkStep', 'trkSetValue', 'trkToggleItem', 'trkToggleTask', 'trkClose', 'trkReopen',
+  'trkSnapshot', 'trkRestore', 'mergeChecklist', 'trkFromForm', 'trkSplit', 'trkGroupOpen',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2228,6 +2231,110 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   const all = X.journalListHTML({journal: [evil]}, '') + X.journalListHTML({journal: [evil]}, '<i>') +
     X.journalPageHTML(evil) + X.journalEditorHTML(evil, ['"><i>']);
   ck('nothing a file puts in a page reaches the markup raw', !/<i>/.test(all) && !all.includes('x"y'), all.slice(0, 300));
+}
+
+/* ---- trackers: the model, progress, and the close rule ----
+   Design: src/docs/specs/2026-09-29-journal-design.md §3, §6. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const b = X.blankChar();
+  ck('a new character has no trackers, no shut groups, and shows the card',
+     same(b.trackers, []) && same(b.trackerCollapse, {}) && b.showTrackers === true);
+  const old = X.migrate({abilities: {}});
+  ck('a sheet from before trackers gets the same', same(old.trackers, []) && X.showTrackers(old));
+  ck('only a real false hides the card', !X.showTrackers({showTrackers: false}) &&
+     X.showTrackers({showTrackers: null}) && X.showTrackers({showTrackers: 'false'}) && X.showTrackers({}));
+  const t0 = {id: 't1', name: 'Goblins', type: 'counter', tag: 'Kills', value: 3, goal: 0, items: [], done: false, autoClose: true, closed: false, at: 5};
+  const back = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {trackers: [t0], trackerCollapse: {kills: true}, showTrackers: false}))));
+  ck('a save → load round trip keeps a tracker, the shut groups and the switch',
+     same(back.trackers, [t0]) && same(back.trackerCollapse, {kills: true}) && back.showTrackers === false);
+  const junk = X.migrate({abilities: {}, trackerCollapse: [],
+    trackers: [null, 'x', ['arr'], {name: 'no id', items: [null, 'y', ['arr'], {text: 'a'}, {id: 'i1', text: 'b'}]},
+               {id: 't', items: [{id: 'i1', text: 'dup'}]}, {id: 't'}]});
+  ck('only tracker objects survive', junk.trackers.length === 3);
+  ck('trackers get ids, a repeat replaced',
+     typeof junk.trackers[0].id === 'string' && junk.trackers[1].id === 't' && junk.trackers[2].id !== 't');
+  ck('only item objects survive, each with an id',
+     junk.trackers[0].items.length === 2 && junk.trackers[0].items.every(i => typeof i.id === 'string' && i.id));
+  ck('an item id is unique across every tracker', junk.trackers[1].items[0].id !== 'i1');
+  ck('a junk collapse map resets', same(junk.trackerCollapse, {}));
+  ck('migrate() stays idempotent over trackers', JSON.stringify(X.migrate(JSON.parse(JSON.stringify(junk)))) === JSON.stringify(junk));
+
+  // reading junk
+  ck('an unknown type is a counter', X.trkType({type: 'wheel'}) === 'counter' && X.trkType(null) === 'counter');
+  ck('counts are whole and never negative', X.trkInt('12') === 12 && X.trkInt(-3) === 0 && X.trkInt('abc') === 0 && X.trkInt(2.7) === 2);
+  ck('a typed count must be digits', X.trkParse(' 42 ') === 42 && X.trkParse('4x') === null && X.trkParse('-1') === null && X.trkParse('') === null);
+  ck('a tracker with no name reads Untitled', X.trkName({name: ' '}) === 'Untitled');
+
+  // progress
+  const P = t => X.trkProgress(t);
+  ck('a counter with no goal is never complete', same(P({value: 999}), {done: 999, total: 0, pct: 0, complete: false}));
+  ck('a counter with a goal counts toward it', same(P({value: 150, goal: 300}), {done: 150, total: 300, pct: 50, complete: false}));
+  ck('...is complete at its goal, and past it', P({value: 300, goal: 300}).complete && P({value: 400, goal: 300}).pct === 100);
+  ck('a checklist counts its ticks, only a real true',
+     same(P({type: 'checklist', items: [{done: true}, {done: false}, {done: 'yes'}]}), {done: 1, total: 3, pct: 33, complete: false}));
+  ck('...is complete when every item is ticked', P({type: 'checklist', items: [{done: true}]}).complete);
+  ck('...and never when it has no items', !P({type: 'checklist', items: []}).complete && !P({type: 'checklist', items: 'x'}).complete);
+  ck('a task is done or not', P({type: 'task', done: true}).complete && !P({type: 'task', done: 'true'}).complete);
+
+  // the close rule
+  const book = () => ({id: 'b', type: 'counter', value: 298, goal: 300, autoClose: true});
+  let t = book();
+  ck('a step short of the goal does not close', X.trkStep(t, 1, 10) === false && t.closed !== true && t.value === 299);
+  ck('the step that reaches it closes, with the time', X.trkStep(t, 1, 11) === true && t.closed === true && t.closedAt === 11);
+  X.trkReopen(t);
+  ck('reopening clears the close and keeps the count', t.closed === false && !('closedAt' in t) && t.value === 300);
+  ck('a reopened tracker at 100% stays open as it goes past', X.trkStep(t, 1, 12) === false && t.closed === false && t.value === 301);
+  X.trkStep(t, -5, 13);
+  ck('...and closes again only on its way back up to the goal', X.trkStep(t, 4, 14) === true && t.closed === true);
+  t = Object.assign(book(), {autoClose: false});
+  ck('with Close when complete off, it never closes itself', X.trkStep(t, 2, 15) === false && t.closed !== true);
+  t = book();
+  ck('a typed value that reaches the goal closes too', X.trkSetValue(t, '300', 16) === true && t.closed === true);
+  t = {id: 'c', type: 'checklist', items: [{id: 'x', text: 'a', done: true}, {id: 'y', text: 'b', done: false}]};
+  ck('ticking the last item closes a checklist', X.trkToggleItem(t, 'y', 17) === true && t.closed === true);
+  t = {id: 'd', type: 'task'};
+  ck('ticking a task closes it', X.trkToggleTask(t, 18) === true && t.closed === true && t.done === true);
+  ck('a step never goes below 0', (() => { const z = {value: 0}; X.trkStep(z, -1, 1); return z.value === 0; })());
+  ck('ticking an item that is not there changes nothing',
+     (() => { const z = {type: 'checklist', items: [{id: 'q', done: false}]}; return X.trkToggleItem(z, 'nope', 1) === false && z.items[0].done === false; })());
+  t = book(); X.trkClose(t, 30);
+  ck('closing by hand closes, with the time', t.closed === true && t.closedAt === 30);
+
+  // Undo
+  t = book(); const snap = X.trkSnapshot(t); const c = {trackers: [t]};
+  X.trkStep(t, 2, 20);
+  ck('Undo puts back the whole tap — the count and the close',
+     X.trkRestore(c, snap) === true && c.trackers[0].value === 298 && c.trackers[0].closed !== true);
+  ck('...as a copy, so a later change cannot reach the snapshot', c.trackers[0] !== snap);
+  ck('Undo for a tracker since deleted changes nothing', X.trkRestore({trackers: []}, snap) === false && X.trkRestore({}, snap) === false);
+
+  // the form
+  const items = [{id: 'i1', text: 'Find the map', done: true}, {id: 'i2', text: 'Cross the Mire', done: false}, {id: 'i3', text: 'Find the map', done: false}];
+  const m = X.mergeChecklist(items, 'Cross the Mire\n\n- Find the map\n  Find the map \nMeet Brindle');
+  ck('the lines become items, blanks dropped', same(m.map(x => x.text), ['Cross the Mire', 'Find the map', 'Find the map', 'Meet Brindle']));
+  ck('reordered lines keep their ids and ticks', m[0].id === 'i2' && m[1].id === 'i1' && m[1].done === true);
+  ck('a repeated line takes the next matching item', m[2].id === 'i3' && m[2].done === false);
+  ck('a leading bullet is typing habit, not text', m[1].text === 'Find the map');
+  ck('a new line is a new item, unticked', m[3].done === false && ['i1', 'i2', 'i3'].indexOf(m[3].id) < 0);
+  ck('a reworded line loses its tick', X.mergeChecklist(items, 'Find the old map')[0].done === false);
+  const f = X.trkFromForm({id: 'f', value: 7, closed: false, items}, {name: ' Read the Codex ', type: 'counter', tag: ' Books ', goal: '5', items: '', autoClose: true});
+  ck('the form tidies what it saves', f.name === 'Read the Codex' && f.tag === 'Books' && f.goal === 5 && f.autoClose === true);
+  ck('the form never closes a tracker, even one it makes complete', f.closed === false && X.trkProgress(f).complete);
+  ck('an unknown type from the form is a counter', X.trkFromForm({}, {type: 'x'}).type === 'counter');
+  ck('Close when complete is on unless the form says off',
+     X.trkFromForm({}, {}).autoClose === true && X.trkFromForm({}, {autoClose: false}).autoClose === false);
+
+  // layout
+  const L = {trackers: [
+    {id: 'k1', name: 'Goblins', tag: 'Kills'}, {id: 'q1', name: 'Map', tag: 'quests'},
+    {id: 'k2', name: 'Orcs', tag: 'kills'}, {id: 'x1', name: 'Done early', closed: true, closedAt: 5},
+    {id: 'x2', name: 'Done later', closed: true, closedAt: 9}, {id: 'u1', name: 'Loose'}]};
+  const s = X.trkSplit(L);
+  ck('open trackers group by tag, A to Z, untagged last', same(s.open.map(g => g.key), ['kills', 'quests', '']));
+  ck('...each group in the order they were made', same(s.open[0].items.map(t => t.id), ['k1', 'k2']));
+  ck('closed trackers are one list, most recently closed first', same(s.closed.map(t => t.id), ['x2', 'x1']));
+  ck('a tracker group nobody shut is open', X.trkGroupOpen({}, 'kills') && !X.trkGroupOpen({trackerCollapse: {kills: true}}, 'kills'));
 }
 
 /* ---- dialogs: what auto-focus may pick, and how the opener is found again ---- */

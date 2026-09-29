@@ -66,7 +66,7 @@ function migrate(s){
      either one stopped the render: the first read of a field on null throws,
      and in strict mode so does the first write to a string (renderSpells()
      normalises `level`, detectSpellAttack() sets `atkType`). */
-  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources","journal"].forEach(k=>{ base[k]=Array.isArray(base[k])?base[k].filter(x=>x!==null&&typeof x==="object"):[]; });
+  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources","journal","trackers"].forEach(k=>{ base[k]=Array.isArray(base[k])?base[k].filter(x=>x!==null&&typeof x==="object"):[]; });
   /* The player's own glossary entries are theirs, so none is dropped for its
      shape (#71). Each gets what makes it reachable: the other categories' field
      names read as the glossary's (glossRepair), and an id, without which the
@@ -78,7 +78,12 @@ function migrate(s){
      is an object), and JSON would drop an id set on one, so each load would
      give it a new id and migrate() would stop being idempotent. Arrays go. */
   base.journal=repairIds(base.journal.filter(x=>!Array.isArray(x)));
-  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
+  base.trackers=repairIds(base.trackers.filter(x=>!Array.isArray(x)));
+  /* A tick is found by its item's id, and focus is put back by that id alone,
+     so items get the same repair from ONE pool across every tracker. */
+  const itemIds=new Set();
+  base.trackers.forEach(t=>{if(Array.isArray(t.items)){t.items=t.items.filter(x=>x!==null&&typeof x==="object"&&!Array.isArray(x));repairIds(t.items,itemIds);}});
+  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse","trackerCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
   /* AFTER the list guards above, so it can rely on inventory being an array. */

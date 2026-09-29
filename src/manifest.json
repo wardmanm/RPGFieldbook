@@ -46,6 +46,7 @@
     "src/js/87-notes.js",
     "src/js/87-combat.js",
     "src/js/87-journal.js",
+    "src/js/87-trackers.js",
     "src/js/88-settings.js",
     "src/js/89-rules-merge.js",
     "src/js/90-boot.js"

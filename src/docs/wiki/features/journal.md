@@ -1,7 +1,8 @@
 # Journal
 
 The Journal tab is the player's own record of the campaign: pages for sessions, people met,
-quests and places. Each page has an optional tag that groups it, the dates it was written and
+quests and places. Beside the pages it holds **trackers**: counters, checklists and one-line tasks
+the player makes up, grouped by tag. Each page has an optional tag that groups it, the dates it was written and
 edited, and the same markdown grammar as the section notes. The Section Notes card below it is
 covered by [Story & notes](story-and-notes.md).
 
@@ -9,7 +10,10 @@ covered by [Story & notes](story-and-notes.md).
 `jnlMatch()`, `jnlSnippet()`, `jnlSavePage()`, `jnlDeletePage()`, `jnlTagList()`,
 `jnlGroupOpen()`, `jnlStampText()`, `insertLine()`, `renderJournal()`, `jnlOpen()`, `jnlBack()`,
 `jnlNewPage()`, `jnlEdit()`, `jnlDone()`, `jnlInput()`, `jnlDelete()`, `insertJournalStamp()`,
-`toggleJnlGroup()` in `87-journal.js` · markup `src/html/60-journal.html` · `47-journal.css` ·
+`toggleJnlGroup()` in `87-journal.js` · `TRK_TYPES`, `trkProgress()`, `trkApply()`, `trkStep()`,
+`trkSetValue()`, `trkToggleItem()`, `trkToggleTask()`, `trkClose()`, `trkReopen()`, `trkSnapshot()`,
+`trkRestore()`, `mergeChecklist()`, `trkFromForm()`, `trkSplit()`, `showTrackers()` in `87-trackers.js` ·
+markup `src/html/60-journal.html` · `47-journal.css` ·
 `renderAll()` in `66-coins-hp.js`, `refreshRulesUI()` in `88-settings.js` · `repairIds()`,
 `migrate()` in `71-char-io.js` · **Tests:** `sheet.js`, `rules-data.js` · **See also:**
 [Story & notes](story-and-notes.md), [Rich text](../architecture/rich-text.md),
@@ -53,6 +57,34 @@ and JSON drops an id set on one, so every load would give it a new id. `journalC
 to `true` for a shut group. Readers still coerce every field (`jnlStr()`, `jnlTime()`), since the
 guard reaches only the top level.
 
+**Trackers.** `character.trackers` is a list of
+`{id, name, type, tag, value, goal, items, done, autoClose, closed, closedAt, at}`, with
+`trackerCollapse` (shut tag groups) and `showTrackers` (read as `!== false`). The type is one of:
+
+| `type` | Progress (`trkProgress()`) | Complete when |
+|---|---|---|
+| `counter` | `value` of `goal` | it has a goal and `value ≥ goal`; with no goal (a kill count), never |
+| `checklist` | ticked `items` of all | it has items and every one is ticked |
+| `task` | — | `done` |
+
+Counts are whole numbers and never below 0 (`trkInt()`), and they may pass the goal. Only a real
+`true` ticks anything.
+
+**The close rule** lives in `trkApply()` alone. A row control (`trkStep()`, `trkSetValue()`,
+`trkToggleItem()`, `trkToggleTask()`) is applied. If that took the tracker from not done to done,
+and `autoClose` is on (the default), it sets `closed` and `closedAt`. The form (`trkFromForm()`)
+never closes anything, and neither does making a tracker. `trkReopen()` leaves the progress alone,
+so a tracker reopened at 100% stays open until it drops below and comes back. `trkClose()` is the
+manual close. Undo is `trkSnapshot()` before the tap and `trkRestore()` after it: the tick and the
+close go back together.
+
+**Checklist items** are typed one per line in the form. `mergeChecklist()` gives each line the
+first unused old item with exactly its text, keeping its id and tick, so reordering keeps every
+tick. A leading bullet is dropped. `migrate()` repairs item ids from one pool across every tracker.
+
+**Layout.** `trkSplit()` groups the open trackers by tag (A to Z, Untagged last, in the order they
+were made), and lists the closed ones newest-closed first.
+
 **The card.** `#journalCard` is the first card on the Journal tab, with **+ Page** (`#jnlNew`) in
 its heading. `renderJournal()` draws `#jnlBody` in one of three views, held in the session-only
 `jnlUI` (`{who, open, editing, draft}`, keyed on the character id, so a switch starts at the
@@ -91,6 +123,8 @@ entry in the list.
 - **`renderJournal()` never rebuilds an open editor.** It checks for a `[data-jnlfield]` in
   `#jnlBody` first. Anything that must replace the editor empties the box first, as starting an
   edit does.
+- **Only `trkApply()` closes a tracker on its own**, and only on the transition to complete. A
+  second path would re-close a tracker the player just reopened.
 
 ## Decisions
 
