@@ -2765,6 +2765,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     slots: Object.assign(X.blankChar().slots, {1: {total: P, used: 0}}),
     coins: {cp: P, sp: 0, gp: 1, pp: 0, ep: 0},
     secNotes: {abilities: {text: P, at: 0}},
+    journal: [{id: P, title: P, tag: P, text: P, at: 1, editedAt: 2}],
   });
   X.character = X.migrate(JSON.parse(JSON.stringify(hostile)));   /* the import path */
   X.activeId = 'hostile';
@@ -2787,6 +2788,11 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   });
   run('Story fields and Proficiencies (glossary chips)', () => ctx.renderAllRT());
   run('the Section Notes card', () => ctx.renderNotes());
+  run('the Journal list', () => { el('jnlSearch').value = ''; ctx.renderJournal(); });
+  run('the Journal list, searching', () => { el('jnlSearch').value = 'PWN'; ctx.renderJournal(); });
+  run('a Journal page', () => ctx.jnlOpen(P));
+  run('the Journal editor', () => ctx.jnlEdit(P));
+  run('the Journal page again, after Done', () => ctx.jnlDone());
   run('the Coins card', () => ctx.renderCoins());
   run('the print sheet', () => ctx.printSheet());
   run('a glossary entry of the character\'s own', () => ctx.openGlossView(C().glossary[0]));
@@ -2821,6 +2827,36 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     spellAbility: 'wis', slots: Object.assign(X.blankChar().slots, {1: {total: '2' + P, used: 0}})}))));
   run('the print sheet\'s spell-slot line', () => ctx.printSheet(), false);
   ck('...which still prints a real slot count', /L1: 2\/2/.test(capture(() => ctx.printSheet()).html));
+
+  /* ---- the journal, driven through its DOM layer (#40) */
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'jnl'}))));
+  /* a real switch (newCharacter/loadCharById/finishImport) always calls
+     renderAll() before the player could click anything on the new character;
+     settle jnlUI here so jnlNewPage() below isn't the first render to see the
+     switch (which would otherwise reset the draft it just opened) */
+  capture(() => ctx.renderJournal());
+  let flow = capture(() => {
+    ctx.jnlNewPage();
+    el('jnlTitle').value = 'Session 9'; el('jnlText').value = 'Into the Mire.'; ctx.jnlInput();
+    ctx.jnlDone();
+  });
+  ck('New page, typed into, then Done: the page is saved',
+     !flow.err && X.character.journal.length === 1 && X.character.journal[0].title === 'Session 9', flow.err && String(flow.err));
+  ck('...and Done shows it', /id="jnlHead"[^>]*>Session 9</.test(flow.html), flow.html.slice(-300));
+  flow = capture(() => { ctx.jnlNewPage(); ctx.jnlDone(); });
+  ck('a page left blank is never saved', !flow.err && X.character.journal.length === 1);
+  ck('...and Done goes back to the list', /data-jnlopen=/.test(flow.html));
+  state.confirm = false;
+  ck('Delete asks first, naming the page, and No keeps it',
+     ctx.jnlDelete(X.character.journal[0].id) === false && X.character.journal.length === 1 &&
+     /Delete the page “Session 9”/.test(state.lastConfirm));
+  state.confirm = true;
+  ck('Yes deletes it', ctx.jnlDelete(X.character.journal[0].id) === true && X.character.journal.length === 0);
+  X.character.journal = [{id: 'k', title: 'Kept', text: 'x', at: 1}];
+  capture(() => ctx.jnlOpen('k'));
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'other'}))));
+  flow = capture(() => ctx.renderJournal());
+  ck('another character starts at its own list, not the page left open', /No pages yet/.test(flow.html), flow.html);
 
   /* ---- a glossary entry with no term never breaks the sheet (#71)
      highlight() looked each chip up with allGlossary().find(x=>x.term.toLowerCase()…),

@@ -966,6 +966,8 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the Journal tab takes no note of its own', !/data-note=/.test(jPanel), jPanel.match(/data-note="[a-z]+"/g));
   ck('the Journal tab has the list the notes renderer targets', jPanel.includes('id="notesList"'));
   ck('nothing still calls it the Notes tab', !/id="tab-notes"|data-tab="notes"/.test(t));
+  ck('the Journal card comes first, then Section Notes',
+     jPanel.indexOf('id="journalCard"') >= 0 && jPanel.indexOf('id="journalCard"') < jPanel.indexOf('id="notesList"'));
 
   // registry titles must match the headings they claim to describe. `origin` is
   // excluded on purpose: that heading is skin-dependent (Race vs Ancestry), which
@@ -2025,6 +2027,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const boxed = (src, id) => new RegExp('<div class="searchbox[^"]*"[^>]*>\\s*<input id="' + id + '"[^>]*placeholder="[^"]+"[^>]*>\\s*<button type="button" class="search-clear" aria-label="[^"]+"').test(src);
   ck('the glossary filter has its clear button', boxed(html, 'glossSearch'));
   ck('the tables filter has its clear button', boxed(html, 'tablesSearch'));
+  ck('the journal search has its clear button', boxed(html, 'jnlSearch'));
   ck('the finder search (items, spells, features) has its clear button', boxed(js, 'brSearch'));
   ck('the × shows only while there is text', /\.searchbox input:placeholder-shown ?\+ ?\.search-clear\{display:none\}/.test(css));
   ck('the × empties the box and re-runs its filter the way typing does',

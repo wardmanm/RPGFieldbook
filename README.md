@@ -215,6 +215,13 @@ you scroll, and the **☰** button in the tab bar opens a jump-to-section list f
 
 ### 📓 Journal
 
+Keep a running journal of your campaign. Tap **+ Page** to start one — a session, someone you
+met, a quest, a place — and give it a tag (Sessions, NPCs, Quests…) to group it with others like
+it. Pages list newest first under their tags, and the search box finds any page by its title,
+tag or text. **Insert timestamp** drops the current date and time into the page, handy for a
+running log. Each page remembers when you started it and when you last changed it, and uses the
+same formatting as notes (below). Journal pages don't print.
+
 Every section of your sheet can hold a note — tap the small page icon beside any heading on the
 **Sheet**, **Spells**, **Inventory** or **Story** tabs. The icon lights up when there's something
 there, and hovering it shows you the note without opening it. Each note remembers when you wrote it

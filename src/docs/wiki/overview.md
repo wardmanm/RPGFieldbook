@@ -122,7 +122,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `86-tables.js` | Rules-tab folding, `findTable()`, `tableHTML()` | [Rules & tables](features/rules-and-tables.md) |
 | `87-notes.js` | `NOTE_SECTIONS`, section notes, `noteHTML()`, the Section Notes card | [Story & notes](features/story-and-notes.md), [Rich text](architecture/rich-text.md), [Sections & layout](ui/sections-and-layout.md) |
 | `87-combat.js` | the combat tab and tracker | [Combat view](features/combat-view.md) |
-| `87-journal.js` | the Journal card's pages: tags, order, search, the page rule, the stamp | [Journal](features/journal.md) |
+| `87-journal.js` | the Journal card: pages, tags, search, the page rule, the editor | [Journal](features/journal.md) |
 | `88-settings.js` | the Settings modal, rules status, `dataStatus()` | [Settings & updates](features/settings-and-updates.md) |
 | `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, fetch and import of packs | [Rules packs](architecture/rules-packs.md) |
 | `90-boot.js` | `wire()`, `boot()` — always last | [Shell](ui/shell.md), [Build & source split](architecture/build-and-source-split.md) |
@@ -133,6 +133,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `35-tables.css` | reference tables and table anchors | [Rules & tables](features/rules-and-tables.md) |
 | `40-spells-coins.css` | spell slots, spells, coins | [Spells](features/spells.md), [Inventory](features/inventory.md) |
 | `45-combat.css` | the combat button and tab | [Combat view](features/combat-view.md) |
+| `47-journal.css` | the Journal tab | [Journal](features/journal.md) |
 | `50-modal.css` | the modal | [Shell](ui/shell.md) |
 | `00-sheet.html` | the Sheet tab | [Sections & layout](ui/sections-and-layout.md) |
 | `10-inventory.html` | the Inventory tab | [Inventory](features/inventory.md) |

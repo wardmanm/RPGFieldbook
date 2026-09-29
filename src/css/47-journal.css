@@ -1,0 +1,24 @@
+/* ================= the Journal tab =================
+   Only theme tokens. The page list reuses .fgroup/.fghead for its tag groups,
+   and a page renders through .n-body, the section notes' styles, so the two
+   read the same. */
+.jnl-entry{position:relative;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;width:100%;text-align:left;
+  background:var(--field);border:0;border-radius:8px;padding:9px 12px;margin-bottom:7px;cursor:pointer;font:inherit;color:var(--ink)}
+.jnl-entry::before{content:"";position:absolute;inset:1px;border:2px solid var(--line);border-radius:9px;pointer-events:none;opacity:.85}
+.jnl-entry:hover::before,.jnl-entry:focus-visible::before{border-color:var(--accent-2);opacity:1}
+.jnl-entry>*{position:relative}
+.jnl-title{font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.02em;flex:1;min-width:0;overflow-wrap:anywhere}
+.jnl-when{font-family:var(--head);font-size:11px;color:var(--ink-soft);flex:none}
+.jnl-snip{flex-basis:100%;font-size:14px;color:var(--ink-soft);overflow-wrap:anywhere}
+.jnl-snip mark{background:color-mix(in srgb,var(--accent) 38%,transparent);color:var(--ink);border-radius:3px;padding:0 1px}
+/* while searching the headers are plain text: every group is held open */
+.fghead.jnl-static{cursor:default}
+.jnl-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.jnl-bar .grow{flex:1}
+.jnl-edlbl{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.jnl-h{font-family:var(--head);font-weight:800;font-size:20px;letter-spacing:.02em;margin:0 0 4px;overflow-wrap:anywhere}
+.jnl-h:focus{outline:none}
+.jnl-h:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+.jnl-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.jnl-tag{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.jnl-tools{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 8px}

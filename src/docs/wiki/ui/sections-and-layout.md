@@ -32,7 +32,7 @@ Settings and Rules sections), `sheet.js` (`featGroups()`, the shared favourites 
 | `20-spells.html` | `#tab-spells` | one `.stack` | spellcasting, slots, activespells, spells; plus `#concCard`, untagged ([Conditions & concentration](../features/conditions-and-concentration.md)) |
 | `30-story.html` | `#tab-story` | `.cols` | proficiencies; `#bioStack` is filled by `buildBio()` with the eight bio cards, untagged by design |
 | `40-rules.html` | `#tab-rules` | one `.stack` | none: two foldable cards ([Rules & tables](../features/rules-and-tables.md)) |
-| `60-journal.html` | `#tab-journal` | one `.stack`, centred, max 820px | none: the Section Notes card collects notes, it doesn't take one |
+| `60-journal.html` | `#tab-journal` | one `.stack`, centred, max 820px: Journal (`#journalCard`), Section Notes | none: neither card takes a section note |
 | `70-combat.html` | `#tab-combat` | `.cview`: header, live region, `#cvList` | none in markup: the real cards are moved in at runtime |
 
 The panels concatenate in manifest order, which is not the tab-bar order (that lives in the
@@ -245,3 +245,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-09-25 — Hit Dice move from Vitals into Rest & Recovery. → ledger L3676
 - 2026-09-28 — The portrait is escaped and drawn only from a data: URL. → ledger L3940
 - 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39
+- 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40

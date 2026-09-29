@@ -169,3 +169,95 @@ function journalEditorHTML(p,tags){
     `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button></div>`+
     NOTE_FMT_HINT+(when?`<p class="hint">${esc(when)}</p>`:"");
 }
+
+/* ================= the DOM layer ================= */
+/* Session only, never saved: which page is open, whether it is being edited,
+   and the draft being edited ({id, at}; see jnlSavePage()). Keyed on the
+   character, so a switch starts again at the list. */
+let jnlUI={who:null,open:null,editing:false,draft:null};
+function jnlReset(){jnlUI={who:character.id,open:null,editing:false,draft:null};}
+function jnlSearchText(){const s=document.getElementById("jnlSearch");return jnlQuery(s?s.value:"");}
+function renderJournal(){
+  const box=document.getElementById("jnlBody");if(!box)return;
+  if(jnlUI.who!==character.id){jnlReset();const s=document.getElementById("jnlSearch");if(s)s.value="";}
+  const pages=jnlPages(character);
+  /* a page deleted, or gone with a reload of the rules or an import */
+  if(!jnlUI.editing&&jnlUI.open&&!pages.some(p=>p.id===jnlUI.open))jnlUI.open=null;
+  const bar=document.getElementById("jnlListBar");if(bar)bar.hidden=!!jnlUI.open;
+  if(jnlUI.editing){
+    /* Built once, when Edit is pressed, and never again while it is open:
+       renderAll() and refreshRulesUI() can run while the player types (a rules
+       fetch landing, a change in Settings), and a rebuild would take the text
+       they are typing, the caret and the focus with it. */
+    if(box.querySelector("[data-jnlfield]"))return;
+    const p=pages.find(x=>x.id===jnlUI.open)||{id:jnlUI.open,title:"",tag:"",text:""};
+    box.innerHTML=journalEditorHTML(p,jnlTagList(character));
+    return;
+  }
+  const p=jnlUI.open&&pages.find(x=>x.id===jnlUI.open);
+  box.innerHTML=p?journalPageHTML(p):journalListHTML(character,jnlSearchText());
+}
+function jnlFocus(id,atEnd){
+  const e=document.getElementById(id);if(!e||!e.focus)return;
+  e.focus({preventScroll:true});
+  if(atEnd&&typeof e.setSelectionRange==="function"){const n=String(e.value||"").length;e.setSelectionRange(n,n);}
+}
+/* A page opens where the card starts, whatever point of a long list it was
+   picked from. */
+function jnlShowCard(){
+  const c=document.getElementById("journalCard"),r=c&&c.getBoundingClientRect&&c.getBoundingClientRect();
+  if(r&&r.top<0)scrollToCard(c);
+}
+function jnlOpen(id){jnlUI.open=id;jnlUI.editing=false;jnlUI.draft=null;renderJournal();jnlShowCard();jnlFocus("jnlHead");}
+/* Back to the list, focus on the page's own entry (which scrolls it into view). */
+function jnlBack(){
+  const id=jnlUI.open;jnlUI.open=null;jnlUI.editing=false;jnlUI.draft=null;renderJournal();
+  const b=id&&document.querySelector(attrSel("data-jnlopen",id));
+  if(b&&b.focus)b.focus();else jnlShowCard();
+}
+/* Editing starts from an empty box, so renderJournal() builds a fresh editor
+   instead of keeping the one it finds. The caret goes to the END of the text:
+   that is where a timestamp lands before the player clicks into the page. */
+function jnlStartEdit(id,at,focusId){
+  jnlUI.open=id;jnlUI.editing=true;jnlUI.draft={id,at};
+  const box=document.getElementById("jnlBody");if(box)box.innerHTML="";
+  renderJournal();jnlShowCard();
+  jnlFocus(focusId,true);
+}
+function jnlNewPage(){jnlStartEdit(uid(),null,"jnlTitle");}
+function jnlEdit(id){const p=jnlPages(character).find(x=>x.id===id);if(p)jnlStartEdit(id,jnlTime(p.at)||null,"jnlText");}
+/* Done shows the page — or the list, when it was left blank and so never saved. */
+function jnlDone(){
+  const id=jnlUI.open;jnlUI.editing=false;jnlUI.draft=null;
+  const saved=jnlPages(character).some(p=>p.id===id);
+  jnlUI.open=saved?id:null;
+  renderJournal();
+  if(saved)jnlFocus("jnlHead");else jnlFocus("jnlNew");
+}
+/* Every keystroke in the editor; the page rule does the rest (jnlSavePage()). */
+function jnlInput(){
+  if(!jnlUI.editing||!jnlUI.draft)return;
+  const v=id=>{const e=document.getElementById(id);return e?e.value:"";};
+  jnlSavePage(character,jnlUI.draft,{title:v("jnlTitle"),tag:v("jnlTag"),text:v("jnlText")},Date.now());
+  scheduleSave();
+}
+function jnlDelete(id){
+  const p=jnlPages(character).find(x=>x.id===id);if(!p)return false;
+  if(!confirm(`Delete the page “${jnlTitle(p)}”? This can't be undone.`))return false;
+  jnlDeletePage(character,id);jnlUI.open=null;jnlUI.editing=false;jnlUI.draft=null;
+  renderJournal();scheduleSave();jnlFocus("jnlNew");
+  return true;
+}
+/* At the caret. The input event is what saves it, as typing does. */
+function insertJournalStamp(){
+  const ta=document.getElementById("jnlText");if(!ta)return;
+  const r=insertLine(ta.value,ta.selectionStart,ta.selectionEnd,jnlStampText(new Date()));
+  ta.value=r.text;ta.focus();ta.setSelectionRange(r.caret,r.caret);
+  ta.dispatchEvent(new Event("input",{bubbles:true}));
+}
+function toggleJnlGroup(key){
+  if(!character.journalCollapse||typeof character.journalCollapse!=="object"||Array.isArray(character.journalCollapse))character.journalCollapse={};
+  character.journalCollapse[key]=!character.journalCollapse[key];
+  renderJournal();scheduleSave();
+  const h=document.querySelector(attrSel("data-jnlgroup",key));if(h&&h.focus)h.focus();
+}

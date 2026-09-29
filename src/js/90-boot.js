@@ -19,6 +19,8 @@ function wire(){
   });
   // slot totals
   document.addEventListener("input",e=>{const s=e.target.closest("[data-slot]");if(!s)return;if(slotsAuto)return;const lv=num(s.dataset.slot);character.slots[lv].total=Math.max(0,num(s.value));if(character.slots[lv].used>character.slots[lv].total)character.slots[lv].used=character.slots[lv].total;renderSlotBubbles();scheduleSave();});
+  /* the journal editor writes on every keystroke (87-journal.js) */
+  document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("[data-jnlfield]"))jnlInput();});
   // clicks
   document.addEventListener("click",e=>{
     const t=e.target;
@@ -35,6 +37,14 @@ function wire(){
     if((m=t.closest("[data-noteedit]")))return openNoteEditor(m.dataset.noteedit);
     if((m=t.closest("[data-notejump]")))return jumpToNote(m.dataset.notejump);
     if((m=t.closest("[data-notegroup]"))){toggleNoteGroup(m.dataset.notegroup);return;}
+    // the journal (87-journal.js)
+    if((m=t.closest("[data-jnlopen]")))return jnlOpen(m.dataset.jnlopen);
+    if(t.closest("[data-jnlback]"))return jnlBack();
+    if((m=t.closest("[data-jnledit]")))return jnlEdit(m.dataset.jnledit);
+    if(t.closest("[data-jnldone]"))return jnlDone();
+    if((m=t.closest("[data-jnldel]"))){jnlDelete(m.dataset.jnldel);return;}
+    if(t.closest("[data-jnlstamp]"))return insertJournalStamp();
+    if((m=t.closest("[data-jnlgroup]"))){toggleJnlGroup(m.dataset.jnlgroup);return;}
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
     /* Max HP padlock — mirrors [data-hdmode] below, minus the confirm: switching
@@ -176,6 +186,7 @@ function wire(){
     /* the notes-tab group headers are role="button" tabindex="0", so they owe
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
+    {const g=e.target.closest&&e.target.closest("[data-jnlgroup]");if(g){e.preventDefault();toggleJnlGroup(g.dataset.jnlgroup);return;}}
   });
   /* The combat tab's header sticks under the tab bar, whose height changes with
      the width (labels become icons at 860px). No Esc handler: the view is a tab
@@ -205,6 +216,8 @@ function wire(){
   /* the refused-write strip (#81) */
   on("saveWarnFile","click",exportChar);
   on("saveWarnRetry","click",retrySave);
+  on("jnlNew","click",jnlNewPage);
+  on("jnlSearch","input",()=>renderJournal());
   document.getElementById("addResource").addEventListener("click",()=>openResourceForm());
   /* clampHP owns both bounds and adjustHP owns the temp-HP-first rule. Every
      part a damage path needs lives in 65-resources.js, where the harness can

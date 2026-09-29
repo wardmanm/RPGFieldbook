@@ -26,8 +26,8 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 |---|---|
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
 | structured objects | `hp` `{cur, max, temp, locked:true}`, `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
-| lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources` |
-| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse` |
+| lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal` |
+| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `journalCollapse` |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
 | per-character settings | `statStyle`, `hdStyle`, `hpColor`, `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound` |
 | text | `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
@@ -83,6 +83,8 @@ chosen "don't ask again" for this version (`skipUpdate`).
 tab's "Notes" card, rendered into `#rt-notes`. It predates everything. `secNotes` is the per-section
 notes map, keyed by `NOTE_SECTIONS` id (not by heading, which gets reworded). Each value is
 `{text, at, editedAt}`, saving an empty note deletes the key, and they are gathered on the Journal tab (`#tab-journal`).
+`journal` is a third thing: the Journal tab's own pages, `[{id, title, tag, text, at, editedAt}]`,
+with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal.md)).
 
 ## Rules that must hold
 
@@ -153,3 +155,4 @@ notes map, keyed by `NOTE_SECTIONS` id (not by heading, which gets reworded). Ea
 - 2026-08-18 — `migrateWeaponEquip()` and its flag, which was first set in `blankChar()` by mistake. → ledger L3213
 - 2026-09-01 — `statStyle` is added as a per-character setting whose resolver needs no migration. → ledger L106, #17
 - 2026-09-28 — `migrate()` keeps only objects in list fields, and repairs glossary entries (aliases, an id) without dropping any. → ledger L4206, #71
+- 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40

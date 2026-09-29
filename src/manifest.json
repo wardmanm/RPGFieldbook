@@ -16,6 +16,7 @@
     "src/css/35-tables.css",
     "src/css/40-spells-coins.css",
     "src/css/45-combat.css",
+    "src/css/47-journal.css",
     "src/css/50-modal.css"
   ],
   "js": [

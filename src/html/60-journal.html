@@ -1,8 +1,15 @@
   <!-- ============ JOURNAL TAB ============ -->
-  <!-- The section notes gathered from every other tab (87-notes.js). The card
-       takes no section note of its own: it collects them. -->
+  <!-- The player's own journal pages (87-journal.js), then the section notes
+       gathered from every other tab (87-notes.js). Neither card takes a section
+       note: one IS the player's notes, the other collects them. -->
   <section class="tabpanel" id="tab-journal">
     <div class="stack" style="max-width:820px;margin:0 auto">
+      <div class="card" id="journalCard">
+        <div class="label">Journal <button class="add" id="jnlNew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Page</button><span class="grow"></span></div>
+        <!-- the search belongs to the list: renderJournal() hides it on a page -->
+        <div id="jnlListBar"><div class="searchbox" style="margin-bottom:10px"><input id="jnlSearch" placeholder="Search your pages…" autocomplete="off"><button type="button" class="search-clear" aria-label="Clear the search" title="Clear">×</button></div></div>
+        <div id="jnlBody"></div>
+      </div>
       <div class="card">
         <div class="label">Section Notes <span class="grow"></span></div>
         <p class="hint">Everything you've jotted against a section of your sheet, gathered here. Tap a heading to jump back to where it belongs.</p>

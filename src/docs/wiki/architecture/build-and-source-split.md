@@ -1,6 +1,6 @@
 # Build & source split
 
-Fieldbook is edited as 44 fragments under `src/` and shipped as one self-contained file,
+Fieldbook is edited as 45 fragments under `src/` and shipped as one self-contained file,
 `dist/fieldbook.html`. `scripts/build-html.js` splices the fragments into a page shell in the order
 `src/manifest.json` gives, byte for byte, with no bundler and no module system: the result has to
 open from `file://` on any device with no server. [ADR-001](../../ADR-001-source-split.md) is the
@@ -23,7 +23,7 @@ stays valid on its own:
 
 | Marker | Where | Filled with |
 |---|---|---|
-| `/*@@CSS@@*/` | inside the single `<style>` | `manifest.css`, 8 fragments |
+| `/*@@CSS@@*/` | inside the single `<style>` | `manifest.css`, 9 fragments |
 | `<!--@@HTML@@-->` | inside `<div class="page">` | `manifest.html`, 7 fragments, one tab panel each |
 | `//@@JS@@` | inside the single `<script>` | `manifest.js`, 29 fragments |
 

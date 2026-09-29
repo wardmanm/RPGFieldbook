@@ -4,7 +4,7 @@ Two kinds of free text, easy to confuse. The **Story tab** holds the character's
 bio cards (Appearance through a card called **Notes**) and Proficiencies & Languages. **Section
 notes** are something else — a note pinned to any of 19 cards on the Sheet, Spells, Inventory and
 Story tabs, opened from an icon in the card's heading and gathered in the **Section Notes** card on
-the **Journal tab**. Both render
+the **Journal tab**, below the player's own journal pages ([Journal](journal.md)). Both render
 the same markdown-on-top-of-glossary grammar.
 
 **Code:** `BIO`, `buildBio()` in `00-constants.js` · `renderRT()`, `renderAllRT()` in
@@ -117,3 +117,4 @@ They print under the heading "Section notes".
 - 2026-08-18 — One rich-text grammar: the bio cards render markdown; the note preview keeps bold, italics and code. → ledger L3035
 - 2026-09-01 — The "By ability" layout hides the Skills card, and with it that card's note button. → ledger L106, #17
 - 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39
+- 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40

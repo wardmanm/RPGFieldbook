@@ -28,5 +28,10 @@ Bullets below this line — leave the heading in place.
 
 ## Pending
 
+- The Notes tab is now the Journal. Keep a running campaign journal in pages — sessions,
+  characters, quests, anything — each with an optional tag to group it by, created and edited
+  dates, a button that stamps the current date and time, and the same formatting as your notes.
+  Search finds any page by its title, tag or text. Your section notes are still there, further
+  down.
 - If your browser refuses to save a change, the sheet now says so plainly — and keeps saying so
   until a save goes through — with a button to save the character to a file instead.

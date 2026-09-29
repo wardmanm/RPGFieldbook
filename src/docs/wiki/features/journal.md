@@ -7,9 +7,13 @@ covered by [Story & notes](story-and-notes.md).
 
 **Code:** `jnlPages()`, `tagLabel()`, `tagKey()`, `groupByTag()`, `attrSel()`, `jnlSort()`,
 `jnlMatch()`, `jnlSnippet()`, `jnlSavePage()`, `jnlDeletePage()`, `jnlTagList()`,
-`jnlGroupOpen()`, `jnlStampText()`, `insertLine()` in `87-journal.js` · `repairIds()`, `migrate()`
-in `71-char-io.js` · **Tests:** `sheet.js` · **See also:** [Story & notes](story-and-notes.md),
-[Rich text](../architecture/rich-text.md), [Character model](../architecture/character-model.md)
+`jnlGroupOpen()`, `jnlStampText()`, `insertLine()`, `renderJournal()`, `jnlOpen()`, `jnlBack()`,
+`jnlNewPage()`, `jnlEdit()`, `jnlDone()`, `jnlInput()`, `jnlDelete()`, `insertJournalStamp()`,
+`toggleJnlGroup()` in `87-journal.js` · markup `src/html/60-journal.html` · `47-journal.css` ·
+`renderAll()` in `66-coins-hp.js`, `refreshRulesUI()` in `88-settings.js` · `repairIds()`,
+`migrate()` in `71-char-io.js` · **Tests:** `sheet.js`, `rules-data.js` · **See also:**
+[Story & notes](story-and-notes.md), [Rich text](../architecture/rich-text.md),
+[Character model](../architecture/character-model.md)
 
 ## How it works
 
@@ -49,6 +53,33 @@ and JSON drops an id set on one, so every load would give it a new id. `journalC
 to `true` for a shut group. Readers still coerce every field (`jnlStr()`, `jnlTime()`), since the
 guard reaches only the top level.
 
+**The card.** `#journalCard` is the first card on the Journal tab, with **+ Page** (`#jnlNew`) in
+its heading. `renderJournal()` draws `#jnlBody` in one of three views, held in the session-only
+`jnlUI` (`{who, open, editing, draft}`, keyed on the character id, so a switch starts at the
+list and clears the search):
+
+- **the list** (`journalListHTML()`): the search box (`#jnlSearch`), then the tag groups. Each
+  page is a button (`data-jnlopen`). A group header is a `role="button"` toggle, stored in
+  `journalCollapse`. While a search is typed, every group is open and its header is plain text;
+- **a page** (`journalPageHTML()`): ← All pages, the title as a focusable heading (`#jnlHead`,
+  focused on open), the tag, the dates (`noteWhen()`), Edit, Delete, and the text through
+  `noteHTML()`. The search row is hidden;
+- **the editor** (`journalEditorHTML()`): title, tag with the tags in use as suggestions, the
+  text, **Insert timestamp**, the formatting key (`NOTE_FMT_HINT`) and Done. Every keystroke calls
+  `jnlInput()`, which writes through `jnlSavePage()` and schedules a save. There is no live
+  preview.
+
+**The editor is built once.** Starting an edit empties `#jnlBody`, and `renderJournal()` builds a
+fresh editor only into an empty box. `renderAll()` and `refreshRulesUI()` both call
+`renderJournal()`, and either can run while the player types (a rules fetch landing, a Settings
+change); a rebuild would take the text, the caret and the focus. Starting an edit puts the caret
+at the end of the text, so **Insert timestamp** (`insertJournalStamp()`) lands at the end until
+the player clicks elsewhere in the page, then at the caret. It fires an `input` event, which saves
+it.
+
+**Delete** asks, naming the page, and returns to the list. **Back** returns focus to the page's
+entry in the list.
+
 ## Rules that must hold
 
 - **A blank page is never saved.** Every write goes through `jnlSavePage()`. No clean-up pass
@@ -57,3 +88,20 @@ guard reaches only the top level.
   in the original.
 - **Tags group by `tagKey()`, and a selector built from one goes through `attrSel()`.** A tag can
   hold a quote, and that makes `querySelector` throw.
+- **`renderJournal()` never rebuilds an open editor.** It checks for a `[data-jnlfield]` in
+  `#jnlBody` first. Anything that must replace the editor empties the box first, as starting an
+  edit does.
+
+## Decisions
+
+| Question | Decision | Rejected, and why |
+|---|---|---|
+| How pages are organised | An optional free-text tag, grouped | Fixed categories: a player can't add their own. A flat list: no structure for a long campaign |
+| What "timestamp" means | Created and edited dates, plus Insert timestamp (a bold line) | Dates only: no way to mark entries in a session log. A heading stamp: too heavy for a line per entry |
+| Page order | Newest created first | Last edited first: the list reshuffles while you tidy. Alphabetical: a session log needs numbered titles |
+| Where a blank page goes | Never saved: a page exists only while it has a title or text | Discard on leave: a tab switch, a character switch or a reload each need their own hook, and one would be missed |
+| Editing | Inline, built once | The section notes' modal: too small for a session's worth of writing |
+
+## History
+
+- 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40

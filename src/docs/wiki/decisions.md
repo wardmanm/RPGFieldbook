@@ -247,6 +247,14 @@ When a page gains a Decisions row, add its line here under that page.
 - **How notes are keyed** — A stable id per section in `NOTE_SECTIONS`
 - **What the hover preview renders** — Phrasing markup only, block markers represented, chips unwrapped
 
+### [Journal](features/journal.md)
+
+- **How pages are organised** — An optional free-text tag, grouped
+- **What "timestamp" means** — Created and edited dates, plus Insert timestamp (a bold line)
+- **Page order** — Newest created first
+- **Where a blank page goes** — Never saved: a page exists only while it has a title or text
+- **Editing** — Inline, built once
+
 ### [Rules & tables](features/rules-and-tables.md)
 
 - **Where the fold state lives** — `settings`, as a collapse map

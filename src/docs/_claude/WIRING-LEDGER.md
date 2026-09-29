@@ -4789,3 +4789,32 @@ boot is gone.
 kept by a failing Try again and cleared by a landing one; a new character, an import and an old
 save under a full store. Pages: [storage](../wiki/architecture/storage.md),
 [home & characters](../wiki/features/home-and-characters.md).
+
+## Journal pages (#40, 2026-09-29)
+
+The Journal tab's first card: the player's own pages, `character.journal`
+(`[{id, title, tag, text, at, editedAt}]`) with `journalCollapse`. `migrate()` guards both and
+`repairIds()` gives every page a unique string id. New fragments `87-journal.js` (pure half, then
+DOM half) and `47-journal.css`.
+
+**The rules.** A page exists only while it has a title or text (`jnlSavePage()`, the `saveNote()`
+rule), so a blank page is never saved however it is left, and nothing cleans up. Tags are trimmed,
+grouped case-blind, A to Z, Untagged last, labelled by the first spelling met, and shared with
+trackers for suggestions. Order is newest created first. Search is case-blind through an `i` RegExp,
+never by lower-casing, which can change a string's length and misplace the `<mark>`. The stamp is
+the locale's date and time in bold, on its own line at the caret, and an edit starts with the caret
+at the end.
+
+**The card.** Three views in one card (list, page, editor), in a session-only state keyed on the
+character. The editor is built once per edit, because `renderAll()`/`refreshRulesUI()` can run
+mid-typing; `renderJournal()` is in both. `NOTE_FMT_HINT` is now shared with the section-note
+editor.
+
+**Guards.** `sheet.js`: the fields, migrate and ids; tags, order, search (escaping, the Unicode
+alignment), the page rule, the stamp and `insertLine()`; the three builders, including hostile
+values; a hostile page through the list, a search, the page and the editor; New → type → Done, a
+blank page never saved, Delete asking, and a character switch resetting. `rules-data.js`: the
+search box's clear button, the card order. Pages: [journal](../wiki/features/journal.md),
+[story & notes](../wiki/features/story-and-notes.md), [rich text](../wiki/architecture/rich-text.md),
+[character model](../wiki/architecture/character-model.md),
+[sections & layout](../wiki/ui/sections-and-layout.md).
