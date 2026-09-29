@@ -2132,7 +2132,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
      (() => { const h = X.jnlSnippet('a'.repeat(200) + ' mire ' + 'b'.repeat(200), 'mire', 10); return h.startsWith('…') && h.endsWith('…') && h.length < 60; })());
   ck('the match stays aligned where lower-casing would change the length',
      X.jnlSnippet('İİİİ İİ the mire', 'mire').includes('<mark>mire</mark>'), X.jnlSnippet('İİİİ İİ the mire', 'mire'));
-  ck('the notes placeholders are stripped, so none reaches the page', !/[-]/.test(X.jnlSnippet('mirex', 'mire')));
+  ck('the notes placeholders are stripped, so none reaches the page', !/[\uE000-\uE00F]/.test(X.jnlSnippet('mire\uE001x', 'mire')));
 
   // the page rule
   const c = {journal: []}, draft = {id: 'n1', at: null};
