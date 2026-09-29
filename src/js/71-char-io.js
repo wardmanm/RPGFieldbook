@@ -30,6 +30,18 @@ function migrateWeaponEquip(c){
   c.wpnEquipInit=1;
   return n;
 }
+/* A row the page finds by id (Edit, Delete, a tick) needs one, and only one:
+   a number becomes text, a missing or repeated id gets a fresh uid(). Pass the
+   same `seen` to keep ids unique across several lists. Safe to run again. */
+function repairIds(list,seen){
+  const s=seen||new Set();
+  list.forEach(x=>{
+    if(typeof x.id==="number")x.id=String(x.id);
+    if(typeof x.id!=="string"||!x.id||s.has(x.id))x.id=uid();
+    s.add(x.id);
+  });
+  return list;
+}
 function migrate(s){
   s=s||{};
   const base=blankChar(), blank=blankChar();
@@ -54,7 +66,7 @@ function migrate(s){
      either one stopped the render: the first read of a field on null throws,
      and in strict mode so does the first write to a string (renderSpells()
      normalises `level`, detectSpellAttack() sets `atkType`). */
-  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources"].forEach(k=>{ base[k]=Array.isArray(base[k])?base[k].filter(x=>x!==null&&typeof x==="object"):[]; });
+  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources","journal"].forEach(k=>{ base[k]=Array.isArray(base[k])?base[k].filter(x=>x!==null&&typeof x==="object"):[]; });
   /* The player's own glossary entries are theirs, so none is dropped for its
      shape (#71). Each gets what makes it reachable: the other categories' field
      names read as the glossary's (glossRepair), and an id, without which the
@@ -62,7 +74,11 @@ function migrate(s){
      listed there as "(no term)"; glossTerm() skips it for matching. */
   base.glossary.forEach(g=>{ if(!g||typeof g!=="object"||Array.isArray(g))return; glossRepair(g);
     if(typeof g.id==="number")g.id=String(g.id); else if(typeof g.id!=="string"||!g.id)g.id=uid(); });
-  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
+  /* A page is found by its id. The list guard above lets an ARRAY through (it
+     is an object), and JSON would drop an id set on one, so each load would
+     give it a new id and migrate() would stop being idempotent. Arrays go. */
+  base.journal=repairIds(base.journal.filter(x=>!Array.isArray(x)));
+  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
   /* AFTER the list guards above, so it can rely on inventory being an array. */

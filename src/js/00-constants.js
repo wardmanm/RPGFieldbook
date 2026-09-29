@@ -62,6 +62,9 @@ function blankChar(){
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
        above), and this is a different thing entirely. */
     secNotes:{}, noteCollapse:{},
+    /* The Journal tab's own pages (87-journal.js): [{id,title,tag,text,at,editedAt}],
+       and which of its tag groups are shut, keyed by lower-cased tag. */
+    journal:[], journalCollapse:{},
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);

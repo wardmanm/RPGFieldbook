@@ -45,7 +45,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'spellDC', 'spellAtkBonus', 'fxTargets', 'FX_LABEL', 'promptSpellAttack', 'openStatBreakdown', 'openAttackBreakdown',
   'renderAttacks',
   'coinKeys',
-  'RULE_CATS', 'reindexRules', 'recomputeDups',
+  'RULE_CATS', 'reindexRules', 'recomputeDups', 'repairIds',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2058,6 +2058,34 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('a card not shown has neither', same(X.cvNeighbours(['vitals'], 'skills'), [null, null]));
 }
 
+/* ---- the journal: its fields, and what migrate() does to them ----
+   Design: src/docs/specs/2026-09-29-journal-design.md §3. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const b = X.blankChar();
+  ck('a new character has an empty journal and no shut groups', same(b.journal, []) && same(b.journalCollapse, {}));
+  ck('...each its own copy', (() => { X.blankChar().journal.push({}); return X.blankChar().journal.length === 0; })());
+  const page = {id: 'p1', title: 'Session 1', tag: 'Sessions', text: 'We met **Brindle**.', at: 100, editedAt: 200};
+  const back = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {journal: [page], journalCollapse: {sessions: true}}))));
+  ck('a save → load round trip keeps every page field', same(back.journal, [page]));
+  ck('...and the shut groups', same(back.journalCollapse, {sessions: true}));
+  const old = X.migrate({name: 'Before the journal', abilities: {}});
+  ck('a sheet saved before the journal gets an empty one', same(old.journal, []) && same(old.journalCollapse, {}));
+  const junk = X.migrate({abilities: {}, journalCollapse: 'shut',
+    journal: [null, 'text', 7, ['arr'], {title: 'kept'}, {id: 5, title: 'numbered'}, {id: 'p1'}, {id: 'p1'}]});
+  ck('only page objects survive — not an array, which the list guard lets through', junk.journal.length === 4, junk.journal);
+  ck('a page with no id gets one', typeof junk.journal[0].id === 'string' && junk.journal[0].id.length > 0);
+  ck('a numeric id becomes text', junk.journal[1].id === '5');
+  ck('a repeated id is replaced, so Edit and Delete find one page', junk.journal[2].id === 'p1' && junk.journal[3].id !== 'p1');
+  ck('a junk collapse map resets', same(junk.journalCollapse, {}));
+  ck('migrate() stays idempotent over the journal', JSON.stringify(X.migrate(JSON.parse(JSON.stringify(junk)))) === JSON.stringify(junk));
+  ck('repairIds leaves a clean list as it is', (() => { const l = [{id: 'a'}, {id: 'b'}]; X.repairIds(l); return same(l, [{id: 'a'}, {id: 'b'}]); })());
+  ck('repairIds can share one pool across lists', (() => {
+    const s = new Set(), l1 = [{id: 'a'}], l2 = [{id: 'a'}];
+    X.repairIds(l1, s); X.repairIds(l2, s); return l1[0].id === 'a' && l2[0].id !== 'a';
+  })());
+}
+
 /* ---- dialogs: what auto-focus may pick, and how the opener is found again ---- */
 {
   const F = X.MODAL_FOCUS_FIELDS;
@@ -2764,7 +2792,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
        whole sheet draws (a string in `spells` threw on the first write to it) */
     const junkLists = Object.assign(X.blankChar(), {system: 'dnd'});
     ['features', 'inventory', 'statuses', 'familiars', 'spells', 'attacks', 'activeSpells', 'glossary',
-     'classes', 'grants', 'resources'].forEach(k => { junkLists[k] = [null, 'str', 7, ['arr'], {}]; });
+     'classes', 'grants', 'resources', 'journal'].forEach(k => { junkLists[k] = [null, 'str', 7, ['arr'], {}]; });
     X.character = X.migrate(JSON.parse(JSON.stringify(junkLists)));
     renders('the whole sheet from a file whose lists hold null, text and numbers (renderAll)', () => ctx.renderAll());
     renders('the print sheet from that file', () => ctx.printSheet());
