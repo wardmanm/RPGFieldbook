@@ -82,7 +82,8 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
 - **Drive interactive changes** (click, fill, then screenshot) and state plainly what you drove and
   what you did not. Real devices, touch, print and Mike's own characters remain his pass.
 - **Worktrees:** one issue per worktree via `scripts/wt.sh`; branches carry **src-only diffs — never
-  commit `dist/fieldbook.html` from one**; integrate one branch per `git merge`.
+  commit `dist/fieldbook.html` from one**; integrate one branch per `git merge`. A merge message
+  closes each issue with its own keyword (`Closes #6, closes #7`), never one keyword for a list.
   → [WORKTREES](src/docs/WORKTREES.md)
 - Git hooks are opt-in (`./dev.sh` menu `h`); staleness is checked on push, never on commit.
 

@@ -124,6 +124,25 @@ git merge --no-ff issue/43-…
 Then browser-QA the result, commit the rebuilt `dist/fieldbook.html`, and push. `pre-push` will stop
 you if the artifact is stale or a suite fails.
 
+**Closing the issues.** The merge message closes them on push, but **every issue number needs its own
+keyword**. GitHub applies a closing keyword only to the number straight after it, so
+`Closes #39, #40, #41` closes #39 alone. That is exactly what happened to the #39 branch's merge.
+
+```text
+Merge branch 'issue/39-journal'
+
+The Notes tab becomes the Journal: journal pages (#40) and trackers (#41).
+Closes #39, closes #40, closes #41.
+```
+
+After pushing, check each one: `gh issue view <n> --json state`. An issue that has to be closed by
+hand gets a comment saying where the fix landed and why it didn't close itself:
+
+```bash
+gh issue close 40 --reason completed --comment "Fixed on main in 2e081e8 (merge of issue/39-journal). \
+Not auto-closed because the merge message listed the issues after a single \"Closes\" keyword."
+```
+
 **If you want PRs as well** (for review, or for CI's verdict on each issue before integrating): push
 the branch and open the PR. CI builds the artifact itself for a PR that doesn't commit one, so a
 src-only branch gets the full job — tests included. If GitHub then reports a conflict, it is almost

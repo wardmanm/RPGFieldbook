@@ -4910,3 +4910,12 @@ on each of the three paths, Yes clearing the warning, and delete and star under 
 [storage](../wiki/architecture/storage.md),
 [home & characters](../wiki/features/home-and-characters.md),
 [combat view](../wiki/features/combat-view.md), [known issues](../wiki/roadmap/known-issues.md).
+
+## One closing keyword per issue in a merge message (process, 2026-10-01)
+
+The `issue/39-journal` merge said "Closes #39, #40, #41, #81". On push GitHub closed #39 only: a
+closing keyword applies to the issue number straight after it, not to a list. #40, #41 and #81
+were closed by hand, each with a comment naming the merge commit and why it hadn't closed itself.
+[WORKTREES](../WORKTREES.md) §5 now shows the form (`Closes #39, closes #40, closes #41`), the
+check after pushing (`gh issue view <n> --json state`), and the comment to leave on a manual
+close. CLAUDE.md's worktree rule carries the one-line version.
