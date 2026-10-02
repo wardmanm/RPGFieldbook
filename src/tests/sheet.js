@@ -57,6 +57,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'ammoKindOf', 'itemAmmo', 'weaponAmmoKind', 'ammoStacks', 'loadedStack', 'ammoPlural', 'ammoOne',
   'unpackAmmo', 'rebaseAmmo', 'migrateAmmo', 'fpMap', 'fpHash',
   'ammoSpentEntry', 'fireAmmo', 'undoFire', 'ammoRecoverable', 'recoverAmmo', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
+  'ammoLineHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
+  'offerAmmoRecovery', 'revertEquipmentGrants',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -3080,6 +3082,85 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('a row with no item gets nothing from ammunition', X.attackNumbers(Object.assign({}, atk, {itemId: undefined})).ammoBonus === 0);
 }
 
+/* ---- the attack row's ammunition line (#6) ---- */
+{
+  const c = X.blankChar();
+  c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                 {id: 'd1', name: 'Dagger', qty: 1, equipped: true, weapon: {kind: 'melee', dice: '1d4'}},
+                 {id: 's1', name: 'Arrow', qty: 19, ammo: {kind: 'arrow'}}];
+  const bowRow = {id: 'a1', name: 'Longbow', itemId: 'w1'}, dagRow = {id: 'a2', name: 'Dagger', itemId: 'd1'};
+  let h = X.ammoLineHTML(c, bowRow);
+  ck('a launcher row shows its loaded stack and Fire', /Arrow ×19/.test(h) && /data-ammo-fire="w1"/.test(h) && !/disabled/.test(h), h);
+  ck('...as plain text while there is one stack to load', !/data-ammo-pick/.test(h));
+  ck('...and no Recover while nothing would come back', !/data-ammo-recover/.test(h));
+  ck('a weapon that fires nothing has no ammunition line', X.ammoLineHTML(c, dagRow) === '' && X.ammoLineHTML(c, {id: 'x'}) === '');
+  c.inventory.push({id: 's2', name: '+1 Arrow', qty: 4, ammo: {kind: 'arrow', bonus: 1}});
+  h = X.ammoLineHTML(c, bowRow);
+  ck('with two stacks, the label opens the picker', /data-ammo-pick="w1"/.test(h), h);
+  c.ammoSpent = {s1: {n: 13, kind: 'arrow'}, s2: {n: 4, kind: 'arrow'}};
+  h = X.ammoLineHTML(c, bowRow);
+  ck('Recover shows what would come back: 6 + 2', /data-ammo-recover="w1"/.test(h) && />Recover 8</.test(h), h);
+  c.inventory = c.inventory.filter(i => !i.ammo);
+  h = X.ammoLineHTML(c, bowRow);
+  ck('with no arrows left it says so, and Fire is disabled', /No arrows/.test(h) && /data-ammo-fire="w1" disabled/.test(h), h);
+}
+
+/* ---- Fire, Undo, loading and Recover, through the sheet's own handlers (#6) ---- */
+{
+  const c = X.blankChar(); X.character = c;
+  c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                 {id: 's1', name: 'Arrow', qty: 2, ammo: {kind: 'arrow'}},
+                 {id: 's2', name: '+1 Arrow', qty: 1, ammo: {kind: 'arrow', bonus: 1}}];
+  const r = X.fireWeapon('w1', false);
+  ck('Fire spends one and returns the shot', !!r && c.inventory[1].qty === 1);
+  ck('an Undo shown for another character does nothing', X.undoFireTap(r, X.blankChar(), false, 'w1') === false && c.inventory[1].qty === 1);
+  ck("this character's Undo puts it back", X.undoFireTap(r, c, false, 'w1') === true && c.inventory[1].qty === 2);
+  ck('loading a stack remembers it, outside weapon',
+     X.loadAmmo('w1', 's2') && c.inventory[0].ammoStack === 's2' && !('ammoStack' in c.inventory[0].weapon));
+  ck('loading a stack that is not there changes nothing', !X.loadAmmo('w1', 'nope') && c.inventory[0].ammoStack === 's2');
+  X.fireWeapon('w1', false);
+  ck('the next shot comes from it, and its last piece removes it', !c.inventory.some(i => i.id === 's2'));
+  X.fireWeapon('w1', false); X.fireWeapon('w1', false);
+  ck('...then the weapon fires the plain arrows until they are gone too', !c.inventory.some(i => i.ammo));
+  ck('nothing left: Fire does nothing', X.fireWeapon('w1', false) === null);
+  ck('Recover gives back 1 of the 3 fired (half of each stack, rounded down), into the old stack',
+     X.recoverWeaponAmmo('w1', false) === 1 && c.inventory.filter(i => i.ammo).map(i => i.id + '×' + i.qty).join() === 's1×1');
+  ck('...and clears the counts', JSON.stringify(c.ammoSpent) === '{}');
+
+  const g = X.blankChar(); X.character = g;
+  g.inventory = [{id: 'g1', name: 'Arrow', qty: 3, ammo: {kind: 'arrow'}, grant: 'class:Ranger'}];
+  g.ammoSpent = {g1: {n: 4, kind: 'arrow', snap: {id: 'g1', name: 'Arrow', qty: 1, grant: 'class:Ranger'}}};
+  X.revertEquipmentGrants('class:Ranger');
+  ck('removing the class that granted a stack forgets its spent count, so Recover cannot bring it back',
+     !g.inventory.length && !('g1' in g.ammoSpent));
+}
+
+/* ---- End combat offers the ammunition back (#6) ---- */
+{
+  const mk = () => {
+    const c = X.blankChar(); X.character = c;
+    c.inventory = [{id: 's1', name: 'Arrow', qty: 7, ammo: {kind: 'arrow'}}];
+    c.ammoSpent = {s1: {n: 13, kind: 'arrow'},
+                   s2: {n: 4, kind: 'bolt', snap: {id: 's2', name: 'Bolt', qty: 1, ammo: {kind: 'bolt'}}},
+                   s3: {n: 1, kind: 'needle'}};
+    X.startCombatNow();
+    return c;
+  };
+  let c = mk(); state.confirm = true;
+  ck('End combat, then yes: half of each kind comes back',
+     X.endCombatAsk() === true && state.lastConfirm === 'Recover ammunition? 6 of 13 arrows, 2 of 4 bolts' &&
+     c.inventory.find(i => i.id === 's1').qty === 13 && (c.inventory.find(i => i.id === 's2') || {}).qty === 2, c.inventory);
+  ck('...and every count clears, the lone needle with them', JSON.stringify(c.ammoSpent) === '{}');
+  const real = ctx.confirm, asked = [];
+  ctx.confirm = m => { asked.push(m); return /^End combat/.test(m); };
+  c = mk();
+  ck('End combat, then no: nothing comes back and nothing is lost',
+     X.endCombatAsk() === true && asked.length === 2 && c.inventory.find(i => i.id === 's1').qty === 7 && c.ammoSpent.s1.n === 13);
+  asked.length = 0; c.ammoSpent = {}; X.startCombatNow();
+  ck('a fight with no shots asks nothing more', X.endCombatAsk() === true && asked.length === 1, asked);
+  ctx.confirm = real;
+}
+
 /* ---- imported files and packs render inert ----
    A character file, a rules pack and a settings file (which carries a whole
    `rules` object) are all written by someone else, and all reach the page
@@ -3229,12 +3310,16 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
                  effects: [{target: 'ac', value: 1}], origin: {kind: 'custom', detail: P, at: 0},
                  uses: {max: 2, per: P, used: 0}, armor: {kind: 'body', base: P, dexCap: P},
                  weapon: {kind: 'melee', dice: P, damageType: P}, use: {heal: '1d4', status: P},
-                 sectionOverride: P}],
+                 sectionOverride: P},
+                {id: 'hl', name: P, qty: 1, equipped: true, weapon: {kind: 'ranged', dice: '1d8', damageType: P, ammo: P}},
+                {id: 'ha', name: P, qty: 3, ammo: {kind: P, bonus: 1}},
+                {id: 'hb', name: P, qty: 2, ammo: {kind: P}}],
     statuses: [{id: P, name: P, description: P, effects: [], active: true},
                {id: 'st2', name: 'Pwnterm', description: '', effects: [], active: true}],
     familiars: [{id: P, name: P, kind: P, ac: P, hp: {cur: P, max: P}, speed: P, description: P, effects: [], active: true}],
     attacks: [{id: P, name: P, kind: 'melee', ability: 'str', proficient: true, damageDice: P, damageType: P, notes: P},
-              {id: 'a2', spellId: P, source: 'spell', name: P, save: {ability: P}, damageDice: P, notes: P}],
+              {id: 'a2', spellId: P, source: 'spell', name: P, save: {ability: P}, damageDice: P, notes: P},
+              {id: 'a3', name: P, kind: 'ranged', ability: 'dex', proficient: true, damageDice: '1d8', itemId: 'hl'}],
     spells: [{id: P, name: P, level: '0' + P, prepared: true, meta: P, text: P, atkType: 'attack',
               dice: '1d6', damageType: P, granted: P, origin: {kind: 'custom', detail: P}}],
     activeSpells: [{id: P, spellId: P, name: P, level: P, conc: true, durationSec: 60, elapsedSec: 6}],
@@ -3247,6 +3332,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     trackers: [{id: P, name: P, type: 'checklist', tag: P, items: [{id: P, text: P, done: true}], at: 1},
                {id: 'tc', name: P, type: 'counter', tag: P, value: 3, goal: 5},
                {id: 'tx', name: P, type: 'task', closed: true, closedAt: 2}],
+    ammoSpent: {ha: {n: 4, kind: P, snap: {id: 'ha', name: P, qty: 1, ammo: {kind: P}}}},
   });
   X.character = X.migrate(JSON.parse(JSON.stringify(hostile)));   /* the import path */
   X.activeId = 'hostile';
@@ -3286,6 +3372,10 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   run('the spell view', () => ctx.openSpellView(C().spells[0]));
   run('the attack editor', () => ctx.openAttackForm(C().attacks[0]));
   run('the to-hit breakdown', () => ctx.openAttackBreakdown(P));
+  run('the to-hit breakdown of a loaded launcher', () => ctx.openAttackBreakdown('a3'));
+  run('the ammunition picker', () => ctx.openAmmoPicker('hl'));
+  run('Fire on a hostile stack', () => ctx.fireWeapon('hl', false));
+  run('Recover on a hostile stack', () => ctx.recoverWeaponAmmo('hl', false));
   run('the resource editor', () => ctx.openResourceForm(C().resources[0]));
   run('the status editor', () => ctx.openStatusForm(C().statuses[0]));
   run('the familiar editor', () => ctx.openFamiliarForm(C().familiars[0]));

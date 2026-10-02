@@ -317,7 +317,9 @@ function endCombatAsk(){
   if(!confirm(`End combat at round ${r}?`))return false;
   const s=combatEnd(character);
   renderActiveSpells();renderCombatChrome();scheduleSave();
-  const msg=`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`;
+  /* then the ammunition (#6): asked once, after the fight is over */
+  const got=offerAmmoRecovery();
+  const msg=`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`+(got?` · ${got}`:"");
   toast(msg);setCombatLive(msg);
   return true;
 }

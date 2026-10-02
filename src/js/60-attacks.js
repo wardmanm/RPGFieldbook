@@ -361,7 +361,7 @@ function renderAttacks(){
         ${isSpell?`<button class="tbtn" data-cast-spell="${esc(a.spellId)}" style="padding:3px 8px;min-height:auto">Cast</button>`:`<button class="icon" data-edit-attack="${esc(a.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`}
         <button class="icon danger" data-del-attack="${esc(a.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
-      ${ic?"":`<div class="desc" style="font-family:var(--head);font-size:13px;letter-spacing:.02em;color:var(--ink-soft)">Damage <b class="${!save&&n.dmgFx?"fx-on":""}" style="${!save&&n.dmgFx?"":"color:var(--ink)"}">${esc(dmg)||"—"}</b>${a.notes?` · ${esc(a.notes)}`:""}</div>`}`;
+      ${ic?"":`<div class="desc" style="font-family:var(--head);font-size:13px;letter-spacing:.02em;color:var(--ink-soft)">Damage <b class="${!save&&n.dmgFx?"fx-on":""}" style="${!save&&n.dmgFx?"":"color:var(--ink)"}">${esc(dmg)||"—"}</b>${a.notes?` · ${esc(a.notes)}`:""}</div>`}${ammoLineHTML(character,a)}`;
     el.appendChild(d);
   });
   /* The heading only appears when there is something to separate — a lone

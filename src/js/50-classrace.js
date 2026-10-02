@@ -118,6 +118,8 @@ function applyEquipGrants(grants,sid,pending){
 /* remove everything a source granted: inventory items + their linked attacks + granted gold */
 function revertEquipmentGrants(sid){
   const rmIds=character.inventory.filter(i=>i.grant===sid).map(i=>i.id);
+  /* a granted stack's spent count goes with it, or Recover would bring it back */
+  rmIds.forEach(id=>forgetAmmo(character,id));
   character.inventory=character.inventory.filter(i=>i.grant!==sid);
   if(rmIds.length)character.attacks=(character.attacks||[]).filter(a=>!rmIds.includes(a.itemId));
   if(character.grantGold&&character.grantGold[sid]){const k=goldKey();character.coins=character.coins||{};character.coins[k]=Math.max(0,num(character.coins[k])-num(character.grantGold[sid]));delete character.grantGold[sid];}

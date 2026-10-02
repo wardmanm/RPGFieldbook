@@ -346,6 +346,19 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
   });
 }
 
+// ---------- the ammunition controls are wired (#6)
+// 90-boot.js is not loaded by the harness, so its handlers are checked as text.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const hooks = ['data-ammo-fire', 'data-ammo-pick', 'data-ammo-load', 'data-ammo-recover'];
+  ck('every ammunition control has a click handler', hooks.every(h => js.includes('closest("[' + h + ']")')),
+     hooks.filter(h => !js.includes('closest("[' + h + ']")')));
+  ck('...and every one the handler names is drawn', hooks.every(h => new RegExp(h + '="\\$\\{esc\\(').test(js)));
+  ck('deleting an item forgets its spent count', /\[data-del-item\][^\n]*forgetAmmo\(character,it\.id\)/.test(js));
+  ck('End combat offers the ammunition back once the fight has ended', /combatEnd\(character\)[\s\S]{0,200}offerAmmoRecovery\(\)/.test(js));
+}
+
 // ---------- the app's ammo tables agree with the 2024 data (#6)
 // The one-time pass on old sheets runs without a rules pool, from the AMMO_*
 // tables in 62-ammo.js; this keeps them in step with what the converter writes.

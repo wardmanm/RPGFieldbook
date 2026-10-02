@@ -254,3 +254,109 @@ function attackAmmo(a){
   const st=loadedStack(character,it), am=st&&itemAmmo(st);
   return {bonus:am?am.bonus:0,name:st?String(st.name||""):""};
 }
+
+/* ================= the DOM half =================
+   The ammunition line under a launcher's attack row, the stack picker, and
+   recovery at End combat. The combat view holds the same Attacks card, so all
+   of it works there too. */
+
+/* What a launcher's attack row shows under it: the stack it is loaded with (a
+   button that opens the picker when there is a choice), Fire, and Recover N
+   when a recovery would give something back. Empty for a row whose item fires
+   nothing. Takes the character, so the hostile-data test can call it. */
+function ammoLineHTML(c,a){
+  const inv=Array.isArray(c&&c.inventory)?c.inventory:[];
+  const it=a&&a.itemId?inv.find(i=>i&&i.id===a.itemId):null;
+  const kind=weaponAmmoKind(it);
+  if(!kind)return "";
+  const st=loadedStack(c,it), many=ammoStacks(c,kind).length>1;
+  const label=st?`${String(st.name||"")} ×${itemQty(st)}`:`No ${ammoPlural(kind)}`;
+  const back=(ammoRecoverable(c).find(r=>r.kind===kind)||{}).back||0;
+  return `<div class="ammo-line">`+
+    (many?`<button type="button" class="ammo-load" data-ammo-pick="${esc(it.id)}" aria-label="${esc("Loaded: "+label+". Choose what it fires")}">${esc(label)}</button>`
+         :`<span class="ammo-load">${esc(label)}</span>`)+
+    `<button type="button" class="tbtn ammo-fire" data-ammo-fire="${esc(it.id)}"${st?"":" disabled"} aria-label="${esc("Fire "+ammoOne(kind)+" from "+String(it.name||"this weapon"))}">Fire</button>`+
+    (back>0?`<button type="button" class="tbtn ammo-recover" data-ammo-recover="${esc(it.id)}" aria-label="${esc("Recover "+back+" "+ammoPlural(kind))}">Recover ${back}</button>`:"")+
+    `</div>`;
+}
+/* The row's Fire button for a weapon item, while it is on screen and live. */
+function ammoFireBtn(itemId){
+  const b=document.querySelector(attrSel("data-ammo-fire",itemId));
+  return b&&!b.disabled&&b.getClientRects().length?b:null;
+}
+/* One Fire tap. The save is scheduled before the redraw, so nothing a redraw
+   throws can cost the player the shot. From the keyboard (event.detail 0)
+   focus stays on Fire while there is more to fire, else it moves to the
+   toast's Undo; a held Enter's auto-repeat must not then press Undo, so the
+   Undo ignores repeated keys. `who` is the character the toast was shown for.
+   Returns the shot, or null when there was nothing to fire. */
+function fireWeapon(itemId,viaKey){
+  const it=(character.inventory||[]).find(i=>i&&i.id===itemId);
+  const r=it?fireAmmo(character,it):null;
+  if(!r)return null;
+  const who=character;
+  scheduleSave();
+  renderInventory();renderAttacks();recompute();
+  const msg=r.removed?`Fired your last ${String(r.stack.name||r.kind)}`:`Fired ${ammoOne(r.kind)} · ${r.left} left`;
+  const undo=toast(msg,{label:"Undo",
+    run:e=>undoFireTap(r,who,!!e&&e.detail===0,itemId),
+    back:()=>ammoFireBtn(itemId)});
+  if(undo)undo.addEventListener("keydown",e=>{if(e.repeat)e.preventDefault();});
+  if(viaKey){const b=ammoFireBtn(itemId);if(b)b.focus();else if(undo)undo.focus();}
+  return r;
+}
+/* The toast's Undo: only for the character it was shown for. */
+function undoFireTap(rec,who,viaKey,itemId){
+  if(!character||character!==who)return false;
+  if(!undoFire(character,rec))return false;
+  scheduleSave();
+  renderInventory();renderAttacks();recompute();
+  const st=(character.inventory||[]).find(i=>i&&i.id===rec.undo.stack.id);
+  toast(st?`Shot undone · ${String(st.name||"")} ×${itemQty(st)}`:"Shot undone");
+  if(viaKey){const b=ammoFireBtn(itemId);if(b)b.focus();}
+  return true;
+}
+/* The stack picker: every stack the weapon can load, the loaded one marked. */
+function openAmmoPicker(itemId){
+  const it=(character.inventory||[]).find(i=>i&&i.id===itemId);
+  const kind=weaponAmmoKind(it);if(!kind)return;
+  const cur=loadedStack(character,it);
+  const list=ammoStacks(character,kind).map(s=>`<button type="button" class="ammo-choice${s===cur?" on":""}" data-ammo-load="${esc(s.id)}" aria-pressed="${s===cur?"true":"false"}"><span>${esc(String(s.name||""))}</span><span class="hint">×${esc(String(itemQty(s)))}</span></button>`).join("");
+  openModal("Load "+String(it.name||"weapon"),
+    `<p class="hint">What ${esc(String(it.name||"it"))} fires next. It keeps firing from this stack while the stack lasts.</p><div class="ammo-picks" data-ammo-weapon="${esc(it.id)}">${list}</div>`);
+}
+/* A stack chosen in the picker, kept on the weapon item OUTSIDE `weapon`. The
+   modal hands focus back to the row's picker button once the row is redrawn. */
+function loadAmmo(itemId,stackId){
+  const it=(character.inventory||[]).find(i=>i&&i.id===itemId);
+  const st=it&&ammoStacks(character,weaponAmmoKind(it)).find(s=>s.id===stackId);
+  if(!st)return false;
+  it.ammoStack=st.id;
+  closeModal();scheduleSave();renderAttacks();
+  return true;
+}
+/* Recover N on a row: half of what this kind fired since the last recovery. */
+function recoverWeaponAmmo(itemId,viaKey){
+  const it=(character.inventory||[]).find(i=>i&&i.id===itemId);
+  const kind=weaponAmmoKind(it);if(!kind)return 0;
+  const list=ammoRecoverable(character).filter(r=>r.kind===kind);
+  const back=recoverAmmo(character,[kind]);
+  scheduleSave();
+  renderInventory();renderAttacks();recompute();
+  toast(back?`Recovered ${ammoSummaryText(list)}`:`No ${ammoPlural(kind)} to recover`);
+  if(viaKey){const b=ammoFireBtn(itemId);if(b)b.focus();}
+  return back;
+}
+/* Asked once, after End combat: half of what was fired since the last
+   recovery, listed per kind. Yes recovers it all and clears every count (a
+   lone shot rounds down to nothing, and is lost); No leaves it all on the rows'
+   Recover buttons. Returns words for the End combat toast, else "". */
+function offerAmmoRecovery(){
+  const list=ammoRecoverable(character);
+  if(!list.length)return "";
+  if(!confirm(`Recover ammunition? ${ammoSummaryText(list)}`))return "";
+  const back=recoverAmmo(character);
+  scheduleSave();
+  renderInventory();renderAttacks();recompute();
+  return back?`recovered ${ammoSummaryText(list)}`:"";
+}
