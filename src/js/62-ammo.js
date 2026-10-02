@@ -255,6 +255,27 @@ function attackAmmo(a){
   return {bonus:am?am.bonus:0,name:st?String(st.name||""):""};
 }
 
+/* ---- the item editor's kind lists (#8) ----
+   The five 2024 kinds, then any other kind this sheet already uses (on an
+   ammunition item or a weapon), then `also` (the kinds the form opened with),
+   so an item's own kind is always on its list. */
+function ammoKindChoices(c,also){
+  const seen=new Set(AMMO_KINDS), extra=[];
+  const add=k=>{k=ammoKindOf(k);if(k&&!seen.has(k)){seen.add(k);extra.push(k);}};
+  (Array.isArray(c&&c.inventory)?c.inventory:[]).forEach(i=>{const a=itemAmmo(i);if(a)add(a.kind);add(weaponAmmoKind(i));});
+  (Array.isArray(also)?also:[]).forEach(add);
+  return AMMO_KINDS.concat(extra);
+}
+function ammoKindLabel(k){k=String(k||"");return k.charAt(0).toUpperCase()+k.slice(1);}
+/* <option>s for a kind <select>: None first when `noneLabel` is given, each
+   kind, then "Other…" (value "__other"), which opens a box for a new kind. */
+function ammoKindOptionsHTML(kinds,selected,noneLabel){
+  const sel=ammoKindOf(selected);
+  return (noneLabel?`<option value=""${sel?"":" selected"}>${esc(noneLabel)}</option>`:"")+
+    kinds.map(k=>`<option value="${esc(k)}"${k===sel?" selected":""}>${esc(ammoKindLabel(k))}</option>`).join("")+
+    `<option value="__other">Other…</option>`;
+}
+
 /* ================= the DOM half =================
    The ammunition line under a launcher's attack row, the stack picker, and
    recovery at End combat. The combat view holds the same Attacks card, so all

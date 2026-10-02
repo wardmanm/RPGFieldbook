@@ -59,6 +59,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'ammoSpentEntry', 'fireAmmo', 'undoFire', 'ammoRecoverable', 'recoverAmmo', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
   'ammoLineHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
   'offerAmmoRecovery', 'revertEquipmentGrants',
+  'ammoKindChoices', 'ammoKindOptionsHTML',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -3161,6 +3162,17 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ctx.confirm = real;
 }
 
+/* ---- the item editor's kind lists (#8) ---- */
+{
+  const c = {inventory: [{name: 'Pellet Bow', weapon: {ammo: 'Dart Pellet'}}, {name: 'Stone', ammo: {kind: 'stone'}}, {name: 'Arrow', ammo: {kind: 'arrow'}}]};
+  ck('the kinds: the five 2024 ones, then those this sheet uses, then what the form opened with',
+     X.ammoKindChoices(c, ['Zap', '']).join() === 'arrow,bolt,firearm bullet,needle,sling bullet,dart pellet,stone,zap');
+  const h = X.ammoKindOptionsHTML(['arrow', 'bolt'], 'Bolt', 'None');
+  ck('the options: None, each kind (the chosen one selected), then Other…',
+     /^<option value="">None<\/option>/.test(h) && /<option value="bolt" selected>Bolt<\/option>/.test(h) && /<option value="__other">Other…<\/option>$/.test(h), h);
+  ck('no None when the list has no label for it', !/value=""/.test(X.ammoKindOptionsHTML(['arrow'], 'arrow', '')));
+}
+
 /* ---- imported files and packs render inert ----
    A character file, a rules pack and a settings file (which carries a whole
    `rules` object) are all written by someone else, and all reach the page
@@ -3376,6 +3388,8 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   run('the ammunition picker', () => ctx.openAmmoPicker('hl'));
   run('Fire on a hostile stack', () => ctx.fireWeapon('hl', false));
   run('Recover on a hostile stack', () => ctx.recoverWeaponAmmo('hl', false));
+  run('the item editor (a hostile ammunition stack)', () => ctx.openItemForm(C().inventory.find(i => i.id === 'hb')));
+  run('the item editor (a launcher of a hostile kind)', () => ctx.openItemForm(C().inventory.find(i => i.id === 'hl')));
   run('the resource editor', () => ctx.openResourceForm(C().resources[0]));
   run('the status editor', () => ctx.openStatusForm(C().statuses[0]));
   run('the familiar editor', () => ctx.openFamiliarForm(C().familiars[0]));
@@ -3697,6 +3711,52 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     const iw2 = (X.character.inventory[0] || {}).weapon || {};
     ck('#74 re-saving the item keeps the bonus and notes', !again.err && iw2.atkMisc === 1 && iw2.dmgMisc === 1
        && iw2.notes === iw.notes, again.err ? String(again.err) : iw2);
+    X.resetRules();
+  }
+
+  /* ---- the item editor's ammunition fields (#8), driven through the form ---- */
+  {
+    const items = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', '5e2024', 'items.json'), 'utf8')).items;
+    X.resetRules();
+    X.mergeRules({system: 'XPHB', items: items.filter(x => ['Arrow', 'Arrows (20)', 'Longbow'].includes(x.name))}, 'x.json');
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    const at = n => String(X.rules.items.findIndex(x => x.name === n));
+    const why = res => res.err ? String(res.err.stack || res.err).split('\n').slice(0, 3).join(' | ') : undefined;
+    let res = capture(() => { ctx.openItemForm(); el('iLib').value = at('Arrows (20)'); fire('iLib', 'change'); fire('iSave', 'click'); });
+    const ar = X.character.inventory[0] || {};
+    ck('#8 Insert from pack turns a bundle into its piece: Arrow ×20, of the arrow kind',
+       !res.err && ar.name === 'Arrow' && ar.qty === 20 && JSON.stringify(ar.ammo) === '{"kind":"arrow"}', why(res) || ar);
+    res = capture(() => { ctx.openItemForm(); el('iLib').value = at('Longbow'); fire('iLib', 'change'); fire('iSave', 'click'); });
+    const bw = X.character.inventory[1] || {};
+    ck('#8 ...and an inserted Longbow fires arrows', !res.err && (bw.weapon || {}).ammo === 'arrow', why(res) || bw);
+    res = capture(() => {
+      ctx.openItemForm(); el('iName').value = 'Elven Arrow'; fire('iIsAmmo', 'click');
+      el('iAmmoKind').value = 'arrow'; el('iAmmoBonus').value = '1'; fire('iSave', 'click');
+    });
+    const ea = X.character.inventory[2] || {};
+    ck('#8 a homebrew item marked as ammunition: an arrow, +1', !res.err && JSON.stringify(ea.ammo) === '{"kind":"arrow","bonus":1}', why(res) || ea);
+    res = capture(() => {
+      ctx.openItemForm(); el('iName').value = 'Pellet Bow'; fire('iIsWeapon', 'click'); el('iWDice').value = '1d4'; el('iWKind').value = 'ranged';
+      el('iWAmmo').value = '__other'; el('iWAmmoOther').value = ' Dart  Pellet '; fire('iSave', 'click');
+    });
+    const pb = X.character.inventory[3] || {};
+    ck('#8 a weapon can fire a kind of its own', !res.err && (pb.weapon || {}).ammo === 'dart pellet', why(res) || pb);
+    const n = X.character.inventory.length;
+    capture(() => {
+      ctx.openItemForm(); el('iName').value = 'Blank'; fire('iIsAmmo', 'click');
+      el('iAmmoKind').value = '__other'; el('iAmmoKindOther').value = ''; fire('iSave', 'click');
+    });
+    ck('#8 Other… with no kind named saves nothing', X.character.inventory.length === n);
+    bw.ammoStack = ar.id;
+    res = capture(() => {
+      ctx.openItemForm(bw);
+      [['iName', 'Longbow'], ['iWKind', 'ranged'], ['iWAbil', 'dex'], ['iWDice', '1d8'], ['iWType', 'piercing'], ['iWAmmo', 'arrow']]
+        .forEach(([id, v]) => { el(id).value = v; });
+      fire('iSave', 'click');
+    });
+    const bw2 = X.character.inventory.find(i => i.id === bw.id) || {};
+    ck('#8 re-saving a launcher keeps what it fires and the stack it is loaded with',
+       !res.err && (bw2.weapon || {}).ammo === 'arrow' && bw2.ammoStack === ar.id, why(res) || bw2);
     X.resetRules();
   }
 
