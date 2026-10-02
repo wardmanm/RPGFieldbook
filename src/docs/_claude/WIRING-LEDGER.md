@@ -4974,3 +4974,14 @@ Pages: [ammunition](../wiki/features/ammunition.md),
 [character model](../wiki/architecture/character-model.md),
 [grants & provenance](../wiki/architecture/grants-and-provenance.md),
 [rules-update tool](../wiki/features/rules-update-tool.md).
+
+## Ammunition in the item editor (#8, 2026-10-02)
+
+The item editor learned the ammunition fields, so a homebrew bow or arrow works like a pack one:
+- a weapon's **Ammunition it fires** (None, the five 2024 kinds, any kind already on the sheet, or
+  Other… for a new one) saves as `weapon.ammo`;
+- **Ammunition**, with a kind and a bonus from +0 to +3, saves as `ammo`;
+- Insert from pack unpacks a bundle into its piece, quantity included;
+- Save carries `ammoStack` and `pack`, which the form doesn't show.
+
+Other… left blank refuses to save, saying why. Page: [ammunition](../wiki/features/ammunition.md).

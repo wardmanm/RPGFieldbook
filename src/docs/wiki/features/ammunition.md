@@ -9,7 +9,8 @@ is its count.
 `unpackAmmo()`, `rebaseAmmo()`, `migrateAmmo()`, `ammoSpentEntry()`, `fireAmmo()`, `undoFire()`,
 `ammoRecoverable()`, `recoverAmmo()`, `attackAmmo()`, `forgetAmmo()`, `ammoLineHTML()`,
 `fireWeapon()`, `undoFireTap()`, `openAmmoPicker()`, `loadAmmo()`, `recoverWeaponAmmo()`,
-`offerAmmoRecovery()` in `62-ammo.js` · `migrate()` in `71-char-io.js` ·
+`offerAmmoRecovery()`, `ammoKindChoices()`, `ammoKindLabel()`, `ammoKindOptionsHTML()` in
+`62-ammo.js` · `openItemForm()` in `80-modal-forms.js` · `migrate()` in `71-char-io.js` ·
 `updProject()` in `72-char-update.js` · `endCombatAsk()` in `87-combat.js` · **Data:** `weapon.ammo`,
 item `ammo`, bundle `pack` ([rules-schema](../../../../docs/rules-schema.md) §6.8) · **Tests:**
 `sheet.js`, `char-update.js`, `rules-data.js` · **See also:** [Inventory](inventory.md),
@@ -67,6 +68,20 @@ the old id, and clears those counts. `offerAmmoRecovery()` asks once after End c
 **The +N.** `attackAmmo()` gives the loaded stack's bonus to `attackNumbers()`, for attack and
 damage alike.
 
+**The item editor.** `openItemForm()` ([Inventory](inventory.md)) learned the ammo fields, so a
+homebrew bow or arrow works like a pack one. `ammoKindChoices()` lists the five 2024 kinds, then any
+other kind already on the sheet (an ammunition item's or a weapon's), then the kinds the form opened
+with, so an item's own kind is always on its list; `ammoKindOptionsHTML()` draws the `<select>` —
+None first when asked, each kind, then "Other…" (`__other`), which opens a box for a new kind. A
+weapon's **Ammunition it fires** select saves `weapon.ammo`; refusing to save — alerting instead —
+only when Other… is chosen and the box is left blank. The **Ammunition** toggle shows **Kind** and a
+**Bonus to attack and damage** select (+0 to +3, plus the item's own bonus if it's outside that
+range); saves `ammo:{kind,bonus}` (bonus omitted at +0), and refuses the same way when Other… is
+blank. **Insert from pack** runs the new item through `unpackAmmo()` first, so picking "Arrows (20)"
+fills the form with Arrow ×20 already marked as ammunition — the one place the form's quantity box
+is filled for the player. Save always carries `ammoStack` and `pack` from the item being edited,
+since neither is on the form.
+
 ## Rules that must hold
 
 - **Per-character ammo state never goes inside `weapon`.** The rules-update tool owns `weapon`: a
@@ -112,3 +127,4 @@ Settled with Mike on 2026-10-01 and 2026-10-02; the full discussion is in
 ## History
 
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
+- 2026-10-02 — The item editor sets what a weapon fires and marks ammunition, with a bonus; Insert from pack unpacks a bundle. → ledger L4978, #8

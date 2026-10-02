@@ -28,6 +28,9 @@ can carry the player's own fields (quantity, origin, favourite, filing) alongsid
 `sectionOverride`, `grant` (the granting sid), `attackId`, the `src` stamp, and a launcher's or a
 stack's ammunition fields, `ammo` and `ammoStack` — see [Ammunition](ammunition.md). Effects apply
 only while `equipped` — see [Computed stats & effects](../architecture/computed-stats-and-effects.md).
+The item editor's own **Ammunition it fires** select (on a weapon) writes `weapon.ammo`, and its
+**Ammunition** toggle — a **Kind** and a **Bonus to attack and damage** of +0 to +3 — writes `ammo`;
+Other… opens a box for a kind not yet on the sheet. See [Ammunition](ammunition.md).
 
 **Sections.** `invSection(it)` files an item under one of `INV_ORDER` — Weapons, Armor, Consumables,
 Magic Items, Tools, Gear, Loot. A valid `sectionOverride` wins outright; otherwise it reads
@@ -188,3 +191,4 @@ the inventory and recompute, because coins have weight.
 - 2026-09-24 — Coins high to low; one section-heading style; a clear button in the finder's search. → ledger L3525, #48, #51, #49
 - 2026-09-28 — Insert from rules pack keeps a weapon's `+N` and notes. → ledger L4392, #74
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
+- 2026-10-02 — The item editor sets what a weapon fires and marks ammunition, with a bonus; Insert from pack unpacks a bundle. → ledger L4978, #8

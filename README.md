@@ -299,7 +299,7 @@ and its header — the round and its arrows — stays in view as you scroll.
 - **Keeping track of the fight.** **Start combat** begins at round 1. **◀** and **▶** step back and
   forward a round and show the time passed in the game — six seconds a round — and your active
   spells' timers move along with them. **End combat** is its own button, and asks before it ends
-  anything.
+  anything. If you fired ammunition, it then offers to recover half of it.
 - **Looking something up.** Pick any other tab, or tap **✕** to go back to the one you came from,
   and combat keeps going: the crossed-swords button shows the round on every tab, and one tap
   brings you back to where you were.
@@ -346,6 +346,14 @@ happening behind the scenes.
 - **Weapons create attacks.** Add a weapon to your inventory and a matching entry appears under
   **Attacks & Weapons**, with the to-hit and damage worked out. Remove the weapon and its attack
   goes away too. (When you build a custom item, tick the **Weapon** box to get the same linking.)
+
+- **Ammunition.** A bow, crossbow, sling, blowgun or firearm shows what it's loaded with under its
+  attack, and a **Fire** button that spends one, with an **Undo**. Carrying more than one kind —
+  plain and +1 arrows, say — tap the label to choose which it fires; a loaded +1 arrow adds +1 to
+  the attack and the damage. Ending combat offers back half of what you fired, and the **Recover**
+  button does the same any time. Bundles such as "Arrows (20)" become 20 single arrows when they
+  reach your sheet. On an item you make yourself, set **Ammunition it fires** on a weapon, or tick
+  **Ammunition** to make the item ammunition.
 
 - **Multiple characters.** Keep a whole party. Switch, duplicate, or delete them from the home
   screen, and set one to open automatically. There's an **Import** button there too, so you can open
