@@ -18,7 +18,8 @@ background or drop a class without hand-cleaning the sheet.
 `costToGp()` in `25-origins-items.js`; `syncResources()` in `65-resources.js` · **Tests:**
 `char-update.js` (grant and revert, `grantItemByName()` called for real, the pending equipment
 picker travelling with its window, the order the choice windows open in), `sheet.js` (`invSection()` filing) · **See also:** [Character building](../features/character-building.md),
-[Inventory](../features/inventory.md), [Class resources](../features/class-resources.md),
+[Inventory](../features/inventory.md), [Ammunition](../features/ammunition.md),
+[Class resources](../features/class-resources.md),
 [Rules-update tool](../features/rules-update-tool.md)
 
 ## How it works
@@ -41,7 +42,7 @@ picked option.
 |---|---|---|---|
 | Features and traits, ability increases, feats, options | `features[]` | `origin`: `{kind:"race"\|"background", name}` or `{kind:"class", class, level, subclass?}` | `removeFeaturesWhere()` on that origin |
 | Skill and save proficiencies | `grants[]` as `{sid, type, key, level}` | `sid` | `removeGrants()` on that sid |
-| Starting equipment, and the attacks it made | `inventory[]` with `grant: sid`; attacks linked by `itemId` | `grant` | `revertEquipmentGrants()` |
+| Starting equipment, and the attacks it made | `inventory[]` with `grant: sid`; attacks linked by `itemId` | `grant` | `revertEquipmentGrants()`, which also forgets each removed item's spent-ammunition count |
 | Starting gold | added to `coins.gp` and recorded in `grantGold[sid]` | `sid` | `revertEquipmentGrants()`: subtracts exactly that amount, never below 0 |
 | Class resource pools | `resources[]` with `auto:true` and a `class:`/`subclass:` key | `key` | `syncResources()` on every `recompute()`: an auto pool whose class or subclass is gone is dropped |
 | Level-1 max HP | `hp.max` / `hp.cur` | nothing: recognised by value | `removeClass()` blanks it only if the box still holds exactly `level1HP()` |
@@ -64,9 +65,11 @@ it is the character's first (#66): a multiclass add grants no equipment and no g
 applies at once through `applyEquipOption()`. A `choose` block is queued as a pending picker. `grantItemByName()` matches the loaded item list by name,
 case-insensitively, and copies `description`, `effects`, `weapon`, `weight`, `category`, `type` and
 **`cost` through `costToGp()`**, because the pack stores cost as a display string ("2 gp") and the
-sheet as a gp number. It stamps the copy, and a weapon gets its attack. An unmatched name becomes a
-plain named item. A second grant of the same name from the same sid adds to the quantity. The
-item's origin badge (C, B or A) comes from `originFromSid()`.
+sheet as a gp number. A bundle unpacks into its pieces the same way the finder does (`unpackAmmo()`),
+so "Arrows (20)" grants 20 single arrows, each tagged with the grant's `sid` — see
+[Ammunition](../features/ammunition.md). It stamps the copy, and a weapon gets its attack. An
+unmatched name becomes a plain named item. A second grant of the same name from the same sid adds to
+the quantity. The item's origin badge (C, B or A) comes from `originFromSid()`.
 
 **Choices.** Skill choices on a race, a race trait or a feat go into a `pending` list that
 `runExtraChoices()` presents after the add, and each pick is granted to the sid that queued it.
@@ -185,3 +188,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-25 — `_equipQueue` is removed, and option costs are forwarded. → ledger L3649
 - 2026-09-28 — Choice windows open one at a time; the queue behind a window travels with it and survives its dismissal. → ledger L3847, #63
 - 2026-09-28 — Only the first class grants saves, starting equipment and gold; a multiclass gets the pack's `multiclass` subset, and removing the first class hands its saves on. → ledger L3886, #66
+- 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6

@@ -98,6 +98,12 @@ Wanted, not yet done. Each needs work, not a source.
   [Humblewood](../data/humblewood.md)
 - Journal pages and trackers don't print; trackers have no rest reset and no group totals
   ([Journal](../features/journal.md)).
+- **Thrown weapons track no ammunition of their own** (Dart, Javelin, Dagger).
+  → [Ammunition](../features/ammunition.md)
+- **Firearm reloading and energy cells (XDMG) are not modelled.** → [Ammunition](../features/ammunition.md)
+- **Magic ammunition outside the selection rule is not converted**: BMT, AU and the 2014 DMG
+  variants, and generic +N weapons. → [Ammunition](../features/ammunition.md)
+- **Quivers and other ammunition containers have no capacity.** → [Ammunition](../features/ammunition.md)
 
 ## Waiting on sources
 
@@ -391,3 +397,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-29 — Narrowed: a refused autosave, new character, import or old-save move now reports itself (#81); `deleteCharacter()`, `setAutoload()` and most `saveSettings()` callers still don't. → ledger L4771
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-09-29 — Narrowed again: `deleteCharacter()` and `setAutoload()` now report a refused index write; only most `saveSettings()` callers still don't. → ledger L4856, #81
+- 2026-10-02 — Deferred: thrown weapons as their own ammunition, firearm reloading and energy cells, magic ammunition variants outside the selection rule, and quiver capacity. → ledger L4952, #6

@@ -14,7 +14,7 @@ alive through edits, rules updates and old saves without ever overwriting what t
 `72-char-update.js` · `migrateWeaponEquip()` in `71-char-io.js` · **Data:** an item's `weapon` object
 ([rules-schema §6.8](../../../../docs/rules-schema.md)) · **Tests:** `sheet.js`, `char-update.js`
 (R7), `rules-data.js` (wiring guards) · **See also:** [Spells](spells.md), [Inventory](inventory.md),
-[Computed stats & effects](../architecture/computed-stats-and-effects.md),
+[Ammunition](ammunition.md), [Computed stats & effects](../architecture/computed-stats-and-effects.md),
 [Rules-update tool](rules-update-tool.md)
 
 ## How it works
@@ -40,6 +40,12 @@ serves the row, the breakdown, the print sheet (`printSheet()`) and the cast dia
 (`promptSpellAttack()`), so none of them can promise different damage. The form's repeatable list is
 `xDmgFieldHTML()` / `wireXDmgField()` / `readXDmg()` / `clearXDmgField()`, parameterised on the element
 id and shared with the spell form.
+
+**Ammunition.** A row whose item has `weapon.ammo` carries, under the damage line and outside the
+collapse, the ammunition line drawn by `ammoLineHTML()`: the stack it is loaded with, Fire, and
+Recover N — see [Ammunition](ammunition.md). `attackNumbers()` adds the loaded stack's `ammo.bonus`
+(`attackAmmo()`) to both the to-hit and the damage bonus, and `openAttackBreakdown()` names the stack
+("+1 Arrow (loaded)") alongside the other sources.
 
 **The card.** Rows collapse individually (`atkCollapse.items`) with a Collapse all / Expand all
 button that hides on an empty list. A star moves a row under a `★ Favorites` heading (`ATK_FAV`, the
@@ -210,3 +216,4 @@ longer allows, leaving orphan rows alone.
 - 2026-09-28 — A `+N` pack weapon adds its bonus once, to its own row, and nothing to other rows; the item form's Insert keeps a weapon's bonus and notes. → ledger L4392, #74
 - 2026-09-28 — A ranged Finesse weapon (the Dart) attacks with the better of STR and DEX. → ledger L4466, #75
 - 2026-09-28 — Spell attack rows take `spell.attack` effects and save rows `spell.dc`, through `spellDC()`; weapon rows take neither. → ledger L4568, #77
+- 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6

@@ -7,7 +7,8 @@ character **without losing a field**, including fields this build has never hear
 comes from keeping that loop lossless: a sheet saved by any version must still open.
 
 **Code:** `blankChar()`, `statStyle()`, `glossRepair()` in `00-constants.js`; `migrate()`, `migrateWeaponEquip()`,
-`exportChar()`, `importChar()`, `finishImport()` in `71-char-io.js`; `newCharacter()`,
+`exportChar()`, `importChar()`, `finishImport()` in `71-char-io.js`; `migrateAmmo()`,
+`ammoSpentMap()` in `62-ammo.js`; `newCharacter()`,
 `loadCharById()` in `75-home-theme.js`; `charNeedsUpdate()` in `72-char-update.js`;
 `markCharChecked()` in `73-char-update-ui.js`; read-time guards `featCol()`, `invCol()`, `atkCol()`
 in `20-lists.js`, `hdStyle()` in `65-resources.js`, `encMode()` in `25-origins-items.js`,
@@ -16,7 +17,8 @@ in `20-lists.js`, `hdStyle()` in `65-resources.js`, `encMode()` in `25-origins-i
 idempotent), `sheet.js` (sub-key defaults arrive through `migrate()`; malformed glossary entries and
 junk list items, repaired, idempotent, and rendered) · **See also:**
 [Storage](storage.md), [Rules-update tool](../features/rules-update-tool.md),
-[Story & notes](../features/story-and-notes.md), [Build & source split](build-and-source-split.md)
+[Story & notes](../features/story-and-notes.md), [Ammunition](../features/ammunition.md),
+[Build & source split](build-and-source-split.md)
 
 ## How it works
 
@@ -27,7 +29,7 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
 | structured objects | `hp` `{cur, max, temp, locked:true}`, `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
 | lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers` |
-| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `journalCollapse`, `trackerCollapse` |
+| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `journalCollapse`, `trackerCollapse`, `ammoSpent` (stack id → `{n, kind, snap}`) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
 | per-character settings | `statStyle`, `hdStyle`, `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound` |
 | text | `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
@@ -57,6 +59,10 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    listed there as "(no term)" and never matched (see [Rich text](rich-text.md)).
 7. `migrateWeaponEquip()` runs last. It is a one-time fix, recorded by `wpnEquipInit`, that equips
    every weapon on a sheet saved before weapons could be equipped.
+8. `migrateAmmo()` runs after it: a one-time pass, recorded by `ammoInit` (never defaulted in
+   `blankChar()`, as `wpnEquipInit` isn't), that unpacks known ammunition bundles and gives a kind to
+   known pieces and launchers on a sheet saved before ammunition. An item's own `ammo` and
+   `ammoStack` need no default — see [Ammunition](../features/ammunition.md).
 
 **It is shallow on purpose.** Beyond each list item being an object, and the glossary repair
 above, nothing inside a list item or a map value is shape-checked. The code that reads those values
@@ -157,3 +163,4 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-09-28 — `migrate()` keeps only objects in list fields, and repairs glossary entries (aliases, an id) without dropping any. → ledger L4206, #71
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
+- 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6

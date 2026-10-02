@@ -4948,3 +4948,29 @@ item is byte-identical but for the new fields, checked by script before the file
 `release.js` will bump XPHB's and XGE's data versions.
 
 Pages: [converter](../wiki/data/converter.md), [supplements](../wiki/data/supplements.md).
+
+## Ammunition on the sheet (#6, 2026-10-02)
+
+A launcher's attack row now carries its ammunition: the loaded stack, **Fire**, and **Recover N**.
+New fragment `62-ammo.js`: a pure half (kinds, stacks, unpacking, the one-time pass, firing, Undo,
+recovery, the +N) and a DOM half (the line, the picker, End combat).
+
+- **Bundles unpack on arrival.** The finder, starting equipment and the one-time pass on old sheets
+  all turn "Arrows (20)" into Arrow ×20, each piece a twentieth of the bundle's own price and weight.
+  The pass runs once per character (`ammoInit`). It re-baselines the update tool only for fields it
+  wrote and only where the player hadn't edited them, so it reads as the pack's change.
+- **Firing.** One piece off the loaded stack, which is the chosen stack (`ammoStack`, outside
+  `weapon`) else the first of the kind. The last piece removes the stack. A spent count
+  (`ammoSpent`) keeps a copy so recovery can rebuild it with its old id. Undo reverses one shot,
+  only on the character it was shown for, and a held key cannot press it.
+- **Recovery.** Half of each stack's count, rounded down per stack. It is offered once after End
+  combat, and Recover N on a row does the same any time. Recover shows only when N > 0. Deleting a
+  stack, or removing the class that granted it, forgets its count.
+- **The +N.** A loaded +1 stack adds 1 to the row's attack and damage, and the breakdown names it.
+
+Pages: [ammunition](../wiki/features/ammunition.md),
+[attacks & damage](../wiki/features/attacks-and-damage.md),
+[combat view](../wiki/features/combat-view.md), [inventory](../wiki/features/inventory.md),
+[character model](../wiki/architecture/character-model.md),
+[grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[rules-update tool](../wiki/features/rules-update-tool.md).

@@ -6,10 +6,14 @@ ammunition knows its kind and any magic bonus. Ammunition arrives in bundles in 
 is its count.
 
 **Code:** `ammoKindOf()`, `itemAmmo()`, `weaponAmmoKind()`, `ammoStacks()`, `loadedStack()`,
-`unpackAmmo()`, `rebaseAmmo()`, `migrateAmmo()` in `62-ammo.js` · `migrate()` in `71-char-io.js` ·
-`updProject()` in `72-char-update.js` · **Data:** `weapon.ammo`, item `ammo`, bundle `pack`
-([rules-schema](../../../../docs/rules-schema.md) §6.8) · **Tests:** `sheet.js`, `char-update.js`,
-`rules-data.js` · **See also:** [Inventory](inventory.md), [Attacks & damage](attacks-and-damage.md),
+`unpackAmmo()`, `rebaseAmmo()`, `migrateAmmo()`, `ammoSpentEntry()`, `fireAmmo()`, `undoFire()`,
+`ammoRecoverable()`, `recoverAmmo()`, `attackAmmo()`, `forgetAmmo()`, `ammoLineHTML()`,
+`fireWeapon()`, `undoFireTap()`, `openAmmoPicker()`, `loadAmmo()`, `recoverWeaponAmmo()`,
+`offerAmmoRecovery()` in `62-ammo.js` · `migrate()` in `71-char-io.js` ·
+`updProject()` in `72-char-update.js` · `endCombatAsk()` in `87-combat.js` · **Data:** `weapon.ammo`,
+item `ammo`, bundle `pack` ([rules-schema](../../../../docs/rules-schema.md) §6.8) · **Tests:**
+`sheet.js`, `char-update.js`, `rules-data.js` · **See also:** [Inventory](inventory.md),
+[Attacks & damage](attacks-and-damage.md), [Combat view](combat-view.md),
 [Converter](../data/converter.md), [Rules-update tool](rules-update-tool.md)
 
 ## How it works
@@ -47,6 +51,22 @@ player never applied still shows. An unpacked bundle joins a stack of the same p
 grant — the one the player already had, wherever it sits, else the first bundle unpacked — and
 stacks the player kept apart stay apart.
 
+**The attack row.** `ammoLineHTML()` draws the line under the damage line and outside the
+collapse: the loaded stack (a picker button when there is more than one), Fire (disabled when
+nothing is loaded), and Recover N when N > 0.
+
+**Firing and Undo.** `fireAmmo()` takes one piece, removes the stack at its last, and counts
+the shot in `ammoSpent[stack id]` as `{n, kind, snap}`. `undoFire()` puts back one piece, or the
+whole stack at its old place, and the count. An Undo for another character, or for a stack the
+player deleted since, does nothing.
+
+**Recovery.** `ammoRecoverable()` gives half of each stack's count, rounded down per stack, and
+summed per kind. `recoverAmmo()` adds it back, rebuilding a used-up stack from its `snap` under
+the old id, and clears those counts. `offerAmmoRecovery()` asks once after End combat.
+
+**The +N.** `attackAmmo()` gives the loaded stack's bonus to `attackNumbers()`, for attack and
+damage alike.
+
 ## Rules that must hold
 
 - **Per-character ammo state never goes inside `weapon`.** The rules-update tool owns `weapon`: a
@@ -55,3 +75,40 @@ stacks the player kept apart stay apart.
   would hide a real pack change; re-baselining an edited field would let an update overwrite it.
 - **The app's tables agree with the data.** `rules-data.js` reads `data/5e2024/items.json` and fails
   on any launcher, bundle or piece the tables lack or disagree with.
+
+## Traps
+
+- **A redraw replaces the Fire button**, so keyboard focus is put back by `ammoFireBtn()`.
+- **Enter on a focused button clicks on key-down and auto-repeats**, which is why the Undo ignores
+  `e.repeat`. Space clicks once, on key-up.
+- **The harness's DOM stubs return no elements**, so the focus paths are only exercised in
+  Playwright.
+
+## Decisions
+
+Settled with Mike on 2026-10-01 and 2026-10-02; the full discussion is in
+[the spec](../../specs/2026-10-02-ammo-design.md) §2.
+
+| Question | Decision | Rejected, and why |
+|---|---|---|
+| Where ammo is spent | A **Fire** button on the weapon's attack row, which the combat view already shows | The inventory row: away from the attack, and the inventory card is not in the combat view by default. Both: a second control for the same thing |
+| How a weapon finds its ammo | **By kind, the player picks the stack**: a longbow takes arrows and loads the Arrow stack itself; with plain and +1 arrows both carried, the player chooses, and the choice is remembered | Always choosing by hand: a step every time for the common single-stack case. Kind only: no way to load the +1 arrows |
+| Recovery | **Asked at End combat, plus a Recover button** on the row: half of what was fired since the last recovery, rounded down | A button only (the first answer, revised 2026-10-02): the prompt is where the player is when it matters. End combat only: shots fired outside a tracked fight would never come back |
+| Bundles | **Unpack on arrival**: "Arrows (20)" ×2 becomes "Arrow" ×40, from the finder, starting equipment and Insert from pack; sheets already holding bundles unpack once on load | Unpack on first shot: inventories look inconsistent. Count inside a bundle: "×2, 7 left in the open one" |
+| A stack at 0 | **Removed, like a potion**; recovery recreates it from a copy kept when it was spent | Keeping it at ×0: Mike chose removal; the copy makes recovery work regardless |
+| The 2014 duplicates (Crossbow Bolt, Blowgun Needle, their bundles, the 2014 Net) | **Stop shipping them**: the converter honours `reprintedAs` | Leaving them: a second kind of bolt in the stack picker. A separate issue: they are in the way of this one |
+| Magic ammunition | **Included**: the converter reads 5e-tools' magic variants for ammunition | Out of scope: Mike wants it now |
+| The item editor and pack format | **Both** learn the ammo fields | The editor only: homebrew packs could not mark ammo weapons |
+| Recover N's visibility | **Shows only when N > 0** | While `ammoSpent` holds anything: a single stray shot gives nothing back, so a "Recover 0" button would be noise. Counts keep accumulating until a recovery can return something |
+| Merging an unpacked bundle | **Only into a stack of the same name, bonus and grant** | Merging any stack of the kind: would pull from a stack the player kept apart on purpose, and take back more than a removed class actually granted |
+
+## Open
+
+- Thrown weapons as their own ammunition (Dart, Javelin, Dagger).
+- Firearm reloading and energy cells (XDMG).
+- Magic variants outside the selection rule (BMT, AU, the 2014 DMG), and generic +N weapons.
+- Containers (Quiver capacity).
+
+## History
+
+- 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6

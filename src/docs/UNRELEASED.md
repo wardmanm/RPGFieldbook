@@ -41,3 +41,9 @@ Bullets below this line — leave the heading in place.
 - If your browser refuses to save a change, the sheet now says so plainly — and keeps saying so
   until a save goes through — with a button to save the character to a file instead, and it asks
   before you switch away from changes it couldn't save.
+- Bows, crossbows, slings, blowguns and firearms now track their ammunition. The weapon's attack
+  row shows what it's loaded with and a Fire button that spends one (with an Undo); ending combat
+  offers to recover half of what you fired, and a Recover button does the same any time. Ammo
+  bundles like "Arrows (20)" unpack into single arrows when they reach your sheet, so the count is
+  always the number you have. Magic ammunition (+1, +2, +3, Slaying, Walloping, Adamantine) is in
+  the item finder, and a loaded +1 arrow adds +1 to the attack.
