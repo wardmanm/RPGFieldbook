@@ -252,3 +252,35 @@ For `src/docs/UNRELEASED.md`:
 >   bundles like "Arrows (20)" unpack into single arrows when they reach your sheet, so the count is
 >   always the number you have. Magic ammunition (+1, +2, +3, Slaying, Walloping, Adamantine) is in
 >   the item finder, and a loaded +1 arrow adds +1 to the attack.
+
+## As built (2026-10-02)
+
+Built as designed, with these differences:
+
+1. **`reprintedAs` covers both item files.** Mike broadened decision 6: 40 renamed 2014 duplicates
+   no longer ship (5 in `items.json`, 35 gear items in `items-magic.json`).
+2. **The data gate includes `data/5e2024/tables.json`.** Ammunition of Slaying's creature table is
+   lifted once, as "Ammunition of Slaying Table".
+3. **The fragment is `src/js/62-ammo.js`,** after `60-attacks.js`.
+4. **Recover N shows only when N > 0** (§6 said "while `ammoSpent` holds anything"). A lone shot's
+   count waits until a recovery can return something; End combat's Yes clears every count, as the
+   rules lose that half.
+5. **The one-time pass merges an unpacked bundle only within one grant,** with the same name and
+   bonus, so removing a class still takes back exactly what it granted.
+6. **Re-baselining** (§3.3): the copy side moves only where the player hadn't edited the field; the
+   pack side takes the piece's own projection, else follows the copy only where it matched the
+   pack. A finder copy's description gets the piece's meta line.
+7. **Undo reverses one shot:** one piece back onto its stack, or the whole stack at its old place.
+   A stack the player deleted since stays deleted.
+8. **Spent counts are forgotten** when a stack is deleted and when the class that granted it is
+   removed, so Recover cannot bring either back.
+9. **A launcher's kind is its piece's kind.** `_ammo_type_kind()` resolves a launcher's `ammoType`
+   through the item index, so a 2014 reference such as "crossbow bolt" reads as `bolt`. The 2024 pack's
+   output is unchanged by it.
+10. **The one-time pass merges wherever the stacks sit.** An unpacked bundle joins the stack of the
+    same piece, bonus and grant the player already had, wherever it sits in the inventory, else the
+    first bundle unpacked. The plan's code merged only into an earlier stack.
+11. **An empty stack is never loaded.** A stack at ×0, which only hand-edited data can produce, is not
+    offered, loaded or fired.
+12. **An Undo applies once.** A double-click on the toast's Undo puts back one piece, not two.
+13. **A second release note** covers the item editor's ammunition controls, beside spec §13's.
