@@ -383,7 +383,10 @@
       "type": "Ammunition",
       "rarity": "Common",
       "description": "This arrow can't be broken, except when it is within an antimagic field",
-      "effects": []
+      "effects": [],
+      "ammo": {
+        "kind": "arrow"
+      }
     },
     {
       "name": "Veteran's Cane",
@@ -433,6 +436,136 @@
       "weight": 1,
       "description": "This wand has 3 charges. While holding it, you can use an action to expend 1 of its charges and target a humanoid you can see within 30 feet of you. The target must succeed on a DC 10 Charisma saving throw or be forced to smile for 1 minute.\nThe wand regains all expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand transforms into a wand of scowls",
       "effects": []
+    },
+    {
+      "name": "Adamantine Arrow",
+      "system": "XGE",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Unknown",
+      "weight": 0.05,
+      "description": "Whenever you hit an object using this ammunition, the hit is a critical hit",
+      "effects": [],
+      "ammo": {
+        "kind": "arrow"
+      }
+    },
+    {
+      "name": "Adamantine Bolt",
+      "system": "XGE",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Unknown",
+      "weight": 0.075,
+      "description": "Whenever you hit an object using this ammunition, the hit is a critical hit",
+      "effects": [],
+      "ammo": {
+        "kind": "bolt"
+      }
+    },
+    {
+      "name": "Adamantine Firearm Bullet",
+      "system": "XGE",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Unknown",
+      "weight": 0.2,
+      "description": "Whenever you hit an object using this ammunition, the hit is a critical hit",
+      "effects": [],
+      "ammo": {
+        "kind": "firearm bullet"
+      }
+    },
+    {
+      "name": "Adamantine Needle",
+      "system": "XGE",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Unknown",
+      "weight": 0.02,
+      "description": "Whenever you hit an object using this ammunition, the hit is a critical hit",
+      "effects": [],
+      "ammo": {
+        "kind": "needle"
+      }
+    },
+    {
+      "name": "Adamantine Sling Bullet",
+      "system": "XGE",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Unknown",
+      "weight": 0.075,
+      "description": "Whenever you hit an object using this ammunition, the hit is a critical hit",
+      "effects": [],
+      "ammo": {
+        "kind": "sling bullet"
+      }
+    },
+    {
+      "name": "Walloping Arrow",
+      "system": "XGE",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Common",
+      "weight": 0.05,
+      "description": "This ammunition packs a wallop. A creature hit by the ammunition must succeed on a DC 10 Strength saving throw or be knocked prone",
+      "effects": [],
+      "ammo": {
+        "kind": "arrow"
+      }
+    },
+    {
+      "name": "Walloping Bolt",
+      "system": "XGE",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Common",
+      "weight": 0.075,
+      "description": "This ammunition packs a wallop. A creature hit by the ammunition must succeed on a DC 10 Strength saving throw or be knocked prone",
+      "effects": [],
+      "ammo": {
+        "kind": "bolt"
+      }
+    },
+    {
+      "name": "Walloping Firearm Bullet",
+      "system": "XGE",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Common",
+      "weight": 0.2,
+      "description": "This ammunition packs a wallop. A creature hit by the ammunition must succeed on a DC 10 Strength saving throw or be knocked prone",
+      "effects": [],
+      "ammo": {
+        "kind": "firearm bullet"
+      }
+    },
+    {
+      "name": "Walloping Needle",
+      "system": "XGE",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Common",
+      "weight": 0.02,
+      "description": "This ammunition packs a wallop. A creature hit by the ammunition must succeed on a DC 10 Strength saving throw or be knocked prone",
+      "effects": [],
+      "ammo": {
+        "kind": "needle"
+      }
+    },
+    {
+      "name": "Walloping Sling Bullet",
+      "system": "XGE",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Common",
+      "weight": 0.075,
+      "description": "This ammunition packs a wallop. A creature hit by the ammunition must succeed on a DC 10 Strength saving throw or be knocked prone",
+      "effects": [],
+      "ammo": {
+        "kind": "sling bullet"
+      }
     }
   ]
 }

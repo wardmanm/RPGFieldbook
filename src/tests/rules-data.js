@@ -353,7 +353,7 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
 {
   const EXPECT={
     xanathars:{system:'XGE',files:{
-      'glossary.json':['keywords',22], 'items-magic.json':['items',43],
+      'glossary.json':['keywords',22], 'items-magic.json':['items',53],
       'feats.json':['feats',15], 'spells.json':['spells',95],
       'subclasses.json':['subclasses',31], 'features.json':['features',22],
       'tables.json':['tables',74]}},

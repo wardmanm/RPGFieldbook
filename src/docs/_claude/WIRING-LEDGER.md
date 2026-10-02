@@ -4919,3 +4919,32 @@ were closed by hand, each with a comment naming the merge commit and why it hadn
 [WORKTREES](../WORKTREES.md) §5 now shows the form (`Closes #39, closes #40, closes #41`), the
 check after pushing (`gh issue view <n> --json state`), and the comment to leave on a manual
 close. CLAUDE.md's worktree rule carries the one-line version.
+
+## Ammunition in the packs (#7, 2026-10-02)
+
+The converter kept nothing 5e-tools says about ammunition. Now:
+- launchers carry `weapon.ammo` (from `ammoType`); a launcher's kind is its piece's kind, 2014
+  names included;
+- ammunition carries `ammo: {kind}` (from its family flag, or its name for XGE's Unbreakable Arrow);
+- bundles carry `pack: {item, qty}` (from `packContents`).
+
+`pick_2024_preferred()` takes, for items, the set of everything the 2024 pack ships from both item
+files, and leaves out a 2014 entry reprinted as one of them. That drops 40 renamed duplicates: the
+2014 Crossbow Bolt, Blowgun Needle, their bundles and the Net from `items.json` (the 2024 Net is gear
+in the other file), and 35 gear items such as "Acid (vial)" and "Spell Scroll (1st Level)" from
+`items-magic.json`. Mike chose both files; no grant names an old one.
+
+`convert_ammo_variants()` reads `magicvariants.json` for ammunition variants only, selected as items
+are:
+- the 2024 pack gets XDMG +1/+2/+3 Ammunition and Ammunition of Slaying;
+- Xanathar's gets Walloping and Adamantine.
+
+Each is expanded onto every single 2024 piece ("+1 Arrow"), never a bundle, its `{=bonusWeapon}`
+written out. Its text is flattened once under the variant's name, so Slaying's creature table is one
+table, "Ammunition of Slaying Table".
+
+**Counts:** 5e2024 items 99 → 94, magic 542 → 527, tables 107 → 108; XGE items 43 → 53. Every other
+item is byte-identical but for the new fields, checked by script before the files were copied.
+`release.js` will bump XPHB's and XGE's data versions.
+
+Pages: [converter](../wiki/data/converter.md), [supplements](../wiki/data/supplements.md).

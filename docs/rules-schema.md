@@ -479,6 +479,10 @@ the converter applies — mirroring `overlay.json` for feats.
   weapon's own flat bonus to hit and to damage, added to this weapon's attack only. A `+1` weapon's
   `+1` goes here, **not** in `effects`: an effect would add it to every attack, and twice to this
   one. Without a `weapon` object an item is just inventory, however weapon-like its description reads.
+
+  > `ammo` *(string, optional)* — the kind of ammunition this weapon fires, the lower-case name of
+  > the single piece: `"arrow"`, `"bolt"`, `"firearm bullet"`, `"needle"`, `"sling bullet"`, or any
+  > kind a pack invents. A weapon with it gets a Fire button on its attack row.
 - **`effects`** apply **while equipped** (e.g. a Ring of Protection: `{"target":"ac","value":1}`). Base
   gear/armor usually have none — the app doesn't replace base AC from an effect; that lives in the
   `description` or the `armor` object. Weapon damage comes from `weapon`, not from `effects`. An
@@ -489,13 +493,19 @@ the converter applies — mirroring `overlay.json` for feats.
   against the triggering attack", "+2 AC against ranged attacks") belongs in the `description`.
   `equipped`, `qty` and `sectionOverride` (which inventory section to file it under) are set
   per-character when the item is added, not in the pack.
+
+  > **Ammunition.** An item that is ammunition carries `"ammo": {"kind": "arrow"}`, plus
+  > `"bonus": 1` for magic ammunition that adds to the attack and damage of the weapon firing it.
+  > A bundle ("Arrows (20)") also carries `"pack": {"item": "Arrow", "qty": 20}`, naming the
+  > single piece it unpacks into when it reaches a sheet. `ammo` and `pack` are rules data; the
+  > count on a sheet is its `qty`.
 - **`weight`** is a **number of pounds, per unit** — not per stack. It is copied onto the character's
   item when the item is added, totalled in the Inventory tab (multiplied by quantity, and added to
   the weight of any coins carried), and used for carrying capacity when the character has
   encumbrance switched on. Omit it and the item weighs nothing, which is the right answer for most
   small things.
 - Optional facet/display fields used by the item browser: **`category`** (coarse — Weapon / Armor /
-  Tool / Gear / Wondrous Item / Potion / Ring / Wand / etc.), **`type`** (specific, e.g. "Heavy Armor"),
+  Tool / Gear / Ammunition / Wondrous Item / Potion / Ring / Wand / etc.), **`type`** (specific, e.g. "Heavy Armor"),
   **`rarity`** (Mundane / Common / Uncommon / Rare / Very Rare / Legendary / Artifact), **`cost`**
   (display string), **`weight`** (number), **`attune`** (bool — needs attunement), and **`attuneNote`**
   (e.g. "by a Cleric"). The browser filters on category, rarity, and attunement, and groups by category;
