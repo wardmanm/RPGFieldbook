@@ -41,7 +41,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'combatGripHTML', 'moveCombatCard',
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
-  'finderQty', 'addLibraryItems', 'attackNumbers', 'recompute',
+  'finderQty', 'addLibraryItems', 'grantItemByName', 'attackNumbers', 'recompute',
   'spellDC', 'spellAtkBonus', 'fxTargets', 'FX_LABEL', 'promptSpellAttack', 'openStatBreakdown', 'openAttackBreakdown',
   'renderAttacks',
   'coinKeys',
@@ -2988,6 +2988,35 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const spent = {s1: {n: 3, kind: 'arrow', snap: {id: 's1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}}}};
   ck('ammoSpent survives a save and a load', same(X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {ammoSpent: spent})))).ammoSpent, spent));
   ck('ammoSpent from a file that is not a map resets', same(X.migrate({abilities: {}, ammoSpent: [1]}).ammoSpent, {}));
+}
+
+/* ---- ammunition arrives unpacked: the finder and starting equipment (#6) ---- */
+{
+  X.resetRules();
+  X.mergeRules({system: 'XPHB', items: [
+    {name: 'Arrow', category: 'Ammunition', type: 'Ammunition', weight: 0.05, cost: '5 cp', description: 'An arrow.', effects: [], ammo: {kind: 'arrow'}},
+    {name: 'Arrows (20)', category: 'Ammunition', type: 'Ammunition', weight: 1, cost: '1 gp', description: 'Arrows.', effects: [],
+     ammo: {kind: 'arrow'}, pack: {item: 'Arrow', qty: 20}}]}, '5e.json');
+  const c = X.blankChar(); X.character = c;
+  X.addLibraryItems([X.rules.items.find(x => x.name === 'Arrows (20)')], null, null, 2);
+  ck('the finder adds two bundles of arrows as forty Arrows', c.inventory.length === 1 && c.inventory[0].name === 'Arrow' && c.inventory[0].qty === 40, c.inventory);
+  ck('...priced and weighed as one Arrow, of the arrow kind, stamped from the Arrow entry',
+     c.inventory[0].cost === 0.05 && c.inventory[0].weight === 0.05 && JSON.stringify(c.inventory[0].ammo) === '{"kind":"arrow"}' &&
+     !!c.inventory[0].src && c.inventory[0].src.name === 'Arrow', c.inventory[0]);
+  X.addLibraryItems([X.rules.items.find(x => x.name === 'Arrow')], null, null, 5);
+  ck('more Arrows join the same stack', c.inventory.length === 1 && c.inventory[0].qty === 45);
+  ck("the copy's ammo is its own object, not the pack's", c.inventory[0].ammo !== X.rules.items.find(x => x.name === 'Arrow').ammo);
+  const p = X.blankChar(); X.character = p;
+  X.addLibraryItems([X.rules.items.find(x => x.name === 'Arrows (20)')], null, 2, 1);
+  ck('a price paid for a bundle is split across its pieces: 2 gp for twenty is 0.1 gp an arrow',
+     p.inventory.length === 1 && p.inventory[0].qty === 20 && p.inventory[0].cost === 0.1, p.inventory);
+  const g = X.blankChar(); X.character = g;
+  X.grantItemByName('Arrows (20)', 1, 'class:Ranger');
+  ck('a class that grants Arrows (20) grants twenty Arrows', g.inventory.length === 1 && g.inventory[0].name === 'Arrow' &&
+     g.inventory[0].qty === 20 && g.inventory[0].grant === 'class:Ranger' && JSON.stringify(g.inventory[0].ammo) === '{"kind":"arrow"}', g.inventory);
+  X.grantItemByName('Arrows (20)', 1, 'class:Ranger');
+  ck('a second grant from the same source joins its stack', g.inventory.length === 1 && g.inventory[0].qty === 40);
+  X.resetRules();
 }
 
 /* ---- imported files and packs render inert ----
