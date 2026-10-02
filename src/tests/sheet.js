@@ -2976,6 +2976,11 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
 
   const two = X.migrate({abilities: {}, inventory: [{id: 'a', name: 'Arrows (20)', qty: 1}, {id: 'b', name: 'Arrows (20)', qty: 1}]});
   ck('two unpacked bundles of one grant become one stack', two.inventory.length === 1 && two.inventory[0].qty === 40, two.inventory);
+  const ahead = X.migrate({abilities: {}, inventory: [{id: 'u', name: 'Arrows (20)', qty: 1}, {id: 'l', name: 'Arrow', qty: 5, ammo: {kind: 'arrow'}}]});
+  ck('a bundle unpacked ahead of a stack the player had still joins it, which keeps its place and id',
+     ahead.inventory.length === 1 && ahead.inventory[0].id === 'l' && ahead.inventory[0].qty === 25, ahead.inventory);
+  const behind = X.migrate({abilities: {}, inventory: [{id: 'l', name: 'Arrow', qty: 5}, {id: 'u', name: 'Arrows (20)', qty: 1}]});
+  ck('...and so does one unpacked behind it', behind.inventory.length === 1 && behind.inventory[0].id === 'l' && behind.inventory[0].qty === 25, behind.inventory);
   const kept = X.migrate({abilities: {}, inventory: [{id: 'a', name: 'Arrow', qty: 3, ammo: {kind: 'arrow'}}, {id: 'b', name: 'Arrow', qty: 4, ammo: {kind: 'arrow'}}]});
   ck('stacks the player kept apart stay apart', kept.inventory.length === 2);
   ck('a fresh character has no spent ammunition, and the pass has not run on it',

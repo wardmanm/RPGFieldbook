@@ -146,20 +146,20 @@ function migrateAmmo(c){
       rebaseAmmo(it,before,null);n++;
     }
   });
-  /* An unpacked bundle joins an earlier stack of the same piece, bonus and grant,
-     so two bundles become one stack; only within one grant, so removing a class
-     still takes back exactly what it granted. Stacks the player kept apart stay. */
-  const firstOf=new Map(), keep=[];
-  inv.forEach(it=>{
-    const a=itemAmmo(it);
-    if(!a){keep.push(it);return;}
-    const k=[String(it.name||"").trim().toLowerCase(),a.bonus,it.grant||""].join("|");
-    const first=firstOf.get(k);
-    if(first&&unpacked.has(it)){first.qty=itemQty(first)+itemQty(it);n++;return;}
-    if(!first)firstOf.set(k,it);
-    keep.push(it);
+  /* An unpacked bundle joins a stack of the same piece, bonus and grant: the
+     one the player already had, wherever it sits, else the first bundle
+     unpacked here, so two bundles become one stack. Only within one grant, so
+     removing a class still takes back exactly what it granted; stacks the
+     player kept apart stay apart. */
+  const keyOf=it=>{const a=itemAmmo(it);return a?[String(it.name||"").trim().toLowerCase(),a.bonus,it.grant||""].join("|"):null;};
+  const home=new Map();
+  inv.forEach(it=>{const k=keyOf(it);if(k==null)return;const h=home.get(k);
+    if(!h||(unpacked.has(h)&&!unpacked.has(it)))home.set(k,it);});
+  c.inventory=inv.filter(it=>{
+    const k=keyOf(it),h=k==null?null:home.get(k);
+    if(!h||h===it||!unpacked.has(it))return true;
+    h.qty=itemQty(h)+itemQty(it);n++;return false;
   });
-  c.inventory=keep;
   c.ammoInit=1;
   return n;
 }

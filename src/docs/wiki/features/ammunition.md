@@ -43,8 +43,9 @@ relied on at load:
 reads as the pack's. The copy side moves only where the player hadn't edited that field, so an edit
 of theirs still reads as theirs. The pack side takes the piece's own projection where the pass knows
 it, and otherwise follows the copy only where the copy matched the pack, so an older pack change the
-player never applied still shows. An unpacked bundle joins an earlier stack of the same piece, bonus
-and grant; stacks the player kept apart stay apart.
+player never applied still shows. An unpacked bundle joins a stack of the same piece, bonus and
+grant — the one the player already had, wherever it sits, else the first bundle unpacked — and
+stacks the player kept apart stay apart.
 
 ## Rules that must hold
 
