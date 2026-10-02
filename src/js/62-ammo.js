@@ -163,3 +163,91 @@ function migrateAmmo(c){
   c.ammoInit=1;
   return n;
 }
+
+/* ---- firing, undoing, recovering ---- */
+function ammoSpentMap(c){const m=c&&c.ammoSpent;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
+/* One stack's spent record, coerced: how many fired since the last recovery,
+   its kind, and the copy recovery rebuilds a used-up stack from. */
+function ammoSpentEntry(c,id){
+  const e=ammoSpentMap(c)[id], ok=e&&typeof e==="object"&&!Array.isArray(e);
+  return {n:(ok&&Number.isInteger(e.n)&&e.n>0)?e.n:0,kind:ok?ammoKindOf(e.kind):"",
+          snap:(ok&&e.snap&&typeof e.snap==="object"&&!Array.isArray(e.snap))?e.snap:null};
+}
+/* One shot from the weapon's loaded stack: one piece off it (the last removes
+   the stack, as using the last potion does), and one more on its spent count,
+   with a copy of the stack for recovery to rebuild it from. Returns what Undo
+   needs, or null when there is nothing to fire. */
+function fireAmmo(c,weaponItem){
+  const st=loadedStack(c,weaponItem);if(!st)return null;
+  const am=itemAmmo(st);
+  if(!c.ammoSpent||typeof c.ammoSpent!=="object"||Array.isArray(c.ammoSpent))c.ammoSpent={};
+  const undo={stack:JSON.parse(JSON.stringify(st)),at:c.inventory.indexOf(st),
+              spent:c.ammoSpent[st.id]?JSON.parse(JSON.stringify(c.ammoSpent[st.id])):null};
+  const prev=ammoSpentEntry(c,st.id);
+  c.ammoSpent[st.id]={n:prev.n+1,kind:am.kind,snap:Object.assign(JSON.parse(JSON.stringify(st)),{qty:1})};
+  const left=Math.max(0,itemQty(st)-1);
+  if(left<=0)c.inventory=c.inventory.filter(x=>x!==st);else st.qty=left;
+  return {stack:st,kind:am.kind,left,removed:left<=0,undo};
+}
+/* Undo puts back exactly what that shot took: one piece onto its stack, or the
+   whole stack at its old place when the shot removed it, and the spent count as
+   it was. A stack the player deleted since stays deleted: they chose that. */
+function undoFire(c,rec){
+  if(!c||!rec||!rec.undo||!rec.undo.stack)return false;
+  const u=rec.undo, id=u.stack.id;
+  if(!Array.isArray(c.inventory))c.inventory=[];
+  const cur=c.inventory.find(x=>x&&x.id===id);
+  if(cur)cur.qty=itemQty(cur)+1;
+  else if(rec.removed)c.inventory.splice(Math.max(0,Math.min(c.inventory.length,u.at)),0,JSON.parse(JSON.stringify(u.stack)));
+  else return false;
+  if(!c.ammoSpent||typeof c.ammoSpent!=="object"||Array.isArray(c.ammoSpent))c.ammoSpent={};
+  if(u.spent)c.ammoSpent[id]=u.spent;else delete c.ammoSpent[id];
+  return true;
+}
+/* What recovery would give back, per kind: half of each stack's count, rounded
+   down per stack, summed. Kinds with nothing to give back are left out. */
+function ammoRecoverable(c){
+  const by=new Map();
+  Object.keys(ammoSpentMap(c)).forEach(id=>{
+    const e=ammoSpentEntry(c,id);if(!e.n||!e.kind)return;
+    const r=by.get(e.kind)||{kind:e.kind,fired:0,back:0};
+    r.fired+=e.n;r.back+=Math.floor(e.n/2);by.set(e.kind,r);
+  });
+  return [...by.values()].filter(r=>r.back>0);
+}
+/* Gives back half of what was fired since the last recovery, for the kinds
+   asked (every kind when none are), and clears those counts: the other half is
+   lost, as the rules have it. A stack the last shot removed comes back from its
+   copy with its old id, so a weapon that had chosen it is loaded with it again.
+   Returns how many pieces came back. */
+function recoverAmmo(c,kinds){
+  const want=Array.isArray(kinds)?new Set(kinds.map(ammoKindOf)):null;
+  const m=ammoSpentMap(c);
+  if(!Array.isArray(c.inventory))c.inventory=[];
+  let back=0;
+  Object.keys(m).forEach(id=>{
+    const e=ammoSpentEntry(c,id);
+    if(want&&!want.has(e.kind))return;
+    const n=Math.floor(e.n/2);
+    if(n>0){
+      const st=c.inventory.find(x=>x&&x.id===id);
+      if(st){st.qty=itemQty(st)+n;back+=n;}
+      else if(e.snap){c.inventory.push(Object.assign(JSON.parse(JSON.stringify(e.snap)),{id,qty:n}));back+=n;}
+    }
+    delete m[id];
+  });
+  return back;
+}
+function ammoSummaryText(list){return list.map(r=>`${r.back} of ${r.fired} ${ammoPlural(r.kind)}`).join(", ");}
+/* A deleted stack's count goes with it: there is nothing to recover into, and
+   the player chose to delete it. */
+function forgetAmmo(c,id){const m=ammoSpentMap(c);if(id in m)delete m[id];}
+/* The +N a weapon row gets from the stack its item is loaded with, and that
+   stack's name for the breakdown. Nothing for a row with no item. */
+function attackAmmo(a){
+  const inv=Array.isArray(character&&character.inventory)?character.inventory:[];
+  const it=a&&a.itemId?inv.find(i=>i&&i.id===a.itemId):null;
+  if(!it||!weaponAmmoKind(it))return {bonus:0,name:""};
+  const st=loadedStack(character,it), am=st&&itemAmmo(st);
+  return {bonus:am?am.bonus:0,name:st?String(st.name||""):""};
+}

@@ -9,9 +9,11 @@ function attackNumbers(a){
      spellAtkBonus() does; a weapon's row never does (#77) */
   const atkFx=sumFx("attack",c)+sumFx("attack."+kind,c)+(a.source==="spell"&&!a.save?sumFx("spell.attack",c):0);
   const dmgFx=sumFx("damage",c)+sumFx("damage."+kind,c);
-  const toHit=abil+(a.proficient?pb:0)+num(a.atkMisc)+atkFx;
-  const dmgBonus=(a.addAbilityDamage?abil:0)+num(a.dmgMisc)+dmgFx;
-  return {toHit,dmgBonus,atkFx,dmgFx,abilName,kind,pb,abil};
+  /* the stack a launcher is loaded with adds its +N to attack AND damage (#6) */
+  const ammo=attackAmmo(a);
+  const toHit=abil+(a.proficient?pb:0)+num(a.atkMisc)+atkFx+ammo.bonus;
+  const dmgBonus=(a.addAbilityDamage?abil:0)+num(a.dmgMisc)+dmgFx+ammo.bonus;
+  return {toHit,dmgBonus,atkFx,dmgFx,abilName,kind,pb,abil,ammoBonus:ammo.bonus,ammoName:ammo.name};
 }
 /* ---- damage lines ----
    An attack's damage is one main die expression plus any number of ADDITIONAL
@@ -451,6 +453,7 @@ function openAttackBreakdown(id){
   b+=row((n.abilName||"No ability")+" modifier",n.abil);
   if(a.proficient)b+=row("Proficiency bonus",pb);
   if(num(a.atkMisc))b+=row("Extra to-hit (manual)",num(a.atkMisc));
+  if(n.ammoBonus)b+=row(n.ammoName+" (loaded)",n.ammoBonus);
   const spellAtk=a.source==="spell"&&!a.save;
   c.filter(x=>x.target==="attack"||x.target==="attack."+n.kind||(spellAtk&&x.target==="spell.attack")).forEach(x=>b+=row(x.source,x.value));
   b+=`<div style="display:flex;justify-content:space-between;border-top:2px solid var(--line);margin-top:6px;padding-top:6px"><b>To hit</b><b>${fmt(n.toHit)}</b></div>`;
@@ -458,6 +461,7 @@ function openAttackBreakdown(id){
   const dc=c.filter(x=>x.target==="damage"||x.target==="damage."+n.kind);
   if(a.addAbilityDamage&&n.abilName)b+=row(n.abilName+" modifier",n.abil);
   if(num(a.dmgMisc))b+=row("Extra damage (manual)",num(a.dmgMisc));
+  if(n.ammoBonus)b+=row(n.ammoName+" (loaded)",n.ammoBonus);
   dc.forEach(x=>b+=row(x.source,x.value));
   /* extras are their own dice and take none of the bonuses above — say so */
   const xd=extraDamageList(a);

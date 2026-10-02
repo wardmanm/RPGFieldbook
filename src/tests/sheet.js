@@ -56,6 +56,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'trackerRowHTML', 'trackerClosedHTML', 'trackersHTML', 'trackerFormHTML', 'trkSummary', 'trkTickHTML', 'trkEditHTML',
   'ammoKindOf', 'itemAmmo', 'weaponAmmoKind', 'ammoStacks', 'loadedStack', 'ammoPlural', 'ammoOne',
   'unpackAmmo', 'rebaseAmmo', 'migrateAmmo', 'fpMap', 'fpHash',
+  'ammoSpentEntry', 'fireAmmo', 'undoFire', 'ammoRecoverable', 'recoverAmmo', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -3017,6 +3018,61 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   X.grantItemByName('Arrows (20)', 1, 'class:Ranger');
   ck('a second grant from the same source joins its stack', g.inventory.length === 1 && g.inventory[0].qty === 40);
   X.resetRules();
+}
+
+/* ---- firing, Undo, recovery and the +N (#6) ---- */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const mk = () => {
+    const c = X.blankChar();
+    c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8', damageType: 'piercing', ability: 'dex'}},
+                   {id: 's1', name: 'Arrow', qty: 2, ammo: {kind: 'arrow'}},
+                   {id: 's2', name: '+1 Arrow', qty: 1, ammo: {kind: 'arrow', bonus: 1}}];
+    return c;
+  };
+  let c = mk(); const bow = c.inventory[0];
+  let r = X.fireAmmo(c, bow);
+  ck('a shot spends one from the loaded stack', !!r && c.inventory[1].qty === 1 && r.left === 1 && !r.removed);
+  ck('...and counts it, with a copy of the stack', X.ammoSpentEntry(c, 's1').n === 1 && X.ammoSpentEntry(c, 's1').snap.name === 'Arrow');
+  r = X.fireAmmo(c, bow);
+  ck('the last piece removes the stack', r.removed && !c.inventory.some(i => i.id === 's1') && X.ammoSpentEntry(c, 's1').n === 2);
+  ck('the weapon then loads the next stack of its kind', X.loadedStack(c, bow).id === 's2');
+  ck('Undo puts the removed stack back where it was, one piece, and the count as it was',
+     X.undoFire(c, r) && c.inventory[1].id === 's1' && c.inventory[1].qty === 1 && X.ammoSpentEntry(c, 's1').n === 1);
+  ck('nothing loaded, nothing fired', X.fireAmmo({inventory: [bow]}, bow) === null);
+  c = mk(); const b2 = c.inventory[0];
+  r = X.fireAmmo(c, b2);
+  ck('Undo of a shot that left some puts the one piece back and forgets the shot',
+     X.undoFire(c, r) && c.inventory[1].qty === 2 && !('s1' in c.ammoSpent));
+  r = X.fireAmmo(c, b2); c.inventory = c.inventory.filter(i => i.id !== 's1');
+  ck('Undo after the player deleted that stack leaves it deleted', !X.undoFire(c, r) && !c.inventory.some(i => i.id === 's1'));
+  ck('junk spent entries read as nothing',
+     same(X.ammoSpentEntry({ammoSpent: {x: 'junk'}}, 'x'), {n: 0, kind: '', snap: null}) &&
+     X.ammoRecoverable({ammoSpent: {a: {n: 'x', kind: 7}, b: null, c: [1], d: {n: 4, kind: ''}}}).length === 0 &&
+     X.ammoRecoverable({ammoSpent: 'junk'}).length === 0);
+
+  c = mk(); const b3 = c.inventory[0];
+  b3.ammoStack = 's1'; X.fireAmmo(c, b3); X.fireAmmo(c, b3);
+  b3.ammoStack = 's2'; X.fireAmmo(c, b3);
+  ck('what recovery would give: half of each stack, rounded down per stack', same(X.ammoRecoverable(c), [{kind: 'arrow', fired: 3, back: 1}]), X.ammoRecoverable(c));
+  ck('...in words', X.ammoSummaryText(X.ammoRecoverable(c)) === '1 of 3 arrows');
+  ck('recovering gives back 1', X.recoverAmmo(c, ['arrow']) === 1);
+  ck('...rebuilding the used-up stack from its copy, with its old id', c.inventory.some(i => i.id === 's1' && i.qty === 1 && i.name === 'Arrow'));
+  ck('...and clears every count of that kind, the lost half included', same(c.ammoSpent, {}));
+  c = mk(); c.ammoSpent = {s1: {n: 13, kind: 'arrow'}, s9: {n: 4, kind: 'bolt'}};
+  ck('several kinds are summed and listed', X.ammoSummaryText(X.ammoRecoverable(c)) === '6 of 13 arrows, 2 of 4 bolts');
+  ck('recovering one kind leaves the other', X.recoverAmmo(c, ['arrow']) === 6 && 's9' in c.ammoSpent && c.inventory.find(i => i.id === 's1').qty === 8);
+  ck('a stack that is gone with no copy gives nothing back, and its count clears', X.recoverAmmo(c) === 0 && same(c.ammoSpent, {}));
+  ck('forgetting a deleted stack drops its count', (() => { const k = {ammoSpent: {s1: {n: 2, kind: 'arrow'}}}; X.forgetAmmo(k, 's1'); return same(k.ammoSpent, {}); })());
+
+  const ch = mk(); ch.abilities.dex = 14; X.character = ch;
+  const atk = {id: 'a1', name: 'Longbow', kind: 'ranged', ability: 'dex', proficient: false, damageDice: '1d8', itemId: 'w1', addAbilityDamage: true};
+  const base = X.attackNumbers(atk);
+  ch.inventory[0].ammoStack = 's2';
+  const plus = X.attackNumbers(atk);
+  ck('a loaded +1 arrow adds 1 to hit and to damage', plus.toHit === base.toHit + 1 && plus.dmgBonus === base.dmgBonus + 1 &&
+     plus.ammoBonus === 1 && plus.ammoName === '+1 Arrow', [base, plus]);
+  ck('a row with no item gets nothing from ammunition', X.attackNumbers(Object.assign({}, atk, {itemId: undefined})).ammoBonus === 0);
 }
 
 /* ---- imported files and packs render inert ----
