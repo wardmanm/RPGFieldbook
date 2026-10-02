@@ -29,7 +29,7 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
 | structured objects | `hp` `{cur, max, temp, locked:true}`, `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
 | lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers` |
-| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `journalCollapse`, `trackerCollapse`, `ammoSpent` (stack id → `{n, kind, snap}`) |
+| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `journalCollapse`, `trackerCollapse`, `ammoSpent` (stack id → `{n, kind, snap, asked}`) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
 | per-character settings | `statStyle`, `hdStyle`, `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound` |
 | text | `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
@@ -61,8 +61,10 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    every weapon on a sheet saved before weapons could be equipped.
 8. `migrateAmmo()` runs after it: a one-time pass, recorded by `ammoInit` (never defaulted in
    `blankChar()`, as `wpnEquipInit` isn't), that unpacks known ammunition bundles and gives a kind to
-   known pieces and launchers on a sheet saved before ammunition. An item's own `ammo` and
-   `ammoStack` need no default — see [Ammunition](../features/ammunition.md).
+   known pieces and launchers on a sheet saved before ammunition. `newCharacter()` sets `ammoInit`
+   to 1 directly on the character it creates, so the pass never runs on a brand-new sheet, which has
+   nothing for it to migrate. An item's own `ammo` and `ammoStack` need no default — see
+   [Ammunition](../features/ammunition.md).
 
 **It is shallow on purpose.** Beyond each list item being an object, and the glossary repair
 above, nothing inside a list item or a map value is shape-checked. The code that reads those values
@@ -164,3 +166,4 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
+- 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6

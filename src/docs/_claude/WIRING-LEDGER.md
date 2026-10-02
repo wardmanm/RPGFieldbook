@@ -4985,3 +4985,45 @@ The item editor learned the ammunition fields, so a homebrew bow or arrow works 
 - Save carries `ammoStack` and `pack`, which the form doesn't show.
 
 Other… left blank refuses to save, saying why. Page: [ammunition](../wiki/features/ammunition.md).
+
+## Ammunition: the final review's fixes (#6, #8, 2026-10-02)
+
+The whole-branch review of #6/#7/#8 found nine problems before merge; all nine are fixed in one wave.
+
+1. `migrateAmmo()` looked names up in `AMMO_BUNDLES`/`AMMO_SINGLE_NAMES`/`AMMO_LAUNCHERS` with plain
+   indexing, so an item named "Constructor" or "__proto__" found an inherited property instead of
+   `undefined` and threw reading `.name` off it — a character with such an item silently failed to
+   open. `ammoTable()` is an own-property lookup used for all three.
+2. `revertEquipmentGrants(sid)` forgot a spent count only by the removed item's id, so a granted
+   stack already fired down to nothing (and so already gone from the inventory) kept its count, and
+   Recover could bring back arrows from a class the player no longer has. `forgetGrantAmmo(c,sid)`
+   deletes every `ammoSpent` entry whose `snap.grant` matches, and runs alongside the id-based
+   `forgetAmmo()`.
+3. A "No" at End combat didn't remember being asked, so the next fight with no new shots asked
+   again about the same old ones. Each `ammoSpent` entry now carries `asked` (carried forward by
+   `fireAmmo()`, since the entry is rebuilt every shot); `ammoAskDue()` is true while any kind has
+   fired more than it was asked about, and `markAmmoAsked()` catches every entry up on a "No".
+   `offerAmmoRecovery()` asks only when due. Recover N on the row is unaffected either way.
+4. `recoverAmmo()` always recreated a used-up stack from its snapshot under the old id, even when an
+   equivalent stack (same name, bonus and grant) already existed — firing the last of one and then
+   picking up more of the same left two identical rows. It now tops up the equivalent stack instead,
+   and repoints any weapon whose `ammoStack` named the old id.
+5. The stack picker's row showed only `×qty`, never the magic bonus the spec called for.
+   `ammoChoiceHTML(s,cur)` factors the row and adds `· +N`/`· -N` when the stack carries one;
+   `openAmmoPicker()` uses it.
+6. Documented, not fixed: 2014-named single pieces and the 35 dropped 2014 gear items read as "not
+   in any loaded pack" on sheets migrated before this branch; two grants of "Arrow ×20" look
+   identical in the picker; Xanathar's five Adamantine Ammunition pieces carry rarity "Unknown".
+7. `newCharacter()` sets `ammoInit=1` on the character it creates, so the one-time pass never runs on
+   a brand-new sheet (never in `blankChar()`, as `wpnEquipInit` isn't either).
+8. Insert from pack left the quantity box at a bundle's count after the next pick was not a bundle,
+   so picking "Arrows (20)" then Longbow saved 20 Longbows. `openItemForm()`'s `#iLib` handler now
+   remembers when the quantity came from a bundle and resets it to 1 the moment the next pick isn't
+   one.
+9. The release note's magic-ammunition list read as if Walloping and Adamantine ship with the core
+   pack; reworded to name Xanathar's Guide.
+
+Pages: [ammunition](../wiki/features/ammunition.md),
+[character model](../wiki/architecture/character-model.md),
+[grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[combat view](../wiki/features/combat-view.md), [known issues](../wiki/roadmap/known-issues.md).

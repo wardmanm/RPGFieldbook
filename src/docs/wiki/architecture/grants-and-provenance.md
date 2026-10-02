@@ -15,7 +15,8 @@ background or drop a class without hand-cleaning the sheet.
 `grantClassSaves()`, `multiclassChoices()`, `selectSubclass()`, `doLevelDown()`, `seedLevel1HP()` in
 `56-class.js`; `runChoices()`,
 `commitChoices()`, `sidToOrigin()` in `58-choices.js`; `originFromSid()`, `itemOrigin()`,
-`costToGp()` in `25-origins-items.js`; `syncResources()` in `65-resources.js` · **Tests:**
+`costToGp()` in `25-origins-items.js`; `syncResources()` in `65-resources.js`;
+`forgetGrantAmmo()` in `62-ammo.js` · **Tests:**
 `char-update.js` (grant and revert, `grantItemByName()` called for real, the pending equipment
 picker travelling with its window, the order the choice windows open in), `sheet.js` (`invSection()` filing) · **See also:** [Character building](../features/character-building.md),
 [Inventory](../features/inventory.md), [Ammunition](../features/ammunition.md),
@@ -42,7 +43,7 @@ picked option.
 |---|---|---|---|
 | Features and traits, ability increases, feats, options | `features[]` | `origin`: `{kind:"race"\|"background", name}` or `{kind:"class", class, level, subclass?}` | `removeFeaturesWhere()` on that origin |
 | Skill and save proficiencies | `grants[]` as `{sid, type, key, level}` | `sid` | `removeGrants()` on that sid |
-| Starting equipment, and the attacks it made | `inventory[]` with `grant: sid`; attacks linked by `itemId` | `grant` | `revertEquipmentGrants()`, which also forgets each removed item's spent-ammunition count |
+| Starting equipment, and the attacks it made | `inventory[]` with `grant: sid`; attacks linked by `itemId` | `grant` | `revertEquipmentGrants()`, which also forgets each removed item's spent-ammunition count, and — by the snapshot's own `grant`, through `forgetGrantAmmo()` — a granted stack already fired down to nothing and so already gone before the source is removed |
 | Starting gold | added to `coins.gp` and recorded in `grantGold[sid]` | `sid` | `revertEquipmentGrants()`: subtracts exactly that amount, never below 0 |
 | Class resource pools | `resources[]` with `auto:true` and a `class:`/`subclass:` key | `key` | `syncResources()` on every `recompute()`: an auto pool whose class or subclass is gone is dropped |
 | Level-1 max HP | `hp.max` / `hp.cur` | nothing: recognised by value | `removeClass()` blanks it only if the box still holds exactly `level1HP()` |
@@ -189,3 +190,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — Choice windows open one at a time; the queue behind a window travels with it and survives its dismissal. → ledger L3847, #63
 - 2026-09-28 — Only the first class grants saves, starting equipment and gold; a multiclass gets the pack's `multiclass` subset, and removing the first class hands its saves on. → ledger L3886, #66
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
+- 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6

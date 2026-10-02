@@ -6,11 +6,13 @@ ammunition knows its kind and any magic bonus. Ammunition arrives in bundles in 
 is its count.
 
 **Code:** `ammoKindOf()`, `itemAmmo()`, `weaponAmmoKind()`, `ammoStacks()`, `loadedStack()`,
-`unpackAmmo()`, `rebaseAmmo()`, `migrateAmmo()`, `ammoSpentEntry()`, `fireAmmo()`, `undoFire()`,
-`ammoRecoverable()`, `recoverAmmo()`, `attackAmmo()`, `forgetAmmo()`, `ammoLineHTML()`,
+`unpackAmmo()`, `ammoTable()`, `rebaseAmmo()`, `migrateAmmo()`, `ammoSpentEntry()`, `fireAmmo()`,
+`undoFire()`, `ammoRecoverable()`, `recoverAmmo()`, `attackAmmo()`, `forgetAmmo()`,
+`forgetGrantAmmo()`, `ammoAskDue()`, `markAmmoAsked()`, `ammoLineHTML()`, `ammoChoiceHTML()`,
 `fireWeapon()`, `undoFireTap()`, `openAmmoPicker()`, `loadAmmo()`, `recoverWeaponAmmo()`,
 `offerAmmoRecovery()`, `ammoKindChoices()`, `ammoKindLabel()`, `ammoKindOptionsHTML()` in
 `62-ammo.js` · `openItemForm()` in `80-modal-forms.js` · `migrate()` in `71-char-io.js` ·
+`revertEquipmentGrants()` in `50-classrace.js` · `newCharacter()` in `75-home-theme.js` ·
 `updProject()` in `72-char-update.js` · `endCombatAsk()` in `87-combat.js` · **Data:** `weapon.ammo`,
 item `ammo`, bundle `pack` ([rules-schema](../../../../docs/rules-schema.md) §6.8) · **Tests:**
 `sheet.js`, `char-update.js`, `rules-data.js` · **See also:** [Inventory](inventory.md),
@@ -34,9 +36,13 @@ the pool's own entry for the piece when it has one, else a piece made from the b
 weight divided.
 
 **Sheets from before ammunition.** `migrate()` runs `migrateAmmo()` once per character, guarded by
-`ammoInit`, which is never defaulted. It works from each item's own data through built-in tables
-(`AMMO_PIECES`, `AMMO_SINGLE_NAMES`, `AMMO_BUNDLES`, `AMMO_LAUNCHERS`), because no rules pool can be
-relied on at load:
+`ammoInit`, which is never defaulted in `blankChar()` — `newCharacter()` sets it to 1 directly on
+the character it creates, since a fresh sheet has nothing for the pass to migrate. It works from
+each item's own data through built-in tables (`AMMO_PIECES`, `AMMO_SINGLE_NAMES`, `AMMO_BUNDLES`,
+`AMMO_LAUNCHERS`), because no rules pool can be relied on at load. Every lookup into one of those
+tables is by own property (`ammoTable()`), never plain indexing: an item named "constructor" or
+"__proto__" otherwise finds an inherited property — an object or function, never `undefined` — and
+the pass throws reading `.name` off it, which used to stop the whole character loading.
 
 - known bundles unpack, the 2014 names into their 2024 piece. Each piece costs and weighs the
   bundle's own figure divided by the count, so a price the player paid survives, and a finder
@@ -54,16 +60,33 @@ stacks the player kept apart stay apart.
 
 **The attack row.** `ammoLineHTML()` draws the line under the damage line and outside the
 collapse: the loaded stack (a picker button when there is more than one), Fire (disabled when
-nothing is loaded), and Recover N when N > 0.
+nothing is loaded), and Recover N when N > 0. The picker button opens `openAmmoPicker()`, whose
+rows (`ammoChoiceHTML()`) read the stack's name, its `×qty`, and its bonus as `· +N`/`· -N` when it
+carries one, so a plain and a magic stack of the same piece read apart.
 
 **Firing and Undo.** `fireAmmo()` takes one piece, removes the stack at its last, and counts
-the shot in `ammoSpent[stack id]` as `{n, kind, snap}`. `undoFire()` puts back one piece, or the
-whole stack at its old place, and the count. An Undo for another character, or for a stack the
-player deleted since, does nothing.
+the shot in `ammoSpent[stack id]` as `{n, kind, snap, asked}` — rebuilt every shot, so it carries
+the previous entry's `asked` forward by hand rather than losing it. `undoFire()` puts back one
+piece, or the whole stack at its old place, and the whole entry, `asked` included. An Undo for
+another character, or for a stack the player deleted since, does nothing.
 
 **Recovery.** `ammoRecoverable()` gives half of each stack's count, rounded down per stack, and
-summed per kind. `recoverAmmo()` adds it back, rebuilding a used-up stack from its `snap` under
-the old id, and clears those counts. `offerAmmoRecovery()` asks once after End combat.
+summed per kind. `recoverAmmo()` adds it back: into an equivalent stack already on the sheet (not a
+bundle, the same lower-cased trimmed name, bonus and grant as the `snap`) when one exists —
+repointing any weapon whose `ammoStack` named the old id — else it rebuilds the stack from `snap`
+under the old id, as before; either way it clears those counts. `offerAmmoRecovery()` asks after
+End combat only when `ammoAskDue()` is true: some kinded entry has fired more since it was last
+asked about (`n > asked`). Yes recovers and clears as above; No instead catches every entry's
+`asked` up to its `n` (`markAmmoAsked()`), so a fight with no new shots asks nothing next time.
+Either way Recover N on the row is unaffected — it always shows and recovers the full count,
+`asked` or not.
+
+**Forgetting a stack's count.** Deleting a stack takes its `ammoSpent` entry with it
+(`forgetAmmo()`): there is nothing left to recover into. Removing the class or background that
+granted a stack does the same, by the entry's own `snap.grant` rather than by id
+(`forgetGrantAmmo()`), so a granted stack already fired down to nothing — and so already gone from
+the inventory before the source itself is removed — still loses its count. See
+[Grants & provenance](../architecture/grants-and-provenance.md).
 
 **The +N.** `attackAmmo()` gives the loaded stack's bonus to `attackNumbers()`, for attack and
 damage alike.
@@ -123,8 +146,19 @@ Settled with Mike on 2026-10-01 and 2026-10-02; the full discussion is in
 - Firearm reloading and energy cells (XDMG).
 - Magic variants outside the selection rule (BMT, AU, the 2014 DMG), and generic +N weapons.
 - Containers (Quiver capacity).
+- **2014-named single pieces keep their name on a sheet migrated before this branch.** "Crossbow
+  Bolt" and "Blowgun Needle" learn the 2024 kind and fire (`AMMO_SINGLE_NAMES`), but `migrateAmmo()`
+  never renames them, so the rules-update tool lists them as not in any loaded pack. Existing
+  copies of the 35 dropped 2014 gear items ("Spell Scroll (1st Level)", "Rations (1 day)"…) show
+  the same way.
+- **Picker rows can look identical** when two grants each give "Arrow ×20": stacks of different
+  grants stay apart by design (see Decisions, "Merging an unpacked bundle"), and nothing in
+  `ammoChoiceHTML()` tells them apart. An origin hint on the row would.
+- **Xanathar's five Adamantine Ammunition pieces carry rarity "Unknown"** (5e-tools writes
+  "unknown"), which sorts first in the item finder's Rarity filter.
 
 ## History
 
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-02 — The item editor sets what a weapon fires and marks ammunition, with a bonus; Insert from pack unpacks a bundle. → ledger L4978, #8
+- 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6

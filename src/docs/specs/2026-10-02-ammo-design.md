@@ -1,6 +1,6 @@
 # Ammunition — design
 
-**Status:** approved design, not yet built · 2026-10-02
+**Status:** implemented on branch `issue/6-ammo` · 2026-10-02 — see As built at the end
 **Issues:** #6 (ammo items), #7 (pull item information to map ammo), #8 (update template for ammo).
 All three land on one branch, `issue/6-ammo`. They share the item and weapon fields and cannot be
 tested apart: the data gives the sheet something to read, and the sheet is what the data is for.
@@ -272,8 +272,9 @@ Built as designed, with these differences:
    pack. A finder copy's description gets the piece's meta line.
 7. **Undo reverses one shot:** one piece back onto its stack, or the whole stack at its old place.
    A stack the player deleted since stays deleted.
-8. **Spent counts are forgotten** when a stack is deleted and when the class that granted it is
-   removed, so Recover cannot bring either back.
+8. **Spent counts are forgotten** when a stack is deleted and when the class or background that
+   granted it is removed — including a granted stack already fired to nothing — so Recover cannot
+   bring either back.
 9. **A launcher's kind is its piece's kind.** `_ammo_type_kind()` resolves a launcher's `ammoType`
    through the item index, so a 2014 reference such as "crossbow bolt" reads as `bolt`. The 2024 pack's
    output is unchanged by it.
@@ -284,3 +285,9 @@ Built as designed, with these differences:
     offered, loaded or fired.
 12. **An Undo applies once.** A double-click on the toast's Undo puts back one piece, not two.
 13. **A second release note** covers the item editor's ammunition controls, beside spec §13's.
+14. **End combat asks only about new shots.** Each spent count remembers how many shots End combat
+    last asked about; after a No, a later fight with no new shots asks nothing, while Recover N
+    keeps the full count.
+15. **Recovery joins an equivalent stack** (same piece, bonus and grant) when the original stack is
+    gone, and a weapon loaded with the old stack is loaded with that one.
+16. **A new character never runs the one-time pass** (`newCharacter()` sets `ammoInit`).

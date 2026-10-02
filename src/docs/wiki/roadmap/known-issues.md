@@ -68,6 +68,17 @@ Known behaviour that is accepted for now.
 - **At phone width** an attack row's name runs into its type label behind the to-hit pill, and a
   feature row's name crowds its source tag **(unverified)**: not re-checked in a browser since it was
   reported. → ledger L3525
+- **2014-named single ammunition pieces keep their name on a sheet migrated before ammunition
+  shipped.** "Crossbow Bolt" and "Blowgun Needle" learn the 2024 kind and fire, but `migrateAmmo()`
+  never renames them, so the rules-update tool lists them as not in any loaded pack. Existing
+  copies of the 35 dropped 2014 gear items ("Spell Scroll (1st Level)", "Rations (1 day)"…) show
+  the same way. → ledger L4989, and [Ammunition](../features/ammunition.md)
+- **Ammunition picker rows can look identical** when two grants each give "Arrow ×20": stacks of
+  different grants stay apart by design, and nothing on the row tells them apart. An origin hint
+  would. → ledger L4989, and [Ammunition](../features/ammunition.md)
+- **Xanathar's five Adamantine Ammunition pieces carry rarity "Unknown"** (5e-tools writes
+  "unknown"), which sorts first in the item finder's Rarity filter. → ledger L4989, and
+  [Ammunition](../features/ammunition.md)
 
 ## Deferred
 
@@ -398,3 +409,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-09-29 — Narrowed again: `deleteCharacter()` and `setAutoload()` now report a refused index write; only most `saveSettings()` callers still don't. → ledger L4856, #81
 - 2026-10-02 — Deferred: thrown weapons as their own ammunition, firearm reloading and energy cells, magic ammunition variants outside the selection rule, and quiver capacity. → ledger L4952, #6
+- 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. Recorded: 2014-named ammunition pieces and dropped gear reading as unmatched on old sheets, same-named grants looking identical in the picker, and Adamantine Ammunition's "Unknown" rarity. → ledger L4989, #6

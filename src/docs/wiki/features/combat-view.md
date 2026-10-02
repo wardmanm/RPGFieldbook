@@ -53,8 +53,10 @@ else the previous one, else ✕.
 `advanceRound(∓1)`, shared with the Active Spells card: every active spell moves 6 s, and in combat
 the round cannot drop below 1. End asks first (`endCombatAsk()`), then `combatEnd()` zeroes the round
 and returns the summary. Once the fight is over, `offerAmmoRecovery()` asks once more — only if
-something is recoverable — to recover half of what was fired ([Ammunition](ammunition.md)); what
-came back is appended to the toast. The header shows time at the *start* of the round
+something is recoverable **and** a shot has been fired since it last asked — to recover half of
+what was fired ([Ammunition](ammunition.md)); a "No" remembers having asked, so a later fight with
+no new shots asks nothing, while Recover N on the row still shows and recovers the full count; what
+came back from a "Yes" is appended to the toast. The header shows time at the *start* of the round
 (`combatElapsedSec()`, round 7 → 36 sec); the summary counts the round being ended (round 7 → 7
 rounds, 42 sec). Every round-mover repaints through `renderCombatChrome()`. The round is announced
 from `#cvLive`, outside the header that is repainted; a repaint keeps focus on the same button by id,
@@ -157,3 +159,4 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-09-29 — Hiding Trackers while it is the view's only card brings back the "Add sections…" hint. → ledger L4856, #41
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
+- 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6

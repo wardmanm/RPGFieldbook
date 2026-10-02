@@ -45,8 +45,9 @@ Bullets below this line — leave the heading in place.
   row shows what it's loaded with and a Fire button that spends one (with an Undo); ending combat
   offers to recover half of what you fired, and a Recover button does the same any time. Ammo
   bundles like "Arrows (20)" unpack into single arrows when they reach your sheet, so the count is
-  always the number you have. Magic ammunition (+1, +2, +3, Slaying, Walloping, Adamantine) is in
-  the item finder, and a loaded +1 arrow adds +1 to the attack.
+  always the number you have. Magic ammunition (+1, +2, +3 and Slaying, plus Walloping and
+  Adamantine with Xanathar's Guide loaded) is in the item finder, and a loaded +1 arrow adds +1 to
+  the attack.
 - Items you make yourself can use ammunition too: in the item editor, choose what ammunition a
   weapon fires, or tick Ammunition to make the item a kind of ammunition, with a magic bonus of up
   to +3. Inserting a bundle like "Arrows (20)" from the rules pack fills in 20 single arrows.
