@@ -33,6 +33,7 @@
     "src/js/56-class.js",
     "src/js/58-choices.js",
     "src/js/60-attacks.js",
+    "src/js/62-ammo.js",
     "src/js/65-resources.js",
     "src/js/66-coins-hp.js",
     "src/js/70-persistence.js",

@@ -21,6 +21,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'noteGroupOpen','notesHTML','noteBtnHTML','noteEntryHTML','esc',
   'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings', 'skillKey',
   'openSettings', 'highlight', 'rulesStatusText', 'rulesBadge', 'dispName', 'fxTargets',
+  'AMMO_PIECES','AMMO_SINGLE_NAMES','AMMO_BUNDLES','AMMO_LAUNCHERS',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -343,6 +344,28 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
     ck(f+' weights are numbers, not strings', bad.length===0, bad.map(i=>i.name+':'+JSON.stringify(i.weight)));
     ck(f+' actually carries weights', items.some(i=>typeof i.weight==='number'));
   });
+}
+
+// ---------- the app's ammo tables agree with the 2024 data (#6)
+// The one-time pass on old sheets runs without a rules pool, from the AMMO_*
+// tables in 62-ammo.js; this keeps them in step with what the converter writes.
+{
+  const items = JSON.parse(fs.readFileSync(path.join('data','5e2024','items.json'),'utf8')).items;
+  const bad = [];
+  items.forEach(it => {
+    const k = it.name.toLowerCase();
+    if (it.weapon && it.weapon.ammo && X.AMMO_LAUNCHERS[k] !== it.weapon.ammo) bad.push('launcher ' + it.name);
+    if (it.pack) {
+      const b = X.AMMO_BUNDLES[k];
+      if (!b || b[0] !== it.ammo.kind || b[1] !== it.pack.qty || X.AMMO_PIECES[b[0]].name !== it.pack.item) bad.push('bundle ' + it.name);
+    } else if (it.ammo) {
+      const p = X.AMMO_PIECES[it.ammo.kind];
+      if (X.AMMO_SINGLE_NAMES[k] !== it.ammo.kind) bad.push('single ' + it.name);
+      if (!p || p.name !== it.name || p.weight !== it.weight || p.cost !== it.cost) bad.push('piece ' + it.name);
+    }
+  });
+  ck("every ammo launcher, bundle and piece in the 2024 data is in the app's tables, alike", bad.length === 0, bad);
+  ck('...and the check found them', items.filter(i => i.pack).length === 5 && items.filter(i => i.weapon && i.weapon.ammo).length === 9);
 }
 
 // ---------- the supplement packs (Xanathar's, Tasha's)
@@ -1590,7 +1613,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // fav must stay OUT of the rules-owned list, or an update would clobber it
   ck('fav is not a rules-owned field on either kind',
      /feature:\["description","effects","uses","cost"\]/.test(js) &&
-     /item:\["description","effects","cost","weight","weapon"\]/.test(js));
+     /item:\["description","effects","cost","weight","weapon","ammo"\]/.test(js));
   // The attack form has the same shape and lost the same way: it rebuilt the
   // record from its boxes and dropped itemId, so an edited weapon attack came
   // unlinked from its inventory item and the next pack update added a duplicate

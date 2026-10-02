@@ -54,6 +54,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'trkApply', 'trkStep', 'trkSetValue', 'trkToggleItem', 'trkToggleTask', 'trkClose', 'trkReopen',
   'trkSnapshot', 'trkRestore', 'mergeChecklist', 'trkFromForm', 'trkSplit', 'trkGroupOpen',
   'trackerRowHTML', 'trackerClosedHTML', 'trackersHTML', 'trackerFormHTML', 'trkSummary', 'trkTickHTML', 'trkEditHTML',
+  'ammoKindOf', 'itemAmmo', 'weaponAmmoKind', 'ammoStacks', 'loadedStack', 'ammoPlural', 'ammoOne',
+  'unpackAmmo', 'rebaseAmmo', 'migrateAmmo', 'fpMap', 'fpHash',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2882,6 +2884,105 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ioun.equipped = false;
   ck('#79 taken off, the proficiency bonus is +2 again, unmarked', painted(['pbDisp']).pbDisp === '+2' && !painted.fx.pbDisp);
   X.character = X.blankChar();
+}
+
+/* ---- ammunition: kinds, stacks, unpacking (#6) ----
+   Design: src/docs/specs/2026-10-02-ammo-design.md §3, §5. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  ck('a kind is trimmed, its spaces collapsed, lower-cased', X.ammoKindOf('  Sling   Bullet ') === 'sling bullet' && X.ammoKindOf(7) === '');
+  ck('an item is ammunition only with a kind', same(X.itemAmmo({ammo: {kind: 'Arrow'}}), {kind: 'arrow', bonus: 0}) &&
+     X.itemAmmo({ammo: 'arrow'}) === null && X.itemAmmo({ammo: {kind: ' '}}) === null && X.itemAmmo({}) === null);
+  ck('a bonus is a whole number, kept within 9', X.itemAmmo({ammo: {kind: 'arrow', bonus: '2'}}).bonus === 2 &&
+     X.itemAmmo({ammo: {kind: 'arrow', bonus: 1.7}}).bonus === 1 && X.itemAmmo({ammo: {kind: 'arrow', bonus: 99}}).bonus === 9 &&
+     X.itemAmmo({ammo: {kind: 'arrow', bonus: 'x'}}).bonus === 0);
+  ck("a weapon's ammo kind", X.weaponAmmoKind({weapon: {ammo: 'Arrow'}}) === 'arrow' && X.weaponAmmoKind({weapon: {}}) === '' && X.weaponAmmoKind({}) === '');
+  const bow = {id: 'w1', name: 'Longbow', weapon: {kind: 'ranged', ammo: 'arrow'}};
+  const plain = {id: 's1', name: 'Arrow', qty: 12, ammo: {kind: 'arrow'}};
+  const magic = {id: 's2', name: '+1 Arrow', qty: 3, ammo: {kind: 'arrow', bonus: 1}};
+  const bolts = {id: 's3', name: 'Bolt', qty: 5, ammo: {kind: 'bolt'}};
+  const c = {inventory: [bow, bolts, plain, magic]};
+  ck('the stacks a weapon can load are its kind, in inventory order', same(X.ammoStacks(c, 'arrow').map(s => s.id), ['s1', 's2']));
+  ck('with no choice made it loads the first', X.loadedStack(c, bow) === plain);
+  ck('a choice is remembered', X.loadedStack(c, Object.assign({}, bow, {ammoStack: 's2'})) === magic);
+  ck('a choice that no longer exists falls back to the first', X.loadedStack(c, Object.assign({}, bow, {ammoStack: 'gone'})) === plain);
+  ck('a choice of the wrong kind is ignored', X.loadedStack(c, Object.assign({}, bow, {ammoStack: 's3'})) === plain);
+  ck('nothing of its kind loads nothing', X.loadedStack({inventory: [bow, bolts]}, bow) === null);
+  ck('a bundle is never loaded', X.ammoStacks({inventory: [{id: 'b', name: 'Arrows (20)', ammo: {kind: 'arrow'}, pack: {item: 'Arrow', qty: 20}}]}, 'arrow').length === 0);
+  ck('kinds read as words', X.ammoPlural('arrow') === 'arrows' && X.ammoPlural('sling bullet') === 'sling bullets' &&
+     X.ammoOne('arrow') === 'an arrow' && X.ammoOne('bolt') === 'a bolt');
+
+  const pool = [{name: 'Arrow', category: 'Ammunition', type: 'Ammunition', weight: 0.05, cost: '5 cp', ammo: {kind: 'arrow'}},
+                {name: 'Arrows (20)', category: 'Ammunition', type: 'Ammunition', weight: 1, cost: '1 gp', ammo: {kind: 'arrow'}, pack: {item: 'Arrow', qty: 20}}];
+  const u = X.unpackAmmo(pool[1], pool);
+  ck("a bundle unpacks into the pool's own single piece, twenty to the bundle", u.def === pool[0] && u.per === 20);
+  const u2 = X.unpackAmmo({name: 'Pellets (50)', category: 'Ammunition', weight: 2, cost: '1 gp', ammo: {kind: 'pellet'}, pack: {item: 'Pellet', qty: 50}}, pool);
+  ck('a bundle whose piece the pool lacks is made from the bundle, cost and weight divided',
+     u2.per === 50 && u2.def.name === 'Pellet' && u2.def.cost === '0.02 gp' && u2.def.weight === 0.04 && same(u2.def.ammo, {kind: 'pellet'}), u2.def);
+  ck('anything else comes back as it is, one to one', X.unpackAmmo(pool[0], pool).def === pool[0] && X.unpackAmmo(pool[0], pool).per === 1);
+  ck('a junk pack field is no bundle', X.unpackAmmo({name: 'X', pack: {item: 'Y', qty: 0}}, pool).per === 1 &&
+     X.unpackAmmo({name: 'X', pack: 'Y'}, pool).per === 1);
+}
+
+/* ---- the one-time pass on sheets saved before ammunition (#6) ---- */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  /* a copy stamped before this branch: its baselines know nothing of `ammo` */
+  const stamp = (it, shape) => {
+    const f = X.fpMap(it, 'item'); delete f.ammo;
+    it.src = {cat: 'items', pack: '5e.json', kind: 'item', shape: shape || 'plain', name: it.name,
+              fp: Object.assign({}, f), cfp: Object.assign({}, f)};
+    return it;
+  };
+  const edited = stamp({id: 'w2', name: 'Shortbow', qty: 1, weapon: {kind: 'ranged', dice: '1d6', damageType: 'piercing', ability: 'dex'}});
+  const editedFp = edited.src.fp.weapon;
+  edited.weapon = Object.assign({}, edited.weapon, {notes: 'My grandfather\'s bow'});   /* the player's edit, after the copy */
+  const old = {name: 'Ranger', abilities: {}, inventory: [
+    stamp({id: 'b1', name: 'Arrows (20)', qty: 2, cost: 1, weight: 1, category: 'Ammunition', type: 'Ammunition', description: 'Arrows.', effects: [], grant: 'class:Ranger'}),
+    {id: 'l1', name: 'Arrow', qty: 5, cost: 0.05, weight: 0.05, origin: {kind: 'purchased'}},
+    stamp({id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', dice: '1d8', damageType: 'piercing', ability: 'dex', notes: 'Range 150/600'}}),
+    edited,
+    {id: 'c1', name: 'Crossbow Bolts (20)', qty: 1, weight: 1.5},
+    {id: 'r1', name: 'Rope', qty: 1}]};
+  const m = X.migrate(JSON.parse(JSON.stringify(old)));
+  const by = id => m.inventory.find(i => i.id === id);
+  ck('the pass ran once and says so', m.ammoInit === 1);
+  ck('a granted bundle unpacks: Arrows (20) ×2 is Arrow ×40', by('b1') && by('b1').name === 'Arrow' && by('b1').qty === 40, by('b1'));
+  ck("...each Arrow a twentieth of the bundle's price and weight, of the arrow kind",
+     by('b1').cost === 0.05 && by('b1').weight === 0.05 && same(by('b1').ammo, {kind: 'arrow'}));
+  ck('...still granted, so removing the class takes it back', by('b1').grant === 'class:Ranger');
+  ck('a bought loose stack learns its kind and stays its own stack', by('l1') && by('l1').qty === 5 && same(by('l1').ammo, {kind: 'arrow'}));
+  ck('a 2014 bundle unpacks into the 2024 piece', by('c1') && by('c1').name === 'Bolt' && by('c1').qty === 20 &&
+     by('c1').weight === 0.075 && !('cost' in by('c1')) && same(by('c1').ammo, {kind: 'bolt'}), by('c1'));
+  ck('a 2024 launcher learns what it fires, nothing else touched', by('w1').weapon.ammo === 'arrow' && by('w1').weapon.dice === '1d8');
+  ck('anything else is left exactly as it was', same(by('r1'), {id: 'r1', name: 'Rope', qty: 1}));
+  ck("the update tool's baseline follows the pass, so the change reads as the pack's",
+     by('w1').src.cfp.weapon === X.fpHash(by('w1').weapon) && by('w1').src.fp.weapon === X.fpHash(by('w1').weapon) &&
+     by('b1').src.name === 'Arrow' && by('b1').src.fp.weight === X.fpHash(0.05) && by('b1').src.fp.cost === X.fpHash(0.05) &&
+     by('b1').src.cfp.ammo === X.fpHash({kind: 'arrow'}) && by('b1').src.fp.ammo === X.fpHash({kind: 'arrow'}));
+  ck("a player's own edit to a launcher still reads as theirs, and the pack side is left alone",
+     by('w2').weapon.ammo === 'arrow' && by('w2').src.cfp.weapon !== X.fpHash(by('w2').weapon) && by('w2').src.fp.weapon === editedFp);
+  ck('a second load changes nothing', JSON.stringify(X.migrate(JSON.parse(JSON.stringify(m)))) === JSON.stringify(m));
+
+  const paid = X.migrate({abilities: {}, inventory: [{id: 'p', name: 'Bolts (20)', qty: 1, cost: 2, weight: 1.5}]}).inventory[0];
+  ck('a bundle bought for 2 gp makes bolts at 0.1 gp each', paid.name === 'Bolt' && paid.qty === 20 && paid.cost === 0.1, paid);
+  const sling = X.migrate({abilities: {}, inventory: [stamp({id: 's', name: 'Sling Bullets (20)', qty: 1, cost: 0.04, weight: 1.5, type: 'Ammunition'})]}).inventory[0];
+  ck("sling bullets keep their fraction of a copper, and the baseline knows the pack's bullet has no price",
+     sling.cost === 0.002 && sling.src.fp.cost === X.fpHash(undefined) && sling.src.cfp.cost === X.fpHash(0.002), sling);
+  const found = X.migrate({abilities: {}, inventory: [stamp({id: 'f', name: 'Arrows (20)', qty: 1, cost: 1, weight: 1, type: 'Ammunition',
+                                                              description: 'Ammunition · 1 gp · 1 lb\nArrows.'}, 'browse')]}).inventory[0];
+  ck("a finder copy's meta line now describes one arrow", found.description === 'Ammunition · 5 cp · 0.05 lb\nArrows.' &&
+     found.src.fp.description === X.fpHash(found.description), found.description);
+
+  const two = X.migrate({abilities: {}, inventory: [{id: 'a', name: 'Arrows (20)', qty: 1}, {id: 'b', name: 'Arrows (20)', qty: 1}]});
+  ck('two unpacked bundles of one grant become one stack', two.inventory.length === 1 && two.inventory[0].qty === 40, two.inventory);
+  const kept = X.migrate({abilities: {}, inventory: [{id: 'a', name: 'Arrow', qty: 3, ammo: {kind: 'arrow'}}, {id: 'b', name: 'Arrow', qty: 4, ammo: {kind: 'arrow'}}]});
+  ck('stacks the player kept apart stay apart', kept.inventory.length === 2);
+  ck('a fresh character has no spent ammunition, and the pass has not run on it',
+     same(X.blankChar().ammoSpent, {}) && !('ammoInit' in X.blankChar()));
+  const spent = {s1: {n: 3, kind: 'arrow', snap: {id: 's1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}}}};
+  ck('ammoSpent survives a save and a load', same(X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {ammoSpent: spent})))).ammoSpent, spent));
+  ck('ammoSpent from a file that is not a map resets', same(X.migrate({abilities: {}, ammoSpent: [1]}).ammoSpent, {}));
 }
 
 /* ---- imported files and packs render inert ----

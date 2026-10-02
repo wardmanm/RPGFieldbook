@@ -1,6 +1,6 @@
 # Build & source split
 
-Fieldbook is edited as 46 fragments under `src/` and shipped as one self-contained file,
+Fieldbook is edited as 47 fragments under `src/` and shipped as one self-contained file,
 `dist/fieldbook.html`. `scripts/build-html.js` splices the fragments into a page shell in the order
 `src/manifest.json` gives, byte for byte, with no bundler and no module system: the result has to
 open from `file://` on any device with no server. [ADR-001](../../ADR-001-source-split.md) is the
@@ -25,7 +25,7 @@ stays valid on its own:
 |---|---|---|
 | `/*@@CSS@@*/` | inside the single `<style>` | `manifest.css`, 9 fragments |
 | `<!--@@HTML@@-->` | inside `<div class="page">` | `manifest.html`, 7 fragments, one tab panel each |
-| `//@@JS@@` | inside the single `<script>` | `manifest.js`, 30 fragments |
+| `//@@JS@@` | inside the single `<script>` | `manifest.js`, 31 fragments |
 
 **The manifest is the order.** Not the filename prefixes, not a glob. `validateOrder()` runs over
 each of `src/css`, `src/js` and `src/html` and dies on drift in both directions — listed but missing,

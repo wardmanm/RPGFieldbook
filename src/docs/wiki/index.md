@@ -34,6 +34,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 - [Vitals & rest](features/vitals-and-rest.md) — HP, temp HP, max-HP lock, Hit Dice, death saves, Rest & Recovery, size
 - [Conditions & concentration](features/conditions-and-concentration.md) — statuses, Concentrating, and its mirror on the Spells tab
 - [Attacks & damage](features/attacks-and-damage.md) — attacks and weapons, spell→attack sync, damage types and detection
+- [Ammunition](features/ammunition.md) — what a launcher fires, stacks and bundles, Fire, Undo and recovery
 - [Class resources](features/class-resources.md) — resource trackers, the class-resources overlay, Superiority Dice
 - [Features & traits](features/features-and-traits.md) — the features list, feat uses and cost, favourites, search
 - [Spells](features/spells.md) — list and browser, prepared, slots, casting and upcast, Active Spells and rounds
