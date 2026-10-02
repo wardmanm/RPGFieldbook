@@ -1158,6 +1158,96 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
         out.append(rec)
     return _pack(book, 'items', out, stem='items')
 
+# ---------------------------------------------------------------- magic ammunition (#7)
+# 5e-tools keeps +1 Ammunition, Ammunition of Slaying and their kin as GENERIC
+# VARIANTS in magicvariants.json — a rule ("a +1 bonus") plus what it applies to
+# ("requires" an ammunition type) — which no converter path read. Each variant a
+# book ships is expanded onto every single 2024 piece of ammunition in the run's
+# item index ("+1 Arrow", "Bolt of Slaying"), never onto a bundle: a piece is
+# what a launcher fires and what a stack counts. Only ammunition variants; the
+# generic +N weapons and armour stay out of scope.
+_VARIANT_VAR = re.compile(r'\{=([A-Za-z0-9]+)(?:/([a-z]+))?\}')
+
+def _fill_variant(node, inh, name):
+    """A variant's text with each "{=key}" written out from its `inherits`
+    ("{=bonusWeapon}" -> "+1"; "/l" lower-cases). One it cannot fill stays as it
+    is and is reported with the run's other template misses."""
+    def fill(s):
+        def sub(m):
+            v = inh.get(m.group(1))
+            if v is None or isinstance(v, (dict, list, bool)):
+                _TEMPLATE_MISSES[(m.group(0), 'the variant has no value for it')].add(name)
+                return m.group(0)
+            out = str(v)
+            return out.lower() if m.group(2) == 'l' else out
+        return _VARIANT_VAR.sub(sub, s)
+    if isinstance(node, str):
+        return fill(node)
+    if isinstance(node, list):
+        return [_fill_variant(x, inh, name) for x in node]
+    if isinstance(node, dict):
+        return {k: (v if k == 'type' else _fill_variant(v, inh, name)) for k, v in node.items()}
+    return node
+
+def _ammo_pieces():
+    """The single 2024 pieces a variant applies to, in file order: XPHB
+    ammunition that is not a bundle."""
+    idx = _SB_INDEX[0] if _SB_INDEX else {}
+    return [e for e in idx.values()
+            if e.get('source') == 'XPHB' and _abbr(e.get('type', '')) in ('A', 'AF') and not e.get('packContents')]
+
+def _is_ammo_variant(v):
+    for r in v.get('requires') or []:
+        if isinstance(r, dict) and (_abbr(r.get('type', '')) in ('A', 'AF') or r.get('arrow') or r.get('bolt')):
+            return True
+    return False
+
+def _variant_selected(v, book):
+    """Selected as an item would be: the 2024 pack takes the 2024 book plus the
+    free-subset flags (never the flags alone filtering the book); a supplement
+    takes its own source."""
+    inh = v.get('inherits') or {}
+    b = _bk(book)
+    if b.is_default:
+        return inh.get('source') == 'XPHB' or inh.get('basicRules2024') is True or inh.get('srd52') is True
+    return inh.get('source') in set(b.codes)
+
+def convert_ammo_variants(path, tables=None, book=None):
+    d = json.load(open(path, encoding='utf-8'))
+    pieces = _ammo_pieces()
+    out = []
+    for v in d.get('magicvariant') or []:
+        if not (isinstance(v, dict) and _is_ammo_variant(v) and _variant_selected(v, book)):
+            continue
+        inh = v.get('inherits') or {}
+        vname = str(v.get('name') or '')
+        # The text is the same for every piece, so it is flattened ONCE, under the
+        # variant's own name: a table inside it is lifted once and named for it.
+        with table_ctx(tables, vname, 'item'):
+            prose = flatten(_fill_variant(inh.get('entries') or v.get('entries') or [], inh, vname))
+        _template_leftovers(prose, vname)
+        bonus = _ival(inh.get('bonusWeapon') or 0)
+        ra = inh.get('reqAttune')
+        excl = v.get('excludes') or {}
+        for p in pieces:
+            if any(p.get(k) == val for k, val in excl.items()):
+                continue
+            kind = _ammo_kind(p)
+            if not kind:
+                continue
+            rec = {'name': (inh.get('namePrefix') or '') + p['name'] + (inh.get('nameSuffix') or ''),
+                   'system': _bk(book).system, 'category': 'Ammunition', 'type': 'Ammunition',
+                   'rarity': _RAR.get(inh.get('rarity', 'none'), (inh.get('rarity') or 'Mundane').title()),
+                   'weight': p.get('weight', None),
+                   'attune': bool(ra) and ra is not False,
+                   'attuneNote': (strip_tags(ra) if isinstance(ra, str) and ra != 'optional' else ''),
+                   'description': prose.strip(' \u00b7.'), 'effects': []}
+            rec = {k: x for k, x in rec.items() if x not in (None, '', False)}
+            rec.setdefault('effects', [])
+            rec['ammo'] = {'kind': kind, 'bonus': bonus} if bonus else {'kind': kind}
+            out.append(rec)
+    return out
+
 # ================================================================ BACKGROUNDS
 def _titlecase_item(name):
     parts = name.replace('_', ' ').split(' ')
@@ -2403,7 +2493,11 @@ def _run_supplement(a):
 
     magic = _find_in(d, 'items.json')
     if not magic: warn('no items.json found')
-    else: emit(convert_items(magic[0], tables=tbls, book=bk), 'items-magic', 'items')
+    else:
+        mpack = convert_items(magic[0], tables=tbls, book=bk)
+        mv = _find_in(d, 'magicvariants.json')
+        if mv: mpack['items'] += convert_ammo_variants(mv[0], tables=tbls, book=bk)
+        emit(mpack, 'items-magic', 'items')
 
     feats = _find_in(d, 'feats.json', 'feat.json')
     if not feats: warn('no feats.json found')
@@ -2552,7 +2646,13 @@ def main():
         # items.json is the MAGIC item file — a separate source from items-base.json,
         # and the old glob order meant it was never reached.
         magic = need('magic items', 'items.json')
-        if magic: _write(convert_items(magic[0], tables=tbls), os.path.join(outdir, 'items-magic.json'))
+        if magic:
+            mpack = convert_items(magic[0], tables=tbls)
+            # magic ammunition is kept as generic variants, in a file of its own (#7)
+            mv = find('magicvariants.json')
+            if mv: mpack['items'] += convert_ammo_variants(mv[0], tables=tbls)
+            else: warn('magicvariants.json not found — no magic ammunition')
+            _write(mpack, os.path.join(outdir, 'items-magic.json'))
         bgs = need('backgrounds', 'background*.json', 'backgrounds.json')
         if bgs: _write(convert_backgrounds(bgs[0], tables=tbls), os.path.join(outdir, 'backgrounds.json'))
         feats = need('feats', 'feats*.json', 'feat.json')

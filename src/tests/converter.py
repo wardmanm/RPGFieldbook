@@ -1486,6 +1486,57 @@ ck('#7 reprint references read in both shapes',
 ck('#7 with no shipped set the 2014 backfill is as it was (every other category)',
    [e['name'] for e in C.pick_2024_preferred([CBOLT14, BOLT])] == ['Bolt', 'Crossbow Bolt'])
 
+# ---- 33. magic ammunition from 5e-tools' magic variants (#7)
+# +1 Ammunition and its kin are generic variants in magicvariants.json, which
+# nothing read. Each one the book ships is expanded onto every single 2024 piece
+# (never a bundle), selected exactly as other items are. Real-shaped entries.
+VARIANTS = {'magicvariant': [
+    {"name": "+1 Ammunition", "type": "GV|XDMG", "requires": [{"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"namePrefix": "+1 ", "source": "XDMG", "srd52": True, "basicRules2024": True, "rarity": "uncommon", "bonusWeapon": "+1",
+                  "entries": ["You have a {=bonusWeapon} bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical."]}},
+    {"name": "+1 Ammunition", "type": "GV|DMG", "requires": [{"type": "A"}, {"type": "AF|DMG"}, {"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"namePrefix": "+1 ", "source": "DMG", "rarity": "uncommon", "bonusWeapon": "+1",
+                  "entries": ["You have a {=bonusWeapon} bonus to attack and damage rolls made with this piece of magic ammunition."]}},
+    {"name": "Ammunition of Slaying", "type": "GV|XDMG", "requires": [{"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"nameSuffix": " of Slaying", "source": "XDMG", "srd52": True, "basicRules2024": True, "rarity": "very rare",
+                  "entries": ["This magic ammunition is meant to slay creatures of a particular type, which the DM chooses or determines randomly by rolling on the table below.",
+                              {"type": "table", "colStyles": ["col-2 text-center", "col-10"], "colLabels": ["1d100", "Creature Type"],
+                               "rows": [["01-10", "Aberrations"], ["11-15", "Beasts"]]}]}},
+    {"name": "Walloping Ammunition", "edition": "classic", "type": "GV|DMG", "requires": [{"type": "A"}, {"type": "AF|DMG"}, {"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"namePrefix": "Walloping ", "source": "XGE", "reprintedAs": ["Walloping Ammunition|XDMG"], "rarity": "common",
+                  "entries": ["This ammunition packs a wallop. A creature hit by the ammunition must succeed on a {@dc 10} Strength saving throw or be knocked {@condition prone}."]}},
+    {"name": "Walloping Ammunition", "type": "GV|XDMG", "requires": [{"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"namePrefix": "Walloping ", "source": "XDMG", "rarity": "common", "entries": ["Walloping, the 2024 printing."]}},
+    {"name": "Adamantine Armor", "type": "GV|XDMG", "requires": [{"type": "MA|XPHB"}, {"type": "HA|XPHB"}],
+     "inherits": {"namePrefix": "Adamantine ", "source": "XDMG", "srd52": True, "basicRules2024": True, "rarity": "uncommon", "entries": ["Armor."]}},
+]}
+_varf = _tmpjson(VARIANTS)
+vsink = []
+with C.statblock_ctx(C.load_item_index(_ammobase, _ammomagic)):
+    v24 = _by_name({'items': C.convert_ammo_variants(_varf, tables=vsink)})
+    vxge = _by_name({'items': C.convert_ammo_variants(_varf, tables=[], book=XGE)})
+ck('#7 the 2024 pack gets +1 and Slaying ammunition, on each single piece and no bundle',
+   sorted(v24) == ['+1 Arrow', '+1 Bolt', '+1 Sling Bullet', 'Arrow of Slaying', 'Bolt of Slaying', 'Sling Bullet of Slaying'], sorted(v24))
+_p1 = v24.get('+1 Arrow', {})
+ck('#7 +1 Arrow is uncommon ammunition, an arrow with +1', _p1.get('ammo') == {'kind': 'arrow', 'bonus': 1}
+   and _p1.get('rarity') == 'Uncommon' and _p1.get('category') == 'Ammunition' and _p1.get('type') == 'Ammunition', _p1)
+ck("#7 ...weighing what an Arrow weighs, with no cost", _p1.get('weight') == 0.05 and 'cost' not in _p1, _p1)
+ck('#7 ...its "{=bonusWeapon}" written out',
+   _p1.get('description') == 'You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical',
+   _p1.get('description'))
+_sl = v24.get('Bolt of Slaying', {})
+ck('#7 Bolt of Slaying is a bolt with no bonus', _sl.get('ammo') == {'kind': 'bolt'} and _sl.get('rarity') == 'Very Rare', _sl)
+ck("#7 ...its creature table lifted ONCE, under the variant's own name",
+   [t['name'] for t in vsink] == ['Ammunition of Slaying Table'] and '[Table: Ammunition of Slaying Table]' in _sl.get('description', ''),
+   [[t['name'] for t in vsink], _sl.get('description')])
+ck("#7 Xanathar's pack gets its own Walloping ammunition and nothing else",
+   sorted(vxge) == ['Walloping Arrow', 'Walloping Bolt', 'Walloping Sling Bullet'], sorted(vxge))
+ck('#7 ...its tags flattened to words', 'Strength saving throw' in vxge.get('Walloping Arrow', {}).get('description', '')
+   and '{@' not in vxge.get('Walloping Arrow', {}).get('description', ''), vxge.get('Walloping Arrow'))
+ck('#7 a variant that is not ammunition is never expanded onto a piece', not any(n.startswith('Adamantine') for n in v24))
+ck('#7 a variant template the variant cannot fill stays as written',
+   C._fill_variant(['A {=bonusWeapon} b {=nope}'], {'bonusWeapon': '+2'}, 'Test') == ['A +2 b {=nope}'])
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)
