@@ -1423,6 +1423,47 @@ ck('#79 ...and is noted, field by field', sorted(f for n, f, v, why in (_BP or [
    list(_BP or []))
 if _BP is not None: _BP.clear()
 
+# ---- 31. ammunition: what a launcher fires, what a piece is, what a bundle holds (#7)
+# 5e-tools names a launcher's ammunition (ammoType, the single piece) and a
+# bundle's contents (packContents); the converter dropped both. Real XPHB/XGE
+# entries, trimmed of entries and page numbers.
+AMMO_PROPS = IB_PROPS + [{"name": "Ammunition", "abbreviation": "A", "source": "XPHB", "entries": [{"type": "entries", "name": "Ammunition", "entries": ["You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it."]}]}]
+LONGBOW = {"name": "Longbow", "source": "XPHB", "srd52": True, "basicRules2024": True, "edition": "one", "type": "R|XPHB", "rarity": "none", "weight": 2, "value": 5000, "weaponCategory": "martial", "property": ["A|XPHB", "H|XPHB", "2H|XPHB"], "mastery": ["Slow|XPHB"], "range": "150/600", "dmg1": "1d8", "dmgType": "P", "bow": True, "weapon": True, "ammoType": "arrow|xphb"}
+ARROW = {"name": "Arrow", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 0.05, "value": 5, "arrow": True}
+ARROWS20 = {"name": "Arrows (20)", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 1, "value": 100, "arrow": True, "packContents": [{"item": "arrow|xphb", "quantity": 20}]}
+BOLT = {"name": "Bolt", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 0.075, "value": 5, "bolt": True}
+BOLTS20 = {"name": "Bolts (20)", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 1.5, "value": 100, "bolt": True, "packContents": [{"item": "bolt|xphb", "quantity": 20}]}
+SLINGB = {"name": "Sling Bullet", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 0.075, "value": 0.2, "bulletSling": True}
+CBOLT14 = {"name": "Crossbow Bolt", "source": "PHB", "srd": True, "basicRules": True, "reprintedAs": ["Bolt|XPHB"], "edition": "classic", "type": "A", "rarity": "none", "weight": 0.075, "value": 5, "bolt": True}
+CBOLTS14 = {"name": "Crossbow Bolts (20)", "source": "PHB", "srd": True, "basicRules": True, "reprintedAs": ["Bolts (20)|XPHB"], "edition": "classic", "type": "A", "rarity": "none", "weight": 1.5, "value": 100, "bolt": True, "packContents": [{"item": "crossbow bolt|phb", "quantity": 20}]}
+NET14 = {"name": "Net", "source": "PHB", "srd": True, "basicRules": True, "reprintedAs": [{"uid": "Net|XPHB", "tag": "item"}], "edition": "classic", "type": "R", "rarity": "none", "weight": 3, "value": 100, "weaponCategory": "martial", "property": ["S", "T"], "range": "5/15", "net": True, "weapon": True}
+NET24 = {"name": "Net", "source": "XPHB", "srd52": True, "basicRules2024": True, "type": "G|XPHB", "rarity": "none", "weight": 3, "value": 100, "entries": ["When you take the Attack action, you can replace one of your attacks with throwing a Net."]}
+UNBREAKABLE = {"name": "Unbreakable Arrow", "source": "XGE", "type": "A", "tier": "minor", "rarity": "common", "entries": ["This arrow can't be broken, except when it is within an {@spell antimagic field}."]}
+_ammobase = _tmpjson({'itemProperty': AMMO_PROPS, 'itemMastery': IB_MASTERY,
+                      'baseitem': [LONGBOW, ARROW, ARROWS20, BOLT, BOLTS20, SLINGB, CBOLT14, CBOLTS14, NET14]})
+_ammomagic = _tmpjson({'item': [NET24, UNBREAKABLE]})
+with C.statblock_ctx(C.load_item_index(_ammobase, _ammomagic)):
+    ab = _by_name(C.convert_items(_ammobase))
+    ax = _by_name(C.convert_items(_ammomagic, book=XGE))
+ck('#7 a Longbow says it fires arrows', ab.get('Longbow', {}).get('weapon', {}).get('ammo') == 'arrow',
+   ab.get('Longbow', {}).get('weapon'))
+ck('#7 an Arrow is ammunition of the arrow kind', ab.get('Arrow', {}).get('ammo') == {'kind': 'arrow'}, ab.get('Arrow'))
+ck('#7 a single piece holds no bundle', 'pack' not in ab.get('Arrow', {}))
+ck('#7 Arrows (20) is twenty Arrows, of the arrow kind',
+   ab.get('Arrows (20)', {}).get('pack') == {'item': 'Arrow', 'qty': 20} and ab.get('Arrows (20)', {}).get('ammo') == {'kind': 'arrow'},
+   ab.get('Arrows (20)'))
+ck('#7 a Sling Bullet is a sling bullet, by its family flag', ab.get('Sling Bullet', {}).get('ammo') == {'kind': 'sling bullet'},
+   ab.get('Sling Bullet'))
+ck("#7 XGE's Unbreakable Arrow, which has no family flag, is an arrow by its name",
+   ax.get('Unbreakable Arrow', {}).get('ammo') == {'kind': 'arrow'}, ax.get('Unbreakable Arrow'))
+ck("#7 a launcher's ammoType is read as a kind", C._ammo_type_kind('firearm bullet|xphb') == 'firearm bullet'
+   and C._ammo_type_kind(None) == '')
+ck('#7 a piece nothing names is no ammunition', C._ammo_kind({'name': 'Rock'}) == '')
+_plus2 = dict(ARROW, name='Test Arrow', bonusWeapon='+2')
+with C.statblock_ctx(C.load_item_index(_tmpjson({'baseitem': [_plus2]}))):
+    p2 = C.convert_items(_tmpjson({'baseitem': [_plus2]}))['items'][0]
+ck('#7 ammunition with its own +N carries it as the bonus', p2.get('ammo') == {'kind': 'arrow', 'bonus': 2}, p2.get('ammo'))
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

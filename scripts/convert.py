@@ -982,6 +982,48 @@ def _coarse(tcode, it):
     if it.get('armor'): return 'Armor'
     return 'Gear'
 
+# ---------------------------------------------------------------- ammunition (#7)
+# 5e-tools says which ammunition a launcher fires (`ammoType: "arrow|xphb"`, the
+# single piece's name) and what a bundle holds (`packContents`); the converter
+# dropped both, so the sheet could not tell that a Longbow takes arrows or that
+# "Arrows (20)" is twenty of them. A KIND is the lower-case name of the single
+# piece: "arrow", "bolt", "firearm bullet", "needle", "sling bullet".
+_AMMO_FLAGS = (('arrow', 'arrow'), ('bolt', 'bolt'), ('bulletSling', 'sling bullet'),
+               ('bulletFirearm', 'firearm bullet'), ('needleBlowgun', 'needle'),
+               ('cellEnergy', 'energy cell'))
+_AMMO_WORDS = ('sling bullet', 'firearm bullet', 'arrow', 'bolt', 'needle')
+
+def _ammo_kind(it):
+    """The kind of a piece of ammunition: its 5e-tools family flag, else a kind
+    its name contains (XGE's Unbreakable Arrow carries no flag). '' for none."""
+    for flag, kind in _AMMO_FLAGS:
+        if it.get(flag) is True:
+            return kind
+    nm = str(it.get('name') or '').lower()
+    for word in _AMMO_WORDS:
+        if word in nm:
+            return word
+    return ''
+
+def _ammo_type_kind(v):
+    """A launcher's `ammoType` ("arrow|xphb") as a kind ("arrow")."""
+    return str(v or '').split('|')[0].strip().lower()
+
+def _pack_of(it):
+    """What one bundle holds, {item, qty}, from `packContents`, or None for a
+    single piece. `item` is the piece's display name, found in the run's item
+    index (load_item_index()), else the reference title-cased."""
+    pc = it.get('packContents') or []
+    if len(pc) != 1 or not isinstance(pc[0], dict):
+        return None
+    ref, qty = pc[0].get('item'), pc[0].get('quantity')
+    if not isinstance(ref, str) or not isinstance(qty, int) or qty < 1:
+        return None
+    nm, _, src = ref.partition('|')
+    idx = _SB_INDEX[0] if _SB_INDEX else {}
+    piece = idx.get((nm.strip().lower(), (src or 'PHB').strip().upper()))
+    return {'item': (piece or {}).get('name') or nm.strip().title(), 'qty': qty}
+
 def convert_items(path, overlay=None, tables=None, book=None, **_):
     d = json.load(open(path, encoding='utf-8'))
     # type-name map: from the file's itemType table if present, else the static fallback
@@ -1039,6 +1081,7 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
             db = _ival(it.get('bonusWeapon') or it.get('bonusWeaponDamage') or 0)
             if b: weapon_data['atkMisc'] = b
             if db: weapon_data['dmgMisc'] = db
+            if it.get('ammoType'): weapon_data['ammo'] = _ammo_type_kind(it['ammoType'])
         elif it.get('armor') or tcode in ('LA', 'MA', 'HA', 'S'):
             ac = it.get('ac')
             if ac is not None:
@@ -1065,6 +1108,14 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
         rec = {k: v for k, v in rec.items() if v not in (None, '', False)}
         rec.setdefault('effects', [])
         if weapon_data: rec['weapon'] = weapon_data
+        if tcode in ('A', 'AF'):
+            kind = _ammo_kind(it)
+            if kind:
+                rec['ammo'] = {'kind': kind}
+                ab = _ival(it.get('bonusWeapon') or 0)
+                if ab: rec['ammo']['bonus'] = ab
+                pk = _pack_of(it)
+                if pk: rec['pack'] = pk
         out.append(rec)
     return _pack(book, 'items', out, stem='items')
 
