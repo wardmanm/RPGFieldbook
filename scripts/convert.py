@@ -1006,8 +1006,20 @@ def _ammo_kind(it):
     return ''
 
 def _ammo_type_kind(v):
-    """A launcher's `ammoType` ("arrow|xphb") as a kind ("arrow")."""
-    return str(v or '').split('|')[0].strip().lower()
+    """A launcher's `ammoType` ("arrow|xphb") as a kind ("arrow"). For 2014
+    items with a pipe-less name like "crossbow bolt", resolves through the item
+    index to the piece's kind (e.g. "bolt"); bare names fall back to lowercased."""
+    nm, _, src = str(v or '').partition('|')
+    nm_lower = nm.strip().lower()
+    # Try the item index if we have one (set by statblock_ctx)
+    idx = _SB_INDEX[0] if _SB_INDEX else {}
+    piece = idx.get((nm_lower, (src or 'PHB').strip().upper()))
+    if piece:
+        kind = _ammo_kind(piece)
+        if kind:
+            return kind
+    # Fallback: the bare name, stripped and lower-cased
+    return nm_lower
 
 def _pack_of(it):
     """What one bundle holds, {item, qty}, from `packContents`, or None for a

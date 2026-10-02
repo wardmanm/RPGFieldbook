@@ -1445,17 +1445,20 @@ _ammomagic = _tmpjson({'item': [NET24, UNBREAKABLE]})
 with C.statblock_ctx(C.load_item_index(_ammobase, _ammomagic)):
     ab = _by_name(C.convert_items(_ammobase))
     ax = _by_name(C.convert_items(_ammomagic, book=XGE))
-ck('#7 a Longbow says it fires arrows', ab.get('Longbow', {}).get('weapon', {}).get('ammo') == 'arrow',
-   ab.get('Longbow', {}).get('weapon'))
-ck('#7 an Arrow is ammunition of the arrow kind', ab.get('Arrow', {}).get('ammo') == {'kind': 'arrow'}, ab.get('Arrow'))
-ck('#7 a single piece holds no bundle', 'pack' not in ab.get('Arrow', {}))
-ck('#7 Arrows (20) is twenty Arrows, of the arrow kind',
-   ab.get('Arrows (20)', {}).get('pack') == {'item': 'Arrow', 'qty': 20} and ab.get('Arrows (20)', {}).get('ammo') == {'kind': 'arrow'},
-   ab.get('Arrows (20)'))
-ck('#7 a Sling Bullet is a sling bullet, by its family flag', ab.get('Sling Bullet', {}).get('ammo') == {'kind': 'sling bullet'},
-   ab.get('Sling Bullet'))
-ck("#7 XGE's Unbreakable Arrow, which has no family flag, is an arrow by its name",
-   ax.get('Unbreakable Arrow', {}).get('ammo') == {'kind': 'arrow'}, ax.get('Unbreakable Arrow'))
+    ck('#7 a Longbow says it fires arrows', ab.get('Longbow', {}).get('weapon', {}).get('ammo') == 'arrow',
+       ab.get('Longbow', {}).get('weapon'))
+    ck('#7 an Arrow is ammunition of the arrow kind', ab.get('Arrow', {}).get('ammo') == {'kind': 'arrow'}, ab.get('Arrow'))
+    ck('#7 a single piece holds no bundle', 'pack' not in ab.get('Arrow', {}))
+    ck('#7 Arrows (20) is twenty Arrows, of the arrow kind',
+       ab.get('Arrows (20)', {}).get('pack') == {'item': 'Arrow', 'qty': 20} and ab.get('Arrows (20)', {}).get('ammo') == {'kind': 'arrow'},
+       ab.get('Arrows (20)'))
+    ck('#7 a Sling Bullet is a sling bullet, by its family flag', ab.get('Sling Bullet', {}).get('ammo') == {'kind': 'sling bullet'},
+       ab.get('Sling Bullet'))
+    ck("#7 XGE's Unbreakable Arrow, which has no family flag, is an arrow by its name",
+       ax.get('Unbreakable Arrow', {}).get('ammo') == {'kind': 'arrow'}, ax.get('Unbreakable Arrow'))
+    ck("#7 a 2014 launcher's pipe-less ammoType resolves through the index to its piece's kind",
+       C._ammo_type_kind('crossbow bolt') == 'bolt' and C._ammo_type_kind('arrow|xphb') == 'arrow',
+       (C._ammo_type_kind('crossbow bolt'), C._ammo_type_kind('arrow|xphb')))
 ck("#7 a launcher's ammoType is read as a kind", C._ammo_type_kind('firearm bullet|xphb') == 'firearm bullet'
    and C._ammo_type_kind(None) == '')
 ck('#7 a piece nothing names is no ammunition', C._ammo_kind({'name': 'Rock'}) == '')
