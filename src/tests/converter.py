@@ -1467,6 +1467,25 @@ with C.statblock_ctx(C.load_item_index(_tmpjson({'baseitem': [_plus2]}))):
     p2 = C.convert_items(_tmpjson({'baseitem': [_plus2]}))['items'][0]
 ck('#7 ammunition with its own +N carries it as the bonus', p2.get('ammo') == {'kind': 'arrow', 'bonus': 2}, p2.get('ammo'))
 
+# ---- 32. a 2014 item reprinted under another name is not shipped beside its 2024 self (#7)
+# pick_2024_preferred() backfilled 2014 entries by NAME, so a renamed reprint
+# ("Crossbow Bolt" -> the 2024 "Bolt") shipped twice. Checked against everything
+# the 2024 pack ships from EITHER item file: the 2024 Net is gear in items.json.
+with C.statblock_ctx(C.load_item_index(_ammobase, _ammomagic)):
+    rb = _by_name(C.convert_items(_ammobase))
+ck('#7 the 2014 Crossbow Bolt, reprinted as the 2024 Bolt, is dropped', 'Crossbow Bolt' not in rb and 'Bolt' in rb, sorted(rb))
+ck('#7 ...and its bundle', 'Crossbow Bolts (20)' not in rb, sorted(rb))
+ck('#7 the 2014 Net, reprinted as a 2024 Net in the OTHER item file, is dropped', 'Net' not in rb, sorted(rb))
+_lone = dict(CBOLT14, name='Lone 2014 Thing', reprintedAs=['Nothing Shipped|XDMG'])
+_lonef = _tmpjson({'baseitem': [_lone]})
+with C.statblock_ctx(C.load_item_index(_lonef)):
+    lb = _by_name(C.convert_items(_lonef))
+ck('#7 a 2014 item whose reprint does NOT ship is kept', 'Lone 2014 Thing' in lb, sorted(lb))
+ck('#7 reprint references read in both shapes',
+   C._reprint_keys({'reprintedAs': ['Bolt|XPHB', {'uid': 'Net|XPHB', 'tag': 'item'}]}) == {('bolt', 'XPHB'), ('net', 'XPHB')})
+ck('#7 with no shipped set the 2014 backfill is as it was (every other category)',
+   [e['name'] for e in C.pick_2024_preferred([CBOLT14, BOLT])] == ['Bolt', 'Crossbow Bolt'])
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

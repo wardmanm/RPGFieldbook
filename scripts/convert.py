@@ -716,7 +716,18 @@ def apply_overlay(name, rec, overlay):
     return rec
 
 # ---------------------------------------------------------------- 2024 selection
-def pick_2024_preferred(entries, name_key='name'):
+def _reprint_keys(e):
+    """(lower name, SOURCE) of each entry an entry was reprinted as. 5e-tools
+    writes a reference as "Bolt|XPHB" or as {"uid": "Net|XPHB", "tag": "item"}."""
+    out = set()
+    for r in e.get('reprintedAs') or []:
+        u = r.get('uid') if isinstance(r, dict) else r
+        nm, _, src = str(u or '').partition('|')
+        if nm.strip():
+            out.add((nm.strip().lower(), (src or 'PHB').strip().upper()))
+    return out
+
+def pick_2024_preferred(entries, name_key='name', shipped=None):
     """Everything from XPHB — the definitive 2024 book — plus any basic-rules
     entry whose name XPHB doesn't already cover (2024 wins on overlap, then the
     free 2024 subset, then 2014).
@@ -727,13 +738,19 @@ def pick_2024_preferred(entries, name_key='name'):
 
     The free 2024 subset is marked by EITHER flag: `srd52` (SRD 5.2) too. 5e-tools
     v2.36.1 moved the 2024 Cloak of Invisibility from basicRules2024 to srd52
-    alone, and reading only the first flag dropped it from the pack."""
+    alone, and reading only the first flag dropped it from the pack.
+
+    `shipped` (items only): the (name, SOURCE) of everything the 2024 pack ships.
+    A 2014 entry REPRINTED AS one of those is the same thing under an old name
+    ("Crossbow Bolt" is the 2024 "Bolt"), and the name check above cannot see it,
+    so it is left out (#7). None leaves the backfill exactly as it was."""
     xphb = [e for e in entries if e.get('source') == 'XPHB']
     names = {e[name_key] for e in xphb}
     two4 = [e for e in entries if (e.get('basicRules2024') is True or e.get('srd52') is True)
             and e[name_key] not in names]
     names |= {e[name_key] for e in two4}
-    legacy = [e for e in entries if e.get('basicRules') is True and e[name_key] not in names]
+    legacy = [e for e in entries if e.get('basicRules') is True and e[name_key] not in names
+              and not (shipped and _reprint_keys(e) & shipped)]
     return xphb + two4 + legacy
 
 # ---------------------------------------------------------------- which book
@@ -781,13 +798,13 @@ DEFAULT_BOOK = Book()
 def _bk(book):
     return book if book is not None else DEFAULT_BOOK
 
-def pick_sources(entries, book=None, name_key='name'):
+def pick_sources(entries, book=None, name_key='name', shipped=None):
     """Select entries for `book`. With no explicit source codes this is exactly
     pick_2024_preferred; with them it is a plain source filter — the basicRules
     backfills are 2024 flags and are never set on a supplement's entries."""
     b = _bk(book)
     if b.is_default:
-        return pick_2024_preferred(entries, name_key)
+        return pick_2024_preferred(entries, name_key, shipped=shipped)
     codes = set(b.codes)
     return [e for e in entries if e.get('source') in codes]
 
@@ -1036,6 +1053,15 @@ def _pack_of(it):
     piece = idx.get((nm.strip().lower(), (src or 'PHB').strip().upper()))
     return {'item': (piece or {}).get('name') or nm.strip().title(), 'qty': qty}
 
+def _shipped_2024():
+    """(lower name, SOURCE) of every item the 2024 pack ships, from BOTH item files
+    in the run's index: what a 2014 entry's `reprintedAs` is checked against. The
+    2024 Net is gear in items.json while the 2014 one is a weapon in
+    items-base.json, so one file alone cannot see it."""
+    idx = _SB_INDEX[0] if _SB_INDEX else {}
+    return {k for k, e in idx.items()
+            if e.get('source') == 'XPHB' or e.get('basicRules2024') is True or e.get('srd52') is True}
+
 def convert_items(path, overlay=None, tables=None, book=None, **_):
     d = json.load(open(path, encoding='utf-8'))
     # type-name map: from the file's itemType table if present, else the static fallback
@@ -1051,7 +1077,8 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
     props.update(own_props); masteries.update(own_masteries)
     src = d.get('baseitem') if d.get('baseitem') else d.get('item', [])
     out = []
-    keep = {id(e) for e in pick_sources(src, book)}
+    shipped = _shipped_2024() if _bk(book).is_default else None
+    keep = {id(e) for e in pick_sources(src, book, shipped=shipped)}
     for it in src:
         if id(it) not in keep: continue
         tcode = _abbr(it.get('type', ''))
