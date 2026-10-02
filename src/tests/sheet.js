@@ -3040,10 +3040,15 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('Undo puts the removed stack back where it was, one piece, and the count as it was',
      X.undoFire(c, r) && c.inventory[1].id === 's1' && c.inventory[1].qty === 1 && X.ammoSpentEntry(c, 's1').n === 1);
   ck('nothing loaded, nothing fired', X.fireAmmo({inventory: [bow]}, bow) === null);
+  const empty = {inventory: [bow, {id: 'z', name: 'Arrow', qty: 0, ammo: {kind: 'arrow'}}, {id: 'y', name: 'Arrow', qty: 2, ammo: {kind: 'arrow'}}]};
+  ck('a stack at ×0 is never loaded: the weapon loads the next', X.loadedStack(empty, bow).id === 'y' &&
+     X.ammoStacks(empty, 'arrow').map(s => s.id).join() === 'y');
+  ck('...and with only an empty stack, nothing is fired', X.fireAmmo({inventory: [bow, {id: 'z', name: 'Arrow', qty: 0, ammo: {kind: 'arrow'}}]}, bow) === null);
   c = mk(); const b2 = c.inventory[0];
   r = X.fireAmmo(c, b2);
   ck('Undo of a shot that left some puts the one piece back and forgets the shot',
      X.undoFire(c, r) && c.inventory[1].qty === 2 && !('s1' in c.ammoSpent));
+  ck('the same Undo twice puts back one piece, not two', X.undoFire(c, r) === false && c.inventory[1].qty === 2);
   r = X.fireAmmo(c, b2); c.inventory = c.inventory.filter(i => i.id !== 's1');
   ck('Undo after the player deleted that stack leaves it deleted', !X.undoFire(c, r) && !c.inventory.some(i => i.id === 's1'));
   ck('junk spent entries read as nothing',

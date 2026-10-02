@@ -42,11 +42,12 @@ function itemAmmo(it){
 }
 function weaponAmmoKind(it){return (it&&it.weapon&&typeof it.weapon==="object")?ammoKindOf(it.weapon.ammo):"";}
 /* The stacks a weapon of `kind` can load, in inventory order. A bundle never
-   sits on a sheet (it unpacks on arrival); one from an odd file is skipped. */
+   sits on a sheet (it unpacks on arrival); one from an odd file is skipped.
+   An empty stack (qty < 1) can't be loaded. */
 function ammoStacks(c,kind){
   if(!kind)return [];
   return (Array.isArray(c&&c.inventory)?c.inventory:[])
-    .filter(i=>i&&typeof i==="object"&&!i.pack&&(itemAmmo(i)||{}).kind===kind);
+    .filter(i=>i&&typeof i==="object"&&!i.pack&&itemQty(i)>=1&&(itemAmmo(i)||{}).kind===kind);
 }
 /* The stack a weapon fires from: the one the player chose (ammoStack, kept on
    the item OUTSIDE `weapon`, which the rules-update tool owns) while it exists
@@ -191,9 +192,10 @@ function fireAmmo(c,weaponItem){
 }
 /* Undo puts back exactly what that shot took: one piece onto its stack, or the
    whole stack at its old place when the shot removed it, and the spent count as
-   it was. A stack the player deleted since stays deleted: they chose that. */
+   it was. A stack the player deleted since stays deleted: they chose that. An Undo applies once. */
 function undoFire(c,rec){
   if(!c||!rec||!rec.undo||!rec.undo.stack)return false;
+  if(rec.undone)return false;
   const u=rec.undo, id=u.stack.id;
   if(!Array.isArray(c.inventory))c.inventory=[];
   const cur=c.inventory.find(x=>x&&x.id===id);
@@ -202,6 +204,7 @@ function undoFire(c,rec){
   else return false;
   if(!c.ammoSpent||typeof c.ammoSpent!=="object"||Array.isArray(c.ammoSpent))c.ammoSpent={};
   if(u.spent)c.ammoSpent[id]=u.spent;else delete c.ammoSpent[id];
+  rec.undone=true;
   return true;
 }
 /* What recovery would give back, per kind: half of each stack's count, rounded
