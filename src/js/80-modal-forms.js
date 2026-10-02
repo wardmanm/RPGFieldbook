@@ -340,11 +340,15 @@ function openItemForm(existing){
   const fxWrap=document.getElementById("iFx");
   document.getElementById("iAddFx").addEventListener("click",()=>fxWrap.insertAdjacentHTML("beforeend",fxRow(null)));
   fxWrap.addEventListener("click",e=>{const d=e.target.closest(".fx-del");if(d)d.closest(".fxrow").remove()});
+  let qtyFromBundle=false;
   const libSel=document.getElementById("iLib");
   if(libSel)libSel.addEventListener("change",()=>{const x0=lib[libSel.value];if(!x0)return;
-    /* a bundle inserts as its single piece, the count it holds as the quantity (#6) */
+    /* a bundle inserts as its single piece, the count it holds as the quantity
+       (#6); picking something else afterwards puts it back to 1, or a bundle
+       picked earlier in the same form left its count on the next item too (#8) */
     const u=unpackAmmo(x0,lib),x=u.def;
-    if(u.per>1)document.getElementById("iQty").value=u.per;
+    if(u.per>1){document.getElementById("iQty").value=u.per;qtyFromBundle=true;}
+    else if(qtyFromBundle){document.getElementById("iQty").value=1;qtyFromBundle=false;}
     document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;const wg=fnum(x.weight);if(wg)document.getElementById("iWeight").value=wg;fxWrap.innerHTML=fxEditorRows(x.effects);
     if(x.weapon){wFrom=x.weapon;isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";setKind("iWAmmo","iWAmmoOther",x.weapon.ammo||"",wAmmoSync);}
     /* Read the AC out of what was just inserted, exactly as the sheet would —

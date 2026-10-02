@@ -31,6 +31,12 @@ const AMMO_BUNDLES={"arrows (20)":["arrow",20],"bolts (20)":["bolt",20],"crossbo
   "sling bullets (20)":["sling bullet",20]};
 const AMMO_LAUNCHERS={"longbow":"arrow","shortbow":"arrow","light crossbow":"bolt","heavy crossbow":"bolt",
   "hand crossbow":"bolt","sling":"sling bullet","blowgun":"needle","musket":"firearm bullet","pistol":"firearm bullet"};
+/* An OWN-property lookup into one of the plain-object tables above. A name of
+   "constructor" or "__proto__" finds an inherited property otherwise — an
+   object or function, never undefined — so migrateAmmo() read one as a real
+   table entry and threw reading .name off it. Not Object.hasOwn: the app
+   targets ES2020. */
+function ammoTable(T,k){return Object.prototype.hasOwnProperty.call(T,k)?T[k]:undefined;}
 
 /* ---- reading it, whatever a file put there ---- */
 function itemAmmo(it){
@@ -113,7 +119,7 @@ function migrateAmmo(c){
   inv.forEach(it=>{
     if(!it||typeof it!=="object")return;
     const key=String(it.name||"").trim().toLowerCase();
-    const b=AMMO_BUNDLES[key];
+    const b=ammoTable(AMMO_BUNDLES,key);
     if(b){
       /* "Arrows (20)" ×2 becomes Arrow ×40, each a twentieth of the bundle's
          own price and weight (spec §3.3), so a price the player paid survives */
@@ -135,12 +141,12 @@ function migrateAmmo(c){
       rebaseAmmo(it,before,{cost:g==null?undefined:g,weight:pc.weight,ammo:{kind}});
       unpacked.add(it);n++;return;
     }
-    const single=AMMO_SINGLE_NAMES[key];
+    const single=ammoTable(AMMO_SINGLE_NAMES,key);
     if(single&&!itemAmmo(it)){
       const before={ammo:it.ammo};it.ammo={kind:single};
       rebaseAmmo(it,before,{ammo:{kind:single}});n++;return;
     }
-    const lk=AMMO_LAUNCHERS[key];
+    const lk=ammoTable(AMMO_LAUNCHERS,key);
     if(lk&&it.weapon&&typeof it.weapon==="object"&&!Array.isArray(it.weapon)&&!it.weapon.ammo){
       const before={weapon:it.weapon};
       it.weapon=Object.assign({},it.weapon,{ammo:lk});
@@ -168,11 +174,16 @@ function migrateAmmo(c){
 /* ---- firing, undoing, recovering ---- */
 function ammoSpentMap(c){const m=c&&c.ammoSpent;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
 /* One stack's spent record, coerced: how many fired since the last recovery,
-   its kind, and the copy recovery rebuilds a used-up stack from. */
+   its kind, the copy recovery rebuilds a used-up stack from, and how many of
+   those shots End combat has already asked about (#6 final review: a whole
+   number, clamped to [0, n], so a later shot always makes `n > asked` true). */
 function ammoSpentEntry(c,id){
   const e=ammoSpentMap(c)[id], ok=e&&typeof e==="object"&&!Array.isArray(e);
-  return {n:(ok&&Number.isInteger(e.n)&&e.n>0)?e.n:0,kind:ok?ammoKindOf(e.kind):"",
-          snap:(ok&&e.snap&&typeof e.snap==="object"&&!Array.isArray(e.snap))?e.snap:null};
+  const n=(ok&&Number.isInteger(e.n)&&e.n>0)?e.n:0;
+  const asked=(ok&&Number.isInteger(e.asked))?Math.max(0,Math.min(n,e.asked)):0;
+  return {n,kind:ok?ammoKindOf(e.kind):"",
+          snap:(ok&&e.snap&&typeof e.snap==="object"&&!Array.isArray(e.snap))?e.snap:null,
+          asked};
 }
 /* One shot from the weapon's loaded stack: one piece off it (the last removes
    the stack, as using the last potion does), and one more on its spent count,
@@ -185,7 +196,10 @@ function fireAmmo(c,weaponItem){
   const undo={stack:JSON.parse(JSON.stringify(st)),at:c.inventory.indexOf(st),
               spent:c.ammoSpent[st.id]?JSON.parse(JSON.stringify(c.ammoSpent[st.id])):null};
   const prev=ammoSpentEntry(c,st.id);
-  c.ammoSpent[st.id]={n:prev.n+1,kind:am.kind,snap:Object.assign(JSON.parse(JSON.stringify(st)),{qty:1})};
+  /* the entry is rebuilt from scratch on every shot, so `asked` has to be
+     carried across by hand or a later shot would read as never having been
+     asked about at all */
+  c.ammoSpent[st.id]={n:prev.n+1,kind:am.kind,asked:prev.asked,snap:Object.assign(JSON.parse(JSON.stringify(st)),{qty:1})};
   const left=Math.max(0,itemQty(st)-1);
   if(left<=0)c.inventory=c.inventory.filter(x=>x!==st);else st.qty=left;
   return {stack:st,kind:am.kind,left,removed:left<=0,undo};
@@ -220,9 +234,13 @@ function ammoRecoverable(c){
 }
 /* Gives back half of what was fired since the last recovery, for the kinds
    asked (every kind when none are), and clears those counts: the other half is
-   lost, as the rules have it. A stack the last shot removed comes back from its
-   copy with its old id, so a weapon that had chosen it is loaded with it again.
-   Returns how many pieces came back. */
+   lost, as the rules have it. When the old stack is gone, recovery first looks
+   for an equivalent one already on the sheet — not a bundle, the same
+   lower-cased trimmed name, the same ammo bonus and the same grant as the
+   snapshot — and tops that up instead of making a second "+1 Arrow" row; any
+   weapon loaded with the old id is repointed to it. Only when there is none
+   does the old stack come back from its copy, under its old id. Returns how
+   many pieces came back. */
 function recoverAmmo(c,kinds){
   const want=Array.isArray(kinds)?new Set(kinds.map(ammoKindOf)):null;
   const m=ammoSpentMap(c);
@@ -235,16 +253,54 @@ function recoverAmmo(c,kinds){
     if(n>0){
       const st=c.inventory.find(x=>x&&x.id===id);
       if(st){st.qty=itemQty(st)+n;back+=n;}
-      else if(e.snap){c.inventory.push(Object.assign(JSON.parse(JSON.stringify(e.snap)),{id,qty:n}));back+=n;}
+      else if(e.snap){
+        const snapAm=itemAmmo(e.snap), snapName=String(e.snap.name||"").trim().toLowerCase(),
+              snapGrant=e.snap.grant||"";
+        const home=c.inventory.find(x=>x&&typeof x==="object"&&!x.pack&&
+          String(x.name||"").trim().toLowerCase()===snapName&&
+          (itemAmmo(x)||{}).bonus===(snapAm?snapAm.bonus:0)&&(x.grant||"")===snapGrant);
+        if(home){
+          home.qty=itemQty(home)+n;
+          c.inventory.forEach(x=>{if(x&&x.ammoStack===id)x.ammoStack=home.id;});
+        }else c.inventory.push(Object.assign(JSON.parse(JSON.stringify(e.snap)),{id,qty:n}));
+        back+=n;
+      }
     }
     delete m[id];
   });
   return back;
 }
+/* True when End combat still owes a prompt: some kinded entry has fired more
+   than it was last asked about (#6 final review — "No" must not ask again
+   about the very same shots). */
+function ammoAskDue(c){
+  const m=ammoSpentMap(c);
+  return Object.keys(m).some(id=>{const e=ammoSpentEntry(c,id);return !!e.kind&&e.n>e.asked;});
+}
+/* After a "No": every kinded entry's `asked` catches up to its `n`, so a
+   fight with no new shots asks nothing next time. `n` itself, and so Recover
+   N, are untouched. */
+function markAmmoAsked(c){
+  const m=ammoSpentMap(c);
+  Object.keys(m).forEach(id=>{const e=ammoSpentEntry(c,id);if(e.kind)m[id].asked=e.n;});
+}
 function ammoSummaryText(list){return list.map(r=>`${r.back} of ${r.fired} ${ammoPlural(r.kind)}`).join(", ");}
 /* A deleted stack's count goes with it: there is nothing to recover into, and
    the player chose to delete it. */
 function forgetAmmo(c,id){const m=ammoSpentMap(c);if(id in m)delete m[id];}
+/* Removing a class or background forgets every spent count it granted, even
+   one whose stack is already gone — fired down to nothing, which removes the
+   stack the way the last potion does, well before the source itself is
+   removed. Without this, revertEquipmentGrants()'s own id-based forgetAmmo()
+   only reaches a granted stack still in the inventory, and Recover brings the
+   revoked grant's arrows back. */
+function forgetGrantAmmo(c,sid){
+  const m=ammoSpentMap(c);
+  Object.keys(m).forEach(id=>{
+    const e=m[id];
+    if(e&&typeof e==="object"&&!Array.isArray(e)&&e.snap&&typeof e.snap==="object"&&!Array.isArray(e.snap)&&e.snap.grant===sid)delete m[id];
+  });
+}
 /* The +N a weapon row gets from the stack its item is loaded with, and that
    stack's name for the breakdown. Nothing for a row with no item. */
 function attackAmmo(a){
@@ -337,12 +393,20 @@ function undoFireTap(rec,who,viaKey,itemId){
   if(viaKey){const b=ammoFireBtn(itemId);if(b)b.focus();}
   return true;
 }
+/* One row of the stack picker (spec §6): name, ×qty, and the stack's +N when
+   it has one — "· +1", "· -1" — so a plain and a magic stack of the same
+   piece read apart. `cur` is the stack the weapon is loaded with now. */
+function ammoChoiceHTML(s,cur){
+  const am=itemAmmo(s), bonus=am&&am.bonus?(am.bonus>0?"+"+am.bonus:String(am.bonus)):"";
+  const hint="×"+String(itemQty(s))+(bonus?" · "+bonus:"");
+  return `<button type="button" class="ammo-choice${s===cur?" on":""}" data-ammo-load="${esc(s.id)}" aria-pressed="${s===cur?"true":"false"}"><span>${esc(String(s.name||""))}</span><span class="hint">${esc(hint)}</span></button>`;
+}
 /* The stack picker: every stack the weapon can load, the loaded one marked. */
 function openAmmoPicker(itemId){
   const it=(character.inventory||[]).find(i=>i&&i.id===itemId);
   const kind=weaponAmmoKind(it);if(!kind)return;
   const cur=loadedStack(character,it);
-  const list=ammoStacks(character,kind).map(s=>`<button type="button" class="ammo-choice${s===cur?" on":""}" data-ammo-load="${esc(s.id)}" aria-pressed="${s===cur?"true":"false"}"><span>${esc(String(s.name||""))}</span><span class="hint">×${esc(String(itemQty(s)))}</span></button>`).join("");
+  const list=ammoStacks(character,kind).map(s=>ammoChoiceHTML(s,cur)).join("");
   openModal("Load "+String(it.name||"weapon"),
     `<p class="hint">What ${esc(String(it.name||"it"))} fires next. It keeps firing from this stack while the stack lasts.</p><div class="ammo-picks" data-ammo-weapon="${esc(it.id)}">${list}</div>`);
 }
@@ -368,14 +432,20 @@ function recoverWeaponAmmo(itemId,viaKey){
   if(viaKey){const b=ammoFireBtn(itemId);if(b)b.focus();}
   return back;
 }
-/* Asked once, after End combat: half of what was fired since the last
-   recovery, listed per kind. Yes recovers it all and clears every count (a
-   lone shot rounds down to nothing, and is lost); No leaves it all on the rows'
-   Recover buttons. Returns words for the End combat toast, else "". */
+/* Asked once, after End combat, and only when a shot has been fired since the
+   last time this asked (#6 final review — "No" must not ask again about the
+   same shots next fight): half of what was fired since the last recovery,
+   listed per kind. Yes recovers it all and clears every count (a lone shot
+   rounds down to nothing, and is lost); No marks every count asked about —
+   Recover N on the row still shows and recovers the full count. Returns words
+   for the End combat toast, else "". */
 function offerAmmoRecovery(){
   const list=ammoRecoverable(character);
-  if(!list.length)return "";
-  if(!confirm(`Recover ammunition? ${ammoSummaryText(list)}`))return "";
+  if(!list.length||!ammoAskDue(character))return "";
+  if(!confirm(`Recover ammunition? ${ammoSummaryText(list)}`)){
+    markAmmoAsked(character);scheduleSave();
+    return "";
+  }
   const back=recoverAmmo(character);
   scheduleSave();
   renderInventory();renderAttacks();recompute();
