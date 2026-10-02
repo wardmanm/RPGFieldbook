@@ -605,7 +605,7 @@ panel in the template; ToC picks it up for free via the existing `.card > .label
 `highlight()` in `10-compute.js` renders the anchors. **Ordering is load-bearing**: anchors are
 lifted out *before* `esc()` (so names stay raw for lookup) and *before* the glossary pass, which
 would otherwise match a glossary term inside a table name ("Damage Types") and corrupt the markup
-built from it. Placeholder is `` — private-use, so it cannot occur in rules text, `esc()`
+built from it. Placeholder is `\ue000` — private-use, so it cannot occur in rules text, `esc()`
 leaves it alone, and being a non-word char the glossary `\b…\b` pass cannot match across it. One
 mark per anchor, restored in order. **An unresolved anchor degrades to the plain sentence "the X
 table", never a dead chip** — the tables pack is a separate optional download.
@@ -1523,8 +1523,8 @@ Three further decisions worth keeping:
   a soft line break, the nicer outcome.
 - **Sentinels are `String.fromCharCode(0xE001…)`, not literal characters.** The first draft embedded
   real private-use bytes; invisible bytes in source are one whitespace cleanup away from silently
-  changing behaviour, and the build is byte-exact. (`` was already taken by `TBL_MARK`.)
-  `noteHTML` also strips `-` from its input, so a player typing one can't forge a
+  changing behaviour, and the build is byte-exact. (`\ue000` was already taken by `TBL_MARK`.)
+  `noteHTML` also strips `\ue000-\ue00f` from its input, so a player typing one can't forge a
   placeholder — which incidentally hardens `highlight()`'s marker too.
 
 Deliberately unsupported: markdown links (they point at a network, in an offline-first app, and read
@@ -2531,7 +2531,7 @@ those exact strings.
 Used at the two surfaces Gadgeteer prose reaches — the features card and the class/subclass info
 panes. Items, spells and familiars keep `highlight()`; no shipped pack uses `**` there.
 
-**Sentinels are written as `""` escapes, not literal characters.** A first pass put the real
+**Sentinels are written as `"\ue00a"` escapes, not literal characters.** A first pass put the real
 private-use bytes in the source, which is exactly the invisible-byte hazard `.editorconfig` and the
 byte-exact build exist to guard against. There is a test asserting the escape form.
 
