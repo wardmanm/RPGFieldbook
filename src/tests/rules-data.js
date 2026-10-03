@@ -21,6 +21,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'noteGroupOpen','notesHTML','noteBtnHTML','noteEntryHTML','esc',
   'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings', 'skillKey',
   'openSettings', 'highlight', 'rulesStatusText', 'rulesBadge', 'dispName', 'fxTargets',
+  'AMMO_PIECES','AMMO_SINGLE_NAMES','AMMO_BUNDLES','AMMO_LAUNCHERS',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -345,6 +346,41 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
   });
 }
 
+// ---------- the ammunition controls are wired (#6)
+// 90-boot.js is not loaded by the harness, so its handlers are checked as text.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const hooks = ['data-ammo-fire', 'data-ammo-pick', 'data-ammo-load', 'data-ammo-recover'];
+  ck('every ammunition control has a click handler', hooks.every(h => js.includes('closest("[' + h + ']")')),
+     hooks.filter(h => !js.includes('closest("[' + h + ']")')));
+  ck('...and every one the handler names is drawn', hooks.every(h => new RegExp(h + '="\\$\\{esc\\(').test(js)));
+  ck('deleting an item forgets its spent count', /\[data-del-item\][^\n]*forgetAmmo\(character,it\.id\)/.test(js));
+  ck('End combat offers the ammunition back once the fight has ended', /combatEnd\(character\)[\s\S]{0,200}offerAmmoRecovery\(\)/.test(js));
+}
+
+// ---------- the app's ammo tables agree with the 2024 data (#6)
+// The one-time pass on old sheets runs without a rules pool, from the AMMO_*
+// tables in 62-ammo.js; this keeps them in step with what the converter writes.
+{
+  const items = JSON.parse(fs.readFileSync(path.join('data','5e2024','items.json'),'utf8')).items;
+  const bad = [];
+  items.forEach(it => {
+    const k = it.name.toLowerCase();
+    if (it.weapon && it.weapon.ammo && X.AMMO_LAUNCHERS[k] !== it.weapon.ammo) bad.push('launcher ' + it.name);
+    if (it.pack) {
+      const b = X.AMMO_BUNDLES[k];
+      if (!b || b[0] !== it.ammo.kind || b[1] !== it.pack.qty || X.AMMO_PIECES[b[0]].name !== it.pack.item) bad.push('bundle ' + it.name);
+    } else if (it.ammo) {
+      const p = X.AMMO_PIECES[it.ammo.kind];
+      if (X.AMMO_SINGLE_NAMES[k] !== it.ammo.kind) bad.push('single ' + it.name);
+      if (!p || p.name !== it.name || p.weight !== it.weight || p.cost !== it.cost) bad.push('piece ' + it.name);
+    }
+  });
+  ck("every ammo launcher, bundle and piece in the 2024 data is in the app's tables, alike", bad.length === 0, bad);
+  ck('...and the check found them', items.filter(i => i.pack).length === 5 && items.filter(i => i.weapon && i.weapon.ammo).length === 9);
+}
+
 // ---------- the supplement packs (Xanathar's, Tasha's)
 // These counts are the whole defence against the failure this converter keeps
 // producing: a source filter that matches nothing writes a valid, empty,
@@ -353,7 +389,7 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
 {
   const EXPECT={
     xanathars:{system:'XGE',files:{
-      'glossary.json':['keywords',22], 'items-magic.json':['items',43],
+      'glossary.json':['keywords',22], 'items-magic.json':['items',53],
       'feats.json':['feats',15], 'spells.json':['spells',95],
       'subclasses.json':['subclasses',31], 'features.json':['features',22],
       'tables.json':['tables',74]}},
@@ -1590,7 +1626,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // fav must stay OUT of the rules-owned list, or an update would clobber it
   ck('fav is not a rules-owned field on either kind',
      /feature:\["description","effects","uses","cost"\]/.test(js) &&
-     /item:\["description","effects","cost","weight","weapon"\]/.test(js));
+     /item:\["description","effects","cost","weight","weapon","ammo"\]/.test(js));
   // The attack form has the same shape and lost the same way: it rebuilt the
   // record from its boxes and dropped itemId, so an edited weapon attack came
   // unlinked from its inventory item and the next pack update added a duplicate

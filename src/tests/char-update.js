@@ -18,6 +18,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag','runChoices',
   'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote',
   'attackNumbers','addLibraryItems','contributions','sumFx','armorAC','spellDC','spellAtkBonus',
+  'uid',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -1632,6 +1633,32 @@ ck('itemMetaLine still ends with the weight',
      ctx.deleteCharacter(dId) === '' && !X.libLoad().index.some(x => x.id === dId) && !store[X.charKey(dId)]
      && X.libLoad().autoload === null);
   ctx.alert = realAlert;
+}
+
+/* ---- ammunition and the rules-update tool (#6, #7) ----
+   A sheet from before ammunition: a Longbow copied before the pack named its
+   ammo, and "Arrows (20)". After the one-time pass and the new pack, the tool
+   must offer nothing: the pass's change is the pack's, not the player's. */
+{
+  ck('UPD_FIELDS.item owns ammo', JSON.stringify(X.UPD_FIELDS.item)===JSON.stringify(['description','effects','cost','weight','weapon','ammo']));
+  const oldBow={name:'Longbow',category:'Weapon',type:'Martial Ranged Weapon',weight:2,cost:'50 gp',description:'Bow.',effects:[],
+                weapon:{kind:'ranged',dice:'1d8',damageType:'piercing',ability:'dex',notes:'Range 150/600'}};
+  const oldArrows={name:'Arrows (20)',category:'Ammunition',type:'Ammunition',weight:1,cost:'1 gp',description:'Arrows.',effects:[]};
+  const newBow=JSON.parse(JSON.stringify(oldBow)); newBow.weapon.ammo='arrow';
+  const newArrow={name:'Arrow',category:'Ammunition',type:'Ammunition',weight:0.05,cost:'5 cp',description:'Arrows.',effects:[],ammo:{kind:'arrow'}};
+  X.resetRules(); X.mergeRules({system:'XPHB',items:[oldBow,oldArrows]},'5e.json');
+  const ch=X.blankChar(); ch.appVersion='1.0.0';
+  const copy=(name,qty)=>{const d=X.rules.items.find(x=>x.name===name);
+    const it={id:X.uid(),name:d.name,qty,description:d.description,effects:[],equipped:true,cost:X.costToGp(d.cost),weight:d.weight,category:d.category,type:d.type};
+    if(d.weapon)it.weapon=JSON.parse(JSON.stringify(d.weapon));
+    X.stampSrc(it,d,'item','items','plain');return it;};
+  ch.inventory=[copy('Longbow',1),copy('Arrows (20)',2)];
+  X.character=X.migrate(JSON.parse(JSON.stringify(ch))); X.activeId=X.character.id;
+  X.resetRules(); X.mergeRules({system:'XPHB',items:[newBow,newArrow]},'5e.json');
+  const rows=X.diffCharacter().rows;
+  ck('#6 after the one-time pass the Longbow has no pending update', !rows.some(r=>r.name==='Longbow'), rows.map(r=>r.name+':'+r.fields));
+  ck("#6 ...and the unpacked Arrow stack matches the pack's Arrow", !rows.some(r=>r.name==='Arrow'), rows.map(r=>r.name+':'+r.fields));
+  X.resetRules();
 }
 
 ck.done();

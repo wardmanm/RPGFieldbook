@@ -15,6 +15,9 @@ page is what that file does not say: what must not move, and the traps that have
 `convert_items()`, `_item_effects()`, `_bonus_reading()`, `_bonus_prose_notes()`, `_weapon_defs()`,
 `_weapon_refs()`, `_weapon_miss_warnings()`, `_class_tables()`, `convert_classes()`,
 `_skill_profs()`, `_multiclass()`, `_optfeat_choices()`, `convert_races()`,
+`_ammo_kind()`, `_ammo_type_kind()`, `_pack_of()`, `_shipped_2024()`, `_reprint_keys()`,
+`_fill_variant()`, `_ammo_pieces()`, `_is_ammo_variant()`, `_variant_selected()`,
+`convert_ammo_variants()`,
 `_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in `scripts/bundle-rules.js`;
 `dataChangedSince()` in `scripts/release.js`; `mergeRules()` in `89-rules-merge.js`;
 `DATA_VERSIONS` in `30-version.js`; `RULE_CATS` in `88-settings.js` ·
@@ -42,12 +45,32 @@ directory, then the repo's `data/`, printing which one it used. Every missing in
 is `XPHB`, then backfills entries XPHB does not cover by name that carry `basicRules2024` **or**
 `srd52` (the free 2024 subset), then `basicRules` (2014). Feats, items, magic items, conditions,
 the glossary and species go through it via `pick_sources()`. `convert_backgrounds()` and
-`convert_spells()` filter on `source == "XPHB"` alone, with no backfill at all.
+`convert_spells()` filter on `source == "XPHB"` alone, with no backfill at all. Items also pass a
+`shipped` set (`_shipped_2024()`, from both item files): a 2014 entry whose `reprintedAs` names
+something the 2024 pack ships is left out, which drops 40 renamed duplicates (Crossbow Bolt, the
+2014 Net, Acid (vial)…).
 
 **Current output** (counted from `data/5e2024/`): 16 backgrounds, 14 classes, 21 conditions,
-77 feats, 58 features, 115 glossary terms, 99 items, 542 magic items, 10 species, 391 spells,
-107 tables. Spells carry a `class` list only when `--sources sources.json` is supplied (`all` finds
+77 feats, 58 features, 115 glossary terms, 94 items, 527 magic items, 10 species, 391 spells,
+108 tables. Spells carry a `class` list only when `--sources sources.json` is supplied (`all` finds
 it in `spells/`); the spell file itself has no per-spell class data.
+
+**Ammunition.** `convert_items()` reads three 5e-tools shapes `all` used to drop entirely. A
+launcher's `ammoType` ("arrow|xphb") becomes `weapon.ammo` through `_ammo_type_kind()`, which
+resolves the reference through the run's item index to the piece's own kind — a 2014 launcher
+naming "crossbow bolt" still reads "bolt". A piece of ammunition (`type` `A`/`AF`) gets `ammo:
+{kind}` from `_ammo_kind()`: the item's family flag (`arrow`, `bolt`, `bulletSling`,
+`bulletFirearm`, `needleBlowgun`), or, when the book defines no flag (XGE's Unbreakable Arrow),
+the matching word in its name. A bundle's `packContents` becomes `pack: {item, qty}` through
+`_pack_of()`, naming the single piece it unpacks into ("Arrows (20)" → `{"item":"Arrow","qty":20}`).
+`convert_ammo_variants()` reads `magicvariants.json` for ammunition variants only (a `requires`
+naming an ammunition type), selected exactly as an item is — the 2024 pack takes XPHB plus the
+free-subset flags, a supplement its own source — and expands each onto every single 2024 piece in
+the run's index ("+1 Arrow", "Arrow of Slaying"), never a bundle, with its `{=bonusWeapon}` and
+other `{=key}` placeholders written out from `inherits`. The variant's text is the same for every
+piece it expands onto, so it is flattened once under the variant's own name, not once per piece;
+a table inside it (Slaying's d100 creature table) is lifted once the same way, as "Ammunition of
+Slaying Table", and every expanded piece's description carries the one anchor.
 
 **Tables are lifted, not dropped.** While an entity is flattened inside `table_ctx()`, every
 5e-tools `table` or `tableGroup` node is normalised by `_norm_table()` to
@@ -210,7 +233,9 @@ sets them, then the array.
 folder and writes `dist/<system>_full.json` with `rulebook: true` and a `dataVersion` read from
 `DATA_VERSIONS` in `30-version.js` (never duplicated). It dedupes the way `mergeRules()` does, by
 name (subclasses by class and name), last file wins, replaced in place, and prints every duplicate
-it folded: today one, `Net`, in both item files. `_note` is not copied into the bundle. The build
+it folded — none, in the v2.36.1 dump. Before #7 that was one, `Net`, shipped from both item files
+(the 2014 weapon in `items.json`, the 2024 gear in `items-magic.json`); `_shipped_2024()` now drops
+the 2014 one before bundling ever sees it. `_note` is not copied into the bundle. The build
 fails if a folder's files disagree on `system`, `excludeSystems` or `requires`, or if the system
 has no `DATA_VERSIONS` entry.
 
@@ -475,3 +500,4 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-28 — `bonusSpellAttack` and `bonusSpellSaveDc` become `spell.attack` / `spell.dc` effects; only `effects` moved, on 28 items in two packs. → ledger L4568, #77
 - 2026-09-29 — `{#itemEntry}` templates are written into the description (`_expand_item_entries()`), filled from the item; an unresolved one is a `WARNING`; only `description` moved, on 54 items in two packs. → ledger L4634, #78
 - 2026-09-29 — `bonusAbilityCheck` and `bonusProficiencyBonus` become `check` / `profBonus` effects; only `effects` moved, on two core items. → ledger L4689, #79
+- 2026-10-02 — Ammunition kinds, bundles and magic ammunition from 5e-tools' variants; a 2014 item reprinted under another name no longer ships beside its 2024 self (40 dropped). → ledger L4923, #7

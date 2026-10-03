@@ -22,7 +22,7 @@
 const UPD_FIELDS={
   feature:["description","effects","uses","cost"],
   spell:["level","meta","text"],
-  item:["description","effects","cost","weight","weapon"]
+  item:["description","effects","cost","weight","weapon","ammo"]
 };
 const UPD_CATS=[["features","feature"],["spells","spell"],["inventory","item"]];
 
@@ -38,6 +38,7 @@ function updProject(def,kind,shape){
     const c=costToGp(def.cost); if(c!=null)p.cost=c;
     const w=fnum(def.weight); if(w)p.weight=w;
     if(def.weapon)p.weapon=def.weapon;
+    if(def.ammo)p.ammo=def.ammo;
     return p;
   }
   const p={};

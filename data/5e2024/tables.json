@@ -1878,6 +1878,77 @@
       "ownerKind": "feat"
     },
     {
+      "name": "Ammunition of Slaying Table",
+      "cols": [
+        "1d100",
+        "Creature Type"
+      ],
+      "align": [
+        "center",
+        "left"
+      ],
+      "rows": [
+        [
+          "01-10",
+          "Aberrations"
+        ],
+        [
+          "11-15",
+          "Beasts"
+        ],
+        [
+          "16-20",
+          "Celestials"
+        ],
+        [
+          "21-25",
+          "Constructs"
+        ],
+        [
+          "26-35",
+          "Dragons"
+        ],
+        [
+          "36-45",
+          "Elementals"
+        ],
+        [
+          "46-50",
+          "Humanoids"
+        ],
+        [
+          "51-60",
+          "Fey"
+        ],
+        [
+          "61-70",
+          "Fiends"
+        ],
+        [
+          "71-75",
+          "Giants"
+        ],
+        [
+          "76-80",
+          "Monstrosities"
+        ],
+        [
+          "81-85",
+          "Oozes"
+        ],
+        [
+          "86-90",
+          "Plants"
+        ],
+        [
+          "91-00",
+          "Undead"
+        ]
+      ],
+      "owner": "Ammunition of Slaying",
+      "ownerKind": "item"
+    },
+    {
       "name": "Amulet of the Planes Table",
       "cols": [
         "1d100",

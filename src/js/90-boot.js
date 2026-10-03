@@ -74,6 +74,11 @@ function wire(){
     if((m=t.closest("[data-atk-info]")))return openAttackBreakdown(m.dataset.atkInfo);
     if((m=t.closest("[data-edit-attack]")))return openAttackForm(character.attacks.find(x=>x.id===m.dataset.editAttack));
     if((m=t.closest("[data-del-attack]"))){const a=character.attacks.find(x=>x.id===m.dataset.delAttack);if(a&&confirm(`Delete “${a.name}”?`)){character.attacks=character.attacks.filter(x=>x.id!==a.id);renderAttacks();scheduleSave();}return;}
+    // a launcher's ammunition (62-ammo.js)
+    if((m=t.closest("[data-ammo-fire]"))){fireWeapon(m.dataset.ammoFire,e.detail===0);return;}
+    if((m=t.closest("[data-ammo-pick]")))return openAmmoPicker(m.dataset.ammoPick);
+    if((m=t.closest("[data-ammo-load]"))){const w=m.closest("[data-ammo-weapon]");if(w)loadAmmo(w.dataset.ammoWeapon,m.dataset.ammoLoad);return;}
+    if((m=t.closest("[data-ammo-recover]"))){recoverWeaponAmmo(m.dataset.ammoRecover,e.detail===0);return;}
     // class & ancestry
     if((m=t.closest("[data-add-race]")))return openAddRace();
     if((m=t.closest("[data-add-class]")))return openAddClass();
@@ -165,7 +170,7 @@ function wire(){
     if((m=t.closest("[data-orig-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.origItem);if(it)openOriginInfo(itemOrigin(it));return;}
     if((m=t.closest("[data-orig-spell]"))){const sp=character.spells.find(x=>x.id===m.dataset.origSpell);if(sp)openOriginInfo(spellOrigin(sp));return;}
     if((m=t.closest("[data-edit-item]")))return openItemForm(character.inventory.find(x=>x.id===m.dataset.editItem));
-    if((m=t.closest("[data-del-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.delItem);if(it){const hasAtk=character.attacks.some(a=>a.itemId===it.id);if(confirm(`Delete “${it.name}”?${hasAtk?" Its linked attack will be removed too.":""}`)){character.inventory=character.inventory.filter(x=>x.id!==it.id);character.attacks=character.attacks.filter(a=>a.itemId!==it.id);renderInventory();renderAttacks();recompute();scheduleSave();}}return;}
+    if((m=t.closest("[data-del-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.delItem);if(it){const hasAtk=character.attacks.some(a=>a.itemId===it.id);if(confirm(`Delete “${it.name}”?${hasAtk?" Its linked attack will be removed too.":""}`)){character.inventory=character.inventory.filter(x=>x.id!==it.id);forgetAmmo(character,it.id);character.attacks=character.attacks.filter(a=>a.itemId!==it.id);renderInventory();renderAttacks();recompute();scheduleSave();}}return;}
     if((m=t.closest("[data-toggle-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.toggleItem);if(it){it.equipped=!it.equipped;renderInventory();recompute();scheduleSave();}return;}
     if((m=t.closest("[data-useitem]")))return useItem(m.dataset.useitem);
     /* Same "click pip i" semantics the feature and hit-dice pips have: tapping

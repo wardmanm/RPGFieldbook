@@ -75,17 +75,6 @@
       "effects": []
     },
     {
-      "name": "Acid (vial)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 1,
-      "cost": "25 gp",
-      "description": "As an action, you can splash the contents of this vial onto a creature within 5 feet of you or throw the vial up to 20 feet, shattering it on impact. In either case, make a ranged attack against a creature or object, treating the acid as an improvised weapon. On a hit, the target takes 2d6 acid damage",
-      "effects": []
-    },
-    {
       "name": "Airship",
       "system": "XPHB",
       "category": "Vehicle",
@@ -103,17 +92,6 @@
       "weight": 1,
       "cost": "50 gp",
       "description": "When you take the Attack action, you can replace one of your attacks with throwing a flask of Alchemist's Fire. Target one creature or object you can see within 20 feet of yourself. The target must succeed on a Dexterity saving throw (DC 8 plus your Dexterity modifier and Proficiency Bonus) or take 1d4 Fire damage and start burning",
-      "effects": []
-    },
-    {
-      "name": "Alchemist's Fire (flask)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 1,
-      "cost": "50 gp",
-      "description": "This sticky, adhesive fluid ignites when exposed to air. As an action, you can throw this flask up to 20 feet, shattering it on impact. Make a ranged attack against a creature or object, treating the alchemist's fire as an improvised weapon. On a hit, the target takes 1d4 fire damage at the start of each of its turns. A creature can end this damage by using its action to make a DC 10 Dexterity check to extinguish the flames",
       "effects": []
     },
     {
@@ -197,16 +175,6 @@
       "rarity": "Mundane",
       "cost": "50 gp",
       "description": "As a Bonus Action, you can drink a vial of Antitoxin to gain Advantage on saving throws to avoid or end the Poisoned condition for 1 hour",
-      "effects": []
-    },
-    {
-      "name": "Antitoxin (vial)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "cost": "50 gp",
-      "description": "A creature that drinks this vial of liquid gains advantage on saving throws against poison for 1 hour. It confers no benefit to undead or constructs",
       "effects": []
     },
     {
@@ -339,17 +307,6 @@
       "effects": []
     },
     {
-      "name": "Ball Bearings (bag of 1,000)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 2,
-      "cost": "1 gp",
-      "description": "As an action, you can spill these tiny metal balls from their pouch to cover a level area 10 feet square. A creature moving across the covered area must succeed on a DC 10 Dexterity saving throw or fall prone. A creature moving through the area at half speed doesn't need to make the saving throw",
-      "effects": []
-    },
-    {
       "name": "Barrel",
       "system": "XPHB",
       "category": "Gear",
@@ -368,16 +325,6 @@
       "rarity": "Mundane",
       "cost": "100 gp",
       "description": "As a Bonus Action, you can use a vial of Basic Poison to coat one weapon or up to three pieces of ammunition. A creature that takes Piercing or Slashing damage from the poisoned weapon or ammunition takes an extra 1d4 Poison damage. Once applied, the poison retains potency for 1 minute or until its damage is dealt, whichever comes first",
-      "effects": []
-    },
-    {
-      "name": "Basic Poison (vial)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "cost": "100 gp",
-      "description": "You can use the poison in this vial to coat one slashing or piercing weapon or up to three pieces of ammunition. Applying the poison takes an action. A creature hit by the poisoned weapon or ammunition must make a DC 10 Constitution saving throw or take 1d4 poison damage. Once applied, the poison retains potency for 1 minute before drying",
       "effects": []
     },
     {
@@ -790,17 +737,6 @@
       "effects": []
     },
     {
-      "name": "Caltrops (bag of 20)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 2,
-      "cost": "1 gp",
-      "description": "As an action, you can spread a single bag of caltrops to cover a 5-foot-square area. Any creature that enters the area must succeed on a DC 15 Dexterity saving throw or stop moving and take 1 piercing damage. Until the creature regains at least 1 hit point, its walking speed is reduced by 10 feet. A creature moving through the area at half speed doesn't need to make the saving throw",
-      "effects": []
-    },
-    {
       "name": "Camel",
       "system": "XPHB",
       "category": "Mount",
@@ -921,17 +857,6 @@
       "weight": 10,
       "cost": "5 gp",
       "description": "As a Utilize action, you can wrap a Chain around an unwilling creature within 5 feet of yourself that has the Grappled, Incapacitated, or Restrained condition if you succeed on a DC 13 Strength (Athletics) check. If the creature's legs are bound, the creature has the Restrained condition until it escapes. Escaping the Chain requires the creature to make a successful DC 18 Dexterity (Acrobatics) check as an action. Bursting the Chain requires a successful DC 20 Strength (Athletics) check as an action",
-      "effects": []
-    },
-    {
-      "name": "Chain (10 feet)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 10,
-      "cost": "5 gp",
-      "description": "A chain has 10 hit points. It can be burst with a successful DC 20 Strength check",
       "effects": []
     },
     {
@@ -1160,15 +1085,6 @@
       "effects": []
     },
     {
-      "name": "Common Wine (pitcher)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Food and Drink",
-      "rarity": "Mundane",
-      "cost": "2 sp",
-      "effects": []
-    },
-    {
       "name": "Component Pouch",
       "system": "XPHB",
       "category": "Gear",
@@ -1214,16 +1130,6 @@
       "weight": 4,
       "cost": "5 gp",
       "description": "While wearing a Costume, you have Advantage on any ability check you make to impersonate the person or type of person it represents",
-      "effects": []
-    },
-    {
-      "name": "Costume Clothes",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 4,
-      "cost": "5 gp",
       "effects": []
     },
     {
@@ -2098,17 +2004,6 @@
       "effects": []
     },
     {
-      "name": "Hempen Rope (50 feet)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 10,
-      "cost": "1 gp",
-      "description": "Rope, whether made of hemp or silk, has 2 hit points and can be burst with a DC 17 Strength check",
-      "effects": []
-    },
-    {
       "name": "Herbalism Kit",
       "system": "XPHB",
       "category": "Tool",
@@ -2138,17 +2033,6 @@
       "weight": 1,
       "cost": "25 gp",
       "description": "When you take the Attack action, you can replace one of your attacks with throwing a flask of Holy Water. Target one creature you can see within 20 feet of yourself. The target must succeed on a Dexterity saving throw (DC 8 plus your Dexterity modifier and Proficiency Bonus) or take 2d8 Radiant damage if it is a Fiend or an Undead",
-      "effects": []
-    },
-    {
-      "name": "Holy Water (flask)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 1,
-      "cost": "25 gp",
-      "description": "As an action, you can splash the contents of this flask onto a creature within 5 feet of you or throw it up to 20 feet, shattering it on impact. In either case, make a ranged attack against a target creature, treating the holy water as an improvised weapon. If the target is a fiend or undead, it takes 2d6 radiant damage.\nA cleric or paladin may create holy water by performing a special ritual. The ritual takes 1 hour to perform, uses 25 gp worth of powdered silver, and requires the caster to expend a 1st-level spell slot",
       "effects": []
     },
     {
@@ -2236,15 +2120,6 @@
       "effects": []
     },
     {
-      "name": "Hunk of Cheese",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Food and Drink",
-      "rarity": "Mundane",
-      "cost": "1 sp",
-      "effects": []
-    },
-    {
       "name": "Hunting Trap",
       "system": "XPHB",
       "category": "Gear",
@@ -2273,15 +2148,6 @@
       "rarity": "Mundane",
       "cost": "10 gp",
       "description": "Ink comes in a 1-ounce bottle, which provides enough ink to write about 500 pages",
-      "effects": []
-    },
-    {
-      "name": "Ink (1-ounce bottle)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "cost": "10 gp",
       "effects": []
     },
     {
@@ -2507,16 +2373,6 @@
       "effects": []
     },
     {
-      "name": "Iron Spikes (10)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 5,
-      "cost": "1 gp",
-      "effects": []
-    },
-    {
       "name": "Javelin of Lightning",
       "system": "XPHB",
       "category": "Weapon",
@@ -2574,17 +2430,6 @@
       "effects": []
     },
     {
-      "name": "Ladder (10-foot)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 25,
-      "cost": "1 sp",
-      "description": "Ladder (10-foot)",
-      "effects": []
-    },
-    {
       "name": "Lamp",
       "system": "XPHB",
       "category": "Gear",
@@ -2611,15 +2456,6 @@
       "type": "Trade Good",
       "rarity": "Mundane",
       "cost": "5 gp",
-      "effects": []
-    },
-    {
-      "name": "Loaf of Bread",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Food and Drink",
-      "rarity": "Mundane",
-      "cost": "2 cp",
       "effects": []
     },
     {
@@ -3008,17 +2844,6 @@
       "effects": []
     },
     {
-      "name": "Oil (flask)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 1,
-      "cost": "1 sp",
-      "description": "Oil usually comes in a clay flask that holds 1 pint. As an action, you can splash the oil in this flask onto a creature within 5 feet of you or throw it up to 20 feet, shattering it on impact. Make a ranged attack against a target creature or object, treating the oil as an improvised weapon. On a hit, the target is covered in oil. If the target takes any fire damage before the oil dries (after 1 minute), the target takes an additional 5 fire damage from the burning oil. You can also pour a flask of oil on the ground to cover a 5-foot-square area, provided that the surface is level. If lit, the oil burns for 2 rounds and deals 5 fire damage to any creature that enters the area or ends its turn in the area. A creature can take this damage only once per turn",
-      "effects": []
-    },
-    {
       "name": "Oil of Etherealness",
       "system": "XPHB",
       "category": "Potion",
@@ -3109,15 +2934,6 @@
       "effects": []
     },
     {
-      "name": "Paper (one sheet)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "cost": "2 sp",
-      "effects": []
-    },
-    {
       "name": "Parchment",
       "system": "XPHB",
       "category": "Gear",
@@ -3125,15 +2941,6 @@
       "rarity": "Mundane",
       "cost": "1 sp",
       "description": "One sheet of Parchment can hold about 250 handwritten words",
-      "effects": []
-    },
-    {
-      "name": "Parchment (one sheet)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "cost": "1 sp",
       "effects": []
     },
     {
@@ -3165,15 +2972,6 @@
       "rarity": "Mundane",
       "cost": "5 gp",
       "description": "Perfume comes in a 4-ounce vial. For 1 hour after applying Perfume to yourself, you have Advantage on Charisma (Persuasion) checks made to influence an Indifferent Humanoid within 5 feet of yourself",
-      "effects": []
-    },
-    {
-      "name": "Perfume (vial)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "cost": "5 gp",
       "effects": []
     },
     {
@@ -3279,15 +3077,6 @@
       "effects": []
     },
     {
-      "name": "Playing Card Set",
-      "system": "XPHB",
-      "category": "Tool",
-      "type": "Gaming Set",
-      "rarity": "Mundane",
-      "cost": "5 sp",
-      "effects": []
-    },
-    {
       "name": "Playing Cards",
       "system": "XPHB",
       "category": "Tool",
@@ -3317,16 +3106,6 @@
       "weight": 7,
       "cost": "5 cp",
       "description": "A Pole is 10 feet long. You can use it to touch something up to 10 feet away. If you must make a Strength (Athletics) check as part of a High or Long Jump, you can use the Pole to vault, giving yourself Advantage on the check",
-      "effects": []
-    },
-    {
-      "name": "Pole (10-foot)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 7,
-      "cost": "5 cp",
       "effects": []
     },
     {
@@ -3874,17 +3653,6 @@
       "effects": []
     },
     {
-      "name": "Rations (1 day)",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 2,
-      "cost": "5 sp",
-      "description": "Rations consist of dry foods suitable for extended travel, including jerky, dried fruit, hardtack, and nuts",
-      "effects": []
-    },
-    {
       "name": "Red Dragon Scale Mail",
       "system": "XPHB",
       "category": "Armor",
@@ -4382,16 +4150,6 @@
       "effects": []
     },
     {
-      "name": "Robes",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 4,
-      "cost": "1 gp",
-      "effects": []
-    },
-    {
       "name": "Rod of Absorption",
       "system": "XPHB",
       "category": "Rod",
@@ -4788,87 +4546,6 @@
       "type": "Wondrous Item",
       "rarity": "Legendary",
       "description": "This viscous, milky-white substance can form a permanent adhesive bond between any two objects. It must be stored in a jar or flask that has been coated inside with Oil of Slipperiness. When found, a container contains 1d6 + 1 ounces.\nOne ounce of the glue can cover a 1-foot square surface. Applying an ounce of Sovereign Glue takes a Utilize action, and the applied glue takes 1 minute to set. Once it has done so, the bond it creates can be broken only by the application of Universal Solvent or Oil of Etherealness, or with a Wish spell",
-      "effects": []
-    },
-    {
-      "name": "Spell Scroll (1st Level)",
-      "system": "XPHB",
-      "category": "Scroll",
-      "type": "Scroll",
-      "rarity": "Common",
-      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 11. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 13 and an attack bonus of 5.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 11 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
-      "effects": []
-    },
-    {
-      "name": "Spell Scroll (2nd Level)",
-      "system": "XPHB",
-      "category": "Scroll",
-      "type": "Scroll",
-      "rarity": "Uncommon",
-      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 12. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 13 and an attack bonus of 5.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 12 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
-      "effects": []
-    },
-    {
-      "name": "Spell Scroll (3rd Level)",
-      "system": "XPHB",
-      "category": "Scroll",
-      "type": "Scroll",
-      "rarity": "Uncommon",
-      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 13. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 15 and an attack bonus of 7.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 13 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
-      "effects": []
-    },
-    {
-      "name": "Spell Scroll (4th Level)",
-      "system": "XPHB",
-      "category": "Scroll",
-      "type": "Scroll",
-      "rarity": "Rare",
-      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 14. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 15 and an attack bonus of 7.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 14 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
-      "effects": []
-    },
-    {
-      "name": "Spell Scroll (5th Level)",
-      "system": "XPHB",
-      "category": "Scroll",
-      "type": "Scroll",
-      "rarity": "Rare",
-      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 15. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 17 and an attack bonus of 9.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 15 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
-      "effects": []
-    },
-    {
-      "name": "Spell Scroll (6th Level)",
-      "system": "XPHB",
-      "category": "Scroll",
-      "type": "Scroll",
-      "rarity": "Very Rare",
-      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 16. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 17 and an attack bonus of 9.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 16 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
-      "effects": []
-    },
-    {
-      "name": "Spell Scroll (7th Level)",
-      "system": "XPHB",
-      "category": "Scroll",
-      "type": "Scroll",
-      "rarity": "Very Rare",
-      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 17. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 18 and an attack bonus of 10.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 17 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
-      "effects": []
-    },
-    {
-      "name": "Spell Scroll (8th Level)",
-      "system": "XPHB",
-      "category": "Scroll",
-      "type": "Scroll",
-      "rarity": "Very Rare",
-      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 18. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 18 and an attack bonus of 10.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 18 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
-      "effects": []
-    },
-    {
-      "name": "Spell Scroll (9th Level)",
-      "system": "XPHB",
-      "category": "Scroll",
-      "type": "Scroll",
-      "rarity": "Legendary",
-      "description": "A spell scroll bears the words of a single spell, written as a mystical cipher. If the spell is on your class's spell list, you can read the scroll and cast its spell without providing any material components. Otherwise, the scroll is unintelligible. Casting the spell by reading the scroll requires the spell's normal casting time. Once the spell is cast, the words on the scroll fade, and it crumbles to dust. If the casting is interrupted, the scroll is not lost.\nIf the spell is on your class's spell list but of a higher level than you can normally cast, you must make an ability check using your spellcasting ability to determine whether you cast it successfully. The DC is 19. On a failed check, the spell disappears from the scroll with no other effect.\nOnce the spell is cast, the words on the scroll fade, and the scroll itself crumbles to dust.\nA spell cast from this scroll has a save DC of 19 and an attack bonus of 11.\nA wizard spell on a spell scroll can be copied just as spells in spellbooks can be copied. When a spell is copied from a spell scroll, the copier must succeed on a DC 19 Intelligence (Arcana) check. If the check succeeds, the spell is successfully copied. Whether the check succeeds or fails, the spell scroll is destroyed",
       "effects": []
     },
     {
@@ -5302,16 +4979,6 @@
       }
     },
     {
-      "name": "Steel Mirror",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 0.5,
-      "cost": "5 gp",
-      "effects": []
-    },
-    {
       "name": "Stone of Controlling Earth Elementals",
       "system": "XPHB",
       "category": "Wondrous Item",
@@ -5614,17 +5281,6 @@
       "effects": []
     },
     {
-      "name": "Two-Person Tent",
-      "system": "XPHB",
-      "category": "Gear",
-      "type": "Adventuring Gear",
-      "rarity": "Mundane",
-      "weight": 20,
-      "cost": "2 gp",
-      "description": "A simple and portable canvas shelter, a tent sleeps two",
-      "effects": []
-    },
-    {
       "name": "Universal Solvent",
       "system": "XPHB",
       "category": "Wondrous Item",
@@ -5909,6 +5565,281 @@
       "weight": 1,
       "cost": "10 gp",
       "effects": []
+    },
+    {
+      "name": "+1 Arrow",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Uncommon",
+      "weight": 0.05,
+      "description": "You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "arrow",
+        "bonus": 1
+      }
+    },
+    {
+      "name": "+1 Bolt",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Uncommon",
+      "weight": 0.075,
+      "description": "You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "bolt",
+        "bonus": 1
+      }
+    },
+    {
+      "name": "+1 Firearm Bullet",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Uncommon",
+      "weight": 0.2,
+      "description": "You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "firearm bullet",
+        "bonus": 1
+      }
+    },
+    {
+      "name": "+1 Needle",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Uncommon",
+      "weight": 0.02,
+      "description": "You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "needle",
+        "bonus": 1
+      }
+    },
+    {
+      "name": "+1 Sling Bullet",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Uncommon",
+      "weight": 0.075,
+      "description": "You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "sling bullet",
+        "bonus": 1
+      }
+    },
+    {
+      "name": "+2 Arrow",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Rare",
+      "weight": 0.05,
+      "description": "You have a +2 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "arrow",
+        "bonus": 2
+      }
+    },
+    {
+      "name": "+2 Bolt",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Rare",
+      "weight": 0.075,
+      "description": "You have a +2 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "bolt",
+        "bonus": 2
+      }
+    },
+    {
+      "name": "+2 Firearm Bullet",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Rare",
+      "weight": 0.2,
+      "description": "You have a +2 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "firearm bullet",
+        "bonus": 2
+      }
+    },
+    {
+      "name": "+2 Needle",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Rare",
+      "weight": 0.02,
+      "description": "You have a +2 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "needle",
+        "bonus": 2
+      }
+    },
+    {
+      "name": "+2 Sling Bullet",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Rare",
+      "weight": 0.075,
+      "description": "You have a +2 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "sling bullet",
+        "bonus": 2
+      }
+    },
+    {
+      "name": "+3 Arrow",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Very Rare",
+      "weight": 0.05,
+      "description": "You have a +3 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "arrow",
+        "bonus": 3
+      }
+    },
+    {
+      "name": "+3 Bolt",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Very Rare",
+      "weight": 0.075,
+      "description": "You have a +3 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "bolt",
+        "bonus": 3
+      }
+    },
+    {
+      "name": "+3 Firearm Bullet",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Very Rare",
+      "weight": 0.2,
+      "description": "You have a +3 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "firearm bullet",
+        "bonus": 3
+      }
+    },
+    {
+      "name": "+3 Needle",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Very Rare",
+      "weight": 0.02,
+      "description": "You have a +3 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "needle",
+        "bonus": 3
+      }
+    },
+    {
+      "name": "+3 Sling Bullet",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Very Rare",
+      "weight": 0.075,
+      "description": "You have a +3 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical",
+      "effects": [],
+      "ammo": {
+        "kind": "sling bullet",
+        "bonus": 3
+      }
+    },
+    {
+      "name": "Arrow of Slaying",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Very Rare",
+      "weight": 0.05,
+      "description": "This magic ammunition is meant to slay creatures of a particular type, which the DM chooses or determines randomly by rolling on the table below. If a creature of that type takes damage from the ammunition, the creature makes a DC 17 Constitution saving throw, taking an extra 6d10 Force damage on a failed save or half as much extra damage on a successful one.\nAfter dealing its extra damage to a creature, the ammunition becomes nonmagical.\n[Table: Ammunition of Slaying Table]",
+      "effects": [],
+      "ammo": {
+        "kind": "arrow"
+      }
+    },
+    {
+      "name": "Bolt of Slaying",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Very Rare",
+      "weight": 0.075,
+      "description": "This magic ammunition is meant to slay creatures of a particular type, which the DM chooses or determines randomly by rolling on the table below. If a creature of that type takes damage from the ammunition, the creature makes a DC 17 Constitution saving throw, taking an extra 6d10 Force damage on a failed save or half as much extra damage on a successful one.\nAfter dealing its extra damage to a creature, the ammunition becomes nonmagical.\n[Table: Ammunition of Slaying Table]",
+      "effects": [],
+      "ammo": {
+        "kind": "bolt"
+      }
+    },
+    {
+      "name": "Firearm Bullet of Slaying",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Very Rare",
+      "weight": 0.2,
+      "description": "This magic ammunition is meant to slay creatures of a particular type, which the DM chooses or determines randomly by rolling on the table below. If a creature of that type takes damage from the ammunition, the creature makes a DC 17 Constitution saving throw, taking an extra 6d10 Force damage on a failed save or half as much extra damage on a successful one.\nAfter dealing its extra damage to a creature, the ammunition becomes nonmagical.\n[Table: Ammunition of Slaying Table]",
+      "effects": [],
+      "ammo": {
+        "kind": "firearm bullet"
+      }
+    },
+    {
+      "name": "Needle of Slaying",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Very Rare",
+      "weight": 0.02,
+      "description": "This magic ammunition is meant to slay creatures of a particular type, which the DM chooses or determines randomly by rolling on the table below. If a creature of that type takes damage from the ammunition, the creature makes a DC 17 Constitution saving throw, taking an extra 6d10 Force damage on a failed save or half as much extra damage on a successful one.\nAfter dealing its extra damage to a creature, the ammunition becomes nonmagical.\n[Table: Ammunition of Slaying Table]",
+      "effects": [],
+      "ammo": {
+        "kind": "needle"
+      }
+    },
+    {
+      "name": "Sling Bullet of Slaying",
+      "system": "XPHB",
+      "category": "Ammunition",
+      "type": "Ammunition",
+      "rarity": "Very Rare",
+      "weight": 0.075,
+      "description": "This magic ammunition is meant to slay creatures of a particular type, which the DM chooses or determines randomly by rolling on the table below. If a creature of that type takes damage from the ammunition, the creature makes a DC 17 Constitution saving throw, taking an extra 6d10 Force damage on a failed save or half as much extra damage on a successful one.\nAfter dealing its extra damage to a creature, the ammunition becomes nonmagical.\n[Table: Ammunition of Slaying Table]",
+      "effects": [],
+      "ammo": {
+        "kind": "sling bullet"
+      }
     }
   ]
 }

@@ -115,7 +115,23 @@ function finderQty(v){const n=Math.floor(Number(v));return Number.isFinite(n)&&n
    one linked attack however many are added. No rendering, so the suite can call it. */
 function addLibraryItems(entries,og,costOverride,qty){
   const n=finderQty(qty);
-  entries.forEach(x=>{const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());if(ex){ex.qty=num(ex.qty)+n;return;}const m=itemMetaLine(x);const it={id:uid(),name:x.name,qty:n,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:!!x.weapon};if(og)it.origin=og;const c=(costOverride!=null?costOverride:costToGp(x.cost));if(c!=null)it.cost=c;const wg=fnum(x.weight);if(wg)it.weight=wg;if(x.category)it.category=x.category;if(x.type)it.type=x.type;if(x.weapon)it.weapon=x.weapon;stampSrc(it,x,"item","items","browse");character.inventory.push(it);if(it.weapon)addAttackForItem(it);});
+  entries.forEach(x0=>{
+    /* A bundle ("Arrows (20)") arrives as its single piece, so the quantity is
+       the count of arrows (#6): ×2 of a twenty-arrow bundle adds 40. */
+    const u=unpackAmmo(x0,rules.items), x=u.def, add=n*u.per;
+    const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());
+    if(ex){ex.qty=num(ex.qty)+add;return;}
+    const m=itemMetaLine(x);
+    const it={id:uid(),name:x.name,qty:add,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:!!x.weapon};
+    if(og)it.origin=og;
+    const c=(costOverride!=null?Math.round(costOverride/u.per*10000)/10000:costToGp(x.cost));if(c!=null)it.cost=c;
+    const wg=fnum(x.weight);if(wg)it.weight=wg;
+    if(x.category)it.category=x.category;if(x.type)it.type=x.type;if(x.weapon)it.weapon=x.weapon;
+    const am=itemAmmo(x);if(am)it.ammo=am.bonus?{kind:am.kind,bonus:am.bonus}:{kind:am.kind};
+    stampSrc(it,x,"item","items","browse");
+    character.inventory.push(it);
+    if(it.weapon)addAttackForItem(it);
+  });
 }
 function browseItems(){
   const lib=rules.items||[];

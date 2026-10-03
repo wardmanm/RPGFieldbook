@@ -14,11 +14,12 @@ player's own numbers**, and it **never updates without a backup first**.
 `openUpdateReview()`, `commitUpdates()`, `finishUpdates()`, `markCharChecked()`,
 `maybePromptUpdate()`, `updRowHTML()` in `73-char-update-ui.js`; `fpHash()`, `fpNorm()` in
 `00-constants.js`; `backupCharacter()` in `70-persistence.js`; `migrate()` in `71-char-io.js`;
-`itemMetaLine()`, `costToGp()` in `25-origins-items.js` · **Tests:** `char-update.js`, with source
+`itemMetaLine()`, `costToGp()` in `25-origins-items.js`; `migrateAmmo()`, `rebaseAmmo()` in
+`62-ammo.js` · **Tests:** `char-update.js`, with source
 guards in `rules-data.js` · **See also:** [Home & characters](home-and-characters.md) (backups),
 [Character model](../architecture/character-model.md), [Attacks & damage](attacks-and-damage.md),
 [Features & traits](features-and-traits.md), [Spells](spells.md), [Inventory](inventory.md),
-[CLAUDE.md](../../../../CLAUDE.md) §Architecture invariants
+[Ammunition](ammunition.md), [CLAUDE.md](../../../../CLAUDE.md) §Architecture invariants
 
 ## How it works
 
@@ -46,14 +47,20 @@ one-way door.
   `fpNorm()`, which sorts keys, collapses whitespace and drops empties, so it is stable across key
   order and spacing.
 - `UPD_FIELDS` is the allowlist of rules-owned fields: feature `description, effects, uses, cost`;
-  spell `level, meta, text`; item `description, effects, cost, weight, weapon`. Everything else is
-  the character's.
+  spell `level, meta, text`; item `description, effects, cost, weight, weapon, ammo`. `ammoStack`,
+  `ammoSpent` and `qty` are character-local and never written by this tool — see
+  [Ammunition](ammunition.md). Everything else is the character's.
 - `shape` is `"browse"` for an item added through the item finder — `updProject()` then prepends
   `itemMetaLine()` and converts the cost with `costToGp()`, as the finder did — and `"plain"` for
   everything copied verbatim. A plain item's cost is projected to its stored gp number too.
 - The copy sites: `addFeatureFromDef()` (category `""`: a trait embedded in a class, race or
   background), `grantFeatDef()` (re-stamped against `feats`), `grantItemByName()`, the item finder,
   the spell finder, `addPickedFeature()`, and `applyUpdateRow()` for a trait it adds.
+
+**The one-time ammunition pass re-baselines what it wrote.** `migrateAmmo()`'s `rebaseAmmo()` is a
+second way a copy's fingerprints move, outside a copy site: when the pass unpacks a bundle or gives
+a piece or launcher its kind, it re-takes `fp`/`cfp` for just the fields it changed, so the change
+reads as the pack's rather than the player's — see [Ammunition](ammunition.md).
 
 **Matching** (`updResolve()`):
 
@@ -207,3 +214,4 @@ state survives. Attack mechanics: [Attacks & damage](attacks-and-damage.md).
 - 2026-09-28 — and items' new spell attack and spell save DC effects. → ledger L4568, #77
 - 2026-09-29 — and the 54 item descriptions that were a template tag, as a `description`-only row. → ledger L4634, #78
 - 2026-09-29 — and the Stone of Good Luck's and Ioun Stone of Mastery's new effects. → ledger L4689, #79
+- 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6

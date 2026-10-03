@@ -110,6 +110,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `56-class.js` | add/remove class, level up/down, subclass, level-1 HP seed | [Character building](features/character-building.md), [Vitals & rest](features/vitals-and-rest.md) |
 | `58-choices.js` | "choose N" choices: `runChoices()`, `gatherChoices()`, `commitChoices()` | [Character building](features/character-building.md) |
 | `60-attacks.js` | `attackNumbers()`, damage; spell→attack sync; casting, Active Spells, `advanceRound()`; `renderAttacks()`, `renderSpells()` | [Attacks & damage](features/attacks-and-damage.md), [Spells](features/spells.md), [Conditions & concentration](features/conditions-and-concentration.md) |
+| `62-ammo.js` | ammunition: kinds, stacks, unpacking, the one-time pass, firing and recovery | [Ammunition](features/ammunition.md) |
 | `65-resources.js` | death saves, rests, Hit Dice, dice expressions, resource trackers, slot bubbles | [Vitals & rest](features/vitals-and-rest.md), [Class resources](features/class-resources.md) |
 | `66-coins-hp.js` | portrait, coins and the Adjust transaction, HP entry, `renderAll()` | [Inventory](features/inventory.md), [Vitals & rest](features/vitals-and-rest.md) |
 | `70-persistence.js` | localStorage keys, the character library, backups, IndexedDB with timeouts, LZW | [Storage](architecture/storage.md), [Home & characters](features/home-and-characters.md) |

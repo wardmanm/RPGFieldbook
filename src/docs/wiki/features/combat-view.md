@@ -18,7 +18,8 @@ its own tab. Leaving the tab never ends combat.
 `60-attacks.js` · markup `src/html/70-combat.html`, styles `src/css/45-combat.css` · **Tests:**
 `sheet.js` (the pure half), `rules-data.js` (the tab wiring) · **See also:**
 [the spec](../../specs/2026-09-24-combat-view-design.md), [the plan](../../plans/2026-09-24-combat-view.md),
-[Spells](spells.md), [Sections & layout](../ui/sections-and-layout.md), [Shell](../ui/shell.md)
+[Spells](spells.md), [Ammunition](ammunition.md), [Sections & layout](../ui/sections-and-layout.md),
+[Shell](../ui/shell.md)
 
 ## How it works
 
@@ -51,11 +52,15 @@ else the previous one, else ✕.
 `startCombatNow()` → `combatStart()`: active, round 1, active spells untouched. ◀ and ▶ are
 `advanceRound(∓1)`, shared with the Active Spells card: every active spell moves 6 s, and in combat
 the round cannot drop below 1. End asks first (`endCombatAsk()`), then `combatEnd()` zeroes the round
-and returns the summary. The header shows time at the *start* of the round (`combatElapsedSec()`,
-round 7 → 36 sec); the summary counts the round being ended (round 7 → 7 rounds, 42 sec). Every
-round-mover repaints through `renderCombatChrome()`. The round is announced from `#cvLive`, outside
-the header that is repainted; a repaint keeps focus on the same button by id, falling back when it is
-gone or disabled (◀ at round 1 → ▶, Start → ▶, End → Start).
+and returns the summary. Once the fight is over, `offerAmmoRecovery()` asks once more — only if
+something is recoverable **and** a shot has been fired since it last asked — to recover half of
+what was fired ([Ammunition](ammunition.md)); a "No" remembers having asked, so a later fight with
+no new shots asks nothing, while Recover N on the row still shows and recovers the full count; what
+came back from a "Yes" is appended to the toast. The header shows time at the *start* of the round
+(`combatElapsedSec()`, round 7 → 36 sec); the summary counts the round being ended (round 7 → 7
+rounds, 42 sec). Every round-mover repaints through `renderCombatChrome()`. The round is announced
+from `#cvLive`, outside the header that is repainted; a repaint keeps focus on the same button by id,
+falling back when it is gone or disabled (◀ at round 1 → ▶, Start → ▶, End → Start).
 
 **The tab-bar button.** `renderCombatButton()`: the swords alone when idle; highlighted with "Rd N"
 in combat, on every tab (at ≤400px just the number). It takes `.active` while the combat tab shows.
@@ -153,3 +158,5 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-09-25 — The overlay becomes a tab; `inert`, the lock, `aria-modal` and its Esc are removed; Hit Dice leave Vitals for Rest & Recovery, so they no longer ride in by default. → ledger L3676
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-09-29 — Hiding Trackers while it is the view's only card brings back the "Add sections…" hint. → ledger L4856, #41
+- 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
+- 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6

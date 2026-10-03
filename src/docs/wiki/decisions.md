@@ -194,6 +194,19 @@ When a page gains a Decisions row, add its line here under that page.
 - **Order of starred attacks** — Insertion order
 - **Should `attackNumbers()` skip the effects of the item that owns the row? (#74)** — No: effects are global, a weapon's own bonus is its `atkMisc`/`dmgMisc`, and the packs are fixed
 
+### [Ammunition](features/ammunition.md)
+
+- **Where ammo is spent** — A **Fire** button on the weapon's attack row, which the combat view already shows
+- **How a weapon finds its ammo** — By kind, the player picks the stack
+- **Recovery** — Asked at End combat, plus a Recover button on the row
+- **Bundles** — Unpack on arrival
+- **A stack at 0** — Removed, like a potion; recovery recreates it from a copy
+- **The 2014 duplicates (Crossbow Bolt, Blowgun Needle, their bundles, the 2014 Net)** — Stop shipping them
+- **Magic ammunition** — Included
+- **The item editor and pack format** — Both learn the ammo fields
+- **Recover N's visibility** — Shows only when N > 0
+- **Merging an unpacked bundle** — Only into a stack of the same name, bonus and grant
+
 ### [Class resources](features/class-resources.md)
 
 - **How a pool shows its die size** — A separate `die`, resolved per level like `max`

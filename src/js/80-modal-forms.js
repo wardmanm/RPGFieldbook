@@ -243,6 +243,11 @@ function openItemForm(existing){
      already doing — otherwise saving any other change would quietly turn it off
      (an empty box saves as "explicitly nothing"). */
   const use=itemUse(it)||{};
+  /* ammunition (#8): what a weapon fires, and whether this item IS ammunition */
+  const am=itemAmmo(it), wAmmo=weaponAmmoKind(it);
+  const kinds=ammoKindChoices(character,[wAmmo,am&&am.kind]);
+  const bonusOpts=[...new Set([0,1,2,3,am?am.bonus:0])].sort((x,y)=>x-y);
+  const bonusText=b=>b<0?String(b):"+"+b;
   const abilOpts=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"],["finesse","Finesse (best of STR/DEX)"],["none","None"]];
   openModal(existing?"Edit item":"New item",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="iLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
@@ -263,6 +268,14 @@ function openItemForm(existing){
         <div class="field"><label class="f">Ability</label><select id="iWAbil">${abilOpts.map(([v,l])=>`<option value="${esc(v)}"${(w.ability||"str")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
       <div class="g2"><div class="field"><label class="f">Damage dice</label><input id="iWDice" value="${esc(w.dice||"")}" placeholder="1d8"></div>
         <div class="field"><label class="f">Damage type</label><input id="iWType" value="${esc(w.damageType||"")}" placeholder="slashing"></div></div>
+      <div class="g2"><div class="field"><label class="f">Ammunition it fires</label><select id="iWAmmo">${ammoKindOptionsHTML(kinds,wAmmo,"None")}</select></div>
+        <div class="field" id="iWAmmoOtherWrap" style="display:none"><label class="f">New kind</label><input id="iWAmmoOther" placeholder="dart pellet" autocomplete="off"></div></div>
+    </div>
+    <label class="equip ${am?"on":""}" id="iIsAmmo" style="font-size:12px;margin-top:8px"><span class="box"></span>Ammunition (a weapon of its kind fires it)</label>
+    <div id="iAmmoFields" style="${am?"":"display:none"}">
+      <div class="g2"><div class="field"><label class="f">Kind</label><select id="iAmmoKind">${ammoKindOptionsHTML(kinds,am?am.kind:"arrow","")}</select></div>
+        <div class="field"><label class="f">Bonus to attack and damage</label><select id="iAmmoBonus">${bonusOpts.map(b=>`<option value="${esc(b)}"${(am?am.bonus:0)===b?" selected":""}>${bonusText(b)}</option>`).join("")}</select></div></div>
+      <div class="field" id="iAmmoKindOtherWrap" style="display:none"><label class="f">New kind</label><input id="iAmmoKindOther" placeholder="dart pellet" autocomplete="off"></div>
     </div>
     <label class="equip ${arm?"on":""}" id="iIsArmor" style="font-size:12px;margin-top:8px"><span class="box"></span>Armor (set the AC it gives)</label>
     <div id="iArmorFields" style="${arm?"":"display:none"}">
@@ -290,6 +303,22 @@ function openItemForm(existing){
   let wFrom=it.weapon||null;
   const wtog=document.getElementById("iIsWeapon"), wfields=document.getElementById("iWeaponFields");
   wtog.addEventListener("click",()=>{isWeapon=!isWeapon;wtog.classList.toggle("on",isWeapon);wfields.style.display=isWeapon?"":"none";});
+  /* "Other…" shows a box for a kind this sheet hasn't used yet */
+  const otherBox=(selId,wrapId)=>{const s=document.getElementById(selId),w=document.getElementById(wrapId);
+    const sync=()=>{w.style.display=s.value==="__other"?"":"none";};s.addEventListener("change",sync);return sync;};
+  const wAmmoSync=otherBox("iWAmmo","iWAmmoOtherWrap"), amKindSync=otherBox("iAmmoKind","iAmmoKindOtherWrap");
+  /* set a kind <select> to `k`: its own option when the list has one, else Other… with `k` in the box */
+  const setKind=(selId,boxId,k,sync)=>{k=ammoKindOf(k);const s=document.getElementById(selId);
+    if(!k||kinds.includes(k))s.value=k;else{s.value="__other";document.getElementById(boxId).value=k;}sync();};
+  const setBonus=b=>{const s=document.getElementById("iAmmoBonus");
+    if(!bonusOpts.includes(b)){bonusOpts.push(b);s.insertAdjacentHTML("beforeend",`<option value="${esc(b)}">${bonusText(b)}</option>`);}
+    s.value=String(b);};
+  /* the kind a <select> names; null when it says Other… and the box is blank */
+  const kindOf=(selId,boxId)=>{const v=document.getElementById(selId).value;
+    return v==="__other"?(ammoKindOf(document.getElementById(boxId).value)||null):ammoKindOf(v);};
+  let isAmmo=!!am;
+  const amtog=document.getElementById("iIsAmmo"), amfields=document.getElementById("iAmmoFields");
+  amtog.addEventListener("click",()=>{isAmmo=!isAmmo;amtog.classList.toggle("on",isAmmo);amfields.style.display=isAmmo?"":"none";});
   let isArmor=!!arm;
   const atog=document.getElementById("iIsArmor"), afields=document.getElementById("iArmorFields");
   const aKind=document.getElementById("iAKind"), aDexW=document.getElementById("iADexWrap"),
@@ -311,9 +340,17 @@ function openItemForm(existing){
   const fxWrap=document.getElementById("iFx");
   document.getElementById("iAddFx").addEventListener("click",()=>fxWrap.insertAdjacentHTML("beforeend",fxRow(null)));
   fxWrap.addEventListener("click",e=>{const d=e.target.closest(".fx-del");if(d)d.closest(".fxrow").remove()});
+  let qtyFromBundle=false;
   const libSel=document.getElementById("iLib");
-  if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;const wg=fnum(x.weight);if(wg)document.getElementById("iWeight").value=wg;fxWrap.innerHTML=fxEditorRows(x.effects);
-    if(x.weapon){wFrom=x.weapon;isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";}
+  if(libSel)libSel.addEventListener("change",()=>{const x0=lib[libSel.value];if(!x0)return;
+    /* a bundle inserts as its single piece, the count it holds as the quantity
+       (#6); picking something else afterwards puts it back to 1, or a bundle
+       picked earlier in the same form left its count on the next item too (#8) */
+    const u=unpackAmmo(x0,lib),x=u.def;
+    if(u.per>1){document.getElementById("iQty").value=u.per;qtyFromBundle=true;}
+    else if(qtyFromBundle){document.getElementById("iQty").value=1;qtyFromBundle=false;}
+    document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;const wg=fnum(x.weight);if(wg)document.getElementById("iWeight").value=wg;fxWrap.innerHTML=fxEditorRows(x.effects);
+    if(x.weapon){wFrom=x.weapon;isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";setKind("iWAmmo","iWAmmoOther",x.weapon.ammo||"",wAmmoSync);}
     /* Read the AC out of what was just inserted, exactly as the sheet would —
        pack armor states it in prose, so this is where that prose becomes fields. */
     const ax=itemArmor({name:x.name,description:x.description||"",category:x.category,type:x.type});
@@ -330,7 +367,9 @@ function openItemForm(existing){
        the Use button the player is about to get. */
     const du=detectItemUse({description:x.description||"",category:x.category,type:x.type,sectionOverride:document.getElementById("iCategory").value});
     document.getElementById("iHeal").value=(du&&du.heal)||"";
-    consume=!!(du&&du.consume);ctog.classList.toggle("on",consume);});
+    consume=!!(du&&du.consume);ctog.classList.toggle("on",consume);
+    const xa=itemAmmo(x);isAmmo=!!xa;amtog.classList.toggle("on",isAmmo);amfields.style.display=isAmmo?"":"none";
+    if(xa){setKind("iAmmoKind","iAmmoKindOther",xa.kind,amKindSync);setBonus(xa.bonus);}});
   document.getElementById("iCancel").addEventListener("click",closeModal);
   /* The detail box is DISABLED rather than hidden when there is no origin kind.
      Hiding it re-flowed the whole lower half of an already long form every time
@@ -371,6 +410,20 @@ function openItemForm(existing){
       }
     }else if(it.armor)rec.armor=it.armor;
     if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(wFrom&&wFrom.notes)||""};if(wFrom&&wFrom.atkMisc!=null)rec.weapon.atkMisc=wFrom.atkMisc;if(wFrom&&wFrom.dmgMisc!=null)rec.weapon.dmgMisc=wFrom.dmgMisc;}
+    if(isWeapon&&dice&&rec.weapon){
+      const wk=kindOf("iWAmmo","iWAmmoOther");
+      if(wk===null){alert("Name the kind of ammunition this weapon fires, or choose None.");return;}
+      if(wk)rec.weapon.ammo=wk;
+    }
+    if(isAmmo){
+      const k=kindOf("iAmmoKind","iAmmoKindOther");
+      if(!k){alert("Name the kind of ammunition, or untick Ammunition.");return;}
+      const b=num(document.getElementById("iAmmoBonus").value);
+      rec.ammo=b?{kind:k,bonus:b}:{kind:k};
+    }
+    /* the loaded stack and a bundle's contents are not on the form: carried, like fav and src */
+    if(it.ammoStack)rec.ammoStack=it.ammoStack;
+    if(it.pack)rec.pack=it.pack;
     /* Limited uses and what Use does. Last, because detectItemUse() below reads
        the FINISHED record — its section depends on the weapon flag set above.
        `used` is the player's own number and survives an edit, clamped in case

@@ -69,6 +69,9 @@ function blankChar(){
        shut, and whether the card shows at all — read as !==false, so a sheet from
        before it shows it. */
     trackers:[], trackerCollapse:{}, showTrackers:true,
+    /* Ammunition fired since the last recovery (62-ammo.js): stack id ->
+       {n, kind, snap}. `ammoInit` is NOT defaulted: the one-time pass sets it. */
+    ammoSpent:{},
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);

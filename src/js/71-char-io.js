@@ -83,11 +83,14 @@ function migrate(s){
      so items get the same repair from ONE pool across every tracker. */
   const itemIds=new Set();
   base.trackers.forEach(t=>{if(Array.isArray(t.items)){t.items=t.items.filter(x=>x!==null&&typeof x==="object"&&!Array.isArray(x));repairIds(t.items,itemIds);}});
-  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse","trackerCollapse"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
+  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse","trackerCollapse","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
   /* AFTER the list guards above, so it can rely on inventory being an array. */
   migrateWeaponEquip(base);
+  /* AFTER the list guards, for the same reason: bundles unpack, pieces and
+     launchers learn their ammunition kind, once per character (#6). */
+  migrateAmmo(base);
   return base;
 }
 function exportChar(){

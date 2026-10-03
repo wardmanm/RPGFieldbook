@@ -1423,6 +1423,120 @@ ck('#79 ...and is noted, field by field', sorted(f for n, f, v, why in (_BP or [
    list(_BP or []))
 if _BP is not None: _BP.clear()
 
+# ---- 31. ammunition: what a launcher fires, what a piece is, what a bundle holds (#7)
+# 5e-tools names a launcher's ammunition (ammoType, the single piece) and a
+# bundle's contents (packContents); the converter dropped both. Real XPHB/XGE
+# entries, trimmed of entries and page numbers.
+AMMO_PROPS = IB_PROPS + [{"name": "Ammunition", "abbreviation": "A", "source": "XPHB", "entries": [{"type": "entries", "name": "Ammunition", "entries": ["You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it."]}]}]
+LONGBOW = {"name": "Longbow", "source": "XPHB", "srd52": True, "basicRules2024": True, "edition": "one", "type": "R|XPHB", "rarity": "none", "weight": 2, "value": 5000, "weaponCategory": "martial", "property": ["A|XPHB", "H|XPHB", "2H|XPHB"], "mastery": ["Slow|XPHB"], "range": "150/600", "dmg1": "1d8", "dmgType": "P", "bow": True, "weapon": True, "ammoType": "arrow|xphb"}
+ARROW = {"name": "Arrow", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 0.05, "value": 5, "arrow": True}
+ARROWS20 = {"name": "Arrows (20)", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 1, "value": 100, "arrow": True, "packContents": [{"item": "arrow|xphb", "quantity": 20}]}
+BOLT = {"name": "Bolt", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 0.075, "value": 5, "bolt": True}
+BOLTS20 = {"name": "Bolts (20)", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 1.5, "value": 100, "bolt": True, "packContents": [{"item": "bolt|xphb", "quantity": 20}]}
+SLINGB = {"name": "Sling Bullet", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 0.075, "value": 0.2, "bulletSling": True}
+CBOLT14 = {"name": "Crossbow Bolt", "source": "PHB", "srd": True, "basicRules": True, "reprintedAs": ["Bolt|XPHB"], "edition": "classic", "type": "A", "rarity": "none", "weight": 0.075, "value": 5, "bolt": True}
+CBOLTS14 = {"name": "Crossbow Bolts (20)", "source": "PHB", "srd": True, "basicRules": True, "reprintedAs": ["Bolts (20)|XPHB"], "edition": "classic", "type": "A", "rarity": "none", "weight": 1.5, "value": 100, "bolt": True, "packContents": [{"item": "crossbow bolt|phb", "quantity": 20}]}
+NET14 = {"name": "Net", "source": "PHB", "srd": True, "basicRules": True, "reprintedAs": [{"uid": "Net|XPHB", "tag": "item"}], "edition": "classic", "type": "R", "rarity": "none", "weight": 3, "value": 100, "weaponCategory": "martial", "property": ["S", "T"], "range": "5/15", "net": True, "weapon": True}
+NET24 = {"name": "Net", "source": "XPHB", "srd52": True, "basicRules2024": True, "type": "G|XPHB", "rarity": "none", "weight": 3, "value": 100, "entries": ["When you take the Attack action, you can replace one of your attacks with throwing a Net."]}
+UNBREAKABLE = {"name": "Unbreakable Arrow", "source": "XGE", "type": "A", "tier": "minor", "rarity": "common", "entries": ["This arrow can't be broken, except when it is within an {@spell antimagic field}."]}
+_ammobase = _tmpjson({'itemProperty': AMMO_PROPS, 'itemMastery': IB_MASTERY,
+                      'baseitem': [LONGBOW, ARROW, ARROWS20, BOLT, BOLTS20, SLINGB, CBOLT14, CBOLTS14, NET14]})
+_ammomagic = _tmpjson({'item': [NET24, UNBREAKABLE]})
+with C.statblock_ctx(C.load_item_index(_ammobase, _ammomagic)):
+    ab = _by_name(C.convert_items(_ammobase))
+    ax = _by_name(C.convert_items(_ammomagic, book=XGE))
+    ck('#7 a Longbow says it fires arrows', ab.get('Longbow', {}).get('weapon', {}).get('ammo') == 'arrow',
+       ab.get('Longbow', {}).get('weapon'))
+    ck('#7 an Arrow is ammunition of the arrow kind', ab.get('Arrow', {}).get('ammo') == {'kind': 'arrow'}, ab.get('Arrow'))
+    ck('#7 a single piece holds no bundle', 'pack' not in ab.get('Arrow', {}))
+    ck('#7 Arrows (20) is twenty Arrows, of the arrow kind',
+       ab.get('Arrows (20)', {}).get('pack') == {'item': 'Arrow', 'qty': 20} and ab.get('Arrows (20)', {}).get('ammo') == {'kind': 'arrow'},
+       ab.get('Arrows (20)'))
+    ck('#7 a Sling Bullet is a sling bullet, by its family flag', ab.get('Sling Bullet', {}).get('ammo') == {'kind': 'sling bullet'},
+       ab.get('Sling Bullet'))
+    ck("#7 XGE's Unbreakable Arrow, which has no family flag, is an arrow by its name",
+       ax.get('Unbreakable Arrow', {}).get('ammo') == {'kind': 'arrow'}, ax.get('Unbreakable Arrow'))
+    ck("#7 a 2014 launcher's pipe-less ammoType resolves through the index to its piece's kind",
+       C._ammo_type_kind('crossbow bolt') == 'bolt' and C._ammo_type_kind('arrow|xphb') == 'arrow',
+       (C._ammo_type_kind('crossbow bolt'), C._ammo_type_kind('arrow|xphb')))
+ck("#7 a launcher's ammoType is read as a kind", C._ammo_type_kind('firearm bullet|xphb') == 'firearm bullet'
+   and C._ammo_type_kind(None) == '')
+ck('#7 a piece nothing names is no ammunition', C._ammo_kind({'name': 'Rock'}) == '')
+_plus2 = dict(ARROW, name='Test Arrow', bonusWeapon='+2')
+with C.statblock_ctx(C.load_item_index(_tmpjson({'baseitem': [_plus2]}))):
+    p2 = C.convert_items(_tmpjson({'baseitem': [_plus2]}))['items'][0]
+ck('#7 ammunition with its own +N carries it as the bonus', p2.get('ammo') == {'kind': 'arrow', 'bonus': 2}, p2.get('ammo'))
+
+# ---- 32. a 2014 item reprinted under another name is not shipped beside its 2024 self (#7)
+# pick_2024_preferred() backfilled 2014 entries by NAME, so a renamed reprint
+# ("Crossbow Bolt" -> the 2024 "Bolt") shipped twice. Checked against everything
+# the 2024 pack ships from EITHER item file: the 2024 Net is gear in items.json.
+with C.statblock_ctx(C.load_item_index(_ammobase, _ammomagic)):
+    rb = _by_name(C.convert_items(_ammobase))
+ck('#7 the 2014 Crossbow Bolt, reprinted as the 2024 Bolt, is dropped', 'Crossbow Bolt' not in rb and 'Bolt' in rb, sorted(rb))
+ck('#7 ...and its bundle', 'Crossbow Bolts (20)' not in rb, sorted(rb))
+ck('#7 the 2014 Net, reprinted as a 2024 Net in the OTHER item file, is dropped', 'Net' not in rb, sorted(rb))
+_lone = dict(CBOLT14, name='Lone 2014 Thing', reprintedAs=['Nothing Shipped|XDMG'])
+_lonef = _tmpjson({'baseitem': [_lone]})
+with C.statblock_ctx(C.load_item_index(_lonef)):
+    lb = _by_name(C.convert_items(_lonef))
+ck('#7 a 2014 item whose reprint does NOT ship is kept', 'Lone 2014 Thing' in lb, sorted(lb))
+ck('#7 reprint references read in both shapes',
+   C._reprint_keys({'reprintedAs': ['Bolt|XPHB', {'uid': 'Net|XPHB', 'tag': 'item'}]}) == {('bolt', 'XPHB'), ('net', 'XPHB')})
+ck('#7 with no shipped set the 2014 backfill is as it was (every other category)',
+   [e['name'] for e in C.pick_2024_preferred([CBOLT14, BOLT])] == ['Bolt', 'Crossbow Bolt'])
+
+# ---- 33. magic ammunition from 5e-tools' magic variants (#7)
+# +1 Ammunition and its kin are generic variants in magicvariants.json, which
+# nothing read. Each one the book ships is expanded onto every single 2024 piece
+# (never a bundle), selected exactly as other items are. Real-shaped entries.
+VARIANTS = {'magicvariant': [
+    {"name": "+1 Ammunition", "type": "GV|XDMG", "requires": [{"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"namePrefix": "+1 ", "source": "XDMG", "srd52": True, "basicRules2024": True, "rarity": "uncommon", "bonusWeapon": "+1",
+                  "entries": ["You have a {=bonusWeapon} bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical."]}},
+    {"name": "+1 Ammunition", "type": "GV|DMG", "requires": [{"type": "A"}, {"type": "AF|DMG"}, {"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"namePrefix": "+1 ", "source": "DMG", "rarity": "uncommon", "bonusWeapon": "+1",
+                  "entries": ["You have a {=bonusWeapon} bonus to attack and damage rolls made with this piece of magic ammunition."]}},
+    {"name": "Ammunition of Slaying", "type": "GV|XDMG", "requires": [{"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"nameSuffix": " of Slaying", "source": "XDMG", "srd52": True, "basicRules2024": True, "rarity": "very rare",
+                  "entries": ["This magic ammunition is meant to slay creatures of a particular type, which the DM chooses or determines randomly by rolling on the table below.",
+                              {"type": "table", "colStyles": ["col-2 text-center", "col-10"], "colLabels": ["1d100", "Creature Type"],
+                               "rows": [["01-10", "Aberrations"], ["11-15", "Beasts"]]}]}},
+    {"name": "Walloping Ammunition", "edition": "classic", "type": "GV|DMG", "requires": [{"type": "A"}, {"type": "AF|DMG"}, {"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"namePrefix": "Walloping ", "source": "XGE", "reprintedAs": ["Walloping Ammunition|XDMG"], "rarity": "common",
+                  "entries": ["This ammunition packs a wallop. A creature hit by the ammunition must succeed on a {@dc 10} Strength saving throw or be knocked {@condition prone}."]}},
+    {"name": "Walloping Ammunition", "type": "GV|XDMG", "requires": [{"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"namePrefix": "Walloping ", "source": "XDMG", "rarity": "common", "entries": ["Walloping, the 2024 printing."]}},
+    {"name": "Adamantine Armor", "type": "GV|XDMG", "requires": [{"type": "MA|XPHB"}, {"type": "HA|XPHB"}],
+     "inherits": {"namePrefix": "Adamantine ", "source": "XDMG", "srd52": True, "basicRules2024": True, "rarity": "uncommon", "entries": ["Armor."]}},
+]}
+_varf = _tmpjson(VARIANTS)
+vsink = []
+with C.statblock_ctx(C.load_item_index(_ammobase, _ammomagic)):
+    v24 = _by_name({'items': C.convert_ammo_variants(_varf, tables=vsink)})
+    vxge = _by_name({'items': C.convert_ammo_variants(_varf, tables=[], book=XGE)})
+ck('#7 the 2024 pack gets +1 and Slaying ammunition, on each single piece and no bundle',
+   sorted(v24) == ['+1 Arrow', '+1 Bolt', '+1 Sling Bullet', 'Arrow of Slaying', 'Bolt of Slaying', 'Sling Bullet of Slaying'], sorted(v24))
+_p1 = v24.get('+1 Arrow', {})
+ck('#7 +1 Arrow is uncommon ammunition, an arrow with +1', _p1.get('ammo') == {'kind': 'arrow', 'bonus': 1}
+   and _p1.get('rarity') == 'Uncommon' and _p1.get('category') == 'Ammunition' and _p1.get('type') == 'Ammunition', _p1)
+ck("#7 ...weighing what an Arrow weighs, with no cost", _p1.get('weight') == 0.05 and 'cost' not in _p1, _p1)
+ck('#7 ...its "{=bonusWeapon}" written out',
+   _p1.get('description') == 'You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical',
+   _p1.get('description'))
+_sl = v24.get('Bolt of Slaying', {})
+ck('#7 Bolt of Slaying is a bolt with no bonus', _sl.get('ammo') == {'kind': 'bolt'} and _sl.get('rarity') == 'Very Rare', _sl)
+ck("#7 ...its creature table lifted ONCE, under the variant's own name",
+   [t['name'] for t in vsink] == ['Ammunition of Slaying Table'] and '[Table: Ammunition of Slaying Table]' in _sl.get('description', ''),
+   [[t['name'] for t in vsink], _sl.get('description')])
+ck("#7 Xanathar's pack gets its own Walloping ammunition and nothing else",
+   sorted(vxge) == ['Walloping Arrow', 'Walloping Bolt', 'Walloping Sling Bullet'], sorted(vxge))
+ck('#7 ...its tags flattened to words', 'Strength saving throw' in vxge.get('Walloping Arrow', {}).get('description', '')
+   and '{@' not in vxge.get('Walloping Arrow', {}).get('description', ''), vxge.get('Walloping Arrow'))
+ck('#7 a variant that is not ammunition is never expanded onto a piece', not any(n.startswith('Adamantine') for n in v24))
+ck('#7 a variant template the variant cannot fill stays as written',
+   C._fill_variant(['A {=bonusWeapon} b {=nope}'], {'bonusWeapon': '+2'}, 'Test') == ['A +2 b {=nope}'])
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

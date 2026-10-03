@@ -605,7 +605,7 @@ panel in the template; ToC picks it up for free via the existing `.card > .label
 `highlight()` in `10-compute.js` renders the anchors. **Ordering is load-bearing**: anchors are
 lifted out *before* `esc()` (so names stay raw for lookup) and *before* the glossary pass, which
 would otherwise match a glossary term inside a table name ("Damage Types") and corrupt the markup
-built from it. Placeholder is `` — private-use, so it cannot occur in rules text, `esc()`
+built from it. Placeholder is `\ue000` — private-use, so it cannot occur in rules text, `esc()`
 leaves it alone, and being a non-word char the glossary `\b…\b` pass cannot match across it. One
 mark per anchor, restored in order. **An unresolved anchor degrades to the plain sentence "the X
 table", never a dead chip** — the tables pack is a separate optional download.
@@ -1523,8 +1523,8 @@ Three further decisions worth keeping:
   a soft line break, the nicer outcome.
 - **Sentinels are `String.fromCharCode(0xE001…)`, not literal characters.** The first draft embedded
   real private-use bytes; invisible bytes in source are one whitespace cleanup away from silently
-  changing behaviour, and the build is byte-exact. (`` was already taken by `TBL_MARK`.)
-  `noteHTML` also strips `-` from its input, so a player typing one can't forge a
+  changing behaviour, and the build is byte-exact. (`\ue000` was already taken by `TBL_MARK`.)
+  `noteHTML` also strips `\ue000-\ue00f` from its input, so a player typing one can't forge a
   placeholder — which incidentally hardens `highlight()`'s marker too.
 
 Deliberately unsupported: markdown links (they point at a network, in an offline-first app, and read
@@ -2531,7 +2531,7 @@ those exact strings.
 Used at the two surfaces Gadgeteer prose reaches — the features card and the class/subclass info
 panes. Items, spells and familiars keep `highlight()`; no shipped pack uses `**` there.
 
-**Sentinels are written as `""` escapes, not literal characters.** A first pass put the real
+**Sentinels are written as `"\ue00a"` escapes, not literal characters.** A first pass put the real
 private-use bytes in the source, which is exactly the invisible-byte hazard `.editorconfig` and the
 byte-exact build exist to guard against. There is a test asserting the escape form.
 
@@ -4919,3 +4919,111 @@ were closed by hand, each with a comment naming the merge commit and why it hadn
 [WORKTREES](../WORKTREES.md) §5 now shows the form (`Closes #39, closes #40, closes #41`), the
 check after pushing (`gh issue view <n> --json state`), and the comment to leave on a manual
 close. CLAUDE.md's worktree rule carries the one-line version.
+
+## Ammunition in the packs (#7, 2026-10-02)
+
+The converter kept nothing 5e-tools says about ammunition. Now:
+- launchers carry `weapon.ammo` (from `ammoType`); a launcher's kind is its piece's kind, 2014
+  names included;
+- ammunition carries `ammo: {kind}` (from its family flag, or its name for XGE's Unbreakable Arrow);
+- bundles carry `pack: {item, qty}` (from `packContents`).
+
+`pick_2024_preferred()` takes, for items, the set of everything the 2024 pack ships from both item
+files, and leaves out a 2014 entry reprinted as one of them. That drops 40 renamed duplicates: the
+2014 Crossbow Bolt, Blowgun Needle, their bundles and the Net from `items.json` (the 2024 Net is gear
+in the other file), and 35 gear items such as "Acid (vial)" and "Spell Scroll (1st Level)" from
+`items-magic.json`. Mike chose both files; no grant names an old one.
+
+`convert_ammo_variants()` reads `magicvariants.json` for ammunition variants only, selected as items
+are:
+- the 2024 pack gets XDMG +1/+2/+3 Ammunition and Ammunition of Slaying;
+- Xanathar's gets Walloping and Adamantine.
+
+Each is expanded onto every single 2024 piece ("+1 Arrow"), never a bundle, its `{=bonusWeapon}`
+written out. Its text is flattened once under the variant's name, so Slaying's creature table is one
+table, "Ammunition of Slaying Table".
+
+**Counts:** 5e2024 items 99 → 94, magic 542 → 527, tables 107 → 108; XGE items 43 → 53. Every other
+item is byte-identical but for the new fields, checked by script before the files were copied.
+`release.js` will bump XPHB's and XGE's data versions.
+
+Pages: [converter](../wiki/data/converter.md), [supplements](../wiki/data/supplements.md).
+
+## Ammunition on the sheet (#6, 2026-10-02)
+
+A launcher's attack row now carries its ammunition: the loaded stack, **Fire**, and **Recover N**.
+New fragment `62-ammo.js`: a pure half (kinds, stacks, unpacking, the one-time pass, firing, Undo,
+recovery, the +N) and a DOM half (the line, the picker, End combat).
+
+- **Bundles unpack on arrival.** The finder, starting equipment and the one-time pass on old sheets
+  all turn "Arrows (20)" into Arrow ×20, each piece a twentieth of the bundle's own price and weight.
+  The pass runs once per character (`ammoInit`). It re-baselines the update tool only for fields it
+  wrote and only where the player hadn't edited them, so it reads as the pack's change.
+- **Firing.** One piece off the loaded stack, which is the chosen stack (`ammoStack`, outside
+  `weapon`) else the first of the kind. The last piece removes the stack. A spent count
+  (`ammoSpent`) keeps a copy so recovery can rebuild it with its old id. Undo reverses one shot,
+  only on the character it was shown for, and a held key cannot press it.
+- **Recovery.** Half of each stack's count, rounded down per stack. It is offered once after End
+  combat, and Recover N on a row does the same any time. Recover shows only when N > 0. Deleting a
+  stack, or removing the class that granted it, forgets its count.
+- **The +N.** A loaded +1 stack adds 1 to the row's attack and damage, and the breakdown names it.
+
+Pages: [ammunition](../wiki/features/ammunition.md),
+[attacks & damage](../wiki/features/attacks-and-damage.md),
+[combat view](../wiki/features/combat-view.md), [inventory](../wiki/features/inventory.md),
+[character model](../wiki/architecture/character-model.md),
+[grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[rules-update tool](../wiki/features/rules-update-tool.md).
+
+## Ammunition in the item editor (#8, 2026-10-02)
+
+The item editor learned the ammunition fields, so a homebrew bow or arrow works like a pack one:
+- a weapon's **Ammunition it fires** (None, the five 2024 kinds, any kind already on the sheet, or
+  Other… for a new one) saves as `weapon.ammo`;
+- **Ammunition**, with a kind and a bonus from +0 to +3, saves as `ammo`;
+- Insert from pack unpacks a bundle into its piece, quantity included;
+- Save carries `ammoStack` and `pack`, which the form doesn't show.
+
+Other… left blank refuses to save, saying why. Page: [ammunition](../wiki/features/ammunition.md).
+
+## Ammunition: the final review's fixes (#6, #8, 2026-10-02)
+
+The whole-branch review of #6/#7/#8 found nine problems before merge; all nine are fixed in one wave.
+
+1. `migrateAmmo()` looked names up in `AMMO_BUNDLES`/`AMMO_SINGLE_NAMES`/`AMMO_LAUNCHERS` with plain
+   indexing, so an item named "Constructor" or "__proto__" found an inherited property instead of
+   `undefined` and threw reading `.name` off it — a character with such an item silently failed to
+   open. `ammoTable()` is an own-property lookup used for all three.
+2. `revertEquipmentGrants(sid)` forgot a spent count only by the removed item's id, so a granted
+   stack already fired down to nothing (and so already gone from the inventory) kept its count, and
+   Recover could bring back arrows from a class the player no longer has. `forgetGrantAmmo(c,sid)`
+   deletes every `ammoSpent` entry whose `snap.grant` matches, and runs alongside the id-based
+   `forgetAmmo()`.
+3. A "No" at End combat didn't remember being asked, so the next fight with no new shots asked
+   again about the same old ones. Each `ammoSpent` entry now carries `asked` (carried forward by
+   `fireAmmo()`, since the entry is rebuilt every shot); `ammoAskDue()` is true while any kind has
+   fired more than it was asked about, and `markAmmoAsked()` catches every entry up on a "No".
+   `offerAmmoRecovery()` asks only when due. Recover N on the row is unaffected either way.
+4. `recoverAmmo()` always recreated a used-up stack from its snapshot under the old id, even when an
+   equivalent stack (same name, bonus and grant) already existed — firing the last of one and then
+   picking up more of the same left two identical rows. It now tops up the equivalent stack instead,
+   and repoints any weapon whose `ammoStack` named the old id.
+5. The stack picker's row showed only `×qty`, never the magic bonus the spec called for.
+   `ammoChoiceHTML(s,cur)` factors the row and adds `· +N`/`· -N` when the stack carries one;
+   `openAmmoPicker()` uses it.
+6. Documented, not fixed: 2014-named single pieces and the 35 dropped 2014 gear items read as "not
+   in any loaded pack" on sheets migrated before this branch; two grants of "Arrow ×20" look
+   identical in the picker; Xanathar's five Adamantine Ammunition pieces carry rarity "Unknown".
+7. `newCharacter()` sets `ammoInit=1` on the character it creates, so the one-time pass never runs on
+   a brand-new sheet (never in `blankChar()`, as `wpnEquipInit` isn't either).
+8. Insert from pack left the quantity box at a bundle's count after the next pick was not a bundle,
+   so picking "Arrows (20)" then Longbow saved 20 Longbows. `openItemForm()`'s `#iLib` handler now
+   remembers when the quantity came from a bundle and resets it to 1 the moment the next pick isn't
+   one.
+9. The release note's magic-ammunition list read as if Walloping and Adamantine ship with the core
+   pack; reworded to name Xanathar's Guide.
+
+Pages: [ammunition](../wiki/features/ammunition.md),
+[character model](../wiki/architecture/character-model.md),
+[grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[combat view](../wiki/features/combat-view.md), [known issues](../wiki/roadmap/known-issues.md).

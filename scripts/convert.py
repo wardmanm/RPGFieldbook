@@ -716,7 +716,18 @@ def apply_overlay(name, rec, overlay):
     return rec
 
 # ---------------------------------------------------------------- 2024 selection
-def pick_2024_preferred(entries, name_key='name'):
+def _reprint_keys(e):
+    """(lower name, SOURCE) of each entry an entry was reprinted as. 5e-tools
+    writes a reference as "Bolt|XPHB" or as {"uid": "Net|XPHB", "tag": "item"}."""
+    out = set()
+    for r in e.get('reprintedAs') or []:
+        u = r.get('uid') if isinstance(r, dict) else r
+        nm, _, src = str(u or '').partition('|')
+        if nm.strip():
+            out.add((nm.strip().lower(), (src or 'PHB').strip().upper()))
+    return out
+
+def pick_2024_preferred(entries, name_key='name', shipped=None):
     """Everything from XPHB — the definitive 2024 book — plus any basic-rules
     entry whose name XPHB doesn't already cover (2024 wins on overlap, then the
     free 2024 subset, then 2014).
@@ -727,13 +738,19 @@ def pick_2024_preferred(entries, name_key='name'):
 
     The free 2024 subset is marked by EITHER flag: `srd52` (SRD 5.2) too. 5e-tools
     v2.36.1 moved the 2024 Cloak of Invisibility from basicRules2024 to srd52
-    alone, and reading only the first flag dropped it from the pack."""
+    alone, and reading only the first flag dropped it from the pack.
+
+    `shipped` (items only): the (name, SOURCE) of everything the 2024 pack ships.
+    A 2014 entry REPRINTED AS one of those is the same thing under an old name
+    ("Crossbow Bolt" is the 2024 "Bolt"), and the name check above cannot see it,
+    so it is left out (#7). None leaves the backfill exactly as it was."""
     xphb = [e for e in entries if e.get('source') == 'XPHB']
     names = {e[name_key] for e in xphb}
     two4 = [e for e in entries if (e.get('basicRules2024') is True or e.get('srd52') is True)
             and e[name_key] not in names]
     names |= {e[name_key] for e in two4}
-    legacy = [e for e in entries if e.get('basicRules') is True and e[name_key] not in names]
+    legacy = [e for e in entries if e.get('basicRules') is True and e[name_key] not in names
+              and not (shipped and _reprint_keys(e) & shipped)]
     return xphb + two4 + legacy
 
 # ---------------------------------------------------------------- which book
@@ -781,13 +798,13 @@ DEFAULT_BOOK = Book()
 def _bk(book):
     return book if book is not None else DEFAULT_BOOK
 
-def pick_sources(entries, book=None, name_key='name'):
+def pick_sources(entries, book=None, name_key='name', shipped=None):
     """Select entries for `book`. With no explicit source codes this is exactly
     pick_2024_preferred; with them it is a plain source filter — the basicRules
     backfills are 2024 flags and are never set on a supplement's entries."""
     b = _bk(book)
     if b.is_default:
-        return pick_2024_preferred(entries, name_key)
+        return pick_2024_preferred(entries, name_key, shipped=shipped)
     codes = set(b.codes)
     return [e for e in entries if e.get('source') in codes]
 
@@ -982,6 +999,69 @@ def _coarse(tcode, it):
     if it.get('armor'): return 'Armor'
     return 'Gear'
 
+# ---------------------------------------------------------------- ammunition (#7)
+# 5e-tools says which ammunition a launcher fires (`ammoType: "arrow|xphb"`, the
+# single piece's name) and what a bundle holds (`packContents`); the converter
+# dropped both, so the sheet could not tell that a Longbow takes arrows or that
+# "Arrows (20)" is twenty of them. A KIND is the lower-case name of the single
+# piece: "arrow", "bolt", "firearm bullet", "needle", "sling bullet".
+_AMMO_FLAGS = (('arrow', 'arrow'), ('bolt', 'bolt'), ('bulletSling', 'sling bullet'),
+               ('bulletFirearm', 'firearm bullet'), ('needleBlowgun', 'needle'),
+               ('cellEnergy', 'energy cell'))
+_AMMO_WORDS = ('sling bullet', 'firearm bullet', 'arrow', 'bolt', 'needle')
+
+def _ammo_kind(it):
+    """The kind of a piece of ammunition: its 5e-tools family flag, else a kind
+    its name contains (XGE's Unbreakable Arrow carries no flag). '' for none."""
+    for flag, kind in _AMMO_FLAGS:
+        if it.get(flag) is True:
+            return kind
+    nm = str(it.get('name') or '').lower()
+    for word in _AMMO_WORDS:
+        if word in nm:
+            return word
+    return ''
+
+def _ammo_type_kind(v):
+    """A launcher's `ammoType` ("arrow|xphb") as a kind ("arrow"). For 2014
+    items with a pipe-less name like "crossbow bolt", resolves through the item
+    index to the piece's kind (e.g. "bolt"); bare names fall back to lowercased."""
+    nm, _, src = str(v or '').partition('|')
+    nm_lower = nm.strip().lower()
+    # Try the item index if we have one (set by statblock_ctx)
+    idx = _SB_INDEX[0] if _SB_INDEX else {}
+    piece = idx.get((nm_lower, (src or 'PHB').strip().upper()))
+    if piece:
+        kind = _ammo_kind(piece)
+        if kind:
+            return kind
+    # Fallback: the bare name, stripped and lower-cased
+    return nm_lower
+
+def _pack_of(it):
+    """What one bundle holds, {item, qty}, from `packContents`, or None for a
+    single piece. `item` is the piece's display name, found in the run's item
+    index (load_item_index()), else the reference title-cased."""
+    pc = it.get('packContents') or []
+    if len(pc) != 1 or not isinstance(pc[0], dict):
+        return None
+    ref, qty = pc[0].get('item'), pc[0].get('quantity')
+    if not isinstance(ref, str) or not isinstance(qty, int) or qty < 1:
+        return None
+    nm, _, src = ref.partition('|')
+    idx = _SB_INDEX[0] if _SB_INDEX else {}
+    piece = idx.get((nm.strip().lower(), (src or 'PHB').strip().upper()))
+    return {'item': (piece or {}).get('name') or nm.strip().title(), 'qty': qty}
+
+def _shipped_2024():
+    """(lower name, SOURCE) of every item the 2024 pack ships, from BOTH item files
+    in the run's index: what a 2014 entry's `reprintedAs` is checked against. The
+    2024 Net is gear in items.json while the 2014 one is a weapon in
+    items-base.json, so one file alone cannot see it."""
+    idx = _SB_INDEX[0] if _SB_INDEX else {}
+    return {k for k, e in idx.items()
+            if e.get('source') == 'XPHB' or e.get('basicRules2024') is True or e.get('srd52') is True}
+
 def convert_items(path, overlay=None, tables=None, book=None, **_):
     d = json.load(open(path, encoding='utf-8'))
     # type-name map: from the file's itemType table if present, else the static fallback
@@ -997,7 +1077,8 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
     props.update(own_props); masteries.update(own_masteries)
     src = d.get('baseitem') if d.get('baseitem') else d.get('item', [])
     out = []
-    keep = {id(e) for e in pick_sources(src, book)}
+    shipped = _shipped_2024() if _bk(book).is_default else None
+    keep = {id(e) for e in pick_sources(src, book, shipped=shipped)}
     for it in src:
         if id(it) not in keep: continue
         tcode = _abbr(it.get('type', ''))
@@ -1039,6 +1120,7 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
             db = _ival(it.get('bonusWeapon') or it.get('bonusWeaponDamage') or 0)
             if b: weapon_data['atkMisc'] = b
             if db: weapon_data['dmgMisc'] = db
+            if it.get('ammoType'): weapon_data['ammo'] = _ammo_type_kind(it['ammoType'])
         elif it.get('armor') or tcode in ('LA', 'MA', 'HA', 'S'):
             ac = it.get('ac')
             if ac is not None:
@@ -1065,8 +1147,106 @@ def convert_items(path, overlay=None, tables=None, book=None, **_):
         rec = {k: v for k, v in rec.items() if v not in (None, '', False)}
         rec.setdefault('effects', [])
         if weapon_data: rec['weapon'] = weapon_data
+        if tcode in ('A', 'AF'):
+            kind = _ammo_kind(it)
+            if kind:
+                rec['ammo'] = {'kind': kind}
+                ab = _ival(it.get('bonusWeapon') or 0)
+                if ab: rec['ammo']['bonus'] = ab
+                pk = _pack_of(it)
+                if pk: rec['pack'] = pk
         out.append(rec)
     return _pack(book, 'items', out, stem='items')
+
+# ---------------------------------------------------------------- magic ammunition (#7)
+# 5e-tools keeps +1 Ammunition, Ammunition of Slaying and their kin as GENERIC
+# VARIANTS in magicvariants.json — a rule ("a +1 bonus") plus what it applies to
+# ("requires" an ammunition type) — which no converter path read. Each variant a
+# book ships is expanded onto every single 2024 piece of ammunition in the run's
+# item index ("+1 Arrow", "Bolt of Slaying"), never onto a bundle: a piece is
+# what a launcher fires and what a stack counts. Only ammunition variants; the
+# generic +N weapons and armour stay out of scope.
+_VARIANT_VAR = re.compile(r'\{=([A-Za-z0-9]+)(?:/([a-z]+))?\}')
+
+def _fill_variant(node, inh, name):
+    """A variant's text with each "{=key}" written out from its `inherits`
+    ("{=bonusWeapon}" -> "+1"; "/l" lower-cases). One it cannot fill stays as it
+    is and is reported with the run's other template misses."""
+    def fill(s):
+        def sub(m):
+            v = inh.get(m.group(1))
+            if v is None or isinstance(v, (dict, list, bool)):
+                _TEMPLATE_MISSES[(m.group(0), 'the variant has no value for it')].add(name)
+                return m.group(0)
+            out = str(v)
+            return out.lower() if m.group(2) == 'l' else out
+        return _VARIANT_VAR.sub(sub, s)
+    if isinstance(node, str):
+        return fill(node)
+    if isinstance(node, list):
+        return [_fill_variant(x, inh, name) for x in node]
+    if isinstance(node, dict):
+        return {k: (v if k == 'type' else _fill_variant(v, inh, name)) for k, v in node.items()}
+    return node
+
+def _ammo_pieces():
+    """The single 2024 pieces a variant applies to, in file order: XPHB
+    ammunition that is not a bundle."""
+    idx = _SB_INDEX[0] if _SB_INDEX else {}
+    return [e for e in idx.values()
+            if e.get('source') == 'XPHB' and _abbr(e.get('type', '')) in ('A', 'AF') and not e.get('packContents')]
+
+def _is_ammo_variant(v):
+    for r in v.get('requires') or []:
+        if isinstance(r, dict) and (_abbr(r.get('type', '')) in ('A', 'AF') or r.get('arrow') or r.get('bolt')):
+            return True
+    return False
+
+def _variant_selected(v, book):
+    """Selected as an item would be: the 2024 pack takes the 2024 book plus the
+    free-subset flags (never the flags alone filtering the book); a supplement
+    takes its own source."""
+    inh = v.get('inherits') or {}
+    b = _bk(book)
+    if b.is_default:
+        return inh.get('source') == 'XPHB' or inh.get('basicRules2024') is True or inh.get('srd52') is True
+    return inh.get('source') in set(b.codes)
+
+def convert_ammo_variants(path, tables=None, book=None):
+    d = json.load(open(path, encoding='utf-8'))
+    pieces = _ammo_pieces()
+    out = []
+    for v in d.get('magicvariant') or []:
+        if not (isinstance(v, dict) and _is_ammo_variant(v) and _variant_selected(v, book)):
+            continue
+        inh = v.get('inherits') or {}
+        vname = str(v.get('name') or '')
+        # The text is the same for every piece, so it is flattened ONCE, under the
+        # variant's own name: a table inside it is lifted once and named for it.
+        with table_ctx(tables, vname, 'item'):
+            prose = flatten(_fill_variant(inh.get('entries') or v.get('entries') or [], inh, vname))
+        _template_leftovers(prose, vname)
+        bonus = _ival(inh.get('bonusWeapon') or 0)
+        ra = inh.get('reqAttune')
+        excl = v.get('excludes') or {}
+        for p in pieces:
+            if any(p.get(k) == val for k, val in excl.items()):
+                continue
+            kind = _ammo_kind(p)
+            if not kind:
+                continue
+            rec = {'name': (inh.get('namePrefix') or '') + p['name'] + (inh.get('nameSuffix') or ''),
+                   'system': _bk(book).system, 'category': 'Ammunition', 'type': 'Ammunition',
+                   'rarity': _RAR.get(inh.get('rarity', 'none'), (inh.get('rarity') or 'Mundane').title()),
+                   'weight': p.get('weight', None),
+                   'attune': bool(ra) and ra is not False,
+                   'attuneNote': (strip_tags(ra) if isinstance(ra, str) and ra != 'optional' else ''),
+                   'description': prose.strip(' \u00b7.'), 'effects': []}
+            rec = {k: x for k, x in rec.items() if x not in (None, '', False)}
+            rec.setdefault('effects', [])
+            rec['ammo'] = {'kind': kind, 'bonus': bonus} if bonus else {'kind': kind}
+            out.append(rec)
+    return out
 
 # ================================================================ BACKGROUNDS
 def _titlecase_item(name):
@@ -2313,7 +2493,11 @@ def _run_supplement(a):
 
     magic = _find_in(d, 'items.json')
     if not magic: warn('no items.json found')
-    else: emit(convert_items(magic[0], tables=tbls, book=bk), 'items-magic', 'items')
+    else:
+        mpack = convert_items(magic[0], tables=tbls, book=bk)
+        mv = _find_in(d, 'magicvariants.json')
+        if mv: mpack['items'] += convert_ammo_variants(mv[0], tables=tbls, book=bk)
+        emit(mpack, 'items-magic', 'items')
 
     feats = _find_in(d, 'feats.json', 'feat.json')
     if not feats: warn('no feats.json found')
@@ -2462,7 +2646,13 @@ def main():
         # items.json is the MAGIC item file — a separate source from items-base.json,
         # and the old glob order meant it was never reached.
         magic = need('magic items', 'items.json')
-        if magic: _write(convert_items(magic[0], tables=tbls), os.path.join(outdir, 'items-magic.json'))
+        if magic:
+            mpack = convert_items(magic[0], tables=tbls)
+            # magic ammunition is kept as generic variants, in a file of its own (#7)
+            mv = find('magicvariants.json')
+            if mv: mpack['items'] += convert_ammo_variants(mv[0], tables=tbls)
+            else: warn('magicvariants.json not found — no magic ammunition')
+            _write(mpack, os.path.join(outdir, 'items-magic.json'))
         bgs = need('backgrounds', 'background*.json', 'backgrounds.json')
         if bgs: _write(convert_backgrounds(bgs[0], tables=tbls), os.path.join(outdir, 'backgrounds.json'))
         feats = need('feats', 'feats*.json', 'feat.json')

@@ -41,7 +41,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'combatGripHTML', 'moveCombatCard',
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
-  'finderQty', 'addLibraryItems', 'attackNumbers', 'recompute',
+  'finderQty', 'addLibraryItems', 'grantItemByName', 'attackNumbers', 'recompute',
   'spellDC', 'spellAtkBonus', 'fxTargets', 'FX_LABEL', 'promptSpellAttack', 'openStatBreakdown', 'openAttackBreakdown',
   'renderAttacks',
   'coinKeys',
@@ -54,6 +54,13 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'trkApply', 'trkStep', 'trkSetValue', 'trkToggleItem', 'trkToggleTask', 'trkClose', 'trkReopen',
   'trkSnapshot', 'trkRestore', 'mergeChecklist', 'trkFromForm', 'trkSplit', 'trkGroupOpen',
   'trackerRowHTML', 'trackerClosedHTML', 'trackersHTML', 'trackerFormHTML', 'trkSummary', 'trkTickHTML', 'trkEditHTML',
+  'ammoKindOf', 'itemAmmo', 'weaponAmmoKind', 'ammoStacks', 'loadedStack', 'ammoPlural', 'ammoOne',
+  'unpackAmmo', 'rebaseAmmo', 'migrateAmmo', 'ammoTable', 'fpMap', 'fpHash',
+  'ammoSpentEntry', 'fireAmmo', 'undoFire', 'ammoRecoverable', 'recoverAmmo', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
+  'forgetGrantAmmo', 'ammoAskDue', 'markAmmoAsked',
+  'ammoLineHTML', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
+  'offerAmmoRecovery', 'revertEquipmentGrants',
+  'ammoKindChoices', 'ammoKindOptionsHTML',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2884,6 +2891,395 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   X.character = X.blankChar();
 }
 
+/* ---- ammunition: kinds, stacks, unpacking (#6) ----
+   Design: src/docs/specs/2026-10-02-ammo-design.md §3, §5. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  ck('a kind is trimmed, its spaces collapsed, lower-cased', X.ammoKindOf('  Sling   Bullet ') === 'sling bullet' && X.ammoKindOf(7) === '');
+  ck('an item is ammunition only with a kind', same(X.itemAmmo({ammo: {kind: 'Arrow'}}), {kind: 'arrow', bonus: 0}) &&
+     X.itemAmmo({ammo: 'arrow'}) === null && X.itemAmmo({ammo: {kind: ' '}}) === null && X.itemAmmo({}) === null);
+  ck('a bonus is a whole number, kept within 9', X.itemAmmo({ammo: {kind: 'arrow', bonus: '2'}}).bonus === 2 &&
+     X.itemAmmo({ammo: {kind: 'arrow', bonus: 1.7}}).bonus === 1 && X.itemAmmo({ammo: {kind: 'arrow', bonus: 99}}).bonus === 9 &&
+     X.itemAmmo({ammo: {kind: 'arrow', bonus: 'x'}}).bonus === 0);
+  ck("a weapon's ammo kind", X.weaponAmmoKind({weapon: {ammo: 'Arrow'}}) === 'arrow' && X.weaponAmmoKind({weapon: {}}) === '' && X.weaponAmmoKind({}) === '');
+  const bow = {id: 'w1', name: 'Longbow', weapon: {kind: 'ranged', ammo: 'arrow'}};
+  const plain = {id: 's1', name: 'Arrow', qty: 12, ammo: {kind: 'arrow'}};
+  const magic = {id: 's2', name: '+1 Arrow', qty: 3, ammo: {kind: 'arrow', bonus: 1}};
+  const bolts = {id: 's3', name: 'Bolt', qty: 5, ammo: {kind: 'bolt'}};
+  const c = {inventory: [bow, bolts, plain, magic]};
+  ck('the stacks a weapon can load are its kind, in inventory order', same(X.ammoStacks(c, 'arrow').map(s => s.id), ['s1', 's2']));
+  ck('with no choice made it loads the first', X.loadedStack(c, bow) === plain);
+  ck('a choice is remembered', X.loadedStack(c, Object.assign({}, bow, {ammoStack: 's2'})) === magic);
+  ck('a choice that no longer exists falls back to the first', X.loadedStack(c, Object.assign({}, bow, {ammoStack: 'gone'})) === plain);
+  ck('a choice of the wrong kind is ignored', X.loadedStack(c, Object.assign({}, bow, {ammoStack: 's3'})) === plain);
+  ck('nothing of its kind loads nothing', X.loadedStack({inventory: [bow, bolts]}, bow) === null);
+  ck('a bundle is never loaded', X.ammoStacks({inventory: [{id: 'b', name: 'Arrows (20)', ammo: {kind: 'arrow'}, pack: {item: 'Arrow', qty: 20}}]}, 'arrow').length === 0);
+  ck('kinds read as words', X.ammoPlural('arrow') === 'arrows' && X.ammoPlural('sling bullet') === 'sling bullets' &&
+     X.ammoOne('arrow') === 'an arrow' && X.ammoOne('bolt') === 'a bolt');
+
+  const pool = [{name: 'Arrow', category: 'Ammunition', type: 'Ammunition', weight: 0.05, cost: '5 cp', ammo: {kind: 'arrow'}},
+                {name: 'Arrows (20)', category: 'Ammunition', type: 'Ammunition', weight: 1, cost: '1 gp', ammo: {kind: 'arrow'}, pack: {item: 'Arrow', qty: 20}}];
+  const u = X.unpackAmmo(pool[1], pool);
+  ck("a bundle unpacks into the pool's own single piece, twenty to the bundle", u.def === pool[0] && u.per === 20);
+  const u2 = X.unpackAmmo({name: 'Pellets (50)', category: 'Ammunition', weight: 2, cost: '1 gp', ammo: {kind: 'pellet'}, pack: {item: 'Pellet', qty: 50}}, pool);
+  ck('a bundle whose piece the pool lacks is made from the bundle, cost and weight divided',
+     u2.per === 50 && u2.def.name === 'Pellet' && u2.def.cost === '0.02 gp' && u2.def.weight === 0.04 && same(u2.def.ammo, {kind: 'pellet'}), u2.def);
+  ck('anything else comes back as it is, one to one', X.unpackAmmo(pool[0], pool).def === pool[0] && X.unpackAmmo(pool[0], pool).per === 1);
+  ck('a junk pack field is no bundle', X.unpackAmmo({name: 'X', pack: {item: 'Y', qty: 0}}, pool).per === 1 &&
+     X.unpackAmmo({name: 'X', pack: 'Y'}, pool).per === 1);
+}
+
+/* ---- the one-time pass on sheets saved before ammunition (#6) ---- */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  /* a copy stamped before this branch: its baselines know nothing of `ammo` */
+  const stamp = (it, shape) => {
+    const f = X.fpMap(it, 'item'); delete f.ammo;
+    it.src = {cat: 'items', pack: '5e.json', kind: 'item', shape: shape || 'plain', name: it.name,
+              fp: Object.assign({}, f), cfp: Object.assign({}, f)};
+    return it;
+  };
+  const edited = stamp({id: 'w2', name: 'Shortbow', qty: 1, weapon: {kind: 'ranged', dice: '1d6', damageType: 'piercing', ability: 'dex'}});
+  const editedFp = edited.src.fp.weapon;
+  edited.weapon = Object.assign({}, edited.weapon, {notes: 'My grandfather\'s bow'});   /* the player's edit, after the copy */
+  const old = {name: 'Ranger', abilities: {}, inventory: [
+    stamp({id: 'b1', name: 'Arrows (20)', qty: 2, cost: 1, weight: 1, category: 'Ammunition', type: 'Ammunition', description: 'Arrows.', effects: [], grant: 'class:Ranger'}),
+    {id: 'l1', name: 'Arrow', qty: 5, cost: 0.05, weight: 0.05, origin: {kind: 'purchased'}},
+    stamp({id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', dice: '1d8', damageType: 'piercing', ability: 'dex', notes: 'Range 150/600'}}),
+    edited,
+    {id: 'c1', name: 'Crossbow Bolts (20)', qty: 1, weight: 1.5},
+    {id: 'r1', name: 'Rope', qty: 1}]};
+  const m = X.migrate(JSON.parse(JSON.stringify(old)));
+  const by = id => m.inventory.find(i => i.id === id);
+  ck('the pass ran once and says so', m.ammoInit === 1);
+  ck('a granted bundle unpacks: Arrows (20) ×2 is Arrow ×40', by('b1') && by('b1').name === 'Arrow' && by('b1').qty === 40, by('b1'));
+  ck("...each Arrow a twentieth of the bundle's price and weight, of the arrow kind",
+     by('b1').cost === 0.05 && by('b1').weight === 0.05 && same(by('b1').ammo, {kind: 'arrow'}));
+  ck('...still granted, so removing the class takes it back', by('b1').grant === 'class:Ranger');
+  ck('a bought loose stack learns its kind and stays its own stack', by('l1') && by('l1').qty === 5 && same(by('l1').ammo, {kind: 'arrow'}));
+  ck('a 2014 bundle unpacks into the 2024 piece', by('c1') && by('c1').name === 'Bolt' && by('c1').qty === 20 &&
+     by('c1').weight === 0.075 && !('cost' in by('c1')) && same(by('c1').ammo, {kind: 'bolt'}), by('c1'));
+  ck('a 2024 launcher learns what it fires, nothing else touched', by('w1').weapon.ammo === 'arrow' && by('w1').weapon.dice === '1d8');
+  ck('anything else is left exactly as it was', same(by('r1'), {id: 'r1', name: 'Rope', qty: 1}));
+  ck("the update tool's baseline follows the pass, so the change reads as the pack's",
+     by('w1').src.cfp.weapon === X.fpHash(by('w1').weapon) && by('w1').src.fp.weapon === X.fpHash(by('w1').weapon) &&
+     by('b1').src.name === 'Arrow' && by('b1').src.fp.weight === X.fpHash(0.05) && by('b1').src.fp.cost === X.fpHash(0.05) &&
+     by('b1').src.cfp.ammo === X.fpHash({kind: 'arrow'}) && by('b1').src.fp.ammo === X.fpHash({kind: 'arrow'}));
+  ck("a player's own edit to a launcher still reads as theirs, and the pack side is left alone",
+     by('w2').weapon.ammo === 'arrow' && by('w2').src.cfp.weapon !== X.fpHash(by('w2').weapon) && by('w2').src.fp.weapon === editedFp);
+  ck('a second load changes nothing', JSON.stringify(X.migrate(JSON.parse(JSON.stringify(m)))) === JSON.stringify(m));
+
+  const paid = X.migrate({abilities: {}, inventory: [{id: 'p', name: 'Bolts (20)', qty: 1, cost: 2, weight: 1.5}]}).inventory[0];
+  ck('a bundle bought for 2 gp makes bolts at 0.1 gp each', paid.name === 'Bolt' && paid.qty === 20 && paid.cost === 0.1, paid);
+  const sling = X.migrate({abilities: {}, inventory: [stamp({id: 's', name: 'Sling Bullets (20)', qty: 1, cost: 0.04, weight: 1.5, type: 'Ammunition'})]}).inventory[0];
+  ck("sling bullets keep their fraction of a copper, and the baseline knows the pack's bullet has no price",
+     sling.cost === 0.002 && sling.src.fp.cost === X.fpHash(undefined) && sling.src.cfp.cost === X.fpHash(0.002), sling);
+  const found = X.migrate({abilities: {}, inventory: [stamp({id: 'f', name: 'Arrows (20)', qty: 1, cost: 1, weight: 1, type: 'Ammunition',
+                                                              description: 'Ammunition · 1 gp · 1 lb\nArrows.'}, 'browse')]}).inventory[0];
+  ck("a finder copy's meta line now describes one arrow", found.description === 'Ammunition · 5 cp · 0.05 lb\nArrows.' &&
+     found.src.fp.description === X.fpHash(found.description), found.description);
+
+  const two = X.migrate({abilities: {}, inventory: [{id: 'a', name: 'Arrows (20)', qty: 1}, {id: 'b', name: 'Arrows (20)', qty: 1}]});
+  ck('two unpacked bundles of one grant become one stack', two.inventory.length === 1 && two.inventory[0].qty === 40, two.inventory);
+  const ahead = X.migrate({abilities: {}, inventory: [{id: 'u', name: 'Arrows (20)', qty: 1}, {id: 'l', name: 'Arrow', qty: 5, ammo: {kind: 'arrow'}}]});
+  ck('a bundle unpacked ahead of a stack the player had still joins it, which keeps its place and id',
+     ahead.inventory.length === 1 && ahead.inventory[0].id === 'l' && ahead.inventory[0].qty === 25, ahead.inventory);
+  const behind = X.migrate({abilities: {}, inventory: [{id: 'l', name: 'Arrow', qty: 5}, {id: 'u', name: 'Arrows (20)', qty: 1}]});
+  ck('...and so does one unpacked behind it', behind.inventory.length === 1 && behind.inventory[0].id === 'l' && behind.inventory[0].qty === 25, behind.inventory);
+  const kept = X.migrate({abilities: {}, inventory: [{id: 'a', name: 'Arrow', qty: 3, ammo: {kind: 'arrow'}}, {id: 'b', name: 'Arrow', qty: 4, ammo: {kind: 'arrow'}}]});
+  ck('stacks the player kept apart stay apart', kept.inventory.length === 2);
+  ck('a fresh character has no spent ammunition, and the pass has not run on it',
+     same(X.blankChar().ammoSpent, {}) && !('ammoInit' in X.blankChar()));
+  const spent = {s1: {n: 3, kind: 'arrow', snap: {id: 's1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}}}};
+  ck('ammoSpent survives a save and a load', same(X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {ammoSpent: spent})))).ammoSpent, spent));
+  ck('ammoSpent from a file that is not a map resets', same(X.migrate({abilities: {}, ammoSpent: [1]}).ammoSpent, {}));
+
+  /* #6 final review, item 1: "constructor" and "__proto__" find an INHERITED
+     property of a plain-object table, never undefined, so the old lookups
+     read one as a real bundle/piece/launcher and threw reading .name off it. */
+  let hostileMigrate;
+  try {
+    hostileMigrate = X.migrate({abilities: {}, inventory: [
+      {id: 'p1', name: 'Constructor', qty: 1}, {id: 'p2', name: '__proto__', qty: 1},
+      {id: 'p3', name: 'toString', qty: 1, weapon: {kind: 'ranged'}}]});
+  } catch (e) { hostileMigrate = e; }
+  ck('an item named Constructor, __proto__ or toString does not throw migrate()', !(hostileMigrate instanceof Error), hostileMigrate);
+  ck('...and none of them is read as real ammunition data',
+     hostileMigrate && !hostileMigrate.inventory.some(i => i.ammo) &&
+     !((hostileMigrate.inventory.find(i => i.id === 'p3') || {}).weapon || {}).ammo, hostileMigrate);
+  ck('ammoTable() is an OWN-property lookup: "constructor" and "__proto__" read as absent',
+     X.ammoTable({foo: 1}, 'constructor') === undefined && X.ammoTable({foo: 1}, '__proto__') === undefined &&
+     X.ammoTable({foo: 1}, 'foo') === 1);
+}
+
+/* ---- a new character never runs the one-time ammo pass (#6 final review) ---- */
+{
+  ctx.newCharacter('Ammo Init Test', 'dnd');
+  ck("newCharacter() marks the one-time pass already done, so it never runs on a fresh sheet",
+     X.character.ammoInit === 1);
+}
+
+/* ---- ammunition arrives unpacked: the finder and starting equipment (#6) ---- */
+{
+  X.resetRules();
+  X.mergeRules({system: 'XPHB', items: [
+    {name: 'Arrow', category: 'Ammunition', type: 'Ammunition', weight: 0.05, cost: '5 cp', description: 'An arrow.', effects: [], ammo: {kind: 'arrow'}},
+    {name: 'Arrows (20)', category: 'Ammunition', type: 'Ammunition', weight: 1, cost: '1 gp', description: 'Arrows.', effects: [],
+     ammo: {kind: 'arrow'}, pack: {item: 'Arrow', qty: 20}}]}, '5e.json');
+  const c = X.blankChar(); X.character = c;
+  X.addLibraryItems([X.rules.items.find(x => x.name === 'Arrows (20)')], null, null, 2);
+  ck('the finder adds two bundles of arrows as forty Arrows', c.inventory.length === 1 && c.inventory[0].name === 'Arrow' && c.inventory[0].qty === 40, c.inventory);
+  ck('...priced and weighed as one Arrow, of the arrow kind, stamped from the Arrow entry',
+     c.inventory[0].cost === 0.05 && c.inventory[0].weight === 0.05 && JSON.stringify(c.inventory[0].ammo) === '{"kind":"arrow"}' &&
+     !!c.inventory[0].src && c.inventory[0].src.name === 'Arrow', c.inventory[0]);
+  X.addLibraryItems([X.rules.items.find(x => x.name === 'Arrow')], null, null, 5);
+  ck('more Arrows join the same stack', c.inventory.length === 1 && c.inventory[0].qty === 45);
+  ck("the copy's ammo is its own object, not the pack's", c.inventory[0].ammo !== X.rules.items.find(x => x.name === 'Arrow').ammo);
+  const p = X.blankChar(); X.character = p;
+  X.addLibraryItems([X.rules.items.find(x => x.name === 'Arrows (20)')], null, 2, 1);
+  ck('a price paid for a bundle is split across its pieces: 2 gp for twenty is 0.1 gp an arrow',
+     p.inventory.length === 1 && p.inventory[0].qty === 20 && p.inventory[0].cost === 0.1, p.inventory);
+  const g = X.blankChar(); X.character = g;
+  X.grantItemByName('Arrows (20)', 1, 'class:Ranger');
+  ck('a class that grants Arrows (20) grants twenty Arrows', g.inventory.length === 1 && g.inventory[0].name === 'Arrow' &&
+     g.inventory[0].qty === 20 && g.inventory[0].grant === 'class:Ranger' && JSON.stringify(g.inventory[0].ammo) === '{"kind":"arrow"}', g.inventory);
+  X.grantItemByName('Arrows (20)', 1, 'class:Ranger');
+  ck('a second grant from the same source joins its stack', g.inventory.length === 1 && g.inventory[0].qty === 40);
+  X.resetRules();
+}
+
+/* ---- firing, Undo, recovery and the +N (#6) ---- */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const mk = () => {
+    const c = X.blankChar();
+    c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8', damageType: 'piercing', ability: 'dex'}},
+                   {id: 's1', name: 'Arrow', qty: 2, ammo: {kind: 'arrow'}},
+                   {id: 's2', name: '+1 Arrow', qty: 1, ammo: {kind: 'arrow', bonus: 1}}];
+    return c;
+  };
+  let c = mk(); const bow = c.inventory[0];
+  let r = X.fireAmmo(c, bow);
+  ck('a shot spends one from the loaded stack', !!r && c.inventory[1].qty === 1 && r.left === 1 && !r.removed);
+  ck('...and counts it, with a copy of the stack', X.ammoSpentEntry(c, 's1').n === 1 && X.ammoSpentEntry(c, 's1').snap.name === 'Arrow');
+  r = X.fireAmmo(c, bow);
+  ck('the last piece removes the stack', r.removed && !c.inventory.some(i => i.id === 's1') && X.ammoSpentEntry(c, 's1').n === 2);
+  ck('the weapon then loads the next stack of its kind', X.loadedStack(c, bow).id === 's2');
+  ck('Undo puts the removed stack back where it was, one piece, and the count as it was',
+     X.undoFire(c, r) && c.inventory[1].id === 's1' && c.inventory[1].qty === 1 && X.ammoSpentEntry(c, 's1').n === 1);
+  ck('nothing loaded, nothing fired', X.fireAmmo({inventory: [bow]}, bow) === null);
+  const empty = {inventory: [bow, {id: 'z', name: 'Arrow', qty: 0, ammo: {kind: 'arrow'}}, {id: 'y', name: 'Arrow', qty: 2, ammo: {kind: 'arrow'}}]};
+  ck('a stack at ×0 is never loaded: the weapon loads the next', X.loadedStack(empty, bow).id === 'y' &&
+     X.ammoStacks(empty, 'arrow').map(s => s.id).join() === 'y');
+  ck('...and with only an empty stack, nothing is fired', X.fireAmmo({inventory: [bow, {id: 'z', name: 'Arrow', qty: 0, ammo: {kind: 'arrow'}}]}, bow) === null);
+  c = mk(); const b2 = c.inventory[0];
+  r = X.fireAmmo(c, b2);
+  ck('Undo of a shot that left some puts the one piece back and forgets the shot',
+     X.undoFire(c, r) && c.inventory[1].qty === 2 && !('s1' in c.ammoSpent));
+  ck('the same Undo twice puts back one piece, not two', X.undoFire(c, r) === false && c.inventory[1].qty === 2);
+  r = X.fireAmmo(c, b2); c.inventory = c.inventory.filter(i => i.id !== 's1');
+  ck('Undo after the player deleted that stack leaves it deleted', !X.undoFire(c, r) && !c.inventory.some(i => i.id === 's1'));
+  ck('junk spent entries read as nothing',
+     same(X.ammoSpentEntry({ammoSpent: {x: 'junk'}}, 'x'), {n: 0, kind: '', snap: null, asked: 0}) &&
+     X.ammoRecoverable({ammoSpent: {a: {n: 'x', kind: 7}, b: null, c: [1], d: {n: 4, kind: ''}}}).length === 0 &&
+     X.ammoRecoverable({ammoSpent: 'junk'}).length === 0);
+
+  c = mk(); const b3 = c.inventory[0];
+  b3.ammoStack = 's1'; X.fireAmmo(c, b3); X.fireAmmo(c, b3);
+  b3.ammoStack = 's2'; X.fireAmmo(c, b3);
+  ck('what recovery would give: half of each stack, rounded down per stack', same(X.ammoRecoverable(c), [{kind: 'arrow', fired: 3, back: 1}]), X.ammoRecoverable(c));
+  ck('...in words', X.ammoSummaryText(X.ammoRecoverable(c)) === '1 of 3 arrows');
+  ck('recovering gives back 1', X.recoverAmmo(c, ['arrow']) === 1);
+  ck('...rebuilding the used-up stack from its copy, with its old id', c.inventory.some(i => i.id === 's1' && i.qty === 1 && i.name === 'Arrow'));
+  ck('...and clears every count of that kind, the lost half included', same(c.ammoSpent, {}));
+
+  /* #6 final review, item 4: when the old stack's id is gone, recovery joins
+     an equivalent one already on the sheet rather than making a second
+     identical row, and repoints anything that had it loaded. */
+  {
+    const c4 = mk(); const bow4 = c4.inventory[0];
+    c4.inventory.find(i => i.id === 's2').qty = 2;   // a two-piece stack, so half comes back as 1
+    bow4.ammoStack = 's2';
+    X.fireAmmo(c4, bow4); X.fireAmmo(c4, bow4);
+    ck('the last +1 Arrow is gone, with two shots recorded', !c4.inventory.some(i => i.id === 's2') && X.ammoSpentEntry(c4, 's2').n === 2);
+    c4.inventory.push({id: 's9', name: '+1 Arrow', qty: 3, ammo: {kind: 'arrow', bonus: 1}});
+    const back4 = X.recoverAmmo(c4);
+    ck('recovery joins the equivalent stack instead of making a duplicate',
+       back4 === 1 && c4.inventory.filter(i => i.name === '+1 Arrow').length === 1 &&
+       c4.inventory.find(i => i.id === 's9').qty === 4, c4.inventory);
+    ck("...and repoints the weapon's loaded stack to the survivor", bow4.ammoStack === 's9');
+  }
+
+  c = mk(); c.ammoSpent = {s1: {n: 13, kind: 'arrow'}, s9: {n: 4, kind: 'bolt'}};
+  ck('several kinds are summed and listed', X.ammoSummaryText(X.ammoRecoverable(c)) === '6 of 13 arrows, 2 of 4 bolts');
+  ck('recovering one kind leaves the other', X.recoverAmmo(c, ['arrow']) === 6 && 's9' in c.ammoSpent && c.inventory.find(i => i.id === 's1').qty === 8);
+  ck('a stack that is gone with no copy gives nothing back, and its count clears', X.recoverAmmo(c) === 0 && same(c.ammoSpent, {}));
+  ck('forgetting a deleted stack drops its count', (() => { const k = {ammoSpent: {s1: {n: 2, kind: 'arrow'}}}; X.forgetAmmo(k, 's1'); return same(k.ammoSpent, {}); })());
+
+  const ch = mk(); ch.abilities.dex = 14; X.character = ch;
+  const atk = {id: 'a1', name: 'Longbow', kind: 'ranged', ability: 'dex', proficient: false, damageDice: '1d8', itemId: 'w1', addAbilityDamage: true};
+  const base = X.attackNumbers(atk);
+  ch.inventory[0].ammoStack = 's2';
+  const plus = X.attackNumbers(atk);
+  ck('a loaded +1 arrow adds 1 to hit and to damage', plus.toHit === base.toHit + 1 && plus.dmgBonus === base.dmgBonus + 1 &&
+     plus.ammoBonus === 1 && plus.ammoName === '+1 Arrow', [base, plus]);
+  ck('a row with no item gets nothing from ammunition', X.attackNumbers(Object.assign({}, atk, {itemId: undefined})).ammoBonus === 0);
+}
+
+/* ---- the attack row's ammunition line (#6) ---- */
+{
+  const c = X.blankChar();
+  c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                 {id: 'd1', name: 'Dagger', qty: 1, equipped: true, weapon: {kind: 'melee', dice: '1d4'}},
+                 {id: 's1', name: 'Arrow', qty: 19, ammo: {kind: 'arrow'}}];
+  const bowRow = {id: 'a1', name: 'Longbow', itemId: 'w1'}, dagRow = {id: 'a2', name: 'Dagger', itemId: 'd1'};
+  let h = X.ammoLineHTML(c, bowRow);
+  ck('a launcher row shows its loaded stack and Fire', /Arrow ×19/.test(h) && /data-ammo-fire="w1"/.test(h) && !/disabled/.test(h), h);
+  ck('...as plain text while there is one stack to load', !/data-ammo-pick/.test(h));
+  ck('...and no Recover while nothing would come back', !/data-ammo-recover/.test(h));
+  ck('a weapon that fires nothing has no ammunition line', X.ammoLineHTML(c, dagRow) === '' && X.ammoLineHTML(c, {id: 'x'}) === '');
+  c.inventory.push({id: 's2', name: '+1 Arrow', qty: 4, ammo: {kind: 'arrow', bonus: 1}});
+  h = X.ammoLineHTML(c, bowRow);
+  ck('with two stacks, the label opens the picker', /data-ammo-pick="w1"/.test(h), h);
+  c.ammoSpent = {s1: {n: 13, kind: 'arrow'}, s2: {n: 4, kind: 'arrow'}};
+  h = X.ammoLineHTML(c, bowRow);
+  ck('Recover shows what would come back: 6 + 2', /data-ammo-recover="w1"/.test(h) && />Recover 8</.test(h), h);
+  c.inventory = c.inventory.filter(i => !i.ammo);
+  h = X.ammoLineHTML(c, bowRow);
+  ck('with no arrows left it says so, and Fire is disabled', /No arrows/.test(h) && /data-ammo-fire="w1" disabled/.test(h), h);
+}
+
+/* ---- the stack picker's row shows the +N (#6 final review, item 5) ---- */
+{
+  const magic = X.ammoChoiceHTML({id: 's', name: 'Elven Arrow', qty: 4, ammo: {kind: 'arrow', bonus: 1}}, null);
+  ck('a magic stack reads ×4 · +1', /×4 · \+1/.test(magic) && /data-ammo-load="s"/.test(magic), magic);
+  const neg = X.ammoChoiceHTML({id: 's2', name: 'Arrow of Weakness', qty: 2, ammo: {kind: 'arrow', bonus: -1}}, null);
+  ck('...and a negative bonus reads as -N, not +-1', /×2 · -1/.test(neg), neg);
+  const mundane = X.ammoChoiceHTML({id: 'm', name: 'Arrow', qty: 4, ammo: {kind: 'arrow'}}, null);
+  ck('a mundane stack is just the count, no ·', /×4/.test(mundane) && !/·/.test(mundane), mundane);
+  const stack = {id: 's', name: 'Elven Arrow', qty: 4, ammo: {kind: 'arrow', bonus: 1}};
+  const on = X.ammoChoiceHTML(stack, stack);
+  ck('the loaded stack is marked on and pressed', /class="ammo-choice on"/.test(on) && /aria-pressed="true"/.test(on), on);
+  ck('a different stack is neither', !/ on"/.test(mundane) && /aria-pressed="false"/.test(mundane), mundane);
+}
+
+/* ---- Fire, Undo, loading and Recover, through the sheet's own handlers (#6) ---- */
+{
+  const c = X.blankChar(); X.character = c;
+  c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                 {id: 's1', name: 'Arrow', qty: 2, ammo: {kind: 'arrow'}},
+                 {id: 's2', name: '+1 Arrow', qty: 1, ammo: {kind: 'arrow', bonus: 1}}];
+  const r = X.fireWeapon('w1', false);
+  ck('Fire spends one and returns the shot', !!r && c.inventory[1].qty === 1);
+  ck('an Undo shown for another character does nothing', X.undoFireTap(r, X.blankChar(), false, 'w1') === false && c.inventory[1].qty === 1);
+  ck("this character's Undo puts it back", X.undoFireTap(r, c, false, 'w1') === true && c.inventory[1].qty === 2);
+  ck('loading a stack remembers it, outside weapon',
+     X.loadAmmo('w1', 's2') && c.inventory[0].ammoStack === 's2' && !('ammoStack' in c.inventory[0].weapon));
+  ck('loading a stack that is not there changes nothing', !X.loadAmmo('w1', 'nope') && c.inventory[0].ammoStack === 's2');
+  X.fireWeapon('w1', false);
+  ck('the next shot comes from it, and its last piece removes it', !c.inventory.some(i => i.id === 's2'));
+  X.fireWeapon('w1', false); X.fireWeapon('w1', false);
+  ck('...then the weapon fires the plain arrows until they are gone too', !c.inventory.some(i => i.ammo));
+  ck('nothing left: Fire does nothing', X.fireWeapon('w1', false) === null);
+  ck('Recover gives back 1 of the 3 fired (half of each stack, rounded down), into the old stack',
+     X.recoverWeaponAmmo('w1', false) === 1 && c.inventory.filter(i => i.ammo).map(i => i.id + '×' + i.qty).join() === 's1×1');
+  ck('...and clears the counts', JSON.stringify(c.ammoSpent) === '{}');
+
+  const g = X.blankChar(); X.character = g;
+  g.inventory = [{id: 'g1', name: 'Arrow', qty: 3, ammo: {kind: 'arrow'}, grant: 'class:Ranger'}];
+  g.ammoSpent = {g1: {n: 4, kind: 'arrow', snap: {id: 'g1', name: 'Arrow', qty: 1, grant: 'class:Ranger'}}};
+  X.revertEquipmentGrants('class:Ranger');
+  ck('removing the class that granted a stack forgets its spent count, so Recover cannot bring it back',
+     !g.inventory.length && !('g1' in g.ammoSpent));
+
+  /* #6 final review, item 2: a granted stack fired down to NOTHING is already
+     removed by the time the class is removed, so the old id-based forgetAmmo()
+     in revertEquipmentGrants() never reaches it — only forgetGrantAmmo(), by
+     the snapshot's own `grant`, does. */
+  const g2 = X.blankChar(); X.character = g2;
+  g2.inventory = [{id: 'w2', name: 'Shortbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d6'}},
+                  {id: 'g2', name: 'Arrow', qty: 2, ammo: {kind: 'arrow'}, grant: 'class:Ranger'}];
+  X.fireWeapon('w2', false); X.fireWeapon('w2', false);
+  ck('firing a granted stack down to nothing still counts the shots, and the stack is gone',
+     g2.ammoSpent.g2 && g2.ammoSpent.g2.n === 2 && !g2.inventory.some(i => i.id === 'g2'));
+  X.revertEquipmentGrants('class:Ranger');
+  ck('removing the class also forgets a granted stack already fired to nothing',
+     !('g2' in g2.ammoSpent) && X.ammoRecoverable(g2).length === 0 && X.recoverAmmo(g2) === 0 &&
+     !g2.inventory.some(i => i.name === 'Arrow'), g2.ammoSpent);
+}
+
+/* ---- End combat offers the ammunition back (#6) ---- */
+{
+  const mk = () => {
+    const c = X.blankChar(); X.character = c;
+    c.inventory = [{id: 's1', name: 'Arrow', qty: 7, ammo: {kind: 'arrow'}}];
+    c.ammoSpent = {s1: {n: 13, kind: 'arrow'},
+                   s2: {n: 4, kind: 'bolt', snap: {id: 's2', name: 'Bolt', qty: 1, ammo: {kind: 'bolt'}}},
+                   s3: {n: 1, kind: 'needle'}};
+    X.startCombatNow();
+    return c;
+  };
+  let c = mk(); state.confirm = true;
+  ck('End combat, then yes: half of each kind comes back',
+     X.endCombatAsk() === true && state.lastConfirm === 'Recover ammunition? 6 of 13 arrows, 2 of 4 bolts' &&
+     c.inventory.find(i => i.id === 's1').qty === 13 && (c.inventory.find(i => i.id === 's2') || {}).qty === 2, c.inventory);
+  ck('...and every count clears, the lone needle with them', JSON.stringify(c.ammoSpent) === '{}');
+  const real = ctx.confirm, asked = [];
+  ctx.confirm = m => { asked.push(m); return /^End combat/.test(m); };
+  c = mk();
+  ck('End combat, then no: nothing comes back and nothing is lost',
+     X.endCombatAsk() === true && asked.length === 2 && c.inventory.find(i => i.id === 's1').qty === 7 && c.ammoSpent.s1.n === 13);
+  /* #6 final review, item 3: "No" must remember it already asked about these
+     shots, so the NEXT fight with nothing new fired does not ask again. */
+  ck('...and it remembers having asked about these shots',
+     c.ammoSpent.s1.asked === 13 && c.ammoSpent.s2.asked === 4, c.ammoSpent);
+  ck('Recover N on the row is unaffected: the full counts still show after No',
+     (X.ammoRecoverable(c).find(r => r.kind === 'arrow') || {}).back === 6 &&
+     (X.ammoRecoverable(c).find(r => r.kind === 'bolt') || {}).back === 2, X.ammoRecoverable(c));
+  asked.length = 0; X.startCombatNow();
+  ck('a fight with no NEW shots asks only the round prompt', X.endCombatAsk() === true && asked.length === 1, asked);
+  c.ammoSpent.s1.n++;   // one more shot since it last asked
+  asked.length = 0; X.startCombatNow();
+  ck('...then one more shot makes it ask again', X.endCombatAsk() === true && asked.length === 2, asked);
+  ctx.confirm = real;
+}
+
+/* ---- ammoAskDue() and markAmmoAsked() (#6 final review, item 3) ---- */
+{
+  ck('ammoAskDue is false once every kinded entry has been asked about',
+     X.ammoAskDue({ammoSpent: {a: {n: 5, kind: 'arrow', asked: 5}}}) === false);
+  ck('...and true while any has fired more than it was asked about',
+     X.ammoAskDue({ammoSpent: {a: {n: 5, kind: 'arrow', asked: 4}, b: {n: 1, kind: 'bolt', asked: 1}}}) === true);
+  ck('...and false with nothing kinded at all', X.ammoAskDue({ammoSpent: {a: {n: 5, kind: ''}}}) === false);
+  const k = {ammoSpent: {a: {n: 5, kind: 'arrow'}, b: {n: 0, kind: ''}}};
+  X.markAmmoAsked(k);
+  ck('markAmmoAsked catches every kinded entry up to its n, and leaves n alone',
+     k.ammoSpent.a.asked === 5 && k.ammoSpent.a.n === 5 && X.ammoAskDue(k) === false);
+  ck('ammoSpentEntry clamps asked to [0, n]',
+     X.ammoSpentEntry({ammoSpent: {a: {n: 5, kind: 'arrow', asked: 99}}}, 'a').asked === 5 &&
+     X.ammoSpentEntry({ammoSpent: {a: {n: 5, kind: 'arrow', asked: -3}}}, 'a').asked === 0 &&
+     X.ammoSpentEntry({ammoSpent: {a: {n: 5, kind: 'arrow'}}}, 'a').asked === 0);
+  const fc = X.blankChar(); fc.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                                             {id: 's1', name: 'Arrow', qty: 3, ammo: {kind: 'arrow'}}];
+  const bowf = fc.inventory[0];
+  X.fireAmmo(fc, bowf);
+  X.markAmmoAsked(fc);
+  X.fireAmmo(fc, bowf);
+  ck("fireAmmo() carries the previous entry's asked forward, since the entry is rebuilt every shot",
+     X.ammoSpentEntry(fc, 's1').n === 2 && X.ammoSpentEntry(fc, 's1').asked === 1);
+}
+
+/* ---- the item editor's kind lists (#8) ---- */
+{
+  const c = {inventory: [{name: 'Pellet Bow', weapon: {ammo: 'Dart Pellet'}}, {name: 'Stone', ammo: {kind: 'stone'}}, {name: 'Arrow', ammo: {kind: 'arrow'}}]};
+  ck('the kinds: the five 2024 ones, then those this sheet uses, then what the form opened with',
+     X.ammoKindChoices(c, ['Zap', '']).join() === 'arrow,bolt,firearm bullet,needle,sling bullet,dart pellet,stone,zap');
+  const h = X.ammoKindOptionsHTML(['arrow', 'bolt'], 'Bolt', 'None');
+  ck('the options: None, each kind (the chosen one selected), then Other…',
+     /^<option value="">None<\/option>/.test(h) && /<option value="bolt" selected>Bolt<\/option>/.test(h) && /<option value="__other">Other…<\/option>$/.test(h), h);
+  ck('no None when the list has no label for it', !/value=""/.test(X.ammoKindOptionsHTML(['arrow'], 'arrow', '')));
+}
+
 /* ---- imported files and packs render inert ----
    A character file, a rules pack and a settings file (which carries a whole
    `rules` object) are all written by someone else, and all reach the page
@@ -3033,12 +3429,17 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
                  effects: [{target: 'ac', value: 1}], origin: {kind: 'custom', detail: P, at: 0},
                  uses: {max: 2, per: P, used: 0}, armor: {kind: 'body', base: P, dexCap: P},
                  weapon: {kind: 'melee', dice: P, damageType: P}, use: {heal: '1d4', status: P},
-                 sectionOverride: P}],
+                 sectionOverride: P},
+                {id: 'hl', name: P, qty: 1, equipped: true, weapon: {kind: 'ranged', dice: '1d8', damageType: P, ammo: P}},
+                {id: 'ha', name: P, qty: 3, ammo: {kind: P, bonus: 1}},
+                {id: 'hb', name: P, qty: 2, ammo: {kind: P}},
+                {id: 'hc', name: 'Constructor', qty: 1}],
     statuses: [{id: P, name: P, description: P, effects: [], active: true},
                {id: 'st2', name: 'Pwnterm', description: '', effects: [], active: true}],
     familiars: [{id: P, name: P, kind: P, ac: P, hp: {cur: P, max: P}, speed: P, description: P, effects: [], active: true}],
     attacks: [{id: P, name: P, kind: 'melee', ability: 'str', proficient: true, damageDice: P, damageType: P, notes: P},
-              {id: 'a2', spellId: P, source: 'spell', name: P, save: {ability: P}, damageDice: P, notes: P}],
+              {id: 'a2', spellId: P, source: 'spell', name: P, save: {ability: P}, damageDice: P, notes: P},
+              {id: 'a3', name: P, kind: 'ranged', ability: 'dex', proficient: true, damageDice: '1d8', itemId: 'hl'}],
     spells: [{id: P, name: P, level: '0' + P, prepared: true, meta: P, text: P, atkType: 'attack',
               dice: '1d6', damageType: P, granted: P, origin: {kind: 'custom', detail: P}}],
     activeSpells: [{id: P, spellId: P, name: P, level: P, conc: true, durationSec: 60, elapsedSec: 6}],
@@ -3051,6 +3452,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     trackers: [{id: P, name: P, type: 'checklist', tag: P, items: [{id: P, text: P, done: true}], at: 1},
                {id: 'tc', name: P, type: 'counter', tag: P, value: 3, goal: 5},
                {id: 'tx', name: P, type: 'task', closed: true, closedAt: 2}],
+    ammoSpent: {ha: {n: 4, kind: P, snap: {id: 'ha', name: P, qty: 1, ammo: {kind: P}}}},
   });
   X.character = X.migrate(JSON.parse(JSON.stringify(hostile)));   /* the import path */
   X.activeId = 'hostile';
@@ -3090,6 +3492,12 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   run('the spell view', () => ctx.openSpellView(C().spells[0]));
   run('the attack editor', () => ctx.openAttackForm(C().attacks[0]));
   run('the to-hit breakdown', () => ctx.openAttackBreakdown(P));
+  run('the to-hit breakdown of a loaded launcher', () => ctx.openAttackBreakdown('a3'));
+  run('the ammunition picker', () => ctx.openAmmoPicker('hl'));
+  run('Fire on a hostile stack', () => ctx.fireWeapon('hl', false));
+  run('Recover on a hostile stack', () => ctx.recoverWeaponAmmo('hl', false));
+  run('the item editor (a hostile ammunition stack)', () => ctx.openItemForm(C().inventory.find(i => i.id === 'hb')));
+  run('the item editor (a launcher of a hostile kind)', () => ctx.openItemForm(C().inventory.find(i => i.id === 'hl')));
   run('the resource editor', () => ctx.openResourceForm(C().resources[0]));
   run('the status editor', () => ctx.openStatusForm(C().statuses[0]));
   run('the familiar editor', () => ctx.openFamiliarForm(C().familiars[0]));
@@ -3411,6 +3819,65 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     const iw2 = (X.character.inventory[0] || {}).weapon || {};
     ck('#74 re-saving the item keeps the bonus and notes', !again.err && iw2.atkMisc === 1 && iw2.dmgMisc === 1
        && iw2.notes === iw.notes, again.err ? String(again.err) : iw2);
+    X.resetRules();
+  }
+
+  /* ---- the item editor's ammunition fields (#8), driven through the form ---- */
+  {
+    const items = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', '5e2024', 'items.json'), 'utf8')).items;
+    X.resetRules();
+    X.mergeRules({system: 'XPHB', items: items.filter(x => ['Arrow', 'Arrows (20)', 'Longbow'].includes(x.name))}, 'x.json');
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    const at = n => String(X.rules.items.findIndex(x => x.name === n));
+    const why = res => res.err ? String(res.err.stack || res.err).split('\n').slice(0, 3).join(' | ') : undefined;
+    let res = capture(() => { ctx.openItemForm(); el('iLib').value = at('Arrows (20)'); fire('iLib', 'change'); fire('iSave', 'click'); });
+    const ar = X.character.inventory[0] || {};
+    ck('#8 Insert from pack turns a bundle into its piece: Arrow ×20, of the arrow kind',
+       !res.err && ar.name === 'Arrow' && ar.qty === 20 && JSON.stringify(ar.ammo) === '{"kind":"arrow"}', why(res) || ar);
+    res = capture(() => { ctx.openItemForm(); el('iLib').value = at('Longbow'); fire('iLib', 'change'); fire('iSave', 'click'); });
+    const bw = X.character.inventory[1] || {};
+    ck('#8 ...and an inserted Longbow fires arrows', !res.err && (bw.weapon || {}).ammo === 'arrow', why(res) || bw);
+    res = capture(() => {
+      ctx.openItemForm(); el('iName').value = 'Elven Arrow'; fire('iIsAmmo', 'click');
+      el('iAmmoKind').value = 'arrow'; el('iAmmoBonus').value = '1'; fire('iSave', 'click');
+    });
+    const ea = X.character.inventory[2] || {};
+    ck('#8 a homebrew item marked as ammunition: an arrow, +1', !res.err && JSON.stringify(ea.ammo) === '{"kind":"arrow","bonus":1}', why(res) || ea);
+    res = capture(() => {
+      ctx.openItemForm(); el('iName').value = 'Pellet Bow'; fire('iIsWeapon', 'click'); el('iWDice').value = '1d4'; el('iWKind').value = 'ranged';
+      el('iWAmmo').value = '__other'; el('iWAmmoOther').value = ' Dart  Pellet '; fire('iSave', 'click');
+    });
+    const pb = X.character.inventory[3] || {};
+    ck('#8 a weapon can fire a kind of its own', !res.err && (pb.weapon || {}).ammo === 'dart pellet', why(res) || pb);
+    const n = X.character.inventory.length;
+    capture(() => {
+      ctx.openItemForm(); el('iName').value = 'Blank'; fire('iIsAmmo', 'click');
+      el('iAmmoKind').value = '__other'; el('iAmmoKindOther').value = ''; fire('iSave', 'click');
+    });
+    ck('#8 Other… with no kind named saves nothing', X.character.inventory.length === n);
+    bw.ammoStack = ar.id;
+    res = capture(() => {
+      ctx.openItemForm(bw);
+      [['iName', 'Longbow'], ['iWKind', 'ranged'], ['iWAbil', 'dex'], ['iWDice', '1d8'], ['iWType', 'piercing'], ['iWAmmo', 'arrow']]
+        .forEach(([id, v]) => { el(id).value = v; });
+      fire('iSave', 'click');
+    });
+    const bw2 = X.character.inventory.find(i => i.id === bw.id) || {};
+    ck('#8 re-saving a launcher keeps what it fires and the stack it is loaded with',
+       !res.err && (bw2.weapon || {}).ammo === 'arrow' && bw2.ammoStack === ar.id, why(res) || bw2);
+
+    /* #6 final review, item 8: Insert from pack filled the quantity box from
+       "Arrows (20)" (20), and picking Longbow next left it there — Save would
+       have added 20 Longbows. */
+    res = capture(() => {
+      ctx.openItemForm();
+      el('iLib').value = at('Arrows (20)'); fire('iLib', 'change');
+      el('iLib').value = at('Longbow'); fire('iLib', 'change');
+      fire('iSave', 'click');
+    });
+    const lb = X.character.inventory[X.character.inventory.length - 1] || {};
+    ck('#8 picking Longbow after a bundle puts the quantity back to 1',
+       !res.err && lb.name === 'Longbow' && lb.qty === 1, why(res) || lb);
     X.resetRules();
   }
 

@@ -18,15 +18,19 @@ can carry the player's own fields (quantity, origin, favourite, filing) alongsid
 `grantItemByName()` in `50-classrace.js` · markup `src/html/10-inventory.html` · **Data:**
 [rules-schema §6.8](../../../../docs/rules-schema.md) · **Tests:** `sheet.js`, `char-update.js`,
 `rules-data.js` · **See also:** [Armor & AC](armor-and-ac.md), [Attacks & damage](attacks-and-damage.md),
-[Grants & provenance](../architecture/grants-and-provenance.md),
+[Ammunition](ammunition.md), [Grants & provenance](../architecture/grants-and-provenance.md),
 [Rules-update tool](rules-update-tool.md), [Vitals & rest](vitals-and-rest.md)
 
 ## How it works
 
 **The item.** `{id, name, qty, description, effects, equipped}` plus optional `category`, `type`,
 `cost` (a gp **number**), `weight` (lb per unit), `weapon`, `armor`, `uses`, `use`, `origin`, `fav`,
-`sectionOverride`, `grant` (the granting sid), `attackId` and the `src` stamp. Effects apply only
-while `equipped` — see [Computed stats & effects](../architecture/computed-stats-and-effects.md).
+`sectionOverride`, `grant` (the granting sid), `attackId`, the `src` stamp, and a launcher's or a
+stack's ammunition fields, `ammo` and `ammoStack` — see [Ammunition](ammunition.md). Effects apply
+only while `equipped` — see [Computed stats & effects](../architecture/computed-stats-and-effects.md).
+The item editor's own **Ammunition it fires** select (on a weapon) writes `weapon.ammo`, and its
+**Ammunition** toggle — a **Kind** and a **Bonus to attack and damage** of +0 to +3 — writes `ammo`;
+Other… opens a box for a kind not yet on the sheet. See [Ammunition](ammunition.md).
 
 **Sections.** `invSection(it)` files an item under one of `INV_ORDER` — Weapons, Armor, Consumables,
 Magic Items, Tools, Gear, Loot. A valid `sectionOverride` wins outright; otherwise it reads
@@ -57,15 +61,17 @@ when above zero.
 grouped by category, an "added" badge on what the sheet already has, preview, and "+ Custom" into the
 item form (which Add opens directly when no items are loaded). Its footer — Origin, Detail, **Qty**,
 Cost (gp) — applies to the whole batch and survives a filter redraw (`readFoot`/`writeFoot` inside
-`openBrowse()`). `addLibraryItems(entries, og, costOverride, qty)` stacks by name: an item already
-carried gains N, a new one is one stack of N with the meta line (`itemMetaLine()`) prepended to its
-description, cost from the override or the listed price, weight, category, type, weapon, a `src`
-stamp, and `equipped` set for weapons; a weapon gets one linked attack however many are added.
-`finderQty()`: blank, 0, negative or text → 1, decimals floor, cap 999.
+`openBrowse()`). `addLibraryItems(entries, og, costOverride, qty)` stacks by name: an ammunition bundle unpacks first
+(`unpackAmmo()`, [Ammunition](ammunition.md)) — ×2 of "Arrows (20)" adds 40 single arrows — then an
+item already carried gains N, a new one is one stack of N with the meta line (`itemMetaLine()`)
+prepended to its description, cost from the override or the listed price, weight, category, type,
+weapon, a `src` stamp, and `equipped` set for weapons; a weapon gets one linked attack however many
+are added. `finderQty()`: blank, 0, negative or text → 1, decimals floor, cap 999.
 
-**Granted items** come from `grantItemByName()`: the same copy with cost parsed through `costToGp()`
-and category/type copied, tagged `grant: sid`, and removed again when the source goes — see
-[Grants & provenance](../architecture/grants-and-provenance.md).
+**Granted items** come from `grantItemByName()`: a bundle unpacks the same way, so starting
+equipment's "Arrows (20)" grants 20 single arrows; otherwise the same copy with cost parsed through
+`costToGp()` and category/type copied, tagged `grant: sid`, and removed again when the source goes —
+see [Grants & provenance](../architecture/grants-and-provenance.md).
 
 **Weight and encumbrance.** All measured values use `fnum()` (parseFloat), never `num()`.
 `carriedWeight()` is items × qty plus coins (50 to the pound, every denomination held, unless
@@ -118,6 +124,8 @@ the inventory and recompute, because coins have weight.
 - **Coin and HP boxes are not `data-path`** — that handler writes on every keystroke and would store
   `"+"` the moment it was typed.
 - **Adjust's listener is installed once** on `#mBody`, which outlives every modal (`_adjWired`).
+- **Deleting an ammunition stack forgets its spent count** (`forgetAmmo()`): there is nothing left
+  to recover into, and the player chose to delete it — see [Ammunition](ammunition.md).
 
 ## Traps
 
@@ -162,7 +170,6 @@ the inventory and recompute, because coins have weight.
   stamp — so the item files by inference and the rules-update tool can only match it by name. The
   finder does all three.
 - Stacking by name ignores the batch's origin and cost for an item already carried.
-- Ammunition comes in bundles ("Arrows (20)"); unpacking belongs to #6–#8.
 - Use does not remove conditions (Elixir of Health) and prints nothing on the sheet.
 - Humblewood species all read Medium until the extractor learns sizes.
 - More in [Known issues](../roadmap/known-issues.md).
@@ -183,3 +190,5 @@ the inventory and recompute, because coins have weight.
 - 2026-09-24 — Qty in the item finder; the footer survives a redraw. → ledger L3503, #50
 - 2026-09-24 — Coins high to low; one section-heading style; a clear button in the finder's search. → ledger L3525, #48, #51, #49
 - 2026-09-28 — Insert from rules pack keeps a weapon's `+N` and notes. → ledger L4392, #74
+- 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
+- 2026-10-02 — The item editor sets what a weapon fires and marks ammunition, with a bonus; Insert from pack unpacks a bundle. → ledger L4978, #8

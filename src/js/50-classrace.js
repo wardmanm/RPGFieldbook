@@ -67,11 +67,14 @@ function removeFeaturesWhere(pred){character.features=character.features.filter(
 function goldKey(){return "gp";}
 function grantItemByName(name,qty,sid){
   qty=Math.max(1,num(qty)||1);
-  const def=(rules.items||[]).find(i=>String(i.name||"").toLowerCase()===String(name||"").toLowerCase());
+  let def=(rules.items||[]).find(i=>String(i.name||"").toLowerCase()===String(name||"").toLowerCase());
+  /* a granted bundle arrives as its single piece too (#6): "Arrows (20)" is 20 Arrows */
+  if(def){const u=unpackAmmo(def,rules.items);if(u.per>1){def=u.def;qty*=u.per;name=def.name;}}
   const ex=character.inventory.find(i=>i.grant===sid&&String(i.name||"").toLowerCase()===String(name||"").toLowerCase());
   if(ex){ex.qty=num(ex.qty)+qty;return;}
   const it={id:uid(),name:(def&&def.name)||name,qty,description:(def&&def.description)||"",effects:(def&&Array.isArray(def.effects))?def.effects:[],equipped:false,grant:sid,origin:originFromSid(sid)};
   if(def&&def.weapon)it.weapon=def.weapon;
+  {const am=def&&itemAmmo(def);if(am)it.ammo=am.bonus?{kind:am.kind,bonus:am.bonus}:{kind:am.kind};}
   if(def){
     const wg=fnum(def.weight);if(wg)it.weight=wg;
     /* Cost is a DISPLAY STRING in the pack ("2 gp", "5 cp") and a gp number on
@@ -115,6 +118,11 @@ function applyEquipGrants(grants,sid,pending){
 /* remove everything a source granted: inventory items + their linked attacks + granted gold */
 function revertEquipmentGrants(sid){
   const rmIds=character.inventory.filter(i=>i.grant===sid).map(i=>i.id);
+  /* a granted stack's spent count goes with it, or Recover would bring it back —
+     by id for a stack still here, and by the snapshot's own grant for one
+     already fired down to nothing and removed before the source was */
+  rmIds.forEach(id=>forgetAmmo(character,id));
+  forgetGrantAmmo(character,sid);
   character.inventory=character.inventory.filter(i=>i.grant!==sid);
   if(rmIds.length)character.attacks=(character.attacks||[]).filter(a=>!rmIds.includes(a.itemId));
   if(character.grantGold&&character.grantGold[sid]){const k=goldKey();character.coins=character.coins||{};character.coins[k]=Math.max(0,num(character.coins[k])-num(character.grantGold[sid]));delete character.grantGold[sid];}
