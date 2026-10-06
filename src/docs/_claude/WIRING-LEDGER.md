@@ -5042,3 +5042,15 @@ Concentrating condition is never timed: its spell owns the clock. The print shee
 left. Pages: [conditions & concentration](../wiki/features/conditions-and-concentration.md),
 [spells](../wiki/features/spells.md), [combat view](../wiki/features/combat-view.md),
 [character model](../wiki/architecture/character-model.md).
+
+## Compact stats in the combat view (#62, 2026-10-06)
+
+Ability Scores & Saves and Skills, added to the combat view with their own swords buttons, draw
+compact and read-only there, as the quick view #62 asked for; the Sheet tab is unchanged.
+`syncStatLock()` disables the two cards' score boxes and proficiency dots exactly while they sit in
+`#cvList` — after the view fills, after a card goes home, and after `buildStats()` redraws (a redraw
+with the view open builds fresh controls). The look is CSS under `#cvList [data-note="abilities"]`
+and `#cvList [data-note="skills"]`: six abilities in a row (three on a phone), the score as a plain
+number, skills in three columns (two, then one, as the screen narrows), the legend hidden; the
+grouped display shrinks the same way. Tapping a value still opens its breakdown. Pages:
+[abilities & skills](../wiki/features/abilities-and-skills.md), [combat view](../wiki/features/combat-view.md).

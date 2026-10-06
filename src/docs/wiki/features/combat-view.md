@@ -81,7 +81,9 @@ Trackers when Settings hides it. `cvCardShown()` tests computed style. `renderCo
 "Add sections with the … button on any card." hint when no card in the view shows. `fillCombatView()`
 and a toggle call it, and so does `renderTrackers()` while the view is open, so hiding Trackers
 when it is the only card there brings the hint back instead of leaving the view blank. The ☰ lists the view's cards, and `scrollToCard()` clears both the tab bar and
-the header.
+the header. Ability Scores & Saves and Skills, added here like any other card, draw compact and
+read-only instead — `syncStatLock()` disables their score boxes and proficiency dots while they sit
+in `#cvList` ([Abilities & skills](abilities-and-skills.md)).
 
 **Character switches.** `syncCombatView()` is the last thing `renderAll()` does: with the tab open it
 empties and refills from the new character (scroll to top if the character changed), then repaints
@@ -163,3 +165,4 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6
 - 2026-10-06 — Timed conditions: a duration in rounds, minutes or hours, counted down by the round
   tracker, clearing itself with an Undo. → ledger L5031, #55
+- 2026-10-06 — In the combat view the two cards draw compact and read-only. → ledger L5046, #62

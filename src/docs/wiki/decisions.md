@@ -153,6 +153,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **How expertise is marked in grouped mode** — CSS off the dot's `data-lvl`
 - **The Skills note button, hidden in grouped mode** — Shipped as a known gap
 - **Where a bonus to plain ability checks shows (#79)** — The ability's breakdown, apart from the score; the modifier box is unchanged
+- **How the quick view reaches the combat view (#62)** — The existing Abilities and Skills cards draw compact and read-only inside the view
+- **The quick view's layout (#62)** — Follows the character's Skills display (Classic or By ability)
 
 ### [Vitals & rest](features/vitals-and-rest.md)
 

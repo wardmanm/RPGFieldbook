@@ -295,6 +295,7 @@ and its header — the round and its arrows — stays in view as you scroll.
   You start with Vitals, Statuses & Conditions, Attacks & Weapons, Resources, Spell Slots and
   Active Spells. Take one out by mistake and the message that confirms it has an **Undo**, which
   puts it back where it was.
+- **Your bonuses at a glance.** Add Ability Scores & Saves and Skills and they show compact and read-only here; tap any value for its breakdown, and edit them on the Sheet tab.
 - **Arranging them.** Inside the combat view, drag a section by the **⋮⋮** grip at the left of its
   heading. With a keyboard, move to the grip and press **↑** or **↓** to move the section one place.
   Your order is saved with the character.

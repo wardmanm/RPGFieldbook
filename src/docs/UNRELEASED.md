@@ -54,3 +54,6 @@ Bullets below this line — leave the heading in place.
 - Conditions can now last a set time: give one a duration in rounds, minutes or hours, and the round
   tracker counts it down beside your active spells. The condition shows the time it has left, clears
   itself when it runs out (with an Undo), and starts its full time again if you switch it back on.
+- Ability Scores & Saves and Skills now draw as a compact, read-only quick view when you add them to
+  the combat view, so your bonuses are easy to read mid-fight. Tap any value for its breakdown; edit
+  them on the Sheet tab as before.
