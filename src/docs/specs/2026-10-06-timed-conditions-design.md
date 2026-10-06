@@ -1,6 +1,6 @@
 # Timed conditions and compact stats in combat — design
 
-**Status:** approved design, not yet built · 2026-10-06
+**Status:** implemented on branch `issue/55-timed-conditions` · 2026-10-06 — see As built at the end
 **Issues:** #55 (timed conditions), #62 (quick view of abilities and skills in the combat tracker).
 Both land on one branch, `issue/55-timed-conditions`, in two milestones (§7), each with its own
 commits. They share the combat view and the round tracker, and a fight is where both are used.
@@ -204,3 +204,13 @@ For `src/docs/UNRELEASED.md`:
 > - Ability Scores & Saves and Skills now draw as a compact, read-only quick view when you add them to
 >   the combat view, so your bonuses are easy to read mid-fight. Tap any value for its breakdown; edit
 >   them on the Sheet tab as before.
+
+## As built (2026-10-06)
+
+Built as designed. Names the spec did not give: `STATUS_UNITS`, `statusDuration()`,
+`statusElapsed()`, `statusTimed()`, `statusUnitFor()`, `fmtStatusTime()`, `statusTimeText()`,
+`statusExpiredText()`, `tickStatuses()`, `restartStatus()`, `announceStatusExpiry()`,
+`undoStatusExpiry()`, `stepStatusTap()` (in `40-sheet.js`), and `syncStatLock()` (in `87-combat.js`).
+The timed-condition code lives beside the status row in `40-sheet.js`; no new fragment.
+
+1. **A timed condition's time sits under its name, not beside the toggle** (spec §4.5 put it in the row's top line). At phone width the top line has no room for it — the name and "3 rounds left" collided — so the time text shares the line under the name with − rd / + rd while active, and stands alone there ("lasts 3 rounds") while cleared. The top line is exactly as it was before this feature.
