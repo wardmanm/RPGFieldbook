@@ -61,6 +61,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'ammoLineHTML', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
   'offerAmmoRecovery', 'revertEquipmentGrants',
   'ammoKindChoices', 'ammoKindOptionsHTML',
+  'statusDuration', 'statusElapsed', 'statusTimed', 'statusUnitFor', 'fmtStatusTime', 'statusTimeText',
+  'statusExpiredText', 'tickStatuses', 'restartStatus',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1925,6 +1927,57 @@ function charWith(inv, hp) {
   X.advanceRound(-1);
   ck('out of combat nothing changes: the round floors at 0 and spells still step back',
      o.combatRound === 0 && o.activeSpells[0].elapsedSec === 6);
+}
+
+/* ---- timed conditions: reading, wording, the clock (#55) ----
+   Design: src/docs/specs/2026-10-06-timed-conditions-design.md §3, §4. */
+{
+  ck('a duration is whole seconds above 0, else untimed',
+     X.statusDuration({durationSec: 18}) === 18 && X.statusDuration({durationSec: '60'}) === 60 &&
+     X.statusDuration({durationSec: 0}) === 0 && X.statusDuration({durationSec: -6}) === 0 &&
+     X.statusDuration({durationSec: 'x'}) === 0 && X.statusDuration({}) === 0 && X.statusDuration(null) === 0);
+  ck('the Concentrating condition is never timed', X.statusDuration({concId: 'a1', durationSec: 60}) === 0 &&
+     !X.statusTimed({concId: 'a1', durationSec: 60}) && X.statusTimed({durationSec: 6}));
+  ck('elapsed time reads as 0 when junk or negative', X.statusElapsed({elapsedSec: 12}) === 12 &&
+     X.statusElapsed({elapsedSec: -5}) === 0 && X.statusElapsed({elapsedSec: 'x'}) === 0 && X.statusElapsed({}) === 0);
+  const t = X.fmtStatusTime;
+  ck('time left in rounds up to a minute', t(1) === '1 round' && t(6) === '1 round' && t(18) === '3 rounds' && t(60) === '10 rounds');
+  ck('...then minutes, rounded up', t(66) === '2 min' && t(120) === '2 min' && t(3540) === '59 min');
+  ck('...then hours and minutes', t(3599) === '1 h' && t(3600) === '1 h' && t(5400) === '1 h 30 min');
+  ck('a row says the time left while active', X.statusTimeText({active: true, durationSec: 18, elapsedSec: 6}) === '2 rounds left');
+  ck('...and its length while cleared', X.statusTimeText({active: false, durationSec: 18}) === 'lasts 3 rounds' &&
+     X.statusTimeText({active: false, durationSec: 60}) === 'lasts 1 min' &&
+     X.statusTimeText({active: false, durationSec: 3600}) === 'lasts 1 h' &&
+     X.statusTimeText({active: false, durationSec: 6}) === 'lasts 1 round');
+  ck('...and nothing when untimed', X.statusTimeText({active: true}) === '' && X.statusTimeText({active: true, concId: 'a', durationSec: 60}) === '');
+  ck('the form shows a duration in the largest unit that divides it',
+     JSON.stringify([X.statusUnitFor(60), X.statusUnitFor(18), X.statusUnitFor(5400), X.statusUnitFor(7200), X.statusUnitFor(0)]) ===
+     JSON.stringify([[1, 'minutes'], [3, 'rounds'], [90, 'minutes'], [2, 'hours'], ['', 'rounds']]));
+  ck('the toast names what ran out', X.statusExpiredText(['Poisoned']) === 'Poisoned has run out' &&
+     X.statusExpiredText(['Poisoned', 'Frightened']) === 'Poisoned and Frightened have run out' &&
+     X.statusExpiredText(['A', 'B', 'C', 'D']) === 'A, B and 2 more have run out');
+
+  const c = {statuses: [{id: 'p', name: 'Poisoned', active: true, durationSec: 18, elapsedSec: 12},
+                        {id: 'u', name: 'Blessed', active: true},
+                        {id: 'x', name: 'Prone', active: false, durationSec: 18, elapsedSec: 0}, null, 'junk']};
+  const ran = X.tickStatuses(c, 6);
+  ck('a step clears a condition that reaches its duration and reports it with its time before the step',
+     JSON.stringify(ran) === JSON.stringify([{id: 'p', name: 'Poisoned', was: 12}]) &&
+     c.statuses[0].active === false && c.statuses[0].elapsedSec === 18);
+  ck('...leaving untimed, cleared and junk entries alone', !('elapsedSec' in c.statuses[1]) && c.statuses[2].elapsedSec === 0);
+  const back = {statuses: [{id: 'p', active: true, durationSec: 18, elapsedSec: 18}]};
+  ck('a step back never clears anything', X.tickStatuses(back, -6).length === 0 &&
+     back.statuses[0].active === true && back.statuses[0].elapsedSec === 12);
+  ck('...and stops at 0', (() => { const z = {statuses: [{id: 'z', active: true, durationSec: 18, elapsedSec: 0}]};
+     X.tickStatuses(z, -6); return z.statuses[0].elapsedSec === 0; })());
+  const one = {statuses: [{id: 'a', active: true, durationSec: 60, elapsedSec: 0}, {id: 'b', active: true, durationSec: 60, elapsedSec: 0}]};
+  X.tickStatuses(one, 6, 'b');
+  ck('a step for one condition moves only it', one.statuses[0].elapsedSec === 0 && one.statuses[1].elapsedSec === 6);
+  ck('a character with no list of statuses steps nothing', X.tickStatuses({statuses: 'junk'}, 6).length === 0 &&
+     X.tickStatuses(null, 6).length === 0);
+  ck('restarting a timed condition starts its full time again', (() => {
+     const s = {durationSec: 18, elapsedSec: 18}; X.restartStatus(s); return s.elapsedSec === 0; })());
+  ck('...and leaves an untimed one alone', (() => { const s = {}; X.restartStatus(s); return !('elapsedSec' in s); })());
 }
 
 ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').includes('<path d="M'));
