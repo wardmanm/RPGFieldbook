@@ -492,7 +492,7 @@ function itemQty(it){return (it&&it.qty!=null&&it.qty!=="")?num(it.qty):1;}
 function addStatusByName(name){
   const nm=String(name||"").trim();if(!nm)return "";
   const ex=(character.statuses||[]).find(s=>String(s.name||"").toLowerCase()===nm.toLowerCase());
-  if(ex){const was=ex.active!==false;ex.active=true;return was?"already":"reactivated";}
+  if(ex){const was=ex.active!==false;ex.active=true;if(!was)restartStatus(ex);return was?"already":"reactivated";}
   character.statuses.push({id:uid(),name:nm,description:"",effects:[],active:true});
   return "added";
 }

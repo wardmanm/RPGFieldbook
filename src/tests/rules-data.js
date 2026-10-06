@@ -381,6 +381,18 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
   ck('...and the check found them', items.filter(i => i.pack).length === 5 && items.filter(i => i.weapon && i.weapon.ammo).length === 9);
 }
 
+// ---------- timed conditions are wired (#55)
+// 90-boot.js is not loaded by the harness, so its handlers are checked as text.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const body = name => (js.match(new RegExp('function ' + name + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}')) || [''])[0];
+  ck("a timed row's round buttons have a click handler", js.includes('closest("[data-status-tick]")'));
+  ck('...and are drawn with an escaped id', /data-status-tick="\$\{esc\(/.test(js));
+  ck('switching a condition back on restarts its clock', /\[data-toggle-status\][^\n]*restartStatus\(s\)/.test(js));
+  ck('the round tracker moves timed conditions with the spells', /tickStatuses\(character,dir\*6\)/.test(body('advanceRound')));
+}
+
 // ---------- the supplement packs (Xanathar's, Tasha's)
 // These counts are the whole defence against the failure this converter keeps
 // producing: a source filter that matches nothing writes a valid, empty,

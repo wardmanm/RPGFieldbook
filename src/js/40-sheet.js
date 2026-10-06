@@ -204,13 +204,19 @@ function statusTitle(name){
    sharing the markup rather than writing a second, nearly-identical one that
    drifts. */
 function statusRowHTML(s){
-  const on=s.active!==false;
+  const on=s.active!==false, tt=statusTimeText(s), ticking=on&&statusTimed(s);
+  const nm=String(s.name||"condition");
   return `<div class="item${on?" on-status":""}"><div class="top">
         <span class="nm">${statusTitle(s.name)}</span>
+        ${tt?`<span class="qty st-time">${esc(tt)}</span>`:""}
         <span class="equip ${on?"on":""}" data-toggle-status="${esc(s.id)}"><span class="box"></span>${on?"Active":"Cleared"}</span>
         <button class="icon" data-edit-status="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-status="${esc(s.id)}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
+      ${ticking?`<div class="use-row"><span class="use-lbl">Time</span>
+        <button class="tbtn" data-status-tick="${esc(s.id)}" data-sec="-6" aria-label="${esc("One round back: "+nm)}" style="padding:3px 8px;min-height:auto">− rd</button>
+        <button class="tbtn" data-status-tick="${esc(s.id)}" data-sec="6" aria-label="${esc("One round on: "+nm)}" style="padding:3px 8px;min-height:auto">+ rd</button>
+      </div>`:""}
       ${s.description?`<div class="desc">${richHTML(s.description)}</div>`:""}
       ${on?fxChips(s.effects):fxChips(s.effects).replace(/class="chip"/g,'class="chip off"')}</div>`;
 }
@@ -306,6 +312,40 @@ function tickStatuses(c,deltaSec,onlyId){
 }
 /* Switching a timed condition back on starts its full duration again. */
 function restartStatus(s){if(statusTimed(s))s.elapsedSec=0;}
+/* One toast for every condition that ran out on a step, with its Undo. Focus is
+   left where it is: the ▶ or + rd just pressed is still there, and pressing it
+   again must move the clock, never land on Undo. */
+function announceStatusExpiry(ran){
+  if(!Array.isArray(ran)||!ran.length)return null;
+  const rec={ran,done:false}, who=character;
+  toast(statusExpiredText(ran.map(r=>r.name)),{label:"Undo",run:()=>undoStatusExpiry(rec,who)});
+  return rec;
+}
+/* The toast's Undo: those conditions active again, each at the time it had
+   before the step. Once only, and only on the character it was shown for (the
+   object, so an import over the same id is another character). A condition
+   deleted since is skipped. */
+function undoStatusExpiry(rec,who){
+  if(!rec||rec.done||!character||character!==who)return false;
+  rec.done=true;
+  rec.ran.forEach(r=>{const s=(character.statuses||[]).find(x=>x&&x.id===r.id);if(s){s.active=true;s.elapsedSec=r.was;}});
+  renderStatuses();recompute();scheduleSave();
+  return true;
+}
+/* − rd / + rd on one timed condition's row. The save is scheduled before the
+   redraw. From the keyboard, focus goes back to the same button, or the row's
+   toggle once the condition has run out (its buttons are gone). */
+function stepStatusTap(id,deltaSec,viaKey){
+  const ran=tickStatuses(character,deltaSec,id);
+  scheduleSave();
+  renderStatuses();if(ran.length)recompute();
+  announceStatusExpiry(ran);
+  if(viaKey){
+    const sel=attrSel("data-status-tick",id)+(deltaSec>0?'[data-sec="6"]':'[data-sec="-6"]');
+    const b=document.querySelector(sel)||document.querySelector(attrSel("data-toggle-status",id));
+    if(b&&b.focus)b.focus();
+  }
+}
 
 function renderFamiliars(){
   const card=document.getElementById("familiarCard");
