@@ -7,7 +7,7 @@ The two are one fact, so ending either ends both, and the same row is mirrored o
 above Active Spells, where you look before casting the next spell.
 
 **Code:** `renderStatuses()`, `statusRowHTML()`, `statusTitle()`, `renderConcCard()`, `statusDuration()`,
-`statusTimeText()`, `tickStatuses()`, `restartStatus()`, `announceStatusExpiry()`,
+`statusElapsed()`, `statusTimeText()`, `tickStatuses()`, `restartStatus()`, `announceStatusExpiry()`,
 `undoStatusExpiry()`, `stepStatusTap()` in `40-sheet.js`; `syncConcStatus()`, `endConcentration()`,
 `endConcFromStatus()`, `concActiveSpell()`, `concStatusRow()`, `concStatusDesc()`, `castSpell()`,
 `maybeExpire()`, `endActiveSpell()`, `advanceRound()` in `60-attacks.js`; `openStatusForm()`,
@@ -37,9 +37,11 @@ adding a second ([Inventory](inventory.md)).
 **Timed conditions.** A condition can now last a set time. A status carries an optional
 `durationSec` (a round is 6) and `elapsedSec`; the status form's "Lasts" row sets it in rounds,
 minutes or hours, and blank is untimed, as every condition was before. `advanceRound()` moves every
-active timed condition with the active spells, and each timed row has − rd / + rd. A forward step
-that brings one to its duration flips it to Cleared (row kept, effects off); one toast per step names
-them, with an Undo that applies once and only on the character it was shown for. Focus is not moved,
+active timed condition with the active spells. The time text sits under the name, with − rd / + rd
+while active — never in the top line, which stays exactly as it was before this feature, so it still
+fits a phone. A forward step that brings one to its duration flips it to Cleared (row kept, effects
+off); one toast per step names them, with an Undo that applies once and only on the character it was
+shown for. Focus is not moved,
 so a keyboard ▶ cannot land on Undo. Switching one back on — the toggle, the form, or an item's Use
 reactivating it — restarts its full duration; changing its length in the form keeps the time already
 run. The Concentrating condition is never timed: its spell owns the clock. The print sheet shows the

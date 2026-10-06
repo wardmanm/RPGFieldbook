@@ -2042,6 +2042,7 @@ function charWith(inv, hp) {
   ck('an untimed row is as it was', !/st-time/.test(plain) && !/data-status-tick/.test(plain));
   ck('the Concentrating row is never timed', !/data-status-tick|st-time/.test(
      X.statusRowHTML({id: 'cc', name: 'Concentrating', active: true, concId: 'a1', durationSec: 60})));
+  ck('the time sits under the name, not in the top line', !/class="top"[^]*st-time[^]*<\/div>\s*<div class="use-row/.test(row) && /use-row st-row"><span class="use-lbl st-time">2 rounds left/.test(row), row);
 
   const saved = Object.assign(X.blankChar(), {statuses: [{id: 'p', name: 'Poisoned', description: '', active: true, durationSec: 18, elapsedSec: 6, effects: []}]});
   const back = X.migrate(JSON.parse(JSON.stringify(saved))).statuses[0] || {};
