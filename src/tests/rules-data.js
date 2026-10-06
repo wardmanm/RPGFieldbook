@@ -1685,7 +1685,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const togStatus = (js.match(/data-toggle-status[\s\S]{0,600}?return;\}/) || [''])[0];
   ck('clearing it on the sheet ends the spell too, after asking',
      /if\(s\.concId&&s\.active!==false\)\{if\(!endConcFromStatus\(\)\)return;\}/.test(togStatus), togStatus.slice(0, 300));
-  const stSave = (js.match(/const rec=\{id:s\.id,name:document\.getElementById\("stName"\)[\s\S]{0,1200}?scheduleSave\(\);/) || [''])[0];
+  const stSave = (js.match(/const rec=\{id:s\.id,name:document\.getElementById\("stName"\)[\s\S]{0,2400}?scheduleSave\(\);/) || [''])[0];
   ck('the status form keeps the link to the spell', /if\(s\.concId\)rec\.concId=s\.concId;/.test(stSave), stSave.slice(-300));
   ck('...and unticking Active there ends the spell as well',
      /if\(rec\.concId&&!active\)endConcentration\(\);/.test(stSave));

@@ -3628,6 +3628,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   run('the item editor (a launcher of a hostile kind)', () => ctx.openItemForm(C().inventory.find(i => i.id === 'hl')));
   run('the resource editor', () => ctx.openResourceForm(C().resources[0]));
   run('the status editor', () => ctx.openStatusForm(C().statuses[0]));
+  run('the status editor (a timed condition)', () => ctx.openStatusForm(C().statuses.find(s => s.id === 'st3')));
   run('the familiar editor', () => ctx.openFamiliarForm(C().familiars[0]));
   run('the origin badge\'s window', () => ctx.openOriginInfo(C().inventory[0].origin));
   /* A fresh copy: renderSpells() above rewrote s.level to a number in place,
@@ -4007,6 +4008,37 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     ck('#8 picking Longbow after a bundle puts the quantity back to 1',
        !res.err && lb.name === 'Longbow' && lb.qty === 1, why(res) || lb);
     X.resetRules();
+  }
+
+  /* ---- the status form's Lasts row (#55), driven through the form ----
+     The recorder DOM does not read values back out of the markup, so each box a
+     save reads is set by hand. */
+  {
+    X.character = X.blankChar();
+    const why = res => res.err ? String(res.err.stack || res.err).split('\n').slice(0, 3).join(' | ') : undefined;
+    let res = capture(() => { ctx.openStatusForm(); el('stName').value = 'Poisoned'; el('stDurN').value = '3'; el('stDurU').value = 'rounds'; fire('stSave', 'click'); });
+    const p = X.character.statuses[0] || {};
+    ck('#55 the form saves a duration: 3 rounds is 18 seconds', !res.err && p.durationSec === 18 && !('elapsedSec' in p), why(res) || p);
+    p.elapsedSec = 6;
+    res = capture(() => { ctx.openStatusForm(p); el('stName').value = 'Poisoned'; el('stDesc').value = 'From the needle trap.';
+      el('stDurN').value = '3'; el('stDurU').value = 'rounds'; fire('stSave', 'click'); });
+    ck('#55 editing the notes mid-fight keeps the time already run', !res.err && X.character.statuses[0].elapsedSec === 6 &&
+       X.character.statuses[0].description === 'From the needle trap.', why(res) || X.character.statuses[0]);
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '2'; el('stDurU').value = 'minutes'; fire('stSave', 'click'); });
+    const p2 = X.character.statuses[0] || {};
+    ck('#55 changing the length keeps the time already run', !res.err && p2.durationSec === 120 && p2.elapsedSec === 6, why(res) || p2);
+    p2.active = false; p2.elapsedSec = 120;
+    res = capture(() => { ctx.openStatusForm(p2); el('stName').value = 'Poisoned'; el('stDurN').value = '2'; el('stDurU').value = 'minutes';
+      fire('stActive', 'click'); fire('stSave', 'click'); });
+    const p3 = X.character.statuses[0] || {};
+    ck('#55 switching it on in the form restarts it', !res.err && p3.active === true && p3.durationSec === 120 && !('elapsedSec' in p3), why(res) || p3);
+    res = capture(() => { ctx.openStatusForm(p3); el('stName').value = 'Poisoned'; el('stDurN').value = ''; fire('stSave', 'click'); });
+    ck('#55 a blank length makes it untimed', !res.err && !('durationSec' in X.character.statuses[0]) && !('elapsedSec' in X.character.statuses[0]),
+       why(res) || X.character.statuses[0]);
+    X.character.statuses = [{id: 'cc', name: 'Concentrating', active: true, concId: 'a1', effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Concentrating'; el('stDurN').value = '3'; fire('stSave', 'click'); });
+    ck('#55 the Concentrating condition never takes a duration', !res.err && !('durationSec' in X.character.statuses[0]), why(res) || X.character.statuses[0]);
+    X.character = X.blankChar();
   }
 
   Object.assign(doc, saved);
