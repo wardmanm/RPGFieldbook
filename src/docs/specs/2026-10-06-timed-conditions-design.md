@@ -84,8 +84,9 @@ re-proposed without the reason they lost.
 - The toast's **Undo** restores each of them to active with the elapsed time it had before the step
   (so ▶ then Undo leaves them one step from the end, as before the ▶). It applies **once** (a second
   press does nothing) and only on the character it was shown for (it carries the character object,
-  as the trackers' and ammunition Undo do). From the keyboard, focus moves to the Undo when the step
-  was taken from the keyboard.
+  as the trackers' and ammunition Undo do).
+- **Focus stays where it is.** The ▶ or Round + that was pressed is still there, so a keyboard player
+  pressing it again must not land on Undo instead. The toast is announced (`role="status"`).
 - ◀ after a condition ran out does not bring it back; Undo does.
 
 ### 4.4 Restarting
@@ -99,8 +100,8 @@ re-proposed without the reason they lost.
 
 - **Active and timed:** the time left, `durationSec − elapsedSec`:
   - up to 60 s: rounds, rounded up — "1 round left", "3 rounds left", "10 rounds left";
-  - up to 3600 s: minutes, rounded up — "2 min left", "10 min left";
-  - beyond: hours and minutes, rounded up to the minute — "1 h left", "1 h 30 min left".
+  - otherwise the time rounded up to the minute: under an hour, minutes — "2 min left",
+    "59 min left"; an hour or more, hours and minutes — "1 h left", "1 h 30 min left".
 - **Cleared and timed:** its length — "lasts 3 rounds", "lasts 1 min", "lasts 1 h".
 - **Untimed:** nothing new.
 - The text sits beside the Active/Cleared toggle; − rd / + rd sit in a row under it, as on Active
@@ -164,7 +165,7 @@ draw condensed while they are inside the combat view (`#cvList`):
 
 - **`src/tests/sheet.js`, pure:**
   - reading a duration: junk, negative, 0, strings, the Concentrating row (never timed);
-  - the time-left text at each boundary (1, 10 and 11 rounds; 1 and 59 minutes; 1 hour; 1 h 30 min)
+  - the time-left text at each boundary (1, 10 and 11 rounds; 2 and 59 minutes; 1 hour; 1 h 30 min)
     and the cleared "lasts …" text;
   - the form's unit choice when editing (60 → 1 minute, 18 → 3 rounds, 5400 → 90 minutes);
   - a step moving only active timed conditions; ◀ at round 1 in combat moving nothing;
