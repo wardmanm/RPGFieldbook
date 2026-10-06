@@ -63,7 +63,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'ammoKindChoices', 'ammoKindOptionsHTML',
   'statusDuration', 'statusElapsed', 'statusTimed', 'statusUnitFor', 'fmtStatusTime', 'statusTimeText',
   'statusExpiredText', 'tickStatuses', 'restartStatus',
-  'announceStatusExpiry', 'undoStatusExpiry', 'stepStatusTap',
+  'announceStatusExpiry', 'undoStatusExpiry', 'stepStatusTap', 'syncStatLock',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2048,6 +2048,29 @@ function charWith(inv, hp) {
   const back = X.migrate(JSON.parse(JSON.stringify(saved))).statuses[0] || {};
   ck('a timed condition survives a save and a load', back.durationSec === 18 && back.elapsedSec === 6, back);
   X.character = X.blankChar();
+}
+
+/* ---- compact stats in the combat view are read-only (#62) ---- */
+{
+  /* two fake cards: closest('#cvList') follows each card's inView flag */
+  const card = inView => {
+    const c = {inView, ctls: [{disabled: false}, {disabled: false}, {disabled: false}]};
+    c.closest = sel => (sel === '#cvList' && c.inView ? {} : null);
+    c.querySelectorAll = sel => (sel === 'input[data-path],button.dot' ? c.ctls : []);
+    return c;
+  };
+  const a = card(true), b = card(false);
+  const doc = {querySelectorAll: sel => (sel === '[data-note="abilities"],[data-note="skills"]' ? [a, b] : [])};
+  X.syncStatLock(doc);
+  ck('inside the combat view the score boxes and proficiency dots are disabled', a.ctls.every(x => x.disabled === true));
+  ck('...and at home they are not', b.ctls.every(x => x.disabled === false));
+  X.syncStatLock(doc);
+  ck('...and running it again changes nothing', a.ctls.every(x => x.disabled === true) && b.ctls.every(x => x.disabled === false));
+  a.inView = false; b.inView = true;
+  X.syncStatLock(doc);
+  ck('a card that goes home is editable again, and one that comes in is locked',
+     a.ctls.every(x => x.disabled === false) && b.ctls.every(x => x.disabled === true));
+  ck('nothing to look in: nothing happens', (() => { try { X.syncStatLock({querySelectorAll: () => []}); return true; } catch (e) { return false; } })());
 }
 
 ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').includes('<path d="M'));

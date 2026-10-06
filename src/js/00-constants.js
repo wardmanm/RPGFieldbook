@@ -292,6 +292,7 @@ function buildStats(){
   buildAbilities();buildSkills();placeLegend();
   const sc=document.getElementById("skillsCard");
   if(sc)sc.style.display=statStyle()==="grouped"?"none":"";
+  syncStatLock();   /* in the combat view the stat controls are read-only (#62) */
 }
 function buildDeath(){
   ["succ","fail"].forEach(kind=>{

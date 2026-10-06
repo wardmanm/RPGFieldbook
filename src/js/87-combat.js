@@ -158,6 +158,7 @@ function fillCombatView(){
     const home=document.createElement("span");home.hidden=true;home.dataset.cvhome=k;
     card.before(home);list.appendChild(card);addGrip(card,k);
   });
+  syncStatLock();
   renderCombatEmpty();
 }
 /* Out: the grip comes off, so no tab ever shows one, and the card takes its
@@ -166,8 +167,23 @@ function sendCardHome(k){
   const home=document.querySelector(`[data-cvhome="${k}"]`),card=combatCard(k);
   if(card)removeGrip(card);
   if(home&&card)home.replaceWith(card);else if(home)home.remove();
+  syncStatLock();
 }
 function emptyCombatView(){document.querySelectorAll("[data-cvhome]").forEach(h=>sendCardHome(h.dataset.cvhome));}
+
+/* The Ability Scores & Saves and Skills cards draw compact and read-only inside
+   the view (#62): their score boxes and proficiency dots are disabled exactly
+   while the card sits in #cvList, and enabled again at home. Idempotent. Runs
+   after the view fills, after a card goes home, and after buildStats() redraws
+   — a redraw with the view open builds fresh controls, which must come out
+   locked. A value still opens its breakdown: that only reads. */
+function syncStatLock(root){
+  const d=root||document;
+  d.querySelectorAll('[data-note="abilities"],[data-note="skills"]').forEach(card=>{
+    const lock=!!(card.closest&&card.closest("#cvList"));
+    card.querySelectorAll("input[data-path],button.dot").forEach(el=>{el.disabled=lock;});
+  });
+}
 
 /* ✕ · title · tracker · (space) · Start or End · ☰. End sits past the spacer,
    well away from the arrows, so a hurried tap on ▶ cannot hit it. On a phone

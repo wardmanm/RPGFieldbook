@@ -393,6 +393,19 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
   ck('the round tracker moves timed conditions with the spells', /tickStatuses\(character,dir\*6\)/.test(body('advanceRound')));
 }
 
+// ---------- compact stats in the combat view stay in step (#62)
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const css = manifest.css.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const body = name => (js.match(new RegExp('function ' + name + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}')) || [''])[0];
+  ck('the view locks the stat controls when it fills', /syncStatLock\(\)/.test(body('fillCombatView')));
+  ck('...unlocks them when a card goes home', /syncStatLock\(\)/.test(body('sendCardHome')));
+  ck('...and re-applies the lock after the stats are rebuilt', /syncStatLock\(\)/.test(body('buildStats')));
+  ck('the compact rules apply only inside the combat view',
+     /#cvList \[data-note="abilities"\]/.test(css) && /#cvList \[data-note="skills"\]/.test(css) && /#cvList #statLegend\{display:none\}/.test(css));
+}
+
 // ---------- the supplement packs (Xanathar's, Tasha's)
 // These counts are the whole defence against the failure this converter keeps
 // producing: a source filter that matches nothing writes a valid, empty,
