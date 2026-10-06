@@ -182,6 +182,12 @@ When a page gains a Decisions row, add its line here under that page.
 - **Effects on the Concentrating row** — None: its rules are prose, and effects are numeric only
 - **The Spells-tab copy** — The same `statusRowHTML()`, redrawn from `renderStatuses()`
 - **Where the copy sits** — Above Active Spells, where you look when casting the next spell — it tells you what you would drop
+- **How a duration is entered** — A number and a unit (rounds, minutes, hours); blank is untimed
+- **When the time runs out** — It clears itself, with a toast and an Undo
+- **What moves the clock** — The round tracker plus − rd / + rd on the row
+- **What the row shows** — Time left ("3 rounds left")
+- **An item's Use applying a timed condition** — Not now: item-applied conditions stay untimed
+- **Reactivating a cleared timed condition** — Restarts its full duration
 
 ### [Attacks & damage](features/attacks-and-damage.md)
 
@@ -287,7 +293,7 @@ When a page gains a Decisions row, add its line here under that page.
 
 - **How it opens** — **As built:** a tab (`#tab-combat`) reached from the swords, with no word tab (owner's call after play)
 - **Where the button lives** — The sticky tab bar, before ☰
-- **What a round changes** — Active spells only, through `advanceRound()`
+- **What a round changes** — Active spells and timed conditions, through `advanceRound()`
 - **Start and End** — Start sets round 1; End is its own button and asks; leaving never ends combat
 - **Which sections** — Any of the 20, six by default, drag to reorder, saved per character
 - **Mechanism** — Move the real cards

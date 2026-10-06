@@ -72,7 +72,10 @@ guards them instead (a class, spell or status whose `name` is missing or a numbe
 text before it is compared or sorted): `noteMap()`, `featCol()`, `invCol()`, `atkCol()` and
 `combatSectionsOf()` each accept a missing or wrong-typed value. Resolvers such as `statStyle()`,
 `hdStyle()` and `encMode()` fall back to exactly the value `blankChar()` defaults to, so an old
-sheet lands on the new-character look and the setting needs no migration of its own.
+sheet lands on the new-character look and the setting needs no migration of its own. A status gains
+its optional timed-condition fields the same way: `durationSec` and `elapsedSec` need no entry in
+`blankChar()` or `migrate()`, since every reader coerces them (`statusDuration()`, `statusElapsed()`
+in [Conditions & concentration](../features/conditions-and-concentration.md)).
 
 **The round trip.** Autosave writes `JSON.stringify(character)`. `exportChar()` writes the same
 object, indented, as `humblewood-<name>.json`, whatever the system. Every load path runs `migrate()`:
@@ -167,3 +170,5 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6
+- 2026-10-06 — Timed conditions: a duration in rounds, minutes or hours, counted down by the round
+  tracker, clearing itself with an Undo. → ledger L5031, #55

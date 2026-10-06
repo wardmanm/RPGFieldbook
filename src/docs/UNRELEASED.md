@@ -51,3 +51,6 @@ Bullets below this line — leave the heading in place.
 - Items you make yourself can use ammunition too: in the item editor, choose what ammunition a
   weapon fires, or tick Ammunition to make the item a kind of ammunition, with a magic bonus of up
   to +3. Inserting a bundle like "Arrows (20)" from the rules pack fills in 20 single arrows.
+- Conditions can now last a set time: give one a duration in rounds, minutes or hours, and the round
+  tracker counts it down beside your active spells. The condition shows the time it has left, clears
+  itself when it runs out (with an Undo), and starts its full time again if you switch it back on.

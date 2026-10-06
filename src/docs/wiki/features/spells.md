@@ -77,10 +77,11 @@ whose to-hit and DC come from `spellAtkBonus()` and `spellDC()`, effects include
 **Active Spells and the round.** Each entry shows its slot level, a C for concentration, elapsed /
 duration and an "expired" flag; − rd / + rd move it 6 s, + sec… asks for seconds, ✕ ends it. The
 card's Round ± is `advanceRound()`, the same function the [combat view](combat-view.md)'s tracker
-calls: it moves `combatRound` and every active spell by 6 s, and in combat refuses to go below round 1
-(without touching the spells). `maybeExpire()` asks once, when elapsed reaches duration, whether to
-end the spell, and re-arms if time is wound back. `parseDurationSec()` reads rounds, minutes, hours,
-days, seconds and "instant"; anything else (Until dispelled) is untimed.
+calls: it moves `combatRound`, every active spell and every active timed condition by 6 s (see
+[Conditions & concentration](conditions-and-concentration.md)), and in combat refuses to go below
+round 1 (without touching the spells or conditions). `maybeExpire()` asks once, when elapsed reaches
+duration, whether to end the spell, and re-arms if time is wound back. `parseDurationSec()` reads
+rounds, minutes, hours, days, seconds and "instant"; anything else (Until dispelled) is untimed.
 
 ## Rules that must hold
 
@@ -163,3 +164,5 @@ days, seconds and "instant"; anything else (Until dispelled) is untimed.
 - 2026-08-18 — The Concentration mirror card above Active Spells. → ledger L3151
 - 2026-08-18 — Slots on level-up investigated: Pact Magic, working as the rule says. → ledger L3169
 - 2026-09-28 — Items' spell attack and spell save DC bonuses reach the card, rows, cast window and print; the card's numbers open a breakdown. → ledger L4568, #77
+- 2026-10-06 — Timed conditions: a duration in rounds, minutes or hours, counted down by the round
+  tracker, clearing itself with an Undo. → ledger L5031, #55

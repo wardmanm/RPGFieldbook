@@ -115,6 +115,8 @@ Wanted, not yet done. Each needs work, not a source.
 - **Magic ammunition outside the selection rule is not converted**: BMT, AU and the 2014 DMG
   variants, and generic +N weapons. → [Ammunition](../features/ammunition.md)
 - **Quivers and other ammunition containers have no capacity.** → [Ammunition](../features/ammunition.md)
+- **Rests do not move condition or spell clocks.** → [Conditions & concentration](../features/conditions-and-concentration.md)
+- **An item's Use cannot apply a timed condition.** → [Conditions & concentration](../features/conditions-and-concentration.md)
 
 ## Waiting on sources
 

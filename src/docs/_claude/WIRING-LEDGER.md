@@ -5027,3 +5027,18 @@ Pages: [ammunition](../wiki/features/ammunition.md),
 [character model](../wiki/architecture/character-model.md),
 [grants & provenance](../wiki/architecture/grants-and-provenance.md),
 [combat view](../wiki/features/combat-view.md), [known issues](../wiki/roadmap/known-issues.md).
+
+## Timed conditions (#55, 2026-10-06)
+
+A condition can now last a set time. A status carries an optional `durationSec` (a round is 6) and
+`elapsedSec`; the status form's "Lasts" row sets it in rounds, minutes or hours, and blank is
+untimed, as every condition was before. `advanceRound()` moves every active timed condition with the
+active spells, and each timed row has − rd / + rd. A forward step that brings one to its duration
+flips it to Cleared (row kept, effects off); one toast per step names them, with an Undo that
+applies once and only on the character it was shown for. Focus is not moved, so a keyboard ▶ cannot
+land on Undo. Switching one back on — the toggle, the form, or an item's Use reactivating it —
+restarts its full duration; changing its length in the form keeps the time already run. The
+Concentrating condition is never timed: its spell owns the clock. The print sheet shows the time
+left. Pages: [conditions & concentration](../wiki/features/conditions-and-concentration.md),
+[spells](../wiki/features/spells.md), [combat view](../wiki/features/combat-view.md),
+[character model](../wiki/architecture/character-model.md).

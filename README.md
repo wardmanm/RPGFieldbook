@@ -184,6 +184,8 @@ Your main character page:
   switch Hit Dice to manual entry — see [section 6](#6-how-the-smart-features-work).)
 - **Statuses & Conditions**, **Attacks & Weapons**, **Skills**, **Resources**,
   **Features & Traits**, and **Familiars & Companions**.
+- **Timed conditions.** Give a condition a duration in rounds, minutes or hours: the round tracker
+  counts it down, and it clears itself when the time is up, with an Undo.
 
 ### 🎒 Inventory
 
@@ -298,8 +300,8 @@ and its header — the round and its arrows — stays in view as you scroll.
   Your order is saved with the character.
 - **Keeping track of the fight.** **Start combat** begins at round 1. **◀** and **▶** step back and
   forward a round and show the time passed in the game — six seconds a round — and your active
-  spells' timers move along with them. **End combat** is its own button, and asks before it ends
-  anything. If you fired ammunition, it then offers to recover half of it.
+  spells and timed conditions move along with them. **End combat** is its own button, and asks
+  before it ends anything. If you fired ammunition, it then offers to recover half of it.
 - **Looking something up.** Pick any other tab, or tap **✕** to go back to the one you came from,
   and combat keeps going: the crossed-swords button shows the round on every tab, and one tap
   brings you back to where you were.
