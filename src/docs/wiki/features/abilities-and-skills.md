@@ -10,10 +10,11 @@ of element ids.
 `statGroupHTML()`, `statStyle()`, `placeLegend()`, `abilFinal()`, `modOf()`, `pbValue()`,
 `effSaveProf()`, `effSkill()`, `grantedProf()` in `00-constants.js`; `recompute()` in
 `10-compute.js`; `renderAll()` in `66-coins-hp.js`; `openStatBreakdown()` in `80-modal-forms.js`;
-the dot handlers in `90-boot.js`; markup in `src/html/00-sheet.html` · **Tests:** `sheet.js`,
+the dot handlers in `90-boot.js`; `syncStatLock()` in `87-combat.js`; markup in
+`src/html/00-sheet.html` · **Tests:** `sheet.js`,
 `rules-data.js` · **See also:** [Computed stats & effects](../architecture/computed-stats-and-effects.md),
 [Grants & provenance](../architecture/grants-and-provenance.md),
-[Sections & layout](../ui/sections-and-layout.md)
+[Sections & layout](../ui/sections-and-layout.md), [Combat view](combat-view.md)
 
 ## How it works
 
@@ -63,6 +64,24 @@ character → Skills display (Classic / By ability), which calls `renderAll()`.
 
 `buildStats()` rebuilds both halves and is the first statement of `renderAll()`.
 
+**In the combat view.** Added to the [combat view](combat-view.md) with their own swords buttons,
+the Ability Scores & Saves and Skills cards draw compact and read-only there; the Sheet tab is
+unchanged. `syncStatLock()` disables the two cards' score boxes and proficiency dots exactly while
+they sit in `#cvList` — after the view fills, after a card goes home, and after `buildStats()`
+redraws, which matters because a redraw with the view open (a character switch, or changing the
+Skills display) builds fresh controls that must come out disabled. The look is CSS under
+`#cvList [data-note="abilities"]` and `#cvList [data-note="skills"]`: six abilities in a row (three
+on a phone), the score as a plain number, skills in three columns above 640px, two down to 381px,
+one below, the legend hidden; the grouped display shrinks the same way. Tapping a value still opens
+its breakdown — that only reads.
+
+**The compact Skills grid reads down each column at every width.** Each multi-column rule
+(`#cvList [data-note="skills"] .skills`, at three columns and at two) sets its own
+`grid-auto-flow:column` rather than depending on the Sheet tab's base `.skills` rule — the view's
+narrower media query could win over that base rule and leave the grid reading across rows instead
+(the #56 trap, reopened at phone width). The one-column rule below 381px keeps `grid-auto-flow:row`,
+the only sane order with one column.
+
 ## Rules that must hold
 
 - **One set of ids, each exactly once.** `mod-<k>`, `save-<k>`, `skill-<k>` and the `.dot` data
@@ -95,6 +114,12 @@ character → Skills display (Classic / By ability), which calls `renderAll()`.
   three-across with a header row brought it to 448px. None of it showed in the DOM assertions.
 - **A two-column grid fills row by row**, so the Classic skills alphabet ran left-right-left-right
   until `grid-auto-flow:column`.
+- **A multi-column rule that doesn't set its own `grid-auto-flow` inherits whichever rule wins the
+  cascade at that width.** The combat view's compact Skills grid set `grid-template-columns` at both
+  its three- and two-column breakpoints but relied on the Sheet tab's base `.skills` rule for the
+  flow; the view's own ≤640px rule sat behind that base rule's own ≤600px switch to `row`, so at
+  phone width the grid read across rows, not down columns — the #56 trap, reopened in a different
+  rule.
 - **`buildSkills()` guards `style.setProperty`**, because the harness's stub element has none.
 
 ## Decisions
@@ -108,6 +133,8 @@ character → Skills display (Classic / By ability), which calls `renderAll()`.
 | How expertise is marked in grouped mode | CSS off the dot's `data-lvl` | — |
 | The Skills note button, hidden in grouped mode | Shipped as a known gap | A second note button in the Abilities label: worse UI than the gap |
 | Where a bonus to plain ability checks shows (#79) | The ability's breakdown, apart from the score; the modifier box is unchanged and unmarked | Adding it to the modifier: attacks, saves and AC read that number. A "check" number in each ability box: new UI for one pack item. Owner may revisit |
+| How the quick view reaches the combat view (#62) | The existing Abilities and Skills cards draw compact and read-only inside the view | A new Quick Stats card on the Sheet tab: duplicates the full cards there. A card that exists only in the view: needs a new way to add it, since cards are added from their own tab |
+| The quick view's layout (#62) | Follows the character's Skills display (Classic or By ability) | Always by ability, or always classic: ignores a choice the player already made |
 
 ## Open
 
@@ -123,3 +150,6 @@ character → Skills display (Classic / By ability), which calls `renderAll()`.
   → ledger L106, #17
 - 2026-09-24 — Classic skills read down each column rather than across. → ledger L3525, #56
 - 2026-09-29 — `check` effects reach every skill, initiative and passive Perception; the proficiency bonus is marked and tappable. → ledger L4689, #79
+- 2026-10-06 — In the combat view the two cards draw compact and read-only. → ledger L5046, #62
+- 2026-10-07 — The final review's fixes: the compact Skills grid sets its own `grid-auto-flow:column`
+  at both multi-column breakpoints, so it reads down each column at every width. → ledger L5058, #55

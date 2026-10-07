@@ -61,6 +61,9 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'ammoLineHTML', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
   'offerAmmoRecovery', 'revertEquipmentGrants',
   'ammoKindChoices', 'ammoKindOptionsHTML',
+  'statusDuration', 'statusElapsed', 'statusTimed', 'statusUnitFor', 'fmtStatusTime', 'statusTimeText',
+  'statusExpiredText', 'statusBackText', 'tickStatuses', 'restartStatus',
+  'announceStatusExpiry', 'undoStatusExpiry', 'stepStatusTap', 'syncStatLock',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1927,6 +1930,152 @@ function charWith(inv, hp) {
      o.combatRound === 0 && o.activeSpells[0].elapsedSec === 6);
 }
 
+/* ---- timed conditions: reading, wording, the clock (#55) ----
+   Design: src/docs/specs/2026-10-06-timed-conditions-design.md §3, §4. */
+{
+  ck('a duration is whole seconds above 0, else untimed',
+     X.statusDuration({durationSec: 18}) === 18 && X.statusDuration({durationSec: '60'}) === 60 &&
+     X.statusDuration({durationSec: 0}) === 0 && X.statusDuration({durationSec: -6}) === 0 &&
+     X.statusDuration({durationSec: 'x'}) === 0 && X.statusDuration({}) === 0 && X.statusDuration(null) === 0);
+  ck('the Concentrating condition is never timed', X.statusDuration({concId: 'a1', durationSec: 60}) === 0 &&
+     !X.statusTimed({concId: 'a1', durationSec: 60}) && X.statusTimed({durationSec: 6}));
+  ck('elapsed time reads as 0 when junk or negative', X.statusElapsed({elapsedSec: 12}) === 12 &&
+     X.statusElapsed({elapsedSec: -5}) === 0 && X.statusElapsed({elapsedSec: 'x'}) === 0 && X.statusElapsed({}) === 0);
+  const t = X.fmtStatusTime;
+  ck('time left in rounds up to a minute', t(1) === '1 round' && t(6) === '1 round' && t(18) === '3 rounds' && t(60) === '10 rounds');
+  ck('...then minutes, rounded up', t(66) === '2 min' && t(120) === '2 min' && t(3540) === '59 min');
+  ck('...then hours and minutes', t(3599) === '1 h' && t(3600) === '1 h' && t(5400) === '1 h 30 min');
+  ck('a row says the time left while active', X.statusTimeText({active: true, durationSec: 18, elapsedSec: 6}) === '2 rounds left');
+  ck('...and its length while cleared', X.statusTimeText({active: false, durationSec: 18}) === 'lasts 3 rounds' &&
+     X.statusTimeText({active: false, durationSec: 60}) === 'lasts 1 min' &&
+     X.statusTimeText({active: false, durationSec: 3600}) === 'lasts 1 h' &&
+     X.statusTimeText({active: false, durationSec: 6}) === 'lasts 1 round');
+  ck('...and nothing when untimed', X.statusTimeText({active: true}) === '' && X.statusTimeText({active: true, concId: 'a', durationSec: 60}) === '');
+  ck('the form shows a duration in the largest unit that divides it',
+     JSON.stringify([X.statusUnitFor(60), X.statusUnitFor(18), X.statusUnitFor(5400), X.statusUnitFor(7200), X.statusUnitFor(0)]) ===
+     JSON.stringify([[1, 'minutes'], [3, 'rounds'], [90, 'minutes'], [2, 'hours'], ['', 'rounds']]));
+  ck('the toast names what ran out', X.statusExpiredText(['Poisoned']) === 'Poisoned has run out' &&
+     X.statusExpiredText(['Poisoned', 'Frightened']) === 'Poisoned and Frightened have run out' &&
+     X.statusExpiredText(['A', 'B', 'C', 'D']) === 'A, B and 2 more have run out');
+  ck('the Undo toast names what came back (final review, #55)', X.statusBackText(['Poisoned']) === 'Poisoned is back' &&
+     X.statusBackText(['Poisoned', 'Frightened']) === 'Poisoned and Frightened are back' &&
+     X.statusBackText(['A', 'B', 'C', 'D']) === 'A, B and 2 more are back');
+
+  const c = {statuses: [{id: 'p', name: 'Poisoned', active: true, durationSec: 18, elapsedSec: 12},
+                        {id: 'u', name: 'Blessed', active: true},
+                        {id: 'x', name: 'Prone', active: false, durationSec: 18, elapsedSec: 0}, null, 'junk']};
+  const ran = X.tickStatuses(c, 6);
+  ck('a step clears a condition that reaches its duration and reports it with its time before the step',
+     JSON.stringify(ran) === JSON.stringify([{id: 'p', name: 'Poisoned', was: 12}]) &&
+     c.statuses[0].active === false && c.statuses[0].elapsedSec === 18);
+  ck('...leaving untimed, cleared and junk entries alone', !('elapsedSec' in c.statuses[1]) && c.statuses[2].elapsedSec === 0);
+  const back = {statuses: [{id: 'p', active: true, durationSec: 18, elapsedSec: 18}]};
+  ck('a step back never clears anything', X.tickStatuses(back, -6).length === 0 &&
+     back.statuses[0].active === true && back.statuses[0].elapsedSec === 12);
+  ck('...and stops at 0', (() => { const z = {statuses: [{id: 'z', active: true, durationSec: 18, elapsedSec: 0}]};
+     X.tickStatuses(z, -6); return z.statuses[0].elapsedSec === 0; })());
+  const one = {statuses: [{id: 'a', active: true, durationSec: 60, elapsedSec: 0}, {id: 'b', active: true, durationSec: 60, elapsedSec: 0}]};
+  X.tickStatuses(one, 6, 'b');
+  ck('a step for one condition moves only it', one.statuses[0].elapsedSec === 0 && one.statuses[1].elapsedSec === 6);
+  ck('a character with no list of statuses steps nothing', X.tickStatuses({statuses: 'junk'}, 6).length === 0 &&
+     X.tickStatuses(null, 6).length === 0);
+  ck('restarting a timed condition starts its full time again', (() => {
+     const s = {durationSec: 18, elapsedSec: 18}; X.restartStatus(s); return s.elapsedSec === 0; })());
+  ck('...and leaves an untimed one alone', (() => { const s = {}; X.restartStatus(s); return !('elapsedSec' in s); })());
+}
+
+/* ---- timed conditions on the sheet: the round, the row, running out (#55) ---- */
+{
+  const mk = () => {
+    const c = X.blankChar(); X.character = c;
+    c.statuses = [{id: 'p', name: 'Poisoned', active: true, durationSec: 18, elapsedSec: 0, effects: []},
+                  {id: 'f', name: 'Frightened', active: true, durationSec: 12, elapsedSec: 6, effects: []},
+                  {id: 'u', name: 'Blessed', active: true, effects: []},
+                  {id: 'x', name: 'Prone', active: false, durationSec: 18, elapsedSec: 0, effects: []}];
+    X.combatStart(c);
+    return c;
+  };
+  let c = mk();
+  X.advanceRound(1);
+  ck('the next round moves every active timed condition on 6 seconds', c.statuses[0].elapsedSec === 6);
+  ck('...one brought to its duration clears itself, its time kept at the duration',
+     c.statuses[1].active === false && c.statuses[1].elapsedSec === 12);
+  ck('...an untimed one and a cleared one do not move', !('elapsedSec' in c.statuses[2]) && c.statuses[3].elapsedSec === 0);
+  c = mk(); c.statuses[0].elapsedSec = 6;
+  X.advanceRound(-1);
+  ck('at round 1 in combat, the previous round moves no condition', c.combatRound === 1 && c.statuses[0].elapsedSec === 6);
+  c = mk(); c.statuses[0].elapsedSec = 12;
+  X.advanceRound(1);
+  ck('several can run out on one step', c.statuses[0].active === false && c.statuses[1].active === false);
+
+  c = mk();
+  const ran = X.tickStatuses(c, 6);
+  const rec = X.announceStatusExpiry(ran);
+  ck('a step that ran something out puts up a toast with what Undo needs', !!rec && rec.ran.length === 1 && rec.ran[0].id === 'f');
+  ck('an Undo shown for another character does nothing', X.undoStatusExpiry(rec, X.blankChar()) === false && c.statuses[1].active === false);
+  ck("this character's Undo brings it back, at its time before the step",
+     X.undoStatusExpiry(rec, c) === true && c.statuses[1].active === true && c.statuses[1].elapsedSec === 6);
+  ck('...once only', X.undoStatusExpiry(rec, c) === false);
+  ck('nothing ran out: no toast', X.announceStatusExpiry([]) === null);
+  c = mk();
+  const rec2 = X.announceStatusExpiry(X.tickStatuses(c, 12));
+  c.statuses = c.statuses.filter(s => s.id !== 'f');
+  ck('an Undo skips a condition deleted since', X.undoStatusExpiry(rec2, c) === true && c.statuses.every(s => s.id !== 'f'));
+
+  c = mk();
+  X.stepStatusTap('p', 6, false);
+  ck('+ rd moves only that condition', c.statuses[0].elapsedSec === 6 && c.statuses[1].elapsedSec === 6);
+  X.stepStatusTap('p', -6, false); X.stepStatusTap('p', -6, false);
+  ck('− rd stops at 0', c.statuses[0].elapsedSec === 0);
+  X.stepStatusTap('f', 6, false);
+  ck('+ rd to the end clears it', c.statuses[1].active === false);
+
+  c = X.blankChar(); X.character = c;
+  c.statuses = [{id: 'q', name: 'Poisoned', active: false, durationSec: 60, elapsedSec: 60, effects: []}];
+  ck('an item reactivating a timed condition restarts it', X.addStatusByName('Poisoned') === 'reactivated' && c.statuses[0].elapsedSec === 0);
+  c.statuses[0].elapsedSec = 24;
+  ck('...one already active keeps running', X.addStatusByName('Poisoned') === 'already' && c.statuses[0].elapsedSec === 24);
+
+  const row = X.statusRowHTML({id: 'p', name: 'Poisoned', active: true, durationSec: 18, elapsedSec: 6});
+  ck('an active timed row shows its time left and the round buttons',
+     /2 rounds left/.test(row) && /data-status-tick="p" data-sec="-6"/.test(row) && /data-status-tick="p" data-sec="6"/.test(row), row);
+  const off = X.statusRowHTML({id: 'p', name: 'Poisoned', active: false, durationSec: 60, elapsedSec: 60});
+  ck('a cleared one shows its length and no round buttons', /lasts 1 min/.test(off) && !/data-status-tick/.test(off), off);
+  const plain = X.statusRowHTML({id: 'b', name: 'Blessed', active: true});
+  ck('an untimed row is as it was', !/st-time/.test(plain) && !/data-status-tick/.test(plain));
+  ck('the Concentrating row is never timed', !/data-status-tick|st-time/.test(
+     X.statusRowHTML({id: 'cc', name: 'Concentrating', active: true, concId: 'a1', durationSec: 60})));
+  ck('the time sits under the name, not in the top line', !/class="top"[^]*st-time[^]*<\/div>\s*<div class="use-row/.test(row) && /use-row st-row"><span class="use-lbl st-time">2 rounds left/.test(row), row);
+
+  const saved = Object.assign(X.blankChar(), {statuses: [{id: 'p', name: 'Poisoned', description: '', active: true, durationSec: 18, elapsedSec: 6, effects: []}]});
+  const back = X.migrate(JSON.parse(JSON.stringify(saved))).statuses[0] || {};
+  ck('a timed condition survives a save and a load', back.durationSec === 18 && back.elapsedSec === 6, back);
+  X.character = X.blankChar();
+}
+
+/* ---- compact stats in the combat view are read-only (#62) ---- */
+{
+  /* two fake cards: closest('#cvList') follows each card's inView flag */
+  const card = inView => {
+    const c = {inView, ctls: [{disabled: false}, {disabled: false}, {disabled: false}]};
+    c.closest = sel => (sel === '#cvList' && c.inView ? {} : null);
+    c.querySelectorAll = sel => (sel === 'input[data-path],button.dot' ? c.ctls : []);
+    return c;
+  };
+  const a = card(true), b = card(false);
+  const doc = {querySelectorAll: sel => (sel === '[data-note="abilities"],[data-note="skills"]' ? [a, b] : [])};
+  X.syncStatLock(doc);
+  ck('inside the combat view the score boxes and proficiency dots are disabled', a.ctls.every(x => x.disabled === true));
+  ck('...and at home they are not', b.ctls.every(x => x.disabled === false));
+  X.syncStatLock(doc);
+  ck('...and running it again changes nothing', a.ctls.every(x => x.disabled === true) && b.ctls.every(x => x.disabled === false));
+  a.inView = false; b.inView = true;
+  X.syncStatLock(doc);
+  ck('a card that goes home is editable again, and one that comes in is locked',
+     a.ctls.every(x => x.disabled === false) && b.ctls.every(x => x.disabled === true));
+  ck('nothing to look in: nothing happens', (() => { try { X.syncStatLock({querySelectorAll: () => []}); return true; } catch (e) { return false; } })());
+}
+
 ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').includes('<path d="M'));
 
 /* ---- the tab-bar button ---- */
@@ -3435,7 +3584,9 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
                 {id: 'hb', name: P, qty: 2, ammo: {kind: P}},
                 {id: 'hc', name: 'Constructor', qty: 1}],
     statuses: [{id: P, name: P, description: P, effects: [], active: true},
-               {id: 'st2', name: 'Pwnterm', description: '', effects: [], active: true}],
+               {id: 'st2', name: 'Pwnterm', description: '', effects: [], active: true},
+               {id: 'st3', name: P, description: P, effects: [], active: true, durationSec: 18, elapsedSec: 6},
+               {id: 'st4', name: P, effects: [], active: true, durationSec: P, elapsedSec: P}],
     familiars: [{id: P, name: P, kind: P, ac: P, hp: {cur: P, max: P}, speed: P, description: P, effects: [], active: true}],
     attacks: [{id: P, name: P, kind: 'melee', ability: 'str', proficient: true, damageDice: P, damageType: P, notes: P},
               {id: 'a2', spellId: P, source: 'spell', name: P, save: {ability: P}, damageDice: P, notes: P},
@@ -3484,6 +3635,10 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   run('the tracker editor', () => ctx.openTrackerForm(C().trackers[0]));
   run('the Coins card', () => ctx.renderCoins());
   run('the print sheet', () => ctx.printSheet());
+  C().statuses.push({id: 'tp', name: 'Poisoned', active: true, durationSec: 18, elapsedSec: 6, effects: []});
+  ck('#55 the print sheet lists a timed condition with its time left',
+     /Poisoned \(2 rounds left\)/.test(capture(() => ctx.printSheet()).html));
+  C().statuses = C().statuses.filter(s => s.id !== 'tp');
   run('a glossary entry of the character\'s own', () => ctx.openGlossView(C().glossary[0]));
   run('the pack\'s image keyword, whose id a settings file sets', () => ctx.renderAllRT());
   run('the item editor (structured armor from the file)', () => ctx.openItemForm(C().inventory[0]));
@@ -3500,6 +3655,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   run('the item editor (a launcher of a hostile kind)', () => ctx.openItemForm(C().inventory.find(i => i.id === 'hl')));
   run('the resource editor', () => ctx.openResourceForm(C().resources[0]));
   run('the status editor', () => ctx.openStatusForm(C().statuses[0]));
+  run('the status editor (a timed condition)', () => ctx.openStatusForm(C().statuses.find(s => s.id === 'st3')));
   run('the familiar editor', () => ctx.openFamiliarForm(C().familiars[0]));
   run('the origin badge\'s window', () => ctx.openOriginInfo(C().inventory[0].origin));
   /* A fresh copy: renderSpells() above rewrote s.level to a number in place,
@@ -3879,6 +4035,63 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     ck('#8 picking Longbow after a bundle puts the quantity back to 1',
        !res.err && lb.name === 'Longbow' && lb.qty === 1, why(res) || lb);
     X.resetRules();
+  }
+
+  /* ---- the status form's Lasts row (#55), driven through the form ----
+     The recorder DOM does not read values back out of the markup, so each box a
+     save reads is set by hand. */
+  {
+    X.character = X.blankChar();
+    const why = res => res.err ? String(res.err.stack || res.err).split('\n').slice(0, 3).join(' | ') : undefined;
+    let res = capture(() => { ctx.openStatusForm(); el('stName').value = 'Poisoned'; el('stDurN').value = '3'; el('stDurU').value = 'rounds'; fire('stSave', 'click'); });
+    const p = X.character.statuses[0] || {};
+    ck('#55 the form saves a duration: 3 rounds is 18 seconds', !res.err && p.durationSec === 18 && !('elapsedSec' in p), why(res) || p);
+    p.elapsedSec = 6;
+    res = capture(() => { ctx.openStatusForm(p); el('stName').value = 'Poisoned'; el('stDesc').value = 'From the needle trap.';
+      el('stDurN').value = '3'; el('stDurU').value = 'rounds'; fire('stSave', 'click'); });
+    ck('#55 editing the notes mid-fight keeps the time already run', !res.err && X.character.statuses[0].elapsedSec === 6 &&
+       X.character.statuses[0].description === 'From the needle trap.', why(res) || X.character.statuses[0]);
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '2'; el('stDurU').value = 'minutes'; fire('stSave', 'click'); });
+    const p2 = X.character.statuses[0] || {};
+    ck('#55 changing the length keeps the time already run', !res.err && p2.durationSec === 120 && p2.elapsedSec === 6, why(res) || p2);
+    p2.active = false; p2.elapsedSec = 120;
+    res = capture(() => { ctx.openStatusForm(p2); el('stName').value = 'Poisoned'; el('stDurN').value = '2'; el('stDurU').value = 'minutes';
+      fire('stActive', 'click'); fire('stSave', 'click'); });
+    const p3 = X.character.statuses[0] || {};
+    ck('#55 switching it on in the form restarts it', !res.err && p3.active === true && p3.durationSec === 120 && !('elapsedSec' in p3), why(res) || p3);
+    res = capture(() => { ctx.openStatusForm(p3); el('stName').value = 'Poisoned'; el('stDurN').value = ''; fire('stSave', 'click'); });
+    ck('#55 a blank length makes it untimed', !res.err && !('durationSec' in X.character.statuses[0]) && !('elapsedSec' in X.character.statuses[0]),
+       why(res) || X.character.statuses[0]);
+    X.character.statuses = [{id: 'cc', name: 'Concentrating', active: true, concId: 'a1', effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Concentrating'; el('stDurN').value = '3'; fire('stSave', 'click'); });
+    ck('#55 the Concentrating condition never takes a duration', !res.err && !('durationSec' in X.character.statuses[0]), why(res) || X.character.statuses[0]);
+
+    /* final review: the Lasts box takes decimals — number × unit rounded to
+       the second, not truncated to a whole number of the unit first. */
+    X.character.statuses = [{id: 'd1', name: 'Poisoned', active: true, effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '1.5'; el('stDurU').value = 'hours'; fire('stSave', 'click'); });
+    ck('#55 final review: "1.5 hours" saves 5400 seconds, not truncated away', !res.err && X.character.statuses[0].durationSec === 5400, why(res) || X.character.statuses[0]);
+    X.character.statuses = [{id: 'd2', name: 'Poisoned', active: true, effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '0.5'; el('stDurU').value = 'hours'; fire('stSave', 'click'); });
+    ck('#55 final review: "0.5 hours" saves 1800 seconds', !res.err && X.character.statuses[0].durationSec === 1800, why(res) || X.character.statuses[0]);
+    X.character.statuses = [{id: 'd3', name: 'Poisoned', active: true, effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '-3'; el('stDurU').value = 'rounds'; fire('stSave', 'click'); });
+    ck('#55 final review: "-3" rounds saves untimed', !res.err && !('durationSec' in X.character.statuses[0]) && !('elapsedSec' in X.character.statuses[0]), why(res) || X.character.statuses[0]);
+
+    /* final review (the spec was silent): shortening a running condition to no
+       more than the time it has already run saves it Cleared — it has already
+       run its course. Restarting (switching it back on in the form) is not
+       this path and still starts at 0, covered above. */
+    X.character.statuses = [{id: 'd4', name: 'Poisoned', active: true, durationSec: 18, elapsedSec: 12, effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '1'; el('stDurU').value = 'rounds'; fire('stSave', 'click'); });
+    ck('#55 final review: shortening to no more than the time already run saves it Cleared',
+       !res.err && X.character.statuses[0].active === false && X.character.statuses[0].elapsedSec === 6, why(res) || X.character.statuses[0]);
+    X.character.statuses = [{id: 'd5', name: 'Poisoned', active: true, durationSec: 18, elapsedSec: 12, effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '3'; el('stDurU').value = 'rounds'; fire('stSave', 'click'); });
+    ck('#55 final review: lengthening past the time already run stays active',
+       !res.err && X.character.statuses[0].active === true && X.character.statuses[0].elapsedSec === 12, why(res) || X.character.statuses[0]);
+
+    X.character = X.blankChar();
   }
 
   Object.assign(doc, saved);

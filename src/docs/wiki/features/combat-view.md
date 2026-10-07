@@ -50,7 +50,8 @@ else the previous one, else ✕.
 **The tracker.** `combatHeaderHTML()` draws ✕ · title · Start combat · ☰ out of combat, and
 ✕ · title · ◀ Round N · time ▶ · (gap) · End combat · ☰ in it — End set well apart from ▶.
 `startCombatNow()` → `combatStart()`: active, round 1, active spells untouched. ◀ and ▶ are
-`advanceRound(∓1)`, shared with the Active Spells card: every active spell moves 6 s, and in combat
+`advanceRound(∓1)`, shared with the Active Spells card: every active spell and every active timed
+condition moves 6 s ([Conditions & concentration](conditions-and-concentration.md)), and in combat
 the round cannot drop below 1. End asks first (`endCombatAsk()`), then `combatEnd()` zeroes the round
 and returns the summary. Once the fight is over, `offerAmmoRecovery()` asks once more — only if
 something is recoverable **and** a shot has been fired since it last asked — to recover half of
@@ -80,7 +81,9 @@ Trackers when Settings hides it. `cvCardShown()` tests computed style. `renderCo
 "Add sections with the … button on any card." hint when no card in the view shows. `fillCombatView()`
 and a toggle call it, and so does `renderTrackers()` while the view is open, so hiding Trackers
 when it is the only card there brings the hint back instead of leaving the view blank. The ☰ lists the view's cards, and `scrollToCard()` clears both the tab bar and
-the header.
+the header. Ability Scores & Saves and Skills, added here like any other card, draw compact and
+read-only instead — `syncStatLock()` disables their score boxes and proficiency dots while they sit
+in `#cvList` ([Abilities & skills](abilities-and-skills.md)).
 
 **Character switches.** `syncCombatView()` is the last thing `renderAll()` does: with the tab open it
 empties and refills from the new character (scroll to top if the character changed), then repaints
@@ -134,7 +137,7 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 |---|---|---|
 | How it opens | **As built:** a tab (`#tab-combat`) reached from the swords, with no word tab (owner's call after play) | The spec's full-screen overlay: in play it covered the tabs a player wanted to glance at. A 7th word tab: crowds the tab bar on a phone. A side panel: the most complex, and a card pinned from the visible tab would vanish from it |
 | Where the button lives | The sticky tab bar, before ☰ | The title bar: it scrolls away, taking the "combat running" indicator with it |
-| What a round changes | Active spells only, through `advanceRound()` | Timed conditions: filed as their own issue |
+| What a round changes | Active spells and timed conditions, through `advanceRound()` | Active spells only — timed conditions came in #55 |
 | Start and End | Start sets round 1; End is its own button and asks; leaving never ends combat | Opening and closing as start and end: closing to look something up would end the fight |
 | Which sections | Any of the 20, six by default, drag to reorder, saved per character | Fixed sheet order; starting empty (no reason recorded) |
 | Mechanism | Move the real cards | Copies: every id duplicated. A purpose-built dashboard: re-implements every section's controls |
@@ -147,7 +150,7 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - The spec, including its "As built" section, describes the overlay and is historical: `inert`, the
   view's Esc, `aria-modal`, `html.cv-lock` and focus on ✕ at open are all gone.
 - The item finder has no Esc of its own.
-- Timed conditions, initiative and turn order are out of scope; time is in-game only.
+- Initiative and turn order are out of scope; time is in-game only.
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -160,3 +163,6 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-09-29 — Hiding Trackers while it is the view's only card brings back the "Add sections…" hint. → ledger L4856, #41
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6
+- 2026-10-06 — Timed conditions: a duration in rounds, minutes or hours, counted down by the round
+  tracker, clearing itself with an Undo. → ledger L5031, #55
+- 2026-10-06 — In the combat view the two cards draw compact and read-only. → ledger L5046, #62

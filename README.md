@@ -184,6 +184,8 @@ Your main character page:
   switch Hit Dice to manual entry — see [section 6](#6-how-the-smart-features-work).)
 - **Statuses & Conditions**, **Attacks & Weapons**, **Skills**, **Resources**,
   **Features & Traits**, and **Familiars & Companions**.
+- **Timed conditions.** Give a condition a duration in rounds, minutes or hours: the round tracker
+  counts it down, and it clears itself when the time is up, with an Undo.
 
 ### 🎒 Inventory
 
@@ -293,13 +295,14 @@ and its header — the round and its arrows — stays in view as you scroll.
   You start with Vitals, Statuses & Conditions, Attacks & Weapons, Resources, Spell Slots and
   Active Spells. Take one out by mistake and the message that confirms it has an **Undo**, which
   puts it back where it was.
+- **Your bonuses at a glance.** Add Ability Scores & Saves and Skills and they show compact and read-only here; tap any value for its breakdown, and edit them on the Sheet tab.
 - **Arranging them.** Inside the combat view, drag a section by the **⋮⋮** grip at the left of its
   heading. With a keyboard, move to the grip and press **↑** or **↓** to move the section one place.
   Your order is saved with the character.
 - **Keeping track of the fight.** **Start combat** begins at round 1. **◀** and **▶** step back and
   forward a round and show the time passed in the game — six seconds a round — and your active
-  spells' timers move along with them. **End combat** is its own button, and asks before it ends
-  anything. If you fired ammunition, it then offers to recover half of it.
+  spells and timed conditions move along with them. **End combat** is its own button, and asks
+  before it ends anything. If you fired ammunition, it then offers to recover half of it.
 - **Looking something up.** Pick any other tab, or tap **✕** to go back to the one you came from,
   and combat keeps going: the crossed-swords button shows the round on every tab, and one tap
   brings you back to where you were.

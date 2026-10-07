@@ -204,13 +204,18 @@ function statusTitle(name){
    sharing the markup rather than writing a second, nearly-identical one that
    drifts. */
 function statusRowHTML(s){
-  const on=s.active!==false;
+  const on=s.active!==false, tt=statusTimeText(s), ticking=on&&statusTimed(s);
+  const nm=String(s.name||"condition");
   return `<div class="item${on?" on-status":""}"><div class="top">
         <span class="nm">${statusTitle(s.name)}</span>
         <span class="equip ${on?"on":""}" data-toggle-status="${esc(s.id)}"><span class="box"></span>${on?"Active":"Cleared"}</span>
         <button class="icon" data-edit-status="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-status="${esc(s.id)}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
+      ${tt?`<div class="use-row st-row"><span class="use-lbl st-time">${esc(tt)}</span>${ticking?`
+        <button class="tbtn" data-status-tick="${esc(s.id)}" data-sec="-6" aria-label="${esc("One round back: "+nm)}" style="padding:3px 8px;min-height:auto">− rd</button>
+        <button class="tbtn" data-status-tick="${esc(s.id)}" data-sec="6" aria-label="${esc("One round on: "+nm)}" style="padding:3px 8px;min-height:auto">+ rd</button>`:""}
+      </div>`:""}
       ${s.description?`<div class="desc">${richHTML(s.description)}</div>`:""}
       ${on?fxChips(s.effects):fxChips(s.effects).replace(/class="chip"/g,'class="chip off"')}</div>`;
 }
@@ -234,6 +239,126 @@ function renderConcCard(){
   card.style.display=row?"":"none";
   el.innerHTML=row?statusRowHTML(row):"";
 }
+
+/* ---- timed conditions (#55) ----
+   A status may last a set time: `durationSec` (a round is 6) and `elapsedSec`,
+   how long it has run since it was last applied. The round tracker moves every
+   active timed condition with the active spells (advanceRound()); one that
+   reaches its duration clears itself, with an Undo. The Concentrating condition
+   is never timed: its spell owns the clock. These helpers are pure, no DOM.
+   Design: src/docs/specs/2026-10-06-timed-conditions-design.md */
+const STATUS_UNITS=[["rounds",6],["minutes",60],["hours",3600]];
+/* the duration in whole seconds; 0 = untimed (junk, 0 or less, or Concentrating) */
+function statusDuration(s){
+  if(!s||typeof s!=="object"||s.concId)return 0;
+  const d=Math.round(Number(s.durationSec));
+  return isFinite(d)&&d>0?d:0;
+}
+function statusElapsed(s){
+  const e=Math.round(Number(s&&s.elapsedSec));
+  return isFinite(e)&&e>0?e:0;
+}
+function statusTimed(s){return statusDuration(s)>0;}
+/* A duration as the form shows it: the largest unit that divides it exactly.
+   [number, unit key], or ["", "rounds"] for untimed. */
+function statusUnitFor(sec){
+  sec=Math.round(Number(sec));
+  if(!isFinite(sec)||sec<=0)return ["","rounds"];
+  for(let i=STATUS_UNITS.length-1;i>=0;i--){const [u,f]=STATUS_UNITS[i];if(sec%f===0)return [sec/f,u];}
+  return [Math.max(1,Math.round(sec/6)),"rounds"];
+}
+/* Time as a fight reads it: rounds up to a minute, then rounded up to the
+   minute — minutes under an hour, hours and minutes after. */
+function fmtStatusTime(sec){
+  sec=Math.max(0,Number(sec)||0);
+  if(sec<=60){const r=Math.ceil(sec/6);return `${r} round${r===1?"":"s"}`;}
+  const t=Math.ceil(sec/60);
+  if(t<60)return `${t} min`;
+  const h=Math.floor(t/60),m=t%60;
+  return m?`${h} h ${m} min`:`${h} h`;
+}
+/* What a row says: the time left while active, its length while cleared (what
+   switching it back on would give), nothing when untimed. */
+function statusTimeText(s){
+  const d=statusDuration(s);if(!d)return "";
+  if(s.active===false){
+    const [n,u]=statusUnitFor(d);
+    return "lasts "+(u==="hours"?`${n} h`:u==="minutes"?`${n} min`:`${n} round${n===1?"":"s"}`);
+  }
+  return fmtStatusTime(Math.max(0,d-statusElapsed(s)))+" left";
+}
+function statusExpiredText(names){
+  const n=(Array.isArray(names)?names:[]).map(x=>String(x||"A condition"));
+  if(n.length<=1)return `${n[0]||"A condition"} has run out`;
+  if(n.length===2)return `${n[0]} and ${n[1]} have run out`;
+  return `${n[0]}, ${n[1]} and ${n.length-2} more have run out`;
+}
+/* The Undo's own confirmation (final review, #55), the same shape as
+   statusExpiredText() and the ammo/tracker Undos ("Shot undone", "… is
+   back"). Only the conditions actually restored — undoStatusExpiry() skips
+   one deleted since. */
+function statusBackText(names){
+  const n=(Array.isArray(names)?names:[]).map(x=>String(x||"A condition"));
+  if(n.length<=1)return `${n[0]||"A condition"} is back`;
+  if(n.length===2)return `${n[0]} and ${n[1]} are back`;
+  return `${n[0]}, ${n[1]} and ${n.length-2} more are back`;
+}
+/* Move active timed conditions by deltaSec: every one, or only `onlyId`. One a
+   forward step brings to its duration clears itself, as the toggle does, its
+   time kept at the duration. Returns those, each with its elapsed time before
+   the step: what Undo restores. Cleared and untimed conditions do not move. */
+function tickStatuses(c,deltaSec,onlyId){
+  const ran=[];
+  (Array.isArray(c&&c.statuses)?c.statuses:[]).forEach(s=>{
+    if(!s||typeof s!=="object"||s.active===false)return;
+    if(onlyId!=null&&s.id!==onlyId)return;
+    const d=statusDuration(s);if(!d)return;
+    const was=statusElapsed(s), now=Math.max(0,was+deltaSec);
+    if(deltaSec>0&&now>=d){s.elapsedSec=d;s.active=false;ran.push({id:s.id,name:s.name,was});}
+    else s.elapsedSec=now;
+  });
+  return ran;
+}
+/* Switching a timed condition back on starts its full duration again. */
+function restartStatus(s){if(statusTimed(s))s.elapsedSec=0;}
+/* One toast for every condition that ran out on a step, with its Undo. Focus is
+   left where it is: the ▶ or + rd just pressed is still there, and pressing it
+   again must move the clock, never land on Undo. */
+function announceStatusExpiry(ran){
+  if(!Array.isArray(ran)||!ran.length)return null;
+  const rec={ran,done:false}, who=character;
+  toast(statusExpiredText(ran.map(r=>r.name)),{label:"Undo",run:()=>undoStatusExpiry(rec,who)});
+  return rec;
+}
+/* The toast's Undo: those conditions active again, each at the time it had
+   before the step. Once only, and only on the character it was shown for (the
+   object, so an import over the same id is another character). A condition
+   deleted since is skipped — and so is its name in the confirmation toast;
+   nothing toasts when nothing was restored. */
+function undoStatusExpiry(rec,who){
+  if(!rec||rec.done||!character||character!==who)return false;
+  rec.done=true;
+  const back=[];
+  rec.ran.forEach(r=>{const s=(character.statuses||[]).find(x=>x&&x.id===r.id);if(s){s.active=true;s.elapsedSec=r.was;back.push(s.name);}});
+  renderStatuses();recompute();scheduleSave();
+  if(back.length)toast(statusBackText(back));
+  return true;
+}
+/* − rd / + rd on one timed condition's row. The save is scheduled before the
+   redraw. From the keyboard, focus goes back to the same button, or the row's
+   Edit button once the condition has run out (its round buttons are gone). */
+function stepStatusTap(id,deltaSec,viaKey){
+  const ran=tickStatuses(character,deltaSec,id);
+  scheduleSave();
+  renderStatuses();if(ran.length)recompute();
+  announceStatusExpiry(ran);
+  if(viaKey){
+    const sel=attrSel("data-status-tick",id)+(deltaSec>0?'[data-sec="6"]':'[data-sec="-6"]');
+    const b=document.querySelector(sel)||document.querySelector(attrSel("data-edit-status",id));
+    if(b&&b.focus)b.focus();
+  }
+}
+
 function renderFamiliars(){
   const card=document.getElementById("familiarCard");
   const link=document.getElementById("addFamiliarLink");

@@ -492,7 +492,7 @@ function itemQty(it){return (it&&it.qty!=null&&it.qty!=="")?num(it.qty):1;}
 function addStatusByName(name){
   const nm=String(name||"").trim();if(!nm)return "";
   const ex=(character.statuses||[]).find(s=>String(s.name||"").toLowerCase()===nm.toLowerCase());
-  if(ex){const was=ex.active!==false;ex.active=true;return was?"already":"reactivated";}
+  if(ex){const was=ex.active!==false;ex.active=true;if(!was)restartStatus(ex);return was?"already":"reactivated";}
   character.statuses.push({id:uid(),name:nm,description:"",effects:[],active:true});
   return "added";
 }
@@ -581,10 +581,16 @@ function statusDatalistHTML(id){
 function openStatusForm(existing){
   const s=existing||{id:uid(),name:"",description:"",effects:[],active:true};
   const dl=statusDatalistHTML("statusTerms");
+  /* how long it lasts (#55); never on the Concentrating condition, whose spell owns the clock */
+  const [durN,durU]=statusUnitFor(statusDuration(s));
   openModal(existing?"Edit status":"New status",`
     <div class="field"><label class="f">Condition / status</label><input id="stName" list="statusTerms" value="${esc(s.name)}" placeholder="Poisoned, Grappled, Blessed…">${dl}
       <p class="hint">If the name matches a glossary or rules entry, it becomes tappable to show the rule.</p></div>
     <div class="field"><label class="f">Notes (optional)</label><textarea id="stDesc">${esc(s.description||"")}</textarea></div>
+    <div class="field"${s.concId?' style="display:none"':""}><label class="f">Lasts (optional)</label>
+      <div class="g2"><input id="stDurN" type="number" min="0" step="1" value="${esc(durN)}" placeholder="Until cleared" aria-label="How long it lasts">
+        <select id="stDurU" aria-label="Unit">${STATUS_UNITS.map(([u])=>`<option value="${esc(u)}"${u===durU?" selected":""}>${esc(u)}</option>`).join("")}</select></div>
+      <p class="hint">The round tracker counts it down, and it clears itself when the time is up. Leave blank for a condition that lasts until you clear it.</p></div>
     <div class="field"><label class="f">Effects while active (optional)</label><div id="stFx">${fxEditorRows(s.effects)}</div><button class="fx-add" id="stAddFx">+ Add effect</button>
       <p class="hint">Use for numeric changes (e.g. AC −2). Non-numeric effects like “disadvantage” are best kept as notes / a glossary entry.</p></div>
     <label class="equip ${s.active!==false?"on":""}" id="stActive" style="font-size:12px"><span class="box"></span>Active now (apply effects)</label>
@@ -601,6 +607,23 @@ function openStatusForm(existing){
        on has to be carried across — lose it and the condition stops ending the
        spell, and nothing on screen says why. */
     if(s.concId)rec.concId=s.concId;
+    /* How long it lasts (#55). The box takes decimals — number × unit rounded
+       to the second ("1.5 hours" is 90 minutes) — and NaN or zero/negative
+       stays untimed. The time already run is kept, so a mistyped length can
+       be corrected; switching it on again here restarts it. */
+    const du=(STATUS_UNITS.find(([u])=>u===document.getElementById("stDurU").value)||STATUS_UNITS[0])[1];
+    const sec=Math.round(Number(document.getElementById("stDurN").value)*du);
+    if(!rec.concId&&sec>0){
+      rec.durationSec=sec;
+      const restarted=active&&s.active===false;
+      if(!restarted&&statusElapsed(s))rec.elapsedSec=statusElapsed(s);
+      /* Shortening a running condition to no more than the time it has
+         already run (final review — the spec was silent): it has already run
+         its course, so save it Cleared. No toast; Undo's own toast after a
+         round-tracker step is the only one for a timed condition. Restarting
+         is not this path and still starts at 0, above. */
+      if(active&&!restarted&&statusElapsed(s)>=sec){rec.active=false;rec.elapsedSec=sec;}
+    }
     const i=character.statuses.findIndex(x=>x.id===s.id);if(i>=0)character.statuses[i]=rec;else character.statuses.push(rec);
     /* Unticking "Active now" on a concentration condition IS ending it, the same
        as clearing it on the sheet — so the spell ends with it. */

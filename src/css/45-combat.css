@@ -112,3 +112,31 @@
 .cv-grip:hover,.cv-grip:focus-visible{color:var(--accent-2)}
 .cv-grip:active{cursor:grabbing}
 .cv-dragging{box-shadow:0 16px 36px rgba(0,0,0,.30);outline:2px dashed var(--accent);outline-offset:3px}
+
+/* ---- compact stats (#62) ----
+   Ability Scores & Saves and Skills, added to the view, draw condensed and
+   read-only: syncStatLock() disables their score boxes and dots while they are in
+   #cvList, and these rules shrink them and show the disabled score as a number. */
+#cvList [data-note="abilities"] .abilities{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+#cvList [data-note="abilities"] .ability{padding:6px 4px 7px}
+#cvList [data-note="abilities"] .ability .n{font-size:9px}
+#cvList [data-note="abilities"] .ability .m{font-size:22px;margin:2px 0 1px}
+#cvList [data-note="abilities"] input[data-path]{border:0;background:none;box-shadow:none;padding:0;min-height:0;width:100%;
+  text-align:center;font-size:12px;font-weight:600;color:var(--ink-soft);-webkit-text-fill-color:var(--ink-soft);opacity:1}
+#cvList [data-note="abilities"] .ability .save{margin-top:4px;gap:4px}
+#cvList [data-note="abilities"] .dot,#cvList [data-note="skills"] .dot{width:13px;height:13px;border-width:2px;cursor:default}
+#cvList [data-note="skills"] .skills{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(6,auto);grid-auto-flow:column;gap:0 14px}
+#cvList [data-note="skills"] .srow{padding:2px 2px;gap:6px}
+#cvList [data-note="skills"] .srow .val{font-size:14px;width:26px}
+#cvList [data-note="skills"] .srow .lbl{font-size:13px}
+#cvList #statLegend{display:none}
+#cvList [data-note="abilities"] .agroups{gap:8px 12px}
+#cvList [data-note="abilities"] .agroup .ahead{padding:3px 8px}
+#cvList [data-note="abilities"] .agroup .ahead .m{font-size:18px}
+#cvList [data-note="abilities"] .agroup .ahead input[data-path]{width:auto;flex:none}
+#cvList [data-note="abilities"] .agroup .srow{padding:1px 2px}
+#cvList [data-note="abilities"] .agroup .srow .val{font-size:13px;width:24px}
+#cvList [data-note="abilities"] .agroup .srow .lbl{font-size:12.5px}
+@media(max-width:640px){#cvList [data-note="skills"] .skills{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(9,auto);grid-auto-flow:column}}
+@media(max-width:560px){#cvList [data-note="abilities"] .abilities{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:380px){#cvList [data-note="skills"] .skills{grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-auto-flow:row}}

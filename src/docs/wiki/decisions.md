@@ -153,6 +153,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **How expertise is marked in grouped mode** — CSS off the dot's `data-lvl`
 - **The Skills note button, hidden in grouped mode** — Shipped as a known gap
 - **Where a bonus to plain ability checks shows (#79)** — The ability's breakdown, apart from the score; the modifier box is unchanged
+- **How the quick view reaches the combat view (#62)** — The existing Abilities and Skills cards draw compact and read-only inside the view
+- **The quick view's layout (#62)** — Follows the character's Skills display (Classic or By ability)
 
 ### [Vitals & rest](features/vitals-and-rest.md)
 
@@ -182,6 +184,12 @@ When a page gains a Decisions row, add its line here under that page.
 - **Effects on the Concentrating row** — None: its rules are prose, and effects are numeric only
 - **The Spells-tab copy** — The same `statusRowHTML()`, redrawn from `renderStatuses()`
 - **Where the copy sits** — Above Active Spells, where you look when casting the next spell — it tells you what you would drop
+- **How a duration is entered** — A number and a unit (rounds, minutes, hours); blank is untimed
+- **When the time runs out** — It clears itself, with a toast and an Undo
+- **What moves the clock** — The round tracker plus − rd / + rd on the row
+- **What the row shows** — Time left ("3 rounds left")
+- **An item's Use applying a timed condition** — Not now: item-applied conditions stay untimed
+- **Reactivating a cleared timed condition** — Restarts its full duration
 
 ### [Attacks & damage](features/attacks-and-damage.md)
 
@@ -287,7 +295,7 @@ When a page gains a Decisions row, add its line here under that page.
 
 - **How it opens** — **As built:** a tab (`#tab-combat`) reached from the swords, with no word tab (owner's call after play)
 - **Where the button lives** — The sticky tab bar, before ☰
-- **What a round changes** — Active spells only, through `advanceRound()`
+- **What a round changes** — Active spells and timed conditions, through `advanceRound()`
 - **Start and End** — Start sets round 1; End is its own button and asks; leaving never ends combat
 - **Which sections** — Any of the 20, six by default, drag to reorder, saved per character
 - **Mechanism** — Move the real cards

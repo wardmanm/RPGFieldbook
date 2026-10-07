@@ -93,12 +93,13 @@ function wire(){
     if((m=t.closest("[data-sub-info]"))){const p=m.dataset.subInfo.split("|");return openSubclassInfo(p[0],p[1]);}
     if((m=t.closest("[data-info-class]")))return openClassInfo(m.dataset.infoClass);
     // statuses
+    if((m=t.closest("[data-status-tick]"))){stepStatusTap(m.dataset.statusTick,num(m.dataset.sec),e.detail===0);return;}
     if((m=t.closest("[data-edit-status]")))return openStatusForm(character.statuses.find(x=>x.id===m.dataset.editStatus));
     /* A concentration condition is the same fact as its Active Spells row, so
        removing or clearing it ends the spell — said in the prompt, because a
        concentration spell is not something the sheet can give back. */
     if((m=t.closest("[data-del-status]"))){const s=character.statuses.find(x=>x.id===m.dataset.delStatus);const ca=(s&&s.concId)?concActiveSpell():null;if(s&&confirm(ca?`Remove “${s.name}”? ${ca.name} ends too.`:`Remove “${s.name}”?`)){if(s.concId)endConcentration();character.statuses=character.statuses.filter(x=>x.id!==s.id);renderStatuses();renderActiveSpells();recompute();scheduleSave();}return;}
-    if((m=t.closest("[data-toggle-status]"))){const s=character.statuses.find(x=>x.id===m.dataset.toggleStatus);if(s){if(s.concId&&s.active!==false){if(!endConcFromStatus())return;}else s.active=s.active===false;renderStatuses();renderActiveSpells();recompute();scheduleSave();}return;}
+    if((m=t.closest("[data-toggle-status]"))){const s=character.statuses.find(x=>x.id===m.dataset.toggleStatus);if(s){if(s.concId&&s.active!==false){if(!endConcFromStatus())return;}else{s.active=s.active===false;if(s.active)restartStatus(s);}renderStatuses();renderActiveSpells();recompute();scheduleSave();}return;}
     // familiars
     if((m=t.closest("[data-edit-familiar]")))return openFamiliarForm(character.familiars.find(x=>x.id===m.dataset.editFamiliar));
     if((m=t.closest("[data-del-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.delFamiliar);if(f&&confirm(`Delete “${f.name}”?`)){character.familiars=character.familiars.filter(x=>x.id!==f.id);renderFamiliars();recompute();scheduleSave();}return;}

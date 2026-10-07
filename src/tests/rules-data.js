@@ -381,6 +381,39 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
   ck('...and the check found them', items.filter(i => i.pack).length === 5 && items.filter(i => i.weapon && i.weapon.ammo).length === 9);
 }
 
+// ---------- timed conditions are wired (#55)
+// 90-boot.js is not loaded by the harness, so its handlers are checked as text.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const body = name => (js.match(new RegExp('function ' + name + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}')) || [''])[0];
+  ck("a timed row's round buttons have a click handler", js.includes('closest("[data-status-tick]")'));
+  ck('...and are drawn with an escaped id', /data-status-tick="\$\{esc\(/.test(js));
+  ck('switching a condition back on restarts its clock', /\[data-toggle-status\][^\n]*restartStatus\(s\)/.test(js));
+  ck('the round tracker moves timed conditions with the spells', /tickStatuses\(character,dir\*6\)/.test(body('advanceRound')));
+}
+
+// ---------- compact stats in the combat view stay in step (#62)
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const css = manifest.css.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const body = name => (js.match(new RegExp('function ' + name + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}')) || [''])[0];
+  ck('the view locks the stat controls when it fills', /syncStatLock\(\)/.test(body('fillCombatView')));
+  ck('...unlocks them when a card goes home', /syncStatLock\(\)/.test(body('sendCardHome')));
+  ck('...and re-applies the lock after the stats are rebuilt', /syncStatLock\(\)/.test(body('buildStats')));
+  ck('the compact rules apply only inside the combat view',
+     /#cvList \[data-note="abilities"\]/.test(css) && /#cvList \[data-note="skills"\]/.test(css) && /#cvList #statLegend\{display:none\}/.test(css));
+  /* #56 trap, reopened at phone width (final review): a multi-column rule that
+     never sets its own grid-auto-flow depends on the base .skills rule, which
+     the view's narrower media query can win over, so the grid reads across
+     rows instead of down each column. */
+  const skillsRules = css.match(/#cvList \[data-note="skills"\] \.skills\{[^}]*\}/g) || [];
+  const multiCol = skillsRules.filter(r => /grid-template-columns:repeat\(/.test(r));
+  ck('every compact Skills grid of two or more columns sets its own grid-auto-flow:column',
+     multiCol.length >= 2 && multiCol.every(r => /grid-auto-flow:column/.test(r)), multiCol);
+}
+
 // ---------- the supplement packs (Xanathar's, Tasha's)
 // These counts are the whole defence against the failure this converter keeps
 // producing: a source filter that matches nothing writes a valid, empty,
@@ -1673,7 +1706,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const togStatus = (js.match(/data-toggle-status[\s\S]{0,600}?return;\}/) || [''])[0];
   ck('clearing it on the sheet ends the spell too, after asking',
      /if\(s\.concId&&s\.active!==false\)\{if\(!endConcFromStatus\(\)\)return;\}/.test(togStatus), togStatus.slice(0, 300));
-  const stSave = (js.match(/const rec=\{id:s\.id,name:document\.getElementById\("stName"\)[\s\S]{0,1200}?scheduleSave\(\);/) || [''])[0];
+  const stSave = (js.match(/const rec=\{id:s\.id,name:document\.getElementById\("stName"\)[\s\S]{0,2400}?scheduleSave\(\);/) || [''])[0];
   ck('the status form keeps the link to the spell', /if\(s\.concId\)rec\.concId=s\.concId;/.test(stSave), stSave.slice(-300));
   ck('...and unticking Active there ends the spell as well',
      /if\(rec\.concId&&!active\)endConcentration\(\);/.test(stSave));

@@ -296,7 +296,14 @@ function advanceRound(dir){
   if(inCombat(character)&&cur+dir<1)return;
   character.combatRound=Math.max(0,cur+dir);
   (character.activeSpells||[]).slice().forEach(a=>bumpActive(a,dir*6));
-  renderActiveSpells();renderCombatChrome();scheduleSave();
+  /* timed conditions move with the spells (#55); one that runs out clears itself */
+  const ran=tickStatuses(character,dir*6);
+  /* Saved right after the tick, before the redraw (final review): every other
+     path here saves first, so a redraw that throws cannot lose the step. */
+  scheduleSave();
+  renderActiveSpells();renderStatuses();renderCombatChrome();
+  if(ran.length)recompute();
+  announceStatusExpiry(ran);
 }
 function renderActiveSpells(){
   const card=document.getElementById("activeSpellCard"),el=document.getElementById("activeSpellList");

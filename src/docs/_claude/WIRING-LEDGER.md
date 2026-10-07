@@ -5027,3 +5027,54 @@ Pages: [ammunition](../wiki/features/ammunition.md),
 [character model](../wiki/architecture/character-model.md),
 [grants & provenance](../wiki/architecture/grants-and-provenance.md),
 [combat view](../wiki/features/combat-view.md), [known issues](../wiki/roadmap/known-issues.md).
+
+## Timed conditions (#55, 2026-10-06)
+
+A condition can now last a set time. A status carries an optional `durationSec` (a round is 6) and
+`elapsedSec`; the status form's "Lasts" row sets it in rounds, minutes or hours, and blank is
+untimed, as every condition was before. `advanceRound()` moves every active timed condition with the
+active spells, and each timed row has − rd / + rd. A forward step that brings one to its duration
+flips it to Cleared (row kept, effects off); one toast per step names them, with an Undo that
+applies once and only on the character it was shown for. Focus is not moved, so a keyboard ▶ cannot
+land on Undo. Switching one back on — the toggle, the form, or an item's Use reactivating it —
+restarts its full duration; changing its length in the form keeps the time already run. The
+Concentrating condition is never timed: its spell owns the clock. The print sheet shows the time
+left. Pages: [conditions & concentration](../wiki/features/conditions-and-concentration.md),
+[spells](../wiki/features/spells.md), [combat view](../wiki/features/combat-view.md),
+[character model](../wiki/architecture/character-model.md).
+
+## Compact stats in the combat view (#62, 2026-10-06)
+
+Ability Scores & Saves and Skills, added to the combat view with their own swords buttons, draw
+compact and read-only there, as the quick view #62 asked for; the Sheet tab is unchanged.
+`syncStatLock()` disables the two cards' score boxes and proficiency dots exactly while they sit in
+`#cvList` — after the view fills, after a card goes home, and after `buildStats()` redraws (a redraw
+with the view open builds fresh controls). The look is CSS under `#cvList [data-note="abilities"]`
+and `#cvList [data-note="skills"]`: six abilities in a row (three on a phone), the score as a plain
+number, skills in three columns (two, then one, as the screen narrows), the legend hidden; the
+grouped display shrinks the same way. Tapping a value still opens its breakdown. Pages:
+[abilities & skills](../wiki/features/abilities-and-skills.md), [combat view](../wiki/features/combat-view.md).
+
+## Timed conditions and compact stats: the final review's fixes (#55, #62, 2026-10-07)
+
+1. The compact Skills grid in the combat view now sets `grid-auto-flow:column` on its own three- and
+   two-column rules, so neither depends on the base `.skills` rule the view's narrower media query
+   could win over; at phone width the left column reads Acrobatics through Investigation, the right
+   Medicine through Survival.
+2. `stepStatusTap()` now falls back keyboard focus to the row's Edit button
+   (`attrSel("data-edit-status",id)`) once a condition has run out, instead of the un-focusable
+   `data-toggle-status` span.
+3. `openStatusForm()`'s save now rounds `number × unit` to the second before truncating, so "1.5
+   hours" saves 5400 seconds instead of being truncated to an untimed condition.
+4. Shortening an active timed condition's length to no more than the time already run now saves it
+   Cleared (`active=false`, `elapsedSec=durationSec`) — the spec was silent on this case; restarting
+   (switching it on in the form) still starts at 0.
+5. `undoStatusExpiry()` now toasts what actually came back, via a new pure helper `statusBackText()`
+   beside `statusExpiredText()` ("Poisoned is back", "Poisoned and Frightened are back", "A, B and 2
+   more are back"); nothing toasts when everything restored was deleted since.
+6. `advanceRound()` now calls `scheduleSave()` right after the tick, before the redraw, so a redraw
+   that throws cannot lose the round step — matching every other round-mover.
+
+Pages: [conditions & concentration](../wiki/features/conditions-and-concentration.md),
+[abilities & skills](../wiki/features/abilities-and-skills.md),
+[combat view](../wiki/features/combat-view.md).
