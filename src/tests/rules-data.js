@@ -282,25 +282,6 @@ ck('clear-all on empty pool is a no-op', X.clearAllRules()===false);
        && /1 glossary entry\b/.test(summ({keywords: 1})), summ({keywords: 3, spells: 1}));
   ck('#71 ...and is empty when nothing was skipped', summ({}) === '' && summ(null) === '', summ({}));
 
-  /* the file import writes it on the status line the player is reading */
-  const status = {textContent: '', className: ''};
-  const getById = ctx.document.getElementById;
-  const hadFR = 'FileReader' in ctx;
-  ctx.document.getElementById = id => id === 'rulesStatus' ? status : getById(id);
-  ctx.FileReader = function () { this.readAsText = f => { this.result = f.text; this.onload && this.onload(); }; };
-  X.resetRules();
-  ctx.importRulesFiles([{name: 'hb.json', text: JSON.stringify({system: 'HB',
-    keywords: [{text: 'no term'}, {term: 'Kept'}], spells: [{level: 1}, {name: 'Zap'}]})}]);
-  ck('#71 importing a file says what it skipped',
-     /skipped/i.test(status.textContent) && /1 glossary entry/.test(status.textContent) && /1 spell/.test(status.textContent),
-     status.textContent);
-  ck('#71 ...and the rest of it loaded', (X.rules.keywords || []).length === 1 && (X.rules.spells || []).length === 1);
-  X.resetRules();
-  ctx.importRulesFiles([{name: 'ok.json', text: JSON.stringify({system: 'HB', spells: [{name: 'Zap'}]})}]);
-  ck('#71 ...and a clean file says nothing about skipping', !/skipped/i.test(status.textContent) && /\bok\b/.test(status.className),
-     [status.textContent, status.className]);
-  ctx.document.getElementById = getById;
-  if (!hadFR) delete ctx.FileReader;
   X.resetRules();
 }
 

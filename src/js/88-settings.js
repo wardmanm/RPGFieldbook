@@ -80,7 +80,7 @@ function openSettings(){
     </div>`:"";
   const secRules=`
     <div class="field"><label class="f">Rules sources</label>
-      <p class="hint">Load one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. <b>Fetch all</b> needs a connection: each source it reaches replaces what it loaded last time, anything it can't reach keeps what it had, and files you imported are never touched. What is loaded stays saved for offline use.</p>
+      <p class="hint">Import the rules data zip, or one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. <b>Fetch all</b> needs a connection: each source it reaches replaces what it loaded last time, anything it can't reach keeps what it had, and files you imported are never touched. What is loaded stays saved for offline use.</p>
       <div id="srcList"></div>
       <div style="display:flex;gap:7px;margin-top:4px"><input id="newSrc" placeholder="https://…/spells.json"><button class="tbtn" id="addSrc">Add</button></div>
       <div class="m-actions" style="justify-content:flex-start;margin-top:8px">
@@ -90,7 +90,7 @@ function openSettings(){
         <button class="tbtn danger" id="btnClearRules" style="margin-left:auto">Clear all</button>
       </div>
       <div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${esc(rulesStatusText())}</div>
-      <input type="file" id="fileRules" accept="application/json,.json" multiple class="hidefile">
+      <input type="file" id="fileRules" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">
     </div>
     <div class="field" style="margin-top:6px"><label class="f">Loaded rules data</label>
       <p class="hint">Everything currently in your rules pool, grouped by file (or source). Remove any piece you no longer want loaded.</p>

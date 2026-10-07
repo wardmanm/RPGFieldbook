@@ -357,13 +357,10 @@ function fetchRulesFrom(url,seen,out,memo){
 function applyFetchedSource(url,packs){
   const old=new Set();
   RULE_CATS.forEach(c=>(rules[c]||[]).forEach(e=>{if(e._url===url)old.add(e);}));
-  /* A `requires` declaration is kept per LABEL, and mergeRules only ever sets
-     one. If this source alone owns a label, its fresh copy decides the
-     declaration, so a pack that stopped declaring one doesn't keep a false
-     "missing" chip. A label shared with a file import keeps it. */
-  if(rules.requires)new Set(packs.map(srcLabel)).forEach(l=>{
-    if(RULE_CATS.every(c=>(rules[c]||[]).every(e=>(e._source||"")!==l||old.has(e))))delete rules.requires[l];
-  });
+  /* If this source alone owns a label, its fresh copy decides the label's
+     `requires` (and credits), so a pack that stopped declaring one doesn't
+     keep a false "missing" chip. A label shared with a file import keeps it. */
+  dropOwnedPackMeta(new Set(packs.map(srcLabel)),old);
   const skipped={};
   packs.forEach(p=>addSkipped(skipped,mergeRules(p,null,url)));
   RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
@@ -418,16 +415,129 @@ function fetchAllRules(){
       return saving.then(err=>{if(err){renderRulesData();updateRulesStatus(head+err,"err");}});
     });
 }
-/* import one or many files; each is merged so you can load traits.json, spells.json, … separately */
+/* ---- importing files (#83) ----
+   Why a zip couldn't be imported, in the player's words. */
+const ZIP_WHY={
+  notzip:"it isn't a zip Fieldbook can read",
+  encrypted:"it's password-protected",
+  zip64:"it's a ZIP64 archive",
+  method:"it uses a compression Fieldbook can't read; re-zip it normally or import the .json files",
+  damaged:"it's damaged — download it again",
+  toolarge:"it's too large to be rules data",
+  toomany:"it has too many files to be rules data",
+  kit:"that's the Fieldbook data kit, a tool for building rules data — import a fieldbook-data-standalone zip instead",
+  empty:"there's no rules data in it"
+};
+/* Holds at least one rules category: what tells a pack from the converter's
+   own inputs (overlay.json, class-resources.json) inside an old app zip. */
+function isRulesPack(o){return RULE_CATS.concat(["traits"]).some(c=>Array.isArray(o[c]));}
+/* A label's `requires` and `credits` are kept once per LABEL, and mergeRules
+   only ever sets them. When the entries about to be replaced are everything
+   that label has, the fresh copy decides: drop them first, so a pack that
+   stopped declaring one doesn't keep it. A label another file shares keeps it. */
+function dropOwnedPackMeta(labels,old){
+  labels.forEach(l=>{
+    if(!RULE_CATS.every(c=>(rules[c]||[]).every(e=>(e._source||"")!==l||old.has(e))))return;
+    if(rules.requires)delete rules.requires[l];
+    if(rules.credits)delete rules.credits[l];
+  });
+}
+/* One pack from a file, replacing what that same file loaded before (R4).
+   mergeRules() alone only adds and replaces, so an entry the new copy dropped
+   lingered forever. Keyed on file name AND source, so spells.json from one
+   pack never unloads spells.json from another — applyFetchedSource()'s
+   pattern, for files. */
+function importPack(obj,file){
+  const src=srcLabel(obj),old=new Set();
+  RULE_CATS.forEach(c=>(rules[c]||[]).forEach(e=>{if(e&&e._file===file&&(e._source||"")===src)old.add(e);}));
+  dropOwnedPackMeta([src],old);
+  const skipped=mergeRules(obj,file);
+  RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
+  pruneRequires();reindexRules();recomputeDups();
+  return skipped;
+}
+/* Rules files as bytes -> merged into the pool. Pure — no DOM, no storage —
+   so the suites drive it directly; importRulesFiles() reads and reports.
+   A zip (known by its first bytes, whatever its name) goes through
+   readDataArchive(), and each pack inside is imported under its OWN file
+   name: the loaded-data rows and version chips stay per pack, and the zip
+   replaces the same packs imported loose. A zip is read whole before any of
+   it merges, so a damaged one changes nothing. Anything else is one JSON pack.
+   Returns {files, archives:[{name,kind,version,count}], failed:[{name,why}],
+   skipped}. */
+function importRulesPayloads(payloads){
+  const res={files:0,archives:[],failed:[],skipped:{}};
+  const parse=(name,bytes)=>{
+    let obj;
+    try{obj=JSON.parse(utf8Text(bytes));}catch(e){res.failed.push({name,why:"not valid JSON"});return null;}
+    if(!obj||typeof obj!=="object"||Array.isArray(obj)){res.failed.push({name,why:"not a rules file"});return null;}
+    return obj;
+  };
+  (Array.isArray(payloads)?payloads:[]).forEach(p=>{
+    const name=String((p&&p.name)||"file"),raw=p&&p.bytes;
+    if(!raw||!ArrayBuffer.isView(raw)){res.failed.push({name,why:"it couldn't be read"});return;}
+    const bytes=new Uint8Array(raw.buffer,raw.byteOffset,raw.byteLength);
+    if(!isZipBytes(bytes)){
+      const obj=parse(name,bytes);
+      if(obj){addSkipped(res.skipped,importPack(obj,name));res.files++;}
+      return;
+    }
+    let arc;
+    try{arc=readDataArchive(bytes,name);}
+    catch(e){res.failed.push({name,why:ZIP_WHY[e&&e.code]||"it couldn't be read"});return;}
+    const before=res.failed.length;let count=0;
+    arc.packs.forEach(pk=>{
+      const obj=parse(pk.name+" in "+name,pk.bytes);
+      if(!obj||(arc.kind==="loose"&&!isRulesPack(obj)))return;
+      addSkipped(res.skipped,importPack(obj,pk.name));count++;
+    });
+    if(!count&&arc.kind==="loose"&&res.failed.length===before){res.failed.push({name,why:ZIP_WHY.empty});return;}
+    res.archives.push({name,kind:arc.kind,version:arc.version,count});
+  });
+  return res;
+}
+/* the first sentences of the status line: each zip, the loose files, each failure */
+function importSummary(res){
+  const s=[];
+  res.archives.forEach(a=>s.push(`Imported ${a.name}: ${a.count} ${a.kind==="loose"?"file":"pack"}${a.count===1?"":"s"}${a.version?", data "+a.version:""}.`));
+  if(res.files)s.push(`Merged ${res.files} file${res.files===1?"":"s"}.`);
+  res.failed.forEach(f=>s.push(`Couldn't import ${f.name}: ${f.why}.`));
+  return s.join(" ");
+}
+/* Both status lines, Settings' and the home screen's, whichever is on show.
+   The home one used to be overwritten with the bare count 400 ms after an
+   import, which hid every failure there. */
+function rulesImportStatus(msg,cls){
+  updateRulesStatus(msg,cls);
+  const h=document.getElementById("homeRulesStatus");if(h)h.textContent=msg;
+}
+/* Settings → Import files, the home screen's import and the Rules tab's two:
+   read every file as bytes, import, save the cache, and say what happened.
+   A save that does not land is said on the same line (the storage rule).
+   Resolves to {msg, cls} once the save has landed or failed, for the suites. */
 function importRulesFiles(files){
-  const list=Array.from(files);let ok=0,bad=0;const skipped={};
-  (function next(i){
-    if(i>=list.length){const m=missingSummary(),sk=skippedSummary(skipped);saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus(`Merged ${ok} file(s)${bad?", "+bad+" failed":""}. `+rulesStatusText()+m+sk,(bad||m||sk)?"err":"ok");return;}
+  const list=Array.from(files||[]);
+  rulesImportStatus(`Reading ${list.length} file${list.length===1?"":"s"}…`,"");
+  const readOne=f=>new Promise(resolve=>{
     const r=new FileReader();
-    r.onload=()=>{try{addSkipped(skipped,mergeRules(JSON.parse(r.result),list[i].name));ok++;}catch(e){bad++;}next(i+1);};
-    r.onerror=()=>{bad++;next(i+1);};
-    r.readAsText(list[i]);
-  })(0);
+    r.onload=()=>resolve({name:f.name,bytes:new Uint8Array(r.result)});
+    r.onerror=()=>resolve({name:f.name,bytes:null});
+    r.readAsArrayBuffer(f);
+  });
+  return Promise.all(list.map(readOne)).then(payloads=>{
+    const res=importRulesPayloads(payloads);
+    const saving=saveRulesCache();
+    refreshRulesUI();renderRulesData();
+    const m=missingSummary(),sk=skippedSummary(res.skipped);
+    const msg=(importSummary(res)+" "+rulesStatusText()+m+sk).trim();
+    const cls=(res.failed.length||m||sk)?"err":"ok";
+    rulesImportStatus(msg,cls);
+    return saving.then(err=>{
+      if(!err)return {msg,cls};
+      renderRulesData();rulesImportStatus(msg+" "+err,"err");
+      return {msg:msg+" "+err,cls:"err"};
+    });
+  });
 }
 /* download a split example set: a manifest plus one file per category */
 function downloadRulesTemplates(){

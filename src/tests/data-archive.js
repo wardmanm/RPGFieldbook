@@ -13,6 +13,7 @@ const {X, ctx, state, bootError} = loadApp([
   'mergeRules', 'resetRules', 'loadedRulesGroups', 'dataStatus', 'dataStatusHTML', 'DATA_VERSIONS',
   'poolFromExport', 'settingsImportQuestionHTML',
   'crc32', 'inflateRaw', 'isZipBytes', 'zipEntries', 'zipEntryBytes', 'readDataArchive', 'utf8Text', 'zipError',
+  'importRulesPayloads', 'importPack', 'importSummary', 'importRulesFiles', 'RULE_CATS',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 
@@ -206,6 +207,154 @@ section('the read cap covers the whole import; a junk inner zip is skipped', () 
   const broken = makeZip([{name: 'fieldbook-data.json', data: MANIFEST('1.8.0', ['z.json'])}, {name: 'z.json', data: PACK('Z', ['A']), crc: 1}]);
   ck('a damaged archive inside the app zip still refuses (it IS an archive)',
      code(() => X.readDataArchive(makeZip([{name: 'data/a.zip', data: Buffer.from(broken), method: 0}]), 'app.zip')) === 'damaged');
+});
+
+const B = s => new Uint8Array(Buffer.from(s, 'utf8'));
+const names = cat => (X.rules[cat] || []).map(e => e.name);
+/* the pool as data, minus the ids the importer hands out */
+const poolSnap = () => JSON.stringify([X.RULE_CATS.map(c => (X.rules[c] || []).map(e => {
+  const o = Object.assign({}, e); delete o._id; if (c === 'keywords') delete o.id; return o; })),
+  X.rules.requires || {}, X.rules.credits || {}]);
+
+section('importing payloads', () => {
+  X.resetRules();
+  let res = X.importRulesPayloads([{name: 'a.json', bytes: B(PACK('Zed', ['Zap', 'Bolt']))}]);
+  ck('a JSON file imports', res.files === 1 && names('spells').join() === 'Zap,Bolt', res);
+  X.importRulesPayloads([{name: 'a.json', bytes: B(PACK('Zed', ['Zap']))}]);
+  ck('re-importing a file drops what its new copy no longer has (R4)', names('spells').join() === 'Zap', names('spells'));
+  X.importRulesPayloads([{name: 'spells.json', bytes: B(PACK('Tasha', ['T1']))}, {name: 'spells.json', bytes: B(PACK('Xan', ['X1']))}]);
+  ck('the same file name from another system is left alone', ['Zap', 'T1', 'X1'].every(n => names('spells').includes(n)), names('spells'));
+  X.importRulesPayloads([{name: 'spells.json', bytes: B(PACK('Tasha', ['T2']))}]);
+  ck('...and re-importing one of them replaces only its own', names('spells').sort().join() === 'T2,X1,Zap', names('spells'));
+
+  /* requires: dropped with the last file that declared it, kept while another file shares the label */
+  const HB = (spells, req) => B(JSON.stringify(Object.assign({system: 'HB', spells: spells.map(name => ({name}))},
+    req ? {requires: [{spells: ['Nope']}]} : {})));
+  X.resetRules();
+  X.importRulesPayloads([{name: 'h.json', bytes: HB(['A'], true)}]);
+  ck('requires is recorded', !!(X.rules.requires && X.rules.requires.HB));
+  X.importRulesPayloads([{name: 'h.json', bytes: HB(['A'], false)}]);
+  ck('a re-import that stops declaring requires drops it, when that file alone had the label',
+     !(X.rules.requires && X.rules.requires.HB), X.rules.requires);
+  X.importRulesPayloads([{name: 'h.json', bytes: HB(['A'], true)}, {name: 'h2.json', bytes: HB(['B'], false)}]);
+  X.importRulesPayloads([{name: 'h2.json', bytes: HB(['B'], false)}]);
+  ck('a label shared with another file keeps its requires', !!(X.rules.requires && X.rules.requires.HB), X.rules.requires);
+
+  /* failures are named, and nothing half-loads */
+  X.resetRules();
+  res = X.importRulesPayloads([{name: 'bad.json', bytes: B('{ nope')}, {name: 'list.json', bytes: B('[1,2]')},
+    {name: 'gone.json', bytes: null},
+    {name: 'locked.zip', bytes: makeZip([{name: 'a.json', data: PACK('Z', ['A']), flags: 1}])},
+    {name: 'kit.zip', bytes: makeZip([{name: 'fbdata.py', data: ''}])}]);
+  const why = Object.fromEntries(res.failed.map(f => [f.name, f.why]));
+  ck('bad JSON: "not valid JSON"', why['bad.json'] === 'not valid JSON', why);
+  ck('a JSON list: "not a rules file"', why['list.json'] === 'not a rules file', why);
+  ck('an unreadable file: "it couldn\'t be read"', why['gone.json'] === "it couldn't be read", why);
+  ck('an encrypted zip: "it\'s password-protected"', why['locked.zip'] === "it's password-protected", why);
+  ck('the data kit says it is the kit', /data kit/.test(why['kit.zip'] || ''), why);
+  ck('...and nothing was loaded', X.RULE_CATS.every(c => !(X.rules[c] || []).length));
+
+  /* an archive */
+  X.resetRules();
+  const arc = makeZip([{name: 'fieldbook-data.json', data: MANIFEST('1.8.0', ['z_full.json', 'y_full.json'])},
+    {name: 'y_full.json', data: PACK('Y', ['B'])}, {name: 'z_full.json', data: PACK('Z', ['A'])}]);
+  res = X.importRulesPayloads([{name: 'fieldbook-data-standalone-1.8.0.zip', bytes: arc}]);
+  ck('an archive imports each pack under its own file name',
+     X.loadedRulesGroups().map(g => g.label).sort().join() === 'y_full.json,z_full.json', X.loadedRulesGroups().map(g => g.label));
+  ck('...and the summary names the archive, its packs and its version',
+     X.importSummary(res) === 'Imported fieldbook-data-standalone-1.8.0.zip: 2 packs, data 1.8.0.', X.importSummary(res));
+  const once = poolSnap();
+  res = X.importRulesPayloads([{name: 'fieldbook-data-standalone-1.8.0.zip', bytes: arc}]);
+  ck('Review focus 2: importing the same archive twice leaves the pool as it was', poolSnap() === once && res.failed.length === 0);
+  X.resetRules();
+  X.importRulesPayloads([{name: 'z_full.json', bytes: B(PACK('Z', ['A', 'Old']))}]);
+  X.importRulesPayloads([{name: 'a.zip', bytes: arc}]);
+  ck('the archive replaces the same pack imported loose', names('spells').sort().join() === 'A,B', names('spells'));
+
+  /* Review focus 1: an app zip from 1.7.x */
+  X.resetRules();
+  const overlay = fs.readFileSync(path.join(ROOT, 'data/overlay.json'));
+  const resources = fs.readFileSync(path.join(ROOT, 'data/class-resources.json'));
+  res = X.importRulesPayloads([{name: 'fieldbook-v1.7.2.zip', bytes: makeZip([
+    {name: 'fieldbook.html', data: '<!doctype html>'}, {name: 'README.md', data: '# Fieldbook'},
+    {name: 'scripts/overlay.json', data: overlay}, {name: 'scripts/class-resources.json', data: resources},
+    {name: 'data/a_full.json', data: PACK('A', ['One'])}, {name: 'data/b_full.json', data: PACK('B', ['Two'])}])}]);
+  ck('Review focus 1: an old app zip loads only its packs, and says so',
+     res.failed.length === 0 && X.importSummary(res) === 'Imported fieldbook-v1.7.2.zip: 2 files.' && names('spells').sort().join() === 'One,Two',
+     [X.importSummary(res), res.failed]);
+  res = X.importRulesPayloads([{name: 'inputs.zip', bytes: makeZip([{name: 'overlay.json', data: overlay}])}]);
+  ck('a zip holding no rules pack at all: "there\'s no rules data in it"',
+     res.failed.length === 1 && res.failed[0].why === "there's no rules data in it", res.failed);
+  X.resetRules();
+});
+
+section('Import files: the status lines', async () => {
+  const writes = [];
+  const el = id => {
+    const o = {className: '', _t: ''};
+    Object.defineProperty(o, 'textContent', {get() { return o._t; }, set(v) { o._t = v; writes.push(id + ': ' + v); }});
+    return o;
+  };
+  const els = {rulesStatus: el('rulesStatus'), homeRulesStatus: el('homeRulesStatus')};
+  const getById = ctx.document.getElementById;
+  ctx.document.getElementById = id => els[id] || getById(id);
+  const hadFR = 'FileReader' in ctx;
+  ctx.FileReader = class {
+    readAsArrayBuffer(f) {
+      if (f.fail) { if (this.onerror) this.onerror(); return; }
+      const b = Buffer.from(f.bytes);
+      this.result = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+      if (this.onload) this.onload();
+    }
+  };
+  const file = (name, s) => ({name, bytes: Buffer.from(s, 'utf8')});
+  try {
+    X.resetRules(); writes.length = 0;
+    const p = X.importRulesFiles([file('a.json', PACK('Zed', ['Zap']))]);
+    ck('Review focus 3: "Reading 1 file…" shows at once, on both lines',
+       writes[0] === 'rulesStatus: Reading 1 file…' && writes[1] === 'homeRulesStatus: Reading 1 file…', writes);
+    const out = await p;
+    ck('a good import says what it merged, as ok', /^Merged 1 file\. Loaded/.test(out.msg) && out.cls === 'ok', out);
+    ck('...on the home screen too', els.homeRulesStatus.textContent === out.msg, els.homeRulesStatus.textContent);
+    const bad = await X.importRulesFiles([file('broken.json', '{ nope'), {name: 'gone.json', fail: true}]);
+    ck('a failure is named with its reason',
+       /Couldn't import broken\.json: not valid JSON\./.test(bad.msg) && /Couldn't import gone\.json: it couldn't be read\./.test(bad.msg)
+       && bad.cls === 'err', bad);
+    /* moved from rules-data.js (#71) */
+    X.resetRules();
+    const sk = await X.importRulesFiles([file('hb.json', JSON.stringify({system: 'HB',
+      keywords: [{text: 'no term'}, {term: 'Kept'}], spells: [{level: 1}, {name: 'Zap'}]}))]);
+    ck('#71 importing a file says what it skipped',
+       /skipped/i.test(sk.msg) && /1 glossary entry/.test(sk.msg) && /1 spell/.test(sk.msg), sk.msg);
+    ck('#71 ...and the rest of it loaded', (X.rules.keywords || []).length === 1 && (X.rules.spells || []).length === 1);
+    X.resetRules();
+    const clean = await X.importRulesFiles([file('ok.json', PACK('HB', ['Zap']))]);
+    ck('#71 ...and a clean file says nothing about skipping', !/skipped/i.test(clean.msg) && clean.cls === 'ok', clean);
+    /* the storage rule: a cache write that does not land is said on the same line */
+    state.quotaFull = true;
+    const full = await X.importRulesFiles([file('q.json', PACK('Q', ['Q1']))]);
+    state.quotaFull = false;
+    ck('a cache save that fails is reported on both import lines',
+       full.cls === 'err' && /wouldn't save/.test(full.msg) && /wouldn't save/.test(els.homeRulesStatus.textContent), full);
+  } finally {
+    ctx.document.getElementById = getById;
+    if (!hadFR) delete ctx.FileReader;
+    X.resetRules();
+  }
+});
+
+section('every rules picker takes a zip', () => {
+  const src = ['src/fieldbook.template.html', 'src/html/40-rules.html', 'src/js/88-settings.js']
+    .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  ['fileRules', 'homeRulesFiles', 'glossRulesFiles', 'tablesRulesFiles'].forEach(id => {
+    const m = new RegExp('id="' + id + '" accept="([^"]*)"').exec(src);
+    const acc = m ? m[1].split(',') : [];
+    ck('Review focus 4: ' + id + ' accepts .json, .zip, application/zip and application/x-zip-compressed',
+       ['.json', '.zip', 'application/zip', 'application/x-zip-compressed'].every(t => acc.includes(t)), m && m[1]);
+  });
+  const boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+  ck('the home import no longer overwrites its own status line on a timer',
+     !/homeRulesFiles[^\n]*setTimeout/.test(boot), (/homeRulesFiles[^\n]*/.exec(boot) || [])[0]);
 });
 
 // ---- add new sections above this line ----
