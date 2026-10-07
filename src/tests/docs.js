@@ -57,7 +57,7 @@ suites.forEach(s => {
   ck('suite "' + s + '" exists', js || py);
 });
 const claudeSuites = /across (\w+) suites/.exec(claude);
-const WORDS = {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8};
+const WORDS = {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10};
 ck('CLAUDE.md states a suite count', !!claudeSuites);
 ck('CLAUDE.md suite count is right',
    claudeSuites && (WORDS[claudeSuites[1]] || +claudeSuites[1]) === suites.length,
@@ -122,33 +122,32 @@ if (docsAllowed) {
 ck('build.sh ships LICENSE', /cp LICENSE /.test(build));
 ck('README section 9 lists LICENSE', /LICENSE\s+←/.test(readme));
 
-// ---------- DATA_VERSIONS must cover every system bundle-rules.js emits
-// A system with no entry makes bundle-rules.js fail the build, which is the
-// right behaviour — but catching it here says why, before the build does.
-const bundle = read('scripts/bundle-rules.js');
-const version = read('src/js/30-version.js');
-const dvm = /const\s+DATA_VERSIONS\s*=\s*(\{[^}]*\})/.exec(version);
-ck('DATA_VERSIONS is present and parseable', !!dvm);
-if (dvm) {
-  let parsed = null;
-  try { parsed = JSON.parse(dvm[1]); } catch (e) { /* reported below */ }
-  ck('DATA_VERSIONS is valid JSON (bundle-rules.js parses it with JSON.parse)', !!parsed, dvm[1]);
-  if (parsed) {
-    Object.entries(parsed).forEach(([sys, v]) =>
-      ck('DATA_VERSIONS.' + sys + ' is an X.Y.Z version', /^\d+\.\d+\.\d+$/.test(v), v));
-    // every system folder bundle-rules knows about needs a mapping in release.js
-    const dirs = [...bundle.matchAll(/\{\s*dir:\s*"([^"]+)"/g)].map(m => m[1]);
-    const relMap = /const\s+SYSTEM_DIRS\s*=\s*\{([^}]*)\}/.exec(read('scripts/release.js'));
-    ck('release.js maps systems to data dirs', !!relMap);
-    if (relMap) {
-      const mapped = [...relMap[1].matchAll(/(\w+)\s*:\s*"([^"]+)"/g)];
-      const mappedDirs = mapped.map(m => m[2]);
-      const mappedSys = mapped.map(m => m[1]);
-      dirs.forEach(d => ck('data dir "' + d + '" has a SYSTEM_DIRS mapping', mappedDirs.includes(d)));
-      Object.keys(parsed).forEach(sys =>
-        ck('DATA_VERSIONS system "' + sys + '" is mapped to a dir', mappedSys.includes(sys)));
-    }
-  }
+// ---------- data/packs.json, the registry of rules packs (#83)
+// The one source of truth for which folders are packs and what version each is
+// at. DATA_VERSIONS is a SNAPSHOT of it taken at each app release, so every
+// system it names must be registered, at that version or a later data release.
+const DV_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([1-9]\d*))?$/;
+const dvParse = v => { const m = DV_RE.exec(typeof v === 'string' ? v : ''); return m ? [+m[1], +m[2], +m[3], m[4] ? +m[4] : 0] : null; };
+const dvCmp = (a, b) => { const pa = dvParse(a), pb = dvParse(b); if (!pa || !pb) return NaN;
+  for (let i = 0; i < 4; i++) if (pa[i] !== pb[i]) return pa[i] - pb[i]; return 0; };
+let packsReg = null;
+try { packsReg = JSON.parse(read('data/packs.json')); } catch (e) { /* reported below */ }
+ck('data/packs.json parses and lists packs', !!packsReg && Array.isArray(packsReg.packs) && packsReg.packs.length > 0);
+if (packsReg && Array.isArray(packsReg.packs)) {
+  ck('data/packs.json release is a data version', !!dvParse(packsReg.release), packsReg.release);
+  packsReg.packs.forEach(p => {
+    ck('pack ' + p.system + ': data/' + p.dir + '/ exists', fs.existsSync(path.join(ROOT, 'data', String(p.dir))));
+    ck('pack ' + p.system + ': version is a data version or null', p.version === null || !!dvParse(p.version), p.version);
+  });
+  const dvm = /const\s+DATA_VERSIONS\s*=\s*(\{[^}]*\})/.exec(read('src/js/30-version.js'));
+  let dv = null;
+  try { dv = JSON.parse(dvm[1]); } catch (e) { /* reported below */ }
+  ck('DATA_VERSIONS is present and is flat JSON (release.js rewrites it)', !!dv);
+  if (dv) Object.entries(dv).forEach(([sys, v]) => {
+    const p = packsReg.packs.find(x => x.system === sys);
+    ck('DATA_VERSIONS.' + sys + ' has a pack in data/packs.json', !!p);
+    if (p) ck('data/packs.json ' + sys + ' is at or after DATA_VERSIONS', dvCmp(p.version, v) >= 0, p.version + ' vs ' + v);
+  });
 }
 
 // ---------- game-icons emblems: the hand-authored map vs the generated fragment
@@ -262,7 +261,9 @@ if (dvm) {
 
   // Every function the app and its tooling define — `name()` on a page must be one.
   const srcFiles = manifest.js.concat(fs.readdirSync(path.join(ROOT, 'scripts'))
-    .filter(f => /\.(js|py)$/.test(f)).map(f => 'scripts/' + f));
+    .filter(f => /\.(js|py)$/.test(f)).map(f => 'scripts/' + f))
+    .concat(fs.readdirSync(path.join(ROOT, 'tools/data-kit'))
+      .filter(f => /\.py$/.test(f)).map(f => 'tools/data-kit/' + f));
   const defined = new Set();
   srcFiles.forEach(f => {
     const s = read(f);

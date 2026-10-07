@@ -47,7 +47,8 @@ src/                     THE SOURCE OF TRUTH — edit here, never the built file
   tests/                 the suites — ./src/tests/run.sh
   docs/                  dev docs (never ship): wiki/, specs/, plans/, UNRELEASED.md, …
 dist/fieldbook.html      BUILD ARTIFACT, tracked. Never hand-edit
-data/<system>/*.json     rules data; bundled into dist/*_full.json packs
+data/<system>/*.json     rules data; data/packs.json registers each pack; bundled into dist/*_full.json
+tools/data-kit/          fbdata.py — pack versions, digests, the data archive (Python 3.8+, stdlib)
 docs/                    PLAYER-FACING, ships — an allowlist of exactly three files
 ```
 
@@ -63,7 +64,7 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
 
 ## Build, test, QA — build freely, never release
 
-- **Tests: `./src/tests/run.sh`** (across seven suites). `humblewood-verbatim` needs PyMuPDF and the
+- **Tests: `./src/tests/run.sh`** (across eight suites). `humblewood-verbatim` needs PyMuPDF and the
   PDFs, so under the system `python3` it skips cleanly; run it directly with
   `.venv/bin/python src/tests/humblewood-verbatim.py`. Safe to run unprompted — they touch no tracked file. Run them after any
   change to `src/`, `scripts/` or `data/`. For a pure function you touch, also write a throwaway Node
@@ -94,8 +95,9 @@ blocking.
 
 - **Player-visible change → one `- ` bullet in `src/docs/UNRELEASED.md`** under `## Pending`, written
   the way it should read to a player. No `<tags>` and no hard-coded versions (the `docs` suite checks).
-- **Never hand-edit `APP_VERSION`, `DATA_VERSIONS` or the `CHANGELOG` array** — `scripts/release.js`
-  owns all three. `docs/CHANGELOG.md` is generated.
+- **Never hand-edit `APP_VERSION`, `DATA_VERSIONS`, the `CHANGELOG` array, or the
+  `version`/`digest`/`release` fields of `data/packs.json`** — `scripts/release.js` and
+  `scripts/data-release.js` own them. `docs/CHANGELOG.md` is generated.
 - **Data-only or converter-only changes need no note and no release** — record them in the ledger.
 
 ## Architecture invariants — don't violate without discussing

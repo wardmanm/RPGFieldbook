@@ -7,7 +7,7 @@ the everyday build. Cutting and publishing a release (`--release`, the tag, `rel
 [RELEASING](../../RELEASING.md); several branches at once is [WORKTREES](../../WORKTREES.md).
 
 **Code:** `build.sh`, `dev.sh`, `.githooks/`, `.github/workflows/ci.yml`; `validateOrder()`,
-`mayOverwrite()` in `scripts/build-html.js`; `bundle()`, `dataVersions()` in `scripts/bundle-rules.js`;
+`mayOverwrite()` in `scripts/build-html.js`; `bundle()`, `registry()` in `scripts/bundle-rules.js`;
 `scripts/gen-changelog.js`; `APP_VERSION` and `DATA_VERSIONS` in `30-version.js` · **Tests:** `docs.js`
 (zip allowlist vs README §9, `DATA_VERSIONS` coverage) · **See also:**
 [Build & source split](../architecture/build-and-source-split.md), [Testing](testing.md),

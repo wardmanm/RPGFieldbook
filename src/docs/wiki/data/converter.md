@@ -19,7 +19,7 @@ page is what that file does not say: what must not move, and the traps that have
 `_fill_variant()`, `_ammo_pieces()`, `_is_ammo_variant()`, `_variant_selected()`,
 `convert_ammo_variants()`,
 `_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in `scripts/bundle-rules.js`;
-`dataChangedSince()` in `scripts/release.js`; `mergeRules()` in `89-rules-merge.js`;
+`pack_digest()` in `tools/data-kit/fbdata.py`; `mergeRules()` in `89-rules-merge.js`;
 `DATA_VERSIONS` in `30-version.js`; `RULE_CATS` in `88-settings.js` ·
 **Data:** `data/5e2024/*.json`, `data/overlay.json`, `data/class-resources.json`,
 `_conversion-data/5etools-v2.36.1/` (gitignored) · **Tests:** `converter.py`, `rules-data.js`,
@@ -241,10 +241,9 @@ has no `DATA_VERSIONS` entry.
 
 ## Rules that must hold
 
-- **The default run reproduces `data/5e2024/` byte for byte.** `release.js`'s
-  `dataChangedSince()` runs `git diff --quiet <last tag> -- data/<dir>`; any byte that moves bumps
-  that system's `DATA_VERSIONS`, the Settings badge, and the release notes, and every player is told
-  to re-download a pack. Check it before and after any converter change:
+- **The default run reproduces `data/5e2024/` byte for byte.** Any change to a value moves that
+  pack's content digest (`pack_digest()`), so the next release bumps its version and every player is
+  told to re-download it. Check it before and after any converter change:
   `python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk data/5e2024`.
   CI cannot run this (it has no dump), so it is a manual gate.
 - **Filter on `source`; flags only backfill.** Never select by `basicRules2024` (or `srd52`)

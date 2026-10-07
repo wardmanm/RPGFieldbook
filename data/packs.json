@@ -1,0 +1,48 @@
+{
+  "_comment": "The rules-pack registry (spec src/docs/specs/2026-10-07-data-archive-design.md §4). version, digest and release are written only by scripts/release.js and scripts/data-release.js through tools/data-kit/fbdata.py — never by hand.",
+  "release": "1.7.2",
+  "packs": [
+    {
+      "system": "XPHB",
+      "dir": "5e2024",
+      "file": "5e2024_full.json",
+      "title": "D&D 2024 — Complete Rulebook",
+      "version": "1.7.2",
+      "digest": "sha256:37d454b61c30cee90097d258858faa80142766b7ca3c6a3eb29ad79678c017d7"
+    },
+    {
+      "system": "Humblewood",
+      "dir": "humblewood",
+      "file": "humblewood_full.json",
+      "title": "Humblewood — Complete Rulebook",
+      "version": "1.7.1",
+      "digest": "sha256:09033b1faa3e470b704ba77c12bcd15de266927755d126e5697c439a2e306d18"
+    },
+    {
+      "system": "XGE",
+      "dir": "xanathars",
+      "file": "xanathars_full.json",
+      "title": "Xanathar's Guide to Everything",
+      "version": "1.7.2",
+      "digest": "sha256:7ff2bd69166ded8fdbf8aba50916dfe388c7b62ad435861145b109be9534fb87"
+    },
+    {
+      "system": "TCE",
+      "dir": "tashas",
+      "file": "tashas_full.json",
+      "title": "Tasha's Cauldron of Everything",
+      "version": "1.7.2",
+      "digest": "sha256:4b476e2b26104039caf12eec4a67870743a157ff05e0cd5255beaf13eef75296"
+    },
+    {
+      "system": "Homebrew",
+      "dir": "homebrew",
+      "file": "homebrew_full.json",
+      "title": "Homebrew",
+      "version": "1.5.0",
+      "digest": "sha256:9551302b331e155a41b325cae53fc97f8b5eed2306c606232cf9358537d4ca54",
+      "license": "CC-BY-SA-3.0",
+      "attribution": "The Predator, a Warlock subclass by D&D Wiki contributors (https://www.dandwiki.com/wiki/The_Predator_(5e_Subclass)), used under CC BY-SA 3.0. Changed: converted to Fieldbook's rules format."
+    }
+  ]
+}

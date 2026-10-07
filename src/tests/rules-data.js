@@ -928,18 +928,18 @@ X.mergeRules({system:'XPHB', dataVersion:'99.0.0', rulebook:true, races:[{name:'
 ck('a pack newer than the app is not flagged stale',
    X.dataStatus(X.loadedRulesGroups()[0]).state === 'current');
 
-// ---------- every shipped pack agrees with DATA_VERSIONS
-[['5e2024_full.json','XPHB'], ['humblewood_full.json','Humblewood'],
- ['xanathars_full.json','XGE'], ['tashas_full.json','TCE'],
- ['homebrew_full.json','Homebrew']].forEach(([f, sysName]) => {
-  const p = path.join(ROOT, 'dist', f);
-  if (!fs.existsSync(p)) { ck(f + ' exists', false); return; }
+// ---------- every shipped pack agrees with data/packs.json (#83)
+JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs.forEach(reg => {
+  if (!fs.existsSync(path.join(ROOT, 'data', reg.dir))) return;
+  const p = path.join(ROOT, 'dist', reg.file);
+  if (!fs.existsSync(p)) { ck(reg.file + ' exists', false); return; }
   const pack = JSON.parse(fs.readFileSync(p, 'utf8'));
-  ck(f + ' declares a dataVersion', !!pack.dataVersion, pack.dataVersion);
-  ck(f + ' dataVersion matches DATA_VERSIONS.' + sysName,
-     pack.dataVersion === X.DATA_VERSIONS[sysName],
-     pack.dataVersion + ' vs ' + X.DATA_VERSIONS[sysName]);
-  ck(f + " system is the DATA_VERSIONS key", pack.system === sysName, pack.system);
+  ck(reg.file + ' system is the registry system', pack.system === reg.system, pack.system);
+  ck(reg.file + ' name is the registry title', pack.name === reg.title, pack.name);
+  ck(reg.file + ' dataVersion is the registry version',
+     (pack.dataVersion || null) === (reg.version || null), pack.dataVersion + ' vs ' + reg.version);
+  ck(reg.file + ' licence and credit match the registry',
+     (pack.license || null) === (reg.license || null) && (pack.attribution || null) === (reg.attribution || null));
 });
 // The bundle is the file players actually import. bundle-rules.js builds it from
 // a fixed key list, so a pack property it doesn't know about is dropped — the

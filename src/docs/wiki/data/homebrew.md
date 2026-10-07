@@ -8,7 +8,7 @@ the open, and it is still the working example of `requires`.
 
 **Code:** `missingRequirements()`, `requiresStatusHTML()`, `missingSummary()`, `mergeRules()` in
 `89-rules-merge.js`; `subclassesFor()` in `50-classrace.js`; `bundle()` in
-`scripts/bundle-rules.js`; `dataChangedSince()` in `scripts/release.js`; `DATA_VERSIONS` in
+`scripts/bundle-rules.js`; `pack_digest()` in `tools/data-kit/fbdata.py`; `DATA_VERSIONS` in
 `30-version.js` · **Data:** `data/homebrew/features.json`, `subclasses.json`, `tables.json` ·
 **Tests:** `rules-data.js`, `tables.js` · **See also:** [Rules packs](../architecture/rules-packs.md),
 [Supplements](supplements.md), [rules-schema](../../../../docs/rules-schema.md)

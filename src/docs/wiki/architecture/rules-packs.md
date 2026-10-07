@@ -16,8 +16,8 @@ covers what the app does with packs.
 `loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `pruneRequires()`, `clearAllRules()`,
 `dataStatus()`, `dataStatusHTML()`, `refreshRulesUI()`, `rulesBadge()` in `88-settings.js`; `systemOf()`, `racesForCharacter()` in `52-race.js`; `findRaceDef()`,
 `findClassDef()`, `subclassesFor()` in `50-classrace.js`; `DATA_VERSIONS` and `cmpVer()` in
-`30-version.js`; `bundle()` and `dataVersions()` in `scripts/bundle-rules.js`; `dataChangedSince()`
-in `scripts/release.js` · **Data:** `data/<dir>/*.json` → `dist/<dir>_full.json` · **Tests:**
+`30-version.js`; `bundle()` and `registry()` in `scripts/bundle-rules.js`; `pack_digest()` and
+`changed_packs()` in `tools/data-kit/fbdata.py` · **Data:** `data/<dir>/*.json` → `dist/<dir>_full.json` · **Tests:**
 `rules-data.js` (bundle ≡ individual files, the three data states, every shipped pack agrees with
 `DATA_VERSIONS`, missing requirements, Fetch all keeping what is loaded, a settings file's pool
 rebuilt and round-tripped, entries with no name skipped and reported), `sheet.js` (a wholesale pool
