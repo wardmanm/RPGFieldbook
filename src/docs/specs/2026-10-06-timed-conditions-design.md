@@ -214,3 +214,7 @@ Built as designed. Names the spec did not give: `STATUS_UNITS`, `statusDuration(
 The timed-condition code lives beside the status row in `40-sheet.js`; no new fragment.
 
 1. **A timed condition's time sits under its name, not beside the toggle** (spec §4.5 put it in the row's top line). At phone width the top line has no room for it — the name and "3 rounds left" collided — so the time text shares the line under the name with − rd / + rd while active, and stands alone there ("lasts 3 rounds") while cleared. The top line is exactly as it was before this feature.
+2. **The Lasts box takes decimals:** number × unit rounded to the second ("1.5 hours" is 90 minutes).
+3. **Shortening a running condition to no more than the time it has run saves it Cleared** (the spec was silent).
+4. **Undo confirms what came back** ("Poisoned is back"), as the other Undos do.
+5. **Skills sit in three columns above 640px** (§5.1 said two on a tablet); they fit the view's column and read down each column at every width.

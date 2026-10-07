@@ -8,7 +8,7 @@ above Active Spells, where you look before casting the next spell.
 
 **Code:** `renderStatuses()`, `statusRowHTML()`, `statusTitle()`, `renderConcCard()`, `statusDuration()`,
 `statusElapsed()`, `statusTimeText()`, `tickStatuses()`, `restartStatus()`, `announceStatusExpiry()`,
-`undoStatusExpiry()`, `stepStatusTap()` in `40-sheet.js`; `syncConcStatus()`, `endConcentration()`,
+`statusExpiredText()`, `statusBackText()`, `undoStatusExpiry()`, `stepStatusTap()` in `40-sheet.js`; `syncConcStatus()`, `endConcentration()`,
 `endConcFromStatus()`, `concActiveSpell()`, `concStatusRow()`, `concStatusDesc()`, `castSpell()`,
 `maybeExpire()`, `endActiveSpell()`, `advanceRound()` in `60-attacks.js`; `openStatusForm()`,
 `addStatusByName()`, `statusTermList()` in `80-modal-forms.js`; `contributions()` in
@@ -36,16 +36,22 @@ adding a second ([Inventory](inventory.md)).
 
 **Timed conditions.** A condition can now last a set time. A status carries an optional
 `durationSec` (a round is 6) and `elapsedSec`; the status form's "Lasts" row sets it in rounds,
-minutes or hours, and blank is untimed, as every condition was before. `advanceRound()` moves every
-active timed condition with the active spells. The time text sits under the name, with − rd / + rd
-while active — never in the top line, which stays exactly as it was before this feature, so it still
-fits a phone. A forward step that brings one to its duration flips it to Cleared (row kept, effects
-off); one toast per step names them, with an Undo that applies once and only on the character it was
-shown for. Focus is not moved,
-so a keyboard ▶ cannot land on Undo. Switching one back on — the toggle, the form, or an item's Use
-reactivating it — restarts its full duration; changing its length in the form keeps the time already
-run. The Concentrating condition is never timed: its spell owns the clock. The print sheet shows the
-time left.
+minutes or hours — the number can be a decimal, rounded to the second ("1.5 hours" is 90 minutes) —
+and blank is untimed, as every condition was before. `advanceRound()` moves every active timed
+condition with the active spells. The time text sits under the name, with − rd / + rd while active —
+never in the top line, which stays exactly as it was before this feature, so it still fits a phone. A
+forward step that brings one to its duration flips it to Cleared (row kept, effects off); one toast
+per step names them, with an Undo that applies once and only on the character it was shown for and
+confirms what came back ("Poisoned is back", `statusBackText()` — the same shape as
+`statusExpiredText()`), skipping any condition deleted since; nothing toasts if everything restored
+was deleted. Focus is not moved, so a keyboard ▶ on the round tracker cannot land on Undo; a row's
+own − rd / + rd buttons return focus to themselves from the keyboard, or to the row's Edit button
+once the condition has run out and its round buttons are gone. Switching one back on — the toggle,
+the form, or an item's Use reactivating it — restarts its full duration; changing its length in the
+form keeps the time already run, unless the kept time is at least the new length, which instead
+saves it Cleared (it has already run its course — the spec was silent on this case). The
+Concentrating condition is never timed: its spell owns the clock. The print sheet shows the time
+left.
 
 **Concentrating.** The running spell is the truth: the entry in `character.activeSpells` with
 `conc:true` (`concActiveSpell()`). The condition is a **mirror** named `CONC_STATUS_NAME`
@@ -94,7 +100,9 @@ and delete work identically on either tab. It is not a note-bearing card.
 - **`concId` is optional and additive.** `migrate()` keeps it with no code; a status saved before it
   existed loads untouched.
 - **The Concentrating condition is never timed — its spell owns the clock.**
-- **The Undo after a condition runs out applies once, and only on its character.**
+- **The Undo after a condition runs out applies once, and only on its character, and confirms what
+  it actually restored** — a condition deleted since is skipped, both in the restore and in the
+  toast text.
 
 ## Traps
 
@@ -125,6 +133,8 @@ and delete work identically on either tab. It is not a note-bearing card.
 | What the row shows | Time left ("3 rounds left") | Elapsed / duration like Active Spells ("0:18 / 1:00"): not the number you act on |
 | An item's Use applying a timed condition | Not now: item-applied conditions stay untimed | A duration on the item form's applied status: more surface than this release needs |
 | Reactivating a cleared timed condition | Restarts its full duration | Resuming the time it had left: not what happens at the table |
+| Shortening a running condition to no more than the time it has run (final review; the spec was silent) | Saves it Cleared | Leaving it active with nothing left to run: a row that claims to be active but does nothing is confusing |
+| The Undo's own confirmation (final review) | A toast, "Poisoned is back" — `statusBackText()`, the same shape as the run-out toast | Silent: the ammo and tracker Undos both confirm; this one didn't, inconsistently |
 
 ## Open
 
@@ -143,3 +153,6 @@ and delete work identically on either tab. It is not a note-bearing card.
   → ledger L3151
 - 2026-10-06 — Timed conditions: a duration in rounds, minutes or hours, counted down by the round
   tracker, clearing itself with an Undo. → ledger L5031, #55
+- 2026-10-07 — The final review's fixes: the Lasts box takes decimals; shortening a running
+  condition below the time already run saves it Cleared; the Undo confirms what came back; a
+  keyboard round-out lands focus on the row's Edit button. → ledger L5058, #55
