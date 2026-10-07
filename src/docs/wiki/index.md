@@ -22,6 +22,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 - [Storage](architecture/storage.md) — localStorage for characters/settings/library, IndexedDB for the rules cache, and failing loudly
 - [Character model](architecture/character-model.md) — `blankChar()`, `migrate()`, the save→load round trip, `notes` vs `secNotes`
 - [Rules packs](architecture/rules-packs.md) — systems vs supplements, loading and merging, `requires`, `dataVersion`
+- [Data archive](architecture/data-archive.md) — the data zip, the pack registry and versions, data-only releases
 - [Grants & provenance](architecture/grants-and-provenance.md) — source ids, clean revert, granted gold and equipment
 - [Computed stats & effects](architecture/computed-stats-and-effects.md) — `recompute()`, numeric-only effects, `usesMax` formulas
 - [Rich text](architecture/rich-text.md) — `highlight()`, glossary, table anchors, markdown on top, and why that order is safe

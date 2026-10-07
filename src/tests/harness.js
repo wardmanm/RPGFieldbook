@@ -43,6 +43,7 @@ function loadApp(names) {
   const ctx = {
     console, JSON, Math, Date, RegExp, String, Number, Array, Object, Set, Map,
     parseInt, parseFloat, isNaN,
+    TextDecoder, TextEncoder,
     setTimeout: noop, clearTimeout: noop,
     crypto: {getRandomValues: a => a},
     alert: noop,

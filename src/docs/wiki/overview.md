@@ -126,6 +126,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `87-journal.js` | the Journal card: pages, tags, search, the page rule, the editor | [Journal](features/journal.md) |
 | `87-trackers.js` | the Trackers card: counters, checklists, tasks, the close rule | [Journal](features/journal.md) |
 | `88-settings.js` | the Settings modal, rules status, `dataStatus()` | [Settings & updates](features/settings-and-updates.md) |
+| `89-zip.js` | the zip reader: `readDataArchive()`, `inflateRaw()`, `zipEntries()` — pure | [Data archive](architecture/data-archive.md) |
 | `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, fetch and import of packs | [Rules packs](architecture/rules-packs.md) |
 | `90-boot.js` | `wire()`, `boot()` — always last | [Shell](ui/shell.md), [Build & source split](architecture/build-and-source-split.md) |
 | `00-tokens.css` | theme tokens, both skins, light/dark | [Theming & icons](ui/theming-and-icons.md) |
