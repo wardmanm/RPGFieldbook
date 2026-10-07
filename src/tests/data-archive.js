@@ -184,6 +184,30 @@ section('the zip reader reads', () => {
   ck('an inner zip that is not an archive is skipped', notArchive.kind === 'loose' && notArchive.packs.map(p => p.name).join() === 'a.json', notArchive);
 });
 
+section('the read cap covers the whole import; a junk inner zip is skipped', () => {
+  const MiB = 1048576;
+  const claims = (n, mib) => Array.from({length: n}, (_, i) => ({name: 'p' + i + '.json', data: 'x', usize: mib * MiB}));
+  ck('loose entries totalling over 128 MiB: toolarge, before inflating any',
+     code(() => X.readDataArchive(makeZip(claims(5, 30)), 'big.zip')) === 'toolarge');
+  /* one real 40 MiB archive, then one claiming 90 MiB: each alone fits, together they don't */
+  const zeros = Buffer.alloc(20 * MiB);
+  const real = makeZip([{name: 'fieldbook-data.json', data: MANIFEST('1.8.0', ['a.json', 'b.json'])},
+    {name: 'a.json', data: zeros, level: 1}, {name: 'b.json', data: zeros, level: 1}]);
+  const claimed = makeZip([{name: 'fieldbook-data.json', data: MANIFEST('1.8.1', ['p0.json', 'p1.json', 'p2.json'])}].concat(claims(3, 30)));
+  const nest = makeZip([{name: 'one.zip', data: Buffer.from(real), method: 0}, {name: 'two.zip', data: Buffer.from(claimed), method: 0}]);
+  ck('nested archives share one budget: 40 + 90 MiB is toolarge', code(() => X.readDataArchive(nest, 'nest.zip')) === 'toolarge');
+  const loose = [{name: 'a.json', data: PACK('Zed', ['A'])}];
+  [['a damaged', makeZip([{name: 'x.json', data: PACK('X', ['B']), crc: 1}])],
+   ['an encrypted', makeZip([{name: 'x.json', data: PACK('X', ['B']), flags: 1}])],
+   ['an unreadable', new Uint8Array([0x50, 0x4b, 3, 4, 1, 2, 3])]].forEach(([label, z]) => {
+    const r = X.readDataArchive(makeZip(loose.concat([{name: 'backup/old.zip', data: Buffer.from(z), method: 0}])), 'o.zip');
+    ck(label + ' inner zip that is not an archive is skipped', r.kind === 'loose' && r.packs.map(p => p.name).join() === 'a.json', r);
+  });
+  const broken = makeZip([{name: 'fieldbook-data.json', data: MANIFEST('1.8.0', ['z.json'])}, {name: 'z.json', data: PACK('Z', ['A']), crc: 1}]);
+  ck('a damaged archive inside the app zip still refuses (it IS an archive)',
+     code(() => X.readDataArchive(makeZip([{name: 'data/a.zip', data: Buffer.from(broken), method: 0}]), 'app.zip')) === 'damaged');
+});
+
 // ---- add new sections above this line ----
 (async () => {
   for (const [name, fn] of SECTIONS) {

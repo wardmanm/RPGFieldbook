@@ -176,44 +176,72 @@ function zipJunk(name){
    zipError. In order: an archive (its manifest at the root or one folder
    down); the data kit, refused; an archive one level inside (the app's zip);
    a zip of loose .json files. Every entry it returns is read and checked
-   before it returns, so a damaged zip imports nothing at all. */
-function readDataArchive(bytes,zipName,nested){
-  const all=zipEntries(bytes).filter(en=>!zipJunk(en.name));
-  let total=0;
-  const read=en=>{total+=en.usize;if(total>ZIP_MAX_TOTAL)throw zipError("toolarge");return zipEntryBytes(bytes,en);};
+   before it returns, so a damaged zip imports nothing at all.
+
+   The 128 MiB read cap is one budget for the whole import, nested archives
+   included: every branch adds the usize of the entries it is about to read
+   to `budget` BEFORE reading any of them, so a hostile size claim is caught
+   before it is ever inflated. A nested *.zip is read as an archive or not at
+   all: with no fieldbook-data.json inside it, it is skipped (null) without
+   touching its other entries — never fallen back to as loose JSON — but once
+   a manifest is found inside it, it IS an archive, and any error reading its
+   packs (damaged, encrypted, too large) propagates and refuses the import. */
+function readDataArchive(bytes,zipName,budget){
+  const nested=!!budget;
+  if(!budget)budget={total:0};
+  let all;
+  if(nested){
+    try{all=zipEntries(bytes).filter(en=>!zipJunk(en.name));}
+    catch(e){return null;}
+  }else{
+    all=zipEntries(bytes).filter(en=>!zipJunk(en.name));
+  }
   const base=n=>n.split("/").pop();
   const byName=(a,b)=>a.name<b.name?-1:a.name>b.name?1:0;
+  const reserve=ens=>{
+    let add=0;
+    ens.forEach(en=>{add+=en.usize;});
+    budget.total+=add;
+    if(budget.total>ZIP_MAX_TOTAL)throw zipError("toolarge");
+  };
   const man=all.filter(en=>base(en.name)==="fieldbook-data.json"&&en.name.split("/").length<=2)
     .sort((a,b)=>a.name.length-b.name.length)[0];
   if(man){
+    reserve([man]);
     let m=null;
-    try{m=JSON.parse(utf8Text(read(man)));}catch(e){if(e&&e.code)throw e;}
+    try{m=JSON.parse(utf8Text(zipEntryBytes(bytes,man)));}catch(e){if(e&&e.code)throw e;}
     if(!m||typeof m!=="object"||m._type!=="fieldbook-data"||!Array.isArray(m.packs))
       throw zipError("damaged","fieldbook-data.json isn't a Fieldbook data manifest");
     const dir=man.name.slice(0,man.name.length-"fieldbook-data.json".length);
-    const packs=m.packs.map(p=>{
+    const resolved=m.packs.map(p=>{
       const f=p&&typeof p.file==="string"?p.file:"";
       const en=f?all.find(x=>x.name===dir+f):null;
       if(!en)throw zipError("damaged","it lists "+(f||"a pack")+" but doesn't hold it");
-      return {name:base(f),bytes:read(en)};
+      return {name:base(f),en};
     });
+    reserve(resolved.map(r=>r.en));
+    const packs=resolved.map(r=>({name:r.name,bytes:zipEntryBytes(bytes,r.en)}));
     return {kind:"data",version:typeof m.version==="string"?m.version:"",packs};
   }
+  if(nested)return null;
   if(all.some(en=>base(en.name)==="fbdata.py"))throw zipError("kit");
-  if(!nested){
+  const zips=all.filter(en=>/\.zip$/i.test(en.name)).sort(byName);
+  if(zips.length){
+    reserve(zips);
     const found=[];
-    all.filter(en=>/\.zip$/i.test(en.name)).sort(byName).forEach(en=>{
-      const inner=read(en);
+    zips.forEach(en=>{
+      const inner=zipEntryBytes(bytes,en);
       if(!isZipBytes(inner))return;
-      let r;
-      try{r=readDataArchive(inner,base(en.name),true);}
-      catch(e){if(e&&(e.code==="notzip"||e.code==="kit"||e.code==="empty"))return;throw e;}
-      if(r.kind==="data")found.push(r);
+      const r=readDataArchive(inner,base(en.name),budget);
+      if(r&&r.kind==="data")found.push(r);
     });
     if(found.length)return {kind:"data",version:found.map(r=>r.version).filter(Boolean).join(", "),
       packs:[].concat(...found.map(r=>r.packs))};
   }
   const json=all.filter(en=>/\.json$/i.test(en.name)).sort(byName);
-  if(json.length)return {kind:"loose",version:"",packs:json.map(en=>({name:base(en.name),bytes:read(en)}))};
+  if(json.length){
+    reserve(json);
+    return {kind:"loose",version:"",packs:json.map(en=>({name:base(en.name),bytes:zipEntryBytes(bytes,en)}))};
+  }
   throw zipError("empty");
 }
