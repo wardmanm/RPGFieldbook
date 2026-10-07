@@ -62,7 +62,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'offerAmmoRecovery', 'revertEquipmentGrants',
   'ammoKindChoices', 'ammoKindOptionsHTML',
   'statusDuration', 'statusElapsed', 'statusTimed', 'statusUnitFor', 'fmtStatusTime', 'statusTimeText',
-  'statusExpiredText', 'tickStatuses', 'restartStatus',
+  'statusExpiredText', 'statusBackText', 'tickStatuses', 'restartStatus',
   'announceStatusExpiry', 'undoStatusExpiry', 'stepStatusTap', 'syncStatLock',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
@@ -1957,6 +1957,9 @@ function charWith(inv, hp) {
   ck('the toast names what ran out', X.statusExpiredText(['Poisoned']) === 'Poisoned has run out' &&
      X.statusExpiredText(['Poisoned', 'Frightened']) === 'Poisoned and Frightened have run out' &&
      X.statusExpiredText(['A', 'B', 'C', 'D']) === 'A, B and 2 more have run out');
+  ck('the Undo toast names what came back (final review, #55)', X.statusBackText(['Poisoned']) === 'Poisoned is back' &&
+     X.statusBackText(['Poisoned', 'Frightened']) === 'Poisoned and Frightened are back' &&
+     X.statusBackText(['A', 'B', 'C', 'D']) === 'A, B and 2 more are back');
 
   const c = {statuses: [{id: 'p', name: 'Poisoned', active: true, durationSec: 18, elapsedSec: 12},
                         {id: 'u', name: 'Blessed', active: true},
@@ -4062,6 +4065,32 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     X.character.statuses = [{id: 'cc', name: 'Concentrating', active: true, concId: 'a1', effects: []}];
     res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Concentrating'; el('stDurN').value = '3'; fire('stSave', 'click'); });
     ck('#55 the Concentrating condition never takes a duration', !res.err && !('durationSec' in X.character.statuses[0]), why(res) || X.character.statuses[0]);
+
+    /* final review: the Lasts box takes decimals — number × unit rounded to
+       the second, not truncated to a whole number of the unit first. */
+    X.character.statuses = [{id: 'd1', name: 'Poisoned', active: true, effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '1.5'; el('stDurU').value = 'hours'; fire('stSave', 'click'); });
+    ck('#55 final review: "1.5 hours" saves 5400 seconds, not truncated away', !res.err && X.character.statuses[0].durationSec === 5400, why(res) || X.character.statuses[0]);
+    X.character.statuses = [{id: 'd2', name: 'Poisoned', active: true, effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '0.5'; el('stDurU').value = 'hours'; fire('stSave', 'click'); });
+    ck('#55 final review: "0.5 hours" saves 1800 seconds', !res.err && X.character.statuses[0].durationSec === 1800, why(res) || X.character.statuses[0]);
+    X.character.statuses = [{id: 'd3', name: 'Poisoned', active: true, effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '-3'; el('stDurU').value = 'rounds'; fire('stSave', 'click'); });
+    ck('#55 final review: "-3" rounds saves untimed', !res.err && !('durationSec' in X.character.statuses[0]) && !('elapsedSec' in X.character.statuses[0]), why(res) || X.character.statuses[0]);
+
+    /* final review (the spec was silent): shortening a running condition to no
+       more than the time it has already run saves it Cleared — it has already
+       run its course. Restarting (switching it back on in the form) is not
+       this path and still starts at 0, covered above. */
+    X.character.statuses = [{id: 'd4', name: 'Poisoned', active: true, durationSec: 18, elapsedSec: 12, effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '1'; el('stDurU').value = 'rounds'; fire('stSave', 'click'); });
+    ck('#55 final review: shortening to no more than the time already run saves it Cleared',
+       !res.err && X.character.statuses[0].active === false && X.character.statuses[0].elapsedSec === 6, why(res) || X.character.statuses[0]);
+    X.character.statuses = [{id: 'd5', name: 'Poisoned', active: true, durationSec: 18, elapsedSec: 12, effects: []}];
+    res = capture(() => { ctx.openStatusForm(X.character.statuses[0]); el('stName').value = 'Poisoned'; el('stDurN').value = '3'; el('stDurU').value = 'rounds'; fire('stSave', 'click'); });
+    ck('#55 final review: lengthening past the time already run stays active',
+       !res.err && X.character.statuses[0].active === true && X.character.statuses[0].elapsedSec === 12, why(res) || X.character.statuses[0]);
+
     X.character = X.blankChar();
   }
 

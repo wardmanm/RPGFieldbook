@@ -293,6 +293,16 @@ function statusExpiredText(names){
   if(n.length===2)return `${n[0]} and ${n[1]} have run out`;
   return `${n[0]}, ${n[1]} and ${n.length-2} more have run out`;
 }
+/* The Undo's own confirmation (final review, #55), the same shape as
+   statusExpiredText() and the ammo/tracker Undos ("Shot undone", "… is
+   back"). Only the conditions actually restored — undoStatusExpiry() skips
+   one deleted since. */
+function statusBackText(names){
+  const n=(Array.isArray(names)?names:[]).map(x=>String(x||"A condition"));
+  if(n.length<=1)return `${n[0]||"A condition"} is back`;
+  if(n.length===2)return `${n[0]} and ${n[1]} are back`;
+  return `${n[0]}, ${n[1]} and ${n.length-2} more are back`;
+}
 /* Move active timed conditions by deltaSec: every one, or only `onlyId`. One a
    forward step brings to its duration clears itself, as the toggle does, its
    time kept at the duration. Returns those, each with its elapsed time before
@@ -323,17 +333,20 @@ function announceStatusExpiry(ran){
 /* The toast's Undo: those conditions active again, each at the time it had
    before the step. Once only, and only on the character it was shown for (the
    object, so an import over the same id is another character). A condition
-   deleted since is skipped. */
+   deleted since is skipped — and so is its name in the confirmation toast;
+   nothing toasts when nothing was restored. */
 function undoStatusExpiry(rec,who){
   if(!rec||rec.done||!character||character!==who)return false;
   rec.done=true;
-  rec.ran.forEach(r=>{const s=(character.statuses||[]).find(x=>x&&x.id===r.id);if(s){s.active=true;s.elapsedSec=r.was;}});
+  const back=[];
+  rec.ran.forEach(r=>{const s=(character.statuses||[]).find(x=>x&&x.id===r.id);if(s){s.active=true;s.elapsedSec=r.was;back.push(s.name);}});
   renderStatuses();recompute();scheduleSave();
+  if(back.length)toast(statusBackText(back));
   return true;
 }
 /* − rd / + rd on one timed condition's row. The save is scheduled before the
    redraw. From the keyboard, focus goes back to the same button, or the row's
-   toggle once the condition has run out (its buttons are gone). */
+   Edit button once the condition has run out (its round buttons are gone). */
 function stepStatusTap(id,deltaSec,viaKey){
   const ran=tickStatuses(character,deltaSec,id);
   scheduleSave();
@@ -341,7 +354,7 @@ function stepStatusTap(id,deltaSec,viaKey){
   announceStatusExpiry(ran);
   if(viaKey){
     const sel=attrSel("data-status-tick",id)+(deltaSec>0?'[data-sec="6"]':'[data-sec="-6"]');
-    const b=document.querySelector(sel)||document.querySelector(attrSel("data-toggle-status",id));
+    const b=document.querySelector(sel)||document.querySelector(attrSel("data-edit-status",id));
     if(b&&b.focus)b.focus();
   }
 }

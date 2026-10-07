@@ -607,14 +607,22 @@ function openStatusForm(existing){
        on has to be carried across — lose it and the condition stops ending the
        spell, and nothing on screen says why. */
     if(s.concId)rec.concId=s.concId;
-    /* How long it lasts (#55). The time already run is kept, so a mistyped
-       length can be corrected; switching it on again here restarts it. */
-    const dn=Math.trunc(Number(document.getElementById("stDurN").value));
+    /* How long it lasts (#55). The box takes decimals — number × unit rounded
+       to the second ("1.5 hours" is 90 minutes) — and NaN or zero/negative
+       stays untimed. The time already run is kept, so a mistyped length can
+       be corrected; switching it on again here restarts it. */
     const du=(STATUS_UNITS.find(([u])=>u===document.getElementById("stDurU").value)||STATUS_UNITS[0])[1];
-    if(!rec.concId&&dn>0){
-      rec.durationSec=dn*du;
+    const sec=Math.round(Number(document.getElementById("stDurN").value)*du);
+    if(!rec.concId&&sec>0){
+      rec.durationSec=sec;
       const restarted=active&&s.active===false;
       if(!restarted&&statusElapsed(s))rec.elapsedSec=statusElapsed(s);
+      /* Shortening a running condition to no more than the time it has
+         already run (final review — the spec was silent): it has already run
+         its course, so save it Cleared. No toast; Undo's own toast after a
+         round-tracker step is the only one for a timed condition. Restarting
+         is not this path and still starts at 0, above. */
+      if(active&&!restarted&&statusElapsed(s)>=sec){rec.active=false;rec.elapsedSec=sec;}
     }
     const i=character.statuses.findIndex(x=>x.id===s.id);if(i>=0)character.statuses[i]=rec;else character.statuses.push(rec);
     /* Unticking "Active now" on a concentration condition IS ending it, the same

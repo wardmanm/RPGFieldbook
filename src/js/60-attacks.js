@@ -298,9 +298,11 @@ function advanceRound(dir){
   (character.activeSpells||[]).slice().forEach(a=>bumpActive(a,dir*6));
   /* timed conditions move with the spells (#55); one that runs out clears itself */
   const ran=tickStatuses(character,dir*6);
+  /* Saved right after the tick, before the redraw (final review): every other
+     path here saves first, so a redraw that throws cannot lose the step. */
+  scheduleSave();
   renderActiveSpells();renderStatuses();renderCombatChrome();
   if(ran.length)recompute();
-  scheduleSave();
   announceStatusExpiry(ran);
 }
 function renderActiveSpells(){

@@ -125,7 +125,7 @@
   text-align:center;font-size:12px;font-weight:600;color:var(--ink-soft);-webkit-text-fill-color:var(--ink-soft);opacity:1}
 #cvList [data-note="abilities"] .ability .save{margin-top:4px;gap:4px}
 #cvList [data-note="abilities"] .dot,#cvList [data-note="skills"] .dot{width:13px;height:13px;border-width:2px;cursor:default}
-#cvList [data-note="skills"] .skills{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(6,auto);gap:0 14px}
+#cvList [data-note="skills"] .skills{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(6,auto);grid-auto-flow:column;gap:0 14px}
 #cvList [data-note="skills"] .srow{padding:2px 2px;gap:6px}
 #cvList [data-note="skills"] .srow .val{font-size:14px;width:26px}
 #cvList [data-note="skills"] .srow .lbl{font-size:13px}
@@ -137,6 +137,6 @@
 #cvList [data-note="abilities"] .agroup .srow{padding:1px 2px}
 #cvList [data-note="abilities"] .agroup .srow .val{font-size:13px;width:24px}
 #cvList [data-note="abilities"] .agroup .srow .lbl{font-size:12.5px}
-@media(max-width:640px){#cvList [data-note="skills"] .skills{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(9,auto)}}
+@media(max-width:640px){#cvList [data-note="skills"] .skills{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(9,auto);grid-auto-flow:column}}
 @media(max-width:560px){#cvList [data-note="abilities"] .abilities{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:380px){#cvList [data-note="skills"] .skills{grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-auto-flow:row}}

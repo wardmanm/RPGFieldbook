@@ -404,6 +404,14 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
   ck('...and re-applies the lock after the stats are rebuilt', /syncStatLock\(\)/.test(body('buildStats')));
   ck('the compact rules apply only inside the combat view',
      /#cvList \[data-note="abilities"\]/.test(css) && /#cvList \[data-note="skills"\]/.test(css) && /#cvList #statLegend\{display:none\}/.test(css));
+  /* #56 trap, reopened at phone width (final review): a multi-column rule that
+     never sets its own grid-auto-flow depends on the base .skills rule, which
+     the view's narrower media query can win over, so the grid reads across
+     rows instead of down each column. */
+  const skillsRules = css.match(/#cvList \[data-note="skills"\] \.skills\{[^}]*\}/g) || [];
+  const multiCol = skillsRules.filter(r => /grid-template-columns:repeat\(/.test(r));
+  ck('every compact Skills grid of two or more columns sets its own grid-auto-flow:column',
+     multiCol.length >= 2 && multiCol.every(r => /grid-auto-flow:column/.test(r)), multiCol);
 }
 
 // ---------- the supplement packs (Xanathar's, Tasha's)
