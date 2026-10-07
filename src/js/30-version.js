@@ -12,6 +12,34 @@ const DATA_VERSIONS={"XPHB":"1.7.2","Humblewood":"1.7.1","XGE":"1.7.2","TCE":"1.
    to that release's page (attach fieldbook.html to the release so players can download it). */
 const UPDATE_REPO="wardmanm/RPGFieldbook";
 function cmpVer(a,b){const pa=String(a||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0),pb=String(b||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);for(let i=0;i<3;i++){if((pa[i]||0)>(pb[i]||0))return 1;if((pa[i]||0)<(pb[i]||0))return -1;}return 0;}
+/* Rules-DATA versions (#83): X.Y.Z is the data shipped with app X.Y.Z, X.Y.Z-N
+   the Nth data-only release after it. NOT semver, where -N would be a
+   pre-release sorting BELOW X.Y.Z: here 1.8.0 < 1.8.0-1 < 1.8.0-10 < 1.8.1.
+   cmpVer() reads "1.8.0-1" and "1.8.0-2" as equal, so data never goes through
+   it. Anything unreadable compares as 0: unknown is never "stale" or "newer".
+   Spec: 2026-10-07-data-archive-design.md §3. */
+function parseDataVer(s){
+  const m=/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([1-9]\d*))?$/.exec(typeof s==="string"?s:"");
+  return m?[+m[1],+m[2],+m[3],m[4]?+m[4]:0]:null;
+}
+function cmpDataVer(a,b){
+  const pa=parseDataVer(a),pb=parseDataVer(b);
+  if(!pa||!pb)return 0;
+  for(let i=0;i<4;i++){if(pa[i]!==pb[i])return pa[i]>pb[i]?1:-1;}
+  return 0;
+}
+/* "v1.8.0" -> "1.8.0"; "data-v1.8.0-2" -> "1.8.0-2"; anything else -> "". A data
+   tag always has its -N: plain X.Y.Z belongs to the app release. */
+function dataVerOfTag(tag){
+  const t=typeof tag==="string"?tag:"";
+  let m=/^v(\d+\.\d+\.\d+)$/.exec(t);
+  if(m&&parseDataVer(m[1]))return m[1];
+  m=/^data-v(\d+\.\d+\.\d+-\d+)$/.exec(t);
+  if(m&&parseDataVer(m[1]))return m[1];
+  return "";
+}
+/* the oldest app a data version is built for: "1.8.0-2" -> "1.8.0" */
+function dataVerBase(v){const p=parseDataVer(v);return p?p.slice(0,3).join("."):"";}
 /* What the update check found, or null. Held so openChangelog() can lead with a
    download link — the pill REPLACES the version button rather than sitting
    beside it, so the changelog has to stay reachable through the pill. */

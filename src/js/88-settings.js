@@ -249,7 +249,7 @@ function settingsImportQuestionHTML(imp){
   const inFile={};file.forEach(g=>{inFile[g.key]=g;});
   const list=gs=>gs.map(g=>g.label+" ("+g.count+(g.dataVersion?", v"+g.dataVersion:"")+")").join(" · ");
   const lost=now.filter(g=>!inFile[g.key]);
-  const older=now.filter(g=>{const f=inFile[g.key];return f&&f.dataVersion&&g.dataVersion&&cmpVer(f.dataVersion,g.dataVersion)<0;});
+  const older=now.filter(g=>{const f=inFile[g.key];return f&&f.dataVersion&&g.dataVersion&&cmpDataVer(f.dataVersion,g.dataVersion)<0;});
   const loss=[];
   if(lost.length)loss.push(`unloads ${lost.length===1?"1 pack":lost.length+" packs"} the file doesn't have: ${lost.map(g=>g.label).join(", ")}`);
   if(older.length)loss.push(`puts back an older copy of ${older.map(g=>g.label+" (v"+inFile[g.key].dataVersion+"; v"+g.dataVersion+" is loaded)").join(", ")}`);
@@ -371,11 +371,11 @@ function clearAllRules(){
 
    Unknown (an old pack from before stamping, or homebrew) is NOT stale — we
    have no evidence either way, and a false alarm on someone's own content is
-   worse than staying quiet. */
+   worse than staying quiet — nor is a version that doesn't parse (cmpDataVer). */
 function dataStatus(g){
   const want=(typeof DATA_VERSIONS!=="undefined"&&DATA_VERSIONS[g.source])||"";
-  if(!want||!g.dataVersion)return {state:"unknown"};
-  const c=cmpVer(g.dataVersion,want);
+  if(!want||!g.dataVersion||!parseDataVer(g.dataVersion))return {state:"unknown"};
+  const c=cmpDataVer(g.dataVersion,want);
   if(c<0)return {state:"stale",have:g.dataVersion,want};
   return {state:"current",have:g.dataVersion};
 }

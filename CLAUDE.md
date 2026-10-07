@@ -64,7 +64,7 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
 
 ## Build, test, QA — build freely, never release
 
-- **Tests: `./src/tests/run.sh`** (across eight suites). `humblewood-verbatim` needs PyMuPDF and the
+- **Tests: `./src/tests/run.sh`** (across nine suites). `humblewood-verbatim` needs PyMuPDF and the
   PDFs, so under the system `python3` it skips cleanly; run it directly with
   `.venv/bin/python src/tests/humblewood-verbatim.py`. Safe to run unprompted — they touch no tracked file. Run them after any
   change to `src/`, `scripts/` or `data/`. For a pure function you touch, also write a throwaway Node
