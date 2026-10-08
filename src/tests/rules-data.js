@@ -956,6 +956,18 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
   ck('#84 R4 the Paladin may take Blessed Warrior', menu('Paladin', '2').includes('Blessed Warrior'), menu('Paladin', '2'));
   ck('#84 R4 the Ranger may take Druidic Warrior', menu('Ranger', '2').includes('Druidic Warrior'), menu('Ranger', '2'));
   ck('#84 R4 the Fighter\'s menu is unchanged (ten styles)', menu('Fighter', '1').length === 10, menu('Fighter', '1'));
+  // {@dice roll|display} with a 5e-tools prompt template as its roll printed the
+  // template ("#$prompt_number:title=Enter Strength Score$# × 7.5 lb.") until #84
+  const templated = [];
+  fs.readdirSync(path.join(ROOT, 'data')).filter(d => fs.statSync(path.join(ROOT, 'data', d)).isDirectory()).forEach(d =>
+    fs.readdirSync(path.join(ROOT, 'data', d)).filter(f => f.endsWith('.json')).forEach(f => {
+      if (fs.readFileSync(path.join(ROOT, 'data', d, f), 'utf8').includes('#$')) templated.push(d + '/' + f);
+    }));
+  ck('#84 no file in any data/<pack>/ holds a 5e-tools prompt template ("#$")', templated.length === 0, templated);
+  const carry = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', '5e2024', 'tables.json'), 'utf8')).tables
+    .find(t => t.name === 'Carrying Capacity');
+  const tiny = carry && carry.rows.find(r => r[0] === 'Tiny');
+  ck('#84 the 2024 Carrying Capacity table\'s Tiny row reads "Str. × 7.5 lb."', !!tiny && tiny[1] === 'Str. × 7.5 lb.', tiny);
 }
 
 // ---------- #84: the SRD 5.2 pack

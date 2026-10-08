@@ -54,6 +54,13 @@ def strip_tags(s):
             return p[0] + ' percent'
         if tag == 'dc':
             return 'DC ' + p[0]
+        # {@dice roll|display} puts its display text second. A roll holding a
+        # 5e-tools prompt template ("#$prompt_number:title=…$#", the Carrying
+        # Capacity table's) renders by its display text; every other dice tag
+        # keeps the roll, as it always has (#84). scaledice and scaledamage have a
+        # grammar of their own and stay in the default family.
+        if tag in ('dice', 'autodice', 'damage', 'd20', 'hit') and '#$' in p[0] and len(p) > 1 and p[1].strip():
+            return p[1]
         # default family: name|source|display?  (feat, spell, item, condition,
         # creature, skill, action, sense, variantrule, status, damage, dice,
         # scaledamage, scaledice, hazard, ...)
@@ -2738,8 +2745,9 @@ def _write(obj, path):
         json.dump(obj, f, indent=2, ensure_ascii=False)
         f.write('\n')          # .editorconfig: every file ends in a newline
     txt = open(path, encoding='utf-8').read()
-    # a 5e-tools {@tag}, or template text ({#itemEntry …}, {{item.resist}}) left in
-    residual = txt.count('{@') + txt.count('{#') + txt.count('{{')
+    # a 5e-tools {@tag}, or template text ({#itemEntry …}, {{item.resist}}, a
+    # dice roll's "#$prompt_number…$#" with no display text to print instead) left in
+    residual = txt.count('{@') + txt.count('{#') + txt.count('{{') + txt.count('#$')
     n = len(obj.get('keywords') or obj.get('feats') or obj.get('spells') or obj.get('classes')
             or obj.get('items') or obj.get('backgrounds') or obj.get('races')
             or obj.get('subclasses') or obj.get('features') or obj.get('tables') or [])

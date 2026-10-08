@@ -762,13 +762,6 @@
       "page": 178
     },
     {
-      "entry": "table:Carrying Capacity",
-      "find": "#$prompt_number:title=Enter Strength Score$#",
-      "replace": "Str.",
-      "page": 178,
-      "why": "convert.py strip_tags() reads {@dice roll|display} as name|source|display and keeps the roll, a 5e-tools template, instead of the display text the SRD prints (\"Str. × 7.5\"). The same cells are garbled in data/5e2024; the converter fix belongs to a change that may move that pack"
-    },
-    {
       "entry": "Spell Scroll (Level 1)",
       "find": "When a level 1 spell is copied in this way, the copier must succeed on a DC 11 Intelligence (Arcana).",
       "replace": "When a spell is copied in this way, the copier must succeed on an Intelligence (Arcana) check with a DC equal to 10 plus the spell's level.",

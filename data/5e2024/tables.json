@@ -4072,28 +4072,28 @@
       "rows": [
         [
           "Tiny",
-          "#$prompt_number:title=Enter Strength Score$# × 7.5 lb.",
-          "#$prompt_number:title=Enter Strength Score$# × 15 lb."
+          "Str. × 7.5 lb.",
+          "Str. × 15 lb."
         ],
         [
           "Small/Medium",
-          "#$prompt_number:title=Enter Strength Score$# × 15 lb.",
-          "#$prompt_number:title=Enter Strength Score$# × 30 lb."
+          "Str. × 15 lb.",
+          "Str. × 30 lb."
         ],
         [
           "Large",
-          "#$prompt_number:title=Enter Strength Score$# × 30 lb.",
-          "#$prompt_number:title=Enter Strength Score$# × 60 lb."
+          "Str. × 30 lb.",
+          "Str. × 60 lb."
         ],
         [
           "Huge",
-          "#$prompt_number:title=Enter Strength Score$# × 60 lb.",
-          "#$prompt_number:title=Enter Strength Score$# × 120 lb."
+          "Str. × 60 lb.",
+          "Str. × 120 lb."
         ],
         [
           "Gargantuan",
-          "#$prompt_number:title=Enter Strength Score$# × 120 lb.",
-          "#$prompt_number:title=Enter Strength Score$# × 240 lb."
+          "Str. × 120 lb.",
+          "Str. × 240 lb."
         ]
       ],
       "caption": "Carrying Capacity",

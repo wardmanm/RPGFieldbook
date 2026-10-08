@@ -1848,6 +1848,23 @@ _f = T.check(["Elf\nDrow\nElven Lineage\nYou know the Dancing Lights cantrip.\n"
 ck('#84 check() finds a planted non-SRD span in a subrace trait',
    any(k == 'Drow/Elven Lineage' and 'lolth' in s for k, s, _ in _f), _f)
 
+# ---- #84 final review: a {@dice} roll holding a 5e-tools prompt template
+# {@dice roll|display} puts its display text second, not third. A roll that is a
+# template ("#$prompt_number:…$#", the Carrying Capacity table's) prints that
+# display text; every other dice tag prints exactly what it did.
+_cc = '{@dice #$prompt_number:title=Enter Strength Score$# × 7.5|Str. × 7.5} lb.'
+ck('#84 a dice roll holding a prompt template renders its display text',
+   C.strip_tags(_cc) == 'Str. × 7.5 lb.', C.strip_tags(_cc))
+ck('#84 ...no other dice text moves: a plain roll with display text keeps the roll',
+   C.strip_tags('{@dice 1d6|one die}') == '1d6', C.strip_tags('{@dice 1d6|one die}'))
+ck('#84 ...nor a damage roll', C.strip_tags('{@damage 2d6}') == '2d6', C.strip_tags('{@damage 2d6}'))
+with tempfile.TemporaryDirectory() as _td:
+    _buf = io.StringIO()
+    with contextlib.redirect_stdout(_buf):
+        C._write({'tables': [{'name': 'T', 'cols': ['A'], 'rows': [[C.strip_tags('{@dice #$prompt_number$# × 2}')]]}]},
+                 os.path.join(_td, 't.json'))
+    ck('#84 a prompt template with no display text is reported as unresolved', 'unresolved tags!' in _buf.getvalue(), _buf.getvalue())
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)
