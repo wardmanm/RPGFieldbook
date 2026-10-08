@@ -1584,6 +1584,118 @@ with tempfile.TemporaryDirectory() as _td:
     finally:
         C._FEAT_INDEX = _saved
 
+# ---- #84: the SRD view and the `srd` command, on an invented mini dump
+import subprocess
+def _mini_dump(root):
+    """Invented entries in the dump's shape: flagged, rename-flagged, unflagged,
+    an inherits-flagged variant, a 2014 basicRules-only entry, mixed-case tags."""
+    def put(rel, obj):
+        p = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        json.dump(obj, open(p, 'w', encoding='utf-8'))
+    T = [{"number": 1, "unit": "action"}]
+    R = {"type": "point", "distance": {"type": "feet", "amount": 60}}
+    D = [{"type": "instant"}]
+    put('conditionsdiseases.json', {"condition": [
+        {"name": "Blinded", "source": "XPHB", "srd52": True, "entries": ["You can't see."]},
+        {"name": "Dazed", "source": "XPHB", "entries": ["Not in the SRD."]}], "status": [], "disease": []})
+    put('variantrules.json', {"variantrule": [
+        {"name": "Advantage", "source": "XPHB", "srd52": True, "entries": ["Roll two d20s."]},
+        {"name": "Bastion", "source": "XPHB", "entries": ["Not in the SRD."]}]})
+    put('items-base.json', {"baseitem": [
+        {"name": "Club", "source": "XPHB", "srd52": True, "type": "M|XPHB", "rarity": "none", "weight": 2,
+         "weaponCategory": "simple", "dmg1": "1d4", "dmgType": "B", "weapon": True, "property": ["L|XPHB"]}],
+        "itemProperty": [{"abbreviation": "L", "source": "XPHB", "entries": [{"name": "Light"}]}]})
+    put('items.json', {"item": [
+        {"name": "Heward's Handy Haversack", "source": "XDMG", "srd52": "Handy Haversack", "rarity": "rare",
+         "wondrous": True, "entries": ["Heward's Handy Haversack has two side pouches."]},
+        {"name": "Bag of Holding", "source": "XDMG", "srd52": True, "rarity": "uncommon", "wondrous": True,
+         "entries": ["It holds what a {@item heward's handy haversack|XDMG|Heward's Handy Haversack} holds."]},
+        {"name": "Abacus", "source": "PHB", "basicRules": True, "rarity": "none", "entries": ["A 2014 item."]},
+        {"name": "Psychic Blade", "source": "XPHB", "rarity": "none", "entries": ["Not in the SRD."]}]})
+    put('magicvariants.json', {"magicvariant": [
+        {"name": "Weapon, +1", "inherits": {"source": "XDMG", "srd52": True, "nameSuffix": " +1", "rarity": "uncommon"}},
+        {"name": "Weapon of Warning", "inherits": {"source": "XDMG", "rarity": "uncommon"}}]})
+    put('backgrounds.json', {"background": [
+        {"name": "Acolyte", "source": "XPHB", "srd52": True, "entries": []},
+        {"name": "Farmer", "source": "XPHB", "entries": []}]})
+    put('feats.json', {"feat": [
+        {"name": "Archery", "source": "XPHB", "srd52": True, "category": "FS", "entries": ["+2 to ranged attack rolls."]},
+        {"name": "Dueling", "source": "XPHB", "category": "FS", "entries": ["Not in the SRD."]},
+        {"name": "Blessed Warrior", "source": "XPHB", "category": "FS:P", "entries": ["You learn two Cleric cantrips."]}]})
+    put('races.json', {"race": [
+        {"name": "Dwarf", "source": "XPHB", "srd52": True, "size": ["M"], "speed": 30, "entries": []},
+        {"name": "Aasimar", "source": "XPHB", "size": ["M"], "speed": 30, "entries": []}]})
+    put('optionalfeatures.json', {"optionalfeature": [
+        {"name": "Agonizing Blast", "source": "XPHB", "srd52": True, "featureType": ["EI"], "entries": ["Add your Charisma."]},
+        {"name": "Parry", "source": "XPHB", "featureType": ["MV:B"], "entries": ["Not in the SRD."]}]})
+    put('spells/spells-xphb.json', {"spell": [
+        {"name": "Bigby's Hand", "source": "XPHB", "srd52": "Arcane Hand", "level": 5, "school": "V", "time": T,
+         "range": R, "components": {"v": True}, "duration": D, "entries": ["{@spell Bigby's hand} makes a hand."]},
+        {"name": "Fireball", "source": "XPHB", "srd52": True, "level": 3, "school": "V", "time": T, "range": R,
+         "components": {"v": True}, "duration": D, "entries": ["Boom. Compare {@spell bigby's hand|XPHB}."]},
+        {"name": "Witch Bolt", "source": "XPHB", "level": 1, "school": "V", "time": T, "range": R,
+         "components": {"v": True}, "duration": D, "entries": ["Not in the SRD."]}]})
+    put('spells/sources.json', {"XPHB": {
+        "Bigby's Hand": {"class": [{"name": "Wizard", "source": "XPHB"}, {"name": "Artificer", "source": "EFA"}]},
+        "Fireball": {"class": [{"name": "Wizard", "source": "XPHB"}]}}})
+    pal = json.loads(json.dumps(_pal))
+    pal['class'][0]['srd52'] = True
+    pal['classFeature'][0]['srd52'] = True
+    put('class/class-paladin.json', pal)
+    put('class/class-artificer.json', {"class": [{"name": "Artificer", "source": "TCE",
+        "hd": {"number": 1, "faces": 8}, "classFeatures": []}], "classFeature": []})
+
+CONVERT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'scripts', 'convert.py')
+with tempfile.TemporaryDirectory() as _td:
+    dump, view, out, out_all = (os.path.join(_td, x) for x in ('dump', 'view', 'out', 'all'))
+    _mini_dump(dump)
+    info = C.srd_view(dump, view)
+    ck('#84 srd_view reads every rename', info['renames'] == {"heward's handy haversack": 'Handy Haversack', "bigby's hand": 'Arcane Hand'}, info['renames'])
+    ck('#84 srd_view derives the SRD Fighting Style feats', info['fighting_styles'] == {'Archery'}, info['fighting_styles'])
+    ck('#84 srd_view carries the referenced feat', info['ref_feats'] == ['Blessed Warrior'], info['ref_feats'])
+    vmv = json.load(open(os.path.join(view, 'magicvariants.json')))['magicvariant']
+    ck('#84 an inherits-flagged variant is kept, marked true; an unflagged one goes',
+       [v['name'] for v in vmv] == ['Weapon, +1'] and vmv[0]['inherits']['srd52'] is True and vmv[0]['srd52'] is True)
+    ck('#84 the view never touches the dump',
+       json.load(open(os.path.join(dump, 'items.json')))['item'][0]['name'] == "Heward's Handy Haversack")
+    ck('#84 a class the SRD lacks gets no file in the view', not os.path.exists(os.path.join(view, 'class', 'class-artificer.json')))
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out], capture_output=True, text=True)
+    ck('#84 srd runs clean on the mini dump', r.returncode == 0, r.stdout[-600:] + r.stderr[-600:])
+    P = lambda f: json.load(open(os.path.join(out, f), encoding='utf-8'))
+    allf = sorted(os.listdir(out))
+    ck('#84 every SRD file says system "SRD 5.2" and excludes Humblewood',
+       all(P(f).get('system') == 'SRD 5.2' and P(f).get('excludeSystems') == ['humblewood'] for f in allf), allf)
+    names = lambda f, k: [e.get('name') or e.get('term') for e in P(f)[k]]
+    ck('#84 only flagged entries: conditions', names('conditions.json', 'keywords') == ['Blinded'])
+    ck('#84 only flagged entries: glossary', names('glossary.json', 'keywords') == ['Advantage'])
+    ck('#84 only flagged entries: magic items (renamed, no 2014 backfill, no Psychic Blade)',
+       sorted(names('items-magic.json', 'items')) == ['Bag of Holding', 'Handy Haversack'], names('items-magic.json', 'items'))
+    ck('#84 only flagged entries: backgrounds, feats, species, options',
+       names('backgrounds.json', 'backgrounds') == ['Acolyte'] and names('feats.json', 'feats') == ['Archery']
+       and names('races.json', 'races') == ['Dwarf'] and names('features.json', 'features') == ['Agonizing Blast'])
+    sp = {s['name']: s for s in P('spells.json')['spells']}
+    ck('#84 a renamed spell keeps its classes, without the Artificer',
+       sorted(sp) == ['Arcane Hand', 'Fireball'] and sp['Arcane Hand'].get('class') == ['Wizard'], sp)
+    ck('#84 tags to a renamed entry follow it (case-insensitive, display text too)',
+       'Arcane Hand makes a hand' in sp['Arcane Hand']['text'] and 'Compare Arcane Hand' in sp['Fireball']['text'],
+       [sp['Arcane Hand']['text'], sp['Fireball']['text']])
+    mi = {i['name']: i for i in P('items-magic.json')['items']}
+    ck('#84 a renamed item\'s own prose uses its new name',
+       mi['Handy Haversack']['description'].startswith('Handy Haversack has two side pouches'), mi['Handy Haversack'])
+    ck('#84 another item\'s tag to it follows', 'what a Handy Haversack holds' in mi['Bag of Holding']['description'], mi['Bag of Holding'])
+    cl = P('classes.json')['classes']
+    menu = [ch for ch in cl[0]['levels']['2']['choices'] if ch.get('label') == 'Choose a Fighting Style'][0]
+    ck('#84 one SRD class (no Artificer fallback), with the SRD menu and the refFeat option',
+       [c['name'] for c in cl] == ['Paladin'] and [o['name'] for o in menu['from']] == ['Archery', 'Blessed Warrior'],
+       [[c['name'] for c in cl], [o['name'] for o in menu['from']]])
+    ck('#84 SRD pack names', P('classes.json').get('name') == 'SRD 5.2 Classes' and P('items.json').get('name') == 'SRD 5.2 Items')
+    r = subprocess.run([sys.executable, CONVERT, 'all', dump, '-o', out_all], capture_output=True, text=True)
+    A = lambda f: json.load(open(os.path.join(out_all, f), encoding='utf-8'))
+    ck('#84 contrast: `all` on the same dump still backfills 2014 and keeps XPHB-only entries',
+       {'Abacus', 'Psychic Blade'} <= {i['name'] for i in A('items-magic.json')['items']}
+       and A('spells.json')['system'] == 'XPHB')
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)
