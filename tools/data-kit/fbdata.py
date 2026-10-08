@@ -3,9 +3,11 @@
 
     fbdata.py digest   [--registry F] [--data-root D]
     fbdata.py versions (--changed | --check | --bump V | --seed) [--registry F] [--data-root D]
+    fbdata.py pack <bundles-dir> -o OUT.zip [--registry F] [--dev] [--built-for X.Y.Z]
+    fbdata.py validate OUT.zip
 
 Python 3.8+, standard library only. Exit status: 0 ok, 1 a check failed,
-2 bad input. Spec: src/docs/specs/2026-10-07-data-archive-design.md §4, §5.1.
+2 bad input. Spec: src/docs/specs/2026-10-07-data-archive-design.md §4–§6.
 """
 import argparse
 import hashlib
@@ -13,6 +15,7 @@ import json
 import os
 import re
 import sys
+import zipfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 DEFAULT_REGISTRY = os.path.join(ROOT, "data", "packs.json")
@@ -27,6 +30,10 @@ DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 META_KEYS = ("system", "title", "license", "attribution")
 # Written in this order; any other key a pack carries is kept, after these.
 PACK_KEYS = ("system", "dir", "file", "title", "version", "digest", "license", "attribution")
+
+MANIFEST = "fieldbook-data.json"
+NOTICE = "NOTICE.md"
+FIXED_TIME = (1980, 1, 1, 0, 0, 0)  # the earliest a zip can say: no build time leaks in
 
 
 class KitError(Exception):
@@ -196,6 +203,174 @@ def cmd_versions(a):
     return 0
 
 
+def app_version():
+    """APP_VERSION from src/js/30-version.js, or "" when the kit runs outside the repo."""
+    try:
+        with open(os.path.join(ROOT, "src", "js", "30-version.js"), encoding="utf-8") as f:
+            m = re.search(r'APP_VERSION="([^"]+)"', f.read())
+        return m.group(1) if m else ""
+    except OSError:
+        return ""
+
+
+def notice_md(reg, mpacks, version, built_for):
+    """The archive's NOTICE.md: what is in it, and every pack's licence and credit."""
+    by_file = {p["file"]: p for p in reg["packs"]}
+    out = ["# Fieldbook rules data %s" % version, ""]
+    if built_for:
+        out += ["Built for Fieldbook %s." % built_for, ""]
+    out += ["Fieldbook 1.8.0 and later open this zip directly: Settings → Rules data → Import files,",
+            "then choose it. Older versions: unzip it and import the .json files.", "",
+            "## Packs", ""]
+    for m in mpacks:
+        p = by_file[m["file"]]
+        out.append("- %s — `%s` (%s%s)" % (p["title"], m["file"], m["system"],
+                                         ", v" + m["version"] if m.get("version") else ""))
+    out += ["", "## Licences and credits", ""]
+    for m in mpacks:
+        p = by_file[m["file"]]
+        out += ["### " + p["title"], ""]
+        if p.get("attribution"):
+            out += [p["attribution"], ""]
+        if p.get("license"):
+            out += ["Licence: %s." % p["license"], ""]
+        if not p.get("attribution") and not p.get("license"):
+            out += ["No licence statement.", ""]
+    return "\n".join(out).rstrip("\n") + "\n"
+
+
+def _zinfo(name):
+    zi = zipfile.ZipInfo(name, date_time=FIXED_TIME)
+    zi.compress_type = zipfile.ZIP_DEFLATED
+    zi.create_system = 3
+    zi.external_attr = 0o100644 << 16
+    return zi
+
+
+def cmd_pack(a):
+    """The archive (spec §6): every registered bundle found in a.bundles, a
+    manifest and NOTICE.md; entries sorted, fixed timestamps, deflate level 9,
+    so two runs with one zlib write the same bytes."""
+    reg = load_registry(a.registry)
+    if not reg.get("release"):
+        raise KitError("the registry has no release to name the archive")
+    version = reg["release"] + ("+dev" if a.dev else "")
+    built_for = a.built_for if a.built_for is not None else app_version()
+    entries, mpacks = {}, []
+    for p in reg["packs"]:
+        src = os.path.join(a.bundles, p["file"])
+        if not os.path.isfile(src):
+            continue
+        with open(src, "rb") as f:
+            raw = f.read()
+        try:
+            obj = json.loads(raw.decode("utf-8"))
+        except ValueError as e:
+            raise KitError("%s: not valid JSON — %s" % (src, e))
+        got = obj.get("system") if isinstance(obj, dict) else None
+        if got != p["system"]:
+            raise KitError("%s: system %r, but the registry says %r" % (src, got, p["system"]))
+        if obj.get("dataVersion") != p.get("version"):
+            raise KitError("%s: dataVersion %r, but the registry says %r — rebuild the bundles"
+                           % (src, obj.get("dataVersion"), p.get("version")))
+        m = {"file": p["file"], "system": p["system"]}
+        if p.get("version"):
+            m["version"] = p["version"]
+        if p.get("license"):
+            m["license"] = p["license"]
+        m["sha256"] = hashlib.sha256(raw).hexdigest()
+        mpacks.append(m)
+        entries[p["file"]] = raw
+    if not mpacks:
+        raise KitError("none of the registry's bundles is in %s — bundle first" % a.bundles)
+    manifest = {"_type": "fieldbook-data", "format": 1, "version": version, "builtFor": built_for, "packs": mpacks}
+    entries[MANIFEST] = (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+    entries[NOTICE] = notice_md(reg, mpacks, version, built_for).encode("utf-8")
+    tmp = a.output + ".tmp"
+    with zipfile.ZipFile(tmp, "w") as z:
+        for name in sorted(entries):
+            z.writestr(_zinfo(name), entries[name], compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+    os.replace(tmp, a.output)
+    print("wrote %s (%d pack%s, data %s)" % (a.output, len(mpacks), "" if len(mpacks) == 1 else "s", version),
+          file=sys.stderr)
+    return 0
+
+
+def validate_archive(path):
+    """Problems with an archive (spec §6.3), one line each; [] when it is sound."""
+    try:
+        z = zipfile.ZipFile(path)
+    except (OSError, zipfile.BadZipFile) as e:
+        return ["not a readable zip: %s" % e]
+    errs = []
+    with z:
+        names = [i.filename for i in z.infolist()]
+        if len(set(names)) != len(names):
+            errs.append("an entry name appears twice")
+        for n in names:
+            if n.endswith("/"):
+                errs.append("a directory entry: %s" % n)
+            if n.startswith("/") or "\\" in n or ".." in n.split("/"):
+                errs.append("an unsafe path: %s" % n)
+        if MANIFEST not in names:
+            return errs + ["no %s at the root" % MANIFEST]
+        try:
+            man = json.loads(z.read(MANIFEST).decode("utf-8"))
+        except (ValueError, zipfile.BadZipFile) as e:
+            return errs + ["%s is unreadable: %s" % (MANIFEST, e)]
+        if not isinstance(man, dict) or man.get("_type") != "fieldbook-data" or man.get("format") != 1:
+            return errs + ['%s: _type must be "fieldbook-data" and format 1' % MANIFEST]
+        ver = man.get("version")
+        if not (isinstance(ver, str) and parse_data_ver(ver[:-4] if ver.endswith("+dev") else ver)):
+            errs.append("%s: version %r" % (MANIFEST, ver))
+        packs = man.get("packs")
+        if not isinstance(packs, list) or not packs:
+            return errs + ["%s: packs must be a non-empty list" % MANIFEST]
+        listed = set()
+        for i, m in enumerate(packs):
+            f = m.get("file") if isinstance(m, dict) else None
+            if not isinstance(f, str):
+                errs.append("packs[%d] names no file" % i)
+                continue
+            listed.add(f)
+            if f not in names:
+                errs.append("%s is listed but missing" % f)
+                continue
+            try:
+                raw = z.read(f)
+            except zipfile.BadZipFile as e:
+                errs.append("%s: %s" % (f, e))
+                continue
+            if hashlib.sha256(raw).hexdigest() != m.get("sha256"):
+                errs.append("%s: its sha256 doesn't match the manifest" % f)
+            try:
+                obj = json.loads(raw.decode("utf-8"))
+            except ValueError:
+                errs.append("%s: not valid JSON" % f)
+                continue
+            if not isinstance(obj, dict):
+                errs.append("%s: not a JSON object" % f)
+                continue
+            if obj.get("system") != m.get("system"):
+                errs.append("%s: system %r, the manifest says %r" % (f, obj.get("system"), m.get("system")))
+            if obj.get("dataVersion") != m.get("version"):
+                errs.append("%s: dataVersion %r, the manifest says %r" % (f, obj.get("dataVersion"), m.get("version")))
+        extra = [n for n in names if n not in listed and n not in (MANIFEST, NOTICE)]
+        if extra:
+            errs.append("not in the manifest: " + ", ".join(extra))
+    return errs
+
+
+def cmd_validate(a):
+    errs = validate_archive(a.zip)
+    for e in errs:
+        print("%s: %s" % (a.zip, e), file=sys.stderr)
+    if errs:
+        return 1
+    print("ok: %s" % a.zip)
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="fbdata.py", description="Fieldbook data kit")
     sub = ap.add_subparsers(dest="cmd")
@@ -215,6 +390,16 @@ def main(argv=None):
     g.add_argument("--bump", metavar="V", help="give changed packs version V; set release to V")
     g.add_argument("--seed", action="store_true", help="record every digest from --data-root")
     p.set_defaults(fn=cmd_versions)
+    p = sub.add_parser("pack", help="write the data archive from bundled packs")
+    p.add_argument("bundles", help="the folder holding the bundles (dist/)")
+    p.add_argument("-o", "--output", required=True, help="the .zip to write")
+    p.add_argument("--registry", default=DEFAULT_REGISTRY, help="default: data/packs.json")
+    p.add_argument("--dev", action="store_true", help='version the archive "<release>+dev"')
+    p.add_argument("--built-for", default=None, help="the app version it is for (default: APP_VERSION)")
+    p.set_defaults(fn=cmd_pack)
+    p = sub.add_parser("validate", help="check an archive; exit 1 with one line per problem")
+    p.add_argument("zip")
+    p.set_defaults(fn=cmd_validate)
     a = ap.parse_args(argv)
     if not getattr(a, "fn", None):
         ap.print_help()

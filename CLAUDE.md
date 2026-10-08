@@ -69,7 +69,8 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
   `.venv/bin/python src/tests/humblewood-verbatim.py`. Safe to run unprompted — they touch no tracked file. Run them after any
   change to `src/`, `scripts/` or `data/`. For a pure function you touch, also write a throwaway Node
   check in the scratchpad. → [testing](src/docs/wiki/process/testing.md)
-- **Building to test is fine:** `./build.sh`, or `./build.sh --no-zip` for just the artifact. It
+- **Building to test is fine:** `./build.sh`, or `./build.sh --no-zip` for just the artifact (the
+  zips need `python3`; `./build.sh --data` builds only the rules-data archive). It
   rewrites the tracked `dist/fieldbook.html` and `docs/CHANGELOG.md`; say plainly when you've built.
   → [building & CI](src/docs/wiki/process/building-and-ci.md)
 - **Never cut a release on your own** — no `./build.sh --release`, no `APP_VERSION` bump, no version

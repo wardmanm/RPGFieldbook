@@ -428,6 +428,58 @@ section('pack credits', () => {
   X.resetRules();
 });
 
+section('round trip: the built archive imports exactly like the bundles', () => {
+  if (!PY) { console.log('note: no python3, round trip skipped'); return; }
+  const reg = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/packs.json'), 'utf8'));
+  const present = reg.packs.filter(p => fs.existsSync(path.join(ROOT, 'dist', p.file)));
+  ck('the bundles exist (run.sh bundles first)', present.length > 0);
+  const dir = tmpDir(), zip = path.join(dir, 'a.zip');
+  const r = spawnSync(PY, [path.join(ROOT, 'tools/data-kit/fbdata.py'), 'pack', path.join(ROOT, 'dist'), '-o', zip], {encoding: 'utf8'});
+  ck('fbdata.py pack ran', r.status === 0, r.stderr);
+  if (r.status === 0) {
+    X.resetRules();
+    const res = X.importRulesPayloads([{name: 'a.zip', bytes: new Uint8Array(fs.readFileSync(zip))}]);
+    ck('the archive imported every pack', res.failed.length === 0 && res.archives[0].count === present.length, res);
+    const viaZip = poolSnap();
+    X.resetRules();
+    present.forEach(p => X.importRulesPayloads([{name: p.file, bytes: new Uint8Array(fs.readFileSync(path.join(ROOT, 'dist', p.file)))}]));
+    ck('the pool equals importing the bundles one by one', poolSnap() === viaZip);
+  }
+  fs.rmSync(dir, {recursive: true, force: true});
+  X.resetRules();
+});
+
+section('zips from other tools', () => {
+  if (!PY) console.log('note: no python3, Python zipfile cases skipped');
+  else {
+    const dir = tmpDir();
+    const script = [
+      'import json, sys, zipfile',
+      'out, method = sys.argv[1], int(sys.argv[2])',
+      'with zipfile.ZipFile(out, "w", compression=method) as z:',
+      '    z.writestr("packs/a.json", json.dumps({"system": "Py", "spells": [{"name": "Alpha"}]}))',
+      '    z.writestr("packs/b.json", json.dumps({"system": "Py", "feats": [{"name": "Beta"}]}))',
+    ].join('\n');
+    [[0, 'stored'], [8, 'deflated']].forEach(([m, label]) => {
+      const out = path.join(dir, label + '.zip');
+      const r = spawnSync(PY, ['-c', script, out, String(m)], {encoding: 'utf8'});
+      const arc = r.status === 0 ? X.readDataArchive(new Uint8Array(fs.readFileSync(out)), label + '.zip') : null;
+      ck('Python zipfile, ' + label + ': read as loose packs',
+         !!arc && arc.kind === 'loose' && arc.packs.map(p => p.name).join() === 'a.json,b.json', r.stderr || arc);
+    });
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
+  if (spawnSync('zip', ['-v'], {stdio: 'ignore'}).status !== 0) { console.log('note: no zip tool, the zip -9 case skipped'); return; }
+  const dir = tmpDir();
+  fs.mkdirSync(path.join(dir, 'in'));
+  const body = JSON.stringify({system: 'Zip', spells: Array.from({length: 2000}, (_, i) => ({name: 'Spell ' + i, text: 'Lorem ipsum '.repeat(20)}))});
+  fs.writeFileSync(path.join(dir, 'in', 'big.json'), body);
+  const r = spawnSync('zip', ['-9', '-q', '-r', 'z.zip', 'in'], {cwd: dir});
+  const arc = r.status === 0 ? X.readDataArchive(new Uint8Array(fs.readFileSync(path.join(dir, 'z.zip'))), 'z.zip') : null;
+  ck('zip -9: the deflated entry inflates byte for byte', !!arc && Buffer.from(arc.packs[0].bytes).toString('utf8') === body);
+  fs.rmSync(dir, {recursive: true, force: true});
+});
+
 // ---- add new sections above this line ----
 (async () => {
   for (const [name, fn] of SECTIONS) {

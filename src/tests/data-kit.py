@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 FBDATA = os.path.join(ROOT, "tools", "data-kit", "fbdata.py")
@@ -152,6 +153,97 @@ shutil.rmtree(d)
 real = fbdata.load_registry(fbdata.DEFAULT_REGISTRY)
 ck("data/packs.json passes check_registry", isinstance(real, dict))
 ck("every real pack has a digest", all((p.get("digest") or "").startswith("sha256:") for p in real["packs"]))
+
+# ---------- the archive: pack and validate (spec §6)
+def bundles(d):
+    """bundles in d/dist matching d's registry, the way bundle-rules.js stamps them"""
+    for p in read_json(d, "data/packs.json")["packs"]:
+        b = {"system": p["system"], "name": p["title"], "version": 1, "rulebook": True,
+             "spells": [{"name": "S-" + p["system"]}]}
+        if p.get("version"):
+            b["dataVersion"] = p["version"]
+        write(d, "dist/" + p["file"], b)
+
+
+def pack(d, out, *extra):
+    return subprocess.run([sys.executable, FBDATA, "pack", os.path.join(d, "dist"), "-o", out,
+                           "--registry", os.path.join(d, "data", "packs.json"), "--built-for", "1.8.0"] + list(extra),
+                          capture_output=True, text=True)
+
+
+def validate(z):
+    return subprocess.run([sys.executable, FBDATA, "validate", z], capture_output=True, text=True)
+
+
+def rezip(src, dst, change=lambda n, b: b, add=()):
+    """copy an archive, letting change(name, bytes) return new bytes or None to drop the entry"""
+    with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zout:
+        for i in zin.infolist():
+            data = change(i.filename, zin.read(i.filename))
+            if data is not None:
+                zout.writestr(i.filename, data)
+        for name, data in add:
+            zout.writestr(name, data)
+
+
+d = scratch()
+reg = read_json(d, "data/packs.json")
+reg["packs"][1]["license"] = "CC-BY-SA-3.0"
+reg["packs"][1]["attribution"] = "Beta, by its authors."
+write(d, "data/packs.json", reg)
+bundles(d)
+z1, z2 = os.path.join(d, "one.zip"), os.path.join(d, "two.zip")
+r = pack(d, z1)
+pack(d, z2)
+ck("pack writes the archive", r.returncode == 0 and os.path.isfile(z1), r.stderr)
+with open(z1, "rb") as f1, open(z2, "rb") as f2:
+    ck("pack is reproducible: two runs, identical bytes", f1.read() == f2.read())
+with zipfile.ZipFile(z1) as z:
+    infos = z.infolist()
+    man = json.loads(z.read("fieldbook-data.json"))
+    notice = z.read("NOTICE.md").decode("utf-8")
+ck("entries are sorted by name",
+   [i.filename for i in infos] == sorted(["NOTICE.md", "alpha_full.json", "beta_full.json", "fieldbook-data.json"]),
+   [i.filename for i in infos])
+ck("every entry is deflated and dated 1980-01-01",
+   all(i.compress_type == zipfile.ZIP_DEFLATED and i.date_time == (1980, 1, 1, 0, 0, 0) for i in infos))
+ck("the manifest names the release and the app",
+   man["_type"] == "fieldbook-data" and man["format"] == 1 and man["version"] == "1.8.0" and man["builtFor"] == "1.8.0", man)
+ck("each manifest pack has file, system, version and sha256",
+   [(m["file"], m["system"], m.get("version")) for m in man["packs"]] == [("alpha_full.json", "Alpha", "1.8.0"), ("beta_full.json", "Beta", "1.7.0")]
+   and all(len(m["sha256"]) == 64 for m in man["packs"]), man["packs"])
+ck("the manifest has no top-level name, system or category keys", not ({"name", "system", "spells", "races"} & set(man)), list(man))
+ck("NOTICE.md carries the licensed pack's credit and licence", "Beta, by its authors." in notice and "Licence: CC-BY-SA-3.0." in notice, notice)
+ck("NOTICE.md says when a pack states no licence", "No licence statement." in notice, notice)
+r = validate(z1)
+ck("validate passes a fresh archive", r.returncode == 0, r.stderr)
+pack(d, z2, "--dev")
+with zipfile.ZipFile(z2) as z:
+    ck("--dev names the version <release>+dev", json.loads(z.read("fieldbook-data.json"))["version"] == "1.8.0+dev")
+ck("validate accepts +dev", validate(z2).returncode == 0, validate(z2).stderr)
+
+bad = os.path.join(d, "bad.zip")
+CASES = {
+    "an extra file": dict(add=[("extra.json", "{}")]),
+    "a missing pack": dict(change=lambda n, b: None if n == "beta_full.json" else b),
+    "a changed pack (sha256)": dict(change=lambda n, b: b.replace(b"S-Beta", b"S-Bet4") if n == "beta_full.json" else b),
+    "a system mismatch": dict(change=lambda n, b: b.replace(b'"Alpha"', b'"Other"') if n == "fieldbook-data.json" else b),
+    "a path that escapes": dict(add=[("../evil.json", "{}")]),
+    "a directory entry": dict(add=[("folder/", "")]),
+    "no manifest": dict(change=lambda n, b: None if n == "fieldbook-data.json" else b),
+}
+for label, kw in CASES.items():
+    rezip(z1, bad, **kw)
+    r = validate(bad)
+    ck("validate refuses %s" % label, r.returncode == 1 and r.stderr.strip() != "", (r.returncode, r.stderr))
+
+write(d, "dist/alpha_full.json", {"system": "Wrong", "dataVersion": "1.8.0"})
+r = pack(d, os.path.join(d, "x.zip"))
+ck("pack refuses a bundle whose system disagrees with the registry", r.returncode == 2 and "Wrong" in r.stderr, r.stderr)
+write(d, "dist/alpha_full.json", {"system": "Alpha", "dataVersion": "1.7.9"})
+r = pack(d, os.path.join(d, "x.zip"))
+ck("pack refuses a stale bundle", r.returncode == 2 and "rebuild" in r.stderr, r.stderr)
+shutil.rmtree(d)
 
 # ---- add new cases above this line ----
 print("")
