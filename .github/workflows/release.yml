@@ -11,6 +11,9 @@ name: Release
 # your eye locally; this workflow only PUBLISHES, and refuses to publish
 # anything it cannot independently reproduce from source.
 #
+# Assets: fieldbook.html, the app zip, and the rules-data archive
+# fieldbook-data-standalone-X.Y.Z.zip. Data-only releases are data-release.yml.
+#
 # workflow_dispatch re-publishes an existing tag — for when an upload failed and
 # the release needs rebuilding, without cutting a new version.
 
@@ -73,6 +76,19 @@ jobs:
             exit 1
           fi
 
+      # release.js records every pack's version in data/packs.json and sets its
+      # release to the app version (#83). A tag cut without it would publish an
+      # archive named for the previous release.
+      - name: Verify data/packs.json is released at this tag
+        run: |
+          REL=$(node -e 'process.stdout.write(String(require("./data/packs.json").release||""))')
+          echo "tag=${{ steps.tag.outputs.version }}  data/packs.json release=$REL"
+          if [ "$REL" != "${{ steps.tag.outputs.version }}" ]; then
+            echo "::error::data/packs.json's release is $REL, not ${{ steps.tag.outputs.version }}."
+            echo "::error::Cut the release with ./build.sh --release <level>, which records the data versions."
+            exit 1
+          fi
+
       # Pending notes at a release tag mean the tag was not cut with --release:
       # those bullets are missing from the changelog, so the release notes would
       # be incomplete. It also makes build.sh name the zips "+dev", which would
@@ -95,9 +111,12 @@ jobs:
       - name: Tests
         run: ./src/tests/run.sh
 
-      # Build, validate and zip exactly as a local run would.
+      # Build, validate and zip exactly as a local run would. The zips need
+      # python3 (tools/data-kit/fbdata.py): the runner's own, named in the log.
       - name: Build
-        run: ./build.sh
+        run: |
+          python3 --version
+          ./build.sh
 
       # The proof that what we publish is what the source says. dist/fieldbook.html
       # is tracked, so a clean rebuild must reproduce it byte for byte; a diff here
@@ -119,65 +138,20 @@ jobs:
           fi
 
       - name: Collect release notes
-        id: notes
         run: |
           V="${{ steps.tag.outputs.version }}"
-          TAG="${{ steps.tag.outputs.tag }}"
           node scripts/release-notes.js "$V" > /tmp/notes.md
-
-          # Tell players WHAT to download. Most releases change the app but not
-          # the rules data, and re-importing packs is the tedious part — so say
-          # plainly when they can skip it. Per system, because a D&D-only player
-          # should not be sent to re-import Humblewood.
-          PREV=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname \
-                 | grep -vx "$TAG" | head -1 || true)
-          CHANGED=""
-          note_changed() {                        # append `name` to a comma list
-            [ -n "$CHANGED" ] && CHANGED="$CHANGED, "
-            CHANGED="$CHANGED\`$1\`"
-          }
-          if [ -n "$PREV" ]; then
-            git diff --quiet "$PREV" "$TAG" -- data/5e2024     || note_changed 5e2024_full.json
-            git diff --quiet "$PREV" "$TAG" -- data/humblewood || note_changed humblewood_full.json
-            git diff --quiet "$PREV" "$TAG" -- data/xanathars  || note_changed xanathars_full.json
-            git diff --quiet "$PREV" "$TAG" -- data/tashas     || note_changed tashas_full.json
-            git diff --quiet "$PREV" "$TAG" -- data/homebrew   || note_changed homebrew_full.json
-          fi
-          {
-            echo
-            echo "---"
-            echo
-            echo "**Just want the app?** Download \`fieldbook.html\` and open it — that is the whole thing."
-            if [ -z "$PREV" ]; then
-              echo
-              echo "Take the rules data too: \`5e2024_full.json\`, \`humblewood_full.json\`,"
-              echo "\`xanathars_full.json\`, \`tashas_full.json\` and \`homebrew_full.json\`,"
-              echo "or \`fieldbook-v$V.zip\` for everything in one download."
-            elif [ -z "$CHANGED" ]; then
-              echo
-              echo "**The rules data has not changed since $PREV** — if you already have it loaded,"
-              echo "you only need \`fieldbook.html\`. Your characters and rules packs are untouched."
-            else
-              echo
-              echo "**Updated rules data:** $CHANGED."
-              echo "Re-import those from Settings → Rules data after updating the app."
-              echo "Packs that are not listed have not changed — no need to re-import them."
-            fi
-          } >> /tmp/notes.md
+          # What to download, and which rules packs changed — from data/packs.json,
+          # where release.js recorded each pack's version (#83).
+          node scripts/data-release-notes.js "$V" --app >> /tmp/notes.md
           echo "Release body:"; cat /tmp/notes.md
 
       - name: Check the assets exist
         run: |
           V="${{ steps.tag.outputs.version }}"
-          for f in dist/fieldbook.html \
-                   "dist/fieldbook-v$V.zip" \
-                   dist/5e2024_full.json \
-                   dist/humblewood_full.json \
-                   dist/xanathars_full.json \
-                   dist/tashas_full.json \
-                   dist/homebrew_full.json; do
+          for f in dist/fieldbook.html "dist/fieldbook-v$V.zip" "dist/fieldbook-data-standalone-$V.zip"; do
             [ -s "$f" ] || { echo "::error::missing or empty asset: $f"; exit 1; }
-            printf '  %-42s %s\n' "$f" "$(du -h "$f" | cut -f1)"
+            printf '  %-46s %s\n' "$f" "$(du -h "$f" | cut -f1)"
           done
 
       # `gh` ships on the runner, so this needs no third-party action — one less
@@ -192,11 +166,7 @@ jobs:
           # "(tar.gz)" to every release itself, from the tag.
           ASSETS=(dist/fieldbook.html
                   "dist/fieldbook-v$V.zip"
-                  dist/5e2024_full.json
-                  dist/humblewood_full.json
-                  dist/xanathars_full.json
-                  dist/tashas_full.json
-                  dist/homebrew_full.json)
+                  "dist/fieldbook-data-standalone-$V.zip")
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists — updating notes and re-uploading assets."
             gh release edit "$TAG" --title "Fieldbook $TAG" --notes-file /tmp/notes.md

@@ -245,6 +245,107 @@ r = pack(d, os.path.join(d, "x.zip"))
 ck("pack refuses a stale bundle", r.returncode == 2 and "rebuild" in r.stderr, r.stderr)
 shutil.rmtree(d)
 
+# ---------- the release scripts, in a scratch git checkout (never this one)
+def git(d, *args):
+    return subprocess.run(["git", "-C", d, "-c", "user.name=t", "-c", "user.email=t@example.com"] + list(args),
+                          capture_output=True, text=True)
+
+
+def node(d, *args):
+    return subprocess.run(["node"] + list(args), cwd=d, capture_output=True, text=True)
+
+
+def checkout(app="1.8.0", release="1.8.0"):
+    """a scratch repo laid out like this one: the scripts, the kit, 30-version.js,
+    the notebook and data/, digests seeded, everything committed"""
+    d = scratch()
+    for rel in ("scripts/data-release.js", "scripts/data-release-notes.js", "scripts/release.js", "tools/data-kit/fbdata.py"):
+        os.makedirs(os.path.dirname(os.path.join(d, rel)), exist_ok=True)
+        shutil.copy(os.path.join(ROOT, rel), os.path.join(d, rel))
+    write(d, "src/js/30-version.js", raw='const APP_VERSION="%s";\nconst DATA_VERSIONS={"Alpha":"1.8.0","Beta":"1.7.0"};\n'
+                                        'const CHANGELOG=[\n  {v:"%s", date:"2026-10-07", notes:["x"]}\n];\n' % (app, app))
+    write(d, "src/docs/UNRELEASED.md", raw="# Notebook\n\n## Pending\n\n- A change a player can see.\n")
+    reg = read_json(d, "data/packs.json")
+    reg["release"] = release
+    write(d, "data/packs.json", reg)
+    subprocess.run([sys.executable, os.path.join(d, "tools/data-kit/fbdata.py"), "versions", "--seed"], capture_output=True)
+    git(d, "init", "-q")
+    git(d, "add", "-A")
+    git(d, "commit", "-qm", "start")
+    return d
+
+
+d = checkout()
+r = node(d, "scripts/data-release.js")
+ck("data-release refuses when nothing changed", r.returncode == 1 and "nothing to release" in r.stderr, r.stderr)
+write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 5}]})
+r = node(d, "scripts/data-release.js")
+ck("data-release refuses uncommitted data", r.returncode == 1 and "uncommitted" in r.stderr, r.stderr)
+git(d, "commit", "-qam", "change alpha")
+before = read_json(d, "data/packs.json")
+r = node(d, "scripts/data-release.js", "--dry-run")
+ck("--dry-run names the release and the pack, and writes nothing",
+   r.returncode == 0 and "1.8.0-1" in r.stdout and "Alpha" in r.stdout and read_json(d, "data/packs.json") == before,
+   (r.stdout, r.stderr))
+r = node(d, "scripts/data-release.js")
+reg = read_json(d, "data/packs.json")
+ck("a data release bumps only the changed pack to 1.8.0-1",
+   r.returncode == 0 and reg["release"] == "1.8.0-1" and reg["packs"][0]["version"] == "1.8.0-1"
+   and reg["packs"][1]["version"] == "1.7.0", (reg, r.stderr))
+ck("...prints the commands, and runs none of them",
+   "git tag -a data-v1.8.0-1" in r.stdout and git(d, "tag", "-l").stdout.strip() == "", r.stdout)
+with open(os.path.join(d, "src/js/30-version.js"), encoding="utf-8") as f:
+    v = f.read()
+ck("...and never touches 30-version.js", 'APP_VERSION="1.8.0"' in v and '"Alpha":"1.8.0"' in v, v[:200])
+git(d, "commit", "-qam", "Data release 1.8.0-1")
+write(d, "data/beta/feats.json", {"system": "Beta", "feats": [{"name": "Tougher"}]})
+git(d, "commit", "-qam", "change beta")
+git(d, "tag", "data-v1.8.0-2")
+r = node(d, "scripts/data-release.js")
+ck("data-release refuses a tag that already exists", r.returncode == 1 and "already exists" in r.stderr, r.stderr)
+git(d, "tag", "-d", "data-v1.8.0-2")
+r = node(d, "scripts/data-release.js")
+ck("the one after 1.8.0-1 is 1.8.0-2", r.returncode == 0 and read_json(d, "data/packs.json")["release"] == "1.8.0-2", r.stderr)
+shutil.rmtree(d)
+
+d = checkout(release="1.7.2")
+write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 5}]})
+git(d, "commit", "-qam", "change")
+r = node(d, "scripts/data-release.js")
+ck("data-release refuses a release that belongs to another app version", r.returncode == 1 and "doesn't belong" in r.stderr, r.stderr)
+shutil.rmtree(d)
+
+d = checkout()
+write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 6}]})
+r = node(d, "scripts/release.js", "1.9.0")
+reg = read_json(d, "data/packs.json")
+with open(os.path.join(d, "src/js/30-version.js"), encoding="utf-8") as f:
+    v = f.read()
+ck("release.js bumps the changed pack to the new app version",
+   r.returncode == 0 and reg["release"] == "1.9.0" and reg["packs"][0]["version"] == "1.9.0" and reg["packs"][1]["version"] == "1.7.0",
+   (r.stderr, reg))
+ck("...snapshots DATA_VERSIONS from the registry", 'const DATA_VERSIONS={"Alpha":"1.9.0","Beta":"1.7.0"}' in v, v[:200])
+ck("...and still bumps APP_VERSION", 'APP_VERSION="1.9.0"' in v)
+shutil.rmtree(d)
+
+d = checkout()
+reg = read_json(d, "data/packs.json")
+reg["release"] = "1.8.0-1"
+reg["packs"][0]["version"] = "1.8.0-1"
+write(d, "data/packs.json", reg)
+r = node(d, "scripts/data-release-notes.js", "1.8.0-1", "--data")
+ck("data notes: for this app and later, what changed, how to import, and the older-app fallback",
+   r.returncode == 0 and "Rules data 1.8.0-1, for Fieldbook 1.8.0 and later" in r.stdout and "Alpha (v1.8.0-1)" in r.stdout
+   and "fieldbook-data-standalone-1.8.0-1.zip" in r.stdout and "unzip it" in r.stdout, r.stdout)
+r = node(d, "scripts/data-release-notes.js", "1.8.0-1", "--app")
+ck("app notes: the archive to download, and what changed",
+   r.returncode == 0 and "fieldbook-data-standalone-1.8.0-1.zip" in r.stdout and "Changed in this release: Alpha (v1.8.0-1)" in r.stdout,
+   r.stdout)
+r = node(d, "scripts/data-release-notes.js", "1.9.0", "--app")
+ck("app notes when no pack changed say only the app is needed", "has not changed" in r.stdout, r.stdout)
+ck("bad arguments exit 1", node(d, "scripts/data-release-notes.js", "1.9", "--app").returncode == 1)
+shutil.rmtree(d)
+
 # ---- add new cases above this line ----
 print("")
 print(("FAILURES: " + ", ".join(FAILED)) if FAILED else "ALL PASSED (%d)" % TOTAL[0])

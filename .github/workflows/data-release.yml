@@ -1,0 +1,133 @@
+name: Data release
+
+# Publishes a DATA-only release (#83): rules data with no app change. Triggered
+# by pushing an annotated tag that scripts/data-release.js prepared:
+#
+#   node scripts/data-release.js       # bumps data/packs.json to X.Y.Z-N
+#   git add data/packs.json && git commit -m "Data release X.Y.Z-N"
+#   git tag -a data-vX.Y.Z-N -m "Fieldbook data X.Y.Z-N"
+#   git push && git push origin data-vX.Y.Z-N
+#
+# A data release is NEVER GitHub's "latest". Every installed copy of Fieldbook
+# finds app updates through /releases/latest, so a data release there would
+# hide them — the last step checks, and repairs it if it ever happens.
+# Spec: src/docs/specs/2026-10-07-data-archive-design.md §8.2.
+
+on:
+  push:
+    tags: ["data-v[0-9]+.[0-9]+.[0-9]+-[0-9]+"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing data tag to (re)publish, e.g. data-v1.8.0-1"
+        required: true
+        type: string
+
+permissions:
+  contents: write        # create the release and upload the archive
+
+concurrency:
+  group: data-release-${{ github.event.inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          if ! printf '%s' "$TAG" | grep -Eq '^data-v[0-9]+\.[0-9]+\.[0-9]+-[1-9][0-9]*$'; then
+            echo "::error::'$TAG' is not a data-vX.Y.Z-N tag"; exit 1
+          fi
+          V="${TAG#data-v}"
+          echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
+          echo "version=$V"       >> "$GITHUB_OUTPUT"
+          echo "base=${V%-*}"     >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Verify data/packs.json is released at this tag
+        run: |
+          REL=$(node -e 'process.stdout.write(String(require("./data/packs.json").release||""))')
+          echo "tag=${{ steps.tag.outputs.version }}  data/packs.json release=$REL"
+          if [ "$REL" != "${{ steps.tag.outputs.version }}" ]; then
+            echo "::error::data/packs.json's release is $REL, not ${{ steps.tag.outputs.version }}."
+            echo "::error::Prepare it with node scripts/data-release.js and commit data/packs.json before tagging."
+            exit 1
+          fi
+
+      - name: Verify the data is for the current app
+        run: |
+          APP=$(grep -oE 'APP_VERSION="[^"]+"' src/js/30-version.js | head -1 | cut -d'"' -f2)
+          echo "data base=${{ steps.tag.outputs.base }}  APP_VERSION=$APP"
+          if [ "$APP" != "${{ steps.tag.outputs.base }}" ]; then
+            echo "::error::Data ${{ steps.tag.outputs.version }} is for app ${{ steps.tag.outputs.base }}, but APP_VERSION here is $APP."
+            exit 1
+          fi
+
+      - name: Verify the recorded digests are current
+        run: |
+          python3 --version
+          if ! python3 tools/data-kit/fbdata.py versions --check; then
+            echo "::error::A pack changed after data/packs.json was bumped. Run node scripts/data-release.js again on the committed data."
+            exit 1
+          fi
+
+      - name: Tests
+        run: ./src/tests/run.sh
+
+      - name: Build the archive
+        run: ./build.sh --data
+
+      - name: Validate the archive
+        run: |
+          Z="dist/fieldbook-data-standalone-${{ steps.tag.outputs.version }}.zip"
+          [ -s "$Z" ] || { echo "::error::missing or empty asset: $Z"; exit 1; }
+          python3 tools/data-kit/fbdata.py validate "$Z"
+
+      - name: Collect release notes
+        run: |
+          node scripts/data-release-notes.js "${{ steps.tag.outputs.version }}" --data > /tmp/notes.md
+          echo "Release body:"; cat /tmp/notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          V="${{ steps.tag.outputs.version }}"
+          TAG="${{ steps.tag.outputs.tag }}"
+          Z="dist/fieldbook-data-standalone-$V.zip"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists — updating notes and re-uploading the archive."
+            gh release edit "$TAG" --title "Fieldbook data $V" --notes-file /tmp/notes.md --latest=false
+            gh release upload "$TAG" "$Z" --clobber
+          else
+            gh release create "$TAG" "$Z" --title "Fieldbook data $V" --notes-file /tmp/notes.md --latest=false
+          fi
+          echo "Published: $(gh release view "$TAG" --json url -q .url)"
+
+      # R9: if a data release ever ends up "latest", put the newest app release
+      # back, then fail so it is seen.
+      - name: Check an app release is still "latest"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST=$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name)
+          echo "latest release: $LATEST"
+          case "$LATEST" in
+            v[0-9]*) exit 0 ;;
+          esac
+          APPTAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
+          if [ -n "$APPTAG" ]; then gh release edit "$APPTAG" --latest; fi
+          echo "::error::$LATEST was the latest release, which hides app updates from every installed copy of Fieldbook."
+          echo "::error::Re-marked ${APPTAG:-(no app tag found)} as latest. Check the releases page."
+          exit 1
