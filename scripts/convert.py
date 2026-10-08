@@ -2504,6 +2504,7 @@ def srd_view(src, dst):
     tagfix = _srd_tag_renamer(renames)
     feats_all = (docs.get('feats.json') or ({}, ()))[0].get('feat') or []
     ref_feats, kept = [], {}
+    dropped, kept_names = set(), set()
     for rel, (d, keys) in docs.items():
         for k in keys:
             arr = d.get(k)
@@ -2513,6 +2514,11 @@ def srd_view(src, dst):
             for e in arr:
                 f = _srd_flag(e)
                 if not f:
+                    # a name the SRD doesn't publish — features are left out: their
+                    # names ("Spellcasting") repeat across classes the SRD keeps
+                    if k not in ('classFeature', 'subclassFeature') and e.get('name') \
+                            and str(e.get('source') or (e.get('inherits') or {}).get('source') or '').upper() in ('XPHB', 'XDMG'):
+                        dropped.add(str(e['name']).strip().lower())
                     continue
                 e = _map_strings(e, tagfix)
                 if isinstance(f, str):
@@ -2528,6 +2534,7 @@ def srd_view(src, dst):
                                     and str(x.get('source') or '').upper() == rsrc), None)
                         if hit and hit not in ref_feats:
                             ref_feats.append(hit)
+                kept_names.add(str(e.get('name') or '').strip().lower())
                 out.append(e)
             d[k] = out
             kept[rel + ':' + k] = len(out)
@@ -2555,12 +2562,41 @@ def srd_view(src, dst):
     fs = {e['name'] for e in (docs.get('feats.json') or ({}, ()))[0].get('feat', [])
           if str(e.get('category', '')) == 'FS'}
     return {'renames': renames, 'fighting_styles': fs, 'kept': kept,
-            'ref_feats': [x['name'] for x in ref_feats], 'nonsrd': set()}
+            'ref_feats': [x['name'] for x in ref_feats],
+            'nonsrd': (dropped - kept_names - {n.lower() for n in (x['name'] for x in ref_feats)}) | set(renames)}
+
+def _srd_leaks(packs, info):
+    """Names the SRD doesn't publish, found in the pack (spec §4): a record,
+    class or subclass NAMED as a non-SRD entry, or a renamed entry's OLD name
+    anywhere in the text. Record names are matched whole, never as substrings,
+    so "Aura of Protection" never trips on the feat Protection; old names are
+    distinctive enough ("Heward's Handy Haversack") to search for anywhere."""
+    bad = []
+    nonsrd = info.get('nonsrd') or set()
+    for f, obj in sorted(packs.items()):
+        for cat, arr in obj.items():
+            if not isinstance(arr, list):
+                continue
+            for r in arr:
+                if not isinstance(r, dict):
+                    continue
+                nm = str(r.get('name') or r.get('term') or '')
+                if nm.strip().lower() in nonsrd:
+                    bad.append('%s: %s %r is not in the SRD' % (f, cat, nm))
+                for sn in (r.get('subclasses') or {}):
+                    if sn.strip().lower() in nonsrd:
+                        bad.append('%s: subclass %r is not in the SRD' % (f, sn))
+    for f, obj in sorted(packs.items()):
+        text = json.dumps(obj, ensure_ascii=False).lower()
+        for old in sorted(info.get('renames') or {}):
+            if old in text:
+                bad.append('%s: %r, the old name of a renamed entry' % (f, old))
+    return bad
 
 def _srd_post(packs, a, info):
-    """After the pipeline, before anything is written: the corrections (Task 5)
-    and the leak scan (Task 3). Returns the errors; any error writes nothing."""
-    return []
+    """After the pipeline, before anything is written: the corrections (added
+    in Task 5) and the leak scan. Returns the errors; any error writes nothing."""
+    return _srd_leaks(packs, info)
 
 def _run_srd(a):
     """`srd`: the SRD 5.2 pack — the 2024 pipeline over srd_view(), then
@@ -2577,6 +2613,11 @@ def _run_srd(a):
                 print('  ERROR: ' + e)
             print('\n  %d ERROR(S) — nothing written to %s' % (len(errors), a.out))
             return 1
+        if getattr(a, 'excluded_out', None):
+            with open(a.excluded_out, 'w', encoding='utf-8') as fh:
+                json.dump({'nonsrd': sorted(info['nonsrd']), 'renamed': dict(sorted(info['renames'].items()))},
+                          fh, indent=1, ensure_ascii=False)
+                fh.write('\n')
         os.makedirs(a.out, exist_ok=True)
         for f, obj in packs.items():
             _write(obj, os.path.join(a.out, f))

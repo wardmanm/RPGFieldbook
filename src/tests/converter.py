@@ -1696,6 +1696,39 @@ with tempfile.TemporaryDirectory() as _td:
        {'Abacus', 'Psychic Blade'} <= {i['name'] for i in A('items-magic.json')['items']}
        and A('spells.json')['system'] == 'XPHB')
 
+# ---- #84: the leak scan — names the SRD doesn't publish
+fake = {'spells.json': {'spells': [{'name': 'Witch Bolt', 'text': 'x'}, {'name': 'Fireball', 'text': 'Aura of Protection.'}]},
+        'classes.json': {'classes': [{'name': 'Fighter', 'subclasses': {'Battle Master': {}}}]}}
+errs = C._srd_leaks(fake, {'nonsrd': {'witch bolt', 'protection', 'battle master'}, 'renames': {}})
+ck('#84 the leak scan names a non-SRD record and a non-SRD subclass',
+   len(errs) == 2 and any('Witch Bolt' in e for e in errs) and any('Battle Master' in e for e in errs), errs)
+ck('#84 ...but never matches a name inside other words ("Aura of Protection")',
+   not any('Protection' in e for e in errs), errs)
+errs = C._srd_leaks({'items.json': {'items': [{'name': 'Bag', 'description': "Like Heward's Handy Haversack."}]}},
+                    {'nonsrd': set(), 'renames': {"heward's handy haversack": 'Handy Haversack'}})
+ck('#84 the leak scan finds a renamed entry\'s old name anywhere in the text', len(errs) == 1 and 'haversack' in errs[0].lower(), errs)
+
+with tempfile.TemporaryDirectory() as _td:
+    dump, view, out, exl = (os.path.join(_td, x) for x in ('dump', 'view', 'out', 'excluded.json'))
+    _mini_dump(dump)
+    info = C.srd_view(dump, view)
+    ck('#84 nonsrd holds the dropped XPHB/XDMG names and the old names',
+       {'witch bolt', 'dueling', 'aasimar', 'farmer', 'psychic blade', 'parry', 'dazed', 'bastion',
+        "heward's handy haversack", "bigby's hand"} <= info['nonsrd'], sorted(info['nonsrd']))
+    ck('#84 ...but not a kept name, nor a feat a kept class references',
+       not ({'club', 'archery', 'blessed warrior', 'fireball'} & info['nonsrd']), sorted(info['nonsrd']))
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out, '--excluded-out', exl], capture_output=True, text=True)
+    ck('#84 a clean mini dump passes the scan, and --excluded-out is written',
+       r.returncode == 0 and json.load(open(exl))['renamed'] == {"bigby's hand": 'Arcane Hand', "heward's handy haversack": 'Handy Haversack'},
+       r.stdout[-400:])
+    sp = os.path.join(dump, 'spells', 'spells-xphb.json')
+    d = json.load(open(sp)); d['spell'][1]['entries'].append("Unlike Heward's Handy Haversack, this is fire.")
+    json.dump(d, open(sp, 'w'))
+    out2 = os.path.join(_td, 'out2')
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out2], capture_output=True, text=True)
+    ck('#84 a planted old name fails the run, says why, and writes nothing',
+       r.returncode == 1 and "heward's handy haversack" in r.stdout.lower() and not os.path.exists(out2), r.stdout[-400:])
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)
