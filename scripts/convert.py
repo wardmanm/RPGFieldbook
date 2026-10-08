@@ -233,6 +233,36 @@ def _formula_text(node):
 _SB_INDEX = None   # (items by (name, source), property names by abbreviation, mastery names,
                    #  itemEntry templates by (name, source))
 
+_FEAT_INDEX = {}   # feats by (lower name, SOURCE): a class feature's refFeat (#84)
+
+def load_feat_index(*paths):
+    """Feats from 5e-tools feat files, keyed (lower name, SOURCE)."""
+    out = {}
+    for p in paths:
+        if not p:
+            continue
+        for f in json.load(open(p, encoding='utf-8')).get('feat') or []:
+            if isinstance(f, dict) and f.get('name'):
+                out[(str(f['name']).lower(), str(f.get('source') or '').upper())] = f
+    return out
+
+def _ref_feats(node):
+    """(name, SOURCE) of every feat a class feature embeds by reference:
+    {"type": "refFeat", "feat": "Blessed Warrior|XPHB"}."""
+    out = []
+    def walk(n):
+        if isinstance(n, dict):
+            if n.get('type') == 'refFeat' and n.get('feat'):
+                nm, _, src = str(n['feat']).partition('|')
+                out.append((nm.strip(), (src or 'XPHB').strip().upper()))
+            for v in n.values():
+                walk(v)
+        elif isinstance(n, list):
+            for v in n:
+                walk(v)
+    walk(node)
+    return out
+
 @contextlib.contextmanager
 def statblock_ctx(index):
     """Set the run's item index (load_item_index()) for statblocks and for
@@ -739,6 +769,8 @@ def pick_2024_preferred(entries, name_key='name', shipped=None):
     The free 2024 subset is marked by EITHER flag: `srd52` (SRD 5.2) too. 5e-tools
     v2.36.1 moved the 2024 Cloak of Invisibility from basicRules2024 to srd52
     alone, and reading only the first flag dropped it from the pack.
+    A renamed entry's `srd52` is its SRD name (a string), and `is True` missed it:
+    Carrion Crawler Mucus and Lolth's Sting were absent (#84).
 
     `shipped` (items only): the (name, SOURCE) of everything the 2024 pack ships.
     A 2014 entry REPRINTED AS one of those is the same thing under an old name
@@ -746,7 +778,7 @@ def pick_2024_preferred(entries, name_key='name', shipped=None):
     so it is left out (#7). None leaves the backfill exactly as it was."""
     xphb = [e for e in entries if e.get('source') == 'XPHB']
     names = {e[name_key] for e in xphb}
-    two4 = [e for e in entries if (e.get('basicRules2024') is True or e.get('srd52') is True)
+    two4 = [e for e in entries if (e.get('basicRules2024') is True or bool(e.get('srd52')))
             and e[name_key] not in names]
     names |= {e[name_key] for e in two4}
     legacy = [e for e in entries if e.get('basicRules') is True and e[name_key] not in names
@@ -779,14 +811,18 @@ class Book:
                     supplement is 2014-era content sitting beside the 2024 rules.
     exclude_systems `excludeSystems` — character systems this pack's species must
                     not be offered to (see docs/rules-schema.md §1).
+    mode            "xphb" (the default run), "supplement" (has codes) or "srd".
+    fighting_styles the Fighting Style menu names this run offers; None = all.
     """
-    def __init__(self, codes=None, system='XPHB', names=None, note='', exclude_systems=None):
+    def __init__(self, codes=None, system='XPHB', names=None, note='', exclude_systems=None, mode=None, fighting_styles=None):
         self.codes = tuple(codes or ())
         self.system = system
         self.names = dict(_XPHB_NAMES)
         self.names.update(names or {})
         self.note = note or ''
         self.exclude_systems = tuple(exclude_systems or ())
+        self.mode = mode or ('supplement' if self.codes else 'xphb')
+        self.fighting_styles = set(fighting_styles) if fighting_styles is not None else None
 
     @property
     def is_default(self):
@@ -1060,7 +1096,7 @@ def _shipped_2024():
     items-base.json, so one file alone cannot see it."""
     idx = _SB_INDEX[0] if _SB_INDEX else {}
     return {k for k, e in idx.items()
-            if e.get('source') == 'XPHB' or e.get('basicRules2024') is True or e.get('srd52') is True}
+            if e.get('source') == 'XPHB' or e.get('basicRules2024') is True or bool(e.get('srd52'))}
 
 def convert_items(path, overlay=None, tables=None, book=None, **_):
     d = json.load(open(path, encoding='utf-8'))
@@ -1209,7 +1245,7 @@ def _variant_selected(v, book):
     inh = v.get('inherits') or {}
     b = _bk(book)
     if b.is_default:
-        return inh.get('source') == 'XPHB' or inh.get('basicRules2024') is True or inh.get('srd52') is True
+        return inh.get('source') == 'XPHB' or inh.get('basicRules2024') is True or bool(inh.get('srd52'))
     return inh.get('source') in set(b.codes)
 
 def convert_ammo_variants(path, tables=None, book=None):
@@ -1737,7 +1773,19 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
             # a 2014-era class would print 2024 text where that book's own list
             # belongs — and it would read perfectly, which is what makes it dangerous.
             if name == 'Fighting Style' and bk.is_default:
-                fs = [apply_overlay(o['name'], dict(o), overlay) for o in (dict(x) for x in FIGHTING_STYLES)]
+                allowed = bk.fighting_styles
+                fs = [apply_overlay(o['name'], dict(o), overlay) for o in FIGHTING_STYLES
+                      if allowed is None or o['name'] in allowed]
+                # The Paladin's and Ranger's own option ("Instead of choosing one of
+                # those feats, you can choose the option below"): the menu above
+                # replaced the feature, so it was never offered (#84, R4).
+                cf = cfidx.get((name.lower(), fsrc, lvl, cn.lower())) or cfidx.get((name.lower(), src, lvl, cn.lower()))
+                for rnm, rsrc in _ref_feats((cf or {}).get('entries')):
+                    ft = _FEAT_INDEX.get((rnm.lower(), rsrc))
+                    if ft:
+                        with table_ctx(tables, entry['name'], 'class'):
+                            fs.append(apply_overlay(ft['name'], {'name': ft['name'],
+                                                'description': flatten(ft.get('entries', []))}, overlay))
                 addchoice(lvl, {'type': 'option', 'label': 'Choose a Fighting Style', 'choose': 1, 'from': fs}); continue
             cf = cfidx.get((name.lower(), fsrc, lvl, cn.lower())) or cfidx.get((name.lower(), src, lvl, cn.lower()))
             if not cf: continue
@@ -1990,6 +2038,12 @@ def _render_optfeat_prereq(pr):
         if block.get('pact'):
             parts.append('Pact of the %s' % block['pact'])
         for s in block.get('spell') or []:
+            if isinstance(s, dict):
+                # a choice, which the dump words itself ("a Warlock Cantrip That
+                # Deals Damage"); str() printed the whole dict into three
+                # Warlock invocations (#84)
+                parts.append(strip_tags(str(s.get('entry') or s.get('entrySummary') or '')))
+                continue
             nm = str(s).split('#')
             parts.append(nm[0].title() + (' cantrip' if len(nm) > 1 and nm[1] == 'c' else ' spell'))
         for it in block.get('item') or []:
@@ -2635,8 +2689,9 @@ def main():
 
         tbls = []       # every converter lifts its tables into this one pack
         # items an entry embeds as a statblock (the Soulknife's Psychic Blade)
-        global _SB_INDEX
+        global _SB_INDEX, _FEAT_INDEX
         _SB_INDEX = load_item_index(*(find('items-base*.json')[:1] + find('items.json')[:1]))
+        _FEAT_INDEX = load_feat_index(*(find('feats.json')[:1] + find('srd-ref-feats.json')[:1]))
         cond = need('conditions', '*condition*.json', 'conditionsdiseases.json')
         if cond: _write(convert_conditions(cond[0], tables=tbls), os.path.join(outdir, 'conditions.json'))
         gloss = need('glossary', '*variantrule*.json', 'variantrules.json')

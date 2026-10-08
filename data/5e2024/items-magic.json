@@ -830,6 +830,16 @@
       "effects": []
     },
     {
+      "name": "Carrion Crawler Mucus",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "200 gp",
+      "description": "A creature subjected to Carrion Crawler Mucus must succeed on a DC 13 Constitution saving throw or have the Poisoned condition for 1 minute. The creature also has the Paralyzed condition while Poisoned in this way. The creature repeats the save at the end of each of its turns, ending the effect on itself on a success",
+      "effects": []
+    },
+    {
       "name": "Cart",
       "system": "XPHB",
       "category": "Vehicle",
@@ -2467,6 +2477,16 @@
       "weight": 1,
       "cost": "10 gp",
       "description": "A Lock comes with a key. Without the key, a creature can use Thieves' Tools to pick this Lock with a successful DC 15 Dexterity (Sleight of Hand) check",
+      "effects": []
+    },
+    {
+      "name": "Lolth's Sting",
+      "system": "XPHB",
+      "category": "Gear",
+      "type": "Adventuring Gear",
+      "rarity": "Mundane",
+      "cost": "200 gp",
+      "description": "A creature subjected to Lolth's Sting must succeed on a DC 13 Constitution saving throw or have the Poisoned condition for 1 hour. If the creature fails the save by 5 or more, the creature also has the Unconscious condition while Poisoned in this way. The creature wakes up if it takes damage or if another creature takes an action to shake it awake",
       "effects": []
     },
     {

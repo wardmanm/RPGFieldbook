@@ -933,6 +933,23 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
      JSON.stringify(pack.excludeSystems) === JSON.stringify(['humblewood']), pack.excludeSystems);
 });
 
+// ---------- #84: three converter fixes that landed in the 2024 pack
+{
+  const mi = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', '5e2024', 'items-magic.json'), 'utf8')).items.map(i => i.name);
+  ck('#84 the 2024 pack has the two items a rename flag used to drop',
+     mi.includes('Carrion Crawler Mucus') && mi.includes("Lolth's Sting"));
+  ['5e2024'].forEach(d => fs.readdirSync(path.join(ROOT, 'data', d)).filter(f => f.endsWith('.json')).forEach(f => {
+    const t = fs.readFileSync(path.join(ROOT, 'data', d, f), 'utf8');
+    ck('#84 no Python dict repr in ' + d + '/' + f, !t.includes("{'"), (t.match(/.{30}\{'.{30}/) || [])[0]);
+  }));
+  const cls = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', '5e2024', 'classes.json'), 'utf8')).classes;
+  const menu = (c, lv) => ((cls.find(x => x.name === c).levels[lv] || {}).choices || [])
+    .filter(ch => ch.label === 'Choose a Fighting Style').map(ch => ch.from.map(o => o.name))[0] || [];
+  ck('#84 R4 the Paladin may take Blessed Warrior', menu('Paladin', '2').includes('Blessed Warrior'), menu('Paladin', '2'));
+  ck('#84 R4 the Ranger may take Druidic Warrior', menu('Ranger', '2').includes('Druidic Warrior'), menu('Ranger', '2'));
+  ck('#84 R4 the Fighter\'s menu is unchanged (ten styles)', menu('Fighter', '1').length === 10, menu('Fighter', '1'));
+}
+
 // ---------- Settings modal: collapsible sections
 // The state is stored as COLLAPSE, so an untouched section falls through to the
 // first-run default. That is what lets those defaults be changed later without

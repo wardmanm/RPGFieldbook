@@ -1537,6 +1537,53 @@ ck('#7 a variant that is not ammunition is never expanded onto a piece', not any
 ck('#7 a variant template the variant cannot fill stays as written',
    C._fill_variant(['A {=bonusWeapon} b {=nope}'], {'bonusWeapon': '+2'}, 'Test') == ['A +2 b {=nope}'])
 
+# ---- #84 decision 1: a rename-flagged entry is still flagged
+ents = [{"name": "Lolth's Sting", "source": "XDMG", "srd52": "Spider's Sting"},
+        {"name": "Plain", "source": "XDMG"}]
+ck('#84 pick_2024_preferred keeps an entry whose srd52 is a rename',
+   [e['name'] for e in C.pick_2024_preferred(ents)] == ["Lolth's Sting"])
+ck('#84 _variant_selected reads a rename flag on inherits',
+   C._variant_selected({"inherits": {"source": "XDMG", "srd52": "New Name"}}, None) is True)
+
+# ---- #84 decision 1: a dict-shaped spell prerequisite renders its own words
+pr = [{"spell": [{"choose": "level=0|class=Warlock", "entry": "a Warlock Cantrip That Deals Damage",
+                  "entrySummary": "Warlock Cantrip That Deals Damage"}],
+       "level": {"level": 2, "class": {"name": "Warlock", "source": "XPHB"}}}]
+ck('#84 a choose-a-spell prerequisite renders its entry, never a dict',
+   C._render_optfeat_prereq(pr) == 'Level 2 Warlock and a Warlock Cantrip That Deals Damage',
+   C._render_optfeat_prereq(pr))
+
+# ---- #84 R4: the Fighting Style choice carries the class's own refFeat option
+import tempfile
+ck('#84 _ref_feats finds a refFeat however deep',
+   C._ref_feats(["x", {"type": "entries", "entries": [{"type": "refFeat", "feat": "Blessed Warrior|XPHB"}]}])
+   == [('Blessed Warrior', 'XPHB')])
+_pal = {"class": [{"name": "Paladin", "source": "XPHB", "hd": {"number": 1, "faces": 10},
+                   "proficiency": ["wis", "cha"], "classFeatures": ["Fighting Style|Paladin|XPHB|2"]}],
+        "classFeature": [{"name": "Fighting Style", "source": "XPHB", "className": "Paladin",
+                          "classSource": "XPHB", "level": 2,
+                          "entries": ["You gain a Fighting Style feat of your choice. Instead of choosing one of those feats, you can choose the option below.",
+                                      {"type": "entries", "entries": [{"type": "refFeat", "feat": "Blessed Warrior|XPHB"}]}]}]}
+with tempfile.TemporaryDirectory() as _td:
+    _pp = os.path.join(_td, 'class-paladin.json')
+    json.dump(_pal, open(_pp, 'w', encoding='utf-8'))
+    _saved = C._FEAT_INDEX
+    C._FEAT_INDEX = {('blessed warrior', 'XPHB'): {"name": "Blessed Warrior", "source": "XPHB",
+                                                    "entries": ["You learn two Cleric cantrips of your choice."]}}
+    try:
+        _cl = C.convert_classes([_pp], book=C.Book(fighting_styles={'Archery', 'Defense'}))['classes'][0]
+        _menu = [ch for ch in _cl['levels']['2']['choices'] if ch.get('label') == 'Choose a Fighting Style'][0]
+        ck('#84 R4 the menu is filtered to the Book\'s styles, then the refFeat option follows',
+           [o['name'] for o in _menu['from']] == ['Archery', 'Defense', 'Blessed Warrior'], [o['name'] for o in _menu['from']])
+        ck('#84 R4 the option carries the feat\'s text',
+           _menu['from'][-1]['description'] == 'You learn two Cleric cantrips of your choice.', _menu['from'][-1])
+        _cl2 = C.convert_classes([_pp])['classes'][0]
+        _menu2 = [ch for ch in _cl2['levels']['2']['choices'] if ch.get('label') == 'Choose a Fighting Style'][0]
+        ck('#84 R4 with no filter the full ten-style menu stays, plus the option',
+           len(_menu2['from']) == len(C.FIGHTING_STYLES) + 1 and _menu2['from'][-1]['name'] == 'Blessed Warrior')
+    finally:
+        C._FEAT_INDEX = _saved
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

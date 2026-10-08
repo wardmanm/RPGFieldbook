@@ -186,7 +186,7 @@
     {
       "name": "Agonizing Blast",
       "source": "Eldritch Invocation",
-      "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip."
+      "description": "Prerequisite: Level 2 Warlock and a Warlock Cantrip That Deals Damage\nChoose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip."
     },
     {
       "name": "Armor of Shadows",
@@ -221,7 +221,7 @@
     {
       "name": "Eldritch Spear",
       "source": "Eldritch Invocation",
-      "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': 'A Warlock Cantrip That Deals Damage', 'Entrysummary': 'Warlock Cantrip That Deals Damage'} spell\nChoose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip."
+      "description": "Prerequisite: Level 2 Warlock and a Warlock Cantrip That Deals Damage\nChoose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip."
     },
     {
       "name": "Fiendish Vigor",
@@ -301,7 +301,7 @@
     {
       "name": "Repelling Blast",
       "source": "Eldritch Invocation",
-      "description": "Prerequisite: Level 2 Warlock and {'Choose': 'Level=0|Class=Warlock|Spell Attack=M;R;O', 'Entry': 'A Warlock Cantrip That Deals Damage Via An Attack Roll', 'Entrysummary': 'Warlock Cantrip That Deals Damage Via An Attack Roll'} spell\nChoose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip."
+      "description": "Prerequisite: Level 2 Warlock and a Warlock Cantrip That Deals Damage via an Attack Roll\nChoose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you.\nRepeatable: You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip."
     },
     {
       "name": "Thirsting Blade",
