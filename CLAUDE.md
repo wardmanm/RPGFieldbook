@@ -64,9 +64,11 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
 
 ## Build, test, QA — build freely, never release
 
-- **Tests: `./src/tests/run.sh`** (across nine suites). `humblewood-verbatim` needs PyMuPDF and the
+- **Tests: `./src/tests/run.sh`** (across ten suites). `humblewood-verbatim` needs PyMuPDF and the
   PDFs, so under the system `python3` it skips cleanly; run it directly with
-  `.venv/bin/python src/tests/humblewood-verbatim.py`. Safe to run unprompted — they touch no tracked file. Run them after any
+  `.venv/bin/python src/tests/humblewood-verbatim.py`. `srd-verbatim` likewise needs PyMuPDF and the
+  SRD PDF in `_conversion-data/srd52/`; run it with `.venv/bin/python src/tests/srd-verbatim.py`.
+  Safe to run unprompted — they touch no tracked file. Run them after any
   change to `src/`, `scripts/` or `data/`. For a pure function you touch, also write a throwaway Node
   check in the scratchpad. → [testing](src/docs/wiki/process/testing.md)
 - **Building to test is fine:** `./build.sh`, or `./build.sh --no-zip` for just the artifact (the

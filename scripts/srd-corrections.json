@@ -1,0 +1,1217 @@
+{
+  "_comment": "Hand-authored corrections for the SRD 5.2 pack (spec src/docs/specs/2026-10-08-srd-pack-design.md §5). convert.py srd applies, in order: `remove` (a whole record or table the SRD doesn't print), `global` whole-word swaps, then each `corrections` entry to the entry it names: a record by name, \"Owner/Trait\" for a class, subclass or species trait, \"table:Name\" for a table (a class record's name reaches everything under it, its subclasses and choices too). `find` is the pack's text after the global swaps; `replace` is the PDF's wording, or \"\" to remove. src/tests/srd-verbatim.py accepts each `accepted` span and finds each `aliases` entry under the SRD's own heading. Every correction and removal cites its page in SRD 5.2.1; `why` says why where the change alone doesn't.",
+  "global": [
+    {
+      "word": "DM",
+      "replace": "GM",
+      "why": "The SRD says \"GM\" (and \"GM's\") throughout and never \"DM\"; the 2024 books say \"DM\".",
+      "page": 111
+    }
+  ],
+  "remove": [
+    {
+      "entry": "table:Iron Flask Table",
+      "why": "the SRD prints no Iron Flask table (its creatures are not in the SRD)",
+      "page": 228
+    }
+  ],
+  "corrections": [
+    {
+      "entry": "Barbarian",
+      "find": "A fierce warrior who channels primal rage.",
+      "replace": "",
+      "page": 28,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Bard",
+      "find": "An inspiring magician whose power echoes the music of creation.",
+      "replace": "",
+      "page": 31,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Cleric",
+      "find": "A priestly champion who wields divine magic in service of a higher power.",
+      "replace": "",
+      "page": 36,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Druid",
+      "find": "A priest of the Old Faith, wielding the powers of nature.",
+      "replace": "",
+      "page": 41,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Fighter",
+      "find": "A master of martial combat, skilled with many weapons and armor.",
+      "replace": "",
+      "page": 47,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Monk",
+      "find": "A martial artist who harnesses the power of ki.",
+      "replace": "",
+      "page": 49,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Paladin",
+      "find": "A holy warrior bound to a sacred oath.",
+      "replace": "",
+      "page": 53,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Ranger",
+      "find": "A warrior of the wilds who blends martial skill with primal magic.",
+      "replace": "",
+      "page": 57,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Rogue",
+      "find": "A scoundrel who uses stealth and precision to overcome obstacles.",
+      "replace": "",
+      "page": 61,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Sorcerer",
+      "find": "A spellcaster who draws on inherent magic from a gift or bloodline.",
+      "replace": "",
+      "page": 64,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Warlock",
+      "find": "A wielder of magic derived from a bargain with an extraplanar entity.",
+      "replace": "",
+      "page": 70,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Wizard",
+      "find": "A scholarly magic-user capable of manipulating the structures of reality.",
+      "replace": "",
+      "page": 77,
+      "why": "convert.py's CLASS_BLURB one-liner (the 2014 Player's Handbook class-table summary); the SRD's class section opens with its Core Traits table and has no summary"
+    },
+    {
+      "entry": "Bard/Jack of All Trades",
+      "find": "\nA Bard's Repertoire: Does your Bard beat a drum while chanting the deeds of ancient heroes? Strum a lute while crooning romantic tunes? Perform arias of stirring power? Recite dramatic monologues from classic tragedies? Use the rhythm of a folk dance to coordinate the movement of allies in battle? Compose naughty limericks? When you play a Bard, consider the style of artistic performance you favor, the moods you might invoke, and the themes that inspire your own creations. Are your poems inspired by moments of natural beauty, or are they brooding reflections on loss? Do you prefer lofty hymns or rowdy tavern songs? Are you drawn to laments for the fallen or celebrations of joy? Do you dance merry jigs or perform elaborate interpretive choreography? Do you focus on one style of performance or strive to master them all?",
+      "replace": "",
+      "page": 32,
+      "why": "a sidebar of the 2024 book's; the SRD's feature ends after its example"
+    },
+    {
+      "entry": "Bard/Spellcasting",
+      "find": "See chapter 7 for the rules on spellcasting.",
+      "replace": "See \"Spells\" for the rules on spellcasting.",
+      "page": 32
+    },
+    {
+      "entry": "Cleric/Spellcasting",
+      "find": "See chapter 7 for the rules on spellcasting.",
+      "replace": "See \"Spells\" for the rules on spellcasting.",
+      "page": 36
+    },
+    {
+      "entry": "Druid/Spellcasting",
+      "find": "See chapter 7 for the rules on spellcasting.",
+      "replace": "See \"Spells\" for the rules on spellcasting.",
+      "page": 41
+    },
+    {
+      "entry": "Paladin/Spellcasting",
+      "find": "See chapter 7 for the rules on spellcasting.",
+      "replace": "See \"Spells\" for the rules on spellcasting.",
+      "page": 54
+    },
+    {
+      "entry": "Ranger/Spellcasting",
+      "find": "See chapter 7 for the rules on spellcasting.",
+      "replace": "See \"Spells\" for the rules on spellcasting.",
+      "page": 57
+    },
+    {
+      "entry": "Sorcerer/Spellcasting",
+      "find": "See chapter 7 for the rules on spellcasting.",
+      "replace": "See \"Spells\" for the rules on spellcasting.",
+      "page": 64
+    },
+    {
+      "entry": "Warlock/Pact Magic",
+      "find": "See chapter 7 for the rules on spellcasting.",
+      "replace": "See \"Spells\" for the rules on spellcasting.",
+      "page": 71
+    },
+    {
+      "entry": "Wizard/Spellcasting",
+      "find": "See chapter 7 for the rules on spellcasting.",
+      "replace": "See \"Spells\" for the rules on spellcasting.",
+      "page": 77
+    },
+    {
+      "entry": "Warlock/Pact Magic",
+      "find": "To cast the level 1 spell Witch Bolt,",
+      "replace": "To cast the level 1 spell Charm Person,",
+      "page": 71
+    },
+    {
+      "entry": "Druid/Wild Shape",
+      "find": "(see appendix B for stat block options)",
+      "replace": "(see \"Animals\" in \"Monsters\" for stat block options)",
+      "page": 42
+    },
+    {
+      "entry": "Druid/Wild Shape",
+      "find": "you may look in the Monster Manual or elsewhere for eligible Beasts if the Dungeon Master permits you to do so.",
+      "replace": "you may look in other sources for eligible Beasts if the Game Master permits you to do so.",
+      "page": 42
+    },
+    {
+      "entry": "Ranger/Deft Explorer",
+      "find": "from the language tables in chapter 2.",
+      "replace": "from the language tables in \"Character Creation.\"",
+      "page": 59
+    },
+    {
+      "entry": "Rogue/Thieves' Cant",
+      "find": "from the language tables in chapter 2.",
+      "replace": "from the language tables in \"Character Creation.\"",
+      "page": 62
+    },
+    {
+      "entry": "Pact of the Chain",
+      "find": "Skeleton, Slaad Tadpole, Sphinx of Wonder, Sprite, or Venomous Snake (see appendix B for the familiar's stat block).",
+      "replace": "Skeleton, Sphinx of Wonder, Sprite, or Venomous Snake (see \"Monsters\" for the familiar's stat block).",
+      "page": 74
+    },
+    {
+      "entry": "Warlock",
+      "find": "Skeleton, Slaad Tadpole, Sphinx of Wonder, Sprite, or Venomous Snake (see appendix B for the familiar's stat block).",
+      "replace": "Skeleton, Sphinx of Wonder, Sprite, or Venomous Snake (see \"Monsters\" for the familiar's stat block).",
+      "page": 74,
+      "why": "the same invocation, as the Warlock's level-by-level invocation choices carry it"
+    },
+    {
+      "entry": "Warlock",
+      "find": "You might forge a bargain with a demon lord such as Demogorgon or Orcus; an archdevil such as Asmodeus; or a pit fiend, balor, yugoloth, or night hag that is especially mighty.",
+      "replace": "You might forge a bargain with a demon lord, an archdevil, or another fiend that is especially mighty.",
+      "page": 76,
+      "why": "the Fiend Patron's opening, in both the subclass description and its level-3 feature"
+    },
+    {
+      "entry": "Sorcerer/Metamagic",
+      "find": "Because your magic flows from within you, you can alter your spells to suit your needs; you gain two Metamagic options of your choice from the \"Metamagic Options\" section later in this class's description.",
+      "replace": "Because your magic flows from within, you can alter your spells to suit your needs; you gain two Metamagic options of your choice from \"Metamagic Options\" later in this class's description.",
+      "page": 66,
+      "why": "the dump's level 10 and 17 Metamagic entries reword the level 2 feature's opening; the SRD has only the level 2 feature"
+    },
+    {
+      "entry": "Spell",
+      "find": "described in chapter 7.",
+      "replace": "described in \"Spells.\"",
+      "page": 188
+    },
+    {
+      "entry": "Hit Point Dice",
+      "find": "as explained in chapter 2.",
+      "replace": "as explained in \"Character Creation.\"",
+      "page": 183
+    },
+    {
+      "entry": "Initiative",
+      "find": "The combat rules in chapter 1 explain",
+      "replace": "The combat rules in \"Playing the Game\" explain",
+      "page": 184
+    },
+    {
+      "entry": "Challenge Rating",
+      "find": "The Dungeon Master's Guide provides guidance to the GM",
+      "replace": "\"Gameplay Toolbox\" (\"Combat Encounters\") provides guidance to the GM",
+      "page": 178
+    },
+    {
+      "entry": "Experience Points",
+      "find": "which are awarded by the Dungeon Master.",
+      "replace": "which are awarded by the Game Master.",
+      "page": 182
+    },
+    {
+      "entry": "Experience Points",
+      "find": " The Dungeon Master's Guide provides guidance on awarding XP.",
+      "replace": "",
+      "page": 182,
+      "why": "the SRD has no such sentence"
+    },
+    {
+      "entry": "Stat Block",
+      "find": "Med ium",
+      "replace": "Medium",
+      "page": 188,
+      "why": "a stray space in the dump"
+    },
+    {
+      "entry": "Stat Block",
+      "find": "which are detailed in chapter 1.",
+      "replace": "which are detailed in \"Playing the Game.\"",
+      "page": 188,
+      "why": "both places: AC, Initiative, and HP; Ability Scores"
+    },
+    {
+      "entry": "Stat Block",
+      "find": "is detailed in the Monster Manual.",
+      "replace": "is detailed in \"Monsters.\"",
+      "page": 189
+    },
+    {
+      "entry": "Passive Perception",
+      "find": "the score becomes 10 + 2 + 2 + 5.",
+      "replace": "the score becomes 19.",
+      "page": 186
+    },
+    {
+      "entry": "Awaken",
+      "find": "in the Monster Manual.",
+      "replace": "in \"Monsters.\"",
+      "page": 112
+    },
+    {
+      "entry": "Create Undead",
+      "find": "(see the Monster Manual for its stat block)",
+      "replace": "(see \"Monsters\" for its stat block)",
+      "page": 121
+    },
+    {
+      "entry": "Create Undead",
+      "find": "See the Monster Manual for these stat blocks.",
+      "replace": "See \"Monsters\" for these stat blocks.",
+      "page": 121
+    },
+    {
+      "entry": "Plane Shift",
+      "find": "such as the City of Brass on the Elemental Plane of Fire or the palace of Dispater on the second level of the Nine Hells",
+      "replace": "such as a specific city on the Elemental Plane of Fire or palace on the second level of the Nine Hells",
+      "page": 153
+    },
+    {
+      "entry": "Wish",
+      "find": "If your wish would undo the multiverse itself, threaten the City of Sigil, or affect the Lady of Pain in any way, you see an image of her in your mind for a moment; she shakes her head, and your wish fails.",
+      "replace": "If your wish would undo the multiverse itself, your wish fails.",
+      "page": 175
+    },
+    {
+      "entry": "Telekinesis",
+      "find": "such as manipulating a simple tool, opening a door or a container, stowing or retrieving an item from an open container, or pouring the contents from a vial.",
+      "replace": "such as manipulating a simple tool.",
+      "page": 168,
+      "why": "the SRD 5.2.1 PDF (and 5.2) breaks off after \"a simple tool,\" and the next spell begins; the rest is the 2024 book's. The sentence ends there, its comma a period"
+    },
+    {
+      "entry": "Amulet",
+      "find": "For an Amulet to be an effective Holy Symbol, it must be worn or held",
+      "replace": "",
+      "page": 97,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Emblem",
+      "find": "For an Emblem to be an effective Holy Symbol, it must be borne on fabric (such as a tabard or banner) or a Shield",
+      "replace": "",
+      "page": 97,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Reliquary",
+      "find": "For a Reliquary to be an effective Holy Symbol, it must be held",
+      "replace": "",
+      "page": 97,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Arrow",
+      "find": "Arrows are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nArrows are typically stored in a Quiver (bought separately)",
+      "replace": "",
+      "page": 94,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Arrows (20)",
+      "find": "Arrows are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nArrows are typically stored in a Quiver (bought separately)",
+      "replace": "",
+      "page": 94,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Bolt",
+      "find": "Crossbow bolts are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nBolts are typically stored in a Crossbow Bolt Case (bought separately)",
+      "replace": "",
+      "page": 94,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Bolts (20)",
+      "find": "Crossbow bolts are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nBolts are typically stored in a Crossbow Bolt Case (bought separately)",
+      "replace": "",
+      "page": 94,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Needle",
+      "find": "Blowgun needles are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nNeedles are typically stored in a Pouch (bought separately)",
+      "replace": "",
+      "page": 94,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Needles (50)",
+      "find": "Blowgun needles are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nNeedles are typically stored in a Pouch (bought separately)",
+      "replace": "",
+      "page": 94,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Sling Bullet",
+      "find": "Sling bullets are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nSling Bullets are typically stored in a Pouch (bought separately)",
+      "replace": "",
+      "page": 94,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Sling Bullets (20)",
+      "find": "Sling bullets are used with a weapon that has the ammunition property to make a ranged attack. Each time you attack with the weapon, you expend one piece of ammunition. Drawing the ammunition from a quiver, case, or other container is part of the attack (you need a free hand to load a one-handed weapon). At the end of the battle, you can recover half your expended ammunition by taking a minute to search the battlefield.\nSling Bullets are typically stored in a Pouch (bought separately)",
+      "replace": "",
+      "page": 94,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Firearm Bullet",
+      "find": "Firearm Bullets are destroyed upon use in a modern firearm",
+      "replace": "",
+      "page": 94,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Firearm Bullets (10)",
+      "find": "Firearm Bullets are destroyed upon use in a modern firearm",
+      "replace": "",
+      "page": 94,
+      "why": "5e-tools' own description; the SRD gives this item only a row in its table, as it does the Arcane Focus items, which the pack already ships with no description"
+    },
+    {
+      "entry": "Bedroll",
+      "find": "(see the Dungeon Master's Guide)",
+      "replace": "(see \"Gameplay Toolbox\")",
+      "page": 96
+    },
+    {
+      "entry": "Blanket",
+      "find": "(see the Dungeon Master's Guide)",
+      "replace": "(see \"Gameplay Toolbox\")",
+      "page": 96
+    },
+    {
+      "entry": "Lance",
+      "find": ". A Lance requires two hands to wield when you aren't mounted",
+      "replace": "",
+      "page": 91,
+      "why": "5e-tools' note on the Two-Handed (unless mounted) property; the SRD's Lance is a row in its Weapons table"
+    },
+    {
+      "entry": "Bag of Tricks, Gray",
+      "find": "See the Monster Manual for the creature's stat block.",
+      "replace": "See \"Monsters\" for the creature's stat block.",
+      "page": 212
+    },
+    {
+      "entry": "Bag of Tricks, Rust",
+      "find": "See the Monster Manual for the creature's stat block.",
+      "replace": "See \"Monsters\" for the creature's stat block.",
+      "page": 212
+    },
+    {
+      "entry": "Bag of Tricks, Tan",
+      "find": "See the Monster Manual for the creature's stat block.",
+      "replace": "See \"Monsters\" for the creature's stat block.",
+      "page": 212
+    },
+    {
+      "entry": "Dragon Orb",
+      "find": "Long ago, in the Dragonlance setting, elves and humans waged a terrible war against chromatic dragons. When the world seemed doomed, the wizards of the Towers of High Sorcery came together and forged five Orbs of Dragonkind to help defeat the dragons. One orb was taken to each of the five towers, and there they were used to speed the war toward a victorious end. The wizards used the orbs to lure dragons to them, then destroyed the dragons with powerful magic.\nAs the Towers of High Sorcery fell in later ages, the orbs were destroyed or faded into legend, and only three are thought to survive. Their magic has been warped over the centuries. Their primary purpose of calling dragons still functions, but they also allow some measure of control over dragons.\nEach orb contains the essence of an evil dragon, a presence that resents any attempt to coax magic from it. Those who try to wield an orb's magic but lack sufficient force of personality might find themselves under the orb's control.\n",
+      "replace": "",
+      "page": 218,
+      "why": "the 2024 book's Dragonlance history; the SRD's Dragon Orb starts at \"An orb is an etched crystal globe\""
+    },
+    {
+      "entry": "Dragon Orb",
+      "find": "Random Properties: An Dragon Orb has the following random properties: • 2 minor beneficial properties\n• 1 minor detrimental property\n• 1 major detrimental property\n",
+      "replace": "",
+      "page": 218,
+      "why": "the SRD gives the Dragon Orb no random properties"
+    },
+    {
+      "entry": "Dragon Orb",
+      "find": "An Dragon Orb has AC 20",
+      "replace": "A Dragon Orb has AC 20",
+      "page": 218,
+      "why": "the rename left \"An\" before \"Dragon Orb\""
+    },
+    {
+      "entry": "Mysterious Deck",
+      "find": "\nA Question of Enmity: Two of the cards in the Mysterious Deck can earn a character the enmity of another being. With the Flames card, the enmity is overt. The character should experience the devil's malevolent efforts on multiple occasions. Seeking out the fiend shouldn't be a simple task, and the adventurer should clash with the devil's allies and followers a few times before being able to confront the devil. In the case of the Rogue card, the enmity is secret and should come from someone thought to be a friend or an ally. As Dungeon Master, you should wait for a dramatically appropriate moment to reveal this enmity, leaving the adventurer guessing who is likely to become a betrayer.",
+      "replace": "",
+      "page": 231,
+      "why": "a sidebar of the 2024 book's for the Dungeon Master; the SRD has none"
+    },
+    {
+      "entry": "Mysterious Deck",
+      "find": " If you have a Bastion (see the Dungeon Master's Guide), it is destroyed by some calamity beyond your control.",
+      "replace": "",
+      "page": 232,
+      "why": "Bastions are not in the SRD"
+    },
+    {
+      "entry": "Dust of Dryness",
+      "find": "(such as a Water Elemental or a Water Weird)",
+      "replace": "(such as a Water Elemental)",
+      "page": 219
+    },
+    {
+      "entry": "Folding Boat",
+      "find": "appear in the Player's Handbook.",
+      "replace": "appear in \"Equipment.\"",
+      "page": 223
+    },
+    {
+      "entry": "Iron Flask",
+      "find": " or determined randomly by rolling on the following table (see the Monster Manual for the creature's stat block).\n[Table: Iron Flask Table]",
+      "replace": "",
+      "page": 228,
+      "why": "the SRD ends the sentence at \"chosen by the GM\" and prints no table"
+    },
+    {
+      "entry": "Gloves of Swimming and Climbing",
+      "find": "climbing and swimming don't cost you extra movement, and you gain",
+      "replace": "you have a Climb Speed and a Swim Speed equal to your Speed, and you gain",
+      "page": 224
+    },
+    {
+      "entry": "Manual of Bodily Health",
+      "find": "health and diet tips",
+      "replace": "health and nutrition tips",
+      "page": 229
+    },
+    {
+      "entry": "Manual of Clay Golems",
+      "find": "two 5th-level spell slots",
+      "replace": "two level 5 spell slots",
+      "page": 229
+    },
+    {
+      "entry": "Manual of Flesh Golems",
+      "find": "two 5th-level spell slots",
+      "replace": "two level 5 spell slots",
+      "page": 229
+    },
+    {
+      "entry": "Manual of Iron Golems",
+      "find": "two 5th-level spell slots",
+      "replace": "two level 5 spell slots",
+      "page": 229
+    },
+    {
+      "entry": "Manual of Stone Golems",
+      "find": "two 5th-level spell slots",
+      "replace": "two level 5 spell slots",
+      "page": 229
+    },
+    {
+      "entry": "Potion of Hill Giant Strength",
+      "find": "a sliver of fingernail from a hill giant",
+      "replace": "a sliver of light resembling a giant's fingernail",
+      "page": 235
+    },
+    {
+      "entry": "Potion of Frost Giant Strength",
+      "find": "a sliver of fingernail from a frost giant",
+      "replace": "a sliver of light resembling a giant's fingernail",
+      "page": 235
+    },
+    {
+      "entry": "Potion of Stone Giant Strength",
+      "find": "a sliver of fingernail from a stone giant",
+      "replace": "a sliver of light resembling a giant's fingernail",
+      "page": 235
+    },
+    {
+      "entry": "Potion of Fire Giant Strength",
+      "find": "a sliver of fingernail from a fire giant",
+      "replace": "a sliver of light resembling a giant's fingernail",
+      "page": 235
+    },
+    {
+      "entry": "Potion of Cloud Giant Strength",
+      "find": "a sliver of fingernail from a cloud giant",
+      "replace": "a sliver of light resembling a giant's fingernail",
+      "page": 235
+    },
+    {
+      "entry": "Potion of Storm Giant Strength",
+      "find": "a sliver of fingernail from a storm giant",
+      "replace": "a sliver of light resembling a giant's fingernail",
+      "page": 235
+    },
+    {
+      "entry": "Horn of Valhalla, Brass",
+      "find": "the summoned Berserkers attack you",
+      "replace": "the summoned spirits attack you",
+      "page": 226
+    },
+    {
+      "entry": "Horn of Valhalla, Bronze",
+      "find": "the summoned Berserkers attack you",
+      "replace": "the summoned spirits attack you",
+      "page": 226
+    },
+    {
+      "entry": "Horn of Valhalla, Iron",
+      "find": "the summoned Berserkers attack you",
+      "replace": "the summoned spirits attack you",
+      "page": 226
+    },
+    {
+      "entry": "Figurine of Wondrous Power, Bronze Griffon",
+      "find": "as specified below.",
+      "replace": "as specified in the figurine's description.",
+      "page": 222
+    },
+    {
+      "entry": "Figurine of Wondrous Power, Ebony Fly",
+      "find": "as specified below.",
+      "replace": "as specified in the figurine's description.",
+      "page": 222
+    },
+    {
+      "entry": "Figurine of Wondrous Power, Golden Lions",
+      "find": "as specified below.",
+      "replace": "as specified in the figurine's description.",
+      "page": 222
+    },
+    {
+      "entry": "Figurine of Wondrous Power, Ivory Goats",
+      "find": "as specified below.",
+      "replace": "as specified in the figurine's description.",
+      "page": 222
+    },
+    {
+      "entry": "Figurine of Wondrous Power, Marble Elephant",
+      "find": "as specified below.",
+      "replace": "as specified in the figurine's description.",
+      "page": 222
+    },
+    {
+      "entry": "Figurine of Wondrous Power, Obsidian Steed",
+      "find": "as specified below.",
+      "replace": "as specified in the figurine's description.",
+      "page": 222
+    },
+    {
+      "entry": "Figurine of Wondrous Power, Onyx Dog",
+      "find": "as specified below.",
+      "replace": "as specified in the figurine's description.",
+      "page": 222
+    },
+    {
+      "entry": "Figurine of Wondrous Power, Serpentine Owl",
+      "find": "as specified below.",
+      "replace": "as specified in the figurine's description.",
+      "page": 222
+    },
+    {
+      "entry": "Figurine of Wondrous Power, Silver Raven",
+      "find": "as specified below.",
+      "replace": "as specified in the figurine's description.",
+      "page": 222
+    },
+    {
+      "entry": "Dwarven Thrower",
+      "find": "It has Thrown with a normal range",
+      "replace": "It has the Thrown property with a normal range",
+      "page": 219,
+      "why": "5e-tools puts a property tag where the book says \"the ... property\", and the converter prints the tag's name"
+    },
+    {
+      "entry": "Quarterstaff of the Acrobat",
+      "find": "This weapon has Thrown with a normal range",
+      "replace": "This weapon has the Thrown property with a normal range",
+      "page": 237,
+      "why": "5e-tools puts a property tag where the book says \"the ... property\", and the converter prints the tag's name"
+    },
+    {
+      "entry": "Sun Blade",
+      "find": "functions as a Longsword with Finesse.",
+      "replace": "functions as a Longsword with the Finesse property.",
+      "page": 248,
+      "why": "5e-tools puts a property tag where the book says \"the ... property\", and the converter prints the tag's name"
+    },
+    {
+      "entry": "table:Reincarnate Table",
+      "find": "Aasimar",
+      "replace": "Roll again.",
+      "page": 158
+    },
+    {
+      "entry": "table:Deck of Illusions",
+      "find": "Beholder",
+      "replace": "Basilisk",
+      "page": 217
+    },
+    {
+      "entry": "table:Object Armor Class",
+      "find": "Adamantite",
+      "replace": "Adamantine",
+      "page": 178
+    },
+    {
+      "entry": "table:Carrying Capacity",
+      "find": "#$prompt_number:title=Enter Strength Score$#",
+      "replace": "Str.",
+      "page": 178,
+      "why": "convert.py strip_tags() reads {@dice roll|display} as name|source|display and keeps the roll, a 5e-tools template, instead of the display text the SRD prints (\"Str. × 7.5\"). The same cells are garbled in data/5e2024; the converter fix belongs to a change that may move that pack"
+    },
+    {
+      "entry": "Spell Scroll (Level 1)",
+      "find": "When a level 1 spell is copied in this way, the copier must succeed on a DC 11 Intelligence (Arcana).",
+      "replace": "When a spell is copied in this way, the copier must succeed on an Intelligence (Arcana) check with a DC equal to 10 plus the spell's level.",
+      "page": 244,
+      "why": "5e-tools works the DC out per level and drops \"check\"; the SRD states the rule once"
+    },
+    {
+      "entry": "Spell Scroll (Level 2)",
+      "find": "When a level 2 spell is copied in this way, the copier must succeed on a DC 12 Intelligence (Arcana).",
+      "replace": "When a spell is copied in this way, the copier must succeed on an Intelligence (Arcana) check with a DC equal to 10 plus the spell's level.",
+      "page": 244,
+      "why": "5e-tools works the DC out per level and drops \"check\"; the SRD states the rule once"
+    },
+    {
+      "entry": "Spell Scroll (Level 3)",
+      "find": "When a level 3 spell is copied in this way, the copier must succeed on a DC 13 Intelligence (Arcana).",
+      "replace": "When a spell is copied in this way, the copier must succeed on an Intelligence (Arcana) check with a DC equal to 10 plus the spell's level.",
+      "page": 244,
+      "why": "5e-tools works the DC out per level and drops \"check\"; the SRD states the rule once"
+    },
+    {
+      "entry": "Spell Scroll (Level 4)",
+      "find": "When a level 4 spell is copied in this way, the copier must succeed on a DC 14 Intelligence (Arcana).",
+      "replace": "When a spell is copied in this way, the copier must succeed on an Intelligence (Arcana) check with a DC equal to 10 plus the spell's level.",
+      "page": 244,
+      "why": "5e-tools works the DC out per level and drops \"check\"; the SRD states the rule once"
+    },
+    {
+      "entry": "Spell Scroll (Level 5)",
+      "find": "When a level 5 spell is copied in this way, the copier must succeed on a DC 15 Intelligence (Arcana).",
+      "replace": "When a spell is copied in this way, the copier must succeed on an Intelligence (Arcana) check with a DC equal to 10 plus the spell's level.",
+      "page": 244,
+      "why": "5e-tools works the DC out per level and drops \"check\"; the SRD states the rule once"
+    },
+    {
+      "entry": "Spell Scroll (Level 6)",
+      "find": "When a level 6 spell is copied in this way, the copier must succeed on a DC 16 Intelligence (Arcana).",
+      "replace": "When a spell is copied in this way, the copier must succeed on an Intelligence (Arcana) check with a DC equal to 10 plus the spell's level.",
+      "page": 244,
+      "why": "5e-tools works the DC out per level and drops \"check\"; the SRD states the rule once"
+    },
+    {
+      "entry": "Spell Scroll (Level 7)",
+      "find": "When a level 7 spell is copied in this way, the copier must succeed on a DC 17 Intelligence (Arcana).",
+      "replace": "When a spell is copied in this way, the copier must succeed on an Intelligence (Arcana) check with a DC equal to 10 plus the spell's level.",
+      "page": 244,
+      "why": "5e-tools works the DC out per level and drops \"check\"; the SRD states the rule once"
+    },
+    {
+      "entry": "Spell Scroll (Level 8)",
+      "find": "When a level 8 spell is copied in this way, the copier must succeed on a DC 18 Intelligence (Arcana).",
+      "replace": "When a spell is copied in this way, the copier must succeed on an Intelligence (Arcana) check with a DC equal to 10 plus the spell's level.",
+      "page": 244,
+      "why": "5e-tools works the DC out per level and drops \"check\"; the SRD states the rule once"
+    },
+    {
+      "entry": "Spell Scroll (Level 9)",
+      "find": "When a level 9 spell is copied in this way, the copier must succeed on a DC 19 Intelligence (Arcana).",
+      "replace": "When a spell is copied in this way, the copier must succeed on an Intelligence (Arcana) check with a DC equal to 10 plus the spell's level.",
+      "page": 244,
+      "why": "5e-tools works the DC out per level and drops \"check\"; the SRD states the rule once"
+    }
+  ],
+  "accepted": [
+    {
+      "entry": "Carpet of Flying, 3 ft. × 5 ft.",
+      "text": "can carry up to 200 lb at a fly speed of 80 feet",
+      "why": "5e-tools writes this size's row of the SRD's Carpet of Flying table (capacity, Fly Speed) into its text"
+    },
+    {
+      "entry": "Carpet of Flying, 4 ft. × 6 ft.",
+      "text": "can carry up to 400 lb at a fly speed of 60 feet",
+      "why": "5e-tools writes this size's row of the SRD's Carpet of Flying table (capacity, Fly Speed) into its text"
+    },
+    {
+      "entry": "Carpet of Flying, 5 ft. × 7 ft.",
+      "text": "can carry up to 600 lb at a fly speed of 40 feet",
+      "why": "5e-tools writes this size's row of the SRD's Carpet of Flying table (capacity, Fly Speed) into its text"
+    },
+    {
+      "entry": "Carpet of Flying, 6 ft. × 9 ft.",
+      "text": "can carry up to 800 lb at a fly speed of 30 feet",
+      "why": "5e-tools writes this size's row of the SRD's Carpet of Flying table (capacity, Fly Speed) into its text"
+    },
+    {
+      "entry": "Exotic Saddle",
+      "text": "a saddle comes with a bit a bridle reins and any other equipment needed to use the saddle an exotic saddle",
+      "why": "both sentences are the SRD's own (Saddles); 5e-tools leaves out the Military Saddle sentence between them"
+    },
+    {
+      "entry": "Grappler",
+      "text": "level 4 and",
+      "why": "convert.py renders the dump's prerequisite alternatives in full (lines 1490-1501): \"Level 4+ and Strength 13+ or Level 4+ and Dexterity 13+\" for the SRD's \"Level 4+, Strength or Dexterity 13+\""
+    },
+    {
+      "entry": "Horn of Valhalla, Brass",
+      "text": "3 berserkers to meet",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Horn of Valhalla, Brass",
+      "text": "brass horn",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Horn of Valhalla, Brass",
+      "text": "brass horn you must have proficiency with all simple weapons",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Horn of Valhalla, Brass",
+      "text": "requirements of",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Horn of Valhalla, Bronze",
+      "text": "4 berserkers to meet",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Horn of Valhalla, Bronze",
+      "text": "bronze horn",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Horn of Valhalla, Bronze",
+      "text": "bronze horn you must have training with all medium armor",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Horn of Valhalla, Bronze",
+      "text": "requirements of",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Horn of Valhalla, Iron",
+      "text": "5 berserkers to meet",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Horn of Valhalla, Iron",
+      "text": "iron horn you must have proficiency with all martial weapons",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Horn of Valhalla, Iron",
+      "text": "requirements of",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Horn of Valhalla, Silver",
+      "text": "summons 2 berserkers",
+      "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
+    },
+    {
+      "entry": "Potion of Cloud Giant Strength",
+      "text": "to 27",
+      "why": "5e-tools writes this potion's Strength score from the SRD's Potion of Giant Strength table into its text"
+    },
+    {
+      "entry": "Potion of Hill Giant Strength",
+      "text": "to 21",
+      "why": "5e-tools writes this potion's Strength score from the SRD's Potion of Giant Strength table into its text"
+    },
+    {
+      "entry": "Potion of Storm Giant Strength",
+      "text": "to 29",
+      "why": "5e-tools writes this potion's Strength score from the SRD's Potion of Giant Strength table into its text"
+    },
+    {
+      "entry": "Ring of Elemental Command (Air)",
+      "text": "choose the spell from the following list",
+      "why": "5e-tools writes this ring's plane and its row of the SRD's spell table into its text"
+    },
+    {
+      "entry": "Ring of Elemental Command (Air)",
+      "text": "the ring of elemental command air",
+      "why": "5e-tools writes this ring's plane and its row of the SRD's spell table into its text"
+    },
+    {
+      "entry": "Ring of Elemental Command (Earth)",
+      "text": "choose the spell from the following list",
+      "why": "5e-tools writes this ring's plane and its row of the SRD's spell table into its text"
+    },
+    {
+      "entry": "Ring of Elemental Command (Fire)",
+      "text": "choose the spell from the following list",
+      "why": "5e-tools writes this ring's plane and its row of the SRD's spell table into its text"
+    },
+    {
+      "entry": "Ring of Elemental Command (Water)",
+      "text": "choose the spell from the following list",
+      "why": "5e-tools writes this ring's plane and its row of the SRD's spell table into its text"
+    },
+    {
+      "entry": "Sorcerer/Metamagic Options",
+      "text": "extended spell heightened spell quickened spell seeking spell subtle spell transmuted spell twinned spell",
+      "why": "convert.py lists the options by name (flatten(), refOptionalfeature, lines 622-629) where the SRD prints them in full; the names are the SRD's"
+    },
+    {
+      "entry": "Spell Scroll (Level 3)",
+      "text": "is 15 and the",
+      "why": "5e-tools writes this level's save DC and attack bonus from the SRD's Spell Scroll table into its text"
+    },
+    {
+      "entry": "Spell Scroll (Level 4)",
+      "text": "is 15 and the",
+      "why": "5e-tools writes this level's save DC and attack bonus from the SRD's Spell Scroll table into its text"
+    },
+    {
+      "entry": "Spell Scroll (Level 5)",
+      "text": "is 17 and the",
+      "why": "5e-tools writes this level's save DC and attack bonus from the SRD's Spell Scroll table into its text"
+    },
+    {
+      "entry": "Spell Scroll (Level 6)",
+      "text": "is 17 and the",
+      "why": "5e-tools writes this level's save DC and attack bonus from the SRD's Spell Scroll table into its text"
+    },
+    {
+      "entry": "Spell Scroll (Level 7)",
+      "text": "is 18 and the",
+      "why": "5e-tools writes this level's save DC and attack bonus from the SRD's Spell Scroll table into its text"
+    },
+    {
+      "entry": "Spell Scroll (Level 8)",
+      "text": "is 18 and the",
+      "why": "5e-tools writes this level's save DC and attack bonus from the SRD's Spell Scroll table into its text"
+    },
+    {
+      "entry": "Spell Scroll (Level 9)",
+      "text": "is 19 and the",
+      "why": "5e-tools writes this level's save DC and attack bonus from the SRD's Spell Scroll table into its text"
+    },
+    {
+      "entry": "Warlock/Eldritch Invocation Options",
+      "text": "chain pact",
+      "why": "convert.py lists the options by name (flatten(), refOptionalfeature, lines 622-629) where the SRD prints them in full; the names are the SRD's"
+    },
+    {
+      "entry": "Warlock/Eldritch Invocation Options",
+      "text": "eldritch spear fiendish vigor gaze of two minds gift of the depths gift of the protectors investment of the chain master lessons of the first ones lifedrinker mask of many faces master of myriad forms misty visions one with shadows otherworldly leap",
+      "why": "convert.py lists the options by name (flatten(), refOptionalfeature, lines 622-629) where the SRD prints them in full; the names are the SRD's"
+    },
+    {
+      "entry": "Warlock/Eldritch Invocation Options",
+      "text": "the tome repelling blast thirsting blade visions of distant realms whispers of the grave witch sight",
+      "why": "convert.py lists the options by name (flatten(), refOptionalfeature, lines 622-629) where the SRD prints them in full; the names are the SRD's"
+    },
+    {
+      "entry": "table:Arid Land",
+      "text": "3rd",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Arid Land",
+      "text": "5th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Arid Land",
+      "text": "7th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Arid Land",
+      "text": "9th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Draconic Spells",
+      "text": "3rd",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Draconic Spells",
+      "text": "5th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Draconic Spells",
+      "text": "7th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Draconic Spells",
+      "text": "9th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Life Domain Spells",
+      "text": "3rd",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Life Domain Spells",
+      "text": "5th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Life Domain Spells",
+      "text": "7th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Life Domain Spells",
+      "text": "9th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Oath of Devotion Spells",
+      "text": "13th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Oath of Devotion Spells",
+      "text": "17th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Oath of Devotion Spells",
+      "text": "3rd",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Oath of Devotion Spells",
+      "text": "5th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Oath of Devotion Spells",
+      "text": "9th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Polar Land",
+      "text": "3rd",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Polar Land",
+      "text": "5th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Polar Land",
+      "text": "7th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Polar Land",
+      "text": "9th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Temperate Land",
+      "text": "3rd",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Temperate Land",
+      "text": "5th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Temperate Land",
+      "text": "7th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Temperate Land",
+      "text": "9th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Tropical Land",
+      "text": "3rd",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Tropical Land",
+      "text": "5th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Tropical Land",
+      "text": "7th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    },
+    {
+      "entry": "table:Tropical Land",
+      "text": "9th",
+      "why": "the 5e-tools table writes the level as an ordinal (\"3rd\"); the SRD prints the number (\"3\")"
+    }
+  ],
+  "aliases": {
+    "+1 Arrow": "Ammunition, +1, +2, or +3",
+    "+1 Bolt": "Ammunition, +1, +2, or +3",
+    "+1 Firearm Bullet": "Ammunition, +1, +2, or +3",
+    "+1 Needle": "Ammunition, +1, +2, or +3",
+    "+1 Sling Bullet": "Ammunition, +1, +2, or +3",
+    "+1 Wand of the War Mage": "Wand of the War Mage, +1, +2, or +3",
+    "+2 Arrow": "Ammunition, +1, +2, or +3",
+    "+2 Bolt": "Ammunition, +1, +2, or +3",
+    "+2 Firearm Bullet": "Ammunition, +1, +2, or +3",
+    "+2 Needle": "Ammunition, +1, +2, or +3",
+    "+2 Sling Bullet": "Ammunition, +1, +2, or +3",
+    "+2 Wand of the War Mage": "Wand of the War Mage, +1, +2, or +3",
+    "+3 Arrow": "Ammunition, +1, +2, or +3",
+    "+3 Bolt": "Ammunition, +1, +2, or +3",
+    "+3 Firearm Bullet": "Ammunition, +1, +2, or +3",
+    "+3 Needle": "Ammunition, +1, +2, or +3",
+    "+3 Sling Bullet": "Ammunition, +1, +2, or +3",
+    "+3 Wand of the War Mage": "Wand of the War Mage, +1, +2, or +3",
+    "Arrow of Slaying": "Ammunition of Slaying",
+    "Bag of Tricks, Gray": "Bag of Tricks",
+    "Bag of Tricks, Rust": "Bag of Tricks",
+    "Bag of Tricks, Tan": "Bag of Tricks",
+    "Belt of Cloud Giant Strength": "Belt of Giant Strength",
+    "Belt of Fire Giant Strength": "Belt of Giant Strength",
+    "Belt of Frost Giant Strength": "Belt of Giant Strength",
+    "Belt of Hill Giant Strength": "Belt of Giant Strength",
+    "Belt of Stone Giant Strength": "Belt of Giant Strength",
+    "Belt of Storm Giant Strength": "Belt of Giant Strength",
+    "Black Dragon Scale Mail": "Dragon Scale Mail",
+    "Blue Dragon Scale Mail": "Dragon Scale Mail",
+    "Bolt of Slaying": "Ammunition of Slaying",
+    "Brass Dragon Scale Mail": "Dragon Scale Mail",
+    "Bronze Dragon Scale Mail": "Dragon Scale Mail",
+    "Carpet of Flying, 3 ft. × 5 ft.": "Carpet of Flying",
+    "Carpet of Flying, 4 ft. × 6 ft.": "Carpet of Flying",
+    "Carpet of Flying, 5 ft. × 7 ft.": "Carpet of Flying",
+    "Carpet of Flying, 6 ft. × 9 ft.": "Carpet of Flying",
+    "Copper Dragon Scale Mail": "Dragon Scale Mail",
+    "Dice Set": "Gaming Set (Varies)",
+    "Dragonchess Set": "Gaming Set (Varies)",
+    "Elemental Gem, Blue Sapphire": "Elemental Gem",
+    "Elemental Gem, Emerald": "Elemental Gem",
+    "Elemental Gem, Red Corundum": "Elemental Gem",
+    "Elemental Gem, Yellow Diamond": "Elemental Gem",
+    "Feather Token, Anchor": "Feather Token",
+    "Feather Token, Bird": "Feather Token",
+    "Feather Token, Fan": "Feather Token",
+    "Feather Token, Swan Boat": "Feather Token",
+    "Feather Token, Tree": "Feather Token",
+    "Feather Token, Whip": "Feather Token",
+    "Figurine of Wondrous Power, Bronze Griffon": "Figurine of Wondrous Power",
+    "Figurine of Wondrous Power, Ebony Fly": "Figurine of Wondrous Power",
+    "Figurine of Wondrous Power, Golden Lions": "Figurine of Wondrous Power",
+    "Figurine of Wondrous Power, Ivory Goats": "Figurine of Wondrous Power",
+    "Figurine of Wondrous Power, Marble Elephant": "Figurine of Wondrous Power",
+    "Figurine of Wondrous Power, Obsidian Steed": "Figurine of Wondrous Power",
+    "Figurine of Wondrous Power, Onyx Dog": "Figurine of Wondrous Power",
+    "Figurine of Wondrous Power, Serpentine Owl": "Figurine of Wondrous Power",
+    "Figurine of Wondrous Power, Silver Raven": "Figurine of Wondrous Power",
+    "Firearm Bullet of Slaying": "Ammunition of Slaying",
+    "Gold Dragon Scale Mail": "Dragon Scale Mail",
+    "Green Dragon Scale Mail": "Dragon Scale Mail",
+    "Horn of Valhalla, Brass": "Horn of Valhalla",
+    "Horn of Valhalla, Bronze": "Horn of Valhalla",
+    "Horn of Valhalla, Iron": "Horn of Valhalla",
+    "Horn of Valhalla, Silver": "Horn of Valhalla",
+    "Ioun Stone, Absorption": "Ioun Stone",
+    "Ioun Stone, Agility": "Ioun Stone",
+    "Ioun Stone, Awareness": "Ioun Stone",
+    "Ioun Stone, Fortitude": "Ioun Stone",
+    "Ioun Stone, Greater Absorption": "Ioun Stone",
+    "Ioun Stone, Insight": "Ioun Stone",
+    "Ioun Stone, Intellect": "Ioun Stone",
+    "Ioun Stone, Leadership": "Ioun Stone",
+    "Ioun Stone, Mastery": "Ioun Stone",
+    "Ioun Stone, Protection": "Ioun Stone",
+    "Ioun Stone, Regeneration": "Ioun Stone",
+    "Ioun Stone, Reserve": "Ioun Stone",
+    "Ioun Stone, Strength": "Ioun Stone",
+    "Ioun Stone, Sustenance": "Ioun Stone",
+    "Manual of Clay Golems": "Manual of Golems",
+    "Manual of Flesh Golems": "Manual of Golems",
+    "Manual of Iron Golems": "Manual of Golems",
+    "Manual of Stone Golems": "Manual of Golems",
+    "Needle of Slaying": "Ammunition of Slaying",
+    "Potion of Acid Resistance": "Potion of Resistance",
+    "Potion of Cloud Giant Strength": "Potion of Giant Strength",
+    "Potion of Cold Resistance": "Potion of Resistance",
+    "Potion of Fire Giant Strength": "Potion of Giant Strength",
+    "Potion of Fire Resistance": "Potion of Resistance",
+    "Potion of Force Resistance": "Potion of Resistance",
+    "Potion of Frost Giant Strength": "Potion of Giant Strength",
+    "Potion of Greater Healing": "Potion of Healing",
+    "Potion of Hill Giant Strength": "Potion of Giant Strength",
+    "Potion of Lightning Resistance": "Potion of Resistance",
+    "Potion of Necrotic Resistance": "Potion of Resistance",
+    "Potion of Poison Resistance": "Potion of Resistance",
+    "Potion of Psychic Resistance": "Potion of Resistance",
+    "Potion of Radiant Resistance": "Potion of Resistance",
+    "Potion of Stone Giant Strength": "Potion of Giant Strength",
+    "Potion of Storm Giant Strength": "Potion of Giant Strength",
+    "Potion of Superior Healing": "Potion of Healing",
+    "Potion of Supreme Healing": "Potion of Healing",
+    "Potion of Thunder Resistance": "Potion of Resistance",
+    "Red Dragon Scale Mail": "Dragon Scale Mail",
+    "Ring of Acid Resistance": "Ring of Resistance",
+    "Ring of Cold Resistance": "Ring of Resistance",
+    "Ring of Elemental Command (Earth)": "Ring of Elemental Command",
+    "Ring of Elemental Command (Fire)": "Ring of Elemental Command",
+    "Ring of Elemental Command (Water)": "Ring of Elemental Command",
+    "Ring of Fire Resistance": "Ring of Resistance",
+    "Ring of Force Resistance": "Ring of Resistance",
+    "Ring of Lightning Resistance": "Ring of Resistance",
+    "Ring of Necrotic Resistance": "Ring of Resistance",
+    "Ring of Poison Resistance": "Ring of Resistance",
+    "Ring of Psychic Resistance": "Ring of Resistance",
+    "Ring of Radiant Resistance": "Ring of Resistance",
+    "Ring of Thunder Resistance": "Ring of Resistance",
+    "Silver Dragon Scale Mail": "Dragon Scale Mail",
+    "Sling Bullet of Slaying": "Ammunition of Slaying",
+    "Spell Scroll (Cantrip)": "Spell Scroll",
+    "Spell Scroll (Level 1)": "Spell Scroll",
+    "Spell Scroll (Level 2)": "Spell Scroll",
+    "Spell Scroll (Level 3)": "Spell Scroll",
+    "Spell Scroll (Level 4)": "Spell Scroll",
+    "Spell Scroll (Level 5)": "Spell Scroll",
+    "Spell Scroll (Level 6)": "Spell Scroll",
+    "Spell Scroll (Level 7)": "Spell Scroll",
+    "Spell Scroll (Level 8)": "Spell Scroll",
+    "Spell Scroll (Level 9)": "Spell Scroll",
+    "Three-Dragon Ante Set": "Gaming Set (Varies)",
+    "White Dragon Scale Mail": "Dragon Scale Mail"
+  }
+}

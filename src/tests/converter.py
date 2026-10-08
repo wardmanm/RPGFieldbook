@@ -1586,6 +1586,9 @@ with tempfile.TemporaryDirectory() as _td:
 
 # ---- #84: the SRD view and the `srd` command, on an invented mini dump
 import subprocess
+# scripts/srd-corrections.json is written against the real dump: on the mini dump
+# every correction would be stale, so these runs name a file that doesn't exist
+NOCORR = os.path.join(tempfile.gettempdir(), 'fieldbook-84-no-srd-corrections.json')
 def _mini_dump(root):
     """Invented entries in the dump's shape: flagged, rename-flagged, unflagged,
     an inherits-flagged variant, a 2014 basicRules-only entry, mixed-case tags."""
@@ -1660,7 +1663,7 @@ with tempfile.TemporaryDirectory() as _td:
     ck('#84 the view never touches the dump',
        json.load(open(os.path.join(dump, 'items.json')))['item'][0]['name'] == "Heward's Handy Haversack")
     ck('#84 a class the SRD lacks gets no file in the view', not os.path.exists(os.path.join(view, 'class', 'class-artificer.json')))
-    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out, '--corrections', NOCORR], capture_output=True, text=True)
     ck('#84 srd runs clean on the mini dump', r.returncode == 0, r.stdout[-600:] + r.stderr[-600:])
     P = lambda f: json.load(open(os.path.join(out, f), encoding='utf-8'))
     allf = sorted(os.listdir(out))
@@ -1717,7 +1720,7 @@ with tempfile.TemporaryDirectory() as _td:
         "heward's handy haversack", "bigby's hand"} <= info['nonsrd'], sorted(info['nonsrd']))
     ck('#84 ...but not a kept name, nor a feat a kept class references',
        not ({'club', 'archery', 'blessed warrior', 'fireball'} & info['nonsrd']), sorted(info['nonsrd']))
-    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out, '--excluded-out', exl], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out, '--excluded-out', exl, '--corrections', NOCORR], capture_output=True, text=True)
     ck('#84 a clean mini dump passes the scan, and --excluded-out is written',
        r.returncode == 0 and json.load(open(exl))['renamed'] == {"bigby's hand": 'Arcane Hand', "heward's handy haversack": 'Handy Haversack'},
        r.stdout[-400:])
@@ -1725,9 +1728,88 @@ with tempfile.TemporaryDirectory() as _td:
     d = json.load(open(sp)); d['spell'][1]['entries'].append("Unlike Heward's Handy Haversack, this is fire.")
     json.dump(d, open(sp, 'w'))
     out2 = os.path.join(_td, 'out2')
-    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out2], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out2, '--corrections', NOCORR], capture_output=True, text=True)
     ck('#84 a planted old name fails the run, says why, and writes nothing',
        r.returncode == 1 and "heward's handy haversack" in r.stdout.lower() and not os.path.exists(out2), r.stdout[-400:])
+
+# ---- #84: srd-corrections.json applied to the converted pack
+def _corr_packs():
+    return {'spells.json': {'system': 'SRD 5.2', 'spells': [{'name': 'Augury', 'text': "Ask the DM. The DMs and the DM's friend agree."}]},
+            'classes.json': {'classes': [{'name': 'Warlock', 'levels': {'1': {'traits': [
+                {'name': 'Pact Magic', 'description': 'For example, Witch Bolt.'}]}}}]},
+            'tables.json': {'tables': [{'name': 'Bag of Beans Table', 'cols': ['d8', 'Effect'], 'rows': [['1', "The DM's choice"]]}]}}
+with tempfile.TemporaryDirectory() as _td:
+    good = os.path.join(_td, 'good.json')
+    json.dump({'global': [{'word': 'DM', 'replace': 'GM', 'why': 'the SRD says GM', 'page': 5}],
+               'corrections': [{'entry': 'Warlock/Pact Magic', 'find': 'Witch Bolt', 'replace': 'Chill Touch', 'page': 70},
+                               {'entry': 'table:Bag of Beans Table', 'find': "GM's choice", 'replace': "GM's chosen effect", 'page': 2}]},
+              open(good, 'w'))
+    p = _corr_packs()
+    errs = C._srd_apply_corrections(p, good)
+    ck('#84 corrections apply cleanly', errs == [], errs)
+    ck('#84 a global swap is whole-word: "DM" and "DM\'s" change, "DMs" doesn\'t',
+       p['spells.json']['spells'][0]['text'] == "Ask the GM. The DMs and the GM's friend agree.", p['spells.json']['spells'][0]['text'])
+    ck('#84 a trait correction lands on that trait',
+       p['classes.json']['classes'][0]['levels']['1']['traits'][0]['description'] == 'For example, Chill Touch.')
+    ck('#84 a table correction lands in its cells, after the global swap',
+       p['tables.json']['tables'][0]['rows'][0][1] == "The GM's chosen effect", p['tables.json']['tables'][0])
+    ck('#84 names are never rewritten', p['tables.json']['tables'][0]['name'] == 'Bag of Beans Table')
+    bad = os.path.join(_td, 'bad.json')
+    json.dump({'global': [{'word': 'Zzyzx', 'replace': 'Q', 'why': '', 'page': 1}],
+               'corrections': [{'entry': 'No Such Entry', 'find': 'a', 'replace': 'b', 'page': 1},
+                               {'entry': 'Augury', 'find': 'not in the text', 'replace': 'b', 'page': 1}]}, open(bad, 'w'))
+    errs = C._srd_apply_corrections(_corr_packs(), bad)
+    ck('#84 a stale or unknown correction is an error, each named',
+       len(errs) == 3 and any('Zzyzx' in e for e in errs) and any('No Such Entry' in e for e in errs)
+       and any('not in the text' in e for e in errs), errs)
+    ck('#84 no corrections file is no corrections', C._srd_apply_corrections(_corr_packs(), os.path.join(_td, 'absent.json')) == [])
+    # a whole record the SRD doesn't print (the Iron Flask's table) is removed, by the same keys
+    rm = os.path.join(_td, 'rm.json')
+    json.dump({'remove': [{'entry': 'table:Bag of Beans Table', 'why': 'the SRD prints no such table', 'page': 1}]}, open(rm, 'w'))
+    p = _corr_packs()
+    errs = C._srd_apply_corrections(p, rm)
+    ck('#84 a removal drops the record it names, and nothing else',
+       errs == [] and p['tables.json']['tables'] == [] and len(p['spells.json']['spells']) == 1, (errs, p))
+    errs = C._srd_apply_corrections(p, rm)
+    ck('#84 a removal that matches nothing is an error, named', len(errs) == 1 and 'Bag of Beans Table' in errs[0], errs)
+
+# ---- #84: srd_text — the pure PDF comparison
+import srd_text as T
+ck('#84 norm joins line-end hyphenation and drops running heads',
+   T.norm('suc-\ncessful System Reference Document 5.2.1\n7\nend') == 'successful end', T.norm('suc-\ncessful System Reference Document 5.2.1\n7\nend'))
+ck('#84 norm drops the PDF\'s soft hyphens and zero-width spaces, as it joins line-end hyphenation',
+   T.norm('Meta' + chr(0xAD) + 'magic Op' + chr(0x200B) + 'tions') == 'metamagic options',
+   T.norm('Meta' + chr(0xAD) + 'magic Op' + chr(0x200B) + 'tions'))
+ck('#84 strip_generated drops the converter\'s stat segments',
+   T.strip_generated('Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple\nIt hums.')
+   == '\nIt hums.', T.strip_generated('Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple\nIt hums.'))
+# convert_items() writes mech + '. ' + prose: the prose after the last segment is checked, not swallowed
+_sg = T.strip_generated('Damage 1d6 bludgeoning · Range 20/60 ft · Mastery: Sap · Base item: Mace. When you hit a Fiend, it burns.\nMore.')
+ck('#84 strip_generated keeps the prose the converter joins on with ". "', _sg == 'When you hit a Fiend, it burns.\nMore.', _sg)
+_sg = T.strip_generated('Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 10 charges.')
+ck('#84 ...after a Mastery segment too', _sg == 'This staff has 10 charges.', _sg)
+_sg = T.strip_generated('AC +2 (Shield) · Base item: Shield. While holding this Shield, you can animate it.')
+ck('#84 ...and after armor segments', _sg == 'While holding this Shield, you can animate it.', _sg)
+ck('#84 a description that is all prose is untouched',
+   T.strip_generated('A Bedroll sleeps one creature. It is warm.') == 'A Bedroll sleeps one creature. It is warm.')
+_pages = ["Augury\nLevel 2 Divination (Cleric)\nAsk the GM about a course of action.\n",
+          "Fireball\nLevel 3 Evocation (Wizard)\nA bright streak flashes to a point you choose.\n",
+          "Belt of Giant Strength\nWondrous Item\nWhile wearing this belt, your Strength changes.\n"]
+_packs = {'spells.json': {'spells': [{'name': 'Augury', 'text': 'Ask the DM about a course of action.'},
+                                     {'name': 'Fireball', 'text': 'A bright streak flashes to a point you choose.\nMaterial: a ball of bat guano.'}]},
+          'items-magic.json': {'items': [{'name': 'Belt of Hill Giant Strength', 'description': 'While wearing this belt, your Strength changes.'}]},
+          'tables.json': {'tables': [{'name': 'Deck', 'cols': ['Card'], 'rows': [['Beholder']]}]}}
+f = T.check(_pages, _packs, {})
+ck('#84 check finds a span the SRD lacks, with its page', ('Augury', 'dm', 1) in f, f)
+ck('#84 a Material line is checked as words', ('Fireball', 'ball bat guano', 2) in f, f)
+ck('#84 an entry the SRD titles differently is "(not located)" without an alias',
+   ('Belt of Hill Giant Strength', '(not located)', None) in f, f)
+ck('#84 a table cell the SRD lacks is found', ('table:Deck', 'beholder', None) in f, f)
+f2 = T.check(_pages, _packs, {'accepted': [{'entry': 'Augury', 'text': 'dm', 'why': 't'}],
+                              'aliases': {'Belt of Hill Giant Strength': 'Belt of Giant Strength'}})
+ck('#84 accepted spans and aliases clear their findings',
+   not any(k in ('Augury', 'Belt of Hill Giant Strength') for k, _, _ in f2) and len(f2) == 3, f2)
+ck('#84 a table\'s header cells are checked too', ('table:Deck', 'card', None) in f2, f2)
 
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])

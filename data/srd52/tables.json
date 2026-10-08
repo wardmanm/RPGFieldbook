@@ -1477,7 +1477,7 @@
         ],
         [
           "02-10",
-          "A geyser erupts and spouts water, beer, mayonnaise, tea, vinegar, wine, or oil (DM's choice) 30 feet into the air for 1d4 minutes."
+          "A geyser erupts and spouts water, beer, mayonnaise, tea, vinegar, wine, or oil (GM's choice) 30 feet into the air for 1d4 minutes."
         ],
         [
           "11-20",
@@ -1497,7 +1497,7 @@
         ],
         [
           "51-60",
-          "1d4 + 4 bright-pink toads crawl forth. Whenever a toad is touched, it transforms into a Large or smaller monster of the DM's choice that acts in accordance with its alignment and nature. The monster remains for 1 minute, then disappears in a puff of bright-pink smoke."
+          "1d4 + 4 bright-pink toads crawl forth. Whenever a toad is touched, it transforms into a Large or smaller monster of the GM's choice that acts in accordance with its alignment and nature. The monster remains for 1 minute, then disappears in a puff of bright-pink smoke."
         ],
         [
           "61-70",
@@ -1513,11 +1513,11 @@
         ],
         [
           "91-95",
-          "A pyramid with a 60-foot-square base bursts upward. Inside is a burial chamber containing a Mummy, a Mummy Lord, or some other Undead of the DM's choice. Its sarcophagus contains treasure of the DM's choice."
+          "A pyramid with a 60-foot-square base bursts upward. Inside is a burial chamber containing a Mummy, a Mummy Lord, or some other Undead of the GM's choice. Its sarcophagus contains treasure of the GM's choice."
         ],
         [
           "96-00",
-          "A giant beanstalk sprouts, growing to a height of the DM's choice. The top leads where the DM chooses, such as to a great view, a cloud giant's castle, or another plane of existence."
+          "A giant beanstalk sprouts, growing to a height of the GM's choice. The top leads where the GM chooses, such as to a great view, a cloud giant's castle, or another plane of existence."
         ]
       ],
       "owner": "Bag of Beans",
@@ -1812,7 +1812,7 @@
         ],
         [
           "13-15",
-          "Beholder"
+          "Basilisk"
         ],
         [
           "16-18",
@@ -2042,149 +2042,14 @@
         ],
         [
           "91-95",
-          "A vertical, 10-foot-diameter, two-way portal to another plane of existence opens in an unoccupied space within 30 feet of you and remains open until the end of your next turn. The DM determines where it leads."
+          "A vertical, 10-foot-diameter, two-way portal to another plane of existence opens in an unoccupied space within 30 feet of you and remains open until the end of your next turn. The GM determines where it leads."
         ],
         [
           "96-00",
-          "You pull a magic item out of the hat. Roll 1d6 to determine the item's rarity: on a 1-3, Common; on a 4-5, Uncommon; on a 6, Rare. The DM chooses the item, which disappears after 1 hour if it's not consumed or destroyed before then."
+          "You pull a magic item out of the hat. Roll 1d6 to determine the item's rarity: on a 1-3, Common; on a 4-5, Uncommon; on a 6, Rare. The GM chooses the item, which disappears after 1 hour if it's not consumed or destroyed before then."
         ]
       ],
       "owner": "Hat of Many Spells",
-      "ownerKind": "item"
-    },
-    {
-      "name": "Iron Flask Table",
-      "cols": [
-        "1d100",
-        "Contents"
-      ],
-      "align": [
-        "center",
-        "left"
-      ],
-      "rows": [
-        [
-          "01-50",
-          "No creature"
-        ],
-        [
-          "51",
-          "Arcanaloth"
-        ],
-        [
-          "52-54",
-          "Bone Devil"
-        ],
-        [
-          "55-56",
-          "Cambion"
-        ],
-        [
-          "57-58",
-          "Dao"
-        ],
-        [
-          "59",
-          "Deva"
-        ],
-        [
-          "60-61",
-          "Djinni"
-        ],
-        [
-          "62-63",
-          "Efreeti"
-        ],
-        [
-          "64-65",
-          "Erinyes"
-        ],
-        [
-          "66-67",
-          "Fomorian"
-        ],
-        [
-          "68",
-          "Githyanki Knight"
-        ],
-        [
-          "69",
-          "Githzerai Zerth"
-        ],
-        [
-          "70-71",
-          "Glabrezu"
-        ],
-        [
-          "72-74",
-          "Hezrou"
-        ],
-        [
-          "75",
-          "Incubus"
-        ],
-        [
-          "76-77",
-          "Invisible Stalker"
-        ],
-        [
-          "78-79",
-          "Marid"
-        ],
-        [
-          "80",
-          "Marilith"
-        ],
-        [
-          "81-82",
-          "Mezzoloth"
-        ],
-        [
-          "83-84",
-          "Nalfeshnee"
-        ],
-        [
-          "85-86",
-          "Night Hag"
-        ],
-        [
-          "87-88",
-          "Nycaloth"
-        ],
-        [
-          "89",
-          "Planetar"
-        ],
-        [
-          "90-91",
-          "Red Slaad"
-        ],
-        [
-          "92-93",
-          "Salamander"
-        ],
-        [
-          "94",
-          "Solar"
-        ],
-        [
-          "95",
-          "Succubus"
-        ],
-        [
-          "96",
-          "Ultroloth"
-        ],
-        [
-          "97-99",
-          "Vrock"
-        ],
-        [
-          "00",
-          "Xorn"
-        ]
-      ],
-      "owner": "Iron Flask",
       "ownerKind": "item"
     },
     {
@@ -3299,7 +3164,7 @@
         ],
         [
           "65-68",
-          "An object of the DM's choice disappears into the Ethereal Plane. The object must be neither worn nor carried, within 120 feet of the chosen point of origin, and no larger than 10 feet in any dimension. If there are no such objects in range, nothing happens."
+          "An object of the GM's choice disappears into the Ethereal Plane. The object must be neither worn nor carried, within 120 feet of the chosen point of origin, and no larger than 10 feet in any dimension. If there are no such objects in range, nothing happens."
         ],
         [
           "69-72",
@@ -3481,28 +3346,28 @@
       "rows": [
         [
           "Tiny",
-          "#$prompt_number:title=Enter Strength Score$# × 7.5 lb.",
-          "#$prompt_number:title=Enter Strength Score$# × 15 lb."
+          "Str. × 7.5 lb.",
+          "Str. × 15 lb."
         ],
         [
           "Small/Medium",
-          "#$prompt_number:title=Enter Strength Score$# × 15 lb.",
-          "#$prompt_number:title=Enter Strength Score$# × 30 lb."
+          "Str. × 15 lb.",
+          "Str. × 30 lb."
         ],
         [
           "Large",
-          "#$prompt_number:title=Enter Strength Score$# × 30 lb.",
-          "#$prompt_number:title=Enter Strength Score$# × 60 lb."
+          "Str. × 30 lb.",
+          "Str. × 60 lb."
         ],
         [
           "Huge",
-          "#$prompt_number:title=Enter Strength Score$# × 60 lb.",
-          "#$prompt_number:title=Enter Strength Score$# × 120 lb."
+          "Str. × 60 lb.",
+          "Str. × 120 lb."
         ],
         [
           "Gargantuan",
-          "#$prompt_number:title=Enter Strength Score$# × 120 lb.",
-          "#$prompt_number:title=Enter Strength Score$# × 240 lb."
+          "Str. × 120 lb.",
+          "Str. × 240 lb."
         ]
       ],
       "caption": "Carrying Capacity",
@@ -3614,7 +3479,7 @@
         ],
         [
           "23",
-          "Adamantite"
+          "Adamantine"
         ]
       ],
       "caption": "Object Armor Class",
@@ -3863,7 +3728,7 @@
         ],
         [
           "7",
-          "Violet. Failed Save: The target has the Blinded condition and makes a Wisdom saving throw at the start of your next turn. On a successful save, the condition ends. On a failed save, the condition ends, and the creature teleports to another plane of existence (DM's choice). Additional Effects: This layer is destroyed by Dispel Magic."
+          "Violet. Failed Save: The target has the Blinded condition and makes a Wisdom saving throw at the start of your next turn. On a successful save, the condition ends. On a failed save, the condition ends, and the creature teleports to another plane of existence (GM's choice). Additional Effects: This layer is destroyed by Dispel Magic."
         ]
       ],
       "caption": "Prismatic Layers",
@@ -3907,7 +3772,7 @@
         ],
         [
           "7",
-          "Violet. Failed Save: The target has the Blinded condition and makes a Wisdom saving throw at the start of your next turn. On a successful save, the condition ends. On a failed save, the condition ends, and the creature teleports to another plane of existence (DM's choice)."
+          "Violet. Failed Save: The target has the Blinded condition and makes a Wisdom saving throw at the start of your next turn. On a successful save, the condition ends. On a failed save, the condition ends, and the creature teleports to another plane of existence (GM's choice)."
         ],
         [
           "8",
@@ -3931,7 +3796,7 @@
       "rows": [
         [
           "1",
-          "Aasimar"
+          "Roll again."
         ],
         [
           "2",

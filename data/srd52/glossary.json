@@ -37,7 +37,7 @@
     {
       "term": "Ally",
       "type": "text",
-      "text": "A creature is your ally if it is a member of your adventuring party, your friend, on your side in combat, or a creature that the rules or the DM designates as your ally."
+      "text": "A creature is your ally if it is a member of your adventuring party, your friend, on your side in combat, or a creature that the rules or the GM designates as your ally."
     },
     {
       "term": "Area of Effect",
@@ -77,7 +77,7 @@
     {
       "term": "Breaking Objects",
       "type": "text",
-      "text": "Objects can be harmed by attacks and by some spells, using the rules below. If an object is exceedingly fragile, the DM may allow a creature to break it automatically with the Attack or Utilize action.\nArmor Class: The Object Armor Class table suggests ACs for various substances.\n[Table: Object Armor Class]\nHit Points: An object is destroyed when it has 0 Hit Points. The Object Hit Points table suggests Hit Points for fragile and resilient objects that are Large or smaller. To track Hit Points for a Huge or Gargantuan object, divide it into Large or smaller sections, and track each section's Hit Points separately. The DM determines whether destroying part of an object causes the whole thing to collapse.\n[Table: Object Hit Points]\nDamage Types and Objects: Objects have Immunity to Poison and Psychic damage. The DM might decide that some damage types are more or less effective against an object. For example, Bludgeoning damage works well for smashing things but not for cutting. Paper or cloth objects might have Vulnerability to Fire damage.\nDamage Threshold: Big objects, such as castle walls, often have extra resilience represented by a damage threshold.\nNo Ability Scores: An object lacks ability scores unless a rule assigns scores to the object. Without ability scores, an object can't make ability checks, and it fails all saving throws."
+      "text": "Objects can be harmed by attacks and by some spells, using the rules below. If an object is exceedingly fragile, the GM may allow a creature to break it automatically with the Attack or Utilize action.\nArmor Class: The Object Armor Class table suggests ACs for various substances.\n[Table: Object Armor Class]\nHit Points: An object is destroyed when it has 0 Hit Points. The Object Hit Points table suggests Hit Points for fragile and resilient objects that are Large or smaller. To track Hit Points for a Huge or Gargantuan object, divide it into Large or smaller sections, and track each section's Hit Points separately. The GM determines whether destroying part of an object causes the whole thing to collapse.\n[Table: Object Hit Points]\nDamage Types and Objects: Objects have Immunity to Poison and Psychic damage. The GM might decide that some damage types are more or less effective against an object. For example, Bludgeoning damage works well for smashing things but not for cutting. Paper or cloth objects might have Vulnerability to Fire damage.\nDamage Threshold: Big objects, such as castle walls, often have extra resilience represented by a damage threshold.\nNo Ability Scores: An object lacks ability scores unless a rule assigns scores to the object. Without ability scores, an object can't make ability checks, and it fails all saving throws."
     },
     {
       "term": "Bright Light",
@@ -107,7 +107,7 @@
     {
       "term": "Challenge Rating",
       "type": "text",
-      "text": "Challenge Rating (CR) summarizes the threat a monster poses to a group of four player characters. Compare a monster's CR to the characters' level. If the CR is higher, the monster is likely a danger. If the CR is lower, the monster likely poses little threat. But circumstances and the number of player characters can significantly alter how threatening a monster is in actual play. The Dungeon Master's Guide provides guidance to the DM on using CR while planning potential combat encounters."
+      "text": "Challenge Rating (CR) summarizes the threat a monster poses to a group of four player characters. Compare a monster's CR to the characters' level. If the CR is higher, the monster is likely a danger. If the CR is lower, the monster likely poses little threat. But circumstances and the number of player characters can significantly alter how threatening a monster is in actual play. \"Gameplay Toolbox\" (\"Combat Encounters\") provides guidance to the GM on using CR while planning potential combat encounters."
     },
     {
       "term": "Character Sheet",
@@ -122,7 +122,7 @@
     {
       "term": "Climbing",
       "type": "text",
-      "text": "While you're climbing, each foot of movement costs 1 extra foot (2 extra feet in difficult terrain). You ignore this extra cost if you have a Climb Speed and use it to climb. At the DM's option, climbing a slippery surface or one with few handholds might require a successful DC 15 Strength (Athletics) check."
+      "text": "While you're climbing, each foot of movement costs 1 extra foot (2 extra feet in difficult terrain). You ignore this extra cost if you have a Climb Speed and use it to climb. At the GM's option, climbing a slippery surface or one with few handholds might require a successful DC 15 Strength (Athletics) check."
     },
     {
       "term": "Condition",
@@ -177,7 +177,7 @@
     {
       "term": "D20 Test",
       "type": "text",
-      "text": "D20 Tests encompass the three main d20 rolls of the game: ability checks, attack rolls, and saving throws. If something in the game affects D20 Tests, it affects all three of these rolls. The DM determines whether a D20 Test is warranted in a given circumstance."
+      "text": "D20 Tests encompass the three main d20 rolls of the game: ability checks, attack rolls, and saving throws. If something in the game affects D20 Tests, it affects all three of these rolls. The GM determines whether a D20 Test is warranted in a given circumstance."
     },
     {
       "term": "Damage",
@@ -197,7 +197,7 @@
     {
       "term": "Damage Types",
       "type": "text",
-      "text": "Attacks and other harmful effects deal different types of damage. Damage types have no rules of their own, but other rules, such as Resistance, rely on the types. The Damage Types table offers examples to help a DM assign a type to a new effect.\n[Table: Damage Types]"
+      "text": "Attacks and other harmful effects deal different types of damage. Damage types have no rules of their own, but other rules, such as Resistance, rely on the types. The Damage Types table offers examples to help a GM assign a type to a new effect.\n[Table: Damage Types]"
     },
     {
       "term": "Darkness",
@@ -247,12 +247,12 @@
     {
       "term": "Enemy",
       "type": "text",
-      "text": "A creature is your enemy if it fights against you in combat, actively works to harm you, or is designated as your enemy by the rules or DM."
+      "text": "A creature is your enemy if it fights against you in combat, actively works to harm you, or is designated as your enemy by the rules or GM."
     },
     {
       "term": "Experience Points",
       "type": "text",
-      "text": "As they overcome challenges and complete adventures, characters earn Experience Points (XP) which are awarded by the Dungeon Master. When a character's XP total crosses certain thresholds, the character's level increases. The Dungeon Master's Guide provides guidance on awarding XP."
+      "text": "As they overcome challenges and complete adventures, characters earn Experience Points (XP) which are awarded by the Game Master. When a character's XP total crosses certain thresholds, the character's level increases."
     },
     {
       "term": "Expertise",
@@ -307,7 +307,7 @@
     {
       "term": "Hit Point Dice",
       "type": "text",
-      "text": "Hit Point Dice, or Hit Dice for short, help determine a player character's Hit Point maximum, as explained in chapter 2. Most monsters also have Hit Dice. A creature can spend Hit Dice during a Short Rest to regain Hit Points."
+      "text": "Hit Point Dice, or Hit Dice for short, help determine a player character's Hit Point maximum, as explained in \"Character Creation.\" Most monsters also have Hit Dice. A creature can spend Hit Dice during a Short Rest to regain Hit Points."
     },
     {
       "term": "Hit Points",
@@ -337,7 +337,7 @@
     {
       "term": "Improvised Weapons",
       "type": "text",
-      "text": "An improvised weapon is an object wielded as a makeshift weapon, such as broken glass, a table leg, or a frying pan. A Simple or Martial weapon also counts as an improvised weapon if it's wielded in a way contrary to its design; if you use a Ranged weapon to make a melee attack or throw a Melee weapon that lacks the Thrown property, the weapon counts as an improvised weapon. An improvised weapon follows the rules below.\nProficiency: Don't add your Proficiency Bonus to attack rolls with an improvised weapon.\nDamage: On a hit, the weapon deals 1d4 damage of a type the DM thinks is appropriate for the object.\nRange: If you throw the weapon, it has a normal range of 20 feet and a long range of 60 feet.\nWeapon Equivalents: If an improvised weapon resembles a Simple or Martial weapon, the DM may say it functions as that weapon and uses that weapon's rules. For example, the DM could treat a table leg as a Club."
+      "text": "An improvised weapon is an object wielded as a makeshift weapon, such as broken glass, a table leg, or a frying pan. A Simple or Martial weapon also counts as an improvised weapon if it's wielded in a way contrary to its design; if you use a Ranged weapon to make a melee attack or throw a Melee weapon that lacks the Thrown property, the weapon counts as an improvised weapon. An improvised weapon follows the rules below.\nProficiency: Don't add your Proficiency Bonus to attack rolls with an improvised weapon.\nDamage: On a hit, the weapon deals 1d4 damage of a type the GM thinks is appropriate for the object.\nRange: If you throw the weapon, it has a normal range of 20 feet and a long range of 60 feet.\nWeapon Equivalents: If an improvised weapon resembles a Simple or Martial weapon, the GM may say it functions as that weapon and uses that weapon's rules. For example, the GM could treat a table leg as a Club."
     },
     {
       "term": "Indifferent [Attitude]",
@@ -347,7 +347,7 @@
     {
       "term": "Initiative",
       "type": "text",
-      "text": "Initiative determines the order of turns during combat. The combat rules in chapter 1 explain how to roll Initiative.\nSometimes a DM might have combatants use their Initiative scores instead of rolling Initiative. Your Initiative score equals 10 plus your Dexterity modifier. If you have Advantage on Initiative rolls, increase your Initiative score by 5. If you have Disadvantage on those rolls, decrease that score by 5."
+      "text": "Initiative determines the order of turns during combat. The combat rules in \"Playing the Game\" explain how to roll Initiative.\nSometimes a GM might have combatants use their Initiative scores instead of rolling Initiative. Your Initiative score equals 10 plus your Dexterity modifier. If you have Advantage on Initiative rolls, increase your Initiative score by 5. If you have Disadvantage on those rolls, decrease that score by 5."
     },
     {
       "term": "Jumping",
@@ -372,7 +372,7 @@
     {
       "term": "Long Jump",
       "type": "text",
-      "text": "When you make a Long Jump, you leap horizontally a number of feet up to your Strength score if you move at least 10 feet immediately before the jump. When you make a standing Long Jump, you can leap only half that distance. Either way, each foot you jump costs a foot of movement.\nIf you land in difficult terrain, you must succeed on a DC 10 Dexterity (Acrobatics) check or have the Prone condition.\nThis Long Jump rule assumes that the height of the jump doesn't matter, such as a jump across a stream or chasm. At your DM's option, you must succeed on a DC 10 Strength (Athletics) check to clear a low obstacle (no taller than a quarter of the jump's distance), such as a hedge or low wall. Otherwise, you hit the obstacle."
+      "text": "When you make a Long Jump, you leap horizontally a number of feet up to your Strength score if you move at least 10 feet immediately before the jump. When you make a standing Long Jump, you can leap only half that distance. Either way, each foot you jump costs a foot of movement.\nIf you land in difficult terrain, you must succeed on a DC 10 Dexterity (Acrobatics) check or have the Prone condition.\nThis Long Jump rule assumes that the height of the jump doesn't matter, such as a jump across a stream or chasm. At your GM's option, you must succeed on a DC 10 Strength (Athletics) check to clear a low obstacle (no taller than a quarter of the jump's distance), such as a hedge or low wall. Otherwise, you hit the obstacle."
     },
     {
       "term": "Long Rest",
@@ -387,7 +387,7 @@
     {
       "term": "Monster",
       "type": "text",
-      "text": "A monster is a creature controlled by the DM, even if the creature is benevolent."
+      "text": "A monster is a creature controlled by the GM, even if the creature is benevolent."
     },
     {
       "term": "Nonplayer Character",
@@ -407,7 +407,7 @@
     {
       "term": "Passive Perception",
       "type": "text",
-      "text": "Passive Perception is a score that reflects a creature's general awareness of its surroundings. The DM uses this score when determining whether a creature notices something without consciously making a Wisdom (Perception) check.\nA creature's Passive Perception equals 10 plus the creature's Wisdom (Perception) check bonus. If the creature has Advantage on such checks, increase the score by 5. If the creature has Disadvantage on them, decrease the score by 5. For example, a level 1 character with a Wisdom of 15 and proficiency in Perception has a Passive Perception of 14 (10 + 2 + 2). If that character has Advantage on Wisdom (Perception) checks, the score becomes 10 + 2 + 2 + 5."
+      "text": "Passive Perception is a score that reflects a creature's general awareness of its surroundings. The GM uses this score when determining whether a creature notices something without consciously making a Wisdom (Perception) check.\nA creature's Passive Perception equals 10 plus the creature's Wisdom (Perception) check bonus. If the creature has Advantage on such checks, increase the score by 5. If the creature has Disadvantage on them, decrease the score by 5. For example, a level 1 character with a Wisdom of 15 and proficiency in Perception has a Passive Perception of 14 (10 + 2 + 2). If that character has Advantage on Wisdom (Perception) checks, the score becomes 19."
     },
     {
       "term": "Per Day",
@@ -477,7 +477,7 @@
     {
       "term": "Simultaneous Effects",
       "type": "text",
-      "text": "If two or more things happen at the same time on a turn, the person at the game table—player or DM whose turn it is decides the order in which those things happen. For example, if two effects occur at the start of a player character's turn, the player decides which of the effects happens first."
+      "text": "If two or more things happen at the same time on a turn, the person at the game table—player or GM whose turn it is decides the order in which those things happen. For example, if two effects occur at the start of a player character's turn, the player decides which of the effects happens first."
     },
     {
       "term": "Size",
@@ -497,7 +497,7 @@
     {
       "term": "Spell",
       "type": "text",
-      "text": "A spell is a magical effect that has the characteristics described in chapter 7."
+      "text": "A spell is a magical effect that has the characteristics described in \"Spells.\""
     },
     {
       "term": "Spell Attack",
@@ -522,7 +522,7 @@
     {
       "term": "Stat Block",
       "type": "text",
-      "text": "A stat block contains the game statistics of a monster. Each stat block includes the following information presented after the monster's name.\nSize: A monster is Tiny, Small, Med ium, Large, Huge, or Gargantuan.\nCreature Type: This entry notes the family of beings a monster belongs to, along with any descriptive tags.\nAlignment: An alignment is suggested for the monster, with the DM determining its actual alignment.\nAC, Initiative, and HP: These entries give the monster's Armor Class, Initiative, and Hit Points, which are detailed in chapter 1. In parentheses after the Hit Points, the monster's Hit Point Dice are provided, along with the contribution of its Constitution, if any, to its Hit Points. Following the Initiative modifier is an Initiative score. Some creatures that are created by magic lack Hit Dice and Initiative information.\nSpeed: Here the monster's Speed is provided, along with any special speeds.\nAbility Scores: A table provides the monster's ability scores, modifiers, and saving throw modifiers, all of which are detailed in chapter 1.\nSkills: This entry lists the monster's skill proficiencies, if any.\nResistances and Vulnerabilities: These entries list the monster's Resistances and Vulnerabilities, if any.\nImmunities: This section lists the monster's damage and condition Immunities, if any.\nGear: If the monster has any equipment that can be given away or retrieved, it's listed in this entry.\nSenses: This entry lists the monster's special senses, such as Darkvision, and its Passive Perception.\nLanguages: This entry lists any languages the monster knows.\nCR: Challenge Rating summarizes the threat a monster poses and is detailed in the Monster Manual. The Experience Points characters receive for defeating a monster and its Proficiency Bonus follow. Some creatures that are created by magic have no CR.\nTraits: The monster's traits, if any, are features that are active at all times or in certain situations.\nActions: The monster can take these actions in addition to those detailed in this glossary.\nBonus Actions: If the monster has Bonus Action options, they are listed in this section.\nReactions: If the monster can take special Reactions, those are listed in this section.\nAttack Notation: The entry for a monster's attack starts by identifying whether the attack is a melee or a ranged attack and then provides the attack roll's bonus, its reach or range, and what happens on a hit. An attack is against one target unless its entry says otherwise.\nSaving Throw Effect Notation: If an effect forces a saving throw, the effect's entry starts by identifying the kind of saving throw required and then provides the save's DC, a description of which creatures must make the save, and what happens on a failed or a successful save.\nDamage Notation: A stat block usually provides both a static number and a die expression for each instance of damage. For example, an attack might deal 4 (1d4 + 2) damage on a hit. The DM determines whether you use the static number or the die expression in parentheses; you don't use both."
+      "text": "A stat block contains the game statistics of a monster. Each stat block includes the following information presented after the monster's name.\nSize: A monster is Tiny, Small, Medium, Large, Huge, or Gargantuan.\nCreature Type: This entry notes the family of beings a monster belongs to, along with any descriptive tags.\nAlignment: An alignment is suggested for the monster, with the GM determining its actual alignment.\nAC, Initiative, and HP: These entries give the monster's Armor Class, Initiative, and Hit Points, which are detailed in \"Playing the Game.\" In parentheses after the Hit Points, the monster's Hit Point Dice are provided, along with the contribution of its Constitution, if any, to its Hit Points. Following the Initiative modifier is an Initiative score. Some creatures that are created by magic lack Hit Dice and Initiative information.\nSpeed: Here the monster's Speed is provided, along with any special speeds.\nAbility Scores: A table provides the monster's ability scores, modifiers, and saving throw modifiers, all of which are detailed in \"Playing the Game.\"\nSkills: This entry lists the monster's skill proficiencies, if any.\nResistances and Vulnerabilities: These entries list the monster's Resistances and Vulnerabilities, if any.\nImmunities: This section lists the monster's damage and condition Immunities, if any.\nGear: If the monster has any equipment that can be given away or retrieved, it's listed in this entry.\nSenses: This entry lists the monster's special senses, such as Darkvision, and its Passive Perception.\nLanguages: This entry lists any languages the monster knows.\nCR: Challenge Rating summarizes the threat a monster poses and is detailed in \"Monsters.\" The Experience Points characters receive for defeating a monster and its Proficiency Bonus follow. Some creatures that are created by magic have no CR.\nTraits: The monster's traits, if any, are features that are active at all times or in certain situations.\nActions: The monster can take these actions in addition to those detailed in this glossary.\nBonus Actions: If the monster has Bonus Action options, they are listed in this section.\nReactions: If the monster can take special Reactions, those are listed in this section.\nAttack Notation: The entry for a monster's attack starts by identifying whether the attack is a melee or a ranged attack and then provides the attack roll's bonus, its reach or range, and what happens on a hit. An attack is against one target unless its entry says otherwise.\nSaving Throw Effect Notation: If an effect forces a saving throw, the effect's entry starts by identifying the kind of saving throw required and then provides the save's DC, a description of which creatures must make the save, and what happens on a failed or a successful save.\nDamage Notation: A stat block usually provides both a static number and a die expression for each instance of damage. For example, an attack might deal 4 (1d4 + 2) damage on a hit. The GM determines whether you use the static number or the die expression in parentheses; you don't use both."
     },
     {
       "term": "Swim Speed",
@@ -532,7 +532,7 @@
     {
       "term": "Swimming",
       "type": "text",
-      "text": "While you're swimming, each foot of movement costs 1 extra foot (2 extra feet in difficult terrain). You ignore this extra cost if you have a Swim Speed and use it to swim. At the DM's option, moving any distance in rough water might require a successful DC 15 Strength (Athletics) check."
+      "text": "While you're swimming, each foot of movement costs 1 extra foot (2 extra feet in difficult terrain). You ignore this extra cost if you have a Swim Speed and use it to swim. At the GM's option, moving any distance in rough water might require a successful DC 15 Strength (Athletics) check."
     },
     {
       "term": "Target",

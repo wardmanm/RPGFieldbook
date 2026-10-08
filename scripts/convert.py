@@ -2565,6 +2565,96 @@ def srd_view(src, dst):
             'ref_feats': [x['name'] for x in ref_feats],
             'nonsrd': (dropped - kept_names - {n.lower() for n in (x['name'] for x in ref_feats)}) | set(renames)}
 
+# Keys a correction never rewrites: names and labels are identity, and a table's
+# name is what "[Table: X]" anchors resolve by.
+SRD_KEY_EXEMPT = {'name', 'term', 'system', 'owner', 'ownerKind', 'source'}
+
+def _srd_targets(packs):
+    """(key, node) for everything a correction can name (spec §5): a record by
+    its name (a keyword by its term); a class's, subclass's or species' trait as
+    "Owner/Trait"; a table as "table:Name"."""
+    for fname, obj in sorted(packs.items()):
+        for cat, arr in obj.items():
+            if not isinstance(arr, list):
+                continue
+            for r in arr:
+                if not isinstance(r, dict):
+                    continue
+                key = str(r.get('term') or r.get('name') or '')
+                if cat == 'tables':
+                    yield 'table:' + key, r
+                    continue
+                if key:
+                    yield key, r
+                for lv in (r.get('levels') or {}).values():
+                    for t in lv.get('traits') or []:
+                        yield key + '/' + str(t.get('name')), t
+                for sn, sd in (r.get('subclasses') or {}).items():
+                    for lv in (sd.get('levels') or {}).values():
+                        for t in lv.get('traits') or []:
+                            yield sn + '/' + str(t.get('name')), t
+                for t in r.get('traits') or []:
+                    yield key + '/' + str(t.get('name')), t
+
+def _srd_sub(node, find, repl):
+    """Replace `find` (a string, or a compiled pattern) with `repl` in every
+    string under node, in place, skipping SRD_KEY_EXEMPT keys. Returns how many
+    strings changed."""
+    n = 0
+    if isinstance(node, dict):
+        items = [(k, v) for k, v in node.items() if k not in SRD_KEY_EXEMPT]
+    elif isinstance(node, list):
+        items = list(enumerate(node))
+    else:
+        return 0
+    for k, v in items:
+        if isinstance(v, str):
+            nv = find.sub(repl, v) if hasattr(find, 'sub') else v.replace(find, repl)
+            if nv != v:
+                node[k] = nv
+                n += 1
+        elif isinstance(v, (dict, list)):
+            n += _srd_sub(v, find, repl)
+    return n
+
+def _srd_apply_corrections(packs, path):
+    """scripts/srd-corrections.json, on the converted pack (spec §5): `remove`
+    first (a whole record or table the SRD doesn't print, named by the same
+    keys), then `global` whole-word swaps, then each `corrections` entry on the
+    entry it names. A removal or swap that matches nothing, an entry nothing is
+    named, or a `find` its entry doesn't contain is an error: a correction that
+    no longer applies means the source moved under it."""
+    if not path or not os.path.exists(path):
+        return []
+    spec = json.load(open(path, encoding='utf-8'))
+    errors = []
+    for rm in spec.get('remove') or []:
+        hit = 0
+        for obj in packs.values():
+            for cat, arr in obj.items():
+                if not isinstance(arr, list):
+                    continue
+                key = lambda r: ('table:' if cat == 'tables' else '') + str(r.get('term') or r.get('name') or '')
+                keep = [r for r in arr if not (isinstance(r, dict) and key(r) == rm['entry'])]
+                hit += len(arr) - len(keep)
+                arr[:] = keep
+        if not hit:
+            errors.append('removal of %r matched nothing' % rm['entry'])
+    for g in spec.get('global') or []:
+        rx = re.compile(r'(?<![\w])' + re.escape(g['word']) + r'(?![\w])')
+        if not sum(_srd_sub(obj, rx, g['replace']) for obj in packs.values()):
+            errors.append('global correction %r matched nothing' % g['word'])
+    targets = {}
+    for key, node in _srd_targets(packs):
+        targets.setdefault(key, []).append(node)
+    for c in spec.get('corrections') or []:
+        nodes = targets.get(c['entry'])
+        if not nodes:
+            errors.append('correction for unknown entry %r' % c['entry'])
+        elif not sum(_srd_sub(nd, c['find'], c['replace']) for nd in nodes):
+            errors.append('correction for %r: %r not found' % (c['entry'], c['find']))
+    return errors
+
 def _srd_leaks(packs, info):
     """Names the SRD doesn't publish, found in the pack (spec §4): a record,
     class or subclass NAMED as a non-SRD entry, or a renamed entry's OLD name
@@ -2594,9 +2684,11 @@ def _srd_leaks(packs, info):
     return bad
 
 def _srd_post(packs, a, info):
-    """After the pipeline, before anything is written: the corrections (added
-    in Task 5) and the leak scan. Returns the errors; any error writes nothing."""
-    return _srd_leaks(packs, info)
+    """After the pipeline, before anything is written: the corrections, then
+    the leak scan (on the corrected text). Returns the errors; any error writes
+    nothing."""
+    path = getattr(a, 'corrections', None) or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'srd-corrections.json')
+    return _srd_apply_corrections(packs, path) + _srd_leaks(packs, info)
 
 def _run_srd(a):
     """`srd`: the SRD 5.2 pack — the 2024 pipeline over srd_view(), then
