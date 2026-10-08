@@ -2569,10 +2569,25 @@ def srd_view(src, dst):
 # name is what "[Table: X]" anchors resolve by.
 SRD_KEY_EXEMPT = {'name', 'term', 'system', 'owner', 'ownerKind', 'source'}
 
+def _srd_level_targets(owner, levels):
+    """(key, node) for a class's or subclass's levels: each trait and each
+    described choice option as "Owner/Name". A level's `spells` note is left
+    out: convert.py writes those counts itself (_spell_notes); it isn't prose."""
+    for lv in (levels or {}).values():
+        for t in lv.get('traits') or []:
+            yield owner + '/' + str(t.get('name')), t
+        for ch in lv.get('choices') or []:
+            for o in ch.get('from') or []:
+                if isinstance(o, dict) and o.get('description'):
+                    yield owner + '/' + str(o.get('name')), o
+
 def _srd_targets(packs):
     """(key, node) for everything a correction can name (spec §5): a record by
-    its name (a keyword by its term); a class's, subclass's or species' trait as
-    "Owner/Trait"; a table as "table:Name"."""
+    its name (a keyword by its term); a subclass by its name (its description,
+    and everything under it); a species' subrace as "Species/Subrace"; a trait
+    of a class, subclass, species or subrace, or a class's or subclass's choice
+    option, as "Owner/Name"; a table as "table:Name". srd_text.records() walks
+    the same places under the same keys."""
     for fname, obj in sorted(packs.items()):
         for cat, arr in obj.items():
             if not isinstance(arr, list):
@@ -2586,15 +2601,17 @@ def _srd_targets(packs):
                     continue
                 if key:
                     yield key, r
-                for lv in (r.get('levels') or {}).values():
-                    for t in lv.get('traits') or []:
-                        yield key + '/' + str(t.get('name')), t
+                yield from _srd_level_targets(key, r.get('levels'))
                 for sn, sd in (r.get('subclasses') or {}).items():
-                    for lv in (sd.get('levels') or {}).values():
-                        for t in lv.get('traits') or []:
-                            yield sn + '/' + str(t.get('name')), t
+                    yield sn, sd
+                    yield from _srd_level_targets(sn, sd.get('levels'))
                 for t in r.get('traits') or []:
                     yield key + '/' + str(t.get('name')), t
+                for sr in r.get('subraces') or []:
+                    srn = str(sr.get('name'))
+                    yield key + '/' + srn, sr
+                    for t in sr.get('traits') or []:
+                        yield srn + '/' + str(t.get('name')), t
 
 def _srd_sub(node, find, repl):
     """Replace `find` (a string, or a compiled pattern) with `repl` in every

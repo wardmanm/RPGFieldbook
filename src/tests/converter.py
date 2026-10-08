@@ -1774,6 +1774,7 @@ with tempfile.TemporaryDirectory() as _td:
     ck('#84 a removal that matches nothing is an error, named', len(errs) == 1 and 'Bag of Beans Table' in errs[0], errs)
 
 # ---- #84: srd_text — the pure PDF comparison
+import copy
 import srd_text as T
 ck('#84 norm joins line-end hyphenation and drops running heads',
    T.norm('suc-\ncessful System Reference Document 5.2.1\n7\nend') == 'successful end', T.norm('suc-\ncessful System Reference Document 5.2.1\n7\nend'))
@@ -1810,6 +1811,42 @@ f2 = T.check(_pages, _packs, {'accepted': [{'entry': 'Augury', 'text': 'dm', 'wh
 ck('#84 accepted spans and aliases clear their findings',
    not any(k in ('Augury', 'Belt of Hill Giant Strength') for k, _, _ in f2) and len(f2) == 3, f2)
 ck('#84 a table\'s header cells are checked too', ('table:Deck', 'card', None) in f2, f2)
+# subraces, subclass descriptions and choice options: walked by both, under the same keys
+_walk = {'races.json': {'races': [{'name': 'Elf', 'description': 'An elf.', 'traits': [{'name': 'Keen Senses', 'description': 'Sharp.'}],
+                                   'subraces': [{'name': 'Drow', 'description': 'A drow.',
+                                                 'traits': [{'name': 'Elven Lineage (Drow)', 'description': 'Dark magic.'}]}]}]},
+         'classes.json': {'classes': [{'name': 'Warlock', 'description': 'A pact.', 'levels': {'1': {
+             'choices': [{'type': 'option', 'from': [{'name': 'Pact of the Chain', 'description': 'A familiar.'}, 'a plain name']}],
+             'spells': {'note': 'You can now have Cantrips: 2.'}}},
+             'subclasses': {'Fiend Patron': {'description': 'The Lower Planes.', 'levels': {'3': {
+                 'traits': [{'name': "Dark One's Blessing", 'description': 'Temporary Hit Points.'}],
+                 'choices': [{'type': 'option', 'from': [{'name': 'A Boon', 'description': 'A boon.'}]}]}}}}}]}}
+_want = {'Elf/Drow': 'A drow.', 'Drow/Elven Lineage (Drow)': 'Dark magic.', 'Fiend Patron': 'The Lower Planes.',
+         'Warlock/Pact of the Chain': 'A familiar.', 'Fiend Patron/A Boon': 'A boon.'}
+_rec = dict(T.records(_walk))
+ck('#84 records() walks subraces, their traits, subclass descriptions and choice options',
+   all(_rec.get(k) == v for k, v in _want.items()), sorted(_rec.items()))
+_tk = {k for k, _ in C._srd_targets(_walk)}
+ck('#84 _srd_targets() names the same entries', set(_want) <= _tk, sorted(_tk))
+ck('#84 a level\'s spells note is not checked: the converter writes those counts',
+   not any('Cantrips: 2' in v for v in _rec.values()), _rec)
+_cw = copy.deepcopy(_walk)
+with tempfile.TemporaryDirectory() as _td:
+    _p = os.path.join(_td, 'c.json')
+    json.dump({'corrections': [{'entry': 'Drow/Elven Lineage (Drow)', 'find': 'Dark', 'replace': 'Drow', 'page': 1},
+                               {'entry': 'Elf/Drow', 'find': 'A drow.', 'replace': 'A dark elf.', 'page': 1},
+                               {'entry': 'Fiend Patron', 'find': 'Lower', 'replace': 'lower', 'page': 1},
+                               {'entry': 'Warlock/Pact of the Chain', 'find': 'familiar', 'replace': 'friend', 'page': 1}]}, open(_p, 'w'))
+    _e = C._srd_apply_corrections(_cw, _p)
+_cr = dict(T.records(_cw))
+ck('#84 a correction reaches a subrace, its trait, a subclass description and an option',
+   _e == [] and _cr['Drow/Elven Lineage (Drow)'] == 'Drow magic.' and _cr['Elf/Drow'] == 'A dark elf.'
+   and _cr['Fiend Patron'] == 'The lower Planes.' and _cr['Warlock/Pact of the Chain'] == 'A friend.', (_e, _cr))
+_f = T.check(["Elf\nDrow\nElven Lineage\nYou know the Dancing Lights cantrip.\n"],
+             {'races.json': {'races': [{'name': 'Elf', 'subraces': [{'name': 'Drow', 'traits': [
+                 {'name': 'Elven Lineage', 'description': 'You know the Dancing Lights cantrip, and Lolth whispers to you.'}]}]}]}}, {})
+ck('#84 check() finds a planted non-SRD span in a subrace trait',
+   any(k == 'Drow/Elven Lineage' and 'lolth' in s for k, s, _ in _f), _f)
 
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])

@@ -49,9 +49,25 @@ def strip_generated(text):
         lines[0] = ' · '.join(p for p in parts if not _GENERATED.match(p.strip()))
     return '\n'.join(lines)
 
+def _level_records(owner, levels):
+    """A class's or subclass's levels: each trait and each described choice
+    option as "Owner/Name". A level's `spells` note is left out: the converter
+    writes those counts itself; they aren't the book's prose."""
+    out = []
+    for lv in (levels or {}).values():
+        for t in lv.get('traits') or []:
+            out.append((owner + '/' + str(t.get('name')), t.get('description') or ''))
+        for ch in lv.get('choices') or []:
+            for o in ch.get('from') or []:
+                if isinstance(o, dict) and o.get('description'):
+                    out.append((owner + '/' + str(o.get('name')), o['description']))
+    return out
+
 def records(packs):
     """(key, text) for every checkable piece of the pack, keyed as
-    srd-corrections.json names entries."""
+    srd-corrections.json names entries (convert.py _srd_targets() walks the
+    same places): a record; a subclass's description by its name; a subrace's
+    as "Species/Subrace"; a trait or choice option as "Owner/Name"."""
     out = []
     for fname, obj in sorted(packs.items()):
         for cat, arr in obj.items():
@@ -64,15 +80,19 @@ def records(packs):
                 body = r.get('text') or r.get('description') or ''
                 if body:
                     out.append((key, strip_generated(body)))
-                for lv in (r.get('levels') or {}).values():
-                    for t in lv.get('traits') or []:
-                        out.append((key + '/' + str(t.get('name')), t.get('description') or ''))
+                out += _level_records(key, r.get('levels'))
                 for sn, sd in (r.get('subclasses') or {}).items():
-                    for lv in (sd.get('levels') or {}).values():
-                        for t in lv.get('traits') or []:
-                            out.append((sn + '/' + str(t.get('name')), t.get('description') or ''))
+                    if sd.get('description'):
+                        out.append((sn, sd['description']))
+                    out += _level_records(sn, sd.get('levels'))
                 for t in r.get('traits') or []:
                     out.append((key + '/' + str(t.get('name')), t.get('description') or ''))
+                for sr in r.get('subraces') or []:
+                    srn = str(sr.get('name'))
+                    if sr.get('description'):
+                        out.append((key + '/' + srn, sr['description']))
+                    for t in sr.get('traits') or []:
+                        out.append((srn + '/' + str(t.get('name')), t.get('description') or ''))
     return out
 
 class Srd:

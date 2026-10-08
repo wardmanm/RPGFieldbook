@@ -660,6 +660,90 @@
       "why": "5e-tools puts a property tag where the book says \"the ... property\", and the converter prints the tag's name"
     },
     {
+      "entry": "Elf/Drow",
+      "find": "You always have these spells prepared, and you can cast each spell once without a spell slot. Once you cast either of these spells with this trait, you can't cast that spell with it again until you finish a Long Rest.",
+      "replace": "You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest.",
+      "page": 84,
+      "why": "5e-tools rewrites the trait's casting rule for this one lineage; the SRD states it once, in the trait. Keyed to the subrace, so its trait copy follows"
+    },
+    {
+      "entry": "Elf/High Elf",
+      "find": "You always have these spells prepared, and you can cast each spell once without a spell slot. Once you cast either of these spells with this trait, you can't cast that spell with it again until you finish a Long Rest.",
+      "replace": "You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest.",
+      "page": 84,
+      "why": "5e-tools rewrites the trait's casting rule for this one lineage; the SRD states it once, in the trait. Keyed to the subrace, so its trait copy follows"
+    },
+    {
+      "entry": "Elf/Wood Elf",
+      "find": "You always have these spells prepared, and you can cast each spell once without a spell slot. Once you cast either of these spells with this trait, you can't cast that spell with it again until you finish a Long Rest.",
+      "replace": "You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest.",
+      "page": 84,
+      "why": "5e-tools rewrites the trait's casting rule for this one lineage; the SRD states it once, in the trait. Keyed to the subrace, so its trait copy follows"
+    },
+    {
+      "entry": "Tiefling/Abyssal",
+      "find": "You always have these spells prepared, and you can cast each spell once without a spell slot. Once you cast either of these spells with this trait, you can't cast that spell with it again until you finish a Long Rest.",
+      "replace": "You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest.",
+      "page": 86,
+      "why": "5e-tools rewrites the trait's casting rule for this one lineage; the SRD states it once, in the trait. Keyed to the subrace, so its trait copy follows"
+    },
+    {
+      "entry": "Tiefling/Chthonic",
+      "find": "You always have these spells prepared, and you can cast each spell once without a spell slot. Once you cast either of these spells with this trait, you can't cast that spell with it again until you finish a Long Rest.",
+      "replace": "You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest.",
+      "page": 86,
+      "why": "5e-tools rewrites the trait's casting rule for this one lineage; the SRD states it once, in the trait. Keyed to the subrace, so its trait copy follows"
+    },
+    {
+      "entry": "Tiefling/Infernal",
+      "find": "You always have these spells prepared, and you can cast each spell once without a spell slot. Once you cast either of these spells with this trait, you can't cast that spell with it again until you finish a Long Rest.",
+      "replace": "You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest.",
+      "page": 86,
+      "why": "5e-tools rewrites the trait's casting rule for this one lineage; the SRD states it once, in the trait. Keyed to the subrace, so its trait copy follows"
+    },
+    {
+      "entry": "Goliath/Cloud Giant",
+      "find": "You are descended from Giants, granting you a supernatural boon; you can use this boon a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "replace": "You are descended from Giants. Choose one of the following benefits—a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "page": 85,
+      "why": "5e-tools rewrites the Giant Ancestry opening for this one boon; the SRD's own sentence, followed by the chosen benefit. Keyed to the subrace, so its trait copy follows"
+    },
+    {
+      "entry": "Goliath/Fire Giant",
+      "find": "You are descended from Giants, granting you a supernatural boon; you can use this boon a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "replace": "You are descended from Giants. Choose one of the following benefits—a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "page": 85,
+      "why": "5e-tools rewrites the Giant Ancestry opening for this one boon; the SRD's own sentence, followed by the chosen benefit. Keyed to the subrace, so its trait copy follows"
+    },
+    {
+      "entry": "Goliath/Frost Giant",
+      "find": "You are descended from Giants, granting you a supernatural boon; you can use this boon a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "replace": "You are descended from Giants. Choose one of the following benefits—a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "page": 85,
+      "why": "5e-tools rewrites the Giant Ancestry opening for this one boon; the SRD's own sentence, followed by the chosen benefit. Keyed to the subrace, so its trait copy follows"
+    },
+    {
+      "entry": "Goliath/Hill Giant",
+      "find": "You are descended from Giants, granting you a supernatural boon; you can use this boon a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "replace": "You are descended from Giants. Choose one of the following benefits—a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "page": 85,
+      "why": "5e-tools rewrites the Giant Ancestry opening for this one boon; the SRD's own sentence, followed by the chosen benefit. Keyed to the subrace, so its trait copy follows"
+    },
+    {
+      "entry": "Goliath/Stone Giant",
+      "find": "You are descended from Giants, granting you a supernatural boon; you can use this boon a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "replace": "You are descended from Giants. Choose one of the following benefits—a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "page": 85,
+      "why": "5e-tools rewrites the Giant Ancestry opening for this one boon; the SRD's own sentence, followed by the chosen benefit. Keyed to the subrace, so its trait copy follows"
+    },
+    {
+      "entry": "Goliath/Storm Giant",
+      "find": "You are descended from Giants, granting you a supernatural boon; you can use this boon a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "replace": "You are descended from Giants. Choose one of the following benefits—a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
+      "page": 85,
+      "why": "5e-tools rewrites the Giant Ancestry opening for this one boon; the SRD's own sentence, followed by the chosen benefit. Keyed to the subrace, so its trait copy follows"
+    },
+    {
       "entry": "table:Reincarnate Table",
       "find": "Aasimar",
       "replace": "Roll again.",
@@ -750,6 +834,11 @@
   ],
   "accepted": [
     {
+      "entry": "Abyssal/Fiendish Legacy (Abyssal)",
+      "text": "ray of sickness spell when you reach character level 5 you also learn the hold person spell",
+      "why": "5e-tools writes this legacy's Level 3 and Level 5 spells from the SRD's Fiendish Legacies table into the trait's sentence"
+    },
+    {
       "entry": "Carpet of Flying, 3 ft. × 5 ft.",
       "text": "can carry up to 200 lb at a fly speed of 80 feet",
       "why": "5e-tools writes this size's row of the SRD's Carpet of Flying table (capacity, Fly Speed) into its text"
@@ -770,14 +859,69 @@
       "why": "5e-tools writes this size's row of the SRD's Carpet of Flying table (capacity, Fly Speed) into its text"
     },
     {
+      "entry": "Chthonic/Fiendish Legacy (Chthonic)",
+      "text": "false life spell when you reach character level 5 you also learn the ray of enfeeblement spell",
+      "why": "5e-tools writes this legacy's Level 3 and Level 5 spells from the SRD's Fiendish Legacies table into the trait's sentence"
+    },
+    {
+      "entry": "Drow/Elven Lineage (Drow)",
+      "text": "faerie fire spell when you reach character level 5 you also learn the darkness spell",
+      "why": "5e-tools writes this lineage's Level 3 and Level 5 spells from the SRD's Elven Lineages table into the trait's sentence"
+    },
+    {
+      "entry": "Elf/Drow",
+      "text": "faerie fire spell when you reach character level 5 you also learn the darkness spell",
+      "why": "5e-tools writes this lineage's Level 3 and Level 5 spells from the SRD's Elven Lineages table into the trait's sentence"
+    },
+    {
+      "entry": "Elf/High Elf",
+      "text": "detect magic spell when you reach character level 5 you also learn the misty step spell",
+      "why": "5e-tools writes this lineage's Level 3 and Level 5 spells from the SRD's Elven Lineages table into the trait's sentence"
+    },
+    {
+      "entry": "Elf/Wood Elf",
+      "text": "longstrider spell when you reach character level 5 you also learn the pass without trace spell",
+      "why": "5e-tools writes this lineage's Level 3 and Level 5 spells from the SRD's Elven Lineages table into the trait's sentence"
+    },
+    {
       "entry": "Exotic Saddle",
       "text": "a saddle comes with a bit a bridle reins and any other equipment needed to use the saddle an exotic saddle",
       "why": "both sentences are the SRD's own (Saddles); 5e-tools leaves out the Military Saddle sentence between them"
     },
     {
+      "entry": "Fighter/Defense",
+      "text": "1 ac",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Fighter/Great Weapon Fighting",
+      "text": "1s and 2s",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Fighter/Great Weapon Fighting",
+      "text": "3s",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Fighter/Great Weapon Fighting",
+      "text": "melee damage dice",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Fighter/Two-Weapon Fighting",
+      "text": "offhand attacks",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
       "entry": "Grappler",
       "text": "level 4 and",
       "why": "convert.py renders the dump's prerequisite alternatives in full (lines 1490-1501): \"Level 4+ and Strength 13+ or Level 4+ and Dexterity 13+\" for the SRD's \"Level 4+, Strength or Dexterity 13+\""
+    },
+    {
+      "entry": "High Elf/Elven Lineage (High Elf)",
+      "text": "detect magic spell when you reach character level 5 you also learn the misty step spell",
+      "why": "5e-tools writes this lineage's Level 3 and Level 5 spells from the SRD's Elven Lineages table into the trait's sentence"
     },
     {
       "entry": "Horn of Valhalla, Brass",
@@ -840,6 +984,36 @@
       "why": "5e-tools writes this horn's row of the SRD's Horn of Valhalla table (spirits, requirement) into its text"
     },
     {
+      "entry": "Infernal/Fiendish Legacy (Infernal)",
+      "text": "hellish rebuke spell when you reach character level 5 you also learn the darkness spell",
+      "why": "5e-tools writes this legacy's Level 3 and Level 5 spells from the SRD's Fiendish Legacies table into the trait's sentence"
+    },
+    {
+      "entry": "Paladin/Defense",
+      "text": "1 ac",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Paladin/Great Weapon Fighting",
+      "text": "1s and 2s",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Paladin/Great Weapon Fighting",
+      "text": "3s",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Paladin/Great Weapon Fighting",
+      "text": "melee damage dice",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Paladin/Two-Weapon Fighting",
+      "text": "offhand attacks",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
       "entry": "Potion of Cloud Giant Strength",
       "text": "to 27",
       "why": "5e-tools writes this potion's Strength score from the SRD's Potion of Giant Strength table into its text"
@@ -853,6 +1027,31 @@
       "entry": "Potion of Storm Giant Strength",
       "text": "to 29",
       "why": "5e-tools writes this potion's Strength score from the SRD's Potion of Giant Strength table into its text"
+    },
+    {
+      "entry": "Ranger/Defense",
+      "text": "1 ac",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Ranger/Great Weapon Fighting",
+      "text": "1s and 2s",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Ranger/Great Weapon Fighting",
+      "text": "3s",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Ranger/Great Weapon Fighting",
+      "text": "melee damage dice",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
+    },
+    {
+      "entry": "Ranger/Two-Weapon Fighting",
+      "text": "offhand attacks",
+      "why": "Fieldbook's own one-line summary of the Fighting Style (convert.py FIGHTING_STYLES, lines 669-680): the project's own MIT text in the option picker, not book text; the feat itself carries the SRD's"
     },
     {
       "entry": "Ring of Elemental Command (Air)",
@@ -920,6 +1119,21 @@
       "why": "5e-tools writes this level's save DC and attack bonus from the SRD's Spell Scroll table into its text"
     },
     {
+      "entry": "Tiefling/Abyssal",
+      "text": "ray of sickness spell when you reach character level 5 you also learn the hold person spell",
+      "why": "5e-tools writes this legacy's Level 3 and Level 5 spells from the SRD's Fiendish Legacies table into the trait's sentence"
+    },
+    {
+      "entry": "Tiefling/Chthonic",
+      "text": "false life spell when you reach character level 5 you also learn the ray of enfeeblement spell",
+      "why": "5e-tools writes this legacy's Level 3 and Level 5 spells from the SRD's Fiendish Legacies table into the trait's sentence"
+    },
+    {
+      "entry": "Tiefling/Infernal",
+      "text": "hellish rebuke spell when you reach character level 5 you also learn the darkness spell",
+      "why": "5e-tools writes this legacy's Level 3 and Level 5 spells from the SRD's Fiendish Legacies table into the trait's sentence"
+    },
+    {
       "entry": "Warlock/Eldritch Invocation Options",
       "text": "chain pact",
       "why": "convert.py lists the options by name (flatten(), refOptionalfeature, lines 622-629) where the SRD prints them in full; the names are the SRD's"
@@ -933,6 +1147,11 @@
       "entry": "Warlock/Eldritch Invocation Options",
       "text": "the tome repelling blast thirsting blade visions of distant realms whispers of the grave witch sight",
       "why": "convert.py lists the options by name (flatten(), refOptionalfeature, lines 622-629) where the SRD prints them in full; the names are the SRD's"
+    },
+    {
+      "entry": "Wood Elf/Elven Lineage (Wood Elf)",
+      "text": "longstrider spell when you reach character level 5 you also learn the pass without trace spell",
+      "why": "5e-tools writes this lineage's Level 3 and Level 5 spells from the SRD's Elven Lineages table into the trait's sentence"
     },
     {
       "entry": "table:Arid Land",
@@ -1099,6 +1318,7 @@
     "+3 Needle": "Ammunition, +1, +2, or +3",
     "+3 Sling Bullet": "Ammunition, +1, +2, or +3",
     "+3 Wand of the War Mage": "Wand of the War Mage, +1, +2, or +3",
+    "Abyssal/Fiendish Legacy (Abyssal)": "Fiendish Legacy",
     "Arrow of Slaying": "Ammunition of Slaying",
     "Bag of Tricks, Gray": "Bag of Tricks",
     "Bag of Tricks, Rust": "Bag of Tricks",
@@ -1118,13 +1338,19 @@
     "Carpet of Flying, 4 ft. × 6 ft.": "Carpet of Flying",
     "Carpet of Flying, 5 ft. × 7 ft.": "Carpet of Flying",
     "Carpet of Flying, 6 ft. × 9 ft.": "Carpet of Flying",
+    "Chthonic/Fiendish Legacy (Chthonic)": "Fiendish Legacy",
+    "Cloud Giant/Giant Ancestry (Cloud)": "Giant Ancestry",
     "Copper Dragon Scale Mail": "Dragon Scale Mail",
     "Dice Set": "Gaming Set (Varies)",
     "Dragonchess Set": "Gaming Set (Varies)",
+    "Drow/Elven Lineage (Drow)": "Elven Lineage",
     "Elemental Gem, Blue Sapphire": "Elemental Gem",
     "Elemental Gem, Emerald": "Elemental Gem",
     "Elemental Gem, Red Corundum": "Elemental Gem",
     "Elemental Gem, Yellow Diamond": "Elemental Gem",
+    "Elf/Drow": "Elven Lineage",
+    "Elf/High Elf": "Elven Lineage",
+    "Elf/Wood Elf": "Elven Lineage",
     "Feather Token, Anchor": "Feather Token",
     "Feather Token, Bird": "Feather Token",
     "Feather Token, Fan": "Feather Token",
@@ -1140,13 +1366,25 @@
     "Figurine of Wondrous Power, Onyx Dog": "Figurine of Wondrous Power",
     "Figurine of Wondrous Power, Serpentine Owl": "Figurine of Wondrous Power",
     "Figurine of Wondrous Power, Silver Raven": "Figurine of Wondrous Power",
+    "Fire Giant/Giant Ancestry (Fire)": "Giant Ancestry",
     "Firearm Bullet of Slaying": "Ammunition of Slaying",
+    "Forest Gnome/Gnomish Lineage (Forest Gnome)": "Gnomish Lineage",
+    "Frost Giant/Giant Ancestry (Frost)": "Giant Ancestry",
     "Gold Dragon Scale Mail": "Dragon Scale Mail",
+    "Goliath/Cloud Giant": "Giant Ancestry",
+    "Goliath/Fire Giant": "Giant Ancestry",
+    "Goliath/Frost Giant": "Giant Ancestry",
+    "Goliath/Hill Giant": "Giant Ancestry",
+    "Goliath/Stone Giant": "Giant Ancestry",
+    "Goliath/Storm Giant": "Giant Ancestry",
     "Green Dragon Scale Mail": "Dragon Scale Mail",
+    "High Elf/Elven Lineage (High Elf)": "Elven Lineage",
+    "Hill Giant/Giant Ancestry (Hill)": "Giant Ancestry",
     "Horn of Valhalla, Brass": "Horn of Valhalla",
     "Horn of Valhalla, Bronze": "Horn of Valhalla",
     "Horn of Valhalla, Iron": "Horn of Valhalla",
     "Horn of Valhalla, Silver": "Horn of Valhalla",
+    "Infernal/Fiendish Legacy (Infernal)": "Fiendish Legacy",
     "Ioun Stone, Absorption": "Ioun Stone",
     "Ioun Stone, Agility": "Ioun Stone",
     "Ioun Stone, Awareness": "Ioun Stone",
@@ -1199,6 +1437,7 @@
     "Ring of Psychic Resistance": "Ring of Resistance",
     "Ring of Radiant Resistance": "Ring of Resistance",
     "Ring of Thunder Resistance": "Ring of Resistance",
+    "Rock Gnome/Gnomish Lineage (Rock Gnome)": "Gnomish Lineage",
     "Silver Dragon Scale Mail": "Dragon Scale Mail",
     "Sling Bullet of Slaying": "Ammunition of Slaying",
     "Spell Scroll (Cantrip)": "Spell Scroll",
@@ -1211,7 +1450,13 @@
     "Spell Scroll (Level 7)": "Spell Scroll",
     "Spell Scroll (Level 8)": "Spell Scroll",
     "Spell Scroll (Level 9)": "Spell Scroll",
+    "Stone Giant/Giant Ancestry (Stone)": "Giant Ancestry",
+    "Storm Giant/Giant Ancestry (Storm)": "Giant Ancestry",
     "Three-Dragon Ante Set": "Gaming Set (Varies)",
-    "White Dragon Scale Mail": "Dragon Scale Mail"
+    "Tiefling/Abyssal": "Fiendish Legacy",
+    "Tiefling/Chthonic": "Fiendish Legacy",
+    "Tiefling/Infernal": "Fiendish Legacy",
+    "White Dragon Scale Mail": "Dragon Scale Mail",
+    "Wood Elf/Elven Lineage (Wood Elf)": "Elven Lineage"
   }
 }
