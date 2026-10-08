@@ -148,10 +148,11 @@ class, species and background descriptions re-resolve live by name. `findTable()
 name lookup, first match in load order, and `[Table: …]` anchors carry no pack (see
 [Rich text](rich-text.md)). So two packs may share a table name only when that is harmless:
 **identical twins**, or **the SRD 5.2 and 2024 packs' copies of one table** (R5). The SRD pack
-reprints 68 of the 2024 pack's tables, 58 word for word and 10 in the SRD's own wording ("GM" for
-"DM", renamed spells, four corrections), so whichever loads first is the same table either way. The
-registry, and so the archive, loads the 2024 pack first. Any other same-named pair fails
-`rules-data.js`, and the converter suffixes a supplement's colliding name (see
+reprints 68 of the 2024 pack's tables, 59 word for word and 9 in the SRD's own wording ("GM" for
+"DM", renamed spells, three corrections), so whichever loads first is the same table either way. The
+registry, and so the archive, loads the 2024 pack first. `rules-data.js` pins those nine by name, so
+a new difference (from a 5e-tools update, say) fails until it is added on purpose. Any other
+same-named pair fails too, and the converter suffixes a supplement's colliding name (see
 [Supplements](../data/supplements.md)).
 
 **Subclasses.** `subclassesFor(d)` returns the class's own subclasses plus every standalone entry in
@@ -244,9 +245,9 @@ files).
 - **`data/5e2024/` and `data/srd52/` must reproduce byte for byte** from the converter. Any value
   that moves changes that pack's digest, so the next release bumps it and every player is told to
   re-download a pack that did not change. See [Converter](../data/converter.md).
-- **A table name is shared only by identical twins or by an SRD 5.2/2024 pair.** `findTable()` takes
-  the first match and an anchor names no pack, so any other pair would open one book's table from
-  the other's prose. `rules-data.js` enforces it across every pack folder.
+- **A table name is shared only by identical twins or by one of the nine pinned SRD 5.2/2024 pairs.**
+  `findTable()` takes the first match and an anchor names no pack, so any other pair would open one
+  book's table from the other's prose. `rules-data.js` enforces it across every pack folder.
 
 ## Traps
 
@@ -336,3 +337,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — Entries with no name are skipped and reported at import and fetch; `reindexRules()` tidies the pool on every path; keywords written `{name, description}` load. → ledger L4206, #71
 - 2026-10-07 — Imports take bytes and zips; a re-import replaces its pack (`importPack()`); versions come from `data/packs.json` and compare with `cmpDataVer()`, with an `update` state for a newer data release; pack credits are kept like `requires`. → ledger L5082, #83
 - 2026-10-08 — SRD 5.2 joins as a system: `systemOf()` reads it as D&D, it loads after the 2024 pack, and an SRD/2024 table pair may share a name (R5, refined). → ledger L5148, #84
+- 2026-10-08 — R5 pinned: the nine SRD/2024 tables that differ are listed by name; Carrying Capacity is now an identical twin (59), leaving three corrected ones. → ledger L5269, #84

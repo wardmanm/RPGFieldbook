@@ -76,9 +76,11 @@ extra", which is what such a build is.
 
 Contents are an **allowlist**, assembled in `.buildtmp/`: `fieldbook.html` at the zip root, `README.md`,
 `LICENSE`, `data/` holding only the rules-data archive, `docs/*.md`, and `scripts/convert.py`
-with its two hand-authored inputs `data/overlay.json` and `data/class-resources.json`, which go in
-`scripts/` because they are converter inputs and not loadable packs. That is README §9. Fieldbook
-opens this zip as it is: it finds the archive inside it.
+with its three hand-authored inputs `data/overlay.json`, `data/class-resources.json` and
+`scripts/srd-corrections.json`, which go in `scripts/` because they are converter inputs and not
+loadable packs. `convert.py srd` looks for its corrections beside itself and fails without them, so
+that one must be there. That is README §9. Fieldbook opens this zip as it is: it finds the archive
+inside it.
 
 After zipping, the guard lists the entries with `unzip -Z1` and fails on any of:
 
@@ -284,3 +286,4 @@ prints the menu and exits 0.
 - 2026-08-18 — Icon generation kept out of `build.sh`; the hooks' JSON check widened to all of `src/`. → ledger L3289
 - 2026-09-24 — CI builds a src-only PR instead of failing it. → ledger L3339
 - 2026-10-07 — The rules-data archive: built and validated after `--no-zip`'s exit, carried in the app zip's `data/` in place of the five packs; `--data`; Python for the zips; `release.yml`'s registry guard and three assets; `data-release.yml` and its "latest" check; dev.sh `d`. → ledger L5082, #83
+- 2026-10-08 — The app zip ships `scripts/srd-corrections.json` beside `convert.py`. → ledger L5269, #84

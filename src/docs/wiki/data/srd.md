@@ -14,7 +14,7 @@ copyrighted packs leave the public repo, it becomes the D&D content every player
 `findTable()` in `86-tables.js`; `dispName()` in `89-rules-merge.js` · **Data:** `data/srd52/*.json`,
 `scripts/srd-corrections.json`, its entry in `data/packs.json`, `_conversion-data/srd52/SRD_CC_v5.2.1.pdf`
 (gitignored) · **Tests:** `converter.py`, `rules-data.js`, `tables.js`, `srd-verbatim.py`, `data-kit.py`,
-`docs.js` (the README credit) · **See also:** [Converter](converter.md),
+`docs.js` (the README and README-converter credit, the zip's corrections file) · **See also:** [Converter](converter.md),
 [Rules packs](../architecture/rules-packs.md), [Data archive](../architecture/data-archive.md),
 [Homebrew](homebrew.md), [Humblewood](humblewood.md) (the other verbatim check), [Testing](../process/testing.md),
 [the spec](../../specs/2026-10-08-srd-pack-design.md)
@@ -99,6 +99,10 @@ python3 scripts/convert.py srd _conversion-data/5etools-v2.36.1 -o data/srd52
    as `src/tests/fixtures/srd-excluded-names.json`, because the data tests need them and CI has no
    dump.
 
+A player can run it too: the app zip ships `scripts/srd-corrections.json` beside `convert.py`, and
+[README-converter](../../../../docs/README-converter.md) gives the command, which from the zip also
+names `--overlay` and `--resources`. The pack in the rules-data zip is still the one to use.
+
 **Matching the PDF.** `scripts/srd-corrections.json` is hand-authored, a converter input beside
 `overlay.json`, never a pack. `_srd_apply_corrections()` applies, in order:
 
@@ -106,7 +110,7 @@ python3 scripts/convert.py srd _conversion-data/5etools-v2.36.1 -o data/srd52
 |---|---|---|
 | `remove` | Drops a whole record or table the SRD doesn't print | 1 (the Iron Flask Table) |
 | `global` | A whole-word swap across the pack | 1 (DM → GM: the SRD never says "DM") |
-| `corrections` | `{entry, find, replace, page, why}` on the entry it names | 125 |
+| `corrections` | `{entry, find, replace, page, why}` on the entry it names | 124 |
 | `accepted` | `{entry, text, why}`: a span `srd-verbatim` lets through | 93 |
 | `aliases` | An entry the SRD titles differently (`"Ring of Fire Resistance": "Ring of Resistance"`) | 158 |
 
@@ -116,7 +120,11 @@ keyword by its term), a subclass by its name, a trait or choice option as "Owner
 rewrites names, terms, owners or sources (`SRD_KEY_EXEMPT`), because a table's name is what its
 anchors resolve by. A removal or swap that matches nothing, a correction naming no entry in the
 pack, or a `find` its entry doesn't contain is an error: a correction that no longer applies means
-the source moved under it.
+the source moved under it. **The file itself is required.** The default is `srd-corrections.json`
+beside `convert.py` (`--corrections PATH` names another); a missing or unreadable one is an error,
+so the pack is built with its corrections or not at all. A run that succeeds prints the file it
+applied and its counts: `corrections: …/srd-corrections.json (1 removal, 1 global, 124 corrections)`.
+A replacement is written as text, never as a regex template.
 
 `scripts/srd_text.py` is the pure half of the check. `norm()` reduces text to comparable words
 (curly quotes and dashes unified, the PDF's running heads and line-end hyphenation removed,
@@ -127,7 +135,11 @@ out, because the converter writes those counts itself. `strip_generated()` drops
 its heading (or its alias) and returns the spans of pack text the SRD lacks. `check()` returns every
 such span, and every table cell the SRD lacks, that `accepted` doesn't list. **A finding is a span of
 pack text that appears nowhere in the SRD.** Text the SRD has elsewhere (the Ammunition rules quoted
-on an arrow) is SRD text, and passes.
+on an arrow) is SRD text, and passes. `check()` also reports the corrections file's own stale lines,
+as the converter fails on a stale correction: an `accepted` (entry, text) that matched no finding
+("(accepted, matched nothing) …") and an `aliases` key that names no record ("(alias names no
+record)"). An alias whose entry is found without it is not stale: 14 of them still pick the right
+heading where the bare name also occurs (Elf/Drow, the Goliath ancestries, the Tiefling legacies).
 
 `src/tests/srd-verbatim.py` reads the PDF with PyMuPDF and runs `check()`. It needs `.venv` and
 `_conversion-data/srd52/SRD_CC_v5.2.1.pdf`, and prints `SKIP` without either, so CI stays green:
@@ -144,7 +156,8 @@ list). Today: ALL PASSED, 1561 records.
 3. Regenerate `data/srd52` and the fixture (`--excluded-out src/tests/fixtures/srd-excluded-names.json`),
    then run `srd-verbatim`. Each new finding is either a **correction** (a name, a number, a rule:
    anything of substance, with its page), an **acceptance** (form only, with a `why`), or an
-   **alias** (the SRD titles the entry differently). Never accept a difference of substance.
+   **alias** (the SRD titles the entry differently). Never accept a difference of substance. A stale
+   acceptance or alias is a finding too: delete it.
 4. A new SRD revision also means a new PDF in `_conversion-data/srd52/`, a new attribution (the
    registry entry, README §10 and the `docs.js` check all name 5.2.1), and a full re-triage.
 5. Run the SRD gate and the suites. A moved `data/srd52` changes the pack's digest, so it is a data
@@ -157,7 +170,7 @@ pack is offered to every character, as any pack's is. With the 2024 pack also lo
 entries show both sources ("Fireball (SRD 5.2)", through `dispName()`), as any duplicate does. The
 registry lists SRD 5.2 after XPHB, so the archive, and an import of it, loads the 2024 pack first,
 and existing characters keep resolving to it. Tables are looked up by name across every pack
-(`findTable()`): the two packs share 68 table names, 58 of them word for word, and the first loaded
+(`findTable()`): the two packs share 68 table names, 59 of them word for word, and the first loaded
 wins (see [Rules packs](../architecture/rules-packs.md)).
 
 ## Rules that must hold
@@ -176,6 +189,10 @@ wins (see [Rules packs](../architecture/rules-packs.md)).
 - **The leak scan stays clean,** and the converter's renames stay complete: `rules-data.js` fails on
   any record or table named as a non-SRD entry and on any of the 33 old names, from the committed
   fixture.
+- **The committed pack carries its corrections.** CI has neither the dump nor the PDF, so
+  `converter.py` checks it from committed files alone: the corrections file's shape, every
+  correction's entry in the pack, each `find` gone and each `replace` there, no removed entry, no
+  global word left.
 
 ## Traps
 
@@ -198,7 +215,8 @@ wins (see [Rules packs](../architecture/rules-packs.md)).
 | How the SRD pack is selected | An SRD view of the dump (`srd_view()`), run through the 2024 pipeline unchanged (`_run_core()`) (R1) | An SRD branch at each of the converter's 20 selection sites: threading a mode through all of them risks the 2024 pack at every one. A prototype of the view reproduced every entry the two packs share byte for byte |
 | Which SRD revision the text and attribution target | SRD 5.2.1, the current one; the system label stays "SRD 5.2" (R2) | SRD 5.2: what Wizards published first, now superseded. The stray-name passages read the same in both |
 | Whose wording the pack ships | The PDF's: every difference corrected or accepted in `srd-corrections.json`, checked by `srd-verbatim` (R3, decision 3) | 5e-tools' text as it stands: where it differs from the SRD it is the 2024 books' wording, which CC-BY-4.0 does not cover |
-| Two packs sharing a table name (R5) | Allowed for byte-identical twins and for an SRD/2024 pair; any other same-named pair fails `rules-data.js` | Renaming the SRD's copies: breaks the anchors in its prose and departs from the PDF's names. Identical twins only (the spec's R5): the SRD's corrections reword 10 of the 68 shared tables |
+| Two packs sharing a table name (R5) | Allowed for byte-identical twins and for the nine pinned SRD/2024 pairs that differ; any other same-named pair, or a change to the nine, fails `rules-data.js` | Renaming the SRD's copies: breaks the anchors in its prose and departs from the PDF's names. Identical twins only (the spec's R5): the SRD's own wording differs in 9 of the 68 shared tables. Any SRD/2024 pair (the plan's widening): a new difference, from a 5e-tools update say, would pass without a word |
+| A missing corrections file (#84) | An error: exit 1, nothing written, the path named; the app zip ships the file beside `convert.py` | No corrections (the plan's ruling): the run succeeded with 5e-tools' wording, and with the file missing from the zip, every player's own run did |
 
 ## Open
 
@@ -210,14 +228,8 @@ wins (see [Rules packs](../architecture/rules-packs.md)).
   "spirits", Spell Scroll stating its DC two ways).
 - **A reordering of SRD words is not caught.** A span passes if it appears anywhere in the SRD.
 - **With both packs loaded, the 2024 twin of a shared table wins** (in archive order), so the SRD's
-  corrected Reincarnate, Deck of Illusions, Object Armor Class and Carrying Capacity tables are
-  shadowed. See [Known issues](../roadmap/known-issues.md).
-- **Stale acceptances and aliases are silent,** unlike stale corrections; an explicit `--corrections`
-  path that doesn't exist means no corrections; and CI never checks the corrections file's shape,
-  because `srd-verbatim` skips there.
-- **The app zip ships `convert.py` without `srd-corrections.json`,** so a player's own `srd` run
-  finds no corrections file and succeeds, silently, with 5e-tools' wording (the Iron Flask Table
-  included) rather than the committed pack's. The pack in the rules-data zip is the one to use.
+  corrected Reincarnate, Deck of Illusions and Object Armor Class tables are shadowed. See
+  [Known issues](../roadmap/known-issues.md).
 - No version until 1.8.0 gives it one (`version: null`), so the bundle carries no `dataVersion` yet.
 - Homebrew's `requires` still names `5e2024_full.json` for its D&D group, though every name in it
   resolves with SRD 5.2 alone; #85 repoints it.
@@ -225,3 +237,4 @@ wins (see [Rules packs](../architecture/rules-packs.md)).
 ## History
 
 - 2026-10-08 — The SRD 5.2 pack: `convert.py srd` over an SRD view of the dump, three rename layers, the leak scan, corrections matched to the SRD 5.2.1 PDF and `srd-verbatim`, the registry entry and credit, `systemOf()`. → ledger L5148, #84
+- 2026-10-08 — The final review's fixes: a missing corrections file fails the run and the app zip ships it; CI checks the committed pack carries its corrections; stale acceptances and aliases fail `srd-verbatim`; Carrying Capacity's correction is gone with the converter bug it covered (124 corrections, three shadowed tables); the nine differing twins are pinned; README-converter documents `srd`. → ledger L5269, #84

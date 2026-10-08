@@ -5265,3 +5265,76 @@ Pages: [SRD 5.2](../wiki/data/srd.md), [converter](../wiki/data/converter.md),
 [homebrew](../wiki/data/homebrew.md), [rules packs](../wiki/architecture/rules-packs.md),
 [data archive](../wiki/architecture/data-archive.md), [testing](../wiki/process/testing.md),
 [overview](../wiki/overview.md), [decisions](../wiki/decisions.md).
+
+## The SRD 5.2 pack — final review fixes (#84, 2026-10-08)
+
+The final whole-branch review of the SRD 5.2 pack (L5148) passed "with fixes". This applies every
+fix ruled in.
+
+1. **A dice roll holding a 5e-tools prompt template.** `strip_tags()` read `{@dice roll|display}`
+   through the default `name|source|display` family, so a two-field tag printed its roll. For
+   `variantrules.json`'s Carrying Capacity that roll is a prompt template,
+   `#$prompt_number:title=Enter Strength Score$# × 7.5`, and it shipped in 10 cells of
+   `data/5e2024/tables.json` (and in the SRD pack until a correction covered it). A dice-family tag
+   (`dice`, `autodice`, `damage`, `d20`, `hit`) whose roll holds `#$` and that has display text now
+   prints the display text, "Str. × 7.5 lb.". No other dice text moves: `{@dice 1d6|one die}` still
+   prints `1d6`, and `scaledice`/`scaledamage` keep their own grammar. `_write()` counts a leftover
+   `#$` as unresolved, so a template with no display text is loud. Of every file the converter
+   reads, only `variantrules.json` holds `#$`, in those 10 tags. `data/5e2024` regenerated:
+   `tables.json`, the 10 cells, nothing else. The SRD's `table:Carrying Capacity` correction went
+   stale and is deleted (124 corrections now); `data/srd52` is byte-identical. Carrying Capacity is
+   now an identical twin, so 59 of the 68 tables the two packs share are word for word, and with
+   both packs loaded three corrected SRD tables are shadowed: Reincarnate, Deck of Illusions,
+   Object Armor Class.
+2. **The SRD pack is built with its corrections, or not at all.** A missing corrections file, the
+   default (`srd-corrections.json` beside `convert.py`) or an explicit `--corrections`, meant no
+   corrections: the run succeeded with 5e-tools' wording, the Iron Flask Table and "DM" included.
+   The app zip shipped `convert.py` without the file, so a player's own `srd` run did exactly that.
+   `_srd_apply_corrections()` now makes a missing file an error (exit 1, nothing written, the path
+   named) and unreadable JSON an error line, not a traceback; a run that succeeds prints
+   `corrections: <path> (1 removal, 1 global, 124 corrections)`. `build.sh` copies
+   `scripts/srd-corrections.json` into the app zip's `scripts/`, and README §9 lists three helper
+   files. Tests: the mini-dump runs pass a real `{}` file from their own temp dir (the old `NOCORR`
+   depended on a path in the system temp dir not existing); a missing file and broken JSON are
+   errors; an explicit missing path, and a `convert.py` copied alone with nothing beside it, each
+   fail, name the path and write nothing; `docs.js` checks `build.sh`'s copy. And a pure check, which
+   CI runs without the dump or the PDF, that the committed `data/srd52` carries its corrections:
+   every section of the file has its shape, every correction's entry resolves through
+   `_srd_targets()`, each `find` is gone and each `replace` there, no removed entry is present, and
+   no global word is left. Run against a pack built with an empty corrections file, it fails three
+   ways.
+3. **README-converter documents `srd`:** what it keeps, renames and corrects; that it fails and
+   writes nothing rather than ship the wrong text; the command from the app zip, with `--overlay`
+   and `--resources`; its flags; that the pack in the rules-data zip is the one to use; and, for
+   anyone sharing the output, the SRD 5.2.1 attribution statement, quoted word for word. The file
+   ships, so it names Wizards nowhere else, as SRD 5.2.1 p. 1 asks. `docs.js` checks both.
+4. **Stale acceptances and aliases fail `srd-verbatim`,** as a stale correction fails the run.
+   `srd_text.check()` also reports each `accepted` (entry, text) that matched no finding, and each
+   `aliases` key that names no record from `records()`. An alias whose entry is found without it is
+   not stale: 14 of them still pick the right heading where the bare name also occurs (Elf/Drow,
+   the Goliath ancestries, the Tiefling legacies). Both counts are 0 on the real data.
+5. **Minors.**
+   - `classes` takes `--feats PATH` and fills `_FEAT_INDEX` through `feat_ctx()`, as `_run_core()`
+     does for `all` and `srd`; without it the Paladin's and Ranger's own Fighting Style option was
+     left off the menu without a word. A class feature's `refFeat` the index lacks is now a
+     `WARNING` on every command (`_feat_miss_warnings()`). `all` and `srd` print none.
+   - A rename's new name and a global swap's replacement are text, never a regex template:
+     `re.sub` is given a function at both places. The self-rename skips an entry with no name rather
+     than raise a `KeyError`.
+   - `Book.mode` stays, documented as informational: nothing reads it, and the SRD run's changes
+     ride on the `Book`'s other fields.
+   - `rules-data.js` checks `srd52_full.json` keeps `excludeSystems` through bundling, and pins the
+     nine same-named SRD/2024 tables that may differ: Bag of Beans Table, Cube of Force Faces, Deck of
+     Illusions, Hat of Many Spells Table, Object Armor Class, Prismatic Layers, Prismatic Rays,
+     Reincarnate Table, Wand of Wonder Effects. A new difference fails until it is added on purpose.
+6. **Plan defects, for the record.** The plan mandated "no corrections file is no corrections" (its
+   brief's test), which point 2 reverses. Its file map omitted `build.sh` and README-converter, so the
+   app zip and the player doc fell outside every task. And it widened spec R5 from "a same-named
+   table with different content fails" to "any SRD/2024 pair may differ", now pinned (point 5).
+
+Both gates are clean with 0 warnings, and the Xanathar's and Tasha's packs reproduce.
+
+Pages: [converter](../wiki/data/converter.md), [SRD 5.2](../wiki/data/srd.md),
+[known issues](../wiki/roadmap/known-issues.md), [rules packs](../wiki/architecture/rules-packs.md),
+[testing](../wiki/process/testing.md), [building & CI](../wiki/process/building-and-ci.md),
+[decisions](../wiki/decisions.md).

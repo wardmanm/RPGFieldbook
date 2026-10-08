@@ -81,7 +81,8 @@ docs/                     PLAYER-FACING — ships. An allowlist of exactly three
   CHANGELOG.md              generated from the in-app CHANGELOG array
 scripts/
   convert.py              5e-tools JSON → rules data (ships, for advanced players)
-  srd-corrections.json    hand-authored: the SRD pack's text matched to the SRD PDF (dev)
+  srd-corrections.json    hand-authored: the SRD pack's text matched to the SRD PDF; ships
+                            beside convert.py, which reads it for srd
   srd_text.py             the pure SRD-text comparison srd-verbatim runs (dev)
   extract-humblewood.py   Humblewood PDFs → rules data; needs .venv (dev)
   build-html.js           src/ → dist/fieldbook.html (dev)
@@ -198,3 +199,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-07 — The rules-data archive, the registry `data/packs.json`, data versions and data releases join the map and the glossary; `89-zip.js` in the code map. → ledger L5082, #83
 - 2026-10-08 — The SRD 5.2 pack joins the pack table, the repo layout and the glossary. → ledger L5148, #84
+- 2026-10-08 — `srd-corrections.json` ships beside `convert.py` in the app zip. → ledger L5269, #84

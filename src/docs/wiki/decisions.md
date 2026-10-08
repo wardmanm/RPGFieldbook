@@ -432,6 +432,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **How the `srd52` flag is read (#84)** — As truthy: `true` and a string (a rename) both count
 - **How a choice-shaped spell prerequisite prints (#84)** — The dump's own `entry` text, in its title case: "a Warlock Cantrip That Deals Damage"
 - **The Paladin's and Ranger's own Fighting Style option (#84, R4)** — On the menu beside the styles, from the class feature's `refFeat`, in both packs
+- **A dice roll holding a 5e-tools prompt template (#84)** — Prints its display text; every other dice tag keeps its roll
+- **A class feature's `refFeat` the feat index lacks (#84)** — The option is left off and a `WARNING` names it; `classes` takes `--feats`
 
 ### [Supplements](data/supplements.md)
 
@@ -475,7 +477,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **How the SRD pack is selected** — An SRD view of the dump (`srd_view()`), run through the 2024 pipeline unchanged (`_run_core()`) (R1)
 - **Which SRD revision the text and attribution target** — SRD 5.2.1, the current one; the system label stays "SRD 5.2" (R2)
 - **Whose wording the pack ships** — The PDF's: every difference corrected or accepted in `srd-corrections.json`, checked by `srd-verbatim` (R3, decision 3)
-- **Two packs sharing a table name (R5)** — Allowed for byte-identical twins and for an SRD/2024 pair; any other same-named pair fails `rules-data.js`
+- **Two packs sharing a table name (R5)** — Allowed for byte-identical twins and for the nine pinned SRD/2024 pairs that differ; any other same-named pair, or a change to the nine, fails `rules-data.js`
+- **A missing corrections file (#84)** — An error: exit 1, nothing written, the path named; the app zip ships the file beside `convert.py`
 
 ## Process
 
