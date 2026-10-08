@@ -1450,7 +1450,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         <div data-rulesbody="gloss">
         <p class="hint">Terms here (plus any from a loaded rules pack) become tappable ❧ wherever they appear in your notes, features, spells, and item descriptions. Manage rule sources in Settings.</p>
         <div class="searchbox" style="margin-bottom:10px"><input id="glossSearch" placeholder="Filter terms…" autocomplete="off"><button type="button" class="search-clear" aria-label="Clear the filter" title="Clear">×</button></div>
-        <input type="file" id="glossRulesFiles" accept="application/json,.json" multiple class="hidefile">
+        <input type="file" id="glossRulesFiles" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">
         <div id="glossList"></div>
         </div>
       </div>
@@ -1459,7 +1459,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         <div data-rulesbody="tables">
         <p class="hint">Tables lifted out of your rules pack — roll tables, class progressions, and the lookup tables the rules text refers to. Where a description mentions one, tap the highlighted name to open it here.</p>
         <div class="searchbox" style="margin-bottom:10px"><input id="tablesSearch" placeholder="Filter tables…" autocomplete="off"><button type="button" class="search-clear" aria-label="Clear the filter" title="Clear">×</button></div>
-        <input type="file" id="tablesRulesFiles" accept="application/json,.json" multiple class="hidefile">
+        <input type="file" id="tablesRulesFiles" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">
         <div id="tablesList"></div>
         </div>
       </div>
@@ -1544,8 +1544,8 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
         <div class="label">Rules data</div>
         <p class="hint" id="homeRulesStatus" style="margin-bottom:8px"></p>
         <button class="tbtn primary" id="homeImportBtn"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Import rules files (bulk)</button>
-        <input type="file" id="homeRulesFiles" accept="application/json,.json" multiple class="hidefile">
-        <p class="hint" style="margin-top:8px">Select multiple JSON files at once — races, classes, spells, feats, backgrounds, subclasses, and glossary all merge together.</p>
+        <input type="file" id="homeRulesFiles" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">
+        <p class="hint" style="margin-top:8px">Choose the rules data zip, or JSON files — races, classes, spells, feats, backgrounds, subclasses and glossary all merge together. You can pick several at once.</p>
         <div class="f" style="margin-top:10px">Loaded data</div>
         <div id="homeRulesData"></div>
         <div class="m-actions" style="justify-content:flex-end;margin-top:8px"><button class="tbtn danger" id="homeClearRules">Clear all</button></div>
@@ -2568,6 +2568,34 @@ const DATA_VERSIONS={"XPHB":"1.7.2","Humblewood":"1.7.1","XGE":"1.7.2","TCE":"1.
    to that release's page (attach fieldbook.html to the release so players can download it). */
 const UPDATE_REPO="wardmanm/RPGFieldbook";
 function cmpVer(a,b){const pa=String(a||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0),pb=String(b||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);for(let i=0;i<3;i++){if((pa[i]||0)>(pb[i]||0))return 1;if((pa[i]||0)<(pb[i]||0))return -1;}return 0;}
+/* Rules-DATA versions (#83): X.Y.Z is the data shipped with app X.Y.Z, X.Y.Z-N
+   the Nth data-only release after it. NOT semver, where -N would be a
+   pre-release sorting BELOW X.Y.Z: here 1.8.0 < 1.8.0-1 < 1.8.0-10 < 1.8.1.
+   cmpVer() reads "1.8.0-1" and "1.8.0-2" as equal, so data never goes through
+   it. Anything unreadable compares as 0: unknown is never "stale" or "newer".
+   Spec: 2026-10-07-data-archive-design.md §3. */
+function parseDataVer(s){
+  const m=/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([1-9]\d*))?$/.exec(typeof s==="string"?s:"");
+  return m?[+m[1],+m[2],+m[3],m[4]?+m[4]:0]:null;
+}
+function cmpDataVer(a,b){
+  const pa=parseDataVer(a),pb=parseDataVer(b);
+  if(!pa||!pb)return 0;
+  for(let i=0;i<4;i++){if(pa[i]!==pb[i])return pa[i]>pb[i]?1:-1;}
+  return 0;
+}
+/* "v1.8.0" -> "1.8.0"; "data-v1.8.0-2" -> "1.8.0-2"; anything else -> "". A data
+   tag always has its -N: plain X.Y.Z belongs to the app release. */
+function dataVerOfTag(tag){
+  const t=typeof tag==="string"?tag:"";
+  let m=/^v(\d+\.\d+\.\d+)$/.exec(t);
+  if(m&&parseDataVer(m[1]))return m[1];
+  m=/^data-v(\d+\.\d+\.\d+-\d+)$/.exec(t);
+  if(m&&parseDataVer(m[1]))return m[1];
+  return "";
+}
+/* the oldest app a data version is built for: "1.8.0-2" -> "1.8.0" */
+function dataVerBase(v){const p=parseDataVer(v);return p?p.slice(0,3).join("."):"";}
 /* What the update check found, or null. Held so openChangelog() can lead with a
    download link — the pill REPLACES the version button rather than sitting
    beside it, so the changelog has to stay reachable through the pill. */
@@ -2597,6 +2625,55 @@ function showUpdatePill(){
   el.textContent="↑ v"+updateAvailable.ver;
   el.title=`Update to version ${updateAvailable.ver} available — you're on ${APP_VERSION}. Tap for what's new and the download.`;
   el.style.display="inline-flex";
+}
+/* Newer rules DATA than what is loaded (#83). Data can be released without the
+   app, as data-vX.Y.Z-N, and those releases are never GitHub's "latest", so
+   checkForUpdate() never sees them. This lists the releases, picks the newest
+   with an archive built for this app or an older one, and reads that tag's
+   registry straight from the repo — raw.githubusercontent.com answers a
+   file:// page. Every failure is silent, as in checkForUpdate(). */
+let dataUpdate=null;
+function pickDataRelease(list,appVer){
+  if(!Array.isArray(list))return null;
+  let best=null;
+  list.forEach(rel=>{
+    if(!rel||typeof rel!=="object"||rel.draft||rel.prerelease)return;
+    const tag=typeof rel.tag_name==="string"?rel.tag_name:"";
+    const ver=dataVerOfTag(tag);if(!ver)return;
+    /* data built for a newer app arrives with that app's own update */
+    if(cmpDataVer(dataVerBase(ver),appVer)>0)return;
+    const asset="fieldbook-data-standalone-"+ver+".zip";
+    if(!Array.isArray(rel.assets)||!rel.assets.some(a=>a&&a.name===asset))return;
+    if(best&&cmpDataVer(ver,best.version)<=0)return;
+    /* the link becomes an <a href>, so only a github.com page is taken */
+    const page=String(rel.html_url||"");
+    best={tag,version:ver,url:/^https:\/\/github\.com\//i.test(page)?page:`https://github.com/${UPDATE_REPO}/releases`};
+  });
+  return best;
+}
+/* the registry at that tag, kept to well-formed packs, or null */
+function dataUpdateFrom(reg,pick){
+  if(!pick||!reg||typeof reg!=="object"||!Array.isArray(reg.packs))return null;
+  const packs=reg.packs.filter(p=>p&&typeof p==="object"&&typeof p.system==="string"&&p.system.trim()
+      &&typeof p.file==="string"&&/^[A-Za-z0-9._-]+\.json$/.test(p.file)&&parseDataVer(p.version))
+    .map(p=>({system:p.system,file:p.file,version:p.version}));
+  return packs.length?{release:pick.version,url:pick.url,packs}:null;
+}
+function checkForDataUpdate(){
+  if(!UPDATE_REPO||(navigator.onLine===false))return Promise.resolve(null);
+  return fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases?per_page=100`,{headers:{Accept:"application/vnd.github+json"}})
+    .then(r=>r.ok?r.json():null)
+    .then(list=>{
+      const pick=pickDataRelease(list,APP_VERSION);
+      if(!pick)return null;
+      return fetch(`https://raw.githubusercontent.com/${UPDATE_REPO}/${encodeURIComponent(pick.tag)}/data/packs.json`,{cache:"no-store"})
+        .then(r=>r.ok?r.json():null)
+        .then(reg=>{
+          dataUpdate=dataUpdateFrom(reg,pick);
+          if(dataUpdate&&typeof renderRulesData==="function")renderRulesData();
+          return dataUpdate;
+        });
+    }).catch(()=>null);
 }
 const CHANGELOG=[
   {v:"1.7.2", date:"2026-09-29", notes:[
@@ -9653,7 +9730,26 @@ function setSecHTML(k,body,badge){
 }
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
 /* the "Rules data" header badge; renderRulesData() keeps it current after the modal opens */
-function rulesBadge(){const n=rulesEntryCount();return n?n+" entries":"none loaded";}
+function rulesBadge(){
+  const n=rulesEntryCount();
+  const up=loadedRulesGroups().some(g=>dataStatus(g).state==="update");
+  return (n?n+" entries":"none loaded")+(up?" · update":"");
+}
+/* Settings → Credits & licences: each loaded pack's own terms (#83). A pack
+   carries them as `license` (an SPDX id) and `attribution` (plain text). */
+const LICENSE_URLS={"CC-BY-4.0":"https://creativecommons.org/licenses/by/4.0/",
+  "CC-BY-SA-3.0":"https://creativecommons.org/licenses/by-sa/3.0/","MIT":"https://opensource.org/license/mit"};
+function rulesCreditsHTML(){
+  const cr=(rules.credits&&typeof rules.credits==="object"&&!Array.isArray(rules.credits))?rules.credits:{};
+  const str=v=>typeof v==="string"?v:"";
+  const rows=Object.keys(cr).sort().map(l=>{
+    const c=cr[l]&&typeof cr[l]==="object"?cr[l]:{};
+    const lic=str(c.license),url=LICENSE_URLS[lic];
+    const licHTML=lic?(url?` Licence: <a href="${esc(url)}" target="_blank" rel="noopener">${esc(lic)}</a>.`:` Licence: ${esc(lic)}.`):"";
+    return `<p class="hint"><b>${esc(str(c.title)||l)}</b>${str(c.attribution)?" — "+esc(str(c.attribution)):""}${licHTML}</p>`;
+  });
+  return rows.length?`<div class="field"><label class="f">Rules data you have loaded</label>${rows.join("")}</div>`:"";
+}
 function openSettings(){
   const secAppearance=`
     <div class="field"><label class="f">Skin</label>
@@ -9696,7 +9792,7 @@ function openSettings(){
     </div>`:"";
   const secRules=`
     <div class="field"><label class="f">Rules sources</label>
-      <p class="hint">Load one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. <b>Fetch all</b> needs a connection: each source it reaches replaces what it loaded last time, anything it can't reach keeps what it had, and files you imported are never touched. What is loaded stays saved for offline use.</p>
+      <p class="hint">Import the rules data zip, or one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. <b>Fetch all</b> needs a connection: each source it reaches replaces what it loaded last time, anything it can't reach keeps what it had, and files you imported are never touched. What is loaded stays saved for offline use.</p>
       <div id="srcList"></div>
       <div style="display:flex;gap:7px;margin-top:4px"><input id="newSrc" placeholder="https://…/spells.json"><button class="tbtn" id="addSrc">Add</button></div>
       <div class="m-actions" style="justify-content:flex-start;margin-top:8px">
@@ -9706,7 +9802,7 @@ function openSettings(){
         <button class="tbtn danger" id="btnClearRules" style="margin-left:auto">Clear all</button>
       </div>
       <div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${esc(rulesStatusText())}</div>
-      <input type="file" id="fileRules" accept="application/json,.json" multiple class="hidefile">
+      <input type="file" id="fileRules" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">
     </div>
     <div class="field" style="margin-top:6px"><label class="f">Loaded rules data</label>
       <p class="hint">Everything currently in your rules pool, grouped by file (or source). Remove any piece you no longer want loaded.</p>
@@ -9732,8 +9828,9 @@ function openSettings(){
     <p class="hint">Fieldbook itself is MIT-licensed. It includes one third-party work:</p>
     <div class="field"><label class="f">Icons</label>
       <p class="hint">The emblems beside each class, ${raceTerm().toLowerCase()} and background, and the crossed swords on the combat button, are from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, by ${ICON_ARTISTS.map(esc).join(", ")}. Used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Each icon has been changed: its background square was removed and its colour now follows your theme.</p></div>
+    ${rulesCreditsHTML()}
     <div class="field"><label class="f">Rules content</label>
-      <p class="hint">Rules data is not part of the app — you load it yourself, from files you supply, and it keeps whatever terms it came with.</p></div>`;
+      <p class="hint">Rules data comes separately from the app, as the rules data zip or files you supply. Each pack keeps its own terms; the ones you have loaded are listed above.</p></div>`;
   openModal("Settings",`<div id="setSections">`+
     setSecHTML("appearance",secAppearance)+
     (secCharacter?setSecHTML("character",secCharacter,character.name||"unnamed"):"")+
@@ -9865,7 +9962,7 @@ function settingsImportQuestionHTML(imp){
   const inFile={};file.forEach(g=>{inFile[g.key]=g;});
   const list=gs=>gs.map(g=>g.label+" ("+g.count+(g.dataVersion?", v"+g.dataVersion:"")+")").join(" · ");
   const lost=now.filter(g=>!inFile[g.key]);
-  const older=now.filter(g=>{const f=inFile[g.key];return f&&f.dataVersion&&g.dataVersion&&cmpVer(f.dataVersion,g.dataVersion)<0;});
+  const older=now.filter(g=>{const f=inFile[g.key];return f&&f.dataVersion&&g.dataVersion&&cmpDataVer(f.dataVersion,g.dataVersion)<0;});
   const loss=[];
   if(lost.length)loss.push(`unloads ${lost.length===1?"1 pack":lost.length+" packs"} the file doesn't have: ${lost.map(g=>g.label).join(", ")}`);
   if(older.length)loss.push(`puts back an older copy of ${older.map(g=>g.label+" (v"+inFile[g.key].dataVersion+"; v"+g.dataVersion+" is loaded)").join(", ")}`);
@@ -9954,14 +10051,15 @@ function rulesBucket(g){
 function removeRulesGroup(key){
   const g=loadedRulesGroups().find(x=>x.key===key);if(!g)return;
   RULE_CATS.forEach(cat=>{if(!rules[cat])return;rules[cat]=rules[cat].filter(e=> g.isFile ? e._file!==g.label : (e._file?true:(e._source||"Unknown")!==g.label));});
-  pruneRequires();
+  prunePackMeta();
   reindexRules();recomputeDups();saveRulesCache();refreshRulesUI();renderAll();renderRulesData();updateRulesStatus(rulesStatusText(),"ok");
 }
-/* drop a source's `requires` once none of its entries are left, so the
-   persisted object doesn't accumulate declarations for packs that are gone */
-function pruneRequires(){
-  if(rules.requires)Object.keys(rules.requires).forEach(src=>{
-    if(!RULE_CATS.some(c=>(rules[c]||[]).some(e=>(e._source||"")===src)))delete rules.requires[src];
+/* drop a source's `requires` and credits once none of its entries are left,
+   so the persisted pool doesn't accumulate them for packs that are gone */
+function prunePackMeta(){
+  ["requires","credits"].forEach(k=>{
+    const m=rules[k];if(!m||typeof m!=="object")return;
+    Object.keys(m).forEach(src=>{if(!RULE_CATS.some(c=>(rules[c]||[]).some(e=>(e._source||"")===src)))delete m[src];});
   });
 }
 /* Unload every rules pack. Destructive and irreversible without re-importing,
@@ -9987,20 +10085,285 @@ function clearAllRules(){
 
    Unknown (an old pack from before stamping, or homebrew) is NOT stale — we
    have no evidence either way, and a false alarm on someone's own content is
-   worse than staying quiet. */
+   worse than staying quiet — nor is a version that doesn't parse (cmpDataVer).
+
+   A pack the app is happy with can still be behind a data-only release (#83):
+   that is "update", quiet, because a data release is optional. */
 function dataStatus(g){
+  const have=g.dataVersion||"";
   const want=(typeof DATA_VERSIONS!=="undefined"&&DATA_VERSIONS[g.source])||"";
-  if(!want||!g.dataVersion)return {state:"unknown"};
-  const c=cmpVer(g.dataVersion,want);
-  if(c<0)return {state:"stale",have:g.dataVersion,want};
-  return {state:"current",have:g.dataVersion};
+  const upd=dataUpdateFor(g);
+  if(!have||!parseDataVer(have)||(!want&&!upd))return {state:"unknown"};
+  if(want&&cmpDataVer(have,want)<0)return {state:"stale",have,want};
+  if(upd&&cmpDataVer(have,upd.version)<0)return {state:"update",have,want:upd.version,release:dataUpdate.release};
+  return {state:"current",have};
+}
+/* the newer copy the data-release check found for a pack loaded from a file of
+   the same system and file name, or null */
+function dataUpdateFor(g){
+  if(!dataUpdate||!g||!g.isFile)return null;
+  return (dataUpdate.packs||[]).find(p=>p.system===g.source&&p.file===g.label)||null;
 }
 function dataStatusHTML(g){
   const st=dataStatus(g);
   if(st.state==="stale")
     return ` <span class="chip warn" title="This pack is from v${esc(st.have)}; this version of Fieldbook ships v${esc(st.want)}. Re-import it from the latest release.">update available · v${esc(st.have)}</span>`;
+  if(st.state==="update")
+    return ` <span class="rd-src" title="${esc("Rules data "+st.release+" has a newer copy of this pack, v"+st.want+". Download it from the release page and import it.")}">v${esc(st.have)} · v${esc(st.want)} out</span>`;
   if(st.state==="current")return ` <span class="rd-src" title="Up to date with this version of Fieldbook.">v${esc(st.have)}</span>`;
   return "";
+}
+/* ================= reading a zip (#83) =================
+   Rules data ships as one zip, fieldbook-data-standalone-<version>.zip, and the
+   app opens it itself, offline (spec 2026-10-07-data-archive-design.md §9).
+   Pure: bytes in, bytes out — no DOM, no storage — so the suites run it as is.
+
+   A small reader of what every zip tool writes: entries found through the
+   central directory, stored or deflated. Everything else is refused by name
+   (zipError's code) rather than half-read, and the caps keep a hostile or
+   mistaken file from eating a phone's memory. */
+const ZIP_MAX_BYTES=64*1048576,ZIP_MAX_ENTRY=32*1048576,ZIP_MAX_TOTAL=128*1048576,ZIP_MAX_ENTRIES=1000;
+function zipError(code,detail){const e=new Error(code+(detail?": "+detail:""));e.code=code;return e;}
+/* Bytes to text the way a JSON file is read: UTF-8, a leading BOM dropped. */
+function utf8Text(bytes){const s=new TextDecoder("utf-8").decode(bytes);return s.charCodeAt(0)===0xFEFF?s.slice(1):s;}
+let _crcTable=null;
+function crc32(bytes){
+  if(!_crcTable){
+    _crcTable=new Uint32Array(256);
+    for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;_crcTable[n]=c>>>0;}
+  }
+  let c=0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++)c=_crcTable[(c^bytes[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0;
+}
+/* ---- RFC 1951 inflate, after zlib's puff.c: small and plain rather than fast ---- */
+const INF_LBASE=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
+const INF_LEXT=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+const INF_DBASE=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];
+const INF_DEXT=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+const INF_CLORDER=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+let _infFixed=null;
+/* a canonical Huffman code from its code lengths: how many codes of each
+   length, and the symbols in code order */
+function infTable(lens){
+  const count=new Uint16Array(16),offs=new Uint16Array(16),symbol=new Uint16Array(lens.length);
+  for(let i=0;i<lens.length;i++)count[lens[i]]++;
+  count[0]=0;
+  let left=1;
+  for(let len=1;len<16;len++){left=left*2-count[len];if(left<0)throw zipError("damaged","an over-subscribed Huffman code");}
+  for(let len=1;len<15;len++)offs[len+1]=offs[len]+count[len];
+  for(let i=0;i<lens.length;i++)if(lens[i])symbol[offs[lens[i]]++]=i;
+  return {count,symbol};
+}
+/* `size` is the length the zip's directory promises. The output is never
+   allowed past it, so a hostile stream can't balloon, and must reach it. */
+function inflateRaw(src,size){
+  const out=new Uint8Array(size);
+  let op=0,ip=0,bitbuf=0,bitcnt=0;
+  const bits=need=>{
+    let val=bitbuf;
+    while(bitcnt<need){
+      if(ip>=src.length)throw zipError("damaged","the compressed data ends early");
+      val|=src[ip++]<<bitcnt;bitcnt+=8;
+    }
+    bitbuf=val>>>need;bitcnt-=need;
+    return val&((1<<need)-1);
+  };
+  const decode=h=>{
+    let code=0,first=0,index=0;
+    for(let len=1;len<16;len++){
+      code|=bits(1);
+      const n=h.count[len];
+      if(code-n<first)return h.symbol[index+(code-first)];
+      index+=n;first=(first+n)<<1;code<<=1;
+    }
+    throw zipError("damaged","a bad Huffman code");
+  };
+  const room=len=>{if(op+len>size)throw zipError("damaged","longer than the zip says");};
+  const codes=(lc,dc)=>{
+    for(;;){
+      let sym=decode(lc);
+      if(sym<256){room(1);out[op++]=sym;continue;}
+      if(sym===256)return;
+      sym-=257;
+      if(sym>=29)throw zipError("damaged","a bad length code");
+      const len=INF_LBASE[sym]+bits(INF_LEXT[sym]);
+      const ds=decode(dc);
+      if(ds>=30)throw zipError("damaged","a bad distance code");
+      const dist=INF_DBASE[ds]+bits(INF_DEXT[ds]);
+      if(dist>op)throw zipError("damaged","a distance too far back");
+      room(len);
+      for(let i=0;i<len;i++,op++)out[op]=out[op-dist];
+    }
+  };
+  let last=0;
+  do{
+    last=bits(1);
+    const type=bits(2);
+    if(type===0){
+      /* stored: the rest of the current byte is padding */
+      bitbuf=0;bitcnt=0;
+      if(ip+4>src.length)throw zipError("damaged","the compressed data ends early");
+      const len=src[ip]|(src[ip+1]<<8),nlen=src[ip+2]|(src[ip+3]<<8);ip+=4;
+      if(len!==(~nlen&0xFFFF))throw zipError("damaged","a bad stored block");
+      if(ip+len>src.length)throw zipError("damaged","the compressed data ends early");
+      room(len);out.set(src.subarray(ip,ip+len),op);op+=len;ip+=len;
+    }else if(type===1){
+      if(!_infFixed){
+        const l=new Uint8Array(288);let i=0;
+        for(;i<144;i++)l[i]=8;for(;i<256;i++)l[i]=9;for(;i<280;i++)l[i]=7;for(;i<288;i++)l[i]=8;
+        _infFixed=[infTable(l),infTable(new Uint8Array(30).fill(5))];
+      }
+      codes(_infFixed[0],_infFixed[1]);
+    }else if(type===2){
+      const nlen=bits(5)+257,ndist=bits(5)+1,ncode=bits(4)+4;
+      if(nlen>286||ndist>30)throw zipError("damaged","a bad dynamic block");
+      const cl=new Uint8Array(19);
+      for(let i=0;i<ncode;i++)cl[INF_CLORDER[i]]=bits(3);
+      const clh=infTable(cl),lens=new Uint8Array(nlen+ndist);
+      for(let i=0;i<nlen+ndist;){
+        const sym=decode(clh);
+        if(sym<16){lens[i++]=sym;continue;}
+        let val=0,rep;
+        if(sym===16){if(!i)throw zipError("damaged","a repeat with nothing before it");val=lens[i-1];rep=3+bits(2);}
+        else if(sym===17)rep=3+bits(3);
+        else rep=11+bits(7);
+        if(i+rep>nlen+ndist)throw zipError("damaged","too many code lengths");
+        while(rep--)lens[i++]=val;
+      }
+      if(!lens[256])throw zipError("damaged","no end-of-block code");
+      codes(infTable(lens.subarray(0,nlen)),infTable(lens.subarray(nlen)));
+    }else throw zipError("damaged","a bad block type");
+  }while(!last);
+  if(op!==size)throw zipError("damaged","shorter than the zip says");
+  return out;
+}
+/* ---- the container ---- */
+function isZipBytes(b){return !!b&&b.length>=4&&b[0]===0x50&&b[1]===0x4B&&((b[2]===3&&b[3]===4)||(b[2]===5&&b[3]===6));}
+function zipEntries(b){
+  if(b.length>ZIP_MAX_BYTES)throw zipError("toolarge");
+  const u16=o=>b[o]|(b[o+1]<<8),u32=o=>(b[o]|(b[o+1]<<8)|(b[o+2]<<16))+b[o+3]*16777216;
+  /* the end record: the last 22 bytes, or up to a 64 KiB comment before them */
+  let e=-1;
+  for(let i=b.length-22;i>=0&&i>=b.length-22-65535;i--){
+    if(b[i]===0x50&&b[i+1]===0x4B&&b[i+2]===5&&b[i+3]===6){e=i;break;}
+  }
+  if(e<0)throw zipError("notzip");
+  const n=u16(e+10),cdSize=u32(e+12),cdOff=u32(e+16);
+  if(u16(e+8)===0xFFFF||n===0xFFFF||cdSize===0xFFFFFFFF||cdOff===0xFFFFFFFF)throw zipError("zip64");
+  if(e>=20&&u32(e-20)===0x07064B50)throw zipError("zip64");
+  if(n>ZIP_MAX_ENTRIES)throw zipError("toomany");
+  if(cdOff+cdSize>e)throw zipError("damaged","the directory is out of range");
+  const dec=new TextDecoder("utf-8"),out=[];
+  let p=cdOff;
+  for(let k=0;k<n;k++){
+    if(p+46>e||u32(p)!==0x02014B50)throw zipError("damaged","a bad directory entry");
+    const flags=u16(p+8),method=u16(p+10),crc=u32(p+16),csize=u32(p+20),usize=u32(p+24);
+    const nl=u16(p+28),xl=u16(p+30),cl=u16(p+32),offset=u32(p+42);
+    if(csize===0xFFFFFFFF||usize===0xFFFFFFFF||offset===0xFFFFFFFF)throw zipError("zip64");
+    if(p+46+nl>e)throw zipError("damaged","a name out of range");
+    out.push({name:dec.decode(b.subarray(p+46,p+46+nl)),method,flags,crc,csize,usize,offset});
+    p+=46+nl+xl+cl;
+  }
+  return out;
+}
+function zipEntryBytes(b,en){
+  if((en.flags&1)||en.method===99)throw zipError("encrypted",en.name);
+  if(en.method!==0&&en.method!==8)throw zipError("method",String(en.method));
+  if(en.usize>ZIP_MAX_ENTRY)throw zipError("toolarge",en.name);
+  const o=en.offset;
+  if(o+30>b.length||b[o]!==0x50||b[o+1]!==0x4B||b[o+2]!==3||b[o+3]!==4)throw zipError("damaged","a bad local header for "+en.name);
+  const start=o+30+(b[o+26]|(b[o+27]<<8))+(b[o+28]|(b[o+29]<<8));
+  if(start+en.csize>b.length)throw zipError("damaged",en.name+" runs past the end");
+  const raw=b.subarray(start,start+en.csize);
+  let data;
+  if(en.method===0){if(en.csize!==en.usize)throw zipError("damaged",en.name+"'s sizes disagree");data=raw;}
+  else data=inflateRaw(raw,en.usize);
+  if(crc32(data)!==en.crc)throw zipError("damaged",en.name+" fails its CRC check");
+  return data;
+}
+/* folders, and what macOS and Finder leave behind */
+function zipJunk(name){
+  const base=name.split("/").pop();
+  return name.endsWith("/")||name.startsWith("__MACOSX/")||base.startsWith("._")||base===".DS_Store";
+}
+/* A rules zip -> {kind, version, packs:[{name, bytes}]} (spec §9.2), or a
+   zipError. In order: an archive (its manifest at the root or one folder
+   down); the data kit, refused; an archive one level inside (the app's zip);
+   a zip of loose .json files. Every entry it returns is read and checked
+   before it returns, so a damaged zip imports nothing at all.
+
+   The 128 MiB read cap is one budget for the whole import, nested archives
+   included: every branch adds the usize of the entries it is about to read
+   to `budget` BEFORE reading any of them, so a hostile size claim is caught
+   before it is ever inflated. A nested *.zip is read as an archive or not at
+   all: with no fieldbook-data.json inside it, it is skipped (null) without
+   touching its other entries — never fallen back to as loose JSON — but once
+   a manifest is found inside it, it IS an archive, and any error reading its
+   packs (damaged, encrypted, too large) propagates and refuses the import. */
+function readDataArchive(bytes,zipName,budget){
+  const nested=!!budget;
+  if(!budget)budget={total:0};
+  let all;
+  if(nested){
+    try{all=zipEntries(bytes).filter(en=>!zipJunk(en.name));}
+    catch(e){return null;}
+  }else{
+    all=zipEntries(bytes).filter(en=>!zipJunk(en.name));
+  }
+  const base=n=>n.split("/").pop();
+  const byName=(a,b)=>a.name<b.name?-1:a.name>b.name?1:0;
+  const reserve=ens=>{
+    let add=0;
+    ens.forEach(en=>{add+=en.usize;});
+    budget.total+=add;
+    if(budget.total>ZIP_MAX_TOTAL)throw zipError("toolarge");
+  };
+  const man=all.filter(en=>base(en.name)==="fieldbook-data.json"&&en.name.split("/").length<=2)
+    .sort((a,b)=>a.name.length-b.name.length)[0];
+  if(man){
+    reserve([man]);
+    let m=null;
+    try{m=JSON.parse(utf8Text(zipEntryBytes(bytes,man)));}catch(e){if(e&&e.code)throw e;}
+    if(!m||typeof m!=="object"||m._type!=="fieldbook-data"||!Array.isArray(m.packs))
+      throw zipError("damaged","fieldbook-data.json isn't a Fieldbook data manifest");
+    /* a manifest's packs list is walked below BEFORE the entry-count cap
+       (ZIP_MAX_ENTRIES) is reached by the zip itself — the manifest's own
+       claim needs the same cap, or a hostile list could be made arbitrarily
+       long without ever naming that many real zip entries. */
+    if(m.packs.length>ZIP_MAX_ENTRIES)throw zipError("toomany");
+    const dir=man.name.slice(0,man.name.length-"fieldbook-data.json".length);
+    const resolved=m.packs.map(p=>{
+      const f=p&&typeof p.file==="string"?p.file:"";
+      const en=f?all.find(x=>x.name===dir+f):null;
+      if(!en)throw zipError("damaged","it lists "+(f||"a pack")+" but doesn't hold it");
+      return {name:base(f),en};
+    });
+    reserve(resolved.map(r=>r.en));
+    const packs=resolved.map(r=>({name:r.name,bytes:zipEntryBytes(bytes,r.en)}));
+    return {kind:"data",version:typeof m.version==="string"?m.version:"",packs};
+  }
+  if(nested)return null;
+  if(all.some(en=>base(en.name)==="fbdata.py"))throw zipError("kit");
+  const zips=all.filter(en=>/\.zip$/i.test(en.name)).sort(byName);
+  if(zips.length){
+    reserve(zips);
+    const found=[];
+    zips.forEach(en=>{
+      const inner=zipEntryBytes(bytes,en);
+      if(!isZipBytes(inner))return;
+      const r=readDataArchive(inner,base(en.name),budget);
+      if(r&&r.kind==="data")found.push(r);
+    });
+    if(found.length)return {kind:"data",version:found.map(r=>r.version).filter(Boolean).join(", "),
+      packs:[].concat(...found.map(r=>r.packs))};
+  }
+  const json=all.filter(en=>/\.json$/i.test(en.name)).sort(byName);
+  if(json.length){
+    reserve(json);
+    return {kind:"loose",version:"",packs:json.map(en=>({name:base(en.name),bytes:zipEntryBytes(bytes,en)}))};
+  }
+  throw zipError("empty");
 }
 /* ---- does a pack have everything it references? ----
 
@@ -10085,6 +10448,15 @@ function missingSummary(){
   const names=[...new Set(bad.map(g=>g.source||g.label))];
   return " "+names.join(", ")+(names.length===1?" refers":" refer")+" to content that isn't loaded — see Loaded data below.";
 }
+/* One line above the loaded-data list when a data release has newer copies of
+   packs the player has loaded (#83). Quiet on purpose (R7): a data release is
+   optional. The link is pickDataRelease()'s, kept to github.com. */
+function dataUpdateHint(groups){
+  const ups=[...new Set(groups.map(g=>({g,st:dataStatus(g)})).filter(x=>x.st.state==="update")
+    .map(x=>x.g.source+" v"+x.st.want))];
+  if(!ups.length||!dataUpdate)return "";
+  return `<p class="hint" style="margin:4px 0 8px">Newer rules data is out: ${esc(ups.join(", "))}. <a href="${esc(dataUpdate.url)}" target="_blank" rel="noopener">Download it from the release page</a>.</p>`;
+}
 function rulesDataHTML(){
   const groups=loadedRulesGroups();
   const warn=rulesCacheWarning()
@@ -10105,7 +10477,7 @@ function rulesDataHTML(){
     /* the heading already names the category on single-category rows */
     html+=inB.map(g=>row(g,b==="rulebook"||b==="mixed")).join("");
   });
-  return warn+html;
+  return warn+dataUpdateHint(groups)+html;
 }
 function renderRulesData(){
   const html=rulesDataHTML();
@@ -10122,7 +10494,7 @@ function renderSrcRows(){
   const srcs=settings.rulesSources||[];
   host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${esc(i)}"><button class="icon danger" data-src-del="${esc(i)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
 }
-function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{}};}
+function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{},credits:{}};}
 /* An entry's name (a keyword's term) as text, or "" when it has none that can
    be shown: not an object, no name, only spaces, or not text. A number is a
    name written without quotes, so it counts. Every picker, lookup and chip
@@ -10153,6 +10525,7 @@ function tidyRule(x,kind){
    everything that could. Returns how many entries it dropped, per category. */
 function tidyRules(){
   const dropped={};
+  if(rules.credits!=null&&(typeof rules.credits!=="object"||Array.isArray(rules.credits)))rules.credits={};
   RULE_CATS.forEach(kind=>{
     const arr=rules[kind];
     if(arr==null)return;
@@ -10181,6 +10554,16 @@ function keyOf(x,kind){if(!x||typeof x!=="object")return "";return kind==="subcl
    (the source URL from Settings, not an include under it) for a fetch. `_url` is
    what lets the next Fetch all replace exactly what that source loaded before. */
 function srcLabel(obj){return String(obj.system||obj.name||"Rules").trim();}
+/* A pack's licence and credit (#83), kept per source LABEL like `requires`, for
+   Settings → Credits & licences: null when it states neither. Plain strings,
+   capped, never markup — they are shown through esc(). */
+function creditOf(title,license,attribution){
+  const lic=typeof license==="string"?license.trim():"";
+  const att=typeof attribution==="string"?attribution.trim().slice(0,2000):"";
+  const l=lic.length<=64?lic:"";
+  if(!l&&!att)return null;
+  return {title:String(title||"").trim(),license:l,attribution:att};
+}
 function mergeRules(obj,fileName,url){
   if(obj.name&&!rules.name)rules.name=obj.name;
   const src=srcLabel(obj);
@@ -10198,6 +10581,11 @@ function mergeRules(obj,fileName,url){
   if(Array.isArray(obj.requires)){
     if(!rules.requires||typeof rules.requires!=="object")rules.requires={};
     rules.requires[srcLabel(obj)]=obj.requires;
+  }
+  const credit=creditOf(obj.name||src,obj.license,obj.attribution);
+  if(credit){
+    if(!rules.credits||typeof rules.credits!=="object"||Array.isArray(rules.credits))rules.credits={};
+    rules.credits[src]=credit;
   }
   const cats={keywords:obj.keywords,features:traitArr,items:obj.items,spells:obj.spells,races:obj.races,classes:obj.classes,feats:obj.feats,backgrounds:obj.backgrounds,subclasses:obj.subclasses,tables:obj.tables};
   /* What this pack had that nothing could reach (#71): counted, returned, and
@@ -10289,6 +10677,13 @@ function poolFromExport(saved){
         });
         flush();
       });
+      /* credits ride along per label, like `requires`, for the labels that came back */
+      if(isObj(saved.credits))Object.keys(saved.credits).forEach(l=>{
+        const c=saved.credits[l];
+        if(!isObj(c)||!RULE_CATS.some(k=>(rules[k]||[]).some(e=>e._source===l)))return;
+        const cr=creditOf(c.title||l,c.license,c.attribution);
+        if(cr){if(!isObj(rules.credits))rules.credits={};rules.credits[l]=cr;}
+      });
     }
     const used=RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);
     return {pool:rules,used,skipped:Math.max(0,offered-used)};
@@ -10361,17 +10756,14 @@ function fetchRulesFrom(url,seen,out,memo){
 function applyFetchedSource(url,packs){
   const old=new Set();
   RULE_CATS.forEach(c=>(rules[c]||[]).forEach(e=>{if(e._url===url)old.add(e);}));
-  /* A `requires` declaration is kept per LABEL, and mergeRules only ever sets
-     one. If this source alone owns a label, its fresh copy decides the
-     declaration, so a pack that stopped declaring one doesn't keep a false
-     "missing" chip. A label shared with a file import keeps it. */
-  if(rules.requires)new Set(packs.map(srcLabel)).forEach(l=>{
-    if(RULE_CATS.every(c=>(rules[c]||[]).every(e=>(e._source||"")!==l||old.has(e))))delete rules.requires[l];
-  });
+  /* If this source alone owns a label, its fresh copy decides the label's
+     `requires` (and credits), so a pack that stopped declaring one doesn't
+     keep a false "missing" chip. A label shared with a file import keeps it. */
+  dropOwnedPackMeta(new Set(packs.map(srcLabel)),old);
   const skipped={};
   packs.forEach(p=>addSkipped(skipped,mergeRules(p,null,url)));
   RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
-  pruneRequires();reindexRules();recomputeDups();
+  prunePackMeta();reindexRules();recomputeDups();
   return skipped;
 }
 /* Settings → Fetch all. Fetching NEVER loses what is loaded (#65): this used to
@@ -10422,16 +10814,155 @@ function fetchAllRules(){
       return saving.then(err=>{if(err){renderRulesData();updateRulesStatus(head+err,"err");}});
     });
 }
-/* import one or many files; each is merged so you can load traits.json, spells.json, … separately */
+/* ---- importing files (#83) ----
+   Why a zip couldn't be imported, in the player's words. */
+const ZIP_WHY={
+  notzip:"it isn't a zip Fieldbook can read",
+  encrypted:"it's password-protected",
+  zip64:"it's a ZIP64 archive",
+  method:"it uses a compression Fieldbook can't read; re-zip it normally or import the .json files",
+  damaged:"it's damaged — download it again",
+  toolarge:"it's too large to be rules data",
+  toomany:"it has too many files to be rules data",
+  kit:"that's the Fieldbook data kit, a tool for building rules data — import a fieldbook-data-standalone zip instead",
+  empty:"there's no rules data in it"
+};
+/* Holds at least one rules category: what tells a pack from the converter's
+   own inputs (overlay.json, class-resources.json) inside an old app zip. */
+function isRulesPack(o){return RULE_CATS.concat(["traits"]).some(c=>Array.isArray(o[c]));}
+/* A label's `requires` and `credits` are kept once per LABEL, and mergeRules
+   only ever sets them. When the entries about to be replaced are everything
+   that label has, the fresh copy decides: drop them first, so a pack that
+   stopped declaring one doesn't keep it. A label another file shares keeps it. */
+function dropOwnedPackMeta(labels,old){
+  labels.forEach(l=>{
+    if(!RULE_CATS.every(c=>(rules[c]||[]).every(e=>(e._source||"")!==l||old.has(e))))return;
+    if(rules.requires)delete rules.requires[l];
+    if(rules.credits)delete rules.credits[l];
+  });
+}
+/* One pack from a file, replacing what that same file loaded before (R4).
+   mergeRules() alone only adds and replaces, so an entry the new copy dropped
+   lingered forever. Keyed on file name AND source, so spells.json from one
+   pack never unloads spells.json from another — applyFetchedSource()'s
+   pattern, for files. */
+function importPack(obj,file){
+  const src=srcLabel(obj),old=new Set();
+  RULE_CATS.forEach(c=>(rules[c]||[]).forEach(e=>{if(e&&e._file===file&&(e._source||"")===src)old.add(e);}));
+  dropOwnedPackMeta([src],old);
+  const skipped=mergeRules(obj,file);
+  RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
+  prunePackMeta();reindexRules();recomputeDups();
+  return skipped;
+}
+/* Rules files as bytes -> merged into the pool. Pure — no DOM, no storage —
+   so the suites drive it directly; importRulesFiles() reads and reports.
+   A zip (known by its first bytes, whatever its name) goes through
+   readDataArchive(), and each pack inside is imported under its OWN file
+   name: the loaded-data rows and version chips stay per pack, and the zip
+   replaces the same packs imported loose. A zip is read whole before any of
+   it merges, so a damaged one changes nothing. Anything else is one JSON pack.
+   Returns {files, archives:[{name,kind,version,count}], failed:[{name,why}],
+   skipped}. */
+function importRulesPayloads(payloads){
+  const res={files:0,archives:[],failed:[],skipped:{}};
+  const parse=(name,bytes)=>{
+    let obj;
+    try{obj=JSON.parse(utf8Text(bytes));}catch(e){res.failed.push({name,why:"not valid JSON"});return null;}
+    if(!obj||typeof obj!=="object"||Array.isArray(obj)){res.failed.push({name,why:"not a rules file"});return null;}
+    return obj;
+  };
+  (Array.isArray(payloads)?payloads:[]).forEach(p=>{
+    const name=String((p&&p.name)||"file"),raw=p&&p.bytes;
+    if(!raw||!ArrayBuffer.isView(raw)){res.failed.push({name,why:"it couldn't be read"});return;}
+    const bytes=new Uint8Array(raw.buffer,raw.byteOffset,raw.byteLength);
+    if(!isZipBytes(bytes)){
+      const obj=parse(name,bytes);
+      /* importPack/mergeRules are given whatever a pack's JSON claims; a shape
+         that parses but breaks something downstream (a bad `requires`, a
+         malformed subclass) must not take the other files in this import down
+         with it — it is named and skipped like any other bad pack. */
+      if(obj){
+        try{addSkipped(res.skipped,importPack(obj,name));res.files++;}
+        catch(e){res.failed.push({name,why:"not a rules file"});}
+      }
+      return;
+    }
+    let arc;
+    try{arc=readDataArchive(bytes,name);}
+    catch(e){res.failed.push({name,why:ZIP_WHY[e&&e.code]||"it couldn't be read"});return;}
+    const before=res.failed.length;let count=0;
+    arc.packs.forEach(pk=>{
+      const obj=parse(pk.name+" in "+name,pk.bytes);
+      if(!obj||(arc.kind==="loose"&&!isRulesPack(obj)))return;
+      try{addSkipped(res.skipped,importPack(obj,pk.name));count++;}
+      catch(e){res.failed.push({name:pk.name+" in "+name,why:"not a rules file"});}
+    });
+    if(!count&&arc.kind==="loose"&&res.failed.length===before){res.failed.push({name,why:ZIP_WHY.empty});return;}
+    res.archives.push({name,kind:arc.kind,version:arc.version,count});
+  });
+  return res;
+}
+/* the first sentences of the status line: each zip, the loose files, each failure */
+function importSummary(res){
+  const s=[];
+  res.archives.forEach(a=>s.push(`Imported ${a.name}: ${a.count} ${a.kind==="loose"?"file":"pack"}${a.count===1?"":"s"}${a.version?", data "+a.version:""}.`));
+  if(res.files)s.push(`Merged ${res.files} file${res.files===1?"":"s"}.`);
+  res.failed.forEach(f=>s.push(`Couldn't import ${f.name}: ${f.why}.`));
+  return s.join(" ");
+}
+/* Both status lines, Settings' and the home screen's, whichever is on show.
+   The home one used to be overwritten with the bare count 400 ms after an
+   import, which hid every failure there.
+
+   Neither line is reachable from the Rules tab's own "Import rules files"
+   links: #rulesStatus lives in the Settings modal, which isn't open, and
+   #homeRulesStatus is on the home screen, hidden behind the sheet. A locked
+   or damaged zip imported from there used to show nothing at all. `opts.toast`
+   (passed only for the FINAL message, never "Reading…") also raises a toast
+   when neither line is on screen to read: no #rulesStatus, and #homeRulesStatus
+   is absent or hidden (`offsetParent===null`). toast() sets text itself —
+   never esc() msg before handing it there. */
+function rulesImportStatus(msg,cls,opts){
+  updateRulesStatus(msg,cls);
+  const h=document.getElementById("homeRulesStatus");if(h)h.textContent=msg;
+  if(opts&&opts.toast&&!document.getElementById("rulesStatus")&&!(h&&h.offsetParent!==null))toast(msg);
+}
+/* Settings → Import files, the home screen's import and the Rules tab's two:
+   read every file as bytes, import, save the cache, and say what happened.
+   A save that does not land is said on the same line (the storage rule).
+   Resolves to {msg, cls} once the save has landed or failed, for the suites. */
 function importRulesFiles(files){
-  const list=Array.from(files);let ok=0,bad=0;const skipped={};
-  (function next(i){
-    if(i>=list.length){const m=missingSummary(),sk=skippedSummary(skipped);saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus(`Merged ${ok} file(s)${bad?", "+bad+" failed":""}. `+rulesStatusText()+m+sk,(bad||m||sk)?"err":"ok");return;}
+  const list=Array.from(files||[]);
+  rulesImportStatus(`Reading ${list.length} file${list.length===1?"":"s"}…`,"");
+  const readOne=f=>new Promise(resolve=>{
     const r=new FileReader();
-    r.onload=()=>{try{addSkipped(skipped,mergeRules(JSON.parse(r.result),list[i].name));ok++;}catch(e){bad++;}next(i+1);};
-    r.onerror=()=>{bad++;next(i+1);};
-    r.readAsText(list[i]);
-  })(0);
+    r.onload=()=>resolve({name:f.name,bytes:new Uint8Array(r.result)});
+    r.onerror=()=>resolve({name:f.name,bytes:null});
+    r.readAsArrayBuffer(f);
+  });
+  return Promise.all(list.map(readOne)).then(payloads=>{
+    const res=importRulesPayloads(payloads);
+    const saving=saveRulesCache();
+    refreshRulesUI();renderRulesData();
+    const m=missingSummary(),sk=skippedSummary(res.skipped);
+    const msg=(importSummary(res)+" "+rulesStatusText()+m+sk).trim();
+    const cls=(res.failed.length||m||sk)?"err":"ok";
+    rulesImportStatus(msg,cls,{toast:true});
+    return saving.then(err=>{
+      if(!err)return {msg,cls};
+      renderRulesData();rulesImportStatus(msg+" "+err,"err",{toast:true});
+      return {msg:msg+" "+err,cls:"err"};
+    });
+  }).catch(e=>{
+    /* importRulesPayloads() itself names each bad pack and never throws, but
+       nothing downstream (a storage call, a render) is guaranteed not to — and
+       without this, that exception strands "Reading N file(s)…" on screen
+       forever and skips the cache save entirely (#83 final review). */
+    const msg="Import failed: "+((e&&e.message)||String(e));
+    rulesImportStatus(msg,"err",{toast:true});
+    return {msg,cls:"err"};
+  });
 }
 /* download a split example set: a manifest plus one file per category */
 function downloadRulesTemplates(){
@@ -10796,7 +11327,7 @@ function wire(){
   document.getElementById("homeMode").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;settings.theme=b.dataset.th;applyTheme();saveSettings();syncHomeSetupControls();});
   document.getElementById("homeRough").addEventListener("click",()=>{settings.rough=!settings.rough;applyTheme();saveSettings();syncHomeSetupControls();});
   document.getElementById("homeImportBtn").addEventListener("click",()=>document.getElementById("homeRulesFiles").click());
-  document.getElementById("homeRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";setTimeout(()=>{const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();},400);});
+  document.getElementById("homeRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
   document.getElementById("glossRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
   document.getElementById("tablesRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
   document.getElementById("homeRulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`)){removeRulesGroup(d.dataset.rdDel);const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
@@ -10843,7 +11374,7 @@ function boot(){
      and reading it is async. Everything above already drew with whatever
      localStorage had (usually nothing, once migrated), and this replaces it. */
   loadRulesCacheAsync();
-  checkForUpdate();
+  checkForUpdate();checkForDataUpdate();
 }
 boot();
 </script>
