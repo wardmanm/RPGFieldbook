@@ -2647,10 +2647,19 @@ def _srd_apply_corrections(packs, path):
     keys), then `global` whole-word swaps, then each `corrections` entry on the
     entry it names. A removal or swap that matches nothing, an entry nothing is
     named, or a `find` its entry doesn't contain is an error: a correction that
-    no longer applies means the source moved under it."""
-    if not path or not os.path.exists(path):
-        return []
-    spec = json.load(open(path, encoding='utf-8'))
+    no longer applies means the source moved under it. So is a file that is
+    missing or unreadable: the SRD pack is built with its corrections, or not at
+    all. On success it says which file it applied, and how much of it."""
+    if not path or not os.path.isfile(path):
+        return ['no corrections file at %s — the SRD pack is built with its corrections '
+                '(srd-corrections.json beside convert.py, or --corrections PATH)' % path]
+    try:
+        with open(path, encoding='utf-8') as fh:
+            spec = json.load(fh)
+    except (OSError, ValueError) as e:
+        return ['corrections file %s could not be read: %s' % (path, e)]
+    if not isinstance(spec, dict):
+        return ['corrections file %s is not a JSON object' % path]
     errors = []
     for rm in spec.get('remove') or []:
         hit = 0
@@ -2677,6 +2686,10 @@ def _srd_apply_corrections(packs, path):
             errors.append('correction for unknown entry %r' % c['entry'])
         elif not sum(_srd_sub(nd, c['find'], c['replace']) for nd in nodes):
             errors.append('correction for %r: %r not found' % (c['entry'], c['find']))
+    if not errors:
+        n = lambda k, word: '%d %s%s' % (len(spec.get(k) or []), word, '' if len(spec.get(k) or []) == 1 else 's')
+        print('  corrections: %s (%s, %d global, %s)'
+              % (path, n('remove', 'removal'), len(spec.get('global') or []), n('corrections', 'correction')))
     return errors
 
 def _srd_leaks(packs, info):
@@ -3079,7 +3092,8 @@ def main():
     pr = sub.add_parser('srd', help='the SRD 5.2 pack: only what the System Reference Document publishes')
     pr.add_argument('dir'); pr.add_argument('-o', '--out', required=True)
     pr.add_argument('--overlay'); pr.add_argument('--resources')
-    pr.add_argument('--corrections', help='default: scripts/srd-corrections.json')
+    pr.add_argument('--corrections', metavar='PATH',
+                    help='default: srd-corrections.json beside convert.py; a missing file is an error')
     pr.add_argument('--excluded-out', metavar='PATH',
                     help='also write the non-SRD names and renames as JSON (the data tests\' fixture)')
     a = ap.parse_args()

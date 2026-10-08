@@ -1587,8 +1587,13 @@ with tempfile.TemporaryDirectory() as _td:
 # ---- #84: the SRD view and the `srd` command, on an invented mini dump
 import subprocess
 # scripts/srd-corrections.json is written against the real dump: on the mini dump
-# every correction would be stale, so these runs name a file that doesn't exist
-NOCORR = os.path.join(tempfile.gettempdir(), 'fieldbook-84-no-srd-corrections.json')
+# every correction would be stale, so these runs pass an empty one, written into
+# the run's own temp dir (a missing file is an error)
+def _nocorr(root):
+    p = os.path.join(root, 'no-corrections.json')
+    with open(p, 'w', encoding='utf-8') as fh:
+        fh.write('{}\n')
+    return p
 def _mini_dump(root):
     """Invented entries in the dump's shape: flagged, rename-flagged, unflagged,
     an inherits-flagged variant, a 2014 basicRules-only entry, mixed-case tags."""
@@ -1663,8 +1668,11 @@ with tempfile.TemporaryDirectory() as _td:
     ck('#84 the view never touches the dump',
        json.load(open(os.path.join(dump, 'items.json')))['item'][0]['name'] == "Heward's Handy Haversack")
     ck('#84 a class the SRD lacks gets no file in the view', not os.path.exists(os.path.join(view, 'class', 'class-artificer.json')))
+    NOCORR = _nocorr(_td)
     r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out, '--corrections', NOCORR], capture_output=True, text=True)
     ck('#84 srd runs clean on the mini dump', r.returncode == 0, r.stdout[-600:] + r.stderr[-600:])
+    ck('#84 srd says which corrections file it applied, and how many',
+       'corrections: %s (0 removals, 0 global, 0 corrections)' % NOCORR in r.stdout, r.stdout[-600:])
     P = lambda f: json.load(open(os.path.join(out, f), encoding='utf-8'))
     allf = sorted(os.listdir(out))
     ck('#84 every SRD file says system "SRD 5.2" and excludes Humblewood',
@@ -1720,6 +1728,7 @@ with tempfile.TemporaryDirectory() as _td:
         "heward's handy haversack", "bigby's hand"} <= info['nonsrd'], sorted(info['nonsrd']))
     ck('#84 ...but not a kept name, nor a feat a kept class references',
        not ({'club', 'archery', 'blessed warrior', 'fireball'} & info['nonsrd']), sorted(info['nonsrd']))
+    NOCORR = _nocorr(_td)
     r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out, '--excluded-out', exl, '--corrections', NOCORR], capture_output=True, text=True)
     ck('#84 a clean mini dump passes the scan, and --excluded-out is written',
        r.returncode == 0 and json.load(open(exl))['renamed'] == {"bigby's hand": 'Arcane Hand', "heward's handy haversack": 'Handy Haversack'},
@@ -1731,6 +1740,27 @@ with tempfile.TemporaryDirectory() as _td:
     r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out2, '--corrections', NOCORR], capture_output=True, text=True)
     ck('#84 a planted old name fails the run, says why, and writes nothing',
        r.returncode == 1 and "heward's handy haversack" in r.stdout.lower() and not os.path.exists(out2), r.stdout[-400:])
+
+# ---- #84 final review: the SRD pack is built with its corrections, or not at all
+with tempfile.TemporaryDirectory() as _td:
+    dump, out = os.path.join(_td, 'dump'), os.path.join(_td, 'out')
+    _mini_dump(dump)
+    _missing = os.path.join(_td, 'nowhere', 'srd-corrections.json')
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out, '--corrections', _missing], capture_output=True, text=True)
+    ck('#84 an explicit --corrections path that does not exist fails the run, names it, and writes nothing',
+       r.returncode == 1 and _missing in r.stdout and not os.path.exists(out), r.stdout[-600:] + r.stderr[-600:])
+    # the default is srd-corrections.json BESIDE convert.py: that is what makes
+    # the app zip's scripts/ work, so a convert.py copied alone must fail loudly
+    _alone = os.path.join(_td, 'scripts')
+    os.makedirs(_alone)
+    shutil.copy(CONVERT, _alone)
+    _repo_data = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data')
+    r = subprocess.run([sys.executable, os.path.join(_alone, 'convert.py'), 'srd', dump, '-o', out,
+                        '--overlay', os.path.join(_repo_data, 'overlay.json'),
+                        '--resources', os.path.join(_repo_data, 'class-resources.json')], capture_output=True, text=True)
+    ck('#84 with no --corrections, a convert.py with no srd-corrections.json beside it fails, naming where it looked',
+       r.returncode == 1 and os.path.join(_alone, 'srd-corrections.json') in r.stdout and not os.path.exists(out),
+       r.stdout[-600:] + r.stderr[-600:])
 
 # ---- #84: srd-corrections.json applied to the converted pack
 def _corr_packs():
@@ -1762,7 +1792,15 @@ with tempfile.TemporaryDirectory() as _td:
     ck('#84 a stale or unknown correction is an error, each named',
        len(errs) == 3 and any('Zzyzx' in e for e in errs) and any('No Such Entry' in e for e in errs)
        and any('not in the text' in e for e in errs), errs)
-    ck('#84 no corrections file is no corrections', C._srd_apply_corrections(_corr_packs(), os.path.join(_td, 'absent.json')) == [])
+    _absent = os.path.join(_td, 'absent.json')
+    errs = C._srd_apply_corrections(_corr_packs(), _absent)
+    ck('#84 a missing corrections file is an error, naming the path', len(errs) == 1 and _absent in errs[0], errs)
+    _broken = os.path.join(_td, 'broken.json')
+    with open(_broken, 'w', encoding='utf-8') as fh:
+        fh.write('{"corrections": [\n')
+    errs = C._srd_apply_corrections(_corr_packs(), _broken)
+    ck('#84 a corrections file that is not JSON is an error line, naming the path, not a traceback',
+       len(errs) == 1 and _broken in errs[0], errs)
     # a whole record the SRD doesn't print (the Iron Flask's table) is removed, by the same keys
     rm = os.path.join(_td, 'rm.json')
     json.dump({'remove': [{'entry': 'table:Bag of Beans Table', 'why': 'the SRD prints no such table', 'page': 1}]}, open(rm, 'w'))
@@ -1772,6 +1810,56 @@ with tempfile.TemporaryDirectory() as _td:
        errs == [] and p['tables.json']['tables'] == [] and len(p['spells.json']['spells']) == 1, (errs, p))
     errs = C._srd_apply_corrections(p, rm)
     ck('#84 a removal that matches nothing is an error, named', len(errs) == 1 and 'Bag of Beans Table' in errs[0], errs)
+
+# ---- #84 final review: the committed SRD pack carries its corrections
+# CI has neither the dump nor the PDF, so neither the SRD gate nor srd-verbatim
+# runs there. This reads committed files only: a data/srd52 regenerated without
+# its corrections, or a corrections file of the wrong shape, fails here.
+import re
+_ROOT =os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
+_SC = json.load(open(os.path.join(_ROOT, 'scripts', 'srd-corrections.json'), encoding='utf-8'))
+_SP = {f: json.load(open(os.path.join(_ROOT, 'data', 'srd52', f), encoding='utf-8'))
+       for f in sorted(os.listdir(os.path.join(_ROOT, 'data', 'srd52'))) if f.endswith('.json')}
+def _strs(node):
+    """Every string a correction can reach under node: _srd_sub()'s walk."""
+    if isinstance(node, str):
+        return [node]
+    if isinstance(node, dict):
+        return [s for k, v in node.items() if k not in C.SRD_KEY_EXEMPT for s in _strs(v)]
+    if isinstance(node, list):
+        return [s for v in node for s in _strs(v)]
+    return []
+_is = lambda x, t: isinstance(x, t) and not isinstance(x, bool)
+_shape = ([('corrections', c) for c in _SC.get('corrections') or []
+           if not (all(_is(c.get(k), str) for k in ('entry', 'find', 'replace')) and _is(c.get('page'), int))]
+          + [('accepted', a) for a in _SC.get('accepted') or [] if not all(_is(a.get(k), str) for k in ('entry', 'text', 'why'))]
+          + [('global', g) for g in _SC.get('global') or []
+             if not (all(_is(g.get(k), str) for k in ('word', 'replace')) and _is(g.get('page'), int))]
+          + [('remove', m) for m in _SC.get('remove') or [] if not (_is(m.get('entry'), str) and _is(m.get('page'), int))]
+          + [('aliases', k) for k, v in (_SC.get('aliases') or {}).items() if not (_is(k, str) and _is(v, str))])
+ck('#84 srd-corrections.json: every section has its shape', _shape == [] and isinstance(_SC.get('aliases'), dict), _shape[:5])
+_tg = {}
+for _k, _n in C._srd_targets(_SP):
+    _tg.setdefault(_k, []).append(_n)
+_unknown, _unapplied = [], []
+for c in _SC.get('corrections') or []:
+    if c['entry'] not in _tg:
+        _unknown.append(c['entry'])
+        continue
+    ss = [s for n in _tg[c['entry']] for s in _strs(n)]
+    if c['find'] not in c['replace'] and any(c['find'] in s for s in ss):
+        _unapplied.append((c['entry'], 'still has', c['find']))
+    if c['replace'] and not any(c['replace'] in s for s in ss):
+        _unapplied.append((c['entry'], 'lacks', c['replace']))
+ck('#84 every correction names an entry in the committed SRD pack', _unknown == [], _unknown)
+ck('#84 every correction is applied in the committed SRD pack: its find gone, its replace there', _unapplied == [], _unapplied[:5])
+_top = {('table:' if cat == 'tables' else '') + str(r.get('term') or r.get('name') or '')
+        for o in _SP.values() for cat, arr in o.items() if isinstance(arr, list) for r in arr if isinstance(r, dict)}
+_kept = [m['entry'] for m in _SC.get('remove') or [] if m['entry'] in _top]
+ck('#84 nothing the corrections remove is in the committed SRD pack', _kept == [], _kept)
+_left = [g['word'] for g in _SC.get('global') or []
+         if any(re.search(r'(?<![\w])' + re.escape(g['word']) + r'(?![\w])', s) for o in _SP.values() for s in _strs(o))]
+ck('#84 no global swap\'s word is left, as a whole word, in the committed SRD pack', _left == [], _left)
 
 # ---- #84: srd_text — the pure PDF comparison
 import copy

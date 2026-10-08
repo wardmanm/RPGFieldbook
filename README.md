@@ -500,8 +500,9 @@ docs/               ← reference material (you can ignore these to just play)
    • CHANGELOG — what changed in each release
    • rules schema — the format, if you want to write your own rules data
    • converter notes — how the data-generation tool works
-scripts/            ← convert.py (plus overlay.json and class-resources.json, the two
-                      files it reads), for advanced users generating their own rules data
+scripts/            ← convert.py (plus overlay.json, class-resources.json and
+                      srd-corrections.json, the three files it reads), for advanced users
+                      generating their own rules data
 ```
 
 **To play, you only ever need `fieldbook.html`.** The rules data makes the pickers and

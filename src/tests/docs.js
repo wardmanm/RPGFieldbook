@@ -127,6 +127,10 @@ if (docsAllowed) {
      wouldBeRejected);
 }
 ck('build.sh ships LICENSE', /cp LICENSE /.test(build));
+// convert.py's default corrections file is the one beside it; without it in the
+// zip, a player's `srd` run fails (#84)
+ck('build.sh ships scripts/srd-corrections.json beside convert.py in the app zip',
+   /^cp [^\n]*scripts\/srd-corrections\.json[^\n]* \.buildtmp\/scripts\/$/m.test(build));
 ck('README section 9 lists LICENSE', /LICENSE\s+←/.test(readme));
 
 // ---------- data/packs.json, the registry of rules packs (#83)

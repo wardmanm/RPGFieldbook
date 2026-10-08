@@ -236,9 +236,10 @@ cp docs/*.md .buildtmp/docs/
 cp scripts/convert.py .buildtmp/scripts/
 # convert.py's hand-authored inputs travel with it — without them an advanced
 # player regenerating data silently loses the Archery/Defense effects and the
-# Rage/Focus/Sorcery trackers. (They are not loadable rules packs, so they must
-# NOT go in data/.)
-cp data/overlay.json data/class-resources.json .buildtmp/scripts/
+# Rage/Focus/Sorcery trackers, and `convert.py srd` fails: its default
+# corrections file is srd-corrections.json beside convert.py. (They are not
+# loadable rules packs, so they must NOT go in data/.)
+cp data/overlay.json data/class-resources.json scripts/srd-corrections.json .buildtmp/scripts/
 ( cd .buildtmp && zip -rq "../$BUNDLE" . -x '*.DS_Store' )
 rm -rf .buildtmp
 echo "    wrote $BUNDLE"
