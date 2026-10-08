@@ -5120,3 +5120,27 @@ version, and data can be released without the app.
 Pages: [data archive](../wiki/architecture/data-archive.md), [rules packs](../wiki/architecture/rules-packs.md),
 [settings & updates](../wiki/features/settings-and-updates.md), [building & CI](../wiki/process/building-and-ci.md),
 [testing](../wiki/process/testing.md).
+
+## Data archive: the final review's fixes (#83, 2026-10-07)
+
+1. An import from the Rules tab (or anywhere no status line is on screen) now also shows its result
+   as a toast, so a refused zip or bad JSON is never silent; "Reading…" never toasts.
+2. A pack whose merge throws is named "not a rules file" and the rest still import; any other throw
+   in an import writes a red "Import failed: …" line instead of stranding "Reading…".
+3. `data-release.yml`'s "latest" check fails with an `::error::` when it can't read the latest
+   release, and prints its explanation before attempting the repair. `release.yml` gains the
+   "digests current" guard. `release.js` looks up `DATA_VERSIONS` before `fbdata.py` writes.
+   `data-release.js` refuses an APP_VERSION below 1.8.0 (no older app opens the zip).
+4. App-release notes say "if you already have those versions loaded" (a player who skipped a data
+   release has older copies). Settings → Credits' "Rules content" line now says rules data comes
+   separately and each pack keeps its own terms.
+5. A manifest listing more than 1,000 files is refused (`toomany`). CI compiles `tools/data-kit/*.py`.
+   `docs.js` checks the app-zip allowlist names the archive. The data-kit suite's scratch repos
+   turn commit signing off.
+6. `scripts/bundle-rules.js` no longer carries a literal NUL byte (its excludeSystems comparison
+   uses `JSON.stringify`); git had been treating the file as binary. Bundle output unchanged.
+
+Deferred to a follow-up: a pack's content digest does not cover the bundler, so a bundler change
+that alters bundle bytes moves no version (#85 rewrites the bundler).
+
+Pages: [data archive](../wiki/architecture/data-archive.md).

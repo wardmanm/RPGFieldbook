@@ -131,3 +131,5 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 
 - 2026-10-07 — The data archive, the pack registry and per-pack versions, opening zips, pack
   credits, the newer-data notice and data-only releases. → ledger L5082
+- 2026-10-07 — The final review's fixes: a toast when no status line is on screen, a pack that
+  throws named and skipped, the release-path guards, the "those versions" note wording. → ledger L5124
