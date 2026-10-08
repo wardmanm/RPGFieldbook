@@ -17,6 +17,7 @@ USAGE
   python convert.py classes    class-*.json                  -o classes.json
   python convert.py races      races.json                    -o races.json
   python convert.py all        <input-dir> -o <output-dir>   # everything it can find
+  convert.py srd <dump> -o <outdir>          the SRD 5.2 pack (only srd52-flagged content)
 
 'all' searches <input-dir> and its spells/ and class/ subdirectories, converts both
 items-base.json and items.json (magic), and falls back to the repo's data/ for
@@ -27,12 +28,14 @@ Options that apply where relevant:
   --sources sources.json   (spells only) tag each spell with its 2024 class list
   --include-legacy         (classes only) also include non-XPHB subclasses (mixes editions)
   --no-spell-notes         (classes only) skip the per-level "prepared/known spells" notes
+  --feats feats.json       (classes only) the feats a class feature offers by reference
+                           (Blessed Warrior, Druidic Warrior); 'all' and 'srd' find them
   --tables tables.json     also write the tables lifted out of the prose to this file
                            ('all' always writes <outdir>/tables-2024.json)
 
 No third-party dependencies — standard library only. Python 3.8+.
 """
-import json, re, argparse, glob, os, sys, contextlib, collections
+import json, re, argparse, glob, os, sys, contextlib, collections, tempfile
 
 # ---------------------------------------------------------------- tag rendering
 # 5e-tools inline tags look like {@tag arg|arg|arg}. Different tags put the
@@ -53,6 +56,13 @@ def strip_tags(s):
             return p[0] + ' percent'
         if tag == 'dc':
             return 'DC ' + p[0]
+        # {@dice roll|display} puts its display text second. A roll holding a
+        # 5e-tools prompt template ("#$prompt_number:title=…$#", the Carrying
+        # Capacity table's) renders by its display text; every other dice tag
+        # keeps the roll, as it always has (#84). scaledice and scaledamage have a
+        # grammar of their own and stay in the default family.
+        if tag in ('dice', 'autodice', 'damage', 'd20', 'hit') and '#$' in p[0] and len(p) > 1 and p[1].strip():
+            return p[1]
         # default family: name|source|display?  (feat, spell, item, condition,
         # creature, skill, action, sense, variantrule, status, damage, dice,
         # scaledamage, scaledice, hazard, ...)
@@ -232,6 +242,56 @@ def _formula_text(node):
 # The same index names weapon properties and masteries for convert_items() (#72).
 _SB_INDEX = None   # (items by (name, source), property names by abbreviation, mastery names,
                    #  itemEntry templates by (name, source))
+
+_FEAT_INDEX = {}   # feats by (lower name, SOURCE): a class feature's refFeat (#84)
+# refFeats the index lacked, as "Name|SOURCE" -> the classes whose menu lacks it.
+# `all` and `srd` fill the index themselves; `classes` alone needs --feats, and
+# without it the Paladin's Blessed Warrior once went missing without a word.
+_FEAT_MISSES = collections.defaultdict(set)
+
+def _feat_miss_warnings(warn):
+    for ref, classes in sorted(_FEAT_MISSES.items()):
+        warn('refFeat %s is not in the feat index, so the Fighting Style menu of %s lacks it '
+             '(`classes` needs --feats feats.json)' % (ref, ', '.join(sorted(classes))))
+
+@contextlib.contextmanager
+def feat_ctx(index):
+    """Set the run's feat index (load_feat_index()) for a class feature's refFeat."""
+    global _FEAT_INDEX
+    prev = _FEAT_INDEX
+    _FEAT_INDEX = index
+    try:
+        yield
+    finally:
+        _FEAT_INDEX = prev
+
+def load_feat_index(*paths):
+    """Feats from 5e-tools feat files, keyed (lower name, SOURCE)."""
+    out = {}
+    for p in paths:
+        if not p:
+            continue
+        for f in json.load(open(p, encoding='utf-8')).get('feat') or []:
+            if isinstance(f, dict) and f.get('name'):
+                out[(str(f['name']).lower(), str(f.get('source') or '').upper())] = f
+    return out
+
+def _ref_feats(node):
+    """(name, SOURCE) of every feat a class feature embeds by reference:
+    {"type": "refFeat", "feat": "Blessed Warrior|XPHB"}."""
+    out = []
+    def walk(n):
+        if isinstance(n, dict):
+            if n.get('type') == 'refFeat' and n.get('feat'):
+                nm, _, src = str(n['feat']).partition('|')
+                out.append((nm.strip(), (src or 'XPHB').strip().upper()))
+            for v in n.values():
+                walk(v)
+        elif isinstance(n, list):
+            for v in n:
+                walk(v)
+    walk(node)
+    return out
 
 @contextlib.contextmanager
 def statblock_ctx(index):
@@ -739,6 +799,8 @@ def pick_2024_preferred(entries, name_key='name', shipped=None):
     The free 2024 subset is marked by EITHER flag: `srd52` (SRD 5.2) too. 5e-tools
     v2.36.1 moved the 2024 Cloak of Invisibility from basicRules2024 to srd52
     alone, and reading only the first flag dropped it from the pack.
+    A renamed entry's `srd52` is its SRD name (a string), and `is True` missed it:
+    Carrion Crawler Mucus and Lolth's Sting were absent (#84).
 
     `shipped` (items only): the (name, SOURCE) of everything the 2024 pack ships.
     A 2014 entry REPRINTED AS one of those is the same thing under an old name
@@ -746,7 +808,7 @@ def pick_2024_preferred(entries, name_key='name', shipped=None):
     so it is left out (#7). None leaves the backfill exactly as it was."""
     xphb = [e for e in entries if e.get('source') == 'XPHB']
     names = {e[name_key] for e in xphb}
-    two4 = [e for e in entries if (e.get('basicRules2024') is True or e.get('srd52') is True)
+    two4 = [e for e in entries if (e.get('basicRules2024') is True or bool(e.get('srd52')))
             and e[name_key] not in names]
     names |= {e[name_key] for e in two4}
     legacy = [e for e in entries if e.get('basicRules') is True and e[name_key] not in names
@@ -779,14 +841,21 @@ class Book:
                     supplement is 2014-era content sitting beside the 2024 rules.
     exclude_systems `excludeSystems` — character systems this pack's species must
                     not be offered to (see docs/rules-schema.md §1).
+    mode            "xphb" (the default run), "supplement" (has codes) or "srd".
+                    Informational only: nothing reads it. What an SRD run changes
+                    rides on the other fields (system, names, exclude_systems,
+                    fighting_styles), so is_default still holds for it.
+    fighting_styles the Fighting Style menu names this run offers; None = all.
     """
-    def __init__(self, codes=None, system='XPHB', names=None, note='', exclude_systems=None):
+    def __init__(self, codes=None, system='XPHB', names=None, note='', exclude_systems=None, mode=None, fighting_styles=None):
         self.codes = tuple(codes or ())
         self.system = system
         self.names = dict(_XPHB_NAMES)
         self.names.update(names or {})
         self.note = note or ''
         self.exclude_systems = tuple(exclude_systems or ())
+        self.mode = mode or ('supplement' if self.codes else 'xphb')
+        self.fighting_styles = set(fighting_styles) if fighting_styles is not None else None
 
     @property
     def is_default(self):
@@ -1060,7 +1129,7 @@ def _shipped_2024():
     items-base.json, so one file alone cannot see it."""
     idx = _SB_INDEX[0] if _SB_INDEX else {}
     return {k for k, e in idx.items()
-            if e.get('source') == 'XPHB' or e.get('basicRules2024') is True or e.get('srd52') is True}
+            if e.get('source') == 'XPHB' or e.get('basicRules2024') is True or bool(e.get('srd52'))}
 
 def convert_items(path, overlay=None, tables=None, book=None, **_):
     d = json.load(open(path, encoding='utf-8'))
@@ -1209,7 +1278,7 @@ def _variant_selected(v, book):
     inh = v.get('inherits') or {}
     b = _bk(book)
     if b.is_default:
-        return inh.get('source') == 'XPHB' or inh.get('basicRules2024') is True or inh.get('srd52') is True
+        return inh.get('source') == 'XPHB' or inh.get('basicRules2024') is True or bool(inh.get('srd52'))
     return inh.get('source') in set(b.codes)
 
 def convert_ammo_variants(path, tables=None, book=None):
@@ -1737,7 +1806,21 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
             # a 2014-era class would print 2024 text where that book's own list
             # belongs — and it would read perfectly, which is what makes it dangerous.
             if name == 'Fighting Style' and bk.is_default:
-                fs = [apply_overlay(o['name'], dict(o), overlay) for o in (dict(x) for x in FIGHTING_STYLES)]
+                allowed = bk.fighting_styles
+                fs = [apply_overlay(o['name'], dict(o), overlay) for o in FIGHTING_STYLES
+                      if allowed is None or o['name'] in allowed]
+                # The Paladin's and Ranger's own option ("Instead of choosing one of
+                # those feats, you can choose the option below"): the menu above
+                # replaced the feature, so it was never offered (#84, R4).
+                cf = cfidx.get((name.lower(), fsrc, lvl, cn.lower())) or cfidx.get((name.lower(), src, lvl, cn.lower()))
+                for rnm, rsrc in _ref_feats((cf or {}).get('entries')):
+                    ft = _FEAT_INDEX.get((rnm.lower(), rsrc))
+                    if not ft:
+                        _FEAT_MISSES['%s|%s' % (rnm, rsrc)].add(entry['name'])
+                        continue
+                    with table_ctx(tables, entry['name'], 'class'):
+                        fs.append(apply_overlay(ft['name'], {'name': ft['name'],
+                                            'description': flatten(ft.get('entries', []))}, overlay))
                 addchoice(lvl, {'type': 'option', 'label': 'Choose a Fighting Style', 'choose': 1, 'from': fs}); continue
             cf = cfidx.get((name.lower(), fsrc, lvl, cn.lower())) or cfidx.get((name.lower(), src, lvl, cn.lower()))
             if not cf: continue
@@ -1990,6 +2073,12 @@ def _render_optfeat_prereq(pr):
         if block.get('pact'):
             parts.append('Pact of the %s' % block['pact'])
         for s in block.get('spell') or []:
+            if isinstance(s, dict):
+                # a choice, which the dump words itself ("a Warlock Cantrip That
+                # Deals Damage"); str() printed the whole dict into three
+                # Warlock invocations (#84)
+                parts.append(strip_tags(str(s.get('entry') or s.get('entrySummary') or '')))
+                continue
             nm = str(s).split('#')
             parts.append(nm[0].title() + (' cantrip' if len(nm) > 1 and nm[1] == 'c' else ' spell'))
         for it in block.get('item') or []:
@@ -2350,14 +2439,357 @@ def convert_races(path, overlay=None, tables=None, book=None, **_):
     out.sort(key=lambda x: x['name'])
     return _pack(book, 'races', out, stem='races', version=1)
 
+# ================================================================ SRD 5.2 (#84)
+# The SRD pack is the 2024 pipeline run over an SRD-only VIEW of the dump
+# (spec 2026-10-08-srd-pack-design.md §3, R1): every entry flagged `srd52`,
+# renamed to its SRD name with every reference following, written to a temp
+# dir. No selection site below learns about the SRD: a prototype of exactly
+# this reproduced every entry the two packs share byte for byte.
+#
+# This is the free-rules trap REVERSED. Everywhere else the flags only
+# backfill (pick_2024_preferred); here the flag IS the filter, and
+# `basicRules2024` is not an open licence, so it is never read.
+
+# Which arrays of which dump files are content, filtered by the flag.
+# Everything else in a file (item properties, types, masteries, the itemEntry
+# templates) is lookup data and is copied whole: none of it is flagged, and
+# filtering it would break the items that use it.
+SRD_FILES = {
+    'conditionsdiseases.json': ('condition', 'status', 'disease'),
+    'variantrules.json': ('variantrule',),
+    'items-base.json': ('baseitem',),
+    'items.json': ('item',),
+    'magicvariants.json': ('magicvariant',),
+    'backgrounds.json': ('background',),
+    'feats.json': ('feat',),
+    'races.json': ('race', 'subrace'),
+    'optionalfeatures.json': ('optionalfeature',),
+    os.path.join('spells', 'spells-xphb.json'): ('spell',),
+}
+SRD_CLASS_KEYS = ('class', 'subclass', 'classFeature', 'subclassFeature')
+SRD_NAMES = {'items': 'SRD 5.2 Items', 'backgrounds': 'SRD 5.2 Backgrounds',
+             'classes': 'SRD 5.2 Classes', 'races': 'SRD 5.2 Species',
+             'tables': 'SRD 5.2 Tables', 'features': 'SRD 5.2 Options'}
+_SRD_RENAMED_TAGS = ('spell', 'item')
+
+def srd_book(fighting_styles=None):
+    """The Book an `srd` run converts with: no source codes, so every 2024
+    behaviour stays on; its own system, names and Fighting Style menu."""
+    return Book(system='SRD 5.2', names=SRD_NAMES, exclude_systems=['humblewood'],
+                mode='srd', fighting_styles=fighting_styles)
+
+def _srd_flag(e):
+    """An entry's SRD flag: True, a string (its SRD name), or None. A magic
+    variant carries it on `inherits`."""
+    if not isinstance(e, dict):
+        return None
+    f = e.get('srd52')
+    if not f and isinstance(e.get('inherits'), dict):
+        f = e['inherits'].get('srd52')
+    return f or None
+
+def _map_strings(node, fn):
+    if isinstance(node, str):
+        return fn(node)
+    if isinstance(node, list):
+        return [_map_strings(x, fn) for x in node]
+    if isinstance(node, dict):
+        return {k: _map_strings(v, fn) for k, v in node.items()}
+    return node
+
+def _srd_tag_renamer(renames):
+    """{@spell X|src|display} and {@item …}: a renamed X takes its SRD name, and
+    a display text equal to the old name follows. Case-insensitive: the dump
+    writes "{@spell Bigby's hand}" and "{@spell Bigby's Hand|XPHB}" alike."""
+    rx = re.compile(r'\{@(' + '|'.join(_SRD_RENAMED_TAGS) + r')\s+([^{}]+)\}', re.I)
+    def rep(m):
+        p = m.group(2).split('|')
+        new = renames.get(p[0].strip().lower())
+        if not new:
+            return m.group(0)
+        old = p[0].strip()
+        p[0] = new
+        if len(p) >= 3 and p[2].strip().lower() == old.lower():
+            p[2] = new
+        return '{@' + m.group(1) + ' ' + '|'.join(p) + '}'
+    return lambda s: rx.sub(rep, s)
+
+def srd_view(src, dst):
+    """Write the SRD-only view of the dump at `src` into `dst` (spec §3):
+    flagged entries only, renamed, every tag following, each marked
+    `srd52: true` so the 2024 pipeline's own checks keep it; sources.json
+    keyed by SRD names with no Artificer (EFA) tags; the feats a kept class
+    feature references in srd-ref-feats.json. The dump is never written."""
+    docs = {}
+    for rel, keys in SRD_FILES.items():
+        p = os.path.join(src, rel)
+        if os.path.exists(p):
+            docs[rel] = (json.load(open(p, encoding='utf-8')), keys)
+    for p in sorted(glob.glob(os.path.join(src, 'class', 'class-*.json'))):
+        docs[os.path.relpath(p, src)] = (json.load(open(p, encoding='utf-8')), SRD_CLASS_KEYS)
+    # renames first: the old name is the key every reference uses
+    renames = {}
+    for d, keys in docs.values():
+        for k in keys:
+            for e in d.get(k) or []:
+                f = _srd_flag(e)
+                if isinstance(f, str) and e.get('name'):
+                    renames[e['name'].strip().lower()] = f.strip()
+    tagfix = _srd_tag_renamer(renames)
+    feats_all = (docs.get('feats.json') or ({}, ()))[0].get('feat') or []
+    ref_feats, kept = [], {}
+    dropped, kept_names = set(), set()
+    for rel, (d, keys) in docs.items():
+        for k in keys:
+            arr = d.get(k)
+            if not isinstance(arr, list):
+                continue
+            out = []
+            for e in arr:
+                f = _srd_flag(e)
+                if not f:
+                    # a name the SRD doesn't publish — features are left out: their
+                    # names ("Spellcasting") repeat across classes the SRD keeps
+                    if k not in ('classFeature', 'subclassFeature') and e.get('name') \
+                            and str(e.get('source') or (e.get('inherits') or {}).get('source') or '').upper() in ('XPHB', 'XDMG'):
+                        dropped.add(str(e['name']).strip().lower())
+                    continue
+                e = _map_strings(e, tagfix)
+                if isinstance(f, str) and e.get('name'):
+                    # the new name is text, never a regex template (a backslash stays)
+                    rx = re.compile(r'(?<![\w])' + re.escape(e['name']) + r'(?![\w])', re.I)
+                    e = _map_strings(e, lambda s, rx=rx, new=f.strip(): rx.sub(lambda m: new, s))
+                    e['name'] = f.strip()
+                e['srd52'] = True
+                if isinstance(e.get('inherits'), dict):
+                    e['inherits']['srd52'] = True
+                if k == 'classFeature':
+                    for rnm, rsrc in _ref_feats(e.get('entries')):
+                        hit = next((x for x in feats_all if x.get('name') == rnm
+                                    and str(x.get('source') or '').upper() == rsrc), None)
+                        if hit and hit not in ref_feats:
+                            ref_feats.append(hit)
+                kept_names.add(str(e.get('name') or '').strip().lower())
+                out.append(e)
+            d[k] = out
+            kept[rel + ':' + k] = len(out)
+    for rel, (d, keys) in docs.items():
+        if rel.startswith('class') and not d.get('class'):
+            continue                       # a class the SRD doesn't have
+        p = os.path.join(dst, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False)
+    if ref_feats:
+        json.dump({'feat': [_map_strings(x, tagfix) for x in ref_feats]},
+                  open(os.path.join(dst, 'srd-ref-feats.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+    sp = os.path.join(src, 'spells', 'sources.json')
+    if os.path.exists(sp):
+        out = {}
+        for bookname, spells in json.load(open(sp, encoding='utf-8')).items():
+            ob = {}
+            for nm, inf in spells.items():
+                inf = {k: ([c for c in v if not (isinstance(c, dict) and c.get('source') == 'EFA')]
+                           if isinstance(v, list) else v) for k, v in inf.items()}
+                ob[renames.get(nm.strip().lower(), nm)] = inf
+            out[bookname] = ob
+        os.makedirs(os.path.join(dst, 'spells'), exist_ok=True)
+        json.dump(out, open(os.path.join(dst, 'spells', 'sources.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+    fs = {e['name'] for e in (docs.get('feats.json') or ({}, ()))[0].get('feat', [])
+          if str(e.get('category', '')) == 'FS'}
+    return {'renames': renames, 'fighting_styles': fs, 'kept': kept,
+            'ref_feats': [x['name'] for x in ref_feats],
+            'nonsrd': (dropped - kept_names - {n.lower() for n in (x['name'] for x in ref_feats)}) | set(renames)}
+
+# Keys a correction never rewrites: names and labels are identity, and a table's
+# name is what "[Table: X]" anchors resolve by.
+SRD_KEY_EXEMPT = {'name', 'term', 'system', 'owner', 'ownerKind', 'source'}
+
+def _srd_level_targets(owner, levels):
+    """(key, node) for a class's or subclass's levels: each trait and each
+    described choice option as "Owner/Name". A level's `spells` note is left
+    out: convert.py writes those counts itself (_spell_notes); it isn't prose."""
+    for lv in (levels or {}).values():
+        for t in lv.get('traits') or []:
+            yield owner + '/' + str(t.get('name')), t
+        for ch in lv.get('choices') or []:
+            for o in ch.get('from') or []:
+                if isinstance(o, dict) and o.get('description'):
+                    yield owner + '/' + str(o.get('name')), o
+
+def _srd_targets(packs):
+    """(key, node) for everything a correction can name (spec §5): a record by
+    its name (a keyword by its term); a subclass by its name (its description,
+    and everything under it); a species' subrace as "Species/Subrace"; a trait
+    of a class, subclass, species or subrace, or a class's or subclass's choice
+    option, as "Owner/Name"; a table as "table:Name". srd_text.records() walks
+    the same places under the same keys."""
+    for fname, obj in sorted(packs.items()):
+        for cat, arr in obj.items():
+            if not isinstance(arr, list):
+                continue
+            for r in arr:
+                if not isinstance(r, dict):
+                    continue
+                key = str(r.get('term') or r.get('name') or '')
+                if cat == 'tables':
+                    yield 'table:' + key, r
+                    continue
+                if key:
+                    yield key, r
+                yield from _srd_level_targets(key, r.get('levels'))
+                for sn, sd in (r.get('subclasses') or {}).items():
+                    yield sn, sd
+                    yield from _srd_level_targets(sn, sd.get('levels'))
+                for t in r.get('traits') or []:
+                    yield key + '/' + str(t.get('name')), t
+                for sr in r.get('subraces') or []:
+                    srn = str(sr.get('name'))
+                    yield key + '/' + srn, sr
+                    for t in sr.get('traits') or []:
+                        yield srn + '/' + str(t.get('name')), t
+
+def _srd_sub(node, find, repl):
+    """Replace `find` (a string, or a compiled pattern) with `repl` in every
+    string under node, in place, skipping SRD_KEY_EXEMPT keys. Returns how many
+    strings changed."""
+    n = 0
+    if isinstance(node, dict):
+        items = [(k, v) for k, v in node.items() if k not in SRD_KEY_EXEMPT]
+    elif isinstance(node, list):
+        items = list(enumerate(node))
+    else:
+        return 0
+    for k, v in items:
+        if isinstance(v, str):
+            # repl is text, never a regex template: a backslash in it stays
+            nv = find.sub(lambda m: repl, v) if hasattr(find, 'sub') else v.replace(find, repl)
+            if nv != v:
+                node[k] = nv
+                n += 1
+        elif isinstance(v, (dict, list)):
+            n += _srd_sub(v, find, repl)
+    return n
+
+def _srd_apply_corrections(packs, path):
+    """scripts/srd-corrections.json, on the converted pack (spec §5): `remove`
+    first (a whole record or table the SRD doesn't print, named by the same
+    keys), then `global` whole-word swaps, then each `corrections` entry on the
+    entry it names. A removal or swap that matches nothing, an entry nothing is
+    named, or a `find` its entry doesn't contain is an error: a correction that
+    no longer applies means the source moved under it. So is a file that is
+    missing or unreadable: the SRD pack is built with its corrections, or not at
+    all. On success it says which file it applied, and how much of it."""
+    if not path or not os.path.isfile(path):
+        return ['no corrections file at %s — the SRD pack is built with its corrections '
+                '(srd-corrections.json beside convert.py, or --corrections PATH)' % path]
+    try:
+        with open(path, encoding='utf-8') as fh:
+            spec = json.load(fh)
+    except (OSError, ValueError) as e:
+        return ['corrections file %s could not be read: %s' % (path, e)]
+    if not isinstance(spec, dict):
+        return ['corrections file %s is not a JSON object' % path]
+    errors = []
+    for rm in spec.get('remove') or []:
+        hit = 0
+        for obj in packs.values():
+            for cat, arr in obj.items():
+                if not isinstance(arr, list):
+                    continue
+                key = lambda r: ('table:' if cat == 'tables' else '') + str(r.get('term') or r.get('name') or '')
+                keep = [r for r in arr if not (isinstance(r, dict) and key(r) == rm['entry'])]
+                hit += len(arr) - len(keep)
+                arr[:] = keep
+        if not hit:
+            errors.append('removal of %r matched nothing' % rm['entry'])
+    for g in spec.get('global') or []:
+        rx = re.compile(r'(?<![\w])' + re.escape(g['word']) + r'(?![\w])')
+        if not sum(_srd_sub(obj, rx, g['replace']) for obj in packs.values()):
+            errors.append('global correction %r matched nothing' % g['word'])
+    targets = {}
+    for key, node in _srd_targets(packs):
+        targets.setdefault(key, []).append(node)
+    for c in spec.get('corrections') or []:
+        nodes = targets.get(c['entry'])
+        if not nodes:
+            errors.append('correction for unknown entry %r' % c['entry'])
+        elif not sum(_srd_sub(nd, c['find'], c['replace']) for nd in nodes):
+            errors.append('correction for %r: %r not found' % (c['entry'], c['find']))
+    if not errors:
+        n = lambda k, word: '%d %s%s' % (len(spec.get(k) or []), word, '' if len(spec.get(k) or []) == 1 else 's')
+        print('  corrections: %s (%s, %d global, %s)'
+              % (path, n('remove', 'removal'), len(spec.get('global') or []), n('corrections', 'correction')))
+    return errors
+
+def _srd_leaks(packs, info):
+    """Names the SRD doesn't publish, found in the pack (spec §4): a record,
+    class or subclass NAMED as a non-SRD entry, or a renamed entry's OLD name
+    anywhere in the text. Record names are matched whole, never as substrings,
+    so "Aura of Protection" never trips on the feat Protection; old names are
+    distinctive enough ("Heward's Handy Haversack") to search for anywhere."""
+    bad = []
+    nonsrd = info.get('nonsrd') or set()
+    for f, obj in sorted(packs.items()):
+        for cat, arr in obj.items():
+            if not isinstance(arr, list):
+                continue
+            for r in arr:
+                if not isinstance(r, dict):
+                    continue
+                nm = str(r.get('name') or r.get('term') or '')
+                if nm.strip().lower() in nonsrd:
+                    bad.append('%s: %s %r is not in the SRD' % (f, cat, nm))
+                for sn in (r.get('subclasses') or {}):
+                    if sn.strip().lower() in nonsrd:
+                        bad.append('%s: subclass %r is not in the SRD' % (f, sn))
+    for f, obj in sorted(packs.items()):
+        text = json.dumps(obj, ensure_ascii=False).lower()
+        for old in sorted(info.get('renames') or {}):
+            if old in text:
+                bad.append('%s: %r, the old name of a renamed entry' % (f, old))
+    return bad
+
+def _srd_post(packs, a, info):
+    """After the pipeline, before anything is written: the corrections, then
+    the leak scan (on the corrected text). Returns the errors; any error writes
+    nothing."""
+    path = getattr(a, 'corrections', None) or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'srd-corrections.json')
+    return _srd_apply_corrections(packs, path) + _srd_leaks(packs, info)
+
+def _run_srd(a):
+    """`srd`: the SRD 5.2 pack — the 2024 pipeline over srd_view(), then
+    _srd_post(), then the files. Nothing is written to -o if _srd_post fails."""
+    with tempfile.TemporaryDirectory() as tmp:
+        view, raw = os.path.join(tmp, 'view'), os.path.join(tmp, 'raw')
+        info = srd_view(a.dir, view)
+        problems = _run_core(view, raw, a.overlay, a.resources, False, srd_book(info['fighting_styles']))
+        packs = {f: json.load(open(os.path.join(raw, f), encoding='utf-8'))
+                 for f in sorted(os.listdir(raw)) if f.endswith('.json')}
+        errors = _srd_post(packs, a, info)
+        if errors:
+            for e in errors:
+                print('  ERROR: ' + e)
+            print('\n  %d ERROR(S) — nothing written to %s' % (len(errors), a.out))
+            return 1
+        if getattr(a, 'excluded_out', None):
+            with open(a.excluded_out, 'w', encoding='utf-8') as fh:
+                json.dump({'nonsrd': sorted(info['nonsrd']), 'renamed': dict(sorted(info['renames'].items()))},
+                          fh, indent=1, ensure_ascii=False)
+                fh.write('\n')
+        os.makedirs(a.out, exist_ok=True)
+        for f, obj in packs.items():
+            _write(obj, os.path.join(a.out, f))
+    return 1 if problems else 0
+
 # ================================================================ CLI
 def _write(obj, path):
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(obj, f, indent=2, ensure_ascii=False)
         f.write('\n')          # .editorconfig: every file ends in a newline
     txt = open(path, encoding='utf-8').read()
-    # a 5e-tools {@tag}, or template text ({#itemEntry …}, {{item.resist}}) left in
-    residual = txt.count('{@') + txt.count('{#') + txt.count('{{')
+    # a 5e-tools {@tag}, or template text ({#itemEntry …}, {{item.resist}}, a
+    # dice roll's "#$prompt_number…$#" with no display text to print instead) left in
+    residual = txt.count('{@') + txt.count('{#') + txt.count('{{') + txt.count('#$')
     n = len(obj.get('keywords') or obj.get('feats') or obj.get('spells') or obj.get('classes')
             or obj.get('items') or obj.get('backgrounds') or obj.get('races')
             or obj.get('subclasses') or obj.get('features') or obj.get('tables') or [])
@@ -2546,12 +2978,109 @@ def _run_supplement(a):
     _cell_miss_warnings(warn)
     _entry_miss_warnings(warn)
     _template_miss_warnings(warn)
+    _feat_miss_warnings(warn)
     if problems:
         print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
         for p in problems:
             print('    - ' + p)
     else:
         print('\n  all inputs found.')
+
+def _run_core(d, outdir, overlay_path=None, resources_path=None, include_legacy=False, book=None):
+    """The whole-dump conversion `all` and `srd` share. `book` None is the 2024
+    run, whose output must never move. Returns the problems it warned about."""
+    os.makedirs(outdir, exist_ok=True)
+    problems = []
+    def warn(msg):
+        problems.append(msg)
+        print('  WARNING: ' + msg)
+
+    # 5e-tools keeps spells and classes in SUBDIRECTORIES; globbing only the
+    # top level silently found nothing and produced no spells and no classes.
+    searchdirs = [d] + [os.path.join(d, s) for s in ('spells', 'class') if os.path.isdir(os.path.join(d, s))]
+    def find(*names):
+        for n in names:
+            for sd in searchdirs:
+                hits = sorted(glob.glob(os.path.join(sd, n)))
+                if hits: return hits
+        return []
+    def need(label, *names):
+        hits = find(*names)
+        if not hits:
+            warn('no %s source found (looked for %s)' % (label, ', '.join(names)))
+        return hits
+
+    # The hand-authored helper files live in the REPO's data/, not in the
+    # 5e-tools dump. Looking only in the input dir silently dropped the
+    # Archery/Defense effects and the Rage/Focus/Sorcery trackers.
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    def helper(flag, fname, label):
+        for cand in ([flag] if flag else []) + [os.path.join(d, fname), os.path.join(here, 'data', fname)]:
+            if cand and os.path.exists(cand):
+                print('  using %s: %s' % (label, cand))
+                return cand
+        warn('%s not found (%s) — those entries will have no effects/trackers' % (label, fname))
+        return None
+    overlay = load_overlay(helper(overlay_path, 'overlay.json', 'overlay'))
+    cres = load_class_resources(helper(resources_path, 'class-resources.json', 'class resources') or '')
+
+    tbls = []       # every converter lifts its tables into this one pack
+    # items an entry embeds as a statblock (the Soulknife's Psychic Blade)
+    global _SB_INDEX, _FEAT_INDEX
+    _SB_INDEX = load_item_index(*(find('items-base*.json')[:1] + find('items.json')[:1]))
+    _FEAT_INDEX = load_feat_index(*(find('feats.json')[:1] + find('srd-ref-feats.json')[:1]))
+    cond = need('conditions', '*condition*.json', 'conditionsdiseases.json')
+    if cond: _write(convert_conditions(cond[0], tables=tbls, book=book), os.path.join(outdir, 'conditions.json'))
+    gloss = need('glossary', '*variantrule*.json', 'variantrules.json')
+    if gloss: _write(convert_glossary(gloss[0], tables=tbls, book=book), os.path.join(outdir, 'glossary.json'))
+    base = need('base items', 'items-base*.json')
+    if base: _write(convert_items(base[0], tables=tbls, book=book), os.path.join(outdir, 'items.json'))
+    # items.json is the MAGIC item file — a separate source from items-base.json,
+    # and the old glob order meant it was never reached.
+    magic = need('magic items', 'items.json')
+    if magic:
+        mpack = convert_items(magic[0], tables=tbls, book=book)
+        # magic ammunition is kept as generic variants, in a file of its own (#7)
+        mv = find('magicvariants.json')
+        if mv: mpack['items'] += convert_ammo_variants(mv[0], tables=tbls, book=book)
+        else: warn('magicvariants.json not found — no magic ammunition')
+        _write(mpack, os.path.join(outdir, 'items-magic.json'))
+    bgs = need('backgrounds', 'background*.json', 'backgrounds.json')
+    if bgs: _write(convert_backgrounds(bgs[0], tables=tbls, book=book), os.path.join(outdir, 'backgrounds.json'))
+    feats = need('feats', 'feats*.json', 'feat.json')
+    if feats: _write(convert_feats(feats[0], overlay=overlay, tables=tbls, book=book), os.path.join(outdir, 'feats.json'))
+    races = need('races', 'races.json')
+    if races: _write(convert_races(races[0], tables=tbls, book=book), os.path.join(outdir, 'races.json'))
+    spells = need('spells', 'spells-xphb.json', 'spells*.json')
+    srcs = find('sources.json')
+    if not srcs: warn('sources.json not found — spells will have no class tags')
+    if spells: _write(convert_spells(spells[0], sources=srcs[0] if srcs else None, tables=tbls, book=book), os.path.join(outdir, 'spells.json'))
+    classfiles = find('class-*.json')
+    if not classfiles: warn('no class-*.json found')
+    # maneuvers, invocations, metamagic, infusions — without it the classes
+    # still convert, but with no option pickers, so say so
+    optf = need('optional features', 'optionalfeatures.json')
+    ofs = load_optfeats(optf[0]) if optf else []
+    if classfiles: _write(convert_classes(classfiles, overlay=overlay, include_legacy=include_legacy, resources=cres, tables=tbls, optfeats=ofs, book=book), os.path.join(outdir, 'classes.json'))
+    # the same options as library entries, so a player can swap one ("each time
+    # you learn new maneuvers, you can also replace one"). 2024 printings only:
+    # pick_2024_preferred would backfill 2014-only invocations into the core pack.
+    xphb = [f for f in ofs if f.get('source') == 'XPHB']
+    if xphb: _write(_pack(book, 'features', _optfeat_features(xphb, tables=tbls, overlay=overlay), stem='features', version=1), os.path.join(outdir, 'features.json'))
+    _write_tables(tbls, os.path.join(outdir, 'tables.json'), book)
+    _bonus_prose_notes(lambda msg: print('  note: ' + msg))
+    _weapon_miss_warnings(warn)
+    _cell_miss_warnings(warn)
+    _entry_miss_warnings(warn)
+    _template_miss_warnings(warn)
+    _feat_miss_warnings(warn)
+    if problems:
+        print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
+        for p in problems:
+            print('    - ' + p)
+    else:
+        print('\n  all inputs found.')
+    return problems
 
 def main():
     ap = argparse.ArgumentParser(description="Convert 5e-tools JSON into Fieldbook rules JSON.")
@@ -2569,6 +3098,9 @@ def main():
                        help='also write the tables lifted out of this source to PATH')
         p.add_argument('--optfeatures', metavar='PATH',
                        help='(classes) optionalfeatures.json, for the maneuver/invocation/metamagic pickers')
+        p.add_argument('--feats', metavar='PATH',
+                       help='(classes) feats.json, for the feats a class feature offers by reference '
+                            '(the Paladin\'s Blessed Warrior, the Ranger\'s Druidic Warrior)')
     pa = sub.add_parser('all'); pa.add_argument('dir'); pa.add_argument('-o', '--out', required=True)
     pa.add_argument('--overlay'); pa.add_argument('--resources')
     pa.add_argument('--include-legacy', action='store_true')
@@ -2591,102 +3123,23 @@ def main():
     ps.add_argument('--exclude-systems', default='',
                     help='comma-separated character systems this pack\'s species must not be offered to')
     ps.add_argument('--overlay'); ps.add_argument('--resources')
+    pr = sub.add_parser('srd', help='the SRD 5.2 pack: only what the System Reference Document publishes')
+    pr.add_argument('dir'); pr.add_argument('-o', '--out', required=True)
+    pr.add_argument('--overlay'); pr.add_argument('--resources')
+    pr.add_argument('--corrections', metavar='PATH',
+                    help='default: srd-corrections.json beside convert.py; a missing file is an error')
+    pr.add_argument('--excluded-out', metavar='PATH',
+                    help='also write the non-SRD names and renames as JSON (the data tests\' fixture)')
     a = ap.parse_args()
 
     if a.cmd == 'supplement':
         return _run_supplement(a)
 
+    if a.cmd == 'srd':
+        return _run_srd(a)
+
     if a.cmd == 'all':
-        d, outdir = a.dir, a.out
-        os.makedirs(outdir, exist_ok=True)
-        problems = []
-        def warn(msg):
-            problems.append(msg)
-            print('  WARNING: ' + msg)
-
-        # 5e-tools keeps spells and classes in SUBDIRECTORIES; globbing only the
-        # top level silently found nothing and produced no spells and no classes.
-        searchdirs = [d] + [os.path.join(d, s) for s in ('spells', 'class') if os.path.isdir(os.path.join(d, s))]
-        def find(*names):
-            for n in names:
-                for sd in searchdirs:
-                    hits = sorted(glob.glob(os.path.join(sd, n)))
-                    if hits: return hits
-            return []
-        def need(label, *names):
-            hits = find(*names)
-            if not hits:
-                warn('no %s source found (looked for %s)' % (label, ', '.join(names)))
-            return hits
-
-        # The hand-authored helper files live in the REPO's data/, not in the
-        # 5e-tools dump. Looking only in the input dir silently dropped the
-        # Archery/Defense effects and the Rage/Focus/Sorcery trackers.
-        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        def helper(flag, fname, label):
-            for cand in ([flag] if flag else []) + [os.path.join(d, fname), os.path.join(here, 'data', fname)]:
-                if cand and os.path.exists(cand):
-                    print('  using %s: %s' % (label, cand))
-                    return cand
-            warn('%s not found (%s) — those entries will have no effects/trackers' % (label, fname))
-            return None
-        overlay = load_overlay(helper(a.overlay, 'overlay.json', 'overlay'))
-        cres = load_class_resources(helper(a.resources, 'class-resources.json', 'class resources') or '')
-
-        tbls = []       # every converter lifts its tables into this one pack
-        # items an entry embeds as a statblock (the Soulknife's Psychic Blade)
-        global _SB_INDEX
-        _SB_INDEX = load_item_index(*(find('items-base*.json')[:1] + find('items.json')[:1]))
-        cond = need('conditions', '*condition*.json', 'conditionsdiseases.json')
-        if cond: _write(convert_conditions(cond[0], tables=tbls), os.path.join(outdir, 'conditions.json'))
-        gloss = need('glossary', '*variantrule*.json', 'variantrules.json')
-        if gloss: _write(convert_glossary(gloss[0], tables=tbls), os.path.join(outdir, 'glossary.json'))
-        base = need('base items', 'items-base*.json')
-        if base: _write(convert_items(base[0], tables=tbls), os.path.join(outdir, 'items.json'))
-        # items.json is the MAGIC item file — a separate source from items-base.json,
-        # and the old glob order meant it was never reached.
-        magic = need('magic items', 'items.json')
-        if magic:
-            mpack = convert_items(magic[0], tables=tbls)
-            # magic ammunition is kept as generic variants, in a file of its own (#7)
-            mv = find('magicvariants.json')
-            if mv: mpack['items'] += convert_ammo_variants(mv[0], tables=tbls)
-            else: warn('magicvariants.json not found — no magic ammunition')
-            _write(mpack, os.path.join(outdir, 'items-magic.json'))
-        bgs = need('backgrounds', 'background*.json', 'backgrounds.json')
-        if bgs: _write(convert_backgrounds(bgs[0], tables=tbls), os.path.join(outdir, 'backgrounds.json'))
-        feats = need('feats', 'feats*.json', 'feat.json')
-        if feats: _write(convert_feats(feats[0], overlay=overlay, tables=tbls), os.path.join(outdir, 'feats.json'))
-        races = need('races', 'races.json')
-        if races: _write(convert_races(races[0], tables=tbls), os.path.join(outdir, 'races.json'))
-        spells = need('spells', 'spells-xphb.json', 'spells*.json')
-        srcs = find('sources.json')
-        if not srcs: warn('sources.json not found — spells will have no class tags')
-        if spells: _write(convert_spells(spells[0], sources=srcs[0] if srcs else None, tables=tbls), os.path.join(outdir, 'spells.json'))
-        classfiles = find('class-*.json')
-        if not classfiles: warn('no class-*.json found')
-        # maneuvers, invocations, metamagic, infusions — without it the classes
-        # still convert, but with no option pickers, so say so
-        optf = need('optional features', 'optionalfeatures.json')
-        ofs = load_optfeats(optf[0]) if optf else []
-        if classfiles: _write(convert_classes(classfiles, overlay=overlay, include_legacy=a.include_legacy, resources=cres, tables=tbls, optfeats=ofs), os.path.join(outdir, 'classes.json'))
-        # the same options as library entries, so a player can swap one ("each time
-        # you learn new maneuvers, you can also replace one"). 2024 printings only:
-        # pick_2024_preferred would backfill 2014-only invocations into the core pack.
-        xphb = [f for f in ofs if f.get('source') == 'XPHB']
-        if xphb: _write(_pack(None, 'features', _optfeat_features(xphb, tables=tbls, overlay=overlay), stem='features', version=1), os.path.join(outdir, 'features.json'))
-        _write_tables(tbls, os.path.join(outdir, 'tables.json'))
-        _bonus_prose_notes(lambda msg: print('  note: ' + msg))
-        _weapon_miss_warnings(warn)
-        _cell_miss_warnings(warn)
-        _entry_miss_warnings(warn)
-        _template_miss_warnings(warn)
-        if problems:
-            print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
-            for p in problems:
-                print('    - ' + p)
-        else:
-            print('\n  all inputs found.')
+        _run_core(a.dir, a.out, a.overlay, a.resources, a.include_legacy)
         return
 
     overlay = load_overlay(a.overlay)
@@ -2716,9 +3169,11 @@ def main():
         files = []
         for pat in a.inputs:
             files.extend(sorted(glob.glob(pat)) if any(ch in pat for ch in '*?[') else [pat])
-        _write(convert_classes(files, overlay=overlay, include_legacy=a.include_legacy,
-                               spell_notes=not a.no_spell_notes, tables=tbls,
-                               optfeats=load_optfeats(a.optfeatures)), a.out)
+        # the feats a class feature offers by reference, read as _run_core() reads them
+        with feat_ctx(load_feat_index(a.feats)):
+            _write(convert_classes(files, overlay=overlay, include_legacy=a.include_legacy,
+                                   spell_notes=not a.no_spell_notes, tables=tbls,
+                                   optfeats=load_optfeats(a.optfeatures)), a.out)
     _bonus_prose_notes(lambda msg: print('  note: ' + msg))
     _weapon_miss_warnings(lambda msg: print('  WARNING: ' + msg))
     if a.tables:
@@ -2727,6 +3182,7 @@ def main():
     # prose is flattened with or without a tables sink, so these always run
     _entry_miss_warnings(lambda msg: print('  WARNING: ' + msg))
     _template_miss_warnings(lambda msg: print('  WARNING: ' + msg))
+    _feat_miss_warnings(lambda msg: print('  WARNING: ' + msg))
 
 if __name__ == '__main__':
     sys.exit(main() or 0)

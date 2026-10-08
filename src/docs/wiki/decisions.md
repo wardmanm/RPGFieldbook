@@ -71,6 +71,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **An entry a pack has with no name** — Skip it, count it, and say so on the status line
 - **Where a wholesale pool is made safe** — `tidyRules()`, run by `reindexRules()`
 - **A keyword written `{name, description}`** — Read as its term and text
+- **How the SRD pack's species reach D&D characters (#84, R6)** — `systemOf()` reads a label starting `srd` as D&D, and the pack also carries `excludeSystems: ["humblewood"]`
 - **The Artificer and Mystic in the core pack** — Leave them, labelled `XPHB`
 
 ### [Data archive](architecture/data-archive.md)
@@ -428,6 +429,11 @@ When a page gains a Decisions row, add its line here under that page.
 - **Which ignored item fields become effects (#79)** — `bonusAbilityCheck` as `check` and `bonusProficiencyBonus` as `profBonus`; `ability` and `modifySpeed` stay prose
 - **How `{{getFullImmRes item.resist}}` prints (#78)** — Title-cased ("Acid"), as the 2024 templates call it; a raw `{{item.resist}}` prints as the item has it
 - **An item's spell attack and spell save DC bonus (#77)** — `spell.attack` / `spell.dc` effects through the same sentence reader, a named class not counting as a condition
+- **How the `srd52` flag is read (#84)** — As truthy: `true` and a string (a rename) both count
+- **How a choice-shaped spell prerequisite prints (#84)** — The dump's own `entry` text, in its title case: "a Warlock Cantrip That Deals Damage"
+- **The Paladin's and Ranger's own Fighting Style option (#84, R4)** — On the menu beside the styles, from the class feature's `refFeat`, in both packs
+- **A dice roll holding a 5e-tools prompt template (#84)** — Prints its display text; every other dice tag keeps its roll
+- **A class feature's `refFeat` the feat index lacks (#84)** — The option is left off and a `WARNING` names it; `classes` takes `--feats`
 
 ### [Supplements](data/supplements.md)
 
@@ -464,6 +470,15 @@ When a page gains a Decisions row, add its line here under that page.
 - **Matching a declared name** — Case-insensitive against everything loaded, whichever pack supplies it
 - **Where the verdict lives** — Recomputed at render time from `rules`; only the declaration is stored
 - **Where the pack's licence and credit live** — `license` and `attribution` in `data/packs.json`, stamped into the bundle
+- **Its `requires` once SRD 5.2 exists (#84, R7)** — Left as it is
+
+### [SRD 5.2](data/srd.md)
+
+- **How the SRD pack is selected** — An SRD view of the dump (`srd_view()`), run through the 2024 pipeline unchanged (`_run_core()`) (R1)
+- **Which SRD revision the text and attribution target** — SRD 5.2.1, the current one; the system label stays "SRD 5.2" (R2)
+- **Whose wording the pack ships** — The PDF's: every difference corrected or accepted in `srd-corrections.json`, checked by `srd-verbatim` (R3, decision 3)
+- **Two packs sharing a table name (R5)** — Allowed for byte-identical twins and for the nine pinned SRD/2024 pairs that differ; any other same-named pair, or a change to the nine, fails `rules-data.js`
+- **A missing corrections file (#84)** — An error: exit 1, nothing written, the path named; the app zip ships the file beside `convert.py`
 
 ## Process
 
@@ -492,7 +507,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where tests live** — `src/tests/`, where the audience rule keeps them out of the zip
 - **How checks are counted** — Each suite prints its total; `run.sh` sums them
 - **When bundles are rebuilt** — On every run
-- **The PDF-dependent suite in CI** — Skips cleanly without `.venv` or the PDF
+- **The PDF-dependent suites in CI** — Skip cleanly without `.venv` or the PDF
+- **What the SRD data tests read in CI, which has no dump** — A committed fixture, `fixtures/srd-excluded-names.json`, written by `convert.py srd --excluded-out`
 - **Finding Python** — Run it
 - **What `docs.js` checks** — Mechanically checkable facts
 

@@ -25,7 +25,7 @@ node scripts/bundle-rules.js >/dev/null || { echo "bundling failed"; exit 1; }
 PY=python3
 "$PY" -c '' >/dev/null 2>&1 || PY=python
 
-SUITES="converter tables rules-data sheet char-update docs humblewood-verbatim data-kit data-archive"
+SUITES="converter tables rules-data sheet char-update docs humblewood-verbatim data-kit data-archive srd-verbatim"
 TOTAL=0
 FAILED=""
 RAN=0

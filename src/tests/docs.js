@@ -86,6 +86,23 @@ ck('README names the rules-data archive', readme.includes('fieldbook-data-standa
 ck("build.sh's app-zip guard allows exactly data/fieldbook-data-standalone-….zip",
    read('build.sh').includes('fieldbook-data-standalone-[^/]+\\.zip'));
 
+// ---------- the SRD's required attribution, word for word (#84)
+ck('README carries the SRD 5.2.1 attribution', readme.includes('This work includes material from the System Reference Document 5.2.1')
+   && readme.includes('https://creativecommons.org/licenses/by/4.0/legalcode'));
+// README-converter ships too, and documents `srd`: it quotes the statement (the
+// registry credit's first two sentences) and names Wizards nowhere else, as
+// SRD 5.2.1 p. 1 asks
+{
+  const conv = read('docs/README-converter.md');
+  const srdReg = JSON.parse(read('data/packs.json')).packs.find(p => p.system === 'SRD 5.2') || {};
+  const statement = String(srdReg.attribution || '').split(' Changed:')[0];
+  ck('README-converter documents `convert.py srd`', /^## The SRD 5\.2 pack: `srd`$/m.test(conv));
+  ck('README-converter quotes the SRD 5.2.1 attribution word for word',
+     statement.startsWith('This work includes material') && conv.includes(statement));
+  ck('README-converter names Wizards only inside that statement', (conv.match(/Wizards/g) || []).length === 1,
+     (conv.match(/Wizards/g) || []).length);
+}
+
 // ---------- changelog notebook: the traps that reach the public release notes
 // Bullets are copied verbatim into the GitHub release body, where <name> is an
 // HTML tag and disappears; and a literal version goes stale on the next bump.
@@ -123,6 +140,10 @@ if (docsAllowed) {
      wouldBeRejected);
 }
 ck('build.sh ships LICENSE', /cp LICENSE /.test(build));
+// convert.py's default corrections file is the one beside it; without it in the
+// zip, a player's `srd` run fails (#84)
+ck('build.sh ships scripts/srd-corrections.json beside convert.py in the app zip',
+   /^cp [^\n]*scripts\/srd-corrections\.json[^\n]* \.buildtmp\/scripts\/$/m.test(build));
 ck('README section 9 lists LICENSE', /LICENSE\s+←/.test(readme));
 
 // ---------- data/packs.json, the registry of rules packs (#83)

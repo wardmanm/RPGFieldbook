@@ -2,8 +2,8 @@
 
 No rules content is baked into the app. Species, classes, subclasses, spells, items, feats,
 backgrounds, glossary terms and tables all arrive as JSON packs that the player imports at runtime.
-Each pack is either a **system** a character can be created in (D&D 2024, Humblewood) or an
-additive **supplement** (Xanathar's, Tasha's, Homebrew). Every loaded pack merges into one pool,
+Each pack is either a **system** a character can be created in (D&D 2024, SRD 5.2, Humblewood) or
+an additive **supplement** (Xanathar's, Tasha's, Homebrew). Every loaded pack merges into one pool,
 the global `rules`, which is cached across reloads (see [Storage](storage.md)) and consulted by
 name. The pack format itself is [rules-schema](../../../../docs/rules-schema.md), so this page
 covers what the app does with packs.
@@ -40,14 +40,17 @@ full of junk, tidied and rendered), `tables.js`, `docs.js` (`data/packs.json` pa
 | `xanathars_full.json` | `XGE` | supplement | `["humblewood"]` | — |
 | `tashas_full.json` | `TCE` | supplement | `["humblewood"]` | — |
 | `homebrew_full.json` | `Homebrew` | supplement, hand-authored | — | yes |
+| `srd52_full.json` | `SRD 5.2` | system: the free D&D rules ([SRD 5.2](../data/srd.md)) | `["humblewood"]` | — |
 
 **Systems and supplements.** A character's `system` is `"dnd"` or `"humblewood"`. Nothing else is
 possible, because `migrate()` coerces it. A pack's `system` stamp is a source label (`XPHB`, `XGE`, …)
 and a different thing. Humblewood is a 5e *setting*: its class, subclasses and spells supplement the
 D&D core rather than replacing it. **Only species are exclusive.** `racesForCharacter()` filters the
-ancestry picker through `systemOf()`, which reads `xphb`/`phb`/`dnd`/`d&d` as D&D, `humblewood` as
-Humblewood, and anything else as "" (offered to both), and through a pack's `excludeSystems`, which
-beats that name-based guess. Classes, subclasses, spells, feats, items and backgrounds are offered
+ancestry picker through `systemOf()`, which reads `xphb`/`phb`/`dnd`/`d&d` as D&D, a label starting
+`srd` ("SRD 5.2") as D&D too, `humblewood` as Humblewood, and anything else as "" (offered to both),
+and through a pack's `excludeSystems`, which beats that name-based guess. The SRD pack carries both:
+`systemOf()` places it, and its `excludeSystems: ["humblewood"]` says the same to an older app that
+doesn't know the label. Classes, subclasses, spells, feats, items and backgrounds are offered
 to every character.
 
 **Getting packs in.** `importRulesFiles()` handles the file picker, reached from Settings, the home
@@ -142,7 +145,15 @@ so a settings file's unusable entries go without a message.
 **Lookups are by name.** `ruleById(kind, idOrName)` matches an `_id` or a `keyOf()` name.
 `findRaceDef()` and `findClassDef()` are thin wrappers over it. A character stores names, and the
 class, species and background descriptions re-resolve live by name. `findTable()` is also a global
-name lookup, and `[Table: …]` anchors carry no pack (see [Rich text](rich-text.md)).
+name lookup, first match in load order, and `[Table: …]` anchors carry no pack (see
+[Rich text](rich-text.md)). So two packs may share a table name only when that is harmless:
+**identical twins**, or **the SRD 5.2 and 2024 packs' copies of one table** (R5). The SRD pack
+reprints 68 of the 2024 pack's tables, 59 word for word and 9 in the SRD's own wording ("GM" for
+"DM", renamed spells, three corrections), so whichever loads first is the same table either way. The
+registry, and so the archive, loads the 2024 pack first. `rules-data.js` pins those nine by name, so
+a new difference (from a 5e-tools update, say) fails until it is added on purpose. Any other
+same-named pair fails too, and the converter suffixes a supplement's colliding name (see
+[Supplements](../data/supplements.md)).
 
 **Subclasses.** `subclassesFor(d)` returns the class's own subclasses plus every standalone entry in
 `rules.subclasses` whose `class` matches. The key is the subclass name, because that is what
@@ -231,9 +242,12 @@ files).
   it, nor the registry's versions, digests or `release`. It must stay a flat JSON object: `release.js`
   and the `docs` suite find it with `\{[^}]*\}` and `JSON.parse` it.
 - **Re-importing replaces by file name and system,** never by file name alone.
-- **`data/5e2024/` must reproduce byte for byte** from the converter. Any value that moves changes
-  XPHB's digest, so the next release bumps it and every player is told to re-download a pack that
-  did not change. See [Converter](../data/converter.md).
+- **`data/5e2024/` and `data/srd52/` must reproduce byte for byte** from the converter. Any value
+  that moves changes that pack's digest, so the next release bumps it and every player is told to
+  re-download a pack that did not change. See [Converter](../data/converter.md).
+- **A table name is shared only by identical twins or by one of the nine pinned SRD 5.2/2024 pairs.**
+  `findTable()` takes the first match and an anchor names no pack, so any other pair would open one
+  book's table from the other's prose. `rules-data.js` enforces it across every pack folder.
 
 ## Traps
 
@@ -291,6 +305,7 @@ files).
 | An entry a pack has with no name | Skip it, count it, and say so on the status line | Dropping it silently (the old way): the author never learns why it is missing. A chip on its loaded-data row, as missing dependencies get: skipped entries are not in the pool to compute from, so it would need a stored count per source with its own pruning (L4206) |
 | Where a wholesale pool is made safe | `tidyRules()`, run by `reindexRules()` | In the Settings import handler: misses both cache restores. In every reader: hundreds of sites, and the next one written would not know (L4206) |
 | A keyword written `{name, description}` | Read as its term and text | Skipping it: every other category is written that way, and it is plainly a term (L4206) |
+| How the SRD pack's species reach D&D characters (#84, R6) | `systemOf()` reads a label starting `srd` as D&D, and the pack also carries `excludeSystems: ["humblewood"]` | `excludeSystems` alone: it says only who the pack is not for, and SRD 5.2 is a D&D system whose species belong to D&D characters (spec R6). `systemOf()` alone: an older app, which doesn't know the label, would offer SRD species to Humblewood characters (L5148) |
 | The Artificer and Mystic in the core pack | Leave them, labelled `XPHB` | Dropping them: moves `data/5e2024/`, bumps XPHB for everyone, and strands Artificer players without Tasha's (L1816) |
 
 ## Open
@@ -321,3 +336,5 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — A settings file's pool is rebuilt through `mergeRules()` (`poolFromExport()`), keeping provenance and order, and replaces the loaded one only when the player says so. → ledger L4134, #70
 - 2026-09-28 — Entries with no name are skipped and reported at import and fetch; `reindexRules()` tidies the pool on every path; keywords written `{name, description}` load. → ledger L4206, #71
 - 2026-10-07 — Imports take bytes and zips; a re-import replaces its pack (`importPack()`); versions come from `data/packs.json` and compare with `cmpDataVer()`, with an `update` state for a newer data release; pack credits are kept like `requires`. → ledger L5082, #83
+- 2026-10-08 — SRD 5.2 joins as a system: `systemOf()` reads it as D&D, it loads after the 2024 pack, and an SRD/2024 table pair may share a name (R5, refined). → ledger L5148, #84
+- 2026-10-08 — R5 pinned: the nine SRD/2024 tables that differ are listed by name; Carrying Capacity is now an identical twin (59), leaving three corrected ones. → ledger L5269, #84

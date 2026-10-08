@@ -47,6 +47,14 @@ Savagery. The expanded spell list is prose and a table, so those 13 spells are i
 structural check; declaring them is the only way the app can say what is missing. The schema is in
 [rules-schema](../../../../docs/rules-schema.md) §1.
 
+**With SRD 5.2 instead of the 2024 pack.** Every name in the D&D group (the Warlock and its 11
+spells) is also in the [SRD 5.2](srd.md) pack, under the same name, and a declared name matches
+whichever pack supplies it. So that group resolves with SRD 5.2 alone, and The Predator attaches to
+the SRD Warlock; only the Xanathar's group still asks for `xanathars_full.json`. `rules-data.js`
+asserts it against `data/srd52/`. The group's `pack` and `file` still name the 2024 pack; they are
+shown only when something in the group is missing, and #85 repoints them when that pack goes
+private.
+
 **What the app does with it.** `mergeRules()` stores the declaration on `rules.requires`, keyed by
 source, so it survives the rules cache. `missingRequirements()` is a pure function of `rules`,
 called at render time: a structural check (any `subclasses[].class` with no loaded class) plus the
@@ -54,7 +62,7 @@ declared groups, matched case-insensitively and pack-blind. `requiresStatusHTML(
 `! n missing` chip on the pack in Settings, with a tooltip naming what to import, and
 `missingSummary()` adds a line to the status after an import or a fetch. Loading never fails. Full
 mechanism: [Rules packs](../architecture/rules-packs.md). With the 2024 pack but not Xanathar's, the
-chip names the two spells and `xanathars_full.json`; with all five packs it is silent.
+chip names the two spells and `xanathars_full.json`; with every pack loaded it is silent.
 
 ## Rules that must hold
 
@@ -92,6 +100,7 @@ chip names the two spells and `xanathars_full.json`; with all five packs it is s
 | Matching a declared name | Case-insensitive against everything loaded, whichever pack supplies it | Matching the named pack: having the spell from somewhere else is not an error |
 | Where the verdict lives | Recomputed at render time from `rules`; only the declaration is stored | Computing it during merge: `mergeRules()` never runs at boot, so anything computed there would be lost on reload |
 | Where the pack's licence and credit live | `license` and `attribution` in `data/packs.json`, stamped into the bundle | The `_note`: never copied into the bundle, so no player ever saw it (L5082) |
+| Its `requires` once SRD 5.2 exists (#84, R7) | Left as it is | Repointing it to the SRD pack now: every name already resolves with either pack, and the 2024 pack stays public until #85, which repoints it (L5148) |
 
 ## Open
 
@@ -105,3 +114,4 @@ chip names the two spells and `xanathars_full.json`; with all five packs it is s
 
 - 2026-08-14 — Homebrew pack added with The Predator; `requires` and structural missing-dependency reporting. → ledger L1883
 - 2026-10-07 — Its CC BY-SA 3.0 licence and credit to D&D Wiki ship for the first time, in the bundle, Settings → Credits & licences and `NOTICE.md`; a new folder is registered in `data/packs.json`. → ledger L5082, #83
+- 2026-10-08 — Its D&D group resolves with SRD 5.2 alone, left as it is until #85 (spec R7). → ledger L5148, #84

@@ -1,0 +1,211 @@
+{
+  "system": "SRD 5.2",
+  "name": "SRD 5.2 Backgrounds",
+  "excludeSystems": [
+    "humblewood"
+  ],
+  "backgrounds": [
+    {
+      "name": "Acolyte",
+      "system": "SRD 5.2",
+      "abilityScores": [
+        "int",
+        "wis",
+        "cha"
+      ],
+      "feat": "Magic Initiate (Cleric)",
+      "skills": [
+        "Insight",
+        "Religion"
+      ],
+      "tools": "Calligrapher's Supplies",
+      "equipment": "Choose A or B: (A) Calligrapher's Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Book (Prayers)"
+                },
+                {
+                  "name": "Calligrapher's Supplies"
+                },
+                {
+                  "name": "Holy Symbol"
+                },
+                {
+                  "name": "Parchment",
+                  "qty": 10
+                },
+                {
+                  "name": "Robe"
+                }
+              ],
+              "gold": 8,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Criminal",
+      "system": "SRD 5.2",
+      "abilityScores": [
+        "dex",
+        "con",
+        "int"
+      ],
+      "feat": "Alert",
+      "skills": [
+        "Sleight of Hand",
+        "Stealth"
+      ],
+      "tools": "Thieves' Tools",
+      "equipment": "Choose A or B: (A) 2 Daggers, Thieves' Tools, Crowbar, 2 Pouches, Traveler's Clothes, 16 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Dagger",
+                  "qty": 2
+                },
+                {
+                  "name": "Thieves' Tools"
+                },
+                {
+                  "name": "Crowbar"
+                },
+                {
+                  "name": "Pouch",
+                  "qty": 2
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 16,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Sage",
+      "system": "SRD 5.2",
+      "abilityScores": [
+        "con",
+        "int",
+        "wis"
+      ],
+      "feat": "Magic Initiate (Wizard)",
+      "skills": [
+        "Arcana",
+        "History"
+      ],
+      "tools": "Calligrapher's Supplies",
+      "equipment": "Choose A or B: (A) Quarterstaff, Calligrapher's Supplies, Book (history), Parchment (8 sheets), Robe, 8 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Quarterstaff"
+                },
+                {
+                  "name": "Calligrapher's Supplies"
+                },
+                {
+                  "name": "Book"
+                },
+                {
+                  "name": "Parchment",
+                  "qty": 8
+                },
+                {
+                  "name": "Robe"
+                }
+              ],
+              "gold": 8,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Soldier",
+      "system": "SRD 5.2",
+      "abilityScores": [
+        "str",
+        "dex",
+        "con"
+      ],
+      "feat": "Savage Attacker",
+      "skills": [
+        "Athletics",
+        "Intimidation"
+      ],
+      "tools": "Choose one kind of Gaming Set",
+      "equipment": "Choose A or B: (A) Spear, Shortbow, 20 Arrows, Gaming Set (same as above), Healer's Kit, Quiver, Traveler's Clothes, 14 GP; or (B) 50 GP",
+      "equipmentGrants": [
+        {
+          "choose": [
+            {
+              "items": [
+                {
+                  "name": "Spear"
+                },
+                {
+                  "name": "Shortbow"
+                },
+                {
+                  "name": "Arrows (20)"
+                },
+                {
+                  "name": "a Gaming Set (your choice)"
+                },
+                {
+                  "name": "Healer's Kit"
+                },
+                {
+                  "name": "Quiver"
+                },
+                {
+                  "name": "Traveler's Clothes"
+                }
+              ],
+              "gold": 14,
+              "label": "A"
+            },
+            {
+              "gold": 50,
+              "label": "B"
+            }
+          ]
+        }
+      ],
+      "description": ""
+    }
+  ]
+}

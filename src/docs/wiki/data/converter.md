@@ -1,13 +1,16 @@
 # Converter
 
-`scripts/convert.py` turns a 5e-tools data dump into the D&D 2024 rules pack, `data/5e2024/`, and
-(through `supplement`) into the Xanathar's and Tasha's packs. It is stdlib-only Python 3.8+ and
+`scripts/convert.py` turns a 5e-tools data dump into the D&D 2024 rules pack, `data/5e2024/`,
+(through `supplement`) into the Xanathar's and Tasha's packs, and (through `srd`) into the SRD 5.2
+pack, `data/srd52/`. It is stdlib-only Python 3.8+ and
 ships to players in the zip's `scripts/`, so it is both a dev tool and a player tool. Its output is
 committed; `scripts/bundle-rules.js` then rolls each system folder into the one-file pack players
 import. The player-facing how-to is [README-converter](../../../../docs/README-converter.md); this
 page is what that file does not say: what must not move, and the traps that have already shipped.
 
-**Code:** `main()`, `pick_2024_preferred()`, `pick_sources()`, `flatten()`, `table_ctx()`,
+**Code:** `main()`, `_run_core()`, `srd_view()`, `pick_2024_preferred()`, `pick_sources()`,
+`_render_optfeat_prereq()`, `_ref_feats()`, `load_feat_index()`, `feat_ctx()`,
+`_feat_miss_warnings()`, `strip_tags()`, `flatten()`, `table_ctx()`,
 `ref_ctx()`, `_register()`, `_norm_table()`, `_cell_text()`, `_dice_text()`, `_cell_miss_warnings()`,
 `_formula_text()`, `_attr_choose()`, `_full_stop()`, `statblock_ctx()`, `load_item_index()`,
 `_statblock_text()`, `_item_traits()`, `_entry_miss_warnings()`, `_expand_item_entries()`,
@@ -21,9 +24,10 @@ page is what that file does not say: what must not move, and the traps that have
 `_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in `scripts/bundle-rules.js`;
 `pack_digest()` in `tools/data-kit/fbdata.py`; `mergeRules()` in `89-rules-merge.js`;
 `DATA_VERSIONS` in `30-version.js`; `RULE_CATS` in `88-settings.js` ·
-**Data:** `data/5e2024/*.json`, `data/overlay.json`, `data/class-resources.json`,
-`_conversion-data/5etools-v2.36.1/` (gitignored) · **Tests:** `converter.py`, `rules-data.js`,
-`tables.js` · **See also:** [Supplements](supplements.md), [Rules packs](../architecture/rules-packs.md),
+**Data:** `data/5e2024/*.json`, `data/srd52/*.json`, `data/overlay.json`, `data/class-resources.json`,
+`scripts/srd-corrections.json`, `_conversion-data/5etools-v2.36.1/` (gitignored) · **Tests:**
+`converter.py`, `rules-data.js`, `tables.js`, `srd-verbatim.py` · **See also:** [Supplements](supplements.md),
+[SRD 5.2](srd.md), [Rules packs](../architecture/rules-packs.md),
 [Class resources](../features/class-resources.md), [Rules & tables](../features/rules-and-tables.md),
 [rules-schema](../../../../docs/rules-schema.md)
 
@@ -31,8 +35,11 @@ page is what that file does not say: what must not move, and the traps that have
 
 **Subcommands.** `conditions`, `glossary`, `feats`, `backgrounds`, `items`, `spells`, `classes`,
 `races` convert one file; `all <dir>` converts a whole dump into `data/5e2024/`; `supplement <dir>
---book XGE|TCE` converts one supplement book (see [Supplements](supplements.md)). `all` is the only
-path that reproduces the committed core pack.
+--book XGE|TCE` converts one supplement book (see [Supplements](supplements.md)); `srd <dir>`
+converts the SRD 5.2 pack (below, and [SRD 5.2](srd.md)). `all` is the only path that reproduces the
+committed core pack, and `srd` the only one that reproduces `data/srd52/`. Both are
+`_run_core()`, the whole-dump conversion: `all` calls it with the default `Book`, `srd` with
+`srd_book()` over a filtered copy of the dump.
 
 **What `all` finds.** It searches the dump root and its `spells/` and `class/` subdirectories
 (5e-tools keeps spells and classes there), converts `items-base.json` to `items.json` and the
@@ -48,10 +55,13 @@ the glossary and species go through it via `pick_sources()`. `convert_background
 `convert_spells()` filter on `source == "XPHB"` alone, with no backfill at all. Items also pass a
 `shipped` set (`_shipped_2024()`, from both item files): a 2014 entry whose `reprintedAs` names
 something the 2024 pack ships is left out, which drops 40 renamed duplicates (Crossbow Bolt, the
-2014 Net, Acid (vial)…).
+2014 Net, Acid (vial)…). `srd52` is read as truthy, in `pick_2024_preferred()`, `_shipped_2024()`
+and `_variant_selected()` alike: it is `true` **or a string**, the entry's SRD name, and a string
+counts. That is how the 2024 pack carries Carrion Crawler Mucus and Lolth's Sting, under their 2024
+names.
 
 **Current output** (counted from `data/5e2024/`): 16 backgrounds, 14 classes, 21 conditions,
-77 feats, 58 features, 115 glossary terms, 94 items, 527 magic items, 10 species, 391 spells,
+77 feats, 58 features, 115 glossary terms, 94 items, 529 magic items, 10 species, 391 spells,
 108 tables. Spells carry a `class` list only when `--sources sources.json` is supplied (`all` finds
 it in `spells/`); the spell file itself has no per-spell class data.
 
@@ -71,6 +81,18 @@ other `{=key}` placeholders written out from `inherits`. The variant's text is t
 piece it expands onto, so it is flattened once under the variant's own name, not once per piece;
 a table inside it (Slaying's d100 creature table) is lifted once the same way, as "Ammunition of
 Slaying Table", and every expanded piece's description carries the one anchor.
+
+**Tags become words.** `strip_tags()` turns each 5e-tools `{@tag …}` into text. Most tags are
+`name|source|display` and print the display text when there is one, else the name. `classFeature`
+and `subclassFeature` keep their display text further along, the link tags (`filter`, `book`,
+`5etools`, `adventure`, `link`) print their first field, and `chance` and `dc` add a word. The roll
+tags (`dice`, `autodice`, `damage`, `d20`, `hit`) go through the default family too, though they
+write their display text second (`{@dice roll|display}`), so a two-field roll prints its roll:
+`{@dice 1d6|one die}` is `1d6`. That stays, because changing it would move dice text that reads
+correctly today. The one exception (#84): a roll holding a 5e-tools prompt template, such as the
+Carrying Capacity table's `{@dice #$prompt_number:title=Enter Strength Score$# × 7.5|Str. × 7.5}`,
+prints its display text, "Str. × 7.5". `scaledice` and `scaledamage` have a grammar of their own and
+are left in the default family.
 
 **Tables are lifted, not dropped.** While an entity is flattened inside `table_ctx()`, every
 5e-tools `table` or `tableGroup` node is normalised by `_norm_table()` to
@@ -199,7 +221,24 @@ level prerequisite that level meets. Each option carries its prose, `repeatable`
 prints a "Repeatable" subsection, and a `cost` from 5e-tools `consumes` (`_optfeat_cost()`, with the
 singular pool name mapped to the tracker's name by `_CONSUMES_AS`). `all` also writes the 58 XPHB
 options as library entries in `features.json`. Student of War, which the source states only in
-prose, comes from `_prose_choices()`, keyed by (class, subclass, source).
+prose, comes from `_prose_choices()`, keyed by (class, subclass, source). An option's prerequisite
+line comes from `_render_optfeat_prereq()`; a spell prerequisite shaped as a choice (a dict) is
+printed by its own `entry` text through `strip_tags()`, in the dump's title case, so Agonizing
+Blast, Eldritch Spear and Repelling Blast read "Prerequisite: Level 2 Warlock and a Warlock Cantrip
+That Deals Damage".
+
+**The Fighting Style menu.** On a run with no source codes (`all` and `srd`), `convert_classes()`
+replaces the Fighting Style class feature with `FIGHTING_STYLES`, the 2024 menu, wording and all,
+limited to the `Book`'s `fighting_styles` when it has them (the SRD's four). The Paladin's and
+Ranger's feature also names its own option ("Instead of choosing one of those feats, you can choose
+the option below") by reference: `_ref_feats()` finds the `refFeat` in the class feature, and the
+feat, looked up in `_FEAT_INDEX` (`load_feat_index()`, from `feats.json` and, in an SRD run, the
+view's `srd-ref-feats.json`), is added as one more option: Blessed Warrior for the Paladin, Druidic
+Warrior for the Ranger. The 2024 Paladin and Ranger menus are the ten styles plus that option, the
+Fighter's the ten; the SRD's are the four plus the option, and four. `all` and `srd` fill the index
+themselves; the `classes` subcommand reads it from `--feats feats.json` (through `feat_ctx()`). A
+`refFeat` the index lacks leaves its option off the menu and is a `WARNING` at the end of every run
+(`_feat_miss_warnings()`), naming the feat and the class.
 
 **Skill proficiencies: one reader.** `_skill_profs()` reads every 5e-tools skill-proficiency list
 the converter meets: a species' `skillProficiencies` (through `_race_skills()`), a class's
@@ -221,11 +260,13 @@ said". The pack's Artificer is the TCE printing and carries TCE's row. What the 
 **Hand-authored inputs.** `data/overlay.json` (`byName`: Archery, Defense) adds numeric `effects`
 to feats and fighting-style options by name, via `apply_overlay()`. `data/class-resources.json`
 adds resource trackers, keyed by class name or `"Class/Subclass"`. They sit at the `data/` root,
-not in a system folder, and the zip ships them in `scripts/` beside `convert.py`. Details of the
+not in a system folder, and the zip ships them in `scripts/` beside `convert.py`, with
+`scripts/srd-corrections.json` (the SRD pack's, below). Details of the
 trackers: [Class resources](../features/class-resources.md).
 
 **Writing.** `_write()` dumps with `indent=2`, `ensure_ascii=False` and a final `\n`, then reports
-the entry count and any unresolved `{@` tag or template text (`{#`, `{{`) left in the file. `_pack()` builds the wrapper in a
+the entry count and any unresolved `{@` tag or template text (`{#`, `{{`, and a roll's `#$` prompt
+template with no display text to print instead) left in the file. `_pack()` builds the wrapper in a
 fixed key order: `system`, `name`, `version`, then `_note` and `excludeSystems` only when the book
 sets them, then the array.
 
@@ -241,18 +282,47 @@ the 2014 one before bundling ever sees it. `_note` is not copied into the bundle
 fails if a folder's files disagree on `system`, `excludeSystems` or `requires`, or if their
 `system` is not the registry's.
 
+**SRD mode** (`srd`, #84). The SRD 5.2 pack is the 2024 pipeline run over an SRD-only copy of the
+dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
+
+- **The view.** `srd_view()` writes a copy of every file the converter reads into a temporary
+  directory, holding only the entries whose `srd52` is truthy (a magic variant's sits on
+  `inherits`), each marked `srd52: true` so the 2024 checks keep it; lookup data is copied whole.
+  **The free-rules trap, reversed:** here the flag *is* the filter. No entry gets in by its
+  `source`, nothing is backfilled, and `basicRules2024` is never read. `_run_core()` then runs
+  unchanged with `srd_book()`: no source codes, so `is_default` holds and every 2024 behaviour stays
+  on, but its own `system` ("SRD 5.2"), pack names (`SRD_NAMES`) and `excludeSystems`.
+- **Renames.** An entry whose flag is a string takes that name, and its references follow in three
+  layers: `{@spell}` and `{@item}` tags anywhere in the view; the old name in the entry's own prose
+  and table captions, before tables are built; and `sources.json`, re-keyed, with its Artificer tags
+  dropped.
+- **Corrections.** After the pipeline, `_srd_apply_corrections()` applies
+  `scripts/srd-corrections.json` to the converted text, so the pack reads as the SRD 5.2.1 PDF does.
+  A correction that no longer matches is an error, and so is a corrections file that is missing or
+  unreadable: the pack is built with its corrections or not at all. The default file is the one
+  beside `convert.py`, which is why the app zip ships it there. A run that succeeds names the file it
+  applied and its counts. `srd-verbatim` checks the result against the PDF.
+- **The leak scan.** Then `_srd_leaks()` fails the run on any record or subclass named as an entry
+  the view dropped, and on any renamed entry's old name in the text. A failed run writes nothing.
+
 ## Rules that must hold
 
-- **The default run reproduces `data/5e2024/` byte for byte.** A value that moves changes the pack's
-  content digest (`pack_digest()`), so the next release, app or data, bumps XPHB's version and every
-  player is told to re-download a pack that did not change. The digest reads canonical JSON, so key
-  order and whitespace alone don't move it, but the gate is still bytes. Check it before and after
-  any converter change:
-  `python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk data/5e2024`.
-  CI cannot run this (it has no dump), so it is a manual gate.
+- **Both packs reproduce byte for byte: `all` makes `data/5e2024/`, `srd` makes `data/srd52/`.**
+  A value that moves changes the pack's content digest (`pack_digest()`), so the next release, app
+  or data, bumps that pack's version and every player is told to re-download a pack that did not
+  change. The digest reads canonical JSON, so key order and whitespace alone don't move it, but the
+  gates are still bytes. Check both before and after any converter change, since the SRD pack runs
+  the same pipeline:
+  `python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk data/5e2024`
+  and
+  `python3 scripts/convert.py srd _conversion-data/5etools-v2.36.1 -o /tmp/srd && diff -r /tmp/srd data/srd52`.
+  CI cannot run them (it has no dump), so they are manual gates.
 - **Filter on `source`; flags only backfill.** Never select by `basicRules2024` (or `srd52`)
   alone. After any change to a converter path, count its `source == "XPHB"` entries in the dump and
-  compare with the output before believing the output.
+  compare with the output before believing the output. The one exception is `srd`, where the flag
+  is the filter by design: there the SRD view, not a selection site, does it.
+- **`srd52` is read as truthy, never `is True`.** It can be a string, a rename; reading it with
+  `is True` drops every renamed entry.
 - **Stdlib only.** `convert.py` ships to players. Anything needing a third-party library belongs in
   a dev-only script (the Humblewood extractor is the precedent).
 - **Never quiet.** A missing input warns; a supplement category with nothing in it writes no file
@@ -288,13 +358,14 @@ fails if a folder's files disagree on `system`, `excludeSystems` or `requires`, 
 - **Table names are unique and global.** They are the merge key in the app and the only thing an
   anchor carries.
 - **Key order and pack-name strings are load-bearing.** `_pack()`'s order and the `_XPHB_NAMES`
-  strings are what the committed files contain; "tidying" either moves every file.
+  and `SRD_NAMES` strings are what the committed files contain; "tidying" any of them moves every
+  file.
 - **`_spell_notes()` stays as it is.** It writes each caster level's `spells.note` ("You can now
   have …"), which `applyClassLevel()` and `openClassInfo()` in `56-class.js` show.
 - **`overlay.json` and `class-resources.json` stay out of the system folders.** The bundler takes
   every `.json` in a system folder, so a helper file there would be swept into a pack.
 - **The bundle equals its files.** `rules-data.js` merges each folder file by file and then the
-  bundle, and asserts the same entries, for all five systems.
+  bundle, and asserts the same entries, for all six packs.
 - **A new rules category is registered everywhere at once.** `CATS` in `bundle-rules.js` must stay
   in step with `RULE_CATS`; a category the bundler does not list is silently left out of every
   bundle. In the app, `tables` had to be added to the `rules` initializer in `00-constants.js`,
@@ -404,7 +475,33 @@ fails if a folder's files disagree on `system`, `excludeSystems` or `requires`, 
 - **Editions mixed silently.** 5e-tools files every edition's maneuvers under one feature type, so a
   2024 Battle Master was one filter away from the 2014 Parry. `_pick_optfeats()` takes one printing
   only. Likewise `features.json` is XPHB-only, and `FIGHTING_STYLES` (the 2024 menu, wording and all)
-  is substituted only on the default run.
+  is substituted only on a run with no source codes (`all` and `srd`), never in a supplement.
+- **A rename read as "not flagged" (#84).** 5e-tools writes `srd52` as `true` or as a string, the
+  entry's SRD name. `pick_2024_preferred()`, `_shipped_2024()` and `_variant_selected()` tested
+  `is True`, so a renamed entry counted as unflagged, and the 2024 pack silently lacked Carrion
+  Crawler Mucus and Lolth's Sting (renamed in the SRD to Crawler Mucus and Spider's Sting). Guard:
+  `converter.py` runs a rename-flagged entry through `pick_2024_preferred()` and a rename-flagged
+  variant through `_variant_selected()`, and `rules-data.js` pins both items in the 2024 pack.
+- **A Python dict as a prerequisite (#84).** `_render_optfeat_prereq()` printed a dict-shaped spell
+  prerequisite with `str()`, so Agonizing Blast, Eldritch Spear and Repelling Blast read "Level 2
+  Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': …} spell", 24 times across the 2024
+  pack's classes and options. Guard: `converter.py` runs the real shape, and `rules-data.js` fails
+  on `{'` in any file of the 2024 or SRD pack.
+- **A hard-coded menu that replaced a feature (#84).** `FIGHTING_STYLES` replaced the Paladin's and
+  Ranger's whole Fighting Style feature, so the option that feature offers by reference (Blessed
+  Warrior, Druidic Warrior) was never on the menu. Guard: `converter.py` checks the option is added
+  and the filter, and `rules-data.js` pins the 2024 Paladin, Ranger and Fighter menus and the SRD
+  Fighter's.
+- **A prompt template printed as table text (#84).** `strip_tags()` read `{@dice roll|display}` as
+  `name|source|display`, so a two-field tag printed its roll. The Carrying Capacity table's roll is a
+  5e-tools prompt template, and all 10 of its cells shipped as
+  "#$prompt_number:title=Enter Strength Score$# × 7.5 lb." in the 2024 pack. `_write()` counted only
+  `{@`, `{#` and `{{`, so the run called it clean. Guard: `converter.py` pins the template case and
+  two dice tags that must not move, `_write()` counts `#$`, and `rules-data.js` fails on `#$` in any
+  pack and pins the Tiny row.
+- **A side path that loads less than `all` (#84).** `all` and `srd` fill `_FEAT_INDEX`; the
+  `classes` subcommand did not, so it gave the Paladin and Ranger the menu without Blessed Warrior
+  and Druidic Warrior, silently. Guard: `classes --feats`, and a missing `refFeat` is a `WARNING`.
 - **Moving the dump moves the data.** Upstream corrections change prose and counts: v2.36.1 added
   Reach, three diseases, 14 XDMG magic items and a table, and reworded 11 magic items and three
   spells. A dump upgrade is therefore a data release, and a deliberate call. `dev.sh` globs
@@ -452,6 +549,11 @@ fails if a folder's files disagree on `system`, `excludeSystems` or `requires`, 
 | Which ignored item fields become effects (#79) | `bonusAbilityCheck` (`check`) and `bonusProficiencyBonus` (`profBonus`), through the sentence reader; `ability` and `modifySpeed` stay prose | A flat `ability.*` +2 for the capped Ioun Stones and Belt of Dwarvenkind: overshoots a score of 19 or 20. A `speed` effect for `modifySpeed`: every pack case multiplies, sets, copies or is another mode. Owner may revisit |
 | How `{{getFullImmRes item.resist}}` prints (#78) | Title-cased, "Acid", as the 2024 templates call it and the 2024 book prints damage types; a raw `{{item.resist}}` prints as the item has it, "acid" (Tasha's) | One casing for both: each template states which it wants |
 | An item's spell attack and spell save DC bonus (#77) | `spell.attack` / `spell.dc` effects through the same sentence reader, a named class not counting as a condition | Prose: 28 items, all standing, would do nothing. `attack`: reaches weapon rows. See [Computed stats & effects](../architecture/computed-stats-and-effects.md) for the class-limited case |
+| How the `srd52` flag is read (#84) | As truthy: `true` and a string (a rename) both count | `is True`: a renamed entry read as unflagged, and the 2024 pack lost Carrion Crawler Mucus and Lolth's Sting |
+| How a choice-shaped spell prerequisite prints (#84) | The dump's own `entry` text, in its title case: "a Warlock Cantrip That Deals Damage" | `str()`: printed the dict. Lower case, as the spec asked: a hand rewording of the dump's text, which every other prerequisite prints as written (a plan ruling) |
+| The Paladin's and Ranger's own Fighting Style option (#84, R4) | On the menu beside the styles, from the class feature's `refFeat`, in both packs | The hard-coded menu alone: it replaced the feature, so the option the feature names was never offered |
+| A dice roll holding a 5e-tools prompt template (#84) | Prints its display text; every other dice tag keeps its roll | Display text for every two-field dice tag: `{@dice 1d6\|one die}` prints `1d6` today, and that would move dice text that reads correctly. The roll: a template is 5e-tools' input box, not the book's words |
+| A class feature's `refFeat` the feat index lacks (#84) | The option is left off and a `WARNING` names it; `classes` takes `--feats` | Silently off the menu: how `classes` alone lost Blessed Warrior and Druidic Warrior. A README line saying "use `all`": leaves the silent path in place |
 
 ## Open
 
@@ -471,9 +573,10 @@ fails if a folder's files disagree on `system`, `excludeSystems` or `requires`, 
   decks have a different shape.
 - The Artificer and the UA Mystic sit in `data/5e2024/classes.json` under the `XPHB` stamp; see
   [Supplements](supplements.md).
-- `convert.py` looks for its helper files in the dump and in `<repo>/data/`, never beside itself,
-  so a player running the zip's `scripts/convert.py` must pass `--overlay` and `--resources`
-  explicitly (`all` warns when it cannot find them). Verified by reading `main()`, not by running.
+- `convert.py` looks for `overlay.json` and `class-resources.json` in the dump and in
+  `<repo>/data/`, never beside itself, so a player running the zip's `scripts/convert.py` must pass
+  `--overlay` and `--resources` explicitly (`all` warns when it cannot find them; README-converter
+  says so for `srd`). Only `srd-corrections.json` is found beside it.
 - The module docstring's USAGE block predates `supplement` and the unprefixed filenames.
 - A comment in `bundle-rules.js`'s dedupe loop still places `mergeRules()` in `88-settings.js` (it
   is in `89-rules-merge.js`).
@@ -505,3 +608,5 @@ fails if a folder's files disagree on `system`, `excludeSystems` or `requires`, 
 - 2026-10-07 — The bundler reads `data/packs.json`; a moved value changes the pack's content digest, which is what the next release bumps, in place of `git diff` since the last tag. → ledger L5082, #83
 - 2026-09-29 — `bonusAbilityCheck` and `bonusProficiencyBonus` become `check` / `profBonus` effects; only `effects` moved, on two core items. → ledger L4689, #79
 - 2026-10-02 — Ammunition kinds, bundles and magic ammunition from 5e-tools' variants; a 2014 item reprinted under another name no longer ships beside its 2024 self (40 dropped). → ledger L4923, #7
+- 2026-10-08 — `srd`: the SRD 5.2 pack from an SRD view of the dump through `_run_core()`, with renames, corrections and the leak scan, and its own byte-for-byte gate. Three fixes in both packs: rename flags read as truthy (the 2024 pack gains Carrion Crawler Mucus and Lolth's Sting), dict prerequisites print their text, and the Paladin's and Ranger's Fighting Style option is offered. → ledger L5148, #84
+- 2026-10-08 — A dice roll holding a prompt template prints its display text (the 2024 Carrying Capacity table, 10 cells) and `_write()` counts `#$`; a missing corrections file fails `srd`, and the zip ships it; `classes --feats`, and a missing `refFeat` warns; replacements are text, not regex templates. → ledger L5269, #84

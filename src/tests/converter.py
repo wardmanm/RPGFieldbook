@@ -1537,6 +1537,484 @@ ck('#7 a variant that is not ammunition is never expanded onto a piece', not any
 ck('#7 a variant template the variant cannot fill stays as written',
    C._fill_variant(['A {=bonusWeapon} b {=nope}'], {'bonusWeapon': '+2'}, 'Test') == ['A +2 b {=nope}'])
 
+# ---- #84 decision 1: a rename-flagged entry is still flagged
+ents = [{"name": "Lolth's Sting", "source": "XDMG", "srd52": "Spider's Sting"},
+        {"name": "Plain", "source": "XDMG"}]
+ck('#84 pick_2024_preferred keeps an entry whose srd52 is a rename',
+   [e['name'] for e in C.pick_2024_preferred(ents)] == ["Lolth's Sting"])
+ck('#84 _variant_selected reads a rename flag on inherits',
+   C._variant_selected({"inherits": {"source": "XDMG", "srd52": "New Name"}}, None) is True)
+
+# ---- #84 decision 1: a dict-shaped spell prerequisite renders its own words
+pr = [{"spell": [{"choose": "level=0|class=Warlock", "entry": "a Warlock Cantrip That Deals Damage",
+                  "entrySummary": "Warlock Cantrip That Deals Damage"}],
+       "level": {"level": 2, "class": {"name": "Warlock", "source": "XPHB"}}}]
+ck('#84 a choose-a-spell prerequisite renders its entry, never a dict',
+   C._render_optfeat_prereq(pr) == 'Level 2 Warlock and a Warlock Cantrip That Deals Damage',
+   C._render_optfeat_prereq(pr))
+
+# ---- #84 R4: the Fighting Style choice carries the class's own refFeat option
+import tempfile
+ck('#84 _ref_feats finds a refFeat however deep',
+   C._ref_feats(["x", {"type": "entries", "entries": [{"type": "refFeat", "feat": "Blessed Warrior|XPHB"}]}])
+   == [('Blessed Warrior', 'XPHB')])
+_pal = {"class": [{"name": "Paladin", "source": "XPHB", "hd": {"number": 1, "faces": 10},
+                   "proficiency": ["wis", "cha"], "classFeatures": ["Fighting Style|Paladin|XPHB|2"]}],
+        "classFeature": [{"name": "Fighting Style", "source": "XPHB", "className": "Paladin",
+                          "classSource": "XPHB", "level": 2,
+                          "entries": ["You gain a Fighting Style feat of your choice. Instead of choosing one of those feats, you can choose the option below.",
+                                      {"type": "entries", "entries": [{"type": "refFeat", "feat": "Blessed Warrior|XPHB"}]}]}]}
+with tempfile.TemporaryDirectory() as _td:
+    _pp = os.path.join(_td, 'class-paladin.json')
+    json.dump(_pal, open(_pp, 'w', encoding='utf-8'))
+    _saved = C._FEAT_INDEX
+    C._FEAT_INDEX = {('blessed warrior', 'XPHB'): {"name": "Blessed Warrior", "source": "XPHB",
+                                                    "entries": ["You learn two Cleric cantrips of your choice."]}}
+    try:
+        _cl = C.convert_classes([_pp], book=C.Book(fighting_styles={'Archery', 'Defense'}))['classes'][0]
+        _menu = [ch for ch in _cl['levels']['2']['choices'] if ch.get('label') == 'Choose a Fighting Style'][0]
+        ck('#84 R4 the menu is filtered to the Book\'s styles, then the refFeat option follows',
+           [o['name'] for o in _menu['from']] == ['Archery', 'Defense', 'Blessed Warrior'], [o['name'] for o in _menu['from']])
+        ck('#84 R4 the option carries the feat\'s text',
+           _menu['from'][-1]['description'] == 'You learn two Cleric cantrips of your choice.', _menu['from'][-1])
+        _cl2 = C.convert_classes([_pp])['classes'][0]
+        _menu2 = [ch for ch in _cl2['levels']['2']['choices'] if ch.get('label') == 'Choose a Fighting Style'][0]
+        ck('#84 R4 with no filter the full ten-style menu stays, plus the option',
+           len(_menu2['from']) == len(C.FIGHTING_STYLES) + 1 and _menu2['from'][-1]['name'] == 'Blessed Warrior')
+    finally:
+        C._FEAT_INDEX = _saved
+
+# ---- #84: the SRD view and the `srd` command, on an invented mini dump
+import subprocess
+# scripts/srd-corrections.json is written against the real dump: on the mini dump
+# every correction would be stale, so these runs pass an empty one, written into
+# the run's own temp dir (a missing file is an error)
+def _nocorr(root):
+    p = os.path.join(root, 'no-corrections.json')
+    with open(p, 'w', encoding='utf-8') as fh:
+        fh.write('{}\n')
+    return p
+def _mini_dump(root):
+    """Invented entries in the dump's shape: flagged, rename-flagged, unflagged,
+    an inherits-flagged variant, a 2014 basicRules-only entry, mixed-case tags."""
+    def put(rel, obj):
+        p = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        json.dump(obj, open(p, 'w', encoding='utf-8'))
+    T = [{"number": 1, "unit": "action"}]
+    R = {"type": "point", "distance": {"type": "feet", "amount": 60}}
+    D = [{"type": "instant"}]
+    put('conditionsdiseases.json', {"condition": [
+        {"name": "Blinded", "source": "XPHB", "srd52": True, "entries": ["You can't see."]},
+        {"name": "Dazed", "source": "XPHB", "entries": ["Not in the SRD."]}], "status": [], "disease": []})
+    put('variantrules.json', {"variantrule": [
+        {"name": "Advantage", "source": "XPHB", "srd52": True, "entries": ["Roll two d20s."]},
+        {"name": "Bastion", "source": "XPHB", "entries": ["Not in the SRD."]}]})
+    put('items-base.json', {"baseitem": [
+        {"name": "Club", "source": "XPHB", "srd52": True, "type": "M|XPHB", "rarity": "none", "weight": 2,
+         "weaponCategory": "simple", "dmg1": "1d4", "dmgType": "B", "weapon": True, "property": ["L|XPHB"]}],
+        "itemProperty": [{"abbreviation": "L", "source": "XPHB", "entries": [{"name": "Light"}]}]})
+    put('items.json', {"item": [
+        {"name": "Heward's Handy Haversack", "source": "XDMG", "srd52": "Handy Haversack", "rarity": "rare",
+         "wondrous": True, "entries": ["Heward's Handy Haversack has two side pouches."]},
+        {"name": "Bag of Holding", "source": "XDMG", "srd52": True, "rarity": "uncommon", "wondrous": True,
+         "entries": ["It holds what a {@item heward's handy haversack|XDMG|Heward's Handy Haversack} holds."]},
+        {"name": "Abacus", "source": "PHB", "basicRules": True, "rarity": "none", "entries": ["A 2014 item."]},
+        {"name": "Psychic Blade", "source": "XPHB", "rarity": "none", "entries": ["Not in the SRD."]}]})
+    put('magicvariants.json', {"magicvariant": [
+        {"name": "Weapon, +1", "inherits": {"source": "XDMG", "srd52": True, "nameSuffix": " +1", "rarity": "uncommon"}},
+        {"name": "Weapon of Warning", "inherits": {"source": "XDMG", "rarity": "uncommon"}}]})
+    put('backgrounds.json', {"background": [
+        {"name": "Acolyte", "source": "XPHB", "srd52": True, "entries": []},
+        {"name": "Farmer", "source": "XPHB", "entries": []}]})
+    put('feats.json', {"feat": [
+        {"name": "Archery", "source": "XPHB", "srd52": True, "category": "FS", "entries": ["+2 to ranged attack rolls."]},
+        {"name": "Dueling", "source": "XPHB", "category": "FS", "entries": ["Not in the SRD."]},
+        {"name": "Blessed Warrior", "source": "XPHB", "category": "FS:P", "entries": ["You learn two Cleric cantrips."]}]})
+    put('races.json', {"race": [
+        {"name": "Dwarf", "source": "XPHB", "srd52": True, "size": ["M"], "speed": 30, "entries": []},
+        {"name": "Aasimar", "source": "XPHB", "size": ["M"], "speed": 30, "entries": []}]})
+    put('optionalfeatures.json', {"optionalfeature": [
+        {"name": "Agonizing Blast", "source": "XPHB", "srd52": True, "featureType": ["EI"], "entries": ["Add your Charisma."]},
+        {"name": "Parry", "source": "XPHB", "featureType": ["MV:B"], "entries": ["Not in the SRD."]}]})
+    put('spells/spells-xphb.json', {"spell": [
+        {"name": "Bigby's Hand", "source": "XPHB", "srd52": "Arcane Hand", "level": 5, "school": "V", "time": T,
+         "range": R, "components": {"v": True}, "duration": D, "entries": ["{@spell Bigby's hand} makes a hand."]},
+        {"name": "Fireball", "source": "XPHB", "srd52": True, "level": 3, "school": "V", "time": T, "range": R,
+         "components": {"v": True}, "duration": D, "entries": ["Boom. Compare {@spell bigby's hand|XPHB}."]},
+        {"name": "Witch Bolt", "source": "XPHB", "level": 1, "school": "V", "time": T, "range": R,
+         "components": {"v": True}, "duration": D, "entries": ["Not in the SRD."]}]})
+    put('spells/sources.json', {"XPHB": {
+        "Bigby's Hand": {"class": [{"name": "Wizard", "source": "XPHB"}, {"name": "Artificer", "source": "EFA"}]},
+        "Fireball": {"class": [{"name": "Wizard", "source": "XPHB"}]}}})
+    pal = json.loads(json.dumps(_pal))
+    pal['class'][0]['srd52'] = True
+    pal['classFeature'][0]['srd52'] = True
+    put('class/class-paladin.json', pal)
+    put('class/class-artificer.json', {"class": [{"name": "Artificer", "source": "TCE",
+        "hd": {"number": 1, "faces": 8}, "classFeatures": []}], "classFeature": []})
+
+CONVERT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'scripts', 'convert.py')
+with tempfile.TemporaryDirectory() as _td:
+    dump, view, out, out_all = (os.path.join(_td, x) for x in ('dump', 'view', 'out', 'all'))
+    _mini_dump(dump)
+    info = C.srd_view(dump, view)
+    ck('#84 srd_view reads every rename', info['renames'] == {"heward's handy haversack": 'Handy Haversack', "bigby's hand": 'Arcane Hand'}, info['renames'])
+    ck('#84 srd_view derives the SRD Fighting Style feats', info['fighting_styles'] == {'Archery'}, info['fighting_styles'])
+    ck('#84 srd_view carries the referenced feat', info['ref_feats'] == ['Blessed Warrior'], info['ref_feats'])
+    vmv = json.load(open(os.path.join(view, 'magicvariants.json')))['magicvariant']
+    ck('#84 an inherits-flagged variant is kept, marked true; an unflagged one goes',
+       [v['name'] for v in vmv] == ['Weapon, +1'] and vmv[0]['inherits']['srd52'] is True and vmv[0]['srd52'] is True)
+    ck('#84 the view never touches the dump',
+       json.load(open(os.path.join(dump, 'items.json')))['item'][0]['name'] == "Heward's Handy Haversack")
+    ck('#84 a class the SRD lacks gets no file in the view', not os.path.exists(os.path.join(view, 'class', 'class-artificer.json')))
+    NOCORR = _nocorr(_td)
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out, '--corrections', NOCORR], capture_output=True, text=True)
+    ck('#84 srd runs clean on the mini dump', r.returncode == 0, r.stdout[-600:] + r.stderr[-600:])
+    ck('#84 srd says which corrections file it applied, and how many',
+       'corrections: %s (0 removals, 0 global, 0 corrections)' % NOCORR in r.stdout, r.stdout[-600:])
+    P = lambda f: json.load(open(os.path.join(out, f), encoding='utf-8'))
+    allf = sorted(os.listdir(out))
+    ck('#84 every SRD file says system "SRD 5.2" and excludes Humblewood',
+       all(P(f).get('system') == 'SRD 5.2' and P(f).get('excludeSystems') == ['humblewood'] for f in allf), allf)
+    names = lambda f, k: [e.get('name') or e.get('term') for e in P(f)[k]]
+    ck('#84 only flagged entries: conditions', names('conditions.json', 'keywords') == ['Blinded'])
+    ck('#84 only flagged entries: glossary', names('glossary.json', 'keywords') == ['Advantage'])
+    ck('#84 only flagged entries: magic items (renamed, no 2014 backfill, no Psychic Blade)',
+       sorted(names('items-magic.json', 'items')) == ['Bag of Holding', 'Handy Haversack'], names('items-magic.json', 'items'))
+    ck('#84 only flagged entries: backgrounds, feats, species, options',
+       names('backgrounds.json', 'backgrounds') == ['Acolyte'] and names('feats.json', 'feats') == ['Archery']
+       and names('races.json', 'races') == ['Dwarf'] and names('features.json', 'features') == ['Agonizing Blast'])
+    sp = {s['name']: s for s in P('spells.json')['spells']}
+    ck('#84 a renamed spell keeps its classes, without the Artificer',
+       sorted(sp) == ['Arcane Hand', 'Fireball'] and sp['Arcane Hand'].get('class') == ['Wizard'], sp)
+    ck('#84 tags to a renamed entry follow it (case-insensitive, display text too)',
+       'Arcane Hand makes a hand' in sp['Arcane Hand']['text'] and 'Compare Arcane Hand' in sp['Fireball']['text'],
+       [sp['Arcane Hand']['text'], sp['Fireball']['text']])
+    mi = {i['name']: i for i in P('items-magic.json')['items']}
+    ck('#84 a renamed item\'s own prose uses its new name',
+       mi['Handy Haversack']['description'].startswith('Handy Haversack has two side pouches'), mi['Handy Haversack'])
+    ck('#84 another item\'s tag to it follows', 'what a Handy Haversack holds' in mi['Bag of Holding']['description'], mi['Bag of Holding'])
+    cl = P('classes.json')['classes']
+    menu = [ch for ch in cl[0]['levels']['2']['choices'] if ch.get('label') == 'Choose a Fighting Style'][0]
+    ck('#84 one SRD class (no Artificer fallback), with the SRD menu and the refFeat option',
+       [c['name'] for c in cl] == ['Paladin'] and [o['name'] for o in menu['from']] == ['Archery', 'Blessed Warrior'],
+       [[c['name'] for c in cl], [o['name'] for o in menu['from']]])
+    ck('#84 SRD pack names', P('classes.json').get('name') == 'SRD 5.2 Classes' and P('items.json').get('name') == 'SRD 5.2 Items')
+    r = subprocess.run([sys.executable, CONVERT, 'all', dump, '-o', out_all], capture_output=True, text=True)
+    A = lambda f: json.load(open(os.path.join(out_all, f), encoding='utf-8'))
+    ck('#84 contrast: `all` on the same dump still backfills 2014 and keeps XPHB-only entries',
+       {'Abacus', 'Psychic Blade'} <= {i['name'] for i in A('items-magic.json')['items']}
+       and A('spells.json')['system'] == 'XPHB')
+
+# ---- #84: the leak scan — names the SRD doesn't publish
+fake = {'spells.json': {'spells': [{'name': 'Witch Bolt', 'text': 'x'}, {'name': 'Fireball', 'text': 'Aura of Protection.'}]},
+        'classes.json': {'classes': [{'name': 'Fighter', 'subclasses': {'Battle Master': {}}}]}}
+errs = C._srd_leaks(fake, {'nonsrd': {'witch bolt', 'protection', 'battle master'}, 'renames': {}})
+ck('#84 the leak scan names a non-SRD record and a non-SRD subclass',
+   len(errs) == 2 and any('Witch Bolt' in e for e in errs) and any('Battle Master' in e for e in errs), errs)
+ck('#84 ...but never matches a name inside other words ("Aura of Protection")',
+   not any('Protection' in e for e in errs), errs)
+errs = C._srd_leaks({'items.json': {'items': [{'name': 'Bag', 'description': "Like Heward's Handy Haversack."}]}},
+                    {'nonsrd': set(), 'renames': {"heward's handy haversack": 'Handy Haversack'}})
+ck('#84 the leak scan finds a renamed entry\'s old name anywhere in the text', len(errs) == 1 and 'haversack' in errs[0].lower(), errs)
+
+with tempfile.TemporaryDirectory() as _td:
+    dump, view, out, exl = (os.path.join(_td, x) for x in ('dump', 'view', 'out', 'excluded.json'))
+    _mini_dump(dump)
+    info = C.srd_view(dump, view)
+    ck('#84 nonsrd holds the dropped XPHB/XDMG names and the old names',
+       {'witch bolt', 'dueling', 'aasimar', 'farmer', 'psychic blade', 'parry', 'dazed', 'bastion',
+        "heward's handy haversack", "bigby's hand"} <= info['nonsrd'], sorted(info['nonsrd']))
+    ck('#84 ...but not a kept name, nor a feat a kept class references',
+       not ({'club', 'archery', 'blessed warrior', 'fireball'} & info['nonsrd']), sorted(info['nonsrd']))
+    NOCORR = _nocorr(_td)
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out, '--excluded-out', exl, '--corrections', NOCORR], capture_output=True, text=True)
+    ck('#84 a clean mini dump passes the scan, and --excluded-out is written',
+       r.returncode == 0 and json.load(open(exl))['renamed'] == {"bigby's hand": 'Arcane Hand', "heward's handy haversack": 'Handy Haversack'},
+       r.stdout[-400:])
+    sp = os.path.join(dump, 'spells', 'spells-xphb.json')
+    d = json.load(open(sp)); d['spell'][1]['entries'].append("Unlike Heward's Handy Haversack, this is fire.")
+    json.dump(d, open(sp, 'w'))
+    out2 = os.path.join(_td, 'out2')
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out2, '--corrections', NOCORR], capture_output=True, text=True)
+    ck('#84 a planted old name fails the run, says why, and writes nothing',
+       r.returncode == 1 and "heward's handy haversack" in r.stdout.lower() and not os.path.exists(out2), r.stdout[-400:])
+
+# ---- #84 final review: the SRD pack is built with its corrections, or not at all
+with tempfile.TemporaryDirectory() as _td:
+    dump, out = os.path.join(_td, 'dump'), os.path.join(_td, 'out')
+    _mini_dump(dump)
+    _missing = os.path.join(_td, 'nowhere', 'srd-corrections.json')
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out, '--corrections', _missing], capture_output=True, text=True)
+    ck('#84 an explicit --corrections path that does not exist fails the run, names it, and writes nothing',
+       r.returncode == 1 and _missing in r.stdout and not os.path.exists(out), r.stdout[-600:] + r.stderr[-600:])
+    # the default is srd-corrections.json BESIDE convert.py: that is what makes
+    # the app zip's scripts/ work, so a convert.py copied alone must fail loudly
+    _alone = os.path.join(_td, 'scripts')
+    os.makedirs(_alone)
+    shutil.copy(CONVERT, _alone)
+    _repo_data = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data')
+    r = subprocess.run([sys.executable, os.path.join(_alone, 'convert.py'), 'srd', dump, '-o', out,
+                        '--overlay', os.path.join(_repo_data, 'overlay.json'),
+                        '--resources', os.path.join(_repo_data, 'class-resources.json')], capture_output=True, text=True)
+    ck('#84 with no --corrections, a convert.py with no srd-corrections.json beside it fails, naming where it looked',
+       r.returncode == 1 and os.path.join(_alone, 'srd-corrections.json') in r.stdout and not os.path.exists(out),
+       r.stdout[-600:] + r.stderr[-600:])
+
+# ---- #84: srd-corrections.json applied to the converted pack
+def _corr_packs():
+    return {'spells.json': {'system': 'SRD 5.2', 'spells': [{'name': 'Augury', 'text': "Ask the DM. The DMs and the DM's friend agree."}]},
+            'classes.json': {'classes': [{'name': 'Warlock', 'levels': {'1': {'traits': [
+                {'name': 'Pact Magic', 'description': 'For example, Witch Bolt.'}]}}}]},
+            'tables.json': {'tables': [{'name': 'Bag of Beans Table', 'cols': ['d8', 'Effect'], 'rows': [['1', "The DM's choice"]]}]}}
+with tempfile.TemporaryDirectory() as _td:
+    good = os.path.join(_td, 'good.json')
+    json.dump({'global': [{'word': 'DM', 'replace': 'GM', 'why': 'the SRD says GM', 'page': 5}],
+               'corrections': [{'entry': 'Warlock/Pact Magic', 'find': 'Witch Bolt', 'replace': 'Chill Touch', 'page': 70},
+                               {'entry': 'table:Bag of Beans Table', 'find': "GM's choice", 'replace': "GM's chosen effect", 'page': 2}]},
+              open(good, 'w'))
+    p = _corr_packs()
+    errs = C._srd_apply_corrections(p, good)
+    ck('#84 corrections apply cleanly', errs == [], errs)
+    ck('#84 a global swap is whole-word: "DM" and "DM\'s" change, "DMs" doesn\'t',
+       p['spells.json']['spells'][0]['text'] == "Ask the GM. The DMs and the GM's friend agree.", p['spells.json']['spells'][0]['text'])
+    ck('#84 a trait correction lands on that trait',
+       p['classes.json']['classes'][0]['levels']['1']['traits'][0]['description'] == 'For example, Chill Touch.')
+    ck('#84 a table correction lands in its cells, after the global swap',
+       p['tables.json']['tables'][0]['rows'][0][1] == "The GM's chosen effect", p['tables.json']['tables'][0])
+    ck('#84 names are never rewritten', p['tables.json']['tables'][0]['name'] == 'Bag of Beans Table')
+    bad = os.path.join(_td, 'bad.json')
+    json.dump({'global': [{'word': 'Zzyzx', 'replace': 'Q', 'why': '', 'page': 1}],
+               'corrections': [{'entry': 'No Such Entry', 'find': 'a', 'replace': 'b', 'page': 1},
+                               {'entry': 'Augury', 'find': 'not in the text', 'replace': 'b', 'page': 1}]}, open(bad, 'w'))
+    errs = C._srd_apply_corrections(_corr_packs(), bad)
+    ck('#84 a stale or unknown correction is an error, each named',
+       len(errs) == 3 and any('Zzyzx' in e for e in errs) and any('No Such Entry' in e for e in errs)
+       and any('not in the text' in e for e in errs), errs)
+    _absent = os.path.join(_td, 'absent.json')
+    errs = C._srd_apply_corrections(_corr_packs(), _absent)
+    ck('#84 a missing corrections file is an error, naming the path', len(errs) == 1 and _absent in errs[0], errs)
+    _broken = os.path.join(_td, 'broken.json')
+    with open(_broken, 'w', encoding='utf-8') as fh:
+        fh.write('{"corrections": [\n')
+    errs = C._srd_apply_corrections(_corr_packs(), _broken)
+    ck('#84 a corrections file that is not JSON is an error line, naming the path, not a traceback',
+       len(errs) == 1 and _broken in errs[0], errs)
+    # a whole record the SRD doesn't print (the Iron Flask's table) is removed, by the same keys
+    rm = os.path.join(_td, 'rm.json')
+    json.dump({'remove': [{'entry': 'table:Bag of Beans Table', 'why': 'the SRD prints no such table', 'page': 1}]}, open(rm, 'w'))
+    p = _corr_packs()
+    errs = C._srd_apply_corrections(p, rm)
+    ck('#84 a removal drops the record it names, and nothing else',
+       errs == [] and p['tables.json']['tables'] == [] and len(p['spells.json']['spells']) == 1, (errs, p))
+    errs = C._srd_apply_corrections(p, rm)
+    ck('#84 a removal that matches nothing is an error, named', len(errs) == 1 and 'Bag of Beans Table' in errs[0], errs)
+
+# ---- #84 final review: the committed SRD pack carries its corrections
+# CI has neither the dump nor the PDF, so neither the SRD gate nor srd-verbatim
+# runs there. This reads committed files only: a data/srd52 regenerated without
+# its corrections, or a corrections file of the wrong shape, fails here.
+import re
+_ROOT =os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
+_SC = json.load(open(os.path.join(_ROOT, 'scripts', 'srd-corrections.json'), encoding='utf-8'))
+_SP = {f: json.load(open(os.path.join(_ROOT, 'data', 'srd52', f), encoding='utf-8'))
+       for f in sorted(os.listdir(os.path.join(_ROOT, 'data', 'srd52'))) if f.endswith('.json')}
+def _strs(node):
+    """Every string a correction can reach under node: _srd_sub()'s walk."""
+    if isinstance(node, str):
+        return [node]
+    if isinstance(node, dict):
+        return [s for k, v in node.items() if k not in C.SRD_KEY_EXEMPT for s in _strs(v)]
+    if isinstance(node, list):
+        return [s for v in node for s in _strs(v)]
+    return []
+_is = lambda x, t: isinstance(x, t) and not isinstance(x, bool)
+_shape = ([('corrections', c) for c in _SC.get('corrections') or []
+           if not (all(_is(c.get(k), str) for k in ('entry', 'find', 'replace')) and _is(c.get('page'), int))]
+          + [('accepted', a) for a in _SC.get('accepted') or [] if not all(_is(a.get(k), str) for k in ('entry', 'text', 'why'))]
+          + [('global', g) for g in _SC.get('global') or []
+             if not (all(_is(g.get(k), str) for k in ('word', 'replace')) and _is(g.get('page'), int))]
+          + [('remove', m) for m in _SC.get('remove') or [] if not (_is(m.get('entry'), str) and _is(m.get('page'), int))]
+          + [('aliases', k) for k, v in (_SC.get('aliases') or {}).items() if not (_is(k, str) and _is(v, str))])
+ck('#84 srd-corrections.json: every section has its shape', _shape == [] and isinstance(_SC.get('aliases'), dict), _shape[:5])
+_tg = {}
+for _k, _n in C._srd_targets(_SP):
+    _tg.setdefault(_k, []).append(_n)
+_unknown, _unapplied = [], []
+for c in _SC.get('corrections') or []:
+    if c['entry'] not in _tg:
+        _unknown.append(c['entry'])
+        continue
+    ss = [s for n in _tg[c['entry']] for s in _strs(n)]
+    if c['find'] not in c['replace'] and any(c['find'] in s for s in ss):
+        _unapplied.append((c['entry'], 'still has', c['find']))
+    if c['replace'] and not any(c['replace'] in s for s in ss):
+        _unapplied.append((c['entry'], 'lacks', c['replace']))
+ck('#84 every correction names an entry in the committed SRD pack', _unknown == [], _unknown)
+ck('#84 every correction is applied in the committed SRD pack: its find gone, its replace there', _unapplied == [], _unapplied[:5])
+_top = {('table:' if cat == 'tables' else '') + str(r.get('term') or r.get('name') or '')
+        for o in _SP.values() for cat, arr in o.items() if isinstance(arr, list) for r in arr if isinstance(r, dict)}
+_kept = [m['entry'] for m in _SC.get('remove') or [] if m['entry'] in _top]
+ck('#84 nothing the corrections remove is in the committed SRD pack', _kept == [], _kept)
+_left = [g['word'] for g in _SC.get('global') or []
+         if any(re.search(r'(?<![\w])' + re.escape(g['word']) + r'(?![\w])', s) for o in _SP.values() for s in _strs(o))]
+ck('#84 no global swap\'s word is left, as a whole word, in the committed SRD pack', _left == [], _left)
+
+# ---- #84: srd_text — the pure PDF comparison
+import copy
+import srd_text as T
+ck('#84 norm joins line-end hyphenation and drops running heads',
+   T.norm('suc-\ncessful System Reference Document 5.2.1\n7\nend') == 'successful end', T.norm('suc-\ncessful System Reference Document 5.2.1\n7\nend'))
+ck('#84 norm drops the PDF\'s soft hyphens and zero-width spaces, as it joins line-end hyphenation',
+   T.norm('Meta' + chr(0xAD) + 'magic Op' + chr(0x200B) + 'tions') == 'metamagic options',
+   T.norm('Meta' + chr(0xAD) + 'magic Op' + chr(0x200B) + 'tions'))
+ck('#84 strip_generated drops the converter\'s stat segments',
+   T.strip_generated('Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple\nIt hums.')
+   == '\nIt hums.', T.strip_generated('Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple\nIt hums.'))
+# convert_items() writes mech + '. ' + prose: the prose after the last segment is checked, not swallowed
+_sg = T.strip_generated('Damage 1d6 bludgeoning · Range 20/60 ft · Mastery: Sap · Base item: Mace. When you hit a Fiend, it burns.\nMore.')
+ck('#84 strip_generated keeps the prose the converter joins on with ". "', _sg == 'When you hit a Fiend, it burns.\nMore.', _sg)
+_sg = T.strip_generated('Damage 1d6 bludgeoning (Versatile 1d8) · Properties: Versatile · Mastery: Topple. This staff has 10 charges.')
+ck('#84 ...after a Mastery segment too', _sg == 'This staff has 10 charges.', _sg)
+_sg = T.strip_generated('AC +2 (Shield) · Base item: Shield. While holding this Shield, you can animate it.')
+ck('#84 ...and after armor segments', _sg == 'While holding this Shield, you can animate it.', _sg)
+ck('#84 a description that is all prose is untouched',
+   T.strip_generated('A Bedroll sleeps one creature. It is warm.') == 'A Bedroll sleeps one creature. It is warm.')
+_pages = ["Augury\nLevel 2 Divination (Cleric)\nAsk the GM about a course of action.\n",
+          "Fireball\nLevel 3 Evocation (Wizard)\nA bright streak flashes to a point you choose.\n",
+          "Belt of Giant Strength\nWondrous Item\nWhile wearing this belt, your Strength changes.\n"]
+_packs = {'spells.json': {'spells': [{'name': 'Augury', 'text': 'Ask the DM about a course of action.'},
+                                     {'name': 'Fireball', 'text': 'A bright streak flashes to a point you choose.\nMaterial: a ball of bat guano.'}]},
+          'items-magic.json': {'items': [{'name': 'Belt of Hill Giant Strength', 'description': 'While wearing this belt, your Strength changes.'}]},
+          'tables.json': {'tables': [{'name': 'Deck', 'cols': ['Card'], 'rows': [['Beholder']]}]}}
+f = T.check(_pages, _packs, {})
+ck('#84 check finds a span the SRD lacks, with its page', ('Augury', 'dm', 1) in f, f)
+ck('#84 a Material line is checked as words', ('Fireball', 'ball bat guano', 2) in f, f)
+ck('#84 an entry the SRD titles differently is "(not located)" without an alias',
+   ('Belt of Hill Giant Strength', '(not located)', None) in f, f)
+ck('#84 a table cell the SRD lacks is found', ('table:Deck', 'beholder', None) in f, f)
+f2 = T.check(_pages, _packs, {'accepted': [{'entry': 'Augury', 'text': 'dm', 'why': 't'}],
+                              'aliases': {'Belt of Hill Giant Strength': 'Belt of Giant Strength'}})
+ck('#84 accepted spans and aliases clear their findings',
+   not any(k in ('Augury', 'Belt of Hill Giant Strength') for k, _, _ in f2) and len(f2) == 3, f2)
+ck('#84 a table\'s header cells are checked too', ('table:Deck', 'card', None) in f2, f2)
+# a stale acceptance or alias fails srd-verbatim, as a stale correction fails the run
+f3 = T.check(_pages, _packs, {'accepted': [{'entry': 'Augury', 'text': 'dm', 'why': 't'},
+                                           {'entry': 'table:Deck', 'text': 'beholder', 'why': 't'},
+                                           {'entry': 'Augury', 'text': 'a span nothing finds', 'why': 't'}],
+                              'aliases': {'Belt of Hill Giant Strength': 'Belt of Giant Strength',
+                                          'Fireball': 'Fireball',
+                                          'Belt of Frost Giant Strength': 'Belt of Giant Strength'}})
+_stale = [(k, s) for k, s, _ in f3 if s.startswith('(')]
+ck('#84 an acceptance that matches no finding is reported, with its entry and text',
+   ('Augury', '(accepted, matched nothing) a span nothing finds') in _stale, f3)
+ck('#84 an alias that names no record is reported', ('Belt of Frost Giant Strength', '(alias names no record)') in _stale, f3)
+ck('#84 ...but not a used acceptance (prose or a table cell), a used alias, nor one its entry is found without',
+   len(_stale) == 2, _stale)
+# subraces, subclass descriptions and choice options: walked by both, under the same keys
+_walk = {'races.json': {'races': [{'name': 'Elf', 'description': 'An elf.', 'traits': [{'name': 'Keen Senses', 'description': 'Sharp.'}],
+                                   'subraces': [{'name': 'Drow', 'description': 'A drow.',
+                                                 'traits': [{'name': 'Elven Lineage (Drow)', 'description': 'Dark magic.'}]}]}]},
+         'classes.json': {'classes': [{'name': 'Warlock', 'description': 'A pact.', 'levels': {'1': {
+             'choices': [{'type': 'option', 'from': [{'name': 'Pact of the Chain', 'description': 'A familiar.'}, 'a plain name']}],
+             'spells': {'note': 'You can now have Cantrips: 2.'}}},
+             'subclasses': {'Fiend Patron': {'description': 'The Lower Planes.', 'levels': {'3': {
+                 'traits': [{'name': "Dark One's Blessing", 'description': 'Temporary Hit Points.'}],
+                 'choices': [{'type': 'option', 'from': [{'name': 'A Boon', 'description': 'A boon.'}]}]}}}}}]}}
+_want = {'Elf/Drow': 'A drow.', 'Drow/Elven Lineage (Drow)': 'Dark magic.', 'Fiend Patron': 'The Lower Planes.',
+         'Warlock/Pact of the Chain': 'A familiar.', 'Fiend Patron/A Boon': 'A boon.'}
+_rec = dict(T.records(_walk))
+ck('#84 records() walks subraces, their traits, subclass descriptions and choice options',
+   all(_rec.get(k) == v for k, v in _want.items()), sorted(_rec.items()))
+_tk = {k for k, _ in C._srd_targets(_walk)}
+ck('#84 _srd_targets() names the same entries', set(_want) <= _tk, sorted(_tk))
+ck('#84 a level\'s spells note is not checked: the converter writes those counts',
+   not any('Cantrips: 2' in v for v in _rec.values()), _rec)
+_cw = copy.deepcopy(_walk)
+with tempfile.TemporaryDirectory() as _td:
+    _p = os.path.join(_td, 'c.json')
+    json.dump({'corrections': [{'entry': 'Drow/Elven Lineage (Drow)', 'find': 'Dark', 'replace': 'Drow', 'page': 1},
+                               {'entry': 'Elf/Drow', 'find': 'A drow.', 'replace': 'A dark elf.', 'page': 1},
+                               {'entry': 'Fiend Patron', 'find': 'Lower', 'replace': 'lower', 'page': 1},
+                               {'entry': 'Warlock/Pact of the Chain', 'find': 'familiar', 'replace': 'friend', 'page': 1}]}, open(_p, 'w'))
+    _e = C._srd_apply_corrections(_cw, _p)
+_cr = dict(T.records(_cw))
+ck('#84 a correction reaches a subrace, its trait, a subclass description and an option',
+   _e == [] and _cr['Drow/Elven Lineage (Drow)'] == 'Drow magic.' and _cr['Elf/Drow'] == 'A dark elf.'
+   and _cr['Fiend Patron'] == 'The lower Planes.' and _cr['Warlock/Pact of the Chain'] == 'A friend.', (_e, _cr))
+_f = T.check(["Elf\nDrow\nElven Lineage\nYou know the Dancing Lights cantrip.\n"],
+             {'races.json': {'races': [{'name': 'Elf', 'subraces': [{'name': 'Drow', 'traits': [
+                 {'name': 'Elven Lineage', 'description': 'You know the Dancing Lights cantrip, and Lolth whispers to you.'}]}]}]}}, {})
+ck('#84 check() finds a planted non-SRD span in a subrace trait',
+   any(k == 'Drow/Elven Lineage' and 'lolth' in s for k, s, _ in _f), _f)
+
+# ---- #84 final review: a {@dice} roll holding a 5e-tools prompt template
+# {@dice roll|display} puts its display text second, not third. A roll that is a
+# template ("#$prompt_number:…$#", the Carrying Capacity table's) prints that
+# display text; every other dice tag prints exactly what it did.
+_cc = '{@dice #$prompt_number:title=Enter Strength Score$# × 7.5|Str. × 7.5} lb.'
+ck('#84 a dice roll holding a prompt template renders its display text',
+   C.strip_tags(_cc) == 'Str. × 7.5 lb.', C.strip_tags(_cc))
+ck('#84 ...no other dice text moves: a plain roll with display text keeps the roll',
+   C.strip_tags('{@dice 1d6|one die}') == '1d6', C.strip_tags('{@dice 1d6|one die}'))
+ck('#84 ...nor a damage roll', C.strip_tags('{@damage 2d6}') == '2d6', C.strip_tags('{@damage 2d6}'))
+with tempfile.TemporaryDirectory() as _td:
+    _buf = io.StringIO()
+    with contextlib.redirect_stdout(_buf):
+        C._write({'tables': [{'name': 'T', 'cols': ['A'], 'rows': [[C.strip_tags('{@dice #$prompt_number$# × 2}')]]}]},
+                 os.path.join(_td, 't.json'))
+    ck('#84 a prompt template with no display text is reported as unresolved', 'unresolved tags!' in _buf.getvalue(), _buf.getvalue())
+
+# ---- #84 final review: a replacement is text, never a regex template
+p = _corr_packs()
+with tempfile.TemporaryDirectory() as _td:
+    _bs = os.path.join(_td, 'bs.json')
+    json.dump({'global': [{'word': 'DM', 'replace': 'G\\g<0>M', 'why': 't', 'page': 1}]}, open(_bs, 'w'))
+    try:
+        errs = C._srd_apply_corrections(p, _bs)
+    except Exception as e:
+        errs = [repr(e)]
+ck('#84 a global swap\'s replacement is written as it stands, backslashes and all',
+   errs == [] and p['spells.json']['spells'][0]['text'].startswith('Ask the G\\g<0>M.'), (errs, p['spells.json']['spells'][0]['text']))
+with tempfile.TemporaryDirectory() as _td:
+    _src, _view = os.path.join(_td, 'dump'), os.path.join(_td, 'view')
+    os.makedirs(_src)
+    json.dump({'item': [{'name': 'Old Thing', 'source': 'XDMG', 'srd52': 'New \\1 Thing', 'rarity': 'rare',
+                         'entries': ['Old Thing hums.']},
+                        {'source': 'XDMG', 'srd52': 'Nameless', 'rarity': 'rare', 'entries': ['No name.']}]},
+              open(os.path.join(_src, 'items.json'), 'w'))
+    try:
+        C.srd_view(_src, _view)
+        _vi = json.load(open(os.path.join(_view, 'items.json')))['item']
+    except Exception as e:
+        _vi = [{'entries': [repr(e)]}]
+ck('#84 a rename\'s new name is written into its own prose as it stands, backslashes and all',
+   _vi[0]['entries'] == ['New \\1 Thing hums.'], _vi)
+ck('#84 ...and a rename-flagged entry with no name is kept, not a KeyError', len(_vi) == 2 and 'name' not in _vi[1], _vi)
+
+# ---- #84 final review: `classes` reads the feats a class feature references
+with tempfile.TemporaryDirectory() as _td:
+    dump = os.path.join(_td, 'dump')
+    _mini_dump(dump)
+    _pp = os.path.join(dump, 'class', 'class-paladin.json')
+    _fs = lambda f: [o['name'] for ch in json.load(open(f))['classes'][0]['levels']['2']['choices']
+                     if ch.get('label') == 'Choose a Fighting Style' for o in ch['from']] if os.path.exists(f) else ['(no output)']
+    r = subprocess.run([sys.executable, CONVERT, 'classes', _pp, '-o', os.path.join(_td, 'c1.json')], capture_output=True, text=True)
+    ck('#84 `classes` without --feats warns, naming the referenced feat it could not find',
+       'WARNING' in r.stdout and 'Blessed Warrior' in r.stdout and 'not in the feat index' in r.stdout, r.stdout[-600:] + r.stderr[-300:])
+    ck('#84 ...and its Paladin menu lacks Blessed Warrior', 'Blessed Warrior' not in _fs(os.path.join(_td, 'c1.json')), _fs(os.path.join(_td, 'c1.json')))
+    r = subprocess.run([sys.executable, CONVERT, 'classes', _pp, '--feats', os.path.join(dump, 'feats.json'),
+                        '-o', os.path.join(_td, 'c2.json')], capture_output=True, text=True)
+    ck('#84 `classes --feats feats.json` gives the Paladin Blessed Warrior, with no warning',
+       _fs(os.path.join(_td, 'c2.json'))[-1:] == ['Blessed Warrior'] and 'not in the feat index' not in r.stdout,
+       [_fs(os.path.join(_td, 'c2.json')), r.stdout[-400:]])
+    r = subprocess.run([sys.executable, CONVERT, 'all', dump, '-o', os.path.join(_td, 'all')], capture_output=True, text=True)
+    r2 = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', os.path.join(_td, 'srd'), '--corrections', _nocorr(_td)],
+                        capture_output=True, text=True)
+    ck('#84 `all` and `srd` find it themselves: no such warning', 'not in the feat index' not in r.stdout + r2.stdout
+       and r2.returncode == 0, (r.stdout[-300:], r2.stdout[-300:]))
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)
