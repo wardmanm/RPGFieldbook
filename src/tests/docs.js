@@ -89,6 +89,19 @@ ck("build.sh's app-zip guard allows exactly data/fieldbook-data-standalone-….z
 // ---------- the SRD's required attribution, word for word (#84)
 ck('README carries the SRD 5.2.1 attribution', readme.includes('This work includes material from the System Reference Document 5.2.1')
    && readme.includes('https://creativecommons.org/licenses/by/4.0/legalcode'));
+// README-converter ships too, and documents `srd`: it quotes the statement (the
+// registry credit's first two sentences) and names Wizards nowhere else, as
+// SRD 5.2.1 p. 1 asks
+{
+  const conv = read('docs/README-converter.md');
+  const srdReg = JSON.parse(read('data/packs.json')).packs.find(p => p.system === 'SRD 5.2') || {};
+  const statement = String(srdReg.attribution || '').split(' Changed:')[0];
+  ck('README-converter documents `convert.py srd`', /^## The SRD 5\.2 pack: `srd`$/m.test(conv));
+  ck('README-converter quotes the SRD 5.2.1 attribution word for word',
+     statement.startsWith('This work includes material') && conv.includes(statement));
+  ck('README-converter names Wizards only inside that statement', (conv.match(/Wizards/g) || []).length === 1,
+     (conv.match(/Wizards/g) || []).length);
+}
 
 // ---------- changelog notebook: the traps that reach the public release notes
 // Bullets are copied verbatim into the GitHub release body, where <name> is an

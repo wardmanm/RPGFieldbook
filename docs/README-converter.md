@@ -95,6 +95,52 @@ Three things are specific to a 2014-era book and worth knowing:
 The 2024 path is untouched by all of this: with no `--book`, selection, pack names and the `system`
 stamp are exactly what they were, and `data/5e2024/` reconverts byte for byte.
 
+## The SRD 5.2 pack: `srd`
+
+`srd` builds the SRD 5.2 pack, the free D&D rules of the System Reference Document, from the same
+5e-tools dump `all` reads:
+
+```bash
+python convert.py srd _conversion-data/5etools-v2.36.1 -o data/srd52
+```
+
+- **Only SRD content.** It keeps only the entries 5e-tools flags `srd52`; nothing gets in by its
+  source, and nothing is backfilled. Those entries then go through the same conversion as `all`.
+- **SRD names.** An entry the SRD prints under another name takes that name (Bigby's Hand is Arcane
+  Hand there, Heward's Handy Haversack is Handy Haversack), and every reference to it follows: the
+  tags in other entries' text, its own prose and table captions, and the spell-to-class list.
+- **SRD wording.** The text is then corrected to the SRD 5.2.1 PDF from `srd-corrections.json`, a
+  hand-authored file beside `convert.py`.
+- It writes the same eleven files as `all`, each with `"system": "SRD 5.2"`, and keeps its species
+  away from Humblewood characters (`excludeSystems`).
+
+**It fails rather than write the wrong thing.** A correction that no longer matches the text (the
+dump moved under it), a missing or unreadable corrections file, or a name the SRD doesn't publish
+anywhere in the pack fails the run: it prints each error, exits 1 and writes nothing to `-o`. A run
+that succeeds names the corrections file it applied and how many corrections it held.
+
+From the app zip, `convert.py` sits in `scripts/` beside its three helper files. It finds
+`srd-corrections.json` there by itself, but name the other two:
+
+```bash
+python scripts/convert.py srd <your 5e-tools dump> -o srd52 \
+  --overlay scripts/overlay.json --resources scripts/class-resources.json
+```
+
+| flag | what it does |
+|---|---|
+| `--corrections PATH` | the corrections file. Defaults to `srd-corrections.json` beside `convert.py`; a missing file is an error |
+| `--overlay PATH` / `--resources PATH` | the hand-authored effects and resource trackers, as for `all` |
+| `--excluded-out PATH` | also write the names the SRD doesn't publish, and the renames, as JSON. The data tests' fixture; for maintainers |
+
+**To play, use the SRD 5.2 pack in the rules-data zip.** It is this command's output on the dump
+named above, checked against the PDF. A newer dump may need new corrections before `srd` runs
+cleanly on it.
+
+If you share what it produces, carry the SRD's attribution statement with it, word for word:
+
+> This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
 ## What each converter produces
 **Selection rule:** everything whose `source` is **XPHB** — the definitive 2024 book — plus any
 basic-rules entry XPHB doesn't already cover by name (2024 wins, then the free 2024 subset, then
