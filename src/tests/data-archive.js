@@ -561,6 +561,102 @@ section('the newer-data notice', async () => {
      /checkForUpdate\(\);\s*checkForDataUpdate\(\);/.test(fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8')));
 });
 
+section('final review 1: a silent import also toasts, from the Rules tab', async () => {
+  const getById = ctx.document.getElementById;
+  const savedToast = ctx.toast;
+  const toasts = [];
+  ctx.toast = msg => { toasts.push(msg); };
+  const hadFR = 'FileReader' in ctx;
+  ctx.FileReader = class {
+    readAsArrayBuffer(f) {
+      const b = Buffer.from(f.bytes);
+      this.result = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+      if (this.onload) this.onload();
+    }
+  };
+  const file = (name, s) => ({name, bytes: Buffer.from(s, 'utf8')});
+  const hiddenHome = {offsetParent: null, _t: ''};
+  Object.defineProperty(hiddenHome, 'textContent', {get() { return hiddenHome._t; }, set(v) { hiddenHome._t = v; }});
+  try {
+    /* the Rules tab's own import links: Settings isn't open (no #rulesStatus)
+       and the home screen is behind the sheet (#homeRulesStatus hidden) */
+    ctx.document.getElementById = id => id === 'homeRulesStatus' ? hiddenHome : (id === 'rulesStatus' ? null : getById(id));
+    X.resetRules(); toasts.length = 0;
+    const out = await X.importRulesFiles([file('a.json', PACK('Zed', ['Zap']))]);
+    ck('an import with neither status line on screen reaches toast() with the final message',
+       toasts.length === 1 && toasts[0] === out.msg, toasts);
+
+    const shownRules = {offsetParent: {}, _t: ''};
+    Object.defineProperty(shownRules, 'textContent', {get() { return shownRules._t; }, set(v) { shownRules._t = v; }});
+    ctx.document.getElementById = id => id === 'rulesStatus' ? shownRules : (id === 'homeRulesStatus' ? null : getById(id));
+    X.resetRules(); toasts.length = 0;
+    await X.importRulesFiles([file('b.json', PACK('Zed', ['Zap']))]);
+    ck('...but not when #rulesStatus (Settings) is present', toasts.length === 0, toasts);
+  } finally {
+    ctx.document.getElementById = getById;
+    ctx.toast = savedToast;
+    if (!hadFR) delete ctx.FileReader;
+    X.resetRules();
+  }
+});
+
+section('final review 5: a pack that throws during merge is named, not fatal', () => {
+  const savedMerge = ctx.mergeRules;
+  X.resetRules();
+  ctx.mergeRules = function (obj, fileName, url) {
+    if (fileName === 'bad.json' || fileName === 'z.json') throw new Error('boom');
+    return savedMerge(obj, fileName, url);
+  };
+  try {
+    const res = X.importRulesPayloads([
+      {name: 'ok.json', bytes: B(PACK('Zed', ['Zap']))},
+      {name: 'bad.json', bytes: B(PACK('Boom', ['X']))},
+    ]);
+    ck('the other file still imports and the failure is named "not a rules file"',
+       res.failed.length === 1 && res.failed[0].name === 'bad.json' && res.failed[0].why === 'not a rules file'
+       && res.files === 1 && names('spells').join() === 'Zap', res);
+
+    X.resetRules();
+    const arcBad = makeZip([{name: 'fieldbook-data.json', data: MANIFEST('1.8.0', ['z.json'])}, {name: 'z.json', data: PACK('Boom', ['A'])}]);
+    const res2 = X.importRulesPayloads([{name: 'arc.zip', bytes: arcBad}]);
+    ck('a throwing pack inside an archive is named "<pack> in <zip>"',
+       res2.failed.length === 1 && res2.failed[0].name === 'z.json in arc.zip' && res2.failed[0].why === 'not a rules file', res2);
+  } finally {
+    ctx.mergeRules = savedMerge;
+    X.resetRules();
+  }
+});
+
+section('final review 5b: an exception after import still ends the status line', async () => {
+  const hadFR = 'FileReader' in ctx;
+  ctx.FileReader = class {
+    readAsArrayBuffer(f) {
+      const b = Buffer.from(f.bytes);
+      this.result = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+      if (this.onload) this.onload();
+    }
+  };
+  const savedRefresh = ctx.refreshRulesUI;
+  ctx.refreshRulesUI = () => { throw new Error('boom after import'); };
+  X.resetRules();
+  const file = (name, s) => ({name, bytes: Buffer.from(s, 'utf8')});
+  try {
+    const out = await X.importRulesFiles([file('a.json', PACK('Zed', ['Zap']))]);
+    ck('a throw downstream of importRulesPayloads() still resolves, with a red status line',
+       out.cls === 'err' && /^Import failed: boom after import/.test(out.msg), out);
+  } finally {
+    ctx.refreshRulesUI = savedRefresh;
+    if (!hadFR) delete ctx.FileReader;
+    X.resetRules();
+  }
+});
+
+section('final review 9: a manifest listing too many files is refused', () => {
+  const manifest = MANIFEST('1.8.0', Array.from({length: 1001}, (_, i) => 'p' + i + '.json'));
+  ck('a manifest claiming 1,001 files: toomany',
+     code(() => X.readDataArchive(makeZip([{name: 'fieldbook-data.json', data: manifest}]), 'big.zip')) === 'toomany');
+});
+
 // ---- add new sections above this line ----
 (async () => {
   for (const [name, fn] of SECTIONS) {

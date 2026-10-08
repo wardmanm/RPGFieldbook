@@ -511,7 +511,14 @@ function importRulesPayloads(payloads){
     const bytes=new Uint8Array(raw.buffer,raw.byteOffset,raw.byteLength);
     if(!isZipBytes(bytes)){
       const obj=parse(name,bytes);
-      if(obj){addSkipped(res.skipped,importPack(obj,name));res.files++;}
+      /* importPack/mergeRules are given whatever a pack's JSON claims; a shape
+         that parses but breaks something downstream (a bad `requires`, a
+         malformed subclass) must not take the other files in this import down
+         with it — it is named and skipped like any other bad pack. */
+      if(obj){
+        try{addSkipped(res.skipped,importPack(obj,name));res.files++;}
+        catch(e){res.failed.push({name,why:"not a rules file"});}
+      }
       return;
     }
     let arc;
@@ -521,7 +528,8 @@ function importRulesPayloads(payloads){
     arc.packs.forEach(pk=>{
       const obj=parse(pk.name+" in "+name,pk.bytes);
       if(!obj||(arc.kind==="loose"&&!isRulesPack(obj)))return;
-      addSkipped(res.skipped,importPack(obj,pk.name));count++;
+      try{addSkipped(res.skipped,importPack(obj,pk.name));count++;}
+      catch(e){res.failed.push({name:pk.name+" in "+name,why:"not a rules file"});}
     });
     if(!count&&arc.kind==="loose"&&res.failed.length===before){res.failed.push({name,why:ZIP_WHY.empty});return;}
     res.archives.push({name,kind:arc.kind,version:arc.version,count});
@@ -538,10 +546,20 @@ function importSummary(res){
 }
 /* Both status lines, Settings' and the home screen's, whichever is on show.
    The home one used to be overwritten with the bare count 400 ms after an
-   import, which hid every failure there. */
-function rulesImportStatus(msg,cls){
+   import, which hid every failure there.
+
+   Neither line is reachable from the Rules tab's own "Import rules files"
+   links: #rulesStatus lives in the Settings modal, which isn't open, and
+   #homeRulesStatus is on the home screen, hidden behind the sheet. A locked
+   or damaged zip imported from there used to show nothing at all. `opts.toast`
+   (passed only for the FINAL message, never "Reading…") also raises a toast
+   when neither line is on screen to read: no #rulesStatus, and #homeRulesStatus
+   is absent or hidden (`offsetParent===null`). toast() sets text itself —
+   never esc() msg before handing it there. */
+function rulesImportStatus(msg,cls,opts){
   updateRulesStatus(msg,cls);
   const h=document.getElementById("homeRulesStatus");if(h)h.textContent=msg;
+  if(opts&&opts.toast&&!document.getElementById("rulesStatus")&&!(h&&h.offsetParent!==null))toast(msg);
 }
 /* Settings → Import files, the home screen's import and the Rules tab's two:
    read every file as bytes, import, save the cache, and say what happened.
@@ -563,12 +581,20 @@ function importRulesFiles(files){
     const m=missingSummary(),sk=skippedSummary(res.skipped);
     const msg=(importSummary(res)+" "+rulesStatusText()+m+sk).trim();
     const cls=(res.failed.length||m||sk)?"err":"ok";
-    rulesImportStatus(msg,cls);
+    rulesImportStatus(msg,cls,{toast:true});
     return saving.then(err=>{
       if(!err)return {msg,cls};
-      renderRulesData();rulesImportStatus(msg+" "+err,"err");
+      renderRulesData();rulesImportStatus(msg+" "+err,"err",{toast:true});
       return {msg:msg+" "+err,cls:"err"};
     });
+  }).catch(e=>{
+    /* importRulesPayloads() itself names each bad pack and never throws, but
+       nothing downstream (a storage call, a render) is guaranteed not to — and
+       without this, that exception strands "Reading N file(s)…" on screen
+       forever and skips the cache save entirely (#83 final review). */
+    const msg="Import failed: "+((e&&e.message)||String(e));
+    rulesImportStatus(msg,"err",{toast:true});
+    return {msg,cls:"err"};
   });
 }
 /* download a split example set: a manifest plus one file per category */

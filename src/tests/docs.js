@@ -80,6 +80,11 @@ const OLD = /\b(humblewood-(races|spells|feats|classes|subclasses|backgrounds)|(
 
 // ---------- the rules data players actually get: one archive (#83)
 ck('README names the rules-data archive', readme.includes('fieldbook-data-standalone'));
+// spec §13: the app zip's data/ allowlist must match exactly the archive name
+// build.sh itself writes (dist/fieldbook-data-standalone-<release>[+dev].zip),
+// or a renamed/extra file in data/ would slip past the guard unnoticed.
+ck("build.sh's app-zip guard allows exactly data/fieldbook-data-standalone-….zip",
+   read('build.sh').includes('fieldbook-data-standalone-[^/]+\\.zip'));
 
 // ---------- changelog notebook: the traps that reach the public release notes
 // Bullets are copied verbatim into the GitHub release body, where <name> is an

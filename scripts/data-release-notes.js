@@ -32,9 +32,9 @@ if (mode === "--app") {
     `**Rules data:** \`${zip}\`. In Fieldbook, open Settings → Rules data → Import files and choose the zip.`);
   if (changed.length) {
     out.push("", `Changed in this release: ${list(changed)}.` +
-      (same.length ? ` Unchanged: ${list(same)} — if you already have those loaded, there's no need to re-import them.` : ""));
+      (same.length ? ` Unchanged: ${list(same)} — if you already have those versions loaded, there's no need to re-import them.` : ""));
   } else {
-    out.push("", "**The rules data has not changed** — if you already have it loaded, you only need `fieldbook.html`.");
+    out.push("", "**No rules pack changed in this release** — if you already have these versions loaded, you only need `fieldbook.html`.");
   }
   out.push("", older);
 } else {

@@ -43,6 +43,16 @@ const src = fs.readFileSync(path.join(ROOT, "src/js/30-version.js"), "utf8");
 const app = (/APP_VERSION\s*=\s*"([^"]+)"/.exec(src) || [])[1] || "";
 if (!/^\d+\.\d+\.\d+$/.test(app)) die(`APP_VERSION "${app}" is not X.Y.Z`);
 
+// 1.8.0 is the first app release that opens the data zip (#83). A data
+// release built against an older APP_VERSION would publish an archive no
+// installed copy of Fieldbook could import.
+const cmp3 = (a, b) => {
+  const pa = a.split(".").map(Number), pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) { if (pa[i] !== pb[i]) return pa[i] - pb[i]; }
+  return 0;
+};
+if (cmp3(app, "1.8.0") < 0) die(`a data release needs Fieldbook 1.8.0 or later, the first that opens the zip — APP_VERSION is ${app}`);
+
 // The digests recorded below must describe what gets committed and tagged.
 const dirty = spawnSync("git", ["-C", ROOT, "status", "--porcelain", "--", "data"], { encoding: "utf8" });
 if (dirty.status !== 0) die("git status failed — is this a git checkout?");

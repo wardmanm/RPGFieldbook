@@ -61,10 +61,14 @@ before anything inflates.
 **Importing.** `importRulesPayloads()` takes bytes; a zip's packs are imported under their own file
 names, so rows and chips stay per pack. `importPack()` replaces what that file name and system
 loaded before, dropping entries the new copy no longer has. In a loose zip, JSON with no rules
-category — the converter's inputs in an old app zip — is skipped. `importRulesFiles()` shows
-"Reading N files…" at once, then one line on both status lines naming each zip, each failure and
-its reason, and a cache save that failed. The four rules pickers accept `.zip`, `application/zip`
-and `application/x-zip-compressed`.
+category — the converter's inputs in an old app zip — is skipped. A pack whose `importPack()` call
+throws is caught per file (or per packed entry, labelled `"<pack> in <zip>"`) and named `"not a rules
+file"` in `failed`, rather than taking the rest of the import down with it. `importRulesFiles()`
+shows "Reading N files…" at once, then one line on both status lines naming each zip, each failure
+and its reason, and a cache save that failed; `rulesImportStatus(msg,cls,{toast:true})` also raises a
+`toast()` for that final line when neither status element is on screen to read it — the Rules tab's
+own "Import rules files" links, with Settings closed and the home screen hidden behind the sheet.
+The four rules pickers accept `.zip`, `application/zip` and `application/x-zip-compressed`.
 
 **Credits.** A pack's `license` and `attribution` become `rules.credits[label]` (`creditOf()`), kept
 and pruned like `requires`, carried by settings files, and listed in Settings → Credits & licences

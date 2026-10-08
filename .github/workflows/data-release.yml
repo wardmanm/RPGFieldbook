@@ -121,13 +121,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST=$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name)
+          LATEST=$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name) || {
+            echo "::error::Could not read the latest release — check the releases page and make sure an app release (vX.Y.Z) is marked Latest."
+            exit 1
+          }
           echo "latest release: $LATEST"
           case "$LATEST" in
             v[0-9]*) exit 0 ;;
           esac
           APPTAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
-          if [ -n "$APPTAG" ]; then gh release edit "$APPTAG" --latest; fi
+          # Both lines FIRST: the repair below can die before explaining why,
+          # and this is run only because it's already gone wrong.
           echo "::error::$LATEST was the latest release, which hides app updates from every installed copy of Fieldbook."
-          echo "::error::Re-marked ${APPTAG:-(no app tag found)} as latest. Check the releases page."
+          echo "::error::Re-marking ${APPTAG:-(no app tag found)} as latest. Check the releases page."
+          if [ -n "$APPTAG" ]; then
+            gh release edit "$APPTAG" --latest || echo "::error::Re-marking $APPTAG as latest failed — mark it Latest by hand on the releases page."
+          fi
           exit 1

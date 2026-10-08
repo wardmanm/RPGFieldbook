@@ -247,7 +247,12 @@ shutil.rmtree(d)
 
 # ---------- the release scripts, in a scratch git checkout (never this one)
 def git(d, *args):
-    return subprocess.run(["git", "-C", d, "-c", "user.name=t", "-c", "user.email=t@example.com"] + list(args),
+    # -c commit.gpgsign=false / tag.gpgsign=false: these scratch repos commit
+    # and tag under a throwaway identity that can't sign — without this, a
+    # machine with signing on globally would hang these tests on a GPG prompt
+    # or fail every commit/tag outright (#83 final review item 12).
+    return subprocess.run(["git", "-C", d, "-c", "user.name=t", "-c", "user.email=t@example.com",
+                           "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"] + list(args),
                           capture_output=True, text=True)
 
 
@@ -315,6 +320,12 @@ r = node(d, "scripts/data-release.js")
 ck("data-release refuses a release that belongs to another app version", r.returncode == 1 and "doesn't belong" in r.stderr, r.stderr)
 shutil.rmtree(d)
 
+# ---------- a data release needs an app that can open the zip (#83 final review item 8)
+d = checkout(app="1.7.2", release="1.7.2")
+r = node(d, "scripts/data-release.js")
+ck("data-release refuses an app older than 1.8.0", r.returncode == 1 and "1.8.0 or later" in r.stderr, r.stderr)
+shutil.rmtree(d)
+
 d = checkout()
 write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 6}]})
 r = node(d, "scripts/release.js", "1.9.0")
@@ -342,7 +353,8 @@ ck("app notes: the archive to download, and what changed",
    r.returncode == 0 and "fieldbook-data-standalone-1.8.0-1.zip" in r.stdout and "Changed in this release: Alpha (v1.8.0-1)" in r.stdout,
    r.stdout)
 r = node(d, "scripts/data-release-notes.js", "1.9.0", "--app")
-ck("app notes when no pack changed say only the app is needed", "has not changed" in r.stdout, r.stdout)
+ck("app notes when no pack changed say only the app is needed",
+   r.returncode == 0 and "No rules pack changed in this release" in r.stdout, r.stdout)
 ck("bad arguments exit 1", node(d, "scripts/data-release-notes.js", "1.9", "--app").returncode == 1)
 shutil.rmtree(d)
 

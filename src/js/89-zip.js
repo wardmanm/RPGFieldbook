@@ -212,6 +212,11 @@ function readDataArchive(bytes,zipName,budget){
     try{m=JSON.parse(utf8Text(zipEntryBytes(bytes,man)));}catch(e){if(e&&e.code)throw e;}
     if(!m||typeof m!=="object"||m._type!=="fieldbook-data"||!Array.isArray(m.packs))
       throw zipError("damaged","fieldbook-data.json isn't a Fieldbook data manifest");
+    /* a manifest's packs list is walked below BEFORE the entry-count cap
+       (ZIP_MAX_ENTRIES) is reached by the zip itself — the manifest's own
+       claim needs the same cap, or a hostile list could be made arbitrarily
+       long without ever naming that many real zip entries. */
+    if(m.packs.length>ZIP_MAX_ENTRIES)throw zipError("toomany");
     const dir=man.name.slice(0,man.name.length-"fieldbook-data.json".length);
     const resolved=m.packs.map(p=>{
       const f=p&&typeof p.file==="string"?p.file:"";

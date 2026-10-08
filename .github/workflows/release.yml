@@ -89,6 +89,19 @@ jobs:
             exit 1
           fi
 
+      # A data change committed AFTER --release ran (or a hand-edit of data/)
+      # leaves the release named for digests that no longer match. Without
+      # this, build.sh would silently name the archive "+dev" and the job
+      # would die three steps later at "missing or empty asset" with no clue
+      # why (data-release.yml has carried this same guard since #83).
+      - name: Verify the recorded digests are current
+        run: |
+          python3 --version
+          if ! python3 tools/data-kit/fbdata.py versions --check; then
+            echo "::error::A pack changed after the release was cut — re-run ./build.sh --release or revert the data change."
+            exit 1
+          fi
+
       # Pending notes at a release tag mean the tag was not cut with --release:
       # those bullets are missing from the changelog, so the release notes would
       # be incomplete. It also makes build.sh name the zips "+dev", which would

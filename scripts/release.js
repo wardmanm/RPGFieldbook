@@ -112,6 +112,13 @@ out = out.replace(/APP_VERSION\s*=\s*"[^"]+"/, `APP_VERSION="${next}"`);
    the archive's release to it. DATA_VERSIONS is then a SNAPSHOT of the
    registry: this build's offline baseline. Run before any file is written
    here, so a failure leaves the CHANGELOG and APP_VERSION untouched. */
+// Found before fbdata.py runs — it is about to WRITE data/packs.json, and
+// "nothing written on failure" has to hold even for a failure discovered only
+// after that write (#83 final review item 7: this used to run after the
+// bump, so a missing DATA_VERSIONS line died with packs.json already changed).
+const dvm = /const\s+DATA_VERSIONS\s*=\s*(\{[^}]*\})/.exec(out);
+if (!dvm) die("could not find DATA_VERSIONS in src/js/30-version.js");
+
 function findPython() {
   for (const py of ["python3", "python"]) {
     if (spawnSync(py, ["-c", ""], { stdio: "ignore" }).status === 0) return py;
@@ -128,8 +135,6 @@ try { bumped = JSON.parse(bump.stdout); } catch (e) { die("fbdata.py printed no 
 const registry = JSON.parse(fs.readFileSync(path.join(ROOT, "data/packs.json"), "utf8"));
 const versions = {};
 registry.packs.forEach((p) => { if (p.version) versions[p.system] = p.version; });
-const dvm = /const\s+DATA_VERSIONS\s*=\s*(\{[^}]*\})/.exec(out);
-if (!dvm) die("could not find DATA_VERSIONS in src/js/30-version.js");
 out = out.replace(dvm[1], () => JSON.stringify(versions));
 fs.writeFileSync(VERSION_JS, out);
 console.error(bumped.length

@@ -106,8 +106,9 @@ of them.** It:
 
 It refuses to release with an empty notebook, and refuses a version that isn't higher than the
 current one (that would break the in-app update check). **A release needs `python3`** (`python`
-will do): without it, `release.js` refuses before writing anything. The registry bump runs first,
-so if it fails, nothing is written.
+will do): without it, `release.js` refuses before writing anything. `src/js/30-version.js` is
+checked for a `DATA_VERSIONS` line *before* the registry bump runs, so a failure there — or the
+registry bump itself failing — leaves `data/packs.json` and `30-version.js` both untouched.
 
 ### What gets attached
 
@@ -180,7 +181,8 @@ node scripts/data-release.js             # bump data/packs.json
 
 It gives every pack whose content changed since its last release the next `<APP_VERSION>-N`, and
 sets the registry's `release` to it. It touches nothing else: not `fieldbook.html`, not
-`APP_VERSION` or `DATA_VERSIONS`, not the changelog or the notebook. It refuses when `data/` has
+`APP_VERSION` or `DATA_VERSIONS`, not the changelog or the notebook. It refuses when `APP_VERSION`
+is older than 1.8.0 (the first release that can open the data zip at all), when `data/` has
 uncommitted changes (the digests must describe what gets tagged), when no pack changed, when the
 registry's `release` belongs to another app version, and when the tag already exists. Then it
 prints, and never runs:
@@ -261,6 +263,13 @@ git tag -d v1.2.2 && git push --delete origin v1.2.2
 **`data/packs.json`'s `release` isn't the tag's version.**
 `release.js` records every pack's version and sets `release` to the new version; a tag cut without
 `--release` would publish an archive named for the previous release. Delete the tag, cut properly,
+re-tag.
+
+**A pack changed after the release was cut (`fbdata.py versions --check` fails).**
+Someone committed a data change after `--release` ran, or hand-edited `data/`, so the recorded
+digests no longer match. Without this check the job would die three steps later at "missing or
+empty asset" with no explanation, because `build.sh` names the archive `+dev` for any digest it
+can't match to a release. Re-run `./build.sh --release <level>` (or revert the data change), commit,
 re-tag.
 
 **A clean rebuild doesn't reproduce the committed `dist/fieldbook.html`.**
