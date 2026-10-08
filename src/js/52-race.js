@@ -9,6 +9,8 @@ function systemOf(entry){
   if(!s)return "";
   if(s==="humblewood")return "humblewood";
   if(s==="xphb"||s==="phb"||s==="dnd"||s.indexOf("d&d")>=0)return "dnd";
+  /* "SRD 5.2" (#84): the free D&D rules, so its species are D&D species */
+  if(s.indexOf("srd")===0)return "dnd";
   return "";
 }
 /* Species offered to THIS character. Filters the picker only — never

@@ -43,6 +43,15 @@
       "digest": "sha256:9551302b331e155a41b325cae53fc97f8b5eed2306c606232cf9358537d4ca54",
       "license": "CC-BY-SA-3.0",
       "attribution": "The Predator, a Warlock subclass by D&D Wiki contributors (https://www.dandwiki.com/wiki/The_Predator_(5e_Subclass)), used under CC BY-SA 3.0. Changed: converted to Fieldbook's rules format."
+    },
+    {
+      "system": "SRD 5.2",
+      "dir": "srd52",
+      "file": "srd52_full.json",
+      "title": "SRD 5.2 — System Reference Document",
+      "version": null,
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (\"SRD 5.2.1\") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode. Changed: converted to Fieldbook's rules format, with renamed entries' references updated."
     }
   ]
 }

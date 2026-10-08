@@ -291,7 +291,7 @@ function entrySet(r){
   X.RULE_CATS.forEach(c=>{o[c]=(r[c]||[]).map(e=>String(e.name||e.term||'')).sort();});
   return o;
 }
-for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
+for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']){
   const dir=path.join('data',sys);
   const files=fs.readdirSync(dir).filter(f=>f.endsWith('.json')).sort();
   X.resetRules();
@@ -489,17 +489,25 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
      xsp.filter(s=>!(s.class||[]).length).map(s=>s.name));
 
   // findTable() looks a table up by NAME across every loaded pack, and a
-  // "[Table: X]" anchor carries no pack of its own — so two packs sharing a
-  // table name means one book's prose opens the other book's table.
+  // "[Table: X]" anchor carries no pack — so two packs sharing a name means one
+  // book's prose opens the other's table. Two exceptions (#84, R5): identical
+  // twins are harmless; and SRD 5.2 reprints the 2024 pack's tables with the
+  // SRD's own edits ("GM" for "DM"), so a same-named pair of those two is the
+  // same table in two wordings — whichever loads first is right either way.
   const seen={};
-  ['5e2024','humblewood','xanathars','tashas','homebrew'].forEach(d=>{
+  ['5e2024','humblewood','xanathars','tashas','homebrew','srd52'].forEach(d=>{
     const p=path.join('data',d,'tables.json');
     if(!fs.existsSync(p))return;
-    JSON.parse(fs.readFileSync(p,'utf8')).tables.forEach(t=>{(seen[t.name]=seen[t.name]||[]).push(d);});
+    JSON.parse(fs.readFileSync(p,'utf8')).tables.forEach(t=>{
+      (seen[t.name]=seen[t.name]||[]).push({d,body:JSON.stringify([t.cols,t.rows,t.footnotes||null])});});
   });
-  const clash=Object.entries(seen).filter(([,v])=>v.length>1);
-  ck('no table name is used by two packs', clash.length===0,
-     clash.map(([n,v])=>n+' -> '+v.join(', ')));
+  const clash=Object.entries(seen).filter(([,v])=>{
+    if(v.length<2)return false;
+    if(new Set(v.map(x=>x.body)).size===1)return false;
+    return !(v.length===2&&new Set(v.map(x=>x.d)).has('5e2024')&&new Set(v.map(x=>x.d)).has('srd52'));
+  });
+  ck('no table name is used by two packs, except identical twins and SRD/2024 rewordings', clash.length===0,
+     clash.map(([n,v])=>n+' -> '+v.map(x=>x.d).join(', ')));
   // and the anchors must follow the rename, or they resolve to nothing
   ['xanathars','tashas','homebrew'].forEach(d=>{
     const names=new Set(JSON.parse(fs.readFileSync(path.join('data',d,'tables.json'),'utf8'))
@@ -555,7 +563,7 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew']){
 // from an object-shaped reference, is how that looks in a pack.
 {
   const weapons=[];
-  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+  ['5e2024','xanathars','tashas','humblewood','homebrew','srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
       (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[])
         .forEach(it=>{if(it.weapon)weapons.push({where:d+'/'+f,it});});
@@ -938,7 +946,7 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
   const mi = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', '5e2024', 'items-magic.json'), 'utf8')).items.map(i => i.name);
   ck('#84 the 2024 pack has the two items a rename flag used to drop',
      mi.includes('Carrion Crawler Mucus') && mi.includes("Lolth's Sting"));
-  ['5e2024'].forEach(d => fs.readdirSync(path.join(ROOT, 'data', d)).filter(f => f.endsWith('.json')).forEach(f => {
+  ['5e2024', 'srd52'].forEach(d => fs.readdirSync(path.join(ROOT, 'data', d)).filter(f => f.endsWith('.json')).forEach(f => {
     const t = fs.readFileSync(path.join(ROOT, 'data', d, f), 'utf8');
     ck('#84 no Python dict repr in ' + d + '/' + f, !t.includes("{'"), (t.match(/.{30}\{'.{30}/) || [])[0]);
   }));
@@ -948,6 +956,88 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
   ck('#84 R4 the Paladin may take Blessed Warrior', menu('Paladin', '2').includes('Blessed Warrior'), menu('Paladin', '2'));
   ck('#84 R4 the Ranger may take Druidic Warrior', menu('Ranger', '2').includes('Druidic Warrior'), menu('Ranger', '2'));
   ck('#84 R4 the Fighter\'s menu is unchanged (ten styles)', menu('Fighter', '1').length === 10, menu('Fighter', '1'));
+}
+
+// ---------- #84: the SRD 5.2 pack
+{
+  const S = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'srd52', f + '.json'), 'utf8'));
+  const n = (f, k) => S(f)[k].length;
+  [['backgrounds', 'backgrounds', 4], ['feats', 'feats', 17], ['races', 'races', 9], ['spells', 'spells', 339],
+   ['classes', 'classes', 12], ['features', 'features', 38], ['items-magic', 'items', 476], ['items', 'items', 94],
+   ['conditions', 'keywords', 21], ['glossary', 'keywords', 115]].forEach(([f, k, want]) =>
+    ck('#84 SRD 5.2 has ' + want + ' ' + f, n(f, k) === want, n(f, k)));
+  ck('#84 SRD 5.2 has its tables', n('tables', 'tables') > 60, n('tables', 'tables'));
+  const cls = S('classes').classes;
+  ck('#84 every SRD class has exactly one subclass',
+     cls.every(c => Object.keys(c.subclasses || {}).length === 1), cls.map(c => c.name + ':' + Object.keys(c.subclasses || {}).length));
+  ck('#84 every SRD file is system "SRD 5.2" and excludes Humblewood',
+     fs.readdirSync(path.join(ROOT, 'data', 'srd52')).every(f => {
+       const o = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'srd52', f), 'utf8'));
+       return o.system === 'SRD 5.2' && JSON.stringify(o.excludeSystems) === '["humblewood"]' && !o._note && !o.requires;
+     }));
+  const fx = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'tests', 'fixtures', 'srd-excluded-names.json'), 'utf8'));
+  const nonsrd = new Set(fx.nonsrd);
+  const named = [];
+  fs.readdirSync(path.join(ROOT, 'data', 'srd52')).forEach(f => {
+    const o = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'srd52', f), 'utf8'));
+    Object.values(o).filter(Array.isArray).forEach(arr => arr.forEach(r => {
+      if (!r || typeof r !== 'object') return;
+      named.push(String(r.name || r.term || ''));
+      Object.keys(r.subclasses || {}).forEach(s => named.push(s));
+    }));
+  });
+  const leaked = named.filter(x => nonsrd.has(x.trim().toLowerCase()));
+  ck('#84 no record, subclass or table in SRD 5.2 is named as a non-SRD entry', leaked.length === 0, leaked);
+  const allText = fs.readdirSync(path.join(ROOT, 'data', 'srd52'))
+    .map(f => fs.readFileSync(path.join(ROOT, 'data', 'srd52', f), 'utf8').toLowerCase()).join('\n');
+  const olds = Object.keys(fx.renamed).filter(o => allText.includes(o));
+  ck('#84 none of the ' + Object.keys(fx.renamed).length + ' renamed originals appears in SRD 5.2', olds.length === 0, olds);
+  ck('#84 every renamed entry is there under its SRD name',
+     Object.values(fx.renamed).every(nm => allText.includes(String(nm).toLowerCase())),
+     Object.values(fx.renamed).filter(nm => !allText.includes(String(nm).toLowerCase())));
+  // R7: homebrew's D&D group resolves with SRD 5.2 alone
+  const pool = {};
+  ['spells', 'classes'].forEach(cat => S(cat)[cat].forEach(e => (pool[cat] = pool[cat] || new Set()).add(String(e.name).toLowerCase())));
+  const hb = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'homebrew', 'subclasses.json'), 'utf8')).requires;
+  const dnd = hb.find(g => /5e2024/.test(g.file || '') || /2024/.test(g.pack || ''));
+  const missHb = [];
+  ['spells', 'classes'].forEach(cat => ((dnd || {})[cat] || []).forEach(nm => {
+    if (!pool[cat].has(String(nm).toLowerCase())) missHb.push(cat + ': ' + nm);
+  }));
+  ck('#84 R7 every name homebrew\'s D&D group requires is in SRD 5.2', !!dnd && missHb.length === 0, missHb);
+  ck('#84 R6 systemOf reads "SRD 5.2" as D&D', X.systemOf({_source: 'SRD 5.2'}) === 'dnd');
+  // Review focus 1: species by character system
+  X.resetRules();
+  X.mergeRules(S('races'), 'races.json');
+  X.character = X.blankChar(); X.character.system = 'humblewood';
+  ck('#84 RF1 a Humblewood character is offered no SRD species', X.racesForCharacter().length === 0,
+     X.racesForCharacter().map(r => r.name));
+  X.character.system = 'dnd';
+  ck('#84 RF1 a D&D character is offered all nine', X.racesForCharacter().length === 9, X.racesForCharacter().map(r => r.name));
+  X.resetRules();
+  // Review focus 2: every table anchor resolves
+  const tnames = new Set(S('tables').tables.map(t => t.name));
+  const anchors = [...allText.matchAll(/\[table: ([^\]]+)\]/g)].map(m => m[1]);
+  const lowerNames = new Set([...tnames].map(t => t.toLowerCase()));
+  const dangling = [...new Set(anchors.filter(a => !lowerNames.has(a)))];
+  ck('#84 RF2 every [Table: X] in SRD 5.2 opens a table it ships', anchors.length > 0 && dangling.length === 0, dangling);
+  // Review focus 3: overlay effects and resource trackers survive
+  const byName = Object.fromEntries(cls.map(c => [c.name, c]));
+  ck('#84 RF3 the Barbarian, Monk and Sorcerer carry their trackers',
+     ['Barbarian', 'Monk', 'Sorcerer'].every(c => (byName[c].resources || []).length > 0));
+  const fsMenu = Object.values(byName.Fighter.levels).flatMap(l => l.choices || []).find(ch => ch.label === 'Choose a Fighting Style');
+  const archery = fsMenu && fsMenu.from.find(o => o.name === 'Archery');
+  ck('#84 RF3 the SRD Fighting Style menu is the four SRD styles, Archery with its effect',
+     !!fsMenu && fsMenu.from.map(o => o.name).join() === 'Archery,Defense,Great Weapon Fighting,Two-Weapon Fighting'
+     && (archery.effects || []).length > 0, fsMenu && fsMenu.from.map(o => o.name));
+  // Review focus 4: spells' classes
+  const sp = S('spells').spells;
+  ck('#84 RF4 every SRD spell has a class list, and none names the Artificer',
+     sp.every(s => (s.class || []).length > 0 && !(s.class || []).includes('Artificer')),
+     sp.filter(s => !(s.class || []).length || (s.class || []).includes('Artificer')).map(s => s.name));
+  // Review focus 5: the 2024 pack loads first
+  const regPacks = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs.map(p => p.system);
+  ck('#84 RF5 the registry lists SRD 5.2 after XPHB', regPacks.indexOf('SRD 5.2') > regPacks.indexOf('XPHB') && regPacks.indexOf('XPHB') >= 0, regPacks);
 }
 
 // ---------- Settings modal: collapsible sections

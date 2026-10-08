@@ -152,7 +152,11 @@ shutil.rmtree(d)
 # ---------- the real registry is well-formed and fully seeded
 real = fbdata.load_registry(fbdata.DEFAULT_REGISTRY)
 ck("data/packs.json passes check_registry", isinstance(real, dict))
-ck("every real pack has a digest", all((p.get("digest") or "").startswith("sha256:") for p in real["packs"]))
+# every pack that has shipped a version is seeded with a digest; a pack still
+# awaiting its first release (SRD 5.2, #84: version is deliberately None until
+# 1.8.0) has none yet, and --seed is never run by hand to manufacture one.
+ck("every released real pack has a digest",
+   all((p.get("digest") or "").startswith("sha256:") for p in real["packs"] if p.get("version") is not None))
 
 # ---------- the archive: pack and validate (spec §6)
 def bundles(d):
