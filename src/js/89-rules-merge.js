@@ -118,7 +118,7 @@ function renderSrcRows(){
   const srcs=settings.rulesSources||[];
   host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${esc(i)}"><button class="icon danger" data-src-del="${esc(i)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
 }
-function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{}};}
+function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{},credits:{}};}
 /* An entry's name (a keyword's term) as text, or "" when it has none that can
    be shown: not an object, no name, only spaces, or not text. A number is a
    name written without quotes, so it counts. Every picker, lookup and chip
@@ -149,6 +149,7 @@ function tidyRule(x,kind){
    everything that could. Returns how many entries it dropped, per category. */
 function tidyRules(){
   const dropped={};
+  if(rules.credits!=null&&(typeof rules.credits!=="object"||Array.isArray(rules.credits)))rules.credits={};
   RULE_CATS.forEach(kind=>{
     const arr=rules[kind];
     if(arr==null)return;
@@ -177,6 +178,16 @@ function keyOf(x,kind){if(!x||typeof x!=="object")return "";return kind==="subcl
    (the source URL from Settings, not an include under it) for a fetch. `_url` is
    what lets the next Fetch all replace exactly what that source loaded before. */
 function srcLabel(obj){return String(obj.system||obj.name||"Rules").trim();}
+/* A pack's licence and credit (#83), kept per source LABEL like `requires`, for
+   Settings → Credits & licences: null when it states neither. Plain strings,
+   capped, never markup — they are shown through esc(). */
+function creditOf(title,license,attribution){
+  const lic=typeof license==="string"?license.trim():"";
+  const att=typeof attribution==="string"?attribution.trim().slice(0,2000):"";
+  const l=lic.length<=64?lic:"";
+  if(!l&&!att)return null;
+  return {title:String(title||"").trim(),license:l,attribution:att};
+}
 function mergeRules(obj,fileName,url){
   if(obj.name&&!rules.name)rules.name=obj.name;
   const src=srcLabel(obj);
@@ -194,6 +205,11 @@ function mergeRules(obj,fileName,url){
   if(Array.isArray(obj.requires)){
     if(!rules.requires||typeof rules.requires!=="object")rules.requires={};
     rules.requires[srcLabel(obj)]=obj.requires;
+  }
+  const credit=creditOf(obj.name||src,obj.license,obj.attribution);
+  if(credit){
+    if(!rules.credits||typeof rules.credits!=="object"||Array.isArray(rules.credits))rules.credits={};
+    rules.credits[src]=credit;
   }
   const cats={keywords:obj.keywords,features:traitArr,items:obj.items,spells:obj.spells,races:obj.races,classes:obj.classes,feats:obj.feats,backgrounds:obj.backgrounds,subclasses:obj.subclasses,tables:obj.tables};
   /* What this pack had that nothing could reach (#71): counted, returned, and
@@ -285,6 +301,13 @@ function poolFromExport(saved){
         });
         flush();
       });
+      /* credits ride along per label, like `requires`, for the labels that came back */
+      if(isObj(saved.credits))Object.keys(saved.credits).forEach(l=>{
+        const c=saved.credits[l];
+        if(!isObj(c)||!RULE_CATS.some(k=>(rules[k]||[]).some(e=>e._source===l)))return;
+        const cr=creditOf(c.title||l,c.license,c.attribution);
+        if(cr){if(!isObj(rules.credits))rules.credits={};rules.credits[l]=cr;}
+      });
     }
     const used=RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);
     return {pool:rules,used,skipped:Math.max(0,offered-used)};
@@ -364,7 +387,7 @@ function applyFetchedSource(url,packs){
   const skipped={};
   packs.forEach(p=>addSkipped(skipped,mergeRules(p,null,url)));
   RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
-  pruneRequires();reindexRules();recomputeDups();
+  prunePackMeta();reindexRules();recomputeDups();
   return skipped;
 }
 /* Settings → Fetch all. Fetching NEVER loses what is loaded (#65): this used to
@@ -453,7 +476,7 @@ function importPack(obj,file){
   dropOwnedPackMeta([src],old);
   const skipped=mergeRules(obj,file);
   RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
-  pruneRequires();reindexRules();recomputeDups();
+  prunePackMeta();reindexRules();recomputeDups();
   return skipped;
 }
 /* Rules files as bytes -> merged into the pool. Pure — no DOM, no storage —

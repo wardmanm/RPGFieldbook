@@ -14,6 +14,7 @@ const {X, ctx, state, bootError} = loadApp([
   'poolFromExport', 'settingsImportQuestionHTML',
   'crc32', 'inflateRaw', 'isZipBytes', 'zipEntries', 'zipEntryBytes', 'readDataArchive', 'utf8Text', 'zipError',
   'importRulesPayloads', 'importPack', 'importSummary', 'importRulesFiles', 'RULE_CATS',
+  'creditOf', 'rulesCreditsHTML', 'removeRulesGroup', 'clearAllRules', 'reindexRules', 'prunePackMeta',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 
@@ -355,6 +356,76 @@ section('every rules picker takes a zip', () => {
   const boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
   ck('the home import no longer overwrites its own status line on a timer',
      !/homeRulesFiles[^\n]*setTimeout/.test(boot), (/homeRulesFiles[^\n]*/.exec(boot) || [])[0]);
+});
+
+section('pack credits', () => {
+  const HBC = {system: 'Homebrew', name: 'Homebrew', license: 'CC-BY-SA-3.0',
+               attribution: 'The Predator, by someone. Changed: converted.', spells: [{name: 'Zap'}]};
+  X.resetRules();
+  X.mergeRules(HBC, 'homebrew_full.json');
+  ck('a pack\'s licence and credit are kept per source',
+     JSON.stringify(X.rules.credits.Homebrew) === JSON.stringify({title: 'Homebrew', license: 'CC-BY-SA-3.0',
+       attribution: 'The Predator, by someone. Changed: converted.'}), X.rules.credits);
+  X.resetRules();
+  X.mergeRules({system: 'Long', license: 'x'.repeat(65), attribution: 'y'.repeat(2500), spells: [{name: 'A'}]}, 'l.json');
+  ck('an over-long licence is dropped, and a credit is cut to 2,000',
+     X.rules.credits.Long.license === '' && X.rules.credits.Long.attribution.length === 2000, X.rules.credits.Long);
+  X.resetRules();
+  X.mergeRules({system: 'Plain', spells: [{name: 'A'}]}, 'p.json');
+  ck('a pack with neither has no credit', !X.rules.credits || !X.rules.credits.Plain);
+
+  /* lifecycle */
+  X.resetRules();
+  X.importRulesPayloads([{name: 'h.json', bytes: B(JSON.stringify(HBC))}]);
+  X.importRulesPayloads([{name: 'h.json', bytes: B(JSON.stringify({system: 'Homebrew', spells: [{name: 'Zap'}]}))}]);
+  ck('a re-import without a credit drops it', !X.rules.credits.Homebrew, X.rules.credits);
+  X.importRulesPayloads([{name: 'h.json', bytes: B(JSON.stringify(HBC))}]);
+  X.removeRulesGroup(X.loadedRulesGroups().find(g => g.label === 'h.json').key);
+  ck('removing the pack prunes its credit', !X.rules.credits.Homebrew, X.rules.credits);
+  X.importRulesPayloads([{name: 'h.json', bytes: B(JSON.stringify(HBC))}]);
+  state.confirm = true;
+  X.clearAllRules();
+  ck('clearing everything clears credits', JSON.stringify(X.rules.credits) === '{}', X.rules.credits);
+
+  /* settings files carry them */
+  X.resetRules();
+  X.mergeRules(HBC, 'homebrew_full.json');
+  const saved = JSON.parse(JSON.stringify(X.rules));
+  saved.credits.Ghost = {title: 'Gone', license: 'MIT', attribution: 'Nobody'};
+  saved.credits.Junk = 'not an object';
+  const built = X.poolFromExport(saved);
+  ck('a settings file\'s pool keeps the credits of the packs it holds',
+     !!built.pool.credits && !!built.pool.credits.Homebrew && built.pool.credits.Homebrew.license === 'CC-BY-SA-3.0', built.pool.credits);
+  ck('...and none for labels it doesn\'t hold, or junk', !built.pool.credits.Ghost && !built.pool.credits.Junk, built.pool.credits);
+
+  /* an old or broken cache */
+  X.resetRules();
+  delete X.rules.credits;
+  ck('a pool from before credits renders no credits list', X.rulesCreditsHTML() === '');
+  X.prunePackMeta();
+  ck('...and prunes without throwing', true);
+  X.rules.credits = 'junk';
+  X.reindexRules();
+  ck('a credits value that isn\'t an object is reset by the tidy', JSON.stringify(X.rules.credits) === '{}', X.rules.credits);
+
+  /* shown escaped */
+  X.resetRules();
+  X.mergeRules({system: 'Evil', name: '<b>Evil</b>', license: 'CC-BY-4.0', attribution: '<img src=x onerror=alert(1)>', spells: [{name: 'A'}]}, 'e.json');
+  X.mergeRules({system: 'Odd', license: 'Custom-1', attribution: 'Ours.', spells: [{name: 'B'}]}, 'o.json');
+  const html = X.rulesCreditsHTML();
+  ck('credits are escaped, never markup', !/<img/.test(html) && html.includes('&lt;img') && html.includes('&lt;b&gt;Evil'), html);
+  ck('a known licence links its deed', html.includes('href="https://creativecommons.org/licenses/by/4.0/"'), html);
+  ck('an unknown licence is plain text', html.includes('Licence: Custom-1.') && !/href="[^"]*Custom/.test(html), html);
+
+  /* the shipped Homebrew bundle carries its credit through an import */
+  const hb = path.join(ROOT, 'dist', 'homebrew_full.json');
+  if (fs.existsSync(hb)) {
+    X.resetRules();
+    X.importRulesPayloads([{name: 'homebrew_full.json', bytes: new Uint8Array(fs.readFileSync(hb))}]);
+    ck('the Homebrew bundle\'s credit reaches Settings',
+       /CC-BY-SA-3\.0/.test(X.rulesCreditsHTML()) && /D&amp;D Wiki/.test(X.rulesCreditsHTML()), X.rulesCreditsHTML());
+  } else console.log('note: dist/homebrew_full.json missing (run.sh bundles first), its credit check skipped');
+  X.resetRules();
 });
 
 // ---- add new sections above this line ----

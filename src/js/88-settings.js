@@ -38,6 +38,21 @@ function setSecHTML(k,body,badge){
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
 /* the "Rules data" header badge; renderRulesData() keeps it current after the modal opens */
 function rulesBadge(){const n=rulesEntryCount();return n?n+" entries":"none loaded";}
+/* Settings → Credits & licences: each loaded pack's own terms (#83). A pack
+   carries them as `license` (an SPDX id) and `attribution` (plain text). */
+const LICENSE_URLS={"CC-BY-4.0":"https://creativecommons.org/licenses/by/4.0/",
+  "CC-BY-SA-3.0":"https://creativecommons.org/licenses/by-sa/3.0/","MIT":"https://opensource.org/license/mit"};
+function rulesCreditsHTML(){
+  const cr=(rules.credits&&typeof rules.credits==="object"&&!Array.isArray(rules.credits))?rules.credits:{};
+  const str=v=>typeof v==="string"?v:"";
+  const rows=Object.keys(cr).sort().map(l=>{
+    const c=cr[l]&&typeof cr[l]==="object"?cr[l]:{};
+    const lic=str(c.license),url=LICENSE_URLS[lic];
+    const licHTML=lic?(url?` Licence: <a href="${esc(url)}" target="_blank" rel="noopener">${esc(lic)}</a>.`:` Licence: ${esc(lic)}.`):"";
+    return `<p class="hint"><b>${esc(str(c.title)||l)}</b>${str(c.attribution)?" — "+esc(str(c.attribution)):""}${licHTML}</p>`;
+  });
+  return rows.length?`<div class="field"><label class="f">Rules data you have loaded</label>${rows.join("")}</div>`:"";
+}
 function openSettings(){
   const secAppearance=`
     <div class="field"><label class="f">Skin</label>
@@ -116,6 +131,7 @@ function openSettings(){
     <p class="hint">Fieldbook itself is MIT-licensed. It includes one third-party work:</p>
     <div class="field"><label class="f">Icons</label>
       <p class="hint">The emblems beside each class, ${raceTerm().toLowerCase()} and background, and the crossed swords on the combat button, are from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, by ${ICON_ARTISTS.map(esc).join(", ")}. Used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Each icon has been changed: its background square was removed and its colour now follows your theme.</p></div>
+    ${rulesCreditsHTML()}
     <div class="field"><label class="f">Rules content</label>
       <p class="hint">Rules data is not part of the app — you load it yourself, from files you supply, and it keeps whatever terms it came with.</p></div>`;
   openModal("Settings",`<div id="setSections">`+
@@ -338,14 +354,15 @@ function rulesBucket(g){
 function removeRulesGroup(key){
   const g=loadedRulesGroups().find(x=>x.key===key);if(!g)return;
   RULE_CATS.forEach(cat=>{if(!rules[cat])return;rules[cat]=rules[cat].filter(e=> g.isFile ? e._file!==g.label : (e._file?true:(e._source||"Unknown")!==g.label));});
-  pruneRequires();
+  prunePackMeta();
   reindexRules();recomputeDups();saveRulesCache();refreshRulesUI();renderAll();renderRulesData();updateRulesStatus(rulesStatusText(),"ok");
 }
-/* drop a source's `requires` once none of its entries are left, so the
-   persisted object doesn't accumulate declarations for packs that are gone */
-function pruneRequires(){
-  if(rules.requires)Object.keys(rules.requires).forEach(src=>{
-    if(!RULE_CATS.some(c=>(rules[c]||[]).some(e=>(e._source||"")===src)))delete rules.requires[src];
+/* drop a source's `requires` and credits once none of its entries are left,
+   so the persisted pool doesn't accumulate them for packs that are gone */
+function prunePackMeta(){
+  ["requires","credits"].forEach(k=>{
+    const m=rules[k];if(!m||typeof m!=="object")return;
+    Object.keys(m).forEach(src=>{if(!RULE_CATS.some(c=>(rules[c]||[]).some(e=>(e._source||"")===src)))delete m[src];});
   });
 }
 /* Unload every rules pack. Destructive and irreversible without re-importing,

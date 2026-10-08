@@ -13,7 +13,7 @@ covers what the app does with packs.
 `dispName()`, `ruleById()`, `resetRules()`, `importRulesFiles()`, `fetchAllRules()`,
 `fetchRulesFrom()`, `applyFetchedSource()`, `poolFromExport()`, `missingRequirements()`, `requiresStatusHTML()`,
 `missingSummary()`, `rulesDataHTML()`, `renderRulesData()` in `89-rules-merge.js`; `glossRepair()` in `00-constants.js`;
-`loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `pruneRequires()`, `clearAllRules()`,
+`loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `prunePackMeta()`, `clearAllRules()`,
 `dataStatus()`, `dataStatusHTML()`, `refreshRulesUI()`, `rulesBadge()` in `88-settings.js`; `systemOf()`, `racesForCharacter()` in `52-race.js`; `findRaceDef()`,
 `findClassDef()`, `subclassesFor()` in `50-classrace.js`; `DATA_VERSIONS` and `cmpVer()` in
 `30-version.js`; `bundle()` and `registry()` in `scripts/bundle-rules.js`; `pack_digest()` and
@@ -135,8 +135,8 @@ added beside the existing one as "Gloom Stalker (XGE)", and the existing key is 
 `_file` (file imports) or `_source` (fetched), and `rulesBucket()` files each group under Rulebook,
 its single category, or Mixed. Each row carries the pack's version badge (`dataStatusHTML()`), its
 missing-content chip (`requiresStatusHTML()`) and a delete button (`removeRulesGroup()`). After a
-removal, `pruneRequires()` drops a source's `requires` once none of its entries remain; the fetch
-uses it too. Fetched entries group by label, whatever URL they came from. `clearAllRules()` confirms with
+removal, `prunePackMeta()` drops a source's `requires` and credits once none of its entries remain;
+the fetch uses it too. Fetched entries group by label, whatever URL they came from. `clearAllRules()` confirms with
 counts and says plainly that characters are not affected: `resetRules()` touches only the pool.
 
 **Missing dependencies.** `missingRequirements(src)` is a pure function of `rules`, called at
