@@ -28,8 +28,8 @@ playtest PDFs. Players load the resulting rules packs at runtime. Details: [over
 2. **Offline-first, and storage failures are loud.** localStorage for characters, settings and the
    library; IndexedDB for the rules cache (localStorage, LZW-compressed, as fallback). Every IndexedDB
    call is timed out. A storage write that does not land must SAY SO — never an empty `catch` around
-   `setItem`. The only network calls — the rules-source fetch and the GitHub update check — are
-   optional and fail silently offline. → [storage](src/docs/wiki/architecture/storage.md)
+   `setItem`. The only network calls — the rules-source fetch and the GitHub update checks (app and
+   rules data) — are optional and fail silently offline. → [storage](src/docs/wiki/architecture/storage.md)
 3. **Backward-compatible data.** Never break loading of existing saved characters. New character
    fields are optional, get a default in `blankChar()`, and survive a save→load round trip.
    → [character model](src/docs/wiki/architecture/character-model.md)
@@ -41,13 +41,14 @@ src/                     THE SOURCE OF TRUTH — edit here, never the built file
   fieldbook.template.html  the page SHELL: top bar, tab bar, ToC, home, modal
   manifest.json          the authoritative concatenation ORDER — add/remove a fragment here
   html/*.html            7 fragments, one tab panel each
-  js/*.js                31 fragments, concatenated into the single <script>
+  js/*.js                32 fragments, concatenated into the single <script>
   css/*.css              9 fragments, concatenated into the single <style>
   icons/icons.json       hand-authored emblem map → scripts/fetch-icons.js → js/05-icons.js
   tests/                 the suites — ./src/tests/run.sh
   docs/                  dev docs (never ship): wiki/, specs/, plans/, UNRELEASED.md, …
 dist/fieldbook.html      BUILD ARTIFACT, tracked. Never hand-edit
-data/<system>/*.json     rules data; bundled into dist/*_full.json packs
+data/<system>/*.json     rules data; data/packs.json registers each pack; bundled into dist/*_full.json
+tools/data-kit/          fbdata.py — pack versions, digests, the data archive (Python 3.8+, stdlib)
 docs/                    PLAYER-FACING, ships — an allowlist of exactly three files
 ```
 
@@ -63,12 +64,13 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
 
 ## Build, test, QA — build freely, never release
 
-- **Tests: `./src/tests/run.sh`** (across seven suites). `humblewood-verbatim` needs PyMuPDF and the
+- **Tests: `./src/tests/run.sh`** (across nine suites). `humblewood-verbatim` needs PyMuPDF and the
   PDFs, so under the system `python3` it skips cleanly; run it directly with
   `.venv/bin/python src/tests/humblewood-verbatim.py`. Safe to run unprompted — they touch no tracked file. Run them after any
   change to `src/`, `scripts/` or `data/`. For a pure function you touch, also write a throwaway Node
   check in the scratchpad. → [testing](src/docs/wiki/process/testing.md)
-- **Building to test is fine:** `./build.sh`, or `./build.sh --no-zip` for just the artifact. It
+- **Building to test is fine:** `./build.sh`, or `./build.sh --no-zip` for just the artifact (the
+  zips need `python3`; `./build.sh --data` builds only the rules-data archive). It
   rewrites the tracked `dist/fieldbook.html` and `docs/CHANGELOG.md`; say plainly when you've built.
   → [building & CI](src/docs/wiki/process/building-and-ci.md)
 - **Never cut a release on your own** — no `./build.sh --release`, no `APP_VERSION` bump, no version
@@ -94,9 +96,12 @@ blocking.
 
 - **Player-visible change → one `- ` bullet in `src/docs/UNRELEASED.md`** under `## Pending`, written
   the way it should read to a player. No `<tags>` and no hard-coded versions (the `docs` suite checks).
-- **Never hand-edit `APP_VERSION`, `DATA_VERSIONS` or the `CHANGELOG` array** — `scripts/release.js`
-  owns all three. `docs/CHANGELOG.md` is generated.
-- **Data-only or converter-only changes need no note and no release** — record them in the ledger.
+- **Never hand-edit `APP_VERSION`, `DATA_VERSIONS`, the `CHANGELOG` array, or the
+  `version`/`digest`/`release` fields of `data/packs.json`** — `scripts/release.js` and
+  `scripts/data-release.js` own them. `docs/CHANGELOG.md` is generated.
+- **Data-only or converter-only changes need no player note** — record them in the ledger. They can
+  ship without an app release as a data release (`node scripts/data-release.js`), which is Mike's to
+  cut like any release.
 
 ## Architecture invariants — don't violate without discussing
 
@@ -128,8 +133,8 @@ Each links to the page that explains it and what broke when it was ignored.
 - **The recurring bug is the free-rules subset.** `basicRules2024` or `srd52` selects only it, and has
   already trimmed backgrounds, spells, feats, items and magic items. Assume any converter path you
   touch has it, and check its count against the full XPHB source.
-- **`data/5e2024/` must reproduce byte for byte** after any converter change, or `release.js` tells
-  every player to re-download a pack that didn't change:
+- **`data/5e2024/` must reproduce byte for byte** after any converter change, or the pack's content
+  digest moves and the next release tells every player to re-download a pack that didn't change:
 
   ```bash
   python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk data/5e2024

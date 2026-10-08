@@ -1,26 +1,33 @@
 #!/usr/bin/env bash
 # Fieldbook build: concatenate src/ into dist/fieldbook.html, validate everything,
 # regenerate docs/CHANGELOG.md from the in-app CHANGELOG array, and produce
-# dist/fieldbook-v<version>.zip. Run from the repo root:
+# dist/fieldbook-data-standalone-<release>.zip and dist/fieldbook-v<version>.zip.
+# Run from the repo root:
 #
 #   ./build.sh                    build + validate. NEVER changes the version.
 #   ./build.sh --no-zip           skip the zips — fast path to dist/fieldbook.html
+#   ./build.sh --data             rules data only: bundles + the data archive
 #   ./build.sh --release patch    cut a release first, then build
 #   ./build.sh --release minor
 #   ./build.sh --release major
 #   ./build.sh --release 2.0.0    explicit version
 #
+# The zips need python3 (tools/data-kit/fbdata.py writes the data archive);
+# --no-zip does not.
+#
 # Releasing is a separate, deliberate act: it folds the pending notes from
 # src/docs/UNRELEASED.md into a new CHANGELOG entry and bumps APP_VERSION.
 # A bare build has to be safe to run constantly, so it must not touch either.
 #
-# Build with unreleased notes pending and the zips are marked "+dev" — their
-# contents are NOT the version their name would otherwise claim.
+# Build with unreleased notes pending and the app zip is marked "+dev"; build
+# with rules data changed since data/packs.json's release and the archive is.
+# Their contents are NOT the version their names would otherwise claim.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 RELEASE=""
 NOZIP=""
+DATAONLY=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --release)
@@ -29,10 +36,18 @@ while [ $# -gt 0 ]; do
       RELEASE="$1"; shift ;;
     --release=*) RELEASE="${1#*=}"; shift ;;
     --no-zip) NOZIP=1; shift ;;
-    -h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --data) DATAONLY=1; shift ;;
+    -h|--help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $1 (try --help)"; exit 1 ;;
   esac
 done
+
+# Checked before anything runs: --release would otherwise cut a release first.
+if [ -n "$DATAONLY" ] && { [ -n "$RELEASE" ] || [ -n "$NOZIP" ]; }; then
+  echo "--data builds only the rules-data archive; it doesn't mix with --release or --no-zip."
+  echo "A data release is cut with: node scripts/data-release.js"
+  exit 1
+fi
 
 # Closing output, shared by the normal path and the --no-zip early exit.
 # VER/PENDING are set later; the body is evaluated at call time.
@@ -42,6 +57,63 @@ finish(){
     echo "    $PENDING unreleased note(s) in src/docs/UNRELEASED.md — still on v$VER."
     echo "    Cut a release with: ./build.sh --release patch|minor|major"
   fi
+}
+
+# The interpreter for tools/data-kit/fbdata.py: python3, then python. Probed by
+# RUNNING it — Windows ships a python3 stub that resolves and then fails.
+find_python() {
+  local p
+  for p in python3 python; do
+    if "$p" -c '' >/dev/null 2>&1; then printf '%s' "$p"; return 0; fi
+  done
+  return 1
+}
+
+validate_data() {
+  echo "==> Validating data/**/*.json"
+  local files f
+  files=$(find data -name '*.json' | sort)
+  for f in $files; do
+    node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" || { echo "    INVALID: $f"; exit 1; }
+  done
+  echo "    ok ($(echo "$files" | wc -l | tr -d ' ') files)"
+}
+
+# Roll each registered pack's per-category files into one importable pack. This
+# is what players get; the individual files stay in the repo for cherry-picking.
+bundle_packs() {
+  echo "==> Bundling rules packs"
+  node scripts/bundle-rules.js || { echo "    bundling failed"; exit 1; }
+}
+
+# The rules-data archive (spec 2026-10-07-data-archive-design.md §6), named for
+# data/packs.json's release — "+dev" when some pack's content has changed since
+# then, because that zip is NOT that release's data. Validated before it can
+# ship; one that fails is deleted. Sets ARCHIVE.
+pack_archive() {
+  local py rel suf="" rc=0
+  py=$(find_python) || { echo "    the zips need python3 (tools/data-kit/fbdata.py); use --no-zip for just the app"; exit 1; }
+  rel=$(node -e 'process.stdout.write(String(require("./data/packs.json").release||""))')
+  case "$rel" in
+    [0-9]*.[0-9]*.[0-9]*) ;;
+    *) echo "    BAD data/packs.json release: '$rel'"; exit 1 ;;
+  esac
+  "$py" tools/data-kit/fbdata.py versions --check >/dev/null || rc=$?
+  case "$rc" in
+    0) ;;
+    1) suf="+dev"; echo "    rules data changed since $rel — naming the archive $rel$suf" ;;
+    *) echo "    fbdata.py versions --check failed"; exit 1 ;;
+  esac
+  ARCHIVE="dist/fieldbook-data-standalone-$rel$suf.zip"
+  rm -f dist/fieldbook-data-standalone-*.zip
+  echo "==> Building $ARCHIVE"
+  if [ -n "$suf" ]; then
+    "$py" tools/data-kit/fbdata.py pack dist -o "$ARCHIVE" --dev
+  else
+    "$py" tools/data-kit/fbdata.py pack dist -o "$ARCHIVE"
+  fi
+  "$py" tools/data-kit/fbdata.py validate "$ARCHIVE" || {
+    rm -f "$ARCHIVE"; echo "    $ARCHIVE failed validation and was deleted"; exit 1; }
 }
 
 # A private temp dir, not a fixed name in a world-writable /tmp. The .js
@@ -59,6 +131,17 @@ trap 'rm -rf "$TMPDIR_BUILD"' EXIT
 if [ -n "$RELEASE" ]; then
   echo "==> Cutting release ($RELEASE)"
   node scripts/release.js "$RELEASE" >/dev/null
+fi
+
+# --data: rules data only, for the data-release workflow. It must not touch
+# dist/fieldbook.html or docs/CHANGELOG.md — a data release ships no app.
+if [ -n "$DATAONLY" ]; then
+  mkdir -p dist
+  validate_data
+  bundle_packs
+  pack_archive
+  echo "==> Done (rules data only): $ARCHIVE"
+  exit 0
 fi
 
 # ---------------------------------------------------------------------------
@@ -88,17 +171,9 @@ NODE
 node --check "$TMPJS"
 echo "    ok"
 
-echo "==> Validating data/**/*.json"
-DATAFILES=$(find data -name '*.json' | sort)
-for f in $DATAFILES; do
-  node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" || { echo "    INVALID: $f"; exit 1; }
-done
-echo "    ok ($(echo "$DATAFILES" | wc -l | tr -d ' ') files)"
+validate_data
 
-# Roll each system's per-category files into one importable pack. This is what
-# players get; the individual files stay in the repo for cherry-picking.
-echo "==> Bundling rules packs"
-node scripts/bundle-rules.js || { echo "    bundling failed"; exit 1; }
+bundle_packs
 
 echo "==> Regenerating docs/CHANGELOG.md from the in-app CHANGELOG array"
 VER=$(node scripts/gen-changelog.js)
@@ -139,6 +214,7 @@ BUNDLE="dist/fieldbook-v$VER$TAGSUF.zip"
 # Clear every old zip so dist/ never accumulates stale versions, and a failed
 # build can't leave last version's bundle looking like the current one.
 rm -f dist/*.zip
+pack_archive
 
 echo "==> Building $BUNDLE"
 # PLAYER-FACING BUNDLE ONLY. This is an allowlist on purpose: it must match what
@@ -153,10 +229,9 @@ cp dist/fieldbook.html .buildtmp/
 cp README.md .buildtmp/
 # The app is MIT; shipping it without its licence would be an oversight.
 cp LICENSE .buildtmp/
-# ONE pack per system, not the per-category files — players import one file per
-# game, not thirty. The individual files remain in the repo for cherry-picking.
-cp dist/5e2024_full.json dist/humblewood_full.json \
-   dist/xanathars_full.json dist/tashas_full.json dist/homebrew_full.json .buildtmp/data/
+# The rules data travels as its archive, which Fieldbook opens as it is — and
+# opens inside this zip too. The per-category files remain in the repo.
+cp "$ARCHIVE" .buildtmp/data/
 cp docs/*.md .buildtmp/docs/
 cp scripts/convert.py .buildtmp/scripts/
 # convert.py's hand-authored inputs travel with it — without them an advanced
@@ -176,18 +251,19 @@ const names=execFileSync("unzip",["-Z1",zip],{encoding:"utf8"})
   .split("\n").map(s=>s.replace(/^\.\//,"")).filter(Boolean);
 // ^src\/ already covers src/tests/ — the audience rule does that work for us.
 const banned=names.filter(n=>/^src\/|^CLAUDE\.md$|^build\.sh$|^dev\.sh$|^\.|WIRING-LEDGER|ADR-\d|UNRELEASED|RELEASING|build-html\.js|gen-changelog\.js|release(-notes)?\.js|bundle-rules\.js|fetch-icons\.js|extract-humblewood\.py/.test(n));
-// data/ must hold ONLY the bundled packs — a stray per-category file means the
-// zip stopped matching what README section 9 promises.
+// data/ must hold ONLY the rules-data archive — anything else means the zip
+// stopped matching what README section 9 promises.
 const dataFiles=names.filter(n=>/^data\/.+/.test(n));
-const strays=dataFiles.filter(n=>!/^data\/(5e2024|humblewood|xanathars|tashas|homebrew)_full\.json$/.test(n));
+const strays=dataFiles.filter(n=>!/^data\/fieldbook-data-standalone-[^/]+\.zip$/.test(n));
 if(strays.length)banned.push(...strays);
+if(dataFiles.length>1)banned.push("(data/ holds more than one archive)");
 // docs/ is an ALLOWLIST, not a blocklist. Naming each dev doc to ban leaves a
 // hole the size of the next one written: HUMBLEWOOD-PLAYTESTS.md was not in the
 // list and would have shipped if it ever landed in docs/.
 const docFiles=names.filter(n=>/^docs\/.+/.test(n)&&!n.endsWith("/"));
 const docStrays=docFiles.filter(n=>!/^docs\/(CHANGELOG|README-converter|rules-schema)\.md$/.test(n));
 if(docStrays.length)banned.push(...docStrays);
-if(!dataFiles.length)banned.push("(no rules packs in data/ — bundling did not run)");
+if(!dataFiles.length)banned.push("(no rules-data archive in data/)");
 if(banned.length){
   // Delete the bundle: a zip that fails this check must never be publishable.
   require("fs").unlinkSync(zip);

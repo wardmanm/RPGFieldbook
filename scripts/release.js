@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /*
  * Cut a release: fold the pending notes from src/docs/UNRELEASED.md into a new
- * CHANGELOG entry in src/js/30-version.js and bump APP_VERSION.
+ * CHANGELOG entry in src/js/30-version.js and bump APP_VERSION, and record each
+ * rules pack's version in data/packs.json (through tools/data-kit/fbdata.py).
  *
  * Invoked by `./build.sh --release <level>` BEFORE the build runs, so the built
  * app carries the new version. Not meant to be run directly, but it is safe to:
@@ -105,40 +106,40 @@ let out = src.slice(0, at + anchor.length) + entry + src.slice(at + anchor.lengt
 out = out.replace(/APP_VERSION\s*=\s*"[^"]+"/, `APP_VERSION="${next}"`);
 
 /* ---------------- data versions ----------------
-   Bump a system's dataVersion ONLY if its data actually changed since the last
-   release, so a player whose packs are still current isn't told to re-download
-   them. Compared against the newest existing tag, working tree included —
-   that is what this release will contain. Silently leaves everything alone if
-   git or the tags are unavailable (a source-zip build, a fresh clone with no
-   tags): the cost is a stale-looking pack, never a wrong bump. */
-const SYSTEM_DIRS = { XPHB: "5e2024", Humblewood: "humblewood", XGE: "xanathars", TCE: "tashas",
-                      Homebrew: "homebrew" };
-function lastTag() {
-  const r = spawnSync("git", ["-C", ROOT, "tag", "-l", "v[0-9]*.[0-9]*.[0-9]*",
-                              "--sort=-v:refname"], { encoding: "utf8" });
-  if (r.status !== 0) return null;
-  return (r.stdout || "").split("\n").map((x) => x.trim()).filter(Boolean)[0] || null;
-}
-function dataChangedSince(tag, dir) {
-  const r = spawnSync("git", ["-C", ROOT, "diff", "--quiet", tag, "--", "data/" + dir]);
-  return r.status === 1;                       // 0 = same, 1 = differs, else error
-}
+   data/packs.json records each pack's version and a digest of its content
+   (spec 2026-10-07-data-archive-design.md §4). fbdata.py gives every pack
+   whose content changed since its last release the version `next`, and sets
+   the archive's release to it. DATA_VERSIONS is then a SNAPSHOT of the
+   registry: this build's offline baseline. Run before any file is written
+   here, so a failure leaves the CHANGELOG and APP_VERSION untouched. */
+// Found before fbdata.py runs — it is about to WRITE data/packs.json, and
+// "nothing written on failure" has to hold even for a failure discovered only
+// after that write (#83 final review item 7: this used to run after the
+// bump, so a missing DATA_VERSIONS line died with packs.json already changed).
 const dvm = /const\s+DATA_VERSIONS\s*=\s*(\{[^}]*\})/.exec(out);
 if (!dvm) die("could not find DATA_VERSIONS in src/js/30-version.js");
-const versions = JSON.parse(dvm[1]);
-const tag = lastTag();
-const bumped = [];
-for (const sysName of Object.keys(versions)) {
-  const dir = SYSTEM_DIRS[sysName];
-  if (!dir) { console.error(`    WARNING: no data dir mapped for system "${sysName}"`); continue; }
-  if (!tag) { versions[sysName] = next; bumped.push(sysName + " (no previous tag)"); continue; }
-  if (dataChangedSince(tag, dir)) { versions[sysName] = next; bumped.push(sysName); }
+
+function findPython() {
+  for (const py of ["python3", "python"]) {
+    if (spawnSync(py, ["-c", ""], { stdio: "ignore" }).status === 0) return py;
+  }
+  return null;
 }
-out = out.replace(dvm[1], JSON.stringify(versions).replace(/","/g, '","'));
+const PY = findPython();
+if (!PY) die("cutting a release needs python3 (tools/data-kit/fbdata.py)");
+const bump = spawnSync(PY, [path.join(ROOT, "tools/data-kit/fbdata.py"), "versions", "--bump", next],
+                       { encoding: "utf8" });
+if (bump.status !== 0) die("fbdata.py versions --bump failed:\n" + (bump.stderr || bump.stdout || ""));
+let bumped;
+try { bumped = JSON.parse(bump.stdout); } catch (e) { die("fbdata.py printed no JSON: " + bump.stdout); }
+const registry = JSON.parse(fs.readFileSync(path.join(ROOT, "data/packs.json"), "utf8"));
+const versions = {};
+registry.packs.forEach((p) => { if (p.version) versions[p.system] = p.version; });
+out = out.replace(dvm[1], () => JSON.stringify(versions));
 fs.writeFileSync(VERSION_JS, out);
 console.error(bumped.length
-  ? `    rules data changed: ${bumped.join(", ")} -> dataVersion ${next}`
-  : `    rules data unchanged since ${tag} — players need only the app`);
+  ? `    rules data changed: ${bumped.join(", ")} -> ${next}`
+  : "    rules data unchanged — every pack keeps its version");
 
 /* ---------------- empty the notebook ---------------- */
 

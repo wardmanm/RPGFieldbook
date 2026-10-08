@@ -37,7 +37,26 @@ function setSecHTML(k,body,badge){
 }
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
 /* the "Rules data" header badge; renderRulesData() keeps it current after the modal opens */
-function rulesBadge(){const n=rulesEntryCount();return n?n+" entries":"none loaded";}
+function rulesBadge(){
+  const n=rulesEntryCount();
+  const up=loadedRulesGroups().some(g=>dataStatus(g).state==="update");
+  return (n?n+" entries":"none loaded")+(up?" · update":"");
+}
+/* Settings → Credits & licences: each loaded pack's own terms (#83). A pack
+   carries them as `license` (an SPDX id) and `attribution` (plain text). */
+const LICENSE_URLS={"CC-BY-4.0":"https://creativecommons.org/licenses/by/4.0/",
+  "CC-BY-SA-3.0":"https://creativecommons.org/licenses/by-sa/3.0/","MIT":"https://opensource.org/license/mit"};
+function rulesCreditsHTML(){
+  const cr=(rules.credits&&typeof rules.credits==="object"&&!Array.isArray(rules.credits))?rules.credits:{};
+  const str=v=>typeof v==="string"?v:"";
+  const rows=Object.keys(cr).sort().map(l=>{
+    const c=cr[l]&&typeof cr[l]==="object"?cr[l]:{};
+    const lic=str(c.license),url=LICENSE_URLS[lic];
+    const licHTML=lic?(url?` Licence: <a href="${esc(url)}" target="_blank" rel="noopener">${esc(lic)}</a>.`:` Licence: ${esc(lic)}.`):"";
+    return `<p class="hint"><b>${esc(str(c.title)||l)}</b>${str(c.attribution)?" — "+esc(str(c.attribution)):""}${licHTML}</p>`;
+  });
+  return rows.length?`<div class="field"><label class="f">Rules data you have loaded</label>${rows.join("")}</div>`:"";
+}
 function openSettings(){
   const secAppearance=`
     <div class="field"><label class="f">Skin</label>
@@ -80,7 +99,7 @@ function openSettings(){
     </div>`:"";
   const secRules=`
     <div class="field"><label class="f">Rules sources</label>
-      <p class="hint">Load one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. <b>Fetch all</b> needs a connection: each source it reaches replaces what it loaded last time, anything it can't reach keeps what it had, and files you imported are never touched. What is loaded stays saved for offline use.</p>
+      <p class="hint">Import the rules data zip, or one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. <b>Fetch all</b> needs a connection: each source it reaches replaces what it loaded last time, anything it can't reach keeps what it had, and files you imported are never touched. What is loaded stays saved for offline use.</p>
       <div id="srcList"></div>
       <div style="display:flex;gap:7px;margin-top:4px"><input id="newSrc" placeholder="https://…/spells.json"><button class="tbtn" id="addSrc">Add</button></div>
       <div class="m-actions" style="justify-content:flex-start;margin-top:8px">
@@ -90,7 +109,7 @@ function openSettings(){
         <button class="tbtn danger" id="btnClearRules" style="margin-left:auto">Clear all</button>
       </div>
       <div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${esc(rulesStatusText())}</div>
-      <input type="file" id="fileRules" accept="application/json,.json" multiple class="hidefile">
+      <input type="file" id="fileRules" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">
     </div>
     <div class="field" style="margin-top:6px"><label class="f">Loaded rules data</label>
       <p class="hint">Everything currently in your rules pool, grouped by file (or source). Remove any piece you no longer want loaded.</p>
@@ -116,8 +135,9 @@ function openSettings(){
     <p class="hint">Fieldbook itself is MIT-licensed. It includes one third-party work:</p>
     <div class="field"><label class="f">Icons</label>
       <p class="hint">The emblems beside each class, ${raceTerm().toLowerCase()} and background, and the crossed swords on the combat button, are from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, by ${ICON_ARTISTS.map(esc).join(", ")}. Used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Each icon has been changed: its background square was removed and its colour now follows your theme.</p></div>
+    ${rulesCreditsHTML()}
     <div class="field"><label class="f">Rules content</label>
-      <p class="hint">Rules data is not part of the app — you load it yourself, from files you supply, and it keeps whatever terms it came with.</p></div>`;
+      <p class="hint">Rules data comes separately from the app, as the rules data zip or files you supply. Each pack keeps its own terms; the ones you have loaded are listed above.</p></div>`;
   openModal("Settings",`<div id="setSections">`+
     setSecHTML("appearance",secAppearance)+
     (secCharacter?setSecHTML("character",secCharacter,character.name||"unnamed"):"")+
@@ -249,7 +269,7 @@ function settingsImportQuestionHTML(imp){
   const inFile={};file.forEach(g=>{inFile[g.key]=g;});
   const list=gs=>gs.map(g=>g.label+" ("+g.count+(g.dataVersion?", v"+g.dataVersion:"")+")").join(" · ");
   const lost=now.filter(g=>!inFile[g.key]);
-  const older=now.filter(g=>{const f=inFile[g.key];return f&&f.dataVersion&&g.dataVersion&&cmpVer(f.dataVersion,g.dataVersion)<0;});
+  const older=now.filter(g=>{const f=inFile[g.key];return f&&f.dataVersion&&g.dataVersion&&cmpDataVer(f.dataVersion,g.dataVersion)<0;});
   const loss=[];
   if(lost.length)loss.push(`unloads ${lost.length===1?"1 pack":lost.length+" packs"} the file doesn't have: ${lost.map(g=>g.label).join(", ")}`);
   if(older.length)loss.push(`puts back an older copy of ${older.map(g=>g.label+" (v"+inFile[g.key].dataVersion+"; v"+g.dataVersion+" is loaded)").join(", ")}`);
@@ -338,14 +358,15 @@ function rulesBucket(g){
 function removeRulesGroup(key){
   const g=loadedRulesGroups().find(x=>x.key===key);if(!g)return;
   RULE_CATS.forEach(cat=>{if(!rules[cat])return;rules[cat]=rules[cat].filter(e=> g.isFile ? e._file!==g.label : (e._file?true:(e._source||"Unknown")!==g.label));});
-  pruneRequires();
+  prunePackMeta();
   reindexRules();recomputeDups();saveRulesCache();refreshRulesUI();renderAll();renderRulesData();updateRulesStatus(rulesStatusText(),"ok");
 }
-/* drop a source's `requires` once none of its entries are left, so the
-   persisted object doesn't accumulate declarations for packs that are gone */
-function pruneRequires(){
-  if(rules.requires)Object.keys(rules.requires).forEach(src=>{
-    if(!RULE_CATS.some(c=>(rules[c]||[]).some(e=>(e._source||"")===src)))delete rules.requires[src];
+/* drop a source's `requires` and credits once none of its entries are left,
+   so the persisted pool doesn't accumulate them for packs that are gone */
+function prunePackMeta(){
+  ["requires","credits"].forEach(k=>{
+    const m=rules[k];if(!m||typeof m!=="object")return;
+    Object.keys(m).forEach(src=>{if(!RULE_CATS.some(c=>(rules[c]||[]).some(e=>(e._source||"")===src)))delete m[src];});
   });
 }
 /* Unload every rules pack. Destructive and irreversible without re-importing,
@@ -371,18 +392,31 @@ function clearAllRules(){
 
    Unknown (an old pack from before stamping, or homebrew) is NOT stale — we
    have no evidence either way, and a false alarm on someone's own content is
-   worse than staying quiet. */
+   worse than staying quiet — nor is a version that doesn't parse (cmpDataVer).
+
+   A pack the app is happy with can still be behind a data-only release (#83):
+   that is "update", quiet, because a data release is optional. */
 function dataStatus(g){
+  const have=g.dataVersion||"";
   const want=(typeof DATA_VERSIONS!=="undefined"&&DATA_VERSIONS[g.source])||"";
-  if(!want||!g.dataVersion)return {state:"unknown"};
-  const c=cmpVer(g.dataVersion,want);
-  if(c<0)return {state:"stale",have:g.dataVersion,want};
-  return {state:"current",have:g.dataVersion};
+  const upd=dataUpdateFor(g);
+  if(!have||!parseDataVer(have)||(!want&&!upd))return {state:"unknown"};
+  if(want&&cmpDataVer(have,want)<0)return {state:"stale",have,want};
+  if(upd&&cmpDataVer(have,upd.version)<0)return {state:"update",have,want:upd.version,release:dataUpdate.release};
+  return {state:"current",have};
+}
+/* the newer copy the data-release check found for a pack loaded from a file of
+   the same system and file name, or null */
+function dataUpdateFor(g){
+  if(!dataUpdate||!g||!g.isFile)return null;
+  return (dataUpdate.packs||[]).find(p=>p.system===g.source&&p.file===g.label)||null;
 }
 function dataStatusHTML(g){
   const st=dataStatus(g);
   if(st.state==="stale")
     return ` <span class="chip warn" title="This pack is from v${esc(st.have)}; this version of Fieldbook ships v${esc(st.want)}. Re-import it from the latest release.">update available · v${esc(st.have)}</span>`;
+  if(st.state==="update")
+    return ` <span class="rd-src" title="${esc("Rules data "+st.release+" has a newer copy of this pack, v"+st.want+". Download it from the release page and import it.")}">v${esc(st.have)} · v${esc(st.want)} out</span>`;
   if(st.state==="current")return ` <span class="rd-src" title="Up to date with this version of Fieldbook.">v${esc(st.have)}</span>`;
   return "";
 }

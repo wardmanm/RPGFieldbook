@@ -87,8 +87,8 @@
         <div class="label">Rules data</div>
         <p class="hint" id="homeRulesStatus" style="margin-bottom:8px"></p>
         <button class="tbtn primary" id="homeImportBtn"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Import rules files (bulk)</button>
-        <input type="file" id="homeRulesFiles" accept="application/json,.json" multiple class="hidefile">
-        <p class="hint" style="margin-top:8px">Select multiple JSON files at once — races, classes, spells, feats, backgrounds, subclasses, and glossary all merge together.</p>
+        <input type="file" id="homeRulesFiles" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">
+        <p class="hint" style="margin-top:8px">Choose the rules data zip, or JSON files — races, classes, spells, feats, backgrounds, subclasses and glossary all merge together. You can pick several at once.</p>
         <div class="f" style="margin-top:10px">Loaded data</div>
         <div id="homeRulesData"></div>
         <div class="m-actions" style="justify-content:flex-end;margin-top:8px"><button class="tbtn danger" id="homeClearRules">Clear all</button></div>

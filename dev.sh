@@ -49,6 +49,21 @@ tag_missing() {
   return 0
 }
 
+# Where the rules data stands: the release data/packs.json records, and how many
+# packs have changed since — a data release (menu d) waiting to happen. Silent
+# without Python, which nothing else on this menu needs.
+data_status() {
+  [ -n "$PY" ] || return 0
+  local rel n
+  rel=$(node -e 'try{process.stdout.write(String(require("./data/packs.json").release||"?"))}catch(e){process.stdout.write("?")}')
+  n=$("$PY" tools/data-kit/fbdata.py versions --changed 2>/dev/null | grep -c . || true)
+  if [ "${n:-0}" -gt 0 ]; then
+    printf ' %s·%s %sdata %s, %s changed%s' "$DIM" "$OFF" "$YEL" "$rel" "$n" "$OFF"
+  else
+    printf ' %s·%s %sdata %s%s' "$DIM" "$OFF" "$DIM" "$rel" "$OFF"
+  fi
+}
+
 status_line() {
   local ver branch notes stale
   ver=$(app_version); branch=$(git_branch); notes=$(pending_notes)
@@ -67,6 +82,7 @@ status_line() {
   if tag_missing; then
     printf ' %s·%s %sv%s NOT TAGGED%s' "$DIM" "$OFF" "$YEL" "$ver" "$OFF"
   fi
+  data_status
   # Uninstalled hooks are invisible — nothing fails, the checks simply never
   # run. Say so in the header rather than letting it be discovered by a red CI.
   if ! hooks_installed; then
@@ -132,6 +148,7 @@ menu() {
     c  Commit…                   (type, issue number, message, then push)
   RELEASE
     7  Cut a release…
+    d  Cut a data release…       (rules data only — no app)
     8  Release checklist
   OTHER
     9  Open the built app in a browser
@@ -182,6 +199,19 @@ release_menu() {
       printf '  %sThe TAG is what triggers publishing. Without it Actions never runs\n' "$DIM"
       printf '  and no release appears — with no error anywhere.%s\n' "$OFF"
       ;;
+    *) printf 'cancelled\n' ;;
+  esac
+}
+
+# A data release changes only data/packs.json, so it needs no build. The dry run
+# shows what it would do first; nothing is committed, tagged or pushed.
+data_release_menu() {
+  printf '\n%sCut a data release%s  (rules data only — the app is not touched)\n' "$B" "$OFF"
+  run node scripts/data-release.js --dry-run || return 0
+  printf '\nBump data/packs.json for this data release? [y/N] '
+  local ok; read -r ok
+  case "$ok" in
+    y|Y) run node scripts/data-release.js ;;
     *) printf 'cancelled\n' ;;
   esac
 }
@@ -367,8 +397,9 @@ where_things_live() {
   ${B}Source of truth${OFF}   src/  — js/ css/ html/ fragments (order: src/manifest.json),
                     fieldbook.template.html (the page shell), tests/, docs/ (dev-only)
   ${B}Build artifact${OFF}    dist/fieldbook.html — never hand-edit; rebuild instead
-  ${B}Rules data${OFF}        data/5e2024/, humblewood/, xanathars/, tashas/ (per category);
-                    build bundles them into dist/<system>_full.json
+  ${B}Rules data${OFF}        data/<dir>/ per category, registered in data/packs.json; the build
+                    bundles them into dist/<file> and packs the archive
+                    dist/fieldbook-data-standalone-<release>.zip (tools/data-kit/fbdata.py)
   ${B}Notebook${OFF}          src/docs/UNRELEASED.md — one bullet per player-visible change
   ${B}Releasing${OFF}         src/docs/RELEASING.md — full procedure and failure modes
   ${B}Conventions${OFF}       CLAUDE.md · project memory: src/docs/_claude/WIRING-LEDGER.md
@@ -422,6 +453,7 @@ while true; do
     6) convert_data; pause ;;
     c|C) commit_menu; pause ;;
     7) release_menu; pause ;;
+    d|D) data_release_menu; pause ;;
     8) checklist; pause ;;
     9) if [ -f dist/fieldbook.html ]; then
          run "$(opener)" dist/fieldbook.html

@@ -16,9 +16,11 @@ Two layers, joined at runtime:
 - **The app** — `src/` concatenated by `scripts/build-html.js` into `dist/fieldbook.html`: one
   `<style>`, one `<script>`, the page shell with seven tab panels spliced in. No framework, no
   modules, no network needed. → [Build & source split](architecture/build-and-source-split.md)
-- **The rules packs** — `data/<dir>/*.json`, bundled by `scripts/bundle-rules.js` into one
-  `dist/<dir>_full.json` per pack. A player imports them in Settings (or fetches them from
-  configured URLs); they are cached in IndexedDB. → [Rules packs](architecture/rules-packs.md),
+- **The rules packs** — `data/<dir>/*.json`, registered in `data/packs.json` and bundled by
+  `scripts/bundle-rules.js` into one `dist/<dir>_full.json` per pack. They ship together as one
+  zip, the rules-data archive, which Fieldbook opens itself. A player imports it, or single packs,
+  in Settings or on the home screen (or fetches packs from configured URLs); they are cached in
+  IndexedDB. → [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md),
   [Storage](architecture/storage.md)
 
 A **character** is created in one of two **systems**, `"dnd"` or `"humblewood"`, which also picks
@@ -63,8 +65,12 @@ src/                      THE SOURCE OF TRUTH — edit here, never the built fil
 dist/
   fieldbook.html          the app — a BUILD ARTIFACT, tracked in git. Never hand-edit
   <dir>_full.json         one bundled rules pack per data dir (gitignored)
-  fieldbook-v<ver>.zip    the player bundle — allowlisted, no dev material (gitignored)
+  fieldbook-data-standalone-<release>.zip   the rules-data archive: every pack, a manifest
+                          and NOTICE.md (gitignored)
+  fieldbook-v<ver>.zip    the player bundle — allowlisted, no dev material; carries the
+                          archive in its data/ (gitignored)
 data/
+  packs.json              the registry: every pack's dir, file, title, version, digest, credit
   <dir>/*.json            per-category rules data — bundled into the packs, does not ship as-is
   overlay.json            hand-authored convert.py inputs; ship to the zip's scripts/,
   class-resources.json      not its data/, because they are not loadable packs
@@ -78,13 +84,18 @@ scripts/
   build-html.js           src/ → dist/fieldbook.html (dev)
   bundle-rules.js         data/<dir>/ → dist/<dir>_full.json (dev)
   gen-changelog.js        regenerates docs/CHANGELOG.md (dev)
-  release.js              bumps APP_VERSION, folds in UNRELEASED.md (dev)
+  release.js              bumps APP_VERSION, folds in UNRELEASED.md, bumps changed packs (dev)
   release-notes.js        one version's changelog section, for the release body (dev)
+  data-release.js         prepares a data-only release: bumps changed packs to X.Y.Z-N (dev)
+  data-release-notes.js   the rules-data part of a release body, from data/packs.json (dev)
   fetch-icons.js          vendors game-icons.net glyphs into js/05-icons.js (dev)
   playwright-mcp.js       cross-platform launcher for the screenshot MCP (dev)
   wt.sh                   add/list/rm parallel issue worktrees (dev)
+tools/data-kit/fbdata.py  pack digests and versions, and the archive's pack and validate
+                          (Python 3.8+, stdlib; dev)
 .claude/skills/wiki/      the skill that maintains this wiki (tracked; never ships)
-.github/workflows/        ci.yml (every push and PR), release.yml (on a version tag)
+.github/workflows/        ci.yml (every push and PR), release.yml (on a version tag),
+                          data-release.yml (on a data-v… tag)
 build.sh · dev.sh         build + validate + zip; the interactive menu over every task
 ```
 
@@ -102,7 +113,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `10-compute.js` | `recompute()`; `highlight()`, `descHTML()`, `renderRT()` | [Computed stats](architecture/computed-stats-and-effects.md), [Rich text](architecture/rich-text.md) |
 | `20-lists.js` | features list, `usesMax()`, `renderFeatures()` | [Features & traits](features/features-and-traits.md) |
 | `25-origins-items.js` | `ORIGIN_KINDS`, item origin and cost, weight and encumbrance, size, `itemArmor()`, `armorAC()` | [Inventory](features/inventory.md), [Armor & AC](features/armor-and-ac.md), [Vitals & rest](features/vitals-and-rest.md) |
-| `30-version.js` | `APP_VERSION`, `DATA_VERSIONS`, `CHANGELOG`, `UPDATE_REPO`; `checkForUpdate()`, the update pill | [Settings & updates](features/settings-and-updates.md), [Rules packs](architecture/rules-packs.md) |
+| `30-version.js` | `APP_VERSION`, `DATA_VERSIONS`, `CHANGELOG`, `UPDATE_REPO`; `checkForUpdate()`, the update pill; data versions (`cmpDataVer()`) and `checkForDataUpdate()` | [Settings & updates](features/settings-and-updates.md), [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
 | `40-sheet.js` | `selectTab()`, the ToC; `invSection()`, item uses, `renderInventory()`; statuses, concentration card, familiars | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Conditions & concentration](features/conditions-and-concentration.md), [Sections & layout](ui/sections-and-layout.md) |
 | `50-classrace.js` | rules lookups, emblems (`iconSVG()`), subclasses; the grant machinery (`applyEquipGrants()`, `revertEquipmentGrants()`, `grantFeatDef()`, `runExtraChoices()`); `renderClassRace()` | [Grants](architecture/grants-and-provenance.md), [Character building](features/character-building.md) |
 | `52-race.js` | ancestry/species pickers, `systemOf()` | [Character building](features/character-building.md) |
@@ -125,8 +136,9 @@ name says where its first function came from, not everything it holds: `migrate(
 | `87-combat.js` | the combat tab and tracker | [Combat view](features/combat-view.md) |
 | `87-journal.js` | the Journal card: pages, tags, search, the page rule, the editor | [Journal](features/journal.md) |
 | `87-trackers.js` | the Trackers card: counters, checklists, tasks, the close rule | [Journal](features/journal.md) |
-| `88-settings.js` | the Settings modal, rules status, `dataStatus()` | [Settings & updates](features/settings-and-updates.md) |
-| `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, fetch and import of packs | [Rules packs](architecture/rules-packs.md) |
+| `88-settings.js` | the Settings modal, rules status, `dataStatus()`, pack credits (`rulesCreditsHTML()`) | [Settings & updates](features/settings-and-updates.md), [Data archive](architecture/data-archive.md) |
+| `89-zip.js` | the zip reader: `readDataArchive()`, `inflateRaw()`, `zipEntries()` — pure | [Data archive](architecture/data-archive.md) |
+| `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, fetch and import of packs and zips (`importRulesPayloads()`, `importPack()`) | [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
 | `90-boot.js` | `wire()`, `boot()` — always last | [Shell](ui/shell.md), [Build & source split](architecture/build-and-source-split.md) |
 | `00-tokens.css` | theme tokens, both skins, light/dark | [Theming & icons](ui/theming-and-icons.md) |
 | `10-chrome.css` | top bar and tabs | [Shell](ui/shell.md) |
@@ -149,8 +161,12 @@ name says where its first function came from, not everything it holds: `migrate(
 
 | Term | Meaning |
 |---|---|
-| **system** | For a *character*: `"dnd"` or `"humblewood"`, chosen at creation. For a *pack*: its `system` stamp (`XPHB`, `Humblewood`, `XGE`, `TCE`, `Homebrew`), the key of `DATA_VERSIONS` |
+| **system** | For a *character*: `"dnd"` or `"humblewood"`, chosen at creation. For a *pack*: its `system` stamp (`XPHB`, `Humblewood`, `XGE`, `TCE`, `Homebrew`), the key of `DATA_VERSIONS` and unique in the registry |
 | **pack** | One bundled rules file, `dist/<dir>_full.json`; loaded packs merge into the global `rules` |
+| **registry** | `data/packs.json`: every pack's `system`, `dir`, `file`, `title`, `version`, content `digest` and optional `license` and `attribution`, plus `release`, the last release's version. Written only by `release.js` and `data-release.js`, through `fbdata.py` |
+| **data version** | A pack's own version, `X.Y.Z` (the data shipped with app X.Y.Z) or `X.Y.Z-N` (the Nth data-only release after it). Not semver: `1.8.0 < 1.8.0-1 < 1.8.1`. Compared with `cmpDataVer()`, never `cmpVer()`. A pack's `dataVersion` |
+| **data release** | A release of rules data with no app: tag `data-vX.Y.Z-N`, the archive as its only asset, never GitHub's "latest". Cut by `data-release.js`, published by `data-release.yml` |
+| **rules-data archive** | `fieldbook-data-standalone-<release>.zip`: every pack, the manifest `fieldbook-data.json` and `NOTICE.md`. Attached to every release and carried in the app zip; Fieldbook opens it itself |
 | **supplement** | A pack that adds to a system rather than being one (XGE, TCE, homebrew) |
 | **skin** | The visual theme, `classic` or `humblewood`; follows the character's system |
 | **sid** | A grant's source id: `race:<name>`, `bg:<name>`, `class:<name>`, `subclass:<class>:<sub>` — from `originSid()` |
@@ -176,3 +192,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-08-10 — Dev docs split by reader into `src/docs/` and `src/docs/_claude/`. → ledger L1302
 - 2026-09-28 — The wiki: reference compiled out of the ledger into topic pages; CLAUDE.md slimmed to the rules. → ledger L3709
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
+- 2026-10-07 — The rules-data archive, the registry `data/packs.json`, data versions and data releases join the map and the glossary; `89-zip.js` in the code map. → ledger L5082, #83

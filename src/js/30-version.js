@@ -12,6 +12,34 @@ const DATA_VERSIONS={"XPHB":"1.7.2","Humblewood":"1.7.1","XGE":"1.7.2","TCE":"1.
    to that release's page (attach fieldbook.html to the release so players can download it). */
 const UPDATE_REPO="wardmanm/RPGFieldbook";
 function cmpVer(a,b){const pa=String(a||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0),pb=String(b||"").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);for(let i=0;i<3;i++){if((pa[i]||0)>(pb[i]||0))return 1;if((pa[i]||0)<(pb[i]||0))return -1;}return 0;}
+/* Rules-DATA versions (#83): X.Y.Z is the data shipped with app X.Y.Z, X.Y.Z-N
+   the Nth data-only release after it. NOT semver, where -N would be a
+   pre-release sorting BELOW X.Y.Z: here 1.8.0 < 1.8.0-1 < 1.8.0-10 < 1.8.1.
+   cmpVer() reads "1.8.0-1" and "1.8.0-2" as equal, so data never goes through
+   it. Anything unreadable compares as 0: unknown is never "stale" or "newer".
+   Spec: 2026-10-07-data-archive-design.md §3. */
+function parseDataVer(s){
+  const m=/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([1-9]\d*))?$/.exec(typeof s==="string"?s:"");
+  return m?[+m[1],+m[2],+m[3],m[4]?+m[4]:0]:null;
+}
+function cmpDataVer(a,b){
+  const pa=parseDataVer(a),pb=parseDataVer(b);
+  if(!pa||!pb)return 0;
+  for(let i=0;i<4;i++){if(pa[i]!==pb[i])return pa[i]>pb[i]?1:-1;}
+  return 0;
+}
+/* "v1.8.0" -> "1.8.0"; "data-v1.8.0-2" -> "1.8.0-2"; anything else -> "". A data
+   tag always has its -N: plain X.Y.Z belongs to the app release. */
+function dataVerOfTag(tag){
+  const t=typeof tag==="string"?tag:"";
+  let m=/^v(\d+\.\d+\.\d+)$/.exec(t);
+  if(m&&parseDataVer(m[1]))return m[1];
+  m=/^data-v(\d+\.\d+\.\d+-\d+)$/.exec(t);
+  if(m&&parseDataVer(m[1]))return m[1];
+  return "";
+}
+/* the oldest app a data version is built for: "1.8.0-2" -> "1.8.0" */
+function dataVerBase(v){const p=parseDataVer(v);return p?p.slice(0,3).join("."):"";}
 /* What the update check found, or null. Held so openChangelog() can lead with a
    download link — the pill REPLACES the version button rather than sitting
    beside it, so the changelog has to stay reachable through the pill. */
@@ -41,6 +69,55 @@ function showUpdatePill(){
   el.textContent="↑ v"+updateAvailable.ver;
   el.title=`Update to version ${updateAvailable.ver} available — you're on ${APP_VERSION}. Tap for what's new and the download.`;
   el.style.display="inline-flex";
+}
+/* Newer rules DATA than what is loaded (#83). Data can be released without the
+   app, as data-vX.Y.Z-N, and those releases are never GitHub's "latest", so
+   checkForUpdate() never sees them. This lists the releases, picks the newest
+   with an archive built for this app or an older one, and reads that tag's
+   registry straight from the repo — raw.githubusercontent.com answers a
+   file:// page. Every failure is silent, as in checkForUpdate(). */
+let dataUpdate=null;
+function pickDataRelease(list,appVer){
+  if(!Array.isArray(list))return null;
+  let best=null;
+  list.forEach(rel=>{
+    if(!rel||typeof rel!=="object"||rel.draft||rel.prerelease)return;
+    const tag=typeof rel.tag_name==="string"?rel.tag_name:"";
+    const ver=dataVerOfTag(tag);if(!ver)return;
+    /* data built for a newer app arrives with that app's own update */
+    if(cmpDataVer(dataVerBase(ver),appVer)>0)return;
+    const asset="fieldbook-data-standalone-"+ver+".zip";
+    if(!Array.isArray(rel.assets)||!rel.assets.some(a=>a&&a.name===asset))return;
+    if(best&&cmpDataVer(ver,best.version)<=0)return;
+    /* the link becomes an <a href>, so only a github.com page is taken */
+    const page=String(rel.html_url||"");
+    best={tag,version:ver,url:/^https:\/\/github\.com\//i.test(page)?page:`https://github.com/${UPDATE_REPO}/releases`};
+  });
+  return best;
+}
+/* the registry at that tag, kept to well-formed packs, or null */
+function dataUpdateFrom(reg,pick){
+  if(!pick||!reg||typeof reg!=="object"||!Array.isArray(reg.packs))return null;
+  const packs=reg.packs.filter(p=>p&&typeof p==="object"&&typeof p.system==="string"&&p.system.trim()
+      &&typeof p.file==="string"&&/^[A-Za-z0-9._-]+\.json$/.test(p.file)&&parseDataVer(p.version))
+    .map(p=>({system:p.system,file:p.file,version:p.version}));
+  return packs.length?{release:pick.version,url:pick.url,packs}:null;
+}
+function checkForDataUpdate(){
+  if(!UPDATE_REPO||(navigator.onLine===false))return Promise.resolve(null);
+  return fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases?per_page=100`,{headers:{Accept:"application/vnd.github+json"}})
+    .then(r=>r.ok?r.json():null)
+    .then(list=>{
+      const pick=pickDataRelease(list,APP_VERSION);
+      if(!pick)return null;
+      return fetch(`https://raw.githubusercontent.com/${UPDATE_REPO}/${encodeURIComponent(pick.tag)}/data/packs.json`,{cache:"no-store"})
+        .then(r=>r.ok?r.json():null)
+        .then(reg=>{
+          dataUpdate=dataUpdateFrom(reg,pick);
+          if(dataUpdate&&typeof renderRulesData==="function")renderRulesData();
+          return dataUpdate;
+        });
+    }).catch(()=>null);
 }
 const CHANGELOG=[
   {v:"1.7.2", date:"2026-09-29", notes:[

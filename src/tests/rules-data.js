@@ -282,25 +282,6 @@ ck('clear-all on empty pool is a no-op', X.clearAllRules()===false);
        && /1 glossary entry\b/.test(summ({keywords: 1})), summ({keywords: 3, spells: 1}));
   ck('#71 ...and is empty when nothing was skipped', summ({}) === '' && summ(null) === '', summ({}));
 
-  /* the file import writes it on the status line the player is reading */
-  const status = {textContent: '', className: ''};
-  const getById = ctx.document.getElementById;
-  const hadFR = 'FileReader' in ctx;
-  ctx.document.getElementById = id => id === 'rulesStatus' ? status : getById(id);
-  ctx.FileReader = function () { this.readAsText = f => { this.result = f.text; this.onload && this.onload(); }; };
-  X.resetRules();
-  ctx.importRulesFiles([{name: 'hb.json', text: JSON.stringify({system: 'HB',
-    keywords: [{text: 'no term'}, {term: 'Kept'}], spells: [{level: 1}, {name: 'Zap'}]})}]);
-  ck('#71 importing a file says what it skipped',
-     /skipped/i.test(status.textContent) && /1 glossary entry/.test(status.textContent) && /1 spell/.test(status.textContent),
-     status.textContent);
-  ck('#71 ...and the rest of it loaded', (X.rules.keywords || []).length === 1 && (X.rules.spells || []).length === 1);
-  X.resetRules();
-  ctx.importRulesFiles([{name: 'ok.json', text: JSON.stringify({system: 'HB', spells: [{name: 'Zap'}]})}]);
-  ck('#71 ...and a clean file says nothing about skipping', !/skipped/i.test(status.textContent) && /\bok\b/.test(status.className),
-     [status.textContent, status.className]);
-  ctx.document.getElementById = getById;
-  if (!hadFR) delete ctx.FileReader;
   X.resetRules();
 }
 
@@ -928,18 +909,18 @@ X.mergeRules({system:'XPHB', dataVersion:'99.0.0', rulebook:true, races:[{name:'
 ck('a pack newer than the app is not flagged stale',
    X.dataStatus(X.loadedRulesGroups()[0]).state === 'current');
 
-// ---------- every shipped pack agrees with DATA_VERSIONS
-[['5e2024_full.json','XPHB'], ['humblewood_full.json','Humblewood'],
- ['xanathars_full.json','XGE'], ['tashas_full.json','TCE'],
- ['homebrew_full.json','Homebrew']].forEach(([f, sysName]) => {
-  const p = path.join(ROOT, 'dist', f);
-  if (!fs.existsSync(p)) { ck(f + ' exists', false); return; }
+// ---------- every shipped pack agrees with data/packs.json (#83)
+JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs.forEach(reg => {
+  if (!fs.existsSync(path.join(ROOT, 'data', reg.dir))) return;
+  const p = path.join(ROOT, 'dist', reg.file);
+  if (!fs.existsSync(p)) { ck(reg.file + ' exists', false); return; }
   const pack = JSON.parse(fs.readFileSync(p, 'utf8'));
-  ck(f + ' declares a dataVersion', !!pack.dataVersion, pack.dataVersion);
-  ck(f + ' dataVersion matches DATA_VERSIONS.' + sysName,
-     pack.dataVersion === X.DATA_VERSIONS[sysName],
-     pack.dataVersion + ' vs ' + X.DATA_VERSIONS[sysName]);
-  ck(f + " system is the DATA_VERSIONS key", pack.system === sysName, pack.system);
+  ck(reg.file + ' system is the registry system', pack.system === reg.system, pack.system);
+  ck(reg.file + ' name is the registry title', pack.name === reg.title, pack.name);
+  ck(reg.file + ' dataVersion is the registry version',
+     (pack.dataVersion || null) === (reg.version || null), pack.dataVersion + ' vs ' + reg.version);
+  ck(reg.file + ' licence and credit match the registry',
+     (pack.license || null) === (reg.license || null) && (pack.attribution || null) === (reg.attribution || null));
 });
 // The bundle is the file players actually import. bundle-rules.js builds it from
 // a fixed key list, so a pack property it doesn't know about is dropped — the

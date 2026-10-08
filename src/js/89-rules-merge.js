@@ -81,6 +81,15 @@ function missingSummary(){
   const names=[...new Set(bad.map(g=>g.source||g.label))];
   return " "+names.join(", ")+(names.length===1?" refers":" refer")+" to content that isn't loaded — see Loaded data below.";
 }
+/* One line above the loaded-data list when a data release has newer copies of
+   packs the player has loaded (#83). Quiet on purpose (R7): a data release is
+   optional. The link is pickDataRelease()'s, kept to github.com. */
+function dataUpdateHint(groups){
+  const ups=[...new Set(groups.map(g=>({g,st:dataStatus(g)})).filter(x=>x.st.state==="update")
+    .map(x=>x.g.source+" v"+x.st.want))];
+  if(!ups.length||!dataUpdate)return "";
+  return `<p class="hint" style="margin:4px 0 8px">Newer rules data is out: ${esc(ups.join(", "))}. <a href="${esc(dataUpdate.url)}" target="_blank" rel="noopener">Download it from the release page</a>.</p>`;
+}
 function rulesDataHTML(){
   const groups=loadedRulesGroups();
   const warn=rulesCacheWarning()
@@ -101,7 +110,7 @@ function rulesDataHTML(){
     /* the heading already names the category on single-category rows */
     html+=inB.map(g=>row(g,b==="rulebook"||b==="mixed")).join("");
   });
-  return warn+html;
+  return warn+dataUpdateHint(groups)+html;
 }
 function renderRulesData(){
   const html=rulesDataHTML();
@@ -118,7 +127,7 @@ function renderSrcRows(){
   const srcs=settings.rulesSources||[];
   host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${esc(i)}"><button class="icon danger" data-src-del="${esc(i)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
 }
-function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{}};}
+function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{},credits:{}};}
 /* An entry's name (a keyword's term) as text, or "" when it has none that can
    be shown: not an object, no name, only spaces, or not text. A number is a
    name written without quotes, so it counts. Every picker, lookup and chip
@@ -149,6 +158,7 @@ function tidyRule(x,kind){
    everything that could. Returns how many entries it dropped, per category. */
 function tidyRules(){
   const dropped={};
+  if(rules.credits!=null&&(typeof rules.credits!=="object"||Array.isArray(rules.credits)))rules.credits={};
   RULE_CATS.forEach(kind=>{
     const arr=rules[kind];
     if(arr==null)return;
@@ -177,6 +187,16 @@ function keyOf(x,kind){if(!x||typeof x!=="object")return "";return kind==="subcl
    (the source URL from Settings, not an include under it) for a fetch. `_url` is
    what lets the next Fetch all replace exactly what that source loaded before. */
 function srcLabel(obj){return String(obj.system||obj.name||"Rules").trim();}
+/* A pack's licence and credit (#83), kept per source LABEL like `requires`, for
+   Settings → Credits & licences: null when it states neither. Plain strings,
+   capped, never markup — they are shown through esc(). */
+function creditOf(title,license,attribution){
+  const lic=typeof license==="string"?license.trim():"";
+  const att=typeof attribution==="string"?attribution.trim().slice(0,2000):"";
+  const l=lic.length<=64?lic:"";
+  if(!l&&!att)return null;
+  return {title:String(title||"").trim(),license:l,attribution:att};
+}
 function mergeRules(obj,fileName,url){
   if(obj.name&&!rules.name)rules.name=obj.name;
   const src=srcLabel(obj);
@@ -194,6 +214,11 @@ function mergeRules(obj,fileName,url){
   if(Array.isArray(obj.requires)){
     if(!rules.requires||typeof rules.requires!=="object")rules.requires={};
     rules.requires[srcLabel(obj)]=obj.requires;
+  }
+  const credit=creditOf(obj.name||src,obj.license,obj.attribution);
+  if(credit){
+    if(!rules.credits||typeof rules.credits!=="object"||Array.isArray(rules.credits))rules.credits={};
+    rules.credits[src]=credit;
   }
   const cats={keywords:obj.keywords,features:traitArr,items:obj.items,spells:obj.spells,races:obj.races,classes:obj.classes,feats:obj.feats,backgrounds:obj.backgrounds,subclasses:obj.subclasses,tables:obj.tables};
   /* What this pack had that nothing could reach (#71): counted, returned, and
@@ -285,6 +310,13 @@ function poolFromExport(saved){
         });
         flush();
       });
+      /* credits ride along per label, like `requires`, for the labels that came back */
+      if(isObj(saved.credits))Object.keys(saved.credits).forEach(l=>{
+        const c=saved.credits[l];
+        if(!isObj(c)||!RULE_CATS.some(k=>(rules[k]||[]).some(e=>e._source===l)))return;
+        const cr=creditOf(c.title||l,c.license,c.attribution);
+        if(cr){if(!isObj(rules.credits))rules.credits={};rules.credits[l]=cr;}
+      });
     }
     const used=RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);
     return {pool:rules,used,skipped:Math.max(0,offered-used)};
@@ -357,17 +389,14 @@ function fetchRulesFrom(url,seen,out,memo){
 function applyFetchedSource(url,packs){
   const old=new Set();
   RULE_CATS.forEach(c=>(rules[c]||[]).forEach(e=>{if(e._url===url)old.add(e);}));
-  /* A `requires` declaration is kept per LABEL, and mergeRules only ever sets
-     one. If this source alone owns a label, its fresh copy decides the
-     declaration, so a pack that stopped declaring one doesn't keep a false
-     "missing" chip. A label shared with a file import keeps it. */
-  if(rules.requires)new Set(packs.map(srcLabel)).forEach(l=>{
-    if(RULE_CATS.every(c=>(rules[c]||[]).every(e=>(e._source||"")!==l||old.has(e))))delete rules.requires[l];
-  });
+  /* If this source alone owns a label, its fresh copy decides the label's
+     `requires` (and credits), so a pack that stopped declaring one doesn't
+     keep a false "missing" chip. A label shared with a file import keeps it. */
+  dropOwnedPackMeta(new Set(packs.map(srcLabel)),old);
   const skipped={};
   packs.forEach(p=>addSkipped(skipped,mergeRules(p,null,url)));
   RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
-  pruneRequires();reindexRules();recomputeDups();
+  prunePackMeta();reindexRules();recomputeDups();
   return skipped;
 }
 /* Settings → Fetch all. Fetching NEVER loses what is loaded (#65): this used to
@@ -418,16 +447,155 @@ function fetchAllRules(){
       return saving.then(err=>{if(err){renderRulesData();updateRulesStatus(head+err,"err");}});
     });
 }
-/* import one or many files; each is merged so you can load traits.json, spells.json, … separately */
+/* ---- importing files (#83) ----
+   Why a zip couldn't be imported, in the player's words. */
+const ZIP_WHY={
+  notzip:"it isn't a zip Fieldbook can read",
+  encrypted:"it's password-protected",
+  zip64:"it's a ZIP64 archive",
+  method:"it uses a compression Fieldbook can't read; re-zip it normally or import the .json files",
+  damaged:"it's damaged — download it again",
+  toolarge:"it's too large to be rules data",
+  toomany:"it has too many files to be rules data",
+  kit:"that's the Fieldbook data kit, a tool for building rules data — import a fieldbook-data-standalone zip instead",
+  empty:"there's no rules data in it"
+};
+/* Holds at least one rules category: what tells a pack from the converter's
+   own inputs (overlay.json, class-resources.json) inside an old app zip. */
+function isRulesPack(o){return RULE_CATS.concat(["traits"]).some(c=>Array.isArray(o[c]));}
+/* A label's `requires` and `credits` are kept once per LABEL, and mergeRules
+   only ever sets them. When the entries about to be replaced are everything
+   that label has, the fresh copy decides: drop them first, so a pack that
+   stopped declaring one doesn't keep it. A label another file shares keeps it. */
+function dropOwnedPackMeta(labels,old){
+  labels.forEach(l=>{
+    if(!RULE_CATS.every(c=>(rules[c]||[]).every(e=>(e._source||"")!==l||old.has(e))))return;
+    if(rules.requires)delete rules.requires[l];
+    if(rules.credits)delete rules.credits[l];
+  });
+}
+/* One pack from a file, replacing what that same file loaded before (R4).
+   mergeRules() alone only adds and replaces, so an entry the new copy dropped
+   lingered forever. Keyed on file name AND source, so spells.json from one
+   pack never unloads spells.json from another — applyFetchedSource()'s
+   pattern, for files. */
+function importPack(obj,file){
+  const src=srcLabel(obj),old=new Set();
+  RULE_CATS.forEach(c=>(rules[c]||[]).forEach(e=>{if(e&&e._file===file&&(e._source||"")===src)old.add(e);}));
+  dropOwnedPackMeta([src],old);
+  const skipped=mergeRules(obj,file);
+  RULE_CATS.forEach(c=>{if(rules[c])rules[c]=rules[c].filter(e=>!old.has(e));});
+  prunePackMeta();reindexRules();recomputeDups();
+  return skipped;
+}
+/* Rules files as bytes -> merged into the pool. Pure — no DOM, no storage —
+   so the suites drive it directly; importRulesFiles() reads and reports.
+   A zip (known by its first bytes, whatever its name) goes through
+   readDataArchive(), and each pack inside is imported under its OWN file
+   name: the loaded-data rows and version chips stay per pack, and the zip
+   replaces the same packs imported loose. A zip is read whole before any of
+   it merges, so a damaged one changes nothing. Anything else is one JSON pack.
+   Returns {files, archives:[{name,kind,version,count}], failed:[{name,why}],
+   skipped}. */
+function importRulesPayloads(payloads){
+  const res={files:0,archives:[],failed:[],skipped:{}};
+  const parse=(name,bytes)=>{
+    let obj;
+    try{obj=JSON.parse(utf8Text(bytes));}catch(e){res.failed.push({name,why:"not valid JSON"});return null;}
+    if(!obj||typeof obj!=="object"||Array.isArray(obj)){res.failed.push({name,why:"not a rules file"});return null;}
+    return obj;
+  };
+  (Array.isArray(payloads)?payloads:[]).forEach(p=>{
+    const name=String((p&&p.name)||"file"),raw=p&&p.bytes;
+    if(!raw||!ArrayBuffer.isView(raw)){res.failed.push({name,why:"it couldn't be read"});return;}
+    const bytes=new Uint8Array(raw.buffer,raw.byteOffset,raw.byteLength);
+    if(!isZipBytes(bytes)){
+      const obj=parse(name,bytes);
+      /* importPack/mergeRules are given whatever a pack's JSON claims; a shape
+         that parses but breaks something downstream (a bad `requires`, a
+         malformed subclass) must not take the other files in this import down
+         with it — it is named and skipped like any other bad pack. */
+      if(obj){
+        try{addSkipped(res.skipped,importPack(obj,name));res.files++;}
+        catch(e){res.failed.push({name,why:"not a rules file"});}
+      }
+      return;
+    }
+    let arc;
+    try{arc=readDataArchive(bytes,name);}
+    catch(e){res.failed.push({name,why:ZIP_WHY[e&&e.code]||"it couldn't be read"});return;}
+    const before=res.failed.length;let count=0;
+    arc.packs.forEach(pk=>{
+      const obj=parse(pk.name+" in "+name,pk.bytes);
+      if(!obj||(arc.kind==="loose"&&!isRulesPack(obj)))return;
+      try{addSkipped(res.skipped,importPack(obj,pk.name));count++;}
+      catch(e){res.failed.push({name:pk.name+" in "+name,why:"not a rules file"});}
+    });
+    if(!count&&arc.kind==="loose"&&res.failed.length===before){res.failed.push({name,why:ZIP_WHY.empty});return;}
+    res.archives.push({name,kind:arc.kind,version:arc.version,count});
+  });
+  return res;
+}
+/* the first sentences of the status line: each zip, the loose files, each failure */
+function importSummary(res){
+  const s=[];
+  res.archives.forEach(a=>s.push(`Imported ${a.name}: ${a.count} ${a.kind==="loose"?"file":"pack"}${a.count===1?"":"s"}${a.version?", data "+a.version:""}.`));
+  if(res.files)s.push(`Merged ${res.files} file${res.files===1?"":"s"}.`);
+  res.failed.forEach(f=>s.push(`Couldn't import ${f.name}: ${f.why}.`));
+  return s.join(" ");
+}
+/* Both status lines, Settings' and the home screen's, whichever is on show.
+   The home one used to be overwritten with the bare count 400 ms after an
+   import, which hid every failure there.
+
+   Neither line is reachable from the Rules tab's own "Import rules files"
+   links: #rulesStatus lives in the Settings modal, which isn't open, and
+   #homeRulesStatus is on the home screen, hidden behind the sheet. A locked
+   or damaged zip imported from there used to show nothing at all. `opts.toast`
+   (passed only for the FINAL message, never "Reading…") also raises a toast
+   when neither line is on screen to read: no #rulesStatus, and #homeRulesStatus
+   is absent or hidden (`offsetParent===null`). toast() sets text itself —
+   never esc() msg before handing it there. */
+function rulesImportStatus(msg,cls,opts){
+  updateRulesStatus(msg,cls);
+  const h=document.getElementById("homeRulesStatus");if(h)h.textContent=msg;
+  if(opts&&opts.toast&&!document.getElementById("rulesStatus")&&!(h&&h.offsetParent!==null))toast(msg);
+}
+/* Settings → Import files, the home screen's import and the Rules tab's two:
+   read every file as bytes, import, save the cache, and say what happened.
+   A save that does not land is said on the same line (the storage rule).
+   Resolves to {msg, cls} once the save has landed or failed, for the suites. */
 function importRulesFiles(files){
-  const list=Array.from(files);let ok=0,bad=0;const skipped={};
-  (function next(i){
-    if(i>=list.length){const m=missingSummary(),sk=skippedSummary(skipped);saveRulesCache();refreshRulesUI();renderRulesData();updateRulesStatus(`Merged ${ok} file(s)${bad?", "+bad+" failed":""}. `+rulesStatusText()+m+sk,(bad||m||sk)?"err":"ok");return;}
+  const list=Array.from(files||[]);
+  rulesImportStatus(`Reading ${list.length} file${list.length===1?"":"s"}…`,"");
+  const readOne=f=>new Promise(resolve=>{
     const r=new FileReader();
-    r.onload=()=>{try{addSkipped(skipped,mergeRules(JSON.parse(r.result),list[i].name));ok++;}catch(e){bad++;}next(i+1);};
-    r.onerror=()=>{bad++;next(i+1);};
-    r.readAsText(list[i]);
-  })(0);
+    r.onload=()=>resolve({name:f.name,bytes:new Uint8Array(r.result)});
+    r.onerror=()=>resolve({name:f.name,bytes:null});
+    r.readAsArrayBuffer(f);
+  });
+  return Promise.all(list.map(readOne)).then(payloads=>{
+    const res=importRulesPayloads(payloads);
+    const saving=saveRulesCache();
+    refreshRulesUI();renderRulesData();
+    const m=missingSummary(),sk=skippedSummary(res.skipped);
+    const msg=(importSummary(res)+" "+rulesStatusText()+m+sk).trim();
+    const cls=(res.failed.length||m||sk)?"err":"ok";
+    rulesImportStatus(msg,cls,{toast:true});
+    return saving.then(err=>{
+      if(!err)return {msg,cls};
+      renderRulesData();rulesImportStatus(msg+" "+err,"err",{toast:true});
+      return {msg:msg+" "+err,cls:"err"};
+    });
+  }).catch(e=>{
+    /* importRulesPayloads() itself names each bad pack and never throws, but
+       nothing downstream (a storage call, a render) is guaranteed not to — and
+       without this, that exception strands "Reading N file(s)…" on screen
+       forever and skips the cache save entirely (#83 final review). */
+    const msg="Import failed: "+((e&&e.message)||String(e));
+    rulesImportStatus(msg,"err",{toast:true});
+    return {msg,cls:"err"};
+  });
 }
 /* download a split example set: a manifest plus one file per category */
 function downloadRulesTemplates(){

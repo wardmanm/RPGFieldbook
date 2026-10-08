@@ -35,7 +35,7 @@ jobs:
           echo "ok — $(ls src/js/*.js scripts/*.js src/tests/*.js | wc -l) files"
 
       - name: Python syntax
-        run: python3 -m py_compile scripts/*.py src/tests/*.py
+        run: python3 -m py_compile scripts/*.py src/tests/*.py tools/data-kit/*.py
 
       - name: Shell syntax (dev entry points)
         run: bash -n dev.sh && bash -n src/tests/run.sh

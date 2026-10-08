@@ -10,7 +10,7 @@ labels: data-update
 
 **Source** — book, packet or 5e-tools file this comes from
 
-<!-- Data-only changes need no UNRELEASED bullet and no release. But if the
-     packs change, release.js bumps that system's DATA_VERSIONS, which is what
-     tells players to re-import. -->
+<!-- Data-only changes need no UNRELEASED bullet. Changed packs get a new
+     version in data/packs.json at the next release, app or data
+     (node scripts/data-release.js), which is what tells players to re-import. -->
 

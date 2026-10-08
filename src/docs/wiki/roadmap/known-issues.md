@@ -79,6 +79,16 @@ Known behaviour that is accepted for now.
 - **Xanathar's five Adamantine Ammunition pieces carry rarity "Unknown"** (5e-tools writes
   "unknown"), which sorts first in the item finder's Rarity filter. → ledger L4989, and
   [Ammunition](../features/ammunition.md)
+- **Fieldbook before 1.8.0 can't open the rules-data zip.** A player on an older copy unzips it and
+  imports the `.json` files inside; the release notes, `NOTICE.md` and README §3a say so. The
+  manifest has no rules keys, so an old copy given it as a loose file merges nothing. → ledger
+  L5082, and [Data archive](../architecture/data-archive.md)
+- **A data update is announced, never installed.** The notice links the release; the player
+  downloads the zip and imports it. → ledger L5082, and
+  [Settings & updates](../features/settings-and-updates.md)
+- **The newer-data notice needs the network** (the GitHub releases list and the tag's registry), and
+  is silent offline or when GitHub refuses, so an offline player never learns of a data release.
+  It runs once per load, like the app's update check. → ledger L5082
 
 ## Deferred
 
@@ -276,8 +286,7 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   - `openModal()` says "~30 call sites"; there are about 50.
   - `modalTakeFocus()` and `toast()` still describe the combat view's removed `inert`.
   - `fetch-icons.js` points to a nonexistent `src/icons/README.md`.
-  - `release.js` says data versions are left alone with no tags.
-  - `bundle-rules.js` places `mergeRules()` in `88-settings.js` and lists two systems.
+  - `bundle-rules.js` places `mergeRules()` in `88-settings.js`.
   - The `convert.py` USAGE docstring is out of date.
   - `spellDamageFromText()` claims a pattern reads Delayed Blast Fireball.
   - `release.yml`'s header still shows `git commit -am`.
@@ -412,3 +421,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-09-29 — Narrowed again: `deleteCharacter()` and `setAutoload()` now report a refused index write; only most `saveSettings()` callers still don't. → ledger L4856, #81
 - 2026-10-02 — Deferred: thrown weapons as their own ammunition, firearm reloading and energy cells, magic ammunition variants outside the selection rule, and quiver capacity. → ledger L4952, #6
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. Recorded: 2014-named ammunition pieces and dropped gear reading as unmatched on old sheets, same-named grants looking identical in the picker, and Adamantine Ammunition's "Unknown" rarity. → ledger L4989, #6
+- 2026-10-07 — The rules-data archive: older copies can't open the zip, a data update is announced and never installed, and the notice needs the network. Removed: `release.js`'s stale no-tags comment, gone with that code. → ledger L5082, #83

@@ -20,8 +20,8 @@ const vm = require("vm");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 
-/* the three globals a suite may need to WRITE, so they need accessors */
-const MUTABLE = ["rules", "character", "activeId", "updateAvailable"];
+/* the globals a suite may need to WRITE, so they need accessors */
+const MUTABLE = ["rules", "character", "activeId", "updateAvailable", "dataUpdate"];
 
 function loadApp(names) {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "src/manifest.json"), "utf8"));
@@ -43,6 +43,7 @@ function loadApp(names) {
   const ctx = {
     console, JSON, Math, Date, RegExp, String, Number, Array, Object, Set, Map,
     parseInt, parseFloat, isNaN,
+    TextDecoder, TextEncoder,
     setTimeout: noop, clearTimeout: noop,
     crypto: {getRandomValues: a => a},
     alert: noop,

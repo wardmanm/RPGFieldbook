@@ -3,24 +3,30 @@
 The Settings modal (the cog in the top bar) and the app's two ways of saying what version you are
 on: the version button, which opens the in-app changelog, and the **update pill** that takes its place
 when GitHub has a newer release. Settings holds the look of the app, the open character's own
-options, the rules data — where it comes from, what is loaded, and whether a loaded pack is older than
-this build expects — and backup of settings and rules.
+options, the rules data — where it comes from, what is loaded, whether a loaded pack is older than
+this build expects, and whether a newer copy of it is out — backup of settings and rules, and the
+credits that the icons and the loaded packs require.
 
 **Code:** `SET_SECTIONS`, `setSecOpen()`, `setSecHTML()`, `openSettings()`, `encSettingsHint()`,
 `rulesStatusText()`, `updateRulesStatus()`, `refreshRulesUI()`, `loadedRulesGroups()`,
-`removeRulesGroup()`, `clearAllRules()`, `dataStatus()`, `dataStatusHTML()`, `rulesCacheWarning()`,
-`rulesBadge()`, `SETTINGS_KEYS`, `foldLegacySettings()`, `readSettingsFile()`, `importSettings()`,
+`removeRulesGroup()`, `clearAllRules()`, `dataStatus()`, `dataUpdateFor()`, `dataStatusHTML()`,
+`rulesCacheWarning()`, `rulesBadge()`, `rulesCreditsHTML()`, `SETTINGS_KEYS`, `foldLegacySettings()`, `readSettingsFile()`, `importSettings()`,
 `rulesPackSummary()`, `settingsImportQuestionHTML()`, `askSettingsImport()`,
 `finishSettingsImport()`, `settingsImportStatus()` in `88-settings.js` · `renderSrcRows()`,
-`renderRulesData()`, `rulesDataHTML()`, `fetchAllRules()`, `fetchRulesFrom()`,
+`renderRulesData()`, `rulesDataHTML()`, `dataUpdateHint()`, `fetchAllRules()`, `fetchRulesFrom()`,
 `applyFetchedSource()`, `importRulesFiles()`, `poolFromExport()`, `downloadRulesTemplates()`,
 `requiresStatusHTML()` in `89-rules-merge.js` · `saveSettings()` in `70-persistence.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
-`checkForUpdate()`, `showUpdatePill()`, `updBannerHTML()`, `openChangelog()` in `30-version.js` ·
-`boot()`, `wire()` in `90-boot.js` · `release.js`, `gen-changelog.js`, `bundle-rules.js` in `scripts/`
+`cmpDataVer()`, `checkForUpdate()`, `showUpdatePill()`, `updBannerHTML()`, `openChangelog()`,
+`pickDataRelease()`, `dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js` ·
+`boot()`, `wire()` in `90-boot.js` · `release.js`, `data-release.js`, `gen-changelog.js`,
+`bundle-rules.js` in `scripts/` · **Data:** `data/packs.json`
 · **Tests:** `rules-data.js` (the modal's ids both ways, the fold state, `dataStatus()`, Fetch all,
-the header chip, and Import settings driven through its real handler),
+the header chip, and Import settings driven through its real handler), `data-archive.js` (the
+`update` state, the hint line, the badge's suffix, `pickDataRelease()`, `dataUpdateFrom()`,
+`checkForDataUpdate()` against a stubbed network, and the credits list escaping hostile text),
 `char-update.js` (`cmpVer()`, `updBannerHTML()`) · **See also:**
-[Rules packs](../architecture/rules-packs.md), [Storage](../architecture/storage.md),
+[Rules packs](../architecture/rules-packs.md), [Data archive](../architecture/data-archive.md),
+[Storage](../architecture/storage.md),
 [Rules-update tool](rules-update-tool.md), [Theming & icons](../ui/theming-and-icons.md),
 [RELEASING](../../RELEASING.md)
 
@@ -35,13 +41,19 @@ list's `.fgroup` / `.fghead` / `.fcaret`:
   live "carrying X of Y" hint), coins count as weight, colour current HP, skills display, Hit Dice
   display, whether the Journal tab shows its Trackers card, and the rules-update check with the
   version the sheet was last checked against.
-- **Rules data** — badged with the entry count (`rulesBadge()`, redrawn by every `renderRulesData()`
-  so it follows imports, fetches, removals and Clear all while the modal is open): sources, the
-  loaded-data list, and the status line.
+- **Rules data** — badged with the entry count, plus ` · update` when a newer copy of a loaded pack
+  is out (`rulesBadge()`, redrawn by every `renderRulesData()` so it follows imports, fetches,
+  removals, Clear all and the data check while the modal is open): sources, the loaded-data list,
+  and the status line.
 - **Characters & backup** — the character library, Export / Import settings, and the status line
   that says what an import did (`#setImpStatus`).
 - **Credits & licences** — the game-icons.net attribution CC BY 3.0 requires, in the app because
-  `fieldbook.html` travels as a lone file; see [Theming & icons](../ui/theming-and-icons.md).
+  `fieldbook.html` travels as a lone file (see [Theming & icons](../ui/theming-and-icons.md)); then
+  "Rules data you have loaded" (`rulesCreditsHTML()`): each loaded pack that states a licence or a
+  credit, as its title, its attribution and its licence. `CC-BY-4.0`, `CC-BY-SA-3.0` and `MIT` link
+  to their licence pages; any other id is plain text; everything is escaped. The list is left out
+  when no loaded pack has a credit. The credits come from `rules.credits` (see
+  [Data archive](../architecture/data-archive.md)).
 
 **Fold state** is a collapse map, `settings.setCollapse` (true = shut); an absent key falls back to
 the first-run default in `SET_SECTIONS` — Appearance and This character open, the rest shut. A toggle
@@ -60,8 +72,12 @@ arrived, "Couldn't fetch … so nothing changed", with the pool and the cache le
 were. Offline or CORS is the likely cause, so a failure suggests importing files. A cache save that
 is refused is reported on the same line. Nothing fetches on its own — only this button, and the
 sources hint says it needs a connection. The mechanics are in
-[Rules packs](../architecture/rules-packs.md). **Import files** merges each
-chosen file under its file name (`importRulesFiles()`); **Get templates** downloads a manifest and one
+[Rules packs](../architecture/rules-packs.md). **Import files** takes `.json` files and zips
+(`importRulesFiles()`): each JSON file, and each pack inside a zip, is imported under its own file
+name, replacing what that file loaded before. The status line says "Reading N files…" at once, then
+names each zip with its pack count and data version, and each file that failed with the reason
+("Couldn't import 83-locked.zip: it's password-protected."), on the home screen's status line too
+(see [Data archive](../architecture/data-archive.md)); **Get templates** downloads a manifest and one
 example file per category; **Clear all** confirms, says characters are unaffected, and empties the
 pool. A legacy `settings.rulesUrl` is folded into the list at boot.
 
@@ -73,11 +89,21 @@ A red line above the list (`rulesCacheWarning()`) says when the last cache save 
 cannot quietly undo an import (see [Storage](../architecture/storage.md)).
 
 **Pack badges.** `dataStatus(g)` compares the pack's `_dataVersion` (its `dataVersion`, stamped at
-merge by `mergeRules()`) with `DATA_VERSIONS[source]`: older is **stale** — an amber "update available
-· v*X*" chip whose tooltip says to re-import from the latest release; equal or newer is **current**, a
-quiet "v*X*"; no stamp or no entry for that system is **unknown** and shows nothing.
-`DATA_VERSIONS` records the release in which each system's data last changed, bumped by `release.js`
-only when that `data/<dir>/` moved; `bundle-rules.js` stamps each pack.
+merge by `mergeRules()`) with `cmpDataVer()`, first against `DATA_VERSIONS[source]` and then against
+the newer-data check's copy of the same system and file name (`dataUpdateFor()`):
+
+- **stale** — older than `DATA_VERSIONS`: an amber "update available · v*X*" chip whose tooltip says
+  to re-import from the latest release.
+- **update** — not stale, but a data release has a newer copy: a muted "v*A* · v*B* out", its
+  tooltip naming the data release. One hint line above the list, "Newer rules data is out: XPHB
+  v1.8.0-1. Download it from the release page." (`dataUpdateHint()`), links the release, in
+  Settings and on the home screen, since both draw `rulesDataHTML()`.
+- **current** — a quiet "v*X*".
+- **unknown** — no stamp, a stamp that doesn't parse, or nothing to compare with: nothing shown.
+
+`DATA_VERSIONS` is the snapshot of `data/packs.json` that `release.js` took when this build was
+released; `bundle-rules.js` stamps each pack from the registry (see
+[Rules packs](../architecture/rules-packs.md)).
 
 **Export settings** writes `{_type:"fieldbook-settings", settings, rules}`: the whole `settings`
 object *and* the whole rules pool as it stands, every entry with its provenance stamps. The shape
@@ -100,7 +126,8 @@ came. Then:
   **Keep my rules** imports the settings only. **Replace my rules** imports both. The window
   (`settingsImportQuestionHTML()`) shows the file's rules and the loaded ones, each as "N packs, M
   entries" with every pack's count and data version. It then says in red what replacing loses:
-  each loaded pack the file does not have, and any it would put back an older copy of. It says
+  each loaded pack the file does not have, and any it would put back an older copy of (by
+  `cmpDataVer()`, so `1.8.0-1` is older than `1.8.0-2`). It says
   characters are not affected either way.
 
 `finishSettingsImport()` applies the answer. It runs `foldLegacySettings()` (the first builds'
@@ -126,6 +153,17 @@ on in its tooltip. The pill is a `<button>` that opens the same changelog, which
 response's `html_url` only when that is a `https://github.com/` page, and the repo's releases page
 otherwise, because it becomes an `<a href>`.
 
+**The newer-data check.** Right after it, `boot()` calls `checkForDataUpdate()`, which skips under
+the same two conditions. A data-only release is never GitHub's "latest", so `checkForUpdate()` never
+sees one. This lists `api.github.com/repos/<repo>/releases?per_page=100`, and `pickDataRelease()`
+takes the newest by `cmpDataVer()` that is not a draft or pre-release, has a `vX.Y.Z` or
+`data-vX.Y.Z-N` tag, is built for this app or an older one (its base no newer than `APP_VERSION`),
+and carries its `fieldbook-data-standalone-<version>.zip`. It then reads that tag's `data/packs.json`
+from `raw.githubusercontent.com`, and `dataUpdateFrom()` keeps only well-formed packs. The result is
+`dataUpdate`, and `renderRulesData()` redraws the rows, the hint and the badge. Packs the player
+hasn't loaded are never mentioned. Every failure is silent; the link, like the pill's, is a
+`https://github.com/` page or the releases page.
+
 ## Rules that must hold
 
 - **Fold state is stored as COLLAPSE, not "open"**, so a first-run default can change later without
@@ -135,13 +173,16 @@ otherwise, because it becomes an `<a href>`.
 - **Every id `openSettings()` looks up exists in the markup it builds, and every id it renders is
   wired** — `rules-data.js` parses the function's own source and checks both directions.
 - **The update check is optional and silent.** No network, no repo, rate-limited, private repo: no
-  pill, no error, nothing else changes.
+  pill, no error, nothing else changes. The newer-data check is the same.
+- **A newer data release is a quiet notice, never the amber chip.** A data release is optional; a
+  pack behind the app it is loaded in is not.
 - **The changelog stays reachable while the pill is up** — the pill replaced the only other way in.
 - **`updBannerHTML()` escapes the release tag**; it comes from the network.
 - **An unknown data version is not stale.** A false alarm on someone's own content is worse than
   silence.
-- **Never hand-edit `APP_VERSION`, `DATA_VERSIONS` or `CHANGELOG`**; `release.js` owns all three, and
-  `APP_VERSION` must only ever rise or the update check breaks.
+- **Never hand-edit `APP_VERSION`, `DATA_VERSIONS`, `CHANGELOG`, or the versions, digests and
+  `release` in `data/packs.json`**; `release.js` owns the first three, `release.js` and
+  `data-release.js` the registry's, and `APP_VERSION` must only ever rise or the update check breaks.
 - **Fetch all never loses what is loaded**, and a run where nothing arrives says "nothing changed"
   and writes neither the pool nor the cache. It is offline-first: failing is the expected case.
 - **Import settings never replaces loaded rules unasked**, and the rules a settings file carries go
@@ -185,6 +226,7 @@ otherwise, because it becomes an `<a href>`.
 | When Import settings asks | Only when the file carries readable rules and some are loaded | Always: a question with nothing to lose is noise. Never: the #70 bug (L4134) |
 | A settings file with an empty pool | Treated as carrying no rules | Replacing with it: that silently unloads everything, which is Clear all's job and it confirms (L4134) |
 | Where an import's outcome is shown | A status line beside the Import button | The rules status line: it sits in the Rules data section, usually folded shut. A toast: a failed save must not vanish (L4134) |
+| How a newer data release is shown | Muted text on the row, one hint line above the list, ` · update` on the Settings count | The amber "update available" chip: that says the pack is behind the app it is loaded in, and a data release is optional (L5082) |
 
 ## Open
 
@@ -215,3 +257,4 @@ otherwise, because it becomes an `<a href>`.
 - 2026-09-28 — The pack name in the rules status line is escaped; the Download link only takes a github.com page. → ledger L3940
 - 2026-09-28 — Import settings asks before replacing loaded rules, rebuilds the file's pool through `mergeRules()`, and says what it did. → ledger L4134, #70
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
+- 2026-10-07 — Import files takes zips and names each failure; the `update` state, its hint line and ` · update` on the count, from `checkForDataUpdate()`; Credits & licences lists each loaded pack's credit. → ledger L5082, #83

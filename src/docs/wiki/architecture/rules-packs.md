@@ -10,19 +10,24 @@ covers what the app does with packs.
 
 **Code:** `mergeRules()`, `srcLabel()`, `keyOf()`, `ruleName()`, `reindexRules()`, `tidyRules()`, `tidyRule()`,
 `skippedSummary()`, `recomputeDups()`,
-`dispName()`, `ruleById()`, `resetRules()`, `importRulesFiles()`, `fetchAllRules()`,
+`dispName()`, `ruleById()`, `resetRules()`, `importRulesFiles()`, `importPack()`, `dropOwnedPackMeta()`,
+`creditOf()`, `fetchAllRules()`,
 `fetchRulesFrom()`, `applyFetchedSource()`, `poolFromExport()`, `missingRequirements()`, `requiresStatusHTML()`,
 `missingSummary()`, `rulesDataHTML()`, `renderRulesData()` in `89-rules-merge.js`; `glossRepair()` in `00-constants.js`;
-`loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `pruneRequires()`, `clearAllRules()`,
+`loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `prunePackMeta()`, `clearAllRules()`,
 `dataStatus()`, `dataStatusHTML()`, `refreshRulesUI()`, `rulesBadge()` in `88-settings.js`; `systemOf()`, `racesForCharacter()` in `52-race.js`; `findRaceDef()`,
-`findClassDef()`, `subclassesFor()` in `50-classrace.js`; `DATA_VERSIONS` and `cmpVer()` in
-`30-version.js`; `bundle()` and `dataVersions()` in `scripts/bundle-rules.js`; `dataChangedSince()`
-in `scripts/release.js` · **Data:** `data/<dir>/*.json` → `dist/<dir>_full.json` · **Tests:**
-`rules-data.js` (bundle ≡ individual files, the three data states, every shipped pack agrees with
-`DATA_VERSIONS`, missing requirements, Fetch all keeping what is loaded, a settings file's pool
-rebuilt and round-tripped, entries with no name skipped and reported), `sheet.js` (a wholesale pool
-full of junk, tidied and rendered), `tables.js`, `docs.js` (`DATA_VERSIONS` is flat JSON,
-X.Y.Z, and every system maps to a data dir) · **See also:** [Converter](../data/converter.md),
+`findClassDef()`, `subclassesFor()` in `50-classrace.js`; `DATA_VERSIONS` and `cmpDataVer()` in
+`30-version.js`; `bundle()` and `registry()` in `scripts/bundle-rules.js`; `pack_digest()` and
+`changed_packs()` in `tools/data-kit/fbdata.py` · **Data:** `data/packs.json`, `data/<dir>/*.json` →
+`dist/<file>` · **Tests:**
+`rules-data.js` (bundle ≡ individual files, the data states, every bundle agrees with
+`data/packs.json` on its system, title, `dataVersion`, licence and credit, missing requirements,
+Fetch all keeping what is loaded, a settings file's pool
+rebuilt and round-tripped, entries with no name skipped and reported), `data-archive.js` (importing
+bytes and zips, `importPack()` replacing, credits, the `update` state), `sheet.js` (a wholesale pool
+full of junk, tidied and rendered), `tables.js`, `docs.js` (`data/packs.json` parses, every pack's
+`dir` exists, and every `DATA_VERSIONS` system has a pack at or after it) · **See also:**
+[Data archive](data-archive.md), [Converter](../data/converter.md),
 [Supplements](../data/supplements.md), [Homebrew](../data/homebrew.md),
 [Settings & updates](../features/settings-and-updates.md), [Rich text](rich-text.md)
 
@@ -46,9 +51,15 @@ beats that name-based guess. Classes, subclasses, spells, feats, items and backg
 to every character.
 
 **Getting packs in.** `importRulesFiles()` handles the file picker, reached from Settings, the home
-screen, and the import links on the Rules tab. `fetchAllRules()` handles the player's own source
+screen, and the import links on the Rules tab. It reads each chosen file as bytes and hands them to
+`importRulesPayloads()`: a zip, known by its first bytes, is opened and each pack inside is imported
+under its own file name; anything else is one JSON pack (see [Data archive](data-archive.md)). Every
+pack goes through `importPack()`, which **replaces what that file name and system loaded before**:
+entries the new copy no longer has are removed, not left beside it. Packs with the same file name
+and a different system are untouched. `fetchAllRules()` handles the player's own source
 URLs from Settings → **Fetch all**. That is the only rules fetch the app makes; it runs on the button
-and never at boot. **Fetching never loses what is loaded:**
+and never at boot. (The newer-data check at boot reads a registry of versions, never rules; see
+[Settings & updates](../features/settings-and-updates.md).) **Fetching never loses what is loaded:**
 
 1. Each source URL is fetched in order with `cache:"no-store"`. `fetchRulesFrom()` follows any
    `include` array relative to the URL (so a manifest pulls in its files) and **collects** the packs
@@ -96,20 +107,27 @@ in a `finally`.
   keyword's `term`) as text: a non-blank string, or a number, which becomes text. An entry that is
   not an object or has none is skipped, and `mergeRules()` returns the count per category.
 - Each entry is keyed by source + `keyOf()` (a lower-cased name, or `term` for keywords, or
-  `class|name` for subclasses). **The same source and name replaces the entry in place**, which is
-  how re-importing a pack updates it. The same name from a *different* source is kept beside it,
-  and `dispName()` shows it as "Name (SRC)" using `rules._dups`.
+  `class|name` for subclasses). **The same source and name replaces the entry in place**; on a
+  re-import, `importPack()` then drops what the new copy did not replace. The same name from a
+  *different* source is kept beside it, and `dispName()` shows it as "Name (SRC)" using
+  `rules._dups`.
 - Keywords are rebuilt from a fixed set of fields (`term`, `type`, `text`, `image`, `cond`) with a
   fresh `id`, after `glossRepair()`: a keyword written `{name, description}`, the way every other
   category is, reads as its term and text. Every other entry is a shallow copy of what the pack had.
-- `requires` is stored per source in `rules.requires`.
+- `requires` is stored per source in `rules.requires`, and a pack's `license` and `attribution` in
+  `rules.credits` (`creditOf()`: a licence over 64 characters is dropped, an attribution cut to
+  2,000). Both only ever get set here; `importPack()` (through `dropOwnedPackMeta()`),
+  `applyFetchedSource()` and `prunePackMeta()` remove a label's once nothing else carries it.
 - Then `reindexRules()` gives every entry a positional `_id` (`r0`, `r1`, …), and
   `recomputeDups()` rebuilds the duplicate sets.
 
-After the last file, the importer saves the cache, calls `refreshRulesUI()` and
-`renderRulesData()`, and writes one status line, with `missingSummary()` appended when something is
-missing and `skippedSummary()` when entries were skipped ("Skipped 2 glossary entries with no
-term."), in red for either. `renderRulesData()` also refreshes the Settings "Rules data" header chip through
+The importer writes "Reading N files…" to both status lines, Settings' and the home screen's, before
+any work. After the last file it saves the cache, calls `refreshRulesUI()` and `renderRulesData()`,
+and writes one line to both: each zip with its pack count and data version, each file that failed
+and why (`importSummary()`), the counts, then `missingSummary()` when something is missing and
+`skippedSummary()` when entries were skipped ("Skipped 2 glossary entries with no term."), in red
+for any of those. A cache save that fails is added to the same line once it settles.
+`renderRulesData()` also refreshes the Settings "Rules data" header chip through
 `rulesBadge()`, because every path that changes the pool calls it. **Boot never merges.** It restores the already-merged pool from the cache and rebuilds
 only `_id` and `_dups`.
 
@@ -135,8 +153,8 @@ added beside the existing one as "Gloom Stalker (XGE)", and the existing key is 
 `_file` (file imports) or `_source` (fetched), and `rulesBucket()` files each group under Rulebook,
 its single category, or Mixed. Each row carries the pack's version badge (`dataStatusHTML()`), its
 missing-content chip (`requiresStatusHTML()`) and a delete button (`removeRulesGroup()`). After a
-removal, `pruneRequires()` drops a source's `requires` once none of its entries remain; the fetch
-uses it too. Fetched entries group by label, whatever URL they came from. `clearAllRules()` confirms with
+removal, `prunePackMeta()` drops a source's `requires` and credits once none of its entries remain;
+the fetch uses it too. Fetched entries group by label, whatever URL they came from. `clearAllRules()` confirms with
 counts and says plainly that characters are not affected: `resetRules()` touches only the pool.
 
 **Missing dependencies.** `missingRequirements(src)` is a pure function of `rules`, called at
@@ -153,19 +171,28 @@ The result is a red `.chip.bad` reading "**! n missing**". Its `title=` tooltip 
 category and names what is absent, plus the file to import where one was declared. Nothing blocks
 loading.
 
-**Is my pack current?** `DATA_VERSIONS` in `30-version.js` records, for each pack `system`, the
-release in which that system's data last changed. `scripts/release.js` bumps a system only when
-`git diff` against the last `v*` tag, working tree included, says its `data/<dir>/` moved. With no
-tag, it bumps every system. `bundle-rules.js` reads `DATA_VERSIONS` and never duplicates it,
-stamping each pack's `dataVersion`. It fails the build for a system with no entry. `mergeRules()`
-copies that value onto every entry as `_dataVersion`, so it survives the cache. `dataStatus()`
-compares with `cmpVer()`: an **older** pack is `stale` (an amber "update available" chip), an equal
-or newer one is `current` (a quiet version tag), and a pack with no stamp, or a system with no entry,
-is `unknown` (nothing shown). `release.yml` runs the same per-directory diff to name, in the release
-notes, only the packs worth re-downloading.
+**Is my pack current?** Each pack's version lives in the registry, `data/packs.json`, beside a
+digest of its content (see [Data archive](data-archive.md)). A release, app or data, gives a new
+version only to the packs whose digest changed; `bundle-rules.js` stamps each bundle's `dataVersion`
+from the registry, and `mergeRules()` copies it onto every entry as `_dataVersion`, so it survives
+the cache. `DATA_VERSIONS` in `30-version.js` is a snapshot of the registry taken at each app
+release: the versions this build shipped with. `dataStatus()` compares with `cmpDataVer()`, which
+reads `X.Y.Z` and `X.Y.Z-N`, and gives one of four states:
 
-**Bundling.** `bundle-rules.js` rolls each `data/<dir>/` into one `dist/<dir>_full.json` stamped
-`rulebook:true`, `version:1` (the *schema* version) and `dataVersion`. It mirrors `mergeRules()`
+- **unknown** — no stamp, a stamp `cmpDataVer()` can't read, or nothing to compare it with: no
+  `DATA_VERSIONS` entry and no data release's copy of the pack. Nothing is shown.
+- **stale** — older than `DATA_VERSIONS`: the amber "update available" chip.
+- **update** — not stale, but a data release has a newer copy of this file (`dataUpdateFor()`): a
+  muted "v*A* · v*B* out" (see [Settings & updates](../features/settings-and-updates.md)).
+- **current** — otherwise: a quiet version tag.
+
+The release notes name the packs whose version is that release's, from the registry
+(`scripts/data-release-notes.js`).
+
+**Bundling.** `bundle-rules.js` rolls each registered `data/<dir>/` into one `dist/<file>` stamped
+`rulebook:true`, `version:1` (the *schema* version), and the registry's `title` as `name`, `version`
+as `dataVersion`, and `license` and `attribution` when it has them. The folder's files must declare
+the registry's `system`, or the build fails. It mirrors `mergeRules()`
 (keyed by name, last one wins, replaced in place), because importing the bundle has to equal
 importing the files one by one, and a test asserts that for every system. `system`,
 `excludeSystems` and `requires` are folder-level: every file in a folder must agree, or the build
@@ -200,12 +227,13 @@ files).
 - **`rules` is persisted whole, so it stays plain JSON** (see [Storage](storage.md)).
 - **Unknown is not stale.** A false alarm on someone's own content is worse than silence, and a pack
   *newer* than the build is simply ahead.
-- **`DATA_VERSIONS` is owned by `release.js`.** Never hand-edit it. It must stay a flat JSON object:
-  both scripts find it with `\{[^}]*\}` and `JSON.parse` it. Every key needs a `SYSTEM_DIRS` entry
-  in `release.js` and a line in `release.yml`'s diff.
-- **`data/5e2024/` must reproduce byte for byte** from the converter. Otherwise XPHB's version bumps
-  and every player is told to re-download a pack that did not change. See
-  [Converter](../data/converter.md).
+- **`DATA_VERSIONS` is a snapshot written by `release.js` from `data/packs.json`.** Never hand-edit
+  it, nor the registry's versions, digests or `release`. It must stay a flat JSON object: `release.js`
+  and the `docs` suite find it with `\{[^}]*\}` and `JSON.parse` it.
+- **Re-importing replaces by file name and system,** never by file name alone.
+- **`data/5e2024/` must reproduce byte for byte** from the converter. Any value that moves changes
+  XPHB's digest, so the next release bumps it and every player is told to re-download a pack that
+  did not change. See [Converter](../data/converter.md).
 
 ## Traps
 
@@ -275,8 +303,6 @@ files).
   entries, as re-importing the file would. That is the source + name keying, not a fetch rule.
 - `requires` entries under `subclasses` can never match (see Traps).
 - The Artificer and Mystic are 2014/UA content labelled `XPHB` in the core pack.
-- The header comment on `scripts/release.js`'s data-version block says it leaves versions alone
-  when tags are unavailable. The code bumps every system in that case.
 - **A settings file's unusable entries are dropped without a message.** `reindexRules()` returns
   the counts, but the Settings import handler (being rewritten in #70) does not report them yet.
 - `rules.features` is a manual picker library, so invocations and pact boons shipped as features
@@ -294,3 +320,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — Fetch all no longer resets the pool: a source replaces only what it loaded (`_url`), a failed run changes nothing, and the Settings chip follows the pool. → ledger L3797, #65
 - 2026-09-28 — A settings file's pool is rebuilt through `mergeRules()` (`poolFromExport()`), keeping provenance and order, and replaces the loaded one only when the player says so. → ledger L4134, #70
 - 2026-09-28 — Entries with no name are skipped and reported at import and fetch; `reindexRules()` tidies the pool on every path; keywords written `{name, description}` load. → ledger L4206, #71
+- 2026-10-07 — Imports take bytes and zips; a re-import replaces its pack (`importPack()`); versions come from `data/packs.json` and compare with `cmpDataVer()`, with an `update` state for a newer data release; pack credits are kept like `requires`. → ledger L5082, #83
