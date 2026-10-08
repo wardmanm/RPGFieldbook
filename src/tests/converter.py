@@ -1899,6 +1899,19 @@ f2 = T.check(_pages, _packs, {'accepted': [{'entry': 'Augury', 'text': 'dm', 'wh
 ck('#84 accepted spans and aliases clear their findings',
    not any(k in ('Augury', 'Belt of Hill Giant Strength') for k, _, _ in f2) and len(f2) == 3, f2)
 ck('#84 a table\'s header cells are checked too', ('table:Deck', 'card', None) in f2, f2)
+# a stale acceptance or alias fails srd-verbatim, as a stale correction fails the run
+f3 = T.check(_pages, _packs, {'accepted': [{'entry': 'Augury', 'text': 'dm', 'why': 't'},
+                                           {'entry': 'table:Deck', 'text': 'beholder', 'why': 't'},
+                                           {'entry': 'Augury', 'text': 'a span nothing finds', 'why': 't'}],
+                              'aliases': {'Belt of Hill Giant Strength': 'Belt of Giant Strength',
+                                          'Fireball': 'Fireball',
+                                          'Belt of Frost Giant Strength': 'Belt of Giant Strength'}})
+_stale = [(k, s) for k, s, _ in f3 if s.startswith('(')]
+ck('#84 an acceptance that matches no finding is reported, with its entry and text',
+   ('Augury', '(accepted, matched nothing) a span nothing finds') in _stale, f3)
+ck('#84 an alias that names no record is reported', ('Belt of Frost Giant Strength', '(alias names no record)') in _stale, f3)
+ck('#84 ...but not a used acceptance (prose or a table cell), a used alias, nor one its entry is found without',
+   len(_stale) == 2, _stale)
 # subraces, subclass descriptions and choice options: walked by both, under the same keys
 _walk = {'races.json': {'races': [{'name': 'Elf', 'description': 'An elf.', 'traits': [{'name': 'Keen Senses', 'description': 'Sharp.'}],
                                    'subraces': [{'name': 'Drow', 'description': 'A drow.',

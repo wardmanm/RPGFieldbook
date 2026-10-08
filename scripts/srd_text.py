@@ -150,20 +150,36 @@ def compare(srd, key, text, heading=None):
 
 def check(pages, packs, corrections):
     """[(key, span, page)] that corrections doesn't accept: every span of pack
-    text the SRD lacks, and every table cell it lacks."""
+    text the SRD lacks, and every table cell it lacks. Then the corrections
+    file's own stale lines, as the converter fails on a stale correction: an
+    `accepted` (entry, text) that matched no finding, and an `aliases` key that
+    names no record. An alias whose entry is found without it is not stale: it
+    may still be what picks the right heading (Elf/Drow, the Goliath ancestries)."""
     srd = Srd(pages)
     accepted = {(a['entry'], a['text']) for a in corrections.get('accepted') or []}
     alias = corrections.get('aliases') or {}
-    out = []
-    for key, text in records(packs):
+    used, out = set(), []
+    recs = records(packs)
+    for key, text in recs:
         spans, page = compare(srd, key, text, alias.get(key))
-        out += [(key, s, page) for s in spans if (key, s) not in accepted]
+        for s in spans:
+            if (key, s) in accepted:
+                used.add((key, s))
+            else:
+                out.append((key, s, page))
     for obj in sorted(packs.values(), key=lambda o: str(o.get('name'))):
         for t in obj.get('tables') or []:
             key = 'table:' + str(t.get('name'))
             for row in [t.get('cols') or []] + (t.get('rows') or []):
                 for cell in row:
                     s = norm(str(cell))
-                    if s and not srd.has(s) and (key, s) not in accepted:
+                    if not s or srd.has(s):
+                        continue
+                    if (key, s) in accepted:
+                        used.add((key, s))
+                    else:
                         out.append((key, s, None))
+    out += [(k, '(accepted, matched nothing) ' + s, None) for k, s in sorted(accepted - used)]
+    keys = {k for k, _ in recs}
+    out += [(k, '(alias names no record)', None) for k in sorted(alias) if k not in keys]
     return out
