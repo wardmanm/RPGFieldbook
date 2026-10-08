@@ -1966,6 +1966,55 @@ with tempfile.TemporaryDirectory() as _td:
                  os.path.join(_td, 't.json'))
     ck('#84 a prompt template with no display text is reported as unresolved', 'unresolved tags!' in _buf.getvalue(), _buf.getvalue())
 
+# ---- #84 final review: a replacement is text, never a regex template
+p = _corr_packs()
+with tempfile.TemporaryDirectory() as _td:
+    _bs = os.path.join(_td, 'bs.json')
+    json.dump({'global': [{'word': 'DM', 'replace': 'G\\g<0>M', 'why': 't', 'page': 1}]}, open(_bs, 'w'))
+    try:
+        errs = C._srd_apply_corrections(p, _bs)
+    except Exception as e:
+        errs = [repr(e)]
+ck('#84 a global swap\'s replacement is written as it stands, backslashes and all',
+   errs == [] and p['spells.json']['spells'][0]['text'].startswith('Ask the G\\g<0>M.'), (errs, p['spells.json']['spells'][0]['text']))
+with tempfile.TemporaryDirectory() as _td:
+    _src, _view = os.path.join(_td, 'dump'), os.path.join(_td, 'view')
+    os.makedirs(_src)
+    json.dump({'item': [{'name': 'Old Thing', 'source': 'XDMG', 'srd52': 'New \\1 Thing', 'rarity': 'rare',
+                         'entries': ['Old Thing hums.']},
+                        {'source': 'XDMG', 'srd52': 'Nameless', 'rarity': 'rare', 'entries': ['No name.']}]},
+              open(os.path.join(_src, 'items.json'), 'w'))
+    try:
+        C.srd_view(_src, _view)
+        _vi = json.load(open(os.path.join(_view, 'items.json')))['item']
+    except Exception as e:
+        _vi = [{'entries': [repr(e)]}]
+ck('#84 a rename\'s new name is written into its own prose as it stands, backslashes and all',
+   _vi[0]['entries'] == ['New \\1 Thing hums.'], _vi)
+ck('#84 ...and a rename-flagged entry with no name is kept, not a KeyError', len(_vi) == 2 and 'name' not in _vi[1], _vi)
+
+# ---- #84 final review: `classes` reads the feats a class feature references
+with tempfile.TemporaryDirectory() as _td:
+    dump = os.path.join(_td, 'dump')
+    _mini_dump(dump)
+    _pp = os.path.join(dump, 'class', 'class-paladin.json')
+    _fs = lambda f: [o['name'] for ch in json.load(open(f))['classes'][0]['levels']['2']['choices']
+                     if ch.get('label') == 'Choose a Fighting Style' for o in ch['from']] if os.path.exists(f) else ['(no output)']
+    r = subprocess.run([sys.executable, CONVERT, 'classes', _pp, '-o', os.path.join(_td, 'c1.json')], capture_output=True, text=True)
+    ck('#84 `classes` without --feats warns, naming the referenced feat it could not find',
+       'WARNING' in r.stdout and 'Blessed Warrior' in r.stdout and 'not in the feat index' in r.stdout, r.stdout[-600:] + r.stderr[-300:])
+    ck('#84 ...and its Paladin menu lacks Blessed Warrior', 'Blessed Warrior' not in _fs(os.path.join(_td, 'c1.json')), _fs(os.path.join(_td, 'c1.json')))
+    r = subprocess.run([sys.executable, CONVERT, 'classes', _pp, '--feats', os.path.join(dump, 'feats.json'),
+                        '-o', os.path.join(_td, 'c2.json')], capture_output=True, text=True)
+    ck('#84 `classes --feats feats.json` gives the Paladin Blessed Warrior, with no warning',
+       _fs(os.path.join(_td, 'c2.json'))[-1:] == ['Blessed Warrior'] and 'not in the feat index' not in r.stdout,
+       [_fs(os.path.join(_td, 'c2.json')), r.stdout[-400:]])
+    r = subprocess.run([sys.executable, CONVERT, 'all', dump, '-o', os.path.join(_td, 'all')], capture_output=True, text=True)
+    r2 = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', os.path.join(_td, 'srd'), '--corrections', _nocorr(_td)],
+                        capture_output=True, text=True)
+    ck('#84 `all` and `srd` find it themselves: no such warning', 'not in the feat index' not in r.stdout + r2.stdout
+       and r2.returncode == 0, (r.stdout[-300:], r2.stdout[-300:]))
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

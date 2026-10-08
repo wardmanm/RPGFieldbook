@@ -492,8 +492,13 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
   // "[Table: X]" anchor carries no pack — so two packs sharing a name means one
   // book's prose opens the other's table. Two exceptions (#84, R5): identical
   // twins are harmless; and SRD 5.2 reprints the 2024 pack's tables with the
-  // SRD's own edits ("GM" for "DM"), so a same-named pair of those two is the
-  // same table in two wordings — whichever loads first is right either way.
+  // SRD's own edits ("GM" for "DM", renamed spells, three corrections), so a
+  // same-named pair of those two is the same table in two wordings — whichever
+  // loads first is right either way. Those pairs are PINNED here: a new
+  // difference (a 5e-tools update, a new correction) must be added on purpose,
+  // and a pair that becomes identical must leave the list.
+  const SRD_REWORDED=['Bag of Beans Table','Cube of Force Faces','Deck of Illusions','Hat of Many Spells Table',
+    'Object Armor Class','Prismatic Layers','Prismatic Rays','Reincarnate Table','Wand of Wonder Effects'];
   const seen={};
   ['5e2024','humblewood','xanathars','tashas','homebrew','srd52'].forEach(d=>{
     const p=path.join('data',d,'tables.json');
@@ -501,13 +506,14 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
     JSON.parse(fs.readFileSync(p,'utf8')).tables.forEach(t=>{
       (seen[t.name]=seen[t.name]||[]).push({d,body:JSON.stringify([t.cols,t.rows,t.footnotes||null])});});
   });
-  const clash=Object.entries(seen).filter(([,v])=>{
-    if(v.length<2)return false;
-    if(new Set(v.map(x=>x.body)).size===1)return false;
-    return !(v.length===2&&new Set(v.map(x=>x.d)).has('5e2024')&&new Set(v.map(x=>x.d)).has('srd52'));
-  });
-  ck('no table name is used by two packs, except identical twins and SRD/2024 rewordings', clash.length===0,
+  const srdPair=v=>v.length===2&&new Set(v.map(x=>x.d)).has('5e2024')&&new Set(v.map(x=>x.d)).has('srd52');
+  const differs=v=>v.length>=2&&new Set(v.map(x=>x.body)).size>1;
+  const clash=Object.entries(seen).filter(([n,v])=>differs(v)&&!(srdPair(v)&&SRD_REWORDED.includes(n)));
+  ck('no table name is used by two packs, except identical twins and the pinned SRD/2024 rewordings', clash.length===0,
      clash.map(([n,v])=>n+' -> '+v.map(x=>x.d).join(', ')));
+  const reworded=Object.entries(seen).filter(([,v])=>srdPair(v)&&differs(v)).map(([n])=>n).sort();
+  ck('the same-named SRD/2024 tables that differ are exactly the pinned '+SRD_REWORDED.length,
+     JSON.stringify(reworded)===JSON.stringify(SRD_REWORDED), reworded);
   // and the anchors must follow the rename, or they resolve to nothing
   ['xanathars','tashas','homebrew'].forEach(d=>{
     const names=new Set(JSON.parse(fs.readFileSync(path.join('data',d,'tables.json'),'utf8'))
@@ -933,7 +939,7 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
 // The bundle is the file players actually import. bundle-rules.js builds it from
 // a fixed key list, so a pack property it doesn't know about is dropped — the
 // per-category files would filter correctly and the bundle silently would not.
-[['xanathars_full.json'], ['tashas_full.json']].forEach(([f]) => {
+[['xanathars_full.json'], ['tashas_full.json'], ['srd52_full.json']].forEach(([f]) => {
   const p = path.join(ROOT, 'dist', f);
   if (!fs.existsSync(p)) return;
   const pack = JSON.parse(fs.readFileSync(p, 'utf8'));

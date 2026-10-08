@@ -28,6 +28,8 @@ Options that apply where relevant:
   --sources sources.json   (spells only) tag each spell with its 2024 class list
   --include-legacy         (classes only) also include non-XPHB subclasses (mixes editions)
   --no-spell-notes         (classes only) skip the per-level "prepared/known spells" notes
+  --feats feats.json       (classes only) the feats a class feature offers by reference
+                           (Blessed Warrior, Druidic Warrior); 'all' and 'srd' find them
   --tables tables.json     also write the tables lifted out of the prose to this file
                            ('all' always writes <outdir>/tables-2024.json)
 
@@ -242,6 +244,26 @@ _SB_INDEX = None   # (items by (name, source), property names by abbreviation, m
                    #  itemEntry templates by (name, source))
 
 _FEAT_INDEX = {}   # feats by (lower name, SOURCE): a class feature's refFeat (#84)
+# refFeats the index lacked, as "Name|SOURCE" -> the classes whose menu lacks it.
+# `all` and `srd` fill the index themselves; `classes` alone needs --feats, and
+# without it the Paladin's Blessed Warrior once went missing without a word.
+_FEAT_MISSES = collections.defaultdict(set)
+
+def _feat_miss_warnings(warn):
+    for ref, classes in sorted(_FEAT_MISSES.items()):
+        warn('refFeat %s is not in the feat index, so the Fighting Style menu of %s lacks it '
+             '(`classes` needs --feats feats.json)' % (ref, ', '.join(sorted(classes))))
+
+@contextlib.contextmanager
+def feat_ctx(index):
+    """Set the run's feat index (load_feat_index()) for a class feature's refFeat."""
+    global _FEAT_INDEX
+    prev = _FEAT_INDEX
+    _FEAT_INDEX = index
+    try:
+        yield
+    finally:
+        _FEAT_INDEX = prev
 
 def load_feat_index(*paths):
     """Feats from 5e-tools feat files, keyed (lower name, SOURCE)."""
@@ -820,6 +842,9 @@ class Book:
     exclude_systems `excludeSystems` — character systems this pack's species must
                     not be offered to (see docs/rules-schema.md §1).
     mode            "xphb" (the default run), "supplement" (has codes) or "srd".
+                    Informational only: nothing reads it. What an SRD run changes
+                    rides on the other fields (system, names, exclude_systems,
+                    fighting_styles), so is_default still holds for it.
     fighting_styles the Fighting Style menu names this run offers; None = all.
     """
     def __init__(self, codes=None, system='XPHB', names=None, note='', exclude_systems=None, mode=None, fighting_styles=None):
@@ -1790,10 +1815,12 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
                 cf = cfidx.get((name.lower(), fsrc, lvl, cn.lower())) or cfidx.get((name.lower(), src, lvl, cn.lower()))
                 for rnm, rsrc in _ref_feats((cf or {}).get('entries')):
                     ft = _FEAT_INDEX.get((rnm.lower(), rsrc))
-                    if ft:
-                        with table_ctx(tables, entry['name'], 'class'):
-                            fs.append(apply_overlay(ft['name'], {'name': ft['name'],
-                                                'description': flatten(ft.get('entries', []))}, overlay))
+                    if not ft:
+                        _FEAT_MISSES['%s|%s' % (rnm, rsrc)].add(entry['name'])
+                        continue
+                    with table_ctx(tables, entry['name'], 'class'):
+                        fs.append(apply_overlay(ft['name'], {'name': ft['name'],
+                                            'description': flatten(ft.get('entries', []))}, overlay))
                 addchoice(lvl, {'type': 'option', 'label': 'Choose a Fighting Style', 'choose': 1, 'from': fs}); continue
             cf = cfidx.get((name.lower(), fsrc, lvl, cn.lower())) or cfidx.get((name.lower(), src, lvl, cn.lower()))
             if not cf: continue
@@ -2528,9 +2555,10 @@ def srd_view(src, dst):
                         dropped.add(str(e['name']).strip().lower())
                     continue
                 e = _map_strings(e, tagfix)
-                if isinstance(f, str):
+                if isinstance(f, str) and e.get('name'):
+                    # the new name is text, never a regex template (a backslash stays)
                     rx = re.compile(r'(?<![\w])' + re.escape(e['name']) + r'(?![\w])', re.I)
-                    e = _map_strings(e, lambda s, rx=rx, f=f: rx.sub(f.strip(), s))
+                    e = _map_strings(e, lambda s, rx=rx, new=f.strip(): rx.sub(lambda m: new, s))
                     e['name'] = f.strip()
                 e['srd52'] = True
                 if isinstance(e.get('inherits'), dict):
@@ -2633,7 +2661,8 @@ def _srd_sub(node, find, repl):
         return 0
     for k, v in items:
         if isinstance(v, str):
-            nv = find.sub(repl, v) if hasattr(find, 'sub') else v.replace(find, repl)
+            # repl is text, never a regex template: a backslash in it stays
+            nv = find.sub(lambda m: repl, v) if hasattr(find, 'sub') else v.replace(find, repl)
             if nv != v:
                 node[k] = nv
                 n += 1
@@ -2949,6 +2978,7 @@ def _run_supplement(a):
     _cell_miss_warnings(warn)
     _entry_miss_warnings(warn)
     _template_miss_warnings(warn)
+    _feat_miss_warnings(warn)
     if problems:
         print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
         for p in problems:
@@ -3043,6 +3073,7 @@ def _run_core(d, outdir, overlay_path=None, resources_path=None, include_legacy=
     _cell_miss_warnings(warn)
     _entry_miss_warnings(warn)
     _template_miss_warnings(warn)
+    _feat_miss_warnings(warn)
     if problems:
         print('\n  %d WARNING(S) — output is incomplete:' % len(problems))
         for p in problems:
@@ -3067,6 +3098,9 @@ def main():
                        help='also write the tables lifted out of this source to PATH')
         p.add_argument('--optfeatures', metavar='PATH',
                        help='(classes) optionalfeatures.json, for the maneuver/invocation/metamagic pickers')
+        p.add_argument('--feats', metavar='PATH',
+                       help='(classes) feats.json, for the feats a class feature offers by reference '
+                            '(the Paladin\'s Blessed Warrior, the Ranger\'s Druidic Warrior)')
     pa = sub.add_parser('all'); pa.add_argument('dir'); pa.add_argument('-o', '--out', required=True)
     pa.add_argument('--overlay'); pa.add_argument('--resources')
     pa.add_argument('--include-legacy', action='store_true')
@@ -3135,9 +3169,11 @@ def main():
         files = []
         for pat in a.inputs:
             files.extend(sorted(glob.glob(pat)) if any(ch in pat for ch in '*?[') else [pat])
-        _write(convert_classes(files, overlay=overlay, include_legacy=a.include_legacy,
-                               spell_notes=not a.no_spell_notes, tables=tbls,
-                               optfeats=load_optfeats(a.optfeatures)), a.out)
+        # the feats a class feature offers by reference, read as _run_core() reads them
+        with feat_ctx(load_feat_index(a.feats)):
+            _write(convert_classes(files, overlay=overlay, include_legacy=a.include_legacy,
+                                   spell_notes=not a.no_spell_notes, tables=tbls,
+                                   optfeats=load_optfeats(a.optfeatures)), a.out)
     _bonus_prose_notes(lambda msg: print('  note: ' + msg))
     _weapon_miss_warnings(lambda msg: print('  WARNING: ' + msg))
     if a.tables:
@@ -3146,6 +3182,7 @@ def main():
     # prose is flattened with or without a tables sink, so these always run
     _entry_miss_warnings(lambda msg: print('  WARNING: ' + msg))
     _template_miss_warnings(lambda msg: print('  WARNING: ' + msg))
+    _feat_miss_warnings(lambda msg: print('  WARNING: ' + msg))
 
 if __name__ == '__main__':
     sys.exit(main() or 0)

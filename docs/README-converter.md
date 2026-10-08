@@ -30,7 +30,7 @@ python convert.py all _conversion-data/5etools-v2.36.1 -o data/5e2024
 python convert.py conditions conditionsdiseases.json                 -o conditions.json
 python convert.py feats      feats.json --overlay ../data/overlay.json -o feats.json
 python convert.py spells     spells-xphb.json --sources sources.json  -o spells.json
-python convert.py classes    class-*.json --overlay ../data/overlay.json -o classes.json
+python convert.py classes    class-*.json --overlay ../data/overlay.json --feats feats.json -o classes.json
 python convert.py races      races.json                              -o races.json
 ```
 
@@ -225,6 +225,7 @@ ability check: each skill, initiative and passive Perception). You can also gran
 - `--include-legacy` — also include non-XPHB subclasses (TCE, XGE, …). Off by default to keep the ruleset edition-consistent; turning it on mixes 2014 subclasses into the 2024 chassis.
 - `--no-spell-notes` — skip the per-level prepared/known-spells notes.
 - `--optfeatures PATH` — `optionalfeatures.json`, for the Battle Master, Sorcerer, Warlock and Artificer option pickers. `all` and `supplement` find it themselves; without it those classes still convert, with no pickers.
+- `--feats PATH` — `feats.json`, for the option a class feature names by reference: the Paladin's Blessed Warrior and the Ranger's Druidic Warrior on their Fighting Style menus. `all` and `srd` find it themselves; without it `classes` leaves that option off the menu and prints a `WARNING` naming it.
 - `--tables PATH` *(any subcommand)* — also write that source's lifted tables to `PATH`. `all` always writes `tables.json`.
 - `--overlay PATH` / `--resources PATH` *(incl. `all`)* — point at the hand-authored inputs explicitly. `all` looks in the input dir then `data/`, so you rarely need these.
 
