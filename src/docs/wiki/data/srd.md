@@ -54,8 +54,8 @@ note CC-BY-4.0 asks for:
 
 `bundle()` stamps it on `dist/srd52_full.json`, so it is listed in Settings → Credits & licences
 while the pack is loaded and in the archive's `NOTICE.md`; README §10 carries the statement too.
-**Fieldbook adds no other attribution to Wizards** (not in the pack, Settings or README §10),
-because the SRD's legal page asks for none:
+**Fieldbook adds no other attribution to Wizards** (not in the pack, Settings, README §10 or the
+player notes), because the SRD's legal page asks for none:
 "Please do not include any other attribution to Wizards or its parent or affiliates other than
 that provided above." The statement names SRD **5.2.1**, the revision the text was matched to; the
 system label stays "SRD 5.2".
