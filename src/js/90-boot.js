@@ -351,6 +351,6 @@ function boot(){
      and reading it is async. Everything above already drew with whatever
      localStorage had (usually nothing, once migrated), and this replaces it. */
   loadRulesCacheAsync();
-  checkForUpdate();
+  checkForUpdate();checkForDataUpdate();
 }
 boot();

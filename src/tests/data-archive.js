@@ -15,6 +15,7 @@ const {X, ctx, state, bootError} = loadApp([
   'crc32', 'inflateRaw', 'isZipBytes', 'zipEntries', 'zipEntryBytes', 'readDataArchive', 'utf8Text', 'zipError',
   'importRulesPayloads', 'importPack', 'importSummary', 'importRulesFiles', 'RULE_CATS',
   'creditOf', 'rulesCreditsHTML', 'removeRulesGroup', 'clearAllRules', 'reindexRules', 'prunePackMeta',
+  'pickDataRelease', 'dataUpdateFrom', 'checkForDataUpdate', 'rulesDataHTML', 'rulesBadge', 'APP_VERSION', 'dataUpdateHint',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 
@@ -478,6 +479,86 @@ section('zips from other tools', () => {
   const arc = r.status === 0 ? X.readDataArchive(new Uint8Array(fs.readFileSync(path.join(dir, 'z.zip'))), 'z.zip') : null;
   ck('zip -9: the deflated entry inflates byte for byte', !!arc && Buffer.from(arc.packs[0].bytes).toString('utf8') === body);
   fs.rmSync(dir, {recursive: true, force: true});
+});
+
+section('the newer-data notice', async () => {
+  const rel = (tag, extra = {}) => Object.assign({tag_name: tag, draft: false, prerelease: false,
+    html_url: 'https://github.com/x/y/releases/tag/' + tag,
+    assets: [{name: 'fieldbook-data-standalone-' + X.dataVerOfTag(tag) + '.zip'}]}, extra);
+  const P = list => X.pickDataRelease(list, '1.8.0');
+  ck('picks the newest data release for this app', (P([rel('v1.8.0'), rel('data-v1.8.0-1'), rel('data-v1.8.0-2')]) || {}).version === '1.8.0-2');
+  ck('-10 beats -9', (P([rel('data-v1.8.0-9'), rel('data-v1.8.0-10')]) || {}).version === '1.8.0-10');
+  ck('an app release carrying the archive counts', (P([rel('v1.8.0')]) || {}).tag === 'v1.8.0');
+  ck('data built for a newer app is skipped', (P([rel('data-v1.8.0-1'), rel('data-v1.9.0-1'), rel('v1.9.0')]) || {}).version === '1.8.0-1');
+  ck('drafts and pre-releases are skipped', P([rel('data-v1.8.0-1', {draft: true}), rel('data-v1.8.0-2', {prerelease: true})]) === null);
+  ck('a release without the archive is skipped', P([rel('v1.7.2', {assets: [{name: 'fieldbook.html'}]})]) === null);
+  ck('junk tags are skipped', P([rel('nightly'), rel('data-v1.8.0'), {tag_name: 7}, null]) === null);
+  ck('not a list (a rate-limit reply): null', X.pickDataRelease({message: 'API rate limit exceeded'}, '1.8.0') === null && X.pickDataRelease(null, '1.8.0') === null);
+  ck('a page off github.com falls back to the releases page',
+     /^https:\/\/github\.com\/.+\/releases$/.test(P([rel('data-v1.8.0-1', {html_url: 'https://evil.example/x'})]).url));
+
+  const pick = {tag: 'data-v1.8.0-1', version: '1.8.0-1', url: 'https://github.com/x/y/releases/tag/data-v1.8.0-1'};
+  const up = X.dataUpdateFrom({release: '1.8.0-1', packs: [
+    {system: 'XPHB', file: '5e2024_full.json', version: '1.8.0-1'}, {system: 'Bad', file: '../evil.json', version: '1.8.0-1'},
+    {system: 'Bad2', file: 'x.json', version: 'v9'}, {system: '', file: 'y.json', version: '1.8.0'}, null]}, pick);
+  ck('dataUpdateFrom keeps only well-formed packs', !!up && up.packs.length === 1 && up.packs[0].system === 'XPHB' && up.release === '1.8.0-1', up);
+  ck('dataUpdateFrom: no packs, no registry or no pick is null',
+     X.dataUpdateFrom({packs: []}, pick) === null && X.dataUpdateFrom(null, pick) === null
+     && X.dataUpdateFrom({packs: [{system: 'A', file: 'a.json', version: '1.8.0'}]}, null) === null);
+
+  /* the row, the hint and the badge */
+  const sys = 'XPHB', base = X.DATA_VERSIONS[sys];
+  const g = () => X.loadedRulesGroups()[0];
+  const load = (v, file) => { X.resetRules(); X.mergeRules({system: sys, rulebook: true, dataVersion: v, races: [{name: 'Elf'}]}, file || '5e2024_full.json'); };
+  load(base);
+  X.dataUpdate = {release: base + '-1', url: 'https://github.com/x/y/releases/tag/data-v' + base + '-1',
+                  packs: [{system: sys, file: '5e2024_full.json', version: base + '-1'}]};
+  ck('a newer data release makes the row "update"', X.dataStatus(g()).state === 'update', X.dataStatus(g()));
+  const chip = X.dataStatusHTML(g());
+  ck('...shown muted, naming both versions', /class="rd-src"/.test(chip) && chip.includes('v' + base + '-1 out') && !/update available/.test(chip), chip);
+  const list = X.rulesDataHTML();
+  ck('...a hint above the list links the release',
+     /Newer rules data is out: XPHB v[\d.-]+\./.test(list) && list.includes('href="https://github.com/x/y/releases/tag/data-v'), list.slice(0, 400));
+  ck('...and the Settings count says so', / · update$/.test(X.rulesBadge()), X.rulesBadge());
+  load(base, 'my-phb.json');
+  ck('a pack loaded under another file name gets no notice', X.dataStatus(g()).state === 'current');
+  load('1.0.0');
+  ck('a pack behind the app is still "stale", amber', X.dataStatus(g()).state === 'stale' && /update available/.test(X.dataStatusHTML(g())));
+  load(base);
+  X.importRulesPayloads([{name: '5e2024_full.json', bytes: B(JSON.stringify({system: sys, rulebook: true, dataVersion: base + '-1', races: [{name: 'Elf'}]}))}]);
+  ck('Review focus 5: importing the newer copy flips the row to current and drops the hint and badge',
+     X.dataStatus(g()).state === 'current' && !/Newer rules data is out/.test(X.rulesDataHTML()) && !/update/.test(X.rulesBadge()),
+     [X.dataStatus(g()), X.rulesBadge()]);
+
+  /* the network: the releases list, then that tag's registry; silent on failure */
+  const calls = [];
+  const reply = body => Promise.resolve({ok: true, json: () => Promise.resolve(body)});
+  const savedFetch = ctx.fetch, savedOnline = ctx.navigator.onLine;
+  try {
+    ctx.navigator.onLine = true;
+    X.dataUpdate = null;
+    ctx.fetch = url => { calls.push(url); return url.includes('api.github.com')
+      ? reply([rel('data-v' + X.APP_VERSION + '-1')])
+      : reply({release: X.APP_VERSION + '-1', packs: [{system: sys, file: '5e2024_full.json', version: X.APP_VERSION + '-1'}]}); };
+    const got = await X.checkForDataUpdate();
+    ck('checkForDataUpdate lists releases, then reads that tag\'s registry',
+       calls.length === 2 && /api\.github\.com\/repos\/.+\/releases\?per_page=100$/.test(calls[0])
+       && /^https:\/\/raw\.githubusercontent\.com\/.+\/data-v[\d.]+-1\/data\/packs\.json$/.test(calls[1]), calls);
+    ck('...and sets dataUpdate', !!got && !!X.dataUpdate && X.dataUpdate.release === X.APP_VERSION + '-1', X.dataUpdate);
+    X.dataUpdate = null;
+    ctx.fetch = () => Promise.reject(new Error('offline'));
+    const none = await X.checkForDataUpdate();
+    ck('a failed check is silent and changes nothing', none === null && X.dataUpdate === null);
+    ctx.navigator.onLine = false; calls.length = 0;
+    ctx.fetch = url => { calls.push(url); return reply([]); };
+    await X.checkForDataUpdate();
+    ck('offline, it doesn\'t try', calls.length === 0);
+  } finally {
+    ctx.fetch = savedFetch; ctx.navigator.onLine = savedOnline;
+    X.dataUpdate = null; X.resetRules();
+  }
+  ck('boot runs the data check after the app check',
+     /checkForUpdate\(\);\s*checkForDataUpdate\(\);/.test(fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8')));
 });
 
 // ---- add new sections above this line ----

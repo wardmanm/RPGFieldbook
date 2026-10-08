@@ -37,7 +37,11 @@ function setSecHTML(k,body,badge){
 }
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
 /* the "Rules data" header badge; renderRulesData() keeps it current after the modal opens */
-function rulesBadge(){const n=rulesEntryCount();return n?n+" entries":"none loaded";}
+function rulesBadge(){
+  const n=rulesEntryCount();
+  const up=loadedRulesGroups().some(g=>dataStatus(g).state==="update");
+  return (n?n+" entries":"none loaded")+(up?" · update":"");
+}
 /* Settings → Credits & licences: each loaded pack's own terms (#83). A pack
    carries them as `license` (an SPDX id) and `attribution` (plain text). */
 const LICENSE_URLS={"CC-BY-4.0":"https://creativecommons.org/licenses/by/4.0/",
@@ -388,18 +392,31 @@ function clearAllRules(){
 
    Unknown (an old pack from before stamping, or homebrew) is NOT stale — we
    have no evidence either way, and a false alarm on someone's own content is
-   worse than staying quiet — nor is a version that doesn't parse (cmpDataVer). */
+   worse than staying quiet — nor is a version that doesn't parse (cmpDataVer).
+
+   A pack the app is happy with can still be behind a data-only release (#83):
+   that is "update", quiet, because a data release is optional. */
 function dataStatus(g){
+  const have=g.dataVersion||"";
   const want=(typeof DATA_VERSIONS!=="undefined"&&DATA_VERSIONS[g.source])||"";
-  if(!want||!g.dataVersion||!parseDataVer(g.dataVersion))return {state:"unknown"};
-  const c=cmpDataVer(g.dataVersion,want);
-  if(c<0)return {state:"stale",have:g.dataVersion,want};
-  return {state:"current",have:g.dataVersion};
+  const upd=dataUpdateFor(g);
+  if(!have||!parseDataVer(have)||(!want&&!upd))return {state:"unknown"};
+  if(want&&cmpDataVer(have,want)<0)return {state:"stale",have,want};
+  if(upd&&cmpDataVer(have,upd.version)<0)return {state:"update",have,want:upd.version,release:dataUpdate.release};
+  return {state:"current",have};
+}
+/* the newer copy the data-release check found for a pack loaded from a file of
+   the same system and file name, or null */
+function dataUpdateFor(g){
+  if(!dataUpdate||!g||!g.isFile)return null;
+  return (dataUpdate.packs||[]).find(p=>p.system===g.source&&p.file===g.label)||null;
 }
 function dataStatusHTML(g){
   const st=dataStatus(g);
   if(st.state==="stale")
     return ` <span class="chip warn" title="This pack is from v${esc(st.have)}; this version of Fieldbook ships v${esc(st.want)}. Re-import it from the latest release.">update available · v${esc(st.have)}</span>`;
+  if(st.state==="update")
+    return ` <span class="rd-src" title="${esc("Rules data "+st.release+" has a newer copy of this pack, v"+st.want+". Download it from the release page and import it.")}">v${esc(st.have)} · v${esc(st.want)} out</span>`;
   if(st.state==="current")return ` <span class="rd-src" title="Up to date with this version of Fieldbook.">v${esc(st.have)}</span>`;
   return "";
 }

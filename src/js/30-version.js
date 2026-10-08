@@ -70,6 +70,55 @@ function showUpdatePill(){
   el.title=`Update to version ${updateAvailable.ver} available — you're on ${APP_VERSION}. Tap for what's new and the download.`;
   el.style.display="inline-flex";
 }
+/* Newer rules DATA than what is loaded (#83). Data can be released without the
+   app, as data-vX.Y.Z-N, and those releases are never GitHub's "latest", so
+   checkForUpdate() never sees them. This lists the releases, picks the newest
+   with an archive built for this app or an older one, and reads that tag's
+   registry straight from the repo — raw.githubusercontent.com answers a
+   file:// page. Every failure is silent, as in checkForUpdate(). */
+let dataUpdate=null;
+function pickDataRelease(list,appVer){
+  if(!Array.isArray(list))return null;
+  let best=null;
+  list.forEach(rel=>{
+    if(!rel||typeof rel!=="object"||rel.draft||rel.prerelease)return;
+    const tag=typeof rel.tag_name==="string"?rel.tag_name:"";
+    const ver=dataVerOfTag(tag);if(!ver)return;
+    /* data built for a newer app arrives with that app's own update */
+    if(cmpDataVer(dataVerBase(ver),appVer)>0)return;
+    const asset="fieldbook-data-standalone-"+ver+".zip";
+    if(!Array.isArray(rel.assets)||!rel.assets.some(a=>a&&a.name===asset))return;
+    if(best&&cmpDataVer(ver,best.version)<=0)return;
+    /* the link becomes an <a href>, so only a github.com page is taken */
+    const page=String(rel.html_url||"");
+    best={tag,version:ver,url:/^https:\/\/github\.com\//i.test(page)?page:`https://github.com/${UPDATE_REPO}/releases`};
+  });
+  return best;
+}
+/* the registry at that tag, kept to well-formed packs, or null */
+function dataUpdateFrom(reg,pick){
+  if(!pick||!reg||typeof reg!=="object"||!Array.isArray(reg.packs))return null;
+  const packs=reg.packs.filter(p=>p&&typeof p==="object"&&typeof p.system==="string"&&p.system.trim()
+      &&typeof p.file==="string"&&/^[A-Za-z0-9._-]+\.json$/.test(p.file)&&parseDataVer(p.version))
+    .map(p=>({system:p.system,file:p.file,version:p.version}));
+  return packs.length?{release:pick.version,url:pick.url,packs}:null;
+}
+function checkForDataUpdate(){
+  if(!UPDATE_REPO||(navigator.onLine===false))return Promise.resolve(null);
+  return fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases?per_page=100`,{headers:{Accept:"application/vnd.github+json"}})
+    .then(r=>r.ok?r.json():null)
+    .then(list=>{
+      const pick=pickDataRelease(list,APP_VERSION);
+      if(!pick)return null;
+      return fetch(`https://raw.githubusercontent.com/${UPDATE_REPO}/${encodeURIComponent(pick.tag)}/data/packs.json`,{cache:"no-store"})
+        .then(r=>r.ok?r.json():null)
+        .then(reg=>{
+          dataUpdate=dataUpdateFrom(reg,pick);
+          if(dataUpdate&&typeof renderRulesData==="function")renderRulesData();
+          return dataUpdate;
+        });
+    }).catch(()=>null);
+}
 const CHANGELOG=[
   {v:"1.7.2", date:"2026-09-29", notes:[
     "Settings → Fetch all no longer throws away rules you imported from files, and when it can't reach a source (offline, or blocked by the site) it leaves your loaded rules exactly as they were and says so, instead of emptying them for the next launch. Each source it does reach replaces only what it loaded last time, and the Rules data count in Settings now stays up to date.",

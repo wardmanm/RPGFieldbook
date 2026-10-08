@@ -81,6 +81,15 @@ function missingSummary(){
   const names=[...new Set(bad.map(g=>g.source||g.label))];
   return " "+names.join(", ")+(names.length===1?" refers":" refer")+" to content that isn't loaded — see Loaded data below.";
 }
+/* One line above the loaded-data list when a data release has newer copies of
+   packs the player has loaded (#83). Quiet on purpose (R7): a data release is
+   optional. The link is pickDataRelease()'s, kept to github.com. */
+function dataUpdateHint(groups){
+  const ups=[...new Set(groups.map(g=>({g,st:dataStatus(g)})).filter(x=>x.st.state==="update")
+    .map(x=>x.g.source+" v"+x.st.want))];
+  if(!ups.length||!dataUpdate)return "";
+  return `<p class="hint" style="margin:4px 0 8px">Newer rules data is out: ${esc(ups.join(", "))}. <a href="${esc(dataUpdate.url)}" target="_blank" rel="noopener">Download it from the release page</a>.</p>`;
+}
 function rulesDataHTML(){
   const groups=loadedRulesGroups();
   const warn=rulesCacheWarning()
@@ -101,7 +110,7 @@ function rulesDataHTML(){
     /* the heading already names the category on single-category rows */
     html+=inB.map(g=>row(g,b==="rulebook"||b==="mixed")).join("");
   });
-  return warn+html;
+  return warn+dataUpdateHint(groups)+html;
 }
 function renderRulesData(){
   const html=rulesDataHTML();
