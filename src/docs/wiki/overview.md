@@ -33,6 +33,7 @@ the **skin** (`classic` or `humblewood`). Packs are stamped with a `system` of t
 | `data/xanathars/` | `XGE` | additive supplement, not a system you create a character in |
 | `data/tashas/` | `TCE` | additive supplement |
 | `data/homebrew/` | `Homebrew` | hand-authored, additive; declares `requires` |
+| `data/srd52/` | `SRD 5.2` | the free D&D rules (the SRD), a system read as D&D; species kept from Humblewood |
 
 The three non-negotiables — one shipped file, offline-first with loud storage failures,
 backward-compatible saves — are stated in [CLAUDE.md](../../../CLAUDE.md) and argued on
@@ -80,6 +81,8 @@ docs/                     PLAYER-FACING — ships. An allowlist of exactly three
   CHANGELOG.md              generated from the in-app CHANGELOG array
 scripts/
   convert.py              5e-tools JSON → rules data (ships, for advanced players)
+  srd-corrections.json    hand-authored: the SRD pack's text matched to the SRD PDF (dev)
+  srd_text.py             the pure SRD-text comparison srd-verbatim runs (dev)
   extract-humblewood.py   Humblewood PDFs → rules data; needs .venv (dev)
   build-html.js           src/ → dist/fieldbook.html (dev)
   bundle-rules.js         data/<dir>/ → dist/<dir>_full.json (dev)
@@ -161,13 +164,14 @@ name says where its first function came from, not everything it holds: `migrate(
 
 | Term | Meaning |
 |---|---|
-| **system** | For a *character*: `"dnd"` or `"humblewood"`, chosen at creation. For a *pack*: its `system` stamp (`XPHB`, `Humblewood`, `XGE`, `TCE`, `Homebrew`), the key of `DATA_VERSIONS` and unique in the registry |
+| **system** | For a *character*: `"dnd"` or `"humblewood"`, chosen at creation. For a *pack*: its `system` stamp (`XPHB`, `Humblewood`, `XGE`, `TCE`, `Homebrew`, `SRD 5.2`), the key of `DATA_VERSIONS` and unique in the registry |
 | **pack** | One bundled rules file, `dist/<dir>_full.json`; loaded packs merge into the global `rules` |
 | **registry** | `data/packs.json`: every pack's `system`, `dir`, `file`, `title`, `version`, content `digest` and optional `license` and `attribution`, plus `release`, the last release's version. Written only by `release.js` and `data-release.js`, through `fbdata.py` |
 | **data version** | A pack's own version, `X.Y.Z` (the data shipped with app X.Y.Z) or `X.Y.Z-N` (the Nth data-only release after it). Not semver: `1.8.0 < 1.8.0-1 < 1.8.1`. Compared with `cmpDataVer()`, never `cmpVer()`. A pack's `dataVersion` |
 | **data release** | A release of rules data with no app: tag `data-vX.Y.Z-N`, the archive as its only asset, never GitHub's "latest". Cut by `data-release.js`, published by `data-release.yml` |
 | **rules-data archive** | `fieldbook-data-standalone-<release>.zip`: every pack, the manifest `fieldbook-data.json` and `NOTICE.md`. Attached to every release and carried in the app zip; Fieldbook opens it itself |
 | **supplement** | A pack that adds to a system rather than being one (XGE, TCE, homebrew) |
+| **SRD 5.2** | The pack of the D&D rules Wizards of the Coast publishes free under CC-BY-4.0, the System Reference Document: `data/srd52/`, `system: "SRD 5.2"`, built by `convert.py srd` from the SRD-flagged entries of the 5e-tools dump and matched to the SRD 5.2.1 PDF. A system read as D&D (`systemOf()`). Not the same as the `srd52` *flag* in the dump, which marks what the SRD contains. → [SRD 5.2](data/srd.md) |
 | **skin** | The visual theme, `classic` or `humblewood`; follows the character's system |
 | **sid** | A grant's source id: `race:<name>`, `bg:<name>`, `class:<name>`, `subclass:<class>:<sub>` — from `originSid()` |
 | **grant** | Something a source added to the character (a proficiency, feature, item, gold), recorded with its sid so removing the source reverts it |
@@ -193,3 +197,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-09-28 — The wiki: reference compiled out of the ledger into topic pages; CLAUDE.md slimmed to the rules. → ledger L3709
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-07 — The rules-data archive, the registry `data/packs.json`, data versions and data releases join the map and the glossary; `89-zip.js` in the code map. → ledger L5082, #83
+- 2026-10-08 — The SRD 5.2 pack joins the pack table, the repo layout and the glossary. → ledger L5148, #84

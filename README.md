@@ -81,6 +81,12 @@ zip. Don't unzip it — Fieldbook opens it itself. Inside is one rules file per 
 
 - **`5e2024_full.json`** — D&D 2024: species, classes, spells, feats, backgrounds, items, magic
   items, conditions, glossary and reference tables. Start here for D&D.
+- **`srd52_full.json`** — SRD 5.2, the free D&D rules, published under Creative Commons in the
+  System Reference Document: 12 classes (one subclass each), 339 spells, 9 species, 4 backgrounds,
+  feats, items, over 470 magic items, conditions, glossary and reference tables. It is a whole D&D
+  game on its own, so a new player can make a D&D character with nothing else loaded. Loaded
+  beside `5e2024_full.json`, anything both packs have appears twice, each tagged with its pack
+  (`Fireball (XPHB)`, `Fireball (SRD 5.2)`).
 - **`humblewood_full.json`** — Humblewood: species, classes, subclasses, spells, feats,
   backgrounds and reference tables.
 - **`xanathars_full.json`** — Xanathar's Guide to Everything: 95 spells, 31 subclasses, 15 feats,
@@ -92,11 +98,11 @@ zip. Don't unzip it — Fieldbook opens it itself. Inside is one rules file per 
 - **`homebrew_full.json`** — community homebrew, currently The Predator (a Warlock patron) with its
   pact boon and invocations.
 
-The last three are **add-ons to D&D 2024, not games of their own** — load `5e2024_full.json` as
-well, or there will be no classes for their subclasses to attach to. If a pack refers to something
-you haven't loaded, Fieldbook says so: the pack gets a red **! n missing** badge under **Loaded
-data**, and hovering it lists what's absent and which file to import. Nothing breaks — you just
-won't get the parts that depend on the missing pack.
+The last three are **add-ons to D&D, not games of their own** — load `5e2024_full.json` (or
+`srd52_full.json`) as well, or there will be no classes for their subclasses to attach to. If a
+pack refers to something you haven't loaded, Fieldbook says so: the pack gets a red **! n missing**
+badge under **Loaded data**, and hovering it lists what's absent and which file to import. Nothing
+breaks — you just won't get the parts that depend on the missing pack.
 
 > **A note on editions.** Xanathar's and Tasha's are 2014-era books, converted exactly as
 > published. Their subclasses list features at the 2014 levels, and the text refers to 2014 class
@@ -114,7 +120,7 @@ these places:
   there.
 
 Fieldbook reads every pack in the zip and says what it loaded, for example "Imported
-fieldbook-data-standalone-1.8.0.zip: 5 packs, data 1.8.0." If something can't be imported, it
+fieldbook-data-standalone-1.8.0.zip: 6 packs, data 1.8.0." If something can't be imported, it
 says which file and why — that a zip is damaged, say, so you know to download it again. You can
 also pick the app's whole download zip, `fieldbook-v<version>.zip`, and Fieldbook finds the rules
 data inside it, or pick single `.json` rules files, as before. Once loaded, the rules are
@@ -131,9 +137,9 @@ the new zip and import it the same way: each pack in it replaces the copy you ha
 
 > **Tip:** You don't have to keep them all. Importing the zip loads every pack in it; playing only
 > Humblewood, or only core D&D, you can remove the others under **Loaded data** afterwards. Or unzip
-> it and import just the `.json` files you want — `humblewood_full.json` on its own, or
-> `5e2024_full.json` plus `xanathars_full.json`, `tashas_full.json` or `homebrew_full.json` if
-> your table uses them.
+> it and import just the `.json` files you want — `humblewood_full.json` on its own,
+> `srd52_full.json` on its own for the free rules, or `5e2024_full.json` plus
+> `xanathars_full.json`, `tashas_full.json` or `homebrew_full.json` if your table uses them.
 
 ### b) Create a character
 
@@ -477,6 +483,9 @@ data/               ← the rules data, as one zip — import it as it is (secti
    • fieldbook-data-standalone-<version>.zip, which holds:
        5e2024_full.json     — D&D 2024: species, classes, spells, feats, backgrounds,
                               items, magic items, conditions, glossary, reference tables
+       srd52_full.json      — SRD 5.2, the free D&D rules: species, classes, spells,
+                              feats, backgrounds, items, magic items, conditions,
+                              glossary, reference tables
        humblewood_full.json — Humblewood: species, classes, subclasses, spells, feats,
                               backgrounds, reference tables
        xanathars_full.json  — Xanathar's Guide: subclasses, spells, feats, magic items,
@@ -520,5 +529,11 @@ you have loaded. The Homebrew pack's The Predator, a Warlock subclass, is by D&D
 contributors ([dandwiki.com](https://www.dandwiki.com/wiki/The_Predator_(5e_Subclass))), used
 under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) and converted to
 Fieldbook's rules format.
+
+The **SRD 5.2** pack is the System Reference Document 5.2.1, used under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and converted to Fieldbook's rules
+format, with renamed entries' references updated. As the SRD asks, its attribution statement:
+
+> This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
 
 Have fun out there. 🌿

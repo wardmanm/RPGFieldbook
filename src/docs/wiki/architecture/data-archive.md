@@ -26,7 +26,8 @@ notice, and both release paths. What the app does with a pack once it is loaded 
 built from, the bundle's `file` and `title`, its `version`, a `digest`, and optionally a `license`
 (an SPDX id) and an `attribution`. `release` is the version of the last release, app or data, and
 names the archive. `bundle-rules.js` reads it (`registry()`), so a bundle's `name`, `dataVersion`,
-`license` and `attribution` all come from here.
+`license` and `attribution` all come from here. A new pack is registered with `version: null` and no
+`digest`; its first release gives it both.
 
 **Versions.** A data version is `X.Y.Z` — the data shipped with app X.Y.Z — or `X.Y.Z-N`, the Nth
 data-only release after it. It is not semver: `1.8.0 < 1.8.0-1 < 1.8.0-10 < 1.8.1`.
@@ -48,7 +49,12 @@ the archive alone with `--latest=false`.
 **The archive.** `fbdata.py pack` writes `fieldbook-data.json` (the manifest), `NOTICE.md` and the
 bundles — sorted, dated 1980-01-01, deflated at level 9 — and `fbdata.py validate`
 (`validate_archive()`) checks it. A build names it `+dev` when a digest is unreleased. The app zip
-carries it in `data/`.
+carries it in `data/`. It holds every registered pack, six today: `5e2024_full.json`,
+`humblewood_full.json`, `xanathars_full.json`, `tashas_full.json`, `homebrew_full.json` and
+`srd52_full.json`, the [SRD 5.2](../data/srd.md) pack. SRD 5.2 has no version until 1.8.0 gives it
+one, so the manifest and `NOTICE.md` list it without one, its bundle has no `dataVersion`, and the
+app shows it no version badge (the **unknown** state). `NOTICE.md` carries its CC-BY-4.0
+attribution in full.
 
 **Opening a zip.** `89-zip.js` is pure. `readDataArchive()` reads, in order: an archive (its manifest
 at the root or one folder down); the data kit, refused; an archive one level inside (the app zip); a
@@ -105,7 +111,10 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 - **The zips need Python.** `./build.sh --no-zip` and the Node suites don't; the zips, a release
   and the `data-kit` suite do.
 - **Seeding was the one hand-run step.** The first digests came from the v1.7.2 tree, so data
-  changed after v1.7.2 still moves to 1.8.0.
+  changed after v1.7.2 still moves to 1.8.0. Never seed again: `fbdata.py versions --seed` records
+  every pack's current digest, so it would mark every unreleased change as released. A new pack
+  (SRD 5.2) waits with no digest, which already reads as "changed", and `data-kit.py` requires a
+  digest only of a pack that has a version.
 - **A per-zip read cap was not a cap.** The first reader gave each nested zip a fresh count, so a
   zip holding many archives could read far past 128 MiB in total, and an inner zip with no manifest
   fell through to being read as loose JSON. The budget is now one per import, reserved before
@@ -125,7 +134,7 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 
 ## Open
 
-- The SRD 5.2 pack (#84), and the private split with the data kit (#85).
+- The private split with the data kit (#85).
 
 ## History
 
@@ -133,3 +142,5 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
   credits, the newer-data notice and data-only releases. → ledger L5082
 - 2026-10-07 — The final review's fixes: a toast when no status line is on screen, a pack that
   throws named and skipped, the release-path guards, the "those versions" note wording. → ledger L5124
+- 2026-10-08 — The archive carries `srd52_full.json`, registered with no version or digest until
+  1.8.0. → ledger L5148, #84

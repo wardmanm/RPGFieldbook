@@ -56,10 +56,11 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 
 ## Data
 
-- [Converter](data/converter.md) — `convert.py`, the `basicRules2024`/`srd52` trap, the byte-for-byte gate
+- [Converter](data/converter.md) — `convert.py`, the `basicRules2024`/`srd52` trap, the byte-for-byte gates
 - [Supplements](data/supplements.md) — Xanathar's and Tasha's as additive packs, and the three traps
 - [Humblewood](data/humblewood.md) — `extract-humblewood.py`, verbatim prose, tables, playtest packets
 - [Homebrew](data/homebrew.md) — the hand-authored pack and `requires`
+- [SRD 5.2](data/srd.md) — the free D&D pack: built from the SRD flags, matched to the SRD PDF, credited as the licence asks
 
 ## Process
 

@@ -89,6 +89,16 @@ Known behaviour that is accepted for now.
 - **The newer-data notice needs the network** (the GitHub releases list and the tag's registry), and
   is silent offline or when GitHub refuses, so an offline player never learns of a data release.
   It runs once per load, like the app's update check. → ledger L5082
+- **With the D&D 2024 and SRD 5.2 packs both loaded, a shared table opens the 2024 copy.**
+  `findTable()` takes the first match in load order and the archive loads the 2024 pack first, so
+  the SRD's own wording of the Reincarnate, Deck of Illusions, Object Armor Class and Carrying
+  Capacity tables, corrected to the SRD PDF, is not what opens then. Both are the same table in two
+  wordings (R5). → ledger L5148, and [SRD 5.2](../data/srd.md)
+- **A player's own `convert.py srd` run applies no corrections.** The app zip ships `convert.py` but
+  not `scripts/srd-corrections.json`, and a missing corrections file means none, silently: the run
+  succeeds with 5e-tools' wording, the Iron Flask Table included, not the committed pack's. Checked
+  by running `srd` with a corrections path that doesn't exist. → ledger L5148, and
+  [SRD 5.2](../data/srd.md)
 
 ## Deferred
 
@@ -422,3 +432,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-02 — Deferred: thrown weapons as their own ammunition, firearm reloading and energy cells, magic ammunition variants outside the selection rule, and quiver capacity. → ledger L4952, #6
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. Recorded: 2014-named ammunition pieces and dropped gear reading as unmatched on old sheets, same-named grants looking identical in the picker, and Adamantine Ammunition's "Unknown" rarity. → ledger L4989, #6
 - 2026-10-07 — The rules-data archive: older copies can't open the zip, a data update is announced and never installed, and the notice needs the network. Removed: `release.js`'s stale no-tags comment, gone with that code. → ledger L5082, #83
+- 2026-10-08 — The SRD 5.2 pack: with both D&D packs loaded the 2024 copy of a shared table opens, and a player's own `convert.py srd` run has no corrections file. → ledger L5148, #84

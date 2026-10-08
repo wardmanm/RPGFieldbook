@@ -86,6 +86,10 @@ ck('README names the rules-data archive', readme.includes('fieldbook-data-standa
 ck("build.sh's app-zip guard allows exactly data/fieldbook-data-standalone-….zip",
    read('build.sh').includes('fieldbook-data-standalone-[^/]+\\.zip'));
 
+// ---------- the SRD's required attribution, word for word (#84)
+ck('README carries the SRD 5.2.1 attribution', readme.includes('This work includes material from the System Reference Document 5.2.1')
+   && readme.includes('https://creativecommons.org/licenses/by/4.0/legalcode'));
+
 // ---------- changelog notebook: the traps that reach the public release notes
 // Bullets are copied verbatim into the GitHub release body, where <name> is an
 // HTML tag and disappears; and a literal version goes stale on the next bump.

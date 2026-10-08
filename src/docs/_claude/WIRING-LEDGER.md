@@ -5144,3 +5144,124 @@ Deferred to a follow-up: a pack's content digest does not cover the bundler, so 
 that alters bundle bytes moves no version (#85 rewrites the bundler).
 
 Pages: [data archive](../wiki/architecture/data-archive.md).
+
+## The SRD 5.2 pack (#84, 2026-10-08)
+
+Part 2 of #82. A new rules pack, **SRD 5.2**: only the D&D content Wizards of the Coast publishes
+under CC-BY-4.0 in the System Reference Document, converted from the same 5e-tools dump as the 2024
+pack, matched to the SRD 5.2.1 PDF, and credited as the licence asks. In #85 it becomes the D&D
+content every player gets. Spec: `src/docs/specs/2026-10-08-srd-pack-design.md`.
+
+1. **The pack.** `data/srd52/`, eleven files, each `system: "SRD 5.2"` with
+   `excludeSystems: ["humblewood"]`, no `_note` and no `requires`; the pack names are "SRD 5.2
+   Items", "SRD 5.2 Backgrounds", "SRD 5.2 Classes", "SRD 5.2 Species", "SRD 5.2 Tables" and "SRD
+   5.2 Options". It holds 4 backgrounds, 17 feats, 9 species, 339 spells, 12 classes with 1
+   subclass each, 38 options (28 Eldritch Invocations, 10 Metamagic), 476 magic items, 94 base
+   items, 21 conditions, 115 glossary terms and 71 tables. `rules-data.js` asserts the counts.
+2. **How it is built.** `python3 scripts/convert.py srd <dump> -o data/srd52`. `srd_view()` writes
+   an SRD-only copy of the dump into a temp dir: flagged entries only (`srd52` true, or a string,
+   which is a rename; a magic variant carries it on `inherits`), each marked `srd52: true` so the
+   2024 pipeline's own checks keep it; the lookup data (item properties, types, masteries,
+   `itemEntry` templates) copied whole; `sources.json` keyed by SRD names, with the Artificer (EFA)
+   class tags dropped. `_run_core()` is `all`'s body, extracted so `all` and `srd` share it (`all` is
+   otherwise unchanged); `_run_srd()` runs it over the view with `srd_book()`, the SRD `Book`:
+   system "SRD 5.2", `SRD_NAMES`, `excludeSystems` humblewood, mode `"srd"` and no source codes, so
+   every 2024 behaviour (`is_default`) stays on, and a Fighting Style menu limited to the Fighting
+   Style feats the view has. Then it corrects, scans and writes; any error writes nothing. **The
+   free-rules trap, reversed:** everywhere else the flags only backfill; here the flag *is* the
+   filter, and `basicRules2024` (not an open licence) is never read.
+3. **Renames, three layers.** For an entry whose `srd52` is a string (33 of them: Bigby's Hand →
+   Arcane Hand, Leomund's Tiny Hut → Tiny Hut, Heward's Handy Haversack → Handy Haversack…):
+   `{@spell X}` and `{@item X}` tags anywhere in the view follow it, case-insensitively, a display
+   text equal to the old name too (`_srd_tag_renamer()`); the old name in the entry's own prose and
+   table captions becomes the new one, before tables are built, so `[Table: …]` anchors and table
+   names agree; and `sources.json` is re-keyed. Anything else, where the SRD rewrote a passage
+   rather than renaming it, is a correction (point 5). **Referenced feats:** a kept class feature
+   that embeds a feat by reference (`refFeat`: the Paladin's Blessed Warrior, the Ranger's Druidic
+   Warrior) needs that feat's text, though the feat is not among the SRD's feats; the view carries
+   it in `srd-ref-feats.json`, which `_run_core()` reads into `_FEAT_INDEX`.
+4. **The leak scan.** `_srd_leaks()`, after the corrections: a record, class or subclass named as a
+   non-SRD entry (every XPHB or XDMG entry the view dropped), or a renamed entry's old name anywhere
+   in the text, fails the run. Record names are matched whole, so "Aura of Protection" never trips
+   on the feat Protection. The real dump: 0 leaks, 502 non-SRD names, 33 renames. `--excluded-out`
+   writes that list; it is committed as `src/tests/fixtures/srd-excluded-names.json`, because the
+   data tests need it and CI has no dump.
+5. **Corrections and `srd-verbatim`.** `scripts/srd-corrections.json`, hand-authored beside
+   `overlay.json`: `remove`, `global` whole-word swaps, `corrections` (`entry`, `find`, `replace`,
+   `page`, `why`), `accepted` spans with a reason, and `aliases` (an entry the SRD titles
+   differently). `_srd_apply_corrections()` applies them in that order; a removal, swap or `find`
+   that matches nothing, or an entry nothing is named, is an error, because the source moved under
+   it. Final numbers: 1 global (DM → GM), 1 removal (the Iron Flask Table), 125 corrections, 93
+   accepted, 158 aliases; every correction cites its PDF page. `scripts/srd_text.py` is the pure
+   half (`norm()`, `records()`, `compare()`, `check()`); `src/tests/srd-verbatim.py` reads
+   `_conversion-data/srd52/SRD_CC_v5.2.1.pdf` with PyMuPDF, skips without either, and fails on any
+   span of pack text that appears nowhere in the SRD and is not accepted.
+   `.venv/bin/python src/tests/srd-verbatim.py` → ALL PASSED (1561 records). It walks each entry's
+   text, plus subraces ("Species/Subrace", "Subrace/Trait"), subclass descriptions (by subclass
+   name) and choice-option descriptions ("Owner/Option"); `levels.N.spells.note` is deliberately not
+   walked: converter-generated counts, not book prose. The triage took 440 findings to 0, then the
+   67 the subrace, subclass and option walk found to 0. Telekinesis ends at "such as manipulating a
+   simple tool," because SRD 5.2.1 itself breaks off there (p. 168): verified, not a truncation bug.
+   `run.sh` runs ten suites.
+6. **Three fixes in both packs** (spec decision 1 and R4); `data/5e2024` regenerated by these alone,
+   and its gate re-established. `pick_2024_preferred()`, `_shipped_2024()` and `_variant_selected()`
+   read `srd52` as truthy, not `is True`, so the 2024 pack gains Carrion Crawler Mucus and Lolth's
+   Sting, which a rename flag had dropped. `_render_optfeat_prereq()` renders a dict-shaped spell
+   prerequisite by its `entry` text: Agonizing Blast, Eldritch Spear and Repelling Blast read "Level
+   2 Warlock and a Warlock Cantrip That Deals Damage" instead of a Python dict (24 occurrences). The
+   Paladin's and Ranger's Fighting Style choice adds Blessed Warrior or Druidic Warrior, from the
+   class feature's `refFeat`: the 2024 menus are ten styles plus that option, the SRD's four.
+7. **The registry entry and its credit.** `data/packs.json` lists SRD 5.2 after XPHB, so the archive
+   and the app load it second and existing characters keep resolving to the 2024 pack. `version:
+   null` until 1.8.0; `license: "CC-BY-4.0"`; and the attribution, whose first two sentences are SRD
+   5.2.1's required statement, verbatim (PDF p. 1), and whose third is the change note CC-BY-4.0
+   asks for:
+
+   > This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode. Changed: converted to Fieldbook's rules format, with renamed entries' references updated.
+
+   The SRD asks for no other attribution to Wizards, so the pack, Settings and README add none. It
+   reaches Settings → Credits & licences and `NOTICE.md`; README §10 carries the statement, and
+   `docs.js` checks it there. Its digest is left absent (point 9).
+8. **`systemOf()`** reads a source label starting `srd` as `"dnd"` (R6), so a D&D character is
+   offered the nine SRD species. `excludeSystems` keeps them from Humblewood characters, older apps
+   (which don't know the label) included.
+9. **Plan rulings beyond the spec:**
+   - The view is written to a temporary directory and deleted after the run; "in memory" meant it
+     never touches the dump.
+   - The referenced feats travel as `srd-ref-feats.json`: a name matching `feats*.json` would be
+     picked up as the feats file.
+   - Corrections apply to the converted pack text, after the pipeline and before the leak scan, so
+     they are written against what players read (spec §3 listed them inside the view).
+   - No seeding: the SRD pack's digest is left absent. `fbdata.py versions --seed` rewrites every
+     pack's digest, and a missing digest already means "changed", so 1.8.0 gives SRD 5.2 its first
+     version. `data-kit.py`'s "every real pack has a digest" check is narrowed to released packs
+     (version not null): an unreleased pack gets its digest at its first release.
+   - The converter tests build their mini dump in a temp dir (the existing `converter.py` pattern),
+     not in `src/tests/fixtures/5etools-mini/`.
+   - The Warlock prerequisite renders the dump's own `entry` text verbatim, in 5e-tools' title case
+     ("a Warlock Cantrip That Deals Damage"); the spec said lower case.
+   - PDF findings are spans of pack text that appear nowhere in the SRD. Text the SRD has elsewhere
+     (the Ammunition rules on an arrow) is SRD text and passes.
+   - The PDF check walks subraces, subclass descriptions and choice options (the spec's "every
+     difference corrected or recorded"); `spells.note` stays out.
+   - R5, refined: `rules-data.js`'s "no table name used by two packs" check exempts byte-identical
+     twins **and** any SRD/2024 pair, because the SRD's corrections reword shared tables. Of the 68
+     tables the two packs share, 58 are identical and 10 differ in the SRD's wording (GM for DM,
+     renamed spells, four corrections).
+
+**Judgment calls for review (Mike):**
+- 5e-tools ammunition and holy-symbol glosses removed from the SRD pack;
+- the 12 class blurbs (`CLASS_BLURB`, 2014 PHB text) are empty in the SRD pack;
+- "3rd"/"5th" ordinals accepted, not corrected (form, not content);
+- a span passes if it appears anywhere in the SRD, so a pure reordering of SRD words is not caught;
+- Goliath subraces open with the SRD's own "Choose one of the following benefits—…" framing;
+- 5e-tools table-row restatements are handled unevenly (Holy Symbol rows removed; Horn of Valhalla,
+  Carpet, Potion and Ring rows accepted; Horn of Valhalla's row says "Berserkers" beside the
+  corrected "spirits"; Spell Scroll states its DC two ways);
+- with both packs loaded, `findTable()` returns the 2024 twin, so the 4 corrected SRD tables
+  (Reincarnate, Deck of Illusions, Object Armor Class, Carrying Capacity) are shadowed.
+
+Pages: [SRD 5.2](../wiki/data/srd.md), [converter](../wiki/data/converter.md),
+[homebrew](../wiki/data/homebrew.md), [rules packs](../wiki/architecture/rules-packs.md),
+[data archive](../wiki/architecture/data-archive.md), [testing](../wiki/process/testing.md),
+[overview](../wiki/overview.md), [decisions](../wiki/decisions.md).

@@ -279,15 +279,17 @@ normal.
   "choose": 1, "from": ["Insight","Perception","Survival"] }`. Put it on the race (or inside a
   trait) rather than baking a fixed `skills` list when the rules let the player pick.
 - **Species are filtered by system.** The ancestry picker only offers races whose `system` matches
-  the character's (`"XPHB"` → a D&D character, `"Humblewood"` → a Humblewood one); any other label
-  is treated as setting-agnostic and shown to both, so homebrew is never hidden. Only *races* are
-  filtered — classes, spells, feats and items stay pooled, because Humblewood supplements the D&D
-  core rather than replacing it. A character that already has a cross-system ancestry keeps it and
-  all its traits; the filter applies to the picker, not to lookups.
+  the character's (`"XPHB"` or `"SRD 5.2"` → a D&D character, `"Humblewood"` → a Humblewood one);
+  any other label is treated as setting-agnostic and shown to both, so homebrew is never hidden.
+  Only *races* are filtered — classes, spells, feats and items stay pooled, because Humblewood
+  supplements the D&D core rather than replacing it. A character that already has a cross-system
+  ancestry keeps it and all its traits; the filter applies to the picker, not to lookups.
   A pack whose `system` is a label the app can't place can say who it is **not** for instead, with
   the file-level `excludeSystems` (§1) — that is how the D&D supplement packs (`"XGE"`, `"TCE"`)
   keep Tasha's Custom Lineage out of a Humblewood character's list. An explicit exclusion wins over
-  the name-based guess.
+  the name-based guess. The SRD 5.2 pack carries `"excludeSystems": ["humblewood"]` as well, so a
+  Fieldbook too old to know the `"SRD 5.2"` label still keeps its species from Humblewood
+  characters.
 
 **`abilityChoice`** *(optional, on a race **or** a subrace)* — offers a player-chosen ability
 increase in the Add-ancestry dialog, the way backgrounds do:

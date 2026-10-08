@@ -13,12 +13,13 @@ see "Keeping the docs current". This file holds only the rules.
 
 ## What this is
 
-**Fieldbook** is a standalone, single-file HTML character sheet app supporting **D&D 5e 2024 (XPHB)**
-and the **Humblewood** TTRPG, plus additive packs for **Xanathar's Guide**, **Tasha's Cauldron** and
-hand-authored **homebrew**. It ships as one self-contained file, `dist/fieldbook.html`, built by
-concatenating the fragments in `src/`. A Python CLI (`scripts/convert.py`) turns 5e-tools exports into
-the app's JSON; a dev-only one (`scripts/extract-humblewood.py`) reads the Humblewood books and
-playtest PDFs. Players load the resulting rules packs at runtime. Details: [overview](src/docs/wiki/overview.md).
+**Fieldbook** is a standalone, single-file HTML character sheet app supporting **D&D 5e 2024 (XPHB)**,
+the free D&D rules of **SRD 5.2** and the **Humblewood** TTRPG, plus additive packs for **Xanathar's
+Guide**, **Tasha's Cauldron** and hand-authored **homebrew**. It ships as one self-contained file,
+`dist/fieldbook.html`, built by concatenating the fragments in `src/`. A Python CLI
+(`scripts/convert.py`) turns 5e-tools exports into the app's JSON; a dev-only one
+(`scripts/extract-humblewood.py`) reads the Humblewood books and playtest PDFs. Players load the
+resulting rules packs at runtime. Details: [overview](src/docs/wiki/overview.md).
 
 ## Non-negotiable constraints
 
@@ -135,12 +136,17 @@ Each links to the page that explains it and what broke when it was ignored.
 - **The recurring bug is the free-rules subset.** `basicRules2024` or `srd52` selects only it, and has
   already trimmed backgrounds, spells, feats, items and magic items. Assume any converter path you
   touch has it, and check its count against the full XPHB source.
-- **`data/5e2024/` must reproduce byte for byte** after any converter change, or the pack's content
-  digest moves and the next release tells every player to re-download a pack that didn't change:
+- **`data/5e2024/` and `data/srd52/` must reproduce byte for byte** after any converter change, or
+  the pack's content digest moves and the next release tells every player to re-download a pack
+  that didn't change:
 
   ```bash
   python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk data/5e2024
+  python3 scripts/convert.py srd _conversion-data/5etools-v2.36.1 -o /tmp/srd && diff -r /tmp/srd data/srd52
   ```
+
+  The SRD pack's corrections live in `scripts/srd-corrections.json`; `srd-verbatim` checks the pack
+  against the SRD PDF. → [SRD 5.2](src/docs/wiki/data/srd.md)
 - Supplements have three traps that all produce correct-looking output. Read
   [supplements](src/docs/wiki/data/supplements.md) before touching `convert.py supplement`.
   → [converter](src/docs/wiki/data/converter.md)
