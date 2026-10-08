@@ -4,10 +4,10 @@ This is the authoritative reference for the JSON "rules packs" that the Fieldboo
 character-sheet app loads. It replaces the old `rules-example/` template files — an
 author (human or AI) can produce any pack from the specs below.
 
-Packs are loaded in-app via **Settings → Rules → Import files** (pick one or more `.json`
-files) or from a **manifest URL**. Everything merges into one shared rules pool that the
-sheet reads from (spell/feat/class pickers, the glossary tab, ancestry/background/class
-selection, and the effects engine).
+Packs are loaded in-app via **Settings → Rules data → Import files** (pick one or more `.json`
+files, or a zip of them — see §6.10b) or from a **manifest URL**. Everything merges into one
+shared rules pool that the sheet reads from (spell/feat/class pickers, the glossary tab,
+ancestry/background/class selection, and the effects engine).
 
 The companion tool `convert.py` generates most of these files from 5e-tools data; hand-author
 new content (or homebrew) using this schema.
@@ -45,7 +45,22 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
 - **`system`** *(recommended)* — the source label. Used as the dedup key and shown as an
   annotation when names collide across sources. Use `"XPHB"` for D&D 2024 core, `"Humblewood"`
   for Humblewood, or your own campaign label.
-- **`name`, `version`, `_note`** — optional metadata. `_note` is ignored by the app.
+- **`name`, `version`, `_note`** — optional metadata. `_note` is ignored by the app, and is not
+  shown to players.
+- **`license`** *(optional, string)* — the pack's licence, as an
+  [SPDX identifier](https://spdx.org/licenses/) such as `"CC-BY-4.0"`, `"CC-BY-SA-3.0"` or `"MIT"`,
+  64 characters at most (a longer one is ignored). Shown in **Settings → Credits & licences** while
+  the pack is loaded; those three link to their licence pages, and any other id is shown as text.
+- **`attribution`** *(optional, string)* — the credit the licence asks for, as plain text: who made
+  the content, where it came from, and what was changed. No markup (it is shown exactly as
+  written), and 2,000 characters at most (the rest is cut). Shown beside the licence in **Settings →
+  Credits & licences**. Use these two, not `_note`, for anything a licence requires players to see:
+
+  ```json
+  { "system": "Moonlit", "name": "The Moonlit Path", "license": "CC-BY-4.0",
+    "attribution": "The Moonlit Path, by Jane Doe (https://example.com/moonlit-path), used under CC BY 4.0. Changed: converted to Fieldbook's rules format." }
+  ```
+- **`dataVersion`** *(optional)* — the pack's own version; see §6.10a.
 - **`excludeSystems`** *(optional, array of strings)* — character systems this pack's **species**
   must not be offered to. Values are `"dnd"` and/or `"humblewood"`, matched case-insensitively.
   Use it when `system` is a label the app can't place on its own: the D&D supplements ship
@@ -87,7 +102,9 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
 
 ### Merging & source annotation
 - Entries are keyed by **`system` + name** (subclasses by `system` + class + name).
-- Re-loading the **same source** replaces its own entries (safe to re-import an updated file).
+- Re-importing a file **replaces what that file loaded before** (the same file name and the same
+  `system`): entries the new copy no longer has are removed, so an updated file is always safe to
+  re-import. Each pack inside a zip counts under its own file name.
 - A same-named entry from a **different source** is **kept**, and both are shown annotated,
   e.g. `Alert (XPHB)` vs `Alert (Humblewood)`. Nothing is silently overwritten.
 - The app assigns its own internal ids at load time — **do not** add an `_id` field.
@@ -567,14 +584,68 @@ character's Inventory (and coins) when the source is added. Supports fixed grant
 
 ### 6.10a Pack-level `dataVersion`
 
-The two bundled packs carry `"dataVersion": "1.3.0"` alongside `system` and `name`. It is the
-Fieldbook release in which **that system's** content last changed, and the app compares it against
-what the running build expects, so it can say "your rules data is current" or "a newer pack exists".
+Every bundled pack carries `"dataVersion"` alongside `system` and `name`: that pack's own version.
+It is written in one of two forms:
 
-It is per system: a release that only touches Humblewood leaves the D&D pack's `dataVersion` alone,
-so D&D players aren't told to re-import a file that hasn't moved. Distinct from `version`, which is
-the schema version. Hand-written packs can omit it — an absent `dataVersion` means "unknown", and
-the app stays quiet rather than guessing.
+- **`X.Y.Z`** — the data shipped with Fieldbook X.Y.Z, e.g. `"1.8.0"`;
+- **`X.Y.Z-N`** — the Nth release of rules data alone after that app release, e.g. `"1.8.0-2"`.
+  N starts at 1; no part has a leading zero.
+
+This is **not** semver, where `-N` would mark a pre-release. Here it comes after: `1.8.0` <
+`1.8.0-1` < `1.8.0-2` < `1.8.0-10` < `1.8.1`.
+
+It is per pack: a release that only touches Humblewood leaves the D&D pack's `dataVersion` alone,
+so D&D players aren't told to re-import a file that hasn't moved. The app compares it with the
+version the running build shipped with ("update available" when the pack is older) and, when it
+can reach GitHub, with the newest rules-data release (a quiet "v*A* · v*B* out" when a newer copy
+is out). Distinct from `version`, which is the schema version. Hand-written packs can omit it — an
+absent or unreadable `dataVersion` means "unknown", and the app stays quiet rather than guessing.
+
+### 6.10b The rules-data archive
+
+The packs Fieldbook ships come as one zip, `fieldbook-data-standalone-<version>.zip`, and the app
+opens it itself:
+
+```
+fieldbook-data-standalone-1.8.0.zip
+  fieldbook-data.json       the manifest
+  NOTICE.md                 what is in it, and every pack's licence and credit
+  5e2024_full.json          the packs, under their usual file names
+  humblewood_full.json
+  …
+```
+
+The manifest, `fieldbook-data.json`:
+
+```json
+{"_type": "fieldbook-data", "format": 1, "version": "1.8.0", "builtFor": "1.8.0",
+ "packs": [{"file": "5e2024_full.json", "system": "XPHB", "version": "1.8.0", "sha256": "…"},
+           {"file": "homebrew_full.json", "system": "Homebrew", "version": "1.8.0",
+            "license": "CC-BY-SA-3.0", "sha256": "…"}]}
+```
+
+- **`_type`** is always `"fieldbook-data"` and **`format`** is `1`. They are how the app knows the
+  zip is an archive.
+- **`version`** is the archive's release, a data version (§6.10a). A local build of unreleased
+  data adds `+dev` (`1.8.0+dev`); that suffix appears only here and in the file name.
+- **`builtFor`** is the Fieldbook version it was built with.
+- **`packs`** lists each pack in import order: its **`file`** (beside the manifest), its
+  **`system`**, its **`version`** (the pack's `dataVersion`), its **`license`** when it has one, and
+  **`sha256`**, the hex SHA-256 of the file's bytes.
+
+The manifest deliberately has no `name`, `system` or category keys, so an older Fieldbook given it
+as a loose file merges nothing. Each pack is imported under its own file name, exactly as if the
+`.json` files had been picked one by one. The manifest may also sit one folder down (a zip of the
+unzipped folder).
+
+**Other zips Fieldbook opens.** The app's own download zip, `fieldbook-v<version>.zip`, carries the
+archive in its `data/` folder, and Fieldbook finds it there. A zip with no manifest is read as
+**loose packs**: every `.json` file in it, in name order, each under its own file name, so you can
+zip your own packs to share them. In a loose zip, a JSON file with none of the category arrays is
+skipped. Fieldbook refuses, and says why, a zip that is password-protected, ZIP64, compressed with
+anything but the usual deflate (or stored), damaged, larger than 64 MiB, holding an entry over
+32 MiB, more than 1,000 files or over 128 MiB of files in all, or holding no rules data.
+Fieldbook before 1.8.0 can't open any zip: unzip it and import the `.json` files.
 
 ### 6.11 `tables` — reference tables
 

@@ -57,3 +57,17 @@ Bullets below this line — leave the heading in place.
 - Ability Scores & Saves and Skills now draw as a compact, read-only quick view when you add them to
   the combat view, so your bonuses are easy to read mid-fight. Tap any value for its breakdown; edit
   them on the Sheet tab as before.
+- **Rules data now comes as one download**, `fieldbook-data-standalone-….zip`, and Fieldbook opens
+  it itself: choose it in Import files on the home screen or in Settings → Rules data. The app's own
+  download zip works too. An older copy of Fieldbook can't open a zip: unzip it and import the
+  `.json` files inside.
+- Rules data can now be updated between app releases. When a newer copy of a rules pack you have
+  loaded is out, Fieldbook says so quietly beside that pack in Settings → Rules data, with a link to
+  download it.
+- Re-importing a rules pack now replaces it completely: anything the new copy no longer has is
+  removed, instead of staying loaded alongside it.
+- Settings → Credits & licences now lists the licence and credit of each rules pack you have loaded,
+  starting with the Homebrew pack's credit to D&D Wiki.
+- When an import fails, Fieldbook now names the file and says why — for example that a zip is
+  password-protected or damaged — on the home screen as well as in Settings, and a large import
+  shows straight away that it is reading the files.

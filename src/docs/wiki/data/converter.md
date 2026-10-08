@@ -229,21 +229,25 @@ the entry count and any unresolved `{@` tag or template text (`{#`, `{{`) left i
 fixed key order: `system`, `name`, `version`, then `_note` and `excludeSystems` only when the book
 sets them, then the array.
 
-**Bundling.** `bundle()` in `bundle-rules.js` reads every `.json` directly inside each system
-folder and writes `dist/<system>_full.json` with `rulebook: true` and a `dataVersion` read from
-`DATA_VERSIONS` in `30-version.js` (never duplicated). It dedupes the way `mergeRules()` does, by
+**Bundling.** `bundle()` in `bundle-rules.js` reads every `.json` directly inside each folder that
+`data/packs.json` registers and writes the registry's `dist/<file>` (`5e2024_full.json`, …) with
+`rulebook: true` and the registry's title, licence, credit and version as `dataVersion` (never
+written here; see [Data archive](../architecture/data-archive.md)). It dedupes the way
+`mergeRules()` does, by
 name (subclasses by class and name), last file wins, replaced in place, and prints every duplicate
 it folded — none, in the v2.36.1 dump. Before #7 that was one, `Net`, shipped from both item files
 (the 2014 weapon in `items.json`, the 2024 gear in `items-magic.json`); `_shipped_2024()` now drops
 the 2014 one before bundling ever sees it. `_note` is not copied into the bundle. The build
-fails if a folder's files disagree on `system`, `excludeSystems` or `requires`, or if the system
-has no `DATA_VERSIONS` entry.
+fails if a folder's files disagree on `system`, `excludeSystems` or `requires`, or if their
+`system` is not the registry's.
 
 ## Rules that must hold
 
-- **The default run reproduces `data/5e2024/` byte for byte.** Any change to a value moves that
-  pack's content digest (`pack_digest()`), so the next release bumps its version and every player is
-  told to re-download it. Check it before and after any converter change:
+- **The default run reproduces `data/5e2024/` byte for byte.** A value that moves changes the pack's
+  content digest (`pack_digest()`), so the next release, app or data, bumps XPHB's version and every
+  player is told to re-download a pack that did not change. The digest reads canonical JSON, so key
+  order and whitespace alone don't move it, but the gate is still bytes. Check it before and after
+  any converter change:
   `python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk data/5e2024`.
   CI cannot run this (it has no dump), so it is a manual gate.
 - **Filter on `source`; flags only backfill.** Never select by `basicRules2024` (or `srd52`)
@@ -471,8 +475,8 @@ has no `DATA_VERSIONS` entry.
   so a player running the zip's `scripts/convert.py` must pass `--overlay` and `--resources`
   explicitly (`all` warns when it cannot find them). Verified by reading `main()`, not by running.
 - The module docstring's USAGE block predates `supplement` and the unprefixed filenames.
-- `bundle-rules.js`'s comments still place `mergeRules()` in `88-settings.js` (it is in
-  `89-rules-merge.js`) and list two systems (there are five).
+- A comment in `bundle-rules.js`'s dedupe loop still places `mergeRules()` in `88-settings.js` (it
+  is in `89-rules-merge.js`).
 - Rune Knight runes get no tracker: they are per-rune uses, not a pool. See
   [Known issues](../roadmap/known-issues.md).
 
@@ -498,5 +502,6 @@ has no `DATA_VERSIONS` entry.
 - 2026-09-28 — An item's AC or saving-throw bonus is an effect only when its sentence states it standing (`_bonus_reading()`); five conditional ones stay prose, each printed as a `note:`; only `effects` moved, on five items in two packs. → ledger L4502, #76
 - 2026-09-28 — `bonusSpellAttack` and `bonusSpellSaveDc` become `spell.attack` / `spell.dc` effects; only `effects` moved, on 28 items in two packs. → ledger L4568, #77
 - 2026-09-29 — `{#itemEntry}` templates are written into the description (`_expand_item_entries()`), filled from the item; an unresolved one is a `WARNING`; only `description` moved, on 54 items in two packs. → ledger L4634, #78
+- 2026-10-07 — The bundler reads `data/packs.json`; a moved value changes the pack's content digest, which is what the next release bumps, in place of `git diff` since the last tag. → ledger L5082, #83
 - 2026-09-29 — `bonusAbilityCheck` and `bonusProficiencyBonus` become `check` / `profBonus` effects; only `effects` moved, on two core items. → ledger L4689, #79
 - 2026-10-02 — Ammunition kinds, bundles and magic ammunition from 5e-tools' variants; a 2014 item reprinted under another name no longer ships beside its 2024 self (40 dropped). → ledger L4923, #7

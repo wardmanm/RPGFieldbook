@@ -5078,3 +5078,45 @@ grouped display shrinks the same way. Tapping a value still opens its breakdown.
 Pages: [conditions & concentration](../wiki/features/conditions-and-concentration.md),
 [abilities & skills](../wiki/features/abilities-and-skills.md),
 [combat view](../wiki/features/combat-view.md).
+
+## Data archive, per-pack versions and data-only releases (#83, 2026-10-07)
+
+Part 1 of #82. Rules data ships as one zip that Fieldbook opens itself, every pack has its own
+version, and data can be released without the app.
+
+1. `data/packs.json` registers every pack (system, dir, file, title, version, digest, optional
+   licence and credit). `tools/data-kit/fbdata.py` (Python 3.8+, stdlib) is the only code that
+   computes digests — canonical JSON of the registry fields and the folder's files — and the only
+   writer of versions. The first digests were seeded from the v1.7.2 tree.
+2. `bundle-rules.js` reads the registry; `release.js` bumps changed packs to the app version through
+   `fbdata.py` and snapshots `DATA_VERSIONS`. The git-diff-since-last-tag logic is gone.
+3. Data versions are `X.Y.Z` / `X.Y.Z-N` (not semver); `cmpDataVer()` compares them. `dataStatus()`
+   and the settings-import older-copy check use it; an unreadable version is unknown (a plan
+   ruling: never stale, never current).
+4. `89-zip.js`: a pure zip reader with a puff.c-style inflate; refuses encrypted, ZIP64, unknown
+   methods, damage and oversize by code. `readDataArchive()` reads an archive, the app zip's nested
+   archive, or loose JSON, and refuses the data kit. The review fix (5f570b1) gave it one read
+   budget per import: the 128 MiB cap covers every entry read, nested archives included, and is
+   reserved before anything inflates; an inner zip is read as an archive or skipped, never as loose
+   JSON.
+5. `importRulesPayloads()` imports bytes; each pack in a zip keeps its own file name. `importPack()`
+   replaces what the same file name and system loaded before (R4). In a loose zip, JSON with no
+   rules category is skipped (an old app zip's converter inputs) — a plan ruling. Both status lines
+   show "Reading…", then every failure by name; a failed cache save is reported there. The four
+   rules pickers accept `.zip`, `application/zip` and `application/x-zip-compressed` (a plan ruling:
+   Windows and some Android pickers label zips with the last).
+6. Pack `license`/`attribution` → `rules.credits` → Settings → Credits & licences and `NOTICE.md`.
+   Homebrew's CC BY-SA 3.0 credit to D&D Wiki ships for the first time.
+7. The archive `fieldbook-data-standalone-<release>.zip` (`fbdata.py pack`, validated by
+   `fbdata.py validate`); the app zip carries it. `build.sh --data` builds only it; the zips need
+   python3, `--no-zip` doesn't.
+8. Data-only releases: `scripts/data-release.js` (dev.sh `d`) and `data-release.yml`, published with
+   `--latest=false` and checked afterwards; app releases attach the archive and get their data notes
+   from `scripts/data-release-notes.js`.
+9. `checkForDataUpdate()` finds the newest data release for this app, reads its registry, and marks
+   older loaded packs "update" — quietly (R7).
+10. A release freeze holds until 1.8.0 (#83, #84, #85) is complete; the history purge is logged for 2.0.
+
+Pages: [data archive](../wiki/architecture/data-archive.md), [rules packs](../wiki/architecture/rules-packs.md),
+[settings & updates](../wiki/features/settings-and-updates.md), [building & CI](../wiki/process/building-and-ci.md),
+[testing](../wiki/process/testing.md).

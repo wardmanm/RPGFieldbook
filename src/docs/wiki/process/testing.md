@@ -1,6 +1,6 @@
 # Testing
 
-`./src/tests/run.sh` runs seven suites: plain Node and Python asserting against the real source, with
+`./src/tests/run.sh` runs nine suites: plain Node and Python asserting against the real source, with
 no framework, no dependencies and no browser. The JS suites load the app exactly as the build
 concatenates it, which is itself the guard against a top-level ordering bug. One suite turns claims in
 the docs into assertions. The rest of this page is the list of ways a check has passed while the
@@ -10,7 +10,8 @@ lesson.
 **Code:** `src/tests/run.sh`, `src/tests/harness.js`; the app's `blankChar()` in `00-constants.js`
 and `APP_VERSION` in `30-version.js` (the TDZ pair); `90-boot.js` (left out of the harness) ·
 **Tests:** `converter.py`, `tables.js`, `rules-data.js`, `sheet.js`, `char-update.js`, `docs.js`,
-`humblewood-verbatim.py` · **See also:** [Building & CI](building-and-ci.md),
+`humblewood-verbatim.py`, `data-kit.py`, `data-archive.js` · **See also:** [Building & CI](building-and-ci.md),
+[Data archive](../architecture/data-archive.md),
 [Screenshot QA](screenshot-qa.md), [Rules-update tool](../features/rules-update-tool.md),
 [Build & source split](../architecture/build-and-source-split.md)
 
@@ -40,11 +41,13 @@ it after a build.
 |---|---|
 | `converter.py` | `scripts/convert.py` on real-shaped fixtures: table extraction and naming, class progression tables built from cells copied out of the dump (`dice`, `bonus`, `bonusSpeed`), the XPHB selection with its free-subset backfill, races, supplement source selection, the `_copy` subclass dedupe, optional features, cross-pack table-name collisions, option pickers from `optionalfeatureProgression`, option costs, subclass resources, Student of War |
 | `tables.js` | `tableHTML()` structure and escaping, the `[Table: X]` anchor pass through `highlight()`, the tables rules category, `migrate()` round-trip, the shipped-table defects (non-empty `cols`, no `_` keys, row widths, unique names, owners, no column blank in every row) and the 2024 class-table values, and `noteHTML()`, whose safety argument is that pipeline |
-| `rules-data.js` | Species filtering by system and `excludeSystems`, missing-dependency reporting, the rules cache never failing silently and its LZW fallback, Settings bucketing and clear-all, **the bundle round-trip** (a bundle equals importing each file), supplement packs, `DATA_VERSIONS` staleness. It also holds the markup guards: the note registry, the tab bar, every `getElementById` target existing app-wide, the Vitals structure, every Settings control still wired, the combat tab, the byte-pin of `src/html` against the built file, and **every attribute value in `src/js` `esc()`'d** (a small tokenizer, not a regex; see [Rich text](../architecture/rich-text.md)) |
+| `rules-data.js` | Species filtering by system and `excludeSystems`, missing-dependency reporting, the rules cache never failing silently and its LZW fallback, Settings bucketing and clear-all, **the bundle round-trip** (a bundle equals importing each file), supplement packs, the data states, **every bundle against `data/packs.json`** (its system, title, `dataVersion`, licence and credit). It also holds the markup guards: the note registry, the tab bar, every `getElementById` target existing app-wide, the Vitals structure, every Settings control still wired, the combat tab, the byte-pin of `src/html` against the built file, and **every attribute value in `src/js` `esc()`'d** (a small tokenizer, not a regex; see [Rich text](../architecture/rich-text.md)) |
 | `sheet.js` | The pure functions the sheet leans on: signed coin/HP entry, temp HP, weight and encumbrance, size, origins, "choose N" budgets, stat layouts, feature grouping and the feat picker, dice expressions, item uses, spell allotments, rich text, emblems, attack damage strings, armor and AC, concentration, the combat view's pure helpers, modal focus; and **a hostile character, pack and keyword id through 40 renderers**, none of which may emit the payload raw |
 | `char-update.js` | The version stamp and the rules-update tool: fingerprints, diff classification, apply keeping character-local state, backups, gating, the R1–R5 regressions; plus level-1 HP seeding, the level-up HP step, option pickers, resource dice, starting-equipment grants, and the order the choice windows open in, driven through the real flow with the 2024 Fighter |
 | `docs.js` | Doc claims as assertions (below) |
 | `humblewood-verbatim.py` | Humblewood core prose is word-for-word the book; Gadgeteer prose too. Needs `.venv` (pymupdf) and the source PDF; **prints `SKIP` and exits 0 without them** |
+| `data-kit.py` | `tools/data-kit/fbdata.py` and the scripts that drive it, every case on a scratch copy under a temp dir: data versions sort the data way; a digest ignores key order and whitespace but not a changed value, title, licence or credit; `versions --changed`, `--check` and `--bump`; every bad registry refused before anything happens; the real registry fully seeded; `pack` writing the same bytes twice, with the right manifest and `NOTICE.md`; `validate` catching a missing file, a SHA mismatch, an extra file, a system mismatch and a path escape; and, in a scratch git repo, `data-release.js` (`--dry-run` writes nothing; it refuses dirty `data/`, no changes, an existing tag and another app's release; the next N), `release.js` (bumps only changed packs, snapshots `DATA_VERSIONS`) and `data-release-notes.js` |
+| `data-archive.js` | The app's half: `parseDataVer()`, `cmpDataVer()` and the tag helpers as tables of cases; `crc32()` against known vectors and `inflateRaw()` against Node's own deflate at every level; every refusal code and the ignored entries; `readDataArchive()` on an archive, a manifest one folder down, an app zip, a kit zip, a loose zip and an empty one; the one read budget across nested archives; `importRulesPayloads()` and `importPack()` replacing; both status lines, the four pickers' `accept`; pack credits through merge, export, removal and clear, escaped; **the round trip** (`fbdata.py pack` the real bundles, import the zip, and the pool equals importing the bundles); zips from Python's `zipfile` and `zip -9`; and the newer-data notice, `checkForDataUpdate()` included, against a stubbed network |
 
 `humblewood-verbatim` runs under whichever `python3` is first on `PATH`. So even on a machine that has
 `.venv` it skips unless the venv is activated, or you run it directly:
@@ -61,7 +64,8 @@ it after a build.
   answer replaces `ctx.fetch` (the `rules-data.js` Fetch all block answers from a route table).
   Top-level `let`/`const` are not context properties, so a suite names what it needs and gets it
   back on one object. `rules`, `character`, `activeId` and `updateAvailable` get accessors, so they
-  can be written. Function declarations *are* context properties, so `ctx.fnName` reaches one
+  can be written, and so does `dataUpdate`. `TextDecoder` and `TextEncoder` are in the context, for
+  the zip reader. Function declarations *are* context properties, so `ctx.fnName` reaches one
   without naming it, and a function that does not exist yet is `undefined` rather than a load
   failure.
   To assert what a renderer writes, swap `ctx.document.getElementById` and `createElement` for
@@ -82,13 +86,15 @@ it after a build.
   `src/html` fragment;
 - CLAUDE.md's "across N suites" against `run.sh`'s `SUITES`, and that every suite file on disk is
   registered there;
-- that no doc names a pre-reorganisation data filename, and that README names the two core packs;
+- that no doc names a pre-reorganisation data filename, and that README names the rules-data
+  archive;
 - that no pending `UNRELEASED.md` bullet or changelog line holds an angle-bracket tag (GitHub eats
   it), and that no pending bullet hard-codes a version;
 - that every `docs/*.md` on disk passes `build.sh`'s allowlist, and that `LICENSE` ships and is
   listed;
-- that `DATA_VERSIONS` parses, holds `X.Y.Z` values, and maps every system to a `SYSTEM_DIRS` entry
-  in `release.js`;
+- that `data/packs.json` parses, its `release` and every pack's version are data versions, every
+  pack's `dir` exists, and every system in `DATA_VERSIONS` (still a flat JSON object) has a pack in
+  the registry at that version or later;
 - that the icon map is parity-checked against the generated `05-icons.js`, covers every shipped
   class, ancestry and background, and carries the CC BY 3.0 credits in README and in `88-settings.js`;
 - for the wiki: every page is listed in `index.md`, every link resolves, there are no wikilinks,
@@ -119,6 +125,10 @@ written before `src/tests/` existed was lost along with its scratchpad.
   sit outside `.page` and turn them into tautologies that still pass.
 - **Every suite ends with `ALL PASSED (n)`, `FAILURES: …` or `SKIP - …`,** prints its own total, is
   listed in `SUITES`, and is counted in CLAUDE.md. `docs.js` enforces the last two.
+- **A check that needs a tool the machine lacks prints a `note:` line and skips; it never fails for
+  that.** `data-archive.js` skips its round trip and Python `zipfile` cases without `python3`, and
+  its `zip -9` case without `zip`. `data-kit.py` is itself Python, so without `python3` it cannot run
+  at all, and `run.sh` reports it failed.
 - **Suites live under `src/tests/`,** so the zip guard's `^src/` keeps them out of the player bundle.
   They are not fragments: `validateOrder()` reads `src/js`, `src/css` and `src/html` without recursing.
 - **A new guard must be seen to fail.** Revert the thing it guards and watch it go red before
@@ -202,3 +212,4 @@ written before `src/tests/` existed was lost along with its scratchpad.
 - 2026-09-28 — The harness `fetch` is replaceable per suite, and the first asynchronous checks run last and call `done` themselves. → ledger L3797, #65
 - 2026-09-28 — `char-update.js` drives the choice windows through the real flow, pressing Done through captured handlers. → ledger L3847, #63
 - 2026-09-28 — The attribute-escaping guard, and recording elements for asserting what renderers write. → ledger L3940
+- 2026-10-07 — Nine suites: `data-kit.py` and `data-archive.js`; `rules-data.js` checks every bundle against `data/packs.json`; `docs.js` checks the registry and that README names the archive; `note:` skips for a missing `python3` or `zip`. → ledger L5082, #83

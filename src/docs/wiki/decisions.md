@@ -73,6 +73,15 @@ When a page gains a Decisions row, add its line here under that page.
 - **A keyword written `{name, description}`** — Read as its term and text
 - **The Artificer and Mystic in the core pack** — Leave them, labelled `XPHB`
 
+### [Data archive](architecture/data-archive.md)
+
+- **How players load the data** — The app opens the zip itself
+- **Version granularity** — Per pack; the archive carries the release
+- **Version format** — `X.Y.Z` / `X.Y.Z-N`
+- **What says a pack changed** — A digest of its content (canonical JSON)
+- **How a running copy learns of new data** — The releases list plus the tag's registry; a quiet notice
+- **Where digests are computed** — Only `fbdata.py`
+
 ### [Grants & provenance](architecture/grants-and-provenance.md)
 
 - **How grants are undone** — Provenance-tracked clean revert
@@ -334,6 +343,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **When Import settings asks** — Only when the file carries readable rules and some are loaded
 - **A settings file with an empty pool** — Treated as carrying no rules
 - **Where an import's outcome is shown** — A status line beside the Import button
+- **How a newer data release is shown** — Muted text on the row, one hint line above the list, ` · update` on the Settings count
 
 ## UI
 
@@ -453,6 +463,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How a pack's dependencies are found** — Two detectors: structural (`subclasses[].class`) and declared (`requires`)
 - **Matching a declared name** — Case-insensitive against everything loaded, whichever pack supplies it
 - **Where the verdict lives** — Recomputed at render time from `rules`; only the declaration is stored
+- **Where the pack's licence and credit live** — `license` and `attribution` in `data/packs.json`, stamped into the bundle
 
 ## Process
 
@@ -470,6 +481,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where the workflow YAML is checked** — Hooks and `dev.sh` `w`, skipping offline
 - **What `dev.sh` is** — A menu that shells out and prints each command
 - **Icon generation** — Run by hand (`scripts/fetch-icons.js`), not wired into `build.sh`
+- **What the app zip's `data/` holds** — The rules-data archive, which the app opens inside the zip
+- **Python for the archive** — Required for the zips only (`fbdata.py`)
 
 ### [Testing](process/testing.md)
 

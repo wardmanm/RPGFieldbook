@@ -75,7 +75,9 @@ When you first open Fieldbook you'll see a **home screen**. Two quick things to 
 
 ### a) Load the rules data (recommended)
 
-The app comes with one rules file per book, in the `data` folder:
+The rules data comes as **one zip file**, `fieldbook-data-standalone-<version>.zip`. Download it
+from the same release page as the app; it's also in the `data` folder of the app's own download
+zip. Don't unzip it — Fieldbook opens it itself. Inside is one rules file per book:
 
 - **`5e2024_full.json`** — D&D 2024: species, classes, spells, feats, backgrounds, items, magic
   items, conditions, glossary and reference tables. Start here for D&D.
@@ -102,21 +104,36 @@ won't get the parts that depend on the missing pack.
 > under its plain name and the older one tagged with its book, e.g. `Gloom Stalker (XGE)` — so
 > nothing you have already chosen changes, and you pick which version your table uses.
 
-Loading them turns on the pickers and auto-calculations. You can load them in any of these places:
+Loading them turns on the pickers and auto-calculations. To load them, choose the zip in any of
+these places:
 
-- **On the home screen:** under **Rules data**, tap **Import rules files (bulk)** and pick as many
-  of the files from the `data` folder as you want.
-- **Later, from Settings** (gear icon): **Rules → Import files**.
+- **On the home screen:** under **Rules data**, tap **Import rules files (bulk)** and pick
+  `fieldbook-data-standalone-<version>.zip`.
+- **Later, from Settings** (gear icon): **Rules data → Import files**.
 - **From the Rules tab:** if nothing is loaded yet, there's an **Import rules files** link right
   there.
 
-Pick as many or as few of the `data` files as you want. They merge together, and once loaded
-they're remembered for next time. You never *have* to load them — you can fill everything in by
-hand — but they make life much easier.
+Fieldbook reads every pack in the zip and says what it loaded, for example "Imported
+fieldbook-data-standalone-1.8.0.zip: 5 packs, data 1.8.0." If something can't be imported, it
+says which file and why — that a zip is damaged, say, so you know to download it again. You can
+also pick the app's whole download zip, `fieldbook-v<version>.zip`, and Fieldbook finds the rules
+data inside it, or pick single `.json` rules files, as before. Once loaded, the rules are
+remembered for next time. You never *have* to load them — you can fill everything in by hand — but
+they make life much easier.
 
-> **Tip:** You don't have to load them all. Playing only Humblewood? Load just
-> `humblewood_full.json`. Only core D&D? Load just `5e2024_full.json`, and add
-> `xanathars_full.json`, `tashas_full.json` or `homebrew_full.json` if your table uses them.
+**Updating the rules data.** Rules data can be updated between app releases. When a newer copy of
+a pack you have loaded is out, Fieldbook mentions it quietly in **Settings → Rules data**, beside
+that pack, with a link to the release page (it needs an internet connection to notice). Download
+the new zip and import it the same way: each pack in it replaces the copy you had.
+
+> **Using a Fieldbook older than 1.8.0?** It can't open a zip. Unzip
+> `fieldbook-data-standalone-<version>.zip` first, then import the `.json` files inside it.
+
+> **Tip:** You don't have to keep them all. Importing the zip loads every pack in it; playing only
+> Humblewood, or only core D&D, you can remove the others under **Loaded data** afterwards. Or unzip
+> it and import just the `.json` files you want — `humblewood_full.json` on its own, or
+> `5e2024_full.json` plus `xanathars_full.json`, `tashas_full.json` or `homebrew_full.json` if
+> your table uses them.
 
 ### b) Create a character
 
@@ -392,11 +409,12 @@ happening behind the scenes.
 ## 7. Settings & themes
 
 Open **Settings** (the gear icon). It's grouped into collapsible sections — **Appearance**, **This
-character**, **Rules data**, **Characters & backup** — and remembers which ones you left open. From
-there you can:
+character**, **Rules data**, **Characters & backup**, **Credits & licences** — and remembers which
+ones you left open. From there you can:
 
-- **Manage rules data:** import files, see a list of everything currently loaded (grouped by
-  file), and remove any piece you no longer want.
+- **Manage rules data:** import the rules-data zip or single files, see a list of everything
+  currently loaded (grouped by file, with each pack's version and a note when a newer copy is
+  out), and remove any piece you no longer want.
 - **Back up everything:** **Export / Import settings** saves your appearance settings *and* all
   loaded rules to a single file — handy for moving your whole setup to another device. Importing
   asks before it replaces rules you already have loaded.
@@ -428,8 +446,14 @@ Autosave lives only in that browser's storage, which can be wiped (see
 matters.
 
 **A spell slot / feature isn't showing up.**
-Make sure you've loaded the relevant rules files (Settings → Rules), and that your class and
+Make sure you've loaded the relevant rules files (Settings → Rules data), and that your class and
 level are set on the Sheet tab.
+
+**Fieldbook says it couldn't import the rules zip.**
+The message says why. "Damaged" usually means the download was cut short: download it again. A
+password-protected zip, or one re-zipped with an unusual tool, can't be read: use the original
+download, or unzip it and import the `.json` files inside. Fieldbook older than 1.8.0 can't open a
+zip at all; unzip it first.
 
 **Can I use it on more than one device?**
 Yes — export your character (and optionally your settings) on one device and import them on the
@@ -449,17 +473,20 @@ Everything stays on your device. The app doesn't send your characters anywhere.
 fieldbook.html      ← the app — open this to run Fieldbook
 README.md           ← this guide
 LICENSE             ← the MIT licence this app is released under
-data/               ← the rules data — one file per book, import the ones you play
-   • 5e2024_full.json     — D&D 2024: species, classes, spells, feats, backgrounds,
-                            items, magic items, conditions, glossary, reference tables
-   • humblewood_full.json — Humblewood: species, classes, subclasses, spells, feats,
-                            backgrounds, reference tables
-   • xanathars_full.json  — Xanathar's Guide: subclasses, spells, feats, magic items,
-                            invocations, downtime and tool rules (add-on to D&D 2024)
-   • tashas_full.json     — Tasha's Cauldron: subclasses, spells, feats, magic items,
-                            Custom Lineage, infusions and optional class features
-                            (add-on to D&D 2024)
-   • homebrew_full.json   — community homebrew (add-on to D&D 2024)
+data/               ← the rules data, as one zip — import it as it is (section 3a)
+   • fieldbook-data-standalone-<version>.zip, which holds:
+       5e2024_full.json     — D&D 2024: species, classes, spells, feats, backgrounds,
+                              items, magic items, conditions, glossary, reference tables
+       humblewood_full.json — Humblewood: species, classes, subclasses, spells, feats,
+                              backgrounds, reference tables
+       xanathars_full.json  — Xanathar's Guide: subclasses, spells, feats, magic items,
+                              invocations, downtime and tool rules (add-on to D&D 2024)
+       tashas_full.json     — Tasha's Cauldron: subclasses, spells, feats, magic items,
+                              Custom Lineage, infusions and optional class features
+                              (add-on to D&D 2024)
+       homebrew_full.json   — community homebrew (add-on to D&D 2024)
+       fieldbook-data.json  — the list of what's in the zip, which Fieldbook reads
+       NOTICE.md            — each pack's version, licence and credits
 docs/               ← reference material (you can ignore these to just play)
    • CHANGELOG — what changed in each release
    • rules schema — the format, if you want to write your own rules data
@@ -468,8 +495,10 @@ scripts/            ← convert.py (plus overlay.json and class-resources.json, 
                       files it reads), for advanced users generating their own rules data
 ```
 
-**To play, you only ever need `fieldbook.html`.** The `data` files make the pickers and
-auto-math available, and the `docs`/`scripts` folders are optional extras for the curious.
+**To play, you only ever need `fieldbook.html`.** The rules data makes the pickers and
+auto-math available, and the `docs`/`scripts` folders are optional extras for the curious. The
+same rules-data zip is also attached to each release on its own, and a release of rules data
+alone comes as just that zip.
 
 ## 10. Credits & licences
 
@@ -484,7 +513,12 @@ follows your chosen theme. Which icon came from whom is recorded in
 `src/icons/icons.json` in the source repository, and the same credit appears in the app
 under **Settings → Credits & licences**.
 
-**Rules content** is not distributed with the app. You load it yourself, from files you
-supply, and it keeps whatever terms it came with.
+**Rules data** comes separately from the app, as the rules-data zip,
+`fieldbook-data-standalone-<version>.zip`. Each pack in it keeps its own terms: they are listed
+in the zip's `NOTICE.md`, and in the app under **Settings → Credits & licences** for every pack
+you have loaded. The Homebrew pack's The Predator, a Warlock subclass, is by D&D Wiki
+contributors ([dandwiki.com](https://www.dandwiki.com/wiki/The_Predator_(5e_Subclass))), used
+under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) and converted to
+Fieldbook's rules format.
 
 Have fun out there. 🌿

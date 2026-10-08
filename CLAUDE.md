@@ -28,8 +28,8 @@ playtest PDFs. Players load the resulting rules packs at runtime. Details: [over
 2. **Offline-first, and storage failures are loud.** localStorage for characters, settings and the
    library; IndexedDB for the rules cache (localStorage, LZW-compressed, as fallback). Every IndexedDB
    call is timed out. A storage write that does not land must SAY SO — never an empty `catch` around
-   `setItem`. The only network calls — the rules-source fetch and the GitHub update check — are
-   optional and fail silently offline. → [storage](src/docs/wiki/architecture/storage.md)
+   `setItem`. The only network calls — the rules-source fetch and the GitHub update checks (app and
+   rules data) — are optional and fail silently offline. → [storage](src/docs/wiki/architecture/storage.md)
 3. **Backward-compatible data.** Never break loading of existing saved characters. New character
    fields are optional, get a default in `blankChar()`, and survive a save→load round trip.
    → [character model](src/docs/wiki/architecture/character-model.md)
@@ -99,7 +99,9 @@ blocking.
 - **Never hand-edit `APP_VERSION`, `DATA_VERSIONS`, the `CHANGELOG` array, or the
   `version`/`digest`/`release` fields of `data/packs.json`** — `scripts/release.js` and
   `scripts/data-release.js` own them. `docs/CHANGELOG.md` is generated.
-- **Data-only or converter-only changes need no note and no release** — record them in the ledger.
+- **Data-only or converter-only changes need no player note** — record them in the ledger. They can
+  ship without an app release as a data release (`node scripts/data-release.js`), which is Mike's to
+  cut like any release.
 
 ## Architecture invariants — don't violate without discussing
 
@@ -131,8 +133,8 @@ Each links to the page that explains it and what broke when it was ignored.
 - **The recurring bug is the free-rules subset.** `basicRules2024` or `srd52` selects only it, and has
   already trimmed backgrounds, spells, feats, items and magic items. Assume any converter path you
   touch has it, and check its count against the full XPHB source.
-- **`data/5e2024/` must reproduce byte for byte** after any converter change, or `release.js` tells
-  every player to re-download a pack that didn't change:
+- **`data/5e2024/` must reproduce byte for byte** after any converter change, or the pack's content
+  digest moves and the next release tells every player to re-download a pack that didn't change:
 
   ```bash
   python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk data/5e2024

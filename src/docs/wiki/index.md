@@ -46,7 +46,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 - [Rules & tables](features/rules-and-tables.md) — the Rules tab, glossary browse, reference tables and `cols`
 - [Combat view](features/combat-view.md) — the combat tab: real cards moved in, the tracker, Undo
 - [Rules-update tool](features/rules-update-tool.md) — finding drift between a sheet and its packs, and the three rules
-- [Settings & updates](features/settings-and-updates.md) — settings sections, rules sources, pack badges, the update pill
+- [Settings & updates](features/settings-and-updates.md) — settings sections, rules sources, pack badges and the newer-data notice, pack credits, the update pill
 
 ## UI
 

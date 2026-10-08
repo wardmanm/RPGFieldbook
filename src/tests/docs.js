@@ -78,10 +78,8 @@ const OLD = /\b(humblewood-(races|spells|feats|classes|subclasses|backgrounds)|(
   ck(f + ' does not name a pre-reorganisation data file', !m, m && m[0]);
 });
 
-// ---------- the two data files players actually get
-['5e2024_full.json', 'humblewood_full.json'].forEach(n => {
-  ck('README names ' + n, readme.includes(n));
-});
+// ---------- the rules data players actually get: one archive (#83)
+ck('README names the rules-data archive', readme.includes('fieldbook-data-standalone'));
 
 // ---------- changelog notebook: the traps that reach the public release notes
 // Bullets are copied verbatim into the GitHub release body, where <name> is an

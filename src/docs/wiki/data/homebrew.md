@@ -8,9 +8,11 @@ the open, and it is still the working example of `requires`.
 
 **Code:** `missingRequirements()`, `requiresStatusHTML()`, `missingSummary()`, `mergeRules()` in
 `89-rules-merge.js`; `subclassesFor()` in `50-classrace.js`; `bundle()` in
-`scripts/bundle-rules.js`; `pack_digest()` in `tools/data-kit/fbdata.py`; `DATA_VERSIONS` in
-`30-version.js` · **Data:** `data/homebrew/features.json`, `subclasses.json`, `tables.json` ·
-**Tests:** `rules-data.js`, `tables.js` · **See also:** [Rules packs](../architecture/rules-packs.md),
+`scripts/bundle-rules.js`; `pack_digest()` in `tools/data-kit/fbdata.py`; `rulesCreditsHTML()` in
+`88-settings.js`; `DATA_VERSIONS` in `30-version.js` · **Data:** `data/homebrew/features.json`,
+`subclasses.json`, `tables.json`; its entry in `data/packs.json` · **Tests:** `rules-data.js`,
+`tables.js`, `data-archive.js` (its credit reaches Settings) · **See also:**
+[Rules packs](../architecture/rules-packs.md), [Data archive](../architecture/data-archive.md),
 [Supplements](supplements.md), [rules-schema](../../../../docs/rules-schema.md)
 
 ## How it works
@@ -23,10 +25,15 @@ the open, and it is still the working example of `requires`.
 | `subclasses.json` | The Predator, `class: "Warlock"`, traits at levels 1, 6, 10 and 14 |
 | `tables.json` | Predator Expanded Spells, owned by the subclass and anchored from its level-1 trait |
 
-The `_note` names the source (a D&D Wiki page) and its licence, CC-BY-SA 3.0. `bundle()` rolls the
-folder into `dist/homebrew_full.json` like any other system, and `DATA_VERSIONS` carries a
-`Homebrew` entry (`1.5.0` today), which `bundle()` requires and `release.js` bumps when
-`data/homebrew/` changes.
+The `_note` names the source (a D&D Wiki page) and its licence, CC-BY-SA 3.0, but it is not copied
+into the bundle, so it never reached players. **The licence and credit that do** live in the pack's
+entry in `data/packs.json`: `license: "CC-BY-SA-3.0"` and an `attribution` crediting The Predator to
+D&D Wiki's contributors, with its page, the licence, and "Changed: converted to Fieldbook's rules
+format." `bundle()` rolls the folder into `dist/homebrew_full.json` like any other pack and stamps
+both on it, so they ship in the bundle, are listed in Settings → Credits & licences once the pack is
+loaded, and appear in the archive's `NOTICE.md` (see [Data archive](../architecture/data-archive.md)).
+Its version is the registry's (`1.5.0` today); adding the credit changed its digest, so the next
+release moves it.
 
 **Why by hand.** Homebrew arrives as PDFs, HTML and JSON, and each piece needs judgement: which
 features are subclass traits and which are invocations, and what level each lands on. The files
@@ -58,12 +65,12 @@ chip names the two spells and `xanathars_full.json`; with all five packs it is s
   the other four packs' data, so the report can only ever mean "not imported", never "misspelt".
 - **Declare only what the schema cannot see.** A subclass's parent class is found structurally with
   no authoring; `requires` is for references that live in prose.
-- **A new homebrew folder with its own `system` is five registrations:** `SYSTEMS` in
-  `bundle-rules.js` (else it is never bundled), `DATA_VERSIONS` in `30-version.js` (else bundling
-  fails), `SYSTEM_DIRS` in `release.js` (else its data version never bumps, with a warning), the
-  bundle copy and the `data/` allowlist in `build.sh` (else it misses the zip, or the zip is
-  deleted), and the pack lists in `tables.js` and `rules-data.js` (else it is untested). Adding to
-  the existing folder under `system: "Homebrew"` needs none of them.
+- **A new homebrew folder with its own `system` is one registration, plus its tests:** a pack in
+  `data/packs.json` (`system`, `dir`, `file`, `title`, and `version: null` until its first release),
+  else it is never bundled, archived or versioned; and the pack lists in `tables.js`, `rules-data.js`
+  and the emblem check in `docs.js`, else it is untested. Its licence and credit go in the same
+  registry entry. `DATA_VERSIONS` picks it up at the next release, and the archive and the app zip
+  from the registry. Adding to the existing folder under `system: "Homebrew"` needs none of it.
 
 ## Traps
 
@@ -84,6 +91,7 @@ chip names the two spells and `xanathars_full.json`; with all five packs it is s
 | How a pack's dependencies are found | Two detectors: structural (`subclasses[].class`) and declared (`requires`) | Structural only: an expanded spell list names spells only inside prose. Scanning prose: would invent as many references as it found |
 | Matching a declared name | Case-insensitive against everything loaded, whichever pack supplies it | Matching the named pack: having the spell from somewhere else is not an error |
 | Where the verdict lives | Recomputed at render time from `rules`; only the declaration is stored | Computing it during merge: `mergeRules()` never runs at boot, so anything computed there would be lost on reload |
+| Where the pack's licence and credit live | `license` and `attribution` in `data/packs.json`, stamped into the bundle | The `_note`: never copied into the bundle, so no player ever saw it (L5082) |
 
 ## Open
 
@@ -96,3 +104,4 @@ chip names the two spells and `xanathars_full.json`; with all five packs it is s
 ## History
 
 - 2026-08-14 — Homebrew pack added with The Predator; `requires` and structural missing-dependency reporting. → ledger L1883
+- 2026-10-07 — Its CC BY-SA 3.0 licence and credit to D&D Wiki ship for the first time, in the bundle, Settings → Credits & licences and `NOTICE.md`; a new folder is registered in `data/packs.json`. → ledger L5082, #83

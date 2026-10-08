@@ -3,10 +3,13 @@
 How a version gets from your working copy to a player's download. Dev-only — this file lives under
 `src/docs/` and is deliberately excluded from the player bundle.
 
+> **Release freeze (from 2026-10-07):** no releases — app or data — until 1.8.0 is complete:
+> #83 (the data archive), #84 (the SRD 5.2 pack) and #85 (the private split). Mike lifts it.
+
 Publishing is automated. **You never upload assets by hand.** Pushing a tag is the whole trigger.
 
-**`./dev.sh` drives all of this from a menu** — build, tests, cut a release, and a condensed copy of
-the checklist — so you shouldn't need this file for the routine path. It's here for the detail:
+**`./dev.sh` drives all of this from a menu** — build, tests, cut a release, cut a data release, and a
+condensed copy of the checklist — so you shouldn't need this file for the routine path. It's here for the detail:
 what each guard refuses and why, and how to recover.
 
 ---
@@ -87,29 +90,37 @@ git push --follow-tags
 
 ### What `--release` does for you
 
-`scripts/release.js` owns `APP_VERSION` and the `CHANGELOG` array — **never hand-edit either.** It:
+`scripts/release.js` owns `APP_VERSION`, `DATA_VERSIONS` and the `CHANGELOG` array, and shares the
+versions, digests and `release` in `data/packs.json` with `data-release.js` — **never hand-edit any
+of them.** It:
 
 - bumps `APP_VERSION` in `src/js/30-version.js`,
-- bumps `DATA_VERSIONS[<system>]` to the new version **only for systems whose `data/<dir>/` changed
-  since the previous tag** (it prints which, or "rules data unchanged — players need only the app"),
+- runs `tools/data-kit/fbdata.py versions --bump <new version>`, which gives the new version **only
+  to the packs whose content changed since their last release** (by content digest, so
+  re-indenting a file changes nothing) and sets the registry's `release` to it (it prints which
+  packs, or "rules data unchanged — every pack keeps its version"),
+- snapshots `DATA_VERSIONS` from `data/packs.json`: the versions this build ships with,
 - folds every pending bullet from `src/docs/UNRELEASED.md` into a new `CHANGELOG` entry,
 - empties the notebook,
-- and then `build.sh` rebuilds, revalidates and re-zips.
+- and then `build.sh` rebuilds, revalidates and re-zips, the rules-data archive included.
 
 It refuses to release with an empty notebook, and refuses a version that isn't higher than the
-current one (that would break the in-app update check).
+current one (that would break the in-app update check). **A release needs `python3`** (`python`
+will do): without it, `release.js` refuses before writing anything. The registry bump runs first,
+so if it fails, nothing is written.
 
 ### What gets attached
 
 | Asset | Who it's for |
 |---|---|
 | `fieldbook.html` | Players who just want the app. This is the whole thing. |
-| `fieldbook-v<V>.zip` | The player bundle — app, README, rules packs, docs, converter. |
+| `fieldbook-v<V>.zip` | The player bundle — app, README, the rules-data archive in `data/`, docs, converter. |
+| `fieldbook-data-standalone-<V>.zip` | The rules data on its own: every pack, a manifest and `NOTICE.md`. Fieldbook opens it directly. |
 | GitHub's own `Source code (zip)` / `(tar.gz)` | Attached automatically from the tag — we don't build or upload a source archive. |
-| `5e2024_full.json`, `humblewood_full.json`, `xanathars_full.json`, `tashas_full.json`, `homebrew_full.json` | Rules packs on their own, for someone updating data without re-downloading the app. |
 
 The release body is that version's section of `docs/CHANGELOG.md`, sliced out by
-`scripts/release-notes.js`.
+`scripts/release-notes.js`, then `scripts/data-release-notes.js <V> --app`: what to download, and
+which rules packs changed in this release (those whose version is `<V>`) and which didn't.
 
 ---
 
@@ -119,8 +130,9 @@ A plain `./build.sh` is the everyday build: it validates everything and produces
 **current** `APP_VERSION`, and never touches the version or the notebook.
 
 ```bash
-./build.sh            # everything, zips included
+./build.sh            # everything, zips included (the zips need python3)
 ./build.sh --no-zip   # stop after the artifact + rules packs; leaves existing zips alone
+./build.sh --data     # only the rules packs and the rules-data archive
 ```
 
 **Zips from a build with pending notes are marked `+dev`:**
@@ -139,9 +151,81 @@ workflow relies on this** — it builds at the tag, where the notebook is empty,
 plain filename. A tag carrying pending notes therefore fails the asset check rather than publishing
 a mislabelled bundle.
 
+**The rules-data archive is marked `+dev` the same way, for its own reason:** when some pack's
+content differs from what `data/packs.json` recorded at the last release, app or data
+(`dist/fieldbook-data-standalone-1.8.0+dev.zip`). That zip is not release 1.8.0's data.
+
 Note that a zipping build starts with `rm -f dist/*.zip`, so it clears earlier zips (including a
 previous release's). They're gitignored and rebuildable from the tag, so nothing is lost — but don't
 leave one in `dist/` expecting it to survive the next build. `--no-zip` skips that wipe.
+
+---
+
+## 1b. Data releases
+
+A **data release** publishes new rules data without a new app: the rules-data archive alone, under
+a tag `data-vX.Y.Z-N`, where X.Y.Z is the current `APP_VERSION` and N counts up from 1. Its packs
+get versions like `1.8.0-1`, which Fieldbook sorts after `1.8.0` and before `1.8.1`.
+
+**When.** Rules data changed and the app didn't — a data fix, a converter run, new homebrew. If app
+changes are also pending, cut an app release instead; it carries the data too. The `./dev.sh`
+header says when one is waiting: `data 1.8.0, 2 changed`.
+
+**How.** `./dev.sh` → `d` (it shows the dry run first, then asks), or by hand:
+
+```bash
+node scripts/data-release.js --dry-run   # what it would do; writes nothing
+node scripts/data-release.js             # bump data/packs.json
+```
+
+It gives every pack whose content changed since its last release the next `<APP_VERSION>-N`, and
+sets the registry's `release` to it. It touches nothing else: not `fieldbook.html`, not
+`APP_VERSION` or `DATA_VERSIONS`, not the changelog or the notebook. It refuses when `data/` has
+uncommitted changes (the digests must describe what gets tagged), when no pack changed, when the
+registry's `release` belongs to another app version, and when the tag already exists. Then it
+prints, and never runs:
+
+```bash
+git add data/packs.json
+git commit -m "Data release 1.8.0-1"
+git tag -a data-v1.8.0-1 -m "Fieldbook data 1.8.0-1"
+git push && git push origin data-v1.8.0-1
+```
+
+**Pushing the tag publishes.** `data-release.yml` runs, and refuses, in order, with an `::error::`
+saying what to do:
+
+1. a tag that isn't `data-vX.Y.Z-N`;
+2. `data/packs.json`'s `release` isn't the tag's version (tagged without running the script, or
+   without committing its change);
+3. the tag's `X.Y.Z` isn't `APP_VERSION` at that commit — a data release is for the current app;
+4. `fbdata.py versions --check` fails: a pack changed after the bump;
+5. the tests fail;
+6. `./build.sh --data` fails;
+7. `fbdata.py validate` finds a problem with the archive.
+
+It then writes the release body (`data-release-notes.js <v> --data`: which packs changed, how to
+import, and the unzip fallback for Fieldbook older than 1.8.0) and publishes
+`fieldbook-data-standalone-<v>.zip` as the only asset, with `--latest=false`.
+
+**A data release is never "latest".** Every installed copy of Fieldbook, 1.7.2 included, finds app
+updates through GitHub's `/releases/latest`; a data release there would hide them. Running copies
+of 1.8.0 and later find data releases through the full releases list instead. The workflow's last
+step reads `/releases/latest`, and if it is not a `v…` tag, it marks the newest app release as
+latest again, then fails, so you see it. Check the releases page if it does.
+
+**Re-publishing.** Actions → Data release → *Run workflow* → enter the tag. It rebuilds the archive
+at that tag and re-uploads it with `--clobber`.
+
+**Rolling back.** Delete the GitHub release and the tag:
+
+```bash
+gh release delete data-v1.8.0-1 --yes
+git tag -d data-v1.8.0-1 && git push --delete origin data-v1.8.0-1
+```
+
+Running copies stop announcing it on their next load. `data/packs.json` keeps the versions it
+recorded, so the next data release is `-2`: a number is never reused. Fix the data and cut that.
 
 ---
 
@@ -161,7 +245,7 @@ fires, the fix is in your working copy, not in the workflow.
 | `bundle-rules.js` | The per-system packs still merge without a name collision. |
 | `./src/tests/run.sh` | The suites. Also run by the release workflow, because `ci.yml` triggers only on pushes to `main` and would otherwise be skipped entirely by a tag. |
 | Byte hygiene | A stripped final newline or a CRLF changes the shipped app. |
-| Full `./build.sh` + zip allowlist | Nothing development-shaped leaked into the player zip. |
+| Full `./build.sh` + archive validation + zip allowlist | The rules-data archive holds exactly what its manifest says, and nothing development-shaped leaked into the player zip. |
 | Build changed no tracked file | You committed the rebuilt artifact. |
 
 ### `release.yml` — on a `v*.*.*` tag
@@ -173,6 +257,11 @@ re-tag:
 ```bash
 git tag -d v1.2.2 && git push --delete origin v1.2.2
 ```
+
+**`data/packs.json`'s `release` isn't the tag's version.**
+`release.js` records every pack's version and sets `release` to the new version; a tag cut without
+`--release` would publish an archive named for the previous release. Delete the tag, cut properly,
+re-tag.
 
 **A clean rebuild doesn't reproduce the committed `dist/fieldbook.html`.**
 This is the check that makes a release *provably* the thing the source produces. Either the artifact
@@ -214,6 +303,11 @@ git switch -c release/1.2.x v1.2.1
 **An upload failed but the tag is fine.** Re-run without cutting a new version:
 Actions → Release → *Run workflow* → enter the tag. It rebuilds and re-uploads with `--clobber`.
 
+**Re-publishing a tag from before 1.8.0** (v1.7.2 or older): in *Run workflow*, set **Use workflow
+from** to that tag, not `main`. `main`'s `release.yml` requires `data/packs.json` and uploads the
+rules-data archive, and neither exists at an old tag, so it would refuse. The tag's own workflow
+builds and uploads what that release always had.
+
 **Wrong notes, right build.** Fix the wording in `src/js/30-version.js`'s `CHANGELOG` entry, rebuild,
 commit, then re-run the workflow for that tag. (This is the one time editing the array by hand is
 right — the version already exists, so `release.js` can't help.)
@@ -243,6 +337,11 @@ but leave its tag in history.
 - **Don't hand-edit `APP_VERSION` or the `CHANGELOG` array** (except the notes-only fix above).
   `release.js` owns both, and its guards exist because a version that goes backwards breaks the
   update check for everyone.
+- **Don't hand-edit the `version`, `digest` or `release` fields of `data/packs.json`**, or
+  `DATA_VERSIONS`. `release.js` and `data-release.js` write them through `fbdata.py`, and the
+  workflows check them against the content.
+- **Don't mark a data release "latest"** on GitHub, by hand or otherwise. It hides app updates from
+  every installed copy.
 - **Don't hand-edit `docs/CHANGELOG.md`** — regenerated from the array on every build.
 - **Don't move or re-point an existing tag.** Cut a new patch instead.
 - **Don't put dev docs in `docs/`.** That directory ships. Dev material goes here in `src/docs/`,
