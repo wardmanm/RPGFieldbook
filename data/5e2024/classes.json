@@ -5,7 +5,7 @@
   "classes": [
     {
       "name": "Artificer",
-      "description": "An inventor who infuses objects with magical power.",
+      "description": "An inventor who builds magic into tools, gear and gadgets.",
       "hitDie": "d8",
       "savingThrows": [
         "con",
@@ -667,7 +667,7 @@
     },
     {
       "name": "Barbarian",
-      "description": "A fierce warrior who channels primal rage.",
+      "description": "A warrior who fights on instinct and fury, shrugging off blows that would fell others.",
       "hitDie": "d12",
       "savingThrows": [
         "str",
@@ -1059,7 +1059,7 @@
     },
     {
       "name": "Bard",
-      "description": "An inspiring magician whose power echoes the music of creation.",
+      "description": "A performer whose songs and stories carry real magic, lifting allies and unsettling foes.",
       "hitDie": "d8",
       "savingThrows": [
         "dex",
@@ -1454,7 +1454,7 @@
     },
     {
       "name": "Cleric",
-      "description": "A priestly champion who wields divine magic in service of a higher power.",
+      "description": "A servant of a god who channels divine power to heal, protect and smite.",
       "hitDie": "d8",
       "savingThrows": [
         "wis",
@@ -1800,7 +1800,7 @@
     },
     {
       "name": "Druid",
-      "description": "A priest of the Old Faith, wielding the powers of nature.",
+      "description": "A guardian of the wild who calls on nature's power and takes the shapes of beasts.",
       "hitDie": "d8",
       "savingThrows": [
         "int",
@@ -2190,7 +2190,7 @@
     },
     {
       "name": "Fighter",
-      "description": "A master of martial combat, skilled with many weapons and armor.",
+      "description": "A trained combatant at home with any weapon and any armor.",
       "hitDie": "d10",
       "savingThrows": [
         "str",
@@ -3488,7 +3488,7 @@
     },
     {
       "name": "Monk",
-      "description": "A martial artist who harnesses the power of ki.",
+      "description": "A disciplined fighter who turns body and focus into speed and striking power.",
       "hitDie": "d8",
       "savingThrows": [
         "str",
@@ -3892,7 +3892,7 @@
     },
     {
       "name": "Mystic",
-      "description": "A wielder of psionic power drawn from the mind.",
+      "description": "A student of the mind who unlocks psionic power through discipline.",
       "hitDie": "d8",
       "savingThrows": [
         "int",
@@ -4324,7 +4324,7 @@
     },
     {
       "name": "Paladin",
-      "description": "A holy warrior bound to a sacred oath.",
+      "description": "A sworn champion whose oath lends holy power to sword and shield.",
       "hitDie": "d10",
       "savingThrows": [
         "wis",
@@ -4781,7 +4781,7 @@
     },
     {
       "name": "Ranger",
-      "description": "A warrior of the wilds who blends martial skill with primal magic.",
+      "description": "A hunter and scout who mixes weapon skill with the magic of the wilds.",
       "hitDie": "d10",
       "savingThrows": [
         "str",
@@ -5265,7 +5265,7 @@
     },
     {
       "name": "Rogue",
-      "description": "A scoundrel who uses stealth and precision to overcome obstacles.",
+      "description": "A specialist who wins through stealth, skill and a well-placed strike.",
       "hitDie": "d8",
       "savingThrows": [
         "dex",
@@ -5664,7 +5664,7 @@
     },
     {
       "name": "Sorcerer",
-      "description": "A spellcaster who draws on inherent magic from a gift or bloodline.",
+      "description": "A caster born with magic in the blood, shaping spells by raw talent.",
       "hitDie": "d6",
       "savingThrows": [
         "con",
@@ -6346,7 +6346,7 @@
     },
     {
       "name": "Warlock",
-      "description": "A wielder of magic derived from a bargain with an extraplanar entity.",
+      "description": "A caster who gains magic by striking a pact with a powerful being.",
       "hitDie": "d8",
       "savingThrows": [
         "wis",
@@ -7524,7 +7524,7 @@
     },
     {
       "name": "Wizard",
-      "description": "A scholarly magic-user capable of manipulating the structures of reality.",
+      "description": "A scholar who masters magic through study and a spellbook full of options.",
       "hitDie": "d6",
       "savingThrows": [
         "int",

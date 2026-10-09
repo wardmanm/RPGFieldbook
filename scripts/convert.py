@@ -730,21 +730,24 @@ def _prose_choices(cls, sub, src, class_skills):
         return {3: out}
     return {}
 
+# One line per class for the class picker, in Fieldbook's own words (#85): the
+# books' class-table summaries are theirs, and this file is public. The SRD
+# pack writes none — the SRD's class sections have no summary.
 CLASS_BLURB = {
-    'Barbarian':'A fierce warrior who channels primal rage.',
-    'Bard':'An inspiring magician whose power echoes the music of creation.',
-    'Cleric':'A priestly champion who wields divine magic in service of a higher power.',
-    'Druid':'A priest of the Old Faith, wielding the powers of nature.',
-    'Fighter':'A master of martial combat, skilled with many weapons and armor.',
-    'Monk':'A martial artist who harnesses the power of ki.',
-    'Paladin':'A holy warrior bound to a sacred oath.',
-    'Ranger':'A warrior of the wilds who blends martial skill with primal magic.',
-    'Rogue':'A scoundrel who uses stealth and precision to overcome obstacles.',
-    'Sorcerer':'A spellcaster who draws on inherent magic from a gift or bloodline.',
-    'Warlock':'A wielder of magic derived from a bargain with an extraplanar entity.',
-    'Wizard':'A scholarly magic-user capable of manipulating the structures of reality.',
-    'Artificer':'An inventor who infuses objects with magical power.',
-    'Mystic':'A wielder of psionic power drawn from the mind.',
+    'Barbarian': 'A warrior who fights on instinct and fury, shrugging off blows that would fell others.',
+    'Bard': 'A performer whose songs and stories carry real magic, lifting allies and unsettling foes.',
+    'Cleric': 'A servant of a god who channels divine power to heal, protect and smite.',
+    'Druid': "A guardian of the wild who calls on nature's power and takes the shapes of beasts.",
+    'Fighter': 'A trained combatant at home with any weapon and any armor.',
+    'Monk': 'A disciplined fighter who turns body and focus into speed and striking power.',
+    'Paladin': 'A sworn champion whose oath lends holy power to sword and shield.',
+    'Ranger': 'A hunter and scout who mixes weapon skill with the magic of the wilds.',
+    'Rogue': 'A specialist who wins through stealth, skill and a well-placed strike.',
+    'Sorcerer': 'A caster born with magic in the blood, shaping spells by raw talent.',
+    'Warlock': 'A caster who gains magic by striking a pact with a powerful being.',
+    'Wizard': 'A scholar who masters magic through study and a spellbook full of options.',
+    'Artificer': 'An inventor who builds magic into tools, gear and gadgets.',
+    'Mystic': 'A student of the mind who unlocks psionic power through discipline.',
 }
 
 # ---------------------------------------------------------------- overlay
@@ -1767,7 +1770,8 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
             except (IndexError, ValueError):
                 return None
 
-        C = {'name': entry['name'], 'description': CLASS_BLURB.get(entry['name'], ''),
+        C = {'name': entry['name'],
+             'description': '' if bk.mode == 'srd' else CLASS_BLURB.get(entry['name'], ''),
              'hitDie': 'd' + str(entry['hd']['faces'])}
         if entry.get('proficiency'): C['savingThrows'] = entry['proficiency']
         if entry.get('spellcastingAbility'): C['spellcasting'] = entry['spellcastingAbility']

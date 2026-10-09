@@ -2034,6 +2034,23 @@ with tempfile.TemporaryDirectory() as t:
        ok and man['packs'][0].get('license') == 'CC-BY-4.0'
        and 'System Reference Document 5.2.1' in zipfile.ZipFile(out).read('NOTICE.md').decode('utf-8'))
 
+# ---------- class one-liners are Fieldbook's own; the SRD pack has none (#85, decision 1)
+# Pinned by value: the old lines were the book's, and this file is public, so
+# the test names the new wording rather than quoting the old.
+ck('CLASS_BLURB is Fieldbook\'s own wording',
+   C.CLASS_BLURB.get('Bard', '').startswith('A performer whose songs and stories')
+   and C.CLASS_BLURB.get('Wizard', '').startswith('A scholar who masters magic'), C.CLASS_BLURB)
+ck('CLASS_BLURB covers the twelve classes, the Artificer and the Mystic', len(C.CLASS_BLURB) == 14)
+with tempfile.TemporaryDirectory() as t:
+    dump = os.path.join(t, 'dump')
+    _mini_dump(dump)
+    out = os.path.join(t, 'out')
+    r = subprocess.run([sys.executable, CONVERT, 'srd', dump, '-o', out, '--corrections', _nocorr(t)],
+                        capture_output=True, text=True)
+    classes = json.load(open(os.path.join(out, 'classes.json'), encoding='utf-8'))['classes']
+    ck('SRD mode writes no class one-liner', r.returncode == 0 and all(c.get('description', '') == '' for c in classes),
+       [c.get('description') for c in classes])
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)
