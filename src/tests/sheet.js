@@ -1111,17 +1111,17 @@ ck('...but still does emphasis and line breaks',
 ck('italic works in descriptions now', X.descHTML('*slanted*') === '<em>slanted</em>');
 ck('code works in descriptions now', X.descHTML('`typed`') === '<code>typed</code>');
 
-// The footnote asterisks that are ALREADY in the Humblewood data. A single *
+// A rules pack can use a literal `*` for its own footnote convention. A single *
 // must stay literal: this is why descHTML is bold-only and not noteInline.
-['You learn the divert power* spell.',
- 'you can cast cymatic sight* without material components',
- 'Spells marked with an asterisk (*) can be found in this book.'].forEach(s => {
+['You gain the Keen Senses* trait.',
+ 'you can use Keen Senses* without a free hand',
+ 'Traits marked with an asterisk (*) require a long rest to reset.'].forEach(s => {
   const out = X.descHTML(s);
   ck('a lone asterisk stays literal: ' + s.slice(0, 28),
      out.indexOf('*') > -1 && out.indexOf('<strong>') === -1 && out.indexOf('<em>') === -1, out);
 });
 ck('two lone asterisks in one string do not pair up',
-   X.descHTML('cast divert power* and cymatic sight* freely').indexOf('<em>') === -1);
+   X.descHTML('cast farsight* and trueshot* freely').indexOf('<em>') === -1);
 
 // escaping is highlight()'s job and must survive the bold pass
 ck('markup in the text is still escaped',

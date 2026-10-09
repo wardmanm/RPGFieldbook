@@ -125,9 +125,9 @@ sheet through the pickers below.
 
 **Formulas, one-entry items and stat blocks are written out.** `flatten()` writes the book's
 centred formula lines (`abilityDc`, `abilityAttackMod`, `abilityGeneric`) through
-`_formula_text()`, worded as 5e-tools' classic renderer words them: "Spell save DC = 8 + your
-proficiency bonus + your Intelligence modifier", "Spell attack modifier = your proficiency bonus +
-your Intelligence modifier", and several abilities as "Strength or Dexterity modifier (your
+`_formula_text()`, worded as 5e-tools' classic renderer words them — [book text: the Spellcasting
+formula line] and [book text: the Spell Attack formula line] — and several abilities as "Strength
+or Dexterity modifier (your
 choice)" (`_attr_choose()`). `_full_stop()` ends each with a full stop, because a named subsection
 joins its blocks with spaces. A list item carrying one `entry` instead of `entries` reads exactly
 as its `entries` twin, "Name: text". A `statblock` embeds another entity by reference:
@@ -197,7 +197,7 @@ rolls"; "+N bonus to … saving throw DC(s)" or "spell save DC"; the Robe of the
 spell save DC and spell attack bonus each increase by 2"; "+N bonus to … ability checks" alone or in
 a list (one named check, or checks "made with" a tool, is not all of them); or "Proficiency Bonus
 increases by N". A class named in it ("the saving throw
-DCs of your druid and ranger spells") is no condition: the sheet has one spellcasting, and the class
+DCs of [book text: a Moon Sickle's class-scoped save-DC clause]") is no condition: the sheet has one spellcasting, and the class
 is the item's attunement. It reads that sentence up to the end of the bonus's own clause, sets aside
 the conditions an equipped item always meets ("while wearing / holding / wielding / carrying",
 "while … is on your person", "while … orbits your head"), and calls the bonus conditional if any of

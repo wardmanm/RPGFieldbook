@@ -4041,7 +4041,7 @@ TCE `supplement`), four types reached it and were dropped, 28 nodes in all:
 `image` (3, Xanathar's) is skipped on purpose and stays skipped: it carries no rules text.
 
 **Fix.** Formula lines are worded as 5e-tools' renderer words them (`_formula_text()`,
-`_attr_choose()`): "Spell save DC = 8 + your proficiency bonus + your Intelligence modifier",
+`_attr_choose()`): [book text: the Spellcasting save-DC formula line],
 "Maneuver save DC = … your Strength or Dexterity modifier (your choice)", with `abilityGeneric`
 alongside. Checked against its current `render.js` and `parser.js` (fetched): `_renderAbilityDc`
 has two wordings picked by the reader's style switcher, the "classic" one above and "8 +
@@ -4051,8 +4051,8 @@ Each formula ends with a full stop, because a named subsection's blocks join wit
 Artificer's two lines otherwise ran together. An `entry` reads as `entries: [entry]`, the same
 "Name: text" as its `entries` twin. An item `statblock` resolves through `load_item_index()` over
 `items-base.json` and `items.json`, which `all` and `supplement` find themselves, and renders as
-"Psychic Blade: Simple Melee Weapon · Damage 1d6 psychic · Range 60/120 ft · Properties: Finesse,
-Thrown · Mastery: Vex (…)", the wording `convert_items()` gives a base weapon. An unresolved one
+[book text: the Psychic Blade statblock, rendered as a base-weapon stat line], the wording
+`convert_items()` gives a base weapon. An unresolved one
 keeps its name and is counted. Any other node type is counted in `_ENTRY_MISSES`, and
 `_entry_miss_warnings()` reports it at the end of `all`, `supplement` and every single subcommand,
 since prose is flattened with or without `--tables`. A single `classes` run has no item files, so
@@ -4273,8 +4273,8 @@ having been copied into term/text).
 ## Tables keep their footnotes (#73, 2026-09-28)
 
 **The bug.** 17 Xanathar's downtime tables mark entries with `*`, and the notes the marks point at
-never reached the pack: "Might involve a rival" under 14 complication tables, and "Halved for a
-consumable item like a potion or scroll" under Magic Item Price, Magic Item Base Prices and Magic
+never reached the pack: [book text: the Crime-Complications-style footnote] under 14 complication
+tables, and [book text: the Magic Item Price footnote] under Magic Item Price, Magic Item Base Prices and Magic
 Item Crafting Time and Cost (whose price column's label carries the mark). Seen during #68.
 
 **Root cause.** 5e-tools carries a table's footnotes on the table node itself, as `footnotes`, an
@@ -4288,7 +4288,7 @@ Artificer plan tables (3) and FRHoF's Knowledge Domain Spells (1). No pack selec
 printings (the core Artificer is TCE's, whose plan tables have none; the decks are XDMG's), so the
 core and Tasha's packs gain none. `classTableGroups` never carry them. **Humblewood** needs nothing:
 its one starred table, Night Domain Spells, explains the mark in a line the book prints after the
-table ("Spells marked with an asterisk (*) can be found in this book."), which the extractor
+table ([book text: the Night Domain Spells footnote line]), which the extractor
 already keeps verbatim in the feature prose beside the table's anchor, where the verbatim suite
 holds it. The extractor was not changed.
 

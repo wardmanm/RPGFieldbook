@@ -211,8 +211,8 @@ def _attr_choose(attrs):
 
 def _formula_text(node):
     """abilityDc / abilityAttackMod / abilityGeneric: the book's centred formula
-    lines ("Spell save DC = 8 + your proficiency bonus + your Intelligence
-    modifier"). Worded as 5e-tools' 'classic' style renders them, which is how
+    lines (e.g. a save-DC or attack-modifier line built from "8 + proficiency bonus +
+    an ability modifier"). Worded as 5e-tools' 'classic' style renders them, which is how
     every source the converter meets them in (PHB, XGE, TCE, UA) prints them;
     5e-tools' other wording is a reader preference, not a printing."""
     t = node.get('type')
@@ -709,9 +709,9 @@ FIGHTING_STYLES = [
 ]
 # Choices a subclass states only in prose, which the source carries no data for.
 # Hand-listed like FIGHTING_STYLES, keyed (class, subclass, source) so another
-# printing is never touched. Student of War: "one type of Artisan's Tools of your
-# choice, and ... one skill of your choice from the skills available to Fighters
-# at level 1" — the skill list is the class's own, read at conversion time.
+# printing is never touched. Student of War grants a tool proficiency of choice
+# plus a skill choice drawn from the Fighter's own skill list — the skill list
+# is the class's own, read at conversion time.
 ARTISANS_TOOLS = ["Alchemist's Supplies", "Brewer's Supplies", "Calligrapher's Supplies",
                   "Carpenter's Tools", "Cartographer's Tools", "Cobbler's Tools", "Cook's Utensils",
                   "Glassblower's Tools", "Jeweler's Tools", "Leatherworker's Tools", "Mason's Tools",
@@ -3066,8 +3066,8 @@ def _run_core(d, outdir, overlay_path=None, resources_path=None, include_legacy=
     optf = need('optional features', 'optionalfeatures.json')
     ofs = load_optfeats(optf[0]) if optf else []
     if classfiles: _write(convert_classes(classfiles, overlay=overlay, include_legacy=include_legacy, resources=cres, tables=tbls, optfeats=ofs, book=book), os.path.join(outdir, 'classes.json'))
-    # the same options as library entries, so a player can swap one ("each time
-    # you learn new maneuvers, you can also replace one"). 2024 printings only:
+    # the same options as library entries, so a player can swap one (the class lets
+    # you trade a known maneuver for another whenever you learn new ones). 2024 printings only:
     # pick_2024_preferred would backfill 2014-only invocations into the core pack.
     xphb = [f for f in ofs if f.get('source') == 'XPHB']
     if xphb: _write(_pack(book, 'features', _optfeat_features(xphb, tables=tbls, overlay=overlay), stem='features', version=1), os.path.join(outdir, 'features.json'))

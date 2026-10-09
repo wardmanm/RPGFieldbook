@@ -119,8 +119,8 @@ Wanted, not yet done. Each needs work, not a source.
   Whispering Wind expanded spells and Deep Roots' two tables. The features that cite them carry their
   full text. → [Humblewood playtests](../../_claude/HUMBLEWOOD-PLAYTESTS.md) §7
 - **Cervan "Surge of Vigor" has no uses tracker.** The ledger deferred it for want of the source, but
-  the verbatim text now states the limit ("can't use this feature again until you have completed a
-  Long Rest"), so it needs `uses {1/long}`, not a book. → ledger L1808, and
+  the verbatim text now states the limit ([book text: the long-rest reset clause]), so it needs
+  `uses {1/long}`, not a book. → ledger L1808, and
   [Humblewood](../data/humblewood.md)
 - Journal pages and trackers don't print; trackers have no rest reset and no group totals
   ([Journal](../features/journal.md)).

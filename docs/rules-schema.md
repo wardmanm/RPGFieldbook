@@ -658,15 +658,15 @@ appear in the app's **Tables** tab, and any description that carries a `[Table: 
 ```json
 "tables": [
   {
-    "name": "Wild Magic Surge",
-    "caption": "Wild Magic Surge",
-    "cols": ["1d100", "Effect"],
+    "name": "Wandering Weather",
+    "caption": "Wandering Weather",
+    "cols": ["1d6", "Effect"],
     "align": ["center", "left"],
     "rows": [
-      ["01-02", "Roll on this table at the start of each of your turns."],
-      ["03-04", "You cast Fireball as a level 3 spell."]
+      ["1-2", "A gentle breeze rolls through the area."],
+      ["3-4", "A short, heavy rain falls for one minute."]
     ],
-    "owner": "Wild Magic Sorcery",
+    "owner": "Weather Walker",
     "ownerKind": "subclass"
   }
 ]

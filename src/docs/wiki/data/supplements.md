@@ -50,8 +50,8 @@ Current counts, asserted file by file in `rules-data.js`:
 | XGE | 22 | 53 | 15 | — | 95 | 31 | 22 | 74 |
 | TCE | 3 | 84 | 15 | 1 (Custom Lineage) | 21 | 26 | 76 | 37 |
 
-17 of Xanathar's tables, every one a downtime table, carry `footnotes` ("Might involve a rival",
-"Halved for a consumable item like a potion or scroll"); `tables.js` pins them. Tasha's has none.
+17 of Xanathar's tables, every one a downtime table, carry `footnotes` ([book text: the two
+downtime-table footnote styles]); `tables.js` pins them. Tasha's has none.
 
 A supplement run also expands the book's own ammunition variants (`convert_ammo_variants()`):
 Xanathar's Walloping and Adamantine Ammunition.
