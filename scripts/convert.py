@@ -1905,9 +1905,9 @@ _TAGLINE = re.compile(r'^\s*\{@i [^{}]*\}\s*$')
 
 def _sub_blurb(sf):
     """A subclass's description: the first real paragraph of its first feature.
-    Not the italic tagline a 2024 subclass opens with — "{@i Augment Physical
-    Might with Psionic Power}" is 41 characters, over the length floor, and was
-    shipped as the whole description of eight subclasses."""
+    Not the italic tagline a 2024 subclass opens with — one shaped like "{@i Kindle
+    the Old Embers with Patient Breath}" (invented here) is 41 characters, over the
+    length floor, and was shipped as the whole description of eight subclasses."""
     for e in sf.get('entries', []):
         if isinstance(e, str) and not _TAGLINE.match(e) and len(strip_tags(e)) > 40:
             return strip_tags(e)
