@@ -5384,3 +5384,41 @@ Pages: [rules packs](../wiki/architecture/rules-packs.md), [building & CI](../wi
    layout instead, since that doc still ships inside both zips.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md), [data archive](../wiki/architecture/data-archive.md)
+
+## A quiet version chip for packs with no baseline, and homebrew needs public packs (#85, 2026-10-09)
+
+1. `dataStatus(g)` (`src/js/88-settings.js`) gains a fourth state, `"known"`: a pack that carries a
+   readable `dataVersion` but has neither a `DATA_VERSIONS` baseline for its system nor a data-release
+   notice for it — a private pack, or an old pack (XPHB, Humblewood, XGE, TCE) that a v1.7.2 player
+   still has loaded after a later build drops it from `DATA_VERSIONS` — used to fall into `"unknown"`
+   and show nothing. It now reports its own version with no claim either way (Review Focus 1, spec
+   2026-10-09): `dataStatusHTML()` renders it the same muted way as `"current"`,
+   `<span class="rd-src" title="This pack's version.">v<have></span>`, never the amber "update
+   available" chip or the newer-data notice (`dataUpdateHint`/`rulesBadge` only ever key off
+   `state==="update"`, so `"known"` is invisible to both by construction).
+2. `data/homebrew/features.json`, `subclasses.json` and `tables.json` — the three files whose
+   `requires` must stay byte-identical for the bundler — rename their first group's target from
+   `{"pack": "D&D 2024", "file": "5e2024_full.json"}` to `{"pack": "SRD 5.2", "file":
+   "srd52_full.json"}` (Warlock and the 11 spells the Predator leans on all resolve from the free SRD
+   52 pack alone — verified against `data/srd52/spells.json`/`classes.json`) and drop `file` from the
+   second group (Xanathar's Guide to Everything), which was never going to be public. A group with no
+   `file` already rendered "— from `<pack>`" (`requiresStatusHTML`, `src/js/89-rules-merge.js`), so no
+   app code changed for that half. Neither pack nor file drives whether a name resolves —
+   `missingRequirements` matches case-insensitively against anything loaded, pack-blind — so this is
+   purely which pack the chip's tooltip tells a player to go get. This is prep for later tasks in
+   #85 that remove the D&D 2024 and Xanathar's packs from the public repo; it is not itself a content
+   change.
+3. Verified end to end: merging `dist/srd52_full.json` then `dist/homebrew_full.json` leaves only
+   Cause Fear and Primal Savagery missing, both reported under "Xanathar's Guide to Everything" with
+   no file to point at.
+4. Tests: `src/tests/data-archive.js`'s `'dataStatus reads data versions'` section gains the Review
+   Focus 1 checks (a pack with a version and no baseline is `"known"`, shown quietly, raises no
+   newer-data notice; a pack with neither version nor baseline stays `"unknown"` and renders nothing).
+   `src/tests/rules-data.js` gains a check that all three homebrew files declare the new `requires`
+   values, and a real-bundle merge check (srd52 + homebrew) proving the resolution above. The existing
+   `#84 R7` check that resolves homebrew's D&D group against the SRD vocabulary matched it by
+   `/5e2024/.test(file)` or `/2024/.test(pack)` — true of "D&D 2024"/"5e2024_full.json", false of
+   "SRD 5.2"/"srd52_full.json" — so it would have silently stopped finding the group and failed;
+   updated to match `file==="srd52_full.json"` or `pack==="SRD 5.2"`.
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md), [homebrew](../wiki/data/homebrew.md)

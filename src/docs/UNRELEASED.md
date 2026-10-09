@@ -76,3 +76,6 @@ Bullets below this line — leave the heading in place.
 - The Warlock invocations Agonizing Blast, Eldritch Spear and Repelling Blast show their prerequisite properly, instead of a line of code.
 - The Carrying Capacity table shows each size's limit (Str. × 7.5 lb. and so on) instead of a line of code.
 - A Paladin choosing a Fighting Style can take Blessed Warrior, and a Ranger Druidic Warrior, as the rules allow.
+- Settings → Rules data now shows the version of a loaded pack this build doesn't recognise — a
+  pack of your own, or an older one a previous release shipped — quietly, with no false "update
+  available" alert.

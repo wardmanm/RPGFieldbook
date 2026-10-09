@@ -99,7 +99,12 @@ the newer-data check's copy of the same system and file name (`dataUpdateFor()`)
   v1.8.0-1. Download it from the release page." (`dataUpdateHint()`), links the release, in
   Settings and on the home screen, since both draw `rulesDataHTML()`.
 - **current** — a quiet "v*X*".
-- **unknown** — no stamp, a stamp that doesn't parse, or nothing to compare with: nothing shown.
+- **known** — a readable version, but no `DATA_VERSIONS` baseline for its system and no data-release
+  copy to compare against: a private pack, or an old pack (XPHB, Humblewood, XGE, TCE) a build after
+  #85 no longer ships a baseline for. Shown exactly like **current** — a quiet "v*X*" — because there
+  is no evidence either way, not nothing: a v1.7.2 player upgrading with an old pack still loaded sees
+  its version, never silence and never an alarm.
+- **unknown** — no stamp at all, or a stamp that doesn't parse: nothing shown.
 
 `DATA_VERSIONS` is the snapshot of `data/packs.json` that `release.js` took when this build was
 released; `fbdata.py bundle` stamps each pack from the registry (see
@@ -259,3 +264,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-07 — Import files takes zips and names each failure; the `update` state, its hint line and ` · update` on the count, from `checkForDataUpdate()`; Credits & licences lists each loaded pack's credit. → ledger L5082, #83
 - 2026-10-09 — Bundling moves to `bundle()` in `tools/data-kit/fbdata.py` (Python), replacing the Node bundler. → ledger L5342, #85
+- 2026-10-09 — `dataStatus()` gains `"known"`: a pack with a version but no baseline to compare it to shows that version quietly, never the amber chip or the newer-data notice. → ledger L5388, #85
