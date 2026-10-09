@@ -449,7 +449,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How a book's spell file is found** — One named file, `spells-<code>.json`
 - **XGE's encounter, trap and name tables; TCE's sidekick classes** — Not converted
 
-### [Humblewood](data/humblewood.md)
+### Humblewood (the private repo's `docs/humblewood.md`)
 
 - **Where PDF extraction lives** — A separate dev-only script whose reviewed output is committed
 - **How tables are found** — Explicit `SPECS`, each with a declared row count

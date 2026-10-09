@@ -16,7 +16,7 @@ copyrighted packs leave the public repo, it becomes the D&D content every player
 (gitignored) · **Tests:** `converter.py`, `rules-data.js`, `tables.js`, `srd-verbatim.py`, `data-kit.py`,
 `docs.js` (the README and README-converter credit, the zip's corrections file) · **See also:** [Converter](converter.md),
 [Rules packs](../architecture/rules-packs.md), [Data archive](../architecture/data-archive.md),
-[Homebrew](homebrew.md), [Humblewood](humblewood.md) (the other verbatim check), [Testing](../process/testing.md),
+[Homebrew](homebrew.md), Humblewood (the private repo's `docs/humblewood.md`, the other verbatim check), [Testing](../process/testing.md),
 [the spec](../../specs/2026-10-08-srd-pack-design.md)
 
 ## How it works

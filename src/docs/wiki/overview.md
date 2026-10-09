@@ -62,7 +62,7 @@ src/                      THE SOURCE OF TRUTH — edit here, never the built fil
     WORKTREES.md            several issues at once in parallel worktrees
     ADR-001-source-split.md why the source is split
     specs/  plans/          one design spec per feature, and the plans that execute them
-    _claude/                agent context: WIRING-LEDGER.md (the log), HUMBLEWOOD-PLAYTESTS.md
+    _claude/                agent context: WIRING-LEDGER.md (the log)
 dist/
   fieldbook.html          the app — a BUILD ARTIFACT, tracked in git. Never hand-edit
   <dir>_full.json         one bundled rules pack per data dir (gitignored)

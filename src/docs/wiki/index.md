@@ -58,7 +58,6 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 
 - [Converter](data/converter.md) — `convert.py`, the `basicRules2024`/`srd52` trap, the byte-for-byte gates
 - [Supplements](data/supplements.md) — Xanathar's and Tasha's as additive packs, and the three traps
-- [Humblewood](data/humblewood.md) — `extract-humblewood.py`, verbatim prose, tables, playtest packets
 - [Homebrew](data/homebrew.md) — the hand-authored pack and `requires`
 - [SRD 5.2](data/srd.md) — the free D&D pack: built from the SRD flags, matched to the SRD PDF, credited as the licence asks
 
@@ -79,6 +78,5 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 - [WORKTREES](../WORKTREES.md) — several issues at once in parallel worktrees
 - [ADR-001](../ADR-001-source-split.md) — why the source is split and still ships as one file
 - [UNRELEASED](../UNRELEASED.md) — the changelog notebook for the next release
-- [Humblewood playtests](../_claude/HUMBLEWOOD-PLAYTESTS.md) — what each playtest packet adds and supersedes
 - [Specs](../specs/) and [plans](../plans/) — one design spec per feature, and the plans that execute them
 - [rules-schema](../../../docs/rules-schema.md) and [README-converter](../../../docs/README-converter.md) — player-facing, ship in the zip

@@ -279,8 +279,9 @@ const strays=dataFiles.filter(n=>!/^data\/fieldbook-data-standalone-[^/]+\.zip$/
 if(strays.length)banned.push(...strays);
 if(dataFiles.length>1)banned.push("(data/ holds more than one archive)");
 // docs/ is an ALLOWLIST, not a blocklist. Naming each dev doc to ban leaves a
-// hole the size of the next one written: HUMBLEWOOD-PLAYTESTS.md was not in the
-// list and would have shipped if it ever landed in docs/.
+// hole the size of the next one written: HUMBLEWOOD-PLAYTESTS.md (a dev doc, now
+// in the private repo) was not in the list and would have shipped if it ever
+// landed in docs/.
 const docFiles=names.filter(n=>/^docs\/.+/.test(n)&&!n.endsWith("/"));
 const docStrays=docFiles.filter(n=>!/^docs\/(CHANGELOG|README-converter|rules-schema)\.md$/.test(n));
 if(docStrays.length)banned.push(...docStrays);

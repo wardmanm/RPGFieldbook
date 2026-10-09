@@ -25,7 +25,7 @@ PY=python3
 # humblewood tables) while dist/ still holds the older pack.
 "$PY" tools/data-kit/fbdata.py bundle -o dist >/dev/null || { echo "bundling failed"; exit 1; }
 
-SUITES="converter tables rules-data sheet char-update docs humblewood-verbatim data-kit data-archive srd-verbatim"
+SUITES="converter tables rules-data sheet char-update docs data-kit data-archive srd-verbatim private-data"
 TOTAL=0
 FAILED=""
 RAN=0

@@ -17,9 +17,10 @@ see "Keeping the docs current". This file holds only the rules.
 the free D&D rules of **SRD 5.2** and the **Humblewood** TTRPG, plus additive packs for **Xanathar's
 Guide**, **Tasha's Cauldron** and hand-authored **homebrew**. It ships as one self-contained file,
 `dist/fieldbook.html`, built by concatenating the fragments in `src/`. A Python CLI
-(`scripts/convert.py`) turns 5e-tools exports into the app's JSON; a dev-only one
-(`scripts/extract-humblewood.py`) reads the Humblewood books and playtest PDFs. Players load the
-resulting rules packs at runtime. Details: [overview](src/docs/wiki/overview.md).
+(`scripts/convert.py`) turns 5e-tools exports into the app's JSON. Players load the resulting
+rules packs at runtime. This repo's packs are SRD 5.2 and homebrew; the 2024, Xanathar's, Tasha's
+and Humblewood packs live in the private repo (`RPGFieldbookPrivate`, linked into a checkout as
+`_private-data`). Details: [overview](src/docs/wiki/overview.md).
 
 ## Non-negotiable constraints
 
@@ -48,7 +49,8 @@ src/                     THE SOURCE OF TRUTH — edit here, never the built file
   tests/                 the suites — ./src/tests/run.sh
   docs/                  dev docs (never ship): wiki/, specs/, plans/, UNRELEASED.md, …
 dist/fieldbook.html      BUILD ARTIFACT, tracked. Never hand-edit
-data/<system>/*.json     rules data; data/packs.json registers each pack; bundled into dist/*_full.json
+data/<system>/*.json     rules data: srd52/ and homebrew/; data/packs.json registers each pack;
+                         bundled into dist/*_full.json
 tools/data-kit/          fbdata.py — pack versions, digests, the data archive (Python 3.8+, stdlib)
 docs/                    PLAYER-FACING, ships — an allowlist of exactly three files
 ```
@@ -65,12 +67,12 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
 
 ## Build, test, QA — build freely, never release
 
-- **Tests: `./src/tests/run.sh`** (across ten suites). `humblewood-verbatim` needs PyMuPDF and the
-  PDFs, so under the system `python3` it skips cleanly; run it directly with
-  `.venv/bin/python src/tests/humblewood-verbatim.py`. `srd-verbatim` likewise needs PyMuPDF and the
-  SRD PDF in `_conversion-data/srd52/`; run it with `.venv/bin/python src/tests/srd-verbatim.py`.
-  Safe to run unprompted — they touch no tracked file. Run them after any
-  change to `src/`, `scripts/` or `data/`. For a pure function you touch, also write a throwaway Node
+- **Tests: `./src/tests/run.sh`** (across ten suites). `srd-verbatim` needs PyMuPDF and the SRD
+  PDF in `_conversion-data/srd52/`, so under the system `python3` it skips cleanly; run it with
+  `.venv/bin/python src/tests/srd-verbatim.py`. `private-data` runs the private repo's suites
+  against this checkout when `_private-data` is linked, and skips otherwise; put `.venv/bin` on
+  `PATH` so its PDF check finds PyMuPDF. Safe to run unprompted — they touch no tracked file. Run
+  them after any change to `src/`, `scripts/` or `data/`. For a pure function you touch, also write a throwaway Node
   check in the scratchpad. → [testing](src/docs/wiki/process/testing.md)
 - **Building to test is fine:** `./build.sh`, or `./build.sh --no-zip` for just the artifact
   (every build needs `python3`: `tools/data-kit/fbdata.py` bundles the packs and writes the
@@ -137,12 +139,12 @@ Each links to the page that explains it and what broke when it was ignored.
 - **The recurring bug is the free-rules subset.** `basicRules2024` or `srd52` selects only it, and has
   already trimmed backgrounds, spells, feats, items and magic items. Assume any converter path you
   touch has it, and check its count against the full XPHB source.
-- **`data/5e2024/` and `data/srd52/` must reproduce byte for byte** after any converter change, or
-  the pack's content digest moves and the next release tells every player to re-download a pack
-  that didn't change:
+- **The 2024 pack (in the private repo) and `data/srd52/` must reproduce byte for byte** after any
+  converter change, or the pack's content digest moves and the next release tells every player to
+  re-download a pack that didn't change:
 
   ```bash
-  python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk data/5e2024
+  python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk _private-data/data/5e2024
   python3 scripts/convert.py srd _conversion-data/5etools-v2.36.1 -o /tmp/srd && diff -r /tmp/srd data/srd52
   ```
 

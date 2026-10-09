@@ -8,8 +8,8 @@ page it concerns.
 
 **See also:** [Grants & provenance](../architecture/grants-and-provenance.md),
 [Computed stats & effects](../architecture/computed-stats-and-effects.md),
-[Humblewood](../data/humblewood.md), [Converter](../data/converter.md),
-[Humblewood playtests](../../_claude/HUMBLEWOOD-PLAYTESTS.md), [2.0](2.0.md)
+Humblewood (the private repo's `docs/humblewood.md`), [Converter](../data/converter.md),
+Humblewood playtests (the private repo's `docs/HUMBLEWOOD-PLAYTESTS.md`), [2.0](2.0.md)
 
 ## Limitations
 
@@ -114,14 +114,14 @@ Wanted, not yet done. Each needs work, not a source.
 - **Twelve Sep 2024 characteristic tables** (Stonesinger, Warrenborn, Wonderstruck) are not extracted.
   Their pages stack tables both vertically and side by side, which the table reader doesn't handle. Six
   of the twelve came back malformed, so all twelve are dropped: a background gets its four tables or
-  none. → ledger L1045, and [Humblewood playtests](../../_claude/HUMBLEWOOD-PLAYTESTS.md) §7
+  none. → ledger L1045, and the private repo's `docs/HUMBLEWOOD-PLAYTESTS.md` §7
 - **Lower-value playtest tables not extracted:** the Gadgeteer progression table, Lunin Pedigree, the
   Whispering Wind expanded spells and Deep Roots' two tables. The features that cite them carry their
-  full text. → [Humblewood playtests](../../_claude/HUMBLEWOOD-PLAYTESTS.md) §7
+  full text. → the private repo's `docs/HUMBLEWOOD-PLAYTESTS.md` §7
 - **Cervan "Surge of Vigor" has no uses tracker.** The ledger deferred it for want of the source, but
   the verbatim text now states the limit ([book text: the long-rest reset clause]), so it needs
   `uses {1/long}`, not a book. → ledger L1808, and
-  [Humblewood](../data/humblewood.md)
+  the private repo's `docs/humblewood.md`
 - Journal pages and trackers don't print; trackers have no rest reset and no group totals
   ([Journal](../features/journal.md)).
 - **Thrown weapons track no ammunition of their own** (Dart, Javelin, Dagger).
@@ -141,7 +141,7 @@ Blocked until someone has the book or PDF.
   Globe of Twilight, Gust Barrier, Invoke the Amaranthine, Shape Plants, Spiny Shield, Stellar Bodies
   and Veil of Dusk. They are Humblewood Vol 1 content. All ten ship with their existing, non-verbatim
   text, untouched. → ledger L1045, and
-  [Humblewood playtests](../../_claude/HUMBLEWOOD-PLAYTESTS.md) §7
+  the private repo's `docs/HUMBLEWOOD-PLAYTESTS.md` §7
 
 ## Found while compiling the wiki — for Mike's triage
 
@@ -256,9 +256,9 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   zip's `all` gets a warning and must pass both flags. → [Converter](../data/converter.md)
 - **The `SUPPLEMENTS` profiles don't carry `--avoid-table-names`**, so a bare `--book` re-run does not
   reproduce the table names (`dev.sh` passes the flag). → [Supplements](../data/supplements.md)
-- **`extract-humblewood.py`:** `--write-prose` drops a repeated heading missing from `HEAD_ERRATA`
-  silently, although ledger L904 calls that a hard error. `audit_th()` checks only core table cells.
-  → [Humblewood](../data/humblewood.md)
+- **`extract-humblewood.py`** (in the private repo): `--write-prose` drops a repeated heading missing
+  from `HEAD_ERRATA` silently, although ledger L904 calls that a hard error. Its "Th" ligature audit
+  checks only core table cells. → the private repo's `docs/humblewood.md`
 - **`humblewood-verbatim` is skipped locally even with `.venv` and the PDFs present**, because
   `run.sh` uses the `python3` on `PATH`, which lacks PyMuPDF. Run with `.venv/bin/python` it reports
   165 passed. `run.sh`'s closing "All N suites passed" also counts a skipped suite.

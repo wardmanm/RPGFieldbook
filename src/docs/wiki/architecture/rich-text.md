@@ -21,7 +21,7 @@ category, through the renderers and pickers), `rules-data.js` (every attribute i
 image through `safeImgSrc()`; run-in panes call `richInline()`, no mid-sentence breaks in
 Humblewood prose) ·
 **See also:** [Story & notes](../features/story-and-notes.md),
-[Rules & tables](../features/rules-and-tables.md), [Humblewood](../data/humblewood.md),
+[Rules & tables](../features/rules-and-tables.md), Humblewood (the private repo's `docs/humblewood.md`),
 [Build & source split](build-and-source-split.md)
 
 ## How it works

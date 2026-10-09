@@ -376,7 +376,7 @@ commit_menu() {
 # worth anything is locally, before the push.
 #
 # Skips cleanly with no npx and no network — same contract as the
-# humblewood-verbatim suite. build.sh needs nothing but node/python3/bash and
+# srd-verbatim suite. build.sh needs nothing but node/python3/bash and
 # must keep working offline, which is exactly why this lives here instead.
 check_workflows() {
   printf '\n%sWorkflow YAML%s\n\n' "$B" "$OFF"

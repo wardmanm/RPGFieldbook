@@ -13,8 +13,9 @@
 function ammoKindOf(v){return (typeof v==="string"?v:"").replace(/\s+/g," ").trim().toLowerCase();}
 const AMMO_KINDS=["arrow","bolt","firearm bullet","needle","sling bullet"];
 /* What the one-time pass knows without a rules pool. Every row agrees with
-   data/5e2024/items.json, and rules-data.js checks that it does. A cost is
-   written as the pack writes it; the Sling Bullet has none. */
+   data/srd52/items.json and with the private repo's 2024 pack: rules-data.js
+   checks the first and the private-data suite the second. A cost is written
+   as the pack writes it; the Sling Bullet has none. */
 const AMMO_PIECES={
   "arrow":         {name:"Arrow",          cost:"5 cp", weight:0.05},
   "bolt":          {name:"Bolt",           cost:"5 cp", weight:0.075},

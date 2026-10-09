@@ -825,7 +825,8 @@ def pick_2024_preferred(entries, name_key='name', shipped=None):
 #
 # The DEFAULT Book reproduces the original behaviour byte for byte — no source
 # codes means pick_2024_preferred, and the pack names are the exact strings the
-# committed data/5e2024/ files already carry. Do not "tidy" these strings.
+# 2024 pack's files (the private repo's data/5e2024/) already carry. Do not
+# "tidy" these strings.
 _XPHB_NAMES = {
     'items': 'D&D 2024 Items', 'backgrounds': 'D&D 2024 Backgrounds',
     'classes': 'XPHB Classes (2024)', 'races': 'D&D 2024 Species',
@@ -836,7 +837,8 @@ class Book:
     """The source book(s) a run converts, and how its packs are labelled.
 
     codes           5e-tools `source` values to keep. Empty = the 2024 default
-                    (pick_2024_preferred), which is what data/5e2024/ was built with.
+                    (pick_2024_preferred), which is what the 2024 pack (the private
+                    repo's data/5e2024/) was built with.
     system          the string stamped as each pack's `system` field. This is the
                     app's merge namespace AND the DATA_VERSIONS key.
     names           per-output-stem pack display names.
@@ -1501,7 +1503,8 @@ def _render_prereq(pr, legacy=False):
     """`legacy` adds the prerequisite shapes 2014-era books use. Both of the extra
     branches are gated rather than merely "verified harmless": `race` never occurs
     in the 2024 run (0 of 77 feats) but `proficiency` does (5 of 77) and is not
-    rendered today, so rendering it unconditionally would move data/5e2024/."""
+    rendered today, so rendering it unconditionally would move the 2024 pack
+    (the private repo's data/5e2024/)."""
     if not pr: return ''
     alts = []
     for block in pr:

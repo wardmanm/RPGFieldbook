@@ -64,15 +64,11 @@ ck('CLAUDE.md suite count is right',
    claudeSuites && claudeSuites[1] + ' vs ' + suites.length);
 
 // every suite file present must actually be registered, or it never runs
-// (#85: private-data takes humblewood-verbatim's slot in the removal commit, so
-// the count stays ten; until then it may wait, and only while that slot is held.
-// Delete this exception with the swap.)
-const awaitingSlot = base => base === 'private-data' && suites.includes('humblewood-verbatim');
 fs.readdirSync(path.join(ROOT, 'src/tests'))
   .filter(f => /\.(js|py)$/.test(f) && !/^(harness|run)\b/.test(f))
   .forEach(f => {
     const base = f.replace(/\.(js|py)$/, '');
-    ck('suite file "' + f + '" is registered in run.sh', suites.includes(base) || awaitingSlot(base));
+    ck('suite file "' + f + '" is registered in run.sh', suites.includes(base));
   });
 
 // ---------- no public test reads a private pack (#85, Review Focus 2)
@@ -87,7 +83,7 @@ fs.readdirSync(path.join(ROOT, 'src/tests'))
 //   a key, or a path under data '<pack>/items.json Name', {'<pack>': {…}}, <pack>: {…}
 // Every .js, .py and .sh file under src/tests, at any depth (fixtures/ holds
 // JSON data, not reads). A label in a synthetic fixture is renamed rather than
-// excused, so the only exception is the suite below that leaves with its pack.
+// excused, so nothing is exempt.
 {
   const NAMES = '5e2024|xanathars|tashas|humblewood', LONE = '(?:5e2024|xanathars|tashas)';
   const PK = '(?:' + NAMES + ')', Q = '[\'"]';
@@ -101,15 +97,11 @@ fs.readdirSync(path.join(ROOT, 'src/tests'))
     Q + PK + '/',
     Q + '?\\b' + PK + Q + '?\\s*:\\s*[{\\[]',
   ].join('|'));
-  /* humblewood-verbatim.py checks the Humblewood pack against its PDFs and
-     leaves this repo with it in #85's removal commit; until then, and only while
-     run.sh still lists it, it is not scanned. Delete this exception with it. */
-  const leaving = f => f === 'humblewood-verbatim.py' && suites.includes('humblewood-verbatim');
   const testFiles = d => fs.readdirSync(path.join(ROOT, 'src/tests', d), { withFileTypes: true }).flatMap(e =>
     e.isDirectory() ? testFiles(d ? d + '/' + e.name : e.name) : /\.(js|py|sh)$/.test(e.name) ? [d ? d + '/' + e.name : e.name] : []);
-  const scanned = testFiles('').filter(f => !leaving(f));
+  const scanned = testFiles('');
   ck('the private-pack scan covers run.sh and every suite', scanned.includes('run.sh') && suites.every(s =>
-    scanned.includes(s + '.js') || scanned.includes(s + '.py') || leaving(s + '.py')), scanned);
+    scanned.includes(s + '.js') || scanned.includes(s + '.py')), scanned);
   scanned.forEach(f => {
     const hits = read('src/tests/' + f).split('\n').map((l, i) => [i + 1, l]).filter(([, l]) => PRIVATE_PACK.test(l));
     ck('src/tests/' + f + ' reads no private pack', !hits.length, hits.slice(0, 3).map(([n, l]) => n + ': ' + l.trim().slice(0, 100)));
