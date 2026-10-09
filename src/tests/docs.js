@@ -75,6 +75,39 @@ fs.readdirSync(path.join(ROOT, 'src/tests'))
     ck('suite file "' + f + '" is registered in run.sh', suites.includes(base) || awaitingSlot(base));
   });
 
+// ---------- no public test reads a private pack (#85, Review Focus 2)
+// The 2024, Xanathar's, Tasha's and Humblewood packs live in the private repo,
+// and CI has none of them. This catches every form the suites used to read one
+// by (<pack> is one of the four folder names below):
+//   a path                      'data/<pack>/x.json', path.join(ROOT, 'data', '<pack>', f)
+//   a bundle name               dist/<pack>_full.json, '<pack>_full.json' anywhere
+//   a helper given the folder   pack('<pack>', f), shippedItems('<pack>', f), read('<pack>', f, n)
+//   a list of pack folders      ['<pack>', …] or […, 'srd52', '<pack>']
+//   a key, or a path under data '<pack>/items.json Name', {'<pack>': {…}}, <pack>: {…}
+// A label in a synthetic fixture is renamed rather than excused, so the only
+// exception is the suite below that leaves with its pack.
+{
+  const NAMES = '5e2024|xanathars|tashas|humblewood';
+  const PK = '(?:' + NAMES + ')', Q = '[\'"]';
+  const PRIVATE_PACK = new RegExp([
+    '(?:data|dist)[\\/\'", ]+' + PK + '(?:_full\\.json|[\\/\'"])',
+    PK + '_full\\.json',
+    '\\w\\(\\s*' + Q + PK + Q + '\\s*[,)]',
+    '\\[\\s*' + Q + PK + Q + '\\s*,',
+    Q + '(?:' + NAMES + '|homebrew|srd52)' + Q + '\\s*,\\s*' + Q + PK + Q,
+    Q + PK + '/',
+    Q + '?\\b' + PK + Q + '?\\s*:\\s*[{\\[]',
+  ].join('|'));
+  /* humblewood-verbatim.py checks the Humblewood pack against its PDFs and
+     leaves this repo with it in #85's removal commit; until then, and only while
+     run.sh still lists it, it is not scanned. Delete this exception with it. */
+  const leaving = f => f === 'humblewood-verbatim.py' && suites.includes('humblewood-verbatim');
+  fs.readdirSync(path.join(ROOT, 'src/tests')).filter(f => /\.(js|py)$/.test(f) && !leaving(f)).forEach(f => {
+    const hits = read('src/tests/' + f).split('\n').map((l, i) => [i + 1, l]).filter(([, l]) => PRIVATE_PACK.test(l));
+    ck('src/tests/' + f + ' reads no private pack', !hits.length, hits.slice(0, 3).map(([n, l]) => n + ': ' + l.trim().slice(0, 100)));
+  });
+}
+
 // ---------- the flat data filenames are gone; no doc may still name them
 const OLD = /\b(humblewood-(races|spells|feats|classes|subclasses|backgrounds)|(spells|feats|items|classes|races|backgrounds|conditions|glossary)-2024)\.json\b/;
 ['README.md', 'CLAUDE.md', 'docs/rules-schema.md', 'docs/README-converter.md'].forEach(f => {
@@ -175,8 +208,13 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   let dv = null;
   try { dv = JSON.parse(dvm[1]); } catch (e) { /* reported below */ }
   ck('DATA_VERSIONS is present and is flat JSON (release.js rewrites it)', !!dv);
+  /* #85: these four packs left this registry for the private repo's. The
+     snapshot still names them until the next release retakes it from this
+     registry, so each may be absent here, and only these four. */
+  const LEFT_FOR_PRIVATE = ['XPHB', 'Humblewood', 'XGE', 'TCE'];
   if (dv) Object.entries(dv).forEach(([sys, v]) => {
     const p = packsReg.packs.find(x => x.system === sys);
+    if (!p && LEFT_FOR_PRIVATE.includes(sys)) return;
     ck('DATA_VERSIONS.' + sys + ' has a pack in data/packs.json', !!p);
     if (p) ck('data/packs.json ' + sys + ' is at or after DATA_VERSIONS', dvCmp(p.version, v) >= 0, p.version + ' vs ' + v);
   });
@@ -228,7 +266,7 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   // This is the check that fires when a future pack adds a race and nobody
   // notices it renders bare. A data-only change CAN go red here — that is the
   // point, and the fix is one line in src/icons/icons.json.
-  const DIRS = ['5e2024', 'humblewood', 'xanathars', 'tashas', 'homebrew'];
+  const DIRS = ['homebrew', 'srd52'];
   const FILES = { classes: 'classes.json', races: 'races.json', backgrounds: 'backgrounds.json' };
   DATA_KINDS.forEach(kind => {
     const have = new Set(Object.keys(iconMap[kind] || {}).map(n => n.trim().toLowerCase()));

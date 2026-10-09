@@ -67,8 +67,8 @@ section('dataStatus reads data versions', () => {
 
 section('Import settings sees an older -N copy', () => {
   X.resetRules();
-  X.mergeRules({system: 'XPHB', rulebook: true, dataVersion: '1.8.0-2', races: [{name: 'Elf'}]}, '5e2024_full.json');
-  const saved = {races: [{name: 'Elf', _source: 'XPHB', _file: '5e2024_full.json', _rulebook: 1, _dataVersion: '1.8.0-1'}]};
+  X.mergeRules({system: 'XPHB', rulebook: true, dataVersion: '1.8.0-2', races: [{name: 'Elf'}]}, 'rulebook_full.json');
+  const saved = {races: [{name: 'Elf', _source: 'XPHB', _file: 'rulebook_full.json', _rulebook: 1, _dataVersion: '1.8.0-1'}]};
   const built = X.poolFromExport(saved);
   const html = X.settingsImportQuestionHTML({pool: built.pool, skipped: 0});
   ck('a file holding 1.8.0-1 while 1.8.0-2 is loaded is an older copy', /puts back an older copy/.test(html), html.slice(0, 300));
@@ -509,33 +509,34 @@ section('the newer-data notice', async () => {
 
   const pick = {tag: 'data-v1.8.0-1', version: '1.8.0-1', url: 'https://github.com/x/y/releases/tag/data-v1.8.0-1'};
   const up = X.dataUpdateFrom({release: '1.8.0-1', packs: [
-    {system: 'XPHB', file: '5e2024_full.json', version: '1.8.0-1'}, {system: 'Bad', file: '../evil.json', version: '1.8.0-1'},
+    {system: 'XPHB', file: 'rulebook_full.json', version: '1.8.0-1'}, {system: 'Bad', file: '../evil.json', version: '1.8.0-1'},
     {system: 'Bad2', file: 'x.json', version: 'v9'}, {system: '', file: 'y.json', version: '1.8.0'}, null]}, pick);
   ck('dataUpdateFrom keeps only well-formed packs', !!up && up.packs.length === 1 && up.packs[0].system === 'XPHB' && up.release === '1.8.0-1', up);
   ck('dataUpdateFrom: no packs, no registry or no pick is null',
      X.dataUpdateFrom({packs: []}, pick) === null && X.dataUpdateFrom(null, pick) === null
      && X.dataUpdateFrom({packs: [{system: 'A', file: 'a.json', version: '1.8.0'}]}, null) === null);
 
-  /* the row, the hint and the badge */
-  const sys = 'XPHB', base = X.DATA_VERSIONS[sys];
+  /* the row, the hint and the badge, on a system this build has a baseline
+     for, read from DATA_VERSIONS rather than named: each release retakes it */
+  const sys = Object.keys(X.DATA_VERSIONS)[0], base = X.DATA_VERSIONS[sys];
   const g = () => X.loadedRulesGroups()[0];
-  const load = (v, file) => { X.resetRules(); X.mergeRules({system: sys, rulebook: true, dataVersion: v, races: [{name: 'Elf'}]}, file || '5e2024_full.json'); };
+  const load = (v, file) => { X.resetRules(); X.mergeRules({system: sys, rulebook: true, dataVersion: v, races: [{name: 'Elf'}]}, file || 'rulebook_full.json'); };
   load(base);
   X.dataUpdate = {release: base + '-1', url: 'https://github.com/x/y/releases/tag/data-v' + base + '-1',
-                  packs: [{system: sys, file: '5e2024_full.json', version: base + '-1'}]};
+                  packs: [{system: sys, file: 'rulebook_full.json', version: base + '-1'}]};
   ck('a newer data release makes the row "update"', X.dataStatus(g()).state === 'update', X.dataStatus(g()));
   const chip = X.dataStatusHTML(g());
   ck('...shown muted, naming both versions', /class="rd-src"/.test(chip) && chip.includes('v' + base + '-1 out') && !/update available/.test(chip), chip);
   const list = X.rulesDataHTML();
   ck('...a hint above the list links the release',
-     /Newer rules data is out: XPHB v[\d.-]+\./.test(list) && list.includes('href="https://github.com/x/y/releases/tag/data-v'), list.slice(0, 400));
+     list.includes('Newer rules data is out: ' + sys + ' v' + base + '-1.') && list.includes('href="https://github.com/x/y/releases/tag/data-v'), list.slice(0, 400));
   ck('...and the Settings count says so', / · update$/.test(X.rulesBadge()), X.rulesBadge());
   load(base, 'my-phb.json');
   ck('a pack loaded under another file name gets no notice', X.dataStatus(g()).state === 'current');
   load('1.0.0');
   ck('a pack behind the app is still "stale", amber', X.dataStatus(g()).state === 'stale' && /update available/.test(X.dataStatusHTML(g())));
   load(base);
-  X.importRulesPayloads([{name: '5e2024_full.json', bytes: B(JSON.stringify({system: sys, rulebook: true, dataVersion: base + '-1', races: [{name: 'Elf'}]}))}]);
+  X.importRulesPayloads([{name: 'rulebook_full.json', bytes: B(JSON.stringify({system: sys, rulebook: true, dataVersion: base + '-1', races: [{name: 'Elf'}]}))}]);
   ck('Review focus 5: importing the newer copy flips the row to current and drops the hint and badge',
      X.dataStatus(g()).state === 'current' && !/Newer rules data is out/.test(X.rulesDataHTML()) && !/update/.test(X.rulesBadge()),
      [X.dataStatus(g()), X.rulesBadge()]);
@@ -549,7 +550,7 @@ section('the newer-data notice', async () => {
     X.dataUpdate = null;
     ctx.fetch = url => { calls.push(url); return url.includes('api.github.com')
       ? reply([rel('data-v' + X.APP_VERSION + '-1')])
-      : reply({release: X.APP_VERSION + '-1', packs: [{system: sys, file: '5e2024_full.json', version: X.APP_VERSION + '-1'}]}); };
+      : reply({release: X.APP_VERSION + '-1', packs: [{system: sys, file: 'rulebook_full.json', version: X.APP_VERSION + '-1'}]}); };
     const got = await X.checkForDataUpdate();
     ck('checkForDataUpdate lists releases, then reads that tag\'s registry',
        calls.length === 2 && /api\.github\.com\/repos\/.+\/releases\?per_page=100$/.test(calls[0])

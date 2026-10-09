@@ -314,8 +314,8 @@ ck('pick_sources by book selects only that source',
 ck('pick_2024_preferred returns [] for a supplement',
    C.pick_2024_preferred([{'name': 'A', 'source': 'XGE'}]) == [])
 
-# Key ORDER is load-bearing: json.dump writes insertion order and data/5e2024/
-# is compared byte for byte.
+# Key ORDER is load-bearing: json.dump writes insertion order and the 2024
+# pack is compared byte for byte.
 ck('_pack XPHB items header exact',
    list(C._pack(None, 'items', [1], stem='items').items())
    == [('system', 'XPHB'), ('name', 'D&D 2024 Items'), ('items', [1])])
@@ -398,7 +398,7 @@ ck('race prerequisite renders under legacy',
    C._render_prereq(race_pr, legacy=True) == 'Elf (Drow)', C._render_prereq(race_pr, legacy=True))
 ck('race prerequisite is invisible to the 2024 run', C._render_prereq(race_pr) == '')
 # `proficiency` DOES occur in the 2024 run and is not rendered there today —
-# rendering it unconditionally would move data/5e2024/feats.json.
+# rendering it unconditionally would move the 2024 pack's feats.json.
 prof_pr = [{'proficiency': [{'armor': 'heavy'}]}]
 ck('proficiency prerequisite is invisible to the 2024 run', C._render_prereq(prof_pr) == '')
 ck('proficiency prerequisite renders under legacy',

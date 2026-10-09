@@ -58,7 +58,7 @@ ck('findRaceDef resolves the other way too', !!X.findRaceDef('Strig'));
 // offer itself to Humblewood characters.
 X.resetRules();
 X.mergeRules({system:'Humblewood',races:[{name:'Strig'}]},'hw.json');
-X.mergeRules({system:'TCE',excludeSystems:['humblewood'],races:[{name:'Custom Lineage'}]},'tashas.json');
+X.mergeRules({system:'TCE',excludeSystems:['humblewood'],races:[{name:'Custom Lineage'}]},'supplement.json');
 ck('systemOf cannot place a supplement', X.systemOf({_source:'TCE'})==='');
 ck('_excludeSystems stamped by mergeRules',
    (X.rules.races||[]).some(r=>r.name==='Custom Lineage'&&Array.isArray(r._excludeSystems)));
@@ -84,22 +84,22 @@ ck('excludeSystems is case-insensitive', (()=>{
 X.resetRules();
 X.mergeRules({system:'XPHB',classes:[{name:'Warlock'}],spells:[{name:'Haste'}]},'5e.json');
 X.mergeRules({system:'Homebrew',subclasses:[{class:'Warlock',name:'The Predator'}],
-  requires:[{pack:"Xanathar's",file:'xanathars_full.json',spells:['Cause Fear']},
-            {pack:'D&D 2024',file:'5e2024_full.json',spells:['Haste']}]},'hb.json');
+  requires:[{pack:'A Supplement',file:'supplement_full.json',spells:['Cause Fear']},
+            {pack:'A Rulebook',file:'rulebook_full.json',spells:['Haste']}]},'hb.json');
 {
   const m=X.missingRequirements('Homebrew');
   const flat=m.flatMap(g=>g.missing.map(x=>x.name));
   ck('a declared name that IS loaded is not reported', !flat.includes('Haste'), flat);
   ck('a declared name that is missing is reported', flat.includes('Cause Fear'), flat);
   ck('the report names the file that provides it',
-     m.some(g=>g.file==='xanathars_full.json'&&g.missing.some(x=>x.name==='Cause Fear')), m);
+     m.some(g=>g.file==='supplement_full.json'&&g.missing.some(x=>x.name==='Cause Fear')), m);
   ck('a pack with nothing missing reports nothing', X.missingRequirements('XPHB').length===0);
   ck('requires is stored on rules, keyed by source', !!(X.rules.requires||{})['Homebrew']);
 }
 // case-insensitive, and satisfied by ANY pack — `file` is documentation, not a constraint
 X.resetRules();
 X.mergeRules({system:'Elsewhere',spells:[{name:'CAUSE FEAR'}]},'other.json');
-X.mergeRules({system:'Homebrew',requires:[{file:'xanathars_full.json',spells:['Cause Fear']}]},'hb.json');
+X.mergeRules({system:'Homebrew',requires:[{file:'supplement_full.json',spells:['Cause Fear']}]},'hb.json');
 ck('matching is case-insensitive and pack-blind', X.missingRequirements('Homebrew').length===0,
    X.missingRequirements('Homebrew'));
 // a category the app doesn't know must be ignored, not reported missing
@@ -204,9 +204,9 @@ ck('and the red line goes away', !/status err/.test(X.rulesDataHTML()));
   ck('lzw round-trip: 25 fuzzed strings', ok);
 
   // the real payload, and the size claim the iOS fallback rests on
-  const pool = fs.readFileSync(path.join(ROOT,'dist','5e2024_full.json'), 'utf8');
+  const pool = fs.readFileSync(path.join(ROOT,'dist','srd52_full.json'), 'utf8');
   const packed = X.lzwCompress(pool);
-  ck('lzw round-trips the shipped 5e2024 pack exactly', X.lzwDecompress(packed) === pool);
+  ck('lzw round-trips the shipped srd52 pack exactly', X.lzwDecompress(packed) === pool);
   ck('lzw gets the pack under a third of its size', packed.length < pool.length/3,
      (100*packed.length/pool.length).toFixed(0) + '%');
 
@@ -225,12 +225,12 @@ ck('and the red line goes away', !/status err/.test(X.rulesDataHTML()));
 X.resetRules();
 X.mergeRules({system:'XPHB',spells:[{name:'Fireball'}]},'spells.json');
 X.mergeRules({system:'XPHB',classes:[{name:'Bard'}],feats:[{name:'Alert'}]},'mixed.json');
-X.mergeRules({system:'XPHB',rulebook:true,spells:[{name:'Bless'}],races:[{name:'Orc'}]},'5e2024_full.json');
+X.mergeRules({system:'XPHB',rulebook:true,spells:[{name:'Bless'}],races:[{name:'Orc'}]},'rulebook_full.json');
 const gs=X.loadedRulesGroups();
 const bucket=n=>X.rulesBucket(gs.find(g=>g.label===n));
 ck('single-category file -> its category', bucket('spells.json')==='spells', bucket('spells.json'));
 ck('multi-category file -> mixed', bucket('mixed.json')==='mixed', bucket('mixed.json'));
-ck('rulebook flag wins over mixed', bucket('5e2024_full.json')==='rulebook', bucket('5e2024_full.json'));
+ck('rulebook flag wins over mixed', bucket('rulebook_full.json')==='rulebook', bucket('rulebook_full.json'));
 const html=X.rulesDataHTML();
 ck('Rulebook heading rendered', html.includes('>Rulebook (1)<'), html.slice(0,200));
 ck('Mixed heading rendered', html.includes('>Mixed (1)<'));
@@ -291,7 +291,7 @@ function entrySet(r){
   X.RULE_CATS.forEach(c=>{o[c]=(r[c]||[]).map(e=>String(e.name||e.term||'')).sort();});
   return o;
 }
-for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']){
+for(const sys of ['homebrew','srd52']){
   const dir=path.join('data',sys);
   const files=fs.readdirSync(dir).filter(f=>f.endsWith('.json')).sort();
   X.resetRules();
@@ -311,16 +311,16 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
 // Weight and size are read as numbers and as size names respectively. A string
 // where a number belongs reads as 0 lb, silently and with no error anywhere.
 {
-  const races=JSON.parse(fs.readFileSync(path.join('data','5e2024','races.json'),'utf8')).races;
+  const races=JSON.parse(fs.readFileSync(path.join('data','srd52','races.json'),'utf8')).races;
   const SIZES=['Tiny','Small','Medium','Large','Huge','Gargantuan'];
   const sized=races.filter(r=>r.size);
-  ck('every 5e2024 species declares a size', sized.length===races.length,
+  ck('every srd52 species declares a size', sized.length===races.length,
      races.filter(r=>!r.size).map(r=>r.name));
   ck('every declared size is a name the app knows',
      sized.every(r=>(Array.isArray(r.size)?r.size:[r.size]).every(s=>SIZES.includes(s))),
      sized.filter(r=>(Array.isArray(r.size)?r.size:[r.size]).some(s=>!SIZES.includes(s))).map(r=>r.name));
   ['items.json','items-magic.json'].forEach(f=>{
-    const items=JSON.parse(fs.readFileSync(path.join('data','5e2024',f),'utf8')).items;
+    const items=JSON.parse(fs.readFileSync(path.join('data','srd52',f),'utf8')).items;
     const bad=items.filter(i=>i.weight!==undefined&&typeof i.weight!=='number');
     ck(f+' weights are numbers, not strings', bad.length===0, bad.map(i=>i.name+':'+JSON.stringify(i.weight)));
     ck(f+' actually carries weights', items.some(i=>typeof i.weight==='number'));
@@ -340,11 +340,11 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
   ck('End combat offers the ammunition back once the fight has ended', /combatEnd\(character\)[\s\S]{0,200}offerAmmoRecovery\(\)/.test(js));
 }
 
-// ---------- the app's ammo tables agree with the 2024 data (#6)
+// ---------- the app's ammo tables agree with the SRD 5.2 data (#6)
 // The one-time pass on old sheets runs without a rules pool, from the AMMO_*
 // tables in 62-ammo.js; this keeps them in step with what the converter writes.
 {
-  const items = JSON.parse(fs.readFileSync(path.join('data','5e2024','items.json'),'utf8')).items;
+  const items = JSON.parse(fs.readFileSync(path.join('data','srd52','items.json'),'utf8')).items;
   const bad = [];
   items.forEach(it => {
     const k = it.name.toLowerCase();
@@ -358,7 +358,7 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
       if (!p || p.name !== it.name || p.weight !== it.weight || p.cost !== it.cost) bad.push('piece ' + it.name);
     }
   });
-  ck("every ammo launcher, bundle and piece in the 2024 data is in the app's tables, alike", bad.length === 0, bad);
+  ck("every ammo launcher, bundle and piece in the SRD 5.2 data is in the app's tables, alike", bad.length === 0, bad);
   ck('...and the check found them', items.filter(i => i.pack).length === 5 && items.filter(i => i.weapon && i.weapon.ammo).length === 9);
 }
 
@@ -395,61 +395,10 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
      multiCol.length >= 2 && multiCol.every(r => /grid-auto-flow:column/.test(r)), multiCol);
 }
 
-// ---------- the supplement packs (Xanathar's, Tasha's)
-// These counts are the whole defence against the failure this converter keeps
-// producing: a source filter that matches nothing writes a valid, empty,
-// entirely plausible-looking pack. A wrong number here is a red test; a silent
-// zero would be a shipped pack with nothing in it.
+// ---------- the homebrew pack: hand-authored, and the reason `requires` exists
+// (The supplement packs' own counts, and every check that read them, moved to
+// the private repo's suite with the packs, #85.)
 {
-  const EXPECT={
-    xanathars:{system:'XGE',files:{
-      'glossary.json':['keywords',22], 'items-magic.json':['items',53],
-      'feats.json':['feats',15], 'spells.json':['spells',95],
-      'subclasses.json':['subclasses',31], 'features.json':['features',22],
-      'tables.json':['tables',74]}},
-    // 26 subclasses, not 30: the Artificer's four already reach the player
-    // through the 5e2024 pack, so repeating them would sit BESIDE them.
-    tashas:{system:'TCE',files:{
-      'glossary.json':['keywords',3], 'items-magic.json':['items',84],
-      'feats.json':['feats',15], 'races.json':['races',1], 'spells.json':['spells',21],
-      'subclasses.json':['subclasses',26], 'features.json':['features',76],
-      'tables.json':['tables',37]}},
-  };
-  Object.entries(EXPECT).forEach(([dir,spec])=>{
-    const onDisk=fs.readdirSync(path.join('data',dir)).filter(f=>f.endsWith('.json')).sort();
-    ck(dir+' ships exactly the expected files',
-       JSON.stringify(onDisk)===JSON.stringify(Object.keys(spec.files).sort()), onDisk);
-    Object.entries(spec.files).forEach(([f,[cat,n]])=>{
-      const p=path.join('data',dir,f);
-      if(!fs.existsSync(p)){ck(dir+'/'+f+' exists',false);return;}
-      const o=JSON.parse(fs.readFileSync(p,'utf8'));
-      ck(dir+'/'+f+' has '+n+' '+cat, (o[cat]||[]).length===n, (o[cat]||[]).length);
-      ck(dir+'/'+f+' declares system '+spec.system, o.system===spec.system, o.system);
-      // every file, not just races.json: the bundler treats excludeSystems as a
-      // folder-level property and errors if the files disagree.
-      ck(dir+'/'+f+' excludes humblewood',
-         JSON.stringify(o.excludeSystems)===JSON.stringify(['humblewood']), o.excludeSystems);
-      ck(dir+'/'+f+' says it is 2014-era content', /2014/.test(o._note||''), o._note);
-    });
-    // A subclass with no traits is what shipping the _copy stub looks like:
-    // right count, valid JSON, no features.
-    const subs=JSON.parse(fs.readFileSync(path.join('data',dir,'subclasses.json'),'utf8')).subclasses;
-    const hollow=subs.filter(s=>!s.class||!s.levels||
-      !Object.values(s.levels).some(l=>(l.traits||[]).length));
-    ck(dir+' every subclass has a class and at least one trait', hollow.length===0,
-       hollow.map(s=>s.name));
-    // features merge by name within a system — duplicates vanish silently
-    const feats=JSON.parse(fs.readFileSync(path.join('data',dir,'features.json'),'utf8')).features;
-    ck(dir+' feature names are unique', new Set(feats.map(f=>f.name)).size===feats.length);
-    ck(dir+' every feature names its kind', feats.every(f=>f.source&&f.description));
-  });
-  // Custom Lineage is the one species here, and the reason excludeSystems exists
-  const cl=JSON.parse(fs.readFileSync(path.join('data','tashas','races.json'),'utf8')).races[0];
-  const SIZES=['Tiny','Small','Medium','Large','Huge','Gargantuan'];
-  ck('Custom Lineage declares sizes the app knows',
-     (Array.isArray(cl.size)?cl.size:[cl.size]).every(s=>SIZES.includes(s)), cl.size);
-  // the class-tag filter feeds the spell browser's "only my class" toggle
-  // ---- the homebrew pack: hand-authored, and the reason `requires` exists
   {
     const files=fs.readdirSync(path.join('data','homebrew')).filter(f=>f.endsWith('.json')).sort();
     ck('homebrew ships the expected files',
@@ -461,23 +410,6 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
     const one=JSON.stringify(reqs[0].requires);
     ck('every homebrew file declares the SAME requires', reqs.every(o=>JSON.stringify(o.requires)===one));
     ck('homebrew declares what it needs', Array.isArray(reqs[0].requires)&&reqs[0].requires.length>0);
-    // The whole demo rests on these resolving once the right pack is imported.
-    // A typo here would show as "missing" forever and look like a working feature.
-    const pool={};
-    ['5e2024','humblewood','xanathars','tashas'].forEach(d=>{
-      X.RULE_CATS.forEach(cat=>{
-        const p=path.join('data',d,cat==='spells'?'spells.json':(cat==='classes'?'classes.json':'__none'));
-        if(!fs.existsSync(p))return;
-        (JSON.parse(fs.readFileSync(p,'utf8'))[cat]||[]).forEach(e=>{
-          (pool[cat]=pool[cat]||new Set()).add(String(e.name).toLowerCase());});
-      });
-    });
-    const unresolvable=[];
-    reqs[0].requires.forEach(g=>X.RULE_CATS.forEach(cat=>{
-      (g[cat]||[]).forEach(n=>{ if(!(pool[cat]&&pool[cat].has(String(n).toLowerCase())))
-        unresolvable.push(cat+': '+n); });
-    }));
-    ck('every name homebrew requires exists in a shipped pack', unresolvable.length===0, unresolvable);
     const sub=JSON.parse(fs.readFileSync(path.join('data','homebrew','subclasses.json'),'utf8')).subclasses[0];
     ck('the Predator attaches to Warlock', sub.class==='Warlock'&&sub.name==='The Predator');
     ck('the Predator has traits at every declared level',
@@ -510,39 +442,25 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
        /from Xanathar&#39;s Guide to Everything/.test(hReal), hReal);
     X.resetRules();
   }
-  const xsp=JSON.parse(fs.readFileSync(path.join('data','xanathars','spells.json'),'utf8')).spells;
-  ck('every Xanathar\'s spell carries a class list',
-     xsp.every(s=>Array.isArray(s.class)&&s.class.length),
-     xsp.filter(s=>!(s.class||[]).length).map(s=>s.name));
 
   // findTable() looks a table up by NAME across every loaded pack, and a
   // "[Table: X]" anchor carries no pack — so two packs sharing a name means one
-  // book's prose opens the other's table. Two exceptions (#84, R5): identical
-  // twins are harmless; and SRD 5.2 reprints the 2024 pack's tables with the
-  // SRD's own edits ("GM" for "DM", renamed spells, three corrections), so a
-  // same-named pair of those two is the same table in two wordings — whichever
-  // loads first is right either way. Those pairs are PINNED here: a new
-  // difference (a 5e-tools update, a new correction) must be added on purpose,
-  // and a pair that becomes identical must leave the list.
-  const SRD_REWORDED=['Bag of Beans Table','Cube of Force Faces','Deck of Illusions','Hat of Many Spells Table',
-    'Object Armor Class','Prismatic Layers','Prismatic Rays','Reincarnate Table','Wand of Wonder Effects'];
+  // book's prose opens the other's table. Identical twins are harmless. (The
+  // SRD 5.2 / 2024 pairs, which differ in wording on purpose, are pinned in the
+  // private repo's suite with the 2024 pack, #85.)
   const seen={};
-  ['5e2024','humblewood','xanathars','tashas','homebrew','srd52'].forEach(d=>{
+  ['homebrew','srd52'].forEach(d=>{
     const p=path.join('data',d,'tables.json');
     if(!fs.existsSync(p))return;
     JSON.parse(fs.readFileSync(p,'utf8')).tables.forEach(t=>{
       (seen[t.name]=seen[t.name]||[]).push({d,body:JSON.stringify([t.cols,t.rows,t.footnotes||null])});});
   });
-  const srdPair=v=>v.length===2&&new Set(v.map(x=>x.d)).has('5e2024')&&new Set(v.map(x=>x.d)).has('srd52');
   const differs=v=>v.length>=2&&new Set(v.map(x=>x.body)).size>1;
-  const clash=Object.entries(seen).filter(([n,v])=>differs(v)&&!(srdPair(v)&&SRD_REWORDED.includes(n)));
-  ck('no table name is used by two packs, except identical twins and the pinned SRD/2024 rewordings', clash.length===0,
+  const clash=Object.entries(seen).filter(([n,v])=>differs(v));
+  ck('no table name is used by two packs, except identical twins', clash.length===0,
      clash.map(([n,v])=>n+' -> '+v.map(x=>x.d).join(', ')));
-  const reworded=Object.entries(seen).filter(([,v])=>srdPair(v)&&differs(v)).map(([n])=>n).sort();
-  ck('the same-named SRD/2024 tables that differ are exactly the pinned '+SRD_REWORDED.length,
-     JSON.stringify(reworded)===JSON.stringify(SRD_REWORDED), reworded);
   // and the anchors must follow the rename, or they resolve to nothing
-  ['xanathars','tashas','homebrew'].forEach(d=>{
+  ['homebrew','srd52'].forEach(d=>{
     const names=new Set(JSON.parse(fs.readFileSync(path.join('data',d,'tables.json'),'utf8'))
       .tables.map(t=>t.name));
     const dangling=[];
@@ -557,37 +475,6 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
   });
 }
 
-// ---------- shipped data: text convert.py's flatten() used to drop (#68)
-// A 5e-tools node type flatten() had no branch for vanished without a word:
-// "your Arcane Shot save DC is calculated as follows:" and then nothing. The
-// converter fixtures prove the renderer; these prove the packs players load
-// were regenerated with it, one pin per dropped shape.
-{
-  const pins=[
-    ['5e2024','classes.json','classes','Artificer','Spell save DC = 8 + your proficiency bonus + your Intelligence modifier.'],
-    ['5e2024','classes.json','classes','Artificer','Spell attack modifier = your proficiency bonus + your Intelligence modifier.'],
-    ['5e2024','classes.json','classes','Mystic','Discipline save DC = 8 + your proficiency bonus + your Intelligence modifier.'],
-    ['5e2024','classes.json','classes','Rogue','has the following traits: Psychic Blade: Simple Melee Weapon · Damage 1d6 psychic'],
-    ['5e2024','conditions.json','keywords','Cackle Fever','Fever: The creature gains 1 Exhaustion level'],
-    ['5e2024','conditions.json','keywords','Sewer Plague','Restlessness: While the creature has any Exhaustion levels'],
-    ['xanathars','subclasses.json','subclasses','Arcane Archer','Arcane Shot save DC = 8 + your proficiency bonus + your Intelligence modifier.'],
-    ['tashas','subclasses.json','subclasses','Path of the Beast','Bite: Your mouth transforms'],
-    ['tashas','subclasses.json','subclasses','College of Creation','Saving Throw: Immediately after'],
-    ['tashas','subclasses.json','subclasses','Circle of Stars','Weal (even): Whenever a creature'],
-    ['tashas','glossary.json','keywords','Customizing Your Origin','Languages: You can speak, read, and write Common'],
-    ['tashas','items-magic.json','items',"Luba's Tarokka of Souls",'Woe: The creature has disadvantage'],
-  ];
-  const cache={};
-  pins.forEach(([dir,f,cat,name,needle])=>{
-    const k=dir+'/'+f;
-    cache[k]=cache[k]||JSON.parse(fs.readFileSync(path.join('data',dir,f),'utf8'))[cat]||[];
-    const e=cache[k].find(x=>x.name===name||x.term===name);
-    // JSON.stringify: the text sits at different depths per category
-    ck(k+' '+name+' carries "'+needle.slice(0,40)+'…"', !!e&&JSON.stringify(e).includes(needle),
-       e?'not found in its text':'no entry named '+name);
-  });
-}
-
 // ---------- shipped data: every weapon names its properties, and attacks as its base weapon does (#72)
 // Only items-base.json defines the 5e-tools property codes, and convert.py once
 // read names from the file it was converting, so the magic weapons printed
@@ -596,12 +483,12 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
 // from an object-shaped reference, is how that looks in a pack.
 {
   const weapons=[];
-  ['5e2024','xanathars','tashas','humblewood','homebrew','srd52'].forEach(d=>
+  ['homebrew','srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
       (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[])
         .forEach(it=>{if(it.weapon)weapons.push({where:d+'/'+f,it});});
     }));
-  ck('the packs ship weapons to check', weapons.length>=70, weapons.length);
+  ck('the packs ship weapons to check', weapons.length>=60, weapons.length);
   // "Range 20/60 · Versatile 1d10 · Finesse, Light · Mastery: Nick" -> the property names
   const propsOf=notes=>String(notes||'').split(' · ').filter(s=>s&&!/^(Range |Mastery: )/.test(s))
     .flatMap(s=>/^Versatile \S+$/.test(s)?['Versatile']:s.split(', '))
@@ -628,11 +515,11 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
      !!dart&&dart.it.weapon.kind==='ranged'&&dart.it.weapon.ability==='finesse', dart&&dart.it.weapon);
   // a magic weapon against the base weapon its description names ("Base item: Dagger")
   const base={};
-  JSON.parse(fs.readFileSync(path.join('data','5e2024','items.json'),'utf8')).items
+  JSON.parse(fs.readFileSync(path.join('data','srd52','items.json'),'utf8')).items
     .forEach(it=>{if(it.weapon)base[it.name.toLowerCase()]=it;});
   const based=weapons.map(x=>Object.assign({b:base[((/Base item: ([^·.]+)/.exec(x.it.description||'')||[])[1]||'')
     .trim().toLowerCase()]},x)).filter(x=>x.b);
-  ck('magic weapons name base weapons the core pack has', based.length>=12, based.length);
+  ck('magic weapons name base weapons the core pack has', based.length>=10, based.length);
   const offBase=based.filter(({it,b})=>(b.weapon.ability==='finesse'&&it.weapon.ability!=='finesse')
     ||it.weapon.dice!==b.weapon.dice||it.weapon.kind!==b.weapon.kind
     ||propsOf(b.weapon.notes).some(p=>!propsOf(it.weapon.notes).includes(p)));
@@ -657,7 +544,7 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
 {
   const ALL_ATTACKS_OK=[];
   const items=[];
-  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+  ['homebrew','srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
       (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[])
         .forEach(it=>items.push({where:d+'/'+f,it}));
@@ -671,10 +558,10 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
      global.map(({where,it})=>where+' '+it.name+': '+JSON.stringify(atkDmg(it))));
   // the bonus is not lost on the way: it is on the weapon, where attackNumbers() reads it once
   const plus=items.filter(({it})=>it.weapon&&it.weapon.atkMisc);
-  ck('#74 the packs still ship +N weapons (11 core, 4 Tasha\'s)',
-     plus.filter(x=>x.where.startsWith('5e2024/')).length===11&&plus.filter(x=>x.where.startsWith('tashas/')).length===4,
+  ck('#74 the packs still ship +N weapons (11 in SRD 5.2)',
+     plus.filter(x=>x.where.startsWith('srd52/')).length===11,
      plus.map(({where,it})=>where+' '+it.name));
-  [['Dagger of Venom',1],['Sun Blade',2],['Dwarven Thrower',3],['+3 Moon Sickle',3],["Baba Yaga's Pestle",3]]
+  [['Dagger of Venom',1],['Sun Blade',2],['Dwarven Thrower',3]]
     .forEach(([name,n])=>{
       const w=(items.find(({it})=>it.name===name)||{it:{}}).it.weapon||{};
       ck('#74 '+name+' carries +'+n+' on its own weapon', w.atkMisc===n&&w.dmgMisc===n, w);
@@ -704,15 +591,14 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
     'Robe of Stars':'saves+1','Stone of Good Luck':'saves+1',
   };
   const CONDITIONAL=[
-    ['5e2024','Quarterstaff of the Acrobat','Reaction to twirl the weapon around you, gaining a +5 bonus to your Armor Class against the triggering attack'],
-    ['5e2024','Arrow-Catching Shield','+2 bonus to Armor Class against ranged attack rolls'],
-    ['5e2024','Bracers of Defense','+2 bonus to Armor Class if you are wearing no armor and using no Shield'],
-    ['5e2024','Rod of Alertness','While in that Bright Light, you and your allies gain a +1 bonus to Armor Class and saving throws'],
-    ['tashas','Teeth of Dahlver-Nar','[Table: Teeth of Dahlver-Nar]'],
+    ['srd52','Quarterstaff of the Acrobat','Reaction to twirl the weapon around you, gaining a +5 bonus to your Armor Class against the triggering attack'],
+    ['srd52','Arrow-Catching Shield','+2 bonus to Armor Class against ranged attack rolls'],
+    ['srd52','Bracers of Defense','+2 bonus to Armor Class if you are wearing no armor and using no Shield'],
+    ['srd52','Rod of Alertness','While in that Bright Light, you and your allies gain a +1 bonus to Armor Class and saving throws'],
   ];
   const SIX=['str','dex','con','int','wis','cha'];
   const items=[];
-  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+  ['homebrew','srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
       (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[])
         .forEach(it=>items.push({dir:d,where:d+'/'+f,it}));
@@ -746,28 +632,25 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
 // 5e-tools' bonusSpellAttack / bonusSpellSaveDc were never read, and the app had
 // no target for either. The REVIEWED list of every pack item carrying one, each
 // read by hand: every one is standing ("while holding…", "while you wear or hold
-// it", the Robe's "each increase by 2"). Tasha's focuses and Moon Sickles name a
-// class ("of your druid and ranger spells"); the sheet has one spellcasting
+// it", the Robe's "each increase by 2"). An item that names the classes whose
+// spells it serves still takes an effect: the sheet has one spellcasting
 // ability, so the bonus goes on it and the class stays in the text.
 {
   const SPELL={
-    '5e2024':{'+1 Wand of the War Mage':'atk+1','+2 Wand of the War Mage':'atk+2','+3 Wand of the War Mage':'atk+3',
-              'Robe of the Archmagi':'atk+2 dc+2','Staff of Power':'atk+2','Staff of the Magi':'atk+2',
-              'Staff of the Woodlands':'atk+2','Talisman of Pure Good':'atk+2','Talisman of Ultimate Evil':'atk+2'},
-    'tashas':{"Reveler's Concertina":'dc+2'},
-    'xanathars':{},
+    'srd52':{'+1 Wand of the War Mage':'atk+1','+2 Wand of the War Mage':'atk+2','+3 Wand of the War Mage':'atk+3',
+             'Robe of the Archmagi':'atk+2 dc+2','Staff of Power':'atk+2','Staff of the Magi':'atk+2',
+             'Staff of the Woodlands':'atk+2','Talisman of Pure Good':'atk+2','Talisman of Ultimate Evil':'atk+2'},
+    'homebrew':{},
   };
-  ['All-Purpose Tool','Amulet of the Devout','Arcane Grimoire','Bloodwell Vial','Moon Sickle',"Rhythm-Maker's Drum"]
-    .forEach(n=>[1,2,3].forEach(k=>{SPELL.tashas['+'+k+' '+n]='atk+'+k+' dc+'+k;}));
   const got={};
-  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+  ['homebrew','srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
       (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[]).forEach(it=>{
         const fx=(it.effects||[]).filter(e=>/^spell\./.test(String(e&&e.target)));
         if(fx.length)(got[d]=got[d]||{})[it.name]=fx.map(e=>(e.target==='spell.attack'?'atk':e.target==='spell.dc'?'dc':e.target)+'+'+e.value).join(' ');
       });
     }));
-  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>{
+  ['homebrew','srd52'].forEach(d=>{
     const want=SPELL[d]||{}, have=got[d]||{};
     const wrong=Object.keys(have).filter(n=>want[n]!==have[n]).concat(Object.keys(want).filter(n=>have[n]!==want[n]));
     ck('#77 '+d+': exactly the reviewed items carry a spell attack or spell save DC bonus ('+Object.keys(want).length+')',
@@ -788,7 +671,7 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
     if(Array.isArray(n.effects))n.effects.forEach(e=>{if(!e||!known.has(e.target))bad.push(where+' '+(n.name||n.term||'?')+': '+JSON.stringify(e));});
     Object.keys(n).forEach(k=>walk(n[k],where));
   };
-  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+  ['homebrew','srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json'))
       .forEach(f=>walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f)));
   ck('#77 every effect target in every pack is one fxTargets() lists', bad.length===0, bad.slice(0,10));
@@ -804,7 +687,7 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
 // polished agate is on your person", "while this pale green prism orbits your
 // head". A dump upgrade that moves it fails here and gets read again.
 {
-  const WANT={'5e2024/items-magic.json Stone of Good Luck':'check+1','5e2024/items-magic.json Ioun Stone, Mastery':'profBonus+1'};
+  const WANT={'srd52/items-magic.json Stone of Good Luck':'check+1','srd52/items-magic.json Ioun Stone, Mastery':'profBonus+1'};
   const got={};
   const walk=(n,where)=>{
     if(Array.isArray(n))return n.forEach(x=>walk(x,where));
@@ -813,13 +696,13 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
       const k=where+' '+(n.name||n.term||'?'); got[k]=(got[k]?got[k]+' ':'')+e.target+(e.value>=0?'+':'')+e.value; } });
     Object.keys(n).forEach(k=>walk(n[k],where));
   };
-  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+  ['homebrew','srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json'))
       .forEach(f=>walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f)));
   const wrong=[...new Set(Object.keys(got).concat(Object.keys(WANT)))].filter(k=>got[k]!==WANT[k]);
   ck('#79 exactly the reviewed items carry an ability-check or proficiency-bonus effect (2)', wrong.length===0,
      wrong.map(k=>k+': want '+(WANT[k]||'none')+', got '+(got[k]||'none')));
-  const stone=JSON.parse(fs.readFileSync(path.join('data','5e2024','items-magic.json'),'utf8')).items.find(x=>x.name==='Stone of Good Luck');
+  const stone=JSON.parse(fs.readFileSync(path.join('data','srd52','items-magic.json'),'utf8')).items.find(x=>x.name==='Stone of Good Luck');
   ck('#79 the Stone of Good Luck keeps its +1 to all six saves beside it',
      !!stone&&['str','dex','con','int','wis','cha'].every(a=>stone.effects.some(e=>e.target==='save.'+a&&e.value===1)), stone&&stone.effects);
 }
@@ -841,22 +724,20 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
     Object.keys(n).forEach(k=>walk(n[k],where,nm));
   };
   let files=0;
-  ['5e2024','xanathars','tashas','humblewood','homebrew'].forEach(d=>
+  ['homebrew','srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
       files++; walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f,'?');
     }));
-  ck('#78 the packs have files to scan', files>=30, files);
+  ck('#78 the packs have files to scan', files>=14, files);
   ck('#78 no pack carries 5e-tools template text: no {#…}, {{…}}, {=…} or {@…}', bad.length===0,
      bad.length+' strings, e.g. '+JSON.stringify(bad.slice(0,6)));
   // the families that shipped the tag now read the book's words, filled from the item
   const pins=[
-    ['5e2024','Black Dragon Scale Mail','you have Resistance to Acid damage'],
-    ['5e2024','Silver Dragon Scale Mail','the closest silver dragon within 30 miles'],
-    ['5e2024','Ring of Acid Resistance','You have Resistance to Acid damage while wearing this ring. The ring is set with pearl'],
-    ['5e2024','Potion of Thunder Resistance','When you drink this potion, you have Resistance to Thunder damage for 1 hour'],
-    ['5e2024','Ioun Stone, Mastery','Roughly marble sized, Ioun Stones are named after Ioun'],
-    ['tashas','Radiant Absorbing Tattoo','emphasize one color (gold).'],
-    ['tashas','Radiant Absorbing Tattoo','Damage Absorption: When you take radiant damage'],
+    ['srd52','Black Dragon Scale Mail','you have Resistance to Acid damage'],
+    ['srd52','Silver Dragon Scale Mail','the closest silver dragon within 30 miles'],
+    ['srd52','Ring of Acid Resistance','You have Resistance to Acid damage while wearing this ring. The ring is set with pearl'],
+    ['srd52','Potion of Thunder Resistance','When you drink this potion, you have Resistance to Thunder damage for 1 hour'],
+    ['srd52','Ioun Stone, Mastery','Roughly marble sized, Ioun Stones are named after Ioun'],
   ];
   const magic={};
   pins.forEach(([d,name,needle])=>{
@@ -913,11 +794,16 @@ X.mergeRules({system:'XGE',subclasses:[{class:'Ranger',name:'Horizon Walker',des
 // nagged. The three states have to be distinguishable, and "unknown" must never
 // be reported as stale — a false alarm on someone's homebrew is worse than
 // staying quiet.
+/* Two systems this build HAS a baseline for, read from DATA_VERSIONS rather than
+   named: the snapshot is retaken from data/packs.json at every release, and the
+   packs that left for the private repo (#85) leave it then. */
+const [OLD_SYS, CUR_SYS] = Object.keys(X.DATA_VERSIONS);
+ck('DATA_VERSIONS has two systems to test staleness with', !!OLD_SYS && !!CUR_SYS, X.DATA_VERSIONS);
 X.resetRules();
-X.mergeRules({system:'XPHB', dataVersion:'1.0.0', rulebook:true,
-              races:[{name:'Elf'}]}, '5e2024_full.json');
-X.mergeRules({system:'Humblewood', dataVersion:X.DATA_VERSIONS['Humblewood'], rulebook:true,
-              races:[{name:'Corvum'}]}, 'humblewood_full.json');
+X.mergeRules({system:OLD_SYS, dataVersion:'1.0.0', rulebook:true,
+              races:[{name:'Elf'}]}, 'rulebook_full.json');
+X.mergeRules({system:CUR_SYS, dataVersion:X.DATA_VERSIONS[CUR_SYS], rulebook:true,
+              races:[{name:'Corvum'}]}, 'campaign_full.json');
 /* deliberately a system DATA_VERSIONS has never heard of — "Homebrew" used to
    play this role and is now a real shipped pack, which made the test read as if
    it were asserting something about that pack. */
@@ -927,26 +813,26 @@ const byLabel = {};
 X.loadedRulesGroups().forEach(g => { byLabel[g.source] = g; });
 
 ck('a pack behind DATA_VERSIONS is stale',
-   X.dataStatus(byLabel['XPHB']).state === 'stale', X.dataStatus(byLabel['XPHB']));
+   X.dataStatus(byLabel[OLD_SYS]).state === 'stale', X.dataStatus(byLabel[OLD_SYS]));
 ck('stale status reports both versions',
-   X.dataStatus(byLabel['XPHB']).have === '1.0.0' &&
-   X.dataStatus(byLabel['XPHB']).want === X.DATA_VERSIONS['XPHB']);
+   X.dataStatus(byLabel[OLD_SYS]).have === '1.0.0' &&
+   X.dataStatus(byLabel[OLD_SYS]).want === X.DATA_VERSIONS[OLD_SYS]);
 ck('a pack at DATA_VERSIONS is current',
-   X.dataStatus(byLabel['Humblewood']).state === 'current');
+   X.dataStatus(byLabel[CUR_SYS]).state === 'current');
 ck('an unstamped/unknown system is NOT stale',
    X.dataStatus(byLabel['MyOwnStuff']).state === 'unknown');
 ck('the loaded dataVersion is recorded on the group',
-   byLabel['XPHB'].dataVersion === '1.0.0');
+   byLabel[OLD_SYS].dataVersion === '1.0.0');
 
 // the badge: visible for stale, quiet otherwise
-ck('stale renders an update chip', /update available/.test(X.dataStatusHTML(byLabel['XPHB'])));
-ck('current renders no update chip', !/update available/.test(X.dataStatusHTML(byLabel['Humblewood'])));
+ck('stale renders an update chip', /update available/.test(X.dataStatusHTML(byLabel[OLD_SYS])));
+ck('current renders no update chip', !/update available/.test(X.dataStatusHTML(byLabel[CUR_SYS])));
 ck('unknown renders nothing at all', X.dataStatusHTML(byLabel['MyOwnStuff']) === '');
 ck('the chip reaches the Settings list', /update available/.test(X.rulesDataHTML()));
 
 // a NEWER pack than the app expects is not "stale" either — the player is ahead
 X.resetRules();
-X.mergeRules({system:'XPHB', dataVersion:'99.0.0', rulebook:true, races:[{name:'Elf'}]}, 'f.json');
+X.mergeRules({system:OLD_SYS, dataVersion:'99.0.0', rulebook:true, races:[{name:'Elf'}]}, 'f.json');
 ck('a pack newer than the app is not flagged stale',
    X.dataStatus(X.loadedRulesGroups()[0]).state === 'current');
 
@@ -966,7 +852,7 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
 // The bundle is the file players actually import. fbdata.py bundle builds it
 // from a fixed key list, so a pack property it doesn't know about is dropped —
 // the per-category files would filter correctly and the bundle silently would not.
-[['xanathars_full.json'], ['tashas_full.json'], ['srd52_full.json']].forEach(([f]) => {
+[['srd52_full.json']].forEach(([f]) => {
   const p = path.join(ROOT, 'dist', f);
   if (!fs.existsSync(p)) return;
   const pack = JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -974,21 +860,19 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
      JSON.stringify(pack.excludeSystems) === JSON.stringify(['humblewood']), pack.excludeSystems);
 });
 
-// ---------- #84: three converter fixes that landed in the 2024 pack
+// ---------- #84: converter fixes, on the public pack (the 2024 pack's own pins
+// moved to the private repo's suite with it, #85)
 {
-  const mi = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', '5e2024', 'items-magic.json'), 'utf8')).items.map(i => i.name);
-  ck('#84 the 2024 pack has the two items a rename flag used to drop',
-     mi.includes('Carrion Crawler Mucus') && mi.includes("Lolth's Sting"));
-  ['5e2024', 'srd52'].forEach(d => fs.readdirSync(path.join(ROOT, 'data', d)).filter(f => f.endsWith('.json')).forEach(f => {
+  ['srd52'].forEach(d => fs.readdirSync(path.join(ROOT, 'data', d)).filter(f => f.endsWith('.json')).forEach(f => {
     const t = fs.readFileSync(path.join(ROOT, 'data', d, f), 'utf8');
     ck('#84 no Python dict repr in ' + d + '/' + f, !t.includes("{'"), (t.match(/.{30}\{'.{30}/) || [])[0]);
   }));
-  const cls = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', '5e2024', 'classes.json'), 'utf8')).classes;
+  const cls = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'srd52', 'classes.json'), 'utf8')).classes;
   const menu = (c, lv) => ((cls.find(x => x.name === c).levels[lv] || {}).choices || [])
     .filter(ch => ch.label === 'Choose a Fighting Style').map(ch => ch.from.map(o => o.name))[0] || [];
   ck('#84 R4 the Paladin may take Blessed Warrior', menu('Paladin', '2').includes('Blessed Warrior'), menu('Paladin', '2'));
   ck('#84 R4 the Ranger may take Druidic Warrior', menu('Ranger', '2').includes('Druidic Warrior'), menu('Ranger', '2'));
-  ck('#84 R4 the Fighter\'s menu is unchanged (ten styles)', menu('Fighter', '1').length === 10, menu('Fighter', '1'));
+  ck('#84 R4 the Fighter\'s menu is unchanged (the four SRD styles)', menu('Fighter', '1').length === 4, menu('Fighter', '1'));
   // {@dice roll|display} with a 5e-tools prompt template as its roll printed the
   // template ("#$prompt_number:title=Enter Strength Score$# × 7.5 lb.") until #84
   const templated = [];
@@ -997,10 +881,10 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
       if (fs.readFileSync(path.join(ROOT, 'data', d, f), 'utf8').includes('#$')) templated.push(d + '/' + f);
     }));
   ck('#84 no file in any data/<pack>/ holds a 5e-tools prompt template ("#$")', templated.length === 0, templated);
-  const carry = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', '5e2024', 'tables.json'), 'utf8')).tables
+  const carry = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'srd52', 'tables.json'), 'utf8')).tables
     .find(t => t.name === 'Carrying Capacity');
   const tiny = carry && carry.rows.find(r => r[0] === 'Tiny');
-  ck('#84 the 2024 Carrying Capacity table\'s Tiny row reads "Str. × 7.5 lb."', !!tiny && tiny[1] === 'Str. × 7.5 lb.', tiny);
+  ck('#84 the SRD 5.2 Carrying Capacity table\'s Tiny row reads "Str. × 7.5 lb."', !!tiny && tiny[1] === 'Str. × 7.5 lb.', tiny);
 }
 
 // ---------- #84: the SRD 5.2 pack
@@ -1041,7 +925,7 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
      Object.values(fx.renamed).every(nm => allText.includes(String(nm).toLowerCase())),
      Object.values(fx.renamed).filter(nm => !allText.includes(String(nm).toLowerCase())));
   // R7/#85 R14: homebrew's D&D group resolves with SRD 5.2 alone — since #85
-  // that group names SRD 5.2 directly (not "2024"/5e2024_full.json), so match it
+  // that group names SRD 5.2 directly (not the 2024 pack's bundle), so match it
   // by its own pack/file rather than the 2024 pack's.
   const pool = {};
   ['spells', 'classes'].forEach(cat => S(cat)[cat].forEach(e => (pool[cat] = pool[cat] || new Set()).add(String(e.name).toLowerCase())));
@@ -1082,9 +966,9 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
   ck('#84 RF4 every SRD spell has a class list, and none names the Artificer',
      sp.every(s => (s.class || []).length > 0 && !(s.class || []).includes('Artificer')),
      sp.filter(s => !(s.class || []).length || (s.class || []).includes('Artificer')).map(s => s.name));
-  // Review focus 5: the 2024 pack loads first
-  const regPacks = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs.map(p => p.system);
-  ck('#84 RF5 the registry lists SRD 5.2 after XPHB', regPacks.indexOf('SRD 5.2') > regPacks.indexOf('XPHB') && regPacks.indexOf('XPHB') >= 0, regPacks);
+  // Review focus 5 ("the 2024 pack loads first") held while one registry listed
+  // both packs. Since #85 the 2024 pack is in the private repo's registry, so no
+  // registry orders the two, and nothing here can check it.
 }
 
 // ---------- Settings modal: collapsible sections
@@ -1913,62 +1797,6 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('...and the browser reads the same one',
      /groupBadge:\(key,chosen\)=>\{[\s\S]{0,200}spellLevelTally\(lv\)/.test(js));
 
-  // ---------- Gadgeteer prose keeps the shape the PDF carries
-  // The frame and component lists were one 3,000-character paragraph because
-  // pt_all_subs appended head/trait/label spans as flat text. The extractor now
-  // keeps them; these assert the DATA, so they fail if a re-extraction ever
-  // drops it again — the reason the fix went in the extractor and not by hand.
-  {
-    const hw = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/humblewood/classes.json'), 'utf8'));
-    const gad = (hw.classes || []).find(c => c.name === 'Gadgeteer');
-    const tr = n => ((((gad || {}).levels || {})['1'] || {}).traits || []).find(t => t.name === n);
-    const frames = tr('Frames'), comps = tr('Components');
-    ck('the Gadgeteer still has its Frames and Components traits', !!frames && !!comps);
-    ['Frames', 'Components'].forEach(n => {
-      const t = tr(n);
-      ck(n + ' is broken into lines', (t.description.match(/\n/g) || []).length > 5,
-         (t.description.match(/\n/g) || []).length);
-      ck('...and its type names are bold', /\*\*[^*]+\*\*/.test(t.description));
-    });
-    // the whole point: layout only. Strip the markup and the words must be there.
-    const bare = s => s.replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
-    [['Frames', 'You can build gadgets using the following frames. Autonomous Frame This convenient gadget can act semi-independently. Scrap Cost: 3'],
-     ['Frames', 'Handheld Frame This versatile gadget requires two hands to wield.']].forEach(([n, phrase]) => {
-      ck('the wording of ' + n + ' is unchanged: "' + phrase.slice(0, 34) + '…"',
-         bare(tr(n).description).indexOf(phrase) > -1);
-    });
-    ck('a frame name starts its own line',
-       /\n\*\*Autonomous Frame\*\*\n/.test(frames.description));
-    ck('a run-in heading keeps its prose beside it',
-       /\n\*\*Remote Control\.\*\* Your gadget moves/.test(frames.description));
-  }
-  // ---------- Gadgeteer paths: nothing bleeds across a feature (#59)
-  // Page 10 of the packet is two layouts stacked, and page 11 starts a path
-  // mid-column; read as plain columns, the tail of Magic Item Hacking became the
-  // Engineer's Crafty Components, its two components went to Masterpiece, and
-  // Make More With Less swallowed the Fizzar introduction. Art captions cut in
-  // half by the column clip ended three more features.
-  {
-    const hw = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/humblewood/classes.json'), 'utf8'));
-    const all = [];
-    (hw.classes || []).concat(hw.subclasses || []).forEach(o => Object.entries(o.levels || {}).forEach(([L, lv]) =>
-      (lv.traits || []).forEach(t => all.push({owner: o.name, L, name: t.name, d: t.description || ''}))));
-    const t = (owner, n) => (all.find(x => x.owner === owner && x.name === n) || {}).d || '';
-    ck('Magic Item Hacking keeps its whole text', /end your Magic Item hacking on it/.test(t('Gadgeteer', 'Magic Item Hacking')));
-    ck("the Engineer's Crafty Components are its two components",
-       /\*\*Quick Shield\*\*/.test(t('Engineer', 'Crafty Components')) && /\*\*Multitool\*\*/.test(t('Engineer', 'Crafty Components')));
-    ck('...and not Magic Item Hacking', !/attune/.test(t('Engineer', 'Crafty Components')));
-    ck('Masterpiece ends at Masterpiece', !/Quick Shield|Multitool/.test(t('Gadgeteer', 'Masterpiece')));
-    ck('no feature carries a path heading',
-       all.every(x => !/\*\*(ENGINEER|FIZZAR)\*\*/.test(x.d)), all.filter(x => /\*\*(ENGINEER|FIZZAR)\*\*/.test(x.d)).map(x => x.name));
-    ck('no feature ends in an art caption',
-       all.every(x => !/(A Fiz|Enhan|Gauntlets|Concept Art|Grabber)"?$/.test(x.d.trim())),
-       all.filter(x => /(A Fiz|Enhan|Gauntlets|Concept Art|Grabber)$/.test(x.d.trim())).map(x => x.name));
-    ck('the Gadgeteer description is whole', /studying the world around them for inspiration\.$/.test(
-       ((hw.classes || []).find(c => c.name === 'Gadgeteer') || {}).description || ''));
-    ck('each path has its own introduction',
-       (hw.subclasses || []).every(s => (s.description || '').length > 150), (hw.subclasses || []).map(s => s.name + ':' + (s.description || '').length));
-  }
   // ---------- every shipped class starts with its skills (#67)
   // A class's first-level skills are its fixed `skills` or a level-1 `skill`
   // choice — the one addClass() offers a first class. The converter dropped the
@@ -1977,7 +1805,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   {
     const dirs = fs.readdirSync(path.join(ROOT, 'data'))
       .filter(d => fs.existsSync(path.join(ROOT, 'data', d, 'classes.json')));
-    ck('class packs found', dirs.includes('5e2024') && dirs.includes('humblewood'), dirs);
+    ck('class packs found', dirs.includes('srd52'), dirs);
     dirs.forEach(dir => {
       const cls = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', dir, 'classes.json'), 'utf8')).classes || [];
       const l1 = c => ((((c.levels || {})['1'] || {}).choices) || []).filter(x => x.type === 'skill');
@@ -1989,58 +1817,8 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
       ck(dir + ': ...and every one is a skill the sheet knows', unknown.length === 0, unknown);
     });
   }
-  // A lineage packet must not claim the species description — Feb 2025's Webpaw
-  // section was overwriting the mustel intro, which made the extractor
-  // non-idempotent and would have churned this file on every run.
-  {
-    const py = fs.readFileSync(path.join(ROOT, 'scripts/extract-humblewood.py'), 'utf8');
-    ck('the Webpaw packet does not claim the species description',
-       /title="Mustel, Webpaw"[\s\S]{0,220}no_description=True/.test(py));
-    ck('...and the extractor honours that flag',
-       /if not spec\.get\("no_description"\):\s*\n\s*take\(cur, "description"/.test(py));
-    ck('the extractor keeps head/trait/label spans distinct',
-       /if style == "head":[\s\S]{0,220}\\n\\n\*\*%s\*\*/.test(py) &&
-       /elif style in \("trait", "label"\):[\s\S]{0,120}\\n\*\*%s\*\*/.test(py));
-    // A tagline is POSITIONAL, never stylistic. `prereq` only means italic, and
-    // the book also italicises inline spell names — keying on the style alone
-    // produced "you had cast the\nidentify spell" and split "divert power*"
-    // across two lines. Both parsers must test position.
-    ck('a class tagline is only an italic run directly under a type name',
-       /elif style == "prereq" and prev == "head":/.test(py));
-    ck('an entity tagline is only the FIRST italic run, before any prose',
-       /if \(style == "prereq" and tagline and not desc and not cur_name\):/.test(py));
-    ck('...and prose turns the tagline flag off', /tagline = False\s*# prose has started/.test(py));
-  }
-  // The data itself: taglines broken out, and NOTHING broken mid-sentence.
-  {
-    const hwFile = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'data/humblewood/' + f), 'utf8'));
-    const allDescs = doc => {
-      const out = [];
-      (function rec(o, trail) {
-        if (Array.isArray(o)) return o.forEach(x => rec(x, trail));
-        if (!o || typeof o !== 'object') return;
-        const t = o.name ? trail.concat(o.name) : trail;
-        if (typeof o.description === 'string') out.push([t.join(' > '), o.description]);
-        Object.keys(o).forEach(k => { if (k !== 'description') rec(o[k], t); });
-      })(doc, []);
-      return out;
-    };
-    const sc = hwFile('subclasses.json'), ft = hwFile('feats.json');
-    const road = allDescs(sc).find(([n]) => /College of the Road/.test(n));
-    ck('a subclass tagline sits on its own line',
-       !!road && /^Learn from People You Meet on Your Travels\n/.test(road[1]), road && road[1].slice(0, 60));
-    const feat = allDescs(ft).find(([n]) => /Bandit Cunning/.test(n));
-    ck('a feat type line does too',
-       !!feat && /^Origin Feat\n/.test(feat[1]), feat && feat[1].slice(0, 40));
-    // the regression this exists to prevent, asserted across every Humblewood file
-    const walls = [];
-    ['classes.json', 'races.json', 'feats.json', 'backgrounds.json', 'subclasses.json'].forEach(f => {
-      allDescs(hwFile(f)).forEach(([n, d]) => {
-        if (/[a-z,]\s*\n[a-z]/.test(d)) walls.push(f + ' :: ' + n);
-      });
-    });
-    ck('no description is broken mid-sentence', walls.length === 0, walls.slice(0, 4));
-  }
+  // (The Humblewood extractor's and pack's own checks moved to the private repo's
+  // suite with them, #85.)
   /* One grammar for every field. descHTML is kept as the name the description
      call sites use, but it delegates — a field cannot quietly support less
      formatting than the field beside it. */
@@ -2496,7 +2274,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     X.character = X.blankChar();
     X.resetRules();
     X.mergeRules({system: 'XPHB', rulebook: true, classes: [{name: 'Wizard'}],
-                  spells: [{name: 'Fireball'}, {name: 'Shield'}]}, '5e2024_full.json');
+                  spells: [{name: 'Fireball'}, {name: 'Shield'}]}, 'rulebook_full.json');
     state.quotaFull = false;
     X.saveRulesCache();
   };
@@ -2534,7 +2312,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      names(null, 'spells', 'XPHB').join() === 'Fireball,Shield' && names(null, 'classes').join() === 'Wizard',
      names(null, 'spells'));
   ck('fetch-all: ...still listed under its file in Loaded data',
-     X.loadedRulesGroups().some(g => g.isFile && g.label === '5e2024_full.json'));
+     X.loadedRulesGroups().some(g => g.isFile && g.label === 'rulebook_full.json'));
   ck('fetch-all: the cache holds both the file pack and the fetched one',
      names(cached(), 'spells').join() === 'Fireball,Fizzle,Shield,Zap', names(cached(), 'spells'));
   ck('fetch-all: the status line reports success', /^Fetched/.test(status.textContent) && /\bok\b/.test(status.className),
@@ -2720,7 +2498,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     // the day of the export: an older copy of the 2024 rulebook from a file, plus a fetched pack
     X.resetRules();
     X.mergeRules({system: 'XPHB', rulebook: true, dataVersion: '1.0.0', classes: [{name: 'Wizard'}],
-                  spells: [{name: 'Fireball'}], keywords: [{term: 'Blinded', text: 'Cannot see.'}]}, '5e2024_full.json');
+                  spells: [{name: 'Fireball'}], keywords: [{term: 'Blinded', text: 'Cannot see.'}]}, 'rulebook_full.json');
     X.mergeRules({system: 'Homebrew', spells: [{name: 'Zap'}]}, null, HB);
     const OLD = JSON.parse(JSON.stringify(X.rules));   // what Export settings wrote: the pool, stamps and all
     const OLD_N = X.rulesEntryCount();
@@ -2730,7 +2508,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
       Object.assign(X.settings, {skin: 'humblewood', theme: 'light', rough: true});
       X.resetRules();
       X.mergeRules({system: 'XPHB', rulebook: true, dataVersion: '1.1.0', classes: [{name: 'Wizard'}],
-                    spells: [{name: 'Fireball'}, {name: 'Shield'}, {name: 'Mage Armor'}]}, '5e2024_full.json');
+                    spells: [{name: 'Fireball'}, {name: 'Shield'}, {name: 'Mage Armor'}]}, 'rulebook_full.json');
       X.mergeRules({system: 'Mine', feats: [{name: 'Lucky Break'}]}, 'my-homebrew.json');
       state.quotaFull = false;
       X.saveRulesCache();
@@ -2757,7 +2535,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
       ck('...counts what the file carries', new RegExp('\\b' + OLD_N + ' entries').test(q) && /\bHomebrew\b/.test(q), q);
       ck('...and what is loaded now', new RegExp('\\b' + X.rulesEntryCount() + ' entries').test(q), q);
       ck('...shows each copy\'s data version, so a downgrade is visible', /v1\.0\.0/.test(q) && /v1\.1\.0/.test(q), q);
-      ck('...and says replacing puts back an older copy of a pack in both', /older copy of 5e2024_full\.json/.test(q), q);
+      ck('...and says replacing puts back an older copy of a pack in both', /older copy of rulebook_full\.json/.test(q), q);
       ck('...offers keeping the rules as well as replacing them, and cancelling',
          /id="setImpKeep"/.test(q) && /id="setImpCancel"/.test(q) && /Keep my rules/.test(q) && /Replace my rules/.test(q), q);
       ck('...says characters are not affected', /characters are not affected/i.test(q), q);
@@ -2784,7 +2562,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
       ck('replace: normalised — every entry re-indexed', ids.every((id, i) => id === 'r' + i), ids);
     }
     ck('replace: provenance survives — the rulebook is still listed under its file, with its version',
-       X.loadedRulesGroups().some(g => g.isFile && g.label === '5e2024_full.json' && g.rulebook && g.dataVersion === '1.0.0'),
+       X.loadedRulesGroups().some(g => g.isFile && g.label === 'rulebook_full.json' && g.rulebook && g.dataVersion === '1.0.0'),
        X.loadedRulesGroups());
     ck('replace: ...and the fetched pack keeps its URL, so Fetch all still replaces it',
        (X.rules.spells || []).filter(e => e.name === 'Zap').every(e => e._url === HB) && names(null, 'spells', 'Homebrew').join() === 'Zap');
@@ -2794,7 +2572,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     ck('replace: the status line says the rules were replaced, with the new count',
        /replaced/i.test(impStatus.textContent) && impStatus.textContent.includes(X.rulesEntryCount() + ' entries'), impStatus.textContent);
     ck('replace: the Rules data chip follows the new pool', chip.textContent === badge(), [chip.textContent, badge()]);
-    ck('replace: the loaded-data list is redrawn', /5e2024_full\.json/.test(rulesDataEl.innerHTML) && !/my-homebrew\.json/.test(rulesDataEl.innerHTML));
+    ck('replace: the loaded-data list is redrawn', /rulebook_full\.json/.test(rulesDataEl.innerHTML) && !/my-homebrew\.json/.test(rulesDataEl.innerHTML));
     ck('replace: Settings reopens on the new pool', writes.length > 0 && writes[writes.length - 1].includes(X.rulesStatusText()) &&
        writes[writes.length - 1].includes('>' + X.rulesBadge() + '<'));
 
@@ -2914,9 +2692,9 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     // ---- export → import round trip: every pack comes back as it was
     seedNow();
     X.mergeRules({system: 'TCE', excludeSystems: ['humblewood'], races: [{name: 'Custom Lineage'}],
-                  requires: [{file: 'x.json', spells: ['Nope']}]}, 'tashas.json');
+                  requires: [{file: 'x.json', spells: ['Nope']}]}, 'supplement.json');
     X.mergeRules({system: 'Homebrew', spells: [{name: 'Zap'}]}, null, HB);
-    X.mergeRules({system: 'XPHB', rulebook: true, dataVersion: '1.1.0', spells: [{name: 'Bless'}]}, '5e2024_full.json');   // appended after Zap
+    X.mergeRules({system: 'XPHB', rulebook: true, dataVersion: '1.1.0', spells: [{name: 'Bless'}]}, 'rulebook_full.json');   // appended after Zap
     {
       const exported = JSON.parse(JSON.stringify({_type: 'fieldbook-settings', settings: X.settings, rules: X.rules}));
       const groups = JSON.stringify(X.loadedRulesGroups());
