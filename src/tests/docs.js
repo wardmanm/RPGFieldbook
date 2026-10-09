@@ -82,18 +82,21 @@ fs.readdirSync(path.join(ROOT, 'src/tests'))
 //   a path                      'data/<pack>/x.json', path.join(ROOT, 'data', '<pack>', f)
 //   a bundle name               dist/<pack>_full.json, '<pack>_full.json' anywhere
 //   a helper given the folder   pack('<pack>', f), shippedItems('<pack>', f), read('<pack>', f, n)
-//   a list of pack folders      ['<pack>', …] or […, 'srd52', '<pack>']
+//   a list of pack folders      ['<pack>', …], […, 'srd52', '<pack>'], or a list of one
+//                               (but humblewood's is the excludeSystems value, so not that one)
 //   a key, or a path under data '<pack>/items.json Name', {'<pack>': {…}}, <pack>: {…}
-// A label in a synthetic fixture is renamed rather than excused, so the only
-// exception is the suite below that leaves with its pack.
+// Every .js, .py and .sh file under src/tests, at any depth (fixtures/ holds
+// JSON data, not reads). A label in a synthetic fixture is renamed rather than
+// excused, so the only exception is the suite below that leaves with its pack.
 {
-  const NAMES = '5e2024|xanathars|tashas|humblewood';
+  const NAMES = '5e2024|xanathars|tashas|humblewood', LONE = '(?:5e2024|xanathars|tashas)';
   const PK = '(?:' + NAMES + ')', Q = '[\'"]';
   const PRIVATE_PACK = new RegExp([
     '(?:data|dist)[\\/\'", ]+' + PK + '(?:_full\\.json|[\\/\'"])',
     PK + '_full\\.json',
     '\\w\\(\\s*' + Q + PK + Q + '\\s*[,)]',
     '\\[\\s*' + Q + PK + Q + '\\s*,',
+    '\\[\\s*' + Q + LONE + Q + '\\s*\\]',
     Q + '(?:' + NAMES + '|homebrew|srd52)' + Q + '\\s*,\\s*' + Q + PK + Q,
     Q + PK + '/',
     Q + '?\\b' + PK + Q + '?\\s*:\\s*[{\\[]',
@@ -102,7 +105,12 @@ fs.readdirSync(path.join(ROOT, 'src/tests'))
      leaves this repo with it in #85's removal commit; until then, and only while
      run.sh still lists it, it is not scanned. Delete this exception with it. */
   const leaving = f => f === 'humblewood-verbatim.py' && suites.includes('humblewood-verbatim');
-  fs.readdirSync(path.join(ROOT, 'src/tests')).filter(f => /\.(js|py)$/.test(f) && !leaving(f)).forEach(f => {
+  const testFiles = d => fs.readdirSync(path.join(ROOT, 'src/tests', d), { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? testFiles(d ? d + '/' + e.name : e.name) : /\.(js|py|sh)$/.test(e.name) ? [d ? d + '/' + e.name : e.name] : []);
+  const scanned = testFiles('').filter(f => !leaving(f));
+  ck('the private-pack scan covers run.sh and every suite', scanned.includes('run.sh') && suites.every(s =>
+    scanned.includes(s + '.js') || scanned.includes(s + '.py') || leaving(s + '.py')), scanned);
+  scanned.forEach(f => {
     const hits = read('src/tests/' + f).split('\n').map((l, i) => [i + 1, l]).filter(([, l]) => PRIVATE_PACK.test(l));
     ck('src/tests/' + f + ' reads no private pack', !hits.length, hits.slice(0, 3).map(([n, l]) => n + ': ' + l.trim().slice(0, 100)));
   });
