@@ -20,6 +20,7 @@ __pycache__/
 # symlink that `git add -A` would happily commit as a broken path.
 .venv
 venv/
+_private-data
 
 # Editor / OS
 # `.claude/*`, not `.claude/`: the trailing-slash form stops git descending into
