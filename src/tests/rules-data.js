@@ -483,6 +483,33 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
     ck('the Predator has traits at every declared level',
        Object.values(sub.levels).every(l=>(l.traits||[]).length>0), Object.keys(sub.levels));
   }
+  // ---------- homebrew's needs point at public packs (#85, R14)
+  ['features', 'subclasses', 'tables'].forEach(f => {
+    const req = JSON.parse(fs.readFileSync('data/homebrew/' + f + '.json', 'utf8')).requires || [];
+    ck('homebrew/' + f + ': its D&D group needs SRD 5.2, by file', req[0] && req[0].pack === 'SRD 5.2' && req[0].file === 'srd52_full.json', req[0]);
+    ck('homebrew/' + f + ": its Xanathar's group names the book, not a file", req[1] && req[1].pack === "Xanathar's Guide to Everything" && !('file' in req[1]), req[1]);
+  });
+  // and the pack an actual player imports resolves that way: load the two
+  // dist bundles a player would (SRD 5.2, the public group's new target, then
+  // homebrew), and the only thing still missing is Xanathar's — which was
+  // never public to begin with, so it is named by the book, not a file.
+  {
+    X.resetRules();
+    X.mergeRules(JSON.parse(fs.readFileSync(path.join(ROOT,'dist','srd52_full.json'),'utf8')), 'srd52_full.json');
+    X.mergeRules(JSON.parse(fs.readFileSync(path.join(ROOT,'dist','homebrew_full.json'),'utf8')), 'homebrew_full.json');
+    const missReal=X.missingRequirements('Homebrew');
+    const xanGroups=missReal.filter(g=>g.pack==="Xanathar's Guide to Everything");
+    const flatReal=xanGroups.flatMap(g=>g.missing.map(x=>x.name));
+    ck('importing SRD 5.2 then homebrew leaves only Xanathar\'s content missing',
+       missReal.every(g=>g.pack==="Xanathar's Guide to Everything"), missReal);
+    ck('...named Cause Fear and Primal Savagery, with no file to point at',
+       JSON.stringify(flatReal.slice().sort())===JSON.stringify(['Cause Fear','Primal Savagery'])
+       && xanGroups.every(g=>g.file===''), [flatReal, xanGroups]);
+    const hReal=X.requiresStatusHTML({source:'Homebrew'});
+    ck('requiresStatusHTML for the homebrew group points at the book by name',
+       /from Xanathar&#39;s Guide to Everything/.test(hReal), hReal);
+    X.resetRules();
+  }
   const xsp=JSON.parse(fs.readFileSync(path.join('data','xanathars','spells.json'),'utf8')).spells;
   ck('every Xanathar\'s spell carries a class list',
      xsp.every(s=>Array.isArray(s.class)&&s.class.length),
@@ -1013,11 +1040,13 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
   ck('#84 every renamed entry is there under its SRD name',
      Object.values(fx.renamed).every(nm => allText.includes(String(nm).toLowerCase())),
      Object.values(fx.renamed).filter(nm => !allText.includes(String(nm).toLowerCase())));
-  // R7: homebrew's D&D group resolves with SRD 5.2 alone
+  // R7/#85 R14: homebrew's D&D group resolves with SRD 5.2 alone — since #85
+  // that group names SRD 5.2 directly (not "2024"/5e2024_full.json), so match it
+  // by its own pack/file rather than the 2024 pack's.
   const pool = {};
   ['spells', 'classes'].forEach(cat => S(cat)[cat].forEach(e => (pool[cat] = pool[cat] || new Set()).add(String(e.name).toLowerCase())));
   const hb = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'homebrew', 'subclasses.json'), 'utf8')).requires;
-  const dnd = hb.find(g => /5e2024/.test(g.file || '') || /2024/.test(g.pack || ''));
+  const dnd = hb.find(g => g.file === 'srd52_full.json' || g.pack === 'SRD 5.2');
   const missHb = [];
   ['spells', 'classes'].forEach(cat => ((dnd || {})[cat] || []).forEach(nm => {
     if (!pool[cat].has(String(nm).toLowerCase())) missHb.push(cat + ': ' + nm);

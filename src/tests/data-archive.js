@@ -52,6 +52,16 @@ section('dataStatus reads data versions', () => {
   ck('the baseline itself is current', at(want).state === 'current');
   ck('a pack older than the baseline is stale', at('1.0.0').state === 'stale');
   ck('an unreadable version is unknown, never stale or current', at('1.0').state === 'unknown', at('1.0'));
+  // Review Focus 1: a pack this build has no baseline for (a private pack, or a
+  // v1.7.2 player's old XPHB after 1.8.0 drops it from DATA_VERSIONS) shows its
+  // version quietly: no alarm, no notice.
+  const other = v => { X.resetRules(); X.mergeRules({system: 'Not In This Build', rulebook: true, dataVersion: v, races: [{name: 'Elf'}]}, 'mine_full.json'); return X.loadedRulesGroups()[0]; };
+  ck('a pack with no baseline is "known"', X.dataStatus(other('1.7.2')).state === 'known', X.dataStatus(other('1.7.2')));
+  ck('...shown as its version, quietly', /v1\.7\.2/.test(X.dataStatusHTML(other('1.7.2'))) && !/update available/.test(X.dataStatusHTML(other('1.7.2'))),
+     X.dataStatusHTML(other('1.7.2')));
+  ck('...and it raises no newer-data notice', !/Newer rules data is out/.test(X.rulesDataHTML()) && !/update/.test(X.rulesBadge()));
+  ck('a pack with no baseline and no version stays unknown and shows nothing',
+     X.dataStatus(other(undefined)).state === 'unknown' && X.dataStatusHTML(other(undefined)) === '');
   X.resetRules();
 });
 

@@ -390,9 +390,12 @@ function clearAllRules(){
    keeps its old version, so nobody is nagged to re-import a pack that is still
    correct.
 
-   Unknown (an old pack from before stamping, or homebrew) is NOT stale — we
-   have no evidence either way, and a false alarm on someone's own content is
-   worse than staying quiet — nor is a version that doesn't parse (cmpDataVer).
+   Unknown (a pack with no stamped version at all, or one that doesn't parse)
+   is NOT stale — we have no evidence either way, and a false alarm on someone's
+   own content is worse than staying quiet. A pack WITH a version but no baseline
+   to compare it to — a private pack, or an old pack a build after #85 no longer
+   ships a baseline for — is "known": its version, shown quietly, no alarm either
+   way.
 
    A pack the app is happy with can still be behind a data-only release (#83):
    that is "update", quiet, because a data release is optional. */
@@ -400,7 +403,10 @@ function dataStatus(g){
   const have=g.dataVersion||"";
   const want=(typeof DATA_VERSIONS!=="undefined"&&DATA_VERSIONS[g.source])||"";
   const upd=dataUpdateFor(g);
-  if(!have||!parseDataVer(have)||(!want&&!upd))return {state:"unknown"};
+  if(!have||!parseDataVer(have))return {state:"unknown"};
+  /* no baseline in this build and no newer copy known: a private pack, or a pack
+     an older Fieldbook shipped (#85). Its version, and no claim either way. */
+  if(!want&&!upd)return {state:"known",have};
   if(want&&cmpDataVer(have,want)<0)return {state:"stale",have,want};
   if(upd&&cmpDataVer(have,upd.version)<0)return {state:"update",have,want:upd.version,release:dataUpdate.release};
   return {state:"current",have};
@@ -417,6 +423,7 @@ function dataStatusHTML(g){
     return ` <span class="chip warn" title="This pack is from v${esc(st.have)}; this version of Fieldbook ships v${esc(st.want)}. Re-import it from the latest release.">update available · v${esc(st.have)}</span>`;
   if(st.state==="update")
     return ` <span class="rd-src" title="${esc("Rules data "+st.release+" has a newer copy of this pack, v"+st.want+". Download it from the release page and import it.")}">v${esc(st.have)} · v${esc(st.want)} out</span>`;
+  if(st.state==="known")return ` <span class="rd-src" title="This pack's version.">v${esc(st.have)}</span>`;
   if(st.state==="current")return ` <span class="rd-src" title="Up to date with this version of Fieldbook.">v${esc(st.have)}</span>`;
   return "";
 }
