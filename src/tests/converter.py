@@ -1,4 +1,4 @@
-import sys, json, os
+import sys, json, os, zipfile
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'scripts'))
 import convert as C
 
@@ -2014,6 +2014,25 @@ with tempfile.TemporaryDirectory() as _td:
                         capture_output=True, text=True)
     ck('#84 `all` and `srd` find it themselves: no such warning', 'not in the feat index' not in r.stdout + r2.stdout
        and r2.returncode == 0, (r.stdout[-300:], r2.stdout[-300:]))
+
+# ---------- fbdata.py build <dump> --srd: convert, bundle, pack, validate (#85, R12)
+with tempfile.TemporaryDirectory() as t:
+    dump = os.path.join(t, 'dump')
+    _mini_dump(dump)
+    out = os.path.join(t, 'srd.zip')
+    fb = os.path.join(_ROOT, 'tools', 'data-kit', 'fbdata.py')
+    # the mini dump needs an empty corrections file: the real scripts/srd-corrections.json
+    # names hundreds of entries this invented dump doesn't have, and a stale correction
+    # fails the run (see _nocorr(), used by the other mini-dump `srd` runs above).
+    r = subprocess.run([sys.executable, fb, 'build', dump, '--srd', '-o', out,
+                        '--corrections', _nocorr(t)], capture_output=True, text=True)
+    ok = r.returncode == 0 and os.path.exists(out)
+    man = json.loads(zipfile.ZipFile(out).read('fieldbook-data.json')) if ok else {}
+    ck('fbdata build <dump> --srd writes an archive holding srd52_full.json',
+       ok and [m['file'] for m in man.get('packs', [])] == ['srd52_full.json'], (r.returncode, r.stderr[-400:]))
+    ck('...credited CC-BY-4.0, with the SRD statement in NOTICE.md',
+       ok and man['packs'][0].get('license') == 'CC-BY-4.0'
+       and 'System Reference Document 5.2.1' in zipfile.ZipFile(out).read('NOTICE.md').decode('utf-8'))
 
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])

@@ -479,6 +479,88 @@ case("text outside ASCII, numbers and floats",
 ck('bundle_text escapes a lone surrogate as JSON.stringify does',
    fbdata.bundle_text({"a": 5.0, "b": chr(0xD800)}) == '{"a":5,"b":"' + chr(92) + 'ud800"}\n')
 
+# ---------- validate --public: only allowlisted licences reach a public release (R13)
+def archive_with(lic):
+    d = scratch()
+    reg = read_json(d, "data/packs.json")
+    reg["packs"] = [reg["packs"][0]]
+    if lic is not None:
+        reg["packs"][0]["license"] = lic
+    write(d, "data/packs.json", reg)
+    bundles(d)
+    out = os.path.join(d, "a.zip")
+    pack(d, out)
+    return d, out
+
+
+for lic, ok in (("CC-BY-4.0", True), ("CC-BY-SA-3.0", True), ("MIT", True), (None, False), ("LicenseRef-WotC", False)):
+    d, z = archive_with(lic)
+    r = subprocess.run([sys.executable, FBDATA, "validate", z, "--public"], capture_output=True, text=True)
+    ck("validate --public %s licence %r" % ("accepts" if ok else "refuses", lic),
+       (r.returncode == 0) == ok and (ok or "public release" in r.stderr), (r.returncode, r.stderr))
+    r = subprocess.run([sys.executable, FBDATA, "validate", z], capture_output=True, text=True)
+    ck("plain validate ignores the licence (%r)" % lic, r.returncode == 0, r.stderr)
+    shutil.rmtree(d)
+
+# ---------- build: a folder of packs, a registry, a single pack file (R12)
+d = scratch()
+bundles(d)
+out = os.path.join(d, "from-registry.zip")
+r = subprocess.run([sys.executable, FBDATA, "build", os.path.join(d, "data"), "-o", out], capture_output=True, text=True)
+ck("build <data root with packs.json> writes a valid archive named for its release",
+   r.returncode == 0 and fbdata.validate_archive(out) == []
+   and json.loads(zipfile.ZipFile(out).read("fieldbook-data.json"))["version"] == "1.8.0", r.stderr)
+one = os.path.join(d, "single.json")
+write(d, "single.json", {"system": "Mine", "name": "My pack", "feats": [{"name": "Sturdy"}]})
+out = os.path.join(d, "single.zip")
+r = subprocess.run([sys.executable, FBDATA, "build", one, "-o", out, "--version", "0.1.0"], capture_output=True, text=True)
+man = json.loads(zipfile.ZipFile(out).read("fieldbook-data.json")) if r.returncode == 0 else {}
+ck("build <one pack file> archives it as it is, versioned by --version",
+   r.returncode == 0 and man.get("version") == "0.1.0" and [m["file"] for m in man["packs"]] == ["single.json"]
+   and "version" not in man["packs"][0], (r.stderr, man))
+r = subprocess.run([sys.executable, FBDATA, "build", os.path.join(d, "nope"), "-o", out], capture_output=True, text=True)
+ck("build refuses a source that isn't there, writing nothing new", r.returncode == 2 and "nope" in r.stderr, r.stderr)
+shutil.rmtree(d)
+
+# ---------- kit_file: beside fbdata.py first (the kit zip), then the repo
+ck("kit_file finds convert.py in the repo", fbdata.kit_file("convert.py", "scripts/convert.py").endswith(os.path.join("scripts", "convert.py")))
+
+# ---------- data-release.js against another registry (R4: private data releases)
+def private_checkout(release="1.7.2"):
+    d = checkout()                       # the public layout, app 1.8.0
+    pd = os.path.join(d, "priv")
+    write(pd, "data/gamma/spells.json", {"system": "Gamma", "spells": [{"name": "Hex", "level": 1}]})
+    write(pd, "data/packs.json", {"release": release, "packs": [
+        {"system": "Gamma", "dir": "gamma", "file": "gamma_full.json", "title": "Gamma", "version": release}]})
+    subprocess.run([sys.executable, os.path.join(d, "tools/data-kit/fbdata.py"), "versions", "--seed",
+                    "--registry", os.path.join(pd, "data/packs.json"), "--data-root", os.path.join(pd, "data")], capture_output=True)
+    git(pd, "init", "-q")
+    git(pd, "add", "-A")
+    git(pd, "commit", "-qm", "start")
+    return d, pd
+
+
+d, pd = private_checkout()
+write(pd, "data/gamma/spells.json", {"system": "Gamma", "spells": [{"name": "Hex", "level": 2}]})
+git(pd, "commit", "-qam", "change")
+args = ["scripts/data-release.js", "--registry", os.path.join(pd, "data/packs.json"), "--data-root", os.path.join(pd, "data")]
+r = node(d, *args)
+reg = read_json(pd, "data/packs.json")
+ck("a private data release after app 1.8.0 is 1.8.0-1, though its last release was 1.7.2",
+   r.returncode == 0 and reg["release"] == "1.8.0-1" and reg["packs"][0]["version"] == "1.8.0-1", (r.stdout, r.stderr))
+ck("...its printed commands run in the private repo", "git -C " in r.stdout and "data-v1.8.0-1" in r.stdout, r.stdout)
+ck("...and the public registry is untouched", read_json(d, "data/packs.json")["release"] == "1.8.0")
+write(pd, "data/gamma/spells.json", {"system": "Gamma", "spells": [{"name": "Hex", "level": 3}]})
+r = node(d, *args)
+ck("a private release refuses uncommitted private data", r.returncode == 1 and "uncommitted" in r.stderr, r.stderr)
+shutil.rmtree(d)
+d = checkout(release="1.7.2")
+write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 5}]})
+git(d, "commit", "-qam", "change")
+r = node(d, "scripts/data-release.js")
+ck("the PUBLIC registry still refuses a release from another app version", r.returncode == 1 and "doesn't belong" in r.stderr, r.stderr)
+shutil.rmtree(d)
+
 # ---- add new cases above this line ----
 print("")
 print(("FAILURES: " + ", ".join(FAILED)) if FAILED else "ALL PASSED (%d)" % TOTAL[0])
