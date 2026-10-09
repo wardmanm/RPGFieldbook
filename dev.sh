@@ -228,36 +228,46 @@ convert_data() {
     printf 'The converter needs python3 (or python). Everything else in this menu works without it.\n'
     return 0
   fi
+  # The copyrighted packs live in the private repo (#85), reached through the
+  # gitignored _private-data link; only the SRD pack is written into this repo.
+  local priv=_private-data/data
   printf '\nSource: %s\n\n' "$dir"
-  printf '  1) D&D 2024 core        -> data/5e2024\n'
-  printf "  2) Xanathar's Guide     -> data/xanathars\n"
-  printf "  3) Tasha's Cauldron     -> data/tashas\n"
-  printf '  4) all three\n'
+  printf '  1) SRD 5.2                 -> data/srd52\n'
+  printf '  2) D&D 2024 core           -> %s/5e2024\n' "$priv"
+  printf "  3) Xanathar's Guide        -> %s/xanathars\n" "$priv"
+  printf "  4) Tasha's Cauldron        -> %s/tashas\n" "$priv"
+  printf '  5) all of 2–4\n'
   printf '  q) cancel\n\n'
   printf 'Which? [q] '
   local which; read -r which
   # The book profiles (pack names, the 2014-era _note, Artificer skip) live in
   # convert.py's SUPPLEMENTS table, not here — duplicating that prose in a menu is
   # how a re-run silently stops reproducing the committed packs.
-  local core=0 xge=0 tce=0
+  local srd=0 core=0 xge=0 tce=0
   case "$which" in
-    1) core=1 ;; 2) xge=1 ;; 3) tce=1 ;; 4) core=1; xge=1; tce=1 ;;
+    1) srd=1 ;; 2) core=1 ;; 3) xge=1 ;; 4) tce=1 ;; 5) core=1; xge=1; tce=1 ;;
     *) printf 'cancelled\n'; return 0 ;;
   esac
+  if [ "$srd" = 0 ] && [ ! -d "$priv" ]; then
+    printf '\n%sLink the private repo as _private-data first (see its README).%s\n' "$YEL" "$OFF"
+    return 0
+  fi
   local targets=""
-  [ "$core" = 1 ] && targets="$targets data/5e2024"
-  [ "$xge" = 1 ] && targets="$targets data/xanathars"
-  [ "$tce" = 1 ] && targets="$targets data/tashas"
+  [ "$srd" = 1 ] && targets="$targets data/srd52"
+  [ "$core" = 1 ] && targets="$targets $priv/5e2024"
+  [ "$xge" = 1 ] && targets="$targets $priv/xanathars"
+  [ "$tce" = 1 ] && targets="$targets $priv/tashas"
   printf 'This OVERWRITES%s/*.json. Proceed? [y/N] ' "$targets"
   local ok; read -r ok
   case "$ok" in y|Y) : ;; *) printf 'cancelled\n'; return 0 ;; esac
-  [ "$core" = 1 ] && run "$PY" scripts/convert.py all "$dir" -o data/5e2024
+  [ "$srd" = 1 ] && run "$PY" scripts/convert.py srd "$dir" -o data/srd52
+  [ "$core" = 1 ] && run "$PY" scripts/convert.py all "$dir" -o "$priv/5e2024"
   # --avoid-table-names: the app looks tables up by name across every loaded pack,
   # so a supplement must not reuse one the core pack already owns.
-  [ "$xge" = 1 ] && run "$PY" scripts/convert.py supplement "$dir" -o data/xanathars \
-      --book XGE --system XGE --avoid-table-names data/5e2024/tables.json
-  [ "$tce" = 1 ] && run "$PY" scripts/convert.py supplement "$dir" -o data/tashas \
-      --book TCE --system TCE --avoid-table-names data/5e2024/tables.json
+  [ "$xge" = 1 ] && run "$PY" scripts/convert.py supplement "$dir" -o "$priv/xanathars" \
+      --book XGE --system XGE --avoid-table-names "$priv/5e2024/tables.json"
+  [ "$tce" = 1 ] && run "$PY" scripts/convert.py supplement "$dir" -o "$priv/tashas" \
+      --book TCE --system TCE --avoid-table-names "$priv/5e2024/tables.json"
   return 0
 }
 

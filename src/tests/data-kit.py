@@ -600,6 +600,34 @@ else:
     ck("...and the kit finds its own convert.py", fbdata_kit_file(t) == os.path.join(t, "convert.py"))
     shutil.rmtree(t)
 
+# ---------- the private-data suite tells the truth (Review Focus 5)
+PRIV = os.path.join(ROOT, "src", "tests", "private-data.js")
+
+
+def priv(run_sh):
+    d = tempfile.mkdtemp(prefix="priv-")
+    if run_sh is not None:
+        write(d, "tests/run.sh", raw=run_sh)
+    r = subprocess.run(["node", PRIV], capture_output=True, text=True,
+                       env=dict(os.environ, FIELDBOOK_PRIVATE=os.path.join(d, "absent" if run_sh is None else "")))
+    shutil.rmtree(d)
+    return r
+
+
+def last_line(r):
+    lines = r.stdout.strip().splitlines()
+    return lines[-1] if lines else ""
+
+
+r = priv(None)
+ck("private-data with nothing linked skips", last_line(r).startswith("SKIP"), r.stdout + r.stderr)
+r = priv('#!/usr/bin/env bash\necho "  leak-scan  FAILED"\necho "FAILURES: leak-scan"\nexit 1\n')
+ck("private-data relays a private failure as a failure", last_line(r).startswith("FAILURES"), r.stdout + r.stderr)
+r = priv('#!/usr/bin/env bash\necho "ALL PASSED (7)"\n')
+ck("private-data relays the private count", last_line(r) == "ALL PASSED (7)", r.stdout + r.stderr)
+r = priv('#!/usr/bin/env bash\necho "something odd"\n')
+ck("private-data treats output it doesn't recognise as a failure", last_line(r).startswith("FAILURES"), r.stdout + r.stderr)
+
 # ---- add new cases above this line ----
 print("")
 print(("FAILURES: " + ", ".join(FAILED)) if FAILED else "ALL PASSED (%d)" % TOTAL[0])

@@ -64,11 +64,15 @@ ck('CLAUDE.md suite count is right',
    claudeSuites && claudeSuites[1] + ' vs ' + suites.length);
 
 // every suite file present must actually be registered, or it never runs
+// (#85: private-data takes humblewood-verbatim's slot in the removal commit, so
+// the count stays ten; until then it may wait, and only while that slot is held.
+// Delete this exception with the swap.)
+const awaitingSlot = base => base === 'private-data' && suites.includes('humblewood-verbatim');
 fs.readdirSync(path.join(ROOT, 'src/tests'))
   .filter(f => /\.(js|py)$/.test(f) && !/^(harness|run)\b/.test(f))
   .forEach(f => {
     const base = f.replace(/\.(js|py)$/, '');
-    ck('suite file "' + f + '" is registered in run.sh', suites.includes(base));
+    ck('suite file "' + f + '" is registered in run.sh', suites.includes(base) || awaitingSlot(base));
   });
 
 // ---------- the flat data filenames are gone; no doc may still name them
