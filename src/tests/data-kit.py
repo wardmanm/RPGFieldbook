@@ -356,6 +356,7 @@ r = node(d, "scripts/data-release-notes.js", "1.8.0-1", "--app")
 ck("app notes: the archive to download, and what changed",
    r.returncode == 0 and "fieldbook-data-standalone-1.8.0-1.zip" in r.stdout and "Changed in this release: Alpha (v1.8.0-1)" in r.stdout,
    r.stdout)
+ck("app notes also point at the data kit (#85)", "fieldbook-data-kit-1.8.0-1.zip" in r.stdout, r.stdout)
 r = node(d, "scripts/data-release-notes.js", "1.9.0", "--app")
 ck("app notes when no pack changed say only the app is needed",
    r.returncode == 0 and "No rules pack changed in this release" in r.stdout, r.stdout)
@@ -560,6 +561,44 @@ git(d, "commit", "-qam", "change")
 r = node(d, "scripts/data-release.js")
 ck("the PUBLIC registry still refuses a release from another app version", r.returncode == 1 and "doesn't belong" in r.stderr, r.stderr)
 shutil.rmtree(d)
+
+# ---------- the kit (#85, R12/R13): the example pack builds and passes --public,
+# and the kit zip (once built) works on its own, unzipped anywhere (Review Focus 3)
+EXAMPLE_PACK = os.path.join(ROOT, "tools", "data-kit", "example-pack")
+t = tempfile.mkdtemp(prefix="example-pack-")
+out = os.path.join(t, "ex.zip")
+r = subprocess.run([sys.executable, FBDATA, "build", EXAMPLE_PACK, "-o", out, "--version", "0.1.0"],
+                   capture_output=True, text=True)
+ck("fbdata.py build builds the example pack", r.returncode == 0, r.stderr)
+r = subprocess.run([sys.executable, FBDATA, "validate", out, "--public"], capture_output=True, text=True)
+ck("the example pack passes validate --public", r.returncode == 0, r.stderr)
+shutil.rmtree(t)
+
+
+def fbdata_kit_file(t):
+    """kit_file() as the unzipped kit's own fbdata.py answers it"""
+    code = "import runpy,sys; m=runpy.run_path(sys.argv[1]); print(m['kit_file']('convert.py','scripts/convert.py'))"
+    r = subprocess.run([sys.executable, "-c", code, os.path.join(t, "fbdata.py")], capture_output=True, text=True)
+    return r.stdout.strip()
+
+
+kits = sorted(f for f in os.listdir(os.path.join(ROOT, "dist")) if f.startswith("fieldbook-data-kit-")) \
+    if os.path.isdir(os.path.join(ROOT, "dist")) else []
+if not kits:
+    print("note: no dist/fieldbook-data-kit-*.zip — run ./build.sh (with zips) to test the kit zip")
+else:
+    kz = os.path.join(ROOT, "dist", kits[-1])
+    names = sorted(n for n in zipfile.ZipFile(kz).namelist() if not n.endswith("/"))
+    want = sorted(["fbdata.py", "convert.py", "overlay.json", "class-resources.json", "srd-corrections.json",
+                   "README.md", "README-converter.md", "rules-schema.md", "LICENSE", "example-pack/example-pack.json"])
+    ck("the kit zip holds exactly the kit", names == want, names)
+    t = tempfile.mkdtemp(prefix="kit-")
+    zipfile.ZipFile(kz).extractall(t)
+    r = subprocess.run([sys.executable, os.path.join(t, "fbdata.py"), "build", os.path.join(t, "example-pack"),
+                        "-o", os.path.join(t, "ex.zip"), "--version", "0.1.0"], capture_output=True, text=True, cwd=t)
+    ck("an unzipped kit builds the example pack with no repo around it", r.returncode == 0, r.stderr)
+    ck("...and the kit finds its own convert.py", fbdata_kit_file(t) == os.path.join(t, "convert.py"))
+    shutil.rmtree(t)
 
 # ---- add new cases above this line ----
 print("")

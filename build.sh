@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Fieldbook build: concatenate src/ into dist/fieldbook.html, validate everything,
 # regenerate docs/CHANGELOG.md from the in-app CHANGELOG array, and produce
-# dist/fieldbook-data-standalone-<release>.zip and dist/fieldbook-v<version>.zip.
+# dist/fieldbook-data-standalone-<release>.zip, dist/fieldbook-v<version>.zip and
+# dist/fieldbook-data-kit-<version>.zip.
 # Run from the repo root:
 #
 #   ./build.sh                    build + validate. NEVER changes the version.
@@ -37,7 +38,7 @@ while [ $# -gt 0 ]; do
     --release=*) RELEASE="${1#*=}"; shift ;;
     --no-zip) NOZIP=1; shift ;;
     --data) DATAONLY=1; shift ;;
-    -h|--help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $1 (try --help)"; exit 1 ;;
   esac
 done
@@ -94,7 +95,7 @@ bundle_packs() {
 # ship; one that fails is deleted. Sets ARCHIVE.
 pack_archive() {
   local py rel suf="" rc=0
-  py=$(find_python) || { echo "    the zips need python3 (tools/data-kit/fbdata.py); use --no-zip for just the app"; exit 1; }
+  py=$(find_python) || { echo "    the zips need python3 (tools/data-kit/fbdata.py)"; exit 1; }
   rel=$(node -e 'process.stdout.write(String(require("./data/packs.json").release||""))')
   case "$rel" in
     [0-9]*.[0-9]*.[0-9]*) ;;
@@ -116,6 +117,28 @@ pack_archive() {
   fi
   "$py" tools/data-kit/fbdata.py validate "$ARCHIVE" || {
     rm -f "$ARCHIVE"; echo "    $ARCHIVE failed validation and was deleted"; exit 1; }
+}
+
+# The data kit (#85): fbdata.py and the converter with the files they read, flat,
+# so `python fbdata.py build …` works wherever the zip is unpacked. An allowlist:
+# exactly these files, and the guard below fails the build on anything else.
+pack_kit() {
+  KIT="dist/fieldbook-data-kit-$VER$TAGSUF.zip"
+  echo "==> Building $KIT"
+  rm -rf .buildkit && mkdir -p .buildkit/example-pack
+  cp scripts/srd-corrections.json scripts/convert.py tools/data-kit/fbdata.py tools/data-kit/README.md \
+     data/overlay.json data/class-resources.json \
+     docs/README-converter.md docs/rules-schema.md LICENSE .buildkit/
+  cp tools/data-kit/example-pack/*.json .buildkit/example-pack/
+  ( cd .buildkit && zip -rqD "../$KIT" . -x '*.DS_Store' )
+  rm -rf .buildkit
+  local got
+  got=$(unzip -Z1 "$KIT" | grep -v '/$' | sort | tr '\n' ' ')
+  local want="LICENSE README-converter.md README.md class-resources.json convert.py example-pack/example-pack.json fbdata.py overlay.json rules-schema.md srd-corrections.json "
+  if [ "$got" != "$want" ]; then
+    rm -f "$KIT"; echo "    the kit zip holds the wrong files: $got"; exit 1
+  fi
+  echo "    wrote $KIT"
 }
 
 # A private temp dir, not a fixed name in a world-writable /tmp. The .js
@@ -214,7 +237,8 @@ fi
 BUNDLE="dist/fieldbook-v$VER$TAGSUF.zip"
 
 # Clear every old zip so dist/ never accumulates stale versions, and a failed
-# build can't leave last version's bundle looking like the current one.
+# build can't leave last version's bundle looking like the current one. This
+# glob already covers dist/fieldbook-data-kit-*.zip too — no separate rm needed.
 rm -f dist/*.zip
 pack_archive
 
@@ -226,7 +250,7 @@ echo "==> Building $BUNDLE"
 # fieldbook.html sits at the ZIP root next to data/; dist/ is a repo-layout
 # detail, not a download one.
 rm -rf .buildtmp
-mkdir -p .buildtmp/data .buildtmp/docs .buildtmp/scripts
+mkdir -p .buildtmp/data .buildtmp/docs
 cp dist/fieldbook.html .buildtmp/
 cp README.md .buildtmp/
 # The app is MIT; shipping it without its licence would be an oversight.
@@ -235,13 +259,7 @@ cp LICENSE .buildtmp/
 # opens inside this zip too. The per-category files remain in the repo.
 cp "$ARCHIVE" .buildtmp/data/
 cp docs/*.md .buildtmp/docs/
-cp scripts/convert.py .buildtmp/scripts/
-# convert.py's hand-authored inputs travel with it — without them an advanced
-# player regenerating data silently loses the Archery/Defense effects and the
-# Rage/Focus/Sorcery trackers, and `convert.py srd` fails: its default
-# corrections file is srd-corrections.json beside convert.py. (They are not
-# loadable rules packs, so they must NOT go in data/.)
-cp data/overlay.json data/class-resources.json scripts/srd-corrections.json .buildtmp/scripts/
+# convert.py and its helper files travel in the data kit zip now (#85).
 ( cd .buildtmp && zip -rq "../$BUNDLE" . -x '*.DS_Store' )
 rm -rf .buildtmp
 echo "    wrote $BUNDLE"
@@ -276,6 +294,8 @@ if(banned.length){
 }
 console.error("    bundle is player-facing only ("+names.filter(n=>!n.endsWith("/")).length+" files)");
 NODE
+
+pack_kit
 
 # NO source zip. GitHub attaches "Source code (zip)" and "(tar.gz)" to every
 # release automatically, built from the tag — which on a clean checkout is the

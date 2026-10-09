@@ -6,6 +6,7 @@ dist/*.zip
 dist/*_full.json
 dist/.buildstamp
 .buildtmp/
+.buildkit/
 
 # Node / tooling
 node_modules/

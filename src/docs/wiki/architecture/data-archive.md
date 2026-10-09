@@ -104,6 +104,10 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 - **Re-importing replaces by file name and system,** never by file name alone.
 - **Credits are text,** shown through `esc()`. A licence longer than 64 characters is dropped, and an
   attribution is cut to 2,000.
+- **A public release may only carry an allowlisted licence** (`CC-BY-4.0`, `CC-BY-SA-3.0`, `MIT` —
+  `PUBLIC_LICENCES`, #85 R13). `fbdata.py validate --public` enforces it on the rules-data archive;
+  `release.yml` and `data-release.yml` both run it, after the build, alongside a check that no asset
+  is named `*private*` — see [Building & CI](../process/building-and-ci.md).
 
 ## Traps
 
@@ -145,3 +149,4 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 - 2026-10-08 — The archive carries `srd52_full.json`, registered with no version or digest until
   1.8.0. → ledger L5148, #84
 - 2026-10-09 — The registry read and bundling move into `fbdata.py` (`load_registry()`, `bundle()`), replacing the Node bundler. → ledger L5342, #85
+- 2026-10-09 — Public releases (app and data) are gated on `validate --public` and a `*private*` name check, run by the release workflows after the build. → ledger L5352, #85

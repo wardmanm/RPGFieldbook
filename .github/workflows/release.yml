@@ -11,8 +11,9 @@ name: Release
 # your eye locally; this workflow only PUBLISHES, and refuses to publish
 # anything it cannot independently reproduce from source.
 #
-# Assets: fieldbook.html, the app zip, and the rules-data archive
-# fieldbook-data-standalone-X.Y.Z.zip. Data-only releases are data-release.yml.
+# Assets: fieldbook.html, the app zip, the rules-data archive
+# fieldbook-data-standalone-X.Y.Z.zip, and the data kit fieldbook-data-kit-X.Y.Z.zip.
+# Data-only releases are data-release.yml.
 #
 # workflow_dispatch re-publishes an existing tag — for when an upload failed and
 # the release needs rebuilding, without cutting a new version.
@@ -162,10 +163,24 @@ jobs:
       - name: Check the assets exist
         run: |
           V="${{ steps.tag.outputs.version }}"
-          for f in dist/fieldbook.html "dist/fieldbook-v$V.zip" "dist/fieldbook-data-standalone-$V.zip"; do
+          for f in dist/fieldbook.html "dist/fieldbook-v$V.zip" "dist/fieldbook-data-standalone-$V.zip" "dist/fieldbook-data-kit-$V.zip"; do
             [ -s "$f" ] || { echo "::error::missing or empty asset: $f"; exit 1; }
             printf '  %-46s %s\n' "$f" "$(du -h "$f" | cut -f1)"
           done
+
+      # R13: a public release may only ever carry packs under an allowlisted
+      # licence, and never an asset meant for the private repo alone.
+      - name: Public assets only
+        run: |
+          V="${{ steps.tag.outputs.version }}"
+          python3 tools/data-kit/fbdata.py validate --public "dist/fieldbook-data-standalone-$V.zip" || {
+            echo "::error::The rules-data archive holds a pack a public release may not carry."; exit 1; }
+          for f in dist/fieldbook.html "dist/fieldbook-v$V.zip" "dist/fieldbook-data-standalone-$V.zip" "dist/fieldbook-data-kit-$V.zip"; do
+            case "$f" in *private*) echo "::error::refusing to publish $f"; exit 1 ;; esac
+          done
+          if unzip -Z1 "dist/fieldbook-v$V.zip" | grep -qi private; then
+            echo "::error::the app zip names something private"; exit 1
+          fi
 
       # `gh` ships on the runner, so this needs no third-party action — one less
       # supply-chain dependency to pin and audit for something that publishes.
@@ -179,7 +194,8 @@ jobs:
           # "(tar.gz)" to every release itself, from the tag.
           ASSETS=(dist/fieldbook.html
                   "dist/fieldbook-v$V.zip"
-                  "dist/fieldbook-data-standalone-$V.zip")
+                  "dist/fieldbook-data-standalone-$V.zip"
+                  "dist/fieldbook-data-kit-$V.zip")
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists — updating notes and re-uploading assets."
             gh release edit "$TAG" --title "Fieldbook $TAG" --notes-file /tmp/notes.md

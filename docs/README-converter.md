@@ -119,13 +119,18 @@ dump moved under it), a missing or unreadable corrections file, or a name the SR
 anywhere in the pack fails the run: it prints each error, exits 1 and writes nothing to `-o`. A run
 that succeeds names the corrections file it applied and how many corrections it held.
 
-From the app zip, `convert.py` sits in `scripts/` beside its three helper files. It finds
-`srd-corrections.json` there by itself, but name the other two:
+`convert.py` ships in the **data kit** zip, `fieldbook-data-kit-<version>.zip` (a separate download
+from the app — see the app zip's README §9), flat beside its three helper files and `fbdata.py`,
+the kit's own front end. It finds `srd-corrections.json` beside itself automatically, but name the
+other two:
 
 ```bash
-python scripts/convert.py srd <your 5e-tools dump> -o srd52 \
-  --overlay scripts/overlay.json --resources scripts/class-resources.json
+python convert.py srd <your 5e-tools dump> -o srd52 \
+  --overlay overlay.json --resources class-resources.json
 ```
+
+Or let the kit do all of this for you: `python fbdata.py build <your 5e-tools dump> -o srd.zip`
+runs `srd` with all three helper files found automatically and packs the result, ready to import.
 
 | flag | what it does |
 |---|---|

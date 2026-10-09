@@ -500,15 +500,16 @@ docs/               ← reference material (you can ignore these to just play)
    • CHANGELOG — what changed in each release
    • rules schema — the format, if you want to write your own rules data
    • converter notes — how the data-generation tool works
-scripts/            ← convert.py (plus overlay.json, class-resources.json and
-                      srd-corrections.json, the three files it reads), for advanced users
-                      generating their own rules data
 ```
 
 **To play, you only ever need `fieldbook.html`.** The rules data makes the pickers and
-auto-math available, and the `docs`/`scripts` folders are optional extras for the curious. The
+auto-math available, and the `docs` folder is an optional extra for the curious. The
 same rules-data zip is also attached to each release on its own, and a release of rules data
 alone comes as just that zip.
+
+**Want to build your own rules data?** Each release also has `fieldbook-data-kit-<version>.zip`:
+the converter and `fbdata.py`, which turns a 5e-tools export into a zip Fieldbook opens. See the
+README inside it.
 
 ## 10. Credits & licences
 

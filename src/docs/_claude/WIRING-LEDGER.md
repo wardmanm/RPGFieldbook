@@ -5348,3 +5348,39 @@ Pages: [converter](../wiki/data/converter.md), [SRD 5.2](../wiki/data/srd.md),
 
 Pages: [rules packs](../wiki/architecture/rules-packs.md), [building & CI](../wiki/process/building-and-ci.md),
 [converter](../wiki/data/converter.md), [testing](../wiki/process/testing.md)
+
+## The data kit zip, the app zip without scripts/, and public-only releases (#85, 2026-10-09)
+
+1. `build.sh` gains `pack_kit()` (spec 2026-10-09 R12/R13): a new allowlisted zip,
+   `dist/fieldbook-data-kit-<version>.zip`, carries `fbdata.py`, `convert.py` and its three
+   hand-authored inputs (`overlay.json`, `class-resources.json`, `srd-corrections.json`), the two
+   player-facing docs `README-converter.md` and `rules-schema.md`, `LICENSE`, the kit's own
+   `README.md`, and `example-pack/example-pack.json` — flat, so `python fbdata.py build …` works
+   wherever the zip is unpacked, with no repo around it. A wrong file set deletes the zip and fails
+   the build, the same discipline as the player zip's own guard. `.buildkit/` (its scratch folder) is
+   gitignored beside `.buildtmp/`.
+2. The player zip drops `scripts/` and its three converter inputs entirely: an advanced player who
+   wants to regenerate rules data now gets the kit zip, every release, in place of digging
+   `convert.py` out of the app zip. README §9 and `docs.js` were updated to match; `docs.js`'s old
+   check for `scripts/srd-corrections.json` in the app zip is now two checks, one proving scripts/
+   is gone from the app zip and one proving the kit's own allowlist still carries it (flat, not under
+   `scripts/`).
+3. `tools/data-kit/example-pack/example-pack.json`: one invented pack covering every category in
+   `docs/rules-schema.md` (keywords, features, items, spells, races, classes, feats, backgrounds,
+   subclasses, tables), `license: "MIT"` so it passes `validate --public`. It gives a kit user
+   something to build with no 5e-tools dump required, and gives `data-kit.py` the same (Review
+   Focus 3: a kit user with only the kit zip, unzipped anywhere, gets an archive the app opens).
+4. R13: a public release must never carry a pack whose licence isn't one of
+   `CC-BY-4.0`/`CC-BY-SA-3.0`/`MIT` (`PUBLIC_LICENCES`, `validate_archive(path, public=True)` — Task
+   2a), and never an asset named for the private repo. `release.yml` gains a "Public assets only"
+   step: `fbdata.py validate --public` on the rules-data archive, a `*private*` name check on every
+   asset, and a check that the app zip names nothing private; `data-release.yml`'s "Validate the
+   archive" step runs the same `--public` validation and name check for the data-only path. Both
+   workflows already publish the data kit as a GitHub asset.
+5. `scripts/data-release-notes.js --app` now also points players at the kit zip, right after the
+   rules-data line.
+6. `docs/README-converter.md`'s own "from the app zip, `convert.py` sits in `scripts/`" instructions
+   were stale the moment the app zip dropped `scripts/` — updated to describe the kit zip's flat
+   layout instead, since that doc still ships inside both zips.
+
+Pages: [building & CI](../wiki/process/building-and-ci.md), [data archive](../wiki/architecture/data-archive.md)

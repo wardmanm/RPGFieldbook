@@ -1,21 +1,23 @@
 # Building & CI
 
 `./build.sh` turns `src/` into the shipped `dist/fieldbook.html`, validates it, bundles the rules
-packs, packs them into the rules-data archive and zips the player download. CI runs the same script,
-plus the test suites, on every push to `main` and every pull request, and two opt-in git hooks run
-the cheap half of it locally. This page is the everyday build and the two release workflows' checks.
-Cutting and publishing a release (`--release`, the tag, a data release) is
+packs, packs them into the rules-data archive, and zips the player download and the data kit. CI
+runs the same script, plus the test suites, on every push to `main` and every pull request, and two
+opt-in git hooks run the cheap half of it locally. This page is the everyday build and the two
+release workflows' checks. Cutting and publishing a release (`--release`, the tag, a data release) is
 [RELEASING](../../RELEASING.md); the archive itself is [Data archive](../architecture/data-archive.md);
 several branches at once is [WORKTREES](../../WORKTREES.md).
 
-**Code:** `build.sh`, `dev.sh`, `.githooks/`, `.github/workflows/ci.yml`, `release.yml`,
-`data-release.yml`; `validateOrder()`, `mayOverwrite()` in `scripts/build-html.js`; `bundle()`,
-`cmd_bundle()`, `load_registry()`, `cmd_pack()`, `validate_archive()` in
-`tools/data-kit/fbdata.py`; `scripts/gen-changelog.js`, `scripts/data-release.js`,
-`scripts/data-release-notes.js`; `APP_VERSION` and `DATA_VERSIONS` in `30-version.js` · **Data:**
-`data/packs.json` · **Tests:** `docs.js` (zip allowlist vs README §9, README names the archive,
+**Code:** `build.sh` (its `pack_archive` and `pack_kit` shell functions), `dev.sh`, `.githooks/`,
+`.github/workflows/ci.yml`, `release.yml`, `data-release.yml`; `validateOrder()`, `mayOverwrite()` in
+`scripts/build-html.js`; `bundle()`, `cmd_bundle()`, `load_registry()`, `cmd_pack()`, `cmd_build()`,
+`validate_archive()`, `kit_file()` in `tools/data-kit/fbdata.py`; `scripts/gen-changelog.js`,
+`scripts/data-release.js`, `scripts/data-release-notes.js`; `APP_VERSION` and `DATA_VERSIONS` in
+`30-version.js` · **Data:** `data/packs.json`, `tools/data-kit/example-pack/example-pack.json` ·
+**Tests:** `docs.js` (zip allowlist vs README §9, README names the archive and the kit,
 `data/packs.json` against `DATA_VERSIONS`), `data-kit.py` (the archive is reproducible and
-validates; the release scripts in a scratch repo) · **See also:**
+validates; the example pack builds and passes `validate --public`; the kit zip, once built, works
+unzipped with no repo around it; the release scripts in a scratch repo) · **See also:**
 [Build & source split](../architecture/build-and-source-split.md), [Data archive](../architecture/data-archive.md),
 [Testing](testing.md),
 [RELEASING](../../RELEASING.md), [WORKTREES](../../WORKTREES.md), [README](../../../../README.md)
@@ -43,11 +45,12 @@ validates; the release scripts in a scratch repo) · **See also:**
    filename.
 8. **The notebook is counted**: `- ` bullets under `## Pending` in `src/docs/UNRELEASED.md`.
 9. **`--no-zip` exits here.** Everything above has run; no zip is touched, not even the old ones.
-10. **`rm -f dist/*.zip`**, then **the rules-data archive** (below). Python was first needed back at
-    step 6 (`fbdata.py bundle`, #85); without `python3` (or `python`) here the build stops with "the
-    zips need python3 (tools/data-kit/fbdata.py); use --no-zip for just the app" — which no longer
-    helps, since `--no-zip` needs it too.
-11. **The player zip**, then its allowlist guard (below).
+10. **`rm -f dist/*.zip`** (this glob already covers the data kit zip too), then **the rules-data
+    archive** (below). Python was first needed back at step 6 (`fbdata.py bundle`, #85); without
+    `python3` (or `python`) here the build stops with "the zips need python3
+    (tools/data-kit/fbdata.py)" — `--no-zip` is no help by this point, since it needs Python too
+    (step 6 already ran).
+11. **The player zip**, then its allowlist guard (below); then **the data kit zip** (below).
 12. The closing line. With notes pending it says how many, and how to cut a release.
 
 A bare `./build.sh` never changes `APP_VERSION`, `CHANGELOG`, the notebook or `data/packs.json`, so
@@ -77,12 +80,11 @@ The name is `dist/fieldbook-v<APP_VERSION>.zip`, or `…+dev.zip` when this is n
 extra", which is what such a build is.
 
 Contents are an **allowlist**, assembled in `.buildtmp/`: `fieldbook.html` at the zip root, `README.md`,
-`LICENSE`, `data/` holding only the rules-data archive, `docs/*.md`, and `scripts/convert.py`
-with its three hand-authored inputs `data/overlay.json`, `data/class-resources.json` and
-`scripts/srd-corrections.json`, which go in `scripts/` because they are converter inputs and not
-loadable packs. `convert.py srd` looks for its corrections beside itself and fails without them, so
-that one must be there. That is README §9. Fieldbook opens this zip as it is: it finds the archive
-inside it.
+`LICENSE`, `data/` holding only the rules-data archive, and `docs/*.md`. That is README §9. Fieldbook
+opens this zip as it is: it finds the archive inside it. There is deliberately **no `scripts/`
+here** (#85) — `convert.py` and its hand-authored inputs travel in the data kit zip instead (below),
+so an advanced player gets the converter from the same place on every release, not by digging into
+the app zip.
 
 After zipping, the guard lists the entries with `unzip -Z1` and fails on any of:
 
@@ -95,6 +97,22 @@ After zipping, the guard lists the entries with `unzip -Z1` and fails on any of:
 
 On failure it **deletes the zip** and exits 1. A zip that fails the check must not exist to be
 uploaded.
+
+### The data kit zip
+
+The `pack_kit` shell function (#85, spec 2026-10-09 R12) writes `dist/fieldbook-data-kit-<APP_VERSION>[+dev].zip`
+right after the player zip and its guard. Unlike the player zip it is a **flat** allowlist, built in
+a scratch `.buildkit/` (gitignored beside `.buildtmp/`) and copied with no subfolders except
+`example-pack/`, so `python fbdata.py build …` finds everything it needs beside itself the moment the
+zip is unpacked, anywhere, with no repo around it — that is what `kit_file()` looks for first. Its
+ten files: `fbdata.py`, the kit's own `README.md`, `convert.py`, its three hand-authored inputs
+(`overlay.json`, `class-resources.json`, `srd-corrections.json`), the two player-facing docs
+(`README-converter.md`, `rules-schema.md`), `LICENSE`, and `example-pack/example-pack.json` — one
+invented pack covering every category in `rules-schema.md`, licensed MIT, so a kit user (and
+`data-kit.py`) has something to build without a 5e-tools dump. `pack_kit` checks its own output
+with `unzip -Z1` against that exact file list and deletes the zip on a mismatch, the same discipline
+as the player zip's guard. `rm -f dist/*.zip` already clears old kit zips too — one glob, no separate
+line needed.
 
 ### No source zip
 
@@ -135,18 +153,22 @@ one whose `data/packs.json` `release` isn't the tag's version (a tag cut without
 one with notes still pending. It runs the tests (a tag never triggers `ci.yml`) and the full build
 under the runner's own `python3`, printing `python3 --version` first, and refuses to publish unless
 that rebuild reproduces the committed `dist/fieldbook.html` byte for byte. The release body is the
-changelog section plus `data-release-notes.js <v> --app`: what to download and which packs changed.
-The assets are `fieldbook.html`, `fieldbook-v<v>.zip` and `fieldbook-data-standalone-<v>.zip`, and
-it checks all three exist before publishing.
+changelog section plus `data-release-notes.js <v> --app`: what to download, which packs changed, and
+(#85) a line pointing at the data kit zip. The assets are `fieldbook.html`, `fieldbook-v<v>.zip`,
+`fieldbook-data-standalone-<v>.zip` and `fieldbook-data-kit-<v>.zip`, and it checks all four exist
+before publishing. **"Public assets only"** (#85, R13) then runs `fbdata.py validate --public` on
+the rules-data archive — refusing a pack whose licence isn't `CC-BY-4.0`/`CC-BY-SA-3.0`/`MIT` — and
+checks no asset's name, and no entry inside the app zip, contains `private`.
 
 **`data-release.yml`** runs on a `data-vX.Y.Z-N` tag. In order, it checks: the tag's form;
 `data/packs.json`'s `release` is the tag's version; the tag's base is `APP_VERSION` at that commit (a
 data release is for the current app); `fbdata.py versions --check` (the recorded digests are
-current); the tests; `./build.sh --data`; and `fbdata.py validate` on the archive. It writes the
-body with `data-release-notes.js <v> --data` and publishes the archive alone with `--latest=false`.
-Its last step reads `releases/latest`: if that is not a `v…` tag, it re-marks the newest app release
-as latest and fails, because a data release marked latest hides app updates from every installed
-copy. Both workflows also take `workflow_dispatch` with a tag, to re-publish one. See
+current); the tests; `./build.sh --data`; and (#85) `fbdata.py validate --public` on the archive plus
+the same `private`-name check, since a data release is published too. It writes the body with
+`data-release-notes.js <v> --data` and publishes the archive alone with `--latest=false`. Its last
+step reads `releases/latest`: if that is not a `v…` tag, it re-marks the newest app release as latest
+and fails, because a data release marked latest hides app updates from every installed copy. Both
+workflows also take `workflow_dispatch` with a tag, to re-publish one. See
 [RELEASING](../../RELEASING.md).
 
 ### Git hooks
@@ -210,8 +232,13 @@ prints the menu and exits 0.
   `fbdata.py`.
 - **Portable shell.** `build.sh` must run under macOS bash 3.2 with BSD tools and under the GNU tools on
   the CI runner.
-- `dist/fieldbook.html` is tracked. `dist/*.zip` (the archive included), `dist/*_full.json`,
-  `dist/.buildstamp` and `.buildtmp/` are ignored.
+- `dist/fieldbook.html` is tracked. `dist/*.zip` (both archives and the kit zip included),
+  `dist/*_full.json`, `dist/.buildstamp`, `.buildtmp/` and `.buildkit/` are ignored.
+- **The app zip and the kit zip are each their own allowlist (#85).** Dev material belongs in
+  neither; `scripts/convert.py` and its inputs left the app zip's allowlist and joined the kit's own,
+  flat. A public release must additionally pass `fbdata.py validate --public` and name nothing
+  `private` (R13) — checked in `release.yml` and `data-release.yml`, not in `build.sh` itself, since
+  a local build has no "public" or "private" to refuse.
 
 ## Traps
 
@@ -260,6 +287,8 @@ prints the menu and exits 0.
 | Icon generation | Run by hand (`scripts/fetch-icons.js`), not wired into `build.sh` | In the build: CI's "no tracked file changed" check would become network-dependent |
 | What the app zip's `data/` holds | The rules-data archive, which the app opens inside the zip | The five loose packs: two copies of one thing, and the loose ones have no manifest or `NOTICE.md` (L5082) |
 | Python for the archive | Required for the zips only (`fbdata.py`) | A Node port of the digest and the packer: two implementations that must agree byte for byte (L5082) |
+| Where `convert.py` ships | A separate, flat data kit zip (L5352) | Inside the app zip's `scripts/`: every player downloaded it, even those who never touch the converter |
+| Where the public/private licence gate lives | `release.yml` and `data-release.yml`, after the build (L5352) | In `build.sh`: a local build has no notion of "about to publish", and the same script also builds a private pack's data |
 
 ## Open
 
@@ -290,3 +319,4 @@ prints the menu and exits 0.
 - 2026-10-07 — The rules-data archive: built and validated after `--no-zip`'s exit, carried in the app zip's `data/` in place of the five packs; `--data`; Python for the zips; `release.yml`'s registry guard and three assets; `data-release.yml` and its "latest" check; dev.sh `d`. → ledger L5082, #83
 - 2026-10-08 — The app zip ships `scripts/srd-corrections.json` beside `convert.py`. → ledger L5269, #84
 - 2026-10-09 — `build.sh`, `run.sh`, CI and `dev.sh` call `fbdata.py bundle` in place of the Node bundler; every build now needs python3. → ledger L5342, #85
+- 2026-10-09 — The app zip drops `scripts/`; a new flat data kit zip (`pack_kit`) carries `convert.py` and its inputs instead, with `example-pack/`; `release.yml` and `data-release.yml` gain the public-only licence and name guard (R13). → ledger L5352, #85
