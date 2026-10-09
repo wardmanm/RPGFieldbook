@@ -449,7 +449,7 @@ while true; do
     4) run ./src/tests/run.sh; pause ;;
     w|W) check_workflows; pause ;;
     h|H) install_hooks; pause ;;
-    5) run node scripts/bundle-rules.js; pause ;;
+    5) run "$PY" tools/data-kit/fbdata.py bundle -o dist; pause ;;
     6) convert_data; pause ;;
     c|C) commit_menu; pause ;;
     7) release_menu; pause ;;

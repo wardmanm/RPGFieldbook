@@ -25,8 +25,9 @@ and `APP_VERSION` in `30-version.js` (the TDZ pair); `90-boot.js` (left out of t
 ./src/tests/run.sh tables    # only suites whose name contains "tables"
 ```
 
-`run.sh` changes to the repo root, **always** rebundles (`node scripts/bundle-rules.js`) and picks a
-Python by running it (`"$PY" -c ''`, with `python3` falling back to `python`). It then runs each name in
+`run.sh` changes to the repo root, picks a Python by running it (`"$PY" -c ''`, with `python3`
+falling back to `python`), and **always** rebundles (`"$PY" tools/data-kit/fbdata.py bundle -o dist`).
+It then runs each name in
 its `SUITES` line (`.py` if one exists, else `.js`) and reads **each suite's last line**:
 `ALL PASSED (n)`, `FAILURES: …`, or `SKIP - reason`. It prints per-suite counts and a total, and exits
 non-zero if any suite failed or if the filter matched nothing. CI, `pre-push`, `release.yml` and
@@ -221,3 +222,4 @@ written before `src/tests/` existed was lost along with its scratchpad.
 - 2026-10-07 — Nine suites: `data-kit.py` and `data-archive.js`; `rules-data.js` checks every bundle against `data/packs.json`; `docs.js` checks the registry and that README names the archive; `note:` skips for a missing `python3` or `zip`. → ledger L5082, #83
 - 2026-10-08 — Ten suites: `srd-verbatim.py`, skipping without PyMuPDF or the SRD PDF; the converter's SRD tests on a temp-dir mini dump; `rules-data.js` checks the SRD pack from the committed `fixtures/srd-excluded-names.json`; `docs.js` checks README's SRD attribution; `data-kit.py` requires digests only of released packs. → ledger L5148, #84
 - 2026-10-08 — `converter.py` checks the committed SRD pack carries its corrections and that a missing corrections file fails; the mini-dump runs pass a real empty file; `srd-verbatim` fails on stale acceptances and aliases; `rules-data.js` pins the nine differing SRD/2024 tables; `docs.js` checks README-converter and the zip's corrections file. → ledger L5269, #84
+- 2026-10-09 — `run.sh` rebundles with `fbdata.py bundle` in place of the Node bundler; `data-kit.py`'s bundle checks move from a Node-vs-Python parity test to golden checks once the Node bundler was removed. → ledger L5342, #85

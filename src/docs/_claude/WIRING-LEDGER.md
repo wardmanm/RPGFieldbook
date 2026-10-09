@@ -5338,3 +5338,13 @@ Pages: [converter](../wiki/data/converter.md), [SRD 5.2](../wiki/data/srd.md),
 [known issues](../wiki/roadmap/known-issues.md), [rules packs](../wiki/architecture/rules-packs.md),
 [testing](../wiki/process/testing.md), [building & CI](../wiki/process/building-and-ci.md),
 [decisions](../wiki/decisions.md).
+
+## The bundler moves to Python (#85, 2026-10-09)
+
+1. `fbdata.py bundle` replaces `scripts/bundle-rules.js` (spec 2026-10-09 R11): kit users have
+   Python, not Node. It reproduced every real pack byte for byte before the switch (the parity test
+   ran over all six packs and 13 synthetic cases, then was replaced by golden checks when the Node
+   bundler was removed). `build.sh`, `run.sh`, CI and `dev.sh` call it; every build now needs python3.
+
+Pages: [rules packs](../wiki/architecture/rules-packs.md), [building & CI](../wiki/process/building-and-ci.md),
+[converter](../wiki/data/converter.md), [testing](../wiki/process/testing.md)

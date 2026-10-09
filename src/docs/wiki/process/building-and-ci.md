@@ -10,7 +10,7 @@ several branches at once is [WORKTREES](../../WORKTREES.md).
 
 **Code:** `build.sh`, `dev.sh`, `.githooks/`, `.github/workflows/ci.yml`, `release.yml`,
 `data-release.yml`; `validateOrder()`, `mayOverwrite()` in `scripts/build-html.js`; `bundle()`,
-`registry()` in `scripts/bundle-rules.js`; `cmd_pack()`, `validate_archive()` in
+`cmd_bundle()`, `load_registry()`, `cmd_pack()`, `validate_archive()` in
 `tools/data-kit/fbdata.py`; `scripts/gen-changelog.js`, `scripts/data-release.js`,
 `scripts/data-release-notes.js`; `APP_VERSION` and `DATA_VERSIONS` in `30-version.js` · **Data:**
 `data/packs.json` · **Tests:** `docs.js` (zip allowlist vs README §9, README names the archive,
@@ -34,9 +34,9 @@ validates; the release scripts in a scratch repo) · **See also:**
    line deep in the concatenation.
 4. **`node --check` on the `<script>` block** extracted from the built file.
 5. **`JSON.parse` on every `data/**/*.json`.**
-6. **`node scripts/bundle-rules.js`** writes `dist/<file>` for every pack in `data/packs.json`
-   (gitignored), stamped with the registry's title, version and credit. A folder whose files
-   disagree about `system`, `excludeSystems` or `requires`, or whose `system` is not the
+6. **`python3 tools/data-kit/fbdata.py bundle -o dist`** writes `dist/<file>` for every pack in
+   `data/packs.json` (gitignored), stamped with the registry's title, version and credit. A folder
+   whose files disagree about `system`, `excludeSystems` or `requires`, or whose `system` is not the
    registry's, fails the build.
 7. **`node scripts/gen-changelog.js`** regenerates `docs/CHANGELOG.md` from the in-app `CHANGELOG`
    array and prints `APP_VERSION`. Anything that isn't `X.Y.Z` stops the build, since it goes into a
@@ -109,7 +109,7 @@ and Python 3.11, checked out at `fetch-depth: 2`. The steps run in order:
    and `src/tests/*.py`; `bash -n` over `dev.sh`, `src/tests/run.sh` and `build.sh`.
 2. Manifest parity for `js`, `css` and `html`, in both directions.
 3. Every `data/**/*.json` parses.
-4. The artifact gate (see below), then `bundle-rules.js`.
+4. The artifact gate (see below), then `fbdata.py bundle`.
 5. `./src/tests/run.sh`.
 6. Byte hygiene (no CR, no BOM, a final newline) over every fragment, the manifest and the template.
 7. The full `./build.sh`, the archive's validation and the zip guard included. Its Python is the
@@ -226,7 +226,7 @@ prints the menu and exits 0.
   untracked fragment, data file or workflow simply doesn't exist. A tag with no `release.yml` queues
   no run at all, with no error. `check_manifest_tracked` catches the fragment case; `dev.sh` and
   RELEASING use `git add -A`.
-- **`bundle-rules.js` skips a missing system directory with a log line**, and a missing category file
+- **`fbdata.py bundle` skips a missing system directory with a log line**, and a missing category file
   just leaves its key out. On a clean checkout an untracked data file produces a complete-looking pack
   with a category missing.
 - **Failing a src-only PR at `--check` skipped every later step, tests included.** Skipping the check
@@ -287,3 +287,4 @@ prints the menu and exits 0.
 - 2026-09-24 — CI builds a src-only PR instead of failing it. → ledger L3339
 - 2026-10-07 — The rules-data archive: built and validated after `--no-zip`'s exit, carried in the app zip's `data/` in place of the five packs; `--data`; Python for the zips; `release.yml`'s registry guard and three assets; `data-release.yml` and its "latest" check; dev.sh `d`. → ledger L5082, #83
 - 2026-10-08 — The app zip ships `scripts/srd-corrections.json` beside `convert.py`. → ledger L5269, #84
+- 2026-10-09 — `build.sh`, `run.sh`, CI and `dev.sh` call `fbdata.py bundle` in place of the Node bundler; every build now needs python3. → ledger L5342, #85

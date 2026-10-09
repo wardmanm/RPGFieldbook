@@ -11,19 +11,19 @@ cd "$(dirname "$0")/../.."       # suites read src/ and data/ by relative path
 
 FILTER="${1:-}"
 
-# rules-data.js compares dist/*_full.json against data/<system>/*.json, so the
-# bundles have to exist before it runs.
-# ALWAYS rebundle. Only rebuilding when the file is missing lets a STALE bundle
-# pass the round-trip test — data/ can gain a category (as it did with
-# humblewood tables) while dist/ still holds the older pack.
-node scripts/bundle-rules.js >/dev/null || { echo "bundling failed"; exit 1; }
-
 # Probe by RUNNING it, not by existence. Windows ships a python3 stub in
 # WindowsApps that resolves fine under `command -v`, then prints "Python was not
 # found" and exits non-zero — which silently failed both Python suites on a box
 # with a perfectly good `python` on PATH.
 PY=python3
 "$PY" -c '' >/dev/null 2>&1 || PY=python
+
+# rules-data.js compares dist/*_full.json against data/<system>/*.json, so the
+# bundles have to exist before it runs.
+# ALWAYS rebundle. Only rebuilding when the file is missing lets a STALE bundle
+# pass the round-trip test — data/ can gain a category (as it did with
+# humblewood tables) while dist/ still holds the older pack.
+"$PY" tools/data-kit/fbdata.py bundle -o dist >/dev/null || { echo "bundling failed"; exit 1; }
 
 SUITES="converter tables rules-data sheet char-update docs humblewood-verbatim data-kit data-archive srd-verbatim"
 TOTAL=0

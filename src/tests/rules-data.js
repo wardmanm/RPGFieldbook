@@ -456,7 +456,7 @@ for(const sys of ['5e2024','humblewood','xanathars','tashas','homebrew','srd52']
        JSON.stringify(files)===JSON.stringify(['features.json','subclasses.json','tables.json']), files);
     const reqs=files.map(f=>JSON.parse(fs.readFileSync(path.join('data','homebrew',f),'utf8')));
     ck('every homebrew file declares system Homebrew', reqs.every(o=>o.system==='Homebrew'));
-    // bundle-rules.js compares these with JSON.stringify and fails the build if
+    // fbdata.py bundle compares these with JSON.stringify and fails the build if
     // they differ, so a mismatch must be a red test here first
     const one=JSON.stringify(reqs[0].requires);
     ck('every homebrew file declares the SAME requires', reqs.every(o=>JSON.stringify(o.requires)===one));
@@ -936,9 +936,9 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
   ck(reg.file + ' licence and credit match the registry',
      (pack.license || null) === (reg.license || null) && (pack.attribution || null) === (reg.attribution || null));
 });
-// The bundle is the file players actually import. bundle-rules.js builds it from
-// a fixed key list, so a pack property it doesn't know about is dropped — the
-// per-category files would filter correctly and the bundle silently would not.
+// The bundle is the file players actually import. fbdata.py bundle builds it
+// from a fixed key list, so a pack property it doesn't know about is dropped —
+// the per-category files would filter correctly and the bundle silently would not.
 [['xanathars_full.json'], ['tashas_full.json'], ['srd52_full.json']].forEach(([f]) => {
   const p = path.join(ROOT, 'dist', f);
   if (!fs.existsSync(p)) return;

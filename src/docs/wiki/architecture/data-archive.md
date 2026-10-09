@@ -14,8 +14,8 @@ notice, and both release paths. What the app does with a pack once it is loaded 
 `parseDataVer()`, `cmpDataVer()`, `dataVerOfTag()`, `dataVerBase()`, `pickDataRelease()`,
 `dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js`; `dataStatus()`, `dataUpdateFor()`,
 `prunePackMeta()`, `rulesCreditsHTML()`, `rulesBadge()` in `88-settings.js`; `pack_digest()`,
-`changed_packs()`, `cmd_pack()`, `validate_archive()` in `tools/data-kit/fbdata.py`; `registry()` in
-`scripts/bundle-rules.js` · **Data:** `data/packs.json` · **Tests:** `data-archive.js`, `data-kit.py`,
+`changed_packs()`, `cmd_pack()`, `validate_archive()`, `bundle()`, `load_registry()` in
+`tools/data-kit/fbdata.py` · **Data:** `data/packs.json` · **Tests:** `data-archive.js`, `data-kit.py`,
 `rules-data.js`, `docs.js` · **See also:** [Rules packs](rules-packs.md),
 [Settings & updates](../features/settings-and-updates.md), [Building & CI](../process/building-and-ci.md),
 [RELEASING](../../RELEASING.md), [the spec](../../specs/2026-10-07-data-archive-design.md)
@@ -25,7 +25,7 @@ notice, and both release paths. What the app does with a pack once it is loaded 
 **The registry.** `data/packs.json` lists every pack: its `system`, the `dir` under `data/` it is
 built from, the bundle's `file` and `title`, its `version`, a `digest`, and optionally a `license`
 (an SPDX id) and an `attribution`. `release` is the version of the last release, app or data, and
-names the archive. `bundle-rules.js` reads it (`registry()`), so a bundle's `name`, `dataVersion`,
+names the archive. `fbdata.py bundle` reads it (`load_registry()`), so a bundle's `name`, `dataVersion`,
 `license` and `attribution` all come from here. A new pack is registered with `version: null` and no
 `digest`; its first release gives it both.
 
@@ -144,3 +144,4 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
   throws named and skipped, the release-path guards, the "those versions" note wording. → ledger L5124
 - 2026-10-08 — The archive carries `srd52_full.json`, registered with no version or digest until
   1.8.0. → ledger L5148, #84
+- 2026-10-09 — The registry read and bundling move into `fbdata.py` (`load_registry()`, `bundle()`), replacing the Node bundler. → ledger L5342, #85

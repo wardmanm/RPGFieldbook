@@ -17,7 +17,7 @@ covers what the app does with packs.
 `loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `prunePackMeta()`, `clearAllRules()`,
 `dataStatus()`, `dataStatusHTML()`, `refreshRulesUI()`, `rulesBadge()` in `88-settings.js`; `systemOf()`, `racesForCharacter()` in `52-race.js`; `findRaceDef()`,
 `findClassDef()`, `subclassesFor()` in `50-classrace.js`; `DATA_VERSIONS` and `cmpDataVer()` in
-`30-version.js`; `bundle()` and `registry()` in `scripts/bundle-rules.js`; `pack_digest()` and
+`30-version.js`; `bundle()`, `cmd_bundle()`, `load_registry()`, `pack_digest()` and
 `changed_packs()` in `tools/data-kit/fbdata.py` · **Data:** `data/packs.json`, `data/<dir>/*.json` →
 `dist/<file>` · **Tests:**
 `rules-data.js` (bundle ≡ individual files, the data states, every bundle agrees with
@@ -184,7 +184,7 @@ loading.
 
 **Is my pack current?** Each pack's version lives in the registry, `data/packs.json`, beside a
 digest of its content (see [Data archive](data-archive.md)). A release, app or data, gives a new
-version only to the packs whose digest changed; `bundle-rules.js` stamps each bundle's `dataVersion`
+version only to the packs whose digest changed; `fbdata.py bundle` stamps each bundle's `dataVersion`
 from the registry, and `mergeRules()` copies it onto every entry as `_dataVersion`, so it survives
 the cache. `DATA_VERSIONS` in `30-version.js` is a snapshot of the registry taken at each app
 release: the versions this build shipped with. `dataStatus()` compares with `cmpDataVer()`, which
@@ -200,7 +200,8 @@ reads `X.Y.Z` and `X.Y.Z-N`, and gives one of four states:
 The release notes name the packs whose version is that release's, from the registry
 (`scripts/data-release-notes.js`).
 
-**Bundling.** `bundle-rules.js` rolls each registered `data/<dir>/` into one `dist/<file>` stamped
+**Bundling.** `bundle()` in `tools/data-kit/fbdata.py` (run as `fbdata.py bundle`) rolls each
+registered `data/<dir>/` into one `dist/<file>` stamped
 `rulebook:true`, `version:1` (the *schema* version), and the registry's `title` as `name`, `version`
 as `dataVersion`, and `license` and `attribution` when it has them. The folder's files must declare
 the registry's `system`, or the build fails. It mirrors `mergeRules()`
@@ -225,7 +226,8 @@ files).
   as a non-blank string. A new path that changes the pool must end in `reindexRules()`.
 - **An entry a pack can't use is said on the status line,** never dropped in silence.
 - **The bundle equals the individual files.** Any change to `mergeRules()` keying needs the same
-  change in `bundle-rules.js` (a keyword with no term keys by its `name` in both), and `RULE_CATS` (`88-settings.js`), `mergeRules()`'s category map
+  change in `bundle()` in `fbdata.py` (a keyword with no term keys by its `name` in both), and
+  `RULE_CATS` (`88-settings.js`), `mergeRules()`'s category map
   and the bundler's `CATS` must stay in step.
 - **Fetching never loses what is loaded.** A source replaces only the entries stamped with its own
   `_url`, and only once all of it has arrived. A run where nothing arrives writes neither the pool
@@ -338,3 +340,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-07 — Imports take bytes and zips; a re-import replaces its pack (`importPack()`); versions come from `data/packs.json` and compare with `cmpDataVer()`, with an `update` state for a newer data release; pack credits are kept like `requires`. → ledger L5082, #83
 - 2026-10-08 — SRD 5.2 joins as a system: `systemOf()` reads it as D&D, it loads after the 2024 pack, and an SRD/2024 table pair may share a name (R5, refined). → ledger L5148, #84
 - 2026-10-08 — R5 pinned: the nine SRD/2024 tables that differ are listed by name; Carrying Capacity is now an identical twin (59), leaving three corrected ones. → ledger L5269, #84
+- 2026-10-09 — Bundling moves from the Node bundler to `bundle()` in `tools/data-kit/fbdata.py` (Python), byte for byte. → ledger L5342, #85

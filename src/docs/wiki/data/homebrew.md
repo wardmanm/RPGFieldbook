@@ -8,7 +8,7 @@ the open, and it is still the working example of `requires`.
 
 **Code:** `missingRequirements()`, `requiresStatusHTML()`, `missingSummary()`, `mergeRules()` in
 `89-rules-merge.js`; `subclassesFor()` in `50-classrace.js`; `bundle()` in
-`scripts/bundle-rules.js`; `pack_digest()` in `tools/data-kit/fbdata.py`; `rulesCreditsHTML()` in
+`tools/data-kit/fbdata.py`; `pack_digest()` in `tools/data-kit/fbdata.py`; `rulesCreditsHTML()` in
 `88-settings.js`; `DATA_VERSIONS` in `30-version.js` · **Data:** `data/homebrew/features.json`,
 `subclasses.json`, `tables.json`; its entry in `data/packs.json` · **Tests:** `rules-data.js`,
 `tables.js`, `data-archive.js` (its credit reaches Settings) · **See also:**
@@ -115,3 +115,4 @@ chip names the two spells and `xanathars_full.json`; with every pack loaded it i
 - 2026-08-14 — Homebrew pack added with The Predator; `requires` and structural missing-dependency reporting. → ledger L1883
 - 2026-10-07 — Its CC BY-SA 3.0 licence and credit to D&D Wiki ship for the first time, in the bundle, Settings → Credits & licences and `NOTICE.md`; a new folder is registered in `data/packs.json`. → ledger L5082, #83
 - 2026-10-08 — Its D&D group resolves with SRD 5.2 alone, left as it is until #85 (spec R7). → ledger L5148, #84
+- 2026-10-09 — `bundle()` moves to `tools/data-kit/fbdata.py` (Python), replacing the Node bundler. → ledger L5342, #85

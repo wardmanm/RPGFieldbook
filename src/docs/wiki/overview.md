@@ -17,7 +17,7 @@ Two layers, joined at runtime:
   `<style>`, one `<script>`, the page shell with seven tab panels spliced in. No framework, no
   modules, no network needed. → [Build & source split](architecture/build-and-source-split.md)
 - **The rules packs** — `data/<dir>/*.json`, registered in `data/packs.json` and bundled by
-  `scripts/bundle-rules.js` into one `dist/<dir>_full.json` per pack. They ship together as one
+  `fbdata.py bundle` into one `dist/<dir>_full.json` per pack. They ship together as one
   zip, the rules-data archive, which Fieldbook opens itself. A player imports it, or single packs,
   in Settings or on the home screen (or fetches packs from configured URLs); they are cached in
   IndexedDB. → [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md),
@@ -86,7 +86,6 @@ scripts/
   srd_text.py             the pure SRD-text comparison srd-verbatim runs (dev)
   extract-humblewood.py   Humblewood PDFs → rules data; needs .venv (dev)
   build-html.js           src/ → dist/fieldbook.html (dev)
-  bundle-rules.js         data/<dir>/ → dist/<dir>_full.json (dev)
   gen-changelog.js        regenerates docs/CHANGELOG.md (dev)
   release.js              bumps APP_VERSION, folds in UNRELEASED.md, bumps changed packs (dev)
   release-notes.js        one version's changelog section, for the release body (dev)
@@ -95,8 +94,8 @@ scripts/
   fetch-icons.js          vendors game-icons.net glyphs into js/05-icons.js (dev)
   playwright-mcp.js       cross-platform launcher for the screenshot MCP (dev)
   wt.sh                   add/list/rm parallel issue worktrees (dev)
-tools/data-kit/fbdata.py  pack digests and versions, and the archive's pack and validate
-                          (Python 3.8+, stdlib; dev)
+tools/data-kit/fbdata.py  bundle (data/<dir>/ → dist/<dir>_full.json), pack digests and
+                          versions, and the archive's pack and validate (Python 3.8+, stdlib; dev)
 .claude/skills/wiki/      the skill that maintains this wiki (tracked; never ships)
 .github/workflows/        ci.yml (every push and PR), release.yml (on a version tag),
                           data-release.yml (on a data-v… tag)
@@ -200,3 +199,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-07 — The rules-data archive, the registry `data/packs.json`, data versions and data releases join the map and the glossary; `89-zip.js` in the code map. → ledger L5082, #83
 - 2026-10-08 — The SRD 5.2 pack joins the pack table, the repo layout and the glossary. → ledger L5148, #84
 - 2026-10-08 — `srd-corrections.json` ships beside `convert.py` in the app zip. → ledger L5269, #84
+- 2026-10-09 — Bundling moves from the Node bundler to `fbdata.py bundle`; the code map drops its entry. → ledger L5342, #85

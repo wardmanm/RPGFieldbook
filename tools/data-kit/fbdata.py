@@ -372,7 +372,7 @@ def cmd_validate(a):
     return 0
 
 
-# ---------- bundling (#85, R11): the port of scripts/bundle-rules.js
+# ---------- bundling (#85, R11)
 # Rules categories a bundle carries, in the order it writes them. Must stay in
 # step with RULE_CATS in src/js/88-settings.js; "traits" is read as "features".
 CATS = ("keywords", "features", "items", "spells", "races", "classes",

@@ -18,8 +18,8 @@ credits that the icons and the loaded packs require.
 `requiresStatusHTML()` in `89-rules-merge.js` · `saveSettings()` in `70-persistence.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
 `cmpDataVer()`, `checkForUpdate()`, `showUpdatePill()`, `updBannerHTML()`, `openChangelog()`,
 `pickDataRelease()`, `dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js` ·
-`boot()`, `wire()` in `90-boot.js` · `release.js`, `data-release.js`, `gen-changelog.js`,
-`bundle-rules.js` in `scripts/` · **Data:** `data/packs.json`
+`boot()`, `wire()` in `90-boot.js` · `release.js`, `data-release.js`, `gen-changelog.js` in
+`scripts/`; `bundle()` in `tools/data-kit/fbdata.py` · **Data:** `data/packs.json`
 · **Tests:** `rules-data.js` (the modal's ids both ways, the fold state, `dataStatus()`, Fetch all,
 the header chip, and Import settings driven through its real handler), `data-archive.js` (the
 `update` state, the hint line, the badge's suffix, `pickDataRelease()`, `dataUpdateFrom()`,
@@ -102,7 +102,7 @@ the newer-data check's copy of the same system and file name (`dataUpdateFor()`)
 - **unknown** — no stamp, a stamp that doesn't parse, or nothing to compare with: nothing shown.
 
 `DATA_VERSIONS` is the snapshot of `data/packs.json` that `release.js` took when this build was
-released; `bundle-rules.js` stamps each pack from the registry (see
+released; `fbdata.py bundle` stamps each pack from the registry (see
 [Rules packs](../architecture/rules-packs.md)).
 
 **Export settings** writes `{_type:"fieldbook-settings", settings, rules}`: the whole `settings`
@@ -258,3 +258,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-09-28 — Import settings asks before replacing loaded rules, rebuilds the file's pool through `mergeRules()`, and says what it did. → ledger L4134, #70
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-07 — Import files takes zips and names each failure; the `update` state, its hint line and ` · update` on the count, from `checkForDataUpdate()`; Credits & licences lists each loaded pack's credit. → ledger L5082, #83
+- 2026-10-09 — Bundling moves to `bundle()` in `tools/data-kit/fbdata.py` (Python), replacing the Node bundler. → ledger L5342, #85

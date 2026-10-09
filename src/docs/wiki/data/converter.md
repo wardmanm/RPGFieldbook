@@ -4,7 +4,7 @@
 (through `supplement`) into the Xanathar's and Tasha's packs, and (through `srd`) into the SRD 5.2
 pack, `data/srd52/`. It is stdlib-only Python 3.8+ and
 ships to players in the zip's `scripts/`, so it is both a dev tool and a player tool. Its output is
-committed; `scripts/bundle-rules.js` then rolls each system folder into the one-file pack players
+committed; `fbdata.py bundle` then rolls each system folder into the one-file pack players
 import. The player-facing how-to is [README-converter](../../../../docs/README-converter.md); this
 page is what that file does not say: what must not move, and the traps that have already shipped.
 
@@ -21,7 +21,7 @@ page is what that file does not say: what must not move, and the traps that have
 `_ammo_kind()`, `_ammo_type_kind()`, `_pack_of()`, `_shipped_2024()`, `_reprint_keys()`,
 `_fill_variant()`, `_ammo_pieces()`, `_is_ammo_variant()`, `_variant_selected()`,
 `convert_ammo_variants()`,
-`_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in `scripts/bundle-rules.js`;
+`_pack()`, `_write()` in `scripts/convert.py`; `bundle()`, `cmd_bundle()`,
 `pack_digest()` in `tools/data-kit/fbdata.py`; `mergeRules()` in `89-rules-merge.js`;
 `DATA_VERSIONS` in `30-version.js`; `RULE_CATS` in `88-settings.js` ·
 **Data:** `data/5e2024/*.json`, `data/srd52/*.json`, `data/overlay.json`, `data/class-resources.json`,
@@ -270,7 +270,8 @@ template with no display text to print instead) left in the file. `_pack()` buil
 fixed key order: `system`, `name`, `version`, then `_note` and `excludeSystems` only when the book
 sets them, then the array.
 
-**Bundling.** `bundle()` in `bundle-rules.js` reads every `.json` directly inside each folder that
+**Bundling.** `bundle()` in `tools/data-kit/fbdata.py` (run as `fbdata.py bundle`) reads every
+`.json` directly inside each folder that
 `data/packs.json` registers and writes the registry's `dist/<file>` (`5e2024_full.json`, …) with
 `rulebook: true` and the registry's title, licence, credit and version as `dataVersion` (never
 written here; see [Data archive](../architecture/data-archive.md)). It dedupes the way
@@ -366,7 +367,7 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
   every `.json` in a system folder, so a helper file there would be swept into a pack.
 - **The bundle equals its files.** `rules-data.js` merges each folder file by file and then the
   bundle, and asserts the same entries, for all six packs.
-- **A new rules category is registered everywhere at once.** `CATS` in `bundle-rules.js` must stay
+- **A new rules category is registered everywhere at once.** `CATS` in `fbdata.py` must stay
   in step with `RULE_CATS`; a category the bundler does not list is silently left out of every
   bundle. In the app, `tables` had to be added to the `rules` initializer in `00-constants.js`,
   `RULE_CATS`, `mergeRules()`'s category map and `resetRules()`. See
@@ -578,8 +579,6 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
   `--overlay` and `--resources` explicitly (`all` warns when it cannot find them; README-converter
   says so for `srd`). Only `srd-corrections.json` is found beside it.
 - The module docstring's USAGE block predates `supplement` and the unprefixed filenames.
-- A comment in `bundle-rules.js`'s dedupe loop still places `mergeRules()` in `88-settings.js` (it
-  is in `89-rules-merge.js`).
 - Rune Knight runes get no tracker: they are per-rune uses, not a pool. See
   [Known issues](../roadmap/known-issues.md).
 
@@ -610,3 +609,4 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
 - 2026-10-02 — Ammunition kinds, bundles and magic ammunition from 5e-tools' variants; a 2014 item reprinted under another name no longer ships beside its 2024 self (40 dropped). → ledger L4923, #7
 - 2026-10-08 — `srd`: the SRD 5.2 pack from an SRD view of the dump through `_run_core()`, with renames, corrections and the leak scan, and its own byte-for-byte gate. Three fixes in both packs: rename flags read as truthy (the 2024 pack gains Carrion Crawler Mucus and Lolth's Sting), dict prerequisites print their text, and the Paladin's and Ranger's Fighting Style option is offered. → ledger L5148, #84
 - 2026-10-08 — A dice roll holding a prompt template prints its display text (the 2024 Carrying Capacity table, 10 cells) and `_write()` counts `#$`; a missing corrections file fails `srd`, and the zip ships it; `classes --feats`, and a missing `refFeat` warns; replacements are text, not regex templates. → ledger L5269, #84
+- 2026-10-09 — Bundling moves to `bundle()` in `tools/data-kit/fbdata.py` (Python), replacing the Node bundler, byte for byte. → ledger L5342, #85

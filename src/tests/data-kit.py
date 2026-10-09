@@ -160,7 +160,7 @@ ck("every released real pack has a digest",
 
 # ---------- the archive: pack and validate (spec §6)
 def bundles(d):
-    """bundles in d/dist matching d's registry, the way bundle-rules.js stamps them"""
+    """bundles in d/dist matching d's registry, the way fbdata.py bundle stamps them"""
     for p in read_json(d, "data/packs.json")["packs"]:
         b = {"system": p["system"], "name": p["title"], "version": 1, "rulebook": True,
              "spells": [{"name": "S-" + p["system"]}]}
@@ -362,92 +362,117 @@ ck("app notes when no pack changed say only the app is needed",
 ck("bad arguments exit 1", node(d, "scripts/data-release-notes.js", "1.9", "--app").returncode == 1)
 shutil.rmtree(d)
 
-# ---------- fbdata.py bundle writes what bundle-rules.js wrote, byte for byte (#85, R11)
-NODE_BUNDLER = os.path.join(ROOT, "scripts", "bundle-rules.js")
-
-
-def node_bundle(root):
-    """bundle-rules.js run on a scratch root laid out like this repo: root/data, root/dist"""
-    os.makedirs(os.path.join(root, "scripts"), exist_ok=True)
-    shutil.copy(NODE_BUNDLER, os.path.join(root, "scripts", "bundle-rules.js"))
-    return subprocess.run(["node", os.path.join(root, "scripts", "bundle-rules.js")], capture_output=True, text=True)
-
-
+# ---------- fbdata.py bundle: golden checks pinning its behaviour (#85, R11)
+# The Node bundler this replaced reproduced these byte for byte, over every
+# real pack and these same fixtures, before it was removed — see
+# src/docs/_claude/WIRING-LEDGER.md "The bundler moves to Python".
 def py_bundle(root, out):
     return subprocess.run([sys.executable, FBDATA, "bundle", "-o", out,
                            "--registry", os.path.join(root, "data", "packs.json"),
                            "--data-root", os.path.join(root, "data")], capture_output=True, text=True)
 
 
-def same_bundles(root):
-    """(ok, detail): both bundlers agree on success and on every byte they write"""
-    n, p = node_bundle(root), py_bundle(root, os.path.join(root, "pyout"))
-    if (n.returncode == 0) != (p.returncode == 0):
-        return False, ("exit", n.returncode, p.returncode, n.stderr[-300:], p.stderr[-300:])
-    nd, pd = os.path.join(root, "dist"), os.path.join(root, "pyout")
-    nf = sorted(os.listdir(nd)) if os.path.isdir(nd) else []
-    pf = sorted(os.listdir(pd)) if os.path.isdir(pd) else []
-    if nf != pf:
-        return False, ("files", nf, pf)
-    for f in nf:
-        with open(os.path.join(nd, f), "rb") as a, open(os.path.join(pd, f), "rb") as b:
-            if a.read() != b.read():
-                return False, ("bytes differ", f)
-    return True, len(nf)
-
-
-if os.path.exists(NODE_BUNDLER):
-    # every real pack, from a copy of data/ (never the repo's own dist/)
-    d = tempfile.mkdtemp(prefix="fbdata-parity-")
-    shutil.copytree(os.path.join(ROOT, "data"), os.path.join(d, "data"))
-    ok, why = same_bundles(d)
-    ck("bundle: every real pack, byte for byte the Node bundle", ok, why)
+def case(name, files, packs, check):
+    """write files/packs under a scratch data root, run fbdata.py bundle into
+    d/pyout, then hand (name, returncode, pyout-dir) to check(), which ck()s"""
+    d = tempfile.mkdtemp(prefix="fbdata-case-")
+    for rel, obj in files.items():
+        write(d, "data/" + rel, obj if not isinstance(obj, str) else None, obj if isinstance(obj, str) else None)
+    write(d, "data/packs.json", {"release": "1.8.0", "packs": packs})
+    out = os.path.join(d, "pyout")
+    r = py_bundle(d, out)
+    check(name, r, out)
     shutil.rmtree(d)
 
-    def case(name, files, packs):
-        d = tempfile.mkdtemp(prefix="fbdata-case-")
-        for rel, obj in files.items():
-            write(d, "data/" + rel, obj if not isinstance(obj, str) else None, obj if isinstance(obj, str) else None)
-        write(d, "data/packs.json", {"release": "1.8.0", "packs": packs})
-        ok, why = same_bundles(d)
-        ck("bundle parity: " + name, ok, why)
-        shutil.rmtree(d)
 
-    P = lambda **kw: dict({"system": "Z", "dir": "z", "file": "z_full.json", "title": "Zed"}, **kw)
-    case("duplicates replace in place, last wins",
-         {"z/a.json": {"system": "Z", "spells": [{"name": "Bolt", "level": 1}, {"name": "Glow"}]},
-          "z/b.json": {"system": "Z", "spells": [{"name": "bolt ", "level": 2}]}}, [P(version="1.8.0")])
-    case("nameless entries are kept",
-         {"z/a.json": {"system": "Z", "items": [{"name": ""}, {"weight": 1}, "junk", [1]]}}, [P()])
-    case("keywords key by term, or by name when the term is blank",
-         {"z/a.json": {"system": "Z", "keywords": [{"term": " ", "name": "Gleam"}, {"term": "gleam", "name": "x"},
-                                                   {"term": 0, "name": "zero"}, {"name": "Other"}]}}, [P()])
-    case("subclasses key by class and name",
-         {"z/a.json": {"system": "Z", "subclasses": [{"class": "Seer", "name": "Path"}, {"class": "Monk", "name": "Path"},
-                                                     {"name": "Orphan"}, {}]}}, [P()])
-    case("features fall back to traits only when features is absent",
-         {"z/a.json": {"system": "Z", "traits": [{"name": "Keen"}]},
-          "z/b.json": {"system": "Z", "features": [], "traits": [{"name": "Lost"}]}}, [P()])
-    case("excludeSystems, requires, licence and credit carried",
-         {"z/a.json": {"system": "Z", "excludeSystems": ["b", " a ", ""], "requires": [{"pack": "Q", "spells": ["S"]}],
-                       "races": [{"name": "Gnomish"}]},
-          "z/b.json": {"system": "Z", "excludeSystems": ["a", "b"], "requires": [{"pack": "Q", "spells": ["S"]}]}},
-         [P(version="1.8.0-2", license="MIT", attribution="By someone.")])
-    case("excludeSystems disagreeing across files fails",
-         {"z/a.json": {"system": "Z", "excludeSystems": ["a"]}, "z/b.json": {"system": "Z", "excludeSystems": ["b"]}}, [P()])
-    case("requires with its keys in another order fails",
-         {"z/a.json": {"system": "Z", "requires": [{"pack": "Q", "file": "q.json"}]},
-          "z/b.json": {"system": "Z", "requires": [{"file": "q.json", "pack": "Q"}]}}, [P()])
-    case("a folder whose files name another system fails",
-         {"z/a.json": {"system": "Other", "feats": [{"name": "Tough"}]}}, [P()])
-    case("two systems in one folder fails",
-         {"z/a.json": {"system": "Z"}, "z/b.json": {"system": "Y"}}, [P()])
-    case("invalid JSON fails", {"z/a.json": "{nope"}, [P()])
-    case("a missing folder or an empty one is skipped",
-         {"y/readme.txt": "not json"}, [P(), P(system="Y", dir="y", file="y_full.json", title="Why")])
-    case("text outside ASCII, numbers and floats",
-         {"z/a.json": {"system": "Z", "items": [{"name": "Café — ✦", "weight": 0.5, "cost": 5.0, "n": -0, "big": 12345678}]}},
-         [P()])
+def fails(name, r, out):
+    ck("bundle: " + name, r.returncode == 1, (r.returncode, r.stdout, r.stderr))
+
+
+def z_obj(name, r, out):
+    """(ok, the parsed z_full.json or None): the success cases all write one pack"""
+    ck("bundle: " + name + " (exit 0)", r.returncode == 0, (r.returncode, r.stdout, r.stderr))
+    p = os.path.join(out, "z_full.json")
+    return read_json(out, "z_full.json") if r.returncode == 0 and os.path.isfile(p) else None
+
+
+P = lambda **kw: dict({"system": "Z", "dir": "z", "file": "z_full.json", "title": "Zed"}, **kw)
+
+case("duplicates replace in place, last wins",
+     {"z/a.json": {"system": "Z", "spells": [{"name": "Bolt", "level": 1}, {"name": "Glow"}]},
+      "z/b.json": {"system": "Z", "spells": [{"name": "bolt ", "level": 2}]}}, [P(version="1.8.0")],
+     lambda name, r, out: ck("bundle: " + name + " writes exactly this",
+         open(os.path.join(out, "z_full.json"), encoding="utf-8").read() ==
+         '{"system":"Z","name":"Zed","version":1,"dataVersion":"1.8.0","rulebook":true,'
+         '"spells":[{"name":"bolt ","level":2},{"name":"Glow"}]}\n'
+         if r.returncode == 0 and os.path.isfile(os.path.join(out, "z_full.json")) else False,
+         (r.returncode, r.stdout, r.stderr)))
+
+case("nameless entries are kept",
+     {"z/a.json": {"system": "Z", "items": [{"name": ""}, {"weight": 1}, "junk", [1]]}}, [P()],
+     lambda name, r, out: ck("bundle: " + name + ", in order",
+         (lambda o: o is not None and o["items"] == [{"name": ""}, {"weight": 1}, "junk", [1]])(z_obj(name, r, out))))
+
+case("keywords key by term, or by name when the term is blank",
+     {"z/a.json": {"system": "Z", "keywords": [{"term": " ", "name": "Gleam"}, {"term": "gleam", "name": "x"},
+                                               {"term": 0, "name": "zero"}, {"name": "Other"}]}}, [P()],
+     lambda name, r, out: ck("bundle: " + name,
+         (lambda o: o is not None and o["keywords"] ==
+          [{"term": "gleam", "name": "x"}, {"term": 0, "name": "zero"}, {"name": "Other"}])(z_obj(name, r, out))))
+
+case("subclasses key by class and name",
+     {"z/a.json": {"system": "Z", "subclasses": [{"class": "Seer", "name": "Path"}, {"class": "Monk", "name": "Path"},
+                                                 {"name": "Orphan"}, {}]}}, [P()],
+     lambda name, r, out: ck("bundle: " + name + " (same name, different class, both kept)",
+         (lambda o: o is not None and o["subclasses"] ==
+          [{"class": "Seer", "name": "Path"}, {"class": "Monk", "name": "Path"}, {"name": "Orphan"}, {}])
+         (z_obj(name, r, out))))
+
+case("features fall back to traits only when features is absent",
+     {"z/a.json": {"system": "Z", "traits": [{"name": "Keen"}]},
+      "z/b.json": {"system": "Z", "features": [], "traits": [{"name": "Lost"}]}}, [P()],
+     lambda name, r, out: ck("bundle: " + name + " (holds only Keen)",
+         (lambda o: o is not None and o["features"] == [{"name": "Keen"}])(z_obj(name, r, out))))
+
+case("excludeSystems, requires, licence and credit carried",
+     {"z/a.json": {"system": "Z", "excludeSystems": ["b", " a ", ""], "requires": [{"pack": "Q", "spells": ["S"]}],
+                   "races": [{"name": "Gnomish"}]},
+      "z/b.json": {"system": "Z", "excludeSystems": ["a", "b"], "requires": [{"pack": "Q", "spells": ["S"]}]}},
+     [P(version="1.8.0-2", license="MIT", attribution="By someone.")],
+     lambda name, r, out: ck("bundle: " + name,
+         (lambda o: o is not None and o["excludeSystems"] == ["a", "b"]
+          and o["requires"] == [{"pack": "Q", "spells": ["S"]}] and o["license"] == "MIT"
+          and o["attribution"] == "By someone." and o["dataVersion"] == "1.8.0-2")(z_obj(name, r, out))))
+
+case("excludeSystems disagreeing across files fails",
+     {"z/a.json": {"system": "Z", "excludeSystems": ["a"]}, "z/b.json": {"system": "Z", "excludeSystems": ["b"]}},
+     [P()], fails)
+case("requires with its keys in another order fails",
+     {"z/a.json": {"system": "Z", "requires": [{"pack": "Q", "file": "q.json"}]},
+      "z/b.json": {"system": "Z", "requires": [{"file": "q.json", "pack": "Q"}]}}, [P()], fails)
+case("a folder whose files name another system fails",
+     {"z/a.json": {"system": "Other", "feats": [{"name": "Tough"}]}}, [P()], fails)
+case("two systems in one folder fails",
+     {"z/a.json": {"system": "Z"}, "z/b.json": {"system": "Y"}}, [P()], fails)
+case("invalid JSON fails", {"z/a.json": "{nope"}, [P()], fails)
+
+case("a missing folder or an empty one is skipped",
+     {"y/readme.txt": "not json"}, [P(), P(system="Y", dir="y", file="y_full.json", title="Why")],
+     lambda name, r, out: ck("bundle: " + name + " (exit 0, nothing written)",
+         r.returncode == 0 and os.path.isdir(out) and os.listdir(out) == [], (r.returncode, os.listdir(out) if os.path.isdir(out) else None)))
+
+case("text outside ASCII, numbers and floats",
+     {"z/a.json": {"system": "Z", "items": [{"name": "Café — ✦", "weight": 0.5, "cost": 5.0, "n": -0, "big": 12345678}]}},
+     [P()],
+     lambda name, r, out: ck("bundle: " + name + " writes exactly this",
+         open(os.path.join(out, "z_full.json"), encoding="utf-8").read() ==
+         '{"system":"Z","name":"Zed","version":1,"rulebook":true,'
+         '"items":[{"name":"Café — ✦","weight":0.5,"cost":5,"n":0,"big":12345678}]}\n'
+         if r.returncode == 0 and os.path.isfile(os.path.join(out, "z_full.json")) else False,
+         (r.returncode, r.stdout, r.stderr)))
+
+ck('bundle_text escapes a lone surrogate as JSON.stringify does',
+   fbdata.bundle_text({"a": 5.0, "b": chr(0xD800)}) == '{"a":5,"b":"' + chr(92) + 'ud800"}\n')
 
 # ---- add new cases above this line ----
 print("")

@@ -11,7 +11,7 @@ entry counts, valid JSON, and something missing or wrong inside.
 `_subclass_levels()`, `convert_class_features()`, `convert_spells()`, `_render_prereq()`,
 `reserved_names()`, `_register()`, `_pack()`, `convert_ammo_variants()` and the `Book` class in
 `scripts/convert.py`;
-`bundle()` in `scripts/bundle-rules.js`; `subclassesFor()`, `subSourceTag()` in
+`bundle()` in `tools/data-kit/fbdata.py`; `subclassesFor()`, `subSourceTag()` in
 `50-classrace.js`; `racesForCharacter()`, `systemOf()` in `52-race.js`; `mergeRules()` in
 `89-rules-merge.js`; `findTable()` in `86-tables.js` · **Data:** `data/xanathars/*.json`,
 `data/tashas/*.json`, `data/class-resources.json` · **Tests:** `converter.py`, `rules-data.js`,
@@ -111,7 +111,7 @@ and missing-dependency reporting: [Rules packs](../architecture/rules-packs.md).
 - **Table names are unique across every pack, and every anchor resolves inside its own pack.**
   `rules-data.js` asserts both over all five packs.
 - **Every file in a pack folder declares the same `system` and `excludeSystems`.** The bundle is one
-  file and can carry one answer; `bundle-rules.js` fails the build otherwise, and `rules-data.js`
+  file and can carry one answer; `bundle()` in `fbdata.py` fails the build otherwise, and `rules-data.js`
   asserts it per file, plus that each `_note` says the content is 2014-era.
 - **Book profiles live in `SUPPLEMENTS`, not in `dev.sh`.**
 - **Convert the core pack first.** `--avoid-table-names` reads `data/5e2024/tables.json`, so a
@@ -180,3 +180,4 @@ and missing-dependency reporting: [Rules packs](../architecture/rules-packs.md).
 - 2026-09-28 — Magic weapons name their properties from the core `items-base.json`: Xanathar's three staves, Tasha's three Moon Sickles and Baba Yaga's Pestle. → ledger L4327, #72
 - 2026-09-28 — Tasha's six `bonusWeapon` items lose their `attack`/`damage` effects: the four weapons keep the bonus on the weapon, the Eldritch Claw Tattoo and Baba Yaga's Mortar and Pestle in prose. → ledger L4392, #74
 - 2026-10-02 — Ammunition kinds, bundles and magic ammunition from 5e-tools' variants; a 2014 item reprinted under another name no longer ships beside its 2024 self (40 dropped). → ledger L4923, #7
+- 2026-10-09 — Bundling moves to `bundle()` in `tools/data-kit/fbdata.py` (Python), replacing the Node bundler. → ledger L5342, #85

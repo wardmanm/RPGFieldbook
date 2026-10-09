@@ -12,8 +12,8 @@
 #   ./build.sh --release major
 #   ./build.sh --release 2.0.0    explicit version
 #
-# The zips need python3 (tools/data-kit/fbdata.py writes the data archive);
-# --no-zip does not.
+# Every build needs python3: tools/data-kit/fbdata.py bundles the rules packs
+# and writes the data archive.
 #
 # Releasing is a separate, deliberate act: it folds the pending notes from
 # src/docs/UNRELEASED.md into a new CHANGELOG entry and bumps APP_VERSION.
@@ -83,7 +83,9 @@ validate_data() {
 # is what players get; the individual files stay in the repo for cherry-picking.
 bundle_packs() {
   echo "==> Bundling rules packs"
-  node scripts/bundle-rules.js || { echo "    bundling failed"; exit 1; }
+  local py
+  py=$(find_python) || { echo "    bundling needs python3 (tools/data-kit/fbdata.py)"; exit 1; }
+  "$py" tools/data-kit/fbdata.py bundle -o dist || { echo "    bundling failed"; exit 1; }
 }
 
 # The rules-data archive (spec 2026-10-07-data-archive-design.md §6), named for

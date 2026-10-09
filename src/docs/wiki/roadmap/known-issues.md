@@ -268,9 +268,8 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   Archery/Defense effects and the Rage/Focus/Sorcery trackers (L625); a plain-modal-after-emblem-modal
   regression check (L3289). `attackNumbers()` and `pbValue()` are untested too.
   → [Testing](../process/testing.md)
-- **Invisible bytes in tracked files:** `scripts/bundle-rules.js` has two literal NUL bytes inside
-  `e.join(…)`, which make grep treat it as binary, and `src/tests/tables.js` has four literal
-  private-use characters. → [Building & CI](../process/building-and-ci.md)
+- **Invisible bytes in tracked files:** `src/tests/tables.js` has four literal private-use
+  characters. → [Building & CI](../process/building-and-ci.md)
 
 ### Stale docs, comments and data notes
 
@@ -291,7 +290,6 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   - `openModal()` says "~30 call sites"; there are about 50.
   - `modalTakeFocus()` and `toast()` still describe the combat view's removed `inert`.
   - `fetch-icons.js` points to a nonexistent `src/icons/README.md`.
-  - `bundle-rules.js` places `mergeRules()` in `88-settings.js`.
   - The `convert.py` USAGE docstring is out of date.
   - `spellDamageFromText()` claims a pattern reads Delayed Blast Fireball.
   - `release.yml`'s header still shows `git commit -am`.
@@ -429,3 +427,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-07 — The rules-data archive: older copies can't open the zip, a data update is announced and never installed, and the notice needs the network. Removed: `release.js`'s stale no-tags comment, gone with that code. → ledger L5082, #83
 - 2026-10-08 — The SRD 5.2 pack: with both D&D packs loaded the 2024 copy of a shared table opens, and a player's own `convert.py srd` run has no corrections file. → ledger L5148, #84
 - 2026-10-08 — Fixed and removed: a player's own `convert.py srd` run applying no corrections (a missing file is now an error, and the app zip ships it). The shadowed-table list loses Carrying Capacity, now an identical twin. → ledger L5269, #84
+- 2026-10-09 — Fixed and removed: the Node bundler's invisible NUL bytes and its stale `mergeRules()` comment, both gone with the file. → ledger L5342, #85
