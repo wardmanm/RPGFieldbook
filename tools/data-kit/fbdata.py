@@ -3,6 +3,7 @@
 
     fbdata.py digest   [--registry F] [--data-root D]
     fbdata.py versions (--changed | --check | --bump V | --seed) [--registry F] [--data-root D]
+    fbdata.py bundle   -o DIR [--registry F] [--data-root D]
     fbdata.py pack <bundles-dir> -o OUT.zip [--registry F] [--dev] [--built-for X.Y.Z]
     fbdata.py validate OUT.zip
 
@@ -371,6 +372,211 @@ def cmd_validate(a):
     return 0
 
 
+# ---------- bundling (#85, R11): the port of scripts/bundle-rules.js
+# Rules categories a bundle carries, in the order it writes them. Must stay in
+# step with RULE_CATS in src/js/88-settings.js; "traits" is read as "features".
+CATS = ("keywords", "features", "items", "spells", "races", "classes",
+        "feats", "backgrounds", "subclasses", "tables")
+# JavaScript's String.prototype.trim() set, so keys match the app's (and the
+# Node bundler's) exactly. Built with chr() — no escapes in this file.
+_JS_WS = "".join(map(chr, [9, 10, 11, 12, 13, 32, 0xA0, 0x1680] + list(range(0x2000, 0x200B))
+                     + [0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF]))
+_LONE = re.compile("[%s-%s]" % (chr(0xD800), chr(0xDFFF)))
+
+
+def _truthy(v):
+    """JavaScript truthiness: [] and {} are true; 0, "" and null are not."""
+    if v is None or v is False:
+        return False
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return v == v and v != 0
+    if isinstance(v, str):
+        return v != ""
+    return True
+
+
+def _num(v):
+    """String(n) for a finite number, as JavaScript writes it."""
+    if isinstance(v, float) and v.is_integer():
+        return str(int(v))
+    return repr(v) if isinstance(v, float) else str(v)
+
+
+def _name(v):
+    """String(v || "") for a name field. A name that is not text, a number or
+    true is nameless here; the Node bundler stringified it. No pack has one."""
+    if not _truthy(v):
+        return ""
+    if v is True:
+        return "true"
+    if isinstance(v, str):
+        return v
+    if isinstance(v, (int, float)):
+        return _num(v)
+    return ""
+
+
+def _key(entry, cat):
+    """subclasses key by class|name, keywords by term (or name when the term is
+    blank), everything else by name; "" is an entry the app skips at import."""
+    if not isinstance(entry, dict):
+        return ""
+    if cat == "keywords":
+        term = entry.get("term")
+        blank = term is None or (isinstance(term, str) and not term.strip(_JS_WS))
+        v = entry.get("name") if blank else term
+        s = v if isinstance(v, str) else (_num(v) if isinstance(v, (int, float)) and not isinstance(v, bool)
+                                          and v == v and v not in (float("inf"), float("-inf")) else "")
+        return s.strip(_JS_WS).lower()
+    if cat == "subclasses":
+        return (_name(entry.get("class")) + "|" + _name(entry.get("name"))).strip(_JS_WS).lower()
+    return _name(entry.get("name")).strip(_JS_WS).lower()
+
+
+def _same(a, b):
+    """JSON.stringify(a) === JSON.stringify(b): key order counts"""
+    return json.dumps(a, ensure_ascii=False, separators=(",", ":")) == json.dumps(b, ensure_ascii=False, separators=(",", ":"))
+
+
+def _ints(x):
+    """JSON.stringify writes 5.0 as 5"""
+    if isinstance(x, float) and x.is_integer():
+        return int(x)
+    if isinstance(x, list):
+        return [_ints(v) for v in x]
+    if isinstance(x, dict):
+        return {k: _ints(v) for k, v in x.items()}
+    return x
+
+
+def _refuse(tok):
+    raise ValueError("%s is not JSON" % tok)
+
+
+def bundle_text(obj):
+    """The bundle file's text: JSON.stringify(obj) + "\\n", byte for byte. Lone
+    surrogates are written as escapes, as JSON.stringify does."""
+    s = json.dumps(_ints(obj), ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+    return _LONE.sub(lambda m: chr(92) + "u%04x" % ord(m.group()), s) + "\n"
+
+
+def bundle(pack, data_root):
+    """One registered pack's folder rolled into one bundle object (spec #83 §4)."""
+    folder = os.path.join(data_root, pack["dir"])
+    shown = pack["dir"]
+    if not os.path.isdir(folder):
+        return {"skipped": "no data/%s/ directory" % shown}
+    files = sorted(f for f in os.listdir(folder) if f.endswith(".json"))
+    if not files:
+        return {"skipped": "data/%s/ has no .json files" % shown}
+    out, seen, errors, dupes, nameless = {}, {}, [], [], []
+    system, exclude, requires = "", None, None
+    for f in files:
+        try:
+            with open(os.path.join(folder, f), encoding="utf-8") as fh:
+                obj = json.loads(fh.read(), parse_constant=_refuse)
+        except (OSError, ValueError) as e:
+            errors.append("%s/%s: not valid JSON — %s" % (shown, f, e))
+            continue
+        if not isinstance(obj, dict):
+            errors.append("%s/%s: not a JSON object" % (shown, f))
+            continue
+        s = _name(obj.get("system")).strip(_JS_WS)
+        if s:
+            if not system:
+                system = s
+            elif s != system:
+                errors.append('%s/%s: system "%s" but the folder is "%s"' % (shown, f, s, system))
+        if isinstance(obj.get("excludeSystems"), list):
+            e = sorted(x for x in (_name(v) if not isinstance(v, (list, dict)) else "" for v in obj["excludeSystems"])
+                       for x in [x.strip(_JS_WS)] if x)
+            if exclude is None:
+                exclude = e
+            elif e != exclude:
+                errors.append("%s/%s: excludeSystems [%s] but the folder declares [%s]"
+                              % (shown, f, ",".join(e), ",".join(exclude)))
+        if isinstance(obj.get("requires"), list):
+            if requires is None:
+                requires = obj["requires"]
+            elif not _same(obj["requires"], requires):
+                errors.append("%s/%s: requires differs from the rest of the folder" % (shown, f))
+        for cat in CATS:
+            # JavaScript's obj.features || obj.traits: an empty features list is truthy
+            if cat == "features":
+                arr = obj.get("features") if _truthy(obj.get("features")) else obj.get("traits")
+            else:
+                arr = obj.get(cat)
+            if not isinstance(arr, list):
+                continue
+            out.setdefault(cat, [])
+            seen.setdefault(cat, {})
+            for e in arr:
+                k = _key(e, cat)
+                if not k:
+                    out[cat].append(e)
+                    nameless.append("%s in %s" % (cat, f))
+                    continue
+                prev = seen[cat].get(k)
+                if prev:
+                    out[cat][prev[0]] = e
+                    label = e.get("name") or e.get("term") or k
+                    dupes.append('%s "%s" (%s -> %s)' % (cat, label, prev[1], f))
+                    continue
+                seen[cat][k] = (len(out[cat]), f)
+                out[cat].append(e)
+    if errors:
+        return {"errors": errors}
+    if system and system != pack["system"]:
+        return {"errors": ['%s: its files say system "%s" but data/packs.json says "%s"' % (shown, system, pack["system"])]}
+    res = {"system": pack["system"], "name": pack["title"], "version": 1}
+    if pack.get("version"):
+        res["dataVersion"] = pack["version"]
+    res["rulebook"] = True
+    if pack.get("license"):
+        res["license"] = pack["license"]
+    if pack.get("attribution"):
+        res["attribution"] = pack["attribution"]
+    if exclude:
+        res["excludeSystems"] = exclude
+    if requires:
+        res["requires"] = requires
+    for cat in CATS:
+        if out.get(cat):
+            res[cat] = out[cat]
+    return {"obj": res, "files": len(files), "dupes": dupes, "nameless": nameless}
+
+
+def cmd_bundle(a):
+    reg = load_registry(a.registry)
+    os.makedirs(a.output, exist_ok=True)
+    failed = False
+    for p in reg["packs"]:
+        r = bundle(p, a.data_root)
+        if "skipped" in r:
+            print("    skipped %s — %s" % (p["file"], r["skipped"]))
+            continue
+        if "errors" in r:
+            failed = True
+            print("    FAILED %s:" % p["file"], file=sys.stderr)
+            for e in r["errors"]:
+                print("      - " + e, file=sys.stderr)
+            continue
+        dest = os.path.join(a.output, p["file"])
+        text = bundle_text(r["obj"])
+        tmp = dest + ".tmp"
+        with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(text)
+        os.replace(tmp, dest)
+        counts = ["%d %s" % (len(r["obj"][c]), c) for c in CATS if c in r["obj"]]
+        print("    %s  (%d files, %d KB)" % (os.path.relpath(dest), r["files"], round(len(text.encode("utf-8")) / 1024)))
+        print("      " + " · ".join(counts))
+        if r["dupes"]:
+            print("      deduped %d: %s" % (len(r["dupes"]), ", ".join(r["dupes"])))
+        if r["nameless"]:
+            print("      %d with no name, which the app will skip: %s" % (len(r["nameless"]), ", ".join(r["nameless"])))
+    return 1 if failed else 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="fbdata.py", description="Fieldbook data kit")
     sub = ap.add_subparsers(dest="cmd")
@@ -390,6 +596,10 @@ def main(argv=None):
     g.add_argument("--bump", metavar="V", help="give changed packs version V; set release to V")
     g.add_argument("--seed", action="store_true", help="record every digest from --data-root")
     p.set_defaults(fn=cmd_versions)
+    p = sub.add_parser("bundle", help="roll each registered pack's folder into one importable file")
+    common(p)
+    p.add_argument("-o", "--output", required=True, help="the folder to write the bundles to (dist/)")
+    p.set_defaults(fn=cmd_bundle)
     p = sub.add_parser("pack", help="write the data archive from bundled packs")
     p.add_argument("bundles", help="the folder holding the bundles (dist/)")
     p.add_argument("-o", "--output", required=True, help="the .zip to write")
