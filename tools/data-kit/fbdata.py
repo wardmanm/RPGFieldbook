@@ -434,7 +434,9 @@ def _key(entry, cat):
 
 
 def _same(a, b):
-    """JSON.stringify(a) === JSON.stringify(b): key order counts"""
+    """JSON.stringify(a) === JSON.stringify(b): key order counts, but 5.0 == 5
+    as JSON.stringify sees it too — so compare through _ints() first."""
+    a, b = _ints(a), _ints(b)
     return json.dumps(a, ensure_ascii=False, separators=(",", ":")) == json.dumps(b, ensure_ascii=False, separators=(",", ":"))
 
 

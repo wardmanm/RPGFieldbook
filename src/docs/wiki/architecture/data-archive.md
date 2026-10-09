@@ -108,8 +108,8 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 ## Traps
 
 - **`cmpVer()` ignores `-N`.** Every comparison of data versions goes through `cmpDataVer()`.
-- **The zips need Python.** `./build.sh --no-zip` and the Node suites don't; the zips, a release
-  and the `data-kit` suite do.
+- **Every build needs Python now.** `fbdata.py bundle` runs even under `--no-zip` (#85); only
+  running a single Node suite directly, skipping `run.sh`'s rebundle, needs none.
 - **Seeding was the one hand-run step.** The first digests came from the v1.7.2 tree, so data
   changed after v1.7.2 still moves to 1.8.0. Never seed again: `fbdata.py versions --seed` records
   every pack's current digest, so it would mark every unreleased change as released. A new pack

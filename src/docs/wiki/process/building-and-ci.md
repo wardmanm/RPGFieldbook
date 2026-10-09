@@ -43,15 +43,17 @@ validates; the release scripts in a scratch repo) · **See also:**
    filename.
 8. **The notebook is counted**: `- ` bullets under `## Pending` in `src/docs/UNRELEASED.md`.
 9. **`--no-zip` exits here.** Everything above has run; no zip is touched, not even the old ones.
-10. **`rm -f dist/*.zip`**, then **the rules-data archive** (below). This is where Python is first
-    needed: without `python3` (or `python`) the build stops with "the zips need python3
-    (tools/data-kit/fbdata.py); use --no-zip for just the app".
+10. **`rm -f dist/*.zip`**, then **the rules-data archive** (below). Python was first needed back at
+    step 6 (`fbdata.py bundle`, #85); without `python3` (or `python`) here the build stops with "the
+    zips need python3 (tools/data-kit/fbdata.py); use --no-zip for just the app" — which no longer
+    helps, since `--no-zip` needs it too.
 11. **The player zip**, then its allowlist guard (below).
 12. The closing line. With notes pending it says how many, and how to cut a release.
 
 A bare `./build.sh` never changes `APP_VERSION`, `CHANGELOG`, the notebook or `data/packs.json`, so
 it is safe to run constantly. It does **not** run the test suites; `./src/tests/run.sh` is separate,
-and CI runs both. It needs node, bash, `zip`, `unzip` and, for the zips, `python3`, and no network.
+and CI runs both. It needs node, bash, `python3` (for the bundler, even under `--no-zip`), and,
+for the zips, `zip`/`unzip` too; no network.
 
 ### The rules-data archive
 
@@ -200,8 +202,8 @@ prints the menu and exits 0.
   branch.
 - **`build.sh` needs no network.** Icon fetching (`scripts/fetch-icons.js`) and the workflow YAML
   check are kept out of it deliberately.
-- **The zips need Python; nothing before them does.** `--no-zip` and the Node suites run without it,
-  so the everyday loop never depends on it.
+- **Every build needs Python now (#85).** `fbdata.py bundle` runs before the zips, under `--no-zip`
+  too; only running a single Node suite directly, skipping `run.sh`'s rebundle, needs none.
 - **The archive that ships is the archive that validated.** A failed `fbdata.py validate` deletes
   it, as the allowlist guard deletes a leaking app zip.
 - **A build never writes `data/packs.json`.** Only `release.js` and `data-release.js` do, through

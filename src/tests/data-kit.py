@@ -450,6 +450,11 @@ case("excludeSystems disagreeing across files fails",
 case("requires with its keys in another order fails",
      {"z/a.json": {"system": "Z", "requires": [{"pack": "Q", "file": "q.json"}]},
       "z/b.json": {"system": "Z", "requires": [{"file": "q.json", "pack": "Q"}]}}, [P()], fails)
+case("requires differing only by 1.0 vs 1 still agree",
+     {"z/a.json": {"system": "Z", "requires": [{"pack": "Q", "n": 1.0}]},
+      "z/b.json": {"system": "Z", "requires": [{"pack": "Q", "n": 1}]}}, [P()],
+     lambda name, r, out: ck("bundle: " + name,
+         (lambda o: o is not None and o["requires"] == [{"pack": "Q", "n": 1.0}])(z_obj(name, r, out))))
 case("a folder whose files name another system fails",
      {"z/a.json": {"system": "Other", "feats": [{"name": "Tough"}]}}, [P()], fails)
 case("two systems in one folder fails",

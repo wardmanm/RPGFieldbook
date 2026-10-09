@@ -131,7 +131,7 @@ A plain `./build.sh` is the everyday build: it validates everything and produces
 **current** `APP_VERSION`, and never touches the version or the notebook.
 
 ```bash
-./build.sh            # everything, zips included (the zips need python3)
+./build.sh            # everything, zips included (every build needs python3 now, #85)
 ./build.sh --no-zip   # stop after the artifact + rules packs; leaves existing zips alone
 ./build.sh --data     # only the rules packs and the rules-data archive
 ```
