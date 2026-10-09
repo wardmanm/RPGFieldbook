@@ -12,28 +12,28 @@ def ck(name, cond, extra=''):
 # ---- 1. a real-shaped d100 roll table with pad + entry cells
 node = {
   "type": "table",
-  "caption": "Wild Magic Surge",
+  "caption": "Glimmerwick Surge",
   "colLabels": ["{@dice 1d100}", "Effect"],
   "colStyles": ["col-2 text-center", "col-10"],
   "rows": [
-    [{"type": "cell", "roll": {"min": 1, "max": 2, "pad": True}}, "Roll on this table at the start of each of your turns."],
-    [{"type": "cell", "roll": {"min": 3, "max": 4, "pad": True}}, "You cast {@spell Fireball} as a level 3 spell."],
-    [{"type": "cell", "roll": {"exact": 100, "pad": True}}, "You regain all expended {@variantrule Sorcery Points|XPHB}."],
+    [{"type": "cell", "roll": {"min": 1, "max": 2, "pad": True}}, "A haze of copper sparks drifts around you for a minute."],
+    [{"type": "cell", "roll": {"min": 3, "max": 4, "pad": True}}, "You hurl {@spell Glimmerbolt} as if from a level 3 slot."],
+    [{"type": "cell", "roll": {"exact": 100, "pad": True}}, "You recover every spent {@variantrule Glimmer Points|XPHB}."],
   ],
 }
 sink = []
-with C.table_ctx(sink, 'Wild Magic Sorcery', 'subclass'):
-    txt = C.flatten([ "Your spellcasting can unleash surges of untamed magic.", node ])
+with C.table_ctx(sink, 'Glimmerwick Sorcery', 'subclass'):
+    txt = C.flatten([ "Your glimmers sometimes slip their leash in odd, bright bursts.", node ])
 t = sink[0]
-ck('caption becomes name', t['name'] == 'Wild Magic Surge', t['name'])
+ck('caption becomes name', t['name'] == 'Glimmerwick Surge', t['name'])
 ck('col labels de-tagged', t['cols'] == ['1d100', 'Effect'], t['cols'])
 ck('align from colStyles', t['align'] == ['center', 'left'], t['align'])
 ck('roll range padded', t['rows'][0][0] == '01-02', t['rows'][0][0])
 ck('roll exact padded', t['rows'][2][0] == '100', t['rows'][2][0])
-ck('cell tags stripped', t['rows'][1][1] == 'You cast Fireball as a level 3 spell.', t['rows'][1][1])
-ck('owner recorded', (t['owner'], t['ownerKind']) == ('Wild Magic Sorcery', 'subclass'), t.get('owner'))
-ck('anchor emitted in prose', '[Table: Wild Magic Surge]' in txt, txt)
-ck('prose kept', txt.startswith('Your spellcasting'), txt)
+ck('cell tags stripped', t['rows'][1][1] == 'You hurl Glimmerbolt as if from a level 3 slot.', t['rows'][1][1])
+ck('owner recorded', (t['owner'], t['ownerKind']) == ('Glimmerwick Sorcery', 'subclass'), t.get('owner'))
+ck('anchor emitted in prose', '[Table: Glimmerwick Surge]' in txt, txt)
+ck('prose kept', txt.startswith('Your glimmers'), txt)
 
 # ---- 2. no sink -> old behaviour, no dangling anchor
 plain = C.flatten(["Before.", node, "After."])
@@ -508,13 +508,13 @@ ck('no optional features given: no maneuver picker',
 # first line over 40 characters, so the taglines of 41+ (eight of them — Psi
 # Warrior, Thief, Hunter...) became the whole description.
 tagfile = json.loads(json.dumps(bmfile))
-tagfile['subclassFeature'][0]['entries'] = ['{@i Augment Physical Might with Psionic Power}',
-                                            'Psi Warriors awaken the power of their minds to augment their might.']
+tagfile['subclassFeature'][0]['entries'] = ['{@i Temper Your Stance with Stubborn Patience}',
+                                            'Ash Sentinels bank the coals of their resolve until it turns to iron.']
 tsd = C.convert_classes([_tmpjson(tagfile)])['classes'][0]['subclasses']['Battle Master']['description']
-ck('an italic tagline is never taken as the description', tsd.startswith('Psi Warriors awaken'), tsd)
+ck('an italic tagline is never taken as the description', tsd.startswith('Ash Sentinels bank'), tsd)
 ts2 = json.loads(json.dumps(_scfile()))
 ts2['subclassFeature'][0]['source'] = 'XGE'   # section 14 mutates the shared _SC_FEAT to TCE
-ts2['subclassFeature'][0]['entries'] = ['{@i Augment Physical Might with Psionic Power}', 'A long enough description line to be picked as the blurb.']
+ts2['subclassFeature'][0]['entries'] = ['{@i Temper Your Stance with Stubborn Patience}', 'A long enough description line to be picked as the blurb.']
 g2 = C.convert_subclasses([_tmpjson(ts2)], book=XGE, tables=[])['subclasses']
 ck('...in the supplement path too', g2 and g2[0]['description'].startswith('A long enough'), g2)
 
@@ -636,23 +636,25 @@ ck('#67 ...and invents no choice for it', not oddc.get('levels', {}).get('1', {}
 # items written with a singular `entry`, and an embedded stat block. Every shape
 # below is copied from the v2.36.1 dump (long prose trimmed where noted).
 
-# XGE Arcane Archer, "Arcane Shot Options" (class-fighter.json subclassFeature)
-AA_OPTS = ["The Arcane Shot feature lets you choose options for it at certain levels. The options are presented here in alphabetical order. They are all magical effects, and each one is associated with one of the schools of magic.",
-           "If an option requires a saving throw, your Arcane Shot save DC is calculated as follows:",
-           {"type": "abilityDc", "name": "Arcane Shot", "attributes": ["int"]},
+# The shape of XGE's Arcane Archer "Arcane Shot Options" (class-fighter.json
+# subclassFeature): prose, a sentence promising a formula, the formula, options
+AA_OPTS = ["Ember Volley grows with you: at set levels you pick another trick for it from the list below. Every trick is a scrap of hedge magic, and each one leans on one of the old schools.",
+           "When a trick calls for a saving throw, its DC comes from this formula:",
+           {"type": "abilityDc", "name": "Ember Volley", "attributes": ["int"]},
            {"type": "options", "count": 2, "entries": [
-               {"type": "refOptionalfeature", "optionalfeature": "Banishing Arrow|XGE"},
-               {"type": "refOptionalfeature", "optionalfeature": "Beguiling Arrow|XGE"}]}]
+               {"type": "refOptionalfeature", "optionalfeature": "Cinderburst Arrow|XGE"},
+               {"type": "refOptionalfeature", "optionalfeature": "Glowmoth Arrow|XGE"}]}]
 aa = C.flatten(AA_OPTS)
-ck('abilityDc renders the save DC formula (Arcane Shot)',
-   'Arcane Shot save DC = 8 + your proficiency bonus + your Intelligence modifier.' in aa, aa)
+ck('abilityDc renders the save DC formula (Ember Volley)',
+   'Ember Volley save DC = 8 + your proficiency bonus + your Intelligence modifier.' in aa, aa)
 ck('...right after the sentence that promises it',
-   'calculated as follows:\nArcane Shot save DC = 8' in aa, aa)
-ck('...and the options still follow it', aa.endswith('• Banishing Arrow\n• Beguiling Arrow'), aa)
+   'from this formula:\nEmber Volley save DC = 8' in aa, aa)
+ck('...and the options still follow it', aa.endswith('• Cinderburst Arrow\n• Glowmoth Arrow'), aa)
 
-# TCE Artificer, "Spellcasting" -> "Spellcasting Ability" (class-artificer.json classFeature)
+# The shape of TCE's Artificer "Spellcasting" -> "Spellcasting Ability"
+# (class-artificer.json classFeature): a named subsection, prose, two formulas
 ART_SC = {"type": "entries", "name": "Spellcasting Ability", "entries": [
-    "Intelligence is your spellcasting ability for your artificer spells; your understanding of the theory behind magic allows you to wield these spells with superior skill. You use your Intelligence whenever an artificer spell refers to your spellcasting ability. In addition, you use your Intelligence modifier when setting the saving throw DC for an artificer spell you cast and when making an attack roll with one.",
+    "Your tinker spells run on Intelligence; you treat each one as a mechanism to be tuned rather than a prayer to be answered. Whenever a tinker spell asks for your spellcasting ability, use Intelligence. Use your Intelligence modifier, too, for the DC of a tinker spell you cast and for the attack rolls of those spells.",
     {"type": "abilityDc", "name": "Spell", "attributes": ["int"]},
     {"type": "abilityAttackMod", "name": "Spell", "attributes": ["int"]}]}
 art = C.flatten([ART_SC])
@@ -663,67 +665,70 @@ ck('abilityAttackMod: Artificer spell attack modifier',
 # a named subsection joins its blocks with spaces, so an unterminated formula
 # would run into the next one: "…Intelligence modifier Spell attack modifier = …"
 ck('...each formula ends its sentence, so the two do not run together',
-   art.endswith('attack roll with one. Spell save DC = 8 + your proficiency bonus + your Intelligence '
+   art.endswith('the attack rolls of those spells. Spell save DC = 8 + your proficiency bonus + your Intelligence '
                 'modifier. Spell attack modifier = your proficiency bonus + your Intelligence modifier.'), art)
 
-# PHB Battle Master, "Combat Superiority" (class-fighter.json): two attributes
+# The shape of PHB's Battle Master "Combat Superiority" (class-fighter.json):
+# a formula with two attributes
 BM_ST = {"type": "entries", "entries": [{"type": "entries", "name": "Saving Throws", "entries": [
-    "Some of your maneuvers require your target to make a saving throw to resist the maneuver's effects. The saving throw DC is calculated as follows:",
-    {"type": "abilityDc", "name": "Maneuver", "attributes": ["str", "dex"]}]}]}
+    "A few of your feints force the target to make a saving throw to shrug them off. Work out the DC like this:",
+    {"type": "abilityDc", "name": "Feint", "attributes": ["str", "con"]}]}]}
 bm = C.flatten([BM_ST])
 ck('several attributes join as 5e-tools does: "X or Y modifier (your choice)"',
-   bm.endswith('Maneuver save DC = 8 + your proficiency bonus + your Strength or Dexterity modifier (your choice).'), bm)
+   bm.endswith('Feint save DC = 8 + your proficiency bonus + your Strength or Constitution modifier (your choice).'), bm)
 # book-xphb.json writes the generic caster as "spellcasting"
 ck('the "spellcasting" attribute reads "spellcasting ability modifier"',
    C.flatten([{"type": "abilityAttackMod", "name": "Spell", "attributes": ["spellcasting"]}])
    == 'Spell attack modifier = your proficiency bonus + your spellcasting ability modifier.')
-# abilityGeneric, the third of the family (book-xdmg.json, book-phb.json)
+# abilityGeneric, the third of the family (shaped as book-xdmg.json, book-phb.json write it)
 ck('abilityGeneric: "Name = text"',
-   C.flatten([{"type": "abilityGeneric", "name": "DC", "page": 29, "text": "8 + ability modifier + Proficiency Bonus"}])
-   == 'DC = 8 + ability modifier + Proficiency Bonus.')
+   C.flatten([{"type": "abilityGeneric", "name": "DC", "page": 29, "text": "6 + your Grit + half your level"}])
+   == 'DC = 6 + your Grit + half your level.')
 ck('abilityGeneric: text alone',
-   C.flatten([{"type": "abilityGeneric", "text": "10 + all modifiers that normally apply to the check"}])
-   == '10 + all modifiers that normally apply to the check.')
+   C.flatten([{"type": "abilityGeneric", "text": "12 + every bonus you would add to the roll"}])
+   == '12 + every bonus you would add to the roll.')
 ck('abilityGeneric: attributes follow the text (renderdemo.json)',
    C.flatten([{"type": "abilityGeneric", "name": "Initiative", "text": "10 - your power level + somebody else's",
                "attributes": ["dex", "str"]}])
    == "Initiative = 10 - your power level + somebody else's Dexterity or Strength modifier (your choice).")
 
-# XDMG Cackle Fever (conditionsdiseases.json): list items with a SINGULAR entry
-CACKLE = ["Cheaply made potions and elixirs are sometimes tainted by Cackle Fever, which affects Humanoids only (gnomes are strangely immune). A creature suffers the following effects {@dice 1d4} days after infection:",
+# The shape of XDMG's Cackle Fever (conditionsdiseases.json): list items with a
+# SINGULAR entry
+CACKLE = ["Stale loaves from a hexed bakery can carry Crumbmouth, a sickness that takes hold only in Humanoids (halflings shrug it off). An eater shows these symptoms {@dice 1d4} days after the meal:",
           {"type": "list", "style": "list-hang-notitle", "items": [
-              {"type": "item", "name": "Fever", "entry": "The creature gains 1 {@condition Exhaustion|XPHB} level, which lasts until the contagion ends on the creature."},
-              {"type": "item", "name": "Uncontrollable Laughter", "entry": "While the creature has the {@condition Exhaustion|XPHB} condition, the creature makes a {@dc 13} Constitution saving throw each time it takes damage other than Psychic damage."}]}]
+              {"type": "item", "name": "Crumbs", "entry": "The eater takes 1 {@condition Exhaustion|XPHB} level that stays until the sickness passes."},
+              {"type": "item", "name": "Endless Chewing", "entry": "As long as the eater has the {@condition Exhaustion|XPHB} condition, it must succeed on a {@dc 13} Constitution saving throw whenever it is hurt, or spend its next turn chewing."}]}]
 cf = C.flatten(CACKLE)
-ck('an item with a singular entry is kept (Cackle Fever)',
-   'days after infection:\nFever: The creature gains 1 Exhaustion level, which lasts until the contagion ends on the creature.\n'
-   'Uncontrollable Laughter: While the creature has the Exhaustion condition, the creature makes a DC 13' in cf, cf)
+ck('an item with a singular entry is kept (Crumbmouth)',
+   'days after the meal:\nCrumbs: The eater takes 1 Exhaustion level that stays until the sickness passes.\n'
+   'Endless Chewing: As long as the eater has the Exhaustion condition, it must succeed on a DC 13' in cf, cf)
 one = {"type": "item", "name": "Bite", "entry": "It deals {@damage 1d8} piercing damage on a hit."}
 ck('...and reads exactly as the same item written with `entries`',
    C.flatten([one]) == C.flatten([{"type": "item", "name": "Bite", "entries": [one['entry']]}]) == 'Bite: It deals 1d8 piercing damage on a hit.',
    C.flatten([one]))
 
-# XPHB Soulknife, "Psychic Blades" (class-rogue.json): the traits are a statblock
-PB_FEAT = ["You can manifest shimmering blades of psychic energy. Whenever you take the {@action Attack|XPHB} action or make an {@action Opportunity Attack|XPHB}, you can manifest a {@item Psychic Blade|XPHB} in your free hand and make the attack with that blade. The magic blade has the following traits:",
-           {"type": "statblock", "tag": "item", "name": "Psychic Blade", "source": "XPHB"},
-           "The blade vanishes immediately after it hits or misses its target, and it leaves no mark if it deals damage."]
-PB_ITEM = {"name": "Psychic Blade", "source": "XPHB", "page": 136, "type": "M", "rarity": "none",
+# The shape of XPHB's Soulknife "Psychic Blades" (class-rogue.json): the traits
+# are a statblock
+PB_FEAT = ["You can call up a sliver of bright thought. Whenever your turn brings an {@action Attack|XPHB} action, or a foe provokes an {@action Opportunity Attack|XPHB} from you, a {@item Mindshard Blade|XPHB} can form in your empty hand, and you attack with it. The sliver is a weapon with these traits:",
+           {"type": "statblock", "tag": "item", "name": "Mindshard Blade", "source": "XPHB"},
+           "The sliver melts away once its attack lands or misses, and it leaves nothing behind."]
+PB_ITEM = {"name": "Mindshard Blade", "source": "XPHB", "page": 136, "type": "M", "rarity": "none",
            "weaponCategory": "simple", "property": ["F|XPHB", "T|XPHB"],
-           "mastery": [{"uid": "Vex|XPHB", "note": "you can use this property, and it doesn't count against the number of properties you can use with Weapon Mastery"}],
-           "range": "60/120", "dmg1": "1d6", "dmgType": "Y"}
+           "mastery": [{"uid": "Vex|XPHB", "note": "usable without the Weapon Mastery feature, and free of its usual limit"}],
+           "range": "30/90", "dmg1": "1d8", "dmgType": "Y"}
 # items-base.json itemProperty, prose trimmed: only the abbreviation and name matter
 PB_PROPS = [{"abbreviation": "F", "source": "XPHB", "page": 213, "entries": [{"type": "entries", "name": "Finesse", "entries": ["…"]}]},
             {"abbreviation": "T", "source": "XPHB", "page": 214, "template": "{{prop_name}} ({{item.range}} ft.)",
              "entries": [{"type": "entries", "name": "Thrown", "entries": ["…"]}]}]
-PB_TRAITS = ("Psychic Blade: Simple Melee Weapon · Damage 1d6 psychic · Range 60/120 ft · "
-             "Properties: Finesse, Thrown · Mastery: Vex (you can use this property, and it doesn't count "
-             "against the number of properties you can use with Weapon Mastery).")
+PB_TRAITS = ("Mindshard Blade: Simple Melee Weapon · Damage 1d8 psychic · Range 30/90 ft · "
+             "Properties: Finesse, Thrown · Mastery: Vex (usable without the Weapon Mastery feature, "
+             "and free of its usual limit).")
 with C.statblock_ctx(C.load_item_index(_tmpjson({'itemProperty': PB_PROPS, 'baseitem': []}),
                                        _tmpjson({'item': [PB_ITEM]}))):
     C._ENTRY_MISSES.clear()
     pb = C.flatten(PB_FEAT)
-    ck('a statblock embeds the item it names (Psychic Blade)',
-       'has the following traits:\n' + PB_TRAITS + '\nThe blade vanishes' in pb, pb)
+    ck('a statblock embeds the item it names (Mindshard Blade)',
+       'with these traits:\n' + PB_TRAITS + '\nThe sliver melts away' in pb, pb)
     ck('...and a resolved statblock is not a miss', not C._ENTRY_MISSES, dict(C._ENTRY_MISSES))
     # a statblock whose item is not in the index names it, and is reported
     ck('an unresolvable statblock falls back to its name',
@@ -732,7 +737,7 @@ with C.statblock_ctx(C.load_item_index(_tmpjson({'itemProperty': PB_PROPS, 'base
 C._ENTRY_MISSES.clear()
 # with no index at all (a single subcommand), the same fallback — not silence
 ck('no item index: the statblock still names what it embeds',
-   C.flatten(PB_FEAT[1:2]) == 'Psychic Blade.' and C._ENTRY_MISSES.get('statblock') == 1, dict(C._ENTRY_MISSES))
+   C.flatten(PB_FEAT[1:2]) == 'Mindshard Blade.' and C._ENTRY_MISSES.get('statblock') == 1, dict(C._ENTRY_MISSES))
 
 # every shape above, known and handled, counts nothing
 C._ENTRY_MISSES.clear()
@@ -774,37 +779,38 @@ shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True
 # 5e-tools hangs a table's footnotes off the node as `footnotes`, an array of
 # entries. _norm_table() read rows, colLabels, colStyles and caption and nothing
 # else, so 17 Xanathar's downtime tables shipped rows marked * with nothing
-# saying what the mark meant. Both nodes are copied whole from the v2.36.1 dump
-# (variantrules.json, XGE "Downtime Activity: Crime" and "...: Buying a Magic Item").
-CRIME = {"type": "table", "caption": "Crime Complications", "colLabels": ["d8", "Complication"],
+# saying what the mark meant. Both nodes have the shapes of XGE's "Downtime
+# Activity: Crime" and "...: Buying a Magic Item" tables (variantrules.json):
+# rows ending in *, and a starred column label.
+CRIME = {"type": "table", "caption": "Mischief Complications", "colLabels": ["d8", "Complication"],
          "colStyles": ["col-2 text-center", "col-10"],
-         "rows": [["1", "A bounty equal to your earnings is offered for information about your crime.*"],
-                  ["2", "An unknown person contacts you, threatening to reveal your crime if you don't render a service.*"],
-                  ["3", "Your victim is financially ruined by your crime."],
-                  ["4", "Someone who knows of your crime has been arrested on an unrelated matter.*"],
-                  ["5", "Your loot is a single, easily identified item that you can't fence in this region."],
-                  ["6", "You robbed someone who was under a local crime lord's protection, and who now wants revenge."],
-                  ["7", "Your victim calls in a favor from a guard, doubling the efforts to solve the case."],
-                  ["8", "Your victim asks one of your adventuring companions to solve the crime."]],
-         "footnotes": ["*Might involve a rival"]}
-PRICE = {"type": "table", "caption": "Magic Item Price", "colLabels": ["Rarity", "Asking Price*"],
+         "rows": [["1", "The miller posts a reward for the name of whoever soaped the millwheel and spoiled the mischief.*"],
+                  ["2", "A hooded stranger slips you a note: do them a favor, or the whole town hears of the mischief.*"],
+                  ["3", "The goat you freed eats the mayor's prize turnips, and everyone blames you."],
+                  ["4", "A chimney sweep who saw everything is picked up for something else and starts talking about the mischief.*"],
+                  ["5", "The only thing you pocketed is a bell so loud that nobody will buy it."],
+                  ["6", "The cart you tipped belonged to the beekeepers' guild, and they hold grudges."],
+                  ["7", "The baker offers free bread to anyone who helps find you, and the whole street is looking."],
+                  ["8", "One of your own friends is asked to sniff out the culprit, and agrees."]],
+         "footnotes": ["*A rival may be behind it"]}
+PRICE = {"type": "table", "caption": "Trinket Price", "colLabels": ["Rarity", "Asking Price*"],
          "colStyles": ["col-5", "col-7 text-right"],
-         "rows": [["Common", "({@dice 1d6 + 1}) × 10 gp"], ["Uncommon", "{@dice 1d6 × 100} gp"],
-                  ["Rare", "{@dice 2d10 × 1,000} gp"], ["Very rare", "({@dice 1d4 + 1}) × 10,000 gp"],
-                  ["Legendary", "{@dice 2d6 × 25,000} gp"]],
-         "footnotes": ["*Halved for a consumable item like a potion or scroll"]}
+         "rows": [["Common", "({@dice 1d4 + 2}) × 10 gp"], ["Uncommon", "{@dice 1d8 × 100} gp"],
+                  ["Rare", "{@dice 2d8 × 1,000} gp"], ["Very rare", "({@dice 1d6 + 2}) × 10,000 gp"],
+                  ["Legendary", "{@dice 2d4 × 25,000} gp"]],
+         "footnotes": ["*Doubled in a port town on market day"]}
 fsink = []
-with C.table_ctx(fsink, 'Downtime Activity: Crime', 'rule'):
-    ftxt = C.flatten(["You might commit a crime.", CRIME, PRICE])
+with C.table_ctx(fsink, 'Downtime Activity: Mischief', 'rule'):
+    ftxt = C.flatten(["You might stir up some mischief.", CRIME, PRICE])
 fc, fp = fsink[0], fsink[1]
-ck('#73 a table keeps its footnotes', fc.get('footnotes') == ['*Might involve a rival'], fc.get('footnotes'))
+ck('#73 a table keeps its footnotes', fc.get('footnotes') == ['*A rival may be behind it'], fc.get('footnotes'))
 ck('#73 ...and the rows keep the * they point from',
-   fc['rows'][0][1].endswith('crime.*') and not fc['rows'][2][1].endswith('*'), fc['rows'])
-ck('#73 a footnote for a starred column label', fp.get('footnotes') == ['*Halved for a consumable item like a potion or scroll']
+   fc['rows'][0][1].endswith('mischief.*') and not fc['rows'][2][1].endswith('*'), fc['rows'])
+ck('#73 a footnote for a starred column label', fp.get('footnotes') == ['*Doubled in a port town on market day']
    and fp['cols'] == ['Rarity', 'Asking Price*'], [fp['cols'], fp.get('footnotes')])
 ck('#73 footnotes sit after the rows, before the caption',
    list(fc) == ['name', 'cols', 'align', 'rows', 'footnotes', 'caption', 'owner', 'ownerKind'], list(fc))
-ck('#73 the anchors are unchanged', ftxt.endswith('[Table: Crime Complications]\n[Table: Magic Item Price]'), ftxt)
+ck('#73 the anchors are unchanged', ftxt.endswith('[Table: Mischief Complications]\n[Table: Trinket Price]'), ftxt)
 ck('#73 a table with no footnotes gains no key', 'footnotes' not in sink3[0] and 'footnotes' not in s4[0], sink3[0])
 fe = []
 with C.table_ctx(fe, 'X', 'rule'):
@@ -828,16 +834,16 @@ fd = []
 with C.table_ctx(fd, 'X', 'rule'):
     C.flatten([dict(CRIME, footnotes=None)]); C.flatten([CRIME]); C.flatten([CRIME])
 ck('#73 a twin that differs only in its footnotes is not reused',
-   [t.get('footnotes') for t in fd] == [None, ['*Might involve a rival']], [t.get('footnotes') for t in fd])
+   [t.get('footnotes') for t in fd] == [None, ['*A rival may be behind it']], [t.get('footnotes') for t in fd])
 ck('#73 ...and a true duplicate still is', len(fd) == 2, len(fd))
 
 # end to end through the glossary path, the one Xanathar's downtime tables take
 fg = []
-_vr = _tmpjson({'variantrule': [{'name': 'Downtime Activity: Crime', 'source': 'XGE',
-                                 'entries': ['You might commit a crime.', CRIME]}]})
+_vr = _tmpjson({'variantrule': [{'name': 'Downtime Activity: Mischief', 'source': 'XGE',
+                                 'entries': ['You might stir up some mischief.', CRIME]}]})
 C.convert_glossary(_vr, tables=fg, book=XGE)
 ck('#73 a supplement rule\'s table ships its footnotes',
-   len(fg) == 1 and fg[0].get('footnotes') == ['*Might involve a rival'] and fg[0].get('owner') == 'Downtime Activity: Crime',
+   len(fg) == 1 and fg[0].get('footnotes') == ['*A rival may be behind it'] and fg[0].get('owner') == 'Downtime Activity: Mischief',
    fg)
 
 # ---- 25. magic weapons name their properties and mastery (#72)
@@ -911,12 +917,12 @@ ck('the Sun Blade\'s own Finesse makes it a finesse weapon',
 ck('a staff with no base item names Versatile too (Staff of Power)',
    ib_magic.get('Staff of Power', {}).get('weapon', {}).get('notes') == 'Versatile 1d8 · Mastery: Topple',
    ib_magic.get('Staff of Power', {}).get('weapon'))
-pbw = ib_magic.get('Psychic Blade', {}).get('weapon', {})
-ck('an object-shaped mastery reads as the statblock reads it, note and all (Psychic Blade)',
-   pbw.get('notes') == 'Range 60/120 · Finesse, Thrown · Mastery: Vex (you can use this property, and it '
-                       "doesn't count against the number of properties you can use with Weapon Mastery)", pbw)
-ck('...not the dict\'s repr', '{' not in json.dumps(ib_magic.get('Psychic Blade', {}).get('description', '')) and
-   "'uid'" not in pbw.get('notes', ''), ib_magic.get('Psychic Blade'))
+pbw = ib_magic.get('Mindshard Blade', {}).get('weapon', {})
+ck('an object-shaped mastery reads as the statblock reads it, note and all (Mindshard Blade)',
+   pbw.get('notes') == 'Range 30/90 · Finesse, Thrown · Mastery: Vex (usable without the Weapon Mastery '
+                       'feature, and free of its usual limit)', pbw)
+ck('...not the dict\'s repr', '{' not in json.dumps(ib_magic.get('Mindshard Blade', {}).get('description', '')) and
+   "'uid'" not in pbw.get('notes', ''), ib_magic.get('Mindshard Blade'))
 ck('...and attacks with finesse', pbw.get('ability') == 'finesse', pbw)
 ms = ib_tce.get('+1 Moon Sickle', {})
 ck('a bare 2014 code resolves as well (Tasha\'s +1 Moon Sickle: "L")',
@@ -999,37 +1005,38 @@ for label, pack, name, n in (('core', ib_magic, 'Dagger of Venom', 1), ('core', 
        e.get('effects') == [], e.get('effects'))
 # The same field on an item that is not a weapon is scoped just as narrowly --
 # bows only, one coated weapon, unarmed strikes, the rod's own mace form -- and
-# no effect target can say "only that weapon", so it stays in the prose. Real
-# shapes from the v2.36.1 dump, loot tables and all but the first entry trimmed.
+# no effect target can say "only that weapon", so it stays in the prose. The
+# shapes of real items in the v2.36.1 dump (bracers, a rod, an oil, a tattoo, an
+# artifact, a ring), with invented names and text, one entry each.
 NONWEAPON = [
-    {"name": "Bracers of Archery", "source": "XDMG", "page": 240, "srd52": True, "basicRules2024": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "grantsProficiency": True, "bonusWeaponDamage": "+2",
-     "entries": ["While wearing these bracers, you have proficiency with the {@item Longbow|XPHB} and {@item Shortbow|XPHB}, and you gain a +2 bonus to damage rolls made with such weapons."]},
-    {"name": "Rod of Lordly Might", "source": "XDMG", "page": 300, "srd52": True, "basicRules2024": True, "type": "RD|XDMG", "rarity": "legendary", "reqAttune": True, "weight": 2, "bonusWeapon": "+3", "light": [{"bright": 40, "dim": 80}],
-     "entries": ["This rod has a flanged head, and it functions as a magic Mace that grants a +3 bonus to attack rolls and damage rolls made with it."]},
-    {"name": "Oil of Sharpness", "source": "XDMG", "page": 282, "srd52": True, "basicRules2024": True, "referenceSources": ["DrDe-BtS"], "type": "P|XPHB", "rarity": "very rare", "weight": 0.5, "bonusWeapon": "+3",
-     "entries": ["One vial of this oil can coat one Melee weapon or twenty pieces of ammunition, but only ammunition and Melee weapons that are nonmagical and deal Slashing or Piercing damage are affected."]},
-    {"name": "Eldritch Claw Tattoo", "source": "TCE", "page": 126, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "tattoo": True, "bonusWeapon": "+1",
-     "entries": [{"type": "entries", "name": "Magical Strikes", "entries": ["While the tattoo is on your skin, your unarmed strikes are considered magical for the purpose of overcoming immunity and resistance to nonmagical attacks, and you gain a +1 bonus to attack and damage rolls with them."]}]},
-    {"name": "Baba Yaga's Mortar and Pestle", "source": "TCE", "page": 121, "rarity": "artifact", "reqAttune": True, "wondrous": True, "bonusWeapon": "+3",
-     "entries": ["The creations of the immortal hag Baba Yaga defy the laws of mortal magic."]},
+    {"name": "Fletcher's Vambraces", "source": "XDMG", "page": 240, "srd52": True, "basicRules2024": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "grantsProficiency": True, "bonusWeaponDamage": "+2",
+     "entries": ["Strapped to your forearms, these vambraces make you proficient with the {@item Longbow|XPHB} and {@item Shortbow|XPHB}, and you add a +2 bonus to damage rolls with those bows."]},
+    {"name": "Rod of the Hearth-Lord", "source": "XDMG", "page": 300, "srd52": True, "basicRules2024": True, "type": "RD|XDMG", "rarity": "legendary", "reqAttune": True, "weight": 2, "bonusWeapon": "+3", "light": [{"bright": 40, "dim": 80}],
+     "entries": ["The rod's iron head is shaped like a turnip, and it serves as a magic Mace that adds a +3 bonus to its attack and damage rolls."]},
+    {"name": "Whetstone Balm", "source": "XDMG", "page": 282, "srd52": True, "basicRules2024": True, "referenceSources": ["DrDe-BtS"], "type": "P|XPHB", "rarity": "very rare", "weight": 0.5, "bonusWeapon": "+3",
+     "entries": ["A dab of this balm can treat one Melee weapon or a quiver of twenty arrows, so long as the steel is plain and made to cut or pierce."]},
+    {"name": "Thornknuckle Tattoo", "source": "TCE", "page": 126, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "tattoo": True, "bonusWeapon": "+1",
+     "entries": [{"type": "entries", "name": "Thorned Fists", "entries": ["While the tattoo marks your skin, your unarmed strikes count as magical, and you gain a +1 bonus to their attack and damage rolls."]}]},
+    {"name": "Granny Nettle's Kettle and Ladle", "source": "TCE", "page": 121, "rarity": "artifact", "reqAttune": True, "wondrous": True, "bonusWeapon": "+3",
+     "entries": ["Granny Nettle cooked up these two long before anyone thought to write down rules for magic."]},
     # the control: a bonus that really is global stays an effect
-    {"name": "Ring of Protection", "source": "XDMG", "page": 294, "srd52": True, "basicRules2024": True, "type": "RG|XDMG", "rarity": "rare", "reqAttune": True, "bonusAc": "+1", "bonusSavingThrow": "+1", "classFeatures": ["replicate magic item|artificer|efa|2|efa"],
-     "entries": ["You gain a +1 bonus to {@variantrule Armor Class|XPHB} and saving throws while wearing this ring."]},
+    {"name": "Ring of the Copper Ward", "source": "XDMG", "page": 294, "srd52": True, "basicRules2024": True, "type": "RG|XDMG", "rarity": "rare", "reqAttune": True, "bonusAc": "+1", "bonusSavingThrow": "+1", "classFeatures": ["replicate magic item|artificer|efa|2|efa"],
+     "entries": ["This plain copper band grants a +1 bonus to {@variantrule Armor Class|XPHB} and saving throws while you wear it."]},
 ]
 _nwf = _tmpjson({'item': NONWEAPON})
 with C.statblock_ctx(C.load_item_index(IB_BASEFILE, _nwf)):
     nw = dict(_by_name(C.convert_items(_nwf)), **_by_name(C.convert_items(_nwf, book=TCE)))
-for name, needle in (('Bracers of Archery', '+2 bonus to damage rolls made with such weapons'),
-                     ('Rod of Lordly Might', '+3 bonus to attack rolls and damage rolls made with it'),
-                     ('Oil of Sharpness', 'coat one Melee weapon'),
-                     ('Eldritch Claw Tattoo', '+1 bonus to attack and damage rolls with them'),
-                     ("Baba Yaga's Mortar and Pestle", 'defy the laws of mortal magic')):
+for name, needle in (("Fletcher's Vambraces", '+2 bonus to damage rolls with those bows'),
+                     ('Rod of the Hearth-Lord', '+3 bonus to its attack and damage rolls'),
+                     ('Whetstone Balm', 'treat one Melee weapon'),
+                     ('Thornknuckle Tattoo', '+1 bonus to their attack and damage rolls'),
+                     ("Granny Nettle's Kettle and Ladle", 'write down rules for magic')):
     e = nw.get(name, {})
     ck('#74 %s: its weapon-only bonus is not an effect on every attack' % name,
        name in nw and e.get('effects') == [] and 'weapon' not in e, e.get('effects'))
     ck('#74 ...and %s\'s prose still states it' % name, needle in e.get('description', ''), e.get('description', '')[:120])
-ring = nw.get('Ring of Protection', {})
-ck('#74 a Ring of Protection keeps its AC and saving-throw effects',
+ring = nw.get('Ring of the Copper Ward', {})
+ck('#74 a ring of protection keeps its AC and saving-throw effects',
    ring.get('effects') == [{'target': 'ac', 'value': 1}] + [{'target': 'save.' + a, 'value': 1}
                                                               for a in ('str', 'dex', 'con', 'int', 'wis', 'cha')],
    ring.get('effects'))
@@ -1071,31 +1078,32 @@ ck('#75 a melee weapon without Finesse still uses STR (Warhammer)',
 # attack read AC +5 at all times. No field in the dump tells the two apart (the
 # Arrow-Catching Shield's +2 against ranged attacks and the Shield of the
 # Cavalier's standing +2 have the same shape), so the converter reads the
-# sentence that states the bonus. Real shapes from the v2.36.1 dump, loot tables
-# and cross-references trimmed; a long item keeps only the entry that states it.
+# sentence that states the bonus. The fixtures have the shapes of those items
+# and their kin in the v2.36.1 dump, with invented names and text; each states
+# its bonus in the same kind of sentence its model does.
 B76_CONDITIONAL = [
-    {"name": "Quarterstaff of the Acrobat", "source": "XDMG", "page": 291, "srd52": True, "basicRules2024": True, "baseItem": "quarterstaff|xphb", "type": "M|XPHB", "rarity": "very rare", "reqAttune": True, "weight": 4, "weaponCategory": "simple", "property": ["T|XPHB", "V|XPHB"], "mastery": ["Topple|XPHB"], "range": "30/120", "dmg1": "1d6", "dmgType": "B", "dmg2": "1d8", "bonusWeapon": "+2", "bonusAc": "+5", "staff": True, "entries": ["You have a +2 bonus to attack rolls and damage rolls made with this magic weapon.", "While holding this weapon, you can cause it to emit green {@variantrule Dim Light|XPHB} out to 10 feet, either as a {@variantrule Bonus Action|XPHB} or after you roll {@variantrule Initiative|XPHB}, or you can extinguish the light as a {@variantrule Bonus Action|XPHB}.", "While holding this weapon, you can take a {@variantrule Bonus Action|XPHB} to alter its form, turning it into a 6-inch rod (for ease of storage) or a 10-foot pole, or reverting it a Quarterstaff; the weapon will elongate only as far as the surrounding space allows.", "In certain forms, the weapon has the following additional properties.", {"type": "entries", "name": "Acrobatic Assist (Quarterstaff and 10-Foot Pole Forms Only)", "entries": ["While holding this weapon, you have {@variantrule Advantage|XPHB} on Dexterity ({@skill Acrobatics|XPHB}) checks."]}, {"type": "entries", "name": "Attack Deflection (Quarterstaff Form Only)", "entries": ["When you are hit by an attack while holding the weapon, you can take a {@variantrule Reaction|XPHB} to twirl the weapon around you, gaining a +5 bonus to your {@variantrule Armor Class|XPHB} against the triggering attack, potentially causing the attack to miss you. You can't use this property again until you finish a {@variantrule Short Rest|XPHB|Short} or {@variantrule Long Rest|XPHB}."]}, {"type": "entries", "name": "Ranged Weapon (Quarterstaff Form Only)", "entries": ["This weapon has {@itemProperty T|XPHB|Thrown} with a normal range of 30 feet and a long range of 120 feet. Immediately after you make a ranged attack with the weapon, it flies back to your hand."]}], "light": [{"dim": 10}]},
-    {"name": "Arrow-Catching Shield", "source": "XDMG", "page": 231, "srd52": True, "basicRules2024": True, "baseItem": "shield|xphb", "type": "S|XPHB", "rarity": "rare", "reqAttune": True, "weight": 6, "ac": 2, "bonusAc": "+2", "entries": ["You gain a +2 bonus to {@variantrule Armor Class|XPHB} against ranged attack rolls while you wield this Shield. This bonus is in addition to the Shield's normal bonus to AC.", "Whenever an attacker makes a ranged attack roll against a target within 5 feet of you, you can take a {@variantrule Reaction|XPHB} to become the target of the attack instead."]},
-    {"name": "Bracers of Defense", "source": "XDMG", "page": 241, "srd52": True, "basicRules2024": True, "rarity": "rare", "reqAttune": True, "wondrous": True, "bonusAc": "+2", "entries": ["While wearing these bracers, you gain a +2 bonus to {@variantrule Armor Class|XPHB} if you are wearing no armor and using no {@item Shield|XPHB}."]},
-    {"name": "Rod of Alertness", "source": "XDMG", "page": 299, "srd52": True, "basicRules2024": True, "type": "RD|XDMG", "rarity": "very rare", "reqAttune": True, "weight": 2, "bonusAc": "+1", "bonusSavingThrow": "+1", "entries": ["This rod has the following properties.", {"type": "entries", "name": "Alertness", "entries": ["While holding the rod, you have {@variantrule Advantage|XPHB} on Wisdom ({@skill Perception|XPHB}) checks and on {@variantrule Initiative|XPHB} rolls."]}, {"type": "entries", "name": "Spells", "entries": ["While holding the rod, you can cast the following spells from it:", {"type": "list", "items": ["{@spell Detect Evil and Good|XPHB}", "{@spell Detect Magic|XPHB}", "{@spell Detect Poison and Disease|XPHB}", "{@spell See Invisibility|XPHB}"]}]}, {"type": "entries", "name": "Protective Aura", "entries": ["As a {@action Magic|XPHB} action, you can plant the haft end of the rod in the ground, whereupon the rod's head sheds {@variantrule Bright Light|XPHB} in a 60-foot radius and {@variantrule Dim Light|XPHB} for an additional 60 feet. While in that {@variantrule Bright Light|XPHB}, you and your allies gain a +1 bonus to {@variantrule Armor Class|XPHB} and saving throws and can sense the location of any {@condition Invisible|XPHB} creature that is also in the {@variantrule Bright Light|XPHB}.", "The rod's head stops glowing and the effect ends after 10 minutes or when a creature takes a {@action Magic|XPHB} action to pull the rod from the ground. Once used, this property can't be used again until the next dawn."]}], "light": [{"bright": 60, "dim": 120}]},
+    {"name": "Quarterstaff of the Tumbler", "source": "XDMG", "page": 291, "srd52": True, "basicRules2024": True, "baseItem": "quarterstaff|xphb", "type": "M|XPHB", "rarity": "very rare", "reqAttune": True, "weight": 4, "weaponCategory": "simple", "property": ["T|XPHB", "V|XPHB"], "mastery": ["Topple|XPHB"], "range": "30/120", "dmg1": "1d6", "dmgType": "B", "dmg2": "1d8", "bonusWeapon": "+2", "bonusAc": "+5", "staff": True, "entries": ["This magic staff adds a +2 bonus to its own attack rolls and damage rolls.", "While holding the staff, you can make it glow with a soft amber {@variantrule Dim Light|XPHB} out to 10 feet, either as a {@variantrule Bonus Action|XPHB} or when you roll {@variantrule Initiative|XPHB}, and you can douse it as a {@variantrule Bonus Action|XPHB}.", "While holding the staff, you can take a {@variantrule Bonus Action|XPHB} to fold it down into a 6-inch baton, stretch it out into a 10-foot pole, or return it to a Quarterstaff; it never grows past the room it has.", "Some of its forms carry extra properties.", {"type": "entries", "name": "Sure Footing (Quarterstaff and 10-Foot Pole Forms Only)", "entries": ["While holding the staff, you keep your feet on any surface: you have {@variantrule Advantage|XPHB} on Dexterity ({@skill Acrobatics|XPHB}) checks."]}, {"type": "entries", "name": "Spinning Guard (Quarterstaff Form Only)", "entries": ["If an attack hits you while you hold the staff, you can take a {@variantrule Reaction|XPHB} to spin it into a blur, gaining a +5 bonus to your {@variantrule Armor Class|XPHB} against that attack, which may turn the hit into a miss. Once used, this property returns when you finish a {@variantrule Short Rest|XPHB|Short} or {@variantrule Long Rest|XPHB}."]}, {"type": "entries", "name": "Boomerang (Quarterstaff Form Only)", "entries": ["The staff has the {@itemProperty T|XPHB|Thrown} property, with a range of 30/120 feet. Right after you make a ranged attack with it, the staff spins back into your hand."]}], "light": [{"dim": 10}]},
+    {"name": "Missile-Snaring Shield", "source": "XDMG", "page": 231, "srd52": True, "basicRules2024": True, "baseItem": "shield|xphb", "type": "S|XPHB", "rarity": "rare", "reqAttune": True, "weight": 6, "ac": 2, "bonusAc": "+2", "entries": ["While you wield this Shield, arrows and bolts glance off it, and it adds a +2 bonus to {@variantrule Armor Class|XPHB} against ranged attacks. That bonus comes on top of the Shield's ordinary bonus to AC.", "When a ranged attack targets an ally beside you, you can take a {@variantrule Reaction|XPHB} to step in and take the shot yourself."]},
+    {"name": "Warding Bracers", "source": "XDMG", "page": 241, "srd52": True, "basicRules2024": True, "rarity": "rare", "reqAttune": True, "wondrous": True, "bonusAc": "+2", "entries": ["While you wear these leather bracers, they give you a +2 bonus to {@variantrule Armor Class|XPHB} if your body is free of armor and your arms hold no {@item Shield|XPHB}."]},
+    {"name": "Rod of the Night Watch", "source": "XDMG", "page": 299, "srd52": True, "basicRules2024": True, "type": "RD|XDMG", "rarity": "very rare", "reqAttune": True, "weight": 2, "bonusAc": "+1", "bonusSavingThrow": "+1", "entries": ["The rod carries these properties.", {"type": "entries", "name": "Wakefulness", "entries": ["While holding the rod, nothing sneaks up on you: you have {@variantrule Advantage|XPHB} on {@variantrule Initiative|XPHB} rolls and on Wisdom ({@skill Perception|XPHB}) checks."]}, {"type": "entries", "name": "Spells", "entries": ["While holding the rod, you can cast these spells from it:", {"type": "list", "items": ["{@spell Lantern Sight|XPHB}", "{@spell Owl's Ear|XPHB}", "{@spell Sniff Out Rot|XPHB}", "{@spell Unveil the Hidden|XPHB}"]}]}, {"type": "entries", "name": "Watchfire", "entries": ["As a {@action Magic|XPHB} action, you can drive the rod's foot into the ground, and its head blazes with {@variantrule Bright Light|XPHB} in a 60-foot radius and {@variantrule Dim Light|XPHB} for 60 feet beyond. While you stand in that {@variantrule Bright Light|XPHB}, you and your allies have a +1 bonus to {@variantrule Armor Class|XPHB} and saving throws and can see any {@condition Invisible|XPHB} creature standing in the light.", "The light dies after 10 minutes, or sooner if a creature takes a {@action Magic|XPHB} action to pull the rod free. The rod then rests until the next dawn."]}], "light": [{"bright": 60, "dim": 120}]},
 ]
 B76_STANDING = [
-    {"name": "Cloak of Protection", "source": "XDMG", "page": 245, "srd52": True, "basicRules2024": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "bonusAc": "+1", "bonusSavingThrow": "+1", "entries": ["You gain a +1 bonus to {@variantrule Armor Class|XPHB} and saving throws while you wear this cloak."]},
-    {"name": "Scarab of Protection", "source": "XDMG", "page": 302, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": True, "wondrous": True, "weight": 1, "bonusAc": "+1", "charges": 12, "entries": ["This beetle-shaped medallion provides three benefits while it is on your person.", {"type": "entries", "name": "Defense", "entries": ["You gain a +1 bonus to {@variantrule Armor Class|XPHB}."]}, {"type": "entries", "name": "Preservation", "entries": ["The scarab has 12 charges. If you fail a saving throw against a Necromancy spell or a harmful effect originating from an Undead, you can take a {@variantrule Reaction|XPHB} to expend 1 charge and turn the failed save into a successful one. The scarab crumbles into powder and is destroyed when its last charge is expended."]}, {"type": "entries", "name": "Spell Resistance", "entries": ["You have {@variantrule Advantage|XPHB} on saving throws against spells."]}]},
-    {"name": "Shield of the Cavalier", "source": "XDMG", "page": 304, "srd52": True, "basicRules2024": True, "baseItem": "shield|xphb", "type": "S|XPHB", "rarity": "very rare", "reqAttune": True, "weight": 6, "ac": 2, "bonusAc": "+2", "entries": ["While holding this Shield, you have a +2 bonus to {@variantrule Armor Class|XPHB}. This bonus is in addition to the Shield's normal bonus to AC."]},
-    {"name": "Stone of Good Luck", "alias": ["Luckstone"], "source": "XDMG", "page": 312, "srd52": True, "basicRules2024": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "bonusSavingThrow": "+1", "bonusAbilityCheck": "+1", "entries": ["While this polished agate is on your person, you gain a +1 bonus to ability checks and saving throws."]},
-    {"name": "Robe of Stars", "source": "XDMG", "page": 297, "srd52": True, "basicRules2024": True, "rarity": "very rare", "reqAttune": True, "wondrous": True, "bonusSavingThrow": "+1", "rechargeAmount": "{@dice 1d6}", "charges": 6, "entries": ["This black or dark-blue robe is embroidered with small white or silver stars. You gain a +1 bonus to saving throws while you wear it."]},
-    {"name": "Glamoured Studded Leather", "source": "XDMG", "page": 264, "srd52": True, "basicRules2024": True, "baseItem": "studded leather armor|xphb", "type": "LA|XPHB", "rarity": "rare", "weight": 13, "ac": 12, "bonusAc": "+1", "entries": ["While wearing this armor, you gain a +1 bonus to {@variantrule Armor Class|XPHB}. You can also take a {@variantrule Bonus Action|XPHB} to cause the armor to assume the appearance of a normal set of clothing or some other kind of armor. You decide what it looks like—including color, style, and accessories—but the armor retains its normal bulk and weight. The illusory appearance lasts until you use this property again or doff the armor."]},
-    {"name": "Ioun Stone, Protection", "source": "XDMG", "page": 273, "srd52": True, "basicRules2024": True, "rarity": "rare", "reqAttune": True, "wondrous": True, "bonusAc": "+1", "hasRefs": True, "entries": ["{#itemEntry Ioun Stone|XDMG}", "You gain a +1 bonus to {@variantrule Armor Class|XPHB} while this dusty-rose prism orbits your head."]},
-    {"name": "Black Dragon Scale Mail", "source": "XDMG", "page": 254, "srd52": True, "basicRules2024": True, "baseItem": "scale mail|xphb", "type": "MA|XPHB", "resist": ["acid"], "detail1": "black", "rarity": "very rare", "reqAttune": True, "weight": 45, "ac": 14, "bonusAc": "+1", "stealth": True, "hasRefs": True, "entries": ["{#itemEntry Dragon Scale Mail|XDMG}"]},
-    {"name": "Staff of Power", "source": "XDMG", "page": 308, "srd52": True, "basicRules2024": True, "type": "M|XPHB", "rarity": "very rare", "reqAttune": "by a sorcerer, warlock, or wizard", "reqAttuneTags": [{"class": "sorcerer"}, {"class": "warlock"}, {"class": "wizard"}], "weight": 4, "weaponCategory": "simple", "property": ["V|XPHB"], "mastery": ["Topple|XPHB"], "dmg1": "1d6", "dmgType": "B", "dmg2": "1d8", "bonusWeapon": "+2", "bonusSpellAttack": "+2", "bonusAc": "+2", "bonusSavingThrow": "+2", "recharge": "dawn", "rechargeAmount": "{@dice 2d8 + 4}", "charges": 20, "staff": True, "entries": ["This staff has 20 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While holding it, you gain a +2 bonus to {@variantrule Armor Class|XPHB}, saving throws, and spell attack rolls."]},
+    {"name": "Hedge-Wool Cloak", "source": "XDMG", "page": 245, "srd52": True, "basicRules2024": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "bonusAc": "+1", "bonusSavingThrow": "+1", "entries": ["Woven from hedge-wool, this cloak lends you a +1 bonus to {@variantrule Armor Class|XPHB} and saving throws while you wear it."]},
+    {"name": "Jade Beetle Brooch", "source": "XDMG", "page": 302, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": True, "wondrous": True, "weight": 1, "bonusAc": "+1", "charges": 12, "entries": ["This brooch, carved from jade in the shape of a beetle, gives three gifts while it is on your person.", {"type": "entries", "name": "Shell", "entries": ["You have a +1 bonus to {@variantrule Armor Class|XPHB}."]}, {"type": "entries", "name": "Second Chance", "entries": ["The brooch has 12 charges. If you fail a saving throw against a curse or a poison, you can take a {@variantrule Reaction|XPHB} to spend 1 charge and succeed instead. Once its last charge is spent, the brooch cracks into green dust."]}, {"type": "entries", "name": "Spell Shell", "entries": ["When a spell calls for a saving throw, you make it with {@variantrule Advantage|XPHB}."]}]},
+    {"name": "Shield of the Outrider", "source": "XDMG", "page": 304, "srd52": True, "basicRules2024": True, "baseItem": "shield|xphb", "type": "S|XPHB", "rarity": "very rare", "reqAttune": True, "weight": 6, "ac": 2, "bonusAc": "+2", "entries": ["While you hold this lance-scarred Shield, it grants a +2 bonus to {@variantrule Armor Class|XPHB}, on top of the usual bonus any Shield gives."]},
+    {"name": "Lucky River Pebble", "alias": ["Luckpebble"], "source": "XDMG", "page": 312, "srd52": True, "basicRules2024": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True, "bonusSavingThrow": "+1", "bonusAbilityCheck": "+1", "entries": ["While this river-smoothed pebble is on your person, luck leans your way, granting a +1 bonus to ability checks and saving throws."]},
+    {"name": "Robe of Lanterns", "source": "XDMG", "page": 297, "srd52": True, "basicRules2024": True, "rarity": "very rare", "reqAttune": True, "wondrous": True, "bonusSavingThrow": "+1", "rechargeAmount": "{@dice 1d6}", "charges": 6, "entries": ["Tiny lanterns are stitched in gold thread all over this deep-red robe. While you wear it, you have a +1 bonus to saving throws."]},
+    {"name": "Masquer's Studded Leather", "source": "XDMG", "page": 264, "srd52": True, "basicRules2024": True, "baseItem": "studded leather armor|xphb", "type": "LA|XPHB", "rarity": "rare", "weight": 13, "ac": 12, "bonusAc": "+1", "entries": ["While you wear these studs and straps, you have a +1 bonus to {@variantrule Armor Class|XPHB}. As a {@variantrule Bonus Action|XPHB}, you can make the armor look like a fine coat, a farmer's smock or any other clothes or armor you picture, though it keeps its true bulk and weight. The disguise holds until you use this property again or take the armor off."]},
+    {"name": "Wisp Stone, Protection", "source": "XDMG", "page": 273, "srd52": True, "basicRules2024": True, "rarity": "rare", "reqAttune": True, "wondrous": True, "bonusAc": "+1", "hasRefs": True, "entries": ["{#itemEntry Wisp Stone|XDMG}", "You have a +1 bonus to {@variantrule Armor Class|XPHB} while this slate-blue bead orbits your head."]},
+    {"name": "Black Wyrmhide Mail", "source": "XDMG", "page": 254, "srd52": True, "basicRules2024": True, "baseItem": "scale mail|xphb", "type": "MA|XPHB", "resist": ["acid"], "detail1": "black", "rarity": "very rare", "reqAttune": True, "weight": 45, "ac": 14, "bonusAc": "+1", "stealth": True, "hasRefs": True, "entries": ["{#itemEntry Wyrmhide Mail|XDMG}"]},
+    {"name": "Staff of the Bramble King", "source": "XDMG", "page": 308, "srd52": True, "basicRules2024": True, "type": "M|XPHB", "rarity": "very rare", "reqAttune": "by a sorcerer, warlock, or wizard", "reqAttuneTags": [{"class": "sorcerer"}, {"class": "warlock"}, {"class": "wizard"}], "weight": 4, "weaponCategory": "simple", "property": ["V|XPHB"], "mastery": ["Topple|XPHB"], "dmg1": "1d6", "dmgType": "B", "dmg2": "1d8", "bonusWeapon": "+2", "bonusSpellAttack": "+2", "bonusAc": "+2", "bonusSavingThrow": "+2", "recharge": "dawn", "rechargeAmount": "{@dice 2d8 + 4}", "charges": 20, "staff": True, "entries": ["Twenty charges sleep in this staff, and you can swing it as a magic Quarterstaff that adds a +2 bonus to its attack rolls and damage rolls. While you hold it, the staff grants you a +2 bonus to {@variantrule Armor Class|XPHB}, to saving throws, and to spell attack rolls."]},
 ]
-B76_TEETH = {"name": "Teeth of Dahlver-Nar", "source": "TCE", "page": 135, "rarity": "artifact", "reqAttune": True, "wondrous": True, "bonusAc": "+2", "modifySpeed": {"static": {"fly": 30}}, "recharge": "dawn", "rechargeAmount": 8, "charges": 8, "entries": ["The Teeth of Dahlver-Nar are stories given form. They are a collection of teeth, each suggestive of wildly different origins and made from various materials. The collection rests within a leather pouch, stitched with images of heroes and whimsical creatures. Where the teeth fall, they bring legends to life.", {"type": "entries", "name": "Using the Teeth", "entries": ["While you are holding the pouch, you can use an action to draw one tooth. Roll on the Teeth of Dahlver-Nar table to determine which tooth you draw, and you can either sow the tooth or implant it (both of which are described later).", {"type": "table", "caption": "Teeth of Dahlver-Nar", "colLabels": ["d20", "Tale and Tooth", "Creatures Summoned", "Implanted Effect"], "colStyles": ["col-2 text-center", "col-2", "col-1", "col-7"], "rows": [["5", "Dooms of the Malpheggi (emerald lizardfolk fang)", "1 {@creature lizard queen||lizardfolk queen} and 4 {@creature lizardfolk}", "You gain reptilian scales, granting you a +2 bonus to your AC. Additionally, when you finish a long rest, you must succeed on a {@dc 15} Constitution saving throw or gain 1 level of {@condition exhaustion}."]]}]}]}
-# The templates two of them embed as "{#itemEntry …}": the Dragon Scale Mails'
+B76_TEETH = {"name": "Satchel of Tall Tales", "source": "TCE", "page": 135, "rarity": "artifact", "reqAttune": True, "wondrous": True, "bonusAc": "+2", "modifySpeed": {"static": {"fly": 30}}, "recharge": "dawn", "rechargeAmount": 8, "charges": 8, "entries": ["The Satchel of Tall Tales holds a jumble of buttons, each one cut from a different story. Its patched leather is stitched with pictures of braggarts and talking animals. Wherever a button lands, its story stands up and walks.", {"type": "entries", "name": "Drawing a Button", "entries": ["While you hold the satchel, an action lets you pull out a single button. Roll on the Satchel of Tall Tales table to learn which one you drew; you can then plant it or sew it on (both explained further on).", {"type": "table", "caption": "Satchel of Tall Tales", "colLabels": ["d20", "Tale and Button", "Creatures Summoned", "Sewn-On Effect"], "colStyles": ["col-2 text-center", "col-2", "col-1", "col-7"], "rows": [["5", "The Bog Queen's Wager (mossy jade button)", "1 {@creature bog crone||marsh crone} and 4 {@creature frogfolk}", "Green scales spread across your skin and give you a +2 bonus to your AC. After every long rest, make a {@dc 15} Constitution saving throw; on a failure, a level of {@condition exhaustion} settles on you."]]}]}]}
+# The templates two of them embed as "{#itemEntry …}": the Wyrmhide Mails'
 # bonus is stated only there.
 B76_ENTRIES = [
-    {"name": "Dragon Scale Mail", "source": "XDMG", "entriesTemplate": ["Dragon Scale Mail is made of the scales of one kind of dragon. Sometimes dragons collect their cast-off scales and gift them. Other times, hunters carefully preserve the hide of a dead dragon. In either case, Dragon Scale Mail is highly valued.", "While wearing this armor, you gain a +1 bonus to {@variantrule Armor Class|XPHB}, you have {@variantrule Advantage|XPHB} on saving throws against the breath weapons of Dragons, and you have {@variantrule Resistance|XPHB} to {{getFullImmRes item.resist}} damage.", "Additionally, you can focus your senses as a {@action Magic|XPHB} action to discern the distance and direction to the closest {{item.detail1}} dragon within 30 miles of yourself. This action can't be used again until the next dawn."]},
-    {"name": "Ioun Stone", "source": "XDMG", "entriesTemplate": ["Roughly marble sized, {@i Ioun Stones} are named after Ioun, a god of knowledge and prophecy revered on some worlds. Many types of {@i Ioun Stones} exist, each type a distinct combination of shape and color.", "When you take a {@action Magic|XPHB} action to toss an {@i Ioun Stone} into the air, the stone orbits your head at a distance of {@dice 1d3} feet, conferring its benefit to you while doing so. You can have up to three {@i Ioun Stones} orbiting your head at the same time.", "Each {@i Ioun Stone} orbiting your head is considered to be an object you are wearing. The orbiting stone avoids contact with other creatures and objects, adjusting its orbit to avoid collisions and thwarting all attempts by other creatures to attack or snatch it.", "As a {@action Utilize|XPHB} action, you can seize and stow any number of {@i Ioun Stones} orbiting your head. If your {@variantrule Attunement|XPHB} to an Ioun Stone ends while it's orbiting your head, the stone falls as though you had dropped it."]},
+    {"name": "Wyrmhide Mail", "source": "XDMG", "entriesTemplate": ["Wyrmhide Mail is stitched from the shed skin of a single kind of dragon. A few dragons trade their old hides for favors; more often the hide comes from a dragon that lost its last fight. Either way, the armor fetches a king's ransom.", "While you wear this armor, it lends you a +1 bonus to {@variantrule Armor Class|XPHB}, you have {@variantrule Advantage|XPHB} on saving throws against a dragon's breath, and you have {@variantrule Resistance|XPHB} to {{getFullImmRes item.resist}} damage.", "As a {@action Magic|XPHB} action, you can sense how far away and in which direction the nearest {{item.detail1}} dragon within 30 miles of you lies. The sense then sleeps until the next dawn."]},
+    {"name": "Wisp Stone", "source": "XDMG", "entriesTemplate": ["No bigger than a cherry, {@i Wisp Stones} take their name from the marsh-lights they were first mistaken for. Each kind has its own cut and its own color.", "When you take a {@action Magic|XPHB} action to flick a {@i Wisp Stone} upward, it circles your head {@dice 1d3} feet away and grants you its benefit while it circles. Up to three {@i Wisp Stones} can circle you at once.", "A circling {@i Wisp Stone} counts as an object you are wearing. It weaves aside from other creatures and objects, and no one else can strike it or pluck it from the air.", "As a {@action Utilize|XPHB} action, you can pluck any number of circling {@i Wisp Stones} from the air and pocket them. If your {@variantrule Attunement|XPHB} to a stone ends while it circles you, it drops as if you had let it go."]},
 ]
 _b76base = _tmpjson({'itemProperty': IB_PROPS, 'itemMastery': IB_MASTERY, 'baseitem': IB_BASE, 'itemEntry': B76_ENTRIES})
 _b76magic = _tmpjson({'item': B76_CONDITIONAL + B76_STANDING + [B76_TEETH]})
@@ -1106,35 +1114,36 @@ with C.statblock_ctx(C.load_item_index(_b76base, _b76magic)):
 SIX = ('str', 'dex', 'con', 'int', 'wis', 'cha')
 def _fx(ac=0, sv=0):
     return ([{'target': 'ac', 'value': ac}] if ac else []) + [{'target': 'save.' + a, 'value': sv} for a in SIX if sv]
-for name, needle in (('Quarterstaff of the Acrobat', 'you can take a Reaction to twirl the weapon around you, gaining a +5 bonus '
-                                                     'to your Armor Class against the triggering attack'),
-                     ('Arrow-Catching Shield', 'You gain a +2 bonus to Armor Class against ranged attack rolls while you wield this Shield'),
-                     ('Bracers of Defense', 'you gain a +2 bonus to Armor Class if you are wearing no armor and using no Shield'),
-                     ('Rod of Alertness', 'While in that Bright Light, you and your allies gain a +1 bonus to Armor Class and saving throws'),
-                     ('Teeth of Dahlver-Nar', 'Using the Teeth')):
+for name, needle in (('Quarterstaff of the Tumbler', 'you can take a Reaction to spin it into a blur, gaining a +5 bonus '
+                                                     'to your Armor Class against that attack'),
+                     ('Missile-Snaring Shield', 'While you wield this Shield, arrows and bolts glance off it, and it adds a +2 bonus to '
+                                                'Armor Class against ranged attacks'),
+                     ('Warding Bracers', 'they give you a +2 bonus to Armor Class if your body is free of armor and your arms hold no Shield'),
+                     ('Rod of the Night Watch', 'While you stand in that Bright Light, you and your allies have a +1 bonus to Armor Class and saving throws'),
+                     ('Satchel of Tall Tales', 'Drawing a Button')):
     e = b76.get(name, {})
     ck('#76 %s: a conditional bonus is not a standing effect' % name, name in b76 and e.get('effects') == [], e.get('effects'))
     ck('#76 ...and %s\'s prose still states it' % name, needle in e.get('description', ''), e.get('description', '')[:160])
-qa = b76.get('Quarterstaff of the Acrobat', {})
+qa = b76.get('Quarterstaff of the Tumbler', {})
 ck('#76 the Quarterstaff keeps its own +2, on its weapon', qa.get('weapon', {}).get('atkMisc') == 2
    and qa.get('weapon', {}).get('dmgMisc') == 2, qa.get('weapon'))
-ck('#76 the Arrow-Catching Shield is still a +2 shield: its armor line, which AC reads', 
-   b76.get('Arrow-Catching Shield', {}).get('description', '').startswith('AC +2 (Shield)'),
-   b76.get('Arrow-Catching Shield', {}).get('description', '')[:40])
-for name, want in (('Cloak of Protection', _fx(1, 1)), ('Scarab of Protection', _fx(1)), ('Shield of the Cavalier', _fx(2)),
+ck('#76 the Missile-Snaring Shield is still a +2 shield: its armor line, which AC reads', 
+   b76.get('Missile-Snaring Shield', {}).get('description', '').startswith('AC +2 (Shield)'),
+   b76.get('Missile-Snaring Shield', {}).get('description', '')[:40])
+for name, want in (('Hedge-Wool Cloak', _fx(1, 1)), ('Jade Beetle Brooch', _fx(1)), ('Shield of the Outrider', _fx(2)),
                    # its +1 to ability checks is #79's `check`
-                   ('Stone of Good Luck', _fx(0, 1) + [{'target': 'check', 'value': 1}]),
-                   ('Robe of Stars', _fx(0, 1)), ('Glamoured Studded Leather', _fx(1)),
-                   ('Ioun Stone, Protection', _fx(1)), ('Black Dragon Scale Mail', _fx(1))):
+                   ('Lucky River Pebble', _fx(0, 1) + [{'target': 'check', 'value': 1}]),
+                   ('Robe of Lanterns', _fx(0, 1)), ("Masquer's Studded Leather", _fx(1)),
+                   ('Wisp Stone, Protection', _fx(1)), ('Black Wyrmhide Mail', _fx(1))):
     ck('#76 %s: a standing bonus stays an effect' % name, b76.get(name, {}).get('effects') == want, b76.get(name, {}).get('effects'))
-sop = [e for e in b76.get('Staff of Power', {}).get('effects', []) if e['target'] == 'ac' or e['target'].startswith('save.')]
-ck('#76 Staff of Power: its standing AC and saving-throw bonus stay effects', sop == _fx(2, 2), sop)
-ck('#76 a bonus stated only in an embedded {#itemEntry} template is read from it (Dragon Scale Mail)',
-   b76.get('Black Dragon Scale Mail', {}).get('effects') == _fx(1), b76.get('Black Dragon Scale Mail', {}).get('effects'))
+sop = [e for e in b76.get('Staff of the Bramble King', {}).get('effects', []) if e['target'] == 'ac' or e['target'].startswith('save.')]
+ck('#76 Staff of the Bramble King: its standing AC and saving-throw bonus stay effects', sop == _fx(2, 2), sop)
+ck('#76 a bonus stated only in an embedded {#itemEntry} template is read from it (Wyrmhide Mail)',
+   b76.get('Black Wyrmhide Mail', {}).get('effects') == _fx(1), b76.get('Black Wyrmhide Mail', {}).get('effects'))
 ck('#78 ...and its description carries the template\'s text, not the tag',
-   '+1 bonus to Armor Class' in b76.get('Black Dragon Scale Mail', {}).get('description', '')
-   and '{#' not in b76.get('Black Dragon Scale Mail', {}).get('description', ''),
-   b76.get('Black Dragon Scale Mail', {}).get('description', '')[-60:])
+   '+1 bonus to Armor Class' in b76.get('Black Wyrmhide Mail', {}).get('description', '')
+   and '{#' not in b76.get('Black Wyrmhide Mail', {}).get('description', ''),
+   b76.get('Black Wyrmhide Mail', {}).get('description', '')[-60:])
 
 # The reader itself, on the sentences above and the shapes it must not misread.
 _rd = getattr(C, '_bonus_reading', None)
@@ -1143,32 +1152,33 @@ def rd(text, key, n):
         return _rd(text, key, n) if _rd else ('no _bonus_reading',)
     except Exception as e:          # a key the reader does not know yet is a FAIL, not a crash
         return ('error', repr(e))
-ck('#76 "while you wear this cloak" is standing', rd('You gain a +1 bonus to Armor Class and saving throws while you wear this cloak.', 'ac', 1)[0] is True,
-   rd('You gain a +1 bonus to Armor Class and saving throws while you wear this cloak.', 'ac', 1))
+ck('#76 "while you wear it" is standing', rd('Woven from hedge-wool, this cloak lends you a +1 bonus to Armor Class and saving throws while you wear it.', 'ac', 1)[0] is True,
+   rd('Woven from hedge-wool, this cloak lends you a +1 bonus to Armor Class and saving throws while you wear it.', 'ac', 1))
 ck('#76 "while this … is on your person" and "orbits your head" are standing',
-   rd('While this polished agate is on your person, you gain a +1 bonus to ability checks and saving throws.', 'saves', 1)[0] is True
-   and rd('You gain a +1 bonus to Armor Class while this dusty-rose prism orbits your head.', 'ac', 1)[0] is True)
-ck('#76 a clause after the bonus does not taint it (Dragon Scale Mail\'s "saving throws against the breath weapons")',
-   rd('While wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath '
-      'weapons of Dragons, and you have Resistance to acid damage.', 'ac', 1)[0] is True)
-ck('#76 "against" right after the bonus narrows it', rd('You gain a +2 bonus to Armor Class against ranged attack rolls while you wield this Shield.', 'ac', 2)[:2] == (False, 'against'),
-   rd('You gain a +2 bonus to Armor Class against ranged attack rolls while you wield this Shield.', 'ac', 2))
-ck('#76 "until the start of your next turn" is conditional',
-   rd('You and all affected creatures gain a +1 bonus to AC until the start of your next turn.', 'ac', 1)[0] is False)
-ck('#76 one named save is not all six', rd('While attuned to this device, you have a +1 bonus to Intelligence saving throws.', 'saves', 1)[0] is None,
-   rd('While attuned to this device, you have a +1 bonus to Intelligence saving throws.', 'saves', 1))
-ck('#76 no sentence stating the bonus: not an effect, and said', rd('A pouch of teeth. [Table: Teeth of Dahlver-Nar]', 'ac', 2)[0] is None)
+   rd('While this river-smoothed pebble is on your person, luck leans your way, granting a +1 bonus to ability checks and saving throws.', 'saves', 1)[0] is True
+   and rd('You have a +1 bonus to Armor Class while this slate-blue bead orbits your head.', 'ac', 1)[0] is True)
+ck('#76 a clause after the bonus does not taint it (Wyrmhide Mail\'s "saving throws against a dragon\'s breath")',
+   rd('While you wear this armor, it lends you a +1 bonus to Armor Class, you have Advantage on saving throws against a '
+      'dragon\'s breath, and you have Resistance to acid damage.', 'ac', 1)[0] is True)
+ck('#76 "against" right after the bonus narrows it',
+   rd('While you wield this Shield, arrows and bolts glance off it, and it adds a +2 bonus to Armor Class against ranged attacks.', 'ac', 2)[:2] == (False, 'against'),
+   rd('While you wield this Shield, arrows and bolts glance off it, and it adds a +2 bonus to Armor Class against ranged attacks.', 'ac', 2))
+ck('#76 "until your next turn begins" is conditional',
+   rd('You and every creature in the circle have a +1 bonus to AC until your next turn begins.', 'ac', 1)[0] is False)
+ck('#76 one named save is not all six', rd('While attuned to this clockwork owl, you have a +1 bonus to Intelligence saving throws.', 'saves', 1)[0] is None,
+   rd('While attuned to this clockwork owl, you have a +1 bonus to Intelligence saving throws.', 'saves', 1))
+ck('#76 no sentence stating the bonus: not an effect, and said', rd('A satchel of buttons. [Table: Satchel of Tall Tales]', 'ac', 2)[0] is None)
 
 # never quiet: every bonus kept out of the effects is listed, with the word that decided it
 got = sorted((n, f) for n, f, v, why in (_BP or []))
 ck('#76 the five bonuses kept in prose are recorded by item and field',
-   got == [('Arrow-Catching Shield', 'bonusAc'), ('Bracers of Defense', 'bonusAc'), ('Quarterstaff of the Acrobat', 'bonusAc'),
-           ('Rod of Alertness', 'bonusAc'), ('Rod of Alertness', 'bonusSavingThrow'), ('Teeth of Dahlver-Nar', 'bonusAc')], got)
+   got == [('Missile-Snaring Shield', 'bonusAc'), ('Quarterstaff of the Tumbler', 'bonusAc'), ('Rod of the Night Watch', 'bonusAc'),
+           ('Rod of the Night Watch', 'bonusSavingThrow'), ('Satchel of Tall Tales', 'bonusAc'), ('Warding Bracers', 'bonusAc')], got)
 said = []
 getattr(C, '_bonus_prose_notes', lambda say: None)(said.append)
 ck('#76 ...and reported one line per item, naming the field and the reason',
-   len(said) == 5 and any('Quarterstaff of the Acrobat' in s and 'bonusAc +5' in s and 'reaction' in s.lower() for s in said)
-   and any('Teeth of Dahlver-Nar' in s and 'no sentence' in s for s in said), said)
+   len(said) == 5 and any('Quarterstaff of the Tumbler' in s and 'bonusAc +5' in s and 'reaction' in s.lower() for s in said)
+   and any('Satchel of Tall Tales' in s and 'no sentence' in s for s in said), said)
 if _BP is not None: _BP.clear()
 
 # ...at the end of every kind of run that converts items
@@ -1179,11 +1189,11 @@ json.dump({'item': B76_CONDITIONAL + B76_STANDING + [B76_TEETH]}, open(os.path.j
 _out = tempfile.mkdtemp()
 for label, argv, outfile, who, fine in (
         ('`items`', ['items', os.path.join(_dump, 'items.json'), '-o', os.path.join(_out, 'i.json')], 'i.json',
-         'Quarterstaff of the Acrobat', 'Black Dragon Scale Mail'),
+         'Quarterstaff of the Tumbler', 'Black Wyrmhide Mail'),
         ('all', ['all', _dump, '-o', os.path.join(_out, 'all')], os.path.join('all', 'items-magic.json'),
-         'Quarterstaff of the Acrobat', 'Black Dragon Scale Mail'),
+         'Quarterstaff of the Tumbler', 'Black Wyrmhide Mail'),
         ('supplement', ['supplement', _dump, '-o', os.path.join(_out, 'sup'), '--book', 'TCE'],
-         os.path.join('sup', 'items-magic.json'), 'Teeth of Dahlver-Nar', None)):
+         os.path.join('sup', 'items-magic.json'), 'Satchel of Tall Tales', None)):
     r = subprocess.run([sys.executable, CONV] + argv, capture_output=True, text=True)
     ck('#76 %s notes the bonus it kept in prose' % label, 'note:' in r.stdout and who in r.stdout
        and 'not an effect' in r.stdout, r.stdout[-800:] + r.stderr[-300:])
@@ -1193,7 +1203,7 @@ for label, argv, outfile, who, fine in (
         got = {'error': str(e)}
     ck('#76 %s leaves %s with no effect' % (label, who), got.get(who, {}).get('effects') == [], got.get('error') or got.get(who))
     if fine:
-        ck('#76 %s reads the Dragon Scale Mail\'s bonus through its template' % label,
+        ck('#76 %s reads the Wyrmhide Mail\'s bonus through its template' % label,
            got.get(fine, {}).get('effects') == _fx(1), got.get(fine))
 shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True)
 
@@ -1204,47 +1214,48 @@ shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True
 # effects through the same sentence reader as AC and saves (#76). A bonus the
 # book limits to one class's spells ("of your druid and ranger spells") is
 # applied to the character's spellcasting, which is the only one the sheet has;
-# the class stays in the prose and in the item's attunement. Real shapes.
+# the class stays in the prose and in the item's attunement. The fixtures have
+# the shapes of those items in the v2.36.1 dump, with invented names and text.
 B77 = [
-    {"name": "+2 Moon Sickle", "source": "TCE", "page": 133, "baseItem": "sickle|PHB", "type": "M", "rarity": "rare", "reqAttune": "by a druid or ranger", "weight": 2, "weaponCategory": "simple", "property": ["L"], "dmg1": "1d4", "dmgType": "S", "bonusWeapon": "+2", "bonusSpellAttack": "+2", "bonusSpellSaveDc": "+2", "focus": ["Druid", "Ranger"], "entries": ["This silver-bladed sickle glimmers softly with moonlight. While holding this magic weapon, you gain a +2 bonus to attack and damage rolls made with it, and you gain a +2 bonus to spell attack rolls and the saving throw DCs of your druid and ranger spells. In addition, you can use the sickle as a spellcasting focus for your druid and ranger spells.", "When you cast a spell that restores hit points, you can roll a {@dice d4} and add the number rolled to the amount of hit points restored, provided you are holding the sickle."]},
-    {"name": "+1 Wand of the War Mage", "source": "XDMG", "page": 322, "srd52": True, "basicRules2024": True, "type": "WD|XDMG", "rarity": "uncommon", "reqAttune": "by a spellcaster", "weight": 1, "bonusSpellAttack": "+1", "entries": ["While holding this wand, you gain a +1 bonus to spell attack rolls. In addition, you ignore {@variantrule Cover|XPHB|Half Cover} when making a spell attack roll."]},
-    {"name": "Robe of the Archmagi", "source": "XDMG", "page": 298, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": "by a sorcerer, warlock, or wizard", "wondrous": True, "bonusSpellAttack": "+2", "bonusSpellSaveDc": "+2", "entries": ["This elegant garment is made from exquisite cloth and adorned with runes.", "You gain these benefits while wearing the robe.", {"type": "entries", "name": "Armor", "entries": ["If you aren't wearing armor, your base {@variantrule Armor Class|XPHB} is 15 plus your Dexterity modifier."]}, {"type": "entries", "name": "Magic Resistance", "entries": ["You have {@variantrule Advantage|XPHB} on saving throws against spells and other magical effects."]}, {"type": "entries", "name": "War Mage", "entries": ["Your spell save DC and spell attack bonus each increase by 2."]}]},
-    {"name": "Staff of the Magi", "source": "XDMG", "page": 310, "srd52": True, "basicRules2024": True, "type": "M|XPHB", "rarity": "legendary", "reqAttune": "by a sorcerer, warlock, or wizard", "weight": 4, "weaponCategory": "simple", "property": ["V|XPHB"], "mastery": ["Topple|XPHB"], "dmg1": "1d6", "dmgType": "B", "dmg2": "1d8", "bonusWeapon": "+2", "bonusSpellAttack": "+2", "recharge": "dawn", "rechargeAmount": "{@dice 4d6 + 2}", "charges": 50, "staff": True, "entries": ["This staff has 50 charges and can be wielded as a magic Quarterstaff that grants a +2 bonus to attack rolls and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls."]},
-    {"name": "Talisman of Pure Good", "source": "XDMG", "page": 314, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": "by a cleric or paladin", "wondrous": True, "weight": 1, "bonusSpellAttack": "+2", "charges": 7, "entries": ["This talisman is a mighty symbol of goodness. A Fiend or an Undead that touches the talisman takes {@damage 8d6} Radiant damage and takes the damage again each time it ends its turn holding or carrying the talisman.", {"type": "entries", "name": "Holy Symbol", "entries": ["You can use the talisman as a Holy Symbol. You gain a +2 bonus to spell attack rolls while you wear or hold it."]}, {"type": "entries", "name": "Pure Rebuke", "entries": ["The talisman has 7 charges. While wearing or holding the talisman, you can take a {@action Magic|XPHB} action to expend 1 charge and target one creature you can see on the ground within 120 feet of yourself. A flaming fissure opens under the target, and the target makes a {@dc 20} Dexterity saving throw. If the target is a Fiend or an Undead, it has {@variantrule Disadvantage|XPHB} on the save. On a failed save, the target falls into the fissure and is destroyed, leaving no remains. On a successful save, the target isn't cast into the fissure but takes {@damage 4d6} Psychic damage from the ordeal. In either case, the fissure then closes, leaving no trace of its existence. When you expend the last charge, the talisman disperses into motes of golden light and is destroyed."]}]},
-    {"name": "Reveler's Concertina", "source": "TCE", "page": 134, "type": "INS", "rarity": "rare", "reqAttune": "by a bard", "wondrous": True, "bonusSpellSaveDc": "+2", "entries": ["While holding this concertina, you gain a +2 bonus to the saving throw DC of your bard spells.", "As an action, you can use the concertina to cast {@spell Otto's irresistible dance} from the item. This property of the concertina can't be used again until the next dawn."]},
-    {"name": "+1 Arcane Grimoire", "source": "TCE", "page": 120, "type": "SCF", "rarity": "uncommon", "reqAttune": "by a wizard", "wondrous": True, "weight": 3, "bonusSpellAttack": "+1", "bonusSpellSaveDc": "+1", "focus": ["Wizard"], "entries": ["While you are holding this leather-bound book, you can use it as a spellcasting focus for your wizard spells, and you gain a +1 bonus to spell attack rolls and to the saving throw DCs of your wizard spells.", "You can use this book as a spellbook. In addition, when you use your Arcane Recovery feature, you can increase the number of spell slot levels you regain by 1."]},
-    {"name": "+1 All-Purpose Tool", "source": "TCE", "page": 119, "type": "SCF", "rarity": "uncommon", "reqAttune": "by an artificer", "wondrous": True, "bonusSpellAttack": "+1", "bonusSpellSaveDc": "+1", "focus": ["Artificer"], "entries": ["This simple screwdriver can transform into a variety of tools; as an action, you can touch the item and transform it into any type of artisan's tool of your choice (see the \"Equipment\" chapter in the {@book Player's Handbook|PHB} for a list of {@item artisan's tools|PHB}). Whatever form the tool takes, you are proficient with it.", "While holding this tool, you gain a +1 bonus to the spell attack rolls and the saving throw DCs of your artificer spells.", "As an action, you can focus on the tool to channel your creative forces. Choose a cantrip that you don't know from any class list. For 8 hours, you can cast that cantrip, and it counts as an artificer cantrip for you. Once this property is used, it can't be used again until the next dawn."]},
+    {"name": "+2 Dewlight Sickle", "source": "TCE", "page": 133, "baseItem": "sickle|PHB", "type": "M", "rarity": "rare", "reqAttune": "by a druid or ranger", "weight": 2, "weaponCategory": "simple", "property": ["L"], "dmg1": "1d4", "dmgType": "S", "bonusWeapon": "+2", "bonusSpellAttack": "+2", "bonusSpellSaveDc": "+2", "focus": ["Druid", "Ranger"], "entries": ["Dew beads on this pale-bladed sickle at dusk. While holding this magic weapon, you have a +2 bonus to its attack and damage rolls, and you also gain a +2 bonus to spell attack rolls made with druid and ranger spells and to the saving throw DCs of those spells. The sickle can serve as a spellcasting focus for them.", "Whenever a spell you cast heals a creature, a {@dice d4} rolled with the sickle in your hand adds to the healing."]},
+    {"name": "+1 Wand of the Hedge Mage", "source": "XDMG", "page": 322, "srd52": True, "basicRules2024": True, "type": "WD|XDMG", "rarity": "uncommon", "reqAttune": "by a spellcaster", "weight": 1, "bonusSpellAttack": "+1", "entries": ["While you hold this birch wand, it adds a +1 bonus to your spell attack rolls. Your spell attacks also ignore {@variantrule Cover|XPHB|Half Cover}."]},
+    {"name": "Robe of the Grand Magister", "source": "XDMG", "page": 298, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": "by a sorcerer, warlock, or wizard", "wondrous": True, "bonusSpellAttack": "+2", "bonusSpellSaveDc": "+2", "entries": ["Silver thread traces old sigils along the hems of this sweeping robe.", "You enjoy the following while you wear the robe.", {"type": "entries", "name": "Armor", "entries": ["Unarmored, you have a base {@variantrule Armor Class|XPHB} of 15 plus your Dexterity modifier."]}, {"type": "entries", "name": "Spell Ward", "entries": ["Spells and other magic that call for a save meet a stubborn wall: you have {@variantrule Advantage|XPHB} on those saving throws."]}, {"type": "entries", "name": "Magister's Edge", "entries": ["Both your spell attack bonus and your spell save DC increase by 2."]}]},
+    {"name": "Staff of the Old Magisters", "source": "XDMG", "page": 310, "srd52": True, "basicRules2024": True, "type": "M|XPHB", "rarity": "legendary", "reqAttune": "by a sorcerer, warlock, or wizard", "weight": 4, "weaponCategory": "simple", "property": ["V|XPHB"], "mastery": ["Topple|XPHB"], "dmg1": "1d6", "dmgType": "B", "dmg2": "1d8", "bonusWeapon": "+2", "bonusSpellAttack": "+2", "recharge": "dawn", "rechargeAmount": "{@dice 4d6 + 2}", "charges": 50, "staff": True, "entries": ["Fifty charges hum inside this staff, which you can swing as a magic Quarterstaff that adds a +2 bonus to its attack rolls and damage rolls. While you hold it, it steadies your magic, granting a +2 bonus to spell attack rolls."]},
+    {"name": "Talisman of the Dawn Choir", "source": "XDMG", "page": 314, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": "by a cleric or paladin", "wondrous": True, "weight": 1, "bonusSpellAttack": "+2", "charges": 7, "entries": ["A sunburst of hammered gold, this talisman burns the wicked. A Fiend or an Undead that touches it takes {@damage 8d6} Radiant damage, and takes it again at the end of each of its turns for as long as it clings to the talisman.", {"type": "entries", "name": "Holy Symbol", "entries": ["The talisman can serve as your Holy Symbol. Its glow lends a +2 bonus to your spell attack rolls while you wear or hold it."]}, {"type": "entries", "name": "Dawn's Judgment", "entries": ["The talisman has 7 charges. While wearing or holding it, you can take a {@action Magic|XPHB} action and spend 1 charge to pick out someone standing on the ground, up to 120 feet away, whom you can see. White fire cracks the earth open beneath the target, which makes a {@dc 20} Dexterity saving throw, with {@variantrule Disadvantage|XPHB} if it is a Fiend or an Undead. If it fails, it drops into the crack and is gone for good. If it succeeds, it keeps its footing but takes {@damage 4d6} Psychic damage from the fright. Either way, the crack then seals over. When the last charge is spent, the talisman crumbles into golden dust."]}]},
+    {"name": "Merrymaker's Squeezebox", "source": "TCE", "page": 134, "type": "INS", "rarity": "rare", "reqAttune": "by a bard", "wondrous": True, "bonusSpellSaveDc": "+2", "entries": ["While you hold this squeezebox, its wheezing tune adds a +2 bonus to the saving throw DC of every bard spell you cast.", "As an action, you can play a jig on the squeezebox that casts {@spell Jolly Jig} from it. It won't play that jig again until the next dawn."]},
+    {"name": "+1 Hedge-Witch's Almanac", "source": "TCE", "page": 120, "type": "SCF", "rarity": "uncommon", "reqAttune": "by a wizard", "wondrous": True, "weight": 3, "bonusSpellAttack": "+1", "bonusSpellSaveDc": "+1", "focus": ["Wizard"], "entries": ["While you are holding this almanac of moon phases and turnip lore, it is a spellcasting focus for wizard spells you cast, and it grants a +1 bonus to the saving throw DCs of those spells and to your spell attack rolls.", "The almanac doubles as a spellbook. Kept as yours, it lets your Arcane Recovery feature restore one more level's worth of spell slots than usual."]},
+    {"name": "+1 Tinker's Everything-Key", "source": "TCE", "page": 119, "type": "SCF", "rarity": "uncommon", "reqAttune": "by an artificer", "wondrous": True, "bonusSpellAttack": "+1", "bonusSpellSaveDc": "+1", "focus": ["Artificer"], "entries": ["This brass key can twist itself into whatever a crafter needs; as an action, you can touch it and turn it into any {@item artisan's tools|PHB} you like (the Equipment chapter of the {@book Player's Handbook|PHB} lists them). You are proficient with whatever tool it becomes.", "While holding the key, your craft-magic sharpens: you have a +1 bonus to the spell attack rolls you make and the saving throw DCs you set with artificer spells.", "As an action, you can fix your mind on the key and borrow one cantrip that you don't already know from any class's list. You can cast it for the next 8 hours, and during that time it is an artificer cantrip for you. After that, the key rests until the next dawn."]},
 ]
-_b77 = _tmpjson({'item': B77 + [x for x in B76_STANDING if x['name'] == 'Staff of Power']})
+_b77 = _tmpjson({'item': B77 + [x for x in B76_STANDING if x['name'] == 'Staff of the Bramble King']})
 _BP = getattr(C, '_BONUS_PROSE', None)
 if _BP is not None: _BP.clear()
 with C.statblock_ctx(C.load_item_index(_b76base, _b77)):
     b77 = dict(_by_name(C.convert_items(_b77)), **_by_name(C.convert_items(_b77, book=TCE)))
 def _sp(atk=0, dc=0):
     return ([{'target': 'spell.attack', 'value': atk}] if atk else []) + ([{'target': 'spell.dc', 'value': dc}] if dc else [])
-for name, want, why in (('+2 Moon Sickle', _sp(2, 2), '"…spell attack rolls and the saving throw DCs of your druid and ranger spells"'),
-                        ('+1 Wand of the War Mage', _sp(1), '"…a +1 bonus to spell attack rolls"'),
-                        ('Robe of the Archmagi', _sp(2, 2), '"Your spell save DC and spell attack bonus each increase by 2"'),
-                        ('Staff of the Magi', _sp(2), 'spell attack rolls only, no DC'),
-                        ('Talisman of Pure Good', _sp(2), '"…while you wear or hold it"'),
-                        ("Reveler's Concertina", _sp(0, 2), 'the DC only'),
-                        ('+1 Arcane Grimoire', _sp(1, 1), '"…and to the saving throw DCs of your wizard spells"'),
-                        ('+1 All-Purpose Tool', _sp(1, 1), '"…to the spell attack rolls and the saving throw DCs"'),
-                        ('Staff of Power', _fx(2, 2) + _sp(2), 'AC, saves and spell attack rolls, while holding it')):
+for name, want, why in (('+2 Dewlight Sickle', _sp(2, 2), '"…spell attack rolls made with druid and ranger spells and to the saving throw DCs of those spells"'),
+                        ('+1 Wand of the Hedge Mage', _sp(1), '"…a +1 bonus to your spell attack rolls"'),
+                        ('Robe of the Grand Magister', _sp(2, 2), '"Both your spell attack bonus and your spell save DC increase by 2"'),
+                        ('Staff of the Old Magisters', _sp(2), 'spell attack rolls only, no DC'),
+                        ('Talisman of the Dawn Choir', _sp(2), '"…while you wear or hold it"'),
+                        ("Merrymaker's Squeezebox", _sp(0, 2), 'the DC only'),
+                        ("+1 Hedge-Witch's Almanac", _sp(1, 1), '"…to the saving throw DCs of those spells and to your spell attack rolls"'),
+                        ("+1 Tinker's Everything-Key", _sp(1, 1), '"…to the spell attack rolls you make and the saving throw DCs you set"'),
+                        ('Staff of the Bramble King', _fx(2, 2) + _sp(2), 'AC, saves and spell attack rolls, while holding it')):
     e = b77.get(name, {})
     ck('#77 %s: %s' % (name, why), e.get('effects') == want, e.get('effects'))
-ck('#77 the Moon Sickle keeps its own +2 on its weapon too',
-   b77.get('+2 Moon Sickle', {}).get('weapon', {}).get('atkMisc') == 2, b77.get('+2 Moon Sickle', {}).get('weapon'))
+ck('#77 the Dewlight Sickle keeps its own +2 on its weapon too',
+   b77.get('+2 Dewlight Sickle', {}).get('weapon', {}).get('atkMisc') == 2, b77.get('+2 Dewlight Sickle', {}).get('weapon'))
 ck('#77 ...and its class limit is still in its description',
-   'druid and ranger spells' in b77.get('+2 Moon Sickle', {}).get('description', ''), b77.get('+2 Moon Sickle', {}).get('description', '')[:200])
+   'druid and ranger spells' in b77.get('+2 Dewlight Sickle', {}).get('description', ''), b77.get('+2 Dewlight Sickle', {}).get('description', '')[:200])
 ck('#77 every spell bonus here is standing: none kept in prose', not (_BP or []), list(_BP or []))
-ck('#77 a spell bonus the book conditions is not an effect (the 2014 Talisman: "If you are a good cleric or paladin")',
-   rd('If you are a good cleric or paladin, you can use the talisman as a holy symbol, and you gain a +2 bonus to spell '
+ck('#77 a spell bonus the book conditions is not an effect (as the 2014 talismans word it: "If you serve the dawn")',
+   rd('If you serve the dawn, the talisman can be your holy symbol, and its glow lends a +2 bonus to your spell '
       'attack rolls while you wear or hold it.', 'spell.attack', 2)[0] is False,
-   rd('If you are a good cleric or paladin, you can use the talisman as a holy symbol, and you gain a +2 bonus to spell '
+   rd('If you serve the dawn, the talisman can be your holy symbol, and its glow lends a +2 bonus to your spell '
       'attack rolls while you wear or hold it.', 'spell.attack', 2))
-ck('#77 a weapon\'s "+2 bonus to attack rolls" is not a spell attack bonus',
-   rd('You have a +2 bonus to attack rolls and damage rolls made with this magic weapon.', 'spell.attack', 2)[0] is None)
+ck('#77 a weapon\'s "+2 bonus to its own attack rolls" is not a spell attack bonus',
+   rd('This magic staff adds a +2 bonus to its own attack rolls and damage rolls.', 'spell.attack', 2)[0] is None)
 if _BP is not None: _BP.clear()
 
 # ---- 30. an item's shared text template is written out (#78)
@@ -1254,21 +1265,22 @@ if _BP is not None: _BP.clear()
 # it are filled from the item's own fields. flatten() passed the tag through as
 # text, so 54 pack items (the Dragon Scale Mails, Ioun Stones, Potions and Rings
 # of Resistance, Tasha's Absorbing Tattoos) read "{#itemEntry Ring of Resistance|
-# XDMG}" where the book's text belongs. Real shapes from the v2.36.1 dump.
+# XDMG}" where the book's text belongs. The fixtures have the shapes of those
+# templates and items in the v2.36.1 dump, with invented names and text.
 B78_ENTRIES = B76_ENTRIES + [
-    {"name": "Absorbing Tattoo", "source": "TCE", "entriesTemplate": ["Produced by a special needle, this magic tattoo features designs that emphasize one color ({{item.detail1}}).", {"type": "entries", "name": "Tattoo Attunement", "entries": ["To attune to this item, you hold the needle to your skin where you want the tattoo to appear, pressing the needle there throughout the attunement process. When the attunement is complete, the needle turns into the ink that becomes the tattoo, which appears on the skin.", "If your attunement to the tattoo ends, the tattoo vanishes, and the needle reappears in your space."]}, {"type": "entries", "name": "Damage Resistance", "entries": ["While the tattoo is on your skin, you have resistance to {{item.resist}} damage."]}, {"type": "entries", "name": "Damage Absorption", "entries": ["When you take {{item.resist}} damage, you can use your reaction to gain immunity against that instance of the damage, and you regain a number of hit points equal to half the damage you would have taken. Once this reaction is used, it can't be used again until the next dawn."]}]},
-    {"name": "Potion of Resistance", "source": "XDMG", "entriesTemplate": ["When you drink this potion, you have {@variantrule Resistance|XPHB} to {{getFullImmRes item.resist}} damage for 1 hour."]},
-    {"name": "Ring of Resistance", "source": "DMG", "entriesTemplate": ["You have resistance to {{item.resist}} damage while wearing this ring. The ring is set with {{item.detail1}}."]},
-    {"name": "Ring of Resistance", "source": "XDMG", "entriesTemplate": ["You have {@variantrule Resistance|XPHB} to {{getFullImmRes item.resist}} damage while wearing this ring. The ring is set with {{item.detail1}}."]},
+    {"name": "Warding Sigil", "source": "TCE", "entriesTemplate": ["Pricked in with an enchanted needle, this sigil swirls in shades of a single color ({{item.detail1}}).", {"type": "entries", "name": "Sigil Attunement", "entries": ["You attune to the sigil by holding its needle against your skin, where the design should go, for the whole attunement. When you finish, the needle melts into ink and the sigil appears.", "If your attunement to the sigil ends, the sigil fades away and the needle reappears beside you."]}, {"type": "entries", "name": "Damage Resistance", "entries": ["While the sigil marks your skin, you have resistance to {{item.resist}} damage."]}, {"type": "entries", "name": "Soaking the Blow", "entries": ["Once per dawn, if you take {{item.resist}} damage, your reaction can turn it aside completely, and you regain hit points equal to half the damage."]}]},
+    {"name": "Draught of Warding", "source": "XDMG", "entriesTemplate": ["A swallow of this draught gives you {@variantrule Resistance|XPHB} to {{getFullImmRes item.resist}} damage for 1 hour."]},
+    {"name": "Band of Warding", "source": "DMG", "entriesTemplate": ["Set with a {{item.detail1}}, this band grants resistance to {{item.resist}} damage while you wear it."]},
+    {"name": "Band of Warding", "source": "XDMG", "entriesTemplate": ["You have {@variantrule Resistance|XPHB} to {{getFullImmRes item.resist}} damage while you wear this band. Its setting holds a {{item.detail1}}."]},
 ]
 B78_ITEMS = [
-    {"name": "Ring of Acid Resistance", "source": "XDMG", "page": 294, "srd52": True, "basicRules2024": True, "referenceSources": ["DrDe-BtS"], "type": "RG|XDMG", "resist": ["acid"], "detail1": "pearl", "rarity": "rare", "hasRefs": True, "entries": ["{#itemEntry Ring of Resistance|XDMG}"]},
+    {"name": "Band of Acid Warding", "source": "XDMG", "page": 294, "srd52": True, "basicRules2024": True, "referenceSources": ["DrDe-BtS"], "type": "RG|XDMG", "resist": ["acid"], "detail1": "pearl", "rarity": "rare", "hasRefs": True, "entries": ["{#itemEntry Band of Warding|XDMG}"]},
     # the 2014 printing names no source in its tag: the DMG, as in 5e-tools
-    {"name": "Ring of Acid Resistance", "source": "DMG", "page": 192, "srd": True, "basicRules": True, "referenceSources": ["CM", "GotSF"], "reprintedAs": ["Ring of Acid Resistance|XDMG"], "type": "RG|DMG", "resist": ["acid"], "detail1": "pearl", "tier": "major", "rarity": "rare", "reqAttune": True, "hasRefs": True, "entries": ["{#itemEntry Ring of Resistance}"]},
-    {"name": "Potion of Fire Resistance", "source": "XDMG", "page": 289, "srd52": True, "basicRules2024": True, "type": "P|XPHB", "resist": ["fire"], "rarity": "uncommon", "weight": 0.5, "hasRefs": True, "entries": ["{#itemEntry Potion of Resistance|XDMG}"], "miscTags": ["CNS"]},
-    {"name": "Acid Absorbing Tattoo", "source": "TCE", "page": 119, "resist": ["acid"], "detail1": "green", "rarity": "very rare", "reqAttune": True, "wondrous": True, "tattoo": True, "hasRefs": True, "entries": ["{#itemEntry Absorbing Tattoo|TCE}"]},
-    {"name": "Ioun Stone, Mastery", "source": "XDMG", "page": 273, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": True, "wondrous": True, "bonusProficiencyBonus": "+1", "hasRefs": True, "entries": ["{#itemEntry Ioun Stone|XDMG}", "Your {@variantrule Proficiency|XPHB|Proficiency Bonus} increases by 1 while this pale green prism orbits your head."], "lootTables": ["Arcana - Legendary|XDMG"], "hasFluffImages": True},
-    [x for x in B76_STANDING if x['name'] == 'Black Dragon Scale Mail'][0],
+    {"name": "Band of Acid Warding", "source": "DMG", "page": 192, "srd": True, "basicRules": True, "referenceSources": ["CM", "GotSF"], "reprintedAs": ["Band of Acid Warding|XDMG"], "type": "RG|DMG", "resist": ["acid"], "detail1": "pearl", "tier": "major", "rarity": "rare", "reqAttune": True, "hasRefs": True, "entries": ["{#itemEntry Band of Warding}"]},
+    {"name": "Draught of Fire Warding", "source": "XDMG", "page": 289, "srd52": True, "basicRules2024": True, "type": "P|XPHB", "resist": ["fire"], "rarity": "uncommon", "weight": 0.5, "hasRefs": True, "entries": ["{#itemEntry Draught of Warding|XDMG}"], "miscTags": ["CNS"]},
+    {"name": "Acid Warding Sigil", "source": "TCE", "page": 119, "resist": ["acid"], "detail1": "green", "rarity": "very rare", "reqAttune": True, "wondrous": True, "tattoo": True, "hasRefs": True, "entries": ["{#itemEntry Warding Sigil|TCE}"]},
+    {"name": "Wisp Stone, Mastery", "source": "XDMG", "page": 273, "srd52": True, "basicRules2024": True, "rarity": "legendary", "reqAttune": True, "wondrous": True, "bonusProficiencyBonus": "+1", "hasRefs": True, "entries": ["{#itemEntry Wisp Stone|XDMG}", "Your {@variantrule Proficiency|XPHB|Proficiency Bonus} increases by 1 while this sea-green bead orbits your head."], "lootTables": ["Arcana - Legendary|XDMG"], "hasFluffImages": True},
+    [x for x in B76_STANDING if x['name'] == 'Black Wyrmhide Mail'][0],
 ]
 _b78base = _tmpjson({'itemProperty': IB_PROPS, 'itemMastery': IB_MASTERY, 'baseitem': IB_BASE, 'itemEntry': B78_ENTRIES})
 _b78magic = _tmpjson({'item': B78_ITEMS})
@@ -1279,35 +1291,35 @@ with C.statblock_ctx(C.load_item_index(_b78base, _b78magic)):
     b78 = _by_name(C.convert_items(_b78magic))
     b78t = _by_name(C.convert_items(_b78magic, book=TCE))
     b78d = _by_name(C.convert_items(_b78magic, book=DMG))
-    b78sb = C._statblock_text({'type': 'statblock', 'tag': 'item', 'name': 'Ring of Acid Resistance', 'source': 'XDMG'})
+    b78sb = C._statblock_text({'type': 'statblock', 'tag': 'item', 'name': 'Band of Acid Warding', 'source': 'XDMG'})
 desc = lambda pack, n: pack.get(n, {}).get('description', '')
-ck('#78 Ring of Acid Resistance reads the template, its damage type in the 2024 book\'s capitals',
-   desc(b78, 'Ring of Acid Resistance') == 'You have Resistance to Acid damage while wearing this ring. The ring is set with pearl',
-   desc(b78, 'Ring of Acid Resistance'))
-ck('#78 Potion of Fire Resistance reads the template',
-   desc(b78, 'Potion of Fire Resistance') == 'When you drink this potion, you have Resistance to Fire damage for 1 hour',
-   desc(b78, 'Potion of Fire Resistance'))
-ck('#78 a tag naming no source is the DMG\'s template, "{{item.resist}}" printed as the item has it (2014 ring)',
-   desc(b78d, 'Ring of Acid Resistance') == 'You have resistance to acid damage while wearing this ring. The ring is set with pearl',
-   desc(b78d, 'Ring of Acid Resistance'))
-_bdsm = desc(b78, 'Black Dragon Scale Mail')
-ck('#78 Black Dragon Scale Mail: its armor line, then the template, filled with its type and its colour',
-   _bdsm.startswith('AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Dragon Scale Mail is made of the scales')
-   and '\nWhile wearing this armor, you gain a +1 bonus to Armor Class, you have Advantage on saving throws against the breath '
-       'weapons of Dragons, and you have Resistance to Acid damage.\n' in _bdsm
-   and 'the closest black dragon within 30 miles' in _bdsm and _bdsm.endswith('until the next dawn'), _bdsm)
-ck('#78 ...and it still reads its +1 AC from that text', b78.get('Black Dragon Scale Mail', {}).get('effects') == _fx(1),
-   b78.get('Black Dragon Scale Mail', {}).get('effects'))
-_tat = desc(b78t, 'Acid Absorbing Tattoo')
-ck('#78 Acid Absorbing Tattoo: the template\'s named sections, as flatten() writes any others',
-   _tat.startswith('Produced by a special needle, this magic tattoo features designs that emphasize one color (green).\n'
-                   'Tattoo Attunement: To attune to this item')
-   and '\nDamage Resistance: While the tattoo is on your skin, you have resistance to acid damage.\n' in _tat
-   and '\nDamage Absorption: When you take acid damage, you can use your reaction' in _tat, _tat)
-_ism = desc(b78, 'Ioun Stone, Mastery')
-ck('#78 Ioun Stone, Mastery: the four shared paragraphs, then its own',
-   _ism.startswith('Roughly marble sized, Ioun Stones are named after Ioun') and _ism.count('\n') == 4
-   and _ism.endswith('\nYour Proficiency Bonus increases by 1 while this pale green prism orbits your head'), _ism)
+ck('#78 Band of Acid Warding reads the template, its damage type in the 2024 book\'s capitals',
+   desc(b78, 'Band of Acid Warding') == 'You have Resistance to Acid damage while you wear this band. Its setting holds a pearl',
+   desc(b78, 'Band of Acid Warding'))
+ck('#78 Draught of Fire Warding reads the template',
+   desc(b78, 'Draught of Fire Warding') == 'A swallow of this draught gives you Resistance to Fire damage for 1 hour',
+   desc(b78, 'Draught of Fire Warding'))
+ck('#78 a tag naming no source is the DMG\'s template, "{{item.resist}}" printed as the item has it (2014 band)',
+   desc(b78d, 'Band of Acid Warding') == 'Set with a pearl, this band grants resistance to acid damage while you wear it',
+   desc(b78d, 'Band of Acid Warding'))
+_bdsm = desc(b78, 'Black Wyrmhide Mail')
+ck('#78 Black Wyrmhide Mail: its armor line, then the template, filled with its type and its colour',
+   _bdsm.startswith('AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. Wyrmhide Mail is stitched from the shed skin')
+   and '\nWhile you wear this armor, it lends you a +1 bonus to Armor Class, you have Advantage on saving throws against a '
+       'dragon\'s breath, and you have Resistance to Acid damage.\n' in _bdsm
+   and 'the nearest black dragon within 30 miles' in _bdsm and _bdsm.endswith('sleeps until the next dawn'), _bdsm)
+ck('#78 ...and it still reads its +1 AC from that text', b78.get('Black Wyrmhide Mail', {}).get('effects') == _fx(1),
+   b78.get('Black Wyrmhide Mail', {}).get('effects'))
+_tat = desc(b78t, 'Acid Warding Sigil')
+ck('#78 Acid Warding Sigil: the template\'s named sections, as flatten() writes any others',
+   _tat.startswith('Pricked in with an enchanted needle, this sigil swirls in shades of a single color (green).\n'
+                   'Sigil Attunement: You attune to the sigil by holding its needle')
+   and '\nDamage Resistance: While the sigil marks your skin, you have resistance to acid damage.\n' in _tat
+   and '\nSoaking the Blow: Once per dawn, if you take acid damage, your reaction can turn it aside' in _tat, _tat)
+_ism = desc(b78, 'Wisp Stone, Mastery')
+ck('#78 Wisp Stone, Mastery: the four shared paragraphs, then its own',
+   _ism.startswith('No bigger than a cherry, Wisp Stones take their name') and _ism.count('\n') == 4
+   and _ism.endswith('\nYour Proficiency Bonus increases by 1 while this sea-green bead orbits your head'), _ism)
 ck('#78 an embedded item statblock reads its template too',
    'Resistance to Acid damage' in b78sb and '{' not in b78sb, b78sb)
 ck('#78 no template text is left in any of them',
@@ -1319,9 +1331,9 @@ B78_BAD = [
     {"name": "Ring of Nothing", "source": "XDMG", "srd52": True, "type": "RG|XDMG", "rarity": "rare", "hasRefs": True,
      "entries": ["{#itemEntry Ring of Nothing|XDMG}"]},
     {"name": "Ring of Blank Resistance", "source": "XDMG", "srd52": True, "type": "RG|XDMG", "rarity": "rare", "hasRefs": True,
-     "entries": ["{#itemEntry Ring of Resistance|XDMG}"]},
+     "entries": ["{#itemEntry Band of Warding|XDMG}"]},
     {"name": "Ring of Asides", "source": "XDMG", "srd52": True, "type": "RG|XDMG", "rarity": "rare",
-     "entries": ["As for {#itemEntry Ring of Resistance|XDMG}, but cold."]},
+     "entries": ["As for {#itemEntry Band of Warding|XDMG}, but cold."]},
 ]
 if _TM is not None: _TM.clear()
 with C.statblock_ctx(C.load_item_index(_b78base)):
@@ -1336,7 +1348,7 @@ ck('#78 ...and each is counted with its item',
    _tmk.get('{#itemEntry Ring of Nothing|XDMG}') == {'Ring of Nothing'}
    and _tmk.get('{{getFullImmRes item.resist}}') == {'Ring of Blank Resistance'}
    and _tmk.get('{{item.detail1}}') == {'Ring of Blank Resistance'}
-   and _tmk.get('{#itemEntry Ring of Resistance|XDMG}') == {'Ring of Asides'}, _tmk)
+   and _tmk.get('{#itemEntry Band of Warding|XDMG}') == {'Ring of Asides'}, _tmk)
 said = []
 getattr(C, '_template_miss_warnings', lambda warn: None)(said.append)
 ck('#78 ...and reported as one WARNING per text, naming the item and why',
@@ -1352,11 +1364,11 @@ json.dump({'item': B78_ITEMS + B78_BAD[:1] + [dict(B78_BAD[0], source='TCE')]}, 
 _out = tempfile.mkdtemp()
 for label, argv, outfile, fine, want in (
         ('`items`', ['items', os.path.join(_dump, 'items.json'), '-o', os.path.join(_out, 'i.json')], 'i.json',
-         'Ring of Acid Resistance', 'You have Resistance to Acid damage'),
+         'Band of Acid Warding', 'You have Resistance to Acid damage'),
         ('all', ['all', _dump, '-o', os.path.join(_out, 'all')], os.path.join('all', 'items-magic.json'),
-         'Ring of Acid Resistance', 'You have Resistance to Acid damage'),
+         'Band of Acid Warding', 'You have Resistance to Acid damage'),
         ('supplement', ['supplement', _dump, '-o', os.path.join(_out, 'sup'), '--book', 'TCE'],
-         os.path.join('sup', 'items-magic.json'), 'Acid Absorbing Tattoo', 'you have resistance to acid damage')):
+         os.path.join('sup', 'items-magic.json'), 'Acid Warding Sigil', 'you have resistance to acid damage')):
     r = subprocess.run([sys.executable, CONV] + argv, capture_output=True, text=True)
     ck('#78 %s warns about the template it could not find' % label,
        'WARNING:' in r.stdout and '{#itemEntry Ring of Nothing|XDMG}' in r.stdout and 'Ring of Nothing' in r.stdout,
@@ -1378,24 +1390,24 @@ shutil.rmtree(_dump, ignore_errors=True); shutil.rmtree(_out, ignore_errors=True
 # Stone changed no number at all. They become `check` (every ability check:
 # skills, initiative, passive Perception) and `profBonus`, through the same
 # sentence reader as AC and saves (#76), so a bonus the book conditions stays
-# prose. The fixtures are the real XDMG entries above.
+# prose. The fixtures are the invented stand-ins above, shaped as those items are.
 _BP = getattr(C, '_BONUS_PROSE', None)
 if _BP is not None: _BP.clear()
-_b79 = _tmpjson({'item': [x for x in B76_STANDING if x['name'] == 'Stone of Good Luck']
-                         + [x for x in B78_ITEMS if x['name'] == 'Ioun Stone, Mastery']})
+_b79 = _tmpjson({'item': [x for x in B76_STANDING if x['name'] == 'Lucky River Pebble']
+                         + [x for x in B78_ITEMS if x['name'] == 'Wisp Stone, Mastery']})
 with C.statblock_ctx(C.load_item_index(_b78base, _b79)):
     b79 = _by_name(C.convert_items(_b79))
-ck('#79 Stone of Good Luck: +1 to all six saves and +1 to ability checks, "while this polished agate is on your person"',
-   b79.get('Stone of Good Luck', {}).get('effects') == _fx(0, 1) + [{'target': 'check', 'value': 1}],
-   b79.get('Stone of Good Luck', {}).get('effects'))
-ck('#79 Ioun Stone, Mastery: +1 proficiency bonus, "while this pale green prism orbits your head"',
-   b79.get('Ioun Stone, Mastery', {}).get('effects') == [{'target': 'profBonus', 'value': 1}],
-   b79.get('Ioun Stone, Mastery', {}).get('effects'))
+ck('#79 Lucky River Pebble: +1 to all six saves and +1 to ability checks, "while this river-smoothed pebble is on your person"',
+   b79.get('Lucky River Pebble', {}).get('effects') == _fx(0, 1) + [{'target': 'check', 'value': 1}],
+   b79.get('Lucky River Pebble', {}).get('effects'))
+ck('#79 Wisp Stone, Mastery: +1 proficiency bonus, "while this sea-green bead orbits your head"',
+   b79.get('Wisp Stone, Mastery', {}).get('effects') == [{'target': 'profBonus', 'value': 1}],
+   b79.get('Wisp Stone, Mastery', {}).get('effects'))
 ck('#79 both are standing: nothing kept in prose', not (_BP or []), list(_BP or []))
 # the reader, on the wordings it must read and the ones it must not
 ck('#79 "+1 bonus to ability checks and saving throws" is a standing check bonus',
-   rd('While this polished agate is on your person, you gain a +1 bonus to ability checks and saving throws.', 'checks', 1)[0] is True,
-   rd('While this polished agate is on your person, you gain a +1 bonus to ability checks and saving throws.', 'checks', 1))
+   rd('While this river-smoothed pebble is on your person, luck leans your way, granting a +1 bonus to ability checks and saving throws.', 'checks', 1)[0] is True,
+   rd('While this river-smoothed pebble is on your person, luck leans your way, granting a +1 bonus to ability checks and saving throws.', 'checks', 1))
 ck('#79 one named check is not every check ("+5 bonus to Wisdom (Perception) checks")',
    rd('You gain a +5 bonus to Wisdom (Perception) checks.', 'checks', 5)[0] is None,
    rd('You gain a +5 bonus to Wisdom (Perception) checks.', 'checks', 5))
@@ -1406,16 +1418,17 @@ ck('#79 a check bonus that lasts "until" something is conditional',
    rd('You gain a +1 bonus to ability checks until the end of your next turn.', 'checks', 1)[0] is False,
    rd('You gain a +1 bonus to ability checks until the end of your next turn.', 'checks', 1))
 ck('#79 "Your Proficiency Bonus increases by 1 while this … orbits your head" is standing',
-   rd('Your Proficiency Bonus increases by 1 while this pale green prism orbits your head.', 'profBonus', 1)[0] is True,
-   rd('Your Proficiency Bonus increases by 1 while this pale green prism orbits your head.', 'profBonus', 1))
+   rd('Your Proficiency Bonus increases by 1 while this sea-green bead orbits your head.', 'profBonus', 1)[0] is True,
+   rd('Your Proficiency Bonus increases by 1 while this sea-green bead orbits your head.', 'profBonus', 1))
 ck('#79 a proficiency bonus that lasts "until" a rest is conditional',
    rd('Your Proficiency Bonus increases by 1 until you finish a Long Rest.', 'profBonus', 1)[0] is False,
    rd('Your Proficiency Bonus increases by 1 until you finish a Long Rest.', 'profBonus', 1))
-# the Stone of Ill Luck's "-2 penalty" (an adventure's, never converted) is no bonus: prose, and said
+# a "-2 penalty", shaped as an adventure item's is (never converted), is no bonus: prose, and said
 if _BP is not None: _BP.clear()
-ILL = {"name": "Stone of Ill Luck", "source": "XDMG", "srd52": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True,
+ILL = {"name": "Unlucky River Pebble", "source": "XDMG", "srd52": True, "rarity": "uncommon", "reqAttune": True, "wondrous": True,
        "bonusSavingThrow": "-2", "bonusAbilityCheck": "-2",
-       "entries": ["While this polished agate is on your person, you take a \u22122 penalty to ability checks and saving throws."]}
+       "entries": ["While this river-smoothed pebble is on your person, luck turns its back on you: you take a "
+                   + chr(0x2212) + "2 penalty to ability checks and saving throws."]}
 with C.statblock_ctx(C.load_item_index(_b78base)):
     ill = C.convert_items(_tmpjson({'item': [ILL]}))['items'][0]
 ck('#79 a penalty no sentence states as a bonus is not an effect', ill.get('effects') == [], ill.get('effects'))
@@ -1426,8 +1439,8 @@ if _BP is not None: _BP.clear()
 # ---- 31. ammunition: what a launcher fires, what a piece is, what a bundle holds (#7)
 # 5e-tools names a launcher's ammunition (ammoType, the single piece) and a
 # bundle's contents (packContents); the converter dropped both. Real XPHB/XGE
-# entries, trimmed of entries and page numbers.
-AMMO_PROPS = IB_PROPS + [{"name": "Ammunition", "abbreviation": "A", "source": "XPHB", "entries": [{"type": "entries", "name": "Ammunition", "entries": ["You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it."]}]}]
+# items' fields, trimmed of page numbers; the few entries kept are invented.
+AMMO_PROPS = IB_PROPS + [{"name": "Ammunition", "abbreviation": "A", "source": "XPHB", "entries": [{"type": "entries", "name": "Ammunition", "entries": ["A weapon with this property needs something to shoot: with nothing loaded, it makes no ranged attack."]}]}]
 LONGBOW = {"name": "Longbow", "source": "XPHB", "srd52": True, "basicRules2024": True, "edition": "one", "type": "R|XPHB", "rarity": "none", "weight": 2, "value": 5000, "weaponCategory": "martial", "property": ["A|XPHB", "H|XPHB", "2H|XPHB"], "mastery": ["Slow|XPHB"], "range": "150/600", "dmg1": "1d8", "dmgType": "P", "bow": True, "weapon": True, "ammoType": "arrow|xphb"}
 ARROW = {"name": "Arrow", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 0.05, "value": 5, "arrow": True}
 ARROWS20 = {"name": "Arrows (20)", "source": "XPHB", "srd52": True, "edition": "one", "type": "A|XPHB", "rarity": "none", "weight": 1, "value": 100, "arrow": True, "packContents": [{"item": "arrow|xphb", "quantity": 20}]}
@@ -1437,8 +1450,8 @@ SLINGB = {"name": "Sling Bullet", "source": "XPHB", "srd52": True, "edition": "o
 CBOLT14 = {"name": "Crossbow Bolt", "source": "PHB", "srd": True, "basicRules": True, "reprintedAs": ["Bolt|XPHB"], "edition": "classic", "type": "A", "rarity": "none", "weight": 0.075, "value": 5, "bolt": True}
 CBOLTS14 = {"name": "Crossbow Bolts (20)", "source": "PHB", "srd": True, "basicRules": True, "reprintedAs": ["Bolts (20)|XPHB"], "edition": "classic", "type": "A", "rarity": "none", "weight": 1.5, "value": 100, "bolt": True, "packContents": [{"item": "crossbow bolt|phb", "quantity": 20}]}
 NET14 = {"name": "Net", "source": "PHB", "srd": True, "basicRules": True, "reprintedAs": [{"uid": "Net|XPHB", "tag": "item"}], "edition": "classic", "type": "R", "rarity": "none", "weight": 3, "value": 100, "weaponCategory": "martial", "property": ["S", "T"], "range": "5/15", "net": True, "weapon": True}
-NET24 = {"name": "Net", "source": "XPHB", "srd52": True, "basicRules2024": True, "type": "G|XPHB", "rarity": "none", "weight": 3, "value": 100, "entries": ["When you take the Attack action, you can replace one of your attacks with throwing a Net."]}
-UNBREAKABLE = {"name": "Unbreakable Arrow", "source": "XGE", "type": "A", "tier": "minor", "rarity": "common", "entries": ["This arrow can't be broken, except when it is within an {@spell antimagic field}."]}
+NET24 = {"name": "Net", "source": "XPHB", "srd52": True, "basicRules2024": True, "type": "G|XPHB", "rarity": "none", "weight": 3, "value": 100, "entries": ["In place of one of the attacks of your Attack action, you can fling this net."]}
+UNBREAKABLE = {"name": "Stubborn Arrow", "source": "XGE", "type": "A", "tier": "minor", "rarity": "common", "entries": ["Nothing can snap this arrow unless it lies inside a {@spell null zone}."]}
 _ammobase = _tmpjson({'itemProperty': AMMO_PROPS, 'itemMastery': IB_MASTERY,
                       'baseitem': [LONGBOW, ARROW, ARROWS20, BOLT, BOLTS20, SLINGB, CBOLT14, CBOLTS14, NET14]})
 _ammomagic = _tmpjson({'item': [NET24, UNBREAKABLE]})
@@ -1454,8 +1467,8 @@ with C.statblock_ctx(C.load_item_index(_ammobase, _ammomagic)):
        ab.get('Arrows (20)'))
     ck('#7 a Sling Bullet is a sling bullet, by its family flag', ab.get('Sling Bullet', {}).get('ammo') == {'kind': 'sling bullet'},
        ab.get('Sling Bullet'))
-    ck("#7 XGE's Unbreakable Arrow, which has no family flag, is an arrow by its name",
-       ax.get('Unbreakable Arrow', {}).get('ammo') == {'kind': 'arrow'}, ax.get('Unbreakable Arrow'))
+    ck("#7 an XGE arrow with no family flag (as the Unbreakable Arrow has none) is an arrow by its name",
+       ax.get('Stubborn Arrow', {}).get('ammo') == {'kind': 'arrow'}, ax.get('Stubborn Arrow'))
     ck("#7 a 2014 launcher's pipe-less ammoType resolves through the index to its piece's kind",
        C._ammo_type_kind('crossbow bolt') == 'bolt' and C._ammo_type_kind('arrow|xphb') == 'arrow',
        (C._ammo_type_kind('crossbow bolt'), C._ammo_type_kind('arrow|xphb')))
@@ -1489,24 +1502,25 @@ ck('#7 with no shipped set the 2014 backfill is as it was (every other category)
 # ---- 33. magic ammunition from 5e-tools' magic variants (#7)
 # +1 Ammunition and its kin are generic variants in magicvariants.json, which
 # nothing read. Each one the book ships is expanded onto every single 2024 piece
-# (never a bundle), selected exactly as other items are. Real-shaped entries.
+# (never a bundle), selected exactly as other items are. Real-shaped entries,
+# with invented names and text.
 VARIANTS = {'magicvariant': [
     {"name": "+1 Ammunition", "type": "GV|XDMG", "requires": [{"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
      "inherits": {"namePrefix": "+1 ", "source": "XDMG", "srd52": True, "basicRules2024": True, "rarity": "uncommon", "bonusWeapon": "+1",
-                  "entries": ["You have a {=bonusWeapon} bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical."]}},
+                  "entries": ["Add {=bonusWeapon} to the attack and damage rolls of this enchanted piece. The enchantment fades the moment it strikes something."]}},
     {"name": "+1 Ammunition", "type": "GV|DMG", "requires": [{"type": "A"}, {"type": "AF|DMG"}, {"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
      "inherits": {"namePrefix": "+1 ", "source": "DMG", "rarity": "uncommon", "bonusWeapon": "+1",
-                  "entries": ["You have a {=bonusWeapon} bonus to attack and damage rolls made with this piece of magic ammunition."]}},
-    {"name": "Ammunition of Slaying", "type": "GV|XDMG", "requires": [{"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
-     "inherits": {"nameSuffix": " of Slaying", "source": "XDMG", "srd52": True, "basicRules2024": True, "rarity": "very rare",
-                  "entries": ["This magic ammunition is meant to slay creatures of a particular type, which the DM chooses or determines randomly by rolling on the table below.",
+                  "entries": ["Add {=bonusWeapon} to the attack and damage rolls of this enchanted piece."]}},
+    {"name": "Ammunition of Felling", "type": "GV|XDMG", "requires": [{"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"nameSuffix": " of Felling", "source": "XDMG", "srd52": True, "basicRules2024": True, "rarity": "very rare",
+                  "entries": ["Each piece of this ammunition hungers for one sort of creature; the DM picks the sort, or rolls for it on the table below.",
                               {"type": "table", "colStyles": ["col-2 text-center", "col-10"], "colLabels": ["1d100", "Creature Type"],
                                "rows": [["01-10", "Aberrations"], ["11-15", "Beasts"]]}]}},
-    {"name": "Walloping Ammunition", "edition": "classic", "type": "GV|DMG", "requires": [{"type": "A"}, {"type": "AF|DMG"}, {"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
-     "inherits": {"namePrefix": "Walloping ", "source": "XGE", "reprintedAs": ["Walloping Ammunition|XDMG"], "rarity": "common",
-                  "entries": ["This ammunition packs a wallop. A creature hit by the ammunition must succeed on a {@dc 10} Strength saving throw or be knocked {@condition prone}."]}},
-    {"name": "Walloping Ammunition", "type": "GV|XDMG", "requires": [{"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
-     "inherits": {"namePrefix": "Walloping ", "source": "XDMG", "rarity": "common", "entries": ["Walloping, the 2024 printing."]}},
+    {"name": "Thudding Ammunition", "edition": "classic", "type": "GV|DMG", "requires": [{"type": "A"}, {"type": "AF|DMG"}, {"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"namePrefix": "Thudding ", "source": "XGE", "reprintedAs": ["Thudding Ammunition|XDMG"], "rarity": "common",
+                  "entries": ["Whatever this piece strikes, it strikes like a mallet: the target makes a {@dc 10} Strength saving throw, landing {@condition prone} on a failure."]}},
+    {"name": "Thudding Ammunition", "type": "GV|XDMG", "requires": [{"type": "A|XPHB"}, {"type": "AF|XDMG"}], "ammo": True,
+     "inherits": {"namePrefix": "Thudding ", "source": "XDMG", "rarity": "common", "entries": ["Thudding, the 2024 printing."]}},
     {"name": "Adamantine Armor", "type": "GV|XDMG", "requires": [{"type": "MA|XPHB"}, {"type": "HA|XPHB"}],
      "inherits": {"namePrefix": "Adamantine ", "source": "XDMG", "srd52": True, "basicRules2024": True, "rarity": "uncommon", "entries": ["Armor."]}},
 ]}
@@ -1515,24 +1529,24 @@ vsink = []
 with C.statblock_ctx(C.load_item_index(_ammobase, _ammomagic)):
     v24 = _by_name({'items': C.convert_ammo_variants(_varf, tables=vsink)})
     vxge = _by_name({'items': C.convert_ammo_variants(_varf, tables=[], book=XGE)})
-ck('#7 the 2024 pack gets +1 and Slaying ammunition, on each single piece and no bundle',
-   sorted(v24) == ['+1 Arrow', '+1 Bolt', '+1 Sling Bullet', 'Arrow of Slaying', 'Bolt of Slaying', 'Sling Bullet of Slaying'], sorted(v24))
+ck('#7 the 2024 pack gets +1 and Felling ammunition, on each single piece and no bundle',
+   sorted(v24) == ['+1 Arrow', '+1 Bolt', '+1 Sling Bullet', 'Arrow of Felling', 'Bolt of Felling', 'Sling Bullet of Felling'], sorted(v24))
 _p1 = v24.get('+1 Arrow', {})
 ck('#7 +1 Arrow is uncommon ammunition, an arrow with +1', _p1.get('ammo') == {'kind': 'arrow', 'bonus': 1}
    and _p1.get('rarity') == 'Uncommon' and _p1.get('category') == 'Ammunition' and _p1.get('type') == 'Ammunition', _p1)
 ck("#7 ...weighing what an Arrow weighs, with no cost", _p1.get('weight') == 0.05 and 'cost' not in _p1, _p1)
 ck('#7 ...its "{=bonusWeapon}" written out',
-   _p1.get('description') == 'You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical',
+   _p1.get('description') == 'Add +1 to the attack and damage rolls of this enchanted piece. The enchantment fades the moment it strikes something',
    _p1.get('description'))
-_sl = v24.get('Bolt of Slaying', {})
-ck('#7 Bolt of Slaying is a bolt with no bonus', _sl.get('ammo') == {'kind': 'bolt'} and _sl.get('rarity') == 'Very Rare', _sl)
+_sl = v24.get('Bolt of Felling', {})
+ck('#7 Bolt of Felling is a bolt with no bonus', _sl.get('ammo') == {'kind': 'bolt'} and _sl.get('rarity') == 'Very Rare', _sl)
 ck("#7 ...its creature table lifted ONCE, under the variant's own name",
-   [t['name'] for t in vsink] == ['Ammunition of Slaying Table'] and '[Table: Ammunition of Slaying Table]' in _sl.get('description', ''),
+   [t['name'] for t in vsink] == ['Ammunition of Felling Table'] and '[Table: Ammunition of Felling Table]' in _sl.get('description', ''),
    [[t['name'] for t in vsink], _sl.get('description')])
-ck("#7 Xanathar's pack gets its own Walloping ammunition and nothing else",
-   sorted(vxge) == ['Walloping Arrow', 'Walloping Bolt', 'Walloping Sling Bullet'], sorted(vxge))
-ck('#7 ...its tags flattened to words', 'Strength saving throw' in vxge.get('Walloping Arrow', {}).get('description', '')
-   and '{@' not in vxge.get('Walloping Arrow', {}).get('description', ''), vxge.get('Walloping Arrow'))
+ck("#7 Xanathar's pack gets its own Thudding ammunition and nothing else",
+   sorted(vxge) == ['Thudding Arrow', 'Thudding Bolt', 'Thudding Sling Bullet'], sorted(vxge))
+ck('#7 ...its tags flattened to words', 'Strength saving throw' in vxge.get('Thudding Arrow', {}).get('description', '')
+   and '{@' not in vxge.get('Thudding Arrow', {}).get('description', ''), vxge.get('Thudding Arrow'))
 ck('#7 a variant that is not ammunition is never expanded onto a piece', not any(n.startswith('Adamantine') for n in v24))
 ck('#7 a variant template the variant cannot fill stays as written',
    C._fill_variant(['A {=bonusWeapon} b {=nope}'], {'bonusWeapon': '+2'}, 'Test') == ['A +2 b {=nope}'])
@@ -1616,7 +1630,7 @@ def _mini_dump(root):
         "itemProperty": [{"abbreviation": "L", "source": "XPHB", "entries": [{"name": "Light"}]}]})
     put('items.json', {"item": [
         {"name": "Heward's Handy Haversack", "source": "XDMG", "srd52": "Handy Haversack", "rarity": "rare",
-         "wondrous": True, "entries": ["Heward's Handy Haversack has two side pouches."]},
+         "wondrous": True, "entries": ["Heward's Handy Haversack swallows more than it looks able to."]},
         {"name": "Bag of Holding", "source": "XDMG", "srd52": True, "rarity": "uncommon", "wondrous": True,
          "entries": ["It holds what a {@item heward's handy haversack|XDMG|Heward's Handy Haversack} holds."]},
         {"name": "Abacus", "source": "PHB", "basicRules": True, "rarity": "none", "entries": ["A 2014 item."]},
@@ -1693,7 +1707,7 @@ with tempfile.TemporaryDirectory() as _td:
        [sp['Arcane Hand']['text'], sp['Fireball']['text']])
     mi = {i['name']: i for i in P('items-magic.json')['items']}
     ck('#84 a renamed item\'s own prose uses its new name',
-       mi['Handy Haversack']['description'].startswith('Handy Haversack has two side pouches'), mi['Handy Haversack'])
+       mi['Handy Haversack']['description'].startswith('Handy Haversack swallows more than it looks'), mi['Handy Haversack'])
     ck('#84 another item\'s tag to it follows', 'what a Handy Haversack holds' in mi['Bag of Holding']['description'], mi['Bag of Holding'])
     cl = P('classes.json')['classes']
     menu = [ch for ch in cl[0]['levels']['2']['choices'] if ch.get('label') == 'Choose a Fighting Style'][0]
