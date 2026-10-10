@@ -18,8 +18,8 @@ checked mechanically.
 chips inside markdown), `sheet.js` (the renderers, no sentinel leaks; a hostile character, pack and
 keyword id through 40 renderers; glossary entries with no term, and junk in every list and
 category, through the renderers and pickers), `rules-data.js` (every attribute interpolation `esc()`'d, every
-image through `safeImgSrc()`; run-in panes call `richInline()`, no mid-sentence breaks in
-Humblewood prose) ·
+image through `safeImgSrc()`; run-in panes call `richInline()`), the private repo's
+`private-data.js` (no mid-sentence breaks in Humblewood prose) ·
 **See also:** [Story & notes](../features/story-and-notes.md),
 [Rules & tables](../features/rules-and-tables.md), Humblewood (the private repo's `docs/humblewood.md`),
 [Build & source split](build-and-source-split.md)
@@ -166,10 +166,10 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
   and re-checked over 19,156 strings across all five packs: zero spurious italics, zero spurious
   blocks.
 - **Newlines in pack data now render.** A stray `\n` mid-sentence from the Humblewood extractor
-  shows as a line break. Treating italics as structure broke Gadgeteer features mid-sentence ("as if
-  you had cast the\nidentify spell"), and was caught only by scanning the data. The scan is now a
-  test across every Humblewood file, and the extractor's tagline rule is positional, never
-  stylistic.
+  shows as a line break. Treating italics as structure broke Gadgeteer features mid-sentence (a
+  spell's name pushed onto a line of its own), and was caught only by scanning the data. The scan is
+  now a test across every Humblewood file, in the private suite since #85, and the extractor's
+  tagline rule is positional, never stylistic.
 - **The first drafts embedded real private-use bytes.** Both the notes sentinels and `descHTML()`'s
   were rewritten as escapes. The test that asserted the escape form went with `descHTML()`'s own
   sentinels, so nothing guards this now. `src/js/` has no literal private-use characters today
@@ -240,3 +240,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — Terms are read only through `glossTerm()`, so an entry with no term can't break a render; the glossary pass looks matches up in a map keyed by the escaped term, which also gives apostrophe terms their id. → ledger L4206, #71
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
+- 2026-10-09 — The Humblewood mid-sentence check moves to the private suite with the pack. → ledger L5426, #85

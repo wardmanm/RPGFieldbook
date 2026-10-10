@@ -44,15 +44,19 @@ older than it is **stale**.
 **Data releases** (`node scripts/data-release.js`, dev.sh `d`): bump only the changed packs to
 `<APP_VERSION>-N`; refuse when nothing changed, when `data/` is dirty, or when the tag exists; print
 the commit, tag and push commands. Pushing `data-vX.Y.Z-N` runs `data-release.yml`, which publishes
-the archive alone with `--latest=false`.
+the archive alone with `--latest=false`. With `--registry` and `--data-root` it bumps another
+registry in its own checkout instead: that is how the private repo's packs are released, as
+`fieldbook-data-private-<ver>.zip` on the private repo only (see
+[Private data](../data/private-data.md)).
 
 **The archive.** `fbdata.py pack` writes `fieldbook-data.json` (the manifest), `NOTICE.md` and the
 bundles — sorted, dated 1980-01-01, deflated at level 9 — and `fbdata.py validate`
 (`validate_archive()`) checks it. A build names it `+dev` when a digest is unreleased. The app zip
-carries it in `data/`. It holds every registered pack, six today: `5e2024_full.json`,
-`humblewood_full.json`, `xanathars_full.json`, `tashas_full.json`, `homebrew_full.json` and
-`srd52_full.json`, the [SRD 5.2](../data/srd.md) pack. SRD 5.2 has no version until 1.8.0 gives it
-one, so the manifest and `NOTICE.md` list it without one, its bundle has no `dataVersion`, and the
+carries it in `data/`. It holds every registered pack, two since #85: `srd52_full.json`, the
+[SRD 5.2](../data/srd.md) pack, and `homebrew_full.json`. The 2024, Xanathar's, Tasha's and
+Humblewood packs left the registry and the archive for the private repo
+([Private data](../data/private-data.md)); a player who loaded them keeps them, shown with the
+quiet `known` chip. SRD 5.2 has no version until 1.8.0 gives it one, so the manifest and `NOTICE.md` list it without one, its bundle has no `dataVersion`, and the
 app shows it no version badge (the **unknown** state). `NOTICE.md` carries its CC-BY-4.0
 attribution in full.
 
@@ -138,7 +142,10 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 
 ## Open
 
-- The private split with the data kit (#85).
+- **Private packs get no newer-data notice.** `checkForDataUpdate()` reads the public registry, which
+  lists only the public packs.
+- **Old releases still hand out the packs** until their assets are deleted at the #85 finish, and
+  GitHub's Source code archives of each tag until the 2.0 history purge ([2.0](../roadmap/2.0.md)).
 
 ## History
 
@@ -150,3 +157,4 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
   1.8.0. → ledger L5148, #84
 - 2026-10-09 — The registry read and bundling move into `fbdata.py` (`load_registry()`, `bundle()`), replacing the Node bundler. → ledger L5342, #85
 - 2026-10-09 — Public releases (app and data) are gated on `validate --public` and a `*private*` name check, run by the release workflows after the build. → ledger L5352, #85
+- 2026-10-09 — The archive holds SRD 5.2 and homebrew only; `data-release.js --registry` cuts the private repo's releases. → ledger L5426, #85

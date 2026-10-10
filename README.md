@@ -77,38 +77,30 @@ When you first open Fieldbook you'll see a **home screen**. Two quick things to 
 
 The rules data comes as **one zip file**, `fieldbook-data-standalone-<version>.zip`. Download it
 from the same release page as the app; it's also in the `data` folder of the app's own download
-zip. Don't unzip it — Fieldbook opens it itself. Inside is one rules file per book:
+zip. Don't unzip it — Fieldbook opens it itself. It holds the rules that may be shared freely:
 
-- **`5e2024_full.json`** — D&D 2024: species, classes, spells, feats, backgrounds, items, magic
-  items, conditions, glossary and reference tables. Start here for D&D.
 - **`srd52_full.json`** — SRD 5.2, the free D&D rules, published under Creative Commons in the
   System Reference Document: 12 classes (one subclass each), 339 spells, 9 species, 4 backgrounds,
   feats, items, over 470 magic items, conditions, glossary and reference tables. It is a whole D&D
-  game on its own, so a new player can make a D&D character with nothing else loaded. Loaded
-  beside `5e2024_full.json`, anything both packs have appears twice, each tagged with its pack
-  (`Fireball (XPHB)`, `Fireball (SRD 5.2)`).
-- **`humblewood_full.json`** — Humblewood: species, classes, subclasses, spells, feats,
-  backgrounds and reference tables.
-- **`xanathars_full.json`** — Xanathar's Guide to Everything: 95 spells, 31 subclasses, 15 feats,
-  43 magic items, the Eldritch Invocations and Arcane Shot options, and the downtime and
-  tool-proficiency rules with their tables.
-- **`tashas_full.json`** — Tasha's Cauldron of Everything: 26 subclasses, 21 spells, 15 feats,
-  84 magic items, Custom Lineage, and the infusions, metamagic, fighting styles, maneuvers, runes
-  and optional class features.
+  game on its own, so a new player can make a D&D character with nothing else loaded.
 - **`homebrew_full.json`** — community homebrew, currently The Predator (a Warlock patron) with its
-  pact boon and invocations.
+  pact boon and invocations. It's an **add-on to D&D, not a game of its own** — load
+  `srd52_full.json` as well, or there will be no Warlock for it to attach to.
 
-The last three are **add-ons to D&D, not games of their own** — load `5e2024_full.json` (or
-`srd52_full.json`) as well, or there will be no classes for their subclasses to attach to. If a
-pack refers to something you haven't loaded, Fieldbook says so: the pack gets a red **! n missing**
-badge under **Loaded data**, and hovering it lists what's absent and which file to import. Nothing
-breaks — you just won't get the parts that depend on the missing pack.
+**The D&D 2024 books, Xanathar's Guide, Tasha's Cauldron and Humblewood are no longer
+distributed.** Their text belongs to their publishers, so Fieldbook no longer hands it out. If you
+already loaded any of those packs, nothing changes: they stay loaded and keep working, and your
+characters keep everything they took from them. Humblewood characters still work too, though
+without the Humblewood pack its ancestries, classes and spells aren't in the pickers, so you fill
+those in by hand. If you have your own 5e-tools data, the **data kit** attached to each release
+builds more packs from it for your own use (see [section 9](#9-whats-in-the-download)).
 
-> **A note on editions.** Xanathar's and Tasha's are 2014-era books, converted exactly as
-> published. Their subclasses list features at the 2014 levels, and the text refers to 2014 class
-> features. Where the 2024 Player's Handbook reprinted a subclass, you get **both** — the 2024 one
-> under its plain name and the older one tagged with its book, e.g. `Gloom Stalker (XGE)` — so
-> nothing you have already chosen changes, and you pick which version your table uses.
+If a pack refers to something you haven't loaded, Fieldbook says so: the pack gets a red **! n
+missing** badge under **Loaded data**, and hovering it lists what's absent and where to get it (the
+homebrew pack's Predator mentions two spells from Xanathar's Guide, for instance). Nothing breaks —
+you just won't get the parts that depend on the missing pack. With a D&D 2024 pack of your own loaded
+beside `srd52_full.json`, anything both packs have appears twice, each tagged with its pack
+(`Fireball (XPHB)`, `Fireball (SRD 5.2)`).
 
 Loading them turns on the pickers and auto-calculations. To load them, choose the zip in any of
 these places:
@@ -120,7 +112,7 @@ these places:
   there.
 
 Fieldbook reads every pack in the zip and says what it loaded, for example "Imported
-fieldbook-data-standalone-1.8.0.zip: 6 packs, data 1.8.0." If something can't be imported, it
+fieldbook-data-standalone-1.8.0.zip: 2 packs, data 1.8.0." If something can't be imported, it
 says which file and why — that a zip is damaged, say, so you know to download it again. You can
 also pick the app's whole download zip, `fieldbook-v<version>.zip`, and Fieldbook finds the rules
 data inside it, or pick single `.json` rules files, as before. Once loaded, the rules are
@@ -130,16 +122,17 @@ they make life much easier.
 **Updating the rules data.** Rules data can be updated between app releases. When a newer copy of
 a pack you have loaded is out, Fieldbook mentions it quietly in **Settings → Rules data**, beside
 that pack, with a link to the release page (it needs an internet connection to notice). Download
-the new zip and import it the same way: each pack in it replaces the copy you had.
+the new zip and import it the same way: each pack in it replaces the copy you had. A pack that
+isn't in Fieldbook's current rules data, such as one an older release shipped or one you built
+yourself, never says an update is out; where it carries a version, Settings shows it quietly.
 
 > **Using a Fieldbook older than 1.8.0?** It can't open a zip. Unzip
 > `fieldbook-data-standalone-<version>.zip` first, then import the `.json` files inside it.
 
-> **Tip:** You don't have to keep them all. Importing the zip loads every pack in it; playing only
-> Humblewood, or only core D&D, you can remove the others under **Loaded data** afterwards. Or unzip
-> it and import just the `.json` files you want — `humblewood_full.json` on its own,
-> `srd52_full.json` on its own for the free rules, or `5e2024_full.json` plus
-> `xanathars_full.json`, `tashas_full.json` or `homebrew_full.json` if your table uses them.
+> **Tip:** You don't have to keep them both. Importing the zip loads every pack in it; you can
+> remove one under **Loaded data** afterwards. Or unzip it and import just the `.json` file you
+> want — `srd52_full.json` on its own for the free rules, plus `homebrew_full.json` if your table
+> uses it.
 
 ### b) Create a character
 
@@ -481,19 +474,10 @@ README.md           ← this guide
 LICENSE             ← the MIT licence this app is released under
 data/               ← the rules data, as one zip — import it as it is (section 3a)
    • fieldbook-data-standalone-<version>.zip, which holds:
-       5e2024_full.json     — D&D 2024: species, classes, spells, feats, backgrounds,
-                              items, magic items, conditions, glossary, reference tables
        srd52_full.json      — SRD 5.2, the free D&D rules: species, classes, spells,
                               feats, backgrounds, items, magic items, conditions,
                               glossary, reference tables
-       humblewood_full.json — Humblewood: species, classes, subclasses, spells, feats,
-                              backgrounds, reference tables
-       xanathars_full.json  — Xanathar's Guide: subclasses, spells, feats, magic items,
-                              invocations, downtime and tool rules (add-on to D&D 2024)
-       tashas_full.json     — Tasha's Cauldron: subclasses, spells, feats, magic items,
-                              Custom Lineage, infusions and optional class features
-                              (add-on to D&D 2024)
-       homebrew_full.json   — community homebrew (add-on to D&D 2024)
+       homebrew_full.json   — community homebrew (add-on to D&D)
        fieldbook-data.json  — the list of what's in the zip, which Fieldbook reads
        NOTICE.md            — each pack's version, licence and credits
 docs/               ← reference material (you can ignore these to just play)
@@ -508,8 +492,10 @@ same rules-data zip is also attached to each release on its own, and a release o
 alone comes as just that zip.
 
 **Want to build your own rules data?** Each release also has `fieldbook-data-kit-<version>.zip`:
-the converter and `fbdata.py`, which turns a 5e-tools export into a zip Fieldbook opens. See the
-README inside it.
+the converter and `fbdata.py`, which turns your own 5e-tools export into a zip Fieldbook opens, in
+one command (`python fbdata.py build <your 5e-tools data folder> -o mine.zip`). It builds the SRD
+5.2 pack by default, which you may share; a pack built from the books you own is for your own use.
+See the README inside it.
 
 ## 10. Credits & licences
 
@@ -525,9 +511,9 @@ follows your chosen theme. Which icon came from whom is recorded in
 under **Settings → Credits & licences**.
 
 **Rules data** comes separately from the app, as the rules-data zip,
-`fieldbook-data-standalone-<version>.zip`. Each pack in it keeps its own terms: they are listed
-in the zip's `NOTICE.md`, and in the app under **Settings → Credits & licences** for every pack
-you have loaded. The Homebrew pack's The Predator, a Warlock subclass, is by D&D Wiki
+`fieldbook-data-standalone-<version>.zip`, which holds two packs, SRD 5.2 and Homebrew. Each keeps
+its own terms: they are listed in the zip's `NOTICE.md`, and in the app under **Settings → Credits
+& licences** for every pack you have loaded. The Homebrew pack's The Predator, a Warlock subclass, is by D&D Wiki
 contributors ([dandwiki.com](https://www.dandwiki.com/wiki/The_Predator_(5e_Subclass))), used
 under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) and converted to
 Fieldbook's rules format.

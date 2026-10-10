@@ -73,6 +73,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **A keyword written `{name, description}`** — Read as its term and text
 - **How the SRD pack's species reach D&D characters (#84, R6)** — `systemOf()` reads a label starting `srd` as D&D, and the pack also carries `excludeSystems: ["humblewood"]`
 - **The Artificer and Mystic in the core pack** — Leave them, labelled `XPHB`
+- **Which of two same-named SRD and 2024 entries a lookup finds, now in two archives (#85)** — The one imported first; re-importing keeps its place
 
 ### [Data archive](architecture/data-archive.md)
 
@@ -395,6 +396,7 @@ When a page gains a Decisions row, add its line here under that page.
 
 ### [Converter](data/converter.md)
 
+- **The class one-liners, `CLASS_BLURB` (#85, decision 1, R6)** — Fieldbook's own words; an SRD run writes none
 - **How the 2024 book is selected** — `source == "XPHB"`, with the free-subset flags only as a backfill
 - **Which flags mark the free 2024 subset** — `basicRules2024` **or** `srd52`
 - **A table found with no sink collecting** — Drop it, emit no anchor
@@ -470,15 +472,51 @@ When a page gains a Decisions row, add its line here under that page.
 - **Matching a declared name** — Case-insensitive against everything loaded, whichever pack supplies it
 - **Where the verdict lives** — Recomputed at render time from `rules`; only the declaration is stored
 - **Where the pack's licence and credit live** — `license` and `attribution` in `data/packs.json`, stamped into the bundle
-- **Its `requires` once SRD 5.2 exists (#84, R7)** — Left as it is
+- **Its `requires` once SRD 5.2 exists (#84, R7)** — Left pointed at the 2024 pack for that release
+- **Xanathar's group's `file` once it goes private (#85)** — Dropped — the group names the book only
 
 ### [SRD 5.2](data/srd.md)
 
 - **How the SRD pack is selected** — An SRD view of the dump (`srd_view()`), run through the 2024 pipeline unchanged (`_run_core()`) (R1)
 - **Which SRD revision the text and attribution target** — SRD 5.2.1, the current one; the system label stays "SRD 5.2" (R2)
 - **Whose wording the pack ships** — The PDF's: every difference corrected or accepted in `srd-corrections.json`, checked by `srd-verbatim` (R3, decision 3)
-- **Two packs sharing a table name (R5)** — Allowed for byte-identical twins and for the nine pinned SRD/2024 pairs that differ; any other same-named pair, or a change to the nine, fails `rules-data.js`
-- **A missing corrections file (#84)** — An error: exit 1, nothing written, the path named; the app zip ships the file beside `convert.py`
+- **Two packs sharing a table name (R5)** — Allowed for byte-identical twins and for the nine pinned SRD/2024 pairs that differ; any other same-named pair, or a change to the nine, fails the check, in the private suite since #85
+- **A missing corrections file (#84)** — An error: exit 1, nothing written, the path named; the kit zip ships the file beside `convert.py` (the app zip did until #85)
+
+### [Private data](data/private-data.md)
+
+- **Where the copyrighted packs live (#82)** — `wardmanm/RPGFieldbookPrivate`, released privately
+- **When they leave public `main` (#82)** — Now; the history purge waits for 2.0
+- **The old releases' pack assets (#82)** — Deleted when the split lands, by hand, with Mike's go-ahead
+- **Book quotes in public dev files (decision 2)** — Redacted in place, keeping the ledger's line count so its citations hold: a one-time exception to append-only
+- **The 10-word footnote in the shipped changelog (decision 3)** — Left; the scan reports it, and the allowlist has a reason ready
+- **Releases (decision 4)** — None until Mike says; 1.8.0 holds more issues
+- **The order of the move (R1)** — Private repo first, then one public removal commit, then the old assets
+- **The private repo's layout (R2)** — Mirror the public paths
+- **The public registry (R3)** — Drops the four packs in the removal commit
+- **How private packs are released (R4)** — Data-only releases, `X.Y.Z-N`, `fieldbook-data-private-<ver>.zip`, through `data-release.js --registry`
+- **A pack the build has no baseline for (R5)** — A quiet `vX` chip, the `known` state
+- **Shipped book quotes (R7)** — Invented examples in `downloadRulesTemplates()`, README-converter and rules-schema
+- **`srd-corrections.json`'s `find` strings (R8)** — Kept, allowlisted; for Mike to confirm
+- **Where the leak scan lives (R9)** — The private repo, in Mike's local run and the private CI (push and nightly)
+- **Public tests (R10)** — Same logic, no book content: SRD entries or invented fixtures; pack assertions move private
+- **Public releases' licences (R13)** — Only `CC-BY-4.0`, `CC-BY-SA-3.0`, `MIT`, and no asset named `private`
+- **Homebrew's `requires` (R14)** — D&D group names SRD 5.2; the Xanathar's group keeps its name and drops `file`
+- **How the private repo starts (R15)** — `git filter-repo` from public history, before its first push
+- **How a checkout finds it (R16)** — The gitignored `_private-data` link; `wt.sh` links worktrees
+- **Same-named 2024 and SRD entries, now in two archives (ruling)** — The player's import order decides; import the private archive first
+- **`DATA_VERSIONS` naming the departed packs (ruling)** — `docs.js` tolerates those four (`LEFT_FOR_PRIVATE`) until the next release retakes the snapshot; then delete it
+- **The filter-repo footnote gap (ruling)** — Left, documented here and in the private README; the tip is exact
+- **Text homebrew shares with a private pack (ruling)** — Not flagged, as R9 has it; Mike's call
+- **The main checkout's link (ruling)** — Made at the finish, after the merge
+
+### [Data kit](data/data-kit.md)
+
+- **The kit's language (#82)** — Python, standard library, in `tools/data-kit/fbdata.py`
+- **The bundler (R11)** — `fbdata.py bundle`, switched only after a byte-for-byte parity test over every pack; `bundle-rules.js` removed
+- **How the kit ships (R12)** — One flat zip per app release, `fieldbook-data-kit-<ver>.zip`, with its own allowlist; the app zip drops `scripts/`
+- **How `convert.py` finds its inputs from the kit (R12)** — `fbdata.py` passes `--overlay`, `--resources` and `--corrections` explicitly
+- **What app releases attach (#82)** — `fieldbook.html`, the app zip (with the archive inside), the archive and the kit
 
 ## Process
 
@@ -497,11 +535,15 @@ When a page gains a Decisions row, add its line here under that page.
 - **What `dev.sh` is** — A menu that shells out and prints each command
 - **Icon generation** — Run by hand (`scripts/fetch-icons.js`), not wired into `build.sh`
 - **What the app zip's `data/` holds** — The rules-data archive, which the app opens inside the zip
-- **Python for the archive** — Required for the zips only (`fbdata.py`)
+- **Python for the archive** — Required by every build since #85 (`fbdata.py` bundles too); for the zips only before
+- **Where `convert.py` ships** — A separate, flat data kit zip
+- **Where the public/private licence gate lives** — `release.yml` and `data-release.yml`, after the build
 
 ### [Testing](process/testing.md)
 
 - **Framework** — None: plain node and python3 with a small recorder
+- **Where the private packs' tests live (#85, R10)** — In the private repo, run from here by the `private-data` suite, which skips without the link; the public suites read SRD 5.2 entries or invented fixtures
+- **The `private-data` suite's verdict** — Pass only on exit 0 and a last line of `ALL PASSED (n)`; anything else fails, never passes
 - **How suites load the app** — The real concatenation in manifest order, in a `vm`
 - **How suites get the markup** — An independent splice in `harness.js`, pinned to the artifact by one assertion
 - **Where tests live** — `src/tests/`, where the audience rule keeps them out of the zip

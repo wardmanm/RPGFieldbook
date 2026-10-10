@@ -57,9 +57,11 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 ## Data
 
 - [Converter](data/converter.md) — `convert.py`, the `basicRules2024`/`srd52` trap, the byte-for-byte gates
-- [Supplements](data/supplements.md) — Xanathar's and Tasha's as additive packs, and the three traps
+- [Supplements](data/supplements.md) — Xanathar's and Tasha's as additive packs (private now), and the three traps
 - [Homebrew](data/homebrew.md) — the hand-authored pack and `requires`
 - [SRD 5.2](data/srd.md) — the free D&D pack: built from the SRD flags, matched to the SRD PDF, credited as the licence asks
+- [Private data](data/private-data.md) — the copyrighted packs in RPGFieldbookPrivate: layout, tests, the leak scan, private releases
+- [Data kit](data/data-kit.md) — fbdata.py: bundle, convert, build, validate; the kit zip
 
 ## Process
 

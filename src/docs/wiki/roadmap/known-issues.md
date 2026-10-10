@@ -8,6 +8,7 @@ page it concerns.
 
 **See also:** [Grants & provenance](../architecture/grants-and-provenance.md),
 [Computed stats & effects](../architecture/computed-stats-and-effects.md),
+[Private data](../data/private-data.md),
 Humblewood (the private repo's `docs/humblewood.md`), [Converter](../data/converter.md),
 Humblewood playtests (the private repo's `docs/HUMBLEWOOD-PLAYTESTS.md`), [2.0](2.0.md)
 
@@ -39,7 +40,8 @@ Known behaviour that is accepted for now.
 - **Missing references degrade quietly.** A feat that isn't loaded becomes an empty feature named
   `Feat: X`, and a missing granted item becomes a bare name. Only subclasses and declared `requires`
   are reported. → ledger L1883
-- **Artificer and Mystic are 2014/UA content labelled XPHB** in `data/5e2024/classes.json`, picked up
+- **Artificer and Mystic are 2014/UA content labelled XPHB** in the 2024 pack's `classes.json`
+  (in the private repo), picked up
   by a fallback in `convert_classes`. This was the owner's call: fixing it drops both from the core
   pack, bumps XPHB's data version, and strands anyone playing an Artificer on the core pack alone.
   Tasha's skips the Artificer and its subclasses instead of shipping duplicates. → ledger L1816
@@ -89,19 +91,37 @@ Known behaviour that is accepted for now.
 - **The newer-data notice needs the network** (the GitHub releases list and the tag's registry), and
   is silent offline or when GitHub refuses, so an offline player never learns of a data release.
   It runs once per load, like the app's update check. → ledger L5082
-- **With the D&D 2024 and SRD 5.2 packs both loaded, a shared table opens the 2024 copy.**
-  `findTable()` takes the first match in load order and the archive loads the 2024 pack first, so
-  the SRD's own wording of the Reincarnate, Deck of Illusions and Object Armor Class tables,
-  corrected to the SRD PDF, is not what opens then. Both are the same table in two wordings (R5).
-  → ledger L5148, L5269, and [SRD 5.2](../data/srd.md)
+- **With the D&D 2024 and SRD 5.2 packs both loaded, import order decides which copy of a shared
+  name a lookup finds.** The two packs come from separate archives since #85 (the public one and the
+  private one), `findTable()` and the other name lookups take the first match in the pool, and a
+  re-import keeps a pack's place. With the 2024 pack imported first, the SRD's own wording of the
+  Reincarnate, Deck of Illusions and Object Armor Class tables, corrected to the SRD PDF, is not what
+  opens; imported second, the SRD copies win. Both are the same table in two wordings (#84 R5).
+  Import the private archive first, or keep existing loads. #84's check that the registry loaded the
+  2024 pack first was removed: no registry holds both packs now. → ledger L5148, L5269, L5426, and
+  [Private data](../data/private-data.md)
+- **Private packs get no newer-data notice.** `checkForDataUpdate()` reads the public registry,
+  which lists only SRD 5.2 and Homebrew; a private pack shows its version quietly (`known`).
+  → ledger L5426, and [Settings & updates](../features/settings-and-updates.md)
+- **Homebrew's Xanathar's spells cannot resolve publicly.** With only the public archive loaded, its
+  chip names Cause Fear and Primal Savagery "from Xanathar's Guide to Everything", and no public
+  file provides them; only the private suite can check that the names exist. → ledger L5426, and
+  [Homebrew](../data/homebrew.md)
+- **The old releases' copyrighted data stays reachable until 2.0.** Deleting the v1.3.0–v1.7.2 pack
+  assets (at the #85 finish) leaves GitHub's Source code archives of each tag, and public history,
+  until the history purge. → ledger L5426, and [2.0](2.0.md)
+- **The leak scan never flags text homebrew shares with a private pack**, because its free corpus
+  includes homebrew (spec R9): The Predator's stock expanded-spell sentence is one such run. Mike's
+  call. → ledger L5426, and [Private data](../data/private-data.md)
 
 ## Deferred
 
 Wanted, not yet done. Each needs work, not a source.
 
 - **Humblewood species have no size.** They all resolve to Medium (`charSize()`), but Jerbeen, Luma
-  and Hedge are Small in the book. The fix belongs in `extract-humblewood.py`, which has a verbatim
-  suite, so the data must not be hand-edited. A player can set size in Vitals meanwhile. → ledger L1426
+  and Hedge are Small in the book. The fix belongs in the private repo's Humblewood extractor, which
+  has a verbatim suite, so the data must not be hand-edited. A player can set size in Vitals
+  meanwhile. → ledger L1426
 - **Small tables inside features read as flat text.** Magic Item Hacking's rarity costs and the
   Spell Emulator component's tiers are examples. → ledger L3596
 - **Rune Knight runes have no tracker.** They are per-rune uses, not a pool, so
@@ -251,18 +271,22 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 - **`convert.py --resources` doesn't work as documented.** The `classes` subcommand accepts it and
   ignores it. `supplement` always reads `data/class-resources.json`, and silently gets nothing if the
   file is missing. → [Converter](../data/converter.md)
-- **`convert.py` never looks for its helper files beside itself**, although `build.sh` ships
-  `overlay.json` and `class-resources.json` next to it in the zip's `scripts/`. A player running the
-  zip's `all` gets a warning and must pass both flags. → [Converter](../data/converter.md)
+- **`convert.py` never looks for its helper files beside itself**, although the data kit zip ships
+  `overlay.json` and `class-resources.json` next to it. A player running the kit's `convert.py all`
+  directly gets a warning and must pass both flags; `fbdata.py convert` and `build` pass them.
+  → [Converter](../data/converter.md), [Data kit](../data/data-kit.md)
 - **The `SUPPLEMENTS` profiles don't carry `--avoid-table-names`**, so a bare `--book` re-run does not
   reproduce the table names (`dev.sh` passes the flag). → [Supplements](../data/supplements.md)
-- **`extract-humblewood.py`** (in the private repo): `--write-prose` drops a repeated heading missing
+- **The Humblewood extractor** (in the private repo): `--write-prose` drops a repeated heading missing
   from `HEAD_ERRATA` silently, although ledger L904 calls that a hard error. Its "Th" ligature audit
   checks only core table cells. → the private repo's `docs/humblewood.md`
-- **`humblewood-verbatim` is skipped locally even with `.venv` and the PDFs present**, because
-  `run.sh` uses the `python3` on `PATH`, which lacks PyMuPDF. Run with `.venv/bin/python` it reports
-  165 passed. `run.sh`'s closing "All N suites passed" also counts a skipped suite.
-  → [Testing](../process/testing.md)
+- **The PDF suites skip locally even with `.venv` and the PDFs present**: `srd-verbatim`, and the
+  private repo's Humblewood suite inside `private-data`, use the `python3` on `PATH`, which lacks
+  PyMuPDF. With `.venv/bin` on `PATH` they run (the Humblewood one reports 165 passed). `run.sh`'s
+  closing "All N suites passed" also counts a skipped suite. → [Testing](../process/testing.md)
+- **`docs.js` still tolerates `DATA_VERSIONS` naming XPHB, Humblewood, XGE and TCE**
+  (`LEFT_FOR_PRIVATE`). The next release retakes `DATA_VERSIONS` from the pruned registry, after
+  which the tolerance is inert: delete it then. → ledger L5426, and [Testing](../process/testing.md)
 - **Tests the ledger says exist but don't:** unit tests for `usesMax()` and for the casting engine
   (`pickSlotLevel()`, `parseDurationSec()`, `autoSlots()`) (L16, L179); explicit assertions of the
   Archery/Defense effects and the Rage/Focus/Sorcery trackers (L625); a plain-modal-after-emblem-modal
@@ -297,8 +321,9 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
     invocations and infusions all use it.
   - The comment above `hdDiceHTML()` describes pip semantics.
   - `wire()` places `adjustHP()` in `65-resources.js`; it lives in `66-coins-hp.js`.
-- **Data `_note`s:** `data/humblewood/races.json` says skill choices are text-only, but five traits have
-  real choosers. `data/humblewood/subclasses.json` names the old `humblewood-spells.json`.
+- **Data `_note`s** in the private repo's Humblewood pack: its `races.json` says skill choices are
+  text-only, but five traits have real choosers, and its `subclasses.json` names the old
+  `humblewood-spells.json`.
 - **Ledger claims now wrong:**
   - L1426 says Humblewood data must not be hand-edited for sizes, but a hand-added `size` or `uses`
     survives re-extraction.
@@ -428,3 +453,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-08 — The SRD 5.2 pack: with both D&D packs loaded the 2024 copy of a shared table opens, and a player's own `convert.py srd` run has no corrections file. → ledger L5148, #84
 - 2026-10-08 — Fixed and removed: a player's own `convert.py srd` run applying no corrections (a missing file is now an error, and the app zip ships it). The shadowed-table list loses Carrying Capacity, now an identical twin. → ledger L5269, #84
 - 2026-10-09 — Fixed and removed: the Node bundler's invisible NUL bytes and its stale `mergeRules()` comment, both gone with the file. → ledger L5342, #85
+- 2026-10-09 — The private split: import order decides which of two same-named 2024 and SRD entries wins; private packs get no notice; homebrew's Xanathar's spells cannot resolve publicly; old releases' data reachable until 2.0; homebrew masks the leak scan; `LEFT_FOR_PRIVATE` to delete after the next release. → ledger L5426, #85

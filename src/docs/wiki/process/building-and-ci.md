@@ -125,12 +125,15 @@ For a local snapshot: `git archive HEAD -o snapshot.zip`.
 It triggers on a push to `main`, on every pull request, and manually. It runs on Ubuntu with Node 20
 and Python 3.11, checked out at `fetch-depth: 2`. The steps run in order:
 
-1. Syntax: `node --check` over `src/js`, `scripts` and `src/tests`; `py_compile` over `scripts/*.py`
-   and `src/tests/*.py`; `bash -n` over `dev.sh`, `src/tests/run.sh` and `build.sh`.
+1. Syntax: `node --check` over `src/js`, `scripts` and `src/tests`; `py_compile` over `scripts/*.py`,
+   `src/tests/*.py` and `tools/data-kit/*.py`; `bash -n` over `dev.sh`, `src/tests/run.sh` and
+   `build.sh`.
 2. Manifest parity for `js`, `css` and `html`, in both directions.
 3. Every `data/**/*.json` parses.
 4. The artifact gate (see below), then `fbdata.py bundle`.
-5. `./src/tests/run.sh`.
+5. `./src/tests/run.sh`. CI has no `_private-data`, so the `private-data` suite skips there; the
+   private repo's own CI runs those suites against public `main` (see
+   [Private data](../data/private-data.md)).
 6. Byte hygiene (no CR, no BOM, a final newline) over every fragment, the manifest and the template.
 7. The full `./build.sh`, the archive's validation and the zip guard included. Its Python is the
    3.11 the job sets up.
@@ -199,7 +202,10 @@ The header also shows `data <release>`, or `data <release>, N changed` when pack
 the registry's `release` (a data release waiting to happen); without Python it leaves that out.
 
 The items are: build (`1`), build without zips (`2`), a staleness check (`3`), tests (`4`), workflow
-YAML (`w`), hooks (`h`), rebundle (`5`), and re-convert from `_conversion-data/5etools-*` (`6`). Then
+YAML (`w`), hooks (`h`), rebundle (`5`), and re-convert from `_conversion-data/5etools-*` (`6`). The
+converter menu writes SRD 5.2 to `data/srd52`, and the 2024, Xanathar's and Tasha's packs (one, or
+all three) to `_private-data/data/…`; it refuses those three, saying to link the private repo
+first, when `_private-data` is not linked (#85). Then
 there is commit (`c`), which builds a `type [26/30]: message, closes #26, closes #30` subject, stages
 with `git add -A` and pushes without `--follow-tags`. Release (`7`) confirms, runs `--release`, then
 prints the commit, tag and push commands and runs none of them. Data release (`d`) runs
@@ -250,7 +256,8 @@ prints the menu and exits 0.
 - **An empty `VER` would ship `fieldbook-v.zip`.** That is the reason for the `X.Y.Z` check. The
   `rm -f dist/*.zip` stops a failed build from leaving last version's bundle looking current.
 - **A blocklist leaks the next doc.** The `docs/` guard used to name dev docs to ban, and
-  `HUMBLEWOOD-PLAYTESTS.md` was not on the list. It is an allowlist now.
+  `HUMBLEWOOD-PLAYTESTS.md` (a dev doc, now in the private repo) was not on the list. It is an
+  allowlist now.
 - **`git commit -am` cannot pick up a new file.** The tag is built in a clean checkout, where an
   untracked fragment, data file or workflow simply doesn't exist. A tag with no `release.yml` queues
   no run at all, with no error. `check_manifest_tracked` catches the fragment case; `dev.sh` and
@@ -286,7 +293,7 @@ prints the menu and exits 0.
 | What `dev.sh` is | A menu that shells out and prints each command | Logic in the menu: it would drift from what CI runs |
 | Icon generation | Run by hand (`scripts/fetch-icons.js`), not wired into `build.sh` | In the build: CI's "no tracked file changed" check would become network-dependent |
 | What the app zip's `data/` holds | The rules-data archive, which the app opens inside the zip | The five loose packs: two copies of one thing, and the loose ones have no manifest or `NOTICE.md` (L5082) |
-| Python for the archive | Required for the zips only (`fbdata.py`) | A Node port of the digest and the packer: two implementations that must agree byte for byte (L5082) |
+| Python for the archive | Required by every build since #85 (`fbdata.py` bundles too); for the zips only before | A Node port of the digest and the packer: two implementations that must agree byte for byte (L5082, L5342) |
 | Where `convert.py` ships | A separate, flat data kit zip (L5352) | Inside the app zip's `scripts/`: every player downloaded it, even those who never touch the converter |
 | Where the public/private licence gate lives | `release.yml` and `data-release.yml`, after the build (L5352) | In `build.sh`: a local build has no notion of "about to publish", and the same script also builds a private pack's data |
 
@@ -294,9 +301,6 @@ prints the menu and exits 0.
 
 - `release.yml`'s header comment still shows `git commit -am`. See
   [known issues](../roadmap/known-issues.md).
-- `ci.yml`'s Python syntax step compiles `scripts/*.py` and `src/tests/*.py`, not
-  `tools/data-kit/`. The `data-kit` suite imports `fbdata.py`, so a syntax error there still fails
-  CI, under a less direct name.
 - `release.yml` keeps `fetch-depth: 0`, which has not been needed since the source zip went. It is
   harmless and was left in place deliberately.
 
@@ -320,3 +324,4 @@ prints the menu and exits 0.
 - 2026-10-08 — The app zip ships `scripts/srd-corrections.json` beside `convert.py`. → ledger L5269, #84
 - 2026-10-09 — `build.sh`, `run.sh`, CI and `dev.sh` call `fbdata.py bundle` in place of the Node bundler; every build now needs python3. → ledger L5342, #85
 - 2026-10-09 — The app zip drops `scripts/`; a new flat data kit zip (`pack_kit`) carries `convert.py` and its inputs instead, with `example-pack/`; `release.yml` and `data-release.yml` gain the public-only licence and name guard (R13). → ledger L5352, #85
+- 2026-10-09 — The converter menu writes the private packs through `_private-data`; CI skips the `private-data` suite, which the private repo's CI covers; `py_compile` covers `tools/data-kit/`. → ledger L5426, #85

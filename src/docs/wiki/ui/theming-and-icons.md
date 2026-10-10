@@ -150,9 +150,11 @@ removed".
 - **Emblems are keyed by name, lower-cased, never by `_id`.** This is the "keep working with no pack"
   property.
 - **Subclasses get no emblem** (`docs.js` asserts `icons.json` has no `subclasses` block).
-- **Every shipped class, race and background has an emblem.** `docs.js` walks `data/5e2024`,
-  `humblewood`, `xanathars`, `tashas` and `homebrew`, so a **data-only** change that adds a name
-  turns the docs suite red until `icons.json` gains a line and the fetcher is re-run.
+- **Every shipped class, race and background has an emblem.** `docs.js` walks the public packs
+  (`DIRS`: `homebrew` and `srd52`), and the private suite walks the 2024, Humblewood, Xanathar's and
+  Tasha's packs, so a **data-only** change that adds a name turns one of them red until
+  `icons.json` gains a line and the fetcher is re-run. The icon map keeps every pack's names,
+  private ones included: names are not the protected text.
 - **The kinds list lives in three places** and moves together: `KINDS` in `fetch-icons.js`,
   `KINDS` in `docs.js` (with `DATA_KINDS`, the three that name things in `data/`), and the `kind`
   argument of `iconSVG()`.
@@ -187,7 +189,7 @@ removed".
 
 | Question | Decision | Rejected, and why |
 |---|---|---|
-| Where the emblem map lives | In the app: `src/icons/icons.json`, generated into `05-icons.js` | In `data/`: converter output is overwritten whole by `_write()`; `data/5e2024/` must reproduce byte for byte; and `release.js` would bump `dataVersion`, telling every player to re-download five packs for a cosmetic change |
+| Where the emblem map lives | In the app: `src/icons/icons.json`, generated into `05-icons.js` | In `data/`: converter output is overwritten whole by `_write()`; the 2024 pack must reproduce byte for byte; and `release.js` would bump `dataVersion`, telling every player to re-download five packs for a cosmetic change |
 | Keep the `.svg` files? | No: the generated fragment is the vendored artwork | 78 SVGs plus a second offline generator: buys nothing, since the only possible drift ("edited the map, forgot to re-fetch") is detectable from the fragment alone |
 | Fetch during the build? | No: run by hand | In `build.sh`: CI's "the build changes no tracked file" check would become a network-dependent comparison against GitHub |
 | What an emblem is keyed by | The entity's name, lower-cased | `_id`: a character stores plain names, and the emblem must draw with no pack loaded |
@@ -219,3 +221,4 @@ removed".
 - 2026-08-18 — Emblems: 78 game-icons.net glyphs through `icons.json` → `fetch-icons.js` → `05-icons.js`, credited in Settings and README §10. → ledger L3289
 - 2026-09-24 — A `ui` kind for the combat button's crossed swords; `docs.js` splits `KINDS` from `DATA_KINDS`. → ledger L3397, #9, #10, #11
 - 2026-09-28 — The emblem's path and class are `esc()`'d like every other attribute value. → ledger L3940
+- 2026-10-09 — The emblem coverage check walks `homebrew` and `srd52`; the private suite covers the four private packs. → ledger L5426, #85

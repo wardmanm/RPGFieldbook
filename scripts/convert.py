@@ -883,10 +883,10 @@ def pick_sources(entries, book=None, name_key='name', shipped=None):
     return [e for e in entries if e.get('source') in codes]
 
 def _pack(book, cat, arr, stem=None, version=None):
-    """Build a pack wrapper. Key order is load-bearing: the committed 5e2024
-    files were written as system, name?, version?, <array> and the build compares
-    bytes. `_note`/`excludeSystems` are absent unless the book sets them, so the
-    default run is untouched."""
+    """Build a pack wrapper. Key order is load-bearing: the committed packs (the
+    2024 pack in the private repo, data/srd52 here) were written as system, name?,
+    version?, <array> and the byte gates compare bytes. `_note`/`excludeSystems`
+    are absent unless the book sets them, so the default run is untouched."""
     b = _bk(book)
     out = {'system': b.system}
     nm = b.names.get(stem if stem is not None else cat)

@@ -115,9 +115,16 @@ registry bump itself failing — leaves `data/packs.json` and `30-version.js` bo
 | Asset | Who it's for |
 |---|---|
 | `fieldbook.html` | Players who just want the app. This is the whole thing. |
-| `fieldbook-v<V>.zip` | The player bundle — app, README, the rules-data archive in `data/`, docs, converter. |
-| `fieldbook-data-standalone-<V>.zip` | The rules data on its own: every pack, a manifest and `NOTICE.md`. Fieldbook opens it directly. |
+| `fieldbook-v<V>.zip` | The player bundle — app, README, `LICENSE`, the rules-data archive in `data/`, docs. No converter since #85. |
+| `fieldbook-data-standalone-<V>.zip` | The rules data on its own: the public packs (SRD 5.2 and homebrew), a manifest and `NOTICE.md`. Fieldbook opens it directly. |
+| `fieldbook-data-kit-<V>.zip` | The data kit: `fbdata.py`, `convert.py` and its inputs, flat, for anyone building rules data from their own 5e-tools export (`fbdata.py build`). |
 | GitHub's own `Source code (zip)` / `(tar.gz)` | Attached automatically from the tag — we don't build or upload a source archive. |
+
+Before publishing, the **"Public assets only"** step runs `fbdata.py validate --public` on the
+rules-data archive, refusing any pack whose licence is missing or not `CC-BY-4.0`, `CC-BY-SA-3.0` or
+`MIT`, and refuses any asset whose name contains `private`, or an app zip with such an entry (#85,
+spec R13). The copyrighted packs live in the private repo and are released only there (§1c); this
+step is what stops a mistake from republishing them.
 
 The release body is that version's section of `docs/CHANGELOG.md`, sliced out by
 `scripts/release-notes.js`, then `scripts/data-release-notes.js <V> --app`: what to download, and
@@ -204,7 +211,8 @@ saying what to do:
 4. `fbdata.py versions --check` fails: a pack changed after the bump;
 5. the tests fail;
 6. `./build.sh --data` fails;
-7. `fbdata.py validate` finds a problem with the archive.
+7. `fbdata.py validate --public` finds a problem with the archive, including a pack whose licence a
+   public release may not carry, or the archive's name contains `private`.
 
 It then writes the release body (`data-release-notes.js <v> --data`: which packs changed, how to
 import, and the unzip fallback for Fieldbook older than 1.8.0) and publishes
@@ -228,6 +236,53 @@ git tag -d data-v1.8.0-1 && git push --delete origin data-v1.8.0-1
 
 Running copies stop announcing it on their next load. `data/packs.json` keeps the versions it
 recorded, so the next data release is `-2`: a number is never reused. Fix the data and cut that.
+
+---
+
+## 1c. Private data releases
+
+The 2024, Xanathar's, Tasha's and Humblewood packs live in the private repo,
+`wardmanm/RPGFieldbookPrivate`, linked into the checkout as `_private-data` (see the wiki's
+[Private data](wiki/data/private-data.md) page and that repo's README). They are released there, and
+only there, as **data-only releases in the same scheme**: changed packs become `<APP_VERSION>-N`, the
+tag is `data-vX.Y.Z-N`, and the one asset is `fieldbook-data-private-X.Y.Z-N.zip`. No app release
+ever bumps a private pack. Like every release, it is Mike's to cut.
+
+**Before the first one:** the private repo must be pushed, and its CI green, which needs #85 on
+public `main` (the CI builds public `main` and bundles with its kit). A private release also needs
+a public app release to build against: `data-release.js` refuses an `APP_VERSION` before 1.8.0, and
+the private workflow checks out the public tag `vX.Y.Z`. XPHB and XGE changed after 1.7.2, so the
+first private release is `1.8.0-1`, after app 1.8.0.
+
+**How.** From the public checkout, with the private data committed:
+
+```bash
+node scripts/data-release.js --registry _private-data/data/packs.json --data-root _private-data/data --dry-run
+node scripts/data-release.js --registry _private-data/data/packs.json --data-root _private-data/data
+```
+
+It bumps the changed packs in the **private** registry, refuses what a public data release refuses
+(nothing changed, uncommitted data in the private checkout, an existing tag), and prints the
+commands, which run against the private repo (`git -C <private repo> …`), never this one:
+
+```bash
+git -C ../RPGFieldbookPrivate add data/packs.json
+git -C ../RPGFieldbookPrivate commit -m "Data release 1.8.0-1"
+git -C ../RPGFieldbookPrivate tag -a data-v1.8.0-1 -m "Fieldbook data 1.8.0-1"
+git -C ../RPGFieldbookPrivate push && git -C ../RPGFieldbookPrivate push origin data-v1.8.0-1
+```
+
+**Pushing the tag publishes, privately.** The private repo's `data-release.yml` refuses, in order:
+a tag that isn't `data-vX.Y.Z-N`; a public app with no `vX.Y.Z` tag; a private `data/packs.json`
+whose `release` isn't the tag's version; a pack changed after the bump (`fbdata.py versions
+--check`); a failing public build at `vX.Y.Z`; failing private suites. It then bundles and packs
+`fieldbook-data-private-X.Y.Z-N.zip` with the public kit at that tag, validates it **without
+`--public`** (these packs carry no open licence), and publishes a release on the private repo only,
+with `--latest=false`. Running copies of Fieldbook never announce it: the newer-data check reads the
+public registry.
+
+**Never** attach a private archive to a public release, or copy a private pack into the public
+`data/`: the public workflows' licence and name checks are the backstop, not the plan.
 
 ---
 
@@ -315,7 +370,8 @@ Actions → Release → *Run workflow* → enter the tag. It rebuilds and re-upl
 **Re-publishing a tag from before 1.8.0** (v1.7.2 or older): in *Run workflow*, set **Use workflow
 from** to that tag, not `main`. `main`'s `release.yml` requires `data/packs.json` and uploads the
 rules-data archive, and neither exists at an old tag, so it would refuse. The tag's own workflow
-builds and uploads what that release always had.
+builds and uploads what that release always had, **copyrighted packs included**: once their assets
+are deleted (§4a), don't, unless Mike decides otherwise.
 
 **Wrong notes, right build.** Fix the wording in `src/js/30-version.js`'s `CHANGELOG` entry, rebuild,
 commit, then re-run the workflow for that tag. (This is the one time editing the array by hand is
@@ -324,6 +380,30 @@ right — the version already exists, so `release.js` can't help.)
 **The build itself was wrong.** Don't move the tag — a tag that changes meaning is exactly what the
 immutability is for. Cut a new patch release. Delete the bad GitHub *release* if it's misleading,
 but leave its tag in history.
+
+---
+
+## 4a. Deleting old release assets (one time, #85)
+
+The releases from v1.3.0 to v1.7.2 carry the copyrighted packs: every `*_full.json`, every
+`fieldbook-v*.zip` (each holds the packs), and `fieldbook-v1.3.0-source.zip`. #85 deletes them, once,
+**by hand and only with Mike's go-ahead**, after the merge. `fieldbook.html` stays on every release:
+it holds no rules data.
+
+1. List what is there and show Mike the exact list of what goes:
+
+   ```bash
+   for t in v1.3.0 v1.3.1 v1.4.0 v1.5.0 v1.6.0 v1.7.0 v1.7.1 v1.7.2; do
+     gh release view "$t" --json assets -q '.assets[].name' | sed "s/^/$t  /"
+   done
+   ```
+
+2. On his go-ahead, delete each listed asset: `gh release delete-asset <tag> <asset> --yes`.
+3. Check every release still has its `fieldbook.html` and nothing else from the list.
+
+This cannot recall the data: GitHub's Source code archives of each tag, and public history, keep it
+until the 2.0 history purge (see the wiki's [2.0](wiki/roadmap/2.0.md) page). Never re-run an old
+tag's release workflow afterwards, which would re-upload them.
 
 ---
 

@@ -1,7 +1,9 @@
 # Homebrew
 
-`data/homebrew/` is the fifth rules pack (`system: "Homebrew"`) and the only one with no script
-behind it: third-party content written as JSON by hand. Today it holds one Warlock subclass, The
+`data/homebrew/` (`system: "Homebrew"`) is one of the two rules packs this repo ships, beside
+[SRD 5.2](srd.md), and the only pack with no script behind it: third-party content written as
+JSON by hand, under CC-BY-SA-3.0, which is why it may stay public when the copyrighted packs moved
+to the private repo ([Private data](private-data.md)). Today it holds one Warlock subclass, The
 Predator, with its pact boon, six invocations and an expanded-spell table. It leans on a class and
 spells that other packs ship, which made it the case that forced missing-dependency reporting into
 the open, and it is still the working example of `requires`.
@@ -11,7 +13,8 @@ the open, and it is still the working example of `requires`.
 `tools/data-kit/fbdata.py`; `pack_digest()` in `tools/data-kit/fbdata.py`; `rulesCreditsHTML()` in
 `88-settings.js`; `DATA_VERSIONS` in `30-version.js` · **Data:** `data/homebrew/features.json`,
 `subclasses.json`, `tables.json`; its entry in `data/packs.json` · **Tests:** `rules-data.js`,
-`tables.js`, `data-archive.js` (its credit reaches Settings) · **See also:**
+`tables.js`, `data-archive.js` (its credit reaches Settings), the private repo's `private-data.js`
+(its Xanathar's names exist in that pack) · **See also:**
 [Rules packs](../architecture/rules-packs.md), [Data archive](../architecture/data-archive.md),
 [Supplements](supplements.md), [rules-schema](../../../../docs/rules-schema.md)
 
@@ -49,9 +52,9 @@ missing. The schema is in [rules-schema](../../../../docs/rules-schema.md) §1.
 
 **Why SRD 5.2, and why Xanathar's has no `file`.** Every name in the first group (the Warlock and its
 11 spells) is also in the [SRD 5.2](srd.md) pack, under the same name, and a declared name matches
-whichever pack supplies it — so that group was already satisfied by SRD 5.2 alone before this change
-(#84, R7); #85 repoints its `pack`/`file` to say so, ahead of the D&D 2024 pack leaving the public
-repo. Xanathar's Guide was never going to be public, so its group drops `file` entirely: there is no
+whichever pack supplies it — so that group was already satisfied by SRD 5.2 alone (#84, R7); #85
+repointed its `pack`/`file` to say so when the D&D 2024 pack left the public repo. Xanathar's Guide
+was never going to be public, so its group drops `file` entirely: there is no
 public file to send a player to, only the book. `requiresStatusHTML()` already renders a group with
 no `file` as "— from `<pack>`", so no app code changed for that half; `requiresStatusHTML()` on a
 pack whose only gap is this group reads "...from Xanathar's Guide to Everything" (no filename).
@@ -72,10 +75,13 @@ chip names the two spells and "Xanathar's Guide to Everything"; with every pack 
 - **Every file in the folder declares the same `system` and the same `requires`.** The bundle is one
   file and can carry one answer; `bundle()` compares `requires` with `JSON.stringify` and fails the
   build on a mismatch, and `rules-data.js` asserts it first.
-- **Every name in `requires` must exist in a shipped pack.** `rules-data.js` resolves each against
-  the other four packs' data, so the report can only ever mean "not imported", never "misspelt".
+- **Every name in `requires` must exist in a pack.** `rules-data.js` resolves the D&D group's names
+  against SRD 5.2 (#84's R7 check), and the private suite resolves the Xanathar's group's against
+  the Xanathar's pack, so the report can only ever mean "not imported", never "misspelt".
 - **Declare only what the schema cannot see.** A subclass's parent class is found structurally with
   no authoring; `requires` is for references that live in prose.
+- **Homebrew stays shareable.** Only content under an open licence goes here; a public release
+  refuses a pack whose licence is not `CC-BY-4.0`, `CC-BY-SA-3.0` or `MIT` (#85 R13).
 - **A new homebrew folder with its own `system` is one registration, plus its tests:** a pack in
   `data/packs.json` (`system`, `dir`, `file`, `title`, and `version: null` until its first release),
   else it is never bundled, archived or versioned; and the pack lists in `tables.js`, `rules-data.js`
@@ -108,6 +114,9 @@ chip names the two spells and "Xanathar's Guide to Everything"; with every pack 
 
 ## Open
 
+- **The Xanathar's spells cannot resolve publicly.** With only the public archive loaded, the chip
+  names Cause Fear and Primal Savagery "from Xanathar's Guide to Everything", and no public file
+  provides them; only the private suite can check that the names exist.
 - The app cannot attach an invocation or pact boon automatically; like every invocation shipped in
   any pack's `features`, they are picked by hand from the library.
 - Loaded alone, the pack's chip reads "15 missing" for 14 distinct entries: the Warlock is found by
@@ -121,3 +130,4 @@ chip names the two spells and "Xanathar's Guide to Everything"; with every pack 
 - 2026-10-08 — Its D&D group resolves with SRD 5.2 alone, left as it is until #85 (spec R7). → ledger L5148, #84
 - 2026-10-09 — `bundle()` moves to `tools/data-kit/fbdata.py` (Python), replacing the Node bundler. → ledger L5342, #85
 - 2026-10-09 — Its D&D group's `pack`/`file` repointed to `"SRD 5.2"`/`srd52_full.json`; Xanathar's group drops `file` and is named by the book alone. → ledger L5388, #85
+- 2026-10-09 — One of the two public packs; the Xanathar's names are checked in the private suite. → ledger L5426, #85

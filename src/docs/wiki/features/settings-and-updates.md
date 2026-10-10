@@ -95,7 +95,7 @@ the newer-data check's copy of the same system and file name (`dataUpdateFor()`)
 - **stale** — older than `DATA_VERSIONS`: an amber "update available · v*X*" chip whose tooltip says
   to re-import from the latest release.
 - **update** — not stale, but a data release has a newer copy: a muted "v*A* · v*B* out", its
-  tooltip naming the data release. One hint line above the list, "Newer rules data is out: XPHB
+  tooltip naming the data release. One hint line above the list, "Newer rules data is out: SRD 5.2
   v1.8.0-1. Download it from the release page." (`dataUpdateHint()`), links the release, in
   Settings and on the home screen, since both draw `rulesDataHTML()`.
 - **current** — a quiet "v*X*".
@@ -235,6 +235,9 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 
 ## Open
 
+- **Private packs get no newer-data notice.** The data check reads the public registry, which lists
+  only SRD 5.2 and Homebrew since #85, so a private pack's row shows its version quietly (`known`)
+  and never "out" (see [Private data](../data/private-data.md)).
 - **Removing a source URL does not unload what it fetched.** Its packs stay until removed under
   Loaded data (see [Rules packs](../architecture/rules-packs.md)).
 - The header comment of `30-version.js` still says to bump `APP_VERSION` and add a `CHANGELOG` entry on
@@ -265,3 +268,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-07 — Import files takes zips and names each failure; the `update` state, its hint line and ` · update` on the count, from `checkForDataUpdate()`; Credits & licences lists each loaded pack's credit. → ledger L5082, #83
 - 2026-10-09 — Bundling moves to `bundle()` in `tools/data-kit/fbdata.py` (Python), replacing the Node bundler. → ledger L5342, #85
 - 2026-10-09 — `dataStatus()` gains `"known"`: a pack with a version but no baseline to compare it to shows that version quietly, never the amber chip or the newer-data notice. → ledger L5388, #85
+- 2026-10-09 — The public registry, which the newer-data check reads, lists only SRD 5.2 and Homebrew; private packs show their version quietly and get no notice. → ledger L5426, #85

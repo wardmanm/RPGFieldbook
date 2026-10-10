@@ -1,10 +1,14 @@
 ---
 name: Data Update
-about: Rules content — new or corrected entries in data/
+about: Rules content — new or corrected entries in data/ (SRD 5.2 and homebrew)
 labels: data-update
 ---
 
-**System** — 5e2024 / humblewood / XGE / TCE / Homebrew
+**System** — SRD 5.2 / Homebrew
+
+<!-- This repo's rules data is the SRD 5.2 and homebrew packs. The D&D 2024,
+     Xanathar's, Tasha's and Humblewood packs live in the private repo
+     (RPGFieldbookPrivate): open their issues there. -->
 
 **What changes** — category and entries
 

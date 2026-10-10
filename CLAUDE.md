@@ -20,7 +20,8 @@ Guide**, **Tasha's Cauldron** and hand-authored **homebrew**. It ships as one se
 (`scripts/convert.py`) turns 5e-tools exports into the app's JSON. Players load the resulting
 rules packs at runtime. This repo's packs are SRD 5.2 and homebrew; the 2024, Xanathar's, Tasha's
 and Humblewood packs live in the private repo (`RPGFieldbookPrivate`, linked into a checkout as
-`_private-data`). Details: [overview](src/docs/wiki/overview.md).
+`_private-data`; see [private data](src/docs/wiki/data/private-data.md)). Details:
+[overview](src/docs/wiki/overview.md).
 
 ## Non-negotiable constraints
 
@@ -51,7 +52,8 @@ src/                     THE SOURCE OF TRUTH — edit here, never the built file
 dist/fieldbook.html      BUILD ARTIFACT, tracked. Never hand-edit
 data/<system>/*.json     rules data: srd52/ and homebrew/; data/packs.json registers each pack;
                          bundled into dist/*_full.json
-tools/data-kit/          fbdata.py — pack versions, digests, the data archive (Python 3.8+, stdlib)
+tools/data-kit/          fbdata.py — bundling, pack versions, digests, the data archive, and the
+                         data kit's convert and build (Python 3.8+, stdlib) → wiki data/data-kit.md
 docs/                    PLAYER-FACING, ships — an allowlist of exactly three files
 ```
 

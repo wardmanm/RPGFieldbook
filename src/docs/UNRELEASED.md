@@ -72,10 +72,16 @@ Bullets below this line — leave the heading in place.
   password-protected or damaged — on the home screen as well as in Settings, and a large import
   shows straight away that it is reading the files.
 - **A new SRD 5.2 rules pack** comes in the rules data zip: the free D&D rules published under Creative Commons as the System Reference Document 5.2.1 — 12 classes, 339 spells, 9 species, 4 backgrounds and over 470 magic items. Its text follows the official SRD, and Settings → Credits & licences shows the attribution its licence requires.
-- The D&D 2024 pack gains Carrion Crawler Mucus and Lolth's Sting, which were missing.
+- A D&D 2024 pack you build with the data kit now includes Carrion Crawler Mucus and Lolth's Sting, which the converter used to leave out.
 - The Warlock invocations Agonizing Blast, Eldritch Spear and Repelling Blast show their prerequisite properly, instead of a line of code.
 - The Carrying Capacity table shows each size's limit (Str. × 7.5 lb. and so on) instead of a line of code.
 - A Paladin choosing a Fighting Style can take Blessed Warrior, and a Ranger Druidic Warrior, as the rules allow.
 - Settings → Rules data now shows the version of a loaded pack this build doesn't recognise — a
   pack of your own, or an older one a previous release shipped — quietly, with no false "update
   available" alert.
+- The rules data zip now holds the free SRD 5.2 rules and the homebrew pack. The D&D 2024 books,
+  Xanathar's Guide, Tasha's Cauldron and Humblewood packs are no longer distributed; any you have
+  already loaded keep working.
+- A new data kit, attached to each release, builds a rules data zip from your own 5e-tools data in
+  one command.
+- The homebrew pack's "needs" note now points to the SRD 5.2 pack.
