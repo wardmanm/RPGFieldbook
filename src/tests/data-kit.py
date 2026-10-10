@@ -521,10 +521,30 @@ ck("build <one pack file> archives it as it is, versioned by --version",
    and "version" not in man["packs"][0], (r.stderr, man))
 r = subprocess.run([sys.executable, FBDATA, "build", os.path.join(d, "nope"), "-o", out], capture_output=True, text=True)
 ck("build refuses a source that isn't there, writing nothing new", r.returncode == 2 and "nope" in r.stderr, r.stderr)
+# a 5e-tools checkout's root, not its data/ folder: say so, not "not a rules pack" (#85)
+for sub, extra in (("class", {"5etools-a/package.json": {"name": "5etools"}}), ("spells", {})):
+    top = os.path.join(d, "5etools-" + ("a" if extra else "b"))
+    os.makedirs(os.path.join(top, "data", sub))
+    for rel, obj in extra.items():
+        write(d, rel, obj)
+    r = subprocess.run([sys.executable, FBDATA, "build", top, "-o", out], capture_output=True, text=True)
+    ck("build at a 5e-tools checkout's root (data/%s) says to point at its data/ folder" % sub,
+       r.returncode == 2 and "looks like a 5e-tools checkout" in r.stderr and "data/ folder" in r.stderr, r.stderr)
 shutil.rmtree(d)
 
 # ---------- kit_file: beside fbdata.py first (the kit zip), then the repo
 ck("kit_file finds convert.py in the repo", fbdata.kit_file("convert.py", "scripts/convert.py").endswith(os.path.join("scripts", "convert.py")))
+
+# ---------- convert: the kit's inputs fill in only what the caller didn't name
+argv = fbdata._convert_argv(["srd", "d", "-o", "o"])
+ck("convert fills in the kit's --overlay, --resources and --corrections once each",
+   [argv.count(f) for f in ("--overlay", "--resources", "--corrections")] == [1, 1, 1], argv)
+argv = fbdata._convert_argv(["srd", "d", "-o", "o", "--overlay=x.json"])
+ck("convert keeps a caller's --overlay=PATH and adds no second --overlay",
+   "--overlay" not in argv and argv.count("--overlay=x.json") == 1, argv)
+argv = fbdata._convert_argv(["srd", "d", "-o", "o", "--resources=r.json", "--corrections=c.json"])
+ck("...nor a second --resources or --corrections after their =PATH forms",
+   "--resources" not in argv and "--corrections" not in argv and argv.count("--overlay") == 1, argv)
 
 # ---------- data-release.js against another registry (R4: private data releases)
 def private_checkout(release="1.7.2"):

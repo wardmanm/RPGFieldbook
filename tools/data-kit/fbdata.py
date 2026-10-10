@@ -621,16 +621,23 @@ def kit_file(name, repo_rel):
     raise KitError("can't find %s beside fbdata.py or at %s" % (name, repo_rel))
 
 
+def _given(args, flag):
+    """Whether the caller passed flag, as "--flag PATH" or "--flag=PATH"."""
+    return any(a == flag or a.startswith(flag + "=") for a in args)
+
+
 def _convert_argv(args):
     """convert.py's command line with the kit's overlay, resources and (for srd)
-    corrections filled in, unless the caller named their own."""
+    corrections filled in, unless the caller named their own. argparse keeps the
+    last of a repeated flag, so appending ours after a caller's --flag=PATH would
+    silently replace theirs."""
     argv = [sys.executable, kit_file("convert.py", "scripts/convert.py")] + list(args)
     if args and args[0] in ("all", "srd", "supplement"):
-        if "--overlay" not in args:
+        if not _given(args, "--overlay"):
             argv += ["--overlay", kit_file("overlay.json", "data/overlay.json")]
-        if "--resources" not in args:
+        if not _given(args, "--resources"):
             argv += ["--resources", kit_file("class-resources.json", "data/class-resources.json")]
-        if args[0] == "srd" and "--corrections" not in args:
+        if args[0] == "srd" and not _given(args, "--corrections"):
             argv += ["--corrections", kit_file("srd-corrections.json", "scripts/srd-corrections.json")]
     return argv
 
@@ -647,6 +654,8 @@ def cmd_build(a):
     src = os.path.abspath(a.src)
     if not os.path.exists(src):
         raise KitError("%s: no such file or folder" % a.src)
+    if os.path.isdir(src) and not _is_dump(src) and _is_dump(os.path.join(src, "data")):
+        raise KitError("%s looks like a 5e-tools checkout; point build at its data/ folder" % a.src)
     if a.version is not None and not parse_data_ver(a.version):
         raise KitError("--version %r is not X.Y.Z or X.Y.Z-N" % a.version)
     work = tempfile.mkdtemp(prefix="fbdata-build-")
