@@ -2547,18 +2547,18 @@ exactly why races, feats, backgrounds and core subclasses already read well, and
 Gadgeteer was broken: `pt_all_subs` deliberately keeps a whole section as one blob.
 
 **A blanket `prereq` rule is actively harmful.** `prereq` only means *italic*, and the core book also
-italicises **inline spell names**. Prototyped across all files, it produced `"you can cast\ncharm
-person as a 1st level spell"` in three races. The prototype was reverted.
+italicises **inline spell names**. Prototyped across all files, it produced [book text: a racial
+trait's spell sentence, split before the spell's name] in three races. The prototype was reverted.
 
 **And the same trap was already live in what had just shipped.** The `prereq` rule in `pt_all_subs`
-was breaking Gadgeteer path features mid-sentence — `"as if you had cast the\nidentify spell"`, and
+was breaking Gadgeteer path features mid-sentence — [book text: a clause split before a spell name], and
 `"divert power*"` split across two lines. Caught only by scanning the data for `[a-z,]\n[a-z]`, not
 by any test that existed. **That scan is now a test**, across every Humblewood file.
 
 **The rule is POSITIONAL in both parsers, never stylistic.** In `pt_all_subs`, an italic run is a
 tagline only when it directly follows a `head`. In `parse_entity`, only the first italic run, before
-any prose or trait. That correctly picks up the genuine shared case — subclass taglines ("Learn from
-People You Meet on Your Travels") and feat type lines ("Origin Feat (Prerequisite: Glide trait)"),
+any prose or trait. That correctly picks up the genuine shared case — subclass taglines ([book text:
+a path's one-line italic motto]) and feat type lines ("Origin Feat (Prerequisite: Glide trait)"),
 11 entries — while leaving inline spell names alone.
 
 **`humblewood-verbatim` still passes 129/133** — it never reads `classes.json`, and its `norm()`
@@ -4041,7 +4041,7 @@ TCE `supplement`), four types reached it and were dropped, 28 nodes in all:
 `image` (3, Xanathar's) is skipped on purpose and stays skipped: it carries no rules text.
 
 **Fix.** Formula lines are worded as 5e-tools' renderer words them (`_formula_text()`,
-`_attr_choose()`): "Spell save DC = 8 + your proficiency bonus + your Intelligence modifier",
+`_attr_choose()`): [book text: the Spellcasting save-DC formula line],
 "Maneuver save DC = … your Strength or Dexterity modifier (your choice)", with `abilityGeneric`
 alongside. Checked against its current `render.js` and `parser.js` (fetched): `_renderAbilityDc`
 has two wordings picked by the reader's style switcher, the "classic" one above and "8 +
@@ -4051,8 +4051,8 @@ Each formula ends with a full stop, because a named subsection's blocks join wit
 Artificer's two lines otherwise ran together. An `entry` reads as `entries: [entry]`, the same
 "Name: text" as its `entries` twin. An item `statblock` resolves through `load_item_index()` over
 `items-base.json` and `items.json`, which `all` and `supplement` find themselves, and renders as
-"Psychic Blade: Simple Melee Weapon · Damage 1d6 psychic · Range 60/120 ft · Properties: Finesse,
-Thrown · Mastery: Vex (…)", the wording `convert_items()` gives a base weapon. An unresolved one
+[book text: the Psychic Blade statblock, rendered as a base-weapon stat line], the wording
+`convert_items()` gives a base weapon. An unresolved one
 keeps its name and is counted. Any other node type is counted in `_ENTRY_MISSES`, and
 `_entry_miss_warnings()` reports it at the end of `all`, `supplement` and every single subcommand,
 since prose is flattened with or without `--tables`. A single `classes` run has no item files, so
@@ -4273,8 +4273,8 @@ having been copied into term/text).
 ## Tables keep their footnotes (#73, 2026-09-28)
 
 **The bug.** 17 Xanathar's downtime tables mark entries with `*`, and the notes the marks point at
-never reached the pack: "Might involve a rival" under 14 complication tables, and "Halved for a
-consumable item like a potion or scroll" under Magic Item Price, Magic Item Base Prices and Magic
+never reached the pack: [book text: the Crime-Complications-style footnote] under 14 complication
+tables, and [book text: the Magic Item Price footnote] under Magic Item Price, Magic Item Base Prices and Magic
 Item Crafting Time and Cost (whose price column's label carries the mark). Seen during #68.
 
 **Root cause.** 5e-tools carries a table's footnotes on the table node itself, as `footnotes`, an
@@ -4288,7 +4288,7 @@ Artificer plan tables (3) and FRHoF's Knowledge Domain Spells (1). No pack selec
 printings (the core Artificer is TCE's, whose plan tables have none; the decks are XDMG's), so the
 core and Tasha's packs gain none. `classTableGroups` never carry them. **Humblewood** needs nothing:
 its one starred table, Night Domain Spells, explains the mark in a line the book prints after the
-table ("Spells marked with an asterisk (*) can be found in this book."), which the extractor
+table ([book text: the Night Domain Spells footnote line]), which the extractor
 already keeps verbatim in the feature prose beside the table's anchor, where the verbatim suite
 holds it. The extractor was not changed.
 
@@ -5338,3 +5338,288 @@ Pages: [converter](../wiki/data/converter.md), [SRD 5.2](../wiki/data/srd.md),
 [known issues](../wiki/roadmap/known-issues.md), [rules packs](../wiki/architecture/rules-packs.md),
 [testing](../wiki/process/testing.md), [building & CI](../wiki/process/building-and-ci.md),
 [decisions](../wiki/decisions.md).
+
+## The bundler moves to Python (#85, 2026-10-09)
+
+1. `fbdata.py bundle` replaces `scripts/bundle-rules.js` (spec 2026-10-09 R11): kit users have
+   Python, not Node. It reproduced every real pack byte for byte before the switch (the parity test
+   ran over all six packs and 13 synthetic cases, then was replaced by golden checks when the Node
+   bundler was removed). `build.sh`, `run.sh`, CI and `dev.sh` call it; every build now needs python3.
+
+Pages: [rules packs](../wiki/architecture/rules-packs.md), [building & CI](../wiki/process/building-and-ci.md),
+[converter](../wiki/data/converter.md), [testing](../wiki/process/testing.md)
+
+## The data kit zip, the app zip without scripts/, and public-only releases (#85, 2026-10-09)
+
+1. `build.sh` gains `pack_kit()` (spec 2026-10-09 R12/R13): a new allowlisted zip,
+   `dist/fieldbook-data-kit-<version>.zip`, carries `fbdata.py`, `convert.py` and its three
+   hand-authored inputs (`overlay.json`, `class-resources.json`, `srd-corrections.json`), the two
+   player-facing docs `README-converter.md` and `rules-schema.md`, `LICENSE`, the kit's own
+   `README.md`, and `example-pack/example-pack.json` — flat, so `python fbdata.py build …` works
+   wherever the zip is unpacked, with no repo around it. A wrong file set deletes the zip and fails
+   the build, the same discipline as the player zip's own guard. `.buildkit/` (its scratch folder) is
+   gitignored beside `.buildtmp/`.
+2. The player zip drops `scripts/` and its three converter inputs entirely: an advanced player who
+   wants to regenerate rules data now gets the kit zip, every release, in place of digging
+   `convert.py` out of the app zip. README §9 and `docs.js` were updated to match; `docs.js`'s old
+   check for `scripts/srd-corrections.json` in the app zip is now two checks, one proving scripts/
+   is gone from the app zip and one proving the kit's own allowlist still carries it (flat, not under
+   `scripts/`).
+3. `tools/data-kit/example-pack/example-pack.json`: one invented pack covering every category in
+   `docs/rules-schema.md` (keywords, features, items, spells, races, classes, feats, backgrounds,
+   subclasses, tables), `license: "MIT"` so it passes `validate --public`. It gives a kit user
+   something to build with no 5e-tools dump required, and gives `data-kit.py` the same (Review
+   Focus 3: a kit user with only the kit zip, unzipped anywhere, gets an archive the app opens).
+4. R13: a public release must never carry a pack whose licence isn't one of
+   `CC-BY-4.0`/`CC-BY-SA-3.0`/`MIT` (`PUBLIC_LICENCES`, `validate_archive(path, public=True)` — Task
+   2a), and never an asset named for the private repo. `release.yml` gains a "Public assets only"
+   step: `fbdata.py validate --public` on the rules-data archive, a `*private*` name check on every
+   asset, and a check that the app zip names nothing private; `data-release.yml`'s "Validate the
+   archive" step runs the same `--public` validation and name check for the data-only path. Both
+   workflows already publish the data kit as a GitHub asset.
+5. `scripts/data-release-notes.js --app` now also points players at the kit zip, right after the
+   rules-data line.
+6. `docs/README-converter.md`'s own "from the app zip, `convert.py` sits in `scripts/`" instructions
+   were stale the moment the app zip dropped `scripts/` — updated to describe the kit zip's flat
+   layout instead, since that doc still ships inside both zips.
+
+Pages: [building & CI](../wiki/process/building-and-ci.md), [data archive](../wiki/architecture/data-archive.md)
+
+## A quiet version chip for packs with no baseline, and homebrew needs public packs (#85, 2026-10-09)
+
+1. `dataStatus(g)` (`src/js/88-settings.js`) gains a fourth state, `"known"`: a pack that carries a
+   readable `dataVersion` but has neither a `DATA_VERSIONS` baseline for its system nor a data-release
+   notice for it — a private pack, or an old pack (XPHB, Humblewood, XGE, TCE) that a v1.7.2 player
+   still has loaded after a later build drops it from `DATA_VERSIONS` — used to fall into `"unknown"`
+   and show nothing. It now reports its own version with no claim either way (Review Focus 1, spec
+   2026-10-09): `dataStatusHTML()` renders it the same muted way as `"current"`,
+   `<span class="rd-src" title="This pack's version.">v<have></span>`, never the amber "update
+   available" chip or the newer-data notice (`dataUpdateHint`/`rulesBadge` only ever key off
+   `state==="update"`, so `"known"` is invisible to both by construction).
+2. `data/homebrew/features.json`, `subclasses.json` and `tables.json` — the three files whose
+   `requires` must stay byte-identical for the bundler — rename their first group's target from
+   `{"pack": "D&D 2024", "file": "5e2024_full.json"}` to `{"pack": "SRD 5.2", "file":
+   "srd52_full.json"}` (Warlock and the 11 spells the Predator leans on all resolve from the free SRD
+   52 pack alone — verified against `data/srd52/spells.json`/`classes.json`) and drop `file` from the
+   second group (Xanathar's Guide to Everything), which was never going to be public. A group with no
+   `file` already rendered "— from `<pack>`" (`requiresStatusHTML`, `src/js/89-rules-merge.js`), so no
+   app code changed for that half. Neither pack nor file drives whether a name resolves —
+   `missingRequirements` matches case-insensitively against anything loaded, pack-blind — so this is
+   purely which pack the chip's tooltip tells a player to go get. This is prep for later tasks in
+   #85 that remove the D&D 2024 and Xanathar's packs from the public repo; it is not itself a content
+   change.
+3. Verified end to end: merging `dist/srd52_full.json` then `dist/homebrew_full.json` leaves only
+   Cause Fear and Primal Savagery missing, both reported under "Xanathar's Guide to Everything" with
+   no file to point at.
+4. Tests: `src/tests/data-archive.js`'s `'dataStatus reads data versions'` section gains the Review
+   Focus 1 checks (a pack with a version and no baseline is `"known"`, shown quietly, raises no
+   newer-data notice; a pack with neither version nor baseline stays `"unknown"` and renders nothing).
+   `src/tests/rules-data.js` gains a check that all three homebrew files declare the new `requires`
+   values, and a real-bundle merge check (srd52 + homebrew) proving the resolution above. The existing
+   `#84 R7` check that resolves homebrew's D&D group against the SRD vocabulary matched it by
+   `/5e2024/.test(file)` or `/2024/.test(pack)` — true of "D&D 2024"/"5e2024_full.json", false of
+   "SRD 5.2"/"srd52_full.json" — so it would have silently stopped finding the group and failed;
+   updated to match `file==="srd52_full.json"` or `pack==="SRD 5.2"`.
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md), [homebrew](../wiki/data/homebrew.md)
+
+## The private data split and the data kit (#85, 2026-10-09)
+
+Spec `src/docs/specs/2026-10-09-private-split-design.md`, plan `src/docs/plans/2026-10-09-private-split.md`,
+commits `f5e491a..c043f2f` and this entry's. Part 3 of #82, which closes with it. The three #85
+entries above record steps of this one; this entry records the whole and every ruling made on the way.
+
+1. **What is public and what is private.** The public repo and its releases carry only rules data
+   that may be shared: SRD 5.2 (`data/srd52/`, CC-BY-4.0) and homebrew (`data/homebrew/`,
+   CC-BY-SA-3.0). The full 2024 pack (XPHB), Xanathar's (XGE), Tasha's (TCE) and Humblewood moved to
+   the private repo `wardmanm/RPGFieldbookPrivate`, with the Humblewood extractor, its PDF suite
+   (`humblewood-verbatim`), the playtest notes and the Humblewood wiki page (now its
+   `docs/humblewood.md`). One removal commit, `c043f2f`, deleted those 37 files and dropped the four
+   entries from `data/packs.json`, after `diff -r` proved the private copies identical. What stays
+   public: `scripts/convert.py` with its `all` and `supplement` code (the converter is ours, and its
+   prose is now too), `data/overlay.json`, `data/class-resources.json`, the icon map, `data/srd52/`,
+   `data/homebrew/`, `scripts/srd-corrections.json`, `scripts/srd_text.py` and the kit. Packs a player
+   has already loaded keep working: nothing in the app changed for them except the quiet chip
+   (point 6).
+2. **The private repo** mirrors the public paths: `data/<dir>/`, its own `data/packs.json` (the four
+   entries, with versions and digests carried over unedited), `scripts/extract-humblewood.py`,
+   `tests/`, `docs/`, a README and two workflows. It was made by `git filter-repo` over the moving
+   paths, on a fresh clone of this branch, so the data keeps its history and blame (40 filtered
+   commits, no tags, `origin` set and never pushed by an agent). Its `tests/run.sh` takes a public checkout as
+   `$FIELDBOOK`, bundles the private packs with the public kit and runs five suites:
+   `leak-scan-self-test`, `private-data` (the four packs' content checks, moved out of the public
+   suites, on the public harness), `leak-scan`, `2024-gate` (the byte gate, when the dump is there)
+   and `humblewood-verbatim` (when PyMuPDF and the PDFs are). Its CI checks out public `main` beside
+   it, builds it and runs `tests/run.sh`, on every push and nightly, so a leak that lands on public
+   `main` is caught within a day even when the private repo is idle. **Private data releases** are
+   data-only releases in the existing scheme: `node scripts/data-release.js --registry
+   <P>/data/packs.json --data-root <P>/data` bumps the changed private packs to `<APP_VERSION>-N` and
+   prints the commit and `data-vX.Y.Z-N` tag commands for the private repo; its `data-release.yml`
+   builds the public app at `vX.Y.Z`, runs the private suites, and publishes
+   `fieldbook-data-private-X.Y.Z-N.zip` on the private repo only, validated without `--public`.
+   XPHB and XGE have changed since 1.7.2, so the first private release is `1.8.0-1`, after app
+   1.8.0. **The private CI fails until #85 is on public `main`**: it builds public `main`, whose kit
+   has no `bundle` before this merge.
+3. **`_private-data` and `wt.sh`.** The private clone is reached through a gitignored symlink,
+   `_private-data`, with no trailing slash in `.gitignore` because git treats a symlink as a file.
+   `scripts/wt.sh` links it into each new worktree beside `.venv` and `_conversion-data`, and removes
+   the link on `rm`. `dev.sh`'s converter menu (item 6) writes SRD 5.2 to `data/srd52` and the 2024,
+   Xanathar's and Tasha's packs to `_private-data/data/…`, and refuses those three, with a message,
+   when `_private-data` is not linked. Humblewood extraction runs in the private repo.
+4. **The kit.** `fbdata.py bundle` replaced `scripts/bundle-rules.js` once a parity test had shown
+   all six real packs and 13 synthetic cases byte-identical under both bundlers (L5342); golden checks
+   replaced the parity test when the Node bundler was removed, and every build now needs python3.
+   `fbdata.py convert` runs `convert.py` with the kit's overlay, resources and (for `srd`)
+   corrections filled in, which also fixes the converter's helper lookup in the zip layout.
+   `fbdata.py build <src> [--srd | --full | --book CODE] -o OUT.zip` takes a 5e-tools dump (and
+   converts it), a data folder with its `packs.json`, or loose packs, then bundles, packs and
+   validates in one command; it never publishes. `fbdata.py validate --public` refuses a pack whose
+   licence is missing or not in `PUBLIC_LICENCES`. The kit zip, `fieldbook-data-kit-<ver>.zip`, is
+   flat and allowlisted (`pack_kit` in `build.sh`, its guard sorted in byte order so a runner's
+   locale cannot fail it), and the app zip no longer carries `scripts/` (L5352).
+5. **The release guards.** `release.yml`'s "Public assets only" step and `data-release.yml`'s
+   validation run `fbdata.py validate --public` on the rules-data archive and refuse any asset whose
+   name contains `private`; `release.yml` also refuses an app zip with such an entry. A local build
+   checks neither: only a publish has a public or private to refuse.
+6. **The quiet chip.** `dataStatus()` gains `known`: a pack with a readable version and no
+   baseline shows `vX` with the title "This pack's version.", never the amber chip or the newer-data
+   notice (L5388). This is what a v1.7.2 player with the old XPHB, Humblewood, XGE or TCE packs
+   loaded sees after upgrading. A ruling made while checking it: the pack row's chips wrap whole at
+   390 px (`.rd-name .chip, .rd-name .rd-src` are `nowrap` and `inline-block`), since every public
+   player now sees homebrew's needs chip.
+7. **Homebrew `requires`.** The D&D group names `SRD 5.2` / `srd52_full.json`; the Xanathar's group
+   keeps its pack name and drops `file`, so its chip reads "from Xanathar's Guide to Everything"
+   (L5388).
+8. **The class one-liners.** `CLASS_BLURB` in `convert.py` is rewritten in Fieldbook's own words
+   (decision 1); the 2024 pack's `classes.json` descriptions were the only data that moved, and the
+   SRD pack writes no blurb, so the 12 corrections that blanked the old lines are gone (124 corrections
+   to 112) and `data/srd52` stayed byte-identical.
+9. **The text clean-up.** Shipped text lost its book quotes: the Bard sample in
+   `downloadRulesTemplates()`, README-converter's spell-save line and rules-schema's Wild Magic row
+   are now invented examples. `srd-corrections.json`'s `find` strings stay, allowlisted: the one
+   place public files quote the 2024 book on purpose, for Mike to confirm. Dev files were redacted in
+   place (decision 2): the ammunition plan's 19 pasted entries became `[5e-tools entry: <name>]`, and
+   short quotes in this ledger and the wiki became paraphrases or `[book text: …]` placeholders, the
+   ledger keeping its 5424 lines and every heading's line (a one-time exception to append-only). The
+   shipped changelog's 10-word footnote stays (decision 3). `src/tests/converter.py`'s book-prose
+   inputs became invented text of the same shape, with the same assertions (466 checks before and
+   after, mutation sweeps at parity); the review found two input shapes the rewrite had stopped
+   exercising, the "while wearing" clause and a bare-comma list of saves, and both were restored.
+   `_sub_blurb()`'s docstring example is invented too.
+10. **The test split.** Public suites test the public packs and invented fixtures, and pass with no
+    private data present. `rules-data.js` went from 839 checks to 677 and `tables.js` from 191 to 148;
+    `sheet.js` and `char-update.js` kept their counts, each check repointed at the SRD entry (Staff of
+    Power, Dragon Scale Mail, the core classes) or at an invented fixture (a Moon Sickle, a class with
+    two subclasses). The four packs' assertions moved to the private `tests/private-data.js` (712
+    checks through the public suite today). `humblewood-verbatim` left `run.sh` and the new
+    `private-data` suite took its slot, so the count stays ten: it runs `_private-data/tests/run.sh`
+    against this checkout, prints `SKIP - no _private-data` without the link, and fails unless the
+    runner exits 0 with `ALL PASSED (n)` as its last line. `docs.js` gains a scan that fails on any
+    public test reading a private pack, in every form a suite used to (a path, a bundle name, a helper
+    given the folder, a list of folders, a key), and its emblem check walks `homebrew` and `srd52`.
+11. **The leak scan.** The private `tests/leak-scan.py` reads every string of the four private packs
+    and of `data/srd52/` and `data/homebrew/`, then every file git tracks in the public checkout plus
+    `dist/fieldbook.html`, and finds runs of words a file shares with the private text and not with
+    the free text. All three are normalised by one function (escapes undone, tags and anchors
+    stripped, lower-cased, an apostrophe counted only inside a word), so text in a single-quoted or
+    escaped string is seen whole: the first tokeniser glued quote marks to words and missed a
+    planted 40-word passage split across quoted lines, and was fixed before the scan was trusted.
+    A run of 14 words or more fails, a run of 10 to 13 is reported, a missing pack folder fails, and
+    an allowlist entry that matches nothing fails, so an entry goes when its run does. An entry is
+    `{file, hash, why}` (the first 16 hex of the sha256 of the run's words), never the text, added
+    by review one run at a time, and its `why` must be one of four reasons, exactly: (a) a span an SRD
+    correction must find (R8); (b) the changelog footnote (decision 3), listed in case it ever grows
+    past 10 words; (c) Fieldbook's own text that `convert.py` writes into the packs
+    (`FIGHTING_STYLES`, `CLASS_BLURB`, the edition notes, `overlay.json` prose, wherever quoted); (d)
+    the SRD's own text, which the SRD can split across two strings that a private pack keeps in one.
+    Today: 46 entries covering 61 runs, (a) 30, (c) 15, (d) 1; 0 failing, 0 stale, 33 reported.
+12. **The spec's decisions and rulings, as executed.**
+    - Decision 1: the class one-liners are rewritten (point 8). Decision 2: public dev files are
+      redacted in place (point 9). Decision 3: the changelog footnote stays. Decision 4: no release
+      of any kind until Mike says; 1.8.0 holds more issues.
+    - R1: the private repo holds the data before public `main` loses it, and the removal is one
+      commit carrying everything that depended on the data. The private repo is still unpushed, so
+      its first push comes before the merge; old release assets are deleted last.
+    - R2: the private repo mirrors the public paths. R3: the public registry drops the four packs in
+      the removal commit, so no installed app is told of an update it can never get.
+    - R4: private releases are data-only releases, `X.Y.Z-N`, asset
+      `fieldbook-data-private-<ver>.zip`. R5: the quiet chip. R6: `CLASS_BLURB` rewritten, SRD mode
+      writes none, the blanking corrections removed. R7: shipped text uses invented examples. R8:
+      the SRD correction spans stay, allowlisted (for Mike to confirm).
+    - R9: the leak scan lives in the private repo. R10: public tests keep their logic and lose
+      their book content. R11: the bundler moved to Python behind a parity test. R12: the kit is one
+      flat zip, and the app zip drops `scripts/`. R13: public releases carry only allowlisted
+      licences and no `private` asset. R14: homebrew's `requires`. R15: the private repo was made
+      by `git filter-repo`. R16: `_private-data`, linked by `wt.sh`.
+    - **Ruling, import order (#84 RF5 removed).** RF5's check that the registry lists SRD 5.2 after
+      XPHB is gone: the two packs now come from two archives, so neither registry can order them.
+      Which same-named entry or table wins is now the order the player imported them in, since a
+      lookup takes the first match and a re-import keeps its place in the pool. Mike should import
+      the private archive first on a fresh install, or keep his existing loads. A fresh install that
+      imports public then private resolves same-named tables to the SRD copy.
+    - **Ruling, `LEFT_FOR_PRIVATE`.** `docs.js` lets `DATA_VERSIONS` name XPHB, Humblewood, XGE and
+      TCE with no pack in the public registry, until the next release retakes `DATA_VERSIONS` from the
+      pruned registry; then the tolerance goes inert, and should be deleted. A tripwire that failed
+      once it was inert was rejected: it would fail CI at the release itself.
+    - **Ruling, the filter-repo history.** `git filter-repo`'s rewrite of the #73 merge (`1c3aa49`)
+      took the private repo's `data/xanathars/tables.json` from the merge's first parent, so that
+      file lacks its 17 footnotes across `1c3aa49..e8f8582`; `c0b0e64` restores them, and the tip is
+      exact. Left as it is and documented in the private README; a rebuild before the first push is
+      cheap if Mike wants exact blame on that file.
+    - **Ruling, homebrew masking.** The scan's free corpus includes homebrew, as R9 says, so text
+      homebrew shares with a private pack is never flagged (The Predator's stock expanded-spell
+      sentence is one such run). Left as R9 has it; Mike's call.
+    - **Ruling, the main checkout's link.** Only this worktree is linked. The main checkout's
+      `/Users/mwardman/Documents/Repos/RPGFieldbook/_private-data` is made at the finish, after the
+      merge brings the `.gitignore` line; before that it would show as untracked there.
+    - Smaller rulings: CLAUDE.md and the docs say every build needs python3 (the plan had missed
+      CLAUDE.md); the bundler's `_same()` normalises integers as the rest does; homebrew's
+      Xanathar's-group cross-check, deleted in the test split, was re-homed in the private suite;
+      two pre-fix screenshots were deleted rather than re-shot.
+    - Still for Mike: the default system for new characters is `"humblewood"` (`blankChar()`), with
+      no public Humblewood data (spec §13); and R8's allowlisted correction spans.
+
+Pages: [private data](../wiki/data/private-data.md), [data kit](../wiki/data/data-kit.md),
+[overview](../wiki/overview.md), [decisions](../wiki/decisions.md), [converter](../wiki/data/converter.md),
+[supplements](../wiki/data/supplements.md), [homebrew](../wiki/data/homebrew.md), [SRD 5.2](../wiki/data/srd.md),
+[rules packs](../wiki/architecture/rules-packs.md), [data archive](../wiki/architecture/data-archive.md),
+[rich text](../wiki/architecture/rich-text.md), [settings & updates](../wiki/features/settings-and-updates.md),
+[ammunition](../wiki/features/ammunition.md), [character building](../wiki/features/character-building.md),
+[theming & icons](../wiki/ui/theming-and-icons.md), [building & CI](../wiki/process/building-and-ci.md),
+[testing](../wiki/process/testing.md), [known issues](../wiki/roadmap/known-issues.md),
+[2.0](../wiki/roadmap/2.0.md), [RELEASING](../RELEASING.md).
+
+## The private split's final review fixes (#85, 2026-10-09)
+
+The whole-branch review passed "with fixes"; these are the fixes ruled in.
+
+1. **The finish order.** The private CI checks out public `main`, which has no `fbdata.py bundle`
+   until #85 merges. So the finish pushes the private repo first (its push-triggered run is
+   expected to fail), merges and pushes public `main`, then runs the private CI by hand and
+   confirms it green. R1 still holds: the private repo has the data before public `main` loses it.
+   The spec's §11 list is corrected, and says so; the plan, the private-data page and RELEASING
+   agree.
+2. **CI runs the kit-zip checks.** `data-kit.py` tests the built kit zip (unzipped, it builds the
+   example pack and finds its own `convert.py`) only when one exists, and `ci.yml` and `release.yml`
+   both test before they build. Each now re-runs `data-kit.py` after the full build, and fails
+   unless those checks ran and passed.
+3. **The app zip's guard bans `scripts/`**, since the kit carries the converter; `docs.js` checks
+   that the guard's pattern bans it and still lets the shipped files through.
+4. **`fbdata.py convert` keeps a caller's `--overlay=PATH`** (and `--resources=`, `--corrections=`):
+   it tested only for the bare flag, appended the kit's after it, and argparse keeps the last.
+5. **`fbdata.py build` at a 5e-tools checkout's root** now says to point it at the `data/` folder,
+   instead of "not a rules pack".
+6. **The leak scan reads new untracked files too** (`git ls-files --cached --others
+   --exclude-standard`), so a local run sees a file before it is committed. Ignored paths stay
+   out, and CI's fresh checkout scans the same set as before.
+7. **Less book text below the scanner's threshold.** A `sheet.js` fixture's near-quote is invented
+   text now, and three short Humblewood fragments in this ledger (lines 2550 to 2561) are
+   `[book text: …]` markers, edited in place with the line count and every heading's line unchanged
+   (decision 2's one-time exception).
+8. Docs: the quiet-chip player note no longer promises a version for a pack of your own (a
+   kit-built pack carries none); the private README says `private-data` is one of the ten suites;
+   the private repo's moved Humblewood pages link within that repo and run from it.
+
+Pages: [private data](../wiki/data/private-data.md), [data kit](../wiki/data/data-kit.md),
+[building & CI](../wiki/process/building-and-ci.md), [testing](../wiki/process/testing.md),
+[RELEASING](../RELEASING.md).

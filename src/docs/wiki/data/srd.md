@@ -4,8 +4,9 @@
 Coast publishes free under Creative Commons in the System Reference Document. It is built by
 `convert.py srd` from the same 5e-tools dump as the 2024 pack, its text is matched to the official
 SRD 5.2.1 PDF, and it carries the attribution the licence asks for. It is a system of its own, read
-as D&D, so a new player can make a D&D character with nothing else loaded. In #85, when the
-copyrighted packs leave the public repo, it becomes the D&D content every player gets.
+as D&D, so a new player can make a D&D character with nothing else loaded. Since #85 moved the
+copyrighted packs to the private repo ([Private data](private-data.md)), it is the only D&D pack
+this repo ships: the D&D content every player gets.
 
 **Code:** `srd_view()`, `srd_book()`, `_srd_flag()`, `_srd_tag_renamer()`, `_run_core()`,
 `_run_srd()`, `_srd_post()`, `_srd_apply_corrections()`, `_srd_targets()`, `_srd_sub()`,
@@ -16,7 +17,7 @@ copyrighted packs leave the public repo, it becomes the D&D content every player
 (gitignored) · **Tests:** `converter.py`, `rules-data.js`, `tables.js`, `srd-verbatim.py`, `data-kit.py`,
 `docs.js` (the README and README-converter credit, the zip's corrections file) · **See also:** [Converter](converter.md),
 [Rules packs](../architecture/rules-packs.md), [Data archive](../architecture/data-archive.md),
-[Homebrew](homebrew.md), [Humblewood](humblewood.md) (the other verbatim check), [Testing](../process/testing.md),
+[Homebrew](homebrew.md), Humblewood (the private repo's `docs/humblewood.md`, the other verbatim check), [Testing](../process/testing.md),
 [the spec](../../specs/2026-10-08-srd-pack-design.md)
 
 ## How it works
@@ -99,9 +100,11 @@ python3 scripts/convert.py srd _conversion-data/5etools-v2.36.1 -o data/srd52
    as `src/tests/fixtures/srd-excluded-names.json`, because the data tests need them and CI has no
    dump.
 
-A player can run it too: the app zip ships `scripts/srd-corrections.json` beside `convert.py`, and
-[README-converter](../../../../docs/README-converter.md) gives the command, which from the zip also
-names `--overlay` and `--resources`. The pack in the rules-data zip is still the one to use.
+A player can run it too: the [data kit](data-kit.md) zip ships `srd-corrections.json` beside
+`convert.py`, `python fbdata.py build <dump> -o srd.zip` runs it with every helper file and packs
+the result, and [README-converter](../../../../docs/README-converter.md) gives the plain `convert.py`
+command, which from the kit also names `--overlay` and `--resources`. The pack in the rules-data
+zip is still the one to use.
 
 **Matching the PDF.** `scripts/srd-corrections.json` is hand-authored, a converter input beside
 `overlay.json`, never a pack. `_srd_apply_corrections()` applies, in order:
@@ -167,11 +170,13 @@ list). Today: ALL PASSED, 1561 records.
 `racesForCharacter()` offers a D&D character the nine SRD species and a Humblewood character none.
 `excludeSystems` says the same to an older app that doesn't know the label. Everything else in the
 pack is offered to every character, as any pack's is. With the 2024 pack also loaded, same-named
-entries show both sources ("Fireball (SRD 5.2)", through `dispName()`), as any duplicate does. The
-registry lists SRD 5.2 after XPHB, so the archive, and an import of it, loads the 2024 pack first,
-and existing characters keep resolving to it. Tables are looked up by name across every pack
-(`findTable()`): the two packs share 68 table names, 59 of them word for word, and the first loaded
-wins (see [Rules packs](../architecture/rules-packs.md)).
+entries show both sources ("Fireball (SRD 5.2)", through `dispName()`), as any duplicate does.
+The two packs come from separate archives since #85, the public one and the private one, so the
+order the player imported them in decides which a name lookup finds first; a re-import keeps a
+pack's place, so a player who loaded the 2024 pack before SRD 5.2 keeps resolving to it. Tables are
+looked up by name across every pack (`findTable()`): the two packs share 68 table names, 59 of them
+word for word, and the first loaded wins (see [Rules packs](../architecture/rules-packs.md),
+[Private data](private-data.md)).
 
 ## Rules that must hold
 
@@ -215,8 +220,8 @@ wins (see [Rules packs](../architecture/rules-packs.md)).
 | How the SRD pack is selected | An SRD view of the dump (`srd_view()`), run through the 2024 pipeline unchanged (`_run_core()`) (R1) | An SRD branch at each of the converter's 20 selection sites: threading a mode through all of them risks the 2024 pack at every one. A prototype of the view reproduced every entry the two packs share byte for byte |
 | Which SRD revision the text and attribution target | SRD 5.2.1, the current one; the system label stays "SRD 5.2" (R2) | SRD 5.2: what Wizards published first, now superseded. The stray-name passages read the same in both |
 | Whose wording the pack ships | The PDF's: every difference corrected or accepted in `srd-corrections.json`, checked by `srd-verbatim` (R3, decision 3) | 5e-tools' text as it stands: where it differs from the SRD it is the 2024 books' wording, which CC-BY-4.0 does not cover |
-| Two packs sharing a table name (R5) | Allowed for byte-identical twins and for the nine pinned SRD/2024 pairs that differ; any other same-named pair, or a change to the nine, fails `rules-data.js` | Renaming the SRD's copies: breaks the anchors in its prose and departs from the PDF's names. Identical twins only (the spec's R5): the SRD's own wording differs in 9 of the 68 shared tables. Any SRD/2024 pair (the plan's widening): a new difference, from a 5e-tools update say, would pass without a word |
-| A missing corrections file (#84) | An error: exit 1, nothing written, the path named; the app zip ships the file beside `convert.py` | No corrections (the plan's ruling): the run succeeded with 5e-tools' wording, and with the file missing from the zip, every player's own run did |
+| Two packs sharing a table name (R5) | Allowed for byte-identical twins and for the nine pinned SRD/2024 pairs that differ; any other same-named pair, or a change to the nine, fails the check, in the private suite since #85 (the only one holding both packs) | Renaming the SRD's copies: breaks the anchors in its prose and departs from the PDF's names. Identical twins only (the spec's R5): the SRD's own wording differs in 9 of the 68 shared tables. Any SRD/2024 pair (the plan's widening): a new difference, from a 5e-tools update say, would pass without a word |
+| A missing corrections file (#84) | An error: exit 1, nothing written, the path named; the kit zip ships the file beside `convert.py` (the app zip did until #85) | No corrections (the plan's ruling): the run succeeded with 5e-tools' wording, and with the file missing from the zip, every player's own run did |
 
 ## Open
 
@@ -227,14 +232,13 @@ wins (see [Rules packs](../architecture/rules-packs.md)).
   Potion and Ring rows accepted, Horn of Valhalla's row saying "Berserkers" beside the corrected
   "spirits", Spell Scroll stating its DC two ways).
 - **A reordering of SRD words is not caught.** A span passes if it appears anywhere in the SRD.
-- **With both packs loaded, the 2024 twin of a shared table wins** (in archive order), so the SRD's
-  corrected Reincarnate, Deck of Illusions and Object Armor Class tables are shadowed. See
-  [Known issues](../roadmap/known-issues.md).
+- **With both packs loaded, the twin of a shared table from the pack imported first wins**, so with
+  the 2024 pack loaded first the SRD's corrected Reincarnate, Deck of Illusions and Object Armor
+  Class tables are shadowed. See [Known issues](../roadmap/known-issues.md).
 - No version until 1.8.0 gives it one (`version: null`), so the bundle carries no `dataVersion` yet.
-- Homebrew's `requires` still names `5e2024_full.json` for its D&D group, though every name in it
-  resolves with SRD 5.2 alone; #85 repoints it.
 
 ## History
 
 - 2026-10-08 — The SRD 5.2 pack: `convert.py srd` over an SRD view of the dump, three rename layers, the leak scan, corrections matched to the SRD 5.2.1 PDF and `srd-verbatim`, the registry entry and credit, `systemOf()`. → ledger L5148, #84
 - 2026-10-08 — The final review's fixes: a missing corrections file fails the run and the app zip ships it; CI checks the committed pack carries its corrections; stale acceptances and aliases fail `srd-verbatim`; Carrying Capacity's correction is gone with the converter bug it covered (124 corrections, three shadowed tables); the nine differing twins are pinned; README-converter documents `srd`. → ledger L5269, #84
+- 2026-10-09 — The only public D&D pack; homebrew's D&D group points at it; with the 2024 pack in its own archive, import order decides which twin a lookup finds (#84's RF5 check removed). → ledger L5426, #85

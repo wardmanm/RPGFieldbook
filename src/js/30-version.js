@@ -4,7 +4,7 @@ const APP_VERSION="1.7.2";
    `system` field its pack carries. Owned by scripts/release.js, which bumps a
    system only when its data/<dir>/ actually changed since the previous tag —
    so the app can tell "you need the new app" from "you also need new data".
-   scripts/bundle-rules.js stamps each pack with its own value as `dataVersion`;
+   fbdata.py bundle stamps each pack with its own value as `dataVersion`;
    dataStatus() compares what a player loaded against these. Never hand-edit. */
 const DATA_VERSIONS={"XPHB":"1.7.2","Humblewood":"1.7.1","XGE":"1.7.2","TCE":"1.7.2","Homebrew":"1.5.0"};
 /* Set this to your GitHub "owner/repo" to enable the update badge. Leave "" to disable.

@@ -1111,17 +1111,17 @@ ck('...but still does emphasis and line breaks',
 ck('italic works in descriptions now', X.descHTML('*slanted*') === '<em>slanted</em>');
 ck('code works in descriptions now', X.descHTML('`typed`') === '<code>typed</code>');
 
-// The footnote asterisks that are ALREADY in the Humblewood data. A single *
+// A rules pack can use a literal `*` for its own footnote convention. A single *
 // must stay literal: this is why descHTML is bold-only and not noteInline.
-['You learn the divert power* spell.',
- 'you can cast cymatic sight* without material components',
- 'Spells marked with an asterisk (*) can be found in this book.'].forEach(s => {
+['You gain the Keen Senses* trait.',
+ 'you can use Keen Senses* without a free hand',
+ 'Traits marked with an asterisk (*) require a long rest to reset.'].forEach(s => {
   const out = X.descHTML(s);
   ck('a lone asterisk stays literal: ' + s.slice(0, 28),
      out.indexOf('*') > -1 && out.indexOf('<strong>') === -1 && out.indexOf('<em>') === -1, out);
 });
 ck('two lone asterisks in one string do not pair up',
-   X.descHTML('cast divert power* and cymatic sight* freely').indexOf('<em>') === -1);
+   X.descHTML('cast farsight* and trueshot* freely').indexOf('<em>') === -1);
 
 // escaping is highlight()'s job and must survive the bold pass
 ck('markup in the text is still escaped',
@@ -1422,7 +1422,7 @@ X.mergeRules({system: 'Probe', feats: [
   {name: 'Boon of Combat Prowess', description: 'Epic Boon · Prerequisite: Level 19+\nYou never miss.'},
   {name: 'Aerial Expert', description: 'Origin Feat (Prerequisite: Glide trait)\nYou glide well.'},
   {name: 'Dragon Fear', description: 'Prerequisite: Dragonborn\nYou can roar.'},
-  {name: 'Glide', description: 'You are more at home in the trees than on the ground.'},
+  {name: 'Glide', description: 'A probe feat that shares its name with a trait.'},
 ], features: [
   {name: 'Glide', description: 'You can glide when you fall.', source: 'Ancestry'},
   {name: 'Darkvision', description: 'You see in the dark.'},
@@ -2740,7 +2740,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
    bonus and an equipped item's effect are different things. The data was wrong. */
 {
   const pack = (dir, f) => JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', dir, f), 'utf8')).items;
-  const core = pack('5e2024', 'items.json'), magic = pack('5e2024', 'items-magic.json'), tce = pack('tashas', 'items-magic.json');
+  const core = pack('srd52', 'items.json'), magic = pack('srd52', 'items-magic.json');
   const def = (list, name) => list.find(x => x.name === name);
   const c = X.blankChar(); X.character = c;
   c.abilities.str = 10; c.abilities.dex = 16; c.level = 1;                    /* STR +0, DEX +3, PB +2 */
@@ -2761,12 +2761,12 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   dagger.equipped = false;
   ck('#74 unequipping the dagger changes no other row',
      X.attackNumbers(row('Club')).toHit === 2 && X.attackNumbers(row('Fire Bolt')).toHit === 2);
-  /* Tasha's: a STR weapon, so the +3 reads on its own */
+  /* the Dwarven Thrower: a STR weapon, so the +3 reads on its own */
   const c2 = X.blankChar(); X.character = c2;
   c2.abilities.str = 10; c2.abilities.dex = 10; c2.level = 1;
-  X.addLibraryItems([def(tce, '+3 Moon Sickle'), def(core, 'Club')], null, null, 1);
-  n = X.attackNumbers(c2.attacks.find(a => a.name === '+3 Moon Sickle'));
-  ck('#74 Tasha\'s +3 Moon Sickle: PB 2 + 3 = +5 to hit, +3 damage', n.toHit === 5 && n.dmgBonus === 3, n);
+  X.addLibraryItems([def(magic, 'Dwarven Thrower'), def(core, 'Club')], null, null, 1);
+  n = X.attackNumbers(c2.attacks.find(a => a.name === 'Dwarven Thrower'));
+  ck('#74 the Dwarven Thrower: PB 2 + 3 = +5 to hit, +3 damage', n.toHit === 5 && n.dmgBonus === 3, n);
   n = X.attackNumbers(c2.attacks.find(a => a.name === 'Club'));
   ck('#74 ...and its Club stays at +2', n.toHit === 2 && n.dmgBonus === 0, n);
   X.character = X.blankChar();
@@ -2778,7 +2778,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
    attackNumbers() already reads "finesse" the same way for any kind; the row's
    kind stays ranged, so a ranged-only effect (Archery) still applies. */
 {
-  const core = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', '5e2024', 'items.json'), 'utf8')).items;
+  const core = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', 'srd52', 'items.json'), 'utf8')).items;
   const dartDef = core.find(x => x.name === 'Dart');
   const withDart = (str, dex) => {
     const c = X.blankChar(); X.character = c;
@@ -2829,7 +2829,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
    only; its ordinary +2 as a shield still counts. The Cloak of Protection is the
    control: its +1 is standing and still applies. */
 {
-  const magic = shippedItems('5e2024', 'items-magic.json');
+  const magic = shippedItems('srd52', 'items-magic.json');
   const def = name => magic.find(x => x.name === name);
   const fresh = () => { const c = X.blankChar(); X.character = c; c.abilities.dex = 14; c.level = 1; return c; };  /* 10 + DEX 2 */
   let c = fresh();
@@ -2867,17 +2867,29 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
 
 /* ---- an item's spell attack and spell save DC bonus reach every number that shows them (#77) ----
    The packs never read 5e-tools' bonusSpellAttack / bonusSpellSaveDc, and the
-   app had no effect target for either, so an equipped Staff of Power or Moon
-   Sickle changed nothing a caster looks at. Now they are `spell.attack` and
-   `spell.dc` effects, read by spellAtkBonus()/spellDC() and so by the
-   Spellcasting card, spell attack rows, save rows, the cast dialog and the
-   breakdowns, and by nothing else: a weapon's row does not take them. The
-   SHIPPED items, added through the finder. A caster with the ability at 16
+   app had no effect target for either, so an equipped Staff of Power changed
+   nothing a caster looks at. Now they are `spell.attack` and `spell.dc`
+   effects, read by spellAtkBonus()/spellDC() and so by the Spellcasting card,
+   spell attack rows, save rows, the cast dialog and the breakdowns, and by
+   nothing else: a weapon's row does not take them. The SHIPPED items, and two
+   invented ones, added through the finder. A caster with the ability at 16
    (+3) at level 1 (PB 2): DC 13, spell attack +5. */
 {
-  const magic = shippedItems('5e2024', 'items-magic.json'), tce = shippedItems('tashas', 'items-magic.json');
-  const core = shippedItems('5e2024', 'items.json');
+  const magic = shippedItems('srd52', 'items-magic.json');
+  const core = shippedItems('srd52', 'items.json');
   const def = (list, name) => list.find(x => x.name === name);
+  /* No SRD 5.2 item raises both numbers by the same amount, or the DC alone, so
+     these two are invented: a +3 weapon that raises spell attack and DC alike,
+     and a focus that raises the DC only. */
+  const inv = [
+    {name: '+3 Ember Sickle', system: 'Fixture', category: 'Weapon', type: 'Simple Melee Weapon', rarity: 'Very Rare',
+     weight: 2, attune: true, description: 'An invented sickle that sharpens the spells of whoever wields it.',
+     effects: [{target: 'spell.attack', value: 3}, {target: 'spell.dc', value: 3}],
+     weapon: {kind: 'melee', dice: '1d4', damageType: 'slashing', ability: 'str', notes: 'Light', atkMisc: 3, dmgMisc: 3}},
+    {name: 'Chime of Clear Notes', system: 'Fixture', category: 'Wondrous Item', type: 'Wondrous Item', rarity: 'Rare',
+     attune: true, description: 'An invented chime that makes its bearer\'s spells harder to shrug off.',
+     effects: [{target: 'spell.dc', value: 2}]},
+  ];
   const fresh = ab => { const c = X.blankChar(); X.character = c; c.level = 1; c.abilities[ab] = 16; c.spellAbility = ab; return c; };
   const T = X.fxTargets().map(([l, t]) => t);
   ck('#77 the effect editor offers Spell attack and Spell save DC',
@@ -2913,15 +2925,15 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   p = painted(['dcDisp', 'satkDisp']);
   ck('#77 unequipped, the card is back to +5', p.satkDisp === '+5' && X.attackNumbers(c.attacks.find(a => a.name === 'Fire Bolt')).toHit === 5, p);
 
-  /* Tasha's +3 Moon Sickle for a druid: spell attack AND DC. Its limit to
-     "your druid and ranger spells" is the item's attunement; the sheet has one
-     spellcasting ability, so the bonus goes on it. */
+  /* A +3 weapon for a druid that raises spell attack AND DC. A real one names
+     the classes it serves; the sheet has one spellcasting ability, so the bonus
+     goes on it. */
   c = fresh('wis');
   c.attacks.push({id: 'sf', name: 'Sacred Flame', spellId: 's2', source: 'spell', save: {ability: 'dex'},
                   damageDice: '1d8', damageType: 'radiant', notes: ''});
-  X.addLibraryItems([def(tce, '+3 Moon Sickle')], null, null, 1);
+  X.addLibraryItems([def(inv, '+3 Ember Sickle')], null, null, 1);
   p = painted(['dcDisp', 'satkDisp']);
-  ck('#77 a +3 Moon Sickle: DC 16 and spell attack +8, both marked',
+  ck('#77 a +3 Ember Sickle: DC 16 and spell attack +8, both marked',
      p.dcDisp === '16' && p.satkDisp === '+8' && painted.fx.dcDisp && painted.fx.satkDisp, [p, painted.fx]);
   m = shownModal(() => X.promptSpellAttack({id: 's2', name: 'Sacred Flame', level: 0, atkType: 'save', saveAbility: 'dex',
                                             dice: '1d8', damageType: 'radiant'}, 0));
@@ -2938,16 +2950,16 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
        /<span class="atk-hit fx-on">DC 16 DEX<\/span>/.test(sf), sf.slice(0, 600));
   }
   m = shownModal(() => X.openStatBreakdown('spell.dc'));
-  ck('#77 ...and tapping the DC names the sickle', m.t === 'Spell save DC breakdown' && /\+3 Moon Sickle<\/span><b>\+3</.test(m.b), m);
-  n = X.attackNumbers(c.attacks.find(a => a.name === '+3 Moon Sickle'));
+  ck('#77 ...and tapping the DC names the sickle', m.t === 'Spell save DC breakdown' && /\+3 Ember Sickle<\/span><b>\+3</.test(m.b), m);
+  n = X.attackNumbers(c.attacks.find(a => a.name === '+3 Ember Sickle'));
   ck('#77 ...while the sickle\'s own row is its weapon: PB 2 + 3 = +5 to hit, +3 damage', n.toHit === 5 && n.dmgBonus === 3, n);
 
-  /* Reveler's Concertina: the DC only, and not a weapon, so it is equipped by hand */
+  /* a focus that raises the DC only, and is not a weapon, so it is equipped by hand */
   c = fresh('cha');
-  X.addLibraryItems([def(tce, "Reveler's Concertina")], null, null, 1);
+  X.addLibraryItems([def(inv, 'Chime of Clear Notes')], null, null, 1);
   c.inventory[0].equipped = true;
   p = painted(['dcDisp', 'satkDisp']);
-  ck('#77 Reveler\'s Concertina: DC 15, spell attack still +5', p.dcDisp === '15' && p.satkDisp === '+5' && !painted.fx.satkDisp, [p, painted.fx]);
+  ck('#77 a Chime of Clear Notes: DC 15, spell attack still +5', p.dcDisp === '15' && p.satkDisp === '+5' && !painted.fx.satkDisp, [p, painted.fx]);
 
   /* no spellcasting ability: nothing to add to */
   c = fresh('int'); c.spellAbility = '';
@@ -2967,7 +2979,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
    which the stone raises through its own save.* effects. The SHIPPED items,
    added through the finder and worn by hand (neither is a weapon). */
 {
-  const magic = shippedItems('5e2024', 'items-magic.json'), core = shippedItems('5e2024', 'items.json');
+  const magic = shippedItems('srd52', 'items-magic.json'), core = shippedItems('srd52', 'items.json');
   const def = (list, name) => list.find(x => x.name === name);
   const SK = X.SKILLS.map(([k]) => 'skill-' + k), MODS = X.ABIL.map(([k]) => 'mod-' + k), SAVES = X.ABIL.map(([k]) => 'save-' + k);
   const IDS = SK.concat(MODS, SAVES, ['initDisp', 'passDisp', 'pbDisp', 'acDisp', 'dcDisp', 'satkDisp']);
@@ -3945,7 +3957,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
      insert does copy); with the effect gone, the dagger would have had no bonus
      at all. Driven through the form itself, with the real shipped entry. */
   {
-    const magic = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', '5e2024', 'items-magic.json'), 'utf8')).items;
+    const magic = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', 'srd52', 'items-magic.json'), 'utf8')).items;
     X.resetRules();
     X.mergeRules({system: 'XPHB', items: [magic.find(x => x.name === 'Dagger of Venom')]}, 'x.json');
     X.character = X.blankChar(); X.character.system = 'dnd';
@@ -3980,7 +3992,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
 
   /* ---- the item editor's ammunition fields (#8), driven through the form ---- */
   {
-    const items = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', '5e2024', 'items.json'), 'utf8')).items;
+    const items = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', 'srd52', 'items.json'), 'utf8')).items;
     X.resetRules();
     X.mergeRules({system: 'XPHB', items: items.filter(x => ['Arrow', 'Arrows (20)', 'Longbow'].includes(x.name))}, 'x.json');
     X.character = X.blankChar(); X.character.system = 'dnd';

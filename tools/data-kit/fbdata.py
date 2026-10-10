@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Fieldbook data kit: versions, digests and archives for rules packs (#83).
+"""Fieldbook data kit: versions, digests and archives for rules packs (#83, #85).
 
     fbdata.py digest   [--registry F] [--data-root D]
     fbdata.py versions (--changed | --check | --bump V | --seed) [--registry F] [--data-root D]
+    fbdata.py bundle   -o DIR [--registry F] [--data-root D]
     fbdata.py pack <bundles-dir> -o OUT.zip [--registry F] [--dev] [--built-for X.Y.Z]
-    fbdata.py validate OUT.zip
+    fbdata.py validate OUT.zip [--public]
+    fbdata.py convert <convert.py arguments...>
+    fbdata.py build <src> [--srd | --full | --book CODE] -o OUT.zip [--version V]
 
 Python 3.8+, standard library only. Exit status: 0 ok, 1 a check failed,
 2 bad input. Spec: src/docs/specs/2026-10-07-data-archive-design.md §4–§6.
@@ -14,12 +17,17 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import zipfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 DEFAULT_REGISTRY = os.path.join(ROOT, "data", "packs.json")
 DEFAULT_DATA_ROOT = os.path.join(ROOT, "data")
+KIT_DIR = os.path.dirname(os.path.abspath(__file__))
+PUBLIC_LICENCES = ("CC-BY-4.0", "CC-BY-SA-3.0", "MIT")
 
 # X.Y.Z is the data shipped with app X.Y.Z; X.Y.Z-N the Nth data-only release
 # after it. NOT semver: here 1.8.0 < 1.8.0-1 < 1.8.0-10 < 1.8.1 (spec §3.1).
@@ -296,8 +304,10 @@ def cmd_pack(a):
     return 0
 
 
-def validate_archive(path):
-    """Problems with an archive (spec §6.3), one line each; [] when it is sound."""
+def validate_archive(path, public=False):
+    """Problems with an archive (spec §6.3), one line each; [] when it is sound.
+    public=True also refuses a pack whose licence a public release may not
+    carry (R13) — missing or not one of PUBLIC_LICENCES."""
     try:
         z = zipfile.ZipFile(path)
     except (OSError, zipfile.BadZipFile) as e:
@@ -358,17 +368,370 @@ def validate_archive(path):
         extra = [n for n in names if n not in listed and n not in (MANIFEST, NOTICE)]
         if extra:
             errs.append("not in the manifest: " + ", ".join(extra))
+        if public:
+            for m in packs:
+                lic = m.get("license") if isinstance(m, dict) else None
+                if lic not in PUBLIC_LICENCES:
+                    errs.append("%s: licence %s is not one a public release may carry (%s)"
+                                % (m.get("file"), lic or "(none)", ", ".join(PUBLIC_LICENCES)))
     return errs
 
 
 def cmd_validate(a):
-    errs = validate_archive(a.zip)
+    errs = validate_archive(a.zip, public=a.public)
     for e in errs:
         print("%s: %s" % (a.zip, e), file=sys.stderr)
     if errs:
         return 1
     print("ok: %s" % a.zip)
     return 0
+
+
+# ---------- bundling (#85, R11)
+# Rules categories a bundle carries, in the order it writes them. Must stay in
+# step with RULE_CATS in src/js/88-settings.js; "traits" is read as "features".
+CATS = ("keywords", "features", "items", "spells", "races", "classes",
+        "feats", "backgrounds", "subclasses", "tables")
+# JavaScript's String.prototype.trim() set, so keys match the app's (and the
+# Node bundler's) exactly. Built with chr() — no escapes in this file.
+_JS_WS = "".join(map(chr, [9, 10, 11, 12, 13, 32, 0xA0, 0x1680] + list(range(0x2000, 0x200B))
+                     + [0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF]))
+_LONE = re.compile("[%s-%s]" % (chr(0xD800), chr(0xDFFF)))
+
+
+def _truthy(v):
+    """JavaScript truthiness: [] and {} are true; 0, "" and null are not."""
+    if v is None or v is False:
+        return False
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return v == v and v != 0
+    if isinstance(v, str):
+        return v != ""
+    return True
+
+
+def _num(v):
+    """String(n) for a finite number, as JavaScript writes it."""
+    if isinstance(v, float) and v.is_integer():
+        return str(int(v))
+    return repr(v) if isinstance(v, float) else str(v)
+
+
+def _name(v):
+    """String(v || "") for a name field. A name that is not text, a number or
+    true is nameless here; the Node bundler stringified it. No pack has one."""
+    if not _truthy(v):
+        return ""
+    if v is True:
+        return "true"
+    if isinstance(v, str):
+        return v
+    if isinstance(v, (int, float)):
+        return _num(v)
+    return ""
+
+
+def _key(entry, cat):
+    """subclasses key by class|name, keywords by term (or name when the term is
+    blank), everything else by name; "" is an entry the app skips at import."""
+    if not isinstance(entry, dict):
+        return ""
+    if cat == "keywords":
+        term = entry.get("term")
+        blank = term is None or (isinstance(term, str) and not term.strip(_JS_WS))
+        v = entry.get("name") if blank else term
+        s = v if isinstance(v, str) else (_num(v) if isinstance(v, (int, float)) and not isinstance(v, bool)
+                                          and v == v and v not in (float("inf"), float("-inf")) else "")
+        return s.strip(_JS_WS).lower()
+    if cat == "subclasses":
+        return (_name(entry.get("class")) + "|" + _name(entry.get("name"))).strip(_JS_WS).lower()
+    return _name(entry.get("name")).strip(_JS_WS).lower()
+
+
+def _same(a, b):
+    """JSON.stringify(a) === JSON.stringify(b): key order counts, but 5.0 == 5
+    as JSON.stringify sees it too — so compare through _ints() first."""
+    a, b = _ints(a), _ints(b)
+    return json.dumps(a, ensure_ascii=False, separators=(",", ":")) == json.dumps(b, ensure_ascii=False, separators=(",", ":"))
+
+
+def _ints(x):
+    """JSON.stringify writes 5.0 as 5"""
+    if isinstance(x, float) and x.is_integer():
+        return int(x)
+    if isinstance(x, list):
+        return [_ints(v) for v in x]
+    if isinstance(x, dict):
+        return {k: _ints(v) for k, v in x.items()}
+    return x
+
+
+def _refuse(tok):
+    raise ValueError("%s is not JSON" % tok)
+
+
+def bundle_text(obj):
+    """The bundle file's text: JSON.stringify(obj) + "\\n", byte for byte. Lone
+    surrogates are written as escapes, as JSON.stringify does."""
+    s = json.dumps(_ints(obj), ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+    return _LONE.sub(lambda m: chr(92) + "u%04x" % ord(m.group()), s) + "\n"
+
+
+def bundle(pack, data_root):
+    """One registered pack's folder rolled into one bundle object (spec #83 §4)."""
+    folder = os.path.join(data_root, pack["dir"])
+    shown = pack["dir"]
+    if not os.path.isdir(folder):
+        return {"skipped": "no data/%s/ directory" % shown}
+    files = sorted(f for f in os.listdir(folder) if f.endswith(".json"))
+    if not files:
+        return {"skipped": "data/%s/ has no .json files" % shown}
+    out, seen, errors, dupes, nameless = {}, {}, [], [], []
+    system, exclude, requires = "", None, None
+    for f in files:
+        try:
+            with open(os.path.join(folder, f), encoding="utf-8") as fh:
+                obj = json.loads(fh.read(), parse_constant=_refuse)
+        except (OSError, ValueError) as e:
+            errors.append("%s/%s: not valid JSON — %s" % (shown, f, e))
+            continue
+        if not isinstance(obj, dict):
+            errors.append("%s/%s: not a JSON object" % (shown, f))
+            continue
+        s = _name(obj.get("system")).strip(_JS_WS)
+        if s:
+            if not system:
+                system = s
+            elif s != system:
+                errors.append('%s/%s: system "%s" but the folder is "%s"' % (shown, f, s, system))
+        if isinstance(obj.get("excludeSystems"), list):
+            e = sorted(x for x in (_name(v) if not isinstance(v, (list, dict)) else "" for v in obj["excludeSystems"])
+                       for x in [x.strip(_JS_WS)] if x)
+            if exclude is None:
+                exclude = e
+            elif e != exclude:
+                errors.append("%s/%s: excludeSystems [%s] but the folder declares [%s]"
+                              % (shown, f, ",".join(e), ",".join(exclude)))
+        if isinstance(obj.get("requires"), list):
+            if requires is None:
+                requires = obj["requires"]
+            elif not _same(obj["requires"], requires):
+                errors.append("%s/%s: requires differs from the rest of the folder" % (shown, f))
+        for cat in CATS:
+            # JavaScript's obj.features || obj.traits: an empty features list is truthy
+            if cat == "features":
+                arr = obj.get("features") if _truthy(obj.get("features")) else obj.get("traits")
+            else:
+                arr = obj.get(cat)
+            if not isinstance(arr, list):
+                continue
+            out.setdefault(cat, [])
+            seen.setdefault(cat, {})
+            for e in arr:
+                k = _key(e, cat)
+                if not k:
+                    out[cat].append(e)
+                    nameless.append("%s in %s" % (cat, f))
+                    continue
+                prev = seen[cat].get(k)
+                if prev:
+                    out[cat][prev[0]] = e
+                    label = e.get("name") or e.get("term") or k
+                    dupes.append('%s "%s" (%s -> %s)' % (cat, label, prev[1], f))
+                    continue
+                seen[cat][k] = (len(out[cat]), f)
+                out[cat].append(e)
+    if errors:
+        return {"errors": errors}
+    if system and system != pack["system"]:
+        return {"errors": ['%s: its files say system "%s" but data/packs.json says "%s"' % (shown, system, pack["system"])]}
+    res = {"system": pack["system"], "name": pack["title"], "version": 1}
+    if pack.get("version"):
+        res["dataVersion"] = pack["version"]
+    res["rulebook"] = True
+    if pack.get("license"):
+        res["license"] = pack["license"]
+    if pack.get("attribution"):
+        res["attribution"] = pack["attribution"]
+    if exclude:
+        res["excludeSystems"] = exclude
+    if requires:
+        res["requires"] = requires
+    for cat in CATS:
+        if out.get(cat):
+            res[cat] = out[cat]
+    return {"obj": res, "files": len(files), "dupes": dupes, "nameless": nameless}
+
+
+def cmd_bundle(a):
+    reg = load_registry(a.registry)
+    os.makedirs(a.output, exist_ok=True)
+    failed = False
+    for p in reg["packs"]:
+        r = bundle(p, a.data_root)
+        if "skipped" in r:
+            print("    skipped %s — %s" % (p["file"], r["skipped"]))
+            continue
+        if "errors" in r:
+            failed = True
+            print("    FAILED %s:" % p["file"], file=sys.stderr)
+            for e in r["errors"]:
+                print("      - " + e, file=sys.stderr)
+            continue
+        dest = os.path.join(a.output, p["file"])
+        text = bundle_text(r["obj"])
+        tmp = dest + ".tmp"
+        with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(text)
+        os.replace(tmp, dest)
+        counts = ["%d %s" % (len(r["obj"][c]), c) for c in CATS if c in r["obj"]]
+        print("    %s  (%d files, %d KB)" % (os.path.relpath(dest), r["files"], round(len(text.encode("utf-8")) / 1024)))
+        print("      " + " · ".join(counts))
+        if r["dupes"]:
+            print("      deduped %d: %s" % (len(r["dupes"]), ", ".join(r["dupes"])))
+        if r["nameless"]:
+            print("      %d with no name, which the app will skip: %s" % (len(r["nameless"]), ", ".join(r["nameless"])))
+    return 1 if failed else 0
+
+
+# ---------- convert / build: the kit's user-facing commands (#85, R12)
+# What `build` writes for each kind of conversion: the registry entry its pack gets.
+SRD_PACK = {"system": "SRD 5.2", "dir": "srd52", "file": "srd52_full.json",
+            "title": "SRD 5.2 — System Reference Document", "license": "CC-BY-4.0",
+            "attribution": ("This work includes material from the System Reference Document 5.2.1 "
+                            "(\"SRD 5.2.1\") by Wizards of the Coast LLC, available at "
+                            "https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative "
+                            "Commons Attribution 4.0 International License, available at "
+                            "https://creativecommons.org/licenses/by/4.0/legalcode. Changed: converted to "
+                            "Fieldbook's rules format, with renamed entries' references updated.")}
+FULL_PACK = {"system": "XPHB", "dir": "5e2024", "file": "5e2024_full.json",
+             "title": "D&D 2024 (built from your 5e-tools data)"}
+BOOK_PACKS = {"XGE": {"system": "XGE", "dir": "xanathars", "file": "xanathars_full.json",
+                      "title": "Xanathar's Guide (built from your 5e-tools data)"},
+              "TCE": {"system": "TCE", "dir": "tashas", "file": "tashas_full.json",
+                      "title": "Tasha's Cauldron (built from your 5e-tools data)"}}
+
+
+def kit_file(name, repo_rel):
+    """A converter input: beside fbdata.py (the kit zip's flat layout), else in
+    the repo checkout this file lives in."""
+    for p in (os.path.join(KIT_DIR, name), os.path.join(ROOT, repo_rel)):
+        if os.path.isfile(p):
+            return p
+    raise KitError("can't find %s beside fbdata.py or at %s" % (name, repo_rel))
+
+
+def _given(args, flag):
+    """Whether the caller passed flag, as "--flag PATH" or "--flag=PATH"."""
+    return any(a == flag or a.startswith(flag + "=") for a in args)
+
+
+def _convert_argv(args):
+    """convert.py's command line with the kit's overlay, resources and (for srd)
+    corrections filled in, unless the caller named their own. argparse keeps the
+    last of a repeated flag, so appending ours after a caller's --flag=PATH would
+    silently replace theirs."""
+    argv = [sys.executable, kit_file("convert.py", "scripts/convert.py")] + list(args)
+    if args and args[0] in ("all", "srd", "supplement"):
+        if not _given(args, "--overlay"):
+            argv += ["--overlay", kit_file("overlay.json", "data/overlay.json")]
+        if not _given(args, "--resources"):
+            argv += ["--resources", kit_file("class-resources.json", "data/class-resources.json")]
+        if args[0] == "srd" and not _given(args, "--corrections"):
+            argv += ["--corrections", kit_file("srd-corrections.json", "scripts/srd-corrections.json")]
+    return argv
+
+
+def cmd_convert(a):
+    return subprocess.run(_convert_argv(a.args)).returncode
+
+
+def _is_dump(src):
+    return os.path.isdir(os.path.join(src, "class")) or os.path.isdir(os.path.join(src, "spells"))
+
+
+def cmd_build(a):
+    src = os.path.abspath(a.src)
+    if not os.path.exists(src):
+        raise KitError("%s: no such file or folder" % a.src)
+    if os.path.isdir(src) and not _is_dump(src) and _is_dump(os.path.join(src, "data")):
+        raise KitError("%s looks like a 5e-tools checkout; point build at its data/ folder" % a.src)
+    if a.version is not None and not parse_data_ver(a.version):
+        raise KitError("--version %r is not X.Y.Z or X.Y.Z-N" % a.version)
+    work = tempfile.mkdtemp(prefix="fbdata-build-")
+    try:
+        data, dist = os.path.join(work, "data"), os.path.join(work, "dist")
+        os.makedirs(data)
+        os.makedirs(dist)
+        if os.path.isdir(src) and _is_dump(src):
+            if a.full:
+                entry, conv = dict(FULL_PACK), ["all", src]
+            elif a.book:
+                code = a.book.upper()
+                entry = dict(BOOK_PACKS.get(code) or {"system": code, "dir": code.lower(),
+                                                      "file": code.lower() + "_full.json", "title": code})
+                core = os.path.join(work, "core")
+                rc = subprocess.run(_convert_argv(["all", src, "-o", core])).returncode
+                if rc:
+                    return rc
+                conv = ["supplement", src, "--book", code, "--system", entry["system"],
+                        "--avoid-table-names", os.path.join(core, "tables.json")]
+            else:
+                entry, conv = dict(SRD_PACK), ["srd", src]
+                if a.corrections:
+                    conv += ["--corrections", a.corrections]
+            rc = subprocess.run(_convert_argv(conv + ["-o", os.path.join(data, entry["dir"])])).returncode
+            if rc:
+                return rc
+            reg = {"release": a.version or "0.0.0", "packs": [entry]}
+        elif os.path.isdir(src) and os.path.isfile(os.path.join(src, "packs.json")):
+            reg = load_registry(os.path.join(src, "packs.json"))
+            data = src
+        else:
+            files = [src] if os.path.isfile(src) else sorted(
+                os.path.join(src, f) for f in os.listdir(src) if f.endswith(".json"))
+            packs = []
+            for f in files:
+                try:
+                    with open(f, encoding="utf-8") as fh:
+                        obj = json.load(fh)
+                except ValueError as e:
+                    raise KitError("%s: not valid JSON — %s" % (f, e))
+                if not isinstance(obj, dict) or not str(obj.get("system") or "").strip():
+                    raise KitError("%s: not a rules pack (no system)" % f)
+                if obj.get("dataVersion") is not None:
+                    raise KitError("%s: carries dataVersion %r; build it from a registry instead"
+                                   % (f, obj.get("dataVersion")))
+                name = os.path.basename(f)
+                shutil.copy(f, os.path.join(dist, name))
+                packs.append({"system": obj["system"], "dir": "_", "file": name,
+                              "title": str(obj.get("name") or name), "license": obj.get("license"),
+                              "attribution": obj.get("attribution")})
+            reg = {"release": a.version or "0.0.0",
+                   "packs": [{k: v for k, v in p.items() if v} for p in packs]}
+        check_registry(reg, "build")
+        regpath = os.path.join(work, "packs.json")
+        write_registry(reg, regpath)
+        if data != src or os.path.isfile(os.path.join(src, "packs.json")):
+            for p in reg["packs"]:
+                if p["dir"] == "_":
+                    continue
+                r = bundle(p, data)
+                if "errors" in r:
+                    raise KitError("%s: %s" % (p["file"], "; ".join(r["errors"])))
+                if "obj" in r:
+                    with open(os.path.join(dist, p["file"]), "w", encoding="utf-8", newline="\n") as fh:
+                        fh.write(bundle_text(r["obj"]))
+        out = os.path.abspath(a.output)
+        rc = cmd_pack(argparse.Namespace(registry=regpath, bundles=dist, output=out, dev=False, built_for=app_version()))
+        if rc:
+            return rc
+        errs = validate_archive(out)
+        for e in errs:
+            print("%s: %s" % (out, e), file=sys.stderr)
+        return 1 if errs else 0
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 
 def main(argv=None):
@@ -390,6 +753,10 @@ def main(argv=None):
     g.add_argument("--bump", metavar="V", help="give changed packs version V; set release to V")
     g.add_argument("--seed", action="store_true", help="record every digest from --data-root")
     p.set_defaults(fn=cmd_versions)
+    p = sub.add_parser("bundle", help="roll each registered pack's folder into one importable file")
+    common(p)
+    p.add_argument("-o", "--output", required=True, help="the folder to write the bundles to (dist/)")
+    p.set_defaults(fn=cmd_bundle)
     p = sub.add_parser("pack", help="write the data archive from bundled packs")
     p.add_argument("bundles", help="the folder holding the bundles (dist/)")
     p.add_argument("-o", "--output", required=True, help="the .zip to write")
@@ -399,7 +766,22 @@ def main(argv=None):
     p.set_defaults(fn=cmd_pack)
     p = sub.add_parser("validate", help="check an archive; exit 1 with one line per problem")
     p.add_argument("zip")
+    p.add_argument("--public", action="store_true",
+                   help="also refuse a pack whose licence a public release may not carry")
     p.set_defaults(fn=cmd_validate)
+    p = sub.add_parser("convert", help="run convert.py with the kit's overlay, resources and corrections")
+    p.add_argument("args", nargs=argparse.REMAINDER)
+    p.set_defaults(fn=cmd_convert)
+    p = sub.add_parser("build", help="one command: convert or collect, bundle, pack, validate")
+    p.add_argument("src", help="a 5e-tools data folder, a folder with packs.json, a folder of packs, or one pack")
+    g = p.add_mutually_exclusive_group()
+    g.add_argument("--srd", action="store_true", help="the SRD 5.2 pack (the default for a 5e-tools folder)")
+    g.add_argument("--full", action="store_true", help="the full 2024 pack (only for your own use)")
+    g.add_argument("--book", metavar="CODE", help="one supplement, e.g. XGE or TCE (only for your own use)")
+    p.add_argument("--corrections", metavar="PATH", help="(--srd) another corrections file")
+    p.add_argument("--version", help="the archive's version when there is no registry (default 0.0.0)")
+    p.add_argument("-o", "--output", required=True)
+    p.set_defaults(fn=cmd_build)
     a = ap.parse_args(argv)
     if not getattr(a, "fn", None):
         ap.print_help()

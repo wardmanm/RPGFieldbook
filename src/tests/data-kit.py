@@ -160,7 +160,7 @@ ck("every released real pack has a digest",
 
 # ---------- the archive: pack and validate (spec §6)
 def bundles(d):
-    """bundles in d/dist matching d's registry, the way bundle-rules.js stamps them"""
+    """bundles in d/dist matching d's registry, the way fbdata.py bundle stamps them"""
     for p in read_json(d, "data/packs.json")["packs"]:
         b = {"system": p["system"], "name": p["title"], "version": 1, "rulebook": True,
              "spells": [{"name": "S-" + p["system"]}]}
@@ -356,11 +356,297 @@ r = node(d, "scripts/data-release-notes.js", "1.8.0-1", "--app")
 ck("app notes: the archive to download, and what changed",
    r.returncode == 0 and "fieldbook-data-standalone-1.8.0-1.zip" in r.stdout and "Changed in this release: Alpha (v1.8.0-1)" in r.stdout,
    r.stdout)
+ck("app notes also point at the data kit (#85)", "fieldbook-data-kit-1.8.0-1.zip" in r.stdout, r.stdout)
 r = node(d, "scripts/data-release-notes.js", "1.9.0", "--app")
 ck("app notes when no pack changed say only the app is needed",
    r.returncode == 0 and "No rules pack changed in this release" in r.stdout, r.stdout)
 ck("bad arguments exit 1", node(d, "scripts/data-release-notes.js", "1.9", "--app").returncode == 1)
 shutil.rmtree(d)
+
+# ---------- fbdata.py bundle: golden checks pinning its behaviour (#85, R11)
+# The Node bundler this replaced reproduced these byte for byte, over every
+# real pack and these same fixtures, before it was removed — see
+# src/docs/_claude/WIRING-LEDGER.md "The bundler moves to Python".
+def py_bundle(root, out):
+    return subprocess.run([sys.executable, FBDATA, "bundle", "-o", out,
+                           "--registry", os.path.join(root, "data", "packs.json"),
+                           "--data-root", os.path.join(root, "data")], capture_output=True, text=True)
+
+
+def case(name, files, packs, check):
+    """write files/packs under a scratch data root, run fbdata.py bundle into
+    d/pyout, then hand (name, returncode, pyout-dir) to check(), which ck()s"""
+    d = tempfile.mkdtemp(prefix="fbdata-case-")
+    for rel, obj in files.items():
+        write(d, "data/" + rel, obj if not isinstance(obj, str) else None, obj if isinstance(obj, str) else None)
+    write(d, "data/packs.json", {"release": "1.8.0", "packs": packs})
+    out = os.path.join(d, "pyout")
+    r = py_bundle(d, out)
+    check(name, r, out)
+    shutil.rmtree(d)
+
+
+def fails(name, r, out):
+    ck("bundle: " + name, r.returncode == 1, (r.returncode, r.stdout, r.stderr))
+
+
+def z_obj(name, r, out):
+    """(ok, the parsed z_full.json or None): the success cases all write one pack"""
+    ck("bundle: " + name + " (exit 0)", r.returncode == 0, (r.returncode, r.stdout, r.stderr))
+    p = os.path.join(out, "z_full.json")
+    return read_json(out, "z_full.json") if r.returncode == 0 and os.path.isfile(p) else None
+
+
+P = lambda **kw: dict({"system": "Z", "dir": "z", "file": "z_full.json", "title": "Zed"}, **kw)
+
+case("duplicates replace in place, last wins",
+     {"z/a.json": {"system": "Z", "spells": [{"name": "Bolt", "level": 1}, {"name": "Glow"}]},
+      "z/b.json": {"system": "Z", "spells": [{"name": "bolt ", "level": 2}]}}, [P(version="1.8.0")],
+     lambda name, r, out: ck("bundle: " + name + " writes exactly this",
+         open(os.path.join(out, "z_full.json"), encoding="utf-8").read() ==
+         '{"system":"Z","name":"Zed","version":1,"dataVersion":"1.8.0","rulebook":true,'
+         '"spells":[{"name":"bolt ","level":2},{"name":"Glow"}]}\n'
+         if r.returncode == 0 and os.path.isfile(os.path.join(out, "z_full.json")) else False,
+         (r.returncode, r.stdout, r.stderr)))
+
+case("nameless entries are kept",
+     {"z/a.json": {"system": "Z", "items": [{"name": ""}, {"weight": 1}, "junk", [1]]}}, [P()],
+     lambda name, r, out: ck("bundle: " + name + ", in order",
+         (lambda o: o is not None and o["items"] == [{"name": ""}, {"weight": 1}, "junk", [1]])(z_obj(name, r, out))))
+
+case("keywords key by term, or by name when the term is blank",
+     {"z/a.json": {"system": "Z", "keywords": [{"term": " ", "name": "Gleam"}, {"term": "gleam", "name": "x"},
+                                               {"term": 0, "name": "zero"}, {"name": "Other"}]}}, [P()],
+     lambda name, r, out: ck("bundle: " + name,
+         (lambda o: o is not None and o["keywords"] ==
+          [{"term": "gleam", "name": "x"}, {"term": 0, "name": "zero"}, {"name": "Other"}])(z_obj(name, r, out))))
+
+case("subclasses key by class and name",
+     {"z/a.json": {"system": "Z", "subclasses": [{"class": "Seer", "name": "Path"}, {"class": "Monk", "name": "Path"},
+                                                 {"name": "Orphan"}, {}]}}, [P()],
+     lambda name, r, out: ck("bundle: " + name + " (same name, different class, both kept)",
+         (lambda o: o is not None and o["subclasses"] ==
+          [{"class": "Seer", "name": "Path"}, {"class": "Monk", "name": "Path"}, {"name": "Orphan"}, {}])
+         (z_obj(name, r, out))))
+
+case("features fall back to traits only when features is absent",
+     {"z/a.json": {"system": "Z", "traits": [{"name": "Keen"}]},
+      "z/b.json": {"system": "Z", "features": [], "traits": [{"name": "Lost"}]}}, [P()],
+     lambda name, r, out: ck("bundle: " + name + " (holds only Keen)",
+         (lambda o: o is not None and o["features"] == [{"name": "Keen"}])(z_obj(name, r, out))))
+
+case("excludeSystems, requires, licence and credit carried",
+     {"z/a.json": {"system": "Z", "excludeSystems": ["b", " a ", ""], "requires": [{"pack": "Q", "spells": ["S"]}],
+                   "races": [{"name": "Gnomish"}]},
+      "z/b.json": {"system": "Z", "excludeSystems": ["a", "b"], "requires": [{"pack": "Q", "spells": ["S"]}]}},
+     [P(version="1.8.0-2", license="MIT", attribution="By someone.")],
+     lambda name, r, out: ck("bundle: " + name,
+         (lambda o: o is not None and o["excludeSystems"] == ["a", "b"]
+          and o["requires"] == [{"pack": "Q", "spells": ["S"]}] and o["license"] == "MIT"
+          and o["attribution"] == "By someone." and o["dataVersion"] == "1.8.0-2")(z_obj(name, r, out))))
+
+case("excludeSystems disagreeing across files fails",
+     {"z/a.json": {"system": "Z", "excludeSystems": ["a"]}, "z/b.json": {"system": "Z", "excludeSystems": ["b"]}},
+     [P()], fails)
+case("requires with its keys in another order fails",
+     {"z/a.json": {"system": "Z", "requires": [{"pack": "Q", "file": "q.json"}]},
+      "z/b.json": {"system": "Z", "requires": [{"file": "q.json", "pack": "Q"}]}}, [P()], fails)
+case("requires differing only by 1.0 vs 1 still agree",
+     {"z/a.json": {"system": "Z", "requires": [{"pack": "Q", "n": 1.0}]},
+      "z/b.json": {"system": "Z", "requires": [{"pack": "Q", "n": 1}]}}, [P()],
+     lambda name, r, out: ck("bundle: " + name,
+         (lambda o: o is not None and o["requires"] == [{"pack": "Q", "n": 1.0}])(z_obj(name, r, out))))
+case("a folder whose files name another system fails",
+     {"z/a.json": {"system": "Other", "feats": [{"name": "Tough"}]}}, [P()], fails)
+case("two systems in one folder fails",
+     {"z/a.json": {"system": "Z"}, "z/b.json": {"system": "Y"}}, [P()], fails)
+case("invalid JSON fails", {"z/a.json": "{nope"}, [P()], fails)
+
+case("a missing folder or an empty one is skipped",
+     {"y/readme.txt": "not json"}, [P(), P(system="Y", dir="y", file="y_full.json", title="Why")],
+     lambda name, r, out: ck("bundle: " + name + " (exit 0, nothing written)",
+         r.returncode == 0 and os.path.isdir(out) and os.listdir(out) == [], (r.returncode, os.listdir(out) if os.path.isdir(out) else None)))
+
+case("text outside ASCII, numbers and floats",
+     {"z/a.json": {"system": "Z", "items": [{"name": "Café — ✦", "weight": 0.5, "cost": 5.0, "n": -0, "big": 12345678}]}},
+     [P()],
+     lambda name, r, out: ck("bundle: " + name + " writes exactly this",
+         open(os.path.join(out, "z_full.json"), encoding="utf-8").read() ==
+         '{"system":"Z","name":"Zed","version":1,"rulebook":true,'
+         '"items":[{"name":"Café — ✦","weight":0.5,"cost":5,"n":0,"big":12345678}]}\n'
+         if r.returncode == 0 and os.path.isfile(os.path.join(out, "z_full.json")) else False,
+         (r.returncode, r.stdout, r.stderr)))
+
+ck('bundle_text escapes a lone surrogate as JSON.stringify does',
+   fbdata.bundle_text({"a": 5.0, "b": chr(0xD800)}) == '{"a":5,"b":"' + chr(92) + 'ud800"}\n')
+
+# ---------- validate --public: only allowlisted licences reach a public release (R13)
+def archive_with(lic):
+    d = scratch()
+    reg = read_json(d, "data/packs.json")
+    reg["packs"] = [reg["packs"][0]]
+    if lic is not None:
+        reg["packs"][0]["license"] = lic
+    write(d, "data/packs.json", reg)
+    bundles(d)
+    out = os.path.join(d, "a.zip")
+    pack(d, out)
+    return d, out
+
+
+for lic, ok in (("CC-BY-4.0", True), ("CC-BY-SA-3.0", True), ("MIT", True), (None, False), ("LicenseRef-WotC", False)):
+    d, z = archive_with(lic)
+    r = subprocess.run([sys.executable, FBDATA, "validate", z, "--public"], capture_output=True, text=True)
+    ck("validate --public %s licence %r" % ("accepts" if ok else "refuses", lic),
+       (r.returncode == 0) == ok and (ok or "public release" in r.stderr), (r.returncode, r.stderr))
+    r = subprocess.run([sys.executable, FBDATA, "validate", z], capture_output=True, text=True)
+    ck("plain validate ignores the licence (%r)" % lic, r.returncode == 0, r.stderr)
+    shutil.rmtree(d)
+
+# ---------- build: a folder of packs, a registry, a single pack file (R12)
+d = scratch()
+bundles(d)
+out = os.path.join(d, "from-registry.zip")
+r = subprocess.run([sys.executable, FBDATA, "build", os.path.join(d, "data"), "-o", out], capture_output=True, text=True)
+ck("build <data root with packs.json> writes a valid archive named for its release",
+   r.returncode == 0 and fbdata.validate_archive(out) == []
+   and json.loads(zipfile.ZipFile(out).read("fieldbook-data.json"))["version"] == "1.8.0", r.stderr)
+one = os.path.join(d, "single.json")
+write(d, "single.json", {"system": "Mine", "name": "My pack", "feats": [{"name": "Sturdy"}]})
+out = os.path.join(d, "single.zip")
+r = subprocess.run([sys.executable, FBDATA, "build", one, "-o", out, "--version", "0.1.0"], capture_output=True, text=True)
+man = json.loads(zipfile.ZipFile(out).read("fieldbook-data.json")) if r.returncode == 0 else {}
+ck("build <one pack file> archives it as it is, versioned by --version",
+   r.returncode == 0 and man.get("version") == "0.1.0" and [m["file"] for m in man["packs"]] == ["single.json"]
+   and "version" not in man["packs"][0], (r.stderr, man))
+r = subprocess.run([sys.executable, FBDATA, "build", os.path.join(d, "nope"), "-o", out], capture_output=True, text=True)
+ck("build refuses a source that isn't there, writing nothing new", r.returncode == 2 and "nope" in r.stderr, r.stderr)
+# a 5e-tools checkout's root, not its data/ folder: say so, not "not a rules pack" (#85)
+for sub, extra in (("class", {"5etools-a/package.json": {"name": "5etools"}}), ("spells", {})):
+    top = os.path.join(d, "5etools-" + ("a" if extra else "b"))
+    os.makedirs(os.path.join(top, "data", sub))
+    for rel, obj in extra.items():
+        write(d, rel, obj)
+    r = subprocess.run([sys.executable, FBDATA, "build", top, "-o", out], capture_output=True, text=True)
+    ck("build at a 5e-tools checkout's root (data/%s) says to point at its data/ folder" % sub,
+       r.returncode == 2 and "looks like a 5e-tools checkout" in r.stderr and "data/ folder" in r.stderr, r.stderr)
+shutil.rmtree(d)
+
+# ---------- kit_file: beside fbdata.py first (the kit zip), then the repo
+ck("kit_file finds convert.py in the repo", fbdata.kit_file("convert.py", "scripts/convert.py").endswith(os.path.join("scripts", "convert.py")))
+
+# ---------- convert: the kit's inputs fill in only what the caller didn't name
+argv = fbdata._convert_argv(["srd", "d", "-o", "o"])
+ck("convert fills in the kit's --overlay, --resources and --corrections once each",
+   [argv.count(f) for f in ("--overlay", "--resources", "--corrections")] == [1, 1, 1], argv)
+argv = fbdata._convert_argv(["srd", "d", "-o", "o", "--overlay=x.json"])
+ck("convert keeps a caller's --overlay=PATH and adds no second --overlay",
+   "--overlay" not in argv and argv.count("--overlay=x.json") == 1, argv)
+argv = fbdata._convert_argv(["srd", "d", "-o", "o", "--resources=r.json", "--corrections=c.json"])
+ck("...nor a second --resources or --corrections after their =PATH forms",
+   "--resources" not in argv and "--corrections" not in argv and argv.count("--overlay") == 1, argv)
+
+# ---------- data-release.js against another registry (R4: private data releases)
+def private_checkout(release="1.7.2"):
+    d = checkout()                       # the public layout, app 1.8.0
+    pd = os.path.join(d, "priv")
+    write(pd, "data/gamma/spells.json", {"system": "Gamma", "spells": [{"name": "Hex", "level": 1}]})
+    write(pd, "data/packs.json", {"release": release, "packs": [
+        {"system": "Gamma", "dir": "gamma", "file": "gamma_full.json", "title": "Gamma", "version": release}]})
+    subprocess.run([sys.executable, os.path.join(d, "tools/data-kit/fbdata.py"), "versions", "--seed",
+                    "--registry", os.path.join(pd, "data/packs.json"), "--data-root", os.path.join(pd, "data")], capture_output=True)
+    git(pd, "init", "-q")
+    git(pd, "add", "-A")
+    git(pd, "commit", "-qm", "start")
+    return d, pd
+
+
+d, pd = private_checkout()
+write(pd, "data/gamma/spells.json", {"system": "Gamma", "spells": [{"name": "Hex", "level": 2}]})
+git(pd, "commit", "-qam", "change")
+args = ["scripts/data-release.js", "--registry", os.path.join(pd, "data/packs.json"), "--data-root", os.path.join(pd, "data")]
+r = node(d, *args)
+reg = read_json(pd, "data/packs.json")
+ck("a private data release after app 1.8.0 is 1.8.0-1, though its last release was 1.7.2",
+   r.returncode == 0 and reg["release"] == "1.8.0-1" and reg["packs"][0]["version"] == "1.8.0-1", (r.stdout, r.stderr))
+ck("...its printed commands run in the private repo", "git -C " in r.stdout and "data-v1.8.0-1" in r.stdout, r.stdout)
+ck("...and the public registry is untouched", read_json(d, "data/packs.json")["release"] == "1.8.0")
+write(pd, "data/gamma/spells.json", {"system": "Gamma", "spells": [{"name": "Hex", "level": 3}]})
+r = node(d, *args)
+ck("a private release refuses uncommitted private data", r.returncode == 1 and "uncommitted" in r.stderr, r.stderr)
+shutil.rmtree(d)
+d = checkout(release="1.7.2")
+write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 5}]})
+git(d, "commit", "-qam", "change")
+r = node(d, "scripts/data-release.js")
+ck("the PUBLIC registry still refuses a release from another app version", r.returncode == 1 and "doesn't belong" in r.stderr, r.stderr)
+shutil.rmtree(d)
+
+# ---------- the kit (#85, R12/R13): the example pack builds and passes --public,
+# and the kit zip (once built) works on its own, unzipped anywhere (Review Focus 3)
+EXAMPLE_PACK = os.path.join(ROOT, "tools", "data-kit", "example-pack")
+t = tempfile.mkdtemp(prefix="example-pack-")
+out = os.path.join(t, "ex.zip")
+r = subprocess.run([sys.executable, FBDATA, "build", EXAMPLE_PACK, "-o", out, "--version", "0.1.0"],
+                   capture_output=True, text=True)
+ck("fbdata.py build builds the example pack", r.returncode == 0, r.stderr)
+r = subprocess.run([sys.executable, FBDATA, "validate", out, "--public"], capture_output=True, text=True)
+ck("the example pack passes validate --public", r.returncode == 0, r.stderr)
+shutil.rmtree(t)
+
+
+def fbdata_kit_file(t):
+    """kit_file() as the unzipped kit's own fbdata.py answers it"""
+    code = "import runpy,sys; m=runpy.run_path(sys.argv[1]); print(m['kit_file']('convert.py','scripts/convert.py'))"
+    r = subprocess.run([sys.executable, "-c", code, os.path.join(t, "fbdata.py")], capture_output=True, text=True)
+    return r.stdout.strip()
+
+
+kits = sorted(f for f in os.listdir(os.path.join(ROOT, "dist")) if f.startswith("fieldbook-data-kit-")) \
+    if os.path.isdir(os.path.join(ROOT, "dist")) else []
+if not kits:
+    print("note: no dist/fieldbook-data-kit-*.zip — run ./build.sh (with zips) to test the kit zip")
+else:
+    kz = os.path.join(ROOT, "dist", kits[-1])
+    names = sorted(n for n in zipfile.ZipFile(kz).namelist() if not n.endswith("/"))
+    want = sorted(["fbdata.py", "convert.py", "overlay.json", "class-resources.json", "srd-corrections.json",
+                   "README.md", "README-converter.md", "rules-schema.md", "LICENSE", "example-pack/example-pack.json"])
+    ck("the kit zip holds exactly the kit", names == want, names)
+    t = tempfile.mkdtemp(prefix="kit-")
+    zipfile.ZipFile(kz).extractall(t)
+    r = subprocess.run([sys.executable, os.path.join(t, "fbdata.py"), "build", os.path.join(t, "example-pack"),
+                        "-o", os.path.join(t, "ex.zip"), "--version", "0.1.0"], capture_output=True, text=True, cwd=t)
+    ck("an unzipped kit builds the example pack with no repo around it", r.returncode == 0, r.stderr)
+    ck("...and the kit finds its own convert.py", fbdata_kit_file(t) == os.path.join(t, "convert.py"))
+    shutil.rmtree(t)
+
+# ---------- the private-data suite tells the truth (Review Focus 5)
+PRIV = os.path.join(ROOT, "src", "tests", "private-data.js")
+
+
+def priv(run_sh):
+    d = tempfile.mkdtemp(prefix="priv-")
+    if run_sh is not None:
+        write(d, "tests/run.sh", raw=run_sh)
+    r = subprocess.run(["node", PRIV], capture_output=True, text=True,
+                       env=dict(os.environ, FIELDBOOK_PRIVATE=os.path.join(d, "absent" if run_sh is None else "")))
+    shutil.rmtree(d)
+    return r
+
+
+def last_line(r):
+    lines = r.stdout.strip().splitlines()
+    return lines[-1] if lines else ""
+
+
+r = priv(None)
+ck("private-data with nothing linked skips", last_line(r).startswith("SKIP"), r.stdout + r.stderr)
+r = priv('#!/usr/bin/env bash\necho "  leak-scan  FAILED"\necho "FAILURES: leak-scan"\nexit 1\n')
+ck("private-data relays a private failure as a failure", last_line(r).startswith("FAILURES"), r.stdout + r.stderr)
+r = priv('#!/usr/bin/env bash\necho "ALL PASSED (7)"\n')
+ck("private-data relays the private count", last_line(r) == "ALL PASSED (7)", r.stdout + r.stderr)
+r = priv('#!/usr/bin/env bash\necho "something odd"\n')
+ck("private-data treats output it doesn't recognise as a failure", last_line(r).startswith("FAILURES"), r.stdout + r.stderr)
 
 # ---- add new cases above this line ----
 print("")

@@ -608,7 +608,7 @@ function downloadRulesTemplates(){
       {name:"Strig",description:"Owlfolk of the Humblewood — patient nocturnal hunters.",abilityScores:{wis:2,dex:1},speed:25,skills:["Perception"],languages:"Birdfolk, Common",
        traits:[{name:"Silent Feathers",description:"You have proficiency in the Stealth skill.",skills:["Stealth"]},{name:"Nocturnal",description:"You can see in dim light within 60 feet as if it were bright light."}]}]}],
     ["classes.json",{classes:[
-      {name:"Bard",description:"An inspiring magician whose power echoes the music of creation.",hitDie:"d8",spellcasting:"cha",savingThrows:["dex","cha"],
+      {name:"Bard",description:"A performer who channels story and song into magic.",hitDie:"d8",spellcasting:"cha",savingThrows:["dex","cha"],
        levels:{
          "1":{traits:[{name:"Bardic Inspiration",description:"Bonus action: give an ally a d6 inspiration die."}],choices:[{type:"skill",choose:3,from:["Acrobatics","Deception","History","Insight","Performance","Persuasion","Stealth"]}],spells:{known:4,note:"You know 4 cantrips/spells to start."}},
          "2":{traits:[{name:"Jack of All Trades",description:"Add half proficiency to checks that lack it."}]},

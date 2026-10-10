@@ -143,7 +143,7 @@ ck('dispName works for tables', X.dispName(X.rules.tables[0], 'tables') === 'Ome
 // editor, and nothing here caught either. These two assertions do.
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
-['5e2024', 'humblewood', 'xanathars', 'tashas', 'homebrew', 'srd52'].forEach(sys => {
+['homebrew', 'srd52'].forEach(sys => {
   const f = path.join(ROOT, 'data', sys, 'tables.json');
   if (!fs.existsSync(f)) { ck(sys + ' tables.json exists', false); return; }
   const tables = JSON.parse(fs.readFileSync(f, 'utf8')).tables;
@@ -184,43 +184,23 @@ const ROOT = path.join(__dirname, '..', '..');
   ck(sys + ': footnotes, where present, are non-empty strings', badNotes.length === 0, badNotes);
 
   // a * in a table points at a footnote; one with nothing to point at is the
-  // #73 bug. Night Domain Spells' line ("Spells marked with an asterisk (*) can
-  // be found in this book.") is printed after the table and kept verbatim in
-  // the feature prose beside its anchor, where the verbatim suite holds it.
-  const EXPLAINED_IN_PROSE = ['Night Domain Spells'];
+  // #73 bug. A table whose asterisk the book explains in the prose beside its
+  // anchor, not under the table, is named here; no public pack has one.
+  const EXPLAINED_IN_PROSE = [];
   const orphan = tables.filter(t => !EXPLAINED_IN_PROSE.includes(t.name) && !(t.footnotes || []).length
     && [t.cols || [], ...(t.rows || [])].some(r => r.some(c => /\*/.test(String(c))))).map(t => t.name);
   ck(sys + ': every * in a table has a footnote to point at', orphan.length === 0, orphan.slice(0, 6));
 });
 
-// ---- Xanathar's downtime tables carry their footnotes (#73)
-{
-  const xge = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'xanathars', 'tables.json'), 'utf8')).tables;
-  const noted = xge.filter(t => (t.footnotes || []).length);
-  ck('#73 xanathars: 17 tables carry footnotes', noted.length === 17, noted.map(t => t.name));
-  ck('#73 xanathars: every footnoted table is a downtime one',
-     noted.every(t => /^Downtime Activity: /.test(t.owner)), noted.map(t => t.owner));
-  const fnOf = n => JSON.stringify((xge.find(t => t.name === n) || {}).footnotes);
-  ck('#73 Crime Complications: "Might involve a rival"', fnOf('Crime Complications') === '["*Might involve a rival"]', fnOf('Crime Complications'));
-  ck('#73 Magic Item Price: "Halved for a consumable item"',
-     fnOf('Magic Item Price') === '["*Halved for a consumable item like a potion or scroll"]', fnOf('Magic Item Price'));
-  ck('#73 all three carousing tables',
-     ['Lower', 'Middle', 'Upper'].every(k => fnOf(k + '-Class Carousing Complications') === '["*Might involve a rival"]'));
-  // and the shipped table renders it, escaped, under the rows
-  const crime = xge.find(t => t.name === 'Crime Complications');
-  const ch = crime ? X.tableHTML(crime) : '';
-  ck('#73 the shipped Crime Complications renders its footnote under the table',
-     /<\/table><\/div><div class="tbl-notes"><p>\*Might involve a rival<\/p><\/div>$/.test(ch), ch.slice(-160));
-  ck('#73 ...and its rows keep their marks', (ch.match(/\*<\/td>/g) || []).length === 3, ch.match(/\*<\/td>/g));
-}
-
-// ---- the 2024 class progression tables, pinned to the book (#64)
+// ---- the class progression tables, pinned to the book (#64)
 // 5e-tools writes these cells as {"type":"dice"}, {"type":"bonus"} and
 // {"type":"bonusSpeed"}. When the converter could not render them, the columns
 // shipped blank — and Bard and Rogue, whose only non-spell column is dice,
-// lost their tables entirely, which no blank-column check can see.
+// lost their tables entirely, which no blank-column check can see. Pinned on
+// SRD 5.2, which the same converter writes (the 2024 pack's own pins moved to
+// the private repo's suite with it, #85).
 {
-  const all = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', '5e2024', 'tables.json'), 'utf8')).tables;
+  const all = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'srd52', 'tables.json'), 'utf8')).tables;
   const cell = (name, col, level) => {
     const t = all.find(x => x.name === name);
     if (!t) return undefined;
@@ -228,20 +208,20 @@ const ROOT = path.join(__dirname, '..', '..');
     return row ? row[t.cols.indexOf(col)] : undefined;
   };
   ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock']
-    .forEach(c => ck('5e2024: ' + c + ' Features table ships', all.some(t => t.name === c + ' Features')));
-  ck('5e2024: Rage Damage +2 / +3 / +4',
+    .forEach(c => ck('srd52: ' + c + ' Features table ships', all.some(t => t.name === c + ' Features')));
+  ck('srd52: Rage Damage +2 / +3 / +4',
      [1, 9, 16].map(l => cell('Barbarian Features', 'Rage Damage', l)).join() === '+2,+3,+4',
      [1, 9, 16].map(l => cell('Barbarian Features', 'Rage Damage', l)));
-  ck('5e2024: Martial Arts 1d6 … 1d12',
+  ck('srd52: Martial Arts 1d6 … 1d12',
      [1, 5, 11, 17].map(l => cell('Monk Features', 'Martial Arts', l)).join() === '1d6,1d8,1d10,1d12',
      [1, 5, 11, 17].map(l => cell('Monk Features', 'Martial Arts', l)));
-  ck('5e2024: Unarmored Movement — then +10 ft. … +30 ft.',
+  ck('srd52: Unarmored Movement — then +10 ft. … +30 ft.',
      [1, 2, 18].map(l => cell('Monk Features', 'Unarmored Movement', l)).join() === '—,+10 ft.,+30 ft.',
      [1, 2, 18].map(l => cell('Monk Features', 'Unarmored Movement', l)));
-  ck('5e2024: Bardic Die 1d6 … 1d12',
+  ck('srd52: Bardic Die 1d6 … 1d12',
      [1, 5, 10, 15].map(l => cell('Bard Features', 'Bardic Die', l)).join() === '1d6,1d8,1d10,1d12',
      [1, 5, 10, 15].map(l => cell('Bard Features', 'Bardic Die', l)));
-  ck('5e2024: Sneak Attack 1d6 … 10d6',
+  ck('srd52: Sneak Attack 1d6 … 10d6',
      [1, 3, 19].map(l => cell('Rogue Features', 'Sneak Attack', l)).join() === '1d6,2d6,10d6',
      [1, 3, 19].map(l => cell('Rogue Features', 'Sneak Attack', l)));
 }

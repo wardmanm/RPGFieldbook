@@ -111,8 +111,9 @@ since neither is on the form.
   value there reads as the player's edit, and an applied update wipes it.
 - **The pass re-baselines only what it wrote, and never over a player's edit.** Re-baselining more
   would hide a real pack change; re-baselining an edited field would let an update overwrite it.
-- **The app's tables agree with the data.** `rules-data.js` reads `data/5e2024/items.json` and fails
-  on any launcher, bundle or piece the tables lack or disagree with.
+- **The app's tables agree with the data.** `rules-data.js` reads `data/srd52/items.json` and fails
+  on any launcher, bundle or piece the tables lack or disagree with; the private suite checks the
+  2024 pack the same way ([Private data](../data/private-data.md)).
 
 ## Traps
 
@@ -162,3 +163,4 @@ Settled with Mike on 2026-10-01 and 2026-10-02; the full discussion is in
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-02 — The item editor sets what a weapon fires and marks ammunition, with a bonus; Insert from pack unpacks a bundle. → ledger L4978, #8
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6
+- 2026-10-09 — The tables-agree-with-the-data check reads SRD 5.2 publicly and the 2024 pack in the private suite. → ledger L5426, #85

@@ -410,7 +410,7 @@ ck('R7 ...and a stamped one round-trips',
    "new" entry is read from the shipped pack, so this fails until the pack is
    fixed; the "old" one is that entry with the effects it used to carry. */
 {
-  const shipped=JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','5e2024','items-magic.json'),'utf8'))
+  const shipped=JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','srd52','items-magic.json'),'utf8'))
     .items.find(x=>x.name==='Dagger of Venom');
   const clubDef={name:'Club',description:'A club.',cost:'1 sp',category:'Weapon',type:'Simple Melee Weapon',weight:2,
                  weapon:{kind:'melee',dice:'1d4',damageType:'bludgeoning',ability:'str',notes:''}};
@@ -476,7 +476,7 @@ ck('R7 ...and a stamped one round-trips',
    keeps what they set. The "new" Dart is the shipped one, so this fails until
    the pack is fixed. */
 {
-  const dartNew=JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','5e2024','items.json'),'utf8'))
+  const dartNew=JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','srd52','items.json'),'utf8'))
     .items.find(x=>x.name==='Dart');
   const dartOld=JSON.parse(JSON.stringify(dartNew)); dartOld.weapon.ability='dex';
   const sheetWith=def=>{
@@ -517,7 +517,7 @@ ck('R7 ...and a stamped one round-trips',
    until the pack is fixed; the "old" one is that entry with the effect it used
    to carry. AC is read the way recompute() paints it: armorAC() + `ac` effects. */
 {
-  const shipped=JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','5e2024','items-magic.json'),'utf8'))
+  const shipped=JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','srd52','items-magic.json'),'utf8'))
     .items.find(x=>x.name==='Quarterstaff of the Acrobat');
   const oldDef=Object.assign(JSON.parse(JSON.stringify(shipped)),{effects:[{target:'ac',value:5}]});
   const acNow=()=>{const c=X.contributions();return X.armorAC(c).base+X.sumFx('ac',c);};
@@ -551,18 +551,24 @@ ck('R7 ...and a stamped one round-trips',
 }
 
 /* #77 — the packs never read an item's spell attack or spell save DC bonus. A
-   sheet's copy of a Staff of Power or a Moon Sickle has none, and gets it only
-   through the rules-update tool: `effects` changed, ticked when untouched, and
-   applying it raises the Spellcasting numbers and nothing the player owns. The
-   "new" entries are the shipped ones, so this fails until the packs carry the
-   effects; the "old" ones are those entries without the spell targets. */
+   sheet's copy of a Staff of Power, or of a +1 weapon that raises spell attack
+   and DC alike, has none, and gets it only through the rules-update tool:
+   `effects` changed, ticked when untouched, and applying it raises the
+   Spellcasting numbers and nothing the player owns. The staff's "new" entry is
+   the shipped one, so this fails until the pack carries the effects; the "old"
+   ones are those entries without the spell targets. SRD 5.2 has no item that
+   raises both numbers by 1, so the sickle is invented. */
 {
   const read=(dir,f,name)=>JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data',dir,f),'utf8')).items.find(x=>x.name===name);
-  const staffNew=read('5e2024','items-magic.json','Staff of Power'), sickleNew=read('tashas','items-magic.json','+1 Moon Sickle');
+  const staffNew=read('srd52','items-magic.json','Staff of Power');
+  const sickleNew={name:'+1 Ember Sickle',system:'Fixture',category:'Weapon',type:'Simple Melee Weapon',rarity:'Uncommon',
+                   weight:2,attune:true,description:'An invented sickle that sharpens the spells of whoever wields it.',
+                   effects:[{target:'spell.attack',value:1},{target:'spell.dc',value:1}],
+                   weapon:{kind:'melee',dice:'1d4',damageType:'slashing',ability:'str',notes:'Light',atkMisc:1,dmgMisc:1}};
   const strip=d=>Object.assign(JSON.parse(JSON.stringify(d)),{effects:(d.effects||[]).filter(e=>!/^spell\./.test(e.target))});
   const load=(staff,sickle)=>{ X.resetRules();
     X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(staff))]},'5e.json');
-    X.mergeRules({system:'TCE',items:[JSON.parse(JSON.stringify(sickle))]},'tce.json'); };
+    X.mergeRules({system:'Fixture',items:[JSON.parse(JSON.stringify(sickle))]},'fixture.json'); };
   load(strip(staffNew),strip(sickleNew));
   const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.abilities.wis=16; ch.level=1; ch.spellAbility='wis';
   X.character=ch; X.activeId=ch.id;
@@ -573,13 +579,13 @@ ck('R7 ...and a stamped one round-trips',
   ch.inventory.forEach(i=>{i.fav=true;});
   const ids=ch.attacks.map(a=>a.id).join();
   load(staffNew,sickleNew);
-  const rows=X.diffCharacter().rows.filter(r=>r.name==='Staff of Power'||r.name==='+1 Moon Sickle');
+  const rows=X.diffCharacter().rows.filter(r=>r.name==='Staff of Power'||r.name==='+1 Ember Sickle');
   ck('#77 the fixed packs offer both, each as one changed row: effects, and nothing else',
      rows.length===2&&rows.every(r=>r.type==='changed'&&r.fields.join()==='effects'), X.diffCharacter().rows.map(r=>r.name+':'+r.fields));
   ck('#77 ...ticked, since nobody edited the copies', rows.length===2&&rows.every(r=>r.apply===true&&r.edited===false),
      rows.map(r=>[r.apply,r.edited]));
   X.applyUpdates(rows);
-  const staff=ch.inventory.find(i=>i.name==='Staff of Power'), sickle=ch.inventory.find(i=>i.name==='+1 Moon Sickle');
+  const staff=ch.inventory.find(i=>i.name==='Staff of Power'), sickle=ch.inventory.find(i=>i.name==='+1 Ember Sickle');
   ck('#77 applying them gives spell attack +2 +1 = +8 and DC +1 = 14', X.spellAtkBonus()===8&&X.spellDC()===14,
      [X.spellAtkBonus(),X.spellDC(),staff.effects,sickle.effects]);
   ck('#77 ...the staff keeps its AC and saving throws', staff.effects.filter(e=>e.target==='ac'||/^save\./.test(e.target)).length===7,
@@ -587,7 +593,7 @@ ck('R7 ...and a stamped one round-trips',
   ck('#77 ...touches none of the player\'s numbers and keeps both attack rows',
      ch.inventory.every(i=>i.equipped&&i.fav)&&ch.attacks.map(a=>a.id).join()===ids, [ch.inventory, ch.attacks.map(a=>a.id)]);
   ck('#77 ...and the weapons still attack as weapons: the sickle PB 2 + 1 = +3, the staff +4',
-     X.attackNumbers(ch.attacks.find(a=>a.name==='+1 Moon Sickle')).toHit===3
+     X.attackNumbers(ch.attacks.find(a=>a.name==='+1 Ember Sickle')).toHit===3
      &&X.attackNumbers(ch.attacks.find(a=>a.name==='Staff of Power')).toHit===4,
      ch.attacks.map(a=>a.name+':'+X.attackNumbers(a).toHit));
   load(strip(staffNew),strip(sickleNew));
@@ -606,7 +612,7 @@ ck('R7 ...and a stamped one round-trips',
    the packs are fixed; the "old" ones are those entries with the tag back. */
 {
   const read=(dir,name)=>JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data',dir,'items-magic.json'),'utf8')).items.find(x=>x.name===name);
-  const ringNew=read('5e2024','Ring of Acid Resistance'), dsmNew=read('5e2024','Black Dragon Scale Mail');
+  const ringNew=read('srd52','Ring of Acid Resistance'), dsmNew=read('srd52','Black Dragon Scale Mail');
   const oldOf=(d,tag)=>Object.assign(JSON.parse(JSON.stringify(d)),{description:tag});
   const ringOld=oldOf(ringNew,'{#itemEntry Ring of Resistance|XDMG}');
   const dsmOld=oldOf(dsmNew,'AC 14 + Dex modifier (max 2) · Disadvantage on Stealth · Base item: Scale Mail. {#itemEntry Dragon Scale Mail|XDMG}');
@@ -652,7 +658,7 @@ ck('R7 ...and a stamped one round-trips',
    player owns. The "new" entries are the shipped ones, so this fails until the
    pack carries the effects; the "old" ones are those entries without them. */
 {
-  const read=name=>JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','5e2024','items-magic.json'),'utf8')).items.find(x=>x.name===name);
+  const read=name=>JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','srd52','items-magic.json'),'utf8')).items.find(x=>x.name===name);
   const stoneNew=read('Stone of Good Luck'), iounNew=read('Ioun Stone, Mastery');
   const strip=d=>Object.assign(JSON.parse(JSON.stringify(d)),{effects:(d.effects||[]).filter(e=>e.target!=='check'&&e.target!=='profBonus')});
   const load=(...defs)=>{ X.resetRules(); X.mergeRules({system:'XPHB',items:defs.map(d=>JSON.parse(JSON.stringify(d)))},'5e.json'); };
@@ -1112,17 +1118,53 @@ ck("the class window's Done hands its own queue to commitChoices",
    /function runChoices\(className,choices,notes,pending\)[\s\S]*?commitChoices\(className,sel,pending\)/.test(
      fs.readFileSync(path.join(__dirname,'../js/58-choices.js'),'utf8')));
 
+// ---------- invented classes for the choice-window flow (#63, #69)
+// The flow needs a class whose two subclasses ask very different things at the
+// level they arrive (one opens its own multi-step picker, one asks nothing), a
+// second class to add beside it, and a class whose level 1 holds only a spell
+// note. SRD 5.2 gives every class one subclass, so these are invented, shaped
+// like the Fighter (Battle Master, Champion), Wizard and pre-#67 Bard these
+// checks first ran against.
+const knacks=()=>['Feint','Hold Fast','Rally','Shove Aside','Trip Up'].map(n=>({name:n,description:'An invented knack.'}));
+const FLOW={classes:[
+  {name:'Marshal',hitDie:'d10',savingThrows:['str','con'],
+   equipmentGrants:[{choose:[{items:[{name:'Rope'}],gold:4,label:'A'},{gold:50,label:'B'}]}],
+   levels:{'1':{choices:[{type:'skill',choose:2,from:['Athletics','History','Insight','Survival']}]},
+           '3':{choices:[{type:'subclass',label:'Marshal Subclass'}]},
+           '4':{choices:[{type:'asi'}]}},
+   subclasses:{
+     'Drillmaster':{description:'Drills and field craft.',levels:{
+       '3':{traits:[{name:'Drillmaster',description:'You learn Drills and Field Craft.'}],
+            choices:[{type:'option',label:'Drills: choose 3',choose:3,from:knacks()},
+                     {type:'skill',choose:1,from:['Athletics','History','Insight','Survival']},
+                     {type:'option',label:'Field Craft: one kind of tool',choose:1,
+                      from:[{name:"Tinker's Tools",description:'Tools.'},{name:"Smith's Tools",description:'Tools.'}]}]},
+       '7':{choices:[{type:'option',label:'Drills: choose 2 more',choose:2,from:knacks()}]},
+       '10':{choices:[{type:'option',label:'Drills: choose 2 more',choose:2,from:knacks()}]}}},
+     'Vanguard':{description:'Nothing to choose.',levels:{'3':{traits:[{name:'Vanguard',description:'You lead the charge.'}]}}}}},
+  {name:'Scholar',hitDie:'d6',savingThrows:['int','wis'],multiclass:{},
+   levels:{'1':{choices:[{type:'skill',choose:2,from:['Arcana','History','Nature','Religion']}],
+                traits:[{name:'Lore',description:'You know things.'}]},
+           '3':{choices:[{type:'subclass',label:'Scholar Subclass'}]}},
+   subclasses:{'School of Ink':{description:'Ink.',levels:{'3':{traits:[{name:'Ink',description:'Ink.'}]}}}}},
+  {name:'Chanter',hitDie:'d8',savingThrows:['dex','cha'],
+   levels:{'1':{spells:{note:'Chanter spells: an invented list.'}},
+           '3':{choices:[{type:'subclass',label:'Chanter Subclass'}]}},
+   subclasses:{'Choir of Echoes':{description:'Echoes.',levels:{'3':{traits:[{name:'Echo',description:'Echoes.'}]}}}}},
+]};
+
 // ---------- #63: every choice window is shown, one after another
 // Add a Fighter at level 3 and pick Battle Master: the subclass's own window
 // (Maneuvers, Student of War) opened and was at once replaced by the
 // starting-equipment picker, because commitChoices() opened both and there is
-// only one modal. Driven with the REAL 2024 Fighter and the real flow: addClass,
-// runChoices, commitChoices, selectSubclass, runExtraChoices, dismissModal. The
-// DOM is stubbed, so the only doubles are the ones it forces — the player's
-// picks (gatherChoices) and the Done buttons, captured so the test can press
-// them. openModal is only recorded; it still runs.
+// only one modal. Driven with the invented Marshal above (Drillmaster for Battle
+// Master, Vanguard for Champion) and the real flow: addClass, runChoices,
+// commitChoices, selectSubclass, runExtraChoices, dismissModal. The DOM is
+// stubbed, so the only doubles are the ones it forces — the player's picks
+// (gatherChoices) and the Done buttons, captured so the test can press them.
+// openModal is only recorded; it still runs.
 {
-  const pack=JSON.parse(fs.readFileSync(path.join(__dirname,'../../data/5e2024/classes.json'),'utf8'));
+  const pack=JSON.parse(JSON.stringify(FLOW));
   const real={open:ctx.openModal,gather:ctx.gatherChoices,byId:ctx.document.getElementById};
   let shown=[],done={},picks=[];
   ctx.openModal=(t,h,i)=>{shown.push({title:t,html:String(h)});return real.open(t,h,i);};
@@ -1137,40 +1179,40 @@ ck("the class window's Done hands its own queue to commitChoices",
       choices:[{type:'skill',choose:3,from:['Arcana','History','Nature','Religion']}]}]},'test-feats');
   };
   const equip=w=>!!w&&/data-ctype="equip"/.test(w.html);
-  const maneuvers=w=>!!w&&/Maneuvers: choose 3/.test(w.html)&&/Student of War/.test(w.html);
+  const drills=w=>!!w&&/Drills: choose 3/.test(w.html)&&/Field Craft/.test(w.html);
   try{
     fresh(pack.classes);
-    X.addClass('Fighter',3);
-    ck('#63 adding a Fighter at 3 opens the class window first', shown.length===1&&/Fighter Subclass/.test(shown[0].html),
+    X.addClass('Marshal',3);
+    ck('#63 adding a Marshal at 3 opens the class window first', shown.length===1&&/Marshal Subclass/.test(shown[0].html),
        shown.map(w=>w.title));
-    let next=press('chDone',[{type:'subclass',name:'Battle Master'}]);
-    ck('#63 picking Battle Master opens its own window next: Maneuvers and Student of War',
-       next.length>=1&&maneuvers(next[0]), next.map(w=>w.title));
+    let next=press('chDone',[{type:'subclass',name:'Drillmaster'}]);
+    ck('#63 picking Drillmaster opens its own window next: Drills and Field Craft',
+       next.length>=1&&drills(next[0]), next.map(w=>w.title));
     ck('#63 ...and nothing replaces it: the equipment picker waits behind it',
        next.length===1&&!equip(next[next.length-1]), next.map(w=>w.title));
-    const bm='subclass:Fighter:Battle Master',ath=X.skillKey('Athletics');
-    next=press('chDone',[{type:'option',ci:0,sid:bm,idxs:[0,1,2]},{type:'skill',sid:bm,keys:[ath]},
-                         {type:'option',ci:2,sid:bm,idxs:[0]}]);
-    const mine=n=>X.character.features.find(f=>f.name===n&&f.origin&&f.origin.subclass==='Battle Master');
-    ck('#63 the maneuvers picked in that window are on the sheet, as Battle Master\'s',
-       !!(mine('Ambush')&&mine('Bait and Switch')&&mine("Commander's Strike")),
+    const dm='subclass:Marshal:Drillmaster',ath=X.skillKey('Athletics');
+    next=press('chDone',[{type:'option',ci:0,sid:dm,idxs:[0,1,2]},{type:'skill',sid:dm,keys:[ath]},
+                         {type:'option',ci:2,sid:dm,idxs:[0]}]);
+    const mine=n=>X.character.features.find(f=>f.name===n&&f.origin&&f.origin.subclass==='Drillmaster');
+    ck('#63 the drills picked in that window are on the sheet, as Drillmaster\'s',
+       !!(mine('Feint')&&mine('Hold Fast')&&mine('Rally')),
        X.character.features.map(f=>f.name));
-    ck('#63 ...and Student of War\'s skill and tool too',
-       X.character.grants.some(g=>g.sid===bm&&g.type==='skill'&&g.key===ath)&&!!mine("Alchemist's Supplies"),
+    ck('#63 ...and Field Craft\'s skill and tool too',
+       X.character.grants.some(g=>g.sid===dm&&g.type==='skill'&&g.key===ath)&&!!mine("Tinker's Tools"),
        X.character.grants);
     ck('#63 then the starting-equipment picker, last', next.length===1&&equip(next[0]), next.map(w=>w.title));
     ck('#63 ...and its Done opens nothing more', press('xchDone',[]).length===0);
 
     // A subclass with nothing to choose at that level hands the queue straight on.
-    fresh(pack.classes); X.addClass('Fighter',3);
-    next=press('chDone',[{type:'subclass',name:'Champion'}]);
+    fresh(pack.classes); X.addClass('Marshal',3);
+    next=press('chDone',[{type:'subclass',name:'Vanguard'}]);
     ck('#63 a subclass with no picks goes straight to the equipment picker',
        next.length===1&&equip(next[0]), next.map(w=>w.title));
 
     // Dismissing the subclass window costs its own picks (the guard says so), not
     // the class's starting equipment: the class is already on the sheet.
-    fresh(pack.classes); X.addClass('Fighter',3);
-    press('chDone',[{type:'subclass',name:'Battle Master'}]);
+    fresh(pack.classes); X.addClass('Marshal',3);
+    press('chDone',[{type:'subclass',name:'Drillmaster'}]);
     let from=shown.length; X.dismissModal();
     ck('#63 dismissing the subclass window still offers the starting equipment',
        shown.length===from+1&&equip(shown[from]), shown.slice(from).map(w=>w.title));
@@ -1180,8 +1222,8 @@ ck("the class window's Done hands its own queue to commitChoices",
     // What waits behind a window belongs to THAT window: another window taking
     // the modal drops it, so it cannot fire after some later dismissal (the
     // _equipQueue leak, through the new route).
-    fresh(pack.classes); X.addClass('Fighter',3);
-    press('chDone',[{type:'subclass',name:'Battle Master'}]);
+    fresh(pack.classes); X.addClass('Marshal',3);
+    press('chDone',[{type:'subclass',name:'Drillmaster'}]);
     X.openModal('Something else','<p>unrelated</p>');
     from=shown.length; X.dismissModal();
     ck('#63 a window replaced by another does not leak its queue into that one\'s dismissal',
@@ -1212,9 +1254,9 @@ ck("the class window's Done hands its own queue to commitChoices",
 // level 1 to the level-3 subclass. And it passed the class name through esc()
 // into a title openModal() sets as TEXT, so "&" and "'" showed as entities. What
 // is checked is what reaches the title element: openModal() runs for real and
-// #mTitle is a recorder. The real 2024 pack, through the real flow.
+// #mTitle is a recorder. The invented classes above, through the real flow.
 {
-  const pack=JSON.parse(fs.readFileSync(path.join(__dirname,'../../data/5e2024/classes.json'),'utf8'));
+  const pack=JSON.parse(JSON.stringify(FLOW));
   const real={byId:ctx.document.getElementById,gather:ctx.gatherChoices};
   let writes=[],done={},picks=[];
   const mTitle={set textContent(v){writes.push({text:String(v)});},get textContent(){return '';},
@@ -1231,34 +1273,34 @@ ck("the class window's Done hands its own queue to commitChoices",
   const fresh=extra=>{hpSetup(pack.classes);if(extra)X.mergeRules({classes:extra},'test-69');writes=[];done={};picks=[];};
   const at=(name,level,subclass)=>{X.character.classes=[{name,level,subclass:subclass||null}];X.character.level=level;writes=[];};
   try{
-    fresh(); X.addClass('Fighter',3);
-    ck('#69 a Fighter added at 3: its window names the levels it holds', shown()[0]==='Fighter — Levels 1–3', shown());
-    let next=press('chDone',[{type:'subclass',name:'Battle Master'}]);
-    ck('#69 ...the Battle Master window after it holds level 3 alone', next[0]==='Fighter — Level 3', next);
+    fresh(); X.addClass('Marshal',3);
+    ck('#69 a Marshal added at 3: its window names the levels it holds', shown()[0]==='Marshal — Levels 1–3', shown());
+    let next=press('chDone',[{type:'subclass',name:'Drillmaster'}]);
+    ck('#69 ...the Drillmaster window after it holds level 3 alone', next[0]==='Marshal — Level 3', next);
 
-    fresh(); at('Fighter',3); X.doLevelUp();
-    ck('#69 a single-level level-up says "Level N"', shown()[0]==='Fighter — Level 4', shown());
-    fresh(); at('Fighter',2); X.doLevelUp();
-    ck('#69 ...including the level that brings the subclass', shown()[0]==='Fighter — Level 3', shown());
+    fresh(); at('Marshal',3); X.doLevelUp();
+    ck('#69 a single-level level-up says "Level N"', shown()[0]==='Marshal — Level 4', shown());
+    fresh(); at('Marshal',2); X.doLevelUp();
+    ck('#69 ...including the level that brings the subclass', shown()[0]==='Marshal — Level 3', shown());
 
-    fresh(); at('Fighter',10,'Champion'); ctx.selectSubclass('Fighter','Battle Master');
+    fresh(); at('Marshal',10,'Vanguard'); ctx.selectSubclass('Marshal','Drillmaster');
     ck('#69 changing subclass at 10: its own window spans the subclass levels it re-asks',
-       shown()[0]==='Fighter — Levels 3–10', shown());
+       shown()[0]==='Marshal — Levels 3–10', shown());
 
-    fresh(); X.addClass('Fighter',1);
-    ck('#69 a first class at level 1 says "Level 1"', shown()[0]==='Fighter — Level 1', shown());
-    writes=[]; X.addClass('Wizard',3);
+    fresh(); X.addClass('Marshal',1);
+    ck('#69 a first class at level 1 says "Level 1"', shown()[0]==='Marshal — Level 1', shown());
+    writes=[]; X.addClass('Scholar',3);
     ck('#69 a multiclass added at 3: its HP step covers 1-3, and the title says so',
-       shown()[0]==='Wizard — Levels 1–3', shown());
-    fresh(); X.addClass('Fighter',1); writes=[]; X.addClass('Wizard',1);
-    ck('#69 ...and a multiclass added at 1 says "Level 1"', shown()[0]==='Wizard — Level 1', shown());
+       shown()[0]==='Scholar — Levels 1–3', shown());
+    fresh(); X.addClass('Marshal',1); writes=[]; X.addClass('Scholar',1);
+    ck('#69 ...and a multiclass added at 1 says "Level 1"', shown()[0]==='Scholar — Level 1', shown());
 
-    /* The 2024 Bard has no level-1 choice (known issue), so at 3 its only
-       level-1 content is the Spellcasting note — which counts: the window shows it. */
-    fresh(); X.addClass('Bard',3);
-    ck('#69 a Bard added at 3: the level-1 spell note counts as held', shown()[0]==='Bard — Levels 1–3', shown());
-    fresh(); X.addClass('Bard',1);
-    ck('#69 ...and a notes-only window at level 1 says "Level 1"', shown()[0]==='Bard — Level 1', shown());
+    /* The Chanter has no level-1 choice, so at 3 its only level-1 content is
+       its spell note — which counts: the window shows it. */
+    fresh(); X.addClass('Chanter',3);
+    ck('#69 a Chanter added at 3: the level-1 spell note counts as held', shown()[0]==='Chanter — Levels 1–3', shown());
+    fresh(); X.addClass('Chanter',1);
+    ck('#69 ...and a notes-only window at level 1 says "Level 1"', shown()[0]==='Chanter — Level 1', shown());
 
     const odd="Tom & Jerry's <Brawler>";
     fresh([{name:odd,hitDie:'d8',levels:{'1':{choices:[{type:'skill',choose:1,from:['Athletics','History']}]}}}]);
@@ -1315,14 +1357,14 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
 // ---------- multiclassing grants a subset (#66)
 // Only the FIRST class is character creation. A class added beside another
 // grants no saving throws and no starting equipment or gold, and only the
-// proficiencies the 2024 multiclassing table lists (Rogue: one skill; Wizard:
+// proficiencies the multiclassing table lists (Rogue: one skill; Wizard:
 // none). Its level-1 FEATURES still arrive, and its levels gain hit points like
-// any later level. Run against the real 2024 pack, not a fixture: the bug was
+// any later level. Run against the real SRD 5.2 pack, not a fixture: the bug was
 // in what a real class's data turned into on the sheet.
 {
-  const PACK=JSON.parse(fs.readFileSync(path.join(__dirname,'../../data/5e2024/classes.json'),'utf8'));
+  const PACK=JSON.parse(fs.readFileSync(path.join(__dirname,'../../data/srd52/classes.json'),'utf8'));
   const mcSetup=(con,extra)=>{
-    c=setup(); X.resetRules(); X.mergeRules(PACK,'5e2024_full.json');
+    c=setup(); X.resetRules(); X.mergeRules(PACK,'srd52_full.json');
     if(extra)X.mergeRules({classes:extra},'test');
     X.character.classes=[]; X.character.level=1; X.character.hp.max=''; X.character.hp.cur='';
     X.character.abilities.con=(con==null)?10:con;
@@ -1382,7 +1424,7 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
     ck('#66 a multiclass Bard offers one skill of any', skillCh().length===1&&skillCh()[0].choose===1&&skillCh()[0].from.length===18, skillCh());
     ck('#67 ...and not its first-class three as well', !skillCh().some(x=>x.choose===3), skillCh());
 
-    /* ---- #67: the Bard as a FIRST class. The 2024 data says "any 3", which the
+    /* ---- #67: the Bard as a FIRST class. The data says "any 3", which the
        converter used to drop, so this window offered no skills at all. */
     mcSetup(); reset(); X.addClass('Bard',1);
     const bsk=skillCh()[0]||{};

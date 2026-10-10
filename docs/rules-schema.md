@@ -20,13 +20,13 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
 
 ```json
 {
-  "system": "Humblewood",
-  "name": "Humblewood Races",
+  "system": "Moonlit",
+  "name": "The Moonlit Path — Ancestries",
   "version": 1,
   "_note": "Optional free text; ignored by the app.",
   "excludeSystems": ["humblewood"],
   "requires": [
-    { "pack": "D&D 2024", "file": "5e2024_full.json", "spells": ["Haste"] }
+    { "pack": "SRD 5.2", "file": "srd52_full.json", "spells": ["Haste"] }
   ],
 
   "keywords":    [ ... ],
@@ -75,12 +75,13 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
   entry names per category using the same category keys as the pack body:
 
   ```json
-  { "pack": "Xanathar's Guide to Everything", "file": "xanathars_full.json",
-    "spells": ["Cause Fear", "Primal Savagery"] }
+  { "pack": "SRD 5.2", "file": "srd52_full.json",
+    "spells": ["Hunter's Mark", "Misty Step"] }
   ```
 
   `pack` and `file` are for the message; `file` is the actionable half, because it tells the player
-  exactly what to import. Names are matched **case-insensitively against everything loaded,
+  exactly what to import. `file` is optional: leave it out when there is no file to send the player
+  to (content from a book, say), and the message names the `pack` alone ("from" and the pack's name). Names are matched **case-insensitively against everything loaded,
   whichever pack supplies it** — having that spell from somewhere else is not an error. A category
   key the app doesn't know is ignored rather than reported missing. Every file in a folder must
   declare the same value, for the same reason as `excludeSystems`.
@@ -93,7 +94,7 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
   working; the app shows a red **! n missing** chip on that pack in Settings → Rules data, with a
   tooltip naming what's absent and where to get it.
 - **`rulebook`** *(optional, boolean)* — mark a pack that carries a whole system in one file, the
-  way `5e2024_full.json` and `humblewood_full.json` do. Purely presentational: the app files it
+  way `srd52_full.json` and `homebrew_full.json` do. Purely presentational: the app files it
   under a **Rulebook** heading in Settings → Loaded rules data instead of **Mixed**. Merging is
   unaffected — a rulebook merges exactly as its individual files would.
 - Category keys are all optional; include only what the pack provides. Split a large pack
@@ -596,8 +597,8 @@ It is written in one of two forms:
 This is **not** semver, where `-N` would mark a pre-release. Here it comes after: `1.8.0` <
 `1.8.0-1` < `1.8.0-2` < `1.8.0-10` < `1.8.1`.
 
-It is per pack: a release that only touches Humblewood leaves the D&D pack's `dataVersion` alone,
-so D&D players aren't told to re-import a file that hasn't moved. The app compares it with the
+It is per pack: a release that only touches the homebrew pack leaves the SRD 5.2 pack's
+`dataVersion` alone, so SRD players aren't told to re-import a file that hasn't moved. The app compares it with the
 version the running build shipped with ("update available" when the pack is older) and, when it
 can reach GitHub, with the newest rules-data release (a quiet "v*A* · v*B* out" when a newer copy
 is out). Distinct from `version`, which is the schema version. Hand-written packs can omit it — an
@@ -612,16 +613,16 @@ opens it itself:
 fieldbook-data-standalone-1.8.0.zip
   fieldbook-data.json       the manifest
   NOTICE.md                 what is in it, and every pack's licence and credit
-  5e2024_full.json          the packs, under their usual file names
-  humblewood_full.json
-  …
+  srd52_full.json           the packs, under their usual file names
+  homebrew_full.json
 ```
 
 The manifest, `fieldbook-data.json`:
 
 ```json
 {"_type": "fieldbook-data", "format": 1, "version": "1.8.0", "builtFor": "1.8.0",
- "packs": [{"file": "5e2024_full.json", "system": "XPHB", "version": "1.8.0", "sha256": "…"},
+ "packs": [{"file": "srd52_full.json", "system": "SRD 5.2", "version": "1.8.0",
+            "license": "CC-BY-4.0", "sha256": "…"},
            {"file": "homebrew_full.json", "system": "Homebrew", "version": "1.8.0",
             "license": "CC-BY-SA-3.0", "sha256": "…"}]}
 ```
@@ -658,15 +659,15 @@ appear in the app's **Tables** tab, and any description that carries a `[Table: 
 ```json
 "tables": [
   {
-    "name": "Wild Magic Surge",
-    "caption": "Wild Magic Surge",
-    "cols": ["1d100", "Effect"],
+    "name": "Wandering Weather",
+    "caption": "Wandering Weather",
+    "cols": ["1d6", "Effect"],
     "align": ["center", "left"],
     "rows": [
-      ["01-02", "Roll on this table at the start of each of your turns."],
-      ["03-04", "You cast Fireball as a level 3 spell."]
+      ["1-2", "A gentle breeze rolls through the area."],
+      ["3-4", "A short, heavy rain falls for one minute."]
     ],
-    "owner": "Wild Magic Sorcery",
+    "owner": "Weather Walker",
     "ownerKind": "subclass"
   }
 ]

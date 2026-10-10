@@ -3,15 +3,17 @@
 `./src/tests/run.sh` runs ten suites: plain Node and Python asserting against the real source, with
 no framework, no dependencies and no browser. The JS suites load the app exactly as the build
 concatenates it, which is itself the guard against a top-level ordering bug. One suite turns claims in
-the docs into assertions. The rest of this page is the list of ways a check has passed while the
+the docs into assertions, and one runs the private repo's suites against this checkout when it is
+linked. Every public suite passes with no private data present, as CI has none. The rest of this page is the list of ways a check has passed while the
 thing it checked was broken, because in this repo that has happened often enough to be the main
 lesson.
 
 **Code:** `src/tests/run.sh`, `src/tests/harness.js`; the app's `blankChar()` in `00-constants.js`
 and `APP_VERSION` in `30-version.js` (the TDZ pair); `90-boot.js` (left out of the harness) ·
 **Tests:** `converter.py`, `tables.js`, `rules-data.js`, `sheet.js`, `char-update.js`, `docs.js`,
-`humblewood-verbatim.py`, `data-kit.py`, `data-archive.js`, `srd-verbatim.py`; the fixture
+`data-kit.py`, `data-archive.js`, `srd-verbatim.py`, `private-data.js`; the fixture
 `fixtures/srd-excluded-names.json` · **See also:** [Building & CI](building-and-ci.md),
+[Private data](../data/private-data.md),
 [Data archive](../architecture/data-archive.md), [SRD 5.2](../data/srd.md),
 [Screenshot QA](screenshot-qa.md), [Rules-update tool](../features/rules-update-tool.md),
 [Build & source split](../architecture/build-and-source-split.md)
@@ -25,8 +27,9 @@ and `APP_VERSION` in `30-version.js` (the TDZ pair); `90-boot.js` (left out of t
 ./src/tests/run.sh tables    # only suites whose name contains "tables"
 ```
 
-`run.sh` changes to the repo root, **always** rebundles (`node scripts/bundle-rules.js`) and picks a
-Python by running it (`"$PY" -c ''`, with `python3` falling back to `python`). It then runs each name in
+`run.sh` changes to the repo root, picks a Python by running it (`"$PY" -c ''`, with `python3`
+falling back to `python`), and **always** rebundles (`"$PY" tools/data-kit/fbdata.py bundle -o dist`).
+It then runs each name in
 its `SUITES` line (`.py` if one exists, else `.js`) and reads **each suite's last line**:
 `ALL PASSED (n)`, `FAILURES: …`, or `SKIP - reason`. It prints per-suite counts and a total, and exits
 non-zero if any suite failed or if the filter matched nothing. CI, `pre-push`, `release.yml` and
@@ -40,22 +43,23 @@ it after a build.
 
 | Suite | What it guards |
 |---|---|
-| `converter.py` | `scripts/convert.py` on real-shaped fixtures: table extraction and naming, class progression tables built from cells copied out of the dump (`dice`, `bonus`, `bonusSpeed`), the XPHB selection with its free-subset backfill, races, supplement source selection, the `_copy` subclass dedupe, optional features, cross-pack table-name collisions, option pickers from `optionalfeatureProgression`, option costs, subclass resources, Student of War; and the SRD pack (#84): rename flags read as truthy, a choice-shaped prerequisite printed as text, the Paladin's and Ranger's Fighting Style option, `srd_view()` (only flagged entries, every rename layer, no Artificer, the dump never touched), a whole `srd` run on a mini dump it builds in a temp dir, the leak scan, the corrections and their errors (a missing or broken corrections file, and a `convert.py` with none beside it, fail and write nothing), **that the committed `data/srd52` carries every correction** (from committed files alone, so CI runs it), and `srd_text.py`'s `norm()`, `records()` and `check()` on synthetic pages, stale acceptances and aliases included; plus a dice roll holding a prompt template, replacements written as text, and `classes --feats` |
-| `tables.js` | `tableHTML()` structure and escaping, the `[Table: X]` anchor pass through `highlight()`, the tables rules category, `migrate()` round-trip, the shipped-table defects (non-empty `cols`, no `_` keys, row widths, unique names, owners, no column blank in every row) and the 2024 class-table values, and `noteHTML()`, whose safety argument is that pipeline |
-| `rules-data.js` | Species filtering by system and `excludeSystems`, missing-dependency reporting, the rules cache never failing silently and its LZW fallback, Settings bucketing and clear-all, **the bundle round-trip** (a bundle equals importing each file), supplement packs, the data states, **every bundle against `data/packs.json`** (its system, title, `dataVersion`, licence and credit), and the SRD 5.2 pack (#84): its counts, its files' `system` and `excludeSystems`, no non-SRD or renamed-original name (from the committed fixture `fixtures/srd-excluded-names.json`, since CI has no dump), homebrew's D&D `requires` resolving with it alone, species by character system, every anchor resolving, its trackers and Archery effect, every spell with a class list, the registry order, the table-twin rule (R5) with its nine pinned SRD/2024 differences, `srd52_full.json` keeping `excludeSystems`, and the fixes in the 2024 pack (no `#$` prompt template in any pack, the Carrying Capacity table's Tiny row). It also holds the markup guards: the note registry, the tab bar, every `getElementById` target existing app-wide, the Vitals structure, every Settings control still wired, the combat tab, the byte-pin of `src/html` against the built file, and **every attribute value in `src/js` `esc()`'d** (a small tokenizer, not a regex; see [Rich text](../architecture/rich-text.md)) |
+| `converter.py` | `scripts/convert.py` on fixtures in the dump's shapes with invented text (#85; same structure, same assertions as the book-text inputs they replaced): table extraction and naming, class progression tables built from the dump's typed cells (`dice`, `bonus`, `bonusSpeed`), the XPHB selection with its free-subset backfill, races, supplement source selection, the `_copy` subclass dedupe, optional features, cross-pack table-name collisions, option pickers from `optionalfeatureProgression`, option costs, subclass resources, Student of War; and the SRD pack (#84): rename flags read as truthy, a choice-shaped prerequisite printed as text, the Paladin's and Ranger's Fighting Style option, `srd_view()` (only flagged entries, every rename layer, no Artificer, the dump never touched), a whole `srd` run on a mini dump it builds in a temp dir, the leak scan, the corrections and their errors (a missing or broken corrections file, and a `convert.py` with none beside it, fail and write nothing), **that the committed `data/srd52` carries every correction** (from committed files alone, so CI runs it), and `srd_text.py`'s `norm()`, `records()` and `check()` on synthetic pages, stale acceptances and aliases included; plus a dice roll holding a prompt template, replacements written as text, `classes --feats`, and `fbdata.py build` on that mini dump |
+| `tables.js` | `tableHTML()` structure and escaping, footnotes on an invented table, the `[Table: X]` anchor pass through `highlight()`, the tables rules category, `migrate()` round-trip, the shipped-table defects in the public packs (non-empty `cols`, no `_` keys, row widths, unique names, owners, no column blank in every row, every `*` with a footnote) and the SRD 5.2 class-table values, and `noteHTML()`, whose safety argument is that pipeline |
+| `rules-data.js` | Species filtering by system and `excludeSystems`, missing-dependency reporting, the rules cache never failing silently and its LZW fallback, Settings bucketing and clear-all, **the bundle round-trip** (a bundle equals importing each file), supplement behaviour on synthetic packs, the data states, **every bundle against `data/packs.json`** (its system, title, `dataVersion`, licence and credit), the item and weapon checks of #72–#79 over the public packs, homebrew's `requires` (its two groups, and an SRD 5.2 plus homebrew import leaving only the Xanathar's spells missing), and the SRD 5.2 pack (#84): its counts, its files' `system` and `excludeSystems`, no non-SRD or renamed-original name (from the committed fixture `fixtures/srd-excluded-names.json`, since CI has no dump), homebrew's D&D `requires` resolving with it alone, species by character system, every anchor resolving, its trackers and Archery effect, every spell with a class list, no table name shared except by identical twins, `srd52_full.json` keeping `excludeSystems`, and the #84 fixes as the SRD pack carries them (no `#$` prompt template in any pack, the Carrying Capacity table's Tiny row, the Fighting Style menus). It also holds the markup guards: the note registry, the tab bar, every `getElementById` target existing app-wide, the Vitals structure, every Settings control still wired, the combat tab, the byte-pin of `src/html` against the built file, and **every attribute value in `src/js` `esc()`'d** (a small tokenizer, not a regex; see [Rich text](../architecture/rich-text.md)) |
 | `sheet.js` | The pure functions the sheet leans on: signed coin/HP entry, temp HP, weight and encumbrance, size, origins, "choose N" budgets, stat layouts, feature grouping and the feat picker, dice expressions, item uses, spell allotments, rich text, emblems, attack damage strings, armor and AC, concentration, the combat view's pure helpers, modal focus; and **a hostile character, pack and keyword id through 40 renderers**, none of which may emit the payload raw |
-| `char-update.js` | The version stamp and the rules-update tool: fingerprints, diff classification, apply keeping character-local state, backups, gating, the R1–R5 regressions; plus level-1 HP seeding, the level-up HP step, option pickers, resource dice, starting-equipment grants, and the order the choice windows open in, driven through the real flow with the 2024 Fighter |
+| `char-update.js` | The version stamp and the rules-update tool: fingerprints, diff classification, apply keeping character-local state, backups, gating, the R1–R5 regressions, the item regressions read from SRD 5.2 entries; plus level-1 HP seeding, the level-up HP step, option pickers, resource dice, starting-equipment grants, and the order the choice windows open in, driven through the real flow with invented classes and the SRD 5.2 classes |
 | `docs.js` | Doc claims as assertions (below) |
-| `humblewood-verbatim.py` | Humblewood core prose is word-for-word the book; Gadgeteer prose too. Needs `.venv` (pymupdf) and the source PDF; **prints `SKIP` and exits 0 without them** |
-| `data-kit.py` | `tools/data-kit/fbdata.py` and the scripts that drive it, every case on a scratch copy under a temp dir: data versions sort the data way; a digest ignores key order and whitespace but not a changed value, title, licence or credit; `versions --changed`, `--check` and `--bump`; every bad registry refused before anything happens; every released pack in the real registry has a digest (an unreleased one, `version: null`, has none until its first release); `pack` writing the same bytes twice, with the right manifest and `NOTICE.md`; `validate` catching a missing file, a SHA mismatch, an extra file, a system mismatch and a path escape; and, in a scratch git repo, `data-release.js` (`--dry-run` writes nothing; it refuses dirty `data/`, no changes, an existing tag and another app's release; the next N), `release.js` (bumps only changed packs, snapshots `DATA_VERSIONS`) and `data-release-notes.js` |
+| `data-kit.py` | `tools/data-kit/fbdata.py` and the scripts that drive it, every case on a scratch copy under a temp dir: data versions sort the data way; a digest ignores key order and whitespace but not a changed value, title, licence or credit; `versions --changed`, `--check` and `--bump`; every bad registry refused before anything happens; every released pack in the real registry has a digest (an unreleased one, `version: null`, has none until its first release); `pack` writing the same bytes twice, with the right manifest and `NOTICE.md`; `validate` catching a missing file, a SHA mismatch, an extra file, a system mismatch and a path escape; and, in a scratch git repo, `data-release.js` (`--dry-run` writes nothing; it refuses dirty `data/`, no changes, an existing tag and another app's release; the next N), `release.js` (bumps only changed packs, snapshots `DATA_VERSIONS`) and `data-release-notes.js`; since #85, golden checks pinning `bundle`, `validate --public` refusing a missing or unlisted licence, `build` from a folder of packs, a registry and one pack file, `kit_file()`'s lookup, `convert` filling in only the inputs the caller didn't name (`--overlay=PATH` included), `build` at a 5e-tools checkout's root pointing at its `data/`, `data-release.js --registry` against another checkout, the example pack and (once built) the kit zip working unzipped with no repo around it (CI re-runs the suite after its full build for these), and the `private-data` suite's three outcomes on a fake runner |
 | `srd-verbatim.py` | The SRD 5.2 pack's text against the SRD 5.2.1 PDF: every span of pack text the SRD lacks must be corrected or accepted in `scripts/srd-corrections.json`, and every acceptance and alias there must still be used (see [SRD 5.2](../data/srd.md)). Needs `.venv` (pymupdf) and `_conversion-data/srd52/SRD_CC_v5.2.1.pdf`; **prints `SKIP` and exits 0 without them** |
 | `data-archive.js` | The app's half: `parseDataVer()`, `cmpDataVer()` and the tag helpers as tables of cases; `crc32()` against known vectors and `inflateRaw()` against Node's own deflate at every level; every refusal code and the ignored entries; `readDataArchive()` on an archive, a manifest one folder down, an app zip, a kit zip, a loose zip and an empty one; the one read budget across nested archives; `importRulesPayloads()` and `importPack()` replacing; both status lines, the four pickers' `accept`; pack credits through merge, export, removal and clear, escaped; **the round trip** (`fbdata.py pack` the real bundles, import the zip, and the pool equals importing the bundles); zips from Python's `zipfile` and `zip -9`; and the newer-data notice, `checkForDataUpdate()` included, against a stubbed network |
+| `private-data.js` | The private repo's suites, run against this checkout (#85). With `_private-data` (or `$FIELDBOOK_PRIVATE`) present it runs `tests/run.sh` there with `FIELDBOOK` set to this checkout, relays its output, and passes only when it exits 0 with `ALL PASSED (n)` as its last line; without it, **prints `SKIP - no _private-data`**. The private runner holds five suites: the leak scan and its self-test, the four packs' content checks, the 2024 byte gate and `humblewood-verbatim` (see [Private data](../data/private-data.md)) |
 
-`humblewood-verbatim` and `srd-verbatim` run under whichever `python3` is first on `PATH`. So even on
-a machine that has `.venv` they skip unless the venv is activated, or you run them directly:
-`.venv/bin/python src/tests/humblewood-verbatim.py` after any change to the extractor, and
-`.venv/bin/python src/tests/srd-verbatim.py` after any change to the converter, the SRD
-corrections or `data/srd52/`.
+`srd-verbatim`, and the private repo's `humblewood-verbatim` inside `private-data`, run under
+whichever `python3` is first on `PATH`. So even on a machine that has `.venv` they skip unless its
+`bin` is on `PATH`: run `PATH=$PWD/.venv/bin:$PATH ./src/tests/run.sh`, or
+`.venv/bin/python src/tests/srd-verbatim.py` directly after any change to the converter, the SRD
+corrections or `data/srd52/`. The Humblewood suite is the private repo's to run after any change to
+its extractor.
 
 ### The harness
 
@@ -95,13 +99,20 @@ corrections or `data/srd52/`.
   documents `srd`, quotes that statement and names Wizards nowhere else;
 - that no pending `UNRELEASED.md` bullet or changelog line holds an angle-bracket tag (GitHub eats
   it), and that no pending bullet hard-codes a version;
+- that **no file under `src/tests/`, at any depth, reads a private pack** (#85): a path into one of
+  the four folders, a bundle name, a helper given the folder name, a list of folders, or a key; and
+  that the scan covers `run.sh` and every suite;
 - that every `docs/*.md` on disk passes `build.sh`'s allowlist, that `LICENSE` ships and is
-  listed, and that `scripts/srd-corrections.json` ships beside `convert.py`;
+  listed, that the app zip ships no `scripts/` and its guard's pattern bans one (while passing the
+  shipped files), that the kit zip's allowlist carries
+  `srd-corrections.json` beside `convert.py`, and that README §9 names the kit;
 - that `data/packs.json` parses, its `release` and every pack's version are data versions, every
   pack's `dir` exists, and every system in `DATA_VERSIONS` (still a flat JSON object) has a pack in
-  the registry at that version or later;
-- that the icon map is parity-checked against the generated `05-icons.js`, covers every shipped
-  class, ancestry and background, and carries the CC BY 3.0 credits in README and in `88-settings.js`;
+  the registry at that version or later — except XPHB, Humblewood, XGE and TCE, which may be
+  absent (`LEFT_FOR_PRIVATE`, below);
+- that the icon map is parity-checked against the generated `05-icons.js`, covers every class,
+  ancestry and background in the public packs (`DIRS`, `homebrew` and `srd52`; the private suite
+  covers the rest), and carries the CC BY 3.0 credits in README and in `88-settings.js`;
 - for the wiki: every page is listed in `index.md`, every link resolves, there are no wikilinks,
   every cited function and fragment exists, and every JS fragment is cited by some page and named in
   the overview's code map. This is the lint from the
@@ -138,6 +149,10 @@ written before `src/tests/` existed was lost along with its scratchpad.
   They are not fragments: `validateOrder()` reads `src/js`, `src/css` and `src/html` without recursing.
 - **A new guard must be seen to fail.** Revert the thing it guards and watch it go red before
   trusting it.
+- **No public test reads a private pack, or quotes one.** A check on the 2024, Xanathar's, Tasha's
+  or Humblewood pack goes in the private `tests/private-data.js`; a logic test that needs an entry
+  reads the SRD 5.2 one, or an invented fixture. `docs.js` enforces the first half and the private
+  leak scan the second.
 
 ## Traps
 
@@ -191,6 +206,8 @@ written before `src/tests/` existed was lost along with its scratchpad.
 | Question | Decision | Rejected, and why |
 |---|---|---|
 | Framework | None: plain node and python3 with a small recorder | — |
+| Where the private packs' tests live (#85, R10) | In the private repo, run from here by the `private-data` suite, which skips without the link; the public suites read SRD 5.2 entries or invented fixtures | Skipping inside each public suite when the data is absent: CI would test nothing of that logic, and the suites would keep the book text (L5426) |
+| The `private-data` suite's verdict | Pass only on exit 0 and a last line of `ALL PASSED (n)`; anything else fails, never passes | Trusting the exit code alone, or the summary line alone: either can lie on a crashed runner (L5426) |
 | How suites load the app | The real concatenation in manifest order, in a `vm` | Per-fragment `require`: loses the TDZ guard |
 | How suites get the markup | An independent splice in `harness.js`, pinned to the artifact by one assertion | Calling `build-html.js`: it exits at require time, and could never catch its own splice bug |
 | Where tests live | `src/tests/`, where the audience rule keeps them out of the zip | Scratchpad throwaways: they vanished, and CI covered no logic |
@@ -200,6 +217,14 @@ written before `src/tests/` existed was lost along with its scratchpad.
 | What the SRD data tests read in CI, which has no dump | A committed fixture, `fixtures/srd-excluded-names.json`, written by `convert.py srd --excluded-out` | Reading the dump: CI has none, and the tests must pass without it (L5148) |
 | Finding Python | Run it | `command -v`: the Windows Store stub |
 | What `docs.js` checks | Mechanically checkable facts | A prose linter: rewording would break it (a blank-line-before-heading check was declined on the same grounds) |
+
+## Open
+
+- **`LEFT_FOR_PRIVATE` in `docs.js` goes inert at the next release**, when `release.js` retakes
+  `DATA_VERSIONS` from the pruned registry; delete it then. A tripwire that failed once it was inert
+  was rejected, since it would fail CI at the release itself.
+- `run.sh`'s closing line counts a skipped suite as run, so CI's "All 10 suites passed" includes the
+  skipped `private-data`.
 
 ## History
 
@@ -221,3 +246,6 @@ written before `src/tests/` existed was lost along with its scratchpad.
 - 2026-10-07 — Nine suites: `data-kit.py` and `data-archive.js`; `rules-data.js` checks every bundle against `data/packs.json`; `docs.js` checks the registry and that README names the archive; `note:` skips for a missing `python3` or `zip`. → ledger L5082, #83
 - 2026-10-08 — Ten suites: `srd-verbatim.py`, skipping without PyMuPDF or the SRD PDF; the converter's SRD tests on a temp-dir mini dump; `rules-data.js` checks the SRD pack from the committed `fixtures/srd-excluded-names.json`; `docs.js` checks README's SRD attribution; `data-kit.py` requires digests only of released packs. → ledger L5148, #84
 - 2026-10-08 — `converter.py` checks the committed SRD pack carries its corrections and that a missing corrections file fails; the mini-dump runs pass a real empty file; `srd-verbatim` fails on stale acceptances and aliases; `rules-data.js` pins the nine differing SRD/2024 tables; `docs.js` checks README-converter and the zip's corrections file. → ledger L5269, #84
+- 2026-10-09 — `run.sh` rebundles with `fbdata.py bundle` in place of the Node bundler; `data-kit.py`'s bundle checks move from a Node-vs-Python parity test to golden checks once the Node bundler was removed. → ledger L5342, #85
+- 2026-10-09 — Ten suites still: `humblewood-verbatim` moves to the private repo and `private-data` takes its slot; the public suites test SRD 5.2, homebrew and invented fixtures, with the four packs' checks moved private; `docs.js` fails on any public test reading a private pack; `converter.py`'s inputs are invented text. → ledger L5426, #85
+- 2026-10-09 — `data-kit.py` pins `convert`'s `--flag=PATH` handling and `build`'s 5e-tools-root refusal, and CI re-runs it after the build; `docs.js` checks the app zip's guard bans `scripts/`. → ledger L5592, #85

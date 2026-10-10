@@ -71,6 +71,43 @@ fs.readdirSync(path.join(ROOT, 'src/tests'))
     ck('suite file "' + f + '" is registered in run.sh', suites.includes(base));
   });
 
+// ---------- no public test reads a private pack (#85, Review Focus 2)
+// The 2024, Xanathar's, Tasha's and Humblewood packs live in the private repo,
+// and CI has none of them. This catches every form the suites used to read one
+// by (<pack> is one of the four folder names below):
+//   a path                      'data/<pack>/x.json', path.join(ROOT, 'data', '<pack>', f)
+//   a bundle name               dist/<pack>_full.json, '<pack>_full.json' anywhere
+//   a helper given the folder   pack('<pack>', f), shippedItems('<pack>', f), read('<pack>', f, n)
+//   a list of pack folders      ['<pack>', …], […, 'srd52', '<pack>'], or a list of one
+//                               (but humblewood's is the excludeSystems value, so not that one)
+//   a key, or a path under data '<pack>/items.json Name', {'<pack>': {…}}, <pack>: {…}
+// Every .js, .py and .sh file under src/tests, at any depth (fixtures/ holds
+// JSON data, not reads). A label in a synthetic fixture is renamed rather than
+// excused, so nothing is exempt.
+{
+  const NAMES = '5e2024|xanathars|tashas|humblewood', LONE = '(?:5e2024|xanathars|tashas)';
+  const PK = '(?:' + NAMES + ')', Q = '[\'"]';
+  const PRIVATE_PACK = new RegExp([
+    '(?:data|dist)[\\/\'", ]+' + PK + '(?:_full\\.json|[\\/\'"])',
+    PK + '_full\\.json',
+    '\\w\\(\\s*' + Q + PK + Q + '\\s*[,)]',
+    '\\[\\s*' + Q + PK + Q + '\\s*,',
+    '\\[\\s*' + Q + LONE + Q + '\\s*\\]',
+    Q + '(?:' + NAMES + '|homebrew|srd52)' + Q + '\\s*,\\s*' + Q + PK + Q,
+    Q + PK + '/',
+    Q + '?\\b' + PK + Q + '?\\s*:\\s*[{\\[]',
+  ].join('|'));
+  const testFiles = d => fs.readdirSync(path.join(ROOT, 'src/tests', d), { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? testFiles(d ? d + '/' + e.name : e.name) : /\.(js|py|sh)$/.test(e.name) ? [d ? d + '/' + e.name : e.name] : []);
+  const scanned = testFiles('');
+  ck('the private-pack scan covers run.sh and every suite', scanned.includes('run.sh') && suites.every(s =>
+    scanned.includes(s + '.js') || scanned.includes(s + '.py')), scanned);
+  scanned.forEach(f => {
+    const hits = read('src/tests/' + f).split('\n').map((l, i) => [i + 1, l]).filter(([, l]) => PRIVATE_PACK.test(l));
+    ck('src/tests/' + f + ' reads no private pack', !hits.length, hits.slice(0, 3).map(([n, l]) => n + ': ' + l.trim().slice(0, 100)));
+  });
+}
+
 // ---------- the flat data filenames are gone; no doc may still name them
 const OLD = /\b(humblewood-(races|spells|feats|classes|subclasses|backgrounds)|(spells|feats|items|classes|races|backgrounds|conditions|glossary)-2024)\.json\b/;
 ['README.md', 'CLAUDE.md', 'docs/rules-schema.md', 'docs/README-converter.md'].forEach(f => {
@@ -140,10 +177,25 @@ if (docsAllowed) {
      wouldBeRejected);
 }
 ck('build.sh ships LICENSE', /cp LICENSE /.test(build));
-// convert.py's default corrections file is the one beside it; without it in the
-// zip, a player's `srd` run fails (#84)
-ck('build.sh ships scripts/srd-corrections.json beside convert.py in the app zip',
-   /^cp [^\n]*scripts\/srd-corrections\.json[^\n]* \.buildtmp\/scripts\/$/m.test(build));
+// convert.py and its helper files travel in the data kit zip now, not the app
+// zip (#85) — the kit's own allowlist still ships srd-corrections.json beside
+// convert.py, just flat instead of under scripts/.
+ck('the app zip ships no scripts/ (the data kit replaces it)',
+   !/mkdir -p[^\n]*\.buildtmp\/scripts/.test(build) && !/cp scripts\/convert\.py \.buildtmp/.test(build));
+// ...and a scripts/ that comes back anyway fails the zip's own guard, which
+// otherwise bans only named dev files at the top level.
+const bannedSrc = /const banned=names\.filter\(n=>\/(.+?)\/\.test\(n\)\);/.exec(build);
+let bannedRe = null;
+try { bannedRe = bannedSrc && new RegExp(bannedSrc[1]); } catch (e) { /* reported below */ }
+ck("build.sh's app-zip guard bans scripts/",
+   !!bannedRe && bannedRe.test('scripts/convert.py') && bannedRe.test('scripts/srd-corrections.json'),
+   bannedSrc && bannedSrc[1]);
+ck('...and still lets the shipped files through',
+   !!bannedRe && !['fieldbook.html', 'README.md', 'LICENSE', 'docs/CHANGELOG.md',
+                   'data/fieldbook-data-standalone-1.8.0.zip'].some(n => bannedRe.test(n)));
+ck('build.sh builds the data kit zip from the kit allowlist',
+   /fieldbook-data-kit-/.test(build) && /cp scripts\/srd-corrections\.json/.test(build));
+ck('README section 9 names the data kit', /fieldbook-data-kit-/.test(readme));
 ck('README section 9 lists LICENSE', /LICENSE\s+←/.test(readme));
 
 // ---------- data/packs.json, the registry of rules packs (#83)
@@ -167,8 +219,13 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   let dv = null;
   try { dv = JSON.parse(dvm[1]); } catch (e) { /* reported below */ }
   ck('DATA_VERSIONS is present and is flat JSON (release.js rewrites it)', !!dv);
+  /* #85: these four packs left this registry for the private repo's. The
+     snapshot still names them until the next release retakes it from this
+     registry, so each may be absent here, and only these four. */
+  const LEFT_FOR_PRIVATE = ['XPHB', 'Humblewood', 'XGE', 'TCE'];
   if (dv) Object.entries(dv).forEach(([sys, v]) => {
     const p = packsReg.packs.find(x => x.system === sys);
+    if (!p && LEFT_FOR_PRIVATE.includes(sys)) return;
     ck('DATA_VERSIONS.' + sys + ' has a pack in data/packs.json', !!p);
     if (p) ck('data/packs.json ' + sys + ' is at or after DATA_VERSIONS', dvCmp(p.version, v) >= 0, p.version + ' vs ' + v);
   });
@@ -220,7 +277,7 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   // This is the check that fires when a future pack adds a race and nobody
   // notices it renders bare. A data-only change CAN go red here — that is the
   // point, and the fix is one line in src/icons/icons.json.
-  const DIRS = ['5e2024', 'humblewood', 'xanathars', 'tashas', 'homebrew'];
+  const DIRS = ['homebrew', 'srd52'];
   const FILES = { classes: 'classes.json', races: 'races.json', backgrounds: 'backgrounds.json' };
   DATA_KINDS.forEach(kind => {
     const have = new Set(Object.keys(iconMap[kind] || {}).map(n => n.trim().toLowerCase()));

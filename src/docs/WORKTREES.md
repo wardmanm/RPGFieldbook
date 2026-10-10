@@ -31,6 +31,8 @@ git merge --no-ff issue/43-…
 Each worktree gets:
 
 - symlinks to `.venv` and `_conversion-data` — 102 MB and 461 MB, so symlinked, never copied
+- a symlink to `_private-data`, the private rules repo, when the main checkout has one (#85), so the
+  `private-data` suite and the converter menu reach it from the worktree too
 - a copy of `.claude/settings.local.json`, so agents don't re-trigger permission prompts you already
   answered
 
@@ -179,8 +181,8 @@ which is the behaviour worth keeping. Discard it deliberately with
 ## 7. Things that have already gone wrong
 
 - **A trailing slash in `.gitignore` does not match a symlink.** `.venv/` matches a *directory*;
-  `wt.sh` creates a symlink, which git sees as a file. The patterns are now `.venv` and
-  `/_conversion-data` with no slash. Get this wrong and `git add -A` in a worktree commits two broken
+  `wt.sh` creates a symlink, which git sees as a file. The patterns are now `.venv`,
+  `/_conversion-data` and `_private-data` with no slash. Get this wrong and `git add -A` in a worktree commits two broken
   symlinks into the repo.
 - **`wt.sh rm` refusing forever.** Same root cause — see section 6.
 - **`\+` in `sed` is a GNU extension.** `slugify` used `s/[^a-z0-9]\+/-/g`, which BSD sed on macOS

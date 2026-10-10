@@ -1,12 +1,14 @@
 # Converter
 
-`scripts/convert.py` turns a 5e-tools data dump into the D&D 2024 rules pack, `data/5e2024/`,
-(through `supplement`) into the Xanathar's and Tasha's packs, and (through `srd`) into the SRD 5.2
-pack, `data/srd52/`. It is stdlib-only Python 3.8+ and
-ships to players in the zip's `scripts/`, so it is both a dev tool and a player tool. Its output is
-committed; `scripts/bundle-rules.js` then rolls each system folder into the one-file pack players
-import. The player-facing how-to is [README-converter](../../../../docs/README-converter.md); this
-page is what that file does not say: what must not move, and the traps that have already shipped.
+`scripts/convert.py` turns a 5e-tools data dump into the D&D 2024 rules pack, (through
+`supplement`) into the Xanathar's and Tasha's packs, and (through `srd`) into the SRD 5.2 pack,
+`data/srd52/`. It is stdlib-only Python 3.8+ and ships to players in the
+[data kit](data-kit.md) zip, so it is both a dev tool and a player tool. Its output is committed:
+`data/srd52/` here, and the 2024, Xanathar's and Tasha's packs in the private repo's `data/`
+(see [Private data](private-data.md)), which `dev.sh` writes through `_private-data`.
+`fbdata.py bundle` then rolls each system folder into the one-file pack players import. The
+player-facing how-to is [README-converter](../../../../docs/README-converter.md); this page is what
+that file does not say: what must not move, and the traps that have already shipped.
 
 **Code:** `main()`, `_run_core()`, `srd_view()`, `pick_2024_preferred()`, `pick_sources()`,
 `_render_optfeat_prereq()`, `_ref_feats()`, `load_feat_index()`, `feat_ctx()`,
@@ -21,10 +23,10 @@ page is what that file does not say: what must not move, and the traps that have
 `_ammo_kind()`, `_ammo_type_kind()`, `_pack_of()`, `_shipped_2024()`, `_reprint_keys()`,
 `_fill_variant()`, `_ammo_pieces()`, `_is_ammo_variant()`, `_variant_selected()`,
 `convert_ammo_variants()`,
-`_pack()`, `_write()` in `scripts/convert.py`; `bundle()` in `scripts/bundle-rules.js`;
+`_pack()`, `_write()` in `scripts/convert.py`; `bundle()`, `cmd_bundle()`,
 `pack_digest()` in `tools/data-kit/fbdata.py`; `mergeRules()` in `89-rules-merge.js`;
 `DATA_VERSIONS` in `30-version.js`; `RULE_CATS` in `88-settings.js` ·
-**Data:** `data/5e2024/*.json`, `data/srd52/*.json`, `data/overlay.json`, `data/class-resources.json`,
+**Data:** `data/srd52/*.json`, the private repo's 2024 pack (`5e2024/`), `data/overlay.json`, `data/class-resources.json`,
 `scripts/srd-corrections.json`, `_conversion-data/5etools-v2.36.1/` (gitignored) · **Tests:**
 `converter.py`, `rules-data.js`, `tables.js`, `srd-verbatim.py` · **See also:** [Supplements](supplements.md),
 [SRD 5.2](srd.md), [Rules packs](../architecture/rules-packs.md),
@@ -34,10 +36,10 @@ page is what that file does not say: what must not move, and the traps that have
 ## How it works
 
 **Subcommands.** `conditions`, `glossary`, `feats`, `backgrounds`, `items`, `spells`, `classes`,
-`races` convert one file; `all <dir>` converts a whole dump into `data/5e2024/`; `supplement <dir>
+`races` convert one file; `all <dir>` converts a whole dump into the 2024 pack; `supplement <dir>
 --book XGE|TCE` converts one supplement book (see [Supplements](supplements.md)); `srd <dir>`
 converts the SRD 5.2 pack (below, and [SRD 5.2](srd.md)). `all` is the only path that reproduces the
-committed core pack, and `srd` the only one that reproduces `data/srd52/`. Both are
+committed core pack (in the private repo), and `srd` the only one that reproduces `data/srd52/`. Both are
 `_run_core()`, the whole-dump conversion: `all` calls it with the default `Book`, `srd` with
 `srd_book()` over a filtered copy of the dump.
 
@@ -60,7 +62,7 @@ and `_variant_selected()` alike: it is `true` **or a string**, the entry's SRD n
 counts. That is how the 2024 pack carries Carrion Crawler Mucus and Lolth's Sting, under their 2024
 names.
 
-**Current output** (counted from `data/5e2024/`): 16 backgrounds, 14 classes, 21 conditions,
+**Current output** of `all` (counted from the private repo's 2024 pack): 16 backgrounds, 14 classes, 21 conditions,
 77 feats, 58 features, 115 glossary terms, 94 items, 529 magic items, 10 species, 391 spells,
 108 tables. Spells carry a `class` list only when `--sources sources.json` is supplied (`all` finds
 it in `spells/`); the spell file itself has no per-spell class data.
@@ -125,9 +127,9 @@ sheet through the pickers below.
 
 **Formulas, one-entry items and stat blocks are written out.** `flatten()` writes the book's
 centred formula lines (`abilityDc`, `abilityAttackMod`, `abilityGeneric`) through
-`_formula_text()`, worded as 5e-tools' classic renderer words them: "Spell save DC = 8 + your
-proficiency bonus + your Intelligence modifier", "Spell attack modifier = your proficiency bonus +
-your Intelligence modifier", and several abilities as "Strength or Dexterity modifier (your
+`_formula_text()`, worded as 5e-tools' classic renderer words them — [book text: the Spellcasting
+formula line] and [book text: the Spell Attack formula line] — and several abilities as "Strength
+or Dexterity modifier (your
 choice)" (`_attr_choose()`). `_full_stop()` ends each with a full stop, because a named subsection
 joins its blocks with spaces. A list item carrying one `entry` instead of `entries` reads exactly
 as its `entries` twin, "Name: text". A `statblock` embeds another entity by reference:
@@ -197,7 +199,7 @@ rolls"; "+N bonus to … saving throw DC(s)" or "spell save DC"; the Robe of the
 spell save DC and spell attack bonus each increase by 2"; "+N bonus to … ability checks" alone or in
 a list (one named check, or checks "made with" a tool, is not all of them); or "Proficiency Bonus
 increases by N". A class named in it ("the saving throw
-DCs of your druid and ranger spells") is no condition: the sheet has one spellcasting, and the class
+DCs of [book text: a Moon Sickle's class-scoped save-DC clause]") is no condition: the sheet has one spellcasting, and the class
 is the item's attunement. It reads that sentence up to the end of the bonus's own clause, sets aside
 the conditions an equipped item always meets ("while wearing / holding / wielding / carrying",
 "while … is on your person", "while … orbits your head"), and calls the bonus conditional if any of
@@ -240,6 +242,10 @@ themselves; the `classes` subcommand reads it from `--feats feats.json` (through
 `refFeat` the index lacks leaves its option off the menu and is a `WARNING` at the end of every run
 (`_feat_miss_warnings()`), naming the feat and the class.
 
+**Class one-liners.** `convert_classes()` gives each class its `description` from `CLASS_BLURB`, 14
+one-line summaries in Fieldbook's own words (#85, spec decision 1). An SRD run writes none
+(`Book.mode` is `srd`), so the SRD pack's classes carry an empty description.
+
 **Skill proficiencies: one reader.** `_skill_profs()` reads every 5e-tools skill-proficiency list
 the converter meets: a species' `skillProficiencies` (through `_race_skills()`), a class's
 `startingProficiencies.skills` and its multiclass skills. A bare name or `{"perception": true}` is a
@@ -260,7 +266,7 @@ said". The pack's Artificer is the TCE printing and carries TCE's row. What the 
 **Hand-authored inputs.** `data/overlay.json` (`byName`: Archery, Defense) adds numeric `effects`
 to feats and fighting-style options by name, via `apply_overlay()`. `data/class-resources.json`
 adds resource trackers, keyed by class name or `"Class/Subclass"`. They sit at the `data/` root,
-not in a system folder, and the zip ships them in `scripts/` beside `convert.py`, with
+not in a system folder, and the data kit zip ships them flat beside `convert.py`, with
 `scripts/srd-corrections.json` (the SRD pack's, below). Details of the
 trackers: [Class resources](../features/class-resources.md).
 
@@ -270,8 +276,9 @@ template with no display text to print instead) left in the file. `_pack()` buil
 fixed key order: `system`, `name`, `version`, then `_note` and `excludeSystems` only when the book
 sets them, then the array.
 
-**Bundling.** `bundle()` in `bundle-rules.js` reads every `.json` directly inside each folder that
-`data/packs.json` registers and writes the registry's `dist/<file>` (`5e2024_full.json`, …) with
+**Bundling.** `bundle()` in `tools/data-kit/fbdata.py` (run as `fbdata.py bundle`) reads every
+`.json` directly inside each folder that
+`data/packs.json` registers and writes the registry's `dist/<file>` (`srd52_full.json`, …) with
 `rulebook: true` and the registry's title, licence, credit and version as `dataVersion` (never
 written here; see [Data archive](../architecture/data-archive.md)). It dedupes the way
 `mergeRules()` does, by
@@ -300,31 +307,33 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
   `scripts/srd-corrections.json` to the converted text, so the pack reads as the SRD 5.2.1 PDF does.
   A correction that no longer matches is an error, and so is a corrections file that is missing or
   unreadable: the pack is built with its corrections or not at all. The default file is the one
-  beside `convert.py`, which is why the app zip ships it there. A run that succeeds names the file it
+  beside `convert.py`, which is why the kit zip ships it there. A run that succeeds names the file it
   applied and its counts. `srd-verbatim` checks the result against the PDF.
 - **The leak scan.** Then `_srd_leaks()` fails the run on any record or subclass named as an entry
   the view dropped, and on any renamed entry's old name in the text. A failed run writes nothing.
 
 ## Rules that must hold
 
-- **Both packs reproduce byte for byte: `all` makes `data/5e2024/`, `srd` makes `data/srd52/`.**
-  A value that moves changes the pack's content digest (`pack_digest()`), so the next release, app
-  or data, bumps that pack's version and every player is told to re-download a pack that did not
-  change. The digest reads canonical JSON, so key order and whitespace alone don't move it, but the
-  gates are still bytes. Check both before and after any converter change, since the SRD pack runs
-  the same pipeline:
-  `python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk data/5e2024`
+- **Both packs reproduce byte for byte: `all` makes the private repo's 2024 pack, `srd` makes
+  `data/srd52/`.** A value that moves changes the pack's content digest (`pack_digest()`), so the
+  next release, app or data, bumps that pack's version and every player is told to re-download a
+  pack that did not change. The digest reads canonical JSON, so key order and whitespace alone
+  don't move it, but the gates are still bytes. Check both before and after any converter change,
+  since the SRD pack runs the same pipeline:
+  `python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk _private-data/data/5e2024`
   and
   `python3 scripts/convert.py srd _conversion-data/5etools-v2.36.1 -o /tmp/srd && diff -r /tmp/srd data/srd52`.
-  CI cannot run them (it has no dump), so they are manual gates.
+  CI cannot run them (it has no dump). The first needs `_private-data`, and the private
+  `2024-gate` suite runs it whenever the dump is present, so Mike's `./src/tests/run.sh` checks it;
+  the second is a manual gate.
 - **Filter on `source`; flags only backfill.** Never select by `basicRules2024` (or `srd52`)
   alone. After any change to a converter path, count its `source == "XPHB"` entries in the dump and
   compare with the output before believing the output. The one exception is `srd`, where the flag
   is the filter by design: there the SRD view, not a selection site, does it.
 - **`srd52` is read as truthy, never `is True`.** It can be a string, a rename; reading it with
   `is True` drops every renamed entry.
-- **Stdlib only.** `convert.py` ships to players. Anything needing a third-party library belongs in
-  a dev-only script (the Humblewood extractor is the precedent).
+- **Stdlib only.** `convert.py` ships to players in the kit. Anything needing a third-party library
+  belongs in a dev-only script (the Humblewood extractor, now in the private repo, is the precedent).
 - **Never quiet.** A missing input warns; a supplement category with nothing in it writes no file
   and says so; a subclass that resolves no features is listed in a `WARNING`, and so is every
   table cell `_cell_text()` could not read, every entry node `flatten()` could not render, every
@@ -365,14 +374,20 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
 - **`overlay.json` and `class-resources.json` stay out of the system folders.** The bundler takes
   every `.json` in a system folder, so a helper file there would be swept into a pack.
 - **The bundle equals its files.** `rules-data.js` merges each folder file by file and then the
-  bundle, and asserts the same entries, for all six packs.
-- **A new rules category is registered everywhere at once.** `CATS` in `bundle-rules.js` must stay
+  bundle, and asserts the same entries, for every pack the public registry lists.
+- **A new rules category is registered everywhere at once.** `CATS` in `fbdata.py` must stay
   in step with `RULE_CATS`; a category the bundler does not list is silently left out of every
   bundle. In the app, `tables` had to be added to the `rules` initializer in `00-constants.js`,
   `RULE_CATS`, `mergeRules()`'s category map and `resetRules()`. See
   [Rules packs](../architecture/rules-packs.md).
 
 ## Traps
+
+Two notes on the guards named below, since #85. `rules-data.js` and `tables.js` run their pack checks
+over the public packs (SRD 5.2 and homebrew), and the private repo's `private-data.js` runs the same
+checks, with the 2024, Xanathar's and Tasha's pins, over the private packs. And `converter.py`'s
+inputs keep the 5e-tools structure with invented text, so "real shapes" means the dump's shapes, not
+its words.
 
 - **The `basicRules2024` trim — five times.** That flag marks only the free subset. Filtering on it
   cost backgrounds (4 of 16), spells (339 of 391), feats (17 of 77), base items (78 of 99) and magic
@@ -386,33 +401,33 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
   only in the dump, which lost the Archery/Defense effects and the Rage/Focus/Sorcery trackers.
   A name-level diff showed nothing lost; only a content-level one does. Guard: `convert_classes()`
   skips a class with no hit die with a note, and every missing input warns. The ledger says the
-  lost effects and trackers are asserted in the test suite, but no tracked suite reads them from
-  `data/5e2024/` (searched): today the only guard for that content is the byte-for-byte diff.
+  lost effects and trackers are asserted in the test suite: `rules-data.js` asserts the SRD pack's
+  trackers and Archery effect, but no suite reads them from the 2024 pack, whose only guard for
+  that content is the byte gate.
 - **Dropped structure.** `flatten()` once discarded every table, then every `ref*Feature` node (579
   in the class files of the v2.36.1 dump, and the real reason Wild Magic Surge was missing), then
-  every `refOptionalfeature` ("…presented in alphabetical order." with nothing
-  after). Then, until #68, four more types, 28 nodes across the three packs: `abilityDc` and
-  `abilityAttackMod` (the Artificer's spell save DC; "your Arcane Shot save DC is calculated as
-  follows:" and nothing), list items with a singular `entry` (Path of the Beast's Bite, Claws and
-  Tail; Cackle Fever's symptoms), and `statblock` (the Soulknife's "The magic blade has the
-  following traits:" and nothing). Each fix was one node type at a time, because a node with no
-  branch vanished without a word. Guard: `converter.py` covers each node type with shapes copied
-  from the dump, `rules-data.js` pins one text per shape in the shipped packs, and an unknown type
-  is now a `WARNING`.
+  every `refOptionalfeature` (a sentence introducing a list of options, with nothing after). Then,
+  until #68, four more types, 28 nodes across the three packs: `abilityDc` and `abilityAttackMod`
+  (the Artificer's spell save DC; the Arcane Shot's lead-in to its save DC, and nothing), list
+  items with a singular `entry` (Path of the Beast's Bite, Claws and Tail; Cackle Fever's
+  symptoms), and `statblock` (the Soulknife's lead-in to its blade's traits, and nothing). Each fix
+  was one node type at a time, because a node with no branch vanished without a word. Guard:
+  `converter.py` covers each node type in the dump's shapes, the private suite pins one text per
+  shape in the 2024, Xanathar's and Tasha's packs, and an unknown type is now a `WARNING`.
 - **Blank class columns, and whole tables gone.** `_cell_text()` once read only strings, numbers,
   `roll` and `entries`, and returned `''` for anything else without a word. Barbarian's Rage Damage
   and Monk's Martial Arts and Unarmored Movement shipped blank from the first table release until
   #64, and Bard and Rogue lost their Features tables outright: a dice column was all they had, so
   the Level-only guard suppressed them. `converter.py` passed throughout, because its fixture wrote
-  Rage Damage as the string `'+2'`. Guard: the fixtures now copy real cells from the dump, an
-  unread cell is a `WARNING`, and `tables.js` fails on any shipped column that is blank in every
-  row and pins the 2024 values.
+  Rage Damage as the string `'+2'`. Guard: the fixtures now use the dump's typed cells, an unread
+  cell is a `WARNING`, and `tables.js` fails on any shipped column that is blank in every row and
+  pins the SRD 5.2 values (the private suite pins the 2024 pack's).
 - **Marks that pointed at nothing (#73).** `_norm_table()` read `rows`, `colLabels`, `colStyles`
   and `caption` and nothing else, so 17 Xanathar's downtime tables shipped rows marked `*` without
-  the "Might involve a rival" or "Halved for a consumable item" they point at. Every table check
-  passed: the rows were right, only the note under them was missing. Guard: `converter.py` copies
-  two of those nodes from the dump, and `tables.js` fails on any shipped table with a `*` and no
-  footnotes.
+  the notes they point at (who else is involved, what is halved). Every table check passed: the rows
+  were right, only the note under them was missing. Guard: `converter.py` runs two nodes of that
+  shape, `tables.js` fails on any shipped table with a `*` and no footnotes, and the private suite
+  pins the 17.
 - **A skill shape one reader knew and another did not (#67).** The species reader turned
   `{"any": N}` into a choice from the start; the class path had its own loop that read only
   `choose` and bare names, and dropped the Bard's `{"any": 3}` without a word. The 2024 Bard shipped
@@ -481,17 +496,17 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
   `is True`, so a renamed entry counted as unflagged, and the 2024 pack silently lacked Carrion
   Crawler Mucus and Lolth's Sting (renamed in the SRD to Crawler Mucus and Spider's Sting). Guard:
   `converter.py` runs a rename-flagged entry through `pick_2024_preferred()` and a rename-flagged
-  variant through `_variant_selected()`, and `rules-data.js` pins both items in the 2024 pack.
+  variant through `_variant_selected()`, and the private suite pins both items in the 2024 pack.
 - **A Python dict as a prerequisite (#84).** `_render_optfeat_prereq()` printed a dict-shaped spell
   prerequisite with `str()`, so Agonizing Blast, Eldritch Spear and Repelling Blast read "Level 2
   Warlock and {'Choose': 'Level=0|Class=Warlock', 'Entry': …} spell", 24 times across the 2024
-  pack's classes and options. Guard: `converter.py` runs the real shape, and `rules-data.js` fails
-  on `{'` in any file of the 2024 or SRD pack.
+  pack's classes and options. Guard: `converter.py` runs the real shape, and `rules-data.js` (for
+  the SRD pack) and the private suite (for the 2024 pack) fail on `{'` in any file.
 - **A hard-coded menu that replaced a feature (#84).** `FIGHTING_STYLES` replaced the Paladin's and
   Ranger's whole Fighting Style feature, so the option that feature offers by reference (Blessed
   Warrior, Druidic Warrior) was never on the menu. Guard: `converter.py` checks the option is added
-  and the filter, and `rules-data.js` pins the 2024 Paladin, Ranger and Fighter menus and the SRD
-  Fighter's.
+  and the filter, and `rules-data.js` pins the SRD Paladin, Ranger and Fighter menus (the private
+  suite the 2024 ones).
 - **A prompt template printed as table text (#84).** `strip_tags()` read `{@dice roll|display}` as
   `name|source|display`, so a two-field tag printed its roll. The Carrying Capacity table's roll is a
   5e-tools prompt template, and all 10 of its cells shipped as
@@ -515,6 +530,7 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
 
 | Question | Decision | Rejected, and why |
 |---|---|---|
+| The class one-liners, `CLASS_BLURB` (#85, decision 1, R6) | Fieldbook's own words; an SRD run writes none | The PHB's class-table lines: book text in a public file, and the SRD pack needed 12 corrections only to blank them (L5426) |
 | How the 2024 book is selected | `source == "XPHB"`, with the free-subset flags only as a backfill | Filtering on `basicRules2024`: it selects only the free subset and has silently trimmed five categories |
 | Which flags mark the free 2024 subset | `basicRules2024` **or** `srd52` | One flag: v2.36.1 moved the Cloak of Invisibility to `srd52` alone. Measured first: across the pack the change only adds free-subset entries and removes nothing |
 | A table found with no sink collecting | Drop it, emit no anchor | An anchor: a dangling anchor is worse than the silent drop it would replace |
@@ -571,15 +587,14 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
 - **A cell carrying both `roll` and `entry` prints only the roll.** Only the DMG, BMT and LLK decks
   (Deck of Many Things, Deck of Illusions…) use it, and no pack ships those printings; the 2024
   decks have a different shape.
-- The Artificer and the UA Mystic sit in `data/5e2024/classes.json` under the `XPHB` stamp; see
+- The Artificer and the UA Mystic sit in the 2024 pack's `classes.json` under the `XPHB` stamp; see
   [Supplements](supplements.md).
 - `convert.py` looks for `overlay.json` and `class-resources.json` in the dump and in
-  `<repo>/data/`, never beside itself, so a player running the zip's `scripts/convert.py` must pass
-  `--overlay` and `--resources` explicitly (`all` warns when it cannot find them; README-converter
-  says so for `srd`). Only `srd-corrections.json` is found beside it.
+  `<repo>/data/`, never beside itself, so a player running the kit's `convert.py` directly must pass
+  `--overlay` and `--resources` (`all` warns when it cannot find them; README-converter says so).
+  Only `srd-corrections.json` is found beside it. `fbdata.py convert` and `build` pass all three
+  ([Data kit](data-kit.md)).
 - The module docstring's USAGE block predates `supplement` and the unprefixed filenames.
-- A comment in `bundle-rules.js`'s dedupe loop still places `mergeRules()` in `88-settings.js` (it
-  is in `89-rules-merge.js`).
 - Rune Knight runes get no tracker: they are per-rune uses, not a pool. See
   [Known issues](../roadmap/known-issues.md).
 
@@ -610,3 +625,5 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
 - 2026-10-02 — Ammunition kinds, bundles and magic ammunition from 5e-tools' variants; a 2014 item reprinted under another name no longer ships beside its 2024 self (40 dropped). → ledger L4923, #7
 - 2026-10-08 — `srd`: the SRD 5.2 pack from an SRD view of the dump through `_run_core()`, with renames, corrections and the leak scan, and its own byte-for-byte gate. Three fixes in both packs: rename flags read as truthy (the 2024 pack gains Carrion Crawler Mucus and Lolth's Sting), dict prerequisites print their text, and the Paladin's and Ranger's Fighting Style option is offered. → ledger L5148, #84
 - 2026-10-08 — A dice roll holding a prompt template prints its display text (the 2024 Carrying Capacity table, 10 cells) and `_write()` counts `#$`; a missing corrections file fails `srd`, and the zip ships it; `classes --feats`, and a missing `refFeat` warns; replacements are text, not regex templates. → ledger L5269, #84
+- 2026-10-09 — Bundling moves to `bundle()` in `tools/data-kit/fbdata.py` (Python), replacing the Node bundler, byte for byte. → ledger L5342, #85
+- 2026-10-09 — The 2024, Xanathar's and Tasha's packs move to the private repo: `convert.py` ships in the data kit, the 2024 gate diffs `_private-data/data/5e2024`, the pack checks split between the public suites and the private one, and `CLASS_BLURB` is Fieldbook's own wording. → ledger L5426, #85

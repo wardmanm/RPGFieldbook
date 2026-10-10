@@ -1,0 +1,69 @@
+{
+  "system": "Example",
+  "name": "Example pack",
+  "license": "MIT",
+  "attribution": "Example pack, by the Fieldbook project. Invented to show the rules-pack schema; not real game content.",
+  "keywords": [
+    { "term": "Glimmerwick", "type": "text", "text": "A rare phosphorescent moss that glows pale blue in moonlight and dims when disturbed." }
+  ],
+  "features": [
+    { "name": "Ash Sentinel's Watch", "source": "Example pack", "description": "You can sense ash spirits within 30 feet of you, even through walls." }
+  ],
+  "items": [
+    { "name": "Cinder Lantern", "category": "Gear", "type": "Wondrous Item", "rarity": "Uncommon", "cost": "50 gp", "weight": 1,
+      "description": "Sheds dim light out to 30 feet, fueled by a single glowing ember that never burns out." }
+  ],
+  "spells": [
+    { "name": "Ashwind Bolt", "level": 1, "meta": "Evocation · 1 action · 60 feet · V, S · Instantaneous",
+      "text": "A mote of burning ash streaks to a point you choose within range and bursts, dealing 2d6 fire damage to each creature within 5 feet of that point.",
+      "class": ["Example Adept"] }
+  ],
+  "races": [
+    { "name": "Cindershade", "category": "Ashkin", "description": "Folk born of smoldering hearths, said to carry a spark of the first bonfire.",
+      "size": "Medium", "speed": "30 ft",
+      "traits": [
+        { "name": "Ember Sight", "description": "You can see normally in dim light and smoke as if it were bright light, out to 30 feet." }
+      ] }
+  ],
+  "classes": [
+    { "name": "Example Adept", "description": "A caster attuned to ash and ember, trained to read omens in the embers of a dying fire.",
+      "hitDie": "d6", "savingThrows": ["int", "wis"], "spellcasting": "int",
+      "levels": {
+        "1": {
+          "traits": [ { "name": "Ashcraft", "description": "You can cast Ashwind Bolt once without expending a spell slot. You regain this use after a long rest." } ],
+          "spells": { "note": "Know 2 cantrips and 2 level-1 spells." }
+        }
+      } }
+  ],
+  "feats": [
+    { "name": "Ember-Touched", "description": "You gain resistance to fire damage, and you can produce a small, harmless flame in your palm as an action." }
+  ],
+  "backgrounds": [
+    { "name": "Ash Wanderer", "description": "You grew up travelling the cinder plains between smoldering hearth-towns.",
+      "abilityScores": ["con", "wis", "cha"], "skills": ["Survival", "Nature"],
+      "equipment": "A set of traveller's clothes, a walking stick, a cinder-streaked journal, and 5 gp." }
+  ],
+  "subclasses": [
+    { "class": "Example Adept", "name": "Path of the Smoldering Hearth",
+      "description": "Adepts who learn to channel the warmth of the hearth fire into protection for themselves and their allies.",
+      "levels": {
+        "3": { "traits": [ { "name": "Hearthbound", "description": "While within 30 feet of an open flame, you gain extra hit points equal to your Example Adept level." } ] }
+      } }
+  ],
+  "tables": [
+    {
+      "name": "Ash Omens",
+      "cols": ["1d6", "Omen"],
+      "rows": [
+        ["1", "A gust of ash swirls at your feet."],
+        ["2", "Distant embers flare brighter for a moment."],
+        ["3", "A faint smell of woodsmoke follows you for an hour."],
+        ["4", "The nearest fire crackles once, loudly."],
+        ["5", "A fine layer of soft grey ash settles on your shoulders."],
+        ["6", "You feel unaccountably warm for a minute."]
+      ],
+      "owner": "Example pack",
+      "ownerKind": "rule"
+    }
+  ]
+}

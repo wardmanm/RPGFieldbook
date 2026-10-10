@@ -3,8 +3,11 @@
 Fieldbook is a character sheet for **D&D 5e 2024** and **Humblewood**, shipped as one self-contained
 HTML file that opens from disk and works offline. Rules content is not built in: players load **rules
 packs** (JSON) generated from 5e-tools exports and the Humblewood books, and the sheet copies what a
-character takes from them. This page is the map — what the pieces are called, where they live, and
-which page explains each.
+character takes from them. This repo carries only the packs that may be shared, SRD 5.2 and
+homebrew; the 2024, Xanathar's, Tasha's and Humblewood packs live in a private repo
+([Private data](data/private-data.md)), and anyone can build their own with the
+[data kit](data/data-kit.md). This page is the map — what the pieces are called, where they live,
+and which page explains each.
 
 **Code:** all of `src/` · **See also:** [index](index.md), [CLAUDE.md](../../../CLAUDE.md) (the rules),
 [README](../../../README.md) (the player guide)
@@ -17,23 +20,23 @@ Two layers, joined at runtime:
   `<style>`, one `<script>`, the page shell with seven tab panels spliced in. No framework, no
   modules, no network needed. → [Build & source split](architecture/build-and-source-split.md)
 - **The rules packs** — `data/<dir>/*.json`, registered in `data/packs.json` and bundled by
-  `scripts/bundle-rules.js` into one `dist/<dir>_full.json` per pack. They ship together as one
-  zip, the rules-data archive, which Fieldbook opens itself. A player imports it, or single packs,
-  in Settings or on the home screen (or fetches packs from configured URLs); they are cached in
-  IndexedDB. → [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md),
+  `fbdata.py bundle` into one `dist/<dir>_full.json` per pack. They ship together as one
+  zip, the rules-data archive, which Fieldbook opens itself; the private repo releases its own,
+  privately. A player imports it, or single packs, in Settings or on the home screen (or fetches
+  packs from configured URLs); they are cached in IndexedDB. → [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md),
   [Storage](architecture/storage.md)
 
 A **character** is created in one of two **systems**, `"dnd"` or `"humblewood"`, which also picks
 the **skin** (`classic` or `humblewood`). Packs are stamped with a `system` of their own:
 
-| Pack dir | `system` stamp | Role |
-|---|---|---|
-| `data/5e2024/` | `XPHB` | core D&D 2024 |
-| `data/humblewood/` | `Humblewood` | core Humblewood (supplements D&D classes/spells; replaces species) |
-| `data/xanathars/` | `XGE` | additive supplement, not a system you create a character in |
-| `data/tashas/` | `TCE` | additive supplement |
-| `data/homebrew/` | `Homebrew` | hand-authored, additive; declares `requires` |
-| `data/srd52/` | `SRD 5.2` | the free D&D rules (the SRD), a system read as D&D; species kept from Humblewood |
+| Pack dir | `system` stamp | Role | Where |
+|---|---|---|---|
+| `srd52/` | `SRD 5.2` | the free D&D rules (the SRD), a system read as D&D; species kept from Humblewood | this repo's `data/` |
+| `homebrew/` | `Homebrew` | hand-authored, additive; declares `requires` | this repo's `data/` |
+| `5e2024/` | `XPHB` | core D&D 2024 | the private repo's `data/` |
+| `humblewood/` | `Humblewood` | core Humblewood (supplements D&D classes/spells; replaces species) | the private repo's `data/` |
+| `xanathars/` | `XGE` | additive supplement, not a system you create a character in | the private repo's `data/` |
+| `tashas/` | `TCE` | additive supplement | the private repo's `data/` |
 
 The three non-negotiables — one shipped file, offline-first with loud storage failures,
 backward-compatible saves — are stated in [CLAUDE.md](../../../CLAUDE.md) and argued on
@@ -62,7 +65,7 @@ src/                      THE SOURCE OF TRUTH — edit here, never the built fil
     WORKTREES.md            several issues at once in parallel worktrees
     ADR-001-source-split.md why the source is split
     specs/  plans/          one design spec per feature, and the plans that execute them
-    _claude/                agent context: WIRING-LEDGER.md (the log), HUMBLEWOOD-PLAYTESTS.md
+    _claude/                agent context: WIRING-LEDGER.md (the log)
 dist/
   fieldbook.html          the app — a BUILD ARTIFACT, tracked in git. Never hand-edit
   <dir>_full.json         one bundled rules pack per data dir (gitignored)
@@ -70,23 +73,25 @@ dist/
                           and NOTICE.md (gitignored)
   fieldbook-v<ver>.zip    the player bundle — allowlisted, no dev material; carries the
                           archive in its data/ (gitignored)
+  fieldbook-data-kit-<ver>.zip   the data kit: fbdata.py, convert.py and their inputs, flat
+                          (gitignored)
 data/
-  packs.json              the registry: every pack's dir, file, title, version, digest, credit
-  <dir>/*.json            per-category rules data — bundled into the packs, does not ship as-is
-  overlay.json            hand-authored convert.py inputs; ship to the zip's scripts/,
-  class-resources.json      not its data/, because they are not loadable packs
+  packs.json              the registry: every public pack's dir, file, title, version, digest, credit
+  srd52/  homebrew/       per-category rules data — bundled into the packs, does not ship as-is
+  overlay.json            hand-authored convert.py inputs; ship in the data kit zip, not the
+  class-resources.json      archive, because they are not loadable packs
+_private-data             gitignored link to the private repo, RPGFieldbookPrivate: the other four
+                          packs, their tests and the leak scan (Mike's checkouts only)
 docs/                     PLAYER-FACING — ships. An allowlist of exactly three files:
   rules-schema.md           the schema of every data file
   README-converter.md       how convert.py works
   CHANGELOG.md              generated from the in-app CHANGELOG array
 scripts/
-  convert.py              5e-tools JSON → rules data (ships, for advanced players)
+  convert.py              5e-tools JSON → rules data (ships in the data kit zip)
   srd-corrections.json    hand-authored: the SRD pack's text matched to the SRD PDF; ships
-                            beside convert.py, which reads it for srd
+                            in the kit beside convert.py, which reads it for srd
   srd_text.py             the pure SRD-text comparison srd-verbatim runs (dev)
-  extract-humblewood.py   Humblewood PDFs → rules data; needs .venv (dev)
   build-html.js           src/ → dist/fieldbook.html (dev)
-  bundle-rules.js         data/<dir>/ → dist/<dir>_full.json (dev)
   gen-changelog.js        regenerates docs/CHANGELOG.md (dev)
   release.js              bumps APP_VERSION, folds in UNRELEASED.md, bumps changed packs (dev)
   release-notes.js        one version's changelog section, for the release body (dev)
@@ -95,8 +100,11 @@ scripts/
   fetch-icons.js          vendors game-icons.net glyphs into js/05-icons.js (dev)
   playwright-mcp.js       cross-platform launcher for the screenshot MCP (dev)
   wt.sh                   add/list/rm parallel issue worktrees (dev)
-tools/data-kit/fbdata.py  pack digests and versions, and the archive's pack and validate
-                          (Python 3.8+, stdlib; dev)
+tools/data-kit/          the data kit (Python 3.8+, stdlib), shipped as its own zip:
+  fbdata.py               bundle (data/<dir>/ → dist/<dir>_full.json), digests and versions,
+                          the archive's pack and validate, and convert and build for kit users
+  README.md               the kit zip's own guide
+  example-pack/           one invented pack with every category
 .claude/skills/wiki/      the skill that maintains this wiki (tracked; never ships)
 .github/workflows/        ci.yml (every push and PR), release.yml (on a version tag),
                           data-release.yml (on a data-v… tag)
@@ -170,7 +178,9 @@ name says where its first function came from, not everything it holds: `migrate(
 | **registry** | `data/packs.json`: every pack's `system`, `dir`, `file`, `title`, `version`, content `digest` and optional `license` and `attribution`, plus `release`, the last release's version. Written only by `release.js` and `data-release.js`, through `fbdata.py` |
 | **data version** | A pack's own version, `X.Y.Z` (the data shipped with app X.Y.Z) or `X.Y.Z-N` (the Nth data-only release after it). Not semver: `1.8.0 < 1.8.0-1 < 1.8.1`. Compared with `cmpDataVer()`, never `cmpVer()`. A pack's `dataVersion` |
 | **data release** | A release of rules data with no app: tag `data-vX.Y.Z-N`, the archive as its only asset, never GitHub's "latest". Cut by `data-release.js`, published by `data-release.yml` |
-| **rules-data archive** | `fieldbook-data-standalone-<release>.zip`: every pack, the manifest `fieldbook-data.json` and `NOTICE.md`. Attached to every release and carried in the app zip; Fieldbook opens it itself |
+| **rules-data archive** | `fieldbook-data-standalone-<release>.zip`: every public pack (SRD 5.2 and homebrew), the manifest `fieldbook-data.json` and `NOTICE.md`. Attached to every release and carried in the app zip; Fieldbook opens it itself |
+| **private data** | The 2024, Xanathar's, Tasha's and Humblewood packs, which carry book text and no open licence: in `wardmanm/RPGFieldbookPrivate`, reached as `_private-data`, released privately as `fieldbook-data-private-<ver>.zip`. → [Private data](data/private-data.md) |
+| **data kit** | `tools/data-kit/fbdata.py` and the converter, attached to each app release as `fieldbook-data-kit-<ver>.zip`; `fbdata.py build` turns a 5e-tools export into an archive Fieldbook opens. → [Data kit](data/data-kit.md) |
 | **supplement** | A pack that adds to a system rather than being one (XGE, TCE, homebrew) |
 | **SRD 5.2** | The pack of the D&D rules Wizards of the Coast publishes free under CC-BY-4.0, the System Reference Document: `data/srd52/`, `system: "SRD 5.2"`, built by `convert.py srd` from the SRD-flagged entries of the 5e-tools dump and matched to the SRD 5.2.1 PDF. A system read as D&D (`systemOf()`). Not the same as the `srd52` *flag* in the dump, which marks what the SRD contains. → [SRD 5.2](data/srd.md) |
 | **skin** | The visual theme, `classic` or `humblewood`; follows the character's system |
@@ -200,3 +210,5 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-07 — The rules-data archive, the registry `data/packs.json`, data versions and data releases join the map and the glossary; `89-zip.js` in the code map. → ledger L5082, #83
 - 2026-10-08 — The SRD 5.2 pack joins the pack table, the repo layout and the glossary. → ledger L5148, #84
 - 2026-10-08 — `srd-corrections.json` ships beside `convert.py` in the app zip. → ledger L5269, #84
+- 2026-10-09 — Bundling moves from the Node bundler to `fbdata.py bundle`; the code map drops its entry. → ledger L5342, #85
+- 2026-10-09 — The private split: the pack table says where each pack lives; the layout gains `_private-data`, the kit zip and `tools/data-kit/`, and loses the Humblewood extractor; the glossary gains private data and the data kit. → ledger L5426, #85

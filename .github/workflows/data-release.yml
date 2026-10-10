@@ -88,11 +88,16 @@ jobs:
       - name: Build the archive
         run: ./build.sh --data
 
+      # R13: a data release is published too, so it needs the same public-only
+      # guard as the app release — never a pack whose licence isn't allowlisted,
+      # and never an asset named for the private repo.
       - name: Validate the archive
         run: |
           Z="dist/fieldbook-data-standalone-${{ steps.tag.outputs.version }}.zip"
           [ -s "$Z" ] || { echo "::error::missing or empty asset: $Z"; exit 1; }
-          python3 tools/data-kit/fbdata.py validate "$Z"
+          python3 tools/data-kit/fbdata.py validate --public "$Z" || {
+            echo "::error::The rules-data archive holds a pack a public release may not carry."; exit 1; }
+          case "$Z" in *private*) echo "::error::refusing to publish $Z"; exit 1 ;; esac
 
       - name: Collect release notes
         run: |

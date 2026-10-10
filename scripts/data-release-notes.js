@@ -30,6 +30,7 @@ if (mode === "--app") {
   out.push("", "---", "",
     "**Just want the app?** Download `fieldbook.html` and open it — that is the whole thing.", "",
     `**Rules data:** \`${zip}\`. In Fieldbook, open Settings → Rules data → Import files and choose the zip.`);
+  out.push("", "**Build your own:** `fieldbook-data-kit-" + ver + ".zip` turns a 5e-tools export into a rules data zip. See the README inside it.");
   if (changed.length) {
     out.push("", `Changed in this release: ${list(changed)}.` +
       (same.length ? ` Unchanged: ${list(same)} — if you already have those versions loaded, there's no need to re-import them.` : ""));

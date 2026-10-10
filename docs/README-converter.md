@@ -4,6 +4,31 @@ Turns raw [5e-tools](https://5e.tools) data files into the Fieldbook rules schem
 preferring the 2024 rules (XPHB / `basicRules2024`). Pure Python 3.8+, no dependencies.
 You run it locally whenever the data changes — no more hand-conversion.
 
+## Running it from a release: the data kit
+
+`convert.py` ships in the **data kit**, `fieldbook-data-kit-<version>.zip`, a separate download on
+each release page, flat beside `fbdata.py` (the kit's front end), its three helper files
+(`overlay.json`, `class-resources.json`, `srd-corrections.json`) and this file. From the unzipped
+kit, two commands do everything:
+
+```bash
+# convert and pack in one go: a rules-data zip Fieldbook opens as it is
+python fbdata.py build <your 5e-tools data folder> -o srd.zip            # the SRD 5.2 pack
+python fbdata.py build <your 5e-tools data folder> --full -o mine.zip    # the full 2024 pack
+python fbdata.py build <your 5e-tools data folder> --book XGE -o xge.zip # one supplement
+
+# or run any convert.py command below with the kit's helper files filled in
+python fbdata.py convert all <your 5e-tools data folder> -o my-2024
+```
+
+`fbdata.py convert` passes `--overlay`, `--resources` and (for `srd`) `--corrections` for you;
+running `convert.py` directly, name them yourself, as the examples below do.
+
+**What you may share.** `srd` builds the SRD 5.2 pack, which is under CC-BY-4.0: share it with its
+attribution (below). `all` and `supplement` build packs from the books themselves, so what they
+write holds the books' text: it is for your own use only. Fieldbook's rules-data zip carries only
+the SRD 5.2 and homebrew packs for that reason.
+
 ## Get the source data
 From the 5e-tools GitHub data repo (or the site's `data/` folder):
 - `conditionsdiseases.json`
@@ -23,15 +48,16 @@ running one subcommand at a time.
 ## Run it
 
 ```bash
-# everything, in one go — this is the normal way
-python convert.py all _conversion-data/5etools-v2.36.1 -o data/5e2024
+# everything, in one go — this is the normal way (for your own use)
+python convert.py all <your 5e-tools data folder> -o my-2024 \
+  --overlay overlay.json --resources class-resources.json
 
 # or one category at a time
-python convert.py conditions conditionsdiseases.json                 -o conditions.json
-python convert.py feats      feats.json --overlay ../data/overlay.json -o feats.json
-python convert.py spells     spells-xphb.json --sources sources.json  -o spells.json
-python convert.py classes    class-*.json --overlay ../data/overlay.json --feats feats.json -o classes.json
-python convert.py races      races.json                              -o races.json
+python convert.py conditions conditionsdiseases.json                -o conditions.json
+python convert.py feats      feats.json --overlay overlay.json       -o feats.json
+python convert.py spells     spells-xphb.json --sources sources.json -o spells.json
+python convert.py classes    class-*.json --overlay overlay.json --feats feats.json -o classes.json
+python convert.py races      races.json                             -o races.json
 ```
 
 `all` handles the whole 5e-tools dump as it actually ships:
@@ -40,28 +66,32 @@ python convert.py races      races.json                              -o races.js
   classes and `sources.json` are all found;
 - it converts **both** `items-base.json` (mundane) and `items.json` (magic), into `items.json` and
   `items-magic.json`;
-- it falls back to the repo's `data/overlay.json` and `data/class-resources.json` when they aren't
-  in the input dir — without those you lose the Archery/Defense effects and the Rage/Focus/Sorcery
-  trackers. A `class-resources.json` key may name a subclass as `"Class/Subclass"`
+- it takes `overlay.json` and `class-resources.json` from `--overlay` and `--resources`, else from
+  the input dir, else from a Fieldbook checkout's `data/` — never from beside `convert.py`, so from
+  the kit name them (or use `fbdata.py convert`). Without them you lose the Archery/Defense effects
+  and the Rage/Focus/Sorcery trackers. A `class-resources.json` key may name a subclass as `"Class/Subclass"`
   (`"Fighter/Battle Master"` → Superiority Dice); `supplement` reads those too;
 - it **warns loudly** for anything it can't find and prints a summary at the end, rather than
   silently writing nothing;
 - classes with no hit die (the TCE sidekicks) are skipped with a note instead of aborting the run.
 
-Output goes to `data/5e2024/`. Players don't import these individually — `./build.sh` rolls each
-system's folder into one `dist/<system>_full.json` pack, and that's what ships. Import either the
-full pack or any individual file via **Settings → Rules → Import files**, or host them and add them
-as sources (a manifest with `include: [...]` also works).
+Output goes to the folder you name with `-o`, one file per category. `fbdata.py build` rolls such a
+folder into one pack inside a rules-data zip, which is the easy thing to import; you can also import
+any individual file via **Settings → Rules data → Import files**, or host them and add them as
+sources (a manifest with `include: [...]` also works). Keep what `all` writes to yourself: it is the
+book's text.
 
 ## Supplements: one book at a time
 
 `all` converts the core rules. A single supplement — Xanathar's Guide, Tasha's Cauldron — uses
-`supplement`, which selects by `source` code instead and writes its own pack folder:
+`supplement`, which selects by `source` code instead and writes its own pack folder. Like `all`, it
+is for your own use. Convert the core pack first, for `--avoid-table-names`
+(`fbdata.py build --book XGE` does both for you):
 
 ```bash
-python convert.py supplement _conversion-data/5etools-v2.36.1 -o data/xanathars \
+python convert.py supplement <your 5e-tools data folder> -o my-xanathars \
   --book XGE --system XGE --pack-name "Xanathar's Guide to Everything" \
-  --exclude-systems humblewood --avoid-table-names data/5e2024/tables.json \
+  --exclude-systems humblewood --avoid-table-names my-2024/tables.json \
   --note "…2014-era content, converted as published…"
 ```
 
@@ -93,7 +123,7 @@ Three things are specific to a 2014-era book and worth knowing:
   the same name (`Gloom Stalker Spells (XGE)`). The anchors follow the rename automatically.
 
 The 2024 path is untouched by all of this: with no `--book`, selection, pack names and the `system`
-stamp are exactly what they were, and `data/5e2024/` reconverts byte for byte.
+stamp are exactly what `all` has always used, so its output does not move.
 
 ## The SRD 5.2 pack: `srd`
 
@@ -101,7 +131,8 @@ stamp are exactly what they were, and `data/5e2024/` reconverts byte for byte.
 5e-tools dump `all` reads:
 
 ```bash
-python convert.py srd _conversion-data/5etools-v2.36.1 -o data/srd52
+python convert.py srd <your 5e-tools data folder> -o srd52 \
+  --overlay overlay.json --resources class-resources.json
 ```
 
 - **Only SRD content.** It keeps only the entries 5e-tools flags `srd52`; nothing gets in by its
@@ -119,13 +150,10 @@ dump moved under it), a missing or unreadable corrections file, or a name the SR
 anywhere in the pack fails the run: it prints each error, exits 1 and writes nothing to `-o`. A run
 that succeeds names the corrections file it applied and how many corrections it held.
 
-From the app zip, `convert.py` sits in `scripts/` beside its three helper files. It finds
-`srd-corrections.json` there by itself, but name the other two:
-
-```bash
-python scripts/convert.py srd <your 5e-tools dump> -o srd52 \
-  --overlay scripts/overlay.json --resources scripts/class-resources.json
-```
+From the data kit, `convert.py` finds `srd-corrections.json` beside itself automatically, but name
+the other two, as above. Or let the kit do all of this for you:
+`python fbdata.py build <your 5e-tools data folder> -o srd.zip` runs `srd` with all three helper
+files found automatically and packs the result, ready to import.
 
 | flag | what it does |
 |---|---|
@@ -169,11 +197,11 @@ anchor in the description where the table used to sit; the app renders that anch
 that opens the table, and as plain text if no tables pack is loaded. Each table records the
 entity it came from (`owner` / `ownerKind`), so the Rules tab can group them and a class view
 can link to its own progression table. A table's footnotes — what a `*` in a row or column label
-points at, such as Xanathar's "Might involve a rival" — travel with it as `footnotes`, and the app
-shows them under the table.
+points at, such as a note on which results involve someone else — travel with it as `footnotes`,
+and the app shows them under the table.
 
 ```bash
-python convert.py all _conversion-data/5etools-v2.36.1 -o data/5e2024   # writes tables.json too
+python convert.py all <your 5e-tools data folder> -o my-2024   # writes tables.json too
 python convert.py spells spells-xphb.json -o spells.json --tables tables.json
 ```
 
@@ -193,8 +221,9 @@ lose the **Wild Magic Surge** table — three later Sorcerer features cited a ta
 made it into the data.
 
 **Formulas, list items and stat blocks.** Three more kinds of entry carry text the book prints,
-and all three are written into the description: the formula lines ("Spell save DC = 8 + your
-proficiency bonus + your Intelligence modifier"), list items with a single `entry` (Cackle Fever's
+and all three are written into the description: the formula lines (an invented example, "Maneuver
+save DC = 8 + your proficiency bonus + your Strength or Dexterity modifier"), list items with a
+single `entry` (Cackle Fever's
 symptoms, Path of the Beast's Bite, Claws and Tail), and `statblock` entries that embed an item by
 reference (the Soulknife's Psychic Blade). A stat block is looked up in `items-base.json` and
 `items.json`, which `all` and `supplement` find themselves; a single subcommand other than `items`
@@ -227,7 +256,7 @@ ability check: each skill, initiative and passive Perception). You can also gran
 - `--optfeatures PATH` — `optionalfeatures.json`, for the Battle Master, Sorcerer, Warlock and Artificer option pickers. `all` and `supplement` find it themselves; without it those classes still convert, with no pickers.
 - `--feats PATH` — `feats.json`, for the option a class feature names by reference: the Paladin's Blessed Warrior and the Ranger's Druidic Warrior on their Fighting Style menus. `all` and `srd` find it themselves; without it `classes` leaves that option off the menu and prints a `WARNING` naming it.
 - `--tables PATH` *(any subcommand)* — also write that source's lifted tables to `PATH`. `all` always writes `tables.json`.
-- `--overlay PATH` / `--resources PATH` *(incl. `all`)* — point at the hand-authored inputs explicitly. `all` looks in the input dir then `data/`, so you rarely need these.
+- `--overlay PATH` / `--resources PATH` *(incl. `all`)* — point at the hand-authored inputs explicitly. `all` looks in the input dir, then in a Fieldbook checkout's `data/`, never beside `convert.py`: from the kit, pass them (or use `fbdata.py convert`, which does).
 
 
 ## Equipment

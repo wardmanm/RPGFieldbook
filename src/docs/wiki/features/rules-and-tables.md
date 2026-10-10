@@ -16,7 +16,7 @@ becomes a chip that opens that table in place.
 [rules-schema §6.11](../../../../docs/rules-schema.md) · **Tests:** `tables.js`, `rules-data.js` ·
 **See also:** [Rich text](../architecture/rich-text.md), [Rules packs](../architecture/rules-packs.md),
 [Converter](../data/converter.md), [Supplements](../data/supplements.md),
-[Humblewood](../data/humblewood.md)
+Humblewood (the private repo's `docs/humblewood.md`)
 
 ## How it works
 

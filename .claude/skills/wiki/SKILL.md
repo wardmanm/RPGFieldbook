@@ -91,5 +91,5 @@ Drop empty sections. Mark a claim you could not check against code **(unverified
 - **A page per fix.** Fixes update their topic's page; only a new topic earns a new page.
 - **Restating player docs.** `docs/rules-schema.md` and `docs/README-converter.md` ship to
   players — link them.
-- **Moving the indexed-in-place docs** (RELEASING, WORKTREES, ADR-001, HUMBLEWOOD-PLAYTESTS).
+- **Moving the indexed-in-place docs** (RELEASING, WORKTREES, ADR-001).
   Tooling and tests name their paths.

@@ -202,6 +202,11 @@ html[data-rough="on"] .hd-cell::before{filter:url(#rough)}
 .rd-row{display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px dotted var(--hair)}
 .rd-main{flex:1;min-width:0}
 .rd-name{font-weight:700;overflow-wrap:anywhere}
+/* overflow-wrap:anywhere on .rd-name (the file name can be long) was also
+   breaking the pills INSIDE it mid-word on a narrow screen — "! 2 missing"
+   split across two lines with the pill background cut in half. A pill moves
+   to the next line whole instead. */
+.rd-name .chip,.rd-name .rd-src{white-space:nowrap;display:inline-block}
 .rd-src{font-family:var(--head);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:0 6px}
 .rd-sub{font-family:var(--head);font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;overflow-wrap:anywhere}
 .res{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px dotted var(--hair)}

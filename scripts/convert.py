@@ -211,8 +211,8 @@ def _attr_choose(attrs):
 
 def _formula_text(node):
     """abilityDc / abilityAttackMod / abilityGeneric: the book's centred formula
-    lines ("Spell save DC = 8 + your proficiency bonus + your Intelligence
-    modifier"). Worded as 5e-tools' 'classic' style renders them, which is how
+    lines (e.g. a save-DC or attack-modifier line built from "8 + proficiency bonus +
+    an ability modifier"). Worded as 5e-tools' 'classic' style renders them, which is how
     every source the converter meets them in (PHB, XGE, TCE, UA) prints them;
     5e-tools' other wording is a reader preference, not a printing."""
     t = node.get('type')
@@ -709,9 +709,9 @@ FIGHTING_STYLES = [
 ]
 # Choices a subclass states only in prose, which the source carries no data for.
 # Hand-listed like FIGHTING_STYLES, keyed (class, subclass, source) so another
-# printing is never touched. Student of War: "one type of Artisan's Tools of your
-# choice, and ... one skill of your choice from the skills available to Fighters
-# at level 1" — the skill list is the class's own, read at conversion time.
+# printing is never touched. Student of War grants a tool proficiency of choice
+# plus a skill choice drawn from the Fighter's own skill list — the skill list
+# is the class's own, read at conversion time.
 ARTISANS_TOOLS = ["Alchemist's Supplies", "Brewer's Supplies", "Calligrapher's Supplies",
                   "Carpenter's Tools", "Cartographer's Tools", "Cobbler's Tools", "Cook's Utensils",
                   "Glassblower's Tools", "Jeweler's Tools", "Leatherworker's Tools", "Mason's Tools",
@@ -730,21 +730,24 @@ def _prose_choices(cls, sub, src, class_skills):
         return {3: out}
     return {}
 
+# One line per class for the class picker, in Fieldbook's own words (#85): the
+# books' class-table summaries are theirs, and this file is public. The SRD
+# pack writes none — the SRD's class sections have no summary.
 CLASS_BLURB = {
-    'Barbarian':'A fierce warrior who channels primal rage.',
-    'Bard':'An inspiring magician whose power echoes the music of creation.',
-    'Cleric':'A priestly champion who wields divine magic in service of a higher power.',
-    'Druid':'A priest of the Old Faith, wielding the powers of nature.',
-    'Fighter':'A master of martial combat, skilled with many weapons and armor.',
-    'Monk':'A martial artist who harnesses the power of ki.',
-    'Paladin':'A holy warrior bound to a sacred oath.',
-    'Ranger':'A warrior of the wilds who blends martial skill with primal magic.',
-    'Rogue':'A scoundrel who uses stealth and precision to overcome obstacles.',
-    'Sorcerer':'A spellcaster who draws on inherent magic from a gift or bloodline.',
-    'Warlock':'A wielder of magic derived from a bargain with an extraplanar entity.',
-    'Wizard':'A scholarly magic-user capable of manipulating the structures of reality.',
-    'Artificer':'An inventor who infuses objects with magical power.',
-    'Mystic':'A wielder of psionic power drawn from the mind.',
+    'Barbarian': 'A warrior who fights on instinct and fury, shrugging off blows that would fell others.',
+    'Bard': 'A performer whose songs and stories carry real magic, lifting allies and unsettling foes.',
+    'Cleric': 'A servant of a god who channels divine power to heal, protect and smite.',
+    'Druid': "A guardian of the wild who calls on nature's power and takes the shapes of beasts.",
+    'Fighter': 'A trained combatant at home with any weapon and any armor.',
+    'Monk': 'A disciplined fighter who turns body and focus into speed and striking power.',
+    'Paladin': 'A sworn champion whose oath lends holy power to sword and shield.',
+    'Ranger': 'A hunter and scout who mixes weapon skill with the magic of the wilds.',
+    'Rogue': 'A specialist who wins through stealth, skill and a well-placed strike.',
+    'Sorcerer': 'A caster born with magic in the blood, shaping spells by raw talent.',
+    'Warlock': 'A caster who gains magic by striking a pact with a powerful being.',
+    'Wizard': 'A scholar who masters magic through study and a spellbook full of options.',
+    'Artificer': 'An inventor who builds magic into tools, gear and gadgets.',
+    'Mystic': 'A student of the mind who unlocks psionic power through discipline.',
 }
 
 # ---------------------------------------------------------------- overlay
@@ -822,7 +825,8 @@ def pick_2024_preferred(entries, name_key='name', shipped=None):
 #
 # The DEFAULT Book reproduces the original behaviour byte for byte — no source
 # codes means pick_2024_preferred, and the pack names are the exact strings the
-# committed data/5e2024/ files already carry. Do not "tidy" these strings.
+# 2024 pack's files (the private repo's data/5e2024/) already carry. Do not
+# "tidy" these strings.
 _XPHB_NAMES = {
     'items': 'D&D 2024 Items', 'backgrounds': 'D&D 2024 Backgrounds',
     'classes': 'XPHB Classes (2024)', 'races': 'D&D 2024 Species',
@@ -833,7 +837,8 @@ class Book:
     """The source book(s) a run converts, and how its packs are labelled.
 
     codes           5e-tools `source` values to keep. Empty = the 2024 default
-                    (pick_2024_preferred), which is what data/5e2024/ was built with.
+                    (pick_2024_preferred), which is what the 2024 pack (the private
+                    repo's data/5e2024/) was built with.
     system          the string stamped as each pack's `system` field. This is the
                     app's merge namespace AND the DATA_VERSIONS key.
     names           per-output-stem pack display names.
@@ -878,10 +883,10 @@ def pick_sources(entries, book=None, name_key='name', shipped=None):
     return [e for e in entries if e.get('source') in codes]
 
 def _pack(book, cat, arr, stem=None, version=None):
-    """Build a pack wrapper. Key order is load-bearing: the committed 5e2024
-    files were written as system, name?, version?, <array> and the build compares
-    bytes. `_note`/`excludeSystems` are absent unless the book sets them, so the
-    default run is untouched."""
+    """Build a pack wrapper. Key order is load-bearing: the committed packs (the
+    2024 pack in the private repo, data/srd52 here) were written as system, name?,
+    version?, <array> and the byte gates compare bytes. `_note`/`excludeSystems`
+    are absent unless the book sets them, so the default run is untouched."""
     b = _bk(book)
     out = {'system': b.system}
     nm = b.names.get(stem if stem is not None else cat)
@@ -1498,7 +1503,8 @@ def _render_prereq(pr, legacy=False):
     """`legacy` adds the prerequisite shapes 2014-era books use. Both of the extra
     branches are gated rather than merely "verified harmless": `race` never occurs
     in the 2024 run (0 of 77 feats) but `proficiency` does (5 of 77) and is not
-    rendered today, so rendering it unconditionally would move data/5e2024/."""
+    rendered today, so rendering it unconditionally would move the 2024 pack
+    (the private repo's data/5e2024/)."""
     if not pr: return ''
     alts = []
     for block in pr:
@@ -1767,7 +1773,8 @@ def convert_classes(paths, overlay=None, include_legacy=False, spell_notes=True,
             except (IndexError, ValueError):
                 return None
 
-        C = {'name': entry['name'], 'description': CLASS_BLURB.get(entry['name'], ''),
+        C = {'name': entry['name'],
+             'description': '' if bk.mode == 'srd' else CLASS_BLURB.get(entry['name'], ''),
              'hitDie': 'd' + str(entry['hd']['faces'])}
         if entry.get('proficiency'): C['savingThrows'] = entry['proficiency']
         if entry.get('spellcastingAbility'): C['spellcasting'] = entry['spellcastingAbility']
@@ -1901,9 +1908,9 @@ _TAGLINE = re.compile(r'^\s*\{@i [^{}]*\}\s*$')
 
 def _sub_blurb(sf):
     """A subclass's description: the first real paragraph of its first feature.
-    Not the italic tagline a 2024 subclass opens with — "{@i Augment Physical
-    Might with Psionic Power}" is 41 characters, over the length floor, and was
-    shipped as the whole description of eight subclasses."""
+    Not the italic tagline a 2024 subclass opens with — one shaped like "{@i Kindle
+    the Old Embers with Patient Breath}" (invented here) is 41 characters, over the
+    length floor, and was shipped as the whole description of eight subclasses."""
     for e in sf.get('entries', []):
         if isinstance(e, str) and not _TAGLINE.match(e) and len(strip_tags(e)) > 40:
             return strip_tags(e)
@@ -3062,8 +3069,8 @@ def _run_core(d, outdir, overlay_path=None, resources_path=None, include_legacy=
     optf = need('optional features', 'optionalfeatures.json')
     ofs = load_optfeats(optf[0]) if optf else []
     if classfiles: _write(convert_classes(classfiles, overlay=overlay, include_legacy=include_legacy, resources=cres, tables=tbls, optfeats=ofs, book=book), os.path.join(outdir, 'classes.json'))
-    # the same options as library entries, so a player can swap one ("each time
-    # you learn new maneuvers, you can also replace one"). 2024 printings only:
+    # the same options as library entries, so a player can swap one (the class lets
+    # you trade a known maneuver for another whenever you learn new ones). 2024 printings only:
     # pick_2024_preferred would backfill 2014-only invocations into the core pack.
     xphb = [f for f in ofs if f.get('source') == 'XPHB']
     if xphb: _write(_pack(book, 'features', _optfeat_features(xphb, tables=tbls, overlay=overlay), stem='features', version=1), os.path.join(outdir, 'features.json'))

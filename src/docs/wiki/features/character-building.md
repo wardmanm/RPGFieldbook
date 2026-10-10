@@ -18,7 +18,7 @@ so removing the source takes it back out; that mechanism is
 `grantFeatDef()`, `runExtraChoices()`, `classChipHTML()` in `50-classrace.js`; `dismissModal()`,
 `setDismissGuard()` in `80-modal-forms.js` · **Data:** `choices` on class, subclass and race
 levels, per [rules-schema](../../../../docs/rules-schema.md) §5; a class's `multiclass` block,
-§6.3; `data/5e2024/features.json` ·
+§6.3; the `features.json` of the 2024 pack (private repo) and of `data/srd52/` ·
 **Tests:** `sheet.js`, `char-update.js`, `rules-data.js` · **See also:**
 [Vitals & rest](vitals-and-rest.md), [Class resources](class-resources.md),
 [Features & traits](features-and-traits.md), [Converter](../data/converter.md)
@@ -135,8 +135,10 @@ Knight runes — arrive from the converter as `option` choices at every level th
 Master's level 3 also carries Student of War: a `skill` choice from the Fighter's own level-1 list,
 and an `option` over the 17 artisan's tools, so the tool is a feature that reverts with the subclass.
 The same XPHB options
-ship as library entries in `data/5e2024/features.json` ("D&D 2024 Options": 20 maneuvers, 28
-invocations, 10 metamagic), reachable from the Features & Traits browser to swap one by hand. How
+ship as library entries in the 2024 pack's `features.json` ("D&D 2024 Options": 20 maneuvers, 28
+invocations, 10 metamagic; in the private repo since #85), and the SRD 5.2 pack's 38 ("SRD 5.2
+Options": 28 invocations, 10 metamagic) in `data/srd52/features.json`, reachable from the
+Features & Traits browser to swap one by hand. How
 they are built: [Converter](../data/converter.md).
 
 ## Rules that must hold
@@ -278,3 +280,4 @@ they are built: [Converter](../data/converter.md).
   choice the converter used to drop. No app change. → ledger L3985, #67
 - 2026-09-28 — a choice window's title names the span of levels it holds, from its choices and
   notes, and shows the class name as written. → ledger L4086, #69
+- 2026-10-09 — The options library: the 2024 pack's in the private repo, the SRD 5.2 pack's here. → ledger L5426, #85

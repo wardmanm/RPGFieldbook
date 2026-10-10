@@ -116,13 +116,16 @@ cmd_add() {
   mkdir -p "$WT_ROOT"
   git worktree add -b "$branch" "$path" "$base" || die "git worktree add failed"
 
-  # Untracked, gitignored, and large: a fresh worktree has none of them, so the
-  # humblewood-verbatim suite would silently drop 129 assertions and converter
-  # work would have no 5e-tools dump to read. Symlink rather than copy — .venv is
-  # 102 MB and _conversion-data is 461 MB.
+  # Untracked, gitignored, and large: a fresh worktree has none of them, so
+  # srd-verbatim would have no SRD PDF to check against and converter work
+  # would have no 5e-tools dump to read. The Humblewood suite itself now lives
+  # in the private repo (#85) — srd-verbatim and the private-data suite are
+  # what need these links here. Symlink rather than copy — .venv is 102 MB,
+  # _conversion-data is 461 MB, and _private-data is another repo entirely.
   local up="../../.."
   [ -d .venv ]             && ln -s "$up/.venv" "$path/.venv"
   [ -d _conversion-data ]  && ln -s "$up/_conversion-data" "$path/_conversion-data"
+  [ -e _private-data ]     && ln -s "$up/_private-data" "$path/_private-data"
 
   # Otherwise every agent re-triggers the permission prompts you already answered.
   if [ -f .claude/settings.local.json ]; then
@@ -177,7 +180,7 @@ cmd_rm() {
   # symlinks and the copied settings are files this script created, not work,
   # and `git worktree remove` counts them as reasons not to proceed. Real
   # uncommitted work still blocks removal, which is the behaviour we want.
-  rm -f "$path/.venv" "$path/_conversion-data" "$path/.claude/settings.local.json"
+  rm -f "$path/.venv" "$path/_conversion-data" "$path/_private-data" "$path/.claude/settings.local.json"
   rmdir "$path/.claude" 2>/dev/null || true
 
   # dist/fieldbook.html is a BUILD ARTIFACT and branches deliberately never commit

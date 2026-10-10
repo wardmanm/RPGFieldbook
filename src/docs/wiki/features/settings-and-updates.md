@@ -18,8 +18,8 @@ credits that the icons and the loaded packs require.
 `requiresStatusHTML()` in `89-rules-merge.js` · `saveSettings()` in `70-persistence.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
 `cmpDataVer()`, `checkForUpdate()`, `showUpdatePill()`, `updBannerHTML()`, `openChangelog()`,
 `pickDataRelease()`, `dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js` ·
-`boot()`, `wire()` in `90-boot.js` · `release.js`, `data-release.js`, `gen-changelog.js`,
-`bundle-rules.js` in `scripts/` · **Data:** `data/packs.json`
+`boot()`, `wire()` in `90-boot.js` · `release.js`, `data-release.js`, `gen-changelog.js` in
+`scripts/`; `bundle()` in `tools/data-kit/fbdata.py` · **Data:** `data/packs.json`
 · **Tests:** `rules-data.js` (the modal's ids both ways, the fold state, `dataStatus()`, Fetch all,
 the header chip, and Import settings driven through its real handler), `data-archive.js` (the
 `update` state, the hint line, the badge's suffix, `pickDataRelease()`, `dataUpdateFrom()`,
@@ -95,14 +95,19 @@ the newer-data check's copy of the same system and file name (`dataUpdateFor()`)
 - **stale** — older than `DATA_VERSIONS`: an amber "update available · v*X*" chip whose tooltip says
   to re-import from the latest release.
 - **update** — not stale, but a data release has a newer copy: a muted "v*A* · v*B* out", its
-  tooltip naming the data release. One hint line above the list, "Newer rules data is out: XPHB
+  tooltip naming the data release. One hint line above the list, "Newer rules data is out: SRD 5.2
   v1.8.0-1. Download it from the release page." (`dataUpdateHint()`), links the release, in
   Settings and on the home screen, since both draw `rulesDataHTML()`.
 - **current** — a quiet "v*X*".
-- **unknown** — no stamp, a stamp that doesn't parse, or nothing to compare with: nothing shown.
+- **known** — a readable version, but no `DATA_VERSIONS` baseline for its system and no data-release
+  copy to compare against: a private pack, or an old pack (XPHB, Humblewood, XGE, TCE) a build after
+  #85 no longer ships a baseline for. Shown exactly like **current** — a quiet "v*X*" — because there
+  is no evidence either way, not nothing: a v1.7.2 player upgrading with an old pack still loaded sees
+  its version, never silence and never an alarm.
+- **unknown** — no stamp at all, or a stamp that doesn't parse: nothing shown.
 
 `DATA_VERSIONS` is the snapshot of `data/packs.json` that `release.js` took when this build was
-released; `bundle-rules.js` stamps each pack from the registry (see
+released; `fbdata.py bundle` stamps each pack from the registry (see
 [Rules packs](../architecture/rules-packs.md)).
 
 **Export settings** writes `{_type:"fieldbook-settings", settings, rules}`: the whole `settings`
@@ -230,6 +235,9 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 
 ## Open
 
+- **Private packs get no newer-data notice.** The data check reads the public registry, which lists
+  only SRD 5.2 and Homebrew since #85, so a private pack's row shows its version quietly (`known`)
+  and never "out" (see [Private data](../data/private-data.md)).
 - **Removing a source URL does not unload what it fetched.** Its packs stay until removed under
   Loaded data (see [Rules packs](../architecture/rules-packs.md)).
 - The header comment of `30-version.js` still says to bump `APP_VERSION` and add a `CHANGELOG` entry on
@@ -258,3 +266,6 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-09-28 — Import settings asks before replacing loaded rules, rebuilds the file's pool through `mergeRules()`, and says what it did. → ledger L4134, #70
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-07 — Import files takes zips and names each failure; the `update` state, its hint line and ` · update` on the count, from `checkForDataUpdate()`; Credits & licences lists each loaded pack's credit. → ledger L5082, #83
+- 2026-10-09 — Bundling moves to `bundle()` in `tools/data-kit/fbdata.py` (Python), replacing the Node bundler. → ledger L5342, #85
+- 2026-10-09 — `dataStatus()` gains `"known"`: a pack with a version but no baseline to compare it to shows that version quietly, never the amber chip or the newer-data notice. → ledger L5388, #85
+- 2026-10-09 — The public registry, which the newer-data check reads, lists only SRD 5.2 and Homebrew; private packs show their version quietly and get no notice. → ledger L5426, #85

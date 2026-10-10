@@ -14,8 +14,8 @@ notice, and both release paths. What the app does with a pack once it is loaded 
 `parseDataVer()`, `cmpDataVer()`, `dataVerOfTag()`, `dataVerBase()`, `pickDataRelease()`,
 `dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js`; `dataStatus()`, `dataUpdateFor()`,
 `prunePackMeta()`, `rulesCreditsHTML()`, `rulesBadge()` in `88-settings.js`; `pack_digest()`,
-`changed_packs()`, `cmd_pack()`, `validate_archive()` in `tools/data-kit/fbdata.py`; `registry()` in
-`scripts/bundle-rules.js` · **Data:** `data/packs.json` · **Tests:** `data-archive.js`, `data-kit.py`,
+`changed_packs()`, `cmd_pack()`, `validate_archive()`, `bundle()`, `load_registry()` in
+`tools/data-kit/fbdata.py` · **Data:** `data/packs.json` · **Tests:** `data-archive.js`, `data-kit.py`,
 `rules-data.js`, `docs.js` · **See also:** [Rules packs](rules-packs.md),
 [Settings & updates](../features/settings-and-updates.md), [Building & CI](../process/building-and-ci.md),
 [RELEASING](../../RELEASING.md), [the spec](../../specs/2026-10-07-data-archive-design.md)
@@ -25,7 +25,7 @@ notice, and both release paths. What the app does with a pack once it is loaded 
 **The registry.** `data/packs.json` lists every pack: its `system`, the `dir` under `data/` it is
 built from, the bundle's `file` and `title`, its `version`, a `digest`, and optionally a `license`
 (an SPDX id) and an `attribution`. `release` is the version of the last release, app or data, and
-names the archive. `bundle-rules.js` reads it (`registry()`), so a bundle's `name`, `dataVersion`,
+names the archive. `fbdata.py bundle` reads it (`load_registry()`), so a bundle's `name`, `dataVersion`,
 `license` and `attribution` all come from here. A new pack is registered with `version: null` and no
 `digest`; its first release gives it both.
 
@@ -44,15 +44,19 @@ older than it is **stale**.
 **Data releases** (`node scripts/data-release.js`, dev.sh `d`): bump only the changed packs to
 `<APP_VERSION>-N`; refuse when nothing changed, when `data/` is dirty, or when the tag exists; print
 the commit, tag and push commands. Pushing `data-vX.Y.Z-N` runs `data-release.yml`, which publishes
-the archive alone with `--latest=false`.
+the archive alone with `--latest=false`. With `--registry` and `--data-root` it bumps another
+registry in its own checkout instead: that is how the private repo's packs are released, as
+`fieldbook-data-private-<ver>.zip` on the private repo only (see
+[Private data](../data/private-data.md)).
 
 **The archive.** `fbdata.py pack` writes `fieldbook-data.json` (the manifest), `NOTICE.md` and the
 bundles — sorted, dated 1980-01-01, deflated at level 9 — and `fbdata.py validate`
 (`validate_archive()`) checks it. A build names it `+dev` when a digest is unreleased. The app zip
-carries it in `data/`. It holds every registered pack, six today: `5e2024_full.json`,
-`humblewood_full.json`, `xanathars_full.json`, `tashas_full.json`, `homebrew_full.json` and
-`srd52_full.json`, the [SRD 5.2](../data/srd.md) pack. SRD 5.2 has no version until 1.8.0 gives it
-one, so the manifest and `NOTICE.md` list it without one, its bundle has no `dataVersion`, and the
+carries it in `data/`. It holds every registered pack, two since #85: `srd52_full.json`, the
+[SRD 5.2](../data/srd.md) pack, and `homebrew_full.json`. The 2024, Xanathar's, Tasha's and
+Humblewood packs left the registry and the archive for the private repo
+([Private data](../data/private-data.md)); a player who loaded them keeps them, shown with the
+quiet `known` chip. SRD 5.2 has no version until 1.8.0 gives it one, so the manifest and `NOTICE.md` list it without one, its bundle has no `dataVersion`, and the
 app shows it no version badge (the **unknown** state). `NOTICE.md` carries its CC-BY-4.0
 attribution in full.
 
@@ -104,12 +108,16 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 - **Re-importing replaces by file name and system,** never by file name alone.
 - **Credits are text,** shown through `esc()`. A licence longer than 64 characters is dropped, and an
   attribution is cut to 2,000.
+- **A public release may only carry an allowlisted licence** (`CC-BY-4.0`, `CC-BY-SA-3.0`, `MIT` —
+  `PUBLIC_LICENCES`, #85 R13). `fbdata.py validate --public` enforces it on the rules-data archive;
+  `release.yml` and `data-release.yml` both run it, after the build, alongside a check that no asset
+  is named `*private*` — see [Building & CI](../process/building-and-ci.md).
 
 ## Traps
 
 - **`cmpVer()` ignores `-N`.** Every comparison of data versions goes through `cmpDataVer()`.
-- **The zips need Python.** `./build.sh --no-zip` and the Node suites don't; the zips, a release
-  and the `data-kit` suite do.
+- **Every build needs Python now.** `fbdata.py bundle` runs even under `--no-zip` (#85); only
+  running a single Node suite directly, skipping `run.sh`'s rebundle, needs none.
 - **Seeding was the one hand-run step.** The first digests came from the v1.7.2 tree, so data
   changed after v1.7.2 still moves to 1.8.0. Never seed again: `fbdata.py versions --seed` records
   every pack's current digest, so it would mark every unreleased change as released. A new pack
@@ -134,7 +142,10 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 
 ## Open
 
-- The private split with the data kit (#85).
+- **Private packs get no newer-data notice.** `checkForDataUpdate()` reads the public registry, which
+  lists only the public packs.
+- **Old releases still hand out the packs** until their assets are deleted at the #85 finish, and
+  GitHub's Source code archives of each tag until the 2.0 history purge ([2.0](../roadmap/2.0.md)).
 
 ## History
 
@@ -144,3 +155,6 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
   throws named and skipped, the release-path guards, the "those versions" note wording. → ledger L5124
 - 2026-10-08 — The archive carries `srd52_full.json`, registered with no version or digest until
   1.8.0. → ledger L5148, #84
+- 2026-10-09 — The registry read and bundling move into `fbdata.py` (`load_registry()`, `bundle()`), replacing the Node bundler. → ledger L5342, #85
+- 2026-10-09 — Public releases (app and data) are gated on `validate --public` and a `*private*` name check, run by the release workflows after the build. → ledger L5352, #85
+- 2026-10-09 — The archive holds SRD 5.2 and homebrew only; `data-release.js --registry` cuts the private repo's releases. → ledger L5426, #85

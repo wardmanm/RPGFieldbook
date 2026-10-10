@@ -3,7 +3,9 @@
 No rules content is baked into the app. Species, classes, subclasses, spells, items, feats,
 backgrounds, glossary terms and tables all arrive as JSON packs that the player imports at runtime.
 Each pack is either a **system** a character can be created in (D&D 2024, SRD 5.2, Humblewood) or
-an additive **supplement** (Xanathar's, Tasha's, Homebrew). Every loaded pack merges into one pool,
+an additive **supplement** (Xanathar's, Tasha's, Homebrew). This repo ships SRD 5.2 and Homebrew;
+the other four live in the private repo and reach the app the same way, from their own archive
+([Private data](../data/private-data.md)). Every loaded pack merges into one pool,
 the global `rules`, which is cached across reloads (see [Storage](storage.md)) and consulted by
 name. The pack format itself is [rules-schema](../../../../docs/rules-schema.md), so this page
 covers what the app does with packs.
@@ -17,7 +19,7 @@ covers what the app does with packs.
 `loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `prunePackMeta()`, `clearAllRules()`,
 `dataStatus()`, `dataStatusHTML()`, `refreshRulesUI()`, `rulesBadge()` in `88-settings.js`; `systemOf()`, `racesForCharacter()` in `52-race.js`; `findRaceDef()`,
 `findClassDef()`, `subclassesFor()` in `50-classrace.js`; `DATA_VERSIONS` and `cmpDataVer()` in
-`30-version.js`; `bundle()` and `registry()` in `scripts/bundle-rules.js`; `pack_digest()` and
+`30-version.js`; `bundle()`, `cmd_bundle()`, `load_registry()`, `pack_digest()` and
 `changed_packs()` in `tools/data-kit/fbdata.py` · **Data:** `data/packs.json`, `data/<dir>/*.json` →
 `dist/<file>` · **Tests:**
 `rules-data.js` (bundle ≡ individual files, the data states, every bundle agrees with
@@ -26,21 +28,23 @@ Fetch all keeping what is loaded, a settings file's pool
 rebuilt and round-tripped, entries with no name skipped and reported), `data-archive.js` (importing
 bytes and zips, `importPack()` replacing, credits, the `update` state), `sheet.js` (a wholesale pool
 full of junk, tidied and rendered), `tables.js`, `docs.js` (`data/packs.json` parses, every pack's
-`dir` exists, and every `DATA_VERSIONS` system has a pack at or after it) · **See also:**
+`dir` exists, and every `DATA_VERSIONS` system has a pack at or after it, bar the four that left
+for the private repo until the next release), the private repo's `private-data.js` (the private
+packs, and the table-name rule across every pack) · **See also:**
 [Data archive](data-archive.md), [Converter](../data/converter.md),
 [Supplements](../data/supplements.md), [Homebrew](../data/homebrew.md),
 [Settings & updates](../features/settings-and-updates.md), [Rich text](rich-text.md)
 
 ## How it works
 
-| Pack | `system` stamp | Kind | `excludeSystems` | `requires` |
-|---|---|---|---|---|
-| `5e2024_full.json` | `XPHB` | system: D&D 2024 core | — | — |
-| `humblewood_full.json` | `Humblewood` | system | — | — |
-| `xanathars_full.json` | `XGE` | supplement | `["humblewood"]` | — |
-| `tashas_full.json` | `TCE` | supplement | `["humblewood"]` | — |
-| `homebrew_full.json` | `Homebrew` | supplement, hand-authored | — | yes |
-| `srd52_full.json` | `SRD 5.2` | system: the free D&D rules ([SRD 5.2](../data/srd.md)) | `["humblewood"]` | — |
+| Pack | `system` stamp | Kind | `excludeSystems` | `requires` | Repo |
+|---|---|---|---|---|---|
+| `srd52_full.json` | `SRD 5.2` | system: the free D&D rules ([SRD 5.2](../data/srd.md)) | `["humblewood"]` | — | public |
+| `homebrew_full.json` | `Homebrew` | supplement, hand-authored | — | yes | public |
+| the 2024 pack | `XPHB` | system: D&D 2024 core | — | — | private |
+| the Humblewood pack | `Humblewood` | system | — | — | private |
+| the Xanathar's pack | `XGE` | supplement | `["humblewood"]` | — | private |
+| the Tasha's pack | `TCE` | supplement | `["humblewood"]` | — | private |
 
 **Systems and supplements.** A character's `system` is `"dnd"` or `"humblewood"`. Nothing else is
 possible, because `migrate()` coerces it. A pack's `system` stamp is a source label (`XPHB`, `XGE`, …)
@@ -147,12 +151,14 @@ so a settings file's unusable entries go without a message.
 class, species and background descriptions re-resolve live by name. `findTable()` is also a global
 name lookup, first match in load order, and `[Table: …]` anchors carry no pack (see
 [Rich text](rich-text.md)). So two packs may share a table name only when that is harmless:
-**identical twins**, or **the SRD 5.2 and 2024 packs' copies of one table** (R5). The SRD pack
+**identical twins**, or **the SRD 5.2 and 2024 packs' copies of one table** (#84 R5). The SRD pack
 reprints 68 of the 2024 pack's tables, 59 word for word and 9 in the SRD's own wording ("GM" for
-"DM", renamed spells, three corrections), so whichever loads first is the same table either way. The
-registry, and so the archive, loads the 2024 pack first. `rules-data.js` pins those nine by name, so
-a new difference (from a 5e-tools update, say) fails until it is added on purpose. Any other
-same-named pair fails too, and the converter suffixes a supplement's colliding name (see
+"DM", renamed spells, three corrections), so whichever loads first is the same table either way.
+**Which loads first is the player's import order**: the two packs come from separate archives since
+#85, and a re-import keeps a pack's place, so whichever was imported first stays first (see
+[Private data](../data/private-data.md)). The private suite pins those nine by name, so a new
+difference (from a 5e-tools update, say) fails until it is added on purpose. Any other same-named
+pair fails too, and the converter suffixes a supplement's colliding name (see
 [Supplements](../data/supplements.md)).
 
 **Subclasses.** `subclassesFor(d)` returns the class's own subclasses plus every standalone entry in
@@ -184,14 +190,16 @@ loading.
 
 **Is my pack current?** Each pack's version lives in the registry, `data/packs.json`, beside a
 digest of its content (see [Data archive](data-archive.md)). A release, app or data, gives a new
-version only to the packs whose digest changed; `bundle-rules.js` stamps each bundle's `dataVersion`
+version only to the packs whose digest changed; `fbdata.py bundle` stamps each bundle's `dataVersion`
 from the registry, and `mergeRules()` copies it onto every entry as `_dataVersion`, so it survives
 the cache. `DATA_VERSIONS` in `30-version.js` is a snapshot of the registry taken at each app
 release: the versions this build shipped with. `dataStatus()` compares with `cmpDataVer()`, which
-reads `X.Y.Z` and `X.Y.Z-N`, and gives one of four states:
+reads `X.Y.Z` and `X.Y.Z-N`, and gives one of five states:
 
-- **unknown** — no stamp, a stamp `cmpDataVer()` can't read, or nothing to compare it with: no
-  `DATA_VERSIONS` entry and no data release's copy of the pack. Nothing is shown.
+- **unknown** — no stamp, or a stamp `cmpDataVer()` can't read. Nothing is shown.
+- **known** — a readable stamp with nothing to compare it with: no `DATA_VERSIONS` entry and no data
+  release's copy of the pack. A private pack, or an old XPHB, Humblewood, XGE or TCE pack after a
+  build that no longer ships their baseline. A quiet version tag, claiming nothing (#85 R5).
 - **stale** — older than `DATA_VERSIONS`: the amber "update available" chip.
 - **update** — not stale, but a data release has a newer copy of this file (`dataUpdateFor()`): a
   muted "v*A* · v*B* out" (see [Settings & updates](../features/settings-and-updates.md)).
@@ -200,7 +208,8 @@ reads `X.Y.Z` and `X.Y.Z-N`, and gives one of four states:
 The release notes name the packs whose version is that release's, from the registry
 (`scripts/data-release-notes.js`).
 
-**Bundling.** `bundle-rules.js` rolls each registered `data/<dir>/` into one `dist/<file>` stamped
+**Bundling.** `bundle()` in `tools/data-kit/fbdata.py` (run as `fbdata.py bundle`) rolls each
+registered `data/<dir>/` into one `dist/<file>` stamped
 `rulebook:true`, `version:1` (the *schema* version), and the registry's `title` as `name`, `version`
 as `dataVersion`, and `license` and `attribution` when it has them. The folder's files must declare
 the registry's `system`, or the build fails. It mirrors `mergeRules()`
@@ -225,7 +234,8 @@ files).
   as a non-blank string. A new path that changes the pool must end in `reindexRules()`.
 - **An entry a pack can't use is said on the status line,** never dropped in silence.
 - **The bundle equals the individual files.** Any change to `mergeRules()` keying needs the same
-  change in `bundle-rules.js` (a keyword with no term keys by its `name` in both), and `RULE_CATS` (`88-settings.js`), `mergeRules()`'s category map
+  change in `bundle()` in `fbdata.py` (a keyword with no term keys by its `name` in both), and
+  `RULE_CATS` (`88-settings.js`), `mergeRules()`'s category map
   and the bundler's `CATS` must stay in step.
 - **Fetching never loses what is loaded.** A source replaces only the entries stamped with its own
   `_url`, and only once all of it has arrived. A run where nothing arrives writes neither the pool
@@ -242,12 +252,13 @@ files).
   it, nor the registry's versions, digests or `release`. It must stay a flat JSON object: `release.js`
   and the `docs` suite find it with `\{[^}]*\}` and `JSON.parse` it.
 - **Re-importing replaces by file name and system,** never by file name alone.
-- **`data/5e2024/` and `data/srd52/` must reproduce byte for byte** from the converter. Any value
+- **The 2024 pack (in the private repo) and `data/srd52/` must reproduce byte for byte** from the converter. Any value
   that moves changes that pack's digest, so the next release bumps it and every player is told to
   re-download a pack that did not change. See [Converter](../data/converter.md).
 - **A table name is shared only by identical twins or by one of the nine pinned SRD 5.2/2024 pairs.**
   `findTable()` takes the first match and an anchor names no pack, so any other pair would open one
-  book's table from the other's prose. `rules-data.js` enforces it across every pack folder.
+  book's table from the other's prose. The private suite enforces it across every pack, public and
+  private; `rules-data.js` across the public ones.
 
 ## Traps
 
@@ -306,7 +317,8 @@ files).
 | Where a wholesale pool is made safe | `tidyRules()`, run by `reindexRules()` | In the Settings import handler: misses both cache restores. In every reader: hundreds of sites, and the next one written would not know (L4206) |
 | A keyword written `{name, description}` | Read as its term and text | Skipping it: every other category is written that way, and it is plainly a term (L4206) |
 | How the SRD pack's species reach D&D characters (#84, R6) | `systemOf()` reads a label starting `srd` as D&D, and the pack also carries `excludeSystems: ["humblewood"]` | `excludeSystems` alone: it says only who the pack is not for, and SRD 5.2 is a D&D system whose species belong to D&D characters (spec R6). `systemOf()` alone: an older app, which doesn't know the label, would offer SRD species to Humblewood characters (L5148) |
-| The Artificer and Mystic in the core pack | Leave them, labelled `XPHB` | Dropping them: moves `data/5e2024/`, bumps XPHB for everyone, and strands Artificer players without Tasha's (L1816) |
+| The Artificer and Mystic in the core pack | Leave them, labelled `XPHB` | Dropping them: moves the 2024 pack, bumps XPHB for everyone, and strands Artificer players without Tasha's (L1816) |
+| Which of two same-named SRD and 2024 entries a lookup finds, now in two archives (#85) | The one imported first; re-importing keeps its place | Ordering them in the registry, as #84's RF5 did: no registry holds both packs any more (L5426) |
 
 ## Open
 
@@ -338,3 +350,6 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-07 — Imports take bytes and zips; a re-import replaces its pack (`importPack()`); versions come from `data/packs.json` and compare with `cmpDataVer()`, with an `update` state for a newer data release; pack credits are kept like `requires`. → ledger L5082, #83
 - 2026-10-08 — SRD 5.2 joins as a system: `systemOf()` reads it as D&D, it loads after the 2024 pack, and an SRD/2024 table pair may share a name (R5, refined). → ledger L5148, #84
 - 2026-10-08 — R5 pinned: the nine SRD/2024 tables that differ are listed by name; Carrying Capacity is now an identical twin (59), leaving three corrected ones. → ledger L5269, #84
+- 2026-10-09 — Bundling moves from the Node bundler to `bundle()` in `tools/data-kit/fbdata.py` (Python), byte for byte. → ledger L5342, #85
+- 2026-10-09 — The `known` state: a pack with a version and no baseline shows it quietly. → ledger L5388, #85
+- 2026-10-09 — Four packs move to the private repo; the 2024 and SRD packs come from separate archives, so import order decides which twin a lookup finds. → ledger L5426, #85
