@@ -1422,7 +1422,7 @@ X.mergeRules({system: 'Probe', feats: [
   {name: 'Boon of Combat Prowess', description: 'Epic Boon · Prerequisite: Level 19+\nYou never miss.'},
   {name: 'Aerial Expert', description: 'Origin Feat (Prerequisite: Glide trait)\nYou glide well.'},
   {name: 'Dragon Fear', description: 'Prerequisite: Dragonborn\nYou can roar.'},
-  {name: 'Glide', description: 'You are more at home in the trees than on the ground.'},
+  {name: 'Glide', description: 'A probe feat that shares its name with a trait.'},
 ], features: [
   {name: 'Glide', description: 'You can glide when you fall.', source: 'Ancestry'},
   {name: 'Darkvision', description: 'You see in the dark.'},
