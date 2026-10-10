@@ -132,6 +132,26 @@ jobs:
           python3 --version
           ./build.sh
 
+      # data-kit.py tests the kit zip itself (unzipped anywhere, it builds the
+      # example pack) only once a built kit zip exists, and Tests runs before the
+      # build, so there it always skips (#85). Run it again now the zip exists,
+      # and fail unless those checks actually ran and passed: the kit is an asset.
+      - name: The kit zip works on its own (data-kit, after the build)
+        run: |
+          set -o pipefail
+          python3 src/tests/data-kit.py | tee "$RUNNER_TEMP/data-kit.log"
+          if grep -q '^note: no dist/fieldbook-data-kit' "$RUNNER_TEMP/data-kit.log"; then
+            echo "::error::data-kit.py found no kit zip after the build, so its kit checks did not run."
+            exit 1
+          fi
+          for c in 'the kit zip holds exactly the kit' \
+                   'an unzipped kit builds the example pack with no repo around it' \
+                   '...and the kit finds its own convert.py'; do
+            grep -Fxq "PASS  $c" "$RUNNER_TEMP/data-kit.log" \
+              || { echo "::error::data-kit.py's kit check did not run or did not pass: $c"; exit 1; }
+          done
+          echo "the kit zip's checks ran and passed."
+
       # The proof that what we publish is what the source says. dist/fieldbook.html
       # is tracked, so a clean rebuild must reproduce it byte for byte; a diff here
       # means the committed artifact was hand-edited or built from other sources.
