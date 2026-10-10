@@ -2547,18 +2547,18 @@ exactly why races, feats, backgrounds and core subclasses already read well, and
 Gadgeteer was broken: `pt_all_subs` deliberately keeps a whole section as one blob.
 
 **A blanket `prereq` rule is actively harmful.** `prereq` only means *italic*, and the core book also
-italicises **inline spell names**. Prototyped across all files, it produced `"you can cast\ncharm
-person as a 1st level spell"` in three races. The prototype was reverted.
+italicises **inline spell names**. Prototyped across all files, it produced [book text: a racial
+trait's spell sentence, split before the spell's name] in three races. The prototype was reverted.
 
 **And the same trap was already live in what had just shipped.** The `prereq` rule in `pt_all_subs`
-was breaking Gadgeteer path features mid-sentence — `"as if you had cast the\nidentify spell"`, and
+was breaking Gadgeteer path features mid-sentence — [book text: a clause split before a spell name], and
 `"divert power*"` split across two lines. Caught only by scanning the data for `[a-z,]\n[a-z]`, not
 by any test that existed. **That scan is now a test**, across every Humblewood file.
 
 **The rule is POSITIONAL in both parsers, never stylistic.** In `pt_all_subs`, an italic run is a
 tagline only when it directly follows a `head`. In `parse_entity`, only the first italic run, before
-any prose or trait. That correctly picks up the genuine shared case — subclass taglines ("Learn from
-People You Meet on Your Travels") and feat type lines ("Origin Feat (Prerequisite: Glide trait)"),
+any prose or trait. That correctly picks up the genuine shared case — subclass taglines ([book text:
+a path's one-line italic motto]) and feat type lines ("Origin Feat (Prerequisite: Glide trait)"),
 11 entries — while leaving inline spell names alone.
 
 **`humblewood-verbatim` still passes 129/133** — it never reads `classes.json`, and its `norm()`
