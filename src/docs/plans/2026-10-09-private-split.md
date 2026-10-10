@@ -1962,8 +1962,9 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ## At the finish (the controller, each step on Mike's go-ahead)
 
 Not tasks for an implementer:
-1. **Push the private repo:** `git -C /Users/mwardman/Documents/Repos/RPGFieldbookPrivate push -u origin main`. Then run its CI by hand (`gh workflow run ci.yml -R wardmanm/RPGFieldbookPrivate`). It builds public `main`, which does not have #85 yet, so expect the CI to need the merge first: confirm it after step 2.
-2. **Merge and push public `main`** with `Closes #85, closes #82`, then rebuild the artifact on `main` (`./build.sh --no-zip`, `node scripts/build-html.js --check`, commit "chore: rebuild the artifact") and push. Re-run the private CI, and confirm it is green.
-3. **Delete the old release assets**, after showing Mike the exact list:
+1. **Push the private repo:** `git -C /Users/mwardman/Documents/Repos/RPGFieldbookPrivate push -u origin main`. Expect its push-triggered CI run to fail (`FAILURES: bundling`): it checks out public `main`, which has no `fbdata.py bundle` until #85 merges. Don't hold the merge for it, and don't change the private repo to make it pass. R1 still holds: the private repo has the data before public `main` loses it.
+2. **Merge and push public `main`** with `Closes #85, closes #82`, then rebuild the artifact on `main` (`./build.sh --no-zip`, `node scripts/build-html.js --check`, commit "chore: rebuild the artifact") and push.
+3. **Run the private CI by hand** (`gh workflow run ci.yml -R wardmanm/RPGFieldbookPrivate`) and confirm it is green.
+4. **Delete the old release assets**, after showing Mike the exact list:
    - every `*_full.json`, `fieldbook-v*.zip` and `fieldbook-v1.3.0-source.zip`, on v1.3.0 to v1.7.2;
    - `fieldbook.html` stays.

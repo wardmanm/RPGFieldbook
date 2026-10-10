@@ -17,7 +17,8 @@ several branches at once is [WORKTREES](../../WORKTREES.md).
 **Tests:** `docs.js` (zip allowlist vs README §9, README names the archive and the kit,
 `data/packs.json` against `DATA_VERSIONS`), `data-kit.py` (the archive is reproducible and
 validates; the example pack builds and passes `validate --public`; the kit zip, once built, works
-unzipped with no repo around it; the release scripts in a scratch repo) · **See also:**
+unzipped with no repo around it, re-run after the full build in `ci.yml` and `release.yml`; the
+release scripts in a scratch repo) · **See also:**
 [Build & source split](../architecture/build-and-source-split.md), [Data archive](../architecture/data-archive.md),
 [Testing](testing.md),
 [RELEASING](../../RELEASING.md), [WORKTREES](../../WORKTREES.md), [README](../../../../README.md)
@@ -88,8 +89,9 @@ the app zip.
 
 After zipping, the guard lists the entries with `unzip -Z1` and fails on any of:
 
-- a dev path: anything under `src/`, any dot-path, `CLAUDE.md`, `build.sh`, `dev.sh`, the ledger, an
-  ADR, `UNRELEASED`, `RELEASING`, or a dev script (`build-html.js`, `gen-changelog.js`, `release.js`,
+- a dev path: anything under `src/` or `scripts/` (the data kit carries the converter now, #85), any
+  dot-path, `CLAUDE.md`, `build.sh`, `dev.sh`, the ledger, an ADR, `UNRELEASED`, `RELEASING`, or a
+  dev script (`build-html.js`, `gen-changelog.js`, `release.js`,
   `release-notes.js`, `bundle-rules.js`, `fetch-icons.js`, `extract-humblewood.py`);
 - anything in `data/` other than exactly one `data/fieldbook-data-standalone-*.zip`, or no archive
   at all;
@@ -137,7 +139,11 @@ and Python 3.11, checked out at `fetch-depth: 2`. The steps run in order:
 6. Byte hygiene (no CR, no BOM, a final newline) over every fragment, the manifest and the template.
 7. The full `./build.sh`, the archive's validation and the zip guard included. Its Python is the
    3.11 the job sets up.
-8. "The build changed no tracked file": `git diff --exit-code`.
+8. `data-kit.py` again, now that the kit zip exists: its kit-zip checks (the zip holds exactly the
+   kit; unzipped, it builds the example pack and finds its own `convert.py`) skip in step 5, which
+   runs before the build. The step fails if the suite fails, if it prints its "no kit zip" note, or
+   if any of those three checks' `PASS` lines is missing.
+9. "The build changed no tracked file": `git diff --exit-code`.
 
 **A src-only PR is built, not checked.** On a `pull_request`, CI asks
 `git diff --quiet HEAD^1 HEAD -- dist/fieldbook.html`. A PR is checked out as a merge commit whose
@@ -155,7 +161,9 @@ What each refusal means and how to clear it is the table in [RELEASING](../../RE
 one whose `data/packs.json` `release` isn't the tag's version (a tag cut without `--release`), then
 one with notes still pending. It runs the tests (a tag never triggers `ci.yml`) and the full build
 under the runner's own `python3`, printing `python3 --version` first, and refuses to publish unless
-that rebuild reproduces the committed `dist/fieldbook.html` byte for byte. The release body is the
+that rebuild reproduces the committed `dist/fieldbook.html` byte for byte. Right after the build it
+re-runs `data-kit.py` and requires its kit-zip checks to have run and passed, as `ci.yml` does, so
+the kit asset is tested as it ships. The release body is the
 changelog section plus `data-release-notes.js <v> --app`: what to download, which packs changed, and
 (#85) a line pointing at the data kit zip. The assets are `fieldbook.html`, `fieldbook-v<v>.zip`,
 `fieldbook-data-standalone-<v>.zip` and `fieldbook-data-kit-<v>.zip`, and it checks all four exist
@@ -325,3 +333,4 @@ prints the menu and exits 0.
 - 2026-10-09 — `build.sh`, `run.sh`, CI and `dev.sh` call `fbdata.py bundle` in place of the Node bundler; every build now needs python3. → ledger L5342, #85
 - 2026-10-09 — The app zip drops `scripts/`; a new flat data kit zip (`pack_kit`) carries `convert.py` and its inputs instead, with `example-pack/`; `release.yml` and `data-release.yml` gain the public-only licence and name guard (R13). → ledger L5352, #85
 - 2026-10-09 — The converter menu writes the private packs through `_private-data`; CI skips the `private-data` suite, which the private repo's CI covers; `py_compile` covers `tools/data-kit/`. → ledger L5426, #85
+- 2026-10-09 — `ci.yml` and `release.yml` re-run `data-kit.py` after the full build and require its kit-zip checks; the app zip's guard bans `scripts/`. → ledger L5592, #85

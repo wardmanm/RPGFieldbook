@@ -117,10 +117,12 @@ on `PATH` so `humblewood-verbatim` finds PyMuPDF rather than skipping:
 
 `tests/leak-scan.py` (spec R9) reads every string of the four private packs (the private text) and
 every string of `data/srd52/` and `data/homebrew/` (the free text), then every file git tracks in the
-public checkout, plus `dist/fieldbook.html`. It reports runs of words that a file shares with the
-private text and not with the free text. All three sides are normalised by one function: escapes
-undone, 5e-tools tags, table anchors and HTML tags stripped, lower-cased, and split into words where
-an apostrophe counts only inside a word, so text in a single-quoted or escaped string is seen whole.
+public checkout, every new file there git doesn't ignore (`git ls-files --cached --others
+--exclude-standard`, so a local run sees a file before it is committed), plus `dist/fieldbook.html`.
+It reports runs of words that a file shares with the private text and not with the free text. All
+three sides are normalised by one function: escapes undone, 5e-tools tags, table anchors and HTML
+tags stripped, lower-cased, and split into words where an apostrophe counts only inside a word, so
+text in a single-quoted or escaped string is seen whole.
 
 - **A run of 14 words or more fails**, unless the allowlist names it. A prototype found every real
   leak at 14 words, with no formulaic false positives.
@@ -267,8 +269,11 @@ imports the public archive and then the private one resolves a shared table name
 ## Open
 
 - **The main checkout has no `_private-data` link yet.** It is made at the finish, after the merge.
-- **The private repo is unpushed and its CI unproven.** Its first push and a manual CI run are the
-  finish's first step; the CI needs #85 on public `main`.
+- **The private repo is unpushed and its CI unproven.** The CI needs #85 on public `main`, so the
+  finish runs: push the private repo (its push-triggered run is expected to fail, `FAILURES:
+  bundling`); merge and push public `main`; then run the private CI by hand (`gh workflow run ci.yml
+  -R wardmanm/RPGFieldbookPrivate`) and confirm it is green. The private repo still has the data
+  before public `main` loses it (R1).
 - **Private packs get no newer-data notice**: `checkForDataUpdate()` reads the public registry
   (spec §8). Mike knows when he has cut one.
 - **Homebrew's Xanathar's spells cannot resolve publicly.** Its chip names Cause Fear and Primal
@@ -280,11 +285,10 @@ imports the public archive and then the private one resolves a shared table name
   no longer names the departed packs.
 - **New characters still default to Humblewood** (`blankChar()`), with no public Humblewood data
   (spec §13): Mike's call, as its own issue.
-- The private README says `private-data` joins `run.sh` "with #85's removal commit"; it has. Its next
-  edit can say so in the present tense.
 
 See [Known issues](../roadmap/known-issues.md).
 
 ## History
 
 - 2026-10-09 — The copyrighted packs, the Humblewood extractor and its suite move to RPGFieldbookPrivate; `_private-data`, the `private-data` suite, the leak scan, private data releases, the import-order and `LEFT_FOR_PRIVATE` rulings. → ledger L5426, #85
+- 2026-10-09 — The finish confirms the private CI after the merge, not before; the leak scan reads new untracked files too. → ledger L5592, #85

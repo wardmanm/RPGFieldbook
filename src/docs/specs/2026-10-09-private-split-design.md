@@ -264,9 +264,15 @@ The count stays **ten**. CI never has `_private-data`, so it runs nine suites an
    - the ledger and `UNRELEASED.md`.
 
 **At the finish, each step on Mike's go-ahead:**
-1. The first push to `RPGFieldbookPrivate`, then confirm its CI.
+1. The first push to `RPGFieldbookPrivate`; its push-triggered CI run is expected to fail.
 2. Merge and push public `main` (`Closes #85, closes #82`).
-3. Delete the old release assets.
+3. Run the private CI by hand (`gh workflow run ci.yml -R wardmanm/RPGFieldbookPrivate`) and
+   confirm it is green.
+4. Delete the old release assets.
+
+This order corrects the approved spec's, which confirmed the private CI before the merge: that CI
+checks out public `main`, which has no `fbdata.py bundle` until #85 merges (R1 still holds: the
+private repo has the data before public `main` loses it).
 
 ## 12. Player-facing notes
 

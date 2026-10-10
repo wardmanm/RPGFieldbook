@@ -35,7 +35,7 @@ own.
 | `versions` | `--changed` lists packs whose digest moved since their release; `--check` exits 1 if any did; `--bump V` gives those packs version V and sets `release`; `--seed` records every digest as released (never again: see [Data archive](../architecture/data-archive.md)) | `python3 tools/data-kit/fbdata.py versions --changed --registry _private-data/data/packs.json --data-root _private-data/data` |
 | `pack` | Writes the archive from the bundles: `fieldbook-data.json`, `NOTICE.md` and each pack, sorted and dated 1980-01-01, so the same input gives the same bytes. `--dev` names its version `<release>+dev`; `--built-for` records the app version | `python3 tools/data-kit/fbdata.py pack dist -o dist/fieldbook-data-standalone-1.8.0.zip` |
 | `validate` | Checks an archive: one line per problem, exit 1. `--public` also refuses a pack whose licence is not `CC-BY-4.0`, `CC-BY-SA-3.0` or `MIT` (`PUBLIC_LICENCES`) | `python3 tools/data-kit/fbdata.py validate --public dist/fieldbook-data-standalone-1.8.0.zip` |
-| `convert` | Runs `convert.py` with the kit's `overlay.json`, `class-resources.json` and (for `srd`) `srd-corrections.json` filled in, unless the caller names their own | `python3 tools/data-kit/fbdata.py convert srd _conversion-data/5etools-v2.36.1 -o /tmp/srd` |
+| `convert` | Runs `convert.py` with the kit's `overlay.json`, `class-resources.json` and (for `srd`) `srd-corrections.json` filled in, unless the caller names their own (`--overlay PATH` or `--overlay=PATH`; `_given()`) | `python3 tools/data-kit/fbdata.py convert srd _conversion-data/5etools-v2.36.1 -o /tmp/srd` |
 | `build` | One command from a source to a validated archive (below) | `python fbdata.py build ~/5etools/data -o srd.zip` |
 
 **Bundling.** `bundle()` mirrors `mergeRules()`: entries keyed by name (subclasses by class and
@@ -63,6 +63,8 @@ temporary folder, and writes only `OUT.zip`. It never publishes.
      pack into a scratch folder for `--avoid-table-names`, as `dev.sh` does.
 
    The archive's version is `--version` (default `0.0.0`), and the pack has no version of its own.
+   Pointed at a 5e-tools checkout's root instead (one whose `data/` holds `class/` or `spells/`),
+   `build` refuses and says to point it at the `data/` folder.
 2. **A data folder with its `packs.json`**, such as this repo's `data/` or the private repo's: every
    registered pack, stamped with the registry's versions. Mike's own archive is
    `python3 tools/data-kit/fbdata.py build _private-data/data -o mine.zip`.
@@ -127,6 +129,9 @@ the test replaced by golden checks. `convert`, `build`, `validate --public` and 
 - **The kit never publishes.** `build` writes a local zip; publishing is the release workflows'.
 - **The kit zip is an allowlist**, flat, guarded after zipping; a new file means editing `pack_kit`'s
   copy and its list together, and `docs.js` checks the kit still carries `srd-corrections.json`.
+- **The built kit zip is tested where it ships.** `ci.yml` and `release.yml` re-run `data-kit.py`
+  after the full build, and fail unless its kit-zip checks ran and passed: its Tests step runs
+  before the build, when there is no kit zip and those checks skip.
 - **A public archive passes `validate --public`**, in both public release workflows.
 
 ## Traps
@@ -134,6 +139,9 @@ the test replaced by golden checks. `convert`, `build`, `validate --public` and 
 - **`convert.py` run directly from the kit misses its helper files**: it looks in the dump and in a
   repo's `data/`, never beside itself, except for `srd-corrections.json`. `fbdata.py convert` and
   `build` pass all three; README-converter says to name them when running `convert.py` alone.
+- **A caller's `--overlay=PATH` was once silently replaced.** `convert` tested only for the bare
+  flag, so it appended the kit's `--overlay` after the caller's, and argparse keeps the last.
+  `_given()` treats `--flag=PATH` as given too, for `--resources` and `--corrections` as well.
 - **A newer 5e-tools dump can fail `--srd`**: a correction that no longer matches is an error, and
   the run writes nothing. `--corrections` names another file.
 - **The kit guard once compared a locale-sorted list with a byte-ordered one**, which a runner with
@@ -158,3 +166,4 @@ the test replaced by golden checks. `convert`, `build`, `validate --public` and 
 
 - 2026-10-09 — `fbdata.py bundle` replaces the Node bundler after a byte-for-byte parity test. → ledger L5342, #85
 - 2026-10-09 — The kit zip, `kit_file()`, `convert`, `build`, `validate --public` and the example pack; the app zip drops `scripts/`. → ledger L5352, L5426, #85
+- 2026-10-09 — `convert` keeps a caller's `--flag=PATH`; `build` at a 5e-tools root points at `data/`; CI and `release.yml` test the built kit zip. → ledger L5592, #85

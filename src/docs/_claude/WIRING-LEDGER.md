@@ -5588,3 +5588,38 @@ Pages: [private data](../wiki/data/private-data.md), [data kit](../wiki/data/dat
 [theming & icons](../wiki/ui/theming-and-icons.md), [building & CI](../wiki/process/building-and-ci.md),
 [testing](../wiki/process/testing.md), [known issues](../wiki/roadmap/known-issues.md),
 [2.0](../wiki/roadmap/2.0.md), [RELEASING](../RELEASING.md).
+
+## The private split's final review fixes (#85, 2026-10-09)
+
+The whole-branch review passed "with fixes"; these are the fixes ruled in.
+
+1. **The finish order.** The private CI checks out public `main`, which has no `fbdata.py bundle`
+   until #85 merges. So the finish pushes the private repo first (its push-triggered run is
+   expected to fail), merges and pushes public `main`, then runs the private CI by hand and
+   confirms it green. R1 still holds: the private repo has the data before public `main` loses it.
+   The spec's §11 list is corrected, and says so; the plan, the private-data page and RELEASING
+   agree.
+2. **CI runs the kit-zip checks.** `data-kit.py` tests the built kit zip (unzipped, it builds the
+   example pack and finds its own `convert.py`) only when one exists, and `ci.yml` and `release.yml`
+   both test before they build. Each now re-runs `data-kit.py` after the full build, and fails
+   unless those checks ran and passed.
+3. **The app zip's guard bans `scripts/`**, since the kit carries the converter; `docs.js` checks
+   that the guard's pattern bans it and still lets the shipped files through.
+4. **`fbdata.py convert` keeps a caller's `--overlay=PATH`** (and `--resources=`, `--corrections=`):
+   it tested only for the bare flag, appended the kit's after it, and argparse keeps the last.
+5. **`fbdata.py build` at a 5e-tools checkout's root** now says to point it at the `data/` folder,
+   instead of "not a rules pack".
+6. **The leak scan reads new untracked files too** (`git ls-files --cached --others
+   --exclude-standard`), so a local run sees a file before it is committed. Ignored paths stay
+   out, and CI's fresh checkout scans the same set as before.
+7. **Less book text below the scanner's threshold.** A `sheet.js` fixture's near-quote is invented
+   text now, and three short Humblewood fragments in this ledger (lines 2550 to 2561) are
+   `[book text: …]` markers, edited in place with the line count and every heading's line unchanged
+   (decision 2's one-time exception).
+8. Docs: the quiet-chip player note no longer promises a version for a pack of your own (a
+   kit-built pack carries none); the private README says `private-data` is one of the ten suites;
+   the private repo's moved Humblewood pages link within that repo and run from it.
+
+Pages: [private data](../wiki/data/private-data.md), [data kit](../wiki/data/data-kit.md),
+[building & CI](../wiki/process/building-and-ci.md), [testing](../wiki/process/testing.md),
+[RELEASING](../RELEASING.md).

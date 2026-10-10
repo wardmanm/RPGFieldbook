@@ -249,8 +249,10 @@ tag is `data-vX.Y.Z-N`, and the one asset is `fieldbook-data-private-X.Y.Z-N.zip
 ever bumps a private pack. Like every release, it is Mike's to cut.
 
 **Before the first one:** the private repo must be pushed, and its CI green, which needs #85 on
-public `main` (the CI builds public `main` and bundles with its kit). A private release also needs
-a public app release to build against: `data-release.js` refuses an `APP_VERSION` before 1.8.0, and
+public `main` (the CI builds public `main` and bundles with its kit). So its first push comes
+before #85 merges and that push's CI run fails; after the merge, run its CI by hand
+(`gh workflow run ci.yml -R wardmanm/RPGFieldbookPrivate`) and confirm it green. A private release
+also needs a public app release to build against: `data-release.js` refuses an `APP_VERSION` before 1.8.0, and
 the private workflow checks out the public tag `vX.Y.Z`. XPHB and XGE changed after 1.7.2, so the
 first private release is `1.8.0-1`, after app 1.8.0.
 
