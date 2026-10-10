@@ -182,6 +182,17 @@ ck('build.sh ships LICENSE', /cp LICENSE /.test(build));
 // convert.py, just flat instead of under scripts/.
 ck('the app zip ships no scripts/ (the data kit replaces it)',
    !/mkdir -p[^\n]*\.buildtmp\/scripts/.test(build) && !/cp scripts\/convert\.py \.buildtmp/.test(build));
+// ...and a scripts/ that comes back anyway fails the zip's own guard, which
+// otherwise bans only named dev files at the top level.
+const bannedSrc = /const banned=names\.filter\(n=>\/(.+?)\/\.test\(n\)\);/.exec(build);
+let bannedRe = null;
+try { bannedRe = bannedSrc && new RegExp(bannedSrc[1]); } catch (e) { /* reported below */ }
+ck("build.sh's app-zip guard bans scripts/",
+   !!bannedRe && bannedRe.test('scripts/convert.py') && bannedRe.test('scripts/srd-corrections.json'),
+   bannedSrc && bannedSrc[1]);
+ck('...and still lets the shipped files through',
+   !!bannedRe && !['fieldbook.html', 'README.md', 'LICENSE', 'docs/CHANGELOG.md',
+                   'data/fieldbook-data-standalone-1.8.0.zip'].some(n => bannedRe.test(n)));
 ck('build.sh builds the data kit zip from the kit allowlist',
    /fieldbook-data-kit-/.test(build) && /cp scripts\/srd-corrections\.json/.test(build));
 ck('README section 9 names the data kit', /fieldbook-data-kit-/.test(readme));
