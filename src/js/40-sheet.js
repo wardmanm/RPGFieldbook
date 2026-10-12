@@ -4,7 +4,7 @@
 function selectTab(name){
   /* The combat view is a tab whose cards belong to the OTHER tabs. Leaving it
      sends them home first, or a note link would land on a tab with its cards
-     missing; entering it remembers where it came from, for ✕. */
+     missing; entering it remembers where it came from, for the swords. */
   const was=(document.querySelector(".tabpanel.active")||{id:"tab-sheet"}).id.replace(/^tab-/,"");
   if(name!=="combat")closeCombatView();
   else if(was!=="combat")cvPrevTab=was;
