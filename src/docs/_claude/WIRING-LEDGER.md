@@ -5623,3 +5623,25 @@ The whole-branch review passed "with fixes"; these are the fixes ruled in.
 Pages: [private data](../wiki/data/private-data.md), [data kit](../wiki/data/data-kit.md),
 [building & CI](../wiki/process/building-and-ci.md), [testing](../wiki/process/testing.md),
 [RELEASING](../RELEASING.md).
+
+## The digest covers the bundle format (#86, 2026-10-12)
+
+1. A pack's content digest (`pack_digest()` in `tools/data-kit/fbdata.py`) covered its registry fields
+   and its files, but not the bundler. A bundler change that altered a bundle's bytes moved no version:
+   `data-release.js` refused with "nothing to release", `--release` bumped no pack, and the next archive
+   shipped different bytes under the same `dataVersion`. Found in #83's final review; timed with #85,
+   which moved bundling into `fbdata.py`.
+2. `BUNDLE_FORMAT` (now 1) joins the digest's meta as `bundleFormat`. Bump it with any change to
+   `bundle()`/`bundle_text()` output. `data-kit.py` pins each format's output: it bundles one pack that
+   exercises every bundling rule and compares the result's sha256 with `BUNDLE_FINGERPRINTS[format]`, so
+   changing the output without a bump, or bumping without recording a fingerprint, fails the suite with
+   the instruction. A simulated one-character output change was shown to fail it.
+3. Adding the format moved every digest once. Publicly that costs nothing at 1.8.0: SRD 5.2 (no digest
+   yet) and Homebrew (changed since 1.5.0) bump anyway. Privately, Humblewood and TCE now also bump at
+   the first private release, beside XPHB and XGE, which had changed already. No escape hatch
+   (`--force SYSTEM`): the format number is the one way a bundler change reaches the versions.
+4. The old releases' asset deletion was deferred by Mike on 2026-10-12; data-archive.md's Open list
+   says so.
+
+Pages: [data archive](../wiki/architecture/data-archive.md), [data kit](../wiki/data/data-kit.md),
+[private data](../wiki/data/private-data.md)

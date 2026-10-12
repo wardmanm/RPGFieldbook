@@ -163,8 +163,9 @@ private suites; bundles and packs the archive with the public kit; validates it 
 `--public`, because these packs carry no open licence; and publishes it with `--latest=false`. The
 full procedure is [RELEASING](../../RELEASING.md) §1c.
 
-XPHB and XGE have changed since their 1.7.2 versions, so the first private release is `1.8.0-1`,
-after app 1.8.0. No app release ever bumps a private pack.
+XPHB and XGE have changed since their 1.7.2 versions, and the bundle format joined every digest
+(#86), so all four private packs bump at the first private release, `1.8.0-1`, after app 1.8.0. No app
+release ever bumps a private pack.
 
 ### Mike's workflow
 
@@ -292,3 +293,4 @@ See [Known issues](../roadmap/known-issues.md).
 
 - 2026-10-09 — The copyrighted packs, the Humblewood extractor and its suite move to RPGFieldbookPrivate; `_private-data`, the `private-data` suite, the leak scan, private data releases, the import-order and `LEFT_FOR_PRIVATE` rulings. → ledger L5426, #85
 - 2026-10-09 — The finish confirms the private CI after the merge, not before; the leak scan reads new untracked files too. → ledger L5592, #85
+- 2026-10-12 — The bundle format joins every digest, so Humblewood and TCE also bump at the first private release. → ledger L5627, #86
