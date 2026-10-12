@@ -198,6 +198,9 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 /* a failure the player must read (#87): the danger colour, and it takes taps —
    it stays until one lands on it or on its Dismiss button */
 .toast.err{background:var(--brick);pointer-events:auto;cursor:pointer}
+/* Classic's --brick and --accent are the same red, so colour alone can't tell
+   an error from a plain toast there: lead with "!", as the "! N missing" chip does */
+.toast.err::before{content:"! ";font-weight:900}
 /* visibility flips only after the fade, so a hidden toast's Undo can be neither
    clicked nor tabbed to. The toast ignores the pointer; its button does not. */
 .toast .toast-act{pointer-events:auto;margin-left:10px;background:none;border:1.5px solid rgba(255,255,255,.85);

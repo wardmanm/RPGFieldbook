@@ -148,8 +148,8 @@ opens the modal over the finder.
 action (`label`, `run`, optional `back`) it adds one button (the combat view's Undo), stays 6 s
 instead of 1.9 s, stays longer while hovered or focused, and returns the button; Tab or Esc on the
 button hides the toast and focuses what `action.back` returns. A third argument, `opts`, adds two
-forms (#87): `{err:true}` is a failure the player must read — the danger colour (`.toast.err`),
-`role="alert"`, a Dismiss button, a tap anywhere hides it, and no auto-hide at all; `{long:true}` is a
+forms (#87): `{err:true}` is a failure the player must read — the danger colour (`.toast.err`), led
+by "!" (Classic's danger and accent colours are the same red), `role="alert"`, a Dismiss button, a tap anywhere hides it, and no auto-hide at all; `{long:true}` is a
 notice of a sentence or two, given the 6 s an action gets. Every other caller passes neither.
 
 ### Wiring and boot
