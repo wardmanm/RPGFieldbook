@@ -2109,9 +2109,10 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
      tOn.label === 'Remove from combat view — Attacks & Weapons' &&
      on.includes('title="Remove from combat view"'));
   const h = X.combatHeaderHTML({combatActive: false, combatRound: 0});
-  ck('the header can always close, and says combat keeps going',
-     h.includes('id="cvClose"') && /combat keeps going/.test(h));
-  ck('the header has its own ☰', h.includes('id="cvToc"'));
+  /* #80: the Combat tab acts like every tab — no ✕ (picking another tab, or the
+     swords again, leaves it) and no ☰ of its own (the tab bar's serves it) */
+  ck('#80 the header has no ✕ and no ☰ of its own',
+     !h.includes('id="cvClose"') && !h.includes('id="cvToc"') && !/✕|☰/.test(h), h);
 }
 
 /* ---- the tracker in the view's header ---- */
@@ -2131,7 +2132,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
      /id="cvPrev"[^>]*disabled/.test(X.combatHeaderHTML({combatActive: true, combatRound: 1})));
   ck('End sits apart from the arrows',
      r3.indexOf('id="cvNext"') < r3.indexOf('class="grow"') && r3.indexOf('class="grow"') < r3.indexOf('id="cvEnd"'));
-  ck('the header can still close and still has ☰', r3.includes('id="cvClose"') && r3.includes('id="cvToc"'));
+  ck('#80 ...in combat too', !r3.includes('id="cvClose"') && !r3.includes('id="cvToc"') && !/✕|☰/.test(r3), r3);
 
   const c = X.blankChar(); c.combatRound = 4; X.character = c;
   X.startCombatNow();

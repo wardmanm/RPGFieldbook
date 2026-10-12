@@ -84,3 +84,4 @@ Bullets below this line — leave the heading in place.
 - A new data kit, attached to each release, builds a rules data zip from your own 5e-tools data in
   one command.
 - The homebrew pack's "needs" note now points to the SRD 5.2 pack.
+- The Combat tab now works like every other tab: its extra close button and second menu button are gone. Press the swords again, or pick any tab, to leave it; the menu button in the tab bar lists its sections.

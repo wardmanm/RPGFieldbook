@@ -35,8 +35,10 @@ scroll and runs `selectTab("combat")`; that shows `#tab-combat` and calls `openC
 runs `fillCombatView()`: for each chosen key it finds `.card[data-note="<k>"]` **at that moment**,
 leaves a hidden `<span data-cvhome="<k>">` in its place, appends the card to `#cvList` and gives it a
 grip. `selectTab()` for any other tab calls `closeCombatView()` first, which sends every card back to
-its marker (`sendCardHome()`, grip removed). ✕, or the swords again, is `leaveCombatTab()`: back to
-the tab it came from, at its scroll, with focus on that tab. `selectTab()` itself never scrolls.
+its marker (`sendCardHome()`, grip removed). The swords again are `leaveCombatTab()`: back to the tab
+they were pressed from, at its scroll, with focus on that tab. The tab has no ✕ and no ☰ of its own
+(#80): like any tab, another tab leaves it, and the tab bar's ☰ lists its sections. `selectTab()`
+itself never scrolls.
 
 **Choosing sections.** `renderCombatToggles()` puts a swords toggle (`.cvbtn`, `data-combatbtn`,
 `aria-pressed`) just before the note button in every `NOTE_SECTIONS` card's heading. Adding appends
@@ -45,10 +47,12 @@ an **Undo** that `undoCombatRemove()` answers by reinserting at the old index
 (`insertCombatSection()`) and re-laying the view (`setCombatOrder()`); the Undo carries the character
 id and does nothing after a switch. Removing by keyboard from inside the view focuses the Undo; Tab or
 Esc from it lands on the grip of the next *shown* card (`cvNeighbours()`, recorded before removal),
-else the previous one, else ✕.
+else the previous one, else the swords (`#btnCombat`).
 
-**The tracker.** `combatHeaderHTML()` draws ✕ · title · Start combat · ☰ out of combat, and
-✕ · title · ◀ Round N · time ▶ · (gap) · End combat · ☰ in it — End set well apart from ▶.
+**The tracker.** `combatHeaderHTML()` draws title · Start combat out of combat, and
+title · ◀ Round N · time ▶ · (gap) · End combat in it — End set well apart from ▶. On a phone the
+header is one row out of combat and two in it (`.fighting`, set by `renderCombatHeader()`): the title,
+then the tracker with End at the far right.
 `startCombatNow()` → `combatStart()`: active, round 1, active spells untouched. ◀ and ▶ are
 `advanceRound(∓1)`, shared with the Active Spells card: every active spell and every active timed
 condition moves 6 s ([Conditions & concentration](conditions-and-concentration.md)), and in combat
@@ -80,7 +84,7 @@ the view with "None right now."; the Skills card in "By ability" mode stays hidd
 Trackers when Settings hides it. `cvCardShown()` tests computed style. `renderCombatEmpty()` shows the
 "Add sections with the … button on any card." hint when no card in the view shows. `fillCombatView()`
 and a toggle call it, and so does `renderTrackers()` while the view is open, so hiding Trackers
-when it is the only card there brings the hint back instead of leaving the view blank. The ☰ lists the view's cards, and `scrollToCard()` clears both the tab bar and
+when it is the only card there brings the hint back instead of leaving the view blank. The tab bar's ☰ lists the view's cards, and `scrollToCard()` clears both the tab bar and
 the header. Ability Scores & Saves and Skills, added here like any other card, draw compact and
 read-only instead — `syncStatLock()` disables their score boxes and proficiency dots while they sit
 in `#cvList` ([Abilities & skills](abilities-and-skills.md)).
@@ -144,11 +148,13 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 | "In combat" | `combatActive`, its own flag | `combatRound > 0`: old sheets would start in a fight |
 | Dragging | Pointer events; neighbours hop, the dragged card stays | HTML5 drag-and-drop: unreliable on phones. Moving the dragged card: can drop its pointer capture |
 | Esc | Not handled | The overlay's capture-phase Esc: Esc is not how you leave a tab |
+| A ✕ and a ☰ in the header | **Removed** (#80): the tab acts like every tab — another tab or the swords leave it, the tab bar's ☰ lists it | Keeping them from the overlay: a close button no other tab has, and a second ☰ beside the tab bar's |
 
 ## Open
 
 - The spec, including its "As built" section, describes the overlay and is historical: `inert`, the
-  view's Esc, `aria-modal`, `html.cv-lock` and focus on ✕ at open are all gone.
+  view's Esc, `aria-modal`, `html.cv-lock`, focus on ✕ at open, and since #80 the ✕ and the header's
+  ☰ themselves, are all gone.
 - The item finder has no Esc of its own.
 - Initiative and turn order are out of scope; time is in-game only.
 - More in [Known issues](../roadmap/known-issues.md).
@@ -166,3 +172,4 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-10-06 — Timed conditions: a duration in rounds, minutes or hours, counted down by the round
   tracker, clearing itself with an Undo. → ledger L5031, #55
 - 2026-10-06 — In the combat view the two cards draw compact and read-only. → ledger L5046, #62
+- 2026-10-12 — No ✕ and no ☰ of its own: the tab bar's ☰ serves the Combat tab; focus fallbacks go to the swords; the phone header is one row out of combat. → ledger L5627, #80

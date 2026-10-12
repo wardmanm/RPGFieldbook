@@ -82,7 +82,7 @@ function modalGiveBackFocus(){
     const a=document.activeElement;if(a&&a!==document.body)return;
     const hits=sel?document.querySelectorAll(sel):[];
     if(hits.length===1&&usable(hits[0])){hits[0].focus({preventScroll:true});return;}
-    if(combatViewOpen()){const c=document.getElementById("cvClose");if(c)c.focus();}
+    if(combatViewOpen()){const c=document.getElementById("btnCombat");if(c)c.focus();}
   },0);
 }
 function dismissModal(){

@@ -5623,3 +5623,20 @@ The whole-branch review passed "with fixes"; these are the fixes ruled in.
 Pages: [private data](../wiki/data/private-data.md), [data kit](../wiki/data/data-kit.md),
 [building & CI](../wiki/process/building-and-ci.md), [testing](../wiki/process/testing.md),
 [RELEASING](../RELEASING.md).
+
+## The Combat tab acts like every other tab (#80, 2026-10-12)
+
+1. When the combat view became a tab, its header kept the overlay's ✕ and its own ☰ beside the tab
+   bar's ☰ — two ways to open the same flyout and a close button no other tab has.
+2. `combatHeaderHTML()` draws title · Start combat out of combat, and title · ◀ Round N · time ▶ ·
+   (gap) · End combat in it. The tab bar's ☰ (`#btnToc`) serves the Combat tab like every tab:
+   `buildToc()`/`openToc()` already listed `#cvList`'s cards and opened below `#cvHead`. The swords
+   still enter, and pressing them again still returns to the tab they were pressed from
+   (`leaveCombatTab()`); any other tab leaves too, as before.
+3. The two places that focused ✕ as a last resort — `cvReturnFocus()` after a keyboard removal with no
+   neighbouring card, and `modalGiveBackFocus()` when a modal closes over the view — focus the swords
+   (`#btnCombat`) instead.
+4. The phone header's two-row layout now applies only in combat: `renderCombatHeader()` sets
+   `.fighting`, and out of combat the header is one row (title, Start combat).
+
+Pages: [combat view](../wiki/features/combat-view.md), [shell](../wiki/ui/shell.md)

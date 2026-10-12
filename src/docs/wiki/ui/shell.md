@@ -74,8 +74,8 @@ active panel, or inside `#cvList` while the combat view is open. A heading whose
 `offsetParent===null` (hidden) is skipped. Each entry's text is a clone of the heading with
 `button, svg, input, select, .grow, .add, .cnt, .enc-pill` stripped; `.inv-sec-head` entries are
 indented as sub-entries. The flyout's title is the active tab button's `textContent` ("Combat" in
-the view). The flyout and backdrop then take `top` from the live bottom edge of `.tabbar` (or of
-`#cvHead` in the combat view): the title bar has usually scrolled away, so the offset is measured,
+the view; the tab bar's ☰ is the only one, the Combat tab included, #80). The flyout and backdrop
+then take `top` from the live bottom edge of `.tabbar` (or of `#cvHead` in the combat view): the title bar has usually scrolled away, so the offset is measured,
 not assumed. Picking an entry calls `scrollToCard()`, a smooth scroll that clears the measured tab
 bar (plus `#cvHead` inside the combat view) and 10px. The flyout closes on a tab switch, a backdrop
 tap or an entry tap.
@@ -117,7 +117,7 @@ One `#modal` backdrop holds `.modal` (`role="dialog"`, `aria-modal`, `tabindex="
   the opener if it is still connected, not inert and rendered. A Save usually re-renders the
   opener's list straight after closing, so a `setTimeout` 0 looks again. If nothing has focus, it
   finds the opener by its selector (its id, else its first `data-*` hook, used only if it matches
-  one usable element), else `#cvClose` when the combat view is open.
+  one usable element), else the swords (`#btnCombat`) when the combat view is open (#80).
 - **Listeners.** `#mBody` survives every open, so a form binds to elements inside its own HTML,
   which die with it, and never to `#mBody` (Settings delegates from `#setSections` for this reason).
   The dialog's one persistent listener, `change` on `#modal` feeding `syncChoiceLimits()`, is bound
@@ -288,3 +288,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-09-28 — `setDismissGuard()` takes `then`, what a dismissed window hands on; `dismissModal()` runs it after closing. → ledger L3847, #63
 - 2026-09-28 — The title contract is stated and guarded: plain text, never `esc()`'d; `runChoices()`, the one caller that escaped, no longer does. → ledger L4086, #69
 - 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39
+- 2026-10-12 — The Combat tab uses the tab bar's ☰ like every tab; a modal closing over it gives focus to the swords. → ledger L5627, #80
