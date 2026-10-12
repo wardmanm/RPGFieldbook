@@ -84,3 +84,4 @@ Bullets below this line — leave the heading in place.
 - A new data kit, attached to each release, builds a rules data zip from your own 5e-tools data in
   one command.
 - The homebrew pack's "needs" note now points to the SRD 5.2 pack.
+- Importing rules from the Rules tab now shows a short message: what was imported and anything that went wrong, without the long list of counts. If an import fails, the message stays on screen until you tap it.

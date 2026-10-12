@@ -230,7 +230,7 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 | How Import settings asks about loaded rules | A window with three answers: Cancel, Keep my rules, Replace my rules | `confirm()`: OK/Cancel carries two outcomes, and making Cancel mean "settings only" would have Cancel import something (L4134) |
 | When Import settings asks | Only when the file carries readable rules and some are loaded | Always: a question with nothing to lose is noise. Never: the #70 bug (L4134) |
 | A settings file with an empty pool | Treated as carrying no rules | Replacing with it: that silently unloads everything, which is Clear all's job and it confirms (L4134) |
-| Where an import's outcome is shown | A status line beside the Import button | The rules status line: it sits in the Rules data section, usually folded shut. A toast: a failed save must not vanish (L4134) |
+| Where an import's outcome is shown | A status line beside the Import button; from the Rules tab, where neither line shows, a toast without the counts, and an error toast that stays until tapped (#87) | The rules status line: it sits in the Rules data section, usually folded shut. A toast that hides on its own: a failed save must not vanish (L4134) |
 | How a newer data release is shown | Muted text on the row, one hint line above the list, ` · update` on the Settings count | The amber "update available" chip: that says the pack is behind the app it is loaded in, and a data release is optional (L5082) |
 
 ## Open
@@ -269,3 +269,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-09 — Bundling moves to `bundle()` in `tools/data-kit/fbdata.py` (Python), replacing the Node bundler. → ledger L5342, #85
 - 2026-10-09 — `dataStatus()` gains `"known"`: a pack with a version but no baseline to compare it to shows that version quietly, never the amber chip or the newer-data notice. → ledger L5388, #85
 - 2026-10-09 — The public registry, which the newer-data check reads, lists only SRD 5.2 and Homebrew; private packs show their version quietly and get no notice. → ledger L5426, #85
+- 2026-10-12 — From the Rules tab, the import toast drops the counts and a failure stays until tapped. → ledger L5627, #87

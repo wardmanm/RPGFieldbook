@@ -554,12 +554,16 @@ function importSummary(res){
    or damaged zip imported from there used to show nothing at all. `opts.toast`
    (passed only for the FINAL message, never "Reading…") also raises a toast
    when neither line is on screen to read: no #rulesStatus, and #homeRulesStatus
-   is absent or hidden (`offsetParent===null`). toast() sets text itself —
-   never esc() msg before handing it there. */
+   is absent or hidden (`offsetParent===null`). It is the toast's own text — the
+   status line without its counts (#87) — or `true` for msg itself; `opts.err`
+   makes it an error that stays until tapped, `opts.long` gives a notice 6 s.
+   toast() sets text itself — never esc() before handing it there. */
 function rulesImportStatus(msg,cls,opts){
   updateRulesStatus(msg,cls);
   const h=document.getElementById("homeRulesStatus");if(h)h.textContent=msg;
-  if(opts&&opts.toast&&!document.getElementById("rulesStatus")&&!(h&&h.offsetParent!==null))toast(msg);
+  const t=opts&&opts.toast;
+  if(t&&!document.getElementById("rulesStatus")&&!(h&&h.offsetParent!==null))
+    toast(typeof t==="string"?t:msg,null,{err:!!opts.err,long:!!opts.long});
 }
 /* Settings → Import files, the home screen's import and the Rules tab's two:
    read every file as bytes, import, save the cache, and say what happened.
@@ -581,10 +585,16 @@ function importRulesFiles(files){
     const m=missingSummary(),sk=skippedSummary(res.skipped);
     const msg=(importSummary(res)+" "+rulesStatusText()+m+sk).trim();
     const cls=(res.failed.length||m||sk)?"err":"ok";
-    rulesImportStatus(msg,cls,{toast:true});
+    /* The toast says what happened and what went wrong, never the counts: they
+       are on the status lines and the Rules tab itself, and on a phone they made
+       a 13-line toast that hid after 1.9 s (#87). A file that failed is an error
+       that stays; a notice (missing content, skipped entries) is not — importing
+       the public zip always notes homebrew's Xanathar's spells — so it gets 6 s. */
+    const brief=(importSummary(res)+m+sk).trim()||"Rules imported.";
+    rulesImportStatus(msg,cls,{toast:brief,err:res.failed.length>0,long:!!(m||sk)});
     return saving.then(err=>{
       if(!err)return {msg,cls};
-      renderRulesData();rulesImportStatus(msg+" "+err,"err",{toast:true});
+      renderRulesData();rulesImportStatus(msg+" "+err,"err",{toast:brief+" "+err,err:true});
       return {msg:msg+" "+err,cls:"err"};
     });
   }).catch(e=>{
@@ -593,7 +603,7 @@ function importRulesFiles(files){
        without this, that exception strands "Reading N file(s)…" on screen
        forever and skips the cache save entirely (#83 final review). */
     const msg="Import failed: "+((e&&e.message)||String(e));
-    rulesImportStatus(msg,"err",{toast:true});
+    rulesImportStatus(msg,"err",{toast:true,err:true});
     return {msg,cls:"err"};
   });
 }

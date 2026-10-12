@@ -5623,3 +5623,23 @@ The whole-branch review passed "with fixes"; these are the fixes ruled in.
 Pages: [private data](../wiki/data/private-data.md), [data kit](../wiki/data/data-kit.md),
 [building & CI](../wiki/process/building-and-ci.md), [testing](../wiki/process/testing.md),
 [RELEASING](../RELEASING.md).
+
+## The import toast says only what happened, and an error stays (#87, 2026-10-12)
+
+1. From the Rules tab (Settings closed, the home screen behind the sheet) an import's outcome is a
+   toast (#83). It carried the whole status line, failures first and then every count — about 13
+   lines on a phone — and hid after 1.9 s, so only the first sentence could be read.
+2. `importRulesFiles()` hands the toast its own text: `importSummary()` plus the missing-content and
+   skipped-entry notices, without `rulesStatusText()`'s counts, which stay on both status lines and are
+   on the Rules tab already. A clean import toasts one short line ("Merged 1 file.", "Imported x.zip: 2
+   packs, data 1.8.0."). `rulesImportStatus()`'s `opts.toast` is now that text (or `true` for msg).
+3. `toast(msg, action, opts)`: `opts.err` shows in the danger colour (`.toast.err`), as `role="alert"`,
+   with a Dismiss button and a tap anywhere hiding it, and schedules no auto-hide; `opts.long` gives a
+   notice the 6 s an action gets. Every existing caller passes neither and is unchanged.
+4. Only real failures are errors: a file that failed, a cache save that did not land (the storage
+   rule), an exception. Missing content and skipped entries are notices (`long`): importing the public
+   zip always notes homebrew's two Xanathar's spells, and a sticky red toast on every normal import
+   would be wrong.
+
+Pages: [shell](../wiki/ui/shell.md), [data archive](../wiki/architecture/data-archive.md),
+[settings & updates](../wiki/features/settings-and-updates.md)

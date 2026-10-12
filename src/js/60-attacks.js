@@ -157,16 +157,26 @@ let _toastT=null;
    and makes the toast something to reach, not just read: it stays 6 s, and longer
    while the pointer is on it or its button has focus. role="status" lets a screen
    reader hear it. It lives outside .page, so the combat view's inert leaves it
-   reachable. */
-function toast(msg,action){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";el.setAttribute("role","status");document.body.appendChild(el);}
-  el.textContent=msg;let b=null;
+   reachable.
+   opts.err: a failure the player must read (#87). It shows in the danger colour
+   as an alert and stays until it is tapped or its Dismiss button is pressed — a
+   1.9 s toast hid all but the first sentence of an import failure, and a save
+   that did not land must never vanish unread (the storage rule). opts.long: a
+   notice of a sentence or two, given the 6 s an action gets. */
+function toast(msg,action,opts){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";el.setAttribute("role","status");document.body.appendChild(el);}
+  const err=!!(opts&&opts.err);
+  el.textContent=msg;el.classList.toggle("err",err);el.setAttribute("role",err?"alert":"status");
+  el.onclick=err?()=>hideToast(true):null;
+  if(err&&!action)action={label:"Dismiss",run(){}};
+  let b=null;
   if(action){b=document.createElement("button");b.type="button";b.className="toast-act";b.textContent=action.label;b.addEventListener("click",e=>{hideToast(true);action.run(e);});
     /* action.back(): where the keyboard returns when it leaves the button by Tab
        or Esc — the player was put here on purpose, and the button sits at the very
        end of the page, so plain Tab order would lose their place. */
     if(action.back)b.addEventListener("keydown",e=>{if(e.key!=="Tab"&&e.key!=="Escape")return;const t=action.back();if(!t)return;e.preventDefault();hideToast(true);t.focus();});
     el.append(" ",b);}
-  el.classList.add("show");clearTimeout(_toastT);_toastT=setTimeout(hideToast,action?6000:1900);return b;}
+  el.classList.add("show");clearTimeout(_toastT);
+  _toastT=err?null:setTimeout(hideToast,(action||(opts&&opts.long))?6000:1900);return b;}
 function hideToast(now){const el=document.getElementById("toast");if(!el)return;
   if(!now&&(el.matches(":hover")||el.contains(document.activeElement))){_toastT=setTimeout(hideToast,1000);return;}
   clearTimeout(_toastT);el.classList.remove("show");}
