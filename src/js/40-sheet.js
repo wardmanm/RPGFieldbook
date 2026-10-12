@@ -109,10 +109,11 @@ function itemUsesRowHTML(it){
 }
 function invItemHTML(it){
   const ic=!!invCol().items[it.id];
-  return `<div class="item fitem"><div class="top">
+  return `<div class="item fitem"><div class="top split">
         <button class="fitoggle" data-invitem="${esc(it.id)}" aria-label="Collapse item"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
         <button class="fav ${it.fav?"on":""}" data-fav-item="${esc(it.id)}" aria-label="Favorite" title="Favorite">${it.fav?"★":"☆"}</button>
         <span class="nm">${esc(it.name||"Item")}</span>
+        <span class="row-meta">
         ${it.qty&&num(it.qty)!==1?`<span class="qty">×${num(it.qty)}</span>`:""}
         ${originBadge(itemOrigin(it),"data-orig-item",it.id)}
         ${fnum(it.cost)?`<span class="qty" title="Cost each">${esc(fmtGp(it.cost))}</span>`:""}
@@ -121,6 +122,7 @@ function invItemHTML(it){
         ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${esc(it.id)}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
         <button class="icon" data-edit-item="${esc(it.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-item="${esc(it.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        </span>
       </div>
       ${ic?"":`${it.description?`<div class="desc">${richHTML(it.description)}</div>`:""}${itemUseLine(it)}${itemUsesRowHTML(it)}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
 }
@@ -206,11 +208,13 @@ function statusTitle(name){
 function statusRowHTML(s){
   const on=s.active!==false, tt=statusTimeText(s), ticking=on&&statusTimed(s);
   const nm=String(s.name||"condition");
-  return `<div class="item${on?" on-status":""}"><div class="top">
+  return `<div class="item${on?" on-status":""}"><div class="top split">
         <span class="nm">${statusTitle(s.name)}</span>
+        <span class="row-meta">
         <span class="equip ${on?"on":""}" data-toggle-status="${esc(s.id)}"><span class="box"></span>${on?"Active":"Cleared"}</span>
         <button class="icon" data-edit-status="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-status="${esc(s.id)}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        </span>
       </div>
       ${tt?`<div class="use-row st-row"><span class="use-lbl st-time">${esc(tt)}</span>${ticking?`
         <button class="tbtn" data-status-tick="${esc(s.id)}" data-sec="-6" aria-label="${esc("One round back: "+nm)}" style="padding:3px 8px;min-height:auto">− rd</button>

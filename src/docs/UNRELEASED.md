@@ -84,3 +84,4 @@ Bullets below this line — leave the heading in place.
 - A new data kit, attached to each release, builds a rules data zip from your own 5e-tools data in
   one command.
 - The homebrew pack's "needs" note now points to the SRD 5.2 pack.
+- On a phone, attack, feature, item and condition rows no longer squeeze their names into their labels: when a row is too narrow, its labels and buttons move to a line of their own under the name.
