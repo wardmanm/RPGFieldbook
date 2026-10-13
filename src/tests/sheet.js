@@ -1026,6 +1026,22 @@ ck('an empty list makes no groups at all',
      off.indexOf('data-fitem') < off.indexOf('data-fav-feature'));
 }
 
+// ---------- #57: everything after a row's name is one group, which drops to its
+// own line whole on a phone instead of the name running over its label
+{
+  const grouped = (html, del) => /<div class="top split">/.test(html) &&
+    new RegExp('<span class="row-meta">[\\s\\S]*' + del).test(html) &&
+    html.indexOf('class="nm"') < html.indexOf('class="row-meta"') && html.indexOf('class="row-meta"') < html.indexOf(del);
+  const f = X.featItemHTML(Object.assign(feat('f9', 'Second Wind', CLS), {source: 'Fighter'}));
+  ck('#57 a feature row groups its source, toggle and buttons after the name',
+     grouped(f, 'data-del-feature') && f.indexOf('class="row-meta"') < f.indexOf('class="qty"'), f.slice(0, 900));
+  const it = X.invItemHTML({id: 'i9', name: 'Potion of Greater Healing', qty: 3, cost: 150, weight: 0.5, category: 'Consumable'});
+  ck('#57 an item row groups its counts, cost, weight and buttons after the name',
+     grouped(it, 'data-del-item') && it.indexOf('class="row-meta"') < it.indexOf('×3'), it.slice(0, 900));
+  const st = X.statusRowHTML({id: 's9', name: 'Frightened'});
+  ck('#57 a condition row groups its toggle and buttons after the name', grouped(st, 'data-del-status'), st.slice(0, 700));
+}
+
 /* ================= spells per level =================
    spellLevelTally is the one place both the Spells tab heading and the spell
    browser's heading get their numbers, so the browser cannot promise something
@@ -2948,6 +2964,9 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     const sf = rows.map(e => String(e.innerHTML || '')).find(h => h.includes('Sacred Flame')) || '';
     ck('#77 ...and the Sacred Flame row shows DC 16, marked as changed by an effect',
        /<span class="atk-hit fx-on">DC 16 DEX<\/span>/.test(sf), sf.slice(0, 600));
+    ck('#57 an attack row groups its type, to-hit and buttons after the name',
+       /<div class="top split">/.test(sf) && /<span class="row-meta">[\s\S]*class="qty"[\s\S]*atk-hit/.test(sf) &&
+       sf.indexOf('class="nm"') < sf.indexOf('class="row-meta"'), sf.slice(0, 600));
   }
   m = shownModal(() => X.openStatBreakdown('spell.dc'));
   ck('#77 ...and tapping the DC names the sickle', m.t === 'Spell save DC breakdown' && /\+3 Ember Sickle<\/span><b>\+3</.test(m.b), m);

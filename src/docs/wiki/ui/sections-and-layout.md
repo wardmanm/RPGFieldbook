@@ -141,6 +141,16 @@ card even when empty. `openFamiliarForm()` edits a record of name, type (`kind`)
 summoned: `contributions()` adds them when `active` is true, labelled with the familiar's name and
 "(summoned)". Row wrapping for the narrow column is scoped to `#familiarList`.
 
+### List rows on a narrow screen
+
+Attack, feature, item and condition rows (`renderAttacks()`, `featItemHTML()`, `invItemHTML()`,
+`statusRowHTML()`) put everything after the name (labels, the to-hit pill, toggles, buttons) in one
+`.row-meta` group, and mark their `.top` as `.split`. A split row may wrap: the name asks for 6em,
+and when the name and the group don't fit side by side, the group drops to its own line whole,
+right-aligned, while the name keeps the line above. The group may also wrap inside itself, for an
+item with many labels. On a wide screen every row is one line. The layout is opt-in by `split`, so
+the other `.item` rows (inventory totals, notes, Active Spells, familiars) are unchanged (#57).
+
 ### Portrait
 
 The first sidebar card (`data-note="portrait"`) holds the image plus name, alignment, XP, level and
@@ -206,6 +216,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | The `origin` title on the Notes tab | Ask `noteTitle()`, which asks `raceTerm()` | Quoting the registry: on the classic skin the Notes tab would disagree with the card it links to |
 | Familiars on a phone | Flatten `.stack` inside the ≤820px query and sink the pair with `order:1` | `order` alone: it only reorders siblings, so a sidebar card can never pass the other column's cards |
 | Where the familiar row may wrap | Only in `#familiarList` | Unscoped `.item .top{flex-wrap:wrap}`: silently restyles Statuses, where one row is right |
+| How a list row fits a phone (#57) | Everything after the name in one `.row-meta` group that drops to its own line whole; opt-in by `.split`; the name asks for 6em | The familiars' `flex-basis:100%`: these rows put a fold button and star before the name, which it would orphan on a line of their own. Truncating the name: loses the name, the one thing the row is for. 8em: split short item rows for no reason |
 | A collapsible in Settings | Reuse `.fgroup` / `.fghead` / `.fcaret` | A second collapsible: the app should not have two things that look like a section header |
 | How collapse state is stored | As shut = `true`, absent = default, so a default can change without reopening what a player shut | Storing "open" (named and set aside at L1741) |
 | Where Rules-tab folding is stored | `settings.rulesCollapse` | On the character: the glossary and tables come from global packs, and folding them on one character to find them open on the next would surprise |
@@ -224,8 +235,6 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
   heads and inventory section heads are not focusable at all.
 - The Attacks card's headings reuse `.inv-sec-head`, inheriting its `cursor:pointer`, but
   `data-atksec` has no handler, so they do not fold.
-- At phone width an attack row's name runs into its type label behind the to-hit pill, and a
-  feature row's name crowds its source tag (seen at L3525, pre-existing).
 - Active Spells, Familiars and Skills (in the grouped layout) are hidden when empty, so their note
   button and combat toggle are unreachable until they have content (L3397).
 - A portrait is stored at full size, against the localStorage quota.
@@ -247,3 +256,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
+- 2026-10-12 — Attack, feature, item and condition rows group what follows the name, so on a phone it drops below whole instead of the name running over it. → ledger L5667, #57

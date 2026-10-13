@@ -16,15 +16,17 @@ function featItemHTML(f){
   const on=f.enabled!==false, ic=!!featCol().items[f.id];
   const hasCost=f.cost&&num(f.cost.amount)>0, hasUses=f.uses&&usesMax(f)>0;
   return `<div class="item fitem">
-      <div class="top">
+      <div class="top split">
         <button class="fitoggle" data-fitem="${esc(f.id)}" aria-label="Collapse item"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
         <button class="fav ${f.fav?"on":""}" data-fav-feature="${esc(f.id)}" aria-label="Favorite" title="Favorite">${f.fav?"★":"☆"}</button>
         <span class="nm">${esc(f.name||"Feature")}</span>
+        <span class="row-meta">
         ${f.source?`<span class="qty">${esc(f.source)}</span>`:""}
         ${(hasCost||hasUses)?`<button class="use-go" data-usefeat="${esc(f.id)}">Use</button>`:""}
         <span class="equip ${on?"on":""}" data-toggle-feature="${esc(f.id)}"><span class="box"></span>${on?"On":"Off"}</span>
         <button class="icon" data-edit-feature="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger" data-del-feature="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        </span>
       </div>
       ${ic?"":`${f.description?`<div class="desc">${descHTML(f.description)}</div>`:""}${hasCost?`<div class="use-cost">Costs ${num(f.cost.amount)} ${esc(f.cost.resource||"resource")} per use</div>`:""}${hasUses?usesRowHTML(f):""}${on?fxChips(f.effects):fxChips(f.effects).replace(/class="chip"/g,'class="chip off"')}`}
     </div>`;

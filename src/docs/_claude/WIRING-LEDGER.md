@@ -5664,3 +5664,20 @@ Pages: [data archive](../wiki/architecture/data-archive.md), [data kit](../wiki/
 
 Pages: [shell](../wiki/ui/shell.md), [data archive](../wiki/architecture/data-archive.md),
 [settings & updates](../wiki/features/settings-and-updates.md)
+## List rows keep their labels readable on a phone (#57, 2026-10-12)
+
+1. At phone width, attack and feature rows squeezed their name into the labels beside it: "Longsword"
+   ran over "Melee" behind the to-hit pill, and a feature's name crowded its source tag. `.item .nm` is
+   `flex:1 1 0` with `min-width:0`, so its box shrank to nothing while its text ran on over the next
+   item (the familiar row's old trap, fixed there by `flex-basis:100%`, which would orphan the fold
+   button and star these rows put before the name).
+2. Attack, feature, item and condition rows (`renderAttacks()`, `featItemHTML()`, `invItemHTML()`,
+   `statusRowHTML()`) now hold everything after the name in one `.row-meta` group, and their `.top`
+   is `.split`. A split row may wrap; its name asks for 6em; the group is right-aligned and may wrap
+   inside itself. Too tight, and the group drops to its own line whole, with the name keeping the line
+   above. On a wide screen every row is one line, as before. 6em, not 8em: at 8em an item like
+   "Longsword 15 gp 3 lb" split into two lines on a phone for no reason.
+3. Other `.item` rows (inventory totals, notes, Active Spells, familiars) are not split and do not
+   change: the layout is opt-in by the `split` class.
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md)
