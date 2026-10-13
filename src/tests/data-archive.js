@@ -575,8 +575,8 @@ section('the newer-data notice', async () => {
 section('final review 1: a silent import also toasts, from the Rules tab', async () => {
   const getById = ctx.document.getElementById;
   const savedToast = ctx.toast;
-  const toasts = [];
-  ctx.toast = msg => { toasts.push(msg); };
+  const toasts = [], toastOpts = [];
+  ctx.toast = (msg, action, opts) => { toasts.push(msg); toastOpts.push(opts || {}); };
   const hadFR = 'FileReader' in ctx;
   ctx.FileReader = class {
     readAsArrayBuffer(f) {
@@ -592,10 +592,35 @@ section('final review 1: a silent import also toasts, from the Rules tab', async
     /* the Rules tab's own import links: Settings isn't open (no #rulesStatus)
        and the home screen is behind the sheet (#homeRulesStatus hidden) */
     ctx.document.getElementById = id => id === 'homeRulesStatus' ? hiddenHome : (id === 'rulesStatus' ? null : getById(id));
-    X.resetRules(); toasts.length = 0;
+    X.resetRules(); toasts.length = 0; toastOpts.length = 0;
     const out = await X.importRulesFiles([file('a.json', PACK('Zed', ['Zap']))]);
-    ck('an import with neither status line on screen reaches toast() with the final message',
-       toasts.length === 1 && toasts[0] === out.msg, toasts);
+    ck('an import with neither status line on screen raises one toast', toasts.length === 1, toasts);
+    /* #87: the toast says what happened, never the counts — those are on the
+       status lines and the Rules tab, and they filled a phone's toast */
+    ck('#87 a clean import toasts one short line, without the counts',
+       toasts[0] === 'Merged 1 file.' && !toastOpts[0].err && /Loaded/.test(out.msg), [toasts[0], out.msg]);
+
+    X.resetRules(); toasts.length = 0; toastOpts.length = 0;
+    await X.importRulesFiles([file('good.json', PACK('Zed', ['Zap'])), file('bad.json', '{nope')]);
+    ck('#87 a failed file toasts its failure, without the counts, as an error that stays',
+       /Couldn't import bad\.json/.test(toasts[0]) && !/Loaded|spells ·|races/.test(toasts[0]) && toastOpts[0].err === true,
+       [toasts[0], toastOpts[0]]);
+
+    X.resetRules(); toasts.length = 0; toastOpts.length = 0;
+    await X.importRulesFiles([file('needs.json', JSON.stringify({system: 'Needy', spells: [{name: 'Zap'}],
+      requires: [{pack: 'Elsewhere', spells: ['Not Loaded']}]}))]);
+    ck('#87 a notice (content it refers to isn\'t loaded) toasts for longer, but is not an error',
+       /refers to content that isn't loaded/.test(toasts[0]) && !toastOpts[0].err && toastOpts[0].long === true,
+       [toasts[0], toastOpts[0]]);
+
+    X.resetRules(); toasts.length = 0; toastOpts.length = 0;
+    state.quotaFull = true;
+    await X.importRulesFiles([file('q.json', PACK('Q', ['Q1']))]);
+    state.quotaFull = false;
+    const last = toasts.length - 1;
+    ck('#87 a save that does not land toasts as an error that stays, still without the counts (the storage rule)',
+       /wouldn't save/.test(toasts[last]) && !/Loaded:|races ·/.test(toasts[last]) && toastOpts[last].err === true,
+       [toasts, toastOpts]);
 
     const shownRules = {offsetParent: {}, _t: ''};
     Object.defineProperty(shownRules, 'textContent', {get() { return shownRules._t; }, set(v) { shownRules._t = v; }});
@@ -608,6 +633,41 @@ section('final review 1: a silent import also toasts, from the Rules tab', async
     ctx.toast = savedToast;
     if (!hadFR) delete ctx.FileReader;
     X.resetRules();
+  }
+});
+
+section('#87 toast(): an error stays until it is tapped; every other toast is unchanged', () => {
+  const getById = ctx.document.getElementById, mk = ctx.document.createElement, savedST = ctx.setTimeout;
+  const fakeEl = () => {
+    const cls = new Set(), attrs = {}, kids = [], ls = {};
+    return {cls, attrs, kids, ls, textContent: '', onclick: null,
+      classList: {add: c => cls.add(c), remove: c => cls.delete(c), toggle: (c, f) => (f === undefined ? !cls.has(c) : f) ? cls.add(c) : cls.delete(c),
+                  contains: c => cls.has(c)},
+      setAttribute: (k, v) => { attrs[k] = v; }, append: (...a) => kids.push(...a),
+      addEventListener: (t, f) => { ls[t] = f; }, matches: () => false, contains: () => false};
+  };
+  const el = fakeEl();
+  const timers = [];
+  try {
+    ctx.document.getElementById = id => id === 'toast' ? el : getById(id);
+    ctx.document.createElement = () => fakeEl();
+    ctx.setTimeout = (f, ms) => { timers.push(ms); return 1; };
+    ctx.toast("Couldn't import bad.json: not valid JSON.", null, {err: true});
+    ck('an error toast shows in the error style, as an alert', el.cls.has('show') && el.cls.has('err') && el.attrs.role === 'alert', [...el.cls, el.attrs]);
+    ck('...schedules no auto-hide', timers.length === 0, timers);
+    ck('...and can be dismissed: a Dismiss button, and a tap anywhere on it',
+       el.kids.some(k => k && k.textContent === 'Dismiss') && typeof el.onclick === 'function', el.kids.map(k => k && k.textContent));
+    el.onclick();
+    ck('...a tap hides it', !el.cls.has('show'));
+    timers.length = 0; el.kids.length = 0;
+    ctx.toast('Cast Fireball');
+    ck('a plain toast after it loses the error style and hides after 1.9 s as before',
+       !el.cls.has('err') && el.attrs.role === 'status' && el.onclick === null && timers[0] === 1900, [...el.cls, el.attrs, timers]);
+    timers.length = 0;
+    ctx.toast('Imported x.zip: 2 packs. Homebrew refers to content that isn\'t loaded.', null, {long: true});
+    ck('a long notice stays 6 s, like a toast with an action', timers[0] === 6000 && !el.cls.has('err'), timers);
+  } finally {
+    ctx.document.getElementById = getById; ctx.document.createElement = mk; ctx.setTimeout = savedST;
   }
 });
 

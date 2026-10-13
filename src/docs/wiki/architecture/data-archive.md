@@ -77,9 +77,11 @@ category — the converter's inputs in an old app zip — is skipped. A pack who
 throws is caught per file (or per packed entry, labelled `"<pack> in <zip>"`) and named `"not a rules
 file"` in `failed`, rather than taking the rest of the import down with it. `importRulesFiles()`
 shows "Reading N files…" at once, then one line on both status lines naming each zip, each failure
-and its reason, and a cache save that failed; `rulesImportStatus(msg,cls,{toast:true})` also raises a
-`toast()` for that final line when neither status element is on screen to read it — the Rules tab's
-own "Import rules files" links, with Settings closed and the home screen hidden behind the sheet.
+and its reason, and a cache save that failed. When neither status element is on screen to read it —
+the Rules tab's own "Import rules files" links, with Settings closed and the home screen hidden behind
+the sheet — `rulesImportStatus()` also raises a `toast()`, with its own shorter text: what happened and
+what went wrong, never the counts (#87). A failed file, a save that did not land or an exception is an
+error toast that stays until tapped; missing content and skipped entries are notices, shown 6 s.
 The four rules pickers accept `.zip`, `application/zip` and `application/x-zip-compressed`.
 
 **Credits.** A pack's `license` and `attribution` become `rules.credits[label]` (`creditOf()`), kept
@@ -167,3 +169,4 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 - 2026-10-09 — Public releases (app and data) are gated on `validate --public` and a `*private*` name check, run by the release workflows after the build. → ledger L5352, #85
 - 2026-10-09 — The archive holds SRD 5.2 and homebrew only; `data-release.js --registry` cuts the private repo's releases. → ledger L5426, #85
 - 2026-10-12 — The digest covers `BUNDLE_FORMAT`, pinned by a fingerprint of the bundler's output; the old releases' asset deletion is deferred. → ledger L5627, #86
+- 2026-10-12 — The import toast drops the counts; a failure is an error toast that stays until tapped. → ledger L5648, #87
