@@ -1934,7 +1934,10 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the swords button opens the tab, and leaves it from inside',
      /closest\("#btnCombat"\)\)return combatViewOpen\(\)\?leaveCombatTab\(\):enterCombatTab\(\)/.test(bootJs) &&
      /function enterCombatTab\(\)\{[\s\S]*?selectTab\("combat"\)/.test(cjs));
-  ck('✕ leaves the tab too, back where it came from', /closest\("#cvClose"\)\)return leaveCombatTab\(\)/.test(bootJs));
+  ck('#80 nothing wires a ✕ or a ☰ of the Combat tab\'s own', !/#cvClose|#cvToc/.test(bootJs) && !/cvClose|cvToc/.test(cjs));
+  ck('#80 a removal from the view with no neighbour left, and a closing modal, hand focus to the swords',
+     /function cvReturnFocus[\s\S]*?getElementById\("btnCombat"\)/.test(cjs) &&
+     /combatViewOpen\(\)\)\{const c=document\.getElementById\("btnCombat"\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/80-modal-forms.js'), 'utf8')));
   // the overlay's machinery: a tab must leave the tab bar and the page usable
   ck('nothing makes the tab bar or page inert for the combat view',
      !/cvInert/.test(cjs + bootJs + fs.readFileSync(path.join(ROOT, 'src/js/80-modal-forms.js'), 'utf8')));

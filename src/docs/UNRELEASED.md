@@ -86,3 +86,4 @@ Bullets below this line — leave the heading in place.
 - The homebrew pack's "needs" note now points to the SRD 5.2 pack.
 - Importing rules from the Rules tab now shows a short message: what was imported and anything that went wrong, without the long list of counts. If an import fails, the message stays on screen until you tap it.
 - On a phone, attack, feature, item and condition rows no longer squeeze their names into their labels: when a row is too narrow, its labels and buttons move to a line of their own under the name.
+- The Combat tab now works like every other tab: its extra close button and second menu button are gone. Press the swords again, or pick any tab, to leave it; the menu button in the tab bar lists its sections.

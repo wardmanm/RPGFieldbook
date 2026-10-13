@@ -76,13 +76,13 @@ function modalGiveBackFocus(){
   if(usable(o))o.focus({preventScroll:true});
   /* A Save usually re-renders the opener's list straight after closing, taking
      focus with it. So look again once it has: the same hook if it is still
-     unique, else ✕ in the combat view. Left alone if focus already went
+     unique, else the swords in the combat view. Left alone if focus already went
      somewhere real — into a second dialog, say. */
   setTimeout(()=>{
     const a=document.activeElement;if(a&&a!==document.body)return;
     const hits=sel?document.querySelectorAll(sel):[];
     if(hits.length===1&&usable(hits[0])){hits[0].focus({preventScroll:true});return;}
-    if(combatViewOpen()){const c=document.getElementById("cvClose");if(c)c.focus();}
+    if(combatViewOpen()){const c=document.getElementById("btnCombat");if(c)c.focus();}
   },0);
 }
 function dismissModal(){

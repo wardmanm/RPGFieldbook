@@ -185,22 +185,22 @@ function syncStatLock(root){
   });
 }
 
-/* ✕ · title · tracker · (space) · Start or End · ☰. End sits past the spacer,
-   well away from the arrows, so a hurried tap on ▶ cannot hit it. On a phone
-   CSS re-flows the same markup into two rows. The time has its own spans so it
-   can stack under the round there. No aria-live here: this is repainted, and a
-   live region that is replaced is never announced — #cvLive is. */
+/* title · tracker · (space) · Start or End. End sits past the spacer, well away
+   from the arrows, so a hurried tap on ▶ cannot hit it. On a phone CSS re-flows
+   the same markup into two rows in combat. The time has its own spans so it can
+   stack under the round there. No ✕ and no ☰ of its own (#80): the Combat tab
+   acts like every tab — another tab, or the swords again, leaves it, and the tab
+   bar's ☰ lists its sections. No aria-live here: this is repainted, and a live
+   region that is replaced is never announced — #cvLive is. */
 function combatHeaderHTML(c){
-  const close=`<button class="tbtn" id="cvClose" aria-label="Close the combat view — combat keeps going" title="Close (combat keeps going)">✕</button>`;
   const title=`<span class="cv-title">${iconSVG("ui","Combat")}Combat</span>`;
-  const toc=`<button class="tbtn" id="cvToc" aria-label="Jump to a section" title="Jump to a section">☰</button>`;
-  if(!inCombat(c))return close+title+`<span class="grow"></span><button class="tbtn primary" id="cvStart">Start combat</button>`+toc;
+  if(!inCombat(c))return title+`<span class="grow"></span><button class="tbtn primary" id="cvStart">Start combat</button>`;
   const r=num(c.combatRound);
-  return close+title+
+  return title+
     `<span class="cv-track"><button class="tbtn" id="cvPrev" aria-label="Previous round"${r<=1?" disabled":""}>◀</button>`+
     `<span class="cv-round">Round <b>${r}</b><span class="cv-sep"> · </span><span class="cv-time">${fmtCombatTime(combatElapsedSec(c))}</span></span>`+
     `<button class="tbtn" id="cvNext" aria-label="Next round">▶</button></span>`+
-    `<span class="grow"></span><button class="tbtn danger" id="cvEnd">End combat</button>`+toc;
+    `<span class="grow"></span><button class="tbtn danger" id="cvEnd">End combat</button>`;
 }
 /* Repainting replaces every button, so focus is carried across by id. When that
    button is gone or disabled — ◀ at round 1, Start once combat starts, End once
@@ -209,6 +209,7 @@ function renderCombatHeader(){
   const h=document.getElementById("cvHead");if(!h)return;
   const a=document.activeElement,had=a&&a.id&&h.contains(a)?a.id:"";
   h.innerHTML=combatHeaderHTML(character);
+  h.classList.toggle("fighting",inCombat(character));   // the two-row phone layout is for combat only
   if(inCombat(character))setCombatLive("Round "+num(character.combatRound));
   const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart"};
   for(let id=had,i=0;id&&i<4;id=instead[id],i++){
@@ -247,9 +248,8 @@ function enterCombatTab(){
   selectTab("combat");
   window.scrollTo({top:cvScroll});
 }
-/* ✕, or the swords again: back to the tab it was opened from, where it was —
-   what closing the overlay used to do. Picking another tab goes there instead,
-   like any tab. */
+/* The swords again: back to the tab it was opened from, where it was. Picking
+   another tab goes there instead, like any tab. */
 function leaveCombatTab(){
   const back=cvPrevTab||"sheet";
   selectTab(back);
@@ -287,10 +287,11 @@ function toggleCombatSection(k,viaKey){
 /* [next, prev] among the SHOWN cards, each null when there is none. */
 function cvNeighbours(keys,k){const i=keys.indexOf(k);return i<0?[null,null]:[keys[i+1]||null,i>0?keys[i-1]:null];}
 /* Where the keyboard goes after a removal from the view: the grip of the card
-   that followed it, else of the one before, else ✕. */
+   that followed it, else of the one before, else the swords — the tab's own
+   button now that it has no ✕ (#80). */
 function cvReturnFocus(nextK,prevK){
   for(const x of [nextK,prevK]){const g=x&&document.querySelector(`#cvList [data-cvgrip="${x}"]`);if(g)return g;}
-  return document.getElementById("cvClose");
+  return document.getElementById("btnCombat");
 }
 /* Back in the place it was taken from. `who` guards a toast that outlived a
    character switch: its Undo belongs to the character it was shown for. After a

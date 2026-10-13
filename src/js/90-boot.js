@@ -144,8 +144,6 @@ function wire(){
        leave the cursor in the box. */
     if((m=t.closest(".search-clear"))){const i=m.parentNode.querySelector("input");if(i){i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.focus();}return;}
     if(t.closest("#btnCombat"))return combatViewOpen()?leaveCombatTab():enterCombatTab();
-    if(t.closest("#cvClose"))return leaveCombatTab();
-    if(t.closest("#cvToc"))return openToc();
     if(t.closest("#cvStart"))return startCombatNow();
     if(t.closest("#cvPrev"))return advanceRound(-1);
     if(t.closest("#cvNext"))return advanceRound(1);

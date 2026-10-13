@@ -32,18 +32,16 @@
   padding:8px clamp(10px,2vw,18px);background:var(--paper-2);border:2px solid var(--line);border-top:0;
   border-radius:0 0 10px 10px;max-width:780px;width:100%;margin:calc(-1*clamp(12px,2.4vw,22px)) auto 0;box-sizing:border-box}
 .cv-head .grow{flex:1}
-/* Up to 640px: two rows, whatever the state. Row 1 is ✕ · title · ☰; the spacer
-   becomes a full-width row break; row 2 is the tracker with Start/End pushed to
-   the far right — End well clear of ◀ ▶, and in the spot Start held. Tab order
-   stays the markup's (✕, tracker, End, ☰). 640, not a phone width: the one-row
-   header needs ~610px in combat, and between the two it wrapped wherever it ran
-   out of room — End under ✕, or ☰ alone on a second row. */
+/* Up to 640px in combat (.fighting): two rows. Row 1 is the title; the spacer
+   becomes a full-width row break; row 2 is the tracker with End pushed to the far
+   right, well clear of ◀ ▶. Out of combat the header is one row, title and Start.
+   640, not a phone width: the one-row header needs ~500px in combat, and between
+   the two it wrapped wherever it ran out of room. No ✕ or ☰ of its own (#80). */
 @media(max-width:640px){
   .cv-head{row-gap:0}
-  #cvToc{order:1;margin-left:auto}
-  .cv-head .grow{order:2;flex:0 0 100%;height:0;margin-top:8px}
-  .cv-track{order:3}
-  #cvStart,#cvEnd{order:4;margin-left:auto}
+  .cv-head.fighting .grow{order:2;flex:0 0 100%;height:0;margin-top:8px}
+  .cv-head.fighting .cv-track{order:3}
+  .cv-head.fighting #cvEnd{order:4;margin-left:auto}
 }
 /* The page scrolls the tab; the body only spaces the list from the header. */
 .cv-body{padding-top:clamp(12px,2.4vw,22px)}
