@@ -154,7 +154,8 @@ function openStatBreakdown(target){
   else if(target==="profBonus")base=`Level ${Math.max(1,num(character.level)||1)}: ${fmt(pb-sumFx("profBonus",c))}`;
   else if(target==="spell.dc"||target==="spell.attack"){const sa=character.spellAbility;base=sa?`${target==="spell.dc"?"8 + ":""}prof ${fmt(pb)} + ${sa.toUpperCase()} mod ${fmt(mods[sa])}`:"No spellcasting ability chosen";}
   let rows=`<p style="margin-bottom:6px">${esc(base)}</p>`+grantLines;
-  const rowOf=x=>`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(x.source)}</span><b>${fmt(x.value)}</b></div>`;
+  /* a penalty's line is red (#89): it is what turned the number red */
+  const rowOf=x=>`<div${x.value<0?' class="bd-neg"':""} style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(x.source)}</span><b>${fmt(x.value)}</b></div>`;
   const plainCheck=target.startsWith("ability.")&&ckRows.length;
   if(contr.length)rows+=contr.map(rowOf).join("");
   else if(!grantLines&&!plainCheck)rows+=`<p style="color:var(--ink-soft);font-style:italic">No item, feature, or grant effects apply.</p>`;
@@ -165,7 +166,7 @@ function openStatBreakdown(target){
     const st=encState(c);
     if(st.mode!=="none"&&st.tier!=="ok"){
       const val=st.floor!=null?(st.floor+" ft"):fmt(st.penalty);
-      rows+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(st.label)} (${esc(fmtWt(st.carried))} / ${esc(fmtWt(st.cap))})</span><b>${esc(val)}</b></div>`;
+      rows+=`<div class="bd-neg" style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(st.label)} (${esc(fmtWt(st.carried))} / ${esc(fmtWt(st.cap))})</span><b>${esc(val)}</b></div>`;
       rows+=`<p class="hint" style="margin-top:6px">${esc(encTierNote(st))}</p>`;
     }
   }

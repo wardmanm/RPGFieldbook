@@ -64,6 +64,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'statusDuration', 'statusElapsed', 'statusTimed', 'statusUnitFor', 'fmtStatusTime', 'statusTimeText',
   'statusExpiredText', 'statusBackText', 'tickStatuses', 'restartStatus',
   'announceStatusExpiry', 'undoStatusExpiry', 'stepStatusTap', 'syncStatLock',
+  'fxNeg', 'mark',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2820,13 +2821,15 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
    for one recompute() and hands back their text. */
 const painted = ids => {
   const got = {}, real = ctx.document.getElementById;
-  const el = () => { const e = {textContent: '', fx: false};
-    e.classList = {toggle: (k, on) => { if (k === 'fx-on') e.fx = !!on; }, add: () => {}, remove: () => {}, contains: () => false};
+  const el = () => { const e = {textContent: '', fx: false, neg: false};
+    e.classList = {toggle: (k, on) => { if (k === 'fx-on') e.fx = !!on; if (k === 'fx-neg') e.neg = !!on; },
+                   add: () => {}, remove: () => {}, contains: () => false};
     return e; };
   ctx.document.getElementById = id => ids.includes(id) ? (got[id] = got[id] || el()) : real(id);
   try { X.recompute(); } finally { ctx.document.getElementById = real; }
   const o = {}; ids.forEach(i => { o[i] = got[i] ? String(got[i].textContent) : undefined; });
   painted.fx = {}; ids.forEach(i => { painted.fx[i] = !!(got[i] && got[i].fx); });   /* marked .fx-on? */
+  painted.neg = {}; ids.forEach(i => { painted.neg[i] = !!(got[i] && got[i].neg); }); /* ...and .fx-neg (#89)? */
   return o;
 };
 /* what a modal would have shown: its title and body */
@@ -4131,6 +4134,159 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   X.activeId = null;
   X.character = X.blankChar();
   X.resetRules();
+}
+
+
+/* ---- a negative effect marks its number red (#89) ----
+   Any ONE contribution below zero marks the number .fx-neg, even when a bonus
+   outweighs it or cancels it out: the player wants to see the penalty first.
+   Derived numbers keep the marker's old rule (Mike, 2026-10-13): -4 CON marks
+   the CON modifier, not the CON save. */
+{
+  const fx = (target, value, source) => ({source: source || 'Test', target, value});
+  ck('#89 fxNeg: no contributions, nothing negative', X.fxNeg([], 'ac') === false);
+  ck('#89 fxNeg: a bonus alone is not negative', X.fxNeg([fx('ac', 1)], 'ac') === false);
+  ck('#89 fxNeg: a penalty is', X.fxNeg([fx('ability.con', -4)], 'ability.con') === true);
+  ck('#89 fxNeg: a penalty to another target is not', X.fxNeg([fx('ability.con', -4)], 'ac') === false);
+  ck('#89 fxNeg: a bigger bonus does not hide a penalty', X.fxNeg([fx('ac', 3), fx('ac', -1)], 'ac') === true);
+  ck('#89 fxNeg: nor does one that cancels it', X.fxNeg([fx('ac', 2), fx('ac', -2)], 'ac') === true);
+  ck('#89 fxNeg: any of several targets counts', X.fxNeg([fx('check', -1)], 'skill.athletics', 'check') === true);
+
+  /* mark(): .fx-neg implies .fx-on, so every existing .fx-on rule still applies */
+  const cls = () => { const e = {on: null, neg: null}; e.classList = {toggle: (k, v) => { if (k === 'fx-on') e.on = !!v; if (k === 'fx-neg') e.neg = !!v; }}; return e; };
+  let el = cls(); X.mark(el, true);
+  ck('#89 mark: a bonus is .fx-on and not .fx-neg', el.on === true && el.neg === false, el);
+  el = cls(); X.mark(el, false, true);
+  ck('#89 mark: a penalty is .fx-on AND .fx-neg, even when the sum says nothing changed', el.on === true && el.neg === true, el);
+  el = cls(); X.mark(el, false);
+  ck('#89 mark: nothing is neither', el.on === false && el.neg === false, el);
+
+  const fresh = () => { const c = X.blankChar(); X.character = c;
+    Object.assign(c.abilities, {str: 14, dex: 12, con: 14, int: 10, wis: 12, cha: 8}); c.speed = 30; return c; };
+  const status = (effects, active) => ({id: X.uid(), name: 'Sickened', description: '', active: active !== false, effects});
+  const worn = (name, effects) => ({id: X.uid(), name, category: 'Wondrous item', qty: 1, equipped: true, effects});
+  const IDS = ['mod-con', 'mod-dex', 'save-con', 'acDisp', 'initDisp', 'speedDisp', 'skill-athletics', 'pbDisp', 'sizeDisp'];
+
+  let c = fresh();
+  c.statuses.push(status([{target: 'ability.con', value: -4}]));
+  c.inventory.push(worn('Gloves of Dexterity', [{target: 'ability.dex', value: 2}]));
+  let p = painted(IDS);
+  ck('#89 -4 CON: the CON modifier is +0 and marked red', p['mod-con'] === '+0' && painted.fx['mod-con'] && painted.neg['mod-con'], [p, painted.neg]);
+  ck('#89 ...+2 DEX stays the plain marker', painted.fx['mod-dex'] && !painted.neg['mod-dex'], painted.neg);
+  ck('#89 ...and the CON save is not marked, as a bonus would not mark it either',
+     p['save-con'] === '+0' && !painted.fx['save-con'] && !painted.neg['save-con'], [p['save-con'], painted.fx, painted.neg]);
+  c.statuses[0].active = false;
+  p = painted(IDS);
+  ck('#89 an inactive status marks nothing', p['mod-con'] === '+2' && !painted.fx['mod-con'] && !painted.neg['mod-con'], [p, painted.neg]);
+
+  c = fresh();   /* unarmoured: 10 + DEX 1 = 11 */
+  c.inventory.push(worn('Ring of Protection', [{target: 'ac', value: 1}]));
+  p = painted(IDS);
+  ck('#89 a bonus to AC alone: 12, marked, not red', p.acDisp === '12' && painted.fx.acDisp && !painted.neg.acDisp, [p.acDisp, painted.neg]);
+  c.statuses.push(status([{target: 'ac', value: -2}]));
+  p = painted(IDS);
+  ck('#89 +1 and -2 to AC: 10, and red', p.acDisp === '10' && painted.fx.acDisp && painted.neg.acDisp, [p.acDisp, painted.neg]);
+  c.statuses[0].effects[0].value = -1;
+  p = painted(IDS);
+  ck('#89 +1 and -1 cancel to 11, and it still shows red', p.acDisp === '11' && painted.fx.acDisp && painted.neg.acDisp, [p.acDisp, painted.fx, painted.neg]);
+
+  c = fresh();
+  c.statuses.push(status([{target: 'check', value: -1}]));
+  p = painted(IDS);
+  ck('#89 -1 to every ability check: Athletics and initiative are red', painted.neg['skill-athletics'] && painted.neg.initDisp, painted.neg);
+  ck('#89 ...the modifiers and saves are not', !painted.neg['mod-dex'] && !painted.neg['save-con'], painted.neg);
+
+  c = fresh();
+  c.statuses.push(status([{target: 'profBonus', value: -1}]));
+  p = painted(IDS);
+  ck('#89 a penalty to the proficiency bonus is red', p.pbDisp === '+1' && painted.neg.pbDisp, [p.pbDisp, painted.neg]);
+
+  c = fresh();
+  c.statuses.push(status([{target: 'speed', value: -10}]));
+  p = painted(IDS);
+  ck('#89 -10 speed: 20, and red', p.speedDisp === '20' && painted.neg.speedDisp, [p.speedDisp, painted.neg]);
+  c = fresh();
+  c.encumbrance = 'variant'; c.inventory.push({id: X.uid(), name: 'Anvil', category: 'Gear', qty: 1, weight: 100});
+  p = painted(IDS);
+  ck('#89 encumbrance lowers speed (30 -> 20), and that is red too', p.speedDisp === '20' && painted.neg.speedDisp, [p.speedDisp, painted.neg]);
+  c.encumbrance = 'none';
+  p = painted(IDS);
+  ck('#89 ...off again, speed is 30 and unmarked', p.speedDisp === '30' && !painted.fx.speedDisp && !painted.neg.speedDisp, [p.speedDisp, painted.neg]);
+  c.size = 'Small';
+  p = painted(IDS);
+  ck('#89 a size you set yourself is marked, never red', painted.fx.sizeDisp && !painted.neg.sizeDisp, painted.neg);
+
+  /* the attack row: to-hit, damage and a save spell's DC */
+  c = fresh();
+  c.inventory.push(worn('Cursed Gauntlet', [{target: 'attack', value: -1}, {target: 'damage', value: 2}]));
+  c.attacks.push({id: 'ls', name: 'Longsword', kind: 'melee', ability: 'str', proficient: true, addAbilityDamage: true,
+                  atkMisc: '', damageDice: '1d8', damageType: 'slashing', dmgMisc: '', notes: ''});
+  let n = X.attackNumbers(c.attacks[0]);
+  ck('#89 attackNumbers: -1 to hit is atkNeg, +2 damage is not dmgNeg',
+     n.toHit === 3 && n.atkNeg === true && n.dmgNeg === false, n);
+  c.inventory.push(worn('Rusty Blade Charm', [{target: 'damage.ranged', value: -3}]));
+  ck('#89 ...a ranged-only penalty leaves a melee row alone', X.attackNumbers(c.attacks[0]).dmgNeg === false);
+  c.inventory.push(worn('Dull Edge', [{target: 'damage.melee', value: -1}]));
+  ck('#89 ...a melee one does not', X.attackNumbers(c.attacks[0]).dmgNeg === true);
+  c.spellAbility = 'wis';
+  c.inventory.push(worn('Muddled Focus', [{target: 'spell.attack', value: -1}, {target: 'spell.dc', value: -1}]));
+  c.attacks.push({id: 'fb', source: 'spell', name: 'Fire Bolt', kind: 'ranged', ability: 'wis', proficient: true,
+                  addAbilityDamage: false, atkMisc: '', damageDice: '1d10', damageType: 'fire', dmgMisc: '', notes: ''});
+  c.attacks.push({id: 'sf', source: 'spell', name: 'Sacred Flame', save: {ability: 'dex'}, damageDice: '1d8', damageType: 'radiant', notes: ''});
+  ck('#89 ...a spell attack row takes the spell.attack penalty', X.attackNumbers(c.attacks[1]).atkNeg === true);
+  c.inventory.find(i => i.name === 'Cursed Gauntlet').equipped = false;
+  ck('#89 ...a weapon row does not', X.attackNumbers(c.attacks[0]).atkNeg === false);
+  c.inventory.find(i => i.name === 'Cursed Gauntlet').equipped = true;
+  c.inventory.find(i => i.name === 'Dull Edge').equipped = false;
+  {
+    const realC = ctx.document.createElement, realB = ctx.document.getElementById, rows = [];
+    ctx.document.createElement = () => { const e = {style: {}, dataset: {}, classList: {toggle() {}, add() {}, remove() {}}}; rows.push(e); return e; };
+    ctx.document.getElementById = id => id === 'attackList' ? {innerHTML: '', appendChild() {}, style: {}} : realB(id);
+    try { X.renderAttacks(); } finally { ctx.document.createElement = realC; ctx.document.getElementById = realB; }
+    const html = nm => rows.map(e => String(e.innerHTML || '')).find(h => h.includes('>' + nm + '<')) || '';
+    const ls = html('Longsword'), sf = html('Sacred Flame');
+    ck('#89 the Longsword row: +3 to hit, red', /<span class="atk-hit fx-on fx-neg" data-atk-info="ls">\+3 to hit<\/span>/.test(ls), ls.slice(0, 700));
+    const dmgOf = h => (h.match(/Damage <b[^>]*>/) || [''])[0];
+    ck('#89 ...and its +2 damage the plain marker', dmgOf(ls) === 'Damage <b class="fx-on" style="">', dmgOf(ls));
+    ck('#89 the Sacred Flame row: its DC red', /<span class="atk-hit fx-on fx-neg">DC \d+ DEX<\/span>/.test(sf), sf.slice(0, 700));
+    c.inventory.find(i => i.name === 'Cursed Gauntlet').effects = [{target: 'damage', value: -2}];
+    rows.length = 0;
+    ctx.document.createElement = () => { const e = {style: {}, dataset: {}, classList: {toggle() {}, add() {}, remove() {}}}; rows.push(e); return e; };
+    ctx.document.getElementById = id => id === 'attackList' ? {innerHTML: '', appendChild() {}, style: {}} : realB(id);
+    try { X.renderAttacks(); } finally { ctx.document.createElement = realC; ctx.document.getElementById = realB; }
+    const ls2 = html('Longsword');
+    ck('#89 a damage penalty alone: the damage is red, the to-hit unmarked',
+       dmgOf(ls2) === 'Damage <b class="fx-on fx-neg" style="">' && /<span class="atk-hit " data-atk-info="ls">/.test(ls2), [dmgOf(ls2), ls2.slice(0, 600)]);
+  }
+
+  /* the breakdowns: the lines that turned it red are red */
+  c = fresh();
+  c.statuses.push(status([{target: 'ability.con', value: -4}]));
+  c.inventory.push(worn('Amulet of Health-ish', [{target: 'ability.con', value: 1}]));
+  let m = shownModal(() => X.openStatBreakdown('ability.con'));
+  ck('#89 the CON breakdown shows the -4 line red', /<div class="bd-neg"[^>]*><span>Sickened<\/span><b>-4<\/b>/.test(m.b), m.b);
+  ck('#89 ...and the +1 line plain', /<div[^>]*><span>Amulet of Health-ish<\/span><b>\+1<\/b>/.test(m.b) && !/bd-neg"[^>]*><span>Amulet/.test(m.b), m.b);
+  c = fresh();
+  c.encumbrance = 'variant'; c.inventory.push({id: X.uid(), name: 'Anvil', category: 'Gear', qty: 1, weight: 100});
+  m = shownModal(() => X.openStatBreakdown('speed'));
+  ck('#89 the speed breakdown shows encumbrance red', /<div class="bd-neg"[^>]*><span>Encumbered/.test(m.b), m.b);
+  c = fresh();
+  c.inventory.push(worn('Cursed Gauntlet', [{target: 'attack', value: -1}]));
+  c.attacks.push({id: 'ls', name: 'Longsword', kind: 'melee', ability: 'str', proficient: true, addAbilityDamage: true,
+                  atkMisc: '', damageDice: '1d8', damageType: 'slashing', dmgMisc: '', notes: ''});
+  m = shownModal(() => X.openAttackBreakdown('ls'));
+  ck('#89 the attack breakdown shows the -1 effect red', /<div class="bd-neg"[^>]*><span>Cursed Gauntlet<\/span><b>-1<\/b>/.test(m.b), m.b);
+  ck('#89 ...and not the STR modifier or proficiency, which are not effects',
+     (m.b.match(/bd-neg/g) || []).length === 1, m.b);
+
+  /* the style: brick red and a different shape, in every skin */
+  const css = require('fs').readFileSync(require('path').join(__dirname, '..', 'css', '30-sheet.css'), 'utf8');
+  ck('#89 .fx-neg is brick red, over the .fx-on colour', /\.fx-on\.fx-neg\{color:var\(--brick\)!important\}/.test(css));
+  ck('#89 ...with a ▼ in place of the ●', /\.fx-on\.fx-neg::after\{content:"▼";[^}]*color:var\(--brick\)/.test(css));
+  ck('#89 ...and a red breakdown line', /\.bd-neg\{color:var\(--brick\)\}/.test(css));
+  const tokens = require('fs').readFileSync(require('path').join(__dirname, '..', 'css', '00-tokens.css'), 'utf8');
+  ck('#89 every skin defines --brick', (tokens.match(/--brick:/g) || []).length >= 4);
+  X.character = X.blankChar();
 }
 
 ck.done();

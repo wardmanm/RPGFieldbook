@@ -5697,3 +5697,27 @@ Pages: [sections & layout](../wiki/ui/sections-and-layout.md)
    `.fighting`, and out of combat the header is one row (title, Start combat).
 
 Pages: [combat view](../wiki/features/combat-view.md), [shell](../wiki/ui/shell.md)
+## A penalty shows its number in red (#89, 2026-10-13)
+
+1. `.fx-on` marked a number an effect or a grant changed, whichever way. It read the SUM, so a −4 CON
+   status looked like a +2 DEX item, and a +2 and a −2 on one number cancelled and marked nothing.
+2. `fxNeg(contribs, ...targets)` (`00-constants.js`) asks each contribution, not the sum: is any one
+   below zero? `mark(el, on, neg)` sets `.fx-on` when either is true and `.fx-neg` with `neg`, so a
+   penalty is marked even when a bonus outweighs or cancels it. Mike: the player wants to deal with
+   the penalty first.
+3. `recompute()` passes it at every mark: the proficiency bonus, each ability modifier, save and
+   skill (with `check`), AC, initiative (with `check`), spell DC and spell attack. Speed is red on a
+   `speed` penalty or when encumbrance lowers it. Size has no penalty: it marks "you set this".
+   `attackNumbers()` returns `atkNeg`/`dmgNeg`; `renderAttacks()` adds `fx-neg` to the to-hit, the
+   damage and a save row's DC.
+4. Derived numbers keep the marker's old rule (Mike, 2026-10-13): −4 CON marks the CON modifier, not
+   the CON save or CON skills, as a +2 CON item never marked them.
+5. CSS: `.fx-on.fx-neg` is `--brick` (every skin and mode has one) with ▼ in place of ●, so the two
+   read apart without colour. `.bd-neg` reddens a penalty's line in `openStatBreakdown()` (and the
+   encumbrance line on speed) and in `openAttackBreakdown()`, where only effect lines can be red.
+6. Tests: `sheet.js` #89 (`fxNeg`, `mark`, the painted numbers through `recompute()`, the attack row
+   markup, both breakdowns, the CSS). Screenshots `.claude/qa/89-*`, both skins, light and dark.
+
+Pages: [computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
+[abilities & skills](../wiki/features/abilities-and-skills.md),
+[attacks & damage](../wiki/features/attacks-and-damage.md)

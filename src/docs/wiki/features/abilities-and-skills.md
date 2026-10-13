@@ -44,9 +44,11 @@ its breakdown lists apart from the score.
 
 **What the sheet shows.** `recompute()` writes `data-lvl` (the effective level) onto each dot, and
 `data-granted="1"` when the proficiency comes from a grant while the manual level is 0 — CSS draws
-that as a ring. A value touched by an effect or a grant gets `fx-on`. Tapping a modifier, save or
+that as a ring. A value touched by an effect or a grant gets `fx-on`; one an effect lowers also gets
+`fx-neg`, red with ▼, even when a bonus outweighs it (see
+[Computed stats & effects](../architecture/computed-stats-and-effects.md)). Tapping a modifier, save or
 skill value (`data-stat`) opens `openStatBreakdown()`: the base, which grant supplied the proficiency
-(`grantSources()`), or "Proficiency (manual)", then each effect by source.
+(`grantSources()`), or "Proficiency (manual)", then each effect by source, a penalty in red.
 
 **Two layouts.** `character.statStyle` is `"classic"` or `"grouped"`, set under Settings → This
 character → Skills display (Classic / By ability), which calls `renderAll()`.
@@ -153,3 +155,4 @@ the only sane order with one column.
 - 2026-10-06 — In the combat view the two cards draw compact and read-only. → ledger L5046, #62
 - 2026-10-07 — The final review's fixes: the compact Skills grid sets its own `grid-auto-flow:column`
   at both multi-column breakpoints, so it reads down each column at every width. → ledger L5058, #55
+- 2026-10-13 — A modifier, save or skill an effect lowers is red with ▼, even beside a bonus; its breakdown line is red. → ledger L5700, #89

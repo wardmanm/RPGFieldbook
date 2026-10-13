@@ -7,7 +7,7 @@ attack, attack to-hit and damage, and effective Max HP. An effect is `{target, v
 "AC +1" or "WIS save +2". `recompute()` is the one place that repaints them all. Anything that is
 not a number (advantage, resistance, darkvision) is deliberately not an effect.
 
-**Code:** `contributions()`, `sumFx()`, `abilFinal()`, `pbValue()`, `effMaxHP()`, `clampHP()`,
+**Code:** `contributions()`, `sumFx()`, `fxNeg()`, `abilFinal()`, `pbValue()`, `effMaxHP()`, `clampHP()`,
 `effSkill()`, `effSaveProf()`, `fxTargets()`, `autoSlots()` in `00-constants.js`; `recompute()`,
 `mark()` in `10-compute.js`; `usesMax()` in `20-lists.js`; `armorAC()`, `encState()`, `encSpeed()`
 in `25-origins-items.js`; `attackNumbers()`, `spellDC()`, `spellAtkBonus()` in `60-attacks.js`;
@@ -69,11 +69,17 @@ dropdown:
   and resources, sets every spell attack row to the current spellcasting ability, and redraws
   Attacks and Active Spells.
 
-A number an effect or a grant changed gets `.fx-on` through `mark()`. Tapping any `data-stat` number
-opens `openStatBreakdown()`, which lists the base, the grant that supplied a proficiency, and each
-contribution by source name. On a skill and on initiative that includes each `check` contribution,
-named "(ability checks)"; on an ability it lists them apart from the score, as what a plain check
-with that ability adds. The proficiency bonus shows "Level N: +2" as its base.
+A number an effect or a grant changed gets `.fx-on` through `mark()`. One an effect **lowered** also
+gets `.fx-neg`, drawn in `--brick` with ▼ in place of ●: `fxNeg(c, ...targets)` asks whether any one
+contribution to those targets is below zero, so a penalty shows even when a bonus outweighs it or
+cancels it out. Speed is also red when encumbrance lowers it; size, which marks a size you set
+yourself, never is.
+
+Tapping any `data-stat` number opens `openStatBreakdown()`, which lists the base, the grant that
+supplied a proficiency, and each contribution by source name, with a penalty's line in red
+(`.bd-neg`). On a skill and on initiative, the contributions include each `check` one, named
+"(ability checks)"; on an ability they are listed apart from the score, as what a plain check with
+that ability adds. The proficiency bonus shows "Level N: +2" as its base.
 
 **Elsewhere, the same pattern:** `attackNumbers(a)` (the better of STR/DEX for finesse, proficiency
 if set, `atkMisc`, `attack` + `attack.<kind>` effects, and `spell.attack` on a spell attack row
@@ -121,6 +127,10 @@ fixed `8`/`"d8"`).
 - **Encumbrance stays outside the engine,** applied after the effects: two of its outcomes
   *replace* speed (5 ft over capacity, 0 at the hard limit) and the third (disadvantage) is not a
   number.
+- **A penalty is marked whatever the sum.** `.fx-neg` comes from `fxNeg()`, which asks each
+  contribution, never from the sign of `sumFx()`: a +2 and a −2 on AC sum to nothing, and the
+  player still wants to see the −2. It goes where `.fx-on` goes and no further, so −4 CON marks the
+  CON modifier and not the CON save, as a +2 CON item never marked the save (#89).
 - **Compute `contributions()` once and pass it down.** `effMaxHP()`, `spellDC()` and
   `spellAtkBonus()` take it optionally for exactly this reason. The HP expression used to be written
   out in three places, and the Spellcasting card had its own copy of the spell formulas, which is
@@ -156,13 +166,14 @@ fixed `8`/`"d8"`).
 | Where an item's spell attack and DC bonus goes (#77) | Two numeric targets, `spell.attack` and `spell.dc`, read by `spellAtkBonus()`/`spellDC()` | Reusing `attack`: it reaches every weapon row, so a Wand of the War Mage would make a sword more accurate. Prose: a flat bonus to one number is exactly what an effect is |
 | A spell bonus the book limits to one class's spells (#77) | Applied to the character's one spellcasting; the class stays in the description | Prose: all 18 of Tasha's focuses and sickles would do nothing for the casters they were made for. Exact only for a single-class caster; a multiclass one's other class reads it too. Owner may revisit |
 | A bonus to every ability check (#79) | One `check` target, added to each skill, initiative and passive Perception | 18 `skill.*` and an `init` effect on the item: 25 chips on one stone, no way to name a plain ability check, and no one-row way for a player to add "+1 to all checks". Owner may revisit |
+| How a penalty shows (#89) | Red (`--brick`) with ▼, on any number one effect lowers, even when a bonus outweighs it; the breakdown's penalty lines red too | Red only when the sum is negative: a cancelling pair would mark nothing, and the player wants the penalty first (Mike). The same ● in red: colour alone would not read for every player |
+| Whether a penalty marks the numbers derived from it (#89) | No: the marker's old rule, so −4 CON marks the modifier, not the CON save or skills | Marking every number it flows into: the bonus marker never did, and both would need to change together (Mike, 2026-10-13) |
 | Where a plain ability check's bonus shows (#79) | In the ability's breakdown, apart from the score; the modifier box stays the modifier, unmarked | Adding it to the modifier box: attacks, saves, AC and spell DCs read the modifier. A separate "check" number beside each ability: new UI for one pack item. Owner may revisit |
 
 ## Open
 
 - `usesMax()` has no suite coverage. The ledger records it as unit-tested, but no test in
   `src/tests/` calls it now.
-- `attackNumbers()` and `pbValue()` are likewise untested by any suite.
 - A feat that lets the player choose an ability to boost is applied by hand. There is no
   feat-level ability-choice mechanism, though it could mirror the skill-choice path.
 
@@ -179,3 +190,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — An effect is a standing bonus: the packs' conditional AC and saving-throw bonuses stay prose. → ledger L4502, #76
 - 2026-09-28 — `spell.attack` and `spell.dc` targets; `spellDC()`/`spellAtkBonus()` add them and the card paints through them. → ledger L4568, #77
 - 2026-09-29 — a `check` target reaches every skill, initiative and passive Perception; the proficiency bonus is marked and tappable. → ledger L4689, #79
+- 2026-10-13 — A number any one effect lowers is marked red with ▼ (`fxNeg()`, `.fx-neg`), even when a bonus outweighs it; breakdowns redden the penalty's line. → ledger L5700, #89
