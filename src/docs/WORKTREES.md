@@ -183,10 +183,11 @@ its own and they all survive. Cutting a release stays a separate, deliberate act
 ```
 
 Removes the worktree and deletes the branch if it merged cleanly; keeps the branch and says so if it
-did not. It ends with a `NOTE` if the shared private repo has work left to commit or push (#90). `rm` first deletes the symlinks and copied settings that `add` created — without that, git
+did not. `rm` first deletes the symlinks and copied settings that `add` created — without that, git
 counts them as untracked files and refuses forever. **Genuine uncommitted work still blocks removal**,
 which is the behaviour worth keeping. Discard it deliberately with
-`git worktree remove --force <path>`.
+`git worktree remove --force <path>`. It ends with a `NOTE` if the shared private repo has work left
+to commit or push (#90).
 
 ---
 

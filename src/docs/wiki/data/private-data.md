@@ -130,7 +130,10 @@ python3 scripts/sync-private.py --status   # NOTE lines while the private repo h
 ```
 
 `dev.sh` item 6 writes through `--write`, and the private runner's `converter-gate` checks through
-the same script at `$FIELDBOOK`, so the menu and the gate cannot drift apart. `--write` converts
+the same script at `$FIELDBOOK`, so the menu and the gate cannot drift apart. A public checkout
+without the script fails the gate with a plain message rather than skipping it: every app release a
+private one may build on (1.8.0 and later, which `data-release.js` enforces) has it, and a skip
+would hide the script being renamed. `--write` converts
 every pack before it touches the private repo, so a failing converter leaves the packs as they were;
 then it adds, updates and removes files to match. A check names each file that moved and ends
 `FAILURES: <pack> (n files); … run python3 scripts/sync-private.py --write, then commit it in the
