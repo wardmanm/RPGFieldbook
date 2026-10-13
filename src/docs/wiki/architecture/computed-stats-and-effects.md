@@ -73,11 +73,13 @@ A number an effect or a grant changed gets `.fx-on` through `mark()`. One an eff
 gets `.fx-neg`, drawn in `--brick` with ▼ in place of ●: `fxNeg(c, ...targets)` asks whether any one
 contribution to those targets is below zero, so a penalty shows even when a bonus outweighs it or
 cancels it out. Speed is also red when encumbrance lowers it; size, which marks a size you set
-yourself, never is. Tapping any `data-stat` number
-opens `openStatBreakdown()`, which lists the base, the grant that supplied a proficiency, and each
-contribution by source name, a penalty's line in red (`.bd-neg`). On a skill and on initiative that includes each `check` contribution,
-named "(ability checks)"; on an ability it lists them apart from the score, as what a plain check
-with that ability adds. The proficiency bonus shows "Level N: +2" as its base.
+yourself, never is.
+
+Tapping any `data-stat` number opens `openStatBreakdown()`, which lists the base, the grant that
+supplied a proficiency, and each contribution by source name, with a penalty's line in red
+(`.bd-neg`). On a skill and on initiative, the contributions include each `check` one, named
+"(ability checks)"; on an ability they are listed apart from the score, as what a plain check with
+that ability adds. The proficiency bonus shows "Level N: +2" as its base.
 
 **Elsewhere, the same pattern:** `attackNumbers(a)` (the better of STR/DEX for finesse, proficiency
 if set, `atkMisc`, `attack` + `attack.<kind>` effects, and `spell.attack` on a spell attack row
