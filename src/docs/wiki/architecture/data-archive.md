@@ -33,8 +33,10 @@ names the archive. `fbdata.py bundle` reads it (`load_registry()`), so a bundle'
 data-only release after it. It is not semver: `1.8.0 < 1.8.0-1 < 1.8.0-10 < 1.8.1`.
 `cmpDataVer()` compares them and returns 0 for anything unreadable; `cmpVer()` still compares app
 versions, and would read `1.8.0-1` and `1.8.0-2` as equal. A pack's version moves only when its
-content does: the digest is the SHA-256 of the canonical JSON of its registry fields and every file
-in its folder (`pack_digest()`), so re-indenting a file changes nothing.
+content does: the digest is the SHA-256 of the canonical JSON of its registry fields, the bundle
+format (`BUNDLE_FORMAT`) and every file in its folder (`pack_digest()`), so re-indenting a file changes
+nothing, and a bundler change that alters a bundle's bytes, once `BUNDLE_FORMAT` is bumped, moves every
+pack (#86).
 
 **App releases** (`./build.sh --release`): `release.js` runs `fbdata.py versions --bump <next>`,
 which gives every changed pack the new app version and sets `release`, then snapshots
@@ -115,6 +117,10 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 
 ## Traps
 
+- **A bundler change is invisible to the digest unless `BUNDLE_FORMAT` moves.** Change what
+  `bundle()` or `bundle_text()` writes and bump `BUNDLE_FORMAT` in `fbdata.py`; `data-kit.py` pins each
+  format's output fingerprint and fails until you do, then asks for the new fingerprint (#86).
+
 - **`cmpVer()` ignores `-N`.** Every comparison of data versions goes through `cmpDataVer()`.
 - **Every build needs Python now.** `fbdata.py bundle` runs even under `--no-zip` (#85); only
   running a single Node suite directly, skipping `run.sh`'s rebundle, needs none.
@@ -139,13 +145,15 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 | What says a pack changed | A digest of its content (canonical JSON) | `git diff` since the last tag: formatting-only changes bumped packs |
 | How a running copy learns of new data | The releases list plus the tag's registry; a quiet notice | Baked into the app: only a new app could announce new data |
 | Where digests are computed | Only `fbdata.py` | In Node and Python both: two implementations that must agree |
+| How a bundler change reaches the versions | `BUNDLE_FORMAT` in the digest, pinned by a fingerprint test (#86) | An escape hatch (`--force SYSTEM`): a manual step to remember on every bundler change |
 
 ## Open
 
 - **Private packs get no newer-data notice.** `checkForDataUpdate()` reads the public registry, which
   lists only the public packs.
-- **Old releases still hand out the packs** until their assets are deleted at the #85 finish, and
-  GitHub's Source code archives of each tag until the 2.0 history purge ([2.0](../roadmap/2.0.md)).
+- **Old releases still hand out the packs.** Deleting the assets of v1.3.0–v1.7.2 is deferred
+  (Mike, 2026-10-12); GitHub's Source code archives of each tag stay until the 2.0 history purge
+  ([2.0](../roadmap/2.0.md)).
 
 ## History
 
@@ -158,3 +166,4 @@ version shows a muted `vA · vB out`, a hint line links the release, and the Set
 - 2026-10-09 — The registry read and bundling move into `fbdata.py` (`load_registry()`, `bundle()`), replacing the Node bundler. → ledger L5342, #85
 - 2026-10-09 — Public releases (app and data) are gated on `validate --public` and a `*private*` name check, run by the release workflows after the build. → ledger L5352, #85
 - 2026-10-09 — The archive holds SRD 5.2 and homebrew only; `data-release.js --registry` cuts the private repo's releases. → ledger L5426, #85
+- 2026-10-12 — The digest covers `BUNDLE_FORMAT`, pinned by a fingerprint of the bundler's output; the old releases' asset deletion is deferred. → ledger L5627, #86

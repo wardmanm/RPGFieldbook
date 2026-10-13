@@ -42,7 +42,9 @@ own.
 name), last file wins, replaced in place; every duplicate and every nameless entry is reported, and a
 folder whose files disagree on `system`, `excludeSystems` or `requires`, or whose `system` is not the
 registry's, fails. `bundle_text()` writes exactly what `JSON.stringify` wrote. What a bundle holds
-and why: [Rules packs](../architecture/rules-packs.md).
+and why: [Rules packs](../architecture/rules-packs.md). `BUNDLE_FORMAT` names this output and sits in
+every pack's digest: any change to what `bundle()` or `bundle_text()` writes bumps it, so every pack's
+version moves; `data-kit.py` pins each format's output fingerprint and fails until it is bumped (#86).
 
 **Finding the converter's inputs.** `kit_file()` looks beside `fbdata.py` first (the kit zip's flat
 layout), then in the repo the file sits in (`scripts/convert.py`, `data/overlay.json`,
@@ -167,3 +169,4 @@ the test replaced by golden checks. `convert`, `build`, `validate --public` and 
 - 2026-10-09 — `fbdata.py bundle` replaces the Node bundler after a byte-for-byte parity test. → ledger L5342, #85
 - 2026-10-09 — The kit zip, `kit_file()`, `convert`, `build`, `validate --public` and the example pack; the app zip drops `scripts/`. → ledger L5352, L5426, #85
 - 2026-10-09 — `convert` keeps a caller's `--flag=PATH`; `build` at a 5e-tools root points at `data/`; CI and `release.yml` test the built kit zip. → ledger L5592, #85
+- 2026-10-12 — `BUNDLE_FORMAT` joins every digest; a fingerprint test pins the bundler's output per format. → ledger L5627, #86

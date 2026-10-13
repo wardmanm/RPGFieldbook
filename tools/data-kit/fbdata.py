@@ -36,6 +36,11 @@ FILE_NAME = re.compile(r"^[A-Za-z0-9._-]+\.json$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 # The registry fields that reach the bundle, so changing one is a content change.
 META_KEYS = ("system", "title", "license", "attribution")
+# The bundle format: part of every digest, so a bundler change that alters a
+# bundle's bytes moves every pack's version and players are told to re-import
+# (#86). Bump it with any change to bundle()/bundle_text() output; data-kit.py
+# pins each format's output and fails until you do.
+BUNDLE_FORMAT = 1
 # Written in this order; any other key a pack carries is kept, after these.
 PACK_KEYS = ("system", "dir", "file", "title", "version", "digest", "license", "attribution")
 
@@ -111,8 +116,9 @@ def load_registry(path):
 
 
 def pack_digest(pack, data_root):
-    """sha256 of the canonical JSON of the pack's registry fields and every
-    *.json directly in its folder; None when the folder is absent (spec §4.1)."""
+    """sha256 of the canonical JSON of the pack's registry fields, the bundle
+    format and every *.json directly in its folder; None when the folder is
+    absent (spec §4.1, #86)."""
     folder = os.path.join(data_root, pack["dir"])
     if not os.path.isdir(folder):
         return None
@@ -127,6 +133,7 @@ def pack_digest(pack, data_root):
         except ValueError as e:
             raise KitError("%s: not valid JSON — %s" % (full, e))
     meta = {k: pack[k] for k in META_KEYS if pack.get(k) is not None}
+    meta["bundleFormat"] = BUNDLE_FORMAT
     body = canon({"meta": meta, "files": files}).encode("utf-8")
     return "sha256:" + hashlib.sha256(body).hexdigest()
 

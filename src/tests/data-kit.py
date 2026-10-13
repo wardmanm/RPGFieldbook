@@ -93,6 +93,58 @@ ck("changing a title is a change", changed(d) == ["Beta"], changed(d))
 reg["packs"][1]["title"] = "Beta"
 write(d, "data/packs.json", reg)
 
+# ---------- the digest covers the bundle format too (#86): a bundler change that
+# alters a bundle's bytes must move every pack's version, or players keep a stale
+# copy under the same dataVersion and are never told to re-import.
+fd = scratch()   # its own scratch: the --check cases below reuse the seeded d above
+before = fbdata.pack_digest(read_json(fd, "data/packs.json")["packs"][0], os.path.join(fd, "data"))
+saved = fbdata.BUNDLE_FORMAT
+try:
+    fbdata.BUNDLE_FORMAT = saved + 1
+    after = fbdata.pack_digest(read_json(fd, "data/packs.json")["packs"][0], os.path.join(fd, "data"))
+finally:
+    fbdata.BUNDLE_FORMAT = saved
+shutil.rmtree(fd)
+ck("bumping BUNDLE_FORMAT changes every digest", before != after, (before, after))
+
+# The bundler's output, pinned per format. A change to bundle()/bundle_text()
+# that alters the bytes fails here until BUNDLE_FORMAT is bumped in fbdata.py
+# and the new fingerprint recorded below (and the next release then gives
+# every pack a new version, as it must).
+BUNDLE_FINGERPRINTS = {
+    1: "sha256:e66f6476bf4ce62581d1e5400589e0472a894611216ec38f2b66d5d68f75516c",
+}
+
+
+def fingerprint_bundle():
+    """one pack exercising every bundling rule: dedupe, nameless entries, keyword
+    and subclass keys, the features/traits fallback, folder-level excludeSystems
+    and requires, licence and credit, numbers and text outside ASCII"""
+    d = tempfile.mkdtemp(prefix="fbdata-fp-")
+    write(d, "data/z/a.json", {"system": "Z", "excludeSystems": ["b", " a "],
+                               "requires": [{"pack": "Q", "spells": ["Spark"]}],
+                               "spells": [{"name": "Bolt", "level": 1}, {"name": "Glow"}],
+                               "keywords": [{"term": " ", "name": "Gleam"}, {"term": "Hush"}],
+                               "subclasses": [{"class": "Seer", "name": "Path"}, {"class": "Monk", "name": "Path"}],
+                               "traits": [{"name": "Keen"}],
+                               "items": [{"name": "Café — ✦", "weight": 0.5, "cost": 5.0}, {"weight": 1}]})
+    write(d, "data/z/b.json", {"system": "Z", "excludeSystems": ["a", "b"],
+                               "requires": [{"pack": "Q", "spells": ["Spark"]}],
+                               "spells": [{"name": "bolt ", "level": 2}]})
+    pack = {"system": "Z", "dir": "z", "file": "z_full.json", "title": "Zed", "version": "1.8.0-1",
+            "license": "MIT", "attribution": "By someone."}
+    r = fbdata.bundle(pack, os.path.join(d, "data"))
+    shutil.rmtree(d)
+    return "sha256:" + __import__("hashlib").sha256(fbdata.bundle_text(r["obj"]).encode("utf-8")).hexdigest()
+
+
+fp = fingerprint_bundle()
+ck("BUNDLE_FORMAT %d has a recorded fingerprint (add one when you bump it)" % fbdata.BUNDLE_FORMAT,
+   fbdata.BUNDLE_FORMAT in BUNDLE_FINGERPRINTS, sorted(BUNDLE_FINGERPRINTS))
+ck("the bundler's output matches BUNDLE_FORMAT's fingerprint — if you changed the output on purpose, "
+   "bump BUNDLE_FORMAT in fbdata.py and record the new fingerprint here",
+   BUNDLE_FINGERPRINTS.get(fbdata.BUNDLE_FORMAT) == fp, fp)
+
 # ---------- --check
 ck("--check passes when nothing changed", kit(d, "versions", "--check").returncode == 0)
 write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 3}]})
