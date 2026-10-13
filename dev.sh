@@ -261,13 +261,14 @@ convert_data() {
   local ok; read -r ok
   case "$ok" in y|Y) : ;; *) printf 'cancelled\n'; return 0 ;; esac
   [ "$srd" = 1 ] && run "$PY" scripts/convert.py srd "$dir" -o data/srd52
-  [ "$core" = 1 ] && run "$PY" scripts/convert.py all "$dir" -o "$priv/5e2024"
-  # --avoid-table-names: the app looks tables up by name across every loaded pack,
-  # so a supplement must not reuse one the core pack already owns.
-  [ "$xge" = 1 ] && run "$PY" scripts/convert.py supplement "$dir" -o "$priv/xanathars" \
-      --book XGE --system XGE --avoid-table-names "$priv/5e2024/tables.json"
-  [ "$tce" = 1 ] && run "$PY" scripts/convert.py supplement "$dir" -o "$priv/tashas" \
-      --book TCE --system TCE --avoid-table-names "$priv/5e2024/tables.json"
+  # The private packs' commands live in sync-private.py, which the private repo's
+  # converter gate also runs, so this menu and that check cannot drift apart (#90).
+  local packs=""
+  [ "$core" = 1 ] && packs="$packs 5e2024"
+  [ "$xge" = 1 ] && packs="$packs xanathars"
+  [ "$tce" = 1 ] && packs="$packs tashas"
+  # shellcheck disable=SC2086  # $packs is a word list on purpose
+  [ -n "$packs" ] && run "$PY" scripts/sync-private.py --write --dump "$dir" $packs
   return 0
 }
 

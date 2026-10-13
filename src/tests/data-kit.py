@@ -700,6 +700,173 @@ ck("private-data relays the private count", last_line(r) == "ALL PASSED (7)", r.
 r = priv('#!/usr/bin/env bash\necho "something odd"\n')
 ck("private-data treats output it doesn't recognise as a failure", last_line(r).startswith("FAILURES"), r.stdout + r.stderr)
 
+# ---------- sync-private.py keeps the private packs in step (#90)
+# A fake converter stands in for convert.py: its output depends on the dump's
+# marker and, for a supplement, on the 2024 tables it is told to avoid, as the
+# real one's does. It logs each call's arguments, with -o's folder as <out>.
+SYNC = os.path.join(ROOT, "scripts", "sync-private.py")
+# The pack folders are the script's own names, read from it: docs.js keeps every
+# private pack name out of the test sources, and this fixture is invented.
+import importlib.util  # noqa: E402
+_spec = importlib.util.spec_from_file_location("sync_private", SYNC)
+SPM = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(SPM)
+CORE, XGE, TCE = SPM.PACKS
+FAKE_CONVERT = """import json, os, sys
+a = sys.argv[1:]
+cmd, dump, out = a[0], a[1], a[a.index("-o") + 1]
+with open(os.environ["FAKE_LOG"], "a") as f:
+    f.write(json.dumps(["<out>" if x == out else x for x in a]) + "\\n")
+if os.path.exists(os.path.join(dump, "fail")):
+    sys.exit(3)
+os.makedirs(out, exist_ok=True)
+marker = open(os.path.join(dump, "marker.txt")).read()
+def put(name, obj):
+    with open(os.path.join(out, name), "w") as f:
+        json.dump(obj, f)
+if cmd == "all":
+    put("tables.json", {"marker": marker})
+else:
+    avoid = a[a.index("--avoid-table-names") + 1]
+    put("pack.json", {"book": a[a.index("--book") + 1], "marker": marker, "avoid": open(avoid).read()})
+"""
+GIT_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+           "GIT_COMMITTER_EMAIL": "t@t", "GIT_CONFIG_NOSYSTEM": "1"}
+sp = tempfile.mkdtemp(prefix="sync-")
+write(sp, "fake_convert.py", raw=FAKE_CONVERT)
+write(sp, "dump/marker.txt", raw="v1")
+DUMP, PRV, LOG = os.path.join(sp, "dump"), os.path.join(sp, "private"), os.path.join(sp, "log.jsonl")
+os.makedirs(os.path.join(PRV, "data"))
+COMMON = ["--converter", os.path.join(sp, "fake_convert.py"), "--dump", DUMP, "--private", PRV]
+
+
+def sync(*args):
+    if os.path.exists(LOG):
+        os.remove(LOG)
+    r = subprocess.run([sys.executable, SYNC] + list(args), capture_output=True, text=True,
+                       env=dict(os.environ, FAKE_LOG=LOG, **GIT_ENV))
+    r.calls = [json.loads(x) for x in open(LOG)] if os.path.exists(LOG) else []
+    return r
+
+
+def git(*args):
+    return subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main"] + list(args),
+                          capture_output=True, text=True, env=dict(os.environ, **GIT_ENV))
+
+
+core_tables = os.path.join(PRV, "data", CORE, "tables.json")
+r = sync("--write", *COMMON)
+ck("#90 --write builds the three packs into the private repo",
+   r.returncode == 0 and os.path.isfile(core_tables)
+   and os.path.isfile(os.path.join(PRV, "data", XGE, "pack.json"))
+   and os.path.isfile(os.path.join(PRV, "data", TCE, "pack.json")), r.stdout + r.stderr)
+ck("#90 ...and says to commit it there", "commit" in r.stdout and PRV in r.stdout, r.stdout)
+ck("#90 ...running exactly the commands dev.sh ran: all, then XGE and TCE avoiding the 2024 tables",
+   len(r.calls) == 3 and r.calls[0] == ["all", DUMP, "-o", "<out>"]
+   and r.calls[1][:-1] == ["supplement", DUMP, "-o", "<out>", "--book", "XGE", "--system", "XGE", "--avoid-table-names"]
+   and r.calls[2][:-1] == ["supplement", DUMP, "-o", "<out>", "--book", "TCE", "--system", "TCE", "--avoid-table-names"]
+   and all(c[-1].endswith(os.path.join(CORE, "tables.json")) for c in r.calls[1:]), r.calls)
+r = sync(*COMMON)
+ck("#90 a check of packs in step passes, counting each file", r.returncode == 0 and last_line(r) == "ALL PASSED (3)",
+   r.stdout + r.stderr)
+ck("#90 ...and writes nothing into the private repo",
+   len(r.calls) == 3 and not any(PRV in x for c in r.calls for x in c), r.calls)
+ck("#90 ...its supplements avoid the 2024 tables it just made, not the private ones, as --write would",
+   len(r.calls) == 3 and not r.calls[1][-1].startswith(PRV) and r.calls[1][-1].endswith("tables.json"), r.calls)
+r = sync(XGE, *COMMON)
+ck("#90 checking one supplement alone avoids the private 2024 tables",
+   r.returncode == 0 and len(r.calls) == 1 and r.calls[0][-1] == core_tables, r.calls)
+write(sp, "dump/marker.txt", raw="v2")
+r = sync(*COMMON)
+ck("#90 a converter change that moves the packs fails the check, naming each",
+   r.returncode == 1 and last_line(r).startswith("FAILURES:")
+   and all(k in last_line(r) for k in (CORE, XGE, TCE)), r.stdout)
+ck("#90 ...lists each file that moved", ("FAIL  %s/tables.json" % CORE) in r.stdout and ("FAIL  %s/pack.json" % TCE) in r.stdout,
+   r.stdout)
+ck("#90 ...and its last line says how to fix it", "sync-private.py --write" in last_line(r) and "private repo" in last_line(r),
+   last_line(r))
+r = sync("--write", TCE, *COMMON)
+ck("#90 --write of one pack touches only that pack",
+   r.returncode == 0 and len(r.calls) == 1 and read_json(PRV, os.path.join("data", TCE, "pack.json"))["marker"] == "v2"
+   and read_json(PRV, os.path.join("data", CORE, "tables.json"))["marker"] == "v1", r.stdout + r.stderr)
+r = sync("--write", *COMMON)
+r2 = sync(*COMMON)
+ck("#90 after --write, the check passes again", r.returncode == 0 and r2.returncode == 0, r.stdout + r2.stdout)
+write(PRV, os.path.join("data", TCE, "old.json"), raw="{}")
+r = sync(*COMMON)
+ck("#90 a file the converter no longer makes fails the check", r.returncode == 1 and (TCE + "/old.json") in r.stdout, r.stdout)
+r = sync("--write", *COMMON)
+ck("#90 ...and --write removes it, saying so",
+   r.returncode == 0 and not os.path.exists(os.path.join(PRV, "data", TCE, "old.json")) and "old.json" in r.stdout,
+   r.stdout)
+r = sync("--write", *COMMON)
+ck("#90 --write with nothing to change says so and asks for no commit", r.returncode == 0 and "commit" not in r.stdout,
+   r.stdout)
+write(sp, "dump/fail", raw="")
+before = read_json(PRV, os.path.join("data", CORE, "tables.json"))
+r = sync(*COMMON)
+ck("#90 a converter that fails is a failure, never a pass", r.returncode == 1 and last_line(r).startswith("FAILURES:"),
+   r.stdout)
+r = sync("--write", *COMMON)
+ck("#90 ...and --write leaves the private packs alone",
+   r.returncode != 0 and read_json(PRV, os.path.join("data", CORE, "tables.json")) == before,
+   r.stdout + r.stderr)
+os.remove(os.path.join(DUMP, "fail"))
+r = sync("--converter", os.path.join(sp, "fake_convert.py"), "--dump", os.path.join(sp, "nodump"), "--private", PRV)
+ck("#90 with no 5e-tools dump the check skips, as CI has none", r.returncode == 0 and last_line(r).startswith("SKIP"), r.stdout)
+r = sync("--converter", os.path.join(sp, "fake_convert.py"), "--dump", DUMP, "--private", os.path.join(sp, "nope"))
+ck("#90 with no private repo it fails", r.returncode == 1 and last_line(r).startswith("FAILURES:"), r.stdout + r.stderr)
+r = sync("srd52", *COMMON)
+ck("#90 a pack it does not convert is refused", r.returncode != 0 and "not a converted pack" in r.stderr, r.stdout + r.stderr)
+
+# --status: what the private repo still has to commit or push
+r = sync("--status", "--private", PRV)
+ck("#90 --status outside a git repo says nothing", r.returncode == 0 and r.stdout.strip() == "", r.stdout + r.stderr)
+remote = os.path.join(sp, "remote.git")
+git("init", "-q", "--bare", remote)
+git("-C", PRV, "init", "-q")
+git("-C", PRV, "add", "-A")
+git("-C", PRV, "commit", "-q", "-m", "packs")
+git("-C", PRV, "remote", "add", "origin", remote)
+git("-C", PRV, "push", "-q", "-u", "origin", "HEAD")
+r = sync("--status", "--private", PRV)
+ck("#90 --status with everything committed and pushed says nothing", r.returncode == 0 and r.stdout.strip() == "",
+   r.stdout + r.stderr)
+write(sp, "dump/marker.txt", raw="v3")
+sync("--write", CORE, *COMMON)
+r = sync("--status", "--private", PRV)
+ck("#90 --status notes uncommitted changes", r.returncode == 0 and r.stdout.startswith("NOTE") and "uncommitted" in r.stdout,
+   r.stdout)
+git("-C", PRV, "commit", "-q", "-am", "v3")
+r = sync("--status", "--private", PRV)
+ck("#90 --status notes a commit not pushed", r.returncode == 0 and r.stdout.startswith("NOTE") and "not pushed" in r.stdout
+   and "uncommitted" not in r.stdout, r.stdout)
+
+# the public suite relays the note, and run.sh shows it on a pass
+write(PRV, "tests/run.sh", raw='#!/usr/bin/env bash\necho "ALL PASSED (7)"\n')
+r = subprocess.run(["node", PRIV], capture_output=True, text=True, env=dict(os.environ, FIELDBOOK_PRIVATE=PRV, **GIT_ENV))
+ck("#90 the private-data suite passes on, with the private repo's NOTE before its last line",
+   last_line(r) == "ALL PASSED (7)" and "\nNOTE" in "\n" + r.stdout and "uncommitted" in r.stdout, r.stdout + r.stderr)
+r = subprocess.run(["bash", os.path.join(ROOT, "src", "tests", "run.sh"), "private-data"], capture_output=True, text=True,
+                   env=dict(os.environ, FIELDBOOK_PRIVATE=PRV, **GIT_ENV))
+ck("#90 run.sh shows a passing suite's NOTE lines", r.returncode == 0 and "NOTE" in r.stdout and "uncommitted" in r.stdout,
+   r.stdout)
+write(PRV, "tests/run.sh", raw='#!/usr/bin/env bash\necho "  converter-gate  FAILED (exit 1)"\n'
+      'echo "      FAIL  %s/pack.json differs"\necho "FAILURES: converter-gate"\nexit 1\n' % TCE)
+r = subprocess.run(["bash", os.path.join(ROOT, "src", "tests", "run.sh"), "private-data"], capture_output=True, text=True,
+                   env=dict(os.environ, FIELDBOOK_PRIVATE=PRV, **GIT_ENV))
+ck("#90 run.sh shows the private runner's indented FAIL lines, so the fix is on screen",
+   r.returncode == 1 and ("FAIL  %s/pack.json differs" % TCE) in r.stdout, r.stdout)
+shutil.rmtree(sp)
+
+# dev.sh's converter menu runs the same commands, through sync-private.py
+with open(os.path.join(ROOT, "dev.sh"), encoding="utf-8") as f:
+    DEVSH = f.read()
+ck("#90 dev.sh writes the private packs through sync-private.py --write",
+   "scripts/sync-private.py --write" in DEVSH, None)
+ck("#90 ...and no longer runs convert.py all or supplement itself",
+   "convert.py all" not in DEVSH and "convert.py supplement" not in DEVSH, None)
+
 # ---- add new cases above this line ----
 print("")
 print(("FAILURES: " + ", ".join(FAILED)) if FAILED else "ALL PASSED (%d)" % TOTAL[0])

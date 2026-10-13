@@ -18,6 +18,15 @@ const r = spawnSync('bash', [RUN], {env: Object.assign({}, process.env, {FIELDBO
 const out = (r.stdout || '') + (r.stderr || '');
 const last = out.trim().split('\n').pop() || '';
 process.stdout.write(out.replace(/\n?$/, '\n'));
+/* What the private repo still has to commit or push (#90): its clone is shared by
+   every worktree, so a change that regenerated a private pack leaves its files
+   there. NOTE lines, never a failure; run.sh shows them under the suite. */
+for (const py of ['python3', 'python']) {
+  const s = spawnSync(py, [path.join(ROOT, 'scripts', 'sync-private.py'), '--status', '--private', P], {encoding: 'utf8'});
+  if (s.error || s.status !== 0) continue;
+  if (s.stdout.trim()) process.stdout.write(s.stdout.replace(/\n?$/, '\n'));
+  break;
+}
 if (r.status === 0 && /^ALL PASSED \(\d+\)$/.test(last)) {
   console.log(last);
   process.exit(0);

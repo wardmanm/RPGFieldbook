@@ -212,8 +212,9 @@ the registry's `release` (a data release waiting to happen); without Python it l
 The items are: build (`1`), build without zips (`2`), a staleness check (`3`), tests (`4`), workflow
 YAML (`w`), hooks (`h`), rebundle (`5`), and re-convert from `_conversion-data/5etools-*` (`6`). The
 converter menu writes SRD 5.2 to `data/srd52`, and the 2024, Xanathar's and Tasha's packs (one, or
-all three) to `_private-data/data/…`; it refuses those three, saying to link the private repo
-first, when `_private-data` is not linked (#85). Then
+all three) to `_private-data/data/…` through `scripts/sync-private.py --write`, which holds their
+commands (#90); it refuses those three, saying to link the private repo first, when
+`_private-data` is not linked (#85). Then
 there is commit (`c`), which builds a `type [26/30]: message, closes #26, closes #30` subject, stages
 with `git add -A` and pushes without `--follow-tags`. Release (`7`) confirms, runs `--release`, then
 prints the commit, tag and push commands and runs none of them. Data release (`d`) runs
@@ -334,3 +335,4 @@ prints the menu and exits 0.
 - 2026-10-09 — The app zip drops `scripts/`; a new flat data kit zip (`pack_kit`) carries `convert.py` and its inputs instead, with `example-pack/`; `release.yml` and `data-release.yml` gain the public-only licence and name guard (R13). → ledger L5352, #85
 - 2026-10-09 — The converter menu writes the private packs through `_private-data`; CI skips the `private-data` suite, which the private repo's CI covers; `py_compile` covers `tools/data-kit/`. → ledger L5426, #85
 - 2026-10-09 — `ci.yml` and `release.yml` re-run `data-kit.py` after the full build and require its kit-zip checks; the app zip's guard bans `scripts/`. → ledger L5592, #85
+- 2026-10-13 — The converter menu writes the private packs through `scripts/sync-private.py --write`, which holds their commands. → ledger L5724, #90

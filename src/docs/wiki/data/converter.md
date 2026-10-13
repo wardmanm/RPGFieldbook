@@ -320,12 +320,13 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
   pack that did not change. The digest reads canonical JSON, so key order and whitespace alone
   don't move it, but the gates are still bytes. Check both before and after any converter change,
   since the SRD pack runs the same pipeline:
-  `python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk _private-data/data/5e2024`
-  and
-  `python3 scripts/convert.py srd _conversion-data/5etools-v2.36.1 -o /tmp/srd && diff -r /tmp/srd data/srd52`.
-  CI cannot run them (it has no dump). The first needs `_private-data`, and the private
-  `2024-gate` suite runs it whenever the dump is present, so Mike's `./src/tests/run.sh` checks it;
-  the second is a manual gate.
+  `python3 scripts/convert.py srd _conversion-data/5etools-v2.36.1 -o /tmp/srd && diff -r /tmp/srd data/srd52`
+  and `python3 scripts/sync-private.py`, which checks the private 2024, Xanathar's and Tasha's packs
+  the same way. CI cannot run them (it has no dump). The second needs `_private-data`, and the
+  private `converter-gate` suite runs it whenever the dump is present, so Mike's
+  `./src/tests/run.sh` checks it; the first is a manual gate. When a change moves a private pack,
+  regenerate it in the same change (`sync-private.py --write`) and commit it in the private repo:
+  see [Private data](private-data.md#keeping-the-private-packs-in-step).
 - **Filter on `source`; flags only backfill.** Never select by `basicRules2024` (or `srd52`)
   alone. After any change to a converter path, count its `source == "XPHB"` entries in the dump and
   compare with the output before believing the output. The one exception is `srd`, where the flag
@@ -627,3 +628,4 @@ its words.
 - 2026-10-08 — A dice roll holding a prompt template prints its display text (the 2024 Carrying Capacity table, 10 cells) and `_write()` counts `#$`; a missing corrections file fails `srd`, and the zip ships it; `classes --feats`, and a missing `refFeat` warns; replacements are text, not regex templates. → ledger L5269, #84
 - 2026-10-09 — Bundling moves to `bundle()` in `tools/data-kit/fbdata.py` (Python), replacing the Node bundler, byte for byte. → ledger L5342, #85
 - 2026-10-09 — The 2024, Xanathar's and Tasha's packs move to the private repo: `convert.py` ships in the data kit, the 2024 gate diffs `_private-data/data/5e2024`, the pack checks split between the public suites and the private one, and `CLASS_BLURB` is Fieldbook's own wording. → ledger L5426, #85
+- 2026-10-13 — The private packs' gate covers Xanathar's and Tasha's too, through `scripts/sync-private.py`, which a change that moves them uses to regenerate them. → ledger L5724, #90

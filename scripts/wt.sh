@@ -207,6 +207,16 @@ cmd_rm() {
       printf '  %sdelete it anyway with: git branch -D %s%s\n' "$DIM" "$branch" "$OFF"
     fi
   fi
+
+  # Every worktree's _private-data is the same private clone, so a branch that
+  # regenerated a private pack leaves its files there, not in the worktree just
+  # removed. Say what is left to commit or push (#90); silent when nothing is.
+  if [ -e _private-data ]; then
+    local py=python3 notes
+    "$py" -c '' >/dev/null 2>&1 || py=python
+    notes=$("$py" scripts/sync-private.py --status 2>/dev/null) || true
+    if [ -n "$notes" ]; then printf '%s%s%s\n' "$YEL" "$notes" "$OFF"; fi
+  fi
 }
 
 case "${1:-}" in
