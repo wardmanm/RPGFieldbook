@@ -505,6 +505,12 @@ html[data-rough="on"] .ability::before{filter:url(#rough)}
 .fx-on{color:var(--accent-2)!important}
 .fx-on::after{content:"●";font-size:.42em;vertical-align:middle;margin-left:.22em;color:var(--accent-2);
   text-shadow:0 0 5px color-mix(in srgb,var(--accent-2) 60%,transparent);position:relative;top:-.12em}
+/* ...and something LOWERED it (#89): brick red, and a ▼ in place of the ● so the
+   two read apart without colour. Wins over a bonus on the same number. */
+.fx-on.fx-neg{color:var(--brick)!important}
+.fx-on.fx-neg::after{content:"▼";font-size:.36em;color:var(--brick);
+  text-shadow:0 0 5px color-mix(in srgb,var(--brick) 50%,transparent)}
+.bd-neg{color:var(--brick)}
 .dot[data-granted="1"]{border-color:var(--accent-2);box-shadow:0 0 0 2px var(--panel),0 0 0 3px var(--accent-2)}
 .afflabel{display:inline-flex;align-items:center;gap:5px;font-family:var(--head);font-size:11px;color:var(--accent-2);
   text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-left:6px}
@@ -1771,6 +1777,10 @@ function contributions(){
   return list;
 }
 function sumFx(target,contribs){return contribs.filter(c=>c.target===target).reduce((a,c)=>a+c.value,0)}
+/* Is any ONE contribution to these targets below zero? Asked of each, not of the
+   sum, so a bonus that outweighs a penalty or cancels it out still shows it: the
+   player wants to deal with the penalty first (#89). */
+function fxNeg(contribs,...targets){return contribs.some(c=>c.value<0&&targets.includes(c.target))}
 /* `c` is optional: pass the contributions you already computed to avoid a second
    pass, omit it and one is taken. This expression used to be written out in
    three places, which is two chances for them to disagree. */
@@ -2155,36 +2165,36 @@ function recompute(){
   character.level=totalLevel();
   const ld=document.getElementById("levelDisp");if(ld)ld.textContent=Math.max(1,num(character.level));
   const pb=pbValue(c);
-  const pbEl=document.getElementById("pbDisp");pbEl.textContent=fmt(pb);mark(pbEl,!!sumFx("profBonus",c));
+  const pbEl=document.getElementById("pbDisp");pbEl.textContent=fmt(pb);mark(pbEl,!!sumFx("profBonus",c),fxNeg(c,"profBonus"));
   /* a bonus to every ability check (#79): each skill, initiative and passive
      Perception take it; the modifiers, saves and everything else do not */
   const ckFx=sumFx("check",c);
   ABIL.forEach(([k])=>{
     const fin=abilFinal(k,c), m=Math.floor((fin-10)/2), buff=sumFx("ability."+k,c);
     const me=document.getElementById("mod-"+k);
-    if(me){me.textContent=fmt(m);mark(me,!!buff);}
+    if(me){me.textContent=fmt(m);mark(me,!!buff,fxNeg(c,"ability."+k));}
     const sv=document.getElementById("save-"+k);
     const saveFx=sumFx("save."+k,c), saveProf=effSaveProf(k);
-    if(sv){sv.textContent=fmt(m+(saveProf?pb:0)+saveFx);mark(sv,!!saveFx||!!grantedProf("save",k));}
+    if(sv){sv.textContent=fmt(m+(saveProf?pb:0)+saveFx);mark(sv,!!saveFx||!!grantedProf("save",k),fxNeg(c,"save."+k));}
     const d=document.querySelector(`.dot[data-save="${k}"]`);if(d){d.dataset.lvl=saveProf?1:0;d.dataset.granted=(!character.saves[k]&&grantedProf("save",k))?1:0;}
   });
   const mods={};ABIL.forEach(([k])=>mods[k]=Math.floor((abilFinal(k,c)-10)/2));
   SKILLS.forEach(([k,,ab])=>{
     const lvl=effSkill(k), skFx=sumFx("skill."+k,c);
     const t=mods[ab]+(lvl>0?pb:0)+(lvl>1?pb:0)+skFx+ckFx;
-    const e=document.getElementById("skill-"+k);if(e){e.textContent=fmt(t);mark(e,!!skFx||!!ckFx||!!grantedProf("skill",k));}
+    const e=document.getElementById("skill-"+k);if(e){e.textContent=fmt(t);mark(e,!!skFx||!!ckFx||!!grantedProf("skill",k),fxNeg(c,"skill."+k,"check"));}
     const d=document.querySelector(`.dot[data-skill="${k}"]`);if(d){d.dataset.lvl=lvl;d.dataset.granted=(!(character.skills[k]||0)&&grantedProf("skill",k))?1:0;}
   });
   const acBase=armorAC(c).base, acFx=sumFx("ac",c);
-  const acEl=document.getElementById("acDisp");acEl.textContent=acBase+acFx;mark(acEl,!!acFx);
+  const acEl=document.getElementById("acDisp");acEl.textContent=acBase+acFx;mark(acEl,!!acFx,fxNeg(c,"ac"));
   const initBase=character.init===""?mods.dex:num(character.init), initFx=sumFx("init",c)+ckFx;
-  const initEl=document.getElementById("initDisp");initEl.textContent=fmt(initBase+initFx);mark(initEl,!!initFx);
+  const initEl=document.getElementById("initDisp");initEl.textContent=fmt(initBase+initFx);mark(initEl,!!initFx,fxNeg(c,"init","check"));
   const spFx=sumFx("speed",c), spBase=num(character.speed)+spFx;
   /* encumbrance is applied last and outside the effects engine on purpose: two of
      its outcomes replace the speed rather than adjust it, and its third cost
      (disadvantage) isn't numeric at all. See encState() in 25-origins-items.js. */
   const encSt=encState(c), spd=encSpeed(spBase,encSt);
-  const spEl=document.getElementById("speedDisp");spEl.textContent=spd;mark(spEl,!!spFx||spd!==spBase);
+  const spEl=document.getElementById("speedDisp");spEl.textContent=spd;mark(spEl,!!spFx||spd!==spBase,fxNeg(c,"speed")||spd<spBase);
   /* marked when you have set it yourself rather than taking the ancestry's —
      the same "this isn't the default" signal the other Vitals boxes use */
   const szEl=document.getElementById("sizeDisp");
@@ -2200,14 +2210,17 @@ function recompute(){
   /* spellDC()/spellAtkBonus() own the formula, effects included (#77), so the
      card cannot read differently from the cast dialog or a save row */
   const sa=character.spellAbility;
-  const dcEl=document.getElementById("dcDisp");dcEl.textContent=sa?String(spellDC(c)):"—";mark(dcEl,!!sa&&!!sumFx("spell.dc",c));
-  const satkEl=document.getElementById("satkDisp");satkEl.textContent=sa?fmt(spellAtkBonus(c)):"—";mark(satkEl,!!sa&&!!sumFx("spell.attack",c));
+  const dcEl=document.getElementById("dcDisp");dcEl.textContent=sa?String(spellDC(c)):"—";mark(dcEl,!!sa&&!!sumFx("spell.dc",c),!!sa&&fxNeg(c,"spell.dc"));
+  const satkEl=document.getElementById("satkDisp");satkEl.textContent=sa?fmt(spellAtkBonus(c)):"—";mark(satkEl,!!sa&&!!sumFx("spell.attack",c),!!sa&&fxNeg(c,"spell.attack"));
   renderEncPill(encSt);
   renderDeath();autoSlots();renderSlotBubbles();renderHitDice();syncResources();renderResources();
   (character.attacks||[]).forEach(a=>{if(a.source==="spell"&&!a.save)a.ability=character.spellAbility||"none";});
   renderAttacks();renderActiveSpells();
 }
-function mark(el,on){el.classList.toggle("fx-on",!!on);}
+/* .fx-on: an effect or a grant changed this number. .fx-neg on top of it: an
+   effect LOWERED it, even if a bonus outweighs or cancels that (#89), so it is
+   marked even when the sum says nothing changed. Red, with ▼ in place of ●. */
+function mark(el,on,neg){el.classList.toggle("fx-on",!!(on||neg));el.classList.toggle("fx-neg",!!neg);}
 
 /* ================= keyword highlight ================= */
 /* A private-use char used as a placeholder while "[Table: Name]" anchors are
@@ -4396,11 +4409,14 @@ function attackNumbers(a){
      spellAtkBonus() does; a weapon's row never does (#77) */
   const atkFx=sumFx("attack",c)+sumFx("attack."+kind,c)+(a.source==="spell"&&!a.save?sumFx("spell.attack",c):0);
   const dmgFx=sumFx("damage",c)+sumFx("damage."+kind,c);
+  /* any one penalty among them marks the cell red (#89) */
+  const atkNeg=fxNeg(c,"attack","attack."+kind,...(a.source==="spell"&&!a.save?["spell.attack"]:[]));
+  const dmgNeg=fxNeg(c,"damage","damage."+kind);
   /* the stack a launcher is loaded with adds its +N to attack AND damage (#6) */
   const ammo=attackAmmo(a);
   const toHit=abil+(a.proficient?pb:0)+num(a.atkMisc)+atkFx+ammo.bonus;
   const dmgBonus=(a.addAbilityDamage?abil:0)+num(a.dmgMisc)+dmgFx+ammo.bonus;
-  return {toHit,dmgBonus,atkFx,dmgFx,abilName,kind,pb,abil,ammoBonus:ammo.bonus,ammoName:ammo.name};
+  return {toHit,dmgBonus,atkFx,dmgFx,atkNeg,dmgNeg,abilName,kind,pb,abil,ammoBonus:ammo.bonus,ammoName:ammo.name};
 }
 /* ---- damage lines ----
    An attack's damage is one main die expression plus any number of ADDITIONAL
@@ -4746,15 +4762,16 @@ function renderAttacks(){
   /* Favorites first, in the order they were added — the list is short and hand
      built, so leaving it unsorted keeps the row where the player put it. */
   const favs=shown.filter(a=>a.fav), rest=shown.filter(a=>!a.fav);
-  const dcFx=sumFx("spell.dc",contributions());
+  const cc=contributions(), dcFx=sumFx("spell.dc",cc), dcNeg=fxNeg(cc,"spell.dc");
   const rows=(list)=>list.forEach(a=>{
     const ic=!!atkCol().items[a.id], isSpell=a.source==="spell", save=a.save;
     const n=attackNumbers(a);
     const dmg=attackDamageStr(a,save?0:n.dmgBonus);
     const typeLabel=save?"Spell save":(isSpell?`Spell · ${n.kind==="ranged"?"Ranged":"Melee"}`:(n.kind==="ranged"?"Ranged":"Melee"));
     const dc=spellDC();
-    const hitCell=save?`<span class="atk-hit${dcFx?" fx-on":""}">DC ${dc!=null?dc:"—"} ${esc((save.ability||"").toUpperCase())}</span>`
-                       :`<span class="atk-hit ${n.atkFx?"fx-on":""}" data-atk-info="${esc(a.id)}">${fmt(n.toHit)} to hit</span>`;
+    const hitCell=save?`<span class="atk-hit${dcFx||dcNeg?" fx-on":""}${dcNeg?" fx-neg":""}">DC ${dc!=null?dc:"—"} ${esc((save.ability||"").toUpperCase())}</span>`
+                       :`<span class="atk-hit ${n.atkFx||n.atkNeg?"fx-on":""}${n.atkNeg?" fx-neg":""}" data-atk-info="${esc(a.id)}">${fmt(n.toHit)} to hit</span>`;
+    const dmgOn=!save&&(n.dmgFx||n.dmgNeg), dmgNeg=!save&&n.dmgNeg;
     const d=document.createElement("div");d.className="item fitem";
     d.innerHTML=`<div class="top split">
         <button class="fitoggle" data-atkitem="${esc(a.id)}" aria-label="Collapse"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -4767,7 +4784,7 @@ function renderAttacks(){
         <button class="icon danger" data-del-attack="${esc(a.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
         </span>
       </div>
-      ${ic?"":`<div class="desc" style="font-family:var(--head);font-size:13px;letter-spacing:.02em;color:var(--ink-soft)">Damage <b class="${!save&&n.dmgFx?"fx-on":""}" style="${!save&&n.dmgFx?"":"color:var(--ink)"}">${esc(dmg)||"—"}</b>${a.notes?` · ${esc(a.notes)}`:""}</div>`}${ammoLineHTML(character,a)}`;
+      ${ic?"":`<div class="desc" style="font-family:var(--head);font-size:13px;letter-spacing:.02em;color:var(--ink-soft)">Damage <b class="${dmgOn?"fx-on":""}${dmgNeg?" fx-neg":""}" style="${dmgOn?"":"color:var(--ink)"}">${esc(dmg)||"—"}</b>${a.notes?` · ${esc(a.notes)}`:""}</div>`}${ammoLineHTML(character,a)}`;
     el.appendChild(d);
   });
   /* The heading only appears when there is something to separate — a lone
@@ -4854,21 +4871,23 @@ function openAttackForm(existing){
 function openAttackBreakdown(id){
   const a=character.attacks.find(x=>x.id===id);if(!a)return;
   const c=contributions(),pb=pbValue(c),n=attackNumbers(a);
-  const row=(l,v)=>`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(l)}</span><b>${fmt(v)}</b></div>`;
+  /* an effect's line is red when it is a penalty (#89): the line that turned the
+     row red. The modifier and the manual extras are not effects and stay plain. */
+  const row=(l,v,fx)=>`<div${fx&&v<0?' class="bd-neg"':""} style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(l)}</span><b>${fmt(v)}</b></div>`;
   let b=`<p style="margin-bottom:4px;font-family:var(--head);text-transform:uppercase;letter-spacing:.05em;font-size:12px;color:var(--ink-soft)">${n.kind==="ranged"?"Ranged":"Melee"} attack</p>`;
   b+=row((n.abilName||"No ability")+" modifier",n.abil);
   if(a.proficient)b+=row("Proficiency bonus",pb);
   if(num(a.atkMisc))b+=row("Extra to-hit (manual)",num(a.atkMisc));
   if(n.ammoBonus)b+=row(n.ammoName+" (loaded)",n.ammoBonus);
   const spellAtk=a.source==="spell"&&!a.save;
-  c.filter(x=>x.target==="attack"||x.target==="attack."+n.kind||(spellAtk&&x.target==="spell.attack")).forEach(x=>b+=row(x.source,x.value));
+  c.filter(x=>x.target==="attack"||x.target==="attack."+n.kind||(spellAtk&&x.target==="spell.attack")).forEach(x=>b+=row(x.source,x.value,true));
   b+=`<div style="display:flex;justify-content:space-between;border-top:2px solid var(--line);margin-top:6px;padding-top:6px"><b>To hit</b><b>${fmt(n.toHit)}</b></div>`;
   b+=`<p style="margin:12px 0 4px"><b>Damage:</b> ${esc(attackDamageStr(a,n.dmgBonus)||"—")}</p>`;
   const dc=c.filter(x=>x.target==="damage"||x.target==="damage."+n.kind);
   if(a.addAbilityDamage&&n.abilName)b+=row(n.abilName+" modifier",n.abil);
   if(num(a.dmgMisc))b+=row("Extra damage (manual)",num(a.dmgMisc));
   if(n.ammoBonus)b+=row(n.ammoName+" (loaded)",n.ammoBonus);
-  dc.forEach(x=>b+=row(x.source,x.value));
+  dc.forEach(x=>b+=row(x.source,x.value,true));
   /* extras are their own dice and take none of the bonuses above — say so */
   const xd=extraDamageList(a);
   if(xd.length)b+=`<p class="hint" style="margin:8px 0 0">Rolled separately, with no modifiers: ${esc(xd.map(d=>damagePartStr(d.dice,d.type,0)).join(", "))}</p>`;
@@ -7331,7 +7350,8 @@ function openStatBreakdown(target){
   else if(target==="profBonus")base=`Level ${Math.max(1,num(character.level)||1)}: ${fmt(pb-sumFx("profBonus",c))}`;
   else if(target==="spell.dc"||target==="spell.attack"){const sa=character.spellAbility;base=sa?`${target==="spell.dc"?"8 + ":""}prof ${fmt(pb)} + ${sa.toUpperCase()} mod ${fmt(mods[sa])}`:"No spellcasting ability chosen";}
   let rows=`<p style="margin-bottom:6px">${esc(base)}</p>`+grantLines;
-  const rowOf=x=>`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(x.source)}</span><b>${fmt(x.value)}</b></div>`;
+  /* a penalty's line is red (#89): it is what turned the number red */
+  const rowOf=x=>`<div${x.value<0?' class="bd-neg"':""} style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(x.source)}</span><b>${fmt(x.value)}</b></div>`;
   const plainCheck=target.startsWith("ability.")&&ckRows.length;
   if(contr.length)rows+=contr.map(rowOf).join("");
   else if(!grantLines&&!plainCheck)rows+=`<p style="color:var(--ink-soft);font-style:italic">No item, feature, or grant effects apply.</p>`;
@@ -7342,7 +7362,7 @@ function openStatBreakdown(target){
     const st=encState(c);
     if(st.mode!=="none"&&st.tier!=="ok"){
       const val=st.floor!=null?(st.floor+" ft"):fmt(st.penalty);
-      rows+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(st.label)} (${esc(fmtWt(st.carried))} / ${esc(fmtWt(st.cap))})</span><b>${esc(val)}</b></div>`;
+      rows+=`<div class="bd-neg" style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(st.label)} (${esc(fmtWt(st.carried))} / ${esc(fmtWt(st.cap))})</span><b>${esc(val)}</b></div>`;
       rows+=`<p class="hint" style="margin-top:6px">${esc(encTierNote(st))}</p>`;
     }
   }
