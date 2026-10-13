@@ -4,36 +4,36 @@ function recompute(){
   character.level=totalLevel();
   const ld=document.getElementById("levelDisp");if(ld)ld.textContent=Math.max(1,num(character.level));
   const pb=pbValue(c);
-  const pbEl=document.getElementById("pbDisp");pbEl.textContent=fmt(pb);mark(pbEl,!!sumFx("profBonus",c));
+  const pbEl=document.getElementById("pbDisp");pbEl.textContent=fmt(pb);mark(pbEl,!!sumFx("profBonus",c),fxNeg(c,"profBonus"));
   /* a bonus to every ability check (#79): each skill, initiative and passive
      Perception take it; the modifiers, saves and everything else do not */
   const ckFx=sumFx("check",c);
   ABIL.forEach(([k])=>{
     const fin=abilFinal(k,c), m=Math.floor((fin-10)/2), buff=sumFx("ability."+k,c);
     const me=document.getElementById("mod-"+k);
-    if(me){me.textContent=fmt(m);mark(me,!!buff);}
+    if(me){me.textContent=fmt(m);mark(me,!!buff,fxNeg(c,"ability."+k));}
     const sv=document.getElementById("save-"+k);
     const saveFx=sumFx("save."+k,c), saveProf=effSaveProf(k);
-    if(sv){sv.textContent=fmt(m+(saveProf?pb:0)+saveFx);mark(sv,!!saveFx||!!grantedProf("save",k));}
+    if(sv){sv.textContent=fmt(m+(saveProf?pb:0)+saveFx);mark(sv,!!saveFx||!!grantedProf("save",k),fxNeg(c,"save."+k));}
     const d=document.querySelector(`.dot[data-save="${k}"]`);if(d){d.dataset.lvl=saveProf?1:0;d.dataset.granted=(!character.saves[k]&&grantedProf("save",k))?1:0;}
   });
   const mods={};ABIL.forEach(([k])=>mods[k]=Math.floor((abilFinal(k,c)-10)/2));
   SKILLS.forEach(([k,,ab])=>{
     const lvl=effSkill(k), skFx=sumFx("skill."+k,c);
     const t=mods[ab]+(lvl>0?pb:0)+(lvl>1?pb:0)+skFx+ckFx;
-    const e=document.getElementById("skill-"+k);if(e){e.textContent=fmt(t);mark(e,!!skFx||!!ckFx||!!grantedProf("skill",k));}
+    const e=document.getElementById("skill-"+k);if(e){e.textContent=fmt(t);mark(e,!!skFx||!!ckFx||!!grantedProf("skill",k),fxNeg(c,"skill."+k,"check"));}
     const d=document.querySelector(`.dot[data-skill="${k}"]`);if(d){d.dataset.lvl=lvl;d.dataset.granted=(!(character.skills[k]||0)&&grantedProf("skill",k))?1:0;}
   });
   const acBase=armorAC(c).base, acFx=sumFx("ac",c);
-  const acEl=document.getElementById("acDisp");acEl.textContent=acBase+acFx;mark(acEl,!!acFx);
+  const acEl=document.getElementById("acDisp");acEl.textContent=acBase+acFx;mark(acEl,!!acFx,fxNeg(c,"ac"));
   const initBase=character.init===""?mods.dex:num(character.init), initFx=sumFx("init",c)+ckFx;
-  const initEl=document.getElementById("initDisp");initEl.textContent=fmt(initBase+initFx);mark(initEl,!!initFx);
+  const initEl=document.getElementById("initDisp");initEl.textContent=fmt(initBase+initFx);mark(initEl,!!initFx,fxNeg(c,"init","check"));
   const spFx=sumFx("speed",c), spBase=num(character.speed)+spFx;
   /* encumbrance is applied last and outside the effects engine on purpose: two of
      its outcomes replace the speed rather than adjust it, and its third cost
      (disadvantage) isn't numeric at all. See encState() in 25-origins-items.js. */
   const encSt=encState(c), spd=encSpeed(spBase,encSt);
-  const spEl=document.getElementById("speedDisp");spEl.textContent=spd;mark(spEl,!!spFx||spd!==spBase);
+  const spEl=document.getElementById("speedDisp");spEl.textContent=spd;mark(spEl,!!spFx||spd!==spBase,fxNeg(c,"speed")||spd<spBase);
   /* marked when you have set it yourself rather than taking the ancestry's —
      the same "this isn't the default" signal the other Vitals boxes use */
   const szEl=document.getElementById("sizeDisp");
@@ -49,14 +49,17 @@ function recompute(){
   /* spellDC()/spellAtkBonus() own the formula, effects included (#77), so the
      card cannot read differently from the cast dialog or a save row */
   const sa=character.spellAbility;
-  const dcEl=document.getElementById("dcDisp");dcEl.textContent=sa?String(spellDC(c)):"—";mark(dcEl,!!sa&&!!sumFx("spell.dc",c));
-  const satkEl=document.getElementById("satkDisp");satkEl.textContent=sa?fmt(spellAtkBonus(c)):"—";mark(satkEl,!!sa&&!!sumFx("spell.attack",c));
+  const dcEl=document.getElementById("dcDisp");dcEl.textContent=sa?String(spellDC(c)):"—";mark(dcEl,!!sa&&!!sumFx("spell.dc",c),!!sa&&fxNeg(c,"spell.dc"));
+  const satkEl=document.getElementById("satkDisp");satkEl.textContent=sa?fmt(spellAtkBonus(c)):"—";mark(satkEl,!!sa&&!!sumFx("spell.attack",c),!!sa&&fxNeg(c,"spell.attack"));
   renderEncPill(encSt);
   renderDeath();autoSlots();renderSlotBubbles();renderHitDice();syncResources();renderResources();
   (character.attacks||[]).forEach(a=>{if(a.source==="spell"&&!a.save)a.ability=character.spellAbility||"none";});
   renderAttacks();renderActiveSpells();
 }
-function mark(el,on){el.classList.toggle("fx-on",!!on);}
+/* .fx-on: an effect or a grant changed this number. .fx-neg on top of it: an
+   effect LOWERED it, even if a bonus outweighs or cancels that (#89), so it is
+   marked even when the sum says nothing changed. Red, with ▼ in place of ●. */
+function mark(el,on,neg){el.classList.toggle("fx-on",!!(on||neg));el.classList.toggle("fx-neg",!!neg);}
 
 /* ================= keyword highlight ================= */
 /* A private-use char used as a placeholder while "[Table: Name]" anchors are

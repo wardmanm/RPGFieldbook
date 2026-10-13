@@ -9,11 +9,14 @@ function attackNumbers(a){
      spellAtkBonus() does; a weapon's row never does (#77) */
   const atkFx=sumFx("attack",c)+sumFx("attack."+kind,c)+(a.source==="spell"&&!a.save?sumFx("spell.attack",c):0);
   const dmgFx=sumFx("damage",c)+sumFx("damage."+kind,c);
+  /* any one penalty among them marks the cell red (#89) */
+  const atkNeg=fxNeg(c,"attack","attack."+kind,...(a.source==="spell"&&!a.save?["spell.attack"]:[]));
+  const dmgNeg=fxNeg(c,"damage","damage."+kind);
   /* the stack a launcher is loaded with adds its +N to attack AND damage (#6) */
   const ammo=attackAmmo(a);
   const toHit=abil+(a.proficient?pb:0)+num(a.atkMisc)+atkFx+ammo.bonus;
   const dmgBonus=(a.addAbilityDamage?abil:0)+num(a.dmgMisc)+dmgFx+ammo.bonus;
-  return {toHit,dmgBonus,atkFx,dmgFx,abilName,kind,pb,abil,ammoBonus:ammo.bonus,ammoName:ammo.name};
+  return {toHit,dmgBonus,atkFx,dmgFx,atkNeg,dmgNeg,abilName,kind,pb,abil,ammoBonus:ammo.bonus,ammoName:ammo.name};
 }
 /* ---- damage lines ----
    An attack's damage is one main die expression plus any number of ADDITIONAL
@@ -359,15 +362,16 @@ function renderAttacks(){
   /* Favorites first, in the order they were added — the list is short and hand
      built, so leaving it unsorted keeps the row where the player put it. */
   const favs=shown.filter(a=>a.fav), rest=shown.filter(a=>!a.fav);
-  const dcFx=sumFx("spell.dc",contributions());
+  const cc=contributions(), dcFx=sumFx("spell.dc",cc), dcNeg=fxNeg(cc,"spell.dc");
   const rows=(list)=>list.forEach(a=>{
     const ic=!!atkCol().items[a.id], isSpell=a.source==="spell", save=a.save;
     const n=attackNumbers(a);
     const dmg=attackDamageStr(a,save?0:n.dmgBonus);
     const typeLabel=save?"Spell save":(isSpell?`Spell · ${n.kind==="ranged"?"Ranged":"Melee"}`:(n.kind==="ranged"?"Ranged":"Melee"));
     const dc=spellDC();
-    const hitCell=save?`<span class="atk-hit${dcFx?" fx-on":""}">DC ${dc!=null?dc:"—"} ${esc((save.ability||"").toUpperCase())}</span>`
-                       :`<span class="atk-hit ${n.atkFx?"fx-on":""}" data-atk-info="${esc(a.id)}">${fmt(n.toHit)} to hit</span>`;
+    const hitCell=save?`<span class="atk-hit${dcFx||dcNeg?" fx-on":""}${dcNeg?" fx-neg":""}">DC ${dc!=null?dc:"—"} ${esc((save.ability||"").toUpperCase())}</span>`
+                       :`<span class="atk-hit ${n.atkFx||n.atkNeg?"fx-on":""}${n.atkNeg?" fx-neg":""}" data-atk-info="${esc(a.id)}">${fmt(n.toHit)} to hit</span>`;
+    const dmgOn=!save&&(n.dmgFx||n.dmgNeg), dmgNeg=!save&&n.dmgNeg;
     const d=document.createElement("div");d.className="item fitem";
     d.innerHTML=`<div class="top split">
         <button class="fitoggle" data-atkitem="${esc(a.id)}" aria-label="Collapse"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -380,7 +384,7 @@ function renderAttacks(){
         <button class="icon danger" data-del-attack="${esc(a.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
         </span>
       </div>
-      ${ic?"":`<div class="desc" style="font-family:var(--head);font-size:13px;letter-spacing:.02em;color:var(--ink-soft)">Damage <b class="${!save&&n.dmgFx?"fx-on":""}" style="${!save&&n.dmgFx?"":"color:var(--ink)"}">${esc(dmg)||"—"}</b>${a.notes?` · ${esc(a.notes)}`:""}</div>`}${ammoLineHTML(character,a)}`;
+      ${ic?"":`<div class="desc" style="font-family:var(--head);font-size:13px;letter-spacing:.02em;color:var(--ink-soft)">Damage <b class="${dmgOn?"fx-on":""}${dmgNeg?" fx-neg":""}" style="${dmgOn?"":"color:var(--ink)"}">${esc(dmg)||"—"}</b>${a.notes?` · ${esc(a.notes)}`:""}</div>`}${ammoLineHTML(character,a)}`;
     el.appendChild(d);
   });
   /* The heading only appears when there is something to separate — a lone
@@ -467,21 +471,23 @@ function openAttackForm(existing){
 function openAttackBreakdown(id){
   const a=character.attacks.find(x=>x.id===id);if(!a)return;
   const c=contributions(),pb=pbValue(c),n=attackNumbers(a);
-  const row=(l,v)=>`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(l)}</span><b>${fmt(v)}</b></div>`;
+  /* an effect's line is red when it is a penalty (#89): the line that turned the
+     row red. The modifier and the manual extras are not effects and stay plain. */
+  const row=(l,v,fx)=>`<div${fx&&v<0?' class="bd-neg"':""} style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(l)}</span><b>${fmt(v)}</b></div>`;
   let b=`<p style="margin-bottom:4px;font-family:var(--head);text-transform:uppercase;letter-spacing:.05em;font-size:12px;color:var(--ink-soft)">${n.kind==="ranged"?"Ranged":"Melee"} attack</p>`;
   b+=row((n.abilName||"No ability")+" modifier",n.abil);
   if(a.proficient)b+=row("Proficiency bonus",pb);
   if(num(a.atkMisc))b+=row("Extra to-hit (manual)",num(a.atkMisc));
   if(n.ammoBonus)b+=row(n.ammoName+" (loaded)",n.ammoBonus);
   const spellAtk=a.source==="spell"&&!a.save;
-  c.filter(x=>x.target==="attack"||x.target==="attack."+n.kind||(spellAtk&&x.target==="spell.attack")).forEach(x=>b+=row(x.source,x.value));
+  c.filter(x=>x.target==="attack"||x.target==="attack."+n.kind||(spellAtk&&x.target==="spell.attack")).forEach(x=>b+=row(x.source,x.value,true));
   b+=`<div style="display:flex;justify-content:space-between;border-top:2px solid var(--line);margin-top:6px;padding-top:6px"><b>To hit</b><b>${fmt(n.toHit)}</b></div>`;
   b+=`<p style="margin:12px 0 4px"><b>Damage:</b> ${esc(attackDamageStr(a,n.dmgBonus)||"—")}</p>`;
   const dc=c.filter(x=>x.target==="damage"||x.target==="damage."+n.kind);
   if(a.addAbilityDamage&&n.abilName)b+=row(n.abilName+" modifier",n.abil);
   if(num(a.dmgMisc))b+=row("Extra damage (manual)",num(a.dmgMisc));
   if(n.ammoBonus)b+=row(n.ammoName+" (loaded)",n.ammoBonus);
-  dc.forEach(x=>b+=row(x.source,x.value));
+  dc.forEach(x=>b+=row(x.source,x.value,true));
   /* extras are their own dice and take none of the bonuses above — say so */
   const xd=extraDamageList(a);
   if(xd.length)b+=`<p class="hint" style="margin:8px 0 0">Rolled separately, with no modifiers: ${esc(xd.map(d=>damagePartStr(d.dice,d.type,0)).join(", "))}</p>`;

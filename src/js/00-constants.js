@@ -182,6 +182,10 @@ function contributions(){
   return list;
 }
 function sumFx(target,contribs){return contribs.filter(c=>c.target===target).reduce((a,c)=>a+c.value,0)}
+/* Is any ONE contribution to these targets below zero? Asked of each, not of the
+   sum, so a bonus that outweighs a penalty or cancels it out still shows it: the
+   player wants to deal with the penalty first (#89). */
+function fxNeg(contribs,...targets){return contribs.some(c=>c.value<0&&targets.includes(c.target))}
 /* `c` is optional: pass the contributions you already computed to avoid a second
    pass, omit it and one is taken. This expression used to be written out in
    three places, which is two chances for them to disagree. */

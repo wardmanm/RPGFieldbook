@@ -10,6 +10,12 @@ html[data-rough="on"] .ability::before{filter:url(#rough)}
 .fx-on{color:var(--accent-2)!important}
 .fx-on::after{content:"●";font-size:.42em;vertical-align:middle;margin-left:.22em;color:var(--accent-2);
   text-shadow:0 0 5px color-mix(in srgb,var(--accent-2) 60%,transparent);position:relative;top:-.12em}
+/* ...and something LOWERED it (#89): brick red, and a ▼ in place of the ● so the
+   two read apart without colour. Wins over a bonus on the same number. */
+.fx-on.fx-neg{color:var(--brick)!important}
+.fx-on.fx-neg::after{content:"▼";font-size:.36em;color:var(--brick);
+  text-shadow:0 0 5px color-mix(in srgb,var(--brick) 50%,transparent)}
+.bd-neg{color:var(--brick)}
 .dot[data-granted="1"]{border-color:var(--accent-2);box-shadow:0 0 0 2px var(--panel),0 0 0 3px var(--accent-2)}
 .afflabel{display:inline-flex;align-items:center;gap:5px;font-family:var(--head);font-size:11px;color:var(--accent-2);
   text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-left:6px}

@@ -94,7 +94,10 @@ A save spell with no damage (`spellHasDamage()`: main dice or extras) gets **no 
 repeat the Spell Save DC; an attack spell always does, because the to-hit appears nowhere else.
 Spell rows show **Cast** where a weapon shows Edit; `recompute()` re-points their `ability` at the
 current `spellAbility` every pass; save rows print `DC N ABILITY` from `spellDC()` with no damage
-bonus, marked when a `spell.dc` effect applies.
+bonus, marked when a `spell.dc` effect applies. On every row the to-hit, the damage and a save row's
+DC are red with ▼ (`fx-neg`) when any one effect on them is a penalty: `attackNumbers()` returns
+`atkNeg`/`dmgNeg` beside `atkFx`/`dmgFx`. `openAttackBreakdown()` reddens a penalty effect's line;
+the modifier and the manual extras are not effects and stay plain.
 
 **The damage detector.** `detectSpellAttack(sp)` runs only while `sp.atkType` is `undefined`: "make a
 ranged/melee spell attack" → attack and kind; "*Ability* saving throw" → save and `saveAbility`;
@@ -217,3 +220,4 @@ longer allows, leaving orphan rows alone.
 - 2026-09-28 — A ranged Finesse weapon (the Dart) attacks with the better of STR and DEX. → ledger L4466, #75
 - 2026-09-28 — Spell attack rows take `spell.attack` effects and save rows `spell.dc`, through `spellDC()`; weapon rows take neither. → ledger L4568, #77
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
+- 2026-10-13 — A to-hit, damage or save DC an effect lowers is red with ▼; the breakdown reddens that effect's line. → ledger L5700, #89
