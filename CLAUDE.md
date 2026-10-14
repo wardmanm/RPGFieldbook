@@ -141,17 +141,22 @@ Each links to the page that explains it and what broke when it was ignored.
 - **The recurring bug is the free-rules subset.** `basicRules2024` or `srd52` selects only it, and has
   already trimmed backgrounds, spells, feats, items and magic items. Assume any converter path you
   touch has it, and check its count against the full XPHB source.
-- **The 2024 pack (in the private repo) and `data/srd52/` must reproduce byte for byte** after any
-  converter change, or the pack's content digest moves and the next release tells every player to
-  re-download a pack that didn't change:
+- **`data/srd52/` and the private 2024, Xanathar's and Tasha's packs must reproduce byte for byte**
+  after any converter change, or the pack's content digest moves and the next release tells every
+  player to re-download a pack that didn't change:
 
   ```bash
-  python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk _private-data/data/5e2024
   python3 scripts/convert.py srd _conversion-data/5etools-v2.36.1 -o /tmp/srd && diff -r /tmp/srd data/srd52
+  python3 scripts/sync-private.py     # the three private packs; the private-data suite runs it too
   ```
 
   The SRD pack's corrections live in `scripts/srd-corrections.json`; `srd-verbatim` checks the pack
   against the SRD PDF. → [SRD 5.2](src/docs/wiki/data/srd.md)
+- **The private packs move with this repo.** When a change here (the converter, `overlay.json`,
+  `class-resources.json`) moves one, regenerate it in the same change with
+  `python3 scripts/sync-private.py --write`, commit it in the private repo naming the issue, and
+  push that right after public `main`. Never hand-edit those packs. Every worktree shares the one
+  private clone, so one branch at a time changes them. → [private data](src/docs/wiki/data/private-data.md)
 - Supplements have three traps that all produce correct-looking output. Read
   [supplements](src/docs/wiki/data/supplements.md) before touching `convert.py supplement`.
   → [converter](src/docs/wiki/data/converter.md)

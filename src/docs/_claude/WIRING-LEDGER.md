@@ -5721,3 +5721,35 @@ Pages: [combat view](../wiki/features/combat-view.md), [shell](../wiki/ui/shell.
 Pages: [computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
 [abilities & skills](../wiki/features/abilities-and-skills.md),
 [attacks & damage](../wiki/features/attacks-and-damage.md)
+## The private packs move with this repo (#90, 2026-10-13)
+
+1. The 2024, Xanathar's and Tasha's packs in RPGFieldbookPrivate are `convert.py`'s output, but only
+   the 2024 pack had a byte gate (`gate-2024.py`), and `dev.sh` held the three commands in a second
+   copy. Nothing caught a public change that moved Xanathar's or Tasha's, and nothing reminded us to
+   commit the private side. (Both reproduced exactly on 2026-10-13.) Mike: changes here that might
+   affect those files must keep them up to date there as well.
+2. `scripts/sync-private.py` (dev-only) is now the one home of the three commands. `--check` (the
+   default) converts into a scratch folder and compares byte for byte, ending `ALL PASSED (n)`,
+   `FAILURES: …` (naming each pack and the fix) or `SKIP - no 5e-tools dump`. `--write` converts all
+   first and touches the private packs only if every conversion succeeds, then adds, updates and
+   removes files to match. `--status` prints `NOTE` lines while the private repo has uncommitted or
+   unpushed work, and nothing otherwise. A supplement avoids the 2024 tables as they will be after
+   the run: the scratch copy when 2024 is converted too, the private one when it is not.
+3. `dev.sh` item 6 writes the private packs through `sync-private.py --write`. The private runner's
+   `2024-gate` becomes `converter-gate`, which runs `$FIELDBOOK/scripts/sync-private.py`, so the gate
+   checks with the commands the menu writes with; `gate-2024.py` is gone.
+4. The reminders: the public `private-data` suite relays `--status`'s NOTE lines, and `run.sh` now
+   shows a passing suite's `NOTE` lines and, on a failure, indented `FAIL` lines too (the private
+   runner indents its suites' details, which hid the fix). `wt.sh rm` prints the same NOTEs.
+5. The rule (CLAUDE.md, WORKTREES): a change that moves a private pack regenerates it in the same
+   change and commits it in the private repo naming the issue; at the finish, push public `main`
+   first, then the private repo. Every worktree links the one private clone, so one branch at a time
+   changes private packs, and `main`'s own run fails the gate until that branch merges.
+6. Tests: `data-kit.py` #90, with a fake converter (the commands pinned, check and write, a moved
+   pack, a removed file, a failing converter, no dump, no private repo, `--status` in a scratch git
+   repo with a bare remote, the suite's and `run.sh`'s relaying, `dev.sh`). The fixture names its
+   pack folders from the script's `PACKS`, as `docs.js` keeps private pack names out of tests.
+   Driven: moving Tasha's on purpose fails `./src/tests/run.sh` with the fix on screen.
+
+Pages: [private data](../wiki/data/private-data.md), [converter](../wiki/data/converter.md),
+[testing](../wiki/process/testing.md), [building & CI](../wiki/process/building-and-ci.md)

@@ -52,11 +52,15 @@ for name in $SUITES; do
       N=$(printf '%s\n' "$LAST" | tr -dc '0-9')
       TOTAL=$((TOTAL + ${N:-0}))
       printf '  %-20s %s checks\n' "$name" "${N:-?}"
+      # a passing suite's NOTE lines are worth seeing, e.g. private work not yet committed (#90)
+      printf '%s\n' "$OUT" | grep -E '^NOTE' | sed 's/^/      /'
       ;;
     *)
       FAILED="$FAILED $name"
       printf '  %-20s FAILED\n' "$name"
-      printf '%s\n' "$OUT" | grep -E '^FAIL|^FAILURES|Error' | sed 's/^/      /'
+      # ` *FAIL`: the private-data suite relays its runner's FAIL lines indented, and
+      # they carry the fix (#90)
+      printf '%s\n' "$OUT" | grep -E '^ *FAIL|^NOTE|Error' | sed 's/^/      /'
       ;;
   esac
 done

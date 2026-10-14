@@ -10,11 +10,12 @@ the [data kit](data-kit.md). This page is how the two repositories work together
 repo's own guide is its `README.md`, and this page agrees with it.
 
 **Code:** `bundle()`, `cmd_build()`, `validate_archive()` in `tools/data-kit/fbdata.py`;
-`dataStatus()` in `88-settings.js`; `scripts/data-release.js`, `scripts/wt.sh`, `dev.sh` (the
-converter menu), `src/tests/private-data.js` · **Data:** `data/packs.json` (public: SRD 5.2 and
+`dataStatus()` in `88-settings.js`; `scripts/sync-private.py`, `scripts/data-release.js`,
+`scripts/wt.sh`, `dev.sh` (the converter menu), `src/tests/private-data.js` · **Data:** `data/packs.json` (public: SRD 5.2 and
 Homebrew); the private repo's `data/packs.json` (XPHB, Humblewood, XGE, TCE) · **Tests:**
 `private-data.js` (runs the private suites), `docs.js` (no public test reads a private pack),
-`data-kit.py` (`data-release.js` against another registry; the `private-data` suite's three outcomes)
+`data-kit.py` (`data-release.js` against another registry; the `private-data` suite's three outcomes;
+`sync-private.py` on a fake converter)
 · **See also:** [Data kit](data-kit.md), [Data archive](../architecture/data-archive.md),
 [Testing](../process/testing.md), [Supplements](supplements.md), [Converter](converter.md),
 [RELEASING](../../RELEASING.md), [2.0](../roadmap/2.0.md) (the history purge),
@@ -52,7 +53,6 @@ data/5e2024/ xanathars/ tashas/ humblewood/
 scripts/extract-humblewood.py  the Humblewood PDFs to rules data (needs PyMuPDF)
 tests/run.sh                   every private suite, run against a public checkout
 tests/private-data.js          the four packs' content checks, on the public test harness
-tests/gate-2024.py             data/5e2024 reproduces byte for byte from the 5e-tools dump
 tests/humblewood-verbatim.py   the Humblewood prose matches the book
 tests/leak-scan.py             no public file carries the private text
 tests/leak-allowlist.json      the reviewed exceptions: file, hash and reason, never text
@@ -81,12 +81,12 @@ cd ../RPGFieldbookPrivate && ln -s ../RPGFieldbook/_conversion-data _conversion-
 
 The second link gives the Humblewood extractor and its suite the PDFs from the folder the public
 checkout already keeps the 5e-tools dump in. `scripts/wt.sh` links `_private-data` into each new
-worktree beside `.venv` and `_conversion-data`, and removes the link on `rm`. **Until #85 is merged,
-only the #85 worktree is linked**: the main checkout's
-`/Users/mwardman/Documents/Repos/RPGFieldbook/_private-data` is made at the finish, after the merge
-brings the `.gitignore` line, since before that it would show as untracked there.
+worktree beside `.venv` and `_conversion-data`, and removes the link on `rm`. Every worktree's link
+points at the **same clone**, so whatever a branch writes into a private pack lands there, not in
+the worktree (see [Keeping the private packs in step](#keeping-the-private-packs-in-step)).
 
-Three things use the link: the `private-data` suite, `dev.sh`'s converter menu and `wt.sh`. CI and
+Four things use the link: the `private-data` suite, `dev.sh`'s converter menu, `sync-private.py`
+and `wt.sh`. CI and
 any other clone have no link, and simply skip.
 
 ### How the tests reach across
@@ -105,13 +105,49 @@ The private `tests/run.sh` bundles the four packs into its own `dist/` with the 
 | `leak-scan-self-test` | the scanner itself, on invented text | never |
 | `private-data` | the registry agrees with every bundle; the four packs' content checks, loaded through the public `harness.js` | never |
 | `leak-scan` | no public file carries the private text (below) | never |
-| `2024-gate` | `convert.py all` on the dump reproduces `data/5e2024/` byte for byte | no dump in `$FIELDBOOK/_conversion-data/5etools-v2.36.1` |
+| `converter-gate` | the 2024, Xanathar's and Tasha's packs reproduce byte for byte from the dump, through the public `sync-private.py` | no dump in `$FIELDBOOK/_conversion-data/5etools-v2.36.1` |
 | `humblewood-verbatim` | the Humblewood prose matches the book | no PyMuPDF, or no PDFs |
 
 So the private checks reuse the public harness and the public app, and a public change that breaks
 them fails Mike's local `./src/tests/run.sh` (and the private CI by the next night). Put `.venv/bin`
 on `PATH` so `humblewood-verbatim` finds PyMuPDF rather than skipping:
 `PATH=$PWD/.venv/bin:$PATH ./src/tests/run.sh`.
+
+### Keeping the private packs in step
+
+The 2024, Xanathar's and Tasha's packs are `convert.py`'s output on the 5e-tools dump, so a public
+change to the converter or its inputs (`overlay.json`, `class-resources.json`) can move them, and
+the private repo has to follow in the same change (#90). Humblewood cannot be moved from here: its
+extractor reads the PDFs and imports nothing public.
+
+`scripts/sync-private.py` is the one home of the three conversion commands (the supplements avoid
+the 2024 pack's table names, as the app looks tables up by name across every pack):
+
+```bash
+python3 scripts/sync-private.py            # check: convert into a scratch folder, compare byte for byte
+python3 scripts/sync-private.py --write    # regenerate in place (or name some: 5e2024 xanathars tashas)
+python3 scripts/sync-private.py --status   # NOTE lines while the private repo has work to commit or push
+```
+
+`dev.sh` item 6 writes through `--write`, and the private runner's `converter-gate` checks through
+the same script at `$FIELDBOOK`, so the menu and the gate cannot drift apart. A public checkout
+without the script fails the gate with a plain message rather than skipping it: every app release a
+private one may build on (1.8.0 and later, which `data-release.js` enforces) has it, and a skip
+would hide the script being renamed. `--write` converts
+every pack before it touches the private repo, so a failing converter leaves the packs as they were;
+then it adds, updates and removes files to match. A check names each file that moved and ends
+`FAILURES: <pack> (n files); … run python3 scripts/sync-private.py --write, then commit it in the
+private repo`, which `run.sh` shows on screen.
+
+When a branch moves a pack:
+
+1. `python3 scripts/sync-private.py --write`, then the tests again.
+2. Commit the packs **in the private repo**, naming the public issue (`… (#N)`).
+3. At the finish, push public `main` first, then the private repo: its CI builds against public
+   `main`, so that order keeps its push run green.
+
+The reminders: the public `private-data` suite relays `--status`'s NOTE lines, which `run.sh` shows
+under the suite even when it passes, and `wt.sh rm` prints them as a branch is torn down.
 
 ### The leak scan
 
@@ -172,10 +208,10 @@ release ever bumps a private pack.
 1. **Tests:** `./src/tests/run.sh` runs everything, private coverage included through
    `private-data`; with `.venv/bin` on `PATH` for the PDF suites.
 2. **Converting:** `./dev.sh` item 6 writes SRD 5.2 to `data/srd52` and the 2024, Xanathar's and
-   Tasha's packs to `_private-data/data/…`, and refuses those three, with a message, when
-   `_private-data` is not linked. The 2024 byte gate is
-   `python3 scripts/convert.py all _conversion-data/5etools-v2.36.1 -o /tmp/chk && diff -r /tmp/chk _private-data/data/5e2024`,
-   and the private `2024-gate` suite runs it too. Humblewood extraction runs in the private repo.
+   Tasha's packs to `_private-data/data/…` through `sync-private.py --write`, and refuses those
+   three, with a message, when `_private-data` is not linked. `python3 scripts/sync-private.py`
+   checks them, and the private `converter-gate` suite runs it too. Humblewood extraction runs in
+   the private repo.
 3. **His own archive:** `python3 tools/data-kit/fbdata.py build _private-data/data -o mine.zip`, or a
    private data release. He imports it alone or beside the public archive.
 4. **Releasing:** the public app and data releases are unchanged; a private data release is the
@@ -215,6 +251,13 @@ imports the public archive and then the private one resolves a shared table name
   `[book text: …]` placeholder. The allowlist's four reasons are the only exceptions, and the leak
   scan is the backstop, not the rule.
 - **The private paths mirror the public ones**, so the kit and the converter need no second mode.
+- **The private packs move with this repo** (#90). A change that moves the 2024, Xanathar's or
+  Tasha's pack regenerates it in the same change, through `sync-private.py --write`, never by hand,
+  and commits it in the private repo naming the issue; the private repo is pushed right after public
+  `main`.
+- **`sync-private.py` holds the three conversion commands, and nothing else does.** `dev.sh` and the
+  private gate both run it; a second copy of a command is how a gate stops checking what the menu
+  writes.
 
 ## Traps
 
@@ -224,10 +267,13 @@ imports the public archive and then the private one resolves a shared table name
 - **A symlink is a file to git.** `.gitignore` names `_private-data` (and `.venv`) with no trailing
   slash: `_private-data/` matches only a directory, so the link would show as untracked and
   `git add -A` would commit it as a path that dangles in every other clone.
-- **The private CI builds public `main`.** So it fails until #85 is merged (the kit on `main` has no
-  `bundle` before then), and any public change that breaks the private suites (a harness change, a
-  renamed function a private check calls) turns it red by the next night, though public CI stays
-  green. Run `./src/tests/run.sh` with the link before merging.
+- **The private CI builds public `main`.** Any public change that breaks the private suites (a
+  harness change, a renamed function a private check calls) turns it red by the next night, though
+  public CI stays green. Run `./src/tests/run.sh` with the link before merging. It has no dump, so
+  its `converter-gate` skips: only a local run checks the packs.
+- **One private clone serves every worktree.** A branch's regenerated packs land in it straight
+  away, so two branches that both move private packs overwrite each other, and `main`'s own test run
+  fails the converter gate until the branch merges. One such branch at a time, merged promptly.
 - **Homebrew masks a shared run.** The free corpus includes homebrew, as R9 says, so text homebrew
   shares with a private pack is never flagged: The Predator's stock expanded-spell sentence is one
   such run. Mike's call whether to narrow it.
@@ -266,15 +312,13 @@ imports the public archive and then the private one resolves a shared table name
 | The filter-repo footnote gap (ruling) | Left, documented here and in the private README; the tip is exact | Rebuilding the history: cheap only before the first push, so it is Mike's call then |
 | Text homebrew shares with a private pack (ruling) | Not flagged, as R9 has it; Mike's call | Scanning homebrew as private: its CC-BY-SA text is free |
 | The main checkout's link (ruling) | Made at the finish, after the merge | Before: it would show as untracked until `.gitignore` names it |
+| Where the private packs' conversion commands live (#90) | `scripts/sync-private.py`, run by `dev.sh` and by the private gate | Each keeping its own copy, as `dev.sh` and `gate-2024.py` did: the gate would check one command while the menu wrote another |
+| What runs the converter gate (#90) | The private runner, calling the public script at `$FIELDBOOK` | A public suite: it would need private pack names in a public test, which `docs.js` forbids |
+| How unfinished private work is flagged (#90) | `NOTE` lines from the `private-data` suite and `wt.sh rm`, never a failure | Failing the run: uncommitted private work is the normal state in the middle of a branch |
+| The push order when both repos change (#90) | Public `main`, then the private repo | Private first: its push run would build a public `main` without the change |
 
 ## Open
 
-- **The main checkout has no `_private-data` link yet.** It is made at the finish, after the merge.
-- **The private repo is unpushed and its CI unproven.** The CI needs #85 on public `main`, so the
-  finish runs: push the private repo (its push-triggered run is expected to fail, `FAILURES:
-  bundling`); merge and push public `main`; then run the private CI by hand (`gh workflow run ci.yml
-  -R wardmanm/RPGFieldbookPrivate`) and confirm it is green. The private repo still has the data
-  before public `main` loses it (R1).
 - **Private packs get no newer-data notice**: `checkForDataUpdate()` reads the public registry
   (spec §8). Mike knows when he has cut one.
 - **Homebrew's Xanathar's spells cannot resolve publicly.** Its chip names Cause Fear and Primal
@@ -294,3 +338,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-09 — The copyrighted packs, the Humblewood extractor and its suite move to RPGFieldbookPrivate; `_private-data`, the `private-data` suite, the leak scan, private data releases, the import-order and `LEFT_FOR_PRIVATE` rulings. → ledger L5426, #85
 - 2026-10-09 — The finish confirms the private CI after the merge, not before; the leak scan reads new untracked files too. → ledger L5592, #85
 - 2026-10-12 — The bundle format joins every digest, so Humblewood and TCE also bump at the first private release. → ledger L5627, #86
+- 2026-10-13 — `sync-private.py` holds the three conversion commands and checks, writes and reports on the private packs; the private gate covers Xanathar's and Tasha's too; the stale link and CI items leave Open (the link exists, the private CI has passed nightly since 2026-10-10). → ledger L5724, #90

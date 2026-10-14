@@ -32,7 +32,8 @@ Each worktree gets:
 
 - symlinks to `.venv` and `_conversion-data` — 102 MB and 461 MB, so symlinked, never copied
 - a symlink to `_private-data`, the private rules repo, when the main checkout has one (#85), so the
-  `private-data` suite and the converter menu reach it from the worktree too
+  `private-data` suite and the converter menu reach it from the worktree too. It is the **same
+  clone** for every worktree: see "The private packs" in section 2
 - a copy of `.claude/settings.local.json`, so agents don't re-trigger permission prompts you already
   answered
 
@@ -57,6 +58,13 @@ lives in `pre-push`, and in this flow agents never push — only you do, at the 
 
 A useful side effect: the built artifact sitting uncommitted in each worktree is exactly what you
 open in a browser to QA that issue in isolation.
+
+**The private packs** (#90). A change to the converter or its inputs can move the 2024, Xanathar's
+or Tasha's pack in the private repo; the `private-data` suite's converter gate then fails and names
+the fix. Regenerate them in the same branch with `python3 scripts/sync-private.py --write` and
+commit them **in the private repo**, naming the issue. Every worktree's `_private-data` is the one
+shared clone, so those files land there, not in the worktree: only one branch at a time may change
+private packs, and `main`'s own test run fails the gate until that branch merges. Merge it promptly.
 
 ---
 
@@ -126,6 +134,10 @@ git merge --no-ff issue/43-…
 Then browser-QA the result, commit the rebuilt `dist/fieldbook.html`, and push. `pre-push` will stop
 you if the artifact is stale or a suite fails.
 
+If the branch moved private packs, push the private repo **next**, after public `main`:
+`git -C _private-data push`. Its CI builds against public `main`, so this order keeps its push run
+green. A `NOTE` under `private-data` in the test run says what it still has to commit or push.
+
 **Closing the issues.** The merge message closes them on push, but **every issue number needs its own
 keyword**. GitHub applies a closing keyword only to the number straight after it, so
 `Closes #39, #40, #41` closes #39 alone. That is exactly what happened to the #39 branch's merge.
@@ -174,7 +186,8 @@ Removes the worktree and deletes the branch if it merged cleanly; keeps the bran
 did not. `rm` first deletes the symlinks and copied settings that `add` created — without that, git
 counts them as untracked files and refuses forever. **Genuine uncommitted work still blocks removal**,
 which is the behaviour worth keeping. Discard it deliberately with
-`git worktree remove --force <path>`.
+`git worktree remove --force <path>`. It ends with a `NOTE` if the shared private repo has work left
+to commit or push (#90).
 
 ---
 
