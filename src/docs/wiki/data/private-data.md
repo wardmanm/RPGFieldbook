@@ -199,9 +199,10 @@ private suites; bundles and packs the archive with the public kit; validates it 
 `--public`, because these packs carry no open licence; and publishes it with `--latest=false`. The
 full procedure is [RELEASING](../../RELEASING.md) §1c.
 
-XPHB and XGE have changed since their 1.7.2 versions, and the bundle format joined every digest
-(#86), so all four private packs bump at the first private release, `1.8.0-1`, after app 1.8.0. No app
-release ever bumps a private pack.
+XPHB and XGE had changed since their 1.7.2 versions, and the bundle format joined every digest
+(#86), so all four private packs bumped at the first private release, `1.8.1-1` (2026-10-16), after
+app 1.8.1; its archive carries #96's ammunition fixes to the 2024 items. No app release ever bumps a
+private pack.
 
 ### Mike's workflow
 
@@ -339,3 +340,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-09 — The finish confirms the private CI after the merge, not before; the leak scan reads new untracked files too. → ledger L5592, #85
 - 2026-10-12 — The bundle format joins every digest, so Humblewood and TCE also bump at the first private release. → ledger L5627, #86
 - 2026-10-13 — `sync-private.py` holds the three conversion commands and checks, writes and reports on the private packs; the private gate covers Xanathar's and Tasha's too; the stale link and CI items leave Open (the link exists, the private CI has passed nightly since 2026-10-10). → ledger L5724, #90
+- 2026-10-16 — The first private release went out as `1.8.1-1`, after app 1.8.1, not `1.8.0-1`. → ledger L5990

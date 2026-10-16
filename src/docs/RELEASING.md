@@ -250,8 +250,8 @@ public `main` (the CI builds public `main` and bundles with its kit). So its fir
 before #85 merges and that push's CI run fails; after the merge, run its CI by hand
 (`gh workflow run ci.yml -R wardmanm/RPGFieldbookPrivate`) and confirm it green. A private release
 also needs a public app release to build against: `data-release.js` refuses an `APP_VERSION` before 1.8.0, and
-the private workflow checks out the public tag `vX.Y.Z`. XPHB and XGE changed after 1.7.2, so the
-first private release is `1.8.0-1`, after app 1.8.0.
+the private workflow checks out the public tag `vX.Y.Z`. The first private release was `1.8.1-1`
+(2026-10-16), after app 1.8.1; it bumped all four packs.
 
 **How.** From the public checkout, with the private data committed:
 

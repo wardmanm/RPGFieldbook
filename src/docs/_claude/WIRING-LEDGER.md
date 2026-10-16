@@ -5987,3 +5987,16 @@ Pages: [settings & updates](../wiki/features/settings-and-updates.md), [shell](.
    same width. `rules-data.js` checks the three declarations; it failed before the change.
 
 Pages: [settings & updates](../wiki/features/settings-and-updates.md)
+## The first private data release, 1.8.1-1 (2026-10-16)
+
+1. After app 1.8.1, Mike asked for the private packs to go out too. `data-release.js --registry
+   _private-data/data/packs.json --data-root _private-data/data` bumped all four (2024, Xanathar's,
+   Tasha's, Humblewood) to `1.8.1-1`; committed and tagged `data-v1.8.1-1` in RPGFieldbookPrivate,
+   pushed. Its `data-release.yml` and CI passed and published `fieldbook-data-private-1.8.1-1.zip`
+   on the private repo only. Checked in the downloaded zip: `dataVersion` `1.8.1-1`, the Light
+   Crossbow fires `bolt`, Bolts (20) is a pack of 20 Bolt (#96).
+2. Running copies do not announce it: the newer-data notice reads the public repo's releases.
+3. RELEASING §1c and the private-data page said the first private release would be `1.8.0-1`;
+   both now name `1.8.1-1`. RELEASING also drops its 1.8.0 release-freeze note.
+
+Pages: [private data](../wiki/data/private-data.md)
