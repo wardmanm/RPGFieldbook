@@ -5913,10 +5913,12 @@ Pages: [sections & layout](../wiki/ui/sections-and-layout.md), [journal](../wiki
    off. It is in `SETTINGS_KEYS`, and Export/Import settings carry it. Settings → Appearance has
    the switch ("Tap outside to close dialogs", `#swBackdrop`, `role="switch"` and `aria-checked`),
    which saves at once.
-4. With it on, only a click whose press also began on the backdrop closes (`_downOnBackdrop`, set
-   on `pointerdown`): a text selection dragged out of a field and let go over the backdrop
-   delivers its click to the backdrop too, and used to close the form. × and Escape close as
-   before, through `dismissModal()`, so the choice pickers' guard still asks.
+4. With it on, only a click pressed and let go on the backdrop closes (`_downOnBackdrop` and
+   `_upOnBackdrop`, set on `pointerdown` and `pointerup`, spent by every click): a press and a
+   release on different elements deliver their click to the backdrop, so a text selection dragged
+   out of a field, or (caught in review) a press outside slid onto the dialog, would close it.
+   A touch release lands where its press began, so a tap works. × and Escape close as before,
+   through `dismissModal()`, so the choice pickers' guard still asks.
 5. Tests: `rules-data.js` (the gated handler, the pointerdown guard, the default, the switch and
    its save, `SETTINGS_KEYS`, the flyout's own close); they fail against the old code. Driven with
    real mouse input: released build, a backdrop click closed a half-typed feature form; fixed

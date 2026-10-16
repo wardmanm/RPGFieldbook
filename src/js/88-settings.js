@@ -287,7 +287,8 @@ function settingsImportQuestionHTML(imp){
 function askSettingsImport(imp){
   openModal("Import settings",settingsImportQuestionHTML(imp));
   const back=()=>{openSettings();settingsImportStatus("Import cancelled. Nothing changed.","");};
-  /* ✕, Escape and a click outside go back to Settings too, having changed nothing */
+  /* ✕, Escape and (when Settings allows it, #106) a click outside go back to
+     Settings too, having changed nothing */
   setDismissGuard(null,back);
   document.getElementById("setImpCancel").addEventListener("click",()=>{closeModal();back();});
   document.getElementById("setImpKeep").addEventListener("click",()=>finishSettingsImport(imp,false));

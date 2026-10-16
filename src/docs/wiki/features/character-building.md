@@ -120,8 +120,8 @@ picked, otherwise to `runExtraChoices()`. `runChoices()` with nothing to show (C
 picks) passes the queue straight on.
 
 **Dismissing.** Closing wipes `#mBody` and a chooser cannot be reopened. `armChoiceDismissGuard()`
-registers a guard (via `setDismissGuard()`) that ✕, a backdrop click and Escape all consult through
-`dismissModal()`: it warns that picks will be discarded, or asks a milder question when only hit
+registers a guard (via `setDismissGuard()`) that ✕, Escape and a backdrop click (only when
+Settings → Appearance allows it, #106) all consult through `dismissModal()`: it warns that picks will be discarded, or asks a milder question when only hit
 points are at stake (`hpPending()`), since Max is unlocked. The guard also carries the window's
 `pending` as `then`, so a dismissed window still opens the ones queued behind it: dismissing costs
 that window's own picks, never the starting equipment of a class already on the sheet.

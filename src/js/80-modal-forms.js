@@ -94,11 +94,16 @@ document.getElementById("mClose").addEventListener("click",dismissModal);
    it (Settings → Appearance, settings.backdropClose, off by default, #106): a
    stray click, or a tap beside a field to put a phone's keyboard away, closed
    the form and lost what was typed. ×, Cancel and Escape always close. And only
-   a click that BEGAN on the backdrop: a text selection dragged out of a field
-   and let go over the backdrop ends its click there too. */
-let _downOnBackdrop=false;
+   a click pressed AND let go on the backdrop: a press and release on different
+   elements delivers its click to their common ancestor, the backdrop — so a
+   text selection dragged out of a field, or a press outside slid onto the
+   dialog to cancel it, would otherwise close it. A touch release lands where
+   its press began, so a tap is unaffected. Both flags are spent by every
+   click, so a later click with no press of its own can't reuse them. */
+let _downOnBackdrop=false,_upOnBackdrop=false;
 modal.addEventListener("pointerdown",e=>{_downOnBackdrop=e.target===modal;});
-modal.addEventListener("click",e=>{if(e.target===modal&&_downOnBackdrop&&settings.backdropClose===true)dismissModal()});
+modal.addEventListener("pointerup",e=>{_upOnBackdrop=e.target===modal;});
+modal.addEventListener("click",e=>{const both=_downOnBackdrop&&_upOnBackdrop;_downOnBackdrop=_upOnBackdrop=false;if(e.target===modal&&both&&settings.backdropClose===true)dismissModal()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&modal.classList.contains("open"))dismissModal()});
 /* Locking a full choice block is a render concern, so it rides the modal rather
    than the global change handler in 90-boot.js — which the test harness drops. */
