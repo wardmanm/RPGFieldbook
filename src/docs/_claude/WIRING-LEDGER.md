@@ -5973,3 +5973,17 @@ Pages: [shell](../wiki/ui/shell.md), [settings & updates](../wiki/features/setti
 
 Pages: [settings & updates](../wiki/features/settings-and-updates.md), [shell](../wiki/ui/shell.md),
 [sections & layout](../wiki/ui/sections-and-layout.md), [storage](../wiki/architecture/storage.md)
+## The Settings page pane keeps its controls clear of its scrollbar (#107, 2026-10-16)
+
+1. Mike, on the pushed #107: the scrollbar overlaps the controls (Rules data: Add, Clear all, each
+   pack's delete button).
+2. Cause: #107's review fix made the page pane (`.set-pages`) the scroller, and it had no right
+   padding; before, the dialog body scrolled and its 18px padding kept the bar clear. Measured: the
+   controls ended exactly at the pane's edge (gap 0), so an overlay scrollbar drew on them.
+3. Fix, CSS only: `.set-pages` takes `padding-right:14px` and `scrollbar-gutter:stable`, and the
+   wide dialog's body gives back its right padding (`padding-right:4px`). Measured after: a 14px gap
+   between the controls and the scrollbar, overlay or visible; no sideways overflow at 390px. Where
+   a scrollbar takes space, the reserved gutter keeps pages that scroll and pages that don't the
+   same width. `rules-data.js` checks the three declarations; it failed before the change.
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md)
