@@ -60,7 +60,9 @@ one-way door.
 **The one-time ammunition pass re-baselines what it wrote.** `migrateAmmo()`'s `rebaseAmmo()` is a
 second way a copy's fingerprints move, outside a copy site: when the pass unpacks a bundle or gives
 a piece or launcher its kind, it re-takes `fp`/`cfp` for just the fields it changed, so the change
-reads as the pack's rather than the player's — see [Ammunition](ammunition.md).
+reads as the pack's rather than the player's — see [Ammunition](ammunition.md). The pool side
+agrees: `tidyRule()` gives an entry from a pack older than ammunition the same fields
+(`ammoRepairDef()`), so a copy the pass repaired reads as unchanged against it.
 
 **Matching** (`updResolve()`):
 
@@ -215,3 +217,4 @@ state survives. Attack mechanics: [Attacks & damage](attacks-and-damage.md).
 - 2026-09-29 — and the 54 item descriptions that were a template tag, as a `description`-only row. → ledger L4634, #78
 - 2026-09-29 — and the Stone of Good Luck's and Ioun Stone of Mastery's new effects. → ledger L4689, #79
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
+- 2026-10-16 — A pool entry from a pack older than ammunition is filled in at load, so repaired copies read as unchanged. → ledger L5780, #96

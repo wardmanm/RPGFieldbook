@@ -140,13 +140,17 @@ function ruleName(x,kind){
 }
 /* Repair one pool entry in place, or say it cannot be kept. A keyword gets the
    glossary's aliases (glossRepair) and an id if it has none, since its chip
-   opens it by id; a numeric name becomes text. */
+   opens it by id; a numeric name becomes text; an item gets any ammunition
+   fields its pack predates (ammoRepairDef()). */
 function tidyRule(x,kind){
   if(kind==="keywords")glossRepair(x);
   const nm=ruleName(x,kind);if(!nm)return false;
   const f=kind==="keywords"?"term":"name";
   if(typeof x[f]!=="string")x[f]=nm;
   if(kind==="keywords"&&(typeof x.id!=="string"||!x.id))x.id=typeof x.id==="number"?String(x.id):uid();
+  /* a launcher, piece or bundle from a pack older than ammunition gets the
+     fields the current packs carry (#96) */
+  if(kind==="items")ammoRepairDef(x);
   return true;
 }
 /* Make the pool safe to render, whatever put it there (#71). mergeRules()

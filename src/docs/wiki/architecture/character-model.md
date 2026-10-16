@@ -61,9 +61,10 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    every weapon on a sheet saved before weapons could be equipped.
 8. `migrateAmmo()` runs after it: a one-time pass, recorded by `ammoInit` (never defaulted in
    `blankChar()`, as `wpnEquipInit` isn't), that unpacks known ammunition bundles and gives a kind to
-   known pieces and launchers on a sheet saved before ammunition. `newCharacter()` sets `ammoInit`
-   to 1 directly on the character it creates, so the pass never runs on a brand-new sheet, which has
-   nothing for it to migrate. An item's own `ammo` and `ammoStack` need no default — see
+   known pieces and launchers. It runs while `ammoInit` is below `AMMO_PASS` (2): pass 1 for sheets
+   saved before ammunition, pass 2 for copies made since from a pack older than it.
+   `newCharacter()` sets `ammoInit` to `AMMO_PASS` directly on the character it creates, so the pass
+   never runs on a brand-new sheet, which has nothing for it to migrate. An item's own `ammo` and `ammoStack` need no default — see
    [Ammunition](../features/ammunition.md).
 
 **It is shallow on purpose.** Beyond each list item being an object, and the glossary repair
@@ -172,3 +173,4 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6
 - 2026-10-06 — Timed conditions: a duration in rounds, minutes or hours, counted down by the round
   tracker, clearing itself with an Undo. → ledger L5031, #55
+- 2026-10-16 — `migrateAmmo()` runs once more on every sheet (`AMMO_PASS` 2); a new sheet starts at that pass. → ledger L5780, #96

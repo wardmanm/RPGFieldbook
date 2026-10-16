@@ -12,7 +12,8 @@
    compared after trimming and collapsing spaces, so a pack's "Arrow " matches. */
 function ammoKindOf(v){return (typeof v==="string"?v:"").replace(/\s+/g," ").trim().toLowerCase();}
 const AMMO_KINDS=["arrow","bolt","firearm bullet","needle","sling bullet"];
-/* What the one-time pass knows without a rules pool. Every row agrees with
+/* What the one-time pass knows without a rules pool, and what fills in a pool
+   entry from a pack older than ammunition (ammoRepairDef()). Every row agrees with
    data/srd52/items.json and with the private repo's 2024 pack: rules-data.js
    checks the first and the private-data suite the second. A cost is written
    as the pack writes it; the Sling Bullet has none. */
@@ -23,9 +24,11 @@ const AMMO_PIECES={
   "needle":        {name:"Needle",         cost:"2 cp", weight:0.02},
   "sling bullet":  {name:"Sling Bullet",                weight:0.075}
 };
-/* single pieces by name, the 2014 names mapping to their 2024 kind */
+/* single pieces by name, the 2014 names mapping to their 2024 kind. Xanathar's
+   Unbreakable Arrow is here too (#96): it is ammunition only in packs made since,
+   and the only piece in the older packs the other names miss. */
 const AMMO_SINGLE_NAMES={"arrow":"arrow","bolt":"bolt","crossbow bolt":"bolt","firearm bullet":"firearm bullet",
-  "needle":"needle","blowgun needle":"needle","sling bullet":"sling bullet"};
+  "needle":"needle","blowgun needle":"needle","sling bullet":"sling bullet","unbreakable arrow":"arrow"};
 /* bundles by name: [kind, how many pieces one holds] */
 const AMMO_BUNDLES={"arrows (20)":["arrow",20],"bolts (20)":["bolt",20],"crossbow bolts (20)":["bolt",20],
   "firearm bullets (10)":["firearm bullet",10],"needles (50)":["needle",50],"blowgun needles (50)":["needle",50],
@@ -38,6 +41,33 @@ const AMMO_LAUNCHERS={"longbow":"arrow","shortbow":"arrow","light crossbow":"bol
    table entry and threw reading .name off it. Not Object.hasOwn: the app
    targets ES2020. */
 function ammoTable(T,k){return Object.prototype.hasOwnProperty.call(T,k)?T[k]:undefined;}
+/* Fill in the ammunition fields a pool entry lacks, from the tables above
+   (#96). The 2024 pack players have (published with 1.7.2) predates them, so its
+   launchers, pieces and bundles came with none, and every copy made from them —
+   the finder, starting equipment, Insert from pack — was no ammunition at all.
+   tidyRule() runs this on every item on every path that loads rules, so the
+   pool always reads as the current packs do. It only fills what is missing: a
+   pack's own value always wins, and anything not in the tables is left alone.
+   The weapon is copied, never edited in place, since the pack object behind it
+   may be shared. Returns whether it changed anything. */
+function ammoRepairDef(x){
+  if(!x||typeof x!=="object"||Array.isArray(x))return false;
+  const key=String(x.name||"").trim().toLowerCase();
+  let ch=false;
+  const b=ammoTable(AMMO_BUNDLES,key);
+  if(b){
+    if(!itemAmmo(x)){x.ammo={kind:b[0]};ch=true;}
+    if(!x.pack){x.pack={item:AMMO_PIECES[b[0]].name,qty:b[1]};ch=true;}
+    return ch;
+  }
+  const single=ammoTable(AMMO_SINGLE_NAMES,key);
+  if(single){if(!itemAmmo(x)){x.ammo={kind:single};ch=true;}return ch;}
+  const lk=ammoTable(AMMO_LAUNCHERS,key);
+  if(lk&&x.weapon&&typeof x.weapon==="object"&&!Array.isArray(x.weapon)&&!x.weapon.ammo){
+    x.weapon=Object.assign({},x.weapon,{ammo:lk});ch=true;
+  }
+  return ch;
+}
 
 /* ---- reading it, whatever a file put there ---- */
 function itemAmmo(it){
@@ -88,11 +118,20 @@ function unpackAmmo(x,pool){
 }
 
 /* ---- the one-time pass on sheets saved before ammunition ----
-   Runs once per character (ammoInit, never defaulted in blankChar(), as
-   wpnEquipInit isn't), from each item's own data: migrate() runs before a
-   rules pool can be relied on. Known bundles unpack into their single piece,
-   known pieces learn their kind, known 2024 launchers learn what they fire.
-   Anything else is left exactly as it is. */
+   Runs once per character per AMMO_PASS (ammoInit, never defaulted in
+   blankChar(), as wpnEquipInit isn't), from each item's own data: migrate()
+   runs before a rules pool can be relied on. Known bundles unpack into their
+   single piece, known pieces learn their kind, known 2024 launchers learn what
+   they fire. Anything else is left exactly as it is.
+   Pass 1 was for sheets saved before ammunition. Pass 2 (#96) runs it once
+   more: copies made from the 2024 pack players had arrived with no ammo
+   fields after pass 1 had run — and on every sheet made since, which skips the
+   pass — so a launcher fired nothing and "Bolts (20)" stayed a bundle. Every
+   step touches only an item that is not yet ammunition (a launcher, one with
+   no kind), so a second run over a migrated sheet changes nothing it already
+   did, and nothing the player marked by hand: a "Bolts (20)" they ticked as
+   ammunition and counted down to 17 stays 17 bolts, not 340. */
+const AMMO_PASS=2;
 
 /* Re-take the rules-update tool's baseline for each field the pass rewrote.
    `before` holds each field's value before the pass; `proj`, where the pass
@@ -114,14 +153,14 @@ function rebaseAmmo(it,before,proj){
   });
 }
 function migrateAmmo(c){
-  if(!c||c.ammoInit)return 0;
+  if(!c||num(c.ammoInit)>=AMMO_PASS)return 0;
   const inv=Array.isArray(c.inventory)?c.inventory:[], unpacked=new Set();
   let n=0;
   inv.forEach(it=>{
     if(!it||typeof it!=="object")return;
     const key=String(it.name||"").trim().toLowerCase();
     const b=ammoTable(AMMO_BUNDLES,key);
-    if(b){
+    if(b&&!itemAmmo(it)){
       /* "Arrows (20)" ×2 becomes Arrow ×40, each a twentieth of the bundle's
          own price and weight (spec §3.3), so a price the player paid survives */
       const kind=b[0], per=b[1], pc=AMMO_PIECES[kind];
@@ -168,7 +207,7 @@ function migrateAmmo(c){
     if(!h||h===it||!unpacked.has(it))return true;
     h.qty=itemQty(h)+itemQty(it);n++;return false;
   });
-  c.ammoInit=1;
+  c.ammoInit=AMMO_PASS;
   return n;
 }
 

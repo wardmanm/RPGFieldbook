@@ -5,13 +5,13 @@ ammunition knows its kind and any magic bonus. Ammunition arrives in bundles in 
 ("Arrows (20)") and unpacks into single pieces the moment it reaches a sheet, so a stack's quantity
 is its count.
 
-**Code:** `ammoKindOf()`, `itemAmmo()`, `weaponAmmoKind()`, `ammoStacks()`, `loadedStack()`,
+**Code:** `ammoKindOf()`, `itemAmmo()`, `weaponAmmoKind()`, `ammoRepairDef()`, `ammoStacks()`, `loadedStack()`,
 `unpackAmmo()`, `ammoTable()`, `rebaseAmmo()`, `migrateAmmo()`, `ammoSpentEntry()`, `fireAmmo()`,
 `undoFire()`, `ammoRecoverable()`, `recoverAmmo()`, `attackAmmo()`, `forgetAmmo()`,
 `forgetGrantAmmo()`, `ammoAskDue()`, `markAmmoAsked()`, `ammoLineHTML()`, `ammoChoiceHTML()`,
 `fireWeapon()`, `undoFireTap()`, `openAmmoPicker()`, `loadAmmo()`, `recoverWeaponAmmo()`,
 `offerAmmoRecovery()`, `ammoKindChoices()`, `ammoKindLabel()`, `ammoKindOptionsHTML()` in
-`62-ammo.js` · `openItemForm()` in `80-modal-forms.js` · `migrate()` in `71-char-io.js` ·
+`62-ammo.js` · `tidyRule()` in `89-rules-merge.js` · `openItemForm()` in `80-modal-forms.js` · `migrate()` in `71-char-io.js` ·
 `revertEquipmentGrants()` in `50-classrace.js` · `newCharacter()` in `75-home-theme.js` ·
 `updProject()` in `72-char-update.js` · `endCombatAsk()` in `87-combat.js` · **Data:** `weapon.ammo`,
 item `ammo`, bundle `pack` ([rules-schema](../../../../docs/rules-schema.md) §6.8) · **Tests:**
@@ -35,9 +35,24 @@ of its kind.
 the pool's own entry for the piece when it has one, else a piece made from the bundle with cost and
 weight divided.
 
-**Sheets from before ammunition.** `migrate()` runs `migrateAmmo()` once per character, guarded by
-`ammoInit`, which is never defaulted in `blankChar()` — `newCharacter()` sets it to 1 directly on
-the character it creates, since a fresh sheet has nothing for the pass to migrate. It works from
+**Packs from before ammunition.** A pack written before ammunition — the 2024 pack players have
+was published with 1.7.2 — has no `weapon.ammo`, `ammo` or `pack` at all. `ammoRepairDef()` fills
+them in from the same tables the pass below uses (`AMMO_LAUNCHERS`, `AMMO_SINGLE_NAMES`,
+`AMMO_BUNDLES`, with each bundle's piece from `AMMO_PIECES`), only where the entry lacks them: a
+pack's own value always wins, and nothing outside the tables is touched. `tidyRule()` runs it on
+every item, so every path that loads rules — a merge, a fetch, Settings → Import, both cache
+restores — leaves the pool reading as the current packs do, and every copy made from it (the
+finder, starting equipment, Insert from pack) is ammunition. The weapon is copied, never edited in
+place.
+
+**Sheets from before ammunition.** `migrate()` runs `migrateAmmo()` once per character per
+`AMMO_PASS`, guarded by `ammoInit`, which is never defaulted in `blankChar()` — `newCharacter()`
+sets it to `AMMO_PASS` directly on the character it creates, since a fresh sheet has nothing for the
+pass to migrate. Pass 1 was for sheets saved before ammunition. Pass 2 runs it once more over sheets
+whose copies were made from a pack older than ammunition after pass 1 had run, or on a sheet made
+since. Every step touches only an item that is not yet ammunition — a bundle the player already
+marked as ammunition by hand keeps their count — so a second run changes nothing it already did.
+It works from
 each item's own data through built-in tables (`AMMO_PIECES`, `AMMO_SINGLE_NAMES`, `AMMO_BUNDLES`,
 `AMMO_LAUNCHERS`), because no rules pool can be relied on at load. Every lookup into one of those
 tables is by own property (`ammoTable()`), never plain indexing: an item named "constructor" or
@@ -111,6 +126,11 @@ since neither is on the form.
   value there reads as the player's edit, and an applied update wipes it.
 - **The pass re-baselines only what it wrote, and never over a player's edit.** Re-baselining more
   would hide a real pack change; re-baselining an edited field would let an update overwrite it.
+- **The pool repair only fills what is missing.** A pack that names its own kind, bonus or bundle
+  keeps it; `ammoRepairDef()` never overwrites, and never edits a weapon object in place, since the
+  pack object behind it may be shared.
+- **A new pass means a new `AMMO_PASS`**, never resetting `ammoInit`: a sheet already at the number
+  must be left alone, and every step of the pass must stay a no-op on a migrated item.
 - **The app's tables agree with the data.** `rules-data.js` reads `data/srd52/items.json` and fails
   on any launcher, bundle or piece the tables lack or disagree with; the private suite checks the
   2024 pack the same way ([Private data](../data/private-data.md)).
@@ -122,6 +142,21 @@ since neither is on the form.
   `e.repeat`. Space clicks once, on key-up.
 - **The harness's DOM stubs return no elements**, so the focus paths are only exercised in
   Playwright.
+- **A pass that runs once misses everything copied after it** (#96). Pass 1 repaired the sheets of
+  the day, but the pack players had still lacked ammunition, so every launcher and bundle added
+  later — and every sheet made since, which skips the pass — arrived bare. Fixing the pool, not
+  only the sheets, is what stops that; pass 2 mends what had already arrived.
+- **A second pass re-enables a launcher the player set to "None"**, as the first did. Since the
+  item editor's select is only days older than the bug, a bare launcher is far likelier to be the
+  bug than a choice; setting None again sticks, since the pass does not run again.
+- **An unpacked bundle's copy keeps the bundle's own text**, so after the pass the update tool can
+  offer the piece's pack description. A fresh finder copy takes the piece's text directly.
+- **A bundle the player marked as ammunition is theirs.** The obvious workaround for #96 was ticking
+  Ammunition on "Bolts (20)" and typing the bolts left. Unpacking it would multiply that count by
+  twenty, so the bundle step skips any item that is already ammunition (caught in review).
+- **A launcher the player gave a kind by hand, copied from the bare pack**, keeps its bare baseline
+  (the pass skips it), so against the repaired pool the update tool lists a `weapon` change. Applying
+  it is harmless, and the data release would list the same.
 
 ## Decisions
 
@@ -139,6 +174,7 @@ Settled with Mike on 2026-10-01 and 2026-10-02; the full discussion is in
 | Magic ammunition | **Included**: the converter reads 5e-tools' magic variants for ammunition | Out of scope: Mike wants it now |
 | The item editor and pack format | **Both** learn the ammo fields | The editor only: homebrew packs could not mark ammo weapons |
 | Recover N's visibility | **Shows only when N > 0** | While `ammoSpent` holds anything: a single stray shot gives nothing back, so a "Recover 0" button would be noise. Counts keep accumulating until a recovery can return something |
+| A pack older than ammunition (#96) | **The app fills in what it lacks, from its own tables, at load** (`ammoRepairDef()` in `tidyRule()`), and runs the sheet pass once more | Only a data release: players would stay broken until they downloaded it, and so would any older or homebrew pack naming the standard weapons. Only re-running the sheet pass: every copy made afterwards would arrive bare again |
 | Merging an unpacked bundle | **Only into a stack of the same name, bonus and grant** | Merging any stack of the kind: would pull from a stack the player kept apart on purpose, and take back more than a removed class actually granted |
 
 ## Open
@@ -164,3 +200,4 @@ Settled with Mike on 2026-10-01 and 2026-10-02; the full discussion is in
 - 2026-10-02 — The item editor sets what a weapon fires and marks ammunition, with a bonus; Insert from pack unpacks a bundle. → ledger L4978, #8
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6
 - 2026-10-09 — The tables-agree-with-the-data check reads SRD 5.2 publicly and the 2024 pack in the private suite. → ledger L5426, #85
+- 2026-10-16 — A pack older than ammunition is filled in at load (`ammoRepairDef()`), and the sheet pass runs once more (`AMMO_PASS` 2). → ledger L5780, #96
