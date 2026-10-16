@@ -336,9 +336,12 @@ When a page gains a Decisions row, add its line here under that page.
 
 ### [Settings & updates](features/settings-and-updates.md)
 
-- **How to tame the long Settings modal** — Folding groups built from the feature list's section header
-- **How fold state is stored** — Collapse map; absent = never touched
-- **What a toggle does** — Flips display and caret in place
+- **How to tame the long Settings dialog (#107)** — A sidebar of six pages: Appearance, Sheet display, Carrying, Rules data, Backup, Credits
+- **How a setting looks (#107)** — A row: name and help left, control right; on/off a switch, two or three short choices segmented, longer lists a dropdown
+- **The icon rail on a phone (#107)** — On the left, as on a desktop
+- **How the pages are built (#107)** — All at open, one shown
+- **When a change applies (#107)** — Instantly, as before
+- **Which page opens (#107)** — The last one viewed, falling back to Appearance
 - **Where the delegated listener lives** — `#setSections`
 - **Version button and update pill** — One control: the pill takes the button's slot
 - **What the pill opens** — The changelog, led by a download banner
@@ -376,7 +379,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **The `origin` title on the Notes tab** — Ask `noteTitle()`, which asks `raceTerm()`
 - **Familiars on a phone** — Flatten `.stack` inside the ≤820px query and sink the pair with `order:1`
 - **Where the familiar row may wrap** — Only in `#familiarList`
-- **A collapsible in Settings** — Reuse `.fgroup` / `.fghead` / `.fcaret`
+- **How Settings is organised (#107)** — A sidebar of pages, one shown at a time; the shared `.fgroup` collapsible was the earlier answer
 - **How a grouping label is typed (#98)** — One group field, the journal's tag box, for tags, a feature's source and an item's category
 - **A group named `constructor` or `__proto__` (#98)** — Refused: no group may be named for an `Object.prototype` property (Mike)
 - **A folded group whose first member is retyped in another case (#98)** — Reopens, as its label changes: fine as it is (Mike)

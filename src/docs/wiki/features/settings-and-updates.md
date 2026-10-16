@@ -20,7 +20,7 @@ credits that the icons and the loaded packs require.
 `pickDataRelease()`, `dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js` ·
 `boot()`, `wire()` in `90-boot.js` · `release.js`, `data-release.js`, `gen-changelog.js` in
 `scripts/`; `bundle()` in `tools/data-kit/fbdata.py` · **Data:** `data/packs.json`
-· **Tests:** `rules-data.js` (the modal's ids both ways, the fold state, `dataStatus()`, Fetch all,
+· **Tests:** `rules-data.js` (the modal's ids both ways, the pages and their fallbacks, `dataStatus()`, Fetch all,
 the header chip, and Import settings driven through its real handler), `data-archive.js` (the
 `update` state, the hint line, the badge's suffix, `pickDataRelease()`, `dataUpdateFrom()`,
 `checkForDataUpdate()` against a stubbed network, and the credits list escaping hostile text),
@@ -32,35 +32,41 @@ the header chip, and Import settings driven through its real handler), `data-arc
 
 ## How it works
 
-**The modal.** `openSettings()` builds five folding groups (replaced by a sidebar in #107, rewritten in Task 5), borrowing the feature
-list's `.fgroup` / `.fghead` / `.fcaret`:
+**The dialog.** `openSettings()` opens a wide dialog (`openModal(…, {wide:true})`, see
+[Shell](../ui/shell.md)): a sidebar of categories beside one page at a time (#107). The sidebar is
+`setNavHTML()` over `SET_PAGES`, a vertical tab list; each page is `setPageHTML()`, its tab panel.
+Every setting is one row (`setRowHTML()`): its name and one line of help on the left, its control in
+a right-hand column, under small group headings (`setGroupHTML()`). The control follows one rule:
+on/off is a switch, two or three short choices are segmented buttons, a longer list is a dropdown,
+and actions are buttons.
 
-- **Appearance** — skin, mode (system/light/dark), hand-drawn borders, icon tabs, and "Tap outside
-  to close dialogs" (`settings.backdropClose`, off by default, #106; see [Shell](../ui/shell.md)).
-  Changing the skin with a character open also sets its `system`.
-- **This character** — only when a character is open, badged with its name: size, encumbrance (with a
-  live "carrying X of Y" hint), coins count as weight, colour current HP, skills display, Hit Dice
-  display, whether the Journal tab shows its Trackers card, and the rules-update check with the
-  version the sheet was last checked against.
-- **Rules data** — badged with the entry count, plus ` · update` when a newer copy of a loaded pack
-  is out (`rulesBadge()`, redrawn by every `renderRulesData()` so it follows imports, fetches,
-  removals, Clear all and the data check while the modal is open): sources, the loaded-data list,
-  and the status line.
-- **Characters & backup** — the character library, Export / Import settings, and the status line
-  that says what an import did (`#setImpStatus`).
-- **Credits & licences** — the game-icons.net attribution CC BY 3.0 requires, in the app because
-  `fieldbook.html` travels as a lone file (see [Theming & icons](../ui/theming-and-icons.md)); then
-  "Rules data you have loaded" (`rulesCreditsHTML()`): each loaded pack that states a licence or a
-  credit, as its title, its attribution and its licence. `CC-BY-4.0`, `CC-BY-SA-3.0` and `MIT` link
-  to their licence pages; any other id is plain text; everything is escaped. The list is left out
-  when no loaded pack has a credit. The credits come from `rules.credits` (see
-  [Data archive](../architecture/data-archive.md)).
+| Page | Groups and settings |
+|---|---|
+| **Appearance** | *Look:* skin (changing it with a character open also sets its `system`), mode (system/light/dark), hand-drawn borders. *Interface:* icon tabs, "Tap outside to close dialogs" (`settings.backdropClose`, off by default, #106; see [Shell](../ui/shell.md)) |
+| **Sheet display** | Only with a character open, titled "For *name*". *Cards:* skills display, Hit Dice display, colour current HP, the Trackers card |
+| **Carrying** | Only with a character open, titled "For *name*". *Size and weight:* size (a dropdown), encumbrance (segmented: Off, Standard, Variant), coins count as weight, and the live "carrying X of Y" line (`encSettingsHint()`) |
+| **Rules data** | *Sources:* the URL list and its Add box, Fetch all, Import files, Get templates, Clear all (set apart), the status line. *Loaded data:* the loaded-data list. *This sheet* (with a character open): the rules-update check, with the version the sheet was last checked against |
+| **Backup** | *Characters:* the character library. *Settings file:* Export and Import, and the status line that says what an import did (`#setImpStatus`) |
+| **Credits** | The game-icons.net attribution CC BY 3.0 requires, in the app because `fieldbook.html` travels as a lone file (see [Theming & icons](../ui/theming-and-icons.md)); then "Rules data you have loaded" (`rulesCreditsHTML()`): each loaded pack that states a licence or a credit, as its title, its attribution and its licence. `CC-BY-4.0`, `CC-BY-SA-3.0` and `MIT` link to their licence pages; any other id is plain text; everything is escaped. The list is left out when no loaded pack has a credit. The credits come from `rules.credits` (see [Data archive](../architecture/data-archive.md)) |
 
-**Fold state** is a collapse map, `settings.setCollapse` (true = shut); an absent key falls back to
-the first-run default in `SET_SECTIONS` — Appearance and This character open, the rest shut. A toggle
-flips `display`, the caret and `aria-expanded` in place, so inputs, listeners and scroll survive.
-Headers are `role="button"` with Enter/Space. The delegated listener is bound to `#setSections`, which
-is rebuilt on every open.
+The sidebar lists Sheet display and Carrying under a "This character" caption, set apart from the
+rest. Rules data carries its entry count, and a dot while a newer copy of a loaded pack is out
+(`rulesNavBadgeHTML()`, whose count's tooltip is `rulesBadge()`); `renderRulesData()` redraws it, so
+it follows imports, fetches, removals, Clear all and the data check whichever page is showing. When
+Icon tabs is on (`html[data-tabs="icons"]`) or the screen is 640px wide or less, the sidebar is a
+52px rail of icons, each named for a screen reader and given a tooltip; on a narrow screen a
+segmented control or dropdown drops below its name while a switch stays beside it. Every switch is
+`role="switch"` with `aria-checked`, kept true by one click listener on the wrapper.
+
+**Which page opens.** Every shown page is built when the dialog opens and all but one are
+`hidden`, so every control keeps its id and its handler, and the lists keep refreshing behind any
+page. A tab click, or ↑/↓ (wrapping, over the shown pages only, `setPageStep()`), Home and End on a
+focused tab, shows its page, scrolls the body to the top and stores the key in `settings.setPage`.
+The next open shows `setPageOf(settings.setPage, hasChar)`: the stored page while it is shown, else
+Appearance — so a character page remembered from a sheet never opens with no character. The
+delegated listeners bind to `#setSections`, which is rebuilt on every open. The dialog keeps one
+height, 680px or nine-tenths of the screen if that is less, so a short page never shrinks it and
+moves the sidebar.
 
 **Rules sources.** `settings.rulesSources` is a list of URLs, edited in place. **Fetch all** runs
 `fetchAllRules()`, which never loses what is loaded. It fetches each URL in turn
@@ -140,8 +146,8 @@ came. Then:
 `rulesUrl` joins `rulesSources`, as at boot), saves, and redraws what boot redraws after loading the
 cache: `refreshRulesUI()`, `renderAll()` and `renderHome()`. Then it reopens Settings, which brings a
 fresh rules status line, Rules data chip and loaded-data list. What happened is written on the
-status line beside the Import button, because the rules status line sits in the Rules data section,
-which is usually folded shut. A refused settings write ("Settings imported for this session only:
+status line beside the Import button, because the rules status line sits on the Rules data page,
+which is usually not the one showing. A refused settings write ("Settings imported for this session only:
 …") and a refused cache write both land on that line.
 
 **The version button and changelog.** `#btnVer` reads `v` + `APP_VERSION` and opens
@@ -172,8 +178,12 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 
 ## Rules that must hold
 
-- **Fold state is stored as COLLAPSE, not "open"**, so a first-run default can change later without
-  reopening a section somebody shut. The Rules tab's sections copy this idiom.
+- **Every page is built when the dialog opens; switching only shows one.** A control on a hidden
+  page keeps its id and handler, and `renderRulesData()` refreshes the list and the badge behind any
+  page. `settings.setPage` is read through `setPageOf()`, never trusted: a stored key that is not a
+  shown page opens Appearance. `settings.setCollapse`, the old fold state, is no longer read.
+- **The wide dialog keeps one height**, or a shorter page shrinks it, it re-centres, and the sidebar
+  moves under the pointer between clicks.
 - **Delegated listeners bind to something rebuilt with the modal**, never to `#mBody`, which outlives
   every modal and would stack one copy per visit.
 - **Every id `openSettings()` looks up exists in the markup it builds, and every id it renders is
@@ -218,9 +228,12 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 
 | Question | Decision | Rejected, and why |
 |---|---|---|
-| How to tame the long Settings modal | Folding groups built from the feature list's section header | A second collapsible: the app should not have two things that look like a section header |
-| How fold state is stored | Collapse map; absent = never touched | An "open" map: defaults could never change without reopening sections people shut |
-| What a toggle does | Flips display and caret in place | Re-rendering the modal: every listener re-attached, inputs and scroll lost |
+| How to tame the long Settings dialog (#107) | A sidebar of six pages: Appearance, Sheet display, Carrying, Rules data, Backup, Credits | Folding sections (2026-08-11 to #107): one long scroll, "This character" held ten controls of four kinds. The five sections as sidebar entries: that page would stay cluttered. Splitting by scope (General, Character, Data, About): longer pages |
+| How a setting looks (#107) | A row: name and help left, control right; on/off a switch, two or three short choices segmented, longer lists a dropdown | Everything a dropdown, as the reference showed: on/off and Light/Dark would take two taps. Grouping by control type: settings that belong together end up apart |
+| The icon rail on a phone (#107) | On the left, as on a desktop | An icon strip across the top: more width, but a second layout to learn |
+| How the pages are built (#107) | All at open, one shown | Only the visible one: every handler rewritten into per-page binders, for nothing a player sees |
+| When a change applies (#107) | Instantly, as before | Save and Cancel, as the reference showed: a new behaviour nobody asked for |
+| Which page opens (#107) | The last one viewed, falling back to Appearance | Always Appearance: a player tweaking one page has to find it again every time |
 | Where the delegated listener lives | `#setSections` | `#mBody`: survives every modal, so listeners stack per visit |
 | Version button and update pill | One control: the pill takes the button's slot | Both side by side: they say the same thing, and the spacer pushed the pill away |
 | What the pill opens | The changelog, led by a download banner | Linking straight to GitHub: "What's new" would be unreachable while an update is pending |
@@ -272,3 +285,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-09 — The public registry, which the newer-data check reads, lists only SRD 5.2 and Homebrew; private packs show their version quietly and get no notice. → ledger L5426, #85
 - 2026-10-12 — From the Rules tab, the import toast drops the counts and a failure stays until tapped. → ledger L5648, #87
 - 2026-10-16 — Appearance gains "Tap outside to close dialogs" (`backdropClose`, off by default, in `SETTINGS_KEYS`). → ledger L5903, #106
+- 2026-10-16 — Settings is a sidebar of six pages, every setting a row with its control on the right; an icon rail with Icon tabs or on a narrow screen; the last page is remembered. → ledger L5930, #107

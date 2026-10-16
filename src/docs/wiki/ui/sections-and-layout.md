@@ -83,7 +83,7 @@ One idiom for every foldable group inside a card or modal:
 
 The caret is drawn pointing right. `.fcaret` turns it 90° to point down (open), and `.fcaret.c`
 leaves it pointing right (shut). The users are the Features & Traits groups (`data-fgroup`), the
-Section Notes card (`data-notegroup`) and the Settings sections (`data-setsec`). The inventory sections and
+Section Notes card (`data-notegroup`). (Settings used it for its sections until #107 made it a sidebar of pages.) The inventory sections and
 the Attacks card's Favorites / Attacks split use `.inv-sec-head`, which shares the one rule
 `.fghead,.inv-sec-head` (a solid 1.5px `--line` rule and an 8px gap) but carries its text directly
 rather than in `.fgname`. The Rules tab's two card headings are `.label.rules-head` with the same
@@ -131,8 +131,9 @@ decides what counts against the allotment.
 | `rulesCollapse` | settings | `gloss` / `tables` | `rulesSecOpen()`, `setRulesSecOpen()` |
 
 Every map stores `true` for **shut**, and an absent key means "never touched", which falls back to
-a default. Character lists default open. `SET_SECTIONS[].open` opens Appearance and This character
-and shuts Rules data, Backup and Credits. `RULES_SECS[].open` shuts both Rules cards. The accessors
+a default. Character lists default open. `RULES_SECS[].open` shuts both Rules cards. Settings
+keeps no collapse map since #107: it remembers the page last viewed (`settings.setPage`), and the old
+`settings.setCollapse` is no longer read. The accessors
 repair or ignore a wrong shape (a hand-edited file) rather than trusting it, and `migrate()`
 guarantees the character maps are objects. Group labels double as keys: `FEAT_FAV` and `ATK_FAV`
 are the same string, "★ Favorites", which is also how `invCollapse.sections` holds that section.
@@ -250,7 +251,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | Familiars on a phone | Flatten `.stack` inside the ≤820px query and sink the pair with `order:1` | `order` alone: it only reorders siblings, so a sidebar card can never pass the other column's cards |
 | Where the familiar row may wrap | Only in `#familiarList` | Unscoped `.item .top{flex-wrap:wrap}`: silently restyles Statuses, where one row is right |
 | How a list row fits a phone (#57) | Everything after the name in one `.row-meta` group that drops to its own line whole; opt-in by `.split`; the name asks for 6em | The familiars' `flex-basis:100%`: these rows put a fold button and star before the name, which it would orphan on a line of their own. Truncating the name: loses the name, the one thing the row is for. 8em: split short item rows for no reason |
-| A collapsible in Settings | Reuse `.fgroup` / `.fghead` / `.fcaret` | A second collapsible: the app should not have two things that look like a section header |
+| How Settings is organised (#107) | A sidebar of pages, one shown at a time (see [Settings & updates](../features/settings-and-updates.md)) | Reusing `.fgroup` / `.fghead` / `.fcaret` (the 2026-08-11 answer): the sections grew into one long scroll. A second collapsible: the app should not have two things that look like a section header |
 | How a grouping label is typed (#98) | One group field, the journal's tag box, for tags, a feature's source and an item's category | A select of fixed groups: a player can't add their own. A box with no suggestions: a typo makes a second group |
 | A group named `constructor` or `__proto__` (#98) | Refused: no group may be named for an `Object.prototype` property, said under the box, and read as no group from a file (Mike) | Making the collapse maps own-property safe: the names would still work, and four maps would each need it |
 | A folded group whose first member is retyped in another case (#98) | Reopens, as its label changes: fine as it is (Mike) | Folding by `tagKey()` as the journal does: would reset every feature group and section a player has folded |
@@ -295,3 +296,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-10-12 — Attack, feature, item and condition rows group what follows the name, so on a phone it drops below whole instead of the name running over it. → ledger L5667, #57
 - 2026-10-16 — The group field: one control for a journal tag, a tracker tag, a feature's source and an item's category. → ledger L5823, #98
 - 2026-10-16 — No group may be named for an `Object.prototype` property; the group field says so and stops the save. A group reopening after a case edit is kept, by decision. → ledger L5872, #98
+- 2026-10-16 — Settings no longer uses the `.fgroup` collapsible or a collapse map: it is a sidebar of pages and remembers the last one. → ledger L5930, #107

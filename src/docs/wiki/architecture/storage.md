@@ -25,7 +25,7 @@ read-back, the refused-write paths and leaving a character) · **See also:** [Ch
 |---|---|---|
 | localStorage | `hw-fb-c-<id>`, from `charKey()` | one character, as `JSON.stringify(character)` |
 | localStorage | `hw-fb-library` (`K_LIB`) | `{autoload, index:[{id, name, system, appVersion, updated}]}` |
-| localStorage | `hw-fb-settings` (`K_SET`) | `settings`: skin, theme, rough, `rulesSources`, `setCollapse`, `rulesCollapse`, `tabIcons` |
+| localStorage | `hw-fb-settings` (`K_SET`) | `settings`: skin, theme, rough, `rulesSources`, `setPage` (the Settings page last viewed, #107), `rulesCollapse`, `tabIcons`, `backdropClose`; `setCollapse`, the old Settings fold state, is no longer read but stays in older saves |
 | IndexedDB | database `hw-fb-cache`, store `kv`, key `rules` | the rules pool as plain JSON. This copy wins |
 | localStorage | `hw-fb-rules` (`K_RULES`) | the rules pool, LZW-compressed. Fallback and migration source only |
 | localStorage | `hw-fb-char` (`K_CHAR`) | a pre-library single-character save, moved into the library once by `migrateOldChar()` |
@@ -206,3 +206,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — `saveSettings()` returns why a write was refused; Import settings reports that and a refused cache write beside its button, and writes the cache only when the player replaces the rules. → ledger L4134, #70
 - 2026-09-29 — A refused character write raises a warning strip that stays until a save lands; new, imported and migrated characters report it too. → ledger L4771, #81
 - 2026-09-29 — Leaving a character flushes its pending save and asks before dropping one that can't land; delete and the autoload star report a refused index write. → ledger L4856, #81
+- 2026-10-16 — `settings.setPage` replaces the Settings fold state (`setCollapse`, no longer read). → ledger L5930, #107
