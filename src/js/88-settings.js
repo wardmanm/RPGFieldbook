@@ -35,6 +35,70 @@ function setSecHTML(k,body,badge){
     `<span class="fgname">${esc(d.title)}</span>${badge?`<span class="fgcount">${esc(badge)}</span>`:""}</div>`+
     `<div class="setsec-body" data-setsecbody="${esc(k)}"${open?"":` style="display:none"`}>${body}</div></div>`;
 }
+/* ---- the sidebar and its pages (#107) ----
+   Six categories beside one page at a time, replacing the folding sections
+   (spec src/docs/specs/2026-10-16-settings-dialog-design.md). `scope:"char"`
+   pages exist only while a character is open. Icons are line drawings in the
+   tab bar's style (24px, stroked), written here, not game-icons artwork, so
+   they need no attribution. */
+const SET_PAGES=[
+  {k:"appearance",title:"Appearance",   scope:"app",
+   icon:`<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>`},
+  {k:"display",   title:"Sheet display",scope:"char",
+   icon:`<path d="M2.5 12s3.6-6.5 9.5-6.5S21.5 12 21.5 12s-3.6 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>`},
+  {k:"carrying",  title:"Carrying",     scope:"char",
+   icon:`<path d="M12 4v16M7.5 20h9M5 7.5h14"/><path d="M5 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/><path d="M19 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/>`},
+  {k:"rules",     title:"Rules data",   scope:"app",
+   icon:`<ellipse cx="12" cy="6" rx="7" ry="2.8"/><path d="M5 6v12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8V6"/><path d="M5 12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8"/>`},
+  {k:"backup",    title:"Backup",       scope:"app",
+   icon:`<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/>`},
+  {k:"credits",   title:"Credits",      scope:"app",
+   icon:`<circle cx="12" cy="12" r="8.5"/><path d="M14.8 9.6a3.4 3.4 0 1 0 0 4.8"/>`}
+];
+function setPageDef(k){return SET_PAGES.find(p=>p.k===k)||null;}
+function setPagesFor(hasChar){return SET_PAGES.filter(p=>hasChar||p.scope!=="char");}
+/* the page to open: the remembered one while it is shown, else Appearance — so a
+   character page remembered from a sheet never opens with no character */
+function setPageOf(stored,hasChar){const p=setPagesFor(hasChar).find(x=>x.k===stored);return p?p.k:"appearance";}
+/* ↑/↓ wrap, Home/End jump; `keys` are the SHOWN pages, so a hidden character
+   page is never stepped onto */
+function setPageStep(keys,cur,key){
+  const i=keys.indexOf(cur);if(i<0)return cur;
+  if(key==="ArrowDown")return keys[(i+1)%keys.length];
+  if(key==="ArrowUp")return keys[(i-1+keys.length)%keys.length];
+  if(key==="Home")return keys[0];
+  if(key==="End")return keys[keys.length-1];
+  return cur;
+}
+function setNavHTML(pages,active,badges){
+  const b=badges||{};let n=0;
+  return `<div class="set-nav" role="tablist" aria-orientation="vertical" aria-label="Settings">`+pages.map((p,i)=>{
+    const on=p.k===active,first=p.scope==="char"&&(n++===0),last=p.scope==="char"&&(!pages[i+1]||pages[i+1].scope!=="char");
+    return (first?`<div class="set-cap" aria-hidden="true">This character</div>`:"")+
+      `<button type="button" class="set-tab" role="tab" id="setTab-${esc(p.k)}" data-setpage="${esc(p.k)}" aria-controls="setPage-${esc(p.k)}" aria-selected="${on?"true":"false"}" tabindex="${on?"0":"-1"}" aria-label="${esc(p.title)}" title="${esc(p.title)}">`+
+      `<svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true">${p.icon}</svg><span class="set-tlbl">${esc(p.title)}</span>`+
+      (Object.prototype.hasOwnProperty.call(b,p.k)?`<span class="set-tbadge" data-setbadge="${esc(p.k)}">${b[p.k]}</span>`:"")+`</button>`+
+      (last?`<div class="set-sep" aria-hidden="true"></div>`:"");
+  }).join("")+`</div>`;
+}
+function setPageHTML(k,body,opts){
+  const d=setPageDef(k);if(!d)return "";const o=opts||{};
+  return `<section class="set-page" role="tabpanel" id="setPage-${esc(k)}" aria-labelledby="setTab-${esc(k)}" data-setpagebody="${esc(k)}"${o.active?"":" hidden"}>`+
+    `<div class="set-ptitle">${esc(d.title)}</div>${o.sub?`<p class="set-psub">${esc(o.sub)}</p>`:""}${body}</section>`;
+}
+function setGroupHTML(title,body){return `<div class="set-grp"><div class="set-grp-h">${esc(title)}</div>${body}</div>`;}
+/* one row: name and help on the left, the control on the right. `inline` keeps a
+   switch beside its name on a narrow page; anything else drops below it there.
+   name, help and control are MARKUP: the caller escapes what is dynamic. */
+function setRowHTML(name,help,control,inline){
+  return `<div class="set-row${inline?" set-inline":""}"><div class="set-row-txt"><div class="t-lbl">${name}</div>${help?`<div class="t-sub">${help}</div>`:""}</div><div class="set-row-ctl">${control}</div></div>`;
+}
+/* the Rules data tab's count, and a dot while a newer copy of a loaded pack is
+   out; renderRulesData() keeps it current */
+function rulesNavBadgeHTML(){
+  const n=rulesEntryCount(),up=loadedRulesGroups().some(g=>dataStatus(g).state==="update");
+  return (n?`<span class="set-cnt" title="${esc(rulesBadge())}">${n}</span>`:"")+(up?`<span class="set-dot" title="Newer rules data is out"></span>`:"");
+}
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
 /* the "Rules data" header badge; renderRulesData() keeps it current after the modal opens */
 function rulesBadge(){
@@ -229,7 +293,7 @@ function encSettingsChanged(){
    cannot say "import the settings but keep my rules" without making Cancel
    import something. Nothing is lost, so nothing is asked, when the file brings
    no rules or none are loaded yet. */
-const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCollapse","tabIcons","backdropClose"];
+const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCollapse","tabIcons","backdropClose","setPage"];
 /* What boot does to settings from an older build, shared with Import settings
    so an old file arrives in the same shape: the first builds' single `rulesUrl`
    joins the sources list. True when that changed something worth saving. */

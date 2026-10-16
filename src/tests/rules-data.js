@@ -17,6 +17,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'mergeRules','resetRules','blankChar','migrate','catName',
   'DATA_VERSIONS','dataStatus','dataStatusHTML',
   'SET_SECTIONS','setSecDef','setSecOpen','setSecHTML','rulesEntryCount','settings',
+  'SET_PAGES','setPageDef','setPagesFor','setPageOf','setPageStep','setNavHTML','setPageHTML','setGroupHTML','setRowHTML','rulesNavBadgeHTML','SETTINGS_KEYS',
   'NOTE_SECTIONS','NOTE_TABS','noteDef','getNote','noteText','hasNote','saveNote',
   'noteGroupOpen','notesHTML','noteBtnHTML','noteEntryHTML','esc',
   'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings', 'skillKey',
@@ -1032,6 +1033,69 @@ ck('a badge is rendered when given', X.setSecHTML('rules', '', '12 entries').inc
 ck('no badge element when there is none', !X.setSecHTML('rules', '').includes('fgcount'));
 ck('badge text is escaped', X.setSecHTML('rules', '', '<img>').includes('&lt;img&gt;'));
 
+// ---------- Settings modal: the sidebar's pages (#107)
+ck('six pages, in the order the sidebar lists them',
+   X.SET_PAGES.map(p => p.k).join() === 'appearance,display,carrying,rules,backup,credits');
+ck('every page has a title, an icon and a unique key',
+   X.SET_PAGES.every(p => p.title && /<(path|circle|rect|ellipse)/.test(p.icon)) && new Set(X.SET_PAGES.map(p => p.k)).size === 6);
+ck('only Sheet display and Carrying belong to a character',
+   X.SET_PAGES.filter(p => p.scope === 'char').map(p => p.k).join() === 'display,carrying' &&
+   X.SET_PAGES.every(p => p.scope === 'char' || p.scope === 'app'));
+ck('without a character the character pages are not shown', X.setPagesFor(false).map(p => p.k).join() === 'appearance,rules,backup,credits');
+ck('...with one, all six are', X.setPagesFor(true).length === 6);
+ck('the remembered page opens', X.setPageOf('rules', false) === 'rules' && X.setPageOf('carrying', true) === 'carrying');
+ck('a character page with no character open opens Appearance', X.setPageOf('display', false) === 'appearance');
+[undefined, null, '', 'nope', 7, {}, '__proto__', 'constructor'].forEach(bad =>
+  ck('a stored page of ' + JSON.stringify(bad) + ' opens Appearance', X.setPageOf(bad, true) === 'appearance'));
+ck('setPageDef finds a page, and is null for rubbish', (X.setPageDef('rules') || {}).title === 'Rules data' && X.setPageDef('zzz') === null);
+{
+  const keys = ['appearance', 'rules', 'backup', 'credits'];
+  ck('↓ moves to the next shown page and wraps', X.setPageStep(keys, 'rules', 'ArrowDown') === 'backup' && X.setPageStep(keys, 'credits', 'ArrowDown') === 'appearance');
+  ck('↑ moves back and wraps', X.setPageStep(keys, 'rules', 'ArrowUp') === 'appearance' && X.setPageStep(keys, 'appearance', 'ArrowUp') === 'credits');
+  ck('Home and End go to the ends', X.setPageStep(keys, 'backup', 'Home') === 'appearance' && X.setPageStep(keys, 'appearance', 'End') === 'credits');
+  ck('any other key, or a page not shown, stays put', X.setPageStep(keys, 'rules', 'x') === 'rules' && X.setPageStep(keys, 'display', 'ArrowDown') === 'display');
+}
+{
+  const nav = X.setNavHTML(X.setPagesFor(true), 'carrying', {rules: '<span class="set-cnt">12</span>'});
+  ck('the sidebar is a vertical tab list', /role="tablist" aria-orientation="vertical"/.test(nav));
+  ck('one tab per page, each tied to its panel',
+     (nav.match(/role="tab"/g) || []).length === 6 && /id="setTab-carrying" data-setpage="carrying" aria-controls="setPage-carrying"/.test(nav));
+  ck('only the active tab is selected and in the tab order',
+     (nav.match(/aria-selected="true"/g) || []).length === 1 && /data-setpage="carrying"[^>]*aria-selected="true" tabindex="0"/.test(nav) &&
+     (nav.match(/tabindex="0"/g) || []).length === 1);
+  ck('each tab is named, for the icon rail', /aria-label="Sheet display" title="Sheet display"/.test(nav));
+  ck('the character pages sit under their caption, set apart from the rest',
+     nav.indexOf('data-setpage="appearance"') < nav.indexOf('This character') &&
+     nav.indexOf('This character') < nav.indexOf('data-setpage="display"') &&
+     /data-setpage="carrying"[\s\S]*?class="set-sep"[\s\S]*?data-setpage="rules"/.test(nav));
+  ck('no caption without a character', !/This character|set-sep/.test(X.setNavHTML(X.setPagesFor(false), 'appearance', {})));
+  ck('a badge is drawn only where given', /data-setbadge="rules"><span class="set-cnt">12<\/span>/.test(nav) && (nav.match(/data-setbadge/g) || []).length === 1);
+}
+{
+  const page = X.setPageHTML('carrying', '<p>x</p>', {active: true, sub: 'For <b>Pib</b>'});
+  ck('a page is the tab panel its tab names',
+     /<section class="set-page" role="tabpanel" id="setPage-carrying" aria-labelledby="setTab-carrying" data-setpagebody="carrying">/.test(page), page);
+  ck('...titled, with its subtitle escaped', /class="set-ptitle">Carrying</.test(page) && page.includes('For &lt;b&gt;Pib&lt;/b&gt;'));
+  const off = X.setPageHTML('rules', '<p>y</p>', {});
+  ck('an inactive page is in the dialog, hidden', /data-setpagebody="rules" hidden>/.test(off) && off.includes('<p>y</p>'));
+  ck('an unknown page draws nothing', X.setPageHTML('zzz', '<p>x</p>', {active: true}) === '');
+}
+{
+  const row = X.setRowHTML('Colour current HP', 'Amber at half.', '<button class="switch"></button>', true);
+  ck('a row is the name and help, then the control',
+     row === '<div class="set-row set-inline"><div class="set-row-txt"><div class="t-lbl">Colour current HP</div><div class="t-sub">Amber at half.</div></div><div class="set-row-ctl"><button class="switch"></button></div></div>', row);
+  const plain = X.setRowHTML('Skin', '', '<div class="seg"></div>');
+  ck('a row without help has no empty help line, and only an inline row is marked so', !/t-sub/.test(plain) && !/set-inline/.test(plain));
+  ck('a group has its heading, escaped',
+     X.setGroupHTML('Look & feel', '<p>r</p>') === '<div class="set-grp"><div class="set-grp-h">Look &amp; feel</div><p>r</p></div>');
+}
+ck('setPage is a setting a file is recognised by', X.SETTINGS_KEYS.includes('setPage'));
+ck('...defaulting to Appearance',
+   /let settings=\{[^\n]*setPage:"appearance"[^\n]*\};/.test(fs.readFileSync(path.join(ROOT, 'src/js/00-constants.js'), 'utf8')));
+X.resetRules();
+ck('the Rules data badge is empty with nothing loaded', X.rulesNavBadgeHTML() === '');
+X.mergeRules({system: 'XPHB', spells: [{name: 'Bless'}, {name: 'Shield'}]}, 'x.json');
+ck('...and counts the pool once something is', X.rulesNavBadgeHTML() === '<span class="set-cnt" title="2 entries">2</span>', X.rulesNavBadgeHTML());
 X.resetRules();
 ck('entry count is zero with nothing loaded', X.rulesEntryCount() === 0);
 X.mergeRules({system: 'XPHB', races: [{name: 'Elf'}, {name: 'Orc'}], spells: [{name: 'Bless'}]}, 'x.json');
