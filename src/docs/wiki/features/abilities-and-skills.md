@@ -76,7 +76,7 @@ Skills display) builds fresh controls that must come out disabled. The look is C
 on a phone), the score as a plain number, skills in three columns above 640px, two down to 381px,
 one below, the legend hidden. The grouped display tightens its rows the same way, but its header
 does not shrink: the name is 13px in full ink, the modifier 24px, and the score 16px bold in full
-ink in a fixed 2.4em box at the right edge, with the save row's label in the Sheet tab's 10px small
+ink in a fixed 2.4em box flush at the right edge, its spinner hidden, with the save row's label in the Sheet tab's 10px small
 capitals, so each ability reads at a glance mid-fight (#92). Tapping a value still opens its
 breakdown — that only reads.
 
@@ -130,8 +130,9 @@ the only sane order with one column.
   written for the tall Classic boxes; on the one-line grouped header they made the name and score
   near-invisible, and the disabled input's own width (about twenty characters) floated the score
   mid-header (#92). The view's `.agroup .srow .lbl` also outranks the Sheet tab's
-  `.agroup .svrow .lbl`, so the save label needs its own rule there. A `ch` width clipped two-digit
-  scores; the box is sized in `em`.
+  `.agroup .svrow .lbl`, so the save label needs its own rule there. A disabled number input still
+  keeps room for its spin button (about 15px in Chromium), which clipped two digits in a `3ch` box
+  and held the score off the right edge; the view hides the spinner in this header.
 - **`buildSkills()` guards `style.setProperty`**, because the harness's stub element has none.
 
 ## Decisions

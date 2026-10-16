@@ -5766,9 +5766,12 @@ Pages: [private data](../wiki/data/private-data.md), [converter](../wiki/data/co
    combat view's `.agroup .srow .lbl` outranks the Sheet tab's `.agroup .svrow .lbl`, so the save
    label lost its small capitals.
 3. Fix, CSS only and scoped to `#cvList`: in the grouped header the name is 13px in full ink, the
-   modifier 24px, the score 16px bold in full ink in a 2.4em box at the right edge, and the save
-   row's label is 10px again. `3ch` clipped two-digit scores (this font's bold digits are wider than
-   `ch`), hence `em`. The Sheet tab and the Classic display in the view are unchanged.
+   modifier 24px, the score 16px bold in full ink in a 2.4em box at the right edge with no spin
+   button, and the save row's label is 10px again. A disabled number input still keeps about 15px
+   for its spin button in Chromium: that clipped two digits at `3ch` and held the score off the
+   edge, so the spinner is hidden (`appearance:textfield`, the WebKit spin-button pseudos). The
+   Sheet tab and the Classic display in the view are unchanged. (Reason corrected in review: the
+   first draft blamed the font's digit width, which measures exactly 1ch.)
 4. Screenshots `.claude/qa/92-*`: before and after in the view, classic skin, Humblewood light and
    dark, and a phone width; the Sheet tab copy checked unchanged after the card goes home.
 
