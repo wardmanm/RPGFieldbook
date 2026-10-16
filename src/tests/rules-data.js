@@ -393,6 +393,24 @@ for(const sys of ['homebrew','srd52']){
   const multiCol = skillsRules.filter(r => /grid-template-columns:repeat\(/.test(r));
   ck('every compact Skills grid of two or more columns sets its own grid-auto-flow:column',
      multiCol.length >= 2 && multiCol.every(r => /grid-auto-flow:column/.test(r)), multiCol);
+  /* #92: the grouped header keeps the .ability skin, so the Classic compact
+     rules (a 9px name, a faint 12px score, an input's own ~20-character width)
+     reach it unless the header sets its own. The name, modifier and score
+     rules win on specificity; the save label ties with the view's .srow .lbl,
+     so it must come after it. */
+  const rule = sel => { const m = css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}')); return m ? m[1] : ''; };
+  const head = '#cvList [data-note="abilities"] .agroup .ahead';
+  ck('in the view the grouped header\'s name is full ink at a readable size',
+     /color:var\(--ink\)/.test(rule(head + ' .n')) && parseFloat((rule(head + ' .n').match(/font-size:([\d.]+)px/) || [])[1]) >= 12);
+  ck('...its modifier the full 24px', /font-size:24px/.test(rule(head + ' .m')));
+  ck('...its score is full ink, bold, in a fixed em box at the right, with no spinner keeping room',
+     /width:[\d.]+em/.test(rule(head + ' input[data-path]')) && /text-align:right/.test(rule(head + ' input[data-path]')) &&
+     /-webkit-text-fill-color:var\(--ink\)/.test(rule(head + ' input[data-path]')) && /font-weight:700/.test(rule(head + ' input[data-path]')) &&
+     /appearance:textfield/.test(rule(head + ' input[data-path]')) &&
+     css.includes(head + ' input[data-path]::-webkit-inner-spin-button'));
+  ck('...and its save label keeps the small capitals',
+     /font-size:10px/.test(rule('#cvList [data-note="abilities"] .agroup .svrow .lbl')) &&
+     css.indexOf('#cvList [data-note="abilities"] .agroup .svrow .lbl{') > css.indexOf('#cvList [data-note="abilities"] .agroup .srow .lbl{'));
 }
 
 // ---------- the homebrew pack: hand-authored, and the reason `requires` exists

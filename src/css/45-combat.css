@@ -129,12 +129,27 @@
 #cvList [data-note="skills"] .srow .lbl{font-size:13px}
 #cvList #statLegend{display:none}
 #cvList [data-note="abilities"] .agroups{gap:8px 12px}
-#cvList [data-note="abilities"] .agroup .ahead{padding:3px 8px}
-#cvList [data-note="abilities"] .agroup .ahead .m{font-size:18px}
-#cvList [data-note="abilities"] .agroup .ahead input[data-path]{width:auto;flex:none}
+/* The By ability header (#92). The rules above are for the six tall boxes, where
+   a 9px name and a faint score sit under a big modifier; they reach this header
+   too, since it keeps the .ability skin. Here the name and the score sit BESIDE
+   the modifier on one line, so they take full ink and real size, and the score
+   gets a fixed width at the right edge — an input's own width is about twenty
+   characters, which floated the number mid-header. The disabled box still
+   keeps room for a number input's spin button (about 15px in Chromium), which
+   clipped two digits in a narrow box and kept the score off the edge, so the
+   spinner goes. The save row keeps the Sheet tab's small capitals, so it no
+   longer outweighs the ability it belongs to. */
+#cvList [data-note="abilities"] .agroup .ahead{padding:4px 10px;gap:10px}
+#cvList [data-note="abilities"] .agroup .ahead .n{font-size:13px;color:var(--ink)}
+#cvList [data-note="abilities"] .agroup .ahead .m{font-size:24px}
+#cvList [data-note="abilities"] .agroup .ahead input[data-path]{width:2.4em;flex:none;text-align:right;font-size:16px;
+  font-weight:700;color:var(--ink);-webkit-text-fill-color:var(--ink);-moz-appearance:textfield;appearance:textfield}
+#cvList [data-note="abilities"] .agroup .ahead input[data-path]::-webkit-inner-spin-button,
+#cvList [data-note="abilities"] .agroup .ahead input[data-path]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 #cvList [data-note="abilities"] .agroup .srow{padding:1px 2px}
 #cvList [data-note="abilities"] .agroup .srow .val{font-size:13px;width:24px}
 #cvList [data-note="abilities"] .agroup .srow .lbl{font-size:12.5px}
+#cvList [data-note="abilities"] .agroup .svrow .lbl{font-size:10px}
 @media(max-width:640px){#cvList [data-note="skills"] .skills{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(9,auto);grid-auto-flow:column}}
 @media(max-width:560px){#cvList [data-note="abilities"] .abilities{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:380px){#cvList [data-note="skills"] .skills{grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-auto-flow:row}}

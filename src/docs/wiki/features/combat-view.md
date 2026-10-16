@@ -87,7 +87,8 @@ and a toggle call it, and so does `renderTrackers()` while the view is open, so 
 when it is the only card there brings the hint back instead of leaving the view blank. The tab bar's ☰ lists the view's cards, and `scrollToCard()` clears both the tab bar and
 the header. Ability Scores & Saves and Skills, added here like any other card, draw compact and
 read-only instead — `syncStatLock()` disables their score boxes and proficiency dots while they sit
-in `#cvList` ([Abilities & skills](abilities-and-skills.md)).
+in `#cvList`, and in the By ability display each ability's name, modifier and score stay full size
+([Abilities & skills](abilities-and-skills.md)).
 
 **Character switches.** `syncCombatView()` is the last thing `renderAll()` does: with the tab open it
 empties and refills from the new character (scroll to top if the character changed), then repaints
@@ -173,3 +174,4 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
   tracker, clearing itself with an Undo. → ledger L5031, #55
 - 2026-10-06 — In the combat view the two cards draw compact and read-only. → ledger L5046, #62
 - 2026-10-12 — No ✕ and no ☰ of its own: the tab bar's ☰ serves the Combat tab; focus fallbacks go to the swords; the phone header is one row out of combat. → ledger L5684, #80
+- 2026-10-16 — The By ability header keeps a full-size name, modifier and score in the view. → ledger L5756, #92

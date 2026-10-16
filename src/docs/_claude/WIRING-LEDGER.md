@@ -5753,3 +5753,27 @@ Pages: [computed stats & effects](../wiki/architecture/computed-stats-and-effect
 
 Pages: [private data](../wiki/data/private-data.md), [converter](../wiki/data/converter.md),
 [testing](../wiki/process/testing.md), [building & CI](../wiki/process/building-and-ci.md)
+## The By ability header reads at a glance in the combat view (#92, 2026-10-16)
+
+1. With Skills display set to By ability, the Ability Scores & Saves card in the combat view showed
+   each ability's name at 9px in soft ink and its score as a faint 12px number floating in the middle
+   of the header, while the "Saving Throws" label under it was 12.5px — the save outweighed the
+   ability it belongs to. Mike: hard to see attribute names and values in combat.
+2. Cause: the #62 compact rules in `45-combat.css` were written for the six tall Classic boxes
+   (`#cvList [data-note="abilities"] .ability .n`, `… input[data-path]`), and the grouped header keeps
+   the `.ability` skin, so they reached it too. The disabled score input kept an input's own width
+   (about twenty characters) under `width:auto`, which centred the number mid-header. And the
+   combat view's `.agroup .srow .lbl` outranks the Sheet tab's `.agroup .svrow .lbl`, so the save
+   label lost its small capitals.
+3. Fix, CSS only and scoped to `#cvList`: in the grouped header the name is 13px in full ink, the
+   modifier 24px, the score 16px bold in full ink in a 2.4em box at the right edge with no spin
+   button, and the save row's label is 10px again. A disabled number input still keeps about 15px
+   for its spin button in Chromium: that clipped two digits at `3ch` and held the score off the
+   edge, so the spinner is hidden (`appearance:textfield`, the WebKit spin-button pseudos). The
+   Sheet tab and the Classic display in the view are unchanged. (Reason corrected in review: the
+   first draft blamed the font's digit width, which measures exactly 1ch.)
+4. Screenshots `.claude/qa/92-*`: before and after in the view, classic skin, Humblewood light and
+   dark, and a phone width; the Sheet tab copy checked unchanged after the card goes home.
+
+Pages: [abilities & skills](../wiki/features/abilities-and-skills.md),
+[combat view](../wiki/features/combat-view.md)

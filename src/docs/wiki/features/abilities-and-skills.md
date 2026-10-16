@@ -74,8 +74,11 @@ redraws, which matters because a redraw with the view open (a character switch, 
 Skills display) builds fresh controls that must come out disabled. The look is CSS under
 `#cvList [data-note="abilities"]` and `#cvList [data-note="skills"]`: six abilities in a row (three
 on a phone), the score as a plain number, skills in three columns above 640px, two down to 381px,
-one below, the legend hidden; the grouped display shrinks the same way. Tapping a value still opens
-its breakdown — that only reads.
+one below, the legend hidden. The grouped display tightens its rows the same way, but its header
+does not shrink: the name is 13px in full ink, the modifier 24px, and the score 16px bold in full
+ink in a fixed 2.4em box flush at the right edge, its spinner hidden, with the save row's label in the Sheet tab's 10px small
+capitals, so each ability reads at a glance mid-fight (#92). Tapping a value still opens its
+breakdown — that only reads.
 
 **The compact Skills grid reads down each column at every width.** Each multi-column rule
 (`#cvList [data-note="skills"] .skills`, at three columns and at two) sets its own
@@ -122,6 +125,14 @@ the only sane order with one column.
   flow; the view's own ≤640px rule sat behind that base rule's own ≤600px switch to `row`, so at
   phone width the grid read across rows, not down columns — the #56 trap, reopened in a different
   rule.
+- **The grouped header keeps the `.ability` skin, so the combat view's Classic rules reach it.**
+  `#cvList [data-note="abilities"] .ability .n` (9px) and `… input[data-path]` (12px soft ink) were
+  written for the tall Classic boxes; on the one-line grouped header they made the name and score
+  near-invisible, and the disabled input's own width (about twenty characters) floated the score
+  mid-header (#92). The view's `.agroup .srow .lbl` also outranks the Sheet tab's
+  `.agroup .svrow .lbl`, so the save label needs its own rule there. A disabled number input still
+  keeps room for its spin button (about 15px in Chromium), which clipped two digits in a `3ch` box
+  and held the score off the right edge; the view hides the spinner in this header.
 - **`buildSkills()` guards `style.setProperty`**, because the harness's stub element has none.
 
 ## Decisions
@@ -156,3 +167,4 @@ the only sane order with one column.
 - 2026-10-07 — The final review's fixes: the compact Skills grid sets its own `grid-auto-flow:column`
   at both multi-column breakpoints, so it reads down each column at every width. → ledger L5058, #55
 - 2026-10-13 — A modifier, save or skill an effect lowers is red with ▼, even beside a bonus; its breakdown line is red. → ledger L5700, #89
+- 2026-10-16 — In the combat view the By ability header keeps a full-size name, modifier and score. → ledger L5756, #92
