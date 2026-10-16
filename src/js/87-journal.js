@@ -12,9 +12,14 @@ function jnlTime(v){return typeof v==="number"&&isFinite(v)?v:0;}
 
 /* ---- tags, shared with the trackers (87-trackers.js) ----
    A tag is the player's own word, so it is only tidied: trimmed, runs of spaces
-   collapsed. It groups by its lower-cased form, so "Quests" and "quests" are one
+   collapsed — unless it is a reserved name (GROUP_RESERVED), which is no tag at
+   all. It groups by its lower-cased form, so "Quests" and "quests" are one
    group. Untagged is the key "", which no real tag can produce. */
-function tagLabel(v){return jnlStr(v).replace(/\s+/g," ").trim();}
+function tagLabel(v){const l=tagTidy(v);return GROUP_RESERVED.has(l.toLowerCase())?"":l;}
+/* The tidy alone: what the player typed, before tagLabel() refuses a reserved
+   name (GROUP_RESERVED). Every grouping reads tagLabel(); only the message
+   that names the refused word reads this. */
+function tagTidy(v){return jnlStr(v).replace(/\s+/g," ").trim();}
 function tagKey(v){return tagLabel(v).toLowerCase();}
 /* [{key, label, items}], A to Z, Untagged last. A group is labelled by the first
    spelling met, and keeps the order it was given. */
@@ -231,6 +236,9 @@ function jnlNewPage(){jnlStartEdit(uid(),null,"jnlTitle");}
 function jnlEdit(id){const p=jnlPages(character).find(x=>x.id===id);if(p)jnlStartEdit(id,jnlTime(p.at)||null,"jnlText");}
 /* Done shows the page — or the list, when it was left blank and so never saved. */
 function jnlDone(){
+  /* a reserved tag (GROUP_RESERVED) keeps the editor open on it, as Save
+     does in the forms */
+  if(groupFieldBlocked("jnlTag"))return;
   const id=jnlUI.open;jnlUI.editing=false;jnlUI.draft=null;
   const saved=jnlPages(character).some(p=>p.id===id);
   jnlUI.open=saved?id:null;

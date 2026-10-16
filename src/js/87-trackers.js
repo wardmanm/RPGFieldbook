@@ -329,11 +329,13 @@ function openTrackerForm(existing){
   /* Close now / Reopen keeps what was typed. The button does what it SAID when
      the form opened, so an Undo in between can't turn Reopen into a close. */
   {const b=$("tkCloseNow"),closing=t.closed!==true;if(b)b.addEventListener("click",()=>{
+    if(groupFieldBlocked("tkTag"))return;
     const x=cur();if(!x){closeModal();renderTrackers();return;}
     trkFromForm(x,fields());
     if(closing)trkClose(x,Date.now());else trkReopen(x);
     done();});}
   $("tkSave").addEventListener("click",()=>{
+    if(groupFieldBlocked("tkTag"))return;
     const x=cur();if(!x){closeModal();renderTrackers();return;}
     trkFromForm(x,fields());
     if(isNew){if(!Array.isArray(character.trackers))character.trackers=[];character.trackers.push(x);}

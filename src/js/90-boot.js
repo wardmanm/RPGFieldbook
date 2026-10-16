@@ -21,6 +21,8 @@ function wire(){
   document.addEventListener("input",e=>{const s=e.target.closest("[data-slot]");if(!s)return;if(slotsAuto)return;const lv=num(s.dataset.slot);character.slots[lv].total=Math.max(0,num(s.value));if(character.slots[lv].used>character.slots[lv].total)character.slots[lv].used=character.slots[lv].total;renderSlotBubbles();scheduleSave();});
   /* the journal editor writes on every keystroke (87-journal.js) */
   document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("[data-jnlfield]"))jnlInput();});
+  /* every group field says at once when a reserved name is typed (#98) */
+  document.addEventListener("input",e=>{const g=e.target.closest&&e.target.closest("[data-groupfield]");if(g)syncGroupFieldMsg(g);});
   // clicks
   document.addEventListener("click",e=>{
     const t=e.target;

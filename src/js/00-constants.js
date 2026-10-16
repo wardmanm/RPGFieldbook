@@ -31,6 +31,14 @@ function uid(){return Math.random().toString(36).slice(2,9)}
    87-combat.js because blankChar() runs at load (`let character=blankChar()`
    below), long before a later fragment's const exists — ADR-001's TDZ rule. */
 const COMBAT_DEFAULTS=["vitals","statuses","attacks","resources","slots","activespells"];
+/* Names no group may have: a journal or tracker tag, a feature's source, an
+   item's category (#98). Every name Object.prototype carries, compared
+   lower-cased. The collapse maps are plain objects read by key, so a group
+   called "constructor" or "toString" read an inherited function and started
+   folded, and "__proto__" could never be folded at all. tagLabel() turns one
+   into no group, and the group field says so. Lives here for the same TDZ
+   reason as COMBAT_DEFAULTS. */
+const GROUP_RESERVED=new Set(Object.getOwnPropertyNames(Object.prototype).map(s=>s.toLowerCase()));
 
 /* appVersion is the app version this character was last RECONCILED against — not
    "last saved with". It stays "" here on purpose: this function is called at top

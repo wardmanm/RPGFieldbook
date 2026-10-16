@@ -36,7 +36,10 @@ only while its title or its text has something in it, which is the section notes
 `at` is set once, when the page is first added, and the draft keeps it. So a page cleared and typed
 again keeps its date. `editedAt` moves only when a field changed. A tag on its own is not content.
 
-**Tags.** `tagLabel()` trims a tag and collapses its runs of spaces. `tagKey()` lower-cases that, so
+**Tags.** `tagLabel()` trims a tag and collapses its runs of spaces, and reads a reserved name
+(`GROUP_RESERVED`: `constructor`, `__proto__` and the other `Object.prototype` names) as no tag, so
+the box refuses one and a file's reads as Untagged — see
+[Sections & layout](../ui/sections-and-layout.md). `tagKey()` lower-cases that, so
 "Quests" and "quests" are one group. Untagged is the key `""`. `groupByTag()` returns groups A to Z
 with Untagged last. Each group is labelled by the first spelling met and keeps the order it was
 given. `jnlTagList()` offers every tag in use on pages and trackers together.
@@ -226,3 +229,4 @@ entry in the list.
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-09-29 — Review fixes: a typed count patches its row, so the + click and Tab survive; Tab from Undo goes to the next tracker; newline-safe selectors; session state and Undo keyed on the character object; the form survives an Undo and keeps what was typed. → ledger L4856, #41, #40
 - 2026-10-16 — The tag box is the shared group field, unchanged on screen; features and items use it too. → ledger L5823, #98
+- 2026-10-16 — A tag named for an `Object.prototype` property is refused, and reads as Untagged from a file; Done waits until it is changed. → ledger L5872, #98

@@ -202,8 +202,32 @@ function groupChoices(labels){
 }
 function groupFieldHTML(o){
   return `<div class="field"><label class="f" for="${esc(o.id)}">${esc(o.label)}</label>`+
-    `<input id="${esc(o.id)}"${o.attrs||""} value="${esc(tagLabel(o.value))}" list="${esc(o.list)}" placeholder="${esc(o.placeholder||"")}" autocomplete="off">`+
-    `<datalist id="${esc(o.list)}">${groupChoices(o.choices).map(t=>`<option value="${esc(t)}">`).join("")}</datalist></div>`;
+    `<input id="${esc(o.id)}"${o.attrs||""} value="${esc(tagLabel(o.value))}" list="${esc(o.list)}" placeholder="${esc(o.placeholder||"")}" autocomplete="off" data-groupfield aria-describedby="${esc(o.id)}Msg">`+
+    `<datalist id="${esc(o.list)}">${groupChoices(o.choices).map(t=>`<option value="${esc(t)}">`).join("")}</datalist>`+
+    `<p class="grp-msg" id="${esc(o.id)}Msg" aria-live="polite"></p></div>`;
+}
+/* A reserved name (GROUP_RESERVED) can't name a group. tagLabel() already turns
+   one into no group wherever it comes from, a file included; these make typing
+   one say so, under the box as it is typed, and stop Save (or the journal's
+   Done) until it is changed — rather than quietly filing the record nowhere. */
+function groupNameProblem(v){
+  const l=tagTidy(v);
+  return l&&GROUP_RESERVED.has(l.toLowerCase())?`“${l}” is a reserved word and can't name a group. Choose another.`:"";
+}
+function syncGroupFieldMsg(input){
+  if(!input)return "";
+  const p=groupNameProblem(input.value),m=document.getElementById(input.id+"Msg");
+  if(m)m.textContent=p;
+  if(input.setAttribute){if(p)input.setAttribute("aria-invalid","true");else input.removeAttribute("aria-invalid");}
+  return p;
+}
+/* true, with the message shown and the box focused, while the field holds a
+   reserved name: the caller's save stops there */
+function groupFieldBlocked(id){
+  const i=document.getElementById(id);
+  if(!i||!syncGroupFieldMsg(i))return false;
+  if(i.focus)i.focus();
+  return true;
 }
 function openFeatureForm(existing){
   const f=existing||{id:uid(),name:"",source:"",description:"",effects:[],enabled:true};
@@ -232,6 +256,7 @@ function openFeatureForm(existing){
   if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("fName").value=x.name||"";document.getElementById("fSrc").value=x.source||"";document.getElementById("fDesc").value=x.description||"";fxWrap.innerHTML=fxEditorRows(x.effects);});
   document.getElementById("fCancel").addEventListener("click",closeModal);
   document.getElementById("fSave").addEventListener("click",()=>{
+    if(groupFieldBlocked("fSrc"))return;
     const rec={id:f.id,name:document.getElementById("fName").value.trim()||"Feature",source:tagLabel(document.getElementById("fSrc").value),description:document.getElementById("fDesc").value,effects:collectFx(fxWrap),enabled:f.enabled!==false};
     const um=Math.max(0,num(document.getElementById("fUses").value));
     if(um>0)rec.uses={max:um,per:document.getElementById("fUsesPer").value,used:Math.min(num(f.uses&&f.uses.used),um)};
@@ -413,6 +438,7 @@ function openItemForm(existing){
   if(iOrig)iOrig.addEventListener("change",()=>{const d=originDef(iOrig.value);
     if(iOrigD){iOrigD.disabled=!iOrig.value;if(!iOrig.value)iOrigD.value="";iOrigD.placeholder=(d&&d.ph)||"place, who, etc.";}});
   document.getElementById("iSave").addEventListener("click",()=>{
+    if(groupFieldBlocked("iCategory"))return;
     const rec={id:it.id,name:document.getElementById("iName").value.trim()||"Item",qty:num(document.getElementById("iQty").value)||1,description:document.getElementById("iDesc").value,effects:collectFx(fxWrap),equipped};
     const so=invSectionName(document.getElementById("iCategory").value);if(so)rec.sectionOverride=so;
     if(it.category)rec.category=it.category;if(it.type)rec.type=it.type;

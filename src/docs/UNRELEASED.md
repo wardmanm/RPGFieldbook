@@ -39,3 +39,6 @@ Bullets below this line — leave the heading in place.
   Metamagic, now sit under their own heading instead of "Other".
 - An item's Category works the same way: pick one of the sections or type your own, and the item
   gets a section of that name after the built-in ones.
+- A tag, feature source or item category can't be one of a few reserved words, such as
+  "constructor"; the box says so. A journal or tracker tag with one of those names used to fold its
+  group on its own, or never let it fold.
