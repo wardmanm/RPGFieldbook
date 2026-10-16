@@ -186,13 +186,37 @@ function collectFx(scope){
 }
 
 /* ---- feature editor ---- */
+/* ---- the group field (#98) ----
+   ONE control for every free-text label that files a record into a group: a
+   journal page's tag, a tracker's tag, a feature's source, an item's category.
+   A text box with the groups already in use offered as suggestions, so picking
+   an existing group is a tap and a new one is just typed — the journal's tag
+   box, which is what it was lifted from. `choices` are labels in any order and
+   spelling; groupChoices() dedupes them the way the groups themselves do (one
+   per tagKey(), first spelling kept) and sorts them A to Z. `attrs` is extra
+   markup for the input (the journal editor's data-jnlfield). */
+function groupChoices(labels){
+  const by=new Map();
+  (Array.isArray(labels)?labels:[]).forEach(v=>{const l=tagLabel(v),k=l.toLowerCase();if(l&&!by.has(k))by.set(k,l);});
+  return [...by.values()].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
+}
+function groupFieldHTML(o){
+  return `<div class="field"><label class="f" for="${esc(o.id)}">${esc(o.label)}</label>`+
+    `<input id="${esc(o.id)}"${o.attrs||""} value="${esc(tagLabel(o.value))}" list="${esc(o.list)}" placeholder="${esc(o.placeholder||"")}" autocomplete="off">`+
+    `<datalist id="${esc(o.list)}">${groupChoices(o.choices).map(t=>`<option value="${esc(t)}">`).join("")}</datalist></div>`;
+}
 function openFeatureForm(existing){
   const f=existing||{id:uid(),name:"",source:"",description:"",effects:[],enabled:true};
   const lib=(rules.features||[]);
+  /* The source is the group the feature files under (#98), so the box offers the
+     groups already on the list, and left empty it files where the feature came
+     from — which the placeholder names. */
+  const srcField=groupFieldHTML({id:"fSrc",list:"fSrcGroups",label:"Source",value:f.source,
+    choices:(character.features||[]).map(featGroupLabel),placeholder:`Automatic (${featOriginLabel(f)})`});
   openModal(existing?"Edit feature":"New feature",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="fLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
     <div class="field"><label class="f">Name</label><input id="fName" value="${esc(f.name)}"></div>
-    <div class="field"><label class="f">Source (optional)</label><input id="fSrc" value="${esc(f.source||"")}" placeholder="Ancestry, Class, Feat…"></div>
+    ${srcField}
     <div class="field"><label class="f">Description</label><textarea id="fDesc">${esc(f.description||"")}</textarea></div>
     <div class="field"><label class="f">Effects on stats</label><div id="fFx">${fxEditorRows(f.effects)}</div><button class="fx-add" id="fAddFx">+ Add effect</button></div>
     <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="fUses" type="number" min="0" value="${esc(num(f.uses&&usesMax(f))||"")}" placeholder="0"></div>
@@ -208,7 +232,7 @@ function openFeatureForm(existing){
   if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("fName").value=x.name||"";document.getElementById("fSrc").value=x.source||"";document.getElementById("fDesc").value=x.description||"";fxWrap.innerHTML=fxEditorRows(x.effects);});
   document.getElementById("fCancel").addEventListener("click",closeModal);
   document.getElementById("fSave").addEventListener("click",()=>{
-    const rec={id:f.id,name:document.getElementById("fName").value.trim()||"Feature",source:document.getElementById("fSrc").value.trim(),description:document.getElementById("fDesc").value,effects:collectFx(fxWrap),enabled:f.enabled!==false};
+    const rec={id:f.id,name:document.getElementById("fName").value.trim()||"Feature",source:tagLabel(document.getElementById("fSrc").value),description:document.getElementById("fDesc").value,effects:collectFx(fxWrap),enabled:f.enabled!==false};
     const um=Math.max(0,num(document.getElementById("fUses").value));
     if(um>0)rec.uses={max:um,per:document.getElementById("fUsesPer").value,used:Math.min(num(f.uses&&f.uses.used),um)};
     const cAmt=Math.max(0,num(document.getElementById("fCost").value)), cRes=document.getElementById("fCostRes").value.trim();
@@ -249,13 +273,20 @@ function openItemForm(existing){
   const kinds=ammoKindChoices(character,[wAmmo,am&&am.kind]);
   const bonusOpts=[...new Set([0,1,2,3,am?am.bonus:0])].sort((x,y)=>x-y);
   const bonusText=b=>b<0?String(b):"+"+b;
+  /* The category is the section the item files under (#98): the seven built-in
+     sections and any the player has made are offered, a new one is typed, and
+     left empty it files where its own data puts it — which the placeholder
+     names, worked out without the override so it never just repeats it. */
+  const catField=groupFieldHTML({id:"iCategory",list:"iCategoryGroups",label:"Category",value:it.sectionOverride,
+    choices:INV_ORDER.concat((character.inventory||[]).map(x=>invSectionName(x&&x.sectionOverride))),
+    placeholder:`Automatic (${invSection(Object.assign({},it,{sectionOverride:""}))})`});
   const abilOpts=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"],["finesse","Finesse (best of STR/DEX)"],["none","None"]];
   openModal(existing?"Edit item":"New item",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="iLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
     <div class="g2"><div class="field"><label class="f">Name</label><input id="iName" value="${esc(it.name)}"></div>
       <div class="field"><label class="f">Quantity</label><input id="iQty" type="number" min="1" value="${esc(num(it.qty)||1)}"></div></div>
     <div class="field"><label class="f">Description</label><textarea id="iDesc">${esc(it.description||"")}</textarea></div>
-    <div class="field"><label class="f">Category</label><select id="iCategory"><option value=""${!it.sectionOverride?" selected":""}>Automatic (${esc(invSection(it))})</option>${INV_ORDER.map(sname=>`<option value="${esc(sname)}"${it.sectionOverride===sname?" selected":""}>${sname}</option>`).join("")}</select></div>
+    ${catField}
     <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${esc(it.cost!=null&&it.cost!==""?fnum(it.cost):"")}" placeholder="0"></div>
       <div class="field"><label class="f">Weight each (lb, optional)</label><input id="iWeight" type="number" min="0" step="0.01" value="${esc(it.weight!=null&&it.weight!==""?fnum(it.weight):"")}" placeholder="0"></div></div>
     <div class="g2"><div class="field"><label class="f">Origin</label><select id="iOrigin">${originOptionsHTML(it.origin)}</select></div>
@@ -382,7 +413,7 @@ function openItemForm(existing){
     if(iOrigD){iOrigD.disabled=!iOrig.value;if(!iOrig.value)iOrigD.value="";iOrigD.placeholder=(d&&d.ph)||"place, who, etc.";}});
   document.getElementById("iSave").addEventListener("click",()=>{
     const rec={id:it.id,name:document.getElementById("iName").value.trim()||"Item",qty:num(document.getElementById("iQty").value)||1,description:document.getElementById("iDesc").value,effects:collectFx(fxWrap),equipped};
-    const so=document.getElementById("iCategory").value;if(so)rec.sectionOverride=so;
+    const so=invSectionName(document.getElementById("iCategory").value);if(so)rec.sectionOverride=so;
     if(it.category)rec.category=it.category;if(it.type)rec.type=it.type;
     const cv=document.getElementById("iCost").value;if(cv!==""&&fnum(cv)>=0)rec.cost=fnum(cv);
     const wv=document.getElementById("iWeight").value;if(wv!==""&&fnum(wv)>0)rec.weight=fnum(wv);

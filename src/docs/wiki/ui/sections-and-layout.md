@@ -9,7 +9,8 @@ search boxes. It also covers two sidebar residents, familiars and the portrait.
 **Code:** `NOTE_SECTIONS`, `noteDef()`, `noteTitle()`, `renderNoteIcons()`, `noteGroupOpen()` in
 `87-notes.js` · `combatSectionsOf()`, `renderCombatToggles()`, `combatCard()` in `87-combat.js` ·
 `featGroups()`, `renderFeatures()`, `featCol()`, `invCol()`, `atkCol()`, `FEAT_FAV`, `ATK_FAV` in
-`20-lists.js` · `renderInventory()`, `renderFamiliars()` in `40-sheet.js` · `renderAttacks()` in
+`20-lists.js` · `renderInventory()`, `invGroups()`, `renderFamiliars()` in `40-sheet.js` ·
+`groupFieldHTML()`, `groupChoices()` in `80-modal-forms.js` · `renderAttacks()` in
 `60-attacks.js` · `rulesSecOpen()`, `renderRulesSections()` in `86-tables.js` · `setSecOpen()`,
 `setSecHTML()` in `88-settings.js` · `buildStats()`, `buildBio()`, `blankChar()` in `00-constants.js`
 · `renderPortrait()` in `66-coins-hp.js` · markup in `00-sheet.html`, `10-inventory.html`,
@@ -91,6 +92,24 @@ caret. Rows inside a group fold individually through a `.fitoggle` button holdin
 
 A **count** goes in `.cnt`, plain and in brackets. A **badge** such as "12 entries" or the
 character's name goes in `.fgcount`, a pill pushed right.
+
+### The group field
+
+Wherever a player types a label that files a record into a group, the box is one control,
+`groupFieldHTML()` (#98): a labelled text box with a datalist of the groups already in use, so an
+existing group is a tap and a new one is just typed. `groupChoices()` dedupes the offered labels by
+`tagKey()` (first spelling kept) and sorts them A to Z. Its users:
+
+| Field | Groups | Empty means |
+|---|---|---|
+| A journal page's Tag | the page list's tag groups | Untagged |
+| A tracker's Tag | the Trackers card's tag groups | Untagged |
+| A feature's Source | the Features & Traits groups (`featGroups()`) | where it came from, named in the placeholder |
+| An item's Category | the inventory sections (`invGroups()`) | the section its own data puts it in, named in the placeholder |
+
+Every user groups case-blind by `tagKey()`, so what the box offers and what the list draws agree.
+Spells have no such field: they group by level, and their Origin is a fixed list of kinds that
+decides what counts against the allotment.
 
 ### Collapse state: character or settings
 
@@ -180,6 +199,9 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - **The ≤820px query sits below the `.stack` rule and holds both halves.** `display:contents` may
   appear once in `10-chrome.css` and only inside the query (asserted); at top level it would flatten
   the desktop layout.
+- **One group field.** A free-text label that files a record into a group is typed in
+  `groupFieldHTML()`, and the list it files into groups by `tagKey()`. A second control would let
+  the two drift, which is the #98 request.
 - **`.inv-sec-head` keeps its name.** `buildToc()` and the `[data-invsec]` handler depend on it.
 - **Headings in a `.label` stay ToC-clean.** See [Shell](shell.md).
 - **Every search box has a placeholder**, or its × never hides.
@@ -218,6 +240,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | Where the familiar row may wrap | Only in `#familiarList` | Unscoped `.item .top{flex-wrap:wrap}`: silently restyles Statuses, where one row is right |
 | How a list row fits a phone (#57) | Everything after the name in one `.row-meta` group that drops to its own line whole; opt-in by `.split`; the name asks for 6em | The familiars' `flex-basis:100%`: these rows put a fold button and star before the name, which it would orphan on a line of their own. Truncating the name: loses the name, the one thing the row is for. 8em: split short item rows for no reason |
 | A collapsible in Settings | Reuse `.fgroup` / `.fghead` / `.fcaret` | A second collapsible: the app should not have two things that look like a section header |
+| How a grouping label is typed (#98) | One group field, the journal's tag box, for tags, a feature's source and an item's category | A select of fixed groups: a player can't add their own. A box with no suggestions: a typo makes a second group |
 | How collapse state is stored | As shut = `true`, absent = default, so a default can change without reopening what a player shut | Storing "open" (named and set aside at L1741) |
 | Where Rules-tab folding is stored | `settings.rulesCollapse` | On the character: the glossary and tables come from global packs, and folding them on one character to find them open on the next would surprise |
 | Colour of group names | `--accent`, set on the shared `.fgname` rule | Scoping the change to Features: the owner chose consistency |
@@ -257,3 +280,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-12 — Attack, feature, item and condition rows group what follows the name, so on a phone it drops below whole instead of the name running over it. → ledger L5667, #57
+- 2026-10-16 — The group field: one control for a journal tag, a tracker tag, a feature's source and an item's category. → ledger L5756, #98

@@ -163,9 +163,7 @@ function journalEditorHTML(p,tags){
     `<button type="button" class="tbtn primary" data-jnldone="${esc(p.id)}">Done</button></div>`+
     `<div class="g2"><div class="field"><label class="f" for="jnlTitle">Title</label>`+
     `<input id="jnlTitle" data-jnlfield="title" value="${esc(jnlStr(p.title))}" placeholder="e.g. Session 3 — into the Mire" autocomplete="off"></div>`+
-    `<div class="field"><label class="f" for="jnlTag">Tag</label>`+
-    `<input id="jnlTag" data-jnlfield="tag" value="${esc(tagLabel(p.tag))}" list="jnlTags" placeholder="e.g. Sessions" autocomplete="off">`+
-    `<datalist id="jnlTags">${tags.map(t=>`<option value="${esc(t)}">`).join("")}</datalist></div></div>`+
+    groupFieldHTML({id:"jnlTag",list:"jnlTags",label:"Tag",value:p.tag,choices:tags,placeholder:"e.g. Sessions",attrs:' data-jnlfield="tag"'})+`</div>`+
     `<div class="field"><label class="f" for="jnlText">Page</label>`+
     `<textarea id="jnlText" data-jnlfield="text" class="n-edit" placeholder="What happened, who you met, what to remember…">${esc(jnlStr(p.text))}</textarea></div>`+
     `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button></div>`+

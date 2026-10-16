@@ -237,11 +237,13 @@ When a page gains a Decisions row, add its line here under that page.
 ### [Features & traits](features/features-and-traits.md)
 
 - **What starring a feature does** — Moves it into a pinned "★ Favorites" group — the same partition the inventory uses, so most of it came for free
-- **How groups sort** — Favourites by name, like the inventory's; origin groups keep grant order, which for a class is level order
+- **How groups sort** — Favourites by name, like the inventory's; the other groups keep grant order, which for a class is level order
+- **What a feature groups by (#98)** — Its `source`, falling back to its origin
+- **The order of groups once sources move (#98)** — Grant order, each feature placing the group it came from, then its own
 - **Favourites in the ☰ menu** — Not listed (`buildToc()` collects `.inv-sec-head`, not `.fghead`)
 - **A starred granted feature on a grant rebuild** — Loses the star, left as-is: in most of those paths the feature genuinely changes
 - **Feats and traits in one picker** — Each wrapped as `{k, e, id}`
-- **The origin of a picked feature** — `null`, so it lands in "Other"
+- **The origin of a picked feature** — `null`, so it files under its own source, or "Other" without one
 - **Where a feat's kind and prerequisite are read** — The first line of the description only
 
 ### [Spells](features/spells.md)
@@ -256,6 +258,8 @@ When a page gains a Decisions row, add its line here under that page.
 ### [Inventory](features/inventory.md)
 
 - **Where a custom item's section is stored** — `sectionOverride`
+- **What a category can be (#98)** — One of the seven, in any case, or a section of the player's own, typed in the group field
+- **Where the player's own sections go (#98)** — After the seven, A to Z
 - **Starred items** — Shown only in `★ Favorites`
 - **Encumbrance default** — `"none"`
 - **Encumbrance as an effect** — No — applied in `recompute()` after the effects
@@ -370,6 +374,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Familiars on a phone** — Flatten `.stack` inside the ≤820px query and sink the pair with `order:1`
 - **Where the familiar row may wrap** — Only in `#familiarList`
 - **A collapsible in Settings** — Reuse `.fgroup` / `.fghead` / `.fcaret`
+- **How a grouping label is typed (#98)** — One group field, the journal's tag box, for tags, a feature's source and an item's category
 - **How collapse state is stored** — As shut = `true`, absent = default, so a default can change without reopening what a player shut
 - **Where Rules-tab folding is stored** — `settings.rulesCollapse`
 - **Colour of group names** — `--accent`, set on the shared `.fgname` rule

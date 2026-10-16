@@ -6,12 +6,12 @@ from, what it cost, what it weighs, whether it is worn, and — for potions, wan
 from starting-equipment grants, or typed in by hand; each is a *copy* of the pack entry, so the sheet
 can carry the player's own fields (quantity, origin, favourite, filing) alongside the rules-owned ones.
 
-**Code:** `renderInventory()`, `invItemHTML()`, `invSection()`, `invTotalsHTML()`, `renderEncPill()`,
+**Code:** `renderInventory()`, `invItemHTML()`, `invSection()`, `invSectionName()`, `invGroups()`, `invTotalsHTML()`, `renderEncPill()`,
 `itemUse()`, `detectItemUse()`, `itemUsesRowHTML()` in `40-sheet.js` · `ORIGIN_KINDS`,
 `originBadge()`, `originFromSid()`, `itemOrigin()`, `originOptionsHTML()`, `itemMetaLine()`,
 `costToGp()`, `inventoryTotal()`, `itemWeight()`, `coinsWeight()`, `carriedWeight()`, `encState()`,
 `encSpeed()` in `25-origins-items.js` · `browseItems()`, `addLibraryItems()`, `finderQty()`,
-`openBrowse()` in `85-browse.js` · `openItemForm()`, `useItem()`, `applyItemUse()`,
+`openBrowse()` in `85-browse.js` · `openItemForm()`, `groupFieldHTML()`, `useItem()`, `applyItemUse()`,
 `openItemUsePrompt()`, `addStatusByName()` in `80-modal-forms.js` · `resetItemUses()`,
 `parseDiceExpr()`, `rollDiceExpr()` in `65-resources.js` · `renderCoins()`, `applyCoinInput()`,
 `signedEntry()`, `coinKeys()`, `openCoinAdjust()`, `convertCoins()` in `66-coins-hp.js` ·
@@ -33,17 +33,27 @@ The item editor's own **Ammunition it fires** select (on a weapon) writes `weapo
 Other… opens a box for a kind not yet on the sheet. See [Ammunition](ammunition.md).
 
 **Sections.** `invSection(it)` files an item under one of `INV_ORDER` — Weapons, Armor, Consumables,
-Magic Items, Tools, Gear, Loot. A valid `sectionOverride` wins outright; otherwise it reads
+Magic Items, Tools, Gear, Loot — or a section of the player's own. A `sectionOverride` wins outright,
+read through `invSectionName()`; otherwise it reads
 `category` (else `type`): a `weapon` object or "weapon" → Weapons; `itemArmor()` or armor/shield →
 Armor; then word-bounded alternations for potion/scroll/consumable/ammunition, wand/rod/staff/ring/
-wondrous/focus, tool/kit/instrument/supplies/utensils; "gear" → Gear; else Loot. A starred item
-(`fav`) is lifted into `★ Favorites` at the top, sorted by name, and appears **only** there. Inside a
-section, equipped items sort first, then by name. Section heads collapse (`invCollapse.sections`,
-keyed by title); Collapse all folds item bodies (`invCollapse.items`).
+wondrous/focus, tool/kit/instrument/supplies/utensils; "gear" → Gear; else Loot. `invGroups()`
+(pure) gives the sections in order: a starred item (`fav`) is lifted into `★ Favorites` (`INV_FAV`) at
+the top, sorted by name, and appears **only** there; then the seven; then the player's own sections
+A to Z, grouped by `tagKey()` and labelled by the first spelling met. Inside a section, equipped
+items sort first, then by name. Section heads collapse (`invCollapse.sections`, keyed by title, a
+player's section included); Collapse all folds item bodies (`invCollapse.items`). A player's section
+is an `.inv-sec-head` like any other, so it is listed in the ☰ flyout.
 
-**Custom category.** The item form's Category select offers "Automatic (*the section it would fall
-into*)" plus the seven sections, and writes `sectionOverride` — never `category`, which belongs to the
-pack entry. The form carries `category` and `type` across an edit.
+**Custom category.** The item form's Category is the group field (`groupFieldHTML()`, see
+[Sections & layout](../ui/sections-and-layout.md)), the box the journal's tags use: it offers the
+seven sections and any the player has made, a new one is typed, and left empty it reads
+"Automatic (*the section the item's own data puts it in*)", worked out without the override.
+`invSectionName()` reads what is typed: one of the seven in any case files there (a typed
+"consumables" is Consumables, so it is still read for healing), anything else is the player's own
+section tidied as a tag, blank is no override, and "★ Favorites" is not a section. It writes
+`sectionOverride` — never `category`, which belongs to the pack entry. The form carries `category`
+and `type` across an edit.
 
 **Origin.** `ORIGIN_KINDS` has 13 kinds, each with a badge letter and a detail placeholder ("at
 (place)", "from (who)"). `originBadge()` draws the letter; tapping it opens the kind, detail and the
@@ -154,6 +164,8 @@ the inventory and recompute, because coins have weight.
 | Question | Decision | Rejected, and why |
 |---|---|---|
 | Where a custom item's section is stored | `sectionOverride` | Writing `category`: clobbers a library item's own category |
+| What a category can be (#98) | One of the seven, in any case, or a section of the player's own, typed in the group field the journal's tags use | The select of seven: Mike asked for the journal's tag pattern everywhere a source or category is set |
+| Where the player's own sections go (#98) | After the seven, A to Z | Interleaved A to Z with the seven: Weapons and Armor would no longer lead |
 | Starred items | Shown only in `★ Favorites` | Also in their section: duplication |
 | Encumbrance default | `"none"` | `"standard"`: drops a hoarding character to 5 ft on upgrade, with no warning (owner's call) |
 | Encumbrance as an effect | No — applied in `recompute()` after the effects | An effect: renders as an editable chip, and cannot say "speed becomes 5" or "disadvantage" |
@@ -192,3 +204,4 @@ the inventory and recompute, because coins have weight.
 - 2026-09-28 — Insert from rules pack keeps a weapon's `+N` and notes. → ledger L4392, #74
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-02 — The item editor sets what a weapon fires and marks ammunition, with a bonus; Insert from pack unpacks a bundle. → ledger L4978, #8
+- 2026-10-16 — Category is the shared group field: a section of the player's own, or one of the seven in any case. → ledger L5756, #98

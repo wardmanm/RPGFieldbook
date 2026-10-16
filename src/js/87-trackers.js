@@ -183,8 +183,7 @@ function trackerFormHTML(t,tags,isNew){
   return `<div class="field"><label class="f" for="tkName">Name</label><input id="tkName" value="${esc(jnlStr(t.name))}" placeholder="e.g. Goblins slain" autocomplete="off"></div>`+
     `<div class="g2"><div class="field"><label class="f" for="tkType">Type</label><select id="tkType">`+
       TRK_TYPES.map(([v,l])=>`<option value="${esc(v)}"${ty===v?" selected":""}>${esc(l)}</option>`).join("")+`</select></div>`+
-    `<div class="field"><label class="f" for="tkTag">Tag</label><input id="tkTag" value="${esc(tagLabel(t.tag))}" list="tkTags" placeholder="e.g. Kills" autocomplete="off">`+
-      `<datalist id="tkTags">${tags.map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div></div>`+
+    groupFieldHTML({id:"tkTag",list:"tkTags",label:"Tag",value:t.tag,choices:tags,placeholder:"e.g. Kills"})+`</div>`+
     `<div class="field" data-tkfor="counter"><label class="f" for="tkGoal">Goal</label><input id="tkGoal" type="number" min="0" inputmode="numeric" value="${esc(g||"")}" placeholder="None — count forever"></div>`+
     `<div class="field" data-tkfor="checklist"><label class="f" for="tkItems">Items, one per line</label><textarea id="tkItems" placeholder="Find the map&#10;Cross the Mire&#10;Meet Brindle">${esc(lines)}</textarea></div>`+
     `<div class="toggle" id="tkAutoRow"><div><div class="t-lbl">Close when complete</div><div class="t-sub">Move it to Completed once it's done. You get an Undo.</div></div>`+

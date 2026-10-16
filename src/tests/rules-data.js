@@ -1227,10 +1227,17 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     let m;
     const rd = /\bid="([A-Za-z][\w-]*)"/g;
     while ((m = rd.exec(s))) declared.add(m[1]);
+    /* the group field (#98) renders the id it is given, so an id handed to
+       groupFieldHTML() is declared there — checked below that it still is */
+    const rg = /groupFieldHTML\(\{id:"([A-Za-z][\w-]*)"/g;
+    while ((m = rg.exec(s))) declared.add(m[1]);
     const ru = /getElementById\("([A-Za-z][\w-]*)"\)/g;
     while ((m = ru.exec(s))) used.set(m[1], f);
   });
   const missing = [...used.keys()].filter(k => !declared.has(k));
+  const formsJs = fs.readFileSync(path.join(ROOT, 'src/js/80-modal-forms.js'), 'utf8');
+  ck('...which counts an id passed to groupFieldHTML() only while it renders it',
+     /function groupFieldHTML\(o\)\{[\s\S]*?<input id="\$\{esc\(o\.id\)\}"[\s\S]*?<datalist id="\$\{esc\(o\.list\)\}"/.test(formsJs));
   ck('every id the app looks up is one it renders', missing.length === 0,
      missing.map(k => k + ' (' + used.get(k) + ')'));
   ck('the check is actually looking at something', used.size > 100 && declared.size > 100,

@@ -17,6 +17,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
   'statStyle', 'statGroupHTML', 'statGroupsHTML', 'ABIL',
   'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
+  'featOriginLabel', 'invSectionName', 'invGroups', 'INV_FAV', 'INV_ORDER', 'groupChoices', 'groupFieldHTML',
+  'tagLabel', 'tagKey', 'journalEditorHTML', 'trackerFormHTML',
   'FEAT_KINDS', 'featKindDef', 'featPickList', 'featPickKind', 'featPickPrereq',
   'featPickName', 'featPickStoredName', 'featPickGroup', 'addPickedFeature', 'updResolve',
   'parseDiceExpr', 'rollDiceExpr', 'diceExprText', 'diceExprDice',
@@ -430,7 +432,42 @@ ck('"Adventuring Gear" does not match on the ring in adventuring',
    sec({category: 'Adventuring Gear'}) === 'Gear');
 // the player's own choice beats all of it
 ck('an explicit section override wins', sec({category: 'Gear', sectionOverride: 'Tools'}) === 'Tools');
-ck('a nonsense override is ignored', sec({category: 'Gear', sectionOverride: 'Nowhere'}) === 'Gear');
+/* #98: the category is a free-text group, as a journal tag is — one of the seven
+   files there whatever its case, anything else is the player's own section */
+ck("a category of the player's own is its own section", sec({category: 'Gear', sectionOverride: 'Spell Components'}) === 'Spell Components');
+ck('...tidied as a tag is', sec({category: 'Gear', sectionOverride: '  Spell   Components '}) === 'Spell Components');
+ck('a built-in section in any case files there', sec({category: 'Gear', sectionOverride: 'tools'}) === 'Tools' &&
+   X.invSectionName('MAGIC ITEMS') === 'Magic Items');
+ck('a blank category is no category', sec({category: 'Gear', sectionOverride: '   '}) === 'Gear' && X.invSectionName(7) === '7' &&
+   X.invSectionName(null) === '' && X.invSectionName({}) === '');
+ck('the favourites heading is not a section', sec({category: 'Gear', sectionOverride: '★ favorites'}) === 'Gear');
+ck('a typed "consumables" is still read for its healing',
+   !!X.detectItemUse({category: 'Gear', sectionOverride: 'consumables', description: 'You regain 2d4 + 2 Hit Points.'}));
+{
+  const it = (id, name, o) => Object.assign({id, name}, o || {});
+  const g = X.invGroups([
+    it('1', 'Rope', {category: 'Adventuring Gear'}),
+    it('2', 'Eye of Newt', {sectionOverride: 'Spell Components'}),
+    it('3', 'Dagger', {weapon: {dice: '1d4'}}),
+    it('4', 'Bat Guano', {sectionOverride: 'spell components'}),
+    it('5', 'Lockpicks', {sectionOverride: 'Burglary'}),
+    it('6', 'Longsword', {weapon: {dice: '1d8'}, equipped: true}),
+    it('7', 'Lucky Coin', {fav: true, sectionOverride: 'Burglary'}),
+    it('8', 'Amulet', {fav: true}),
+    it('9', 'Chalk', {sectionOverride: 'gear'})]);
+  ck('sections run: favourites, the built-in seven in their order, then the player\'s own A to Z',
+     g.map(x => x.title).join() === '★ Favorites,Weapons,Gear,Burglary,Spell Components', g.map(x => x.title));
+  ck("...a player's section groups whatever the case, by its first spelling",
+     g.find(x => x.title === 'Spell Components').items.map(i => i.name).join() === 'Bat Guano,Eye of Newt');
+  ck('...a built-in name typed in lower case joins the built-in section',
+     g.find(x => x.title === 'Gear').items.map(i => i.name).join() === 'Chalk,Rope');
+  ck('...a starred item shows only in Favorites, by name', g[0].items.map(i => i.name).join() === 'Amulet,Lucky Coin' &&
+     g.find(x => x.title === 'Burglary').items.length === 1);
+  ck('...equipped first inside a section', g.find(x => x.title === 'Weapons').items.map(i => i.name).join() === 'Longsword,Dagger');
+  ck('...and the favourites title is the shared label', X.INV_FAV === X.FEAT_FAV);
+  ck('an empty or junk inventory has no sections', X.invGroups([]).length === 0 && X.invGroups(null).length === 0 &&
+     X.invGroups([null, 7]).length === 0);
+}
 
 /* ================= item origin =================
    Where a thing came from: {kind, detail, at}, kind drawn from a fixed
@@ -1010,6 +1047,65 @@ const RACE = {kind: 'race', name: 'Elf'}, CLS = {kind: 'class', class: 'Rogue'};
 }
 ck('an empty list makes no groups at all',
    X.featGroups([]).length === 0 && X.featGroups(null).length === 0);
+
+/* #98: a feature files under its SOURCE — the label on its row, which the
+   player edits — and only when it has none, under where it came from */
+{
+  const MAP = {kind: 'race', name: 'Mapach'}, BG = {kind: 'background', name: 'Wanderer'};
+  const f = (id, name, origin, source, fav) => ({id, name, origin, source, fav, enabled: true});
+  const list = [f('1', 'Climber', MAP, 'Mapach'), f('2', 'Darkvision', MAP, 'Mapach'), f('3', 'Resilience', MAP, 'Mapach'),
+                f('4', 'Wanderer — Ability Scores', BG, 'Wanderer')];
+  ck('granted features file under their source, which is where they came from',
+     X.featGroups(list).map(g => g.label + ':' + g.items.length).join() === 'Mapach:3,Wanderer:1');
+  list[0].source = 'Wanderer';
+  const g = X.featGroups(list);
+  ck('changing a source moves the feature into that group', g.map(g => g.label + ':' + g.items.length).join() === 'Mapach:2,Wanderer:2' &&
+     g[1].items.map(x => x.name).join() === 'Climber,Wanderer — Ability Scores', g.map(g => g.label));
+  ck("...while its origin stays, so removing the ancestry still takes it back", list[0].origin === MAP);
+  list[0].source = 'Something Else';
+  ck("a new source makes a new group, placed by its first feature: after the group that feature came from",
+     X.featGroups(list).map(g => g.label).join() === 'Mapach,Something Else,Wanderer', X.featGroups(list).map(g => g.label));
+  ck('...and a group only a moved feature names, with its origin group emptied, still lists in grant order',
+     X.featGroups([f('1', 'A', MAP, 'Wanderer'), f('2', 'B', BG, 'Wanderer'), f('3', 'C', {kind: 'class', class: 'Rogue'}, 'Rogue')])
+       .map(g => g.label + ':' + g.items.length).join() === 'Wanderer:2,Rogue:1');
+  list[0].source = 'mapach';
+  ck('a source in another case joins the group, labelled by the first spelling met, as journal tags are',
+     X.featGroups(list).map(g => g.label + ':' + g.items.length).join() === 'mapach:3,Wanderer:1', X.featGroups(list).map(g => g.label));
+  list[0].source = '';
+  ck('an empty source files where the feature came from', X.featGroupLabel(list[0]) === 'Mapach');
+  ck('a source reading as the favourites heading files by origin', X.featGroupLabel(f('9', 'X', MAP, '★ favorites')) === 'Mapach');
+  ck("...and a picked trait's own source is its group", X.featGroupLabel(f('9', 'Agonizing Blast', null, 'Eldritch Invocation')) === 'Eldritch Invocation');
+  ck('what an empty source would file under ignores the source', X.featOriginLabel(f('9', 'X', BG, 'Mapach')) === 'Wanderer' &&
+     X.featOriginLabel(f('9', 'X', null, 'Mapach')) === 'Other');
+  ck('a starred feature still moves to Favorites whatever its source',
+     X.featGroups([f('1', 'Climber', MAP, 'Wanderer', true)]).map(g => g.label).join() === X.FEAT_FAV);
+}
+
+/* #98: the one group field — the journal's tag box, now shared by the tags, a
+   feature's source and an item's category */
+{
+  ck('the choices are deduped whatever the case, first spelling kept, A to Z, blanks and junk dropped',
+     JSON.stringify(X.groupChoices(['Weapons', 'burglary', ' ', 'Burglary', null, 'armor  kit', 'Armor Kit', 7])) ===
+     JSON.stringify(['7', 'armor kit', 'burglary', 'Weapons']), X.groupChoices(['Weapons', 'burglary', ' ', 'Burglary', null, 'armor  kit', 'Armor Kit', 7]));
+  ck('...and no list is no choices', X.groupChoices(undefined).length === 0);
+  const h = X.groupFieldHTML({id: 'fSrc', list: 'fSrcGroups', label: 'Source', value: 'Mapach', choices: ['Mapach', 'Wanderer'], placeholder: 'Automatic (Other)'});
+  ck('it is a labelled box tied to its list of groups',
+     /<label class="f" for="fSrc">Source<\/label><input id="fSrc" value="Mapach" list="fSrcGroups" placeholder="Automatic \(Other\)" autocomplete="off">/.test(h) &&
+     /<datalist id="fSrcGroups"><option value="Mapach"><option value="Wanderer"><\/datalist>/.test(h), h);
+  const evil = X.groupFieldHTML({id: 'x', list: 'y', label: '<b>', value: '"><i>', choices: ['"><i>'], placeholder: '"><i>'});
+  ck('...and escapes everything a player typed', !/<i>|<b>/.test(evil), evil);
+  ck("the journal editor's tag is that field", /id="jnlTag" data-jnlfield="tag" value="Quests" list="jnlTags"/.test(
+     X.journalEditorHTML({id: 'p', title: 't', tag: 'Quests', text: ''}, ['Quests'])));
+  ck("...and the tracker form's", /id="tkTag" value="Kills" list="tkTags"/.test(X.trackerFormHTML({type: 'counter', tag: 'Kills'}, ['Kills'], true)));
+  const forms = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '80-modal-forms.js'), 'utf8');
+  const body = name => (forms.match(new RegExp('function ' + name + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}')) || [''])[0];
+  ck("the feature form's Source and the item form's Category are that field too",
+     /groupFieldHTML\(\{id:"fSrc"/.test(body('openFeatureForm')) && /groupFieldHTML\(\{id:"iCategory"/.test(body('openItemForm')) &&
+     !/<select id="iCategory">/.test(forms) && !/<input id="fSrc"/.test(forms));
+  ck('...and each saves what the group would show: a tidied source, a resolved category',
+     /source:tagLabel\(document\.getElementById\("fSrc"\)\.value\)/.test(body('openFeatureForm')) &&
+     /invSectionName\(document\.getElementById\("iCategory"\)\.value\)/.test(body('openItemForm')));
+}
 
 // ---------- the star markup matches inventory's
 {
