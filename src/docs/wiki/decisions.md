@@ -225,6 +225,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **The item editor and pack format** — Both learn the ammo fields
 - **Recover N's visibility** — Shows only when N > 0
 - **Merging an unpacked bundle** — Only into a stack of the same name, bonus and grant
+- **A pack older than ammunition (#96)** — The app fills in what it lacks from its own tables at load, and runs the sheet pass once more
 
 ### [Class resources](features/class-resources.md)
 

@@ -142,8 +142,9 @@ only `_id` and `_dups`.
 anything, and every path that changes the pool ends in `reindexRules()`: a merge, a fetch, a
 removal, Settings → Import (which assigns `rules` wholesale, never through `mergeRules()`), and both
 cache restores. A category that is not a list becomes an empty one; `tidyRule()` drops an entry
-with no `ruleName()`, turns a numeric name into text, and gives a keyword the glossary aliases and an
-id if it has none. It returns what it dropped per category, for a caller to report; none does yet,
+with no `ruleName()`, turns a numeric name into text, gives a keyword the glossary aliases and an
+id if it has none, and gives an item any ammunition fields its pack predates (`ammoRepairDef()`,
+see [Ammunition](../features/ammunition.md)). It returns what it dropped per category, for a caller to report; none does yet,
 so a settings file's unusable entries go without a message.
 
 **Lookups are by name.** `ruleById(kind, idOrName)` matches an `_id` or a `keyOf()` name.
@@ -353,3 +354,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-09 — Bundling moves from the Node bundler to `bundle()` in `tools/data-kit/fbdata.py` (Python), byte for byte. → ledger L5342, #85
 - 2026-10-09 — The `known` state: a pack with a version and no baseline shows it quietly. → ledger L5388, #85
 - 2026-10-09 — Four packs move to the private repo; the 2024 and SRD packs come from separate archives, so import order decides which twin a lookup finds. → ledger L5426, #85
+- 2026-10-16 — `tidyRule()` fills in the ammunition fields of an item from a pack older than ammunition. → ledger L5756, #96

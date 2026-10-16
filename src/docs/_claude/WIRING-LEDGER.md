@@ -5753,3 +5753,42 @@ Pages: [computed stats & effects](../wiki/architecture/computed-stats-and-effect
 
 Pages: [private data](../wiki/data/private-data.md), [converter](../wiki/data/converter.md),
 [testing](../wiki/process/testing.md), [building & CI](../wiki/process/building-and-ci.md)
+## A pack older than ammunition still gives a launcher its ammunition (#96, 2026-10-16)
+
+1. Mike: a Light Crossbow is not ammo-enabled by default, and ammunition does not mark itself as
+   ammunition. Reproduced with the 2024 pack players actually have: its last release is 1.7.2
+   (2026-09-29), and ammunition reached the data on 2026-10-02 (private `1cdfb3f`), so its nine
+   launchers carry no `weapon.ammo`, its pieces no `ammo` and its bundles no `pack`.
+   `fbdata.py digest --registry _private-data/data/packs.json --data-root _private-data/data`
+   reads CHANGED for all four private packs. Driven in the released build: the finder's Light
+   Crossbow had no ammunition line, and "Crossbow Bolts (20)" stayed one bundle.
+2. `migrateAmmo()` had repaired copies already on a sheet, once, from the built-in tables. Every
+   copy made after that from the bare pool — the finder, starting equipment, Insert from pack, and
+   every sheet made in 1.8.0, where `newCharacter()` marks the pass done — arrived bare.
+3. The pool: `ammoRepairDef()` (`62-ammo.js`) fills a launcher's `weapon.ammo`, a piece's `ammo`,
+   and a bundle's `ammo` and `pack` from the same tables, only where missing; a pack's own value
+   wins, the weapon is copied rather than edited in place, and nothing outside the tables is
+   touched. `tidyRule()` calls it for every item, so every path that loads rules repairs the pool:
+   a merge, a fetch, Settings → Import, and both cache restores at boot. `fpNorm()` sorts keys, so a
+   repaired entry fingerprints exactly as the current pack's will.
+4. The sheets: `AMMO_PASS` is 2 and `migrateAmmo()` runs while `ammoInit` is below it, so a sheet
+   the first pass ran on (or one made since) gets the pass once more. Every step fills only what is
+   missing, so a second run changes nothing else. `newCharacter()` sets `ammoInit` to `AMMO_PASS`.
+   Like the first pass, it gives a known launcher its kind even if the player had set "None": in
+   the two days the item editor has had that select, it is far likelier to be the bug.
+5. Repaired copies and the repaired pool agree in the update tool (no change, no edit), except that
+   an unpacked bundle's copy keeps the bundle's own text, so the pack's piece description reads as
+   an update — the first pass behaves the same, and a fresh finder copy takes the piece's text.
+6. Tests: `sheet.js` #96 (the repair per entry, a pack's own value winning, junk and hostile names,
+   the merge and a restored pool, the finder and starting equipment, the second pass with the
+   update tool's view, a sheet already at the pass). Each half fails alone without its fix.
+   Driven: the v1.7.2 2024 items imported through Setup → Import rules files into the released
+   build and then the fixed one; the cached pool came back repaired, an existing sheet holding the
+   bare crossbow and bundle was repaired on open, Fire spent a bolt, and a fresh finder add was
+   right. Screenshots `.claude/qa/96-*`.
+7. Not done here, and Mike's to cut: a data release of the private packs, so the 2024 pack players
+   download carries the ammunition data itself.
+
+Pages: [ammunition](../wiki/features/ammunition.md), [rules packs](../wiki/architecture/rules-packs.md),
+[character model](../wiki/architecture/character-model.md),
+[rules-update tool](../wiki/features/rules-update-tool.md)
