@@ -7,7 +7,7 @@ options, the rules data — where it comes from, what is loaded, whether a loade
 this build expects, and whether a newer copy of it is out — backup of settings and rules, and the
 credits that the icons and the loaded packs require.
 
-**Code:** `SET_SECTIONS`, `setSecOpen()`, `setSecHTML()`, `openSettings()`, `encSettingsHint()`,
+**Code:** `SET_PAGES`, `setPageOf()`, `setNavHTML()`, `setPageHTML()`, `setRowHTML()`, `rulesNavBadgeHTML()`, `openSettings()`, `encSettingsHint()`,
 `rulesStatusText()`, `updateRulesStatus()`, `refreshRulesUI()`, `loadedRulesGroups()`,
 `removeRulesGroup()`, `clearAllRules()`, `dataStatus()`, `dataUpdateFor()`, `dataStatusHTML()`,
 `rulesCacheWarning()`, `rulesBadge()`, `rulesCreditsHTML()`, `SETTINGS_KEYS`, `foldLegacySettings()`, `readSettingsFile()`, `importSettings()`,
@@ -32,7 +32,7 @@ the header chip, and Import settings driven through its real handler), `data-arc
 
 ## How it works
 
-**The modal.** `openSettings()` builds five folding groups with `setSecHTML()`, borrowing the feature
+**The modal.** `openSettings()` builds five folding groups (replaced by a sidebar in #107, rewritten in Task 5), borrowing the feature
 list's `.fgroup` / `.fghead` / `.fcaret`:
 
 - **Appearance** — skin, mode (system/light/dark), hand-drawn borders, icon tabs, and "Tap outside

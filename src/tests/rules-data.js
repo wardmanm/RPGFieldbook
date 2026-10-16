@@ -16,7 +16,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'loadedRulesGroups','rulesBucket','rulesDataHTML','clearAllRules',
   'mergeRules','resetRules','blankChar','migrate','catName',
   'DATA_VERSIONS','dataStatus','dataStatusHTML',
-  'SET_SECTIONS','setSecDef','setSecOpen','setSecHTML','rulesEntryCount','settings',
+  'rulesEntryCount','settings',
   'SET_PAGES','setPageDef','setPagesFor','setPageOf','setPageStep','setNavHTML','setPageHTML','setGroupHTML','setRowHTML','rulesNavBadgeHTML','SETTINGS_KEYS',
   'NOTE_SECTIONS','NOTE_TABS','noteDef','getNote','noteText','hasNote','saveNote',
   'noteGroupOpen','notesHTML','noteBtnHTML','noteEntryHTML','esc',
@@ -990,48 +990,6 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
   // registry orders the two, and nothing here can check it.
 }
 
-// ---------- Settings modal: collapsible sections
-// The state is stored as COLLAPSE, so an untouched section falls through to the
-// first-run default. That is what lets those defaults be changed later without
-// silently reopening sections someone deliberately shut.
-X.settings.setCollapse = {};
-X.SET_SECTIONS.forEach(s => {
-  ck('section "' + s.k + '" starts at its declared default', X.setSecOpen(s.k) === s.open);
-});
-ck('an unknown section id defaults to open', X.setSecOpen('no-such-section') === true);
-X.settings.setCollapse = {appearance: true, rules: false};
-ck('a stored collapse closes the section', X.setSecOpen('appearance') === false);
-ck('a stored false opens one that defaults shut', X.setSecOpen('rules') === true);
-ck('sections nobody touched keep their default', X.setSecOpen('backup') === false);
-// settings arrive from a JSON file a user can hand-edit or an old version wrote
-[null, undefined, [], 'nope', 7].forEach(bad => {
-  X.settings.setCollapse = bad;
-  ck('a ' + JSON.stringify(bad) + ' setCollapse falls back to defaults', X.setSecOpen('appearance') === true);
-});
-X.settings.setCollapse = {};
-
-ck('every section id is unique', new Set(X.SET_SECTIONS.map(s => s.k)).size === X.SET_SECTIONS.length);
-ck('setSecDef finds a real section', (X.setSecDef('rules') || {}).title === 'Rules data');
-ck('setSecDef on rubbish is null, not a throw', X.setSecDef('zzz') === null);
-ck('markup for an unknown section is empty, not broken', X.setSecHTML('zzz', '<p>x</p>') === '');
-
-const open = X.setSecHTML('appearance', '<p>body</p>');
-ck('an open section carries no collapsed caret', !/fcaret c"/.test(open), open);
-ck('an open section is not display:none', !/display:none/.test(open), open);
-ck('the section body is tagged for the toggle', open.includes('data-setsecbody="appearance"'));
-ck('the header is tagged for the toggle', open.includes('data-setsec="appearance"'));
-ck('the header announces its state to screen readers', open.includes('aria-expanded="true"'));
-X.settings.setCollapse = {appearance: true};
-const shut = X.setSecHTML('appearance', '<p>body</p>');
-ck('a closed section hides its body', shut.includes('display:none'), shut);
-ck('a closed section turns the caret', shut.includes('fcaret c"'), shut);
-ck('a closed section says so to screen readers', shut.includes('aria-expanded="false"'));
-ck('a closed section still renders its body (it is hidden, not dropped)', shut.includes('<p>body</p>'));
-X.settings.setCollapse = {};
-// the badge is the reason a folded section is still informative
-ck('a badge is rendered when given', X.setSecHTML('rules', '', '12 entries').includes('>12 entries<'));
-ck('no badge element when there is none', !X.setSecHTML('rules', '').includes('fgcount'));
-ck('badge text is escaped', X.setSecHTML('rules', '', '<img>').includes('&lt;img&gt;'));
 
 // ---------- Settings modal: the sidebar's pages (#107)
 ck('six pages, in the order the sidebar lists them',
@@ -1524,11 +1482,11 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /\.hpcol input\.hp-danger\{color:var\(--brick\)\}/.test(sheetCss));
   ck('renderHP paints the band onto the Current box',
      /function renderHP\(\)\{[\s\S]*?getElementById\("hpCur"\)[\s\S]{0,140}classList\.toggle\("hp-warn"/.test(js));
-  ck('the colour switch is in the "This character" settings section, per character',
+  ck('the colour switch is on the Sheet display page, per character',
      /id="swHpColor"/.test(js) && /character\.hpColor/.test(js));
   // spec §11 (#41): the Trackers switch is drawn in This character and does something
-  ck('the Trackers switch is rendered in the "This character" settings section',
-     /id="swTrackers"/.test((js.match(/const secCharacter=activeId\?`[\s\S]*?`:"";/) || [''])[0]) &&
+  ck('the Trackers switch is rendered on the Sheet display page',
+     /id="swTrackers"/.test((js.match(/const secDisplay=hasChar\?[\s\S]*?:"";/) || [''])[0]) &&
      /showTrackers\(character\)\?"on":""\}" id="swTrackers"/.test(js));
   ck('...and wired: a tap flips showTrackers, redraws the card and saves',
      /getElementById\("swTrackers"\);if\(b\)b\.addEventListener\("click",\(\)=>\{character\.showTrackers=!showTrackers\(character\);[^}]*renderTrackers\(\);scheduleSave\(\);\}\)/.test(js),
@@ -1714,7 +1672,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('...the setting is off by default, for a new player and one whose settings predate it',
      /let settings=\{[^\n]*backdropClose:false[^\n]*\};/.test(js) && /settings\.backdropClose===true\)dismissModal/.test(js));
   ck('...Settings has its switch, which saves it, and a settings file carries it',
-     /id="swBackdrop" role="switch" aria-checked="\$\{settings\.backdropClose===true\?"true":"false"\}"/.test(js) &&
+     /class="switch \$\{settings\.backdropClose===true\?"on":""\}" id="swBackdrop" role="switch" aria-checked="\$\{settings\.backdropClose===true\?"true":"false"\}"/.test(js) &&
      /getElementById\("swBackdrop"\)\.addEventListener\("click",e=>\{settings\.backdropClose=settings\.backdropClose!==true;[^\n]*saveSettings\(\);\}\)/.test(js) &&
      /const SETTINGS_KEYS=\[[^\]]*"backdropClose"/.test(js));
   ck('...and the flyout still closes on a tap outside', /if\(t\.closest\("#tocBack"\)\)return closeToc\(\);/.test(js));
@@ -1973,6 +1931,32 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const inert = new Set(['srcList', 'rulesData', 'rulesStatus', 'encHint', 'setSections']);
   const unwired = [...declared].filter(k => !used.has(k) && !inert.has(k));
   ck('every control it renders is wired up somewhere', unwired.length === 0, unwired);
+}
+
+// ---------- Settings modal: each control on its page (#107)
+{
+  const src = fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8');
+  const sec = name => (src.match(new RegExp('const ' + name + '=[\\s\\S]*?\\n  const ')) || [''])[0];
+  const on = (name, ids) => ids.every(id => sec(name).includes('id="' + id + '"'));
+  ck('Appearance holds the look and the interface switches', on('secAppearance', ['segSkin', 'segTheme', 'swRough', 'swTabIcons', 'swBackdrop']));
+  ck('Sheet display holds the card choices', on('secDisplay', ['segStatStyle', 'segHdStyle', 'swHpColor', 'swTrackers']));
+  ck('Carrying holds size, encumbrance, coins and the live line', on('secCarrying', ['setSize', 'segEnc', 'swCoinWeight', 'encHint']));
+  ck('Rules data holds the sources, the list and the sheet check', on('secRules', ['srcList', 'newSrc', 'btnFetchRules', 'btnClearRules', 'rulesData', 'btnCharUpdate']));
+  ck('Backup holds the library and the settings file', on('secBackup', ['swHome', 'btnExportSettings', 'btnImportSettings', 'setImpStatus']));
+  ck('encumbrance is a segmented choice now, not a dropdown', !/id="setEnc"/.test(src) &&
+     /character\.encumbrance=b\.dataset\.enc;/.test(src) && ['none', 'standard', 'variant'].every(v => sec('secCarrying').includes('["' + v + '",')));
+  ck('every switch on the dialog says its state to a screen reader',
+     (src.match(/class="switch /g) || []).length === 6 && (src.match(/role="switch" aria-checked=/g) || []).length === 6 &&
+     /const s=e\.target\.closest\("\.switch"\);if\(s\)s\.setAttribute\("aria-checked",s\.classList\.contains\("on"\)\?"true":"false"\);/.test(src));
+  ck('Settings opens wide, on the remembered page; a dialog opened from it does not',
+     /openModal\("Settings",[\s\S]*?\{wide:true\}\);/.test(src) && /setPageOf\(settings\.setPage,hasChar\)/.test(src) &&
+     /openModal\("Import settings",settingsImportQuestionHTML\(imp\)\);/.test(src));
+  ck('the arrow keys step over the SHOWN pages only', /setPageStep\(pages\.map\(p=>p\.k\),t\.dataset\.setpage,e\.key\)/.test(src));
+  ck('switching a page shows it, remembers it and starts it at the top',
+     /p\.hidden=p\.dataset\.setpagebody!==k;/.test(src) && /settings\.setPage=k;saveSettings\(\);/.test(src) && /mb\.scrollTop=0/.test(src));
+  ck('the old folding sections are gone', !/SET_SECTIONS|setSecHTML|setSecOpen|data-setsec=/.test(src));
+  ck('the badge refresh targets the sidebar',
+     /querySelector\('\[data-setbadge="rules"\]'\)[\s\S]{0,40}innerHTML=rulesNavBadgeHTML\(\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/89-rules-merge.js'), 'utf8')));
 }
 
 /* ================= the Rules tab sections start collapsed ====================
@@ -2373,16 +2357,16 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   };
   // the status line and the Settings "Rules data" header chip, readable
   const status = {textContent: '', className: ''};
-  const chip = {textContent: 'STALE'};
+  const chip = {innerHTML: 'STALE'};
   const getById = ctx.document.getElementById;
   ctx.document.getElementById = id => id === 'rulesStatus' ? status : getById(id);
-  ctx.document.querySelector = sel => /data-setsec="rules"/.test(sel) && /fgcount/.test(sel) ? chip : null;
+  ctx.document.querySelector = sel => /data-setbadge="rules"/.test(sel) ? chip : null;
   // drain every microtask the fetch chain queues, whether or not it returns a promise
   const run = async () => { calls = []; await X.fetchAllRules(); await new Promise(r => setImmediate(r)); };
   const cache = () => store[X.K_RULES];
   const cached = () => JSON.parse(X.readRulesCacheString(cache()) || '{}');
   const names = (r, cat, src) => { const a = (r || X.rules)[cat]; return (Array.isArray(a) ? a : []).filter(e => e && (!src || e._source === src)).map(e => e.name).sort(); };
-  const badge = () => { const n = X.rulesEntryCount(); return n ? n + ' entries' : 'none loaded'; };
+  const badge = () => X.rulesNavBadgeHTML();
   // a file-imported rulebook, cached the way an import leaves it
   const seedFilePack = () => {
     X.character = X.blankChar();
@@ -2399,7 +2383,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   X.settings.rulesSources = [OFF];
   routes = {};
   const poolBefore = JSON.stringify(X.rules), cacheBefore = cache();
-  chip.textContent = 'STALE';
+  chip.innerHTML = 'STALE';
   await run();
   ck('fetch-all offline: the pool is exactly as it was', JSON.stringify(X.rules) === poolBefore,
      names(null, 'spells'));
@@ -2411,14 +2395,14 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('fetch-all offline: ...names the source that failed', /offline-pack\.json/.test(status.textContent), status.textContent);
   ck('fetch-all offline: ...points at importing files instead', /import/i.test(status.textContent), status.textContent);
   ck('fetch-all offline: ...in red', /\berr\b/.test(status.className), status.className);
-  ck('fetch-all offline: the Rules data chip counts what is loaded', chip.textContent === badge(), [chip.textContent, badge()]);
+  ck('fetch-all offline: the Rules data badge counts what is loaded', chip.innerHTML === badge(), [chip.innerHTML, badge()]);
   ck('fetch-all offline: one request, uncached', calls.length === 1 && calls[0].cache === 'no-store', calls);
 
   // ---- (a) a file-imported pack survives a successful fetch of another source
   seedFilePack();
   X.settings.rulesSources = [HB];
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap', text: 'v1'}, {name: 'Fizzle'}]}};
-  chip.textContent = 'STALE';
+  chip.innerHTML = 'STALE';
   await run();
   ck('fetch-all: the fetched pack is merged', names(null, 'spells', 'Homebrew').join() === 'Fizzle,Zap',
      names(null, 'spells', 'Homebrew'));
@@ -2431,8 +2415,8 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      names(cached(), 'spells').join() === 'Fireball,Fizzle,Shield,Zap', names(cached(), 'spells'));
   ck('fetch-all: the status line reports success', /^Fetched/.test(status.textContent) && /\bok\b/.test(status.className),
      [status.textContent, status.className]);
-  ck('fetch-all: the Rules data chip counts the new pool', chip.textContent === badge() && badge() === '5 entries',
-     [chip.textContent, badge()]);
+  ck('fetch-all: the Rules data badge counts the new pool', chip.innerHTML === badge() && X.rulesEntryCount() === 5,
+     [chip.innerHTML, badge()]);
 
   // ---- (c) re-fetching a source replaces its own packs, without duplicates
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap', text: 'v2'}, {name: 'Bolt'}]}};
@@ -2568,10 +2552,10 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      status.textContent);
 
   // ---- the Rules data chip follows every change to the pool, not only Fetch all
-  chip.textContent = 'STALE';
+  chip.innerHTML = 'STALE';
   state.confirm = true;
   X.clearAllRules();
-  ck('the Rules data chip follows Clear all', chip.textContent === 'none loaded', chip.textContent);
+  ck('the Rules data badge follows Clear all', chip.innerHTML === '', chip.innerHTML);
 
   /* ================= Import settings asks before replacing loaded rules (#70) ==========
      Export settings writes {_type:"fieldbook-settings", settings, rules}: the WHOLE pool as
@@ -2662,7 +2646,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
       dirty.keywords[0].id = 'kw-from-the-file';
       dirty.spells.push(Object.assign({}, dirty.spells[0], {_id: 'r999', text: 'a second copy'}));   // same source + name twice
       await importFile(settingsFile(dirty));
-      chip.textContent = 'STALE';
+      chip.innerHTML = 'STALE';
       await click('setImpReplace');
     }
     ck('replace: the pool is the file\'s', names(null, 'spells').join() === 'Fireball,Zap' && names(null, 'feats').join() === '',
@@ -2685,10 +2669,10 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     ck('replace: the settings are imported too', X.settings.skin === 'classic');
     ck('replace: the status line says the rules were replaced, with the new count',
        /replaced/i.test(impStatus.textContent) && impStatus.textContent.includes(X.rulesEntryCount() + ' entries'), impStatus.textContent);
-    ck('replace: the Rules data chip follows the new pool', chip.textContent === badge(), [chip.textContent, badge()]);
+    ck('replace: the Rules data badge follows the new pool', chip.innerHTML === badge(), [chip.innerHTML, badge()]);
     ck('replace: the loaded-data list is redrawn', /rulebook_full\.json/.test(rulesDataEl.innerHTML) && !/my-homebrew\.json/.test(rulesDataEl.innerHTML));
     ck('replace: Settings reopens on the new pool', writes.length > 0 && writes[writes.length - 1].includes(X.rulesStatusText()) &&
-       writes[writes.length - 1].includes('>' + X.rulesBadge() + '<'));
+       writes[writes.length - 1].includes(X.rulesNavBadgeHTML()));
 
     // ---- (d) a settings file with no rules never asks and never touches the pool
     for (const [what, file] of [

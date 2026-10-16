@@ -1,40 +1,7 @@
 /* ================= settings modal =================
-   The modal grew a control at a time until it was one long scroll, so it is
-   grouped into collapsible sections. They reuse the feature-list idiom
-   (.fgroup/.fghead/.fcaret) rather than inventing a second collapsible — one
-   less thing to keep looking the same. Open/closed is remembered in `settings`,
-   because a setting you visit often shouldn't need reopening every time. */
-const SET_SECTIONS=[
-  /* `open` is the FIRST-RUN default, not the current state. Appearance and the
-     character's own options are what people come here for; the rules-data block
-     is the longest and the least often touched, so it starts folded away — with
-     its entry count on the header, so "did my rules load?" is still answerable
-     without opening it. */
-  {k:"appearance",title:"Appearance",       open:true},
-  {k:"character", title:"This character",   open:true},
-  {k:"rules",     title:"Rules data",       open:false},
-  {k:"backup",    title:"Characters & backup",open:false},
-  /* Attribution for the game-icons.net emblems. Folded shut by default — it is
-     a legal notice, not a control — but it must be IN THE APP, because
-     fieldbook.html is routinely shared as a lone file that no README follows. */
-  {k:"credits",   title:"Credits & licences",open:false}
-];
-function setSecDef(k){return SET_SECTIONS.find(s=>s.k===k)||null;}
-/* stored as COLLAPSE (true = closed) so an absent key means "first run", and the
-   defaults above can change later without rewriting anyone's saved settings */
-function setSecOpen(k){
-  const c=(settings&&settings.setCollapse&&typeof settings.setCollapse==="object"&&!Array.isArray(settings.setCollapse))?settings.setCollapse:{};
-  if(k in c)return !c[k];
-  const d=setSecDef(k);return d?d.open:true;
-}
-function setSecHTML(k,body,badge){
-  const d=setSecDef(k);if(!d)return "";
-  const open=setSecOpen(k);
-  return `<div class="fgroup"><div class="fghead" data-setsec="${esc(k)}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">`+
-    `<svg class="fcaret ${open?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`+
-    `<span class="fgname">${esc(d.title)}</span>${badge?`<span class="fgcount">${esc(badge)}</span>`:""}</div>`+
-    `<div class="setsec-body" data-setsecbody="${esc(k)}"${open?"":` style="display:none"`}>${body}</div></div>`;
-}
+   A sidebar of categories beside one page at a time (#107). It replaced five
+   folding sections that had grown, a control at a time, into one long scroll.
+   The page last viewed is remembered in `settings.setPage`. */
 /* ---- the sidebar and its pages (#107) ----
    Six categories beside one page at a time, replacing the folding sections
    (spec src/docs/specs/2026-10-16-settings-dialog-design.md). `scope:"char"`
@@ -122,73 +89,57 @@ function rulesCreditsHTML(){
   return rows.length?`<div class="field"><label class="f">Rules data you have loaded</label>${rows.join("")}</div>`:"";
 }
 function openSettings(){
-  const secAppearance=`
-    <div class="field"><label class="f">Skin</label>
-      <div class="seg" id="segSkin">
-        <button data-skin="humblewood" class="${(settings.skin||"humblewood")==="humblewood"?"on":""}">Humblewood</button>
-        <button data-skin="classic" class="${settings.skin==="classic"?"on":""}">Classic D&amp;D</button>
-      </div></div>
-    <div class="field"><label class="f">Mode</label>
-      <div class="seg" id="segTheme">
-        <button data-th="system" class="${settings.theme==="system"?"on":""}">System</button>
-        <button data-th="light" class="${settings.theme==="light"?"on":""}">Light</button>
-        <button data-th="dark" class="${settings.theme==="dark"?"on":""}">Dark</button>
-      </div></div>
-    <div class="toggle"><div><div class="t-lbl">Hand-drawn borders</div><div class="t-sub">Inky wobble. Turn off for a cleaner look / low-end devices.</div></div><button class="switch ${settings.rough?"on":""}" id="swRough"></button></div>
-    <div class="toggle"><div><div class="t-lbl">Icon tabs</div><div class="t-sub">Show the tab bar as icons instead of words, on every screen size. Narrow screens do this anyway.</div></div><button class="switch ${settings.tabIcons?"on":""}" id="swTabIcons"></button></div>
-    <div class="toggle"><div><div class="t-lbl">Tap outside to close dialogs</div><div class="t-sub">Leave this off so a stray click, or a tap to hide your phone's keyboard, can't close a dialog and lose what you typed. ×, Cancel and Esc always close.</div></div><button class="switch ${settings.backdropClose===true?"on":""}" id="swBackdrop" role="switch" aria-checked="${settings.backdropClose===true?"true":"false"}" aria-label="Tap outside to close dialogs"></button></div>`;
-  const secCharacter=activeId?`
-    <div class="g2"><div class="field"><label class="f">Size</label>
-        <select id="setSize">${sizeOptionsHTML(character.size)}</select></div>
-      <div class="field"><label class="f">Encumbrance</label>
-        <select id="setEnc">${[["none","Off — show weight only"],["standard","Standard (capacity, push/drag)"],["variant","Variant (encumbered tiers)"]].map(([v,l])=>`<option value="${esc(v)}"${encMode()===v?" selected":""}>${esc(l)}</option>`).join("")}</select></div></div>
-    <p class="hint" id="encHint">${esc(encSettingsHint())}</p>
-    <div class="toggle"><div><div class="t-lbl">Coins count as weight</div><div class="t-sub">50 coins to the pound, the way the rules have it.</div></div><button class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight"></button></div>
-    <div class="toggle"><div><div class="t-lbl">Colour current HP</div><div class="t-sub">Amber at half your maximum, red at a quarter.</div></div><button class="switch ${character.hpColor!==false?"on":""}" id="swHpColor"></button></div>
-    <div class="toggle"><div><div class="t-lbl">Trackers</div><div class="t-sub">Show the Trackers card on the Journal tab. Hiding it keeps everything you've counted.</div></div><button class="switch ${showTrackers(character)?"on":""}" id="swTrackers"></button></div>
-    <div class="field"><label class="f">Skills display</label>
-      <div class="seg" id="segStatStyle">
-        ${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>
-          `<button data-statstyle="${esc(v)}" class="${statStyle()===v?"on":""}">${l}</button>`).join("")}
-      </div>
-      <p class="hint">Classic keeps Ability Scores and Skills as two cards, skills listed A to Z. By ability stacks each ability with its saving throw and the skills it governs, and folds the Skills card away. Display only — every number means the same thing either way.</p></div>
-    <div class="field"><label class="f">Hit Dice display</label>
-      <div class="seg" id="segHdStyle">
-        ${[["full","Full"],["condensed","Condensed"],["dice","Dice"]].map(([v,l])=>
-          `<button data-hdstyle="${esc(v)}" class="${hdStyle()===v?"on":""}">${l}</button>`).join("")}
-      </div>
-      <p class="hint">Full boxes each die size like a stat; Condensed is one tight line per size; Dice draws every die as a token you tap to spend. Only Full and Condensed let you mark a die spent without healing.</p></div>
-    <div class="field" style="margin-top:12px"><label class="f">Rules updates</label>
-      <p class="hint">Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compare this sheet against your loaded rules and update what you choose. A backup is always saved first.</p>
-      <div class="m-actions" style="justify-content:flex-start"><button class="tbtn" id="btnCharUpdate">Check for rules updates</button></div>
-    </div>`:"";
-  const secRules=`
-    <div class="field"><label class="f">Rules sources</label>
-      <p class="hint">Import the rules data zip, or one or more JSON files — split by category (conditions, traits, items, spells), or point to a manifest that <b>include</b>s them. All sources merge; later ones win on name clashes. <b>Fetch all</b> needs a connection: each source it reaches replaces what it loaded last time, anything it can't reach keeps what it had, and files you imported are never touched. What is loaded stays saved for offline use.</p>
-      <div id="srcList"></div>
-      <div style="display:flex;gap:7px;margin-top:4px"><input id="newSrc" placeholder="https://…/spells.json"><button class="tbtn" id="addSrc">Add</button></div>
-      <div class="m-actions" style="justify-content:flex-start;margin-top:8px">
-        <button class="tbtn" id="btnFetchRules">Fetch all</button>
-        <button class="tbtn" id="btnImportRules">Import files</button>
-        <button class="tbtn" id="btnRulesTemplate">Get templates</button>
-        <button class="tbtn danger" id="btnClearRules" style="margin-left:auto">Clear all</button>
-      </div>
-      <div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${esc(rulesStatusText())}</div>
-      <input type="file" id="fileRules" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">
-    </div>
-    <div class="field" style="margin-top:6px"><label class="f">Loaded rules data</label>
-      <p class="hint">Everything currently in your rules pool, grouped by file (or source). Remove any piece you no longer want loaded.</p>
-      <div id="rulesData"></div>
-    </div>`;
-  const secBackup=`
-    <div class="toggle"><div><div class="t-lbl">Character library</div><div class="t-sub">Switch characters, set autoload, or start a new one.</div></div><button class="tbtn" id="swHome">Open</button></div>
-    <div class="m-actions" style="justify-content:flex-start;margin-top:10px">
-      <button class="tbtn" id="btnExportSettings">Export settings</button>
-      <button class="tbtn" id="btnImportSettings">Import settings</button>
-      <input type="file" id="fileSettings" accept="application/json,.json" class="hidefile">
-    </div>
-    <div class="status" id="setImpStatus"></div>
-    <p class="hint" style="margin-top:6px">Export saves your appearance settings <b>and</b> all loaded rules data to one JSON file. Import restores the settings, and asks before it replaces the rules you have loaded.</p>`;
+  const hasChar=!!activeId,who=character.name||"unnamed";
+  const secAppearance=
+    setGroupHTML("Look",
+      setRowHTML("Skin","The app's look. It also sets the open character's game system.",
+        `<div class="seg" id="segSkin"><button type="button" data-skin="humblewood" class="${(settings.skin||"humblewood")==="humblewood"?"on":""}">Humblewood</button><button type="button" data-skin="classic" class="${settings.skin==="classic"?"on":""}">Classic D&amp;D</button></div>`)+
+      setRowHTML("Mode","Light, dark, or follow your device.",
+        `<div class="seg" id="segTheme"><button type="button" data-th="system" class="${settings.theme==="system"?"on":""}">System</button><button type="button" data-th="light" class="${settings.theme==="light"?"on":""}">Light</button><button type="button" data-th="dark" class="${settings.theme==="dark"?"on":""}">Dark</button></div>`)+
+      setRowHTML("Hand-drawn borders","Inky wobble. Turn off for a cleaner look or a slow device.",
+        `<button type="button" class="switch ${settings.rough?"on":""}" id="swRough" role="switch" aria-checked="${settings.rough?"true":"false"}" aria-label="Hand-drawn borders"></button>`,true))+
+    setGroupHTML("Interface",
+      setRowHTML("Icon tabs","Show the tab bar as icons at every width. Narrow screens always do.",
+        `<button type="button" class="switch ${settings.tabIcons?"on":""}" id="swTabIcons" role="switch" aria-checked="${settings.tabIcons?"true":"false"}" aria-label="Icon tabs"></button>`,true)+
+      setRowHTML("Tap outside to close dialogs","Leave off so a stray tap, or hiding your phone's keyboard, can't lose what you typed. ×, Cancel and Esc always close.",
+        `<button type="button" class="switch ${settings.backdropClose===true?"on":""}" id="swBackdrop" role="switch" aria-checked="${settings.backdropClose===true?"true":"false"}" aria-label="Tap outside to close dialogs"></button>`,true));
+  const secDisplay=hasChar?setGroupHTML("Cards",
+      setRowHTML("Skills display","Skills listed A to Z, or under each ability.",
+        `<div class="seg" id="segStatStyle">${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>`<button type="button" data-statstyle="${esc(v)}" class="${statStyle()===v?"on":""}">${l}</button>`).join("")}</div>`)+
+      setRowHTML("Hit Dice display","Boxes, one line per size, or dice you tap.<br>Only Full and Condensed can mark a die spent without healing.",
+        `<div class="seg" id="segHdStyle">${[["full","Full"],["condensed","Condensed"],["dice","Dice"]].map(([v,l])=>`<button type="button" data-hdstyle="${esc(v)}" class="${hdStyle()===v?"on":""}">${l}</button>`).join("")}</div>`)+
+      setRowHTML("Colour current HP","Amber at half your maximum, red at a quarter.",
+        `<button type="button" class="switch ${character.hpColor!==false?"on":""}" id="swHpColor" role="switch" aria-checked="${character.hpColor!==false?"true":"false"}" aria-label="Colour current HP"></button>`,true)+
+      setRowHTML("Trackers card","Show it on the Journal tab. Hiding it keeps what you've counted.",
+        `<button type="button" class="switch ${showTrackers(character)?"on":""}" id="swTrackers" role="switch" aria-checked="${showTrackers(character)?"true":"false"}" aria-label="Trackers card"></button>`,true)):"";
+  const secCarrying=hasChar?setGroupHTML("Size and weight",
+      setRowHTML("Size","From your ancestry unless you choose one. It sets your carrying capacity.",
+        `<select id="setSize" aria-label="Size">${sizeOptionsHTML(character.size)}</select>`)+
+      setRowHTML("Encumbrance","Off shows weight only. Standard limits you at capacity; Variant slows you in tiers before that.",
+        `<div class="seg" id="segEnc">${[["none","Off"],["standard","Standard"],["variant","Variant"]].map(([v,l])=>`<button type="button" data-enc="${esc(v)}" class="${encMode()===v?"on":""}">${l}</button>`).join("")}</div>`)+
+      setRowHTML("Coins count as weight","50 coins to the pound, the way the rules have it.",
+        `<button type="button" class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight" role="switch" aria-checked="${character.coinWeight!==false?"true":"false"}" aria-label="Coins count as weight"></button>`,true)+
+      `<p class="hint set-note" id="encHint">${esc(encSettingsHint())}</p>`):"";
+  const secRules=setGroupHTML("Sources",
+      `<p class="hint">Import the rules data zip or JSON files, or add a URL and Fetch all (needs a connection). What is loaded stays saved for offline use.</p>`+
+      `<div id="srcList"></div>`+
+      `<div class="set-addsrc"><input id="newSrc" placeholder="https://…/spells.json" aria-label="Rules source URL" title="A URL can point to one file, or to a manifest that includes others. All sources merge; later ones win on name clashes."><button type="button" class="tbtn" id="addSrc">Add</button></div>`+
+      `<div class="m-actions set-actions"><button type="button" class="tbtn" id="btnFetchRules" title="Each source it reaches replaces what it loaded last time; one it can't reach keeps what it had. Files you imported are never touched.">Fetch all</button><button type="button" class="tbtn" id="btnImportRules" title="The rules data zip, or JSON files split by category.">Import files</button><button type="button" class="tbtn" id="btnRulesTemplate">Get templates</button><button type="button" class="tbtn danger" id="btnClearRules">Clear all</button></div>`+
+      `<div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${esc(rulesStatusText())}</div>`+
+      `<input type="file" id="fileRules" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">`)+
+    setGroupHTML("Loaded data",
+      `<p class="hint">Everything in your rules pool, by file or source. Remove what you no longer want.</p><div id="rulesData"></div>`)+
+    (hasChar?setGroupHTML("This sheet",
+      setRowHTML("Rules updates",`Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compares this sheet with your loaded rules; a backup is saved first.`,
+        `<button type="button" class="tbtn" id="btnCharUpdate">Check for rules updates</button>`)):"");
+  const secBackup=setGroupHTML("Characters",
+      setRowHTML("Character library","Switch characters, set autoload, or start a new one.",
+        `<button type="button" class="tbtn" id="swHome">Open</button>`))+
+    setGroupHTML("Settings file",
+      setRowHTML("Settings and rules data","Export saves your settings and all loaded rules data to one JSON file. Import asks before it replaces the rules you have loaded.",
+        `<div class="set-btns"><button type="button" class="tbtn" id="btnExportSettings">Export</button><button type="button" class="tbtn" id="btnImportSettings">Import</button></div>`)+
+      `<input type="file" id="fileSettings" accept="application/json,.json" class="hidefile">`+
+      `<div class="status" id="setImpStatus"></div>`);
   /* CC BY 3.0 obliges us to name the artists, name and link the licence, and say
      that the work was changed — hence the last sentence, which is not decorative.
      ICON_ARTISTS is generated from the icons actually vendored (05-icons.js), so
@@ -203,32 +154,33 @@ function openSettings(){
     ${rulesCreditsHTML()}
     <div class="field"><label class="f">Rules content</label>
       <p class="hint">Rules data comes separately from the app, as the rules data zip or files you supply. Each pack keeps its own terms; the ones you have loaded are listed above.</p></div>`;
-  openModal("Settings",`<div id="setSections">`+
-    setSecHTML("appearance",secAppearance)+
-    (secCharacter?setSecHTML("character",secCharacter,character.name||"unnamed"):"")+
-    setSecHTML("rules",secRules,rulesBadge())+
-    setSecHTML("backup",secBackup)+
-    setSecHTML("credits",secCredits)+
-    `</div>`);
+  const pages=setPagesFor(hasChar),active=setPageOf(settings.setPage,hasChar);
+  const body={appearance:secAppearance,display:secDisplay,carrying:secCarrying,rules:secRules,backup:secBackup,credits:secCredits};
+  const sub={display:"For "+who,carrying:"For "+who};
+  openModal("Settings",`<div class="set-wrap" id="setSections">`+
+    setNavHTML(pages,active,{rules:rulesNavBadgeHTML()})+
+    `<div class="set-pages">`+pages.map(p=>setPageHTML(p.k,body[p.k],{active:p.k===active,sub:sub[p.k]})).join("")+`</div></div>`,"",{wide:true});
   /* Delegated from a wrapper INSIDE the modal body, not from #mBody itself:
      #mBody survives every open, so a listener bound to it would stack up one
-     copy per visit. */
+     copy per visit. Every page is built; switching shows one and remembers it. */
   const secs=document.getElementById("setSections");
-  const toggleSec=(head)=>{
-    const k=head.dataset.setsec;
-    if(!settings.setCollapse||typeof settings.setCollapse!=="object"||Array.isArray(settings.setCollapse))settings.setCollapse={};
-    const open=!setSecOpen(k);
-    settings.setCollapse[k]=!open;
-    head.setAttribute("aria-expanded",open?"true":"false");
-    const car=head.querySelector(".fcaret");if(car)car.classList.toggle("c",!open);
-    const body=secs.querySelector(`[data-setsecbody="${k}"]`);if(body)body.style.display=open?"":"none";
-    saveSettings();
+  const showPage=(k,focus)=>{
+    secs.querySelectorAll("[data-setpage]").forEach(t=>{const on=t.dataset.setpage===k;t.setAttribute("aria-selected",on?"true":"false");t.tabIndex=on?0:-1;if(on&&focus)t.focus();});
+    secs.querySelectorAll("[data-setpagebody]").forEach(p=>{p.hidden=p.dataset.setpagebody!==k;});
+    const mb=secs.closest(".m-body");if(mb)mb.scrollTop=0;
+    settings.setPage=k;saveSettings();
   };
-  secs.addEventListener("click",e=>{const h=e.target.closest("[data-setsec]");if(h)toggleSec(h);});
+  /* A switch's own handler (bound on the button) runs first and flips its `on`
+     class; this then says the new state to a screen reader, for every switch. */
+  secs.addEventListener("click",e=>{
+    const t=e.target.closest("[data-setpage]");if(t){showPage(t.dataset.setpage,false);return;}
+    const s=e.target.closest(".switch");if(s)s.setAttribute("aria-checked",s.classList.contains("on")?"true":"false");
+  });
   secs.addEventListener("keydown",e=>{
-    if(e.key!=="Enter"&&e.key!==" ")return;
-    const h=e.target.closest("[data-setsec]");if(!h)return;
-    e.preventDefault();toggleSec(h);
+    const t=e.target.closest("[data-setpage]");if(!t)return;
+    const next=setPageStep(pages.map(p=>p.k),t.dataset.setpage,e.key);
+    if(next===t.dataset.setpage)return;
+    e.preventDefault();showPage(next,true);
   });
   document.getElementById("segSkin").addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(!b)return;settings.skin=b.dataset.skin;document.querySelectorAll("#segSkin button").forEach(x=>x.classList.toggle("on",x===b));applyTheme();saveSettings();if(activeId){character.system=systemForSkin(settings.skin);renderCoins();libTouch();scheduleSave();}});
   document.getElementById("segTheme").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;settings.theme=b.dataset.th;document.querySelectorAll("#segTheme button").forEach(x=>x.classList.toggle("on",x===b));applyTheme();saveSettings();});
@@ -247,7 +199,7 @@ function openSettings(){
   /* the size / encumbrance / coin-weight block only exists when a character is
      open, so every one of these is guarded */
   {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{character.size=s.value;encSettingsChanged();});}
-  {const s=document.getElementById("setEnc");if(s)s.addEventListener("change",()=>{character.encumbrance=s.value;encSettingsChanged();});}
+  {const g=document.getElementById("segEnc");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-enc]");if(!b)return;character.encumbrance=b.dataset.enc;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));encSettingsChanged();});}
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
   {const b=document.getElementById("swHpColor");if(b)b.addEventListener("click",()=>{character.hpColor=(character.hpColor===false);b.classList.toggle("on",character.hpColor!==false);renderHP();scheduleSave();});}
   {const b=document.getElementById("swTrackers");if(b)b.addEventListener("click",()=>{character.showTrackers=!showTrackers(character);b.classList.toggle("on",character.showTrackers);renderTrackers();scheduleSave();});}

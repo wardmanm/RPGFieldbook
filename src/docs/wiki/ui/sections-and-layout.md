@@ -12,8 +12,7 @@ search boxes. It also covers two sidebar residents, familiars and the portrait.
 `20-lists.js` · `renderInventory()`, `invGroups()`, `renderFamiliars()` in `40-sheet.js` ·
 `groupFieldHTML()`, `groupChoices()`, `groupNameProblem()`, `syncGroupFieldMsg()`, `groupFieldBlocked()` in
 `80-modal-forms.js` · `GROUP_RESERVED` in `00-constants.js` · `tagLabel()`, `tagTidy()` in `87-journal.js` · `renderAttacks()` in
-`60-attacks.js` · `rulesSecOpen()`, `renderRulesSections()` in `86-tables.js` · `setSecOpen()`,
-`setSecHTML()` in `88-settings.js` · `buildStats()`, `buildBio()`, `blankChar()` in `00-constants.js`
+`60-attacks.js` · `rulesSecOpen()`, `renderRulesSections()` in `86-tables.js` · `setPageOf()` in `88-settings.js` · `buildStats()`, `buildBio()`, `blankChar()` in `00-constants.js`
 · `renderPortrait()` in `66-coins-hp.js` · markup in `00-sheet.html`, `10-inventory.html`,
 `20-spells.html`, `30-story.html`, `40-rules.html`, `60-journal.html`, `70-combat.html` · `10-chrome.css`,
 `20-cards.css`, `30-sheet.css` ·
@@ -129,7 +128,6 @@ decides what counts against the allotment.
 | `invCollapse.sections` / `.items` | character | section name / item id | `invCol()` |
 | `atkCollapse.items` | character | attack id | `atkCol()` |
 | `noteCollapse` | character | tab | `noteGroupOpen()`, `toggleNoteGroup()` |
-| `setCollapse` | settings | Settings section id | `setSecOpen()` |
 | `rulesCollapse` | settings | `gloss` / `tables` | `rulesSecOpen()`, `setRulesSecOpen()` |
 
 Every map stores `true` for **shut**, and an absent key means "never touched", which falls back to
