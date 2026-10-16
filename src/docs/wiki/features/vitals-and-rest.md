@@ -25,7 +25,7 @@ points on level-up), [Armor & AC](armor-and-ac.md), [Inventory](inventory.md) (e
 **Size** is `charSize()`: the size the player chose, else the ancestry's (`raceDefSize()`), else
 Medium. Tapping it (or Enter/Space) opens `openSizePicker()` — a chooser, not a breakdown, with
 "From ancestry (…)" first and a carrying-capacity preview from `capacityFor()`. The same list,
-`sizeOptionsHTML()`, is in Settings → This character. Size changes nothing but carrying capacity,
+`sizeOptionsHTML()`, is in Settings → Carrying. Size changes nothing but carrying capacity,
 and that only while Encumbrance is on. Passive Perception is covered in
 [Abilities & skills](abilities-and-skills.md); the ✦ star in the card label toggles Inspiration.
 
@@ -85,7 +85,7 @@ dice live in `hdUsed[die]`, clamped to the total. `renderHitDice()` writes the a
 `character.hitdice`, shows the text field only in manual mode (with a "Reset to class" banner), and
 draws an empty state with no class and no manual dice. Switching to manual asks first — the dice will
 stop following the class at level-up; switching back does not. The look is `hdStyle()`, chosen
-under Settings → This character → Hit Dice display:
+under Settings → Sheet display → Hit Dice display:
 
 - **Full** (the default): a boxed cell per die size — die, "left / total", pips, Roll.
 - **Condensed**: one line per size — die, pips, "3/5", Roll — in `.hd-grid`, whose rows are

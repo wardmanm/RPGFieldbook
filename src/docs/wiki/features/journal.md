@@ -140,7 +140,7 @@ keyboard, Reopen moves the row from the Completed markup back into the open one,
 matching `data-*` hook either, so it lands focus on that tracker's own edit button instead, the
 one hook both forms carry.
 
-**Hidden and in combat.** Settings → This character → Trackers sets `showTrackers`, and
+**Hidden and in combat.** Settings → Sheet display → Trackers card sets `showTrackers`, and
 `renderTrackers()` hides the card with `display:none`, keeping it in the DOM, which the section
 registry requires. Trackers is the 20th entry in `NOTE_SECTIONS` (tab `journal`), so it takes a
 section note and can be added to the combat view like any registered card. Hidden, it is skipped
@@ -214,7 +214,7 @@ entry in the list.
 | Editing | Inline, built once | The section notes' modal: too small for a session's worth of writing |
 | Tracker types | Counter (optional goal), checklist, task | Counter and checklist only: a one-line to-do becomes a one-item list. A separate Progress type: a counter with a goal already is one |
 | Closing at 100% | Close when complete, on by default, only on the step to complete, with an Undo of the whole tap | Offer a Close button: a tap on every completion. Always automatic: no way to keep a finished checklist in view |
-| Hiding the card | Per character, in Settings → This character | App-wide: the sheet's other display choices are per character |
+| Hiding the card | Per character, in Settings → Sheet display | App-wide: the sheet's other display choices are per character |
 | Trackers in the combat view | A registered section, so it also takes a section note | A combat-only list beside the registry: a second list of sections to keep in step |
 | Tracker text | Plain, `esc()` only | The notes grammar: a glossary pass per tap, and a chip inside a checkbox button |
 

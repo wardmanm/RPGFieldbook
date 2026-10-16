@@ -85,15 +85,15 @@ error toast that stays until tapped; missing content and skipped entries are not
 The four rules pickers accept `.zip`, `application/zip` and `application/x-zip-compressed`.
 
 **Credits.** A pack's `license` and `attribution` become `rules.credits[label]` (`creditOf()`), kept
-and pruned like `requires`, carried by settings files, and listed in Settings → Credits & licences
+and pruned like `requires`, carried by settings files, and listed in Settings → Credits
 (`rulesCreditsHTML()`), escaped.
 
 **The notice.** `checkForDataUpdate()` runs after `checkForUpdate()`. It lists the releases,
 `pickDataRelease()` takes the newest with an archive built for this app or an older one, and it
 reads that tag's `data/packs.json` from `raw.githubusercontent.com`, which answers a `file://` page
 with `access-control-allow-origin: *`. A loaded pack with the same system and file name and an older
-version shows a muted `vA · vB out`, a hint line links the release, and the Settings count adds
-`· update`. Any failure is silent.
+version shows a muted `vA · vB out`, a hint line links the release, and the Settings sidebar's Rules data
+tab shows a dot. Any failure is silent.
 
 ## Rules that must hold
 

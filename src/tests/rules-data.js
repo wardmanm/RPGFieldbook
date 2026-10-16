@@ -16,7 +16,8 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'loadedRulesGroups','rulesBucket','rulesDataHTML','clearAllRules',
   'mergeRules','resetRules','blankChar','migrate','catName',
   'DATA_VERSIONS','dataStatus','dataStatusHTML',
-  'SET_SECTIONS','setSecDef','setSecOpen','setSecHTML','rulesEntryCount','settings',
+  'rulesEntryCount','settings',
+  'SET_PAGES','setPageDef','setPagesFor','setPageOf','setPageStep','setNavHTML','setPageHTML','setGroupHTML','setRowHTML','rulesNavBadgeHTML','SETTINGS_KEYS',
   'NOTE_SECTIONS','NOTE_TABS','noteDef','getNote','noteText','hasNote','saveNote',
   'noteGroupOpen','notesHTML','noteBtnHTML','noteEntryHTML','esc',
   'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings', 'skillKey',
@@ -989,49 +990,73 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
   // registry orders the two, and nothing here can check it.
 }
 
-// ---------- Settings modal: collapsible sections
-// The state is stored as COLLAPSE, so an untouched section falls through to the
-// first-run default. That is what lets those defaults be changed later without
-// silently reopening sections someone deliberately shut.
-X.settings.setCollapse = {};
-X.SET_SECTIONS.forEach(s => {
-  ck('section "' + s.k + '" starts at its declared default', X.setSecOpen(s.k) === s.open);
-});
-ck('an unknown section id defaults to open', X.setSecOpen('no-such-section') === true);
-X.settings.setCollapse = {appearance: true, rules: false};
-ck('a stored collapse closes the section', X.setSecOpen('appearance') === false);
-ck('a stored false opens one that defaults shut', X.setSecOpen('rules') === true);
-ck('sections nobody touched keep their default', X.setSecOpen('backup') === false);
-// settings arrive from a JSON file a user can hand-edit or an old version wrote
-[null, undefined, [], 'nope', 7].forEach(bad => {
-  X.settings.setCollapse = bad;
-  ck('a ' + JSON.stringify(bad) + ' setCollapse falls back to defaults', X.setSecOpen('appearance') === true);
-});
-X.settings.setCollapse = {};
 
-ck('every section id is unique', new Set(X.SET_SECTIONS.map(s => s.k)).size === X.SET_SECTIONS.length);
-ck('setSecDef finds a real section', (X.setSecDef('rules') || {}).title === 'Rules data');
-ck('setSecDef on rubbish is null, not a throw', X.setSecDef('zzz') === null);
-ck('markup for an unknown section is empty, not broken', X.setSecHTML('zzz', '<p>x</p>') === '');
-
-const open = X.setSecHTML('appearance', '<p>body</p>');
-ck('an open section carries no collapsed caret', !/fcaret c"/.test(open), open);
-ck('an open section is not display:none', !/display:none/.test(open), open);
-ck('the section body is tagged for the toggle', open.includes('data-setsecbody="appearance"'));
-ck('the header is tagged for the toggle', open.includes('data-setsec="appearance"'));
-ck('the header announces its state to screen readers', open.includes('aria-expanded="true"'));
-X.settings.setCollapse = {appearance: true};
-const shut = X.setSecHTML('appearance', '<p>body</p>');
-ck('a closed section hides its body', shut.includes('display:none'), shut);
-ck('a closed section turns the caret', shut.includes('fcaret c"'), shut);
-ck('a closed section says so to screen readers', shut.includes('aria-expanded="false"'));
-ck('a closed section still renders its body (it is hidden, not dropped)', shut.includes('<p>body</p>'));
-X.settings.setCollapse = {};
-// the badge is the reason a folded section is still informative
-ck('a badge is rendered when given', X.setSecHTML('rules', '', '12 entries').includes('>12 entries<'));
-ck('no badge element when there is none', !X.setSecHTML('rules', '').includes('fgcount'));
-ck('badge text is escaped', X.setSecHTML('rules', '', '<img>').includes('&lt;img&gt;'));
-
+// ---------- Settings modal: the sidebar's pages (#107)
+ck('six pages, in the order the sidebar lists them',
+   X.SET_PAGES.map(p => p.k).join() === 'appearance,display,carrying,rules,backup,credits');
+ck('every page has a title, an icon and a unique key',
+   X.SET_PAGES.every(p => p.title && /<(path|circle|rect|ellipse)/.test(p.icon)) && new Set(X.SET_PAGES.map(p => p.k)).size === 6);
+ck('only Sheet display and Carrying belong to a character',
+   X.SET_PAGES.filter(p => p.scope === 'char').map(p => p.k).join() === 'display,carrying' &&
+   X.SET_PAGES.every(p => p.scope === 'char' || p.scope === 'app'));
+ck('without a character the character pages are not shown', X.setPagesFor(false).map(p => p.k).join() === 'appearance,rules,backup,credits');
+ck('...with one, all six are', X.setPagesFor(true).length === 6);
+ck('the remembered page opens', X.setPageOf('rules', false) === 'rules' && X.setPageOf('carrying', true) === 'carrying');
+ck('a character page with no character open opens Appearance', X.setPageOf('display', false) === 'appearance');
+[undefined, null, '', 'nope', 7, {}, '__proto__', 'constructor'].forEach(bad =>
+  ck('a stored page of ' + JSON.stringify(bad) + ' opens Appearance', X.setPageOf(bad, true) === 'appearance'));
+ck('setPageDef finds a page, and is null for rubbish', (X.setPageDef('rules') || {}).title === 'Rules data' && X.setPageDef('zzz') === null);
+{
+  const keys = ['appearance', 'rules', 'backup', 'credits'];
+  ck('↓ moves to the next shown page and wraps', X.setPageStep(keys, 'rules', 'ArrowDown') === 'backup' && X.setPageStep(keys, 'credits', 'ArrowDown') === 'appearance');
+  ck('↑ moves back and wraps', X.setPageStep(keys, 'rules', 'ArrowUp') === 'appearance' && X.setPageStep(keys, 'appearance', 'ArrowUp') === 'credits');
+  ck('Home and End go to the ends', X.setPageStep(keys, 'backup', 'Home') === 'appearance' && X.setPageStep(keys, 'appearance', 'End') === 'credits');
+  ck('any other key, or a page not shown, stays put', X.setPageStep(keys, 'rules', 'x') === 'rules' && X.setPageStep(keys, 'display', 'ArrowDown') === 'display');
+}
+{
+  const nav = X.setNavHTML(X.setPagesFor(true), 'carrying', {rules: '<span class="set-cnt">12</span>'});
+  ck('the sidebar is a vertical tab list', /role="tablist" aria-orientation="vertical"/.test(nav));
+  ck('one tab per page, each tied to its panel',
+     (nav.match(/role="tab"/g) || []).length === 6 && /id="setTab-carrying" data-setpage="carrying" aria-controls="setPage-carrying"/.test(nav));
+  ck('only the active tab is selected and in the tab order',
+     (nav.match(/aria-selected="true"/g) || []).length === 1 && /data-setpage="carrying"[^>]*aria-selected="true" tabindex="0"/.test(nav) &&
+     (nav.match(/tabindex="0"/g) || []).length === 1);
+  ck('each tab is named, for the icon rail', /aria-label="Sheet display" title="Sheet display"/.test(nav));
+  ck('the character pages sit under their caption, set apart from the rest',
+     nav.indexOf('data-setpage="appearance"') < nav.indexOf('This character') &&
+     nav.indexOf('This character') < nav.indexOf('data-setpage="display"') &&
+     /data-setpage="carrying"[\s\S]*?class="set-sep"[\s\S]*?data-setpage="rules"/.test(nav));
+  ck('no caption without a character', !/This character|set-sep/.test(X.setNavHTML(X.setPagesFor(false), 'appearance', {})));
+  ck('a badge is drawn only where given', /data-setbadge="rules"><span class="set-cnt">12<\/span>/.test(nav) && (nav.match(/data-setbadge/g) || []).length === 1);
+  ck('...and the tab that carries one is described by it, for a screen reader',
+     /data-setpage="rules"[^>]*aria-describedby="setBadgeDesc-rules"/.test(nav) && (nav.match(/aria-describedby/g) || []).length === 1);
+}
+{
+  const page = X.setPageHTML('carrying', '<p>x</p>', {active: true, sub: 'For <b>Pib</b>'});
+  ck('a page is the tab panel its tab names',
+     /<section class="set-page" role="tabpanel" id="setPage-carrying" aria-labelledby="setTab-carrying" data-setpagebody="carrying">/.test(page), page);
+  ck('...titled, with its subtitle escaped', /class="set-ptitle">Carrying</.test(page) && page.includes('For &lt;b&gt;Pib&lt;/b&gt;'));
+  const off = X.setPageHTML('rules', '<p>y</p>', {});
+  ck('an inactive page is in the dialog, hidden', /data-setpagebody="rules" hidden>/.test(off) && off.includes('<p>y</p>'));
+  ck('an unknown page draws nothing', X.setPageHTML('zzz', '<p>x</p>', {active: true}) === '');
+}
+{
+  const row = X.setRowHTML('Colour current HP', 'Amber at half.', '<button class="switch"></button>', true);
+  ck('a row is the name and help, then the control',
+     row === '<div class="set-row set-inline"><div class="set-row-txt"><div class="t-lbl">Colour current HP</div><div class="t-sub">Amber at half.</div></div><div class="set-row-ctl"><button class="switch"></button></div></div>', row);
+  const plain = X.setRowHTML('Skin', '', '<div class="seg"></div>');
+  ck('a row without help has no empty help line, and only an inline row is marked so', !/t-sub/.test(plain) && !/set-inline/.test(plain));
+  ck('a group has its heading, escaped',
+     X.setGroupHTML('Look & feel', '<p>r</p>') === '<div class="set-grp"><div class="set-grp-h">Look &amp; feel</div><p>r</p></div>');
+}
+ck('setPage is a setting a file is recognised by', X.SETTINGS_KEYS.includes('setPage'));
+ck('...defaulting to Appearance',
+   /let settings=\{[^\n]*setPage:"appearance"[^\n]*\};/.test(fs.readFileSync(path.join(ROOT, 'src/js/00-constants.js'), 'utf8')));
+X.resetRules();
+ck('the Rules data badge shows nothing with nothing loaded, and says so to a screen reader',
+   X.rulesNavBadgeHTML() === '<span id="setBadgeDesc-rules" hidden>none loaded</span>', X.rulesNavBadgeHTML());
+X.mergeRules({system: 'XPHB', spells: [{name: 'Bless'}, {name: 'Shield'}]}, 'x.json');
+ck('...and counts the pool once something is', X.rulesNavBadgeHTML() === '<span class="set-cnt" title="2 entries">2</span><span id="setBadgeDesc-rules" hidden>2 entries</span>', X.rulesNavBadgeHTML());
 X.resetRules();
 ck('entry count is zero with nothing loaded', X.rulesEntryCount() === 0);
 X.mergeRules({system: 'XPHB', races: [{name: 'Elf'}, {name: 'Orc'}], spells: [{name: 'Bless'}]}, 'x.json');
@@ -1169,7 +1194,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      h.indexOf('>Sheet<') < h.indexOf('>Inventory<'), h.replace(/<[^>]+>/g, '|').slice(0, 200));
   ck('a tab with no notes gets no group', !h.includes('>Spells<'));
   /* Counts read like the inventory section heads now — parenthesised, plain.
-     .fgcount is still the PILL, kept for the Settings badges ("12 entries"),
+     .fgcount was the PILL the old Settings section badges used ("12 entries"),
      which are text and would read wrongly in brackets. */
   ck('the group count is the number of notes in it', h.includes('<span class="cnt">(2)</span>'), h.slice(0, 160));
   ck('each note renders its body', h.includes('<p>a</p>') && h.includes('<p>c</p>'));
@@ -1460,11 +1485,11 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /\.hpcol input\.hp-danger\{color:var\(--brick\)\}/.test(sheetCss));
   ck('renderHP paints the band onto the Current box',
      /function renderHP\(\)\{[\s\S]*?getElementById\("hpCur"\)[\s\S]{0,140}classList\.toggle\("hp-warn"/.test(js));
-  ck('the colour switch is in the "This character" settings section, per character',
+  ck('the colour switch is on the Sheet display page, per character',
      /id="swHpColor"/.test(js) && /character\.hpColor/.test(js));
-  // spec §11 (#41): the Trackers switch is drawn in This character and does something
-  ck('the Trackers switch is rendered in the "This character" settings section',
-     /id="swTrackers"/.test((js.match(/const secCharacter=activeId\?`[\s\S]*?`:"";/) || [''])[0]) &&
+  // spec §11 (#41): the Trackers switch is drawn on the Sheet display page and does something
+  ck('the Trackers switch is rendered on the Sheet display page',
+     /id="swTrackers"/.test((js.match(/const secDisplay=hasChar\?[\s\S]*?:"";/) || [''])[0]) &&
      /showTrackers\(character\)\?"on":""\}" id="swTrackers"/.test(js));
   ck('...and wired: a tap flips showTrackers, redraws the card and saves',
      /getElementById\("swTrackers"\);if\(b\)b\.addEventListener\("click",\(\)=>\{character\.showTrackers=!showTrackers\(character\);[^}]*renderTrackers\(\);scheduleSave\(\);\}\)/.test(js),
@@ -1650,10 +1675,16 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('...the setting is off by default, for a new player and one whose settings predate it',
      /let settings=\{[^\n]*backdropClose:false[^\n]*\};/.test(js) && /settings\.backdropClose===true\)dismissModal/.test(js));
   ck('...Settings has its switch, which saves it, and a settings file carries it',
-     /id="swBackdrop" role="switch" aria-checked="\$\{settings\.backdropClose===true\?"true":"false"\}"/.test(js) &&
+     /class="switch \$\{settings\.backdropClose===true\?"on":""\}" id="swBackdrop" role="switch" aria-checked="\$\{settings\.backdropClose===true\?"true":"false"\}"/.test(js) &&
      /getElementById\("swBackdrop"\)\.addEventListener\("click",e=>\{settings\.backdropClose=settings\.backdropClose!==true;[^\n]*saveSettings\(\);\}\)/.test(js) &&
      /const SETTINGS_KEYS=\[[^\]]*"backdropClose"/.test(js));
   ck('...and the flyout still closes on a tap outside', /if\(t\.closest\("#tocBack"\)\)return closeToc\(\);/.test(js));
+  /* #107: Settings opens wide. The class is set or cleared on EVERY open, as the
+     emblem slot is, so a dialog opened from Settings never inherits the width. */
+  ck('openModal sets or clears the wide class on every open',
+     /function openModal\(title,html,icon,opts\)\{[^\n]*\.classList\.toggle\("wide",!!\(opts&&opts\.wide\)\)/.test(js));
+  ck('...and the wide dialog has its width',
+     /\.modal\.wide\{width:min\(820px,100%\)[;}]/.test(fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8')));
   ck('...and dismissModal asks the guard before closing',
      /function dismissModal\(\)\{[\s\S]{0,160}_dismissGuard\(\)[\s\S]{0,80}confirm\(msg\)\)return;/.test(js));
   // the guard must not leak between modals: an ordinary form's Escape is cancel
@@ -1903,6 +1934,65 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const inert = new Set(['srcList', 'rulesData', 'rulesStatus', 'encHint', 'setSections']);
   const unwired = [...declared].filter(k => !used.has(k) && !inert.has(k));
   ck('every control it renders is wired up somewhere', unwired.length === 0, unwired);
+}
+
+// ---------- Settings modal: each control on its page (#107)
+{
+  const src = fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8');
+  const sec = name => (src.match(new RegExp('const ' + name + '=[\\s\\S]*?\\n  const ')) || [''])[0];
+  const on = (name, ids) => ids.every(id => sec(name).includes('id="' + id + '"'));
+  ck('Appearance holds the look and the interface switches', on('secAppearance', ['segSkin', 'segTheme', 'swRough', 'swTabIcons', 'swBackdrop']));
+  ck('Sheet display holds the card choices', on('secDisplay', ['segStatStyle', 'segHdStyle', 'swHpColor', 'swTrackers']));
+  ck('Carrying holds size, encumbrance, coins and the live line', on('secCarrying', ['setSize', 'segEnc', 'swCoinWeight', 'encHint']));
+  ck('Rules data holds the sources, the list and the sheet check', on('secRules', ['srcList', 'newSrc', 'btnFetchRules', 'btnClearRules', 'rulesData', 'btnCharUpdate']));
+  ck('Backup holds the library and the settings file', on('secBackup', ['swHome', 'btnExportSettings', 'btnImportSettings', 'setImpStatus']));
+  ck('encumbrance is a segmented choice now, not a dropdown', !/id="setEnc"/.test(src) &&
+     /character\.encumbrance=b\.dataset\.enc;/.test(src) && ['none', 'standard', 'variant'].every(v => sec('secCarrying').includes('["' + v + '",')));
+  ck('every switch on the dialog says its state to a screen reader',
+     (src.match(/class="switch /g) || []).length === 6 && (src.match(/role="switch" aria-checked=/g) || []).length === 6 &&
+     /const s=e\.target\.closest\("\.switch"\);if\(s\)s\.setAttribute\("aria-checked",s\.classList\.contains\("on"\)\?"true":"false"\);/.test(src));
+  ck('Settings opens wide, on the remembered page; a dialog opened from it does not',
+     /openModal\("Settings",[\s\S]*?\{wide:true\}\);/.test(src) && /setPageOf\(settings\.setPage,hasChar\)/.test(src) &&
+     /openModal\("Import settings",settingsImportQuestionHTML\(imp\)\);/.test(src));
+  ck('the arrow keys step over the SHOWN pages only', /setPageStep\(pages\.map\(p=>p\.k\),t\.dataset\.setpage,e\.key\)/.test(src));
+  ck('switching a page shows it, remembers it and starts it at the top',
+     /p\.hidden=p\.dataset\.setpagebody!==k;/.test(src) && /settings\.setPage=k;saveSettings\(\);/.test(src) && /const pg=secs\.querySelector\("\.set-pages"\);if\(pg\)pg\.scrollTop=0;/.test(src));
+  /* spec §7: a duplicated id would let getElementById wire one copy and leave the
+     other dead; the two-way check above collects ids into a Set, so count here */
+  {
+    const body = src.slice(src.indexOf('function openSettings()'), src.indexOf('function encSettingsHint('));
+    const counts = {};
+    (body.match(/\bid="([A-Za-z][\w-]*)"/g) || []).forEach(m => { const k = m.slice(4, -1); counts[k] = (counts[k] || 0) + 1; });
+    const twice = Object.keys(counts).filter(k => counts[k] > 1);
+    ck('every control id in the Settings markup appears exactly once', Object.keys(counts).length > 25 && twice.length === 0, twice);
+  }
+  ck('the old folding sections are gone', !/SET_SECTIONS|setSecHTML|setSecOpen|data-setsec=/.test(src));
+  /* review: Encumbrance was a <select>, which announces its value; as buttons it
+     must say which is pressed — and so must every segmented choice here */
+  ck('every segmented choice on the dialog says which button is pressed',
+     ['segSkin', 'segTheme', 'segStatStyle', 'segHdStyle', 'segEnc'].every(id => /aria-pressed="\$\{/.test((src.match(new RegExp('id="' + id + '"[\\s\\S]{0,700}')) || [''])[0])) &&
+     /const g=e\.target\.closest\("\.seg"\);if\(g\)g\.querySelectorAll\("button"\)\.forEach\(b=>b\.setAttribute\("aria-pressed",b\.classList\.contains\("on"\)\?"true":"false"\)\);/.test(src));
+  ck('the badge refresh targets the sidebar',
+     /querySelector\('\[data-setbadge="rules"\]'\)[\s\S]{0,40}innerHTML=rulesNavBadgeHTML\(\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/89-rules-merge.js'), 'utf8')));
+  const mcss = fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8');
+  /* review: a sticky sidebar inside one scroller was cut off on a landscape phone
+     until the page was scrolled to its end; each pane scrolls on its own now */
+  ck('the dialog is two panes, each scrolling on its own, so the sidebar stays reachable',
+     /\.set-wrap\{display:grid;grid-template-columns:184px minmax\(0,1fr\);grid-template-rows:minmax\(0,1fr\)/.test(mcss) &&
+     /\.modal\.wide \.m-body\{overflow:hidden;display:flex;flex-direction:column/.test(mcss) &&
+     /\.set-nav\{[^}]*overflow-y:auto/.test(mcss) && /\.set-pages\{[^}]*overflow-y:auto/.test(mcss) && !/\.set-nav\{position:sticky/.test(mcss));
+  ck('a hidden page takes no room', /\.set-page\[hidden\]\{display:none\}/.test(mcss));
+  /* a page shorter than the last one used to shrink the dialog, which re-centred
+     and moved the sidebar under the pointer between clicks */
+  ck('the wide dialog keeps one height, so switching pages never moves the sidebar',
+     /\.modal\.wide\{[^}]*height:min\(680px,90dvh\)/.test(mcss));
+  ck('the sidebar becomes an icon rail with Icon tabs on, and on a narrow screen',
+     /html\[data-tabs="icons"\] \.set-wrap\{grid-template-columns:52px minmax\(0,1fr\)/.test(mcss) &&
+     /@media\(max-width:640px\)\{[^@]*\.set-wrap\{grid-template-columns:52px minmax\(0,1fr\)/.test(mcss));
+  ck('on a narrow screen a choice drops below its name, a switch stays beside it',
+     /@media\(max-width:640px\)\{[^@]*\.set-row:not\(\.set-inline\)\{flex-direction:column/.test(mcss));
+  ck('a long name in a page subtitle wraps', /\.m-body p\.set-psub\{[^}]*overflow-wrap:anywhere/.test(mcss));
+  ck('the folding-section styles are gone', !/#setSections \.fghead|\.setsec-body/.test(mcss));
 }
 
 /* ================= the Rules tab sections start collapsed ====================
@@ -2274,7 +2364,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('title scan: a comma inside a template does not end the title',
      firstArg(probe, 'openModal('.length) === '`${a}, ${esc(b)} — x`', firstArg(probe, 'openModal('.length));
   ck('openModal() writes the title as textContent (the contract the scan rests on)',
-     /function openModal\(title,html,icon\)\{[^}]*getElementById\("mTitle"\)\.textContent=title;/.test(
+     /function openModal\(title,html,icon,opts\)\{[^}]*getElementById\("mTitle"\)\.textContent=title;/.test(
        fs.readFileSync(path.join(ROOT, 'src/js/80-modal-forms.js'), 'utf8')));
 }
 
@@ -2301,18 +2391,18 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     if (r && r.__status) return Promise.resolve({ok: false, status: r.__status, json: () => Promise.reject(new Error('no body'))});
     return Promise.resolve({ok: true, status: 200, json: () => Promise.resolve(JSON.parse(JSON.stringify(r)))});
   };
-  // the status line and the Settings "Rules data" header chip, readable
+  // the status line and the Settings sidebar's Rules data badge, readable
   const status = {textContent: '', className: ''};
-  const chip = {textContent: 'STALE'};
+  const chip = {innerHTML: 'STALE'};
   const getById = ctx.document.getElementById;
   ctx.document.getElementById = id => id === 'rulesStatus' ? status : getById(id);
-  ctx.document.querySelector = sel => /data-setsec="rules"/.test(sel) && /fgcount/.test(sel) ? chip : null;
+  ctx.document.querySelector = sel => /data-setbadge="rules"/.test(sel) ? chip : null;
   // drain every microtask the fetch chain queues, whether or not it returns a promise
   const run = async () => { calls = []; await X.fetchAllRules(); await new Promise(r => setImmediate(r)); };
   const cache = () => store[X.K_RULES];
   const cached = () => JSON.parse(X.readRulesCacheString(cache()) || '{}');
   const names = (r, cat, src) => { const a = (r || X.rules)[cat]; return (Array.isArray(a) ? a : []).filter(e => e && (!src || e._source === src)).map(e => e.name).sort(); };
-  const badge = () => { const n = X.rulesEntryCount(); return n ? n + ' entries' : 'none loaded'; };
+  const badge = () => X.rulesNavBadgeHTML();
   // a file-imported rulebook, cached the way an import leaves it
   const seedFilePack = () => {
     X.character = X.blankChar();
@@ -2329,7 +2419,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   X.settings.rulesSources = [OFF];
   routes = {};
   const poolBefore = JSON.stringify(X.rules), cacheBefore = cache();
-  chip.textContent = 'STALE';
+  chip.innerHTML = 'STALE';
   await run();
   ck('fetch-all offline: the pool is exactly as it was', JSON.stringify(X.rules) === poolBefore,
      names(null, 'spells'));
@@ -2341,14 +2431,14 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('fetch-all offline: ...names the source that failed', /offline-pack\.json/.test(status.textContent), status.textContent);
   ck('fetch-all offline: ...points at importing files instead', /import/i.test(status.textContent), status.textContent);
   ck('fetch-all offline: ...in red', /\berr\b/.test(status.className), status.className);
-  ck('fetch-all offline: the Rules data chip counts what is loaded', chip.textContent === badge(), [chip.textContent, badge()]);
+  ck('fetch-all offline: the Rules data badge counts what is loaded', chip.innerHTML === badge(), [chip.innerHTML, badge()]);
   ck('fetch-all offline: one request, uncached', calls.length === 1 && calls[0].cache === 'no-store', calls);
 
   // ---- (a) a file-imported pack survives a successful fetch of another source
   seedFilePack();
   X.settings.rulesSources = [HB];
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap', text: 'v1'}, {name: 'Fizzle'}]}};
-  chip.textContent = 'STALE';
+  chip.innerHTML = 'STALE';
   await run();
   ck('fetch-all: the fetched pack is merged', names(null, 'spells', 'Homebrew').join() === 'Fizzle,Zap',
      names(null, 'spells', 'Homebrew'));
@@ -2361,8 +2451,8 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      names(cached(), 'spells').join() === 'Fireball,Fizzle,Shield,Zap', names(cached(), 'spells'));
   ck('fetch-all: the status line reports success', /^Fetched/.test(status.textContent) && /\bok\b/.test(status.className),
      [status.textContent, status.className]);
-  ck('fetch-all: the Rules data chip counts the new pool', chip.textContent === badge() && badge() === '5 entries',
-     [chip.textContent, badge()]);
+  ck('fetch-all: the Rules data badge counts the new pool', chip.innerHTML === badge() && X.rulesEntryCount() === 5,
+     [chip.innerHTML, badge()]);
 
   // ---- (c) re-fetching a source replaces its own packs, without duplicates
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap', text: 'v2'}, {name: 'Bolt'}]}};
@@ -2497,11 +2587,11 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /skipped/i.test(status.textContent) && /1 glossary entry/.test(status.textContent) && /1 spell/.test(status.textContent),
      status.textContent);
 
-  // ---- the Rules data chip follows every change to the pool, not only Fetch all
-  chip.textContent = 'STALE';
+  // ---- the Rules data badge follows every change to the pool, not only Fetch all
+  chip.innerHTML = 'STALE';
   state.confirm = true;
   X.clearAllRules();
-  ck('the Rules data chip follows Clear all', chip.textContent === 'none loaded', chip.textContent);
+  ck('the Rules data badge follows Clear all', chip.innerHTML === badge() && !/set-cnt/.test(chip.innerHTML) && /none loaded/.test(chip.innerHTML), chip.innerHTML);
 
   /* ================= Import settings asks before replacing loaded rules (#70) ==========
      Export settings writes {_type:"fieldbook-settings", settings, rules}: the WHOLE pool as
@@ -2592,7 +2682,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
       dirty.keywords[0].id = 'kw-from-the-file';
       dirty.spells.push(Object.assign({}, dirty.spells[0], {_id: 'r999', text: 'a second copy'}));   // same source + name twice
       await importFile(settingsFile(dirty));
-      chip.textContent = 'STALE';
+      chip.innerHTML = 'STALE';
       await click('setImpReplace');
     }
     ck('replace: the pool is the file\'s', names(null, 'spells').join() === 'Fireball,Zap' && names(null, 'feats').join() === '',
@@ -2615,10 +2705,10 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     ck('replace: the settings are imported too', X.settings.skin === 'classic');
     ck('replace: the status line says the rules were replaced, with the new count',
        /replaced/i.test(impStatus.textContent) && impStatus.textContent.includes(X.rulesEntryCount() + ' entries'), impStatus.textContent);
-    ck('replace: the Rules data chip follows the new pool', chip.textContent === badge(), [chip.textContent, badge()]);
+    ck('replace: the Rules data badge follows the new pool', chip.innerHTML === badge(), [chip.innerHTML, badge()]);
     ck('replace: the loaded-data list is redrawn', /rulebook_full\.json/.test(rulesDataEl.innerHTML) && !/my-homebrew\.json/.test(rulesDataEl.innerHTML));
     ck('replace: Settings reopens on the new pool', writes.length > 0 && writes[writes.length - 1].includes(X.rulesStatusText()) &&
-       writes[writes.length - 1].includes('>' + X.rulesBadge() + '<'));
+       writes[writes.length - 1].includes(X.rulesNavBadgeHTML()));
 
     // ---- (d) a settings file with no rules never asks and never touches the pool
     for (const [what, file] of [

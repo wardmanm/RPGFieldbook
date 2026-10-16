@@ -115,12 +115,12 @@ function rulesDataHTML(){
 function renderRulesData(){
   const html=rulesDataHTML();
   ["rulesData","homeRulesData"].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=html;});
-  /* The Settings "Rules data" header counts the pool. It is drawn once by
+  /* The Settings sidebar's Rules data tab counts the pool (#107). It is drawn once by
      openSettings(), so without this it kept the count from when the modal
      opened, whatever an import, fetch, remove or clear did afterwards. Every
      path that changes the pool ends here, which is why the refresh lives here. */
-  const chip=document.querySelector('[data-setsec="rules"] .fgcount');
-  if(chip)chip.textContent=rulesBadge();
+  const badge=document.querySelector('[data-setbadge="rules"]');
+  if(badge)badge.innerHTML=rulesNavBadgeHTML();
 }
 function renderSrcRows(){
   const host=document.getElementById("srcList");if(!host)return;

@@ -53,7 +53,7 @@ note CC-BY-4.0 asks for:
 
 > This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode. Changed: converted to Fieldbook's rules format, with renamed entries' references updated.
 
-`bundle()` stamps it on `dist/srd52_full.json`, so it is listed in Settings → Credits & licences
+`bundle()` stamps it on `dist/srd52_full.json`, so it is listed in Settings → Credits
 while the pack is loaded and in the archive's `NOTICE.md`; README §10 carries the statement too.
 **Fieldbook adds no other attribution to Wizards** (not in the pack, Settings, README §10 or the
 player notes), because the SRD's legal page asks for none:

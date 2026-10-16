@@ -34,7 +34,7 @@ sheet already drawn. `charNeedsUpdate()` says no for a backup (`isBackup`), when
 `skipUpdate === APP_VERSION`, when the stamp is not behind, and when no packs are loaded. If it is
 behind and the diff is empty, the sheet is quietly marked checked; otherwise a modal offers
 **Not now**, **Don't ask again for vX** (sets `skipUpdate`, leaves the stamp) and **Review
-updates**. Settings → This character → Rules updates is the manual way in, so dismissing is never a
+updates**. Settings → Rules data → Check for rules updates is the manual way in, so dismissing is never a
 one-way door.
 
 **Stamping a copy.** Each copy site calls `stampSrc(copy, def, kind, cat, shape)`, which records

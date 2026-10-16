@@ -88,9 +88,10 @@ function blankChar(){
   return c;
 }
 let character=blankChar();
-/* setCollapse: which Settings sections are folded shut, keyed by section id.
-   Absent key = never touched, so SET_SECTIONS' first-run defaults apply. */
-let settings={skin:"humblewood",theme:"light",autoload:true,rough:true,rulesSources:[],setCollapse:{},tabIcons:false,backdropClose:false};
+/* setPage: the Settings page last viewed (#107). setCollapse is the fold state
+   of the sections that page replaced; it is no longer read, and stays only
+   because old settings files carry it. */
+let settings={skin:"humblewood",theme:"light",autoload:true,rough:true,rulesSources:[],setCollapse:{},tabIcons:false,backdropClose:false,setPage:"appearance"};
 let rules={name:"",version:0,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[]};
 
 function seedGlossary(){return [];}

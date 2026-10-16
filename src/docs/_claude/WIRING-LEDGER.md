@@ -5927,3 +5927,49 @@ Pages: [sections & layout](../wiki/ui/sections-and-layout.md), [journal](../wiki
    Screenshots `.claude/qa/106-*`. Not driven: touch on a real phone.
 
 Pages: [shell](../wiki/ui/shell.md), [settings & updates](../wiki/features/settings-and-updates.md)
+## Settings is a sidebar of six pages (#107, 2026-10-16)
+
+1. Mike: the Settings dialog is cluttered and its one long scroll of five folding sections is hard
+   to parse. Wanted: sidebar categories, consistent control types lined up as in a reference
+   Preferences dialog, and the sidebar condensed to icons when Icon tabs is on or the screen is
+   cramped. Designed with him first: spec `src/docs/specs/2026-10-16-settings-dialog-design.md`,
+   plan `src/docs/plans/2026-10-16-settings-dialog.md`.
+2. Six pages: Appearance (Look; Interface), Sheet display and Carrying (only with a character open,
+   under a "This character" caption, each "For *name*"), Rules data (Sources; Loaded data; This
+   sheet — the rules-update check moved here from the old character section), Backup (Characters;
+   Settings file) and Credits (text unchanged). `SET_PAGES` and pure helpers (`setPagesFor()`,
+   `setPageOf()`, `setPageStep()`, `setNavHTML()`, `setPageHTML()`, `setGroupHTML()`,
+   `setRowHTML()`, `rulesNavBadgeHTML()`) replace `SET_SECTIONS`, `setSecOpen()` and `setSecHTML()`.
+3. Every setting is a row: name and one help line left, control right. The type rule: on/off is a
+   switch, two or three short choices are segmented buttons, a longer list is a dropdown, actions
+   are buttons. So Encumbrance became segmented (`segEnc`, Off / Standard / Variant; `setEnc` is
+   gone). Help paragraphs were cut to one line each, a second where a fact needed it; the Rules
+   sources detail moved into tooltips. Every switch is `role="switch"` with `aria-checked` (only
+   `swBackdrop` had them, since #106), kept true by one click listener on the wrapper.
+4. Every page is built when the dialog opens and one is shown, so every control kept its id and
+   handler, and `renderRulesData()` keeps the sidebar's count and update dot live behind any page.
+   The sidebar is a vertical tab list: ↑/↓ wrap over the shown pages only, Home/End jump. The page
+   last viewed is `settings.setPage` (default "appearance", in `SETTINGS_KEYS`); a character page
+   with no character open, or a value that isn't a shown page, opens Appearance. `setCollapse` is
+   no longer read; old files keep it, harmlessly.
+5. `openModal(title, html, icon, opts)`: `{wide:true}` sets the dialog's `wide` class, cleared on
+   every other open, so Import settings and the rules-update review open at normal width and
+   Settings comes back wide. The wide dialog is `min(820px,100%)` by `min(680px,90dvh)`: a fixed
+   height, because a shorter page shrank the dialog, which re-centred and moved the sidebar under
+   the pointer (seen in the first screenshots). The sidebar and the page each scroll on their own
+   (`.m-body` does not): a sticky sidebar in one scroller was cut off on an 800×360 landscape phone
+   until the page reached its end, and End focused a tab below the visible area (final review).
+6. The rail: 52px of icons, by `html[data-tabs="icons"]` or `max-width:640px`; on a narrow screen a
+   segmented control or dropdown drops below its name and a switch stays beside it. The icons are
+   stroked line drawings written into `SET_PAGES`, so they need no attribution.
+7. Tests: `rules-data.js` (the registry, the fallbacks, the arrow-key steps, the nav and page
+   markup, rows and groups, each control on its page, the switches' state, the wide dialog and its
+   reset, the badge refresh, the CSS); the #69 title guard and the #70 reopen check updated to the
+   new signature and badge. Driven with real input: tabs, ↓/↑/Home/End with and without a
+   character, a switch's `aria-checked`, encumbrance and size, reopening on the last page, the
+   badge behind Appearance, Clear all, Import settings and Cancel, Icon tabs from inside Settings;
+   the sidebar's position constant over 24 page switches; no overflow at 390px. Screenshots
+   `.claude/qa/107-*`: both skins, light and dark, every page, phone, 700px, Icon tabs.
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md), [shell](../wiki/ui/shell.md),
+[sections & layout](../wiki/ui/sections-and-layout.md), [storage](../wiki/architecture/storage.md)

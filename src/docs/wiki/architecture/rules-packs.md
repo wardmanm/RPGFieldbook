@@ -134,8 +134,8 @@ and writes one line to both: each zip with its pack count and data version, each
 and why (`importSummary()`), the counts, then `missingSummary()` when something is missing and
 `skippedSummary()` when entries were skipped ("Skipped 2 glossary entries with no term."), in red
 for any of those. A cache save that fails is added to the same line once it settles.
-`renderRulesData()` also refreshes the Settings "Rules data" header chip through
-`rulesBadge()`, because every path that changes the pool calls it. **Boot never merges.** It restores the already-merged pool from the cache and rebuilds
+`renderRulesData()` also refreshes the Settings sidebar's Rules data badge through
+`rulesNavBadgeHTML()`, because every path that changes the pool calls it. **Boot never merges.** It restores the already-merged pool from the cache and rebuilds
 only `_id` and `_dups`.
 
 **The pool is made safe on every change.** `reindexRules()` runs `tidyRules()` before it numbers

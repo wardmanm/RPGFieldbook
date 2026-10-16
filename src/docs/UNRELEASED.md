@@ -45,3 +45,7 @@ Bullets below this line — leave the heading in place.
 - Clicking or tapping outside a dialog no longer closes it, so a stray click or tapping away to hide
   your phone's keyboard can't lose what you typed. If you prefer the old way, turn on Settings →
   Appearance → Tap outside to close dialogs. ×, Cancel and Esc still close as before.
+- Settings is easier to find your way around: a sidebar of categories (Appearance, Sheet display,
+  Carrying, Rules data, Backup, Credits) beside one page at a time, every setting on its own row.
+  With icon tabs on, or on a phone, the sidebar shrinks to icons. Encumbrance is now three buttons,
+  and Check for rules updates is under Rules data.

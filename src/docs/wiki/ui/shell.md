@@ -88,8 +88,9 @@ Rules tab's two cards, `#concCard`) are listed too.
 One `#modal` backdrop holds `.modal` (`role="dialog"`, `aria-modal`, `tabindex="-1"`) with
 `#mIcon`, `#mTitle`, `#mClose` and `#mBody`.
 
-- `openModal()` (title, html, icon) clears the dismiss guard and its `then`, sets the title as
-  `textContent`, sets `#mIcon` to the icon or `""` on **every** call, puts the HTML into `#mBody` as
+- `openModal()` (title, html, icon, opts) clears the dismiss guard and its `then`, sets the title as
+  `textContent`, sets `#mIcon` to the icon or `""` on **every** call, sets or clears the dialog's
+  `wide` class from `opts.wide` on **every** call (Settings passes `{wide:true}`, #107), puts the HTML into `#mBody` as
   `innerHTML`, shows the dialog and calls `modalTakeFocus()`. Calling it while open swaps the content
   in place. **The title is plain text and the body is markup:** a title holds class, spell, item and
   pack names, and callers pass it exactly as written, never `esc()`'d; they escape what goes into
@@ -216,6 +217,9 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
   `openModal()`, never before. The three user dismissals go through `dismissModal()`, which reads
   `then` before `closeModal()` clears it.
 - **`#mIcon` is assigned on every open.** No test guards this.
+- **The `wide` class is set or cleared on every open** (`rules-data.js` asserts it), so a dialog
+  opened from Settings — Import settings, the rules-update review — comes up at the normal width,
+  and Settings comes back wide.
 - **The modal title is `textContent`, the body is `innerHTML`.** Callers escape the body and must
   not escape the title. `rules-data.js` pins the assignment and reads every `openModal()` call's
   first argument, refusing `esc(` or an entity in it.
@@ -304,3 +308,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-12 — `toast()` gains `opts`: `err` (stays until tapped, danger colour, alert) and `long` (6 s). → ledger L5648, #87
 - 2026-10-12 — The Combat tab uses the tab bar's ☰ like every tab; a modal closing over it gives focus to the swords. → ledger L5684, #80
 - 2026-10-16 — A backdrop click closes a dialog only with `settings.backdropClose` on (off by default), and only when the press began on the backdrop. → ledger L5903, #106
+- 2026-10-16 — `openModal()` takes `opts`; `{wide:true}` widens the dialog, set or cleared on every open. → ledger L5930, #107

@@ -26,7 +26,7 @@ top-bar `#savestate` to "Autosaved" — or "Use Save ↑" if the blob write thro
 the index so a card can badge it without parsing every blob.
 
 **The screen.** `#home` is a fixed overlay in the template shell, not a tab. `showHome()` opens it
-from the top bar's house button (`#btnHome`) and from Settings → Characters & backup → Open;
+from the top bar's house button (`#btnHome`) and from Settings → Backup → Open;
 `hideHome()` closes it. `renderHome()` draws:
 
 - **Cards**, newest `updated` first: name, a system badge (D&D / Humblewood), a version badge and a
@@ -96,7 +96,7 @@ switching to it. It returns `{id, copy}`, or `{error, copy}` where `error` is a 
 `storageWhy()` ("your browser's storage is full", "…is blocking storage for this page"). The index
 write is read back; if it did not land, the orphan blob is removed and an error returned. The only
 caller is the rules-update tool, with tag `v<appVersion>`. A backup is an ordinary card on the home
-screen; `isBackup` only stops it being offered updates itself. Settings → Characters & backup also
+screen; `isBackup` only stops it being offered updates itself. Settings → Backup also
 exports and imports *settings and rules data* — not characters (see
 [Settings & updates](settings-and-updates.md)).
 

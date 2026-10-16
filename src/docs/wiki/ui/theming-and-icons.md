@@ -131,7 +131,7 @@ attribute value in `src/js` is escaped, so the guard needs no list of exceptions
 CC BY 3.0 asks for three things: name the artists, name and link the licence, and say the work was
 changed. Removing the background square and the fill is the change. All three appear in two places:
 
-- **In the app**, Settings → Credits & licences (folded by default), built from `ICON_ARTISTS`, so
+- **In the app**, Settings → Credits, built from `ICON_ARTISTS`, so
   the credit cannot drift from what is vendored.
 - **In [README §10](../../../../README.md)**, which ships in the zip.
 
