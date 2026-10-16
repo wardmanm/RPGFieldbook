@@ -50,7 +50,9 @@ place.
 sets it to `AMMO_PASS` directly on the character it creates, since a fresh sheet has nothing for the
 pass to migrate. Pass 1 was for sheets saved before ammunition. Pass 2 runs it once more over sheets
 whose copies were made from a pack older than ammunition after pass 1 had run, or on a sheet made
-since; every step fills only what is missing, so a second run changes nothing else. It works from
+since. Every step touches only an item that is not yet ammunition — a bundle the player already
+marked as ammunition by hand keeps their count — so a second run changes nothing it already did.
+It works from
 each item's own data through built-in tables (`AMMO_PIECES`, `AMMO_SINGLE_NAMES`, `AMMO_BUNDLES`,
 `AMMO_LAUNCHERS`), because no rules pool can be relied on at load. Every lookup into one of those
 tables is by own property (`ammoTable()`), never plain indexing: an item named "constructor" or
@@ -149,6 +151,12 @@ since neither is on the form.
   bug than a choice; setting None again sticks, since the pass does not run again.
 - **An unpacked bundle's copy keeps the bundle's own text**, so after the pass the update tool can
   offer the piece's pack description. A fresh finder copy takes the piece's text directly.
+- **A bundle the player marked as ammunition is theirs.** The obvious workaround for #96 was ticking
+  Ammunition on "Bolts (20)" and typing the bolts left. Unpacking it would multiply that count by
+  twenty, so the bundle step skips any item that is already ammunition (caught in review).
+- **A launcher the player gave a kind by hand, copied from the bare pack**, keeps its bare baseline
+  (the pass skips it), so against the repaired pool the update tool lists a `weapon` change. Applying
+  it is harmless, and the data release would list the same.
 
 ## Decisions
 

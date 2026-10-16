@@ -56,7 +56,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'trackerRowHTML', 'trackerClosedHTML', 'trackersHTML', 'trackerFormHTML', 'trkSummary', 'trkTickHTML', 'trkEditHTML',
   'ammoKindOf', 'itemAmmo', 'weaponAmmoKind', 'ammoStacks', 'loadedStack', 'ammoPlural', 'ammoOne',
   'unpackAmmo', 'rebaseAmmo', 'migrateAmmo', 'ammoTable', 'fpMap', 'fpHash',
-  'AMMO_PASS', 'ammoRepairDef', 'reindexRules', 'stampSrc', 'updChangedFields', 'updEdited',
+  'AMMO_PASS', 'ammoRepairDef', 'stampSrc', 'updChangedFields', 'updEdited',
   'ammoSpentEntry', 'fireAmmo', 'undoFire', 'ammoRecoverable', 'recoverAmmo', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
   'forgetGrantAmmo', 'ammoAskDue', 'markAmmoAsked',
   'ammoLineHTML', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
@@ -3236,7 +3236,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
 /* ---- a pack older than ammunition (#96) ----
    The 2024 pack players have was published with 1.7.2, before ammunition: no
    weapon.ammo on a launcher, no ammo on a piece, no pack on a bundle. These are
-   its entries exactly as it shipped them. */
+   its entries with those fields as it shipped them, trimmed of the rest. */
 {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const bare = () => [
@@ -3248,6 +3248,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     {name: 'Bolts (20)', category: 'Ammunition', type: 'Ammunition', weight: 1.5, cost: '1 gp', description: '', effects: []},
     {name: 'Crossbow Bolts (20)', category: 'Ammunition', type: 'Ammunition', weight: 1.5, cost: '1 gp', description: '', effects: []},
     {name: 'Blowgun Needle', category: 'Ammunition', type: 'Ammunition', weight: 0.02, cost: '2 cp', description: '', effects: []},
+    {name: 'Unbreakable Arrow', category: 'Ammunition', type: 'Ammunition', description: '', effects: []},
     {name: 'Dagger', category: 'Weapon', type: 'Simple Melee Weapon', weight: 1, cost: '2 gp', description: '', effects: [],
      weapon: {kind: 'melee', dice: '1d4', damageType: 'piercing', ability: 'finesse'}},
     {name: 'Rope', category: 'Adventuring Gear', type: 'Adventuring Gear', weight: 5, cost: '1 gp', description: '', effects: []}];
@@ -3262,11 +3263,13 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck("...on a copy of the weapon, never the pack's own object", !('ammo' in wpn) && by(e, 'Light Crossbow').weapon !== wpn);
   ck('a bare piece learns its kind, a 2014 name its 2024 kind',
      same(by(e, 'Bolt').ammo, {kind: 'bolt'}) && same(by(e, 'Blowgun Needle').ammo, {kind: 'needle'}));
+  ck("...and so does Xanathar's Unbreakable Arrow, the one magic piece the older packs had",
+     same(by(e, 'Unbreakable Arrow').ammo, {kind: 'arrow'}));
   ck('a bare bundle becomes a bundle of its piece', same(by(e, 'Bolts (20)').ammo, {kind: 'bolt'}) && same(by(e, 'Bolts (20)').pack, {item: 'Bolt', qty: 20}));
   ck('...a 2014 bundle a bundle of the 2024 piece', same(by(e, 'Crossbow Bolts (20)').pack, {item: 'Bolt', qty: 20}));
   ck('anything not in the tables is left exactly as it was',
      same(by(e, 'Dagger'), by(bare(), 'Dagger')) && same(by(e, 'Rope'), by(bare(), 'Rope')));
-  ck('...and the repair says which it changed', same(changed, [true, true, true, true, true, true, false, false]), changed);
+  ck('...and the repair says which it changed', same(changed, [true, true, true, true, true, true, true, false, false]), changed);
   const own = {name: 'Longbow', weapon: {kind: 'ranged', ammo: 'flight arrow'}};
   const ownB = {name: 'Arrows (20)', ammo: {kind: 'arrow', bonus: 1}, pack: {item: '+1 Arrow', qty: 20}};
   ck("a pack's own value always wins", !X.ammoRepairDef(own) && own.weapon.ammo === 'flight arrow' &&
@@ -3304,29 +3307,45 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   /* a sheet the first pass already ran on, holding copies made from the bare
      pack since: the second pass repairs them, and the update tool then agrees
      the copy and the repaired pack are the same, with nothing edited */
-  const stampBare = (it, def, shape) => X.stampSrc(it, def, 'item', 'items', shape);
+  /* stamped as the finder stamped them: from the bare entry, with the pack's
+     source, so the update tool resolves them back through updResolve() */
+  const stampBare = (it, def, shape) => X.stampSrc(it, Object.assign({_source: 'XPHB'}, def), 'item', 'items', shape);
   const bxb = bare()[0], bbolt = bare()[2];
-  const mid = {name: 'Fighter', abilities: {}, ammoInit: 1, inventory: [
+  const mid = {name: 'Fighter', abilities: {}, ammoInit: '1', inventory: [
     stampBare({id: 'x', name: 'Light Crossbow', qty: 1, equipped: true, cost: 25, weight: 5, description: 'Bare.', effects: [],
                weapon: JSON.parse(JSON.stringify(bxb.weapon))}, bxb, 'plain'),
     stampBare({id: 'b', name: 'Bolt', qty: 6, cost: 0.05, weight: 0.075, description: 'Ammunition · 5 cp · 0.075 lb\n', effects: []}, bbolt, 'browse'),
     {id: 'k', name: 'Bolts (20)', qty: 1, cost: 1, weight: 1.5, category: 'Ammunition', type: 'Ammunition'},
-    {id: 'r', name: 'Rope', qty: 1}]};
+    /* the workaround for this very bug: a bundle the player ticked as
+       ammunition in the item editor and counted down by hand */
+    {id: 'h', name: 'Crossbow Bolts (20)', qty: 17, ammo: {kind: 'bolt'}},
+    {id: 'a', name: 'Arrow', qty: 9, ammo: {kind: 'arrow'}},
+    {id: 'l', name: 'Longbow', qty: 1, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}, ammoStack: 'a'},
+    {id: 'r', name: 'Rope', qty: 1}],
+    ammoSpent: {a: {n: 3, kind: 'arrow', asked: 2, snap: {id: 'a', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}}}}};
   const m2 = X.migrate(JSON.parse(JSON.stringify(mid)));
   const at = id => m2.inventory.find(i => i.id === id);
-  ck('the second pass runs on a sheet the first already did', m2.ammoInit === X.AMMO_PASS);
+  ck('the second pass runs on a sheet the first already did, whatever a file wrote for it', m2.ammoInit === X.AMMO_PASS);
   ck('...the crossbow fires bolts', at('x').weapon.ammo === 'bolt');
   ck('...the bundle unpacks and joins the Bolts already carried', !at('k') && at('b').qty === 26 && same(at('b').ammo, {kind: 'bolt'}), m2.inventory);
   ck('...and nothing else moves', same(at('r'), {id: 'r', name: 'Rope', qty: 1}));
+  ck("...a bundle the player already marked as ammunition keeps their count, not twenty times it (review)",
+     at('h') && at('h').qty === 17 && at('h').name === 'Crossbow Bolts (20)' && at('b').qty === 26, m2.inventory);
+  ck('...and spent counts, Recover and a chosen stack are left as they were',
+     same(m2.ammoSpent, mid.ammoSpent) && at('l').ammoStack === 'a' && at('a').qty === 9);
   X.resetRules();
   X.mergeRules({system: 'XPHB', items: bare()}, '5e.json');
-  ck("the update tool sees no change between the repaired copies and the repaired pack, and no edit",
-     X.updChangedFields(at('x'), by(X.rules.items, 'Light Crossbow'), 'item').length === 0 && X.updEdited(at('x'), 'item') === false &&
-     X.updChangedFields(at('b'), by(X.rules.items, 'Bolt'), 'item').length === 0 && X.updEdited(at('b'), 'item') === false,
-     [X.updChangedFields(at('x'), by(X.rules.items, 'Light Crossbow'), 'item'), X.updChangedFields(at('b'), by(X.rules.items, 'Bolt'), 'item')]);
+  const rx = X.updResolve(at('x'), 'item').def, rb = X.updResolve(at('b'), 'item').def;
+  ck('the update tool resolves the repaired copies to the repaired entries',
+     rx === by(X.rules.items, 'Light Crossbow') && rb === by(X.rules.items, 'Bolt'));
+  ck("...and sees no change between them, and no edit",
+     !!rx && !!rb && X.updChangedFields(at('x'), rx, 'item').length === 0 && X.updEdited(at('x'), 'item') === false &&
+     X.updChangedFields(at('b'), rb, 'item').length === 0 && X.updEdited(at('b'), 'item') === false,
+     [rx && X.updChangedFields(at('x'), rx, 'item'), rb && X.updChangedFields(at('b'), rb, 'item')]);
   ck('a sheet already at this pass is left alone', JSON.stringify(X.migrate(JSON.parse(JSON.stringify(m2)))) === JSON.stringify(m2));
   const done = {abilities: {}, ammoInit: X.AMMO_PASS, inventory: [{id: 'k', name: 'Bolts (20)', qty: 1}]};
   ck('...even one still holding a bundle', X.migrate(JSON.parse(JSON.stringify(done))).inventory[0].name === 'Bolts (20)');
+  ck('...or one whose file wrote the pass as text', X.migrate({abilities: {}, ammoInit: '2', inventory: [{id: 'k', name: 'Bolts (20)', qty: 1}]}).inventory[0].name === 'Bolts (20)');
   X.resetRules();
 }
 

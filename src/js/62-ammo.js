@@ -24,9 +24,11 @@ const AMMO_PIECES={
   "needle":        {name:"Needle",         cost:"2 cp", weight:0.02},
   "sling bullet":  {name:"Sling Bullet",                weight:0.075}
 };
-/* single pieces by name, the 2014 names mapping to their 2024 kind */
+/* single pieces by name, the 2014 names mapping to their 2024 kind. Xanathar's
+   Unbreakable Arrow is here too (#96): it is ammunition only in packs made since,
+   and the only piece in the older packs the other names miss. */
 const AMMO_SINGLE_NAMES={"arrow":"arrow","bolt":"bolt","crossbow bolt":"bolt","firearm bullet":"firearm bullet",
-  "needle":"needle","blowgun needle":"needle","sling bullet":"sling bullet"};
+  "needle":"needle","blowgun needle":"needle","sling bullet":"sling bullet","unbreakable arrow":"arrow"};
 /* bundles by name: [kind, how many pieces one holds] */
 const AMMO_BUNDLES={"arrows (20)":["arrow",20],"bolts (20)":["bolt",20],"crossbow bolts (20)":["bolt",20],
   "firearm bullets (10)":["firearm bullet",10],"needles (50)":["needle",50],"blowgun needles (50)":["needle",50],
@@ -125,8 +127,10 @@ function unpackAmmo(x,pool){
    more: copies made from the 2024 pack players had arrived with no ammo
    fields after pass 1 had run — and on every sheet made since, which skips the
    pass — so a launcher fired nothing and "Bolts (20)" stayed a bundle. Every
-   step fills only what is missing, so a second run over a migrated sheet
-   changes nothing else. */
+   step touches only an item that is not yet ammunition (a launcher, one with
+   no kind), so a second run over a migrated sheet changes nothing it already
+   did, and nothing the player marked by hand: a "Bolts (20)" they ticked as
+   ammunition and counted down to 17 stays 17 bolts, not 340. */
 const AMMO_PASS=2;
 
 /* Re-take the rules-update tool's baseline for each field the pass rewrote.
@@ -156,7 +160,7 @@ function migrateAmmo(c){
     if(!it||typeof it!=="object")return;
     const key=String(it.name||"").trim().toLowerCase();
     const b=ammoTable(AMMO_BUNDLES,key);
-    if(b){
+    if(b&&!itemAmmo(it)){
       /* "Arrows (20)" ×2 becomes Arrow ×40, each a twentieth of the bundle's
          own price and weight (spec §3.3), so a price the player paid survives */
       const kind=b[0], per=b[1], pc=AMMO_PIECES[kind];

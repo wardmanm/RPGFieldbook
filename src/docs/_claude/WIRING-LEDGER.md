@@ -5772,8 +5772,12 @@ Pages: [private data](../wiki/data/private-data.md), [converter](../wiki/data/co
    a merge, a fetch, Settings → Import, and both cache restores at boot. `fpNorm()` sorts keys, so a
    repaired entry fingerprints exactly as the current pack's will.
 4. The sheets: `AMMO_PASS` is 2 and `migrateAmmo()` runs while `ammoInit` is below it, so a sheet
-   the first pass ran on (or one made since) gets the pass once more. Every step fills only what is
-   missing, so a second run changes nothing else. `newCharacter()` sets `ammoInit` to `AMMO_PASS`.
+   the first pass ran on (or one made since) gets the pass once more. Every step touches only an
+   item that is not yet ammunition — the bundle step now skips one already marked as ammunition
+   (review: the obvious workaround for this bug was ticking Ammunition on "Bolts (20)" and typing
+   the bolts left, which pass 2 would have multiplied by twenty) — so a second run changes nothing
+   it already did. `newCharacter()` sets `ammoInit` to `AMMO_PASS`. Xanathar's Unbreakable Arrow
+   joins `AMMO_SINGLE_NAMES`: the one piece in the older packs the other names missed.
    Like the first pass, it gives a known launcher its kind even if the player had set "None": in
    the two days the item editor has had that select, it is far likelier to be the bug.
 5. Repaired copies and the repaired pool agree in the update tool (no change, no edit), except that

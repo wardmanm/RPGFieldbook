@@ -28,6 +28,6 @@ Bullets below this line — leave the heading in place.
 
 ## Pending
 
-- Bows, crossbows, slings, blowguns and firearms know their ammunition again, and arrows, bolts,
+- Bows, crossbows, slings, blowguns and firearms now know their ammunition, and arrows, bolts,
   needles and bullets mark themselves as ammunition, even with rules data from before ammunition
   arrived. A crossbow or bundle of bolts already on your sheet is fixed the next time you open it.
