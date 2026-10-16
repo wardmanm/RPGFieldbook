@@ -1,6 +1,6 @@
 {
   "_comment": "The rules-pack registry (spec src/docs/specs/2026-10-07-data-archive-design.md §4). version, digest and release are written only by scripts/release.js and scripts/data-release.js through tools/data-kit/fbdata.py — never by hand.",
-  "release": "1.8.0",
+  "release": "1.8.1",
   "packs": [
     {
       "system": "Homebrew",

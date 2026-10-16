@@ -1,5 +1,5 @@
 /* ---- app version & changelog (bump APP_VERSION + add a CHANGELOG entry on every fieldbook.html change) ---- */
-const APP_VERSION="1.8.0";
+const APP_VERSION="1.8.1";
 /* The release in which each system's RULES DATA last changed, keyed by the
    `system` field its pack carries. Owned by scripts/release.js, which bumps a
    system only when its data/<dir>/ actually changed since the previous tag —
@@ -120,6 +120,15 @@ function checkForDataUpdate(){
     }).catch(()=>null);
 }
 const CHANGELOG=[
+  {v:"1.8.1", date:"2026-10-16", notes:[
+    "In the combat view, with skills grouped by ability, each ability's name, modifier and score are large and easy to read again, and \"Saving Throws\" no longer outweighs the ability it belongs to.",
+    "Bows, crossbows, slings, blowguns and firearms now know their ammunition, and arrows, bolts, needles and bullets mark themselves as ammunition, even with rules data from before ammunition arrived. A crossbow or bundle of bolts already on your sheet is fixed the next time you open it.",
+    "Changing a feature's source now moves it into that group on Features & Traits, and the Source box suggests the groups you already have, the way journal tags do. Left empty, a feature goes back to where it came from. Options you picked from the feature list, such as Eldritch Invocations or Metamagic, now sit under their own heading instead of \"Other\".",
+    "An item's Category works the same way: pick one of the sections or type your own, and the item gets a section of that name after the built-in ones.",
+    "A tag, feature source or item category can't be one of a few reserved words, such as \"constructor\"; the box says so. A journal or tracker tag with one of those names used to fold its group on its own, or never let it fold.",
+    "Clicking or tapping outside a dialog no longer closes it, so a stray click or tapping away to hide your phone's keyboard can't lose what you typed. If you prefer the old way, turn on Settings → Appearance → Tap outside to close dialogs. ×, Cancel and Esc still close as before.",
+    "Settings is easier to find your way around: a sidebar of categories (Appearance, Sheet display, Carrying, Rules data, Backup, Credits) beside one page at a time, every setting on its own row. With icon tabs on, or on a phone, the sidebar shrinks to icons. Encumbrance is now three buttons, and Check for rules updates is under Rules data."
+  ]},
   {v:"1.8.0", date:"2026-10-14", notes:[
     "The Notes tab is now the Journal. Keep a running campaign journal in pages — sessions, characters, quests, anything — each with an optional tag to group it by, created and edited dates, a button that stamps the current date and time, and the same formatting as your notes. Search finds any page by its title, tag or text. Your section notes are still there, further down.",
     "New trackers on the Journal tab: counters (with or without a goal), checklists and one-line tasks, grouped by a tag you choose — kills by creature type, pages of a book, steps of a quest. Anything with a goal can close itself when it's done and move to Completed, with an Undo. Add the Trackers card to the combat view to count mid-fight, or hide it in Settings → This character.",
