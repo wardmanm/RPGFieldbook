@@ -5900,3 +5900,30 @@ Pages: [features & traits](../wiki/features/features-and-traits.md),
 
 Pages: [sections & layout](../wiki/ui/sections-and-layout.md), [journal](../wiki/features/journal.md),
 [known issues](../wiki/roadmap/known-issues.md)
+## Clicking outside a dialog no longer closes it, unless Settings says so (#106, 2026-10-16)
+
+1. Mike: clicking outside any dialog closes it without saving — hard on a phone, where a tap beside
+   a field puts the keyboard away, and on desktop with a stray click. Wanted: a global setting for
+   close-on-click-outside, off by default; flyouts unaffected.
+2. The one path: the backdrop listener in `80-modal-forms.js` sent every click on `#modal` itself to
+   `dismissModal()`. The ☰ flyout's backdrop is its own element (`#tocBack`, handled in `wire()`),
+   and the browse picker is full-screen with its own Close, so neither is touched.
+3. `settings.backdropClose`, app-wide, `false` in the `settings` literal, so a player whose saved
+   settings predate it starts with it off too; read as `=== true`, so a junk value from a file is
+   off. It is in `SETTINGS_KEYS`, and Export/Import settings carry it. Settings → Appearance has
+   the switch ("Tap outside to close dialogs", `#swBackdrop`, `role="switch"` and `aria-checked`),
+   which saves at once.
+4. With it on, only a click pressed and let go on the backdrop closes (`_downOnBackdrop` and
+   `_upOnBackdrop`, set on `pointerdown` and `pointerup`, spent by every click): a press and a
+   release on different elements deliver their click to the backdrop, so a text selection dragged
+   out of a field, or (caught in review) a press outside slid onto the dialog, would close it.
+   A touch release lands where its press began, so a tap works. × and Escape close as before,
+   through `dismissModal()`, so the choice pickers' guard still asks.
+5. Tests: `rules-data.js` (the gated handler, the pointerdown guard, the default, the switch and
+   its save, `SETTINGS_KEYS`, the flyout's own close); they fail against the old code. Driven with
+   real mouse input: released build, a backdrop click closed a half-typed feature form; fixed
+   build, it stays with the text, × and Esc close, the flyout closes on an outside tap, the switch
+   saves the setting, then a drag out of the field keeps the form and a backdrop click closes it.
+   Screenshots `.claude/qa/106-*`. Not driven: touch on a real phone.
+
+Pages: [shell](../wiki/ui/shell.md), [settings & updates](../wiki/features/settings-and-updates.md)

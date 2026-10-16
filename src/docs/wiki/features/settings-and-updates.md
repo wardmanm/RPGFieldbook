@@ -35,8 +35,9 @@ the header chip, and Import settings driven through its real handler), `data-arc
 **The modal.** `openSettings()` builds five folding groups with `setSecHTML()`, borrowing the feature
 list's `.fgroup` / `.fghead` / `.fcaret`:
 
-- **Appearance** — skin, mode (system/light/dark), hand-drawn borders, icon tabs. Changing the skin
-  with a character open also sets its `system`.
+- **Appearance** — skin, mode (system/light/dark), hand-drawn borders, icon tabs, and "Tap outside
+  to close dialogs" (`settings.backdropClose`, off by default, #106; see [Shell](../ui/shell.md)).
+  Changing the skin with a character open also sets its `system`.
 - **This character** — only when a character is open, badged with its name: size, encumbrance (with a
   live "carrying X of Y" hint), coins count as weight, colour current HP, skills display, Hit Dice
   display, whether the Journal tab shows its Trackers card, and the rules-update check with the
@@ -270,3 +271,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-09 — `dataStatus()` gains `"known"`: a pack with a version but no baseline to compare it to shows that version quietly, never the amber chip or the newer-data notice. → ledger L5388, #85
 - 2026-10-09 — The public registry, which the newer-data check reads, lists only SRD 5.2 and Homebrew; private packs show their version quietly and get no notice. → ledger L5426, #85
 - 2026-10-12 — From the Rules tab, the import toast drops the counts and a failure stays until tapped. → ledger L5648, #87
+- 2026-10-16 — Appearance gains "Tap outside to close dialogs" (`backdropClose`, off by default, in `SETTINGS_KEYS`). → ledger L5903, #106

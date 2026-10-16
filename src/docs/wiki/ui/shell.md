@@ -96,8 +96,13 @@ One `#modal` backdrop holds `.modal` (`role="dialog"`, `aria-modal`, `tabindex="
   the body.
 - `closeModal()` clears the guard and its `then`, hides the dialog, empties `#mBody` and gives
   focus back.
-- **Dismissal.** ×, a backdrop click and Escape (a document `keydown` bound at load in
-  `80-modal-forms.js`) all go to `dismissModal()`. If a guard is set, it returns a message and the
+- **Dismissal.** × and Escape (a document `keydown` bound at load in `80-modal-forms.js`) go to
+  `dismissModal()`. A backdrop click does too, but only when `settings.backdropClose` is `true`
+  (Settings → Appearance, off by default, #106), and only for a click pressed and let go on the
+  backdrop (`_downOnBackdrop` and `_upOnBackdrop`, set on `pointerdown` and `pointerup`, spent by
+  every click). A press and release on different elements deliver their click to the backdrop, so
+  without both a selection dragged out of a field, or a press outside slid onto the dialog, would
+  close it. The ☰ flyout's backdrop is its own and always closes it. If a guard is set, it returns a message and the
   close waits on a `confirm` prompt. Done and Save handlers call `closeModal()` directly. Only
   the "choose N" pickers arm a guard, via `armChoiceDismissGuard()` after `openModal()`
   ([Character building](../features/character-building.md)).
@@ -202,6 +207,9 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - **Card headings stay ToC-clean.** Anything in a `.label` that is not the title must be a
   `button`/`svg`/`input`/`select` or carry `.grow`/`.add`/`.cnt`/`.enc-pill`, or its text leaks into
   the flyout entry. The note preview is a `<span>` inside the note button for this reason.
+- **A backdrop click closes nothing unless `settings.backdropClose === true`.** Off is the default
+  for every player, a saved settings file without the key included; a stray click or a tap to hide
+  a phone's keyboard must not throw away a form. × and Escape are never gated.
 - **`openModal()` begins `_dismissGuard=null;`.** `rules-data.js` asserts that literal prefix, and
   that `closeModal()` clears it too. Both also clear `_dismissThen`, so a dismissal's follow-up
   never fires for a later window (`char-update.js` checks this by behaviour). A guard is armed after
@@ -252,6 +260,8 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 | Does `selectTab()` scroll? | No. The caller decides: the tab bar goes to the top, a note jump to its card | Scrolling inside it: a note jump would fight its own tab switch |
 | Where does the dismissal guard live? | `dismissModal()`, in front of the three user dismissals only | Inside `closeModal()`: every Done handler calls it and would have to answer its own prompt |
 | Which modals get a guard? | Only one that stands to lose something (the choice pickers) | A guard everywhere: for an ordinary form Escape is cancel and must stay instant |
+| Does a click outside close a dialog? (#106) | Only with Settings → Appearance → Tap outside to close dialogs, off by default, app-wide; and only a click pressed and let go on the backdrop | Always: a stray click, or a tap to put a phone's keyboard away, lost the form. Never: some players want it. Per character: it is how the app behaves, not the sheet |
+| Do × and Escape follow that setting? | No, they always close | Gating them: both are deliberate, and Escape is how a keyboard leaves a form |
 | Where a dismissed window's follow-up lives | With its guard, as `then`, cleared by every open and close | A module global: the old equipment queue outlived its window and fired after the next level-up (L3649) |
 | Where does auto-focus land? | The first text box on the first screenful with a fine pointer; the dialog itself on touch | A field on touch: it raises the on-screen keyboard for every form. A `<select>`: type-ahead rewrote the form |
 | The emblem slot in the header | Assigned on every open | Behind `if(icon)`: all but six of the ~50 call sites pass nothing and must clear it, or a class emblem leaks into the next modal |
@@ -293,3 +303,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39
 - 2026-10-12 — `toast()` gains `opts`: `err` (stays until tapped, danger colour, alert) and `long` (6 s). → ledger L5648, #87
 - 2026-10-12 — The Combat tab uses the tab bar's ☰ like every tab; a modal closing over it gives focus to the swords. → ledger L5684, #80
+- 2026-10-16 — A backdrop click closes a dialog only with `settings.backdropClose` on (off by default), and only when the press began on the backdrop. → ledger L5903, #106

@@ -1636,8 +1636,24 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // a chooser — which would make dismissing the easiest way past the new warning.
   ck('the three dismissals go through dismissModal, not closeModal',
      /getElementById\("mClose"\)\.addEventListener\("click",dismissModal\)/.test(js) &&
-     /if\(e\.target===modal\)dismissModal\(\)/.test(js) &&
+     /if\(e\.target===modal&&both&&settings\.backdropClose===true\)dismissModal\(\)/.test(js) &&
      /Escape"&&modal\.classList\.contains\("open"\)\)dismissModal\(\)/.test(js));
+  /* #106: a click outside closes a dialog only when Settings says so, off by
+     default — a stray click, or a tap to hide a phone's keyboard, lost the
+     form. × and Escape are untouched above. And only a click that began on the
+     backdrop, so a selection dragged out of a field doesn't close it. */
+  ck('the backdrop closes a dialog only with the setting on, and only for a click pressed and let go on it',
+     /modal\.addEventListener\("pointerdown",e=>\{_downOnBackdrop=e\.target===modal;\}\)/.test(js) &&
+     /modal\.addEventListener\("pointerup",e=>\{_upOnBackdrop=e\.target===modal;\}\)/.test(js) &&
+     /const both=_downOnBackdrop&&_upOnBackdrop;_downOnBackdrop=_upOnBackdrop=false;/.test(js) &&
+     (js.match(/e\.target===modal/g) || []).length === 3);
+  ck('...the setting is off by default, for a new player and one whose settings predate it',
+     /let settings=\{[^\n]*backdropClose:false[^\n]*\};/.test(js) && /settings\.backdropClose===true\)dismissModal/.test(js));
+  ck('...Settings has its switch, which saves it, and a settings file carries it',
+     /id="swBackdrop" role="switch" aria-checked="\$\{settings\.backdropClose===true\?"true":"false"\}"/.test(js) &&
+     /getElementById\("swBackdrop"\)\.addEventListener\("click",e=>\{settings\.backdropClose=settings\.backdropClose!==true;[^\n]*saveSettings\(\);\}\)/.test(js) &&
+     /const SETTINGS_KEYS=\[[^\]]*"backdropClose"/.test(js));
+  ck('...and the flyout still closes on a tap outside', /if\(t\.closest\("#tocBack"\)\)return closeToc\(\);/.test(js));
   ck('...and dismissModal asks the guard before closing',
      /function dismissModal\(\)\{[\s\S]{0,160}_dismissGuard\(\)[\s\S]{0,80}confirm\(msg\)\)return;/.test(js));
   // the guard must not leak between modals: an ordinary form's Escape is cancel

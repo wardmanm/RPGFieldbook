@@ -42,3 +42,6 @@ Bullets below this line — leave the heading in place.
 - A tag, feature source or item category can't be one of a few reserved words, such as
   "constructor"; the box says so. A journal or tracker tag with one of those names used to fold its
   group on its own, or never let it fold.
+- Clicking or tapping outside a dialog no longer closes it, so a stray click or tapping away to hide
+  your phone's keyboard can't lose what you typed. If you prefer the old way, turn on Settings →
+  Appearance → Tap outside to close dialogs. ×, Cancel and Esc still close as before.

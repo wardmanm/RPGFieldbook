@@ -71,7 +71,8 @@ function openSettings(){
         <button data-th="dark" class="${settings.theme==="dark"?"on":""}">Dark</button>
       </div></div>
     <div class="toggle"><div><div class="t-lbl">Hand-drawn borders</div><div class="t-sub">Inky wobble. Turn off for a cleaner look / low-end devices.</div></div><button class="switch ${settings.rough?"on":""}" id="swRough"></button></div>
-    <div class="toggle"><div><div class="t-lbl">Icon tabs</div><div class="t-sub">Show the tab bar as icons instead of words, on every screen size. Narrow screens do this anyway.</div></div><button class="switch ${settings.tabIcons?"on":""}" id="swTabIcons"></button></div>`;
+    <div class="toggle"><div><div class="t-lbl">Icon tabs</div><div class="t-sub">Show the tab bar as icons instead of words, on every screen size. Narrow screens do this anyway.</div></div><button class="switch ${settings.tabIcons?"on":""}" id="swTabIcons"></button></div>
+    <div class="toggle"><div><div class="t-lbl">Tap outside to close dialogs</div><div class="t-sub">Leave this off so a stray click, or a tap to hide your phone's keyboard, can't close a dialog and lose what you typed. ×, Cancel and Esc always close.</div></div><button class="switch ${settings.backdropClose===true?"on":""}" id="swBackdrop" role="switch" aria-checked="${settings.backdropClose===true?"true":"false"}" aria-label="Tap outside to close dialogs"></button></div>`;
   const secCharacter=activeId?`
     <div class="g2"><div class="field"><label class="f">Size</label>
         <select id="setSize">${sizeOptionsHTML(character.size)}</select></div>
@@ -170,6 +171,8 @@ function openSettings(){
   document.getElementById("swHome").addEventListener("click",()=>{closeModal();showHome();});
   document.getElementById("swRough").addEventListener("click",e=>{settings.rough=!settings.rough;e.currentTarget.classList.toggle("on",settings.rough);applyTheme();saveSettings();});
   document.getElementById("swTabIcons").addEventListener("click",e=>{settings.tabIcons=!settings.tabIcons;e.currentTarget.classList.toggle("on",settings.tabIcons);applyTheme();saveSettings();});
+  /* #106: app-wide, off by default — read by the backdrop listener in 80-modal-forms.js */
+  document.getElementById("swBackdrop").addEventListener("click",e=>{settings.backdropClose=settings.backdropClose!==true;const on=settings.backdropClose;e.currentTarget.classList.toggle("on",on);e.currentTarget.setAttribute("aria-checked",on?"true":"false");saveSettings();});
   renderSrcRows();renderRulesData();
   document.getElementById("rulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`))removeRulesGroup(d.dataset.rdDel);});
   document.getElementById("srcList").addEventListener("input",e=>{const inp=e.target.closest("[data-src-i]");if(!inp)return;settings.rulesSources[num(inp.dataset.srcI)]=inp.value.trim();saveSettings();});
@@ -226,7 +229,7 @@ function encSettingsChanged(){
    cannot say "import the settings but keep my rules" without making Cancel
    import something. Nothing is lost, so nothing is asked, when the file brings
    no rules or none are loaded yet. */
-const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCollapse","tabIcons"];
+const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCollapse","tabIcons","backdropClose"];
 /* What boot does to settings from an older build, shared with Import settings
    so an old file arrives in the same shape: the first builds' single `rulesUrl`
    joins the sources list. True when that changed something worth saving. */
@@ -284,7 +287,8 @@ function settingsImportQuestionHTML(imp){
 function askSettingsImport(imp){
   openModal("Import settings",settingsImportQuestionHTML(imp));
   const back=()=>{openSettings();settingsImportStatus("Import cancelled. Nothing changed.","");};
-  /* ✕, Escape and a click outside go back to Settings too, having changed nothing */
+  /* ✕, Escape and (when Settings allows it, #106) a click outside go back to
+     Settings too, having changed nothing */
   setDismissGuard(null,back);
   document.getElementById("setImpCancel").addEventListener("click",()=>{closeModal();back();});
   document.getElementById("setImpKeep").addEventListener("click",()=>finishSettingsImport(imp,false));

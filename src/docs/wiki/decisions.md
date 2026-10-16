@@ -359,6 +359,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Does `selectTab()` scroll?** — No. The caller decides: the tab bar goes to the top, a note jump to its card
 - **Where does the dismissal guard live?** — `dismissModal()`, in front of the three user dismissals only
 - **Which modals get a guard?** — Only one that stands to lose something (the choice pickers)
+- **Does a click outside close a dialog? (#106)** — Only with Settings → Appearance → Tap outside to close dialogs, off by default; and only a click pressed and let go on the backdrop
+- **Do × and Escape follow that setting?** — No, they always close
 - **Where a dismissed window's follow-up lives** — With its guard, as `then`, cleared by every open and close
 - **Where does auto-focus land?** — The first text box on the first screenful with a fine pointer; the dialog itself on touch
 - **The emblem slot in the header** — Assigned on every open
