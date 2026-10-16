@@ -30,6 +30,7 @@ Bullets below this line — leave the heading in place.
 
 - Changing a feature's source now moves it into that group on Features & Traits, and the Source box
   suggests the groups you already have, the way journal tags do. Left empty, a feature goes back to
-  where it came from.
+  where it came from. Options you picked from the feature list, such as Eldritch Invocations or
+  Metamagic, now sit under their own heading instead of "Other".
 - An item's Category works the same way: pick one of the sections or type your own, and the item
   gets a section of that name after the built-in ones.

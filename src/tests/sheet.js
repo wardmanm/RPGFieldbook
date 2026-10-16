@@ -1065,6 +1065,22 @@ ck('an empty list makes no groups at all',
   list[0].source = 'Something Else';
   ck("a new source makes a new group, placed by its first feature: after the group that feature came from",
      X.featGroups(list).map(g => g.label).join() === 'Mapach,Something Else,Wanderer', X.featGroups(list).map(g => g.label));
+  {
+    const CLS = {kind: 'class', class: 'Fighter'};
+    const three = [f('1', 'Climber', MAP, 'Mapach'), f('2', 'Darkvision', MAP, 'Mapach'), f('3', 'Second Wind', CLS, 'Fighter'),
+                   f('4', 'Wanderer — Ability Scores', BG, 'Wanderer')];
+    three[0].source = 'Wanderer';
+    ck('moving a feature past a group between leaves every group where it was (review)',
+       X.featGroups(three).map(g => g.label).join() === 'Mapach,Fighter,Wanderer', X.featGroups(three).map(g => g.label));
+    const cfirst = [f('3', 'Second Wind', CLS, 'Wanderer'), f('5', 'Action Surge', CLS, 'Fighter'), f('1', 'Climber', MAP, 'Mapach'),
+                    f('4', 'Wanderer — Ability Scores', BG, 'Wanderer')];
+    ck('...whichever group the moved feature started in',
+       X.featGroups(cfirst).map(g => g.label).join() === 'Fighter,Mapach,Wanderer', X.featGroups(cfirst).map(g => g.label));
+    three[0].source = 'Climbing';
+    three[1].source = 'Senses';
+    ck('...and groups named only by a source follow the group their first feature came from, in order',
+       X.featGroups(three).map(g => g.label).join() === 'Climbing,Senses,Fighter,Wanderer', X.featGroups(three).map(g => g.label));
+  }
   ck('...and a group only a moved feature names, with its origin group emptied, still lists in grant order',
      X.featGroups([f('1', 'A', MAP, 'Wanderer'), f('2', 'B', BG, 'Wanderer'), f('3', 'C', {kind: 'class', class: 'Rogue'}, 'Rogue')])
        .map(g => g.label + ':' + g.items.length).join() === 'Wanderer:2,Rogue:1');

@@ -99,21 +99,24 @@ function featGroups(list){
   const favs=all.filter(f=>f&&f.fav).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
   if(favs.length)out.push({label:FEAT_FAV,items:favs});
   /* One group per tagKey(), as the journal's tags: "Mapach" typed as "mapach"
-     joins the Mapach group, labelled by the first spelling met. The ORDER
-     follows the features in grant order, each placing the group it came from
-     and then the group it is filed in (#98), so moving the first Mapach trait
-     into the background's group leaves Mapach first. Ordering by each group's
-     first member instead pulled a whole group up the list when one early
-     feature moved into it. */
-  const order=[],seen=new Set(),groups=new Map();
-  const place=k=>{if(!seen.has(k)){seen.add(k);order.push(k);}};
-  all.filter(f=>f&&!f.fav).forEach(f=>{
+     joins the Mapach group, labelled by the first spelling met. The ORDER is
+     where features came from (#98): the groups features came from list in
+     grant order whether or not anything is still filed in them, so a feature
+     moving between them never reorders the list; a group named only by a
+     source lists right after the group its first feature came from. Placing
+     each group at its first member instead pulled the background's group above
+     the class's when the first ancestry trait moved into it. */
+  const rest=all.filter(f=>f&&!f.fav), origins=[], isOrigin=new Set(), groups=new Map(), after=new Map();
+  rest.forEach(f=>{const o=tagKey(featOriginLabel(f));if(!isOrigin.has(o)){isOrigin.add(o);origins.push(o);}});
+  rest.forEach(f=>{
     const l=featGroupLabel(f),k=tagKey(l);
-    place(tagKey(featOriginLabel(f)));place(k);
-    if(!groups.has(k))groups.set(k,{label:l,items:[]});
+    if(!groups.has(k)){
+      groups.set(k,{label:l,items:[]});
+      if(!isOrigin.has(k)){const o=tagKey(featOriginLabel(f));if(!after.has(o))after.set(o,[]);after.get(o).push(k);}
+    }
     groups.get(k).items.push(f);
   });
-  order.forEach(k=>{if(groups.has(k))out.push(groups.get(k));});
+  origins.forEach(o=>{if(groups.has(o))out.push(groups.get(o));(after.get(o)||[]).forEach(k=>out.push(groups.get(k)));});
   return out;
 }
 function renderFeatures(){

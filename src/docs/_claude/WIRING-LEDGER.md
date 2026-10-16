@@ -5763,10 +5763,13 @@ Pages: [private data](../wiki/data/private-data.md), [converter](../wiki/data/co
    the row's tag is the free-text `source`. Granted features take their source from the same
    origin (`addFeatureFromDef()`), so the two agreed until the player edited one.
 3. Features: `featGroupLabel()` is the source when there is one, else `featOriginLabel()` (the old
-   origin rule). Groups key on `tagKey()`, labelled by the first spelling met. Order follows the
-   features in grant order, each placing the group it came from and then the group it is filed in,
-   so moving the first Mapach trait leaves Mapach first (ordering by first member pulled the target
-   group up the list — caught by a test). A source reading as "★ Favorites" files by origin.
+   origin rule). Groups key on `tagKey()`, labelled by the first spelling met. The groups features
+   came from list in grant order whether or not anything is still filed in them, and a group named
+   only by a source lists right after the group its first feature came from, so a feature moving
+   never reorders the list. (Ordering by first member pulled the target group up — caught by a
+   test; the next attempt, each feature placing its origin and then its own group, still put
+   Wanderer above Fighter when the first Mapach trait moved — caught in review.) A source reading
+   as "★ Favorites" files by origin. `.inv-sec-head` wraps a long one-word section name.
    `origin` is untouched, so removing an ancestry still takes its traits back wherever they are
    filed. What moves on existing sheets: only features whose source differs from their origin —
    hand-typed sources, and picked options whose pack gives a source (Eldritch Invocation, Battle

@@ -37,10 +37,10 @@ when it has one, and otherwise `featOriginLabel()` — the ancestry's name, the 
 class's, or "Other" for a feature with no `origin`. A granted feature's source is that same name
 (`addFeatureFromDef()`), so it files where it came from until the player edits it; then it moves.
 Groups key on `tagKey()`, so a source typed in another case joins the group, which keeps the first
-spelling met. A source reading as "★ Favorites" files by origin. Groups list in grant order, each
-feature placing the group it came from and then the group it is filed in, so moving the first
-Mapach trait into the background's group leaves Mapach first; features keep grant order inside a
-group (level order, for a class). Favourites are **moved**, not copied: the other groups are built
+spelling met. A source reading as "★ Favorites" files by origin. The groups features came from
+list in grant order whether or not anything is still filed in them, so moving a feature between
+them never reorders the list; a group named only by a source lists right after the group its first
+feature came from. Features keep grant order inside a group (level order, for a class). Favourites are **moved**, not copied: the other groups are built
 from the rest. A group heading (`.fghead`) collapses under
 `featCollapse.groups[label]`, an item under `featCollapse.items[id]`, and "Collapse all" shuts every
 group while any is open. The heading style is shared with the inventory:
@@ -109,9 +109,11 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 - **Editing the source did not move the feature** (#98). The list grouped by `origin` alone, so
   the row's label changed and the feature stayed put. The two agree for every granted feature,
   which is why it only showed once a player edited one.
-- **Ordering groups by their first member reshuffled the list.** Moving the first Mapach trait into
-  the background's group pulled that whole group above Mapach; each feature now also places the
-  group it came from.
+- **Ordering groups by their members reshuffled the list.** Placing each group at its first member
+  pulled the background's group above Mapach when the first Mapach trait moved into it. The first
+  fix, each feature placing its origin group and then its own, still pulled the background's group
+  above the class's for a character with all three; review caught it. The groups features came
+  from now hold their places outright.
 - **The form's rebuild dropped what it did not ask about.** `origin` and `src` were already being
   lost when favourites arrived: an edited class feature jumped to "Other" and dropped out of the
   update tool. Fixed alongside `fav`, the same guard the item form has.
@@ -136,7 +138,7 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 | What starring a feature does | Moves it into a pinned "★ Favorites" group — the same partition the inventory uses, so most of it came for free | — |
 | How groups sort | Favourites by name, like the inventory's; the other groups keep grant order, which for a class is level order | — |
 | What a feature groups by (#98) | Its `source`, falling back to its origin | `origin` alone: editing the source changed the label and left the feature where it was. A separate group field: a second label beside the source, for the same idea |
-| The order of groups once sources move (#98) | Grant order, each feature placing the group it came from, then its own | Order of each group's first member: one early feature moving pulls a whole group up the list. A to Z: loses ancestry, background, class order |
+| The order of groups once sources move (#98) | The groups features came from, in grant order; a group named only by a source right after the group its first feature came from | Placing each group at its first member, or each feature placing its origin then its own group: one feature moving pulls a group up past others. A to Z: loses ancestry, background, class order |
 | Favourites in the ☰ menu | Not listed (`buildToc()` collects `.inv-sec-head`, not `.fghead`) | Adding them: every feature group would land in the menu |
 | A starred granted feature on a grant rebuild | Loses the star, left as-is: in most of those paths the feature genuinely changes | — |
 | Feats and traits in one picker | Each wrapped as `{k, e, id}` | Concatenating the lists: Humblewood ships `Glide` as both, added in different shapes, and `_id` alone does not say which list a row came from |

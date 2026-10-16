@@ -252,6 +252,8 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 
 ## Open
 
+- **The collapse maps read inherited properties, and feature groups and inventory sections fold by
+  their first spelling** (#98 widened both to free text). See [Known issues](../roadmap/known-issues.md).
 - **Keyboard reach of group headings is uneven.** Notes and Settings headings are
   `role="button" tabindex="0"` with Enter/Space handlers. The Rules-tab headings have the role,
   `tabindex` and `aria-expanded` but no key handler (only `click` toggles them). Features group

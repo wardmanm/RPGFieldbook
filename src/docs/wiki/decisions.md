@@ -239,7 +239,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **What starring a feature does** — Moves it into a pinned "★ Favorites" group — the same partition the inventory uses, so most of it came for free
 - **How groups sort** — Favourites by name, like the inventory's; the other groups keep grant order, which for a class is level order
 - **What a feature groups by (#98)** — Its `source`, falling back to its origin
-- **The order of groups once sources move (#98)** — Grant order, each feature placing the group it came from, then its own
+- **The order of groups once sources move (#98)** — The groups features came from, in grant order; a group named only by a source right after the group its first feature came from
 - **Favourites in the ☰ menu** — Not listed (`buildToc()` collects `.inv-sec-head`, not `.fghead`)
 - **A starred granted feature on a grant rebuild** — Loses the star, left as-is: in most of those paths the feature genuinely changes
 - **Feats and traits in one picker** — Each wrapped as `{k, e, id}`

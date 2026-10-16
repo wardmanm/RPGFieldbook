@@ -240,9 +240,10 @@ function openFeatureForm(existing){
     /* rec is rebuilt from the form, so anything the form doesn't ask about has to
        be carried across explicitly or an edit silently discards it — the same
        trap the item editor already guards against. All three are invisible when
-       lost: the favourite star, the origin that files this under its class
-       rather than "Other", and the src stamp the rules-update tool needs to tell
-       "the pack changed" from "the player edited this". */
+       lost: the favourite star, the origin that makes removing its class take
+       it back (and files it when the source is empty), and the src stamp the
+       rules-update tool needs to tell "the pack changed" from "the player
+       edited this". */
     if(f.fav)rec.fav=f.fav;
     if(f.origin)rec.origin=f.origin;
     if(f.src)rec.src=f.src;
