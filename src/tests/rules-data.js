@@ -1681,7 +1681,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('openModal sets or clears the wide class on every open',
      /function openModal\(title,html,icon,opts\)\{[^\n]*\.classList\.toggle\("wide",!!\(opts&&opts\.wide\)\)/.test(js));
   ck('...and the wide dialog has its width',
-     /\.modal\.wide\{width:min\(820px,100%\)\}/.test(fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8')));
+     /\.modal\.wide\{width:min\(820px,100%\)[;}]/.test(fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8')));
   ck('...and dismissModal asks the guard before closing',
      /function dismissModal\(\)\{[\s\S]{0,160}_dismissGuard\(\)[\s\S]{0,80}confirm\(msg\)\)return;/.test(js));
   // the guard must not leak between modals: an ordinary form's Escape is cancel
@@ -1957,6 +1957,21 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the old folding sections are gone', !/SET_SECTIONS|setSecHTML|setSecOpen|data-setsec=/.test(src));
   ck('the badge refresh targets the sidebar',
      /querySelector\('\[data-setbadge="rules"\]'\)[\s\S]{0,40}innerHTML=rulesNavBadgeHTML\(\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/89-rules-merge.js'), 'utf8')));
+  const mcss = fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8');
+  ck('the dialog is two panes, the sidebar staying put while the page scrolls',
+     /\.set-wrap\{display:grid;grid-template-columns:184px minmax\(0,1fr\)/.test(mcss) && /\.set-nav\{position:sticky;top:0/.test(mcss));
+  ck('a hidden page takes no room', /\.set-page\[hidden\]\{display:none\}/.test(mcss));
+  /* a page shorter than the last one used to shrink the dialog, which re-centred
+     and moved the sidebar under the pointer between clicks */
+  ck('the wide dialog keeps one height, so switching pages never moves the sidebar',
+     /\.modal\.wide\{[^}]*height:min\(680px,90dvh\)/.test(mcss));
+  ck('the sidebar becomes an icon rail with Icon tabs on, and on a narrow screen',
+     /html\[data-tabs="icons"\] \.set-wrap\{grid-template-columns:52px minmax\(0,1fr\)/.test(mcss) &&
+     /@media\(max-width:640px\)\{[^@]*\.set-wrap\{grid-template-columns:52px minmax\(0,1fr\)/.test(mcss));
+  ck('on a narrow screen a choice drops below its name, a switch stays beside it',
+     /@media\(max-width:640px\)\{[^@]*\.set-row:not\(\.set-inline\)\{flex-direction:column/.test(mcss));
+  ck('a long name in a page subtitle wraps', /\.m-body p\.set-psub\{[^}]*overflow-wrap:anywhere/.test(mcss));
+  ck('the folding-section styles are gone', !/#setSections \.fghead|\.setsec-body/.test(mcss));
 }
 
 /* ================= the Rules tab sections start collapsed ====================
