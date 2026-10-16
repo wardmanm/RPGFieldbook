@@ -28,4 +28,5 @@ Bullets below this line — leave the heading in place.
 
 ## Pending
 
-_Nothing yet._
+- In the combat view, with skills grouped by ability, each ability's name, modifier and score are
+  large and easy to read again, and "Saving Throws" no longer outweighs the ability it belongs to.
