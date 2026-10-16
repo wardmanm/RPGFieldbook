@@ -19,6 +19,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
   'featOriginLabel', 'invSectionName', 'invGroups', 'INV_FAV', 'INV_ORDER', 'groupChoices', 'groupFieldHTML',
   'tagLabel', 'tagKey', 'journalEditorHTML', 'trackerFormHTML',
+  'GROUP_RESERVED', 'tagTidy', 'groupNameProblem', 'syncGroupFieldMsg', 'groupFieldBlocked', 'groupByTag', 'invSection',
   'FEAT_KINDS', 'featKindDef', 'featPickList', 'featPickKind', 'featPickPrereq',
   'featPickName', 'featPickStoredName', 'featPickGroup', 'addPickedFeature', 'updResolve',
   'parseDiceExpr', 'rollDiceExpr', 'diceExprText', 'diceExprDice',
@@ -1106,9 +1107,9 @@ ck('an empty list makes no groups at all',
      JSON.stringify(['7', 'armor kit', 'burglary', 'Weapons']), X.groupChoices(['Weapons', 'burglary', ' ', 'Burglary', null, 'armor  kit', 'Armor Kit', 7]));
   ck('...and no list is no choices', X.groupChoices(undefined).length === 0);
   const h = X.groupFieldHTML({id: 'fSrc', list: 'fSrcGroups', label: 'Source', value: 'Mapach', choices: ['Mapach', 'Wanderer'], placeholder: 'Automatic (Other)'});
-  ck('it is a labelled box tied to its list of groups',
-     /<label class="f" for="fSrc">Source<\/label><input id="fSrc" value="Mapach" list="fSrcGroups" placeholder="Automatic \(Other\)" autocomplete="off">/.test(h) &&
-     /<datalist id="fSrcGroups"><option value="Mapach"><option value="Wanderer"><\/datalist>/.test(h), h);
+  ck('it is a labelled box tied to its list of groups, with a place for its message',
+     /<label class="f" for="fSrc">Source<\/label><input id="fSrc" value="Mapach" list="fSrcGroups" placeholder="Automatic \(Other\)" autocomplete="off" data-groupfield aria-describedby="fSrcMsg">/.test(h) &&
+     /<datalist id="fSrcGroups"><option value="Mapach"><option value="Wanderer"><\/datalist><p class="grp-msg" id="fSrcMsg" aria-live="polite"><\/p>/.test(h), h);
   const evil = X.groupFieldHTML({id: 'x', list: 'y', label: '<b>', value: '"><i>', choices: ['"><i>'], placeholder: '"><i>'});
   ck('...and escapes everything a player typed', !/<i>|<b>/.test(evil), evil);
   ck("the journal editor's tag is that field", /id="jnlTag" data-jnlfield="tag" value="Quests" list="jnlTags"/.test(
@@ -1119,6 +1120,50 @@ ck('an empty list makes no groups at all',
   ck("the feature form's Source and the item form's Category are that field too",
      /groupFieldHTML\(\{id:"fSrc"/.test(body('openFeatureForm')) && /groupFieldHTML\(\{id:"iCategory"/.test(body('openItemForm')) &&
      !/<select id="iCategory">/.test(forms) && !/<input id="fSrc"/.test(forms));
+  /* a reserved name (#98 follow-up): every name Object.prototype carries.
+     The collapse maps are plain objects, so "constructor" read an inherited
+     function (folded from the start) and "__proto__" could never fold. */
+  ck('the reserved names are every Object.prototype name, lower-cased',
+     ['constructor', '__proto__', 'tostring', 'valueof', 'hasownproperty', 'isprototypeof'].every(n => X.GROUP_RESERVED.has(n)) &&
+     !X.GROUP_RESERVED.has('kills'));
+  ck('a reserved name is no group, whatever its case or spacing',
+     ['constructor', 'Constructor', '  __proto__ ', 'toString', 'VALUEOF'].every(n => X.tagLabel(n) === '') &&
+     X.tagLabel('Constructors') === 'Constructors' && X.tagTidy(' __proto__ ') === '__proto__');
+  ck('...so tags read from a file never make one: they read as Untagged',
+     JSON.stringify(X.groupByTag([{tag: 'constructor'}, {tag: '__proto__'}, {tag: 'Kills'}], x => x.tag).map(g => g.key)) === '["kills",""]');
+  ck("...a feature with that source files where it came from, an item with that category where its data puts it",
+     X.featGroupLabel({source: 'constructor', origin: {kind: 'race', name: 'Elf'}}) === 'Elf' &&
+     X.invSectionName('__proto__') === '' && X.invSection({name: 'x', category: 'Gear', sectionOverride: 'toString'}) === 'Gear');
+  ck('...and it is never offered as a choice, nor shown in the box', X.groupChoices(['constructor', 'Kills', '__proto__']).join() === 'Kills' &&
+     /value=""/.test(X.groupFieldHTML({id: 'z', list: 'zl', label: 'Tag', value: 'constructor', choices: []})));
+  ck('typing one is named in a message; anything else is fine',
+     /“constructor” is a reserved word/.test(X.groupNameProblem(' constructor ')) && X.groupNameProblem('Kills') === '' && X.groupNameProblem('') === '');
+  {
+    const attrs = {};
+    const box = {id: 'tkTag', value: '__proto__', focused: false, focus() { this.focused = true; },
+                 setAttribute(k, v) { attrs[k] = v; }, removeAttribute(k) { delete attrs[k]; }};
+    ck('the message shows under the box, which reads as invalid', /“__proto__”/.test(X.syncGroupFieldMsg(box)) && attrs['aria-invalid'] === 'true');
+    box.value = 'Kills';
+    ck('...and clears once the name changes', X.syncGroupFieldMsg(box) === '' && !('aria-invalid' in attrs));
+    const realGet = ctx.document.getElementById;
+    box.value = 'Constructor';
+    ctx.document.getElementById = id => (id === 'tkTag' ? box : realGet(id));
+    const blocked = X.groupFieldBlocked('tkTag');
+    box.value = 'Kills'; box.focused = false;
+    const allowed = X.groupFieldBlocked('tkTag');
+    ctx.document.getElementById = realGet;
+    ck('a save stops on a reserved name, with the box focused, and goes ahead on any other', blocked === true && allowed === false && box.focused === false);
+  }
+  const trk = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '87-trackers.js'), 'utf8');
+  const jnl = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '87-journal.js'), 'utf8');
+  const boot = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '90-boot.js'), 'utf8');
+  ck('every save of a group field checks it first: the feature, item and tracker forms and the journal\'s Done',
+     /getElementById\("fSave"\)\.addEventListener\("click",\(\)=>\{\s*if\(groupFieldBlocked\("fSrc"\)\)return;/.test(forms) &&
+     /getElementById\("iSave"\)\.addEventListener\("click",\(\)=>\{\s*if\(groupFieldBlocked\("iCategory"\)\)return;/.test(forms) &&
+     /\$\("tkSave"\)\.addEventListener\("click",\(\)=>\{\s*if\(groupFieldBlocked\("tkTag"\)\)return;/.test(trk) &&
+     /addEventListener\("click",\(\)=>\{\s*if\(groupFieldBlocked\("tkTag"\)\)return;\s*const x=cur\(\);if\(!x\)\{closeModal\(\);renderTrackers\(\);return;\}\s*trkFromForm\(x,fields\(\)\);\s*if\(closing\)/.test(trk) &&
+     /function jnlDone\(\)\{[\s\S]{0,200}if\(groupFieldBlocked\("jnlTag"\)\)return;/.test(jnl));
+  ck('...and the box says so as it is typed', /closest\("\[data-groupfield\]"\);if\(g\)syncGroupFieldMsg\(g\)/.test(boot));
   ck('...and each saves what the group would show: a tidied source, a resolved category',
      /source:tagLabel\(document\.getElementById\("fSrc"\)\.value\)/.test(body('openFeatureForm')) &&
      /invSectionName\(document\.getElementById\("iCategory"\)\.value\)/.test(body('openItemForm')));

@@ -5869,3 +5869,34 @@ Pages: [ammunition](../wiki/features/ammunition.md), [rules packs](../wiki/archi
 Pages: [features & traits](../wiki/features/features-and-traits.md),
 [inventory](../wiki/features/inventory.md), [journal](../wiki/features/journal.md),
 [sections & layout](../wiki/ui/sections-and-layout.md)
+## No group may be named constructor or __proto__ (#98, 2026-10-16)
+
+1. Mike, on the #98 known issues: make sure a group cannot be called constructor or proto; and a
+   folded group reopening after a case edit of its first member is fine — not an issue.
+2. The cause: the collapse maps (`featCollapse.groups`, `invCollapse.sections`, `journalCollapse`,
+   `trackerCollapse`) are plain objects read by key, so a group named for an `Object.prototype`
+   property read an inherited value — "constructor" or "toString" started folded, "__proto__" could
+   never fold. Journal and tracker tags already had it; #98's free-text sources and categories
+   reached two more maps.
+3. `GROUP_RESERVED` (`00-constants.js`, beside `COMBAT_DEFAULTS` for the TDZ) is every
+   `Object.prototype` name, lower-cased. `tagLabel()` turns one into no group, whatever its case or
+   spacing; every grouping reads `tagLabel()` (journal pages, trackers, `featGroupLabel()`,
+   `invSectionName()`, `groupChoices()`, the box's value), so a name from a file is caught too:
+   a page tagged "constructor" reads as Untagged, a feature with that source files by origin.
+   `tagTidy()` is the tidy alone, for the message.
+4. The group field says so: `groupFieldHTML()` adds `data-groupfield`, `aria-describedby` and an
+   empty `.grp-msg`; one input listener in `90-boot.js` runs `syncGroupFieldMsg()`, which names the
+   word (`groupNameProblem()`) and marks the box `aria-invalid`. `groupFieldBlocked()` stops the
+   feature form's Save, the item form's Save, the tracker form's Save and Close now, and the
+   journal's Done, focusing the box. Refused rather than made safe in the maps: Mike asked that the
+   names not be usable, and one rule at the label covers every map at once.
+5. The fold-by-first-spelling note leaves Known issues and becomes a decision.
+6. Tests: `sheet.js` (the reserved set, `tagLabel()` in any case, file tags as Untagged, the feature
+   and item fallbacks, choices and the box's value, the message and `aria-invalid`, a blocked and an
+   allowed save, every save path and the input listener as text). They fail without the
+   `tagLabel()` guard. Driven: "constructor" in the tracker form (refused, tag unchanged; then
+   "constructors" saved), "__proto__" in the feature form (refused), "toString" in the journal
+   editor (Done stays, the page holds no tag). Screenshots `.claude/qa/98-after-reserved-*`.
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md), [journal](../wiki/features/journal.md),
+[known issues](../wiki/roadmap/known-issues.md)

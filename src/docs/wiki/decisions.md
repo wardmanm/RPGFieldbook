@@ -376,6 +376,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where the familiar row may wrap** — Only in `#familiarList`
 - **A collapsible in Settings** — Reuse `.fgroup` / `.fghead` / `.fcaret`
 - **How a grouping label is typed (#98)** — One group field, the journal's tag box, for tags, a feature's source and an item's category
+- **A group named `constructor` or `__proto__` (#98)** — Refused: no group may be named for an `Object.prototype` property (Mike)
+- **A folded group whose first member is retyped in another case (#98)** — Reopens, as its label changes: fine as it is (Mike)
 - **How collapse state is stored** — As shut = `true`, absent = default, so a default can change without reopening what a player shut
 - **Where Rules-tab folding is stored** — `settings.rulesCollapse`
 - **Colour of group names** — `--accent`, set on the shared `.fgname` rule

@@ -10,7 +10,8 @@ search boxes. It also covers two sidebar residents, familiars and the portrait.
 `87-notes.js` · `combatSectionsOf()`, `renderCombatToggles()`, `combatCard()` in `87-combat.js` ·
 `featGroups()`, `renderFeatures()`, `featCol()`, `invCol()`, `atkCol()`, `FEAT_FAV`, `ATK_FAV` in
 `20-lists.js` · `renderInventory()`, `invGroups()`, `renderFamiliars()` in `40-sheet.js` ·
-`groupFieldHTML()`, `groupChoices()` in `80-modal-forms.js` · `renderAttacks()` in
+`groupFieldHTML()`, `groupChoices()`, `groupNameProblem()`, `syncGroupFieldMsg()`, `groupFieldBlocked()` in
+`80-modal-forms.js` · `GROUP_RESERVED` in `00-constants.js` · `tagLabel()`, `tagTidy()` in `87-journal.js` · `renderAttacks()` in
 `60-attacks.js` · `rulesSecOpen()`, `renderRulesSections()` in `86-tables.js` · `setSecOpen()`,
 `setSecHTML()` in `88-settings.js` · `buildStats()`, `buildBio()`, `blankChar()` in `00-constants.js`
 · `renderPortrait()` in `66-coins-hp.js` · markup in `00-sheet.html`, `10-inventory.html`,
@@ -108,6 +109,15 @@ existing group is a tap and a new one is just typed. `groupChoices()` dedupes th
 | An item's Category | the inventory sections (`invGroups()`) | the section its own data puts it in, named in the placeholder |
 
 Every user groups case-blind by `tagKey()`, so what the box offers and what the list draws agree.
+
+**Reserved names.** No group may be named for an `Object.prototype` property — `constructor`,
+`__proto__`, `toString` and the rest (`GROUP_RESERVED`, compared lower-cased). The collapse maps are
+plain objects read by key, so such a group used to read an inherited value: folded from the start,
+or never foldable. `tagLabel()`, which every grouping reads, turns one into no group, so a name from
+a file is caught too. Typed in the box, `syncGroupFieldMsg()` names the word under it (`.grp-msg`)
+and marks it `aria-invalid`, and `groupFieldBlocked()` stops the form's Save — the tracker form's
+Close now and the journal's Done too — with the box focused.
+
 Spells have no such field: they group by level, and their Origin is a fixed list of kinds that
 decides what counts against the allotment.
 
@@ -202,6 +212,9 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - **One group field.** A free-text label that files a record into a group is typed in
   `groupFieldHTML()`, and the list it files into groups by `tagKey()`. A second control would let
   the two drift, which is the #98 request.
+- **Every group name goes through `tagLabel()`**, which refuses a reserved name. A grouping path
+  that read the raw text would put an `Object.prototype` name back into a collapse map, and every
+  save of a group field calls `groupFieldBlocked()` first.
 - **`.inv-sec-head` keeps its name.** `buildToc()` and the `[data-invsec]` handler depend on it.
 - **Headings in a `.label` stay ToC-clean.** See [Shell](shell.md).
 - **Every search box has a placeholder**, or its × never hides.
@@ -241,6 +254,8 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | How a list row fits a phone (#57) | Everything after the name in one `.row-meta` group that drops to its own line whole; opt-in by `.split`; the name asks for 6em | The familiars' `flex-basis:100%`: these rows put a fold button and star before the name, which it would orphan on a line of their own. Truncating the name: loses the name, the one thing the row is for. 8em: split short item rows for no reason |
 | A collapsible in Settings | Reuse `.fgroup` / `.fghead` / `.fcaret` | A second collapsible: the app should not have two things that look like a section header |
 | How a grouping label is typed (#98) | One group field, the journal's tag box, for tags, a feature's source and an item's category | A select of fixed groups: a player can't add their own. A box with no suggestions: a typo makes a second group |
+| A group named `constructor` or `__proto__` (#98) | Refused: no group may be named for an `Object.prototype` property, said under the box, and read as no group from a file (Mike) | Making the collapse maps own-property safe: the names would still work, and four maps would each need it |
+| A folded group whose first member is retyped in another case (#98) | Reopens, as its label changes: fine as it is (Mike) | Folding by `tagKey()` as the journal does: would reset every feature group and section a player has folded |
 | How collapse state is stored | As shut = `true`, absent = default, so a default can change without reopening what a player shut | Storing "open" (named and set aside at L1741) |
 | Where Rules-tab folding is stored | `settings.rulesCollapse` | On the character: the glossary and tables come from global packs, and folding them on one character to find them open on the next would surprise |
 | Colour of group names | `--accent`, set on the shared `.fgname` rule | Scoping the change to Features: the owner chose consistency |
@@ -252,8 +267,6 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 
 ## Open
 
-- **The collapse maps read inherited properties, and feature groups and inventory sections fold by
-  their first spelling** (#98 widened both to free text). See [Known issues](../roadmap/known-issues.md).
 - **Keyboard reach of group headings is uneven.** Notes and Settings headings are
   `role="button" tabindex="0"` with Enter/Space handlers. The Rules-tab headings have the role,
   `tabindex` and `aria-expanded` but no key handler (only `click` toggles them). Features group
@@ -283,3 +296,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-12 — Attack, feature, item and condition rows group what follows the name, so on a phone it drops below whole instead of the name running over it. → ledger L5667, #57
 - 2026-10-16 — The group field: one control for a journal tag, a tracker tag, a feature's source and an item's category. → ledger L5823, #98
+- 2026-10-16 — No group may be named for an `Object.prototype` property; the group field says so and stops the save. A group reopening after a case edit is kept, by decision. → ledger L5872, #98
