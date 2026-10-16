@@ -60,7 +60,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 /* ---- the Settings dialog (#107): a sidebar of categories beside one page ----
    Each pane scrolls on its own inside a body that does not: a sticky sidebar in
    one scroller was cut off on a landscape phone until the page reached its end. */
-.modal.wide .m-body{overflow:hidden;display:flex;flex-direction:column;padding-bottom:0}
+.modal.wide .m-body{overflow:hidden;display:flex;flex-direction:column;padding-bottom:0;padding-right:4px}
 .set-wrap{display:grid;grid-template-columns:184px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:0 18px;flex:1 1 auto;min-height:0}
 .set-nav{display:flex;flex-direction:column;gap:2px;padding:2px 12px 12px 0;border-right:1.5px solid var(--hair);overflow-y:auto;min-height:0}
 .set-cap{font-family:var(--head);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin:10px 0 2px 10px}
@@ -75,7 +75,9 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 .set-tbadge{display:inline-flex;align-items:center;gap:5px;flex:none}
 .set-cnt{font-family:var(--head);font-size:10px;color:var(--ink-soft)}
 .set-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
-.set-pages{min-width:0;min-height:0;overflow-y:auto;padding-bottom:18px;-webkit-overflow-scrolling:touch}
+/* the pane is the scroller, so its own right padding keeps a scrollbar off the
+   controls (an overlay one draws over content); the body's 4px makes up the 18px */
+.set-pages{min-width:0;min-height:0;overflow-y:auto;padding-right:14px;padding-bottom:18px;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch}
 .set-page[hidden]{display:none}
 .set-ptitle{font-family:var(--head);font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:6px 0 2px}
 .m-body p.set-psub{font-size:13px;color:var(--ink-soft);margin:0 0 6px;overflow-wrap:anywhere}

@@ -186,6 +186,8 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - **The wide dialog keeps one height, and its two panes scroll apart.** A shorter page otherwise
   shrinks it, it re-centres, and the sidebar moves under the pointer between clicks; a sidebar that
   shares one scroller with the page was cut off on a landscape phone until the page reached its end.
+  The page pane keeps 14px of right padding and a stable scrollbar gutter, or its scrollbar (an
+  overlay one draws over content) sits on the controls at its right edge.
 - **Delegated listeners bind to something rebuilt with the modal**, never to `#mBody`, which outlives
   every modal and would stack one copy per visit.
 - **Every id `openSettings()` looks up exists in the markup it builds, and every id it renders is
@@ -288,3 +290,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-12 — From the Rules tab, the import toast drops the counts and a failure stays until tapped. → ledger L5648, #87
 - 2026-10-16 — Appearance gains "Tap outside to close dialogs" (`backdropClose`, off by default, in `SETTINGS_KEYS`). → ledger L5903, #106
 - 2026-10-16 — Settings is a sidebar of six pages, every setting a row with its control on the right; an icon rail with Icon tabs or on a narrow screen; the last page is remembered. → ledger L5930, #107
+- 2026-10-16 — The page pane keeps its controls clear of its scrollbar. → ledger L5976, #107

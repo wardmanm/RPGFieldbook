@@ -1982,6 +1982,13 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /\.modal\.wide \.m-body\{overflow:hidden;display:flex;flex-direction:column/.test(mcss) &&
      /\.set-nav\{[^}]*overflow-y:auto/.test(mcss) && /\.set-pages\{[^}]*overflow-y:auto/.test(mcss) && !/\.set-nav\{position:sticky/.test(mcss));
   ck('a hidden page takes no room', /\.set-page\[hidden\]\{display:none\}/.test(mcss));
+  /* Mike, after #107: the page pane's scrollbar sat on its controls. The pane is
+     the scroller, so its own right padding is what keeps a scrollbar (an overlay
+     one draws over content) off Clear all, Add and the delete buttons; the body
+     gives that room back so the content's right edge stays 18px from the dialog's */
+  ck('the page pane keeps its content clear of its scrollbar',
+     /\.set-pages\{[^}]*padding-right:14px/.test(mcss) && /\.set-pages\{[^}]*scrollbar-gutter:stable/.test(mcss) &&
+     /\.modal\.wide \.m-body\{[^}]*padding-right:4px/.test(mcss));
   /* a page shorter than the last one used to shrink the dialog, which re-centred
      and moved the sidebar under the pointer between clicks */
   ck('the wide dialog keeps one height, so switching pages never moves the sidebar',
