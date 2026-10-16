@@ -3,7 +3,20 @@ function fxChips(effects){
   if(!effects||!effects.length)return "";
   return `<div class="fx">`+effects.map(e=>`<span class="chip">${esc(FX_LABEL[e.target]||e.target)} ${fmt(num(e.value))}</span>`).join("")+`</div>`;
 }
+/* The group a feature files under is its SOURCE (#98) — the label on its row,
+   which the player can edit — and only when it has none, where it came from.
+   Grouping by origin alone meant editing the source changed the label and left
+   the feature where it was. `origin` still decides what removing a class or an
+   ancestry takes back; this is only where the row is shown. A source that
+   reads as the favourites heading files by origin, or starring and that group
+   would fold together. */
 function featGroupLabel(f){
+  const s=tagLabel(f&&f.source);
+  if(s&&s.toLowerCase()!==FEAT_FAV.toLowerCase())return s;
+  return featOriginLabel(f);
+}
+/* Where a feature came from, as a group name: what an empty source files under. */
+function featOriginLabel(f){
   const o=f&&f.origin;
   if(!o)return "Other";
   if(o.kind==="race")return o.name||raceTerm();
@@ -73,9 +86,9 @@ const FEAT_FAV="★ Favorites";
 /* attacks reuse the same label, so the two lists read as one idea */
 const ATK_FAV="★ Favorites";
 /* Split the feature list into the groups the list renders, in order. Favourites
-   are MOVED, not copied — the origin groups are built from non-favourites only,
+   are MOVED, not copied — the source groups are built from non-favourites only,
    the same partition renderInventory does. Sorted by name like inventory's
-   Favorites section; the origin groups keep grant order, which for a class is
+   Favorites section; the other groups keep grant order, which for a class is
    level order.
    Pure on purpose: renderFeatures writes through innerHTML on an element the
    test harness stubs, so this is the only part of the grouping that can be
@@ -85,9 +98,25 @@ function featGroups(list){
   const out=[];
   const favs=all.filter(f=>f&&f.fav).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
   if(favs.length)out.push({label:FEAT_FAV,items:favs});
-  const order=[],groups={};
-  all.filter(f=>f&&!f.fav).forEach(f=>{const g=featGroupLabel(f);if(!groups[g]){groups[g]=[];order.push(g);}groups[g].push(f);});
-  order.forEach(g=>out.push({label:g,items:groups[g]}));
+  /* One group per tagKey(), as the journal's tags: "Mapach" typed as "mapach"
+     joins the Mapach group, labelled by the first spelling met. The ORDER is
+     where features came from (#98): the groups features came from list in
+     grant order whether or not anything is still filed in them, so a feature
+     moving between them never reorders the list; a group named only by a
+     source lists right after the group its first feature came from. Placing
+     each group at its first member instead pulled the background's group above
+     the class's when the first ancestry trait moved into it. */
+  const rest=all.filter(f=>f&&!f.fav), origins=[], isOrigin=new Set(), groups=new Map(), after=new Map();
+  rest.forEach(f=>{const o=tagKey(featOriginLabel(f));if(!isOrigin.has(o)){isOrigin.add(o);origins.push(o);}});
+  rest.forEach(f=>{
+    const l=featGroupLabel(f),k=tagKey(l);
+    if(!groups.has(k)){
+      groups.set(k,{label:l,items:[]});
+      if(!isOrigin.has(k)){const o=tagKey(featOriginLabel(f));if(!after.has(o))after.set(o,[]);after.get(o).push(k);}
+    }
+    groups.get(k).items.push(f);
+  });
+  origins.forEach(o=>{if(groups.has(o))out.push(groups.get(o));(after.get(o)||[]).forEach(k=>out.push(groups.get(k)));});
   return out;
 }
 function renderFeatures(){

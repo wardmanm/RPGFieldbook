@@ -3,15 +3,15 @@
 The Features & Traits card on the Sheet tab lists everything a character can do that is not a spell,
 an item or an attack: ancestry traits, class and subclass features, feats, picked options such as
 maneuvers and invocations, and anything the player writes in. Each can carry numeric effects,
-limited uses that come back on a rest, and a cost in a resource. The list groups by where each
-feature came from, pins favourites at the top, and its Add button searches every feat and trait in
-the loaded packs.
+limited uses that come back on a rest, and a cost in a resource. The list groups by each feature's
+source — the label on its row, which the player can edit — pins favourites at the top, and its Add
+button searches every feat and trait in the loaded packs.
 
-**Code:** `renderFeatures()`, `featGroups()`, `featGroupLabel()`, `featItemHTML()`, `usesMax()`,
+**Code:** `renderFeatures()`, `featGroups()`, `featGroupLabel()`, `featOriginLabel()`, `featItemHTML()`, `usesMax()`,
 `usesRowHTML()`, `useFeature()`, `featCol()`, `fxChips()` in `20-lists.js`; `addFeatureFromDef()`,
 `grantFeatDef()` in `50-classrace.js`; `browseFeatures()`, `featPickList()`, `featPickKind()`,
-`featPickPrereq()`, `featPickGroup()`, `addPickedFeature()` in `85-browse.js`; `openFeatureForm()`
-in `80-modal-forms.js`; `resetFeatureUses()` in `65-resources.js`; the feature handlers in
+`featPickPrereq()`, `featPickGroup()`, `addPickedFeature()` in `85-browse.js`; `openFeatureForm()`,
+`groupFieldHTML()` in `80-modal-forms.js`; `resetFeatureUses()` in `65-resources.js`; the feature handlers in
 `90-boot.js` · **Data:** `feats` and `features`, per
 [rules-schema](../../../../docs/rules-schema.md) §6.6 and §6.9 · **Tests:** `sheet.js`,
 `rules-data.js`, `char-update.js` · **See also:** [Character building](character-building.md),
@@ -32,10 +32,16 @@ origin's source id. `grantFeatDef()` wraps a feat as "Feat: <name>", re-stamps i
 feat entry, and queues the feat's skill choices when the origin has a source id.
 
 **Groups.** `featGroups(list)` is pure. Favourites come first, sorted by name, under
-"★ Favorites" (`FEAT_FAV`); then one group per `featGroupLabel()` — the ancestry's name, the
-background's, the class's, or "Other" for a feature with no `origin` — in the order each first
-appears, features in grant order (level order, for a class). Favourites are **moved**, not copied:
-the origin groups are built from the rest. A group heading (`.fghead`) collapses under
+"★ Favorites" (`FEAT_FAV`); then one group per `featGroupLabel()`, which is the feature's `source`
+when it has one, and otherwise `featOriginLabel()` — the ancestry's name, the background's, the
+class's, or "Other" for a feature with no `origin`. A granted feature's source is that same name
+(`addFeatureFromDef()`), so it files where it came from until the player edits it; then it moves.
+Groups key on `tagKey()`, so a source typed in another case joins the group, which keeps the first
+spelling met. A source reading as "★ Favorites" files by origin. The groups features came from
+list in grant order whether or not anything is still filed in them, so moving a feature between
+them never reorders the list; a group named only by a source lists right after the group its first
+feature came from. Features keep grant order inside a group (level order, for a class). Favourites are **moved**, not copied: the other groups are built
+from the rest. A group heading (`.fghead`) collapses under
 `featCollapse.groups[label]`, an item under `featCollapse.items[id]`, and "Collapse all" shuts every
 group while any is open. The heading style is shared with the inventory:
 [Sections & layout](../ui/sections-and-layout.md).
@@ -70,12 +76,15 @@ shared full-screen picker, or the plain form when no pack has feats or traits:
   the group changes.
 - Rows already on the sheet show "added"; `addPickedFeature()` refuses a duplicate by stored name.
   A feat is stored as "Feat: <name>" and stamped against `feats`, exactly as a granted one; a trait
-  keeps its name and is stamped against `features`. Both get `origin: null` and land in "Other".
+  keeps its name and is stamped against `features`. Both get `origin: null`; a trait files under its
+  own source ("Eldritch Invocation"), a feat, which has none, under "Other".
 
 **Editing.** `openFeatureForm()` has name, source, description, effect rows, limited uses with a
 reset, a cost with a resource (a datalist of the sheet's pools), and an "Insert from rules pack"
-select over `rules.features`. Save rebuilds the record from the form and carries `fav`, `origin` and
-`src` across.
+select over `rules.features`. The source is the group field (`groupFieldHTML()`, see
+[Sections & layout](../ui/sections-and-layout.md)): it offers every group on the list, and left
+empty it reads "Automatic (*the group it came from*)". Save stores the source tidied as a tag
+(`tagLabel()`), rebuilds the record from the form and carries `fav`, `origin` and `src` across.
 
 ## Rules that must hold
 
@@ -86,16 +95,25 @@ select over `rules.features`. Save rebuilds the record from the form and carries
 - **`fav` stays out of `UPD_FIELDS.feature`**, so an update never writes it and `updEdited()` never
   reads a star as an edit.
 - **Every form save carries `fav`, `origin` and `src`.** Each fails silently in its own way — a lost
-  star, a class feature filed under "Other" and no longer revertable, a copy the update tool can no
+  star, a class feature that no longer goes when its class does, a copy the update tool can no
   longer tell from a hand edit — and each has its own source guard in `rules-data.js`.
-- **`origin` is structural, not a label.** It drives the grouping and the `removeFeaturesWhere()`
-  predicates that make removing a class or ancestry take its features back. A picked feature gets
-  `origin: null`.
+- **`origin` is structural, not a label.** It drives the `removeFeaturesWhere()` predicates that
+  make removing a class or ancestry take its features back, wherever the feature is filed, and the
+  group an empty source falls back to. Where a feature is *shown* is its `source`. A picked feature
+  gets `origin: null`.
 - **A picked feat and a granted feat are the same record** — "Feat: X", stamped against `feats` —
   so the update tool treats them identically.
 
 ## Traps
 
+- **Editing the source did not move the feature** (#98). The list grouped by `origin` alone, so
+  the row's label changed and the feature stayed put. The two agree for every granted feature,
+  which is why it only showed once a player edited one.
+- **Ordering groups by their members reshuffled the list.** Placing each group at its first member
+  pulled the background's group above Mapach when the first Mapach trait moved into it. The first
+  fix, each feature placing its origin group and then its own, still pulled the background's group
+  above the class's for a character with all three; review caught it. The groups features came
+  from now hold their places outright.
 - **The form's rebuild dropped what it did not ask about.** `origin` and `src` were already being
   lost when favourites arrived: an edited class feature jumped to "Other" and dropped out of the
   update tool. Fixed alongside `fav`, the same guard the item form has.
@@ -118,11 +136,13 @@ select over `rules.features`. Save rebuilds the record from the form and carries
 | Question | Decision | Rejected, and why |
 |---|---|---|
 | What starring a feature does | Moves it into a pinned "★ Favorites" group — the same partition the inventory uses, so most of it came for free | — |
-| How groups sort | Favourites by name, like the inventory's; origin groups keep grant order, which for a class is level order | — |
+| How groups sort | Favourites by name, like the inventory's; the other groups keep grant order, which for a class is level order | — |
+| What a feature groups by (#98) | Its `source`, falling back to its origin | `origin` alone: editing the source changed the label and left the feature where it was. A separate group field: a second label beside the source, for the same idea |
+| The order of groups once sources move (#98) | The groups features came from, in grant order; a group named only by a source right after the group its first feature came from | Placing each group at its first member, or each feature placing its origin then its own group: one feature moving pulls a group up past others. A to Z: loses ancestry, background, class order |
 | Favourites in the ☰ menu | Not listed (`buildToc()` collects `.inv-sec-head`, not `.fghead`) | Adding them: every feature group would land in the menu |
 | A starred granted feature on a grant rebuild | Loses the star, left as-is: in most of those paths the feature genuinely changes | — |
 | Feats and traits in one picker | Each wrapped as `{k, e, id}` | Concatenating the lists: Humblewood ships `Glide` as both, added in different shapes, and `_id` alone does not say which list a row came from |
-| The origin of a picked feature | `null`, so it lands in "Other" | An origin select for the label: `origin` drives clean revert, and browse origins carry `detail`, not the `name` those predicates match |
+| The origin of a picked feature | `null`, so it files under its own source, or "Other" without one | An origin select for the label: `origin` drives clean revert, and browse origins carry `detail`, not the `name` those predicates match |
 | Where a feat's kind and prerequisite are read | The first line of the description only | The whole body: its prose would gate half the list behind false prerequisites |
 
 ## Open
@@ -140,3 +160,4 @@ select over `rules.features`. Save rebuilds the record from the form and carries
 - 2026-08-17 — Add searches every feat and trait in the loaded packs. → ledger L2776, #31
 - 2026-08-18 — "Collapse all" on Features & Traits, and the shared group-heading style.
   → ledger L3123
+- 2026-10-16 — A feature files under its source, falling back to where it came from; the Source box offers the groups in use. → ledger L5823, #98

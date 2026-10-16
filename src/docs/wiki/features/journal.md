@@ -10,7 +10,7 @@ covered by [Story & notes](story-and-notes.md).
 `jnlMatch()`, `jnlSnippet()`, `jnlSavePage()`, `jnlDeletePage()`, `jnlTagList()`,
 `jnlGroupOpen()`, `jnlStampText()`, `insertLine()`, `renderJournal()`, `jnlOpen()`, `jnlBack()`,
 `jnlNewPage()`, `jnlEdit()`, `jnlDone()`, `jnlInput()`, `jnlDelete()`, `insertJournalStamp()`,
-`toggleJnlGroup()` in `87-journal.js` · `TRK_TYPES`, `trkProgress()`, `trkApply()`, `trkStep()`,
+`toggleJnlGroup()` in `87-journal.js` · `groupFieldHTML()` in `80-modal-forms.js` · `TRK_TYPES`, `trkProgress()`, `trkApply()`, `trkStep()`,
 `trkSetValue()`, `trkToggleItem()`, `trkToggleTask()`, `trkClose()`, `trkReopen()`, `trkSnapshot()`,
 `trkRestore()`, `mergeChecklist()`, `trkFromForm()`, `trkSplit()`, `trkAfter()`, `showTrackers()`,
 `renderTrackers()`, `trkPatchRow()`, `trkAct()`, `trkNextControl()`, `undoTrackerChange()`,
@@ -124,7 +124,7 @@ lists the open trackers drawn after this one, taken before the tap while it stil
 skipping shut groups. `trkNextControl()` returns the first control of the first of them still open
 and on screen, for the toast to focus. With none left, it returns + Tracker.
 
-**The form** (`openTrackerForm()`) holds Name, Type, Tag (with the tags in use), Goal for a
+**The form** (`openTrackerForm()`) holds Name, Type, Tag (the group field with the tags in use), Goal for a
 counter, Items one per line for a checklist, and Close when complete. The last shows only for
 something that can complete. An existing tracker also has **Close now** (or **Reopen**) and
 **Delete**. The toast sits outside the modal's inert, so its Undo can land while the form is open
@@ -157,7 +157,8 @@ the same way. The three views:
 - **a page** (`journalPageHTML()`): ← All pages, the title as a focusable heading (`#jnlHead`,
   focused on open), the tag, the dates (`noteWhen()`), Edit, Delete, and the text through
   `noteHTML()`. The search row is hidden;
-- **the editor** (`journalEditorHTML()`): title, tag with the tags in use as suggestions, the
+- **the editor** (`journalEditorHTML()`): title, tag with the tags in use as suggestions (the group
+  field, `groupFieldHTML()`, which the feature form's Source and the item form's Category share), the
   text, **Insert timestamp**, the formatting key (`NOTE_FMT_HINT`) and Done. Every keystroke calls
   `jnlInput()`, which writes through `jnlSavePage()` and schedules a save. There is no live
   preview.
@@ -224,3 +225,4 @@ entry in the list.
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-09-29 — Review fixes: a typed count patches its row, so the + click and Tab survive; Tab from Undo goes to the next tracker; newline-safe selectors; session state and Undo keyed on the character object; the form survives an Undo and keeps what was typed. → ledger L4856, #41, #40
+- 2026-10-16 — The tag box is the shared group field, unchanged on screen; features and items use it too. → ledger L5823, #98

@@ -5820,3 +5820,52 @@ Pages: [abilities & skills](../wiki/features/abilities-and-skills.md),
 Pages: [ammunition](../wiki/features/ammunition.md), [rules packs](../wiki/architecture/rules-packs.md),
 [character model](../wiki/architecture/character-model.md),
 [rules-update tool](../wiki/features/rules-update-tool.md)
+## A feature files under its source; one group field for tags, sources and categories (#98, 2026-10-16)
+
+1. Mike: editing a feature's source changes its label but leaves it in its original group ("Mapach"
+   edited to "Background" stays under Mapach). Editing should move it, and the box should offer the
+   groups that already exist, exactly as the journal's tags do — one pattern everywhere a source or
+   category is set (Sheet, Inventory, Spells).
+2. Cause: `featGroups()` grouped by `featGroupLabel()`, which read only the structural `origin`;
+   the row's tag is the free-text `source`. Granted features take their source from the same
+   origin (`addFeatureFromDef()`), so the two agreed until the player edited one.
+3. Features: `featGroupLabel()` is the source when there is one, else `featOriginLabel()` (the old
+   origin rule). Groups key on `tagKey()`, labelled by the first spelling met. The groups features
+   came from list in grant order whether or not anything is still filed in them, and a group named
+   only by a source lists right after the group its first feature came from, so a feature moving
+   never reorders the list. (Ordering by first member pulled the target group up — caught by a
+   test; the next attempt, each feature placing its origin and then its own group, still put
+   Wanderer above Fighter when the first Mapach trait moved — caught in review.) A source reading
+   as "★ Favorites" files by origin. `.inv-sec-head` wraps a long one-word section name.
+   `origin` is untouched, so removing an ancestry still takes its traits back wherever they are
+   filed. What moves on existing sheets: only features whose source differs from their origin —
+   hand-typed sources, and picked options whose pack gives a source (Eldritch Invocation, Battle
+   Master Maneuver, Metamagic), which leave "Other" for a group of that name.
+4. The group field: `groupFieldHTML()` and `groupChoices()` in `80-modal-forms.js` — a labelled box
+   with a datalist of the groups in use, deduped by `tagKey()` and sorted A to Z. The journal page's
+   tag, the tracker's tag, the feature form's Source and the item form's Category all use it; the
+   journal and tracker markup is unchanged (their tracker form screenshots are byte-identical).
+5. Inventory: Category was a select of the seven sections. It is now the group field, and
+   `invSectionName()` reads what is typed: one of `INV_ORDER` in any case files there (so a typed
+   "consumables" is still read for healing), anything else is the player's own section, and
+   "★ Favorites" is not a section. `invGroups()` (pure) orders favourites, the seven, then the
+   player's sections A to Z. `sectionOverride` still never touches `category`. The placeholder
+   names the automatic section worked out without the override (the old select's "Automatic"
+   repeated the override when one was set). A file with an unknown `sectionOverride` — only
+   possible by hand-editing before this — now shows it as its own section.
+6. Spells: nothing to change. They group by level, and their Origin is a fixed list of kinds that
+   says which spells count against the allotment, not a free-text category.
+7. `rules-data.js`'s "every id the app looks up is one it renders" counts an id passed to
+   `groupFieldHTML({id:…})`, guarded by a check that the helper still renders it.
+8. Tests: `sheet.js` #98 (the custom category, `invSectionName()`, `invGroups()`' order and
+   grouping, a feature moving with its source, group order, case, the favourites guard, a picked
+   trait's group, `groupChoices()`, `groupFieldHTML()` and its escaping, the journal and tracker
+   tags, the two forms as text). The grouping tests fail on the old `20-lists.js`.
+   Driven: Mike's case on the released build (Climber edited to the background's group stays under
+   Mapach), the same sheet regrouped on open in the fixed build, a new "Senses" group made from the
+   form, "Spell Components" made from the item form (filed after the seven, offered next time,
+   folds, listed in ☰), and "tools" saved as Tools. Screenshots `.claude/qa/98-*`.
+
+Pages: [features & traits](../wiki/features/features-and-traits.md),
+[inventory](../wiki/features/inventory.md), [journal](../wiki/features/journal.md),
+[sections & layout](../wiki/ui/sections-and-layout.md)

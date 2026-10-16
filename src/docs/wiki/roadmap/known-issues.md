@@ -258,6 +258,16 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   `choicesSettled()` is defined and never called. Nothing binds `character.speed`, so base speed only
   ever comes from the ancestry. → [Character model](../architecture/character-model.md)
 
+- **Collapse maps read inherited properties.** A group, tag or section named `constructor` or
+  `toString` starts folded, and `__proto__` can never be folded, because `featCol().groups`,
+  `invCol().sections`, `journalCollapse` and `trackerCollapse` are plain objects read by key. Since
+  #98 a feature's source and an item's category reach two more of them; a shared own-property
+  accessor would fix all four. → [Sections & layout](../ui/sections-and-layout.md)
+- **A group's fold follows its label's first spelling.** Feature groups and inventory sections fold
+  by label, and a group is labelled by the first spelling met, so editing its first member from
+  "Mapach" to "mapach" renames it and reopens it. The journal folds by `tagKey()` instead.
+  → [Sections & layout](../ui/sections-and-layout.md)
+
 ### Tooling
 
 - **Subclass tables are never read.** Subclasses carry `subclassTableGroups`, but `_class_tables()`
@@ -454,3 +464,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-08 — Fixed and removed: a player's own `convert.py srd` run applying no corrections (a missing file is now an error, and the app zip ships it). The shadowed-table list loses Carrying Capacity, now an identical twin. → ledger L5269, #84
 - 2026-10-09 — Fixed and removed: the Node bundler's invisible NUL bytes and its stale `mergeRules()` comment, both gone with the file. → ledger L5342, #85
 - 2026-10-09 — The private split: import order decides which of two same-named 2024 and SRD entries wins; private packs get no notice; homebrew's Xanathar's spells cannot resolve publicly; old releases' data reachable until 2.0; homebrew masks the leak scan; `LEFT_FOR_PRIVATE` to delete after the next release. → ledger L5426, #85
+- 2026-10-16 — Collapse maps read inherited properties, and a group's fold follows its label's first spelling, both reached by #98's free-text groups. → ledger L5823, #98

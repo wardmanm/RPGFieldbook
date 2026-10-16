@@ -49,9 +49,19 @@ function buildToc(){
    the view covers. */
 function openToc(){buildToc();const tb=combatViewOpen()?document.getElementById("cvHead"):document.querySelector(".tabbar");const top=tb?Math.max(0,Math.round(tb.getBoundingClientRect().bottom)):0;const fly=document.getElementById("tocFly"),back=document.getElementById("tocBack");if(fly)fly.style.top=top+"px";if(back)back.style.top=top+"px";if(fly)fly.classList.add("open");if(back)back.classList.add("open");}
 function closeToc(){const f=document.getElementById("tocFly"),b=document.getElementById("tocBack");if(f)f.classList.remove("open");if(b)b.classList.remove("open");}
+/* A player's category as the section it names (#98). One of INV_ORDER in any
+   case files there ("consumables" is Consumables, so it is still read for its
+   healing); anything else is their own section, tidied as a tag is. "" for
+   none, and for the favourites heading, which is not a section. */
+function invSectionName(v){
+  const l=tagLabel(v);if(!l)return "";
+  const k=l.toLowerCase();
+  if(k===INV_FAV.toLowerCase())return "";
+  return INV_ORDER.find(s=>s.toLowerCase()===k)||l;
+}
 function invSection(it){
-  const ov=String(it.sectionOverride||"").trim();
-  if(ov&&INV_ORDER.includes(ov))return ov;
+  const ov=invSectionName(it.sectionOverride);
+  if(ov)return ov;
   const c=String(it.category||it.type||"").toLowerCase();
   if(it.weapon||c.includes("weapon"))return "Weapons";
   if(itemArmor(it)||c.includes("armor")||c.includes("shield"))return "Armor";
@@ -66,6 +76,28 @@ function invSection(it){
   return "Loot";
 }
 const INV_ORDER=["Weapons","Armor","Consumables","Magic Items","Tools","Gear","Loot"];
+/* the pinned section's title, and its collapse key — the label FEAT_FAV and
+   ATK_FAV share */
+const INV_FAV="★ Favorites";
+/* The sections the inventory draws, in order, each {title, items} sorted as
+   shown: ★ Favorites by name, then the seven built-in sections, then the
+   player's own (#98) A to Z, each with equipped items first and then by name.
+   A player's sections group by tagKey(), labelled by the first spelling met.
+   Empty sections are left out. Pure, so the order can be asserted:
+   renderInventory() only draws it. */
+function invGroups(list){
+  const all=Array.isArray(list)?list.filter(it=>it&&typeof it==="object"):[];
+  const byName=(a,b)=>String(a.name||"").localeCompare(String(b.name||""));
+  const eqThenName=(a,b)=>((b.equipped?1:0)-(a.equipped?1:0))||byName(a,b);
+  const by=new Map();
+  all.filter(it=>!it.fav).forEach(it=>{const t=invSection(it),k=tagKey(t);if(!by.has(k))by.set(k,{title:t,items:[]});by.get(k).items.push(it);});
+  const own=[...by.keys()].filter(k=>!INV_ORDER.some(s=>s.toLowerCase()===k)).sort((a,b)=>a.localeCompare(b));
+  const out=[];
+  const favs=all.filter(it=>it.fav);
+  if(favs.length)out.push({title:INV_FAV,items:favs.sort(byName)});
+  INV_ORDER.map(s=>s.toLowerCase()).concat(own).forEach(k=>{const g=by.get(k);if(g)out.push({title:g.title,items:g.items.sort(eqThenName)});});
+  return out;
+}
 /* ---- using an item ----
    What drinking, reading or activating this item does. An explicit `use` block
    the player configured wins; failing that a consumable is READ from its own
@@ -175,23 +207,17 @@ function renderInventory(){
   if(caBtn)caBtn.style.display=character.inventory.length?"inline-flex":"none";
   if(!character.inventory.length){el.innerHTML=`<div class="empty">No items yet. Equip gear that grants effects (e.g. +1 AC) and your stats update automatically.</div>`+invTotalsHTML();return;}
   if(caLbl)caLbl.textContent=character.inventory.some(it=>!invCol().items[it.id])?"Collapse all":"Expand all";
-  const byName=(a,b)=>String(a.name||"").localeCompare(String(b.name||""));
-  const eqThenName=(a,b)=>((b.equipped?1:0)-(a.equipped?1:0))||byName(a,b);
-  const favs=character.inventory.filter(it=>it.fav).sort(byName);
-  const groups={};character.inventory.filter(it=>!it.fav).forEach(it=>{const s=invSection(it);(groups[s]=groups[s]||[]).push(it);});
   const sc=invCol().sections;
-  const renderSec=(title,items,sorter)=>{
-    if(!items.length)return;
+  const renderSec=(title,items)=>{
     const collapsed=!!sc[title];
     /* The caret is drawn pointing right, like the Features one: the shared .fcaret
        turns it down when open. A down-drawn path turned 90° more pointed LEFT (#51). */
     const head=document.createElement("div");head.className="inv-sec-head";head.dataset.invsec=title;
     head.innerHTML=`<svg class="fcaret ${collapsed?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>${esc(title)} <span class="cnt">(${items.length})</span>`;
     el.appendChild(head);
-    if(!collapsed)items.slice().sort(sorter).forEach(it=>{const w=document.createElement("div");w.innerHTML=invItemHTML(it);el.appendChild(w.firstElementChild);});
+    if(!collapsed)items.forEach(it=>{const w=document.createElement("div");w.innerHTML=invItemHTML(it);el.appendChild(w.firstElementChild);});
   };
-  renderSec("★ Favorites",favs,byName);
-  INV_ORDER.forEach(s=>renderSec(s,groups[s]||[],eqThenName));
+  invGroups(character.inventory).forEach(g=>renderSec(g.title,g.items));
   el.insertAdjacentHTML("beforeend",invTotalsHTML());
 }
 function statusTitle(name){
