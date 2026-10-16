@@ -91,7 +91,7 @@ caret. Rows inside a group fold individually through a `.fitoggle` button holdin
 (features, items, attacks).
 
 A **count** goes in `.cnt`, plain and in brackets. A **badge** such as "12 entries" or the
-character's name goes in `.fgcount`, a pill pushed right.
+character's name goes in `.fgcount`, a pill pushed right; nothing uses it since Settings became a sidebar (#107).
 
 ### The group field
 
@@ -234,7 +234,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
   Comments are now stripped first (L2242).
 - **`.fgname{flex:1}`** pushed the count to the far right, not beside the title. It is now
   `flex:0 1 auto` (L3123).
-- **`.fgcount` is not always a count.** Settings passes badges through it, which would read absurdly
+- **`.fgcount` was not always a count.** Settings used to pass badges through it, which would read absurdly
   in brackets, so counts moved to `.cnt` (L3123).
 - **The inventory caret pointed left when open.** It was drawn pointing down and then turned another
   90° by the shared `.fcaret`. It is now drawn like the Features caret (L3525).

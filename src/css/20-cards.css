@@ -103,10 +103,10 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
    wraps rather than pushing the count off the row. */
 .fgname{font-family:var(--head);font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:var(--accent);flex:0 1 auto;min-width:0;overflow-wrap:anywhere}
 /* Counts in a group header match the inventory section heads — plain, dim,
-   parenthesised. .fgcount stays a PILL for the Settings badges, which carry
-   text like "12 entries" rather than a number. */
+   parenthesised. .fgcount, the PILL the Settings section badges used ("12
+   entries"), has no user since Settings became a sidebar (#107). */
 .fghead .cnt{font-family:var(--head);font-size:12px;font-weight:600;color:var(--ink-soft);flex:none}
-/* the Settings badge keeps its far-right position; only counts move inward */
+/* the pill stays far right; only counts move inward */
 .fgcount{font-family:var(--head);font-size:11px;font-weight:700;color:var(--ink-soft);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:1px 8px;flex:none;margin-left:auto}
 /* The two Rules-tab headings are toggles. The caret is the same one the group
    heads use, so a shut section reads the same way everywhere in the app. */

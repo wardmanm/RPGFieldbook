@@ -5944,8 +5944,8 @@ Pages: [shell](../wiki/ui/shell.md), [settings & updates](../wiki/features/setti
    switch, two or three short choices are segmented buttons, a longer list is a dropdown, actions
    are buttons. So Encumbrance became segmented (`segEnc`, Off / Standard / Variant; `setEnc` is
    gone). Help paragraphs were cut to one line each, a second where a fact needed it; the Rules
-   sources detail moved into tooltips. Every switch gains `role="switch"` and `aria-checked`, kept
-   true by one click listener on the wrapper (the old switches had neither).
+   sources detail moved into tooltips. Every switch is `role="switch"` with `aria-checked` (only
+   `swBackdrop` had them, since #106), kept true by one click listener on the wrapper.
 4. Every page is built when the dialog opens and one is shown, so every control kept its id and
    handler, and `renderRulesData()` keeps the sidebar's count and update dot live behind any page.
    The sidebar is a vertical tab list: ↑/↓ wrap over the shown pages only, Home/End jump. The page
@@ -5956,7 +5956,9 @@ Pages: [shell](../wiki/ui/shell.md), [settings & updates](../wiki/features/setti
    every other open, so Import settings and the rules-update review open at normal width and
    Settings comes back wide. The wide dialog is `min(820px,100%)` by `min(680px,90dvh)`: a fixed
    height, because a shorter page shrank the dialog, which re-centred and moved the sidebar under
-   the pointer (seen in the first screenshots).
+   the pointer (seen in the first screenshots). The sidebar and the page each scroll on their own
+   (`.m-body` does not): a sticky sidebar in one scroller was cut off on an 800×360 landscape phone
+   until the page reached its end, and End focused a tab below the visible area (final review).
 6. The rail: 52px of icons, by `html[data-tabs="icons"]` or `max-width:640px`; on a narrow screen a
    segmented control or dropdown drops below its name and a switch stays beside it. The icons are
    stroked line drawings written into `SET_PAGES`, so they need no attribution.

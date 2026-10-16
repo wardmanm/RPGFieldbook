@@ -90,7 +90,7 @@ every consumer reads: mode `none` (the default), `standard` (over capacity: spee
 double: cannot move) or `variant` (−10 ft past ⅓, −20 ft past ⅔, then the standard limits), where
 capacity is STR × 15 × the size multiplier. `encSpeed()` applies it in `recompute()` *after* the
 numeric effects. The header pill and the Carried weight / Capacity rows show it; the settings live in
-Settings → This character, and size in [Vitals & rest](vitals-and-rest.md).
+Settings → Carrying, and size in [Vitals & rest](vitals-and-rest.md).
 
 **Item uses.** `it.uses = {max, per, used}` is the feature shape, so `usesMax()` and the pips read
 both; `resetItemUses()` runs on a long rest (short + long) and a short rest (short); `per:"none"` is

@@ -293,7 +293,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Editing** — Inline, built once
 - **Tracker types** — Counter (optional goal), checklist, task
 - **Closing at 100%** — Close when complete, on by default, only on the step to complete, with an Undo of the whole tap
-- **Hiding the card** — Per character, in Settings → This character
+- **Hiding the card** — Per character, in Settings → Sheet display
 - **Trackers in the combat view** — A registered section, so it also takes a section note
 - **Tracker text** — Plain, `esc()` only
 
@@ -353,7 +353,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **When Import settings asks** — Only when the file carries readable rules and some are loaded
 - **A settings file with an empty pool** — Treated as carrying no rules
 - **Where an import's outcome is shown** — A status line beside the Import button
-- **How a newer data release is shown** — Muted text on the row, one hint line above the list, ` · update` on the Settings count
+- **How a newer data release is shown** — Muted text on the row, one hint line above the list, a dot on the Settings sidebar's Rules data tab
 
 ## UI
 

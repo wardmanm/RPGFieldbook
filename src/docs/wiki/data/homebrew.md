@@ -33,7 +33,7 @@ into the bundle, so it never reached players. **The licence and credit that do**
 entry in `data/packs.json`: `license: "CC-BY-SA-3.0"` and an `attribution` crediting The Predator to
 D&D Wiki's contributors, with its page, the licence, and "Changed: converted to Fieldbook's rules
 format." `bundle()` rolls the folder into `dist/homebrew_full.json` like any other pack and stamps
-both on it, so they ship in the bundle, are listed in Settings → Credits & licences once the pack is
+both on it, so they ship in the bundle, are listed in Settings → Credits once the pack is
 loaded, and appear in the archive's `NOTICE.md` (see [Data archive](../architecture/data-archive.md)).
 Its version is the registry's (`1.5.0` today); adding the credit changed its digest, so the next
 release moves it.

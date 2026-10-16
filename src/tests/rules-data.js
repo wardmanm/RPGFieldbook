@@ -1028,6 +1028,8 @@ ck('setPageDef finds a page, and is null for rubbish', (X.setPageDef('rules') ||
      /data-setpage="carrying"[\s\S]*?class="set-sep"[\s\S]*?data-setpage="rules"/.test(nav));
   ck('no caption without a character', !/This character|set-sep/.test(X.setNavHTML(X.setPagesFor(false), 'appearance', {})));
   ck('a badge is drawn only where given', /data-setbadge="rules"><span class="set-cnt">12<\/span>/.test(nav) && (nav.match(/data-setbadge/g) || []).length === 1);
+  ck('...and the tab that carries one is described by it, for a screen reader',
+     /data-setpage="rules"[^>]*aria-describedby="setBadgeDesc-rules"/.test(nav) && (nav.match(/aria-describedby/g) || []).length === 1);
 }
 {
   const page = X.setPageHTML('carrying', '<p>x</p>', {active: true, sub: 'For <b>Pib</b>'});
@@ -1051,9 +1053,10 @@ ck('setPage is a setting a file is recognised by', X.SETTINGS_KEYS.includes('set
 ck('...defaulting to Appearance',
    /let settings=\{[^\n]*setPage:"appearance"[^\n]*\};/.test(fs.readFileSync(path.join(ROOT, 'src/js/00-constants.js'), 'utf8')));
 X.resetRules();
-ck('the Rules data badge is empty with nothing loaded', X.rulesNavBadgeHTML() === '');
+ck('the Rules data badge shows nothing with nothing loaded, and says so to a screen reader',
+   X.rulesNavBadgeHTML() === '<span id="setBadgeDesc-rules" hidden>none loaded</span>', X.rulesNavBadgeHTML());
 X.mergeRules({system: 'XPHB', spells: [{name: 'Bless'}, {name: 'Shield'}]}, 'x.json');
-ck('...and counts the pool once something is', X.rulesNavBadgeHTML() === '<span class="set-cnt" title="2 entries">2</span>', X.rulesNavBadgeHTML());
+ck('...and counts the pool once something is', X.rulesNavBadgeHTML() === '<span class="set-cnt" title="2 entries">2</span><span id="setBadgeDesc-rules" hidden>2 entries</span>', X.rulesNavBadgeHTML());
 X.resetRules();
 ck('entry count is zero with nothing loaded', X.rulesEntryCount() === 0);
 X.mergeRules({system: 'XPHB', races: [{name: 'Elf'}, {name: 'Orc'}], spells: [{name: 'Bless'}]}, 'x.json');
@@ -1191,7 +1194,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      h.indexOf('>Sheet<') < h.indexOf('>Inventory<'), h.replace(/<[^>]+>/g, '|').slice(0, 200));
   ck('a tab with no notes gets no group', !h.includes('>Spells<'));
   /* Counts read like the inventory section heads now — parenthesised, plain.
-     .fgcount is still the PILL, kept for the Settings badges ("12 entries"),
+     .fgcount was the PILL the old Settings section badges used ("12 entries"),
      which are text and would read wrongly in brackets. */
   ck('the group count is the number of notes in it', h.includes('<span class="cnt">(2)</span>'), h.slice(0, 160));
   ck('each note renders its body', h.includes('<p>a</p>') && h.includes('<p>c</p>'));
@@ -1484,7 +1487,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /function renderHP\(\)\{[\s\S]*?getElementById\("hpCur"\)[\s\S]{0,140}classList\.toggle\("hp-warn"/.test(js));
   ck('the colour switch is on the Sheet display page, per character',
      /id="swHpColor"/.test(js) && /character\.hpColor/.test(js));
-  // spec §11 (#41): the Trackers switch is drawn in This character and does something
+  // spec §11 (#41): the Trackers switch is drawn on the Sheet display page and does something
   ck('the Trackers switch is rendered on the Sheet display page',
      /id="swTrackers"/.test((js.match(/const secDisplay=hasChar\?[\s\S]*?:"";/) || [''])[0]) &&
      /showTrackers\(character\)\?"on":""\}" id="swTrackers"/.test(js));
@@ -1953,13 +1956,31 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /openModal\("Import settings",settingsImportQuestionHTML\(imp\)\);/.test(src));
   ck('the arrow keys step over the SHOWN pages only', /setPageStep\(pages\.map\(p=>p\.k\),t\.dataset\.setpage,e\.key\)/.test(src));
   ck('switching a page shows it, remembers it and starts it at the top',
-     /p\.hidden=p\.dataset\.setpagebody!==k;/.test(src) && /settings\.setPage=k;saveSettings\(\);/.test(src) && /mb\.scrollTop=0/.test(src));
+     /p\.hidden=p\.dataset\.setpagebody!==k;/.test(src) && /settings\.setPage=k;saveSettings\(\);/.test(src) && /const pg=secs\.querySelector\("\.set-pages"\);if\(pg\)pg\.scrollTop=0;/.test(src));
+  /* spec §7: a duplicated id would let getElementById wire one copy and leave the
+     other dead; the two-way check above collects ids into a Set, so count here */
+  {
+    const body = src.slice(src.indexOf('function openSettings()'), src.indexOf('function encSettingsHint('));
+    const counts = {};
+    (body.match(/\bid="([A-Za-z][\w-]*)"/g) || []).forEach(m => { const k = m.slice(4, -1); counts[k] = (counts[k] || 0) + 1; });
+    const twice = Object.keys(counts).filter(k => counts[k] > 1);
+    ck('every control id in the Settings markup appears exactly once', Object.keys(counts).length > 25 && twice.length === 0, twice);
+  }
   ck('the old folding sections are gone', !/SET_SECTIONS|setSecHTML|setSecOpen|data-setsec=/.test(src));
+  /* review: Encumbrance was a <select>, which announces its value; as buttons it
+     must say which is pressed — and so must every segmented choice here */
+  ck('every segmented choice on the dialog says which button is pressed',
+     ['segSkin', 'segTheme', 'segStatStyle', 'segHdStyle', 'segEnc'].every(id => /aria-pressed="\$\{/.test((src.match(new RegExp('id="' + id + '"[\\s\\S]{0,700}')) || [''])[0])) &&
+     /const g=e\.target\.closest\("\.seg"\);if\(g\)g\.querySelectorAll\("button"\)\.forEach\(b=>b\.setAttribute\("aria-pressed",b\.classList\.contains\("on"\)\?"true":"false"\)\);/.test(src));
   ck('the badge refresh targets the sidebar',
      /querySelector\('\[data-setbadge="rules"\]'\)[\s\S]{0,40}innerHTML=rulesNavBadgeHTML\(\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/89-rules-merge.js'), 'utf8')));
   const mcss = fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8');
-  ck('the dialog is two panes, the sidebar staying put while the page scrolls',
-     /\.set-wrap\{display:grid;grid-template-columns:184px minmax\(0,1fr\)/.test(mcss) && /\.set-nav\{position:sticky;top:0/.test(mcss));
+  /* review: a sticky sidebar inside one scroller was cut off on a landscape phone
+     until the page was scrolled to its end; each pane scrolls on its own now */
+  ck('the dialog is two panes, each scrolling on its own, so the sidebar stays reachable',
+     /\.set-wrap\{display:grid;grid-template-columns:184px minmax\(0,1fr\);grid-template-rows:minmax\(0,1fr\)/.test(mcss) &&
+     /\.modal\.wide \.m-body\{overflow:hidden;display:flex;flex-direction:column/.test(mcss) &&
+     /\.set-nav\{[^}]*overflow-y:auto/.test(mcss) && /\.set-pages\{[^}]*overflow-y:auto/.test(mcss) && !/\.set-nav\{position:sticky/.test(mcss));
   ck('a hidden page takes no room', /\.set-page\[hidden\]\{display:none\}/.test(mcss));
   /* a page shorter than the last one used to shrink the dialog, which re-centred
      and moved the sidebar under the pointer between clicks */
@@ -2370,7 +2391,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     if (r && r.__status) return Promise.resolve({ok: false, status: r.__status, json: () => Promise.reject(new Error('no body'))});
     return Promise.resolve({ok: true, status: 200, json: () => Promise.resolve(JSON.parse(JSON.stringify(r)))});
   };
-  // the status line and the Settings "Rules data" header chip, readable
+  // the status line and the Settings sidebar's Rules data badge, readable
   const status = {textContent: '', className: ''};
   const chip = {innerHTML: 'STALE'};
   const getById = ctx.document.getElementById;
@@ -2566,11 +2587,11 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /skipped/i.test(status.textContent) && /1 glossary entry/.test(status.textContent) && /1 spell/.test(status.textContent),
      status.textContent);
 
-  // ---- the Rules data chip follows every change to the pool, not only Fetch all
+  // ---- the Rules data badge follows every change to the pool, not only Fetch all
   chip.innerHTML = 'STALE';
   state.confirm = true;
   X.clearAllRules();
-  ck('the Rules data badge follows Clear all', chip.innerHTML === '', chip.innerHTML);
+  ck('the Rules data badge follows Clear all', chip.innerHTML === badge() && !/set-cnt/.test(chip.innerHTML) && /none loaded/.test(chip.innerHTML), chip.innerHTML);
 
   /* ================= Import settings asks before replacing loaded rules (#70) ==========
      Export settings writes {_type:"fieldbook-settings", settings, rules}: the WHOLE pool as

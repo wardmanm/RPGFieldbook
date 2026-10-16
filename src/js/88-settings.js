@@ -40,11 +40,12 @@ function setPageStep(keys,cur,key){
 function setNavHTML(pages,active,badges){
   const b=badges||{};let n=0;
   return `<div class="set-nav" role="tablist" aria-orientation="vertical" aria-label="Settings">`+pages.map((p,i)=>{
-    const on=p.k===active,first=p.scope==="char"&&(n++===0),last=p.scope==="char"&&(!pages[i+1]||pages[i+1].scope!=="char");
+    const on=p.k===active,first=p.scope==="char"&&(n++===0),last=p.scope==="char"&&(!pages[i+1]||pages[i+1].scope!=="char"),
+      badge=Object.prototype.hasOwnProperty.call(b,p.k);
     return (first?`<div class="set-cap" aria-hidden="true">This character</div>`:"")+
-      `<button type="button" class="set-tab" role="tab" id="setTab-${esc(p.k)}" data-setpage="${esc(p.k)}" aria-controls="setPage-${esc(p.k)}" aria-selected="${on?"true":"false"}" tabindex="${on?"0":"-1"}" aria-label="${esc(p.title)}" title="${esc(p.title)}">`+
+      `<button type="button" class="set-tab" role="tab" id="setTab-${esc(p.k)}" data-setpage="${esc(p.k)}" aria-controls="setPage-${esc(p.k)}" aria-selected="${on?"true":"false"}" tabindex="${on?"0":"-1"}" aria-label="${esc(p.title)}" title="${esc(p.title)}"${badge?` aria-describedby="setBadgeDesc-${esc(p.k)}"`:""}>`+
       `<svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true">${p.icon}</svg><span class="set-tlbl">${esc(p.title)}</span>`+
-      (Object.prototype.hasOwnProperty.call(b,p.k)?`<span class="set-tbadge" data-setbadge="${esc(p.k)}">${b[p.k]}</span>`:"")+`</button>`+
+      (badge?`<span class="set-tbadge" data-setbadge="${esc(p.k)}">${b[p.k]}</span>`:"")+`</button>`+
       (last?`<div class="set-sep" aria-hidden="true"></div>`:"");
   }).join("")+`</div>`;
 }
@@ -61,10 +62,13 @@ function setRowHTML(name,help,control,inline){
   return `<div class="set-row${inline?" set-inline":""}"><div class="set-row-txt"><div class="t-lbl">${name}</div>${help?`<div class="t-sub">${help}</div>`:""}</div><div class="set-row-ctl">${control}</div></div>`;
 }
 /* the Rules data tab's count, and a dot while a newer copy of a loaded pack is
-   out; renderRulesData() keeps it current */
+   out; renderRulesData() keeps it current. The tab's aria-label replaces its
+   contents, so the same facts are its description (setNavHTML() points
+   aria-describedby here), the way the old section header read them aloud. */
 function rulesNavBadgeHTML(){
   const n=rulesEntryCount(),up=loadedRulesGroups().some(g=>dataStatus(g).state==="update");
-  return (n?`<span class="set-cnt" title="${esc(rulesBadge())}">${n}</span>`:"")+(up?`<span class="set-dot" title="Newer rules data is out"></span>`:"");
+  return (n?`<span class="set-cnt" title="${esc(rulesBadge())}">${n}</span>`:"")+(up?`<span class="set-dot" title="Newer rules data is out"></span>`:"")+
+    `<span id="setBadgeDesc-rules" hidden>${esc(rulesBadge())}</span>`;
 }
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
 /* the "Rules data" header badge; renderRulesData() keeps it current after the modal opens */
@@ -93,9 +97,9 @@ function openSettings(){
   const secAppearance=
     setGroupHTML("Look",
       setRowHTML("Skin","The app's look. It also sets the open character's game system.",
-        `<div class="seg" id="segSkin"><button type="button" data-skin="humblewood" class="${(settings.skin||"humblewood")==="humblewood"?"on":""}">Humblewood</button><button type="button" data-skin="classic" class="${settings.skin==="classic"?"on":""}">Classic D&amp;D</button></div>`)+
+        `<div class="seg" id="segSkin"><button type="button" data-skin="humblewood" class="${(settings.skin||"humblewood")==="humblewood"?"on":""}" aria-pressed="${(settings.skin||"humblewood")==="humblewood"?"true":"false"}">Humblewood</button><button type="button" data-skin="classic" class="${settings.skin==="classic"?"on":""}" aria-pressed="${settings.skin==="classic"?"true":"false"}">Classic D&amp;D</button></div>`)+
       setRowHTML("Mode","Light, dark, or follow your device.",
-        `<div class="seg" id="segTheme"><button type="button" data-th="system" class="${settings.theme==="system"?"on":""}">System</button><button type="button" data-th="light" class="${settings.theme==="light"?"on":""}">Light</button><button type="button" data-th="dark" class="${settings.theme==="dark"?"on":""}">Dark</button></div>`)+
+        `<div class="seg" id="segTheme"><button type="button" data-th="system" class="${settings.theme==="system"?"on":""}" aria-pressed="${settings.theme==="system"?"true":"false"}">System</button><button type="button" data-th="light" class="${settings.theme==="light"?"on":""}" aria-pressed="${settings.theme==="light"?"true":"false"}">Light</button><button type="button" data-th="dark" class="${settings.theme==="dark"?"on":""}" aria-pressed="${settings.theme==="dark"?"true":"false"}">Dark</button></div>`)+
       setRowHTML("Hand-drawn borders","Inky wobble. Turn off for a cleaner look or a slow device.",
         `<button type="button" class="switch ${settings.rough?"on":""}" id="swRough" role="switch" aria-checked="${settings.rough?"true":"false"}" aria-label="Hand-drawn borders"></button>`,true))+
     setGroupHTML("Interface",
@@ -105,9 +109,9 @@ function openSettings(){
         `<button type="button" class="switch ${settings.backdropClose===true?"on":""}" id="swBackdrop" role="switch" aria-checked="${settings.backdropClose===true?"true":"false"}" aria-label="Tap outside to close dialogs"></button>`,true));
   const secDisplay=hasChar?setGroupHTML("Cards",
       setRowHTML("Skills display","Skills listed A to Z, or under each ability.",
-        `<div class="seg" id="segStatStyle">${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>`<button type="button" data-statstyle="${esc(v)}" class="${statStyle()===v?"on":""}">${l}</button>`).join("")}</div>`)+
+        `<div class="seg" id="segStatStyle">${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>`<button type="button" data-statstyle="${esc(v)}" class="${statStyle()===v?"on":""}" aria-pressed="${statStyle()===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
       setRowHTML("Hit Dice display","Boxes, one line per size, or dice you tap.<br>Only Full and Condensed can mark a die spent without healing.",
-        `<div class="seg" id="segHdStyle">${[["full","Full"],["condensed","Condensed"],["dice","Dice"]].map(([v,l])=>`<button type="button" data-hdstyle="${esc(v)}" class="${hdStyle()===v?"on":""}">${l}</button>`).join("")}</div>`)+
+        `<div class="seg" id="segHdStyle">${[["full","Full"],["condensed","Condensed"],["dice","Dice"]].map(([v,l])=>`<button type="button" data-hdstyle="${esc(v)}" class="${hdStyle()===v?"on":""}" aria-pressed="${hdStyle()===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
       setRowHTML("Colour current HP","Amber at half your maximum, red at a quarter.",
         `<button type="button" class="switch ${character.hpColor!==false?"on":""}" id="swHpColor" role="switch" aria-checked="${character.hpColor!==false?"true":"false"}" aria-label="Colour current HP"></button>`,true)+
       setRowHTML("Trackers card","Show it on the Journal tab. Hiding it keeps what you've counted.",
@@ -116,7 +120,7 @@ function openSettings(){
       setRowHTML("Size","From your ancestry unless you choose one. It sets your carrying capacity.",
         `<select id="setSize" aria-label="Size">${sizeOptionsHTML(character.size)}</select>`)+
       setRowHTML("Encumbrance","Off shows weight only. Standard limits you at capacity; Variant slows you in tiers before that.",
-        `<div class="seg" id="segEnc">${[["none","Off"],["standard","Standard"],["variant","Variant"]].map(([v,l])=>`<button type="button" data-enc="${esc(v)}" class="${encMode()===v?"on":""}">${l}</button>`).join("")}</div>`)+
+        `<div class="seg" id="segEnc">${[["none","Off"],["standard","Standard"],["variant","Variant"]].map(([v,l])=>`<button type="button" data-enc="${esc(v)}" class="${encMode()===v?"on":""}" aria-pressed="${encMode()===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
       setRowHTML("Coins count as weight","50 coins to the pound, the way the rules have it.",
         `<button type="button" class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight" role="switch" aria-checked="${character.coinWeight!==false?"true":"false"}" aria-label="Coins count as weight"></button>`,true)+
       `<p class="hint set-note" id="encHint">${esc(encSettingsHint())}</p>`):"";
@@ -167,14 +171,16 @@ function openSettings(){
   const showPage=(k,focus)=>{
     secs.querySelectorAll("[data-setpage]").forEach(t=>{const on=t.dataset.setpage===k;t.setAttribute("aria-selected",on?"true":"false");t.tabIndex=on?0:-1;if(on&&focus)t.focus();});
     secs.querySelectorAll("[data-setpagebody]").forEach(p=>{p.hidden=p.dataset.setpagebody!==k;});
-    const mb=secs.closest(".m-body");if(mb)mb.scrollTop=0;
+    const pg=secs.querySelector(".set-pages");if(pg)pg.scrollTop=0;
     settings.setPage=k;saveSettings();
   };
-  /* A switch's own handler (bound on the button) runs first and flips its `on`
-     class; this then says the new state to a screen reader, for every switch. */
+  /* A control's own handler (bound on it, or on its group) runs first and moves
+     the `on` class; this then says the new state to a screen reader, for every
+     switch and every segmented choice. */
   secs.addEventListener("click",e=>{
     const t=e.target.closest("[data-setpage]");if(t){showPage(t.dataset.setpage,false);return;}
     const s=e.target.closest(".switch");if(s)s.setAttribute("aria-checked",s.classList.contains("on")?"true":"false");
+    const g=e.target.closest(".seg");if(g)g.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.classList.contains("on")?"true":"false"));
   });
   secs.addEventListener("keydown",e=>{
     const t=e.target.closest("[data-setpage]");if(!t)return;

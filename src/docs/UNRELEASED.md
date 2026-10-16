@@ -47,4 +47,5 @@ Bullets below this line — leave the heading in place.
   Appearance → Tap outside to close dialogs. ×, Cancel and Esc still close as before.
 - Settings is easier to find your way around: a sidebar of categories (Appearance, Sheet display,
   Carrying, Rules data, Backup, Credits) beside one page at a time, every setting on its own row.
-  With icon tabs on, or on a phone, the sidebar shrinks to icons. Encumbrance is now three buttons.
+  With icon tabs on, or on a phone, the sidebar shrinks to icons. Encumbrance is now three buttons,
+  and Check for rules updates is under Rules data.

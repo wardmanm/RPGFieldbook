@@ -21,7 +21,7 @@ credits that the icons and the loaded packs require.
 `boot()`, `wire()` in `90-boot.js` · `release.js`, `data-release.js`, `gen-changelog.js` in
 `scripts/`; `bundle()` in `tools/data-kit/fbdata.py` · **Data:** `data/packs.json`
 · **Tests:** `rules-data.js` (the modal's ids both ways, the pages and their fallbacks, `dataStatus()`, Fetch all,
-the header chip, and Import settings driven through its real handler), `data-archive.js` (the
+the sidebar's Rules data badge, and Import settings driven through its real handler), `data-archive.js` (the
 `update` state, the hint line, the badge's suffix, `pickDataRelease()`, `dataUpdateFrom()`,
 `checkForDataUpdate()` against a stubbed network, and the credits list escaping hostile text),
 `char-update.js` (`cmpVer()`, `updBannerHTML()`) · **See also:**
@@ -66,7 +66,8 @@ The next open shows `setPageOf(settings.setPage, hasChar)`: the stored page whil
 Appearance — so a character page remembered from a sheet never opens with no character. The
 delegated listeners bind to `#setSections`, which is rebuilt on every open. The dialog keeps one
 height, 680px or nine-tenths of the screen if that is less, so a short page never shrinks it and
-moves the sidebar.
+moves the sidebar, and the sidebar and the page each scroll on its own inside it (`.m-body` does
+not), so on a landscape phone every tab stays reachable.
 
 **Rules sources.** `settings.rulesSources` is a list of URLs, edited in place. **Fetch all** runs
 `fetchAllRules()`, which never loses what is loaded. It fetches each URL in turn
@@ -145,7 +146,7 @@ came. Then:
 `finishSettingsImport()` applies the answer. It runs `foldLegacySettings()` (the first builds'
 `rulesUrl` joins `rulesSources`, as at boot), saves, and redraws what boot redraws after loading the
 cache: `refreshRulesUI()`, `renderAll()` and `renderHome()`. Then it reopens Settings, which brings a
-fresh rules status line, Rules data chip and loaded-data list. What happened is written on the
+fresh rules status line, Rules data badge and loaded-data list. What happened is written on the
 status line beside the Import button, because the rules status line sits on the Rules data page,
 which is usually not the one showing. A refused settings write ("Settings imported for this session only:
 …") and a refused cache write both land on that line.
@@ -182,8 +183,9 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
   page keeps its id and handler, and `renderRulesData()` refreshes the list and the badge behind any
   page. `settings.setPage` is read through `setPageOf()`, never trusted: a stored key that is not a
   shown page opens Appearance. `settings.setCollapse`, the old fold state, is no longer read.
-- **The wide dialog keeps one height**, or a shorter page shrinks it, it re-centres, and the sidebar
-  moves under the pointer between clicks.
+- **The wide dialog keeps one height, and its two panes scroll apart.** A shorter page otherwise
+  shrinks it, it re-centres, and the sidebar moves under the pointer between clicks; a sidebar that
+  shares one scroller with the page was cut off on a landscape phone until the page reached its end.
 - **Delegated listeners bind to something rebuilt with the modal**, never to `#mBody`, which outlives
   every modal and would stack one copy per visit.
 - **Every id `openSettings()` looks up exists in the markup it builds, and every id it renders is
@@ -245,7 +247,7 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 | When Import settings asks | Only when the file carries readable rules and some are loaded | Always: a question with nothing to lose is noise. Never: the #70 bug (L4134) |
 | A settings file with an empty pool | Treated as carrying no rules | Replacing with it: that silently unloads everything, which is Clear all's job and it confirms (L4134) |
 | Where an import's outcome is shown | A status line beside the Import button; from the Rules tab, where neither line shows, a toast without the counts, and an error toast that stays until tapped (#87) | The rules status line: it sits in the Rules data section, usually folded shut. A toast that hides on its own: a failed save must not vanish (L4134) |
-| How a newer data release is shown | Muted text on the row, one hint line above the list, ` · update` on the Settings count | The amber "update available" chip: that says the pack is behind the app it is loaded in, and a data release is optional (L5082) |
+| How a newer data release is shown | Muted text on the row, one hint line above the list, a dot on the Settings sidebar's Rules data tab | The amber "update available" chip: that says the pack is behind the app it is loaded in, and a data release is optional (L5082) |
 
 ## Open
 
