@@ -3,9 +3,6 @@
 How a version gets from your working copy to a player's download. Dev-only — this file lives under
 `src/docs/` and is deliberately excluded from the player bundle.
 
-> **Release freeze (from 2026-10-07):** no releases — app or data — until 1.8.0 is complete:
-> #83 (the data archive), #84 (the SRD 5.2 pack) and #85 (the private split). Mike lifts it.
-
 Publishing is automated. **You never upload assets by hand.** Pushing a tag is the whole trigger.
 
 **`./dev.sh` drives all of this from a menu** — build, tests, cut a release, cut a data release, and a
