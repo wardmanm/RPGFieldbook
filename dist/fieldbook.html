@@ -290,9 +290,11 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 /* The inventory/attack heads carry their text directly rather than in .fgname,
    so they take its look here; and a gap above each section after the first,
    the way .fgroup spaces the feature groups. */
-.inv-sec-head{font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:var(--accent);margin-top:12px}
+/* overflow-wrap: a player's own section (#98) can be one long word, which
+   would otherwise run off the card on a phone */
+.inv-sec-head{font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:var(--accent);margin-top:12px;overflow-wrap:anywhere}
 .inv-sec-head:first-child{margin-top:0}
-.inv-sec-head .cnt{color:var(--ink-soft);font-weight:600}
+.inv-sec-head .cnt{color:var(--ink-soft);font-weight:600;flex:none;overflow-wrap:normal}
 .fghead:hover .fgname{color:var(--accent-2)}
 /* flex:0 1 auto, NOT flex:1 — the count has to sit beside the title the way the
    inventory section heads do. flex:1 stretched the name across the header and
@@ -1040,12 +1042,27 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 #cvList [data-note="skills"] .srow .lbl{font-size:13px}
 #cvList #statLegend{display:none}
 #cvList [data-note="abilities"] .agroups{gap:8px 12px}
-#cvList [data-note="abilities"] .agroup .ahead{padding:3px 8px}
-#cvList [data-note="abilities"] .agroup .ahead .m{font-size:18px}
-#cvList [data-note="abilities"] .agroup .ahead input[data-path]{width:auto;flex:none}
+/* The By ability header (#92). The rules above are for the six tall boxes, where
+   a 9px name and a faint score sit under a big modifier; they reach this header
+   too, since it keeps the .ability skin. Here the name and the score sit BESIDE
+   the modifier on one line, so they take full ink and real size, and the score
+   gets a fixed width at the right edge — an input's own width is about twenty
+   characters, which floated the number mid-header. The disabled box still
+   keeps room for a number input's spin button (about 15px in Chromium), which
+   clipped two digits in a narrow box and kept the score off the edge, so the
+   spinner goes. The save row keeps the Sheet tab's small capitals, so it no
+   longer outweighs the ability it belongs to. */
+#cvList [data-note="abilities"] .agroup .ahead{padding:4px 10px;gap:10px}
+#cvList [data-note="abilities"] .agroup .ahead .n{font-size:13px;color:var(--ink)}
+#cvList [data-note="abilities"] .agroup .ahead .m{font-size:24px}
+#cvList [data-note="abilities"] .agroup .ahead input[data-path]{width:2.4em;flex:none;text-align:right;font-size:16px;
+  font-weight:700;color:var(--ink);-webkit-text-fill-color:var(--ink);-moz-appearance:textfield;appearance:textfield}
+#cvList [data-note="abilities"] .agroup .ahead input[data-path]::-webkit-inner-spin-button,
+#cvList [data-note="abilities"] .agroup .ahead input[data-path]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 #cvList [data-note="abilities"] .agroup .srow{padding:1px 2px}
 #cvList [data-note="abilities"] .agroup .srow .val{font-size:13px;width:24px}
 #cvList [data-note="abilities"] .agroup .srow .lbl{font-size:12.5px}
+#cvList [data-note="abilities"] .agroup .svrow .lbl{font-size:10px}
 @media(max-width:640px){#cvList [data-note="skills"] .skills{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(9,auto);grid-auto-flow:column}}
 @media(max-width:560px){#cvList [data-note="abilities"] .abilities{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:380px){#cvList [data-note="skills"] .skills{grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-auto-flow:row}}
@@ -2307,7 +2324,20 @@ function fxChips(effects){
   if(!effects||!effects.length)return "";
   return `<div class="fx">`+effects.map(e=>`<span class="chip">${esc(FX_LABEL[e.target]||e.target)} ${fmt(num(e.value))}</span>`).join("")+`</div>`;
 }
+/* The group a feature files under is its SOURCE (#98) — the label on its row,
+   which the player can edit — and only when it has none, where it came from.
+   Grouping by origin alone meant editing the source changed the label and left
+   the feature where it was. `origin` still decides what removing a class or an
+   ancestry takes back; this is only where the row is shown. A source that
+   reads as the favourites heading files by origin, or starring and that group
+   would fold together. */
 function featGroupLabel(f){
+  const s=tagLabel(f&&f.source);
+  if(s&&s.toLowerCase()!==FEAT_FAV.toLowerCase())return s;
+  return featOriginLabel(f);
+}
+/* Where a feature came from, as a group name: what an empty source files under. */
+function featOriginLabel(f){
   const o=f&&f.origin;
   if(!o)return "Other";
   if(o.kind==="race")return o.name||raceTerm();
@@ -2377,9 +2407,9 @@ const FEAT_FAV="★ Favorites";
 /* attacks reuse the same label, so the two lists read as one idea */
 const ATK_FAV="★ Favorites";
 /* Split the feature list into the groups the list renders, in order. Favourites
-   are MOVED, not copied — the origin groups are built from non-favourites only,
+   are MOVED, not copied — the source groups are built from non-favourites only,
    the same partition renderInventory does. Sorted by name like inventory's
-   Favorites section; the origin groups keep grant order, which for a class is
+   Favorites section; the other groups keep grant order, which for a class is
    level order.
    Pure on purpose: renderFeatures writes through innerHTML on an element the
    test harness stubs, so this is the only part of the grouping that can be
@@ -2389,9 +2419,25 @@ function featGroups(list){
   const out=[];
   const favs=all.filter(f=>f&&f.fav).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
   if(favs.length)out.push({label:FEAT_FAV,items:favs});
-  const order=[],groups={};
-  all.filter(f=>f&&!f.fav).forEach(f=>{const g=featGroupLabel(f);if(!groups[g]){groups[g]=[];order.push(g);}groups[g].push(f);});
-  order.forEach(g=>out.push({label:g,items:groups[g]}));
+  /* One group per tagKey(), as the journal's tags: "Mapach" typed as "mapach"
+     joins the Mapach group, labelled by the first spelling met. The ORDER is
+     where features came from (#98): the groups features came from list in
+     grant order whether or not anything is still filed in them, so a feature
+     moving between them never reorders the list; a group named only by a
+     source lists right after the group its first feature came from. Placing
+     each group at its first member instead pulled the background's group above
+     the class's when the first ancestry trait moved into it. */
+  const rest=all.filter(f=>f&&!f.fav), origins=[], isOrigin=new Set(), groups=new Map(), after=new Map();
+  rest.forEach(f=>{const o=tagKey(featOriginLabel(f));if(!isOrigin.has(o)){isOrigin.add(o);origins.push(o);}});
+  rest.forEach(f=>{
+    const l=featGroupLabel(f),k=tagKey(l);
+    if(!groups.has(k)){
+      groups.set(k,{label:l,items:[]});
+      if(!isOrigin.has(k)){const o=tagKey(featOriginLabel(f));if(!after.has(o))after.set(o,[]);after.get(o).push(k);}
+    }
+    groups.get(k).items.push(f);
+  });
+  origins.forEach(o=>{if(groups.has(o))out.push(groups.get(o));(after.get(o)||[]).forEach(k=>out.push(groups.get(k)));});
   return out;
 }
 function renderFeatures(){
@@ -2969,9 +3015,19 @@ function buildToc(){
    the view covers. */
 function openToc(){buildToc();const tb=combatViewOpen()?document.getElementById("cvHead"):document.querySelector(".tabbar");const top=tb?Math.max(0,Math.round(tb.getBoundingClientRect().bottom)):0;const fly=document.getElementById("tocFly"),back=document.getElementById("tocBack");if(fly)fly.style.top=top+"px";if(back)back.style.top=top+"px";if(fly)fly.classList.add("open");if(back)back.classList.add("open");}
 function closeToc(){const f=document.getElementById("tocFly"),b=document.getElementById("tocBack");if(f)f.classList.remove("open");if(b)b.classList.remove("open");}
+/* A player's category as the section it names (#98). One of INV_ORDER in any
+   case files there ("consumables" is Consumables, so it is still read for its
+   healing); anything else is their own section, tidied as a tag is. "" for
+   none, and for the favourites heading, which is not a section. */
+function invSectionName(v){
+  const l=tagLabel(v);if(!l)return "";
+  const k=l.toLowerCase();
+  if(k===INV_FAV.toLowerCase())return "";
+  return INV_ORDER.find(s=>s.toLowerCase()===k)||l;
+}
 function invSection(it){
-  const ov=String(it.sectionOverride||"").trim();
-  if(ov&&INV_ORDER.includes(ov))return ov;
+  const ov=invSectionName(it.sectionOverride);
+  if(ov)return ov;
   const c=String(it.category||it.type||"").toLowerCase();
   if(it.weapon||c.includes("weapon"))return "Weapons";
   if(itemArmor(it)||c.includes("armor")||c.includes("shield"))return "Armor";
@@ -2986,6 +3042,28 @@ function invSection(it){
   return "Loot";
 }
 const INV_ORDER=["Weapons","Armor","Consumables","Magic Items","Tools","Gear","Loot"];
+/* the pinned section's title, and its collapse key — the label FEAT_FAV and
+   ATK_FAV share */
+const INV_FAV="★ Favorites";
+/* The sections the inventory draws, in order, each {title, items} sorted as
+   shown: ★ Favorites by name, then the seven built-in sections, then the
+   player's own (#98) A to Z, each with equipped items first and then by name.
+   A player's sections group by tagKey(), labelled by the first spelling met.
+   Empty sections are left out. Pure, so the order can be asserted:
+   renderInventory() only draws it. */
+function invGroups(list){
+  const all=Array.isArray(list)?list.filter(it=>it&&typeof it==="object"):[];
+  const byName=(a,b)=>String(a.name||"").localeCompare(String(b.name||""));
+  const eqThenName=(a,b)=>((b.equipped?1:0)-(a.equipped?1:0))||byName(a,b);
+  const by=new Map();
+  all.filter(it=>!it.fav).forEach(it=>{const t=invSection(it),k=tagKey(t);if(!by.has(k))by.set(k,{title:t,items:[]});by.get(k).items.push(it);});
+  const own=[...by.keys()].filter(k=>!INV_ORDER.some(s=>s.toLowerCase()===k)).sort((a,b)=>a.localeCompare(b));
+  const out=[];
+  const favs=all.filter(it=>it.fav);
+  if(favs.length)out.push({title:INV_FAV,items:favs.sort(byName)});
+  INV_ORDER.map(s=>s.toLowerCase()).concat(own).forEach(k=>{const g=by.get(k);if(g)out.push({title:g.title,items:g.items.sort(eqThenName)});});
+  return out;
+}
 /* ---- using an item ----
    What drinking, reading or activating this item does. An explicit `use` block
    the player configured wins; failing that a consumable is READ from its own
@@ -3095,23 +3173,17 @@ function renderInventory(){
   if(caBtn)caBtn.style.display=character.inventory.length?"inline-flex":"none";
   if(!character.inventory.length){el.innerHTML=`<div class="empty">No items yet. Equip gear that grants effects (e.g. +1 AC) and your stats update automatically.</div>`+invTotalsHTML();return;}
   if(caLbl)caLbl.textContent=character.inventory.some(it=>!invCol().items[it.id])?"Collapse all":"Expand all";
-  const byName=(a,b)=>String(a.name||"").localeCompare(String(b.name||""));
-  const eqThenName=(a,b)=>((b.equipped?1:0)-(a.equipped?1:0))||byName(a,b);
-  const favs=character.inventory.filter(it=>it.fav).sort(byName);
-  const groups={};character.inventory.filter(it=>!it.fav).forEach(it=>{const s=invSection(it);(groups[s]=groups[s]||[]).push(it);});
   const sc=invCol().sections;
-  const renderSec=(title,items,sorter)=>{
-    if(!items.length)return;
+  const renderSec=(title,items)=>{
     const collapsed=!!sc[title];
     /* The caret is drawn pointing right, like the Features one: the shared .fcaret
        turns it down when open. A down-drawn path turned 90° more pointed LEFT (#51). */
     const head=document.createElement("div");head.className="inv-sec-head";head.dataset.invsec=title;
     head.innerHTML=`<svg class="fcaret ${collapsed?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>${esc(title)} <span class="cnt">(${items.length})</span>`;
     el.appendChild(head);
-    if(!collapsed)items.slice().sort(sorter).forEach(it=>{const w=document.createElement("div");w.innerHTML=invItemHTML(it);el.appendChild(w.firstElementChild);});
+    if(!collapsed)items.forEach(it=>{const w=document.createElement("div");w.innerHTML=invItemHTML(it);el.appendChild(w.firstElementChild);});
   };
-  renderSec("★ Favorites",favs,byName);
-  INV_ORDER.forEach(s=>renderSec(s,groups[s]||[],eqThenName));
+  invGroups(character.inventory).forEach(g=>renderSec(g.title,g.items));
   el.insertAdjacentHTML("beforeend",invTotalsHTML());
 }
 function statusTitle(name){
@@ -5012,7 +5084,8 @@ function renderGloss(){
    compared after trimming and collapsing spaces, so a pack's "Arrow " matches. */
 function ammoKindOf(v){return (typeof v==="string"?v:"").replace(/\s+/g," ").trim().toLowerCase();}
 const AMMO_KINDS=["arrow","bolt","firearm bullet","needle","sling bullet"];
-/* What the one-time pass knows without a rules pool. Every row agrees with
+/* What the one-time pass knows without a rules pool, and what fills in a pool
+   entry from a pack older than ammunition (ammoRepairDef()). Every row agrees with
    data/srd52/items.json and with the private repo's 2024 pack: rules-data.js
    checks the first and the private-data suite the second. A cost is written
    as the pack writes it; the Sling Bullet has none. */
@@ -5023,9 +5096,11 @@ const AMMO_PIECES={
   "needle":        {name:"Needle",         cost:"2 cp", weight:0.02},
   "sling bullet":  {name:"Sling Bullet",                weight:0.075}
 };
-/* single pieces by name, the 2014 names mapping to their 2024 kind */
+/* single pieces by name, the 2014 names mapping to their 2024 kind. Xanathar's
+   Unbreakable Arrow is here too (#96): it is ammunition only in packs made since,
+   and the only piece in the older packs the other names miss. */
 const AMMO_SINGLE_NAMES={"arrow":"arrow","bolt":"bolt","crossbow bolt":"bolt","firearm bullet":"firearm bullet",
-  "needle":"needle","blowgun needle":"needle","sling bullet":"sling bullet"};
+  "needle":"needle","blowgun needle":"needle","sling bullet":"sling bullet","unbreakable arrow":"arrow"};
 /* bundles by name: [kind, how many pieces one holds] */
 const AMMO_BUNDLES={"arrows (20)":["arrow",20],"bolts (20)":["bolt",20],"crossbow bolts (20)":["bolt",20],
   "firearm bullets (10)":["firearm bullet",10],"needles (50)":["needle",50],"blowgun needles (50)":["needle",50],
@@ -5038,6 +5113,33 @@ const AMMO_LAUNCHERS={"longbow":"arrow","shortbow":"arrow","light crossbow":"bol
    table entry and threw reading .name off it. Not Object.hasOwn: the app
    targets ES2020. */
 function ammoTable(T,k){return Object.prototype.hasOwnProperty.call(T,k)?T[k]:undefined;}
+/* Fill in the ammunition fields a pool entry lacks, from the tables above
+   (#96). The 2024 pack players have (published with 1.7.2) predates them, so its
+   launchers, pieces and bundles came with none, and every copy made from them —
+   the finder, starting equipment, Insert from pack — was no ammunition at all.
+   tidyRule() runs this on every item on every path that loads rules, so the
+   pool always reads as the current packs do. It only fills what is missing: a
+   pack's own value always wins, and anything not in the tables is left alone.
+   The weapon is copied, never edited in place, since the pack object behind it
+   may be shared. Returns whether it changed anything. */
+function ammoRepairDef(x){
+  if(!x||typeof x!=="object"||Array.isArray(x))return false;
+  const key=String(x.name||"").trim().toLowerCase();
+  let ch=false;
+  const b=ammoTable(AMMO_BUNDLES,key);
+  if(b){
+    if(!itemAmmo(x)){x.ammo={kind:b[0]};ch=true;}
+    if(!x.pack){x.pack={item:AMMO_PIECES[b[0]].name,qty:b[1]};ch=true;}
+    return ch;
+  }
+  const single=ammoTable(AMMO_SINGLE_NAMES,key);
+  if(single){if(!itemAmmo(x)){x.ammo={kind:single};ch=true;}return ch;}
+  const lk=ammoTable(AMMO_LAUNCHERS,key);
+  if(lk&&x.weapon&&typeof x.weapon==="object"&&!Array.isArray(x.weapon)&&!x.weapon.ammo){
+    x.weapon=Object.assign({},x.weapon,{ammo:lk});ch=true;
+  }
+  return ch;
+}
 
 /* ---- reading it, whatever a file put there ---- */
 function itemAmmo(it){
@@ -5088,11 +5190,20 @@ function unpackAmmo(x,pool){
 }
 
 /* ---- the one-time pass on sheets saved before ammunition ----
-   Runs once per character (ammoInit, never defaulted in blankChar(), as
-   wpnEquipInit isn't), from each item's own data: migrate() runs before a
-   rules pool can be relied on. Known bundles unpack into their single piece,
-   known pieces learn their kind, known 2024 launchers learn what they fire.
-   Anything else is left exactly as it is. */
+   Runs once per character per AMMO_PASS (ammoInit, never defaulted in
+   blankChar(), as wpnEquipInit isn't), from each item's own data: migrate()
+   runs before a rules pool can be relied on. Known bundles unpack into their
+   single piece, known pieces learn their kind, known 2024 launchers learn what
+   they fire. Anything else is left exactly as it is.
+   Pass 1 was for sheets saved before ammunition. Pass 2 (#96) runs it once
+   more: copies made from the 2024 pack players had arrived with no ammo
+   fields after pass 1 had run — and on every sheet made since, which skips the
+   pass — so a launcher fired nothing and "Bolts (20)" stayed a bundle. Every
+   step touches only an item that is not yet ammunition (a launcher, one with
+   no kind), so a second run over a migrated sheet changes nothing it already
+   did, and nothing the player marked by hand: a "Bolts (20)" they ticked as
+   ammunition and counted down to 17 stays 17 bolts, not 340. */
+const AMMO_PASS=2;
 
 /* Re-take the rules-update tool's baseline for each field the pass rewrote.
    `before` holds each field's value before the pass; `proj`, where the pass
@@ -5114,14 +5225,14 @@ function rebaseAmmo(it,before,proj){
   });
 }
 function migrateAmmo(c){
-  if(!c||c.ammoInit)return 0;
+  if(!c||num(c.ammoInit)>=AMMO_PASS)return 0;
   const inv=Array.isArray(c.inventory)?c.inventory:[], unpacked=new Set();
   let n=0;
   inv.forEach(it=>{
     if(!it||typeof it!=="object")return;
     const key=String(it.name||"").trim().toLowerCase();
     const b=ammoTable(AMMO_BUNDLES,key);
-    if(b){
+    if(b&&!itemAmmo(it)){
       /* "Arrows (20)" ×2 becomes Arrow ×40, each a twentieth of the bundle's
          own price and weight (spec §3.3), so a price the player paid survives */
       const kind=b[0], per=b[1], pc=AMMO_PIECES[kind];
@@ -5168,7 +5279,7 @@ function migrateAmmo(c){
     if(!h||h===it||!unpacked.has(it))return true;
     h.qty=itemQty(h)+itemQty(it);n++;return false;
   });
-  c.ammoInit=1;
+  c.ammoInit=AMMO_PASS;
   return n;
 }
 
@@ -7104,7 +7215,7 @@ function newCharacter(name,system){
   if(!leaveCharacterOk())return false;
   const c=blankChar();c.system=(system==="dnd")?"dnd":"humblewood";c.name=name||"";c.glossary=seedGlossary();
   c.appVersion=APP_VERSION;   // safe here: runtime, long after 30-version.js has run
-  c.ammoInit=1;   // a new sheet has nothing for the one-time ammo pass to migrate (never in blankChar — see wpnEquipInit)
+  c.ammoInit=AMMO_PASS;   // a new sheet has nothing for the one-time ammo pass to migrate (never in blankChar — see wpnEquipInit)
   character=c;activeId=c.id;
   /* as finishImport(): listed only once stored, and a refusal says so (#81) */
   let why="";try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){why=storageWhy(e);}
@@ -7409,13 +7520,37 @@ function collectFx(scope){
 }
 
 /* ---- feature editor ---- */
+/* ---- the group field (#98) ----
+   ONE control for every free-text label that files a record into a group: a
+   journal page's tag, a tracker's tag, a feature's source, an item's category.
+   A text box with the groups already in use offered as suggestions, so picking
+   an existing group is a tap and a new one is just typed — the journal's tag
+   box, which is what it was lifted from. `choices` are labels in any order and
+   spelling; groupChoices() dedupes them the way the groups themselves do (one
+   per tagKey(), first spelling kept) and sorts them A to Z. `attrs` is extra
+   markup for the input (the journal editor's data-jnlfield). */
+function groupChoices(labels){
+  const by=new Map();
+  (Array.isArray(labels)?labels:[]).forEach(v=>{const l=tagLabel(v),k=l.toLowerCase();if(l&&!by.has(k))by.set(k,l);});
+  return [...by.values()].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
+}
+function groupFieldHTML(o){
+  return `<div class="field"><label class="f" for="${esc(o.id)}">${esc(o.label)}</label>`+
+    `<input id="${esc(o.id)}"${o.attrs||""} value="${esc(tagLabel(o.value))}" list="${esc(o.list)}" placeholder="${esc(o.placeholder||"")}" autocomplete="off">`+
+    `<datalist id="${esc(o.list)}">${groupChoices(o.choices).map(t=>`<option value="${esc(t)}">`).join("")}</datalist></div>`;
+}
 function openFeatureForm(existing){
   const f=existing||{id:uid(),name:"",source:"",description:"",effects:[],enabled:true};
   const lib=(rules.features||[]);
+  /* The source is the group the feature files under (#98), so the box offers the
+     groups already on the list, and left empty it files where the feature came
+     from — which the placeholder names. */
+  const srcField=groupFieldHTML({id:"fSrc",list:"fSrcGroups",label:"Source",value:f.source,
+    choices:(character.features||[]).map(featGroupLabel),placeholder:`Automatic (${featOriginLabel(f)})`});
   openModal(existing?"Edit feature":"New feature",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="fLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
     <div class="field"><label class="f">Name</label><input id="fName" value="${esc(f.name)}"></div>
-    <div class="field"><label class="f">Source (optional)</label><input id="fSrc" value="${esc(f.source||"")}" placeholder="Ancestry, Class, Feat…"></div>
+    ${srcField}
     <div class="field"><label class="f">Description</label><textarea id="fDesc">${esc(f.description||"")}</textarea></div>
     <div class="field"><label class="f">Effects on stats</label><div id="fFx">${fxEditorRows(f.effects)}</div><button class="fx-add" id="fAddFx">+ Add effect</button></div>
     <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="fUses" type="number" min="0" value="${esc(num(f.uses&&usesMax(f))||"")}" placeholder="0"></div>
@@ -7431,7 +7566,7 @@ function openFeatureForm(existing){
   if(libSel)libSel.addEventListener("change",()=>{const x=lib[libSel.value];if(!x)return;document.getElementById("fName").value=x.name||"";document.getElementById("fSrc").value=x.source||"";document.getElementById("fDesc").value=x.description||"";fxWrap.innerHTML=fxEditorRows(x.effects);});
   document.getElementById("fCancel").addEventListener("click",closeModal);
   document.getElementById("fSave").addEventListener("click",()=>{
-    const rec={id:f.id,name:document.getElementById("fName").value.trim()||"Feature",source:document.getElementById("fSrc").value.trim(),description:document.getElementById("fDesc").value,effects:collectFx(fxWrap),enabled:f.enabled!==false};
+    const rec={id:f.id,name:document.getElementById("fName").value.trim()||"Feature",source:tagLabel(document.getElementById("fSrc").value),description:document.getElementById("fDesc").value,effects:collectFx(fxWrap),enabled:f.enabled!==false};
     const um=Math.max(0,num(document.getElementById("fUses").value));
     if(um>0)rec.uses={max:um,per:document.getElementById("fUsesPer").value,used:Math.min(num(f.uses&&f.uses.used),um)};
     const cAmt=Math.max(0,num(document.getElementById("fCost").value)), cRes=document.getElementById("fCostRes").value.trim();
@@ -7439,9 +7574,10 @@ function openFeatureForm(existing){
     /* rec is rebuilt from the form, so anything the form doesn't ask about has to
        be carried across explicitly or an edit silently discards it — the same
        trap the item editor already guards against. All three are invisible when
-       lost: the favourite star, the origin that files this under its class
-       rather than "Other", and the src stamp the rules-update tool needs to tell
-       "the pack changed" from "the player edited this". */
+       lost: the favourite star, the origin that makes removing its class take
+       it back (and files it when the source is empty), and the src stamp the
+       rules-update tool needs to tell "the pack changed" from "the player
+       edited this". */
     if(f.fav)rec.fav=f.fav;
     if(f.origin)rec.origin=f.origin;
     if(f.src)rec.src=f.src;
@@ -7472,13 +7608,20 @@ function openItemForm(existing){
   const kinds=ammoKindChoices(character,[wAmmo,am&&am.kind]);
   const bonusOpts=[...new Set([0,1,2,3,am?am.bonus:0])].sort((x,y)=>x-y);
   const bonusText=b=>b<0?String(b):"+"+b;
+  /* The category is the section the item files under (#98): the seven built-in
+     sections and any the player has made are offered, a new one is typed, and
+     left empty it files where its own data puts it — which the placeholder
+     names, worked out without the override so it never just repeats it. */
+  const catField=groupFieldHTML({id:"iCategory",list:"iCategoryGroups",label:"Category",value:it.sectionOverride,
+    choices:INV_ORDER.concat((character.inventory||[]).map(x=>invSectionName(x&&x.sectionOverride))),
+    placeholder:`Automatic (${invSection(Object.assign({},it,{sectionOverride:""}))})`});
   const abilOpts=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"],["finesse","Finesse (best of STR/DEX)"],["none","None"]];
   openModal(existing?"Edit item":"New item",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="iLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
     <div class="g2"><div class="field"><label class="f">Name</label><input id="iName" value="${esc(it.name)}"></div>
       <div class="field"><label class="f">Quantity</label><input id="iQty" type="number" min="1" value="${esc(num(it.qty)||1)}"></div></div>
     <div class="field"><label class="f">Description</label><textarea id="iDesc">${esc(it.description||"")}</textarea></div>
-    <div class="field"><label class="f">Category</label><select id="iCategory"><option value=""${!it.sectionOverride?" selected":""}>Automatic (${esc(invSection(it))})</option>${INV_ORDER.map(sname=>`<option value="${esc(sname)}"${it.sectionOverride===sname?" selected":""}>${sname}</option>`).join("")}</select></div>
+    ${catField}
     <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${esc(it.cost!=null&&it.cost!==""?fnum(it.cost):"")}" placeholder="0"></div>
       <div class="field"><label class="f">Weight each (lb, optional)</label><input id="iWeight" type="number" min="0" step="0.01" value="${esc(it.weight!=null&&it.weight!==""?fnum(it.weight):"")}" placeholder="0"></div></div>
     <div class="g2"><div class="field"><label class="f">Origin</label><select id="iOrigin">${originOptionsHTML(it.origin)}</select></div>
@@ -7605,7 +7748,7 @@ function openItemForm(existing){
     if(iOrigD){iOrigD.disabled=!iOrig.value;if(!iOrig.value)iOrigD.value="";iOrigD.placeholder=(d&&d.ph)||"place, who, etc.";}});
   document.getElementById("iSave").addEventListener("click",()=>{
     const rec={id:it.id,name:document.getElementById("iName").value.trim()||"Item",qty:num(document.getElementById("iQty").value)||1,description:document.getElementById("iDesc").value,effects:collectFx(fxWrap),equipped};
-    const so=document.getElementById("iCategory").value;if(so)rec.sectionOverride=so;
+    const so=invSectionName(document.getElementById("iCategory").value);if(so)rec.sectionOverride=so;
     if(it.category)rec.category=it.category;if(it.type)rec.type=it.type;
     const cv=document.getElementById("iCost").value;if(cv!==""&&fnum(cv)>=0)rec.cost=fnum(cv);
     const wv=document.getElementById("iWeight").value;if(wv!==""&&fnum(wv)>0)rec.weight=fnum(wv);
@@ -9334,9 +9477,7 @@ function journalEditorHTML(p,tags){
     `<button type="button" class="tbtn primary" data-jnldone="${esc(p.id)}">Done</button></div>`+
     `<div class="g2"><div class="field"><label class="f" for="jnlTitle">Title</label>`+
     `<input id="jnlTitle" data-jnlfield="title" value="${esc(jnlStr(p.title))}" placeholder="e.g. Session 3 — into the Mire" autocomplete="off"></div>`+
-    `<div class="field"><label class="f" for="jnlTag">Tag</label>`+
-    `<input id="jnlTag" data-jnlfield="tag" value="${esc(tagLabel(p.tag))}" list="jnlTags" placeholder="e.g. Sessions" autocomplete="off">`+
-    `<datalist id="jnlTags">${tags.map(t=>`<option value="${esc(t)}">`).join("")}</datalist></div></div>`+
+    groupFieldHTML({id:"jnlTag",list:"jnlTags",label:"Tag",value:p.tag,choices:tags,placeholder:"e.g. Sessions",attrs:' data-jnlfield="tag"'})+`</div>`+
     `<div class="field"><label class="f" for="jnlText">Page</label>`+
     `<textarea id="jnlText" data-jnlfield="text" class="n-edit" placeholder="What happened, who you met, what to remember…">${esc(jnlStr(p.text))}</textarea></div>`+
     `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button></div>`+
@@ -9622,8 +9763,7 @@ function trackerFormHTML(t,tags,isNew){
   return `<div class="field"><label class="f" for="tkName">Name</label><input id="tkName" value="${esc(jnlStr(t.name))}" placeholder="e.g. Goblins slain" autocomplete="off"></div>`+
     `<div class="g2"><div class="field"><label class="f" for="tkType">Type</label><select id="tkType">`+
       TRK_TYPES.map(([v,l])=>`<option value="${esc(v)}"${ty===v?" selected":""}>${esc(l)}</option>`).join("")+`</select></div>`+
-    `<div class="field"><label class="f" for="tkTag">Tag</label><input id="tkTag" value="${esc(tagLabel(t.tag))}" list="tkTags" placeholder="e.g. Kills" autocomplete="off">`+
-      `<datalist id="tkTags">${tags.map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div></div>`+
+    groupFieldHTML({id:"tkTag",list:"tkTags",label:"Tag",value:t.tag,choices:tags,placeholder:"e.g. Kills"})+`</div>`+
     `<div class="field" data-tkfor="counter"><label class="f" for="tkGoal">Goal</label><input id="tkGoal" type="number" min="0" inputmode="numeric" value="${esc(g||"")}" placeholder="None — count forever"></div>`+
     `<div class="field" data-tkfor="checklist"><label class="f" for="tkItems">Items, one per line</label><textarea id="tkItems" placeholder="Find the map&#10;Cross the Mire&#10;Meet Brindle">${esc(lines)}</textarea></div>`+
     `<div class="toggle" id="tkAutoRow"><div><div class="t-lbl">Close when complete</div><div class="t-sub">Move it to Completed once it's done. You get an Undo.</div></div>`+
@@ -10603,13 +10743,17 @@ function ruleName(x,kind){
 }
 /* Repair one pool entry in place, or say it cannot be kept. A keyword gets the
    glossary's aliases (glossRepair) and an id if it has none, since its chip
-   opens it by id; a numeric name becomes text. */
+   opens it by id; a numeric name becomes text; an item gets any ammunition
+   fields its pack predates (ammoRepairDef()). */
 function tidyRule(x,kind){
   if(kind==="keywords")glossRepair(x);
   const nm=ruleName(x,kind);if(!nm)return false;
   const f=kind==="keywords"?"term":"name";
   if(typeof x[f]!=="string")x[f]=nm;
   if(kind==="keywords"&&(typeof x.id!=="string"||!x.id))x.id=typeof x.id==="number"?String(x.id):uid();
+  /* a launcher, piece or bundle from a pack older than ammunition gets the
+     fields the current packs carry (#96) */
+  if(kind==="items")ammoRepairDef(x);
   return true;
 }
 /* Make the pool safe to render, whatever put it there (#71). mergeRules()
