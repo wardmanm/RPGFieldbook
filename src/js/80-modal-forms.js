@@ -23,8 +23,11 @@ function setDismissGuard(fn,then){_dismissGuard=fn;_dismissThen=then||null;}
    `icon` is optional emblem markup for the header (iconSVG()). It is assigned
    UNCONDITIONALLY, never guarded behind `if(icon)`: all but six of the ~50 call
    sites pass nothing, and they must CLEAR the slot, or a class emblem leaks into
-   the next spell modal that opens. */
-function openModal(title,html,icon){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
+   the next spell modal that opens.
+   `opts` is optional: {wide:true} widens the dialog (Settings, #107). Like the
+   emblem, the class is set or cleared on EVERY open, so a dialog opened from a
+   wide one comes up at the normal width. */
+function openModal(title,html,icon,opts){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";const box=modal.querySelector(".modal");if(box)box.classList.toggle("wide",!!(opts&&opts.wide));document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
 function closeModal(){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
 /* ---- focus ----
    A dialog takes the keyboard with it. On open, every other child of <body> goes

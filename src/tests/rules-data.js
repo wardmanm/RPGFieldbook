@@ -1654,6 +1654,12 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /getElementById\("swBackdrop"\)\.addEventListener\("click",e=>\{settings\.backdropClose=settings\.backdropClose!==true;[^\n]*saveSettings\(\);\}\)/.test(js) &&
      /const SETTINGS_KEYS=\[[^\]]*"backdropClose"/.test(js));
   ck('...and the flyout still closes on a tap outside', /if\(t\.closest\("#tocBack"\)\)return closeToc\(\);/.test(js));
+  /* #107: Settings opens wide. The class is set or cleared on EVERY open, as the
+     emblem slot is, so a dialog opened from Settings never inherits the width. */
+  ck('openModal sets or clears the wide class on every open',
+     /function openModal\(title,html,icon,opts\)\{[^\n]*\.classList\.toggle\("wide",!!\(opts&&opts\.wide\)\)/.test(js));
+  ck('...and the wide dialog has its width',
+     /\.modal\.wide\{width:min\(820px,100%\)\}/.test(fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8')));
   ck('...and dismissModal asks the guard before closing',
      /function dismissModal\(\)\{[\s\S]{0,160}_dismissGuard\(\)[\s\S]{0,80}confirm\(msg\)\)return;/.test(js));
   // the guard must not leak between modals: an ordinary form's Escape is cancel
@@ -2274,7 +2280,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('title scan: a comma inside a template does not end the title',
      firstArg(probe, 'openModal('.length) === '`${a}, ${esc(b)} — x`', firstArg(probe, 'openModal('.length));
   ck('openModal() writes the title as textContent (the contract the scan rests on)',
-     /function openModal\(title,html,icon\)\{[^}]*getElementById\("mTitle"\)\.textContent=title;/.test(
+     /function openModal\(title,html,icon,opts\)\{[^}]*getElementById\("mTitle"\)\.textContent=title;/.test(
        fs.readFileSync(path.join(ROOT, 'src/js/80-modal-forms.js'), 'utf8')));
 }
 
