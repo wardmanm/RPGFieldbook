@@ -72,6 +72,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 ## Roadmap
 
 - [Known issues](roadmap/known-issues.md) — limitations, deferred work, and what is verified NOT a gap
+- [1.9.0](roadmap/1.9.0.md) — the last feature release before 2.0: the fifteen items, their dependencies, the five waves, how a wave runs
 - [2.0](roadmap/2.0.md) — the refactor: goals, what it must carry, open questions
 
 ## Elsewhere (indexed in place, not moved)

@@ -6000,3 +6000,47 @@ Pages: [settings & updates](../wiki/features/settings-and-updates.md)
    both now name `1.8.1-1`. RELEASING also drops its 1.8.0 release-freeze note.
 
 Pages: [private data](../wiki/data/private-data.md)
+## The 1.9.0 integration plan (#100, 2026-10-16)
+
+1. Mike: plan 1.9.0, the last feature release before the 2.0 rewrite; no development yet. The
+   fifteen open issues on the v1.9.0 milestone were read with the wiki pages for every area they
+   touch, mapped to the fragments each is expected to edit and the character or settings state each
+   adds, and scheduled into five waves by disjoint files (WORKTREES §3): #88 alone; then
+   #95→#93→#94 (one worktree), #104, #97 and #99 (with #53) in parallel; then #103 with #101 and a
+   CORS spike for #102; then #91, #47, #52, #102; then #105, the capstone that needs #104, #91,
+   #47 and #95.
+2. Decisions, Mike's: #103 sits in the middle (not first: nothing else was ready to run beside
+   it; not last: #91 and #47 would be built against the old layout). Waves run as parallel
+   worktrees. #102 covers public packs only, installing the latest public data release from a
+   manifest source, with a spike first on whether GitHub release assets answer `file://` with
+   CORS; private packs stay file imports. Specs are written per wave, just in time, against merged
+   code.
+3. The rule the page states: 2.0 begins as a 1:1 port, so every field 1.9.0 adds is a save format
+   2.0 must load, and each spec puts its data model first.
+4. New page `wiki/roadmap/1.9.0.md`, indexed under Roadmap. Nothing in `src/` outside docs changed.
+
+Pages: [1.9.0](../wiki/roadmap/1.9.0.md), [2.0](../wiki/roadmap/2.0.md)
+## The 1.9.0 plan's open questions answered (#100, 2026-10-17)
+
+1. Mike went through the "what each spec has to settle" list on the 1.9.0 page, one item at a
+   time. Twenty decisions, now a table on the page ("Decisions made before the specs"), each with
+   what was rejected and why. The specs take them as given; one found wrong is revisited in the
+   spec, not quietly changed.
+2. The one that moves the plan: #104 grows from M to L. Hits, not misses, are the recoverable
+   shots in Hit/Miss mode; ammunition carries its own recoverability (`ammo.recover`: never for
+   firearm bullets, always for thrown weapons, absent for the character's rule), set in the item
+   editor and allowed in pack data; and a Thrown weapon fires itself from its own stack, which
+   closes the deferred "thrown weapons track no ammunition" item once built. The recovery rule is
+   per character under Sheet display, and End combat applies it with a toast and Undo in place of
+   the Yes/No prompt.
+3. The rest, in brief: #95 migrates checklists and tasks into tickable journal pages; #93/#94 are
+   tiles in a wrapping row with the total in the group header; #97 hides edit and delete only, per
+   section; #99 lists every loaded category and opens the existing info windows; #103 moves
+   Attacks to Inventory and the bio fields to Story, one layout, no setting; #101 is a "Level N!"
+   screen before the choice window; #91 saves combatants with the fight and seeds them from a
+   party roster on Story; #47 logs every item and coin change and warns on a shortfall without
+   blocking; #52 hides tabs from Sheet display, never Sheet or Combat, and a jump unhides; #102's
+   source is a per-release manifest JSON and install goes through the zip importer; #105 is one
+   screen whose loot opens the trade window, with flagged trackers and pages shown live.
+
+Pages: [1.9.0](../wiki/roadmap/1.9.0.md)
