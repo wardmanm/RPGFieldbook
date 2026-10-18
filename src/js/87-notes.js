@@ -88,10 +88,14 @@ const NOTE_SENTINELS=new RegExp("["+String.fromCharCode(0xE000)+"-"+String.fromC
    with words after it, is a checkbox. One regex serves the renderer and the
    helpers, so they cannot disagree. Design: specs/2026-10-17-journal-checklists-design.md §4 */
 const NOTE_CK=/^ {0,3}(?:[-*+] +)?\[( |x|X)?\] +(\S.*)$/;
-/* the checkbox lines of a text, in order: their line index, state and words */
+/* the checkbox lines of a text, in order: their line index, state and words.
+   Each line is matched as noteHTML() reads it, its sentinel characters
+   stripped, or a line that starts with one is drawn as a box and not counted,
+   and a tap flips the wrong line. The indices are the text's own lines:
+   stripping never removes a newline. */
 function noteCheckboxes(text){
   const lines=String(text==null?"":text).replace(/\r\n?/g,"\n").split("\n"),out=[];
-  lines.forEach((l,i)=>{const m=NOTE_CK.exec(l);if(m)out.push({line:i,checked:/x/i.test(m[1]||""),text:m[2]});});
+  lines.forEach((l,i)=>{const m=NOTE_CK.exec(l.replace(NOTE_SENTINELS,""));if(m)out.push({line:i,checked:/x/i.test(m[1]||""),text:m[2]});});
   return out;
 }
 /* the text with the n-th checkbox flipped — [ ] and [] to [x], [x] and [X] to
@@ -104,6 +108,9 @@ function toggleCheckbox(text,n){
   lines[ck.line]=lines[ck.line].replace(/\[( |x|X)?\]/,ck.checked?"[ ]":"[x]");
   return lines.join("\n");
 }
+/* A box's accessible name is its item, in plain words: the emphasis and code
+   marks dropped. Its state is aria-checked's, so the name never says it. */
+function noteCkLabel(t){return String(t).replace(/[*`]/g,"").replace(/\s+/g," ").trim();}
 function noteProgress(text){const l=noteCheckboxes(text);return {done:l.filter(x=>x.checked).length,total:l.length};}
 /* Indexed, not a single repeating mark like TBL_MARK: this pass NESTS — a code
    span can swallow an already-held glossary chip — so ordinal restore-in-order
@@ -163,7 +170,7 @@ function noteHTML(text){
     if(isCk(l)){
       const items=[];
       while(i<lines.length&&isCk(lines[i])){const m=isCk(lines[i]);items.push({on:/x/i.test(m[1]||""),t:m[2]});i++;}
-      out.push(`<ul class="n-ck">`+items.map(x=>`<li><button type="button" class="ck" role="checkbox" aria-checked="${x.on?"true":"false"}" data-ck="${esc(ckN++)}" aria-label="${x.on?"Checked":"Not checked"}"></button><span class="ck-t">${noteInline(x.t)}</span></li>`).join("")+`</ul>`);
+      out.push(`<ul class="n-ck">`+items.map(x=>`<li><button type="button" class="ck" role="checkbox" aria-checked="${x.on?"true":"false"}" data-ck="${esc(ckN++)}" aria-label="${esc(noteCkLabel(x.t))}"></button><span class="ck-t">${noteInline(x.t)}</span></li>`).join("")+`</ul>`);
       continue;
     }
     if(isUl(l)){

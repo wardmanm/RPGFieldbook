@@ -29,24 +29,26 @@ function trkParse(v){const s=jnlStr(v).trim();return /^\d+$/.test(s)?parseInt(s,
 /* ---- checklists and tasks became journal pages (#95) ----
    Every tracker whose RAW type is checklist or task leaves `trackers` and
    becomes journal text (spec §5). A checklist is one page: its name, its tag,
-   one "[ ]"/"[x]" line per item, and for a closed one every item ticked and a
-   final "Closed <date>". Tasks are one "Tasks" page per tag, a line each, a
-   closed one ticked with its date on the line. Idempotent by construction:
-   afterwards no tracker has either type, so there is no pass counter to keep.
-   Pure; migrate() (71-char-io.js) calls it after the list guards. Dates are
-   written as the locale's date, not fmtWhen()'s relative "3h ago", which would
-   freeze wrong on a page. */
+   one "[ ]"/"[x]" line per item, each item keeping its own tick, and for a
+   closed one a final "Closed <date>" (ticking every item would lose the real
+   ticks for good). Tasks are one "Tasks" page per tag, a line each, a closed
+   one ticked (a task's only state is done) with its date on the line.
+   Idempotent by construction: afterwards no tracker has either type, so there
+   is no pass counter to keep. No DOM; it mutates `c` and calls uid().
+   migrate() (71-char-io.js) calls it after the list guards. Dates are written
+   as the locale's date, not fmtWhen()'s relative "3h ago", which would freeze
+   wrong on a page; a date no calendar holds writes none. */
 function migrateTrackerPages(c,now){
   const all=Array.isArray(c.trackers)?c.trackers:[];
   const gone=all.filter(t=>t&&typeof t==="object"&&!Array.isArray(t)&&(t.type==="checklist"||t.type==="task"));
   if(!gone.length)return 0;
   if(!Array.isArray(c.journal))c.journal=[];
-  const day=ts=>jnlTime(ts)?new Date(jnlTime(ts)).toLocaleDateString():"";
+  const day=ts=>{const d=new Date(jnlTime(ts));return jnlTime(ts)&&!isNaN(d.getTime())?d.toLocaleDateString():"";};
   const mark=on=>on?"[x] ":"[ ] ";
   gone.filter(t=>t.type==="checklist").forEach(t=>{
     const closed=t.closed===true,when=day(t.closedAt);
     const items=Array.isArray(t.items)?t.items.filter(i=>i&&typeof i==="object"&&!Array.isArray(i)):[];
-    const lines=items.map(i=>mark(closed||i.done===true)+(jnlStr(i.text).trim()||"Untitled"));
+    const lines=items.map(i=>mark(i.done===true)+(jnlStr(i.text).trim()||"Untitled"));
     if(closed&&when){if(lines.length)lines.push("");lines.push("Closed "+when);}
     const at=jnlTime(t.at)||now;
     c.journal.push({id:uid(),title:trkName(t),tag:tagLabel(t.tag),text:lines.join("\n"),at,editedAt:jnlTime(t.closedAt)||at});
@@ -160,14 +162,14 @@ function trackerClosedHTML(t){
 }
 function trackersHTML(c,completedOpen){
   const s=trkSplit(c);
-  if(!s.open.length&&!s.closed.length)return `<div class="empty">No trackers yet. Tap + Tracker to count something — kills, pages read, the steps of a quest.</div>`;
+  if(!s.open.length&&!s.closed.length)return `<div class="empty">No trackers yet. Tap + Tracker to count something — kills, pages read, days on the road.</div>`;
   const caret=o=>`<svg class="fcaret ${o?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`;
   let h=s.open.length?s.open.map(g=>{
     const o=trkGroupOpen(c,g.key),on=trkTotalOn(c,g.key);
     return `<div class="fgroup"><div class="fghead" data-trkgroup="${esc(g.key)}" role="button" tabindex="0" aria-expanded="${o?"true":"false"}">`+
       caret(o)+`<span class="fgname">${esc(g.label)}</span><span class="cnt">(${g.items.length})</span>`+
       (on?`<span class="trk-total">· ${esc(trkGroupTotal(c,g.key))}</span>`:"")+
-      `<button type="button" class="icon trk-sum${on?" on":""}" data-trktotal="${esc(g.key)}" aria-pressed="${on?"true":"false"}" aria-label="${esc((on?"Hide":"Show")+" the total for "+g.label)}" title="Total">Σ</button></div>`+
+      `<button type="button" class="icon trk-sum${on?" on":""}" data-trktotal="${esc(g.key)}" aria-pressed="${on?"true":"false"}" aria-label="${esc("Total for "+g.label)}" title="Total">Σ</button></div>`+
       `<div class="trk-group"${o?"":` style="display:none"`}>${g.items.map(trackerRowHTML).join("")}</div></div>`;
   }).join(""):`<div class="empty">Nothing open — everything here is done.</div>`;
   if(s.closed.length)h+=`<div class="fgroup trk-done"><div class="fghead" data-trkcompleted role="button" tabindex="0" aria-expanded="${completedOpen?"true":"false"}">`+
@@ -212,14 +214,17 @@ function renderTrackers(){
 }
 function trkById(id){return trkList(character).find(t=>t.id===id)||null;}
 /* A typed count, written into its row where it stands: the box, the bar's value
-   and its width. The goal and the "of N" can't change from the row. false when
-   there is no row, for the caller to redraw instead. */
+   and its width, and the group header's total when it shows one (#93). The
+   goal and the "of N" can't change from the row. false when there is no row,
+   for the caller to redraw instead. */
 function trkPatchRow(t){
   const row=document.querySelector(attrSel("data-trk",t.id));if(!row)return false;
   const pr=trkProgress(t),g=trkInt(t.goal);
   const v=row.querySelector("[data-trkval]");if(v)v.value=String(pr.done);
   const bar=row.querySelector(".trk-bar");
   if(bar){bar.setAttribute("aria-valuenow",String(Math.min(pr.done,g)));const f=bar.querySelector("span");if(f)f.style.width=pr.pct+"%";}
+  const grp=row.closest&&row.closest(".fgroup"),tot=grp&&grp.querySelector(".trk-total");
+  if(tot)tot.textContent="· "+trkGroupTotal(character,tagKey(t.tag));
   return true;
 }
 /* One tap on a row. When it finishes a tracker set to close, the toast offers an

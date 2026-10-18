@@ -47,9 +47,10 @@ function wire(){
     if((m=t.closest("[data-jnldel]"))){jnlDelete(m.dataset.jnldel);return;}
     if(t.closest("[data-jnlstamp]"))return insertJournalStamp();
     if(t.closest("[data-jnlck]"))return insertJournalCheckbox();
-    /* a checkbox in a rendered page or section note (#95): only those two
-       surfaces answer it — a box drawn in an item description does nothing */
-    if((m=t.closest("[data-ck]"))){const n=num(m.dataset.ck);if(m.closest("#jnlBody"))jnlToggleCheckbox(n);else{const ne=m.closest("#notesList .item"),ed=ne&&ne.querySelector("[data-noteedit]");if(ed)noteToggleCheckbox(ed.dataset.noteedit,n);}return;}
+    /* a checkbox in a rendered page, a Story field or a section note (#95):
+       only those three surfaces answer it — a box drawn in an item description
+       does nothing */
+    if((m=t.closest("[data-ck]"))){const n=num(m.dataset.ck),rt=m.closest('[id^="rt-"]');if(m.closest("#jnlBody"))jnlToggleCheckbox(n);else if(rt)rtToggleCheckbox(rt.id.slice(3),n);else{const ne=m.closest("#notesList .item"),ed=ne&&ne.querySelector("[data-noteedit]");if(ed)noteToggleCheckbox(ed.dataset.noteedit,n);}return;}
     if((m=t.closest("[data-jnlgroup]"))){toggleJnlGroup(m.dataset.jnlgroup);return;}
     // trackers (87-trackers.js). The tap's own `t` is the target, so the tracker is `x`.
     if((m=t.closest("[data-trkdec]")))return trkAct(m.dataset.trkdec,(x,now)=>trkStep(x,-1,now),e.detail===0);

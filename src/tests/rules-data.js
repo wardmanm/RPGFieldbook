@@ -2166,6 +2166,8 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     const boot = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '90-boot.js'), 'utf8');
     ck('#95 a tap on a checkbox is wired, and finds its owner before acting',
        /t\.closest\("\[data-ck\]"\)[^\n]*jnlToggleCheckbox\(n\)[^\n]*noteToggleCheckbox\(/.test(boot), 'no [data-ck] handler in wire()');
+    ck('#95 ...and a Story field is its third owner, found by its #rt- host before the section note',
+       /t\.closest\("\[data-ck\]"\)[^\n]*closest\('\[id\^="rt-"\]'\)[^\n]*rtToggleCheckbox\([a-z]+\.id\.slice\(3\),n\)[^\n]*noteToggleCheckbox\(/.test(boot), 'no rt- branch in the [data-ck] handler');
     ck('#95 Insert checkbox is wired in the journal editor', /t\.closest\("\[data-jnlck\]"\)\)return insertJournalCheckbox\(\);/.test(boot));
     const notes = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '87-notes.js'), 'utf8');
     ck('#95 the section-note editor has Insert checkbox, wired to its own textarea',
