@@ -2174,6 +2174,9 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
        /t\.closest\("\[data-trktotal\]"\)[^\n]*toggleTrkTotal\(/.test(boot) &&
        /closest\("\[data-trkgroup\]"\)\)&&!t\.closest\("\[data-trktotal\]"\)/.test(boot) &&
        /closest\("\[data-trkgroup\]"\);if\(g&&!e\.target\.closest\("\[data-trktotal\]"\)\)/.test(boot));
+    const jcss = require('fs').readFileSync(require('path').join(__dirname, '..', 'css', '47-journal.css'), 'utf8');
+    ck('#94 open tracker groups are wrapping rows of tiles, and Completed stays a list',
+       /\.trk-group\{display:flex;flex-wrap:wrap/.test(jcss) && /\.trk\{flex:1 1 150px;max-width:280px/.test(jcss) && /\.trk-done \.trk-group\{display:block\}/.test(jcss));
   }
   ck('the finder search (items, spells, features) has its clear button', boxed(js, 'brSearch'));
   ck('the × shows only while there is text', /\.searchbox input:placeholder-shown ?\+ ?\.search-clear\{display:none\}/.test(css));
