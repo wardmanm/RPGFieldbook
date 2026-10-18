@@ -24,6 +24,9 @@
 .jnl-tag{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
 .jnl-tools{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 8px}
 /* ---- trackers ---- rows share the resource rows' −/+ buttons (.res-btn) */
+.trk-total{font-family:var(--head);font-size:12px;font-weight:700;color:var(--accent-2);font-variant-numeric:tabular-nums;margin-left:4px}
+.trk-sum{margin-left:auto;font-family:var(--head);font-weight:700;font-size:14px;color:var(--ink-soft);width:28px;height:28px}
+.trk-sum.on{color:var(--accent-2)}
 .trk{padding:8px 2px;border-bottom:1px dotted var(--hair)}
 .trk-group>.trk:last-child{border-bottom:0}
 .trk-top{display:flex;align-items:center;gap:8px}

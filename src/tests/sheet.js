@@ -55,7 +55,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'fmtWhen', 'noteWhen', 'jnlWhen',
   'TRK_TYPES', 'trkList', 'trkType', 'trkInt', 'trkName', 'showTrackers', 'trkParse', 'trkProgress',
   'trkApply', 'trkStep', 'trkSetValue', 'trkClose', 'trkReopen',
-  'trkSnapshot', 'trkRestore', 'trkFromForm', 'trkSplit', 'trkGroupOpen', 'migrateTrackerPages',
+  'trkSnapshot', 'trkRestore', 'trkFromForm', 'trkSplit', 'trkGroupOpen', 'trkTotalOn', 'trkGroupTotal', 'migrateTrackerPages',
   'trackerRowHTML', 'trackerClosedHTML', 'trackersHTML', 'trackerFormHTML', 'trkSummary', 'trkEditHTML',
   'ammoKindOf', 'itemAmmo', 'weaponAmmoKind', 'ammoStacks', 'loadedStack', 'ammoPlural', 'ammoOne',
   'unpackAmmo', 'rebaseAmmo', 'migrateAmmo', 'ammoTable', 'fpMap', 'fpHash',
@@ -2657,6 +2657,9 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
      typeof junk.trackers[0].id === 'string' && junk.trackers[1].id === 't' && junk.trackers[2].id !== 't');
   ck('a junk collapse map resets', same(junk.trackerCollapse, {}));
   ck('migrate() stays idempotent over trackers', JSON.stringify(X.migrate(JSON.parse(JSON.stringify(junk)))) === JSON.stringify(junk));
+  ck('#93 a new character has no totals switched on, and a junk map resets',
+     same(X.blankChar().trackerTotals, {}) && same(X.migrate({abilities: {}, trackerTotals: 'yes'}).trackerTotals, {}) &&
+     same(X.migrate({abilities: {}, trackerTotals: {kills: true}}).trackerTotals, {kills: true}));
 
   // reading junk
   ck('an unknown type is a counter', X.trkType({type: 'wheel'}) === 'counter' && X.trkType(null) === 'counter');
@@ -2714,6 +2717,11 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('...each group in the order they were made', same(s.open[0].items.map(t => t.id), ['k1', 'k2']));
   ck('closed trackers are one list, most recently closed first', same(s.closed.map(t => t.id), ['x2', 'x1']));
   ck('a tracker group nobody shut is open', X.trkGroupOpen({}, 'kills') && !X.trkGroupOpen({trackerCollapse: {kills: true}}, 'kills'));
+
+  // #93 totals
+  const T = {trackers: [{id: 'a', tag: 'Kills', value: 10}, {id: 'b', tag: 'kills', value: 5, closed: true, closedAt: 1}, {id: 'c', tag: 'Books', value: 99}, {id: 'd', tag: 'Kills', value: 'x'}], trackerTotals: {kills: true}};
+  ck('#93 a total counts every counter with the tag, open or closed, junk as 0', X.trkGroupTotal(T, 'kills') === 15 && X.trkGroupTotal(T, 'books') === 99 && X.trkGroupTotal(T, '') === 0);
+  ck('#93 the switch is read from trackerTotals, only a real true', X.trkTotalOn(T, 'kills') && !X.trkTotalOn(T, 'books') && !X.trkTotalOn({trackerTotals: {kills: 'yes'}}, 'kills') && !X.trkTotalOn({trackerTotals: []}, 'kills'));
 }
 
 /* ---- checklists and tasks become journal pages on load (#95, spec §5) ---- */
@@ -2778,6 +2786,12 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('open trackers are grouped by tag, A to Z',
      h.indexOf('>Books<') < h.indexOf('>Kills<'));
   ck('a shut group hides its trackers, still rendered', /data-trkgroup="books"[^>]*aria-expanded="false"/.test(h) && h.includes('data-trkdec="b1"'));
+
+  const ht = X.trackersHTML({trackers: [kills, {id: 'k2', name: 'Orcs', tag: 'kills', value: 30, closed: true, closedAt: 1}], trackerTotals: {kills: true}}, false);
+  ck('#93 a group with its total on reads it in the header, after the count',
+     /<span class="cnt">\(1\)<\/span><span class="trk-total">· 42<\/span><button type="button" class="icon trk-sum on" data-trktotal="kills" aria-pressed="true"/.test(ht), ht);
+  ck('#93 ...off, the header has the switch and no total', /data-trktotal="kills" aria-pressed="false"/.test(h) && !h.includes('trk-total'));
+  ck('#93 the switch is named for a screen reader', ht.includes('aria-label="Hide the total for Kills"') && h.includes('aria-label="Show the total for Kills"'));
   ck('closed trackers are in Completed, shut by default',
      /data-trkcompleted role="button" tabindex="0" aria-expanded="false"/.test(h) &&
      h.includes('<span class="fgname">Completed</span><span class="cnt">(1)</span>'));
@@ -2860,6 +2874,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('a keyboard Enter that completes a tracker still closes it', c.trackers[0].closed === true && c.trackers[0].value === 300);
   ctx.reopenTracker('b', true);
   ck('a keyboard Reopen still reopens, its count kept', c.trackers[0].closed === false && c.trackers[0].value === 300);
+  ck('#93 toggling a total writes the map and back', (() => { ctx.toggleTrkTotal('kills'); const on = X.character.trackerTotals.kills === true; ctx.toggleTrkTotal('kills'); return on && !('kills' in X.character.trackerTotals); })());
 }
 
 /* ---- a typed count commits in place (#41) ----

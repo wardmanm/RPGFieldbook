@@ -2170,6 +2170,10 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     const notes = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '87-notes.js'), 'utf8');
     ck('#95 the section-note editor has Insert checkbox, wired to its own textarea',
        /id="noteCk">Insert checkbox<\/button>/.test(notes) && /getElementById\("noteCk"\)[^\n]*insertCheckboxInto\("noteText"\)/.test(notes));
+    ck('#93 the Σ button toggles the total, and the header fold ignores it, by click and by key',
+       /t\.closest\("\[data-trktotal\]"\)[^\n]*toggleTrkTotal\(/.test(boot) &&
+       /closest\("\[data-trkgroup\]"\)\)&&!t\.closest\("\[data-trktotal\]"\)/.test(boot) &&
+       /closest\("\[data-trkgroup\]"\);if\(g&&!e\.target\.closest\("\[data-trktotal\]"\)\)/.test(boot));
   }
   ck('the finder search (items, spells, features) has its clear button', boxed(js, 'brSearch'));
   ck('the × shows only while there is text', /\.searchbox input:placeholder-shown ?\+ ?\.search-clear\{display:none\}/.test(css));

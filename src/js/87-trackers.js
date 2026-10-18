@@ -120,6 +120,12 @@ function trkSplit(c){
   };
 }
 function trkGroupOpen(c,key){const m=c&&c.trackerCollapse;return !(m&&typeof m==="object"&&!Array.isArray(m)&&m[key]);}
+/* ---- a group's total (#93) ----
+   Every counter with the tag, open OR closed, so completing one never drops
+   the total. Shown only where trackerTotals[key] is true (absent is off, the
+   collapse-map convention); the key is tagKey(), "" for Untagged. */
+function trkTotalOn(c,key){const m=c&&c.trackerTotals;return !!(m&&typeof m==="object"&&!Array.isArray(m)&&m[key]===true);}
+function trkGroupTotal(c,key){return trkList(c).filter(t=>tagKey(t.tag)===key).reduce((s,t)=>s+trkInt(t.value),0);}
 /* The ids of the open trackers drawn after `id`, in the card's order: the rest
    of its group, then the groups below. A shut group's rows can't take focus, so
    they are left out. Where Tab from a closing tap's Undo goes (trkAct()). */
@@ -157,9 +163,11 @@ function trackersHTML(c,completedOpen){
   if(!s.open.length&&!s.closed.length)return `<div class="empty">No trackers yet. Tap + Tracker to count something — kills, pages read, the steps of a quest.</div>`;
   const caret=o=>`<svg class="fcaret ${o?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`;
   let h=s.open.length?s.open.map(g=>{
-    const o=trkGroupOpen(c,g.key);
+    const o=trkGroupOpen(c,g.key),on=trkTotalOn(c,g.key);
     return `<div class="fgroup"><div class="fghead" data-trkgroup="${esc(g.key)}" role="button" tabindex="0" aria-expanded="${o?"true":"false"}">`+
-      caret(o)+`<span class="fgname">${esc(g.label)}</span><span class="cnt">(${g.items.length})</span></div>`+
+      caret(o)+`<span class="fgname">${esc(g.label)}</span><span class="cnt">(${g.items.length})</span>`+
+      (on?`<span class="trk-total">· ${esc(trkGroupTotal(c,g.key))}</span>`:"")+
+      `<button type="button" class="icon trk-sum${on?" on":""}" data-trktotal="${esc(g.key)}" aria-pressed="${on?"true":"false"}" aria-label="${esc((on?"Hide":"Show")+" the total for "+g.label)}" title="Total">Σ</button></div>`+
       `<div class="trk-group"${o?"":` style="display:none"`}>${g.items.map(trackerRowHTML).join("")}</div></div>`;
   }).join(""):`<div class="empty">Nothing open — everything here is done.</div>`;
   if(s.closed.length)h+=`<div class="fgroup trk-done"><div class="fghead" data-trkcompleted role="button" tabindex="0" aria-expanded="${completedOpen?"true":"false"}">`+
@@ -276,6 +284,11 @@ function commitTrackerValue(inp,viaKey){
 function toggleTrkGroup(key){
   if(!character.trackerCollapse||typeof character.trackerCollapse!=="object"||Array.isArray(character.trackerCollapse))character.trackerCollapse={};
   character.trackerCollapse[key]=!character.trackerCollapse[key];
+  renderTrackers();scheduleSave();
+}
+function toggleTrkTotal(key){
+  if(!character.trackerTotals||typeof character.trackerTotals!=="object"||Array.isArray(character.trackerTotals))character.trackerTotals={};
+  if(character.trackerTotals[key]===true)delete character.trackerTotals[key];else character.trackerTotals[key]=true;
   renderTrackers();scheduleSave();
 }
 function toggleTrkCompleted(){trkCompletedOpen=!trkCompletedOpen;renderTrackers();}

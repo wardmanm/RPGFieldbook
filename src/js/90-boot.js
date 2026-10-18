@@ -56,7 +56,8 @@ function wire(){
     if((m=t.closest("[data-trkinc]")))return trkAct(m.dataset.trkinc,(x,now)=>trkStep(x,1,now),e.detail===0);
     if((m=t.closest("[data-trkedit]"))){const x=trkById(m.dataset.trkedit);if(x)openTrackerForm(x);return;}
     if((m=t.closest("[data-trkreopen]")))return reopenTracker(m.dataset.trkreopen,e.detail===0);
-    if((m=t.closest("[data-trkgroup]"))){toggleTrkGroup(m.dataset.trkgroup);return;}
+    if((m=t.closest("[data-trktotal]"))){toggleTrkTotal(m.dataset.trktotal);return;}
+    if((m=t.closest("[data-trkgroup]"))&&!t.closest("[data-trktotal]")){toggleTrkGroup(m.dataset.trkgroup);return;}
     if(t.closest("[data-trkcompleted]"))return toggleTrkCompleted();
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
@@ -204,7 +205,8 @@ function wire(){
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
     {const g=e.target.closest&&e.target.closest("[data-jnlgroup]");if(g){e.preventDefault();toggleJnlGroup(g.dataset.jnlgroup);return;}}
-    {const g=e.target.closest&&e.target.closest("[data-trkgroup]");if(g){e.preventDefault();toggleTrkGroup(g.dataset.trkgroup);return;}}
+    /* the Σ inside the header is a real button: Enter and Space click it natively, so the header must not also fold */
+    {const g=e.target.closest&&e.target.closest("[data-trkgroup]");if(g&&!e.target.closest("[data-trktotal]")){e.preventDefault();toggleTrkGroup(g.dataset.trkgroup);return;}}
     {const g=e.target.closest&&e.target.closest("[data-trkcompleted]");if(g){e.preventDefault();toggleTrkCompleted();return;}}
   });
   /* The combat tab's header sticks under the tab bar, whose height changes with
