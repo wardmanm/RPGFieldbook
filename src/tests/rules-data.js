@@ -2162,6 +2162,12 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the glossary filter has its clear button', boxed(html, 'glossSearch'));
   ck('the tables filter has its clear button', boxed(html, 'tablesSearch'));
   ck('the journal search has its clear button', boxed(html, 'jnlSearch'));
+  {
+    const boot = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '90-boot.js'), 'utf8');
+    ck('#95 a tap on a checkbox is wired, and finds its owner before acting',
+       /t\.closest\("\[data-ck\]"\)[^\n]*jnlToggleCheckbox\(n\)[^\n]*noteToggleCheckbox\(/.test(boot), 'no [data-ck] handler in wire()');
+    ck('#95 Insert checkbox is wired in the journal editor', /t\.closest\("\[data-jnlck\]"\)\)return insertJournalCheckbox\(\);/.test(boot));
+  }
   ck('the finder search (items, spells, features) has its clear button', boxed(js, 'brSearch'));
   ck('the × shows only while there is text', /\.searchbox input:placeholder-shown ?\+ ?\.search-clear\{display:none\}/.test(css));
   ck('the × empties the box and re-runs its filter the way typing does',

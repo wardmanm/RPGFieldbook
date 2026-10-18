@@ -51,7 +51,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'RULE_CATS', 'reindexRules', 'recomputeDups', 'repairIds',
   'jnlStr', 'jnlTime', 'tagLabel', 'tagKey', 'groupByTag', 'attrSel', 'jnlPages', 'jnlTitle', 'jnlSort',
   'jnlQuery', 'jnlFind', 'jnlMatch', 'jnlSnippet', 'jnlSavePage', 'jnlDeletePage', 'jnlTagList',
-  'jnlGroupOpen', 'jnlStampText', 'insertLine', 'journalListHTML', 'journalPageHTML', 'journalEditorHTML', 'jnlEntryHTML', 'NOTE_FMT_HINT',
+  'jnlGroupOpen', 'jnlStampText', 'insertLine', 'insertMarker', 'journalListHTML', 'journalPageHTML', 'journalEditorHTML', 'jnlEntryHTML', 'NOTE_FMT_HINT',
   'fmtWhen', 'noteWhen', 'jnlWhen',
   'TRK_TYPES', 'trkList', 'trkType', 'trkInt', 'trkItems', 'trkName', 'showTrackers', 'trkParse', 'trkProgress',
   'trkApply', 'trkStep', 'trkSetValue', 'trkToggleItem', 'trkToggleTask', 'trkClose', 'trkReopen',
@@ -2614,6 +2614,25 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   const all = X.journalListHTML({journal: [evil]}, '') + X.journalListHTML({journal: [evil]}, '<i>') +
     X.journalPageHTML(evil) + X.journalEditorHTML(evil, ['"><i>']);
   ck('nothing a file puts in a page reaches the markup raw', !/<i>/.test(all) && !all.includes('x"y'), all.slice(0, 300));
+
+  // #95: progress on the row and the page, the editor's button
+  const cl = {journal: [{id: 'q1', title: 'The lost map', tag: 'Quests', text: '[x] Find the map\n[ ] Cross the Mire\n[ ] Meet Brindle', at: 1, editedAt: 1},
+                        {id: 'q2', title: 'No boxes', tag: 'Quests', text: 'prose', at: 2, editedAt: 2}], journalCollapse: {}};
+  const lh = X.journalListHTML(cl, '');
+  ck('#95 a page with checkboxes shows done/total on its row', /data-jnlopen="q1"><span class="jnl-title">The lost map<\/span><span class="jnl-prog">1\/3<\/span>/.test(lh), lh);
+  ck('#95 ...and one without shows nothing new', (lh.match(/jnl-prog/g) || []).length === 1, lh);
+  const ph = X.journalPageHTML(cl.journal[0]);
+  ck('#95 the page view shows the count in its meta line and real boxes in its body',
+     ph.includes('<span class="jnl-prog">1/3</span>') && /aria-checked="true" data-ck="0"/.test(ph) && /aria-checked="false" data-ck="2"/.test(ph), ph);
+  ck('#95 the editor has Insert checkbox beside Insert timestamp',
+     /data-jnlstamp>Insert timestamp<\/button><button type="button" class="tbtn" data-jnlck>Insert checkbox<\/button>/.test(X.journalEditorHTML({id: 'e', title: '', tag: '', text: ''}, [])));
+  ck('#95 the formatting key mentions it', /\[ \]<\/b> checkbox/.test(X.NOTE_FMT_HINT), X.NOTE_FMT_HINT);
+  // insertMarker: the caret lands AFTER the marker, on its line
+  const M = '[ ] ';
+  ck('#95 into an empty page: the marker, caret after it', JSON.stringify(X.insertMarker('', 0, 0, M)) === JSON.stringify({text: '[ ] ', caret: 4}));
+  ck('#95 at the end of a line: on a new line', JSON.stringify(X.insertMarker('abc', 3, 3, M)) === JSON.stringify({text: 'abc\n[ ] ', caret: 8}));
+  ck('#95 at the start of a line: no extra break', JSON.stringify(X.insertMarker('abc\ndef', 4, 4, M)) === JSON.stringify({text: 'abc\n[ ] def', caret: 8}));
+  ck('#95 a selection is replaced', JSON.stringify(X.insertMarker('abcd', 1, 3, M)) === JSON.stringify({text: 'a\n[ ] d', caret: 6}));
 }
 
 /* ---- trackers: the model, progress, and the close rule ----
@@ -2777,6 +2796,23 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
     X.trackerFormHTML(evil, ['"><i>'], false);
   ck('nothing a file puts in a tracker reaches the markup raw',
      !/<i>/.test(all) && !all.includes('x"y') && !all.includes('a"b'), all.slice(0, 300));
+}
+
+/* ---- a tick in the page view writes the line back (#95) ---- */
+{
+  const c = X.blankChar(); X.character = c;
+  c.journal = [{id: 'q1', title: 'Map', tag: '', text: '[ ] a\n[x] b', at: 1, editedAt: 1}];
+  ctx.renderJournal();
+  ctx.jnlOpen('q1');
+  ck('#95 a tap flips the line, stamps editedAt and says it did',
+     ctx.jnlToggleCheckbox(0) === true && c.journal[0].text === '[x] a\n[x] b' && c.journal[0].editedAt > 1, c.journal[0]);
+  ck('#95 ...and back', ctx.jnlToggleCheckbox(0) === true && c.journal[0].text === '[ ] a\n[x] b');
+  ck('#95 an ordinal that is not there changes nothing', ctx.jnlToggleCheckbox(7) === false && c.journal[0].text === '[ ] a\n[x] b');
+  ctx.jnlEdit('q1');
+  ck('#95 while the editor is open a tick is refused', ctx.jnlToggleCheckbox(0) === false && c.journal[0].text === '[ ] a\n[x] b');
+  ctx.jnlDone();
+  c.journal = [];
+  ck('#95 a tick on a page deleted meanwhile changes nothing', ctx.jnlToggleCheckbox(0) === false);
 }
 
 /* ---- trackers through their DOM layer: a tap, the close, the Undo ---- */

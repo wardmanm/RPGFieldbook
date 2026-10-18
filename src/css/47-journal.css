@@ -9,6 +9,7 @@
 .jnl-entry>*{position:relative}
 .jnl-title{font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.02em;flex:1;min-width:0;overflow-wrap:anywhere}
 .jnl-when{font-family:var(--head);font-size:11px;color:var(--ink-soft);flex:none}
+.jnl-prog{font-family:var(--head);font-size:12px;font-weight:700;color:var(--accent-2);font-variant-numeric:tabular-nums;flex:none}
 .jnl-snip{flex-basis:100%;font-size:14px;color:var(--ink-soft);overflow-wrap:anywhere}
 .jnl-snip mark{background:color-mix(in srgb,var(--accent) 38%,transparent);color:var(--ink);border-radius:3px;padding:0 1px}
 /* while searching the headers are plain text: every group is held open */

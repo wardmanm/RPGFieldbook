@@ -323,7 +323,7 @@ function jumpToNote(k){
 
 /* The one-line formatting key, shared by every editor of this grammar: the
    section-note editor and the journal page editor. */
-const NOTE_FMT_HINT=`<p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>`;
+const NOTE_FMT_HINT=`<p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>[ ]</b> checkbox, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>`;
 
 /* ---- editor ---- */
 function openNoteEditor(k){
