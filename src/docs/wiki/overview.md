@@ -147,7 +147,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `87-notes.js` | `NOTE_SECTIONS`, section notes, `noteHTML()`, the Section Notes card | [Story & notes](features/story-and-notes.md), [Rich text](architecture/rich-text.md), [Sections & layout](ui/sections-and-layout.md) |
 | `87-combat.js` | the combat tab and tracker | [Combat view](features/combat-view.md) |
 | `87-journal.js` | the Journal card: pages, tags, search, the page rule, the editor | [Journal](features/journal.md) |
-| `87-trackers.js` | the Trackers card: counters, checklists, tasks, the close rule | [Journal](features/journal.md) |
+| `87-trackers.js` | the Trackers card: counters, grouped-tag tiles, totals, the close rule, `migrateTrackerPages()` | [Journal](features/journal.md) |
 | `88-settings.js` | the Settings modal, rules status, `dataStatus()`, pack credits (`rulesCreditsHTML()`) | [Settings & updates](features/settings-and-updates.md), [Data archive](architecture/data-archive.md) |
 | `89-zip.js` | the zip reader: `readDataArchive()`, `inflateRaw()`, `zipEntries()` — pure | [Data archive](architecture/data-archive.md) |
 | `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, fetch and import of packs and zips (`importRulesPayloads()`, `importPack()`) | [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
@@ -212,3 +212,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-08 — `srd-corrections.json` ships beside `convert.py` in the app zip. → ledger L5269, #84
 - 2026-10-09 — Bundling moves from the Node bundler to `fbdata.py bundle`; the code map drops its entry. → ledger L5342, #85
 - 2026-10-09 — The private split: the pack table says where each pack lives; the layout gains `_private-data`, the kit zip and `tools/data-kit/`, and loses the Humblewood extractor; the glossary gains private data and the data kit. → ledger L5426, #85
+- 2026-10-17 — The `87-trackers.js` code-map row updated: counters only, tiles and totals, not checklists and tasks. → ledger L6047, #95, #93, #94

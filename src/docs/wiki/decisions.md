@@ -291,11 +291,20 @@ When a page gains a Decisions row, add its line here under that page.
 - **Page order** — Newest created first
 - **Where a blank page goes** — Never saved: a page exists only while it has a title or text
 - **Editing** — Inline, built once
-- **Tracker types** — Counter (optional goal), checklist, task
+- **Existing checklist and task trackers (#95)** — Migrated into journal pages by `migrate()`; Trackers becomes counters only
+- **A checkbox in a rendered page (#95)** — Tickable in the read view: a tap flips it and rewrites that line
+- **Closed checklists and tasks (#95)** — Migrated too, every item ticked, with the closed date kept
+- **Progress in the page list (#95)** — A "3/5" count on the row of a page that has checkboxes
+- **Section notes and checkboxes (#95)** — Same grammar, tickable in both
+- **The checkbox editor (#95)** — An Insert checkbox button, `[]` accepted as unchecked
+- **Tasks on migration (#95)** — One page per tag, titled "Tasks", one line per task
+- **Tracker types** — Counter only since #95; checklist and task migrated to journal pages
 - **Closing at 100%** — Close when complete, on by default, only on the step to complete, with an Undo of the whole tap
 - **Hiding the card** — Per character, in Settings → Sheet display
 - **Trackers in the combat view** — A registered section, so it also takes a section note
 - **Tracker text** — Plain, `esc()` only
+- **Tracker layout (#93, #94)** — Compact tiles in a wrapping row per tag group; Completed stays a list of rows
+- **What a group total counts (#93)** — Every counter with that tag, open or closed; a Σ button on the group header, stored in `trackerTotals[tagKey]`
 
 ### [Rules & tables](features/rules-and-tables.md)
 
