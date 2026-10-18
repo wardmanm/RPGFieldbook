@@ -83,6 +83,28 @@ function noteWhen(n){
 const NOTE_H0=String.fromCharCode(0xE001), NOTE_H1=String.fromCharCode(0xE002);  /* indexed hold delimiters */
 const NOTE_LB=String.fromCharCode(0xE003);  /* one soft line break inside a block */
 const NOTE_SENTINELS=new RegExp("["+String.fromCharCode(0xE000)+"-"+String.fromCharCode(0xE00F)+"]","g");
+/* ---- checklists (#95) ----
+   A line that starts `[ ]`, `[]`, `[x]` or `[X]`, a bullet before it allowed,
+   with words after it, is a checkbox. One regex serves the renderer and the
+   helpers, so they cannot disagree. Design: specs/2026-10-17-journal-checklists-design.md §4 */
+const NOTE_CK=/^ {0,3}(?:[-*+] +)?\[( |x|X)?\] +(\S.*)$/;
+/* the checkbox lines of a text, in order: their line index, state and words */
+function noteCheckboxes(text){
+  const lines=String(text==null?"":text).replace(/\r\n?/g,"\n").split("\n"),out=[];
+  lines.forEach((l,i)=>{const m=NOTE_CK.exec(l);if(m)out.push({line:i,checked:/x/i.test(m[1]||""),text:m[2]});});
+  return out;
+}
+/* the text with the n-th checkbox flipped — [ ] and [] to [x], [x] and [X] to
+   [ ] — and every other byte as it was (CRLF normalised to LF, as noteHTML()
+   reads it). Out of range: the text as given. */
+function toggleCheckbox(text,n){
+  const given=String(text==null?"":text),src=given.replace(/\r\n?/g,"\n"),lines=src.split("\n");
+  const ck=noteCheckboxes(src)[n];
+  if(!ck)return given;
+  lines[ck.line]=lines[ck.line].replace(/\[( |x|X)?\]/,ck.checked?"[ ]":"[x]");
+  return lines.join("\n");
+}
+function noteProgress(text){const l=noteCheckboxes(text);return {done:l.filter(x=>x.checked).length,total:l.length};}
 /* Indexed, not a single repeating mark like TBL_MARK: this pass NESTS — a code
    span can swallow an already-held glossary chip — so ordinal restore-in-order
    doesn't hold. */
@@ -122,19 +144,31 @@ function noteHTML(text){
      ___ , and the spaced forms. Checked BEFORE bullets so "* * *" is a rule. */
   const isHr=l=>/^ {0,3}([-*_])(?: *\1){2,} *$/.test(l);
   const isH=l=>/^ {0,3}(#{1,6}) +(.*)$/.exec(l);
+  const isCk=l=>NOTE_CK.exec(l);
   const isUl=l=>/^ {0,3}[-*+] +/.test(l);
   const isOl=l=>/^ {0,3}(\d{1,9})[.)] +/.exec(l);
   const isQ=l=>/^ {0,3}> ?/.test(l);
-  const starts=l=>isHr(l)||isH(l)||isUl(l)||isOl(l)||isQ(l);
+  const starts=l=>isHr(l)||isH(l)||isCk(l)||isUl(l)||isOl(l)||isQ(l);
+  let ckN=0;   /* the ordinal of each checkbox in the WHOLE text: the write-back key */
   while(i<lines.length){
     const l=lines[i];
     if(!l.trim()){i++;continue;}
     if(isHr(l)){out.push(`<hr class="n-hr">`);i++;continue;}   /* before bullets: "* * *" is a rule */
     const h=isH(l);
     if(h){const lv=h[1].length;out.push(`<div class="n-h n-h${esc(lv)}">${noteInline(h[2])}</div>`);i++;continue;}
+    /* BEFORE bullets: "- [ ] x" begins like one. Each item is rendered on its
+       own, not joined with NOTE_LB and split back: an emphasis opened on one
+       item and closed on the next would otherwise carry a <strong> across two
+       <li>s. Checklists are short, so the extra highlight() calls are cheap. */
+    if(isCk(l)){
+      const items=[];
+      while(i<lines.length&&isCk(lines[i])){const m=isCk(lines[i]);items.push({on:/x/i.test(m[1]||""),t:m[2]});i++;}
+      out.push(`<ul class="n-ck">`+items.map(x=>`<li><button type="button" class="ck" role="checkbox" aria-checked="${x.on?"true":"false"}" data-ck="${esc(ckN++)}" aria-label="${x.on?"Checked":"Not checked"}"></button><span class="ck-t">${noteInline(x.t)}</span></li>`).join("")+`</ul>`);
+      continue;
+    }
     if(isUl(l)){
       const items=[];
-      while(i<lines.length&&isUl(lines[i])&&!isHr(lines[i])){items.push(lines[i].replace(/^ {0,3}[-*+] +/,""));i++;}
+      while(i<lines.length&&isUl(lines[i])&&!isHr(lines[i])&&!isCk(lines[i])){items.push(lines[i].replace(/^ {0,3}[-*+] +/,""));i++;}
       out.push(`<ul class="n-ul">`+items.map(t=>`<li>${noteInline(t)}</li>`).join("")+`</ul>`);continue;
     }
     const o=isOl(l);
@@ -202,6 +236,7 @@ function notePreview(text,max){
   let cut=false;
   if(src.replace(/\s+/g," ").length>n){src=src.slice(0,n).replace(/\s+\S*$/,"");cut=true;}
   const lines=src.split("\n").map(l=>l
+    .replace(/^ {0,3}(?:[-*+] +)?\[( |x|X)?\] +(?=\S)/,(m,x)=>(/x/i.test(x||"")?"☑ ":"☐ "))  /* checkbox -> ☐ / ☑ */
     .replace(/^ {0,3}#{1,6} +/,"")                    /* heading: keep the words */
     .replace(/^ {0,3}> ?/,"")                         /* quote */
     .replace(/^ {0,3}([-*+]) +/,"\u2022 ")            /* bullet -> • */

@@ -31,7 +31,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'iconSVG', 'iconSlug', 'GAME_ICONS', 'ICON_MAP',
   'attackDamageStr', 'extraDamageList', 'damagePartStr', 'carryAttackLinks',
   'spellHasDamage', 'spellDamageFromText', 'spellDamageBackfill', 'dropDamagelessSpellRows',
-  'richHTML', 'richInline', 'noteHTML',
+  'richHTML', 'richInline', 'noteHTML', 'noteCheckboxes', 'toggleCheckbox', 'noteProgress', 'notePreview',
   'itemArmor', 'armorAC', 'armorKindOf', 'ARMOR_DEXCAP', 'isEquippable', 'contributions',
   'featGroups', 'FEAT_FAV', 'ATK_FAV', 'atkCol', 'featCol', 'statusRowHTML', 'concStatusRow',
   'attackVisible', 'migrateWeaponEquip',
@@ -2396,6 +2396,49 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('the first card has only the one after', same(X.cvNeighbours(['attacks', 'vitals'], 'attacks'), ['vitals', null]));
   ck('a lone card has neither', same(X.cvNeighbours(['vitals'], 'vitals'), [null, null]));
   ck('a card not shown has neither', same(X.cvNeighbours(['vitals'], 'skills'), [null, null]));
+}
+
+/* ---- checklists in a note: the grammar, the toggle, the count (#95)
+   Design: src/docs/specs/2026-10-17-journal-checklists-design.md §4. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const h = X.noteHTML('[ ] find the map\n[x] cross the Mire\n- [] meet Brindle\n   * [X] pay him');
+  ck('#95 checkbox lines become one list of four', (h.match(/<li>/g) || []).length === 4 && h.includes('<ul class="n-ck">'), h);
+  ck('#95 each box is a checkbox button with its ordinal',
+     /<button type="button" class="ck" role="checkbox" aria-checked="false" data-ck="0"/.test(h) &&
+     /aria-checked="true" data-ck="1"/.test(h) && /aria-checked="false" data-ck="2"/.test(h) && /aria-checked="true" data-ck="3"/.test(h), h);
+  ck('#95 the text follows the box, the bullet dropped', h.includes('<span class="ck-t">meet Brindle</span>') && !h.includes('- meet'));
+  ck('#95 an unchecked box is labelled, and a checked one', h.includes('aria-label="Not checked"') && h.includes('aria-label="Checked"'));
+  const txt = X.noteHTML('[x]y\nsee [x] mid-line\n[]\n[ ] \n> [ ] quoted');
+  ck('#95 a marker glued to its text, mid-line, alone, or inside a quote is text', !txt.includes('n-ck') && !txt.includes('data-ck'), txt);
+  const two = X.noteHTML('[ ] a\n[ ] b\n\nplain\n\n[x] c');
+  ck('#95 two runs are two lists, ordinals continuing', (two.match(/<ul class="n-ck">/g) || []).length === 2 && two.includes('data-ck="2"'), two);
+  const unb = X.noteHTML('[ ] **start\n[ ] end**');
+  ck('#95 emphasis cannot span two items (each is rendered alone)', !/<strong>[^<]*<\/span><\/li>/.test(unb) && unb.includes('**start') && unb.includes('end**'), unb);
+  const bul = X.noteHTML('- one\n- [ ] two\n- three');
+  ck('#95 a checkbox line ends a bullet list and starts its own block', bul.indexOf('</ul>') < bul.indexOf('n-ck') && (bul.match(/<ul/g) || []).length === 3, bul);
+  const hostile = X.noteHTML('[x] <script>alert(1)</script> "quoted"');
+  ck('#95 the item text is escaped like any block', !hostile.includes('<script>') && hostile.includes('&lt;script&gt;'), hostile);
+  ck('#95 no sentinel leaks', !/[-]/.test(h + two + unb));
+
+  const list = X.noteCheckboxes('intro\n[ ] a\n\n- [x] b\n[X] c\nnot [ ] one');
+  ck('#95 noteCheckboxes() lists the checkbox lines with their line numbers',
+     same(list, [{line: 1, checked: false, text: 'a'}, {line: 3, checked: true, text: 'b'}, {line: 4, checked: true, text: 'c'}]), list);
+  ck('#95 noteCheckboxes() and noteHTML() agree on the count', list.length === (X.noteHTML('intro\n[ ] a\n\n- [x] b\n[X] c\nnot [ ] one').match(/data-ck=/g) || []).length);
+  const src = 'title\n  - [] a\n[x] b  \nplain **x**\n[X] c';
+  ck('#95 toggleCheckbox() flips only the named line, normalising the marker',
+     X.toggleCheckbox(src, 0) === 'title\n  - [x] a\n[x] b  \nplain **x**\n[X] c' &&
+     X.toggleCheckbox(src, 1) === 'title\n  - [] a\n[ ] b  \nplain **x**\n[X] c' &&
+     X.toggleCheckbox(src, 2) === 'title\n  - [] a\n[x] b  \nplain **x**\n[ ] c', X.toggleCheckbox(src, 0));
+  ck('#95 ...every other byte stays', X.toggleCheckbox(src, 1).split('\n').filter((l, i) => i !== 2).join('\n') === src.split('\n').filter((l, i) => i !== 2).join('\n'));
+  ck('#95 ...out of range returns the text as it was', X.toggleCheckbox(src, 9) === src && X.toggleCheckbox(src, -1) === src && X.toggleCheckbox(null, 0) === '');
+  ck('#95 ...twice is the original, its marker normalised', X.toggleCheckbox(X.toggleCheckbox(src, 1), 1) === src &&
+     X.toggleCheckbox(X.toggleCheckbox(src, 0), 0) === src.replace('- [] a', '- [ ] a'));
+  ck('#95 CRLF text still names the right line, and comes back LF', X.toggleCheckbox('a\r\n[ ] b\r\n[ ] c', 1) === 'a\n[ ] b\n[x] c');
+  ck('#95 noteProgress() counts', same(X.noteProgress('[x] a\n[ ] b\n[x] c'), {done: 2, total: 3}) &&
+     same(X.noteProgress('no boxes'), {done: 0, total: 0}) && same(X.noteProgress(''), {done: 0, total: 0}));
+  const pv = X.notePreview('[ ] find\n[x] found\n- bullet');
+  ck('#95 the hover preview shows a box glyph, never a button', pv.includes('☐ find') && pv.includes('☑ found') && pv.includes('• bullet') && !pv.includes('<button'), pv);
 }
 
 /* ---- the journal: its fields, and what migrate() does to them ----
