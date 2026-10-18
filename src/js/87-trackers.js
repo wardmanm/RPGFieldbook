@@ -1,8 +1,8 @@
 /* ================= trackers =================
-   Counters, checklists and one-line tasks the player makes up, grouped by a tag
-   of their choosing — kills by creature type, pages of a book, the steps of a
-   quest. One that can finish can close itself when it does, into a Completed
-   list, with an Undo. Design: src/docs/specs/2026-09-29-journal-design.md §6
+   Counters the player makes up, grouped by a tag of their choosing — kills by
+   creature type, pages of a book. (Checklists and tasks live in journal pages
+   since #95.) One that can finish can close itself when it does, into a
+   Completed list, with an Undo. Design: src/docs/specs/2026-09-29-journal-design.md §6
 
    NOT the resource trackers on the Sheet (65-resources.js), nor the combat round
    tracker (87-combat.js). Tags are the journal's: tagLabel(), groupByTag() in
@@ -10,31 +10,26 @@
 
    The pure half comes first — no DOM — so src/tests/sheet.js can assert it. */
 
-const TRK_TYPES=[["counter","Counter"],["checklist","Checklist"],["task","Task"]];
+const TRK_TYPES=[["counter","Counter"]];
 
 /* ---- reading one, whatever a file put there ----
-   migrate() keeps only objects in `trackers` (and in each `items`) and repairs
-   their ids; every field inside is read through these. */
+   migrate() keeps only objects in `trackers` and repairs their ids; every
+   field inside is read through these. */
 function trkList(c){const l=c&&c.trackers;return Array.isArray(l)?l.filter(t=>t&&typeof t==="object"&&!Array.isArray(t)):[];}
-function trkType(t){const v=t&&t.type;return (v==="checklist"||v==="task")?v:"counter";}
+/* Every tracker is a counter since #95; a file's "checklist" or "task"
+   migrates to a page (migrateTrackerPages()). */
+function trkType(t){return "counter";}
 /* A whole number, 0 or more; anything else is 0. */
 function trkInt(v){const n=Math.floor(Number(v));return isFinite(n)&&n>0?n:0;}
-function trkItems(t){const l=t&&t.items;return Array.isArray(l)?l.filter(x=>x&&typeof x==="object"&&!Array.isArray(x)):[];}
 function trkName(t){return jnlStr(t&&t.name).trim()||"Untitled";}
 function showTrackers(c){return !c||c.showTrackers!==false;}
 /* A typed count: digits only, or null to put the old value back. */
 function trkParse(v){const s=jnlStr(v).trim();return /^\d+$/.test(s)?parseInt(s,10):null;}
 
 /* ---- how far along ----
-   A counter with no goal (kills) and a checklist with no items are never
-   complete: there is nothing to finish. Only a real `true` ticks anything. */
+   A counter with no goal (kills) is never complete: there is nothing to
+   finish. */
 function trkProgress(t){
-  const ty=trkType(t);
-  if(ty==="task"){const d=t.done===true;return {done:d?1:0,total:1,pct:d?100:0,complete:d};}
-  if(ty==="checklist"){
-    const it=trkItems(t),n=it.filter(x=>x.done===true).length;
-    return {done:n,total:it.length,pct:it.length?Math.round(n*100/it.length):0,complete:it.length>0&&n===it.length};
-  }
   const v=trkInt(t.value),g=trkInt(t.goal);
   return {done:v,total:g,pct:g?Math.min(100,Math.round(v*100/g)):0,complete:g>0&&v>=g};
 }
@@ -54,8 +49,6 @@ function trkApply(t,change,now){
 /* Never below 0; past the goal is fine ("read it twice"). */
 function trkStep(t,d,now){return trkApply(t,x=>{x.value=Math.max(0,trkInt(x.value)+d);},now);}
 function trkSetValue(t,v,now){return trkApply(t,x=>{x.value=trkInt(v);},now);}
-function trkToggleItem(t,itemId,now){return trkApply(t,x=>{const it=trkItems(x).find(i=>i.id===itemId);if(it)it.done=it.done!==true;},now);}
-function trkToggleTask(t,now){return trkApply(t,x=>{x.done=x.done!==true;},now);}
 /* By hand, from the form. No Undo: it was deliberate. Reopening leaves the
    progress alone. */
 function trkClose(t,now){t.closed=true;t.closedAt=now;}
@@ -69,27 +62,13 @@ function trkRestore(c,snap){
   l[i]=JSON.parse(JSON.stringify(snap));return true;
 }
 
-/* ---- the form's lines back into items ----
-   One line, one item. Each line takes the first unused old item with exactly its
-   text, keeping that item's id and tick, so reordering keeps every tick; a new or
-   reworded line is a new item, unticked. A leading bullet ("- ", "* ", "• ") is
-   typing habit, not part of the item. */
-function mergeChecklist(items,text){
-  const old=Array.isArray(items)?items.filter(x=>x&&typeof x==="object"):[],used=new Set();
-  return jnlStr(text).replace(/\r\n?/g,"\n").split("\n").map(l=>l.replace(/^\s*[-*+\u2022]\s+/,"").trim()).filter(Boolean).map(l=>{
-    const hit=old.find(x=>!used.has(x)&&jnlStr(x.text).trim()===l);
-    if(!hit)return {id:uid(),text:l,done:false};
-    used.add(hit);
-    return {id:(typeof hit.id==="string"&&hit.id)?hit.id:uid(),text:l,done:hit.done===true};
-  });
-}
 /* The form's fields onto a tracker. Never closes it, whatever the new goal. */
 function trkFromForm(t,f){
   t.name=jnlStr(f.name).trim();
-  t.type=trkType({type:f.type});
+  t.type="counter";
   t.tag=tagLabel(f.tag);
   t.goal=trkInt(f.goal);
-  t.items=mergeChecklist(trkItems(t),f.items);
+  delete t.items;delete t.done;
   t.autoClose=f.autoClose!==false;
   t.value=trkInt(t.value);
   return t;
@@ -121,39 +100,17 @@ function trkAfter(c,id){
    would pay for a highlight() of the whole card. */
 const TRK_PEN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`;
 function trkEditHTML(t){return `<button type="button" class="icon" data-trkedit="${esc(t.id)}" aria-label="${esc("Edit "+trkName(t))}" title="Edit">${TRK_PEN}</button>`;}
-/* A tick is a <button role="checkbox">: a native checkbox inside a <label> fires
-   the page's click handler twice, and the sheet's .equip spans can't be reached
-   by keyboard. `attr` is its hook, already escaped, and comes after role and
-   aria-checked so it is the button's FIRST data-* — the one focus is put back by. */
-function trkTickHTML(attr,on,label){
-  return `<button type="button" class="trk-tick" role="checkbox" aria-checked="${on?"true":"false"}" ${attr}><span class="box" aria-hidden="true"></span><span class="trk-it">${esc(label)}</span></button>`;
-}
 function trackerRowHTML(t){
-  const ty=trkType(t),pr=trkProgress(t),name=trkName(t);
-  if(ty==="task")return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top">${trkTickHTML(`data-trktask="${esc(t.id)}"`,pr.complete,name)}${trkEditHTML(t)}</div></div>`;
-  let prog="",body="";
-  if(ty==="checklist"){
-    const it=trkItems(t);
-    prog=`<span class="trk-prog">${pr.done} / ${pr.total}</span>`;
-    body=it.length?`<div class="trk-items">${it.map(i=>trkTickHTML(`data-trkitem="${esc(i.id)}"`,i.done===true,jnlStr(i.text))).join("")}</div>`:
-      `<div class="empty">No items yet — tap the pencil to add some.</div>`;
-  }else{
-    const g=trkInt(t.goal);
-    body=`<div class="trk-ctl"><button type="button" class="res-btn" data-trkdec="${esc(t.id)}" aria-label="${esc("One less — "+name)}">−</button>`+
-      `<input class="trk-val" data-trkval="${esc(t.id)}" inputmode="numeric" value="${esc(pr.done)}" aria-label="${esc(name+" — count")}">`+
-      `<button type="button" class="res-btn" data-trkinc="${esc(t.id)}" aria-label="${esc("One more — "+name)}">+</button>`+
-      (g?`<span class="trk-of">of ${esc(g)}</span>`:"")+`</div>`+
-      (g?`<div class="trk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(g)}" aria-valuenow="${esc(Math.min(pr.done,g))}" aria-label="${esc(name)}"><span style="width:${esc(pr.pct)}%"></span></div>`:"");
-  }
-  return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(name)}</span>${prog}${trkEditHTML(t)}</div>${body}</div>`;
+  const pr=trkProgress(t),name=trkName(t),g=trkInt(t.goal);
+  const body=`<div class="trk-ctl"><button type="button" class="res-btn" data-trkdec="${esc(t.id)}" aria-label="${esc("One less — "+name)}">−</button>`+
+    `<input class="trk-val" data-trkval="${esc(t.id)}" inputmode="numeric" value="${esc(pr.done)}" aria-label="${esc(name+" — count")}">`+
+    `<button type="button" class="res-btn" data-trkinc="${esc(t.id)}" aria-label="${esc("One more — "+name)}">+</button>`+
+    (g?`<span class="trk-of">of ${esc(g)}</span>`:"")+`</div>`+
+    (g?`<div class="trk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(g)}" aria-valuenow="${esc(Math.min(pr.done,g))}" aria-label="${esc(name)}"><span style="width:${esc(pr.pct)}%"></span></div>`:"");
+  return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(name)}</span>${trkEditHTML(t)}</div>${body}</div>`;
 }
 /* In Completed: what it came to, when it closed, and the way back. */
-function trkSummary(t){
-  const ty=trkType(t),pr=trkProgress(t);
-  if(ty==="task")return "Done";
-  if(ty==="checklist")return pr.done+" / "+pr.total;
-  return trkInt(t.goal)?pr.done+" / "+trkInt(t.goal):String(pr.done);
-}
+function trkSummary(t){const pr=trkProgress(t);return trkInt(t.goal)?pr.done+" / "+trkInt(t.goal):String(pr.done);}
 function trackerClosedHTML(t){
   const when=jnlTime(t.closedAt)?"Closed "+fmtWhen(jnlTime(t.closedAt)):"";
   return `<div class="trk trk-closed" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(trkName(t))}</span>`+
@@ -175,17 +132,13 @@ function trackersHTML(c,completedOpen){
     `<div class="trk-group"${completedOpen?"":` style="display:none"`}>${s.closed.map(trackerClosedHTML).join("")}</div></div>`;
   return h;
 }
-/* Goal belongs to counters and Items to checklists; openTrackerForm() shows the
-   one the chosen type needs. Close now / Reopen and Delete only for one that
-   exists. */
+/* Name and Tag side by side, then Goal; Close when complete only once there is a
+   goal to complete. Close now / Reopen and Delete only for one that exists. */
 function trackerFormHTML(t,tags,isNew){
-  const ty=trkType(t),g=trkInt(t.goal),auto=t.autoClose!==false,lines=trkItems(t).map(i=>jnlStr(i.text)).join("\n");
-  return `<div class="field"><label class="f" for="tkName">Name</label><input id="tkName" value="${esc(jnlStr(t.name))}" placeholder="e.g. Goblins slain" autocomplete="off"></div>`+
-    `<div class="g2"><div class="field"><label class="f" for="tkType">Type</label><select id="tkType">`+
-      TRK_TYPES.map(([v,l])=>`<option value="${esc(v)}"${ty===v?" selected":""}>${esc(l)}</option>`).join("")+`</select></div>`+
+  const g=trkInt(t.goal),auto=t.autoClose!==false;
+  return `<div class="g2"><div class="field"><label class="f" for="tkName">Name</label><input id="tkName" value="${esc(jnlStr(t.name))}" placeholder="e.g. Goblins slain" autocomplete="off"></div>`+
     groupFieldHTML({id:"tkTag",list:"tkTags",label:"Tag",value:t.tag,choices:tags,placeholder:"e.g. Kills"})+`</div>`+
-    `<div class="field" data-tkfor="counter"><label class="f" for="tkGoal">Goal</label><input id="tkGoal" type="number" min="0" inputmode="numeric" value="${esc(g||"")}" placeholder="None — count forever"></div>`+
-    `<div class="field" data-tkfor="checklist"><label class="f" for="tkItems">Items, one per line</label><textarea id="tkItems" placeholder="Find the map&#10;Cross the Mire&#10;Meet Brindle">${esc(lines)}</textarea></div>`+
+    `<div class="field"><label class="f" for="tkGoal">Goal</label><input id="tkGoal" type="number" min="0" inputmode="numeric" value="${esc(g||"")}" placeholder="None — count forever"></div>`+
     `<div class="toggle" id="tkAutoRow"><div><div class="t-lbl">Close when complete</div><div class="t-sub">Move it to Completed once it's done. You get an Undo.</div></div>`+
       `<button type="button" class="switch ${auto?"on":""}" id="tkAuto" role="switch" aria-checked="${auto?"true":"false"}" aria-label="Close when complete"></button></div>`+
     `<div class="m-actions">`+(isNew?"":`<button type="button" class="tbtn danger" id="tkDel" style="margin-right:auto">Delete</button>`+
@@ -302,17 +255,12 @@ function reopenTracker(id,viaKey){
 }
 function openTrackerForm(existing){
   const isNew=!existing;
-  const t=existing||{id:uid(),name:"",type:"counter",tag:"",value:0,goal:0,items:[],done:false,autoClose:true,at:Date.now()};
+  const t=existing||{id:uid(),name:"",type:"counter",tag:"",value:0,goal:0,autoClose:true,at:Date.now()};
   openModal(isNew?"New tracker":"Edit tracker",trackerFormHTML(t,jnlTagList(character),isNew));
   const $=id=>document.getElementById(id);
-  /* Goal for a counter, Items for a checklist; Close when complete only for one
-     that can complete, and a counter needs a goal for that. */
-  const sync=()=>{
-    const ty=$("tkType").value;
-    document.querySelectorAll("[data-tkfor]").forEach(f=>{f.hidden=f.dataset.tkfor!==ty;});
-    $("tkAutoRow").hidden=ty==="counter"&&!trkInt($("tkGoal").value);
-  };
-  $("tkType").addEventListener("change",sync);$("tkGoal").addEventListener("input",sync);sync();
+  /* Close when complete only for one that can complete: a counter needs a goal. */
+  const sync=()=>{$("tkAutoRow").hidden=!trkInt($("tkGoal").value);};
+  $("tkGoal").addEventListener("input",sync);sync();
   $("tkAuto").addEventListener("click",e=>{const b=e.currentTarget,on=!b.classList.contains("on");b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");});
   $("tkCancel").addEventListener("click",closeModal);
   /* The tracker as stored NOW. The toast sits outside the modal's inert, so its
@@ -320,8 +268,7 @@ function openTrackerForm(existing){
      snapshot — `t` would then be a copy no longer in the list. A new tracker
      has no stored copy: Save adds `t` itself. */
   const cur=()=>isNew?t:trkById(t.id);
-  const fields=()=>({name:$("tkName").value,type:$("tkType").value,tag:$("tkTag").value,goal:$("tkGoal").value,
-    items:$("tkItems").value,autoClose:$("tkAuto").classList.contains("on")});
+  const fields=()=>({name:$("tkName").value,tag:$("tkTag").value,goal:$("tkGoal").value,autoClose:$("tkAuto").classList.contains("on")});
   const done=()=>{closeModal();renderTrackers();scheduleSave();};
   {const d=$("tkDel");if(d)d.addEventListener("click",()=>{
     if(!confirm(`Delete the tracker “${trkName(cur()||t)}”?`))return;

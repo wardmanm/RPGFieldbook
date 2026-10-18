@@ -11,8 +11,8 @@ covered by [Story & notes](story-and-notes.md).
 `jnlGroupOpen()`, `jnlStampText()`, `insertLine()`, `renderJournal()`, `jnlOpen()`, `jnlBack()`,
 `jnlNewPage()`, `jnlEdit()`, `jnlDone()`, `jnlInput()`, `jnlDelete()`, `insertJournalStamp()`,
 `toggleJnlGroup()` in `87-journal.js` · `groupFieldHTML()` in `80-modal-forms.js` · `TRK_TYPES`, `trkProgress()`, `trkApply()`, `trkStep()`,
-`trkSetValue()`, `trkToggleItem()`, `trkToggleTask()`, `trkClose()`, `trkReopen()`, `trkSnapshot()`,
-`trkRestore()`, `mergeChecklist()`, `trkFromForm()`, `trkSplit()`, `trkAfter()`, `showTrackers()`,
+`trkSetValue()`, `trkClose()`, `trkReopen()`, `trkSnapshot()`,
+`trkRestore()`, `trkFromForm()`, `trkSplit()`, `trkAfter()`, `showTrackers()`,
 `renderTrackers()`, `trkPatchRow()`, `trkAct()`, `trkNextControl()`, `undoTrackerChange()`,
 `commitTrackerValue()`, `openTrackerForm()`, `reopenTracker()` in `87-trackers.js` ·
 `NOTE_SECTIONS` in `87-notes.js` · `openerSelector()` in `80-modal-forms.js` · `commitBox()` in
@@ -77,17 +77,13 @@ guard reaches only the top level.
 Counts are whole numbers and never below 0 (`trkInt()`), and they may pass the goal. Only a real
 `true` ticks anything.
 
-**The close rule** lives in `trkApply()` alone. A row control (`trkStep()`, `trkSetValue()`,
-`trkToggleItem()`, `trkToggleTask()`) is applied. If that took the tracker from not done to done,
+**The close rule** lives in `trkApply()` alone. A row control (`trkStep()`, `trkSetValue()`)
+is applied. If that took the tracker from not done to done,
 and `autoClose` is on (the default), it sets `closed` and `closedAt`. The form (`trkFromForm()`)
 never closes anything, and neither does making a tracker. `trkReopen()` leaves the progress alone,
 so a tracker reopened at 100% stays open until it drops below and comes back. `trkClose()` is the
 manual close. Undo is `trkSnapshot()` before the tap and `trkRestore()` after it: the tick and the
 close go back together.
-
-**Checklist items** are typed one per line in the form. `mergeChecklist()` gives each line the
-first unused old item with exactly its text, keeping its id and tick, so reordering keeps every
-tick. A leading bullet is dropped. `migrate()` repairs item ids from one pool across every tracker.
 
 **Layout.** `trkSplit()` groups the open trackers by tag (A to Z, Untagged last, in the order they
 were made), and lists the closed ones newest-closed first.

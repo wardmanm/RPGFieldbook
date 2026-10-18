@@ -54,8 +54,6 @@ function wire(){
     // trackers (87-trackers.js). The tap's own `t` is the target, so the tracker is `x`.
     if((m=t.closest("[data-trkdec]")))return trkAct(m.dataset.trkdec,(x,now)=>trkStep(x,-1,now),e.detail===0);
     if((m=t.closest("[data-trkinc]")))return trkAct(m.dataset.trkinc,(x,now)=>trkStep(x,1,now),e.detail===0);
-    if((m=t.closest("[data-trkitem]"))){const r=m.closest("[data-trk]"),iid=m.dataset.trkitem;if(r)trkAct(r.dataset.trk,(x,now)=>trkToggleItem(x,iid,now),e.detail===0);return;}
-    if((m=t.closest("[data-trktask]")))return trkAct(m.dataset.trktask,(x,now)=>trkToggleTask(x,now),e.detail===0);
     if((m=t.closest("[data-trkedit]"))){const x=trkById(m.dataset.trkedit);if(x)openTrackerForm(x);return;}
     if((m=t.closest("[data-trkreopen]")))return reopenTracker(m.dataset.trkreopen,e.detail===0);
     if((m=t.closest("[data-trkgroup]"))){toggleTrkGroup(m.dataset.trkgroup);return;}
