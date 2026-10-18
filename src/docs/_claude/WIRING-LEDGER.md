@@ -6065,3 +6065,16 @@ Pages: [journal](../wiki/features/journal.md), [rich text](../wiki/architecture/
 7. Tests: `sheet.js` (the in-place total through a hand-built row/group DOM, as the #41 in-place tests do; the box's label, plain and escaped; the Story write-back, refused while editing and for an unknown key; the closed-checklist fixture, now `[x] a\n[ ] b\n\nClosed <date>`; the sentinel line; the junk date; the Σ's constant name; the hint), `rules-data.js` (the `[data-ck]` branch's `#rt-` owner). Driven in Playwright: a Story Notes field with `[ ] buy rope\n[x] sharpen sword`, its first box clicked, `character.notes` read back as `[x] buy rope…` with focus on the same box (`.claude/qa/95-story-tick.png`); a Kills group with its total on (5 + 2 → "· 7"), 12 typed into Goblins' box and a click elsewhere, the header reading "· 14" with no redraw (`.claude/qa/93-total-after-typing.png`).
 
 Pages: [journal](../wiki/features/journal.md), [rich text](../wiki/architecture/rich-text.md), [story & notes](../wiki/features/story-and-notes.md), [known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md)
+## The #104 spec: ammunition recovery options and thrown weapons (#104, 2026-10-18)
+
+1. Brainstormed with Mike: spec `specs/2026-10-18-ammo-recovery-design.md`. A per-character rule
+   (`character.ammoRecovery`: half, all, hits, none; default half, so every sheet keeps today's
+   behaviour), an item's own `recover` (always, never) that wins over it, None included; app-side
+   defaults (firearm bullets never, Thrown weapons always); every hit comes back in Hits-only;
+   thrown weapons get Throw and stay on the sheet at ×0; End combat recovers on its own with an
+   Undo recovery; the rule is read at recovery, and an unanswered shot comes back at half.
+2. One decision recorded on the 1.9.0 page changed: the override is a top-level item field set in
+   the item editor, not `ammo.recover` in pack data, so no pack digest moves and no data release is
+   needed.
+
+Pages: [1.9.0](../wiki/roadmap/1.9.0.md)
