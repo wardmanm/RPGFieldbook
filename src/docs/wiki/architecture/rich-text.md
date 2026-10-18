@@ -77,7 +77,10 @@ A click, Enter or Space on `.kw` opens the glossary entry, and on `.tblref` open
   `<strong>` across two `<li>`s. The `n` in each item's `data-ck="n"` is that checkbox's ordinal
   among every checkbox line of the whole text, 0-based — the key `toggleCheckbox()` writes back
   with. The button and its text sit beside each other, never nested: a `role="button"` chip inside a
-  `role="checkbox"` button would be a button in a button.
+  `role="checkbox"` button would be a button in a button. The button's `aria-label` is its item in
+  plain words (`noteCkLabel()`: the `*` and backtick marks dropped), escaped like any attribute;
+  `aria-checked` carries the state, so the name never says it. `noteCheckboxes()` matches each line
+  with the sentinels stripped, exactly as `noteHTML()` reads it, so the two agree on the count.
 - `richHTML(text)` is `noteHTML()` with a **lone** `<p>` unwrapped. Hundreds of `.desc` slots get
   bare inline text, and a `<p>` there would pick up browser margins. Blocks appear only when the
   text actually contains a list, heading or quote.
@@ -99,7 +102,7 @@ A click, Enter or Space on `.kw` opens the glossary entry, and on `.tblref` open
 | Journal pages (`journalPageHTML()`) | `noteHTML()`, checkboxes tickable |
 | Journal search excerpts (`jnlSnippet()`), titles and tags | `esc()` only |
 | Tracker names (`trackerRowHTML()`) | `esc()` only: a chip inside a checkbox button would be a button in a button |
-| Story bio fields and Proficiencies (`renderRT()`) | `richHTML()` |
+| Story bio fields and Proficiencies (`renderRT()`) | `richHTML()`, checkboxes tickable in the read view (`rtToggleCheckbox()`) |
 | Feature, item, status and familiar descriptions; browse previews; the spell view | `richHTML()` / `descHTML()` |
 | Trait lines in the class, subclass, species and background panes | `richInline()` |
 | A note's hover preview | `notePreview()` |
@@ -149,8 +152,9 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
   `imgHTML()` (asserted).
 - **Text between tags that comes from a file is `esc()`'d or goes through a renderer above.** The
   scan cannot see this; the hostile-character renders in `sheet.js` do.
-- **A `[data-ck]` is emitted wherever the grammar renders; only `#jnlBody` and `#notesList`
-  answer it.** A checkbox in an item or feature description draws and does nothing — one grammar
+- **A `[data-ck]` is emitted wherever the grammar renders; only three surfaces answer it:
+  journal pages (`#jnlBody`), section notes (`#notesList`) and the Story tab's rich-text fields
+  (`#rt-<key>`).** A checkbox in an item or feature description draws and does nothing — one grammar
   everywhere, as this page requires, and a pack has no business shipping checkboxes.
 - **Sentinels live in U+E000–U+E00F and are written as escapes** (`""`,
   `String.fromCharCode(0xE001)`), never as literal characters. Invisible bytes in source are one
@@ -255,3 +259,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-09 — The Humblewood mid-sentence check moves to the private suite with the pack. → ledger L5426, #85
 - 2026-10-17 — A checkbox block joins the grammar, tested before bullets, one item one `noteInline()` call; Section notes and Journal pages become the first tickable surfaces, through `[data-ck]`. → ledger L6047, #95
+- 2026-10-17 — The Story tab's rich-text fields become the third tickable surface; a box is named by its item, not its state; `noteCheckboxes()` strips the sentinels as `noteHTML()` does. → ledger L6057, #95

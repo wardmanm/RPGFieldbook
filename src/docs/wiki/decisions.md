@@ -293,9 +293,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **Editing** — Inline, built once
 - **Existing checklist and task trackers (#95)** — Migrated into journal pages by `migrate()`; Trackers becomes counters only
 - **A checkbox in a rendered page (#95)** — Tickable in the read view: a tap flips it and rewrites that line
-- **Closed checklists and tasks (#95)** — Migrated too, every item ticked, with the closed date kept
+- **Closed checklists and tasks (#95)** — Migrated too: a closed checklist keeps each item's real tick plus a "Closed <date>" line (not every item ticked, the first choice, which lost the real ticks); a closed task is ticked with its date
 - **Progress in the page list (#95)** — A "3/5" count on the row of a page that has checkboxes
-- **Section notes and checkboxes (#95)** — Same grammar, tickable in both
+- **Section notes, Story fields and checkboxes (#95)** — Same grammar, tickable in all three
 - **The checkbox editor (#95)** — An Insert checkbox button, `[]` accepted as unchecked
 - **Tasks on migration (#95)** — One page per tag, titled "Tasks", one line per task
 - **Tracker types** — Counter only since #95; checklist and task migrated to journal pages

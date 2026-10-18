@@ -76,7 +76,10 @@ lines of the whole text) and leaves every other byte alone; `noteProgress(text)`
 over them. A tap on `[data-ck]` in the page's read view calls `jnlToggleCheckbox(n)`: it rewrites
 that line, stamps `editedAt`, saves, redraws and puts focus back on the same box. It is refused
 while the page is being edited — the text is in a textarea then, and no box is on screen — and
-when the page the tap belonged to is gone (another tab switched, an import). The page list
+when the page the tap belonged to is gone (another tab switched, an import). Section notes and
+the Story tab's rich-text fields tick the same way ([Story & notes](story-and-notes.md)); a box in
+a pack's description is drawn and does nothing. Each box is named by its item in plain words
+(`noteCkLabel()`), its state left to `aria-checked`. The page list
 (`jnlEntryHTML()`) and the page's own meta line (`journalPageHTML()`) show `done/total` next to the
 title whenever a page has any checkboxes; a page with none shows nothing. **Insert checkbox**
 (`data-jnlck` → `insertJournalCheckbox()` → `insertCheckboxInto("jnlText")`) puts `[ ] ` on its own
@@ -101,11 +104,11 @@ Counts are whole numbers and never below 0 (`trkInt()`), and they may pass the g
 and `repairIds()` and before the collapse-map repair, and takes every tracker whose **raw** `type`
 is `checklist` or `task` out of `trackers` and turns it into a journal page (spec §5): a checklist
 becomes one page, its name as the title, its items as `[ ]`/`[x]` lines in order; tasks become one
-"Tasks" page per tag (including the untagged), one line per task. A closed checklist has every item
-ticked and a trailing "Closed `<date>`" line; a closed task's date is appended to its own line
-instead ("— closed `<date>`"). Dates are
+"Tasks" page per tag (including the untagged), one line per task. A closed checklist keeps each
+item's own tick and gains a trailing "Closed `<date>`" line; a closed task is ticked (a task's only
+state is done) and its date is appended to its own line instead ("— closed `<date>`"). Dates are
 written with `Date`'s `toLocaleDateString`, not `fmtWhen()`'s relative "3h ago", which would freeze wrong
-on a page once read. The pages get fresh `uid()`s. Nothing a player recorded is dropped — only
+on a page once read; a `closedAt` no calendar holds writes no date at all, never "Invalid Date". The pages get fresh `uid()`s. Nothing a player recorded is dropped — only
 `autoClose` and `goal`, which mean nothing on a page, don't carry over. It is idempotent by
 construction: afterwards no tracker has either raw type, so a second run (and a stale export
 imported later) finds nothing to migrate, with no pass counter or flag to keep in step.
@@ -113,7 +116,8 @@ imported later) finds nothing to migrate, with no pass counter or flag to keep i
 **Tiles and totals (#93, #94).** An open tag group lays its trackers out as `.trk` tiles in a
 wrapping `.trk-group` row — two across on a phone, more on a wider screen, a lone tile never
 stretching the full width. Completed stays a list of rows: a record, not a dashboard. The group
-header carries a Σ button (`data-trktotal`, `toggleTrkTotal()`); on, it shows the tag's total after
+header carries a Σ button (`data-trktotal`, `toggleTrkTotal()`), always named "Total for `<tag>`",
+whether it is on read from `aria-pressed`; on, it shows the tag's total after
 the group's tracker count ("Kills (3) · 42"), read from `trkGroupTotal()`, which sums **every** counter with that tag — open or
 closed — so completing one never drops the total. The switch itself is stored in
 `character.trackerTotals[tagKey]`, read through `trkTotalOn()`: absent or anything but a literal
@@ -147,7 +151,8 @@ puts the stored count back. The two differ:
 
 - **change** fires as the box loses focus, which happens at the mousedown on + or on a Tab. So it
   does not redraw. `trkAct()`'s `inPlace` flag has `trkPatchRow()` write the new count into the row
-  where it stands: the box, and the bar's `aria-valuenow` and width. A non-number is put back in
+  where it stands: the box, the bar's `aria-valuenow` and width, and the group header's total
+  (`.trk-total`) when the group shows one, so the total never lags a typed count. A non-number is put back in
   place too. A redraw there used to replace the + under the pointer, so its click never arrived
   (5, type 9, click + gave 9), and it dropped a Tab's focus to the page.
 - **Enter** redraws, and `commitBox()` (`90-boot.js`) selects the new box. A change that closes the
@@ -257,9 +262,9 @@ entry in the list.
 | Editing | Inline, built once | The section notes' modal: too small for a session's worth of writing |
 | Existing checklist and task trackers (#95) | Migrated into journal pages by `migrate()`: a checklist becomes a page, its items as `[ ]`/`[x]` lines; the tasks of one tag merge into one page. Trackers becomes counters only | Read-only in Completed: two homes for one idea until 2.0. Migrate and keep a copy: every list twice |
 | A checkbox in a rendered page (#95) | Tickable in the read view: a tap flips it and rewrites that line to `[x]` | Read-only until Edit: three taps a tick. A second task syntax with a cross-page roll-up: a second grammar to learn |
-| Closed checklists and tasks (#95) | Migrated too, every item ticked, with the closed date kept | Dropping them: deletes a record a player may be keeping. A "Completed" tag: hides them from the tag they were filed under |
+| Closed checklists and tasks (#95) | Migrated too: a closed checklist keeps each item's real tick and gains a "Closed `<date>`" line; a closed task is ticked with its date on its line | Every item of a closed checklist ticked (the first choice, changed at the final review): it loses the real ticks for good. Dropping them: deletes a record a player may be keeping. A "Completed" tag: hides them from the tag they were filed under |
 | Progress in the page list (#95) | A "3/5" count on the row of a page that has checkboxes; nothing on one that hasn't | No count: the tracker-at-a-glance feel is lost. A bar as well: row height on a phone |
-| Section notes and checkboxes (#95) | Same grammar, tickable in both: a tap in the Section Notes card writes back to `secNotes` the same way | Render but not tick: one mark, two behaviours. Journal only: `[ ]` in a section note would look broken |
+| Section notes, Story fields and checkboxes (#95) | Same grammar, tickable in all three: a tap in the Section Notes card writes back to `secNotes`, and one in a Story rich-text field's read view to that field | Render but not tick: one mark, two behaviours. Journal only: `[ ]` in a section note would look broken |
 | The checkbox editor (#95) | An Insert checkbox button beside Insert timestamp, and `[]` accepted as unchecked | Syntax only: `[` is two taps away on a phone keyboard. Enter continuing the list: Enter-magic in a textarea surprises, and needs an escape |
 | Tasks on migration (#95) | One page per tag, titled "Tasks", one line per task; a closed task's date on its line | One page per task: a page for every one-liner |
 | Tracker types | ~~Counter (optional goal), checklist, task~~ — **counter only since #95**, checklist and task migrated to journal pages | Counter and checklist only: a one-line to-do becomes a one-item list. A separate Progress type: a counter with a goal already is one |
@@ -274,6 +279,9 @@ entry in the list.
 
 - Journal pages and trackers don't print. A long campaign journal could run to many pages.
 - Trackers have no reset on a rest.
+- The Σ is a `<button>` nested in the `role="button"` group header, so assistive tech may flatten
+  the header and never reach it. Restructuring the header pattern, which the journal's, the
+  section notes' and the trackers' groups share, is likely 2.0's ([Known issues](../roadmap/known-issues.md)).
 
 ## History
 
@@ -283,3 +291,4 @@ entry in the list.
 - 2026-10-16 — The tag box is the shared group field, unchanged on screen; features and items use it too. → ledger L5823, #98
 - 2026-10-16 — A tag named for an `Object.prototype` property is refused, and reads as Untagged from a file; Done waits until it is changed. → ledger L5872, #98
 - 2026-10-17 — Checklists and tasks leave trackers for journal pages: a [ ]/[x] line is a tickable checkbox in a page and a section note, the list shows progress, existing checklist and task trackers migrate into pages; Trackers keeps counters only (#95). Groups show an optional total (#93) and lay out as tiles (#94). → ledger L6047, #95, #93, #94
+- 2026-10-17 — Final review: a typed count moves the group total; the Σ is always "Total for <tag>"; a box is named by its item; Story fields tick too; a closed checklist keeps its real ticks; a junk date writes none. → ledger L6057, #95, #93

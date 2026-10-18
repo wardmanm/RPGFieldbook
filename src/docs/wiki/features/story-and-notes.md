@@ -7,8 +7,8 @@ Story and Journal tabs, opened from an icon in the card's heading and gathered i
 the **Journal tab**, below the player's own journal pages ([Journal](journal.md)). Both render
 the same markdown-on-top-of-glossary grammar.
 
-**Code:** `BIO`, `buildBio()` in `00-constants.js` · `renderRT()`, `renderAllRT()` in
-`10-compute.js` · `NOTE_SECTIONS`, `NOTE_TABS`, `noteTitle()`, `noteMap()`, `getNote()`,
+**Code:** `BIO`, `buildBio()` in `00-constants.js` · `renderRT()`, `renderAllRT()`, `rtKeys()`,
+`rtToggleCheckbox()` in `10-compute.js` · `NOTE_SECTIONS`, `NOTE_TABS`, `noteTitle()`, `noteMap()`, `getNote()`,
 `saveNote()`, `noteWhen()`, `noteBtnHTML()`, `notePreview()`, `renderNoteIcons()`, `notesHTML()`,
 `noteEntryHTML()`, `renderNotes()`, `toggleNoteGroup()`, `jumpToNote()`, `openNoteEditor()` in
 `87-notes.js` · `selectTab()`, `scrollToCard()` in `40-sheet.js` · markup `src/html/30-story.html`,
@@ -25,8 +25,12 @@ one card per entry into `#bioStack` at boot, each with an Edit button (`data-edi
 `#rt-<key>` host. `renderRT(key)` shows either a textarea that writes `character[key]` on every input
 and schedules a save, or the rendered text (`richHTML()`, see [Rich text](../architecture/rich-text.md))
 with an "Nothing yet — tap Edit." empty state. The button reads Edit / Done. `renderAllRT()` redraws
-`proficiencies` and every bio key; it runs from `renderAll()` and `refreshRulesUI()`, because a
-glossary change alters how the text reads.
+`proficiencies` and every bio key (`rtKeys()`); it runs from `renderAll()` and `refreshRulesUI()`, because a
+glossary change alters how the text reads. A checkbox line (`[ ]`/`[x]`, the journal's grammar) in
+any of these fields is tickable in its read view: `rtToggleCheckbox(key,n)` flips that line in
+`character[key]`, redraws the field, saves and puts focus back on the same box. It is refused while
+the field is being edited (the text is in the textarea then), for a key that is not one of these
+fields, and when nothing would change.
 
 **Proficiencies & Languages** (`character.proficiencies`) sits in its own card at the top of the
 Story tab, uses the same `renderRT()`, and — unlike the bio cards — takes a section note.
@@ -125,3 +129,4 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-17 — A checkbox in a section note is tickable on the Section Notes card, and the note editor gains an Insert checkbox button (#95). → ledger L6047, #95
+- 2026-10-17 — A checkbox in a Story field (Proficiencies or a bio card) is tickable in its read view, refused while editing. → ledger L6057, #95

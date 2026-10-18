@@ -29,8 +29,9 @@ Bullets below this line — leave the heading in place.
 ## Pending
 
 - Journal pages can hold checklists: a line starting `[ ]` or `[x]` is a checkbox you can tick in
-  the page itself, and the page list shows how many are done. Section notes do the same, and both
-  editors have an Insert checkbox button. Checklist and task trackers you already had have moved
+  the page itself, and the page list shows how many are done. Section notes and the text fields on
+  the Story tab tick the same way, and the journal and section-note editors have an Insert checkbox
+  button. Checklist and task trackers you already had have moved
   into journal pages, ticks and dates included; Trackers now holds counters only.
 - A tracker group can show the total of its counters: tap the Σ on the group's heading.
 - Trackers lay out as tiles across the card instead of one long list.
