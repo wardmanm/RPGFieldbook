@@ -2419,7 +2419,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('#95 a checkbox line ends a bullet list and starts its own block', bul.indexOf('</ul>') < bul.indexOf('n-ck') && (bul.match(/<ul/g) || []).length === 3, bul);
   const hostile = X.noteHTML('[x] <script>alert(1)</script> "quoted"');
   ck('#95 the item text is escaped like any block', !hostile.includes('<script>') && hostile.includes('&lt;script&gt;'), hostile);
-  ck('#95 no sentinel leaks', !/[-]/.test(h + two + unb));
+  ck('#95 no sentinel leaks', !/[\uE000-\uE00F]/.test(h + two + unb));
 
   const list = X.noteCheckboxes('intro\n[ ] a\n\n- [x] b\n[X] c\nnot [ ] one');
   ck('#95 noteCheckboxes() lists the checkbox lines with their line numbers',
