@@ -1,6 +1,6 @@
 # Journal checklists — design
 
-**Status:** approved 2026-10-17, not yet built · wave 1 of [1.9.0](../wiki/roadmap/1.9.0.md)
+**Status:** implemented on branch `issue/95-journal-checklists` · 2026-10-17 · wave 1 of [1.9.0](../wiki/roadmap/1.9.0.md)
 **Issue:** #95 (checklists and tasks leave trackers and become journal features). Built on one
 branch, `issue/95-journal-checklists`; #93 and #94 follow it in the same worktree, since all three
 reshape `87-trackers.js`.
@@ -270,3 +270,24 @@ For `UNRELEASED.md`, one bullet:
   the page itself, and the page list shows how many are done. Section notes do the same. Checklist
   and task trackers you already had have moved into journal pages, ticks and dates included;
   Trackers now holds counters only.
+
+## 14. As built
+
+Departures from this spec, found while implementing and verified against the shipped code:
+
+- **§4.1's fallback, not its primary plan.** Each checkbox item gets its own `noteInline()` call,
+  not the whole list joined by `NOTE_LB` and split back: an emphasis opened on one item and closed
+  on the next would otherwise carry a `<strong>` across two `<li>`s.
+- **Migrated dates are `toLocaleDateString()`, not `fmtWhen()`** (§5's text says `fmtWhen()`): a
+  relative "3h ago" would freeze wrong on a page read later.
+- **`- [ ] x` inside a run of bullets ends the bullet list** (§9, made explicit in `noteHTML()`'s
+  bullet loop): the checkbox rule is tested first, as a heading or quote would be.
+- **No keydown handler was needed.** `.ck` is a real `<button>`, so a native click covers Enter and
+  Space; only the `click` delegate in `wire()` answers `[data-ck]`.
+- **"of N" sits on its own line in every tile, not only at narrow widths** (the #94 review fix):
+  `.trk-of` is `flex-basis:100%` unconditionally, so it never counts toward the −/count/+ row's
+  min-content on a phone-width tile. The tile is `flex:1 1 140px` (max `280px`), the count box
+  `54px`, and the tile's −/+ buttons `30px` square.
+- **The Σ is a real `<button>` inside the `role="button"` group header**, not a `<span>`: both the
+  header's click and keydown fold handlers check for it explicitly and return before toggling the
+  group, rather than relying on event bubbling alone to miss it.

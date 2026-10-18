@@ -57,7 +57,10 @@ link, the added/edited dates, an edit button and the note rendered by `noteHTML(
 calls `selectTab()` — which never scrolls — then `scrollToCard()` and flashes the card; a card that
 is hidden (`offsetParent === null`: an empty Familiars or Active Spells) scrolls to the top instead.
 They print under the heading "Section notes". Its groups now include Journal, holding just
-Trackers, since that card sits on the Journal tab too ([Journal](journal.md)).
+Trackers, since that card sits on the Journal tab too ([Journal](journal.md)). A checkbox in a note
+(the same `[ ]`/`[x]` grammar as a journal page) is tickable right on the card
+(`noteToggleCheckbox()`), writes back through `saveNote()`, and the note editor has an Insert
+checkbox button beside its formatting key ([Journal](journal.md), [Rich text](../architecture/rich-text.md)).
 
 ## Rules that must hold
 
@@ -121,3 +124,4 @@ Trackers, since that card sits on the Journal tab too ([Journal](journal.md)).
 - 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
+- 2026-10-17 — A checkbox in a section note is tickable on the Section Notes card, and the note editor gains an Insert checkbox button (#95). → ledger L6047, #95

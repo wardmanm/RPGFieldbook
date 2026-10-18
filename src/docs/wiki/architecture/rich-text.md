@@ -13,7 +13,7 @@ checked mechanically.
 **Code:** `esc()`, `escReg()`, `safeImgSrc()`, `imgHTML()`, `allGlossary()`, `glossTerm()`, `glossRepair()` in `00-constants.js`; `highlight()`, `descHTML()`,
 `renderRT()` in `10-compute.js`; `findTable()`, `tableHTML()`, `openTableByName()`,
 `tableChipsHTML()` in `86-tables.js`; `noteInline()`, `noteHTML()`, `richHTML()`, `richInline()`,
-`notePreview()` in `87-notes.js`; `printSheet()`, `printStrip()` in `71-char-io.js`;
+`notePreview()`, `noteCheckboxes()`, `toggleCheckbox()`, `noteProgress()` in `87-notes.js`; `printSheet()`, `printStrip()` in `71-char-io.js`;
 `refreshRulesUI()` in `88-settings.js` · **Tests:** `tables.js` (escaping, forged placeholders,
 chips inside markdown), `sheet.js` (the renderers, no sentinel leaks; a hostile character, pack and
 keyword id through 40 renderers; glossary entries with no term, and junk in every list and
@@ -68,6 +68,16 @@ A click, Enter or Space on `.kw` opens the glossary entry, and on `.tblref` open
   before bullets, so `* * *` is a rule), `#`…`######` a heading, `-`/`*`/`+` a list, `1.`/`1)` a
   numbered list that keeps its start, `>` a quote, and anything else a paragraph. The lines of one
   block are joined with U+E003 so each block costs **one** `noteInline()`/`highlight()` call.
+- **Checkboxes (#95).** `^ {0,3}(?:[-*+] +)?\[( |x|X)?\] +(\S.*)$` — `[ ]`/`[]` unchecked, `[x]`/`[X]`
+  checked, a leading bullet accepted and dropped, words required — is tested **before** the bullet
+  rule, since `- [ ]` begins like one; a checkbox line therefore ends a run of bullets rather than
+  joining it. Consecutive checkbox lines become one `<ul class="n-ck">`. Unlike every other block,
+  each item gets its **own** `noteInline()` call rather than the lines being joined by U+E003 and
+  split back: an emphasis opened on one item and closed on the next would otherwise carry a
+  `<strong>` across two `<li>`s. The `n` in each item's `data-ck="n"` is that checkbox's ordinal
+  among every checkbox line of the whole text, 0-based — the key `toggleCheckbox()` writes back
+  with. The button and its text sit beside each other, never nested: a `role="button"` chip inside a
+  `role="checkbox"` button would be a button in a button.
 - `richHTML(text)` is `noteHTML()` with a **lone** `<p>` unwrapped. Hundreds of `.desc` slots get
   bare inline text, and a `<p>` there would pick up browser margins. Blocks appear only when the
   text actually contains a list, heading or quote.
@@ -85,10 +95,10 @@ A click, Enter or Space on `.kw` opens the glossary entry, and on `.tblref` open
 
 | Surface | Renderer |
 |---|---|
-| Section notes (the Journal tab's Section Notes card, and each card's note) | `noteHTML()` |
-| Journal pages (`journalPageHTML()`) | `noteHTML()` |
+| Section notes (the Journal tab's Section Notes card, and each card's note) | `noteHTML()`, checkboxes tickable |
+| Journal pages (`journalPageHTML()`) | `noteHTML()`, checkboxes tickable |
 | Journal search excerpts (`jnlSnippet()`), titles and tags | `esc()` only |
-| Tracker names and items (`trackerRowHTML()`) | `esc()` only: a chip inside a checkbox button would be a button in a button |
+| Tracker names (`trackerRowHTML()`) | `esc()` only: a chip inside a checkbox button would be a button in a button |
 | Story bio fields and Proficiencies (`renderRT()`) | `richHTML()` |
 | Feature, item, status and familiar descriptions; browse previews; the spell view | `richHTML()` / `descHTML()` |
 | Trait lines in the class, subclass, species and background panes | `richInline()` |
@@ -139,6 +149,9 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
   `imgHTML()` (asserted).
 - **Text between tags that comes from a file is `esc()`'d or goes through a renderer above.** The
   scan cannot see this; the hostile-character renders in `sheet.js` do.
+- **A `[data-ck]` is emitted wherever the grammar renders; only `#jnlBody` and `#notesList`
+  answer it.** A checkbox in an item or feature description draws and does nothing — one grammar
+  everywhere, as this page requires, and a pack has no business shipping checkboxes.
 - **Sentinels live in U+E000–U+E00F and are written as escapes** (`""`,
   `String.fromCharCode(0xE001)`), never as literal characters. Invisible bytes in source are one
   whitespace cleanup away from changing behaviour, and the build is byte-exact. The strip in
@@ -241,3 +254,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-29 — Journal pages: tags, search, timestamps, the page rule; the card and its editor. → ledger L4793, #40
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-09 — The Humblewood mid-sentence check moves to the private suite with the pack. → ledger L5426, #85
+- 2026-10-17 — A checkbox block joins the grammar, tested before bullets, one item one `noteInline()` call; Section notes and Journal pages become the first tickable surfaces, through `[data-ck]`. → ledger L6047, #95
