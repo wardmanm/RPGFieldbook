@@ -79,6 +79,9 @@ function migrate(s){
      give it a new id and migrate() would stop being idempotent. Arrays go. */
   base.journal=repairIds(base.journal.filter(x=>!Array.isArray(x)));
   base.trackers=repairIds(base.trackers.filter(x=>!Array.isArray(x)));
+  /* AFTER both repairs: checklists and tasks become journal pages (#95). The
+     new pages take fresh uid()s, which cannot collide with a repaired one. */
+  migrateTrackerPages(base,Date.now());
   ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse","trackerCollapse","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;

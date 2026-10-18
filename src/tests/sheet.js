@@ -55,7 +55,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'fmtWhen', 'noteWhen', 'jnlWhen',
   'TRK_TYPES', 'trkList', 'trkType', 'trkInt', 'trkName', 'showTrackers', 'trkParse', 'trkProgress',
   'trkApply', 'trkStep', 'trkSetValue', 'trkClose', 'trkReopen',
-  'trkSnapshot', 'trkRestore', 'trkFromForm', 'trkSplit', 'trkGroupOpen',
+  'trkSnapshot', 'trkRestore', 'trkFromForm', 'trkSplit', 'trkGroupOpen', 'migrateTrackerPages',
   'trackerRowHTML', 'trackerClosedHTML', 'trackersHTML', 'trackerFormHTML', 'trkSummary', 'trkEditHTML',
   'ammoKindOf', 'itemAmmo', 'weaponAmmoKind', 'ammoStacks', 'loadedStack', 'ammoPlural', 'ammoOne',
   'unpackAmmo', 'rebaseAmmo', 'migrateAmmo', 'ammoTable', 'fpMap', 'fpHash',
@@ -2716,6 +2716,47 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('a tracker group nobody shut is open', X.trkGroupOpen({}, 'kills') && !X.trkGroupOpen({trackerCollapse: {kills: true}}, 'kills'));
 }
 
+/* ---- checklists and tasks become journal pages on load (#95, spec §5) ---- */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const D = new Date(2026, 9, 1, 12).getTime(), day = d => new Date(d).toLocaleDateString();
+  const sheet = () => ({abilities: {}, journal: [{id: 'p0', title: 'Older', tag: '', text: 'x', at: 5, editedAt: 5}], trackers: [
+    {id: 'c1', name: 'The lost map', type: 'checklist', tag: 'Quests', at: 100, items: [{id: 'i1', text: 'Find the map', done: true}, {id: 'i2', text: 'Cross the Mire', done: false}]},
+    {id: 'c2', name: 'Done by hand', type: 'checklist', tag: 'quests', at: 200, closed: true, closedAt: D, items: [{id: 'i3', text: 'a', done: true}, {id: 'i4', text: 'b', done: false}]},
+    {id: 'c3', name: 'Empty', type: 'checklist', tag: '', at: 300, items: []},
+    {id: 't1', name: 'Pay Brindle', type: 'task', tag: 'Quests', at: 400},
+    {id: 't2', name: 'Buy rope', type: 'task', tag: 'Shopping', at: 500, done: true, closed: true, closedAt: D},
+    {id: 't3', name: 'Loose end', type: 'task', at: 600},
+    {id: 't4', name: 'Second quest task', type: 'task', tag: 'quests', at: 50},
+    {id: 'k1', name: 'Goblins', type: 'counter', tag: 'Kills', value: 3, at: 700}]});
+  const m = X.migrate(sheet());
+  ck('#95 every checklist and task leaves the trackers; the counter stays', same(m.trackers.map(t => t.id), ['k1']), m.trackers);
+  const byTitle = t => m.journal.find(p => p.title === t);
+  const map = byTitle('The lost map');
+  ck('#95 an open checklist is a page: its name, tag, date and items',
+     !!map && map.tag === 'Quests' && map.at === 100 && map.editedAt === 100 && map.text === '[x] Find the map\n[ ] Cross the Mire', map);
+  const hand = byTitle('Done by hand');
+  ck('#95 a closed checklist has every item ticked and a Closed line',
+     !!hand && hand.text === '[x] a\n[x] b\n\nClosed ' + day(D) && hand.editedAt === D, hand);
+  ck('#95 an empty checklist is a page with just its title', byTitle('Empty') && byTitle('Empty').text === '' && byTitle('Empty').tag === '');
+  const tasks = m.journal.filter(p => p.title === 'Tasks');
+  ck('#95 tasks become one Tasks page per tag, the untagged included', tasks.length === 3 && same(tasks.map(p => p.tag).sort(), ['', 'Quests', 'Shopping']), tasks.map(p => p.tag));
+  const q = tasks.find(p => p.tag === 'Quests');
+  ck('#95 ...one line per task, in the order they were made, dated by the oldest',
+     !!q && q.text === '[ ] Second quest task\n[ ] Pay Brindle' && q.at === 50, q);
+  const s = tasks.find(p => p.tag === 'Shopping');
+  ck('#95 ...a closed task is ticked with its date on its line', !!s && s.text === '[x] Buy rope — closed ' + day(D) && s.editedAt === D, s);
+  ck('#95 the pages that were there are untouched', m.journal[0].id === 'p0' && m.journal[0].text === 'x');
+  ck('#95 new pages get fresh, unique ids', new Set(m.journal.map(p => p.id)).size === m.journal.length && m.journal.every(p => typeof p.id === 'string' && p.id));
+  const again = X.migrate(JSON.parse(JSON.stringify(m)));
+  ck('#95 running it again changes nothing', JSON.stringify(again) === JSON.stringify(m));
+  ck('#95 a sheet with no such trackers is untouched', (() => { const c = {abilities: {}, trackers: [{id: 'k', type: 'counter', value: 1}], journal: []}; return X.migrateTrackerPages(c, 1) === 0 && c.journal.length === 0 && c.trackers.length === 1; })());
+  const junk = X.migrate({abilities: {}, trackers: [{id: 'j', type: 'checklist', items: [null, 'str', {text: 7}, {done: true}], tag: 'constructor'}]});
+  ck('#95 junk items are skipped or named, and a reserved tag reads as none',
+     junk.trackers.length === 0 && junk.journal.length === 1 && junk.journal[0].text === '[ ] 7\n[x] Untitled' && junk.journal[0].tag === '', junk.journal);
+  ck('#95 a sheet whose journal is not a list gets one', (() => { const c = {abilities: {}, journal: 'nope', trackers: [{id: 'x', type: 'task', name: 'a'}]}; X.migrateTrackerPages(c, 9); return Array.isArray(c.journal) && c.journal[0].at === 9; })());
+}
+
 /* ---- the trackers' markup ---- */
 {
   ck('no trackers says how to start one', /No trackers yet/.test(X.trackersHTML({trackers: []}, false)));
@@ -4091,7 +4132,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('...so a keystroke in the old editor cannot write over the imported page',
      imported.journal[0].text === 'Imported words.', imported.journal[0].text);
   X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'rep2',
-    trackers: [{id: 'd', name: 'Done', type: 'task', done: true, closed: true, closedAt: 1}]}))));
+    trackers: [{id: 'd', name: 'Done', type: 'counter', value: 5, goal: 5, closed: true, closedAt: 1}]}))));
   capture(() => ctx.renderTrackers());
   flow = capture(() => ctx.toggleTrkCompleted());
   const wasOpen = /data-trkcompleted[^>]*aria-expanded="true"/.test(flow.html);

@@ -26,6 +26,41 @@ function showTrackers(c){return !c||c.showTrackers!==false;}
 /* A typed count: digits only, or null to put the old value back. */
 function trkParse(v){const s=jnlStr(v).trim();return /^\d+$/.test(s)?parseInt(s,10):null;}
 
+/* ---- checklists and tasks became journal pages (#95) ----
+   Every tracker whose RAW type is checklist or task leaves `trackers` and
+   becomes journal text (spec §5). A checklist is one page: its name, its tag,
+   one "[ ]"/"[x]" line per item, and for a closed one every item ticked and a
+   final "Closed <date>". Tasks are one "Tasks" page per tag, a line each, a
+   closed one ticked with its date on the line. Idempotent by construction:
+   afterwards no tracker has either type, so there is no pass counter to keep.
+   Pure; migrate() (71-char-io.js) calls it after the list guards. Dates are
+   written as the locale's date, not fmtWhen()'s relative "3h ago", which would
+   freeze wrong on a page. */
+function migrateTrackerPages(c,now){
+  const all=Array.isArray(c.trackers)?c.trackers:[];
+  const gone=all.filter(t=>t&&typeof t==="object"&&!Array.isArray(t)&&(t.type==="checklist"||t.type==="task"));
+  if(!gone.length)return 0;
+  if(!Array.isArray(c.journal))c.journal=[];
+  const day=ts=>jnlTime(ts)?new Date(jnlTime(ts)).toLocaleDateString():"";
+  const mark=on=>on?"[x] ":"[ ] ";
+  gone.filter(t=>t.type==="checklist").forEach(t=>{
+    const closed=t.closed===true,when=day(t.closedAt);
+    const items=Array.isArray(t.items)?t.items.filter(i=>i&&typeof i==="object"&&!Array.isArray(i)):[];
+    const lines=items.map(i=>mark(closed||i.done===true)+(jnlStr(i.text).trim()||"Untitled"));
+    if(closed&&when){if(lines.length)lines.push("");lines.push("Closed "+when);}
+    const at=jnlTime(t.at)||now;
+    c.journal.push({id:uid(),title:trkName(t),tag:tagLabel(t.tag),text:lines.join("\n"),at,editedAt:jnlTime(t.closedAt)||at});
+  });
+  groupByTag(gone.filter(t=>t.type==="task"),t=>t.tag).forEach(g=>{
+    const items=g.items.slice().sort((a,b)=>jnlTime(a.at)-jnlTime(b.at));
+    const lines=items.map(t=>{const closed=t.closed===true,when=day(t.closedAt);return mark(closed||t.done===true)+trkName(t)+(closed&&when?" — closed "+when:"");});
+    const ats=items.map(t=>jnlTime(t.at)).filter(Boolean),eds=items.map(t=>jnlTime(t.closedAt)||jnlTime(t.at)).filter(Boolean);
+    c.journal.push({id:uid(),title:"Tasks",tag:g.key?g.label:"",text:lines.join("\n"),at:ats.length?Math.min.apply(null,ats):now,editedAt:eds.length?Math.max.apply(null,eds):now});
+  });
+  c.trackers=all.filter(t=>gone.indexOf(t)<0);
+  return gone.length;
+}
+
 /* ---- how far along ----
    A counter with no goal (kills) is never complete: there is nothing to
    finish. */
