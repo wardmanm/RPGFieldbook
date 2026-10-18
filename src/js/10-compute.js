@@ -139,5 +139,20 @@ function renderRT(key){
     host.innerHTML=val.trim()?`<div class="rt-view">${richHTML(val)}</div>`:`<div class="rt-view empty">Nothing yet — tap Edit.</div>`;
   }
 }
-function renderAllRT(){["proficiencies",...BIO.map(b=>b[0])].forEach(renderRT)}
+function rtKeys(){return ["proficiencies",...BIO.map(b=>b[0])];}
+function renderAllRT(){rtKeys().forEach(renderRT)}
+/* A tap on the n-th checkbox of a Story field's read view (#95): the third
+   tickable surface, after journal pages and section notes. Flips that line
+   (toggleCheckbox()), redraws the field, saves, and puts focus back on the same
+   box. Refused while the field is being edited (the text is in the textarea
+   then), for a key that is not one of these fields, and when nothing changed. */
+function rtToggleCheckbox(key,n){
+  if(rtKeys().indexOf(key)<0||editing[key])return false;
+  const cur=typeof character[key]==="string"?character[key]:"",t=toggleCheckbox(cur,n);
+  if(t===cur)return false;
+  character[key]=t;renderRT(key);scheduleSave();
+  const host=document.getElementById("rt-"+key),b=host&&host.querySelector(`[data-ck="${num(n)}"]`);
+  if(b&&b.focus)b.focus({preventScroll:true});
+  return true;
+}
 

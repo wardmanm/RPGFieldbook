@@ -79,11 +79,10 @@ function migrate(s){
      give it a new id and migrate() would stop being idempotent. Arrays go. */
   base.journal=repairIds(base.journal.filter(x=>!Array.isArray(x)));
   base.trackers=repairIds(base.trackers.filter(x=>!Array.isArray(x)));
-  /* A tick is found by its item's id, and focus is put back by that id alone,
-     so items get the same repair from ONE pool across every tracker. */
-  const itemIds=new Set();
-  base.trackers.forEach(t=>{if(Array.isArray(t.items)){t.items=t.items.filter(x=>x!==null&&typeof x==="object"&&!Array.isArray(x));repairIds(t.items,itemIds);}});
-  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse","trackerCollapse","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
+  /* AFTER both repairs: checklists and tasks become journal pages (#95). The
+     new pages take fresh uid()s, which cannot collide with a repaired one. */
+  migrateTrackerPages(base,Date.now());
+  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse","trackerCollapse","trackerTotals","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
   /* AFTER the list guards above, so it can rely on inventory being an array. */

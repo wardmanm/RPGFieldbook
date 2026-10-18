@@ -2162,6 +2162,26 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the glossary filter has its clear button', boxed(html, 'glossSearch'));
   ck('the tables filter has its clear button', boxed(html, 'tablesSearch'));
   ck('the journal search has its clear button', boxed(html, 'jnlSearch'));
+  {
+    const boot = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '90-boot.js'), 'utf8');
+    ck('#95 a tap on a checkbox is wired, and finds its owner before acting',
+       /t\.closest\("\[data-ck\]"\)[^\n]*jnlToggleCheckbox\(n\)[^\n]*noteToggleCheckbox\(/.test(boot), 'no [data-ck] handler in wire()');
+    ck('#95 ...and a Story field is its third owner, found by its #rt- host before the section note',
+       /t\.closest\("\[data-ck\]"\)[^\n]*closest\('\[id\^="rt-"\]'\)[^\n]*rtToggleCheckbox\([a-z]+\.id\.slice\(3\),n\)[^\n]*noteToggleCheckbox\(/.test(boot), 'no rt- branch in the [data-ck] handler');
+    ck('#95 Insert checkbox is wired in the journal editor', /t\.closest\("\[data-jnlck\]"\)\)return insertJournalCheckbox\(\);/.test(boot));
+    const notes = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '87-notes.js'), 'utf8');
+    ck('#95 the section-note editor has Insert checkbox, wired to its own textarea',
+       /id="noteCk">Insert checkbox<\/button>/.test(notes) && /getElementById\("noteCk"\)[^\n]*insertCheckboxInto\("noteText"\)/.test(notes));
+    ck('#93 the Σ button toggles the total, and the header fold ignores it, by click and by key',
+       /t\.closest\("\[data-trktotal\]"\)[^\n]*toggleTrkTotal\(/.test(boot) &&
+       /closest\("\[data-trkgroup\]"\)\)&&!t\.closest\("\[data-trktotal\]"\)/.test(boot) &&
+       /closest\("\[data-trkgroup\]"\);if\(g&&!e\.target\.closest\("\[data-trktotal\]"\)\)/.test(boot));
+    const jcss = require('fs').readFileSync(require('path').join(__dirname, '..', 'css', '47-journal.css'), 'utf8');
+    ck('#94 open tracker groups are wrapping rows of tiles, and Completed stays a list',
+       /\.trk-group\{display:flex;flex-wrap:wrap/.test(jcss) && /\.trk\{flex:1 1 140px;max-width:280px/.test(jcss) && /\.trk-done \.trk-group\{display:block\}/.test(jcss));
+    ck('#94 "of N" drops to its own line so it never crowds the −/count/+ row off a two-column phone width, and the buttons stay a comfortable tap target',
+       /\.trk-of\{flex-basis:100%/.test(jcss) && /\.trk-ctl \.res-btn\{width:30px;height:30px\}/.test(jcss));
+  }
   ck('the finder search (items, spells, features) has its clear button', boxed(js, 'brSearch'));
   ck('the × shows only while there is text', /\.searchbox input:placeholder-shown ?\+ ?\.search-clear\{display:none\}/.test(css));
   ck('the × empties the box and re-runs its filter the way typing does',

@@ -69,6 +69,16 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 .n-h3,.n-h4,.n-h5,.n-h6{font-size:14px;color:var(--ink-soft)}
 .n-ul,.n-ol{margin:0 0 8px;padding-left:20px}
 .n-ul li,.n-ol li{margin:2px 0}
+/* a checklist in a note (#95): the box is a real button, the text beside it */
+.n-ck{list-style:none;margin:0 0 8px;padding:0}
+.n-ck li{display:flex;align-items:flex-start;gap:8px;margin:3px 0}
+.ck{width:18px;height:18px;flex:none;margin-top:3px;padding:0;border-radius:4px;border:2px solid var(--line);background:var(--field);
+  display:inline-grid;place-items:center;line-height:1;cursor:pointer;color:#fff;font:inherit}
+.ck[aria-checked="true"]{background:var(--accent-2);border-color:var(--accent-2)}
+.ck[aria-checked="true"]::after{content:"✓";font-size:12px;font-weight:700}
+.ck:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+.ck-t{flex:1;min-width:0;overflow-wrap:anywhere}
+.ck[aria-checked="true"]+.ck-t{text-decoration:line-through;color:var(--ink-soft)}
 .n-q{margin:0 0 8px;padding:2px 0 2px 10px;border-left:3px solid var(--hair);color:var(--ink-soft)}
 .n-hr{border:0;border-top:1px solid var(--hair);margin:10px 0}
 /* `code` only ever reaches the DOM from our own renderer, so styling the

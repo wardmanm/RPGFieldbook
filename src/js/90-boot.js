@@ -46,15 +46,19 @@ function wire(){
     if(t.closest("[data-jnldone]"))return jnlDone();
     if((m=t.closest("[data-jnldel]"))){jnlDelete(m.dataset.jnldel);return;}
     if(t.closest("[data-jnlstamp]"))return insertJournalStamp();
+    if(t.closest("[data-jnlck]"))return insertJournalCheckbox();
+    /* a checkbox in a rendered page, a Story field or a section note (#95):
+       only those three surfaces answer it — a box drawn in an item description
+       does nothing */
+    if((m=t.closest("[data-ck]"))){const n=num(m.dataset.ck),rt=m.closest('[id^="rt-"]');if(m.closest("#jnlBody"))jnlToggleCheckbox(n);else if(rt)rtToggleCheckbox(rt.id.slice(3),n);else{const ne=m.closest("#notesList .item"),ed=ne&&ne.querySelector("[data-noteedit]");if(ed)noteToggleCheckbox(ed.dataset.noteedit,n);}return;}
     if((m=t.closest("[data-jnlgroup]"))){toggleJnlGroup(m.dataset.jnlgroup);return;}
     // trackers (87-trackers.js). The tap's own `t` is the target, so the tracker is `x`.
     if((m=t.closest("[data-trkdec]")))return trkAct(m.dataset.trkdec,(x,now)=>trkStep(x,-1,now),e.detail===0);
     if((m=t.closest("[data-trkinc]")))return trkAct(m.dataset.trkinc,(x,now)=>trkStep(x,1,now),e.detail===0);
-    if((m=t.closest("[data-trkitem]"))){const r=m.closest("[data-trk]"),iid=m.dataset.trkitem;if(r)trkAct(r.dataset.trk,(x,now)=>trkToggleItem(x,iid,now),e.detail===0);return;}
-    if((m=t.closest("[data-trktask]")))return trkAct(m.dataset.trktask,(x,now)=>trkToggleTask(x,now),e.detail===0);
     if((m=t.closest("[data-trkedit]"))){const x=trkById(m.dataset.trkedit);if(x)openTrackerForm(x);return;}
     if((m=t.closest("[data-trkreopen]")))return reopenTracker(m.dataset.trkreopen,e.detail===0);
-    if((m=t.closest("[data-trkgroup]"))){toggleTrkGroup(m.dataset.trkgroup);return;}
+    if((m=t.closest("[data-trktotal]"))){toggleTrkTotal(m.dataset.trktotal);return;}
+    if((m=t.closest("[data-trkgroup]"))&&!t.closest("[data-trktotal]")){toggleTrkGroup(m.dataset.trkgroup);return;}
     if(t.closest("[data-trkcompleted]"))return toggleTrkCompleted();
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
@@ -202,7 +206,8 @@ function wire(){
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
     {const g=e.target.closest&&e.target.closest("[data-jnlgroup]");if(g){e.preventDefault();toggleJnlGroup(g.dataset.jnlgroup);return;}}
-    {const g=e.target.closest&&e.target.closest("[data-trkgroup]");if(g){e.preventDefault();toggleTrkGroup(g.dataset.trkgroup);return;}}
+    /* the Σ inside the header is a real button: Enter and Space click it natively, so the header must not also fold */
+    {const g=e.target.closest&&e.target.closest("[data-trkgroup]");if(g&&!e.target.closest("[data-trktotal]")){e.preventDefault();toggleTrkGroup(g.dataset.trkgroup);return;}}
     {const g=e.target.closest&&e.target.closest("[data-trkcompleted]");if(g){e.preventDefault();toggleTrkCompleted();return;}}
   });
   /* The combat tab's header sticks under the tab bar, whose height changes with

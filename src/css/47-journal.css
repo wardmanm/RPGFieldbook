@@ -9,6 +9,7 @@
 .jnl-entry>*{position:relative}
 .jnl-title{font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.02em;flex:1;min-width:0;overflow-wrap:anywhere}
 .jnl-when{font-family:var(--head);font-size:11px;color:var(--ink-soft);flex:none}
+.jnl-prog{font-family:var(--head);font-size:12px;font-weight:700;color:var(--accent-2);font-variant-numeric:tabular-nums;flex:none}
 .jnl-snip{flex-basis:100%;font-size:14px;color:var(--ink-soft);overflow-wrap:anywhere}
 .jnl-snip mark{background:color-mix(in srgb,var(--accent) 38%,transparent);color:var(--ink);border-radius:3px;padding:0 1px}
 /* while searching the headers are plain text: every group is held open */
@@ -23,26 +24,29 @@
 .jnl-tag{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
 .jnl-tools{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 8px}
 /* ---- trackers ---- rows share the resource rows' −/+ buttons (.res-btn) */
-.trk{padding:8px 2px;border-bottom:1px dotted var(--hair)}
-.trk-group>.trk:last-child{border-bottom:0}
+.trk-total{font-family:var(--head);font-size:12px;font-weight:700;color:var(--accent-2);font-variant-numeric:tabular-nums;margin-left:4px}
+.trk-sum{margin-left:auto;font-family:var(--head);font-weight:700;font-size:14px;color:var(--ink-soft);width:28px;height:28px}
+.trk-sum.on{color:var(--accent-2)}
+/* #94: an open group is a wrapping row of tiles — two across on a phone, four
+   or five on a desktop; a lone tile never stretches the whole width. Completed
+   is a record, not a dashboard, so it stays a list of rows. */
+.trk-group{display:flex;flex-wrap:wrap;gap:8px;padding:6px 0 2px}
+.trk{flex:1 1 140px;max-width:280px;padding:8px;border:1.5px solid var(--hair);border-radius:10px;background:var(--field)}
 .trk-top{display:flex;align-items:center;gap:8px}
+.trk-done .trk-group{display:block}
+.trk-done .trk{max-width:none;padding:8px 2px;border:0;border-bottom:1px dotted var(--hair);border-radius:0;background:none}
+.trk-done .trk-group>.trk:last-child{border-bottom:0}
 .trk-name{font-weight:700;flex:1;min-width:0;overflow-wrap:anywhere}
 .trk-prog{font-family:var(--head);font-size:12px;font-weight:700;color:var(--ink-soft);font-variant-numeric:tabular-nums;flex:none}
-.trk-ctl{display:flex;align-items:center;gap:8px;margin-top:6px}
-.trk-val{width:76px;min-height:34px;padding:4px 8px;text-align:center;font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
-.trk-of{font-family:var(--head);font-size:12px;color:var(--ink-soft)}
+/* "of N" always drops to its own line (flex-basis:100% forces a wrap point
+   regardless of width) so it never counts toward the −/count/+ row's
+   min-content — that row, not the label, is what a two-column phone width has
+   to fit. */
+.trk-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:6px}
+.trk-ctl .res-btn{width:30px;height:30px}
+.trk-val{width:54px;min-height:34px;padding:4px 4px;text-align:center;font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+.trk-of{flex-basis:100%;font-family:var(--head);font-size:12px;color:var(--ink-soft)}
 .trk-bar{height:6px;border-radius:99px;background:var(--field);border:1px solid var(--hair);overflow:hidden;margin-top:7px}
 .trk-bar>span{display:block;height:100%;background:var(--accent-2)}
-.trk-items{display:flex;flex-direction:column;gap:2px;margin-top:4px}
-/* the tick: a real button, styled like the sheet's .equip box */
-.trk-tick{display:flex;align-items:flex-start;gap:8px;width:100%;text-align:left;background:none;border:0;padding:5px 2px;
-  cursor:pointer;font:inherit;color:var(--ink);border-radius:6px}
-.trk-tick:hover,.trk-tick:focus-visible{background:color-mix(in srgb,var(--accent-2) 10%,transparent)}
-.trk-tick .box{width:18px;height:18px;flex:none;border-radius:4px;border:2px solid var(--line);display:inline-grid;place-items:center;line-height:1;margin-top:2px}
-.trk-tick[aria-checked="true"] .box{background:var(--accent-2)}
-.trk-tick[aria-checked="true"] .box::after{content:"✓";color:#fff;font-size:12px;font-weight:700;line-height:1}
-.trk-tick[aria-checked="true"] .trk-it{text-decoration:line-through;color:var(--ink-soft)}
-/* a task: its name is the tick */
-.trk-top .trk-tick{flex:1;min-width:0;font-weight:700}
 .trk-closed .trk-name{color:var(--ink-soft)}
 .trk-done .fgname{color:var(--ink-soft)}

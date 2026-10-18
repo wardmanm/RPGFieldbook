@@ -113,6 +113,9 @@ Known behaviour that is accepted for now.
 - **The leak scan never flags text homebrew shares with a private pack**, because its free corpus
   includes homebrew (spec R9): The Predator's stock expanded-spell sentence is one such run. Mike's
   call. → ledger L5426, and [Private data](../data/private-data.md)
+- **The trackers' Σ is a button nested in a `role="button"` group header,** so assistive tech may
+  flatten the header and never reach the Σ. Restructuring the header pattern (the journal's and the
+  section notes' group headers share it) is likely 2.0's. → ledger L6057, and [Journal](../features/journal.md)
 
 ## Deferred
 
@@ -142,7 +145,7 @@ Wanted, not yet done. Each needs work, not a source.
   the verbatim text now states the limit ([book text: the long-rest reset clause]), so it needs
   `uses {1/long}`, not a book. → ledger L1808, and
   the private repo's `docs/humblewood.md`
-- Journal pages and trackers don't print; trackers have no rest reset and no group totals
+- Journal pages and trackers don't print; trackers have no rest reset
   ([Journal](../features/journal.md)).
 - **Thrown weapons track no ammunition of their own** (Dart, Javelin, Dagger).
   → [Ammunition](../features/ammunition.md)
@@ -457,3 +460,5 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-09 — The private split: import order decides which of two same-named 2024 and SRD entries wins; private packs get no notice; homebrew's Xanathar's spells cannot resolve publicly; old releases' data reachable until 2.0; homebrew masks the leak scan; `LEFT_FOR_PRIVATE` to delete after the next release. → ledger L5426, #85
 - 2026-10-16 — Collapse maps read inherited properties, and a group's fold follows its label's first spelling, both reached by #98's free-text groups. → ledger L5823, #98
 - 2026-10-16 — Removed: a group named for an `Object.prototype` property is now refused (fixed); a group reopening after a case edit is kept by decision. → ledger L5872, #98
+- 2026-10-17 — Narrowed: trackers now show a group total (#93), so the deferred line drops "and no group totals". → ledger L6047, #95, #93
+- 2026-10-17 — Limitation: the Σ nested in the `role="button"` group header. → ledger L6057, #93

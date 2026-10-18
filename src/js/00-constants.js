@@ -75,8 +75,9 @@ function blankChar(){
     journal:[], journalCollapse:{},
     /* The Journal tab's trackers (87-trackers.js), which of their tag groups are
        shut, and whether the card shows at all — read as !==false, so a sheet from
-       before it shows it. */
-    trackers:[], trackerCollapse:{}, showTrackers:true,
+       before it shows it. `trackerTotals` maps a tag key to `true` where the
+       group shows its total (#93). */
+    trackers:[], trackerCollapse:{}, trackerTotals:{}, showTrackers:true,
     /* Ammunition fired since the last recovery (62-ammo.js): stack id ->
        {n, kind, snap}. `ammoInit` is NOT defaulted: the one-time pass sets it. */
     ammoSpent:{},

@@ -83,6 +83,35 @@ function noteWhen(n){
 const NOTE_H0=String.fromCharCode(0xE001), NOTE_H1=String.fromCharCode(0xE002);  /* indexed hold delimiters */
 const NOTE_LB=String.fromCharCode(0xE003);  /* one soft line break inside a block */
 const NOTE_SENTINELS=new RegExp("["+String.fromCharCode(0xE000)+"-"+String.fromCharCode(0xE00F)+"]","g");
+/* ---- checklists (#95) ----
+   A line that starts `[ ]`, `[]`, `[x]` or `[X]`, a bullet before it allowed,
+   with words after it, is a checkbox. One regex serves the renderer and the
+   helpers, so they cannot disagree. Design: specs/2026-10-17-journal-checklists-design.md §4 */
+const NOTE_CK=/^ {0,3}(?:[-*+] +)?\[( |x|X)?\] +(\S.*)$/;
+/* the checkbox lines of a text, in order: their line index, state and words.
+   Each line is matched as noteHTML() reads it, its sentinel characters
+   stripped, or a line that starts with one is drawn as a box and not counted,
+   and a tap flips the wrong line. The indices are the text's own lines:
+   stripping never removes a newline. */
+function noteCheckboxes(text){
+  const lines=String(text==null?"":text).replace(/\r\n?/g,"\n").split("\n"),out=[];
+  lines.forEach((l,i)=>{const m=NOTE_CK.exec(l.replace(NOTE_SENTINELS,""));if(m)out.push({line:i,checked:/x/i.test(m[1]||""),text:m[2]});});
+  return out;
+}
+/* the text with the n-th checkbox flipped — [ ] and [] to [x], [x] and [X] to
+   [ ] — and every other byte as it was (CRLF normalised to LF, as noteHTML()
+   reads it). Out of range: the text as given. */
+function toggleCheckbox(text,n){
+  const given=String(text==null?"":text),src=given.replace(/\r\n?/g,"\n"),lines=src.split("\n");
+  const ck=noteCheckboxes(src)[n];
+  if(!ck)return given;
+  lines[ck.line]=lines[ck.line].replace(/\[( |x|X)?\]/,ck.checked?"[ ]":"[x]");
+  return lines.join("\n");
+}
+/* A box's accessible name is its item, in plain words: the emphasis and code
+   marks dropped. Its state is aria-checked's, so the name never says it. */
+function noteCkLabel(t){return String(t).replace(/[*`]/g,"").replace(/\s+/g," ").trim();}
+function noteProgress(text){const l=noteCheckboxes(text);return {done:l.filter(x=>x.checked).length,total:l.length};}
 /* Indexed, not a single repeating mark like TBL_MARK: this pass NESTS — a code
    span can swallow an already-held glossary chip — so ordinal restore-in-order
    doesn't hold. */
@@ -122,19 +151,31 @@ function noteHTML(text){
      ___ , and the spaced forms. Checked BEFORE bullets so "* * *" is a rule. */
   const isHr=l=>/^ {0,3}([-*_])(?: *\1){2,} *$/.test(l);
   const isH=l=>/^ {0,3}(#{1,6}) +(.*)$/.exec(l);
+  const isCk=l=>NOTE_CK.exec(l);
   const isUl=l=>/^ {0,3}[-*+] +/.test(l);
   const isOl=l=>/^ {0,3}(\d{1,9})[.)] +/.exec(l);
   const isQ=l=>/^ {0,3}> ?/.test(l);
-  const starts=l=>isHr(l)||isH(l)||isUl(l)||isOl(l)||isQ(l);
+  const starts=l=>isHr(l)||isH(l)||isCk(l)||isUl(l)||isOl(l)||isQ(l);
+  let ckN=0;   /* the ordinal of each checkbox in the WHOLE text: the write-back key */
   while(i<lines.length){
     const l=lines[i];
     if(!l.trim()){i++;continue;}
     if(isHr(l)){out.push(`<hr class="n-hr">`);i++;continue;}   /* before bullets: "* * *" is a rule */
     const h=isH(l);
     if(h){const lv=h[1].length;out.push(`<div class="n-h n-h${esc(lv)}">${noteInline(h[2])}</div>`);i++;continue;}
+    /* BEFORE bullets: "- [ ] x" begins like one. Each item is rendered on its
+       own, not joined with NOTE_LB and split back: an emphasis opened on one
+       item and closed on the next would otherwise carry a <strong> across two
+       <li>s. Checklists are short, so the extra highlight() calls are cheap. */
+    if(isCk(l)){
+      const items=[];
+      while(i<lines.length&&isCk(lines[i])){const m=isCk(lines[i]);items.push({on:/x/i.test(m[1]||""),t:m[2]});i++;}
+      out.push(`<ul class="n-ck">`+items.map(x=>`<li><button type="button" class="ck" role="checkbox" aria-checked="${x.on?"true":"false"}" data-ck="${esc(ckN++)}" aria-label="${esc(noteCkLabel(x.t))}"></button><span class="ck-t">${noteInline(x.t)}</span></li>`).join("")+`</ul>`);
+      continue;
+    }
     if(isUl(l)){
       const items=[];
-      while(i<lines.length&&isUl(lines[i])&&!isHr(lines[i])){items.push(lines[i].replace(/^ {0,3}[-*+] +/,""));i++;}
+      while(i<lines.length&&isUl(lines[i])&&!isHr(lines[i])&&!isCk(lines[i])){items.push(lines[i].replace(/^ {0,3}[-*+] +/,""));i++;}
       out.push(`<ul class="n-ul">`+items.map(t=>`<li>${noteInline(t)}</li>`).join("")+`</ul>`);continue;
     }
     const o=isOl(l);
@@ -202,6 +243,7 @@ function notePreview(text,max){
   let cut=false;
   if(src.replace(/\s+/g," ").length>n){src=src.slice(0,n).replace(/\s+\S*$/,"");cut=true;}
   const lines=src.split("\n").map(l=>l
+    .replace(/^ {0,3}(?:[-*+] +)?\[( |x|X)?\] +(?=\S)/,(m,x)=>(/x/i.test(x||"")?"☑ ":"☐ "))  /* checkbox -> ☐ / ☑ */
     .replace(/^ {0,3}#{1,6} +/,"")                    /* heading: keep the words */
     .replace(/^ {0,3}> ?/,"")                         /* quote */
     .replace(/^ {0,3}([-*+]) +/,"\u2022 ")            /* bullet -> • */
@@ -274,6 +316,20 @@ function notesHTML(){
 }
 function renderNotes(){const el=document.getElementById("notesList");if(el)el.innerHTML=notesHTML();}
 
+/* A tap on the n-th checkbox of a section note's entry on the Section Notes
+   card flips that line (toggleCheckbox()) and saves through saveNote(), which
+   keeps `at` and moves `editedAt`; the card and the hover previews redraw, and
+   focus goes back to the same box (#95). */
+function noteToggleCheckbox(k,n){
+  if(!noteDef(k))return false;
+  const cur=noteText(k),t=toggleCheckbox(cur,n);
+  if(t===cur)return false;
+  saveNote(k,t);scheduleSave();renderNotes();renderNoteIcons();
+  const ed=document.querySelector(attrSel("data-noteedit",k)),row=ed&&ed.closest&&ed.closest(".item"),b=row&&row.querySelector(`[data-ck="${num(n)}"]`);
+  if(b&&b.focus)b.focus({preventScroll:true});
+  return true;
+}
+
 /* ---- jump to the section a note belongs to ---- */
 function jumpToNote(k){
   const def=noteDef(k);if(!def)return;
@@ -288,7 +344,7 @@ function jumpToNote(k){
 
 /* The one-line formatting key, shared by every editor of this grammar: the
    section-note editor and the journal page editor. */
-const NOTE_FMT_HINT=`<p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>`;
+const NOTE_FMT_HINT=`<p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>[ ]</b> checkbox, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>`;
 
 /* ---- editor ---- */
 function openNoteEditor(k){
@@ -297,10 +353,12 @@ function openNoteEditor(k){
   openModal("Note — "+noteTitle(def),`
     <div class="field"><label class="f">Your note</label>
       <textarea id="noteText" class="n-edit" placeholder="Anything you want to remember about this section…">${esc(noteText(k))}</textarea></div>
+    <div class="jnl-tools"><button type="button" class="tbtn" id="noteCk">Insert checkbox</button></div>
     ${NOTE_FMT_HINT}
     ${when?`<p class="hint">${esc(when)}</p>`:""}
     <div class="m-actions">${n?`<button class="tbtn danger" id="noteDel" style="margin-right:auto">Delete</button>`:""}<button class="tbtn" id="noteCancel">Cancel</button><button class="tbtn primary" id="noteSave">Save</button></div>`);
   const ta=document.getElementById("noteText");if(ta)ta.focus();
+  document.getElementById("noteCk").addEventListener("click",()=>insertCheckboxInto("noteText"));
   document.getElementById("noteCancel").addEventListener("click",closeModal);
   {const d=document.getElementById("noteDel");if(d)d.addEventListener("click",()=>{saveNote(k,"");closeModal();renderNoteIcons();renderNotes();scheduleSave();});}
   document.getElementById("noteSave").addEventListener("click",()=>{

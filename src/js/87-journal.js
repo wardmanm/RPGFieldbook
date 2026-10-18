@@ -124,12 +124,24 @@ function insertLine(text,start,end,line){
   const ins=(before&&!before.endsWith("\n")?"\n":"")+line+"\n";
   return {text:before+ins+after,caret:before.length+ins.length};
 }
+/* `marker` at the START of a line at the selection — the line the caret is on
+   if it is at a line start, else a new line — with the caret right after the
+   marker, since the next thing typed is the item (#95). insertLine() puts a
+   whole line and moves on; this stays. */
+function insertMarker(text,start,end,marker){
+  const t=jnlStr(text),n=t.length;
+  const s=Math.max(0,Math.min(n,num(start))),e=Math.max(s,Math.min(n,num(end)));
+  const before=t.slice(0,s),after=t.slice(e);
+  const ins=(before&&!before.endsWith("\n")?"\n":"")+marker;
+  return {text:before+ins+after,caret:before.length+ins.length};
+}
 
 /* ---- markup: pure strings, so the harness can assert every state ---- */
 function jnlEntryHTML(p,q){
-  const snip=q?jnlSnippet(p.text,q):"";
+  const snip=q?jnlSnippet(p.text,q):"",pr=noteProgress(jnlStr(p.text));
   return `<button type="button" class="jnl-entry" data-jnlopen="${esc(p.id)}">`+
     `<span class="jnl-title">${esc(jnlTitle(p))}</span>`+
+    (pr.total?`<span class="jnl-prog">${esc(pr.done+"/"+pr.total)}</span>`:"")+
     (jnlTime(p.at)?`<span class="jnl-when">${esc(fmtWhen(jnlTime(p.at)))}</span>`:"")+
     (snip?`<span class="jnl-snip">${snip}</span>`:"")+`</button>`;
 }
@@ -152,12 +164,12 @@ function journalListHTML(c,q){
 }
 function jnlWhen(p){return jnlTime(p.at)?noteWhen({at:jnlTime(p.at),editedAt:jnlTime(p.editedAt)}):"";}
 function journalPageHTML(p){
-  const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text));
+  const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text)),pr=noteProgress(jnlStr(p.text));
   return `<div class="jnl-bar"><button type="button" class="tbtn" data-jnlback>← All pages</button><span class="grow"></span>`+
     `<button type="button" class="tbtn" data-jnledit="${esc(p.id)}">Edit</button>`+
     `<button type="button" class="tbtn danger" data-jnldel="${esc(p.id)}">Delete</button></div>`+
     `<h3 class="jnl-h" id="jnlHead" tabindex="-1">${esc(jnlTitle(p))}</h3>`+
-    ((tag||when)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"")+
+    ((tag||when||pr.total)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${pr.total?`<span class="jnl-prog">${esc(pr.done+"/"+pr.total)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"")+
     (body?`<div class="n-body">${body}</div>`:`<div class="empty">Nothing written yet — tap Edit.</div>`);
 }
 /* Built ONCE per edit (renderJournal() leaves it alone after), so it can keep
@@ -171,7 +183,7 @@ function journalEditorHTML(p,tags){
     groupFieldHTML({id:"jnlTag",list:"jnlTags",label:"Tag",value:p.tag,choices:tags,placeholder:"e.g. Sessions",attrs:' data-jnlfield="tag"'})+`</div>`+
     `<div class="field"><label class="f" for="jnlText">Page</label>`+
     `<textarea id="jnlText" data-jnlfield="text" class="n-edit" placeholder="What happened, who you met, what to remember…">${esc(jnlStr(p.text))}</textarea></div>`+
-    `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button></div>`+
+    `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button><button type="button" class="tbtn" data-jnlck>Insert checkbox</button></div>`+
     NOTE_FMT_HINT+(when?`<p class="hint">${esc(when)}</p>`:"");
 }
 
@@ -265,6 +277,29 @@ function insertJournalStamp(){
   const r=insertLine(ta.value,ta.selectionStart,ta.selectionEnd,jnlStampText(new Date()));
   ta.value=r.text;ta.focus();ta.setSelectionRange(r.caret,r.caret);
   ta.dispatchEvent(new Event("input",{bubbles:true}));
+}
+/* Insert checkbox, in whichever editor of this grammar (#95): the journal's
+   #jnlText, the section-note modal's #noteText. The input event saves it. */
+function insertCheckboxInto(id){
+  const ta=document.getElementById(id);if(!ta)return;
+  const r=insertMarker(ta.value,ta.selectionStart,ta.selectionEnd,"[ ] ");
+  ta.value=r.text;ta.focus();ta.setSelectionRange(r.caret,r.caret);
+  ta.dispatchEvent(new Event("input",{bubbles:true}));
+}
+function insertJournalCheckbox(){insertCheckboxInto("jnlText");}
+/* A tap on the n-th checkbox of the OPEN page's read view flips that line in
+   the text (toggleCheckbox()), stamps editedAt, saves and redraws, with focus
+   back on the same box. Refused while editing (the text is in the textarea
+   then, and no box is on screen), and when the page is gone. */
+function jnlToggleCheckbox(n){
+  if(!jnlUI.open||jnlUI.editing)return false;
+  const p=jnlPages(character).find(x=>x.id===jnlUI.open);if(!p)return false;
+  const cur=jnlStr(p.text),t=toggleCheckbox(cur,n);
+  if(t===cur)return false;
+  p.text=t;p.editedAt=Date.now();
+  scheduleSave();renderJournal();
+  const b=document.querySelector(`#jnlBody [data-ck="${num(n)}"]`);if(b&&b.focus)b.focus({preventScroll:true});
+  return true;
 }
 function toggleJnlGroup(key){
   if(!character.journalCollapse||typeof character.journalCollapse!=="object"||Array.isArray(character.journalCollapse))character.journalCollapse={};

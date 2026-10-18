@@ -29,7 +29,7 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
 | structured objects | `hp` `{cur, max, temp, locked:true}`, `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
 | lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers` |
-| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `journalCollapse`, `trackerCollapse`, `ammoSpent` (stack id → `{n, kind, snap, asked}`) |
+| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack id → `{n, kind, snap, asked}`) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
 | per-character settings | `statStyle`, `hdStyle`, `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound` |
 | text | `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
@@ -174,3 +174,4 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-10-06 — Timed conditions: a duration in rounds, minutes or hours, counted down by the round
   tracker, clearing itself with an Undo. → ledger L5031, #55
 - 2026-10-16 — `migrateAmmo()` runs once more on every sheet (`AMMO_PASS` 2); a new sheet starts at that pass. → ledger L5780, #96
+- 2026-10-17 — `trackerTotals` joins the collapse-style maps, a per-tag switch for a tracker group's total (#93); `trackers[].type` loses `checklist` and `task`, migrated into journal pages by `migrateTrackerPages()` (#95). → ledger L6047, #95, #93

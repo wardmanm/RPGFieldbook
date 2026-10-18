@@ -1,6 +1,6 @@
 # Journal checklists — design
 
-**Status:** approved 2026-10-17, not yet built · wave 1 of [1.9.0](../wiki/roadmap/1.9.0.md)
+**Status:** implemented on branch `issue/95-journal-checklists` · 2026-10-17 · wave 1 of [1.9.0](../wiki/roadmap/1.9.0.md)
 **Issue:** #95 (checklists and tasks leave trackers and become journal features). Built on one
 branch, `issue/95-journal-checklists`; #93 and #94 follow it in the same worktree, since all three
 reshape `87-trackers.js`.
@@ -30,9 +30,9 @@ The rejected options are recorded so they are not re-proposed without the reason
 |---|---|---|---|
 | 1 | Existing checklist and task trackers | **Migrated into journal pages** on load; Trackers becomes counters only | Read-only in Completed: two homes for one idea until 2.0. Migrate and keep a copy: every list twice |
 | 2 | A checkbox in a rendered page | **Tickable in the read view**; a tap rewrites the line in the text | Read-only until Edit: three taps a tick. A second task syntax with a cross-page roll-up: a second grammar to learn |
-| 3 | Closed checklists and tasks | **Migrated too**, every item ticked, with the closed date kept (§5) | Dropping them: deletes a record a player may be keeping. A "Completed" tag: hides them from the tag they were filed under |
+| 3 | Closed checklists and tasks | **Migrated too**: a closed checklist keeps each item's real tick and gains a "Closed <date>" line; a closed task is ticked, its date on its line (§5). Changed at the final review: ticking every item would lose ticks irreversibly | Every item of a closed checklist ticked (the first choice): a tick the player never made, and the real ones lost for good. Dropping them: deletes a record a player may be keeping. A "Completed" tag: hides them from the tag they were filed under |
 | 4 | Progress in the page list | **A "3/5" count** on the row of a page that has checkboxes; nothing on one that hasn't | No count: the tracker-at-a-glance feel is lost. A bar as well: row height on a phone |
-| 5 | Section notes | **Same grammar, tickable in both**: a tap in the Section Notes card writes back to `secNotes` the same way | Render but not tick: one mark, two behaviours. Journal only: `[ ]` in a section note would look broken |
+| 5 | Section notes, and the Story fields | **Same grammar, tickable in all three**: a tap in the Section Notes card writes back to `secNotes` the same way, and one in a Story rich-text field's read view (Proficiencies and the bio cards) to that field (added at the final review) | Render but not tick: one mark, two behaviours. Journal only: `[ ]` in a section note would look broken |
 | 6 | The editor | **An Insert checkbox button** beside Insert timestamp, and `[]` accepted as unchecked | Syntax only: `[` is two taps away on a phone keyboard. Enter continuing the list: Enter-magic in a textarea surprises, and needs an escape |
 | 7 | Tasks on migration | **One page per tag, titled "Tasks"**, one line per task; a closed task's date on its line | One page per task: a page for every one-liner |
 
@@ -78,7 +78,7 @@ bullet:
   say so in the ledger.)
 
 `richHTML()` and `descHTML()` inherit the block, so a `[ ]` in an item description draws a box.
-It does nothing there: `data-ck` is always emitted, and only the two surfaces in §4.3 answer it.
+It does nothing there: `data-ck` is always emitted, and only the three surfaces in §4.3 answer it.
 That is deliberate — one grammar everywhere, as [Rich text](../wiki/architecture/rich-text.md)
 requires — and a pack has no business shipping checkboxes.
 
@@ -109,6 +109,11 @@ delegated `keydown` (the `.kw` / `.tblref` pattern). The handler finds the owner
 - **inside `#notesList`** — the Section Notes card. The entry's `data-noteedit` ancestor names the
   section `k`; `saveNote(k, toggleCheckbox(noteText(k), n))`, `scheduleSave()`, `renderNotes()`,
   `renderNoteIcons()` (the hover preview changes), focus back the same way.
+- **inside `#rt-<key>`** — a Story rich-text field's read view (Proficiencies and the bio cards,
+  `character.notes` among them; `renderRT()` draws them through `richHTML()`). Added at the final
+  review: a box there was drawn and ignored taps. `rtToggleCheckbox(key, n)` refuses a key that is
+  not one of those fields and a field being edited, else writes `character[key]`, redraws the
+  field with `renderRT()`, saves and puts focus back on the same box.
 - anywhere else — nothing.
 
 A tap changes no derived number, so `recompute()` is never called. Undo is not offered: the tap
@@ -130,6 +135,7 @@ tag      its tag, through tagLabel()
 at       its `at`, else now
 editedAt its closedAt, else its `at`, else now
 text     one line per item, "[x] text" or "[ ] text", in item order;
+         each item keeps its own tick, closed or not;
          a closed one adds a blank line and "Closed <date>" (fmtWhen(closedAt));
          an empty checklist has no text, and is a page because its title is one
 ```
@@ -270,3 +276,42 @@ For `UNRELEASED.md`, one bullet:
   the page itself, and the page list shows how many are done. Section notes do the same. Checklist
   and task trackers you already had have moved into journal pages, ticks and dates included;
   Trackers now holds counters only.
+
+## 14. As built
+
+Departures from this spec, found while implementing and verified against the shipped code:
+
+- **§4.1's fallback, not its primary plan.** Each checkbox item gets its own `noteInline()` call,
+  not the whole list joined by `NOTE_LB` and split back: an emphasis opened on one item and closed
+  on the next would otherwise carry a `<strong>` across two `<li>`s.
+- **Migrated dates are `toLocaleDateString()`, not `fmtWhen()`** (§5's text says `fmtWhen()`): a
+  relative "3h ago" would freeze wrong on a page read later.
+- **`- [ ] x` inside a run of bullets ends the bullet list** (§9, made explicit in `noteHTML()`'s
+  bullet loop): the checkbox rule is tested first, as a heading or quote would be.
+- **No keydown handler was needed.** `.ck` is a real `<button>`, so a native click covers Enter and
+  Space; only the `click` delegate in `wire()` answers `[data-ck]`.
+- **"of N" sits on its own line in every tile, not only at narrow widths** (the #94 review fix):
+  `.trk-of` is `flex-basis:100%` unconditionally, so it never counts toward the −/count/+ row's
+  min-content on a phone-width tile. The tile is `flex:1 1 140px` (max `280px`), the count box
+  `54px`, and the tile's −/+ buttons `30px` square.
+- **The Σ is a real `<button>` inside the `role="button"` group header**, not a `<span>`: both the
+  header's click and keydown fold handlers check for it explicitly and return before toggling the
+  group, rather than relying on event bubbling alone to miss it. A button nested in a
+  `role="button"` is a known accessibility compromise: assistive tech may flatten the header and
+  never reach the Σ. Restructuring the header pattern (the journal's and the section
+  notes' group headers share it) is left for 2.0 (Known issues).
+- **The Σ's name is constant**, "Total for <tag>"; whether the total shows is `aria-pressed`
+  alone. A name that flipped between Show and Hide would announce the state twice.
+- **A typed count moves the total too.** The count box commits in place (`trkPatchRow()`), and
+  the patch updates the header's `.trk-total` with the box and the bar, so the total never lags.
+- **`.ck` fills with `--accent-2`**, not `--accent` (§8): `--accent-2` is the theme's
+  control-fill colour, the one its switches and focus rings use.
+- **A box is named by its item.** Each `.ck` carries `aria-label` set to its item in plain words
+  (`noteCkLabel()`: the `*` and backtick marks dropped); `aria-checked` carries the state, so the
+  name never says "Checked".
+- **The Story tab's rich-text fields are a third tickable surface** (§4.3), found at the final
+  review.
+- **A closed checklist keeps its real ticks** (decision 3, changed at the final review), and a
+  `closedAt` no calendar holds writes no date at all rather than "Invalid Date".
+- **`noteCheckboxes()` strips the sentinel characters before matching**, as `noteHTML()` does,
+  so a line beginning with one is counted where it is drawn, and a tap flips the right line.
