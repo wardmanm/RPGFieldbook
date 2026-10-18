@@ -2167,6 +2167,9 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     ck('#95 a tap on a checkbox is wired, and finds its owner before acting',
        /t\.closest\("\[data-ck\]"\)[^\n]*jnlToggleCheckbox\(n\)[^\n]*noteToggleCheckbox\(/.test(boot), 'no [data-ck] handler in wire()');
     ck('#95 Insert checkbox is wired in the journal editor', /t\.closest\("\[data-jnlck\]"\)\)return insertJournalCheckbox\(\);/.test(boot));
+    const notes = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '87-notes.js'), 'utf8');
+    ck('#95 the section-note editor has Insert checkbox, wired to its own textarea',
+       /id="noteCk">Insert checkbox<\/button>/.test(notes) && /getElementById\("noteCk"\)[^\n]*insertCheckboxInto\("noteText"\)/.test(notes));
   }
   ck('the finder search (items, spells, features) has its clear button', boxed(js, 'brSearch'));
   ck('the × shows only while there is text', /\.searchbox input:placeholder-shown ?\+ ?\.search-clear\{display:none\}/.test(css));

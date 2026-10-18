@@ -2815,6 +2815,17 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('#95 a tick on a page deleted meanwhile changes nothing', ctx.jnlToggleCheckbox(0) === false);
 }
 
+/* ---- a tick in a section note writes back too (#95) ---- */
+{
+  const c = X.blankChar(); X.character = c;
+  c.secNotes = {vitals: {text: '[ ] rest\n[x] eat', at: 1, editedAt: 1}};
+  ck('#95 a section note renders its boxes', /aria-checked="false" data-ck="0"/.test(ctx.noteEntryHTML(ctx.noteDef('vitals'))));
+  ck('#95 a tap flips the note\'s line and keeps its dates',
+     ctx.noteToggleCheckbox('vitals', 0) === true && c.secNotes.vitals.text === '[x] rest\n[x] eat' && c.secNotes.vitals.at === 1 && c.secNotes.vitals.editedAt > 1, c.secNotes.vitals);
+  ck('#95 an unknown section or ordinal changes nothing',
+     ctx.noteToggleCheckbox('nope', 0) === false && ctx.noteToggleCheckbox('vitals', 5) === false && c.secNotes.vitals.text === '[x] rest\n[x] eat');
+}
+
 /* ---- trackers through their DOM layer: a tap, the close, the Undo ---- */
 {
   const c = X.blankChar(); X.character = c;

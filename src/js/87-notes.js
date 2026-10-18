@@ -309,6 +309,20 @@ function notesHTML(){
 }
 function renderNotes(){const el=document.getElementById("notesList");if(el)el.innerHTML=notesHTML();}
 
+/* A tap on the n-th checkbox of a section note's entry on the Section Notes
+   card flips that line (toggleCheckbox()) and saves through saveNote(), which
+   keeps `at` and moves `editedAt`; the card and the hover previews redraw, and
+   focus goes back to the same box (#95). */
+function noteToggleCheckbox(k,n){
+  if(!noteDef(k))return false;
+  const cur=noteText(k),t=toggleCheckbox(cur,n);
+  if(t===cur)return false;
+  saveNote(k,t);scheduleSave();renderNotes();renderNoteIcons();
+  const ed=document.querySelector(attrSel("data-noteedit",k)),row=ed&&ed.closest&&ed.closest(".item"),b=row&&row.querySelector(`[data-ck="${num(n)}"]`);
+  if(b&&b.focus)b.focus({preventScroll:true});
+  return true;
+}
+
 /* ---- jump to the section a note belongs to ---- */
 function jumpToNote(k){
   const def=noteDef(k);if(!def)return;
@@ -332,10 +346,12 @@ function openNoteEditor(k){
   openModal("Note — "+noteTitle(def),`
     <div class="field"><label class="f">Your note</label>
       <textarea id="noteText" class="n-edit" placeholder="Anything you want to remember about this section…">${esc(noteText(k))}</textarea></div>
+    <div class="jnl-tools"><button type="button" class="tbtn" id="noteCk">Insert checkbox</button></div>
     ${NOTE_FMT_HINT}
     ${when?`<p class="hint">${esc(when)}</p>`:""}
     <div class="m-actions">${n?`<button class="tbtn danger" id="noteDel" style="margin-right:auto">Delete</button>`:""}<button class="tbtn" id="noteCancel">Cancel</button><button class="tbtn primary" id="noteSave">Save</button></div>`);
   const ta=document.getElementById("noteText");if(ta)ta.focus();
+  document.getElementById("noteCk").addEventListener("click",()=>insertCheckboxInto("noteText"));
   document.getElementById("noteCancel").addEventListener("click",closeModal);
   {const d=document.getElementById("noteDel");if(d)d.addEventListener("click",()=>{saveNote(k,"");closeModal();renderNoteIcons();renderNotes();scheduleSave();});}
   document.getElementById("noteSave").addEventListener("click",()=>{
