@@ -271,6 +271,16 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 .n-h3,.n-h4,.n-h5,.n-h6{font-size:14px;color:var(--ink-soft)}
 .n-ul,.n-ol{margin:0 0 8px;padding-left:20px}
 .n-ul li,.n-ol li{margin:2px 0}
+/* a checklist in a note (#95): the box is a real button, the text beside it */
+.n-ck{list-style:none;margin:0 0 8px;padding:0}
+.n-ck li{display:flex;align-items:flex-start;gap:8px;margin:3px 0}
+.ck{width:18px;height:18px;flex:none;margin-top:3px;padding:0;border-radius:4px;border:2px solid var(--line);background:var(--field);
+  display:inline-grid;place-items:center;line-height:1;cursor:pointer;color:#fff;font:inherit}
+.ck[aria-checked="true"]{background:var(--accent-2);border-color:var(--accent-2)}
+.ck[aria-checked="true"]::after{content:"✓";font-size:12px;font-weight:700}
+.ck:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+.ck-t{flex:1;min-width:0;overflow-wrap:anywhere}
+.ck[aria-checked="true"]+.ck-t{text-decoration:line-through;color:var(--ink-soft)}
 .n-q{margin:0 0 8px;padding:2px 0 2px 10px;border-left:3px solid var(--hair);color:var(--ink-soft)}
 .n-hr{border:0;border-top:1px solid var(--hair);margin:10px 0}
 /* `code` only ever reaches the DOM from our own renderer, so styling the
@@ -1080,6 +1090,7 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .jnl-entry>*{position:relative}
 .jnl-title{font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.02em;flex:1;min-width:0;overflow-wrap:anywhere}
 .jnl-when{font-family:var(--head);font-size:11px;color:var(--ink-soft);flex:none}
+.jnl-prog{font-family:var(--head);font-size:12px;font-weight:700;color:var(--accent-2);font-variant-numeric:tabular-nums;flex:none}
 .jnl-snip{flex-basis:100%;font-size:14px;color:var(--ink-soft);overflow-wrap:anywhere}
 .jnl-snip mark{background:color-mix(in srgb,var(--accent) 38%,transparent);color:var(--ink);border-radius:3px;padding:0 1px}
 /* while searching the headers are plain text: every group is held open */
@@ -1094,27 +1105,30 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .jnl-tag{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
 .jnl-tools{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 8px}
 /* ---- trackers ---- rows share the resource rows' −/+ buttons (.res-btn) */
-.trk{padding:8px 2px;border-bottom:1px dotted var(--hair)}
-.trk-group>.trk:last-child{border-bottom:0}
+.trk-total{font-family:var(--head);font-size:12px;font-weight:700;color:var(--accent-2);font-variant-numeric:tabular-nums;margin-left:4px}
+.trk-sum{margin-left:auto;font-family:var(--head);font-weight:700;font-size:14px;color:var(--ink-soft);width:28px;height:28px}
+.trk-sum.on{color:var(--accent-2)}
+/* #94: an open group is a wrapping row of tiles — two across on a phone, four
+   or five on a desktop; a lone tile never stretches the whole width. Completed
+   is a record, not a dashboard, so it stays a list of rows. */
+.trk-group{display:flex;flex-wrap:wrap;gap:8px;padding:6px 0 2px}
+.trk{flex:1 1 140px;max-width:280px;padding:8px;border:1.5px solid var(--hair);border-radius:10px;background:var(--field)}
 .trk-top{display:flex;align-items:center;gap:8px}
+.trk-done .trk-group{display:block}
+.trk-done .trk{max-width:none;padding:8px 2px;border:0;border-bottom:1px dotted var(--hair);border-radius:0;background:none}
+.trk-done .trk-group>.trk:last-child{border-bottom:0}
 .trk-name{font-weight:700;flex:1;min-width:0;overflow-wrap:anywhere}
 .trk-prog{font-family:var(--head);font-size:12px;font-weight:700;color:var(--ink-soft);font-variant-numeric:tabular-nums;flex:none}
-.trk-ctl{display:flex;align-items:center;gap:8px;margin-top:6px}
-.trk-val{width:76px;min-height:34px;padding:4px 8px;text-align:center;font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
-.trk-of{font-family:var(--head);font-size:12px;color:var(--ink-soft)}
+/* "of N" always drops to its own line (flex-basis:100% forces a wrap point
+   regardless of width) so it never counts toward the −/count/+ row's
+   min-content — that row, not the label, is what a two-column phone width has
+   to fit. */
+.trk-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:6px}
+.trk-ctl .res-btn{width:30px;height:30px}
+.trk-val{width:54px;min-height:34px;padding:4px 4px;text-align:center;font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+.trk-of{flex-basis:100%;font-family:var(--head);font-size:12px;color:var(--ink-soft)}
 .trk-bar{height:6px;border-radius:99px;background:var(--field);border:1px solid var(--hair);overflow:hidden;margin-top:7px}
 .trk-bar>span{display:block;height:100%;background:var(--accent-2)}
-.trk-items{display:flex;flex-direction:column;gap:2px;margin-top:4px}
-/* the tick: a real button, styled like the sheet's .equip box */
-.trk-tick{display:flex;align-items:flex-start;gap:8px;width:100%;text-align:left;background:none;border:0;padding:5px 2px;
-  cursor:pointer;font:inherit;color:var(--ink);border-radius:6px}
-.trk-tick:hover,.trk-tick:focus-visible{background:color-mix(in srgb,var(--accent-2) 10%,transparent)}
-.trk-tick .box{width:18px;height:18px;flex:none;border-radius:4px;border:2px solid var(--line);display:inline-grid;place-items:center;line-height:1;margin-top:2px}
-.trk-tick[aria-checked="true"] .box{background:var(--accent-2)}
-.trk-tick[aria-checked="true"] .box::after{content:"✓";color:#fff;font-size:12px;font-weight:700;line-height:1}
-.trk-tick[aria-checked="true"] .trk-it{text-decoration:line-through;color:var(--ink-soft)}
-/* a task: its name is the tick */
-.trk-top .trk-tick{flex:1;min-width:0;font-weight:700}
 .trk-closed .trk-name{color:var(--ink-soft)}
 .trk-done .fgname{color:var(--ink-soft)}
 /* ================= Modal ================= */
@@ -1742,8 +1756,9 @@ function blankChar(){
     journal:[], journalCollapse:{},
     /* The Journal tab's trackers (87-trackers.js), which of their tag groups are
        shut, and whether the card shows at all — read as !==false, so a sheet from
-       before it shows it. */
-    trackers:[], trackerCollapse:{}, showTrackers:true,
+       before it shows it. `trackerTotals` maps a tag key to `true` where the
+       group shows its total (#93). */
+    trackers:[], trackerCollapse:{}, trackerTotals:{}, showTrackers:true,
     /* Ammunition fired since the last recovery (62-ammo.js): stack id ->
        {n, kind, snap}. `ammoInit` is NOT defaulted: the one-time pass sets it. */
     ammoSpent:{},
@@ -2381,7 +2396,22 @@ function renderRT(key){
     host.innerHTML=val.trim()?`<div class="rt-view">${richHTML(val)}</div>`:`<div class="rt-view empty">Nothing yet — tap Edit.</div>`;
   }
 }
-function renderAllRT(){["proficiencies",...BIO.map(b=>b[0])].forEach(renderRT)}
+function rtKeys(){return ["proficiencies",...BIO.map(b=>b[0])];}
+function renderAllRT(){rtKeys().forEach(renderRT)}
+/* A tap on the n-th checkbox of a Story field's read view (#95): the third
+   tickable surface, after journal pages and section notes. Flips that line
+   (toggleCheckbox()), redraws the field, saves, and puts focus back on the same
+   box. Refused while the field is being edited (the text is in the textarea
+   then), for a key that is not one of these fields, and when nothing changed. */
+function rtToggleCheckbox(key,n){
+  if(rtKeys().indexOf(key)<0||editing[key])return false;
+  const cur=typeof character[key]==="string"?character[key]:"",t=toggleCheckbox(cur,n);
+  if(t===cur)return false;
+  character[key]=t;renderRT(key);scheduleSave();
+  const host=document.getElementById("rt-"+key),b=host&&host.querySelector(`[data-ck="${num(n)}"]`);
+  if(b&&b.focus)b.focus({preventScroll:true});
+  return true;
+}
 
 /* ================= structured lists ================= */
 function fxChips(effects){
@@ -6637,11 +6667,10 @@ function migrate(s){
      give it a new id and migrate() would stop being idempotent. Arrays go. */
   base.journal=repairIds(base.journal.filter(x=>!Array.isArray(x)));
   base.trackers=repairIds(base.trackers.filter(x=>!Array.isArray(x)));
-  /* A tick is found by its item's id, and focus is put back by that id alone,
-     so items get the same repair from ONE pool across every tracker. */
-  const itemIds=new Set();
-  base.trackers.forEach(t=>{if(Array.isArray(t.items)){t.items=t.items.filter(x=>x!==null&&typeof x==="object"&&!Array.isArray(x));repairIds(t.items,itemIds);}});
-  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse","trackerCollapse","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
+  /* AFTER both repairs: checklists and tasks become journal pages (#95). The
+     new pages take fresh uid()s, which cannot collide with a repaired one. */
+  migrateTrackerPages(base,Date.now());
+  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse","trackerCollapse","trackerTotals","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
   /* AFTER the list guards above, so it can rely on inventory being an array. */
@@ -8794,6 +8823,35 @@ function noteWhen(n){
 const NOTE_H0=String.fromCharCode(0xE001), NOTE_H1=String.fromCharCode(0xE002);  /* indexed hold delimiters */
 const NOTE_LB=String.fromCharCode(0xE003);  /* one soft line break inside a block */
 const NOTE_SENTINELS=new RegExp("["+String.fromCharCode(0xE000)+"-"+String.fromCharCode(0xE00F)+"]","g");
+/* ---- checklists (#95) ----
+   A line that starts `[ ]`, `[]`, `[x]` or `[X]`, a bullet before it allowed,
+   with words after it, is a checkbox. One regex serves the renderer and the
+   helpers, so they cannot disagree. Design: specs/2026-10-17-journal-checklists-design.md §4 */
+const NOTE_CK=/^ {0,3}(?:[-*+] +)?\[( |x|X)?\] +(\S.*)$/;
+/* the checkbox lines of a text, in order: their line index, state and words.
+   Each line is matched as noteHTML() reads it, its sentinel characters
+   stripped, or a line that starts with one is drawn as a box and not counted,
+   and a tap flips the wrong line. The indices are the text's own lines:
+   stripping never removes a newline. */
+function noteCheckboxes(text){
+  const lines=String(text==null?"":text).replace(/\r\n?/g,"\n").split("\n"),out=[];
+  lines.forEach((l,i)=>{const m=NOTE_CK.exec(l.replace(NOTE_SENTINELS,""));if(m)out.push({line:i,checked:/x/i.test(m[1]||""),text:m[2]});});
+  return out;
+}
+/* the text with the n-th checkbox flipped — [ ] and [] to [x], [x] and [X] to
+   [ ] — and every other byte as it was (CRLF normalised to LF, as noteHTML()
+   reads it). Out of range: the text as given. */
+function toggleCheckbox(text,n){
+  const given=String(text==null?"":text),src=given.replace(/\r\n?/g,"\n"),lines=src.split("\n");
+  const ck=noteCheckboxes(src)[n];
+  if(!ck)return given;
+  lines[ck.line]=lines[ck.line].replace(/\[( |x|X)?\]/,ck.checked?"[ ]":"[x]");
+  return lines.join("\n");
+}
+/* A box's accessible name is its item, in plain words: the emphasis and code
+   marks dropped. Its state is aria-checked's, so the name never says it. */
+function noteCkLabel(t){return String(t).replace(/[*`]/g,"").replace(/\s+/g," ").trim();}
+function noteProgress(text){const l=noteCheckboxes(text);return {done:l.filter(x=>x.checked).length,total:l.length};}
 /* Indexed, not a single repeating mark like TBL_MARK: this pass NESTS — a code
    span can swallow an already-held glossary chip — so ordinal restore-in-order
    doesn't hold. */
@@ -8833,19 +8891,31 @@ function noteHTML(text){
      ___ , and the spaced forms. Checked BEFORE bullets so "* * *" is a rule. */
   const isHr=l=>/^ {0,3}([-*_])(?: *\1){2,} *$/.test(l);
   const isH=l=>/^ {0,3}(#{1,6}) +(.*)$/.exec(l);
+  const isCk=l=>NOTE_CK.exec(l);
   const isUl=l=>/^ {0,3}[-*+] +/.test(l);
   const isOl=l=>/^ {0,3}(\d{1,9})[.)] +/.exec(l);
   const isQ=l=>/^ {0,3}> ?/.test(l);
-  const starts=l=>isHr(l)||isH(l)||isUl(l)||isOl(l)||isQ(l);
+  const starts=l=>isHr(l)||isH(l)||isCk(l)||isUl(l)||isOl(l)||isQ(l);
+  let ckN=0;   /* the ordinal of each checkbox in the WHOLE text: the write-back key */
   while(i<lines.length){
     const l=lines[i];
     if(!l.trim()){i++;continue;}
     if(isHr(l)){out.push(`<hr class="n-hr">`);i++;continue;}   /* before bullets: "* * *" is a rule */
     const h=isH(l);
     if(h){const lv=h[1].length;out.push(`<div class="n-h n-h${esc(lv)}">${noteInline(h[2])}</div>`);i++;continue;}
+    /* BEFORE bullets: "- [ ] x" begins like one. Each item is rendered on its
+       own, not joined with NOTE_LB and split back: an emphasis opened on one
+       item and closed on the next would otherwise carry a <strong> across two
+       <li>s. Checklists are short, so the extra highlight() calls are cheap. */
+    if(isCk(l)){
+      const items=[];
+      while(i<lines.length&&isCk(lines[i])){const m=isCk(lines[i]);items.push({on:/x/i.test(m[1]||""),t:m[2]});i++;}
+      out.push(`<ul class="n-ck">`+items.map(x=>`<li><button type="button" class="ck" role="checkbox" aria-checked="${x.on?"true":"false"}" data-ck="${esc(ckN++)}" aria-label="${esc(noteCkLabel(x.t))}"></button><span class="ck-t">${noteInline(x.t)}</span></li>`).join("")+`</ul>`);
+      continue;
+    }
     if(isUl(l)){
       const items=[];
-      while(i<lines.length&&isUl(lines[i])&&!isHr(lines[i])){items.push(lines[i].replace(/^ {0,3}[-*+] +/,""));i++;}
+      while(i<lines.length&&isUl(lines[i])&&!isHr(lines[i])&&!isCk(lines[i])){items.push(lines[i].replace(/^ {0,3}[-*+] +/,""));i++;}
       out.push(`<ul class="n-ul">`+items.map(t=>`<li>${noteInline(t)}</li>`).join("")+`</ul>`);continue;
     }
     const o=isOl(l);
@@ -8913,6 +8983,7 @@ function notePreview(text,max){
   let cut=false;
   if(src.replace(/\s+/g," ").length>n){src=src.slice(0,n).replace(/\s+\S*$/,"");cut=true;}
   const lines=src.split("\n").map(l=>l
+    .replace(/^ {0,3}(?:[-*+] +)?\[( |x|X)?\] +(?=\S)/,(m,x)=>(/x/i.test(x||"")?"☑ ":"☐ "))  /* checkbox -> ☐ / ☑ */
     .replace(/^ {0,3}#{1,6} +/,"")                    /* heading: keep the words */
     .replace(/^ {0,3}> ?/,"")                         /* quote */
     .replace(/^ {0,3}([-*+]) +/,"\u2022 ")            /* bullet -> • */
@@ -8985,6 +9056,20 @@ function notesHTML(){
 }
 function renderNotes(){const el=document.getElementById("notesList");if(el)el.innerHTML=notesHTML();}
 
+/* A tap on the n-th checkbox of a section note's entry on the Section Notes
+   card flips that line (toggleCheckbox()) and saves through saveNote(), which
+   keeps `at` and moves `editedAt`; the card and the hover previews redraw, and
+   focus goes back to the same box (#95). */
+function noteToggleCheckbox(k,n){
+  if(!noteDef(k))return false;
+  const cur=noteText(k),t=toggleCheckbox(cur,n);
+  if(t===cur)return false;
+  saveNote(k,t);scheduleSave();renderNotes();renderNoteIcons();
+  const ed=document.querySelector(attrSel("data-noteedit",k)),row=ed&&ed.closest&&ed.closest(".item"),b=row&&row.querySelector(`[data-ck="${num(n)}"]`);
+  if(b&&b.focus)b.focus({preventScroll:true});
+  return true;
+}
+
 /* ---- jump to the section a note belongs to ---- */
 function jumpToNote(k){
   const def=noteDef(k);if(!def)return;
@@ -8999,7 +9084,7 @@ function jumpToNote(k){
 
 /* The one-line formatting key, shared by every editor of this grammar: the
    section-note editor and the journal page editor. */
-const NOTE_FMT_HINT=`<p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>`;
+const NOTE_FMT_HINT=`<p class="hint">Formatting: <b>**bold**</b>, <b>*italic*</b>, <b>\`code\`</b>, <b>#</b> heading, <b>-</b> bullet, <b>1.</b> numbered, <b>[ ]</b> checkbox, <b>&gt;</b> quote, <b>---</b> divider. Rules terms you know stay tappable.</p>`;
 
 /* ---- editor ---- */
 function openNoteEditor(k){
@@ -9008,10 +9093,12 @@ function openNoteEditor(k){
   openModal("Note — "+noteTitle(def),`
     <div class="field"><label class="f">Your note</label>
       <textarea id="noteText" class="n-edit" placeholder="Anything you want to remember about this section…">${esc(noteText(k))}</textarea></div>
+    <div class="jnl-tools"><button type="button" class="tbtn" id="noteCk">Insert checkbox</button></div>
     ${NOTE_FMT_HINT}
     ${when?`<p class="hint">${esc(when)}</p>`:""}
     <div class="m-actions">${n?`<button class="tbtn danger" id="noteDel" style="margin-right:auto">Delete</button>`:""}<button class="tbtn" id="noteCancel">Cancel</button><button class="tbtn primary" id="noteSave">Save</button></div>`);
   const ta=document.getElementById("noteText");if(ta)ta.focus();
+  document.getElementById("noteCk").addEventListener("click",()=>insertCheckboxInto("noteText"));
   document.getElementById("noteCancel").addEventListener("click",closeModal);
   {const d=document.getElementById("noteDel");if(d)d.addEventListener("click",()=>{saveNote(k,"");closeModal();renderNoteIcons();renderNotes();scheduleSave();});}
   document.getElementById("noteSave").addEventListener("click",()=>{
@@ -9553,12 +9640,24 @@ function insertLine(text,start,end,line){
   const ins=(before&&!before.endsWith("\n")?"\n":"")+line+"\n";
   return {text:before+ins+after,caret:before.length+ins.length};
 }
+/* `marker` at the START of a line at the selection — the line the caret is on
+   if it is at a line start, else a new line — with the caret right after the
+   marker, since the next thing typed is the item (#95). insertLine() puts a
+   whole line and moves on; this stays. */
+function insertMarker(text,start,end,marker){
+  const t=jnlStr(text),n=t.length;
+  const s=Math.max(0,Math.min(n,num(start))),e=Math.max(s,Math.min(n,num(end)));
+  const before=t.slice(0,s),after=t.slice(e);
+  const ins=(before&&!before.endsWith("\n")?"\n":"")+marker;
+  return {text:before+ins+after,caret:before.length+ins.length};
+}
 
 /* ---- markup: pure strings, so the harness can assert every state ---- */
 function jnlEntryHTML(p,q){
-  const snip=q?jnlSnippet(p.text,q):"";
+  const snip=q?jnlSnippet(p.text,q):"",pr=noteProgress(jnlStr(p.text));
   return `<button type="button" class="jnl-entry" data-jnlopen="${esc(p.id)}">`+
     `<span class="jnl-title">${esc(jnlTitle(p))}</span>`+
+    (pr.total?`<span class="jnl-prog">${esc(pr.done+"/"+pr.total)}</span>`:"")+
     (jnlTime(p.at)?`<span class="jnl-when">${esc(fmtWhen(jnlTime(p.at)))}</span>`:"")+
     (snip?`<span class="jnl-snip">${snip}</span>`:"")+`</button>`;
 }
@@ -9581,12 +9680,12 @@ function journalListHTML(c,q){
 }
 function jnlWhen(p){return jnlTime(p.at)?noteWhen({at:jnlTime(p.at),editedAt:jnlTime(p.editedAt)}):"";}
 function journalPageHTML(p){
-  const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text));
+  const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text)),pr=noteProgress(jnlStr(p.text));
   return `<div class="jnl-bar"><button type="button" class="tbtn" data-jnlback>← All pages</button><span class="grow"></span>`+
     `<button type="button" class="tbtn" data-jnledit="${esc(p.id)}">Edit</button>`+
     `<button type="button" class="tbtn danger" data-jnldel="${esc(p.id)}">Delete</button></div>`+
     `<h3 class="jnl-h" id="jnlHead" tabindex="-1">${esc(jnlTitle(p))}</h3>`+
-    ((tag||when)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"")+
+    ((tag||when||pr.total)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${pr.total?`<span class="jnl-prog">${esc(pr.done+"/"+pr.total)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"")+
     (body?`<div class="n-body">${body}</div>`:`<div class="empty">Nothing written yet — tap Edit.</div>`);
 }
 /* Built ONCE per edit (renderJournal() leaves it alone after), so it can keep
@@ -9600,7 +9699,7 @@ function journalEditorHTML(p,tags){
     groupFieldHTML({id:"jnlTag",list:"jnlTags",label:"Tag",value:p.tag,choices:tags,placeholder:"e.g. Sessions",attrs:' data-jnlfield="tag"'})+`</div>`+
     `<div class="field"><label class="f" for="jnlText">Page</label>`+
     `<textarea id="jnlText" data-jnlfield="text" class="n-edit" placeholder="What happened, who you met, what to remember…">${esc(jnlStr(p.text))}</textarea></div>`+
-    `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button></div>`+
+    `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button><button type="button" class="tbtn" data-jnlck>Insert checkbox</button></div>`+
     NOTE_FMT_HINT+(when?`<p class="hint">${esc(when)}</p>`:"");
 }
 
@@ -9695,6 +9794,29 @@ function insertJournalStamp(){
   ta.value=r.text;ta.focus();ta.setSelectionRange(r.caret,r.caret);
   ta.dispatchEvent(new Event("input",{bubbles:true}));
 }
+/* Insert checkbox, in whichever editor of this grammar (#95): the journal's
+   #jnlText, the section-note modal's #noteText. The input event saves it. */
+function insertCheckboxInto(id){
+  const ta=document.getElementById(id);if(!ta)return;
+  const r=insertMarker(ta.value,ta.selectionStart,ta.selectionEnd,"[ ] ");
+  ta.value=r.text;ta.focus();ta.setSelectionRange(r.caret,r.caret);
+  ta.dispatchEvent(new Event("input",{bubbles:true}));
+}
+function insertJournalCheckbox(){insertCheckboxInto("jnlText");}
+/* A tap on the n-th checkbox of the OPEN page's read view flips that line in
+   the text (toggleCheckbox()), stamps editedAt, saves and redraws, with focus
+   back on the same box. Refused while editing (the text is in the textarea
+   then, and no box is on screen), and when the page is gone. */
+function jnlToggleCheckbox(n){
+  if(!jnlUI.open||jnlUI.editing)return false;
+  const p=jnlPages(character).find(x=>x.id===jnlUI.open);if(!p)return false;
+  const cur=jnlStr(p.text),t=toggleCheckbox(cur,n);
+  if(t===cur)return false;
+  p.text=t;p.editedAt=Date.now();
+  scheduleSave();renderJournal();
+  const b=document.querySelector(`#jnlBody [data-ck="${num(n)}"]`);if(b&&b.focus)b.focus({preventScroll:true});
+  return true;
+}
 function toggleJnlGroup(key){
   if(!character.journalCollapse||typeof character.journalCollapse!=="object"||Array.isArray(character.journalCollapse))character.journalCollapse={};
   character.journalCollapse[key]=!character.journalCollapse[key];
@@ -9702,10 +9824,10 @@ function toggleJnlGroup(key){
   const h=document.querySelector(attrSel("data-jnlgroup",key));if(h&&h.focus)h.focus();
 }
 /* ================= trackers =================
-   Counters, checklists and one-line tasks the player makes up, grouped by a tag
-   of their choosing — kills by creature type, pages of a book, the steps of a
-   quest. One that can finish can close itself when it does, into a Completed
-   list, with an Undo. Design: src/docs/specs/2026-09-29-journal-design.md §6
+   Counters the player makes up, grouped by a tag of their choosing — kills by
+   creature type, pages of a book. (Checklists and tasks live in journal pages
+   since #95.) One that can finish can close itself when it does, into a
+   Completed list, with an Undo. Design: src/docs/specs/2026-09-29-journal-design.md §6
 
    NOT the resource trackers on the Sheet (65-resources.js), nor the combat round
    tracker (87-combat.js). Tags are the journal's: tagLabel(), groupByTag() in
@@ -9713,31 +9835,63 @@ function toggleJnlGroup(key){
 
    The pure half comes first — no DOM — so src/tests/sheet.js can assert it. */
 
-const TRK_TYPES=[["counter","Counter"],["checklist","Checklist"],["task","Task"]];
+const TRK_TYPES=[["counter","Counter"]];
 
 /* ---- reading one, whatever a file put there ----
-   migrate() keeps only objects in `trackers` (and in each `items`) and repairs
-   their ids; every field inside is read through these. */
+   migrate() keeps only objects in `trackers` and repairs their ids; every
+   field inside is read through these. */
 function trkList(c){const l=c&&c.trackers;return Array.isArray(l)?l.filter(t=>t&&typeof t==="object"&&!Array.isArray(t)):[];}
-function trkType(t){const v=t&&t.type;return (v==="checklist"||v==="task")?v:"counter";}
+/* Every tracker is a counter since #95; a file's "checklist" or "task"
+   migrates to a page (migrateTrackerPages()). */
+function trkType(t){return "counter";}
 /* A whole number, 0 or more; anything else is 0. */
 function trkInt(v){const n=Math.floor(Number(v));return isFinite(n)&&n>0?n:0;}
-function trkItems(t){const l=t&&t.items;return Array.isArray(l)?l.filter(x=>x&&typeof x==="object"&&!Array.isArray(x)):[];}
 function trkName(t){return jnlStr(t&&t.name).trim()||"Untitled";}
 function showTrackers(c){return !c||c.showTrackers!==false;}
 /* A typed count: digits only, or null to put the old value back. */
 function trkParse(v){const s=jnlStr(v).trim();return /^\d+$/.test(s)?parseInt(s,10):null;}
 
+/* ---- checklists and tasks became journal pages (#95) ----
+   Every tracker whose RAW type is checklist or task leaves `trackers` and
+   becomes journal text (spec §5). A checklist is one page: its name, its tag,
+   one "[ ]"/"[x]" line per item, each item keeping its own tick, and for a
+   closed one a final "Closed <date>" (ticking every item would lose the real
+   ticks for good). Tasks are one "Tasks" page per tag, a line each, a closed
+   one ticked (a task's only state is done) with its date on the line.
+   Idempotent by construction: afterwards no tracker has either type, so there
+   is no pass counter to keep. No DOM; it mutates `c` and calls uid().
+   migrate() (71-char-io.js) calls it after the list guards. Dates are written
+   as the locale's date, not fmtWhen()'s relative "3h ago", which would freeze
+   wrong on a page; a date no calendar holds writes none. */
+function migrateTrackerPages(c,now){
+  const all=Array.isArray(c.trackers)?c.trackers:[];
+  const gone=all.filter(t=>t&&typeof t==="object"&&!Array.isArray(t)&&(t.type==="checklist"||t.type==="task"));
+  if(!gone.length)return 0;
+  if(!Array.isArray(c.journal))c.journal=[];
+  const day=ts=>{const d=new Date(jnlTime(ts));return jnlTime(ts)&&!isNaN(d.getTime())?d.toLocaleDateString():"";};
+  const mark=on=>on?"[x] ":"[ ] ";
+  gone.filter(t=>t.type==="checklist").forEach(t=>{
+    const closed=t.closed===true,when=day(t.closedAt);
+    const items=Array.isArray(t.items)?t.items.filter(i=>i&&typeof i==="object"&&!Array.isArray(i)):[];
+    const lines=items.map(i=>mark(i.done===true)+(jnlStr(i.text).trim()||"Untitled"));
+    if(closed&&when){if(lines.length)lines.push("");lines.push("Closed "+when);}
+    const at=jnlTime(t.at)||now;
+    c.journal.push({id:uid(),title:trkName(t),tag:tagLabel(t.tag),text:lines.join("\n"),at,editedAt:jnlTime(t.closedAt)||at});
+  });
+  groupByTag(gone.filter(t=>t.type==="task"),t=>t.tag).forEach(g=>{
+    const items=g.items.slice().sort((a,b)=>jnlTime(a.at)-jnlTime(b.at));
+    const lines=items.map(t=>{const closed=t.closed===true,when=day(t.closedAt);return mark(closed||t.done===true)+trkName(t)+(closed&&when?" — closed "+when:"");});
+    const ats=items.map(t=>jnlTime(t.at)).filter(Boolean),eds=items.map(t=>jnlTime(t.closedAt)||jnlTime(t.at)).filter(Boolean);
+    c.journal.push({id:uid(),title:"Tasks",tag:g.key?g.label:"",text:lines.join("\n"),at:ats.length?Math.min.apply(null,ats):now,editedAt:eds.length?Math.max.apply(null,eds):now});
+  });
+  c.trackers=all.filter(t=>gone.indexOf(t)<0);
+  return gone.length;
+}
+
 /* ---- how far along ----
-   A counter with no goal (kills) and a checklist with no items are never
-   complete: there is nothing to finish. Only a real `true` ticks anything. */
+   A counter with no goal (kills) is never complete: there is nothing to
+   finish. */
 function trkProgress(t){
-  const ty=trkType(t);
-  if(ty==="task"){const d=t.done===true;return {done:d?1:0,total:1,pct:d?100:0,complete:d};}
-  if(ty==="checklist"){
-    const it=trkItems(t),n=it.filter(x=>x.done===true).length;
-    return {done:n,total:it.length,pct:it.length?Math.round(n*100/it.length):0,complete:it.length>0&&n===it.length};
-  }
   const v=trkInt(t.value),g=trkInt(t.goal);
   return {done:v,total:g,pct:g?Math.min(100,Math.round(v*100/g)):0,complete:g>0&&v>=g};
 }
@@ -9757,8 +9911,6 @@ function trkApply(t,change,now){
 /* Never below 0; past the goal is fine ("read it twice"). */
 function trkStep(t,d,now){return trkApply(t,x=>{x.value=Math.max(0,trkInt(x.value)+d);},now);}
 function trkSetValue(t,v,now){return trkApply(t,x=>{x.value=trkInt(v);},now);}
-function trkToggleItem(t,itemId,now){return trkApply(t,x=>{const it=trkItems(x).find(i=>i.id===itemId);if(it)it.done=it.done!==true;},now);}
-function trkToggleTask(t,now){return trkApply(t,x=>{x.done=x.done!==true;},now);}
 /* By hand, from the form. No Undo: it was deliberate. Reopening leaves the
    progress alone. */
 function trkClose(t,now){t.closed=true;t.closedAt=now;}
@@ -9772,27 +9924,13 @@ function trkRestore(c,snap){
   l[i]=JSON.parse(JSON.stringify(snap));return true;
 }
 
-/* ---- the form's lines back into items ----
-   One line, one item. Each line takes the first unused old item with exactly its
-   text, keeping that item's id and tick, so reordering keeps every tick; a new or
-   reworded line is a new item, unticked. A leading bullet ("- ", "* ", "• ") is
-   typing habit, not part of the item. */
-function mergeChecklist(items,text){
-  const old=Array.isArray(items)?items.filter(x=>x&&typeof x==="object"):[],used=new Set();
-  return jnlStr(text).replace(/\r\n?/g,"\n").split("\n").map(l=>l.replace(/^\s*[-*+\u2022]\s+/,"").trim()).filter(Boolean).map(l=>{
-    const hit=old.find(x=>!used.has(x)&&jnlStr(x.text).trim()===l);
-    if(!hit)return {id:uid(),text:l,done:false};
-    used.add(hit);
-    return {id:(typeof hit.id==="string"&&hit.id)?hit.id:uid(),text:l,done:hit.done===true};
-  });
-}
 /* The form's fields onto a tracker. Never closes it, whatever the new goal. */
 function trkFromForm(t,f){
   t.name=jnlStr(f.name).trim();
-  t.type=trkType({type:f.type});
+  t.type="counter";
   t.tag=tagLabel(f.tag);
   t.goal=trkInt(f.goal);
-  t.items=mergeChecklist(trkItems(t),f.items);
+  delete t.items;delete t.done;
   t.autoClose=f.autoClose!==false;
   t.value=trkInt(t.value);
   return t;
@@ -9809,6 +9947,12 @@ function trkSplit(c){
   };
 }
 function trkGroupOpen(c,key){const m=c&&c.trackerCollapse;return !(m&&typeof m==="object"&&!Array.isArray(m)&&m[key]);}
+/* ---- a group's total (#93) ----
+   Every counter with the tag, open OR closed, so completing one never drops
+   the total. Shown only where trackerTotals[key] is true (absent is off, the
+   collapse-map convention); the key is tagKey(), "" for Untagged. */
+function trkTotalOn(c,key){const m=c&&c.trackerTotals;return !!(m&&typeof m==="object"&&!Array.isArray(m)&&m[key]===true);}
+function trkGroupTotal(c,key){return trkList(c).filter(t=>tagKey(t.tag)===key).reduce((s,t)=>s+trkInt(t.value),0);}
 /* The ids of the open trackers drawn after `id`, in the card's order: the rest
    of its group, then the groups below. A shut group's rows can't take focus, so
    they are left out. Where Tab from a closing tap's Undo goes (trkAct()). */
@@ -9824,39 +9968,17 @@ function trkAfter(c,id){
    would pay for a highlight() of the whole card. */
 const TRK_PEN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`;
 function trkEditHTML(t){return `<button type="button" class="icon" data-trkedit="${esc(t.id)}" aria-label="${esc("Edit "+trkName(t))}" title="Edit">${TRK_PEN}</button>`;}
-/* A tick is a <button role="checkbox">: a native checkbox inside a <label> fires
-   the page's click handler twice, and the sheet's .equip spans can't be reached
-   by keyboard. `attr` is its hook, already escaped, and comes after role and
-   aria-checked so it is the button's FIRST data-* — the one focus is put back by. */
-function trkTickHTML(attr,on,label){
-  return `<button type="button" class="trk-tick" role="checkbox" aria-checked="${on?"true":"false"}" ${attr}><span class="box" aria-hidden="true"></span><span class="trk-it">${esc(label)}</span></button>`;
-}
 function trackerRowHTML(t){
-  const ty=trkType(t),pr=trkProgress(t),name=trkName(t);
-  if(ty==="task")return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top">${trkTickHTML(`data-trktask="${esc(t.id)}"`,pr.complete,name)}${trkEditHTML(t)}</div></div>`;
-  let prog="",body="";
-  if(ty==="checklist"){
-    const it=trkItems(t);
-    prog=`<span class="trk-prog">${pr.done} / ${pr.total}</span>`;
-    body=it.length?`<div class="trk-items">${it.map(i=>trkTickHTML(`data-trkitem="${esc(i.id)}"`,i.done===true,jnlStr(i.text))).join("")}</div>`:
-      `<div class="empty">No items yet — tap the pencil to add some.</div>`;
-  }else{
-    const g=trkInt(t.goal);
-    body=`<div class="trk-ctl"><button type="button" class="res-btn" data-trkdec="${esc(t.id)}" aria-label="${esc("One less — "+name)}">−</button>`+
-      `<input class="trk-val" data-trkval="${esc(t.id)}" inputmode="numeric" value="${esc(pr.done)}" aria-label="${esc(name+" — count")}">`+
-      `<button type="button" class="res-btn" data-trkinc="${esc(t.id)}" aria-label="${esc("One more — "+name)}">+</button>`+
-      (g?`<span class="trk-of">of ${esc(g)}</span>`:"")+`</div>`+
-      (g?`<div class="trk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(g)}" aria-valuenow="${esc(Math.min(pr.done,g))}" aria-label="${esc(name)}"><span style="width:${esc(pr.pct)}%"></span></div>`:"");
-  }
-  return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(name)}</span>${prog}${trkEditHTML(t)}</div>${body}</div>`;
+  const pr=trkProgress(t),name=trkName(t),g=trkInt(t.goal);
+  const body=`<div class="trk-ctl"><button type="button" class="res-btn" data-trkdec="${esc(t.id)}" aria-label="${esc("One less — "+name)}">−</button>`+
+    `<input class="trk-val" data-trkval="${esc(t.id)}" inputmode="numeric" value="${esc(pr.done)}" aria-label="${esc(name+" — count")}">`+
+    `<button type="button" class="res-btn" data-trkinc="${esc(t.id)}" aria-label="${esc("One more — "+name)}">+</button>`+
+    (g?`<span class="trk-of">of ${esc(g)}</span>`:"")+`</div>`+
+    (g?`<div class="trk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(g)}" aria-valuenow="${esc(Math.min(pr.done,g))}" aria-label="${esc(name)}"><span style="width:${esc(pr.pct)}%"></span></div>`:"");
+  return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(name)}</span>${trkEditHTML(t)}</div>${body}</div>`;
 }
 /* In Completed: what it came to, when it closed, and the way back. */
-function trkSummary(t){
-  const ty=trkType(t),pr=trkProgress(t);
-  if(ty==="task")return "Done";
-  if(ty==="checklist")return pr.done+" / "+pr.total;
-  return trkInt(t.goal)?pr.done+" / "+trkInt(t.goal):String(pr.done);
-}
+function trkSummary(t){const pr=trkProgress(t);return trkInt(t.goal)?pr.done+" / "+trkInt(t.goal):String(pr.done);}
 function trackerClosedHTML(t){
   const when=jnlTime(t.closedAt)?"Closed "+fmtWhen(jnlTime(t.closedAt)):"";
   return `<div class="trk trk-closed" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(trkName(t))}</span>`+
@@ -9865,12 +9987,14 @@ function trackerClosedHTML(t){
 }
 function trackersHTML(c,completedOpen){
   const s=trkSplit(c);
-  if(!s.open.length&&!s.closed.length)return `<div class="empty">No trackers yet. Tap + Tracker to count something — kills, pages read, the steps of a quest.</div>`;
+  if(!s.open.length&&!s.closed.length)return `<div class="empty">No trackers yet. Tap + Tracker to count something — kills, pages read, days on the road.</div>`;
   const caret=o=>`<svg class="fcaret ${o?"":"c"}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`;
   let h=s.open.length?s.open.map(g=>{
-    const o=trkGroupOpen(c,g.key);
+    const o=trkGroupOpen(c,g.key),on=trkTotalOn(c,g.key);
     return `<div class="fgroup"><div class="fghead" data-trkgroup="${esc(g.key)}" role="button" tabindex="0" aria-expanded="${o?"true":"false"}">`+
-      caret(o)+`<span class="fgname">${esc(g.label)}</span><span class="cnt">(${g.items.length})</span></div>`+
+      caret(o)+`<span class="fgname">${esc(g.label)}</span><span class="cnt">(${g.items.length})</span>`+
+      (on?`<span class="trk-total">· ${esc(trkGroupTotal(c,g.key))}</span>`:"")+
+      `<button type="button" class="icon trk-sum${on?" on":""}" data-trktotal="${esc(g.key)}" aria-pressed="${on?"true":"false"}" aria-label="${esc("Total for "+g.label)}" title="Total">Σ</button></div>`+
       `<div class="trk-group"${o?"":` style="display:none"`}>${g.items.map(trackerRowHTML).join("")}</div></div>`;
   }).join(""):`<div class="empty">Nothing open — everything here is done.</div>`;
   if(s.closed.length)h+=`<div class="fgroup trk-done"><div class="fghead" data-trkcompleted role="button" tabindex="0" aria-expanded="${completedOpen?"true":"false"}">`+
@@ -9878,17 +10002,13 @@ function trackersHTML(c,completedOpen){
     `<div class="trk-group"${completedOpen?"":` style="display:none"`}>${s.closed.map(trackerClosedHTML).join("")}</div></div>`;
   return h;
 }
-/* Goal belongs to counters and Items to checklists; openTrackerForm() shows the
-   one the chosen type needs. Close now / Reopen and Delete only for one that
-   exists. */
+/* Name and Tag side by side, then Goal; Close when complete only once there is a
+   goal to complete. Close now / Reopen and Delete only for one that exists. */
 function trackerFormHTML(t,tags,isNew){
-  const ty=trkType(t),g=trkInt(t.goal),auto=t.autoClose!==false,lines=trkItems(t).map(i=>jnlStr(i.text)).join("\n");
-  return `<div class="field"><label class="f" for="tkName">Name</label><input id="tkName" value="${esc(jnlStr(t.name))}" placeholder="e.g. Goblins slain" autocomplete="off"></div>`+
-    `<div class="g2"><div class="field"><label class="f" for="tkType">Type</label><select id="tkType">`+
-      TRK_TYPES.map(([v,l])=>`<option value="${esc(v)}"${ty===v?" selected":""}>${esc(l)}</option>`).join("")+`</select></div>`+
+  const g=trkInt(t.goal),auto=t.autoClose!==false;
+  return `<div class="g2"><div class="field"><label class="f" for="tkName">Name</label><input id="tkName" value="${esc(jnlStr(t.name))}" placeholder="e.g. Goblins slain" autocomplete="off"></div>`+
     groupFieldHTML({id:"tkTag",list:"tkTags",label:"Tag",value:t.tag,choices:tags,placeholder:"e.g. Kills"})+`</div>`+
-    `<div class="field" data-tkfor="counter"><label class="f" for="tkGoal">Goal</label><input id="tkGoal" type="number" min="0" inputmode="numeric" value="${esc(g||"")}" placeholder="None — count forever"></div>`+
-    `<div class="field" data-tkfor="checklist"><label class="f" for="tkItems">Items, one per line</label><textarea id="tkItems" placeholder="Find the map&#10;Cross the Mire&#10;Meet Brindle">${esc(lines)}</textarea></div>`+
+    `<div class="field"><label class="f" for="tkGoal">Goal</label><input id="tkGoal" type="number" min="0" inputmode="numeric" value="${esc(g||"")}" placeholder="None — count forever"></div>`+
     `<div class="toggle" id="tkAutoRow"><div><div class="t-lbl">Close when complete</div><div class="t-sub">Move it to Completed once it's done. You get an Undo.</div></div>`+
       `<button type="button" class="switch ${auto?"on":""}" id="tkAuto" role="switch" aria-checked="${auto?"true":"false"}" aria-label="Close when complete"></button></div>`+
     `<div class="m-actions">`+(isNew?"":`<button type="button" class="tbtn danger" id="tkDel" style="margin-right:auto">Delete</button>`+
@@ -9919,14 +10039,17 @@ function renderTrackers(){
 }
 function trkById(id){return trkList(character).find(t=>t.id===id)||null;}
 /* A typed count, written into its row where it stands: the box, the bar's value
-   and its width. The goal and the "of N" can't change from the row. false when
-   there is no row, for the caller to redraw instead. */
+   and its width, and the group header's total when it shows one (#93). The
+   goal and the "of N" can't change from the row. false when there is no row,
+   for the caller to redraw instead. */
 function trkPatchRow(t){
   const row=document.querySelector(attrSel("data-trk",t.id));if(!row)return false;
   const pr=trkProgress(t),g=trkInt(t.goal);
   const v=row.querySelector("[data-trkval]");if(v)v.value=String(pr.done);
   const bar=row.querySelector(".trk-bar");
   if(bar){bar.setAttribute("aria-valuenow",String(Math.min(pr.done,g)));const f=bar.querySelector("span");if(f)f.style.width=pr.pct+"%";}
+  const grp=row.closest&&row.closest(".fgroup"),tot=grp&&grp.querySelector(".trk-total");
+  if(tot)tot.textContent="· "+trkGroupTotal(character,tagKey(t.tag));
   return true;
 }
 /* One tap on a row. When it finishes a tracker set to close, the toast offers an
@@ -9993,6 +10116,11 @@ function toggleTrkGroup(key){
   character.trackerCollapse[key]=!character.trackerCollapse[key];
   renderTrackers();scheduleSave();
 }
+function toggleTrkTotal(key){
+  if(!character.trackerTotals||typeof character.trackerTotals!=="object"||Array.isArray(character.trackerTotals))character.trackerTotals={};
+  if(character.trackerTotals[key]===true)delete character.trackerTotals[key];else character.trackerTotals[key]=true;
+  renderTrackers();scheduleSave();
+}
 function toggleTrkCompleted(){trkCompletedOpen=!trkCompletedOpen;renderTrackers();}
 /* Reopening moves the row from trackerClosedHTML() (data-trkreopen) back into
    trackerRowHTML() (no such hook), so renderTrackers()'s own focus-restore has
@@ -10005,17 +10133,12 @@ function reopenTracker(id,viaKey){
 }
 function openTrackerForm(existing){
   const isNew=!existing;
-  const t=existing||{id:uid(),name:"",type:"counter",tag:"",value:0,goal:0,items:[],done:false,autoClose:true,at:Date.now()};
+  const t=existing||{id:uid(),name:"",type:"counter",tag:"",value:0,goal:0,autoClose:true,at:Date.now()};
   openModal(isNew?"New tracker":"Edit tracker",trackerFormHTML(t,jnlTagList(character),isNew));
   const $=id=>document.getElementById(id);
-  /* Goal for a counter, Items for a checklist; Close when complete only for one
-     that can complete, and a counter needs a goal for that. */
-  const sync=()=>{
-    const ty=$("tkType").value;
-    document.querySelectorAll("[data-tkfor]").forEach(f=>{f.hidden=f.dataset.tkfor!==ty;});
-    $("tkAutoRow").hidden=ty==="counter"&&!trkInt($("tkGoal").value);
-  };
-  $("tkType").addEventListener("change",sync);$("tkGoal").addEventListener("input",sync);sync();
+  /* Close when complete only for one that can complete: a counter needs a goal. */
+  const sync=()=>{$("tkAutoRow").hidden=!trkInt($("tkGoal").value);};
+  $("tkGoal").addEventListener("input",sync);sync();
   $("tkAuto").addEventListener("click",e=>{const b=e.currentTarget,on=!b.classList.contains("on");b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");});
   $("tkCancel").addEventListener("click",closeModal);
   /* The tracker as stored NOW. The toast sits outside the modal's inert, so its
@@ -10023,8 +10146,7 @@ function openTrackerForm(existing){
      snapshot — `t` would then be a copy no longer in the list. A new tracker
      has no stored copy: Save adds `t` itself. */
   const cur=()=>isNew?t:trkById(t.id);
-  const fields=()=>({name:$("tkName").value,type:$("tkType").value,tag:$("tkTag").value,goal:$("tkGoal").value,
-    items:$("tkItems").value,autoClose:$("tkAuto").classList.contains("on")});
+  const fields=()=>({name:$("tkName").value,tag:$("tkTag").value,goal:$("tkGoal").value,autoClose:$("tkAuto").classList.contains("on")});
   const done=()=>{closeModal();renderTrackers();scheduleSave();};
   {const d=$("tkDel");if(d)d.addEventListener("click",()=>{
     if(!confirm(`Delete the tracker “${trkName(cur()||t)}”?`))return;
@@ -11470,15 +11592,19 @@ function wire(){
     if(t.closest("[data-jnldone]"))return jnlDone();
     if((m=t.closest("[data-jnldel]"))){jnlDelete(m.dataset.jnldel);return;}
     if(t.closest("[data-jnlstamp]"))return insertJournalStamp();
+    if(t.closest("[data-jnlck]"))return insertJournalCheckbox();
+    /* a checkbox in a rendered page, a Story field or a section note (#95):
+       only those three surfaces answer it — a box drawn in an item description
+       does nothing */
+    if((m=t.closest("[data-ck]"))){const n=num(m.dataset.ck),rt=m.closest('[id^="rt-"]');if(m.closest("#jnlBody"))jnlToggleCheckbox(n);else if(rt)rtToggleCheckbox(rt.id.slice(3),n);else{const ne=m.closest("#notesList .item"),ed=ne&&ne.querySelector("[data-noteedit]");if(ed)noteToggleCheckbox(ed.dataset.noteedit,n);}return;}
     if((m=t.closest("[data-jnlgroup]"))){toggleJnlGroup(m.dataset.jnlgroup);return;}
     // trackers (87-trackers.js). The tap's own `t` is the target, so the tracker is `x`.
     if((m=t.closest("[data-trkdec]")))return trkAct(m.dataset.trkdec,(x,now)=>trkStep(x,-1,now),e.detail===0);
     if((m=t.closest("[data-trkinc]")))return trkAct(m.dataset.trkinc,(x,now)=>trkStep(x,1,now),e.detail===0);
-    if((m=t.closest("[data-trkitem]"))){const r=m.closest("[data-trk]"),iid=m.dataset.trkitem;if(r)trkAct(r.dataset.trk,(x,now)=>trkToggleItem(x,iid,now),e.detail===0);return;}
-    if((m=t.closest("[data-trktask]")))return trkAct(m.dataset.trktask,(x,now)=>trkToggleTask(x,now),e.detail===0);
     if((m=t.closest("[data-trkedit]"))){const x=trkById(m.dataset.trkedit);if(x)openTrackerForm(x);return;}
     if((m=t.closest("[data-trkreopen]")))return reopenTracker(m.dataset.trkreopen,e.detail===0);
-    if((m=t.closest("[data-trkgroup]"))){toggleTrkGroup(m.dataset.trkgroup);return;}
+    if((m=t.closest("[data-trktotal]"))){toggleTrkTotal(m.dataset.trktotal);return;}
+    if((m=t.closest("[data-trkgroup]"))&&!t.closest("[data-trktotal]")){toggleTrkGroup(m.dataset.trkgroup);return;}
     if(t.closest("[data-trkcompleted]"))return toggleTrkCompleted();
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
@@ -11626,7 +11752,8 @@ function wire(){
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
     {const g=e.target.closest&&e.target.closest("[data-jnlgroup]");if(g){e.preventDefault();toggleJnlGroup(g.dataset.jnlgroup);return;}}
-    {const g=e.target.closest&&e.target.closest("[data-trkgroup]");if(g){e.preventDefault();toggleTrkGroup(g.dataset.trkgroup);return;}}
+    /* the Σ inside the header is a real button: Enter and Space click it natively, so the header must not also fold */
+    {const g=e.target.closest&&e.target.closest("[data-trkgroup]");if(g&&!e.target.closest("[data-trktotal]")){e.preventDefault();toggleTrkGroup(g.dataset.trkgroup);return;}}
     {const g=e.target.closest&&e.target.closest("[data-trkcompleted]");if(g){e.preventDefault();toggleTrkCompleted();return;}}
   });
   /* The combat tab's header sticks under the tab bar, whose height changes with
