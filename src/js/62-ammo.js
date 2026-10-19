@@ -342,10 +342,18 @@ function ammoRecoverable(c){
    the sheet — not a bundle, the same lower-cased trimmed name, the same ammo
    bonus and the same grant as the snapshot — and tops that up instead of
    making a second "+1 Arrow" row; any weapon loaded with the old id is
-   repointed to it. Only when there is none does the old stack come back from
-   its copy, under its old id. A thrown weapon is still on the sheet at ×0, so
-   its throws go back onto it. When `rec` is an object it is filled with what
-   was done, for undoRecovery(). Returns how many pieces came back. */
+   repointed to it (its target id kept as `to`, so undoRecovery() only unpoints
+   a weapon the player hasn't re-loaded since). Only when there is none does
+   the old stack come back from its copy, under its old id. A thrown weapon is
+   still on the sheet at ×0, so its throws go back onto it.
+   Every `added`/`made` record carries `from`: the ammoSpent id it answers for
+   (its own id, except a home-join's, which is the home stack's id) — this is
+   what undoRecovery() uses to tell a cleared entry that DEPENDED on a stack
+   (present for the full top-up, even one giving 0 back; joined into a home
+   stack; or rebuilt) from one whose stack was already gone with nothing given
+   back (review finding 1: that distinction is what Undo must not restore
+   blindly). When `rec` is an object it is filled with what was done, for
+   undoRecovery(). Returns how many pieces came back. */
 function recoverAmmo(c,kinds,rec){
   const want=Array.isArray(kinds)?new Set(kinds.map(ammoKindOf)):null;
   const m=ammoSpentMap(c);
@@ -356,54 +364,117 @@ function recoverAmmo(c,kinds,rec){
     const e=ammoSpentEntry(c,id);
     if(want&&!want.has(e.kind))return;
     const n=ammoBack(ammoRecoverRule(c,ammoEntryItem(c,id,e)),e);
-    if(n>0){
-      const st=c.inventory.find(x=>x&&x.id===id);
-      if(st){st.qty=itemQty(st)+n;back+=n;if(log)log.added.push({id,n});}
-      else if(e.snap){
-        const snapAm=itemAmmo(e.snap), snapName=String(e.snap.name||"").trim().toLowerCase(),
-              snapGrant=e.snap.grant||"";
-        const home=c.inventory.find(x=>x&&typeof x==="object"&&!x.pack&&
-          String(x.name||"").trim().toLowerCase()===snapName&&
-          (itemAmmo(x)||{}).bonus===(snapAm?snapAm.bonus:0)&&(x.grant||"")===snapGrant);
-        if(home){
-          home.qty=itemQty(home)+n;if(log)log.added.push({id:home.id,n});
-          c.inventory.forEach(x=>{if(x&&x.ammoStack===id){x.ammoStack=home.id;if(log)log.repointed.push({id:x.id,from:id});}});
-        }else{
-          c.inventory.push(Object.assign(JSON.parse(JSON.stringify(e.snap)),{id,qty:n}));
-          if(log)log.made.push({id,n});
-        }
-        back+=n;
+    const st=c.inventory.find(x=>x&&x.id===id);
+    if(st){
+      /* Present at recovery, whatever the rule gave it — even 0 — still ties
+         this cleared entry to that stack (finding 1): deleting the stack
+         afterwards must drop the entry's history with it. */
+      if(log)log.added.push({id,n,from:id});
+      if(n>0){st.qty=itemQty(st)+n;back+=n;}
+    }else if(n>0&&e.snap){
+      const snapAm=itemAmmo(e.snap), snapName=String(e.snap.name||"").trim().toLowerCase(),
+            snapGrant=e.snap.grant||"";
+      const home=c.inventory.find(x=>x&&typeof x==="object"&&!x.pack&&
+        String(x.name||"").trim().toLowerCase()===snapName&&
+        (itemAmmo(x)||{}).bonus===(snapAm?snapAm.bonus:0)&&(x.grant||"")===snapGrant);
+      if(home){
+        home.qty=itemQty(home)+n;if(log)log.added.push({id:home.id,n,from:id});
+        c.inventory.forEach(x=>{if(x&&x.ammoStack===id){x.ammoStack=home.id;if(log)log.repointed.push({id:x.id,from:id,to:home.id});}});
+      }else{
+        c.inventory.push(Object.assign(JSON.parse(JSON.stringify(e.snap)),{id,qty:n}));
+        if(log)log.made.push({id,n,from:id});
       }
+      back+=n;
     }
     if(log)log.cleared[id]=JSON.parse(JSON.stringify(m[id]));
     delete m[id];
   });
   return back;
 }
-/* Undo recovery (#104, spec §6): takes back exactly what that recovery gave.
-   A stack it rebuilt goes while it holds no more than it was given; a quantity
-   it added comes off (a stack of ammunition left with nothing goes, as the
-   last shot removes it; a thrown weapon stays at ×0); a weapon it repointed
-   points back; an entry it cleared comes back, ADDED to any entry a shot
-   fired since has started, so that shot stays fired. Once only. */
+/* Whether the character still holds a record of granting source `sid`
+   (#104 review finding 1) — used only for a cleared entry whose stack was
+   ALREADY gone at recovery (recoverAmmo() logged no `from` for it), to decide
+   whether Undo should still bring its history back. Mirrors the sid shapes
+   originSid() builds (race:name, bg:name, class:name, subclass:class:subclass)
+   against the character's own race/background/classes, the same fields
+   removeRace()/removeBackground()/removeClass() check before ever calling
+   revertEquipmentGrants() (src/js/50-classrace.js, 52-race.js, 54-background.js,
+   56-class.js). An unrecognised sid shape reads as still live: Undo defaults
+   to restoring rather than guessing, per the ruling. */
+function grantSidLive(c,sid){
+  if(!c||!sid)return true;
+  const i=String(sid).indexOf(":");if(i<0)return true;
+  const kind=sid.slice(0,i), rest=sid.slice(i+1);
+  if(kind==="race")return !!(c.race&&c.race.name===rest);
+  if(kind==="bg")return !!(c.bg&&c.bg.name===rest);
+  if(kind==="class")return (Array.isArray(c.classes)?c.classes:[]).some(cl=>cl&&cl.name===rest);
+  if(kind==="subclass"){
+    const j=rest.indexOf(":");if(j<0)return true;
+    return (Array.isArray(c.classes)?c.classes:[]).some(cl=>cl&&cl.name===rest.slice(0,j)&&cl.subclass===rest.slice(j+1));
+  }
+  return true;
+}
+/* Undo recovery (#104, spec §6; review findings 1–3): takes back exactly what
+   that recovery gave, no more. A stack it rebuilt goes while it holds no more
+   than it was given; a quantity it added comes off (any ammunition stack left
+   with nothing goes, as the last shot removes it — that is unchanged by this
+   review: it's removed everywhere else in the app too; a thrown weapon stays
+   on the sheet at ×0 instead). Either `take()` can come up short of the
+   amount it was asked to remove — a shot fired since has already used some
+   or all of it — and that shortfall comes off the cleared entry's own `n`
+   before it is restored, so those shots are not counted twice (finding 2). A
+   weapon it repointed points back only if it still points where recovery left
+   it — not wherever the player has since loaded it (finding 3). A cleared
+   entry comes back ADDED to any entry a shot fired since has started under
+   the same id, so that shot stays fired; one with no dependency at all — its
+   stack was already gone when it was cleared — comes back as before UNLESS
+   its snapshot names a granting source that has since been revoked (finding
+   1); one that DID depend on a stack (present, joined, or rebuilt) comes back
+   only if that stack is still on the sheet, or a new entry has already taken
+   its id (the shot-since case above). Once only. */
 function undoRecovery(c,rec){
   if(!c||!rec||typeof rec!=="object"||rec.undone||!Array.isArray(rec.added)||!Array.isArray(rec.made)||
      !Array.isArray(rec.repointed)||!rec.cleared||typeof rec.cleared!=="object")return false;
   if(!Array.isArray(c.inventory))c.inventory=[];
+  /* Who was on the sheet before Undo's OWN take() below removes a stack it
+     rebuilt or emptied back out — that removal is Undo doing its job, not
+     evidence the player deleted anything, so the "is its stack gone" check
+     for restoring a cleared entry (below) reads this snapshot, taken first. */
+  const livePre=new Set(c.inventory.filter(x=>x&&x.id!=null).map(x=>x.id));
+  const short={};
   const take=(id,n,rebuilt)=>{
-    const it=c.inventory.find(x=>x&&x.id===id);if(!it)return;
-    if(itemQty(it)<=n&&(rebuilt||!weaponThrown(it)))c.inventory=c.inventory.filter(x=>x!==it);
-    else it.qty=Math.max(0,itemQty(it)-n);
+    const it=c.inventory.find(x=>x&&x.id===id);
+    if(!it)return n;
+    const have=itemQty(it);
+    if(have<=n&&(rebuilt||!weaponThrown(it)))c.inventory=c.inventory.filter(x=>x!==it);
+    else it.qty=Math.max(0,have-n);
+    return Math.max(0,n-have);
   };
-  rec.made.forEach(x=>take(x.id,x.n,true));
-  rec.added.forEach(x=>take(x.id,x.n,false));
-  rec.repointed.forEach(x=>{const it=c.inventory.find(y=>y&&y.id===x.id);if(it)it.ammoStack=x.from;});
+  rec.made.forEach(x=>{short[x.from]=(short[x.from]||0)+take(x.id,x.n,true);});
+  rec.added.forEach(x=>{short[x.from]=(short[x.from]||0)+take(x.id,x.n,false);});
+  rec.repointed.forEach(x=>{const it=c.inventory.find(y=>y&&y.id===x.id);if(it&&it.ammoStack===x.to)it.ammoStack=x.from;});
   if(!c.ammoSpent||typeof c.ammoSpent!=="object"||Array.isArray(c.ammoSpent))c.ammoSpent={};
+  /* The item the entry depended on (its own id while present, or what it was
+     joined into / rebuilt as), when recoverAmmo() recorded one. */
+  const target=id=>{const m=rec.made.find(x=>x.from===id);if(m)return m.id;const a=rec.added.find(x=>x.from===id);return a?a.id:null;};
   Object.keys(rec.cleared).forEach(id=>{
-    const old=rec.cleared[id];
-    if(!(id in c.ammoSpent)){c.ammoSpent[id]=old;return;}
-    const o=ammoSpentEntry({ammoSpent:{x:old}},"x"), k=ammoSpentEntry(c,id);
-    c.ammoSpent[id]=Object.assign({},c.ammoSpent[id],{n:o.n+k.n,hits:o.hits+k.hits,misses:o.misses+k.misses});
+    const raw=rec.cleared[id];
+    const t=target(id), already=id in c.ammoSpent;
+    if(t){
+      if(!already&&!livePre.has(t))return;      /* its stack was already gone, and nothing has refired it */
+    }else{
+      const g=raw&&raw.snap&&raw.snap.grant;
+      if(g&&!grantSidLive(c,g))return;                            /* it was already used up, and its source is gone too */
+    }
+    const sh=short[id]||0;
+    /* No shots since: put the entry back exactly as it was raw, with no
+       hits/misses added to a pre-#104 shape that never had them. */
+    if(!already&&sh<=0){c.ammoSpent[id]=raw;return;}
+    const o=ammoSpentEntry({ammoSpent:{x:raw}},"x");
+    const n=Math.max(0,o.n-sh), hits=Math.min(o.hits,n), misses=Math.min(Math.max(0,n-hits),o.misses);
+    if(!already){c.ammoSpent[id]=Object.assign({},raw,{n,hits,misses});return;}
+    const k=ammoSpentEntry(c,id);
+    c.ammoSpent[id]=Object.assign({},c.ammoSpent[id],{n:n+k.n,hits:hits+k.hits,misses:misses+k.misses});
   });
   rec.undone=true;
   return true;
@@ -558,7 +629,7 @@ function loadAmmo(itemId,stackId){
   closeModal();scheduleSave();renderAttacks();
   return true;
 }
-/* Recover N on a row: half of what this kind fired since the last recovery. */
+/* Recover N on a row: what this kind's rule gives back, for shots fired since the last recovery. */
 function recoverWeaponAmmo(itemId,viaKey){
   const it=(character.inventory||[]).find(i=>i&&i.id===itemId);
   const kind=weaponAmmoKind(it);if(!kind)return 0;
@@ -572,9 +643,10 @@ function recoverWeaponAmmo(itemId,viaKey){
 }
 /* Asked once, after End combat, and only when a shot has been fired since the
    last time this asked (#6 final review — "No" must not ask again about the
-   same shots next fight): half of what was fired since the last recovery,
-   listed per kind. Yes recovers it all and clears every count (a lone shot
-   rounds down to nothing, and is lost); No marks every count asked about —
+   same shots next fight): what each kind's rule gives back for what was
+   fired since the last recovery, listed per kind. Yes recovers it all and
+   clears every count (what the rule doesn't give back is lost); No marks
+   every count asked about —
    Recover N on the row still shows and recovers the full count. Returns words
    for the End combat toast, else "". */
 function offerAmmoRecovery(){
