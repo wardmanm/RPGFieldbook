@@ -27,9 +27,11 @@ _private-data
 # the directory, so no `!` rule beneath it can ever take effect. Project skills
 # are tracked so every clone and every worktree gets them; worktrees, QA
 # screenshots and settings.local.json stay ignored. build.sh bans dot-paths from
-# the player zip, so a skill cannot ship.
+# the player zip, so a skill cannot ship. The session status log is tracked too
+# (CLAUDE.md, "Session status log"; updated on main only, #108).
 .claude/*
 !.claude/skills/
+!.claude/status.md
 .DS_Store
 Thumbs.db
 .vscode/

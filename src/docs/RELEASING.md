@@ -5,6 +5,8 @@ How a version gets from your working copy to a player's download. Dev-only — t
 
 Publishing is automated. **You never upload assets by hand.** Pushing a tag is the whole trigger.
 
+**For Claude: Mike starts a release by typing `/release`** — the `release` skill (`.claude/skills/release/`) runs the steps below with his two confirmations, the exact version and "publish" (#109).
+
 **`./dev.sh` drives all of this from a menu** — build, tests, cut a release, cut a data release, and a
 condensed copy of the checklist — so you shouldn't need this file for the routine path. It's here for the detail:
 what each guard refuses and why, and how to recover.

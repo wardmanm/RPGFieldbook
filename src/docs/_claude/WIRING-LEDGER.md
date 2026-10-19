@@ -6200,3 +6200,25 @@ Pages: [ammunition](../wiki/features/ammunition.md), [combat view](../wiki/featu
 Pages: [ammunition](../wiki/features/ammunition.md), [combat view](../wiki/features/combat-view.md),
 [inventory](../wiki/features/inventory.md), [settings & updates](../wiki/features/settings-and-updates.md),
 [known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md)
+## /status and /release: the session status log and a release skill (#108, #109, 2026-10-19)
+
+1. Mike added "Session status log" to CLAUDE.md: `.claude/status.md` kept current for his daily
+   update. `.claude/*` is git-ignored, so `.gitignore` gains `!.claude/status.md`. With parallel
+   worktrees, every branch rewriting one summary file would conflict on every merge, so (Mike's
+   call) it is written on main only: worktree branches never touch it, and WORKTREES §5 refreshes it
+   after the merges. CLAUDE.md's section says so.
+2. Two project skills, slash commands (Mike's ask): `/status` (`.claude/skills/status/`) and
+   `/release [app|data|private] [version]` (`.claude/skills/release/`, `disable-model-invocation:
+   true`, so only Mike starts one). CLAUDE.md's "never cut a release on your own" names `/release`
+   as the exception: it cuts only after Mike confirms the exact version and publishes only after he
+   says "publish". RELEASING.md stays the reference; the skill links it.
+3. Written test-first (writing-skills): five baseline scenarios without the skills, then with them.
+   Baselines: every release scenario refused to cut or publish even when Mike asked ("never on your
+   own" read as "never"), one let an uncommitted modified file into a release, only one checked the
+   result after publishing; the status baseline misstated two items and missed the milestone,
+   release readiness and worktrees. With the skills all five passed; two loopholes closed after the
+   runs (no version proposed while `??`/` M` questions are open; known issues are not loose ends).
+4. Memory: the "never release" note now says "only via /release"; a stale index line for a deleted
+   1.8.0-freeze note removed.
+
+Pages: [building & CI](../wiki/process/building-and-ci.md)

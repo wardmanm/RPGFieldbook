@@ -83,7 +83,9 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
   → [building & CI](src/docs/wiki/process/building-and-ci.md)
 - **Never cut a release on your own** — no `./build.sh --release`, no `APP_VERSION` bump, no version
   tag, no publishing push. Pushing the tag is what publishes. Add notes to `src/docs/UNRELEASED.md`,
-  say a release is ready, and stop. Procedure: [RELEASING](src/docs/RELEASING.md).
+  say a release is ready, and stop. **Mike typing `/release` is the exception:** the `release` skill
+  (`.claude/skills/release/`) runs the release, cutting only after he confirms the exact version and
+  publishing only after he says "publish". Procedure: [RELEASING](src/docs/RELEASING.md).
 - **Screenshots are required for any UI-affecting change** — each affected tab, before and after for
   a change to existing UI, via the project's Playwright MCP server (`.mcp.json`), never a
   plugin-provided one (it refuses `file://`). Tab names are lowercase; `newCharacter(name, system)`
@@ -179,3 +181,35 @@ At the end of any task that changed behaviour, data, the converter, the build or
 - Prefer a proper interactive chooser over storing descriptive text when rules allow player choice.
 - Verify before diagnosing something as "missing" — don't over-infer from data shape.
 - Keep responses and commits focused. Mike does the browser QA and makes scope calls.
+
+## Session status log
+
+Keep `.claude/status.md` current so Mike's daily update knows where this project stands. Update it before every push and before ending a session, even if no code changed, with the `status` skill (`/status`). It is written on main only: worktree branches never touch it, so it never conflicts in a merge (#108).
+
+A commit that changes only this file goes straight to main (docs(repo): status). It's the one exception to working on a branch (Mike, 2026-10-19).
+
+Keep the file under ~60 lines, in this structure:
+
+```markdown
+# Status: <project name>
+Updated: YYYY-MM-DD · Branch: <branch>
+
+## Current focus
+One or two sentences on what's being worked on right now.
+
+## Recent changes
+- YYYY-MM-DD: what changed, in plain language (keep the last ~10; drop older ones)
+
+## Pending decisions
+- **<the question>** (raised YYYY-MM-DD). Options: A / B / C. Leaning: <only if Mike has said>. Blocks: <what's waiting on it>
+
+## Loose ends
+- Unfinished work, known bugs, failing tests, PRs waiting on review
+```
+
+Rules:
+- Something is only decided when Mike says so. Your own recommendations go under Pending decisions as options, not outcomes.
+- When a decision is made, remove it from Pending decisions and note the outcome under Recent changes.
+- Delete loose ends once they're done. Stale items make the daily update wrong.
+- No secrets, credentials or client-confidential details. This repo is public.
+

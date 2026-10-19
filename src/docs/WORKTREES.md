@@ -131,6 +131,9 @@ git merge --no-ff issue/43-…
 ./build.sh && ./src/tests/run.sh
 ```
 
+Then refresh the status log on main, with `/status` (#108): it rewrites `.claude/status.md` and commits
+it. Worktree branches never touch that file, so it never conflicts in a merge; main is its only writer.
+
 Then browser-QA the result, commit the rebuilt `dist/fieldbook.html`, and push. `pre-push` will stop
 you if the artifact is stale or a suite fails.
 

@@ -223,6 +223,21 @@ none. The last are the release checklist
 (`8`), open the app (`9`) and where things live (`s`). It is Bash 3.2 compatible, and with no TTY it
 prints the menu and exits 0.
 
+### `/release` and `/status`
+
+Two project skills, typed as slash commands (#108, #109). `/release [app|data|private] [version]`
+(`.claude/skills/release/`) runs a release for Mike: it works out which kind is due, runs the
+preflight (on main and not behind, no untracked or unexplained modified files, every suite with
+`.venv/bin` on `PATH`, nothing half-merged, the private repo's state, where the milestone stands),
+asks Mike to confirm the exact version, cuts it, shows the changelog, and only after he says
+"publish" commits, tags and pushes; then it watches the workflow and checks the release's assets and
+"latest". `disable-model-invocation: true` means Claude never starts one on its own; CLAUDE.md's
+"never cut a release on your own" names it as the one way in. [RELEASING](../../RELEASING.md)
+stays the reference it links to. `/status` (`.claude/skills/status/`) rewrites
+`.claude/status.md`, the session status log CLAUDE.md asks for, from git, the open milestone's
+issues and roadmap page, and `UNRELEASED.md`, and commits it on main as `docs(repo): status`. It is
+written on main only, so it never conflicts in a worktree merge ([WORKTREES](../../WORKTREES.md) §5).
+
 ## Rules that must hold
 
 - **A plain build is idempotent on versioning.** Only `--release` touches `APP_VERSION`, `CHANGELOG`
@@ -336,3 +351,4 @@ prints the menu and exits 0.
 - 2026-10-09 — The converter menu writes the private packs through `_private-data`; CI skips the `private-data` suite, which the private repo's CI covers; `py_compile` covers `tools/data-kit/`. → ledger L5426, #85
 - 2026-10-09 — `ci.yml` and `release.yml` re-run `data-kit.py` after the full build and require its kit-zip checks; the app zip's guard bans `scripts/`. → ledger L5592, #85
 - 2026-10-13 — The converter menu writes the private packs through `scripts/sync-private.py --write`, which holds their commands. → ledger L5724, #90
+- 2026-10-19 — `/release` and `/status`: a release skill with two gates (the exact version, then "publish"), and the session status log written on main. → ledger L6203, #108, #109
