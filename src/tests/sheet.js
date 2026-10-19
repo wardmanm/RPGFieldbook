@@ -60,6 +60,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'ammoKindOf', 'itemAmmo', 'weaponAmmoKind', 'ammoStacks', 'loadedStack', 'ammoPlural', 'ammoOne',
   'unpackAmmo', 'rebaseAmmo', 'migrateAmmo', 'ammoTable', 'fpMap', 'fpHash',
   'AMMO_PASS', 'ammoRepairDef', 'stampSrc', 'updChangedFields', 'updEdited',
+  'AMMO_RECOVERY', 'ammoRecoveryOf', 'itemRecover', 'weaponThrown', 'ammoThrownKind', 'AMMO_RECOVER_DEFAULTS', 'ammoDefaultRecover', 'ammoRecoverRule', 'ammoBack',
   'ammoSpentEntry', 'fireAmmo', 'undoFire', 'ammoRecoverable', 'recoverAmmo', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
   'forgetGrantAmmo', 'ammoAskDue', 'markAmmoAsked',
   'ammoLineHTML', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
@@ -3683,6 +3684,51 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   X.resetRules();
 }
 
+/* ---- the recovery rule: who gets what back (#104, spec §4) ---- */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  ck('#104 a new character recovers half', X.blankChar().ammoRecovery === 'half' && X.ammoRecoveryOf(X.blankChar()) === 'half');
+  ck('#104 a sheet from before reads as half, and so does junk',
+     X.ammoRecoveryOf(X.migrate({abilities: {}})) === 'half' && X.ammoRecoveryOf({ammoRecovery: 'lots'}) === 'half' &&
+     X.ammoRecoveryOf({ammoRecovery: 'constructor'}) === 'half' && X.ammoRecoveryOf(null) === 'half');
+  ck('#104 each rule reads as itself', ['half', 'all', 'hits', 'none'].every(r => X.ammoRecoveryOf({ammoRecovery: r}) === r));
+  ck('#104 the rule survives a save and load',
+     X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {ammoRecovery: 'hits'})))).ammoRecovery === 'hits');
+  ck('#104 an item override is always, never, or nothing',
+     X.itemRecover({recover: 'always'}) === 'always' && X.itemRecover({recover: 'never'}) === 'never' &&
+     X.itemRecover({recover: 'sometimes'}) === '' && X.itemRecover({recover: '__proto__'}) === '' && X.itemRecover(null) === '');
+  const w = n => ({name: 'Dagger', weapon: {kind: 'melee', dice: '1d4', notes: n}});
+  ck('#104 the SRD thrown weapons read as thrown',
+     ['Range 20/60 · Finesse, Light, Thrown · Mastery: Nick', 'Range 30/120 · Thrown · Mastery: Slow',
+      'Range 20/60 · Versatile 1d8 · Thrown · Mastery: Sap'].every(n => X.weaponThrown(w(n))));
+  ck('#104 Thrown must be a whole property, in any case',
+     X.weaponThrown(w('Light, THROWN')) && !X.weaponThrown(w('Unthrown, Light')) && !X.weaponThrown(w('Finesse, Light')) && !X.weaponThrown(w('')));
+  ck('#104 a launcher is never thrown, and junk is not thrown',
+     !X.weaponThrown({weapon: {ammo: 'arrow', notes: 'Thrown'}}) && !X.weaponThrown({weapon: {notes: 7}}) &&
+     !X.weaponThrown({weapon: []}) && !X.weaponThrown({weapon: 'Thrown'}) && !X.weaponThrown(null));
+  ck("#104 a thrown weapon's kind is its own name", X.ammoThrownKind({name: ' +1  Dagger '}) === '+1 dagger' && X.ammoThrownKind({name: ''}) === 'thrown weapon');
+  const bullet = {ammo: {kind: 'firearm bullet'}}, arrow = {ammo: {kind: 'arrow'}}, dagger = w('Finesse, Light, Thrown');
+  ck('#104 defaults: bullets never, thrown weapons always, arrows none',
+     X.ammoDefaultRecover(bullet) === 'never' && X.ammoDefaultRecover(dagger) === 'always' && X.ammoDefaultRecover(arrow) === '' &&
+     X.ammoDefaultRecover({ammo: {kind: 'constructor'}}) === '' && X.ammoDefaultRecover(null) === '');
+  const none = {ammoRecovery: 'none'};
+  ck('#104 the rule: the item, then its default, then the sheet',
+     X.ammoRecoverRule(none, Object.assign({recover: 'never'}, dagger)) === 'never' && X.ammoRecoverRule(none, dagger) === 'always' &&
+     X.ammoRecoverRule({ammoRecovery: 'all'}, bullet) === 'never' && X.ammoRecoverRule(none, arrow) === 'none' &&
+     X.ammoRecoverRule(none, Object.assign({recover: 'always'}, arrow)) === 'always' && X.ammoRecoverRule({}, null) === 'half');
+  const e = {n: 7, hits: 3, misses: 2};
+  ck('#104 how many come back under each rule',
+     X.ammoBack('always', e) === 7 && X.ammoBack('all', e) === 7 && X.ammoBack('half', e) === 3 &&
+     X.ammoBack('hits', e) === 4 && X.ammoBack('never', e) === 0 && X.ammoBack('none', e) === 0);
+  ck('#104 hits only, with no shot answered, is half', X.ammoBack('hits', {n: 5, hits: 0, misses: 0}) === 2);
+  const E = v => X.ammoSpentEntry({ammoSpent: {a: v}}, 'a');
+  ck('#104 an entry reads its tallies', same([E({n: 5, kind: 'arrow', hits: 2, misses: 1}).hits, E({n: 5, kind: 'arrow', hits: 2, misses: 1}).misses], [2, 1]));
+  ck('#104 tallies are clamped: never below 0, never past n together',
+     E({n: 5, kind: 'arrow', hits: 9, misses: 9}).hits === 5 && E({n: 5, kind: 'arrow', hits: 9, misses: 9}).misses === 0 &&
+     E({n: 5, kind: 'arrow', hits: -1, misses: 'x'}).hits === 0 && E({n: 5, kind: 'arrow', hits: 3, misses: 4}).misses === 2);
+  ck('#104 an entry from before #104 has no answers', E({n: 5, kind: 'arrow'}).hits === 0 && E({n: 5, kind: 'arrow'}).misses === 0);
+}
+
 /* ---- firing, Undo, recovery and the +N (#6) ---- */
 {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -3715,7 +3761,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   r = X.fireAmmo(c, b2); c.inventory = c.inventory.filter(i => i.id !== 's1');
   ck('Undo after the player deleted that stack leaves it deleted', !X.undoFire(c, r) && !c.inventory.some(i => i.id === 's1'));
   ck('junk spent entries read as nothing',
-     same(X.ammoSpentEntry({ammoSpent: {x: 'junk'}}, 'x'), {n: 0, kind: '', snap: null, asked: 0}) &&
+     same(X.ammoSpentEntry({ammoSpent: {x: 'junk'}}, 'x'), {n: 0, hits: 0, misses: 0, kind: '', snap: null, asked: 0}) &&
      X.ammoRecoverable({ammoSpent: {a: {n: 'x', kind: 7}, b: null, c: [1], d: {n: 4, kind: ''}}}).length === 0 &&
      X.ammoRecoverable({ammoSpent: 'junk'}).length === 0);
 

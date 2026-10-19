@@ -78,9 +78,12 @@ function blankChar(){
        before it shows it. `trackerTotals` maps a tag key to `true` where the
        group shows its total (#93). */
     trackers:[], trackerCollapse:{}, trackerTotals:{}, showTrackers:true,
-    /* Ammunition fired since the last recovery (62-ammo.js): stack id ->
-       {n, kind, snap}. `ammoInit` is NOT defaulted: the one-time pass sets it. */
-    ammoSpent:{},
+    /* Ammunition fired since the last recovery (62-ammo.js): stack or thrown
+       weapon id -> {n, hits, misses, kind, snap}. `ammoInit` is NOT defaulted:
+       the one-time pass sets it. `ammoRecovery` is the character's rule for what
+       comes back (#104): half, all, hits or none; half is the rules as written
+       and what every sheet did before. */
+    ammoSpent:{}, ammoRecovery:"half",
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);

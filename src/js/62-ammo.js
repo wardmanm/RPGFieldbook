@@ -96,6 +96,45 @@ function loadedStack(c,weaponItem){
 function ammoPlural(kind){const k=ammoKindOf(kind);return k?(/s$/.test(k)?k:k+"s"):"pieces";}
 function ammoOne(kind){const k=ammoKindOf(kind)||"piece";return (/^[aeiou]/.test(k)?"an ":"a ")+k;}
 
+/* ---- recovery: the rule, and what comes back (#104) ----
+   The character's rule, an item's own override, the app's defaults, and how
+   many of one entry's shots come back. Read at recovery, never at the shot,
+   so changing the setting reaches shots already fired.
+   Design: src/docs/specs/2026-10-18-ammo-recovery-design.md §4 */
+const AMMO_RECOVERY=[["half","Half (rules as written)"],["all","All"],["hits","Hits only"],["none","None"]];
+function ammoRecoveryOf(c){const v=c&&c.ammoRecovery;return AMMO_RECOVERY.some(r=>r[0]===v)?v:"half";}
+/* An item's own override, kept OUTSIDE ammo and weapon (the rules-update tool
+   owns those): "always", "never", or "" for the sheet's rule. */
+function itemRecover(it){const v=it&&it.recover;return (v==="always"||v==="never")?v:"";}
+/* A thrown weapon lists Thrown among the properties in its notes ("Range 20/60
+   · Finesse, Light, Thrown · Mastery: Nick"): a whole property, any case. A
+   launcher is never thrown. */
+function weaponThrown(it){
+  const w=it&&it.weapon;
+  if(!w||typeof w!=="object"||Array.isArray(w)||ammoKindOf(w.ammo))return false;
+  return (typeof w.notes==="string"?w.notes:"").split("·").some(seg=>seg.split(",").some(p=>p.trim().toLowerCase()==="thrown"));
+}
+/* What a thrown weapon's throws are counted as: its own name, as a kind. */
+function ammoThrownKind(it){return ammoKindOf(String(it&&it.name||""))||"thrown weapon";}
+/* The app's defaults, so the packs need not say (spec decision 5). */
+const AMMO_RECOVER_DEFAULTS={"firearm bullet":"never"};
+function ammoDefaultRecover(it){
+  const am=itemAmmo(it);
+  if(am)return ammoTable(AMMO_RECOVER_DEFAULTS,am.kind)||"";
+  return weaponThrown(it)?"always":"";
+}
+/* The rule for one item: its own override, else the app's default, else the
+   character's rule. None does not override an item set to always. */
+function ammoRecoverRule(c,it){return itemRecover(it)||ammoDefaultRecover(it)||ammoRecoveryOf(c);}
+/* How many of one entry's shots come back under a rule. Hits only: every hit,
+   and half of the shots nobody answered for. */
+function ammoBack(rule,e){
+  if(rule==="always"||rule==="all")return e.n;
+  if(rule==="half")return Math.floor(e.n/2);
+  if(rule==="hits")return e.hits+Math.floor((e.n-e.hits-e.misses)/2);
+  return 0;
+}
+
 /* ---- a bundle unpacks into its single piece ----
    `x` is a pack entry. A bundle (pack:{item, qty}) comes back as the single
    piece to add and how many ONE bundle holds: the pool's own entry for that
@@ -214,16 +253,18 @@ function migrateAmmo(c){
 /* ---- firing, undoing, recovering ---- */
 function ammoSpentMap(c){const m=c&&c.ammoSpent;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
 /* One stack's spent record, coerced: how many fired since the last recovery,
-   its kind, the copy recovery rebuilds a used-up stack from, and how many of
-   those shots End combat has already asked about (#6 final review: a whole
-   number, clamped to [0, n], so a later shot always makes `n > asked` true). */
+   how many of those were answered Hit and Miss (#104: each clamped so that
+   hits + misses never passes n), its kind, the copy recovery rebuilds a
+   used-up stack from, and how many of those shots End combat has already asked
+   about (#6 final review: clamped to [0, n]). */
 function ammoSpentEntry(c,id){
-  const e=ammoSpentMap(c)[id], ok=e&&typeof e==="object"&&!Array.isArray(e);
+  const e=ammoSpentMap(c)[id], ok=!!e&&typeof e==="object"&&!Array.isArray(e);
   const n=(ok&&Number.isInteger(e.n)&&e.n>0)?e.n:0;
-  const asked=(ok&&Number.isInteger(e.asked))?Math.max(0,Math.min(n,e.asked)):0;
-  return {n,kind:ok?ammoKindOf(e.kind):"",
+  const cnt=v=>(ok&&Number.isInteger(v))?Math.max(0,Math.min(n,v)):0;
+  const hits=cnt(ok?e.hits:0), misses=Math.min(n-hits,cnt(ok?e.misses:0));
+  return {n,hits,misses,kind:ok?ammoKindOf(e.kind):"",
           snap:(ok&&e.snap&&typeof e.snap==="object"&&!Array.isArray(e.snap))?e.snap:null,
-          asked};
+          asked:cnt(ok?e.asked:0)};
 }
 /* One shot from the weapon's loaded stack: one piece off it (the last removes
    the stack, as using the last potion does), and one more on its spent count,
