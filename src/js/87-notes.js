@@ -303,6 +303,45 @@ function editToggleHTML(k,hidden){
   return `<button type="button" class="edbtn${hidden?" on":""}" data-edtoggle="${esc(k)}" aria-pressed="${hidden?"true":"false"}" aria-label="${esc(t.label)}" title="${esc(t.title)}">`+
     editToggleSVG(hidden)+`</button>`;
 }
+function editCard(k){
+  return k==="journal"?document.getElementById("journalCard")
+    :k==="secnotes"?document.getElementById("notesCard")
+    :document.querySelector(`.card[data-note="${k}"]`);
+}
+/* Mirrors renderCombatToggles(): idempotent, replaces only its own button, and
+   never label.innerHTML += (that re-parses the label and destroys #starBtn,
+   #encPill and #roundNum). It sits before the combat toggle, or the note button
+   when there is none, so the note keeps the far right. It also sets ed-off BOTH
+   ways, so switching to a character who hides nothing clears the last one's. */
+function renderEditToggles(){
+  EDIT_CARDS.forEach(k=>{
+    const card=editCard(k);if(!card)return;
+    const hidden=editHidden(character,k);
+    card.classList.toggle("ed-off",hidden);
+    const label=card.querySelector(".label");if(!label)return;
+    const html=editToggleHTML(k,hidden), old=label.querySelector("[data-edtoggle]");
+    if(old){old.outerHTML=html;return;}
+    const next=label.querySelector("[data-combatbtn]")||label.querySelector("[data-notebtn]");
+    if(next)next.insertAdjacentHTML("beforebegin",html);else label.insertAdjacentHTML("beforeend",html);
+  });
+}
+/* A tap repaints the one button in place; replacing it would drop keyboard focus
+   from the button just pressed. */
+function paintEditToggle(k,hidden){
+  const b=document.querySelector(`[data-edtoggle="${k}"]`);if(!b)return;
+  const t=editToggleText(k,hidden);
+  b.classList.toggle("on",hidden);b.setAttribute("aria-pressed",hidden?"true":"false");
+  b.setAttribute("aria-label",t.label);b.title=t.title;b.innerHTML=editToggleSVG(hidden);
+}
+function toggleEditCard(k){
+  if(!EDIT_CARDS.includes(k))return;
+  const hidden=!editHidden(character,k);
+  setEditHidden(character,k,hidden);
+  const card=editCard(k);if(card)card.classList.toggle("ed-off",hidden);
+  paintEditToggle(k,hidden);
+  if(k==="journal")renderJournal();   // a blank page's line names the Edit button
+  scheduleSave();
+}
 
 /* ================= the Section Notes card ================= */
 function noteGroupOpen(tab){

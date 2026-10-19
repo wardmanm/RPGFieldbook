@@ -23,6 +23,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings', 'skillKey',
   'openSettings', 'highlight', 'rulesStatusText', 'rulesBadge', 'dispName', 'fxTargets',
   'AMMO_PIECES','AMMO_SINGLE_NAMES','AMMO_BUNDLES','AMMO_LAUNCHERS',
+  'EDIT_CARDS',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1111,6 +1112,23 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     const cs = classesOf(a);
     ck('#97 no ' + a + ' button carries ed', cs.length > 0 && cs.every(c => !hasEd(c)), cs);
   });
+}
+
+// ---------- #97: every card key reaches a card, and the CSS hides what it should
+{
+  const t = loadHTML();
+  const reach = k => k === 'journal' ? t.includes('id="journalCard"')
+    : k === 'secnotes' ? /<div class="card" id="notesCard">\s*<div class="label">Section Notes/.test(t)
+    : t.includes('<div class="card" data-note="' + k + '"');
+  const lost = X.EDIT_CARDS.filter(k => !reach(k));
+  ck('#97 every edit-toggle key reaches a card with a header', lost.length === 0, lost);
+  const css = fs.readFileSync(path.join(ROOT, 'src/css/20-cards.css'), 'utf8');
+  ck('#97 a hidden card hides its ed buttons', /\.ed-off \.ed\{display:none!important\}/.test(css));
+  ck('#97 the toggle has its look', /\.label \.edbtn\{/.test(css) && /\.label \.edbtn\.on\{/.test(css));
+  const boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+  ck('#97 a tap on the toggle is wired', boot.includes('[data-edtoggle]') && boot.includes('toggleEditCard('));
+  const all = fs.readFileSync(path.join(ROOT, 'src/js/66-coins-hp.js'), 'utf8');
+  ck('#97 renderAll() draws the toggles after the note icons', /renderNoteIcons\(\);renderEditToggles\(\);/.test(all));
 }
 
 // ---------- section notes: the registry IS the contract
