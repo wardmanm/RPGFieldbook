@@ -61,7 +61,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'unpackAmmo', 'rebaseAmmo', 'migrateAmmo', 'ammoTable', 'fpMap', 'fpHash',
   'AMMO_PASS', 'ammoRepairDef', 'stampSrc', 'updChangedFields', 'updEdited',
   'AMMO_RECOVERY', 'ammoRecoveryOf', 'itemRecover', 'weaponThrown', 'ammoThrownKind', 'AMMO_RECOVER_DEFAULTS', 'ammoDefaultRecover', 'ammoRecoverRule', 'ammoBack',
-  'ammoSpentEntry', 'fireAmmo', 'undoFire', 'ammoRecoverable', 'recoverAmmo', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
+  'ammoSpentEntry', 'fireAmmo', 'undoFire', 'throwAmmo', 'ammoRecordShot', 'ammoRecoverable', 'recoverAmmo', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
   'forgetGrantAmmo', 'ammoAskDue', 'markAmmoAsked',
   'ammoLineHTML', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
   'offerAmmoRecovery', 'revertEquipmentGrants',
@@ -3727,6 +3727,38 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
      E({n: 5, kind: 'arrow', hits: 9, misses: 9}).hits === 5 && E({n: 5, kind: 'arrow', hits: 9, misses: 9}).misses === 0 &&
      E({n: 5, kind: 'arrow', hits: -1, misses: 'x'}).hits === 0 && E({n: 5, kind: 'arrow', hits: 3, misses: 4}).misses === 2);
   ck('#104 an entry from before #104 has no answers', E({n: 5, kind: 'arrow'}).hits === 0 && E({n: 5, kind: 'arrow'}).misses === 0);
+}
+
+/* ---- a shot's answer, and throwing (#104, spec §5) ---- */
+{
+  const DAGGER = 'Range 20/60 · Finesse, Light, Thrown · Mastery: Nick';
+  const mk = () => {
+    const c = X.blankChar();
+    c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                   {id: 's1', name: 'Arrow', qty: 5, ammo: {kind: 'arrow'}},
+                   {id: 'd1', name: 'Dagger', qty: 2, equipped: true, weapon: {kind: 'melee', dice: '1d4', notes: DAGGER}}];
+    return c;
+  };
+  let c = mk(); const bow = c.inventory[0];
+  X.fireAmmo(c, bow, 'hit'); X.fireAmmo(c, bow, 'miss'); X.fireAmmo(c, bow); const last = X.fireAmmo(c, bow, 'hit');
+  let e = X.ammoSpentEntry(c, 's1');
+  ck('#104 a shot records its answer, and an unanswered one records none', e.n === 4 && e.hits === 2 && e.misses === 1, e);
+  ck('#104 ...and the shot says which', last.outcome === 'hit');
+  ck('#104 Undo takes the answer back with the shot', X.undoFire(c, last) && X.ammoSpentEntry(c, 's1').hits === 1 && X.ammoSpentEntry(c, 's1').n === 3);
+  ck('#104 an answer that is neither counts as none',
+     (() => { const k = mk(); X.fireAmmo(k, k.inventory[0], 'graze'); const x = X.ammoSpentEntry(k, 's1'); return x.n === 1 && x.hits === 0 && x.misses === 0; })());
+  c = mk(); const dag = c.inventory[2];
+  const t = X.throwAmmo(c, dag);
+  ck('#104 a throw takes one from the weapon itself', !!t && dag.qty === 1 && t.left === 1 && !t.removed && t.kind === 'dagger');
+  ck('#104 ...and counts it under the weapon, with a one-piece copy',
+     X.ammoSpentEntry(c, 'd1').n === 1 && X.ammoSpentEntry(c, 'd1').snap.name === 'Dagger' && X.ammoSpentEntry(c, 'd1').snap.qty === 1);
+  const t2 = X.throwAmmo(c, dag, 'miss');
+  ck('#104 the last throw leaves the weapon on the sheet at ×0, in its place',
+     dag.qty === 0 && c.inventory.indexOf(dag) === 2 && !t2.removed && X.ammoSpentEntry(c, 'd1').misses === 1);
+  ck('#104 at ×0 there is nothing to throw', X.throwAmmo(c, dag) === null && dag.qty === 0 && X.ammoSpentEntry(c, 'd1').n === 2);
+  ck('#104 Undo of a throw puts the weapon back to ×1', X.undoFire(c, t2) && dag.qty === 1 && X.ammoSpentEntry(c, 'd1').n === 1);
+  ck('#104 only a thrown weapon on this sheet is thrown',
+     X.throwAmmo(c, c.inventory[0]) === null && X.throwAmmo(c, {id: 'x', name: 'Dagger', qty: 3, weapon: {notes: 'Thrown'}}) === null);
 }
 
 /* ---- firing, Undo, recovery and the +N (#6) ---- */

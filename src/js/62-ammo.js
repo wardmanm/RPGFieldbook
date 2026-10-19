@@ -266,24 +266,41 @@ function ammoSpentEntry(c,id){
           snap:(ok&&e.snap&&typeof e.snap==="object"&&!Array.isArray(e.snap))?e.snap:null,
           asked:cnt(ok?e.asked:0)};
 }
-/* One shot from the weapon's loaded stack: one piece off it (the last removes
-   the stack, as using the last potion does), and one more on its spent count,
-   with a copy of the stack for recovery to rebuild it from. Returns what Undo
-   needs, or null when there is nothing to fire. */
-function fireAmmo(c,weaponItem){
-  const st=loadedStack(c,weaponItem);if(!st)return null;
-  const am=itemAmmo(st);
+/* One shot onto `st`'s spent entry: one more on its count, one more Hit or
+   Miss when the question was answered (#104), and a one-piece copy of the item
+   for recovery to rebuild from. The entry is rebuilt every shot, so the
+   tallies and `asked` are carried across by hand. Returns what Undo needs to
+   put it back. Shared by Fire and Throw, so both count the same way. */
+function ammoRecordShot(c,st,kind,outcome){
   if(!c.ammoSpent||typeof c.ammoSpent!=="object"||Array.isArray(c.ammoSpent))c.ammoSpent={};
   const undo={stack:JSON.parse(JSON.stringify(st)),at:c.inventory.indexOf(st),
               spent:c.ammoSpent[st.id]?JSON.parse(JSON.stringify(c.ammoSpent[st.id])):null};
-  const prev=ammoSpentEntry(c,st.id);
-  /* the entry is rebuilt from scratch on every shot, so `asked` has to be
-     carried across by hand or a later shot would read as never having been
-     asked about at all */
-  c.ammoSpent[st.id]={n:prev.n+1,kind:am.kind,asked:prev.asked,snap:Object.assign(JSON.parse(JSON.stringify(st)),{qty:1})};
+  const p=ammoSpentEntry(c,st.id);
+  c.ammoSpent[st.id]={n:p.n+1,hits:p.hits+(outcome==="hit"?1:0),misses:p.misses+(outcome==="miss"?1:0),
+    kind,asked:p.asked,snap:Object.assign(JSON.parse(JSON.stringify(st)),{qty:1})};
+  return undo;
+}
+/* One shot from the weapon's loaded stack: one piece off it (the last removes
+   the stack, as using the last potion does), counted with its answer. Returns
+   what Undo needs, or null when there is nothing to fire. */
+function fireAmmo(c,weaponItem,outcome){
+  const st=loadedStack(c,weaponItem);if(!st)return null;
+  const am=itemAmmo(st), undo=ammoRecordShot(c,st,am.kind,outcome);
   const left=Math.max(0,itemQty(st)-1);
   if(left<=0)c.inventory=c.inventory.filter(x=>x!==st);else st.qty=left;
-  return {stack:st,kind:am.kind,left,removed:left<=0,undo};
+  return {stack:st,kind:am.kind,left,removed:left<=0,undo,outcome:(outcome==="hit"||outcome==="miss")?outcome:""};
+}
+/* One throw of a thrown weapon (#104): one off the weapon item's own count.
+   At ×0 the item STAYS (spec decision 8): its attack row must not vanish
+   mid-fight, and recovery adds back onto it. Returns the same record as
+   fireAmmo(), so undoFire() puts it back; null when it is not a thrown weapon
+   on this sheet or none is left. */
+function throwAmmo(c,weaponItem,outcome){
+  if(!weaponThrown(weaponItem)||!Array.isArray(c&&c.inventory)||c.inventory.indexOf(weaponItem)<0||itemQty(weaponItem)<1)return null;
+  const kind=ammoThrownKind(weaponItem), undo=ammoRecordShot(c,weaponItem,kind,outcome);
+  const left=Math.max(0,itemQty(weaponItem)-1);
+  weaponItem.qty=left;
+  return {stack:weaponItem,kind,left,removed:false,undo,outcome:(outcome==="hit"||outcome==="miss")?outcome:""};
 }
 /* Undo puts back exactly what that shot took: one piece onto its stack, or the
    whole stack at its old place when the shot removed it, and the spent count as
