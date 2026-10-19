@@ -315,6 +315,11 @@ function openItemForm(existing){
   const kinds=ammoKindChoices(character,[wAmmo,am&&am.kind]);
   const bonusOpts=[...new Set([0,1,2,3,am?am.bonus:0])].sort((x,y)=>x-y);
   const bonusText=b=>b<0?String(b):"+"+b;
+  /* #104: whether the Recovery field shows, one rule so the three places that
+     ask (the initial render, the ammo toggle, and Insert from rules pack) can't
+     drift — ammunition, or a weapon (the one just inserted, not necessarily
+     `it`'s own) that is Thrown. */
+  const recoverShows=(ammoNow,wobj)=>!!(ammoNow||weaponThrown({weapon:wobj}));
   /* The category is the section the item files under (#98): the seven built-in
      sections and any the player has made are offered, a new one is typed, and
      left empty it files where its own data puts it — which the placeholder
@@ -351,7 +356,7 @@ function openItemForm(existing){
         <div class="field"><label class="f">Bonus to attack and damage</label><select id="iAmmoBonus">${bonusOpts.map(b=>`<option value="${esc(b)}"${(am?am.bonus:0)===b?" selected":""}>${bonusText(b)}</option>`).join("")}</select></div></div>
       <div class="field" id="iAmmoKindOtherWrap" style="display:none"><label class="f">New kind</label><input id="iAmmoKindOther" placeholder="dart pellet" autocomplete="off"></div>
     </div>
-    <div class="field" id="iRecoverWrap" style="${(am||weaponThrown(it))?"":"display:none"}"><label class="f" for="iRecover">After a fight</label><select id="iRecover">${recoverOptionsHTML(it)}</select></div>
+    <div class="field" id="iRecoverWrap" style="${recoverShows(am,w)?"":"display:none"}"><label class="f" for="iRecover">After a fight</label><select id="iRecover">${recoverOptionsHTML(it)}</select></div>
     <label class="equip ${arm?"on":""}" id="iIsArmor" style="font-size:12px;margin-top:8px"><span class="box"></span>Armor (set the AC it gives)</label>
     <div id="iArmorFields" style="${arm?"":"display:none"}">
       <div class="g2"><div class="field"><label class="f">Kind</label><select id="iAKind">${ARMOR_KINDS.map(([v,l])=>`<option value="${esc(v)}"${armKind===v?" selected":""}>${l}</option>`).join("")}</select></div>
@@ -393,7 +398,7 @@ function openItemForm(existing){
     return v==="__other"?(ammoKindOf(document.getElementById(boxId).value)||null):ammoKindOf(v);};
   let isAmmo=!!am;
   const amtog=document.getElementById("iIsAmmo"), amfields=document.getElementById("iAmmoFields");
-  amtog.addEventListener("click",()=>{isAmmo=!isAmmo;amtog.classList.toggle("on",isAmmo);amfields.style.display=isAmmo?"":"none";const rw=document.getElementById("iRecoverWrap");if(rw)rw.style.display=(isAmmo||weaponThrown(it))?"":"none";});
+  amtog.addEventListener("click",()=>{isAmmo=!isAmmo;amtog.classList.toggle("on",isAmmo);amfields.style.display=isAmmo?"":"none";const rw=document.getElementById("iRecoverWrap");if(rw)rw.style.display=recoverShows(isAmmo,w)?"":"none";});
   let isArmor=!!arm;
   const atog=document.getElementById("iIsArmor"), afields=document.getElementById("iArmorFields");
   const aKind=document.getElementById("iAKind"), aDexW=document.getElementById("iADexWrap"),
@@ -444,7 +449,17 @@ function openItemForm(existing){
     document.getElementById("iHeal").value=(du&&du.heal)||"";
     consume=!!(du&&du.consume);ctog.classList.toggle("on",consume);
     const xa=itemAmmo(x);isAmmo=!!xa;amtog.classList.toggle("on",isAmmo);amfields.style.display=isAmmo?"":"none";
-    if(xa){setKind("iAmmoKind","iAmmoKindOther",xa.kind,amKindSync);setBonus(xa.bonus);}});
+    if(xa){setKind("iAmmoKind","iAmmoKindOther",xa.kind,amKindSync);setBonus(xa.bonus);}
+    /* #104: the inserted entry may now be ammunition or a Thrown weapon (or
+       may no longer be either) — show/hide the same as the ammo toggle does,
+       and refresh its options for what THIS entry defaults to, keeping a
+       choice the player already made (an explicit Always/Never) rather than
+       losing it under whatever "Insert from rules pack" is picked next. */
+    {const rw=document.getElementById("iRecoverWrap");
+     if(rw)rw.style.display=recoverShows(isAmmo,x.weapon||{})?"":"none";
+     const irSel=document.getElementById("iRecover");
+     if(irSel){const cur=irSel.value;
+       irSel.innerHTML=recoverOptionsHTML(Object.assign({},x,{recover:(cur==="always"||cur==="never")?cur:undefined}));}}});
   document.getElementById("iCancel").addEventListener("click",closeModal);
   /* The detail box is DISABLED rather than hidden when there is no origin kind.
      Hiding it re-flowed the whole lower half of an already long form every time

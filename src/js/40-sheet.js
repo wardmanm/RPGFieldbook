@@ -146,7 +146,7 @@ function invItemHTML(it){
         <button class="fav ${it.fav?"on":""}" data-fav-item="${esc(it.id)}" aria-label="Favorite" title="Favorite">${it.fav?"★":"☆"}</button>
         <span class="nm">${esc(it.name||"Item")}</span>
         <span class="row-meta">
-        ${it.qty&&num(it.qty)!==1?`<span class="qty">×${num(it.qty)}</span>`:""}
+        ${itemQty(it)!==1?`<span class="qty">×${itemQty(it)}</span>`:""}
         ${originBadge(itemOrigin(it),"data-orig-item",it.id)}
         ${fnum(it.cost)?`<span class="qty" title="Cost each">${esc(fmtGp(it.cost))}</span>`:""}
         ${itemWeight(it)?`<span class="qty" title="Weight each">${esc(fmtWt(it.weight))}</span>`:""}

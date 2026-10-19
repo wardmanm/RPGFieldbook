@@ -441,6 +441,13 @@ function undoRecovery(c,rec){
   const livePre=new Set(c.inventory.filter(x=>x&&x.id!=null).map(x=>x.id));
   const short={};
   const take=(id,n,rebuilt)=>{
+    /* #104 review (folded in): n===0 means this entry's rule gave the stack
+       nothing — present at recovery (added, from recoverAmmo()'s `n` even at
+       0) only to tie the cleared entry to it (finding 1 there). A stack
+       already sitting at ×0 then reads have<=n as "take the lot" and removed
+       it, though Undo took nothing from it. A true no-op: look nothing up,
+       touch nothing, owe nothing back. */
+    if(n<=0)return 0;
     const it=c.inventory.find(x=>x&&x.id===id);
     if(!it)return n;
     const have=itemQty(it);

@@ -733,6 +733,9 @@ ck('weight is per unit', X.itemWeight(item({weight: 0.05, qty: 20})) === 0.05);
 ck('20 arrows at 0.05 lb weigh exactly 1 lb, not 0',
    X.itemWeightTotal(item({weight: 0.05, qty: 20})) === 1);
 ck('a missing qty counts as one', X.itemWeightTotal(item({weight: 3, qty: undefined})) === 3);
+// #104 review finding 2: ×0 (reachable since Task 2's thrown weapons, and now
+// from any item's own editor) must weigh and cost nothing — "||1" read it as ×1.
+ck('a ×0 item weighs nothing', X.itemWeightTotal(item({weight: 3, qty: 0})) === 0);
 
 // ---------- coins weigh something: 50 to the pound
 sheet({coins: {cp: '', sp: '', ep: '', gp: 500, pp: ''}});
@@ -758,6 +761,10 @@ sheet({inventory: [item({weight: 3, equipped: false}), item({weight: 3, equipped
 ck('unequipped gear still weighs — you are carrying it', X.carriedWeight() === 6);
 sheet({inventory: [item({cost: 0.1, qty: 3})]});
 ck('inventory value no longer truncates sub-1gp costs', X.inventoryTotal() === 0.3);
+// #104 review finding 2
+sheet({inventory: [item({weight: 3, cost: 5}), item({weight: 7, cost: 11, qty: 0})]});
+ck('a ×0 item adds no weight to carriedWeight()', X.carriedWeight() === 3);
+ck('...and no value to inventoryTotal()', X.inventoryTotal() === 5);
 
 // ---------- size: explicit choice, else ancestry, else Medium
 // the app stores full names; the converter is what turns 5e-tools' codes into them
@@ -1198,6 +1205,12 @@ ck('an empty list makes no groups at all',
   const it = X.invItemHTML({id: 'i9', name: 'Potion of Greater Healing', qty: 3, cost: 150, weight: 0.5, category: 'Consumable'});
   ck('#57 an item row groups its counts, cost, weight and buttons after the name',
      grouped(it, 'data-del-item') && it.indexOf('class="row-meta"') < it.indexOf('×3'), it.slice(0, 900));
+  // #104 review finding 2: a ×0 item (a thrown weapon out of throws, or any
+  // item zeroed in the editor) must say ×0, not look like ×1 by showing nothing.
+  const it0 = X.invItemHTML({id: 'i10', name: 'Dagger', qty: 0});
+  ck('#104 a ×0 item shows ×0, not nothing', /class="qty">×0</.test(it0), it0.slice(0, 400));
+  const it1 = X.invItemHTML({id: 'i11', name: 'Dagger', qty: 1});
+  ck('...and ×1 still shows no badge, as before', !/class="qty">×/.test(it1), it1.slice(0, 400));
   const st = X.statusRowHTML({id: 's9', name: 'Frightened'});
   ck('#57 a condition row groups its toggle and buttons after the name', grouped(st, 'data-del-status'), st.slice(0, 700));
 }
@@ -3916,6 +3929,21 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     ck('#104 review 3: Undo leaves a weapon the player has since re-loaded alone',
        c6.inventory[0].ammoStack === 's3');
   }
+
+  /* ---- review round 1, folded in: a ×0 non-thrown stack recovery gave
+     nothing to must not be removed by its own Undo (reachable since an
+     item's own Quantity can now be set to 0 in the editor) ---- */
+  {
+    const c7 = X.blankChar(); c7.ammoRecovery = 'half';
+    c7.inventory = [{id: 'z1', name: 'Arrow', qty: 0, ammo: {kind: 'arrow'}}];
+    c7.ammoSpent = {z1: {n: 1, kind: 'arrow'}};
+    const rz = {};
+    ck('#104 folded-in setup: half of 1 shot is 0, so recovery clears the entry but gives nothing',
+       X.recoverAmmo(c7, ['arrow'], rz) === 0 && c7.inventory[0].id === 'z1' && c7.inventory[0].qty === 0 && !('z1' in c7.ammoSpent));
+    ck('#104 folded-in: Undo recovery leaves the ×0 stack on the sheet, not removed, and restores the entry',
+       X.undoRecovery(c7, rz) && c7.inventory.some(i => i.id === 'z1') && c7.inventory[0].qty === 0 && c7.ammoSpent.z1.n === 1,
+       [c7.inventory, c7.ammoSpent]);
+  }
 }
 
 /* ---- the thrown weapon's row, and when Fire asks (#104, spec §5.2, §5.4) ---- */
@@ -4709,7 +4737,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   {
     const items = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', 'srd52', 'items.json'), 'utf8')).items;
     X.resetRules();
-    X.mergeRules({system: 'XPHB', items: items.filter(x => ['Arrow', 'Arrows (20)', 'Longbow'].includes(x.name))}, 'x.json');
+    X.mergeRules({system: 'XPHB', items: items.filter(x => ['Arrow', 'Arrows (20)', 'Longbow', 'Dagger', 'Firearm Bullets (10)', "Alchemist's Supplies"].includes(x.name))}, 'x.json');
     X.character = X.blankChar(); X.character.system = 'dnd';
     const at = n => String(X.rules.items.findIndex(x => x.name === n));
     const why = res => res.err ? String(res.err.stack || res.err).split('\n').slice(0, 3).join(' | ') : undefined;
@@ -4761,6 +4789,22 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     const lb = X.character.inventory[X.character.inventory.length - 1] || {};
     ck('#8 picking Longbow after a bundle puts the quantity back to 1',
        !res.err && lb.name === 'Longbow' && lb.qty === 1, why(res) || lb);
+
+    /* #104 review finding 1: Insert from rules pack must re-sync the
+       Recovery field too — it stayed hidden (with the blank item's default)
+       when a thrown weapon or an ammunition bundle was inserted. */
+    res = capture(() => { ctx.openItemForm(); el('iLib').value = at('Dagger'); fire('iLib', 'change'); });
+    ck('#104 Insert from pack shows Recovery for a Thrown weapon, defaulted to Always',
+       !res.err && el('iRecoverWrap').style.display !== 'none' && /Default \(always comes back\)/.test(el('iRecover').innerHTML),
+       why(res) || { display: el('iRecoverWrap').style.display, html: el('iRecover').innerHTML });
+    res = capture(() => { ctx.openItemForm(); el('iLib').value = at('Firearm Bullets (10)'); fire('iLib', 'change'); });
+    ck("#104 ...and for an ammunition bundle, defaulted to this kind's own default (Never, for firearm bullets)",
+       !res.err && el('iRecoverWrap').style.display !== 'none' && /Default \(never comes back\)/.test(el('iRecover').innerHTML),
+       why(res) || { display: el('iRecoverWrap').style.display, html: el('iRecover').innerHTML });
+    res = capture(() => { ctx.openItemForm(); el('iLib').value = at("Alchemist's Supplies"); fire('iLib', 'change'); });
+    ck('#104 ...and hides it again for a plain item',
+       !res.err && el('iRecoverWrap').style.display === 'none',
+       why(res) || el('iRecoverWrap').style.display);
     X.resetRules();
   }
 

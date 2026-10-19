@@ -54,7 +54,10 @@ function itemMetaLine(x){
 }
 function fmtGp(n){n=fnum(n);return Math.round(n*100)/100+" gp";}
 function costToGp(str){if(str==null)return null;const s=String(str).toLowerCase().replace(/,/g,"");const mult={pp:10,gp:1,ep:0.5,sp:0.1,cp:0.01};let gp=0,found=false,m;const re=/(\d+(?:\.\d+)?)\s*(pp|gp|ep|sp|cp)\b/g;while((m=re.exec(s))){gp+=parseFloat(m[1])*mult[m[2]];found=true;}if(!found){const n=parseFloat(s);return isNaN(n)?null:n;}return Math.round(gp*100)/100;}
-function inventoryTotal(){return Math.round((character.inventory||[]).reduce((a,it)=>a+fnum(it.cost)*(num(it.qty)||1),0)*100)/100;}
+/* itemQty(), not num(it.qty)||1 (#104 review finding 2): a stack set to ×0
+   (a thrown weapon with nothing left, or any item the player zeroed) adds
+   nothing to the total — "||1" read it as ×1 instead. */
+function inventoryTotal(){return Math.round((character.inventory||[]).reduce((a,it)=>a+fnum(it.cost)*itemQty(it),0)*100)/100;}
 
 /* ---- carried weight and encumbrance ----
    All pure and DOM-free so they stay testable; the rendering lives in 40-sheet
@@ -62,7 +65,8 @@ function inventoryTotal(){return Math.round((character.inventory||[]).reduce((a,
    breakdown). Weight is measured, not counted, so everything here uses fnum. */
 function fmtWt(n){return Math.round(fnum(n)*100)/100+" lb";}
 function itemWeight(it){return fnum(it&&it.weight);}            /* per unit */
-function itemWeightTotal(it){return itemWeight(it)*(num(it&&it.qty)||1);}
+/* itemQty(), not num(it.qty)||1 (#104 review finding 2): see inventoryTotal(). */
+function itemWeightTotal(it){return itemWeight(it)*itemQty(it);}
 /* 5e: 50 coins weigh a pound. Sums every denomination the sheet holds rather
    than coinKeys(), because an imported character can be carrying electrum the
    current skin doesn't display — it is still in their purse. */
