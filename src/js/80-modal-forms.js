@@ -315,10 +315,10 @@ function openItemForm(existing){
   const kinds=ammoKindChoices(character,[wAmmo,am&&am.kind]);
   const bonusOpts=[...new Set([0,1,2,3,am?am.bonus:0])].sort((x,y)=>x-y);
   const bonusText=b=>b<0?String(b):"+"+b;
-  /* #104: whether the Recovery field shows, one rule so the three places that
-     ask (the initial render, the ammo toggle, and Insert from rules pack) can't
-     drift — ammunition, or a weapon (the one just inserted, not necessarily
-     `it`'s own) that is Thrown. */
+  /* #104: whether the "After a fight" field shows, one rule so every place
+     that asks (the initial render, and syncRecover() below for the Weapon and
+     Ammunition toggles, the fired-kind select and Insert from rules pack) can't
+     drift — ammunition, or a weapon that is Thrown. */
   const recoverShows=(ammoNow,wobj)=>!!(ammoNow||weaponThrown({weapon:wobj}));
   /* The category is the section the item files under (#98): the seven built-in
      sections and any the player has made are offered, a new one is typed, and
@@ -382,7 +382,7 @@ function openItemForm(existing){
      item alone gave an inserted +N weapon no bonus at all (#74). */
   let wFrom=it.weapon||null;
   const wtog=document.getElementById("iIsWeapon"), wfields=document.getElementById("iWeaponFields");
-  wtog.addEventListener("click",()=>{isWeapon=!isWeapon;wtog.classList.toggle("on",isWeapon);wfields.style.display=isWeapon?"":"none";});
+  wtog.addEventListener("click",()=>{isWeapon=!isWeapon;wtog.classList.toggle("on",isWeapon);wfields.style.display=isWeapon?"":"none";syncRecover();});
   /* "Other…" shows a box for a kind this sheet hasn't used yet */
   const otherBox=(selId,wrapId)=>{const s=document.getElementById(selId),w=document.getElementById(wrapId);
     const sync=()=>{w.style.display=s.value==="__other"?"":"none";};s.addEventListener("change",sync);return sync;};
@@ -398,7 +398,15 @@ function openItemForm(existing){
     return v==="__other"?(ammoKindOf(document.getElementById(boxId).value)||null):ammoKindOf(v);};
   let isAmmo=!!am;
   const amtog=document.getElementById("iIsAmmo"), amfields=document.getElementById("iAmmoFields");
-  amtog.addEventListener("click",()=>{isAmmo=!isAmmo;amtog.classList.toggle("on",isAmmo);amfields.style.display=isAmmo?"":"none";const rw=document.getElementById("iRecoverWrap");if(rw)rw.style.display=recoverShows(isAmmo,w)?"":"none";});
+  /* #104 final review item 4: the field follows the form as it is NOW — the
+     weapon Save would build (Weapon ticked; its notes carried from wFrom, the
+     entry last inserted; what it fires from the select), not the weapon the
+     item opened with — so it shows exactly when Save keeps its choice. */
+  const syncRecover=()=>{const rw=document.getElementById("iRecoverWrap");
+    if(rw)rw.style.display=recoverShows(isAmmo,isWeapon?{notes:(wFrom&&wFrom.notes)||"",ammo:kindOf("iWAmmo","iWAmmoOther")||""}:{})?"":"none";};
+  amtog.addEventListener("click",()=>{isAmmo=!isAmmo;amtog.classList.toggle("on",isAmmo);amfields.style.display=isAmmo?"":"none";syncRecover();});
+  document.getElementById("iWAmmo").addEventListener("change",syncRecover);
+  document.getElementById("iWAmmoOther").addEventListener("input",syncRecover);
   let isArmor=!!arm;
   const atog=document.getElementById("iIsArmor"), afields=document.getElementById("iArmorFields");
   const aKind=document.getElementById("iAKind"), aDexW=document.getElementById("iADexWrap"),
@@ -455,8 +463,7 @@ function openItemForm(existing){
        and refresh its options for what THIS entry defaults to, keeping a
        choice the player already made (an explicit Always/Never) rather than
        losing it under whatever "Insert from rules pack" is picked next. */
-    {const rw=document.getElementById("iRecoverWrap");
-     if(rw)rw.style.display=recoverShows(isAmmo,x.weapon||{})?"":"none";
+    {syncRecover();
      const irSel=document.getElementById("iRecover");
      if(irSel){const cur=irSel.value;
        irSel.innerHTML=recoverOptionsHTML(Object.assign({},x,{recover:(cur==="always"||cur==="never")?cur:undefined}));}}});

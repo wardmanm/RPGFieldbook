@@ -335,7 +335,9 @@ function ammoRecoverable(c){
   return [...by.values()].filter(r=>r.back>0);
 }
 /* Gives back what each entry's rule allows (#104), for the kinds asked
-   (every kind when none are), and clears those entries: the rest is lost. When
+   (every kind when none are) — or, when `ids` is given, for those ammoSpent
+   entries only (a thrown weapon's row recovers its own entry: final review,
+   item 2) — and clears those entries: the rest is lost. When
    the old stack is gone, recovery first looks for an equivalent one already on
    the sheet — not a bundle, the same lower-cased trimmed name, the same ammo
    bonus and the same grant as the snapshot — and tops that up instead of
@@ -352,8 +354,9 @@ function ammoRecoverable(c){
    back (review finding 1: that distinction is what Undo must not restore
    blindly). When `rec` is an object it is filled with what was done, for
    undoRecovery(). Returns how many pieces came back. */
-function recoverAmmo(c,kinds,rec){
+function recoverAmmo(c,kinds,rec,ids){
   const want=Array.isArray(kinds)?new Set(kinds.map(ammoKindOf)):null;
+  const only=Array.isArray(ids)?new Set(ids):null;
   const m=ammoSpentMap(c);
   if(!Array.isArray(c.inventory))c.inventory=[];
   const log=(rec&&typeof rec==="object")?Object.assign(rec,{added:[],made:[],repointed:[],cleared:{}}):null;
@@ -361,6 +364,7 @@ function recoverAmmo(c,kinds,rec){
   Object.keys(m).forEach(id=>{
     const e=ammoSpentEntry(c,id);
     if(want&&!want.has(e.kind))return;
+    if(only&&!only.has(id))return;
     const n=ammoBack(ammoRecoverRule(c,ammoEntryItem(c,id,e)),e);
     const st=c.inventory.find(x=>x&&x.id===id);
     if(st){
@@ -565,14 +569,24 @@ function ammoLineHTML(c,a){
     `</div>`;
 }
 /* Under a thrown weapon's row (#104): its own count (no picker — it throws
-   itself), Throw (disabled at ×0, when every one is out there), and Recover N. */
+   itself), Throw (disabled at ×0, when every one is out there), and Recover N.
+   N is read from this weapon's OWN entry, under its id, not from its kind: the
+   kind is the name it had when thrown, so a rename since would hide what End
+   combat still recovers, and a second weapon of the same name would add its
+   throws to this row (final review, item 2). */
 function thrownLineHTML(c,it){
   const kind=ammoThrownKind(it), q=itemQty(it), name=String(it.name||"");
-  const back=(ammoRecoverable(c).find(r=>r.kind===kind)||{}).back||0;
+  const back=ammoThrownBack(c,it);
   return `<div class="ammo-line"><span class="ammo-load">${esc(name+" ×"+q)}</span>`+
     `<button type="button" class="tbtn ammo-fire" data-ammo-throw="${esc(it.id)}"${q>=1?"":" disabled"} aria-label="${esc("Throw "+(/^[aeiou]/i.test(name)?"an ":"a ")+name)}">Throw</button>`+
     (back>0?`<button type="button" class="tbtn ammo-recover" data-ammo-recover="${esc(it.id)}" aria-label="${esc("Recover "+back+" "+ammoPlural(kind))}">Recover ${back}</button>`:"")+
     `</div>`;
+}
+/* What a thrown weapon's own entry gives back under its rule: the row's
+   Recover N, and exactly what its tap recovers. */
+function ammoThrownBack(c,it){
+  const e=ammoSpentEntry(c,it&&it.id);
+  return (e.n&&e.kind)?ammoBack(ammoRecoverRule(c,it),e):0;
 }
 /* Fire and Throw ask Hit or miss first only when this item comes back by
    the Hits-only rule (spec §5.4): an item set to always or never, a thrown
@@ -676,33 +690,40 @@ function loadAmmo(itemId,stackId){
   closeModal();scheduleSave();renderAttacks();
   return true;
 }
-/* Recover N on a row: what this kind's rule gives back of
-   what it fired since the last recovery (#104). */
+/* Recover N on a row: what this kind's rule gives back of what it fired
+   since the last recovery (#104). A thrown weapon's row recovers its own
+   entry only, by its id, so the tap gives back exactly the N its row shows. */
 function recoverWeaponAmmo(itemId,viaKey){
   const it=(character.inventory||[]).find(i=>i&&i.id===itemId);
-  const kind=weaponAmmoKind(it)||(weaponThrown(it)?ammoThrownKind(it):"");if(!kind)return 0;
-  const list=ammoRecoverable(character).filter(r=>r.kind===kind);
-  const back=recoverAmmo(character,[kind]);
+  const thrown=!weaponAmmoKind(it)&&weaponThrown(it);
+  const kind=weaponAmmoKind(it)||(thrown?ammoThrownKind(it):"");if(!kind)return 0;
+  const e=thrown?ammoSpentEntry(character,it.id):null;
+  const list=thrown?(e.n&&e.kind?[{kind:e.kind,fired:e.n,back:ammoThrownBack(character,it)}]:[])
+                   :ammoRecoverable(character).filter(r=>r.kind===kind);
+  const back=thrown?recoverAmmo(character,null,undefined,[it.id]):recoverAmmo(character,[kind]);
   scheduleSave();
   renderInventory();renderAttacks();recompute();
   toast(back?`Recovered ${ammoSummaryText(list)}`:`No ${ammoPlural(kind)} to recover`);
   if(viaKey){const b=ammoFireBtn(itemId);if(b)b.focus();}
   return back;
 }
-/* After End combat (#104, spec §6): when anything is recoverable under the
-   rules, it is recovered — the kinds with something to give back, so a kind on
-   None or Never stays on record for a later change of rule — and the words for
-   the End combat toast come back with the record its Undo needs. null when
-   there was nothing. Shots fired outside a tracked fight are swept up too, as
-   the row's Recover does. */
+/* After End combat (#104, spec §6): the fight is over, so every outstanding
+   count is settled — each entry gives back what its rule allows and is
+   cleared, and the rest is spent (spec §4.3). A count on None or Never is
+   retired too, not kept: kept, it piled up fight after fight and came back in
+   full the day the rule changed (final review, item 1). When something came
+   back, the words for the End combat toast come back with the record its Undo
+   needs — that Undo restores every entry it cleared, the ones that gave
+   nothing included. When nothing came back the counts are cleared quietly and
+   this returns null: no toast words, no Undo. Shots fired outside a tracked
+   fight are swept up too, as the row's Recover does. */
 function applyAmmoRecovery(){
-  const list=ammoRecoverable(character);
-  if(!list.length)return null;
-  const rec={};
-  recoverAmmo(character,list.map(r=>r.kind),rec);
+  if(!Object.keys(ammoSpentMap(character)).length)return null;
+  const list=ammoRecoverable(character), rec={};
+  recoverAmmo(character,null,rec);
   scheduleSave();
   renderInventory();renderAttacks();recompute();
-  return {text:`recovered ${ammoSummaryText(list)}`,rec};
+  return list.length?{text:`recovered ${ammoSummaryText(list)}`,rec}:null;
 }
 /* The End combat toast's Undo recovery: only for the character it was shown for. */
 function undoRecoveryTap(rec,who){
