@@ -6143,3 +6143,60 @@ Pages: [ammunition](../wiki/features/ammunition.md), [combat view](../wiki/featu
 [inventory](../wiki/features/inventory.md), [settings & updates](../wiki/features/settings-and-updates.md),
 [character model](../wiki/architecture/character-model.md), [known issues](../wiki/roadmap/known-issues.md),
 [1.9.0](../wiki/roadmap/1.9.0.md)
+
+## Final review fixes (#104, 2026-10-19)
+
+1. **End combat retires every outstanding count** (controller ruling, reversing the plan's
+   narrowing). `applyAmmoRecovery()` used to recover only the kinds with something to give back,
+   so under None, Never or the firearm-bullet default the counts were never cleared: they piled up
+   fight after fight and came back in full when the rule later changed (three None fights of 10
+   arrows, then All → 30 back), and a Never stack's count was cleared or kept depending on whether
+   another stack of its kind gave anything. It now calls `recoverAmmo(character, null, rec)`
+   whenever any entry is outstanding: each gives back what its rule allows and is cleared, the rest
+   spent (spec §4.3). Something back → `{text, rec}` as before, and Undo recovery restores every
+   entry it cleared, zero-back ones included. Nothing back → the counts clear quietly and it
+   returns `null` (no toast words, no Undo). A direct `recoverAmmo(c, kinds)` that names kinds
+   still leaves other kinds alone — the row's Recover is unchanged.
+2. **A thrown weapon's row reads its own entry.** `thrownLineHTML()` looked Recover N up by
+   `ammoThrownKind(it)` — the weapon's current name — so renaming "Dagger" to "Silvered Dagger"
+   after a throw hid Recover N though End combat still recovered it, and two weapons of the same
+   name shared one N. The row's N is now `ammoThrownBack()` — `ammoBack()` of the rule over the
+   entry under `it.id` — and `recoverWeaponAmmo()` recovers that one entry by id
+   (`recoverAmmo()` gains an optional fourth `ids` filter), so the row's N and what its tap gives
+   back agree.
+3. **The print sheet counts a ×0 item.** `printSheet()` added "×N" only when `num(it.qty)>1`, so a
+   thrown weapon spent to ×0 printed as if ×1. It now shows the count whenever `itemQty(it)!==1`,
+   as the inventory badge does; the known-issues Limitation is removed.
+4. **The item editor's "After a fight" field follows the form.** The Ammunition toggle re-checked
+   visibility against the weapon the item *opened* with, so after Insert from pack of a Dagger,
+   ticking Ammunition on and off hid the field though Save still kept the Dagger's choice.
+   `syncRecover()` in `openItemForm()` now reads the weapon Save would build — Weapon ticked, its
+   notes carried from the entry last inserted, what it fires from the select — and runs on the
+   Weapon and Ammunition toggles, the fired-kind select and Insert from pack.
+5. Docs: the spec's As built corrects the §5.2 note (the equipped-only rule is the universal one,
+   not an override for thrown weapons), records the editor's labels as built, that only pack data
+   marks a weapon Thrown (the editor has no notes field — §5.1's "typing the property" is wrong),
+   that a count declined under the old Yes/No question is recovered at the first End combat after
+   upgrading, and this entry's End combat reversal. Two Limitations join known issues: Undo
+   recovery drops a home-joined entry's unrecovered remainder once the home stack is fired out,
+   and `grantSidLive()` checks the source now, not "revoked since".
+6. Tests (`sheet.js`): End combat clears the zero-back needle and, under None, clears every count
+   quietly (no "recovered", no Undo); three None fights then All recovers nothing; Undo recovery
+   after an End combat that also cleared a zero-back entry restores it; throw, rename, the row
+   still shows Recover 1 and the tap recovers it; two same-named daggers each show and recover
+   their own; the print sheet shows ×0 and ×3 and leaves ×1 plain; the item editor's field stays
+   shown through Ammunition on/off after Insert of a Dagger, hides with Weapon off and for a
+   weapon that fires ammunition, and Save keeps the choice.
+7. QA driven in Playwright: (a) the keyboard path — Tab from the Longbow row's Delete onto Fire,
+   Enter opened "Longbow: hit or miss?" with focus on Hit and nothing fired, Enter fired a hit
+   (`ammoSpent.s1` `{n:1, hits:1}`, Arrow ×9, toast "Fired an arrow · hit · 9 left"), focus back on
+   Fire → `.claude/qa/104-keyboard.png`; (b) under None, three shots then End combat: toast
+   "Combat ended after 1 round (6 sec)" with no recovery words and no Undo, `ammoSpent` `{}`,
+   Arrow count unchanged → `104-none-end.png`; (c) Throw on the Dagger, renamed to "Silvered
+   Dagger" in the item editor and saved: the row reads "Silvered Dagger ×1 · Throw · Recover 1"
+   → `104-renamed.png`; tapping Recover 1 gave it back (×2, `ammoSpent` `{}`). Not driven in the
+   browser: item 4 (no rules pack loaded in the QA page; the harness drives it through the form).
+
+Pages: [ammunition](../wiki/features/ammunition.md), [combat view](../wiki/features/combat-view.md),
+[inventory](../wiki/features/inventory.md), [settings & updates](../wiki/features/settings-and-updates.md),
+[known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md)

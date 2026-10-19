@@ -218,25 +218,31 @@ End combat), [Combat view](../wiki/features/combat-view.md) (End combat no longe
 ## As built
 
 Differences from this spec, and anything it left open, as the branch actually shipped (Task 7,
-2026-10-19). Browser QA (Task 7) drove every step in its brief and found nothing else to record
-here — see the ledger entry for exactly what was driven.
+2026-10-19, and the final review's fixes the same day). Browser QA (Task 7 and the final review)
+is recorded in the ledger entries for each.
 
 - **Names.** §5.3's `throwWeapon()` is two functions: `throwAmmo()`, the pure half (`62-ammo.js`,
   parallel to `fireAmmo()`), and `throwWeaponTap()`, the DOM tap (parallel to `fireWeapon()`). Both
   share `shotDone()` with `fireWeapon()` for the save, the redraw and the toast's Undo, so Fire and
   Throw are identical once a shot or throw is recorded — not repeated code, as §5.3 asked for.
 - **The thrown row's visibility (§5.2).** §5.2 said a thrown weapon's row "is drawn whether or not
-  it is equipped, as today" — true of a launcher's row, but a controller ruling during the build
-  (constraints.md) overrides it for a thrown weapon specifically: its row, like every weapon's row,
-  shows **only while equipped**. A sheathed dagger draws no Throw button, matching every other
-  attack row's rule and avoiding a throw control for a weapon not in hand.
+  it is equipped, as today". That was never today's rule: `attackVisible()` hides the row of every
+  unequipped weapon item, launchers included. The controller's ruling during the build
+  (constraints.md) kept that universal rule rather than making an exception for thrown weapons: a
+  thrown weapon's row, and so its Throw, shows **only while equipped**, like every weapon's row.
+- **The thrown row reads its own entry (final review).** Recover N under a thrown weapon's row is
+  read from the entry under the weapon's own id (`ammoThrownBack()`), not summed by kind, and its
+  tap recovers that one entry (`recoverAmmo()`'s `ids` filter). By kind, renaming the weapon after
+  a throw hid Recover N (the kind is the name it had when thrown) though End combat still recovered
+  it, and two weapons of the same name showed one shared N that either tap would give back.
 - **Quantity 0 (found while planning).** The item editor's Quantity box floored to 1 on save
   (`num(v)||1`), so editing a thrown weapon already at ×0 — with nothing else changed — silently
   turned it back into ×1. Fixed end to end: the box allows `min="0"`, and the save reads
   `Math.max(0, num(v))`. Two totals that read quantity as `num(it.qty)||1` had the same bug for any
   ×0 item: `inventoryTotal()` and the new `itemWeightTotal()` (split out of the carried-weight sum)
   now read it through `itemQty()`, and the inventory row's ×N badge shows **×0** instead of nothing,
-  which used to look like ×1. See [Inventory](../wiki/features/inventory.md).
+  which used to look like ×1. The print sheet had the same gap (`num(it.qty)>1`) and, since the
+  final review, shows the count whenever `itemQty(it)!==1`, as the badge does. See [Inventory](../wiki/features/inventory.md).
 - **§6 vs §8, resolved for §8.** §6's "every entry it cleared is put back as it was" reads as an
   unconditional restore; §8's edge cases (a stack deleted at ×0, a revoking grant) are the real rule
   `undoRecovery()` implements: a cleared entry is restored only when nothing since has made restoring
@@ -250,7 +256,7 @@ here — see the ledger entry for exactly what was driven.
   on the sheet — a stack at ×0 does not exist, it is removed (see [Ammunition](../wiki/features/ammunition.md),
   "A stack at 0"). `undoRecovery()`'s `take()` removes the item when taking its last would leave it
   at ×0, exactly as the last shot does; it is a true no-op at `n===0`, so Undo never deletes a ×0
-  stack that a zero-back recovery only touched to tie its cleared entry to it (review round 1,
+  stack that a zero-back recovery only touched to tie its cleared entry to it (Task 6 fix round 1,
   commit `554f6e3`, folded in after the review found Undo deleting a stack it had given nothing to).
   A thrown weapon is the one exception by design (decision 8): it stays at ×0 instead.
 - **Firearm bullets on a sheet from before #104 now recover nothing, not half.** §8's "A sheet from
@@ -262,11 +268,38 @@ here — see the ledger entry for exactly what was driven.
   intended fix (decision 5's whole point), recorded here because it is the one place "a sheet from
   before #104 behaves exactly as today" does not hold.
 - **`recoverShows()`** (`80-modal-forms.js`) is the one rule, not in the original spec, for whether
-  the item editor's Recovery field shows at all: ammunition, or a weapon — the one just inserted by
-  Insert from pack, not necessarily the item being edited — that is Thrown. Review round 2 (commit
-  `554f6e3`) found Insert from pack left the field exactly as the blank new-item form had it instead
-  of re-syncing to the inserted item's own defaults; `recoverShows()` is now shared by the initial
-  render, the Ammunition toggle and Insert from pack, so the three can't drift again.
+  the item editor's "After a fight" field shows at all: ammunition, or a Thrown weapon. Task 6 fix
+  round 1 (`554f6e3`) found Insert from pack left the field exactly as the blank new-item form had
+  it instead of re-syncing to the inserted item's own defaults; the final review found the
+  Ammunition toggle still checked the weapon the item *opened* with. Every re-check now goes through
+  the form's `syncRecover()`, which reads the weapon Save would build (Weapon ticked, its notes
+  carried from the entry last inserted, what it fires from the select) — on the Weapon and
+  Ammunition toggles, the fired-kind select and Insert from pack — so the field shows exactly when
+  Save keeps its choice.
+- **The editor's labels as built (§7).** The field is "After a fight", not "Recovery". Its options
+  are "Default (never comes back)", "Default (always comes back)" or "Sheet's rule" (the first
+  names the app's default when there is one), then "Always comes back" and "Never comes back".
+  Settings' choices read "Half (rules as written)", All, Hits only, None.
+- **A weapon made in the item editor cannot be Thrown (§5.1).** §5.1 said "a homebrew weapon gets
+  it by typing the property into its notes", but the item editor has no weapon-notes field: Save
+  carries `weapon.notes` from the pack entry last inserted (or the item being edited). Only pack
+  data — a rules pack's own entry, inserted or found — marks a weapon Thrown. Recorded as Open on
+  the [Ammunition](../wiki/features/ammunition.md) page.
+- **Old sheets: counts declined under the old question come back.** Before #104, End combat asked
+  Yes/No about new shots, and a "No" left those counts on record. The first End combat after
+  upgrading recovers them under the sheet's rule, with a toast and Undo recovery — a departure from
+  §8's "exactly as today", recorded here; Undo recovery puts them back if the player didn't want
+  them.
+- **End combat retires every count (final review, reversing the plan).** The plan had
+  `applyAmmoRecovery()` recover only the kinds with something to give back, so a kind on None or
+  Never "stays on record for a later change of rule". The controller reversed that: those counts
+  were never cleared, so they piled up fight after fight and came back in full the day the rule
+  changed (three None fights of 10 arrows, then All → 30 back), and a Never stack's count was kept
+  or cleared depending on whether another stack of its kind gave anything. End combat now settles
+  every outstanding entry — each gives back what its rule allows and is cleared, the rest spent
+  (§4.3). When something came back, the toast carries Undo recovery, which restores every entry it
+  cleared, zero-back ones included; when nothing came back, the counts are cleared quietly — no
+  toast words, no Undo. The row's Recover still names its own kind only.
 
 ## 12. Release note
 

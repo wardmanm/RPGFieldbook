@@ -35,7 +35,9 @@ see [Computed stats & effects](../architecture/computed-stats-and-effects.md). T
 **Ammunition it fires** select (on a weapon) writes `weapon.ammo`, and its **Ammunition** toggle — a
 **Kind** and a **Bonus to attack and damage** of +0 to +3 — writes `ammo`; Other… opens a box for a
 kind not yet on the sheet. For ammunition or a Thrown weapon, an **After a fight** select writes
-`recover` — "Sheet's rule" (named when the app has a default for this item), Always, Never. See
+`recover` — the default ("Default (never comes back)" or "Default (always comes back)" when the
+app has one for this item, else "Sheet's rule"), "Always comes back", "Never comes back"; it shows
+exactly when Save would keep it, following the Weapon and Ammunition toggles. See
 [Ammunition](ammunition.md).
 
 **Sections.** `invSection(it)` files an item under one of `INV_ORDER` — Weapons, Armor, Consumables,
@@ -71,7 +73,8 @@ Detail box is **disabled** until a kind is chosen. `origin` is character-local: 
 **Cost and value.** `costToGp()` parses the pack's display string ("15 gp", "2 sp", "1 gp 5 sp") into
 gp. The row shows cost each, and its ×N quantity badge (`itemQty(it)!==1`) once qty is anything but
 1 — a ×0 item (a Thrown weapon spent down, or any item zeroed by hand, #104) shows **×0** rather
-than nothing, which used to look like ×1. `inventoryTotal()` (Σ cost × qty, 2 dp) is the Total value
+than nothing, which used to look like ×1; the print sheet (`printSheet()`) counts the same way.
+`inventoryTotal()` (Σ cost × qty, 2 dp) is the Total value
 line, shown when above zero, and `itemWeightTotal()` (`itemWeight()` × qty) is what the carried
 weight sums; both read quantity through `itemQty(it)` — never `num(it.qty)||1`, which read a ×0
 item's quantity as 1 — so a ×0 item adds no value and no weight (#104 review).
@@ -220,3 +223,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-02 — The item editor sets what a weapon fires and marks ammunition, with a bonus; Insert from pack unpacks a bundle. → ledger L4978, #8
 - 2026-10-16 — Category is the shared group field: a section of the player's own, or one of the seven in any case. → ledger L5823, #98
 - 2026-10-19 — `recover` joins the item shape; the editor's Quantity allows 0; totals and the ×N badge read quantity through `itemQty()`. → ledger L6081, #104
+- 2026-10-19 — The "After a fight" select's labels as built, and it follows the form's current weapon; the print sheet counts a ×0 item. → ledger L6147, #104

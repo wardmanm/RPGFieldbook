@@ -217,7 +217,8 @@ When a page gains a Decisions row, add its line here under that page.
 
 - **Where ammo is spent** — A **Fire** button on the weapon's attack row, which the combat view already shows
 - **How a weapon finds its ammo** — By kind, the player picks the stack
-- **Recovery** — Asked at End combat, plus a Recover button on the row
+- **Recovery** — One of four rules the player chooses per character (#104); End combat recovers on its own, with an Undo, plus a Recover button on the row
+- **Counts that give nothing back at End combat (#104)** — Retired with the rest, never kept for a later change of rule
 - **Bundles** — Unpack on arrival
 - **A stack at 0** — Removed, like a potion; recovery recreates it from a copy
 - **The 2014 duplicates (Crossbow Bolt, Blowgun Needle, their bundles, the 2014 Net)** — Stop shipping them

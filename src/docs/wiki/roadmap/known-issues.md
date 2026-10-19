@@ -65,9 +65,6 @@ Known behaviour that is accepted for now.
   → ledger L2776
 - **The printed sheet** shows prepared spells as `◆`/`○` with no key (the same gap as the skill and
   save rows), and prints no item uses. → ledger L2345, L2818
-- **The printed sheet shows a ×0 item with no count.** `printSheet()` (`71-char-io.js`) only adds
-  "×N" when `num(it.qty)>1`, so a Thrown weapon spent down to nothing, or any item zeroed by hand
-  (#104), prints the same as one at ×1. → ledger L6081, and [Ammunition](../features/ammunition.md)
 - **The item finder has no Escape key of its own.** `openBrowse()` closes from its Close button only;
   the global Escape handler dismisses the modal and nothing else. → ledger L3397
 - **At phone width** an attack row's name runs into its type label behind the to-hit pill, and a
@@ -81,6 +78,19 @@ Known behaviour that is accepted for now.
 - **Ammunition picker rows can look identical** when two grants each give "Arrow ×20": stacks of
   different grants stay apart by design, and nothing on the row tells them apart. An origin hint
   would. → ledger L4989, and [Ammunition](../features/ammunition.md)
+- **Undo recovery drops a home-joined entry's unrecovered remainder once the home stack is fired
+  out.** When recovery tops up an equivalent stack already on the sheet (the old one being gone)
+  and that stack is then fired down to nothing, `undoRecovery()` finds the stack it depended on gone
+  and does not restore the cleared entry, so the shots recovery did not give back are not put back
+  on record. Unreachable from the UI today: the shot's own toast replaces the one carrying Undo
+  recovery. → ledger L6147, and [Ammunition](../features/ammunition.md)
+- **Undo recovery asks whether a grant is live now, not whether it was revoked since.**
+  `grantSidLive()` checks the character's race, background and classes at Undo time, so a class
+  removed and re-added inside the Undo window reads as never revoked, and a cleared entry from its
+  old grant comes back. → ledger L6147, and [Ammunition](../features/ammunition.md)
+- **A weapon made in the item editor cannot be Thrown.** The editor has no weapon-notes field; Save
+  carries `weapon.notes` from the pack entry last inserted, so only pack data marks a weapon Thrown.
+  → ledger L6147, and [Ammunition](../features/ammunition.md)
 - **Xanathar's five Adamantine Ammunition pieces carry rarity "Unknown"** (5e-tools writes
   "unknown"), which sorts first in the item finder's Rarity filter. → ledger L4989, and
   [Ammunition](../features/ammunition.md)
@@ -464,3 +474,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-17 — Narrowed: trackers now show a group total (#93), so the deferred line drops "and no group totals". → ledger L6047, #95, #93
 - 2026-10-17 — Limitation: the Σ nested in the `role="button"` group header. → ledger L6057, #93
 - 2026-10-19 — Fixed and removed: thrown weapons now track their own ammunition (#104). Added: the printed sheet shows a ×0 item with no count. → ledger L6081, #104
+- 2026-10-19 — Fixed and removed: the printed sheet's ×0 count. Added: Undo recovery dropping a home-joined entry's remainder once the home stack is fired out, `grantSidLive()` checking the source now rather than "revoked since", and editor-made weapons that cannot be Thrown. → ledger L6147, #104

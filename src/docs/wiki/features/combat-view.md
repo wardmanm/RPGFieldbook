@@ -59,10 +59,13 @@ then the tracker with End at the far right.
 condition moves 6 s ([Conditions & concentration](conditions-and-concentration.md)), and in combat
 the round cannot drop below 1. End asks first (`endCombatAsk()`), then `combatEnd()` zeroes the
 round and returns the summary. `applyAmmoRecovery()` (#104) then recovers ammunition **on its
-own**, whenever anything is recoverable under the character's rule — no question — and its summary
-("recovered 6 of 12 arrows, 2 of 2 daggers") joins the End combat toast, which carries **Undo
-recovery** (`undoRecoveryTap()`): it reverses exactly that recovery, scoped to the character it was
-shown for, and does nothing after a switch — see [Ammunition](ammunition.md). The header shows time
+own** — no question — and retires every outstanding count: each gives back what its rule allows and
+is cleared, the rest spent, so a count on None or Never never piles up for a later change of rule.
+When something came back its summary ("recovered 6 of 12 arrows, 2 of 2 daggers") joins the End
+combat toast, which carries **Undo recovery** (`undoRecoveryTap()`): it reverses exactly that
+recovery, every cleared entry included, scoped to the character it was shown for, and does nothing
+after a switch. When nothing came back the counts clear quietly and the toast says only that combat
+ended — see [Ammunition](ammunition.md). The header shows time
 at the *start* of the round (`combatElapsedSec()`, round 7 → 36 sec); the summary counts the round
 being ended (round 7 → 7 rounds, 42 sec). Every round-mover repaints through `renderCombatChrome()`.
 The round is announced from `#cvLive`, outside the header that is repainted; a repaint keeps focus
@@ -178,3 +181,4 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-10-12 — No ✕ and no ☰ of its own: the tab bar's ☰ serves the Combat tab; focus fallbacks go to the swords; the phone header is one row out of combat. → ledger L5684, #80
 - 2026-10-16 — The By ability header keeps a full-size name, modifier and score in the view. → ledger L5756, #92
 - 2026-10-19 — End combat recovers ammunition on its own in place of asking, with Undo recovery on the toast. → ledger L6081, #104
+- 2026-10-19 — End combat retires every outstanding ammunition count, quietly when nothing comes back. → ledger L6147, #104
