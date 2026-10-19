@@ -196,7 +196,9 @@ commit and tag commands to run in the private repo. Pushing the tag runs the pri
 `data-release.yml`: it checks that the public app has a `vX.Y.Z` tag, that the tag matches the
 registry's `release` and no pack changed after the bump; builds the public app at `vX.Y.Z`; runs the
 private suites; bundles and packs the archive with the public kit; validates it **without**
-`--public`, because these packs carry no open licence; and publishes it with `--latest=false`. The
+`--public`, because these packs carry no open licence; and publishes it with `--latest=false`. Unlike
+the public workflows it has no approval step: required reviewers on a private repo need a paid plan,
+so the tag publishes, guarded only by Claude Code's ask rules and `/release`'s "publish". The
 full procedure is [RELEASING](../../RELEASING.md) §1c.
 
 XPHB and XGE had changed since their 1.7.2 versions, and the bundle format joined every digest
@@ -341,3 +343,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-12 — The bundle format joins every digest, so Humblewood and TCE also bump at the first private release. → ledger L5627, #86
 - 2026-10-13 — `sync-private.py` holds the three conversion commands and checks, writes and reports on the private packs; the private gate covers Xanathar's and Tasha's too; the stale link and CI items leave Open (the link exists, the private CI has passed nightly since 2026-10-10). → ledger L5724, #90
 - 2026-10-16 — The first private release went out as `1.8.1-1`, after app 1.8.1, not `1.8.0-1`. → ledger L5990
+- 2026-10-19 — The private release has no approval gate (plan limit); the public ones do. → ledger L6226, #109

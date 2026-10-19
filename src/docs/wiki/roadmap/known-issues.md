@@ -129,6 +129,10 @@ Known behaviour that is accepted for now.
 - **The trackers' Σ is a button nested in a `role="button"` group header,** so assistive tech may
   flatten the header and never reach the Σ. Restructuring the header pattern (the journal's and the
   section notes' group headers share it) is likely 2.0's. → ledger L6057, and [Journal](../features/journal.md)
+- **A private data release publishes on its tag, with no approval step.** The public workflows wait
+  for Mike in the `release` environment; GitHub refuses required reviewers on a private repo on the
+  current plan (HTTP 422). Claude Code's ask rules and `/release`'s "publish" are its only gates.
+  → ledger L6226, and [Private data](../data/private-data.md)
 
 ## Deferred
 
@@ -475,3 +479,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-17 — Limitation: the Σ nested in the `role="button"` group header. → ledger L6057, #93
 - 2026-10-19 — Fixed and removed: thrown weapons now track their own ammunition (#104). Added: the printed sheet shows a ×0 item with no count. → ledger L6081, #104
 - 2026-10-19 — Fixed and removed: the printed sheet's ×0 count. Added: Undo recovery dropping a home-joined entry's remainder once the home stack is fired out, `grantSidLive()` checking the source now rather than "revoked since", and editor-made weapons that cannot be Thrown. → ledger L6147, #104
+- 2026-10-19 — Added: a private data release has no approval step (plan limit). → ledger L6226, #109

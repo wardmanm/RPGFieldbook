@@ -4,11 +4,14 @@ Updated: 2026-10-19 · Branch: main
 ## Current focus
 1.9.0, wave 1 of 5: #95/#93/#94 and #104 are merged; #97 (edit-button toggles) and #99 with #53
 (Rules tab overhaul) are not started, and wave 0's #88 neither. No worktree is open. Today also
-added two commands: `/status` (this file, #108) and `/release` (#109).
+added two commands, `/status` (this file, #108) and `/release` (#109), and an approval gate on
+releases.
 
 ## Recent changes
+- 2026-10-19: Public app and data releases now wait for Mike's approval in GitHub before
+  publishing (`release` environment); Claude Code asks before release commands (#109).
 - 2026-10-19: `/status` and `/release` skills; this status log tracked and written on main only
-  (#108, #109; committed, not yet pushed).
+  (#108, #109).
 - 2026-10-19: Merged #104 — ammunition recovery rule (half/all/hits only/none), per-item
   always/never, Throw for thrown weapons, End combat recovering on its own with Undo recovery.
 - 2026-10-18: Merged #95, #93, #94 — tickable checklists in journal pages and section notes (old
@@ -37,4 +40,3 @@ added two commands: `/status` (this file, #108) and `/release` (#109).
   declined counts come back "under the sheet's rule" (each entry's own rule applies, and nothing
   comes back for bullets); `ammunition.md`'s older Decisions row says End combat acts "when anything
   is recoverable" (it now retires every count).
-- #108 and #109: committed on main, not pushed; they close on push.

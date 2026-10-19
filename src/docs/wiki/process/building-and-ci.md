@@ -157,6 +157,15 @@ What each refusal means and how to clear it is the table in [RELEASING](../../RE
 
 ### `release.yml` and `data-release.yml`
 
+**Nothing publishes without Mike's approval** (#109). Each workflow is two jobs. `verify` runs every
+check below and builds the assets and the release notes with `contents: read`, then uploads them as
+a workflow artifact. `publish` needs `verify`, runs in the GitHub environment `release` (required
+reviewer: Mike) with `contents: write`, waits for his approval in the run page, downloads the
+artifact and uploads exactly that; a `workflow_dispatch` re-publish waits the same way. The tracked
+`.claude/settings.json` adds Claude Code `ask` rules on the commands that start a release (`git tag`,
+pushing a tag, `gh release create|edit|delete`, `gh workflow run`, and the `_private-data` ones). The
+private repo cannot have the environment gate on its plan (known issues).
+
 **`release.yml`** runs on a `vX.Y.Z` tag. It refuses a tag that doesn't match `APP_VERSION`, then
 one whose `data/packs.json` `release` isn't the tag's version (a tag cut without `--release`), then
 one with notes still pending. It runs the tests (a tag never triggers `ci.yml`) and the full build
@@ -352,3 +361,4 @@ written on main only, so it never conflicts in a worktree merge ([WORKTREES](../
 - 2026-10-09 — `ci.yml` and `release.yml` re-run `data-kit.py` after the full build and require its kit-zip checks; the app zip's guard bans `scripts/`. → ledger L5592, #85
 - 2026-10-13 — The converter menu writes the private packs through `scripts/sync-private.py --write`, which holds their commands. → ledger L5724, #90
 - 2026-10-19 — `/release` and `/status`: a release skill with two gates (the exact version, then "publish"), and the session status log written on main. → ledger L6203, #108, #109
+- 2026-10-19 — Releases wait for Mike: `verify` → `publish` jobs, `publish` in the `release` environment; Claude Code ask rules on the release commands. → ledger L6226, #109

@@ -75,6 +75,11 @@ Never `git commit -am`. Never force-push, delete a tag or delete a release witho
 
 ## 6. Check it landed
 
+For app and data, the push publishes nothing yet. The run's `verify` job checks and builds; then
+its `publish` job waits for Mike to approve it in GitHub (the `release` environment). Once
+`verify` is green, give him the run URL and say "waiting for your approval in Actions"; you never
+approve it. Private releases have no such gate (see RELEASING §2).
+
 ```bash
 gh run watch "$(gh run list --workflow <release.yml|data-release.yml> -L1 --json databaseId -q '.[0].databaseId')"
 gh release view <tag> --json assets,isLatest -q '[.isLatest, [.assets[].name]]'

@@ -8,6 +8,10 @@ name: Data release
 #   git tag -a data-vX.Y.Z-N -m "Fieldbook data X.Y.Z-N"
 #   git push && git push origin data-vX.Y.Z-N
 #
+# Two jobs, as in release.yml: `verify` checks, tests and builds the archive;
+# `publish` waits in the `release` environment for Mike's approval (a required
+# reviewer) before it creates the release (#109).
+#
 # A data release is NEVER GitHub's "latest". Every installed copy of Fieldbook
 # finds app updates through /releases/latest, so a data release there would
 # hide them — the last step checks, and repairs it if it ever happens.
@@ -24,15 +28,18 @@ on:
         type: string
 
 permissions:
-  contents: write        # create the release and upload the archive
+  contents: read         # verify only reads; publish asks for write itself
 
 concurrency:
   group: data-release-${{ github.event.inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
     steps:
       - name: Resolve tag
         id: tag
@@ -104,19 +111,51 @@ jobs:
           node scripts/data-release-notes.js "${{ steps.tag.outputs.version }}" --data > /tmp/notes.md
           echo "Release body:"; cat /tmp/notes.md
 
+      - name: Hand the archive to publish
+        run: cp /tmp/notes.md dist/release-notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: data-release-assets
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            dist/fieldbook-data-standalone-${{ steps.tag.outputs.version }}.zip
+            dist/release-notes.md
+
+  # Waits for Mike's approval: the `release` environment has him as a required
+  # reviewer. Reject, and nothing is published.
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write        # create the release and upload the archive
+    steps:
+      # the latest-release check below lists the app tags with git
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.tag }}
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: data-release-assets
+          path: dist
+
       - name: Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          V="${{ steps.tag.outputs.version }}"
-          TAG="${{ steps.tag.outputs.tag }}"
+          V="${{ needs.verify.outputs.version }}"
+          TAG="${{ needs.verify.outputs.tag }}"
           Z="dist/fieldbook-data-standalone-$V.zip"
+          [ -s "$Z" ] && [ -s dist/release-notes.md ] || { echo "::error::the archive or its notes are missing after hand-over"; exit 1; }
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists — updating notes and re-uploading the archive."
-            gh release edit "$TAG" --title "Fieldbook data $V" --notes-file /tmp/notes.md --latest=false
+            gh release edit "$TAG" --title "Fieldbook data $V" --notes-file dist/release-notes.md --latest=false
             gh release upload "$TAG" "$Z" --clobber
           else
-            gh release create "$TAG" "$Z" --title "Fieldbook data $V" --notes-file /tmp/notes.md --latest=false
+            gh release create "$TAG" "$Z" --title "Fieldbook data $V" --notes-file dist/release-notes.md --latest=false
           fi
           echo "Published: $(gh release view "$TAG" --json url -q .url)"
 

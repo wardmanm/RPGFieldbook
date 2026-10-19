@@ -6222,3 +6222,25 @@ Pages: [ammunition](../wiki/features/ammunition.md), [combat view](../wiki/featu
    1.8.0-freeze note removed.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md)
+
+## Releases wait for Mike's approval (#109, 2026-10-19)
+
+1. Mike asked whether a release needs his approval as its last step. It did not: pushing a `v…` or
+   `data-v…` tag published at once, and nothing but instructions kept Claude from pushing one.
+2. `release.yml` and `data-release.yml` are each split in two. `verify` (`contents: read`) runs
+   every existing check, builds, writes the notes to `dist/release-notes.md` and uploads the assets
+   as a workflow artifact; `publish` (`needs: verify`, `environment: release`, `contents: write`)
+   downloads them and runs the same `gh release` commands. The public repo's `release` environment
+   has Mike as required reviewer, so `publish` waits for him in the run page; a manual re-publish
+   waits too. `data-release.yml`'s publish job checks out the tag (full history) for the git tag
+   lookup and the "app release still latest" step.
+3. `.claude/settings.json`, now tracked (`.gitignore` exception), sets Claude Code `ask` rules on
+   `git tag`, `git push --follow-tags|--tags`, pushing `v…`/`data-v…` tags, `gh release
+   create|edit|delete`, `gh workflow run`, and the `_private-data` tag and push commands.
+4. The private repo cannot have the environment: GitHub answers 422 (required reviewers on a
+   private repo need a paid plan). The empty environment the attempt left was deleted. Recorded in
+   known issues.
+5. The `/release` skill's §6 says the run waits for Mike's approval and that Claude never approves.
+
+Pages: [building & CI](../wiki/process/building-and-ci.md), [private data](../wiki/data/private-data.md),
+[known issues](../wiki/roadmap/known-issues.md)

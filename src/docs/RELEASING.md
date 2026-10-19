@@ -3,7 +3,8 @@
 How a version gets from your working copy to a player's download. Dev-only — this file lives under
 `src/docs/` and is deliberately excluded from the player bundle.
 
-Publishing is automated. **You never upload assets by hand.** Pushing a tag is the whole trigger.
+Publishing is automated. **You never upload assets by hand.** Pushing a tag is the whole trigger,
+and nothing goes public until Mike approves the run's `publish` job in GitHub (§2, the approval gate).
 
 **For Claude: Mike starts a release by typing `/release`** — the `release` skill (`.claude/skills/release/`) runs the steps below with his two confirmations, the exact version and "publish" (#109).
 
@@ -69,7 +70,9 @@ Two things that have each bitten once:
   line and `git push --tags` succeeds with nothing to push, Actions never runs, and no release
   appears — with no error to go looking for. The `NOT TAGGED` warning in the header exists for this.
 
-**8. Watch Actions → Release.** About a minute. When it's green,
+**8. Approve it in Actions → Release.** The `verify` job builds and checks everything (about a
+minute), then the `publish` job waits: *Review deployments* → `release` → *Approve and deploy*.
+Only then is anything uploaded. When it's green,
 `https://github.com/wardmanm/RPGFieldbook/releases/latest` has the new version and the in-app update
 badge starts pointing at it.
 
@@ -200,7 +203,8 @@ git tag -a data-v1.8.0-1 -m "Fieldbook data 1.8.0-1"
 git push && git push origin data-v1.8.0-1
 ```
 
-**Pushing the tag publishes.** `data-release.yml` runs, and refuses, in order, with an `::error::`
+**Pushing the tag starts the publish.** `data-release.yml` runs, waits for Mike's approval before
+uploading (§2, the approval gate), and refuses, in order, with an `::error::`
 saying what to do:
 
 1. a tag that isn't `data-vX.Y.Z-N`;
@@ -224,7 +228,7 @@ step reads `/releases/latest`, and if it is not a `v…` tag, it marks the newes
 latest again, then fails, so you see it. Check the releases page if it does.
 
 **Re-publishing.** Actions → Data release → *Run workflow* → enter the tag. It rebuilds the archive
-at that tag and re-uploads it with `--clobber`.
+at that tag and, once approved, re-uploads it with `--clobber`.
 
 **Rolling back.** Delete the GitHub release and the tag:
 
@@ -291,6 +295,23 @@ public registry.
 
 Both workflows are in `.github/workflows/`. Everything below is a *deliberate* refusal — if one
 fires, the fix is in your working copy, not in the workflow.
+
+### The approval gate (#109)
+
+`release.yml` and `data-release.yml` each run two jobs. **`verify`** does every check below, builds
+the assets and writes the notes, with read-only access, and hands them on as a workflow artifact.
+**`publish`** runs in the `release` environment, whose required reviewer is Mike: it waits until he
+approves it in the run page (*Review deployments*), then uploads exactly what `verify` built. A tag
+pushed by mistake costs nothing until that click, and rejecting the run publishes nothing (delete
+the tag after). A manual *Run workflow* waits the same way.
+
+Claude Code also asks before the commands that start a release (`git tag`, `git push --follow-tags`,
+pushing a `v…` or `data-v…` tag, `gh release create|edit|delete`, `gh workflow run`, and the
+`_private-data` equivalents): `.claude/settings.json`, tracked.
+
+**The private repo has no approval gate.** Required reviewers on a private repository need a paid
+GitHub plan (the API answers 422), so `RPGFieldbookPrivate`'s release publishes on the tag, guarded
+only by Claude Code's ask rules and `/release`'s Gate 2.
 
 ### `ci.yml` — every push and PR
 
@@ -366,7 +387,8 @@ git switch -c release/1.2.x v1.2.1
 ## 4. Fixing a release
 
 **An upload failed but the tag is fine.** Re-run without cutting a new version:
-Actions → Release → *Run workflow* → enter the tag. It rebuilds and re-uploads with `--clobber`.
+Actions → Release → *Run workflow* → enter the tag. It rebuilds and, once approved, re-uploads with
+`--clobber`.
 
 **Re-publishing a tag from before 1.8.0** (v1.7.2 or older): in *Run workflow*, set **Use workflow
 from** to that tag, not `main`. `main`'s `release.yml` requires `data/packs.json` and uploads the

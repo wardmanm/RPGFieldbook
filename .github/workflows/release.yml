@@ -1,22 +1,29 @@
 name: Release
 
 # Publishing is triggered by pushing an annotated tag that a LOCAL release cut
-# already produced:
+# already produced (Mike runs it with /release; src/docs/RELEASING.md):
 #
-#   ./build.sh --release patch      # bumps APP_VERSION, folds in UNRELEASED.md
-#   git commit -am "Release v1.2.2"
-#   git tag -a v1.2.2 -m "v1.2.2" && git push && git push --tags
+#   ./build.sh --release 1.2.2      # bumps APP_VERSION, folds in UNRELEASED.md
+#   git add -A && git commit -m "Release v1.2.2"
+#   git tag -a v1.2.2 -m "v1.2.2" && git push --follow-tags
 #
 # The version decision, the changelog wording and the artifact all stay under
 # your eye locally; this workflow only PUBLISHES, and refuses to publish
 # anything it cannot independently reproduce from source.
+#
+# Two jobs. `verify` checks the tag, runs the tests, builds and checks every
+# asset; `publish` then waits in the `release` environment until Mike approves
+# it (a required reviewer, set in the repo's Settings → Environments), and only
+# then creates the release. So nothing is ever published without his click,
+# whoever or whatever pushed the tag (#109).
 #
 # Assets: fieldbook.html, the app zip, the rules-data archive
 # fieldbook-data-standalone-X.Y.Z.zip, and the data kit fieldbook-data-kit-X.Y.Z.zip.
 # Data-only releases are data-release.yml.
 #
 # workflow_dispatch re-publishes an existing tag — for when an upload failed and
-# the release needs rebuilding, without cutting a new version.
+# the release needs rebuilding, without cutting a new version. It waits for the
+# same approval.
 
 on:
   push:
@@ -29,15 +36,18 @@ on:
         type: string
 
 permissions:
-  contents: write        # create the release and upload assets
+  contents: read         # verify only reads; publish asks for write itself
 
 concurrency:
   group: release-${{ github.event.inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
     steps:
       - name: Resolve tag
         id: tag
@@ -202,26 +212,62 @@ jobs:
             echo "::error::the app zip names something private"; exit 1
           fi
 
+      # Everything publish needs, handed over as one artifact: the four assets
+      # and the release body. publish never rebuilds — what Mike approves is
+      # exactly what verify built and checked.
+      - name: Hand the assets to publish
+        run: cp /tmp/notes.md dist/release-notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            dist/fieldbook.html
+            dist/fieldbook-v${{ steps.tag.outputs.version }}.zip
+            dist/fieldbook-data-standalone-${{ steps.tag.outputs.version }}.zip
+            dist/fieldbook-data-kit-${{ steps.tag.outputs.version }}.zip
+            dist/release-notes.md
+
+  # Waits for Mike's approval: the `release` environment has him as a required
+  # reviewer. Approve in the run's page (or the GitHub app); reject, and nothing
+  # is published.
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write        # create the release and upload assets
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: dist
+
       # `gh` ships on the runner, so this needs no third-party action — one less
       # supply-chain dependency to pin and audit for something that publishes.
       - name: Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          V="${{ steps.tag.outputs.version }}"
-          TAG="${{ steps.tag.outputs.tag }}"
+          V="${{ needs.verify.outputs.version }}"
+          TAG="${{ needs.verify.outputs.tag }}"
           # No source archive here: GitHub attaches "Source code (zip)" and
           # "(tar.gz)" to every release itself, from the tag.
           ASSETS=(dist/fieldbook.html
                   "dist/fieldbook-v$V.zip"
                   "dist/fieldbook-data-standalone-$V.zip"
                   "dist/fieldbook-data-kit-$V.zip")
+          for f in "${ASSETS[@]}" dist/release-notes.md; do
+            [ -s "$f" ] || { echo "::error::missing or empty after hand-over: $f"; exit 1; }
+          done
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists — updating notes and re-uploading assets."
-            gh release edit "$TAG" --title "Fieldbook $TAG" --notes-file /tmp/notes.md
+            gh release edit "$TAG" --title "Fieldbook $TAG" --notes-file dist/release-notes.md
             gh release upload "$TAG" "${ASSETS[@]}" --clobber
           else
             gh release create "$TAG" "${ASSETS[@]}" \
-              --title "Fieldbook $TAG" --notes-file /tmp/notes.md
+              --title "Fieldbook $TAG" --notes-file dist/release-notes.md
           fi
           echo "Published: $(gh release view "$TAG" --json url -q .url)"

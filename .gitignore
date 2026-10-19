@@ -26,12 +26,14 @@ _private-data
 # `.claude/*`, not `.claude/`: the trailing-slash form stops git descending into
 # the directory, so no `!` rule beneath it can ever take effect. Project skills
 # are tracked so every clone and every worktree gets them; worktrees, QA
-# screenshots and settings.local.json stay ignored. build.sh bans dot-paths from
+# screenshots and settings.local.json stay ignored; settings.json (the ask rules
+# before release commands, #109) is tracked. build.sh bans dot-paths from
 # the player zip, so a skill cannot ship. The session status log is tracked too
 # (CLAUDE.md, "Session status log"; updated on main only, #108).
 .claude/*
 !.claude/skills/
 !.claude/status.md
+!.claude/settings.json
 .DS_Store
 Thumbs.db
 .vscode/
