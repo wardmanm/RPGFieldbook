@@ -319,38 +319,46 @@ function undoFire(c,rec){
   rec.undone=true;
   return true;
 }
-/* What recovery would give back, per kind: half of each stack's count, rounded
-   down per stack, summed. Kinds with nothing to give back are left out. */
+/* The item an entry's rule is read from: the live one while it is on the
+   sheet (its override may have changed since the shot), else the entry's copy. */
+function ammoEntryItem(c,id,e){
+  const inv=Array.isArray(c&&c.inventory)?c.inventory:[];
+  return inv.find(x=>x&&x.id===id)||e.snap;
+}
+/* What recovery would give back, per kind, under each entry's rule (#104):
+   summed per kind. Kinds with nothing to give back are left out. */
 function ammoRecoverable(c){
   const by=new Map();
   Object.keys(ammoSpentMap(c)).forEach(id=>{
     const e=ammoSpentEntry(c,id);if(!e.n||!e.kind)return;
     const r=by.get(e.kind)||{kind:e.kind,fired:0,back:0};
-    r.fired+=e.n;r.back+=Math.floor(e.n/2);by.set(e.kind,r);
+    r.fired+=e.n;r.back+=ammoBack(ammoRecoverRule(c,ammoEntryItem(c,id,e)),e);by.set(e.kind,r);
   });
   return [...by.values()].filter(r=>r.back>0);
 }
-/* Gives back half of what was fired since the last recovery, for the kinds
-   asked (every kind when none are), and clears those counts: the other half is
-   lost, as the rules have it. When the old stack is gone, recovery first looks
-   for an equivalent one already on the sheet — not a bundle, the same
-   lower-cased trimmed name, the same ammo bonus and the same grant as the
-   snapshot — and tops that up instead of making a second "+1 Arrow" row; any
-   weapon loaded with the old id is repointed to it. Only when there is none
-   does the old stack come back from its copy, under its old id. Returns how
-   many pieces came back. */
-function recoverAmmo(c,kinds){
+/* Gives back what each entry's rule allows (#104), for the kinds asked
+   (every kind when none are), and clears those entries: the rest is lost. When
+   the old stack is gone, recovery first looks for an equivalent one already on
+   the sheet — not a bundle, the same lower-cased trimmed name, the same ammo
+   bonus and the same grant as the snapshot — and tops that up instead of
+   making a second "+1 Arrow" row; any weapon loaded with the old id is
+   repointed to it. Only when there is none does the old stack come back from
+   its copy, under its old id. A thrown weapon is still on the sheet at ×0, so
+   its throws go back onto it. When `rec` is an object it is filled with what
+   was done, for undoRecovery(). Returns how many pieces came back. */
+function recoverAmmo(c,kinds,rec){
   const want=Array.isArray(kinds)?new Set(kinds.map(ammoKindOf)):null;
   const m=ammoSpentMap(c);
   if(!Array.isArray(c.inventory))c.inventory=[];
+  const log=(rec&&typeof rec==="object")?Object.assign(rec,{added:[],made:[],repointed:[],cleared:{}}):null;
   let back=0;
   Object.keys(m).forEach(id=>{
     const e=ammoSpentEntry(c,id);
     if(want&&!want.has(e.kind))return;
-    const n=Math.floor(e.n/2);
+    const n=ammoBack(ammoRecoverRule(c,ammoEntryItem(c,id,e)),e);
     if(n>0){
       const st=c.inventory.find(x=>x&&x.id===id);
-      if(st){st.qty=itemQty(st)+n;back+=n;}
+      if(st){st.qty=itemQty(st)+n;back+=n;if(log)log.added.push({id,n});}
       else if(e.snap){
         const snapAm=itemAmmo(e.snap), snapName=String(e.snap.name||"").trim().toLowerCase(),
               snapGrant=e.snap.grant||"";
@@ -358,15 +366,47 @@ function recoverAmmo(c,kinds){
           String(x.name||"").trim().toLowerCase()===snapName&&
           (itemAmmo(x)||{}).bonus===(snapAm?snapAm.bonus:0)&&(x.grant||"")===snapGrant);
         if(home){
-          home.qty=itemQty(home)+n;
-          c.inventory.forEach(x=>{if(x&&x.ammoStack===id)x.ammoStack=home.id;});
-        }else c.inventory.push(Object.assign(JSON.parse(JSON.stringify(e.snap)),{id,qty:n}));
+          home.qty=itemQty(home)+n;if(log)log.added.push({id:home.id,n});
+          c.inventory.forEach(x=>{if(x&&x.ammoStack===id){x.ammoStack=home.id;if(log)log.repointed.push({id:x.id,from:id});}});
+        }else{
+          c.inventory.push(Object.assign(JSON.parse(JSON.stringify(e.snap)),{id,qty:n}));
+          if(log)log.made.push({id,n});
+        }
         back+=n;
       }
     }
+    if(log)log.cleared[id]=JSON.parse(JSON.stringify(m[id]));
     delete m[id];
   });
   return back;
+}
+/* Undo recovery (#104, spec §6): takes back exactly what that recovery gave.
+   A stack it rebuilt goes while it holds no more than it was given; a quantity
+   it added comes off (a stack of ammunition left with nothing goes, as the
+   last shot removes it; a thrown weapon stays at ×0); a weapon it repointed
+   points back; an entry it cleared comes back, ADDED to any entry a shot
+   fired since has started, so that shot stays fired. Once only. */
+function undoRecovery(c,rec){
+  if(!c||!rec||typeof rec!=="object"||rec.undone||!Array.isArray(rec.added)||!Array.isArray(rec.made)||
+     !Array.isArray(rec.repointed)||!rec.cleared||typeof rec.cleared!=="object")return false;
+  if(!Array.isArray(c.inventory))c.inventory=[];
+  const take=(id,n,rebuilt)=>{
+    const it=c.inventory.find(x=>x&&x.id===id);if(!it)return;
+    if(itemQty(it)<=n&&(rebuilt||!weaponThrown(it)))c.inventory=c.inventory.filter(x=>x!==it);
+    else it.qty=Math.max(0,itemQty(it)-n);
+  };
+  rec.made.forEach(x=>take(x.id,x.n,true));
+  rec.added.forEach(x=>take(x.id,x.n,false));
+  rec.repointed.forEach(x=>{const it=c.inventory.find(y=>y&&y.id===x.id);if(it)it.ammoStack=x.from;});
+  if(!c.ammoSpent||typeof c.ammoSpent!=="object"||Array.isArray(c.ammoSpent))c.ammoSpent={};
+  Object.keys(rec.cleared).forEach(id=>{
+    const old=rec.cleared[id];
+    if(!(id in c.ammoSpent)){c.ammoSpent[id]=old;return;}
+    const o=ammoSpentEntry({ammoSpent:{x:old}},"x"), k=ammoSpentEntry(c,id);
+    c.ammoSpent[id]=Object.assign({},c.ammoSpent[id],{n:o.n+k.n,hits:o.hits+k.hits,misses:o.misses+k.misses});
+  });
+  rec.undone=true;
+  return true;
 }
 /* True when End combat still owes a prompt: some kinded entry has fired more
    than it was last asked about (#6 final review — "No" must not ask again
