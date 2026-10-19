@@ -1103,7 +1103,9 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const KEPT = ['data-fav-feature', 'data-fav-item', 'data-fav-attack', 'data-usefeat', 'data-useitem',
     'data-cast-spell', 'data-prep', 'data-res-dec', 'data-res-inc', 'data-res-reset', 'data-trkdec',
     'data-trkinc', 'data-fitem', 'data-invitem', 'data-atkitem', 'data-notebtn', 'data-combatbtn',
-    'data-edtoggle', 'data-edit-gloss', 'data-del-gloss', 'data-view-gloss', 'data-jnlback'];
+    'data-edtoggle', 'data-edit-gloss', 'data-del-gloss', 'data-view-gloss', 'data-jnlback',
+    'data-ammo-fire', 'data-ammo-throw', 'data-ammo-recover', 'data-active-end', 'data-trkreopen',
+    'data-trktotal', 'data-status-tick'];
   HIDDEN.forEach(a => {
     const cs = classesOf(a);
     ck('#97 every ' + a + ' button carries ed', cs.length > 0 && cs.every(hasEd), cs);

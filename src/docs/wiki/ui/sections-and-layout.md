@@ -113,8 +113,8 @@ click-delegation key.
 (an extra `<path>` from `editToggleSVG()`), in `--accent`, `aria-pressed="true"` — so a card in
 "locked" state is the one that stands out, matching the combat toggle's and note button's idiom.
 Title is the action ("Hide edit buttons" / "Show edit buttons"); the aria-label adds the card's
-title via `noteTitle()` (so Ancestry & Background's heading follows the skin, as the note button's
-already does) — "Hide edit buttons — Features & Traits".
+title via `noteTitle()` (so Ancestry & Background's heading follows the skin on the next render, as
+the note button's does) — "Hide edit buttons — Features & Traits".
 
 ### Group headings: `.fgroup` / `.fghead` / `.fcaret`
 
