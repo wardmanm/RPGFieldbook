@@ -1076,16 +1076,20 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
 {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
   const js = manifest.js.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
-  // the class attribute of the <button> whose opening tag carries `attr=`
+  // the class attribute of the <button> whose opening tag carries `attr`, valued or not
+  // (e.g. `data-jnlback` with no `=` at all)
+  const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const classesOf = attr => {
-    const out = []; let at = js.indexOf(attr + '=');
-    while (at >= 0) {
+    const out = [];
+    const re = new RegExp(escRe(attr) + '(?=[=\\s>])', 'g');
+    let m;
+    while ((m = re.exec(js))) {
+      const at = m.index;
       const open = js.lastIndexOf('<button', at), close = js.indexOf('>', open);
       if (open >= 0 && close > at) {
-        const m = /class="([^"]*)"/.exec(js.slice(open, at));
-        out.push(m ? m[1] : '');
+        const mm = /class="([^"]*)"/.exec(js.slice(open, at));
+        out.push(mm ? mm[1] : '');
       }
-      at = js.indexOf(attr + '=', at + 1);
     }
     return out;
   };
@@ -1105,7 +1109,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   });
   KEPT.forEach(a => {
     const cs = classesOf(a);
-    ck('#97 no ' + a + ' button carries ed', cs.every(c => !hasEd(c)), cs);
+    ck('#97 no ' + a + ' button carries ed', cs.length > 0 && cs.every(c => !hasEd(c)), cs);
   });
 }
 
