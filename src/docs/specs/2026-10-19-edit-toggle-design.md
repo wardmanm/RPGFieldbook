@@ -124,3 +124,28 @@ changes. A card whose renderer rebuilds its rows keeps working, because the hidi
 - The Rules tab's glossary entries (decision 4).
 - Hiding anything but edit, delete and remove (decision 1).
 - An app-wide default for new characters.
+
+## As built
+
+As specified, §1–§9, with these notes:
+
+- **§6's focus edge case has no dedicated test.** The claim ("`focus()` on a `display:none`
+  button does nothing, so it falls through without error") is a statement about browser behaviour,
+  not app logic, and nothing in `87-trackers.js` changed to handle it — there was no code path to
+  add a regression test around. The suite does assert the shape every other §6 and §7 line asks
+  for: the round trip, the markup scan (every edit/delete/remove button carries `ed`, every play
+  control doesn't), the toggle's both states, and every `EDIT_CARDS` key reaching a real card.
+- **§7's "every card key reaches a card" and "the markup carries `ed`" are two separate scans,
+  not one.** `rules-data.js` checks the twelve `HIDDEN` button hooks all carry `ed` and the
+  `KEPT` play-control hooks never do (source-scanned, since most rows are built as template
+  literals rather than real DOM), and separately that every `EDIT_CARDS` key reaches a card in the
+  built template. Together they cover §7's "the registry is exactly the cards whose markup has an
+  `ed` button," but neither list was generated from the other, so a button added later still needs
+  a line in whichever list it belongs to.
+- Everything else — the twelve `EDIT_CARDS` keys, `editHide`'s shape and its `migrate()` guard,
+  the `ed`/`ed-off` CSS-only hiding, the header order (pencil, combat, note), the `edbtn` /
+  `data-edtoggle` names, the look and text in both states, the Journal blank-page line, and the QA
+  pass across both skins, four tabs, Features/Inventory/Class/Trackers hidden and restored, a
+  reload, a second character, the combat view and the keyboard path — landed as specified. See the
+  ledger entry (`WIRING-LEDGER.md`, "Hideable edit buttons (#97, 2026-10-19)") for the full QA
+  account and the screenshot paths.

@@ -29,7 +29,7 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
 | structured objects | `hp` `{cur, max, temp, locked:true}`, `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
 | lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers` |
-| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0) |
+| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
 | per-character settings | `statStyle`, `hdStyle`, `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `ammoRecovery` (`"half"` default, #104) |
 | text | `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
@@ -51,7 +51,10 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
 4. `coins` maps the legacy Humblewood keys (`km`, `sm`, `em`, `gm`, `pm`) onto `cp`…`pp`.
 5. The list fields are forced to arrays **of objects**: `null` (what JSON writes for a hole or an
    `undefined`) and bare strings or numbers are dropped. The map fields are forced to plain
-   objects, and `race`/`bg` become `null` unless they are plain objects.
+   objects, and `race`/`bg` become `null` unless they are plain objects. `editHide` defaults to
+   `{}` in `blankChar()` and sits in `71-char-io.js`'s object-shape guard beside `noteCollapse` and
+   `trackerTotals`: a non-object, an array or `null` becomes `{}` (#97). Its values are read
+   `=== true`, so junk left inside the map reads as shown rather than needing its own coercion.
 6. Each glossary entry is repaired, never dropped: `glossRepair()` fills an absent or blank `term`
    from `name` and an absent `text` from `description` (the other categories' field names, kept as
    they were), a numeric term becomes text, and an entry with no id gets one from `uid()` (a numeric
@@ -178,3 +181,4 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-10-16 — `migrateAmmo()` runs once more on every sheet (`AMMO_PASS` 2); a new sheet starts at that pass. → ledger L5780, #96
 - 2026-10-17 — `trackerTotals` joins the collapse-style maps, a per-tag switch for a tracker group's total (#93); `trackers[].type` loses `checklist` and `task`, migrated into journal pages by `migrateTrackerPages()` (#95). → ledger L6047, #95, #93
 - 2026-10-19 — `ammoRecovery` joins the per-character settings, defaulted `"half"` in `blankChar()`; `ammoSpent` entries gain `hits`/`misses`. → ledger L6081, #104
+- 2026-10-19 — `editHide` joins the collapse-style maps, defaulted `{}` in `blankChar()` and guarded the same way: a card key → `true` for a hidden card's edit, delete and remove buttons. → ledger L6248, #97
