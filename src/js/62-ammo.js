@@ -254,22 +254,20 @@ function migrateAmmo(c){
 function ammoSpentMap(c){const m=c&&c.ammoSpent;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
 /* One stack's spent record, coerced: how many fired since the last recovery,
    how many of those were answered Hit and Miss (#104: each clamped so that
-   hits + misses never passes n), its kind, the copy recovery rebuilds a
-   used-up stack from, and how many of those shots End combat has already asked
-   about (#6 final review: clamped to [0, n]). */
+   hits + misses never passes n), its kind, and the copy recovery rebuilds a
+   used-up stack from. */
 function ammoSpentEntry(c,id){
   const e=ammoSpentMap(c)[id], ok=!!e&&typeof e==="object"&&!Array.isArray(e);
   const n=(ok&&Number.isInteger(e.n)&&e.n>0)?e.n:0;
   const cnt=v=>(ok&&Number.isInteger(v))?Math.max(0,Math.min(n,v)):0;
   const hits=cnt(ok?e.hits:0), misses=Math.min(n-hits,cnt(ok?e.misses:0));
   return {n,hits,misses,kind:ok?ammoKindOf(e.kind):"",
-          snap:(ok&&e.snap&&typeof e.snap==="object"&&!Array.isArray(e.snap))?e.snap:null,
-          asked:cnt(ok?e.asked:0)};
+          snap:(ok&&e.snap&&typeof e.snap==="object"&&!Array.isArray(e.snap))?e.snap:null};
 }
 /* One shot onto `st`'s spent entry: one more on its count, one more Hit or
    Miss when the question was answered (#104), and a one-piece copy of the item
    for recovery to rebuild from. The entry is rebuilt every shot, so the
-   tallies and `asked` are carried across by hand. Returns what Undo needs to
+   tallies are carried across by hand. Returns what Undo needs to
    put it back. Shared by Fire and Throw, so both count the same way. */
 function ammoRecordShot(c,st,kind,outcome){
   if(!c.ammoSpent||typeof c.ammoSpent!=="object"||Array.isArray(c.ammoSpent))c.ammoSpent={};
@@ -277,7 +275,7 @@ function ammoRecordShot(c,st,kind,outcome){
               spent:c.ammoSpent[st.id]?JSON.parse(JSON.stringify(c.ammoSpent[st.id])):null};
   const p=ammoSpentEntry(c,st.id);
   c.ammoSpent[st.id]={n:p.n+1,hits:p.hits+(outcome==="hit"?1:0),misses:p.misses+(outcome==="miss"?1:0),
-    kind,asked:p.asked,snap:Object.assign(JSON.parse(JSON.stringify(st)),{qty:1})};
+    kind,snap:Object.assign(JSON.parse(JSON.stringify(st)),{qty:1})};
   return undo;
 }
 /* One shot from the weapon's loaded stack: one piece off it (the last removes
@@ -479,20 +477,6 @@ function undoRecovery(c,rec){
   rec.undone=true;
   return true;
 }
-/* True when End combat still owes a prompt: some kinded entry has fired more
-   than it was last asked about (#6 final review — "No" must not ask again
-   about the very same shots). */
-function ammoAskDue(c){
-  const m=ammoSpentMap(c);
-  return Object.keys(m).some(id=>{const e=ammoSpentEntry(c,id);return !!e.kind&&e.n>e.asked;});
-}
-/* After a "No": every kinded entry's `asked` catches up to its `n`, so a
-   fight with no new shots asks nothing next time. `n` itself, and so Recover
-   N, are untouched. */
-function markAmmoAsked(c){
-  const m=ammoSpentMap(c);
-  Object.keys(m).forEach(id=>{const e=ammoSpentEntry(c,id);if(e.kind)m[id].asked=e.n;});
-}
 function ammoSummaryText(list){return list.map(r=>`${r.back} of ${r.fired} ${ammoPlural(r.kind)}`).join(", ");}
 /* A deleted stack's count goes with it: there is nothing to recover into, and
    the player chose to delete it. */
@@ -690,23 +674,27 @@ function recoverWeaponAmmo(itemId,viaKey){
   if(viaKey){const b=ammoFireBtn(itemId);if(b)b.focus();}
   return back;
 }
-/* Asked once, after End combat, and only when a shot has been fired since the
-   last time this asked (#6 final review — "No" must not ask again about the
-   same shots next fight): what each kind's rule gives back for what was
-   fired since the last recovery, listed per kind. Yes recovers it all and
-   clears every count (what the rule doesn't give back is lost); No marks
-   every count asked about —
-   Recover N on the row still shows and recovers the full count. Returns words
-   for the End combat toast, else "". */
-function offerAmmoRecovery(){
+/* After End combat (#104, spec §6): when anything is recoverable under the
+   rules, it is recovered — the kinds with something to give back, so a kind on
+   None or Never stays on record for a later change of rule — and the words for
+   the End combat toast come back with the record its Undo needs. null when
+   there was nothing. Shots fired outside a tracked fight are swept up too, as
+   the row's Recover does. */
+function applyAmmoRecovery(){
   const list=ammoRecoverable(character);
-  if(!list.length||!ammoAskDue(character))return "";
-  if(!confirm(`Recover ammunition? ${ammoSummaryText(list)}`)){
-    markAmmoAsked(character);scheduleSave();
-    return "";
-  }
-  const back=recoverAmmo(character);
+  if(!list.length)return null;
+  const rec={};
+  recoverAmmo(character,list.map(r=>r.kind),rec);
   scheduleSave();
   renderInventory();renderAttacks();recompute();
-  return back?`recovered ${ammoSummaryText(list)}`:"";
+  return {text:`recovered ${ammoSummaryText(list)}`,rec};
+}
+/* The End combat toast's Undo recovery: only for the character it was shown for. */
+function undoRecoveryTap(rec,who){
+  if(!character||character!==who)return false;
+  if(!undoRecovery(character,rec))return false;
+  scheduleSave();
+  renderInventory();renderAttacks();recompute();
+  toast("Recovery undone");
+  return true;
 }

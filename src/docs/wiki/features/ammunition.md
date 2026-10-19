@@ -8,9 +8,9 @@ is its count.
 **Code:** `ammoKindOf()`, `itemAmmo()`, `weaponAmmoKind()`, `ammoRepairDef()`, `ammoStacks()`, `loadedStack()`,
 `unpackAmmo()`, `ammoTable()`, `rebaseAmmo()`, `migrateAmmo()`, `ammoSpentEntry()`, `fireAmmo()`,
 `undoFire()`, `ammoRecoverable()`, `recoverAmmo()`, `attackAmmo()`, `forgetAmmo()`,
-`forgetGrantAmmo()`, `ammoAskDue()`, `markAmmoAsked()`, `ammoLineHTML()`, `ammoChoiceHTML()`,
+`forgetGrantAmmo()`, `ammoLineHTML()`, `ammoChoiceHTML()`,
 `fireWeapon()`, `undoFireTap()`, `openAmmoPicker()`, `loadAmmo()`, `recoverWeaponAmmo()`,
-`offerAmmoRecovery()`, `ammoKindChoices()`, `ammoKindLabel()`, `ammoKindOptionsHTML()` in
+`applyAmmoRecovery()`, `undoRecoveryTap()`, `ammoKindChoices()`, `ammoKindLabel()`, `ammoKindOptionsHTML()` in
 `62-ammo.js` · `tidyRule()` in `89-rules-merge.js` · `openItemForm()` in `80-modal-forms.js` · `migrate()` in `71-char-io.js` ·
 `revertEquipmentGrants()` in `50-classrace.js` · `newCharacter()` in `75-home-theme.js` ·
 `updProject()` in `72-char-update.js` · `endCombatAsk()` in `87-combat.js` · **Data:** `weapon.ammo`,
@@ -89,12 +89,8 @@ another character, or for a stack the player deleted since, does nothing.
 summed per kind. `recoverAmmo()` adds it back: into an equivalent stack already on the sheet (not a
 bundle, the same lower-cased trimmed name, bonus and grant as the `snap`) when one exists —
 repointing any weapon whose `ammoStack` named the old id — else it rebuilds the stack from `snap`
-under the old id, as before; either way it clears those counts. `offerAmmoRecovery()` asks after
-End combat only when `ammoAskDue()` is true: some kinded entry has fired more since it was last
-asked about (`n > asked`). Yes recovers and clears as above; No instead catches every entry's
-`asked` up to its `n` (`markAmmoAsked()`), so a fight with no new shots asks nothing next time.
-Either way Recover N on the row is unaffected — it always shows and recovers the full count,
-`asked` or not.
+under the old id, as before; either way it clears those counts. End combat recovers on its own
+(`applyAmmoRecovery()`), with an Undo recovery (#104).
 
 **Forgetting a stack's count.** Deleting a stack takes its `ammoSpent` entry with it
 (`forgetAmmo()`): there is nothing left to recover into. Removing the class or background that

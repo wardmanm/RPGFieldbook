@@ -57,11 +57,8 @@ then the tracker with End at the far right.
 `advanceRound(∓1)`, shared with the Active Spells card: every active spell and every active timed
 condition moves 6 s ([Conditions & concentration](conditions-and-concentration.md)), and in combat
 the round cannot drop below 1. End asks first (`endCombatAsk()`), then `combatEnd()` zeroes the round
-and returns the summary. Once the fight is over, `offerAmmoRecovery()` asks once more — only if
-something is recoverable **and** a shot has been fired since it last asked — to recover half of
-what was fired ([Ammunition](ammunition.md)); a "No" remembers having asked, so a later fight with
-no new shots asks nothing, while Recover N on the row still shows and recovers the full count; what
-came back from a "Yes" is appended to the toast. The header shows time at the *start* of the round
+and returns the summary. Once the fight is over, `applyAmmoRecovery()` recovers what the character's
+rule gives back and adds it to the toast, with an Undo recovery ([Ammunition](ammunition.md)). The header shows time at the *start* of the round
 (`combatElapsedSec()`, round 7 → 36 sec); the summary counts the round being ended (round 7 → 7
 rounds, 42 sec). Every round-mover repaints through `renderCombatChrome()`. The round is announced
 from `#cvLive`, outside the header that is repainted; a repaint keeps focus on the same button by id,

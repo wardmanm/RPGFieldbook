@@ -62,9 +62,9 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'AMMO_PASS', 'ammoRepairDef', 'stampSrc', 'updChangedFields', 'updEdited',
   'AMMO_RECOVERY', 'ammoRecoveryOf', 'itemRecover', 'weaponThrown', 'ammoThrownKind', 'AMMO_RECOVER_DEFAULTS', 'ammoDefaultRecover', 'ammoRecoverRule', 'ammoBack',
   'ammoSpentEntry', 'fireAmmo', 'undoFire', 'throwAmmo', 'ammoRecordShot', 'ammoEntryItem', 'ammoRecoverable', 'recoverAmmo', 'grantSidLive', 'undoRecovery', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
-  'forgetGrantAmmo', 'ammoAskDue', 'markAmmoAsked',
+  'forgetGrantAmmo',
   'ammoLineHTML', 'thrownLineHTML', 'ammoAsks', 'throwWeaponTap', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
-  'offerAmmoRecovery', 'revertEquipmentGrants',
+  'applyAmmoRecovery', 'undoRecoveryTap', 'revertEquipmentGrants',
   'ammoKindChoices', 'ammoKindOptionsHTML',
   'statusDuration', 'statusElapsed', 'statusTimed', 'statusUnitFor', 'fmtStatusTime', 'statusTimeText',
   'statusExpiredText', 'statusBackText', 'tickStatuses', 'restartStatus',
@@ -3982,7 +3982,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   r = X.fireAmmo(c, b2); c.inventory = c.inventory.filter(i => i.id !== 's1');
   ck('Undo after the player deleted that stack leaves it deleted', !X.undoFire(c, r) && !c.inventory.some(i => i.id === 's1'));
   ck('junk spent entries read as nothing',
-     same(X.ammoSpentEntry({ammoSpent: {x: 'junk'}}, 'x'), {n: 0, hits: 0, misses: 0, kind: '', snap: null, asked: 0}) &&
+     same(X.ammoSpentEntry({ammoSpent: {x: 'junk'}}, 'x'), {n: 0, hits: 0, misses: 0, kind: '', snap: null}) &&
      X.ammoRecoverable({ammoSpent: {a: {n: 'x', kind: 7}, b: null, c: [1], d: {n: 4, kind: ''}}}).length === 0 &&
      X.ammoRecoverable({ammoSpent: 'junk'}).length === 0);
 
@@ -4110,7 +4110,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
      !g2.inventory.some(i => i.name === 'Arrow'), g2.ammoSpent);
 }
 
-/* ---- End combat offers the ammunition back (#6) ---- */
+/* ---- End combat recovers on its own, with an Undo (#104, spec §6) ---- */
 {
   const mk = () => {
     const c = X.blankChar(); X.character = c;
@@ -4121,54 +4121,20 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     X.startCombatNow();
     return c;
   };
-  let c = mk(); state.confirm = true;
-  ck('End combat, then yes: half of each kind comes back',
-     X.endCombatAsk() === true && state.lastConfirm === 'Recover ammunition? 6 of 13 arrows, 2 of 4 bolts' &&
-     c.inventory.find(i => i.id === 's1').qty === 13 && (c.inventory.find(i => i.id === 's2') || {}).qty === 2, c.inventory);
-  ck('...and every count clears, the lone needle with them', JSON.stringify(c.ammoSpent) === '{}');
-  const real = ctx.confirm, asked = [];
-  ctx.confirm = m => { asked.push(m); return /^End combat/.test(m); };
-  c = mk();
-  ck('End combat, then no: nothing comes back and nothing is lost',
-     X.endCombatAsk() === true && asked.length === 2 && c.inventory.find(i => i.id === 's1').qty === 7 && c.ammoSpent.s1.n === 13);
-  /* #6 final review, item 3: "No" must remember it already asked about these
-     shots, so the NEXT fight with nothing new fired does not ask again. */
-  ck('...and it remembers having asked about these shots',
-     c.ammoSpent.s1.asked === 13 && c.ammoSpent.s2.asked === 4, c.ammoSpent);
-  ck('Recover N on the row is unaffected: the full counts still show after No',
-     (X.ammoRecoverable(c).find(r => r.kind === 'arrow') || {}).back === 6 &&
-     (X.ammoRecoverable(c).find(r => r.kind === 'bolt') || {}).back === 2, X.ammoRecoverable(c));
-  asked.length = 0; X.startCombatNow();
-  ck('a fight with no NEW shots asks only the round prompt', X.endCombatAsk() === true && asked.length === 1, asked);
-  c.ammoSpent.s1.n++;   // one more shot since it last asked
-  asked.length = 0; X.startCombatNow();
-  ck('...then one more shot makes it ask again', X.endCombatAsk() === true && asked.length === 2, asked);
-  ctx.confirm = real;
-}
-
-/* ---- ammoAskDue() and markAmmoAsked() (#6 final review, item 3) ---- */
-{
-  ck('ammoAskDue is false once every kinded entry has been asked about',
-     X.ammoAskDue({ammoSpent: {a: {n: 5, kind: 'arrow', asked: 5}}}) === false);
-  ck('...and true while any has fired more than it was asked about',
-     X.ammoAskDue({ammoSpent: {a: {n: 5, kind: 'arrow', asked: 4}, b: {n: 1, kind: 'bolt', asked: 1}}}) === true);
-  ck('...and false with nothing kinded at all', X.ammoAskDue({ammoSpent: {a: {n: 5, kind: ''}}}) === false);
-  const k = {ammoSpent: {a: {n: 5, kind: 'arrow'}, b: {n: 0, kind: ''}}};
-  X.markAmmoAsked(k);
-  ck('markAmmoAsked catches every kinded entry up to its n, and leaves n alone',
-     k.ammoSpent.a.asked === 5 && k.ammoSpent.a.n === 5 && X.ammoAskDue(k) === false);
-  ck('ammoSpentEntry clamps asked to [0, n]',
-     X.ammoSpentEntry({ammoSpent: {a: {n: 5, kind: 'arrow', asked: 99}}}, 'a').asked === 5 &&
-     X.ammoSpentEntry({ammoSpent: {a: {n: 5, kind: 'arrow', asked: -3}}}, 'a').asked === 0 &&
-     X.ammoSpentEntry({ammoSpent: {a: {n: 5, kind: 'arrow'}}}, 'a').asked === 0);
-  const fc = X.blankChar(); fc.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
-                                             {id: 's1', name: 'Arrow', qty: 3, ammo: {kind: 'arrow'}}];
-  const bowf = fc.inventory[0];
-  X.fireAmmo(fc, bowf);
-  X.markAmmoAsked(fc);
-  X.fireAmmo(fc, bowf);
-  ck("fireAmmo() carries the previous entry's asked forward, since the entry is rebuilt every shot",
-     X.ammoSpentEntry(fc, 's1').n === 2 && X.ammoSpentEntry(fc, 's1').asked === 1);
+  let c = mk(); state.confirm = true; state.lastConfirm = null;
+  ck('#104 End combat asks only about ending, then recovers half of each kind',
+     X.endCombatAsk() === true && state.lastConfirm === 'End combat at round 1?' &&
+     c.inventory.find(i => i.id === 's1').qty === 13 && (c.inventory.find(i => i.id === 's2') || {}).qty === 2, [state.lastConfirm, c.inventory]);
+  ck('#104 ...and the lone needle, which gives nothing back, stays on record', JSON.stringify(Object.keys(c.ammoSpent)) === '["s3"]', c.ammoSpent);
+  c = mk(); const rec = {}; X.recoverAmmo(c, ['arrow', 'bolt'], rec);
+  ck("#104 the toast's Undo recovery puts it all back",
+     ctx.undoRecoveryTap(rec, c) === true && c.inventory.find(i => i.id === 's1').qty === 7 && !c.inventory.some(i => i.id === 's2') && c.ammoSpent.s1.n === 13);
+  ck('#104 ...but not on another sheet',
+     (() => { const k = mk(), r = {}; X.recoverAmmo(k, ['arrow'], r); X.character = X.blankChar(); return ctx.undoRecoveryTap(r, k) === false && k.inventory[0].qty === 13; })());
+  c = mk(); c.ammoRecovery = 'none';
+  ck('#104 with nothing recoverable, End combat recovers nothing and keeps the counts', X.endCombatAsk() === true && c.inventory[0].qty === 7 && c.ammoSpent.s1.n === 13);
+  ck('#104 applyAmmoRecovery says nothing when there is nothing', (() => { X.character = X.blankChar(); return ctx.applyAmmoRecovery() === null; })());
+  ck('#104 a spent entry no longer carries asked', !('asked' in X.ammoSpentEntry({ammoSpent: {a: {n: 2, kind: 'arrow', asked: 1}}}, 'a')));
 }
 
 /* ---- the item editor's kind lists (#8) ---- */

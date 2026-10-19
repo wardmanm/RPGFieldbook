@@ -338,7 +338,8 @@ for(const sys of ['homebrew','srd52']){
      hooks.filter(h => !js.includes('closest("[' + h + ']")')));
   ck('...and every one the handler names is drawn', hooks.every(h => new RegExp(h + '="\\$\\{esc\\(').test(js)));
   ck('deleting an item forgets its spent count', /\[data-del-item\][^\n]*forgetAmmo\(character,it\.id\)/.test(js));
-  ck('End combat offers the ammunition back once the fight has ended', /combatEnd\(character\)[\s\S]{0,200}offerAmmoRecovery\(\)/.test(js));
+  ck('#104 End combat recovers the ammunition once the fight has ended, with an Undo recovery',
+     /combatEnd\(character\)[\s\S]{0,200}applyAmmoRecovery\(\)/.test(js) && /label:"Undo recovery",run:\(\)=>undoRecoveryTap\(/.test(js));
 }
 
 // ---------- the app's ammo tables agree with the SRD 5.2 data (#6)

@@ -334,10 +334,10 @@ function endCombatAsk(){
   if(!confirm(`End combat at round ${r}?`))return false;
   const s=combatEnd(character);
   renderActiveSpells();renderCombatChrome();scheduleSave();
-  /* then the ammunition (#6): asked once, after the fight is over */
-  const got=offerAmmoRecovery();
-  const msg=`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`+(got?` · ${got}`:"");
-  toast(msg);setCombatLive(msg);
+  /* then the ammunition (#104): recovered by the rule, with an Undo recovery on the toast */
+  const got=applyAmmoRecovery(), who=character;
+  const msg=`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`+(got?` · ${got.text}`:"");
+  toast(msg,got?{label:"Undo recovery",run:()=>undoRecoveryTap(got.rec,who)}:undefined);setCombatLive(msg);
   return true;
 }
 
