@@ -65,7 +65,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'forgetGrantAmmo',
   'ammoLineHTML', 'thrownLineHTML', 'ammoAsks', 'throwWeaponTap', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
   'applyAmmoRecovery', 'undoRecoveryTap', 'revertEquipmentGrants',
-  'ammoKindChoices', 'ammoKindOptionsHTML',
+  'ammoKindChoices', 'ammoKindOptionsHTML', 'recoverOptionsHTML',
   'statusDuration', 'statusElapsed', 'statusTimed', 'statusUnitFor', 'fmtStatusTime', 'statusTimeText',
   'statusExpiredText', 'statusBackText', 'tickStatuses', 'restartStatus',
   'announceStatusExpiry', 'undoStatusExpiry', 'stepStatusTap', 'syncStatLock',
@@ -4146,6 +4146,14 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('the options: None, each kind (the chosen one selected), then Other…',
      /^<option value="">None<\/option>/.test(h) && /<option value="bolt" selected>Bolt<\/option>/.test(h) && /<option value="__other">Other…<\/option>$/.test(h), h);
   ck('no None when the list has no label for it', !/value=""/.test(X.ammoKindOptionsHTML(['arrow'], 'arrow', '')));
+  // #104: the Recovery select
+  const sel = h2 => (h2.match(/<option value="([a-z]*)" selected>/) || [])[1];
+  const ro = X.recoverOptionsHTML({ammo: {kind: 'firearm bullet'}});
+  ck('#104 Recovery offers the default, Always and Never, naming the default when there is one',
+     /<option value="" selected>Default \(never comes back\)<\/option><option value="always">Always comes back<\/option><option value="never">Never comes back<\/option>/.test(ro), ro);
+  ck("#104 ...a thrown weapon's default is always", X.recoverOptionsHTML({weapon: {notes: 'Thrown'}}).includes('>Default (always comes back)<'));
+  ck("#104 ...an arrow's is the sheet's rule (the apostrophe escaped, as esc() writes it)", X.recoverOptionsHTML({ammo: {kind: 'arrow'}}).includes('>Sheet&#39;s rule<'));
+  ck("#104 ...and the item's own choice is selected", sel(X.recoverOptionsHTML({ammo: {kind: 'arrow'}, recover: 'never'})) === 'never' && sel(X.recoverOptionsHTML({recover: 'junk'})) === '');
 }
 
 /* ---- imported files and packs render inert ----

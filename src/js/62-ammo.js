@@ -524,6 +524,14 @@ function ammoKindOptionsHTML(kinds,selected,noneLabel){
     kinds.map(k=>`<option value="${esc(k)}"${k===sel?" selected":""}>${esc(ammoKindLabel(k))}</option>`).join("")+
     `<option value="__other">Other…</option>`;
 }
+/* The item editor's Recovery <option>s (#104): the default (named when the
+   app has one for this item), Always, Never; the item's own choice selected. */
+function recoverOptionsHTML(it){
+  const cur=itemRecover(it), d=ammoDefaultRecover(it);
+  const first=d==="never"?"Default (never comes back)":d==="always"?"Default (always comes back)":"Sheet's rule";
+  return [["",first],["always","Always comes back"],["never","Never comes back"]]
+    .map(([v,l])=>`<option value="${esc(v)}"${cur===v?" selected":""}>${esc(l)}</option>`).join("");
+}
 
 /* ================= the DOM half =================
    The ammunition line under a launcher's attack row, the stack picker, and

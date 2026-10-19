@@ -326,7 +326,7 @@ function openItemForm(existing){
   openModal(existing?"Edit item":"New item",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="iLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
     <div class="g2"><div class="field"><label class="f">Name</label><input id="iName" value="${esc(it.name)}"></div>
-      <div class="field"><label class="f">Quantity</label><input id="iQty" type="number" min="1" value="${esc(num(it.qty)||1)}"></div></div>
+      <div class="field"><label class="f">Quantity</label><input id="iQty" type="number" min="0" value="${esc(it.qty===0||it.qty==="0"?0:(num(it.qty)||1))}"></div></div>
     <div class="field"><label class="f">Description</label><textarea id="iDesc">${esc(it.description||"")}</textarea></div>
     ${catField}
     <div class="g2"><div class="field"><label class="f">Cost (gp, optional)</label><input id="iCost" type="number" min="0" step="0.01" value="${esc(it.cost!=null&&it.cost!==""?fnum(it.cost):"")}" placeholder="0"></div>
@@ -351,6 +351,7 @@ function openItemForm(existing){
         <div class="field"><label class="f">Bonus to attack and damage</label><select id="iAmmoBonus">${bonusOpts.map(b=>`<option value="${esc(b)}"${(am?am.bonus:0)===b?" selected":""}>${bonusText(b)}</option>`).join("")}</select></div></div>
       <div class="field" id="iAmmoKindOtherWrap" style="display:none"><label class="f">New kind</label><input id="iAmmoKindOther" placeholder="dart pellet" autocomplete="off"></div>
     </div>
+    <div class="field" id="iRecoverWrap" style="${(am||weaponThrown(it))?"":"display:none"}"><label class="f" for="iRecover">After a fight</label><select id="iRecover">${recoverOptionsHTML(it)}</select></div>
     <label class="equip ${arm?"on":""}" id="iIsArmor" style="font-size:12px;margin-top:8px"><span class="box"></span>Armor (set the AC it gives)</label>
     <div id="iArmorFields" style="${arm?"":"display:none"}">
       <div class="g2"><div class="field"><label class="f">Kind</label><select id="iAKind">${ARMOR_KINDS.map(([v,l])=>`<option value="${esc(v)}"${armKind===v?" selected":""}>${l}</option>`).join("")}</select></div>
@@ -392,7 +393,7 @@ function openItemForm(existing){
     return v==="__other"?(ammoKindOf(document.getElementById(boxId).value)||null):ammoKindOf(v);};
   let isAmmo=!!am;
   const amtog=document.getElementById("iIsAmmo"), amfields=document.getElementById("iAmmoFields");
-  amtog.addEventListener("click",()=>{isAmmo=!isAmmo;amtog.classList.toggle("on",isAmmo);amfields.style.display=isAmmo?"":"none";});
+  amtog.addEventListener("click",()=>{isAmmo=!isAmmo;amtog.classList.toggle("on",isAmmo);amfields.style.display=isAmmo?"":"none";const rw=document.getElementById("iRecoverWrap");if(rw)rw.style.display=(isAmmo||weaponThrown(it))?"":"none";});
   let isArmor=!!arm;
   const atog=document.getElementById("iIsArmor"), afields=document.getElementById("iArmorFields");
   const aKind=document.getElementById("iAKind"), aDexW=document.getElementById("iADexWrap"),
@@ -455,7 +456,7 @@ function openItemForm(existing){
     if(iOrigD){iOrigD.disabled=!iOrig.value;if(!iOrig.value)iOrigD.value="";iOrigD.placeholder=(d&&d.ph)||"place, who, etc.";}});
   document.getElementById("iSave").addEventListener("click",()=>{
     if(groupFieldBlocked("iCategory"))return;
-    const rec={id:it.id,name:document.getElementById("iName").value.trim()||"Item",qty:num(document.getElementById("iQty").value)||1,description:document.getElementById("iDesc").value,effects:collectFx(fxWrap),equipped};
+    const rec={id:it.id,name:document.getElementById("iName").value.trim()||"Item",qty:(v=>v===""?1:Math.max(0,num(v)))(String(document.getElementById("iQty").value).trim()),description:document.getElementById("iDesc").value,effects:collectFx(fxWrap),equipped};
     const so=invSectionName(document.getElementById("iCategory").value);if(so)rec.sectionOverride=so;
     if(it.category)rec.category=it.category;if(it.type)rec.type=it.type;
     const cv=document.getElementById("iCost").value;if(cv!==""&&fnum(cv)>=0)rec.cost=fnum(cv);
@@ -499,6 +500,9 @@ function openItemForm(existing){
     /* the loaded stack and a bundle's contents are not on the form: carried, like fav and src */
     if(it.ammoStack)rec.ammoStack=it.ammoStack;
     if(it.pack)rec.pack=it.pack;
+    /* #104: what comes back after a fight, for ammunition and thrown weapons;
+       the default is no field at all */
+    {const rv=(document.getElementById("iRecover")||{}).value;if((isAmmo||weaponThrown(rec))&&(rv==="always"||rv==="never"))rec.recover=rv;}
     /* Limited uses and what Use does. Last, because detectItemUse() below reads
        the FINISHED record — its section depends on the weapon flag set above.
        `used` is the player's own number and survives an edit, clamped in case

@@ -340,6 +340,12 @@ for(const sys of ['homebrew','srd52']){
   ck('deleting an item forgets its spent count', /\[data-del-item\][^\n]*forgetAmmo\(character,it\.id\)/.test(js));
   ck('#104 End combat recovers the ammunition once the fight has ended, with an Undo recovery',
      /combatEnd\(character\)[\s\S]{0,200}applyAmmoRecovery\(\)/.test(js) && /label:"Undo recovery",run:\(\)=>undoRecoveryTap\(/.test(js));
+  ck('#104 Settings → Sheet display has the Ammo recovery select, wired to the character',
+     /id="setAmmoRec"/.test(js) && /getElementById\("setAmmoRec"\)[^\n]*addEventListener\("change"[^\n]*character\.ammoRecovery=/.test(js));
+  ck('#104 the item editor has a Recovery select, saved as item.recover',
+     /id="iRecover">\$\{recoverOptionsHTML\(it\)\}<\/select>/.test(js) && /rec\.recover=rv/.test(js));
+  ck("#104 the item editor's Quantity allows 0, so a thrown weapon at ×0 stays at ×0",
+     /id="iQty" type="number" min="0"/.test(js) && !/qty:num\(document\.getElementById\("iQty"\)\.value\)\|\|1/.test(js));
 }
 
 // ---------- the app's ammo tables agree with the SRD 5.2 data (#6)
