@@ -320,7 +320,7 @@ function noteEntryHTML(def){
     `<button class="linkbtn n-jump" data-notejump="${esc(def.k)}">${esc(noteTitle(def))}</button>`+
     `<span style="flex:1"></span>`+
     (when?`<span class="n-when">${esc(when)}</span>`:"")+
-    `<button class="icon" data-noteedit="${esc(def.k)}" aria-label="Edit note"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`+
+    `<button class="icon ed" data-noteedit="${esc(def.k)}" aria-label="Edit note"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`+
     `</div><div class="n-body">${noteHTML(noteText(def.k))}</div></div>`;
 }
 /* Pure, so the group order, counts, collapse state and empty state are all

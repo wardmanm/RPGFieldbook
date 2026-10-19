@@ -1069,6 +1069,46 @@ ck('entry count is zero with nothing loaded', X.rulesEntryCount() === 0);
 X.mergeRules({system: 'XPHB', races: [{name: 'Elf'}, {name: 'Orc'}], spells: [{name: 'Bless'}]}, 'x.json');
 ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCount());
 
+// ---------- #97: the edit/delete buttons a card's pencil hides carry `ed`, and nothing else does
+// CSS hides them (`.ed-off .ed`), so the class IS the feature: a button without it
+// never hides, and a play control with it vanishes mid-session. Scanned in the
+// source because most of these rows are built straight into the DOM.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const js = manifest.js.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  // the class attribute of the <button> whose opening tag carries `attr=`
+  const classesOf = attr => {
+    const out = []; let at = js.indexOf(attr + '=');
+    while (at >= 0) {
+      const open = js.lastIndexOf('<button', at), close = js.indexOf('>', open);
+      if (open >= 0 && close > at) {
+        const m = /class="([^"]*)"/.exec(js.slice(open, at));
+        out.push(m ? m[1] : '');
+      }
+      at = js.indexOf(attr + '=', at + 1);
+    }
+    return out;
+  };
+  const hasEd = cls => cls.split(/\s+/).includes('ed');
+  const HIDDEN = ['data-edit-feature', 'data-del-feature', 'data-edit-item', 'data-del-item',
+    'data-edit-status', 'data-del-status', 'data-edit-familiar', 'data-del-familiar',
+    'data-del-class', 'data-del-race', 'data-del-bg', 'data-edit-attack', 'data-del-attack',
+    'data-edit-spell', 'data-del-spell', 'data-res-edit', 'data-res-del', 'data-trkedit',
+    'data-jnledit', 'data-jnldel', 'data-noteedit'];
+  const KEPT = ['data-fav-feature', 'data-fav-item', 'data-fav-attack', 'data-usefeat', 'data-useitem',
+    'data-cast-spell', 'data-prep', 'data-res-dec', 'data-res-inc', 'data-res-reset', 'data-trkdec',
+    'data-trkinc', 'data-fitem', 'data-invitem', 'data-atkitem', 'data-notebtn', 'data-combatbtn',
+    'data-edtoggle', 'data-edit-gloss', 'data-del-gloss', 'data-view-gloss', 'data-jnlback'];
+  HIDDEN.forEach(a => {
+    const cs = classesOf(a);
+    ck('#97 every ' + a + ' button carries ed', cs.length > 0 && cs.every(hasEd), cs);
+  });
+  KEPT.forEach(a => {
+    const cs = classesOf(a);
+    ck('#97 no ' + a + ' button carries ed', cs.every(c => !hasEd(c)), cs);
+  });
+}
+
 // ---------- section notes: the registry IS the contract
 // NOTE_SECTIONS drives the icon injection, the Section Notes card's grouping and
 // its headings. If it and the template disagree, a section silently loses its

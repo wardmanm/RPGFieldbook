@@ -152,8 +152,8 @@ function invItemHTML(it){
         ${itemWeight(it)?`<span class="qty" title="Weight each">${esc(fmtWt(it.weight))}</span>`:""}
         ${itemUsable(it)?`<button class="use-go" data-useitem="${esc(it.id)}">Use</button>`:""}
         ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${esc(it.id)}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
-        <button class="icon" data-edit-item="${esc(it.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-item="${esc(it.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        <button class="icon ed" data-edit-item="${esc(it.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger ed" data-del-item="${esc(it.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
         </span>
       </div>
       ${ic?"":`${it.description?`<div class="desc">${richHTML(it.description)}</div>`:""}${itemUseLine(it)}${itemUsesRowHTML(it)}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
@@ -238,8 +238,8 @@ function statusRowHTML(s){
         <span class="nm">${statusTitle(s.name)}</span>
         <span class="row-meta">
         <span class="equip ${on?"on":""}" data-toggle-status="${esc(s.id)}"><span class="box"></span>${on?"Active":"Cleared"}</span>
-        <button class="icon" data-edit-status="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-status="${esc(s.id)}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        <button class="icon ed" data-edit-status="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger ed" data-del-status="${esc(s.id)}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
         </span>
       </div>
       ${tt?`<div class="use-row st-row"><span class="use-lbl st-time">${esc(tt)}</span>${ticking?`
@@ -407,8 +407,8 @@ function renderFamiliars(){
         <span class="nm">${esc(f.name||"Familiar")}</span>
         ${f.kind?`<span class="qty">${esc(f.kind)}</span>`:""}
         <span class="fam-state ${on?"on":"off"}" data-toggle-familiar="${esc(f.id)}">${on?"● Summoned":"○ Dismissed"}</span>
-        <button class="icon" data-edit-familiar="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-familiar="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        <button class="icon ed" data-edit-familiar="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger ed" data-del-familiar="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${stats?`<div class="desc" style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em">${stats}</div>`:""}
       ${f.description?`<div class="desc">${richHTML(f.description)}</div>`:""}

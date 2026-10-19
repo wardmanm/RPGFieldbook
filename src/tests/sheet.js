@@ -16,7 +16,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'itemOrigin', 'originOptionsHTML', 'grantedFromOrigin', 'originFromGranted',
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
   'statStyle', 'statGroupHTML', 'statGroupsHTML', 'ABIL',
-  'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
+  'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV', 'classChipHTML',
   'featOriginLabel', 'invSectionName', 'invGroups', 'INV_FAV', 'INV_ORDER', 'groupChoices', 'groupFieldHTML',
   'tagLabel', 'tagKey', 'journalEditorHTML', 'trackerFormHTML',
   'GROUP_RESERVED', 'tagTidy', 'groupNameProblem', 'syncGroupFieldMsg', 'groupFieldBlocked', 'groupByTag', 'invSection',
@@ -32,6 +32,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'attackDamageStr', 'extraDamageList', 'damagePartStr', 'carryAttackLinks',
   'spellHasDamage', 'spellDamageFromText', 'spellDamageBackfill', 'dropDamagelessSpellRows',
   'richHTML', 'richInline', 'noteHTML', 'noteCheckboxes', 'toggleCheckbox', 'noteProgress', 'notePreview',
+  'noteDef', 'noteEntryHTML',
   'itemArmor', 'armorAC', 'armorKindOf', 'ARMOR_DEXCAP', 'isEquippable', 'contributions',
   'featGroups', 'FEAT_FAV', 'ATK_FAV', 'atkCol', 'featCol', 'statusRowHTML', 'concStatusRow',
   'attackVisible', 'migrateWeaponEquip',
@@ -2320,6 +2321,25 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   const t = X.editToggleText('trackers', true);
   ck('#97 the repaint text matches the markup', t.title === 'Show edit buttons' && t.label === 'Show edit buttons — Trackers');
   ck('#97 the toggle never uses the bio Edit button\'s names', !/editbtn|data-edit=/.test(shown + hidden));
+}
+
+/* ---- hideable edit buttons: the rows (#97, spec §4, §6) ---- */
+{
+  const ed = (h, attr) => new RegExp('<button[^>]*class="[^"]*\\bed\\b[^"]*"[^>]*' + attr + '=').test(h);
+  ck('#97 a feature row\'s edit and delete carry ed', ed(X.featItemHTML({id: 'f', name: 'Rage'}), 'data-edit-feature') && ed(X.featItemHTML({id: 'f', name: 'Rage'}), 'data-del-feature'));
+  ck('#97 an item row\'s edit and delete carry ed', ed(X.invItemHTML({id: 'i', name: 'Rope'}), 'data-edit-item') && ed(X.invItemHTML({id: 'i', name: 'Rope'}), 'data-del-item'));
+  ck('#97 a status row\'s edit and remove carry ed', ed(X.statusRowHTML({id: 's', name: 'poisoned'}), 'data-edit-status') && ed(X.statusRowHTML({id: 's', name: 'poisoned'}), 'data-del-status'));
+  ck('#97 a class chip\'s Remove carries ed', ed(X.classChipHTML({name: 'Fighter', level: 3, subclass: null}, 0), 'data-del-class'));
+  ck('#97 a tracker\'s pencil carries ed', ed(X.trkEditHTML({id: 't', name: 'Kills'}), 'data-trkedit'));
+  ck('#97 a section note\'s pencil carries ed', ed(X.noteEntryHTML(X.noteDef('features')), 'data-noteedit'));
+  const page = {id: 'p', title: 'x', text: ''};
+  X.character = X.blankChar();
+  ck('#97 a page\'s Edit and Delete carry ed', ed(X.journalPageHTML(page), 'data-jnledit') && ed(X.journalPageHTML(page), 'data-jnldel'));
+  ck('#97 a blank page says tap Edit while Edit shows', X.journalPageHTML(page).includes('Nothing written yet — tap Edit.'));
+  X.setEditHidden(X.character, 'journal', true);
+  ck('#97 and only "Nothing written yet." while it is hidden',
+     X.journalPageHTML(page).includes('Nothing written yet.') && !X.journalPageHTML(page).includes('tap Edit'));
+  X.character = X.blankChar();
 }
 
 /* ---- the per-card toggle, and the view's header ---- */
