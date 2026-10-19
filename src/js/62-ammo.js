@@ -554,7 +554,7 @@ function ammoLineHTML(c,a){
   const inv=Array.isArray(c&&c.inventory)?c.inventory:[];
   const it=a&&a.itemId?inv.find(i=>i&&i.id===a.itemId):null;
   const kind=weaponAmmoKind(it);
-  if(!kind)return "";
+  if(!kind)return weaponThrown(it)?thrownLineHTML(c,it):"";
   const st=loadedStack(c,it), many=ammoStacks(c,kind).length>1;
   const label=st?`${String(st.name||"")} ×${itemQty(st)}`:`No ${ammoPlural(kind)}`;
   const back=(ammoRecoverable(c).find(r=>r.kind===kind)||{}).back||0;
@@ -565,31 +565,79 @@ function ammoLineHTML(c,a){
     (back>0?`<button type="button" class="tbtn ammo-recover" data-ammo-recover="${esc(it.id)}" aria-label="${esc("Recover "+back+" "+ammoPlural(kind))}">Recover ${back}</button>`:"")+
     `</div>`;
 }
+/* Under a thrown weapon's row (#104): its own count (no picker — it throws
+   itself), Throw (disabled at ×0, when every one is out there), and Recover N. */
+function thrownLineHTML(c,it){
+  const kind=ammoThrownKind(it), q=itemQty(it), name=String(it.name||"");
+  const back=(ammoRecoverable(c).find(r=>r.kind===kind)||{}).back||0;
+  return `<div class="ammo-line"><span class="ammo-load">${esc(name+" ×"+q)}</span>`+
+    `<button type="button" class="tbtn ammo-fire" data-ammo-throw="${esc(it.id)}"${q>=1?"":" disabled"} aria-label="${esc("Throw "+(/^[aeiou]/i.test(name)?"an ":"a ")+name)}">Throw</button>`+
+    (back>0?`<button type="button" class="tbtn ammo-recover" data-ammo-recover="${esc(it.id)}" aria-label="${esc("Recover "+back+" "+ammoPlural(kind))}">Recover ${back}</button>`:"")+
+    `</div>`;
+}
+/* Fire and Throw ask Hit or miss first only when this item comes back by
+   the Hits-only rule (spec §5.4): an item set to always or never, a thrown
+   weapon on its default, and every other rule fire at once. */
+function ammoAsks(c,it){return !!it&&ammoRecoverRule(c,it)==="hits";}
+/* The question. Closing it (✕, Escape) fires nothing. Focus starts on Hit. */
+function askAmmoOutcome(title,go){
+  openModal(title,`<p class="hint">Hits come back after the fight; misses are lost.</p>`+
+    `<div class="m-actions"><button type="button" class="tbtn" id="ammoMiss">Miss</button><button type="button" class="tbtn primary" id="ammoHit">Hit</button></div>`);
+  const h=document.getElementById("ammoHit"), m=document.getElementById("ammoMiss");
+  if(h)h.addEventListener("click",()=>{closeModal();go("hit");});
+  if(m)m.addEventListener("click",()=>{closeModal();go("miss");});
+  if(h&&h.focus)h.focus();
+}
 /* The row's Fire button for a weapon item, while it is on screen and live. */
 function ammoFireBtn(itemId){
-  const b=document.querySelector(attrSel("data-ammo-fire",itemId));
+  const b=document.querySelector(attrSel("data-ammo-fire",itemId))||document.querySelector(attrSel("data-ammo-throw",itemId));
   return b&&!b.disabled&&b.getClientRects().length?b:null;
 }
-/* One Fire tap. The save is scheduled before the redraw, so nothing a redraw
-   throws can cost the player the shot. From the keyboard (event.detail 0)
-   focus stays on Fire while there is more to fire, else it moves to the
-   toast's Undo; a held Enter's auto-repeat must not then press Undo, so the
-   Undo ignores repeated keys. `who` is the character the toast was shown for.
-   Returns the shot, or null when there was nothing to fire. */
-function fireWeapon(itemId,viaKey){
+/* One Fire tap. Under Hits only it asks first, and fires once answered.
+   `who` is the character the toast was shown for. Returns the shot, or null
+   when there was nothing to fire, or while the question is still open. */
+function fireWeapon(itemId,viaKey,outcome){
   const it=(character.inventory||[]).find(i=>i&&i.id===itemId);
-  const r=it?fireAmmo(character,it):null;
+  if(!it)return null;
+  const st=loadedStack(character,it);
+  if(outcome===undefined&&st&&ammoAsks(character,st)){
+    askAmmoOutcome(`${String(it.name||"Fire")}: hit or miss?`,o=>fireWeapon(itemId,viaKey,o));
+    return null;
+  }
+  const r=fireAmmo(character,it,outcome);
   if(!r)return null;
+  shotDone(r,itemId,viaKey,r.removed?`Fired your last ${String(r.stack.name||r.kind)}${r.outcome?" · "+r.outcome:""}`
+    :`Fired ${ammoOne(r.kind)}${r.outcome?" · "+r.outcome:""} · ${r.left} left`);
+  return r;
+}
+/* One Throw tap (#104): as Fire, from the weapon's own count. */
+function throwWeaponTap(itemId,viaKey,outcome){
+  const it=(character.inventory||[]).find(i=>i&&i.id===itemId);
+  if(!it||!weaponThrown(it))return null;
+  if(outcome===undefined&&itemQty(it)>=1&&ammoAsks(character,it)){
+    askAmmoOutcome(`${String(it.name||"Throw")}: hit or miss?`,o=>throwWeaponTap(itemId,viaKey,o));
+    return null;
+  }
+  const r=throwAmmo(character,it,outcome);
+  if(!r)return null;
+  const name=String(it.name||"");
+  shotDone(r,itemId,viaKey,`Threw ${/^[aeiou]/i.test(name)?"an":"a"} ${name}${r.outcome?" · "+r.outcome:""} · ${r.left} left`);
+  return r;
+}
+/* After Fire or Throw: save, redraw, and the toast with its Undo. The save is
+   scheduled before the redraw, so nothing a redraw throws can cost the player
+   the shot. From the keyboard focus stays on the button while there is more,
+   else it moves to the toast's Undo; a held Enter's auto-repeat must not then
+   press Undo, so the Undo ignores repeated keys. */
+function shotDone(r,itemId,viaKey,msg){
   const who=character;
   scheduleSave();
   renderInventory();renderAttacks();recompute();
-  const msg=r.removed?`Fired your last ${String(r.stack.name||r.kind)}`:`Fired ${ammoOne(r.kind)} · ${r.left} left`;
   const undo=toast(msg,{label:"Undo",
     run:e=>undoFireTap(r,who,!!e&&e.detail===0,itemId),
     back:()=>ammoFireBtn(itemId)});
   if(undo)undo.addEventListener("keydown",e=>{if(e.repeat)e.preventDefault();});
   if(viaKey){const b=ammoFireBtn(itemId);if(b)b.focus();else if(undo)undo.focus();}
-  return r;
 }
 /* The toast's Undo: only for the character it was shown for. */
 function undoFireTap(rec,who,viaKey,itemId){
@@ -629,10 +677,11 @@ function loadAmmo(itemId,stackId){
   closeModal();scheduleSave();renderAttacks();
   return true;
 }
-/* Recover N on a row: what this kind's rule gives back, for shots fired since the last recovery. */
+/* Recover N on a row: what this kind's rule gives back of
+   what it fired since the last recovery (#104). */
 function recoverWeaponAmmo(itemId,viaKey){
   const it=(character.inventory||[]).find(i=>i&&i.id===itemId);
-  const kind=weaponAmmoKind(it);if(!kind)return 0;
+  const kind=weaponAmmoKind(it)||(weaponThrown(it)?ammoThrownKind(it):"");if(!kind)return 0;
   const list=ammoRecoverable(character).filter(r=>r.kind===kind);
   const back=recoverAmmo(character,[kind]);
   scheduleSave();

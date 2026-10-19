@@ -333,7 +333,7 @@ for(const sys of ['homebrew','srd52']){
 {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
   const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
-  const hooks = ['data-ammo-fire', 'data-ammo-pick', 'data-ammo-load', 'data-ammo-recover'];
+  const hooks = ['data-ammo-fire', 'data-ammo-pick', 'data-ammo-load', 'data-ammo-recover', 'data-ammo-throw'];
   ck('every ammunition control has a click handler', hooks.every(h => js.includes('closest("[' + h + ']")')),
      hooks.filter(h => !js.includes('closest("[' + h + ']")')));
   ck('...and every one the handler names is drawn', hooks.every(h => new RegExp(h + '="\\$\\{esc\\(').test(js)));

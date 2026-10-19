@@ -82,6 +82,7 @@ function wire(){
     if((m=t.closest("[data-del-attack]"))){const a=character.attacks.find(x=>x.id===m.dataset.delAttack);if(a&&confirm(`Delete “${a.name}”?`)){character.attacks=character.attacks.filter(x=>x.id!==a.id);renderAttacks();scheduleSave();}return;}
     // a launcher's ammunition (62-ammo.js)
     if((m=t.closest("[data-ammo-fire]"))){fireWeapon(m.dataset.ammoFire,e.detail===0);return;}
+    if((m=t.closest("[data-ammo-throw]"))){throwWeaponTap(m.dataset.ammoThrow,e.detail===0);return;}
     if((m=t.closest("[data-ammo-pick]")))return openAmmoPicker(m.dataset.ammoPick);
     if((m=t.closest("[data-ammo-load]"))){const w=m.closest("[data-ammo-weapon]");if(w)loadAmmo(w.dataset.ammoWeapon,m.dataset.ammoLoad);return;}
     if((m=t.closest("[data-ammo-recover]"))){recoverWeaponAmmo(m.dataset.ammoRecover,e.detail===0);return;}

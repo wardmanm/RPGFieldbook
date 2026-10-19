@@ -63,7 +63,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'AMMO_RECOVERY', 'ammoRecoveryOf', 'itemRecover', 'weaponThrown', 'ammoThrownKind', 'AMMO_RECOVER_DEFAULTS', 'ammoDefaultRecover', 'ammoRecoverRule', 'ammoBack',
   'ammoSpentEntry', 'fireAmmo', 'undoFire', 'throwAmmo', 'ammoRecordShot', 'ammoEntryItem', 'ammoRecoverable', 'recoverAmmo', 'grantSidLive', 'undoRecovery', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
   'forgetGrantAmmo', 'ammoAskDue', 'markAmmoAsked',
-  'ammoLineHTML', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
+  'ammoLineHTML', 'thrownLineHTML', 'ammoAsks', 'throwWeaponTap', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
   'offerAmmoRecovery', 'revertEquipmentGrants',
   'ammoKindChoices', 'ammoKindOptionsHTML',
   'statusDuration', 'statusElapsed', 'statusTimed', 'statusUnitFor', 'fmtStatusTime', 'statusTimeText',
@@ -3916,6 +3916,38 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     ck('#104 review 3: Undo leaves a weapon the player has since re-loaded alone',
        c6.inventory[0].ammoStack === 's3');
   }
+}
+
+/* ---- the thrown weapon's row, and when Fire asks (#104, spec §5.2, §5.4) ---- */
+{
+  const DAGGER = 'Range 20/60 · Finesse, Light, Thrown · Mastery: Nick';
+  const c = X.blankChar();
+  c.inventory = [{id: 'd1', name: 'Dagger', qty: 2, equipped: true, weapon: {kind: 'melee', dice: '1d4', notes: DAGGER}},
+                 {id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                 {id: 's1', name: 'Arrow', qty: 4, ammo: {kind: 'arrow'}},
+                 {id: 'm1', name: 'Mace', qty: 1, equipped: true, weapon: {kind: 'melee', dice: '1d6', notes: ''}}];
+  const h = X.ammoLineHTML(c, {itemId: 'd1'});
+  ck("#104 a thrown weapon's row shows its count and Throw, and no picker or Fire",
+     h.includes('>Dagger ×2<') && /data-ammo-throw="d1"[^>]*>Throw</.test(h) && !h.includes('data-ammo-fire') && !h.includes('data-ammo-pick'), h);
+  c.inventory[0].qty = 0;
+  ck('#104 ...Throw is disabled at ×0', /data-ammo-throw="d1" disabled/.test(X.ammoLineHTML(c, {itemId: 'd1'})), X.ammoLineHTML(c, {itemId: 'd1'}));
+  c.ammoSpent = {d1: {n: 2, kind: 'dagger'}};
+  ck('#104 ...and offers Recover 2 for the two thrown', /data-ammo-recover="d1"[^>]*>Recover 2</.test(X.ammoLineHTML(c, {itemId: 'd1'})));
+  ck('#104 a weapon that neither fires nor is thrown draws no line', X.ammoLineHTML(c, {itemId: 'm1'}) === '');
+  ck("#104 a launcher's row is as it was", /data-ammo-fire="w1"/.test(X.ammoLineHTML(c, {itemId: 'w1'})));
+  const hh = X.ammoLineHTML({inventory: [{id: 'x"y', name: '<i>Dagger', qty: 1, weapon: {notes: 'Thrown'}}]}, {itemId: 'x"y'});
+  ck('#104 the thrown row escapes what a file put in the item', !hh.includes('<i>') && !hh.includes('x"y') && hh.includes('&lt;i&gt;Dagger'), hh);
+  ck('#104 Fire asks only under Hits only, for an item on the sheet rule',
+     X.ammoAsks({ammoRecovery: 'hits'}, {ammo: {kind: 'arrow'}}) && !X.ammoAsks({ammoRecovery: 'half'}, {ammo: {kind: 'arrow'}}) &&
+     !X.ammoAsks({ammoRecovery: 'hits'}, {ammo: {kind: 'arrow'}, recover: 'always'}) &&
+     !X.ammoAsks({ammoRecovery: 'hits'}, {weapon: {notes: 'Thrown'}}) && !X.ammoAsks({ammoRecovery: 'hits'}, null));
+  /* through the taps: under Hits only Fire asks first and fires nothing; with an answer it fires */
+  const t = X.blankChar(); X.character = t; t.ammoRecovery = 'hits';
+  t.inventory = JSON.parse(JSON.stringify(c.inventory)); t.inventory[0].qty = 2; t.ammoSpent = {};
+  ck('#104 under Hits only, Fire asks and fires nothing yet', X.fireWeapon('w1', false) === null && t.inventory.find(i => i.id === 's1').qty === 4);
+  ck('#104 ...the answer fires, with its tally', !!X.fireWeapon('w1', false, 'hit') && X.ammoSpentEntry(t, 's1').hits === 1 && t.inventory.find(i => i.id === 's1').qty === 3);
+  ck('#104 a thrown weapon never asks: Throw throws at once', !!X.throwWeaponTap('d1', false) && t.inventory[0].qty === 1 && X.ammoSpentEntry(t, 'd1').n === 1);
+  ck('#104 Recover on the thrown row brings it back', X.recoverWeaponAmmo('d1', false) === 1 && t.inventory[0].qty === 2);
 }
 
 /* ---- firing, Undo, recovery and the +N (#6) ---- */
