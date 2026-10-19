@@ -115,7 +115,10 @@ function openSettings(){
       setRowHTML("Colour current HP","Amber at half your maximum, red at a quarter.",
         `<button type="button" class="switch ${character.hpColor!==false?"on":""}" id="swHpColor" role="switch" aria-checked="${character.hpColor!==false?"true":"false"}" aria-label="Colour current HP"></button>`,true)+
       setRowHTML("Trackers card","Show it on the Journal tab. Hiding it keeps what you've counted.",
-        `<button type="button" class="switch ${showTrackers(character)?"on":""}" id="swTrackers" role="switch" aria-checked="${showTrackers(character)?"true":"false"}" aria-label="Trackers card"></button>`,true)):"";
+        `<button type="button" class="switch ${showTrackers(character)?"on":""}" id="swTrackers" role="switch" aria-checked="${showTrackers(character)?"true":"false"}" aria-label="Trackers card"></button>`,true))+
+    setGroupHTML("Ammunition",
+      setRowHTML("Ammo recovery","What comes back after a fight. Thrown weapons and items set to Always come back anyway; firearm bullets never do.",
+        `<select id="setAmmoRec" aria-label="Ammo recovery">${AMMO_RECOVERY.map(([v,l])=>`<option value="${esc(v)}"${ammoRecoveryOf(character)===v?" selected":""}>${esc(l)}</option>`).join("")}</select>`)):"";
   const secCarrying=hasChar?setGroupHTML("Size and weight",
       setRowHTML("Size","From your ancestry unless you choose one. It sets your carrying capacity.",
         `<select id="setSize" aria-label="Size">${sizeOptionsHTML(character.size)}</select>`)+
@@ -209,6 +212,7 @@ function openSettings(){
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
   {const b=document.getElementById("swHpColor");if(b)b.addEventListener("click",()=>{character.hpColor=(character.hpColor===false);b.classList.toggle("on",character.hpColor!==false);renderHP();scheduleSave();});}
   {const b=document.getElementById("swTrackers");if(b)b.addEventListener("click",()=>{character.showTrackers=!showTrackers(character);b.classList.toggle("on",character.showTrackers);renderTrackers();scheduleSave();});}
+  {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
   /* renderAll(), not buildStats(): the rebuild blanks the six score inputs, and
      only renderAll refills them from [data-path] and then repaints through
      recompute(). Calling the builder alone leaves blank boxes and a wall of +0. */

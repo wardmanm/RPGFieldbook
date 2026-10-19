@@ -60,11 +60,12 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'ammoKindOf', 'itemAmmo', 'weaponAmmoKind', 'ammoStacks', 'loadedStack', 'ammoPlural', 'ammoOne',
   'unpackAmmo', 'rebaseAmmo', 'migrateAmmo', 'ammoTable', 'fpMap', 'fpHash',
   'AMMO_PASS', 'ammoRepairDef', 'stampSrc', 'updChangedFields', 'updEdited',
-  'ammoSpentEntry', 'fireAmmo', 'undoFire', 'ammoRecoverable', 'recoverAmmo', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
-  'forgetGrantAmmo', 'ammoAskDue', 'markAmmoAsked',
-  'ammoLineHTML', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
-  'offerAmmoRecovery', 'revertEquipmentGrants',
-  'ammoKindChoices', 'ammoKindOptionsHTML',
+  'AMMO_RECOVERY', 'ammoRecoveryOf', 'itemRecover', 'weaponThrown', 'ammoThrownKind', 'AMMO_RECOVER_DEFAULTS', 'ammoDefaultRecover', 'ammoRecoverRule', 'ammoBack',
+  'ammoSpentEntry', 'fireAmmo', 'undoFire', 'throwAmmo', 'ammoRecordShot', 'ammoEntryItem', 'ammoRecoverable', 'recoverAmmo', 'grantSidLive', 'undoRecovery', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
+  'forgetGrantAmmo',
+  'ammoLineHTML', 'thrownLineHTML', 'ammoAsks', 'throwWeaponTap', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
+  'applyAmmoRecovery', 'undoRecoveryTap', 'revertEquipmentGrants',
+  'ammoKindChoices', 'ammoKindOptionsHTML', 'recoverOptionsHTML',
   'statusDuration', 'statusElapsed', 'statusTimed', 'statusUnitFor', 'fmtStatusTime', 'statusTimeText',
   'statusExpiredText', 'statusBackText', 'tickStatuses', 'restartStatus',
   'announceStatusExpiry', 'undoStatusExpiry', 'stepStatusTap', 'syncStatLock',
@@ -732,6 +733,9 @@ ck('weight is per unit', X.itemWeight(item({weight: 0.05, qty: 20})) === 0.05);
 ck('20 arrows at 0.05 lb weigh exactly 1 lb, not 0',
    X.itemWeightTotal(item({weight: 0.05, qty: 20})) === 1);
 ck('a missing qty counts as one', X.itemWeightTotal(item({weight: 3, qty: undefined})) === 3);
+// #104 review finding 2: ×0 (reachable since Task 2's thrown weapons, and now
+// from any item's own editor) must weigh and cost nothing — "||1" read it as ×1.
+ck('a ×0 item weighs nothing', X.itemWeightTotal(item({weight: 3, qty: 0})) === 0);
 
 // ---------- coins weigh something: 50 to the pound
 sheet({coins: {cp: '', sp: '', ep: '', gp: 500, pp: ''}});
@@ -757,6 +761,10 @@ sheet({inventory: [item({weight: 3, equipped: false}), item({weight: 3, equipped
 ck('unequipped gear still weighs — you are carrying it', X.carriedWeight() === 6);
 sheet({inventory: [item({cost: 0.1, qty: 3})]});
 ck('inventory value no longer truncates sub-1gp costs', X.inventoryTotal() === 0.3);
+// #104 review finding 2
+sheet({inventory: [item({weight: 3, cost: 5}), item({weight: 7, cost: 11, qty: 0})]});
+ck('a ×0 item adds no weight to carriedWeight()', X.carriedWeight() === 3);
+ck('...and no value to inventoryTotal()', X.inventoryTotal() === 5);
 
 // ---------- size: explicit choice, else ancestry, else Medium
 // the app stores full names; the converter is what turns 5e-tools' codes into them
@@ -1197,6 +1205,12 @@ ck('an empty list makes no groups at all',
   const it = X.invItemHTML({id: 'i9', name: 'Potion of Greater Healing', qty: 3, cost: 150, weight: 0.5, category: 'Consumable'});
   ck('#57 an item row groups its counts, cost, weight and buttons after the name',
      grouped(it, 'data-del-item') && it.indexOf('class="row-meta"') < it.indexOf('×3'), it.slice(0, 900));
+  // #104 review finding 2: a ×0 item (a thrown weapon out of throws, or any
+  // item zeroed in the editor) must say ×0, not look like ×1 by showing nothing.
+  const it0 = X.invItemHTML({id: 'i10', name: 'Dagger', qty: 0});
+  ck('#104 a ×0 item shows ×0, not nothing', /class="qty">×0</.test(it0), it0.slice(0, 400));
+  const it1 = X.invItemHTML({id: 'i11', name: 'Dagger', qty: 1});
+  ck('...and ×1 still shows no badge, as before', !/class="qty">×/.test(it1), it1.slice(0, 400));
   const st = X.statusRowHTML({id: 's9', name: 'Frightened'});
   ck('#57 a condition row groups its toggle and buttons after the name', grouped(st, 'data-del-status'), st.slice(0, 700));
 }
@@ -3683,6 +3697,303 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   X.resetRules();
 }
 
+/* ---- the recovery rule: who gets what back (#104, spec §4) ---- */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  ck('#104 a new character recovers half', X.blankChar().ammoRecovery === 'half' && X.ammoRecoveryOf(X.blankChar()) === 'half');
+  ck('#104 a sheet from before reads as half, and so does junk',
+     X.ammoRecoveryOf(X.migrate({abilities: {}})) === 'half' && X.ammoRecoveryOf({ammoRecovery: 'lots'}) === 'half' &&
+     X.ammoRecoveryOf({ammoRecovery: 'constructor'}) === 'half' && X.ammoRecoveryOf(null) === 'half');
+  ck('#104 each rule reads as itself', ['half', 'all', 'hits', 'none'].every(r => X.ammoRecoveryOf({ammoRecovery: r}) === r));
+  ck('#104 the rule survives a save and load',
+     X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {ammoRecovery: 'hits'})))).ammoRecovery === 'hits');
+  ck('#104 an item override is always, never, or nothing',
+     X.itemRecover({recover: 'always'}) === 'always' && X.itemRecover({recover: 'never'}) === 'never' &&
+     X.itemRecover({recover: 'sometimes'}) === '' && X.itemRecover({recover: '__proto__'}) === '' && X.itemRecover(null) === '');
+  const w = n => ({name: 'Dagger', weapon: {kind: 'melee', dice: '1d4', notes: n}});
+  ck('#104 the SRD thrown weapons read as thrown',
+     ['Range 20/60 · Finesse, Light, Thrown · Mastery: Nick', 'Range 30/120 · Thrown · Mastery: Slow',
+      'Range 20/60 · Versatile 1d8 · Thrown · Mastery: Sap'].every(n => X.weaponThrown(w(n))));
+  ck('#104 Thrown must be a whole property, in any case',
+     X.weaponThrown(w('Light, THROWN')) && !X.weaponThrown(w('Unthrown, Light')) && !X.weaponThrown(w('Finesse, Light')) && !X.weaponThrown(w('')));
+  ck('#104 a launcher is never thrown, and junk is not thrown',
+     !X.weaponThrown({weapon: {ammo: 'arrow', notes: 'Thrown'}}) && !X.weaponThrown({weapon: {notes: 7}}) &&
+     !X.weaponThrown({weapon: []}) && !X.weaponThrown({weapon: 'Thrown'}) && !X.weaponThrown(null));
+  ck("#104 a thrown weapon's kind is its own name", X.ammoThrownKind({name: ' +1  Dagger '}) === '+1 dagger' && X.ammoThrownKind({name: ''}) === 'thrown weapon');
+  const bullet = {ammo: {kind: 'firearm bullet'}}, arrow = {ammo: {kind: 'arrow'}}, dagger = w('Finesse, Light, Thrown');
+  ck('#104 defaults: bullets never, thrown weapons always, arrows none',
+     X.ammoDefaultRecover(bullet) === 'never' && X.ammoDefaultRecover(dagger) === 'always' && X.ammoDefaultRecover(arrow) === '' &&
+     X.ammoDefaultRecover({ammo: {kind: 'constructor'}}) === '' && X.ammoDefaultRecover(null) === '');
+  const none = {ammoRecovery: 'none'};
+  ck('#104 the rule: the item, then its default, then the sheet',
+     X.ammoRecoverRule(none, Object.assign({recover: 'never'}, dagger)) === 'never' && X.ammoRecoverRule(none, dagger) === 'always' &&
+     X.ammoRecoverRule({ammoRecovery: 'all'}, bullet) === 'never' && X.ammoRecoverRule(none, arrow) === 'none' &&
+     X.ammoRecoverRule(none, Object.assign({recover: 'always'}, arrow)) === 'always' && X.ammoRecoverRule({}, null) === 'half');
+  const e = {n: 7, hits: 3, misses: 2};
+  ck('#104 how many come back under each rule',
+     X.ammoBack('always', e) === 7 && X.ammoBack('all', e) === 7 && X.ammoBack('half', e) === 3 &&
+     X.ammoBack('hits', e) === 4 && X.ammoBack('never', e) === 0 && X.ammoBack('none', e) === 0);
+  ck('#104 hits only, with no shot answered, is half', X.ammoBack('hits', {n: 5, hits: 0, misses: 0}) === 2);
+  const E = v => X.ammoSpentEntry({ammoSpent: {a: v}}, 'a');
+  ck('#104 an entry reads its tallies', same([E({n: 5, kind: 'arrow', hits: 2, misses: 1}).hits, E({n: 5, kind: 'arrow', hits: 2, misses: 1}).misses], [2, 1]));
+  ck('#104 tallies are clamped: never below 0, never past n together',
+     E({n: 5, kind: 'arrow', hits: 9, misses: 9}).hits === 5 && E({n: 5, kind: 'arrow', hits: 9, misses: 9}).misses === 0 &&
+     E({n: 5, kind: 'arrow', hits: -1, misses: 'x'}).hits === 0 && E({n: 5, kind: 'arrow', hits: 3, misses: 4}).misses === 2);
+  ck('#104 an entry from before #104 has no answers', E({n: 5, kind: 'arrow'}).hits === 0 && E({n: 5, kind: 'arrow'}).misses === 0);
+}
+
+/* ---- a shot's answer, and throwing (#104, spec §5) ---- */
+{
+  const DAGGER = 'Range 20/60 · Finesse, Light, Thrown · Mastery: Nick';
+  const mk = () => {
+    const c = X.blankChar();
+    c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                   {id: 's1', name: 'Arrow', qty: 5, ammo: {kind: 'arrow'}},
+                   {id: 'd1', name: 'Dagger', qty: 2, equipped: true, weapon: {kind: 'melee', dice: '1d4', notes: DAGGER}}];
+    return c;
+  };
+  let c = mk(); const bow = c.inventory[0];
+  X.fireAmmo(c, bow, 'hit'); X.fireAmmo(c, bow, 'miss'); X.fireAmmo(c, bow); const last = X.fireAmmo(c, bow, 'hit');
+  let e = X.ammoSpentEntry(c, 's1');
+  ck('#104 a shot records its answer, and an unanswered one records none', e.n === 4 && e.hits === 2 && e.misses === 1, e);
+  ck('#104 ...and the shot says which', last.outcome === 'hit');
+  ck('#104 Undo takes the answer back with the shot', X.undoFire(c, last) && X.ammoSpentEntry(c, 's1').hits === 1 && X.ammoSpentEntry(c, 's1').n === 3);
+  ck('#104 an answer that is neither counts as none',
+     (() => { const k = mk(); X.fireAmmo(k, k.inventory[0], 'graze'); const x = X.ammoSpentEntry(k, 's1'); return x.n === 1 && x.hits === 0 && x.misses === 0; })());
+  c = mk(); const dag = c.inventory[2];
+  const t = X.throwAmmo(c, dag);
+  ck('#104 a throw takes one from the weapon itself', !!t && dag.qty === 1 && t.left === 1 && !t.removed && t.kind === 'dagger');
+  ck('#104 ...and counts it under the weapon, with a one-piece copy',
+     X.ammoSpentEntry(c, 'd1').n === 1 && X.ammoSpentEntry(c, 'd1').snap.name === 'Dagger' && X.ammoSpentEntry(c, 'd1').snap.qty === 1);
+  const t2 = X.throwAmmo(c, dag, 'miss');
+  ck('#104 the last throw leaves the weapon on the sheet at ×0, in its place',
+     dag.qty === 0 && c.inventory.indexOf(dag) === 2 && !t2.removed && X.ammoSpentEntry(c, 'd1').misses === 1);
+  ck('#104 at ×0 there is nothing to throw', X.throwAmmo(c, dag) === null && dag.qty === 0 && X.ammoSpentEntry(c, 'd1').n === 2);
+  ck('#104 Undo of a throw puts the weapon back to ×1', X.undoFire(c, t2) && dag.qty === 1 && X.ammoSpentEntry(c, 'd1').n === 1);
+  ck('#104 only a thrown weapon on this sheet is thrown',
+     X.throwAmmo(c, c.inventory[0]) === null && X.throwAmmo(c, {id: 'x', name: 'Dagger', qty: 3, weapon: {notes: 'Thrown'}}) === null);
+}
+
+/* ---- recovery under each rule, its record and its Undo (#104, spec §4.3, §6) ---- */
+{
+  const norm = o => JSON.stringify(Object.keys(o).sort().map(k => [k, o[k]]));
+  const mk = rule => {
+    const c = X.blankChar(); c.ammoRecovery = rule;
+    c.inventory = [{id: 's1', name: 'Arrow', qty: 2, ammo: {kind: 'arrow'}},
+                   {id: 'b1', name: 'Firearm Bullet', qty: 3, ammo: {kind: 'firearm bullet'}},
+                   {id: 'd1', name: 'Dagger', qty: 0, weapon: {kind: 'melee', dice: '1d4', notes: 'Finesse, Light, Thrown'}}];
+    c.ammoSpent = {s1: {n: 6, hits: 3, misses: 1, kind: 'arrow'}, b1: {n: 4, kind: 'firearm bullet'}, d1: {n: 2, kind: 'dagger'}};
+    return c;
+  };
+  const backOf = (c, k) => (X.ammoRecoverable(c).find(r => r.kind === k) || {}).back || 0;
+  ck('#104 half: 3 of 6 arrows, no bullets, both daggers',
+     backOf(mk('half'), 'arrow') === 3 && backOf(mk('half'), 'firearm bullet') === 0 && backOf(mk('half'), 'dagger') === 2);
+  ck('#104 all: every arrow', backOf(mk('all'), 'arrow') === 6);
+  ck('#104 hits only: the 3 hits and half the 2 unanswered', backOf(mk('hits'), 'arrow') === 4);
+  ck('#104 none: no arrows, but the daggers still come back', backOf(mk('none'), 'arrow') === 0 && backOf(mk('none'), 'dagger') === 2);
+  ck('#104 a stack set to always wins over None', (() => { const c = mk('none'); c.inventory[0].recover = 'always'; return backOf(c, 'arrow') === 6; })());
+  ck('#104 a stack set to never wins over All', (() => { const c = mk('all'); c.inventory[0].recover = 'never'; return backOf(c, 'arrow') === 0; })());
+  ck("#104 a stack that is gone is read from its copy",
+     (() => { const c = mk('all'); c.inventory.splice(0, 1); c.ammoSpent.s1.snap = {id: 's1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}, recover: 'never'}; return backOf(c, 'arrow') === 0; })());
+
+  let c = mk('none');
+  ck('#104 under None, recovering the daggers puts them back on the weapon at ×0', X.recoverAmmo(c, ['dagger'], {}) === 2 && c.inventory[2].qty === 2);
+  ck('#104 ...and the arrows, a kind not asked for, stay on record', 's1' in c.ammoSpent && !('d1' in c.ammoSpent));
+
+  c = mk('all'); const r2 = {};
+  const inv0 = JSON.stringify(c.inventory), spent0 = norm(c.ammoSpent);
+  X.recoverAmmo(c, ['arrow', 'dagger'], r2);
+  ck('#104 recovery records what it gave and what it cleared',
+     r2.added.length === 2 && r2.made.length === 0 && Object.keys(r2.cleared).sort().join() === 'd1,s1', r2);
+  ck('#104 Undo recovery puts everything back as it was',
+     X.undoRecovery(c, r2) && JSON.stringify(c.inventory) === inv0 && norm(c.ammoSpent) === spent0, [c.inventory, c.ammoSpent]);
+  ck('#104 ...once', X.undoRecovery(c, r2) === false);
+
+  c = mk('all'); const r3 = {};
+  X.recoverAmmo(c, ['arrow'], r3);                                           // arrows 2 -> 8; s1 cleared
+  X.fireAmmo(c, {id: 'w', name: 'Bow', weapon: {ammo: 'arrow'}}, 'hit');      // 8 -> 7; a new s1 entry n 1, hits 1
+  X.undoRecovery(c, r3);
+  ck('#104 Undo recovery after a later shot takes back only what it gave, and keeps the shot',
+     c.inventory[0].qty === 1 && c.ammoSpent.s1.n === 7 && c.ammoSpent.s1.hits === 4, [c.inventory[0], c.ammoSpent.s1]);
+
+  c = mk('all'); c.inventory.splice(0, 1); c.ammoSpent.s1.snap = {id: 's1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}}; const r4 = {};
+  X.recoverAmmo(c, ['arrow'], r4);
+  ck('#104 a stack rebuilt by recovery is removed by its Undo',
+     r4.made.length === 1 && X.undoRecovery(c, r4) && !c.inventory.some(i => i.id === 's1') && c.ammoSpent.s1.n === 6, c.inventory);
+  ck('#104 a call with no record still returns the count', X.recoverAmmo(mk('half'), ['arrow']) === 3);
+  ck('#104 Undo with no record, or a junk one, does nothing', X.undoRecovery(mk('half'), null) === false && X.undoRecovery(mk('half'), {}) === false);
+
+  /* ---- review round 1, finding 1: Undo must not resurrect a stack — or a
+     grant's history — that is no longer there (spec §8 wins over §6's "put
+     back as it was") ---- */
+  c = mk('all'); const ra = {};
+  X.recoverAmmo(c, ['arrow'], ra);                            // s1: arrows 2 -> 8, cleared
+  c.inventory = c.inventory.filter(i => i.id !== 's1');       // the delete handler's own removal...
+  X.forgetAmmo(c, 's1');                                       // ...and its own forgetAmmo() call
+  ck('#104 review 1a: Undo does not restore a topped-up stack the player deleted',
+     X.undoRecovery(c, ra) === true && !('s1' in c.ammoSpent) && !X.ammoRecoverable(c).some(r => r.kind === 'arrow'));
+
+  c = mk('all'); c.inventory.splice(0, 1);
+  c.ammoSpent.s1.snap = {id: 's1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}};
+  const rb = {};
+  X.recoverAmmo(c, ['arrow'], rb);                            // rebuilds s1 at qty 6
+  c.inventory = c.inventory.filter(i => i.id !== 's1');       // deleted before Undo
+  X.forgetAmmo(c, 's1');
+  ck('#104 review 1b: Undo does not restore a rebuilt stack the player deleted',
+     X.undoRecovery(c, rb) === true && !('s1' in c.ammoSpent));
+
+  {
+    const g = X.blankChar(); X.character = g; g.ammoRecovery = 'all';
+    g.inventory = [{id: 'g1', name: 'Arrow', qty: 2, ammo: {kind: 'arrow'}, grant: 'class:Ranger'}];
+    g.ammoSpent = {g1: {n: 6, hits: 3, misses: 1, kind: 'arrow',
+      snap: {id: 'g1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}, grant: 'class:Ranger'}}};
+    const rc = {};
+    ck('#104 review 1c setup: recovering the granted stack', X.recoverAmmo(g, ['arrow'], rc) === 6 && g.inventory[0].qty === 8);
+    X.revertEquipmentGrants('class:Ranger');                   // the real removal path (50-classrace.js)
+    ck('#104 review 1c: the grant removed the stack it had just topped up', !g.inventory.length);
+    ck('#104 review 1c: Undo does not restore a granted stack whose source is gone',
+       X.undoRecovery(g, rc) === true && !('g1' in g.ammoSpent));
+  }
+
+  /* The entry has NO dependency at all — its stack was already gone, nothing
+     was given back — so this exercises grantSidLive() specifically: restored
+     when the granting class is still there, not when it isn't (reproduced
+     without a full removeClass(), which this suite can't call directly; the
+     distinction grantSidLive() reads is exactly what removeClass() leaves
+     behind either way: whether character.classes still names it). */
+  {
+    const g2 = X.blankChar(); g2.ammoRecovery = 'none';         // arrow has no app default, so None really gives 0
+    g2.inventory = [];
+    g2.ammoSpent = {g2a: {n: 2, kind: 'arrow', snap: {id: 'g2a', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}, grant: 'class:Ranger'}}};
+    const re = {};
+    ck('#104 review 1 (grantSidLive) setup: nothing to recover for an already-gone granted stack',
+       X.recoverAmmo(g2, ['arrow'], re) === 0);
+    ck('#104 review 1 (grantSidLive): Undo does not restore it when the class is gone',
+       X.undoRecovery(g2, re) === true && !('g2a' in g2.ammoSpent));
+
+    const g3 = X.blankChar(); g3.ammoRecovery = 'none'; g3.classes = [{name: 'Ranger', level: 1}];
+    g3.inventory = [];
+    g3.ammoSpent = {g3a: {n: 2, kind: 'arrow', snap: {id: 'g3a', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}, grant: 'class:Ranger'}}};
+    const rf = {};
+    X.recoverAmmo(g3, ['arrow'], rf);
+    ck('#104 review 1 (grantSidLive): ...but comes back when the class is still there',
+       X.undoRecovery(g3, rf) === true && g3.ammoSpent.g3a && g3.ammoSpent.g3a.n === 2);
+  }
+
+  /* ---- review round 1, finding 2: a shot since recovery that Undo cannot
+     fully take back must not be counted twice ---- */
+  c = mk('all'); const rg = {};
+  X.recoverAmmo(c, ['arrow'], rg);                             // s1: arrows 2 -> 8
+  for (let i = 0; i < 8; i++) X.fireAmmo(c, {id: 'w', name: 'Bow', weapon: {ammo: 'arrow'}}, '');
+  ck('#104 review 2 setup: firing the whole recovered stack removes it, with a fresh n-8 entry',
+     !c.inventory.some(i => i.id === 's1') && c.ammoSpent.s1.n === 8);
+  X.undoRecovery(c, rg);
+  ck('#104 review 2: Undo after it is all fired out does not double-count those shots (8, not 14)',
+     c.ammoSpent.s1.n === 8 && !c.inventory.some(i => i.id === 's1'));
+
+  c = mk('none'); const rh = {};
+  X.recoverAmmo(c, ['dagger'], rh);                            // dagger: ×0 -> ×2 (Thrown defaults to always)
+  X.throwAmmo(c, c.inventory[2], ''); X.throwAmmo(c, c.inventory[2], '');
+  ck('#104 review 2 setup: throwing the recovered dagger back out leaves it at ×0 with a fresh n-2 entry',
+     c.inventory[2].qty === 0 && c.ammoSpent.d1.n === 2);
+  X.undoRecovery(c, rh);
+  ck('#104 review 2: Undo of a thrown weapon does not double-count either (n 2, ×0)',
+     c.inventory[2].qty === 0 && c.ammoSpent.d1.n === 2);
+
+  /* ---- review round 1, finding 3: Undo re-points a weapon only if it is
+     still pointed where recovery left it ---- */
+  {
+    const c5 = X.blankChar(); c5.ammoRecovery = 'all';
+    c5.inventory = [
+      {id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}, ammoStack: 's1'},
+      {id: 's2', name: 'Arrow', qty: 3, ammo: {kind: 'arrow'}}];
+    c5.ammoSpent = {s1: {n: 6, hits: 3, misses: 1, kind: 'arrow', snap: {id: 's1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}}}};
+    const inv5 = JSON.stringify(c5.inventory), spent5 = norm(c5.ammoSpent), rh3 = {};
+    X.recoverAmmo(c5, ['arrow'], rh3);
+    ck('#104 review 3 setup: a home-join repoints the weapon and records its target',
+       rh3.repointed.length === 1 && rh3.repointed[0].to === 's2' && c5.inventory[0].ammoStack === 's2' && c5.inventory[1].qty === 9);
+    ck('#104 review 3: Undo of a home-join round-trips inventory, ammoSpent and the pointer',
+       X.undoRecovery(c5, rh3) && JSON.stringify(c5.inventory) === inv5 && norm(c5.ammoSpent) === spent5 && c5.inventory[0].ammoStack === 's1');
+  }
+  {
+    const c6 = X.blankChar(); c6.ammoRecovery = 'all';
+    c6.inventory = [
+      {id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}, ammoStack: 's1'},
+      {id: 's2', name: 'Arrow', qty: 3, ammo: {kind: 'arrow'}}];
+    c6.ammoSpent = {s1: {n: 6, hits: 3, misses: 1, kind: 'arrow', snap: {id: 's1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}}}};
+    const rh4 = {};
+    X.recoverAmmo(c6, ['arrow'], rh4);
+    ck('#104 review 3 setup: the weapon is repointed to the home stack', c6.inventory[0].ammoStack === 's2');
+    c6.inventory[0].ammoStack = 's3';                          // the player loads a different stack since
+    X.undoRecovery(c6, rh4);
+    ck('#104 review 3: Undo leaves a weapon the player has since re-loaded alone',
+       c6.inventory[0].ammoStack === 's3');
+  }
+
+  /* ---- review round 1, folded in: a ×0 non-thrown stack recovery gave
+     nothing to must not be removed by its own Undo (reachable since an
+     item's own Quantity can now be set to 0 in the editor) ---- */
+  {
+    const c7 = X.blankChar(); c7.ammoRecovery = 'half';
+    c7.inventory = [{id: 'z1', name: 'Arrow', qty: 0, ammo: {kind: 'arrow'}}];
+    c7.ammoSpent = {z1: {n: 1, kind: 'arrow'}};
+    const rz = {};
+    ck('#104 folded-in setup: half of 1 shot is 0, so recovery clears the entry but gives nothing',
+       X.recoverAmmo(c7, ['arrow'], rz) === 0 && c7.inventory[0].id === 'z1' && c7.inventory[0].qty === 0 && !('z1' in c7.ammoSpent));
+    ck('#104 folded-in: Undo recovery leaves the ×0 stack on the sheet, not removed, and restores the entry',
+       X.undoRecovery(c7, rz) && c7.inventory.some(i => i.id === 'z1') && c7.inventory[0].qty === 0 && c7.ammoSpent.z1.n === 1,
+       [c7.inventory, c7.ammoSpent]);
+  }
+}
+
+/* ---- the thrown weapon's row, and when Fire asks (#104, spec §5.2, §5.4) ---- */
+{
+  const DAGGER = 'Range 20/60 · Finesse, Light, Thrown · Mastery: Nick';
+  const c = X.blankChar();
+  c.inventory = [{id: 'd1', name: 'Dagger', qty: 2, equipped: true, weapon: {kind: 'melee', dice: '1d4', notes: DAGGER}},
+                 {id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                 {id: 's1', name: 'Arrow', qty: 4, ammo: {kind: 'arrow'}},
+                 {id: 'm1', name: 'Mace', qty: 1, equipped: true, weapon: {kind: 'melee', dice: '1d6', notes: ''}}];
+  const h = X.ammoLineHTML(c, {itemId: 'd1'});
+  ck("#104 a thrown weapon's row shows its count and Throw, and no picker or Fire",
+     h.includes('>Dagger ×2<') && /data-ammo-throw="d1"[^>]*>Throw</.test(h) && !h.includes('data-ammo-fire') && !h.includes('data-ammo-pick'), h);
+  c.inventory[0].qty = 0;
+  ck('#104 ...Throw is disabled at ×0', /data-ammo-throw="d1" disabled/.test(X.ammoLineHTML(c, {itemId: 'd1'})), X.ammoLineHTML(c, {itemId: 'd1'}));
+  c.ammoSpent = {d1: {n: 2, kind: 'dagger'}};
+  ck('#104 ...and offers Recover 2 for the two thrown', /data-ammo-recover="d1"[^>]*>Recover 2</.test(X.ammoLineHTML(c, {itemId: 'd1'})));
+  ck('#104 a weapon that neither fires nor is thrown draws no line', X.ammoLineHTML(c, {itemId: 'm1'}) === '');
+  ck("#104 a launcher's row is as it was", /data-ammo-fire="w1"/.test(X.ammoLineHTML(c, {itemId: 'w1'})));
+  const hh = X.ammoLineHTML({inventory: [{id: 'x"y', name: '<i>Dagger', qty: 1, weapon: {notes: 'Thrown'}}]}, {itemId: 'x"y'});
+  ck('#104 the thrown row escapes what a file put in the item', !hh.includes('<i>') && !hh.includes('x"y') && hh.includes('&lt;i&gt;Dagger'), hh);
+  ck('#104 Fire asks only under Hits only, for an item on the sheet rule',
+     X.ammoAsks({ammoRecovery: 'hits'}, {ammo: {kind: 'arrow'}}) && !X.ammoAsks({ammoRecovery: 'half'}, {ammo: {kind: 'arrow'}}) &&
+     !X.ammoAsks({ammoRecovery: 'hits'}, {ammo: {kind: 'arrow'}, recover: 'always'}) &&
+     !X.ammoAsks({ammoRecovery: 'hits'}, {weapon: {notes: 'Thrown'}}) && !X.ammoAsks({ammoRecovery: 'hits'}, null));
+  /* through the taps: under Hits only Fire asks first and fires nothing; with an answer it fires */
+  const t = X.blankChar(); X.character = t; t.ammoRecovery = 'hits';
+  t.inventory = JSON.parse(JSON.stringify(c.inventory)); t.inventory[0].qty = 2; t.ammoSpent = {};
+  ck('#104 under Hits only, Fire asks and fires nothing yet', X.fireWeapon('w1', false) === null && t.inventory.find(i => i.id === 's1').qty === 4);
+  ck('#104 ...the answer fires, with its tally', !!X.fireWeapon('w1', false, 'hit') && X.ammoSpentEntry(t, 's1').hits === 1 && t.inventory.find(i => i.id === 's1').qty === 3);
+  ck('#104 a thrown weapon never asks: Throw throws at once', !!X.throwWeaponTap('d1', false) && t.inventory[0].qty === 1 && X.ammoSpentEntry(t, 'd1').n === 1);
+  ck('#104 Recover on the thrown row brings it back', X.recoverWeaponAmmo('d1', false) === 1 && t.inventory[0].qty === 2);
+  /* final review item 2: the row reads the weapon's own entry, not its kind —
+     a rename after the throw hid Recover though End combat still recovered it */
+  X.throwWeaponTap('d1', false); t.inventory[0].name = 'Silvered Dagger';
+  ck('#104 throw, then rename: the row still offers Recover 1',
+     /data-ammo-recover="d1"[^>]*>Recover 1</.test(X.ammoLineHTML(t, {itemId: 'd1'})), X.ammoLineHTML(t, {itemId: 'd1'}));
+  ck('#104 ...and the tap recovers it', X.recoverWeaponAmmo('d1', false) === 1 && t.inventory[0].qty === 2 && !('d1' in t.ammoSpent));
+  /* two daggers on one sheet: each row's N is its own, and its tap gives back exactly that */
+  t.inventory.push({id: 'd2', name: 'Dagger', qty: 1, equipped: true, weapon: {kind: 'melee', dice: '1d4', notes: DAGGER}});
+  t.inventory[0].name = 'Dagger';
+  X.throwWeaponTap('d1', false); X.throwWeaponTap('d1', false); X.throwWeaponTap('d2', false);
+  ck('#104 two daggers: each row offers its own count back',
+     />Recover 2</.test(X.ammoLineHTML(t, {itemId: 'd1'})) && />Recover 1</.test(X.ammoLineHTML(t, {itemId: 'd2'})),
+     [X.ammoLineHTML(t, {itemId: 'd1'}), X.ammoLineHTML(t, {itemId: 'd2'})]);
+  ck("#104 ...and one row's tap leaves the other's throw on record",
+     X.recoverWeaponAmmo('d2', false) === 1 && t.inventory.find(i => i.id === 'd2').qty === 1 && X.ammoSpentEntry(t, 'd1').n === 2 &&
+     t.inventory[0].qty === 0, t.ammoSpent);
+}
+
 /* ---- firing, Undo, recovery and the +N (#6) ---- */
 {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -3715,7 +4026,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   r = X.fireAmmo(c, b2); c.inventory = c.inventory.filter(i => i.id !== 's1');
   ck('Undo after the player deleted that stack leaves it deleted', !X.undoFire(c, r) && !c.inventory.some(i => i.id === 's1'));
   ck('junk spent entries read as nothing',
-     same(X.ammoSpentEntry({ammoSpent: {x: 'junk'}}, 'x'), {n: 0, kind: '', snap: null, asked: 0}) &&
+     same(X.ammoSpentEntry({ammoSpent: {x: 'junk'}}, 'x'), {n: 0, hits: 0, misses: 0, kind: '', snap: null}) &&
      X.ammoRecoverable({ammoSpent: {a: {n: 'x', kind: 7}, b: null, c: [1], d: {n: 4, kind: ''}}}).length === 0 &&
      X.ammoRecoverable({ammoSpent: 'junk'}).length === 0);
 
@@ -3843,7 +4154,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
      !g2.inventory.some(i => i.name === 'Arrow'), g2.ammoSpent);
 }
 
-/* ---- End combat offers the ammunition back (#6) ---- */
+/* ---- End combat recovers on its own, with an Undo (#104, spec §6) ---- */
 {
   const mk = () => {
     const c = X.blankChar(); X.character = c;
@@ -3854,54 +4165,55 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     X.startCombatNow();
     return c;
   };
-  let c = mk(); state.confirm = true;
-  ck('End combat, then yes: half of each kind comes back',
-     X.endCombatAsk() === true && state.lastConfirm === 'Recover ammunition? 6 of 13 arrows, 2 of 4 bolts' &&
-     c.inventory.find(i => i.id === 's1').qty === 13 && (c.inventory.find(i => i.id === 's2') || {}).qty === 2, c.inventory);
-  ck('...and every count clears, the lone needle with them', JSON.stringify(c.ammoSpent) === '{}');
-  const real = ctx.confirm, asked = [];
-  ctx.confirm = m => { asked.push(m); return /^End combat/.test(m); };
-  c = mk();
-  ck('End combat, then no: nothing comes back and nothing is lost',
-     X.endCombatAsk() === true && asked.length === 2 && c.inventory.find(i => i.id === 's1').qty === 7 && c.ammoSpent.s1.n === 13);
-  /* #6 final review, item 3: "No" must remember it already asked about these
-     shots, so the NEXT fight with nothing new fired does not ask again. */
-  ck('...and it remembers having asked about these shots',
-     c.ammoSpent.s1.asked === 13 && c.ammoSpent.s2.asked === 4, c.ammoSpent);
-  ck('Recover N on the row is unaffected: the full counts still show after No',
-     (X.ammoRecoverable(c).find(r => r.kind === 'arrow') || {}).back === 6 &&
-     (X.ammoRecoverable(c).find(r => r.kind === 'bolt') || {}).back === 2, X.ammoRecoverable(c));
-  asked.length = 0; X.startCombatNow();
-  ck('a fight with no NEW shots asks only the round prompt', X.endCombatAsk() === true && asked.length === 1, asked);
-  c.ammoSpent.s1.n++;   // one more shot since it last asked
-  asked.length = 0; X.startCombatNow();
-  ck('...then one more shot makes it ask again', X.endCombatAsk() === true && asked.length === 2, asked);
-  ctx.confirm = real;
-}
-
-/* ---- ammoAskDue() and markAmmoAsked() (#6 final review, item 3) ---- */
-{
-  ck('ammoAskDue is false once every kinded entry has been asked about',
-     X.ammoAskDue({ammoSpent: {a: {n: 5, kind: 'arrow', asked: 5}}}) === false);
-  ck('...and true while any has fired more than it was asked about',
-     X.ammoAskDue({ammoSpent: {a: {n: 5, kind: 'arrow', asked: 4}, b: {n: 1, kind: 'bolt', asked: 1}}}) === true);
-  ck('...and false with nothing kinded at all', X.ammoAskDue({ammoSpent: {a: {n: 5, kind: ''}}}) === false);
-  const k = {ammoSpent: {a: {n: 5, kind: 'arrow'}, b: {n: 0, kind: ''}}};
-  X.markAmmoAsked(k);
-  ck('markAmmoAsked catches every kinded entry up to its n, and leaves n alone',
-     k.ammoSpent.a.asked === 5 && k.ammoSpent.a.n === 5 && X.ammoAskDue(k) === false);
-  ck('ammoSpentEntry clamps asked to [0, n]',
-     X.ammoSpentEntry({ammoSpent: {a: {n: 5, kind: 'arrow', asked: 99}}}, 'a').asked === 5 &&
-     X.ammoSpentEntry({ammoSpent: {a: {n: 5, kind: 'arrow', asked: -3}}}, 'a').asked === 0 &&
-     X.ammoSpentEntry({ammoSpent: {a: {n: 5, kind: 'arrow'}}}, 'a').asked === 0);
-  const fc = X.blankChar(); fc.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
-                                             {id: 's1', name: 'Arrow', qty: 3, ammo: {kind: 'arrow'}}];
-  const bowf = fc.inventory[0];
-  X.fireAmmo(fc, bowf);
-  X.markAmmoAsked(fc);
-  X.fireAmmo(fc, bowf);
-  ck("fireAmmo() carries the previous entry's asked forward, since the entry is rebuilt every shot",
-     X.ammoSpentEntry(fc, 's1').n === 2 && X.ammoSpentEntry(fc, 's1').asked === 1);
+  let c = mk(); state.confirm = true; state.lastConfirm = null;
+  ck('#104 End combat asks only about ending, then recovers half of each kind',
+     X.endCombatAsk() === true && state.lastConfirm === 'End combat at round 1?' &&
+     c.inventory.find(i => i.id === 's1').qty === 13 && (c.inventory.find(i => i.id === 's2') || {}).qty === 2, [state.lastConfirm, c.inventory]);
+  ck('#104 ...and the lone needle, which gives nothing back, is spent: cleared', JSON.stringify(c.ammoSpent) === '{}', c.ammoSpent);
+  c = mk(); const rec = {}; X.recoverAmmo(c, ['arrow', 'bolt'], rec);
+  ck("#104 the toast's Undo recovery puts it all back",
+     ctx.undoRecoveryTap(rec, c) === true && c.inventory.find(i => i.id === 's1').qty === 7 && !c.inventory.some(i => i.id === 's2') && c.ammoSpent.s1.n === 13);
+  ck('#104 ...but not on another sheet',
+     (() => { const k = mk(), r = {}; X.recoverAmmo(k, ['arrow'], r); X.character = X.blankChar(); return ctx.undoRecoveryTap(r, k) === false && k.inventory[0].qty === 13; })());
+  c = mk(); c.ammoRecovery = 'none';
+  {
+    const realToast = ctx.toast; let offer = 'none yet', said = '';
+    ctx.toast = (msg, action) => { said = msg; offer = action; return null; };
+    ck('#104 with nothing recoverable, End combat recovers nothing and clears the counts',
+       X.endCombatAsk() === true && c.inventory[0].qty === 7 && JSON.stringify(c.ammoSpent) === '{}', c.ammoSpent);
+    ck('#104 ...quietly: no recovery in the toast, and no Undo recovery', !/recovered/.test(said) && offer === undefined, [said, offer]);
+    ctx.toast = realToast;
+  }
+  ck('#104 applyAmmoRecovery says nothing when there is nothing', (() => { X.character = X.blankChar(); return ctx.applyAmmoRecovery() === null; })());
+  ck('#104 ...and, with only counts that give nothing back, clears them and still says nothing',
+     (() => { const k = mk(); k.ammoRecovery = 'none'; return ctx.applyAmmoRecovery() === null && JSON.stringify(k.ammoSpent) === '{}'; })());
+  /* final review item 1: under None (or Never) the counts used to pile up fight
+     after fight and come back in full once the rule changed. */
+  {
+    const k = X.blankChar(); X.character = k; k.ammoRecovery = 'none';
+    k.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                   {id: 's1', name: 'Arrow', qty: 40, ammo: {kind: 'arrow'}}];
+    for (let f = 0; f < 3; f++) { X.startCombatNow(); for (let i = 0; i < 10; i++) X.fireWeapon('w1', false); X.endCombatAsk(); }
+    ck('#104 three fights under None: 30 arrows spent, nothing left on record',
+       k.inventory[1].qty === 10 && JSON.stringify(k.ammoSpent) === '{}', [k.inventory[1].qty, k.ammoSpent]);
+    k.ammoRecovery = 'all';
+    ck('#104 ...so switching to All afterwards recovers nothing from those fights',
+       X.ammoRecoverable(k).length === 0 && ctx.applyAmmoRecovery() === null && k.inventory[1].qty === 10);
+  }
+  /* ...and Undo recovery restores every entry that End combat cleared, the
+     ones that gave nothing back included */
+  {
+    const k = mk(); let offer = null;
+    const realToast = ctx.toast; ctx.toast = (msg, action) => { if (action) offer = action; return null; };
+    X.endCombatAsk();
+    ctx.toast = realToast;
+    ck('#104 End combat that recovered something offers Undo recovery, which clears the needle too',
+       !!offer && offer.label === 'Undo recovery' && JSON.stringify(k.ammoSpent) === '{}', offer);
+    ck('#104 ...and Undo recovery brings the needle back with the rest',
+       !!offer && offer.run() === true && k.ammoSpent.s3 && k.ammoSpent.s3.n === 1 && k.ammoSpent.s1.n === 13 && k.ammoSpent.s2.n === 4 &&
+       k.inventory.find(i => i.id === 's1').qty === 7, k.ammoSpent);
+  }
+  ck('#104 a spent entry no longer carries asked', !('asked' in X.ammoSpentEntry({ammoSpent: {a: {n: 2, kind: 'arrow', asked: 1}}}, 'a')));
 }
 
 /* ---- the item editor's kind lists (#8) ---- */
@@ -3913,6 +4225,14 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('the options: None, each kind (the chosen one selected), then Other…',
      /^<option value="">None<\/option>/.test(h) && /<option value="bolt" selected>Bolt<\/option>/.test(h) && /<option value="__other">Other…<\/option>$/.test(h), h);
   ck('no None when the list has no label for it', !/value=""/.test(X.ammoKindOptionsHTML(['arrow'], 'arrow', '')));
+  // #104: the Recovery select
+  const sel = h2 => (h2.match(/<option value="([a-z]*)" selected>/) || [])[1];
+  const ro = X.recoverOptionsHTML({ammo: {kind: 'firearm bullet'}});
+  ck('#104 Recovery offers the default, Always and Never, naming the default when there is one',
+     /<option value="" selected>Default \(never comes back\)<\/option><option value="always">Always comes back<\/option><option value="never">Never comes back<\/option>/.test(ro), ro);
+  ck("#104 ...a thrown weapon's default is always", X.recoverOptionsHTML({weapon: {notes: 'Thrown'}}).includes('>Default (always comes back)<'));
+  ck("#104 ...an arrow's is the sheet's rule (the apostrophe escaped, as esc() writes it)", X.recoverOptionsHTML({ammo: {kind: 'arrow'}}).includes('>Sheet&#39;s rule<'));
+  ck("#104 ...and the item's own choice is selected", sel(X.recoverOptionsHTML({ammo: {kind: 'arrow'}, recover: 'never'})) === 'never' && sel(X.recoverOptionsHTML({recover: 'junk'})) === '');
 }
 
 /* ---- imported files and packs render inert ----
@@ -4164,6 +4484,15 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     spellAbility: 'wis', slots: Object.assign(X.blankChar().slots, {1: {total: '2' + P, used: 0}})}))));
   run('the print sheet\'s spell-slot line', () => ctx.printSheet(), false);
   ck('...which still prints a real slot count', /L1: 2\/2/.test(capture(() => ctx.printSheet()).html));
+  /* #104 final review item 3: a thrown weapon stays at ×0 — the print sheet
+     showed it with no count, as if ×1. It counts as the inventory badge does. */
+  X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {
+    inventory: [{id: 'p0', name: 'Dagger', qty: 0}, {id: 'p1', name: 'Rope', qty: 1}, {id: 'p3', name: 'Torch', qty: 3}, {id: 'pn', name: 'Chalk'}]}))));
+  {
+    const ph = capture(() => ctx.printSheet()).html;
+    ck('#104 the print sheet counts a ×0 item, and leaves a single one plain',
+       /<b>Dagger<\/b> ×0/.test(ph) && /<b>Rope<\/b>(?! ×)/.test(ph) && /<b>Torch<\/b> ×3/.test(ph) && /<b>Chalk<\/b>(?! ×)/.test(ph), ph);
+  }
 
   /* ---- the journal, driven through its DOM layer (#40) */
   X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {id: 'jnl'}))));
@@ -4468,7 +4797,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   {
     const items = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', 'srd52', 'items.json'), 'utf8')).items;
     X.resetRules();
-    X.mergeRules({system: 'XPHB', items: items.filter(x => ['Arrow', 'Arrows (20)', 'Longbow'].includes(x.name))}, 'x.json');
+    X.mergeRules({system: 'XPHB', items: items.filter(x => ['Arrow', 'Arrows (20)', 'Longbow', 'Dagger', 'Firearm Bullets (10)', "Alchemist's Supplies"].includes(x.name))}, 'x.json');
     X.character = X.blankChar(); X.character.system = 'dnd';
     const at = n => String(X.rules.items.findIndex(x => x.name === n));
     const why = res => res.err ? String(res.err.stack || res.err).split('\n').slice(0, 3).join(' | ') : undefined;
@@ -4520,7 +4849,48 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     const lb = X.character.inventory[X.character.inventory.length - 1] || {};
     ck('#8 picking Longbow after a bundle puts the quantity back to 1',
        !res.err && lb.name === 'Longbow' && lb.qty === 1, why(res) || lb);
-    X.resetRules();
+
+    /* #104 review finding 1: Insert from rules pack must re-sync the
+       Recovery field too — it stayed hidden (with the blank item's default)
+       when a thrown weapon or an ammunition bundle was inserted. */
+    res = capture(() => { ctx.openItemForm(); el('iLib').value = at('Dagger'); fire('iLib', 'change'); });
+    ck('#104 Insert from pack shows Recovery for a Thrown weapon, defaulted to Always',
+       !res.err && el('iRecoverWrap').style.display !== 'none' && /Default \(always comes back\)/.test(el('iRecover').innerHTML),
+       why(res) || { display: el('iRecoverWrap').style.display, html: el('iRecover').innerHTML });
+    res = capture(() => { ctx.openItemForm(); el('iLib').value = at('Firearm Bullets (10)'); fire('iLib', 'change'); });
+    ck("#104 ...and for an ammunition bundle, defaulted to this kind's own default (Never, for firearm bullets)",
+       !res.err && el('iRecoverWrap').style.display !== 'none' && /Default \(never comes back\)/.test(el('iRecover').innerHTML),
+       why(res) || { display: el('iRecoverWrap').style.display, html: el('iRecover').innerHTML });
+    res = capture(() => { ctx.openItemForm(); el('iLib').value = at("Alchemist's Supplies"); fire('iLib', 'change'); });
+    ck('#104 ...and hides it again for a plain item',
+       !res.err && el('iRecoverWrap').style.display === 'none',
+       why(res) || el('iRecoverWrap').style.display);
+    /* #104 final review item 4: the toggles read the form's CURRENT weapon (the
+       one just inserted), not the one the item opened with — ticking Ammunition
+       on and off again after inserting a Dagger hid the field, though Save
+       still keeps a Dagger's choice. */
+    const shown = () => el('iRecoverWrap').style.display !== 'none';
+    let seen = [];
+    res = capture(() => {
+      ctx.openItemForm(); el('iLib').value = at('Dagger'); fire('iLib', 'change');
+      fire('iIsAmmo', 'click'); seen.push(shown()); fire('iIsAmmo', 'click'); seen.push(shown());
+    });
+    ck('#104 after Insert of a Dagger, Ammunition on and off again keeps "After a fight" showing',
+       !res.err && seen.join() === 'true,true', why(res) || seen);
+    seen = [];
+    /* (capture() starts a fresh DOM, so the form is opened again in each) */
+    res = capture(() => {
+      ctx.openItemForm(); el('iLib').value = at('Dagger'); fire('iLib', 'change');
+      fire('iIsWeapon', 'click'); seen.push(shown()); fire('iIsWeapon', 'click'); seen.push(shown());
+      el('iWAmmo').value = 'arrow'; fire('iWAmmo', 'change'); seen.push(shown());
+      el('iWAmmo').value = ''; fire('iWAmmo', 'change'); seen.push(shown());
+      el('iName').value = 'Dagger'; el('iWDice').value = '1d4'; el('iWKind').value = 'melee'; el('iWAbil').value = 'finesse'; el('iWType').value = 'piercing';
+      el('iRecover').value = 'never'; fire('iSave', 'click');
+    });
+    ck('#104 ...Weapon off hides it and on shows it again; a weapon that fires ammunition is no thrown weapon',
+       !res.err && seen.join() === 'false,true,false,true', why(res) || seen);
+    const dg = X.character.inventory[X.character.inventory.length - 1] || {};
+    ck('#104 ...and Save keeps the choice the shown field made', !res.err && dg.name === 'Dagger' && dg.recover === 'never', why(res) || dg);
   }
 
   /* ---- the status form's Lasts row (#55), driven through the form ----

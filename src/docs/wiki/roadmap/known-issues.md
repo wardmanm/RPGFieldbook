@@ -78,6 +78,19 @@ Known behaviour that is accepted for now.
 - **Ammunition picker rows can look identical** when two grants each give "Arrow ×20": stacks of
   different grants stay apart by design, and nothing on the row tells them apart. An origin hint
   would. → ledger L4989, and [Ammunition](../features/ammunition.md)
+- **Undo recovery drops a home-joined entry's unrecovered remainder once the home stack is fired
+  out.** When recovery tops up an equivalent stack already on the sheet (the old one being gone)
+  and that stack is then fired down to nothing, `undoRecovery()` finds the stack it depended on gone
+  and does not restore the cleared entry, so the shots recovery did not give back are not put back
+  on record. Unreachable from the UI today: the shot's own toast replaces the one carrying Undo
+  recovery. → ledger L6147, and [Ammunition](../features/ammunition.md)
+- **Undo recovery asks whether a grant is live now, not whether it was revoked since.**
+  `grantSidLive()` checks the character's race, background and classes at Undo time, so a class
+  removed and re-added inside the Undo window reads as never revoked, and a cleared entry from its
+  old grant comes back. → ledger L6147, and [Ammunition](../features/ammunition.md)
+- **A weapon made in the item editor cannot be Thrown.** The editor has no weapon-notes field; Save
+  carries `weapon.notes` from the pack entry last inserted, so only pack data marks a weapon Thrown.
+  → ledger L6147, and [Ammunition](../features/ammunition.md)
 - **Xanathar's five Adamantine Ammunition pieces carry rarity "Unknown"** (5e-tools writes
   "unknown"), which sorts first in the item finder's Rarity filter. → ledger L4989, and
   [Ammunition](../features/ammunition.md)
@@ -147,8 +160,6 @@ Wanted, not yet done. Each needs work, not a source.
   the private repo's `docs/humblewood.md`
 - Journal pages and trackers don't print; trackers have no rest reset
   ([Journal](../features/journal.md)).
-- **Thrown weapons track no ammunition of their own** (Dart, Javelin, Dagger).
-  → [Ammunition](../features/ammunition.md)
 - **Firearm reloading and energy cells (XDMG) are not modelled.** → [Ammunition](../features/ammunition.md)
 - **Magic ammunition outside the selection rule is not converted**: BMT, AU and the 2014 DMG
   variants, and generic +N weapons. → [Ammunition](../features/ammunition.md)
@@ -462,3 +473,5 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-16 — Removed: a group named for an `Object.prototype` property is now refused (fixed); a group reopening after a case edit is kept by decision. → ledger L5872, #98
 - 2026-10-17 — Narrowed: trackers now show a group total (#93), so the deferred line drops "and no group totals". → ledger L6047, #95, #93
 - 2026-10-17 — Limitation: the Σ nested in the `role="button"` group header. → ledger L6057, #93
+- 2026-10-19 — Fixed and removed: thrown weapons now track their own ammunition (#104). Added: the printed sheet shows a ×0 item with no count. → ledger L6081, #104
+- 2026-10-19 — Fixed and removed: the printed sheet's ×0 count. Added: Undo recovery dropping a home-joined entry's remainder once the home stack is fired out, `grantSidLive()` checking the source now rather than "revoked since", and editor-made weapons that cannot be Thrown. → ledger L6147, #104

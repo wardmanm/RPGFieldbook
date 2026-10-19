@@ -35,3 +35,8 @@ Bullets below this line — leave the heading in place.
   into journal pages, ticks and dates included; Trackers now holds counters only.
 - A tracker group can show the total of its counters: tap the Σ on the group's heading.
 - Trackers lay out as tiles across the card instead of one long list.
+- Choose how ammunition comes back after a fight in Settings → Sheet display: half (the rules as
+  written), all, only the shots that hit, or none. Firearm bullets never come back, and any item can
+  be set to always or never. Thrown weapons such as daggers and javelins now have a Throw button
+  that counts them, and they come back after the fight. Ending combat recovers ammunition on its own,
+  with an Undo.

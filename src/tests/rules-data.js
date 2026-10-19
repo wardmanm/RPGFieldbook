@@ -333,12 +333,19 @@ for(const sys of ['homebrew','srd52']){
 {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
   const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
-  const hooks = ['data-ammo-fire', 'data-ammo-pick', 'data-ammo-load', 'data-ammo-recover'];
+  const hooks = ['data-ammo-fire', 'data-ammo-pick', 'data-ammo-load', 'data-ammo-recover', 'data-ammo-throw'];
   ck('every ammunition control has a click handler', hooks.every(h => js.includes('closest("[' + h + ']")')),
      hooks.filter(h => !js.includes('closest("[' + h + ']")')));
   ck('...and every one the handler names is drawn', hooks.every(h => new RegExp(h + '="\\$\\{esc\\(').test(js)));
   ck('deleting an item forgets its spent count', /\[data-del-item\][^\n]*forgetAmmo\(character,it\.id\)/.test(js));
-  ck('End combat offers the ammunition back once the fight has ended', /combatEnd\(character\)[\s\S]{0,200}offerAmmoRecovery\(\)/.test(js));
+  ck('#104 End combat recovers the ammunition once the fight has ended, with an Undo recovery',
+     /combatEnd\(character\)[\s\S]{0,200}applyAmmoRecovery\(\)/.test(js) && /label:"Undo recovery",run:\(\)=>undoRecoveryTap\(/.test(js));
+  ck('#104 Settings → Sheet display has the Ammo recovery select, wired to the character',
+     /id="setAmmoRec"/.test(js) && /getElementById\("setAmmoRec"\)[^\n]*addEventListener\("change"[^\n]*character\.ammoRecovery=/.test(js));
+  ck('#104 the item editor has a Recovery select, saved as item.recover',
+     /id="iRecover">\$\{recoverOptionsHTML\(it\)\}<\/select>/.test(js) && /rec\.recover=rv/.test(js));
+  ck("#104 the item editor's Quantity allows 0, so a thrown weapon at ×0 stays at ×0",
+     /id="iQty" type="number" min="0"/.test(js) && !/qty:num\(document\.getElementById\("iQty"\)\.value\)\|\|1/.test(js));
 }
 
 // ---------- the app's ammo tables agree with the SRD 5.2 data (#6)
