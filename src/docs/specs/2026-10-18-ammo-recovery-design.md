@@ -1,6 +1,6 @@
 # Ammunition recovery options and thrown weapons — design
 
-**Status:** approved 2026-10-18, not yet built · wave 1 of [1.9.0](../wiki/roadmap/1.9.0.md)
+**Status:** implemented on branch `issue/104-ammo-recovery` · 2026-10-19 · wave 1 of [1.9.0](../wiki/roadmap/1.9.0.md)
 **Issue:** #104 (ammo recovery should have options). Built on one branch, `issue/104-ammo-recovery`.
 Extends the ammunition design of [2026-10-02](2026-10-02-ammo-design.md); read the
 [Ammunition](../wiki/features/ammunition.md) page first.
@@ -214,6 +214,59 @@ End combat), [Combat view](../wiki/features/combat-view.md) (End combat no longe
   other deferred ammunition items stay deferred.
 - A count for thrown weapons that are not in the player's inventory (an improvised throw).
 - #105's combat-end dialog, which will show this recovery inside it; this branch keeps the toast.
+
+## As built
+
+Differences from this spec, and anything it left open, as the branch actually shipped (Task 7,
+2026-10-19). Browser QA (Task 7) drove every step in its brief and found nothing else to record
+here — see the ledger entry for exactly what was driven.
+
+- **Names.** §5.3's `throwWeapon()` is two functions: `throwAmmo()`, the pure half (`62-ammo.js`,
+  parallel to `fireAmmo()`), and `throwWeaponTap()`, the DOM tap (parallel to `fireWeapon()`). Both
+  share `shotDone()` with `fireWeapon()` for the save, the redraw and the toast's Undo, so Fire and
+  Throw are identical once a shot or throw is recorded — not repeated code, as §5.3 asked for.
+- **The thrown row's visibility (§5.2).** §5.2 said a thrown weapon's row "is drawn whether or not
+  it is equipped, as today" — true of a launcher's row, but a controller ruling during the build
+  (constraints.md) overrides it for a thrown weapon specifically: its row, like every weapon's row,
+  shows **only while equipped**. A sheathed dagger draws no Throw button, matching every other
+  attack row's rule and avoiding a throw control for a weapon not in hand.
+- **Quantity 0 (found while planning).** The item editor's Quantity box floored to 1 on save
+  (`num(v)||1`), so editing a thrown weapon already at ×0 — with nothing else changed — silently
+  turned it back into ×1. Fixed end to end: the box allows `min="0"`, and the save reads
+  `Math.max(0, num(v))`. Two totals that read quantity as `num(it.qty)||1` had the same bug for any
+  ×0 item: `inventoryTotal()` and the new `itemWeightTotal()` (split out of the carried-weight sum)
+  now read it through `itemQty()`, and the inventory row's ×N badge shows **×0** instead of nothing,
+  which used to look like ×1. See [Inventory](../wiki/features/inventory.md).
+- **§6 vs §8, resolved for §8.** §6's "every entry it cleared is put back as it was" reads as an
+  unconditional restore; §8's edge cases (a stack deleted at ×0, a revoking grant) are the real rule
+  `undoRecovery()` implements: a cleared entry is restored only when nothing since has made restoring
+  it wrong — a shot fired since is never double-counted (the shortfall comes off the restored entry's
+  own `n` first), and an entry whose stack was already gone at recovery is **not** restored if the
+  grant that made it has since been revoked (`grantSidLive()`). §8 governs; §6 is the simplified
+  summary. Three findings on this exact path were caught and folded in before the feature shipped
+  (commit `3cbc6a5`).
+- **A recovered stack Undo leaves at ×0 is removed (§6 said "never below 0").** §6 describes Undo
+  clamping a quantity at 0; the actual rule is the one that already governs every ammunition stack
+  on the sheet — a stack at ×0 does not exist, it is removed (see [Ammunition](../wiki/features/ammunition.md),
+  "A stack at 0"). `undoRecovery()`'s `take()` removes the item when taking its last would leave it
+  at ×0, exactly as the last shot does; it is a true no-op at `n===0`, so Undo never deletes a ×0
+  stack that a zero-back recovery only touched to tie its cleared entry to it (review round 1,
+  commit `554f6e3`, folded in after the review found Undo deleting a stack it had given nothing to).
+  A thrown weapon is the one exception by design (decision 8): it stays at ×0 instead.
+- **Firearm bullets on a sheet from before #104 now recover nothing, not half.** §8's "A sheet from
+  before #104 … reads as half, every shot unanswered — exactly today's behaviour" is true of
+  `character.ammoRecovery` and the tallies, but not of a firearm bullet specifically: decision 5's
+  app default (`AMMO_RECOVER_DEFAULTS`) applies by the item's own kind, not by anything stamped on
+  the sheet, so a pre-#104 sheet's firearm bullets — which used to recover at half like every other
+  stack — now recover nothing unless the player sets that item's own Recovery to Always. This is the
+  intended fix (decision 5's whole point), recorded here because it is the one place "a sheet from
+  before #104 behaves exactly as today" does not hold.
+- **`recoverShows()`** (`80-modal-forms.js`) is the one rule, not in the original spec, for whether
+  the item editor's Recovery field shows at all: ammunition, or a weapon — the one just inserted by
+  Insert from pack, not necessarily the item being edited — that is Thrown. Review round 2 (commit
+  `554f6e3`) found Insert from pack left the field exactly as the blank new-item form had it instead
+  of re-syncing to the inserted item's own defaults; `recoverShows()` is now shared by the initial
+  render, the Ammunition toggle and Insert from pack, so the three can't drift again.
 
 ## 12. Release note
 

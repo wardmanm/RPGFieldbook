@@ -9,9 +9,10 @@ can carry the player's own fields (quantity, origin, favourite, filing) alongsid
 **Code:** `renderInventory()`, `invItemHTML()`, `invSection()`, `invSectionName()`, `invGroups()`, `invTotalsHTML()`, `renderEncPill()`,
 `itemUse()`, `detectItemUse()`, `itemUsesRowHTML()` in `40-sheet.js` · `ORIGIN_KINDS`,
 `originBadge()`, `originFromSid()`, `itemOrigin()`, `originOptionsHTML()`, `itemMetaLine()`,
-`costToGp()`, `inventoryTotal()`, `itemWeight()`, `coinsWeight()`, `carriedWeight()`, `encState()`,
-`encSpeed()` in `25-origins-items.js` · `browseItems()`, `addLibraryItems()`, `finderQty()`,
-`openBrowse()` in `85-browse.js` · `openItemForm()`, `groupFieldHTML()`, `useItem()`, `applyItemUse()`,
+`costToGp()`, `inventoryTotal()`, `itemWeight()`, `itemWeightTotal()`, `coinsWeight()`,
+`carriedWeight()`, `encState()`, `encSpeed()` in `25-origins-items.js` · `browseItems()`,
+`addLibraryItems()`, `finderQty()`, `openBrowse()` in `85-browse.js` · `openItemForm()`,
+`groupFieldHTML()`, `useItem()`, `applyItemUse()`, `itemQty()`,
 `openItemUsePrompt()`, `addStatusByName()` in `80-modal-forms.js` · `resetItemUses()`,
 `parseDiceExpr()`, `rollDiceExpr()` in `65-resources.js` · `renderCoins()`, `applyCoinInput()`,
 `signedEntry()`, `coinKeys()`, `openCoinAdjust()`, `convertCoins()` in `66-coins-hp.js` ·
@@ -25,12 +26,17 @@ can carry the player's own fields (quantity, origin, favourite, filing) alongsid
 
 **The item.** `{id, name, qty, description, effects, equipped}` plus optional `category`, `type`,
 `cost` (a gp **number**), `weight` (lb per unit), `weapon`, `armor`, `uses`, `use`, `origin`, `fav`,
-`sectionOverride`, `grant` (the granting sid), `attackId`, the `src` stamp, and a launcher's or a
-stack's ammunition fields, `ammo` and `ammoStack` — see [Ammunition](ammunition.md). Effects apply
-only while `equipped` — see [Computed stats & effects](../architecture/computed-stats-and-effects.md).
-The item editor's own **Ammunition it fires** select (on a weapon) writes `weapon.ammo`, and its
-**Ammunition** toggle — a **Kind** and a **Bonus to attack and damage** of +0 to +3 — writes `ammo`;
-Other… opens a box for a kind not yet on the sheet. See [Ammunition](ammunition.md).
+`sectionOverride`, `grant` (the granting sid), `attackId`, the `src` stamp, a launcher's or a
+stack's ammunition fields `ammo` and `ammoStack`, and a top-level `recover` (`"always"` or
+`"never"`, #104) — see [Ammunition](ammunition.md). `qty` may be `0`: the item editor's Quantity box
+allows it (`min="0"`, no longer floored to 1 on save), for a Thrown weapon spent down to nothing or
+any other item a player wants to zero out rather than delete. Effects apply only while `equipped` —
+see [Computed stats & effects](../architecture/computed-stats-and-effects.md). The item editor's own
+**Ammunition it fires** select (on a weapon) writes `weapon.ammo`, and its **Ammunition** toggle — a
+**Kind** and a **Bonus to attack and damage** of +0 to +3 — writes `ammo`; Other… opens a box for a
+kind not yet on the sheet. For ammunition or a Thrown weapon, an **After a fight** select writes
+`recover` — "Sheet's rule" (named when the app has a default for this item), Always, Never. See
+[Ammunition](ammunition.md).
 
 **Sections.** `invSection(it)` files an item under one of `INV_ORDER` — Weapons, Armor, Consumables,
 Magic Items, Tools, Gear, Loot — or a section of the player's own. A `sectionOverride` wins outright,
@@ -63,8 +69,12 @@ Detail box is **disabled** until a kind is chosen. `origin` is character-local: 
 `UPD_FIELDS`, so a rules update never touches it.
 
 **Cost and value.** `costToGp()` parses the pack's display string ("15 gp", "2 sp", "1 gp 5 sp") into
-gp. The row shows cost each; `inventoryTotal()` (Σ cost × qty, 2 dp) is the Total value line, shown
-when above zero.
+gp. The row shows cost each, and its ×N quantity badge (`itemQty(it)!==1`) once qty is anything but
+1 — a ×0 item (a Thrown weapon spent down, or any item zeroed by hand, #104) shows **×0** rather
+than nothing, which used to look like ×1. `inventoryTotal()` (Σ cost × qty, 2 dp) is the Total value
+line, shown when above zero, and `itemWeightTotal()` (`itemWeight()` × qty) is what the carried
+weight sums; both read quantity through `itemQty(it)` — never `num(it.qty)||1`, which read a ×0
+item's quantity as 1 — so a ×0 item adds no value and no weight (#104 review).
 
 **The item finder.** `browseItems()` is the shared picker ([Shell](../ui/shell.md)) over
 `rules.items`: search on name/type/category/rarity, facets Category, Rarity and Needs attunement,
@@ -158,6 +168,10 @@ the inventory and recompute, because coins have weight.
   bonus hid it; when #74 removed the effect, the inserted Dagger of Venom would have had no +1. → L4392
 - **The inventory caret pointed left when open**: drawn down, then rotated again by the shared
   `.fcaret`. → L3525
+- **Before #104, the Quantity box floored to 1 on save**, so editing a thrown weapon already at ×0
+  (nothing else touched) turned it back into ×1. Found while planning #104, not caught by Playwright
+  — the fixture never saved a ×0 item. The box now allows `0` end to end: `min="0"` and the save
+  reading `Math.max(0, num(v))` rather than `num(v)||1`. → L6081, #104
 
 ## Decisions
 
@@ -205,3 +219,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-02 — The item editor sets what a weapon fires and marks ammunition, with a bonus; Insert from pack unpacks a bundle. → ledger L4978, #8
 - 2026-10-16 — Category is the shared group field: a section of the player's own, or one of the seven in any case. → ledger L5823, #98
+- 2026-10-19 — `recover` joins the item shape; the editor's Quantity allows 0; totals and the ×N badge read quantity through `itemQty()`. → ledger L6081, #104

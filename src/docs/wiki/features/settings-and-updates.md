@@ -27,7 +27,8 @@ the sidebar's Rules data badge, and Import settings driven through its real hand
 `char-update.js` (`cmpVer()`, `updBannerHTML()`) · **See also:**
 [Rules packs](../architecture/rules-packs.md), [Data archive](../architecture/data-archive.md),
 [Storage](../architecture/storage.md),
-[Rules-update tool](rules-update-tool.md), [Theming & icons](../ui/theming-and-icons.md),
+[Rules-update tool](rules-update-tool.md), [Ammunition](ammunition.md),
+[Theming & icons](../ui/theming-and-icons.md),
 [RELEASING](../../RELEASING.md)
 
 ## How it works
@@ -43,7 +44,7 @@ and actions are buttons.
 | Page | Groups and settings |
 |---|---|
 | **Appearance** | *Look:* skin (changing it with a character open also sets its `system`), mode (system/light/dark), hand-drawn borders. *Interface:* icon tabs, "Tap outside to close dialogs" (`settings.backdropClose`, off by default, #106; see [Shell](../ui/shell.md)) |
-| **Sheet display** | Only with a character open, titled "For *name*". *Cards:* skills display, Hit Dice display, colour current HP, the Trackers card |
+| **Sheet display** | Only with a character open, titled "For *name*". *Cards:* skills display, Hit Dice display, colour current HP, the Trackers card. *Ammunition* (#104): "Ammo recovery" — Half (RAW) / All / Hits only / None, writing `character.ammoRecovery` |
 | **Carrying** | Only with a character open, titled "For *name*". *Size and weight:* size (a dropdown), encumbrance (segmented: Off, Standard, Variant), coins count as weight, and the live "carrying X of Y" line (`encSettingsHint()`) |
 | **Rules data** | *Sources:* the URL list and its Add box, Fetch all, Import files, Get templates, Clear all (set apart), the status line. *Loaded data:* the loaded-data list. *This sheet* (with a character open): the rules-update check, with the version the sheet was last checked against |
 | **Backup** | *Characters:* the character library. *Settings file:* Export and Import, and the status line that says what an import did (`#setImpStatus`) |
@@ -291,3 +292,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-16 — Appearance gains "Tap outside to close dialogs" (`backdropClose`, off by default, in `SETTINGS_KEYS`). → ledger L5903, #106
 - 2026-10-16 — Settings is a sidebar of six pages, every setting a row with its control on the right; an icon rail with Icon tabs or on a narrow screen; the last page is remembered. → ledger L5930, #107
 - 2026-10-16 — The page pane keeps its controls clear of its scrollbar. → ledger L5976, #107
+- 2026-10-19 — Sheet display gains an Ammunition group: "Ammo recovery" (half/all/hits/none), writing `character.ammoRecovery`. → ledger L6081, #104

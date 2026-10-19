@@ -8,7 +8,7 @@ comes from keeping that loop lossless: a sheet saved by any version must still o
 
 **Code:** `blankChar()`, `statStyle()`, `glossRepair()` in `00-constants.js`; `migrate()`, `migrateWeaponEquip()`,
 `exportChar()`, `importChar()`, `finishImport()` in `71-char-io.js`; `migrateAmmo()`,
-`ammoSpentMap()` in `62-ammo.js`; `newCharacter()`,
+`ammoSpentMap()`, `ammoRecoveryOf()` in `62-ammo.js`; `newCharacter()`,
 `loadCharById()` in `75-home-theme.js`; `charNeedsUpdate()` in `72-char-update.js`;
 `markCharChecked()` in `73-char-update-ui.js`; read-time guards `featCol()`, `invCol()`, `atkCol()`
 in `20-lists.js`, `hdStyle()` in `65-resources.js`, `encMode()` in `25-origins-items.js`,
@@ -29,9 +29,9 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
 | structured objects | `hp` `{cur, max, temp, locked:true}`, `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
 | lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers` |
-| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack id → `{n, kind, snap, asked}`) |
+| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
-| per-character settings | `statStyle`, `hdStyle`, `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound` |
+| per-character settings | `statStyle`, `hdStyle`, `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `ammoRecovery` (`"half"` default, #104) |
 | text | `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
 
 Inputs bound with `data-path` write the raw input string, so numbers on the sheet are often
@@ -72,8 +72,10 @@ above, nothing inside a list item or a map value is shape-checked. The code that
 guards them instead (a class, spell or status whose `name` is missing or a number is turned into
 text before it is compared or sorted): `noteMap()`, `featCol()`, `invCol()`, `atkCol()` and
 `combatSectionsOf()` each accept a missing or wrong-typed value. Resolvers such as `statStyle()`,
-`hdStyle()` and `encMode()` fall back to exactly the value `blankChar()` defaults to, so an old
-sheet lands on the new-character look and the setting needs no migration of its own. A status gains
+`hdStyle()`, `encMode()` and `ammoRecoveryOf()` fall back to exactly the value `blankChar()`
+defaults to, so an old sheet lands on the new-character look and the setting needs no migration of
+its own — `ammoRecoveryOf()`'s fallback of `"half"` matches `blankChar()`'s own default (#104), so a
+sheet saved before the field existed reads exactly as one that has it set to `"half"`. A status gains
 its optional timed-condition fields the same way: `durationSec` and `elapsedSec` need no entry in
 `blankChar()` or `migrate()`, since every reader coerces them (`statusDuration()`, `statusElapsed()`
 in [Conditions & concentration](../features/conditions-and-concentration.md)).
@@ -175,3 +177,4 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
   tracker, clearing itself with an Undo. → ledger L5031, #55
 - 2026-10-16 — `migrateAmmo()` runs once more on every sheet (`AMMO_PASS` 2); a new sheet starts at that pass. → ledger L5780, #96
 - 2026-10-17 — `trackerTotals` joins the collapse-style maps, a per-tag switch for a tracker group's total (#93); `trackers[].type` loses `checklist` and `task`, migrated into journal pages by `migrateTrackerPages()` (#95). → ledger L6047, #95, #93
+- 2026-10-19 — `ammoRecovery` joins the per-character settings, defaulted `"half"` in `blankChar()`; `ammoSpent` entries gain `hits`/`misses`. → ledger L6081, #104

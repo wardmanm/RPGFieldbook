@@ -15,7 +15,8 @@ its own tab. Leaving the tab never ends combat.
 `cvNeighbours()`, `syncCombatView()`, `startCombatNow()`, `endCombatAsk()`, `startCombatDrag()`,
 `moveCombatCard()`, `setCombatOrder()` in `87-combat.js` · `COMBAT_DEFAULTS` in `00-constants.js` ·
 `selectTab()`, `buildToc()`, `scrollToCard()` in `40-sheet.js` · `advanceRound()`, `toast()` in
-`60-attacks.js` · markup `src/html/70-combat.html`, styles `src/css/45-combat.css` · **Tests:**
+`60-attacks.js` · `applyAmmoRecovery()`, `undoRecoveryTap()` in `62-ammo.js` · markup
+`src/html/70-combat.html`, styles `src/css/45-combat.css` · **Tests:**
 `sheet.js` (the pure half), `rules-data.js` (the tab wiring) · **See also:**
 [the spec](../../specs/2026-09-24-combat-view-design.md), [the plan](../../plans/2026-09-24-combat-view.md),
 [Spells](spells.md), [Ammunition](ammunition.md), [Sections & layout](../ui/sections-and-layout.md),
@@ -56,13 +57,17 @@ then the tracker with End at the far right.
 `startCombatNow()` → `combatStart()`: active, round 1, active spells untouched. ◀ and ▶ are
 `advanceRound(∓1)`, shared with the Active Spells card: every active spell and every active timed
 condition moves 6 s ([Conditions & concentration](conditions-and-concentration.md)), and in combat
-the round cannot drop below 1. End asks first (`endCombatAsk()`), then `combatEnd()` zeroes the round
-and returns the summary. Once the fight is over, `applyAmmoRecovery()` recovers what the character's
-rule gives back and adds it to the toast, with an Undo recovery ([Ammunition](ammunition.md)). The header shows time at the *start* of the round
-(`combatElapsedSec()`, round 7 → 36 sec); the summary counts the round being ended (round 7 → 7
-rounds, 42 sec). Every round-mover repaints through `renderCombatChrome()`. The round is announced
-from `#cvLive`, outside the header that is repainted; a repaint keeps focus on the same button by id,
-falling back when it is gone or disabled (◀ at round 1 → ▶, Start → ▶, End → Start).
+the round cannot drop below 1. End asks first (`endCombatAsk()`), then `combatEnd()` zeroes the
+round and returns the summary. `applyAmmoRecovery()` (#104) then recovers ammunition **on its
+own**, whenever anything is recoverable under the character's rule — no question — and its summary
+("recovered 6 of 12 arrows, 2 of 2 daggers") joins the End combat toast, which carries **Undo
+recovery** (`undoRecoveryTap()`): it reverses exactly that recovery, scoped to the character it was
+shown for, and does nothing after a switch — see [Ammunition](ammunition.md). The header shows time
+at the *start* of the round (`combatElapsedSec()`, round 7 → 36 sec); the summary counts the round
+being ended (round 7 → 7 rounds, 42 sec). Every round-mover repaints through `renderCombatChrome()`.
+The round is announced from `#cvLive`, outside the header that is repainted; a repaint keeps focus
+on the same button by id, falling back when it is gone or disabled (◀ at round 1 → ▶, Start → ▶, End
+→ Start).
 
 **The tab-bar button.** `renderCombatButton()`: the swords alone when idle; highlighted with "Rd N"
 in combat, on every tab (at ≤400px just the number). It takes `.active` while the combat tab shows.
@@ -172,3 +177,4 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-10-06 — In the combat view the two cards draw compact and read-only. → ledger L5046, #62
 - 2026-10-12 — No ✕ and no ☰ of its own: the tab bar's ☰ serves the Combat tab; focus fallbacks go to the swords; the phone header is one row out of combat. → ledger L5684, #80
 - 2026-10-16 — The By ability header keeps a full-size name, modifier and score in the view. → ledger L5756, #92
+- 2026-10-19 — End combat recovers ammunition on its own in place of asking, with Undo recovery on the toast. → ledger L6081, #104

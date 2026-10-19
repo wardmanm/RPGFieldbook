@@ -6,15 +6,19 @@ ammunition knows its kind and any magic bonus. Ammunition arrives in bundles in 
 is its count.
 
 **Code:** `ammoKindOf()`, `itemAmmo()`, `weaponAmmoKind()`, `ammoRepairDef()`, `ammoStacks()`, `loadedStack()`,
-`unpackAmmo()`, `ammoTable()`, `rebaseAmmo()`, `migrateAmmo()`, `ammoSpentEntry()`, `fireAmmo()`,
-`undoFire()`, `ammoRecoverable()`, `recoverAmmo()`, `attackAmmo()`, `forgetAmmo()`,
-`forgetGrantAmmo()`, `ammoLineHTML()`, `ammoChoiceHTML()`,
-`fireWeapon()`, `undoFireTap()`, `openAmmoPicker()`, `loadAmmo()`, `recoverWeaponAmmo()`,
-`applyAmmoRecovery()`, `undoRecoveryTap()`, `ammoKindChoices()`, `ammoKindLabel()`, `ammoKindOptionsHTML()` in
-`62-ammo.js` · `tidyRule()` in `89-rules-merge.js` · `openItemForm()` in `80-modal-forms.js` · `migrate()` in `71-char-io.js` ·
+`unpackAmmo()`, `ammoTable()`, `rebaseAmmo()`, `migrateAmmo()`, `ammoSpentEntry()`, `ammoRecordShot()`,
+`fireAmmo()`, `undoFire()`, `ammoRecoverable()`, `recoverAmmo()`, `undoRecovery()`, `grantSidLive()`,
+`attackAmmo()`, `forgetAmmo()`, `forgetGrantAmmo()`, `ammoLineHTML()`, `thrownLineHTML()`,
+`ammoChoiceHTML()`, `fireWeapon()`, `throwWeaponTap()`, `throwAmmo()`, `shotDone()`, `undoFireTap()`,
+`openAmmoPicker()`, `loadAmmo()`, `recoverWeaponAmmo()`, `applyAmmoRecovery()`, `undoRecoveryTap()`,
+`ammoKindChoices()`, `ammoKindLabel()`, `ammoKindOptionsHTML()`, `AMMO_RECOVERY`, `ammoRecoveryOf()`,
+`itemRecover()`, `weaponThrown()`, `ammoThrownKind()`, `AMMO_RECOVER_DEFAULTS`, `ammoDefaultRecover()`,
+`ammoRecoverRule()`, `ammoBack()`, `ammoEntryItem()`, `ammoAsks()`, `askAmmoOutcome()`,
+`recoverOptionsHTML()` in `62-ammo.js` · `tidyRule()` in `89-rules-merge.js` · `openItemForm()`,
+`recoverShows()` in `80-modal-forms.js` · `migrate()` in `71-char-io.js` ·
 `revertEquipmentGrants()` in `50-classrace.js` · `newCharacter()` in `75-home-theme.js` ·
 `updProject()` in `72-char-update.js` · `endCombatAsk()` in `87-combat.js` · **Data:** `weapon.ammo`,
-item `ammo`, bundle `pack` ([rules-schema](../../../../docs/rules-schema.md) §6.8) · **Tests:**
+item `ammo`, item `recover`, bundle `pack` ([rules-schema](../../../../docs/rules-schema.md) §6.8) · **Tests:**
 `sheet.js`, `char-update.js`, `rules-data.js` · **See also:** [Inventory](inventory.md),
 [Attacks & damage](attacks-and-damage.md), [Combat view](combat-view.md),
 [Converter](../data/converter.md), [Rules-update tool](rules-update-tool.md)
@@ -79,18 +83,97 @@ nothing is loaded), and Recover N when N > 0. The picker button opens `openAmmoP
 rows (`ammoChoiceHTML()`) read the stack's name, its `×qty`, and its bonus as `· +N`/`· -N` when it
 carries one, so a plain and a magic stack of the same piece read apart.
 
-**Firing and Undo.** `fireAmmo()` takes one piece, removes the stack at its last, and counts
-the shot in `ammoSpent[stack id]` as `{n, kind, snap, asked}` — rebuilt every shot, so it carries
-the previous entry's `asked` forward by hand rather than losing it. `undoFire()` puts back one
-piece, or the whole stack at its old place, and the whole entry, `asked` included. An Undo for
-another character, or for a stack the player deleted since, does nothing.
+**Firing and Undo.** `fireAmmo()` takes one piece, removes the stack at its last, and counts the
+shot through `ammoRecordShot()` — shared with Throw (below), so both count the same way: it
+rebuilds `ammoSpent[id]` every shot as `{n, hits, misses, kind, snap}`, one more on `n`, one more
+on `hits` or `misses` when the Hit/Miss question (below) was answered, and a fresh one-piece `snap`
+for recovery to rebuild from — so the running tallies are carried forward by hand rather than lost.
+`undoFire()` puts back one piece, or the whole stack at its old place, and the whole entry as it
+was, tallies included. An Undo for another character, or for a stack the player deleted since,
+does nothing.
 
-**Recovery.** `ammoRecoverable()` gives half of each stack's count, rounded down per stack, and
-summed per kind. `recoverAmmo()` adds it back: into an equivalent stack already on the sheet (not a
-bundle, the same lower-cased trimmed name, bonus and grant as the `snap`) when one exists —
-repointing any weapon whose `ammoStack` named the old id — else it rebuilds the stack from `snap`
-under the old id, as before; either way it clears those counts. End combat recovers on its own
-(`applyAmmoRecovery()`), with an Undo recovery (#104).
+## Thrown weapons
+
+A weapon with the property **Thrown** — Dagger, Dart, Handaxe, Javelin, Light Hammer, Spear,
+Trident in the shipped packs — throws itself instead of firing from a stack. `weaponThrown(it)`
+matches a whole property in `weapon.notes`, which are `·`-separated segments, each
+comma-separated ("Range 20/60 · Finesse, Light, Thrown · Mastery: Nick"), any case; a launcher
+(`weapon.ammo`) is never thrown, and a homebrew weapon gets the property by typing it into its own
+notes. `ammoThrownKind(it)` is what its throws are counted as: the weapon's own lower-cased name,
+so a Dagger and a Javelin never share a kind.
+
+`ammoLineHTML()` draws `thrownLineHTML()` under a thrown weapon's row instead of a launcher's
+line — only while the weapon is equipped, like every weapon's row: the weapon's own count (no
+picker — it throws itself), **Throw** (disabled at ×0), and Recover N. `throwAmmo()` spends one off
+the weapon item's own count, never below 0: at ×0 the item **stays** on the sheet, so its row and
+Throw don't vanish mid-fight, and recovery still has something to add back onto. `throwWeaponTap()`
+is the DOM tap; it shares `shotDone()` with `fireWeapon()` for the save, the redraw and the toast's
+Undo, so Fire and Throw behave identically once a shot or throw is recorded. Recovery (below) gives
+a thrown weapon's count back exactly as it gives a launcher's stack back.
+
+## The question
+
+Fire and Throw ask first only when the rule for that item (ignoring what it has already fired,
+`ammoAsks(c, it)`) is Hits only. `askAmmoOutcome()` opens a small dialog, "*Item*: hit or miss?",
+focus starting on **Hit**; closing it — ✕ or Escape — fires or throws nothing, so a stray tap costs
+no ammunition. Every other rule — Half, All, an item's own Always or Never, a thrown weapon on its
+default of Always — fires or throws at once. The toast names the answer: "Fired an arrow · hit · 9
+left", "Threw a Dagger · miss · 0 left".
+
+## Recovery
+
+Four rules, `character.ammoRecovery` (`AMMO_RECOVERY`: Half — rules as written — · All · Hits only
+· None), chosen in Settings → Sheet display; `ammoRecoveryOf(c)` reads it and anything else — an
+old sheet has no field at all — reads as Half, today's behaviour.
+
+`ammoRecoverRule(c, it)` is the rule for one item: its own override (`itemRecover()`, a top-level
+`it.recover`, `"always"` or `"never"`, kept **outside** `ammo` and `weapon` since the rules-update
+tool owns those) when it has one; else the app's own default (`ammoDefaultRecover()`:
+`AMMO_RECOVER_DEFAULTS` makes a firearm bullet `"never"`; a thrown weapon (above) is `"always"`;
+anything else has none); else the character's rule. None does not override an item set to Always —
+a thrown dagger, or a bullet marked Always by hand, still comes back on a table that otherwise
+recovers nothing.
+
+`ammoBack(rule, e)` is how many of one entry's `{n, hits, misses}` shots come back:
+
+| Rule | Back |
+|---|---|
+| `always`, `all` | `n` |
+| `half` | `⌊n / 2⌋` |
+| `hits` | `hits + ⌊(n − hits − misses) / 2⌋` — every hit, plus half of what nobody answered for |
+| `never`, `none` | 0 |
+
+An entry from before #104 has neither `hits` nor `misses`; `ammoSpentEntry()` reads both as 0, so
+Hits-only treats every old shot as unanswered and gives back half of it. The rule is read at
+*recovery*, never at the shot, so changing the setting reaches shots already fired.
+
+`ammoRecoverable(c)` sums `ammoBack()` per kind (a thrown weapon's kind is its own lower-cased
+name), listing only kinds with something to give back, as before #104. `recoverAmmo(c, kinds, rec)`
+gives each entry's kind what its rule allows, by the paths it had before — onto the stack, onto an
+equivalent stack already on the sheet (repointing any weapon loaded from the old id), or rebuilt
+from the `snap` under the old id; for a thrown weapon, onto the weapon item, still on the sheet at
+×0 — and clears the entries it recovered. When `rec` is passed it is filled with a **recovery
+record**: `added`, `made` and `repointed` lists (each carrying `from`, the `ammoSpent` id it answers
+for) and `cleared` (each entry's value just before it was cleared).
+
+`undoRecovery(c, rec)` reverses exactly that recovery, no more: each `added`/`made` quantity comes
+back off its item (any stack it leaves at ×0 is removed, as the last shot removes one — true
+everywhere else in the app too; a thrown weapon stays at ×0 instead of being removed); a stack it
+rebuilt goes while it holds no more than it was given; a weapon it repointed points back only if it
+still points where recovery left it, not wherever the player has since loaded it. A shot fired
+since may have already used some or all of what Undo is taking back; the shortfall comes off the
+restored entry's own `n` first, so those shots are never counted twice. A cleared entry that
+depended on a stack at recovery (present even for a zero-back entry, joined into a home stack, or
+rebuilt) comes back only if that stack is still on the sheet, or a new entry has already taken its
+id (a shot fired since); one with no dependency at all — its stack was already gone when it was
+cleared — comes back as before, unless its snapshot names a granting source that has since been
+revoked (`grantSidLive()`, mirroring the sid shapes `removeRace()`/`removeBackground()`/
+`removeClass()` check — an unrecognised shape reads as still live, so Undo defaults to restoring
+rather than guessing). Undo recovery applies once, and does nothing after a switch to another
+character.
+
+End combat recovers on its own (`applyAmmoRecovery()`), with Undo recovery on the toast
+(`undoRecoveryTap()`) in place of the old Yes/No question — see [Combat view](combat-view.md).
 
 **Forgetting a stack's count.** Deleting a stack takes its `ammoSpent` entry with it
 (`forgetAmmo()`): there is nothing left to recover into. Removing the class or background that
@@ -116,10 +199,22 @@ fills the form with Arrow ×20 already marked as ammunition — the one place th
 is filled for the player. Save always carries `ammoStack` and `pack` from the item being edited,
 since neither is on the form.
 
+For ammunition or a thrown weapon, an **After a fight** select (`recoverOptionsHTML(it)`, #104)
+writes `it.recover`: "Sheet's rule" (named when the app has a default for this item — "Default:
+never comes back", "Default: always comes back"), Always, Never; the first choice deletes the
+field. `recoverShows(ammoNow, wobj)` is the one rule for whether the field shows at all — ammunition
+or a Thrown weapon — shared by the initial render, the Ammunition toggle, and **Insert from pack**,
+so the three can't drift: picking a pack weapon that is itself Thrown, or a pack entry that is
+ammunition, re-syncs the field's visibility and its options to that item's own defaults.
+
 ## Rules that must hold
 
 - **Per-character ammo state never goes inside `weapon`.** The rules-update tool owns `weapon`: a
   value there reads as the player's edit, and an applied update wipes it.
+- **`item.recover` is top-level, outside both `ammo` and `weapon`**, for the same reason — it is the
+  player's own edit in the item editor, never a pack field.
+- **The rule is read at recovery, never at the shot.** Changing the sheet's setting with shots
+  outstanding changes what they get back; no shot carries its own copy of the rule.
 - **The pass re-baselines only what it wrote, and never over a player's edit.** Re-baselining more
   would hide a real pack change; re-baselining an edited field would let an update overwrite it.
 - **The pool repair only fills what is missing.** A pack that names its own kind, bonus or bundle
@@ -163,7 +258,7 @@ Settled with Mike on 2026-10-01 and 2026-10-02; the full discussion is in
 |---|---|---|
 | Where ammo is spent | A **Fire** button on the weapon's attack row, which the combat view already shows | The inventory row: away from the attack, and the inventory card is not in the combat view by default. Both: a second control for the same thing |
 | How a weapon finds its ammo | **By kind, the player picks the stack**: a longbow takes arrows and loads the Arrow stack itself; with plain and +1 arrows both carried, the player chooses, and the choice is remembered | Always choosing by hand: a step every time for the common single-stack case. Kind only: no way to load the +1 arrows |
-| Recovery | **Asked at End combat, plus a Recover button** on the row: half of what was fired since the last recovery, rounded down | A button only (the first answer, revised 2026-10-02): the prompt is where the player is when it matters. End combat only: shots fired outside a tracked fight would never come back |
+| Recovery (revised by #104, below) | **Half of what was fired, rounded down, is now one of four rules the player chooses** (#104) | Always asking at End combat, plus a Recover button on the row, with no choice of rule: Mike wanted a table that doesn't use the RAW half, or that wants nothing back, to say so |
 | Bundles | **Unpack on arrival**: "Arrows (20)" ×2 becomes "Arrow" ×40, from the finder, starting equipment and Insert from pack; sheets already holding bundles unpack once on load | Unpack on first shot: inventories look inconsistent. Count inside a bundle: "×2, 7 left in the open one" |
 | A stack at 0 | **Removed, like a potion**; recovery recreates it from a copy kept when it was spent | Keeping it at ×0: Mike chose removal; the copy makes recovery work regardless |
 | The 2014 duplicates (Crossbow Bolt, Blowgun Needle, their bundles, the 2014 Net) | **Stop shipping them**: the converter honours `reprintedAs` | Leaving them: a second kind of bolt in the stack picker. A separate issue: they are in the way of this one |
@@ -173,9 +268,24 @@ Settled with Mike on 2026-10-01 and 2026-10-02; the full discussion is in
 | A pack older than ammunition (#96) | **The app fills in what it lacks, from its own tables, at load** (`ammoRepairDef()` in `tidyRule()`), and runs the sheet pass once more | Only a data release: players would stay broken until they downloaded it, and so would any older or homebrew pack naming the standard weapons. Only re-running the sheet pass: every copy made afterwards would arrive bare again |
 | Merging an unpacked bundle | **Only into a stack of the same name, bonus and grant** | Merging any stack of the kind: would pull from a stack the player kept apart on purpose, and take back more than a removed class actually granted |
 
+Settled with Mike on 2026-10-17 and 2026-10-18 (#104); the full discussion is in
+[the 2026-10-18 spec](../../specs/2026-10-18-ammo-recovery-design.md) §2.
+
+| Question | Decision | Rejected, and why |
+|---|---|---|
+| Where the rule lives | **Per character, Settings → Sheet display**, "Ammo recovery": Half (RAW) / All / Hits only / None | App-wide: two tables on one device can't differ |
+| How Hits-only learns the result | **Fire and Throw ask Hit or Miss at once**, before the shot counts; Undo reverses it | Tagging after the fact: untagged shots need a default. Two Fire buttons: a wider row, easy to mis-tap |
+| Which shots come back in Hits-only | **Every hit comes back; misses are lost** | Half of the hits: harsher, and two rules to explain |
+| Per-item recoverability | **An item's own `recover` (always/never) wins over the sheet's rule**, set in the item editor | The sheet's rule alone: a bullet and a javelin can't both be right |
+| Where the defaults come from | **The app, by kind and property**: a firearm bullet never comes back, a Thrown weapon always does, unless the item says otherwise | Writing `recover` into the packs: every pack's digest moves and a data release is needed, for a default the app can know |
+| None and an item set to Always | **The item wins**: None is the sheet's default giving nothing back, but a thrown dagger is still picked up | None as a master switch: a thrown dagger would be lost for good on a table that doesn't use ammunition recovery |
+| Thrown weapons | **A Thrown weapon throws itself**: Throw spends one from its own count | Only the field, thrown weapons later: "always" would have no user |
+| A thrown weapon at ×0 | **Stays on the sheet at ×0, Throw disabled**, until recovery brings it back | Removed like an arrow stack: its attack row would vanish mid-fight |
+| End combat | **Recovers on its own, with a toast and an Undo**, when anything is recoverable | Still asking Yes/No: a tap after every fight |
+| Shots fired under one rule, recovered under another | **The rule is read at recovery**; a Hit/Miss answer is recorded whenever it is given; in Hits-only, an unanswered shot comes back at half | The rule in force at each shot: every shot would carry its own rule, and changing the setting would do nothing to shots already fired |
+
 ## Open
 
-- Thrown weapons as their own ammunition (Dart, Javelin, Dagger).
 - Firearm reloading and energy cells (XDMG).
 - Magic variants outside the selection rule (BMT, AU, the 2014 DMG), and generic +N weapons.
 - Containers (Quiver capacity).
@@ -197,3 +307,4 @@ Settled with Mike on 2026-10-01 and 2026-10-02; the full discussion is in
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6
 - 2026-10-09 — The tables-agree-with-the-data check reads SRD 5.2 publicly and the 2024 pack in the private suite. → ledger L5426, #85
 - 2026-10-16 — A pack older than ammunition is filled in at load (`ammoRepairDef()`), and the sheet pass runs once more (`AMMO_PASS` 2). → ledger L5780, #96
+- 2026-10-19 — A per-character recovery rule (half/all/hits/none), an item's own override and the app's defaults, Hit/Miss tallies, Thrown weapons that throw themselves, recovery's record and Undo, and End combat recovering on its own. → ledger L6081, #104

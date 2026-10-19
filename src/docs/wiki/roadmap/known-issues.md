@@ -65,6 +65,9 @@ Known behaviour that is accepted for now.
   → ledger L2776
 - **The printed sheet** shows prepared spells as `◆`/`○` with no key (the same gap as the skill and
   save rows), and prints no item uses. → ledger L2345, L2818
+- **The printed sheet shows a ×0 item with no count.** `printSheet()` (`71-char-io.js`) only adds
+  "×N" when `num(it.qty)>1`, so a Thrown weapon spent down to nothing, or any item zeroed by hand
+  (#104), prints the same as one at ×1. → ledger L6081, and [Ammunition](../features/ammunition.md)
 - **The item finder has no Escape key of its own.** `openBrowse()` closes from its Close button only;
   the global Escape handler dismisses the modal and nothing else. → ledger L3397
 - **At phone width** an attack row's name runs into its type label behind the to-hit pill, and a
@@ -147,8 +150,6 @@ Wanted, not yet done. Each needs work, not a source.
   the private repo's `docs/humblewood.md`
 - Journal pages and trackers don't print; trackers have no rest reset
   ([Journal](../features/journal.md)).
-- **Thrown weapons track no ammunition of their own** (Dart, Javelin, Dagger).
-  → [Ammunition](../features/ammunition.md)
 - **Firearm reloading and energy cells (XDMG) are not modelled.** → [Ammunition](../features/ammunition.md)
 - **Magic ammunition outside the selection rule is not converted**: BMT, AU and the 2014 DMG
   variants, and generic +N weapons. → [Ammunition](../features/ammunition.md)
@@ -462,3 +463,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-16 — Removed: a group named for an `Object.prototype` property is now refused (fixed); a group reopening after a case edit is kept by decision. → ledger L5872, #98
 - 2026-10-17 — Narrowed: trackers now show a group total (#93), so the deferred line drops "and no group totals". → ledger L6047, #95, #93
 - 2026-10-17 — Limitation: the Σ nested in the `role="button"` group header. → ledger L6057, #93
+- 2026-10-19 — Fixed and removed: thrown weapons now track their own ammunition (#104). Added: the printed sheet shows a ×0 item with no count. → ledger L6081, #104

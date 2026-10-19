@@ -6078,3 +6078,68 @@ Pages: [journal](../wiki/features/journal.md), [rich text](../wiki/architecture/
    needed.
 
 Pages: [1.9.0](../wiki/roadmap/1.9.0.md)
+## Ammunition recovery options and thrown weapons (#104, 2026-10-19)
+
+1. Built on `issue/104-ammo-recovery`: spec `specs/2026-10-18-ammo-recovery-design.md`, plan
+   `plans/2026-10-19-ammo-recovery.md`. Seven feat/fix commits plus this docs task.
+2. The rule: `character.ammoRecovery` (`AMMO_RECOVERY`: half/all/hits/none), default `"half"`, read
+   through `ammoRecoveryOf()`. The override: a top-level `item.recover` (`"always"`/`"never"`),
+   outside `ammo` and `weapon`, read through `itemRecover()`; the app's own defaults
+   (`AMMO_RECOVER_DEFAULTS`, `ammoDefaultRecover()`) make a firearm bullet never and a Thrown weapon
+   always. `ammoRecoverRule()` chains item override → app default → sheet rule; None never overrides
+   an item set to Always. `ammoBack()` is the per-entry table (half/all/hits/none).
+3. The tallies: `ammoSpentEntry()` adds `hits`/`misses` to each entry, clamped so
+   `hits + misses ≤ n`; `ammoRecordShot()` (new, shared by Fire and Throw) rebuilds the entry every
+   shot. `ammoAsks()`/`askAmmoOutcome()` ask Hit or Miss first, only under the Hits-only rule;
+   closing the dialog fires nothing.
+4. Throw: `weaponThrown()` reads the Thrown property out of `weapon.notes`; `ammoThrownKind()` is
+   the weapon's own lower-cased name; `throwAmmo()` spends one off the weapon item's own count,
+   never below 0, the item staying on the sheet at ×0 so its row and Throw don't vanish mid-fight;
+   `throwWeaponTap()` is the DOM tap, sharing `shotDone()` with `fireWeapon()`. `ammoLineHTML()`
+   draws `thrownLineHTML()` under a thrown weapon's row instead of a launcher's line, only while
+   equipped.
+5. Recovery's record and Undo: `recoverAmmo(c, kinds, rec)` now takes an optional `rec`, filled with
+   `added`/`made`/`repointed` (each carrying `from`, the `ammoSpent` id it answers for) and
+   `cleared`. `undoRecovery(c, rec)` reverses exactly that recovery once: a shortfall from a shot
+   fired since comes off the restored entry first (never double-counted); a cleared entry with no
+   stack dependency at recovery is restored unless its granting source has since been revoked
+   (`grantSidLive()`, mirroring the race/bg/class/subclass sid shapes the three `remove*()`
+   functions check). Review round 1 (commit `3cbc6a5`) folded in three findings on this path before
+   it shipped; review round 2 (commit `554f6e3`) fixed three more after the rest of the feature
+   landed: re-syncing the item editor's Recovery field on Insert from pack (`recoverShows()`);
+   `inventoryTotal()`/`itemWeightTotal()` reading quantity through `itemQty()` so a ×0 item adds
+   nothing and its row badge shows `×0` instead of looking like `×1`; and `undoRecovery()`'s
+   `take()` being a true no-op at `n===0`, so Undo no longer deletes a ×0 stack it gave nothing to.
+6. End combat: `applyAmmoRecovery()` replaces `offerAmmoRecovery()`'s Yes/No question — it recovers
+   on its own whenever anything is recoverable, and its summary and record join the End combat toast
+   with an **Undo recovery** action (`undoRecoveryTap()`), scoped to the character it was shown for.
+7. Settings → Sheet display gained an *Ammunition* group with the "Ammo recovery" dropdown
+   (`setAmmoRec`, four choices with a help line). The item editor gained an "After a fight" select
+   (`recoverOptionsHTML()`) for ammunition and Thrown weapons, shown by one shared rule
+   (`recoverShows()`) so the initial render, the Ammunition toggle and Insert from pack can't drift.
+8. Tests: `sheet.js` — `ammoRecoveryOf()`/its default, `ammoRecoverRule()` for every source,
+   `ammoBack()` across the table including Hits-only with unanswered shots, `ammoSpentEntry()`
+   clamping, `weaponThrown()` over the SRD weapons' notes and a junk/substring case, `fireAmmo()`
+   with each outcome and `undoFire()`, `throwAmmo()` down to ×0 and back through Undo,
+   `recoverAmmo()` under each rule (None with an item set to Always, onto a thrown weapon at ×0) and
+   its record, the recovery Undo after a later shot, the `ammoRecovery`/`recover`/tallies round trip,
+   a hostile `recover` value, and (round 1) the `inventoryTotal()`/badge/Undo-no-op fixes. `rules-data.js`
+   — the Throw/Hit/Miss hooks wired, the Settings row and the item editor's select both wired, and
+   (round 1) the Insert-from-pack resync.
+9. QA driven in Playwright (Task 7, this entry): all seven of the brief's steps — the Longbow/Dagger
+   rows (Fire, Throw), the Hits-only question (Hit, Miss, Escape firing nothing, `ammoSpent.s1`
+   checked after each), Throw twice to ×0 with Throw disabled, `startCombatNow()`/`endCombatAsk()`
+   with the confirm stubbed (the toast read "Combat ended after 1 round (6 sec) · recovered 1 of 2
+   arrows, 2 of 2 daggers", Arrow ×9/Dagger ×2, then Undo recovery back to Arrow ×8/Dagger ×0 with
+   `ammoSpent` restored), the Settings dropdown (read "Hits only", set to `"none"` and confirmed on
+   `character.ammoRecovery`), the item editor's "After a fight" showing "Default (always comes
+   back)" for the Dagger and Save-with-no-change leaving it at ×0, and the same rows and Throw
+   repeated on a Humblewood character and at 390×844. Nothing driven disagreed with the spec or the
+   code; no bug found. Screenshots: `.claude/qa/104-rows.png`, `104-question.png`,
+   `104-thrown-zero.png`, `104-end-combat.png`, `104-settings.png`, `104-item-editor.png`,
+   `104-rows-humblewood.png`, `104-rows-phone.png`.
+
+Pages: [ammunition](../wiki/features/ammunition.md), [combat view](../wiki/features/combat-view.md),
+[inventory](../wiki/features/inventory.md), [settings & updates](../wiki/features/settings-and-updates.md),
+[character model](../wiki/architecture/character-model.md), [known issues](../wiki/roadmap/known-issues.md),
+[1.9.0](../wiki/roadmap/1.9.0.md)
