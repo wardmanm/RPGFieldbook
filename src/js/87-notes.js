@@ -276,6 +276,34 @@ function renderNoteIcons(){
   });
 }
 
+/* ================= hideable edit buttons (#97) =================
+   A pencil in a list card's header hides that card's edit, delete and remove
+   buttons. CSS does the hiding: each such button carries the class `ed`, a
+   hidden card carries `ed-off`, and `.ed-off .ed` is display:none. So the
+   renderers never read the flag and a card that rebuilds its rows stays hidden.
+   Keys are NOTE_SECTIONS ids, plus the two cards outside that registry. */
+const EDIT_CARDS=["class","origin","statuses","attacks","resources","features","familiars","spells","inventory","trackers","journal","secnotes"];
+function editHideMap(c){const m=c&&c.editHide;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
+/* `=== true`, so anything else a hand-edited file holds reads as shown. */
+function editHidden(c,k){return EDIT_CARDS.includes(k)&&editHideMap(c)[k]===true;}
+function setEditHidden(c,k,hidden){
+  if(!c||!EDIT_CARDS.includes(k))return;
+  if(!c.editHide||typeof c.editHide!=="object"||Array.isArray(c.editHide))c.editHide={};
+  if(hidden)c.editHide[k]=true;else delete c.editHide[k];
+}
+function editCardTitle(k){return k==="journal"?"Journal":k==="secnotes"?"Section Notes":noteTitle(noteDef(k));}
+/* The title is the action; the aria-label adds the card, as the combat toggle's does. */
+function editToggleText(k,hidden){const title=hidden?"Show edit buttons":"Hide edit buttons";return {title,label:title+" — "+editCardTitle(k)};}
+function editToggleSVG(hidden){
+  return `<svg class="edicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>`+
+    (hidden?`<path d="M3 3l18 18"/>`:"")+`</svg>`;
+}
+function editToggleHTML(k,hidden){
+  const t=editToggleText(k,hidden);
+  return `<button type="button" class="edbtn${hidden?" on":""}" data-edtoggle="${esc(k)}" aria-pressed="${hidden?"true":"false"}" aria-label="${esc(t.label)}" title="${esc(t.title)}">`+
+    editToggleSVG(hidden)+`</button>`;
+}
+
 /* ================= the Section Notes card ================= */
 function noteGroupOpen(tab){
   const c=(character&&character.noteCollapse&&typeof character.noteCollapse==="object"&&!Array.isArray(character.noteCollapse))?character.noteCollapse:{};

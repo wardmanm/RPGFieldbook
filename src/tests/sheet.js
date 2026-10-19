@@ -41,6 +41,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'COMBAT_DEFAULTS', 'inCombat', 'combatSectionsOf', 'withCombatSection', 'moveCombatSection',
   'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
   'combatToggleHTML', 'combatToggleText', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
+  'EDIT_CARDS', 'editHidden', 'setEditHidden', 'editCardTitle', 'editToggleText', 'editToggleHTML',
   'combatGripHTML', 'moveCombatCard',
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
@@ -2278,6 +2279,47 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   // so "Rd " must be its own element and the number must sit outside it.
   ck('"Rd " is its own span, so a phone can drop it and keep the number',
      on.includes('<span class="cv-rd"><span class="cv-rdw">Rd </span>3</span>'));
+}
+
+/* ---- hideable edit buttons: the field and the toggle (#97, spec §3, §5) ---- */
+{
+  ck('#97 a new character shows every card\'s edit buttons',
+     JSON.stringify(X.blankChar().editHide) === '{}' && X.EDIT_CARDS.every(k => !X.editHidden(X.blankChar(), k)));
+  ck('#97 the twelve cards', JSON.stringify(X.EDIT_CARDS) ===
+     JSON.stringify(['class', 'origin', 'statuses', 'attacks', 'resources', 'features', 'familiars', 'spells', 'inventory', 'trackers', 'journal', 'secnotes']));
+  ck('#97 a sheet from before, and junk, read as {}',
+     JSON.stringify(X.migrate({abilities: {}}).editHide) === '{}' &&
+     ['x', [], null, 7].every(v => JSON.stringify(X.migrate({abilities: {}, editHide: v}).editHide) === '{}'));
+  const c = X.blankChar();
+  X.setEditHidden(c, 'features', true);
+  ck('#97 hiding is stored as true, and read back', c.editHide.features === true && X.editHidden(c, 'features') && !X.editHidden(c, 'inventory'));
+  X.setEditHidden(c, 'features', false);
+  ck('#97 showing again removes the key', !('features' in c.editHide) && !X.editHidden(c, 'features'));
+  X.setEditHidden(c, 'portrait', true); X.setEditHidden(c, '__proto__', true);
+  ck('#97 a key that is not a card is never written', JSON.stringify(c.editHide) === '{}');
+  ck('#97 only a true value hides',
+     ['yes', 1, null, {}].every(v => !X.editHidden({editHide: {features: v}}, 'features')) &&
+     X.editHidden({editHide: {features: true}}, 'features'));
+  ck('#97 a stored key that is not a card does nothing, and junk maps read as shown',
+     !X.editHidden({editHide: {portrait: true}}, 'portrait') && !X.editHidden({editHide: 'x'}, 'features') && !X.editHidden(null, 'features'));
+  const saved = Object.assign(X.blankChar(), {editHide: {inventory: true, portrait: true}});
+  const back = X.migrate(JSON.parse(JSON.stringify(saved)));
+  ck('#97 the field survives a save and load, an unknown key untouched',
+     back.editHide.inventory === true && back.editHide.portrait === true && X.editHidden(back, 'inventory'));
+  ck('#97 each card has a title',
+     X.editCardTitle('features') === 'Features & Traits' && X.editCardTitle('journal') === 'Journal' &&
+     X.editCardTitle('secnotes') === 'Section Notes' && X.EDIT_CARDS.every(k => X.editCardTitle(k)));
+  const shown = X.editToggleHTML('features', false), hidden = X.editToggleHTML('features', true);
+  ck('#97 the toggle carries its card and its state',
+     shown.includes('data-edtoggle="features"') && shown.includes('aria-pressed="false"') && shown.includes('class="edbtn"') &&
+     hidden.includes('aria-pressed="true"') && hidden.includes('class="edbtn on"'));
+  ck('#97 it says what it will do, and to which card',
+     shown.includes('title="Hide edit buttons"') && shown.includes('aria-label="Hide edit buttons — Features &amp; Traits"') &&
+     hidden.includes('title="Show edit buttons"') && hidden.includes('aria-label="Show edit buttons — Features &amp; Traits"'));
+  ck('#97 hidden wears a slash, shown does not', hidden.includes('M3 3l18 18') && !shown.includes('M3 3l18 18'));
+  const t = X.editToggleText('trackers', true);
+  ck('#97 the repaint text matches the markup', t.title === 'Show edit buttons' && t.label === 'Show edit buttons — Trackers');
+  ck('#97 the toggle never uses the bio Edit button\'s names', !/editbtn|data-edit=/.test(shown + hidden));
 }
 
 /* ---- the per-card toggle, and the view's header ---- */

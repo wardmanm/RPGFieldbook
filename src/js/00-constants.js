@@ -70,6 +70,9 @@ function blankChar(){
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
        above), and this is a different thing entirely. */
     secNotes:{}, noteCollapse:{},
+    /* Cards whose edit/delete buttons the player has hidden (87-notes.js, #97):
+       card key -> true. Read only through editHidden(). */
+    editHide:{},
     /* The Journal tab's own pages (87-journal.js): [{id,title,tag,text,at,editedAt}],
        and which of its tag groups are shut, keyed by lower-cased tag. */
     journal:[], journalCollapse:{},
