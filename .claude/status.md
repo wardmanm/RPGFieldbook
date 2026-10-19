@@ -40,6 +40,3 @@ releases.
   declined counts come back "under the sheet's rule" (each entry's own rule applies, and nothing
   comes back for bullets); `ammunition.md`'s older Decisions row says End combat acts "when anything
   is recoverable" (it now retires every count).
-- Gate test run 39281505979 (a re-run of v1.8.1) passed `verify` and waits at the `release`
-  approval. Cancel and reject both failed during GitHub's Actions incident (2026-10-19). Reject it
-  in the run page (*Review deployments* → Reject), never approve; it expires on its own in 30 days.
