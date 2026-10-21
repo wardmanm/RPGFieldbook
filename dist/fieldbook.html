@@ -248,6 +248,18 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 .label .notebtn.on{color:var(--accent)}
 .label .notebtn:hover,.label .notebtn:focus-visible{color:var(--accent-2)}
 .notebtn .noteicon{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+/* ---- the edit-buttons toggle (#97) ----
+   The .notebtn / .cvbtn state language: faint while the card's edit buttons show,
+   accent while they are hidden, so a locked card is the one that stands out. It
+   takes the margin-left:auto that parks the header's buttons at the far right;
+   the combat toggle or note button after it then sits flush. */
+.label .edbtn{background:none;border:0;cursor:pointer;padding:3px 4px;color:var(--hair);
+  display:inline-flex;align-items:center;flex:none;margin-left:auto}
+.label .edbtn.on{color:var(--accent)}
+.label .edbtn:hover,.label .edbtn:focus-visible{color:var(--accent-2)}
+.label .edbtn + .cvbtn,.label .edbtn + .notebtn{margin-left:0}
+.edbtn .edicon{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.ed-off .ed{display:none!important}
 /* The preview opens DOWNWARD always: the tab bar is z-index 40 and sticky, so a
    card that opened upward would slide under it. Every inherited .label property
    is reset — uppercase 12px letter-spaced .14em is unreadable as prose. */
@@ -1597,7 +1609,7 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
         <div class="label">Trackers <button class="add" id="addTracker"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Tracker</button><span class="grow"></span></div>
         <div id="trkList"></div>
       </div>
-      <div class="card">
+      <div class="card" id="notesCard">
         <div class="label">Section Notes <span class="grow"></span></div>
         <p class="hint">Everything you've jotted against a section of your sheet, gathered here. Tap a heading to jump back to where it belongs.</p>
         <div id="notesList"></div>
@@ -1751,6 +1763,9 @@ function blankChar(){
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
        above), and this is a different thing entirely. */
     secNotes:{}, noteCollapse:{},
+    /* Cards whose edit/delete buttons the player has hidden (87-notes.js, #97):
+       card key -> true. Read only through editHidden(). */
+    editHide:{},
     /* The Journal tab's own pages (87-journal.js): [{id,title,tag,text,at,editedAt}],
        and which of its tag groups are shut, keyed by lower-cased tag. */
     journal:[], journalCollapse:{},
@@ -2455,8 +2470,8 @@ function featItemHTML(f){
         ${f.source?`<span class="qty">${esc(f.source)}</span>`:""}
         ${(hasCost||hasUses)?`<button class="use-go" data-usefeat="${esc(f.id)}">Use</button>`:""}
         <span class="equip ${on?"on":""}" data-toggle-feature="${esc(f.id)}"><span class="box"></span>${on?"On":"Off"}</span>
-        <button class="icon" data-edit-feature="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-feature="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        <button class="icon ed" data-edit-feature="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger ed" data-del-feature="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
         </span>
       </div>
       ${ic?"":`${f.description?`<div class="desc">${descHTML(f.description)}</div>`:""}${hasCost?`<div class="use-cost">Costs ${num(f.cost.amount)} ${esc(f.cost.resource||"resource")} per use</div>`:""}${hasUses?usesRowHTML(f):""}${on?fxChips(f.effects):fxChips(f.effects).replace(/class="chip"/g,'class="chip off"')}`}
@@ -3228,8 +3243,8 @@ function invItemHTML(it){
         ${itemWeight(it)?`<span class="qty" title="Weight each">${esc(fmtWt(it.weight))}</span>`:""}
         ${itemUsable(it)?`<button class="use-go" data-useitem="${esc(it.id)}">Use</button>`:""}
         ${isEquippable(it)?`<span class="equip ${it.equipped?"on":""}" data-toggle-item="${esc(it.id)}"><span class="box"></span>${it.equipped?"Equipped":"Equip"}</span>`:""}
-        <button class="icon" data-edit-item="${esc(it.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-item="${esc(it.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        <button class="icon ed" data-edit-item="${esc(it.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger ed" data-del-item="${esc(it.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
         </span>
       </div>
       ${ic?"":`${it.description?`<div class="desc">${richHTML(it.description)}</div>`:""}${itemUseLine(it)}${itemUsesRowHTML(it)}${it.equipped?fxChips(it.effects):fxChips(it.effects).replace(/class="chip"/g,'class="chip off"')}`}</div>`;
@@ -3314,8 +3329,8 @@ function statusRowHTML(s){
         <span class="nm">${statusTitle(s.name)}</span>
         <span class="row-meta">
         <span class="equip ${on?"on":""}" data-toggle-status="${esc(s.id)}"><span class="box"></span>${on?"Active":"Cleared"}</span>
-        <button class="icon" data-edit-status="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-status="${esc(s.id)}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        <button class="icon ed" data-edit-status="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger ed" data-del-status="${esc(s.id)}" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
         </span>
       </div>
       ${tt?`<div class="use-row st-row"><span class="use-lbl st-time">${esc(tt)}</span>${ticking?`
@@ -3483,8 +3498,8 @@ function renderFamiliars(){
         <span class="nm">${esc(f.name||"Familiar")}</span>
         ${f.kind?`<span class="qty">${esc(f.kind)}</span>`:""}
         <span class="fam-state ${on?"on":"off"}" data-toggle-familiar="${esc(f.id)}">${on?"● Summoned":"○ Dismissed"}</span>
-        <button class="icon" data-edit-familiar="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-familiar="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        <button class="icon ed" data-edit-familiar="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger ed" data-del-familiar="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
       ${stats?`<div class="desc" style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em">${stats}</div>`:""}
       ${f.description?`<div class="desc">${richHTML(f.description)}</div>`:""}
@@ -3668,7 +3683,7 @@ function runExtraChoices(pending){
    handler, so it wins inside the chip. */
 function classChipHTML(c,idx){
   const sub=c.subclass?` · <button type="button" class="linkbtn link" data-sub-info="${esc(c.name)}|${esc(c.subclass)}" title="About ${esc(c.subclass)}">${esc(c.subclass)}</button>`:"";
-  return `<div class="cr-chip" data-info-class="${esc(c.name)}">${iconSVG("classes",c.name)}<span class="cr-k">Class</span><span class="cr-n">${esc(c.name)} ${num(c.level)}${sub}</span><button class="icon danger" data-del-class="${esc(idx)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
+  return `<div class="cr-chip" data-info-class="${esc(c.name)}">${iconSVG("classes",c.name)}<span class="cr-k">Class</span><span class="cr-n">${esc(c.name)} ${num(c.level)}${sub}</span><button class="icon danger ed" data-del-class="${esc(idx)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
 }
 function renderClassRace(){
   const rb=document.getElementById("raceBgBox"), cb=document.getElementById("classBox");
@@ -3676,12 +3691,12 @@ function renderClassRace(){
     const parts=[];
     if(character.race&&character.race.name){
       const rn=character.race.name+(character.race.subrace?` · ${character.race.subrace}`:"");
-      parts.push(`<div class="cr-chip" data-info-race="${esc(character.race.name)}">${iconSVG("races",character.race.name)}<span class="cr-k">${raceTerm()}</span><span class="cr-n">${esc(rn)}</span><button class="icon danger" data-del-race="1" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
+      parts.push(`<div class="cr-chip" data-info-race="${esc(character.race.name)}">${iconSVG("races",character.race.name)}<span class="cr-k">${raceTerm()}</span><span class="cr-n">${esc(rn)}</span><button class="icon danger ed" data-del-race="1" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
     }else{
       parts.push(`<button class="mini" data-add-race style="margin-bottom:8px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add ${raceTerm().toLowerCase()}</button>`);
     }
     if(character.bg&&character.bg.name){
-      parts.push(`<div class="cr-chip" data-info-bg="${esc(character.bg.name)}">${iconSVG("backgrounds",character.bg.name)}<span class="cr-k">Background</span><span class="cr-n">${esc(character.bg.name)}</span><button class="icon danger" data-del-bg="1" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
+      parts.push(`<div class="cr-chip" data-info-bg="${esc(character.bg.name)}">${iconSVG("backgrounds",character.bg.name)}<span class="cr-k">Background</span><span class="cr-n">${esc(character.bg.name)}</span><button class="icon danger ed" data-del-bg="1" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
     }else{
       parts.push(`<button class="mini" data-add-bg><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add background</button>`);
     }
@@ -4989,8 +5004,8 @@ function renderAttacks(){
         <span class="row-meta">
         <span class="qty">${typeLabel}</span>
         ${hitCell}
-        ${isSpell?`<button class="tbtn" data-cast-spell="${esc(a.spellId)}" style="padding:3px 8px;min-height:auto">Cast</button>`:`<button class="icon" data-edit-attack="${esc(a.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`}
-        <button class="icon danger" data-del-attack="${esc(a.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+        ${isSpell?`<button class="tbtn" data-cast-spell="${esc(a.spellId)}" style="padding:3px 8px;min-height:auto">Cast</button>`:`<button class="icon ed" data-edit-attack="${esc(a.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`}
+        <button class="icon danger ed" data-del-attack="${esc(a.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
         </span>
       </div>
       ${ic?"":`<div class="desc" style="font-family:var(--head);font-size:13px;letter-spacing:.02em;color:var(--ink-soft)">Damage <b class="${dmgOn?"fx-on":""}${dmgNeg?" fx-neg":""}" style="${dmgOn?"":"color:var(--ink)"}">${esc(dmg)||"—"}</b>${a.notes?` · ${esc(a.notes)}`:""}</div>`}${ammoLineHTML(character,a)}`;
@@ -5127,8 +5142,8 @@ function renderSpells(){
         ${(s.origin||s.granted)?originBadge(spellOrigin(s),"data-orig-spell",s.id):""}
         ${s.meta?`<span class="meta">${esc(s.meta)}</span>`:""}
         <button class="tbtn" data-cast-spell="${esc(s.id)}" style="padding:3px 8px;min-height:auto">Cast</button>
-        <button class="icon" data-edit-spell="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger" data-del-spell="${esc(s.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`;
+        <button class="icon ed" data-edit-spell="${esc(s.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger ed" data-del-spell="${esc(s.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`;
       el.appendChild(r);
     });
   });
@@ -6195,7 +6210,7 @@ function renderResources(){
       <div class="res-val"><b>${cur}</b><span>/${max}</span></div>
       <button class="res-btn" data-res-inc="${esc(r.id)}" aria-label="Gain one">+</button>
       <button class="icon" data-res-reset="${esc(r.id)}" title="Restore to full"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/></svg></button>
-      ${r.auto?"":`<button class="icon" data-res-edit="${esc(r.id)}" aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="icon danger" data-res-del="${esc(r.id)}" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`}
+      ${r.auto?"":`<button class="icon ed" data-res-edit="${esc(r.id)}" aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="icon danger ed" data-res-del="${esc(r.id)}" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`}
     </div>`;
   }).join("");
 }
@@ -6492,7 +6507,7 @@ function renderAll(){
      way the mirror never saw — reconciles on load rather than showing a
      condition for a spell that isn't running. */
   syncConcStatus();
-  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderRulesSections();renderNoteIcons();renderNotes();renderJournal();renderTrackers();renderAllRT();recompute();
+  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderRulesSections();renderNoteIcons();renderEditToggles();renderNotes();renderJournal();renderTrackers();renderAllRT();recompute();
   /* LAST: the combat toggles sit beside the note buttons drawn above, and an open
      combat view refills from THIS character — every character switch ends here. */
   syncCombatView();
@@ -6920,7 +6935,7 @@ function migrate(s){
   /* AFTER both repairs: checklists and tasks become journal pages (#95). The
      new pages take fresh uid()s, which cannot collide with a repaired one. */
   migrateTrackerPages(base,Date.now());
-  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse","trackerCollapse","trackerTotals","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
+  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","editHide","journalCollapse","trackerCollapse","trackerTotals","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
   /* AFTER the list guards above, so it can rely on inventory being an array. */
@@ -9292,6 +9307,73 @@ function renderNoteIcons(){
   });
 }
 
+/* ================= hideable edit buttons (#97) =================
+   A pencil in a list card's header hides that card's edit, delete and remove
+   buttons. CSS does the hiding: each such button carries the class `ed`, a
+   hidden card carries `ed-off`, and `.ed-off .ed` is display:none. So the
+   renderers never read the flag and a card that rebuilds its rows stays hidden.
+   Keys are NOTE_SECTIONS ids, plus the two cards outside that registry. */
+const EDIT_CARDS=["class","origin","statuses","attacks","resources","features","familiars","spells","inventory","trackers","journal","secnotes"];
+function editHideMap(c){const m=c&&c.editHide;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
+/* `=== true`, so anything else a hand-edited file holds reads as shown. */
+function editHidden(c,k){return EDIT_CARDS.includes(k)&&editHideMap(c)[k]===true;}
+function setEditHidden(c,k,hidden){
+  if(!c||!EDIT_CARDS.includes(k))return;
+  if(!c.editHide||typeof c.editHide!=="object"||Array.isArray(c.editHide))c.editHide={};
+  if(hidden)c.editHide[k]=true;else delete c.editHide[k];
+}
+function editCardTitle(k){return k==="journal"?"Journal":k==="secnotes"?"Section Notes":noteTitle(noteDef(k));}
+/* The title is the action; the aria-label adds the card, as the combat toggle's does. */
+function editToggleText(k,hidden){const title=hidden?"Show edit buttons":"Hide edit buttons";return {title,label:title+" — "+editCardTitle(k)};}
+function editToggleSVG(hidden){
+  return `<svg class="edicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>`+
+    (hidden?`<path d="M3 3l18 18"/>`:"")+`</svg>`;
+}
+function editToggleHTML(k,hidden){
+  const t=editToggleText(k,hidden);
+  return `<button type="button" class="edbtn${hidden?" on":""}" data-edtoggle="${esc(k)}" aria-pressed="${hidden?"true":"false"}" aria-label="${esc(t.label)}" title="${esc(t.title)}">`+
+    editToggleSVG(hidden)+`</button>`;
+}
+function editCard(k){
+  return k==="journal"?document.getElementById("journalCard")
+    :k==="secnotes"?document.getElementById("notesCard")
+    :document.querySelector(`.card[data-note="${k}"]`);
+}
+/* Mirrors renderCombatToggles(): idempotent, replaces only its own button, and
+   never label.innerHTML += (that re-parses the label and destroys #starBtn,
+   #encPill and #roundNum). It sits before the combat toggle, or the note button
+   when there is none, so the note keeps the far right. It also sets ed-off BOTH
+   ways, so switching to a character who hides nothing clears the last one's. */
+function renderEditToggles(){
+  EDIT_CARDS.forEach(k=>{
+    const card=editCard(k);if(!card)return;
+    const hidden=editHidden(character,k);
+    card.classList.toggle("ed-off",hidden);
+    const label=card.querySelector(".label");if(!label)return;
+    const html=editToggleHTML(k,hidden), old=label.querySelector("[data-edtoggle]");
+    if(old){old.outerHTML=html;return;}
+    const next=label.querySelector("[data-combatbtn]")||label.querySelector("[data-notebtn]");
+    if(next)next.insertAdjacentHTML("beforebegin",html);else label.insertAdjacentHTML("beforeend",html);
+  });
+}
+/* A tap repaints the one button in place; replacing it would drop keyboard focus
+   from the button just pressed. */
+function paintEditToggle(k,hidden){
+  const b=document.querySelector(`[data-edtoggle="${k}"]`);if(!b)return;
+  const t=editToggleText(k,hidden);
+  b.classList.toggle("on",hidden);b.setAttribute("aria-pressed",hidden?"true":"false");
+  b.setAttribute("aria-label",t.label);b.title=t.title;b.innerHTML=editToggleSVG(hidden);
+}
+function toggleEditCard(k){
+  if(!EDIT_CARDS.includes(k))return;
+  const hidden=!editHidden(character,k);
+  setEditHidden(character,k,hidden);
+  const card=editCard(k);if(card)card.classList.toggle("ed-off",hidden);
+  paintEditToggle(k,hidden);
+  if(k==="journal")renderJournal();   // a blank page's line names the Edit button
+  scheduleSave();
+}
+
 /* ================= the Section Notes card ================= */
 function noteGroupOpen(tab){
   const c=(character&&character.noteCollapse&&typeof character.noteCollapse==="object"&&!Array.isArray(character.noteCollapse))?character.noteCollapse:{};
@@ -9308,7 +9390,7 @@ function noteEntryHTML(def){
     `<button class="linkbtn n-jump" data-notejump="${esc(def.k)}">${esc(noteTitle(def))}</button>`+
     `<span style="flex:1"></span>`+
     (when?`<span class="n-when">${esc(when)}</span>`:"")+
-    `<button class="icon" data-noteedit="${esc(def.k)}" aria-label="Edit note"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`+
+    `<button class="icon ed" data-noteedit="${esc(def.k)}" aria-label="Edit note"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`+
     `</div><div class="n-body">${noteHTML(noteText(def.k))}</div></div>`;
 }
 /* Pure, so the group order, counts, collapse state and empty state are all
@@ -9958,11 +10040,11 @@ function jnlWhen(p){return jnlTime(p.at)?noteWhen({at:jnlTime(p.at),editedAt:jnl
 function journalPageHTML(p){
   const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text)),pr=noteProgress(jnlStr(p.text));
   return `<div class="jnl-bar"><button type="button" class="tbtn" data-jnlback>← All pages</button><span class="grow"></span>`+
-    `<button type="button" class="tbtn" data-jnledit="${esc(p.id)}">Edit</button>`+
-    `<button type="button" class="tbtn danger" data-jnldel="${esc(p.id)}">Delete</button></div>`+
+    `<button type="button" class="tbtn ed" data-jnledit="${esc(p.id)}">Edit</button>`+
+    `<button type="button" class="tbtn danger ed" data-jnldel="${esc(p.id)}">Delete</button></div>`+
     `<h3 class="jnl-h" id="jnlHead" tabindex="-1">${esc(jnlTitle(p))}</h3>`+
     ((tag||when||pr.total)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${pr.total?`<span class="jnl-prog">${esc(pr.done+"/"+pr.total)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"")+
-    (body?`<div class="n-body">${body}</div>`:`<div class="empty">Nothing written yet — tap Edit.</div>`);
+    (body?`<div class="n-body">${body}</div>`:`<div class="empty">${editHidden(character,"journal")?"Nothing written yet.":"Nothing written yet — tap Edit."}</div>`);
 }
 /* Built ONCE per edit (renderJournal() leaves it alone after), so it can keep
    the player's caret. Everything typed is written straight to the page. */
@@ -10243,7 +10325,7 @@ function trkAfter(c,id){
    chip inside a checkbox button would be a button in a button, and every −/+
    would pay for a highlight() of the whole card. */
 const TRK_PEN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`;
-function trkEditHTML(t){return `<button type="button" class="icon" data-trkedit="${esc(t.id)}" aria-label="${esc("Edit "+trkName(t))}" title="Edit">${TRK_PEN}</button>`;}
+function trkEditHTML(t){return `<button type="button" class="icon ed" data-trkedit="${esc(t.id)}" aria-label="${esc("Edit "+trkName(t))}" title="Edit">${TRK_PEN}</button>`;}
 function trackerRowHTML(t){
   const pr=trkProgress(t),name=trkName(t),g=trkInt(t.goal);
   const body=`<div class="trk-ctl"><button type="button" class="res-btn" data-trkdec="${esc(t.id)}" aria-label="${esc("One less — "+name)}">−</button>`+
@@ -11981,6 +12063,7 @@ function wire(){
     if(t.closest("#cvPrev"))return advanceRound(-1);
     if(t.closest("#cvNext"))return advanceRound(1);
     if(t.closest("#cvEnd"))return endCombatAsk();
+    if((m=t.closest("[data-edtoggle]")))return toggleEditCard(m.dataset.edtoggle);
     if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn,e.detail===0);
     if(t.closest("#btnToc"))return openToc();
     if(t.closest("#tocBack"))return closeToc();
