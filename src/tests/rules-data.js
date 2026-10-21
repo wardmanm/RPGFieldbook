@@ -23,6 +23,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings', 'skillKey',
   'openSettings', 'highlight', 'rulesStatusText', 'rulesBadge', 'dispName', 'fxTargets',
   'AMMO_PIECES','AMMO_SINGLE_NAMES','AMMO_BUNDLES','AMMO_LAUNCHERS',
+  'EDIT_CARDS',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1068,6 +1069,69 @@ X.resetRules();
 ck('entry count is zero with nothing loaded', X.rulesEntryCount() === 0);
 X.mergeRules({system: 'XPHB', races: [{name: 'Elf'}, {name: 'Orc'}], spells: [{name: 'Bless'}]}, 'x.json');
 ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCount());
+
+// ---------- #97: the edit/delete buttons a card's pencil hides carry `ed`, and nothing else does
+// CSS hides them (`.ed-off .ed`), so the class IS the feature: a button without it
+// never hides, and a play control with it vanishes mid-session. Scanned in the
+// source because most of these rows are built straight into the DOM.
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const js = manifest.js.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  // the class attribute of the <button> whose opening tag carries `attr`, valued or not
+  // (e.g. `data-jnlback` with no `=` at all)
+  const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const classesOf = attr => {
+    const out = [];
+    const re = new RegExp(escRe(attr) + '(?=[=\\s>])', 'g');
+    let m;
+    while ((m = re.exec(js))) {
+      const at = m.index;
+      const open = js.lastIndexOf('<button', at), close = js.indexOf('>', open);
+      if (open >= 0 && close > at) {
+        const mm = /class="([^"]*)"/.exec(js.slice(open, at));
+        out.push(mm ? mm[1] : '');
+      }
+    }
+    return out;
+  };
+  const hasEd = cls => cls.split(/\s+/).includes('ed');
+  const HIDDEN = ['data-edit-feature', 'data-del-feature', 'data-edit-item', 'data-del-item',
+    'data-edit-status', 'data-del-status', 'data-edit-familiar', 'data-del-familiar',
+    'data-del-class', 'data-del-race', 'data-del-bg', 'data-edit-attack', 'data-del-attack',
+    'data-edit-spell', 'data-del-spell', 'data-res-edit', 'data-res-del', 'data-trkedit',
+    'data-jnledit', 'data-jnldel', 'data-noteedit'];
+  const KEPT = ['data-fav-feature', 'data-fav-item', 'data-fav-attack', 'data-usefeat', 'data-useitem',
+    'data-cast-spell', 'data-prep', 'data-res-dec', 'data-res-inc', 'data-res-reset', 'data-trkdec',
+    'data-trkinc', 'data-fitem', 'data-invitem', 'data-atkitem', 'data-notebtn', 'data-combatbtn',
+    'data-edtoggle', 'data-edit-gloss', 'data-del-gloss', 'data-view-gloss', 'data-jnlback',
+    'data-ammo-fire', 'data-ammo-throw', 'data-ammo-recover', 'data-active-end', 'data-trkreopen',
+    'data-trktotal', 'data-status-tick'];
+  HIDDEN.forEach(a => {
+    const cs = classesOf(a);
+    ck('#97 every ' + a + ' button carries ed', cs.length > 0 && cs.every(hasEd), cs);
+  });
+  KEPT.forEach(a => {
+    const cs = classesOf(a);
+    ck('#97 no ' + a + ' button carries ed', cs.length > 0 && cs.every(c => !hasEd(c)), cs);
+  });
+}
+
+// ---------- #97: every card key reaches a card, and the CSS hides what it should
+{
+  const t = loadHTML();
+  const reach = k => k === 'journal' ? t.includes('id="journalCard"')
+    : k === 'secnotes' ? /<div class="card" id="notesCard">\s*<div class="label">Section Notes/.test(t)
+    : t.includes('<div class="card" data-note="' + k + '"');
+  const lost = X.EDIT_CARDS.filter(k => !reach(k));
+  ck('#97 every edit-toggle key reaches a card with a header', lost.length === 0, lost);
+  const css = fs.readFileSync(path.join(ROOT, 'src/css/20-cards.css'), 'utf8');
+  ck('#97 a hidden card hides its ed buttons', /\.ed-off \.ed\{display:none!important\}/.test(css));
+  ck('#97 the toggle has its look', /\.label \.edbtn\{/.test(css) && /\.label \.edbtn\.on\{/.test(css));
+  const boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+  ck('#97 a tap on the toggle is wired', boot.includes('[data-edtoggle]') && boot.includes('toggleEditCard('));
+  const all = fs.readFileSync(path.join(ROOT, 'src/js/66-coins-hp.js'), 'utf8');
+  ck('#97 renderAll() draws the toggles after the note icons', /renderNoteIcons\(\);renderEditToggles\(\);/.test(all));
+}
 
 // ---------- section notes: the registry IS the contract
 // NOTE_SECTIONS drives the icon injection, the Section Notes card's grouping and

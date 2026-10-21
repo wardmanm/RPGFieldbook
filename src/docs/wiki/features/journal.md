@@ -199,7 +199,11 @@ the same way. The three views:
   `journalCollapse`. While a search is typed, every group is open and its header is plain text;
 - **a page** (`journalPageHTML()`): ← All pages, the title as a focusable heading (`#jnlHead`,
   focused on open), the tag, the dates (`noteWhen()`), Edit, Delete, and the text through
-  `noteHTML()`. The search row is hidden;
+  `noteHTML()`. The search row is hidden. A page with no text yet shows "Nothing written yet — tap
+  Edit." in place of the body — or just "Nothing written yet." when the Journal card's edit buttons
+  are hidden (`editHidden(character,"journal")`, #97), since naming a button that isn't there would
+  confuse. Edit and Delete carry `ed`, so hiding the card hides them with everything else on it
+  ([Sections & layout](../ui/sections-and-layout.md));
 - **the editor** (`journalEditorHTML()`): title, tag with the tags in use as suggestions (the group
   field, `groupFieldHTML()`, which the feature form's Source and the item form's Category share), the
   text, **Insert timestamp**, the formatting key (`NOTE_FMT_HINT`) and Done. Every keystroke calls
@@ -292,3 +296,4 @@ entry in the list.
 - 2026-10-16 — A tag named for an `Object.prototype` property is refused, and reads as Untagged from a file; Done waits until it is changed. → ledger L5872, #98
 - 2026-10-17 — Checklists and tasks leave trackers for journal pages: a [ ]/[x] line is a tickable checkbox in a page and a section note, the list shows progress, existing checklist and task trackers migrate into pages; Trackers keeps counters only (#95). Groups show an optional total (#93) and lay out as tiles (#94). → ledger L6047, #95, #93, #94
 - 2026-10-17 — Final review: a typed count moves the group total; the Σ is always "Total for <tag>"; a box is named by its item; Story fields tick too; a closed checklist keeps its real ticks; a junk date writes none. → ledger L6057, #95, #93
+- 2026-10-19 — The Journal card's pencil hides a page's Edit and Delete; a blank page's empty line drops "— tap Edit" while they're hidden. → ledger L6248, #97

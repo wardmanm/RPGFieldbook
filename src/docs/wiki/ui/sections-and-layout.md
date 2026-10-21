@@ -6,8 +6,10 @@ the `NOTE_SECTIONS` registry and the rules for tagging a card, and the conventio
 group headings with a caret, collapse state and where it is stored, favourites, collapse-all and
 search boxes. It also covers two sidebar residents, familiars and the portrait.
 
-**Code:** `NOTE_SECTIONS`, `noteDef()`, `noteTitle()`, `renderNoteIcons()`, `noteGroupOpen()` in
-`87-notes.js` · `combatSectionsOf()`, `renderCombatToggles()`, `combatCard()` in `87-combat.js` ·
+**Code:** `NOTE_SECTIONS`, `noteDef()`, `noteTitle()`, `renderNoteIcons()`, `noteGroupOpen()`,
+`EDIT_CARDS`, `editHidden()`, `setEditHidden()`, `editCardTitle()`, `editToggleHTML()`,
+`renderEditToggles()`, `toggleEditCard()` in `87-notes.js` · `combatSectionsOf()`,
+`renderCombatToggles()`, `combatCard()` in `87-combat.js` ·
 `featGroups()`, `renderFeatures()`, `featCol()`, `invCol()`, `atkCol()`, `FEAT_FAV`, `ATK_FAV` in
 `20-lists.js` · `renderInventory()`, `invGroups()`, `renderFamiliars()` in `40-sheet.js` ·
 `groupFieldHTML()`, `groupChoices()`, `groupNameProblem()`, `syncGroupFieldMsg()`, `groupFieldBlocked()` in
@@ -68,6 +70,51 @@ Card headings are live. A `.label` can hold `#starBtn`, `#encPill` or `#roundNum
 controls replace only their own button (`outerHTML`) or insert beside it, never
 `label.innerHTML +=`. The note button parks at the far right with `margin-left:auto`, and the combat
 toggle goes just before it.
+
+### Hideable edit buttons (#97)
+
+Every card that lists things with edit, delete or remove buttons gets a pencil in its header,
+before the combat toggle and the note button (so the note keeps the far right): pencil, combat,
+note. A tap hides that card's edit, delete and remove buttons — a bin or a chip's Remove is one
+mis-tap from losing a feature, an item or a class — and leaves every play control alone (stars,
+folds, Use, Fire, Throw, Cast, equip, On/Off, prepared pins, resource −/+/reset, the familiar's
+Summoned switch, + Add). One switch per card, per character, shown by default.
+
+`EDIT_CARDS` in `87-notes.js` lists the twelve keys: the ten `NOTE_SECTIONS` ids `class`, `origin`,
+`statuses`, `attacks`, `resources`, `features`, `familiars`, `spells`, `inventory`, `trackers`, plus
+`journal` and `secnotes` — the two cards outside that registry, found by id (`#journalCard`,
+`#notesCard`, which the Section Notes card carries for this). `character.editHide` maps a key to
+`true` when hidden; absent or anything but a literal `true` reads as shown (see
+[Character model](../architecture/character-model.md)).
+
+**How it hides: CSS, not a render check (spec decision 6).** Each edit/delete/remove button carries
+the class `ed`, beside its existing classes; a hidden card's root carries `ed-off`; one rule,
+`.ed-off .ed{display:none!important}`, does the rest (`20-cards.css`). No renderer reads the flag,
+so a card whose renderer rebuilds its rows — a feature's fold, a new item, a re-sorted list — stays
+hidden for free, instead of ten renderers each gaining a condition that can drift.
+
+`editHidden()`, `setEditHidden()`, `editCardTitle()`, `editToggleText()`, `editToggleSVG()`,
+`editToggleHTML()` (pure) and `editCard()` are the small pieces; `renderEditToggles()` draws one
+button per `EDIT_CARDS` entry and sets `ed-off` both ways (so switching to a character who hides
+nothing clears the last one's), mirroring `renderCombatToggles()`: idempotent, replacing only its
+own button, never `label.innerHTML +=`. A tap (`toggleEditCard()`, wired in `90-boot.js` on
+`[data-edtoggle]`) flips the map, toggles `ed-off` on the card, **repaints the one button in place**
+rather than replacing it — so a keyboard Enter on the pencil keeps focus on it — and
+`scheduleSave()`s; no list re-renders. Hiding or showing Journal also re-runs `renderJournal()`,
+since a blank page's empty-state line names the Edit button and must read "Nothing written yet."
+with no "— tap Edit" once it's gone.
+
+**Names.** The button class is `edbtn` and its hook is `data-edtoggle`, not `editbtn` /
+`data-edit`: those already name the Story tab's rich-text "Edit" button (`buildBio()`,
+`00-constants.js`), and reusing them would have collided both as a CSS selector and as a
+click-delegation key.
+
+**Look.** Shown: a plain pencil, faint (`--hair`). Hidden: the same pencil with a slash through it
+(an extra `<path>` from `editToggleSVG()`), in `--accent`, `aria-pressed="true"` — so a card in
+"locked" state is the one that stands out, matching the combat toggle's and note button's idiom.
+Title is the action ("Hide edit buttons" / "Show edit buttons"); the aria-label adds the card's
+title via `noteTitle()` (so Ancestry & Background's heading follows the skin on the next render, as
+the note button's does) — "Hide edit buttons — Features & Traits".
 
 ### Group headings: `.fgroup` / `.fghead` / `.fcaret`
 
@@ -297,3 +344,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-10-16 — The group field: one control for a journal tag, a tracker tag, a feature's source and an item's category. → ledger L5823, #98
 - 2026-10-16 — No group may be named for an `Object.prototype` property; the group field says so and stops the save. A group reopening after a case edit is kept, by decision. → ledger L5872, #98
 - 2026-10-16 — Settings no longer uses the `.fgroup` collapsible or a collapse map: it is a sidebar of pages and remembers the last one. → ledger L5930, #107
+- 2026-10-19 — A pencil in every card's header hides that card's edit, delete and remove buttons, per card and per character, by CSS (`.ed`/`.ed-off`), before the combat toggle and the note button. → ledger L6248, #97

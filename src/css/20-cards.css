@@ -46,6 +46,18 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
 .label .notebtn.on{color:var(--accent)}
 .label .notebtn:hover,.label .notebtn:focus-visible{color:var(--accent-2)}
 .notebtn .noteicon{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+/* ---- the edit-buttons toggle (#97) ----
+   The .notebtn / .cvbtn state language: faint while the card's edit buttons show,
+   accent while they are hidden, so a locked card is the one that stands out. It
+   takes the margin-left:auto that parks the header's buttons at the far right;
+   the combat toggle or note button after it then sits flush. */
+.label .edbtn{background:none;border:0;cursor:pointer;padding:3px 4px;color:var(--hair);
+  display:inline-flex;align-items:center;flex:none;margin-left:auto}
+.label .edbtn.on{color:var(--accent)}
+.label .edbtn:hover,.label .edbtn:focus-visible{color:var(--accent-2)}
+.label .edbtn + .cvbtn,.label .edbtn + .notebtn{margin-left:0}
+.edbtn .edicon{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.ed-off .ed{display:none!important}
 /* The preview opens DOWNWARD always: the tab bar is z-index 40 and sticky, so a
    card that opened upward would slide under it. Every inherited .label property
    is reset — uppercase 12px letter-spaced .14em is unreadable as prose. */

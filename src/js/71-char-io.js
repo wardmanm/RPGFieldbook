@@ -82,7 +82,7 @@ function migrate(s){
   /* AFTER both repairs: checklists and tasks become journal pages (#95). The
      new pages take fresh uid()s, which cannot collide with a repaired one. */
   migrateTrackerPages(base,Date.now());
-  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","journalCollapse","trackerCollapse","trackerTotals","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
+  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","editHide","journalCollapse","trackerCollapse","trackerTotals","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
   /* AFTER the list guards above, so it can rely on inventory being an array. */

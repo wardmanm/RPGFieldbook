@@ -6244,3 +6244,82 @@ Pages: [building & CI](../wiki/process/building-and-ci.md)
 
 Pages: [building & CI](../wiki/process/building-and-ci.md), [private data](../wiki/data/private-data.md),
 [known issues](../wiki/roadmap/known-issues.md)
+
+## Hideable edit buttons (#97, 2026-10-19)
+
+1. Every list card gains a pencil in its header, beside the combat toggle and the note button. A
+   tap hides that card's edit, delete and remove buttons — the riskiest ones, a mis-tap from losing
+   a feature, an item or a class — and keeps every play control (stars, folds, Use, Fire, Throw,
+   Cast, equip, On/Off, prepared pins, resource −/+/reset, the familiar's Summoned switch, + Add).
+   One switch per card, per character, default shown, so no existing sheet changes. Design:
+   [the spec](../specs/2026-10-19-edit-toggle-design.md).
+2. Decisions (settled with Mike, recorded in the spec): edit/delete/remove only, never a play
+   control; one switch per card, not one sheet-wide switch; every card with such a button, including
+   the class and ancestry/background chips' Remove and Section Notes, not just the plan's original
+   seven; the Rules tab's glossary stays out (app-wide data, not a character); shown by default; CSS
+   does the hiding (`.ed` on each button, `.ed-off .ed{display:none!important}` on a hidden card),
+   so no renderer reads the flag and a rebuilt row stays hidden for free.
+3. Data (`71-char-io.js`, `00-constants.js`): `character.editHide`, a card key → `true` when hidden;
+   `blankChar()` defaults `{}`; `migrate()`'s object-shape guard (beside `noteCollapse` and
+   `trackerTotals`) turns a non-object, an array or null back into `{}`. Values read `=== true`, so
+   junk in the map reads as shown.
+4. The registry (`87-notes.js`): `EDIT_CARDS`, the twelve keys — `class`, `origin`, `statuses`,
+   `attacks`, `resources`, `features`, `familiars`, `spells`, `inventory`, `trackers`, `journal`,
+   `secnotes`. The first ten are `NOTE_SECTIONS` ids; `journal` and `secnotes` are the two cards
+   outside that registry, found by id (`#journalCard`, `#notesCard` — the Section Notes card gained
+   the latter). `editHidden()`, `setEditHidden()`, `editCardTitle()`, `editToggleText()`,
+   `editToggleSVG()`, `editToggleHTML()` (pure), `editCard()`, `renderEditToggles()`,
+   `paintEditToggle()`, `toggleEditCard()`. `renderEditToggles()` mirrors `renderCombatToggles()`:
+   idempotent, replaces only its own button (never `label.innerHTML +=`), sits before the combat
+   toggle or the note button so the note keeps the far right, and sets `ed-off` both ways so
+   switching to a character who hides nothing clears the last one's. A tap flips the map,
+   `classList.toggle("ed-off")`s the card, repaints the one button in place (so a keyboard Enter
+   keeps focus on it) and `scheduleSave()`s — no list re-renders. `toggleEditCard("journal")` also
+   calls `renderJournal()`, since a blank page's empty-state line names the Edit button.
+5. The `ed` class landed on all 21 edit/delete/remove buttons across `20-lists.js`, `40-sheet.js`
+   (items, statuses, familiars), `50-classrace.js` (the class, race and background chips' Remove),
+   `60-attacks.js` (attacks, spells), `65-resources.js`, `87-trackers.js` (a counter's pencil — its
+   only way into the form, so hiding Trackers hides delete too, by decision), `87-journal.js` (a
+   page's Edit/Delete) and `87-notes.js` (a section note's edit pencil). `20-cards.css` gained the
+   `.edbtn`/`.edicon` look (shown: a faint plain pencil; hidden: the pencil with a slash, in accent,
+   `aria-pressed="true"`) and the one hiding rule. `60-journal.html`'s blank-page line now reads
+   "Nothing written yet." with no "— tap Edit" when the Journal's buttons are hidden
+   (`87-journal.js`). `renderAll()` (`66-coins-hp.js`) calls `renderEditToggles()` right after
+   `renderNoteIcons()`; `90-boot.js` wires `[data-edtoggle]` to `toggleEditCard()`.
+6. Tests: `sheet.js` — the default `{}` and every card starts shown; `blankChar()` never sets a key
+   it shouldn't; `migrate()` repairs a string/array/null/missing `editHide` to `{}` and round-trips
+   a real one; hiding/showing writes and clears the key; a non-card key is refused;
+   `editHidden()` reads only a literal `true` and copes with a missing or wrong-typed map, a
+   non-card key, and a null character; `editCardTitle()` for all twelve; `editToggleHTML()` in both
+   states (classes, `aria-pressed`, title, label, the slash). `rules-data.js` — a play-control scan
+   (new, `test(#97)`) asserts every edit/delete/remove button in every renderer's sample markup
+   carries `ed` and every play-control button (`.fav`, `.fitoggle`, `.equip`, `.use-go`,
+   `data-prep`, `data-cast-spell`, resource `.res-btn`, the familiar's Summoned switch, `+ Add`
+   variants) does not, so a future renderer that forgets the class fails the suite instead of
+   shipping silently; the `EDIT_CARDS` registry reaches a real card for every key; the CSS rule
+   exists; the boot wiring exists.
+7. QA driven in Playwright, both skins, four tabs (Sheet, Spells, Inventory, Journal), a character
+   with a class, a species, a background, two features, two items, a status, a familiar, a player
+   resource, a spell, an attack, a tracker, a journal page and a section note, built directly on
+   `character` via `browser_evaluate` (not through rules-pack lookups, so `system` landed on
+   `"humblewood"` per `newCharacter('QA','srd52')`'s literal call — content was hand-built either
+   way): all twelve cards show the pencil in header order (pencil, combat, note) on both skins;
+   Features' pencil hides its edit/delete while stars, folds, On/Off and Use stay, turns accent with
+   a slash (`aria-pressed="true"`), and a second tap restores them; the same for Inventory, Class
+   (the chip's Remove) and Trackers; hiding Features and reloading reads the flag back from storage
+   (the app does not autoload without a starred character, so the check loaded the sheet explicitly
+   — `editHide` was already `{true}` in its stored JSON before the load ran); a second, untouched
+   character's Features shows its buttons; adding an Attack (already a default combat section) and
+   entering combat, its pencil there hides the card's edit button and repaints, matching the Sheet
+   tab's state (the same card node, moved); hiding Journal and opening a page with a title but no
+   text shows "Nothing written yet." with Edit/Delete in the markup but `display:none`; a pencil
+   focused directly and activated by a real `Enter` keypress toggles `aria-pressed`, `editHide` and
+   keeps focus on the button. Not driven: tabbing from a cold page through the full tab order to
+   reach a pencil (the button was focused by script, then Enter was a real keyboard event); real
+   devices, touch and print, Mike's own characters, as every screenshot QA leaves to him.
+   → `.claude/qa/97-before-<tab>-<skin>.png`, `97-after-<tab>-<skin>.png`, `97-features-hidden.png`,
+   `97-class-hidden.png`, `97-inventory-hidden.png`, `97-trackers-hidden.png`, `97-switch.png`,
+   `97-combat.png`, `97-journal.png`.
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
+[character model](../wiki/architecture/character-model.md), [journal](../wiki/features/journal.md)

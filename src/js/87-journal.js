@@ -166,11 +166,11 @@ function jnlWhen(p){return jnlTime(p.at)?noteWhen({at:jnlTime(p.at),editedAt:jnl
 function journalPageHTML(p){
   const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text)),pr=noteProgress(jnlStr(p.text));
   return `<div class="jnl-bar"><button type="button" class="tbtn" data-jnlback>← All pages</button><span class="grow"></span>`+
-    `<button type="button" class="tbtn" data-jnledit="${esc(p.id)}">Edit</button>`+
-    `<button type="button" class="tbtn danger" data-jnldel="${esc(p.id)}">Delete</button></div>`+
+    `<button type="button" class="tbtn ed" data-jnledit="${esc(p.id)}">Edit</button>`+
+    `<button type="button" class="tbtn danger ed" data-jnldel="${esc(p.id)}">Delete</button></div>`+
     `<h3 class="jnl-h" id="jnlHead" tabindex="-1">${esc(jnlTitle(p))}</h3>`+
     ((tag||when||pr.total)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${pr.total?`<span class="jnl-prog">${esc(pr.done+"/"+pr.total)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"")+
-    (body?`<div class="n-body">${body}</div>`:`<div class="empty">Nothing written yet — tap Edit.</div>`);
+    (body?`<div class="n-body">${body}</div>`:`<div class="empty">${editHidden(character,"journal")?"Nothing written yet.":"Nothing written yet — tap Edit."}</div>`);
 }
 /* Built ONCE per edit (renderJournal() leaves it alone after), so it can keep
    the player's caret. Everything typed is written straight to the page. */

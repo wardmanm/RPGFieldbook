@@ -142,7 +142,7 @@ function trkAfter(c,id){
    chip inside a checkbox button would be a button in a button, and every −/+
    would pay for a highlight() of the whole card. */
 const TRK_PEN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`;
-function trkEditHTML(t){return `<button type="button" class="icon" data-trkedit="${esc(t.id)}" aria-label="${esc("Edit "+trkName(t))}" title="Edit">${TRK_PEN}</button>`;}
+function trkEditHTML(t){return `<button type="button" class="icon ed" data-trkedit="${esc(t.id)}" aria-label="${esc("Edit "+trkName(t))}" title="Edit">${TRK_PEN}</button>`;}
 function trackerRowHTML(t){
   const pr=trkProgress(t),name=trkName(t),g=trkInt(t.goal);
   const body=`<div class="trk-ctl"><button type="button" class="res-btn" data-trkdec="${esc(t.id)}" aria-label="${esc("One less — "+name)}">−</button>`+

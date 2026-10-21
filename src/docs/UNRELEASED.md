@@ -40,3 +40,5 @@ Bullets below this line — leave the heading in place.
   be set to always or never. Thrown weapons such as daggers and javelins now have a Throw button
   that counts them, and they come back after the fight. Ending combat recovers ammunition on its own,
   with an Undo.
+- Every list card has a pencil in its header that hides its edit and delete buttons, so they stay
+  out of the way in play.
