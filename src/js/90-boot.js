@@ -97,7 +97,7 @@ function wire(){
     if((m=t.closest("[data-info-bg]")))return openBackgroundInfo(m.dataset.infoBg);
     if((m=t.closest("[data-choose-sub]")))return chooseSubclass(m.dataset.chooseSub);
     if((m=t.closest("[data-change-sub]")))return chooseSubclass(m.dataset.changeSub);
-    if((m=t.closest("[data-sub-info]"))){const p=m.dataset.subInfo.split("|");return openSubclassInfo(p[0],p[1]);}
+    if((m=t.closest("[data-sub-info]"))){const p=m.dataset.subInfo.split("|");return openSubclassInfo(p[0],p.slice(1).join("|"),m.dataset.subRef?{ref:true}:undefined);}
     if((m=t.closest("[data-info-class]")))return openClassInfo(m.dataset.infoClass);
     // statuses
     if((m=t.closest("[data-status-tick]"))){stepStatusTap(m.dataset.statusTick,num(m.dataset.sec),e.detail===0);return;}

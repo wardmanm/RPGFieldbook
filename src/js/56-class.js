@@ -325,11 +325,15 @@ function chooseSubclass(className){
   document.getElementById("scCancel").addEventListener("click",closeModal);
   document.querySelectorAll("[data-pick-sub]").forEach(el=>el.addEventListener("click",()=>{const p=el.dataset.pickSub.split("|");closeModal();selectSubclass(p[0],p[1]);}));
 }
-function openSubclassInfo(className,subName){
+/* By the class's id or name; `{ref:true}` is the Rules tab's reference mode,
+   which shows the rules without this character's level marks (#99). */
+function openSubclassInfo(className,subName,opts){
+  const ref=!!(opts&&opts.ref);
   const d=findClassDef(className),sc=subclassesFor(d)[subName];
   if(!sc){openModal(subName,`<p class="hint">No data for this subclass.</p>`);return;}
-  const entry=character.classes.find(c=>c.name===className);
-  let b=`<p class="hint" style="margin-bottom:6px">${esc(className)} subclass</p><p>${esc(sc.description||"")}</p>`;
+  const cn=d?String(d.name||className):String(className);
+  const entry=ref?null:character.classes.find(c=>c.name===className||c.name===cn);
+  let b=`<p class="hint" style="margin-bottom:6px">${esc(cn)} subclass</p><p>${esc(sc.description||"")}</p>`;
   if(sc.spellcasting)b+=`<p class="hint"><b>Grants spellcasting (${esc(sc.spellcasting.toUpperCase())})</b></p>`;
   b+=tableChipsHTML(subName,"subclass");
   if(sc.levels)Object.keys(sc.levels).map(Number).sort((a,b)=>a-b).forEach(L=>{
@@ -341,19 +345,25 @@ function openSubclassInfo(className,subName){
   });
   openModal(subName,b);
 }
-function openClassInfo(name){
-  const d=findClassDef(name),entry=(character.classes||[]).find(c=>String(c.name||"").toLowerCase()===String(name||"").toLowerCase());
+/* By id or name. The window speaks the entry's own name, so a Rules-tab row that
+   passes an `_id` reads "Fighter", not "r12"; `{ref:true}` leaves the character
+   out (#99). */
+function openClassInfo(name,opts){
+  const ref=!!(opts&&opts.ref);
+  const d=findClassDef(name);
   if(!d){openModal(name,`<p class="hint">No rules data loaded for this class — it was added as a custom name.</p>`,iconSVG("classes",name,"lg"));return;}
+  const nm=String(d.name||name);
+  const entry=ref?null:(character.classes||[]).find(c=>String(c.name||"").toLowerCase()===nm.toLowerCase());
   let b=`<p>${esc(d.description||"")}</p>`;
   const meta=[d.hitDie?("Hit die "+d.hitDie):"",d.spellcasting?("Spellcasting "+d.spellcasting.toUpperCase()):"",d.savingThrows?("Saves "+d.savingThrows.map(x=>x.toUpperCase()).join("/")):""].filter(Boolean).join(" · ");
   if(meta)b+=`<p class="hint"><b>${esc(meta)}</b></p>`;
-  b+=tableChipsHTML(name,"class");
+  b+=tableChipsHTML(nm,"class");
   const subMap=subclassesFor(d);
   if(Object.keys(subMap).length){
     b+=`<div style="border-top:1px dotted var(--hair);padding-top:8px;margin-top:8px">`;
-    if(entry&&entry.subclass)b+=`<p><b>Subclass:</b> <span class="link" data-sub-info="${esc(name)}|${esc(entry.subclass)}">${esc(entry.subclass)}</span> &nbsp;<button class="tbtn" data-change-sub="${esc(name)}" style="padding:4px 9px;min-height:auto">Change</button></p>`;
-    else if(entry)b+=`<p><b>Subclass:</b> not chosen yet &nbsp;<button class="tbtn primary" data-choose-sub="${esc(name)}" style="padding:4px 9px;min-height:auto">Choose</button></p>`;
-    else b+=`<p class="hint"><b>Subclasses:</b> ${Object.keys(subMap).map(n=>`<span class="link" data-sub-info="${esc(name)}|${esc(n)}">${esc(n)}</span>`).join(", ")}</p>`;
+    if(entry&&entry.subclass)b+=`<p><b>Subclass:</b> <span class="link" data-sub-info="${esc(nm)}|${esc(entry.subclass)}">${esc(entry.subclass)}</span> &nbsp;<button class="tbtn" data-change-sub="${esc(nm)}" style="padding:4px 9px;min-height:auto">Change</button></p>`;
+    else if(entry)b+=`<p><b>Subclass:</b> not chosen yet &nbsp;<button class="tbtn primary" data-choose-sub="${esc(nm)}" style="padding:4px 9px;min-height:auto">Choose</button></p>`;
+    else b+=`<p class="hint"><b>Subclasses:</b> ${Object.keys(subMap).map(n=>`<span class="link" data-sub-info="${esc(ref?(d._id||nm):nm)}|${esc(n)}"${ref?` data-sub-ref="1"`:""}>${esc(n)}</span>`).join(", ")}</p>`;
     b+=`</div>`;
   }
   if(d.levels)Object.keys(d.levels).map(Number).sort((x,y)=>x-y).forEach(L=>{
@@ -364,6 +374,6 @@ function openClassInfo(name){
     if(lv.spells)b+=`<p class="hint" style="margin:3px 0;color:var(--accent-2)">✦ Spells: ${esc(lv.spells.note||("up to "+lv.spells.known+" known"))}</p>`;
     b+=`</div>`;
   });
-  openModal(name+(entry?` ${num(entry.level)}`:""),b,iconSVG("classes",name,"lg"));
+  openModal(nm+(entry?` ${num(entry.level)}`:""),b,iconSVG("classes",nm,"lg"));
 }
 

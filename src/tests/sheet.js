@@ -4369,6 +4369,60 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ctx.openBrowse = savedOB; ctx.openModal = savedOM; X.rules = savedRules; X.character = savedChar;
 }
 
+/* ---- #99: the windows open by id, titled by name, and in reference mode ---- */
+{
+  const savedRules = X.rules, savedChar = X.character, savedOM = ctx.openModal;
+  let modal = null;
+  ctx.openModal = (title, html) => { modal = {title, html}; };
+  const open = fn => { modal = null; fn(); return modal || {title: '', html: ''}; };
+  X.rules = {name: 'T', keywords: [], features: [], items: [], spells: [], feats: [], tables: [], subclasses: [],
+    classes: [{_id: 'c1', name: 'Fighter', description: 'First edition.', hitDie: 'd10', _source: 'SRD',
+               levels: {'1': {traits: [{name: 'Second Wind'}]}, '3': {traits: [{name: 'Subclass'}]}},
+               subclasses: {Champion: {description: 'Crits.', levels: {'3': {traits: [{name: 'Improved Critical'}]}}}}},
+              {_id: 'c2', name: 'Fighter', description: 'Second edition.', hitDie: 'd10', _source: 'XPHB'}],
+    races: [{_id: 'r1', name: 'Elf', description: 'Old elf.', speed: '30 ft', _source: 'SRD', subraces: [{name: 'High Elf'}]},
+            {_id: 'r2', name: 'Elf', description: 'New elf.', speed: '35 ft', _source: 'XPHB', subraces: [{name: 'High Elf'}]}],
+    backgrounds: [{_id: 'b1', name: 'Acolyte', description: 'Temple.', feat: 'Magic Initiate', abilityScores: ['int', 'wis', 'cha'], _source: 'SRD'}]};
+  ctx.recomputeDups();
+  X.character = X.blankChar();
+  Object.assign(X.character, {classes: [{name: 'Fighter', level: 3, subclass: 'Champion'}],
+    race: {name: 'Elf', subrace: 'High Elf'}, bg: {name: 'Acolyte', feat: 'Magic Initiate', abils: [{target: 'abilities.wis', value: 2}]}});
+
+  const sheetCls = open(() => ctx.openClassInfo('Fighter'));
+  ck('#99 from the sheet, the class window is unchanged', sheetCls.title === 'Fighter 3' &&
+     sheetCls.html.includes('Level 3 — current') && sheetCls.html.includes('data-sub-info="Fighter|Champion"') && sheetCls.html.includes('data-change-sub'));
+  const refCls = open(() => ctx.openClassInfo('c1', {ref: true}));
+  ck('#99 by id, titled by its name', refCls.title === 'Fighter');
+  ck('#99 reference mode shows nothing of the character',
+     !refCls.html.includes('— current') && !refCls.html.includes('data-change-sub') && !refCls.html.includes('data-choose-sub'));
+  ck('#99 ...and lists its subclasses as links that stay in reference mode',
+     refCls.html.includes('data-sub-info="c1|Champion"') && refCls.html.includes('data-sub-ref="1"'));
+  ck('#99 two packs\' Fighters open their own entries',
+     refCls.html.includes('First edition.') && open(() => ctx.openClassInfo('c2', {ref: true})).html.includes('Second edition.'));
+
+  ck('#99 from the sheet, the subclass window marks what was gained',
+     open(() => ctx.openSubclassInfo('Fighter', 'Champion')).html.includes('Level 3 — gained'));
+  const refSub = open(() => ctx.openSubclassInfo('c1', 'Champion', {ref: true}));
+  ck('#99 a subclass in reference mode: no gained marks, the class named, not its id',
+     refSub.title === 'Champion' && !refSub.html.includes('— gained') && refSub.html.includes('Fighter subclass') && !refSub.html.includes('c1 subclass'));
+
+  ck('#99 from the sheet, the species window marks the chosen lineage',
+     open(() => ctx.openRaceInfo('Elf')).html.includes('High Elf — selected'));
+  const refRace = open(() => ctx.openRaceInfo('r2', {ref: true}));
+  ck('#99 a species by id, in reference mode', refRace.title === 'Elf' && refRace.html.includes('New elf.') &&
+     refRace.html.includes('35 ft') && !refRace.html.includes('— selected'));
+
+  ck('#99 from the sheet, the background window shows your choices',
+     open(() => ctx.openBackgroundInfo('Acolyte')).html.includes('Your choices'));
+  const refBg = open(() => ctx.openBackgroundInfo('b1', {ref: true}));
+  ck('#99 a background in reference mode shows its options, not your choices',
+     refBg.title === 'Acolyte' && refBg.html.includes('Magic Initiate') && !refBg.html.includes('Your choices'));
+
+  ck('#99 an unknown name still says so', open(() => ctx.openClassInfo('Nobody', {ref: true})).html.includes('No rules data loaded'));
+
+  ctx.openModal = savedOM; X.rules = savedRules; X.character = savedChar;
+}
+
 /* ---- imported files and packs render inert ----
    A character file, a rules pack and a settings file (which carries a whole
    `rules` object) are all written by someone else, and all reach the page

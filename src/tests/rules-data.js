@@ -2466,6 +2466,12 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
        fs.readFileSync(path.join(ROOT, 'src/js/80-modal-forms.js'), 'utf8')));
 }
 
+{
+  const boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+  ck('#99 a subclass link from a reference window opens in reference mode',
+     /data-sub-info[\s\S]{0,200}subRef\?\{ref:true\}/.test(boot));
+}
+
 /* ================= Fetch all never loses what is loaded (issue #65) ===========
    fetchAllRules() used to call resetRules() BEFORE fetching, so every pack
    imported from a file was discarded, and when the fetch then failed (offline,
