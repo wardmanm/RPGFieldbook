@@ -1,18 +1,17 @@
 # Status: Fieldbook
-Updated: 2026-10-21 · Branch: main
+Updated: 2026-10-22 · Branch: main
 
 ## Current focus
-1.9.0, wave 1 of 5: #95/#93/#94, #104 and #97 are merged. #99 with #53 (Rules tab overhaul) has
-its spec written (`src/docs/specs/2026-10-19-rules-browser-design.md`), waiting on Mike's review
-before its plan and worktree. Wave 0's #88 is not started. No branch open.
+1.9.0: wave 1 is complete (#95/#93/#94, #104, #97, #99 with #53 all merged). Wave 0's #88 is not
+started. Next is wave 2: #103 (Sheet tab makeover), #101 beside it, and the #102 CORS spike. No
+branch open.
 
 ## Recent changes
+- 2026-10-22: Merged #99 and #53 — the Rules tab is a browser over every loaded category: a sidebar
+  with counts and a search across everything, sortable filterable tables, rows open the sheet's own
+  windows in a reference mode; the item and feat pickers share its filters and previews.
 - 2026-10-21: Merged #97 — a pencil in every list card's header hides that card's edit, delete and
   remove buttons, per card and per character, shown by default.
-- 2026-10-19: Mike chose to run #99 with #53 and #97 side by side; #99/#53's design settled: a
-  category sidebar over every loaded category, sortable filterable tables, rows open the existing
-  windows (reference mode for class/background), a search across all categories, a list screen on
-  phones.
 - 2026-10-19: Public app and data releases now wait for Mike's approval in GitHub before
   publishing (`release` environment); Claude Code asks before release commands (#109).
 - 2026-10-19: `/status` and `/release` skills; this status log tracked and written on main only
@@ -26,7 +25,6 @@ before its plan and worktree. Wave 0's #88 is not started. No branch open.
 - 2026-10-16: Released v1.8.1; first private data release, 1.8.1-1.
 
 ## Pending decisions
-- **The #99/#53 spec** (raised 2026-10-19). Options: approve / change. Blocks: #99's plan and worktree.
 - **End combat clears every outstanding ammunition count** (raised 2026-10-19, #104 final review).
   Shots that give nothing back (None, Never, firearm bullets) are spent at End combat; earlier Mike
   was told they would stay on record for a later rule change. Options: keep / revert to keeping
@@ -40,9 +38,13 @@ before its plan and worktree. Wave 0's #88 is not started. No branch open.
   combat buttons. Options: leave / tighten the header CSS. For Mike's device pass.
 
 ## Loose ends
-- 5 player-visible changes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
-- #97 on Mike's devices: Claude drove it at 1280px and 360px (`.claude/qa/97-*.png`); real devices,
-  touch, print and Mike's own characters not checked.
+- 6 player-visible changes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
+- #97 and #99 on Mike's devices: Claude drove them at desktop and phone widths
+  (`.claude/qa/97-*.png`, `.claude/qa/99-*.png`); real devices, touch, print and Mike's own
+  characters not checked.
+- #99 follow-ups parked at its final review: keyboard focus drops to the page after a sort, filter
+  or Show more tap in the Rules tables; a rules fetch landing while typing in a category's search
+  box takes focus (the text is kept).
 - #104 follow-up: `src/tests/sheet.js`, the #8 item-editor test block no longer ends with
   `X.resetRules()`, so its SRD items stay loaded for the tests after it (suite still passes).
 - #104 follow-up: two doc sentences to tighten — the spec's As built "Old sheets" bullet says
