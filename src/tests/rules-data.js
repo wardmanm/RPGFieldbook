@@ -25,6 +25,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'AMMO_PIECES','AMMO_SINGLE_NAMES','AMMO_BUNDLES','AMMO_LAUNCHERS',
   'EDIT_CARDS',
   'RB_CATS', 'RB_PAGE', 'RB_HITS', 'rbUI', 'rbCat', 'rbShown', 'rbFacets', 'rbState', 'rbFacetVal', 'rbPasses', 'rbSorted', 'rbSortBy', 'rbToggleFacet', 'rbClearFacets', 'rbFindRow', 'rbOpenRow', 'rulesCatOf', 'rbSideHTML', 'rbHeadHTML', 'rbBodyHTML', 'rbSearchHTML',
+  'rbToList', 'rbOpenCat', 'rbNum', 'K_SET', 'saveSettings',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2106,6 +2107,17 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /rbCatSearch[\s\S]{0,200}rbRefreshBody\(\)/.test(boot) && !/rbCatSearch[\s\S]{0,200}renderRulesBrowser\(\)/.test(boot));
   const sheetJs = fs.readFileSync(path.join(ROOT, 'src/js/40-sheet.js'), 'utf8');
   ck('#99 the ☰ flyout lists the categories on the Rules tab', /tab-rules[\s\S]{0,400}rbShown\(\)[\s\S]{0,300}rbOpenCat\(/.test(sheetJs));
+  // final-review (a): the tab always opens on the category list, never the
+  // last table a previous visit left on
+  ck('#99 (a) entering the Rules tab from elsewhere resets to the category list',
+     /function selectTab\(name\)\{[\s\S]{0,500}if\(name==="rules"&&was!=="rules"\)rbToList\(\)/.test(sheetJs));
+  // final-review (c): the flyout's Rules entries scroll to the card, show a
+  // count, and the dead "no sections" branch (the Glossary is always listed) is gone
+  const rulesCase = (sheetJs.match(/panel\.id==="tab-rules"\)\{[\s\S]*?\n\s*return;\n\s*\}/) || [''])[0];
+  ck('#99 (c) the flyout scrolls to the opened category, and the dead branch is gone',
+     /scrollToCard\(/.test(rulesCase) && /rbOpenCat\(/.test(rulesCase) && !/No sections here/.test(rulesCase));
+  ck('#99 (c) each flyout entry shows its category\'s row count',
+     /a\.textContent=cat\.title\+" \("\+rows\.length\+"\)"/.test(rulesCase));
 }
 
 // ---------- the combat view is a TAB: its icon in the tab bar, its panel in the page
@@ -2607,6 +2619,39 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('#99 a class opens in reference mode', !!modal && modal.title === 'Fighter');
   modal = null; X.rbOpenRow('spells', 'nope');
   ck('#99 an unknown id opens nothing', modal === null);
+
+  // final-review (a): rbToList() is the runtime hook selectTab() calls —
+  // behavioural half of the source-level check above
+  X.rbUI.screen = 'table';
+  X.rbToList();
+  ck('#99 (a) rbToList() resets the screen to the category list', X.rbUI.screen === 'list');
+
+  // final-review (3): two base packs both naming a class "Fighter" must not
+  // collide in the Class column — it reads the display name, not the plain one
+  X.rules = {name: 'T', classes: [
+    {_id: 'cA', name: 'Fighter', hitDie: 'd10', _source: 'SRD', subclasses: {Samurai: {description: 'x'}}},
+    {_id: 'cB', name: 'Fighter', hitDie: 'd10', _source: 'XPHB', subclasses: {Samurai: {description: 'y'}}},
+  ]};
+  ctx.recomputeDups();
+  const subCat = X.rbCat('subclasses'), clsCol = subCat.cols.find(c => c.key === 'cls');
+  ck('#99 (3) same-named classes from two packs show distinct Class cells',
+     JSON.stringify(subCat.rows().map(r => clsCol.get(r)).sort()) === '["Fighter (SRD)","Fighter (XPHB)"]');
+  const clsFacet = subCat.facets(subCat.rows())[0];
+  ck('#99 (3) ...and the Class facet options are distinct too',
+     JSON.stringify(clsFacet.options.map(o => o.label).sort()) === '["Fighter (SRD)","Fighter (XPHB)"]');
+  fresh();
+
+  // final-review (4): rbNum takes the first number, not every digit joined
+  ck('#99 (4) rbNum reads the first number, blank is null',
+     X.rbNum('30 ft') === 30 && X.rbNum('Walk 30 ft; Fly 60 ft') === 30 && X.rbNum('d12') === 12 && X.rbNum('') === null);
+
+  // final-review (5): opening a category persists it, loudly enough to check
+  // against the stored settings blob a reload would read back
+  delete store[X.K_SET];
+  X.rbOpenCat('spells');
+  ck('#99 (5) opening a category persists settings.rulesCat', X.settings.rulesCat === 'spells');
+  ck('#99 (5) ...and the stored settings blob holds it too',
+     typeof store[X.K_SET] === 'string' && JSON.parse(store[X.K_SET]).rulesCat === 'spells');
 
   ctx.openModal = savedOM; X.rules = savedRules; X.character = savedChar; X.settings.rulesCat = savedCat; X.rbUI.per = {}; X.rbUI.q = '';
 }

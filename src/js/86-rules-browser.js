@@ -22,7 +22,10 @@ function rbRow(e,kind,extra){
   const nm=kind==="keywords"?glossTerm(e):rbStr(e.name);
   return Object.assign({id:String(rbStr(e._id)||nm),name:rbName(e,kind),e,src:rbSrc(e),subj:e},extra||{});
 }
-function rbNum(v){const n=parseFloat(String(v==null?"":v).replace(/[^0-9.\-]/g,""));return isNaN(n)?null:n;}
+/* the first number in the text, not every digit joined — "1d10" is 1, not 110;
+   for hit dice ("d10", no leading count) that leaves the die size, which is
+   the only number there to sort by */
+function rbNum(v){const m=String(v==null?"":v).match(/-?\d+(?:\.\d+)?/);return m?parseFloat(m[0]):null;}
 function rbTblKind(t){const i=TBL_KINDS.findIndex(([k])=>k===t.ownerKind);return i<0?TBL_KINDS.length:i;}
 /* a shared picker facet matches an entry (or a feat's {k,e}); the browser hands
    it the row, so this unwraps */
@@ -46,9 +49,11 @@ const RB_CATS=[
    rows:()=>{const out=[];rbList("classes").forEach(d=>{const m=subclassesFor(d);Object.keys(m).forEach(k=>{
      const sc=m[k];if(!sc||typeof sc!=="object"||!k)return;
      out.push({id:"sub:"+(rbStr(d._id)||rbStr(d.name))+"|"+k,name:k,e:sc,cls:d,src:rbSrc(sc)||rbSrc(d),subj:sc});});});return out;},
-   cols:[RB_NAME,{key:"cls",label:"Class",get:r=>rbStr(r.cls.name)},RB_SOURCE],
-   facets:list=>{const cl=[...new Set(list.map(r=>rbStr(r.cls.name)).filter(Boolean))].sort();
-     return [{key:"cls",label:"Class",type:"multi",options:cl.map(c=>({value:c.toLowerCase(),label:c})),match:(r,a)=>a.has(rbStr(r.cls.name).toLowerCase())}];},
+   /* the class's display name, not its plain one — "Fighter" alone is
+      ambiguous once two base packs both have one (#99 final review) */
+   cols:[RB_NAME,{key:"cls",label:"Class",get:r=>rbName(r.cls,"classes")},RB_SOURCE],
+   facets:list=>{const cl=[...new Set(list.map(r=>rbName(r.cls,"classes")).filter(Boolean))].sort();
+     return [{key:"cls",label:"Class",type:"multi",options:cl.map(c=>({value:c.toLowerCase(),label:c})),match:(r,a)=>a.has(rbName(r.cls,"classes").toLowerCase())}];},
    order:{key:"cls",dir:1},
    open:r=>openSubclassInfo(r.cls._id||r.cls.name,r.name,{ref:true})},
   {k:"races",title:"Species",
@@ -270,6 +275,13 @@ function rbSearchHTML(shown,q){
 
 /* ================= the DOM half ================= */
 function rbCurKey(){return rulesCatOf(settings,rbShown());}
+/* Entering the Rules tab from another tab: forget whatever table was open and
+   open on the category list (spec §7). selectTab() calls this; it never runs
+   during boot, so the TDZ that orders every other fragment doesn't apply. */
+function rbToList(){
+  rbUI.screen="list";
+  const c=document.getElementById("rbCard");if(c&&c.dataset)c.dataset.screen="list";
+}
 function rbPaintSide(shown,k){
   const side=document.getElementById("rbSide");if(!side)return;
   const q=String(rbUI.q||"").trim();

@@ -6,6 +6,9 @@ function selectTab(name){
      sends them home first, or a note link would land on a tab with its cards
      missing; entering it remembers where it came from, for the swords. */
   const was=(document.querySelector(".tabpanel.active")||{id:"tab-sheet"}).id.replace(/^tab-/,"");
+  /* Entering the Rules tab from elsewhere always opens on its category list
+     (spec #7), never the table a previous visit left on. */
+  if(name==="rules"&&was!=="rules")rbToList();
   if(name!=="combat")closeCombatView();
   else if(was!=="combat")cvPrevTab=was;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
@@ -33,9 +36,12 @@ function buildToc(){
   const tabBtn=document.querySelector(".tab.active");const tabName=inView?"Combat":(tabBtn?tabBtn.textContent.trim():"Sections");
   /* The Rules tab is one card; its sections are its categories (#99). */
   if(!inView&&panel&&panel.id==="tab-rules"){
+    /* the Glossary is always listed (its + Add is always reachable), so this
+       pane is never empty and needs no empty-list fallback */
     const shown=rbShown();
-    fly.innerHTML=`<h4>${esc(tabName)}</h4>`+(shown.length?"":`<p class="hint" style="padding:6px">No sections here.</p>`);
-    shown.forEach(({cat})=>{const a=document.createElement("a");a.textContent=cat.title;a.addEventListener("click",()=>{closeToc();rbOpenCat(cat.k);});fly.appendChild(a);});
+    fly.innerHTML=`<h4>${esc(tabName)}</h4>`;
+    shown.forEach(({cat,rows})=>{const a=document.createElement("a");a.textContent=cat.title+" ("+rows.length+")";
+      a.addEventListener("click",()=>{closeToc();rbOpenCat(cat.k);scrollToCard(document.getElementById("rbCard"));});fly.appendChild(a);});
     return;
   }
   const items=[];
