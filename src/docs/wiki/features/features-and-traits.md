@@ -66,7 +66,10 @@ shared full-screen picker, or the plain form when no pack has feats or traits:
 - **One list, two kinds.** `featPickList()` wraps every `rules.feats` entry and every
   `rules.features` entry as `{k:"feat"|"trait", e, id}`.
 - **Facets**: Type — Origin feat, General feat, Fighting Style feat, Epic Boon, Feat, Trait, only the
-  kinds present; Pack, when more than one source is loaded; and "No prerequisite".
+  kinds present; Pack, when more than one source is loaded; and "No prerequisite" — built by
+  `featFacets(list)`, the same facets the Rules tab's Feats and Traits categories filter by (#99), as
+  `itemFacets()` and `spellFacets()` do for Items and Spells. The eye button's preview opens
+  `openFeatInfo(w)`, likewise shared with those two categories' rows.
 - **Search** covers the name, the source and the whole description.
 - A feat's kind and prerequisite come from the **first line** of its description, where the
   converter writes them ("General feat · Prerequisite: Level 4+"): `featPickKind()`,
@@ -161,3 +164,4 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 - 2026-08-18 — "Collapse all" on Features & Traits, and the shared group-heading style.
   → ledger L3123
 - 2026-10-16 — A feature files under its source, falling back to where it came from; the Source box offers the groups in use. → ledger L5823, #98
+- 2026-10-22 — The feat/trait picker's filters and preview become `featFacets()` and `openFeatInfo()`, shared with the Rules tab's Feats and Traits categories. → ledger L6327, #99

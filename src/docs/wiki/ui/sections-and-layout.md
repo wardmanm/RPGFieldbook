@@ -344,3 +344,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-10-16 — No group may be named for an `Object.prototype` property; the group field says so and stops the save. A group reopening after a case edit is kept, by decision. → ledger L5872, #98
 - 2026-10-16 — Settings no longer uses the `.fgroup` collapsible or a collapse map: it is a sidebar of pages and remembers the last one. → ledger L5930, #107
 - 2026-10-19 — A pencil in every card's header hides that card's edit, delete and remove buttons, per card and per character, by CSS (`.ed`/`.ed-off`), before the combat toggle and the note button. → ledger L6248, #97
+- 2026-10-22 — The Rules tab becomes one card, the browser; `settings.rulesCat` (the category last opened) replaces `settings.rulesCollapse`. → ledger L6327, #99

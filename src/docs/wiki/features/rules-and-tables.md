@@ -22,17 +22,66 @@ Humblewood (the private repo's `docs/humblewood.md`)
 
 **The browser.** One card (`#rbCard`, `src/html/40-rules.html`). On the left, every category the
 loaded packs hold, in `RB_CATS` order with its count (Classes, Subclasses, Species, Backgrounds,
-Feats, Traits, Spells, Items, Conditions, Glossary, Tables; the Glossary is always listed, so its
-+ Add is always reachable), under a search box across all of them. On the right, the open category
-as a sortable table with its own search box and, where it has them, the Add pickers' filters. A row
-opens the window the sheet already uses for that entry (the class, subclass, species and background
-windows in reference mode, with nothing to add). The category last opened
-is `settings.rulesCat` (read through `rulesCatOf()`); search, filters and sort live only for the
-session. `renderRulesBrowser()` paints it all, from `renderAll()` (a sheet loaded with cached rules)
-and from `refreshRulesUI()` (a pack load); typing in a category's box repaints only its body, so the
-box keeps focus. 640px and under it shows one pane at a time, by `#rbCard[data-screen]`, with
-← Categories to go back. The ☰ flyout lists the categories. With no pack loaded the card opens on an
-Import rules files prompt.
+Feats, Traits, Spells, Items, Conditions, Glossary, Tables; the Glossary is always listed, even
+empty, so its + Add is always reachable — a ruling beyond the spec, which only said every
+*non-empty* category), under a search box across all of them. On the right, the open category as a
+sortable table with its own search box and, where it has them, the Add pickers' filters behind a
+Filters button that folds the pills away (open or shut is per-category session state,
+`st.showFilters`); its label carries the active count ("Filters (2)") and a Clear button appears
+beside it once any are set. A row opens the window the sheet already uses for that entry, by the
+entry's `_id` (the class, subclass, species and background windows in reference mode, with nothing
+to add — see below). The category last opened is `settings.rulesCat` (read through `rulesCatOf()`,
+which falls back to the first listed category when the stored one is unknown or now empty); the
+search text, filters and sort of every category, and the sidebar's own query, live only for the
+session, in the module-level `rbUI`. `renderRulesBrowser()` paints it all — the import prompt or the
+sidebar and pane — from `renderAll()` (a sheet loaded with cached rules) and from `refreshRulesUI()`
+(a pack load); typing in a category's own box runs `rbRefreshBody()`, which repaints only `#rbBody`,
+so the box keeps focus and every keystroke lands (the sidebar's box, over every category, repaints
+the sidebar the same way). 640px and under it shows one pane at a time, by `#rbCard[data-screen]`,
+with ← Categories to go back, which also returns keyboard focus to the category button just left.
+The ☰ flyout lists the categories; tapping one calls `rbOpenCat()`, which does not scroll the page —
+see Open, below. A long table (more than 300 rows after filtering) shows the first page and a
+"Show *N* more" button (`rbState().shown`, capped at 300 more per tap); filters and search narrow
+*before* the cap applies. With no pack loaded the card opens on an Import rules files prompt, above
+where the (Glossary-only) browser would be.
+
+**The categories.** `RB_CATS` in `86-rules-browser.js` is the config table, one entry per category:
+
+| Category | Rows from | Columns | Filters | Default sort |
+|---|---|---|---|---|
+| Classes | `classes` | Name · Hit die · Source | — | name |
+| Subclasses | `subclassesFor()` of every loaded class | Name · Class · Source | Class | class, then name |
+| Species | `races` | Name · Size · Speed · Source | — | name |
+| Backgrounds | `backgrounds` | Name · Feat · Source | — | name |
+| Feats | `feats` (wrapped as `{k:"feat",e}`) | Name · Type · Prerequisite · Source | Type, Pack (own), No prerequisite (`featFacets()`) | name |
+| Traits | `features` (wrapped as `{k:"trait",e}`) | Name · From (`source`) · Source | — | name |
+| Spells | `spells` | Name · Level · School · Time · Source | Level, Class (defaults to *every* class, not this character's — a lookup, not a choice), School, Concentration (`spellFacets(list,{classDefault:"all"})`) | level (cantrips first), then name |
+| Items | `items` | Name · Category · Rarity · Cost · Source | Category, Rarity, Needs attunement (`itemFacets()`) | name |
+| Conditions | `keywords` with `cond:true` | Name · Source | — | name |
+| Glossary | `keywords` without `cond:true`, plus `character.glossary` | Term · Type · Source ("Yours" for the player's) | Your entries (toggle) | term |
+| Tables | `allTables()` | Name · Rows · From (`owner`) · **Source** | Kind (`TBL_KINDS`) | kind, then name |
+
+**Subclasses, a ruling beyond the spec's literal source.** The spec names `rules.subclasses` alone;
+this category instead lists what `subclassesFor()` returns for every loaded class — the class's own
+inline `subclasses` plus any standalone `rules.subclasses` entry naming it — because the SRD pack
+(and most packs) carry a class's subclasses inside the class record, and the literal source would
+leave the category empty for an SRD-only player. A subclass whose class is not loaded is not listed.
+**Tables carries a Source column too**, beyond its shorter §4 column list, because decision 7 ("a
+Source column everywhere") outranks it.
+
+**The Pack filter is per category**, not app-wide: `rbFacets()` adds one, labelled "Pack", whenever
+that category's *own* rows (after its own filters) span more than one `_source` — matching the item,
+spell and feat pickers. Feats already carry their own Pack filter from `featFacets()`; `rbFacets()`
+does not add a second one.
+
+**Search across everything.** The sidebar's box (`#rbSearch`) searches every listed category's
+display name — a glossary term's *text* is not searched, only its term, matching the glossary's own
+search today. While it has text, the category list is replaced by grouped results, in `RB_CATS`
+order: up to `RB_HITS` (8) rows per category, then "*N* more in *Category* →" when a category has
+more; a row opens its window directly (`rbOpenRow()`), and the "more in" link opens that category
+with the same text carried into its *own* search box (`rbMoreIn()`), clearing the sidebar's. Clearing
+the sidebar's box restores the category list. Matching is case-insensitive substring, as every
+search in the app is.
 
 **The glossary.** `allGlossary()` is the rules pack's `keywords` plus `character.glossary`. The
 Glossary category lists the pack's terms (conditions have their own category) together with the
@@ -152,6 +201,13 @@ a table opened from a spell preview replaces it.
   the `ownerKind` list that `TBL_KINDS` groups by.
 - Rolling is not done in the app; a `1d100` column is text.
 - Small tables inside a feature (Magic Item Hacking's rarity costs) still read as flat text.
+- **Leaving the Rules tab and coming back shows the last table, not the category list** the spec
+  (§7) calls for: `rbUI.screen` is never reset on a tab switch. Found in #99's own QA, not fixed
+  there. → ledger L6327, #99
+- **The ☰ flyout can leave the Rules pane off-screen.** `rbOpenCat()`, which the flyout's Rules-tab
+  entries call, repaints but never scrolls, unlike every other tab's entries
+  ([Shell](../ui/shell.md)). Picking a shorter category from deep in a long one can leave the
+  viewport scrolled past the new content. Found in #99's own QA, not fixed there. → ledger L6327, #99
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -167,3 +223,4 @@ a table opened from a spell preview replaces it.
 - 2026-09-28 — Glossary images are escaped and shown only from data: URLs; the glossary id in a chip is escaped. → ledger L3940
 - 2026-09-28 — A player's entry with no term is listed as "(no term)"; tables are read through `tableRows()`/`tableCols()`, so a table with no rows no longer stops the sheet. → ledger L4206, #71
 - 2026-09-28 — Tables carry optional `footnotes`, shown under the table; 17 Xanathar's downtime tables gain theirs. → ledger L4273, #73
+- 2026-10-22 — The Rules tab becomes a browser over every loaded category (Classes through Tables), replacing the Glossary and Reference Tables cards: a sidebar with counts and a search across everything, a sortable filterable table per category, a row opening the window the sheet already uses, in reference mode for class/subclass/species/background. `settings.rulesCat` replaces `rulesCollapse`. → ledger L6327, #99, #53

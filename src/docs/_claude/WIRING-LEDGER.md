@@ -6323,3 +6323,131 @@ Pages: [building & CI](../wiki/process/building-and-ci.md), [private data](../wi
 
 Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
 [character model](../wiki/architecture/character-model.md), [journal](../wiki/features/journal.md)
+
+## The Rules tab as a browser (#99, #53, 2026-10-22)
+
+1. The Rules tab becomes a browser over everything the loaded packs hold, replacing the old
+   Glossary-and-Tables cards: a sidebar of eleven categories (Classes, Subclasses, Species,
+   Backgrounds, Feats, Traits, Spells, Items, Conditions, Glossary, Tables) with counts and a search
+   across all of them; a category opens a sortable table with its own search and the Add pickers'
+   filters; a row opens the window the sheet already uses for that entry. It is read-only — nothing
+   here adds to the character (#53's scope). Why: a rules question mid-session meant leaving the
+   sheet or guessing which Add picker held the answer; the tab held only the glossary and reference
+   tables. Design: [the spec](../specs/2026-10-19-rules-browser-design.md),
+   [the plan](../plans/2026-10-21-rules-browser.md).
+2. Decisions (spec §2, settled with Mike 2026-10-16/19): every loaded category plus Glossary and
+   Tables, fixed order, an empty one hidden; a row opens the existing info windows, unified, rather
+   than a second rendering; the class, subclass, species and background windows gain a reference
+   mode (`{ref:true}`) for this use, showing the rules without this character's level, subclass or
+   choices; narrow screens get a list-then-table screen with "← Categories", not a chip row or a
+   dropdown; one search box above the sidebar plus each table's own; one generic table driven by a
+   config per category, in a new fragment; a Source column everywhere, and a Pack filter only when
+   more than one pack is loaded; Conditions is its own category, over the glossary terms marked
+   `cond`, not left inside the Glossary.
+3. Rulings the plan added beyond the spec's literal wording (`src/docs/plans/2026-10-21-rules-browser.md`,
+   Global Constraints): the **Glossary is always listed, even empty**, so its + Add stays reachable;
+   **Subclasses lists `subclassesFor()` of every loaded class** (its own inline subclasses plus any
+   loose `rules.subclasses` entry), not `rules.subclasses` alone, because the SRD pack carries
+   subclasses inside each class and the literal source would leave the category empty for an
+   SRD-only player; **Tables gets a Source column too**, since decision 7 outranks its shorter §4
+   column list; **the Pack filter is per category**, added when that category's own rows span more
+   than one pack; **with no pack loaded, the import prompt shows above the browser**, which then
+   lists only the Glossary.
+4. Shared builders, moved out of the pickers' closures into named functions both the pickers and the
+   Rules tab call (`85-browse.js`): `ITEM_RARITIES`, `itemCatOf()`, `itemRarOf()`, `itemFacets()`,
+   `spellClassesOf()`, `spellSchoolOf()`, `spellFacets(lib,opts)` (`opts.classDefault`: `"mine"` for
+   the pickers, `"all"` for the Rules tab's lookup), `featFacets()`; and two viewers lifted out of
+   the item and feat pickers' previews, so the Rules tab opens the very same one: `openItemInfo(x)`,
+   `openFeatInfo(w)`. The pickers' own tests keep passing unchanged — the proof the lift did not
+   change their behaviour.
+5. The four windows learn to open by `_id` and in reference mode (`56-class.js`, `52-race.js`,
+   `54-background.js`): `openClassInfo(idOrName,opts)`, `openSubclassInfo(classIdOrName,subName,opts)`,
+   `openRaceInfo(idOrName,opts)`, `openBackgroundInfo(idOrName,opts)`. Without `opts` every sheet
+   call is unchanged; `{ref:true}` drops the character entirely (no "current", no subclass marker,
+   no "your choices") and a class window's subclass links carry `data-sub-ref="1"` so they stay in
+   reference mode too (`90-boot.js`'s `[data-sub-info]` handler reads it). Two packs' same-named
+   entries (two "Fighter"s, two "Elf"s) now open their own, since `_id` resolves before name.
+6. The browser itself, `src/js/86-rules-browser.js` (new, 33rd JS fragment, after `86-tables.js`):
+   `RB_CATS`'s eleven configs (rows, columns, filters, default sort, the window a row opens);
+   `rbShown()`, `rbCat()`, `rulesCatOf()`, `rbFacets()` (the per-category Pack filter), `rbState()`,
+   `rbPasses()`, `rbSorted()`/`rbSortBy()` (numeric, cost-by-gold-value, level-cantrips-first,
+   reversing, blanks last), `rbToggleFacet()`/`rbClearFacets()`, `rbFindRow()`/`rbOpenRow()`; the
+   markup strings `rbSideHTML()`, `rbHeadHTML()`, `rbFacetsHTML()`, `rbBodyHTML()` (the 300-row cap
+   and "Show N more"), `rbSearchHTML()` (the cross-category grouping, 8-row cap, "N more in
+   Category →"); the DOM half `renderRulesBrowser()`, `rbPaintSide()`, `rbRefreshBody()` (typing in a
+   category's own box repaints only this, never the box itself — Review Focus 3), `rbOpenCat()`,
+   `rbBack()`, `rbMoreIn()`, `rbCurKey()`. Every field is read through `rbStr()` and the named
+   helpers (`glossTerm()`, `tableRows()`, `featPickKind()`, …), never raw, so a malformed pack entry
+   (a keyword with no term, a table whose rows are not a list, a null entry, a numeric name) renders
+   blank or is skipped rather than stopping the tab (#71).
+7. The old tab is gone: `src/html/40-rules.html` is one card (`#rbCard`, `data-screen="list"|"table"`);
+   `renderGloss()`, `renderTables()`, `RULES_SECS`, `rulesSecOpen()`, `setRulesSecOpen()`,
+   `renderRulesSections()`, `toggleRulesSec()` are deleted; `SETTINGS_KEYS`'s `"rulesCollapse"`
+   becomes `"rulesCat"` (the old key is left alone in a stored settings file — harmless unknown
+   data); `buildToc()` gains the Rules tab's case, listing `rbShown()`'s categories and opening one
+   through `rbOpenCat()`. CSS for the sidebar, the sortable headers and the narrow one-pane-at-a-time
+   layout lands in `35-tables.css`; `.rules-head` is removed from `20-cards.css`.
+8. Tests: `sheet.js` pins the lifted builders and viewers match the pickers' own, the four windows'
+   id/reference-mode behaviour (including an unknown name, and two packs' same-named entries each
+   opening their own), and the browser rendering over every category without throwing on a tidied,
+   partly malformed pool. `rules-data.js` pins `RB_CATS`'s shape (Name first, a Source column, a
+   window per category), the category order, subclasses via `subclassesFor()`, sorting (numeric,
+   cost, level, reversing, blanks last), the Pack filter's one-per-category rule, the Glossary's
+   always-listed rule and its own entries' Preview/Edit/Delete, the 300-row cap and "Show more", the
+   cross-category search's grouping and 8-row cap, `rulesCatOf()`'s fallback (including a now-empty
+   stored category), the markup (the browser's ids, the old ids and renderers gone, the narrow CSS,
+   the boot wiring, the delegated typing-repaints-body-only rule), and the render invariant
+   (`renderRulesBrowser()` in both `renderAll()` and `refreshRulesUI()`). `./src/tests/run.sh` green
+   across every suite, including `docs` (fragment count 33, the new fragment named in the overview
+   and on this page's own `Code:` line) and the `private-data`/`srd-verbatim` suites where available.
+9. QA driven in the project's Playwright MCP, both skins, 1280×900 and 390×844, the real SRD 5.2 pack
+   (570 items, 339 spells, 12 classes, 9 races, 4 backgrounds, 17 feats, 71 tables, 136 keywords)
+   fed in through the hidden `#rbRulesFiles` input (`importRulesFiles()`), not fabricated fixtures:
+   the sidebar with counts (wide) and the category list (narrow) before and after, both skins; Spells
+   sorted by Level (▲ then ▼ on a second tap) and filtered to School: Evocation (339 → 54, the table
+   and count both changing); typing three letters into a category's own search box keeps focus and
+   the caret and every letter lands, confirmed by reading `document.activeElement` and the input's
+   value after typing with real keystrokes (Review Focus 3); a row of all nine window kinds opened
+   (a class in reference mode — no "current", its subclass link carrying `data-sub-ref`; that
+   subclass from the class window; a species; a background; a feat; an item; a spell; a condition; a
+   table); narrow Items → table with "← Categories" → tap back → the list, with focus landing back on
+   the Items button; a cross-category search for "fire" (Spells 7, Items 16 with "8 more in Items →",
+   Tables 1) and following the "more in" link into Items with "fire" carried into its own box; the
+   Glossary's + Add creating an entry that shows "Yours", Edit renaming it, Delete removing it
+   (Review Focus 5); the ☰ flyout listing all eleven categories and opening one on tap; a full page
+   reload keeping the last-opened category (`settings.rulesCat` surviving the round trip, backed by
+   the rules cache restoring the pack too); the item and feat pickers' previews unchanged after the
+   lift (same titles, same body); a literal `[Table: Beast Shapes]` anchor inside the Druid's Wild
+   Shape feature prose still resolving to a `.tblref` chip and opening the table, alongside the
+   class's own `tableChipsHTML()` row.
+10. **Two findings from the brief's narrow-screen and ☰-flyout checks, not fixed here (QA only, no
+    product code touched):**
+    - **(a) Leaving the Rules tab and coming back does not return to the category list.**
+      Spec §7 says "The tab opens on the category list." `rbUI.screen` is a module-level flag that
+      `selectTab()` never resets, so a tab switch away and back (at any width, confirmed narrow)
+      shows the last table, not the list. `rbBack()` is the only path that sets it to `"list"`.
+    - **(c) The ☰ flyout, picked from deep in a long table on a wide screen, can leave the pane
+      off-screen.** `rbOpenCat()` (called from `buildToc()`'s Rules-tab entries) repaints the pane
+      but never scrolls, unlike every other tab's flyout entries, which call `scrollToCard()`.
+      Scrolled to y=3000 inside Items (570 rows) then picking Spells from the flyout left the
+      viewport at y=3000 while the now-shorter Spells pane's top sat at y=-2868 — an empty-looking
+      screen until the player scrolls up by hand. Screenshots: `.claude/qa/99-tabswitch-table-not-list.png`,
+      `.claude/qa/99-toc-offscreen-bug.png`.
+    - (b) and (d), also asked for by the brief, hold as specified: narrow's "← Categories" returns
+      keyboard focus to the category button just left; at 360–390px the Spells table scrolls
+      sideways inside its own box while the page's `document.documentElement.scrollWidth` stays
+      equal to its `clientWidth` (no page-level sideways scroll).
+11. Screenshots: `.claude/qa/99-before-<1280|390>-<classic|humblewood>.png`,
+    `99-after-<1280|390>-<classic|humblewood>.png`, `99-before-preview-<item|feat>.png`,
+    `99-after-preview-<item|feat>.png`, `99-spells-filtered.png`,
+    `99-window-<class|subclass|species|background|feat|item|spell|condition|table>.png`,
+    `99-narrow-table.png`, `99-search.png`, `99-more-in.png`, `99-glossary.png`, `99-toc.png`,
+    `99-table-anchor-chip.png`, and the two bug shots above. Not driven: real devices, touch, print,
+    and Mike's own characters, as every screenshot QA leaves to him; the task's "more in Spells"
+    example — the real pack's "fire" search had only 7 Spells hits (under the 8-row cap), so the
+    "more in" link that actually appeared was Items', and that is the one followed and shot.
+
+Pages: [rules & tables](../wiki/features/rules-and-tables.md), [shell](../wiki/ui/shell.md),
+[sections & layout](../wiki/ui/sections-and-layout.md), [decisions](../wiki/decisions.md),
+[character building](../wiki/features/character-building.md), [inventory](../wiki/features/inventory.md),
+[features & traits](../wiki/features/features-and-traits.md), [1.9.0](../wiki/roadmap/1.9.0.md)
