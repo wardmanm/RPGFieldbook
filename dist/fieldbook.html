@@ -332,11 +332,6 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 .fghead .cnt{font-family:var(--head);font-size:12px;font-weight:600;color:var(--ink-soft);flex:none}
 /* the pill stays far right; only counts move inward */
 .fgcount{font-family:var(--head);font-size:11px;font-weight:700;color:var(--ink-soft);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:1px 8px;flex:none;margin-left:auto}
-/* The two Rules-tab headings are toggles. The caret is the same one the group
-   heads use, so a shut section reads the same way everywhere in the app. */
-.rules-head{cursor:pointer;user-select:none}
-.rules-head .fcaret{stroke:var(--accent)}
-.rules-head .cnt{font-family:var(--head);font-size:12px;font-weight:600;color:var(--ink-soft);flex:none}
 .fcaret{width:14px;height:14px;flex:none;stroke:var(--ink-soft);fill:none;stroke-width:2.5;transform:rotate(90deg);transition:transform .12s}
 .fcaret.c{transform:rotate(0deg)}
 .fitoggle{background:transparent;border:0;cursor:pointer;padding:0 2px;display:inline-flex;align-items:center;flex:none;color:var(--ink-soft)}
@@ -881,6 +876,47 @@ table.rtbl td:first-child{white-space:nowrap;font-family:var(--head);font-weight
    annotate, smaller and softer than the cells, and wrapping at any width */
 .tbl-notes{margin:-4px 2px 10px;font-size:13px;line-height:1.45;color:var(--ink-soft)}
 .tbl-notes p{margin:0 0 2px}
+
+/* ================= the Rules tab browser (#99) =================
+   Wide: the categories on the left, the open one's table on the right. 640px and
+   under (Settings' breakpoint): one pane at a time, by #rbCard[data-screen] — the
+   category list, or a table with ← Categories. */
+.rb-wrap{display:grid;grid-template-columns:210px minmax(0,1fr);gap:0 18px;align-items:start}
+.rb-allsearch{margin-bottom:8px}
+.rb-cats{display:flex;flex-direction:column;gap:2px}
+.rb-cat{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;
+  background:none;border:0;border-radius:8px;padding:8px 10px;min-height:38px;cursor:pointer;
+  font-family:var(--head);font-size:14px;font-weight:600;color:var(--ink)}
+.rb-cat:hover,.rb-cat:focus-visible{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.rb-cat.on{background:color-mix(in srgb,var(--accent) 24%,transparent)}
+.rb-cat .cnt,.rb-title .cnt{font-family:var(--head);font-size:12px;font-weight:600;color:var(--ink-soft)}
+.rb-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.rb-title{margin:0;flex:1;font-family:var(--head);font-size:18px}
+/* the Glossary's + Add: the card heading's .label .add, which it no longer sits in */
+.rb-head .add{font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-2);
+  background:none;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 6px;border-radius:6px}
+.rb-head .add:hover{background:color-mix(in srgb,var(--accent-2) 16%,transparent)}
+.rb-head .add svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4}
+.rb-back{display:none}
+.rb-catsearch{margin-bottom:8px}
+.rb-fbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.rb-facets{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.rb-count{font-family:var(--head);font-size:12px;color:var(--ink-soft);margin:4px 0 6px}
+.rb-sort{background:none;border:0;padding:0;cursor:pointer;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit}
+.rb-open{background:none;border:0;padding:0;cursor:pointer;font:inherit;color:var(--ink);text-align:left}
+.rb-tbl tbody tr{cursor:pointer}
+.rb-tbl tbody tr:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.rb-acts{white-space:nowrap;text-align:right}
+.rb-more{margin-top:8px}
+.rb-sgroup{margin-bottom:8px}
+.rb-hit{display:block;width:100%;text-align:left;background:none;border:0;border-radius:6px;padding:7px 10px;cursor:pointer;font:inherit;color:var(--ink)}
+.rb-hit:hover,.rb-hit:focus-visible{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+@media(max-width:640px){
+  .rb-wrap{grid-template-columns:minmax(0,1fr)}
+  #rbCard[data-screen="list"] .rb-main{display:none}
+  #rbCard[data-screen="table"] .rb-side{display:none}
+  .rb-back{display:inline-flex}
+}
 /* spell slots */
 .slotgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
 @media(max-width:600px){.slotgrid{grid-template-columns:repeat(2,1fr)}}
@@ -1567,29 +1603,25 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
   </section>
 
   <!-- ============ RULES TAB ============ -->
+  <!-- A browser over every loaded category (86-rules-browser.js, #99): the
+       categories and a search across all of them on the left, the open one's
+       table on the right. 640px and under, one pane at a time, by data-screen. -->
   <section class="tabpanel" id="tab-rules">
     <div class="stack">
-      <div class="card">
-        <div class="label rules-head" data-rulessec="gloss" role="button" tabindex="0" aria-expanded="true"><svg class="fcaret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Glossary &amp; Rules <span class="cnt" id="glossCount"></span> <button class="add" id="btnAddGloss"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
-        <div data-rulesbody="gloss">
-        <p class="hint">Terms here (plus any from a loaded rules pack) become tappable ❧ wherever they appear in your notes, features, spells, and item descriptions. Manage rule sources in Settings.</p>
-        <div class="searchbox" style="margin-bottom:10px"><input id="glossSearch" placeholder="Filter terms…" autocomplete="off"><button type="button" class="search-clear" aria-label="Clear the filter" title="Clear">×</button></div>
-        <input type="file" id="glossRulesFiles" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">
-        <div id="glossList"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="label rules-head" data-rulessec="tables" role="button" tabindex="0" aria-expanded="true"><svg class="fcaret" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Reference Tables <span class="cnt" id="tablesCount"></span><span class="grow"></span></div>
-        <div data-rulesbody="tables">
-        <p class="hint">Tables lifted out of your rules pack — roll tables, class progressions, and the lookup tables the rules text refers to. Where a description mentions one, tap the highlighted name to open it here.</p>
-        <div class="searchbox" style="margin-bottom:10px"><input id="tablesSearch" placeholder="Filter tables…" autocomplete="off"><button type="button" class="search-clear" aria-label="Clear the filter" title="Clear">×</button></div>
-        <input type="file" id="tablesRulesFiles" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">
-        <div id="tablesList"></div>
+      <div class="card rb" id="rbCard" data-screen="list">
+        <div class="label">Rules <span class="grow"></span></div>
+        <input type="file" id="rbRulesFiles" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">
+        <div id="rbEmpty"></div>
+        <div class="rb-wrap">
+          <nav class="rb-side" aria-label="Rules categories">
+            <div class="searchbox rb-allsearch"><input id="rbSearch" placeholder="Search all rules…" autocomplete="off" aria-label="Search all rules"><button type="button" class="search-clear" aria-label="Clear the search" title="Clear">×</button></div>
+            <div id="rbSide"></div>
+          </nav>
+          <div class="rb-main" id="rbMain"></div>
         </div>
       </div>
     </div>
   </section>
-
   <!-- ============ JOURNAL TAB ============ -->
   <!-- The player's own journal pages (87-journal.js), their trackers
        (87-trackers.js), then the section notes gathered from every other tab
@@ -3097,6 +3129,9 @@ function selectTab(name){
      sends them home first, or a note link would land on a tab with its cards
      missing; entering it remembers where it came from, for the swords. */
   const was=(document.querySelector(".tabpanel.active")||{id:"tab-sheet"}).id.replace(/^tab-/,"");
+  /* Entering the Rules tab from elsewhere always opens on its category list
+     (spec #7), never the table a previous visit left on. */
+  if(name==="rules"&&was!=="rules")rbToList();
   if(name!=="combat")closeCombatView();
   else if(was!=="combat")cvPrevTab=was;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
@@ -3122,6 +3157,16 @@ function buildToc(){
   const inView=combatViewOpen();
   const panel=inView?document.getElementById("cvList"):document.querySelector(".tabpanel.active");
   const tabBtn=document.querySelector(".tab.active");const tabName=inView?"Combat":(tabBtn?tabBtn.textContent.trim():"Sections");
+  /* The Rules tab is one card; its sections are its categories (#99). */
+  if(!inView&&panel&&panel.id==="tab-rules"){
+    /* the Glossary is always listed (its + Add is always reachable), so this
+       pane is never empty and needs no empty-list fallback */
+    const shown=rbShown();
+    fly.innerHTML=`<h4>${esc(tabName)}</h4>`;
+    shown.forEach(({cat,rows})=>{const a=document.createElement("a");a.textContent=cat.title+" ("+rows.length+")";
+      a.addEventListener("click",()=>{closeToc();rbOpenCat(cat.k);scrollToCard(document.getElementById("rbCard"));});fly.appendChild(a);});
+    return;
+  }
   const items=[];
   if(panel)panel.querySelectorAll(".card > .label, .inv-sec-head").forEach(node=>{
     const target=node.classList.contains("inv-sec-head")?node:node.closest(".card");
@@ -3845,10 +3890,13 @@ function removeRace(doRender){
   character.race=null;
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}
 }
-function openRaceInfo(name){
+/* By id or name; `{ref:true}` leaves the chosen lineage unmarked (#99). */
+function openRaceInfo(name,opts){
+  const ref=!!(opts&&opts.ref);
   const d=findRaceDef(name);
   if(!d){openModal(name,`<p class="hint">No rules data loaded for this ${raceTerm().toLowerCase()} — it was added as a custom name.</p>`,iconSVG("races",name,"lg"));return;}
-  const cur=character.race&&character.race.subrace;
+  const nm=String(d.name||name);
+  const cur=ref?null:(character.race&&character.race.subrace);
   const sect=(obj)=>{
     let s="";
     if(obj.abilityScores)s+=`<p><b>Ability increase:</b> ${esc(Object.entries(obj.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", "))}</p>`;
@@ -3861,11 +3909,11 @@ function openRaceInfo(name){
   };
   let b=`<p>${esc(d.description||"")}</p>`+(d.category?`<p class="hint">${esc(d.category)}</p>`:"")+sect(d);
   /* species-owned tables link from here; owner-based, so no prose anchor needed */
-  b+=tableChipsHTML(name,"race");
+  b+=tableChipsHTML(nm,"race");
   (d.subraces||[]).forEach(sd=>{
     b+=`<div style="border-top:2px solid var(--line);margin-top:10px;padding-top:8px"><b style="${cur===sd.name?"color:var(--accent)":""}">${esc(sd.name)}${cur===sd.name?" — selected":""}</b>${sd.description?`<p class="hint" style="margin:4px 0">${esc(sd.description)}</p>`:""}${sect(sd)}</div>`;
   });
-  openModal(name,b,iconSVG("races",name,"lg"));
+  openModal(nm,b,iconSVG("races",nm,"lg"));
 }
 
 /* ---- background ---- */
@@ -3951,7 +3999,9 @@ function removeBackground(doRender){
   character.bg=null;
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}
 }
-function openBackgroundInfo(name){
+/* By id or name; `{ref:true}` leaves out your choices (#99). */
+function openBackgroundInfo(name,opts){
+  const ref=!!(opts&&opts.ref);
   const d=findBackgroundDef(name);
   if(!d){openModal(name,`<p class="hint">No rules data loaded for this background — it was added as a custom name.</p>`,iconSVG("backgrounds",name,"lg"));return;}
   let b=`<p>${esc(d.description||"")}</p>`;
@@ -3966,7 +4016,7 @@ function openBackgroundInfo(name){
      so they link from here rather than needing an anchor in the prose. */
   b+=tableChipsHTML(d.name,"background");
   const cur=character.bg;
-  if(cur&&cur.name===d.name){const bits=[];if(cur.feat)bits.push("Feat: "+cur.feat);if(cur.abils)bits.push(cur.abils.map(e=>e.target.split(".")[1].toUpperCase()+" "+fmt(e.value)).join(", "));if(bits.length)b+=`<p class="hint" style="border-top:2px solid var(--line);margin-top:8px;padding-top:8px">Your choices — ${esc(bits.join(" · "))}</p>`;}
+  if(!ref&&cur&&cur.name===d.name){const bits=[];if(cur.feat)bits.push("Feat: "+cur.feat);if(cur.abils)bits.push(cur.abils.map(e=>e.target.split(".")[1].toUpperCase()+" "+fmt(e.value)).join(", "));if(bits.length)b+=`<p class="hint" style="border-top:2px solid var(--line);margin-top:8px;padding-top:8px">Your choices — ${esc(bits.join(" · "))}</p>`;}
   openModal(d.name,b,iconSVG("backgrounds",d.name,"lg"));
 }
 function classSummary(d){const bits=[];if(d.hitDie)bits.push("Hit die "+d.hitDie);if(d.spellcasting)bits.push("Spellcasting "+d.spellcasting.toUpperCase());if(d.savingThrows)bits.push("Saves "+d.savingThrows.map(x=>x.toUpperCase()).join("/"));return bits.length?`<p class="hint"><b>${esc(bits.join(" · "))}</b></p>`:"";}
@@ -4296,11 +4346,15 @@ function chooseSubclass(className){
   document.getElementById("scCancel").addEventListener("click",closeModal);
   document.querySelectorAll("[data-pick-sub]").forEach(el=>el.addEventListener("click",()=>{const p=el.dataset.pickSub.split("|");closeModal();selectSubclass(p[0],p[1]);}));
 }
-function openSubclassInfo(className,subName){
+/* By the class's id or name; `{ref:true}` is the Rules tab's reference mode,
+   which shows the rules without this character's level marks (#99). */
+function openSubclassInfo(className,subName,opts){
+  const ref=!!(opts&&opts.ref);
   const d=findClassDef(className),sc=subclassesFor(d)[subName];
   if(!sc){openModal(subName,`<p class="hint">No data for this subclass.</p>`);return;}
-  const entry=character.classes.find(c=>c.name===className);
-  let b=`<p class="hint" style="margin-bottom:6px">${esc(className)} subclass</p><p>${esc(sc.description||"")}</p>`;
+  const cn=d?String(d.name||className):String(className);
+  const entry=ref?null:character.classes.find(c=>c.name===className||c.name===cn);
+  let b=`<p class="hint" style="margin-bottom:6px">${esc(cn)} subclass</p><p>${esc(sc.description||"")}</p>`;
   if(sc.spellcasting)b+=`<p class="hint"><b>Grants spellcasting (${esc(sc.spellcasting.toUpperCase())})</b></p>`;
   b+=tableChipsHTML(subName,"subclass");
   if(sc.levels)Object.keys(sc.levels).map(Number).sort((a,b)=>a-b).forEach(L=>{
@@ -4312,19 +4366,25 @@ function openSubclassInfo(className,subName){
   });
   openModal(subName,b);
 }
-function openClassInfo(name){
-  const d=findClassDef(name),entry=(character.classes||[]).find(c=>String(c.name||"").toLowerCase()===String(name||"").toLowerCase());
+/* By id or name. The window speaks the entry's own name, so a Rules-tab row that
+   passes an `_id` reads "Fighter", not "r12"; `{ref:true}` leaves the character
+   out (#99). */
+function openClassInfo(name,opts){
+  const ref=!!(opts&&opts.ref);
+  const d=findClassDef(name);
   if(!d){openModal(name,`<p class="hint">No rules data loaded for this class — it was added as a custom name.</p>`,iconSVG("classes",name,"lg"));return;}
+  const nm=String(d.name||name);
+  const entry=ref?null:(character.classes||[]).find(c=>String(c.name||"").toLowerCase()===nm.toLowerCase());
   let b=`<p>${esc(d.description||"")}</p>`;
   const meta=[d.hitDie?("Hit die "+d.hitDie):"",d.spellcasting?("Spellcasting "+d.spellcasting.toUpperCase()):"",d.savingThrows?("Saves "+d.savingThrows.map(x=>x.toUpperCase()).join("/")):""].filter(Boolean).join(" · ");
   if(meta)b+=`<p class="hint"><b>${esc(meta)}</b></p>`;
-  b+=tableChipsHTML(name,"class");
+  b+=tableChipsHTML(nm,"class");
   const subMap=subclassesFor(d);
   if(Object.keys(subMap).length){
     b+=`<div style="border-top:1px dotted var(--hair);padding-top:8px;margin-top:8px">`;
-    if(entry&&entry.subclass)b+=`<p><b>Subclass:</b> <span class="link" data-sub-info="${esc(name)}|${esc(entry.subclass)}">${esc(entry.subclass)}</span> &nbsp;<button class="tbtn" data-change-sub="${esc(name)}" style="padding:4px 9px;min-height:auto">Change</button></p>`;
-    else if(entry)b+=`<p><b>Subclass:</b> not chosen yet &nbsp;<button class="tbtn primary" data-choose-sub="${esc(name)}" style="padding:4px 9px;min-height:auto">Choose</button></p>`;
-    else b+=`<p class="hint"><b>Subclasses:</b> ${Object.keys(subMap).map(n=>`<span class="link" data-sub-info="${esc(name)}|${esc(n)}">${esc(n)}</span>`).join(", ")}</p>`;
+    if(entry&&entry.subclass)b+=`<p><b>Subclass:</b> <span class="link" data-sub-info="${esc(nm)}|${esc(entry.subclass)}">${esc(entry.subclass)}</span> &nbsp;<button class="tbtn" data-change-sub="${esc(nm)}" style="padding:4px 9px;min-height:auto">Change</button></p>`;
+    else if(entry)b+=`<p><b>Subclass:</b> not chosen yet &nbsp;<button class="tbtn primary" data-choose-sub="${esc(nm)}" style="padding:4px 9px;min-height:auto">Choose</button></p>`;
+    else b+=`<p class="hint"><b>Subclasses:</b> ${Object.keys(subMap).map(n=>`<span class="link" data-sub-info="${esc(ref?(d._id||nm):nm)}|${esc(n)}"${ref?` data-sub-ref="1"`:""}>${esc(n)}</span>`).join(", ")}</p>`;
     b+=`</div>`;
   }
   if(d.levels)Object.keys(d.levels).map(Number).sort((x,y)=>x-y).forEach(L=>{
@@ -4335,7 +4395,7 @@ function openClassInfo(name){
     if(lv.spells)b+=`<p class="hint" style="margin:3px 0;color:var(--accent-2)">✦ Spells: ${esc(lv.spells.note||("up to "+lv.spells.known+" known"))}</p>`;
     b+=`</div>`;
   });
-  openModal(name+(entry?` ${num(entry.level)}`:""),b,iconSVG("classes",name,"lg"));
+  openModal(nm+(entry?` ${num(entry.level)}`:""),b,iconSVG("classes",nm,"lg"));
 }
 
 /* ---- level-up choices ----
@@ -5148,53 +5208,6 @@ function renderSpells(){
     });
   });
 }
-function renderGloss(){
-  const el=document.getElementById("glossList");el.innerHTML="";
-  const si=document.getElementById("glossSearch");
-  const q=(si?si.value:"").trim().toLowerCase();
-  const match=t=>!q||String(t).toLowerCase().includes(q);
-  const CAP=150;
-  /* glossTerm(), never `.term` (#71). A pack keyword with no term can't be
-     reached from anywhere, so it isn't listed; the pool drops those anyway
-     (tidyRules). The player's own entry with no term IS listed — it is theirs,
-     and Edit is how it gets one. */
-  const allrk=(Array.isArray(rules.keywords)?rules.keywords:[]).filter(g=>glossTerm(g));
-  const anyRules=RULE_CATS.some(c=>(rules[c]||[]).length);
-  if(!anyRules){
-    el.insertAdjacentHTML("beforeend",`<div class="empty" style="line-height:1.7">No rules pack loaded yet. <button class="linkbtn" id="glossImport">Import rules files</button> to add conditions, spells, feats, backgrounds, and more — or manage sources in Settings.</div>`);
-  }
-  const rk=allrk.filter(g=>match(glossTerm(g)));
-  if(allrk.length){
-    const h=document.createElement("div");h.className="spell-h";
-    /* NO esc() here: textContent assigns a literal string, so escaping first
-       double-encodes — a pack called "D&D 2024" rendered as "D&amp;D 2024".
-       textContent is already safe; esc() belongs with innerHTML, not this. */
-    h.textContent=`From rules pack${rules.name?" · "+rules.name:""} (${rk.length})`;el.appendChild(h);
-    if(!rk.length)el.insertAdjacentHTML("beforeend",`<div class="empty">No matches.</div>`);
-    rk.slice(0,CAP).forEach(g=>{
-      const d=document.createElement("div");d.className="item";
-      d.innerHTML=`<div class="top"><span class="nm">${esc(dispName(g,"keywords"))}</span><span class="chip">${g.type==="image"?"Image":"Text"}</span>
-        <button class="icon" data-view-gloss-rk="${esc(g._id||g.term)}" aria-label="Preview"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>`;
-      el.appendChild(d);
-    });
-    if(rk.length>CAP)el.insertAdjacentHTML("beforeend",`<div class="empty">…and ${rk.length-CAP} more — type to filter.</div>`);
-  }
-  const own=(Array.isArray(character.glossary)?character.glossary:[]).filter(g=>g&&typeof g==="object"&&!Array.isArray(g));
-  const mine=own.filter(g=>match(glossTerm(g))).sort((a,b)=>glossTerm(a).localeCompare(glossTerm(b)));
-  const h2=document.createElement("div");h2.className="spell-h";h2.textContent=`Your entries (${mine.length})`;el.appendChild(h2);
-  if(!own.length){el.insertAdjacentHTML("beforeend",`<div class="empty">None yet — add campaign-specific terms or house rules here.</div>`);return;}
-  if(!mine.length){el.insertAdjacentHTML("beforeend",`<div class="empty">No matches.</div>`);return;}
-  mine.forEach(g=>{
-    const d=document.createElement("div");d.className="item";
-    const t=glossTerm(g);
-    d.innerHTML=`<div class="top"><span class="nm">${t?esc(t):`<em title="This entry has no term, so it never shows up in your text. Edit it to give it one.">(no term)</em>`}</span><span class="chip">${g.type==="image"?"Image":"Text"}</span>
-      <button class="icon" data-view-gloss="${esc(g.id)}" aria-label="Preview"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-      <button class="icon" data-edit-gloss="${esc(g.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-      <button class="icon danger" data-del-gloss="${esc(g.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
-    el.appendChild(d);
-  });
-}
-
 /* ================= ammunition =================
    A bow, crossbow, sling, blowgun or firearm knows the KIND of ammunition it
    fires (weapon.ammo, from the pack); a stack of ammunition knows its kind and
@@ -6498,16 +6511,16 @@ function renderAll(){
   buildStats();
   renderCoins();renderHP();   /* neither is data-path, so neither is in the loop below */
   document.querySelectorAll("[data-path]").forEach(inp=>{const v=get({character},inp.dataset.path);inp.value=(v===null||v===undefined)?"":v});
-  /* renderTables belongs here for the same reason renderGloss does: both draw
+  /* renderRulesBrowser belongs here as well as in refreshRulesUI(): it draws
      from the rules pool, not the character, so loading a sheet with rules
-     already cached has to draw them. Leaving it out meant the Tables tab was
-     blank after a refresh until you typed in its filter box. */
+     already cached has to draw it. Leaving the tables out once meant the Tables
+     list was blank after a refresh until you typed in its filter box. */
   /* Before anything draws: the Concentrating condition mirrors the active spell,
      and a sheet saved before that existed — or one whose spell was ended in some
      way the mirror never saw — reconciles on load rather than showing a
      condition for a spell that isn't running. */
   syncConcStatus();
-  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderRulesSections();renderNoteIcons();renderEditToggles();renderNotes();renderJournal();renderTrackers();renderAllRT();recompute();
+  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderRulesBrowser();renderNoteIcons();renderEditToggles();renderNotes();renderJournal();renderTrackers();renderAllRT();recompute();
   /* LAST: the combat toggles sit beside the note buttons drawn above, and an open
      combat view refills from THIS character — every character switch ends here. */
   syncCombatView();
@@ -8669,30 +8682,53 @@ function addLibraryItems(entries,og,costOverride,qty){
     if(it.weapon)addAttackForItem(it);
   });
 }
+/* ---- the pickers' filters, shared with the Rules tab (#99) ----
+   Each returns the facet list openBrowse() takes. The Rules tab's tables filter
+   the same entries with the same lists, so the two can never disagree. */
+const ITEM_RARITIES=["Mundane","Common","Uncommon","Rare","Very Rare","Legendary","Artifact"];
+function itemCatOf(x){return (x&&x.category)||"Gear";}
+function itemRarOf(x){return (x&&x.rarity)||"Mundane";}
+function itemFacets(lib){
+  const cats=[...new Set(lib.map(itemCatOf))].sort().map(c=>({value:String(c).toLowerCase(),label:c}));
+  const rars=[...new Set(lib.map(itemRarOf))].sort((a,b)=>ITEM_RARITIES.indexOf(a)-ITEM_RARITIES.indexOf(b)).map(r=>({value:String(r).toLowerCase(),label:r}));
+  return [
+    {key:"cat",label:"Category",type:"multi",options:cats,match:(e,a)=>a.has(String(itemCatOf(e)).toLowerCase())},
+    {key:"rar",label:"Rarity",type:"multi",options:rars,match:(e,a)=>a.has(String(itemRarOf(e)).toLowerCase())},
+    {key:"attune",label:"Needs attunement",type:"toggle",match:e=>!!e.attune}
+  ];
+}
+function spellClassesOf(x){return x&&x.class?(Array.isArray(x.class)?x.class:[x.class]):[];}
+function spellSchoolOf(x){return String((x&&x.meta)||"").split("·")[0].trim();}
+/* `classDefault`: "mine" (the picker starts on this character's classes) or
+   "all" (the Rules tab: a lookup, not a choice, so nothing starts filtered). */
+function spellFacets(lib,opts){
+  const levels=[{value:"0",label:"Cantrip"}].concat([1,2,3,4,5,6,7,8,9].map(n=>({value:String(n),label:"Lv "+n})));
+  const classOpts=[...new Set(lib.flatMap(spellClassesOf).map(c=>String(c)))].sort((a,b)=>a.localeCompare(b)).map(c=>({value:c.toLowerCase(),label:c}));
+  const schoolOpts=[...new Set(lib.map(spellSchoolOf).filter(Boolean))].sort().map(s=>({value:s.toLowerCase(),label:s}));
+  const mine=(character.classes||[]).map(c=>String(c.name||"").toLowerCase());
+  const def=(opts&&opts.classDefault==="all")?[]:mine.filter(c=>classOpts.some(o=>o.value===c));
+  return [
+    {key:"level",label:"Level",type:"multi",options:levels,match:(e,a)=>a.has(String(num(e.level)))},
+    {key:"class",label:"Class",type:"multi",options:classOpts,default:def,match:(e,a)=>{const c=spellClassesOf(e);return !c.length||c.some(x=>a.has(String(x).toLowerCase()));}},
+    {key:"school",label:"School",type:"multi",options:schoolOpts,match:(e,a)=>a.has(spellSchoolOf(e).toLowerCase())},
+    {key:"conc",label:"Concentration",type:"toggle",match:e=>/concentration/i.test(e.meta||"")}
+  ];
+}
 function browseItems(){
   const lib=rules.items||[];
   if(!lib.length)return openItemForm();
-  const catOf=x=>x.category||"Gear", rarOf=x=>x.rarity||"Mundane";
-  const RAR=["Mundane","Common","Uncommon","Rare","Very Rare","Legendary","Artifact"];
-  const cats=[...new Set(lib.map(catOf))].sort().map(c=>({value:c.toLowerCase(),label:c}));
-  const rars=[...new Set(lib.map(rarOf))].sort((a,b)=>RAR.indexOf(a)-RAR.indexOf(b)).map(r=>({value:r.toLowerCase(),label:r}));
-  const meta=itemMetaLine;   /* shared with the update diff — see 25-origins-items.js */
   openBrowse({
     noun:"items", noun1:"item", items:lib, id:x=>x._id||x.name,
     search:x=>`${x.name} ${x.type||""} ${x.category||""} ${x.rarity||""}`,
     row:x=>({title:x.name,tag:(x.rarity&&x.rarity!=="Mundane")?x.rarity:(x.cost||"")}),
-    sort:(a,b)=>String(catOf(a)).localeCompare(String(catOf(b)))||String(a.name||"").localeCompare(String(b.name||"")),
-    group:x=>catOf(x),
+    sort:(a,b)=>String(itemCatOf(a)).localeCompare(String(itemCatOf(b)))||String(a.name||"").localeCompare(String(b.name||"")),
+    group:x=>itemCatOf(x),
     added:x=>character.inventory.some(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase()),
-    preview:x=>openModal(x.name,`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(meta(x))}</p><div class="desc">${richHTML(x.description||"—")}</div>`),
+    preview:x=>openItemInfo(x),
     onCustom:()=>openItemForm(),
     originSelect:true,
     costInput:true,
-    facets:[
-      {key:"cat",label:"Category",type:"multi",options:cats,match:(e,a)=>a.has(catOf(e).toLowerCase())},
-      {key:"rar",label:"Rarity",type:"multi",options:rars,match:(e,a)=>a.has(rarOf(e).toLowerCase())},
-      {key:"attune",label:"Needs attunement",type:"toggle",match:e=>!!e.attune}
-    ],
+    facets:itemFacets(lib),
     qtyInput:true,
     onAdd:(entries,og,costOverride,qty)=>{addLibraryItems(entries,og,costOverride,qty);renderInventory();renderAttacks();recompute();scheduleSave();}
   });
@@ -8713,17 +8749,10 @@ function addAttackForItem(item){
 function browseSpells(){
   const lib=rules.spells||[];
   if(!lib.length)return openSpellForm();
-  const myCl=(character.classes||[]).map(c=>String(c.name||"").toLowerCase());
-  const clsOf=x=>x.class?(Array.isArray(x.class)?x.class:[x.class]):[];
-  const schoolOf=x=>String(x.meta||"").split("·")[0].trim();
-  const levels=[{value:"0",label:"Cantrip"}].concat([1,2,3,4,5,6,7,8,9].map(n=>({value:String(n),label:"Lv "+n})));
-  const classOpts=[...new Set(lib.flatMap(clsOf).map(c=>String(c)))].sort((a,b)=>a.localeCompare(b)).map(c=>({value:c.toLowerCase(),label:c}));
-  const schoolOpts=[...new Set(lib.map(schoolOf).filter(Boolean))].sort().map(s=>({value:s.toLowerCase(),label:s}));
-  const defClasses=myCl.filter(c=>classOpts.some(o=>o.value===c));
   openBrowse({
     noun:"spells", noun1:"spell", items:lib, id:x=>x._id||x.name,
-    search:x=>`${x.name} ${x.meta||""} ${clsOf(x).join(" ")}`,
-    row:x=>({title:dispName(x,"spells"),tag:schoolOf(x)}),
+    search:x=>`${x.name} ${x.meta||""} ${spellClassesOf(x).join(" ")}`,
+    row:x=>({title:dispName(x,"spells"),tag:spellSchoolOf(x)}),
     sort:(a,b)=>num(a.level)-num(b.level)||String(a.name||"").localeCompare(String(b.name||"")),
     group:x=>num(x.level)===0?"Cantrips":"Level "+num(x.level),
     groupKey:x=>String(num(x.level)),
@@ -8750,12 +8779,7 @@ function browseSpells(){
     preview:x=>openSpellView({name:x.name,level:num(x.level),meta:x.meta,text:x.text}),
     onCustom:()=>openSpellForm(),
     originSelect:"spell",
-    facets:[
-      {key:"level",label:"Level",type:"multi",options:levels,match:(e,a)=>a.has(String(num(e.level)))},
-      {key:"class",label:"Class",type:"multi",options:classOpts,default:defClasses,match:(e,a)=>{const c=clsOf(e);return !c.length||c.some(x=>a.has(String(x).toLowerCase()));}},
-      {key:"school",label:"School",type:"multi",options:schoolOpts,match:(e,a)=>a.has(schoolOf(e).toLowerCase())},
-      {key:"conc",label:"Concentration",type:"toggle",match:e=>/concentration/i.test(e.meta||"")}
-    ],
+    facets:spellFacets(lib),
     onAdd:(entries,og)=>{entries.forEach(x=>{if(character.spells.some(s=>String(s.name||"").toLowerCase()===String(x.name||"").toLowerCase()))return;const sp={id:uid(),name:x.name,level:num(x.level),meta:x.meta||"",text:x.text||"",prepared:false,granted:og?grantedFromOrigin(og.kind):"",origin:og||null};detectSpellAttack(sp);stampSrc(sp,x,"spell","spells");character.spells.push(sp);syncSpellAttack(sp);});renderSpells();renderAttacks();scheduleSave();}
   });
 }
@@ -8833,9 +8857,7 @@ function addPickedFeature(w){
   if(added)stampSrc(added,e,"feature",w.k==="feat"?"feats":"features");
   return added||null;
 }
-function browseFeatures(){
-  const list=featPickList();
-  if(!list.length)return openFeatureForm();
+function featFacets(list){
   const present=FEAT_KINDS.filter(k=>list.some(w=>featPickKind(w)===k.key));
   const srcs=[...new Set(list.map(w=>String(w.e._source||"")).filter(Boolean))].sort();
   const facets=[{key:"kind",label:"Type",type:"multi",
@@ -8846,6 +8868,12 @@ function browseFeatures(){
     options:srcs.map(s=>({value:s.toLowerCase(),label:s})),
     match:(w,a)=>a.has(String(w.e._source||"").toLowerCase())});
   facets.push({key:"noreq",label:"No prerequisite",type:"toggle",match:w=>!featPickPrereq(w)});
+  return facets;
+}
+function browseFeatures(){
+  const list=featPickList();
+  if(!list.length)return openFeatureForm();
+  const facets=featFacets(list);
   openBrowse({
     noun:"feats & traits", noun1:"feat or trait", items:list, id:w=>w.id,
     /* the description too: "which feat gives me advantage on saves" is the
@@ -8861,13 +8889,24 @@ function browseFeatures(){
       ||String(a.e.name||"").localeCompare(String(b.e.name||"")),
     group:featPickGroup,
     added:w=>featPickHas(featPickStoredName(w)),
-    preview:w=>{const bits=[w.k==="trait"?(String(w.e.source||"").trim()||"Trait"):featKindDef(featPickKind(w)).label,
-                            w.e._source||""].filter(Boolean);
-      openModal(featPickName(w),`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(bits.join(" · "))}</p><div class="desc">${descHTML(w.e.description||"—")}</div>`);},
+    preview:w=>openFeatInfo(w),
     onCustom:()=>openFeatureForm(),
     facets,
     onAdd:entries=>{entries.forEach(addPickedFeature);renderFeatures();recompute();scheduleSave();}
   });
+}
+/* The windows an item and a feat or trait open in: the pickers' previews, lifted
+   out so the Rules tab opens the very same one (#99). */
+function openItemInfo(x){
+  if(!x)return;
+  const meta=itemMetaLine;   /* shared with the update diff — see 25-origins-items.js */
+  openModal(x.name,`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(meta(x))}</p><div class="desc">${richHTML(x.description||"—")}</div>`);
+}
+function openFeatInfo(w){
+  if(!w||!w.e)return;
+  const bits=[w.k==="trait"?(String(w.e.source||"").trim()||"Trait"):featKindDef(featPickKind(w)).label,
+              w.e._source||""].filter(Boolean);
+  openModal(featPickName(w),`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(bits.join(" · "))}</p><div class="desc">${descHTML(w.e.description||"—")}</div>`);
 }
 
 /* ---- glossary editor ---- */
@@ -8892,59 +8931,17 @@ function openGlossForm(existing){
     const term=document.getElementById("gTerm").value.trim();if(!term){alert("Give the entry a term.");return;}
     const rec={id:g.id,term,type:type.value,text:document.getElementById("gText").value,image:img};
     const i=character.glossary.findIndex(x=>x&&x.id===g.id);if(i>=0)character.glossary[i]=rec;else character.glossary.push(rec);
-    closeModal();renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();
+    closeModal();renderRulesBrowser();renderFeatures();renderInventory();renderAllRT();scheduleSave();
   });
 }
 
-/* ---- the two Rules-tab sections collapse, and START collapsed ----
-   Both lists are long — the glossary alone is 132 entries with a pack loaded —
-   and Reference Tables sits underneath it, so reaching the tables meant
-   scrolling past all of it.
-
-   Stored as a COLLAPSE map in settings, exactly like the Settings sections and
-   for the same reason: an absent key means "never touched", so the default can
-   be closed today without freezing anyone who has since opened one. It lives in
-   SETTINGS rather than on the character because the glossary and tables come
-   from the rules packs, which are global — collapsing them on one character and
-   finding them open on the next would be the surprising behaviour.
-
-   `open` is the default for a section nobody has touched. */
-const RULES_SECS=[{k:"gloss",open:false},{k:"tables",open:false}];
-function rulesSecDef(k){return RULES_SECS.find(s=>s.k===k)||null;}
-function rulesSecOpen(k){
-  const c=(settings&&settings.rulesCollapse&&typeof settings.rulesCollapse==="object"&&!Array.isArray(settings.rulesCollapse))?settings.rulesCollapse:{};
-  if(k in c)return !c[k];
-  const d=rulesSecDef(k);return d?d.open:true;
-}
-function setRulesSecOpen(k,open){
-  if(!settings.rulesCollapse||typeof settings.rulesCollapse!=="object"||Array.isArray(settings.rulesCollapse))settings.rulesCollapse={};
-  settings.rulesCollapse[k]=!open;
-  saveSettings();
-}
-/* Paint both sections from the stored state. Counts go in the heading so a shut
-   section still says what is inside it — the reason you would open it. */
-function renderRulesSections(){
-  const counts={gloss:(allGlossary()||[]).length,tables:(allTables()||[]).length};
-  RULES_SECS.forEach(({k})=>{
-    const head=document.querySelector(`[data-rulessec="${k}"]`),
-          body=document.querySelector(`[data-rulesbody="${k}"]`);
-    if(!head||!body)return;
-    const open=rulesSecOpen(k);
-    body.style.display=open?"":"none";
-    head.setAttribute("aria-expanded",open?"true":"false");
-    const car=head.querySelector(".fcaret");if(car)car.classList.toggle("c",!open);
-    const cnt=document.getElementById(k==="gloss"?"glossCount":"tablesCount");
-    if(cnt)cnt.textContent=counts[k]?`(${counts[k]})`:"";
-  });
-}
-function toggleRulesSec(k){setRulesSecOpen(k,!rulesSecOpen(k));renderRulesSections();}
 /* ================= rules tables =================
    Tables come from a rules pack as their own category (see rules-schema §6.11).
    The converter lifts each table out of the prose it lived in and leaves a
    "[Table: Name]" anchor behind; highlight() turns that into a tappable chip.
    Everything here is read-only reference material — no character state. */
 function allTables(){return Array.isArray(rules.tables)?rules.tables:[]}
-/* A table's rows and columns as lists, whatever the pack wrote. renderTables()
+/* A table's rows and columns as lists, whatever the pack wrote. renderRulesBrowser()
    runs in renderAll(), so a table with no `rows` stopped every render, the same
    way a keyword with no term did (#71). A row that is not a list is one cell. */
 function tableRows(t){return (t&&Array.isArray(t.rows)?t.rows:[]).map(r=>Array.isArray(r)?r:[r]);}
@@ -8992,42 +8989,341 @@ function openTableByName(name){
   else openModal(String(name||"Table"),`<p class="hint">That table isn’t in any loaded rules pack. Import a pack that includes tables from Settings.</p>`);
 }
 const TBL_KINDS=[["class","Class progression"],["subclass","Subclass progression"],["race","Species & lineages"],["spell","Spells"],["item","Items & equipment"],["feat","Feats"],["background","Backgrounds"],["rule","Rules & glossary"]];
-function renderTables(){
-  const el=document.getElementById("tablesList");if(!el)return;
-  const si=document.getElementById("tablesSearch");
-  const q=(si?si.value:"").trim().toLowerCase();
-  const list=allTables().filter(t=>{
-    if(!q)return true;
-    return (String(t.name||"")+" "+String(t.owner||"")+" "+tableCols(t).join(" ")).toLowerCase().includes(q);
-  });
-  el.innerHTML="";
-  if(!allTables().length){
-    el.insertAdjacentHTML("beforeend",`<div class="empty" style="line-height:1.7">No tables loaded yet. Tables come from a rules pack — <button class="linkbtn" id="tablesImport">Import rules files</button> or add a source in Settings.</div>`);
-    return;
-  }
-  if(!list.length){el.insertAdjacentHTML("beforeend",`<div class="empty">No matches.</div>`);return;}
-  const seen=new Set();
-  const groups=TBL_KINDS.map(([kind,label])=>[label,list.filter(t=>t.ownerKind===kind)]);
-  groups.forEach(g=>g[1].forEach(t=>seen.add(t)));
-  const rest=list.filter(t=>!seen.has(t));
-  if(rest.length)groups.push(["Other",rest]);
-  groups.forEach(([label,arr])=>{
-    if(!arr.length)return;
-    const h=document.createElement("div");h.className="spell-h";h.textContent=`${label} (${arr.length})`;el.appendChild(h);
-    arr.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))).forEach(t=>{
-      const d=document.createElement("div");d.className="item";
-      d.innerHTML=`<div class="top"><span class="nm">${esc(dispName(t,"tables"))}</span><span class="chip">${esc(String(tableRows(t).length))} rows</span>
-        <button class="icon" data-view-table="${esc(t.name)}" aria-label="View table"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
-        ${t.owner?`<div class="desc hint">From ${esc(t.owner)}</div>`:""}`;
-      el.appendChild(d);
-    });
-  });
-}
 /* a row of chips linking to an entity's tables — used by the class/race views */
 function tableChipsHTML(name,kind){
   const ts=tablesFor(name,kind);
   if(!ts.length)return "";
   return `<div class="tblchips">`+ts.map(t=>`<button type="button" class="tblref" data-tbl="${esc(t.name)}">${esc(t.name)}</button>`).join("")+`</div>`;
+}
+/* ================= the Rules tab: a browser over the loaded rules (#99, #53) =================
+   Every category the packs hold, in one fixed order, each a sortable table with
+   its own search and the Add pickers' filters; a row opens the window the sheet
+   already uses for that entry. It is for reading: the only writes are the
+   glossary's own + Add, Edit and Delete, which the old Glossary card had.
+
+   The pure half (rows, filters, sorting, markup strings, state) comes first, so
+   the harness can assert all of it. The DOM half paints #rbSide, #rbMain and
+   #rbBody and nothing else. Pack fields are someone else's file (#71): read
+   through rbStr() and the named helpers, never raw. */
+
+/* ---- reading a category ---- */
+function rbList(kind){return (Array.isArray(rules[kind])?rules[kind]:[]).filter(e=>e&&typeof e==="object"&&!Array.isArray(e));}
+function rbStr(v){return typeof v==="string"?v.trim():(typeof v==="number"&&isFinite(v)?String(v):"");}
+function rbSrc(e){return rbStr(e&&e._source);}
+/* the display name: dispName() adds "(SRC)" only when two packs share a name */
+function rbName(e,kind){
+  const nm=kind==="keywords"?glossTerm(e):rbStr(e&&e.name);
+  return nm?String(dispName({name:nm,term:nm,_source:e._source},kind)):"";
+}
+function rbRow(e,kind,extra){
+  const nm=kind==="keywords"?glossTerm(e):rbStr(e.name);
+  return Object.assign({id:String(rbStr(e._id)||nm),name:rbName(e,kind),e,src:rbSrc(e),subj:e},extra||{});
+}
+/* the first number in the text, not every digit joined — "1d10" is 1, not 110;
+   for hit dice ("d10", no leading count) that leaves the die size, which is
+   the only number there to sort by */
+function rbNum(v){const m=String(v==null?"":v).match(/-?\d+(?:\.\d+)?/);return m?parseFloat(m[0]):null;}
+function rbTblKind(t){const i=TBL_KINDS.findIndex(([k])=>k===t.ownerKind);return i<0?TBL_KINDS.length:i;}
+/* a shared picker facet matches an entry (or a feat's {k,e}); the browser hands
+   it the row, so this unwraps */
+function rbWrap(facets){return facets.map(f=>Object.assign({},f,{match:(r,a)=>f.match(r.subj,a)}));}
+
+const RB_NAME={key:"name",label:"Name",get:r=>r.name};
+const RB_SOURCE={key:"src",label:"Source",get:r=>r.src};
+const RB_PAGE=300, RB_HITS=8;
+/* The categories, in the order the sidebar lists them. `rows` builds the rows,
+   `cols` the columns (`get` is the cell, `sort` the value to sort by when it is
+   not the cell), `keys` sort values that are not columns, `order` the default
+   sort, `facets` the filters, `open` the window a row opens. */
+const RB_CATS=[
+  {k:"classes",title:"Classes",
+   rows:()=>rbList("classes").map(e=>rbRow(e,"classes")).filter(r=>r.name),
+   cols:[RB_NAME,{key:"hd",label:"Hit die",get:r=>rbStr(r.e.hitDie),sort:r=>rbNum(r.e.hitDie)},RB_SOURCE],
+   open:r=>openClassInfo(r.e._id||r.e.name,{ref:true})},
+  {k:"subclasses",title:"Subclasses",
+   /* what subclassesFor() gives each class: its own subclasses and the loose
+      ones, keyed as the class window keys them */
+   rows:()=>{const out=[];rbList("classes").forEach(d=>{const m=subclassesFor(d);Object.keys(m).forEach(k=>{
+     const sc=m[k];if(!sc||typeof sc!=="object"||!k)return;
+     out.push({id:"sub:"+(rbStr(d._id)||rbStr(d.name))+"|"+k,name:k,e:sc,cls:d,src:rbSrc(sc)||rbSrc(d),subj:sc});});});return out;},
+   /* the class's display name, not its plain one — "Fighter" alone is
+      ambiguous once two base packs both have one (#99 final review) */
+   cols:[RB_NAME,{key:"cls",label:"Class",get:r=>rbName(r.cls,"classes")},RB_SOURCE],
+   facets:list=>{const cl=[...new Set(list.map(r=>rbName(r.cls,"classes")).filter(Boolean))].sort();
+     return [{key:"cls",label:"Class",type:"multi",options:cl.map(c=>({value:c.toLowerCase(),label:c})),match:(r,a)=>a.has(rbName(r.cls,"classes").toLowerCase())}];},
+   order:{key:"cls",dir:1},
+   open:r=>openSubclassInfo(r.cls._id||r.cls.name,r.name,{ref:true})},
+  {k:"races",title:"Species",
+   rows:()=>rbList("races").map(e=>rbRow(e,"races")).filter(r=>r.name),
+   cols:[RB_NAME,{key:"size",label:"Size",get:r=>rbStr(sizeLabel(r.e.size))},{key:"speed",label:"Speed",get:r=>rbStr(r.e.speed),sort:r=>rbNum(r.e.speed)},RB_SOURCE],
+   open:r=>openRaceInfo(r.e._id||r.e.name,{ref:true})},
+  {k:"backgrounds",title:"Backgrounds",
+   rows:()=>rbList("backgrounds").map(e=>rbRow(e,"backgrounds")).filter(r=>r.name),
+   cols:[RB_NAME,{key:"feat",label:"Feat",get:r=>bgFeatList(r.e).map(rbStr).filter(Boolean).join(" or ")},RB_SOURCE],
+   open:r=>openBackgroundInfo(r.e._id||r.e.name,{ref:true})},
+  {k:"feats",title:"Feats",
+   rows:()=>rbList("feats").map(e=>rbRow(e,"feats",{subj:{k:"feat",e}})).filter(r=>r.name),
+   cols:[RB_NAME,{key:"type",label:"Type",get:r=>featKindDef(featPickKind(r.subj)).label},{key:"pre",label:"Prerequisite",get:r=>featPickPrereq(r.subj)},RB_SOURCE],
+   facets:list=>rbWrap(featFacets(list.map(r=>r.subj))),
+   open:r=>openFeatInfo(r.subj)},
+  {k:"features",title:"Traits",
+   rows:()=>rbList("features").map(e=>rbRow(e,"features",{subj:{k:"trait",e}})).filter(r=>r.name),
+   cols:[RB_NAME,{key:"from",label:"From",get:r=>rbStr(r.e.source)},RB_SOURCE],
+   open:r=>openFeatInfo(r.subj)},
+  {k:"spells",title:"Spells",
+   rows:()=>rbList("spells").map(e=>rbRow(e,"spells")).filter(r=>r.name),
+   cols:[RB_NAME,{key:"lvl",label:"Level",get:r=>num(r.e.level)===0?"Cantrip":String(num(r.e.level)),sort:r=>num(r.e.level)},
+         {key:"school",label:"School",get:r=>spellSchoolOf(r.e)},{key:"time",label:"Time",get:r=>rbStr(String(rbStr(r.e.meta)).split("·")[1])},RB_SOURCE],
+   facets:list=>rbWrap(spellFacets(list.map(r=>r.e),{classDefault:"all"})),
+   order:{key:"lvl",dir:1},
+   open:r=>openSpellView({name:rbStr(r.e.name),level:num(r.e.level),meta:rbStr(r.e.meta),text:rbStr(r.e.text)})},
+  {k:"items",title:"Items",
+   rows:()=>rbList("items").map(e=>rbRow(e,"items")).filter(r=>r.name),
+   cols:[RB_NAME,{key:"cat",label:"Category",get:r=>rbStr(itemCatOf(r.e))},
+         {key:"rar",label:"Rarity",get:r=>rbStr(itemRarOf(r.e)),sort:r=>{const i=ITEM_RARITIES.indexOf(itemRarOf(r.e));return i<0?ITEM_RARITIES.length:i;}},
+         {key:"cost",label:"Cost",get:r=>rbStr(r.e.cost),sort:r=>{const g=costToGp(r.e.cost);return typeof g==="number"&&isFinite(g)?g:null;}},RB_SOURCE],
+   facets:list=>rbWrap(itemFacets(list.map(r=>r.e))),
+   open:r=>openItemInfo(r.e)},
+  {k:"conditions",title:"Conditions",
+   rows:()=>rbList("keywords").filter(g=>g.cond===true&&glossTerm(g)).map(g=>rbRow(g,"keywords")),
+   cols:[RB_NAME,RB_SOURCE],
+   open:r=>openGlossView(r.e)},
+  {k:"glossary",title:"Glossary",
+   /* the pack's other terms, then the player's own — listed even with no term,
+      because Edit is how one gets a term (#71) */
+   rows:()=>{
+     const pack=rbList("keywords").filter(g=>g.cond!==true&&glossTerm(g)).map(g=>rbRow(g,"keywords"));
+     const own=(Array.isArray(character.glossary)?character.glossary:[]).filter(g=>g&&typeof g==="object"&&!Array.isArray(g))
+       .map(g=>({id:"own:"+rbStr(g.id),name:glossTerm(g),e:g,src:"Yours",own:true,subj:g}));
+     return pack.concat(own);},
+   cols:[{key:"name",label:"Term",get:r=>r.name},{key:"type",label:"Type",get:r=>r.e.type==="image"?"Image":"Text"},RB_SOURCE],
+   facets:()=>[{key:"own",label:"Your entries",type:"toggle",match:r=>!!r.own}],
+   open:r=>openGlossView(r.e)},
+  {k:"tables",title:"Tables",
+   rows:()=>allTables().filter(t=>t&&typeof t==="object"&&!Array.isArray(t)).map(t=>rbRow(t,"tables")).filter(r=>r.name),
+   cols:[RB_NAME,{key:"rows",label:"Rows",get:r=>String(tableRows(r.e).length),sort:r=>tableRows(r.e).length},{key:"from",label:"From",get:r=>rbStr(r.e.owner)},RB_SOURCE],
+   keys:[{key:"kind",sort:r=>rbTblKind(r.e)}],
+   facets:list=>{
+     const opts=TBL_KINDS.filter(([k])=>list.some(r=>r.e.ownerKind===k)).map(([k,l])=>({value:k,label:l}));
+     if(list.some(r=>rbTblKind(r.e)===TBL_KINDS.length))opts.push({value:"other",label:"Other"});
+     return [{key:"kind",label:"Kind",type:"multi",options:opts,match:(r,a)=>a.has(rbTblKind(r.e)===TBL_KINDS.length?"other":String(r.e.ownerKind))}];},
+   order:{key:"kind",dir:1},
+   open:r=>openTableView(r.e)}
+];
+function rbCat(k){return RB_CATS.find(c=>c.k===k)||null;}
+/* the categories the sidebar lists, with their rows; the Glossary always, so
+   its + Add is always reachable */
+function rbShown(){return RB_CATS.map(cat=>({cat,rows:cat.rows()})).filter(x=>x.rows.length||x.cat.k==="glossary");}
+/* The last category opened, if it is still listed; else the first. */
+function rulesCatOf(s,shown){
+  const k=s&&typeof s.rulesCat==="string"?s.rulesCat:"";
+  return shown.some(x=>x.cat.k===k)?k:(shown[0]?shown[0].cat.k:"");
+}
+function rbFindRow(k,id){const c=rbCat(k);return c?(c.rows().find(r=>r.id===id)||null):null;}
+function rbOpenRow(k,id){const c=rbCat(k),r=rbFindRow(k,id);if(c&&r)c.open(r);}
+
+/* ---- filters: the category's own, and Pack when its rows span two packs ---- */
+function rbFacets(cat,rows){
+  const fs=cat.facets?cat.facets(rows):[];
+  const srcs=[...new Set(rows.map(r=>r.src).filter(s=>s&&s!=="Yours"))].sort();
+  if(srcs.length>1&&!fs.some(f=>f.key==="pack"))fs.push({key:"pack",label:"Pack",type:"multi",
+    options:srcs.map(s=>({value:s.toLowerCase(),label:s})),match:(r,a)=>a.has(String(r.src).toLowerCase())});
+  return fs;
+}
+
+/* ---- state: in memory for the session; only the category is saved ---- */
+const rbUI={per:{},q:"",screen:"list"};
+function rbState(k){
+  if(!rbUI.per[k])rbUI.per[k]={q:"",facets:{},sort:null,shown:RB_PAGE,showFilters:false};
+  return rbUI.per[k];
+}
+/* a facet's value, from its default the first time it is read */
+function rbFacetVal(st,f){
+  if(!(f.key in st.facets))st.facets[f.key]=f.type==="toggle"?!!f.default:new Set((f.default||[]).map(String));
+  return st.facets[f.key];
+}
+function rbRowText(cat,r){return cat.cols.map(c=>c.get(r)).join(" ");}
+function rbPasses(cat,st,facets,r){
+  if(st.q){if(!rbRowText(cat,r).toLowerCase().includes(String(st.q).trim().toLowerCase()))return false;}
+  for(const f of facets){const v=rbFacetVal(st,f);
+    if(f.type==="toggle"){if(v&&!f.match(r,true))return false;}
+    else if(v.size&&!f.match(r,v))return false;}
+  return true;
+}
+function rbToggleFacet(k,key,val){
+  const cat=rbCat(k);if(!cat)return;
+  const f=rbFacets(cat,cat.rows()).find(x=>x.key===key);if(!f)return;
+  const st=rbState(k),v=rbFacetVal(st,f);
+  if(f.type==="toggle")st.facets[key]=!v;
+  else{const s=String(val);if(v.has(s))v.delete(s);else v.add(s);}
+  st.shown=RB_PAGE;
+}
+function rbClearFacets(k){
+  const cat=rbCat(k);if(!cat)return;
+  const st=rbState(k);
+  rbFacets(cat,cat.rows()).forEach(f=>{st.facets[f.key]=f.type==="toggle"?false:new Set();});
+  st.shown=RB_PAGE;
+}
+
+/* ---- sorting: numbers as numbers, blanks last whichever way, then by name ---- */
+function rbSortVal(cat,key,r){
+  const c=cat.cols.find(x=>x.key===key)||(cat.keys||[]).find(x=>x.key===key);
+  if(!c)return "";
+  return c.sort?c.sort(r):c.get(r);
+}
+function rbCompare(a,b){
+  if(typeof a==="number"&&typeof b==="number")return a-b;
+  return String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:"base"});
+}
+function rbSortOf(cat,st){return st.sort||cat.order||{key:"name",dir:1};}
+function rbSorted(cat,st,rows){
+  const s=rbSortOf(cat,st);
+  return rows.slice().sort((x,y)=>{
+    const va=rbSortVal(cat,s.key,x),vb=rbSortVal(cat,s.key,y);
+    const ea=va==null||va==="",eb=vb==null||vb==="";
+    if(ea!==eb)return ea?1:-1;
+    return (ea?0:s.dir*rbCompare(va,vb))||rbCompare(x.name,y.name);
+  });
+}
+function rbSortBy(k,key){
+  const cat=rbCat(k);if(!cat)return;
+  const st=rbState(k),cur=rbSortOf(cat,st);
+  st.sort=cur.key===key?{key,dir:-cur.dir}:{key,dir:1};
+  st.shown=RB_PAGE;
+}
+
+/* ---- markup: pure strings ---- */
+const RB_EYE=`<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const RB_PEN=`<svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`;
+const RB_BIN=`<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>`;
+const RB_NOTERM=`<em title="This entry has no term, so it never shows up in your text. Edit it to give it one.">(no term)</em>`;
+function rbSideHTML(shown,active){
+  return `<div class="rb-cats">`+shown.map(({cat,rows})=>{const on=cat.k===active;
+    return `<button type="button" class="rb-cat${on?" on":""}" data-rbcat="${esc(cat.k)}"${on?` aria-current="true"`:""}><span class="rb-cn">${esc(cat.title)}</span><span class="cnt">${esc(String(rows.length))}</span></button>`;
+  }).join("")+`</div>`;
+}
+/* The pane's fixed top: back, title, + Add, the search box. Built when the
+   category changes, never while typing, so the box keeps focus and caret. */
+function rbHeadHTML(cat,total,q){
+  const gl=cat.k==="glossary";
+  return `<div class="rb-head"><button type="button" class="tbtn rb-back" data-rbback>← Categories</button>`+
+    `<h3 class="rb-title" id="rbTitle" tabindex="-1">${esc(cat.title)} <span class="cnt">(${esc(String(total))})</span></h3>`+
+    (gl?`<button type="button" class="add" id="btnAddGloss"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button>`:"")+`</div>`+
+    (gl?`<p class="hint">Terms here become tappable ❧ wherever they appear in your notes, features, spells and item descriptions.</p>`:"")+
+    `<div class="searchbox rb-catsearch"><input id="rbCatSearch" placeholder="Search ${esc(cat.title.toLowerCase())}…" value="${esc(q||"")}" autocomplete="off" aria-label="Search ${esc(cat.title)}"><button type="button" class="search-clear" aria-label="Clear the search" title="Clear">×</button></div>`+
+    `<div id="rbBody"></div>`;
+}
+function rbFacetsHTML(st,facets){
+  return facets.map(f=>{const v=rbFacetVal(st,f);
+    if(f.type==="toggle")return `<div class="fgrp"><span class="flbl">&nbsp;</span><button type="button" class="fpill${v?" on":""}" data-rbtoggle="${esc(f.key)}" aria-pressed="${v?"true":"false"}">${esc(f.label)}</button></div>`;
+    return `<div class="fgrp"><span class="flbl">${esc(f.label)}</span>`+(f.options||[]).map(o=>{const on=v.has(String(o.value));
+      return `<button type="button" class="fpill${on?" on":""}" data-rbfacet="${esc(f.key)}" data-rbval="${esc(String(o.value))}" aria-pressed="${on?"true":"false"}">${esc(o.label)}</button>`;}).join("")+`</div>`;
+  }).join("");
+}
+function rbActiveCount(st,facets){return facets.reduce((n,f)=>{const v=rbFacetVal(st,f);return n+(f.type==="toggle"?(v?1:0):v.size);},0);}
+function rbThHTML(cat,st,c){
+  const s=rbSortOf(cat,st),on=s.key===c.key,up=s.dir>0;
+  return `<th${on?(up?` aria-sort="ascending"`:` aria-sort="descending"`):""}><button type="button" class="rb-sort" data-rbsort="${esc(c.key)}">${esc(c.label)}${on?(up?" ▲":" ▼"):""}</button></th>`;
+}
+function rbOwnActsHTML(g){
+  const id=rbStr(g.id);
+  return `<button class="icon" data-view-gloss="${esc(id)}" aria-label="Preview">${RB_EYE}</button>`+
+    `<button class="icon" data-edit-gloss="${esc(id)}" aria-label="Edit">${RB_PEN}</button>`+
+    `<button class="icon danger" data-del-gloss="${esc(id)}" aria-label="Delete">${RB_BIN}</button>`;
+}
+function rbRowHTML(cat,r){
+  const cells=cat.cols.map((c,i)=>{const v=c.get(r);
+    return i===0?`<td><button type="button" class="rb-open">${v?esc(v):RB_NOTERM}</button></td>`:`<td>${esc(v)}</td>`;}).join("");
+  const acts=cat.k==="glossary"?`<td class="rb-acts">${r.own?rbOwnActsHTML(r.e):""}</td>`:"";
+  return `<tr data-rbrow="${esc(r.id)}">${cells}${acts}</tr>`;
+}
+/* What repaints on a filter, a sort, a search or Show more. */
+function rbBodyHTML(cat,rows,st,facets){
+  const list=rbSorted(cat,st,rows.filter(r=>rbPasses(cat,st,facets,r)));
+  const shown=list.slice(0,st.shown);
+  const n=rbActiveCount(st,facets);
+  let h="";
+  if(facets.length){
+    h+=`<div class="rb-fbar"><button type="button" class="fpill" data-rbfilters aria-expanded="${st.showFilters?"true":"false"}">Filters${n?` (${esc(String(n))})`:""}</button>`+
+      (n?`<button type="button" class="fpill clear" data-rbclear>Clear</button>`:"")+`</div>`;
+    if(st.showFilters)h+=`<div class="rb-facets">${rbFacetsHTML(st,facets)}</div>`;
+  }
+  h+=`<div class="rb-count">${esc(String(list.length))} of ${esc(String(rows.length))}</div>`;
+  if(!list.length)return h+`<div class="empty">No matches.</div>`;
+  h+=`<div class="tbl-wrap rb-tblwrap"><table class="rtbl rb-tbl"><thead><tr>${cat.cols.map(c=>rbThHTML(cat,st,c)).join("")}${cat.k==="glossary"?`<th aria-label="Actions"></th>`:""}</tr></thead>`+
+    `<tbody>${shown.map(r=>rbRowHTML(cat,r)).join("")}</tbody></table></div>`;
+  if(list.length>shown.length)h+=`<button type="button" class="tbtn rb-more" data-rbmore>Show ${esc(String(Math.min(RB_PAGE,list.length-shown.length)))} more</button>`;
+  return h;
+}
+/* The sidebar while its box has text: every listed category's matching names,
+   up to RB_HITS each, then a link into the category with the text carried over. */
+function rbSearchHTML(shown,q){
+  const s=String(q||"").trim().toLowerCase();
+  let h="";
+  shown.forEach(({cat,rows})=>{
+    const hits=rows.filter(r=>String(r.name||"").toLowerCase().includes(s)).sort((a,b)=>rbCompare(a.name,b.name));
+    if(!hits.length)return;
+    h+=`<div class="rb-sgroup"><div class="spell-h">${esc(cat.title)} (${esc(String(hits.length))})</div>`+
+      hits.slice(0,RB_HITS).map(r=>`<button type="button" class="rb-hit" data-rbhit="${esc(r.id)}" data-rbhitcat="${esc(cat.k)}">${r.name?esc(r.name):RB_NOTERM}</button>`).join("")+
+      (hits.length>RB_HITS?`<button type="button" class="linkbtn rb-morein" data-rbmorein="${esc(cat.k)}">${esc(String(hits.length-RB_HITS))} more in ${esc(cat.title)} →</button>`:"")+`</div>`;
+  });
+  return h||`<div class="empty">No matches.</div>`;
+}
+
+/* ================= the DOM half ================= */
+function rbCurKey(){return rulesCatOf(settings,rbShown());}
+/* Entering the Rules tab from another tab: forget whatever table was open and
+   open on the category list (spec §7). selectTab() calls this; it never runs
+   during boot, so the TDZ that orders every other fragment doesn't apply. */
+function rbToList(){
+  rbUI.screen="list";
+  const c=document.getElementById("rbCard");if(c&&c.dataset)c.dataset.screen="list";
+}
+function rbPaintSide(shown,k){
+  const side=document.getElementById("rbSide");if(!side)return;
+  const q=String(rbUI.q||"").trim();
+  side.innerHTML=q?rbSearchHTML(shown,q):rbSideHTML(shown,k);
+}
+function rbPaintBody(it){
+  const b=document.getElementById("rbBody");if(!b)return;
+  b.innerHTML=rbBodyHTML(it.cat,it.rows,rbState(it.cat.k),rbFacets(it.cat,it.rows));
+}
+/* Everything: the import prompt, the sidebar, the pane. Runs from renderAll()
+   and refreshRulesUI(), and when the category changes — never on a keystroke in
+   a category's own box, which repaints the body alone (rbRefreshBody). */
+function renderRulesBrowser(){
+  const empty=document.getElementById("rbEmpty");
+  if(empty)empty.innerHTML=RULE_CATS.some(c=>(rules[c]||[]).length)?"":
+    `<div class="empty" style="line-height:1.7">No rules pack loaded yet. <button class="linkbtn" id="rbImport">Import rules files</button> to add classes, spells, feats, items and more, or manage sources in Settings.</div>`;
+  const card=document.getElementById("rbCard");if(card&&card.dataset)card.dataset.screen=rbUI.screen;
+  const shown=rbShown(),k=rulesCatOf(settings,shown);
+  rbPaintSide(shown,k);
+  const main=document.getElementById("rbMain");if(!main)return;
+  const it=shown.find(x=>x.cat.k===k);
+  if(!it){main.innerHTML="";return;}
+  main.innerHTML=rbHeadHTML(it.cat,it.rows.length,rbState(k).q);
+  rbPaintBody(it);
+}
+function rbRefreshBody(){const shown=rbShown(),k=rulesCatOf(settings,shown),it=shown.find(x=>x.cat.k===k);if(it)rbPaintBody(it);}
+function rbOpenCat(k,focus){
+  if(!rbCat(k))return;
+  settings.rulesCat=k;saveSettings();
+  rbUI.screen="table";
+  renderRulesBrowser();
+  if(focus){const h=document.getElementById("rbTitle");if(h&&h.focus)h.focus();}
+}
+/* narrow screens: back to the list, with focus on the category just left */
+function rbBack(){
+  rbUI.screen="list";
+  const card=document.getElementById("rbCard");if(card)card.dataset.screen="list";
+  const b=document.querySelector(`[data-rbcat="${rbCurKey()}"]`);if(b&&b.focus)b.focus();
+}
+/* "N more in Spells →": that category, with the search carried into its own box */
+function rbMoreIn(k){
+  if(!rbCat(k))return;
+  rbState(k).q=String(rbUI.q||"").trim();rbState(k).shown=RB_PAGE;
+  rbUI.q="";const s=document.getElementById("rbSearch");if(s)s.value="";
+  rbOpenCat(k);
 }
 /* ================= section notes =================
    A note pinned to any section of the sheet, plus the Section Notes card on the
@@ -10782,7 +11078,7 @@ function encSettingsChanged(){
    cannot say "import the settings but keep my rules" without making Cancel
    import something. Nothing is lost, so nothing is asked, when the file brings
    no rules or none are loaded yet. */
-const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCollapse","tabIcons","backdropClose","setPage"];
+const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCat","tabIcons","backdropClose","setPage"];
 /* What boot does to settings from an older build, shared with Import settings
    so an old file arrives in the same shape: the first builds' single `rulesUrl`
    joins the sources list. True when that changed something worth saving. */
@@ -10886,7 +11182,7 @@ function updateRulesStatus(msg,cls){const el=document.getElementById("rulesStatu
 /* renderNotes and renderJournal are here because notes and journal pages run
    through highlight() too — editing the glossary changes how every one reads.
    An open journal editor is left alone (renderJournal()). */
-function refreshRulesUI(){renderRulesSections();renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderJournal();renderAllRT();}
+function refreshRulesUI(){renderRulesBrowser();renderFeatures();renderInventory();renderSpells();renderClassRace();renderNotes();renderJournal();renderAllRT();}
 const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
 /* display names for a category — one map, used by both the group summary and
    the headings in the loaded-data list */
@@ -11940,7 +12236,6 @@ function wire(){
     if((m=t.closest("[data-stat]"))){openStatBreakdown(m.dataset.stat);return;}
     if((m=t.closest(".kw"))){const g=allGlossary().find(x=>x.id===m.dataset.gid);if(g)openGlossView(g);return;}
     if((m=t.closest(".tblref"))){openTableByName(m.dataset.tbl);return;}
-    if((m=t.closest("[data-view-table]"))){openTableByName(m.dataset.viewTable);return;}
     if((m=t.closest("[data-edit]"))){const k=m.dataset.edit;editing[k]=!editing[k];renderRT(k);if(!editing[k])scheduleSave();return;}
     // section notes
     if((m=t.closest("[data-notebtn]")))return openNoteEditor(m.dataset.notebtn);
@@ -12005,7 +12300,7 @@ function wire(){
     if((m=t.closest("[data-info-bg]")))return openBackgroundInfo(m.dataset.infoBg);
     if((m=t.closest("[data-choose-sub]")))return chooseSubclass(m.dataset.chooseSub);
     if((m=t.closest("[data-change-sub]")))return chooseSubclass(m.dataset.changeSub);
-    if((m=t.closest("[data-sub-info]"))){const p=m.dataset.subInfo.split("|");return openSubclassInfo(p[0],p[1]);}
+    if((m=t.closest("[data-sub-info]"))){const p=m.dataset.subInfo.split("|");return openSubclassInfo(p[0],p.slice(1).join("|"),m.dataset.subRef?{ref:true}:undefined);}
     if((m=t.closest("[data-info-class]")))return openClassInfo(m.dataset.infoClass);
     // statuses
     if((m=t.closest("[data-status-tick]"))){stepStatusTap(m.dataset.statusTick,num(m.dataset.sec),e.detail===0);return;}
@@ -12049,8 +12344,6 @@ function wire(){
     if((m=t.closest("[data-hd]"))){const die=m.dataset.hd,i=num(m.dataset.i);if(!character.hdUsed)character.hdUsed={};const u=num(character.hdUsed[die]);character.hdUsed[die]=(u===i)?i-1:i;renderHitDice();recompute();scheduleSave();return;}
     if((m=t.closest("[data-fuse]"))){const f=character.features.find(x=>x.id===m.dataset.fuse);if(f&&f.uses){const i=num(m.dataset.i);f.uses.used=(num(f.uses.used)===i)?i-1:i;renderFeatures();scheduleSave();}return;}
     if((m=t.closest("[data-usefeat]")))return useFeature(m.dataset.usefeat);
-    if(t.closest("#glossImport"))return document.getElementById("glossRulesFiles").click();
-    if(t.closest("#tablesImport"))return document.getElementById("tablesRulesFiles").click();
     if((m=t.closest("[data-invitem]"))){const id=m.dataset.invitem,ic=invCol();ic.items[id]=!ic.items[id];renderInventory();scheduleSave();return;}
     if((m=t.closest("[data-fav-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.favItem);if(it){it.fav=!it.fav;renderInventory();scheduleSave();}return;}
     if((m=t.closest("[data-invsec]"))){const s=invCol().sections;s[m.dataset.invsec]=!s[m.dataset.invsec];renderInventory();scheduleSave();return;}
@@ -12072,10 +12365,6 @@ function wire(){
        derived. Same as the inventory star above, and unlike the On/Off toggle
        below, which does change what the effects engine sees. */
     if((m=t.closest("[data-fav-feature]"))){const f=character.features.find(x=>x.id===m.dataset.favFeature);if(f){f.fav=!f.fav;renderFeatures();scheduleSave();}return;}
-    /* The glossary header contains its own "+ Add" button, so a bare closest()
-       here would toggle the section every time you reached for it. Anything
-       interactive inside the heading keeps its own click. */
-    if((m=t.closest("[data-rulessec]"))&&!t.closest("button, input, select, a, [role=button]:not([data-rulessec])")){toggleRulesSec(m.dataset.rulessec);return;}
     if((m=t.closest("[data-fav-attack]"))){const a=character.attacks.find(x=>x.id===m.dataset.favAttack);if(a){a.fav=!a.fav;renderAttacks();scheduleSave();}return;}
     if((m=t.closest("[data-fgroup]"))){const g=m.dataset.fgroup,fc=featCol();fc.groups[g]=!fc.groups[g];renderFeatures();scheduleSave();return;}
     if((m=t.closest("[data-edit-feature]")))return openFeatureForm(character.features.find(x=>x.id===m.dataset.editFeature));
@@ -12104,9 +12393,23 @@ function wire(){
     if((m=t.closest("[data-prep]"))){const s=character.spells.find(x=>x.id===m.dataset.prep);if(s){s.prepared=!s.prepared;renderSpells();scheduleSave();}return;}
     // glossary
     if((m=t.closest("[data-view-gloss]")))return openGlossView(character.glossary.find(x=>x&&x.id===m.dataset.viewGloss));
-    if((m=t.closest("[data-view-gloss-rk]")))return openGlossView((rules.keywords||[]).find(x=>x&&(x._id||x.term)===m.dataset.viewGlossRk));
     if((m=t.closest("[data-edit-gloss]")))return openGlossForm(character.glossary.find(x=>x&&x.id===m.dataset.editGloss));
-    if((m=t.closest("[data-del-gloss]"))){const g=character.glossary.find(x=>x&&x.id===m.dataset.delGloss);if(g&&confirm(`Delete “${glossTerm(g)||"this entry"}”?`)){character.glossary=character.glossary.filter(x=>x!==g);renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();}return;}
+    if((m=t.closest("[data-del-gloss]"))){const g=character.glossary.find(x=>x&&x.id===m.dataset.delGloss);if(g&&confirm(`Delete “${glossTerm(g)||"this entry"}”?`)){character.glossary=character.glossary.filter(x=>x!==g);renderRulesBrowser();renderFeatures();renderInventory();renderAllRT();scheduleSave();}return;}
+    // the Rules tab browser (86-rules-browser.js). After the glossary's own
+    // buttons above: they sit inside a row, and the row must not take their tap.
+    if(t.closest("#rbImport"))return document.getElementById("rbRulesFiles").click();
+    if(t.closest("#btnAddGloss"))return openGlossForm();
+    if((m=t.closest("[data-rbcat]")))return rbOpenCat(m.dataset.rbcat,e.detail===0);
+    if(t.closest("[data-rbback]"))return rbBack();
+    if((m=t.closest("[data-rbsort]"))){rbSortBy(rbCurKey(),m.dataset.rbsort);return rbRefreshBody();}
+    if((m=t.closest("[data-rbfacet]"))){rbToggleFacet(rbCurKey(),m.dataset.rbfacet,m.dataset.rbval);return rbRefreshBody();}
+    if((m=t.closest("[data-rbtoggle]"))){rbToggleFacet(rbCurKey(),m.dataset.rbtoggle,null);return rbRefreshBody();}
+    if(t.closest("[data-rbfilters]")){const st=rbState(rbCurKey());st.showFilters=!st.showFilters;return rbRefreshBody();}
+    if(t.closest("[data-rbclear]")){rbClearFacets(rbCurKey());return rbRefreshBody();}
+    if(t.closest("[data-rbmore]")){rbState(rbCurKey()).shown+=RB_PAGE;return rbRefreshBody();}
+    if((m=t.closest("[data-rbmorein]")))return rbMoreIn(m.dataset.rbmorein);
+    if((m=t.closest("[data-rbhit]")))return rbOpenRow(m.dataset.rbhitcat,m.dataset.rbhit);
+    if((m=t.closest("[data-rbrow]")))return rbOpenRow(rbCurKey(),m.dataset.rbrow);
   });
   document.addEventListener("keydown",e=>{
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
@@ -12161,10 +12464,11 @@ function wire(){
   document.getElementById("btnPortrait").addEventListener("click",()=>document.getElementById("filePortrait").click());
   document.getElementById("filePortrait").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{character.portraitImg=r.result;renderPortrait();scheduleSave()};r.readAsDataURL(f);e.target.value="";});
   document.getElementById("btnPortraitDel").addEventListener("click",()=>{if(character.portraitImg&&confirm("Remove portrait?")){character.portraitImg=null;renderPortrait();scheduleSave();}});
-  // add glossary
-  document.getElementById("btnAddGloss").addEventListener("click",()=>openGlossForm());
-  document.getElementById("glossSearch").addEventListener("input",()=>renderGloss());
-  document.getElementById("tablesSearch").addEventListener("input",()=>renderTables());
+  /* The Rules tab: the box over the sidebar repaints the sidebar; a category's
+     own box (built by rbHeadHTML, so delegated) repaints only that table's body,
+     never the box itself, or typing would lose focus with every letter. */
+  document.getElementById("rbSearch").addEventListener("input",e=>{rbUI.q=e.target.value;rbPaintSide(rbShown(),rbCurKey());});
+  document.getElementById("rbMain").addEventListener("input",e=>{if(e.target.id!=="rbCatSearch")return;const st=rbState(rbCurKey());st.q=e.target.value;st.shown=RB_PAGE;rbRefreshBody();});
   document.getElementById("addFamiliarLink").addEventListener("click",()=>openFamiliarForm());
   document.getElementById("btnLevelUp").addEventListener("click",doLevelUp);
   document.getElementById("btnLevelDown").addEventListener("click",doLevelDown);
@@ -12220,8 +12524,7 @@ function wire(){
   document.getElementById("homeRough").addEventListener("click",()=>{settings.rough=!settings.rough;applyTheme();saveSettings();syncHomeSetupControls();});
   document.getElementById("homeImportBtn").addEventListener("click",()=>document.getElementById("homeRulesFiles").click());
   document.getElementById("homeRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
-  document.getElementById("glossRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
-  document.getElementById("tablesRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
+  document.getElementById("rbRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
   document.getElementById("homeRulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`)){removeRulesGroup(d.dataset.rdDel);const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
   document.getElementById("homeClearRules").addEventListener("click",()=>{if(clearAllRules()){const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
   document.getElementById("homeChars").addEventListener("click",e=>{
