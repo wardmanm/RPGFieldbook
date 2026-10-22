@@ -1,18 +1,17 @@
 # Rules & tables
 
-The Rules tab: **Glossary & Rules** (every term from the loaded packs plus the player's own entries)
-and **Reference Tables** (roll tables, class progressions and the lookup tables rules prose points
-at). Neither is character data. Their real reach is elsewhere: every glossary term becomes a tappable
+The Rules tab: a browser over every loaded rules category, the **Glossary** (every term from the
+loaded packs plus the player's own entries) and the **Tables** (roll tables, class progressions and
+the lookup tables rules prose points at) among them. None of it is character data. Their real reach is elsewhere: every glossary term becomes a tappable
 chip wherever it appears in the app, and every `[Table: Name]` anchor the converter left in the prose
 becomes a chip that opens that table in place.
 
-**Code:** `renderGloss()` in `60-attacks.js` · `openGlossForm()` in `85-browse.js` ·
+**Code:** `openGlossForm()` in `85-browse.js` ·
 `openGlossView()` in `80-modal-forms.js` · `allGlossary()`, `glossTerm()` in `00-constants.js` · `highlight()` in
-`10-compute.js` · `RULES_SECS`, `rulesSecOpen()`, `setRulesSecOpen()`, `renderRulesSections()`,
-`toggleRulesSec()`, `allTables()`, `tableRows()`, `tableCols()`, `findTable()`, `tablesFor()`, `tableHTML()`, `openTableView()`,
-`openTableByName()`, `renderTables()`, `tableChipsHTML()` in `86-tables.js` · `refreshRulesUI()`,
+`10-compute.js` · `allTables()`, `tableRows()`, `tableCols()`, `findTable()`, `tablesFor()`, `tableHTML()`, `openTableView()`,
+`openTableByName()`, `TBL_KINDS`, `tableChipsHTML()` in `86-tables.js` · `refreshRulesUI()`,
 `RULE_CATS` in `88-settings.js` · `mergeRules()`, `reindexRules()` in `89-rules-merge.js` ·
-`RB_CATS`, `rbShown()`, `rbBodyHTML()`, `rbSearchHTML()` in `86-rules-browser.js` · markup
+`RB_CATS`, `rbShown()`, `rbBodyHTML()`, `rbSearchHTML()`, `renderRulesBrowser()` in `86-rules-browser.js` · markup
 `src/html/40-rules.html` · **Data:** each pack's `tables.json`;
 [rules-schema §6.11](../../../../docs/rules-schema.md) · **Tests:** `tables.js`, `rules-data.js` ·
 **See also:** [Rich text](../architecture/rich-text.md), [Rules packs](../architecture/rules-packs.md),
@@ -21,22 +20,28 @@ Humblewood (the private repo's `docs/humblewood.md`)
 
 ## How it works
 
-**Two folding sections.** Each card heading is a toggle (`data-rulessec`, `role="button"`, with
-`aria-expanded` and a caret) over a body (`data-rulesbody`), and carries its count — `(154)` — so a
-shut section still says what is inside. Both start shut. State is a collapse map in
-`settings.rulesCollapse`, where an absent key means "never touched" and falls back to `RULES_SECS`'
-default. `renderRulesSections()` paints both, from `renderAll()` (a sheet loaded with cached rules)
-and from `refreshRulesUI()` (a pack load). A click that lands on anything interactive inside the
-heading — the glossary's + Add — keeps its own meaning and does not toggle. Both filter boxes are the
-shared `.searchbox` with a × clear button.
+**The browser.** One card (`#rbCard`, `src/html/40-rules.html`). On the left, every category the
+loaded packs hold, in `RB_CATS` order with its count (Classes, Subclasses, Species, Backgrounds,
+Feats, Traits, Spells, Items, Conditions, Glossary, Tables; the Glossary is always listed, so its
++ Add is always reachable), under a search box across all of them. On the right, the open category
+as a sortable table with its own search box and, where it has them, the Add pickers' filters. A row
+opens the window the sheet already uses for that entry (the class, subclass, species and background
+windows in reference mode, with nothing to add). The category last opened
+is `settings.rulesCat` (read through `rulesCatOf()`); search, filters and sort live only for the
+session. `renderRulesBrowser()` paints it all, from `renderAll()` (a sheet loaded with cached rules)
+and from `refreshRulesUI()` (a pack load); typing in a category's box repaints only its body, so the
+box keeps focus. 640px and under it shows one pane at a time, by `#rbCard[data-screen]`, with
+← Categories to go back. The ☰ flyout lists the categories. With no pack loaded the card opens on an
+Import rules files prompt.
 
-**The glossary.** `allGlossary()` is the rules pack's `keywords` plus `character.glossary`.
-`renderGloss()` lists "From rules pack · *pack name*" (the first 150 matches, then "…and N more —
-type to filter") and "Your entries", each row with a preview; the player's own entries also have Edit
-and Delete. Every term is read through `glossTerm()`: a pack keyword with no term is not listed (the
-pool drops those, see [Rules packs](../architecture/rules-packs.md)), and a player's entry with none
-is listed as "(no term)", so it can be given one or deleted; it never becomes a chip. `openGlossForm()` makes an entry of type Text or Rules image (a screenshot stored as a
-data URL); a term is required. With no pack loaded the list opens on an Import rules files prompt.
+**The glossary.** `allGlossary()` is the rules pack's `keywords` plus `character.glossary`. The
+Glossary category lists the pack's terms (conditions have their own category) together with the
+player's own, sourced "Yours", which carry Preview, Edit and Delete beside the row and can be shown alone with
+the "Your entries" filter. + Add sits in its heading. Every term is read through `glossTerm()`: a
+pack keyword with no term is not listed (the pool drops those, see
+[Rules packs](../architecture/rules-packs.md)), and a player's entry with none is listed as
+"(no term)", so it can be given one or deleted; it never becomes a chip. `openGlossForm()` makes an
+entry of type Text or Rules image (a screenshot stored as a data URL); a term is required.
 An image entry, the player's or a pack's, is drawn through `imgHTML()`: escaped, and only from a
 data: URL, the form rules-schema §6.1 documents. A pack image given as a web address is not fetched;
 the entry says the image isn't stored in the file. See [Rich text](../architecture/rich-text.md).
@@ -50,9 +55,9 @@ text, because it changes how they read.
 re-loading a pack replaces its own and a same-named table from another pack is kept beside it). A
 table is `{name, cols, align, rows, owner, ownerKind}`, optionally `footnotes`, `caption` and
 `source`.
-`renderTables()` filters on name, owner and column labels, groups by `ownerKind` in `TBL_KINDS` order
-(class, subclass, race, spell, item, feat, background, rule, then Other) and sorts by name; with none
-loaded it shows an Import rules files prompt. `openTableView()` opens the modal: owner, kind and row
+The Tables category lists them sorted by `ownerKind` in `TBL_KINDS` order (class, subclass, race,
+spell, item, feat, background, rule, then Other), with a Kind filter over the same groups; a row
+opens `openTableView()`, the modal: owner, kind and row
 count, then `tableHTML()` — a header from `cols` (omitted when every label is empty), per-column
 `align`, and every cell escaped. Rows and columns are read through `tableRows()` and `tableCols()`,
 which give lists whatever the pack wrote: a table with no `rows` counts as 0 rows and says it has
@@ -116,9 +121,9 @@ a table opened from a spell preview replaces it.
 - **Marks that pointed at nothing.** 17 Xanathar's downtime tables shipped rows marked `*` with
   the note they point at dropped: `_norm_table()` never read the node's `footnotes`, and the
   schema had nowhere to put them (#73). → L4273
-- **The Tables tab was blank on load.** `renderTables()` was in `refreshRulesUI()` but not
+- **The Tables tab was blank on load.** The tables renderer was in `refreshRulesUI()` but not
   `renderAll()`, so tables drew only after an import or a keystroke in the filter. → L1581
-- **A table with no `rows` stopped every render** (#71). `renderTables()` read `t.rows.length`,
+- **A table with no `rows` stopped every render** (#71). The tables renderer read `t.rows.length`,
   and it runs in `renderAll()`, so one hand-written table without rows failed the whole sheet the
   way a keyword without a term did. `mergeRules()` checks only the name. → L4206
 - **The glossary heading's + Add toggled the section** every time it was pressed, until the handler

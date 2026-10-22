@@ -267,3 +267,52 @@ function rbSearchHTML(shown,q){
   });
   return h||`<div class="empty">No matches.</div>`;
 }
+
+/* ================= the DOM half ================= */
+function rbCurKey(){return rulesCatOf(settings,rbShown());}
+function rbPaintSide(shown,k){
+  const side=document.getElementById("rbSide");if(!side)return;
+  const q=String(rbUI.q||"").trim();
+  side.innerHTML=q?rbSearchHTML(shown,q):rbSideHTML(shown,k);
+}
+function rbPaintBody(it){
+  const b=document.getElementById("rbBody");if(!b)return;
+  b.innerHTML=rbBodyHTML(it.cat,it.rows,rbState(it.cat.k),rbFacets(it.cat,it.rows));
+}
+/* Everything: the import prompt, the sidebar, the pane. Runs from renderAll()
+   and refreshRulesUI(), and when the category changes — never on a keystroke in
+   a category's own box, which repaints the body alone (rbRefreshBody). */
+function renderRulesBrowser(){
+  const empty=document.getElementById("rbEmpty");
+  if(empty)empty.innerHTML=RULE_CATS.some(c=>(rules[c]||[]).length)?"":
+    `<div class="empty" style="line-height:1.7">No rules pack loaded yet. <button class="linkbtn" id="rbImport">Import rules files</button> to add classes, spells, feats, items and more, or manage sources in Settings.</div>`;
+  const card=document.getElementById("rbCard");if(card&&card.dataset)card.dataset.screen=rbUI.screen;
+  const shown=rbShown(),k=rulesCatOf(settings,shown);
+  rbPaintSide(shown,k);
+  const main=document.getElementById("rbMain");if(!main)return;
+  const it=shown.find(x=>x.cat.k===k);
+  if(!it){main.innerHTML="";return;}
+  main.innerHTML=rbHeadHTML(it.cat,it.rows.length,rbState(k).q);
+  rbPaintBody(it);
+}
+function rbRefreshBody(){const shown=rbShown(),k=rulesCatOf(settings,shown),it=shown.find(x=>x.cat.k===k);if(it)rbPaintBody(it);}
+function rbOpenCat(k,focus){
+  if(!rbCat(k))return;
+  settings.rulesCat=k;saveSettings();
+  rbUI.screen="table";
+  renderRulesBrowser();
+  if(focus){const h=document.getElementById("rbTitle");if(h&&h.focus)h.focus();}
+}
+/* narrow screens: back to the list, with focus on the category just left */
+function rbBack(){
+  rbUI.screen="list";
+  const card=document.getElementById("rbCard");if(card)card.dataset.screen="list";
+  const b=document.querySelector(`[data-rbcat="${rbCurKey()}"]`);if(b&&b.focus)b.focus();
+}
+/* "N more in Spells →": that category, with the search carried into its own box */
+function rbMoreIn(k){
+  if(!rbCat(k))return;
+  rbState(k).q=String(rbUI.q||"").trim();rbState(k).shown=RB_PAGE;
+  rbUI.q="";const s=document.getElementById("rbSearch");if(s)s.value="";
+  rbOpenCat(k);
+}

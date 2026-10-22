@@ -73,6 +73,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'announceStatusExpiry', 'undoStatusExpiry', 'stepStatusTap', 'syncStatLock',
   'fxNeg', 'mark', 'editing',
   'itemFacets', 'spellFacets', 'featFacets', 'itemCatOf', 'itemRarOf', 'spellClassesOf', 'spellSchoolOf', 'openItemInfo', 'openFeatInfo', 'ITEM_RARITIES',
+  'settings', 'rbUI',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -4612,7 +4613,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   run('Attacks & Weapons', () => ctx.renderAttacks());
   run('Active Spells', () => ctx.renderActiveSpells());
   run('the spell list', () => ctx.renderSpells());
-  run('the Rules tab glossary', () => ctx.renderGloss());
+  run('the Rules tab browser, on the Glossary', () => { X.settings.rulesCat = 'glossary'; X.rbUI.per = {}; ctx.renderRulesBrowser(); });
   run('Resources', () => ctx.renderResources());
   ['full', 'condensed', 'dice'].forEach(s => {
     C().hdStyle = s;
@@ -4818,8 +4819,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('#71 a status named after a keyword is still a chip', /data-gid="kw1"[^>]*>Grappled</.test(stHtml), stHtml.slice(0, 400));
   renders('Story fields and Proficiencies', () => ctx.renderAllRT());
   renders('the Section Notes card', () => ctx.renderNotes());
-  renders('the Rules tab section counts', () => ctx.renderRulesSections());
-  const gl = renders('the Rules tab glossary', () => ctx.renderGloss());
+  const gl = renders('the Rules tab glossary', () => { X.settings.rulesCat = 'glossary'; X.rbUI.per = {}; ctx.renderRulesBrowser(); });
   ck('#71 the player\'s entry with no term is still listed, so it can be fixed',
      /data-edit-gloss="own0"/.test(gl) && /data-del-gloss="own0"/.test(gl) && /no term/i.test(gl), gl.slice(0, 600));
   ck('#71 ...and so is the one whose term is not text', /data-edit-gloss="own2"/.test(gl), gl.slice(0, 600));
@@ -4871,7 +4871,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     ck('#71 ...and is still idempotent', !!m && JSON.stringify(again) === JSON.stringify(m));
     /* and the migrated sheet renders, the entry with no term listed for fixing */
     X.character = m || X.blankChar();
-    const gl2 = renders('the Rules tab glossary after migrate()', () => ctx.renderGloss());
+    const gl2 = renders('the Rules tab glossary after migrate()', () => { X.settings.rulesCat = 'glossary'; X.rbUI.per = {}; ctx.renderRulesBrowser(); });
     ck('#71 the entry with no term is listed after migrate() too', /data-edit-gloss="g0"/.test(gl2), gl2.slice(0, 400));
     let h2 = null; try { h2 = ctx.highlight('Aliased'); } catch (e) { h2 = String(e); }
     ck('#71 an aliased entry chips once migrated', /data-gid="g2"/.test(h2 || ''), h2);
@@ -4934,7 +4934,10 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     renders('the item picker', () => ctx.browseItems());
     renders('the spell picker', () => ctx.browseSpells());
     renders('the class window, with classes that have no name', () => ctx.openClassInfo('Fighter'));
-    renders('the Reference Tables list (a table with no rows, one with ragged rows)', () => ctx.renderTables());
+    renders('the Rules tab tables (a table with no rows, one with ragged rows)', () => { X.settings.rulesCat = 'tables'; X.rbUI.per = {}; ctx.renderRulesBrowser(); });
+    const RB_EVERY = ['classes', 'subclasses', 'races', 'backgrounds', 'feats', 'features', 'spells', 'items', 'conditions', 'glossary', 'tables'];
+    RB_EVERY.forEach(k => renders('the Rules tab browser on ' + k + ' over a tidied pool',
+      () => { X.settings.rulesCat = k; X.rbUI.per = {}; ctx.renderRulesBrowser(); }));
     renders('a table with no rows', () => ctx.openTableByName('Rowless'));
     renders('a table whose cols and rows are not lists', () => ctx.openTableByName('Ragged'));
     renders('the print sheet over a tidied pool', () => ctx.printSheet());

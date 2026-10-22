@@ -358,7 +358,7 @@ section('Import files: the status lines', async () => {
 section('every rules picker takes a zip', () => {
   const src = ['src/fieldbook.template.html', 'src/html/40-rules.html', 'src/js/88-settings.js']
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
-  ['fileRules', 'homeRulesFiles', 'glossRulesFiles', 'tablesRulesFiles'].forEach(id => {
+  ['fileRules', 'homeRulesFiles', 'rbRulesFiles'].forEach(id => {
     const m = new RegExp('id="' + id + '" accept="([^"]*)"').exec(src);
     const acc = m ? m[1].split(',') : [];
     ck('Review focus 4: ' + id + ' accepts .json, .zip, application/zip and application/x-zip-compressed',

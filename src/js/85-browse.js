@@ -382,7 +382,7 @@ function openGlossForm(existing){
     const term=document.getElementById("gTerm").value.trim();if(!term){alert("Give the entry a term.");return;}
     const rec={id:g.id,term,type:type.value,text:document.getElementById("gText").value,image:img};
     const i=character.glossary.findIndex(x=>x&&x.id===g.id);if(i>=0)character.glossary[i]=rec;else character.glossary.push(rec);
-    closeModal();renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();
+    closeModal();renderRulesBrowser();renderFeatures();renderInventory();renderAllRT();scheduleSave();
   });
 }
 

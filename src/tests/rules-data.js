@@ -20,7 +20,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'SET_PAGES','setPageDef','setPagesFor','setPageOf','setPageStep','setNavHTML','setPageHTML','setGroupHTML','setRowHTML','rulesNavBadgeHTML','SETTINGS_KEYS',
   'NOTE_SECTIONS','NOTE_TABS','noteDef','getNote','noteText','hasNote','saveNote',
   'noteGroupOpen','notesHTML','noteBtnHTML','noteEntryHTML','esc',
-  'rulesSecOpen', 'setRulesSecOpen', 'RULES_SECS', 'settings', 'skillKey',
+  'renderRulesBrowser', 'rbCurKey', 'settings', 'skillKey',
   'openSettings', 'highlight', 'rulesStatusText', 'rulesBadge', 'dispName', 'fxTargets',
   'AMMO_PIECES','AMMO_SINGLE_NAMES','AMMO_BUNDLES','AMMO_LAUNCHERS',
   'EDIT_CARDS',
@@ -1326,6 +1326,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      {onRulesChange: [...onRulesChange], onLoad: [...onLoad]});
   const missing = [...onRulesChange].filter(f => !onLoad.has(f));
   ck('every renderer refreshRulesUI calls is also called by renderAll', missing.length === 0, missing);
+  ck('#99 renderRulesBrowser is in both', onRulesChange.has('renderRulesBrowser') && onLoad.has('renderRulesBrowser'));
 }
 
 // ---------- every getElementById target exists, app-wide
@@ -2074,39 +2075,37 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the folding-section styles are gone', !/#setSections \.fghead|\.setsec-body/.test(mcss));
 }
 
-/* ================= the Rules tab sections start collapsed ====================
-   Both lists are long and Reference Tables sits under the glossary, so reaching
-   the tables meant scrolling past 132 entries. Stored as a COLLAPSE map in
-   settings — like the Settings sections — so an absent key means "never
-   touched" and the default can be closed without freezing a later choice. */
+// ---------- #99: the Rules tab's shell, and what left with the old cards
 {
-  const S = X.settings;
-  S.rulesCollapse = {};
-  ck('both sections start collapsed', !X.rulesSecOpen('gloss') && !X.rulesSecOpen('tables'));
-  ck('every declared section defaults closed', X.RULES_SECS.every(d => d.open === false), X.RULES_SECS);
-
-  X.setRulesSecOpen('gloss', true);
-  ck('opening one is remembered', X.rulesSecOpen('gloss') === true);
-  ck('...and does not open the other', X.rulesSecOpen('tables') === false);
-  ck('...stored as a COLLAPSE flag, so the key means "touched"',
-     S.rulesCollapse.gloss === false, JSON.stringify(S.rulesCollapse));
-
-  X.setRulesSecOpen('gloss', false);
-  ck('shutting it again is remembered too',
-     X.rulesSecOpen('gloss') === false && S.rulesCollapse.gloss === true);
-
-  /* the reason for the collapse-map shape: a player who has opened a section
-     must not have it slammed shut by a later change of default */
-  S.rulesCollapse = {gloss: false};
-  ck('an explicit choice survives, whatever the default says', X.rulesSecOpen('gloss') === true);
-  ck('...while an untouched section still follows the default', X.rulesSecOpen('tables') === false);
-
-  // junk in settings must not throw or wedge the tab shut
-  S.rulesCollapse = null;
-  ck('a missing map falls back to the defaults', X.rulesSecOpen('gloss') === false);
-  S.rulesCollapse = ['not', 'a', 'map'];
-  ck('an array is ignored rather than trusted', X.rulesSecOpen('tables') === false);
-  S.rulesCollapse = {};
+  const t = loadHTML();
+  const at = t.indexOf('id="tab-rules"'), end = t.indexOf('<section class="tabpanel', at + 1);
+  const panel = at < 0 ? '' : t.slice(at, end < 0 ? undefined : end);
+  ck('#99 the Rules tab holds the browser',
+     ['id="rbCard"', 'data-screen="list"', 'id="rbSide"', 'id="rbMain"', 'id="rbEmpty"', 'id="rbSearch"', 'id="rbRulesFiles"']
+       .every(s => panel.includes(s)), panel.slice(0, 500));
+  ck('#99 the old cards are gone',
+     !/id="(glossSearch|tablesSearch|glossList|tablesList|glossRulesFiles|tablesRulesFiles)"|data-rulessec|data-rulesbody/.test(t));
+  const js = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8')).js
+    .map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  ck('#99 nothing calls the old renderers or folds',
+     !/\b(renderGloss|renderTables|renderRulesSections|toggleRulesSec|rulesSecOpen|setRulesSecOpen)\s*\(|RULES_SECS|rulesCollapse/.test(js));
+  const settingsJs = fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8');
+  ck('#99 the category is a setting that exports, the old folds are not',
+     /SETTINGS_KEYS=\[[^\]]*"rulesCat"/.test(settingsJs) && !/SETTINGS_KEYS=\[[^\]]*"rulesCollapse"/.test(settingsJs));
+  const css = fs.readFileSync(path.join(ROOT, 'src/css/35-tables.css'), 'utf8');
+  ck('#99 narrow screens show one pane at a time',
+     /@media\(max-width:640px\)\{[\s\S]*#rbCard\[data-screen="list"\] \.rb-main\{display:none\}[\s\S]*#rbCard\[data-screen="table"\] \.rb-side\{display:none\}/.test(css));
+  const boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+  const at2 = s => boot.indexOf(s);
+  ck('#99 the glossary\'s own buttons are matched before the row they sit in',
+     at2('[data-edit-gloss]') > 0 && at2('[data-del-gloss]') > 0 && at2('[data-rbrow]') > at2('[data-del-gloss]'));
+  ck('#99 every browser tap is wired',
+     ['[data-rbcat]', '[data-rbback]', '[data-rbsort]', '[data-rbfacet]', '[data-rbtoggle]', '[data-rbfilters]', '[data-rbclear]',
+      '[data-rbmore]', '[data-rbhit]', '[data-rbmorein]', '[data-rbrow]', '#btnAddGloss', '#rbImport'].every(s => boot.includes(s)));
+  ck('#99 typing in a category\'s box repaints the body only',
+     /rbCatSearch[\s\S]{0,200}rbRefreshBody\(\)/.test(boot) && !/rbCatSearch[\s\S]{0,200}renderRulesBrowser\(\)/.test(boot));
+  const sheetJs = fs.readFileSync(path.join(ROOT, 'src/js/40-sheet.js'), 'utf8');
+  ck('#99 the ☰ flyout lists the categories on the Rules tab', /tab-rules[\s\S]{0,400}rbShown\(\)[\s\S]{0,300}rbOpenCat\(/.test(sheetJs));
 }
 
 // ---------- the combat view is a TAB: its icon in the tab bar, its panel in the page
@@ -2231,8 +2230,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
   const html = loadHTML();
   const boxed = (src, id) => new RegExp('<div class="searchbox[^"]*"[^>]*>\\s*<input id="' + id + '"[^>]*placeholder="[^"]+"[^>]*>\\s*<button type="button" class="search-clear" aria-label="[^"]+"').test(src);
-  ck('the glossary filter has its clear button', boxed(html, 'glossSearch'));
-  ck('the tables filter has its clear button', boxed(html, 'tablesSearch'));
+  ck('the Rules search has its clear button', boxed(html, 'rbSearch'));
   ck('the journal search has its clear button', boxed(html, 'jnlSearch'));
   {
     const boot = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '90-boot.js'), 'utf8');

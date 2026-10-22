@@ -31,6 +31,13 @@ function buildToc(){
   const inView=combatViewOpen();
   const panel=inView?document.getElementById("cvList"):document.querySelector(".tabpanel.active");
   const tabBtn=document.querySelector(".tab.active");const tabName=inView?"Combat":(tabBtn?tabBtn.textContent.trim():"Sections");
+  /* The Rules tab is one card; its sections are its categories (#99). */
+  if(!inView&&panel&&panel.id==="tab-rules"){
+    const shown=rbShown();
+    fly.innerHTML=`<h4>${esc(tabName)}</h4>`+(shown.length?"":`<p class="hint" style="padding:6px">No sections here.</p>`);
+    shown.forEach(({cat})=>{const a=document.createElement("a");a.textContent=cat.title;a.addEventListener("click",()=>{closeToc();rbOpenCat(cat.k);});fly.appendChild(a);});
+    return;
+  }
   const items=[];
   if(panel)panel.querySelectorAll(".card > .label, .inv-sec-head").forEach(node=>{
     const target=node.classList.contains("inv-sec-head")?node:node.closest(".card");

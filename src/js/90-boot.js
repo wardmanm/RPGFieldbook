@@ -32,7 +32,6 @@ function wire(){
     if((m=t.closest("[data-stat]"))){openStatBreakdown(m.dataset.stat);return;}
     if((m=t.closest(".kw"))){const g=allGlossary().find(x=>x.id===m.dataset.gid);if(g)openGlossView(g);return;}
     if((m=t.closest(".tblref"))){openTableByName(m.dataset.tbl);return;}
-    if((m=t.closest("[data-view-table]"))){openTableByName(m.dataset.viewTable);return;}
     if((m=t.closest("[data-edit]"))){const k=m.dataset.edit;editing[k]=!editing[k];renderRT(k);if(!editing[k])scheduleSave();return;}
     // section notes
     if((m=t.closest("[data-notebtn]")))return openNoteEditor(m.dataset.notebtn);
@@ -141,8 +140,6 @@ function wire(){
     if((m=t.closest("[data-hd]"))){const die=m.dataset.hd,i=num(m.dataset.i);if(!character.hdUsed)character.hdUsed={};const u=num(character.hdUsed[die]);character.hdUsed[die]=(u===i)?i-1:i;renderHitDice();recompute();scheduleSave();return;}
     if((m=t.closest("[data-fuse]"))){const f=character.features.find(x=>x.id===m.dataset.fuse);if(f&&f.uses){const i=num(m.dataset.i);f.uses.used=(num(f.uses.used)===i)?i-1:i;renderFeatures();scheduleSave();}return;}
     if((m=t.closest("[data-usefeat]")))return useFeature(m.dataset.usefeat);
-    if(t.closest("#glossImport"))return document.getElementById("glossRulesFiles").click();
-    if(t.closest("#tablesImport"))return document.getElementById("tablesRulesFiles").click();
     if((m=t.closest("[data-invitem]"))){const id=m.dataset.invitem,ic=invCol();ic.items[id]=!ic.items[id];renderInventory();scheduleSave();return;}
     if((m=t.closest("[data-fav-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.favItem);if(it){it.fav=!it.fav;renderInventory();scheduleSave();}return;}
     if((m=t.closest("[data-invsec]"))){const s=invCol().sections;s[m.dataset.invsec]=!s[m.dataset.invsec];renderInventory();scheduleSave();return;}
@@ -164,10 +161,6 @@ function wire(){
        derived. Same as the inventory star above, and unlike the On/Off toggle
        below, which does change what the effects engine sees. */
     if((m=t.closest("[data-fav-feature]"))){const f=character.features.find(x=>x.id===m.dataset.favFeature);if(f){f.fav=!f.fav;renderFeatures();scheduleSave();}return;}
-    /* The glossary header contains its own "+ Add" button, so a bare closest()
-       here would toggle the section every time you reached for it. Anything
-       interactive inside the heading keeps its own click. */
-    if((m=t.closest("[data-rulessec]"))&&!t.closest("button, input, select, a, [role=button]:not([data-rulessec])")){toggleRulesSec(m.dataset.rulessec);return;}
     if((m=t.closest("[data-fav-attack]"))){const a=character.attacks.find(x=>x.id===m.dataset.favAttack);if(a){a.fav=!a.fav;renderAttacks();scheduleSave();}return;}
     if((m=t.closest("[data-fgroup]"))){const g=m.dataset.fgroup,fc=featCol();fc.groups[g]=!fc.groups[g];renderFeatures();scheduleSave();return;}
     if((m=t.closest("[data-edit-feature]")))return openFeatureForm(character.features.find(x=>x.id===m.dataset.editFeature));
@@ -196,9 +189,23 @@ function wire(){
     if((m=t.closest("[data-prep]"))){const s=character.spells.find(x=>x.id===m.dataset.prep);if(s){s.prepared=!s.prepared;renderSpells();scheduleSave();}return;}
     // glossary
     if((m=t.closest("[data-view-gloss]")))return openGlossView(character.glossary.find(x=>x&&x.id===m.dataset.viewGloss));
-    if((m=t.closest("[data-view-gloss-rk]")))return openGlossView((rules.keywords||[]).find(x=>x&&(x._id||x.term)===m.dataset.viewGlossRk));
     if((m=t.closest("[data-edit-gloss]")))return openGlossForm(character.glossary.find(x=>x&&x.id===m.dataset.editGloss));
-    if((m=t.closest("[data-del-gloss]"))){const g=character.glossary.find(x=>x&&x.id===m.dataset.delGloss);if(g&&confirm(`Delete “${glossTerm(g)||"this entry"}”?`)){character.glossary=character.glossary.filter(x=>x!==g);renderGloss();renderFeatures();renderInventory();renderAllRT();scheduleSave();}return;}
+    if((m=t.closest("[data-del-gloss]"))){const g=character.glossary.find(x=>x&&x.id===m.dataset.delGloss);if(g&&confirm(`Delete “${glossTerm(g)||"this entry"}”?`)){character.glossary=character.glossary.filter(x=>x!==g);renderRulesBrowser();renderFeatures();renderInventory();renderAllRT();scheduleSave();}return;}
+    // the Rules tab browser (86-rules-browser.js). After the glossary's own
+    // buttons above: they sit inside a row, and the row must not take their tap.
+    if(t.closest("#rbImport"))return document.getElementById("rbRulesFiles").click();
+    if(t.closest("#btnAddGloss"))return openGlossForm();
+    if((m=t.closest("[data-rbcat]")))return rbOpenCat(m.dataset.rbcat,e.detail===0);
+    if(t.closest("[data-rbback]"))return rbBack();
+    if((m=t.closest("[data-rbsort]"))){rbSortBy(rbCurKey(),m.dataset.rbsort);return rbRefreshBody();}
+    if((m=t.closest("[data-rbfacet]"))){rbToggleFacet(rbCurKey(),m.dataset.rbfacet,m.dataset.rbval);return rbRefreshBody();}
+    if((m=t.closest("[data-rbtoggle]"))){rbToggleFacet(rbCurKey(),m.dataset.rbtoggle,null);return rbRefreshBody();}
+    if(t.closest("[data-rbfilters]")){const st=rbState(rbCurKey());st.showFilters=!st.showFilters;return rbRefreshBody();}
+    if(t.closest("[data-rbclear]")){rbClearFacets(rbCurKey());return rbRefreshBody();}
+    if(t.closest("[data-rbmore]")){rbState(rbCurKey()).shown+=RB_PAGE;return rbRefreshBody();}
+    if((m=t.closest("[data-rbmorein]")))return rbMoreIn(m.dataset.rbmorein);
+    if((m=t.closest("[data-rbhit]")))return rbOpenRow(m.dataset.rbhitcat,m.dataset.rbhit);
+    if((m=t.closest("[data-rbrow]")))return rbOpenRow(rbCurKey(),m.dataset.rbrow);
   });
   document.addEventListener("keydown",e=>{
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
@@ -253,10 +260,11 @@ function wire(){
   document.getElementById("btnPortrait").addEventListener("click",()=>document.getElementById("filePortrait").click());
   document.getElementById("filePortrait").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{character.portraitImg=r.result;renderPortrait();scheduleSave()};r.readAsDataURL(f);e.target.value="";});
   document.getElementById("btnPortraitDel").addEventListener("click",()=>{if(character.portraitImg&&confirm("Remove portrait?")){character.portraitImg=null;renderPortrait();scheduleSave();}});
-  // add glossary
-  document.getElementById("btnAddGloss").addEventListener("click",()=>openGlossForm());
-  document.getElementById("glossSearch").addEventListener("input",()=>renderGloss());
-  document.getElementById("tablesSearch").addEventListener("input",()=>renderTables());
+  /* The Rules tab: the box over the sidebar repaints the sidebar; a category's
+     own box (built by rbHeadHTML, so delegated) repaints only that table's body,
+     never the box itself, or typing would lose focus with every letter. */
+  document.getElementById("rbSearch").addEventListener("input",e=>{rbUI.q=e.target.value;rbPaintSide(rbShown(),rbCurKey());});
+  document.getElementById("rbMain").addEventListener("input",e=>{if(e.target.id!=="rbCatSearch")return;const st=rbState(rbCurKey());st.q=e.target.value;st.shown=RB_PAGE;rbRefreshBody();});
   document.getElementById("addFamiliarLink").addEventListener("click",()=>openFamiliarForm());
   document.getElementById("btnLevelUp").addEventListener("click",doLevelUp);
   document.getElementById("btnLevelDown").addEventListener("click",doLevelDown);
@@ -312,8 +320,7 @@ function wire(){
   document.getElementById("homeRough").addEventListener("click",()=>{settings.rough=!settings.rough;applyTheme();saveSettings();syncHomeSetupControls();});
   document.getElementById("homeImportBtn").addEventListener("click",()=>document.getElementById("homeRulesFiles").click());
   document.getElementById("homeRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
-  document.getElementById("glossRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
-  document.getElementById("tablesRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
+  document.getElementById("rbRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
   document.getElementById("homeRulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`)){removeRulesGroup(d.dataset.rdDel);const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
   document.getElementById("homeClearRules").addEventListener("click",()=>{if(clearAllRules()){const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
   document.getElementById("homeChars").addEventListener("click",e=>{
