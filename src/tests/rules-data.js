@@ -24,6 +24,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'openSettings', 'highlight', 'rulesStatusText', 'rulesBadge', 'dispName', 'fxTargets',
   'AMMO_PIECES','AMMO_SINGLE_NAMES','AMMO_BUNDLES','AMMO_LAUNCHERS',
   'EDIT_CARDS',
+  'RB_CATS', 'RB_PAGE', 'RB_HITS', 'rbUI', 'rbCat', 'rbShown', 'rbFacets', 'rbState', 'rbFacetVal', 'rbPasses', 'rbSorted', 'rbSortBy', 'rbToggleFacet', 'rbClearFacets', 'rbFindRow', 'rbOpenRow', 'rulesCatOf', 'rbSideHTML', 'rbHeadHTML', 'rbBodyHTML', 'rbSearchHTML',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2470,6 +2471,146 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
   ck('#99 a subclass link from a reference window opens in reference mode',
      /data-sub-info[\s\S]{0,200}subRef\?\{ref:true\}/.test(boot));
+}
+
+// ---------- #99: the Rules tab browser, pure half (86-rules-browser.js)
+{
+  const savedRules = X.rules, savedChar = X.character, savedCat = X.settings.rulesCat, savedOM = ctx.openModal;
+  let modal = null;
+  ctx.openModal = (title, html) => { modal = {title, html}; };
+  const pack = () => ({name: 'T',
+    classes: [{_id: 'c1', name: 'Fighter', hitDie: 'd10', _source: 'SRD', subclasses: {Champion: {description: 'Crit.'}}},
+              {_id: 'c2', name: 'Wizard', hitDie: 'd6', _source: 'SRD'}],
+    subclasses: [{_id: 'sc1', class: 'Fighter', name: 'Battle Master', _source: 'XPHB'}],
+    races: [{_id: 'r1', name: 'Elf', size: 'Medium', speed: '30 ft', description: 'Old.', _source: 'SRD'},
+            {_id: 'r2', name: 'Elf', size: 'Medium', speed: '35 ft', description: 'New.', _source: 'XPHB'}],
+    backgrounds: [{_id: 'b1', name: 'Acolyte', feat: 'Magic Initiate', _source: 'SRD'}],
+    feats: [{_id: 'f1', name: 'Alert', description: 'Origin feat\nx', _source: 'SRD'},
+            {_id: 'f2', name: 'Grappler', description: 'General feat · Prerequisite: Level 4+\ny', _source: 'XPHB'}],
+    features: [{_id: 't1', name: 'Darkvision', source: 'Elf', _source: 'SRD'}],
+    spells: [{_id: 's1', name: 'Fire Bolt', level: 0, meta: 'Evocation · Action · 120 feet', class: ['Wizard'], _source: 'SRD'},
+             {_id: 's2', name: 'Bless', level: 1, meta: 'Enchantment · Action · 30 feet · Concentration', class: ['Cleric'], _source: 'SRD'},
+             {_id: 's3', name: 'Fireball', level: 3, meta: 'Evocation · Action · 150 feet', class: ['Wizard'], _source: 'SRD'}],
+    items: [{_id: 'i1', name: 'Rope', cost: '1 gp', _source: 'SRD'}, {_id: 'i2', name: 'Plate', category: 'Armor', cost: '1,500 gp', _source: 'SRD'},
+            {_id: 'i3', name: 'Wand', category: 'Wondrous Item', rarity: 'Rare', _source: 'SRD'}, {_id: 'i4', name: 'Torch', cost: '1 cp', _source: 'SRD'}],
+    keywords: [{_id: 'k1', term: 'Blinded', text: 'x', cond: true, _source: 'SRD'}, {_id: 'k2', term: 'Advantage', text: 'y', _source: 'SRD'},
+               {term: 5}, null, 'Grappled'],
+    tables: [{_id: 'tb1', name: 'Fighter Features', owner: 'Fighter', ownerKind: 'class', cols: ['Level'], rows: [['1'], ['2']], _source: 'SRD'},
+             {_id: 'tb2', name: 'Trinkets', ownerKind: 'rule', rows: [['1']], _source: 'SRD'},
+             {_id: 'tb3', name: 'Odd', rows: 'x', _source: 'SRD'}]});
+  const fresh = () => { X.rules = pack(); ctx.recomputeDups(); X.rbUI.per = {}; X.rbUI.q = '';
+    X.character = X.blankChar(); X.character.classes = [{name: 'Cleric', level: 1}];
+    X.character.glossary = [{id: 'own1', term: 'Hexed', type: 'text', text: 'm'}, {id: 'own0', type: 'text', text: 'no term'}]; };
+  fresh();
+  const keys = () => X.rbShown().map(x => x.cat.k);
+  const rows = k => X.rbShown().find(x => x.cat.k === k).rows;
+  const names = rs => JSON.stringify(rs.map(r => r.name));
+
+  ck('#99 the categories, in order', JSON.stringify(keys()) ===
+     '["classes","subclasses","races","backgrounds","feats","features","spells","items","conditions","glossary","tables"]', keys());
+  ck('#99 every category: Name first, a Source column, a window', X.RB_CATS.every(c =>
+     c.cols[0].key === 'name' && c.cols.some(x => x.key === 'src') && typeof c.open === 'function'));
+  X.rules.feats = [];
+  ck('#99 an empty category is not listed', !keys().includes('feats'));
+  X.rules = {name: 'none'}; ctx.recomputeDups(); X.character.glossary = [];
+  ck('#99 ...but the Glossary always is, for its + Add', JSON.stringify(keys()) === '["glossary"]', keys());
+  fresh();
+
+  ck('#99 subclasses: the class\'s own and the loose ones, by class then name',
+     names(X.rbSorted(X.rbCat('subclasses'), X.rbState('subclasses'), rows('subclasses'))) === '["Battle Master","Champion"]');
+  ck('#99 same-named species from two packs are two rows', names(rows('races')) === '["Elf (SRD)","Elf (XPHB)"]' &&
+     JSON.stringify(rows('races').map(r => r.id)) === '["r1","r2"]');
+  ck('#99 Conditions are the glossary terms marked cond', names(rows('conditions')) === '["Blinded"]');
+  ck('#99 Glossary: the other pack terms and your own, malformed ones skipped', names(rows('glossary')) === '["Advantage","Hexed",""]' &&
+     rows('glossary').filter(r => r.own).length === 2 && rows('glossary')[1].src === 'Yours');
+  ck('#99 a table whose rows are not a list counts 0', X.RB_CATS.find(c => c.k === 'tables').cols.find(c => c.key === 'rows').get(rows('tables')[2]) === '0');
+  ck('#99 tables sort by kind, then name', names(X.rbSorted(X.rbCat('tables'), X.rbState('tables'), rows('tables'))) === '["Fighter Features","Trinkets","Odd"]');
+
+  const sp = X.rbCat('spells');
+  ck('#99 spells sort by level, cantrips first', names(X.rbSorted(sp, X.rbState('spells'), rows('spells'))) === '["Fire Bolt","Bless","Fireball"]');
+  const body = X.rbBodyHTML(sp, rows('spells'), X.rbState('spells'), X.rbFacets(sp, rows('spells')));
+  ck('#99 the sorted column says so', /<th aria-sort="ascending"><button type="button" class="rb-sort" data-rbsort="lvl">Level ▲/.test(body), body.slice(0, 600));
+  X.rbSortBy('spells', 'name');
+  ck('#99 tap a header to sort by it', names(X.rbSorted(sp, X.rbState('spells'), rows('spells'))) === '["Bless","Fire Bolt","Fireball"]');
+  X.rbSortBy('spells', 'name');
+  ck('#99 ...tap again to reverse', names(X.rbSorted(sp, X.rbState('spells'), rows('spells'))) === '["Fireball","Fire Bolt","Bless"]');
+  const it = X.rbCat('items');
+  X.rbSortBy('items', 'cost');
+  ck('#99 cost sorts by gold value, blanks last', names(X.rbSorted(it, X.rbState('items'), rows('items'))) === '["Torch","Rope","Plate","Wand"]');
+  X.rbSortBy('items', 'cost');
+  ck('#99 ...and blanks stay last reversed', names(X.rbSorted(it, X.rbState('items'), rows('items'))) === '["Plate","Rope","Torch","Wand"]');
+
+  const sf = X.rbFacets(sp, rows('spells'));
+  ck('#99 spells filter as the picker does', JSON.stringify(sf.map(f => f.key)) === '["level","class","school","conc"]');
+  ck('#99 a lookup starts on every class, not this character\'s', X.rbFacetVal(X.rbState('spells'), sf[1]).size === 0);
+  X.rbToggleFacet('spells', 'school', 'evocation');
+  const pass = k => { const c = X.rbCat(k), st = X.rbState(k), f = X.rbFacets(c, rows(k)); return rows(k).filter(r => X.rbPasses(c, st, f, r)); };
+  ck('#99 a facet narrows the table', names(pass('spells')) === '["Fire Bolt","Fireball"]');
+  X.rbToggleFacet('spells', 'school', 'evocation');
+  ck('#99 ...and tapping it again clears it', pass('spells').length === 3);
+  X.rbToggleFacet('spells', 'conc', null);
+  ck('#99 a toggle facet', names(pass('spells')) === '["Bless"]');
+  X.rbClearFacets('spells');
+  ck('#99 clear empties every facet', pass('spells').length === 3);
+  X.rbState('spells').q = 'fire';
+  ck('#99 a category\'s own search', names(pass('spells')) === '["Fire Bolt","Fireball"]');
+  X.rbState('spells').q = '';
+
+  ck('#99 one pack, no Pack filter', !X.rbFacets(it, rows('items')).some(f => f.key === 'pack'));
+  ck('#99 two packs, a Pack filter', X.rbFacets(X.rbCat('races'), rows('races')).some(f => f.key === 'pack'));
+  ck('#99 feats keep their own Pack filter, not a second one',
+     X.rbFacets(X.rbCat('feats'), rows('feats')).filter(f => f.key === 'pack').length === 1);
+  X.rbToggleFacet('glossary', 'own', null);
+  ck('#99 Your entries narrows the Glossary to yours', pass('glossary').every(r => r.own) && pass('glossary').length === 2);
+  X.rbClearFacets('glossary');
+
+  const gl = X.rbBodyHTML(X.rbCat('glossary'), rows('glossary'), X.rbState('glossary'), X.rbFacets(X.rbCat('glossary'), rows('glossary')));
+  ck('#99 your own entries keep Preview, Edit and Delete', /data-view-gloss="own1"/.test(gl) && /data-edit-gloss="own1"/.test(gl) && /data-del-gloss="own0"/.test(gl));
+  ck('#99 an entry with no term is listed, to be fixed', /\(no term\)/.test(gl));
+  ck('#99 a pack term has no Edit', !/data-edit-gloss="k2"/.test(gl));
+  ck('#99 + Add lives on the Glossary\'s header only',
+     X.rbHeadHTML(X.rbCat('glossary'), 3, '').includes('id="btnAddGloss"') && !X.rbHeadHTML(sp, 3, '').includes('btnAddGloss'));
+  ck('#99 a category\'s search box keeps its text and has a clear button',
+     /<div class="searchbox[^"]*"><input id="rbCatSearch"[^>]*value="fi&quot;re"[^>]*><button type="button" class="search-clear"/.test(X.rbHeadHTML(sp, 3, 'fi"re')));
+
+  const many = Array.from({length: 650}, (_, i) => ({_id: 'm' + i, name: 'Item ' + i, _source: 'SRD'}));
+  X.rules.items = many;
+  const mst = X.rbState('items'); mst.sort = null;
+  let mb = X.rbBodyHTML(it, rows('items'), mst, X.rbFacets(it, rows('items')));
+  ck('#99 a long table shows 300, then Show 300 more', (mb.match(/<tr data-rbrow=/g) || []).length === 300 && mb.includes('Show 300 more'));
+  mst.shown = 600; mb = X.rbBodyHTML(it, rows('items'), mst, X.rbFacets(it, rows('items')));
+  ck('#99 ...then Show 50 more', (mb.match(/<tr data-rbrow=/g) || []).length === 600 && mb.includes('Show 50 more'));
+  mst.shown = 900; mb = X.rbBodyHTML(it, rows('items'), mst, X.rbFacets(it, rows('items')));
+  ck('#99 ...then no button', !mb.includes('data-rbmore'));
+  fresh();
+
+  X.rules.spells = Array.from({length: 10}, (_, i) => ({_id: 'b' + i, name: 'Bolt ' + i, level: 1, _source: 'SRD'}));
+  const sh = X.rbSearchHTML(X.rbShown(), 'bolt');
+  ck('#99 search everything: 8 rows a category, then a link that carries on',
+     (sh.match(/data-rbhitcat="spells"/g) || []).length === 8 && sh.includes('data-rbmorein="spells"') && sh.includes('2 more in Spells →'));
+  ck('#99 search everything finds names in every category', X.rbSearchHTML(X.rbShown(), 'elf').includes('data-rbhit="r2"'));
+  ck('#99 search everything, nothing found', X.rbSearchHTML(X.rbShown(), 'zzz').includes('No matches'));
+  fresh();
+
+  const side = X.rbSideHTML(X.rbShown(), 'spells');
+  ck('#99 the open category is marked', /class="rb-cat on" data-rbcat="spells" aria-current="true"/.test(side) && !/data-rbcat="items" aria-current/.test(side));
+  ck('#99 each category shows its count', /data-rbcat="spells"[^>]*><span class="rb-cn">Spells<\/span><span class="cnt">3<\/span>/.test(side));
+  ck('#99 the stored category, or the first listed',
+     X.rulesCatOf({rulesCat: 'spells'}, X.rbShown()) === 'spells' && X.rulesCatOf({rulesCat: 'nope'}, X.rbShown()) === 'classes' &&
+     X.rulesCatOf({}, X.rbShown()) === 'classes' && X.rulesCatOf({rulesCat: '__proto__'}, X.rbShown()) === 'classes' && X.rulesCatOf(null, X.rbShown()) === 'classes');
+  X.rules.feats = [];
+  ck('#99 a stored category that is now empty falls back', X.rulesCatOf({rulesCat: 'feats'}, X.rbShown()) === 'classes');
+  fresh();
+
+  ck('#99 every row is found again by its id', X.rbShown().every(({cat, rows: rs}) => rs.every(r => X.rbFindRow(cat.k, r.id) && X.rbFindRow(cat.k, r.id).id === r.id)));
+  modal = null; X.rbOpenRow('races', 'r2');
+  ck('#99 a row opens its own entry', !!modal && modal.title === 'Elf' && modal.html.includes('New.'));
+  modal = null; X.rbOpenRow('classes', 'c1');
+  ck('#99 a class opens in reference mode', !!modal && modal.title === 'Fighter');
+  modal = null; X.rbOpenRow('spells', 'nope');
+  ck('#99 an unknown id opens nothing', modal === null);
+
+  ctx.openModal = savedOM; X.rules = savedRules; X.character = savedChar; X.settings.rulesCat = savedCat; X.rbUI.per = {}; X.rbUI.q = '';
 }
 
 /* ================= Fetch all never loses what is loaded (issue #65) ===========

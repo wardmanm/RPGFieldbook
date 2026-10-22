@@ -11,7 +11,8 @@ becomes a chip that opens that table in place.
 `10-compute.js` · `RULES_SECS`, `rulesSecOpen()`, `setRulesSecOpen()`, `renderRulesSections()`,
 `toggleRulesSec()`, `allTables()`, `tableRows()`, `tableCols()`, `findTable()`, `tablesFor()`, `tableHTML()`, `openTableView()`,
 `openTableByName()`, `renderTables()`, `tableChipsHTML()` in `86-tables.js` · `refreshRulesUI()`,
-`RULE_CATS` in `88-settings.js` · `mergeRules()`, `reindexRules()` in `89-rules-merge.js` · markup
+`RULE_CATS` in `88-settings.js` · `mergeRules()`, `reindexRules()` in `89-rules-merge.js` ·
+`RB_CATS`, `rbShown()`, `rbBodyHTML()`, `rbSearchHTML()` in `86-rules-browser.js` · markup
 `src/html/40-rules.html` · **Data:** each pack's `tables.json`;
 [rules-schema §6.11](../../../../docs/rules-schema.md) · **Tests:** `tables.js`, `rules-data.js` ·
 **See also:** [Rich text](../architecture/rich-text.md), [Rules packs](../architecture/rules-packs.md),
