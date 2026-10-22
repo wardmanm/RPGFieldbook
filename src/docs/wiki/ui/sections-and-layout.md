@@ -303,7 +303,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | A group named `constructor` or `__proto__` (#98) | Refused: no group may be named for an `Object.prototype` property, said under the box, and read as no group from a file (Mike) | Making the collapse maps own-property safe: the names would still work, and four maps would each need it |
 | A folded group whose first member is retyped in another case (#98) | Reopens, as its label changes: fine as it is (Mike) | Folding by `tagKey()` as the journal does: would reset every feature group and section a player has folded |
 | How collapse state is stored | As shut = `true`, absent = default, so a default can change without reopening what a player shut | Storing "open" (named and set aside at L1741) |
-| Where Rules-tab folding is stored | `settings.rulesCollapse` | On the character: the glossary and tables come from global packs, and folding them on one character to find them open on the next would surprise |
+| Where the Rules tab remembers its place | `settings.rulesCat`, app-wide — the category last opened, since the tab's own fold ended with #99 | On the character: the packs are global, so remembering per-character would surprise a player opening a different sheet and finding a different category open |
 | Colour of group names | `--accent`, set on the shared `.fgname` rule | Scoping the change to Features: the owner chose consistency |
 | Counts and badges in a heading | Counts in `.cnt`, badges keep the `.fgcount` pill | One style for both: a badge like "12 entries" reads absurdly in brackets |
 | Order of favourite attacks | The order they were added | Sorted: the list is short and hand-built, so a row stays where the player put it |
@@ -345,3 +345,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-10-16 — Settings no longer uses the `.fgroup` collapsible or a collapse map: it is a sidebar of pages and remembers the last one. → ledger L5930, #107
 - 2026-10-19 — A pencil in every card's header hides that card's edit, delete and remove buttons, per card and per character, by CSS (`.ed`/`.ed-off`), before the combat toggle and the note button. → ledger L6248, #97
 - 2026-10-22 — The Rules tab becomes one card, the browser; `settings.rulesCat` (the category last opened) replaces `settings.rulesCollapse`. → ledger L6327, #99
+- 2026-10-22 — The stale "Where Rules-tab folding is stored" decision is rewritten: `settings.rulesCat`, not `rulesCollapse`. → ledger L6455, #99

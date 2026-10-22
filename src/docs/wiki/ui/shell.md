@@ -83,12 +83,10 @@ tap or an entry tap.
 The flyout is DOM-driven. It does not read `NOTE_SECTIONS`, so cards outside the registry
 (`#concCard`) are listed too. **The Rules tab is its own case** (`buildToc()`, #99): instead of
 walking the DOM for `.card > .label`s, it lists `rbShown()`'s categories by name and count, and a
-tap calls `rbOpenCat()` directly rather than `scrollToCard()` — the Rules tab is one card, so there
-is nothing to scroll *to* in the usual sense. This means the Rules tab's flyout entries are the one
-case that does not clear the measured tab-bar offset the way every other tab's `scrollToCard()`
-call does: picking a category from deep in a long table's scroll position can leave the newly
-painted (and possibly shorter) pane off-screen until the player scrolls back up by hand — found in
-#99's own QA, not fixed there ([Rules & tables](../features/rules-and-tables.md)).
+tap calls `rbOpenCat()` to repaint the pane, then `scrollToCard(document.getElementById("rbCard"))`
+to bring it into view — the same offset-clearing scroll every other tab's entries get, so picking a
+category from deep in a long table's scroll position no longer leaves the newly painted (and
+possibly shorter) pane off-screen (fixed in #99's final-review pass; [Rules & tables](../features/rules-and-tables.md)).
 
 ### The modal
 
@@ -317,3 +315,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-16 — A backdrop click closes a dialog only with `settings.backdropClose` on (off by default), and only when the press began on the backdrop. → ledger L5903, #106
 - 2026-10-16 — `openModal()` takes `opts`; `{wide:true}` widens the dialog, set or cleared on every open. → ledger L5930, #107
 - 2026-10-22 — The ☰ flyout gains a Rules-tab case: it lists `rbShown()`'s categories by name and count instead of walking the DOM, and a tap calls `rbOpenCat()` rather than `scrollToCard()`. → ledger L6327, #99
+- 2026-10-22 — The Rules-tab flyout entries now also call `scrollToCard()` after `rbOpenCat()`, clearing the tab-bar offset like every other tab's entries. → ledger L6455, #99

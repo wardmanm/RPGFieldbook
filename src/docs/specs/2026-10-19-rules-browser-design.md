@@ -219,16 +219,17 @@ browser (#99, #53, 2026-10-22)".
 - **§6 (state)** — as specified: `settings.rulesCat` persists and falls back to the first listed
   category when the stored value is unknown or now empty; everything else lives in memory for the
   session; `settings.rulesCollapse` is left alone, unread.
-- **§7 (layout) — as specified, with two gaps found in this task's own QA, not fixed here** (see
-  the ledger entry and [Rules & tables](../wiki/features/rules-and-tables.md)'s Open section,
-  [Shell](../wiki/ui/shell.md)):
-  - Leaving the Rules tab and returning does not reopen the category list the way §7 says "the tab
-    opens on the category list" — it shows whatever table was last open, at any width, because
-    `rbUI.screen` is never reset on a tab switch.
-  - The ☰ flyout's Rules-tab entries repaint the chosen category but never scroll, unlike every
-    other tab's entries (`scrollToCard()`); picked from deep in a long table, the newly painted pane
-    can sit off-screen until the player scrolls up by hand.
-  - What does hold as specified: the narrow one-pane-at-a-time screen with "← Categories" (which
+- **§7 (layout) — as specified.** Two gaps found in this task's own QA were fixed in the
+  final-review pass (ledger `## The Rules browser: final-review fixes (#99, 2026-10-22)`,
+  [Rules & tables](../wiki/features/rules-and-tables.md), [Shell](../wiki/ui/shell.md)):
+  - The tab now always reopens the category list the way §7 says "the tab opens on the category
+    list" — `rbToList()` resets `rbUI.screen` when `selectTab()` enters the Rules tab from
+    elsewhere, so a table left open on a previous visit no longer carries over.
+  - The ☰ flyout's Rules-tab entries now scroll the chosen category into view after
+    `rbOpenCat()` repaints it, via `scrollToCard(document.getElementById("rbCard"))`, matching
+    every other tab's entries — picking a category from deep in a long table's scroll position no
+    longer leaves the newly painted pane off-screen.
+  - What already held as specified: the narrow one-pane-at-a-time screen with "← Categories" (which
     also returns focus to the category button just left); the table scrolling sideways inside its
     own box at 360–390px while the page itself does not scroll sideways.
 - **§8 (search)** — as specified: the sidebar's box searches every category's display name only (not

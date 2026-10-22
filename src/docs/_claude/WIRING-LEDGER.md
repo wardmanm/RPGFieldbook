@@ -6451,3 +6451,67 @@ Pages: [rules & tables](../wiki/features/rules-and-tables.md), [shell](../wiki/u
 [sections & layout](../wiki/ui/sections-and-layout.md), [decisions](../wiki/decisions.md),
 [character building](../wiki/features/character-building.md), [inventory](../wiki/features/inventory.md),
 [features & traits](../wiki/features/features-and-traits.md), [1.9.0](../wiki/roadmap/1.9.0.md)
+
+## The Rules browser: final-review fixes (#99, 2026-10-22)
+
+Fixes for the two findings L6327 §10 left open, plus three more caught in the same final-review
+pass over `src/js/86-rules-browser.js`. This entry supersedes L6327 §10's (a) and (c), and its
+"Open" wiki rows — both are fixed now, not still open.
+
+1. **(a) The tab now always opens on the category list on re-entry.** `rbUI.screen` was a
+   module-level flag `selectTab()` never touched, so leaving the Rules tab for another and coming
+   back showed whatever table was last open, at any width — the spec (§7) says "the tab opens on
+   the category list." New function `rbToList()` (`86-rules-browser.js`) sets `rbUI.screen="list"`
+   and `#rbCard`'s `data-screen` to match; `selectTab()` (`40-sheet.js`) calls it when `name==="rules"`
+   and the tab being left (`was`) is not already `"rules"`. A runtime-only call — no TDZ risk, since
+   function declarations hoist across the whole concatenated script regardless of fragment order.
+2. **(c) The ☰ flyout's Rules-tab entries now scroll the pane into view.** `buildToc()`'s Rules
+   case called `rbOpenCat()` to repaint but never scrolled, unlike every other tab's entries
+   (`scrollToCard()`), so picking a shorter category from deep in a long table's scroll position
+   could leave the newly painted pane off-screen. The entry's click handler now also calls
+   `scrollToCard(document.getElementById("rbCard"))` after `rbOpenCat()`. While there: each entry's
+   text gains its category's row count ("Spells (339)"), matching the sidebar; and the dead
+   "No sections here." branch is deleted — the Glossary is always listed (its own + Add needs to
+   stay reachable), so this pane is never empty.
+3. **Subclasses' Class column and facet now read the display name, not the plain one.** With two
+   base packs both naming a class "Fighter" (plausible once a second 2024-era or homebrew pack
+   loads alongside SRD), the Class column and its filter options showed "Fighter" twice with no way
+   to tell them apart. Both now call `rbName(r.cls,"classes")` — already used for the Name column,
+   it runs the class entry through `dispName()`, which appends " (SRC)" only when two packs share a
+   name — instead of the plain `rbStr(r.cls.name)`.
+4. **`rbNum()` took every digit, not the first number.** `"1d10".replace(/[^0-9.-]/g,"")` reads
+   "110", which sorted a 1d10 hit die (or any "NdM" text) nowhere near where its size belongs.
+   `rbNum()` now matches the first run of digits (`/-?\d+(?:\.\d+)?/`) and parses that, so "30 ft"
+   is 30, "d12" is 12, and "" is `null`, matching the old behaviour for every value that was never
+   ambiguous in the first place.
+5. **Persisting the opened category gained a test.** `rbOpenCat()` already wrote `settings.rulesCat`
+   and called `saveSettings()` — nothing in the product changed — but nothing asserted it survived
+   into the stored settings blob a reload reads back. `rules-data.js` now opens a category and
+   checks both `settings.rulesCat` and the parsed `localStorage` entry under `K_SET`.
+6. **The stale fold-state decisions are rewritten.** The Rules tab's old two-section fold
+   (`settings.rulesCollapse`, gone since L6327) left three rows describing it as current: "Where
+   the fold state lives" and "Default fold state" (`decisions.md`, `rules-and-tables.md`'s Decisions
+   table) and "Where Rules-tab folding is stored" (`decisions.md`, `sections-and-layout.md`'s own
+   row at `## History` is untouched — that one is already historical). All three are rewritten to
+   the current truth: where the Rules tab remembers its place is `settings.rulesCat`, app-wide, not
+   on the character; which category opens when none is stored or the stored one has emptied out is
+   the first one listed (`rulesCatOf()`'s fallback); and where tables are browsed is as one of the
+   browser's own categories, not a card under the glossary. Each row keeps a meaningful rejected
+   alternative rather than carrying the old one forward unchanged. The roadmap's 1.9.0 #99 row's
+   "fold state in `settings`" cell becomes "`settings.rulesCat`".
+7. Tests: `rules-data.js` gains source-level checks that `selectTab()` calls `rbToList()` entering
+   the Rules tab from elsewhere, and that `buildToc()`'s Rules case calls `scrollToCard()` and no
+   longer contains the dead branch, plus a behavioural check that `rbToList()` sets `rbUI.screen`
+   to `"list"`; a fixture with two classes named "Fighter" from two packs, each with a subclass,
+   checks the Class column and facet read "Fighter (SRD)" / "Fighter (XPHB)"; `rbNum()` is pinned
+   directly against four inputs; and `rbOpenCat('spells')` is checked against both
+   `settings.rulesCat` and the stored `K_SET` blob. `./src/tests/run.sh` green across all ten
+   suites.
+8. Re-driven in the project's Playwright MCP: (a) at 390px, Spells open → sheet tab → back to Rules
+   shows the category list, not the Spells table; (c) at 1280×900, Items scrolled deep, ☰ → Conditions
+   lands the pane in view with no manual scrolling. Screenshots: `.claude/qa/99-fix-a.png`,
+   `.claude/qa/99-fix-c.png`.
+
+Pages: [rules & tables](../wiki/features/rules-and-tables.md), [shell](../wiki/ui/shell.md),
+[sections & layout](../wiki/ui/sections-and-layout.md), [decisions](../wiki/decisions.md),
+[roadmap/1.9.0](../wiki/roadmap/1.9.0.md)

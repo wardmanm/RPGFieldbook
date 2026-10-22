@@ -182,12 +182,12 @@ a table opened from a spell preview replaces it.
 
 | Question | Decision | Rejected, and why |
 |---|---|---|
-| Where the fold state lives | `settings`, as a collapse map | On the character: the glossary and tables come from global packs, so folding on one sheet and finding them open on the next would surprise |
-| Default fold state | Both shut; an absent key means untouched | Open: reaching a table meant scrolling past 154 glossary entries |
+| Where the Rules tab remembers its place | `settings.rulesCat`, app-wide — the category last opened | On the character: the packs are global, so remembering per-character would surprise a player opening a different sheet and finding a different category open |
+| Which category opens with nothing stored, or the stored one now empty | The first listed category (`rulesCatOf()`'s fallback) | Always Classes: drops the "last opened" promise the moment a stored category empties out, e.g. after Clear all |
 | An anchor whose table is not loaded | The words "the *Name* table" | A chip: it would open nothing, and the tables pack is a separate optional download |
 | An anchor with no table sink active (converter) | Keep the old silent drop | Emitting an anchor: one with no table behind it is worse than the drop |
 | Spell-slot columns in class tables | Skipped | Kept: the app derives slots by level, and a 10-column grid swamps a phone |
-| Where tables are browsed | A card under the glossary on the Rules tab (#32) | Their own tab: one more tab to scroll past (changelog) |
+| Where tables are browsed | As one of the Rules browser's own categories (`Tables` in `RB_CATS`), same as any other | Their own tab: one more tab to scroll past (changelog); a card under the glossary (#32): superseded once the whole tab became a browser over every category (#99) |
 | Where a table's footnotes render (#73) | Under the table, outside its scroll box, escaped like a cell | A `<tfoot>` row: it sits inside the scroll box, so a wide d100 table scrolls the note away. Through `highlight()`: cells use `esc()`, and a note is part of the table |
 
 ## Open
@@ -201,13 +201,6 @@ a table opened from a spell preview replaces it.
   the `ownerKind` list that `TBL_KINDS` groups by.
 - Rolling is not done in the app; a `1d100` column is text.
 - Small tables inside a feature (Magic Item Hacking's rarity costs) still read as flat text.
-- **Leaving the Rules tab and coming back shows the last table, not the category list** the spec
-  (§7) calls for: `rbUI.screen` is never reset on a tab switch. Found in #99's own QA, not fixed
-  there. → ledger L6327, #99
-- **The ☰ flyout can leave the Rules pane off-screen.** `rbOpenCat()`, which the flyout's Rules-tab
-  entries call, repaints but never scrolls, unlike every other tab's entries
-  ([Shell](../ui/shell.md)). Picking a shorter category from deep in a long one can leave the
-  viewport scrolled past the new content. Found in #99's own QA, not fixed there. → ledger L6327, #99
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -224,3 +217,4 @@ a table opened from a spell preview replaces it.
 - 2026-09-28 — A player's entry with no term is listed as "(no term)"; tables are read through `tableRows()`/`tableCols()`, so a table with no rows no longer stops the sheet. → ledger L4206, #71
 - 2026-09-28 — Tables carry optional `footnotes`, shown under the table; 17 Xanathar's downtime tables gain theirs. → ledger L4273, #73
 - 2026-10-22 — The Rules tab becomes a browser over every loaded category (Classes through Tables), replacing the Glossary and Reference Tables cards: a sidebar with counts and a search across everything, a sortable filterable table per category, a row opening the window the sheet already uses, in reference mode for class/subclass/species/background. `settings.rulesCat` replaces `rulesCollapse`. → ledger L6327, #99, #53
+- 2026-10-22 — Final-review fixes: re-entering the Rules tab always opens the category list; the ☰ flyout scrolls the chosen category into view and shows its count; same-named classes from two packs read distinctly in Subclasses' Class column; `rbNum()` reads the first number instead of joining every digit. The stale fold-state rows above are rewritten to the current truth. → ledger L6455, #99
