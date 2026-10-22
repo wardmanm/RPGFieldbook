@@ -133,30 +133,53 @@ function addLibraryItems(entries,og,costOverride,qty){
     if(it.weapon)addAttackForItem(it);
   });
 }
+/* ---- the pickers' filters, shared with the Rules tab (#99) ----
+   Each returns the facet list openBrowse() takes. The Rules tab's tables filter
+   the same entries with the same lists, so the two can never disagree. */
+const ITEM_RARITIES=["Mundane","Common","Uncommon","Rare","Very Rare","Legendary","Artifact"];
+function itemCatOf(x){return (x&&x.category)||"Gear";}
+function itemRarOf(x){return (x&&x.rarity)||"Mundane";}
+function itemFacets(lib){
+  const cats=[...new Set(lib.map(itemCatOf))].sort().map(c=>({value:String(c).toLowerCase(),label:c}));
+  const rars=[...new Set(lib.map(itemRarOf))].sort((a,b)=>ITEM_RARITIES.indexOf(a)-ITEM_RARITIES.indexOf(b)).map(r=>({value:String(r).toLowerCase(),label:r}));
+  return [
+    {key:"cat",label:"Category",type:"multi",options:cats,match:(e,a)=>a.has(String(itemCatOf(e)).toLowerCase())},
+    {key:"rar",label:"Rarity",type:"multi",options:rars,match:(e,a)=>a.has(String(itemRarOf(e)).toLowerCase())},
+    {key:"attune",label:"Needs attunement",type:"toggle",match:e=>!!e.attune}
+  ];
+}
+function spellClassesOf(x){return x&&x.class?(Array.isArray(x.class)?x.class:[x.class]):[];}
+function spellSchoolOf(x){return String((x&&x.meta)||"").split("·")[0].trim();}
+/* `classDefault`: "mine" (the picker starts on this character's classes) or
+   "all" (the Rules tab: a lookup, not a choice, so nothing starts filtered). */
+function spellFacets(lib,opts){
+  const levels=[{value:"0",label:"Cantrip"}].concat([1,2,3,4,5,6,7,8,9].map(n=>({value:String(n),label:"Lv "+n})));
+  const classOpts=[...new Set(lib.flatMap(spellClassesOf).map(c=>String(c)))].sort((a,b)=>a.localeCompare(b)).map(c=>({value:c.toLowerCase(),label:c}));
+  const schoolOpts=[...new Set(lib.map(spellSchoolOf).filter(Boolean))].sort().map(s=>({value:s.toLowerCase(),label:s}));
+  const mine=(character.classes||[]).map(c=>String(c.name||"").toLowerCase());
+  const def=(opts&&opts.classDefault==="all")?[]:mine.filter(c=>classOpts.some(o=>o.value===c));
+  return [
+    {key:"level",label:"Level",type:"multi",options:levels,match:(e,a)=>a.has(String(num(e.level)))},
+    {key:"class",label:"Class",type:"multi",options:classOpts,default:def,match:(e,a)=>{const c=spellClassesOf(e);return !c.length||c.some(x=>a.has(String(x).toLowerCase()));}},
+    {key:"school",label:"School",type:"multi",options:schoolOpts,match:(e,a)=>a.has(spellSchoolOf(e).toLowerCase())},
+    {key:"conc",label:"Concentration",type:"toggle",match:e=>/concentration/i.test(e.meta||"")}
+  ];
+}
 function browseItems(){
   const lib=rules.items||[];
   if(!lib.length)return openItemForm();
-  const catOf=x=>x.category||"Gear", rarOf=x=>x.rarity||"Mundane";
-  const RAR=["Mundane","Common","Uncommon","Rare","Very Rare","Legendary","Artifact"];
-  const cats=[...new Set(lib.map(catOf))].sort().map(c=>({value:c.toLowerCase(),label:c}));
-  const rars=[...new Set(lib.map(rarOf))].sort((a,b)=>RAR.indexOf(a)-RAR.indexOf(b)).map(r=>({value:r.toLowerCase(),label:r}));
-  const meta=itemMetaLine;   /* shared with the update diff — see 25-origins-items.js */
   openBrowse({
     noun:"items", noun1:"item", items:lib, id:x=>x._id||x.name,
     search:x=>`${x.name} ${x.type||""} ${x.category||""} ${x.rarity||""}`,
     row:x=>({title:x.name,tag:(x.rarity&&x.rarity!=="Mundane")?x.rarity:(x.cost||"")}),
-    sort:(a,b)=>String(catOf(a)).localeCompare(String(catOf(b)))||String(a.name||"").localeCompare(String(b.name||"")),
-    group:x=>catOf(x),
+    sort:(a,b)=>String(itemCatOf(a)).localeCompare(String(itemCatOf(b)))||String(a.name||"").localeCompare(String(b.name||"")),
+    group:x=>itemCatOf(x),
     added:x=>character.inventory.some(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase()),
-    preview:x=>openModal(x.name,`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(meta(x))}</p><div class="desc">${richHTML(x.description||"—")}</div>`),
+    preview:x=>openItemInfo(x),
     onCustom:()=>openItemForm(),
     originSelect:true,
     costInput:true,
-    facets:[
-      {key:"cat",label:"Category",type:"multi",options:cats,match:(e,a)=>a.has(catOf(e).toLowerCase())},
-      {key:"rar",label:"Rarity",type:"multi",options:rars,match:(e,a)=>a.has(rarOf(e).toLowerCase())},
-      {key:"attune",label:"Needs attunement",type:"toggle",match:e=>!!e.attune}
-    ],
+    facets:itemFacets(lib),
     qtyInput:true,
     onAdd:(entries,og,costOverride,qty)=>{addLibraryItems(entries,og,costOverride,qty);renderInventory();renderAttacks();recompute();scheduleSave();}
   });
@@ -177,17 +200,10 @@ function addAttackForItem(item){
 function browseSpells(){
   const lib=rules.spells||[];
   if(!lib.length)return openSpellForm();
-  const myCl=(character.classes||[]).map(c=>String(c.name||"").toLowerCase());
-  const clsOf=x=>x.class?(Array.isArray(x.class)?x.class:[x.class]):[];
-  const schoolOf=x=>String(x.meta||"").split("·")[0].trim();
-  const levels=[{value:"0",label:"Cantrip"}].concat([1,2,3,4,5,6,7,8,9].map(n=>({value:String(n),label:"Lv "+n})));
-  const classOpts=[...new Set(lib.flatMap(clsOf).map(c=>String(c)))].sort((a,b)=>a.localeCompare(b)).map(c=>({value:c.toLowerCase(),label:c}));
-  const schoolOpts=[...new Set(lib.map(schoolOf).filter(Boolean))].sort().map(s=>({value:s.toLowerCase(),label:s}));
-  const defClasses=myCl.filter(c=>classOpts.some(o=>o.value===c));
   openBrowse({
     noun:"spells", noun1:"spell", items:lib, id:x=>x._id||x.name,
-    search:x=>`${x.name} ${x.meta||""} ${clsOf(x).join(" ")}`,
-    row:x=>({title:dispName(x,"spells"),tag:schoolOf(x)}),
+    search:x=>`${x.name} ${x.meta||""} ${spellClassesOf(x).join(" ")}`,
+    row:x=>({title:dispName(x,"spells"),tag:spellSchoolOf(x)}),
     sort:(a,b)=>num(a.level)-num(b.level)||String(a.name||"").localeCompare(String(b.name||"")),
     group:x=>num(x.level)===0?"Cantrips":"Level "+num(x.level),
     groupKey:x=>String(num(x.level)),
@@ -214,12 +230,7 @@ function browseSpells(){
     preview:x=>openSpellView({name:x.name,level:num(x.level),meta:x.meta,text:x.text}),
     onCustom:()=>openSpellForm(),
     originSelect:"spell",
-    facets:[
-      {key:"level",label:"Level",type:"multi",options:levels,match:(e,a)=>a.has(String(num(e.level)))},
-      {key:"class",label:"Class",type:"multi",options:classOpts,default:defClasses,match:(e,a)=>{const c=clsOf(e);return !c.length||c.some(x=>a.has(String(x).toLowerCase()));}},
-      {key:"school",label:"School",type:"multi",options:schoolOpts,match:(e,a)=>a.has(schoolOf(e).toLowerCase())},
-      {key:"conc",label:"Concentration",type:"toggle",match:e=>/concentration/i.test(e.meta||"")}
-    ],
+    facets:spellFacets(lib),
     onAdd:(entries,og)=>{entries.forEach(x=>{if(character.spells.some(s=>String(s.name||"").toLowerCase()===String(x.name||"").toLowerCase()))return;const sp={id:uid(),name:x.name,level:num(x.level),meta:x.meta||"",text:x.text||"",prepared:false,granted:og?grantedFromOrigin(og.kind):"",origin:og||null};detectSpellAttack(sp);stampSrc(sp,x,"spell","spells");character.spells.push(sp);syncSpellAttack(sp);});renderSpells();renderAttacks();scheduleSave();}
   });
 }
@@ -297,9 +308,7 @@ function addPickedFeature(w){
   if(added)stampSrc(added,e,"feature",w.k==="feat"?"feats":"features");
   return added||null;
 }
-function browseFeatures(){
-  const list=featPickList();
-  if(!list.length)return openFeatureForm();
+function featFacets(list){
   const present=FEAT_KINDS.filter(k=>list.some(w=>featPickKind(w)===k.key));
   const srcs=[...new Set(list.map(w=>String(w.e._source||"")).filter(Boolean))].sort();
   const facets=[{key:"kind",label:"Type",type:"multi",
@@ -310,6 +319,12 @@ function browseFeatures(){
     options:srcs.map(s=>({value:s.toLowerCase(),label:s})),
     match:(w,a)=>a.has(String(w.e._source||"").toLowerCase())});
   facets.push({key:"noreq",label:"No prerequisite",type:"toggle",match:w=>!featPickPrereq(w)});
+  return facets;
+}
+function browseFeatures(){
+  const list=featPickList();
+  if(!list.length)return openFeatureForm();
+  const facets=featFacets(list);
   openBrowse({
     noun:"feats & traits", noun1:"feat or trait", items:list, id:w=>w.id,
     /* the description too: "which feat gives me advantage on saves" is the
@@ -325,13 +340,24 @@ function browseFeatures(){
       ||String(a.e.name||"").localeCompare(String(b.e.name||"")),
     group:featPickGroup,
     added:w=>featPickHas(featPickStoredName(w)),
-    preview:w=>{const bits=[w.k==="trait"?(String(w.e.source||"").trim()||"Trait"):featKindDef(featPickKind(w)).label,
-                            w.e._source||""].filter(Boolean);
-      openModal(featPickName(w),`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(bits.join(" · "))}</p><div class="desc">${descHTML(w.e.description||"—")}</div>`);},
+    preview:w=>openFeatInfo(w),
     onCustom:()=>openFeatureForm(),
     facets,
     onAdd:entries=>{entries.forEach(addPickedFeature);renderFeatures();recompute();scheduleSave();}
   });
+}
+/* The windows an item and a feat or trait open in: the pickers' previews, lifted
+   out so the Rules tab opens the very same one (#99). */
+function openItemInfo(x){
+  if(!x)return;
+  const meta=itemMetaLine;   /* shared with the update diff — see 25-origins-items.js */
+  openModal(x.name,`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(meta(x))}</p><div class="desc">${richHTML(x.description||"—")}</div>`);
+}
+function openFeatInfo(w){
+  if(!w||!w.e)return;
+  const bits=[w.k==="trait"?(String(w.e.source||"").trim()||"Trait"):featKindDef(featPickKind(w)).label,
+              w.e._source||""].filter(Boolean);
+  openModal(featPickName(w),`<p class="hint" style="font-family:var(--head);text-transform:uppercase;letter-spacing:.05em">${esc(bits.join(" · "))}</p><div class="desc">${descHTML(w.e.description||"—")}</div>`);
 }
 
 /* ---- glossary editor ---- */

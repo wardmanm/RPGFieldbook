@@ -72,6 +72,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'statusExpiredText', 'statusBackText', 'tickStatuses', 'restartStatus',
   'announceStatusExpiry', 'undoStatusExpiry', 'stepStatusTap', 'syncStatLock',
   'fxNeg', 'mark', 'editing',
+  'itemFacets', 'spellFacets', 'featFacets', 'itemCatOf', 'itemRarOf', 'spellClassesOf', 'spellSchoolOf', 'openItemInfo', 'openFeatInfo', 'ITEM_RARITIES',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -4295,6 +4296,77 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck("#104 ...a thrown weapon's default is always", X.recoverOptionsHTML({weapon: {notes: 'Thrown'}}).includes('>Default (always comes back)<'));
   ck("#104 ...an arrow's is the sheet's rule (the apostrophe escaped, as esc() writes it)", X.recoverOptionsHTML({ammo: {kind: 'arrow'}}).includes('>Sheet&#39;s rule<'));
   ck("#104 ...and the item's own choice is selected", sel(X.recoverOptionsHTML({ammo: {kind: 'arrow'}, recover: 'never'})) === 'never' && sel(X.recoverOptionsHTML({recover: 'junk'})) === '');
+}
+
+/* ---- #99: the pickers' filters and previews, shared with the Rules tab ---- */
+{
+  const savedRules = X.rules, savedChar = X.character, savedOB = ctx.openBrowse, savedOM = ctx.openModal;
+  let cfg = null, modal = null;
+  ctx.openBrowse = c => { cfg = c; };
+  ctx.openModal = (title, html) => { modal = {title, html}; };
+  const items = [{_id: 'i1', name: 'Rope', category: 'Gear', cost: '1 gp', _source: 'SRD'},
+    {_id: 'i2', name: 'Wand', category: 'Wondrous Item', rarity: 'Rare', attune: true, description: 'Zap.', _source: 'SRD'},
+    {_id: 'i3', name: 'Ring', rarity: 'Uncommon', _source: 'SRD'}];
+  const spells = [{_id: 's1', name: 'Fire Bolt', level: 0, meta: 'Evocation · Action · 120 feet', class: ['Wizard', 'Sorcerer'], _source: 'SRD'},
+    {_id: 's2', name: 'Bless', level: 1, meta: 'Enchantment · Action · 30 feet · Concentration, up to 1 minute', class: 'Cleric', _source: 'SRD'},
+    {_id: 's3', name: 'Loose', level: 2, meta: '', _source: 'SRD'}];
+  const feats = [{_id: 'f1', name: 'Alert', description: 'Origin feat\nYou are alert.', _source: 'SRD'},
+    {_id: 'f2', name: 'Grappler', description: 'General feat · Prerequisite: Level 4+, Strength 13+\nGrab.', _source: 'XPHB'}];
+  const traits = [{_id: 't1', name: 'Darkvision', source: 'Elf', description: 'See.', _source: 'SRD'}];
+  X.rules = {name: 'T', keywords: [], features: traits, items, spells, races: [], classes: [], feats,
+             backgrounds: [], subclasses: [], tables: []};
+  ctx.recomputeDups();
+  X.character = X.blankChar();
+  X.character.classes = [{name: 'Cleric', level: 1}];
+  const shape = fs => JSON.stringify(fs.map(f => [f.key, f.label, f.type, f.options || null, f.default || null]));
+
+  const fi = X.itemFacets(items);
+  ck('#99 itemFacets: category, rarity, attunement', shape(fi) === JSON.stringify([
+    ['cat', 'Category', 'multi', [{value: 'gear', label: 'Gear'}, {value: 'wondrous item', label: 'Wondrous Item'}], null],
+    ['rar', 'Rarity', 'multi', [{value: 'mundane', label: 'Mundane'}, {value: 'uncommon', label: 'Uncommon'}, {value: 'rare', label: 'Rare'}], null],
+    ['attune', 'Needs attunement', 'toggle', null, null]]), shape(fi));
+  ck('#99 an item with no category is Gear, with no rarity Mundane',
+     X.itemCatOf(items[2]) === 'Gear' && X.itemRarOf(items[0]) === 'Mundane' && X.itemCatOf(null) === 'Gear');
+  ck('#99 the item facets match as the picker did',
+     fi[0].match(items[2], new Set(['gear'])) && !fi[0].match(items[1], new Set(['gear'])) && fi[2].match(items[1]) && !fi[2].match(items[0]));
+  ctx.browseItems();
+  ck('#99 the item picker uses itemFacets', !!cfg && shape(cfg.facets) === shape(fi));
+  modal = null; cfg.preview(items[1]); const viaPicker = modal;
+  modal = null; X.openItemInfo(items[1]);
+  ck('#99 openItemInfo is the picker\'s preview', !!modal && !!viaPicker && modal.title === 'Wand' &&
+     modal.html === viaPicker.html && modal.html.includes('Zap.') && modal.html.includes(ctx.esc(ctx.itemMetaLine(items[1]))));
+
+  const fs = X.spellFacets(spells), fsAll = X.spellFacets(spells, {classDefault: 'all'});
+  ck('#99 spellFacets: level, class, school, concentration', JSON.stringify(fs.map(f => f.key)) === '["level","class","school","conc"]');
+  ck('#99 the class filter starts on this character\'s classes in the picker',
+     JSON.stringify(fs[1].default) === '["cleric"]');
+  ck('#99 ...and on every class for a lookup', JSON.stringify(fsAll[1].default) === '[]');
+  ck('#99 schools come from the first part of meta',
+     JSON.stringify(fs[2].options.map(o => o.value)) === '["enchantment","evocation"]' && X.spellSchoolOf(spells[0]) === 'Evocation');
+  ck('#99 a spell with no class passes any class filter, a string class is one class',
+     fs[1].match(spells[2], new Set(['wizard'])) && fs[1].match(spells[1], new Set(['cleric'])) &&
+     JSON.stringify(X.spellClassesOf(spells[1])) === '["Cleric"]' && JSON.stringify(X.spellClassesOf(null)) === '[]');
+  ck('#99 concentration reads meta', fs[3].match(spells[1]) && !fs[3].match(spells[0]));
+  cfg = null; ctx.browseSpells();
+  ck('#99 the spell picker uses spellFacets', !!cfg && shape(cfg.facets) === shape(fs));
+
+  const list = X.featPickList(), ff = X.featFacets(list);
+  ck('#99 featFacets: type, pack (two packs), no prerequisite', JSON.stringify(ff.map(f => f.key)) === '["kind","pack","noreq"]');
+  ck('#99 feat types are the ones present', JSON.stringify(ff[0].options.map(o => o.label)) === '["Origin feat","General feat","Trait"]');
+  ck('#99 one pack, no Pack filter', JSON.stringify(X.featFacets(list.filter(w => w.e._source === 'SRD')).map(f => f.key)) === '["kind","noreq"]');
+  ck('#99 no prerequisite reads the first line', ff[2].match(list[0]) && !ff[2].match(list[1]));
+  cfg = null; ctx.browseFeatures();
+  ck('#99 the feat picker uses featFacets', !!cfg && shape(cfg.facets) === shape(ff));
+  modal = null; cfg.preview(list[1]); const featPicker = modal;
+  modal = null; X.openFeatInfo(list[1]);
+  ck('#99 openFeatInfo is the picker\'s preview', !!modal && !!featPicker && modal.title === 'Grappler' &&
+     modal.html === featPicker.html && modal.html.includes('General feat · XPHB'));
+  modal = null; X.openFeatInfo(list[2]);
+  ck('#99 a trait reads its own source', !!modal && modal.html.includes('Elf · SRD'));
+  modal = null; X.openFeatInfo(null); X.openItemInfo(null);
+  ck('#99 nothing to show opens nothing', modal === null);
+
+  ctx.openBrowse = savedOB; ctx.openModal = savedOM; X.rules = savedRules; X.character = savedChar;
 }
 
 /* ---- imported files and packs render inert ----
