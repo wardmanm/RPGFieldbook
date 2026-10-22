@@ -255,7 +255,7 @@ function encSettingsChanged(){
    cannot say "import the settings but keep my rules" without making Cancel
    import something. Nothing is lost, so nothing is asked, when the file brings
    no rules or none are loaded yet. */
-const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCollapse","tabIcons","backdropClose","setPage"];
+const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCat","tabIcons","backdropClose","setPage"];
 /* What boot does to settings from an older build, shared with Import settings
    so an old file arrives in the same shape: the first builds' single `rulesUrl`
    joins the sources list. True when that changed something worth saving. */
@@ -359,7 +359,7 @@ function updateRulesStatus(msg,cls){const el=document.getElementById("rulesStatu
 /* renderNotes and renderJournal are here because notes and journal pages run
    through highlight() too — editing the glossary changes how every one reads.
    An open journal editor is left alone (renderJournal()). */
-function refreshRulesUI(){renderRulesSections();renderGloss();renderFeatures();renderInventory();renderSpells();renderClassRace();renderTables();renderNotes();renderJournal();renderAllRT();}
+function refreshRulesUI(){renderRulesBrowser();renderFeatures();renderInventory();renderSpells();renderClassRace();renderNotes();renderJournal();renderAllRT();}
 const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
 /* display names for a category — one map, used by both the group summary and
    the headings in the loaded-data list */

@@ -132,10 +132,13 @@ function removeRace(doRender){
   character.race=null;
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}
 }
-function openRaceInfo(name){
+/* By id or name; `{ref:true}` leaves the chosen lineage unmarked (#99). */
+function openRaceInfo(name,opts){
+  const ref=!!(opts&&opts.ref);
   const d=findRaceDef(name);
   if(!d){openModal(name,`<p class="hint">No rules data loaded for this ${raceTerm().toLowerCase()} — it was added as a custom name.</p>`,iconSVG("races",name,"lg"));return;}
-  const cur=character.race&&character.race.subrace;
+  const nm=String(d.name||name);
+  const cur=ref?null:(character.race&&character.race.subrace);
   const sect=(obj)=>{
     let s="";
     if(obj.abilityScores)s+=`<p><b>Ability increase:</b> ${esc(Object.entries(obj.abilityScores).map(([k,v])=>`${k.toUpperCase()} ${fmt(num(v))}`).join(", "))}</p>`;
@@ -148,10 +151,10 @@ function openRaceInfo(name){
   };
   let b=`<p>${esc(d.description||"")}</p>`+(d.category?`<p class="hint">${esc(d.category)}</p>`:"")+sect(d);
   /* species-owned tables link from here; owner-based, so no prose anchor needed */
-  b+=tableChipsHTML(name,"race");
+  b+=tableChipsHTML(nm,"race");
   (d.subraces||[]).forEach(sd=>{
     b+=`<div style="border-top:2px solid var(--line);margin-top:10px;padding-top:8px"><b style="${cur===sd.name?"color:var(--accent)":""}">${esc(sd.name)}${cur===sd.name?" — selected":""}</b>${sd.description?`<p class="hint" style="margin:4px 0">${esc(sd.description)}</p>`:""}${sect(sd)}</div>`;
   });
-  openModal(name,b,iconSVG("races",name,"lg"));
+  openModal(nm,b,iconSVG("races",nm,"lg"));
 }
 

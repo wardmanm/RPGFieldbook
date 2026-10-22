@@ -35,12 +35,17 @@ then grants from the species and then the subrace: fixed `abilityScores` as a fe
 saves as grants, each trait as a feature, any `choices` (skill) queued, `equipmentGrants`, and speed
 and size **only if those boxes are empty**. `proficiencies` and `languages` are appended to the
 free-text Proficiencies box. Queued skill choices then open through `runExtraChoices()`.
+`openRaceInfo(idOrName,opts)` opens by the pack entry's `_id` as readily as by name, and the Rules
+tab's Species rows open it with `{ref:true}` (#99): the window shows the species' own rules with no
+"— selected" mark, since there is no character to mark it against.
 
 **Background.** `openAddBackground()` previews the 2024 shape: the three eligible abilities as
 +2/+1 or +1/+1/+1, a feat (a select when the background offers more than one), the granted skills,
 tools and languages. `applyBackground()` adds the ability feature, the skill grants, the feat through
 `grantFeatDef()`, the single background `feature`, `equipmentGrants`, and appends tools and
-languages to Proficiencies.
+languages to Proficiencies. `openBackgroundInfo(idOrName,opts)` opens by id as well as by name, and
+the Rules tab's Backgrounds rows open it with `{ref:true}` (#99): the window shows the background's
+options, not this character's choices.
 
 **Class.** `openAddClass()` takes a pack class or a custom name and a starting level (1–20).
 `addClass()` sets the spellcasting ability if none is set and runs `applyClassLevel()` for every
@@ -64,7 +69,11 @@ in its data only, and a multiclass's is shown in the note, never tracked. Removi
 class while another remains makes that one first: it takes its saving throws, tagged to it, with a
 toast, and nothing else is re-offered. The class chip
 (`classChipHTML()`) opens the class; its subclass is a separate link button (`data-sub-info`), matched
-before `data-info-class` so it wins inside the chip.
+before `data-info-class` so it wins inside the chip. `openClassInfo(idOrName,opts)` and
+`openSubclassInfo(classIdOrName,subName,opts)` open by id as well as by name, and the Rules tab's
+Classes and Subclasses rows open them with `{ref:true}` (#99): no "— current" level, no subclass
+marker, nothing from `character.classes`; a subclass link inside such a window carries
+`data-sub-ref="1"` so following it stays in reference mode too.
 
 **Level up.** `doLevelUp()` asks which class when there are several, raises it, and runs
 `applyClassLevel()` for the new level (class and subclass). `hpChoice()` is built **before** Max HP is
@@ -281,3 +290,4 @@ they are built: [Converter](../data/converter.md).
 - 2026-09-28 — a choice window's title names the span of levels it holds, from its choices and
   notes, and shows the class name as written. → ledger L4086, #69
 - 2026-10-09 — The options library: the 2024 pack's in the private repo, the SRD 5.2 pack's here. → ledger L5426, #85
+- 2026-10-22 — The class, subclass, species and background windows open by `_id` as well as by name, and gain a reference mode (`{ref:true}`) for the Rules tab's rows, with nothing from the open character. → ledger L6327, #99

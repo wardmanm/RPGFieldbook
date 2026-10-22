@@ -25,7 +25,7 @@ read-back, the refused-write paths and leaving a character) · **See also:** [Ch
 |---|---|---|
 | localStorage | `hw-fb-c-<id>`, from `charKey()` | one character, as `JSON.stringify(character)` |
 | localStorage | `hw-fb-library` (`K_LIB`) | `{autoload, index:[{id, name, system, appVersion, updated}]}` |
-| localStorage | `hw-fb-settings` (`K_SET`) | `settings`: skin, theme, rough, `rulesSources`, `setPage` (the Settings page last viewed, #107), `rulesCollapse`, `tabIcons`, `backdropClose`; `setCollapse`, the old Settings fold state, is no longer read but stays in older saves |
+| localStorage | `hw-fb-settings` (`K_SET`) | `settings`: skin, theme, rough, `rulesSources`, `setPage` (the Settings page last viewed, #107), `rulesCat` (the Rules tab's category last opened, #99), `tabIcons`, `backdropClose`; `setCollapse` and `rulesCollapse`, the old Settings and Rules-tab fold states, are no longer read but stay in older saves |
 | IndexedDB | database `hw-fb-cache`, store `kv`, key `rules` | the rules pool as plain JSON. This copy wins |
 | localStorage | `hw-fb-rules` (`K_RULES`) | the rules pool, LZW-compressed. Fallback and migration source only |
 | localStorage | `hw-fb-char` (`K_CHAR`) | a pre-library single-character save, moved into the library once by `migrateOldChar()` |

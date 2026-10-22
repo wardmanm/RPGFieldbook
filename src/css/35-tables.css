@@ -27,3 +27,44 @@ table.rtbl td:first-child{white-space:nowrap;font-family:var(--head);font-weight
    annotate, smaller and softer than the cells, and wrapping at any width */
 .tbl-notes{margin:-4px 2px 10px;font-size:13px;line-height:1.45;color:var(--ink-soft)}
 .tbl-notes p{margin:0 0 2px}
+
+/* ================= the Rules tab browser (#99) =================
+   Wide: the categories on the left, the open one's table on the right. 640px and
+   under (Settings' breakpoint): one pane at a time, by #rbCard[data-screen] — the
+   category list, or a table with ← Categories. */
+.rb-wrap{display:grid;grid-template-columns:210px minmax(0,1fr);gap:0 18px;align-items:start}
+.rb-allsearch{margin-bottom:8px}
+.rb-cats{display:flex;flex-direction:column;gap:2px}
+.rb-cat{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;
+  background:none;border:0;border-radius:8px;padding:8px 10px;min-height:38px;cursor:pointer;
+  font-family:var(--head);font-size:14px;font-weight:600;color:var(--ink)}
+.rb-cat:hover,.rb-cat:focus-visible{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.rb-cat.on{background:color-mix(in srgb,var(--accent) 24%,transparent)}
+.rb-cat .cnt,.rb-title .cnt{font-family:var(--head);font-size:12px;font-weight:600;color:var(--ink-soft)}
+.rb-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.rb-title{margin:0;flex:1;font-family:var(--head);font-size:18px}
+/* the Glossary's + Add: the card heading's .label .add, which it no longer sits in */
+.rb-head .add{font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-2);
+  background:none;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 6px;border-radius:6px}
+.rb-head .add:hover{background:color-mix(in srgb,var(--accent-2) 16%,transparent)}
+.rb-head .add svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4}
+.rb-back{display:none}
+.rb-catsearch{margin-bottom:8px}
+.rb-fbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.rb-facets{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.rb-count{font-family:var(--head);font-size:12px;color:var(--ink-soft);margin:4px 0 6px}
+.rb-sort{background:none;border:0;padding:0;cursor:pointer;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit}
+.rb-open{background:none;border:0;padding:0;cursor:pointer;font:inherit;color:var(--ink);text-align:left}
+.rb-tbl tbody tr{cursor:pointer}
+.rb-tbl tbody tr:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.rb-acts{white-space:nowrap;text-align:right}
+.rb-more{margin-top:8px}
+.rb-sgroup{margin-bottom:8px}
+.rb-hit{display:block;width:100%;text-align:left;background:none;border:0;border-radius:6px;padding:7px 10px;cursor:pointer;font:inherit;color:var(--ink)}
+.rb-hit:hover,.rb-hit:focus-visible{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+@media(max-width:640px){
+  .rb-wrap{grid-template-columns:minmax(0,1fr)}
+  #rbCard[data-screen="list"] .rb-main{display:none}
+  #rbCard[data-screen="table"] .rb-side{display:none}
+  .rb-back{display:inline-flex}
+}

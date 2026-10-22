@@ -14,7 +14,7 @@ search boxes. It also covers two sidebar residents, familiars and the portrait.
 `20-lists.js` · `renderInventory()`, `invGroups()`, `renderFamiliars()` in `40-sheet.js` ·
 `groupFieldHTML()`, `groupChoices()`, `groupNameProblem()`, `syncGroupFieldMsg()`, `groupFieldBlocked()` in
 `80-modal-forms.js` · `GROUP_RESERVED` in `00-constants.js` · `tagLabel()`, `tagTidy()` in `87-journal.js` · `renderAttacks()` in
-`60-attacks.js` · `rulesSecOpen()`, `renderRulesSections()` in `86-tables.js` · `setPageOf()` in `88-settings.js` · `buildStats()`, `buildBio()`, `blankChar()` in `00-constants.js`
+`60-attacks.js` · `rulesCatOf()` in `86-rules-browser.js` · `setPageOf()` in `88-settings.js` · `buildStats()`, `buildBio()`, `blankChar()` in `00-constants.js`
 · `renderPortrait()` in `66-coins-hp.js` · markup in `00-sheet.html`, `10-inventory.html`,
 `20-spells.html`, `30-story.html`, `40-rules.html`, `60-journal.html`, `70-combat.html` · `10-chrome.css`,
 `20-cards.css`, `30-sheet.css` ·
@@ -34,7 +34,7 @@ Settings and Rules sections), `sheet.js` (`featGroups()`, the shared favourites 
 | `10-inventory.html` | `#tab-inventory` | one `.stack`, centred, max 720px | inventory, coins |
 | `20-spells.html` | `#tab-spells` | one `.stack` | spellcasting, slots, activespells, spells; plus `#concCard`, untagged ([Conditions & concentration](../features/conditions-and-concentration.md)) |
 | `30-story.html` | `#tab-story` | `.cols` | proficiencies; `#bioStack` is filled by `buildBio()` with the eight bio cards, untagged by design |
-| `40-rules.html` | `#tab-rules` | one `.stack` | none: two foldable cards ([Rules & tables](../features/rules-and-tables.md)) |
+| `40-rules.html` | `#tab-rules` | one `.stack` | none: one card, the Rules browser ([Rules & tables](../features/rules-and-tables.md)) |
 | `60-journal.html` | `#tab-journal` | one `.stack`, centred, max 820px: Journal (`#journalCard`), Trackers (`data-note="trackers"`), Section Notes | Trackers only |
 | `70-combat.html` | `#tab-combat` | `.cview`: header, live region, `#cvList` | none in markup: the real cards are moved in at runtime |
 
@@ -133,8 +133,7 @@ leaves it pointing right (shut). The users are the Features & Traits groups (`da
 Section Notes card (`data-notegroup`). (Settings used it for its sections until #107 made it a sidebar of pages.) The inventory sections and
 the Attacks card's Favorites / Attacks split use `.inv-sec-head`, which shares the one rule
 `.fghead,.inv-sec-head` (a solid 1.5px `--line` rule and an 8px gap) but carries its text directly
-rather than in `.fgname`. The Rules tab's two card headings are `.label.rules-head` with the same
-caret. Rows inside a group fold individually through a `.fitoggle` button holding its own `.fcaret`
+rather than in `.fgname`. Rows inside a group fold individually through a `.fitoggle` button holding its own `.fcaret`
 (features, items, attacks).
 
 A **count** goes in `.cnt`, plain and in brackets. A **badge** such as "12 entries" or the
@@ -175,10 +174,10 @@ decides what counts against the allotment.
 | `invCollapse.sections` / `.items` | character | section name / item id | `invCol()` |
 | `atkCollapse.items` | character | attack id | `atkCol()` |
 | `noteCollapse` | character | tab | `noteGroupOpen()`, `toggleNoteGroup()` |
-| `rulesCollapse` | settings | `gloss` / `tables` | `rulesSecOpen()`, `setRulesSecOpen()` |
+| `rulesCat` | settings | the category last opened | `rulesCatOf()` |
 
 Every map stores `true` for **shut**, and an absent key means "never touched", which falls back to
-a default. Character lists default open. `RULES_SECS[].open` shuts both Rules cards. Settings
+a default. Character lists default open. Settings
 keeps no collapse map since #107: it remembers the page last viewed (`settings.setPage`), and the old
 `settings.setCollapse` is no longer read. The accessors
 repair or ignore a wrong shape (a hand-edited file) rather than trusting it, and `migrate()`
@@ -203,8 +202,9 @@ never calls `recompute()`.
 `.searchbox` wraps an input with a placeholder and a `button.search-clear`. CSS shows the × only
 while the box has text, using `:placeholder-shown`, so no script tracks it. The click handler in
 `wire()` empties the box and dispatches the same bubbling `input` event typing sends, so each box's
-own listener re-filters unchanged. There are three: `#glossSearch`, `#tablesSearch`, and
-`#brSearch`, shared by the item, spell and feature finders.
+own listener re-filters unchanged. Among them: `#rbSearch` over the Rules tab's categories,
+`#rbCatSearch` in the open category (built with the pane, so its listener is delegated on
+`#rbMain`), and `#brSearch`, shared by the item, spell and feature finders.
 
 ### Familiars
 
@@ -285,9 +285,9 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
   in brackets, so counts moved to `.cnt` (L3123).
 - **The inventory caret pointed left when open.** It was drawn pointing down and then turned another
   90° by the shared `.fcaret`. It is now drawn like the Features caret (L3525).
-- **The Rules glossary heading contains its own "+ Add".** A bare `closest` on `[data-rulessec]`
-  folded the section whenever you reached for Add, so the handler ignores clicks on anything
-  interactive inside the heading (L3189).
+- **The Rules glossary heading contained its own "+ Add".** A bare `closest` on the fold toggle
+  folded the section whenever you reached for Add, until the handler ignored clicks on anything
+  interactive inside the heading (L3189). The folding headings went with the Rules browser (#99).
 
 ## Decisions
 
@@ -303,7 +303,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | A group named `constructor` or `__proto__` (#98) | Refused: no group may be named for an `Object.prototype` property, said under the box, and read as no group from a file (Mike) | Making the collapse maps own-property safe: the names would still work, and four maps would each need it |
 | A folded group whose first member is retyped in another case (#98) | Reopens, as its label changes: fine as it is (Mike) | Folding by `tagKey()` as the journal does: would reset every feature group and section a player has folded |
 | How collapse state is stored | As shut = `true`, absent = default, so a default can change without reopening what a player shut | Storing "open" (named and set aside at L1741) |
-| Where Rules-tab folding is stored | `settings.rulesCollapse` | On the character: the glossary and tables come from global packs, and folding them on one character to find them open on the next would surprise |
+| Where the Rules tab remembers its place | `settings.rulesCat`, app-wide — the category last opened, since the tab's own fold ended with #99 | On the character: the packs are global, so remembering per-character would surprise a player opening a different sheet and finding a different category open |
 | Colour of group names | `--accent`, set on the shared `.fgname` rule | Scoping the change to Features: the owner chose consistency |
 | Counts and badges in a heading | Counts in `.cnt`, badges keep the `.fgcount` pill | One style for both: a badge like "12 entries" reads absurdly in brackets |
 | Order of favourite attacks | The order they were added | Sorted: the list is short and hand-built, so a row stays where the player put it |
@@ -314,8 +314,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 ## Open
 
 - **Keyboard reach of group headings is uneven.** Notes and Settings headings are
-  `role="button" tabindex="0"` with Enter/Space handlers. The Rules-tab headings have the role,
-  `tabindex` and `aria-expanded` but no key handler (only `click` toggles them). Features group
+  `role="button" tabindex="0"` with Enter/Space handlers. Features group
   heads and inventory section heads are not focusable at all.
 - The Attacks card's headings reuse `.inv-sec-head`, inheriting its `cursor:pointer`, but
   `data-atksec` has no handler, so they do not fold.
@@ -345,3 +344,5 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-10-16 — No group may be named for an `Object.prototype` property; the group field says so and stops the save. A group reopening after a case edit is kept, by decision. → ledger L5872, #98
 - 2026-10-16 — Settings no longer uses the `.fgroup` collapsible or a collapse map: it is a sidebar of pages and remembers the last one. → ledger L5930, #107
 - 2026-10-19 — A pencil in every card's header hides that card's edit, delete and remove buttons, per card and per character, by CSS (`.ed`/`.ed-off`), before the combat toggle and the note button. → ledger L6248, #97
+- 2026-10-22 — The Rules tab becomes one card, the browser; `settings.rulesCat` (the category last opened) replaces `settings.rulesCollapse`. → ledger L6327, #99
+- 2026-10-22 — The stale "Where Rules-tab folding is stored" decision is rewritten: `settings.rulesCat`, not `rulesCollapse`. → ledger L6455, #99

@@ -186,3 +186,65 @@ take a name pass the id through. Two packs' "Elf" each open their own.
   window. (The Traits category is the packs' standalone `features` list, which is separate.)
 - Fixing `openGlossView()`'s literal `[Table: …]` brackets (a known issue, separate).
 - Persisting searches, filters or sort.
+
+## As built (2026-10-22)
+
+Built across four tasks ([the plan](../plans/2026-10-21-rules-browser.md)); every section below is
+as specified except where noted. Ledger: `src/docs/_claude/WIRING-LEDGER.md`, "The Rules tab as a
+browser (#99, #53, 2026-10-22)".
+
+- **§1–§3 (what it is, decisions, structure)** — as specified. The new fragment is
+  `src/js/86-rules-browser.js`, the 33rd JS fragment, after `86-tables.js`; the shared filter
+  builders (`itemFacets()`, `spellFacets()`, `featFacets()`) and the lifted previews
+  (`openItemInfo()`, `openFeatInfo()`) landed in `85-browse.js` as §3 describes.
+- **§4 (categories) — four rulings beyond the literal text**, added by the plan's Global
+  Constraints and carried through unchanged:
+  - **The Glossary is always listed, even empty** (§4 only promises a non-empty category is
+    listed), so its + Add stays reachable with no pack loaded.
+  - **Subclasses lists `subclassesFor()` of every loaded class** — its own inline subclasses plus
+    any standalone `rules.subclasses` entry naming it — not `rules.subclasses` alone as §4's source
+    column literally says, because the SRD pack (and most packs) carry a class's subclasses inside
+    the class record; the literal source would leave the category empty for an SRD-only player.
+  - **Tables carries a Source column too**, beyond §4's shorter column list for it, because
+    decision 7 ("a Source column everywhere") outranks it.
+  - **The Pack filter is per category**, exactly matching decision 7's "only when more than one
+    pack is loaded" read per category rather than app-wide; feats keep their own Pack filter from
+    `featFacets()` rather than gaining a second one.
+  - One UI addition §4 does not name: the filter pills sit behind a **Filters button that folds
+    them away**, carrying the active count and a Clear button once any are set, so a category with
+    several facets does not push its table below the fold by default.
+- **§5 (windows)** — as specified: every row opens by `_id`; the four reference-mode windows show
+  nothing of the open character; a class window's subclass link carries `data-sub-ref="1"` so
+  following it from a reference-mode window stays in reference mode.
+- **§6 (state)** — as specified: `settings.rulesCat` persists and falls back to the first listed
+  category when the stored value is unknown or now empty; everything else lives in memory for the
+  session; `settings.rulesCollapse` is left alone, unread.
+- **§7 (layout) — as specified.** Two gaps found in this task's own QA were fixed in the
+  final-review pass (ledger `## The Rules browser: final-review fixes (#99, 2026-10-22)`,
+  [Rules & tables](../wiki/features/rules-and-tables.md), [Shell](../wiki/ui/shell.md)):
+  - The tab now always reopens the category list the way §7 says "the tab opens on the category
+    list" — `rbToList()` resets `rbUI.screen` when `selectTab()` enters the Rules tab from
+    elsewhere, so a table left open on a previous visit no longer carries over.
+  - The ☰ flyout's Rules-tab entries now scroll the chosen category into view after
+    `rbOpenCat()` repaints it, via `scrollToCard(document.getElementById("rbCard"))`, matching
+    every other tab's entries — picking a category from deep in a long table's scroll position no
+    longer leaves the newly painted pane off-screen.
+  - What already held as specified: the narrow one-pane-at-a-time screen with "← Categories" (which
+    also returns focus to the category button just left); the table scrolling sideways inside its
+    own box at 360–390px while the page itself does not scroll sideways.
+- **§8 (search)** — as specified: the sidebar's box searches every category's display name only (not
+  a glossary term's text); results group in `RB_CATS` order, 8 rows per category, then "*N* more in
+  *Category* →", which opens that category with the text carried into its own box.
+- **§9 (testing)** — as specified: the configs, shared builders, sorting, reference mode, duplicate
+  same-named entries, search, the 300-row cap and the render invariant are each pinned in
+  `sheet.js` / `rules-data.js`; `./src/tests/run.sh` is green. Screenshots and the driven checks are
+  in the ledger entry; one substitution worth naming: the brief's example search, "fire", produced
+  only 7 Spells hits in the real SRD pack (under the 8-row cap), so no "more in Spells →" link
+  existed to follow — the one actually shown was Items' ("8 more in Items →"), and that is the link
+  driven and shot.
+- **§10 (docs)** — done: this page, the ledger, `rules-and-tables.md`, `shell.md`,
+  `sections-and-layout.md`, `decisions.md`, `character-building.md`, `inventory.md`,
+  `features-and-traits.md`, `1.9.0.md`'s wave table, and the `UNRELEASED.md` bullet.
+- **§11 (out of scope)** — held: nothing here adds to the character; no pack chip row; no class
+  feature rows of their own; `openGlossView()`'s literal brackets untouched; no persistence of
+  search, filters or sort beyond the category itself.

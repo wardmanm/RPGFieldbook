@@ -254,16 +254,16 @@ function renderAll(){
   buildStats();
   renderCoins();renderHP();   /* neither is data-path, so neither is in the loop below */
   document.querySelectorAll("[data-path]").forEach(inp=>{const v=get({character},inp.dataset.path);inp.value=(v===null||v===undefined)?"":v});
-  /* renderTables belongs here for the same reason renderGloss does: both draw
+  /* renderRulesBrowser belongs here as well as in refreshRulesUI(): it draws
      from the rules pool, not the character, so loading a sheet with rules
-     already cached has to draw them. Leaving it out meant the Tables tab was
-     blank after a refresh until you typed in its filter box. */
+     already cached has to draw it. Leaving the tables out once meant the Tables
+     list was blank after a refresh until you typed in its filter box. */
   /* Before anything draws: the Concentrating condition mirrors the active spell,
      and a sheet saved before that existed — or one whose spell was ended in some
      way the mirror never saw — reconciles on load rather than showing a
      condition for a spell that isn't running. */
   syncConcStatus();
-  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderGloss();renderTables();renderRulesSections();renderNoteIcons();renderEditToggles();renderNotes();renderJournal();renderTrackers();renderAllRT();recompute();
+  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderFamiliars();ensureSpellAttacks();renderSpells();renderRulesBrowser();renderNoteIcons();renderEditToggles();renderNotes();renderJournal();renderTrackers();renderAllRT();recompute();
   /* LAST: the combat toggles sit beside the note buttons drawn above, and an open
      combat view refills from THIS character — every character switch ends here. */
   syncCombatView();

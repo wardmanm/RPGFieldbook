@@ -42,3 +42,4 @@ Bullets below this line — leave the heading in place.
   with an Undo.
 - Every list card has a pencil in its header that hides its edit and delete buttons, so they stay
   out of the way in play.
+- The Rules tab is now a browser: every class, species, background, feat, spell, item, condition, glossary term and table from your rules packs, in sortable tables with filters and a search across all of them. Tap a row to read it.

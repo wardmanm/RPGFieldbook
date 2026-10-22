@@ -80,9 +80,11 @@ weight sums; both read quantity through `itemQty(it)` — never `num(it.qty)||1`
 item's quantity as 1 — so a ×0 item adds no value and no weight (#104 review).
 
 **The item finder.** `browseItems()` is the shared picker ([Shell](../ui/shell.md)) over
-`rules.items`: search on name/type/category/rarity, facets Category, Rarity and Needs attunement,
-grouped by category, an "added" badge on what the sheet already has, preview, and "+ Custom" into the
-item form (which Add opens directly when no items are loaded). Its footer — Origin, Detail, **Qty**,
+`rules.items`: search on name/type/category/rarity, facets Category, Rarity and Needs attunement
+from `itemFacets(lib)`, grouped by category, an "added" badge on what the sheet already has, a
+preview that opens `openItemInfo(x)`, and "+ Custom" into the item form (which Add opens directly
+when no items are loaded). `itemFacets()` and `openItemInfo()` are shared with the Rules tab's Items
+category (#99), which filters and previews the very same way so the two can never disagree. Its footer — Origin, Detail, **Qty**,
 Cost (gp) — applies to the whole batch and survives a filter redraw (`readFoot`/`writeFoot` inside
 `openBrowse()`). `addLibraryItems(entries, og, costOverride, qty)` stacks by name: an ammunition bundle unpacks first
 (`unpackAmmo()`, [Ammunition](ammunition.md)) — ×2 of "Arrows (20)" adds 40 single arrows — then an
@@ -224,3 +226,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-16 — Category is the shared group field: a section of the player's own, or one of the seven in any case. → ledger L5823, #98
 - 2026-10-19 — `recover` joins the item shape; the editor's Quantity allows 0; totals and the ×N badge read quantity through `itemQty()`. → ledger L6081, #104
 - 2026-10-19 — The "After a fight" select's labels as built, and it follows the form's current weapon; the print sheet counts a ×0 item. → ledger L6147, #104
+- 2026-10-22 — The item finder's facets and preview become `itemFacets()` and `openItemInfo()`, shared with the Rules tab's Items category. → ledger L6327, #99

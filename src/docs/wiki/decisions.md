@@ -309,13 +309,21 @@ When a page gains a Decisions row, add its line here under that page.
 
 ### [Rules & tables](features/rules-and-tables.md)
 
-- **Where the fold state lives** — `settings`, as a collapse map
-- **Default fold state** — Both shut; an absent key means untouched
+- **Where the Rules tab remembers its place** — `settings.rulesCat`, app-wide
+- **Which category opens with nothing stored, or the stored one now empty** — The first listed category (`rulesCatOf()`'s fallback)
 - **An anchor whose table is not loaded** — The words "the *Name* table"
 - **An anchor with no table sink active (converter)** — Keep the old silent drop
 - **Spell-slot columns in class tables** — Skipped
-- **Where tables are browsed** — A card under the glossary on the Rules tab (#32)
+- **Where tables are browsed** — As one of the Rules browser's own categories, same as any other
 - **Where a table's footnotes render (#73)** — Under the table, outside its scroll box, escaped like a cell
+- **Which categories the Rules tab browses (#99)** — [Every loaded category, plus Glossary and Tables](../specs/2026-10-19-rules-browser-design.md), in a fixed order; an empty one is hidden
+- **What a row opens (#99)** — [The existing info windows, unified](../specs/2026-10-19-rules-browser-design.md); feats, traits and items get one in the same style
+- **Class, subclass and background windows from the Rules tab (#99)** — [Reference mode](../specs/2026-10-19-rules-browser-design.md) (`{ref:true}`): the same function, showing the rules only
+- **Narrow screens on the Rules tab (#99)** — [A list screen](../specs/2026-10-19-rules-browser-design.md): the categories are one screen, a table the next, with "← Categories" back
+- **Search on the Rules tab (#99)** — [One box above the sidebar searching every category](../specs/2026-10-19-rules-browser-design.md), as well as each table's own
+- **How the Rules tab is structured (#99)** — [A new fragment, one generic table driven by a config per category](../specs/2026-10-19-rules-browser-design.md); the pickers' filter definitions move into shared builders
+- **The pack, on the Rules tab (#99)** — [A Source column everywhere](../specs/2026-10-19-rules-browser-design.md), and a Pack filter only when more than one pack is loaded
+- **Conditions on the Rules tab (#99)** — [Their own category](../specs/2026-10-19-rules-browser-design.md): glossary terms marked `cond`
 
 ### [Combat view](features/combat-view.md)
 
@@ -394,7 +402,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **A group named `constructor` or `__proto__` (#98)** — Refused: no group may be named for an `Object.prototype` property (Mike)
 - **A folded group whose first member is retyped in another case (#98)** — Reopens, as its label changes: fine as it is (Mike)
 - **How collapse state is stored** — As shut = `true`, absent = default, so a default can change without reopening what a player shut
-- **Where Rules-tab folding is stored** — `settings.rulesCollapse`
+- **Where the Rules tab remembers its place** — `settings.rulesCat`, app-wide
 - **Colour of group names** — `--accent`, set on the shared `.fgname` rule
 - **Counts and badges in a heading** — Counts in `.cnt`, badges keep the `.fgcount` pill
 - **Order of favourite attacks** — The order they were added

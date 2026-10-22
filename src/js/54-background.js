@@ -81,7 +81,9 @@ function removeBackground(doRender){
   character.bg=null;
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}
 }
-function openBackgroundInfo(name){
+/* By id or name; `{ref:true}` leaves out your choices (#99). */
+function openBackgroundInfo(name,opts){
+  const ref=!!(opts&&opts.ref);
   const d=findBackgroundDef(name);
   if(!d){openModal(name,`<p class="hint">No rules data loaded for this background — it was added as a custom name.</p>`,iconSVG("backgrounds",name,"lg"));return;}
   let b=`<p>${esc(d.description||"")}</p>`;
@@ -96,6 +98,6 @@ function openBackgroundInfo(name){
      so they link from here rather than needing an anchor in the prose. */
   b+=tableChipsHTML(d.name,"background");
   const cur=character.bg;
-  if(cur&&cur.name===d.name){const bits=[];if(cur.feat)bits.push("Feat: "+cur.feat);if(cur.abils)bits.push(cur.abils.map(e=>e.target.split(".")[1].toUpperCase()+" "+fmt(e.value)).join(", "));if(bits.length)b+=`<p class="hint" style="border-top:2px solid var(--line);margin-top:8px;padding-top:8px">Your choices — ${esc(bits.join(" · "))}</p>`;}
+  if(!ref&&cur&&cur.name===d.name){const bits=[];if(cur.feat)bits.push("Feat: "+cur.feat);if(cur.abils)bits.push(cur.abils.map(e=>e.target.split(".")[1].toUpperCase()+" "+fmt(e.value)).join(", "));if(bits.length)b+=`<p class="hint" style="border-top:2px solid var(--line);margin-top:8px;padding-top:8px">Your choices — ${esc(bits.join(" · "))}</p>`;}
   openModal(d.name,b,iconSVG("backgrounds",d.name,"lg"));
 }
