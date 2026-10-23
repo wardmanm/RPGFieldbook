@@ -1,12 +1,23 @@
 # Status: Fieldbook
-Updated: 2026-10-22 · Branch: main
+Updated: 2026-10-23 · Branch: main
 
 ## Current focus
-1.9.0: wave 1 is complete (#95/#93/#94, #104, #97, #99 with #53 all merged). Wave 0's #88 is not
-started. Next is wave 2: #103 (Sheet tab makeover), #101 beside it, and the #102 CORS spike. No
-branch open.
+1.9.0: waves 0 and 1 are complete (#88 merged 2026-10-23). Wave 2: #103 (Sheet tab makeover) has
+its spec and plan (`src/docs/specs/2026-10-23-sheet-makeover-design.md`,
+`src/docs/plans/2026-10-23-sheet-makeover.md`), waiting on Mike's execution choice; #101 follows once
+#103's design is settled. The #102 spike is done (below). No branch open.
 
 ## Recent changes
+- 2026-10-23: Merged #88 — a pack's `requires` and credits are kept in prototype-free maps, so a pack
+  labelled `__proto__`, `constructor` or `toString` is just a key.
+- 2026-10-23: #103 designed with Mike (mockups in the visual companion): Foundry-style header over a
+  portrait/vitals rail, ability strip, Defences chips, a hit-die spend box (roll or enter your roll),
+  familiars behind a header icon, XP or Milestone advancement, Attacks to Inventory, Story renamed Bio
+  with alignment, languages and senses. Calculation rules from packs with a conflict chooser deferred
+  to 2.0 (Mike).
+- 2026-10-23: #102 spike: a file:// page cannot download a GitHub release zip (both the download link
+  and the API asset end at storage with no CORS header); api.github.com JSON and
+  raw.githubusercontent.com files do work, so #102 would fetch pack files one by one.
 - 2026-10-22: Merged #99 and #53 — the Rules tab is a browser over every loaded category: a sidebar
   with counts and a search across everything, sortable filterable tables, rows open the sheet's own
   windows in a reference mode; the item and feat pickers share its filters and previews.
@@ -25,6 +36,10 @@ branch open.
 - 2026-10-16: Released v1.8.1; first private data release, 1.8.1-1.
 
 ## Pending decisions
+- **#103's execution method** (raised 2026-10-23). Options: subagent-driven (recommended) / native.
+  Blocks: #103's worktree.
+- **#102's install route** (raised 2026-10-23, from the spike). Options: fetch each pack file from the
+  release tag via raw.githubusercontent.com / keep announce-and-link. Blocks: #102's spec (wave 3).
 - **End combat clears every outstanding ammunition count** (raised 2026-10-19, #104 final review).
   Shots that give nothing back (None, Never, firearm bullets) are spent at End combat; earlier Mike
   was told they would stay on record for a later rule change. Options: keep / revert to keeping
