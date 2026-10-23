@@ -8,9 +8,9 @@ lock, the level-1 seed, the colour bands, the three Hit Dice looks, and what eac
 
 **Code:** `applyHPInput()`, `adjustHP()`, `renderHP()`, `hpBand()`, `signedEntry()`,
 `signedDelta()`, `entryDigits()` in `66-coins-hp.js`; `clampHP()`, `effMaxHP()`, `buildDeath()` in
-`00-constants.js`; `longRest()`, `shortRest()`, `hitDicePool()`, `renderHitDice()`, `hdStyle()`,
-`hdFullHTML()`, `hdCondensedHTML()`, `hdDiceHTML()`, `hdPips()`, `rollHitDie()`,
-`recoverHitDice()`, `renderDeath()` in `65-resources.js`; `level1HP()`, `seedLevel1HP()`,
+`00-constants.js`; `longRest()`, `shortRest()`, `hitDicePool()`, `renderHitDice()`, `hdBarHTML()`,
+`hdSpendHTML()`, `openHdSpend()`, `hdConMod()`, `hdHeal()`, `hdSpendCheck()`, `spendHitDie()`,
+`rollHitDie()`, `recoverHitDice()`, `renderDeath()` in `65-resources.js`; `level1HP()`, `seedLevel1HP()`,
 `resyncLevel1HP()`, `hitDieMax()` in `56-class.js`; `charSize()`, `sizeOptionsHTML()`,
 `capacityFor()` in `25-origins-items.js`; `openSizePicker()` in `80-modal-forms.js`; `bumpHP()`,
 the padlock, death-save and hit-dice handlers in `90-boot.js` · `chipList()`, `xpProgress()`,
@@ -81,23 +81,36 @@ outward from the skull. The skull is written `&#9760;&#65038;`. Only a long rest
 nothing rolls them or resets them on healing.
 
 **Hit Dice.** `hitDicePool()` groups dice by size, d12 first. In auto mode each class contributes
-its hit die × its level; in manual mode the pool is parsed from the text field ("2d8 + 1d6"). Spent
-dice live in `hdUsed[die]`, clamped to the total. `renderHitDice()` writes the auto pool back into
-`character.hitdice`, shows the text field only in manual mode (with a "Reset to class" banner), and
-draws an empty state with no class and no manual dice. Switching to manual asks first — the dice will
-stop following the class at level-up; switching back does not. The look is `hdStyle()`, chosen
-under Settings → Sheet display → Hit Dice display:
+its hit die × its level (and the class name, in `cls` — joined with " / " when two classes share a
+size); in manual mode the pool is parsed from the text field ("2d8 + 1d6"). Spent dice live in
+`hdUsed[die]`, clamped to the total. `renderHitDice()` writes the auto pool back into
+`character.hitdice` and draws `#hdWrap` as one bar (`hdBarHTML()`) — die, "left / total" per size and
+the CON modifier — or the empty-state hint with no class and no manual dice. **One look, not three**
+(#103): the old Full/Condensed/Dice styles and their Settings row are gone; `character.hdStyle`
+stays in `blankChar()`/`migrate()` so an old sheet round-trips, but nothing reads it.
 
-- **Full** (the default): a boxed cell per die size — die, "left / total", pips, Roll.
-- **Condensed**: one line per size — die, pips, "3/5", Roll — in `.hd-grid`, whose rows are
-  `display:contents` so a multiclass pool lines up column by column.
-- **Dice**: every die a token. Tap an unspent one to roll and heal; tap a spent one to put back
-  exactly one.
+**Spending one.** Tapping the bar opens "Spend a hit die" (`openHdSpend()`, `hdSpendHTML()`): one
+row per die size — pick it (`[data-hdpick]`, disabled when none are left), nudge `used` ±1 with
+`[data-hdused]` (clamped 0..total, never heals) — then either **🎲 Roll for me** (`rollHitDie()`)
+or type a roll ("I rolled [ ] → Apply"), live-checked by `hdSpendCheck(die, typed)` (a whole number
+from 1 to the die, else a reason why not) and previewed as "5 + CON 5 = 10 HP → 98 / 153" before
+Apply calls `spendHitDie(die, roll)`. `hdConMod()` reads CON through `abilFinal()` (items and
+statuses included — the value is spent the instant it's rolled, never re-derived, unlike the
+level-1 seed's `modOf()`); `hdHeal(roll, conMod)` floors the heal at 0. `spendHitDie()` is
+`rollHitDie()`'s old body, shared now by both paths: mark the die used, `adjustHP(heal)`, show the
+working in a `restSummary()`.
 
-In Full and Condensed, clicking pip *i* marks *i* spent (or *i* − 1 if already *i*), without healing.
-Putting a die back never un-heals. `rollHitDie()` rolls the die, adds the CON modifier from
-`abilFinal()` (items and statuses included), heals at least 0 through `adjustHP()`, and shows the
-working.
+**Where the auto/manual pill and the manual-dice field live.** Both `[data-hdmode]` and
+`#hitdiceInput` moved out of the Rest & Recovery card's own heading and into the spend box's foot
+— `hdSpendHTML()` is their only source now, rebuilt fresh each time the box opens.
+`renderHitDice()` still patches whichever copy is currently in the document (readOnly, `.hidden`,
+value, the pill's text/class) exactly as it always has, so the mode-toggle handler in `90-boot.js`
+needed no change — it still just calls `renderHitDice()` and focuses `#hitdiceInput` directly, and
+that now finds the box's copy while it's open. `.hidden` (the IDL property) is what has to do the
+hiding, not `style.display`: the input's `hidden` attribute is written into the markup itself at
+render time, and a cleared inline style would not override that attribute's own
+`[hidden]{display:none}` rule the way an empty string used to when the input had no `hidden`
+attribute to fight.
 
 **Rests.** `longRest()` sets Current to the effective maximum (if one is set), clears Temp and death
 saves, restores every spell slot, gets back half the total Hit Dice (at least one, largest die
@@ -122,12 +135,13 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
   and the clean revert would stop firing, silently.
 - **Floor at 1.** `effMaxHP()>0` means "a maximum is set" in `clampHP()` and `longRest()`, and
   `level1HP()` returns 0 for "no die".
-- **Nothing sits between `#hdWrap` and `.hd-grid`, or inside it.** `.hd-row{display:contents}` is
-  the column alignment, and it breaks silently and only on a multiclass sheet. The manual-mode
-  banner stays outside the grid, where it would otherwise size the columns. `rules-data.js` asserts
-  the CSS and that the builder puts `.hd-row` directly inside `.hd-grid`.
-- **`hdStyle()` falls back to `"full"`, the `blankChar()` default**, so older sheets need no
-  migration.
+- **The manual-mode "Reset to class" banner stays outside the bar**, written into `#hdWrap` above
+  `hdBarHTML()`'s output, not inside it — the same reason the old per-style banner stayed outside
+  `.hd-grid`: a child spanning the bar's own layout would fight it.
+- **`#hitdiceInput`/`[data-hdmode]` are patched by `.hidden`/property writes, not `style.display`.**
+  `hdSpendHTML()` bakes a literal `hidden` attribute into the input's markup at render time; a
+  cleared inline style does not override an attribute the UA stylesheet still matches, so
+  `renderHitDice()` toggles the `.hidden` IDL property instead, which does.
 - **Both cards are note anchors** (`vitals` and `rest` in `NOTE_SECTIONS`); removing either orphans
   its notes.
 - **`wire()` binds these buttons through a null-safe helper.** It has no `try`; one missing id used to
@@ -149,9 +163,6 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
 - **`bumpHP` once had no floor** (holding − went to −7), and an `applyHPInput()` guard written as
   `k in character.hp` would have let a `data-hp="locked"` hook write a boolean.
 - **`recompute()` does not call `renderHP()`**, so anything that changes the lock renders it itself.
-- **The dice style was first built with pip semantics** — tap a spent die and get several back.
-  Caught in a live click-through. The comment above `hdDiceHTML()` still describes those semantics;
-  the handler in `90-boot.js` returns exactly one.
 - **The layout guards once encoded nesting.** `rules-data.js` sliced "to the next card" and "to the
   first `</div>`"; moving a block broke them for reasons unrelated to what they guarded. They now
   use a `block` helper that counts divs, and each was mutation-tested.
@@ -170,16 +181,14 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
 | A first class that starts above level 1 | Seed level 1, then the level-up HP step for levels 2..N (average by default) | No hit points at all, as before #66; or several dice boxes, one per level — the one box already takes a total and "Roll for me" rolls all of them |
 | Temp HP in the colour bands | Excluded | Included: it sits above the maximum and could read healthy while the real pool is empty |
 | The amber band's colour | A new `--warn` token | `--accent`: equals `--brick` on the classic skin, so the two bands would match |
-| Default Hit Dice look | Full (owner's call): it speaks the same language as the Vitals strip and the HP panel, at the cost of height | — |
-| Tapping a spent die in the dice look | Puts back exactly one | Pip semantics: tokens are interchangeable, and getting three back contradicts the tooltip |
 | Where the Hit Dice sit | Rest & Recovery, under the rest buttons | Under Hit Points in Vitals: they rode into the combat view by default, between the player and the hit points |
+| How many hit-dice looks (#103) | One bar, tapping it opens a spend box | Keeping Full/Condensed/Dice as a per-character choice: a display option for something every player does the same way — pick a die, spend it — not a matter of taste |
+| How a hit die is spent (#103) | Pick, then either auto-roll or type your own roll, live-validated | Auto-roll only (the old `rollHitDie()`): a roll made at the table has to go in by hand somewhere, and a second "override HP by hand" path after the fact is worse than typing the roll itself |
 | Death saves filling outward | CSS `row-reverse` off `data-kind="fail"` | `buildDeath()` counting backwards: the click handler and `.on` toggling would have to change |
 | Size on tap | A chooser | A breakdown like the other boxes: size is a choice, not a derived number |
 
 ## Open
 
-- The dice look cannot mark a die spent without healing; Full and Condensed can, and the settings
-  hint says so.
 - There is no box to type a base Speed: `character.speed` is only ever written by the ancestry seed,
   so a custom ancestry reads 0 plus effects. Swapping ancestry keeps the first one's speed and size
   ([Character building](character-building.md)).
@@ -205,3 +214,5 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
 - 2026-09-25 — Hit Dice back in Rest & Recovery, reversing their move into Vitals. → ledger L3676
 - 2026-09-28 — a first class that starts above level 1 is seeded and asks for levels 2..N; it used
   to get no hit points at all. → ledger L3886, #66
+- 2026-10-23 — the three Hit Dice looks (and their Settings row) retired for one bar; tapping it
+  opens a spend box that rolls for you or takes a typed roll. → ledger L6580, #103

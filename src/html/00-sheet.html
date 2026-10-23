@@ -115,18 +115,11 @@
           <!-- Hit Dice sit under the rests they belong to: spent on a short rest,
                half back on a long one. (For 1.7.0 they were stacked under Hit
                Points in Vitals, which put them in the combat view by default.)
-               Nothing may be inserted between #hdWrap and .hd-grid, or inside
-               it: .hd-row is display:contents and hands its four cells straight
-               to that grid, which is the only reason a multiclass pool lines up
-               column by column. A wrapper there breaks it with no error. -->
+               #103: one bar now, not a pips/boxes/dice choice — tapping it opens
+               the spend box (hdSpendHTML in 65-resources.js), which is the only
+               home left for the auto/manual pill and the manual dice field. -->
           <div class="hd-box">
-            <!-- the auto/manual pill rides ON the heading, not under it: alone
-                 on its own line it read as an orphaned control and cost a whole
-                 row of the panel's height -->
-            <div class="hd-title">Hit Dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">auto</button></div>
-            <div class="hd-head">
-              <input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" readonly aria-label="Hit Dice">
-            </div>
+            <div class="hd-title">Hit Dice</div>
             <div class="hd-wrap" id="hdWrap"></div>
           </div>
         </div>

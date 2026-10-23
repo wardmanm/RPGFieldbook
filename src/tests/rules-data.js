@@ -1555,31 +1555,29 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // a short rest and come back on a long one. They sat in Vitals for one release
   // (1.7.0), which put them in the combat view by default, between the player
   // and the hit points they were watching. Vitals keeps exactly the hit points.
-  const hd = ['hitdiceInput', 'data-hdmode', 'hdWrap'];
+  // #103: the spend box is the only home now for the auto/manual pill and the
+  // manual-dice input — Rest & Recovery keeps just the bar (hdWrap).
+  const hd = ['hdWrap'];
   const owned = ['data-hp="cur"', 'data-hp="max"', 'data-hp="temp"', 'id="deathFail"', 'data-hplock'];
   ck('Vitals owns HP, the death saves and the padlock',
      owned.every(s => vitals.includes(s)), owned.filter(s => !vitals.includes(s)));
-  ck('...and no hit dice', !hd.some(s => vitals.includes(s)), hd.filter(s => vitals.includes(s)));
+  ck('...and no hit dice', !hd.some(s => vitals.includes(s)) &&
+     !vitals.includes('hitdiceInput') && !vitals.includes('data-hdmode'), hd.filter(s => vitals.includes(s)));
   ck('Rest & Recovery keeps both rest buttons',
      rest.includes('id="btnShortRest"') && rest.includes('id="btnLongRest"'));
-  ck('...and owns all of hit dice', hd.every(s => rest.includes(s)), hd.filter(s => !rest.includes(s)));
+  ck('...and owns the hit-dice bar', hd.every(s => rest.includes(s)), hd.filter(s => !rest.includes(s)));
+  // #103: the input and the mode pill moved OUT of the Rest card and into the
+  // spend box's foot (hdSpendHTML in 65-resources.js) — each id now exists
+  // exactly once, inside the box, not in the static template at all
+  ck('...but no longer the hit-dice input or the mode pill (they moved into the spend box)',
+     !rest.includes('id="hitdiceInput"') && !rest.includes('data-hdmode'), rest);
   ck('...under the rest buttons', rest.indexOf('id="hdWrap"') > rest.indexOf('id="btnLongRest"'));
   ck('...and no hit points', !/data-hp=/.test(rest), rest);
-  ck('hit dice is written once, not in two cards',
-     (t.match(/id="hitdiceInput"/g) || []).length === 1 &&
+  ck('the hit-dice bar is written once, not in two cards',
      (t.match(/id="hdWrap"/g) || []).length === 1);
-
-  // .hd-row is display:contents feeding .hd-grid's repeat(4,max-content): the
-  // row hands its four cells straight to that grid, which is the only reason a
-  // multiclass pool lines its die/pips/count/Roll up across rows. Anything
-  // nested between them breaks the alignment with no error at all — and only on
-  // a multiclass sheet, which is why it needs a guard rather than an eyeball.
-  ck('.hd-row is display:contents', /\.hd-row\{[^}]*display:contents/.test(cardsCss));
-  ck('.hd-grid is the four-column max-content grid it feeds',
-     /\.hd-grid\{[^}]*grid-template-columns:repeat\(4,max-content\)/.test(cardsCss));
-  ck('renderHitDice puts .hd-row directly inside .hd-grid',
-     /class="hd-grid">`\s*\+\s*pool\.map/.test(js) &&
-     /return `<div class="hd-row">/.test(js));
+  ck('#103 the hit-dice input and mode pill are built by hdSpendHTML, not the static template',
+     !/id="hitdiceInput"/.test(t) && !/data-hdmode/.test(t) &&
+     /id="hitdiceInput"/.test(js) && /data-hdmode/.test(js));
 
   // the two panels are a pair: one heading rule, one frame treatment, one colour
   // apart. The rough skin is why the frame matters — a real CSS border takes no
@@ -1588,11 +1586,12 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // the rule existing is not the same as the panel wearing it
   ck('both panels actually carry a heading',
      /<div class="hp-title">Hit Points<\/div>/.test(hpwrap) &&
-     /<div class="hd-title">Hit Dice[\s\S]{0,200}?<\/div>/.test(rest));
-  // the auto/manual pill rides ON the heading — alone on its own line it read as
-  // an orphaned control and cost a whole row of the panel's height
-  ck('the auto/manual pill sits on the Hit Dice heading',
-     /<div class="hd-title">Hit Dice <button class="hd-mode" data-hdmode/.test(rest));
+     /<div class="hd-title">Hit Dice<\/div>/.test(rest));
+  // #103: the pill used to ride ON the heading; it now lives in the spend
+  // box's foot, built by hdSpendHTML, not the static Rest-card heading
+  ck('#103 the auto/manual pill sits in the spend box\'s foot, not the heading',
+     !/<div class="hd-title">Hit Dice <button/.test(rest) &&
+     /<div class="hd-foot">Hit dice <button class="hd-mode" data-hdmode/.test(js));
   // anchored at a line start so it matches the STANDALONE rule, not the shared
   // `.hp-title,.hd-title{...}` one, whose body has no colour at all
   ck('the hit-dice heading is not brick (that is the HP panel\'s colour)',
@@ -1666,27 +1665,19 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /getElementById\("swTrackers"\);if\(b\)b\.addEventListener\("click",\(\)=>\{character\.showTrackers=!showTrackers\(character\);[^}]*renderTrackers\(\);scheduleSave\(\);\}\)/.test(js),
      (js.match(/.{0,40}getElementById\("swTrackers"\).{0,200}/) || [''])[0]);
 
-  // ---- the three hit-dice styles
-  // Each is a separate builder, so a broken one is a broken LOOK, not an error.
-  ck('all three hit-dice styles have a builder',
-     /function hdFullHTML\(/.test(js) && /function hdCondensedHTML\(/.test(js) && /function hdDiceHTML\(/.test(js));
-  ck('renderHitDice picks between all three', (() => {
+  // ---- #103: the hit-dice bar and the spend box retire the three styles
+  ck('#103 the Hit Dice display setting is retired',
+     !/segHdStyle|data-hdstyle/.test(fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8')));
+  ck('#103 the three style builders are gone',
+     !/function hdFullHTML\(/.test(js) && !/function hdCondensedHTML\(/.test(js) && !/function hdDiceHTML\(/.test(js) &&
+     !/function hdPips\(/.test(js) && !/function hdStyle\(\)/.test(js));
+  ck('#103 renderHitDice draws the one bar instead', (() => {
      const r = (js.match(/function renderHitDice\(\)\{[\s\S]*?\n\}/) || [''])[0];
-     return /hdFullHTML/.test(r) && /hdDiceHTML/.test(r) && /hdCondensedHTML/.test(r);
+     return /hdBarHTML\(pool,hdConMod\(\)\)/.test(r) &&
+            !/hdFullHTML|hdDiceHTML|hdCondensedHTML/.test(r);
   })());
-  // an unknown or absent value must land on full — the same value blankChar
-  // defaults to, which is what saves the setting from needing a migration and
-  // stops an old sheet showing something a new character would not
-  ck('an unrecognised style falls back to full',
-     /function hdStyle\(\)\{[\s\S]{0,160}?:"full"/.test(js),
-     (js.match(/function hdStyle\(\)\{[\s\S]{0,160}/) || [''])[0]);
-  ck('...and blankChar defaults to the same thing', /hdStyle:"full"/.test(js));
-  ck('the style picker is per character, in the settings modal',
-     /id="segHdStyle"/.test(js) && /character\.hdStyle=b\.dataset\.hdstyle/.test(js));
-  ck('all three styles are offered by name', (() => {
-     const seg = (js.match(/id="segHdStyle"[\s\S]{0,400}/) || [''])[0];
-     return ['full', 'condensed', 'dice'].every(v => seg.includes(`"${v}"`));
-  })());
+  ck('#103 the spend box is what the bar opens',
+     /closest\("\[data-hdspend\]"\)\)return openHdSpend\(\)/.test(js));
 
   // ---- the two ability/skill layouts
   // Pure string builders, not DOM building: the harness has no DOM, so this is
@@ -1739,14 +1730,11 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      /\.agroup \.dot\[data-lvl="2"\]~\.exp\{display:/.test(sheetCss));
   ck('the grouped rows reuse .srow rather than restating it',
      /\.agroup \.srow\{/.test(sheetCss) && /\.srow\{display:flex/.test(sheetCss));
-  // the dice style's token is the control: unspent rolls, spent goes back
-  ck('the dice tokens are wired', /closest\("\[data-hddie\]"\)/.test(js));
-  ck('...and tapping an unspent die rolls it',
-     /data-hddie[\s\S]{0,400}rollHitDie\(die\)/.test(js));
-  ck('the full and condensed styles keep the pips and the Roll button',
-     /function hdPips\(/.test(js) &&
-     ['hdFullHTML', 'hdCondensedHTML'].every(f =>
-       new RegExp('function ' + f + '\\([\\s\\S]*?data-hdroll').test(js)));
+  // #103: data-hdroll/data-hddie/data-hd are gone with the three styles —
+  // the bar's one control is data-hdspend, already asserted above
+  ck('#103 the old pip and dice-token handlers are gone',
+     !/closest\("\[data-hdroll\]"\)/.test(js) && !/closest\("\[data-hddie\]"\)/.test(js) &&
+     !/closest\("\[data-hd\]"\)/.test(js));
 
   // ---------- Familiars live in the LEFT sidebar
   // You reach for a familiar mid-fight, and it used to be the last card on the
@@ -2113,7 +2101,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const sec = name => (src.match(new RegExp('const ' + name + '=[\\s\\S]*?\\n  const ')) || [''])[0];
   const on = (name, ids) => ids.every(id => sec(name).includes('id="' + id + '"'));
   ck('Appearance holds the look and the interface switches', on('secAppearance', ['segSkin', 'segTheme', 'swRough', 'swTabIcons', 'swBackdrop']));
-  ck('Sheet display holds the card choices', on('secDisplay', ['segStatStyle', 'segHdStyle', 'swHpColor', 'swTrackers']));
+  ck('Sheet display holds the card choices', on('secDisplay', ['segStatStyle', 'swHpColor', 'swTrackers']));
   ck('Carrying holds size, encumbrance, coins and the live line', on('secCarrying', ['setSize', 'segEnc', 'swCoinWeight', 'encHint']));
   ck('Rules data holds the sources, the list and the sheet check', on('secRules', ['srcList', 'newSrc', 'btnFetchRules', 'btnClearRules', 'rulesData', 'btnCharUpdate']));
   ck('Backup holds the library and the settings file', on('secBackup', ['swHome', 'btnExportSettings', 'btnImportSettings', 'setImpStatus']));
@@ -2141,7 +2129,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   /* review: Encumbrance was a <select>, which announces its value; as buttons it
      must say which is pressed — and so must every segmented choice here */
   ck('every segmented choice on the dialog says which button is pressed',
-     ['segSkin', 'segTheme', 'segStatStyle', 'segHdStyle', 'segEnc'].every(id => /aria-pressed="\$\{/.test((src.match(new RegExp('id="' + id + '"[\\s\\S]{0,700}')) || [''])[0])) &&
+     ['segSkin', 'segTheme', 'segStatStyle', 'segEnc'].every(id => /aria-pressed="\$\{/.test((src.match(new RegExp('id="' + id + '"[\\s\\S]{0,700}')) || [''])[0])) &&
      /const g=e\.target\.closest\("\.seg"\);if\(g\)g\.querySelectorAll\("button"\)\.forEach\(b=>b\.setAttribute\("aria-pressed",b\.classList\.contains\("on"\)\?"true":"false"\)\);/.test(src));
   ck('the badge refresh targets the sidebar',
      /querySelector\('\[data-setbadge="rules"\]'\)[\s\S]{0,40}innerHTML=rulesNavBadgeHTML\(\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/89-rules-merge.js'), 'utf8')));

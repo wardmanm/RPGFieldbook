@@ -121,23 +121,8 @@ function wire(){
       scheduleSave();return;
     }
     if(t.closest("[data-hdreset]")){character.hdManual=false;renderHitDice();scheduleSave();return;}
-    if((m=t.closest("[data-hdroll]")))return rollHitDie(m.dataset.hdroll);
-    /* Dice style: the token IS the control. An unspent die rolls and heals; a
-       spent one goes back — exactly ONE, not "everything from here on" the way
-       the pips work. Pips are positions on a track, so clicking pip 3 meaning
-       "three spent" is natural; tokens are interchangeable, and tapping one to
-       get three back would contradict its own tooltip. Putting a die back never
-       un-heals you, matching what the pips have always done. */
-    if((m=t.closest("[data-hddie]"))){
-      const die=m.dataset.hddie,i=num(m.dataset.i),p=hitDicePool().find(x=>x.die===die);
-      if(p&&i<=p.used){
-        if(!character.hdUsed)character.hdUsed={};
-        character.hdUsed[die]=Math.max(0,num(character.hdUsed[die])-1);
-        renderHitDice();recompute();scheduleSave();
-      }else rollHitDie(die);
-      return;
-    }
-    if((m=t.closest("[data-hd]"))){const die=m.dataset.hd,i=num(m.dataset.i);if(!character.hdUsed)character.hdUsed={};const u=num(character.hdUsed[die]);character.hdUsed[die]=(u===i)?i-1:i;renderHitDice();recompute();scheduleSave();return;}
+    // #103: one bar, tapping it opens the spend box (65-resources.js)
+    if(t.closest("[data-hdspend]"))return openHdSpend();
     if((m=t.closest("[data-fuse]"))){const f=character.features.find(x=>x.id===m.dataset.fuse);if(f&&f.uses){const i=num(m.dataset.i);f.uses.used=(num(f.uses.used)===i)?i-1:i;renderFeatures();scheduleSave();}return;}
     if((m=t.closest("[data-usefeat]")))return useFeature(m.dataset.usefeat);
     if((m=t.closest("[data-invitem]"))){const id=m.dataset.invitem,ic=invCol();ic.items[id]=!ic.items[id];renderInventory();scheduleSave();return;}

@@ -6576,3 +6576,56 @@ reports a false declaration; `rulesCreditsHTML()` lists the `__proto__` pack's (
 without throwing. Full suite: all ten green, data unchanged.
 
 Pages: [rules packs](../wiki/architecture/rules-packs.md)
+
+## The hit-dice bar and the spend box (#103, 2026-10-23)
+
+**What.** Spending a hit die used to be a per-style click: a pip in Full/Condensed, a token in
+Dice — each one a bare `rollHitDie(die)` that auto-rolled and healed with no chance to type a
+roll made at the table. Task 5 of the #103 sheet makeover replaces all three looks with one bar
+(`hdBarHTML()`, under the rest buttons, same place Hit Dice have always lived) that shows every
+die's `left / total` and the CON modifier; tapping it opens a "Spend a hit die" box
+(`hdSpendHTML()` in a modal via `openHdSpend()`) with one row per die size (pick it, nudge `used`
+±1 with no healing), and two ways to spend the pick: "🎲 Roll for me" (`rollHitDie()`, now a thin
+wrapper over the shared maths) or type a roll ("I rolled [ ] → Apply"), which live-validates
+through `hdSpendCheck()` and previews "5 + CON 5 = 10 HP → 98 / 153" before `spendHitDie()` applies
+it. `hdConMod()` and `hdHeal()` are the maths `rollHitDie()` always had, pulled out so both paths
+share one answer.
+
+**Retired:** the "Hit Dice display" Settings row and its three builders, `hdFullHTML()`,
+`hdCondensedHTML()`, `hdDiceHTML()`, plus `hdPips()` and the style resolver `hdStyle()`. The
+`character.hdStyle` field stays in `blankChar()`/`migrate()` as inert data — an old sheet carries a
+`full`/`condensed`/`dice` value nothing reads any more, which is cheaper than a migration step and
+never surfaces.
+
+**Where the auto/manual pill and the manual-dice field went.** They used to sit on the Rest &
+Recovery card's own heading (`[data-hdmode]`, `#hitdiceInput`). Both ids now live only inside the
+spend box's foot, rendered fresh by `hdSpendHTML()` every time it opens — `00-sheet.html`'s Rest
+card keeps just `<div class="hd-title">Hit Dice</div>` and `#hdWrap`. `#hitdiceInput` now carries
+`value="${esc(character.hitdice||"")}"` (a modal is never refilled by `renderAll()`'s `[data-path]`
+loop, since that loop runs once at character load, not on every modal open) and a literal
+`hidden` attribute computed at render time instead of the old `inp.style.display` toggle — the
+toggle alone would not have overridden the attribute's own `[hidden]{display:none}` rule.
+`renderHitDice()` keeps patching whichever copy of `#hitdiceInput`/`[data-hdmode]` is currently in
+the document (now via the `.hidden` IDL property, not `style.display`, for the reason above) so the
+existing `[data-hdmode]` click handler in `90-boot.js` needed no change at all — it still just calls
+`renderHitDice()` and pokes `#hitdiceInput` directly, and that now finds the modal's copy when the
+box is open across a mode toggle.
+
+**`hitDicePool()` grows a `cls` field** — the class name(s) contributing to each die size, joined
+with " / " for the (rare) case of two classes sharing one die. Previously nothing needed per-die
+provenance; the spend box's rows do (`<b>d8</b> Cleric · 12 / 15`).
+
+**Tests.** `sheet.js`: the brief's six `#103` checks for `hdSpendCheck()`, `hdHeal()`,
+`hdBarHTML()` and `hdSpendHTML()` (a typed roll's range, the heal floor, the bar's contents, the
+box's rows/disabled-die/both spend paths); the retired hit-dice-style block (9 checks on
+`hdStyle()`/`blankChar().hdStyle` as a resolved VALUE) is deleted — the field surviving a round
+trip is no longer interesting once nothing reads it back as a style. The hostile-character render
+pass drops its three-style loop for one `renderHitDice()` call plus a new `openHdSpend()` call,
+still exercising `esc(p.die)` against a hostile `hitDie` string. `rules-data.js`: the Rest-card
+template guard now asserts `#hitdiceInput`/`data-hdmode` are OUT of the static template and INTO
+`hdSpendHTML()`'s source instead of IN the Rest card; the Settings-row retirement check
+(`!/segHdStyle|data-hdstyle/`); the three-builder and dice-token-handler checks are replaced with
+checks that they're gone and that `renderHitDice()` calls `hdBarHTML()` only. Full suite green
+(`./build.sh --no-zip` then all ten suites).
+
+Pages: [vitals & rest](../wiki/features/vitals-and-rest.md)

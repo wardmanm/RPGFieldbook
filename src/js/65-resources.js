@@ -59,29 +59,35 @@ function shortRest(){
 }
 /* ---- hit dice pool (derived from class hit die × level) ---- */
 function hitDicePool(){
-  const totals={};
+  const totals={},classesByDie={};
   if(character.hdManual){
     const re=/(\d+)\s*(d\d+)/gi;let mm;
     while((mm=re.exec(character.hitdice||""))){const die=mm[2].toLowerCase();totals[die]=(totals[die]||0)+parseInt(mm[1],10);}
   }else{
-    (character.classes||[]).forEach(c=>{const d=findClassDef(c.name);const die=d&&d.hitDie;if(die)totals[die]=(totals[die]||0)+num(c.level);});
+    /* classesByDie: a multiclass sheet can have two classes sharing one die
+       size, so this is every contributing class name, not one — the spend
+       box's row joins them with " / " rather than picking just the first. */
+    (character.classes||[]).forEach(c=>{const d=findClassDef(c.name);const die=d&&d.hitDie;if(die){totals[die]=(totals[die]||0)+num(c.level);(classesByDie[die]=classesByDie[die]||[]).push(c.name);}});
   }
   const order=["d12","d10","d8","d6","d4","d20"];
-  return Object.keys(totals).sort((a,b)=>order.indexOf(a)-order.indexOf(b)).map(die=>({die,total:totals[die],used:Math.min(totals[die],num((character.hdUsed||{})[die]))}));
+  return Object.keys(totals).sort((a,b)=>order.indexOf(a)-order.indexOf(b)).map(die=>({die,total:totals[die],used:Math.min(totals[die],num((character.hdUsed||{})[die])),cls:(classesByDie[die]||[]).join(" / ")}));
 }
 function hdString(pool){return pool.map(p=>p.total+p.die).join(" + ");}
 function renderHitDice(){
   const pool=hitDicePool();
-  /* One function for both halves of the Rest & Recovery card — the field and the
-     pips. They can't be split: this auto-mode write feeds the pool below it, and
+  /* One function for both halves — the auto-mode write and the bar it draws
+     into #hdWrap. They can't be split: this write feeds the pool below it, and
      no caller ever wants only one of them. */
   if(!character.hdManual)character.hitdice=hdString(pool);
-  /* In auto mode the text field is a read-only echo of the pool below it —
-     the same dice written twice, which is what made this card confusing. So it
-     is HIDDEN unless you're editing them by hand; the auto/manual pill is what
-     brings it back, and it already focuses it on the way in. */
+  /* #hitdiceInput and the mode pill now live inside the spend box (#103),
+     rebuilt fresh by hdSpendHTML() each time it opens — but the box can stay
+     open across a mode toggle, so this keeps patching whichever copy is
+     currently in the document, same as before the box existed. `.hidden` is
+     the IDL property, not style.display: a cleared inline style would NOT
+     override the markup's own `hidden` attribute, because the UA stylesheet's
+     [hidden]{display:none} rule would still apply underneath it. */
   const inp=document.getElementById("hitdiceInput"), modeBtn=document.querySelector("[data-hdmode]");
-  if(inp){inp.readOnly=!character.hdManual;inp.style.display=character.hdManual?"":"none";if(!character.hdManual)inp.value=character.hitdice||"";}
+  if(inp){inp.readOnly=!character.hdManual;inp.hidden=!character.hdManual;if(!character.hdManual)inp.value=character.hitdice||"";}
   if(modeBtn){modeBtn.textContent=character.hdManual?"manual":"auto";modeBtn.classList.toggle("manual",character.hdManual);}
   const el=document.getElementById("hdWrap");if(!el)return;
   const warn=character.hdManual?`<div class="hd-warn">⚠ Manual Hit Dice — they won't follow your class when you level up. <button class="linkbtn" data-hdreset>Reset to class</button></div>`:"";
@@ -89,76 +95,87 @@ function renderHitDice(){
     el.innerHTML=warn+`<p class="hint hd-none">${character.hdManual?"Type your dice above, e.g. 2d8 + 1d6.":"Add a class and your Hit Dice appear here. Or switch to manual and type them in."}</p>`;
     return;
   }
-  const style=hdStyle();
-  el.innerHTML=warn+(style==="condensed"?hdCondensedHTML(pool):style==="dice"?hdDiceHTML(pool):hdFullHTML(pool));
+  el.innerHTML=warn+hdBarHTML(pool,hdConMod());
 }
-/* Which of the three looks this character uses. Anything unrecognised — an
-   older sheet, a hand-edited file — falls back to full, which is also
-   blankChar's default, so the setting needs no migration of its own and an old
-   sheet lands on the same look a new one does. */
-function hdStyle(){const s=character.hdStyle;return (s==="condensed"||s==="dice")?s:"full";}
-/* A pip is filled when the die is SPENT — the same way the spell slot bubbles
-   read. The count beside them says which way round it goes, so nobody has to
-   infer it. Shared by the full and condensed styles; the dice style has no
-   separate pips, because there the dice ARE the pips. */
-function hdPips(p){
-  let h="";
-  for(let i=1;i<=p.total;i++)h+=`<button class="hd-b ${i<=p.used?"used":""}" data-hd="${esc(p.die)}" data-i="${esc(i)}" aria-label="${esc(p.die)} number ${esc(i)}${i<=p.used?" (spent)":""}"></button>`;
-  return h;
+/* ---- #103: the hit-dice bar and the spend box ----
+   One bar per character; tapping it opens the box. The maths is the old
+   rollHitDie()'s, shared now by both ways of spending — rolling for you and
+   typing your own roll. */
+function hdConMod(){return Math.floor((abilFinal("con",contributions())-10)/2);}
+function hdHeal(roll,conMod){return Math.max(0,roll+conMod);}
+function hdSpendCheck(die,typed){
+  const n=parseInt(String(die).slice(1),10)||8, s=String(typed==null?"":typed).trim();
+  if(!/^\d+$/.test(s))return {ok:false,roll:0,why:"Type the number you rolled."};
+  const r=parseInt(s,10);
+  if(r<1||r>n)return {ok:false,roll:r,why:`A ${die} rolls 1 to ${n}.`};
+  return {ok:true,roll:r,why:""};
 }
-/* CONDENSED — one line per die size. The rows get their own grid container so
-   their four columns line up with each other; .hd-row is display:contents and
-   hands its cells straight to it, which is the whole mechanism. The warning
-   banner stays OUTSIDE that grid: a grid item spanning every column still feeds
-   the column sizing, which stretched the Roll buttons to the width of a
-   sentence. */
-function hdCondensedHTML(pool){
-  return `<div class="hd-grid">`+pool.map(p=>{
-    const left=p.total-p.used;
-    return `<div class="hd-row"><span class="hd-die">${esc(p.die)}</span><span class="hd-pips">${hdPips(p)}</span>`+
-      `<span class="hd-left${left?"":" out"}" title="${esc(left)} of ${esc(p.total)} left">${left}/${p.total}</span>`+
-      `<button class="hd-roll" data-hdroll="${esc(p.die)}" ${left?"":"disabled"} title="Spend one ${esc(p.die)} and heal">Roll</button></div>`;
-  }).join("")+`</div>`;
+function hdBarHTML(pool,conMod){
+  const left=pool.reduce((a,p)=>a+(p.total-p.used),0),total=pool.reduce((a,p)=>a+p.total,0);
+  const dice=pool.map(p=>`${esc(p.die)} · ${esc(String(p.total-p.used))} / ${esc(String(p.total))}`).join(" &nbsp; ");
+  const pct=total?Math.round(100*left/total):0;
+  return `<div class="hd-lbl">Hit dice <span class="hd-con">CON ${conMod>=0?"+":"−"}${esc(String(Math.abs(conMod)))}</span></div>`+
+    `<button type="button" class="hd-bar" data-hdspend aria-label="Spend a hit die"><i style="width:${esc(String(pct))}%"></i><span>${dice}</span></button>`;
 }
-/* FULL — a boxed cell per die size, speaking the same language as the Vitals
-   strip and the Hit Points panel. */
-function hdFullHTML(pool){
-  return `<div class="hd-boxes">`+pool.map(p=>{
-    const left=p.total-p.used;
-    return `<div class="hd-cell"><div class="hd-cd">${esc(p.die)}</div>`+
-      `<div class="hd-cv">${left}<small> / ${p.total}</small></div>`+
-      `<div class="hd-pips">${hdPips(p)}</div>`+
-      `<button class="hd-roll" data-hdroll="${esc(p.die)}" ${left?"":"disabled"} title="Spend one ${esc(p.die)} and heal">Roll</button></div>`;
-  }).join("")+`</div>`;
+function hdSpendHTML(pool,sel,conMod,cur,max){
+  const rows=pool.map(p=>{const left=p.total-p.used;
+    return `<div class="hd-pick${p.die===sel?" on":""}"><button type="button" class="hd-pickbtn" data-hdpick="${esc(p.die)}"${left?"":" disabled"}>`+
+      `<b>${esc(p.die)}</b> ${esc(p.cls||"")} · ${esc(String(left))} / ${esc(String(p.total))}</button>`+
+      `<span class="hd-used">used <button type="button" class="tbtn" data-hdused="${esc(p.die)}" data-d="-1" aria-label="${esc("Un-spend a "+p.die)}">−</button>`+
+      `<button type="button" class="tbtn" data-hdused="${esc(p.die)}" data-d="1" aria-label="${esc("Mark a "+p.die+" spent")}">+</button></span></div>`;}).join("");
+  return rows+
+    `<div class="hd-how"><button type="button" class="tbtn primary" id="hdRollMe">🎲 Roll for me</button> <span>or</span> `+
+    `<label>I rolled <input id="hdTyped" inputmode="numeric" size="3"></label> <button type="button" class="tbtn" id="hdApply" disabled>Apply</button></div>`+
+    `<div class="hd-res" id="hdRes" aria-live="polite"></div>`+
+    `<div class="hd-foot">Hit dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">${character.hdManual?"manual":"auto"}</button> `+
+    `<input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" value="${esc(character.hitdice||"")}"${character.hdManual?"":" readonly hidden"} aria-label="Hit Dice"></div>`;
 }
-/* DICE — every die is its own token, so the die size, the pip and the count
-   stop saying the same thing three times over. Tapping an unspent one rolls it;
-   tapping a spent one puts it back, with the same "click pip i" semantics the
-   other two styles have. The trade: there is no way to mark a die spent WITHOUT
-   healing here. That is what the other two styles keep it for. */
-function hdDiceHTML(pool){
-  return `<div class="hd-dice">`+pool.map(p=>
-    `<div class="hd-drow">`+Array.from({length:p.total},(_,i)=>{
-      const spent=i<p.used;
-      return `<button class="hd-d${spent?" spent":""}" data-hddie="${esc(p.die)}" data-i="${esc(i+1)}"`+
-        ` title="${esc(spent?"Spent — tap to put it back":"Tap to spend this "+p.die+" and heal")}"`+
-        ` aria-label="${esc(p.die)}${spent?", spent":""}">${esc(p.die.slice(1))}</button>`;
-    }).join("")+`</div>`).join("")+
-    `</div><p class="hint hd-foot">Tap a die to spend it and heal</p>`;
+/* Opens the box. `sel` is which die row is picked — kept across a re-open so
+   a used +/-, or picking a different die, doesn't lose the player's place.
+   Defaults to the first die with any left, so Roll/Apply are reachable
+   without a tap first. */
+function openHdSpend(sel){
+  const pool=hitDicePool();
+  if(!pool.some(p=>p.die===sel))sel=(pool.find(p=>p.total>p.used)||pool[0]||{}).die;
+  openModal("Spend a hit die",hdSpendHTML(pool,sel,hdConMod(),character.hp.cur,effMaxHP()));
+  const body=document.getElementById("mBody");if(!body)return;
+  body.querySelectorAll("[data-hdpick]").forEach(b=>b.addEventListener("click",()=>openHdSpend(b.dataset.hdpick)));
+  /* Marking a die used/unused here never heals — that's what Roll/Apply are
+     for. Clamped 0..total so a stray extra tap can't go negative or past the
+     pool's own size. */
+  body.querySelectorAll("[data-hdused]").forEach(b=>b.addEventListener("click",()=>{
+    const die=b.dataset.hdused,p=hitDicePool().find(x=>x.die===die);if(!p)return;
+    if(!character.hdUsed)character.hdUsed={};
+    character.hdUsed[die]=Math.max(0,Math.min(p.total,num(character.hdUsed[die])+num(b.dataset.d)));
+    renderHitDice();scheduleSave();openHdSpend(sel);
+  }));
+  const typed=document.getElementById("hdTyped"),res=document.getElementById("hdRes"),apply=document.getElementById("hdApply");
+  const check=()=>{
+    const r=hdSpendCheck(sel,typed.value);
+    if(apply)apply.disabled=!r.ok;
+    if(res){
+      if(r.ok){
+        const conMod=hdConMod(),heal=hdHeal(r.roll,conMod),mx=effMaxHP(),cr=num(character.hp.cur);
+        const capped=mx>0?Math.min(cr+heal,mx):cr+heal;
+        res.textContent=`${r.roll} + CON ${conMod} = ${heal} HP → ${capped} / ${mx}`;
+      }else res.textContent=r.why;
+    }
+    return r;
+  };
+  if(typed)typed.addEventListener("input",check);
+  if(apply)apply.addEventListener("click",()=>{const r=check();if(r.ok){spendHitDie(sel,r.roll);closeModal();}});
+  const rollMe=document.getElementById("hdRollMe");if(rollMe)rollMe.addEventListener("click",()=>{rollHitDie(sel);closeModal();});
 }
-function rollHitDie(die){
+/* Spend one `die` with this roll: mark it used, heal through adjustHP, report. */
+function spendHitDie(die,roll){
   const p=hitDicePool().find(x=>x.die===die);if(!p||p.used>=p.total)return;
-  const n=parseInt(die.slice(1),10)||8, c=contributions();
-  /* abilFinal here, unlike level1HP's modOf: this value is consumed in the
-     instant it is computed and never re-derived, so transient contributions are
-     exactly what should count. Don't "harmonise" the two. */
-  const conMod=Math.floor((abilFinal("con",c)-10)/2), roll=1+Math.floor(Math.random()*n), heal=Math.max(0,roll+conMod);
-  adjustHP(heal);   /* positive: never touches temp, and clampHP caps it at the effective max */
+  const conMod=hdConMod(),heal=hdHeal(roll,conMod);
+  adjustHP(heal);
   if(!character.hdUsed)character.hdUsed={};character.hdUsed[die]=num(character.hdUsed[die])+1;
-  renderHP();
-  renderHitDice();recompute();scheduleSave();
+  renderHP();renderHitDice();recompute();scheduleSave();
   restSummary("Hit die spent — "+die,[`Rolled ${roll} ${conMod>=0?"+":"−"} ${Math.abs(conMod)} CON = ${heal} HP`,`Current HP: ${character.hp.cur}`],"");
 }
+function rollHitDie(die){const n=parseInt(String(die).slice(1),10)||8;spendHitDie(die,1+Math.floor(Math.random()*n));}
 /* ---- dice expressions (item healing) ----
    Parsing is kept apart from rolling on purpose: parseDiceExpr is pure and
    total, so every accepted and rejected spelling can be asserted, and

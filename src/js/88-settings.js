@@ -110,8 +110,6 @@ function openSettings(){
   const secDisplay=hasChar?setGroupHTML("Cards",
       setRowHTML("Skills display","Skills listed A to Z, or under each ability.",
         `<div class="seg" id="segStatStyle">${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>`<button type="button" data-statstyle="${esc(v)}" class="${statStyle()===v?"on":""}" aria-pressed="${statStyle()===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
-      setRowHTML("Hit Dice display","Boxes, one line per size, or dice you tap.<br>Only Full and Condensed can mark a die spent without healing.",
-        `<div class="seg" id="segHdStyle">${[["full","Full"],["condensed","Condensed"],["dice","Dice"]].map(([v,l])=>`<button type="button" data-hdstyle="${esc(v)}" class="${hdStyle()===v?"on":""}" aria-pressed="${hdStyle()===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
       setRowHTML("Colour current HP","Amber at half your maximum, red at a quarter.",
         `<button type="button" class="switch ${character.hpColor!==false?"on":""}" id="swHpColor" role="switch" aria-checked="${character.hpColor!==false?"true":"false"}" aria-label="Colour current HP"></button>`,true)+
       setRowHTML("Trackers card","Show it on the Journal tab. Hiding it keeps what you've counted.",
@@ -217,7 +215,6 @@ function openSettings(){
      only renderAll refills them from [data-path] and then repaints through
      recompute(). Calling the builder alone leaves blank boxes and a wall of +0. */
   {const g=document.getElementById("segStatStyle");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-statstyle]");if(!b)return;character.statStyle=b.dataset.statstyle;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderAll();scheduleSave();});}
-  {const g=document.getElementById("segHdStyle");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-hdstyle]");if(!b)return;character.hdStyle=b.dataset.hdstyle;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderHitDice();scheduleSave();});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());

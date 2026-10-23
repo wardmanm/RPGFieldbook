@@ -7,7 +7,8 @@ const {loadApp, makeCheck} = require('./harness');
 const ck = makeCheck();
 const {X, ctx, state, bootError, fragments} = loadApp([
   'signedEntry', 'signedDelta', 'num', 'fnum', 'fmtWt', 'fmtGp', 'blankChar', 'migrate',
-  'clampHP', 'effMaxHP', 'adjustHP', 'applyHPInput', 'renderHP', 'hpBand', 'hdStyle',
+  'clampHP', 'effMaxHP', 'adjustHP', 'applyHPInput', 'renderHP', 'hpBand',
+  'hdSpendCheck', 'hdHeal', 'hdBarHTML', 'hdSpendHTML',
   'itemWeight', 'itemWeightTotal', 'coinsWeight', 'carriedWeight',
   'sizeName', 'sizeLabel', 'charSize', 'carryCapacity', 'encMode', 'encState',
   'encSpeed', 'encTierNote', 'contributions', 'inventoryTotal', 'SIZES', 'SIZE_CARRY',
@@ -351,26 +352,24 @@ ck('colouring is on by default for a new character', X.blankChar().hpColor === t
 ck('...and for a sheet saved before the setting existed',
    X.migrate({id: 'old2'}).hpColor === true);
 
-/* ---- the hit-dice display style ----
-   Three looks, chosen per character. hdStyle() resolves anything it does not
-   recognise to full — the same value blankChar defaults to, so an older sheet
-   with no field at all lands on the same look a new character gets, and the
-   setting needs no migration of its own. */
-ck('a new character defaults to full', X.blankChar().hdStyle === 'full');
-X.character.hdStyle = 'full';      ck('full is honoured', X.hdStyle() === 'full');
-X.character.hdStyle = 'dice';      ck('dice is honoured', X.hdStyle() === 'dice');
-X.character.hdStyle = 'condensed'; ck('condensed is honoured', X.hdStyle() === 'condensed');
-X.character.hdStyle = 'nonsense';  ck('an unknown style falls back', X.hdStyle() === 'full');
-delete X.character.hdStyle;        ck('a missing style falls back too', X.hdStyle() === 'full');
-ck('a sheet saved before the styles existed reads as full',
-   X.migrate({id: 'old3'}).hdStyle === 'full');
-// the fallback and the blankChar default must not drift apart, or an old sheet
-// and a new character show different things
-ck('the fallback agrees with the default', (() => {
-  delete X.character.hdStyle; return X.hdStyle() === X.blankChar().hdStyle;
-})());
-ck('a chosen style survives a round-trip',
-   X.migrate(JSON.parse(JSON.stringify(X.migrate({id: 'k', hdStyle: 'dice'})))).hdStyle === 'dice');
+/* ---- #103: spending a hit die (spec §6.3) ----
+   The three hit-dice display styles (full/condensed/dice) and hdStyle() are
+   retired along with their Settings row: one bar now, tapping it opens the
+   spend box. */
+{
+  ck('#103 a typed roll must be a whole number from 1 to the die',
+     X.hdSpendCheck('d8', '8').ok && X.hdSpendCheck('d8', ' 5 ').roll === 5 &&
+     ['0', '9', '4.5', '', 'abc', '-1'].every(v => !X.hdSpendCheck('d8', v).ok && X.hdSpendCheck('d8', v).why));
+  ck('#103 the heal is roll + CON, never below 0', X.hdHeal(5, 5) === 10 && X.hdHeal(1, -3) === 0 && X.hdHeal(3, -1) === 2);
+  const pool = [{die: 'd8', total: 15, used: 3, cls: 'Cleric'}, {die: 'd10', total: 2, used: 2, cls: 'Fighter'}];
+  const bar = X.hdBarHTML(pool, 5);
+  ck('#103 the bar: die, left of total, CON', bar.includes('d8') && bar.includes('12 / 15') && bar.includes('CON +5') && bar.includes('data-hdspend'));
+  const box = X.hdSpendHTML(pool, 'd8', 5, 88, 153);
+  ck('#103 the box: a row per die, used −/+, both ways to spend', box.includes('data-hdpick="d8"') && box.includes('data-hdpick="d10"') &&
+     box.includes('data-hdused="d8"') && box.includes('id="hdRollMe"') && box.includes('id="hdTyped"') && box.includes('id="hdApply"'));
+  ck('#103 a die type with none left cannot be picked', /data-hdpick="d10"[^>]*disabled/.test(box));
+  ck('#103 the box keeps auto / manual', box.includes('data-hdmode'));
+}
 
 /* ---- the ability/skill layout ----
    Two looks over ONE set of ids, chosen per character. statStyle() resolves
@@ -4776,10 +4775,9 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   run('the spell list', () => ctx.renderSpells());
   run('the Rules tab browser, on the Glossary', () => { X.settings.rulesCat = 'glossary'; X.rbUI.per = {}; ctx.renderRulesBrowser(); });
   run('Resources', () => ctx.renderResources());
-  ['full', 'condensed', 'dice'].forEach(s => {
-    C().hdStyle = s;
-    run('Hit Dice from a pack\'s hit die (' + s + ')', () => ctx.renderHitDice());
-  });
+  // #103: one bar now, not a three-way style choice
+  run('Hit Dice from a pack\'s hit die', () => ctx.renderHitDice());
+  run('the hit-dice spend box', () => ctx.openHdSpend());
   run('Story fields and Proficiencies (glossary chips)', () => ctx.renderAllRT());
   run('the Section Notes card', () => ctx.renderNotes());
   run('the Journal list', () => { el('jnlSearch').value = ''; ctx.renderJournal(); });

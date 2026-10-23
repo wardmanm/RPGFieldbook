@@ -11,7 +11,7 @@ comes from keeping that loop lossless: a sheet saved by any version must still o
 `ammoSpentMap()`, `ammoRecoveryOf()` in `62-ammo.js`; `newCharacter()`,
 `loadCharById()` in `75-home-theme.js`; `charNeedsUpdate()` in `72-char-update.js`;
 `markCharChecked()` in `73-char-update-ui.js`; read-time guards `featCol()`, `invCol()`, `atkCol()`
-in `20-lists.js`, `hdStyle()` in `65-resources.js`, `encMode()` in `25-origins-items.js`,
+in `20-lists.js`, `encMode()` in `25-origins-items.js`,
 `noteMap()` in `87-notes.js`, `combatSectionsOf()` in `87-combat.js` · **Tests:** `char-update.js`
 (the stamp is preserved and never advanced; unknown fields survive), `tables.js` (the round trip is
 idempotent), `sheet.js` (sub-key defaults arrive through `migrate()`; malformed glossary entries and
@@ -31,7 +31,8 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 | lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers` |
 | maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
-| per-character settings | `statStyle`, `hdStyle`, `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `ammoRecovery` (`"half"` default, #104) |
+| per-character settings | `statStyle`, `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `ammoRecovery` (`"half"` default, #104) |
+| retired, kept for old sheets | `hdStyle` — the three hit-dice looks it chose between are gone (#103); `migrate()` still carries the field so an old save round-trips, nothing reads it any more |
 | text | `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
 
 Inputs bound with `data-path` write the raw input string, so numbers on the sheet are often
@@ -75,7 +76,7 @@ above, nothing inside a list item or a map value is shape-checked. The code that
 guards them instead (a class, spell or status whose `name` is missing or a number is turned into
 text before it is compared or sorted): `noteMap()`, `featCol()`, `invCol()`, `atkCol()` and
 `combatSectionsOf()` each accept a missing or wrong-typed value. Resolvers such as `statStyle()`,
-`hdStyle()`, `encMode()` and `ammoRecoveryOf()` fall back to exactly the value `blankChar()`
+`encMode()` and `ammoRecoveryOf()` fall back to exactly the value `blankChar()`
 defaults to, so an old sheet lands on the new-character look and the setting needs no migration of
 its own — `ammoRecoveryOf()`'s fallback of `"half"` matches `blankChar()`'s own default (#104), so a
 sheet saved before the field existed reads exactly as one that has it set to `"half"`. A status gains

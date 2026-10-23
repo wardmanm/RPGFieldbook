@@ -338,7 +338,6 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   - `release.yml`'s header still shows `git commit -am`.
   - `choiceFieldHTML()` calls its `option` checkbox branch dead code, but maneuvers, metamagic,
     invocations and infusions all use it.
-  - The comment above `hdDiceHTML()` describes pip semantics.
   - `wire()` places `adjustHP()` in `65-resources.js`; it lives in `66-coins-hp.js`.
 - **Data `_note`s** in the private repo's Humblewood pack: its `races.json` says skill choices are
   text-only, but five traits have real choosers, and its `subclasses.json` names the old
