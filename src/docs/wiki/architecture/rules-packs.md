@@ -11,6 +11,7 @@ name. The pack format itself is [rules-schema](../../../../docs/rules-schema.md)
 covers what the app does with packs.
 
 **Code:** `mergeRules()`, `srcLabel()`, `keyOf()`, `ruleName()`, `reindexRules()`, `tidyRules()`, `tidyRule()`,
+`packMap()`, `normPackMaps()`,
 `skippedSummary()`, `recomputeDups()`,
 `dispName()`, `ruleById()`, `resetRules()`, `importRulesFiles()`, `importPack()`, `dropOwnedPackMeta()`,
 `creditOf()`, `fetchAllRules()`,
@@ -125,6 +126,12 @@ in a `finally`.
   `rules.credits` (`creditOf()`: a licence over 64 characters is dropped, an attribution cut to
   2,000). Both only ever get set here; `importPack()` (through `dropOwnedPackMeta()`),
   `applyFetchedSource()` and `prunePackMeta()` remove a label's once nothing else carries it.
+- **Both maps are null-prototype** (`packMap()`), because the key is a pack's own label, written
+  freely by whoever authors the pack — a label of `__proto__` or `constructor` is as valid as any
+  other. `resetRules()`, `mergeRules()`'s lazy-init and `tidyRules()` (so every path that ends in
+  `reindexRules()`) all build or rebuild them through `packMap()`, so any label is an ordinary own
+  key and an absent one reads `undefined`, never the inherited `Object.prototype` member of that
+  name (#88).
 - Then `reindexRules()` gives every entry a positional `_id` (`r0`, `r1`, …), and
   `recomputeDups()` rebuilds the duplicate sets.
 
@@ -298,6 +305,11 @@ files).
 - **`requires` cannot name a subclass.** `ruleById()` matches `keyOf()`, which is `class|name` for
   subclasses, so a plain subclass name in `requires` always reports missing. No shipped pack
   declares one. Found by reading the code.
+- **A pack labelled `__proto__` or `constructor`.** `rules.requires`/`rules.credits` were plain
+  objects keyed by the pack's own label: `__proto__` set the object's prototype instead of a key
+  (the declaration silently vanished), and `constructor` with no `requires` declared read back the
+  inherited `Object` function, which threw when `missingRequirements()` called `.forEach` on it.
+  Fixed by making both maps null-prototype (`packMap()`). Found by reading the code, not reported.
 
 ## Decisions
 
@@ -355,3 +367,5 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-09 — The `known` state: a pack with a version and no baseline shows it quietly. → ledger L5388, #85
 - 2026-10-09 — Four packs move to the private repo; the 2024 and SRD packs come from separate archives, so import order decides which twin a lookup finds. → ledger L5426, #85
 - 2026-10-16 — `tidyRule()` fills in the ammunition fields of an item from a pack older than ammunition. → ledger L5780, #96
+- 2026-10-23 — `rules.requires`/`rules.credits` become null-prototype maps (`packMap()`), so a pack
+  labelled `__proto__` or `constructor` is handled like any other label. → ledger L6519, #88
