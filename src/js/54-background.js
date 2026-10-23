@@ -67,8 +67,8 @@ function applyBackground(sel,opts){
     // tools / languages / equipment → proficiencies notes
     const notes=[];
     if(d.tools)notes.push("Tools: "+d.tools);
-    if(d.languages)notes.push("Languages: "+d.languages);
     if(notes.length)character.proficiencies=(character.proficiencies?character.proficiencies+"\n":"")+notes.join("\n");
+    if(d.languages)grantLanguages(character,"bg:"+name,d.languages);
   }
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
   return _bgPending;
@@ -77,6 +77,7 @@ function removeBackground(doRender){
   const name=character.bg&&character.bg.name;
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="background"&&f.origin.name===name);
   removeGrants(g=>g.sid==="bg:"+name);
+  dropLanguages(character,"bg:"+name);
   revertEquipmentGrants("bg:"+name);
   character.bg=null;
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}

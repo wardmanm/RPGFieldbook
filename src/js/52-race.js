@@ -112,7 +112,8 @@ function applyRace(sel, subrace, opts){
        species and a player's own choice always wins. Leaving it "" is also fine:
        charSize() falls back to the ancestry's own size at read time. */
     if(obj.size&&(character.size===""||character.size==null))character.size=sizeName(obj.size);
-    if(obj.proficiencies||obj.languages){const add=[obj.proficiencies,obj.languages?("Languages: "+obj.languages):""].filter(Boolean).join("\n");character.proficiencies=(character.proficiencies?character.proficiencies+"\n":"")+add;}
+    if(obj.proficiencies)character.proficiencies=(character.proficiencies?character.proficiencies+"\n":"")+obj.proficiencies;
+    if(obj.languages)grantLanguages(character,"race:"+name,obj.languages);
   };
   if(d){
     grantFrom(d,name);
@@ -128,6 +129,7 @@ function removeRace(doRender){
   const name=character.race&&character.race.name;
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="race"&&f.origin.name===name);
   removeGrants(g=>g.sid==="race:"+name);
+  character.languages=chipClean(character.languages,"languages",true).filter(x=>!(x.src==="race:"+name||x.src.indexOf("race:"+name+" (")===0));
   revertEquipmentGrants("race:"+name);
   character.race=null;
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}

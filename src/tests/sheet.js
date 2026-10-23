@@ -75,6 +75,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'itemFacets', 'spellFacets', 'featFacets', 'itemCatOf', 'itemRarOf', 'spellClassesOf', 'spellSchoolOf', 'openItemInfo', 'openFeatInfo', 'ITEM_RARITIES',
   'settings', 'rbUI',
   'CHIP_KEYS', 'chipClean', 'chipList', 'advancementOf', 'SRD_ADVANCEMENT', 'advancementFor', 'xpNumber', 'xpProgress', 'defaultLanguagesFor', 'ensureDefaultLanguages', 'langParse',
+  'grantLanguages', 'dropLanguages',
   'mergeNoteInto', 'liftLanguages', 'migrateSheet103',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
@@ -4524,6 +4525,34 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const kept = X.migrate({abilities: {}, system: 'dnd', langLifted: true, proficiencies: 'Languages: Gnomish'});
   ck('#103 a sheet already flagged keeps its Languages line too', kept.proficiencies === 'Languages: Gnomish' &&
      !X.chipList(kept, 'languages').some(l => l.name === 'Gnomish'), kept);
+}
+
+/* ---- #103: a species or background grants languages as chips (spec §5) ---- */
+{
+  const c = {languages: [{id: 'p', name: 'Elvish', src: ''}, {id: 's', name: 'Common', src: 'system'}]};
+  X.grantLanguages(c, 'race:Elf', 'Common, Elvish and Sylvan');
+  ck('#103 a grant adds what is missing, stamped with its source', JSON.stringify(c.languages.map(l => [l.name, l.src])) ===
+     '[["Elvish",""],["Common","system"],["Sylvan","race:Elf"]]', c.languages);
+  X.grantLanguages(c, 'bg:Sage', 'Sylvan, Draconic');
+  ck('#103 a second grant does not double one', c.languages.filter(l => l.name === 'Sylvan').length === 1 && c.languages.some(l => l.name === 'Draconic' && l.src === 'bg:Sage'));
+  X.dropLanguages(c, 'race:Elf');
+  ck('#103 removing the species takes only its own', JSON.stringify(c.languages.map(l => l.name)) === '["Elvish","Common","Draconic"]', c.languages);
+  X.grantLanguages(c, 'race:Odd', 42);
+  ck('#103 a pack field that is not text grants nothing', c.languages.length === 3);
+}
+/* the real paths: apply and remove a species with languages */
+{
+  const savedRules = X.rules, savedChar = X.character;
+  X.rules = Object.assign({}, X.rules, {races: [{name: 'Elf', languages: 'Common and Elvish', _source: 'SRD 5.2'}]});
+  ctx.recomputeDups();
+  X.character = X.migrate({abilities: {}, system: 'dnd'});
+  ck('#103 the species apply function exists', typeof ctx.applyRace === 'function');
+  ctx.applyRace('Elf');
+  ck('#103 picking a species grants its languages as chips', X.chipList(X.character, 'languages').some(l => l.name === 'Elvish' && l.src === 'race:Elf'));
+  ck('#103 ...and writes no Languages line', !/Languages:/i.test(X.character.proficiencies || ''));
+  ctx.removeRace(false);
+  ck('#103 removing it takes them back', !X.chipList(X.character, 'languages').some(l => l.name === 'Elvish'));
+  X.rules = savedRules; X.character = savedChar;
 }
 
 /* ---- imported files and packs render inert ----

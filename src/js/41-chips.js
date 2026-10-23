@@ -75,3 +75,13 @@ function langParse(str){
   if(typeof str!=="string")return [];
   return str.split(/,|\band\b|;/i).map(s=>s.trim()).filter(s=>s&&!/\b(choice|any|other|one|two|three)\b/i.test(s));
 }
+/* Grants (#103): a species or background stamps its languages with the grant's
+   source id ("race:Elf", "bg:Sage" — the same ids its other grants use), so
+   removing it takes exactly those back. A language already present stays as
+   it is: the player's own, or an earlier grant's. */
+function grantLanguages(c,src,str){
+  const have=chipClean(c.languages,"languages",true),names=new Set(have.map(x=>x.name.toLowerCase()));
+  langParse(str).forEach(n=>{if(!names.has(n.toLowerCase())){have.push({id:uid(),name:n,src});names.add(n.toLowerCase());}});
+  c.languages=have;
+}
+function dropLanguages(c,src){c.languages=chipClean(c.languages,"languages",true).filter(x=>x.src!==src);}
