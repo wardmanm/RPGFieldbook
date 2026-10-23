@@ -155,6 +155,9 @@ function wire(){
     if((m=t.closest(".search-clear"))){const i=m.parentNode.querySelector("input");if(i){i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.focus();}return;}
     if(t.closest("#btnCombat"))return combatViewOpen()?leaveCombatTab():enterCombatTab();
     if(t.closest("#cvStart"))return startCombatNow();
+    /* #103: the combat header's own star — the sheet's #starBtn is in the
+       header, which the view does not bring unless the player adds it */
+    if(t.closest("[data-inspire]"))return toggleInspiration();
     if(t.closest("#cvPrev"))return advanceRound(-1);
     if(t.closest("#cvNext"))return advanceRound(1);
     if(t.closest("#cvEnd"))return endCombatAsk();
@@ -253,7 +256,7 @@ function wire(){
      silently never binds. One dead button is a far better failure than that. */
   const on=(id,ev,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener(ev,fn);};
   // star + hp
-  on("starBtn","click",()=>{character.inspiration=!character.inspiration;recompute();scheduleSave();});
+  on("starBtn","click",toggleInspiration);
   on("hpPlus","click",()=>bumpHP(1));
   on("hpMinus","click",()=>bumpHP(-1));
   on("btnLongRest","click",longRest);
@@ -280,8 +283,6 @@ function wire(){
   document.getElementById("rbSearch").addEventListener("input",e=>{rbUI.q=e.target.value;rbPaintSide(rbShown(),rbCurKey());});
   document.getElementById("rbMain").addEventListener("input",e=>{if(e.target.id!=="rbCatSearch")return;const st=rbState(rbCurKey());st.q=e.target.value;st.shown=RB_PAGE;rbRefreshBody();});
   document.getElementById("addFamiliarLink").addEventListener("click",()=>openFamiliarForm());
-  document.getElementById("btnLevelUp").addEventListener("click",doLevelUp);
-  document.getElementById("btnLevelDown").addEventListener("click",doLevelDown);
   // theme / settings / save / load
   document.getElementById("btnTheme").addEventListener("click",()=>{let t=settings.theme;if(t==="system")t=document.documentElement.dataset.theme;settings.theme=(t==="dark")?"light":"dark";applyTheme();saveSettings();});
   document.getElementById("btnSettings").addEventListener("click",openSettings);

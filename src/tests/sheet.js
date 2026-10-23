@@ -16,8 +16,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'ORIGIN_KINDS', 'originDef', 'originLabel', 'originLetter', 'originFromSid',
   'itemOrigin', 'originOptionsHTML', 'grantedFromOrigin', 'originFromGranted',
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
-  'statStyle', 'statGroupHTML', 'statGroupsHTML', 'ABIL',
-  'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV', 'classChipHTML',
+  'ABIL',
+  'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
   'featOriginLabel', 'invSectionName', 'invGroups', 'INV_FAV', 'INV_ORDER', 'groupChoices', 'groupFieldHTML',
   'tagLabel', 'tagKey', 'journalEditorHTML', 'trackerFormHTML',
   'GROUP_RESERVED', 'tagTidy', 'groupNameProblem', 'syncGroupFieldMsg', 'groupFieldBlocked', 'groupByTag', 'invSection',
@@ -448,44 +448,13 @@ ck('...and for a sheet saved before the setting existed',
   X.character = X.blankChar(); X.rules = {};
 }
 
-/* ---- the ability/skill layout ----
-   Two looks over ONE set of ids, chosen per character. statStyle() resolves
-   anything it does not recognise to classic — the same value blankChar defaults
-   to — so an older sheet needs no migration and does not move under the player. */
-ck('a new character defaults to classic', X.blankChar().statStyle === 'classic');
-X.character.statStyle = 'grouped';  ck('grouped is honoured', X.statStyle() === 'grouped');
-X.character.statStyle = 'classic';  ck('classic is honoured', X.statStyle() === 'classic');
-X.character.statStyle = 'nonsense'; ck('an unknown layout falls back', X.statStyle() === 'classic');
-delete X.character.statStyle;       ck('a missing layout falls back too', X.statStyle() === 'classic');
-ck('a sheet saved before the layouts existed reads as classic',
-   X.migrate({id: 'old4'}).statStyle === 'classic');
-ck('the fallback agrees with the default', (() => {
-  delete X.character.statStyle; return X.statStyle() === X.blankChar().statStyle;
-})());
-ck('a chosen layout survives a round-trip',
+/* ---- #103: the ability/skill layout setting is retired (spec decision 9) ----
+   The strip and the Skills column replace "By ability". A saved statStyle
+   stays in an old sheet (migrate() keeps every field) and nothing reads it.
+   (Were the statStyle() fallback checks and the grouped markup's id contract,
+   for builders that no longer exist.) */
+ck('#103 a retired layout choice survives a round trip, unread',
    X.migrate(JSON.parse(JSON.stringify(X.migrate({id: 'k', statStyle: 'grouped'})))).statStyle === 'grouped');
-
-/* The grouped markup must emit every hook recompute() finds by id or attribute.
-   Get one wrong and that number just stops updating — nothing throws, and the
-   harness has no DOM, so these string assertions are the only guard there is. */
-const gHTML = X.statGroupsHTML();
-ck('every ability keeps its modifier id and its breakdown hook',
-   X.ABIL.every(([k]) => gHTML.includes(`id="mod-${k}"`) && gHTML.includes(`data-stat="ability.${k}"`)));
-ck('every score box keeps its data-path and its recompute trigger',
-   X.ABIL.every(([k]) => gHTML.includes(`data-path="character.abilities.${k}"`)) &&
-   (gHTML.match(/data-recompute/g) || []).length === 6);
-ck('every save keeps its id, its dot and its breakdown hook',
-   X.ABIL.every(([k]) => gHTML.includes(`id="save-${k}"`) && gHTML.includes(`data-save="${k}"`) &&
-                         gHTML.includes(`data-stat="save.${k}"`)));
-ck('every skill appears exactly once — a duplicate id updates one and strands the other',
-   X.SKILLS.every(([k]) => (gHTML.match(new RegExp(`id="skill-${k}"`, 'g')) || []).length === 1));
-ck('...under the ability that governs it',
-   X.SKILLS.every(([k, , ab]) => X.statGroupHTML(ab, ab.toUpperCase()).includes(`id="skill-${k}"`)));
-ck('Constitution gets a saving throw and no skills',
-   X.statGroupHTML('con', 'CON').includes('id="save-con"') &&
-   !/data-skill=/.test(X.statGroupHTML('con', 'CON')));
-ck('the breakdown modal is reachable from all thirty numbers',
-   (gHTML.match(/data-stat="/g) || []).length === X.ABIL.length * 2 + X.SKILLS.length);
 
 /* ================= inventory filing =================
    invSection() reads category/type. Nothing used to copy those onto an item, so
@@ -2368,8 +2337,10 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
 {
   ck('#97 a new character shows every card\'s edit buttons',
      JSON.stringify(X.blankChar().editHide) === '{}' && X.EDIT_CARDS.every(k => !X.editHidden(X.blankChar(), k)));
+  // #103: class and origin leave (their Remove sits behind the header's flyout
+  // and window, with a confirm); defences and proficiencies joined in Task 4
   ck('#97 the twelve cards', JSON.stringify(X.EDIT_CARDS) ===
-     JSON.stringify(['class', 'origin', 'statuses', 'attacks', 'resources', 'features', 'familiars', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies']));
+     JSON.stringify(['statuses', 'attacks', 'resources', 'features', 'familiars', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies']));
   ck('#97 a sheet from before, and junk, read as {}',
      JSON.stringify(X.migrate({abilities: {}}).editHide) === '{}' &&
      ['x', [], null, 7].every(v => JSON.stringify(X.migrate({abilities: {}, editHide: v}).editHide) === '{}'));
@@ -2411,7 +2382,8 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('#97 a feature row\'s edit and delete carry ed', ed(X.featItemHTML({id: 'f', name: 'Rage'}), 'data-edit-feature') && ed(X.featItemHTML({id: 'f', name: 'Rage'}), 'data-del-feature'));
   ck('#97 an item row\'s edit and delete carry ed', ed(X.invItemHTML({id: 'i', name: 'Rope'}), 'data-edit-item') && ed(X.invItemHTML({id: 'i', name: 'Rope'}), 'data-del-item'));
   ck('#97 a status row\'s edit and remove carry ed', ed(X.statusRowHTML({id: 's', name: 'poisoned'}), 'data-edit-status') && ed(X.statusRowHTML({id: 's', name: 'poisoned'}), 'data-del-status'));
-  ck('#97 a class chip\'s Remove carries ed', ed(X.classChipHTML({name: 'Fighter', level: 3, subclass: null}, 0), 'data-del-class'));
+  // #103: the class chip went with the Class card; its Remove is the flyout's
+  ck('#97 a class\'s Remove carries ed', ed(X.classFlyHTML({classes: [{name: 'Fighter', level: 3, subclass: null}]}, 0), 'data-del-class'));
   ck('#97 a tracker\'s pencil carries ed', ed(X.trkEditHTML({id: 't', name: 'Kills'}), 'data-trkedit'));
   ck('#97 a section note\'s pencil carries ed', ed(X.noteEntryHTML(X.noteDef('features')), 'data-noteedit'));
   const page = {id: 'p', title: 'x', text: ''};
@@ -4901,7 +4873,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const C = () => X.character;
   const run = (name, fn, reach) => inert(name, capture(fn), reach);
   run('the portrait', () => ctx.renderPortrait());
-  run('class, ancestry and background chips', () => ctx.renderClassRace());
+  run('renderClassRace (the header)', () => ctx.renderClassRace());
   run('Features & Traits', () => ctx.renderFeatures());
   run('Inventory', () => ctx.renderInventory());
   run('Statuses', () => ctx.renderStatuses());
@@ -5133,7 +5105,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   renders('the item editor (its "applies" list comes from keywords)', () => ctx.openItemForm());
   renders('the print sheet', () => ctx.printSheet());
   renders('the Add class window', () => ctx.openAddClass());
-  renders('class, ancestry and background chips', () => ctx.renderClassRace());
+  renders('renderClassRace (the header)', () => ctx.renderClassRace());
 
   /* ---- the character's boundary: migrate() keeps the player's entries (#71)
      A glossary entry is the player's own data, so migrate() never drops one

@@ -6,8 +6,8 @@ places — a dot the player taps, and grants that an ancestry, background, class
 the higher of the two wins. A per-character setting lays the block out one of two ways, over one set
 of element ids.
 
-**Code:** `buildStats()`, `buildAbilities()`, `buildSkills()`, `statGroupsHTML()`,
-`statGroupHTML()`, `statStyle()`, `placeLegend()`, `abilFinal()`, `modOf()`, `pbValue()`,
+**Code:** `buildStats()`, `buildAbilities()`, `buildSkills()`,
+`placeLegend()`, `abilFinal()`, `modOf()`, `pbValue()`,
 `effSaveProf()`, `effSkill()`, `grantedProf()` in `00-constants.js`; `recompute()` in
 `10-compute.js`; `renderAll()` in `66-coins-hp.js`; `openStatBreakdown()` in `80-modal-forms.js`;
 the dot handlers in `90-boot.js`; `syncStatLock()` in `87-combat.js`; markup in
@@ -50,15 +50,17 @@ that as a ring. A value touched by an effect or a grant gets `fx-on`; one an eff
 skill value (`data-stat`) opens `openStatBreakdown()`: the base, which grant supplied the proficiency
 (`grantSources()`), or "Proficiency (manual)", then each effect by source, a penalty in red.
 
-**Two layouts.** `character.statStyle` is `"classic"` or `"grouped"`, set under Settings → This
-character → Skills display (Classic / By ability), which calls `renderAll()`.
+**Two layouts** — until #103, which retired the grouped one and its Skills display setting (the
+Sheet's ability strip and Skills column replace it; a saved `statStyle` stays, unread). Task 8 of #103
+rewrites this section; what follows is the history.
+`character.statStyle` was `"classic"` or `"grouped"`.
 
 - **Classic.** `#abilities` is a three-column grid of six boxes, each with its save underneath. The
   Skills card lists all eighteen A → Z in two columns that read **down** each column: `.skills` is
   `grid-auto-flow:column` over `grid-template-rows:repeat(var(--skill-rows,9),auto)`, and
   `buildSkills()` sets `--skill-rows` to half the list, rounded up. The DOM order is unchanged, so
   Tab still walks A → Z; under 600px it is one column.
-- **Grouped.** `statGroupsHTML()` fills `#abilities` with `.agroups`: three across (two under 900px,
+- **Grouped (retired).** The grouped builder filled `#abilities` with `.agroups`: three across (two under 900px,
   one under 560px), each ability a compact header row — name, modifier, score — over its saving
   throw and the skills it governs ("No skills use CON" for CON). Expertise shows an "Expert" tag,
   drawn by CSS alone off `.dot[data-lvl="2"]`. The Skills card is hidden, not removed, and
@@ -99,8 +101,7 @@ the only sane order with one column.
   per character, and every swap path — `loadCharById()`, `newCharacter()`, import, settings import —
   ends in `renderAll()`. The rebuild blanks the six score inputs, which the loop then refills;
   `recompute()` at the end repaints every number.
-- **`statStyle()` falls back to exactly `blankChar()`'s default** (`classic`), which is why the field
-  needs no migration. A test asserts the two agree.
+- **The retired `statStyle` field** stays in `blankChar()` (`classic`) and in old sheets, unread (#103).
 - **`.agroups` spans `grid-column:1/-1`.** `#abilities` is itself a three-column grid.
 - **The Skills card keeps `data-note="skills"` before its `id`.** `rules-data.js` counts the literal
   `<div class="card" data-note="` prefix to assert the number of note-bearing cards.

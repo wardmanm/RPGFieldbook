@@ -1,6 +1,12 @@
   <!-- ============ INVENTORY TAB ============ -->
   <section class="tabpanel" id="tab-inventory">
     <div class="stack" style="max-width:720px;margin:0 auto">
+      <!-- #103: Attacks moved here from the Sheet, unchanged (spec §10) -->
+      <div class="card" data-note="attacks">
+        <div class="label">Attacks &amp; Weapons <button class="add" data-add="attack"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="atkCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="atkCollapseLbl">Collapse all</span></button></div>
+        <div id="attackList"></div>
+      </div>
+
       <div class="card" data-note="inventory">
         <div class="label">Equipment &amp; Inventory <span class="chip enc-pill" id="encPill" style="display:none"></span> <button class="add" data-add="item"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="invCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="invCollapseLbl">Collapse all</span></button></div>
         <div id="inventoryList"></div>

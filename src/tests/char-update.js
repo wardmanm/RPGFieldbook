@@ -15,7 +15,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'addClass','removeClass','doLevelUp','hitDieMax','level1HP','resyncLevel1HP','modOf',
   'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
-  'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag','runChoices',
+  'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classFlyHTML','subSourceTag','runChoices',
   'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote',
   'attackNumbers','addLibraryItems','contributions','sumFx','armorAC','spellDC','spellAtkBonus',
   'uid',
@@ -1495,12 +1495,13 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
   }finally{ctx.runChoices=realRC;ctx.runExtraChoices=realRX;}
 }
 
-// #61: the subclass on the class chip is its own way into the subclass window
-ck('the class chip links its subclass',
-   /data-sub-info="Fighter\|Battle Master"/.test(X.classChipHTML({name:'Fighter',level:3,subclass:'Battle Master'},0)),
-   X.classChipHTML({name:'Fighter',level:3,subclass:'Battle Master'},0));
-ck('...and a chip with no subclass has no link',
-   !/data-sub-info/.test(X.classChipHTML({name:'Fighter',level:2,subclass:null},0)));
+// #61: the subclass is its own way into the subclass window. #103: the class
+// chip went with the Class card; the header's class flyout carries it now.
+ck('the class flyout links its subclass',
+   /data-sub-info="Fighter\|Battle Master"/.test(X.classFlyHTML({classes:[{name:'Fighter',level:3,subclass:'Battle Master'}]},0)),
+   X.classFlyHTML({classes:[{name:'Fighter',level:3,subclass:'Battle Master'}]},0));
+ck('...and with no subclass it offers the choice, not a link',
+   !/data-sub-info/.test(X.classFlyHTML({classes:[{name:'Fighter',level:2,subclass:null}]},0)));
 
 // ---------- item weight is rules-owned, like cost
 c=setup();

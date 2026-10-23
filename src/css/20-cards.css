@@ -135,18 +135,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 .fitoggle{background:transparent;border:0;cursor:pointer;padding:0 2px;display:inline-flex;align-items:center;flex:none;color:var(--ink-soft)}
 .fitem .top{align-items:center}
 input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
-.hd-wrap{margin-top:10px}
-/* The Hit Dice bar, under the rest buttons in Rest & Recovery. Same inset
-   ::before as .hpwrap — and for the reason the old comment here got wrong once
-   the two became neighbours: a real CSS border takes no filter, so on the
-   rough skin .hpwrap wobbled and this did not; and a border sits outside the
-   padding box while the inset sits 1px inside, leaving the two frames 1px out
-   at the corners. Verdigris rather than brick — same weight, different voice,
-   matching .hd-title. */
-.hd-box{position:relative;margin-top:12px;background:var(--field);border-radius:9px;padding:10px}
-.hd-box::before{content:"";position:absolute;inset:1px;border:2.5px solid var(--accent-2);border-radius:10px;pointer-events:none}
-html[data-rough="on"] .hd-box::before{filter:url(#rough)}
-.hd-box>*{position:relative}
+/* the hit-dice bar's home in the rail (#103; its Rest & Recovery panel went with the card) */
+.hd-wrap{margin:0}
 .hd-none{margin:0}
 /* One pill, used twice: the hit-dice auto/manual toggle (now in the spend
    box's foot, #103) and the Max HP padlock. */

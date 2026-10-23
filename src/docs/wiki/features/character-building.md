@@ -15,7 +15,7 @@ so removing the source takes it back out; that mechanism is
 `choiceLevelSpan()`, `choiceNoteText()` in `58-choices.js`;
 `openAddRace()`, `applyRace()`, `racesForCharacter()` in `52-race.js`; `openAddBackground()`,
 `applyBackground()` in `54-background.js`; `subclassesFor()`, `addFeatureFromDef()`,
-`grantFeatDef()`, `runExtraChoices()`, `classChipHTML()` in `50-classrace.js`; `dismissModal()`,
+`grantFeatDef()`, `runExtraChoices()` in `50-classrace.js`; `dismissModal()`,
 `setDismissGuard()` in `80-modal-forms.js` · **Data:** `choices` on class, subclass and race
 levels, per [rules-schema](../../../../docs/rules-schema.md) §5; a class's `multiclass` block,
 §6.3; the `features.json` of the 2024 pack (private repo) and of `data/srd52/` ·
@@ -67,9 +67,9 @@ The Add class preview shows the same note once a class is on the sheet, so its "
 read as a promise. Armor, weapon and tool training is text in either case: the first class's lives
 in its data only, and a multiclass's is shown in the note, never tracked. Removing the **first**
 class while another remains makes that one first: it takes its saving throws, tagged to it, with a
-toast, and nothing else is re-offered. The class chip
-(`classChipHTML()`) opens the class; its subclass is a separate link button (`data-sub-info`), matched
-before `data-info-class` so it wins inside the chip. `openClassInfo(idOrName,opts)` and
+toast, and nothing else is re-offered. The class
+chip went with the Class card (#103); the header's class flyout (`classFlyHTML()`) offers the class,
+and its subclass as its own entry (`data-sub-info`). `openClassInfo(idOrName,opts)` and
 `openSubclassInfo(classIdOrName,subName,opts)` open by id as well as by name, and the Rules tab's
 Classes and Subclasses rows open them with `{ref:true}` (#99): no "— current" level, no subclass
 marker, nothing from `character.classes`; a subclass link inside such a window carries

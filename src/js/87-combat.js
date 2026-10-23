@@ -35,8 +35,9 @@ function insertCombatSection(list,k,at){
   out.splice(Math.max(0,Math.min(out.length,at)),0,k);
   return out;
 }
-/* ↑/↓: past the next SHOWN section, and any hidden ones between. Skills in By
-   ability mode is hidden in the view but keeps its slot, and an arrow press that
+/* ↑/↓: past the next SHOWN section, and any hidden ones between. A card hidden
+   in the view keeps its slot (Skills was, in the By ability layout #103
+   retired; the rule stays general), and an arrow press that
    only swapped with it would look like nothing happened. The hidden ones stay
    with the shown neighbour, as they do when dragging. */
 function stepCombatSection(list,k,delta,shown){
@@ -139,8 +140,8 @@ function renderCombatToggles(){
   });
 }
 /* Whether a card in the view actually shows. Computed style, not the inline one:
-   the view's CSS overrides #activeSpellCard's inline display:none, but not the
-   Skills card's in By ability mode. Not offsetParent either — fillCombatView()
+   the view's CSS overrides #activeSpellCard's inline display:none, and a card
+   it does not override stays hidden. Not offsetParent either — fillCombatView()
    runs before the view itself is shown. */
 function cvCardShown(card){return getComputedStyle(card).display!=="none";}
 function renderCombatEmpty(){
@@ -193,7 +194,12 @@ function syncStatLock(root){
    bar's ☰ lists its sections. No aria-live here: this is repainted, and a live
    region that is replaced is never announced — #cvLive is. */
 function combatHeaderHTML(c){
-  const title=`<span class="cv-title">${iconSVG("ui","Combat")}Combat</span>`;
+  /* #103: inspiration moved off the Vitals card into the sheet header, which the
+     view does not carry, so the view has its own star: class-based (no id — the
+     sheet's #starBtn is the one id), the same toggle, painted by recompute(). */
+  const on=!!(c&&c.inspiration);
+  const title=`<span class="cv-title">${iconSVG("ui","Combat")}Combat</span>`+
+    `<button type="button" class="starbtn cv-star${on?" on":""}" data-inspire title="Inspiration" aria-label="Toggle inspiration" aria-pressed="${on?"true":"false"}">&#10022;</button>`;
   if(!inCombat(c))return title+`<span class="grow"></span><button class="tbtn primary" id="cvStart">Start combat</button>`;
   const r=num(c.combatRound);
   return title+
@@ -268,7 +274,7 @@ function toggleCombatSection(k,viaKey){
   const cur=combatSectionsOf(character), on=!cur.includes(k), at=cur.indexOf(k), who=character.id;
   const fromView=!on&&cvOpen&&!!document.querySelector(`#cvList [data-combatbtn="${k}"]`);
   /* Its shown neighbours, read before it leaves: the saved order can hold a
-     hidden card (Skills in By ability mode) that must not count as the next one. */
+     hidden card that must not count as the next one. */
   const [nextK,prevK]=fromView?cvNeighbours([...document.querySelectorAll("#cvList > .card")].filter(cvCardShown).map(c=>c.dataset.note),k):[null,null];
   character.combatSections=withCombatSection(cur,k,on);
   if(cvOpen){if(on)fillCombatView();else{sendCardHome(k);renderCombatEmpty();}}
@@ -369,8 +375,8 @@ function moveCombatCard(k,delta){
 }
 /* Pointer events, not HTML5 drag-and-drop, which is unreliable on phones. The
    dragged card is NEVER moved itself — moving an element can drop its pointer
-   capture mid-drag — so its NEIGHBOURS hop over it instead. A hidden card (Skills
-   in By ability mode) has no height to pass, so it is never the neighbour: it
+   capture mid-drag — so its NEIGHBOURS hop over it instead. A hidden card has no
+   height to pass, so it is never the neighbour: it
    hops along with the next shown one. Near the top (just under the sticky
    header) or the bottom of the window, the page scrolls. The order is read back
    off the DOM on release. */

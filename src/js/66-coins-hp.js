@@ -201,6 +201,15 @@ function renderHP(){
   });
   const cur=document.getElementById("hpCur"),band=hpBand();
   if(cur){cur.classList.toggle("hp-warn",band==="hp-warn");cur.classList.toggle("hp-danger",band==="hp-danger");}
+  /* #103: the rail's HP bar. Its fill is cur over the EFFECTIVE max (as
+     hpBand() measures it), 0 with no max, and it wears the band — "" when
+     Colour current HP is off, so the bar stays the plain colour. */
+  const fill=document.getElementById("hpFill");
+  if(fill){
+    const emx=effMaxHP(),pct=emx>0?Math.max(0,Math.min(100,Math.round(num(character.hp.cur)/emx*100))):0;
+    fill.style.width=pct+"%";
+    fill.classList.toggle("hp-warn",band==="hp-warn");fill.classList.toggle("hp-danger",band==="hp-danger");
+  }
   /* Two layers, the same shape the auto spell-slot fields use: readOnly so the
      browser refuses the edit, AND a refusal in applyHPInput, because readOnly
      is only a hint — paste, autofill and any programmatic caller go straight
@@ -246,11 +255,9 @@ function applyHPInput(inp){
   return true;
 }
 function renderAll(){
-  /* FIRST, before the [data-path] loop below: the ability/skill layout is a
-     per-character setting, and the builders otherwise only ran at boot — so
-     loading a grouped sheet over a classic one kept the classic markup forever.
-     It has to precede the loop because rebuilding blanks the six score inputs
-     that the loop refills, and recompute() at the end repaints every number. */
+  /* FIRST, before the [data-path] loop below: rebuilding blanks the six score
+     inputs that the loop refills, and recompute() at the end repaints every
+     number. */
   buildStats();
   renderCoins();renderHP();   /* neither is data-path, so neither is in the loop below */
   document.querySelectorAll("[data-path]").forEach(inp=>{const v=get({character},inp.dataset.path);inp.value=(v===null||v===undefined)?"":v});

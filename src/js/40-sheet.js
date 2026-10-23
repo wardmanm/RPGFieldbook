@@ -423,8 +423,11 @@ function renderFamiliars(){
   const card=document.getElementById("familiarCard");
   const link=document.getElementById("addFamiliarLink");
   const has=character.familiars.length>0;
-  card.style.display=has?"":"none";
-  link.style.display=has?"none":"";
+  /* #103: hidden on the Sheet whatever it holds — familiars open from the
+     header's paw (spec §6.6). The combat view shows it (45-combat.css), and the
+     old add button stays hidden: the paw's flyout offers + Add familiar. */
+  card.style.display="none";
+  link.hidden=true;
   /* Cleared BEFORE the early return: the combat view shows this card even when it
      is empty, and a list still holding the last familiar removed would show it. */
   const el=document.getElementById("familiarList");el.innerHTML="";
@@ -459,8 +462,8 @@ function classLineHTML(c){
 }
 /* The menu under one class: the Class card's controls, moved. Its buttons are
    the existing hooks where one exists (subclass, Remove, + Add class), so they
-   run exactly what the card runs. No ids: the card's #btnLevelUp/#btnLevelDown
-   still exist. */
+   run exactly what the card ran. No ids: [data-shlevel] is delegated, and
+   the Class card and its two level buttons are gone (#103). */
 function classFlyHTML(c,i){
   const x=(Array.isArray(c&&c.classes)?c.classes:[])[i];
   if(!x||!x.name)return "";

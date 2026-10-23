@@ -108,8 +108,6 @@ function openSettings(){
       setRowHTML("Tap outside to close dialogs","Leave off so a stray tap, or hiding your phone's keyboard, can't lose what you typed. ×, Cancel and Esc always close.",
         `<button type="button" class="switch ${settings.backdropClose===true?"on":""}" id="swBackdrop" role="switch" aria-checked="${settings.backdropClose===true?"true":"false"}" aria-label="Tap outside to close dialogs"></button>`,true));
   const secDisplay=hasChar?setGroupHTML("Cards",
-      setRowHTML("Skills display","Skills listed A to Z, or under each ability.",
-        `<div class="seg" id="segStatStyle">${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>`<button type="button" data-statstyle="${esc(v)}" class="${statStyle()===v?"on":""}" aria-pressed="${statStyle()===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
       setRowHTML("Colour current HP","Amber at half your maximum, red at a quarter.",
         `<button type="button" class="switch ${character.hpColor!==false?"on":""}" id="swHpColor" role="switch" aria-checked="${character.hpColor!==false?"true":"false"}" aria-label="Colour current HP"></button>`,true)+
       setRowHTML("Trackers card","Show it on the Journal tab. Hiding it keeps what you've counted.",
@@ -219,10 +217,6 @@ function openSettings(){
   {const g=document.getElementById("segAdv");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-adv]");if(!b)return;character.advancement=advancementOf({advancement:b.dataset.adv});g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderSheetHead();scheduleSave();});}
   {const b=document.getElementById("swFamiliars");if(b)b.addEventListener("click",()=>{character.showFamiliars=character.showFamiliars!==true;b.classList.toggle("on",character.showFamiliars);renderSheetHead();scheduleSave();});}
   {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
-  /* renderAll(), not buildStats(): the rebuild blanks the six score inputs, and
-     only renderAll refills them from [data-path] and then repaints through
-     recompute(). Calling the builder alone leaves blank boxes and a wall of +0. */
-  {const g=document.getElementById("segStatStyle");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-statstyle]");if(!b)return;character.statStyle=b.dataset.statstyle;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderAll();scheduleSave();});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());

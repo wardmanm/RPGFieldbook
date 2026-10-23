@@ -70,16 +70,25 @@
    Active Spells and Familiars vanish from their tab when they have nothing to
    show. In the view a vanished card reads as a bug, so here they show, with a
    line saying so; !important beats the inline display:none their renderers
-   write. NOT #skillsCard — in By ability mode its rows live in the Abilities
-   card, and an empty Skills card here would be the bug. */
+   write. */
 #combatView #activeSpellCard,#combatView #familiarCard{display:block!important}
-/* ≤820px the sheet sinks Familiars to the end with order:1 (10-chrome.css), and
-   that rule is not scoped to the sheet: in this flex column it would pin the card
-   last whatever the saved order, so dragging it would seem to do nothing. */
+/* The saved order is the order: nothing a tab's layout sets (the Sheet's
+   ≤700px `order`s, 10-chrome.css, are scoped to .sheet-grid; an unscoped
+   order:1 once pinned Familiars last here) may reorder this flex column. */
 #combatView #familiarCard{order:0}
-/* The portrait box is square at its card's width; at the view's 780px it would
-   fill the screen. Capped at the sidebar width it was drawn for. */
-#combatView .portrait{max-width:320px;margin-inline:auto}
+/* ---- the rail in the view (#103) ----
+   At the view's 780px the rail's one column would be a portrait filling the
+   screen. Two columns instead: the portrait and its shield at the left, the
+   rest beside it. The rail's dark tokens come with it (they are on .rail). */
+#cvList .rail{display:grid;grid-template-columns:150px minmax(0,1fr);column-gap:16px;row-gap:10px;align-items:start}
+#cvList .rail>.label{grid-column:1/-1}
+#cvList .rail>.rail-pic{grid-column:1;grid-row:2/span 5}
+#cvList .rail>:not(.label):not(.rail-pic){grid-column:2}
+@media(max-width:480px){
+  #cvList .rail{grid-template-columns:96px minmax(0,1fr);column-gap:10px}
+  #cvList .rail .rail-ac{width:50px;height:56px;bottom:-26px}
+  #cvList .rail .rail-ac .big{font-size:20px}
+}
 #combatView #activeSpellList:empty::before,#combatView #familiarList:empty::before{
   content:"None right now.";display:block;font-style:italic;color:var(--ink-soft);font-size:14px}
 
@@ -128,28 +137,6 @@
 #cvList [data-note="skills"] .srow .val{font-size:14px;width:26px}
 #cvList [data-note="skills"] .srow .lbl{font-size:13px}
 #cvList #statLegend{display:none}
-#cvList [data-note="abilities"] .agroups{gap:8px 12px}
-/* The By ability header (#92). The rules above are for the six tall boxes, where
-   a 9px name and a faint score sit under a big modifier; they reach this header
-   too, since it keeps the .ability skin. Here the name and the score sit BESIDE
-   the modifier on one line, so they take full ink and real size, and the score
-   gets a fixed width at the right edge — an input's own width is about twenty
-   characters, which floated the number mid-header. The disabled box still
-   keeps room for a number input's spin button (about 15px in Chromium), which
-   clipped two digits in a narrow box and kept the score off the edge, so the
-   spinner goes. The save row keeps the Sheet tab's small capitals, so it no
-   longer outweighs the ability it belongs to. */
-#cvList [data-note="abilities"] .agroup .ahead{padding:4px 10px;gap:10px}
-#cvList [data-note="abilities"] .agroup .ahead .n{font-size:13px;color:var(--ink)}
-#cvList [data-note="abilities"] .agroup .ahead .m{font-size:24px}
-#cvList [data-note="abilities"] .agroup .ahead input[data-path]{width:2.4em;flex:none;text-align:right;font-size:16px;
-  font-weight:700;color:var(--ink);-webkit-text-fill-color:var(--ink);-moz-appearance:textfield;appearance:textfield}
-#cvList [data-note="abilities"] .agroup .ahead input[data-path]::-webkit-inner-spin-button,
-#cvList [data-note="abilities"] .agroup .ahead input[data-path]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-#cvList [data-note="abilities"] .agroup .srow{padding:1px 2px}
-#cvList [data-note="abilities"] .agroup .srow .val{font-size:13px;width:24px}
-#cvList [data-note="abilities"] .agroup .srow .lbl{font-size:12.5px}
-#cvList [data-note="abilities"] .agroup .svrow .lbl{font-size:10px}
 @media(max-width:640px){#cvList [data-note="skills"] .skills{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(9,auto);grid-auto-flow:column}}
 @media(max-width:560px){#cvList [data-note="abilities"] .abilities{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:380px){#cvList [data-note="skills"] .skills{grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-auto-flow:row}}

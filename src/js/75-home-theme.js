@@ -134,8 +134,8 @@ function applyTheme(){
   const wmM=document.getElementById("wmMain"),wmS=document.getElementById("wmSub");
   if(wmM)wmM.textContent=wm.main; if(wmS)wmS.textContent=wm.sub;
   document.title=wm.title;
-  const cw=document.getElementById("craceWord");if(cw)cw.textContent=raceTerm();
-  if(document.getElementById("classBox"))renderClassRace();
+  /* the header's "+ Species" / "+ Race" follows the skin (raceTerm()) */
+  if(document.getElementById("sheetHead"))renderClassRace();
   const on=t==="dark";
   document.getElementById("themeIcon").innerHTML=on
     ?'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'

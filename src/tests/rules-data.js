@@ -24,7 +24,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'renderRulesBrowser', 'rbCurKey', 'settings', 'skillKey',
   'openSettings', 'highlight', 'rulesStatusText', 'rulesBadge', 'dispName', 'fxTargets',
   'AMMO_PIECES','AMMO_SINGLE_NAMES','AMMO_BUNDLES','AMMO_LAUNCHERS',
-  'EDIT_CARDS',
+  'EDIT_CARDS', 'combatHeaderHTML',
   'RB_CATS', 'RB_PAGE', 'RB_HITS', 'rbUI', 'rbCat', 'rbShown', 'rbFacets', 'rbState', 'rbFacetVal', 'rbPasses', 'rbSorted', 'rbSortBy', 'rbToggleFacet', 'rbClearFacets', 'rbFindRow', 'rbOpenRow', 'rulesCatOf', 'rbSideHTML', 'rbHeadHTML', 'rbBodyHTML', 'rbSearchHTML',
   'rbToList', 'rbOpenCat', 'rbNum', 'K_SET', 'saveSettings',
   'prunePackMeta',
@@ -490,24 +490,9 @@ for(const sys of ['homebrew','srd52']){
   const multiCol = skillsRules.filter(r => /grid-template-columns:repeat\(/.test(r));
   ck('every compact Skills grid of two or more columns sets its own grid-auto-flow:column',
      multiCol.length >= 2 && multiCol.every(r => /grid-auto-flow:column/.test(r)), multiCol);
-  /* #92: the grouped header keeps the .ability skin, so the Classic compact
-     rules (a 9px name, a faint 12px score, an input's own ~20-character width)
-     reach it unless the header sets its own. The name, modifier and score
-     rules win on specificity; the save label ties with the view's .srow .lbl,
-     so it must come after it. */
-  const rule = sel => { const m = css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}')); return m ? m[1] : ''; };
-  const head = '#cvList [data-note="abilities"] .agroup .ahead';
-  ck('in the view the grouped header\'s name is full ink at a readable size',
-     /color:var\(--ink\)/.test(rule(head + ' .n')) && parseFloat((rule(head + ' .n').match(/font-size:([\d.]+)px/) || [])[1]) >= 12);
-  ck('...its modifier the full 24px', /font-size:24px/.test(rule(head + ' .m')));
-  ck('...its score is full ink, bold, in a fixed em box at the right, with no spinner keeping room',
-     /width:[\d.]+em/.test(rule(head + ' input[data-path]')) && /text-align:right/.test(rule(head + ' input[data-path]')) &&
-     /-webkit-text-fill-color:var\(--ink\)/.test(rule(head + ' input[data-path]')) && /font-weight:700/.test(rule(head + ' input[data-path]')) &&
-     /appearance:textfield/.test(rule(head + ' input[data-path]')) &&
-     css.includes(head + ' input[data-path]::-webkit-inner-spin-button'));
-  ck('...and its save label keeps the small capitals',
-     /font-size:10px/.test(rule('#cvList [data-note="abilities"] .agroup .svrow .lbl')) &&
-     css.indexOf('#cvList [data-note="abilities"] .agroup .svrow .lbl{') > css.indexOf('#cvList [data-note="abilities"] .agroup .srow .lbl{'));
+  /* #103: the four #92 checks on the By ability header in the view went with
+     the grouped layout (decision 9); the strip's boxes take the compact rules
+     above. */
 }
 
 // ---------- the homebrew pack: hand-authored, and the reason `requires` exists
@@ -1209,7 +1194,8 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const t = loadHTML();
   const reach = k => k === 'journal' ? t.includes('id="journalCard"')
     : k === 'secnotes' ? /<div class="card" id="notesCard">\s*<div class="label">Section Notes/.test(t)
-    : t.includes('<div class="card" data-note="' + k + '"');
+    // #103: a card may carry a layout class (`card wide`) before data-note
+    : new RegExp('<div class="card(?: [a-z-]+)?" data-note="' + k + '"').test(t);
   const lost = X.EDIT_CARDS.filter(k => !reach(k));
   ck('#97 every edit-toggle key reaches a card with a header', lost.length === 0, lost);
   const css = fs.readFileSync(path.join(ROOT, 'src/css/20-cards.css'), 'utf8');
@@ -1229,7 +1215,8 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const t = loadHTML();
   const inTemplate = (t.match(/data-note="([a-z]+)"/g) || []).map(s => s.slice(11, -1));
 
-  ck('the registry has 21 sections', X.NOTE_SECTIONS.length === 21, X.NOTE_SECTIONS.length);
+  // #103: 21 → 18 — the Class, Ancestry & Background and Rest cards are gone
+  ck('the registry has 18 sections', X.NOTE_SECTIONS.length === 18, X.NOTE_SECTIONS.length);
   ck('every section id is unique',
      new Set(X.NOTE_SECTIONS.map(s => s.k)).size === X.NOTE_SECTIONS.length);
   ck('every section names a tab the Section Notes card can group under',
@@ -1243,9 +1230,15 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('no card is tagged twice', new Set(inTemplate).size === inTemplate.length);
   // the attribute has to be ON the card, because renderNoteIcons looks for the
   // .label inside it
+  // #103: the sheet header is the `portrait` section, so the literal-prefix
+  // count takes its <header> opening as well as the <div> cards; and the
+  // rail, the strip and Features carry one layout class after "card" (the
+  // brief's `card rail` / `card strip` / `card wide`) — data-note still
+  // straight after the class attribute, which is what the count guards
   ck('every data-note is on a card element',
-     (t.match(/data-note="[a-z]+"/g) || []).every((_, i) => true) &&
-     (t.match(/<div class="card" data-note="[a-z]+"/g) || []).length === 21,
+     (t.match(/data-note="[a-z]+"/g) || []).length === 18 &&
+     (t.match(/<div class="card(?: [a-z-]+)?" data-note="[a-z]+"/g) || []).length +
+     (t.match(/<header class="card sheet-head" data-note="[a-z]+"/g) || []).length === 18,
      (t.match(/<div class="card"[^>]*data-note[^>]*>/g) || []).length);
   /* The Journal panel, sliced to the next panel so a card on a LATER tab can
      neither satisfy nor break these. The regex this replaced ran on to the end
@@ -1263,13 +1256,13 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('the Journal tab has the list the notes renderer targets', jPanel.includes('id="notesList"'));
   ck('nothing still calls it the Notes tab', !/id="tab-notes"|data-tab="notes"/.test(t));
 
-  // registry titles must match the headings they claim to describe. `origin` is
-  // excluded on purpose: that heading is skin-dependent (Race vs Ancestry), which
-  // is exactly why noteTitle() asks the app instead of quoting the registry.
-  X.NOTE_SECTIONS.filter(s => s.k !== 'origin').forEach(s => {
+  // registry titles must match the headings they claim to describe. (#103: the
+  // skin-dependent `origin` heading is gone; the header's heading is the hidden
+  // "Character" caption in its .label.sh-bar, so the label may carry a class
+  // and the caption's span.)
+  X.NOTE_SECTIONS.forEach(s => {
     const at = t.indexOf('data-note="' + s.k + '"');
-    const lab = t.slice(at, t.indexOf('</div>', at));
-    const m = /<div class="label">([^<]*)/.exec(lab);
+    const m = /<div class="label(?: [a-z-]+)?">(?:<span class="sh-cap">)?([^<]*)/.exec(t.slice(at));
     const text = m ? m[1].replace(/&amp;/g, '&').trim() : '';
     ck('the registry title for "' + s.k + '" matches its heading', text === s.title, {text, title: s.title});
   });
@@ -1284,6 +1277,54 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('#103 the Story tab reads Bio', /data-tab="story"[^>]*>[\s\S]{0,300}Bio/.test(t) && X.NOTE_TABS.story === 'Bio');
   ck('#103 the Bio card holds alignment and the chip rows',
      /data-note="proficiencies"[\s\S]*data-path="character.alignment"[\s\S]*id="bioLanguages"[\s\S]*id="bioSenses"/.test(t));
+}
+
+// ---------- #103: the new Sheet
+{
+  const t = loadHTML();
+  const at = t.indexOf('id="tab-sheet"'), end = t.indexOf('<section class="tabpanel', at + 1), sheet = t.slice(at, end);
+  const once = id => (t.match(new RegExp('id="' + id + '"', 'g')) || []).length === 1;
+  const ids = ['acDisp', 'initDisp', 'speedDisp', 'sizeDisp', 'passDisp', 'pbDisp', 'hpCur', 'hpMax', 'hpTemp', 'deathSucc', 'deathFail',
+    'maxNote', 'starBtn', 'hdWrap', 'abilities', 'skills', 'statLegend', 'familiarCard', 'addFamiliarLink', 'btnShortRest', 'btnLongRest', 'portrait'];
+  const missing = ids.filter(id => !once(id));
+  ck('#103 every painted id exists exactly once', missing.length === 0, missing);
+  ck('#103 the rail holds the vitals, the portrait and the hit dice', /data-note="vitals"[\s\S]*id="portrait"[\s\S]*id="acDisp"[\s\S]*id="hpCur"[\s\S]*id="hdWrap"/.test(sheet));
+  ck('#103 the header is the Character section', /<header class="card sheet-head" data-note="portrait"/.test(sheet));
+  ck('#103 no Class, Ancestry or Rest card', !/data-note="(class|origin|rest)"/.test(t));
+  ck('#103 Attacks is on Inventory', (() => { const i = t.indexOf('id="tab-inventory"'), e = t.indexOf('<section class="tabpanel', i + 1); return t.slice(i, e).includes('data-note="attacks"'); })());
+  ck('#103 the registry agrees', !X.noteDef('class') && !X.noteDef('origin') && !X.noteDef('rest') && X.noteDef('attacks').tab === 'inventory' &&
+     X.noteDef('portrait').title === 'Character' && !X.EDIT_CARDS.includes('class') && !X.EDIT_CARDS.includes('origin'));
+  const css = ['src/css/10-chrome.css', 'src/css/30-sheet.css'].map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  const base = css.indexOf('.sheet-grid{'), m1 = css.indexOf('@media(max-width:1000px)'), m2 = css.indexOf('@media(max-width:700px)');
+  ck('#103 three columns, then two, then one — the queries after the base rule', base >= 0 && m1 > base && m2 > m1);
+  ck('#103 the Skills display setting is retired', !/segStatStyle|data-statstyle/.test(fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8')));
+  // beyond the brief's block: what the grid is and where the cards sit in it
+  ck('#103 the grid is rail · middle · right', /\.sheet-grid\{[^}]*grid-template-columns:minmax\(220px,260px\) minmax\(0,1\.3fr\) minmax\(0,1fr\)/.test(css));
+  ck('#103 the Sheet\'s cards run rail, strip, Skills, the right column, Features',
+     /data-note="vitals"[\s\S]*data-note="abilities"[\s\S]*data-note="skills"[\s\S]*class="col-r"[\s\S]*data-note="defences"[\s\S]*data-note="statuses"[\s\S]*data-note="resources"[\s\S]*data-note="features"/.test(sheet));
+  ck('#103 the Attacks card leads the Inventory tab, above Equipment',
+     (() => { const i = t.indexOf('id="tab-inventory"'); return t.indexOf('data-note="attacks"', i) < t.indexOf('data-note="inventory"', i); })());
+  ck('#103 the old .cols / .stack layout is gone from the Sheet', !/class="cols"|class="stack"/.test(sheet));
+  const tok = fs.readFileSync(path.join(ROOT, 'src/css/00-tokens.css'), 'utf8');
+  ck('#103 the rail\'s tokens are in all four palettes', ['--rail-bg:', '--rail-ink:'].every(k => (tok.match(new RegExp(k, 'g')) || []).length === 4));
+  ck('#103 the rail is dark by its tokens', /\.rail\{[^}]*--panel:var\(--rail-bg\)/.test(css) && /\.rail\{[^}]*--ink:var\(--rail-ink\)/.test(css));
+  const boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+  ck('#103 nothing wires the deleted Class card\'s buttons (an unguarded lookup would leave the sheet inert)',
+     !/btnLevelUp|btnLevelDown/.test(boot));
+  const alljs = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8')).js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const gone = ['raceBgBox', 'classBox', 'craceWord', 'btnLevelUp', 'btnLevelDown'].filter(id => alljs.includes(id));
+  ck('#103 no script names a removed id', gone.length === 0, gone);
+  // the controller's ruling: the combat view keeps an inspiration toggle
+  ck('#103 the combat header carries the inspiration toggle, in and out of combat',
+     /data-inspire/.test(X.combatHeaderHTML({combatActive: false})) && /data-inspire/.test(X.combatHeaderHTML({combatActive: true, combatRound: 2})) &&
+     /aria-pressed="true"/.test(X.combatHeaderHTML({inspiration: true})) && !/btnShortRest|btnLongRest/.test(X.combatHeaderHTML({combatActive: true, combatRound: 2})));
+  ck('#103 ...wired to the same toggle as the star', /closest\("\[data-inspire\]"\)\)return toggleInspiration\(\)/.test(boot) && /on\("starBtn","click",toggleInspiration\)/.test(boot));
+  X.character = X.blankChar(); X.character.inspiration = false;
+  ctx.toggleInspiration();
+  ck('#103 toggling it flips the inspiration', X.character.inspiration === true);
+  ctx.toggleInspiration();
+  ck('#103 ...and back', X.character.inspiration === false);
+  ck('#103 recompute() paints the view\'s toggle where it paints the star', /querySelectorAll\("#starBtn,\[data-inspire\]"\)/.test(alljs));
 }
 
 // ---------- the tab bar
@@ -1507,9 +1548,10 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
        a fragment losing its closing </section> is a real way to get here. */
     throw new Error('block(): unbalanced <div> searching from ' + JSON.stringify(needle));
   }
+  // #103: the Vitals card is the rail; Rest & Recovery is gone (its rests
+  // went to the header, its hit dice to the rail)
   const vitals = block(t, 'data-note="vitals"');
-  const rest = block(t, 'data-note="rest"');
-  const hpwrap = block(t, 'class="hpwrap"');
+  const hpbox = block(t, 'class="rail-hp"');
 
   // The whole point of the HP rework: data-path commits on every keystroke, so
   // typing "-3" would store "-" at the first character.
@@ -1533,13 +1575,18 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const deathBlock = block(t, 'class="death"');
   ck('both death-save sets are inside .death',
      deathBlock.includes('id="deathSucc"') && deathBlock.includes('id="deathFail"'), deathBlock);
-  // failures read first, beside the skull's own colour; successes on the right
-  ck('failures come before successes',
-     deathBlock.indexOf('id="deathFail"') < deathBlock.indexOf('id="deathSucc"'));
-  ck('the death saves stay inside the HP panel, under the +/- row',
-     hpwrap.includes('id="deathFail"') && hpwrap.indexOf('id="hpMinus"') < hpwrap.indexOf('id="deathFail"'));
-  ck('the failure set is laid out in reverse so it fills outward from the skull',
-     /\.death \.set\[data-kind="fail"\]\{[^}]*row-reverse/.test(sheetCss));
+  // #103 (spec §6.2, decision 6): ✓ ○○○ ☠ ○○○ ✗ — successes left of the skull,
+  // failures right, in the rail above the badges and the HP bar. (Was
+  // "failures come before successes", inside the HP panel under the +/- row.)
+  ck('#103 successes come before the skull, failures after it',
+     deathBlock.indexOf('id="deathSucc"') < deathBlock.indexOf('class="dskull"') &&
+     deathBlock.indexOf('class="dskull"') < deathBlock.indexOf('id="deathFail"'));
+  ck('#103 a ✓ and a ✗ mark the two ends', /&#10003;[\s\S]*id="deathSucc"[\s\S]*id="deathFail"[\s\S]*&#10007;/.test(deathBlock));
+  ck('#103 the death saves sit in the rail, above the HP bar',
+     vitals.includes('id="deathSucc"') && vitals.indexOf('class="death"') < vitals.indexOf('id="hpMinus"'));
+  ck('#103 the success set is laid out in reverse so it fills outward from the skull',
+     /\.death \.set\[data-kind="succ"\]\{[^}]*row-reverse/.test(sheetCss) &&
+     !/\.death \.set\[data-kind="fail"\]\{[^}]*row-reverse/.test(sheetCss));
   // a bare U+FE0E is invisible in source and a colour emoji is wrong on the sheet
   ck('the skull is the text-presentation entity pair', t.includes('&#9760;&#65038;'));
 
@@ -1559,11 +1606,10 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
        need.every(s => (t.match(new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length === 1),
        need.filter(s => (t.split(s).length - 1) !== 1));
     ck('#103 the header sits in the Sheet tab, above the columns',
-       at > t.indexOf('id="tab-sheet"') && at < t.indexOf('class="cols"', t.indexOf('id="tab-sheet"')));
+       at > t.indexOf('id="tab-sheet"') && at < t.indexOf('class="sheet-grid"', t.indexOf('id="tab-sheet"')));
     ck('#103 its icons row is a .label with a hidden "Character" caption, for the ☰ and the note button',
        /<div class="label sh-bar"><span class="sh-cap">Character<\/span><span class="grow"><\/span>/.test(head));
-    ck('#103 the star is no longer in the Vitals label row',
-       !((vitals.match(/<div class="label">[\s\S]*?<\/div>/) || [''])[0]).includes('id="starBtn"'));
+    ck('#103 the star is not in the rail', !vitals.includes('id="starBtn"'));
     ck('#103 the portrait card keeps no name, Experience or Level field',
        !/data-path="character.xp"/.test(t) && !/id="levelDisp"/.test(t) && /id="levelDisp"/.test(js) && /id="pbDisp"/.test(t));
     ck('#103 the header\'s flyout hooks are wired',
@@ -1578,56 +1624,28 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     })());
   }
 
-  // Hit Dice live in Rest & Recovery, under the rest buttons: they are spent on
-  // a short rest and come back on a long one. They sat in Vitals for one release
-  // (1.7.0), which put them in the combat view by default, between the player
-  // and the hit points they were watching. Vitals keeps exactly the hit points.
-  // #103: the spend box is the only home now for the auto/manual pill and the
-  // manual-dice input — Rest & Recovery keeps just the bar (hdWrap).
-  const hd = ['hdWrap'];
-  const owned = ['data-hp="cur"', 'data-hp="max"', 'data-hp="temp"', 'id="deathFail"', 'data-hplock'];
-  ck('Vitals owns HP, the death saves and the padlock',
+  // #103: the rail owns the hit points, the death saves, the padlock AND the
+  // hit-dice bar (spec §6.2). They sat in two cards — Vitals and Rest &
+  // Recovery — until the rail; Rest & Recovery is gone, its rest buttons in the
+  // header (asserted there). The hit-dice input and the mode pill live in the
+  // spend box (hdSpendHTML in 65-resources.js), not the static template.
+  const owned = ['data-hp="cur"', 'data-hp="max"', 'data-hp="temp"', 'id="deathFail"', 'data-hplock', 'id="hdWrap"'];
+  ck('#103 the rail owns HP, the death saves, the padlock and the hit-dice bar',
      owned.every(s => vitals.includes(s)), owned.filter(s => !vitals.includes(s)));
-  ck('...and no hit dice', !hd.some(s => vitals.includes(s)) &&
-     !vitals.includes('hitdiceInput') && !vitals.includes('data-hdmode'), hd.filter(s => vitals.includes(s)));
-  // #103: the rest buttons moved into the sheet header (asserted there)
-  ck('#103 Rest & Recovery no longer holds the rest buttons',
-     !rest.includes('id="btnShortRest"') && !rest.includes('id="btnLongRest"'));
-  ck('...and owns the hit-dice bar', hd.every(s => rest.includes(s)), hd.filter(s => !rest.includes(s)));
-  // #103: the input and the mode pill moved OUT of the Rest card and into the
-  // spend box's foot (hdSpendHTML in 65-resources.js) — each id now exists
-  // exactly once, inside the box, not in the static template at all
-  ck('...but no longer the hit-dice input or the mode pill (they moved into the spend box)',
-     !rest.includes('id="hitdiceInput"') && !rest.includes('data-hdmode'), rest);
-  ck('...and no hit points', !/data-hp=/.test(rest), rest);
-  ck('the hit-dice bar is written once, not in two cards',
+  ck('#103 ...with the hit dice under the hit points', vitals.indexOf('id="hpCur"') < vitals.indexOf('id="hdWrap"'));
+  ck('the hit-dice bar is written once',
      (t.match(/id="hdWrap"/g) || []).length === 1);
   ck('#103 the hit-dice input and mode pill are built by hdSpendHTML, not the static template',
      !/id="hitdiceInput"/.test(t) && !/data-hdmode/.test(t) &&
      /id="hitdiceInput"/.test(js) && /data-hdmode/.test(js));
-
-  // the two panels are a pair: one heading rule, one frame treatment, one colour
-  // apart. The rough skin is why the frame matters — a real CSS border takes no
-  // filter, so it stops matching .hpwrap the moment the two become neighbours.
-  ck('Hit Points and Hit Dice share one heading rule', /\.hp-title,\.hd-title\{/.test(sheetCss));
-  // the rule existing is not the same as the panel wearing it
-  ck('both panels actually carry a heading',
-     /<div class="hp-title">Hit Points<\/div>/.test(hpwrap) &&
-     /<div class="hd-title">Hit Dice<\/div>/.test(rest));
-  // #103: the pill used to ride ON the heading; it now lives in the spend
-  // box's foot, built by hdSpendHTML, not the static Rest-card heading
-  ck('#103 the auto/manual pill sits in the spend box\'s foot, not the heading',
-     !/<div class="hd-title">Hit Dice <button/.test(rest) &&
+  // #103: the HP bar and the hit-dice bar read as a pair: one label rule (the
+  // hit-dice label is hdBarHTML's .hd-lbl; HP's is the template's .hp-lbl).
+  // (Were the .hp-title/.hd-title panel headings and the two rough-skin frames.)
+  ck('#103 HP and Hit Dice share one label rule', /\.hp-lbl,\.hd-lbl\{/.test(sheetCss));
+  ck('#103 the HP bar carries its label', /<div class="hp-lbl">Hit points/.test(hpbox));
+  ck('#103 the auto/manual pill sits in the spend box\'s foot',
      /<div class="hd-foot">Hit dice <button class="hd-mode" data-hdmode/.test(js));
-  // anchored at a line start so it matches the STANDALONE rule, not the shared
-  // `.hp-title,.hd-title{...}` one, whose body has no colour at all
-  ck('the hit-dice heading is not brick (that is the HP panel\'s colour)',
-     /\n\.hd-title\{[^}]*color:var\(--(?!brick\))[a-z0-9-]+\)/.test(sheetCss),
-     (sheetCss.match(/\n\.hd-title\{[^}]*\}/) || [''])[0]);
-  ck('the hit-dice panel takes the rough skin like the HP panel does',
-     /html\[data-rough="on"\] \.hd-box::before/.test(cardsCss) &&
-     /html\[data-rough="on"\] \.hpwrap::before/.test(sheetCss));
-
+  ck('#103 the old HP and hit-dice panels are gone', !/class="hpwrap"|class="hd-box"|class="hd-title"|class="hp-title"/.test(t));
   // ---- the Max HP lock
   ck('exactly one padlock, and it is beside the Max label',
      (t.match(/data-hplock/g) || []).length === 1 && /Max <button class="hp-lock" data-hplock/.test(t),
@@ -1677,11 +1695,17 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     const tok = fs.readFileSync(path.join(ROOT, 'src/css/00-tokens.css'), 'utf8');
     return (tok.match(/--warn:/g) || []).length === (tok.match(/--brick:/g) || []).length;
   })());
-  ck('both bands are styled on the HP box',
-     /\.hpcol input\.hp-warn\{color:var\(--warn\)\}/.test(sheetCss) &&
-     /\.hpcol input\.hp-danger\{color:var\(--brick\)\}/.test(sheetCss));
+  // #103: the bands colour the HP bar's fill (spec §6.2); the Current box
+  // still carries the class (renderHP keeps every write it made)
+  ck('#103 both bands are styled on the HP bar\'s fill',
+     /\.hp-fill\.hp-warn\{background:var\(--warn\)\}/.test(sheetCss) &&
+     /\.hp-fill\.hp-danger\{background:var\(--brick\)\}/.test(sheetCss));
   ck('renderHP paints the band onto the Current box',
      /function renderHP\(\)\{[\s\S]*?getElementById\("hpCur"\)[\s\S]{0,140}classList\.toggle\("hp-warn"/.test(js));
+  ck('#103 ...and the bar\'s fill: its width from cur / effective max, its band class',
+     /function renderHP\(\)\{[\s\S]*?getElementById\("hpFill"\)[\s\S]{0,400}effMaxHP\(\)[\s\S]{0,400}style\.width=[\s\S]{0,200}classList\.toggle\("hp-danger"/.test(js));
+  ck('#103 the bar holds the three HP boxes between − and +',
+     /id="hpMinus"[\s\S]*class="hp-bar"[\s\S]*id="hpFill"[\s\S]*id="hpCur"[\s\S]*id="hpMax"[\s\S]*id="hpTemp"[\s\S]*id="hpPlus"/.test(hpbox));
   ck('the colour switch is on the Sheet display page, per character',
      /id="swHpColor"/.test(js) && /character\.hpColor/.test(js));
   // spec §11 (#41): the Trackers switch is drawn on the Sheet display page and does something
@@ -1706,118 +1730,80 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('#103 the spend box is what the bar opens',
      /closest\("\[data-hdspend\]"\)\)return openHdSpend\(\)/.test(js));
 
-  // ---- the two ability/skill layouts
-  // Pure string builders, not DOM building: the harness has no DOM, so this is
-  // the only way the id contract can be asserted at all (see sheet.js).
-  ck('the grouped layout has its own pure builders',
-     /function statGroupHTML\(/.test(js) && /function statGroupsHTML\(/.test(js));
-  ck('both builders pick on the style', (() => {
+  // ---- #103: the ability strip (spec §6.4) replaces the two layouts
+  // Pure markup building, no numbers: recompute() finds every number by id and
+  // every dot by attribute. (Were the Classic / By ability tests — the grouped
+  // builders statGroupHTML/statGroupsHTML, statStyle(), its picker and its CSS
+  // — retired with the "Skills display" setting, decision 9.)
+  ck('#103 the grouped layout and statStyle() are gone',
+     !/function statGroupHTML\(/.test(js) && !/function statGroupsHTML\(/.test(js) && !/function statStyle\(\)/.test(js) &&
+     !/statStyle\(\)/.test(js) && !/\.agroup/.test(sheetCss + css('45-combat.css')));
+  ck('#103 buildAbilities builds the six boxes, each with its modifier, score and save', (() => {
      const a = (js.match(/function buildAbilities\(\)\{[\s\S]*?\n\}/) || [''])[0];
-     const k = (js.match(/function buildSkills\(\)\{[\s\S]*?\n\}/) || [''])[0];
-     return /statStyle\(\)/.test(a) && /statGroupsHTML/.test(a) && /statStyle\(\)/.test(k);
+     return /className="ability"/.test(a) && /id="mod-\$\{esc\(k\)\}"/.test(a) && /data-path="character\.abilities\.\$\{esc\(k\)\}"/.test(a) &&
+            /data-save="\$\{esc\(k\)\}"/.test(a) && /id="save-\$\{esc\(k\)\}"/.test(a);
   })());
-  // the grouped path must EMPTY #skills and return, or #skill-perception exists
-  // twice; getElementById takes the first and the hidden copy silently rots
-  ck('the grouped path clears the classic skill list',
-     /const el=document\.getElementById\("skills"\);el\.innerHTML="";[\s\S]{0,420}?if\(statStyle\(\)==="grouped"\)return;/.test(js));
-  ck('an unrecognised layout falls back to classic',
-     /function statStyle\(\)\{[\s\S]{0,160}?:"classic"/.test(js));
-  ck('...and blankChar defaults to the same thing', /statStyle:"classic"/.test(js));
-  ck('the layout picker is per character, in the settings modal',
-     /id="segStatStyle"/.test(js) && /character\.statStyle=b\.dataset\.statstyle/.test(js));
-  ck('both layouts are offered by name', (() => {
-     const seg = (js.match(/id="segStatStyle"[\s\S]{0,400}/) || [''])[0];
-     return ['classic', 'grouped'].every(v => seg.includes(`"${v}"`));
-  })());
-  // the layout is per CHARACTER, so LOADING one has to rebuild it. Building only
-  // at boot left a grouped sheet drawing classic after a character swap.
-  ck('renderAll rebuilds the layout', (() => {
+  ck('#103 buildStats no longer hides the Skills card', !/getElementById\("skillsCard"\)/.test(js));
+  // the layout is per CHARACTER no more, but a rebuild still blanks the six
+  // score inputs, so renderAll keeps building first and refilling after
+  ck('renderAll rebuilds the stats', (() => {
      const r = (js.match(/function renderAll\(\)\{[\s\S]*?\n\}/) || [''])[0];
      return /buildStats\(\);/.test(r);
   })());
-  // ...and FIRST: the rebuild blanks the six score inputs, and the [data-path]
-  // loop below it is what refills them
   ck('...before the data-path loop refills the score boxes', (() => {
      const r = (js.match(/function renderAll\(\)\{[\s\S]*?\n\}/) || [''])[0];
      return r.indexOf('buildStats()') >= 0 &&
             r.indexOf('buildStats()') < r.indexOf('querySelectorAll("[data-path]")');
   })());
-  // the Skills card is HIDDEN, never removed: the note registry, the 19-card
-  // template guard and the label guard all need it to stay in the document
-  ck('the Skills card is hidden by id, and the id sits after data-note',
-     /getElementById\("skillsCard"\)/.test(js) &&
+  ck('the Skills card keeps its id after data-note',
      loadHTML().includes('<div class="card" data-note="skills" id="skillsCard"'));
-  // one legend, moved between the cards — a second copy in JS would drift from
-  // the template's
-  ck('the legend is moved, not duplicated',
-     /function placeLegend\(/.test(js) && !/class="legend"/.test(js));
-  // expertise is marked straight off the dot's data-lvl, which recompute already
-  // writes — that is what keeps this a display change with no rules code touched
-  ck('expertise is marked from the dot, not from JS',
-     /\.agroup \.dot\[data-lvl="2"\]~\.exp\{display:/.test(sheetCss));
-  ck('the grouped rows reuse .srow rather than restating it',
-     /\.agroup \.srow\{/.test(sheetCss) && /\.srow\{display:flex/.test(sheetCss));
+  // one legend, in the Skills card — a second copy in JS would drift from the
+  // template's
+  ck('#103 the legend is placed in the Skills card only, never duplicated',
+     /function placeLegend\(/.test(js) && !/class="legend"/.test(js) &&
+     /function placeLegend\(\)\{[\s\S]*?data-note="skills"/.test(js) && !/abilities/.test((js.match(/function placeLegend\(\)\{[\s\S]*?\n\}/) || [''])[0]));
+  ck('the skill rows are .srow', /\.srow\{display:flex/.test(sheetCss));
   // #103: data-hdroll/data-hddie/data-hd are gone with the three styles —
   // the bar's one control is data-hdspend, already asserted above
   ck('#103 the old pip and dice-token handlers are gone',
      !/closest\("\[data-hdroll\]"\)/.test(js) && !/closest\("\[data-hddie\]"\)/.test(js) &&
      !/closest\("\[data-hd\]"\)/.test(js));
 
-  // ---------- Familiars live in the LEFT sidebar
-  // You reach for a familiar mid-fight, and it used to be the last card on the
-  // sheet. The card and the button are a mutually-exclusive pair that
-  // renderFamiliars() looks up UNGUARDED — a missing id throws and takes out
-  // every listener registered after it.
-  const left = block(t, 'class="stack"');                       // the first stack is the left one
-  const right = block(t.slice(t.indexOf('class="stack"') + 8), 'class="stack"');
-  ck('the left stack is the portrait column', left.includes('id="portrait"') && !left.includes('id="hpCur"'));
-  ck('the right stack is the main column', right.includes('id="hpCur"') && !right.includes('id="portrait"'));
-  ck('familiars moved into the left sidebar',
-     left.includes('data-note="familiars"') && left.includes('id="addFamiliarLink"'));
-  ck('...and nothing is left behind in the right column',
-     !right.includes('data-note="familiars"') && !right.includes('id="addFamiliarLink"'));
-  ck('the card and its add button stay adjacent — they are one control',
-     /id="familiarList"><\/div>\s*<\/div>\s*<button class="mini" id="addFamiliarLink"/.test(t));
+  // ---------- #103: familiars open from the header's paw (spec §6.6)
+  // The card stays in the DOM, hidden on the Sheet, so the combat view can
+  // still take it and its note keeps its key. The card and the old add button
+  // are looked up UNGUARDED (renderFamiliars(), wire()) — a missing id throws
+  // and takes out every listener registered after it. (Were "familiars moved
+  // into the left sidebar", "below Class", the left/right stack checks and the
+  // ≤820px flatten-and-sink rules: the stacks are gone.)
   ck('both familiar ids exist exactly once (both are looked up unguarded)',
      ['familiarCard', 'addFamiliarLink', 'familiarList'].every(id =>
        (t.match(new RegExp('id="' + id + '"', 'g')) || []).length === 1));
   ck('the familiars card keeps the attribute order the card count needs',
      /<div class="card" data-note="familiars" id="familiarCard"/.test(t));
-  ck('it sits below Class, so the identity cards stay together',
-     left.indexOf('data-note="familiars"') > left.indexOf('data-note="class"'));
+  ck('#103 the familiars card starts hidden, and the old add button stays hidden',
+     /data-note="familiars" id="familiarCard" style="display:none"/.test(t) && /<button class="mini" id="addFamiliarLink" hidden/.test(t));
+  ck('#103 renderFamiliars keeps the card hidden on the Sheet', (() => {
+     const r = (js.match(/function renderFamiliars\(\)\{[\s\S]*?\n\}/) || [''])[0];
+     return /card\.style\.display="none"/.test(r) && !/card\.style\.display=has/.test(r);
+  })());
+  ck('#103 a jump to the familiars note opens the paw\'s flyout',
+     /function jumpToNote\(k\)\{[\s\S]*?k==="familiars"[\s\S]*?openShFly\("fam"/.test(js));
+  ck('#103 the combat view still shows the card, in its saved place',
+     /#combatView #activeSpellCard,#combatView #familiarCard\{display:block!important\}/.test(css('45-combat.css')) &&
+     /#combatView #familiarCard\{order:0\}/.test(css('45-combat.css')));
+  ck('#103 the stacks\' phone flattening is gone with them',
+     !/\.stack\{display:contents\}/.test(chromeCss) && !/#familiarCard,#addFamiliarLink\{order:1\}/.test(chromeCss));
+  ck('the Bio tab keeps its two columns', /\.cols\{display:grid;[^}]*grid-template-columns:minmax\(0,320px\) minmax\(0,1fr\)/.test(chromeCss) &&
+     /class="cols"/.test(t.slice(t.indexOf('id="tab-story"'))));
 
-  // On a phone the columns collapse and the sidebar renders FIRST, which would
-  // put familiars above HP and Skills. order alone cannot fix that — order only
-  // reorders siblings — so the stacks are flattened inside the media query and
-  // the pair is sunk. Both halves must be inside the query: display:contents at
-  // top level would destroy the two-column desktop layout outright.
-  const mq = (chromeCss.match(/@media\(max-width:820px\)\{[\s\S]*?\n\}/) || [''])[0];
-  ck('the phone layout flattens the stacks', /\.stack\{display:contents\}/.test(mq), mq);
-  ck('...and sinks familiars below the main stack',
-     /#familiarCard,#addFamiliarLink\{order:1\}/.test(mq), mq);
-  ck('neither rule escapes the media query (they would break the desktop layout)',
-     !/^\.stack\{display:contents\}/m.test(chromeCss) &&
-     (chromeCss.match(/display:contents/g) || []).length === 1);
-  /* Existing is not the same as WINNING. `.stack{display:grid}` and the query's
-     `.stack{display:contents}` have identical specificity, so whichever comes
-     last applies — and with the query written above the base rule the phone
-     layout silently did nothing at all. Only a browser shows that; here, assert
-     the order that makes it work. */
-  ck('the media query comes after the .stack rule it overrides',
-     chromeCss.indexOf('@media(max-width:820px)') > chromeCss.indexOf('.stack{display:grid'),
-     {query: chromeCss.indexOf('@media(max-width:820px)'), base: chromeCss.indexOf('.stack{display:grid')});
-  ck('the desktop layout is still two columns',
-     /\.cols\{display:grid;[^}]*grid-template-columns:minmax\(0,320px\) minmax\(0,1fr\)/.test(chromeCss));
-
-  // 320px leaves ~266px inside an .item, and .item .top has no wrap: the pill,
-  // two icons and the gaps eat ~200px before the name is drawn.
+  // The familiar row may wrap (it is drawn in the familiar's modal too)
   ck('the familiar row may wrap in the narrow column',
      /#familiarList \.item \.top\{flex-wrap:wrap\}/.test(sheetCss));
-  ck('...and the fix is scoped, so Statuses in the wide column is untouched',
+  ck('...and the fix is scoped, so Statuses is untouched',
      !/^\.item \.top\{[^}]*flex-wrap/m.test(sheetCss));
   ck('the summoned pill does not break inside its own border',
      /#familiarList \.fam-state\{white-space:nowrap\}/.test(sheetCss));
-
   // buildToc listed every card label with no visibility filter, so a hidden
   // card gave a menu entry that scrolled to a zero-height box. jumpToNote has
   // always made this check; the two now agree.
@@ -2128,7 +2114,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const sec = name => (src.match(new RegExp('const ' + name + '=[\\s\\S]*?\\n  const ')) || [''])[0];
   const on = (name, ids) => ids.every(id => sec(name).includes('id="' + id + '"'));
   ck('Appearance holds the look and the interface switches', on('secAppearance', ['segSkin', 'segTheme', 'swRough', 'swTabIcons', 'swBackdrop']));
-  ck('Sheet display holds the card choices', on('secDisplay', ['segStatStyle', 'swHpColor', 'swTrackers']));
+  ck('Sheet display holds the card choices', on('secDisplay', ['swHpColor', 'swTrackers']));
   ck('#103 ...and the advancement choice and the familiars icon', on('secDisplay', ['segAdv', 'swFamiliars']));
   ck('Carrying holds size, encumbrance, coins and the live line', on('secCarrying', ['setSize', 'segEnc', 'swCoinWeight', 'encHint']));
   ck('Rules data holds the sources, the list and the sheet check', on('secRules', ['srcList', 'newSrc', 'btnFetchRules', 'btnClearRules', 'rulesData', 'btnCharUpdate']));
@@ -2158,7 +2144,8 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   /* review: Encumbrance was a <select>, which announces its value; as buttons it
      must say which is pressed — and so must every segmented choice here */
   ck('every segmented choice on the dialog says which button is pressed',
-     ['segSkin', 'segTheme', 'segStatStyle', 'segEnc'].every(id => /aria-pressed="\$\{/.test((src.match(new RegExp('id="' + id + '"[\\s\\S]{0,700}')) || [''])[0])) &&
+     // #103: segStatStyle retired with the Skills display setting; segAdv took its place
+     ['segSkin', 'segTheme', 'segAdv', 'segEnc'].every(id => /aria-pressed="\$\{/.test((src.match(new RegExp('id="' + id + '"[\\s\\S]{0,700}')) || [''])[0])) &&
      /const g=e\.target\.closest\("\.seg"\);if\(g\)g\.querySelectorAll\("button"\)\.forEach\(b=>b\.setAttribute\("aria-pressed",b\.classList\.contains\("on"\)\?"true":"false"\)\);/.test(src));
   ck('the badge refresh targets the sidebar',
      /querySelector\('\[data-setbadge="rules"\]'\)[\s\S]{0,40}innerHTML=rulesNavBadgeHTML\(\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/89-rules-merge.js'), 'utf8')));
