@@ -1364,6 +1364,21 @@ function block(html, needle, tag) {
        ['defences"\]\{order:3', 'statuses"\]\{order:4', 'skillsCard\{order:5', 'resources"\]\{order:6', 'features"\]\{order:7'].every(x => new RegExp(x).test(in2)), in2);
     ck('#103 the stacks are only ever flattened inside .sheet-grid', !/(^|[}\s,])\.col-[mr]\{display:contents/.test(g) && !/\.stack\{display:contents/.test(g));
   }
+  // Mike's second pass: narrow stack cards follow their own width (container
+  // queries), never break a resource name mid-word, and keep headings on one line
+  {
+    const sc = fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const cards = fs.readFileSync(path.join(ROOT, 'src/css/20-cards.css'), 'utf8');
+    const all = ['00-tokens', '10-chrome', '20-cards', '30-sheet', '45-combat', '47-journal', '50-modal'].map(f => { try { return fs.readFileSync(path.join(ROOT, 'src/css/' + f + '.css'), 'utf8'); } catch (e) { return ''; } }).join('\n');
+    ck('#103 the stacks\' cards are the only size containers', /\.sheet-grid>\.col-m>\.card,\.sheet-grid>\.col-r>\.card\{container-type:inline-size\}/.test(sc) &&
+       (all.match(/container-type:/g) || []).length === 1);
+    ck('#103 a narrow resource row puts its controls under the name', /@container \(max-width:420px\)\{\.res\{flex-wrap:wrap;[^}]*\}\.res-main\{flex:1 0 100%\}\}/.test(sc));
+    ck('#103 a resource name never breaks mid-word', /\.res-name\{[^}]*overflow-wrap:break-word/.test(cards) && !/\.res-name\{[^}]*overflow-wrap:anywhere/.test(cards));
+    ck('#103 the Sheet\'s headings stay on one line; narrow ones tighten and drop the words beside them',
+       /\.sheet-grid \.card>\.label\{white-space:nowrap\}/.test(sc) && /@container \(max-width:460px\)\{#featCollapseLbl\{display:none\}\}/.test(sc) &&
+       /@container \(max-width:380px\)\{\.card>\.label\{[^}]*\}\.card>\.label \.add\{font-size:0;/.test(sc));
+    ck('#103 Collapse all keeps a name without its words', /id="featCollapseAll" title="Collapse or expand all"/.test(t));
+  }
   // Mike: the rests read "Short rest" / "Long rest" on a desktop; the icons
   // come back with Icon tabs on, or at the width the tab bar turns to icons
   {

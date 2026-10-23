@@ -135,6 +135,22 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
 /* Change / Remove at the foot of a species or background window */
 #mBody > .rowbtns:last-child{margin:14px 0 0}
 
+/* ---- narrow stacks (#103, Mike's second pass) ----
+   The two stacks' cards are size containers, so these rules follow the
+   card's own width, not the viewport's: the right stack is ~355px at 1280
+   but full width at 900. A heading stays on one line; when the card is
+   narrow its Add buttons keep only their + (the word stays the accessible
+   name) and the heading's tracking tightens, and Features' "Collapse all"
+   keeps only its icon (its title names it). A resource row puts its
+   controls on a second line under the name. Only inside .sheet-grid's
+   stacks: no container is declared anywhere else, so no other card is
+   touched. */
+.sheet-grid>.col-m>.card,.sheet-grid>.col-r>.card{container-type:inline-size}
+.sheet-grid .card>.label{white-space:nowrap}
+@container (max-width:460px){#featCollapseLbl{display:none}}
+@container (max-width:420px){.res{flex-wrap:wrap;justify-content:flex-end;row-gap:6px}.res-main{flex:1 0 100%}}
+@container (max-width:380px){.card>.label{letter-spacing:.08em;gap:6px}.card>.label .add{font-size:0;gap:0;padding:4px}}
+
 /* ---- the rail (#103, spec §6.2; card `vitals`) ----
    Dark by its own tokens (00-tokens.css): the everyday tokens are re-pointed
    here, so every control inside — inputs, the death-save circles, the padlock,

@@ -164,7 +164,7 @@ input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
 .rd-sub{font-family:var(--head);font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;overflow-wrap:anywhere}
 .res{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px dotted var(--hair)}
 .res-main{flex:1;min-width:0}
-.res-name{font-weight:700;display:flex;align-items:center;gap:6px;overflow-wrap:anywhere}
+.res-name{font-weight:700;display:flex;align-items:center;gap:6px;overflow-wrap:break-word}  /* break-word, not anywhere: anywhere lets a narrow row split "Superiority" mid-word */
 .res-auto{font-family:var(--head);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:0 6px}
 .res-die{font-family:var(--body);font-size:13px;font-weight:700;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:6px;padding:0 5px;line-height:1.5}
 .res-sub{font-family:var(--head);font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em}
