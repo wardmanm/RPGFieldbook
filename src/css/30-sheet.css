@@ -94,6 +94,14 @@ html[data-rough="on"] .vbox::before{filter:url(#rough)}
 .sh-barslot{display:contents}
 .sh-xpbar{display:block;height:6px;border-radius:3px;overflow:hidden;background:color-mix(in srgb,var(--ink) 16%,transparent)}
 .sh-xpbar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+/* a phone fits the icons and the level badge on one row under the name: at
+   390px wide that needs ~10px back from the gaps and the XP box (#103 QA). A
+   "Level up ready" badge is wider, and still wraps to its own row. */
+@media(max-width:480px){
+  .sheet-head{column-gap:10px}
+  .sheet-head .sh-bar{gap:4px}
+  .sh-xpwrap{width:96px}
+}
 /* the menus: under the tab bar (40), over the cards; #shBack is transparent */
 .sh-back{display:none;position:fixed;inset:0;z-index:35}
 .sh-back.open{display:block}
