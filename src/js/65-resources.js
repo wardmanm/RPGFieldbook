@@ -163,8 +163,11 @@ function openHdSpend(sel){
     return r;
   };
   if(typed)typed.addEventListener("input",check);
-  if(apply)apply.addEventListener("click",()=>{const r=check();if(r.ok){spendHitDie(sel,r.roll);closeModal();}});
-  const rollMe=document.getElementById("hdRollMe");if(rollMe)rollMe.addEventListener("click",()=>{rollHitDie(sel);closeModal();});
+  /* No closeModal() here: spendHitDie() (which rollHitDie() also calls) ends in
+     restSummary(), which OPENS the "Hit die spent" modal in this one's place —
+     closing right after would close THAT one before the player ever saw it. */
+  if(apply)apply.addEventListener("click",()=>{const r=check();if(r.ok)spendHitDie(sel,r.roll);});
+  const rollMe=document.getElementById("hdRollMe");if(rollMe)rollMe.addEventListener("click",()=>rollHitDie(sel));
 }
 /* Spend one `die` with this roll: mark it used, heal through adjustHP, report. */
 function spendHitDie(die,roll){
