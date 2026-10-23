@@ -27,6 +27,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'EDIT_CARDS',
   'RB_CATS', 'RB_PAGE', 'RB_HITS', 'rbUI', 'rbCat', 'rbShown', 'rbFacets', 'rbState', 'rbFacetVal', 'rbPasses', 'rbSorted', 'rbSortBy', 'rbToggleFacet', 'rbClearFacets', 'rbFindRow', 'rbOpenRow', 'rulesCatOf', 'rbSideHTML', 'rbHeadHTML', 'rbBodyHTML', 'rbSearchHTML',
   'rbToList', 'rbOpenCat', 'rbNum', 'K_SET', 'saveSettings',
+  'prunePackMeta',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2739,6 +2740,24 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      typeof store[X.K_SET] === 'string' && JSON.parse(store[X.K_SET]).rulesCat === 'spells');
 
   ctx.openModal = savedOM; X.rules = savedRules; X.character = savedChar; X.settings.rulesCat = savedCat; X.rbUI.per = {}; X.rbUI.q = '';
+}
+
+// ---------- #103: defaultLanguages and advancement are per-label pack fields, like requires
+{
+  const saved = X.rules;
+  X.resetRules();
+  X.mergeRules({system: 'humblewood', defaultLanguages: ['Common', 'Birdsong'], advancement: [[0, 1], [100, 2]], races: [{name: 'Mapach'}]}, 'h.json');
+  X.mergeRules({system: '__proto__', defaultLanguages: ['Odd'], races: [{name: 'Q'}]}, 'p.json');
+  ck('#103 the fields are stored per label', JSON.stringify(X.rules.defaultLanguages.humblewood) === '["Common","Birdsong"]' && X.rules.advancement.humblewood[1][0] === 100);
+  ck('#103 ...in prototype-free maps', Object.getPrototypeOf(X.rules.defaultLanguages) === null && JSON.stringify(X.rules.defaultLanguages['__proto__']) === '["Odd"]');
+  ck('#103 junk inside a declaration is dropped', (() => { X.mergeRules({system: 'j', defaultLanguages: ['A', 3, '  '], advancement: 'no', races: [{name: 'J'}]}, 'j.json');
+    return JSON.stringify(X.rules.defaultLanguages.j) === '["A"]' && !('j' in X.rules.advancement); })());
+  const back = JSON.parse(JSON.stringify(X.rules));
+  X.resetRules(); Object.assign(X.rules, back); X.normPackMaps();
+  ck('#103 a save and load keeps them', JSON.stringify(X.rules.defaultLanguages.humblewood) === '["Common","Birdsong"]' && Object.getPrototypeOf(X.rules.advancement) === null);
+  X.rules.races = X.rules.races.filter(r => r._source !== 'humblewood'); X.prunePackMeta();
+  ck('#103 removing the pack drops them', !('humblewood' in X.rules.defaultLanguages) && !('humblewood' in X.rules.advancement));
+  X.rules = saved;
 }
 
 /* ================= Fetch all never loses what is loaded (issue #65) ===========

@@ -93,6 +93,19 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
   Nothing here ever blocks loading. The pack merges as normal and everything it does ship keeps
   working; the app shows a red **! n missing** chip on that pack in Settings → Rules data, with a
   tooltip naming what's absent and where to get it.
+- **`defaultLanguages`** *(optional, array of strings)* — languages every character of this
+  ruleset knows; Fieldbook falls back to Common when a ruleset declares none:
+
+  ```json
+  { "system": "Humblewood", "defaultLanguages": ["Common", "Birdsong"] }
+  ```
+- **`advancement`** *(optional, array)* — XP thresholds as `[[0,1],[300,2],…]`, ascending, one row
+  per level from 1; Fieldbook falls back to the SRD's when a ruleset declares none or a malformed
+  table:
+
+  ```json
+  { "system": "Humblewood", "advancement": [[0, 1], [100, 2], [400, 3]] }
+  ```
 - **`rulebook`** *(optional, boolean)* — mark a pack that carries a whole system in one file, the
   way `srd52_full.json` and `homebrew_full.json` do. Purely presentational: the app files it
   under a **Rulebook** heading in Settings → Loaded rules data instead of **Mixed**. Merging is

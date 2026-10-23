@@ -74,6 +74,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'fxNeg', 'mark', 'editing',
   'itemFacets', 'spellFacets', 'featFacets', 'itemCatOf', 'itemRarOf', 'spellClassesOf', 'spellSchoolOf', 'openItemInfo', 'openFeatInfo', 'ITEM_RARITIES',
   'settings', 'rbUI',
+  'CHIP_KEYS', 'chipClean', 'chipList', 'advancementOf', 'SRD_ADVANCEMENT', 'advancementFor', 'xpNumber', 'xpProgress', 'defaultLanguagesFor', 'ensureDefaultLanguages', 'langParse',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -4422,6 +4423,58 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('#99 an unknown name still says so', open(() => ctx.openClassInfo('Nobody', {ref: true})).html.includes('No rules data loaded'));
 
   ctx.openModal = savedOM; X.rules = savedRules; X.character = savedChar;
+}
+
+/* ---- #103: chips, advancement and default languages (spec §3, §4, §4a) ---- */
+{
+  const savedRules = X.rules;
+  const b = X.blankChar();
+  ck('#103 new lists start empty', ['resists', 'immunes', 'senses', 'languages'].every(k => Array.isArray(b[k]) && b[k].length === 0));
+  ck('#103 a new character advances by XP', b.advancement === 'xp' && X.advancementOf(b) === 'xp');
+  ck('#103 advancement junk reads as xp', ['milestone', 'Milestone', 'lots', null, 7].map(v => X.advancementOf({advancement: v})).join() === 'milestone,xp,xp,xp,xp');
+  const dirty = [{id: 'a', name: ' Fire '}, {name: 'fire'}, {name: ''}, 'Cold', null, [], {name: 5}, {id: 'c', name: 'Cold'}];
+  const clean = X.chipClean(dirty, 'resists', false);
+  ck('#103 chips: trimmed, deduped case-blind, junk dropped', JSON.stringify(clean.map(c => c.name)) === '["Fire","Cold"]', clean);
+  ck('#103 a read never invents an id', clean[0].id === 'a' && X.chipClean([{name: 'X'}], 'resists', false)[0].id === '');
+  ck('#103 migrate mints ids', typeof X.chipClean([{name: 'X'}], 'resists', true)[0].id === 'string' && X.chipClean([{name: 'X'}], 'resists', true)[0].id.length > 0);
+  const sen = X.chipClean([{name: 'Darkvision', range: 60}, {name: 'Tremorsense', range: '30'}, {name: 'Blindsight', range: -5}, {name: 'Truesight', range: 'far'}], 'senses', false);
+  ck('#103 a sense range is a whole number of feet or blank', JSON.stringify(sen.map(s => s.range)) === '[60,30,"",""]', sen);
+  ck('#103 only languages keep a source', X.chipClean([{name: 'Common', src: 'system'}], 'languages', false)[0].src === 'system' &&
+     !('src' in X.chipClean([{name: 'Fire', src: 'race:Elf'}], 'resists', false)[0]) && X.chipClean([{name: 'Elvish'}], 'languages', false)[0].src === '');
+  ck('#103 chipList reads through the guard', X.chipList({resists: 'nope'}, 'resists').length === 0 && X.chipList(null, 'senses').length === 0);
+
+  ck('#103 the SRD table: 20 levels from 0', X.SRD_ADVANCEMENT.length === 20 && X.SRD_ADVANCEMENT[0][0] === 0 && X.SRD_ADVANCEMENT[19][0] === 355000 && X.SRD_ADVANCEMENT[15][0] === 195000);
+  X.rules = {name: 'T', advancement: Object.create(null), defaultLanguages: Object.create(null)};
+  ck('#103 no declaration: the SRD table and Common', X.advancementFor({system: 'dnd'}) === X.SRD_ADVANCEMENT && JSON.stringify(X.defaultLanguagesFor({system: 'dnd'})) === '["Common"]');
+  X.rules.advancement.humblewood = [[0, 1], [100, 2], [400, 3]];
+  X.rules.defaultLanguages.humblewood = ['Common', 'Birdsong', '', 7];
+  ck('#103 a ruleset that declares its own', X.advancementFor({system: 'humblewood'})[1][0] === 100 &&
+     JSON.stringify(X.defaultLanguagesFor({system: 'humblewood'})) === '["Common","Birdsong"]');
+  ck('#103 ...used only by its own ruleset', X.advancementFor({system: 'dnd'}) === X.SRD_ADVANCEMENT);
+  X.rules.advancement.humblewood = [[0, 1], [500, 2], [400, 3]];
+  ck('#103 a malformed table falls back', X.advancementFor({system: 'humblewood'}) === X.SRD_ADVANCEMENT);
+  X.rules.advancement.humblewood = [[0, 2]];
+  ck('#103 a table must start at level 1, xp 0', X.advancementFor({system: 'humblewood'}) === X.SRD_ADVANCEMENT);
+  X.rules = savedRules;
+
+  ck('#103 XP reads numbers and digit strings', X.xpNumber(183000) === 183000 && X.xpNumber('183,000') === 183000 && X.xpNumber(' 42 ') === 42 &&
+     X.xpNumber('') === null && X.xpNumber('lots') === null && X.xpNumber(-5) === null && X.xpNumber('1.5') === null);
+  const lvl = (n, xp) => ({system: 'dnd', xp, classes: [{name: 'Cleric', level: n}]});
+  const p = X.xpProgress(lvl(15, '183,000'));
+  ck('#103 progress toward the next level', p && p.xp === 183000 && p.level === 15 && p.next === 195000 && p.ready === false, p);
+  ck('#103 past the threshold: ready', X.xpProgress(lvl(15, 200000)).ready === true);
+  ck('#103 level 20 has no next', X.xpProgress(lvl(20, 400000)).next === null && X.xpProgress(lvl(20, 400000)).ready === false);
+  ck('#103 XP not a number: no progress', X.xpProgress(lvl(3, 'a lot')) === null);
+
+  ck('#103 languages parse from a pack string', JSON.stringify(X.langParse('Common, Elvish and one other language of your choice')) === '["Common","Elvish"]' &&
+     JSON.stringify(X.langParse('Common and Dwarvish')) === '["Common","Dwarvish"]' && JSON.stringify(X.langParse('Any two languages')) === '[]' &&
+     JSON.stringify(X.langParse(7)) === '[]');
+  const c = X.blankChar(); c.system = 'dnd'; c.languages = [{id: 'x', name: 'common', src: ''}];
+  X.ensureDefaultLanguages(c);
+  ck('#103 a default already present is not doubled', c.languages.length === 1);
+  const c2 = X.blankChar(); c2.system = 'dnd';
+  X.ensureDefaultLanguages(c2); X.ensureDefaultLanguages(c2);
+  ck('#103 defaults are added once, stamped system', c2.languages.length === 1 && c2.languages[0].name === 'Common' && c2.languages[0].src === 'system');
 }
 
 /* ---- imported files and packs render inert ----

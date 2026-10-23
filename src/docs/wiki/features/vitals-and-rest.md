@@ -13,7 +13,8 @@ lock, the level-1 seed, the colour bands, the three Hit Dice looks, and what eac
 `recoverHitDice()`, `renderDeath()` in `65-resources.js`; `level1HP()`, `seedLevel1HP()`,
 `resyncLevel1HP()`, `hitDieMax()` in `56-class.js`; `charSize()`, `sizeOptionsHTML()`,
 `capacityFor()` in `25-origins-items.js`; `openSizePicker()` in `80-modal-forms.js`; `bumpHP()`,
-the padlock, death-save and hit-dice handlers in `90-boot.js` · **Tests:** `sheet.js`,
+the padlock, death-save and hit-dice handlers in `90-boot.js` · `chipList()`, `xpProgress()`,
+`advancementFor()` in `41-chips.js` · **Tests:** `sheet.js`,
 `char-update.js`, `rules-data.js` · **See also:** [Character building](character-building.md) (hit
 points on level-up), [Armor & AC](armor-and-ac.md), [Inventory](inventory.md) (encumbrance),
 [Combat view](combat-view.md), [Class resources](class-resources.md)

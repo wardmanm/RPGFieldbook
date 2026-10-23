@@ -45,6 +45,11 @@ const GROUP_RESERVED=new Set(Object.getOwnPropertyNames(Object.prototype).map(s=
    level on the line below, before 30-version.js has run, so touching APP_VERSION
    from here would be a TDZ ReferenceError and the app would never boot.
    newCharacter() stamps the real version; "" means "never checked". */
+/* The SRD's character advancement (XP → level), the fallback when the
+   character's ruleset declares no `advancement` of its own (#103). A literal:
+   blankChar() and this run at load, before `rules` exists. */
+const SRD_ADVANCEMENT=[[0,1],[300,2],[900,3],[2700,4],[6500,5],[14000,6],[23000,7],[34000,8],[48000,9],[64000,10],
+  [85000,11],[100000,12],[120000,13],[140000,14],[165000,15],[195000,16],[225000,17],[265000,18],[305000,19],[355000,20]];
 function blankChar(){
   const c={id:uid(),appVersion:"",system:"humblewood",name:"",class:"",ancestry:"",background:"",alignment:"",xp:"",level:1,
     ac:"",init:"",speed:"",hitdice:"",hdManual:false,inspiration:false,
@@ -70,6 +75,10 @@ function blankChar(){
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
        above), and this is a different thing entirely. */
     secNotes:{}, noteCollapse:{},
+    /* #103: chips (41-chips.js), read only through chipList(); default
+       languages are added at runtime (ensureDefaultLanguages), never here. */
+    resists:[], immunes:[], senses:[], languages:[],
+    advancement:"xp", showFamiliars:false,
     /* Cards whose edit/delete buttons the player has hidden (87-notes.js, #97):
        card key -> true. Read only through editHidden(). */
     editHide:{},

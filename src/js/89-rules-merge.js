@@ -146,8 +146,8 @@ function packMap(o){
    (plain object or not). For a path that doesn't already run through
    `tidyRules()` (which does the same thing) right after assigning `rules` —
    see the three cache/import restores in rules-packs.md. */
-function normPackMaps(){rules.requires=packMap(rules.requires);rules.credits=packMap(rules.credits);}
-function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:packMap(),credits:packMap()};}
+function normPackMaps(){rules.requires=packMap(rules.requires);rules.credits=packMap(rules.credits);rules.defaultLanguages=packMap(rules.defaultLanguages);rules.advancement=packMap(rules.advancement);}
+function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:packMap(),credits:packMap(),defaultLanguages:packMap(),advancement:packMap()};}
 /* An entry's name (a keyword's term) as text, or "" when it has none that can
    be shown: not an object, no name, only spaces, or not text. A number is a
    name written without quotes, so it counts. Every picker, lookup and chip
@@ -184,6 +184,8 @@ function tidyRules(){
   const dropped={};
   rules.requires=packMap(rules.requires);
   rules.credits=packMap(rules.credits);
+  rules.defaultLanguages=packMap(rules.defaultLanguages);
+  rules.advancement=packMap(rules.advancement);
   RULE_CATS.forEach(kind=>{
     const arr=rules[kind];
     if(arr==null)return;
@@ -244,6 +246,11 @@ function mergeRules(obj,fileName,url){
       rules.requires=packMap(rules.requires);
     rules.requires[srcLabel(obj)]=obj.requires;
   }
+  if(Array.isArray(obj.defaultLanguages)){
+    const l=obj.defaultLanguages.filter(x=>typeof x==="string"&&x.trim()).map(x=>x.trim());
+    rules.defaultLanguages=packMap(rules.defaultLanguages);if(l.length)rules.defaultLanguages[src]=l;
+  }
+  if(Array.isArray(obj.advancement)){rules.advancement=packMap(rules.advancement);rules.advancement[src]=obj.advancement;}
   const credit=creditOf(obj.name||src,obj.license,obj.attribution);
   if(credit){
     if(!rules.credits||typeof rules.credits!=="object"||Array.isArray(rules.credits)||Object.getPrototypeOf(rules.credits)!==null)
@@ -312,6 +319,8 @@ function poolFromExport(saved){
     if(isObj(saved)){
       if(typeof saved.name==="string")rules.name=saved.name;
       const req=isObj(saved.requires)?saved.requires:{};
+      const defLang=isObj(saved.defaultLanguages)?saved.defaultLanguages:{};
+      const adv=isObj(saved.advancement)?saved.advancement:{};
       RULE_CATS.forEach(cat=>{
         /* the same features-or-traits choice mergeRules makes */
         const arr=(cat==="features"&&!Array.isArray(saved.features))?saved.traits:saved[cat];
@@ -331,6 +340,8 @@ function poolFromExport(saved){
           if(!run||run.key!==key){
             flush();
             if(Array.isArray(req[srcLabel(pack)]))pack.requires=req[srcLabel(pack)];
+            if(Array.isArray(defLang[srcLabel(pack)]))pack.defaultLanguages=defLang[srcLabel(pack)];
+            if(Array.isArray(adv[srcLabel(pack)]))pack.advancement=adv[srcLabel(pack)];
             pack[cat]=[];
             run={key,file,url,pack};
           }
@@ -502,6 +513,8 @@ function dropOwnedPackMeta(labels,old){
     if(!RULE_CATS.every(c=>(rules[c]||[]).every(e=>(e._source||"")!==l||old.has(e))))return;
     if(rules.requires)delete rules.requires[l];
     if(rules.credits)delete rules.credits[l];
+    if(rules.defaultLanguages)delete rules.defaultLanguages[l];
+    if(rules.advancement)delete rules.advancement[l];
   });
 }
 /* One pack from a file, replacing what that same file loaded before (R4).

@@ -394,7 +394,7 @@ function removeRulesGroup(key){
 /* drop a source's `requires` and credits once none of its entries are left,
    so the persisted pool doesn't accumulate them for packs that are gone */
 function prunePackMeta(){
-  ["requires","credits"].forEach(k=>{
+  ["requires","credits","defaultLanguages","advancement"].forEach(k=>{
     const m=rules[k];if(!m||typeof m!=="object")return;
     Object.keys(m).forEach(src=>{if(!RULE_CATS.some(c=>(rules[c]||[]).some(e=>(e._source||"")===src)))delete m[src];});
   });
