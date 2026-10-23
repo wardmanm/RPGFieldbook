@@ -345,7 +345,7 @@ function poolFromExport(saved){
         const c=saved.credits[l];
         if(!isObj(c)||!RULE_CATS.some(k=>(rules[k]||[]).some(e=>e._source===l)))return;
         const cr=creditOf(c.title||l,c.license,c.attribution);
-        if(cr){if(!isObj(rules.credits))rules.credits=packMap();rules.credits[l]=cr;}
+        if(cr){rules.credits=packMap(rules.credits);rules.credits[l]=cr;}
       });
     }
     const used=RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);
