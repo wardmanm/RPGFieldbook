@@ -1,6 +1,6 @@
 # Attacks & damage
 
-The **Attacks & Weapons** card on the Sheet tab: one row per attack, each showing a to-hit (or a save
+The **Attacks & Weapons** card, at the top of the Inventory tab (on the Sheet until #103): one row per attack, each showing a to-hit (or a save
 DC) and a damage line worked out from the character's abilities, proficiency and effects. Rows come
 from three places — made by hand, generated from a weapon in the inventory, or generated from a spell
 — and the last two stay linked to what made them. Most of the complexity is in keeping those links
@@ -221,3 +221,4 @@ longer allows, leaving orphan rows alone.
 - 2026-09-28 — Spell attack rows take `spell.attack` effects and save rows `spell.dc`, through `spellDC()`; weapon rows take neither. → ledger L4568, #77
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-13 — A to-hit, damage or save DC an effect lowers is red with ▼; the breakdown reddens that effect's line. → ledger L5700, #89
+- 2026-10-23 — The card moves, unchanged, from the Sheet to the top of the Inventory tab, its note, combat-view place and #97 pencil with it. → ledger L6633, #103

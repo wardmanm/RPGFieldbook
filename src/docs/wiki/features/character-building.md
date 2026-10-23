@@ -1,6 +1,7 @@
 # Character building
 
-How a sheet gets its ancestry, background and classes: the three Add pickers on the Sheet tab,
+How a sheet gets its ancestry, background and classes: the three Add pickers, reached from the
+Sheet's header,
 level-up and level-down, choosing or changing a subclass, and the choice modal that every one of
 them ends in — "choose 2 skills", an Ability Score Improvement, a feat, hit points, a subclass, or an
 option list such as Battle Master maneuvers. Everything these add is tagged with where it came from,
@@ -16,7 +17,9 @@ so removing the source takes it back out; that mechanism is
 `openAddRace()`, `applyRace()`, `racesForCharacter()` in `52-race.js`; `openAddBackground()`,
 `applyBackground()` in `54-background.js`; `subclassesFor()`, `addFeatureFromDef()`,
 `grantFeatDef()`, `runExtraChoices()` in `50-classrace.js`; `dismissModal()`,
-`setDismissGuard()` in `80-modal-forms.js` · **Data:** `choices` on class, subclass and race
+`setDismissGuard()` in `80-modal-forms.js`; `classLineHTML()`, `classFlyHTML()`, `openShFly()` in
+`40-sheet.js`; `raceInfoFoot()` in `52-race.js`, `bgInfoFoot()` in `54-background.js`;
+`grantLanguages()`, `dropLanguages()` in `41-chips.js` · **Data:** `choices` on class, subclass and race
 levels, per [rules-schema](../../../../docs/rules-schema.md) §5; a class's `multiclass` block,
 §6.3; the `features.json` of the 2024 pack (private repo) and of `data/srd52/` ·
 **Tests:** `sheet.js`, `char-update.js`, `rules-data.js` · **See also:**
@@ -24,6 +27,19 @@ levels, per [rules-schema](../../../../docs/rules-schema.md) §5; a class's `mul
 [Features & traits](features-and-traits.md), [Converter](../data/converter.md)
 
 ## How it works
+
+**Where it starts: the header** (#103). Under the name, the header's class line reads
+"Cleric 12 · Fighter 3 · Half-Elf · Acolyte" (`classLineHTML()`), every part a button:
+
+- **A class** opens the header's popover with its menu (`classFlyHTML()`): About (its info window),
+  its subclass (or Choose subclass), ▲ Level up, ▼ Level down, + Add class and Remove (with the
+  existing confirm). These are the old Class card's controls, moved; its Level up / Level down
+  buttons and its chips are gone.
+- **The species or background** opens its info window, which, from the sheet and for the
+  character's own pick, ends in **Change** (the picker again) and **Remove** (confirm, then the
+  window closes) — `raceInfoFoot()` / `bgInfoFoot()`. Reference mode (`{ref:true}`) shows neither.
+- **Nothing chosen** reads "+ Class", "+ Race" / "+ Ancestry" (by skin, `raceTerm()`) and
+  "+ Background", each opening its picker.
 
 **Ancestry.** `openAddRace()` lists `racesForCharacter()`: every loaded species except those whose
 system (read from `_source` by `systemOf()`) is the other one, or whose pack lists this system in
@@ -33,8 +49,9 @@ picked. If it (or the subrace) carries `abilityChoice`, the modal offers +2/+1, 
 (the 2024 rule puts the increase on the background). `applyRace()` removes any current ancestry,
 then grants from the species and then the subrace: fixed `abilityScores` as a feature, skills and
 saves as grants, each trait as a feature, any `choices` (skill) queued, `equipmentGrants`, and speed
-and size **only if those boxes are empty**. `proficiencies` and `languages` are appended to the
-free-text Proficiencies box. Queued skill choices then open through `runExtraChoices()`.
+and size **only if those boxes are empty**. `proficiencies` is appended to the free-text
+Proficiencies box; `languages` become chips stamped `race:<Name>` (`grantLanguages()`), which
+removing or changing the species takes back ([Grants & provenance](../architecture/grants-and-provenance.md)). Queued skill choices then open through `runExtraChoices()`.
 `openRaceInfo(idOrName,opts)` opens by the pack entry's `_id` as readily as by name, and the Rules
 tab's Species rows open it with `{ref:true}` (#99): the window shows the species' own rules with no
 "— selected" mark, since there is no character to mark it against.
@@ -42,12 +59,14 @@ tab's Species rows open it with `{ref:true}` (#99): the window shows the species
 **Background.** `openAddBackground()` previews the 2024 shape: the three eligible abilities as
 +2/+1 or +1/+1/+1, a feat (a select when the background offers more than one), the granted skills,
 tools and languages. `applyBackground()` adds the ability feature, the skill grants, the feat through
-`grantFeatDef()`, the single background `feature`, `equipmentGrants`, and appends tools and
-languages to Proficiencies. `openBackgroundInfo(idOrName,opts)` opens by id as well as by name, and
+`grantFeatDef()`, the single background `feature`, `equipmentGrants`, appends tools to
+Proficiencies, and grants its `languages` as chips stamped `bg:<Name>`. `openBackgroundInfo(idOrName,opts)` opens by id as well as by name, and
 the Rules tab's Backgrounds rows open it with `{ref:true}` (#99): the window shows the background's
 options, not this character's choices.
 
-**Class.** `openAddClass()` takes a pack class or a custom name and a starting level (1–20).
+**Class.** `openAddClass()` takes a pack class or a custom name and a starting level (1–20). With
+no class in the loaded rules it says so in the old Class card's words (`NO_RULES_HINT`): load a
+rules pack with races and classes from Settings → Rules, or use a custom name.
 `addClass()` sets the spellcasting ability if none is set and runs `applyClassLevel()` for every
 level up to the starting one — traits become features, `choices` and spell notes collect — then
 opens one choice modal for all of them. What else it grants depends on whether a class is already
@@ -67,15 +86,14 @@ The Add class preview shows the same note once a class is on the sheet, so its "
 read as a promise. Armor, weapon and tool training is text in either case: the first class's lives
 in its data only, and a multiclass's is shown in the note, never tracked. Removing the **first**
 class while another remains makes that one first: it takes its saving throws, tagged to it, with a
-toast, and nothing else is re-offered. The class
-chip went with the Class card (#103); the header's class flyout (`classFlyHTML()`) offers the class,
-and its subclass as its own entry (`data-sub-info`). `openClassInfo(idOrName,opts)` and
+toast, and nothing else is re-offered. The header's class menu (`classFlyHTML()`) offers the
+class's window, and its subclass as its own entry (`data-sub-info`). `openClassInfo(idOrName,opts)` and
 `openSubclassInfo(classIdOrName,subName,opts)` open by id as well as by name, and the Rules tab's
 Classes and Subclasses rows open them with `{ref:true}` (#99): no "— current" level, no subclass
 marker, nothing from `character.classes`; a subclass link inside such a window carries
 `data-sub-ref="1"` so following it stays in reference mode too.
 
-**Level up.** `doLevelUp()` asks which class when there are several, raises it, and runs
+**Level up.** From the class menu, or the level ring's "Level up ready" ([Vitals & rest](vitals-and-rest.md)). `doLevelUp()` asks which class when there are several, raises it, and runs
 `applyClassLevel()` for the new level (class and subclass). `hpChoice()` is built **before** Max HP is
 unlocked, so it remembers the lock; the level's modal then opens with a synthesized `{type:"hp"}`
 block first. Blank takes the fixed value (half the die + 1), "Roll for me" rolls it, CON is added
@@ -291,3 +309,4 @@ they are built: [Converter](../data/converter.md).
   notes, and shows the class name as written. → ledger L4086, #69
 - 2026-10-09 — The options library: the 2024 pack's in the private repo, the SRD 5.2 pack's here. → ledger L5426, #85
 - 2026-10-22 — The class, subclass, species and background windows open by `_id` as well as by name, and gain a reference mode (`{ref:true}`) for the Rules tab's rows, with nothing from the open character. → ledger L6327, #99
+- 2026-10-23 — The Class and Ancestry & Background cards go: the header's class line opens a class menu (About, subclass, Level up / down, + Add class, Remove) and the species and background windows gain Change and Remove; species and backgrounds grant languages as chips; Add class with no classes loaded points to Settings → Rules. → ledger L6633, #103

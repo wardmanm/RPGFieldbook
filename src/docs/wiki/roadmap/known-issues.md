@@ -45,14 +45,8 @@ Known behaviour that is accepted for now.
   by a fallback in `convert_classes`. This was the owner's call: fixing it drops both from the core
   pack, bumps XPHB's data version, and strands anyone playing an Artificer on the core pack alone.
   Tasha's skips the Artificer and its subclasses instead of shipping duplicates. → ledger L1816
-- **In the By ability ("grouped") layout a Skills note can't be started.** The Skills card is hidden,
-  and the Section Notes card lists only sections that already have a note. Existing Skills notes stay editable.
-  Mitigating it means a second note button in the Abilities label, which is worse UI than the gap.
-  → ledger L106
 - **`**Hit** Points` loses its glossary chip.** The asterisks break the `\b(term)\b` match. This is
   inherent to escaping first and matching second. → ledger L1504
-- **The Dice hit-dice style can't mark a die spent without healing,** because tapping is the roll.
-  Full and Condensed can, and the Settings hint says so. → ledger L2178
 - **A favourited granted feature loses its star when the grant is rebuilt.** Changing subclass,
   removing a class or swapping ancestry runs `removeFeaturesWhere()` and re-adds through
   `addFeatureFromDef()`, which makes a new object. Inventory doesn't have this problem, because
@@ -129,6 +123,18 @@ Known behaviour that is accepted for now.
 - **The trackers' Σ is a button nested in a `role="button"` group header,** so assistive tech may
   flatten the header and never reach the Σ. Restructuring the header pattern (the journal's and the
   section notes' group headers share it) is likely 2.0's. → ledger L6057, and [Journal](../features/journal.md)
+- **A new character made before a cold rules cache has loaded gets Common as its default
+  language**, even where a loaded pack would declare other `defaultLanguages`: `newCharacter()`
+  reads the packs as they are at that moment, and `migrate()` only adds missing defaults later, so
+  the fallback Common stays beside them. Inert today: no pack declares `defaultLanguages`.
+  → ledger L6633, and [Character model](../architecture/character-model.md)
+- **Changing a sheet's system does not swap its `system` language chips** for the new ruleset's
+  defaults (the #103 spec §4 asked for it; not built). Inert today for the same reason: every
+  ruleset falls back to Common. → ledger L6633, and [Character model](../architecture/character-model.md)
+- **Familiars can't be added to the combat view from the Sheet.** Since #103 the Familiars card is
+  hidden on the Sheet (familiars open from the header's paw), and its combat toggle is on that card.
+  A sheet that already has Familiars in the view keeps it. → ledger L6633, and
+  [Combat view](../features/combat-view.md)
 - **A private data release publishes on its tag, with no approval step.** The public workflows wait
   for Mike in the `release` environment; GitHub refuses required reviewers on a private repo on the
   current plan (HTTP 422). Claude Code's ask rules and `/release`'s "publish" are its only gates.
@@ -140,7 +146,7 @@ Wanted, not yet done. Each needs work, not a source.
 
 - **Humblewood species have no size.** They all resolve to Medium (`charSize()`), but Jerbeen, Luma
   and Hedge are Small in the book. The fix belongs in the private repo's Humblewood extractor, which
-  has a verbatim suite, so the data must not be hand-edited. A player can set size in Vitals
+  has a verbatim suite, so the data must not be hand-edited. A player can set size from the rail
   meanwhile. → ledger L1426
 - **Small tables inside features read as flat text.** Magic Item Hacking's rarity costs and the
   Spell Emulator component's tiers are examples. → ledger L3596
@@ -479,3 +485,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-19 — Fixed and removed: thrown weapons now track their own ammunition (#104). Added: the printed sheet shows a ×0 item with no count. → ledger L6081, #104
 - 2026-10-19 — Fixed and removed: the printed sheet's ×0 count. Added: Undo recovery dropping a home-joined entry's remainder once the home stack is fired out, `grantSidLive()` checking the source now rather than "revoked since", and editor-made weapons that cannot be Thrown. → ledger L6147, #104
 - 2026-10-19 — Added: a private data release has no approval step (plan limit). → ledger L6226, #109
+- 2026-10-23 — Removed with #103: the By ability Skills-note gap and the Dice hit-dice style's spend limit (both layouts retired). Added: a cold-cache new character's default language, the unbuilt system-change swap of `system` chips, and Familiars no longer addable to the combat view from the Sheet. → ledger L6633, #103

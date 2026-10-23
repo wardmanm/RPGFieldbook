@@ -126,8 +126,8 @@ name says where its first function came from, not everything it holds: `migrate(
 | `20-lists.js` | features list, `usesMax()`, `renderFeatures()` | [Features & traits](features/features-and-traits.md) |
 | `25-origins-items.js` | `ORIGIN_KINDS`, item origin and cost, weight and encumbrance, size, `itemArmor()`, `armorAC()` | [Inventory](features/inventory.md), [Armor & AC](features/armor-and-ac.md), [Vitals & rest](features/vitals-and-rest.md) |
 | `30-version.js` | `APP_VERSION`, `DATA_VERSIONS`, `CHANGELOG`, `UPDATE_REPO`; `checkForUpdate()`, the update pill; data versions (`cmpDataVer()`) and `checkForDataUpdate()` | [Settings & updates](features/settings-and-updates.md), [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
-| `40-sheet.js` | `selectTab()`, the ToC; `invSection()`, item uses, `renderInventory()`; statuses, concentration card, familiars | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Conditions & concentration](features/conditions-and-concentration.md), [Sections & layout](ui/sections-and-layout.md) |
-| `41-chips.js` | chips (defences, senses, languages), the advancement table, default languages | [Vitals & rest](features/vitals-and-rest.md) |
+| `40-sheet.js` | `selectTab()`, the ToC; `invSection()`, item uses, `renderInventory()`; statuses, concentration card, familiars; the Sheet header (class line, class and familiar menus, level badge) | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Conditions & concentration](features/conditions-and-concentration.md), [Sections & layout](ui/sections-and-layout.md) |
+| `41-chips.js` | chips (defences, senses, languages), their grants, the advancement table, default languages | [Vitals & rest](features/vitals-and-rest.md), [Character model](architecture/character-model.md), [Grants](architecture/grants-and-provenance.md), [Story & notes](features/story-and-notes.md) |
 | `50-classrace.js` | rules lookups, emblems (`iconSVG()`), subclasses; the grant machinery (`applyEquipGrants()`, `revertEquipmentGrants()`, `grantFeatDef()`, `runExtraChoices()`); `renderClassRace()` | [Grants](architecture/grants-and-provenance.md), [Character building](features/character-building.md) |
 | `52-race.js` | ancestry/species pickers, `systemOf()` | [Character building](features/character-building.md) |
 | `54-background.js` | background pickers | [Character building](features/character-building.md) |
@@ -163,10 +163,10 @@ name says where its first function came from, not everything it holds: `migrate(
 | `45-combat.css` | the combat button and tab | [Combat view](features/combat-view.md) |
 | `47-journal.css` | the Journal tab | [Journal](features/journal.md) |
 | `50-modal.css` | the modal | [Shell](ui/shell.md) |
-| `00-sheet.html` | the Sheet tab | [Sections & layout](ui/sections-and-layout.md) |
+| `00-sheet.html` | the Sheet tab: the header, then the grid (rail, strip, Skills, Defences/Statuses/Resources, Features) | [Sections & layout](ui/sections-and-layout.md) |
 | `10-inventory.html` | the Inventory tab | [Inventory](features/inventory.md) |
 | `20-spells.html` | the Spells tab | [Spells](features/spells.md) |
-| `30-story.html` | the Story tab | [Story & notes](features/story-and-notes.md) |
+| `30-story.html` | the Bio tab (`#tab-story`) | [Story & notes](features/story-and-notes.md) |
 | `40-rules.html` | the Rules tab | [Rules & tables](features/rules-and-tables.md) |
 | `60-journal.html` | the Journal tab | [Story & notes](features/story-and-notes.md) |
 | `70-combat.html` | the Combat tab | [Combat view](features/combat-view.md) |
@@ -193,7 +193,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | **library** | The character library: the index of saved characters in localStorage (`K_LIB`). Not the rules — those are "packs" or "the rules cache" |
 | **stamp / fingerprint** | What `stampSrc()` writes on a copied rules entry: its pack, category and per-field hashes, so the rules-update tool can tell drift from player edits |
 | **effect** | A numeric modifier `{target, value}` (AC +1, save +2, speed +5). Nothing non-numeric is an effect |
-| **BIO / notes / secNotes** | `BIO` lists the Story tab's free-text fields, of which `character.notes` is one; `character.secNotes` is the per-section notes map. Different things |
+| **BIO / notes / secNotes** | `BIO` lists the Bio tab's free-text fields, of which `character.notes` is one; `character.secNotes` is the per-section notes map. Different things |
 | **tracker** | Three things: a *resource tracker* on the Sheet (`renderResources()`), the combat *round tracker* (`87-combat.js`), and the Journal tab's *trackers* (`87-trackers.js`) |
 
 ## Decisions
@@ -215,3 +215,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-09 — Bundling moves from the Node bundler to `fbdata.py bundle`; the code map drops its entry. → ledger L5342, #85
 - 2026-10-09 — The private split: the pack table says where each pack lives; the layout gains `_private-data`, the kit zip and `tools/data-kit/`, and loses the Humblewood extractor; the glossary gains private data and the data kit. → ledger L5426, #85
 - 2026-10-17 — The `87-trackers.js` code-map row updated: counters only, tiles and totals, not checklists and tasks. → ledger L6047, #95, #93, #94
+- 2026-10-23 — The code map follows the Sheet makeover: the header in `40-sheet.js`, chips and their grants in `41-chips.js`, the Bio tab. → ledger L6633, #103

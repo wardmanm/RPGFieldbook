@@ -1,9 +1,10 @@
 # Story & notes
 
-Two kinds of free text, easy to confuse. The **Story tab** holds the character's own writing: eight
-bio cards (Appearance through a card called **Notes**) and Proficiencies & Languages. **Section
-notes** are something else — a note pinned to any of 20 cards on the Sheet, Spells, Inventory,
-Story and Journal tabs, opened from an icon in the card's heading and gathered in the **Section Notes** card on
+Two kinds of free text, easy to confuse. The **Bio tab** (called Story until #103; its id is still
+`story`) holds the character's own writing: eight bio cards (Appearance through a card called
+**Notes**) and the "Proficiencies, Senses & Languages" card. **Section
+notes** are something else — a note pinned to any of 18 cards on the Sheet, Spells, Inventory,
+Bio and Journal tabs, opened from an icon in the card's heading and gathered in the **Section Notes** card on
 the **Journal tab**, below the player's own journal pages ([Journal](journal.md)). Both render
 the same markdown-on-top-of-glossary grammar.
 
@@ -11,7 +12,8 @@ the same markdown-on-top-of-glossary grammar.
 `rtToggleCheckbox()` in `10-compute.js` · `NOTE_SECTIONS`, `NOTE_TABS`, `noteTitle()`, `noteMap()`, `getNote()`,
 `saveNote()`, `noteWhen()`, `noteBtnHTML()`, `notePreview()`, `renderNoteIcons()`, `notesHTML()`,
 `noteEntryHTML()`, `renderNotes()`, `toggleNoteGroup()`, `jumpToNote()`, `openNoteEditor()` in
-`87-notes.js` · `selectTab()`, `scrollToCard()` in `40-sheet.js` · markup `src/html/30-story.html`,
+`87-notes.js` · `mergeNoteInto()`, `migrateSheet103()` in `71-char-io.js` · `chipsHTML()`,
+`renderBioChips()` in `41-chips.js` · `selectTab()`, `scrollToCard()` in `40-sheet.js` · markup `src/html/30-story.html`,
 `src/html/60-journal.html` · **Tests:** `rules-data.js` (registry ↔ template, storage guards, the pure
 renderers), `tables.js` (the markdown) · **See also:** [Rich text](../architecture/rich-text.md),
 [Character model](../architecture/character-model.md),
@@ -32,13 +34,25 @@ any of these fields is tickable in its read view: `rtToggleCheckbox(key,n)` flip
 the field is being edited (the text is in the textarea then), for a key that is not one of these
 fields, and when nothing would change.
 
-**Proficiencies & Languages** (`character.proficiencies`) sits in its own card at the top of the
-Story tab, uses the same `renderRT()`, and — unlike the bio cards — takes a section note.
+**Proficiencies, Senses & Languages** (the `proficiencies` section) sits in its own card at the
+top of the Bio tab, and — unlike the bio cards — takes a section note. It holds, top to bottom:
+**Alignment** (`character.alignment`, moved here from the Sheet), **Languages** and **Senses** as
+chip rows (`renderBioChips()`, `chipsHTML()`; a sense may carry a range, "DARKVISION · 60 FT"; a
+granted language shows its source, "· species", and has no ×), and the Proficiencies prose
+(`character.proficiencies`, the same `renderRT()`). The chips, their grants and the default
+language are on [Character model](../architecture/character-model.md) and
+[Grants & provenance](../architecture/grants-and-provenance.md). #97's pencil on this card hides
+the chips' ×.
 
-**Section notes.** `NOTE_SECTIONS` is the registry: 20 entries of `{k, tab, title}` — twelve on the
-Sheet, four on Spells, two on Inventory, one (Proficiencies) on Story, one (Trackers) on the
-Journal tab. A card opts in with
-`data-note="<k>"` on its `<div class="card">`. `renderNoteIcons()` puts a note button at the end of
+**The name.** The tab's label, its ☰ title and the Section Notes card's group heading read **Bio**
+(`NOTE_TABS.story`); the id stays `story`, because saved Section Notes fold state (`noteCollapse`)
+keys on it.
+
+**Section notes.** `NOTE_SECTIONS` is the registry: 18 entries of `{k, tab, title}` — nine on the
+Sheet (the header, titled "Character", and the rail, strip, Skills, Defences, Statuses, Resources,
+Features and the hidden Familiars), four on Spells, three on Inventory (Attacks, Equipment, Coins),
+one (Proficiencies) on Bio, one (Trackers) on the Journal tab. A card opts in with
+`data-note="<k>"` on its card element. `renderNoteIcons()` puts a note button at the end of
 each such card's `.label`, lit (`.on`) when a note exists, with a hover preview (`notePreview()`)
 inside it. The button opens `openNoteEditor(k)`: a textarea, a one-line formatting key, the dates,
 Save, Cancel and (for an existing note) Delete.
@@ -49,9 +63,15 @@ an empty one. `at` is set once; `editedAt` moves only when the text actually cha
 `noteMap()` / `getNote()`, which tolerate a hand-edited file putting a string where a note object
 belongs — `migrate()` guards `secNotes` at the top level only.
 
-**Titles.** `noteTitle(def)` quotes the registry, except for `origin`, whose heading depends on the
-skin ("Race" or "Ancestry" & Background, via `raceTerm()`), so the Section Notes card always agrees
-with the card it links to.
+**Titles.** `noteTitle(def)` quotes the registry, so the Section Notes card always agrees with the
+card it links to.
+
+**Notes from retired cards (#103).** The Class, Ancestry & Background and Rest & Recovery cards are
+gone. `migrate()` (`migrateSheet103()`) moves their notes once, through `mergeNoteInto()`: `class`
+and `origin` into `portrait` (the header) under "**Class:**" and "**Ancestry & Background:**", `rest`
+into `vitals` under "**Rest & Recovery:**", each after a blank line, the target made if absent. The
+merged note keeps the earlier `at` and the later `editedAt`; a junk value under a removed key is
+dropped. A sheet without such notes is unchanged, so it runs safely on every load.
 
 **The Section Notes card** (on `#tab-journal`; the card deliberately has no `data-note`). `notesHTML()`
 groups the notes by tab in registry order, lists only sections that have a note, and shows an empty
@@ -59,7 +79,8 @@ state otherwise. Each group header is a `role="button"` toggle (click, Enter or 
 character in `noteCollapse`; a closed group still renders its notes, hidden. Each entry has a jump
 link, the added/edited dates, an edit button and the note rendered by `noteHTML()`. `jumpToNote(k)`
 calls `selectTab()` — which never scrolls — then `scrollToCard()` and flashes the card; a card that
-is hidden (`offsetParent === null`: an empty Familiars or Active Spells) scrolls to the top instead.
+is hidden (`offsetParent === null`: an empty Active Spells) scrolls to the top instead.
+Familiars' note opens the header paw's popover, hung from the header bar when the paw is hidden.
 They print under the heading "Section notes". Its groups now include Journal, holding just
 Trackers, since that card sits on the Journal tab too ([Journal](journal.md)). A checkbox in a note
 (the same `[ ]`/`[x]` grammar as a journal page) is tickable right on the card
@@ -68,12 +89,13 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 
 ## Rules that must hold
 
-- **`character.notes` and `character.secNotes` are different things.** `notes` is the Story tab's
+- **`character.notes` and `character.secNotes` are different things.** `notes` is the Bio tab's
   "Notes" bio card (`#rt-notes`); `secNotes` is the section-note map (the Journal tab's Section Notes
-  card). Merging or renaming either into the other breaks the Story tab silently.
+  card). Merging or renaming either into the other breaks the Bio tab silently.
 - **Registry ids are stable and never derived from headings.** Headings get reworded; a note keyed to
   one would be orphaned. `rules-data.js` checks the registry against the template both ways and
-  counts exactly 20 `<div class="card" data-note="` cards.
+  counts exactly 18 note-bearing card openings.
+- **A retired section's notes are merged, never dropped**, and the merge is idempotent.
 - **The note button is a `<button>` and its preview a `<span>` inside it.** `buildToc()` clones each
   `.label` and strips buttons before reading its text; a sibling preview would leak into the ☰ entry.
 - **`renderNoteIcons()` replaces only its own button** — never `label.innerHTML +=`, which re-parses
@@ -97,7 +119,7 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - **A preview that flattened everything** showed a note reading `**bold**` / `- bullet` as plain
   "bold bulleted", with no sign either marker worked; the note card itself had rendered correctly all
   along. → L3035
-- **The Story tab's "Notes" card formatted nothing** — no markup, not even line breaks — while the
+- **The Bio tab's "Notes" card formatted nothing** — no markup, not even line breaks — while the
   section notes rendered the whole grammar. One renderer for every field fixed it. → L3035
 
 ## Decisions
@@ -105,15 +127,14 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 | Question | Decision | Rejected, and why |
 |---|---|---|
 | Do the eight bio cards take a section note? | No | Yes: a note attached to your Backstory box is a note about a note |
-| What the new field is called | `secNotes` | Reusing or renaming `notes`: that is the Story tab's bio field, and merging them breaks it silently |
+| What the new field is called | `secNotes` | Reusing or renaming `notes`: that is the Bio tab's bio field, and merging them breaks it silently |
+| The Story tab's name (#103) | **Bio**, with the id kept as `story` | Renaming the id too: every saved Section Notes fold state would reset |
+| Notes on a retired card (#103) | Merged once into the card that took its controls, under a heading | Dropping them: a player's words lost. Keeping the key: a note with no card to open it from |
 | How notes are keyed | A stable id per section in `NOTE_SECTIONS` | The heading text: headings get reworded and the note would be orphaned |
 | What the hover preview renders | Phrasing markup only, block markers represented, chips unwrapped | The full `noteHTML()` output: blocks and `role="button"` chips are illegal in a button, and a chip on a hover card vanishes as you reach for it |
 
 ## Open
 
-- In the "By ability" skills layout the Skills card is hidden, so its note button is too; a player
-  who never wrote a Skills note cannot start one in that mode (existing notes stay listed). Shipped
-  knowingly. → L106
 - `**Hit** Points` loses its *Hit Points* chip: the asterisks break the glossary's `\b…\b` match.
   Inherent to escaping first.
 - Markdown links, `_underscore_` emphasis, nested lists and pipe tables are deliberately unsupported —
@@ -130,3 +151,4 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - 2026-09-29 — Trackers: counters, checklists and tasks that close themselves when done, with Undo; registered section 20, in the combat view; hideable per character. → ledger L4822, #41
 - 2026-10-17 — A checkbox in a section note is tickable on the Section Notes card, and the note editor gains an Insert checkbox button (#95). → ledger L6047, #95
 - 2026-10-17 — A checkbox in a Story field (Proficiencies or a bio card) is tickable in its read view, refused while editing. → ledger L6057, #95
+- 2026-10-23 — The Story tab is Bio; its first card holds Alignment, Languages and Senses chips and the prose; 18 sections; the Class, Ancestry & Background and Rest notes merge into Character and Vitals; By ability's hidden Skills note is gone with it. → ledger L6633, #103

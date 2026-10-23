@@ -153,7 +153,7 @@ Editing the glossary changes how every note reads, so `refreshRulesUI()` re-rend
 - **Text between tags that comes from a file is `esc()`'d or goes through a renderer above.** The
   scan cannot see this; the hostile-character renders in `sheet.js` do.
 - **A `[data-ck]` is emitted wherever the grammar renders; only three surfaces answer it:
-  journal pages (`#jnlBody`), section notes (`#notesList`) and the Story tab's rich-text fields
+  journal pages (`#jnlBody`), section notes (`#notesList`) and the Bio tab's rich-text fields
   (`#rt-<key>`).** A checkbox in an item or feature description draws and does nothing — one grammar
   everywhere, as this page requires, and a pack has no business shipping checkboxes.
 - **Sentinels live in U+E000–U+E00F and are written as escapes** (`""`,
@@ -260,3 +260,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-09 — The Humblewood mid-sentence check moves to the private suite with the pack. → ledger L5426, #85
 - 2026-10-17 — A checkbox block joins the grammar, tested before bullets, one item one `noteInline()` call; Section notes and Journal pages become the first tickable surfaces, through `[data-ck]`. → ledger L6047, #95
 - 2026-10-17 — The Story tab's rich-text fields become the third tickable surface; a box is named by its item, not its state; `noteCheckboxes()` strips the sentinels as `noteHTML()` does. → ledger L6057, #95
+- 2026-10-23 — The Story tab is Bio. → ledger L6633, #103

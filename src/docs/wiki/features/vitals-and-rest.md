@@ -1,10 +1,13 @@
 # Vitals & rest
 
-The Vitals card and the Rest & Recovery card on the Sheet tab. Vitals holds the stat strip (AC,
-Initiative, Speed, Size, Passive Perception), the Inspiration star, and the Hit Points panel —
-Current, Max and Temp boxes, − and + buttons, and the death-save row. Rest & Recovery holds Short
-Rest, Long Rest and the Hit Dice. This page covers how hit points are typed and spent, the Max HP
-lock, the level-1 seed, the colour bands, the three Hit Dice looks, and what each rest gives back.
+The Sheet's dark rail (the `vitals` section, #103) and the rest and level controls in the header
+above it. The rail runs down the left: the portrait with the AC shield over its bottom edge, the
+death saves `✓ ○○○ ☠ ○○○ ✗`, Init / Speed / Prof badges, the Hit Points bar (Current, Max and Temp
+boxes inside it, − and + either side, the Max padlock beside its label), the Hit Dice bar, and Size ·
+Passive Perception in small text. The header holds Short Rest, Long Rest, the Inspiration star and
+the level ring with the XP. This page covers how hit points are typed and spent, the Max HP lock,
+the level-1 seed, the colour bands, the hit-dice bar and its spend box, the level badge, and what
+each rest gives back.
 
 **Code:** `applyHPInput()`, `adjustHP()`, `renderHP()`, `hpBand()`, `signedEntry()`,
 `signedDelta()`, `entryDigits()` in `66-coins-hp.js`; `clampHP()`, `effMaxHP()`, `buildDeath()` in
@@ -13,22 +16,31 @@ lock, the level-1 seed, the colour bands, the three Hit Dice looks, and what eac
 `rollHitDie()`, `recoverHitDice()`, `renderDeath()` in `65-resources.js`; `level1HP()`, `seedLevel1HP()`,
 `resyncLevel1HP()`, `hitDieMax()` in `56-class.js`; `charSize()`, `sizeOptionsHTML()`,
 `capacityFor()` in `25-origins-items.js`; `openSizePicker()` in `80-modal-forms.js`; `bumpHP()`,
-the padlock, death-save and hit-dice handlers in `90-boot.js` · `chipList()`, `xpProgress()`,
-`advancementFor()` in `41-chips.js` · **Tests:** `sheet.js`,
+the padlock, death-save and hit-dice handlers in `90-boot.js` · `xpProgress()`, `xpNumber()`,
+`advancementFor()`, `advancementOf()` in `41-chips.js` · `levelBadgeHTML()`, `levelRingHTML()`,
+`xpBarHTML()`, `renderLevelBadge()`, `renderSheetHead()` in `40-sheet.js` · `toggleInspiration()`
+in `10-compute.js` · **Tests:** `sheet.js`,
 `char-update.js`, `rules-data.js` · **See also:** [Character building](character-building.md) (hit
 points on level-up), [Armor & AC](armor-and-ac.md), [Inventory](inventory.md) (encumbrance),
 [Combat view](combat-view.md), [Class resources](class-resources.md)
 
 ## How it works
 
-**The stat strip.** AC, Initiative and Speed tap through to their breakdowns (`data-stat`); AC is
+**The rail.** `.rail` re-points the page's tokens to `--rail-*`, so it is dark in light mode and
+tinted in dark mode while the cards' own rules draw it ([Sections & layout](../ui/sections-and-layout.md)).
+Every id `recompute()`, `renderHP()` and the death-save code paint kept its id when it moved here.
+At ≤700px the portrait sits small at the left with the rest of the rail beside it.
+
+**The badges.** AC (the shield), Initiative, Speed and the proficiency bonus tap through to their breakdowns (`data-stat`); AC is
 [Armor & AC](armor-and-ac.md), and Speed is its base plus `speed` effects, then encumbrance.
 **Size** is `charSize()`: the size the player chose, else the ancestry's (`raceDefSize()`), else
 Medium. Tapping it (or Enter/Space) opens `openSizePicker()` — a chooser, not a breakdown, with
 "From ancestry (…)" first and a carrying-capacity preview from `capacityFor()`. The same list,
 `sizeOptionsHTML()`, is in Settings → Carrying. Size changes nothing but carrying capacity,
 and that only while Encumbrance is on. Passive Perception is covered in
-[Abilities & skills](abilities-and-skills.md); the ✦ star in the card label toggles Inspiration.
+[Abilities & skills](abilities-and-skills.md). The ✦ star (`#starBtn`) is in the header;
+`toggleInspiration()` flips `character.inspiration`, and `recompute()` paints `#starBtn` and the
+combat view's own `[data-inspire]` star together.
 
 **Typing hit points.** The three boxes are `type="text" inputmode="tel"` with `data-hp`, **not**
 `data-path`, and commit on `change` (blur) or Enter, which reselects the box for the next entry.
@@ -48,7 +60,12 @@ and Temp is untouched.
 (`bumpHP()`, ±1), typed damage, and a spent hit die. Damage soaks Temp first; spent-out Temp reads
 `""`, as a long rest leaves it; the overflow comes off Current. Healing goes to Current only.
 `clampHP()` then floors all three at 0 (a blank stays blank) and caps Current at `effMaxHP()`, which
-is Max plus any `hp.max` effects; `#maxNote` shows the effective maximum when an effect applies.
+is Max plus any `hp.max` effects; `#maxNote` shows the effective maximum when an effect applies,
+and is empty (and hidden) otherwise.
+
+**The HP bar.** The three boxes sit inside `.hp-bar`, "26 / 38" with "+3" temp at its right.
+`renderHP()` sets the fill (`#hpFill`) to Current ÷ `effMaxHP()`, clamped 0–100 and 0 with no
+maximum, and gives it the band class, so the bar itself turns amber or red.
 
 **The Max HP lock.** `hp.locked` (default `true`) is read as `!==false`. `renderHP()` makes Max
 `readOnly` and draws the padlock (`[data-hplock]`, an inline SVG with both shackles, toggled by
@@ -72,11 +89,12 @@ the only one, at level 1, and Max still equals the seed.
 
 **Colour bands.** `hpBand()` returns `hp-warn` at or below 50% of `effMaxHP()` and `hp-danger` at or
 below 25%; nothing when no maximum is set or `character.hpColor` is `false` (Settings → This
-character → Colour current HP). Temp is not counted. `--warn` is its own token in all four palettes.
+character → Colour current HP). `renderHP()` puts it on the bar's fill and on the Current box.
+Temp is not counted. `--warn` is its own token in all four palettes, as is `--rail-warn`.
 
-**Death saves.** `buildDeath()` draws three circles per side: `○○○ – ☠ – ○○○`, failures left,
-successes right. Clicking circle *i* sets the count to *i*, or to *i* − 1 if it was already *i*. The
-failure set is `flex-direction:row-reverse`, keyed off `data-kind="fail"`, so both sides fill
+**Death saves.** `buildDeath()` draws three circles per side: `✓ ○○○ ☠ ○○○ ✗`, successes left,
+failures right. Clicking circle *i* sets the count to *i*, or to *i* − 1 if it was already *i*. The
+success set is `flex-direction:row-reverse`, keyed off `data-kind="succ"`, so both sides fill
 outward from the skull. The skull is written `&#9760;&#65038;`. Only a long rest clears them;
 nothing rolls them or resets them on healing.
 
@@ -84,8 +102,9 @@ nothing rolls them or resets them on healing.
 its hit die × its level (and the class name, in `cls` — joined with " / " when two classes share a
 size); in manual mode the pool is parsed from the text field ("2d8 + 1d6"). Spent dice live in
 `hdUsed[die]`, clamped to the total. `renderHitDice()` writes the auto pool back into
-`character.hitdice` and draws `#hdWrap` as one bar (`hdBarHTML()`) — die, "left / total" per size and
-the CON modifier — or the empty-state hint with no class and no manual dice. **One look, not three**
+`character.hitdice` and draws `#hdWrap`, in the rail under the HP bar, as one bar (`hdBarHTML()`):
+its label "Hit dice" with "CON +2" at the right, then die and "left / total" per size, filled by
+what is left — or the empty-state hint with no class and no manual dice. **One look, not three**
 (#103): the old Full/Condensed/Dice styles and their Settings row are gone; `character.hdStyle`
 stays in `blankChar()`/`migrate()` so an old sheet round-trips, but nothing reads it.
 
@@ -101,8 +120,8 @@ level-1 seed's `modOf()`); `hdHeal(roll, conMod)` floors the heal at 0. `spendHi
 working in a `restSummary()`.
 
 **Where the auto/manual pill and the manual-dice field live.** Both `[data-hdmode]` and
-`#hitdiceInput` moved out of the Rest & Recovery card's own heading and into the spend box's foot
-— `hdSpendHTML()` is their only source now, rebuilt fresh each time the box opens.
+`#hitdiceInput` live only in the spend box's foot — `hdSpendHTML()` is their only source,
+rebuilt fresh each time the box opens.
 `renderHitDice()` still patches whichever copy is currently in the document (readOnly, `.hidden`,
 value, the pill's text/class) exactly as it always has, so the mode-toggle handler in `90-boot.js`
 needed no change — it still just calls `renderHitDice()` and focuses `#hitdiceInput` directly, and
@@ -112,7 +131,18 @@ render time, and a cleared inline style would not override that attribute's own
 `[hidden]{display:none}` rule the way an empty string used to when the input had no `hidden`
 attribute to fight.
 
-**Rests.** `longRest()` sets Current to the effective maximum (if one is set), clears Temp and death
+**The level badge and XP** (`#shLevel` in the header, `levelBadgeHTML()`). A ring holds the total
+level (`#levelDisp`, which `recompute()` writes). In XP mode (`character.advancement`, read through
+`advancementOf()`, "xp" unless it is exactly "milestone") the XP box (`data-path="character.xp"`)
+and a bar follow: `xpProgress()` reads the XP (a number, or digits with commas, through
+`xpNumber()`) against the character's ruleset's `advancement` table, else `SRD_ADVANCEMENT`
+(`advancementFor()`), and gives the next level's threshold. The bar fills from 0 toward it, capped
+at 99% until the XP reaches it; then the ring becomes a "Level up ready" button that runs Level up.
+XP that is not a number shows as typed, with no bar. Typing in the box repaints only the ring and the
+bar (`renderLevelBadge()`), so the caret stays. **Milestone mode** shows the ring alone; the XP stays
+in the data, so switching back restores it. The switch is Settings → Sheet display → Advancement.
+
+**Rests.** The header's ☕ and ☾ icons (`#btnShortRest`, `#btnLongRest`) run them. `longRest()` sets Current to the effective maximum (if one is set), clears Temp and death
 saves, restores every spell slot, gets back half the total Hit Dice (at least one, largest die
 first — `recoverHitDice()`), and resets short- and long-rest feature uses, item uses and resources.
 `shortRest()` restores Warlock pact slots and short-rest feature uses, item uses and resources, and
@@ -142,8 +172,11 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
   `hdSpendHTML()` bakes a literal `hidden` attribute into the input's markup at render time; a
   cleared inline style does not override an attribute the UA stylesheet still matches, so
   `renderHitDice()` toggles the `.hidden` IDL property instead, which does.
-- **Both cards are note anchors** (`vitals` and `rest` in `NOTE_SECTIONS`); removing either orphans
-  its notes.
+- **The rail is the `vitals` note anchor.** The old Rest & Recovery card's `rest` notes merged into
+  `vitals` once, in `migrate()` (`migrateSheet103()`), under "**Rest & Recovery:**"; a saved
+  `rest` in the combat view became `vitals`.
+- **`#starBtn`, `#encPill` and `#roundNum` move only by DOM move**, never `label.innerHTML +=`
+  ([Sections & layout](../ui/sections-and-layout.md)).
 - **`wire()` binds these buttons through a null-safe helper.** It has no `try`; one missing id used to
   throw and leave every later listener unbound.
 
@@ -181,10 +214,13 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
 | A first class that starts above level 1 | Seed level 1, then the level-up HP step for levels 2..N (average by default) | No hit points at all, as before #66; or several dice boxes, one per level — the one box already takes a total and "Roll for me" rolls all of them |
 | Temp HP in the colour bands | Excluded | Included: it sits above the maximum and could read healthy while the real pool is empty |
 | The amber band's colour | A new `--warn` token | `--accent`: equals `--brick` on the classic skin, so the two bands would match |
-| Where the Hit Dice sit | Rest & Recovery, under the rest buttons | Under Hit Points in Vitals: they rode into the combat view by default, between the player and the hit points |
+| Where the Hit Dice sit (#103) | In the rail, a bar under Hit Points | Rest & Recovery under the rest buttons (the 2026-09-25 answer): that card went, and a bar is one line. Under Hit Points as a panel (2026-08-14): it rode into the combat view as a block between the player and the hit points |
+| Where the rests and the star sit (#103) | Icons in the header | The Rest card and the Vitals label: the clutter the issue is about |
+| XP thresholds (#103) | The ruleset's `advancement` table, else the SRD's, hard-coded | The converter extracting it now: every pack's digest moves for numbers the fallback already has |
+| XP or milestones (#103) | A per-character `advancement` setting | XP only: tables that use milestones keep an empty field. App-wide: two tables on one device can't differ |
 | How many hit-dice looks (#103) | One bar, tapping it opens a spend box | Keeping Full/Condensed/Dice as a per-character choice: a display option for something every player does the same way — pick a die, spend it — not a matter of taste |
 | How a hit die is spent (#103) | Pick, then either auto-roll or type your own roll, live-validated | Auto-roll only (the old `rollHitDie()`): a roll made at the table has to go in by hand somewhere, and a second "override HP by hand" path after the fact is worse than typing the roll itself |
-| Death saves filling outward | CSS `row-reverse` off `data-kind="fail"` | `buildDeath()` counting backwards: the click handler and `.on` toggling would have to change |
+| Death saves filling outward | CSS `row-reverse` off `data-kind="succ"` (successes now sit left of the skull, #103) | `buildDeath()` counting backwards: the click handler and `.on` toggling would have to change |
 | Size on tap | A chooser | A breakdown like the other boxes: size is a choice, not a derived number |
 
 ## Open
@@ -197,6 +233,8 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
   keeps the Max its window added (seed plus levels 2–3), as a levelled-up class always has, so
   re-adding a different class does not seed over it. Recording what the app wrote per class would
   close this; not done.
+- On a phone the AC shield overlaps the small portrait's bottom edge; whether that reads well on a
+  device is Mike's pass.
 - See [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -216,3 +254,6 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
   to get no hit points at all. → ledger L3886, #66
 - 2026-10-23 — the three Hit Dice looks (and their Settings row) retired for one bar; tapping it
   opens a spend box that rolls for you or takes a typed roll. → ledger L6580, #103
+- 2026-10-23 — Vitals becomes the dark rail (portrait, AC shield, ✓○○○☠○○○✗, badges, HP and hit-dice
+  bars); the rests, the star and the level with XP move to the header, with XP or milestone
+  advancement; the Rest & Recovery card and its note key are gone. → ledger L6633, #103

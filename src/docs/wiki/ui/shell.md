@@ -53,7 +53,8 @@ first. Save is `exportChar()`; Load clicks the hidden `#fileLoad`, whose change 
 
 Each `.tab` carries `data-tab="<name>"` and owns a panel `#tab-<name>`. The names are lowercase:
 `sheet`, `spells`, `inventory`, `story`, `journal`, `rules`, and `combat`, whose button is
-`#btnCombat` in `.tab-tools`, not a `.tab`.
+`#btnCombat` in `.tab-tools`, not a `.tab`. The `story` tab's button reads **Bio** (#103); its id
+stays `story`, because saved Section Notes fold state keys on it.
 
 `selectTab()` reads which panel is active; leaving `combat` calls `closeCombatView()` first, which
 sends the moved cards home, and entering it records `cvPrevTab`. It then toggles `.active` on every
@@ -81,12 +82,25 @@ bar (plus `#cvHead` inside the combat view) and 10px. The flyout closes on a tab
 tap or an entry tap.
 
 The flyout is DOM-driven. It does not read `NOTE_SECTIONS`, so cards outside the registry
-(`#concCard`) are listed too. **The Rules tab is its own case** (`buildToc()`, #99): instead of
+(`#concCard`) are listed too. The Sheet's header is a card too (#103): its `.label sh-bar` holds
+a visually hidden caption, "Character", which is what its entry reads, and the level badge sits
+outside that `.label` so the level never leaks into it. **The Rules tab is its own case** (`buildToc()`, #99): instead of
 walking the DOM for `.card > .label`s, it lists `rbShown()`'s categories by name and count, and a
 tap calls `rbOpenCat()` to repaint the pane, then `scrollToCard(document.getElementById("rbCard"))`
 to bring it into view — the same offset-clearing scroll every other tab's entries get, so picking a
 category from deep in a long table's scroll position no longer leaves the newly painted (and
 possibly shorter) pane off-screen (fixed in #99's final-review pass; [Rules & tables](../features/rules-and-tables.md)).
+
+### The Sheet header's popover
+
+The Sheet's header (#103) has one popover of its own, `#shFly` over a transparent `#shBack`, on
+the ☰ flyout's pattern: `openShFly()` fills it with the class menu (`classFlyHTML()`) or the
+familiars menu (`famFlyHTML()`), hangs it under the button that opened it (positioned inside the
+header, so it scrolls with the page), marks that button `aria-expanded`, and focuses its first
+item. A tap outside lands on `#shBack` and closes it; any button inside closes it before its own
+action runs; Esc closes it and puts focus back on its button; `selectTab()` and `renderSheetHead()`
+close it. With no anchor (a familiars-note jump while the paw is hidden) it hangs from the
+header's bar.
 
 ### The modal
 
@@ -316,3 +330,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-16 — `openModal()` takes `opts`; `{wide:true}` widens the dialog, set or cleared on every open. → ledger L5930, #107
 - 2026-10-22 — The ☰ flyout gains a Rules-tab case: it lists `rbShown()`'s categories by name and count instead of walking the DOM, and a tap calls `rbOpenCat()` rather than `scrollToCard()`. → ledger L6327, #99
 - 2026-10-22 — The Rules-tab flyout entries now also call `scrollToCard()` after `rbOpenCat()`, clearing the tab-bar offset like every other tab's entries. → ledger L6455, #99
+- 2026-10-23 — The Story tab's button reads Bio (id `story` kept); the Sheet header is a card whose ☰ entry is "Character"; the header's own popover (`openShFly()`). → ledger L6633, #103

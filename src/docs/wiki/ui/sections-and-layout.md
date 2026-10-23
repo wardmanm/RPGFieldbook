@@ -4,21 +4,23 @@ Every tab is a column of **cards**, and most cards are **sections** with a stabl
 feature, the combat view and print all key on. This page covers how the seven panels are laid out,
 the `NOTE_SECTIONS` registry and the rules for tagging a card, and the conventions every list shares:
 group headings with a caret, collapse state and where it is stored, favourites, collapse-all and
-search boxes. It also covers two sidebar residents, familiars and the portrait.
+search boxes. It also covers the Sheet's own grid: the header band over a dark rail, the ability
+strip, and familiars, which open from the header.
 
 **Code:** `NOTE_SECTIONS`, `noteDef()`, `noteTitle()`, `renderNoteIcons()`, `noteGroupOpen()`,
 `EDIT_CARDS`, `editHidden()`, `setEditHidden()`, `editCardTitle()`, `editToggleHTML()`,
 `renderEditToggles()`, `toggleEditCard()` in `87-notes.js` · `combatSectionsOf()`,
-`renderCombatToggles()`, `combatCard()` in `87-combat.js` ·
+`renderCombatToggles()`, `combatCard()`, `combatAddable()` in `87-combat.js` ·
 `featGroups()`, `renderFeatures()`, `featCol()`, `invCol()`, `atkCol()`, `FEAT_FAV`, `ATK_FAV` in
-`20-lists.js` · `renderInventory()`, `invGroups()`, `renderFamiliars()` in `40-sheet.js` ·
+`20-lists.js` · `renderInventory()`, `invGroups()`, `renderFamiliars()`, `renderSheetHead()`,
+`famFlyHTML()`, `openShFly()`, `openFamiliar()` in `40-sheet.js` ·
 `groupFieldHTML()`, `groupChoices()`, `groupNameProblem()`, `syncGroupFieldMsg()`, `groupFieldBlocked()` in
 `80-modal-forms.js` · `GROUP_RESERVED` in `00-constants.js` · `tagLabel()`, `tagTidy()` in `87-journal.js` · `renderAttacks()` in
 `60-attacks.js` · `rulesCatOf()` in `86-rules-browser.js` · `setPageOf()` in `88-settings.js` · `buildStats()`, `buildBio()`, `blankChar()` in `00-constants.js`
 · `renderPortrait()` in `66-coins-hp.js` · markup in `00-sheet.html`, `10-inventory.html`,
 `20-spells.html`, `30-story.html`, `40-rules.html`, `60-journal.html`, `70-combat.html` · `10-chrome.css`,
 `20-cards.css`, `30-sheet.css` ·
-**Tests:** `rules-data.js` (registry against template, familiars layout, section heads, search boxes,
+**Tests:** `rules-data.js` (registry against template, the Sheet grid and its queries, section heads, search boxes,
 Settings and Rules sections), `sheet.js` (`featGroups()`, the shared favourites label) ·
 **See also:** [Shell](shell.md), [Story & notes](../features/story-and-notes.md),
 [Combat view](../features/combat-view.md), [Inventory](../features/inventory.md),
@@ -30,10 +32,10 @@ Settings and Rules sections), `sheet.js` (`featGroups()`, the shared favourites 
 
 | Fragment | Panel | Layout | Section cards (`data-note`) |
 |---|---|---|---|
-| `00-sheet.html` | `#tab-sheet` | `.cols`: sidebar `.stack` + main `.stack` | sidebar: portrait, origin, class, familiars · main: abilities, skills, vitals, rest, statuses, attacks, resources, features |
-| `10-inventory.html` | `#tab-inventory` | one `.stack`, centred, max 720px | inventory, coins |
+| `00-sheet.html` | `#tab-sheet` | the header (`<header class="card sheet-head">`), then `.sheet-grid` | portrait (the header) · the grid: vitals (the rail), abilities (the strip), skills, then in `.col-r` defences, statuses, resources; features full width; familiars hidden |
+| `10-inventory.html` | `#tab-inventory` | one `.stack`, centred, max 720px | attacks, inventory, coins |
 | `20-spells.html` | `#tab-spells` | one `.stack` | spellcasting, slots, activespells, spells; plus `#concCard`, untagged ([Conditions & concentration](../features/conditions-and-concentration.md)) |
-| `30-story.html` | `#tab-story` | `.cols` | proficiencies; `#bioStack` is filled by `buildBio()` with the eight bio cards, untagged by design |
+| `30-story.html` | `#tab-story` (the **Bio** tab) | `.cols` | proficiencies ("Proficiencies, Senses & Languages"); `#bioStack` is filled by `buildBio()` with the eight bio cards, untagged by design |
 | `40-rules.html` | `#tab-rules` | one `.stack` | none: one card, the Rules browser ([Rules & tables](../features/rules-and-tables.md)) |
 | `60-journal.html` | `#tab-journal` | one `.stack`, centred, max 820px: Journal (`#journalCard`), Trackers (`data-note="trackers"`), Section Notes | Trackers only |
 | `70-combat.html` | `#tab-combat` | `.cview`: header, live region, `#cvList` | none in markup: the real cards are moved in at runtime |
@@ -42,31 +44,62 @@ The panels concatenate in manifest order, which is not the tab-bar order (that l
 template). Only `.active` shows, so the two never need to agree. The gap at `50-` is the Tables tab
 deleted in #32; prefixes are a reading aid and were not renumbered.
 
-`.page` is capped at 1160px. `.cols` is a 320px sidebar beside a flexible main column. At ≤820px it
-becomes one column and `.stack` becomes `display:contents`, so every card is a direct grid item of
-`.cols`. That lets one `order:1` sink `#familiarCard` and `#addFamiliarLink` below the main column
-instead of above HP and Skills. It costs nothing because `.stack` carries one rule and its gap equals
-`.cols`'s.
+`.page` is capped at 1160px. `.stack` is a column of cards with a 12–18px gap (it scales with the width) at
+every width. `.cols`, now only on Bio, is a 320px sidebar beside a flexible main column, one column
+at ≤820px.
+
+### The Sheet: a header over a grid (#103)
+
+The Sheet is one condensed page after Foundry VTT's sheet (spec
+`2026-10-23-sheet-makeover-design.md`):
+
+- **The header** is a band across the top, `<header class="card sheet-head" data-note="portrait">`:
+  the name, the class line, the rest and inspiration icons, the paw, and the level ring with the XP.
+  It is the `portrait` section, titled "Character"; its icons row is a `.label sh-bar` whose caption
+  "Character" is visually hidden, so the note button and the ☰ entry find it like any card
+  heading. The level badge (`#shLevel`) sits outside that `.label` so the ☰ entry reads
+  "Character", not the level. What it does is on [Vitals & rest](../features/vitals-and-rest.md)
+  and [Character building](../features/character-building.md).
+- **`.sheet-grid`** (`10-chrome.css`) holds the rest: `minmax(220px,260px) minmax(0,1.3fr)
+  minmax(0,1fr)`. The **rail** (`card rail`, the `vitals` section) spans the left column's four
+  rows, so it never stretches the others. The **strip** (`card strip`, `abilities`) runs over the
+  other two columns; under it **Skills** (`#skillsCard`) sits beside **`.col-r`** (Defences,
+  Statuses, Resources); **Features** (`card wide`) runs full width under them.
+- **Two columns at ≤1000px:** the rail beside one column of the strip (3 × 2), Skills and `.col-r`;
+  Features full width under both.
+- **One column at ≤700px**, in the spec's order: rail, abilities, Defences, Statuses, Skills,
+  Resources, Features. `.col-r` becomes `display:contents` inside that query, so its three cards are
+  grid items and `order` can interleave them with Skills.
+- **The rail is dark by its own tokens.** `.rail` re-points `--panel`, `--ink`, `--ink-soft`,
+  `--line` and the field tokens to `--rail-*` (all four palettes in `00-tokens.css`), so the
+  cards' own rules draw it dark without a second set of selectors. In dark mode the rail is tinted
+  (forest green in Humblewood, slate in Classic) rather than darker, because the page ground is
+  already near-black.
+- **The phone header** (≤480px, `30-sheet.css`) tightens its gaps and the XP box so the icons and
+  the level badge share one row under the name.
 
 ### The section registry
 
-`NOTE_SECTIONS` in `87-notes.js` lists 20 sections as `{k, tab, title}`. Each one's card carries
-`data-note="k"` as the attribute right after `class="card"`. Its consumers:
+`NOTE_SECTIONS` in `87-notes.js` lists 18 sections as `{k, tab, title}`, with `nocv:true` on the
+one the combat view may not take (`portrait`, the header). Each one's card carries `data-note="k"`
+as the attribute right after its class attribute (`class="card"`, or `card` plus one layout class:
+`card rail`, `card strip`, `card wide`, and the header's `card sheet-head`). Its consumers:
 
 - **Notes.** `renderNoteIcons()` puts a note button in each card's `.label`, `notesHTML()` groups
   the Journal tab's Section Notes card by `tab`, and notes are stored in `character.secNotes[k]`
   ([Story & notes](../features/story-and-notes.md)).
-- **Combat view.** `combatSectionsOf()` filters the saved `combatSections` down to registry ids,
-  `renderCombatToggles()` puts a toggle before the note button, and `combatCard()` looks the card up
-  fresh on every call ([Combat view](../features/combat-view.md)).
+- **Combat view.** `combatSectionsOf()` filters the saved `combatSections` down to registry ids
+  the view may take (`combatAddable()`), `renderCombatToggles()` puts a toggle before the note
+  button of each of those, and `combatCard()` looks the card up fresh on every call
+  ([Combat view](../features/combat-view.md)).
 - **Print** lists section notes in registry order; `jumpToNote()` uses `tab` to pick the tab.
 
 The ☰ flyout does **not** use the registry. It walks the DOM (see [Shell](shell.md)).
 
-`noteTitle()` returns the registry title, except for `origin`, whose heading depends on the skin
-("Race" or "Ancestry" & Background, from `raceTerm()`).
+`noteTitle()` returns the registry title. (It once varied `origin`'s by skin; that card went with
+#103.)
 
-Card headings are live. A `.label` can hold `#starBtn`, `#encPill` or `#roundNum`, so injected
+Card headings are live. A `.label` can hold `#starBtn` (the header's), `#encPill` or `#roundNum`, so injected
 controls replace only their own button (`outerHTML`) or insert beside it, never
 `label.innerHTML +=`. The note button parks at the far right with `margin-left:auto`, and the combat
 toggle goes just before it.
@@ -76,14 +109,17 @@ toggle goes just before it.
 Every card that lists things with edit, delete or remove buttons gets a pencil in its header,
 before the combat toggle and the note button (so the note keeps the far right): pencil, combat,
 note. A tap hides that card's edit, delete and remove buttons — a bin or a chip's Remove is one
-mis-tap from losing a feature, an item or a class — and leaves every play control alone (stars,
+mis-tap from losing a feature, an item or a resistance — and leaves every play control alone (stars,
 folds, Use, Fire, Throw, Cast, equip, On/Off, prepared pins, resource −/+/reset, the familiar's
 Summoned switch, + Add). One switch per card, per character, shown by default.
 
-`EDIT_CARDS` in `87-notes.js` lists the twelve keys: the ten `NOTE_SECTIONS` ids `class`, `origin`,
-`statuses`, `attacks`, `resources`, `features`, `familiars`, `spells`, `inventory`, `trackers`, plus
+`EDIT_CARDS` in `87-notes.js` lists the twelve keys: the ten `NOTE_SECTIONS` ids `statuses`,
+`attacks`, `resources`, `features`, `familiars`, `spells`, `inventory`, `trackers`, `defences`,
+`proficiencies` (the last two hide the chips' ×), plus
 `journal` and `secnotes` — the two cards outside that registry, found by id (`#journalCard`,
-`#notesCard`, which the Section Notes card carries for this). `character.editHide` maps a key to
+`#notesCard`, which the Section Notes card carries for this). A class's, species' or background's
+Remove sits behind the header's flyout or info window, with a confirm, so those carry `ed` but no
+pencil reaches them: stored `editHide.class` / `.origin` are left and ignored. `character.editHide` maps a key to
 `true` when hidden; absent or anything but a literal `true` reads as shown (see
 [Character model](../architecture/character-model.md)).
 
@@ -105,7 +141,7 @@ since a blank page's empty-state line names the Edit button and must read "Nothi
 with no "— tap Edit" once it's gone.
 
 **Names.** The button class is `edbtn` and its hook is `data-edtoggle`, not `editbtn` /
-`data-edit`: those already name the Story tab's rich-text "Edit" button (`buildBio()`,
+`data-edit`: those already name the Bio tab's rich-text "Edit" button (`buildBio()`,
 `00-constants.js`), and reusing them would have collided both as a CSS selector and as a
 click-delegation key.
 
@@ -113,8 +149,7 @@ click-delegation key.
 (an extra `<path>` from `editToggleSVG()`), in `--accent`, `aria-pressed="true"` — so a card in
 "locked" state is the one that stands out, matching the combat toggle's and note button's idiom.
 Title is the action ("Hide edit buttons" / "Show edit buttons"); the aria-label adds the card's
-title via `noteTitle()` (so Ancestry & Background's heading follows the skin on the next render, as
-the note button's does) — "Hide edit buttons — Features & Traits".
+title via `noteTitle()` — "Hide edit buttons — Features & Traits".
 
 ### Group headings: `.fgroup` / `.fghead` / `.fcaret`
 
@@ -208,13 +243,23 @@ own listener re-filters unchanged. Among them: `#rbSearch` over the Rules tab's 
 
 ### Familiars
 
-`#familiarCard` and `#addFamiliarLink` are one control in the sidebar, under Class.
-`renderFamiliars()` shows exactly one of them: the card once a familiar exists, the "Add a familiar"
-button until then. It clears the list before its early return, because the combat view shows the
-card even when empty. `openFamiliarForm()` edits a record of name, type (`kind`), `ac`,
+Familiars open from the header (#103, spec §6.6). While `character.showFamiliars` is on, the
+header shows a paw (`sheetHeadHTML()`), faint when there is no familiar. Tapping it opens the
+header's popover (`openShFly()` with `famFlyHTML()`): each familiar's name with ● (summoned) or
+○ (dismissed), and **+ Add familiar** at the foot. A name opens a modal (`openFamiliar()`) with that
+familiar's card (`familiarCardHTML()`: kind, AC, HP, speed, notes) and its Summon / Dismiss, Edit
+and Delete. Settings → Sheet display → "Familiars & companions icon" is the switch; `migrate()`
+sets it once from whether the sheet has a familiar, and adding the first familiar turns it on.
+
+`#familiarCard` stays in the Sheet's markup, always `display:none` there, with the old
+`#addFamiliarLink` hidden beside it: the combat view still takes the card (its CSS shows it there),
+and its note keeps its key. `renderFamiliars()` fills its list, clearing it before its early return,
+because the combat view shows the card even when empty. `jumpToNote('familiars')` scrolls to the
+header and opens the paw's popover, hung from `#sheetHead .sh-bar` when the paw is hidden.
+`openFamiliarForm()` edits a record of name, type (`kind`), `ac`,
 `hp.cur`/`hp.max`, `speed`, `description`, `effects` and `active`. Its effects count only while it is
 summoned: `contributions()` adds them when `active` is true, labelled with the familiar's name and
-"(summoned)". Row wrapping for the narrow column is scoped to `#familiarList`.
+"(summoned)". Row wrapping is scoped to `#familiarList` (and the modal's copy).
 
 ### List rows on a narrow screen
 
@@ -228,8 +273,9 @@ the other `.item` rows (inventory totals, notes, Active Spells, familiars) are u
 
 ### Portrait
 
-The first sidebar card (`data-note="portrait"`) holds the image plus name, alignment, XP, level and
-proficiency bonus. Add image opens a file input. `FileReader` turns the file into a data URL stored
+The portrait sits at the top of the rail (`.rail-pic`, in the `vitals` section), with the AC
+shield over its bottom edge and two small buttons, + (add) and × (remove). The name, XP and level
+are in the header; alignment is on Bio; the proficiency bonus is a rail badge. Add image opens a file input. `FileReader` turns the file into a data URL stored
 as `character.portraitImg`, at full size with no downscaling, and `renderPortrait()` draws it through
 `imgHTML()` as an `<img>` in a square, `object-fit:cover` frame. An imported file controls that
 string, so it is escaped and must be a data: URL; anything else (a web address, javascript:) shows
@@ -238,23 +284,27 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 
 ## Rules that must hold
 
-- **Registry and template agree both ways.** `rules-data.js` asserts 20 entries, unique ids, a card
-  for every entry, an entry for every tagged card, no card tagged twice, and each title equal to its
-  heading (except `origin`).
+- **Registry and template agree both ways.** `rules-data.js` asserts 18 entries, unique ids, a card
+  for every entry, an entry for every tagged card, no card tagged twice, and each title equal to
+  the heading inside that card's own element (sliced to its closing tag, so a card that lost its
+  `.label` cannot borrow the next card's).
 - **Section ids are stable and never derived from a heading.** A note or a saved combat layout is
   keyed by `k`, and a reworded heading must not orphan it.
-- **`data-note` comes straight after `class="card"`.** The 20-card test counts the literal prefix
-  `<div class="card" data-note="`, so an `id` placed first hides the card from it.
-  `#familiarCard` and `#skillsCard` put their ids last for this reason.
-- **A section's card is hidden, never removed.** Familiars and Active Spells are `display:none`
-  until they have content, and Skills is hidden in the grouped ability layout (`buildStats()`). The
-  registry, the card count and every id lookup need them in the document.
-- **The familiar pair stays adjacent, and their ids stay unique and unrenamed.**
-  `renderFamiliars()` and `wire()` both look them up without a guard. A missing id throws, and in
-  `wire()` that leaves every later listener unbound.
-- **The ≤820px query sits below the `.stack` rule and holds both halves.** `display:contents` may
-  appear once in `10-chrome.css` and only inside the query (asserted); at top level it would flatten
-  the desktop layout.
+- **`data-note` comes straight after the class attribute.** The card-count test counts
+  `<div class="card( layout-class)?" data-note="` plus the header's opening, so an `id` placed first
+  hides the card from it. `#familiarCard` and `#skillsCard` put their ids last for this reason.
+- **A section's card is hidden, never removed.** Familiars is always `display:none` on the Sheet
+  and Active Spells until it has content. The registry, the card count, the combat view and every
+  id lookup need them in the document.
+- **The familiar ids stay unique and unrenamed.** `renderFamiliars()` and `wire()` both look
+  `#familiarCard`, `#familiarList` and `#addFamiliarLink` up without a guard. A missing id throws,
+  and in `wire()` that leaves every later listener unbound.
+- **A media query comes after the rule it overrides.** `rules-data.js` pins the grid's ≤1000px and
+  ≤700px queries after `.sheet-grid`, and 30-sheet.css's strip (≤1000px) and rail (≤700px) queries
+  after `.strip .abilities` and `.rail`. `display:contents` on `.col-r` lives only inside the
+  ≤700px query.
+- **The header is not combat-addable** (`nocv`). Its rests are not a fight action, and the portrait
+  rides in with Vitals; a saved `portrait` in the view becomes `vitals` in `migrate()`.
 - **One group field.** A free-text label that files a record into a group is typed in
   `groupFieldHTML()`, and the list it files into groups by `tagKey()`. A second control would let
   the two drift, which is the #98 request.
@@ -269,9 +319,13 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 
 ## Traps
 
-- **The phone fix that did nothing.** The ≤820px query was first written above `.stack{display:grid}`.
+- **The phone fix that did nothing.** A ≤820px query was once written above `.stack{display:grid}`.
   At equal specificity the later rule wins, so `display` quietly stayed `grid`. The test asserting
-  the rule existed passed. It now asserts the order too (L2242).
+  the rule existed passed. The tests now assert each query's order (L2242, L6633).
+- **An unscoped `display:contents` flattened every tab.** The Sheet's old `.stack{display:contents}`
+  at ≤820px (there to sink the familiars) reached every `.stack`, so the cards on Spells, Journal and
+  Inventory touched with no gap on a phone. It went with the stacks in #103, and the gap came back
+  (L6633).
 - **`flex-wrap` alone did not wrap the familiar row.** `.item .nm` is `flex:1 1 0` with
   `min-width:0`, so flex always found "room" on line one and squeezed the name to 12px. The name
   needs `flex-basis:100%`. The fix is scoped to `#familiarList`, because an unscoped `.item .top`
@@ -294,8 +348,9 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | Question | Decision | Rejected, and why |
 |---|---|---|
 | How is a section identified? | A stable `k` in `NOTE_SECTIONS` | A heading-derived id: headings get reworded, and notes keyed to one would be orphaned |
-| The `origin` title on the Notes tab | Ask `noteTitle()`, which asks `raceTerm()` | Quoting the registry: on the classic skin the Notes tab would disagree with the card it links to |
-| Familiars on a phone | Flatten `.stack` inside the ≤820px query and sink the pair with `order:1` | `order` alone: it only reorders siblings, so a sidebar card can never pass the other column's cards |
+| The Sheet's layout (#103) | One layout, no setting: header, rail, strip, Skills beside Defences/Statuses/Resources, Features; three columns, two, one by width | A classic fallback: twice the CSS and screenshots until 2.0 |
+| Familiars on the Sheet (#103) | A paw in the header, shown by a per-character switch, opening a popover and a modal; the card stays in the DOM, hidden, for the combat view | A chip with the name: long names and several familiars don't fit. A side drawer: heavier than needed. Flattening `.stack` to sink the card on a phone (the 2026-08-15 answer): the stacks are gone |
+| May the header go in the combat view? (#103) | No (`nocv`); a saved one becomes Vitals | Keeping it addable: the name, rests and level would ride into a fight view |
 | Where the familiar row may wrap | Only in `#familiarList` | Unscoped `.item .top{flex-wrap:wrap}`: silently restyles Statuses, where one row is right |
 | How a list row fits a phone (#57) | Everything after the name in one `.row-meta` group that drops to its own line whole; opt-in by `.split`; the name asks for 6em | The familiars' `flex-basis:100%`: these rows put a fold button and star before the name, which it would orphan on a line of their own. Truncating the name: loses the name, the one thing the row is for. 8em: split short item rows for no reason |
 | How Settings is organised (#107) | A sidebar of pages, one shown at a time (see [Settings & updates](../features/settings-and-updates.md)) | Reusing `.fgroup` / `.fghead` / `.fcaret` (the 2026-08-11 answer): the sections grew into one long scroll. A second collapsible: the app should not have two things that look like a section header |
@@ -318,8 +373,10 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
   heads and inventory section heads are not focusable at all.
 - The Attacks card's headings reuse `.inv-sec-head`, inheriting its `cursor:pointer`, but
   `data-atksec` has no handler, so they do not fold.
-- Active Spells, Familiars and Skills (in the grouped layout) are hidden when empty, so their note
-  button and combat toggle are unreachable until they have content (L3397).
+- Active Spells is hidden when empty, so its note button and combat toggle are unreachable until it
+  has content (L3397). Familiars' note opens from the paw, but its combat toggle is on the card,
+  which the Sheet hides: a sheet that already has Familiars in the combat view keeps it (and can
+  remove it there), but nothing on the Sheet can add it (L6633).
 - A portrait is stored at full size, against the localStorage quota.
 - More: [Known issues](../roadmap/known-issues.md).
 
@@ -346,3 +403,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-10-19 — A pencil in every card's header hides that card's edit, delete and remove buttons, per card and per character, by CSS (`.ed`/`.ed-off`), before the combat toggle and the note button. → ledger L6248, #97
 - 2026-10-22 — The Rules tab becomes one card, the browser; `settings.rulesCat` (the category last opened) replaces `settings.rulesCollapse`. → ledger L6327, #99
 - 2026-10-22 — The stale "Where Rules-tab folding is stored" decision is rewritten: `settings.rulesCat`, not `rulesCollapse`. → ledger L6455, #99
+- 2026-10-23 — The Sheet makeover: a header band over a grid (rail, strip, Skills, Defences/Statuses/Resources, Features), three, two and one columns; the stacks and their phone flatten go; familiars open from the paw; 18 sections, `portrait` is the header and not combat-addable; Attacks on Inventory. → ledger L6633, #103

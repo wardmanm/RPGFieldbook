@@ -3,8 +3,8 @@
 The six ability scores, their saving throws and the eighteen skills on the Sheet tab. The player
 types the six scores; every modifier, save and skill bonus is computed. Proficiency comes from two
 places — a dot the player taps, and grants that an ancestry, background, class or feat added — and
-the higher of the two wins. A per-character setting lays the block out one of two ways, over one set
-of element ids.
+the higher of the two wins. The six abilities run as a strip across the top of the Sheet, each
+with its save beneath; Skills is the card under it, beside Defences (#103).
 
 **Code:** `buildStats()`, `buildAbilities()`, `buildSkills()`,
 `placeLegend()`, `abilFinal()`, `modOf()`, `pbValue()`,
@@ -50,36 +50,32 @@ that as a ring. A value touched by an effect or a grant gets `fx-on`; one an eff
 skill value (`data-stat`) opens `openStatBreakdown()`: the base, which grant supplied the proficiency
 (`grantSources()`), or "Proficiency (manual)", then each effect by source, a penalty in red.
 
-**Two layouts** — until #103, which retired the grouped one and its Skills display setting (the
-Sheet's ability strip and Skills column replace it; a saved `statStyle` stays, unread). Task 8 of #103
-rewrites this section; what follows is the history.
-`character.statStyle` was `"classic"` or `"grouped"`.
+**The ability strip** (`card strip`, the `abilities` section). `buildAbilities()` draws six
+`.ability` boxes into `#abilities`: the name, the modifier large, the score small and editable, and
+the save beneath with its proficiency dot. The strip is six across over the Sheet's middle and right
+columns, and 3 × 2 at ≤1000px. There is no Saving Throws card: each save stays with its ability.
 
-- **Classic.** `#abilities` is a three-column grid of six boxes, each with its save underneath. The
-  Skills card lists all eighteen A → Z in two columns that read **down** each column: `.skills` is
-  `grid-auto-flow:column` over `grid-template-rows:repeat(var(--skill-rows,9),auto)`, and
-  `buildSkills()` sets `--skill-rows` to half the list, rounded up. The DOM order is unchanged, so
-  Tab still walks A → Z; under 600px it is one column.
-- **Grouped (retired).** The grouped builder filled `#abilities` with `.agroups`: three across (two under 900px,
-  one under 560px), each ability a compact header row — name, modifier, score — over its saving
-  throw and the skills it governs ("No skills use CON" for CON). Expertise shows an "Expert" tag,
-  drawn by CSS alone off `.dot[data-lvl="2"]`. The Skills card is hidden, not removed, and
-  `placeLegend()` moves the one legend node into the Abilities card.
+**The Skills card** (`#skillsCard`) lists all eighteen A → Z in two condensed columns that read
+**down** each column: `.skills` is `grid-auto-flow:column` over
+`grid-template-rows:repeat(var(--skill-rows,9),auto)`, and `buildSkills()` sets `--skill-rows` to
+half the list, rounded up. The DOM order is unchanged, so Tab still walks A → Z; under 600px it is
+one column. Each row is the dot, the bonus, the name and the ability; `placeLegend()` puts the one
+legend (none · proficient · expertise) at the foot of the card.
 
-`buildStats()` rebuilds both halves and is the first statement of `renderAll()`.
+`buildStats()` rebuilds both and is the first statement of `renderAll()`. **One layout** (#103):
+the By ability ("grouped") layout and its Skills display setting are retired; a saved
+`character.statStyle` stays in the sheet, unread.
 
 **In the combat view.** Added to the [combat view](combat-view.md) with their own swords buttons,
 the Ability Scores & Saves and Skills cards draw compact and read-only there; the Sheet tab is
 unchanged. `syncStatLock()` disables the two cards' score boxes and proficiency dots exactly while
 they sit in `#cvList` — after the view fills, after a card goes home, and after `buildStats()`
-redraws, which matters because a redraw with the view open (a character switch, or changing the
-Skills display) builds fresh controls that must come out disabled. The look is CSS under
+redraws, which matters because a redraw with the view open (a character switch) builds fresh
+controls that must come out disabled. The look is CSS under
 `#cvList [data-note="abilities"]` and `#cvList [data-note="skills"]`: six abilities in a row (three
 on a phone), the score as a plain number, skills in three columns above 640px, two down to 381px,
-one below, the legend hidden. The grouped display tightens its rows the same way, but its header
-does not shrink: the name is 13px in full ink, the modifier 24px, and the score 16px bold in full
-ink in a fixed 2.4em box flush at the right edge, its spinner hidden, with the save row's label in the Sheet tab's 10px small
-capitals, so each ability reads at a glance mid-fight (#92). Tapping a value still opens its
+one below, the legend hidden. The `#cvList` rules out-specify the Sheet's `.strip` and
+`#skillsCard` rules, so the strip's own sizes do not leak in. Tapping a value still opens its
 breakdown — that only reads.
 
 **The compact Skills grid reads down each column at every width.** Each multi-column rule
@@ -92,32 +88,26 @@ the only sane order with one column.
 ## Rules that must hold
 
 - **One set of ids, each exactly once.** `mod-<k>`, `save-<k>`, `skill-<k>` and the `.dot` data
-  attributes exist in whichever layout is showing, and nowhere else. `recompute()`, the breakdowns
-  and print all find them by id. In grouped mode `buildSkills()` must **clear** `#skills` and
-  return, not merely rely on the hidden card: a second `#skill-perception` would leave
-  `getElementById` updating one copy while the other rots. `sheet.js` asserts each skill id appears
-  once in the grouped markup.
+  attributes exist in the strip and the Skills card and nowhere else. `recompute()`, the breakdowns
+  and print all find them by id; a second `#skill-perception` would leave `getElementById` updating
+  one copy while the other rots.
 - **`buildStats()` is `renderAll()`'s first statement**, before the `[data-path]` loop. The layout is
   per character, and every swap path — `loadCharById()`, `newCharacter()`, import, settings import —
   ends in `renderAll()`. The rebuild blanks the six score inputs, which the loop then refills;
   `recompute()` at the end repaints every number.
 - **The retired `statStyle` field** stays in `blankChar()` (`classic`) and in old sheets, unread (#103).
-- **`.agroups` spans `grid-column:1/-1`.** `#abilities` is itself a three-column grid.
 - **The Skills card keeps `data-note="skills"` before its `id`.** `rules-data.js` counts the literal
   `<div class="card" data-note="` prefix to assert the number of note-bearing cards.
-- **The legend is moved, never duplicated**, and appended to the card — never into `#abilities`,
-  which is cleared on every rebuild.
+- **The legend is placed, never duplicated**, and appended to the Skills card — never into
+  `#abilities`, which is cleared on every rebuild.
+- **The strip's ≤1000px query comes after `.strip .abilities`** (asserted), or the strip stays six
+  across on a tablet.
 - **Expertise is display-only**, marked by CSS from the `data-lvl` that `recompute()` already writes.
 
 ## Traps
 
-- **The builders used to run only at boot.** Loading a grouped sheet over a classic one kept the
-  classic markup for good. The hook is `renderAll()`, not the settings toggle.
-- **The grouped block rendered into one third of the card**, every label wrapped, until `.agroups`
-  spanned the parent grid. Caught by a screenshot; the suite has no layout.
-- **The first grouped cut was one vertical column** — each row full-width with a two-word label, the
-  ability in a tall box beside a list that for STR is one row. The card was taller than the viewport;
-  three-across with a header row brought it to 448px. None of it showed in the DOM assertions.
+- **The builders used to run only at boot.** When the layout was a per-character choice, loading
+  one sheet over another kept the first one's markup for good. The hook is `renderAll()`.
 - **A two-column grid fills row by row**, so the Classic skills alphabet ran left-right-left-right
   until `grid-auto-flow:column`.
 - **A multi-column rule that doesn't set its own `grid-auto-flow` inherits whichever rule wins the
@@ -126,34 +116,20 @@ the only sane order with one column.
   flow; the view's own ≤640px rule sat behind that base rule's own ≤600px switch to `row`, so at
   phone width the grid read across rows, not down columns — the #56 trap, reopened in a different
   rule.
-- **The grouped header keeps the `.ability` skin, so the combat view's Classic rules reach it.**
-  `#cvList [data-note="abilities"] .ability .n` (9px) and `… input[data-path]` (12px soft ink) were
-  written for the tall Classic boxes; on the one-line grouped header they made the name and score
-  near-invisible, and the disabled input's own width (about twenty characters) floated the score
-  mid-header (#92). The view's `.agroup .srow .lbl` also outranks the Sheet tab's
-  `.agroup .svrow .lbl`, so the save label needs its own rule there. A disabled number input still
-  keeps room for its spin button (about 15px in Chromium), which clipped two digits in a `3ch` box
-  and held the score off the right edge; the view hides the spinner in this header.
 - **`buildSkills()` guards `style.setProperty`**, because the harness's stub element has none.
 
 ## Decisions
 
 | Question | Decision | Rejected, and why |
 |---|---|---|
-| How the grouped layout is laid out | Three across, two down; each ability a header row over its save and skills | One vertical column: it read as mostly air and ran taller than the viewport |
-| Where the layout is rebuilt | `renderAll()`, first statement | Only on the settings toggle: loading a grouped sheet over a classic one kept the classic markup |
-| What grouped mode does to the Skills card | Hides it and empties `#skills` | Only hiding it: a duplicate `#skill-perception`, with one copy silently stale |
-| How the setting avoids a migration | A resolver whose fallback equals the `blankChar()` default, as `hdStyle` does | — |
-| How expertise is marked in grouped mode | CSS off the dot's `data-lvl` | — |
-| The Skills note button, hidden in grouped mode | Shipped as a known gap | A second note button in the Abilities label: worse UI than the gap |
+| The ability and skill layout (#103) | One: the strip with saves beneath, Skills as its own condensed card; no setting | Keeping By ability (the 2026-09-01 per-character choice): a second layout of the middle column to design and shoot, and its hidden Skills card cost a note button |
+| Where the layout is rebuilt | `renderAll()`, first statement | Only at boot or on a settings toggle: loading one sheet over another kept the first one's markup |
 | Where a bonus to plain ability checks shows (#79) | The ability's breakdown, apart from the score; the modifier box is unchanged and unmarked | Adding it to the modifier: attacks, saves and AC read that number. A "check" number in each ability box: new UI for one pack item. Owner may revisit |
 | How the quick view reaches the combat view (#62) | The existing Abilities and Skills cards draw compact and read-only inside the view | A new Quick Stats card on the Sheet tab: duplicates the full cards there. A card that exists only in the view: needs a new way to add it, since cards are added from their own tab |
-| The quick view's layout (#62) | Follows the character's Skills display (Classic or By ability) | Always by ability, or always classic: ignores a choice the player already made |
+| The quick view's layout (#62) | The strip and Skills, compact (one layout since #103) | Following a per-character Skills display: retired with By ability |
 
 ## Open
 
-- In grouped mode the Skills card's note button is hidden, and the Section Notes card lists only sections
-  that already have a note, so a Skills note cannot be *started* there. Existing notes stay listed.
 - Rules content never grants expertise: a grant carries a level, but nothing supplies 2, and
   expertise features stay prose by decision (see [Known issues](../roadmap/known-issues.md)).
 - Player-choice ability increases on some feats (Sun Touched, Moonlit) are applied by hand.
@@ -169,3 +145,4 @@ the only sane order with one column.
   at both multi-column breakpoints, so it reads down each column at every width. → ledger L5058, #55
 - 2026-10-13 — A modifier, save or skill an effect lowers is red with ▼, even beside a bonus; its breakdown line is red. → ledger L5700, #89
 - 2026-10-16 — In the combat view the By ability header keeps a full-size name, modifier and score. → ledger L5756, #92
+- 2026-10-23 — One layout: the abilities as a strip with their saves, Skills its own condensed card beside Defences; By ability and the Skills display setting retired. → ledger L6633, #103

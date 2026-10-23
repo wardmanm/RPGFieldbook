@@ -2,7 +2,7 @@
 
 The Inventory tab: everything the character carries, filed into sections, with where each thing came
 from, what it cost, what it weighs, whether it is worn, and — for potions, wands and the like — a
-**Use** button. Below it, the Coins card. Items arrive from a rules pack through the item finder,
+**Use** button. Above it, the Attacks & Weapons card ([Attacks & damage](attacks-and-damage.md), moved here from the Sheet in #103); below it, the Coins card. Items arrive from a rules pack through the item finder,
 from starting-equipment grants, or typed in by hand; each is a *copy* of the pack entry, so the sheet
 can carry the player's own fields (quantity, origin, favourite, filing) alongside the rules-owned ones.
 
@@ -227,3 +227,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-19 — `recover` joins the item shape; the editor's Quantity allows 0; totals and the ×N badge read quantity through `itemQty()`. → ledger L6081, #104
 - 2026-10-19 — The "After a fight" select's labels as built, and it follows the form's current weapon; the print sheet counts a ×0 item. → ledger L6147, #104
 - 2026-10-22 — The item finder's facets and preview become `itemFacets()` and `openItemInfo()`, shared with the Rules tab's Items category. → ledger L6327, #99
+- 2026-10-23 — Attacks & Weapons heads the tab, above Equipment & Inventory. → ledger L6633, #103

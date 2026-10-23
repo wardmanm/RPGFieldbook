@@ -12,7 +12,9 @@ comes from keeping that loop lossless: a sheet saved by any version must still o
 `loadCharById()` in `75-home-theme.js`; `charNeedsUpdate()` in `72-char-update.js`;
 `markCharChecked()` in `73-char-update-ui.js`; read-time guards `featCol()`, `invCol()`, `atkCol()`
 in `20-lists.js`, `encMode()` in `25-origins-items.js`,
-`noteMap()` in `87-notes.js`, `combatSectionsOf()` in `87-combat.js` · **Tests:** `char-update.js`
+`noteMap()` in `87-notes.js`, `combatSectionsOf()` in `87-combat.js`, `chipList()`,
+`advancementOf()` in `41-chips.js`; the #103 pass `migrateSheet103()`, `mergeNoteInto()`,
+`liftLanguages()` in `71-char-io.js`, `ensureDefaultLanguages()` in `41-chips.js` · **Tests:** `char-update.js`
 (the stamp is preserved and never advanced; unknown fields survive), `tables.js` (the round trip is
 idempotent), `sheet.js` (sub-key defaults arrive through `migrate()`; malformed glossary entries and
 junk list items, repaired, idempotent, and rendered) · **See also:**
@@ -29,11 +31,12 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
 | structured objects | `hp` `{cur, max, temp, locked:true}`, `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
 | lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers` |
+| chip lists (#103) | `resists` `[{id, name}]`, `immunes` `[{id, name}]`, `senses` `[{id, name, range}]` (`range` whole feet or `""`), `languages` `[{id, name, src}]` (`src` `""` the player's, `race:…` / `bg:…` a grant, `system` a ruleset default) — all `[]` in `blankChar()` |
 | maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
-| per-character settings | `statStyle` (retired with #103, kept and unread), `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `ammoRecovery` (`"half"` default, #104) |
-| retired, kept for old sheets | `hdStyle` — the three hit-dice looks it chose between are gone (#103); `migrate()` still carries the field so an old save round-trips, nothing reads it any more |
-| text | `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
+| per-character settings | `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `ammoRecovery` (`"half"` default, #104), `advancement` (`"xp"` or `"milestone"`, `"xp"` default, read through `advancementOf()`, #103), `showFamiliars` (the header's paw, `false` in `blankChar()`, #103) |
+| retired, kept for old sheets | `hdStyle` (the three hit-dice looks) and `statStyle` (the By ability layout), both gone with #103; `migrate()` still carries them so an old save round-trips, nothing reads them |
+| text | `alignment` (on Bio since #103), `xp` (a number or digits with commas; anything else shows as typed), `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
 
 Inputs bound with `data-path` write the raw input string, so numbers on the sheet are often
 strings, and code reads them through `num()` (integers) or `fnum()` (weights, coin). `""` is a real
@@ -61,7 +64,7 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    they were), a numeric term becomes text, and an entry with no id gets one from `uid()` (a numeric
    id becomes text), so the Rules tab's Edit and Delete can find it. One with no term at all stays,
    listed there as "(no term)" and never matched (see [Rich text](rich-text.md)).
-7. `migrateWeaponEquip()` runs last. It is a one-time fix, recorded by `wpnEquipInit`, that equips
+7. `migrateWeaponEquip()` runs next. It is a one-time fix, recorded by `wpnEquipInit`, that equips
    every weapon on a sheet saved before weapons could be equipped.
 8. `migrateAmmo()` runs after it: a one-time pass, recorded by `ammoInit` (never defaulted in
    `blankChar()`, as `wpnEquipInit` isn't), that unpacks known ammunition bundles and gives a kind to
@@ -70,6 +73,24 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    `newCharacter()` sets `ammoInit` to `AMMO_PASS` directly on the character it creates, so the pass
    never runs on a brand-new sheet, which has nothing for it to migrate. An item's own `ammo` and `ammoStack` need no default — see
    [Ammunition](../features/ammunition.md).
+9. `migrateSheet103()` (#103) runs last. Each step is a no-op on a sheet that does not need it, so
+   it is safe on every load:
+   - the four chip lists go through `chipClean()` (a non-array reads `[]`, an entry that is not an
+     object or has no string `name` is dropped, names trimmed, duplicates by name dropped case-blind,
+     an entry with no id given one; a sense's `range` becomes whole feet or `""`); `advancement`
+     through `advancementOf()`;
+   - the retired cards' notes merge (`mergeNoteInto()`): `class` and `origin` into `portrait`,
+     `rest` into `vitals`, each under a bold heading, keeping the earlier `at` and the later
+     `editedAt` ([Story & notes](../features/story-and-notes.md));
+   - in `combatSections`, `rest` and `portrait` become `vitals`, deduped;
+   - "Languages: …" lines in `proficiencies` become the player's chips and leave the text
+     (`liftLanguages()`), **once**: recorded by `langLifted`, which `newCharacter()` sets and
+     `blankChar()` never does, so a line the player types later stays text;
+   - `ensureDefaultLanguages()` adds the ruleset's default languages the sheet lacks (case-blind), as
+     `system` chips — Common unless a pack declares `defaultLanguages`.
+
+   `showFamiliars` is decided from the file before that: a stored boolean wins, else it is whether
+   the sheet has a familiar.
 
 **It is shallow on purpose.** Beyond each list item being an object, and the glossary repair
 above, nothing inside a list item or a map value is shape-checked. The code that reads those values
@@ -87,7 +108,8 @@ in [Conditions & concentration](../features/conditions-and-concentration.md)).
 **The round trip.** Autosave writes `JSON.stringify(character)`. `exportChar()` writes the same
 object, indented, as `humblewood-<name>.json`, whatever the system. Every load path runs `migrate()`:
 `loadCharById()`, `importChar()` (which accepts a file only if it parses and has `abilities`) and
-`migrateOldChar()`. `newCharacter()` builds straight from `blankChar()`.
+`migrateOldChar()`. `newCharacter()` builds straight from `blankChar()`, then adds the default
+languages and marks `ammoInit` and `langLifted` done.
 
 **The version stamp, `appVersion`,** means "the app version this sheet was last **reconciled**
 against", not "last saved with". `blankChar()` seeds `""`, `newCharacter()` stamps `APP_VERSION`,
@@ -97,7 +119,7 @@ index so a home card can badge it. `charNeedsUpdate()` is true when the stamp is
 `APP_VERSION`, packs are loaded, the sheet is not a backup (`isBackup`), and the player has not
 chosen "don't ask again" for this version (`skipUpdate`).
 
-**`notes` and `secNotes` are different things.** `notes` is the eighth `BIO` string, the Story
+**`notes` and `secNotes` are different things.** `notes` is the eighth `BIO` string, the Bio
 tab's "Notes" card, rendered into `#rt-notes`. It predates everything. `secNotes` is the per-section
 notes map, keyed by `NOTE_SECTIONS` id (not by heading, which gets reworded). Each value is
 `{text, at, editedAt}`, saving an empty note deletes the key, and they are gathered on the Journal tab (`#tab-journal`).
@@ -125,7 +147,7 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - **The character stays plain JSON:** no `Set`, `Map`, function or `undefined` that has to
   survive. It also never stores a rules `_id`, which is reassigned on every boot (see
   [Rules packs](rules-packs.md)).
-- **Never merge or rename `notes` and `secNotes` into each other.** Either change breaks the Story
+- **Never merge or rename `notes` and `secNotes` into each other.** Either change breaks the Bio
   tab or orphans every saved section note, and nothing throws.
 
 ## Traps
@@ -153,6 +175,8 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 | Where a new character is stamped | `newCharacter()` | `blankChar()`: it runs at top level before `30-version.js` defines `APP_VERSION`, a TDZ white screen (L702) |
 | Where the Max HP lock lives | `hp.locked`, inside `hp` | A top-level `hpLocked`: inside `hp`, `migrate()`'s sub-key fill gives every old sheet the default for free (L2105) |
 | The section-notes field | `secNotes` | Reusing `notes`: already the Story tab's bio field, so merging breaks that tab silently (L1497) |
+| The chip lists (#103) | Their own fields, read through one guard, `chipList()` | Prose in `proficiencies`: a grant can't be taken back cleanly, and the Defences card needs a list |
+| How often the Languages lift runs (#103) | Once, flagged by `langLifted` (never in `blankChar()`) | Every load: a "Languages:" line the player types later would be lifted too |
 | List items that are not objects | Dropped: `null`, strings, numbers | Kept: no screen can show one and each stopped the render. Dropping only `null`: a bare string in `spells` still threw on the first write in strict mode (L4206) |
 | A player's glossary entry with no term | Kept, given an id if it lacks one, listed as "(no term)" | Dropped: the player's own data, gone silently. Left without an id: Edit and Delete can't reach it (L4206) |
 | A player's glossary entry written `{name, description}` | Read as its term and text, originals kept | Leaving it termless: those are the names every other category uses, so the intent is plain (L4206) |
@@ -162,6 +186,11 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 
 - Nothing validates the inside of list items (items, spells, attacks, features). A hand-edited
   file with a wrong-typed field in an item relies on each reader coping.
+- `newCharacter()` reads the default languages from the loaded packs; a sheet made before a cold
+  rules cache has loaded gets the fallback Common even where a pack would declare others. Inert
+  today: no pack declares `defaultLanguages` ([Known issues](../roadmap/known-issues.md)).
+- Changing a sheet's system (Settings → Skin) does not swap its `system` chips for the new
+  ruleset's (spec §4 asked for it). Inert today for the same reason.
 
 ## History
 
@@ -183,3 +212,4 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-10-17 — `trackerTotals` joins the collapse-style maps, a per-tag switch for a tracker group's total (#93); `trackers[].type` loses `checklist` and `task`, migrated into journal pages by `migrateTrackerPages()` (#95). → ledger L6047, #95, #93
 - 2026-10-19 — `ammoRecovery` joins the per-character settings, defaulted `"half"` in `blankChar()`; `ammoSpent` entries gain `hits`/`misses`. → ledger L6081, #104
 - 2026-10-19 — `editHide` joins the collapse-style maps, defaulted `{}` in `blankChar()` and guarded the same way: a card key → `true` for a hidden card's edit, delete and remove buttons. → ledger L6248, #97
+- 2026-10-23 — The Sheet makeover: `resists`, `immunes`, `senses`, `languages`, `advancement`, `showFamiliars`; `statStyle` and `hdStyle` retired, kept; `migrateSheet103()` merges the retired cards' notes, maps `rest`/`portrait` in the combat view to `vitals`, lifts "Languages:" lines once and adds the default languages. → ledger L6633, #103

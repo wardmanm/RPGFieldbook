@@ -1,6 +1,6 @@
 # The Sheet tab makeover — design
 
-**Status:** approved in conversation 2026-10-23 (advancement revised the same day), awaiting written-spec review · wave 2 of [1.9.0](../wiki/roadmap/1.9.0.md)
+**Status:** approved 2026-10-23 and built on branch `issue/103-sheet-makeover` (eight tasks), awaiting Mike's device pass — see [As built](#as-built) · wave 2 of [1.9.0](../wiki/roadmap/1.9.0.md)
 **Issue:** #103 (Sheet tab makeover). One branch, `issue/103-sheet-makeover`, after #88 merges.
 Mockups: `.superpowers/brainstorm/59468-1792760354/content/` (`layout-v2.html`, `rail-v2.html`,
 `widths.html`). Read [Sections & layout](../wiki/ui/sections-and-layout.md),
@@ -313,3 +313,73 @@ languages and senses."
 - Any change to the combat view's own layout beyond what the rail brings.
 - Calculation rules from packs in general, and a chooser for conflicting rulesets (decision 18, 2.0).
 - The converter extracting the advancement table (decision 16).
+
+## As built
+
+Built 2026-10-23 in eight tasks (base `603c4e7`): chips, advancement and default languages; the
+migration; language grants; the chip cards and Bio; the hit-dice bar and spend box; the header;
+the grid; QA, tuning and docs. Ledger: "The hit-dice bar and the spend box" (L6580) and "The Sheet
+makeover" (L6633). What differs from the sections above, and why:
+
+**Deviations**
+
+- **§4, a system change replacing `system` chips: not built.** Changing a sheet's system (Settings →
+  Skin) leaves its `system` chips. Inert today, because every ruleset falls back to Common; recorded in
+  [Known issues](../wiki/roadmap/known-issues.md).
+- **§4, a new character before a cold rules cache** gets the fallback Common even where a pack would
+  declare other defaults (parked in Task 2; inert, no pack declares `defaultLanguages`; known issues).
+- **§5, the Languages lift runs once**, flagged by `langLifted` (set by `newCharacter()`, never in
+  `blankChar()`), so a "Languages:" line the player types later stays text. "Once" in §5 read as
+  "on every load, a no-op when there is no line", which would lift the player's later line.
+- **§6.1, the empty species reads "+ Race" / "+ Ancestry"** by skin (`raceTerm()`), as the rest of
+  the sheet words it, not "+ Species". "Level up ready" runs Level up directly (`doLevelUp()`, which
+  asks which class when there are several) rather than opening the class menu.
+- **§6.1, the header's Remove buttons carry `ed`** though no pencil reaches them (they sit outside
+  any `EDIT_CARDS` card); kept, commented, so every `data-del-*` button carries it (#97's guard).
+- **§6.1, adding the first familiar turns `showFamiliars` on** (decision 5's default, applied at the
+  moment it changes).
+- **§6.2, the rail and the strip keep a small `.label`** ("Vitals", "Ability Scores & Saves"): the
+  note button, the combat toggle, the ☰ entry and the registry-title test all need one.
+- **§6.2, `#maxNote` shows only when an effect moves Max HP**; its standing placeholder went (no room
+  in the rail, none in the mockup).
+- **§6.2, the death saves read ✓ ○○○ ☠ ○○○ ✗** with the success set reversed so both fill outward
+  (the old row was failures first).
+- **§6.6, `sheetHeadHTML()` builds the paw only**; the rest of the header is static markup, because
+  boot wires its ids once.
+- **§6.7, the phone rail** puts the small portrait at the left with the rest beside it and the AC
+  shield over the portrait's bottom edge, not beside it (the mockup was schematic; Mike's device pass).
+- **§7, the header is not combat-addable** (Task 8 ruling): `portrait` is marked `nocv`, and a saved
+  `portrait` in the combat view becomes `vitals`, like `rest`. Its rests are not a fight action and
+  the portrait rides in with Vitals. The view gains its own Inspiration ✦ instead (Task 6 ruling).
+- **§7, Familiars** stays combat-capable (the view still shows its card), but with the card hidden
+  on the Sheet nothing there can add it; a sheet that already has it keeps it. For Mike: a combat
+  toggle in the paw's menu would close this.
+- **§8, print** puts the chips in their own box; the Proficiencies prose was never printed and still
+  is not.
+- **§10, removing `.stack{display:contents}`** (it only existed to sink the Sheet's Familiars on a
+  phone, and reached every tab) restores the 12px gap between cards on Spells, Journal and
+  Inventory at ≤820px; they touched before. A separate release-note bullet says so.
+- **The no-packs hint** the old Class card showed is back in the Add class window (`NO_RULES_HINT`),
+  the way into a sheet with no class (Task 8 ruling).
+- **Dark mode**: the rail is tinted rather than darker (forest green with a gold edge in Humblewood,
+  slate in Classic), because the dark page ground is already near-black and a darker rail read as one
+  more card. Light mode is the mockup's dark rail.
+- **The phone header** (≤480px) tightens its gaps and the XP box so the icons and the level badge
+  share one row under the name: two rows in all, not the three the first build had.
+- `statStyle` and `hdStyle` stay in `blankChar()` and saved sheets, unread; `classChipHTML()`,
+  `statStyle()` and the grouped builders are deleted.
+
+**Checked in QA** (Playwright, 1280 / 900 / 390, both skins, light and dark): a level-15 "88/153"
+fits its boxes (28px of text in a 35px box in Classic's Cinzel) at 390 and 1280; the sense chip
+reads "TREMORSENSE · 60 FT" (the chip is uppercase) as §8 asks.
+
+**What Mike still has to check on his devices**
+
+- Touch: the header's class line, the paw and its menu, the hit-dice bar and the spend box, the HP
+  bar's boxes (tap to type) and ± buttons, the death-save circles, the chip × and + Add.
+- The phone rail: the shield over the small portrait, and whether two header rows read well.
+- The dark rail tints in both skins on a real screen.
+- Print: the new Resistances, Immunities, Senses and Languages box.
+- His own characters: an old sheet's Class / Ancestry / Rest notes merged into Character and
+  Vitals, its "Languages:" line become chips, and its combat view (a saved Portrait becomes Vitals).
+- Whether Familiars should be addable to the combat view from the paw's menu.
