@@ -45,17 +45,23 @@ function repairIds(list,seen){
 /* ---- #103: the Sheet makeover's one-time work. Every step is idempotent: a
    sheet already migrated has nothing left for it to find. ---- */
 /* A removed section's note joins the one that took its place, under a heading
-   naming where it came from; the earlier start and the later edit are kept. */
+   naming where it came from; the earlier start and the later edit are kept.
+   A note stored as a plain string (no at/editedAt) merges its text too; any
+   other junk under the key (an array, a number, ...) has no text to keep, so
+   it is just dropped — either way the removed key always goes. */
 function mergeNoteInto(c,from,into,heading){
   const m=c.secNotes;if(!m||typeof m!=="object")return;
-  const f=m[from];if(!f||typeof f!=="object"||Array.isArray(f))return;
-  const t=String(f.text||"").trim();
+  if(!(from in m))return;
+  const f=m[from];
+  let t="",at,ed;
+  if(f&&typeof f==="object"&&!Array.isArray(f)){t=String(f.text||"").trim();at=f.at;ed=f.editedAt;}
+  else if(typeof f==="string")t=f.trim();
   if(t){
     const to=(m[into]&&typeof m[into]==="object"&&!Array.isArray(m[into]))?m[into]:null;
     const prev=to?String(to.text||"").trim():"";
     const block="**"+heading+":**\n"+t;
-    const nums=[to&&to.at,f.at].filter(x=>typeof x==="number");
-    const eds=[to&&to.editedAt,f.editedAt].filter(x=>typeof x==="number");
+    const nums=[to&&to.at,at].filter(x=>typeof x==="number");
+    const eds=[to&&to.editedAt,ed].filter(x=>typeof x==="number");
     m[into]=Object.assign({},to||{},{text:prev?prev+"\n\n"+block:block});
     if(nums.length)m[into].at=Math.min(...nums);
     if(eds.length)m[into].editedAt=Math.max(...eds);
@@ -83,7 +89,11 @@ function migrateSheet103(c){
     const out=[];c.combatSections.forEach(k=>{const v=k==="rest"?"vitals":k;if(!out.includes(v))out.push(v);});
     c.combatSections=out;
   }
-  liftLanguages(c);
+  /* liftLanguages runs once, same pattern as ammoInit: never defaulted in
+     blankChar(), so an old sheet's undefined flag lifts once on its first
+     migration, after which a player's own "Languages:" line in Proficiencies
+     stays theirs to type. */
+  if(c.langLifted!==true){liftLanguages(c);c.langLifted=true;}
   ensureDefaultLanguages(c);
 }
 function migrate(s){

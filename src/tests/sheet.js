@@ -4509,6 +4509,21 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const n = {secNotes: {}};
   X.mergeNoteInto(n, 'class', 'portrait', 'Class');
   ck('#103 nothing to merge: nothing changes', JSON.stringify(n.secNotes) === '{}');
+
+  const n2 = {secNotes: {class: 'Took Life.'}};
+  X.mergeNoteInto(n2, 'class', 'portrait', 'Class');
+  ck('#103 a note stored as a bare string still merges', n2.secNotes.portrait.text === '**Class:**\nTook Life.' && !('class' in n2.secNotes), n2);
+  const n3 = {secNotes: {class: [1]}};
+  X.mergeNoteInto(n3, 'class', 'portrait', 'Class');
+  ck('#103 junk under a removed key is dropped, not merged, never throws', !('portrait' in n3.secNotes) && !('class' in n3.secNotes), n3);
+
+  ck('#103 langLifted is set once migrate has run', m.langLifted === true);
+  const again = X.migrate(Object.assign(JSON.parse(JSON.stringify(m)), {proficiencies: m.proficiencies + '\nLanguages: Orcish'}));
+  ck('#103 the lift runs once: a later "Languages:" line stays text, not chips', again.proficiencies.includes('Languages: Orcish') &&
+     !X.chipList(again, 'languages').some(l => l.name === 'Orcish'), again.proficiencies);
+  const kept = X.migrate({abilities: {}, system: 'dnd', langLifted: true, proficiencies: 'Languages: Gnomish'});
+  ck('#103 a sheet already flagged keeps its Languages line too', kept.proficiencies === 'Languages: Gnomish' &&
+     !X.chipList(kept, 'languages').some(l => l.name === 'Gnomish'), kept);
 }
 
 /* ---- imported files and packs render inert ----
