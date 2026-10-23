@@ -1,6 +1,6 @@
 # The Sheet tab makeover — design
 
-**Status:** approved in conversation 2026-10-23, awaiting written-spec review · wave 2 of [1.9.0](../wiki/roadmap/1.9.0.md)
+**Status:** approved in conversation 2026-10-23 (advancement revised the same day), awaiting written-spec review · wave 2 of [1.9.0](../wiki/roadmap/1.9.0.md)
 **Issue:** #103 (Sheet tab makeover). One branch, `issue/103-sheet-makeover`, after #88 merges.
 Mockups: `.superpowers/brainstorm/59468-1792760354/content/` (`layout-v2.html`, `rail-v2.html`,
 `widths.html`). Read [Sections & layout](../wiki/ui/sections-and-layout.md),
@@ -47,6 +47,9 @@ Settled with Mike on 2026-10-16 (the 1.9.0 page) and 2026-10-23 (this brainstorm
 | 13 | Senses | **Chips on Bio with an optional range** ("Darkvision · 60 ft"), player-added: Blindsight, Darkvision, Tremorsense, Truesight or free text. Passive Perception stays in the rail | On the Sheet: the issue moves descriptive lists to Bio; senses are rarely changed in play |
 | 14 | The Story tab | **Renamed Bio.** Its id stays `story` (saved state keys on it) | Renaming the id too: every saved Section Notes fold state would reset |
 | 15 | Favorites | **No cross-category Favorites panel** (Foundry's mixed list under the portrait): each card already has ★ favourites at its top | A second favourites system |
+| 16 | Where the XP thresholds come from | **The character's ruleset's `advancement` table, falling back to the SRD's**, hard-coded. No pack declares it yet: SRD 5.2 and the 2024 rules use identical thresholds, so the fallback is right for both; the converter can extract it in 2.0 | The converter extracting it now: every pack's digest moves and a data release follows, for numbers the fallback already has. A hard-coded table only: a homebrew or Humblewood world with other numbers could not say so |
+| 17 | XP or milestones | **A per-character setting, `advancement`: XP (today's behaviour, the default) or Milestone** (no XP; the DM grants levels, taken with Level up) | XP only: tables that use milestones keep an empty field. App-wide: two tables on one device can't differ |
+| 18 | Calculation rules in general | **Deferred to 2.0** (Mike, 2026-10-23): rules that drive calculations (spell slots, proficiency, advancement) coming from the loaded packs, with a chooser when two loaded rulesets conflict. 2.0 rewrites the app for fully customisable systems; until then the advancement table is the one ruleset-specific calculation | Building the conflict chooser in 1.9.0: a subsystem the rewrite would replace |
 
 ## 3. Data
 
@@ -60,6 +63,7 @@ survive a save → load round trip ([Character model](../wiki/architecture/chara
 | `senses` | `[{id, name, range}]` | `[]` | `range` a number of feet or `""` |
 | `languages` | `[{id, name, src}]` | the ruleset's defaults (§4) | `src`: `""` (the player's), `"race:…"`, `"bg:…"` (grants, the existing provenance form), or `"system"` (§4) |
 | `showFamiliars` | boolean | see below | the header paw. `migrate()` sets it once when absent: `true` if `familiars` has an entry, else `false` |
+| `advancement` | `"xp"` \| `"milestone"` | `"xp"` | read through `advancementOf(c)`; anything else reads as `"xp"` |
 
 - Every list is read through one guard (`chipList(c, key)`): a non-array reads as `[]`, an entry
   that is not an object or has no string `name` is dropped, names are trimmed, and duplicates by
@@ -79,6 +83,19 @@ survive a save → load round trip ([Character model](../wiki/architecture/chara
   When the character's system changes, `system` chips are replaced with the new system's.
 - A `system` chip shows its source ("Common · rules") and has no ×, like a grant.
 - No pack declares the field yet, so no pack's digest moves; Common is the fallback everywhere.
+
+## 4a. The advancement table
+
+- A system pack may declare `advancement`: a list of `[xp, level]` pairs, ascending (new optional
+  field, `docs/rules-schema.md`). Merged per pack label like `defaultLanguages`, in #88's `packMap()`.
+- `advancementFor(c)`: the declaration of the pack whose `system` is the character's, if it is a
+  valid ascending list of whole numbers starting at level 1; else `SRD_ADVANCEMENT`, the SRD's table
+  (0 → 1, 300 → 2, 900 → 3, 2700 → 4, 6500 → 5, 14000 → 6, 23000 → 7, 34000 → 8, 48000 → 9,
+  64000 → 10, 85000 → 11, 100000 → 12, 120000 → 13, 140000 → 14, 165000 → 15, 195000 → 16,
+  225000 → 17, 265000 → 18, 305000 → 19, 355000 → 20), a top-level literal in `00-constants.js`.
+- `xpProgress(c)`: from the character's XP (a number, or a string of digits and commas) and total
+  level, `{xp, next, levelFor}` — the threshold of the next level and the level the XP earns —
+  or `null` when XP is not a number. At level 20, no next.
 
 ## 5. Languages from species and backgrounds
 
@@ -110,8 +127,12 @@ A band across the top (the reference's red, as theme tokens, so both skins follo
 - **Icons**, right side: Short rest, Long rest, Inspiration (★, the existing toggle) — the existing
   handlers, as icon buttons with titles.
 - **The paw** (§6.6), when `showFamiliars` is on.
-- **Level badge and XP**: the total level in a ring; XP as an editable number; a bar toward the next
-  level from the SRD advancement table, shown only when XP is a number.
+- **Level badge and XP**: the total level in a ring.
+  - **XP mode** (`advancement` "xp"): XP as an editable number beside it, and a bar toward the next
+    level's threshold (§4a). When XP reaches it, the bar is full and the badge reads "Level up ready";
+    tapping the badge opens the class flyout. XP not a number: shown as typed, no bar.
+  - **Milestone mode**: the badge only; levels come from Level up in the class flyout.
+- **Settings → This character**: "Advancement: XP / Milestone".
 - **The section-note button** for `portrait`, titled "Character" (§7).
 
 ### 6.2 The rail (left column; card `vitals`)
@@ -243,7 +264,9 @@ Inventory. Its renderer, ids and wiring do not change.
 - **A familiar marked summoned with no stat block**: the modal shows its name, kind and the Summon /
   Dismiss button.
 - **A character with no class**: the class line reads "+ Class".
-- **XP not a number**: shown as typed, no bar.
+- **XP not a number**: shown as typed, no bar. **A pack's `advancement` that is malformed** (not
+  ascending, not numbers): the SRD fallback is used.
+- **Switching to Milestone**: XP is kept in the data, only hidden, so switching back restores it.
 
 ## 12. Testing
 
@@ -253,6 +276,8 @@ Inventory. Its renderer, ids and wiring do not change.
 - Grants: a species with `languages` adds chips with provenance; removing it removes them; a name
   also added by hand stays.
 - `defaultLanguagesFor()`: a pack's declaration, the fallback, a label of `__proto__` (with #88).
+- `advancementFor()` and `xpProgress()`: a pack's table, the SRD fallback, a malformed table, XP as
+  "183,000", XP past the next threshold, level 20, XP not a number; `advancementOf()` junk.
 - The spend box's maths: roll and manual, CON negative, a total below 0, out-of-range input, the
   last die, a multiclass pool.
 - The registry against the template (both ways), the new counts, `EDIT_CARDS`, `COMBAT_DEFAULTS`.
@@ -272,8 +297,9 @@ Inventory. Its renderer, ids and wiring do not change.
 [Abilities & skills](../wiki/features/abilities-and-skills.md), [Story & notes](../wiki/features/story-and-notes.md),
 [Combat view](../wiki/features/combat-view.md), [Character model](../wiki/architecture/character-model.md),
 [Grants & provenance](../wiki/architecture/grants-and-provenance.md), [Shell](../wiki/ui/shell.md),
-[Rules packs](../wiki/architecture/rules-packs.md) (`defaultLanguages`), `docs/rules-schema.md`
-(ships), the ledger, and `UNRELEASED.md`: "The Sheet tab is redesigned: a header with your class,
+[Rules packs](../wiki/architecture/rules-packs.md) (`defaultLanguages`, `advancement`),
+`docs/rules-schema.md` (ships), [2.0](../wiki/roadmap/2.0.md) (decision 18 added to what 2.0 must
+carry), the ledger, and `UNRELEASED.md`: "The Sheet tab is redesigned: a header with your class,
 level and rest buttons, a portrait rail with AC, HP and hit dice, abilities with their saves across
 the top, and a new Defences card for resistances and immunities. Spend a hit die by rolling in the
 app or entering your own roll. Attacks move to Inventory; the Story tab is now Bio, with alignment,
@@ -285,3 +311,5 @@ languages and senses."
 - Filling resistances, immunities or senses from pack prose (decisions 10, 13).
 - Armor and weapon proficiency chips (the reference shows them; not asked).
 - Any change to the combat view's own layout beyond what the rail brings.
+- Calculation rules from packs in general, and a chooser for conflicting rulesets (decision 18, 2.0).
+- The converter extracting the advancement table (decision 16).
