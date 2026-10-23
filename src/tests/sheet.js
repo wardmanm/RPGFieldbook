@@ -76,6 +76,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'settings', 'rbUI',
   'CHIP_KEYS', 'chipClean', 'chipList', 'advancementOf', 'SRD_ADVANCEMENT', 'advancementFor', 'xpNumber', 'xpProgress', 'defaultLanguagesFor', 'ensureDefaultLanguages', 'langParse',
   'grantLanguages', 'dropLanguages',
+  'CHIP_SUGGEST', 'chipsHTML', 'chipChooserHTML', 'openChipChooser', 'addChip', 'removeChip', 'renderDefences', 'renderBioChips',
   'mergeNoteInto', 'liftLanguages', 'migrateSheet103',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
@@ -2292,7 +2293,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('#97 a new character shows every card\'s edit buttons',
      JSON.stringify(X.blankChar().editHide) === '{}' && X.EDIT_CARDS.every(k => !X.editHidden(X.blankChar(), k)));
   ck('#97 the twelve cards', JSON.stringify(X.EDIT_CARDS) ===
-     JSON.stringify(['class', 'origin', 'statuses', 'attacks', 'resources', 'features', 'familiars', 'spells', 'inventory', 'trackers', 'journal', 'secnotes']));
+     JSON.stringify(['class', 'origin', 'statuses', 'attacks', 'resources', 'features', 'familiars', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies']));
   ck('#97 a sheet from before, and junk, read as {}',
      JSON.stringify(X.migrate({abilities: {}}).editHide) === '{}' &&
      ['x', [], null, 7].every(v => JSON.stringify(X.migrate({abilities: {}, editHide: v}).editHide) === '{}'));
@@ -4553,6 +4554,35 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ctx.removeRace(false);
   ck('#103 removing it takes them back', !X.chipList(X.character, 'languages').some(l => l.name === 'Elvish'));
   X.rules = savedRules; X.character = savedChar;
+}
+
+/* ---- #103: the chip component (spec §8) ---- */
+{
+  const c = {resists: [{id: 'r1', name: 'Fire'}], senses: [{id: 's1', name: 'Darkvision', range: 60}],
+             languages: [{id: 'l1', name: 'Common', src: 'system'}, {id: 'l2', name: 'Elvish', src: 'race:Elf'}, {id: 'l3', name: 'Draconic', src: ''}]};
+  const r = X.chipsHTML(c, 'resists');
+  ck('#103 a chip, in capitals, with an × the pencil hides', r.includes('>FIRE<button type="button" class="chip-x ed" data-chipdel="resists" data-chipid="r1"'), r);
+  ck('#103 + Add opens the chooser', r.includes('data-chipadd="resists"'));
+  ck('#103 a sense shows its range', X.chipsHTML(c, 'senses').includes('60 ft'));
+  const l = X.chipsHTML(c, 'languages');
+  ck('#103 a granted language shows its source and has no ×', l.includes('COMMON<span class="chip-src"> · rules</span>') && l.includes('ELVISH<span class="chip-src"> · species</span>') &&
+     !l.includes('data-chipid="l1"') && !l.includes('data-chipid="l2"') && l.includes('data-chipid="l3"'), l);
+  ck('#103 an empty list says None', X.chipsHTML({immunes: []}, 'immunes').includes('None'));
+  ck('#103 names are escaped', X.chipsHTML({resists: [{id: 'x', name: '<b>'}]}, 'resists').includes('>&lt;B&gt;<button') && !X.chipsHTML({resists: [{id: 'x', name: '<b>'}]}, 'resists').includes('<B>'));
+  const ch = X.chipChooserHTML({resists: [{id: 'r1', name: 'Fire'}]}, 'resists');
+  ck('#103 the chooser offers the damage types, Fire marked added', X.CHIP_SUGGEST.resists.length === 13 && /data-chippick="Fire"[^>]*disabled/.test(ch) && ch.includes('data-chippick="Cold"'));
+  ck('#103 immunities also offer conditions', X.CHIP_SUGGEST.immunes.includes('Poisoned') && X.CHIP_SUGGEST.immunes.includes('Poison'));
+  ck('#103 senses offer the four, with a range box', JSON.stringify(X.CHIP_SUGGEST.senses) === '["Blindsight","Darkvision","Tremorsense","Truesight"]' && X.chipChooserHTML({}, 'senses').includes('id="chipRange"'));
+  const a = {resists: []};
+  X.addChip(a, 'resists', ' fire '); X.addChip(a, 'resists', 'FIRE'); X.addChip(a, 'resists', '');
+  ck('#103 add trims, refuses blanks and duplicates', a.resists.length === 1 && a.resists[0].name === 'fire');
+  X.addChip(a, 'senses', 'Darkvision', '60');
+  ck('#103 a sense keeps its range', a.senses[0].range === 60);
+  X.removeChip(a, 'resists', a.resists[0].id);
+  ck('#103 remove by id', a.resists.length === 0);
+  const g = {languages: [{id: 'l2', name: 'Elvish', src: 'race:Elf'}]};
+  X.removeChip(g, 'languages', 'l2');
+  ck('#103 a granted chip cannot be removed by hand', g.languages.length === 1);
 }
 
 /* ---- imported files and packs render inert ----

@@ -19,6 +19,7 @@ const NOTE_SECTIONS=[
   {k:"skills",       tab:"sheet",     title:"Skills"},
   {k:"vitals",       tab:"sheet",     title:"Vitals"},
   {k:"rest",         tab:"sheet",     title:"Rest & Recovery"},
+  {k:"defences",     tab:"sheet",     title:"Defences"},
   {k:"statuses",     tab:"sheet",     title:"Statuses & Conditions"},
   {k:"attacks",      tab:"sheet",     title:"Attacks & Weapons"},
   {k:"resources",    tab:"sheet",     title:"Resources"},
@@ -30,10 +31,10 @@ const NOTE_SECTIONS=[
   {k:"spells",       tab:"spells",    title:"Spells & Cantrips"},
   {k:"inventory",    tab:"inventory", title:"Equipment & Inventory"},
   {k:"coins",        tab:"inventory", title:"Coins"},
-  {k:"proficiencies",tab:"story",     title:"Proficiencies & Languages"},
+  {k:"proficiencies",tab:"story",     title:"Proficiencies, Senses & Languages"},
   {k:"trackers",     tab:"journal",   title:"Trackers"}
 ];
-const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Story",journal:"Journal"};
+const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Bio",journal:"Journal"};
 function noteDef(k){return NOTE_SECTIONS.find(s=>s.k===k)||null;}
 /* The ancestry heading is skin-dependent — "Race" on the classic skin — so the
    Section Notes card has to ask rather than quote the registry, or it would
@@ -282,7 +283,7 @@ function renderNoteIcons(){
    hidden card carries `ed-off`, and `.ed-off .ed` is display:none. So the
    renderers never read the flag and a card that rebuilds its rows stays hidden.
    Keys are NOTE_SECTIONS ids, plus the two cards outside that registry. */
-const EDIT_CARDS=["class","origin","statuses","attacks","resources","features","familiars","spells","inventory","trackers","journal","secnotes"];
+const EDIT_CARDS=["class","origin","statuses","attacks","resources","features","familiars","spells","inventory","trackers","journal","secnotes","defences","proficiencies"];
 function editHideMap(c){const m=c&&c.editHide;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
 /* `=== true`, so anything else a hand-edited file holds reads as shown. */
 function editHidden(c,k){return EDIT_CARDS.includes(k)&&editHideMap(c)[k]===true;}

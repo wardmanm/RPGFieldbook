@@ -153,6 +153,9 @@ function wire(){
     if(t.closest("#cvNext"))return advanceRound(1);
     if(t.closest("#cvEnd"))return endCombatAsk();
     if((m=t.closest("[data-edtoggle]")))return toggleEditCard(m.dataset.edtoggle);
+    // chips: defences, senses, languages (#103)
+    if((m=t.closest("[data-chipadd]")))return openChipChooser(m.dataset.chipadd);
+    if((m=t.closest("[data-chipdel]"))){removeChip(character,m.dataset.chipdel,m.dataset.chipid);renderChipsAll();scheduleSave();return;}
     if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn,e.detail===0);
     if(t.closest("#btnToc"))return openToc();
     if(t.closest("#tocBack"))return closeToc();

@@ -187,6 +187,14 @@ function printSheet(){
   const inv=(character.inventory||[]).map(it=>`<div class="p-item"><b>${esc(it.name)}</b>${itemQty(it)!==1?` ×${itemQty(it)}`:""}${it.equipped?" (equipped)":""}${it.description?`<div>${esc(printStrip(it.description)).replace(/\n/g,"<br>")}</div>`:""}</div>`).join("");
   const coins=["pp","gp","ep","sp","cp"].map(k=>num(character.coins[k])?`${num(character.coins[k])} ${k.toUpperCase()}`:"").filter(Boolean).join(" · ");
   const bio=BIO.map(([k,lbl])=>character[k]?`<div class="p-item"><b>${lbl}</b><div>${esc(printStrip(character[k])).replace(/\n/g,"<br>")}</div></div>`:"").join("");
+  /* Defences, Senses and Languages (#103): one line per list, each only when
+     non-empty, escaped like the vitals/resources lines beside it. */
+  const chipLine=(label,key,withRange)=>{
+    const l=chipList(character,key);if(!l.length)return"";
+    const names=l.map(x=>esc(x.name.toUpperCase())+(withRange&&x.range!==""?` (${esc(String(x.range))} ft)`:"")).join(", ");
+    return `<span class="p-stat">${label}: <b>${names}</b></span>`;
+  };
+  const defLines=[chipLine("Resistances","resists"),chipLine("Immunities","immunes"),chipLine("Senses","senses",true),chipLine("Languages","languages")].filter(Boolean).join(" ");
   /* Section notes print as PLAIN TEXT — the markdown markers stay visible rather
      than being rendered. Print escapes everything (see the bio line above); it
      is not the place to start emitting markup from user input. */
@@ -197,6 +205,7 @@ function printSheet(){
     <div class="p-abils">${abils}</div>
     <div class="p-box" style="margin-top:6px">${vit}</div>
     ${(res||stat)?`<div class="p-box">${res}${stat?` <span class="p-stat">Statuses: <b>${stat}</b></span>`:""}</div>`:""}
+    ${defLines?`<div class="p-box">${defLines}</div>`:""}
     <div class="p-sec">Saving Throws</div><div class="p-grid">${saves}</div>
     <div class="p-sec">Skills</div><div class="p-grid">${skills}</div>
     ${attacks?`<div class="p-sec">Attacks &amp; Weapons</div>${attacks}`:""}

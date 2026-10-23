@@ -1229,7 +1229,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const t = loadHTML();
   const inTemplate = (t.match(/data-note="([a-z]+)"/g) || []).map(s => s.slice(11, -1));
 
-  ck('the registry has 20 sections', X.NOTE_SECTIONS.length === 20, X.NOTE_SECTIONS.length);
+  ck('the registry has 21 sections', X.NOTE_SECTIONS.length === 21, X.NOTE_SECTIONS.length);
   ck('every section id is unique',
      new Set(X.NOTE_SECTIONS.map(s => s.k)).size === X.NOTE_SECTIONS.length);
   ck('every section names a tab the Section Notes card can group under',
@@ -1245,7 +1245,7 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // .label inside it
   ck('every data-note is on a card element',
      (t.match(/data-note="[a-z]+"/g) || []).every((_, i) => true) &&
-     (t.match(/<div class="card" data-note="[a-z]+"/g) || []).length === 20,
+     (t.match(/<div class="card" data-note="[a-z]+"/g) || []).length === 21,
      (t.match(/<div class="card"[^>]*data-note[^>]*>/g) || []).length);
   /* The Journal panel, sliced to the next panel so a card on a LATER tab can
      neither satisfy nor break these. The regex this replaced ran on to the end
@@ -1273,6 +1273,17 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
     const text = m ? m[1].replace(/&amp;/g, '&').trim() : '';
     ck('the registry title for "' + s.k + '" matches its heading', text === s.title, {text, title: s.title});
   });
+}
+
+// ---------- #103: the Defences card, the Bio tab and its chip rows
+{
+  const t = loadHTML();
+  ck('#103 the Defences card is registered and in the template', t.includes('<div class="card" data-note="defences"') && X.noteDef('defences') && X.noteDef('defences').tab === 'sheet');
+  // the {0,200} window the brief gave was too tight for the tab's own svg icon
+  // (224 chars from the end of the opening tag to the label) — widened, not removed
+  ck('#103 the Story tab reads Bio', /data-tab="story"[^>]*>[\s\S]{0,300}Bio/.test(t) && X.NOTE_TABS.story === 'Bio');
+  ck('#103 the Bio card holds alignment and the chip rows',
+     /data-note="proficiencies"[\s\S]*data-path="character.alignment"[\s\S]*id="bioLanguages"[\s\S]*id="bioSenses"/.test(t));
 }
 
 // ---------- the tab bar

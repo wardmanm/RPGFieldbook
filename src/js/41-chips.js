@@ -85,3 +85,69 @@ function grantLanguages(c,src,str){
   c.languages=have;
 }
 function dropLanguages(c,src){c.languages=chipClean(c.languages,"languages",true).filter(x=>x.src!==src);}
+
+/* ---- the component ---- */
+const CHIP_SUGGEST={
+  resists:["Acid","Bludgeoning","Cold","Fire","Force","Lightning","Necrotic","Piercing","Poison","Psychic","Radiant","Slashing","Thunder"],
+  immunes:["Acid","Bludgeoning","Cold","Fire","Force","Lightning","Necrotic","Piercing","Poison","Psychic","Radiant","Slashing","Thunder",
+    "Blinded","Charmed","Deafened","Exhaustion","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"],
+  senses:["Blindsight","Darkvision","Tremorsense","Truesight"]
+};
+const CHIP_SRC={system:"rules",race:"species",bg:"background"};
+function chipSrcLabel(src){const k=String(src||"").split(":")[0];return CHIP_SRC[k]||"";}
+function chipsHTML(c,key){
+  const list=chipList(c,key);
+  const chips=list.map(x=>{
+    const src=key==="languages"?chipSrcLabel(x.src):"";
+    const range=key==="senses"&&x.range!==""?` · ${esc(String(x.range))} ft`:"";
+    const del=src?"":`<button type="button" class="chip-x ed" data-chipdel="${esc(key)}" data-chipid="${esc(x.id)}" aria-label="${esc("Remove "+x.name)}">×</button>`;
+    return `<span class="chip chip-${esc(key)}">${esc(x.name.toUpperCase())}${range}${src?`<span class="chip-src"> · ${esc(src)}</span>`:""}${del}</span>`;
+  }).join("");
+  return `<div class="chips">${chips||`<span class="chip-none">None</span>`}<button type="button" class="chip chip-add" data-chipadd="${esc(key)}">+ Add</button></div>`;
+}
+function chipChooserHTML(c,key){
+  const have=new Set(chipList(c,key).map(x=>x.name.toLowerCase()));
+  const sug=key==="languages"?chipPackLanguages():(CHIP_SUGGEST[key]||[]);
+  const pills=sug.map(n=>{const on=have.has(n.toLowerCase());return `<button type="button" class="fpill${on?" on":""}" data-chippick="${esc(n)}"${on?" disabled":""}>${esc(n)}${on?" ✓":""}</button>`;}).join("");
+  return (pills?`<div class="fgrp chip-sug">${pills}</div>`:"")+
+    `<div class="field"><label class="f" for="chipName">Or type one</label><input id="chipName" autocomplete="off"></div>`+
+    (key==="senses"?`<div class="field"><label class="f" for="chipRange">Range (feet)</label><input id="chipRange" inputmode="numeric" placeholder="60"></div>`:"")+
+    `<div class="rowbtns"><button type="button" class="tbtn primary" id="chipOk">Add</button><button type="button" class="tbtn" id="chipCancel">Cancel</button></div>`;
+}
+/* the languages the loaded packs name, for the chooser's pills */
+function chipPackLanguages(){
+  const out=new Set();
+  ["races","backgrounds"].forEach(k=>(Array.isArray(rules[k])?rules[k]:[]).forEach(e=>{if(e&&typeof e.languages==="string")langParse(e.languages).forEach(n=>out.add(n));}));
+  Object.keys(rules.defaultLanguages||{}).forEach(l=>(rules.defaultLanguages[l]||[]).forEach(n=>typeof n==="string"&&out.add(n)));
+  return [...out].sort((a,b)=>a.localeCompare(b));
+}
+function addChip(c,key,name,range){
+  const n=String(name==null?"":name).trim();if(!n)return false;
+  const list=chipClean(c[key],key,true);
+  if(list.some(x=>x.name.toLowerCase()===n.toLowerCase()))return false;
+  const e={id:uid(),name:n};
+  if(key==="senses"){const r=parseInt(String(range==null?"":range).trim(),10);e.range=(isFinite(r)&&r>0)?r:"";}
+  if(key==="languages")e.src="";
+  list.push(e);c[key]=list;return true;
+}
+/* a granted language is the grant's to take back, not the player's */
+function removeChip(c,key,id){c[key]=chipClean(c[key],key,true).filter(x=>!(x.id===id&&!(key==="languages"&&x.src)));}
+const CHIP_TITLE={resists:"Add a resistance",immunes:"Add an immunity",senses:"Add a sense",languages:"Add a language"};
+function openChipChooser(key){
+  openModal(CHIP_TITLE[key]||"Add",chipChooserHTML(character,key));
+  const done=(name)=>{const rng=document.getElementById("chipRange");if(addChip(character,key,name,rng?rng.value:"")){closeModal();renderChipsAll();scheduleSave();}};
+  document.querySelectorAll("[data-chippick]").forEach(b=>b.addEventListener("click",()=>done(b.dataset.chippick)));
+  const ok=document.getElementById("chipOk");if(ok)ok.addEventListener("click",()=>{const i=document.getElementById("chipName");done(i?i.value:"");});
+  const cn=document.getElementById("chipCancel");if(cn)cn.addEventListener("click",closeModal);
+}
+function renderDefences(){
+  const r=document.getElementById("defResists"),i=document.getElementById("defImmunes");
+  if(r)r.innerHTML=chipsHTML(character,"resists");
+  if(i)i.innerHTML=chipsHTML(character,"immunes");
+}
+function renderBioChips(){
+  const l=document.getElementById("bioLanguages"),s=document.getElementById("bioSenses");
+  if(l)l.innerHTML=chipsHTML(character,"languages");
+  if(s)s.innerHTML=chipsHTML(character,"senses");
+}
+function renderChipsAll(){renderDefences();renderBioChips();}

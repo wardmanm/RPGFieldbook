@@ -11,10 +11,7 @@
           </div>
           <input type="file" id="filePortrait" accept="image/*" class="hidefile">
           <div class="field"><label class="f">Character name</label><input data-path="character.name" placeholder="Pib Thornwhistle"></div>
-          <div class="g2">
-            <div class="field"><label class="f">Alignment</label><input data-path="character.alignment" placeholder="NG"></div>
-            <div class="field"><label class="f">Experience</label><input type="number" min="0" data-path="character.xp" placeholder="0"></div>
-          </div>
+          <div class="field"><label class="f">Experience</label><input type="number" min="0" data-path="character.xp" placeholder="0"></div>
           <div class="g2">
             <div class="field"><label class="f">Level</label><div class="vbox" style="padding:6px"><div class="big" id="levelDisp">1</div></div></div>
             <div class="field"><label class="f">Proficiency Bonus</label><div class="vbox" style="padding:6px"><div class="big" data-stat="profBonus" id="pbDisp">+2</div></div></div>
@@ -132,6 +129,12 @@
             </div>
             <div class="hd-wrap" id="hdWrap"></div>
           </div>
+        </div>
+
+        <div class="card" data-note="defences">
+          <div class="label">Defences <span class="grow"></span></div>
+          <div class="def-h">Resistances</div><div id="defResists"></div>
+          <div class="def-h">Immunities</div><div id="defImmunes"></div>
         </div>
 
         <div class="card" data-note="statuses">
