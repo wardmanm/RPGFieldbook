@@ -80,9 +80,20 @@ html[data-rough="on"] .vbox::before{filter:url(#rough)}
 .sh-ico{min-width:36px;height:36px;padding:0 6px;font-size:18px;line-height:1;color:var(--ink);cursor:pointer;
   background:color-mix(in srgb,var(--panel) 60%,transparent);border:1.5px solid color-mix(in srgb,var(--accent) 55%,transparent);border-radius:8px}
 .sh-ico:hover{border-color:var(--accent);background:var(--panel)}
+/* Mike (#103): the rests say "Short rest" / "Long rest" on a wide page, and
+   show their icon instead where the tab bar does — Icon tabs on, or at its
+   860px breakpoint (10-chrome.css; the query is after these base rules). */
+.sh-rest{font-family:var(--head);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:0 10px}
+.sh-rest .sh-rico{display:none}
+.sh-rico{font-size:18px}
+html[data-tabs="icons"] .sh-rest .sh-rlbl{display:none}
+html[data-tabs="icons"] .sh-rest .sh-rico{display:inline}
+html[data-tabs="icons"] .sh-rest{padding:0 6px}
+@media(max-width:860px){.sh-rest .sh-rlbl{display:none}.sh-rest .sh-rico{display:inline}}
+@media(max-width:860px){.sh-rest{padding:0 6px}}
 .sh-paw.faint{opacity:.45}
 .sh-pawslot{display:contents}
-.sh-level{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.sh-level{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:8px}
 .sh-ringslot{display:contents}
 .sh-ring{display:inline-grid;grid-auto-flow:column;align-items:center;justify-content:center;gap:6px;min-width:42px;height:42px;padding:0 6px;
   border-radius:999px;border:2.5px solid var(--accent);background:var(--panel);color:var(--ink);font-family:var(--display);font-weight:900;font-size:20px}

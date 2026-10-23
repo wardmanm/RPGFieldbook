@@ -4769,6 +4769,83 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ctx.openModal = savedOM; X.character = savedChar;
 }
 
+/* ---- #103 (Mike's layout ruling): the combat view takes cards out of the
+   Sheet's two stacks and puts each back in its own stack, in its own place.
+   The REAL Sheet markup, parsed into a small node tree (just enough DOM for
+   fillCombatView / emptyCombatView: before, appendChild, replaceWith,
+   closest, querySelector by #id, .class and [attr]), with a #combatView >
+   #cvList beside it. */
+{
+  const html = require('./harness').loadHTML();
+  const at = html.indexOf('id="tab-sheet"'), from = html.lastIndexOf('<section', at), to = html.indexOf('<section class="tabpanel', at + 1);
+  const VOID = new Set(['input', 'img', 'br', 'hr', 'path', 'circle', 'line', 'rect', 'polyline', 'polygon']);
+  const match = (n, sel) => {
+    if (!n.tag) return false;
+    const parts = sel.match(/#[\w-]+|\.[\w-]+|\[[\w-]+(?:="[^"]*")?\]|^[a-z]+/g) || [];
+    return parts.length > 0 && parts.every(p => {
+      if (p[0] === '#') return n.attr('id') === p.slice(1);
+      if (p[0] === '.') return (n.attr('class') || '').split(/\s+/).includes(p.slice(1));
+      if (p[0] === '[') { const m = /^\[([\w-]+)(?:="([^"]*)")?\]$/.exec(p); const v = n.attr(m[1]); return m[2] === undefined ? v !== undefined : v === m[2]; }
+      return n.tag === p;
+    });
+  };
+  function mk(tag, attrs) {
+    const n = {tag, attrs: attrs || {}, parent: null, children: [], dataset: {}, hidden: false,
+      attr(k) { if (k in this.attrs) return this.attrs[k]; if (k.indexOf('data-') === 0) { const d = this.dataset[k.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())]; return d === undefined ? undefined : String(d); } return undefined; },
+      appendChild(c) { if (c.parent) c.remove(); c.parent = this; this.children.push(c); return c; },
+      remove() { if (this.parent) { const s = this.parent.children; s.splice(s.indexOf(this), 1); this.parent = null; } },
+      before(c) { if (c.parent) c.remove(); const s = this.parent.children; s.splice(s.indexOf(this), 0, c); c.parent = this.parent; },
+      replaceWith(c) { const p = this.parent; if (c.parent) c.remove(); const s = p.children; s.splice(s.indexOf(this), 1, c); c.parent = p; this.parent = null; },
+      closest(sel) { for (let x = this; x; x = x.parent) if (match(x, sel)) return x; return null; },
+      querySelectorAll(sel) { const out = []; const walk = x => x.children.forEach(c => { if (match(c, sel)) out.push(c); walk(c); }); walk(this); return out; },
+      querySelector(sel) { return this.querySelectorAll(sel)[0] || null; }};
+    return n;
+  }
+  const root = mk('root');
+  let cur = root;
+  const re = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][\w-]*)((?:[^>"]|"[^"]*")*?)(\/?)>/g;
+  let m;
+  const src = html.slice(from, to);
+  while ((m = re.exec(src))) {
+    if (!m[2]) continue;
+    const tag = m[2].toLowerCase();
+    if (m[1]) { if (cur.tag === tag) cur = cur.parent; continue; }
+    const attrs = {}; let a; const ar = /([\w-]+)(?:="([^"]*)")?/g;
+    while ((a = ar.exec(m[3]))) attrs[a[1]] = a[2] === undefined ? '' : a[2];
+    const n = cur.appendChild(mk(tag, attrs));
+    if (!VOID.has(tag) && !m[4]) cur = n;
+  }
+  const view = root.appendChild(mk('div', {id: 'combatView'})), list = view.appendChild(mk('div', {id: 'cvList'}));
+  const where = k => { const c = root.querySelector('.card[data-note="' + k + '"]'); const p = c.parent; return (p.attr('class') || p.attr('id') || p.tag) + '#' + p.children.indexOf(c); };
+  const KEYS = ['vitals', 'abilities', 'skills', 'features', 'defences', 'statuses', 'resources'];
+  const before = KEYS.map(where);
+  ck('#103 the parsed Sheet has the two stacks, in their places',
+     before.join() === 'sheet-grid#0,sheet-grid#1,col-m#0,col-m#1,col-r#0,col-r#1,col-r#2', before);
+  const doc = ctx.document, keep = {g: doc.getElementById, q: doc.querySelector, qa: doc.querySelectorAll, c: doc.createElement,
+    ag: ctx.addGrip, rg: ctx.removeGrip, sl: ctx.syncStatLock, re: ctx.renderCombatEmpty, ch: X.character};
+  doc.getElementById = id => root.querySelector('#' + id);
+  doc.querySelector = sel => root.querySelector(sel);
+  doc.querySelectorAll = sel => root.querySelectorAll(sel);
+  doc.createElement = tag => mk(tag);
+  ctx.addGrip = () => {}; ctx.removeGrip = () => {}; ctx.syncStatLock = () => {}; ctx.renderCombatEmpty = () => {};
+  try {
+    X.character = X.blankChar(); X.character.combatSections = KEYS.slice();
+    ctx.fillCombatView();
+    ck('#103 every card goes into the view, a marker left in its place',
+       KEYS.every(k => root.querySelector('.card[data-note="' + k + '"]').parent === list) &&
+       KEYS.every(k => root.querySelector('[data-cvhome="' + k + '"]')), KEYS.map(where));
+    ck('#103 ...the markers sit in the stacks the cards came from',
+       root.querySelector('[data-cvhome="features"]').parent.attr('class') === 'col-m' && root.querySelector('[data-cvhome="statuses"]').parent.attr('class') === 'col-r');
+    ctx.emptyCombatView();
+    const after = KEYS.map(where);
+    ck('#103 after End, every card is back in its own stack, in its own place', JSON.stringify(after) === JSON.stringify(before), after);
+    ck('#103 ...and no marker is left behind', root.querySelectorAll('[data-cvhome]').length === 0);
+  } finally {
+    doc.getElementById = keep.g; doc.querySelector = keep.q; doc.querySelectorAll = keep.qa; doc.createElement = keep.c;
+    ctx.addGrip = keep.ag; ctx.removeGrip = keep.rg; ctx.syncStatLock = keep.sl; ctx.renderCombatEmpty = keep.re; X.character = keep.ch;
+  }
+}
+
 /* ---- #103 final review fixes (I-1, I-3, M-1, M-3, M-7, M-8, M-9, M-11, M-14) ---- */
 const FS103 = require('fs'), P103 = require('path');
 const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');

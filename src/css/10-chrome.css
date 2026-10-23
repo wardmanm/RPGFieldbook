@@ -105,46 +105,51 @@ html[data-tabs="icons"] .tabicon{display:block}
 
 /* ---- the Sheet (#103, spec §6.7) ----
    Three columns: the rail down the left; the ability strip over the middle and
-   right; Skills in the middle beside .col-r (Defences, Statuses, Resources);
-   Features (.wide) under both. The rail spans a last 1fr row as well: a spanned
-   flexible track takes what the rail needs beyond the rows beside it, so a
-   rail taller than the strip and Skills does not open gaps between them. The
-   last card in the other column spans that track too, so it is never an empty
-   row with a second gap of its own.
+   right; under it two independent stacks (Mike's ruling) — .col-m (Skills,
+   Features) and .col-r (Defences, Statuses, Resources) — so Features follows
+   Skills instead of waiting for the taller right column's row. The rail spans
+   the stacks' 1fr row as well: a spanned flexible track takes what the rail
+   needs beyond the strip, so a rail taller than the strip opens no gap above
+   the stacks.
    The two queries come AFTER this base rule and override it at equal
    specificity — written above it, they would quietly do nothing (the trap in
-   Sections & layout). */
+   Sections & layout). Each stack is only ever flattened (display:contents)
+   inside a query and scoped to .sheet-grid: an unscoped .stack rule once took
+   the gap out from between the cards of every one-stack tab. */
 .sheet-grid{display:grid;gap:clamp(12px,2vw,18px);grid-template-columns:minmax(220px,260px) minmax(0,1.3fr) minmax(0,1fr);
-  grid-template-rows:auto auto auto 1fr;align-items:start}
-.sheet-grid>.rail{grid-column:1;grid-row:1/5}
+  grid-template-rows:auto 1fr;align-items:start}
+.sheet-grid>.rail{grid-column:1;grid-row:1/3}
 .sheet-grid>.strip{grid-column:2/4;grid-row:1}
-.sheet-grid>#skillsCard{grid-column:2;grid-row:2}
-.sheet-grid>.col-r{grid-column:3;grid-row:2;display:grid;gap:clamp(12px,2vw,18px);align-content:start;min-width:0}
-.sheet-grid>.wide{grid-column:2/4;grid-row:3/5}
-/* Two columns: the rail, and one column of everything else; Features full
-   width under both. */
+.sheet-grid>.col-m{grid-column:2;grid-row:2}
+.sheet-grid>.col-r{grid-column:3;grid-row:2}
+.sheet-grid>.col-m,.sheet-grid>.col-r{display:grid;gap:clamp(12px,2vw,18px);align-content:start;min-width:0}
+/* Two columns, as widths.html: the rail, and one column of the strip, Skills
+   and the right stack; Features full width under both. .col-m opens so Skills
+   and Features are grid items of their own; .col-r stays a stack. The rail and
+   the right stack span a last 1fr row, so neither opens a gap above Features. */
 @media(max-width:1000px){
   .sheet-grid{grid-template-columns:minmax(200px,240px) minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto}
+  .sheet-grid>.col-m{display:contents}
   .sheet-grid>.rail{grid-column:1;grid-row:1/5}
   .sheet-grid>.strip{grid-column:2;grid-row:1}
-  .sheet-grid>#skillsCard{grid-column:2;grid-row:2}
+  .sheet-grid #skillsCard{grid-column:2;grid-row:2}
   .sheet-grid>.col-r{grid-column:2;grid-row:3/5}
-  .sheet-grid>.wide{grid-column:1/-1;grid-row:5}
+  .sheet-grid [data-note="features"]{grid-column:1/-1;grid-row:5}
 }
 /* One column, in the spec's order: rail, abilities, Defences, Statuses, Skills,
-   Resources, Features. .col-r is flattened (display:contents, inside this
-   query only) so its three cards are grid items that `order` can interleave
-   with Skills; nothing is written twice in the markup. */
+   Resources, Features. Both stacks open (display:contents, inside this query
+   only) so their cards are grid items that `order` can interleave; nothing is
+   written twice in the markup. */
 @media(max-width:700px){
   .sheet-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
-  .sheet-grid>.rail,.sheet-grid>.strip,.sheet-grid>#skillsCard,.sheet-grid>.wide{grid-column:1;grid-row:auto}
-  .sheet-grid>.col-r{display:contents}
+  .sheet-grid>.col-m,.sheet-grid>.col-r{display:contents}
+  .sheet-grid>.rail,.sheet-grid>.strip,.sheet-grid #skillsCard,.sheet-grid [data-note="features"]{grid-column:1;grid-row:auto}
   .sheet-grid>.rail{order:1}
   .sheet-grid>.strip{order:2}
   .sheet-grid [data-note="defences"]{order:3}
   .sheet-grid [data-note="statuses"]{order:4}
-  .sheet-grid>#skillsCard{order:5}
+  .sheet-grid #skillsCard{order:5}
   .sheet-grid [data-note="resources"]{order:6}
-  .sheet-grid>.wide{order:7}
+  .sheet-grid [data-note="features"]{order:7}
 }
 

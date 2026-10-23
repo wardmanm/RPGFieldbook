@@ -5,10 +5,14 @@
          find them; #levelDisp is drawn inside #shLevel by levelBadgeHTML().
          The header IS the `portrait` section (registry title "Character"):
          class="card" then data-note, the order the registry's template guard
-         counts by literal prefix. Its icons row is the .label the note button,
-         the #97 pencil, the combat toggle and the ☰ entry ("Character", from
-         the visually hidden .sh-cap) read, the way they read every card
-         heading. #shSub, #shPaw and #shLevel are
+         counts by literal prefix. Its icons row is the .label the note button
+         and the ☰ entry ("Character", from the visually hidden .sh-cap) read,
+         the way they read every card heading. Mike's order (#103): Short rest,
+         Long rest, the paw, the star, the level badge — #shLevel last, so the
+         note button renderNoteIcons() appends lands after the XP bar. The ☰
+         strips .sh-level with the buttons, so it still reads "Character".
+         Each rest shows its words, or its icon with Icon tabs on or at the tab
+         bar's icon width (30-sheet.css). #shSub, #shPaw and #shLevel are
          filled by renderSheetHead() (40-sheet.js); #shFly is the one popover
          the class and familiar flyouts share, #shBack its tap-outside layer. -->
     <header class="card sheet-head" data-note="portrait" id="sheetHead">
@@ -17,21 +21,22 @@
         <div class="sh-sub" id="shSub"></div>
       </div>
       <div class="label sh-bar"><span class="sh-cap">Character</span><span class="grow"></span>
-        <button type="button" class="sh-ico" id="btnShortRest" title="Short rest" aria-label="Short rest">&#9749;</button>
-        <button type="button" class="sh-ico" id="btnLongRest" title="Long rest" aria-label="Long rest">&#9790;</button>
-        <button class="starbtn" id="starBtn" title="Inspiration" aria-label="Toggle inspiration" aria-pressed="false">&#10022;</button>
+        <button type="button" class="sh-ico sh-rest" id="btnShortRest" title="Short rest" aria-label="Short rest"><span class="sh-rico" aria-hidden="true">&#9749;</span><span class="sh-rlbl">Short rest</span></button>
+        <button type="button" class="sh-ico sh-rest" id="btnLongRest" title="Long rest" aria-label="Long rest"><span class="sh-rico" aria-hidden="true">&#9790;</span><span class="sh-rlbl">Long rest</span></button>
         <span class="sh-pawslot" id="shPaw"></span>
+        <button class="starbtn" id="starBtn" title="Inspiration" aria-label="Toggle inspiration" aria-pressed="false">&#10022;</button>
+        <span class="sh-level" id="shLevel"></span>
       </div>
-      <!-- outside the .label, so the ☰ entry reads "Character", not the level -->
-      <span class="sh-level" id="shLevel"></span>
       <div class="sh-back" id="shBack"></div>
       <div class="sh-fly" id="shFly" role="menu" aria-label="Character menu"></div>
     </header>
     <!-- #103 (spec §6.2–6.7): one grid under the header. 10-chrome.css lays it
          out — the rail down the left, the strip over the other two columns,
-         Skills beside .col-r, Features full width — and re-lays it at
-         ≤1000px (two columns) and ≤700px (one, with .col-r flattened so its
-         cards can take their places by `order`). Every id recompute(),
+         and under it two independent stacks (Mike's ruling): .col-m (Skills,
+         Features) and .col-r (Defences, Statuses, Resources), so no card waits
+         on its neighbour's row. It re-lays at ≤1000px (two columns: .col-m
+         opens so Features runs full width under the rail) and ≤700px (one:
+         both open, so the cards take the phone order by `order`). Every id recompute(),
          renderHP() and the death-save code paint MOVED here unchanged. -->
     <div class="sheet-grid">
       <!-- The rail: Vitals, dark by its own tokens (.rail in 30-sheet.css).
@@ -103,12 +108,19 @@
       <!-- id AFTER data-note, deliberately: the registry's template guard counts
            the literal `<div class="card" data-note="` prefix, so an id placed
            first hides this card from the count. Same for #familiarCard below. -->
-      <div class="card" data-note="skills" id="skillsCard">
-        <div class="label">Skills <span class="grow"></span></div>
-        <div class="skills" id="skills"></div>
-        <div class="legend" id="statLegend">
-          <b><i></i>None</b><b><i class="p"></i>Proficient</b><b><i class="e"></i>Expertise</b>
-          <b style="color:var(--ink-soft)">Tap dot to cycle</b>
+      <div class="col-m">
+        <div class="card" data-note="skills" id="skillsCard">
+          <div class="label">Skills <span class="grow"></span></div>
+          <div class="skills" id="skills"></div>
+          <div class="legend" id="statLegend">
+            <b><i></i>None</b><b><i class="p"></i>Proficient</b><b><i class="e"></i>Expertise</b>
+            <b style="color:var(--ink-soft)">Tap dot to cycle</b>
+          </div>
+        </div>
+
+        <div class="card" data-note="features">
+          <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="featCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="featCollapseLbl">Collapse all</span></button></div>
+          <div id="featureList"></div>
         </div>
       </div>
 
@@ -128,11 +140,6 @@
           <div class="label">Resources <button class="add" id="addResource"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Resource</button><span class="grow"></span></div>
           <div id="resList"></div>
         </div>
-      </div>
-
-      <div class="card wide" data-note="features">
-        <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="featCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="featCollapseLbl">Collapse all</span></button></div>
-        <div id="featureList"></div>
       </div>
 
       <!-- Familiars open from the header's paw (spec §6.6). The card stays in

@@ -52,7 +52,9 @@ function buildToc(){
        that scrolls to a zero-height box and lands nowhere. jumpToNote() has
        always made this check; this is the same rule, in the other consumer. */
     if(target&&target.offsetParent===null)return;
-    const cl=node.cloneNode(true);cl.querySelectorAll("button,svg,input,select,.grow,.add,.cnt,.enc-pill").forEach(x=>x.remove());
+    /* .sh-level: the sheet header's level badge sits inside its .label (#103,
+       so the note button lands after it) and must not read into "Character" */
+    const cl=node.cloneNode(true);cl.querySelectorAll("button,svg,input,select,.grow,.add,.cnt,.enc-pill,.sh-level").forEach(x=>x.remove());
     const t=cl.textContent.trim();if(t&&target)items.push({t,target,sub:node.classList.contains("inv-sec-head")});
   });
   fly.innerHTML=`<h4>${esc(tabName)}</h4>`+(items.length?"":`<p class="hint" style="padding:6px">No sections here.</p>`);

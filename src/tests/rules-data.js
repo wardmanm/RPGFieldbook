@@ -1335,8 +1335,60 @@ function block(html, needle, tag) {
   ck('#103 the Skills display setting is retired', !/segStatStyle|data-statstyle/.test(fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8')));
   // beyond the brief's block: what the grid is and where the cards sit in it
   ck('#103 the grid is rail · middle · right', /\.sheet-grid\{[^}]*grid-template-columns:minmax\(220px,260px\) minmax\(0,1\.3fr\) minmax\(0,1fr\)/.test(css));
-  ck('#103 the Sheet\'s cards run rail, strip, Skills, the right column, Features',
-     /data-note="vitals"[\s\S]*data-note="abilities"[\s\S]*data-note="skills"[\s\S]*class="col-r"[\s\S]*data-note="defences"[\s\S]*data-note="statuses"[\s\S]*data-note="resources"[\s\S]*data-note="features"/.test(sheet));
+  // Mike's layout ruling: the middle and right columns are independent stacks,
+  // so Features follows Skills instead of waiting under the taller right column
+  ck('#103 the Sheet\'s cards run rail, strip, the middle stack (Skills, Features), the right stack (Defences, Statuses, Resources)',
+     /data-note="vitals"[\s\S]*data-note="abilities"[\s\S]*<div class="col-m">\s*(?:<!--[\s\S]*?-->\s*)*<div class="card" data-note="skills"[\s\S]*data-note="features"[\s\S]*<div class="col-r">\s*<div class="card" data-note="defences"[\s\S]*data-note="statuses"[\s\S]*data-note="resources"/.test(sheet));
+  {
+    const colM = block(sheet, '<div class="col-m">'), colR = block(sheet, '<div class="col-r">');
+    ck('#103 the middle stack holds exactly Skills, then Features',
+       JSON.stringify(colM.match(/data-note="[a-z]+"/g)) === JSON.stringify(['data-note="skills"', 'data-note="features"']), colM.match(/data-note="[a-z]+"/g));
+    ck('#103 the right stack holds exactly Defences, Statuses, Resources',
+       JSON.stringify(colR.match(/data-note="[a-z]+"/g)) === JSON.stringify(['data-note="defences"', 'data-note="statuses"', 'data-note="resources"']), colR.match(/data-note="[a-z]+"/g));
+    ck('#103 Features is no longer full width', !/class="card wide" data-note="features"/.test(t) && !/\.sheet-grid>\.wide/.test(css));
+  }
+  {
+    const g = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const q1 = g.indexOf('@media(max-width:1000px){\n  .sheet-grid{'), q2 = g.indexOf('@media(max-width:700px){\n  .sheet-grid{');
+    const in1 = q1 < 0 ? '' : g.slice(q1, g.indexOf('\n}', q1)), in2 = q2 < 0 ? '' : g.slice(q2, g.indexOf('\n}', q2));
+    const base = g.slice(g.indexOf('.sheet-grid{'), q1);
+    ck('#103 desktop: the strip over both stacks, the stacks side by side, each its own grid',
+       /\.sheet-grid>\.strip\{grid-column:2\/4;grid-row:1\}/.test(base) && /\.sheet-grid>\.col-m\{grid-column:2;grid-row:2\}/.test(base) &&
+       /\.sheet-grid>\.col-r\{grid-column:3;grid-row:2\}/.test(base) && /\.sheet-grid>\.col-m,\.sheet-grid>\.col-r\{display:grid;[^}]*align-content:start/.test(base), base);
+    ck('#103 no stack is flattened on the desktop grid', !/display:contents/.test(base));
+    ck('#103 two columns: the middle stack opens so Features goes full width under the rail, the right stack stays whole',
+       /\.sheet-grid>\.col-m\{display:contents\}/.test(in1) && !/\.col-r\{display:contents\}/.test(in1) &&
+       /\.sheet-grid \[data-note="features"\]\{grid-column:1\/-1;grid-row:5\}/.test(in1), in1);
+    ck('#103 one column: both stacks open, in the phone order',
+       /\.sheet-grid>\.col-m,\.sheet-grid>\.col-r\{display:contents\}/.test(in2) &&
+       ['defences"\]\{order:3', 'statuses"\]\{order:4', 'skillsCard\{order:5', 'resources"\]\{order:6', 'features"\]\{order:7'].every(x => new RegExp(x).test(in2)), in2);
+    ck('#103 the stacks are only ever flattened inside .sheet-grid', !/(^|[}\s,])\.col-[mr]\{display:contents/.test(g) && !/\.stack\{display:contents/.test(g));
+  }
+  // Mike: the rests read "Short rest" / "Long rest" on a desktop; the icons
+  // come back with Icon tabs on, or at the width the tab bar turns to icons
+  {
+    const hd = block(t, 'id="sheetHead"', 'header');
+    ck('#103 each rest button carries its icon and its words, ids and names kept',
+       /<button type="button" class="sh-ico sh-rest" id="btnShortRest" title="Short rest" aria-label="Short rest"><span class="sh-rico" aria-hidden="true">&#9749;<\/span><span class="sh-rlbl">Short rest<\/span><\/button>/.test(hd) &&
+       /<button type="button" class="sh-ico sh-rest" id="btnLongRest" title="Long rest" aria-label="Long rest"><span class="sh-rico" aria-hidden="true">&#9790;<\/span><span class="sh-rlbl">Long rest<\/span><\/button>/.test(hd), hd.slice(0, 900));
+    const sc = fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const baseR = sc.indexOf('.sh-rest .sh-rico{display:none}'), narrow = sc.search(/@media\(max-width:860px\)\{\.sh-rest \.sh-rlbl\{display:none\}\.sh-rest \.sh-rico\{display:inline\}\}/);
+    ck('#103 by default the words show and the icon hides', baseR >= 0 && !/(^|\})\.sh-rest \.sh-rlbl\{display:none/.test(sc));
+    ck('#103 with Icon tabs on, the icon shows and the words hide',
+       /html\[data-tabs="icons"\] \.sh-rest \.sh-rlbl\{display:none\}/.test(sc) && /html\[data-tabs="icons"\] \.sh-rest \.sh-rico\{display:inline\}/.test(sc));
+    ck('#103 ...and at the tab bar\'s own breakpoint, after the base rule', narrow > baseR && /@media\(max-width:860px\)\{\.tab \.tlbl\{display:none\}/.test(fs.readFileSync(path.join(ROOT, 'src/css/10-chrome.css'), 'utf8')));
+    // Mike: Short rest, Long rest, the paw, the star, then the level and XP,
+    // then the note button (renderNoteIcons appends it to the end of the .label)
+    const lbl = block(hd, '<div class="label sh-bar">');
+    const pos = ['id="btnShortRest"', 'id="btnLongRest"', 'id="shPaw"', 'id="starBtn"', 'id="shLevel"'].map(x => lbl.indexOf(x));
+    ck('#103 the header row runs Short rest, Long rest, paw, star, level', pos.every((p, i) => p >= 0 && (i === 0 || p > pos[i - 1])), pos);
+    ck('#103 ...the level is the .label\'s last child, so the note button (appended) lands after the XP bar',
+       /<span class="sh-level" id="shLevel"><\/span>\s*<\/div>$/.test(lbl), lbl.slice(-120));
+    const js = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8')).js.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+    ck('#103 renderNoteIcons() appends to the end of the .label', /label\.insertAdjacentHTML\("beforeend",noteBtnHTML\(def\)\)/.test(js));
+    ck('#103 the ☰ entry still reads "Character": the level is stripped with the buttons',
+       /cl\.querySelectorAll\("button,svg,input,select,\.grow,\.add,\.cnt,\.enc-pill,\.sh-level"\)/.test(js));
+  }
   ck('#103 the Attacks card leads the Inventory tab, above Equipment',
      (() => { const i = t.indexOf('id="tab-inventory"'); return t.indexOf('data-note="attacks"', i) < t.indexOf('data-note="inventory"', i); })());
   ck('#103 the old .cols / .stack layout is gone from the Sheet', !/class="cols"|class="stack"/.test(sheet));
