@@ -82,7 +82,10 @@ sheet already has keeps its own source — the player's, an earlier grant's or t
 name the player also added stays theirs when the grant goes. A granted chip shows its source
 ("· species", "· background") and has no ×: it is the grant's to take back. Nothing is appended to
 `proficiencies` for languages any more; a sheet's old "Languages: …" lines become the player's own
-chips once, in `migrate()` ([Character model](character-model.md)).
+chips once, in `migrate()` ([Character model](character-model.md)). Their grant cannot be recovered,
+so they stay after a species or background change (a known issue, not a bug). A `src` the sheet does
+not know (hand-edited) reads as the player's: `chipSrcLabel()` looks up own keys only, and
+`chipClean()` clears it, so the chip's × and `removeChip()` agree.
 
 **Choices.** Skill choices on a race, a race trait or a feat go into a `pending` list that
 `runExtraChoices()` presents after the add, and each pick is granted to the sid that queued it.
@@ -205,3 +208,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6
 - 2026-10-23 — Species and backgrounds grant languages as chips stamped `race:`/`bg:`, taken back by `dropLanguages()`; nothing appends "Languages:" to Proficiencies any more. → ledger L6633, #103
+- 2026-10-23 — Lifted languages noted as the player's own; an unknown language `src` reads as the player's. → ledger L6729, #103

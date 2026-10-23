@@ -113,13 +113,16 @@ mis-tap from losing a feature, an item or a resistance — and leaves every play
 folds, Use, Fire, Throw, Cast, equip, On/Off, prepared pins, resource −/+/reset, the familiar's
 Summoned switch, + Add). One switch per card, per character, shown by default.
 
-`EDIT_CARDS` in `87-notes.js` lists the twelve keys: the ten `NOTE_SECTIONS` ids `statuses`,
-`attacks`, `resources`, `features`, `familiars`, `spells`, `inventory`, `trackers`, `defences`,
+`EDIT_CARDS` in `87-notes.js` lists the eleven keys: the nine `NOTE_SECTIONS` ids `statuses`,
+`attacks`, `resources`, `features`, `spells`, `inventory`, `trackers`, `defences`,
 `proficiencies` (the last two hide the chips' ×), plus
 `journal` and `secnotes` — the two cards outside that registry, found by id (`#journalCard`,
 `#notesCard`, which the Section Notes card carries for this). A class's, species' or background's
 Remove sits behind the header's flyout or info window, with a confirm, so those carry `ed` but no
-pencil reaches them: stored `editHide.class` / `.origin` are left and ignored. `character.editHide` maps a key to
+pencil reaches them: stored `editHide.class` / `.origin` are left and ignored. `familiars` left
+the list too: its card is hidden on the Sheet, so its pencil was out of reach, and Edit and Delete
+now sit in the familiar's own window, which is not a list in play. Its buttons keep `ed` (inert) for
+the guard, and a stored `editHide.familiars` is ignored. `character.editHide` maps a key to
 `true` when hidden; absent or anything but a literal `true` reads as shown (see
 [Character model](../architecture/character-model.md)).
 
@@ -244,10 +247,14 @@ own listener re-filters unchanged. Among them: `#rbSearch` over the Rules tab's 
 ### Familiars
 
 Familiars open from the header (#103, spec §6.6). While `character.showFamiliars` is on, the
-header shows a paw (`sheetHeadHTML()`), faint when there is no familiar. Tapping it opens the
+header shows a paw (`pawHTML()`), faint when there is no familiar. Tapping it opens the
 header's popover (`openShFly()` with `famFlyHTML()`): each familiar's name with ● (summoned) or
-○ (dismissed), and **+ Add familiar** at the foot. A name opens a modal (`openFamiliar()`) with that
-familiar's card (`familiarCardHTML()`: kind, AC, HP, speed, notes) and its Summon / Dismiss, Edit
+○ (dismissed), **+ Add familiar**, then the section's two controls the hidden card's heading used to
+carry: **Combat view** on/off (`role="menuitemcheckbox"`, `data-combatbtn="familiars"`) and
+**Add a note** / **Edit note** (`data-notebtn="familiars"`). Both are the existing delegated hooks,
+which run after the popover closes. A name opens a modal (`openFamiliar()`) with that
+familiar's card (`familiarCardHTML()`: kind, AC, HP, speed, notes) and its Summon / Dismiss (a
+button with `aria-pressed`; after the modal repaints, focus goes back to it), Edit
 and Delete. Settings → Sheet display → "Familiars & companions icon" is the switch; `migrate()`
 sets it once from whether the sheet has a familiar, and adding the first familiar turns it on.
 
@@ -350,6 +357,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | How is a section identified? | A stable `k` in `NOTE_SECTIONS` | A heading-derived id: headings get reworded, and notes keyed to one would be orphaned |
 | The Sheet's layout (#103) | One layout, no setting: header, rail, strip, Skills beside Defences/Statuses/Resources, Features; three columns, two, one by width | A classic fallback: twice the CSS and screenshots until 2.0 |
 | Familiars on the Sheet (#103) | A paw in the header, shown by a per-character switch, opening a popover and a modal; the card stays in the DOM, hidden, for the combat view | A chip with the name: long names and several familiars don't fit. A side drawer: heavier than needed. Flattening `.stack` to sink the card on a phone (the 2026-08-15 answer): the stacks are gone |
+| The familiars' #97 pencil (#103) | None: `familiars` leaves `EDIT_CARDS` | The familiar's window honouring `editHide`: its only toggle would be on the card, reachable just in the combat view |
 | May the header go in the combat view? (#103) | No (`nocv`); a saved one becomes Vitals | Keeping it addable: the name, rests and level would ride into a fight view |
 | Where the familiar row may wrap | Only in `#familiarList` | Unscoped `.item .top{flex-wrap:wrap}`: silently restyles Statuses, where one row is right |
 | How a list row fits a phone (#57) | Everything after the name in one `.row-meta` group that drops to its own line whole; opt-in by `.split`; the name asks for 6em | The familiars' `flex-basis:100%`: these rows put a fold button and star before the name, which it would orphan on a line of their own. Truncating the name: loses the name, the one thing the row is for. 8em: split short item rows for no reason |
@@ -374,9 +382,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - The Attacks card's headings reuse `.inv-sec-head`, inheriting its `cursor:pointer`, but
   `data-atksec` has no handler, so they do not fold.
 - Active Spells is hidden when empty, so its note button and combat toggle are unreachable until it
-  has content (L3397). Familiars' note opens from the paw, but its combat toggle is on the card,
-  which the Sheet hides: a sheet that already has Familiars in the combat view keeps it (and can
-  remove it there), but nothing on the Sheet can add it (L6633).
+  has content (L3397). Familiars' note and combat toggle are in the paw's menu (L6729).
 - A portrait is stored at full size, against the localStorage quota.
 - More: [Known issues](../roadmap/known-issues.md).
 
@@ -404,3 +410,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-10-22 — The Rules tab becomes one card, the browser; `settings.rulesCat` (the category last opened) replaces `settings.rulesCollapse`. → ledger L6327, #99
 - 2026-10-22 — The stale "Where Rules-tab folding is stored" decision is rewritten: `settings.rulesCat`, not `rulesCollapse`. → ledger L6455, #99
 - 2026-10-23 — The Sheet makeover: a header band over a grid (rail, strip, Skills, Defences/Statuses/Resources, Features), three, two and one columns; the stacks and their phone flatten go; familiars open from the paw; 18 sections, `portrait` is the header and not combat-addable; Attacks on Inventory. → ledger L6633, #103
+- 2026-10-23 — Final review fixes: the paw's menu gains Combat view and Note; `familiars` leaves `EDIT_CARDS` (eleven); `sheetHeadHTML()` is `pawHTML()`. → ledger L6729, #103

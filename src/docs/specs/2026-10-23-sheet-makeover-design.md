@@ -319,12 +319,14 @@ languages and senses."
 Built 2026-10-23 in eight tasks (base `603c4e7`): chips, advancement and default languages; the
 migration; language grants; the chip cards and Bio; the hit-dice bar and spend box; the header;
 the grid; QA, tuning and docs. Ledger: "The hit-dice bar and the spend box" (L6580) and "The Sheet
-makeover" (L6633). What differs from the sections above, and why:
+makeover" (L6633); the final review's fixes are "The Sheet makeover: final review fixes" (L6729).
+What differs from the sections above, and why:
 
 **Deviations**
 
-- **§4, a system change replacing `system` chips: not built.** Changing a sheet's system (Settings →
-  Skin) leaves its `system` chips. Inert today, because every ruleset falls back to Common; recorded in
+- **§4, a system change replacing `system` chips: not needed** — a character's system never changes
+  (ruled at plan time). Settings → Skin does still rewrite the open character's `system`, which
+  leaves its `system` chips; inert today, because every ruleset falls back to Common, and recorded in
   [Known issues](../wiki/roadmap/known-issues.md).
 - **§4, a new character before a cold rules cache** gets the fallback Common even where a pack would
   declare other defaults (parked in Task 2; inert, no pack declares `defaultLanguages`; known issues).
@@ -344,16 +346,18 @@ makeover" (L6633). What differs from the sections above, and why:
   in the rail, none in the mockup).
 - **§6.2, the death saves read ✓ ○○○ ☠ ○○○ ✗** with the success set reversed so both fill outward
   (the old row was failures first).
-- **§6.6, `sheetHeadHTML()` builds the paw only**; the rest of the header is static markup, because
-  boot wires its ids once.
+- **§6.6, `pawHTML()` builds the paw only** (it was `sheetHeadHTML()`, renamed in the final review);
+  the rest of the header is static markup, because boot wires its ids once.
+- **§6.6, the paw's menu also holds Combat view and Note** (final review I-3), the controls the
+  hidden Familiars card's heading carried; `familiars` leaves #97's `EDIT_CARDS`, since its pencil
+  was out of reach and Edit / Delete now live in the familiar's window.
 - **§6.7, the phone rail** puts the small portrait at the left with the rest beside it and the AC
   shield over the portrait's bottom edge, not beside it (the mockup was schematic; Mike's device pass).
 - **§7, the header is not combat-addable** (Task 8 ruling): `portrait` is marked `nocv`, and a saved
   `portrait` in the combat view becomes `vitals`, like `rest`. Its rests are not a fight action and
   the portrait rides in with Vitals. The view gains its own Inspiration ✦ instead (Task 6 ruling).
-- **§7, Familiars** stays combat-capable (the view still shows its card), but with the card hidden
-  on the Sheet nothing there can add it; a sheet that already has it keeps it. For Mike: a combat
-  toggle in the paw's menu would close this.
+- **§7, Familiars** stays combat-capable: the view shows its card, and the paw's menu adds or
+  removes it (final review I-3).
 - **§8, print** puts the chips in their own box; the Proficiencies prose was never printed and still
   is not.
 - **§10, removing `.stack{display:contents}`** (it only existed to sink the Sheet's Familiars on a
@@ -366,6 +370,13 @@ makeover" (L6633). What differs from the sections above, and why:
   more card. Light mode is the mockup's dark rail.
 - **The phone header** (≤480px) tightens its gaps and the XP box so the icons and the level badge
   share one row under the name: two rows in all, not the three the first build had.
+- **Final review fixes** (L6729): with no hit-dice pool (a custom class, or no pack) the auto/manual
+  pill and the dice field sit inline under the hint, one copy at a time with the spend box's (I-1); a
+  class's menu levels that class, `doLevelUp(idx)` / `doLevelDown(idx)` (I-2); the short rest points
+  at the hit-dice bar and offers Spend a hit die (M-1); an unknown language `src` reads as the
+  player's (M-3); the species button names the subrace (M-7); an open spend box follows a dice edit
+  or the mode switch (M-8); **§6.1's XP bar fills within the level**, `(xp − cur) / (next − cur)`,
+  clamped (Mike's ruling, M-9); Summon / Dismiss is a button and keeps the keyboard (M-14).
 - `statStyle` and `hdStyle` stay in `blankChar()` and saved sheets, unread; `classChipHTML()`,
   `statStyle()` and the grouped builders are deleted.
 
@@ -382,4 +393,4 @@ reads "TREMORSENSE · 60 FT" (the chip is uppercase) as §8 asks.
 - Print: the new Resistances, Immunities, Senses and Languages box.
 - His own characters: an old sheet's Class / Ancestry / Rest notes merged into Character and
   Vitals, its "Languages:" line become chips, and its combat view (a saved Portrait becomes Vitals).
-- Whether Familiars should be addable to the combat view from the paw's menu.
+- The paw menu's Combat view and Note items, and the inline hit-dice field on a custom class.

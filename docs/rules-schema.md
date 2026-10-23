@@ -99,6 +99,10 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
   ```json
   { "system": "Humblewood", "defaultLanguages": ["Common", "Birdsong"] }
   ```
+
+  Both this and `advancement` below are read from the pack whose `system` is the character's
+  ruleset: `Humblewood`, or one of the D&D labels (`XPHB`, `PHB`, `SRD 5.2`). A pack with a
+  homebrew system label of its own is not read for either.
 - **`advancement`** *(optional, array)* — XP thresholds as `[[0,1],[300,2],…]`, ascending, one row
   per level from 1; Fieldbook falls back to the SRD's when a ruleset declares none or a malformed
   table:

@@ -93,7 +93,8 @@ between.
 height (`cvStickyTop()`, on open and resize); ≤640px it wraps to two rows and ≤480px the time stacks
 under the round. Active Spells and Familiars, which hide on their own tab when empty, always show in
 the view with "None right now." (Familiars is always hidden on the Sheet, so the view is the one
-place its card shows); Trackers stays hidden when Settings hides it. `cvCardShown()` tests computed style. `renderCombatEmpty()` shows the
+place its card shows; its toggle on the Sheet is the **Combat view** item in the header paw's menu,
+the same `[data-combatbtn="familiars"]` hook); Trackers stays hidden when Settings hides it. `cvCardShown()` tests computed style. `renderCombatEmpty()` shows the
 "Add sections with the … button on any card." hint when no card in the view shows. `fillCombatView()`
 and a toggle call it, and so does `renderTrackers()` while the view is open, so hiding Trackers
 when it is the only card there brings the hint back instead of leaving the view blank. The tab bar's ☰ lists the view's cards, and `scrollToCard()` clears both the tab bar and
@@ -174,8 +175,6 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
   ☰ themselves, are all gone.
 - The item finder has no Esc of its own.
 - Initiative and turn order are out of scope; time is in-game only.
-- Familiars cannot be added to the view from the Sheet any more: its toggle is on the card, which
-  the Sheet hides (#103). A sheet that already has it keeps it.
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -196,3 +195,4 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-10-19 — End combat recovers ammunition on its own in place of asking, with Undo recovery on the toast. → ledger L6081, #104
 - 2026-10-19 — End combat retires every outstanding ammunition count, quietly when nothing comes back. → ledger L6147, #104
 - 2026-10-23 — Vitals arrives as the rail, in two columns; the view gains its own Inspiration ✦; the Sheet's header is not combat-addable, and a saved `portrait` or `rest` becomes `vitals`; By ability's compact header is gone. → ledger L6633, #103
+- 2026-10-23 — Familiars is addable again, from the paw's menu (its card is hidden on the Sheet); the card shows in the view and goes home hidden. → ledger L6729, #103

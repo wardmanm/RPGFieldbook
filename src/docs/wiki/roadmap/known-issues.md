@@ -129,12 +129,15 @@ Known behaviour that is accepted for now.
   the fallback Common stays beside them. Inert today: no pack declares `defaultLanguages`.
   → ledger L6633, and [Character model](../architecture/character-model.md)
 - **Changing a sheet's system does not swap its `system` language chips** for the new ruleset's
-  defaults (the #103 spec §4 asked for it; not built). Inert today for the same reason: every
-  ruleset falls back to Common. → ledger L6633, and [Character model](../architecture/character-model.md)
-- **Familiars can't be added to the combat view from the Sheet.** Since #103 the Familiars card is
-  hidden on the Sheet (familiars open from the header's paw), and its combat toggle is on that card.
-  A sheet that already has Familiars in the view keeps it. → ledger L6633, and
-  [Combat view](../features/combat-view.md)
+  defaults (the #103 spec §4 asked for it; ruled not needed at plan time, as a character's system
+  is not meant to change, though Settings → Skin does rewrite the open character's). Inert today:
+  every ruleset falls back to Common. → ledger L6633, and [Character model](../architecture/character-model.md)
+- **Languages lifted from an old sheet are the player's own**, so they stay after a species or
+  background change. #103 turned a sheet's "Languages: …" lines into chips once, with no source,
+  because the old race grant wrote them as prose and which grant added which cannot be recovered:
+  an old Elf with "Languages: Common, Elvish" keeps Elvish as a Dwarf. Remove the chip by hand. This
+  is the spec's choice, not a bug. → ledger L6729, and
+  [Grants & provenance](../architecture/grants-and-provenance.md)
 - **A private data release publishes on its tag, with no approval step.** The public workflows wait
   for Mike in the `release` environment; GitHub refuses required reviewers on a private repo on the
   current plan (HTTP 422). Claude Code's ask rules and `/release`'s "publish" are its only gates.
@@ -486,3 +489,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-19 — Fixed and removed: the printed sheet's ×0 count. Added: Undo recovery dropping a home-joined entry's remainder once the home stack is fired out, `grantSidLive()` checking the source now rather than "revoked since", and editor-made weapons that cannot be Thrown. → ledger L6147, #104
 - 2026-10-19 — Added: a private data release has no approval step (plan limit). → ledger L6226, #109
 - 2026-10-23 — Removed with #103: the By ability Skills-note gap and the Dice hit-dice style's spend limit (both layouts retired). Added: a cold-cache new character's default language, the unbuilt system-change swap of `system` chips, and Familiars no longer addable to the combat view from the Sheet. → ledger L6633, #103
+- 2026-10-23 — Removed with the #103 final review: Familiars not addable to the combat view (the paw's menu has the toggle). Added: lifted languages are the player's own. The system-chip swap's entry now records the plan-time ruling. → ledger L6729, #103

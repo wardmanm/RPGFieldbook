@@ -180,8 +180,10 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where the Hit Dice sit (#103)** — In the rail, a bar under Hit Points
 - **Where the rests and the star sit (#103)** — Icons in the header
 - **XP thresholds (#103)** — The ruleset's `advancement` table, else the SRD's, hard-coded
+- **How the XP bar fills (#103)** — Within the level, `(xp − cur) / (next − cur)`, clamped 0..1 (Mike's ruling)
 - **XP or milestones (#103)** — A per-character `advancement` setting
 - **How many hit-dice looks (#103)** — One bar, tapping it opens a spend box
+- **Where the hit-dice pill and field sit with no pool (#103)** — Inline under the hint, one copy at a time with the spend box's
 - **How a hit die is spent (#103)** — Pick, then either auto-roll or type your own roll, live-validated
 - **Death saves filling outward** — CSS `row-reverse` off `data-kind="succ"` (successes left of the skull since #103)
 - **Size on tap** — A chooser
@@ -401,6 +403,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How is a section identified?** — A stable `k` in `NOTE_SECTIONS`
 - **The Sheet's layout (#103)** — One layout, no setting: header, rail, strip, Skills beside Defences/Statuses/Resources, Features; three columns, two, one by width
 - **Familiars on the Sheet (#103)** — A paw in the header opening a popover and a modal; the card stays in the DOM, hidden, for the combat view
+- **The familiars' #97 pencil (#103)** — None: `familiars` leaves `EDIT_CARDS`
 - **May the header go in the combat view? (#103)** — No (`nocv`); a saved one becomes Vitals
 - **Where the familiar row may wrap** — Only in `#familiarList`
 - **How Settings is organised (#107)** — A sidebar of pages, one shown at a time; the shared `.fgroup` collapsible was the earlier answer

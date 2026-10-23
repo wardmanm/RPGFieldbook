@@ -12,7 +12,8 @@ each rest gives back.
 **Code:** `applyHPInput()`, `adjustHP()`, `renderHP()`, `hpBand()`, `signedEntry()`,
 `signedDelta()`, `entryDigits()` in `66-coins-hp.js`; `clampHP()`, `effMaxHP()`, `buildDeath()` in
 `00-constants.js`; `longRest()`, `shortRest()`, `hitDicePool()`, `renderHitDice()`, `hdBarHTML()`,
-`hdSpendHTML()`, `openHdSpend()`, `hdConMod()`, `hdHeal()`, `hdSpendCheck()`, `spendHitDie()`,
+`hdSpendHTML()`, `hdFootHTML()`, `hdBoxOpen()`, `hdRefresh()`, `hdDiceEdited()`, `toggleHdMode()`,
+`openHdSpend()`, `hdConMod()`, `hdHeal()`, `hdSpendCheck()`, `spendHitDie()`,
 `rollHitDie()`, `recoverHitDice()`, `renderDeath()` in `65-resources.js`; `level1HP()`, `seedLevel1HP()`,
 `resyncLevel1HP()`, `hitDieMax()` in `56-class.js`; `charSize()`, `sizeOptionsHTML()`,
 `capacityFor()` in `25-origins-items.js`; `openSizePicker()` in `80-modal-forms.js`; `bumpHP()`,
@@ -104,7 +105,9 @@ size); in manual mode the pool is parsed from the text field ("2d8 + 1d6"). Spen
 `hdUsed[die]`, clamped to the total. `renderHitDice()` writes the auto pool back into
 `character.hitdice` and draws `#hdWrap`, in the rail under the HP bar, as one bar (`hdBarHTML()`):
 its label "Hit dice" with "CON +2" at the right, then die and "left / total" per size, filled by
-what is left — or the empty-state hint with no class and no manual dice. **One look, not three**
+what is left. With no pool (no class, a class the loaded rules have no hit die for, or manual
+dice that don't parse) it draws a hint instead, with the auto/manual pill and the dice field under
+it, so a custom class can switch to manual and type its dice. **One look, not three**
 (#103): the old Full/Condensed/Dice styles and their Settings row are gone; `character.hdStyle`
 stays in `blankChar()`/`migrate()` so an old sheet round-trips, but nothing reads it.
 
@@ -119,13 +122,20 @@ level-1 seed's `modOf()`); `hdHeal(roll, conMod)` floors the heal at 0. `spendHi
 `rollHitDie()`'s old body, shared now by both paths: mark the die used, `adjustHP(heal)`, show the
 working in a `restSummary()`.
 
-**Where the auto/manual pill and the manual-dice field live.** Both `[data-hdmode]` and
-`#hitdiceInput` live only in the spend box's foot — `hdSpendHTML()` is their only source,
-rebuilt fresh each time the box opens.
-`renderHitDice()` still patches whichever copy is currently in the document (readOnly, `.hidden`,
-value, the pill's text/class) exactly as it always has, so the mode-toggle handler in `90-boot.js`
-needed no change — it still just calls `renderHitDice()` and focuses `#hitdiceInput` directly, and
-that now finds the box's copy while it's open. `.hidden` (the IDL property) is what has to do the
+**Where the auto/manual pill and the manual-dice field live.** `[data-hdmode]` and
+`#hitdiceInput` come from one builder, `hdFootHTML()`, drawn in one of two places, never both: the
+spend box's foot, or inline in `#hdWrap` under the hint when the pool is empty and the box is closed
+(`hdBoxOpen()` checks `#mBody` for `#hdRollMe`). `openHdSpend()` removes the inline foot before it
+opens the box. While the player types in the inline field, `renderHitDice()` redraws only the
+`.hd-main` part above it, so the caret stays and dice that start to parse ("2d8") bring the bar
+without taking the field away; the next full draw drops the field once there is a pool. The pill
+runs `toggleHdMode()` (switching to manual asks first) and an edit to the field runs
+`hdDiceEdited()` after the shared `[data-path]` handler has written and saved it. Both go through
+`hdRefresh()`: an open box is drawn again from the new pool, keeping the picked die, so its rows and
+Roll/Apply follow; with nothing left to spend from it closes and the inline field takes over; then
+the keyboard goes back to the field (caret kept) or the pill. `renderHitDice()` still patches
+whichever copy is in the document (readOnly, `.hidden`, value, the pill's text/class).
+`.hidden` (the IDL property) is what has to do the
 hiding, not `style.display`: the input's `hidden` attribute is written into the markup itself at
 render time, and a cleared inline style would not override that attribute's own
 `[hidden]{display:none}` rule the way an empty string used to when the input had no `hidden`
@@ -136,8 +146,10 @@ level (`#levelDisp`, which `recompute()` writes). In XP mode (`character.advance
 `advancementOf()`, "xp" unless it is exactly "milestone") the XP box (`data-path="character.xp"`)
 and a bar follow: `xpProgress()` reads the XP (a number, or digits with commas, through
 `xpNumber()`) against the character's ruleset's `advancement` table, else `SRD_ADVANCEMENT`
-(`advancementFor()`), and gives the next level's threshold. The bar fills from 0 toward it, capped
-at 99% until the XP reaches it; then the ring becomes a "Level up ready" button that runs Level up.
+(`advancementFor()`), and gives this level's threshold (`cur`) and the next one's. The bar fills
+within the level, `(xp − cur) / (next − cur)` clamped to 0..1 (Mike's ruling), so a character who
+has just reached level 5 shows an empty bar; it is capped at 99% until the XP reaches the next
+threshold, and full at the top of the table; then the ring becomes a "Level up ready" button that runs Level up.
 XP that is not a number shows as typed, with no bar. Typing in the box repaints only the ring and the
 bar (`renderLevelBadge()`), so the caret stays. **Milestone mode** shows the ring alone; the XP stays
 in the data, so switching back restores it. The switch is Settings → Sheet display → Advancement.
@@ -146,7 +158,9 @@ in the data, so switching back restores it. The switch is Settings → Sheet dis
 saves, restores every spell slot, gets back half the total Hit Dice (at least one, largest die
 first — `recoverHitDice()`), and resets short- and long-rest feature uses, item uses and resources.
 `shortRest()` restores Warlock pact slots and short-rest feature uses, item uses and resources, and
-reminds the player to spend Hit Dice. Both end in a summary of what came back.
+points at the hit-dice bar; while any dice are left its summary also offers **Spend a hit die**
+(`restSummary(…, {hd:true})`), which opens the spend box in its place. Both end in a summary of what
+came back.
 
 ## Rules that must hold
 
@@ -168,8 +182,11 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
 - **The manual-mode "Reset to class" banner stays outside the bar**, written into `#hdWrap` above
   `hdBarHTML()`'s output, not inside it — the same reason the old per-style banner stayed outside
   `.hd-grid`: a child spanning the bar's own layout would fight it.
+- **One copy of `#hitdiceInput` and `[data-hdmode]` at a time.** The inline foot is drawn only with
+  an empty pool and the box closed, and `openHdSpend()` removes it first. Two copies would leave
+  `renderHitDice()` patching the wrong one.
 - **`#hitdiceInput`/`[data-hdmode]` are patched by `.hidden`/property writes, not `style.display`.**
-  `hdSpendHTML()` bakes a literal `hidden` attribute into the input's markup at render time; a
+  `hdFootHTML()` bakes a literal `hidden` attribute into the input's markup at render time; a
   cleared inline style does not override an attribute the UA stylesheet still matches, so
   `renderHitDice()` toggles the `.hidden` IDL property instead, which does.
 - **The rail is the `vitals` note anchor.** The old Rest & Recovery card's `rest` notes merged into
@@ -217,8 +234,10 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
 | Where the Hit Dice sit (#103) | In the rail, a bar under Hit Points | Rest & Recovery under the rest buttons (the 2026-09-25 answer): that card went, and a bar is one line. Under Hit Points as a panel (2026-08-14): it rode into the combat view as a block between the player and the hit points |
 | Where the rests and the star sit (#103) | Icons in the header | The Rest card and the Vitals label: the clutter the issue is about |
 | XP thresholds (#103) | The ruleset's `advancement` table, else the SRD's, hard-coded | The converter extracting it now: every pack's digest moves for numbers the fallback already has |
+| How the XP bar fills (#103) | Within the level, `(xp − cur) / (next − cur)`, clamped 0..1 (Mike's ruling) | From 0 toward the next threshold: a character who has just reached level 5 showed 46% |
 | XP or milestones (#103) | A per-character `advancement` setting | XP only: tables that use milestones keep an empty field. App-wide: two tables on one device can't differ |
 | How many hit-dice looks (#103) | One bar, tapping it opens a spend box | Keeping Full/Condensed/Dice as a per-character choice: a display option for something every player does the same way — pick a die, spend it — not a matter of taste |
+| Where the hit-dice pill and field sit with no pool (#103) | Inline under the hint, one copy at a time with the spend box's | An empty "Set hit dice" bar that opens the box: a box with no rows to spend from |
 | How a hit die is spent (#103) | Pick, then either auto-roll or type your own roll, live-validated | Auto-roll only (the old `rollHitDie()`): a roll made at the table has to go in by hand somewhere, and a second "override HP by hand" path after the fact is worse than typing the roll itself |
 | Death saves filling outward | CSS `row-reverse` off `data-kind="succ"` (successes now sit left of the skull, #103) | `buildDeath()` counting backwards: the click handler and `.on` toggling would have to change |
 | Size on tap | A chooser | A breakdown like the other boxes: size is a choice, not a derived number |
@@ -257,3 +276,7 @@ reminds the player to spend Hit Dice. Both end in a summary of what came back.
 - 2026-10-23 — Vitals becomes the dark rail (portrait, AC shield, ✓○○○☠○○○✗, badges, HP and hit-dice
   bars); the rests, the star and the level with XP move to the header, with XP or milestone
   advancement; the Rest & Recovery card and its note key are gone. → ledger L6633, #103
+- 2026-10-23 — Final review fixes: with no hit-dice pool the pill and the dice field sit under the
+  hint, so a custom class can type its dice; an open spend box follows a dice edit or the mode
+  switch; the XP bar fills within the level; the short rest offers Spend a hit die.
+  → ledger L6729, #103

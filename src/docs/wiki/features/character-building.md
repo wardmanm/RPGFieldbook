@@ -34,8 +34,10 @@ levels, per [rules-schema](../../../../docs/rules-schema.md) §5; a class's `mul
 - **A class** opens the header's popover with its menu (`classFlyHTML()`): About (its info window),
   its subclass (or Choose subclass), ▲ Level up, ▼ Level down, + Add class and Remove (with the
   existing confirm). These are the old Class card's controls, moved; its Level up / Level down
-  buttons and its chips are gone.
-- **The species or background** opens its info window, which, from the sheet and for the
+  buttons and its chips are gone. The menu's ▲ / ▼ carry the class's index (`data-shidx`), so they
+  act on **that** class.
+- **The species or background** opens its info window (the species button reads "Elf · High Elf"
+  when there is a subrace), which, from the sheet and for the
   character's own pick, ends in **Change** (the picker again) and **Remove** (confirm, then the
   window closes) — `raceInfoFoot()` / `bgInfoFoot()`. Reference mode (`{ref:true}`) shows neither.
 - **Nothing chosen** reads "+ Class", "+ Race" / "+ Ancestry" (by skin, `raceTerm()`) and
@@ -93,13 +95,15 @@ Classes and Subclasses rows open them with `{ref:true}` (#99): no "— current" 
 marker, nothing from `character.classes`; a subclass link inside such a window carries
 `data-sub-ref="1"` so following it stays in reference mode too.
 
-**Level up.** From the class menu, or the level ring's "Level up ready" ([Vitals & rest](vitals-and-rest.md)). `doLevelUp()` asks which class when there are several, raises it, and runs
+**Level up.** From the class menu, or the level ring's "Level up ready" ([Vitals & rest](vitals-and-rest.md)). `doLevelUp(idx)` levels class `idx` when the menu passes one; with none (Level up ready) it asks which class when there are several. It raises it and runs
 `applyClassLevel()` for the new level (class and subclass). `hpChoice()` is built **before** Max HP is
 unlocked, so it remembers the lock; the level's modal then opens with a synthesized `{type:"hp"}`
 block first. Blank takes the fixed value (half the die + 1), "Roll for me" rolls it, CON is added
 once per level via `conModNow()`, and the floor is 1 per level. `commitHPChoice()` raises Max and
-Current and puts the lock back only if it was locked. **Level down** (`doLevelDown()`) only lowers
-the number: traits, grants and choices stay.
+Current and puts the lock back only if it was locked. **Level down** (`doLevelDown(idx)`) only lowers
+the number: traits, grants and choices stay. From a class's menu it lowers that class, and at level 1
+says to use Remove in the class's menu; with no index it lowers the one class above level 1, or asks
+which when there are several.
 
 **Subclass.** Either a `subclass` choice at the class's level, or Choose/Change in the class info
 window (`chooseSubclass()`), which shows each with its pack and description. `selectSubclass()`
@@ -310,3 +314,4 @@ they are built: [Converter](../data/converter.md).
 - 2026-10-09 — The options library: the 2024 pack's in the private repo, the SRD 5.2 pack's here. → ledger L5426, #85
 - 2026-10-22 — The class, subclass, species and background windows open by `_id` as well as by name, and gain a reference mode (`{ref:true}`) for the Rules tab's rows, with nothing from the open character. → ledger L6327, #99
 - 2026-10-23 — The Class and Ancestry & Background cards go: the header's class line opens a class menu (About, subclass, Level up / down, + Add class, Remove) and the species and background windows gain Change and Remove; species and backgrounds grant languages as chips; Add class with no classes loaded points to Settings → Rules. → ledger L6633, #103
+- 2026-10-23 — A class's menu levels that class: ▲ / ▼ pass its index to `doLevelUp(idx)` / `doLevelDown(idx)`; the species button names the subrace. → ledger L6729, #103

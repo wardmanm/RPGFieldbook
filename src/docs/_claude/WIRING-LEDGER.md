@@ -6725,3 +6725,50 @@ Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
 [character model](../wiki/architecture/character-model.md),
 [grants & provenance](../wiki/architecture/grants-and-provenance.md), [shell](../wiki/ui/shell.md),
 [rules packs](../wiki/architecture/rules-packs.md), [2.0](../wiki/roadmap/2.0.md)
+
+## The Sheet makeover: final review fixes (#103, 2026-10-23)
+
+The whole-branch review found three player-facing gaps and a set of minors. Fixed:
+
+1. *I-1, no hit-dice pool.* A custom class (or no pack) had no bar, so no spend box, so no
+   auto/manual pill and no `#hitdiceInput`: no hit dice at all. `renderHitDice()` now draws the pill
+   and field inline under the hint (`hdFootHTML()`, shared with the box's foot) whenever the pool is
+   empty and the box is closed. One copy at a time: `openHdSpend()` removes the inline foot first,
+   and the inline copy is left out while the box is open. Typing in the inline field redraws only
+   `.hd-main` above it, so the caret stays and dice that parse mid-word don't take the field away.
+2. *I-2, per-class levels.* The class menu's ▲/▼ carry `data-shidx`, and `doLevelUp(idx)` /
+   `doLevelDown(idx)` act on that class. With no index (Level up ready, older callers) they ask as
+   before. The alerts say "Remove in the class's menu", not the gone ✕.
+3. *I-3, the hidden Familiars card's heading.* The paw's menu (`famFlyHTML()`) now holds a
+   Combat view item (`data-combatbtn="familiars"`, `role="menuitemcheckbox"`, on/off) and a Note
+   item (`data-notebtn="familiars"`), both the existing delegated hooks. `familiars` leaves
+   `EDIT_CARDS` (eleven now): its pencil was unreachable, and dropping it was smaller and sounder
+   than teaching the modal the hide state, which only the combat view could then toggle. Driven:
+   the toggle adds Familiars, the view shows `#combatView #familiarCard`, End combat keeps it there,
+   leaving the view sends it home hidden.
+4. *M-1:* the short rest's note points at the hit-dice bar, and the summary offers "Spend a hit die"
+   (`restSummary(…, {hd})` → `openHdSpend()`) while any are left.
+5. *M-3:* `chipSrcLabel()` looks up own keys only (`chipSrcKey()`), and `chipClean()` turns an
+   unknown language `src` into `""`, the player's, so its × and `removeChip()` agree.
+6. *M-7:* the header's species button appends "· subrace", escaped.
+7. *M-8:* the pill (`toggleHdMode()`) and a dice edit (`hdDiceEdited()`) redraw an open spend box
+   from the new pool, keeping the picked die, then put the keyboard back (caret kept); with nothing
+   left to spend from, the box closes and the inline field takes over.
+8. *M-9 (Mike's ruling):* the XP bar fills within the level, `(xp − cur) / (next − cur)`, clamped
+   0..1; `xpProgress()` returns `cur`.
+9. *M-10:* `sheetHeadHTML()` is `pawHTML()`. *M-11:* the dead `.cr-k` rule is gone. *M-14:* Summon /
+   Dismiss is a `<button>` with `aria-pressed`, and the modal's repaint puts focus back on it.
+
+Docs: the release note names the paw menu and its switch, the XP bar and setting, language chips
+and the lifted "Languages:" lines, and the removed display settings (M-2); known issues says lifted
+languages are the player's (M-4); rules-schema says which pack's `defaultLanguages` /
+`advancement` is read (M-6); the spec's As built marks the system-chip swap "not needed".
+
+Tests: `sheet.js` (I-1, I-3, M-1, M-3, M-7, M-8, M-9, M-11, M-14, and the menu's `data-shidx`),
+`char-update.js` (I-2 on both indexes, the no-index paths, the reworded alert).
+
+Pages: [vitals & rest](../wiki/features/vitals-and-rest.md),
+[character building](../wiki/features/character-building.md),
+[combat view](../wiki/features/combat-view.md), [sections & layout](../wiki/ui/sections-and-layout.md),
+[grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[known issues](../wiki/roadmap/known-issues.md)

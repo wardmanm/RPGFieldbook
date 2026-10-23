@@ -47,5 +47,16 @@ Bullets below this line — leave the heading in place.
   with AC, HP and hit dice, abilities with their saves across the top, and a new Defences card for
   resistances and immunities. Spend a hit die by rolling in the app or entering your own roll.
   Attacks move to Inventory; the Story tab is now Bio, with alignment, languages and senses.
+- Familiars live in a paw menu in the sheet's header: summon, edit, add, put them in the combat view
+  and keep their note from there. A character without a familiar can show the paw with the
+  Familiars & companions icon switch in Settings.
+- The level in the header has an XP bar that fills toward your next level, and says when you are
+  ready to level up. Groups that level by milestone can hide it with the Advancement setting
+  (XP or Milestone) in Settings.
+- Languages are chips now. Your species and background add theirs, and take them back if you change
+  them. The "Languages:" lines on an existing sheet become chips that are yours to keep or remove.
+- The Hit Dice display and Skills display settings are gone: hit dice are one bar under your hit
+  points, and skills one list. A class with no hit die in your rules data can still switch the bar
+  to manual and type its dice.
 - On a phone, the cards on the Spells, Inventory and Journal tabs have a small gap between them
   again instead of touching.
