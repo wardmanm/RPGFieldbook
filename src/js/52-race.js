@@ -135,10 +135,17 @@ function removeRace(doRender){
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}
 }
 /* By id or name; `{ref:true}` leaves the chosen lineage unmarked (#99). */
+/* From the sheet (#103), the character's own species gets Change (the Add
+   picker, which replaces it) and Remove (the existing confirm). Never in
+   reference mode. */
+function raceInfoFoot(ref,names){
+  const cur=character.race&&character.race.name;
+  return (!ref&&cur&&names.indexOf(cur)>=0)?`<div class="rowbtns"><button class="tbtn" data-shchange="race">Change</button><button class="tbtn danger ed" data-del-race="1">Remove</button></div>`:"";
+}
 function openRaceInfo(name,opts){
   const ref=!!(opts&&opts.ref);
   const d=findRaceDef(name);
-  if(!d){openModal(name,`<p class="hint">No rules data loaded for this ${raceTerm().toLowerCase()} — it was added as a custom name.</p>`,iconSVG("races",name,"lg"));return;}
+  if(!d){openModal(name,`<p class="hint">No rules data loaded for this ${raceTerm().toLowerCase()} — it was added as a custom name.</p>`+raceInfoFoot(ref,[name]),iconSVG("races",name,"lg"));return;}
   const nm=String(d.name||name);
   const cur=ref?null:(character.race&&character.race.subrace);
   const sect=(obj)=>{
@@ -157,6 +164,7 @@ function openRaceInfo(name,opts){
   (d.subraces||[]).forEach(sd=>{
     b+=`<div style="border-top:2px solid var(--line);margin-top:10px;padding-top:8px"><b style="${cur===sd.name?"color:var(--accent)":""}">${esc(sd.name)}${cur===sd.name?" — selected":""}</b>${sd.description?`<p class="hint" style="margin:4px 0">${esc(sd.description)}</p>`:""}${sect(sd)}</div>`;
   });
+  b+=raceInfoFoot(ref,[name,nm]);
   openModal(nm,b,iconSVG("races",nm,"lg"));
 }
 

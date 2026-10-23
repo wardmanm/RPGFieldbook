@@ -16,7 +16,7 @@ function selectTab(name){
   /* its button is an icon beside ☰, not a .tab */
   const cb=document.getElementById("btnCombat");if(cb)cb.classList.toggle("active",name==="combat");
   if(name==="combat")openCombatView();
-  closeToc();
+  closeToc();closeShFly();
 }
 /* Scroll a card to just under the sticky tab bar, whose height is measured live
    rather than assumed. Shared by the table of contents and the notes jump. */
@@ -402,6 +402,23 @@ function stepStatusTap(id,deltaSec,viaKey){
   }
 }
 
+/* One familiar's row: the Familiars card's list and the header's familiar
+   modal (openFamiliar) draw the same markup, so their Summon / Edit / Delete
+   are the same delegated buttons (90-boot.js). */
+function familiarCardHTML(f){
+  const on=!!f.active;
+  const stats=[f.ac!==""&&f.ac!=null?`AC ${esc(f.ac)}`:"",(f.hp&&(f.hp.max!==""&&f.hp.max!=null))?`HP ${esc(f.hp.cur||0)}/${esc(f.hp.max)}`:"",f.speed?`Speed ${esc(f.speed)}`:""].filter(Boolean).join(" · ");
+  return `<div class="item${on?" on-fam":""}"><div class="top">
+        <span class="nm">${esc(f.name||"Familiar")}</span>
+        ${f.kind?`<span class="qty">${esc(f.kind)}</span>`:""}
+        <span class="fam-state ${on?"on":"off"}" data-toggle-familiar="${esc(f.id)}">${on?"● Summoned":"○ Dismissed"}</span>
+        <button class="icon ed" data-edit-familiar="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon danger ed" data-del-familiar="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
+      </div>
+      ${stats?`<div class="desc" style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em">${stats}</div>`:""}
+      ${f.description?`<div class="desc">${richHTML(f.description)}</div>`:""}
+      ${(f.effects&&f.effects.length)?(on?fxChips(f.effects):fxChips(f.effects).replace(/class="chip"/g,'class="chip off"')):""}</div>`;
+}
 function renderFamiliars(){
   const card=document.getElementById("familiarCard");
   const link=document.getElementById("addFamiliarLink");
@@ -411,21 +428,146 @@ function renderFamiliars(){
   /* Cleared BEFORE the early return: the combat view shows this card even when it
      is empty, and a list still holding the last familiar removed would show it. */
   const el=document.getElementById("familiarList");el.innerHTML="";
+  /* the header's paw is faint with none (#103), so it follows the count */
+  renderSheetHead();
   if(!has)return;
-  character.familiars.forEach(f=>{
-    const on=!!f.active;
-    const stats=[f.ac!==""&&f.ac!=null?`AC ${esc(f.ac)}`:"",(f.hp&&(f.hp.max!==""&&f.hp.max!=null))?`HP ${esc(f.hp.cur||0)}/${esc(f.hp.max)}`:"",f.speed?`Speed ${esc(f.speed)}`:""].filter(Boolean).join(" · ");
-    const d=document.createElement("div");d.className="item"+(on?" on-fam":"");
-    d.innerHTML=`<div class="top">
-        <span class="nm">${esc(f.name||"Familiar")}</span>
-        ${f.kind?`<span class="qty">${esc(f.kind)}</span>`:""}
-        <span class="fam-state ${on?"on":"off"}" data-toggle-familiar="${esc(f.id)}">${on?"● Summoned":"○ Dismissed"}</span>
-        <button class="icon ed" data-edit-familiar="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="icon danger ed" data-del-familiar="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
-      </div>
-      ${stats?`<div class="desc" style="font-family:var(--head);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em">${stats}</div>`:""}
-      ${f.description?`<div class="desc">${richHTML(f.description)}</div>`:""}
-      ${(f.effects&&f.effects.length)?(on?fxChips(f.effects):fxChips(f.effects).replace(/class="chip"/g,'class="chip off"')):""}`;
-    el.appendChild(d);
-  });
+  el.innerHTML=character.familiars.map(f=>familiarCardHTML(f)).join("");
+}
+
+/* ================= the sheet header (#103, spec §6.1, §6.6) =================
+   The name, both rests and the star are static markup in 00-sheet.html (their
+   ids are wired once at boot); these draw the parts that follow the character:
+   the class line (#shSub), the paw (#shPaw) and the level badge (#shLevel). */
+function headLevel(c){
+  const t=(Array.isArray(c&&c.classes)?c.classes:[]).reduce((a,x)=>a+num(x&&x.level),0);
+  return Math.max(1,t||num(c&&c.level)||1);
+}
+/* "Cleric 12 · Fighter 3 · Half-Elf · Acolyte", each part a button. A part not
+   chosen yet is its add button: "+ Class" here, and the existing data-add-race
+   / data-add-bg pickers for the other two. */
+function classLineHTML(c){
+  const cls=(Array.isArray(c&&c.classes)?c.classes:[]).map((x,i)=>({x,i})).filter(o=>o.x&&o.x.name);
+  const parts=[cls.length
+    ?cls.map(({x,i})=>`<button type="button" class="sh-cls" data-shcls="${esc(i)}" aria-haspopup="menu" aria-expanded="false">${esc(x.name)} ${esc(num(x.level))}</button>`).join(" · ")
+    :`<button type="button" class="sh-cls sh-add" data-shaddcls>+ Class</button>`];
+  const r=c&&c.race&&c.race.name,b=c&&c.bg&&c.bg.name;
+  parts.push(r?`<button type="button" class="sh-org" data-shrace="${esc(r)}">${esc(r)}</button>`
+              :`<button type="button" class="sh-org sh-add" data-add-race>+ ${esc(raceTerm())}</button>`);
+  parts.push(b?`<button type="button" class="sh-org" data-shbg="${esc(b)}">${esc(b)}</button>`
+              :`<button type="button" class="sh-org sh-add" data-add-bg>+ Background</button>`);
+  return parts.join(" · ");
+}
+/* The menu under one class: the Class card's controls, moved. Its buttons are
+   the existing hooks where one exists (subclass, Remove, + Add class), so they
+   run exactly what the card runs. No ids: the card's #btnLevelUp/#btnLevelDown
+   still exist. */
+function classFlyHTML(c,i){
+  const x=(Array.isArray(c&&c.classes)?c.classes:[])[i];
+  if(!x||!x.name)return "";
+  const sub=x.subclass
+    ?`<button type="button" role="menuitem" data-sub-info="${esc(x.name)}|${esc(x.subclass)}">Subclass: ${esc(x.subclass)}</button>`
+    :`<button type="button" role="menuitem" data-choose-sub="${esc(x.name)}">Choose subclass</button>`;
+  return `<div class="sh-flyhd">${esc(x.name)} ${esc(num(x.level))}</div>`+
+    `<button type="button" role="menuitem" data-shinfo="${esc(i)}">About ${esc(x.name)}</button>`+sub+
+    `<button type="button" role="menuitem" data-shlevel="up">▲ Level up</button>`+
+    `<button type="button" role="menuitem" data-shlevel="down">▼ Level down</button>`+
+    `<button type="button" role="menuitem" data-shaddcls>+ Add class</button>`+
+    `<button type="button" role="menuitem" class="danger ed" data-del-class="${esc(i)}">Remove</button>`;
+}
+/* The ring holds #levelDisp, so recompute()'s write to it lands. In XP mode,
+   once the XP reaches the next threshold it is a button: "Level up ready". */
+function levelRingHTML(c){
+  const lvl=esc(String(headLevel(c)));
+  const p=advancementOf(c)==="xp"?xpProgress(c):null;
+  return (p&&p.ready)
+    ?`<button type="button" class="sh-ring ready" data-shlevelup title="Level up ready"><b id="levelDisp">${lvl}</b><small>Level up ready</small></button>`
+    :`<span class="sh-ring" title="Level"><span class="sh-vh">Level </span><b id="levelDisp">${lvl}</b></span>`;
+}
+/* XP toward the next level's threshold, from 0; full at the top of the table.
+   Nothing when the XP is not a number (it shows as typed). */
+function xpBarHTML(c){
+  const p=advancementOf(c)==="xp"?xpProgress(c):null;if(!p)return "";
+  const fmtN=n=>n.toLocaleString("en-US");
+  const pct=p.next===null||p.ready?100:Math.min(99,Math.round(p.xp/p.next*100));
+  const tip=p.next===null?fmtN(p.xp)+" XP":fmtN(p.xp)+" / "+fmtN(p.next);
+  return `<span class="sh-xpbar" title="${esc(tip)}" role="img" aria-label="${esc(tip+" XP")}"><i style="width:${esc(String(pct))}%"></i></span>`;
+}
+/* Milestone mode is the ring only; the XP stays in the data, so switching back
+   restores it. */
+function levelBadgeHTML(c){
+  if(advancementOf(c)!=="xp")return `<span class="sh-ringslot">${levelRingHTML(c)}</span>`;
+  const v=c&&c.xp!=null?String(c.xp):"";
+  return `<span class="sh-ringslot">${levelRingHTML(c)}</span><span class="sh-xpwrap">`+
+    `<input class="sh-xp" data-path="character.xp" inputmode="numeric" aria-label="Experience points" placeholder="XP" value="${esc(v)}">`+
+    `<span class="sh-barslot">${xpBarHTML(c)}</span></span>`;
+}
+/* The header's conditional icon: the paw, while the character's
+   showFamiliars is on — faint with no familiar, its menu then offering + Add. */
+function sheetHeadHTML(c){
+  if(!(c&&c.showFamiliars===true))return "";
+  const n=Array.isArray(c.familiars)?c.familiars.length:0;
+  return `<button type="button" class="sh-ico sh-paw${n?"":" faint"}" data-shpaw aria-label="Familiars" title="Familiars &amp; companions" aria-haspopup="menu" aria-expanded="false">🐾</button>`;
+}
+function famFlyHTML(c){
+  const fs=(Array.isArray(c&&c.familiars)?c.familiars:[]).filter(f=>f&&typeof f==="object");
+  return `<div class="sh-flyhd">Familiars &amp; companions</div>`+
+    fs.map(f=>`<button type="button" role="menuitem" data-shfam="${esc(f.id)}" aria-label="${esc(String(f.name||"Familiar")+(f.active?", summoned":", dismissed"))}">${esc(f.name||"Familiar")} <span class="sh-st">${f.active?"●":"○"}</span></button>`).join("")+
+    `<button type="button" role="menuitem" class="sh-add" data-add="familiar">+ Add familiar</button>`;
+}
+/* The ring and the bar, without touching the XP box: typing in it repaints
+   these live, and a full rebuild would take the caret out of it. */
+function renderLevelBadge(){
+  const lv=document.getElementById("shLevel");if(!lv)return;
+  const inp=lv.querySelector(".sh-xp");
+  if(inp&&document.activeElement===inp&&advancementOf(character)==="xp"){
+    const r=lv.querySelector(".sh-ringslot"),b=lv.querySelector(".sh-barslot");
+    if(r)r.innerHTML=levelRingHTML(character);
+    if(b)b.innerHTML=xpBarHTML(character);
+    return;
+  }
+  lv.innerHTML=levelBadgeHTML(character);
+}
+function renderSheetHead(){
+  closeShFly();
+  const sub=document.getElementById("shSub");if(sub)sub.innerHTML=classLineHTML(character);
+  const paw=document.getElementById("shPaw");if(paw)paw.innerHTML=sheetHeadHTML(character);
+  renderLevelBadge();
+}
+/* The class and familiar menus: one popover (#shFly) hung under the button
+   that opened it, inside the header so it scrolls with the page, over a
+   transparent layer (#shBack) that a tap outside lands on and closes it —
+   the ☰ flyout's pattern. Any button in it closes it before its own action
+   runs (90-boot.js). */
+let _shFly=null;
+function openShFly(kind,i,anchor){
+  const fly=document.getElementById("shFly"),back=document.getElementById("shBack");if(!fly)return;
+  const html=kind==="fam"?famFlyHTML(character):classFlyHTML(character,i);
+  closeShFly();
+  if(!html)return;
+  fly.innerHTML=html;
+  fly.classList.add("open");if(back)back.classList.add("open");
+  _shFly={kind,i,anchor:anchor||null};
+  const head=document.getElementById("sheetHead");
+  if(anchor&&head){
+    const hr=head.getBoundingClientRect(),ar=anchor.getBoundingClientRect();
+    const w=fly.offsetWidth||0;
+    fly.style.top=Math.round(ar.bottom-hr.top+4)+"px";
+    fly.style.left=Math.round(Math.max(6,Math.min(ar.left-hr.left,hr.width-w-6)))+"px";
+    if(anchor.setAttribute)anchor.setAttribute("aria-expanded","true");
+  }
+  const first=fly.querySelector("button");if(first&&first.focus)first.focus({preventScroll:true});
+}
+function closeShFly(){
+  const fly=document.getElementById("shFly"),back=document.getElementById("shBack");
+  if(fly){fly.classList.remove("open");fly.innerHTML="";}
+  if(back)back.classList.remove("open");
+  if(_shFly&&_shFly.anchor&&_shFly.anchor.setAttribute)_shFly.anchor.setAttribute("aria-expanded","false");
+  _shFly=null;
+}
+/* A familiar's stat card in the modal, from the paw's menu. Summon / Dismiss,
+   Edit and Delete are the list's own buttons; the toggle re-opens this so the
+   modal repaints. */
+function openFamiliar(id){
+  const f=(Array.isArray(character.familiars)?character.familiars:[]).find(x=>x&&x.id===id);if(!f)return;
+  openModal(String(f.name||"Familiar"),`<div class="fam-modal">${familiarCardHTML(f)}</div>`);
 }

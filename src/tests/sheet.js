@@ -79,6 +79,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'grantLanguages', 'dropLanguages',
   'CHIP_SUGGEST', 'chipsHTML', 'chipChooserHTML', 'openChipChooser', 'addChip', 'removeChip', 'renderDefences', 'renderBioChips',
   'mergeNoteInto', 'liftLanguages', 'migrateSheet103',
+  'sheetHeadHTML', 'classLineHTML', 'classFlyHTML', 'levelBadgeHTML', 'familiarCardHTML', 'famFlyHTML',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -4660,6 +4661,65 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('#103 a granted chip cannot be removed by hand', g.languages.length === 1);
 }
 
+/* ---- #103: the header (spec §6.1, §6.6) ---- */
+{
+  const c = X.migrate({abilities: {}, system: 'dnd', name: 'Hobbs', xp: '183,000', classes: [{name: 'Cleric', level: 15}],
+    race: {name: 'Half-Elf'}, bg: {name: 'Acolyte'}, familiars: [{id: 'f1', name: 'A very long owl name', active: true}, {id: 'f2', name: 'Cat'}]});
+  const line = X.classLineHTML(c);
+  ck('#103 the class line: each class, species, background, tappable', line.includes('data-shcls="0"') && line.includes('Cleric 15') && line.includes('data-shrace') && line.includes('Half-Elf') && line.includes('Acolyte'));
+  ck('#103 no class: + Class', X.classLineHTML(X.migrate({abilities: {}})).includes('data-shaddcls'));
+  const lv = X.levelBadgeHTML(c);
+  ck('#103 XP mode: the XP field and a bar to the next level', lv.includes('data-path="character.xp"') && lv.includes('sh-xpbar') && lv.includes('195,000'));
+  ck('#103 ready: the badge offers Level up', X.levelBadgeHTML(Object.assign({}, c, {xp: '200000'})).includes('data-shlevelup'));
+  ck('#103 Milestone: the ring only', !X.levelBadgeHTML(Object.assign({}, c, {advancement: 'milestone'})).includes('character.xp'));
+  const fly = X.famFlyHTML(c);
+  ck('#103 the familiar flyout: name and abbreviated status per familiar, + Add', fly.includes('data-shfam="f1"') && fly.includes('●') && fly.includes('○') && fly.includes('data-add="familiar"'));
+  ck('#103 the familiar card markup is shared with the list', X.familiarCardHTML(c.familiars[0]).includes('data-toggle-familiar="f1"'));
+  const cf = X.classFlyHTML(c, 0);
+  ck('#103 the class flyout: info, level up/down, add, remove', ['data-shinfo="0"', 'data-shlevel="up"', 'data-shlevel="down"', 'data-shaddcls', 'data-del-class="0"'].every(s => cf.includes(s)), cf);
+  ck('#103 the XP shows with thousands separators', X.levelBadgeHTML(c).includes('183,000 / 195,000'));
+
+  /* beyond the brief's list: the edges spec §11 names */
+  ck('#103 the class line joins several classes, each with its own index',
+     X.classLineHTML(Object.assign({}, c, {classes: [{name: 'Cleric', level: 12}, {name: 'Fighter', level: 3}]})).includes('data-shcls="1"'));
+  const bare = X.classLineHTML(X.migrate({abilities: {}}));
+  ck('#103 no species or background: their add buttons', bare.includes('data-add-race') && bare.includes('data-add-bg') && !bare.includes('data-shrace') && !bare.includes('data-shbg'));
+  ck('#103 the flyout offers Choose when there is no subclass, the subclass when there is',
+     cf.includes('data-choose-sub="Cleric"') && X.classFlyHTML(Object.assign({}, c, {classes: [{name: 'Cleric', level: 15, subclass: 'Life'}]}), 0).includes('data-sub-info="Cleric|Life"'));
+  ck('#103 a flyout for a class that is not there is empty', X.classFlyHTML(c, 7) === '');
+  const typed = X.levelBadgeHTML(Object.assign({}, c, {xp: 'lots'}));
+  ck('#103 XP not a number: shown as typed, no bar', typed.includes('value="lots"') && !typed.includes('sh-xpbar'));
+  ck('#103 the ring holds #levelDisp, so recompute() still writes the level', lv.includes('id="levelDisp"') && lv.includes('>15<'));
+  ck('#103 the bar is as full as the XP is toward the next level',
+     /style="width:94%"/.test(lv), lv);
+  ck('#103 Level up ready is said, not just coloured', /class="sh-ring ready"/.test(X.levelBadgeHTML(Object.assign({}, c, {xp: '200000'}))) &&
+     X.levelBadgeHTML(Object.assign({}, c, {xp: '200000'})).includes('Level up ready'));
+  ck('#103 the XP field is escaped', X.levelBadgeHTML(Object.assign({}, c, {xp: '"><b>'})).includes('value="&quot;&gt;&lt;b&gt;"'));
+  ck('#103 the paw shows with the setting on, faint with no familiar',
+     X.sheetHeadHTML(Object.assign({}, c, {showFamiliars: true})).includes('data-shpaw') && !X.sheetHeadHTML(Object.assign({}, c, {showFamiliars: true})).includes('faint') &&
+     X.sheetHeadHTML(Object.assign({}, c, {showFamiliars: true, familiars: []})).includes('sh-paw faint'));
+  ck('#103 the paw hides with the setting off', !X.sheetHeadHTML(Object.assign({}, c, {showFamiliars: false})).includes('data-shpaw'));
+  ck('#103 an empty familiar list still offers + Add', X.famFlyHTML({familiars: []}).includes('data-add="familiar"') && X.famFlyHTML({}).includes('data-add="familiar"'));
+  ck('#103 a familiar card with no stat block: its name and the Summon switch',
+     /Owl[\s\S]*data-toggle-familiar="o"/.test(X.familiarCardHTML({id: 'o', name: 'Owl', active: true})));
+
+  /* the info windows: Change / Remove from the sheet, never in reference mode */
+  const savedOM = ctx.openModal, savedChar = X.character;
+  let got = null; ctx.openModal = (t, b) => { got = String(b); };
+  X.character = X.migrate({abilities: {}, race: {name: 'Half-Elf'}, bg: {name: 'Acolyte'}});
+  ctx.openRaceInfo('Half-Elf');
+  ck('#103 the species window from the sheet: Change and Remove', got.includes('data-shchange="race"') && got.includes('data-del-race="1"'), got);
+  ctx.openRaceInfo('Half-Elf', {ref: true});
+  ck('#103 ...but not in reference mode', !got.includes('data-shchange') && !got.includes('data-del-race'));
+  ctx.openRaceInfo('Dwarf');
+  ck('#103 ...nor for a species the character does not have', !got.includes('data-shchange'));
+  ctx.openBackgroundInfo('Acolyte');
+  ck('#103 the background window from the sheet: Change and Remove', got.includes('data-shchange="bg"') && got.includes('data-del-bg="1"'), got);
+  ctx.openBackgroundInfo('Acolyte', {ref: true});
+  ck('#103 ...but not in reference mode', !got.includes('data-shchange') && !got.includes('data-del-bg'));
+  ctx.openModal = savedOM; X.character = savedChar;
+}
+
 /* ---- imported files and packs render inert ----
    A character file, a rules pack and a settings file (which carries a whole
    `rules` object) are all written by someone else, and all reach the page
@@ -4798,7 +4858,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   X.rules.keywords[0].id = P;
   const hostile = X.blankChar();
   Object.assign(hostile, {
-    id: 'hostile', name: P, portraitImg: 'data:image/png;base64,AA' + ON + ' x="' + P,
+    id: 'hostile', name: P, xp: P, portraitImg: 'data:image/png;base64,AA' + ON + ' x="' + P,
     classes: [{name: 'Hostile', level: 2, subclass: 'Sub' + P}, {name: P, level: 1, subclass: P}],
     race: {name: 'HRace', subrace: P}, bg: {name: 'HBg'},
     proficiencies: 'Pwnterm and Pwnkw, ' + P, appearance: P, notes: P,
@@ -4846,6 +4906,11 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   run('Inventory', () => ctx.renderInventory());
   run('Statuses', () => ctx.renderStatuses());
   run('Familiars', () => ctx.renderFamiliars());
+  // #103: the header, its flyouts and the familiar's modal
+  run('the sheet header', () => ctx.renderSheetHead());
+  run('the class flyout', () => ctx.openShFly('class', 1));
+  run('the familiar flyout', () => ctx.openShFly('fam'));
+  run('the familiar modal', () => ctx.openFamiliar(P));
   run('Attacks & Weapons', () => ctx.renderAttacks());
   run('Active Spells', () => ctx.renderActiveSpells());
   run('the spell list', () => ctx.renderSpells());

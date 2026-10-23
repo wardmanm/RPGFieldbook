@@ -14,6 +14,8 @@ function wire(){
     setP({character},inp.dataset.path,inp.value);
     if(prevCon!==null)resyncLevel1HP(prevCon);
     if(inp.dataset.path==="character.hitdice")renderHitDice();
+    /* the header's ring and XP bar follow the box as it is typed (#103) */
+    if(inp.dataset.path==="character.xp")renderLevelBadge();
     if(inp.hasAttribute("data-recompute"))recompute();
     scheduleSave();
   });
@@ -27,6 +29,21 @@ function wire(){
   document.addEventListener("click",e=>{
     const t=e.target;
     let m;
+    /* #103: the sheet header and its two menus (40-sheet.js). A tap outside a
+       menu lands on #shBack and only closes it; a button inside closes it and
+       then runs its own hook, here or further down (subclass, Remove, + Add). */
+    if(t.closest("#shBack"))return closeShFly();
+    if(_shFly&&t.closest("#shFly button"))closeShFly();
+    if((m=t.closest("[data-shcls]")))return openShFly("class",num(m.dataset.shcls),m);
+    if(t.closest("[data-shaddcls]"))return openAddClass();
+    if((m=t.closest("[data-shrace]")))return openRaceInfo(m.dataset.shrace);
+    if((m=t.closest("[data-shbg]")))return openBackgroundInfo(m.dataset.shbg);
+    if((m=t.closest("[data-shchange]")))return m.dataset.shchange==="bg"?openAddBackground():openAddRace();
+    if((m=t.closest("[data-shinfo]"))){const x=character.classes[num(m.dataset.shinfo)];if(x)openClassInfo(x.name);return;}
+    if((m=t.closest("[data-shlevel]")))return m.dataset.shlevel==="down"?doLevelDown():doLevelUp();
+    if((m=t.closest("[data-shpaw]")))return openShFly("fam",0,m);
+    if((m=t.closest("[data-shfam]")))return openFamiliar(m.dataset.shfam);
+    if(t.closest("[data-shlevelup]"))return doLevelUp();
     if((m=t.closest(".dot[data-save]"))){const k=m.dataset.save;character.saves[k]=!character.saves[k];recompute();scheduleSave();return;}
     if((m=t.closest(".dot[data-skill]"))){const k=m.dataset.skill;character.skills[k]=((character.skills[k]||0)+1)%3;recompute();scheduleSave();return;}
     if((m=t.closest("[data-stat]"))){openStatBreakdown(m.dataset.stat);return;}
@@ -88,11 +105,13 @@ function wire(){
     // class & ancestry
     if((m=t.closest("[data-add-race]")))return openAddRace();
     if((m=t.closest("[data-add-class]")))return openAddClass();
-    if((m=t.closest("[data-del-race]"))){if(confirm("Remove ancestry and the traits it added?"))removeRace();return;}
+    /* Remove inside an info window (#103) closes it: it would go on showing
+       what was just removed */
+    if((m=t.closest("[data-del-race]"))){if(confirm("Remove ancestry and the traits it added?")){if(m.closest("#mBody"))closeModal();removeRace();}return;}
     if((m=t.closest("[data-del-class]"))){const i=num(m.dataset.delClass);const c=character.classes[i];if(c&&confirm(`Remove ${c.name} and the traits it added?`))removeClass(i);return;}
     if((m=t.closest("[data-info-race]")))return openRaceInfo(m.dataset.infoRace);
     if((m=t.closest("[data-add-bg]")))return openAddBackground();
-    if((m=t.closest("[data-del-bg]"))){if(confirm("Remove background “"+(character.bg&&character.bg.name)+"”?"))removeBackground();return;}
+    if((m=t.closest("[data-del-bg]"))){if(confirm("Remove background “"+(character.bg&&character.bg.name)+"”?")){if(m.closest("#mBody"))closeModal();removeBackground();}return;}
     if((m=t.closest("[data-info-bg]")))return openBackgroundInfo(m.dataset.infoBg);
     if((m=t.closest("[data-choose-sub]")))return chooseSubclass(m.dataset.chooseSub);
     if((m=t.closest("[data-change-sub]")))return chooseSubclass(m.dataset.changeSub);
@@ -108,8 +127,10 @@ function wire(){
     if((m=t.closest("[data-toggle-status]"))){const s=character.statuses.find(x=>x.id===m.dataset.toggleStatus);if(s){if(s.concId&&s.active!==false){if(!endConcFromStatus())return;}else{s.active=s.active===false;if(s.active)restartStatus(s);}renderStatuses();renderActiveSpells();recompute();scheduleSave();}return;}
     // familiars
     if((m=t.closest("[data-edit-familiar]")))return openFamiliarForm(character.familiars.find(x=>x.id===m.dataset.editFamiliar));
-    if((m=t.closest("[data-del-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.delFamiliar);if(f&&confirm(`Delete “${f.name}”?`)){character.familiars=character.familiars.filter(x=>x.id!==f.id);renderFamiliars();recompute();scheduleSave();}return;}
-    if((m=t.closest("[data-toggle-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.toggleFamiliar);if(f){f.active=!f.active;renderFamiliars();recompute();scheduleSave();}return;}
+    /* the same two buttons sit in the header's familiar modal (openFamiliar):
+       Delete there closes it, Summon / Dismiss re-opens it so it repaints */
+    if((m=t.closest("[data-del-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.delFamiliar);if(f&&confirm(`Delete “${f.name}”?`)){if(m.closest("#mBody"))closeModal();character.familiars=character.familiars.filter(x=>x.id!==f.id);renderFamiliars();recompute();scheduleSave();}return;}
+    if((m=t.closest("[data-toggle-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.toggleFamiliar);if(f){f.active=!f.active;renderFamiliars();recompute();scheduleSave();if(m.closest("#mBody"))openFamiliar(f.id);}return;}
     if((m=t.closest("[data-res-dec]"))){const r=character.resources.find(x=>x.id===m.dataset.resDec);if(r){r.cur=Math.max(0,num(r.cur)-1);renderResources();scheduleSave();}return;}
     if((m=t.closest("[data-res-inc]"))){const r=character.resources.find(x=>x.id===m.dataset.resInc);if(r){r.cur=Math.min(num(r.max),num(r.cur)+1);renderResources();scheduleSave();}return;}
     if((m=t.closest("[data-res-reset]"))){const r=character.resources.find(x=>x.id===m.dataset.resReset);if(r){r.cur=num(r.max);renderResources();scheduleSave();}return;}
@@ -194,6 +215,11 @@ function wire(){
     if((m=t.closest("[data-rbmorein]")))return rbMoreIn(m.dataset.rbmorein);
     if((m=t.closest("[data-rbhit]")))return rbOpenRow(m.dataset.rbhitcat,m.dataset.rbhit);
     if((m=t.closest("[data-rbrow]")))return rbOpenRow(rbCurKey(),m.dataset.rbrow);
+  });
+  /* Esc closes a header menu and hands focus back to what opened it (#103) */
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape"||!_shFly)return;
+    const a=_shFly.anchor;closeShFly();if(a&&a.isConnected&&a.focus)a.focus();
   });
   document.addEventListener("keydown",e=>{
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;

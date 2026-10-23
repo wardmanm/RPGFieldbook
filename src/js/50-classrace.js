@@ -200,5 +200,8 @@ function renderClassRace(){
     if(!(rules.races||[]).length&&!(rules.classes||[]).length)parts.push(`<p class="hint" style="margin-top:8px">Load a rules pack with <b>races</b> and <b>classes</b> (Settings → Rules) to auto-apply traits and stats. Custom names work too, without auto data.</p>`);
     cb.innerHTML=parts.join("");
   }
+  /* the header's class line and level follow every class, species and
+     background change, all of which end here (#103) */
+  renderSheetHead();
 }
 

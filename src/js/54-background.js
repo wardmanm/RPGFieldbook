@@ -83,10 +83,17 @@ function removeBackground(doRender){
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}
 }
 /* By id or name; `{ref:true}` leaves out your choices (#99). */
+/* From the sheet (#103), the character's own background gets Change (the Add
+   picker, which replaces it) and Remove (the existing confirm). Never in
+   reference mode. */
+function bgInfoFoot(ref,names){
+  const cur=character.bg&&character.bg.name;
+  return (!ref&&cur&&names.indexOf(cur)>=0)?`<div class="rowbtns"><button class="tbtn" data-shchange="bg">Change</button><button class="tbtn danger ed" data-del-bg="1">Remove</button></div>`:"";
+}
 function openBackgroundInfo(name,opts){
   const ref=!!(opts&&opts.ref);
   const d=findBackgroundDef(name);
-  if(!d){openModal(name,`<p class="hint">No rules data loaded for this background — it was added as a custom name.</p>`,iconSVG("backgrounds",name,"lg"));return;}
+  if(!d){openModal(name,`<p class="hint">No rules data loaded for this background — it was added as a custom name.</p>`+bgInfoFoot(ref,[name]),iconSVG("backgrounds",name,"lg"));return;}
   let b=`<p>${esc(d.description||"")}</p>`;
   b+=`<p><b>Ability Scores:</b> ${esc((d.abilityScores||[]).map(a=>String(a).toUpperCase()).join(", "))}</p>`;
   b+=`<p><b>Feat:</b> ${esc(bgFeatList(d).join(" or "))}</p>`;
@@ -100,5 +107,6 @@ function openBackgroundInfo(name,opts){
   b+=tableChipsHTML(d.name,"background");
   const cur=character.bg;
   if(!ref&&cur&&cur.name===d.name){const bits=[];if(cur.feat)bits.push("Feat: "+cur.feat);if(cur.abils)bits.push(cur.abils.map(e=>e.target.split(".")[1].toUpperCase()+" "+fmt(e.value)).join(", "));if(bits.length)b+=`<p class="hint" style="border-top:2px solid var(--line);margin-top:8px;padding-top:8px">Your choices — ${esc(bits.join(" · "))}</p>`;}
+  b+=bgInfoFoot(ref,[name,d.name]);
   openModal(d.name,b,iconSVG("backgrounds",d.name,"lg"));
 }

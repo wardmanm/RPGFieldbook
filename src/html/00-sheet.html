@@ -1,5 +1,30 @@
   <!-- ============ SHEET TAB ============ -->
   <section class="tabpanel active" id="tab-sheet">
+    <!-- #103: the sheet header (spec §6.1). The name, both rests and the star
+         MOVED here with their ids, so recompute() and wire()'s on(...) still
+         find them; #levelDisp is drawn inside #shLevel by levelBadgeHTML().
+         The icons row is a .label so that, once the header carries the
+         portrait section, the note button, the combat toggle and the ☰ entry
+         ("Character", from the visually hidden .sh-cap) find it the way they
+         find every card heading. #shSub, #shPaw and #shLevel are
+         filled by renderSheetHead() (40-sheet.js); #shFly is the one popover
+         the class and familiar flyouts share, #shBack its tap-outside layer. -->
+    <header class="sheet-head" id="sheetHead">
+      <div class="sh-id">
+        <input class="sh-name" data-path="character.name" placeholder="Character name" aria-label="Character name">
+        <div class="sh-sub" id="shSub"></div>
+      </div>
+      <div class="label sh-bar"><span class="sh-cap">Character</span><span class="grow"></span>
+        <button type="button" class="sh-ico" id="btnShortRest" title="Short rest" aria-label="Short rest">&#9749;</button>
+        <button type="button" class="sh-ico" id="btnLongRest" title="Long rest" aria-label="Long rest">&#9790;</button>
+        <button class="starbtn" id="starBtn" title="Inspiration" aria-label="Toggle inspiration" aria-pressed="false">&#10022;</button>
+        <span class="sh-pawslot" id="shPaw"></span>
+      </div>
+      <!-- outside the .label, so the ☰ entry reads "Character", not the level -->
+      <span class="sh-level" id="shLevel"></span>
+      <div class="sh-back" id="shBack"></div>
+      <div class="sh-fly" id="shFly" role="menu" aria-label="Character menu"></div>
+    </header>
     <div class="cols">
       <div class="stack">
         <div class="card" data-note="portrait">
@@ -10,12 +35,7 @@
             <button class="mini danger" id="btnPortraitDel">Remove</button>
           </div>
           <input type="file" id="filePortrait" accept="image/*" class="hidefile">
-          <div class="field"><label class="f">Character name</label><input data-path="character.name" placeholder="Pib Thornwhistle"></div>
-          <div class="field"><label class="f">Experience</label><input type="number" min="0" data-path="character.xp" placeholder="0"></div>
-          <div class="g2">
-            <div class="field"><label class="f">Level</label><div class="vbox" style="padding:6px"><div class="big" id="levelDisp">1</div></div></div>
-            <div class="field"><label class="f">Proficiency Bonus</label><div class="vbox" style="padding:6px"><div class="big" data-stat="profBonus" id="pbDisp">+2</div></div></div>
-          </div>
+          <div class="field"><label class="f">Proficiency Bonus</label><div class="vbox" style="padding:6px"><div class="big" data-stat="profBonus" id="pbDisp">+2</div></div></div>
         </div>
 
         <div class="card" data-note="origin">
@@ -63,7 +83,7 @@
         </div>
 
         <div class="card" data-note="vitals">
-          <div class="label">Vitals <span class="grow"></span><button class="starbtn" id="starBtn" title="Inspiration" aria-label="Toggle inspiration" aria-pressed="false">&#10022;</button></div>
+          <div class="label">Vitals <span class="grow"></span></div>
           <div class="vitals" style="margin-bottom:11px">
             <div class="vbox"><div class="n">Armor Class</div><div class="big" data-stat="ac" id="acDisp">10</div></div>
             <div class="vbox"><div class="n">Initiative</div><div class="big" data-stat="init" id="initDisp">+0</div></div>
@@ -108,11 +128,7 @@
 
         <div class="card" data-note="rest">
           <div class="label">Rest &amp; Recovery <span class="grow"></span></div>
-          <div class="rest-row">
-            <button class="restbtn" id="btnShortRest">☕ Short Rest</button>
-            <button class="restbtn" id="btnLongRest">☾ Long Rest</button>
-          </div>
-          <!-- Hit Dice sit under the rests they belong to: spent on a short rest,
+          <!-- Hit Dice sit with the rests they belong to: spent on a short rest,
                half back on a long one. (For 1.7.0 they were stacked under Hit
                Points in Vitals, which put them in the combat view by default.)
                #103: one bar now, not a pips/boxes/dice choice — tapping it opens

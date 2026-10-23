@@ -114,6 +114,11 @@ function openSettings(){
         `<button type="button" class="switch ${character.hpColor!==false?"on":""}" id="swHpColor" role="switch" aria-checked="${character.hpColor!==false?"true":"false"}" aria-label="Colour current HP"></button>`,true)+
       setRowHTML("Trackers card","Show it on the Journal tab. Hiding it keeps what you've counted.",
         `<button type="button" class="switch ${showTrackers(character)?"on":""}" id="swTrackers" role="switch" aria-checked="${showTrackers(character)?"true":"false"}" aria-label="Trackers card"></button>`,true))+
+    setGroupHTML("Levels and companions",
+      setRowHTML("Advancement","XP shows your experience in the header, with a bar to the next level. Milestone hides it: your table grants levels, taken with Level up.",
+        `<div class="seg" id="segAdv">${[["xp","XP"],["milestone","Milestone"]].map(([v,l])=>`<button type="button" data-adv="${esc(v)}" class="${advancementOf(character)===v?"on":""}" aria-pressed="${advancementOf(character)===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
+      setRowHTML("Familiars &amp; companions icon","A paw in the sheet's header that lists your familiars and companions, and adds them.",
+        `<button type="button" class="switch ${character.showFamiliars===true?"on":""}" id="swFamiliars" role="switch" aria-checked="${character.showFamiliars===true?"true":"false"}" aria-label="Familiars and companions icon"></button>`,true))+
     setGroupHTML("Ammunition",
       setRowHTML("Ammo recovery","What comes back after a fight. Thrown weapons and items set to Always come back anyway; firearm bullets never do.",
         `<select id="setAmmoRec" aria-label="Ammo recovery">${AMMO_RECOVERY.map(([v,l])=>`<option value="${esc(v)}"${ammoRecoveryOf(character)===v?" selected":""}>${esc(l)}</option>`).join("")}</select>`)):"";
@@ -210,6 +215,9 @@ function openSettings(){
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
   {const b=document.getElementById("swHpColor");if(b)b.addEventListener("click",()=>{character.hpColor=(character.hpColor===false);b.classList.toggle("on",character.hpColor!==false);renderHP();scheduleSave();});}
   {const b=document.getElementById("swTrackers");if(b)b.addEventListener("click",()=>{character.showTrackers=!showTrackers(character);b.classList.toggle("on",character.showTrackers);renderTrackers();scheduleSave();});}
+  /* #103: both repaint the sheet header */
+  {const g=document.getElementById("segAdv");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-adv]");if(!b)return;character.advancement=advancementOf({advancement:b.dataset.adv});g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderSheetHead();scheduleSave();});}
+  {const b=document.getElementById("swFamiliars");if(b)b.addEventListener("click",()=>{character.showFamiliars=character.showFamiliars!==true;b.classList.toggle("on",character.showFamiliars);renderSheetHead();scheduleSave();});}
   {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
   /* renderAll(), not buildStats(): the rebuild blanks the six score inputs, and
      only renderAll refills them from [data-path] and then repaints through

@@ -44,10 +44,67 @@ html[data-rough="on"] .vbox::before{filter:url(#rough)}
    Proficiency Bonus, Spell save DC — where a grid-column would mean nothing. */
 .vitals>.vbox{grid-column:span 2}
 .vitals>.vbox.wide{grid-column:span 3}
-/* Inspiration is a marker, not a stat: it lives in the Vitals card's heading
-   rather than taking a box of its own, so it sizes to a 12px label row. */
+/* Inspiration is a marker, not a stat: an icon in the sheet header's row
+   (#103; it sat in the Vitals heading before), not a box of its own. */
 .starbtn{background:none;border:0;cursor:pointer;font-size:26px;line-height:1;color:var(--hair);padding:0 2px;margin:-3px 0;flex:none}
 .starbtn.on{color:var(--accent)}
+
+/* ---- the sheet header (#103, spec §6.1) ----
+   A band in the accent's family, mixed into the panel so ink stays readable in
+   all four skin/mode pairs. It wraps on a narrow page: name and class line,
+   then the icons and the level. Positioned so the class and familiar menus
+   (#shFly) hang under their buttons and scroll with it. */
+.sheet-head{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 clamp(12px,2vw,18px);
+  padding:10px 14px;background:color-mix(in srgb,var(--accent) 16%,var(--panel));border:2px solid var(--accent);
+  border-radius:12px;box-shadow:var(--shadow);color:var(--ink)}
+.sh-id{flex:1 1 240px;min-width:0}
+.sh-name{font-family:var(--display);font-weight:900;font-size:28px;line-height:1.15;color:var(--ink);background:transparent;
+  border:0;border-bottom:1.5px dashed transparent;border-radius:0;padding:0 0 2px;min-height:0}
+.sh-name:hover{border-bottom-color:var(--hair)}
+.sh-name:focus{outline:none;background:transparent;border-bottom-color:var(--accent)}
+.sh-sub{font-family:var(--head);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);margin-top:3px;line-height:1.7}
+.sh-sub button{background:none;border:0;padding:1px 1px;font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ink);
+  font-weight:700;cursor:pointer;border-bottom:1.5px dotted color-mix(in srgb,var(--accent) 70%,transparent)}
+.sh-sub button:hover,.sh-sub button[aria-expanded="true"]{color:var(--accent)}
+.sh-sub .sh-add{color:var(--accent-2);font-weight:600}
+/* the icons row is a .label (the ☰ and the note button look for one); here it
+   is a plain row, its caption visually hidden */
+.sheet-head .sh-bar{margin:0;gap:6px;letter-spacing:0;flex:0 1 auto;flex-wrap:wrap}
+.sheet-head .sh-bar .grow{display:none}
+.sh-cap,.sh-vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.sh-ico{min-width:36px;height:36px;padding:0 6px;font-size:18px;line-height:1;color:var(--ink);cursor:pointer;
+  background:color-mix(in srgb,var(--panel) 60%,transparent);border:1.5px solid color-mix(in srgb,var(--accent) 55%,transparent);border-radius:8px}
+.sh-ico:hover{border-color:var(--accent);background:var(--panel)}
+.sh-paw.faint{opacity:.45}
+.sh-pawslot{display:contents}
+.sh-level{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.sh-ringslot{display:contents}
+.sh-ring{display:inline-grid;grid-auto-flow:column;align-items:center;justify-content:center;gap:6px;min-width:42px;height:42px;padding:0 6px;
+  border-radius:999px;border:2.5px solid var(--accent);background:var(--panel);color:var(--ink);font-family:var(--display);font-weight:900;font-size:20px}
+.sh-ring b{font-weight:900}
+.sh-ring.ready{cursor:pointer;background:var(--accent);color:var(--panel);padding:0 12px}
+.sh-ring small{font-family:var(--head);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.sh-xpwrap{display:flex;flex-direction:column;gap:4px;width:110px}
+.sh-xp{min-height:0;padding:3px 7px;font-family:var(--head);font-size:14px;text-align:right}
+.sh-barslot{display:contents}
+.sh-xpbar{display:block;height:6px;border-radius:3px;overflow:hidden;background:color-mix(in srgb,var(--ink) 16%,transparent)}
+.sh-xpbar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+/* the menus: under the tab bar (40), over the cards; #shBack is transparent */
+.sh-back{display:none;position:fixed;inset:0;z-index:35}
+.sh-back.open{display:block}
+.sh-fly{display:none;position:absolute;z-index:36;min-width:190px;max-width:min(280px,calc(100% - 12px));padding:6px;
+  background:var(--paper);border:2px solid var(--accent);border-radius:10px;box-shadow:var(--shadow)}
+.sh-fly.open{display:block}
+.sh-fly button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:7px;padding:9px 10px;
+  font-family:var(--head);font-size:13px;color:var(--ink);cursor:pointer}
+.sh-fly button:hover,.sh-fly button:focus-visible{background:var(--paper-2);color:var(--accent)}
+.sh-fly button.danger{color:var(--brick)}
+.sh-fly .sh-add{color:var(--accent-2)}
+.sh-fly .sh-st{color:var(--accent-2);margin-left:4px}
+.sh-flyhd{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+  padding:4px 10px 6px;margin-bottom:4px;border-bottom:1px dotted var(--hair)}
+/* Change / Remove at the foot of a species or background window */
+#mBody > .rowbtns:last-child{margin:14px 0 0}
 
 .hpwrap{position:relative;background:var(--field);border-radius:9px;padding:10px}
 .hpwrap::before{content:"";position:absolute;inset:1px;border:2.5px solid var(--brick);border-radius:10px;pointer-events:none}

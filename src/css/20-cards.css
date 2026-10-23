@@ -135,9 +135,6 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 .fitoggle{background:transparent;border:0;cursor:pointer;padding:0 2px;display:inline-flex;align-items:center;flex:none;color:var(--ink-soft)}
 .fitem .top{align-items:center}
 input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
-.rest-row{display:flex;gap:8px}
-.restbtn{flex:1;font-family:var(--head);font-weight:700;font-size:12px;letter-spacing:.03em;padding:7px 6px;border-radius:8px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer}
-.restbtn:hover{border-color:var(--accent-2);color:var(--accent-2)}
 .hd-wrap{margin-top:10px}
 /* The Hit Dice bar, under the rest buttons in Rest & Recovery. Same inset
    ::before as .hpwrap — and for the reason the old comment here got wrong once

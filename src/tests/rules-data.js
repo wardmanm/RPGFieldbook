@@ -1546,10 +1546,37 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // starBtn is looked up UNGUARDED nowhere any more, but it is still the id both
   // recompute() and wire() reach for, and there must be exactly one
   ck('exactly one starBtn', (t.match(/id="starBtn"/g) || []).length === 1);
-  // was a one-physical-line regex, which pinned the label's formatting as well
-  // as the fact that it holds the star
-  ck('the star sits in the Vitals label row',
-     ((vitals.match(/<div class="label">[\s\S]*?<\/div>/) || [''])[0]).includes('id="starBtn"'));
+  // #103: the star, both rests, the name and the level moved into the sheet
+  // header (spec §6.1). Same ids, so recompute() and wire()'s on(...) still find
+  // them. (Was "the star sits in the Vitals label row".)
+  {
+    const at = t.indexOf('id="sheetHead"');
+    const head = at < 0 ? '' : t.slice(t.lastIndexOf('<header', at), t.indexOf('</header>', at) + 9);
+    const need = ['data-path="character.name"', 'id="btnShortRest"', 'id="btnLongRest"', 'id="starBtn"', 'id="shSub"', 'id="shLevel"'];
+    ck('#103 the sheet header holds the name, both rests, the star, the class line and the level',
+       need.every(s => head.includes(s)), need.filter(s => !head.includes(s)));
+    ck('#103 ...each exactly once in the whole template',
+       need.every(s => (t.match(new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length === 1),
+       need.filter(s => (t.split(s).length - 1) !== 1));
+    ck('#103 the header sits in the Sheet tab, above the columns',
+       at > t.indexOf('id="tab-sheet"') && at < t.indexOf('class="cols"', t.indexOf('id="tab-sheet"')));
+    ck('#103 its icons row is a .label with a hidden "Character" caption, for the ☰ and the note button',
+       /<div class="label sh-bar"><span class="sh-cap">Character<\/span><span class="grow"><\/span>/.test(head));
+    ck('#103 the star is no longer in the Vitals label row',
+       !((vitals.match(/<div class="label">[\s\S]*?<\/div>/) || [''])[0]).includes('id="starBtn"'));
+    ck('#103 the portrait card keeps no name, Experience or Level field',
+       !/data-path="character.xp"/.test(t) && !/id="levelDisp"/.test(t) && /id="levelDisp"/.test(js) && /id="pbDisp"/.test(t));
+    ck('#103 the header\'s flyout hooks are wired',
+       ['[data-shcls]', '[data-shaddcls]', '[data-shrace]', '[data-shbg]', '[data-shchange]', '[data-shinfo]', '[data-shlevel]', '[data-shpaw]', '[data-shfam]', '[data-shlevelup]']
+         .every(h => js.includes('closest("' + h + '")')),
+       ['[data-shcls]', '[data-shaddcls]', '[data-shrace]', '[data-shbg]', '[data-shchange]', '[data-shinfo]', '[data-shlevel]', '[data-shpaw]', '[data-shfam]', '[data-shlevelup]']
+         .filter(h => !js.includes('closest("' + h + '")')));
+    ck('#103 renderClassRace() and renderFamiliars() repaint the header',
+       /function renderClassRace\(\)\{[\s\S]*?renderSheetHead\(\)/.test(js) && /function renderFamiliars\(\)\{[\s\S]*?renderSheetHead\(\)[\s\S]*?\n\}/.test(js));
+    ck('#103 the header band takes theme tokens only', (() => {
+      const r = sheetCss.match(/\.sheet-head\{[^}]*\}/); return !!r && !/#[0-9a-f]{3,6}\b/i.test(r[0]) && /var\(--accent\)/.test(r[0]);
+    })());
+  }
 
   // Hit Dice live in Rest & Recovery, under the rest buttons: they are spent on
   // a short rest and come back on a long one. They sat in Vitals for one release
@@ -1563,15 +1590,15 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
      owned.every(s => vitals.includes(s)), owned.filter(s => !vitals.includes(s)));
   ck('...and no hit dice', !hd.some(s => vitals.includes(s)) &&
      !vitals.includes('hitdiceInput') && !vitals.includes('data-hdmode'), hd.filter(s => vitals.includes(s)));
-  ck('Rest & Recovery keeps both rest buttons',
-     rest.includes('id="btnShortRest"') && rest.includes('id="btnLongRest"'));
+  // #103: the rest buttons moved into the sheet header (asserted there)
+  ck('#103 Rest & Recovery no longer holds the rest buttons',
+     !rest.includes('id="btnShortRest"') && !rest.includes('id="btnLongRest"'));
   ck('...and owns the hit-dice bar', hd.every(s => rest.includes(s)), hd.filter(s => !rest.includes(s)));
   // #103: the input and the mode pill moved OUT of the Rest card and into the
   // spend box's foot (hdSpendHTML in 65-resources.js) — each id now exists
   // exactly once, inside the box, not in the static template at all
   ck('...but no longer the hit-dice input or the mode pill (they moved into the spend box)',
      !rest.includes('id="hitdiceInput"') && !rest.includes('data-hdmode'), rest);
-  ck('...under the rest buttons', rest.indexOf('id="hdWrap"') > rest.indexOf('id="btnLongRest"'));
   ck('...and no hit points', !/data-hp=/.test(rest), rest);
   ck('the hit-dice bar is written once, not in two cards',
      (t.match(/id="hdWrap"/g) || []).length === 1);
@@ -2102,13 +2129,15 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const on = (name, ids) => ids.every(id => sec(name).includes('id="' + id + '"'));
   ck('Appearance holds the look and the interface switches', on('secAppearance', ['segSkin', 'segTheme', 'swRough', 'swTabIcons', 'swBackdrop']));
   ck('Sheet display holds the card choices', on('secDisplay', ['segStatStyle', 'swHpColor', 'swTrackers']));
+  ck('#103 ...and the advancement choice and the familiars icon', on('secDisplay', ['segAdv', 'swFamiliars']));
   ck('Carrying holds size, encumbrance, coins and the live line', on('secCarrying', ['setSize', 'segEnc', 'swCoinWeight', 'encHint']));
   ck('Rules data holds the sources, the list and the sheet check', on('secRules', ['srcList', 'newSrc', 'btnFetchRules', 'btnClearRules', 'rulesData', 'btnCharUpdate']));
   ck('Backup holds the library and the settings file', on('secBackup', ['swHome', 'btnExportSettings', 'btnImportSettings', 'setImpStatus']));
   ck('encumbrance is a segmented choice now, not a dropdown', !/id="setEnc"/.test(src) &&
      /character\.encumbrance=b\.dataset\.enc;/.test(src) && ['none', 'standard', 'variant'].every(v => sec('secCarrying').includes('["' + v + '",')));
   ck('every switch on the dialog says its state to a screen reader',
-     (src.match(/class="switch /g) || []).length === 6 && (src.match(/role="switch" aria-checked=/g) || []).length === 6 &&
+     // 7 since #103 added the familiars-icon switch
+     (src.match(/class="switch /g) || []).length === 7 && (src.match(/role="switch" aria-checked=/g) || []).length === 7 &&
      /const s=e\.target\.closest\("\.switch"\);if\(s\)s\.setAttribute\("aria-checked",s\.classList\.contains\("on"\)\?"true":"false"\);/.test(src));
   ck('Settings opens wide, on the remembered page; a dialog opened from it does not',
      /openModal\("Settings",[\s\S]*?\{wide:true\}\);/.test(src) && /setPageOf\(settings\.setPage,hasChar\)/.test(src) &&
