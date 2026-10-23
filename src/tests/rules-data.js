@@ -1693,7 +1693,7 @@ function block(html, needle, tag) {
   ck('the seed, re-sync and un-seed never touch the lock',
      ['seedLevel1HP', 'resyncLevel1HP', 'removeClass'].every(n => fnBody(n) && !/hp\.locked/.test(fnBody(n))));
   ck('doLevelUp clears the lock',
-     /function doLevelUp\(\)\{[\s\S]*?character\.hp\.locked=false;renderHP\(\)/.test(cls));
+     /function doLevelUp\(idx\)\{[\s\S]*?character\.hp\.locked=false;renderHP\(\)/.test(cls));
   ck('...and reads it for the HP step BEFORE clearing it',
      /const hp=hpChoice\([^)]*\);[\s\S]{0,800}character\.hp\.locked=false/.test(fnBody('doLevelUp')));
   ck('the only re-lock is the HP step restoring what it found',

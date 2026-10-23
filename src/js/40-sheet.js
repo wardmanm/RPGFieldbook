@@ -404,14 +404,17 @@ function stepStatusTap(id,deltaSec,viaKey){
 
 /* One familiar's row: the Familiars card's list and the header's familiar
    modal (openFamiliar) draw the same markup, so their Summon / Edit / Delete
-   are the same delegated buttons (90-boot.js). */
+   are the same delegated buttons (90-boot.js). Edit and Delete keep `ed` for
+   #97's guard, inert now that familiars is off EDIT_CARDS (final review I-3).
+   Summon / Dismiss is a button, so the keyboard reaches it and can be put
+   back on it after the modal repaints (M-14). */
 function familiarCardHTML(f){
   const on=!!f.active;
   const stats=[f.ac!==""&&f.ac!=null?`AC ${esc(f.ac)}`:"",(f.hp&&(f.hp.max!==""&&f.hp.max!=null))?`HP ${esc(f.hp.cur||0)}/${esc(f.hp.max)}`:"",f.speed?`Speed ${esc(f.speed)}`:""].filter(Boolean).join(" · ");
   return `<div class="item${on?" on-fam":""}"><div class="top">
         <span class="nm">${esc(f.name||"Familiar")}</span>
         ${f.kind?`<span class="qty">${esc(f.kind)}</span>`:""}
-        <span class="fam-state ${on?"on":"off"}" data-toggle-familiar="${esc(f.id)}">${on?"● Summoned":"○ Dismissed"}</span>
+        <button type="button" class="fam-state ${on?"on":"off"}" data-toggle-familiar="${esc(f.id)}" aria-pressed="${on?"true":"false"}">${on?"● Summoned":"○ Dismissed"}</button>
         <button class="icon ed" data-edit-familiar="${esc(f.id)}" aria-label="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         <button class="icon danger ed" data-del-familiar="${esc(f.id)}" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>
       </div>
@@ -454,7 +457,9 @@ function classLineHTML(c){
     ?cls.map(({x,i})=>`<button type="button" class="sh-cls" data-shcls="${esc(i)}" aria-haspopup="menu" aria-expanded="false">${esc(x.name)} ${esc(num(x.level))}</button>`).join(" · ")
     :`<button type="button" class="sh-cls sh-add" data-shaddcls>+ Class</button>`];
   const r=c&&c.race&&c.race.name,b=c&&c.bg&&c.bg.name;
-  parts.push(r?`<button type="button" class="sh-org" data-shrace="${esc(r)}">${esc(r)}</button>`
+  /* the subrace or lineage follows the species, as the Origin chip had it */
+  const sr=r&&typeof c.race.subrace==="string"&&c.race.subrace.trim()?" · "+esc(c.race.subrace.trim()):"";
+  parts.push(r?`<button type="button" class="sh-org" data-shrace="${esc(r)}">${esc(r)}${sr}</button>`
               :`<button type="button" class="sh-org sh-add" data-add-race>+ ${esc(raceTerm())}</button>`);
   parts.push(b?`<button type="button" class="sh-org" data-shbg="${esc(b)}">${esc(b)}</button>`
               :`<button type="button" class="sh-org sh-add" data-add-bg>+ Background</button>`);
@@ -463,7 +468,8 @@ function classLineHTML(c){
 /* The menu under one class: the Class card's controls, moved. Its buttons are
    the existing hooks where one exists (subclass, Remove, + Add class), so they
    run exactly what the card ran. No ids: [data-shlevel] is delegated, and
-   the Class card and its two level buttons are gone (#103). Remove's `ed` is
+   the Class card and its two level buttons are gone (#103). Level up / down
+   carry this class's index (data-shidx), so they act on this class. Remove's `ed` is
    inert here: the flyout sits in the header, which is not an EDIT_CARDS card,
    so no ✎ toggle hides it. It is kept so every data-del-* button carries ed
    (the #97 guard in rules-data.js), and a Remove that ever lands in a card
@@ -476,8 +482,8 @@ function classFlyHTML(c,i){
     :`<button type="button" role="menuitem" data-choose-sub="${esc(x.name)}">Choose subclass</button>`;
   return `<div class="sh-flyhd">${esc(x.name)} ${esc(num(x.level))}</div>`+
     `<button type="button" role="menuitem" data-shinfo="${esc(i)}">About ${esc(x.name)}</button>`+sub+
-    `<button type="button" role="menuitem" data-shlevel="up">▲ Level up</button>`+
-    `<button type="button" role="menuitem" data-shlevel="down">▼ Level down</button>`+
+    `<button type="button" role="menuitem" data-shlevel="up" data-shidx="${esc(i)}">▲ Level up</button>`+
+    `<button type="button" role="menuitem" data-shlevel="down" data-shidx="${esc(i)}">▼ Level down</button>`+
     `<button type="button" role="menuitem" data-shaddcls>+ Add class</button>`+
     `<button type="button" role="menuitem" class="danger ed" data-del-class="${esc(i)}">Remove</button>`;
 }
@@ -490,12 +496,15 @@ function levelRingHTML(c){
     ?`<button type="button" class="sh-ring ready" data-shlevelup title="Level up ready"><b id="levelDisp">${lvl}</b><small>Level up ready</small></button>`
     :`<span class="sh-ring" title="Level"><span class="sh-vh">Level </span><b id="levelDisp">${lvl}</b></span>`;
 }
-/* XP toward the next level's threshold, from 0; full at the top of the table.
-   Nothing when the XP is not a number (it shows as typed). */
+/* XP through the current level: empty at this level's threshold, full at the
+   next one's (Mike's ruling on the final review's M-9), clamped, so XP below
+   the level's own threshold reads empty. Full at the top of the table. Nothing
+   when the XP is not a number (it shows as typed). */
 function xpBarHTML(c){
   const p=advancementOf(c)==="xp"?xpProgress(c):null;if(!p)return "";
   const fmtN=n=>n.toLocaleString("en-US");
-  const pct=p.next===null||p.ready?100:Math.min(99,Math.round(p.xp/p.next*100));
+  const f=p.next===null||p.ready?1:Math.max(0,Math.min(1,(p.xp-p.cur)/((p.next-p.cur)||1)));
+  const pct=f===1?100:Math.min(99,Math.round(f*100));
   const tip=p.next===null?fmtN(p.xp)+" XP":fmtN(p.xp)+" / "+fmtN(p.next);
   return `<span class="sh-xpbar" title="${esc(tip)}" role="img" aria-label="${esc(tip+" XP")}"><i style="width:${esc(String(pct))}%"></i></span>`;
 }
@@ -510,16 +519,24 @@ function levelBadgeHTML(c){
 }
 /* The header's conditional icon: the paw, while the character's
    showFamiliars is on — faint with no familiar, its menu then offering + Add. */
-function sheetHeadHTML(c){
+function pawHTML(c){
   if(!(c&&c.showFamiliars===true))return "";
   const n=Array.isArray(c.familiars)?c.familiars.length:0;
   return `<button type="button" class="sh-ico sh-paw${n?"":" faint"}" data-shpaw aria-label="Familiars" title="Familiars &amp; companions" aria-haspopup="menu" aria-expanded="false">🐾</button>`;
 }
+/* The paw's menu also carries what the hidden Familiars card's heading did
+   (final review I-3): its combat-view toggle and its section note. Both are the
+   existing delegated hooks — [data-combatbtn] and [data-notebtn] — run after
+   the menu closes, so they act exactly as the card's buttons did. */
 function famFlyHTML(c){
   const fs=(Array.isArray(c&&c.familiars)?c.familiars:[]).filter(f=>f&&typeof f==="object");
+  const cv=combatSectionsOf(c).includes("familiars"),cvt=combatToggleText("familiars",cv),nt=hasNote("familiars");
   return `<div class="sh-flyhd">Familiars &amp; companions</div>`+
     fs.map(f=>`<button type="button" role="menuitem" data-shfam="${esc(f.id)}" aria-label="${esc(String(f.name||"Familiar")+(f.active?", summoned":", dismissed"))}">${esc(f.name||"Familiar")} <span class="sh-st">${f.active?"●":"○"}</span></button>`).join("")+
-    `<button type="button" role="menuitem" class="sh-add" data-add="familiar">+ Add familiar</button>`;
+    `<button type="button" role="menuitem" class="sh-add" data-add="familiar">+ Add familiar</button>`+
+    `<div class="sh-flysep" role="separator"></div>`+
+    `<button type="button" role="menuitemcheckbox" class="sh-flyopt" data-combatbtn="familiars" aria-checked="${cv?"true":"false"}" title="${esc(cvt.title)}">${iconSVG("ui","Combat","cvicon")} Combat view <span class="sh-st">${cv?"on":"off"}</span></button>`+
+    `<button type="button" role="menuitem" class="sh-flyopt" data-notebtn="familiars">${nt?"Edit note":"Add a note"}</button>`;
 }
 /* The ring and the bar, without touching the XP box: typing in it repaints
    these live, and a full rebuild would take the caret out of it. */
@@ -537,7 +554,7 @@ function renderLevelBadge(){
 function renderSheetHead(){
   closeShFly();
   const sub=document.getElementById("shSub");if(sub)sub.innerHTML=classLineHTML(character);
-  const paw=document.getElementById("shPaw");if(paw)paw.innerHTML=sheetHeadHTML(character);
+  const paw=document.getElementById("shPaw");if(paw)paw.innerHTML=pawHTML(character);
   renderLevelBadge();
 }
 /* The class and familiar menus: one popover (#shFly) hung under the button

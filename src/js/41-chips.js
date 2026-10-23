@@ -5,6 +5,14 @@
    anything someone typed. Also here: the two ruleset-specific helpers #103
    adds, the advancement table and the default languages. */
 const CHIP_KEYS=["resists","immunes","senses","languages"];
+/* A language's source: "system" (the ruleset's default), "race:<Name>" or
+   "bg:<Name>" (a grant's sid), or "" (the player's). Looked up as an OWN key:
+   "constructor" or "__proto__:x" in a hand-edited file would otherwise find
+   Object.prototype's members. Anything unknown is the player's (chipClean), so
+   its chip has the × and removeChip() agrees to take it. */
+const CHIP_SRC={system:"rules",race:"species",bg:"background"};
+function chipSrcKey(src){const k=String(src||"").split(":")[0];return Object.prototype.hasOwnProperty.call(CHIP_SRC,k)?k:"";}
+function chipSrcLabel(src){const k=chipSrcKey(src);return k?CHIP_SRC[k]:"";}
 /* `mint`: migrate() gives an entry with no id one; a read never invents one,
    so reading is pure. */
 function chipClean(list,key,mint){
@@ -15,7 +23,7 @@ function chipClean(list,key,mint){
     const k=name.toLowerCase();if(seen.has(k))return;seen.add(k);
     const e={id:(typeof x.id==="string"&&x.id)?x.id:(mint?uid():""),name};
     if(key==="senses"){const r=typeof x.range==="number"?x.range:(typeof x.range==="string"&&/^\s*\d+\s*$/.test(x.range)?parseInt(x.range,10):NaN);e.range=(isFinite(r)&&r>0)?Math.round(r):"";}
-    if(key==="languages")e.src=typeof x.src==="string"?x.src:"";
+    if(key==="languages")e.src=typeof x.src==="string"&&chipSrcKey(x.src)?x.src:"";
     out.push(e);
   });
   return out;
@@ -47,13 +55,14 @@ function xpNumber(v){
   const s=v.trim().replace(/,/g,"");
   return /^\d+$/.test(s)?parseInt(s,10):null;
 }
-/* {xp, level (the sheet's total level), next (XP for level+1, or null), ready} */
+/* {xp, level (the sheet's total level), cur (XP for that level, 0 past the
+   table), next (XP for level+1, or null), ready} — the bar fills cur → next. */
 function xpProgress(c){
   const xp=xpNumber(c&&c.xp);if(xp===null)return null;
   const level=(Array.isArray(c.classes)?c.classes:[]).reduce((a,x)=>a+num(x&&x.level),0)||num(c.level)||1;
-  const t=advancementFor(c),row=t.find(r=>r[1]===level+1);
-  const next=row?row[0]:null;
-  return {xp,level,next,ready:next!==null&&xp>=next};
+  const t=advancementFor(c),row=t.find(r=>r[1]===level+1),here=t.find(r=>r[1]===level);
+  const next=row?row[0]:null,cur=here?here[0]:0;
+  return {xp,level,cur,next,ready:next!==null&&xp>=next};
 }
 function defaultLanguagesFor(c){
   const d=rulesetDecl(rules.defaultLanguages,c);
@@ -93,8 +102,6 @@ const CHIP_SUGGEST={
     "Blinded","Charmed","Deafened","Exhaustion","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"],
   senses:["Blindsight","Darkvision","Tremorsense","Truesight"]
 };
-const CHIP_SRC={system:"rules",race:"species",bg:"background"};
-function chipSrcLabel(src){const k=String(src||"").split(":")[0];return CHIP_SRC[k]||"";}
 function chipsHTML(c,key){
   const list=chipList(c,key);
   const chips=list.map(x=>{

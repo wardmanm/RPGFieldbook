@@ -1704,4 +1704,35 @@ ck('itemMetaLine still ends with the weight',
   X.resetRules();
 }
 
+// ---------- #103 I-2: a class's own menu levels that class
+// The header has one menu per class, so its Level up / down take the class's
+// index. With no index (Level up ready, older callers) they ask as before.
+{
+  const realAlert=ctx.alert, realOM=ctx.openModal; let said=null, asked=null;
+  ctx.alert=m=>{said=m;}; ctx.openModal=t=>{asked=t;};
+  const lv=()=>X.character.classes.map(c=>c.name+' '+c.level).join(',');
+  try{
+    hpSetup(CLS); X.character.classes=[{name:'Fighter',level:3},{name:'Wizard',level:2}]; X.character.level=5;
+    ctx.doLevelDown(1);
+    ck('#103 I-2 Level down from the Wizard menu lowers the Wizard, without asking', lv()==='Fighter 3,Wizard 1' && asked===null, [lv(),asked]);
+    X.character.classes=[{name:'Fighter',level:3},{name:'Wizard',level:1}]; said=null; asked=null;
+    ctx.doLevelDown(1);
+    ck('#103 I-2 ...at Wizard 1 it says so and leaves the Fighter alone', lv()==='Fighter 3,Wizard 1' && asked===null && /Remove in the class's menu/.test(said||''), [lv(),said]);
+    ck("#103 I-2 neither alert names the ✕ the Class card had", !/✕/.test(fs.readFileSync(path.join(__dirname,'..','js','56-class.js'),'utf8').match(/function doLevelDown[\s\S]*?\n}\n/)[0]));
+    asked=null;
+    ctx.doLevelUp(1);
+    ck('#103 I-2 Level up on index 1 levels the Wizard, without asking which class', lv()==='Fighter 3,Wizard 2' && asked!=='Level up — which class?', [lv(),asked]);
+    ctx.doLevelUp(0);
+    ck('#103 I-2 ...and on index 0 the Fighter', lv()==='Fighter 4,Wizard 2', lv());
+    asked=null;
+    ctx.doLevelUp();
+    ck('#103 I-2 with no index, several classes still ask which', asked==='Level up — which class?' && lv()==='Fighter 4,Wizard 2', [lv(),asked]);
+    X.character.classes=[{name:'Fighter',level:3},{name:'Wizard',level:1}]; asked=null;
+    ctx.doLevelDown();
+    ck('#103 I-2 ...and Level down with no index keeps its one-eligible shortcut', lv()==='Fighter 2,Wizard 1' && asked===null, lv());
+    ctx.doLevelDown(7);
+    ck('#103 I-2 an index that is not a class does nothing', lv()==='Fighter 2,Wizard 1');
+  }finally{ctx.alert=realAlert; ctx.openModal=realOM;}
+}
+
 ck.done();

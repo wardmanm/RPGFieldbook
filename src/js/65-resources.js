@@ -4,9 +4,13 @@ function renderDeath(){
   document.querySelectorAll('#deathFail .c').forEach(c=>c.classList.toggle("on",num(c.dataset.i)<=(character.death.fail||0)));
 }
 /* ---- rests (derived from HP, spell slots, and caster data) ---- */
-function restSummary(title,lines,note){
-  const body=(lines.length?`<ul style="margin:2px 0 8px;padding-left:18px;line-height:1.6">${lines.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>`:"")+(note?`<p class="hint">${esc(note)}</p>`:"")+`<div class="m-actions"><button class="tbtn primary" id="restOk">OK</button></div>`;
+/* opts.hd: offer "Spend a hit die" beside OK — the short rest's summary, while
+   any are left. It opens the spend box in this window's place. */
+function restSummary(title,lines,note,opts){
+  const hd=!!(opts&&opts.hd);
+  const body=(lines.length?`<ul style="margin:2px 0 8px;padding-left:18px;line-height:1.6">${lines.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>`:"")+(note?`<p class="hint">${esc(note)}</p>`:"")+`<div class="m-actions">${hd?`<button class="tbtn" id="restHd">Spend a hit die</button>`:""}<button class="tbtn primary" id="restOk">OK</button></div>`;
   openModal(title,body);const b=document.getElementById("restOk");if(b)b.addEventListener("click",closeModal);
+  const h=hd?document.getElementById("restHd"):null;if(h)h.addEventListener("click",()=>openHdSpend());
 }
 function resetFeatureUses(kinds){
   let n=0;(character.features||[]).forEach(f=>{if(f.uses&&kinds.includes(f.uses.per||"")){if(f.uses.used){n++;}f.uses.used=0;}});
@@ -55,7 +59,7 @@ function shortRest(){
   const resBack=resetResources(["short"]);
   renderFeatures();renderInventory();renderResources();recompute();scheduleSave();
   const lines=[];if(pactMsg)lines.push(pactMsg);if(featBack)lines.push(`${featBack} short-rest feature tracker${featBack===1?"":"s"} reset`);if(itemBack)lines.push(`${itemBack} short-rest item tracker${itemBack===1?"":"s"} reset`);if(resBack)lines.push(`${resBack} short-rest resource${resBack===1?"":"s"} restored`);
-  restSummary("Short rest",lines.length?lines:["No resources auto-recover on a short rest for this character."],"Spend Hit Dice from the Rest & Recovery card to heal. Regular spell slots return on a long rest, not a short one.");
+  restSummary("Short rest",lines.length?lines:["No resources auto-recover on a short rest for this character."],"Tap the hit-dice bar under your hit points to spend Hit Dice and heal. Regular spell slots return on a long rest, not a short one.",{hd:hitDicePool().some(p=>p.total>p.used)});
 }
 /* ---- hit dice pool (derived from class hit die × level) ---- */
 function hitDicePool(){
@@ -79,11 +83,10 @@ function renderHitDice(){
      into #hdWrap. They can't be split: this write feeds the pool below it, and
      no caller ever wants only one of them. */
   if(!character.hdManual)character.hitdice=hdString(pool);
-  /* #hitdiceInput and the mode pill now live inside the spend box (#103),
-     rebuilt fresh by hdSpendHTML() each time it opens — but the box can stay
-     open across a mode toggle, so this keeps patching whichever copy is
-     currently in the document, same as before the box existed. `.hidden` is
-     the IDL property, not style.display: a cleared inline style would NOT
+  /* #hitdiceInput and the mode pill (hdFootHTML) are in the spend box's foot,
+     or inline here when there is no pool to open the box from — one copy at a
+     time, wherever it is, so this patches whichever is in the document. `.hidden`
+     is the IDL property, not style.display: a cleared inline style would NOT
      override the markup's own `hidden` attribute, because the UA stylesheet's
      [hidden]{display:none} rule would still apply underneath it. */
   const inp=document.getElementById("hitdiceInput"), modeBtn=document.querySelector("[data-hdmode]");
@@ -91,11 +94,56 @@ function renderHitDice(){
   if(modeBtn){modeBtn.textContent=character.hdManual?"manual":"auto";modeBtn.classList.toggle("manual",character.hdManual);}
   const el=document.getElementById("hdWrap");if(!el)return;
   const warn=character.hdManual?`<div class="hd-warn">⚠ Manual Hit Dice — they won't follow your class when you level up. <button class="linkbtn" data-hdreset>Reset to class</button></div>`:"";
-  if(!pool.length){
-    el.innerHTML=warn+`<p class="hint hd-none">${character.hdManual?"Type your dice above, e.g. 2d8 + 1d6.":"Add a class and your Hit Dice appear here. Or switch to manual and type them in."}</p>`;
-    return;
-  }
-  el.innerHTML=warn+hdBarHTML(pool,hdConMod());
+  const main=warn+(pool.length?hdBarHTML(pool,hdConMod())
+    :`<p class="hint hd-none">${character.hdManual?"Type your dice below, e.g. 2d8 + 1d6."
+      :(character.classes||[]).some(c=>c&&c.name)?"Your rules data has no hit die for your class. Switch to manual below and type your dice in."
+      :"Add a class and your Hit Dice appear here, or switch to manual below and type them in."}</p>`);
+  /* The player is typing in the inline field: redraw only what is above it, so
+     the caret stays, and dice that start to parse mid-word ("2d8") don't take
+     the field away. It goes on the next full draw. */
+  const own=el.querySelector&&el.querySelector("#hitdiceInput");
+  if(own&&document.activeElement===own){const m=el.querySelector(".hd-main");if(m){m.innerHTML=main;return;}}
+  /* No pool, no bar to open the box from — so the pill and the field are
+     here (final review I-1: a custom class could not get hit dice at all).
+     Never while the box is open: its foot already holds both ids. */
+  el.innerHTML=`<div class="hd-main">${main}</div>`+(!pool.length&&!hdBoxOpen()?hdFootHTML():"");
+}
+/* the spend box is open when #mBody holds its Roll button */
+function hdBoxOpen(){const b=document.getElementById("mBody");return !!(b&&b.querySelector&&b.querySelector("#hdRollMe"));}
+/* The auto/manual pill and the manual-dice field, in one place for both
+   copies (the box's foot and the inline one). */
+function hdFootHTML(){
+  return `<div class="hd-foot">Hit dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">${character.hdManual?"manual":"auto"}</button> `+
+    `<input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" value="${esc(character.hitdice||"")}"${character.hdManual?"":" readonly hidden"} aria-label="Hit Dice"></div>`;
+}
+/* After the dice or the mode change (final review M-8): an open box is drawn
+   again from the new pool, keeping the picked die, so its rows and Roll/Apply
+   follow; with nothing left to spend from, it closes and the field comes back
+   under the hit points. Then the keyboard goes back where it was: `focusSel`,
+   with the caret where it stood when `keepCaret`. */
+function hdRefresh(focusSel,keepCaret){
+  const a=document.activeElement;
+  const caret=keepCaret&&a&&a.id==="hitdiceInput"&&typeof a.selectionStart==="number"?a.selectionStart:null;
+  if(hdBoxOpen()){
+    const on=document.querySelector("#mBody .hd-pick.on [data-hdpick]");
+    if(hitDicePool().length){renderHitDice();openHdSpend(on&&on.dataset?on.dataset.hdpick:undefined);}
+    else{closeModal();renderHitDice();}
+  }else renderHitDice();
+  const f=focusSel==="#hitdiceInput"?document.getElementById("hitdiceInput"):document.querySelector(focusSel);
+  if(f&&!f.hidden&&f.focus){f.focus();if(caret!==null&&f.setSelectionRange)f.setSelectionRange(caret,caret);}
+}
+/* The shared [data-path] input handler has written character.hitdice (and
+   saves); this redraws what follows from it. */
+function hdDiceEdited(){hdRefresh("#hitdiceInput",true);}
+/* The auto/manual pill. Switching to manual asks first: those dice no longer
+   follow the class at level-up. */
+function toggleHdMode(){
+  if(!character.hdManual){
+    if(!confirm("Switch to manual Hit Dice? They will no longer follow your class rules when you level up."))return;
+    character.hdManual=true;
+  }else character.hdManual=false;
+  hdRefresh(character.hdManual?"#hitdiceInput":"[data-hdmode]",false);
+  scheduleSave();
 }
 /* ---- #103: the hit-dice bar and the spend box ----
    One bar per character; tapping it opens the box. The maths is the old
@@ -133,15 +181,16 @@ function hdSpendHTML(pool,sel,conMod,cur,max){
   return rows+
     `<div class="hd-how"><button type="button" class="tbtn primary" id="hdRollMe"${none?" disabled":""}>🎲 Roll for me</button> <span>or</span> `+
     `<label>I rolled <input id="hdTyped" inputmode="numeric" size="3"${none?" disabled":""}></label> <button type="button" class="tbtn" id="hdApply" disabled>Apply</button></div>`+
-    `<div class="hd-res" id="hdRes" aria-live="polite">${none?HD_NONE_LEFT:""}</div>`+
-    `<div class="hd-foot">Hit dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">${character.hdManual?"manual":"auto"}</button> `+
-    `<input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" value="${esc(character.hitdice||"")}"${character.hdManual?"":" readonly hidden"} aria-label="Hit Dice"></div>`;
+    `<div class="hd-res" id="hdRes" aria-live="polite">${none?HD_NONE_LEFT:""}</div>`+hdFootHTML();
 }
 /* Opens the box. `sel` is which die row is picked — kept across a re-open so
    a used +/-, or picking a different die, doesn't lose the player's place.
    Defaults to the first die with any left, so Roll/Apply are reachable
    without a tap first. */
 function openHdSpend(sel){
+  /* the box's foot brings the pill and the field: the sheet's inline copy
+     (renderHitDice, no pool) goes first, so neither id is in the page twice */
+  {const f=document.querySelector("#hdWrap .hd-foot");if(f)f.remove();}
   const pool=hitDicePool();
   if(!pool.some(p=>p.die===sel))sel=(pool.find(p=>p.total>p.used)||pool[0]||{}).die;
   openModal("Spend a hit die",hdSpendHTML(pool,sel,hdConMod(),character.hp.cur,effMaxHP()));

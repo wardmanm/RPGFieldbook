@@ -114,6 +114,11 @@ html[data-rough="on"] .vbox::before{filter:url(#rough)}
 .sh-fly button.danger{color:var(--brick)}
 .sh-fly .sh-add{color:var(--accent-2)}
 .sh-fly .sh-st{color:var(--accent-2);margin-left:4px}
+/* the familiars menu's section controls, under its list: combat view and note */
+.sh-flysep{border-top:1px dotted var(--hair);margin:4px 6px}
+.sh-fly .sh-flyopt{color:var(--ink-soft)}
+.sh-fly .cvicon{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:4px;color:currentColor}
+.sh-fly .sh-flyopt[aria-checked="true"]{color:var(--accent-2)}
 .sh-flyhd{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
   padding:4px 10px 6px;margin-bottom:4px;border-bottom:1px dotted var(--hair)}
 /* Change / Remove at the foot of a species or background window */
@@ -391,7 +396,6 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 #familiarList .fam-state{white-space:nowrap}  /* don't break "Summoned" inside its own pill */
 .cr-chip{display:flex;align-items:center;gap:9px;background:var(--field);border:2px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:8px;cursor:pointer;position:relative;min-width:0}
 .cr-chip:hover{border-color:var(--accent-2)}
-.cr-chip .cr-k{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;flex:none}
 .cr-chip .cr-n{font-family:var(--head);font-weight:700;flex:1;letter-spacing:.02em;font-size:15px;min-width:0;overflow-wrap:anywhere;word-break:break-word}
 /* game-icons emblems (see src/icons/icons.json). These are FILLED silhouettes on
    a 512 viewBox — the opposite of every other icon in this file, which are 24x24

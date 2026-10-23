@@ -252,7 +252,10 @@ function removeClass(idx){
   character.level=totalLevel();const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   renderClassRace();renderFeatures();recompute();scheduleSave();
 }
-function doLevelUp(){
+/* `idx`: the class to level, from that class's own menu in the header (#103).
+   Without one (Level up ready, older callers) a sheet with several classes
+   asks which. An index that is not a class does nothing. */
+function doLevelUp(idx){
   if(!character.classes.length){alert("Add a class first (Add class), then you can level it up.");return;}
   const proceed=idx=>{
     const entry=character.classes[idx],d=findClassDef(entry.name);
@@ -270,23 +273,27 @@ function doLevelUp(){
     renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
     runChoices(entry.name,[hp].concat(res.choices),res.notes);
   };
+  if(idx!==undefined){if(character.classes[idx])proceed(idx);return;}
   if(character.classes.length===1){proceed(0);return;}
   openModal("Level up — which class?",character.classes.map((c,i)=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvlclass="${esc(i)}">${esc(c.name)} ${num(c.level)} → ${num(c.level)+1}</button>`).join("")+`<div class="m-actions"><button class="tbtn" id="luCancel">Cancel</button></div>`);
   document.getElementById("luCancel").addEventListener("click",closeModal);
   document.querySelectorAll("[data-lvlclass]").forEach(b=>b.addEventListener("click",()=>{const i=num(b.dataset.lvlclass);closeModal();proceed(i);}));
 }
-function doLevelDown(){
+/* `idx` as doLevelUp's: from a class's own menu it lowers that class, never
+   another that happens to be the only one above level 1. */
+function doLevelDown(idx){
   if(!character.classes.length){alert("No classes to reduce.");return;}
   const proceed=idx=>{
     const entry=character.classes[idx],d=findClassDef(entry.name);
     const newL=num(entry.level)-1;
-    if(newL<1){alert(entry.name+" is already at level 1. To remove it entirely, use the ✕ on the class.");return;}
+    if(newL<1){alert(entry.name+" is already at level 1. To remove it entirely, use Remove in the class's menu.");return;}
     entry.level=newL;                       // only lower the number; keep all traits, grants, and choices
     character.level=totalLevel();
     renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
   };
+  if(idx!==undefined){if(character.classes[idx])proceed(idx);return;}
   const eligible=character.classes.map((c,i)=>({c,i})).filter(o=>num(o.c.level)>1);
-  if(!eligible.length){alert("All classes are at level 1. To remove one, use the ✕ on the class.");return;}
+  if(!eligible.length){alert("All classes are at level 1. To remove one, use Remove in the class's menu.");return;}
   if(eligible.length===1){proceed(eligible[0].i);return;}
   openModal("Level down — which class?",eligible.map(o=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvldown="${esc(o.i)}">${esc(o.c.name)} ${num(o.c.level)} → ${num(o.c.level)-1}</button>`).join("")+`<p class="hint">This only reduces the class's level. Traits, proficiencies, and choices you've already gained are kept.</p><div class="m-actions"><button class="tbtn" id="ldCancel">Cancel</button></div>`);
   document.getElementById("ldCancel").addEventListener("click",closeModal);

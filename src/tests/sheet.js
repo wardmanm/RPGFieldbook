@@ -77,9 +77,9 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'settings', 'rbUI',
   'CHIP_KEYS', 'chipClean', 'chipList', 'advancementOf', 'SRD_ADVANCEMENT', 'advancementFor', 'xpNumber', 'xpProgress', 'defaultLanguagesFor', 'ensureDefaultLanguages', 'langParse',
   'grantLanguages', 'dropLanguages',
-  'CHIP_SUGGEST', 'chipsHTML', 'chipChooserHTML', 'openChipChooser', 'addChip', 'removeChip', 'renderDefences', 'renderBioChips',
+  'CHIP_SUGGEST', 'chipSrcLabel', 'chipsHTML', 'chipChooserHTML', 'openChipChooser', 'addChip', 'removeChip', 'renderDefences', 'renderBioChips',
   'mergeNoteInto', 'liftLanguages', 'migrateSheet103',
-  'sheetHeadHTML', 'classLineHTML', 'classFlyHTML', 'levelBadgeHTML', 'familiarCardHTML', 'famFlyHTML',
+  'pawHTML', 'classLineHTML', 'classFlyHTML', 'levelBadgeHTML', 'familiarCardHTML', 'famFlyHTML',
   'combatAddable', 'renderCombatToggles', 'jumpToNote', 'openAddClass', 'NO_RULES_HINT', 'NOTE_SECTIONS',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
@@ -2340,8 +2340,9 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
      JSON.stringify(X.blankChar().editHide) === '{}' && X.EDIT_CARDS.every(k => !X.editHidden(X.blankChar(), k)));
   // #103: class and origin leave (their Remove sits behind the header's flyout
   // and window, with a confirm); defences and proficiencies joined in Task 4
-  ck('#97 the twelve cards', JSON.stringify(X.EDIT_CARDS) ===
-     JSON.stringify(['statuses', 'attacks', 'resources', 'features', 'familiars', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies']));
+  // #103 final review I-3: familiars leaves (its card is hidden on the Sheet)
+  ck('#97 the eleven cards', JSON.stringify(X.EDIT_CARDS) ===
+     JSON.stringify(['statuses', 'attacks', 'resources', 'features', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies']));
   ck('#97 a sheet from before, and junk, read as {}',
      JSON.stringify(X.migrate({abilities: {}}).editHide) === '{}' &&
      ['x', [], null, 7].every(v => JSON.stringify(X.migrate({abilities: {}, editHide: v}).editHide) === '{}'));
@@ -4730,18 +4731,23 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('#103 the flyout offers Choose when there is no subclass, the subclass when there is',
      cf.includes('data-choose-sub="Cleric"') && X.classFlyHTML(Object.assign({}, c, {classes: [{name: 'Cleric', level: 15, subclass: 'Life'}]}), 0).includes('data-sub-info="Cleric|Life"'));
   ck('#103 a flyout for a class that is not there is empty', X.classFlyHTML(c, 7) === '');
+  // I-2: the menu's level buttons carry the class they belong to
+  const cf1 = X.classFlyHTML(Object.assign({}, c, {classes: [{name: 'Fighter', level: 3}, {name: 'Wizard', level: 1}]}), 1);
+  ck('#103 I-2 a class menu\'s Level up / down name their class', cf1.includes('data-shlevel="up" data-shidx="1"') && cf1.includes('data-shlevel="down" data-shidx="1"'), cf1);
+  ck('#103 I-2 ...and the tap passes it on', /\[data-shlevel\]"\)\)\)\{const i=num\(m\.dataset\.shidx\);return m\.dataset\.shlevel==="down"\?doLevelDown\(i\):doLevelUp\(i\);\}/.test(require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '90-boot.js'), 'utf8')));
   const typed = X.levelBadgeHTML(Object.assign({}, c, {xp: 'lots'}));
   ck('#103 XP not a number: shown as typed, no bar', typed.includes('value="lots"') && !typed.includes('sh-xpbar'));
   ck('#103 the ring holds #levelDisp, so recompute() still writes the level', lv.includes('id="levelDisp"') && lv.includes('>15<'));
-  ck('#103 the bar is as full as the XP is toward the next level',
-     /style="width:94%"/.test(lv), lv);
+  // M-9 (ruled): within the level, 165,000 → 195,000, so 183,000 is 60%
+  ck('#103 the bar is as full as the XP is through the current level',
+     /style="width:60%"/.test(lv), lv);
   ck('#103 Level up ready is said, not just coloured', /class="sh-ring ready"/.test(X.levelBadgeHTML(Object.assign({}, c, {xp: '200000'}))) &&
      X.levelBadgeHTML(Object.assign({}, c, {xp: '200000'})).includes('Level up ready'));
   ck('#103 the XP field is escaped', X.levelBadgeHTML(Object.assign({}, c, {xp: '"><b>'})).includes('value="&quot;&gt;&lt;b&gt;"'));
   ck('#103 the paw shows with the setting on, faint with no familiar',
-     X.sheetHeadHTML(Object.assign({}, c, {showFamiliars: true})).includes('data-shpaw') && !X.sheetHeadHTML(Object.assign({}, c, {showFamiliars: true})).includes('faint') &&
-     X.sheetHeadHTML(Object.assign({}, c, {showFamiliars: true, familiars: []})).includes('sh-paw faint'));
-  ck('#103 the paw hides with the setting off', !X.sheetHeadHTML(Object.assign({}, c, {showFamiliars: false})).includes('data-shpaw'));
+     X.pawHTML(Object.assign({}, c, {showFamiliars: true})).includes('data-shpaw') && !X.pawHTML(Object.assign({}, c, {showFamiliars: true})).includes('faint') &&
+     X.pawHTML(Object.assign({}, c, {showFamiliars: true, familiars: []})).includes('sh-paw faint'));
+  ck('#103 the paw hides with the setting off', !X.pawHTML(Object.assign({}, c, {showFamiliars: false})).includes('data-shpaw'));
   ck('#103 an empty familiar list still offers + Add', X.famFlyHTML({familiars: []}).includes('data-add="familiar"') && X.famFlyHTML({}).includes('data-add="familiar"'));
   ck('#103 a familiar card with no stat block: its name and the Summon switch',
      /Owl[\s\S]*data-toggle-familiar="o"/.test(X.familiarCardHTML({id: 'o', name: 'Owl', active: true})));
@@ -4761,6 +4767,179 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ctx.openBackgroundInfo('Acolyte', {ref: true});
   ck('#103 ...but not in reference mode', !got.includes('data-shchange') && !got.includes('data-del-bg'));
   ctx.openModal = savedOM; X.character = savedChar;
+}
+
+/* ---- #103 final review fixes (I-1, I-3, M-1, M-3, M-7, M-8, M-9, M-11, M-14) ---- */
+const FS103 = require('fs'), P103 = require('path');
+const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
+/* I-1 and M-8: the hit-dice pill and field, with no pool and across the box.
+   A small fake document: #hdWrap and #mBody are what renderHitDice() and the
+   box read. */
+{
+  const doc = ctx.document;
+  const keep = {g: doc.getElementById, q: doc.querySelector, a: doc.activeElement, save: ctx.scheduleSave,
+    om: ctx.openModal, cm: ctx.closeModal, ch: X.character, conf: state.confirm};
+  let saves = 0, wrap, body = null, foot = null, picked = null, opened = null, closed = 0, inpEl = null;
+  const mk = () => ({innerHTML: '', querySelector: () => null});
+  const boxBody = () => ({querySelector: s => s === '#hdRollMe' ? {} : null, querySelectorAll: () => []});
+  doc.getElementById = id => id === 'hdWrap' ? wrap : id === 'mBody' ? body : id === 'hitdiceInput' ? inpEl : null;
+  doc.querySelector = s => s === '#hdWrap .hd-foot' ? foot : s === '#mBody .hd-pick.on [data-hdpick]' ? picked : null;
+  ctx.scheduleSave = () => { saves++; };
+  ctx.openModal = (t, h) => { opened = h; };
+  ctx.closeModal = () => { closed++; body = null; };
+  try {
+    ctx.resetRules(); ctx.mergeRules({classes: [{name: 'Fighter', hitDie: 'd10'}]}, 'test-103');
+    wrap = mk();
+    X.character = X.migrate({abilities: {}, classes: [{name: 'Homebrewer', level: 3}]});
+    ctx.renderHitDice();
+    ck('#103 I-1 no pool: the auto/manual pill is still on the sheet', wrap.innerHTML.includes('data-hdmode'), wrap.innerHTML);
+    ck('#103 I-1 ...and the dice field, once, bound like every field (the shared input handler writes and saves it)',
+       (wrap.innerHTML.match(/id="hitdiceInput"/g) || []).length === 1 && wrap.innerHTML.includes('data-path="character.hitdice"'), wrap.innerHTML);
+    ck('#103 I-1 ...and the hint says where the switch is', /Switch to manual below/.test(wrap.innerHTML) && /no hit die for your class/.test(wrap.innerHTML), wrap.innerHTML);
+    state.confirm = true; saves = 0;
+    ctx.toggleHdMode();
+    ck('#103 I-1 the pill switches to manual, saves, and opens the field',
+       X.character.hdManual === true && saves === 1 && /id="hitdiceInput"/.test(wrap.innerHTML) && !/id="hitdiceInput"[^>]*hidden/.test(wrap.innerHTML), wrap.innerHTML);
+    X.character.hitdice = '3d6';   /* what the shared [data-path] handler writes */
+    ctx.hdDiceEdited();
+    ck('#103 I-1 typed dice become the bar', wrap.innerHTML.includes('data-hdspend') && wrap.innerHTML.includes('d6 · 3 / 3'), wrap.innerHTML);
+    const boot = SRC103('js/90-boot.js');
+    ck('#103 I-1 an edit to the field is saved: the input handler calls hdDiceEdited, then scheduleSave',
+       /if\(inp\.dataset\.path==="character\.hitdice"\)hdDiceEdited\(\);[\s\S]{0,200}scheduleSave\(\);/.test(boot));
+    ck('#103 I-1 the pill runs toggleHdMode', /\[data-hdmode\]"\)\)\{toggleHdMode\(\);return;\}/.test(boot) || /\[data-hdmode\]"\)\)return toggleHdMode\(\);/.test(boot));
+
+    /* typing in the inline field keeps it: only the part above it is redrawn */
+    const main = {innerHTML: ''}, own = {id: 'hitdiceInput'};
+    wrap = {innerHTML: 'UNTOUCHED', querySelector: s => s === '#hitdiceInput' ? own : s === '.hd-main' ? main : null};
+    doc.activeElement = own;
+    X.character.hitdice = '2d8';
+    ctx.renderHitDice();
+    ck('#103 I-1 typing in the field redraws only the bar above it', wrap.innerHTML === 'UNTOUCHED' && main.innerHTML.includes('data-hdspend'), main.innerHTML);
+    doc.activeElement = keep.a;
+
+    /* the box open: its foot holds the ids, so the sheet leaves its copy out */
+    wrap = mk(); body = boxBody();
+    X.character.hitdice = '';
+    ctx.renderHitDice();
+    ck('#103 I-1 with the spend box open the sheet draws no second pill or field',
+       !wrap.innerHTML.includes('hitdiceInput') && !wrap.innerHTML.includes('data-hdmode'), wrap.innerHTML);
+    body = null;
+    let removed = 0; foot = {remove: () => { removed++; }};
+    X.character.hitdice = '2d8';
+    ctx.openHdSpend();
+    ck('#103 I-1 opening the box takes the inline copy away first', removed === 1);
+    foot = null;
+
+    /* M-8: an edit in the open box redraws its rows */
+    body = boxBody(); picked = {dataset: {hdpick: 'd8'}}; opened = null;
+    let focused = 0; inpEl = {hidden: false, focus: () => { focused++; }, setSelectionRange: () => {}};
+    X.character.hitdice = '2d10';
+    ctx.hdDiceEdited();
+    ck('#103 M-8 a dice edit redraws the open box with the new rows', !!opened && opened.includes('data-hdpick="d10"') && !opened.includes('data-hdpick="d8"'), opened);
+    ck('#103 M-8 ...and the field has the keyboard again', focused === 1);
+    /* the mode switch, in the box: back to the class's dice */
+    X.character = Object.assign(X.character, {classes: [{name: 'Fighter', level: 3}]});
+    opened = null;
+    ctx.toggleHdMode();
+    ck('#103 M-8 the auto/manual switch redraws the open box from the class', X.character.hdManual === false && !!opened && opened.includes('Fighter · 3 / 3'), opened);
+    /* nothing to spend from: the box gives way to the field under the hit points */
+    X.character.classes = [{name: 'Homebrewer', level: 3}];
+    X.character.hdManual = true; X.character.hitdice = 'd8';
+    body = boxBody(); wrap = mk(); closed = 0;
+    ctx.hdDiceEdited();
+    ck('#103 M-8 dice that no longer parse close the box and bring the field back under HP',
+       closed === 1 && (wrap.innerHTML.match(/id="hitdiceInput"/g) || []).length === 1, wrap.innerHTML);
+  } finally {
+    doc.getElementById = keep.g; doc.querySelector = keep.q; doc.activeElement = keep.a;
+    ctx.scheduleSave = keep.save; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
+    X.character = keep.ch; state.confirm = keep.conf; ctx.resetRules();
+  }
+}
+
+/* M-1: the short rest says where the hit dice are, and offers them */
+{
+  const keep = {rs: ctx.restSummary, ch: X.character};
+  let got = null;
+  ctx.restSummary = (t, lines, note, opts) => { got = {t, lines, note, opts}; };
+  try {
+    ctx.resetRules(); ctx.mergeRules({classes: [{name: 'Fighter', hitDie: 'd10'}]}, 'test-103');
+    X.character = X.migrate({abilities: {}, classes: [{name: 'Fighter', level: 3}]});
+    ctx.shortRest();
+    ck('#103 M-1 the short rest points at the hit-dice bar, not the old card',
+       got && /hit-dice bar under your hit points/.test(got.note) && !/Rest & Recovery card/.test(got.note), got && got.note);
+    ck('#103 M-1 ...and offers Spend a hit die while there are some left', got && got.opts && got.opts.hd === true);
+    X.character.hdUsed = {d10: 3};
+    ctx.shortRest();
+    ck('#103 M-1 ...but not when none are left', got && !(got.opts && got.opts.hd));
+  } finally { ctx.restSummary = keep.rs; X.character = keep.ch; ctx.resetRules(); }
+  ck('#103 M-1 the button opens the spend box', /id="restHd"/.test(SRC103('js/65-resources.js')) && /restHd[\s\S]{0,120}openHdSpend\(\)/.test(SRC103('js/65-resources.js')));
+}
+
+/* I-3: the paw's menu carries what the hidden Familiars card's heading did */
+{
+  const keep = {ch: X.character, toast: ctx.toast};
+  ctx.toast = () => null;
+  try {
+    X.character = X.migrate({abilities: {}, familiars: [{id: 'f1', name: 'Owl'}]});
+    let fly = X.famFlyHTML(X.character);
+    ck('#103 I-3 the paw menu has the familiars combat toggle, showing off', fly.includes('data-combatbtn="familiars"') && /data-combatbtn="familiars"[^>]*aria-checked="false"|aria-checked="false"[^>]*data-combatbtn="familiars"/.test(fly), fly);
+    ck('#103 I-3 ...and a Note item that starts the familiars note', fly.includes('data-notebtn="familiars"') && /Add a note/.test(fly), fly);
+    ck('#103 I-3 ...neither of them hidden by a pencil', !/data-combatbtn="familiars"[^>]*class="[^"]*\bed\b/.test(fly) && !/class="[^"]*\bed\b[^"]*"[^>]*data-notebtn/.test(fly));
+    ctx.toggleCombatSection('familiars');
+    ck('#103 I-3 toggling it adds familiars to the combat view', X.combatSectionsOf(X.character).includes('familiars'), X.character.combatSections);
+    fly = X.famFlyHTML(X.character);
+    ck('#103 I-3 ...and the menu then shows it on', /aria-checked="true"/.test(fly), fly);
+    X.character.secNotes = {familiars: {text: 'Owl hates rain', at: 1}};
+    ck('#103 I-3 with a note, the item edits it', /Edit note/.test(X.famFlyHTML(X.character)));
+    ctx.toggleCombatSection('familiars');
+    ck('#103 I-3 toggling again takes it out', !X.combatSectionsOf(X.character).includes('familiars'));
+    ck('#103 I-3 the view shows the card the Sheet hides', /#combatView #activeSpellCard,#combatView #familiarCard\{display:block!important\}/.test(SRC103('css/45-combat.css')));
+    ck('#103 I-3 the pencil goes: familiars is off #97\'s list, and a stored hide is ignored',
+       !X.EDIT_CARDS.includes('familiars') && !X.editHidden({editHide: {familiars: true}}, 'familiars'));
+  } finally { X.character = keep.ch; ctx.toast = keep.toast; }
+}
+
+/* M-3: a language chip's source is one the sheet knows, or the player's */
+{
+  ck('#103 M-3 an unknown source has no label', X.chipSrcLabel('weird') === '' && X.chipSrcLabel('constructor') === '' && X.chipSrcLabel('__proto__:x') === '' && X.chipSrcLabel('toString') === '');
+  ck('#103 M-3 ...and a known one keeps its', X.chipSrcLabel('race:Elf') === 'species' && X.chipSrcLabel('bg:Sage') === 'background' && X.chipSrcLabel('system') === 'rules');
+  const cl = X.chipClean([{id: 'a', name: 'Weird', src: 'weird'}, {id: 'b', name: 'Ctor', src: 'constructor'}, {id: 'c', name: 'Proto', src: '__proto__:x'}, {id: 'd', name: 'Elvish', src: 'race:Elf'}], 'languages', false);
+  ck('#103 M-3 an unknown source becomes the player\'s', JSON.stringify(cl.map(x => x.src)) === '["","","","race:Elf"]', cl);
+  const c = {languages: [{id: 'a', name: 'Weird', src: 'weird'}, {id: 'b', name: 'Ctor', src: 'constructor'}, {id: 'c', name: 'Proto', src: '__proto__:x'}]};
+  const h = X.chipsHTML(c, 'languages');
+  ck('#103 M-3 ...so it shows an × and no junk label', ['a', 'b', 'c'].every(i => h.includes('data-chipid="' + i + '"')) && !/function|object Object/.test(h), h);
+  ['a', 'b', 'c'].forEach(i => X.removeChip(c, 'languages', i));
+  ck('#103 M-3 ...and the × removes it', c.languages.length === 0, c.languages);
+}
+
+/* M-7: the header names the subrace */
+{
+  const line = X.classLineHTML(X.migrate({abilities: {}, race: {name: 'Elf', subrace: 'High Elf'}}));
+  ck('#103 M-7 the species button reads "Elf · High Elf"', line.includes('data-shrace="Elf">Elf · High Elf</button>'), line);
+  ck('#103 M-7 ...escaped', X.classLineHTML(X.migrate({abilities: {}, race: {name: 'Elf', subrace: '<b>'}})).includes('Elf · &lt;b&gt;</button>'));
+  ck('#103 M-7 ...and just the species when there is none', X.classLineHTML(X.migrate({abilities: {}, race: {name: 'Elf'}})).includes('data-shrace="Elf">Elf</button>'));
+}
+
+/* M-9: the XP bar fills within the current level */
+{
+  const at = (lvl, xp) => X.migrate({abilities: {}, system: 'dnd', xp, classes: [{name: 'Cleric', level: lvl}]});
+  const p = X.xpProgress(at(5, 6500));
+  ck('#103 M-9 progress knows the current level\'s threshold', p && p.cur === 6500 && p.next === 14000, p);
+  const w = c => (/style="width:(\d+)%"/.exec(X.levelBadgeHTML(c)) || [])[1];
+  ck('#103 M-9 just reached level 5: an empty bar', w(at(5, 6500)) === '0', w(at(5, 6500)));
+  ck('#103 M-9 halfway through level 5', w(at(5, 10250)) === '50', w(at(5, 10250)));
+  ck('#103 M-9 XP below the level\'s own threshold clamps to empty', w(at(5, 1000)) === '0', w(at(5, 1000)));
+  ck('#103 M-9 at the top of the table: full', w(at(20, 400000)) === '100', w(at(20, 400000)));
+}
+
+/* M-11, M-14 */
+{
+  const css = ['css/20-cards.css', 'css/30-sheet.css', 'css/45-combat.css'].map(SRC103).join('\n');
+  ck('#103 M-11 the dead .cr-k rule is gone', !/\.cr-k\b/.test(css));
+  const fam = X.familiarCardHTML({id: 'f1', name: 'Owl', active: true});
+  ck('#103 M-14 Summon / Dismiss is a button, so it can hold the keyboard', /<button type="button" class="fam-state on" data-toggle-familiar="f1" aria-pressed="true">/.test(fam), fam);
+  ck('#103 M-14 ...and after the modal repaints, focus goes back to it',
+     /openFamiliar\(f\.id\);[^\n]{0,160}attrSel\("data-toggle-familiar",f\.id\)[^\n]{0,60}\.focus\(\)/.test(SRC103('js/90-boot.js')));
 }
 
 /* ---- imported files and packs render inert ----

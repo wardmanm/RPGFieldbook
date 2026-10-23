@@ -13,7 +13,7 @@ function wire(){
     const prevCon=inp.dataset.path==="character.abilities.con"?character.abilities.con:null;
     setP({character},inp.dataset.path,inp.value);
     if(prevCon!==null)resyncLevel1HP(prevCon);
-    if(inp.dataset.path==="character.hitdice")renderHitDice();
+    if(inp.dataset.path==="character.hitdice")hdDiceEdited();
     /* the header's ring and XP bar follow the box as it is typed (#103) */
     if(inp.dataset.path==="character.xp")renderLevelBadge();
     if(inp.hasAttribute("data-recompute"))recompute();
@@ -40,7 +40,7 @@ function wire(){
     if((m=t.closest("[data-shbg]")))return openBackgroundInfo(m.dataset.shbg);
     if((m=t.closest("[data-shchange]")))return m.dataset.shchange==="bg"?openAddBackground():openAddRace();
     if((m=t.closest("[data-shinfo]"))){const x=character.classes[num(m.dataset.shinfo)];if(x)openClassInfo(x.name);return;}
-    if((m=t.closest("[data-shlevel]")))return m.dataset.shlevel==="down"?doLevelDown():doLevelUp();
+    if((m=t.closest("[data-shlevel]"))){const i=num(m.dataset.shidx);return m.dataset.shlevel==="down"?doLevelDown(i):doLevelUp(i);}
     if((m=t.closest("[data-shpaw]")))return openShFly("fam",0,m);
     if((m=t.closest("[data-shfam]")))return openFamiliar(m.dataset.shfam);
     if(t.closest("[data-shlevelup]"))return doLevelUp();
@@ -130,17 +130,14 @@ function wire(){
     /* the same two buttons sit in the header's familiar modal (openFamiliar):
        Delete there closes it, Summon / Dismiss re-opens it so it repaints */
     if((m=t.closest("[data-del-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.delFamiliar);if(f&&confirm(`Delete “${f.name}”?`)){if(m.closest("#mBody"))closeModal();character.familiars=character.familiars.filter(x=>x.id!==f.id);renderFamiliars();recompute();scheduleSave();}return;}
-    if((m=t.closest("[data-toggle-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.toggleFamiliar);if(f){f.active=!f.active;renderFamiliars();recompute();scheduleSave();if(m.closest("#mBody"))openFamiliar(f.id);}return;}
+    /* ...and the keyboard goes back to the toggle the repaint replaced (M-14) */
+    if((m=t.closest("[data-toggle-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.toggleFamiliar);if(f){f.active=!f.active;renderFamiliars();recompute();scheduleSave();if(m.closest("#mBody")){openFamiliar(f.id);const b=document.querySelector("#mBody "+attrSel("data-toggle-familiar",f.id));if(b)b.focus();}}return;}
     if((m=t.closest("[data-res-dec]"))){const r=character.resources.find(x=>x.id===m.dataset.resDec);if(r){r.cur=Math.max(0,num(r.cur)-1);renderResources();scheduleSave();}return;}
     if((m=t.closest("[data-res-inc]"))){const r=character.resources.find(x=>x.id===m.dataset.resInc);if(r){r.cur=Math.min(num(r.max),num(r.cur)+1);renderResources();scheduleSave();}return;}
     if((m=t.closest("[data-res-reset]"))){const r=character.resources.find(x=>x.id===m.dataset.resReset);if(r){r.cur=num(r.max);renderResources();scheduleSave();}return;}
     if((m=t.closest("[data-res-edit]")))return openResourceForm(character.resources.find(x=>x.id===m.dataset.resEdit));
     if((m=t.closest("[data-res-del]"))){const r=character.resources.find(x=>x.id===m.dataset.resDel);if(r&&confirm(`Delete resource “${r.name}”?`)){character.resources=character.resources.filter(x=>x.id!==r.id);renderResources();scheduleSave();}return;}
-    if((m=t.closest("[data-hdmode]"))){
-      if(!character.hdManual){if(!confirm("Switch to manual Hit Dice? They will no longer follow your class rules when you level up."))return;character.hdManual=true;renderHitDice();const i=document.getElementById("hitdiceInput");if(i){i.readOnly=false;i.focus();}}
-      else{character.hdManual=false;renderHitDice();}
-      scheduleSave();return;
-    }
+    if(t.closest("[data-hdmode]")){toggleHdMode();return;}
     if(t.closest("[data-hdreset]")){character.hdManual=false;renderHitDice();scheduleSave();return;}
     // #103: one bar, tapping it opens the spend box (65-resources.js)
     if(t.closest("[data-hdspend]"))return openHdSpend();

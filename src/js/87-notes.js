@@ -284,8 +284,12 @@ function renderNoteIcons(){
    buttons. CSS does the hiding: each such button carries the class `ed`, a
    hidden card carries `ed-off`, and `.ed-off .ed` is display:none. So the
    renderers never read the flag and a card that rebuilds its rows stays hidden.
-   Keys are NOTE_SECTIONS ids, plus the two cards outside that registry. */
-const EDIT_CARDS=["statuses","attacks","resources","features","familiars","spells","inventory","trackers","journal","secnotes","defences","proficiencies"];
+   Keys are NOTE_SECTIONS ids, plus the two cards outside that registry.
+   Not `familiars` (#103 final review I-3): its card is hidden on the Sheet, so
+   its pencil was out of reach, and the familiar's own window, where Edit and
+   Delete now live, is not a list in play. A stored editHide.familiars is left
+   and ignored, as class and origin's are. */
+const EDIT_CARDS=["statuses","attacks","resources","features","spells","inventory","trackers","journal","secnotes","defences","proficiencies"];
 function editHideMap(c){const m=c&&c.editHide;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
 /* `=== true`, so anything else a hand-edited file holds reads as shown. */
 function editHidden(c,k){return EDIT_CARDS.includes(k)&&editHideMap(c)[k]===true;}
