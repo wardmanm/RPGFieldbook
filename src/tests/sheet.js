@@ -369,6 +369,82 @@ ck('...and for a sheet saved before the setting existed',
      box.includes('data-hdused="d8"') && box.includes('id="hdRollMe"') && box.includes('id="hdTyped"') && box.includes('id="hdApply"'));
   ck('#103 a die type with none left cannot be picked', /data-hdpick="d10"[^>]*disabled/.test(box));
   ck('#103 the box keeps auto / manual', box.includes('data-hdmode'));
+
+  /* ---- #103 fix round 1 (minor): a fully-spent pool can't roll or type ----
+     openHdSpend()'s fallback can leave `sel` pointing at an exhausted die
+     when nothing in the pool has any left; Roll for me and the typed box
+     must not sit there clickable and silently do nothing. */
+  const spentPool = [{die: 'd8', total: 2, used: 2, cls: 'Cleric'}];
+  const spentBox = X.hdSpendHTML(spentPool, 'd8', 5, 10, 20);
+  ck('#103 fix1 an all-spent pool disables Roll for me', /id="hdRollMe"[^>]*disabled/.test(spentBox), spentBox);
+  ck('#103 fix1 ...and the typed box', /id="hdTyped"[^>]*disabled/.test(spentBox));
+  ck('#103 fix1 ...Apply stays disabled too', /id="hdApply"[^>]*disabled/.test(spentBox));
+  ck('#103 fix1 ...with a reason shown up front', spentBox.includes('No hit dice left'));
+  // a die with some left stays fully usable — this is about the SELECTED die
+  // having none, not the pool being empty
+  const mixedBox = X.hdSpendHTML(pool, 'd8', 5, 10, 20);
+  ck('#103 fix1 a die with some left keeps Roll for me and the typed box enabled',
+     !/id="hdRollMe"[^>]*disabled/.test(mixedBox) && !/id="hdTyped"[^>]*disabled/.test(mixedBox) &&
+     !mixedBox.includes('No hit dice left'));
+}
+
+/* ---- #103 fix round 1 (important): the spend box does not close the
+   "Hit die spent" summary it just opened ----
+   bd9022c fixed a bug only a browser caught: Apply and Roll for me both end
+   in spendHitDie(), which ends in restSummary() — OPENING the summary modal
+   in the spend box's own place. The old code then called closeModal() right
+   after, closing that summary in the same tick, before it ever painted. This
+   drives openHdSpend()'s REAL wiring (not just the pure builders above) and
+   asserts the openModal/closeModal call order: every path must END on an
+   `open` of the summary, never a `close`. */
+{
+  X.rules = {classes: [{name: 'Fighter', hitDie: 'd8'}]};
+  X.character = X.migrate({
+    classes: [{name: 'Fighter', level: 1}],
+    abilities: Object.assign(X.blankChar().abilities, {con: 14}),
+    hp: {cur: 5, max: 20, temp: '', locked: false},
+  });
+
+  // a minimal per-id element: enough for openHdSpend()'s own wiring to find
+  // hdTyped/hdApply/hdRollMe/mBody and for a full render pass (renderHP(),
+  // renderHitDice(), recompute()) not to throw reaching for one
+  const byId = {};
+  const el = () => ({
+    value: '', dataset: {}, disabled: false, hidden: false, readOnly: false,
+    textContent: '', innerHTML: '', style: {}, children: [],
+    classList: {toggle() {}, add() {}, remove() {}, contains: () => false},
+    _on: {}, addEventListener(type, fn) { (this._on[type] = this._on[type] || []).push(fn); },
+    querySelector: () => null, querySelectorAll: () => [], closest: () => null,
+    setAttribute() {}, removeAttribute() {}, focus() {}, remove() {},
+  });
+  const realGetById = ctx.document.getElementById, realOpen = ctx.openModal, realClose = ctx.closeModal;
+  const log = [];
+  ctx.document.getElementById = id => byId[id] || (byId[id] = el());
+  ctx.openModal = t => log.push(['open', String(t)]);
+  ctx.closeModal = () => log.push(['close']);
+
+  const endsOnTheSummary = () =>
+    log.length >= 2 && log[log.length - 1][0] === 'open' && /^Hit die spent/.test(log[log.length - 1][1]) &&
+    !log.slice(1).some((e, i) => e[0] === 'close');   // no close AFTER the box's own open
+
+  try {
+    // (a) the Apply path, for a valid typed roll
+    Object.keys(byId).forEach(k => delete byId[k]); log.length = 0;
+    ctx.openHdSpend('d8');
+    byId.hdTyped.value = '5';
+    (byId.hdApply._on.click || []).forEach(fn => fn());
+    ck('#103 fix1 Apply ends on the "Hit die spent" summary, not closed', endsOnTheSummary(), log);
+
+    // (b) the Roll-for-me path — put the die back first
+    X.character.hdUsed = {};
+    Object.keys(byId).forEach(k => delete byId[k]); log.length = 0;
+    ctx.openHdSpend('d8');
+    (byId.hdRollMe._on.click || []).forEach(fn => fn());
+    ck('#103 fix1 Roll for me ends on the "Hit die spent" summary too, not closed', endsOnTheSummary(), log);
+  } finally {
+    ctx.document.getElementById = realGetById; ctx.openModal = realOpen; ctx.closeModal = realClose;
+  }
+  X.character = X.blankChar(); X.rules = {};
 }
 
 /* ---- the ability/skill layout ----

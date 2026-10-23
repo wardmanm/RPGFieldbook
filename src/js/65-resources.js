@@ -101,6 +101,7 @@ function renderHitDice(){
    One bar per character; tapping it opens the box. The maths is the old
    rollHitDie()'s, shared now by both ways of spending — rolling for you and
    typing your own roll. */
+const HD_NONE_LEFT="No hit dice left — a long rest restores them.";
 function hdConMod(){return Math.floor((abilFinal("con",contributions())-10)/2);}
 function hdHeal(roll,conMod){return Math.max(0,roll+conMod);}
 function hdSpendCheck(die,typed){
@@ -118,15 +119,21 @@ function hdBarHTML(pool,conMod){
     `<button type="button" class="hd-bar" data-hdspend aria-label="Spend a hit die"><i style="width:${esc(String(pct))}%"></i><span>${dice}</span></button>`;
 }
 function hdSpendHTML(pool,sel,conMod,cur,max){
+  /* #103 fix round 1 (minor): the fallback in openHdSpend() can leave `sel`
+     pointing at an exhausted die (none left at all, anywhere in the pool) —
+     Roll for me and the typed box would otherwise sit there clickable and do
+     nothing. Disabled, with the reason said up front rather than only after
+     a tap goes nowhere. */
+  const selP=pool.find(p=>p.die===sel), none=!selP||selP.total<=selP.used;
   const rows=pool.map(p=>{const left=p.total-p.used;
     return `<div class="hd-pick${p.die===sel?" on":""}"><button type="button" class="hd-pickbtn" data-hdpick="${esc(p.die)}"${left?"":" disabled"}>`+
       `<b>${esc(p.die)}</b> ${esc(p.cls||"")} · ${esc(String(left))} / ${esc(String(p.total))}</button>`+
       `<span class="hd-used">used <button type="button" class="tbtn" data-hdused="${esc(p.die)}" data-d="-1" aria-label="${esc("Un-spend a "+p.die)}">−</button>`+
       `<button type="button" class="tbtn" data-hdused="${esc(p.die)}" data-d="1" aria-label="${esc("Mark a "+p.die+" spent")}">+</button></span></div>`;}).join("");
   return rows+
-    `<div class="hd-how"><button type="button" class="tbtn primary" id="hdRollMe">🎲 Roll for me</button> <span>or</span> `+
-    `<label>I rolled <input id="hdTyped" inputmode="numeric" size="3"></label> <button type="button" class="tbtn" id="hdApply" disabled>Apply</button></div>`+
-    `<div class="hd-res" id="hdRes" aria-live="polite"></div>`+
+    `<div class="hd-how"><button type="button" class="tbtn primary" id="hdRollMe"${none?" disabled":""}>🎲 Roll for me</button> <span>or</span> `+
+    `<label>I rolled <input id="hdTyped" inputmode="numeric" size="3"${none?" disabled":""}></label> <button type="button" class="tbtn" id="hdApply" disabled>Apply</button></div>`+
+    `<div class="hd-res" id="hdRes" aria-live="polite">${none?HD_NONE_LEFT:""}</div>`+
     `<div class="hd-foot">Hit dice <button class="hd-mode" data-hdmode title="Toggle auto (from class) vs manual">${character.hdManual?"manual":"auto"}</button> `+
     `<input data-path="character.hitdice" id="hitdiceInput" placeholder="3d10" value="${esc(character.hitdice||"")}"${character.hdManual?"":" readonly hidden"} aria-label="Hit Dice"></div>`;
 }
@@ -150,7 +157,13 @@ function openHdSpend(sel){
     renderHitDice();scheduleSave();openHdSpend(sel);
   }));
   const typed=document.getElementById("hdTyped"),res=document.getElementById("hdRes"),apply=document.getElementById("hdApply");
+  /* Belt and braces alongside hdSpendHTML's disabled Roll-for-me/typed box:
+     #hdTyped is disabled when `sel` has none left, so this branch is normally
+     unreachable from a real click — but Apply must never be talked into
+     enabling itself for a die with nothing left, from here or anywhere else. */
   const check=()=>{
+    const p=hitDicePool().find(x=>x.die===sel);
+    if(!p||p.total<=p.used){if(apply)apply.disabled=true;if(res)res.textContent=HD_NONE_LEFT;return {ok:false,roll:0,why:HD_NONE_LEFT};}
     const r=hdSpendCheck(sel,typed.value);
     if(apply)apply.disabled=!r.ok;
     if(res){
