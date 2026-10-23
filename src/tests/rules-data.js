@@ -1207,6 +1207,31 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   ck('#97 renderAll() draws the toggles after the note icons', /renderNoteIcons\(\);renderEditToggles\(\);/.test(all));
 }
 
+/* Slice one element and its whole subtree by counting <tag>/</tag> from the
+   tag carrying `needle` (a <div> unless `tag` says otherwise: the sheet header
+   is a <header>). The guards that use it used to slice "from this literal to
+   the next <div class=\"card\"" and "non-greedy to the first </div>", and both
+   encoded the current NESTING as well as the current content — so a block
+   moving between cards, or a child turning into a <div>, broke them for
+   reasons that had nothing to do with what they guard. */
+function block(html, needle, tag) {
+  tag = tag || 'div';
+  const at = html.lastIndexOf('<' + tag, html.indexOf(needle));
+  const re = new RegExp('<' + tag + '\\b|</' + tag + '>', 'g'), close = '</' + tag + '>';
+  re.lastIndex = at;
+  let depth = 0, m;
+  while ((m = re.exec(html))) {
+    depth += m[0] === close ? -1 : 1;
+    if (depth === 0) return html.slice(at, m.index + m[0].length);
+  }
+  /* Never return the unterminated tail. Every consumer asks "is X inside
+     this block?" with .includes(), so a slice running to end-of-document makes
+     those assertions trivially TRUE — the block would swallow the rest of the
+     app and pass. Now that the markup lives in seven separately-editable files,
+     a fragment losing its closing </section> is a real way to get here. */
+  throw new Error('block(): unbalanced <' + tag + '> searching from ' + JSON.stringify(needle));
+}
+
 // ---------- section notes: the registry IS the contract
 // NOTE_SECTIONS drives the icon injection, the Section Notes card's grouping and
 // its headings. If it and the template disagree, a section silently loses its
@@ -1259,10 +1284,13 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   // registry titles must match the headings they claim to describe. (#103: the
   // skin-dependent `origin` heading is gone; the header's heading is the hidden
   // "Character" caption in its .label.sh-bar, so the label may carry a class
-  // and the caption's span.)
+  // and the caption's span.) Each card is sliced to its own end, so a card
+  // that lost its .label cannot borrow the next card's.
   X.NOTE_SECTIONS.forEach(s => {
-    const at = t.indexOf('data-note="' + s.k + '"');
-    const m = /<div class="label(?: [a-z-]+)?">(?:<span class="sh-cap">)?([^<]*)/.exec(t.slice(at));
+    const needle = 'data-note="' + s.k + '"', at = t.indexOf(needle);
+    const tag = at < 0 ? '' : (/^<([a-z]+)/.exec(t.slice(t.lastIndexOf('<', at))) || [])[1];
+    const own = tag ? block(t, needle, tag) : '';
+    const m = /<div class="label(?: [a-z-]+)?">(?:<span class="sh-cap">)?([^<]*)/.exec(own);
     const text = m ? m[1].replace(/&amp;/g, '&').trim() : '';
     ck('the registry title for "' + s.k + '" matches its heading', text === s.title, {text, title: s.title});
   });
@@ -1297,6 +1325,13 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const css = ['src/css/10-chrome.css', 'src/css/30-sheet.css'].map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
   const base = css.indexOf('.sheet-grid{'), m1 = css.indexOf('@media(max-width:1000px)'), m2 = css.indexOf('@media(max-width:700px)');
   ck('#103 three columns, then two, then one — the queries after the base rule', base >= 0 && m1 > base && m2 > m1);
+  // the wiki's trap — a query above its base rule silently does nothing — holds
+  // for 30-sheet.css's own two queries as well as for the grid's
+  const sh = fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const stripBase = sh.indexOf('.strip .abilities{'), stripQ = sh.search(/@media\(max-width:1000px\)\{\s*\.strip \.abilities\{/);
+  const railBase = sh.search(/(^|\n|\})\.rail\{/), railQ = sh.search(/@media\(max-width:700px\)\{\s*\.rail\{/);
+  ck('#103 the strip\'s ≤1000px and the rail\'s ≤700px queries come after their base rules',
+     stripBase >= 0 && stripQ > stripBase && railBase >= 0 && railQ > railBase, {stripBase, stripQ, railBase, railQ});
   ck('#103 the Skills display setting is retired', !/segStatStyle|data-statstyle/.test(fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8')));
   // beyond the brief's block: what the grid is and where the cards sit in it
   ck('#103 the grid is rail · middle · right', /\.sheet-grid\{[^}]*grid-template-columns:minmax\(220px,260px\) minmax\(0,1\.3fr\) minmax\(0,1fr\)/.test(css));
@@ -1526,28 +1561,8 @@ ck('entry count sums every category', X.rulesEntryCount() === 3, X.rulesEntryCou
   const sheetCss = css('30-sheet.css');
   const chromeCss = css('10-chrome.css');
 
-  /* Slice one element and its whole subtree by counting <div>/</div> from the
-     tag carrying `needle`. The guards below used to slice "from this literal to
-     the next <div class=\"card\"" and "non-greedy to the first </div>", and both
-     encoded the current NESTING as well as the current content — so a block
-     moving between cards, or a child turning into a <div>, broke them for
-     reasons that had nothing to do with what they guard. */
-  function block(html, needle) {
-    const at = html.lastIndexOf('<div', html.indexOf(needle));
-    const re = /<div\b|<\/div>/g;
-    re.lastIndex = at;
-    let depth = 0, m;
-    while ((m = re.exec(html))) {
-      depth += m[0] === '</div>' ? -1 : 1;
-      if (depth === 0) return html.slice(at, m.index + m[0].length);
-    }
-    /* Never return the unterminated tail. Every consumer below asks "is X inside
-       this block?" with .includes(), so a slice running to end-of-document makes
-       those assertions trivially TRUE — the block would swallow the rest of the
-       app and pass. Now that the markup lives in seven separately-editable files,
-       a fragment losing its closing </section> is a real way to get here. */
-    throw new Error('block(): unbalanced <div> searching from ' + JSON.stringify(needle));
-  }
+  /* block() — slicing one element and its subtree — is defined at the top
+     level, above the section-notes registry checks, which use it too. */
   // #103: the Vitals card is the rail; Rest & Recovery is gone (its rests
   // went to the header, its hit dice to the rail)
   const vitals = block(t, 'data-note="vitals"');

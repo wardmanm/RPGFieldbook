@@ -140,6 +140,9 @@ function removeRace(doRender){
    reference mode. */
 function raceInfoFoot(ref,names){
   const cur=character.race&&character.race.name;
+  /* `ed` is inert in the info window (it is outside any [data-note] card, so
+     no ✎ toggle reaches it); kept so every data-del-* carries ed, as the #97
+     guard in rules-data.js asks. */
   return (!ref&&cur&&names.indexOf(cur)>=0)?`<div class="rowbtns"><button class="tbtn" data-shchange="race">Change</button><button class="tbtn danger ed" data-del-race="1">Remove</button></div>`:"";
 }
 function openRaceInfo(name,opts){

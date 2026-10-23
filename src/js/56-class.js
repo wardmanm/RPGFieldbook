@@ -1,8 +1,11 @@
 function classSummary(d){const bits=[];if(d.hitDie)bits.push("Hit die "+d.hitDie);if(d.spellcasting)bits.push("Spellcasting "+d.spellcasting.toUpperCase());if(d.savingThrows)bits.push("Saves "+d.savingThrows.map(x=>x.toUpperCase()).join("/"));return bits.length?`<p class="hint"><b>${esc(bits.join(" · "))}</b></p>`:"";}
+/* The Class card's pointer to Settings → Rules, which went with the card
+   (#103): + Class is now the way in for a sheet with no class. */
+const NO_RULES_HINT=`Load a rules pack with <b>races</b> and <b>classes</b> (Settings → Rules) to auto-apply traits and stats. Custom names work too, without auto data.`;
 function openAddClass(){
   const list=rules.classes||[];
   openModal("Add class",`
-    ${list.length?`<div class="field"><label class="f">Class from rules</label><select id="classSel"><option value="">— choose —</option>${list.map(c=>`<option value="${esc(c._id||c.name)}">${esc(dispName(c,"classes"))}</option>`).join("")}</select></div>`:`<p class="hint">No classes in the loaded rules. Enter a custom name; no traits will be auto-applied.</p>`}
+    ${list.length?`<div class="field"><label class="f">Class from rules</label><select id="classSel"><option value="">— choose —</option>${list.map(c=>`<option value="${esc(c._id||c.name)}">${esc(dispName(c,"classes"))}</option>`).join("")}</select></div>`:`<p class="hint">${NO_RULES_HINT}</p>`}
     <div class="field"><label class="f">Or custom name</label><input id="classCustom" placeholder="Ranger"></div>
     <div class="field"><label class="f">Starting level</label><input id="classLvl" type="number" min="1" max="20" value="1"></div>
     <div id="classPrev"></div>

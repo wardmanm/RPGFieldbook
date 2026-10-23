@@ -19,10 +19,12 @@ function inCombat(c){return !!c&&c.combatActive===true;}
 function combatSectionsOf(c){
   const raw=c&&c.combatSections;
   if(!Array.isArray(raw))return COMBAT_DEFAULTS.slice();
-  const known=new Set(NOTE_SECTIONS.map(s=>s.k)),out=[];
+  const known=new Set(NOTE_SECTIONS.filter(s=>!s.nocv).map(s=>s.k)),out=[];
   raw.forEach(k=>{if(typeof k==="string"&&known.has(k)&&!out.includes(k))out.push(k);});
   return out;
 }
+/* A registry section the view may take: every one but those marked nocv. */
+function combatAddable(k){const d=noteDef(k);return !!d&&!d.nocv;}
 function withCombatSection(list,k,on){
   if(on)return list.includes(k)?list.slice():list.concat([k]);
   return list.filter(x=>x!==k);
@@ -131,6 +133,7 @@ function paintCombatToggle(k,on){
 function renderCombatToggles(){
   const on=new Set(combatSectionsOf(character));
   NOTE_SECTIONS.forEach(def=>{
+    if(!combatAddable(def.k))return;
     const card=combatCard(def.k);if(!card)return;
     const label=card.querySelector(".label");if(!label)return;
     const html=combatToggleHTML(def.k,on.has(def.k)), old=label.querySelector("[data-combatbtn]");
@@ -270,7 +273,7 @@ function cvStickyTop(){
 }
 /* viaKey: the click came from Enter/Space (event.detail 0), not a pointer. */
 function toggleCombatSection(k,viaKey){
-  const def=noteDef(k);if(!def)return;
+  const def=noteDef(k);if(!def||!combatAddable(k))return;
   const cur=combatSectionsOf(character), on=!cur.includes(k), at=cur.indexOf(k), who=character.id;
   const fromView=!on&&cvOpen&&!!document.querySelector(`#cvList [data-combatbtn="${k}"]`);
   /* Its shown neighbours, read before it leaves: the saved order can hold a

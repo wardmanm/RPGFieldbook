@@ -15,7 +15,7 @@
    and `rest` are gone with their cards (an old sheet's notes under them merge
    into `portrait` / `vitals` once, in migrate()); `attacks` is on Inventory. */
 const NOTE_SECTIONS=[
-  {k:"portrait",     tab:"sheet",     title:"Character"},
+  {k:"portrait",     tab:"sheet",     title:"Character", nocv:true},
   {k:"vitals",       tab:"sheet",     title:"Vitals"},
   {k:"abilities",    tab:"sheet",     title:"Ability Scores & Saves"},
   {k:"skills",       tab:"sheet",     title:"Skills"},
@@ -34,6 +34,9 @@ const NOTE_SECTIONS=[
   {k:"proficiencies",tab:"story",     title:"Proficiencies, Senses & Languages"},
   {k:"trackers",     tab:"journal",   title:"Trackers"}
 ];
+/* nocv: never offered to the combat view. The header (`portrait`) holds the
+   rest buttons, which are not a fight action, and the portrait itself rides in
+   with Vitals (#103); migrate() turns a saved `portrait` there into `vitals`. */
 const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Bio",journal:"Journal"};
 function noteDef(k){return NOTE_SECTIONS.find(s=>s.k===k)||null;}
 /* Kept as the one way to title a section (#103 removed the one heading that
@@ -405,7 +408,9 @@ function jumpToNote(k){
      header's paw, so its note jumps to the paw's flyout (spec §6.6). */
   if(k==="familiars"){
     const head=document.getElementById("sheetHead");if(head)scrollToCard(head);
-    openShFly("fam",0,document.querySelector("[data-shpaw]"));
+    /* With the paw hidden (showFamiliars off) the flyout hangs from the
+       header's bar, not from nowhere. */
+    openShFly("fam",0,document.querySelector("[data-shpaw]")||document.querySelector("#sheetHead .sh-bar"));
     return;
   }
   const card=document.querySelector(`[data-note="${def.k}"]`);

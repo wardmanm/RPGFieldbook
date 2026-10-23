@@ -80,6 +80,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'CHIP_SUGGEST', 'chipsHTML', 'chipChooserHTML', 'openChipChooser', 'addChip', 'removeChip', 'renderDefences', 'renderBioChips',
   'mergeNoteInto', 'liftLanguages', 'migrateSheet103',
   'sheetHeadHTML', 'classLineHTML', 'classFlyHTML', 'levelBadgeHTML', 'familiarCardHTML', 'famFlyHTML',
+  'combatAddable', 'renderCombatToggles', 'jumpToNote', 'openAddClass', 'NO_RULES_HINT', 'NOTE_SECTIONS',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -4574,6 +4575,76 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const kept = X.migrate({abilities: {}, system: 'dnd', langLifted: true, proficiencies: 'Languages: Gnomish'});
   ck('#103 a sheet already flagged keeps its Languages line too', kept.proficiencies === 'Languages: Gnomish' &&
      !X.chipList(kept, 'languages').some(l => l.name === 'Gnomish'), kept);
+}
+
+/* ---- #103: the header is not combat-addable (Task 7 review M3) ----
+   The header is the `portrait` section. Its rest buttons stay out of the combat
+   view (not a fight action), and the portrait image now rides in with Vitals,
+   so a saved `portrait` in the view becomes `vitals`, as `rest` does. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const m1 = X.migrate({abilities: {}, combatSections: ['portrait', 'statuses']});
+  ck('#103 a saved portrait in the combat view becomes vitals', same(m1.combatSections, ['vitals', 'statuses']), m1.combatSections);
+  const m2 = X.migrate({abilities: {}, combatSections: ['vitals', 'portrait', 'rest', 'statuses']});
+  ck('#103 ...once, beside a vitals (and a rest) already there', same(m2.combatSections, ['vitals', 'statuses']), m2.combatSections);
+  ck('#103 ...and migrating again changes nothing', same(X.migrate(JSON.parse(JSON.stringify(m2))).combatSections, ['vitals', 'statuses']));
+  ck('#103 the header is not combat-addable; every other section is',
+     !X.combatAddable('portrait') && X.combatAddable('vitals') && X.combatAddable('familiars') && !X.combatAddable('nope') &&
+     X.NOTE_SECTIONS.filter(s => !X.combatAddable(s.k)).map(s => s.k).join() === 'portrait');
+  ck('#103 a portrait that reaches the view unmigrated is dropped', same(X.combatSectionsOf({combatSections: ['portrait', 'vitals']}), ['vitals']));
+  const c = X.blankChar(); X.character = c;
+  X.toggleCombatSection('portrait');
+  ck('#103 the toggle cannot add the header', same(c.combatSections, X.COMBAT_DEFAULTS), c.combatSections);
+
+  // renderCombatToggles() against fake cards: one per registry key, each with a .label
+  const doc = ctx.document, q = doc.querySelector, got = [];
+  doc.querySelector = sel => {
+    const mm = /^\.card\[data-note="([a-z]+)"\]$/.exec(sel); if (!mm) return null;
+    const k = mm[1];
+    const label = {querySelector: () => null, insertAdjacentHTML: (pos, html) => got.push([k, html])};
+    return {querySelector: s => s === '.label' ? label : null};
+  };
+  try { X.renderCombatToggles(); } finally { doc.querySelector = q; }
+  ck('#103 the header carries no combat toggle', !got.some(([k]) => k === 'portrait') && got.some(([k]) => k === 'vitals') &&
+     got.length === X.NOTE_SECTIONS.length - 1, got.map(([k]) => k));
+}
+
+/* ---- #103: a jump to the familiars note with the paw hidden (Task 7 review M4) ----
+   With showFamiliars off there is no paw, so the flyout hangs from the header's
+   .sh-bar instead of opening with no position. */
+{
+  const doc = ctx.document, q = doc.querySelector;
+  const keep = {openShFly: ctx.openShFly, selectTab: ctx.selectTab, scrollToCard: ctx.scrollToCard};
+  const bar = {bar: true}, paw = {paw: true};
+  let anchor = 'unset';
+  ctx.openShFly = (kind, i, a) => { anchor = a; };
+  ctx.selectTab = () => {}; ctx.scrollToCard = () => {};
+  try {
+    doc.querySelector = sel => sel === '[data-shpaw]' ? null : sel === '#sheetHead .sh-bar' ? bar : null;
+    X.jumpToNote('familiars');
+    ck('#103 with the paw hidden, the flyout anchors on the header bar', anchor === bar, anchor);
+    doc.querySelector = sel => sel === '[data-shpaw]' ? paw : sel === '#sheetHead .sh-bar' ? bar : null;
+    X.jumpToNote('familiars');
+    ck('#103 ...and on the paw when it shows', anchor === paw, anchor);
+  } finally { doc.querySelector = q; Object.assign(ctx, keep); }
+}
+
+/* ---- #103: no rules pack, no classes: + Class says where to load one (Task 7 review M5) ----
+   The Class card's hint went with the card; it lives on in the Add class window. */
+{
+  const keep = ctx.openModal, keepRules = X.rules;
+  let body = '';
+  ctx.openModal = (t, h) => { body = h; };
+  try {
+    X.rules = Object.assign({}, keepRules, {classes: []});
+    X.character = X.blankChar();
+    X.openAddClass();
+    ck('#103 with no classes loaded, Add class points to Settings → Rules', body.includes(X.NO_RULES_HINT) &&
+       /Settings → Rules/.test(X.NO_RULES_HINT) && /<b>races<\/b> and <b>classes<\/b>/.test(X.NO_RULES_HINT), body);
+    X.rules = Object.assign({}, keepRules, {classes: [{name: 'Cleric', hitDie: 'd8'}]});
+    X.openAddClass();
+    ck('#103 ...and says nothing of it when a pack has classes', !body.includes('Settings → Rules') && body.includes('Cleric'), body);
+  } finally { ctx.openModal = keep; X.rules = keepRules; }
 }
 
 /* ---- #103: a species or background grants languages as chips (spec §5) ---- */

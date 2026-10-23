@@ -463,7 +463,11 @@ function classLineHTML(c){
 /* The menu under one class: the Class card's controls, moved. Its buttons are
    the existing hooks where one exists (subclass, Remove, + Add class), so they
    run exactly what the card ran. No ids: [data-shlevel] is delegated, and
-   the Class card and its two level buttons are gone (#103). */
+   the Class card and its two level buttons are gone (#103). Remove's `ed` is
+   inert here: the flyout sits in the header, which is not an EDIT_CARDS card,
+   so no ✎ toggle hides it. It is kept so every data-del-* button carries ed
+   (the #97 guard in rules-data.js), and a Remove that ever lands in a card
+   hides with it. */
 function classFlyHTML(c,i){
   const x=(Array.isArray(c&&c.classes)?c.classes:[])[i];
   if(!x||!x.name)return "";
@@ -556,7 +560,8 @@ function openShFly(kind,i,anchor){
     const w=fly.offsetWidth||0;
     fly.style.top=Math.round(ar.bottom-hr.top+4)+"px";
     fly.style.left=Math.round(Math.max(6,Math.min(ar.left-hr.left,hr.width-w-6)))+"px";
-    if(anchor.setAttribute)anchor.setAttribute("aria-expanded","true");
+    /* only a menu button says it is expanded: the .sh-bar fallback is not one */
+    if(anchor.hasAttribute&&anchor.hasAttribute("aria-haspopup"))anchor.setAttribute("aria-expanded","true");
   }
   const first=fly.querySelector("button");if(first&&first.focus)first.focus({preventScroll:true});
 }
@@ -564,7 +569,7 @@ function closeShFly(){
   const fly=document.getElementById("shFly"),back=document.getElementById("shBack");
   if(fly){fly.classList.remove("open");fly.innerHTML="";}
   if(back)back.classList.remove("open");
-  if(_shFly&&_shFly.anchor&&_shFly.anchor.setAttribute)_shFly.anchor.setAttribute("aria-expanded","false");
+  if(_shFly&&_shFly.anchor&&_shFly.anchor.hasAttribute&&_shFly.anchor.hasAttribute("aria-haspopup"))_shFly.anchor.setAttribute("aria-expanded","false");
   _shFly=null;
 }
 /* A familiar's stat card in the modal, from the paw's menu. Summon / Dismiss,

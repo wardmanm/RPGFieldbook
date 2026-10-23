@@ -88,6 +88,8 @@ function removeBackground(doRender){
    reference mode. */
 function bgInfoFoot(ref,names){
   const cur=character.bg&&character.bg.name;
+  /* `ed` is inert here, as in raceInfoFoot(): outside any card; kept for the
+     #97 every-data-del-carries-ed guard. */
   return (!ref&&cur&&names.indexOf(cur)>=0)?`<div class="rowbtns"><button class="tbtn" data-shchange="bg">Change</button><button class="tbtn danger ed" data-del-bg="1">Remove</button></div>`:"";
 }
 function openBackgroundInfo(name,opts){

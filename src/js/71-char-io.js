@@ -86,7 +86,9 @@ function migrateSheet103(c){
   mergeNoteInto(c,"origin","portrait","Ancestry & Background");
   mergeNoteInto(c,"rest","vitals","Rest & Recovery");
   if(Array.isArray(c.combatSections)){
-    const out=[];c.combatSections.forEach(k=>{const v=k==="rest"?"vitals":k;if(!out.includes(v))out.push(v);});
+    /* rest's hit dice went to the rail; the header (portrait) is not
+       combat-addable, and its portrait now rides in with Vitals */
+    const out=[];c.combatSections.forEach(k=>{const v=k==="rest"||k==="portrait"?"vitals":k;if(!out.includes(v))out.push(v);});
     c.combatSections=out;
   }
   /* liftLanguages runs once, same pattern as ammoInit: never defaulted in
