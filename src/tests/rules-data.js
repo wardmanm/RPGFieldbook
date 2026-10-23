@@ -11,6 +11,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'RULE_CATS','systemOf','racesForCharacter','raceOptions','findRaceDef',
   'subclassesFor','findClassDef',
   'missingRequirements','requiresStatusHTML','missingSummary',
+  'packMap','normPackMaps',
   'saveRulesCache','rulesCacheWarning','cacheBytes',
   'lzwCompress','lzwDecompress','readRulesCacheString',
   'loadedRulesGroups','rulesBucket','rulesDataHTML','clearAllRules',
@@ -140,6 +141,90 @@ X.mergeRules({system:'Homebrew',subclasses:[{class:'Warlock',name:'P'}],
      Object.keys(revived.requires||{}));
   X.rules=revived;
   ck('and still reports after restore', X.missingRequirements('Homebrew').length>0);
+}
+
+// ---------- #88: pack labels as map keys
+// `rules.requires` and `rules.credits` are keyed by a pack's own label
+// (srcLabel()): a pack labelled "__proto__" set the object's PROTOTYPE
+// instead of a key, silently losing the declaration; one labelled
+// "constructor" with no `requires` read back the inherited Object
+// constructor, and `decl.forEach` threw. packMap() makes both maps
+// null-prototype, so any label is an ordinary key.
+{
+  // 1. packMap() itself
+  const m1=X.packMap({a:1});
+  ck('packMap copies own keys', m1.a===1, m1);
+  ck('packMap has no prototype', Object.getPrototypeOf(m1)===null);
+  ck('packMap(null) is an empty null-proto map', Object.keys(X.packMap(null)).length===0 && Object.getPrototypeOf(X.packMap(null))===null);
+  ck('packMap([1]) is an empty null-proto map, not a copy of the array', Object.keys(X.packMap([1])).length===0 && Object.getPrototypeOf(X.packMap([1]))===null);
+  ck('packMap(\'x\') is an empty null-proto map', Object.keys(X.packMap('x')).length===0 && Object.getPrototypeOf(X.packMap('x'))===null);
+
+  // 2. merging a pack labelled "__proto__" — the real merge path
+  X.resetRules();
+  X.mergeRules({system:'__proto__',requires:[{feats:['X']}],license:'MIT',attribution:'a',
+    feats:[{name:'F'}]},'f.json');
+  ck('requires["__proto__"] is the declared array, not the prototype',
+     Array.isArray(X.rules.requires['__proto__']) && X.rules.requires['__proto__'][0].feats[0]==='X',
+     X.rules.requires['__proto__']);
+  ck('Object.keys(requires) includes "__proto__" as an own key',
+     Object.keys(X.rules.requires).includes('__proto__'), Object.keys(X.rules.requires));
+  ck('credits has a "__proto__" entry', !!X.rules.credits['__proto__'], X.rules.credits);
+  ck('Object.prototype gained nothing', ({}).feats===undefined && Object.getPrototypeOf({})===Object.prototype);
+
+  // 3. the declaration survives a save -> load round trip, the way the cache
+  //    restore does: Object.assign into a reset pool, then normPackMaps()
+  //    (the restore paths already end in reindexRules()/tidyRules(), which
+  //    does the same normalisation — see the report for which path does which)
+  {
+    const saved=JSON.parse(JSON.stringify(X.rules));
+    X.resetRules();
+    X.rules=Object.assign(X.rules,saved);
+    X.normPackMaps();
+    ck('the "__proto__" declaration survives the round trip',
+       Array.isArray(X.rules.requires['__proto__']), X.rules.requires);
+    ck('restored requires is still a null-prototype map', Object.getPrototypeOf(X.rules.requires)===null);
+    ck('restored credits is still a null-prototype map', Object.getPrototypeOf(X.rules.credits)===null);
+    // and it must still be safe to write a NEW "__proto__" label after a restore
+    X.mergeRules({system:'__proto__',requires:[{feats:['Y']}],feats:[{name:'G'}]},'g.json');
+    ck('writing to it again after restore is still an ordinary key',
+       Array.isArray(X.rules.requires['__proto__']) && X.rules.requires['__proto__'][0].feats[0]==='Y');
+  }
+
+  // 4. removing the pack's entries — the real removal path Settings' own
+  //    "remove" button uses (removeRulesGroup -> prunePackMeta)
+  X.resetRules();
+  X.mergeRules({system:'__proto__',requires:[{feats:['X']}],license:'MIT',attribution:'a',
+    feats:[{name:'F'}]},'proto.json');
+  ck('setup: the pack is loaded under its file', X.loadedRulesGroups().some(g=>g.key==='f:proto.json'));
+  ctx.removeRulesGroup('f:proto.json');
+  ck('removing the pack drops the "__proto__" requires entry',
+     !('__proto__' in X.rules.requires) && X.rules.requires['__proto__']===undefined, X.rules.requires);
+  ck('...and the "__proto__" credits entry', !('__proto__' in X.rules.credits) && X.rules.credits['__proto__']===undefined, X.rules.credits);
+
+  // 5. a pack labelled "constructor" or "toString" with NO requires must not
+  //    make missingRequirements() throw on an inherited non-array value
+  ['constructor','toString'].forEach(label=>{
+    X.resetRules();
+    X.mergeRules({system:label,classes:[{name:'Warlock'}]},'x.json');
+    let threw=null,result=null;
+    try{result=X.missingRequirements(label);}catch(e){threw=String(e&&e.message||e);}
+    ck('missingRequirements("'+label+'") does not throw', threw===null, threw);
+    ck('missingRequirements("'+label+'") reports nothing declared', Array.isArray(result)&&result.length===0, result);
+  });
+
+  // 6. rulesCreditsHTML() lists the "__proto__" pack's credit, escaped, and
+  //    does not throw
+  X.resetRules();
+  X.mergeRules({system:'__proto__',license:'MIT',attribution:'<script>bad</script>',
+    feats:[{name:'F'}]},'f.json');
+  {
+    let threw=null,html='';
+    try{html=ctx.rulesCreditsHTML();}catch(e){threw=String(e&&e.message||e);}
+    ck('rulesCreditsHTML does not throw for a "__proto__" pack', threw===null, threw);
+    ck('rulesCreditsHTML lists its credit', /__proto__/.test(html) && /MIT/.test(html), html);
+    ck('rulesCreditsHTML escapes the attribution', html.includes('&lt;script&gt;') && !html.includes('<script>bad</script>'), html);
+  }
+  X.resetRules();
 }
 
 // ---------- the rules cache must never fail silently

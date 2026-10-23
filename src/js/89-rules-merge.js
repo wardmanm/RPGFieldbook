@@ -32,7 +32,8 @@ function missingRequirements(src){
   });
   if(orphan.length)out.push({pack:"",file:"",missing:orphan.map(n=>({cat:"classes",name:n}))});
   /* declared */
-  const decl=(rules.requires&&rules.requires[src])||[];
+  const d=rules.requires&&rules.requires[src];
+  const decl=Array.isArray(d)?d:[];
   decl.forEach(grp=>{
     if(!grp||typeof grp!=="object")return;
     const miss=[];
@@ -127,7 +128,26 @@ function renderSrcRows(){
   const srcs=settings.rulesSources||[];
   host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${esc(i)}"><button class="icon danger" data-src-del="${esc(i)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
 }
-function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:{},credits:{}};}
+/* `rules.requires` and `rules.credits` are keyed by a pack's own LABEL
+   (srcLabel()), which a pack author writes freely — nothing stops it being
+   "__proto__" or "constructor". A plain object can't hold an "__proto__" key
+   safely: `obj["__proto__"]=x` sets the object's PROTOTYPE instead of adding
+   a key (the declaration is lost, silently), and `obj["constructor"]` reads
+   back the inherited Object constructor when nothing set that key, which
+   broke a `.forEach` on it downstream (#88). A null-prototype map has no
+   inherited properties at all, so every label — any label — is just an
+   ordinary own key. Returns a NEW map; never mutates `o`. */
+function packMap(o){
+  const m=Object.create(null);
+  if(o&&typeof o==="object"&&!Array.isArray(o))Object.keys(o).forEach(k=>{m[k]=o[k];});
+  return m;
+}
+/* Normalise both maps to null-prototype, copying whatever own keys they have
+   (plain object or not). For a path that doesn't already run through
+   `tidyRules()` (which does the same thing) right after assigning `rules` —
+   see the three cache/import restores in rules-packs.md. */
+function normPackMaps(){rules.requires=packMap(rules.requires);rules.credits=packMap(rules.credits);}
+function resetRules(){rules={name:"",version:1,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[],requires:packMap(),credits:packMap()};}
 /* An entry's name (a keyword's term) as text, or "" when it has none that can
    be shown: not an object, no name, only spaces, or not text. A number is a
    name written without quotes, so it counts. Every picker, lookup and chip
@@ -162,7 +182,8 @@ function tidyRule(x,kind){
    everything that could. Returns how many entries it dropped, per category. */
 function tidyRules(){
   const dropped={};
-  if(rules.credits!=null&&(typeof rules.credits!=="object"||Array.isArray(rules.credits)))rules.credits={};
+  rules.requires=packMap(rules.requires);
+  rules.credits=packMap(rules.credits);
   RULE_CATS.forEach(kind=>{
     const arr=rules[kind];
     if(arr==null)return;
@@ -216,12 +237,17 @@ function mergeRules(obj,fileName,url){
      boot restores — mergeRules never runs again. Must stay plain arrays and
      strings for that round trip; rules._dups uses Sets and serialises to {}. */
   if(Array.isArray(obj.requires)){
-    if(!rules.requires||typeof rules.requires!=="object")rules.requires={};
+    /* a restored map that isn't already null-prototype (a settings file's
+       plain JSON, say) is fixed here, before the write below — the first
+       write of a never-before-seen "__proto__" key is the dangerous one */
+    if(!rules.requires||typeof rules.requires!=="object"||Array.isArray(rules.requires)||Object.getPrototypeOf(rules.requires)!==null)
+      rules.requires=packMap(rules.requires);
     rules.requires[srcLabel(obj)]=obj.requires;
   }
   const credit=creditOf(obj.name||src,obj.license,obj.attribution);
   if(credit){
-    if(!rules.credits||typeof rules.credits!=="object"||Array.isArray(rules.credits))rules.credits={};
+    if(!rules.credits||typeof rules.credits!=="object"||Array.isArray(rules.credits)||Object.getPrototypeOf(rules.credits)!==null)
+      rules.credits=packMap(rules.credits);
     rules.credits[src]=credit;
   }
   const cats={keywords:obj.keywords,features:traitArr,items:obj.items,spells:obj.spells,races:obj.races,classes:obj.classes,feats:obj.feats,backgrounds:obj.backgrounds,subclasses:obj.subclasses,tables:obj.tables};
@@ -319,7 +345,7 @@ function poolFromExport(saved){
         const c=saved.credits[l];
         if(!isObj(c)||!RULE_CATS.some(k=>(rules[k]||[]).some(e=>e._source===l)))return;
         const cr=creditOf(c.title||l,c.license,c.attribution);
-        if(cr){if(!isObj(rules.credits))rules.credits={};rules.credits[l]=cr;}
+        if(cr){rules.credits=packMap(rules.credits);rules.credits[l]=cr;}
       });
     }
     const used=RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);

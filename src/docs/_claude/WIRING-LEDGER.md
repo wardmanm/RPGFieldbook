@@ -6515,3 +6515,64 @@ pass over `src/js/86-rules-browser.js`. This entry supersedes L6327 §10's (a) a
 Pages: [rules & tables](../wiki/features/rules-and-tables.md), [shell](../wiki/ui/shell.md),
 [sections & layout](../wiki/ui/sections-and-layout.md), [decisions](../wiki/decisions.md),
 [roadmap/1.9.0](../wiki/roadmap/1.9.0.md)
+
+## Pack-label maps without a prototype (#88, 2026-10-23)
+
+**What.** `rules.requires[label]` and `rules.credits[label]` (89-rules-merge.js) are keyed by a
+pack's own `srcLabel()` — its `system` or `name`, written freely by whoever authors the pack. Both
+were plain objects. Two failure modes: (1) a pack labelled `__proto__` made
+`rules.requires["__proto__"]=x` set the object's PROTOTYPE instead of adding a key — the
+declaration silently vanished and never persisted; (2) a pack labelled `constructor` (or
+`toString`, `hasOwnProperty`, …) that declared no `requires` made `rules.requires["constructor"]`
+read back the inherited `Object` function (truthy, not an array), so `missingRequirements()`'s old
+`const decl=(rules.requires&&rules.requires[src])||[];decl.forEach(...)` threw. Nothing global was
+polluted — only the object's own prototype changed, never `Object.prototype` — but both were real
+bugs: a lost declaration, and a thrown exception on an ordinary (if oddly named) pack.
+
+**Why.** Any string a pack author writes becomes an object key here, with no allow-list and no
+escaping. A null-prototype object has no inherited properties at all, so every label is just an
+ordinary own key — the fix moves the invariant from "labels must avoid `Object.prototype`'s names"
+(unenforceable) to "these two maps are never plain objects".
+
+**Design.** One helper, `packMap(o)` (89-rules-merge.js, next to `resetRules()`): returns a NEW
+`Object.create(null)` map holding `o`'s own enumerable keys when `o` is a plain non-array object,
+else an empty null-prototype map — never mutates `o`. A second helper, `normPackMaps()`, sets
+`rules.requires=packMap(rules.requires);rules.credits=packMap(rules.credits);` for a path that does
+not already run through `tidyRules()` right after assigning `rules`.
+
+Applied at:
+- `resetRules()` — `requires:packMap(),credits:packMap()`.
+- `mergeRules()`'s lazy-init lines for both maps — now rebuild via `packMap(existing)` whenever the
+  current value isn't already a null-prototype object (covers a restored plain object from an older
+  cache, a settings file, or a first merge), before the `[srcLabel(obj)]=` write.
+- `tidyRules()` — unconditionally `rules.requires=packMap(rules.requires);rules.credits=packMap(rules.credits);`,
+  replacing the old credits-only non-array guard. Every path that changes the pool ends in
+  `reindexRules()`, which calls `tidyRules()` first — so this one change normalises every restore.
+- `poolFromExport()`'s credits-restore line — `rules.credits={}` → `rules.credits=packMap();`.
+- The declared-requirements read in `missingRequirements()` (~L35) — was
+  `const decl=(rules.requires&&rules.requires[src])||[];`, now
+  `const d=rules.requires&&rules.requires[src];const decl=Array.isArray(d)?d:[];`, so a truthy
+  non-array (the old `constructor` bug, or anything else unexpected) reads as "nothing declared"
+  instead of throwing on `.forEach`.
+
+**The three restore paths all already run through `tidyRules()` immediately after assigning
+`rules`,** so none needed an explicit `normPackMaps()` call — `tidyRules()`'s fix covers them for
+free: `loadRulesCacheAsync()` (71-char-io.js) does `rules=Object.assign(rules,parsed);reindexRules();`;
+`boot()` (90-boot.js) does `rules=Object.assign(rules,JSON.parse(rr));reindexRules();`; Import
+settings' swap (88-settings.js, `finishSettingsImport()`) does `rules=imp.pool;reindexRules();`.
+`normPackMaps()` is defined for a future path that skips `tidyRules()`, and used directly by the
+round-trip test below (`JSON.parse(JSON.stringify(rules))` restored the way a cache restore does:
+`Object.assign` into a reset pool, then `normPackMaps()`).
+
+**Tests** (`rules-data.js`, "#88: pack labels as map keys"): `packMap()` on a plain object, `null`,
+an array and a string; merging a pack labelled `__proto__` (`requires`, `license`, `attribution`,
+one feat) through the real `mergeRules()` path — the declaration lands as an ordinary own key in
+both maps, and `Object.prototype` gains nothing; the declaration surviving
+`JSON.parse(JSON.stringify(rules))` restored via `Object.assign`+`normPackMaps()`, including a
+second write to the same label afterwards; removing that pack through the real Settings removal
+path (`removeRulesGroup()` → `prunePackMeta()`) drops the `__proto__` entry from both maps; a pack
+labelled `constructor` or `toString` with no `requires` — `missingRequirements()` neither throws nor
+reports a false declaration; `rulesCreditsHTML()` lists the `__proto__` pack's (escaped) credit
+without throwing. Full suite: all ten green, data unchanged.
+
+Pages: [rules packs](../wiki/architecture/rules-packs.md)
