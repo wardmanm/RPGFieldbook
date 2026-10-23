@@ -75,6 +75,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'itemFacets', 'spellFacets', 'featFacets', 'itemCatOf', 'itemRarOf', 'spellClassesOf', 'spellSchoolOf', 'openItemInfo', 'openFeatInfo', 'ITEM_RARITIES',
   'settings', 'rbUI',
   'CHIP_KEYS', 'chipClean', 'chipList', 'advancementOf', 'SRD_ADVANCEMENT', 'advancementFor', 'xpNumber', 'xpProgress', 'defaultLanguagesFor', 'ensureDefaultLanguages', 'langParse',
+  'mergeNoteInto', 'liftLanguages', 'migrateSheet103',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -4475,6 +4476,39 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const c2 = X.blankChar(); c2.system = 'dnd';
   X.ensureDefaultLanguages(c2); X.ensureDefaultLanguages(c2);
   ck('#103 defaults are added once, stamped system', c2.languages.length === 1 && c2.languages[0].name === 'Common' && c2.languages[0].src === 'system');
+}
+
+/* ---- #103: an old sheet comes forward (spec §5, §7, §11) ---- */
+{
+  const old = () => ({abilities: {}, system: 'dnd',
+    proficiencies: 'Light armor.\nLanguages: Common, Elvish, Draconic\nTools: Thieves\' tools',
+    secNotes: {class: {text: 'Took Life domain.', at: 5, editedAt: 9}, origin: {text: 'From the north.', at: 3, editedAt: 4},
+               rest: {text: 'Short rests at noon.', at: 7, editedAt: 8}, portrait: {text: 'Scar on cheek.', at: 6, editedAt: 6}},
+    combatSections: ['vitals', 'rest', 'statuses'], familiars: [{id: 'f', name: 'Owl'}]});
+  const m = X.migrate(old());
+  ck('#103 class and origin notes merge into Character', m.secNotes.portrait.text ===
+     'Scar on cheek.\n\n**Class:**\nTook Life domain.\n\n**Ancestry & Background:**\nFrom the north.', m.secNotes.portrait.text);
+  ck('#103 ...keeping the earlier start and the later edit', m.secNotes.portrait.at === 3 && m.secNotes.portrait.editedAt === 9);
+  ck('#103 the merged notes are gone', !('class' in m.secNotes) && !('origin' in m.secNotes) && !('rest' in m.secNotes));
+  ck('#103 the rest note merges into Vitals, created when absent', m.secNotes.vitals.text === '**Rest & Recovery:**\nShort rests at noon.', m.secNotes.vitals);
+  ck('#103 the Languages line becomes chips', JSON.stringify(X.chipList(m, 'languages').map(l => l.name)) === '["Common","Elvish","Draconic"]' &&
+     X.chipList(m, 'languages').every(l => l.src === ''));
+  ck('#103 ...and leaves the rest of the text', m.proficiencies === 'Light armor.\nTools: Thieves\' tools', JSON.stringify(m.proficiencies));
+  ck('#103 a migrated Common is not doubled by the default', X.chipList(m, 'languages').filter(l => l.name.toLowerCase() === 'common').length === 1);
+  ck('#103 rest in the combat view becomes vitals, once', JSON.stringify(m.combatSections) === '["vitals","statuses"]', m.combatSections);
+  ck('#103 a character with a familiar shows the icon', m.showFamiliars === true && X.migrate({abilities: {}}).showFamiliars === false);
+  ck('#103 a stored choice is kept', X.migrate({abilities: {}, familiars: [{id: 'f', name: 'Owl'}], showFamiliars: false}).showFamiliars === false);
+  const twice = X.migrate(JSON.parse(JSON.stringify(m)));
+  ck('#103 migrating twice changes nothing', JSON.stringify(twice) === JSON.stringify(m));
+  ck('#103 a sheet from before gets Common', JSON.stringify(X.chipList(X.migrate({abilities: {}, system: 'dnd'}), 'languages').map(l => [l.name, l.src])) === '[["Common","system"]]');
+  ck('#103 junk lists are emptied, advancement guarded', (() => { const j = X.migrate({abilities: {}, resists: 'x', senses: [null, {name: 'Darkvision', range: '60'}], advancement: 'lots'});
+    return j.resists.length === 0 && j.senses[0].range === 60 && typeof j.senses[0].id === 'string' && j.senses[0].id && j.advancement === 'xp'; })());
+  const lift = {proficiencies: 'languages: Gnomish\nLanguages:   \nOther'};
+  X.liftLanguages(lift);
+  ck('#103 the lift is case-blind and drops an empty line', JSON.stringify(X.chipList(lift, 'languages').map(l => l.name)) === '["Gnomish"]' && lift.proficiencies === 'Other', lift);
+  const n = {secNotes: {}};
+  X.mergeNoteInto(n, 'class', 'portrait', 'Class');
+  ck('#103 nothing to merge: nothing changes', JSON.stringify(n.secNotes) === '{}');
 }
 
 /* ---- imported files and packs render inert ----

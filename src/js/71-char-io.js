@@ -42,6 +42,50 @@ function repairIds(list,seen){
   });
   return list;
 }
+/* ---- #103: the Sheet makeover's one-time work. Every step is idempotent: a
+   sheet already migrated has nothing left for it to find. ---- */
+/* A removed section's note joins the one that took its place, under a heading
+   naming where it came from; the earlier start and the later edit are kept. */
+function mergeNoteInto(c,from,into,heading){
+  const m=c.secNotes;if(!m||typeof m!=="object")return;
+  const f=m[from];if(!f||typeof f!=="object"||Array.isArray(f))return;
+  const t=String(f.text||"").trim();
+  if(t){
+    const to=(m[into]&&typeof m[into]==="object"&&!Array.isArray(m[into]))?m[into]:null;
+    const prev=to?String(to.text||"").trim():"";
+    const block="**"+heading+":**\n"+t;
+    const nums=[to&&to.at,f.at].filter(x=>typeof x==="number");
+    const eds=[to&&to.editedAt,f.editedAt].filter(x=>typeof x==="number");
+    m[into]=Object.assign({},to||{},{text:prev?prev+"\n\n"+block:block});
+    if(nums.length)m[into].at=Math.min(...nums);
+    if(eds.length)m[into].editedAt=Math.max(...eds);
+  }
+  delete m[from];
+}
+/* "Languages: …" lines in Proficiencies become the player's own chips. */
+function liftLanguages(c){
+  const p=typeof c.proficiencies==="string"?c.proficiencies:"";
+  if(!/^\s*languages\s*:/im.test(p))return;
+  const found=[],keep=[];
+  p.split("\n").forEach(line=>{const mm=/^\s*languages\s*:(.*)$/i.exec(line);if(mm)found.push(...langParse(mm[1]));else keep.push(line);});
+  c.proficiencies=keep.join("\n").replace(/\n{3,}/g,"\n\n").trim();
+  const have=chipClean(c.languages,"languages",true),names=new Set(have.map(x=>x.name.toLowerCase()));
+  found.forEach(n=>{if(!names.has(n.toLowerCase())){have.push({id:uid(),name:n,src:""});names.add(n.toLowerCase());}});
+  c.languages=have;
+}
+function migrateSheet103(c){
+  CHIP_KEYS.forEach(k=>{c[k]=chipClean(c[k],k,true);});
+  c.advancement=advancementOf(c);
+  mergeNoteInto(c,"class","portrait","Class");
+  mergeNoteInto(c,"origin","portrait","Ancestry & Background");
+  mergeNoteInto(c,"rest","vitals","Rest & Recovery");
+  if(Array.isArray(c.combatSections)){
+    const out=[];c.combatSections.forEach(k=>{const v=k==="rest"?"vitals":k;if(!out.includes(v))out.push(v);});
+    c.combatSections=out;
+  }
+  liftLanguages(c);
+  ensureDefaultLanguages(c);
+}
 function migrate(s){
   s=s||{};
   const base=blankChar(), blank=blankChar();
@@ -90,6 +134,10 @@ function migrate(s){
   /* AFTER the list guards, for the same reason: bundles unpack, pieces and
      launchers learn their ammunition kind, once per character (#6). */
   migrateAmmo(base);
+  /* #103: showFamiliars is decided from the FILE, so a stored choice wins and a
+     sheet from before gets the icon only if it has a familiar. */
+  base.showFamiliars=typeof s.showFamiliars==="boolean"?s.showFamiliars:base.familiars.length>0;
+  migrateSheet103(base);
   return base;
 }
 function exportChar(){

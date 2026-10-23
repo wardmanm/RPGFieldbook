@@ -22,7 +22,7 @@ function loadCharById(id){
 }
 function newCharacter(name,system){
   if(!leaveCharacterOk())return false;
-  const c=blankChar();c.system=(system==="dnd")?"dnd":"humblewood";c.name=name||"";c.glossary=seedGlossary();
+  const c=blankChar();c.system=(system==="dnd")?"dnd":"humblewood";c.name=name||"";c.glossary=seedGlossary();ensureDefaultLanguages(c);
   c.appVersion=APP_VERSION;   // safe here: runtime, long after 30-version.js has run
   c.ammoInit=AMMO_PASS;   // a new sheet has nothing for the one-time ammo pass to migrate (never in blankChar — see wpnEquipInit)
   character=c;activeId=c.id;
