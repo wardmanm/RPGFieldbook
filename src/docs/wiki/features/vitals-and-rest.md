@@ -154,7 +154,10 @@ XP that is not a number shows as typed, with no bar. Typing in the box repaints 
 bar (`renderLevelBadge()`), so the caret stays. **Milestone mode** shows the ring alone; the XP stays
 in the data, so switching back restores it. The switch is Settings → Sheet display → Advancement.
 
-**Rests.** The header's ☕ and ☾ icons (`#btnShortRest`, `#btnLongRest`) run them. `longRest()` sets Current to the effective maximum (if one is set), clears Temp and death
+**Rests.** The header's **Short rest** and **Long rest** buttons (`#btnShortRest`, `#btnLongRest`)
+run them. Each holds its words (`.sh-rlbl`) and its icon (`.sh-rico`, ☕ / ☾): the words show by
+default, the icon with Icon tabs on (`html[data-tabs="icons"]`) or at ≤860px, where the tab bar
+turns to icons. `longRest()` sets Current to the effective maximum (if one is set), clears Temp and death
 saves, restores every spell slot, gets back half the total Hit Dice (at least one, largest die
 first — `recoverHitDice()`), and resets short- and long-rest feature uses, item uses and resources.
 `shortRest()` restores Warlock pact slots and short-rest feature uses, item uses and resources, and
@@ -280,3 +283,4 @@ came back.
   hint, so a custom class can type its dice; an open spend box follows a dice edit or the mode
   switch; the XP bar fills within the level; the short rest offers Spend a hit die.
   → ledger L6729, #103
+- 2026-10-23 — The rest buttons read "Short rest" / "Long rest", icons with Icon tabs or on a narrow page. → ledger L6776, #103

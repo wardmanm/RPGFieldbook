@@ -54,22 +54,27 @@ The Sheet is one condensed page after Foundry VTT's sheet (spec
 `2026-10-23-sheet-makeover-design.md`):
 
 - **The header** is a band across the top, `<header class="card sheet-head" data-note="portrait">`:
-  the name, the class line, the rest and inspiration icons, the paw, and the level ring with the XP.
-  It is the `portrait` section, titled "Character"; its icons row is a `.label sh-bar` whose caption
+  the name and the class line, then one row: Short rest, Long rest, the paw, the star, the level
+  ring with the XP, and the note button last (Mike's order). The rests read "Short rest" /
+  "Long rest" and show their icons instead with Icon tabs on or at ≤860px, the tab bar's own rule.
+  It is the `portrait` section, titled "Character"; that row is a `.label sh-bar` whose caption
   "Character" is visually hidden, so the note button and the ☰ entry find it like any card
-  heading. The level badge (`#shLevel`) sits outside that `.label` so the ☰ entry reads
-  "Character", not the level. What it does is on [Vitals & rest](../features/vitals-and-rest.md)
+  heading. The level badge (`#shLevel`) is the `.label`'s last child, so the note button
+  `renderNoteIcons()` appends lands after the XP bar; the ☰ strips `.sh-level` with the buttons, so
+  its entry still reads "Character". The header has no combat toggle (`nocv`). What it does is on [Vitals & rest](../features/vitals-and-rest.md)
   and [Character building](../features/character-building.md).
 - **`.sheet-grid`** (`10-chrome.css`) holds the rest: `minmax(220px,260px) minmax(0,1.3fr)
   minmax(0,1fr)`. The **rail** (`card rail`, the `vitals` section) spans the left column's four
   rows, so it never stretches the others. The **strip** (`card strip`, `abilities`) runs over the
-  other two columns; under it **Skills** (`#skillsCard`) sits beside **`.col-r`** (Defences,
-  Statuses, Resources); **Features** (`card wide`) runs full width under them.
+  other two columns; under it two **independent stacks** sit side by side (Mike's ruling):
+  **`.col-m`** (Skills, Features) and **`.col-r`** (Defences, Statuses, Resources), each its own
+  grid, so no card waits on its neighbour's row and Features follows Skills directly.
 - **Two columns at ≤1000px:** the rail beside one column of the strip (3 × 2), Skills and `.col-r`;
-  Features full width under both.
+  Features full width under both, as widths.html. `.col-m` becomes `display:contents` inside that
+  query so Skills and Features are grid items of their own; `.col-r` stays a stack.
 - **One column at ≤700px**, in the spec's order: rail, abilities, Defences, Statuses, Skills,
-  Resources, Features. `.col-r` becomes `display:contents` inside that query, so its three cards are
-  grid items and `order` can interleave them with Skills.
+  Resources, Features. Both stacks become `display:contents` inside that query, so their cards are
+  grid items and `order` can interleave them.
 - **The rail is dark by its own tokens.** `.rail` re-points `--panel`, `--ink`, `--ink-soft`,
   `--line` and the field tokens to `--rail-*` (all four palettes in `00-tokens.css`), so the
   cards' own rules draw it dark without a second set of selectors. In dark mode the rail is tinted
@@ -83,7 +88,7 @@ The Sheet is one condensed page after Foundry VTT's sheet (spec
 `NOTE_SECTIONS` in `87-notes.js` lists 18 sections as `{k, tab, title}`, with `nocv:true` on the
 one the combat view may not take (`portrait`, the header). Each one's card carries `data-note="k"`
 as the attribute right after its class attribute (`class="card"`, or `card` plus one layout class:
-`card rail`, `card strip`, `card wide`, and the header's `card sheet-head`). Its consumers:
+`card rail`, `card strip`, and the header's `card sheet-head`). Its consumers:
 
 - **Notes.** `renderNoteIcons()` puts a note button in each card's `.label`, `notesHTML()` groups
   the Journal tab's Section Notes card by `tab`, and notes are stored in `character.secNotes[k]`
@@ -308,8 +313,12 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
   and in `wire()` that leaves every later listener unbound.
 - **A media query comes after the rule it overrides.** `rules-data.js` pins the grid's ≤1000px and
   ≤700px queries after `.sheet-grid`, and 30-sheet.css's strip (≤1000px) and rail (≤700px) queries
-  after `.strip .abilities` and `.rail`. `display:contents` on `.col-r` lives only inside the
-  ≤700px query.
+  after `.strip .abilities` and `.rail`. `display:contents` on `.col-m` (≤1000px) and on both
+  stacks (≤700px) lives only inside those queries, scoped to `.sheet-grid`; an unscoped `.stack`
+  rule once broke every one-stack tab.
+- **A card goes home to its own stack.** The combat view leaves a marker where each card was, inside
+  `.col-m` or `.col-r`, and puts the card back in its place; `sheet.js` checks this against the real
+  markup.
 - **The header is not combat-addable** (`nocv`). Its rests are not a fight action, and the portrait
   rides in with Vitals; a saved `portrait` in the view becomes `vitals` in `migrate()`.
 - **One group field.** A free-text label that files a record into a group is typed in
@@ -355,7 +364,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | Question | Decision | Rejected, and why |
 |---|---|---|
 | How is a section identified? | A stable `k` in `NOTE_SECTIONS` | A heading-derived id: headings get reworded, and notes keyed to one would be orphaned |
-| The Sheet's layout (#103) | One layout, no setting: header, rail, strip, Skills beside Defences/Statuses/Resources, Features; three columns, two, one by width | A classic fallback: twice the CSS and screenshots until 2.0 |
+| The Sheet's layout (#103) | One layout, no setting: header, rail, strip, then two independent stacks (Skills, Features · Defences, Statuses, Resources); three columns, two, one by width | A classic fallback: twice the CSS and screenshots until 2.0 |
 | Familiars on the Sheet (#103) | A paw in the header, shown by a per-character switch, opening a popover and a modal; the card stays in the DOM, hidden, for the combat view | A chip with the name: long names and several familiars don't fit. A side drawer: heavier than needed. Flattening `.stack` to sink the card on a phone (the 2026-08-15 answer): the stacks are gone |
 | The familiars' #97 pencil (#103) | None: `familiars` leaves `EDIT_CARDS` | The familiar's window honouring `editHide`: its only toggle would be on the card, reachable just in the combat view |
 | May the header go in the combat view? (#103) | No (`nocv`); a saved one becomes Vitals | Keeping it addable: the name, rests and level would ride into a fight view |
@@ -411,3 +420,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-10-22 — The stale "Where Rules-tab folding is stored" decision is rewritten: `settings.rulesCat`, not `rulesCollapse`. → ledger L6455, #99
 - 2026-10-23 — The Sheet makeover: a header band over a grid (rail, strip, Skills, Defences/Statuses/Resources, Features), three, two and one columns; the stacks and their phone flatten go; familiars open from the paw; 18 sections, `portrait` is the header and not combat-addable; Attacks on Inventory. → ledger L6633, #103
 - 2026-10-23 — Final review fixes: the paw's menu gains Combat view and Note; `familiars` leaves `EDIT_CARDS` (eleven); `sheetHeadHTML()` is `pawHTML()`. → ledger L6729, #103
+- 2026-10-23 — Mike's changes: the middle and right columns are independent stacks (Features follows Skills); the rests read as words; the header runs rests, paw, star, level, note. → ledger L6776, #103

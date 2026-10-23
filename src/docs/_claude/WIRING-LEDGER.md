@@ -6772,3 +6772,31 @@ Pages: [vitals & rest](../wiki/features/vitals-and-rest.md),
 [combat view](../wiki/features/combat-view.md), [sections & layout](../wiki/ui/sections-and-layout.md),
 [grants & provenance](../wiki/architecture/grants-and-provenance.md),
 [known issues](../wiki/roadmap/known-issues.md)
+
+## The Sheet makeover: Mike's header and column changes (#103, 2026-10-23)
+
+Mike's feedback on the Task 7 screenshots, four changes:
+
+1. *Rest chips.* `#btnShortRest` / `#btnLongRest` hold an icon (`.sh-rico`) and words
+   (`.sh-rlbl`). The words show by default; the icon shows instead with Icon tabs on
+   (`html[data-tabs="icons"]`, set by `applyTheme()`) or at ≤860px, the tab bar's own breakpoint.
+   Ids, titles and aria-labels unchanged.
+2. *The note button last.* `#shLevel` moved into the header's `.label.sh-bar` as its last child, so
+   the note button `renderNoteIcons()` appends lands after the XP bar. The ☰ strips `.sh-level`
+   with the buttons, so its entry still reads "Character". The header has no combat toggle
+   (`portrait` is `nocv`), so the note button is the only control that moved.
+3. *Order:* Short rest, Long rest, the paw, the star, the level badge and XP, the note button.
+4. *Independent stacks.* Under the strip, `.col-m` (Skills, Features) and `.col-r` (Defences,
+   Statuses, Resources) are two grids side by side, so Features follows Skills instead of waiting
+   for the right column's row (the gap Mike circled); Features is no longer full width at desktop.
+   At ≤1000px `.col-m` opens (`display:contents`) so the two-column layout stays widths.html's
+   (Features full width under the rail); at ≤700px both open and `order` gives the phone order.
+   Both flattenings are scoped to `.sheet-grid` and sit inside their queries.
+
+The ☰ now lists Skills and Features before Defences (DOM order). Tests: `rules-data.js` (the
+stacks and their CSS, the rest chips, the header's DOM order, the ☰ strip), `sheet.js` (the real
+Sheet markup parsed into a node tree: the combat view takes every card and returns each to its own
+stack and place). Shots `.claude/qa/103-mike-*`.
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
+[vitals & rest](../wiki/features/vitals-and-rest.md), [shell](../wiki/ui/shell.md)

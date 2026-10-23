@@ -83,8 +83,9 @@ tap or an entry tap.
 
 The flyout is DOM-driven. It does not read `NOTE_SECTIONS`, so cards outside the registry
 (`#concCard`) are listed too. The Sheet's header is a card too (#103): its `.label sh-bar` holds
-a visually hidden caption, "Character", which is what its entry reads, and the level badge sits
-outside that `.label` so the level never leaks into it. **The Rules tab is its own case** (`buildToc()`, #99): instead of
+a visually hidden caption, "Character", which is what its entry reads. The level badge sits inside
+that `.label` (last, so the note button lands after it), and the flyout strips `.sh-level` with
+the buttons, so the level never leaks into the entry. **The Rules tab is its own case** (`buildToc()`, #99): instead of
 walking the DOM for `.card > .label`s, it lists `rbShown()`'s categories by name and count, and a
 tap calls `rbOpenCat()` to repaint the pane, then `scrollToCard(document.getElementById("rbCard"))`
 to bring it into view — the same offset-clearing scroll every other tab's entries get, so picking a
@@ -331,3 +332,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-22 — The ☰ flyout gains a Rules-tab case: it lists `rbShown()`'s categories by name and count instead of walking the DOM, and a tap calls `rbOpenCat()` rather than `scrollToCard()`. → ledger L6327, #99
 - 2026-10-22 — The Rules-tab flyout entries now also call `scrollToCard()` after `rbOpenCat()`, clearing the tab-bar offset like every other tab's entries. → ledger L6455, #99
 - 2026-10-23 — The Story tab's button reads Bio (id `story` kept); the Sheet header is a card whose ☰ entry is "Character"; the header's own popover (`openShFly()`). → ledger L6633, #103
+- 2026-10-23 — The ☰ strips the Sheet header's `.sh-level`, now inside its `.label`. → ledger L6776, #103

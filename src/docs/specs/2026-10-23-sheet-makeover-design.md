@@ -377,6 +377,12 @@ What differs from the sections above, and why:
   player's (M-3); the species button names the subrace (M-7); an open spend box follows a dice edit
   or the mode switch (M-8); **§6.1's XP bar fills within the level**, `(xp − cur) / (next − cur)`,
   clamped (Mike's ruling, M-9); Summon / Dismiss is a button and keeps the keyboard (M-14).
+- **Mike's header and column changes** (L6776): the rests read "Short rest" / "Long rest" (icons
+  with Icon tabs on or at ≤860px); the header row runs Short rest, Long rest, paw, star, level and
+  XP, then the note button (`#shLevel` inside the `.label`); **§6.5/§6.7's Features is no longer
+  full width at desktop**: the middle and right columns are independent stacks (`.col-m`: Skills,
+  Features; `.col-r`: Defences, Statuses, Resources), so Features follows Skills; two columns keep
+  Features full width under the rail, one column keeps the phone order.
 - `statStyle` and `hdStyle` stay in `blankChar()` and saved sheets, unread; `classChipHTML()`,
   `statStyle()` and the grouped builders are deleted.
 
