@@ -2,10 +2,17 @@
 Updated: 2026-10-24 · Branch: main
 
 ## Current focus
-1.9.0 wave 2: #103 (Sheet tab makeover) merged 2026-10-24; #101 (level-up fanfare) is next, to be
-brainstormed against the new Sheet. Then wave 3 (#91, #47, #52, #102) and wave 4 (#105). No branch open.
+1.9.0 wave 2 is complete: #103 and #101 merged 2026-10-24, and the #102 spike is done. Next is wave 3
+(#91, #47, #52, #102), then wave 4 (#105). #102's spec waits on its install-route decision. No branch
+open.
 
 ## Recent changes
+- 2026-10-24: Merged #101. Levelling up plays a short animation (rune circle, the ring ticking up, a
+  LEVEL N banner). A card then shows what the level gave, with the HP roll on it (roll it, type it,
+  or take the average). The choice window follows only when there is something to choose. Paladin and
+  Ranger spell slots round up (2024 rule). The multiclass note states the 13+ prerequisite. A "don't
+  stack" tag appears on Extra Attack and Unarmored Defense (Claude's ruling: narrowed from every
+  same-named feature, which wrongly flagged Spellcasting).
 - 2026-10-24: Merged #103. The Sheet now has:
   - a Foundry-style header: class menu, level badge, XP or Milestone advancement, rests, inspiration
     and a familiars paw;
@@ -41,7 +48,11 @@ brainstormed against the new Sheet. Then wave 3 (#91, #47, #52, #102) and wave 4
   2026-10-19). Options: keep / restore it.
 
 ## Loose ends
-- 13 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
+- 15 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
+- #101 on Mike's devices: Claude drove it at 1280 and 390 in both skins (`.claude/qa/101-*.png`).
+  Still to check: touch, print, real reduced motion, Safari and Firefox, Mike's own characters. Also:
+  - a long card at phone width puts the HP step and Done below the fold;
+  - the card's class line and banner now use the body font (the Cinzel "1" read as an "I").
 - #103 on Mike's devices: Claude drove it at 1280/900/390 in both skins (`.claude/qa/103-*.png`).
   Still to check: touch, print, Safari/Firefox, and Mike's own characters. Also for that pass:
   - the phone AC shield overlaps the portrait rather than sitting beside it;
