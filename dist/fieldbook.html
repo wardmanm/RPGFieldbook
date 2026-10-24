@@ -14,6 +14,8 @@
   --head:"Cinzel", Georgia, serif;
   --body:"EB Garamond", Georgia, "Times New Roman", serif;
   --radius:7px;
+  /* #101: the level-up scene — a forest night, for Humblewood */
+  --lu-night:#0d1a12; --lu-night-2:#2a4433; --lu-glow:#e6d98a; --lu-spark:#e2b44c;
 }
 html[data-theme="light"]{
   --paper:#f4edda;      /* warm cream page */
@@ -64,7 +66,8 @@ html[data-theme="dark"]{
   --rail-accent:#d8a544; --rail-good:#5eb7a3; --rail-bad:#d5765f; --rail-warn:#e0b452;
 }
 /* ---- Classic D&D skin (parchment + red/gold, Roman-cap display) ---- */
-html[data-skin="classic"]{ --display:"Cinzel", Georgia, "Times New Roman", serif; }
+html[data-skin="classic"]{ --display:"Cinzel", Georgia, "Times New Roman", serif;
+  --lu-night:#1d1826; --lu-night-2:#3a2f4a; --lu-glow:#9fd4ff; --lu-spark:#e2b44c; }
 html[data-skin="classic"][data-theme="light"]{
   --paper:#efe7d3; --paper-2:#e4d9be; --panel:#f5efdf;
   --ink:#1c1710; --ink-soft:#6b6047; --line:#2a2018; --hair:rgba(42,32,24,.22);
@@ -1472,6 +1475,58 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
   #printArea .p-two .p-item{break-inside:avoid}
   #printArea .p-mark{font-weight:bold}
 }
+/* ---- the level card (#101) ---- */
+/* the banner number and the class line carry a digit ("1 → 2", "LEVEL 11"), and --display/--head
+   (Cinzel on the classic skin) draw a "1" with no serif, reading as a capital "I"; the body font's
+   figures don't, so these two use it instead of the heading faces (#101) */
+.lu-card .lu-bn{margin:0 0 10px;padding:6px;text-align:center;background:var(--accent);color:var(--paper);font:900 22px/1.1 var(--body);letter-spacing:.06em;border-radius:6px}
+.lu-k{margin:0;font:700 11px var(--head);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lu-cls{margin:0 0 6px;font-family:var(--body);font-weight:700}
+.lu-list{list-style:none;margin:0;padding:0}
+.lu-row{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px dotted var(--hair)}
+.lu-row>i{font-style:normal;flex:0 0 16px;text-align:center;color:var(--accent)}
+.lu-row>span{flex:1;min-width:0}
+.lu-row small{flex:0 0 auto;font:700 10px var(--head);text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+.lu-d{display:block;font-size:13px;color:var(--ink-soft)}
+.lu-warn{display:block;font-size:13px;color:var(--brick)}
+.lu-none{padding:8px 0;color:var(--ink-soft);font-style:italic}
+.lu-hp{margin-top:12px;padding:8px 10px;border:1.5px solid var(--line);border-radius:6px;background:var(--field)}
+.lu-hp h5{margin:0;font:700 11px var(--head);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.lu-avg{background:none;border:0;padding:4px 2px;color:var(--accent-2);text-decoration:underline;cursor:pointer;font:inherit}
+.lu-hp .hd-res.bad{color:var(--brick)}
+/* ---- the level-up scene (#101): over the page, under the modal (80) ---- */
+.lu-fx{position:fixed;inset:0;z-index:75;overflow:hidden;cursor:pointer;
+  background:radial-gradient(circle at 50% 42%,var(--lu-night-2) 0,var(--lu-night) 70%);animation:luScene 2.4s ease forwards}
+.lu-sigil{position:absolute;left:50%;top:42%;width:min(70vw,300px);height:min(70vw,300px);transform:translate(-50%,-50%);opacity:0;animation:luSigil 2.1s ease-out forwards}
+.lu-sigil circle,.lu-sigil path{fill:none;stroke:var(--lu-glow);stroke-width:2;stroke-linecap:round;filter:drop-shadow(0 0 4px var(--lu-glow))}
+.lu-c1{stroke-dasharray:760;stroke-dashoffset:760;animation:luDraw .8s .05s ease-out forwards}
+.lu-c2{stroke-dasharray:600;stroke-dashoffset:600;animation:luDraw .8s .25s ease-out forwards}
+.lu-star{stroke-dasharray:1400;stroke-dashoffset:1400;animation:luDraw .9s .4s ease-out forwards}
+.lu-runes{transform-origin:125px 125px;animation:luSpin 2.1s linear forwards}
+.lu-runes path{stroke-width:1.6}
+.lu-ring{position:absolute;left:50%;top:42%;width:84px;height:84px;box-sizing:border-box;margin:-42px 0 0 -42px;border:4px solid var(--accent);border-radius:50%;
+  background:var(--paper);color:var(--accent);display:grid;place-items:center;font:900 40px/1 var(--head);font-variant-numeric:lining-nums;opacity:0;animation:luRing 1.9s ease-out forwards}
+.lu-ring b{grid-area:1/1}
+.lu-old{animation:luOut .2s .8s forwards}
+.lu-new{opacity:0;animation:luIn .2s .8s forwards}
+.lu-flash{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at 50% 42%,rgba(255,255,255,.95),transparent 55%);animation:luFlash .6s 1.1s ease-out forwards}
+.lu-banner{position:absolute;left:50%;top:16%;transform:translateX(-50%);min-width:min(80vw,320px);padding:10px 24px;box-sizing:border-box;text-align:center;
+  background:var(--accent);color:var(--paper);font:900 30px/1 var(--display);letter-spacing:.06em;clip-path:inset(0 50% 0 50%);animation:luUnfurl .6s 1.5s ease-out forwards}
+.lu-spark{position:absolute;top:20%;width:7px;height:7px;border-radius:50%;background:var(--lu-spark);opacity:0;animation:luSparkFall 1.2s ease-out forwards}
+.lu-mote{position:absolute;bottom:-10px;width:5px;height:5px;border-radius:50%;background:var(--lu-glow);box-shadow:0 0 8px 2px var(--lu-glow);opacity:0;animation:luMote 2s ease-out forwards}
+@keyframes luScene{0%{opacity:0}8%{opacity:1}88%{opacity:1}100%{opacity:0}}
+@keyframes luDraw{to{stroke-dashoffset:0}}
+@keyframes luSpin{to{transform:rotate(120deg)}}
+@keyframes luSigil{0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}15%{opacity:1}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.3)}}
+@keyframes luRing{0%{opacity:0;transform:scale(.2)}25%{opacity:1;transform:scale(1)}55%{transform:scale(1.25);box-shadow:0 0 30px 8px var(--lu-glow)}85%{opacity:1;transform:scale(1.1)}100%{opacity:0;transform:scale(.5) translateY(-160px)}}
+@keyframes luOut{to{opacity:0}}
+@keyframes luIn{to{opacity:1}}
+@keyframes luFlash{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+@keyframes luUnfurl{to{clip-path:inset(0 0 0 0)}}
+@keyframes luSparkFall{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(40vh) scale(.4)}}
+@keyframes luMote{0%{opacity:0;transform:translateY(0)}20%{opacity:1}100%{opacity:0;transform:translateY(-70vh)}}
+@media (prefers-reduced-motion:reduce){.lu-fx{display:none}}
+@media print{.lu-fx{display:none!important}}
 </style>
 </head>
 <body>
@@ -2205,7 +2260,7 @@ function classCasterKind(c){
   return null;
 }
 function hasCasterClass(){return (character.classes||[]).some(c=>classCasterKind(c));}
-function casterLevel(){let lvl=0;(character.classes||[]).forEach(c=>{const L=num(c.level),k=classCasterKind(c);if(k==="full")lvl+=L;else if(k==="half")lvl+=Math.floor(L/2);else if(k==="third")lvl+=Math.floor(L/3);});return lvl;}
+function casterLevel(){let lvl=0;(character.classes||[]).forEach(c=>{const L=num(c.level),k=classCasterKind(c);if(k==="full")lvl+=L;else if(k==="half")lvl+=Math.ceil(L/2);   /* 2024 / SRD 5.2.1: "half your levels (round up)", every ruleset (#101) */ else if(k==="third")lvl+=Math.floor(L/3);});return lvl;}
 function warlockLevel(){let wl=0;(character.classes||[]).forEach(c=>{if(String(c.name||"").toLowerCase()==="warlock")wl+=num(c.level);});return wl;}
 let slotsAuto=false;
 function autoSlots(){
@@ -4636,20 +4691,25 @@ function multiclassChoices(d,sid){
   const mc=d&&d.multiclass;
   return (mc&&Array.isArray(mc.choices)?mc.choices:[]).map(ch=>({...ch,_level:1,_sid:sid}));
 }
+/* SRD 5.2.1 p.25. Said, never checked: the packs don't carry each class's
+   primary ability, and blocking needs that data (#101, out of scope). */
+const MC_PREREQ="Multiclassing needs a score of 13 or more in the primary ability of your current class and the new one.";
 function multiclassNote(d){
   if(!d)return "";
   const head=`${d.name} as an extra class: no saving throws and no starting equipment — those come from your first class.`;
   const mc=d.multiclass;
-  if(!mc||typeof mc!=="object")return head+` This rules pack doesn't list what multiclassing into ${d.name} grants, so no class skills are offered; add any proficiencies you gain yourself.`;
+  if(!mc||typeof mc!=="object")return head+` This rules pack doesn't list what multiclassing into ${d.name} grants, so no class skills are offered; add any proficiencies you gain yourself.`+" "+MC_PREREQ;
   const bits=[];
   if(mc.proficiencies)bits.push(String(mc.proficiencies));
   const n=(Array.isArray(mc.choices)?mc.choices:[]).filter(c=>c&&c.type==="skill").reduce((a,c)=>a+(num(c.choose)||1),0);
   if(n)bits.push(n===1?"one skill (below)":n+" skills (below)");
-  return head+(bits.length?" You gain: "+bits.join(", ")+".":" It grants no other proficiencies.");
+  return head+(bits.length?" You gain: "+bits.join(", ")+".":" It grants no other proficiencies.")+" "+MC_PREREQ;
 }
 function addClass(name,lvl){
+  if(luBusy())return;   /* #101: the scene is playing; one level-up at a time */
   const d=findClassDef(name);
   const first=!character.classes.length,sid="class:"+name;
+  const before=first?null:levelSnapshot();   /* #101: a second class is a level up */
   const entry={name,level:0,subclass:null};
   character.classes.push(entry);
   if(d){
@@ -4674,7 +4734,8 @@ function addClass(name,lvl){
      level 1 then asks for levels 2..N the same way — but only on top of a seed,
      never on a Max the player already typed. hpChoice() before the unlock: it
      remembers the lock. */
-  if(!first){choices=[hpChoice(d,lvl,lvl,name)].concat(choices);character.hp.locked=false;renderHP();}
+  let hp=null;
+  if(!first){hp=hpChoice(d,lvl,lvl,name);character.hp.locked=false;renderHP();}
   else if(seedLevel1HP(d)&&lvl>1){
     choices=[hpChoice(d,lvl-1,lvl,name,`Level 1 is already in Max HP: the full ${d.hitDie} plus CON. This is levels 2–${lvl}.`)].concat(choices);
     character.hp.locked=false;renderHP();
@@ -4682,6 +4743,8 @@ function addClass(name,lvl){
   const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
+  if(!first){openLevelUp({cls:name,from:0,to:lvl,charLevel:character.level,before,after:levelSnapshot(),
+    hp,choices,notes,pending:_eq});return;}
   runChoices(name,choices,notes,_eq);   /* with nothing to show, it opens the equipment picker itself */
 }
 function removeClass(idx){
@@ -4718,10 +4781,12 @@ function removeClass(idx){
    Without one (Level up ready, older callers) a sheet with several classes
    asks which. An index that is not a class does nothing. */
 function doLevelUp(idx){
+  if(luBusy())return;   /* #101: the scene is playing; one level-up at a time */
   if(!character.classes.length){alert("Add a class first (Add class), then you can level it up.");return;}
   const proceed=idx=>{
     const entry=character.classes[idx],d=findClassDef(entry.name);
     const newL=num(entry.level)+1;if(newL>20){alert(entry.name+" is already level 20.");return;}
+    const before=levelSnapshot();   /* #101: what the card compares against */
     entry.level=newL;
     const res=applyClassLevel(entry,d,newL);
     const hp=hpChoice(d,1,newL,entry.name);   /* before the unlock below: it remembers the lock */
@@ -4733,7 +4798,8 @@ function doLevelUp(idx){
     character.hp.locked=false;renderHP();
     character.level=totalLevel();const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
     renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
-    runChoices(entry.name,[hp].concat(res.choices),res.notes);
+    openLevelUp({cls:entry.name,from:newL-1,to:newL,charLevel:character.level,before,after:levelSnapshot(),
+      hp,choices:res.choices,notes:res.notes,pending:null});
   };
   if(idx!==undefined){if(character.classes[idx])proceed(idx);return;}
   if(character.classes.length===1){proceed(0);return;}
@@ -4849,6 +4915,251 @@ function openClassInfo(name,opts){
   openModal(nm+(entry?` ${num(entry.level)}`:""),b,iconSVG("classes",nm,"lg"));
 }
 
+/* ================= level-up fanfare (#101) =================
+   What a level gave. The sheet is snapshotted before the level is applied
+   and again after recompute(), and the card lists the difference. Comparing
+   the sheet, not reading the class table, is what makes it right for any
+   pack, homebrew included, and it can never claim something the sheet did
+   not get. Spec: src/docs/specs/2026-10-24-level-up-fanfare-design.md. */
+function levelSnapshot(){
+  const slots=[];
+  for(let lv=1;lv<=9;lv++){const s=character.slots&&character.slots[lv];slots.push(s?num(s.total):0);}
+  /* keyed by the resource's own key, so Channel Divinity from a Cleric and from
+     a Paladin stay two rows; a player's own resource has none, so its name */
+  const res={};
+  (character.resources||[]).forEach(r=>{
+    if(!r||!r.name)return;
+    res[r.key||("own:"+String(r.name).toLowerCase())]={name:String(r.name),max:num(r.max),die:String(r.die||"")};
+  });
+  return {
+    level:totalLevel(),
+    feats:(character.features||[]).map(f=>({id:f.id,name:String(f.name||""),desc:String(f.description||""),
+      cls:(f.origin&&f.origin.class)||"",sub:(f.origin&&f.origin.subclass)||""})),
+    slots,res,pb:pbValue(contributions())
+  };
+}
+const LU_ORD=["","1st","2nd","3rd","4th","5th","6th","7th","8th","9th"];
+const LU_CHOICE={asi:["Ability Score Improvement","+2 to one ability, or +1 to two"],feat:["Choose a feat",""],
+  subclass:["Choose your subclass",""],skill:["Choose skills",""],option:["Choose an option",""]};
+/* A feature's first sentence as plain text: the card is a summary, and the
+   full text stays on the Features card. Escaped where it is rendered. */
+function luSummary(s){
+  let t=String(s==null?"":s).replace(/\[Table:\s*([^\]]+)\]/g,"$1").replace(/<[^>]*>/g,"")
+    .replace(/[*_`#>]/g,"").replace(/\s+/g," ").trim();
+  const m=/^.*?[.!?](?=\s|$)/.exec(t);if(m)t=m[0];
+  return t.length>160?t.slice(0,157).trimEnd()+"…":t;
+}
+/* The features the rules say do not add together when a second class grants
+   them again (SRD 5.2.1 p.26, Multiclassing): Extra Attack, and Unarmored
+   Defense (you use only one way to calculate AC). A same-named feature that is
+   not here is left untagged: Spellcasting combines by its own rule, and
+   Expertise or Epic Boon are separate picks. */
+const LU_NO_STACK=["extra attack","unarmored defense"];
+function levelGains(before,after,choices,notes){
+  const rows=[],had=new Set(before.feats.map(f=>f.id));
+  after.feats.filter(f=>!had.has(f.id)).forEach(f=>{
+    const nm=f.name.toLowerCase();
+    const twin=LU_NO_STACK.includes(nm)&&before.feats.find(b=>b.cls&&f.cls&&b.cls!==f.cls&&b.name.toLowerCase()===nm);
+    rows.push({kind:"feature",text:f.name,detail:luSummary(f.desc),tag:f.sub||"feature",
+      warn:twin?`You already have this from ${twin.cls}; they don't stack.`:""});
+  });
+  (choices||[]).filter(ch=>ch&&ch.type!=="hp").forEach(ch=>{
+    const d=LU_CHOICE[ch.type]||["A choice",""];
+    rows.push({kind:"choice",text:String(ch.label||d[0]),detail:d[1],tag:"choose next",warn:""});
+  });
+  Object.keys(after.res).forEach(k=>{
+    const a=after.res[k],b=before.res[k];
+    if(!b){rows.push({kind:"resource",text:`${a.name} ×${a.max}`+(a.die?` · ${a.die}`:""),detail:"",tag:"new",warn:""});return;}
+    if(a.max>b.max)rows.push({kind:"resource",text:`${a.name} ${b.max} → ${a.max}`,detail:"",tag:"uses",warn:""});
+    if(a.die&&b.die&&a.die!==b.die)rows.push({kind:"resource",text:`${a.name} ${b.die} → ${a.die}`,detail:"",tag:"die",warn:""});
+  });
+  for(let lv=1;lv<=9;lv++){
+    const b=num(before.slots[lv-1]),a=num(after.slots[lv-1]);
+    if(a>b)rows.push({kind:"slot",text:b?`Spell slots · ${LU_ORD[lv]} level ${b} → ${a}`:`Spell slots · ${LU_ORD[lv]} level ×${a}`,
+      detail:"",tag:b?"slots":"new",warn:""});
+  }
+  if(after.pb>before.pb)rows.push({kind:"pb",text:`Proficiency bonus +${before.pb} → +${after.pb}`,detail:"",tag:"bonus",warn:""});
+  (notes||[]).forEach(n=>{const t=choiceNoteText(n).trim();if(t)rows.push({kind:"note",text:t,detail:"",tag:"note",warn:""});});
+  return rows;
+}
+/* The typed value of the HP step: the dice total, n..n×die, as the spend box
+   takes 1..die. With no hit die (a custom class) it is the hit points
+   themselves, any whole number. */
+function luHPCheck(ch,raw){
+  const die=num(ch&&ch.die),n=Math.max(1,num(ch&&ch.levels)||1),s=String(raw==null?"":raw).trim();
+  if(!/^\d+$/.test(s))return {ok:false,why:die?"Type the number you rolled.":"Type the hit points you gained."};
+  const r=parseInt(s,10);
+  if(die&&(r<n||r>n*die))return {ok:false,why:n>1?`${n}d${die} rolls ${n} to ${n*die}.`:`A d${die} rolls 1 to ${die}.`};
+  return {ok:true,why:""};
+}
+/* ---- the level card ----
+   One open level-up at a time; the card is a modal. Done or Continue commits
+   the HP through commitHPChoice() and hands on to runChoices(), which with
+   nothing to choose falls through to runExtraChoices(pending) as before. */
+let _lu=null;
+function luState(){return _lu;}
+const LU_HP_CLOSE="Close without adding this level's hit points?\n\nMax HP is unlocked, so you can type the new total yourself.";
+const LU_ICON={feature:"✦",choice:"✧",resource:"◆",slot:"◇",pb:"↑",note:"✎"};
+/* A level-up's notes are all one class's. A second class added above level 1
+   brings every level's spell note, and each later one supersedes the one
+   before ("Prepared Spells: 4", then "5"), so only the highest level's are
+   kept. A plain string (the multiclass note) has no level and always stays. */
+function luLatestNotes(notes){
+  const L=n=>(n&&typeof n==="object")?num(n._level):0;
+  const top=(notes||[]).reduce((m,n)=>Math.max(m,L(n)),0);
+  return (notes||[]).filter(n=>L(n)<1||L(n)===top);
+}
+/* `id` is the character the level-up belongs to. Every way on (the scene's
+   end, Done, closing) checks it, and one whose character has changed is
+   dropped: no card, no HP, no choices on someone else's sheet. */
+function openLevelUp(info){
+  _lu={id:activeId,cls:info.cls,from:num(info.from),to:num(info.to),charLevel:num(info.charLevel),fromLevel:num(info.before&&info.before.level),
+    hp:info.hp,choices:(info.choices||[]).filter(ch=>ch&&ch.type!=="hp"),pending:info.pending||null,
+    gains:levelGains(info.before,info.after,info.choices||[],luLatestNotes(info.notes)),raw:null,set:false,note:""};
+  playLevelUpFx(_lu.fromLevel||(_lu.charLevel-(_lu.to-_lu.from)),_lu.charLevel,showLevelUpCard);
+}
+function luRowHTML(r){
+  return `<li class="lu-row lu-${esc(r.kind)}"><i aria-hidden="true">${LU_ICON[r.kind]||"•"}</i><span>${esc(r.text)}`+
+    (r.detail?`<span class="lu-d">${esc(r.detail)}</span>`:"")+(r.warn?`<span class="lu-warn">${esc(r.warn)}</span>`:"")+
+    `</span>${r.tag?`<small>${esc(r.tag)}</small>`:""}</li>`;
+}
+function levelUpHPHTML(ch){
+  const die=num(ch&&ch.die),n=Math.max(1,num(ch&&ch.levels)||1),con=conModNow();
+  const res=`<div class="hd-res" id="luRes" aria-live="polite"></div>`;
+  if(!die)return `<div class="lu-hp"><h5>Hit points</h5><div class="hd-how"><label>HP gained <input id="luTyped" inputmode="numeric" size="3"></label> `+
+    `<button type="button" class="tbtn" id="luApply">Apply</button></div>${res}</div>`;
+  const conTxt=(n>1?n+"×":"")+"CON "+(con<0?"−"+Math.abs(con):con);
+  return `<div class="lu-hp"><h5>Hit points · ${esc((n>1?n:"")+"d"+die)} + ${esc(conTxt)}</h5><div class="hd-how">`+
+    `<button type="button" class="tbtn primary" id="luRoll">🎲 Roll for me</button> <span>or</span> `+
+    `<label>I rolled <input id="luTyped" inputmode="numeric" size="3"></label> <button type="button" class="tbtn" id="luApply">Apply</button> `+
+    `<button type="button" class="lu-avg" id="luAvg">Take the average (${esc(String(n*hpFixed(die)))})</button></div>${res}</div>`;
+}
+function levelUpCardHTML(lu){
+  const rows=lu.gains.length?lu.gains.map(luRowHTML).join(""):`<li class="lu-none">Nothing new from the rules at this level.</li>`;
+  return `<div class="lu-card"><div class="lu-bn">LEVEL ${esc(String(lu.charLevel))}</div>`+
+    `<p class="lu-k">You reached</p><p class="lu-cls">${esc(lu.cls)} ${esc(String(lu.from))} → ${esc(String(lu.to))} · character level ${esc(String(lu.charLevel))}</p>`+
+    `<ul class="lu-list">${rows}</ul>`+levelUpHPHTML(lu.hp)+
+    `<div class="m-actions"><button type="button" class="tbtn primary" id="luGo" disabled>${(lu.choices||[]).length?"Continue to your choice ▸":"Done"}</button></div></div>`;
+}
+/* true, and the level-up dropped, when the open character is not the one it
+   started on */
+function luStale(){if(_lu&&_lu.id!==activeId){_lu=null;return true;}return false;}
+/* Loading, importing or starting a character, or going Home: the level-up
+   is dropped first, then a playing scene ends (its done() finds no _lu and
+   opens nothing) and an open card closes, so neither stays over another sheet. */
+function luAbandon(){
+  const had=!!_lu;_lu=null;
+  luSkip();
+  if(had&&document.querySelector&&document.querySelector("#mBody .lu-card"))closeModal();
+}
+function showLevelUpCard(){
+  if(!_lu||luStale())return;
+  openModal("Level up",levelUpCardHTML(_lu));
+  /* after openModal, which clears the guard on every open */
+  setDismissGuard(()=>(_lu&&!_lu.set&&_lu.id===activeId)?LU_HP_CLOSE:"",luDismissed);
+  const on=(id,ev,fn)=>{const el=document.getElementById(id);if(el&&el.addEventListener)el.addEventListener(ev,fn);};
+  const typed=()=>{const el=document.getElementById("luTyped");return el?el.value:"";};
+  const apply=()=>luSetHP(typed());
+  on("luRoll","click",luRoll);
+  on("luApply","click",apply);
+  on("luTyped","keydown",e=>{if(e.key==="Enter"){e.preventDefault();apply();}});
+  on("luAvg","click",()=>luSetHP(null));
+  on("luGo","click",luFinish);
+}
+function luSay(text,bad){const el=document.getElementById("luRes");if(!el)return;el.textContent=text;if(el.classList)el.classList.toggle("bad",!!bad);}
+/* raw===null takes the average (half the die + 1). Otherwise raw is checked
+   by luHPCheck. Nothing is committed until Done, so a roll can be redone.
+   A value that fails takes back any earlier one and disables Done: the card
+   must never commit a number it no longer shows, and closing asks again. */
+function luSetHP(raw,note){
+  if(!_lu)return "No level-up is open.";
+  const ch=_lu.hp||{};
+  const fail=why=>{
+    _lu.set=false;_lu.raw=null;_lu.note="";
+    const go=document.getElementById("luGo");if(go)go.disabled=true;
+    luSay(why,true);return why;
+  };
+  if(raw===null){if(!num(ch.die))return fail("Type the hit points you gained.");_lu.raw="";}
+  else{const c=luHPCheck(ch,raw);if(!c.ok)return fail(c.why);_lu.raw=String(raw).trim();}
+  _lu.set=true;_lu.note=note||"";
+  luSay(luHPLine(),false);
+  const go=document.getElementById("luGo");if(go)go.disabled=false;
+  return "";
+}
+function luHPLine(){
+  const ch=_lu.hp||{},m=num(character.hp.max);
+  if(!num(ch.die)){const g=Math.max(0,num(_lu.raw));return `${g} HP · Max HP ${m} → ${m+g}`;}
+  return hpGainText(ch,_lu.raw,conModNow(),m,_lu.note);
+}
+function luRoll(){
+  if(!_lu)return;
+  const ch=_lu.hp||{},die=num(ch.die),n=Math.max(1,num(ch.levels)||1);if(!die)return;
+  const r=rollDiceExpr({dice:[{n,sides:die,sign:1}],mod:0});
+  const box=document.getElementById("luTyped");if(box)box.value=String(r.total);
+  luSetHP(String(r.total),"Rolled "+r.faces.join(", "));
+}
+function luFinish(){
+  if(luStale()){closeModal();return false;}
+  if(!_lu||!_lu.set)return false;
+  const lu=_lu;_lu=null;
+  closeModal();
+  commitHPChoice(lu.hp,lu.raw);scheduleSave();
+  runChoices(lu.cls,lu.choices,[],lu.pending);
+  return true;
+}
+/* Esc, × or the backdrop. The guard has already asked when HP was not set.
+   HP that was set is kept; the choices open either way, because a choice the
+   player never saw must not vanish with the card. */
+function luDismissed(){
+  const lu=_lu;_lu=null;if(!lu||lu.id!==activeId)return;
+  if(lu.set){commitHPChoice(lu.hp,lu.raw);scheduleSave();}
+  runChoices(lu.cls,lu.choices,[],lu.pending);
+}
+/* ---- the scene (panel F of the mockup) ----
+   A layer over the page and under the modal (z-index 75 < 80): a rune circle
+   draws itself, the level ring glows and ticks old → new, a flash, the
+   banner and its sparks. CSS keyframes only; the runes are drawn paths, so
+   no font is needed. A click, a tap or Esc/Enter/Space skips to the card;
+   reduced motion never builds it. Nothing here is saved. */
+const LU_FX_MS=2400;
+const LU_STAR="M125 31L165.8 209.7L51.5 66.4L216.6 145.9L33.4 145.9L198.5 66.4L84.2 209.7Z";
+const LU_RUNES=["M2 0V16M2 4L8 1M2 9L8 6","M2 16V0L8 5V16","M2 0V16M2 4L7 8L2 12","M2 0V16M2 2L8 6M2 7L8 11",
+  "M2 16V0L7 4L2 8L8 16","M7 2L2 8L7 14","M1 1L9 15M9 1L1 15","M2 16V0L7 4L2 8","M2 0V16M8 0V16M2 5L8 11",
+  "M5 0V16M1 6L9 10","M5 0V16","M5 0V16M1 5L5 0L9 5"];
+const LU_SPARKS=[[18,0],[33,.15],[48,.05],[63,.2],[80,.1],[26,.3],[72,.35]];
+const LU_MOTES=[[6,.1],[14,.7],[22,.3],[30,1],[38,.2],[46,.8],[54,.4],[62,1.1],[70,.15],[78,.6],[86,.9],[94,.35],[10,1.2],[50,.55],[66,.05],[90,.75]];
+let _luFx=null;
+function luBusy(){return !!_luFx;}
+function luReducedMotion(){try{return !!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);}catch(e){return false;}}
+function luFxHTML(from,to){
+  let runes="";
+  for(let i=0;i<24;i++)runes+=`<path transform="rotate(${esc(String(i*15))} 125 125) translate(120 9)" d="${esc(LU_RUNES[i%LU_RUNES.length])}"/>`;
+  return `<svg class="lu-sigil" viewBox="0 0 250 250" aria-hidden="true"><circle class="lu-c1" cx="125" cy="125" r="118"/>`+
+    `<circle class="lu-c2" cx="125" cy="125" r="94"/><path class="lu-star" d="${esc(LU_STAR)}"/><g class="lu-runes">${runes}</g></svg>`+
+    `<div class="lu-ring"><b class="lu-old">${esc(String(from))}</b><b class="lu-new">${esc(String(to))}</b></div>`+
+    `<div class="lu-flash"></div><div class="lu-banner">LEVEL ${esc(String(to))}</div>`+
+    LU_SPARKS.map(([x,d])=>`<i class="lu-spark" style="left:${esc(String(x))}%;animation-delay:${esc(String(1.6+d))}s"></i>`).join("")+
+    LU_MOTES.map(([x,d])=>`<i class="lu-mote" style="left:${esc(String(x))}%;animation-delay:${esc(String(d))}s"></i>`).join("");
+}
+function playLevelUpFx(from,to,done){
+  if(luReducedMotion()){done();return;}
+  const el=document.createElement("div");
+  el.id="luFx";el.className="lu-fx";el.setAttribute("aria-hidden","true");
+  el.innerHTML=luFxHTML(from,to);
+  const fx={el,done,timer:null,key:null};_luFx=fx;
+  fx.key=e=>{if(e.key==="Escape"||e.key==="Enter"||e.key===" "){if(e.preventDefault)e.preventDefault();luSkip();}};
+  el.addEventListener("click",luSkip);
+  document.addEventListener("keydown",fx.key);
+  document.body.appendChild(el);
+  fx.timer=setTimeout(luSkip,LU_FX_MS);
+}
+function luSkip(){
+  const fx=_luFx;if(!fx)return;_luFx=null;
+  clearTimeout(fx.timer);
+  if(document.removeEventListener)document.removeEventListener("keydown",fx.key);
+  if(fx.el&&typeof fx.el.remove==="function")fx.el.remove();
+  fx.done();
+}
 /* ---- level-up choices ----
    `choose` used to reach the label prose and nowhere else, so by the time
    gatherChoices() read the boxes back there was nothing left to check against —
@@ -5089,9 +5400,11 @@ function armChoiceDismissGuard(pending){
     const picked=blocks.reduce((a,b)=>a+num(b.picked),0);
     const short=choiceShortfall(blocks);
     const hp=hpPending();
-    /* Hit points alone are not lost for good — the level-up left Max unlocked —
-       so they get their own, milder question rather than "no way to reopen". */
-    if(!short&&!picked)return hp?"Close without adding this level's hit points?\n\nMax HP is unlocked, so you can type the new total yourself.":"";
+    /* Hit points alone are not lost for good — addClass() left Max unlocked
+       (this block is creation's: a first class added above level 1; a
+       level-up's HP is on the level card, #101) — so they get their own,
+       milder question rather than "no way to reopen". */
+    if(!short&&!picked)return hp?LU_HP_CLOSE:"";
     return (picked?"Closing will discard the picks you have made.":"You have not made your picks yet.")+
       "\n\nThere is no way to reopen this later — you would have to remove and re-add it."+
       (hp?"\n\nThis level's hit points will not be added either.":"")+"\n\nClose anyway?";
@@ -7633,6 +7946,7 @@ function printSheet(){
    import again. */
 function finishImport(ch){
   if(!leaveCharacterOk())return false;
+  luAbandon();   /* #101: a level-up belongs to the sheet it started on */
   character=ch;activeId=ch.id;
   /* Stored first, and listed only once it is (#81): an index entry for a blob
      that never landed is a home-screen card that opens nothing. */
@@ -8192,6 +8506,7 @@ function loadCharById(id){
   let raw;try{raw=localStorage.getItem(charKey(id));}catch(e){}
   if(!raw)return false;
   try{character=migrate(JSON.parse(raw));}catch(e){return false;}
+  luAbandon();   /* #101: a level-up belongs to the sheet it started on */
   activeId=character.id||id;
   settings.skin=skinForSystem(character.system);saveSettings();applyTheme();
   renderAll();hideHome();
@@ -8208,6 +8523,7 @@ function newCharacter(name,system){
   c.appVersion=APP_VERSION;   // safe here: runtime, long after 30-version.js has run
   c.ammoInit=AMMO_PASS;   // a new sheet has nothing for the one-time ammo pass to migrate (never in blankChar — see wpnEquipInit)
   c.langLifted=true;   // a new sheet has no "Languages:" line in Proficiencies to lift (never in blankChar — see ammoInit above)
+  luAbandon();   /* #101: a level-up belongs to the sheet it started on */
   character=c;activeId=c.id;
   /* as finishImport(): listed only once stored, and a refusal says so (#81) */
   let why="";try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){why=storageWhy(e);}
@@ -8246,7 +8562,7 @@ function migrateOldChar(){
   return "";
 }
 let homeForceSetup=false;
-function showHome(){renderHome();document.getElementById("home").style.display="flex";}
+function showHome(){luAbandon();renderHome();document.getElementById("home").style.display="flex";}
 function hideHome(){const h=document.getElementById("home");if(h)h.style.display="none";}
 function fmtWhen(ts){if(!ts)return "";const d=new Date(ts),now=Date.now(),diff=(now-ts)/1000;if(diff<60)return "just now";if(diff<3600)return Math.floor(diff/60)+"m ago";if(diff<86400)return Math.floor(diff/3600)+"h ago";return d.toLocaleDateString();}
 function renderHome(){
