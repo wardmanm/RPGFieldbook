@@ -19,8 +19,9 @@ so removing the source takes it back out; that mechanism is
 `grantFeatDef()`, `runExtraChoices()` in `50-classrace.js`; `dismissModal()`,
 `setDismissGuard()` in `80-modal-forms.js`; `classLineHTML()`, `classFlyHTML()`, `openShFly()` in
 `40-sheet.js`; `raceInfoFoot()` in `52-race.js`, `bgInfoFoot()` in `54-background.js`;
-`grantLanguages()`, `dropLanguages()` in `41-chips.js` · `levelSnapshot()`,
-`levelGains()`, `luHPCheck()` in `57-levelup.js` · **Data:** `choices` on class, subclass and race
+`grantLanguages()`, `dropLanguages()` in `41-chips.js` · `levelSnapshot()`, `levelGains()`,
+`luHPCheck()`, `openLevelUp()`, `levelUpCardHTML()`, `levelUpHPHTML()`, `luSetHP()`, `luFinish()`,
+`luDismissed()`, `playLevelUpFx()`, `luSkip()` in `57-levelup.js` · **Data:** `choices` on class, subclass and race
 levels, per [rules-schema](../../../../docs/rules-schema.md) §5; a class's `multiclass` block,
 §6.3; the `features.json` of the 2024 pack (private repo) and of `data/srd52/` ·
 **Tests:** `sheet.js`, `char-update.js`, `rules-data.js` · **See also:**
@@ -82,7 +83,7 @@ on the sheet:
 | Level-1 `skill` choice | offered in full ("choose 2"; a Bard chooses 3 from all 18) | replaced by the pack's `multiclass.choices` (`multiclassChoices()`): one skill for a Bard, Ranger or Rogue, none for most; nothing if the class has no `multiclass` block |
 | Other level-1 choices, traits, spells | yes | yes (Fighting Style, invocations, Spellcasting) |
 | Starting equipment and gold | `equipmentGrants`, fixed blocks at once and a picker after the window | none |
-| Hit points | level 1 seeded by `seedLevel1HP()`; a class starting above level 1 then asks for levels 2..N in the window | an HP step for all its levels, with its own die |
+| Hit points | level 1 seeded by `seedLevel1HP()`; a class starting above level 1 then asks for levels 2..N in the window | the level-up card's HP step (#101), for all its levels, with its own die |
 | A note in the window | — | `multiclassNote()`: no saves or equipment, and what it gains (`multiclass.proficiencies` and the skill count), or that the pack does not list it |
 
 The Add class preview shows the same note once a class is on the sheet, so its "Saves" line is not
@@ -96,12 +97,31 @@ Classes and Subclasses rows open them with `{ref:true}` (#99): no "— current" 
 marker, nothing from `character.classes`; a subclass link inside such a window carries
 `data-sub-ref="1"` so following it stays in reference mode too.
 
-**Level up.** From the class menu, or the level ring's "Level up ready" ([Vitals & rest](vitals-and-rest.md)). `doLevelUp(idx)` levels class `idx` when the menu passes one; with none (Level up ready) it asks which class when there are several. It raises it and runs
-`applyClassLevel()` for the new level (class and subclass). `hpChoice()` is built **before** Max HP is
-unlocked, so it remembers the lock; the level's modal then opens with a synthesized `{type:"hp"}`
-block first. Blank takes the fixed value (half the die + 1), "Roll for me" rolls it, CON is added
-once per level via `conModNow()`, and the floor is 1 per level. `commitHPChoice()` raises Max and
-Current and puts the lock back only if it was locked. **Level down** (`doLevelDown(idx)`) only lowers
+**Level up (#101).** From the class menu, or the level ring's "Level up ready"
+([Vitals & rest](vitals-and-rest.md)). `doLevelUp(idx)` levels class `idx` when the menu passes
+one; with none (Level up ready) it asks which class when there are several. It takes a
+`levelSnapshot()`, runs `applyClassLevel()` for the new level (class and subclass) and the Max HP
+unlock exactly as before, then calls `openLevelUp(info)` in place of `runChoices()` — and so does
+`addClass()` when the new class is a second class (not creation; see below). `openLevelUp` plays
+the scene (a rune circle draws itself, the level ring glows and ticks old → new, a flash, a LEVEL N
+banner with sparks — skipped under `prefers-reduced-motion`, or by a click, tap or Esc/Enter/Space,
+which focuses the card), then shows the card (`levelUpCardHTML()`): a header naming the class and
+levels, `levelGains()`'s rows (new features — tagged with the subclass, and warned when a feature's
+name matches one already held from a *different* class — choices still to make, new or changed
+resources, new or bigger spell slots, a rising proficiency bonus, then the pack's own notes for
+that level), and the hit-points step at the foot (`levelUpHPHTML()`): the same controls, wording
+and order as the hit-dice spend box ([Vitals & rest](vitals-and-rest.md)) — Roll for me, "I rolled"
+plus Apply (live-checked by `luHPCheck()`, n dice for a second class arriving above level 1), or
+Take the average. **Done** (nothing left to choose) or **Continue to your choice ▸** both stay
+disabled until HP is set (`luSetHP()`); either commits it (`commitHPChoice()`, which raises Max and
+Current and puts the lock back only if it was locked) and Continue then opens the usual choice
+window, `runChoices(cls, choices, [], pending)` — no `notes`, since the card already showed them,
+and no `hp` block, since the card already asked for it. **Closing the card early** (`luDismissed()`,
+through the same guard as the choice windows, `LU_HP_CLOSE`) asks first when HP isn't set; either
+way the choices and any pending window (a second class's starting equipment) still open, because a
+choice the player never saw must not vanish with the card. **Creation is unchanged**: a first class
+added above level 1 still gets its `{type:"hp"}` block inside the choice window for levels 2..N
+(see the table below), because creation has no fanfare. **Level down** (`doLevelDown(idx)`) only lowers
 the number: traits, grants and choices stay. From a class's menu it lowers that class, and at level 1
 says to use Remove in the class's menu; with no index it lowers the one class above level 1, or asks
 which when there are several.
@@ -123,7 +143,7 @@ pack is keyed "Name (PACK)" and offered alongside, and `subSourceTag()` tags the
 | `asi` | +2 to one, or +1 to two | an "Ability Score Improvement" feature carrying the effects |
 | `feat` | a select over `from`, or every loaded feat | `grantFeatDef()` |
 | `subclass` | radios with pack and description | `selectSubclass()` after the rest commits |
-| `hp` | a dice box, Roll for me, and the working ("Average 6 + 2 CON = 8 HP") | `commitHPChoice()` |
+| `hp` | a dice box, Roll for me, and the working ("Average 6 + 2 CON = 8 HP") — creation only now: a level-up or a second class gets the level-up card's own HP step instead (#101) | `commitHPChoice()` |
 
 `effectiveChoose()` sets how many new picks a block asks for: granted options do not spend the
 budget, but it never asks for more than remain. The target is written as `data-choose` on the
@@ -316,3 +336,6 @@ they are built: [Converter](../data/converter.md).
 - 2026-10-22 — The class, subclass, species and background windows open by `_id` as well as by name, and gain a reference mode (`{ref:true}`) for the Rules tab's rows, with nothing from the open character. → ledger L6327, #99
 - 2026-10-23 — The Class and Ancestry & Background cards go: the header's class line opens a class menu (About, subclass, Level up / down, + Add class, Remove) and the species and background windows gain Change and Remove; species and backgrounds grant languages as chips; Add class with no classes loaded points to Settings → Rules. → ledger L6633, #103
 - 2026-10-23 — A class's menu levels that class: ▲ / ▼ pass its index to `doLevelUp(idx)` / `doLevelDown(idx)`; the species button names the subrace. → ledger L6729, #103
+- 2026-10-24 — Levelling up (and adding a second class) plays a short scene, then a card listing
+  everything the level gave with the hit-point step on it; Done or Continue, closing early asks
+  first, and creation keeps the old `hp` block in the choice window. → ledger L6840, #101

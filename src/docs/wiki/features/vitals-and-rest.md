@@ -122,6 +122,15 @@ level-1 seed's `modOf()`); `hdHeal(roll, conMod)` floors the heal at 0. `spendHi
 `rollHitDie()`'s old body, shared now by both paths: mark the die used, `adjustHP(heal)`, show the
 working in a `restSummary()`.
 
+**The level-up card's HP step copies this box** (#101): the same controls, order and wording — Roll
+for me, "I rolled" plus Apply (live-checked, the same shape of range message), or Take the average
+— in `levelUpHPHTML()` and `luSetHP()`/`luHPCheck()`, `57-levelup.js`. It is a separate instance
+(it is gaining hit points, not spending a die, so there is nothing to clamp against a pool), but the
+wording and the live-checked "I rolled" field are deliberately the same box a player already knows
+from here. Pressing its Done or Continue — not Apply — is what raises Max and Current
+(`commitHPChoice()`) and puts the Max HP lock back, the same as this box's own spends do not touch
+the lock at all. See [Character building](character-building.md) for the flow.
+
 **Where the auto/manual pill and the manual-dice field live.** `[data-hdmode]` and
 `#hitdiceInput` come from one builder, `hdFootHTML()`, drawn in one of two places, never both: the
 spend box's foot, or inline in `#hdWrap` under the hint when the pool is empty and the box is closed
@@ -284,3 +293,4 @@ came back.
   switch; the XP bar fills within the level; the short rest offers Spend a hit die.
   → ledger L6729, #103
 - 2026-10-23 — The rest buttons read "Short rest" / "Long rest", icons with Icon tabs or on a narrow page. → ledger L6776, #103
+- 2026-10-24 — The level-up card's hit-points step copies this box's controls, order and wording. → ledger L6840, #101
