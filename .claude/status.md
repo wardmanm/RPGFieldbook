@@ -3,10 +3,15 @@ Updated: 2026-10-24 · Branch: main
 
 ## Current focus
 1.9.0 wave 2 is complete: #103 and #101 merged 2026-10-24, and the #102 spike is done. Next is wave 3
-(#91, #47, #52, #102), then wave 4 (#105). #102's spec waits on its install-route decision. No branch
+(#91, #47, #52, #102), then wave 4 (#105). #102's install route is decided (below). No branch
 open.
 
 ## Recent changes
+- 2026-10-24: Mike decided #102's install route. The app fetches each pack file named by a public
+  manifest. The default is the release tag on raw.githubusercontent.com, and any public host that
+  allows cross-origin reads works too: paths resolve relative to the manifest, and each download is
+  checked against its digest. The private packs stay a manual download (raw can't serve a private
+  repo).
 - 2026-10-24: Merged #101. Levelling up plays a short animation (rune circle, the ring ticking up, a
   LEVEL N banner). A card then shows what the level gave, with the HP roll on it (roll it, type it,
   or take the average). The choice window follows only when there is something to choose. Paladin and
@@ -37,8 +42,6 @@ open.
 - 2026-10-16: Released v1.8.1; first private data release, 1.8.1-1.
 
 ## Pending decisions
-- **#102's install route** (raised 2026-10-23, from the spike). Options: fetch each pack file from the
-  release tag via raw.githubusercontent.com / keep announce-and-link. Blocks: #102's spec (wave 3).
 - **End combat clears every outstanding ammunition count** (raised 2026-10-19, #104 final review).
   Shots that give nothing back are spent at End combat. Mike was told earlier they would stay on
   record. Options: keep / revert. Blocks: nothing; it is on main.
