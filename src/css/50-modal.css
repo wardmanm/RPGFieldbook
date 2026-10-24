@@ -149,3 +149,19 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
   #printArea .p-two .p-item{break-inside:avoid}
   #printArea .p-mark{font-weight:bold}
 }
+/* ---- the level card (#101) ---- */
+.lu-card .lu-bn{margin:0 0 10px;padding:6px;text-align:center;background:var(--accent);color:var(--paper);font:900 22px/1.1 var(--display);letter-spacing:.06em;border-radius:6px}
+.lu-k{margin:0;font:700 11px var(--head);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lu-cls{margin:0 0 6px;font-family:var(--head);font-weight:700}
+.lu-list{list-style:none;margin:0;padding:0}
+.lu-row{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px dotted var(--hair)}
+.lu-row>i{font-style:normal;flex:0 0 16px;text-align:center;color:var(--accent)}
+.lu-row>span{flex:1;min-width:0}
+.lu-row small{flex:0 0 auto;font:700 10px var(--head);text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+.lu-d{display:block;font-size:13px;color:var(--ink-soft)}
+.lu-warn{display:block;font-size:13px;color:var(--brick)}
+.lu-none{padding:8px 0;color:var(--ink-soft);font-style:italic}
+.lu-hp{margin-top:12px;padding:8px 10px;border:1.5px solid var(--line);border-radius:6px;background:var(--field)}
+.lu-hp h5{margin:0;font:700 11px var(--head);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.lu-avg{background:none;border:0;padding:4px 2px;color:var(--accent-2);text-decoration:underline;cursor:pointer;font:inherit}
+.lu-hp .hd-res.bad{color:var(--brick)}

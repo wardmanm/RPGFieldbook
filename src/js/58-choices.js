@@ -240,7 +240,7 @@ function armChoiceDismissGuard(pending){
     const hp=hpPending();
     /* Hit points alone are not lost for good — the level-up left Max unlocked —
        so they get their own, milder question rather than "no way to reopen". */
-    if(!short&&!picked)return hp?"Close without adding this level's hit points?\n\nMax HP is unlocked, so you can type the new total yourself.":"";
+    if(!short&&!picked)return hp?LU_HP_CLOSE:"";
     return (picked?"Closing will discard the picks you have made.":"You have not made your picks yet.")+
       "\n\nThere is no way to reopen this later — you would have to remove and re-add it."+
       (hp?"\n\nThis level's hit points will not be added either.":"")+"\n\nClose anyway?";

@@ -68,3 +68,95 @@ function luHPCheck(ch,raw){
   if(die&&(r<n||r>n*die))return {ok:false,why:n>1?`${n}d${die} rolls ${n} to ${n*die}.`:`A d${die} rolls 1 to ${die}.`};
   return {ok:true,why:""};
 }
+/* ---- the level card ----
+   One open level-up at a time; the card is a modal. Done or Continue commits
+   the HP through commitHPChoice() and hands on to runChoices(), which with
+   nothing to choose falls through to runExtraChoices(pending) as before. */
+let _lu=null;
+function luState(){return _lu;}
+const LU_HP_CLOSE="Close without adding this level's hit points?\n\nMax HP is unlocked, so you can type the new total yourself.";
+const LU_ICON={feature:"✦",choice:"✧",resource:"◆",slot:"◇",pb:"↑",note:"✎"};
+function openLevelUp(info){
+  _lu={cls:info.cls,from:num(info.from),to:num(info.to),charLevel:num(info.charLevel),fromLevel:num(info.before&&info.before.level),
+    hp:info.hp,choices:(info.choices||[]).filter(ch=>ch&&ch.type!=="hp"),pending:info.pending||null,
+    gains:levelGains(info.before,info.after,info.choices||[],info.notes||[]),raw:null,set:false,note:""};
+  showLevelUpCard();
+}
+function luRowHTML(r){
+  return `<li class="lu-row lu-${esc(r.kind)}"><i aria-hidden="true">${LU_ICON[r.kind]||"•"}</i><span>${esc(r.text)}`+
+    (r.detail?`<span class="lu-d">${esc(r.detail)}</span>`:"")+(r.warn?`<span class="lu-warn">${esc(r.warn)}</span>`:"")+
+    `</span>${r.tag?`<small>${esc(r.tag)}</small>`:""}</li>`;
+}
+function levelUpHPHTML(ch){
+  const die=num(ch&&ch.die),n=Math.max(1,num(ch&&ch.levels)||1),con=conModNow();
+  const res=`<div class="hd-res" id="luRes" aria-live="polite"></div>`;
+  if(!die)return `<div class="lu-hp"><h5>Hit points</h5><div class="hd-how"><label>HP gained <input id="luTyped" inputmode="numeric" size="3"></label> `+
+    `<button type="button" class="tbtn" id="luApply">Apply</button></div>${res}</div>`;
+  const conTxt=(n>1?n+"×":"")+"CON "+(con<0?"−"+Math.abs(con):con);
+  return `<div class="lu-hp"><h5>Hit points · ${esc((n>1?n:"")+"d"+die)} + ${esc(conTxt)}</h5><div class="hd-how">`+
+    `<button type="button" class="tbtn primary" id="luRoll">🎲 Roll for me</button> <span>or</span> `+
+    `<label>I rolled <input id="luTyped" inputmode="numeric" size="3"></label> <button type="button" class="tbtn" id="luApply">Apply</button> `+
+    `<button type="button" class="lu-avg" id="luAvg">Take the average (${esc(String(n*hpFixed(die)))})</button></div>${res}</div>`;
+}
+function levelUpCardHTML(lu){
+  const rows=lu.gains.length?lu.gains.map(luRowHTML).join(""):`<li class="lu-none">Nothing new from the rules at this level.</li>`;
+  return `<div class="lu-card"><div class="lu-bn">LEVEL ${esc(String(lu.charLevel))}</div>`+
+    `<p class="lu-k">You reached</p><p class="lu-cls">${esc(lu.cls)} ${esc(String(lu.from))} → ${esc(String(lu.to))} · character level ${esc(String(lu.charLevel))}</p>`+
+    `<ul class="lu-list">${rows}</ul>`+levelUpHPHTML(lu.hp)+
+    `<div class="m-actions"><button type="button" class="tbtn primary" id="luGo" disabled>${(lu.choices||[]).length?"Continue to your choice ▸":"Done"}</button></div></div>`;
+}
+function showLevelUpCard(){
+  if(!_lu)return;
+  openModal("Level up",levelUpCardHTML(_lu));
+  /* after openModal, which clears the guard on every open */
+  setDismissGuard(()=>(_lu&&!_lu.set)?LU_HP_CLOSE:"",luDismissed);
+  const on=(id,ev,fn)=>{const el=document.getElementById(id);if(el&&el.addEventListener)el.addEventListener(ev,fn);};
+  const typed=()=>{const el=document.getElementById("luTyped");return el?el.value:"";};
+  const apply=()=>{const why=luSetHP(typed());if(why)luSay(why,true);};
+  on("luRoll","click",luRoll);
+  on("luApply","click",apply);
+  on("luTyped","keydown",e=>{if(e.key==="Enter"){e.preventDefault();apply();}});
+  on("luAvg","click",()=>luSetHP(null));
+  on("luGo","click",luFinish);
+}
+function luSay(text,bad){const el=document.getElementById("luRes");if(!el)return;el.textContent=text;if(el.classList)el.classList.toggle("bad",!!bad);}
+/* raw===null takes the average (half the die + 1). Otherwise raw is checked
+   by luHPCheck. Nothing is committed until Done, so a roll can be redone. */
+function luSetHP(raw,note){
+  if(!_lu)return "No level-up is open.";
+  const ch=_lu.hp||{};
+  if(raw===null){if(!num(ch.die))return "Type the hit points you gained.";_lu.raw="";}
+  else{const c=luHPCheck(ch,raw);if(!c.ok)return c.why;_lu.raw=String(raw).trim();}
+  _lu.set=true;_lu.note=note||"";
+  luSay(luHPLine(),false);
+  const go=document.getElementById("luGo");if(go)go.disabled=false;
+  return "";
+}
+function luHPLine(){
+  const ch=_lu.hp||{},m=num(character.hp.max);
+  if(!num(ch.die)){const g=Math.max(0,num(_lu.raw));return `${g} HP · Max HP ${m} → ${m+g}`;}
+  return hpGainText(ch,_lu.raw,conModNow(),m,_lu.note);
+}
+function luRoll(){
+  if(!_lu)return;
+  const ch=_lu.hp||{},die=num(ch.die),n=Math.max(1,num(ch.levels)||1);if(!die)return;
+  const r=rollDiceExpr({dice:[{n,sides:die,sign:1}],mod:0});
+  const box=document.getElementById("luTyped");if(box)box.value=String(r.total);
+  luSetHP(String(r.total),"Rolled "+r.faces.join(", "));
+}
+function luFinish(){
+  if(!_lu||!_lu.set)return false;
+  const lu=_lu;_lu=null;
+  closeModal();
+  commitHPChoice(lu.hp,lu.raw);scheduleSave();
+  runChoices(lu.cls,lu.choices,[],lu.pending);
+  return true;
+}
+/* Esc, × or the backdrop. The guard has already asked when HP was not set.
+   HP that was set is kept; the choices open either way, because a choice the
+   player never saw must not vanish with the card. */
+function luDismissed(){
+  const lu=_lu;_lu=null;if(!lu)return;
+  if(lu.set){commitHPChoice(lu.hp,lu.raw);scheduleSave();}
+  runChoices(lu.cls,lu.choices,[],lu.pending);
+}
