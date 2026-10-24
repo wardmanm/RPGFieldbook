@@ -150,9 +150,12 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
   #printArea .p-mark{font-weight:bold}
 }
 /* ---- the level card (#101) ---- */
-.lu-card .lu-bn{margin:0 0 10px;padding:6px;text-align:center;background:var(--accent);color:var(--paper);font:900 22px/1.1 var(--display);letter-spacing:.06em;border-radius:6px}
+/* the banner number and the class line carry a digit ("1 → 2", "LEVEL 11"), and --display/--head
+   (Cinzel on the classic skin) draw a "1" with no serif, reading as a capital "I"; the body font's
+   figures don't, so these two use it instead of the heading faces (#101) */
+.lu-card .lu-bn{margin:0 0 10px;padding:6px;text-align:center;background:var(--accent);color:var(--paper);font:900 22px/1.1 var(--body);letter-spacing:.06em;border-radius:6px}
 .lu-k{margin:0;font:700 11px var(--head);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
-.lu-cls{margin:0 0 6px;font-family:var(--head);font-weight:700}
+.lu-cls{margin:0 0 6px;font-family:var(--body);font-weight:700}
 .lu-list{list-style:none;margin:0;padding:0}
 .lu-row{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px dotted var(--hair)}
 .lu-row>i{font-style:normal;flex:0 0 16px;text-align:center;color:var(--accent)}
