@@ -343,7 +343,14 @@ Built as designed, §1–§11, with these notes:
    - after a skip (click, tap or Esc/Enter/Space), keyboard focus lands on the HP step's first
      `<input>` (`#luTyped`), not the card's first element in DOM order (`#luRoll`) — `openModal()`'s
      existing first-focusable-input behaviour, not new here, rather than a dedicated focus target
-     for the card.
+     for the card;
+   - **390-wide QA was read narrowly.** Only the quiet-level card (`101-after-card-390-classic-
+     light.png`), the before shot, the Humblewood scene (`101-scene-humblewood-light-390.png`) and
+     the class-line wrap fix (`101-css-wrap-*-360.png`, 360 not 390) were shot at phone width; the
+     ASI card's Continue window, the multiclass note's full text, Cleric 5's longer gains list,
+     Paladin 1's slots page and the reduced-motion card were driven and shot only at 1280 — so
+     whether a card with more rows or a longer note reads well at 390 is still Mike's phone pass to
+     confirm.
 
 **What Mike checks on his devices:** touch (the card's buttons and the HP step's Roll/Apply are
 sized the same as every other modal control, but the scene itself has never been tapped on a real
