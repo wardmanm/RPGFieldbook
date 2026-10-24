@@ -21,7 +21,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'uid',
   'levelSnapshot','levelGains','luSummary','luHPCheck',
   'openLevelUp','luState','luSetHP','luRoll','luFinish','levelUpCardHTML','levelUpHPHTML','LU_HP_CLOSE',
-  'luFxHTML','playLevelUpFx','luSkip','luBusy','luReducedMotion',
+  'luFxHTML','playLevelUpFx','luSkip','luBusy','luReducedMotion','luLatestNotes','luAbandon','showHome',
 ]);
 /* #101: level-ups in this suite skip the scene (reduced motion), as the
    harness's setTimeout never fires; the scene's own block turns it back on. */
@@ -978,8 +978,10 @@ ck('...and actually levelled', X.num(X.character.classes[0].level)===2);
 // ---------- the hit-point step on every level-up (#58)
 // There was never an HP prompt: levelling only unlocked the box, so the choice
 // modal a subclass level opens was all the player saw and the hit points were
-// forgotten. Every level-up now carries a synthesized {type:"hp"} choice that
-// rides the same modal and commit as the level's other picks.
+// forgotten. Since #101 a level-up's HP step is on the level card (luSetHP,
+// luFinish); the synthesized {type:"hp"} choice rides the choice window only at
+// creation, for a first class added above level 1. Both commit through
+// commitHPChoice().
 ck('fixed HP is half the die plus one', X.hpFixed(6)===4 && X.hpFixed(8)===5 && X.hpFixed(10)===6 && X.hpFixed(12)===7);
 ck('fixed HP is 0 with no die', X.hpFixed(0)===0);
 ck('blank dice take the fixed value, plus CON', X.hpGain(10,1,null,2)===8 && X.hpGain(10,1,'',2)===8);
@@ -1813,6 +1815,16 @@ ck('itemMetaLine still ends with the weight',
   const g5=X.levelGains(S({feats:[F('x','Extra Attack',{cls:'Fighter'})]}),S({feats:[F('x','Extra Attack',{cls:'Fighter'}),F('y','Extra Attack',{cls:'Paladin'})]}),[],[]);
   ck('#101 a feature you already have from another class says they don\'t stack',
      g5.length===1&&g5[0].warn==="You already have this from Fighter; they don't stack.", g5);
+  /* final review I1: only the features the rules say don't add together
+     (SRD 5.2.1 p.26) are tagged. Spellcasting combines by its own rule. */
+  const g5b=X.levelGains(S({feats:[F('w','Spellcasting',{cls:'Wizard'})]}),S({feats:[F('w','Spellcasting',{cls:'Wizard'}),F('c','Spellcasting',{cls:'Cleric'})]}),[],[]);
+  ck('#101 Spellcasting from Wizard then Cleric combines, so it is not tagged', g5b.length===1&&g5b[0].warn==='', g5b);
+  const g5c=X.levelGains(S({feats:[F('e','Expertise',{cls:'Rogue'}),F('b','Epic Boon',{cls:'Rogue'})]}),
+    S({feats:[F('e','Expertise',{cls:'Rogue'}),F('b','Epic Boon',{cls:'Rogue'}),F('e2','Expertise',{cls:'Bard'}),F('b2','Epic Boon',{cls:'Bard'})]}),[],[]);
+  ck('#101 ...nor are Expertise and Epic Boon', g5c.length===2&&g5c.every(r=>r.warn===''), g5c);
+  const g5d=X.levelGains(S({feats:[F('m','Unarmored Defense',{cls:'Monk'})]}),S({feats:[F('m','Unarmored Defense',{cls:'Monk'}),F('u','unarmored defense',{cls:'Barbarian'})]}),[],[]);
+  ck('#101 Unarmored Defense from Monk then Barbarian is tagged (one way to calculate AC)',
+     g5d.length===1&&g5d[0].warn==="You already have this from Monk; they don't stack.", g5d);
   const g6=X.levelGains(S({}),S({feats:[F('z','Combat Superiority',{cls:'Fighter',sub:'Battle Master'})]}),[],[]);
   ck('#101 a subclass feature is tagged with its subclass', g6[0].tag==='Battle Master'&&g6[0].warn==='', g6);
   ck('#101 a subclass choice is listed to choose next',
@@ -1856,6 +1868,7 @@ ck('itemMetaLine still ends with the weight',
   ctx.openModal=function(t,h){om.push({t,h:String(h)});return realOM.apply(null,arguments);};
   const reset=()=>{rc=[];om=[];};
   const card=()=>om.filter(o=>/class="lu-card"/.test(o.h)).pop();
+  const F0=[{name:'Fighter',hitDie:'d10',levels:{'2':{choices:[{type:'asi',label:'Ability Score Improvement'}]}}}];
   try{
     /* a quiet level: no choices */
     hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=true; reset(); X.doLevelUp();
@@ -1870,6 +1883,32 @@ ck('itemMetaLine still ends with the weight',
     ck('#101 Done closes, applies 7 + CON 0, and relocks', X.luFinish()===true&&X.num(X.character.hp.max)===17&&X.character.hp.locked===true&&X.luState()===null,
        [X.character.hp.max,X.character.hp.locked]);
     ck('#101 ...and a level with nothing to choose opens no choice window', rc.length===1&&rc[0][1].length===0, rc);
+
+    /* final review I2: a bad Apply after a good one takes the good one back,
+       so Done can never commit a number the card no longer shows */
+    hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=true; reset(); X.doLevelUp();
+    X.luSetHP('7');
+    ck('#101 a bad Apply after a good one clears the earlier value', X.luSetHP('11')==='A d10 rolls 1 to 10.'&&
+       X.luState().set===false&&X.luState().raw===null, X.luState());
+    ck('#101 ...so Done does nothing', X.luFinish()===false&&X.luState()!==null&&X.num(X.character.hp.max)===10, X.character.hp.max);
+    state.confirm=false; state.lastConfirm=null; X.dismissModal();
+    ck('#101 ...and closing asks again, in the HP words', state.lastConfirm===X.LU_HP_CLOSE&&X.luState()!==null, state.lastConfirm);
+    state.confirm=true; X.dismissModal();
+    ck('#101 ...and closing anyway adds nothing', X.num(X.character.hp.max)===10&&X.character.hp.locked===false, [X.character.hp.max,X.character.hp.locked]);
+
+    /* final review M1: a level-up belongs to the character it started on */
+    hpSetup(CLS); X.addClass('Fighter',1); reset(); X.doLevelUp(); X.luSetHP('7');
+    const luA=X.character, luB=X.blankChar(); luB.hp.max=30; luB.hp.cur=30;
+    X.character=luB; X.activeId=luB.id;
+    ck('#101 Done on a level-up whose character changed is a no-op', X.luFinish()===false&&X.luState()===null, X.luState());
+    ck('#101 ...neither character\'s HP changes, and no choices open', X.num(luA.hp.max)===10&&X.num(luB.hp.max)===30&&rc.length===0,
+       [luA.hp.max,luB.hp.max,rc.length]);
+    hpSetup(F0); X.addClass('Fighter',1); reset(); X.doLevelUp(); X.luSetHP('7');
+    const luC=X.character; X.activeId='someone-else';
+    state.lastConfirm=null; X.dismissModal();
+    ck('#101 closing a level-up whose character changed drops it: no HP, no choices', X.luState()===null&&X.num(luC.hp.max)===10&&rc.length===0,
+       [luC.hp.max,rc.length]);
+    X.activeId=luC.id;
 
     /* the average, and Roll for me */
     hpSetup(CLS); X.addClass('Fighter',1); reset(); X.doLevelUp(); X.luSetHP(null); X.luFinish();
@@ -1906,6 +1945,17 @@ ck('itemMetaLine still ends with the weight',
     X.luFinish();
     /* the Fighter 2's creation window (levels 2..2) was never committed, so Max is its seed, 10 */
     ck('#101 ...and adds 9 + 2×CON 0', X.num(X.character.hp.max)===10+9, X.character.hp.max);
+
+    /* final review M4: a second class added above level 1 lists only its
+       latest spell note; the earlier ones are superseded */
+    hpSetup([{name:'Fighter',hitDie:'d10'},{name:'Wizard',hitDie:'d6',levels:{'1':{spells:{note:'Cantrips: 3; Prepared Spells: 4'}},'2':{spells:{note:'Prepared Spells: 5'}}}}]);
+    X.addClass('Fighter',2); reset(); X.addClass('Wizard',2);
+    const wizNotes=((X.luState()||{}).gains||[]).filter(r=>r.kind==='note').map(r=>r.text);
+    ck('#101 a second class at 2 lists only its level-2 spell note', wizNotes.includes('Prepared Spells: 5')&&!wizNotes.some(t=>/Cantrips: 3/.test(t)), wizNotes);
+    X.luSetHP(null); X.luFinish();
+    ck('#101 luLatestNotes keeps the highest level\'s notes and every plain string',
+       JSON.stringify(X.luLatestNotes(['Multiclass.',{text:'a',_level:1},{text:'b',_level:3},{text:'c',_level:3},{text:'d',_level:2}]).map(n=>typeof n==='string'?n:n.text))==='["Multiclass.","b","c"]',
+       X.luLatestNotes(['Multiclass.',{text:'a',_level:1},{text:'b',_level:3},{text:'c',_level:3},{text:'d',_level:2}]));
 
     /* creation is unchanged */
     hpSetup(CLS); reset(); X.addClass('Fighter',3);
@@ -1944,6 +1994,16 @@ ck('itemMetaLine still ends with the weight',
     X.luSkip();
     ck('#101 ...and a second skip opens nothing more', om.length===1, om);
     X.luSetHP(null); X.luFinish();
+
+    /* final review M1: the scene ends on another character: no card */
+    hpSetup(CLS); X.addClass('Fighter',1); om=[]; X.doLevelUp();
+    X.activeId='someone-else'; X.luSkip();
+    ck('#101 a scene that ends on another character opens no card', !X.luBusy()&&om.length===0&&X.luState()===null, om);
+    X.activeId=X.character.id;
+    /* ...and going Home (or loading, or importing) drops a playing scene */
+    hpSetup(CLS); X.addClass('Fighter',1); om=[]; X.doLevelUp();
+    X.showHome();
+    ck('#101 going Home ends the scene and drops the level-up', !X.luBusy()&&om.length===0&&X.luState()===null, [X.luBusy(),om]);
 
     ctx.window.matchMedia=()=>({matches:true,addEventListener(){}});
     ck('#101 reduced motion is read from the device', X.luReducedMotion()===true);

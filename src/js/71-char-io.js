@@ -225,6 +225,7 @@ function printSheet(){
    import again. */
 function finishImport(ch){
   if(!leaveCharacterOk())return false;
+  luAbandon();   /* #101: a level-up belongs to the sheet it started on */
   character=ch;activeId=ch.id;
   /* Stored first, and listed only once it is (#81): an index entry for a blob
      that never landed is a home-screen card that opens nothing. */

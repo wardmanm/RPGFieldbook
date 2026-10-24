@@ -32,10 +32,17 @@ function luSummary(s){
   const m=/^.*?[.!?](?=\s|$)/.exec(t);if(m)t=m[0];
   return t.length>160?t.slice(0,157).trimEnd()+"…":t;
 }
+/* The features the rules say do not add together when a second class grants
+   them again (SRD 5.2.1 p.26, Multiclassing): Extra Attack, and Unarmored
+   Defense (you use only one way to calculate AC). A same-named feature that is
+   not here is left untagged: Spellcasting combines by its own rule, and
+   Expertise or Epic Boon are separate picks. */
+const LU_NO_STACK=["extra attack","unarmored defense"];
 function levelGains(before,after,choices,notes){
   const rows=[],had=new Set(before.feats.map(f=>f.id));
   after.feats.filter(f=>!had.has(f.id)).forEach(f=>{
-    const twin=before.feats.find(b=>b.cls&&f.cls&&b.cls!==f.cls&&b.name.toLowerCase()===f.name.toLowerCase());
+    const nm=f.name.toLowerCase();
+    const twin=LU_NO_STACK.includes(nm)&&before.feats.find(b=>b.cls&&f.cls&&b.cls!==f.cls&&b.name.toLowerCase()===nm);
     rows.push({kind:"feature",text:f.name,detail:luSummary(f.desc),tag:f.sub||"feature",
       warn:twin?`You already have this from ${twin.cls}; they don't stack.`:""});
   });
@@ -76,10 +83,22 @@ let _lu=null;
 function luState(){return _lu;}
 const LU_HP_CLOSE="Close without adding this level's hit points?\n\nMax HP is unlocked, so you can type the new total yourself.";
 const LU_ICON={feature:"✦",choice:"✧",resource:"◆",slot:"◇",pb:"↑",note:"✎"};
+/* A level-up's notes are all one class's. A second class added above level 1
+   brings every level's spell note, and each later one supersedes the one
+   before ("Prepared Spells: 4", then "5"), so only the highest level's are
+   kept. A plain string (the multiclass note) has no level and always stays. */
+function luLatestNotes(notes){
+  const L=n=>(n&&typeof n==="object")?num(n._level):0;
+  const top=(notes||[]).reduce((m,n)=>Math.max(m,L(n)),0);
+  return (notes||[]).filter(n=>L(n)<1||L(n)===top);
+}
+/* `id` is the character the level-up belongs to. Every way on (the scene's
+   end, Done, closing) checks it, and one whose character has changed is
+   dropped: no card, no HP, no choices on someone else's sheet. */
 function openLevelUp(info){
-  _lu={cls:info.cls,from:num(info.from),to:num(info.to),charLevel:num(info.charLevel),fromLevel:num(info.before&&info.before.level),
+  _lu={id:activeId,cls:info.cls,from:num(info.from),to:num(info.to),charLevel:num(info.charLevel),fromLevel:num(info.before&&info.before.level),
     hp:info.hp,choices:(info.choices||[]).filter(ch=>ch&&ch.type!=="hp"),pending:info.pending||null,
-    gains:levelGains(info.before,info.after,info.choices||[],info.notes||[]),raw:null,set:false,note:""};
+    gains:levelGains(info.before,info.after,info.choices||[],luLatestNotes(info.notes)),raw:null,set:false,note:""};
   playLevelUpFx(_lu.fromLevel||(_lu.charLevel-(_lu.to-_lu.from)),_lu.charLevel,showLevelUpCard);
 }
 function luRowHTML(r){
@@ -105,14 +124,25 @@ function levelUpCardHTML(lu){
     `<ul class="lu-list">${rows}</ul>`+levelUpHPHTML(lu.hp)+
     `<div class="m-actions"><button type="button" class="tbtn primary" id="luGo" disabled>${(lu.choices||[]).length?"Continue to your choice ▸":"Done"}</button></div></div>`;
 }
+/* true, and the level-up dropped, when the open character is not the one it
+   started on */
+function luStale(){if(_lu&&_lu.id!==activeId){_lu=null;return true;}return false;}
+/* Loading, importing or starting a character, or going Home: the level-up
+   is dropped first, then a playing scene ends (its done() finds no _lu and
+   opens nothing) and an open card closes, so neither stays over another sheet. */
+function luAbandon(){
+  const had=!!_lu;_lu=null;
+  luSkip();
+  if(had&&document.querySelector&&document.querySelector("#mBody .lu-card"))closeModal();
+}
 function showLevelUpCard(){
-  if(!_lu)return;
+  if(!_lu||luStale())return;
   openModal("Level up",levelUpCardHTML(_lu));
   /* after openModal, which clears the guard on every open */
-  setDismissGuard(()=>(_lu&&!_lu.set)?LU_HP_CLOSE:"",luDismissed);
+  setDismissGuard(()=>(_lu&&!_lu.set&&_lu.id===activeId)?LU_HP_CLOSE:"",luDismissed);
   const on=(id,ev,fn)=>{const el=document.getElementById(id);if(el&&el.addEventListener)el.addEventListener(ev,fn);};
   const typed=()=>{const el=document.getElementById("luTyped");return el?el.value:"";};
-  const apply=()=>{const why=luSetHP(typed());if(why)luSay(why,true);};
+  const apply=()=>luSetHP(typed());
   on("luRoll","click",luRoll);
   on("luApply","click",apply);
   on("luTyped","keydown",e=>{if(e.key==="Enter"){e.preventDefault();apply();}});
@@ -121,12 +151,19 @@ function showLevelUpCard(){
 }
 function luSay(text,bad){const el=document.getElementById("luRes");if(!el)return;el.textContent=text;if(el.classList)el.classList.toggle("bad",!!bad);}
 /* raw===null takes the average (half the die + 1). Otherwise raw is checked
-   by luHPCheck. Nothing is committed until Done, so a roll can be redone. */
+   by luHPCheck. Nothing is committed until Done, so a roll can be redone.
+   A value that fails takes back any earlier one and disables Done: the card
+   must never commit a number it no longer shows, and closing asks again. */
 function luSetHP(raw,note){
   if(!_lu)return "No level-up is open.";
   const ch=_lu.hp||{};
-  if(raw===null){if(!num(ch.die))return "Type the hit points you gained.";_lu.raw="";}
-  else{const c=luHPCheck(ch,raw);if(!c.ok)return c.why;_lu.raw=String(raw).trim();}
+  const fail=why=>{
+    _lu.set=false;_lu.raw=null;_lu.note="";
+    const go=document.getElementById("luGo");if(go)go.disabled=true;
+    luSay(why,true);return why;
+  };
+  if(raw===null){if(!num(ch.die))return fail("Type the hit points you gained.");_lu.raw="";}
+  else{const c=luHPCheck(ch,raw);if(!c.ok)return fail(c.why);_lu.raw=String(raw).trim();}
   _lu.set=true;_lu.note=note||"";
   luSay(luHPLine(),false);
   const go=document.getElementById("luGo");if(go)go.disabled=false;
@@ -145,6 +182,7 @@ function luRoll(){
   luSetHP(String(r.total),"Rolled "+r.faces.join(", "));
 }
 function luFinish(){
+  if(luStale()){closeModal();return false;}
   if(!_lu||!_lu.set)return false;
   const lu=_lu;_lu=null;
   closeModal();
@@ -156,7 +194,7 @@ function luFinish(){
    HP that was set is kept; the choices open either way, because a choice the
    player never saw must not vanish with the card. */
 function luDismissed(){
-  const lu=_lu;_lu=null;if(!lu)return;
+  const lu=_lu;_lu=null;if(!lu||lu.id!==activeId)return;
   if(lu.set){commitHPChoice(lu.hp,lu.raw);scheduleSave();}
   runChoices(lu.cls,lu.choices,[],lu.pending);
 }

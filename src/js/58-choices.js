@@ -238,8 +238,10 @@ function armChoiceDismissGuard(pending){
     const picked=blocks.reduce((a,b)=>a+num(b.picked),0);
     const short=choiceShortfall(blocks);
     const hp=hpPending();
-    /* Hit points alone are not lost for good — the level-up left Max unlocked —
-       so they get their own, milder question rather than "no way to reopen". */
+    /* Hit points alone are not lost for good — addClass() left Max unlocked
+       (this block is creation's: a first class added above level 1; a
+       level-up's HP is on the level card, #101) — so they get their own,
+       milder question rather than "no way to reopen". */
     if(!short&&!picked)return hp?LU_HP_CLOSE:"";
     return (picked?"Closing will discard the picks you have made.":"You have not made your picks yet.")+
       "\n\nThere is no way to reopen this later — you would have to remove and re-add it."+
