@@ -16,7 +16,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classFlyHTML','subSourceTag','runChoices',
-  'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote',
+  'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote','casterLevel','autoSlots',
   'attackNumbers','addLibraryItems','contributions','sumFx','armorAC','spellDC','spellAtkBonus',
   'uid',
 ]);
@@ -1733,6 +1733,28 @@ ck('itemMetaLine still ends with the weight',
     ctx.doLevelDown(7);
     ck('#103 I-2 an index that is not a class does nothing', lv()==='Fighter 2,Wizard 1');
   }finally{ctx.alert=realAlert; ctx.openModal=realOM;}
+}
+
+// ---------- #101 multiclassing: half-casters round UP (SRD 5.2.1 p.26), for every ruleset
+{
+  const cl=list=>{X.character.classes=list;X.character.level=list.reduce((a,c)=>a+c.level,0);return X.casterLevel();};
+  ck('#101 a Paladin 1 counts as caster level 1 (2024: two 1st-level slots)', cl([{name:'Paladin',level:1}])===1, cl([{name:'Paladin',level:1}]));
+  ck('#101 a Ranger 3 counts as 2', cl([{name:'Ranger',level:3}])===2, cl([{name:'Ranger',level:3}]));
+  ck('#101 a Wizard 3 / Paladin 3 counts as 5', cl([{name:'Wizard',level:3},{name:'Paladin',level:3}])===5,
+     cl([{name:'Wizard',level:3},{name:'Paladin',level:3}]));
+  ck('#101 a Ranger 1 / Paladin 1 counts as 2 (each class rounds up)', cl([{name:'Ranger',level:1},{name:'Paladin',level:1}])===2,
+     cl([{name:'Ranger',level:1},{name:'Paladin',level:1}]));
+  ck('#101 an Eldritch Knight 3 still counts a third, rounded down', cl([{name:'Fighter',level:3,subclass:'Eldritch Knight'}])===1,
+     cl([{name:'Fighter',level:3,subclass:'Eldritch Knight'}]));
+  ck('#101 an Eldritch Knight 5 is still 1', cl([{name:'Fighter',level:5,subclass:'Eldritch Knight'}])===1);
+  X.character.classes=[{name:'Paladin',level:1}];X.character.level=1;X.autoSlots();
+  ck('#101 ...so a Paladin 1 gets its two 1st-level slots', X.num(X.character.slots[1].total)===2, X.character.slots[1]);
+  X.character.classes=[{name:'Warlock',level:3}];X.character.level=3;X.autoSlots();
+  ck('#101 Warlock pact slots are untouched (two 2nd-level slots at 3)', X.num(X.character.slots[2].total)===2&&X.num(X.character.slots[1].total)===0,
+     [X.character.slots[1],X.character.slots[2]]);
+  const note=X.multiclassNote({name:'Druid',multiclass:{}});
+  ck('#101 the multiclass note states the 13+ prerequisite', /13 or more in the primary ability of your current class and the new one\./.test(note), note);
+  ck('#101 ...and a custom class (no definition) still has no note', X.multiclassNote(null)==='');
 }
 
 ck.done();
