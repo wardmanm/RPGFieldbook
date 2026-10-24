@@ -286,3 +286,111 @@ Checked against SRD 5.2.1, "Multiclassing", pp. 25–26.
 - Blocking a multiclass that misses the 13+ prerequisite. That needs primary abilities in the packs,
   which is converter work for 2.0's pack-driven rules (#103 decision 18).
 - Multiclass AC rules: one AC calculation at a time is already how `armorAC()` works.
+
+## 13. As built
+
+Built as designed, §1–§11, with these notes:
+
+1. **§6's "`animationend` or a 2.6s backstop timer" became one 2.4s timer, full stop.** The
+   keyframes all finish by 2.4s (the longest, the sigil, is 2.1s plus its 1.9s-delayed ring finale,
+   and the banner's own unfurl ends at 2.1s), so a single `setTimeout(luSkip, LU_FX_MS)` both ends
+   the scene and is what a test can wait on; `animationend` on a multi-element layer would have to
+   pick which element's event to trust. Cost if wrong: the card could open a frame early on a very
+   slow device, never late.
+2. **§3.5's Continue passes `[]` for `notes`, not the level's notes**, so `runChoices(className,
+   choices, [], pending)` rather than `runChoices(className, choices, notes, pending)` as literally
+   written. This matches the same section's own rule two sentences later — "notes alone count as
+   nothing to choose: they are already on the card" — passing the real notes through would reopen a
+   window just to repeat text the card already showed, with no pick to make there. The spec's two
+   sentences disagreed in their literal reading; the second one governed.
+3. **The multiclass 13+ sentence (§7) is appended to `multiclassNote()`'s return, not inserted as
+   its own row.** It reads in the note the player already sees in the add-class preview and on the
+   level card (§4 row 6), rather than as a seventh `levelGains()` row kind of its own.
+4. **Two cosmetic fixes, found in Task 3's own screenshot QA and made here, CSS only
+   (`50-modal.css`):** at phone width the card's class line ("Fighter 1 → 2 · character level 2")
+   could wrap onto a line holding only the trailing number; and `--head`/`--display`'s Cinzel face
+   (the classic skin) draws "1" with no serif, reading as a capital "I" in both the class line and
+   the LEVEL N banner. `font-variant-numeric:lining-nums` was tried first and changed nothing —
+   Cinzel defines no alternate numeral set for the property to pick between — so `.lu-cls` and
+   `.lu-bn` move to `var(--body)` (EB Garamond) instead, whose figures read unambiguously and which,
+   as a side effect, fits every realistic class line on one line down to 320px wide.
+5. **Reduced motion was not driven through true OS-level emulation.** The project's Playwright MCP
+   server (`@playwright/mcp@0.0.79`) has no `browser_emulate_media` tool, so the branch was driven
+   by monkey-patching `window.matchMedia` in the live page and re-running `doLevelUp()`, exercising
+   the real `luReducedMotion()` code path rather than the unit harness's own mock. This is not the
+   same as a real OS or browser reduced-motion setting; see "What Mike checks," below.
+6. **Known minor items, left for the controller, not fixed in this branch:**
+   - a resource whose max and die both change in the same level emits two rows, "uses" then "die",
+     as spec §4 intends (separate lines) — this case has no test (`levelGains()`);
+   - a bad "I rolled" + Apply after a good one shows the error line but Done/Continue still commits
+     the earlier, now-unseen value (`57-levelup.js`, `luSetHP`/`luFinish`) — **fixed in note 7**;
+   - stale comments at `char-update.js:977` and `58-choices.js:241`, left over from before this
+     branch's rewiring of the lines near them — **fixed in note 7**;
+   - the card's own DOM wiring (`showLevelUpCard`'s listeners) has no unit coverage, only the
+     browser QA drive recorded in the ledger;
+   - the #63 regression test (no two choice windows open at once) passes whether or not
+     `runExtraChoices` is actually called, so it would not catch that specific call being dropped;
+   - `LU_ICON` is a plain-object lookup keyed by `kind`, so an internal kind named `constructor`
+     would print a function instead of falling through to the default bullet — internal kinds only,
+     never player text, so not reachable today;
+   - `rules-data.js`'s `#101` CSS-block check sits just before the file's trailing async IIFE,
+     rather than beside the file's other CSS checks — a pointer comment at the usual spot would
+     help the next person find it;
+   - two notes with no code effect, left as called: the commit trailer on Task 1's commit
+     (`86b585f`) names the model that actually wrote it rather than the brief's; and
+     `casterLevel()`'s SRD-citing comment sits mid-expression, which the plan asked for and which
+     is valid JS;
+   - after a skip (click, tap or Esc/Enter/Space), keyboard focus lands on the HP step's first
+     `<input>` (`#luTyped`), not the card's first element in DOM order (`#luRoll`) — `openModal()`'s
+     existing first-focusable-input behaviour, not new here, rather than a dedicated focus target
+     for the card;
+   - **390-wide QA was read narrowly.** Only the quiet-level card (`101-after-card-390-classic-
+     light.png`), the before shot, the Humblewood scene (`101-scene-humblewood-light-390.png`) and
+     the class-line wrap fix (`101-css-wrap-*-360.png`, 360 not 390) were shot at phone width; the
+     ASI card's Continue window, the multiclass note's full text, Cleric 5's longer gains list,
+     Paladin 1's slots page and the reduced-motion card were driven and shot only at 1280 — so
+     whether a card with more rows or a longer note reads well at 390 is still Mike's phone pass to
+     confirm.
+
+7. **The final review's fixes** (ledger "Level-up fanfare: final review fixes"):
+   - **Decision 11 is narrowed to an allowlist.** The card tags a new feature "you already have
+     this from X; they don't stack" only when its name is on `LU_NO_STACK`, Extra Attack or
+     Unarmored Defense, and it is already held from another class. Those are the two SRD 5.2.1
+     p.26 names: Extra Attack doesn't stack, and you use only one way to calculate AC. A
+     same-named Spellcasting is not tagged, because it combines by the multiclass slot table.
+     Nor are Expertise and Epic Boon, which are separate picks. The decisions table keeps the
+     original wording; this note governs.
+   - **§5's "nothing is set" now holds after a good value.** An Apply that fails clears `_lu.set`,
+     `_lu.raw` and `_lu.note`, disables Done/Continue and shows the error. So Done does nothing,
+     and closing asks `LU_HP_CLOSE` again.
+   - **A level-up belongs to its character.** `_lu.id` is the `activeId` at `openLevelUp()`. The
+     scene's end, Done and closing drop a level-up whose character has changed: no card, no HP,
+     no choices. Loading, importing or starting a character, and going Home, call `luAbandon()`.
+     It ends a playing scene and closes an open card.
+   - **One spell note per class.** A second class added above level 1 lists only the highest
+     level's spell note (`luLatestNotes()`), not every level's.
+   - **The two stale comments** above now describe creation.
+   - **Left, and in the wiki's known issues:**
+     - a long card at 390 puts the HP step and Done below the fold, for Mike's phone pass;
+     - the page behind the scene isn't inert for its 2.4s;
+     - `luSummary()` cuts at abbreviations;
+     - focus after a skip lands on `#luTyped`.
+
+     Nothing may `openModal()` over the card; this is now a rule in the wiki's character-building
+     page.
+
+**What Mike checks on his devices:** touch (the card's buttons and the HP step's Roll/Apply are
+sized the same as every other modal control, but the scene itself has never been tapped on a real
+touchscreen); print (the scene and the card are modals, like every other window, and are not
+expected to print — nothing here changes `@media print`'s existing rule for `.modal`, only adds one
+for `.lu-fx`); real characters (every level-up driven in QA started from a fresh `newCharacter()`
+sheet; nothing here reads or writes a field a saved character wouldn't already have, but a levelled,
+multiclassed character of Mike's own is the real stress case for `levelGains()`'s diffing); and real
+reduced motion, set in the OS or the browser rather than monkey-patched, which is the one branch
+this task could not drive end to end (note 5, above).
+
+Everything else — the scene's markup, timing and tokens, the card's rows and ordering, the HP
+step's controls and wording, Done/Continue/closing-early, the multiclass fixes, and the QA pass
+across both skins, both themes, 1280 and 390 wide, with the console clean throughout — landed as
+specified. See the ledger entry (`WIRING-LEDGER.md`, "Level-up fanfare (#101, 2026-10-24)") for the
+full QA account and every screenshot path.

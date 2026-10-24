@@ -10,6 +10,7 @@ function loadCharById(id){
   let raw;try{raw=localStorage.getItem(charKey(id));}catch(e){}
   if(!raw)return false;
   try{character=migrate(JSON.parse(raw));}catch(e){return false;}
+  luAbandon();   /* #101: a level-up belongs to the sheet it started on */
   activeId=character.id||id;
   settings.skin=skinForSystem(character.system);saveSettings();applyTheme();
   renderAll();hideHome();
@@ -26,6 +27,7 @@ function newCharacter(name,system){
   c.appVersion=APP_VERSION;   // safe here: runtime, long after 30-version.js has run
   c.ammoInit=AMMO_PASS;   // a new sheet has nothing for the one-time ammo pass to migrate (never in blankChar — see wpnEquipInit)
   c.langLifted=true;   // a new sheet has no "Languages:" line in Proficiencies to lift (never in blankChar — see ammoInit above)
+  luAbandon();   /* #101: a level-up belongs to the sheet it started on */
   character=c;activeId=c.id;
   /* as finishImport(): listed only once stored, and a refusal says so (#81) */
   let why="";try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){why=storageWhy(e);}
@@ -64,7 +66,7 @@ function migrateOldChar(){
   return "";
 }
 let homeForceSetup=false;
-function showHome(){renderHome();document.getElementById("home").style.display="flex";}
+function showHome(){luAbandon();renderHome();document.getElementById("home").style.display="flex";}
 function hideHome(){const h=document.getElementById("home");if(h)h.style.display="none";}
 function fmtWhen(ts){if(!ts)return "";const d=new Date(ts),now=Date.now(),diff=(now-ts)/1000;if(diff<60)return "just now";if(diff<3600)return Math.floor(diff/60)+"m ago";if(diff<86400)return Math.floor(diff/3600)+"h ago";return d.toLocaleDateString();}
 function renderHome(){

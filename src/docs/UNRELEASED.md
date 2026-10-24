@@ -61,3 +61,7 @@ Bullets below this line — leave the heading in place.
 - On a phone, the cards on the Spells, Inventory and Journal tabs have a small gap between them
   again instead of touching.
 - The ☰ section menu is gone; a ↑ button in the bottom corner takes you back to the top.
+- Levelling up is a moment now: a short animation, then a card with everything the level gives
+  you and your hit-point roll.
+- Paladin and Ranger spell slots follow the 2024 rule (half your levels, rounded up), so a level 1
+  Paladin has its two slots.

@@ -149,3 +149,55 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
   #printArea .p-two .p-item{break-inside:avoid}
   #printArea .p-mark{font-weight:bold}
 }
+/* ---- the level card (#101) ---- */
+/* the banner number and the class line carry a digit ("1 → 2", "LEVEL 11"), and --display/--head
+   (Cinzel on the classic skin) draw a "1" with no serif, reading as a capital "I"; the body font's
+   figures don't, so these two use it instead of the heading faces (#101) */
+.lu-card .lu-bn{margin:0 0 10px;padding:6px;text-align:center;background:var(--accent);color:var(--paper);font:900 22px/1.1 var(--body);letter-spacing:.06em;border-radius:6px}
+.lu-k{margin:0;font:700 11px var(--head);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lu-cls{margin:0 0 6px;font-family:var(--body);font-weight:700}
+.lu-list{list-style:none;margin:0;padding:0}
+.lu-row{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px dotted var(--hair)}
+.lu-row>i{font-style:normal;flex:0 0 16px;text-align:center;color:var(--accent)}
+.lu-row>span{flex:1;min-width:0}
+.lu-row small{flex:0 0 auto;font:700 10px var(--head);text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+.lu-d{display:block;font-size:13px;color:var(--ink-soft)}
+.lu-warn{display:block;font-size:13px;color:var(--brick)}
+.lu-none{padding:8px 0;color:var(--ink-soft);font-style:italic}
+.lu-hp{margin-top:12px;padding:8px 10px;border:1.5px solid var(--line);border-radius:6px;background:var(--field)}
+.lu-hp h5{margin:0;font:700 11px var(--head);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.lu-avg{background:none;border:0;padding:4px 2px;color:var(--accent-2);text-decoration:underline;cursor:pointer;font:inherit}
+.lu-hp .hd-res.bad{color:var(--brick)}
+/* ---- the level-up scene (#101): over the page, under the modal (80) ---- */
+.lu-fx{position:fixed;inset:0;z-index:75;overflow:hidden;cursor:pointer;
+  background:radial-gradient(circle at 50% 42%,var(--lu-night-2) 0,var(--lu-night) 70%);animation:luScene 2.4s ease forwards}
+.lu-sigil{position:absolute;left:50%;top:42%;width:min(70vw,300px);height:min(70vw,300px);transform:translate(-50%,-50%);opacity:0;animation:luSigil 2.1s ease-out forwards}
+.lu-sigil circle,.lu-sigil path{fill:none;stroke:var(--lu-glow);stroke-width:2;stroke-linecap:round;filter:drop-shadow(0 0 4px var(--lu-glow))}
+.lu-c1{stroke-dasharray:760;stroke-dashoffset:760;animation:luDraw .8s .05s ease-out forwards}
+.lu-c2{stroke-dasharray:600;stroke-dashoffset:600;animation:luDraw .8s .25s ease-out forwards}
+.lu-star{stroke-dasharray:1400;stroke-dashoffset:1400;animation:luDraw .9s .4s ease-out forwards}
+.lu-runes{transform-origin:125px 125px;animation:luSpin 2.1s linear forwards}
+.lu-runes path{stroke-width:1.6}
+.lu-ring{position:absolute;left:50%;top:42%;width:84px;height:84px;box-sizing:border-box;margin:-42px 0 0 -42px;border:4px solid var(--accent);border-radius:50%;
+  background:var(--paper);color:var(--accent);display:grid;place-items:center;font:900 40px/1 var(--head);font-variant-numeric:lining-nums;opacity:0;animation:luRing 1.9s ease-out forwards}
+.lu-ring b{grid-area:1/1}
+.lu-old{animation:luOut .2s .8s forwards}
+.lu-new{opacity:0;animation:luIn .2s .8s forwards}
+.lu-flash{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at 50% 42%,rgba(255,255,255,.95),transparent 55%);animation:luFlash .6s 1.1s ease-out forwards}
+.lu-banner{position:absolute;left:50%;top:16%;transform:translateX(-50%);min-width:min(80vw,320px);padding:10px 24px;box-sizing:border-box;text-align:center;
+  background:var(--accent);color:var(--paper);font:900 30px/1 var(--display);letter-spacing:.06em;clip-path:inset(0 50% 0 50%);animation:luUnfurl .6s 1.5s ease-out forwards}
+.lu-spark{position:absolute;top:20%;width:7px;height:7px;border-radius:50%;background:var(--lu-spark);opacity:0;animation:luSparkFall 1.2s ease-out forwards}
+.lu-mote{position:absolute;bottom:-10px;width:5px;height:5px;border-radius:50%;background:var(--lu-glow);box-shadow:0 0 8px 2px var(--lu-glow);opacity:0;animation:luMote 2s ease-out forwards}
+@keyframes luScene{0%{opacity:0}8%{opacity:1}88%{opacity:1}100%{opacity:0}}
+@keyframes luDraw{to{stroke-dashoffset:0}}
+@keyframes luSpin{to{transform:rotate(120deg)}}
+@keyframes luSigil{0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}15%{opacity:1}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.3)}}
+@keyframes luRing{0%{opacity:0;transform:scale(.2)}25%{opacity:1;transform:scale(1)}55%{transform:scale(1.25);box-shadow:0 0 30px 8px var(--lu-glow)}85%{opacity:1;transform:scale(1.1)}100%{opacity:0;transform:scale(.5) translateY(-160px)}}
+@keyframes luOut{to{opacity:0}}
+@keyframes luIn{to{opacity:1}}
+@keyframes luFlash{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+@keyframes luUnfurl{to{clip-path:inset(0 0 0 0)}}
+@keyframes luSparkFall{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(40vh) scale(.4)}}
+@keyframes luMote{0%{opacity:0;transform:translateY(0)}20%{opacity:1}100%{opacity:0;transform:translateY(-70vh)}}
+@media (prefers-reduced-motion:reduce){.lu-fx{display:none}}
+@media print{.lu-fx{display:none!important}}

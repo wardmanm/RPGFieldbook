@@ -66,13 +66,22 @@ and so leaves `system` mode, resolving it to what is showing first.
   specificity.
 
 Each defines `--paper`, `--paper-2`, `--panel`, `--ink`, `--ink-soft`, `--line`, `--hair`,
-`--accent`, `--accent-2`, `--brick`, `--warn`, `--field`, `--field-focus`, `--shadow` and
-`--ground`. The fonts are `--display` (Grenze Gotisch; Cinzel on the classic skin), `--head`
+`--accent`, `--accent-2`, `--brick`, `--warn`, `--field`, `--field-focus`, `--shadow`, `--ground`
+and, since #101, `--lu-night`, `--lu-night-2`, `--lu-glow` and `--lu-spark` for the level-up scene
+([Character building](../features/character-building.md)). Unlike every other token, light and
+dark **share one value** per skin: the scene dims the whole page to a night backdrop regardless of
+theme (`--lu-night`/`--lu-night-2`, the gradient's edge and centre), so it is defined once per skin
+block rather than once per theme block — Humblewood's values are on `:root` and the classic skin's
+on `html[data-skin="classic"]`, which wins as usual (`00-tokens.css`). Classic is a violet night with pale
+arcane blue (`--lu-glow`); Humblewood is a deep forest green (`#0d1a12`) with a warm gold-green glow.
+`--lu-spark` (the banner's gold sparks) is the same gold in both skins. The fonts are `--display`
+(Grenze Gotisch; Cinzel on the classic skin), `--head`
 (Cinzel) and `--body` (EB Garamond). They load from Google Fonts through a `<link>` in the template,
 and each stack falls back to Georgia or Times New Roman, which is what renders offline. Most text on
 an `--accent` fill is a fixed `#20160a` in both themes (primary buttons, selected segments and
 pills). Print ignores the tokens: `#printArea` is forced to black on white. `prefers-reduced-motion`
-switches every animation and transition off (`50-modal.css`).
+switches every animation and transition off (`50-modal.css`), and never builds the level-up scene
+layer at all (#101).
 
 On the classic skin **`--accent` and `--brick` are the same colour** (`#8f2318` light, `#e2564a`
 dark). That is why `--warn` exists, for the middle band of the current-HP colours, and why states
@@ -184,6 +193,11 @@ removed".
   property fails silently (L505).
 - **`fill-rule` is left at the default.** The glyphs are drawn with counter-wound holes, and forcing
   `evenodd` inverts the holes on many of them (`fetch-icons.js`).
+- **Cinzel's "1" reads like a capital "I".** `--head` and `--display` (classic skin) have no serif
+  on the digit, and `font-variant-numeric:lining-nums` does nothing to it — Cinzel defines no
+  alternate numeral set for the property to pick between. Anywhere a digit must stay readable next
+  to this face, set `--body` instead; that is what the level-up card's class line and banner number
+  do (L6840, #101).
 
 ## Decisions
 
@@ -222,3 +236,7 @@ removed".
 - 2026-09-24 — A `ui` kind for the combat button's crossed swords; `docs.js` splits `KINDS` from `DATA_KINDS`. → ledger L3397, #9, #10, #11
 - 2026-09-28 — The emblem's path and class are `esc()`'d like every other attribute value. → ledger L3940
 - 2026-10-09 — The emblem coverage check walks `homebrew` and `srd52`; the private suite covers the four private packs. → ledger L5426, #85
+- 2026-10-24 — `--lu-night`, `--lu-night-2`, `--lu-glow` and `--lu-spark` for the level-up scene, one
+  violet-night value per skin shared by light and dark; the card's class line and banner number move
+  to `--body` so a "1" doesn't read as "I". → ledger L6840, #101
+- 2026-10-24 — Corrected: Humblewood's scene tokens are on `:root`, not `html[data-theme]`. → ledger L6928, #101

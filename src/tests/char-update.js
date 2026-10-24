@@ -16,10 +16,16 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classFlyHTML','subSourceTag','runChoices',
-  'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote',
+  'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote','casterLevel','autoSlots',
   'attackNumbers','addLibraryItems','contributions','sumFx','armorAC','spellDC','spellAtkBonus',
   'uid',
+  'levelSnapshot','levelGains','luSummary','luHPCheck',
+  'openLevelUp','luState','luSetHP','luRoll','luFinish','levelUpCardHTML','levelUpHPHTML','LU_HP_CLOSE',
+  'luFxHTML','playLevelUpFx','luSkip','luBusy','luReducedMotion','luLatestNotes','luAbandon','showHome',
 ]);
+/* #101: level-ups in this suite skip the scene (reduced motion), as the
+   harness's setTimeout never fires; the scene's own block turns it back on. */
+ctx.window.matchMedia=()=>({matches:true,addEventListener(){}});
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
    defined APP_VERSION, so a reference to it there would white-screen the app. */
@@ -972,8 +978,10 @@ ck('...and actually levelled', X.num(X.character.classes[0].level)===2);
 // ---------- the hit-point step on every level-up (#58)
 // There was never an HP prompt: levelling only unlocked the box, so the choice
 // modal a subclass level opens was all the player saw and the hit points were
-// forgotten. Every level-up now carries a synthesized {type:"hp"} choice that
-// rides the same modal and commit as the level's other picks.
+// forgotten. Since #101 a level-up's HP step is on the level card (luSetHP,
+// luFinish); the synthesized {type:"hp"} choice rides the choice window only at
+// creation, for a first class added above level 1. Both commit through
+// commitHPChoice().
 ck('fixed HP is half the die plus one', X.hpFixed(6)===4 && X.hpFixed(8)===5 && X.hpFixed(10)===6 && X.hpFixed(12)===7);
 ck('fixed HP is 0 with no die', X.hpFixed(0)===0);
 ck('blank dice take the fixed value, plus CON', X.hpGain(10,1,null,2)===8 && X.hpGain(10,1,'',2)===8);
@@ -1007,30 +1015,31 @@ ck('several levels show CON per level',
 // Taking the average: max AND current go up, and the lock is put back the way
 // the player had it — the unlock is only the fallback for a dismissed prompt.
 hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=true; X.doLevelUp();
-X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''}]);
+X.luSetHP(null); X.luFinish();
 ck('the average lands on max HP', X.num(X.character.hp.max)===16, X.character.hp.max);
 ck('...and on current HP', X.num(X.character.hp.cur)===16, X.character.hp.cur);
 ck('...and the box is locked again, as it was before levelling', X.character.hp.locked===true);
 
 hpSetup(CLS,14); X.addClass('Fighter',1); X.doLevelUp();
-X.commitChoices('Fighter',[{type:'hp',ci:0,dice:'3'}]);
+X.luSetHP('3'); X.luFinish();
 ck('a typed roll adds CON once', X.num(X.character.hp.max)===12+5, X.character.hp.max);
 
 hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=false; X.doLevelUp();
-X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''}]);
+X.luSetHP(null); X.luFinish();
 ck('a box the player had unlocked stays unlocked', X.character.hp.locked===false);
 
 hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.cur=3; X.doLevelUp();
-X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''}]);
+X.luSetHP(null); X.luFinish();
 ck('a hurt character gains the same hit points on top', X.num(X.character.hp.cur)===9, X.character.hp.cur);
 
-// A custom class has no die: blank means "I'll type it", a number is the total.
+// A custom class has no die: nothing typed means "I'll type it", a number is the total.
+// #101: with nothing typed the card's Done stays disabled, so closing it is the way out.
 hpSetup(CLS); X.addClass('Homebrewer',1); X.character.hp.max=12; X.character.hp.cur=12;
 X.character.hp.locked=true; X.doLevelUp();
-X.commitChoices('Homebrewer',[{type:'hp',ci:0,dice:''}]);
+state.confirm=true; X.dismissModal();
 ck('no die and nothing typed changes nothing', X.num(X.character.hp.max)===12, X.character.hp.max);
 ck('...and leaves the box unlocked to type into', X.character.hp.locked===false);
-X.doLevelUp(); X.commitChoices('Homebrewer',[{type:'hp',ci:0,dice:'7'}]);
+X.doLevelUp(); X.luSetHP('7'); X.luFinish();
 ck('no die and a number typed adds exactly that', X.num(X.character.hp.max)===19, X.character.hp.max);
 
 // THE #58 regression: the subclass level. HP must land even though the same
@@ -1039,7 +1048,8 @@ ck('no die and a number typed adds exactly that', X.num(X.character.hp.max)===19
   const F=[{name:'Fighter',hitDie:'d10',levels:{'3':{choices:[{type:'subclass',label:'Fighter Subclass'}]}},
             subclasses:{'Battle Master':{description:'Students of war.',levels:{'3':{traits:[{name:'Combat Superiority'}]}}}}}];
   hpSetup(F); X.addClass('Fighter',2); X.character.hp.max=20; X.character.hp.cur=20; X.doLevelUp();
-  X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''},{type:'subclass',name:'Battle Master'}]);
+  /* #101: the card takes the HP; its Continue opens the window with the subclass */
+  X.luSetHP(null); X.luFinish(); X.commitChoices('Fighter',[{type:'subclass',name:'Battle Master'}]);
   ck('a subclass level still gains its hit points', X.num(X.character.hp.max)===26, X.character.hp.max);
   ck('...and still takes the subclass', X.character.classes[0].subclass==='Battle Master');
   ck('...with its features', X.character.features.some(f=>f.name==='Combat Superiority'));
@@ -1102,8 +1112,7 @@ ck('...and one with no pack shows nothing', X.subSourceTag('Engineer',{})==='');
   try{
     X.addClass('Fighter',1);                 /* opens the class window (skills), queues equipment */
     /* ...which the player closes without Done. Then they level up and press Done: */
-    X.doLevelUp(); got=null;
-    X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''}]);
+    X.doLevelUp(); got=null; X.luSetHP(null); X.luFinish();
     ck('a dismissed window does not leak its equipment picker into the next level-up',
        !(got||[]).some(x=>x&&x.kind==='equip'), got);
     /* and a window that IS completed still hands its own picker on */
@@ -1278,9 +1287,11 @@ const FLOW={classes:[
     let next=press('chDone',[{type:'subclass',name:'Drillmaster'}]);
     ck('#69 ...the Drillmaster window after it holds level 3 alone', next[0]==='Marshal — Level 3', next);
 
-    fresh(); at('Marshal',3); X.doLevelUp();
+    /* #101: a level-up opens the level card first; its title is "Level up". The
+       choice window behind it opens on Continue, and that is the title checked. */
+    fresh(); at('Marshal',3); X.doLevelUp(); X.luSetHP(null); writes=[]; X.luFinish();
     ck('#69 a single-level level-up says "Level N"', shown()[0]==='Marshal — Level 4', shown());
-    fresh(); at('Marshal',2); X.doLevelUp();
+    fresh(); at('Marshal',2); X.doLevelUp(); X.luSetHP(null); writes=[]; X.luFinish();
     ck('#69 ...including the level that brings the subclass', shown()[0]==='Marshal — Level 3', shown());
 
     fresh(); at('Marshal',10,'Vanguard'); ctx.selectSubclass('Marshal','Drillmaster');
@@ -1289,11 +1300,17 @@ const FLOW={classes:[
 
     fresh(); X.addClass('Marshal',1);
     ck('#69 a first class at level 1 says "Level 1"', shown()[0]==='Marshal — Level 1', shown());
+    /* #101: a second class is a level-up, so its HP step and its notes are on
+       the level card, which names the levels gained ("Scholar 0 → 3"). The
+       choice window after it holds only what is left to choose. */
     writes=[]; X.addClass('Scholar',3);
-    ck('#69 a multiclass added at 3: its HP step covers 1-3, and the title says so',
-       shown()[0]==='Scholar — Levels 1–3', shown());
+    const sch3=X.luState()||{hp:{}}; X.luSetHP(null); writes=[]; X.luFinish();
+    ck('#69 a multiclass added at 3: its HP step covers 1-3, and the card says so; the window holds level 3 alone',
+       sch3.hp.levels===3&&/Scholar 0 → 3 · /.test(X.levelUpCardHTML(sch3))&&shown()[0]==='Scholar — Level 3', [sch3.hp,shown()]);
     fresh(); X.addClass('Marshal',1); writes=[]; X.addClass('Scholar',1);
-    ck('#69 ...and a multiclass added at 1 says "Level 1"', shown()[0]==='Scholar — Level 1', shown());
+    const sch1=X.luState()||{hp:{}}; X.luSetHP(null); writes=[]; X.luFinish();
+    ck('#69 ...and a multiclass added at 1: the card says "0 → 1", and with nothing to choose no window follows',
+       sch1.hp.levels===1&&/Scholar 0 → 1 · /.test(X.levelUpCardHTML(sch1))&&shown().length===0, [sch1.hp,shown()]);
 
     /* The Chanter has no level-1 choice, so at 3 its only level-1 content is
        its spell note — which counts: the window shows it. */
@@ -1351,7 +1368,7 @@ ck('a fixed die, written either way', X.resolveResDie({die:8},1)==='d8' && X.res
 
 // Multiclassing into a new class is gaining a level too, with the NEW die.
 hpSetup(CLS); X.addClass('Fighter',1); X.addClass('Wizard',1);
-X.commitChoices('Wizard',[{type:'hp',ci:0,dice:''}]);
+X.luSetHP(null); X.luFinish();
 ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.max)===14, X.character.hp.max);
 
 // ---------- multiclassing grants a subset (#66)
@@ -1378,10 +1395,15 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
   const reset=()=>{rc=[];rx=[];};
   const win=()=>rc[rc.length-1]||[];                       /* [className, choices, notes, eq] */
   const choicesOf=()=>win()[1]||[];
-  const notesOf=()=>(win()[2]||[]).map(n=>typeof n==='string'?n:(n&&n.text)||'').join(' ');   /* a note is text, or {text,_level} */
   const saves=sid=>(X.character.grants||[]).filter(g=>g.sid===sid&&g.type==='save').map(g=>g.key).sort().join(',');
   const eqQueued=sid=>rc.concat(rx).some(call=>call.some(a=>Array.isArray(a)&&a.some(x=>x&&x.kind==='equip'&&x.sid===sid)));
   const skillCh=()=>choicesOf().filter(x=>x.type==='skill');
+  /* #101: a second class opens the level card first. Its HP step and its notes
+     are on the card; Done or Continue then opens the window for what is left,
+     which is where its skills and equipment are read. */
+  const cardNotes=()=>((X.luState()||{}).gains||[]).filter(r=>r.kind==='note').map(r=>r.text).join(' ');
+  const finishCard=()=>{X.luSetHP(null);X.luFinish();};
+  let mcNotes='';
   try{
     /* ---- the first class: unchanged */
     mcSetup(); reset(); X.addClass('Fighter',1);
@@ -1393,17 +1415,17 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
 
     /* ---- a second class */
     reset(); X.addClass('Wizard',1);
+    const wizHP=(X.luState()||{}).hp||{}; mcNotes=cardNotes();
     ck('#66 a second class grants NO saving throws', saves('class:Wizard')==='', saves('class:Wizard'));
     ck('#66 ...the first class keeps its own', saves('class:Fighter')==='con,str', saves('class:Fighter'));
-    ck('#66 ...queues NO starting equipment', !eqQueued('class:Wizard'), rc.concat(rx));
-    ck('#66 ...grants no gold', !(X.character.grantGold||{})['class:Wizard'], X.character.grantGold);
-    ck('#66 ...offers no Wizard skills (multiclassing into Wizard grants none)', skillCh().length===0, skillCh());
     ck('#66 ...does not re-seed Max HP from the new die', X.num(X.character.hp.max)===10, X.character.hp.max);
-    ck('#66 ...asks for its hit points like a level-up', choicesOf()[0]&&choicesOf()[0].type==='hp'&&choicesOf()[0].die===6&&choicesOf()[0].levels===1,
-       choicesOf()[0]);
+    ck('#66 ...asks for its hit points like a level-up', wizHP.type==='hp'&&wizHP.die===6&&wizHP.levels===1, wizHP);
     ck('#66 ...still gets its level-1 features', X.character.features.some(f=>f.name==='Arcane Recovery'&&f.origin&&f.origin.class==='Wizard'));
-    ck('#66 ...and says why there are no saves or equipment', /saving throws/i.test(notesOf())&&/equipment/i.test(notesOf()), notesOf());
-    X.commitChoices('Wizard',[{type:'hp',ci:0,dice:''}]);
+    ck('#66 ...and says why there are no saves or equipment', /saving throws/i.test(mcNotes)&&/equipment/i.test(mcNotes), mcNotes);
+    finishCard();
+    ck('#66 ...queues NO starting equipment', rc.length===1&&!eqQueued('class:Wizard'), rc.concat(rx));
+    ck('#66 ...grants no gold', !(X.character.grantGold||{})['class:Wizard'], X.character.grantGold);
+    ck('#66 ...offers no Wizard skills (multiclassing into Wizard grants none)', rc.length===1&&skillCh().length===0, skillCh());
     ck('#66 ...its hit points average like any later level', X.num(X.character.hp.max)===14, X.character.hp.max);
 
     /* ---- removing the second class reverts only what it added */
@@ -1413,14 +1435,14 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
     ck('#66 ...and leaves no Wizard grant behind', !X.character.grants.some(g=>g.sid.indexOf('Wizard')>=0), X.character.grants);
 
     /* ---- the multiclass skill subset, from the pack's multiclass data */
-    mcSetup(); X.addClass('Fighter',1); reset(); X.addClass('Rogue',1);
+    mcSetup(); X.addClass('Fighter',1); reset(); X.addClass('Rogue',1); mcNotes=cardNotes(); finishCard();
     ck('#66 a multiclass Rogue offers ONE skill, not four', skillCh().length===1&&skillCh()[0].choose===1, skillCh());
     ck('#66 ...from the Rogue\'s own list', skillCh()[0]&&skillCh()[0].from.indexOf('Stealth')>=0&&skillCh()[0].from.indexOf('Arcana')<0,
        skillCh()[0]);
     ck('#66 ...granted to the class, so it reverts with it', skillCh()[0]&&skillCh()[0]._sid==='class:Rogue', skillCh()[0]);
-    ck('#66 ...and names what else it trains', /Thieves' Tools/i.test(notesOf())&&/Light armor/i.test(notesOf()), notesOf());
+    ck('#66 ...and names what else it trains', /Thieves' Tools/i.test(mcNotes)&&/Light armor/i.test(mcNotes), mcNotes);
     ck('#66 ...still no saves', saves('class:Rogue')==='');
-    mcSetup(); X.addClass('Fighter',1); reset(); X.addClass('Bard',1);
+    mcSetup(); X.addClass('Fighter',1); reset(); X.addClass('Bard',1); finishCard();
     ck('#66 a multiclass Bard offers one skill of any', skillCh().length===1&&skillCh()[0].choose===1&&skillCh()[0].from.length===18, skillCh());
     ck('#67 ...and not its first-class three as well', !skillCh().some(x=>x.choose===3), skillCh());
 
@@ -1440,7 +1462,7 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
        bkeys.every(k=>X.character.grants.some(g=>g.sid==='class:Bard'&&g.type==='skill'&&g.key===k)), X.character.grants);
     X.removeClass(0);
     ck('#67 ...and leave with it', !X.character.grants.some(g=>g.sid==='class:Bard'&&g.type==='skill'), X.character.grants);
-    mcSetup(); X.addClass('Wizard',1); reset(); X.addClass('Fighter',1);
+    mcSetup(); X.addClass('Wizard',1); reset(); X.addClass('Fighter',1); finishCard();
     ck('#66 a multiclass Fighter keeps its level-1 Fighting Style', choicesOf().some(x=>x.type==='option'&&/Fighting Style/.test(x.label||'')),
        choicesOf().map(x=>x.type+':'+(x.label||'')));
     ck('#66 ...but offers no skills', skillCh().length===0, skillCh());
@@ -1449,9 +1471,9 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
     mcSetup(null,[{name:'Tinker',hitDie:'d8',savingThrows:['int','con'],
       equipmentGrants:[{items:[{name:'Rope'}],gold:10}],
       levels:{'1':{traits:[{name:'Gizmo'}],choices:[{type:'skill',choose:2,from:['Arcana','History','Nature']}]}}}]);
-    X.addClass('Fighter',1); reset(); X.addClass('Tinker',1);
+    X.addClass('Fighter',1); reset(); X.addClass('Tinker',1); mcNotes=cardNotes(); finishCard();
     ck('#66 a class with no multiclass data offers no class skills', skillCh().length===0, skillCh());
-    ck('#66 ...and says the pack does not list them', /does(n't| not) list/i.test(notesOf()), notesOf());
+    ck('#66 ...and says the pack does not list them', /does(n't| not) list/i.test(mcNotes), mcNotes);
     ck('#66 ...a FIXED equipment block is not applied either', !X.character.inventory.some(i=>i.grant==='class:Tinker')&&!(X.character.grantGold||{})['class:Tinker'],
        [X.character.inventory.map(i=>i.name+'/'+i.grant),X.character.grantGold]);
     ck('#66 ...nor its saves', saves('class:Tinker')==='');
@@ -1733,6 +1755,262 @@ ck('itemMetaLine still ends with the weight',
     ctx.doLevelDown(7);
     ck('#103 I-2 an index that is not a class does nothing', lv()==='Fighter 2,Wizard 1');
   }finally{ctx.alert=realAlert; ctx.openModal=realOM;}
+}
+
+// ---------- #101 multiclassing: half-casters round UP (SRD 5.2.1 p.26), for every ruleset
+{
+  const cl=list=>{X.character.classes=list;X.character.level=list.reduce((a,c)=>a+c.level,0);return X.casterLevel();};
+  ck('#101 a Paladin 1 counts as caster level 1 (2024: two 1st-level slots)', cl([{name:'Paladin',level:1}])===1, cl([{name:'Paladin',level:1}]));
+  ck('#101 a Ranger 3 counts as 2', cl([{name:'Ranger',level:3}])===2, cl([{name:'Ranger',level:3}]));
+  ck('#101 a Wizard 3 / Paladin 3 counts as 5', cl([{name:'Wizard',level:3},{name:'Paladin',level:3}])===5,
+     cl([{name:'Wizard',level:3},{name:'Paladin',level:3}]));
+  ck('#101 a Ranger 1 / Paladin 1 counts as 2 (each class rounds up)', cl([{name:'Ranger',level:1},{name:'Paladin',level:1}])===2,
+     cl([{name:'Ranger',level:1},{name:'Paladin',level:1}]));
+  ck('#101 an Eldritch Knight 3 still counts a third, rounded down', cl([{name:'Fighter',level:3,subclass:'Eldritch Knight'}])===1,
+     cl([{name:'Fighter',level:3,subclass:'Eldritch Knight'}]));
+  ck('#101 an Eldritch Knight 5 is still 1', cl([{name:'Fighter',level:5,subclass:'Eldritch Knight'}])===1);
+  X.character.classes=[{name:'Paladin',level:1}];X.character.level=1;X.autoSlots();
+  ck('#101 ...so a Paladin 1 gets its two 1st-level slots', X.num(X.character.slots[1].total)===2, X.character.slots[1]);
+  X.character.classes=[{name:'Warlock',level:3}];X.character.level=3;X.autoSlots();
+  ck('#101 Warlock pact slots are untouched (two 2nd-level slots at 3)', X.num(X.character.slots[2].total)===2&&X.num(X.character.slots[1].total)===0,
+     [X.character.slots[1],X.character.slots[2]]);
+  const note=X.multiclassNote({name:'Druid',multiclass:{}});
+  ck('#101 the multiclass note states the 13+ prerequisite', /13 or more in the primary ability of your current class and the new one\./.test(note), note);
+  ck('#101 ...and a custom class (no definition) still has no note', X.multiclassNote(null)==='');
+}
+
+// ---------- #101 what a level gave: levelGains() over two snapshots
+{
+  const S=o=>Object.assign({level:4,feats:[],slots:[0,0,0,0,0,0,0,0,0],res:{},pb:2},o);
+  const F=(id,name,o)=>Object.assign({id,name,desc:'',cls:'Cleric',sub:''},o);
+  const CD='class:Cleric:channel divinity';
+  const b=S({feats:[F('a','Spellcasting')],slots:[4,3,0,0,0,0,0,0,0],res:{[CD]:{name:'Channel Divinity',max:2,die:''}},pb:2});
+  const a=S({level:5,feats:[F('a','Spellcasting'),F('b','Sear Undead',{desc:'Whenever you use Turn Undead, you can roll d8s. Each Undead that fails takes damage.'})],
+    slots:[4,3,2,0,0,0,0,0,0],res:{[CD]:{name:'Channel Divinity',max:3,die:''}},pb:3});
+  const g=X.levelGains(b,a,[{type:'asi',label:'Ability Score Improvement'},{type:'hp',die:8,levels:1}],[{text:'You can now have Prepared Spells: 9.',_level:5}]);
+  ck('#101 gains come in the spec order', g.map(r=>r.kind).join(',')==='feature,choice,resource,slot,pb,note', g.map(r=>r.kind));
+  ck('#101 a new feature carries its first sentence', g[0].text==='Sear Undead'&&g[0].detail==='Whenever you use Turn Undead, you can roll d8s.'&&g[0].tag==='feature', g[0]);
+  ck('#101 the hp choice is never listed as a choice', g.filter(r=>r.kind==='choice').length===1&&g[1].text==='Ability Score Improvement'&&g[1].tag==='choose next', g);
+  ck('#101 a resource that grows reads old → new', g.some(r=>r.kind==='resource'&&r.text==='Channel Divinity 2 → 3'&&r.tag==='uses'), g);
+  ck('#101 a new slot level reads ×n, tagged new', g.some(r=>r.kind==='slot'&&r.text==='Spell slots · 3rd level ×2'&&r.tag==='new'), g);
+  ck('#101 the proficiency bonus shows when it rises', g.some(r=>r.kind==='pb'&&r.text==='Proficiency bonus +2 → +3'), g);
+  ck('#101 the pack note is listed', g.some(r=>r.kind==='note'&&r.text==='You can now have Prepared Spells: 9.'), g);
+
+  const g2=X.levelGains(S({slots:[2,0,0,0,0,0,0,0,0],res:{}}),
+    S({slots:[3,0,0,0,0,0,0,0,0],res:{'subclass:Fighter:Battle Master:superiority dice':{name:'Superiority Dice',max:4,die:'d8'}}}),[],[]);
+  ck('#101 a new resource reads ×n · die, tagged new', g2.some(r=>r.text==='Superiority Dice ×4 · d8'&&r.tag==='new'), g2);
+  ck('#101 a slot level that grows reads old → new', g2.some(r=>r.text==='Spell slots · 1st level 2 → 3'&&r.tag==='slots'), g2);
+  ck('#101 an unchanged proficiency bonus is not listed', !g2.some(r=>r.kind==='pb'), g2);
+  const SD='k:sd';
+  const g3=X.levelGains(S({res:{[SD]:{name:'Superiority Dice',max:5,die:'d8'}}}),S({res:{[SD]:{name:'Superiority Dice',max:5,die:'d10'}}}),[],[]);
+  ck('#101 a bigger die reads d8 → d10, tagged die', g3.length===1&&g3[0].text==='Superiority Dice d8 → d10'&&g3[0].tag==='die', g3);
+  ck('#101 a level that changed nothing lists nothing', X.levelGains(S({}),S({}),[],[]).length===0);
+
+  /* Review Focus 5: two classes' Channel Divinity stay apart */
+  const two={'class:Cleric:channel divinity':{name:'Channel Divinity',max:2,die:''},'class:Paladin:channel divinity':{name:'Channel Divinity',max:1,die:''}};
+  const g4=X.levelGains(S({res:two}),S({res:Object.assign({},two,{'class:Paladin:channel divinity':{name:'Channel Divinity',max:2,die:''}})}),[],[]);
+  ck('#101 two classes\' Channel Divinity stay apart: only the Paladin\'s grows', g4.length===1&&g4[0].text==='Channel Divinity 1 → 2', g4);
+
+  /* decision 11: a feature you already have from another class */
+  const g5=X.levelGains(S({feats:[F('x','Extra Attack',{cls:'Fighter'})]}),S({feats:[F('x','Extra Attack',{cls:'Fighter'}),F('y','Extra Attack',{cls:'Paladin'})]}),[],[]);
+  ck('#101 a feature you already have from another class says they don\'t stack',
+     g5.length===1&&g5[0].warn==="You already have this from Fighter; they don't stack.", g5);
+  /* final review I1: only the features the rules say don't add together
+     (SRD 5.2.1 p.26) are tagged. Spellcasting combines by its own rule. */
+  const g5b=X.levelGains(S({feats:[F('w','Spellcasting',{cls:'Wizard'})]}),S({feats:[F('w','Spellcasting',{cls:'Wizard'}),F('c','Spellcasting',{cls:'Cleric'})]}),[],[]);
+  ck('#101 Spellcasting from Wizard then Cleric combines, so it is not tagged', g5b.length===1&&g5b[0].warn==='', g5b);
+  const g5c=X.levelGains(S({feats:[F('e','Expertise',{cls:'Rogue'}),F('b','Epic Boon',{cls:'Rogue'})]}),
+    S({feats:[F('e','Expertise',{cls:'Rogue'}),F('b','Epic Boon',{cls:'Rogue'}),F('e2','Expertise',{cls:'Bard'}),F('b2','Epic Boon',{cls:'Bard'})]}),[],[]);
+  ck('#101 ...nor are Expertise and Epic Boon', g5c.length===2&&g5c.every(r=>r.warn===''), g5c);
+  const g5d=X.levelGains(S({feats:[F('m','Unarmored Defense',{cls:'Monk'})]}),S({feats:[F('m','Unarmored Defense',{cls:'Monk'}),F('u','unarmored defense',{cls:'Barbarian'})]}),[],[]);
+  ck('#101 Unarmored Defense from Monk then Barbarian is tagged (one way to calculate AC)',
+     g5d.length===1&&g5d[0].warn==="You already have this from Monk; they don't stack.", g5d);
+  const g6=X.levelGains(S({}),S({feats:[F('z','Combat Superiority',{cls:'Fighter',sub:'Battle Master'})]}),[],[]);
+  ck('#101 a subclass feature is tagged with its subclass', g6[0].tag==='Battle Master'&&g6[0].warn==='', g6);
+  ck('#101 a subclass choice is listed to choose next',
+     X.levelGains(S({}),S({}),[{type:'subclass',label:'Fighter Subclass'}],[])[0].text==='Fighter Subclass');
+  ck('#101 a choice with no label gets a plain one', X.levelGains(S({}),S({}),[{type:'feat'}],[])[0].text==='Choose a feat');
+
+  /* Review Focus 4: messy feature text */
+  ck('#101 luSummary drops markup, keeping the words', X.luSummary('<img src=x onerror=alert(1)>Roll **twice** on [Table: Wild Magic]. Then more.')==='Roll twice on Wild Magic.',
+     X.luSummary('<img src=x onerror=alert(1)>Roll **twice** on [Table: Wild Magic]. Then more.'));
+  ck('#101 ...a sentence with no full stop is kept whole', X.luSummary('You gain a fly speed')==='You gain a fly speed');
+  const long='A'.repeat(400)+'.';
+  ck('#101 ...and a long one is cut to 160 with an ellipsis', X.luSummary(long).length===158&&/…$/.test(X.luSummary(long)), X.luSummary(long).length);
+  ck('#101 ...and nothing reads as nothing', X.luSummary(null)===''&&X.luSummary('')==='');
+
+  /* a live snapshot reads the real sheet */
+  c=setup(); X.character.features=[{id:'f1',name:'Rage',description:'Fury.',effects:[],enabled:true,origin:{kind:'class',class:'Barbarian',level:1}}];
+  X.character.slots[1]={total:2,used:0}; X.character.resources=[{id:'r1',key:'class:Barbarian:rage',name:'Rage',max:2,cur:2,die:''}];
+  X.character.level=1;
+  const s=X.levelSnapshot();
+  ck('#101 levelSnapshot reads features, slots, resources and the proficiency bonus',
+     s.feats[0].id==='f1'&&s.feats[0].cls==='Barbarian'&&s.slots[0]===2&&s.res['class:Barbarian:rage'].max===2&&s.pb===2&&s.level===1, s);
+  X.character.resources=[{id:'r2',name:'Luck',max:3,cur:3}];
+  ck('#101 ...a resource of the player\'s own is keyed by its name', X.levelSnapshot().res['own:luck'].max===3, X.levelSnapshot().res);
+}
+
+// ---------- #101 the HP step's typed value (Review Focus 3)
+{
+  const d10={die:10,levels:1}, two={die:6,levels:2}, none={die:0,levels:1};
+  const ok=(ch,v)=>X.luHPCheck(ch,v).ok;
+  ck('#101 a d10 takes 1..10', ok(d10,'1')&&ok(d10,'10')&&ok(d10,' 7 ')&&ok(d10,'07'));
+  ck('#101 ...and refuses 0, 11, -3, 3.5, empty and words', !ok(d10,'0')&&!ok(d10,'11')&&!ok(d10,'-3')&&!ok(d10,'3.5')&&!ok(d10,'')&&!ok(d10,'seven'));
+  ck('#101 ...saying the range', X.luHPCheck(d10,'11').why==='A d10 rolls 1 to 10.'&&X.luHPCheck(d10,'').why==='Type the number you rolled.', [X.luHPCheck(d10,'11'),X.luHPCheck(d10,'')]);
+  ck('#101 two dice take their total, 2..12', ok(two,'2')&&ok(two,'12')&&!ok(two,'1')&&!ok(two,'13')&&X.luHPCheck(two,'13').why==='2d6 rolls 2 to 12.');
+  ck('#101 no die takes any whole number, 0 included', ok(none,'0')&&ok(none,'25')&&!ok(none,'-1')&&X.luHPCheck(none,'').why==='Type the hit points you gained.');
+}
+
+// ---------- #101 the level card: Done or Continue, the HP step, closing early
+{
+  const realRC=ctx.runChoices, realOM=ctx.openModal; let rc=[], om=[];
+  ctx.runChoices=function(){rc.push(Array.prototype.slice.call(arguments));return realRC.apply(null,arguments);};
+  ctx.openModal=function(t,h){om.push({t,h:String(h)});return realOM.apply(null,arguments);};
+  const reset=()=>{rc=[];om=[];};
+  const card=()=>om.filter(o=>/class="lu-card"/.test(o.h)).pop();
+  const F0=[{name:'Fighter',hitDie:'d10',levels:{'2':{choices:[{type:'asi',label:'Ability Score Improvement'}]}}}];
+  try{
+    /* a quiet level: no choices */
+    hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=true; reset(); X.doLevelUp();
+    ck('#101 a level-up opens the level card, not the choice window', card()&&rc.length===0, [om.map(o=>o.t),rc.length]);
+    ck('#101 ...titled "Level up", with a LEVEL N banner', card().t==='Level up'&&/LEVEL 2/.test(card().h), card()&&card().t);
+    ck('#101 ...says what was reached', /Fighter 1 → 2 · character level 2/.test(card().h), card().h);
+    ck('#101 ...ends on Done, disabled until HP is set', /id="luGo" disabled>Done</.test(card().h), card().h);
+    ck('#101 ...the open level-up is held', X.luState()&&X.luState().cls==='Fighter'&&X.luState().set===false);
+    ck('#101 Done does nothing before HP is set', X.luFinish()===false&&X.luState()!==null);
+    ck('#101 a bad typed value sets nothing and says why', X.luSetHP('11')==='A d10 rolls 1 to 10.'&&X.luState().set===false);
+    ck('#101 a good one is accepted', X.luSetHP('7')===''&&X.luState().set===true&&X.luState().raw==='7');
+    ck('#101 Done closes, applies 7 + CON 0, and relocks', X.luFinish()===true&&X.num(X.character.hp.max)===17&&X.character.hp.locked===true&&X.luState()===null,
+       [X.character.hp.max,X.character.hp.locked]);
+    ck('#101 ...and a level with nothing to choose opens no choice window', rc.length===1&&rc[0][1].length===0, rc);
+
+    /* final review I2: a bad Apply after a good one takes the good one back,
+       so Done can never commit a number the card no longer shows */
+    hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=true; reset(); X.doLevelUp();
+    X.luSetHP('7');
+    ck('#101 a bad Apply after a good one clears the earlier value', X.luSetHP('11')==='A d10 rolls 1 to 10.'&&
+       X.luState().set===false&&X.luState().raw===null, X.luState());
+    ck('#101 ...so Done does nothing', X.luFinish()===false&&X.luState()!==null&&X.num(X.character.hp.max)===10, X.character.hp.max);
+    state.confirm=false; state.lastConfirm=null; X.dismissModal();
+    ck('#101 ...and closing asks again, in the HP words', state.lastConfirm===X.LU_HP_CLOSE&&X.luState()!==null, state.lastConfirm);
+    state.confirm=true; X.dismissModal();
+    ck('#101 ...and closing anyway adds nothing', X.num(X.character.hp.max)===10&&X.character.hp.locked===false, [X.character.hp.max,X.character.hp.locked]);
+
+    /* final review M1: a level-up belongs to the character it started on */
+    hpSetup(CLS); X.addClass('Fighter',1); reset(); X.doLevelUp(); X.luSetHP('7');
+    const luA=X.character, luB=X.blankChar(); luB.hp.max=30; luB.hp.cur=30;
+    X.character=luB; X.activeId=luB.id;
+    ck('#101 Done on a level-up whose character changed is a no-op', X.luFinish()===false&&X.luState()===null, X.luState());
+    ck('#101 ...neither character\'s HP changes, and no choices open', X.num(luA.hp.max)===10&&X.num(luB.hp.max)===30&&rc.length===0,
+       [luA.hp.max,luB.hp.max,rc.length]);
+    hpSetup(F0); X.addClass('Fighter',1); reset(); X.doLevelUp(); X.luSetHP('7');
+    const luC=X.character; X.activeId='someone-else';
+    state.lastConfirm=null; X.dismissModal();
+    ck('#101 closing a level-up whose character changed drops it: no HP, no choices', X.luState()===null&&X.num(luC.hp.max)===10&&rc.length===0,
+       [luC.hp.max,rc.length]);
+    X.activeId=luC.id;
+
+    /* the average, and Roll for me */
+    hpSetup(CLS); X.addClass('Fighter',1); reset(); X.doLevelUp(); X.luSetHP(null); X.luFinish();
+    ck('#101 the average (null) takes half the die + 1', X.num(X.character.hp.max)===16, X.character.hp.max);
+    hpSetup(CLS); X.addClass('Fighter',1); reset(); X.doLevelUp(); X.luRoll();
+    const r=X.num(X.luState().raw);
+    ck('#101 Roll for me sets a roll in range and says it was rolled', X.luState().set&&r>=1&&r<=10&&/^Rolled /.test(X.luState().note), X.luState());
+
+    /* a level with a choice */
+    const F=[{name:'Fighter',hitDie:'d10',levels:{'2':{choices:[{type:'asi',label:'Ability Score Improvement'}]}}}];
+    hpSetup(F); X.addClass('Fighter',1); reset(); X.doLevelUp();
+    ck('#101 a level with a choice says Continue to your choice', /id="luGo" disabled>Continue to your choice ▸</.test(card().h), card().h);
+    ck('#101 ...and lists the choice', /Ability Score Improvement/.test(card().h)&&/choose next/.test(card().h));
+    X.luSetHP(null); X.luFinish();
+    ck('#101 Continue opens the choice window, without an hp block and without notes', rc.length===1&&rc[0][0]==='Fighter'&&
+       rc[0][1].length===1&&rc[0][1][0].type==='asi'&&rc[0][2].length===0, rc);
+
+    /* Review Focus 1: closing early still opens the choices */
+    hpSetup(F); X.addClass('Fighter',1); reset(); X.doLevelUp();
+    state.confirm=false; X.dismissModal();
+    ck('#101 closing early asks first, in the HP words', state.lastConfirm===X.LU_HP_CLOSE&&X.luState()!==null, state.lastConfirm);
+    state.confirm=true; X.dismissModal();
+    ck('#101 closing early still opens the choices', rc.length===1&&rc[0][1][0].type==='asi', rc);
+    ck('#101 ...applies no HP and leaves Max unlocked', X.num(X.character.hp.max)===10&&X.character.hp.locked===false, [X.character.hp.max,X.character.hp.locked]);
+    hpSetup(CLS); X.addClass('Fighter',1); reset(); X.doLevelUp(); X.luSetHP('5'); state.lastConfirm=null; X.dismissModal();
+    ck('#101 closing after setting HP keeps it, without asking', state.lastConfirm===null&&X.num(X.character.hp.max)===15, X.character.hp.max);
+
+    /* a second class: n dice, notes on the card */
+    hpSetup(CLS); X.addClass('Fighter',2); reset(); X.addClass('Wizard',2);
+    ck('#101 a second class opens the card too', card()&&/Wizard 0 → 2 · character level 4/.test(card().h), card()&&card().h);
+    ck('#101 ...its HP step is 2d6', X.luState().hp.die===6&&X.luState().hp.levels===2&&/2d6/.test(card().h), X.luState().hp);
+    ck('#101 ...the multiclass note is on the card', /13 or more in the primary ability/.test(card().h), card().h);
+    ck('#101 ...2d6 takes 2..12', X.luSetHP('13')==='2d6 rolls 2 to 12.'&&X.luSetHP('9')==='');
+    X.luFinish();
+    /* the Fighter 2's creation window (levels 2..2) was never committed, so Max is its seed, 10 */
+    ck('#101 ...and adds 9 + 2×CON 0', X.num(X.character.hp.max)===10+9, X.character.hp.max);
+
+    /* final review M4: a second class added above level 1 lists only its
+       latest spell note; the earlier ones are superseded */
+    hpSetup([{name:'Fighter',hitDie:'d10'},{name:'Wizard',hitDie:'d6',levels:{'1':{spells:{note:'Cantrips: 3; Prepared Spells: 4'}},'2':{spells:{note:'Prepared Spells: 5'}}}}]);
+    X.addClass('Fighter',2); reset(); X.addClass('Wizard',2);
+    const wizNotes=((X.luState()||{}).gains||[]).filter(r=>r.kind==='note').map(r=>r.text);
+    ck('#101 a second class at 2 lists only its level-2 spell note', wizNotes.includes('Prepared Spells: 5')&&!wizNotes.some(t=>/Cantrips: 3/.test(t)), wizNotes);
+    X.luSetHP(null); X.luFinish();
+    ck('#101 luLatestNotes keeps the highest level\'s notes and every plain string',
+       JSON.stringify(X.luLatestNotes(['Multiclass.',{text:'a',_level:1},{text:'b',_level:3},{text:'c',_level:3},{text:'d',_level:2}]).map(n=>typeof n==='string'?n:n.text))==='["Multiclass.","b","c"]',
+       X.luLatestNotes(['Multiclass.',{text:'a',_level:1},{text:'b',_level:3},{text:'c',_level:3},{text:'d',_level:2}]));
+
+    /* creation is unchanged */
+    hpSetup(CLS); reset(); X.addClass('Fighter',3);
+    ck('#101 a first class above level 1 gets no card; its window keeps the hp block', !card()&&rc.length===1&&rc[0][1][0].type==='hp', [om.map(o=>o.t),rc]);
+
+    /* escaping and the no-die step */
+    const html=X.levelUpCardHTML({cls:'Tom & <b>',from:1,to:2,charLevel:2,hp:{die:8,levels:1},choices:[],
+      gains:[{kind:'feature',text:'<img src=x onerror=1>',detail:'a & b',tag:'feature',warn:''}]});
+    ck('#101 the card escapes names and gains', /Tom &amp; &lt;b&gt;/.test(html)&&/&lt;img src=x onerror=1&gt;/.test(html)&&!/<img/.test(html), html);
+    ck('#101 an empty gains list says nothing new', /Nothing new from the rules at this level\./.test(X.levelUpCardHTML({cls:'X',from:1,to:2,charLevel:2,hp:{die:8,levels:1},choices:[],gains:[]})));
+    const hp8=X.levelUpHPHTML({die:8,levels:1}), hp0=X.levelUpHPHTML({die:0,levels:1});
+    ck('#101 the HP step offers Roll, I rolled + Apply, and the average', /id="luRoll"/.test(hp8)&&/I rolled/.test(hp8)&&/id="luApply"/.test(hp8)&&/Take the average \(5\)/.test(hp8), hp8);
+    ck('#101 ...with no die, one HP-gained box and nothing to roll', /HP gained/.test(hp0)&&!/luRoll/.test(hp0)&&!/average/.test(hp0), hp0);
+  }finally{ctx.runChoices=realRC;ctx.openModal=realOM;state.confirm=true;}
+}
+
+// ---------- #101 the scene: plays first, skips, honours reduced motion
+{
+  const realOM=ctx.openModal, realMM=ctx.window.matchMedia; let om=[];
+  ctx.openModal=function(t,h){om.push(t);return realOM.apply(null,arguments);};
+  ctx.window.matchMedia=()=>({matches:false,addEventListener(){}});   /* motion allowed: the scene plays */
+  try{
+    const fx=X.luFxHTML(4,5);
+    ck('#101 the scene draws a sigil: two circles and a seven-point star', /<svg class="lu-sigil"/.test(fx)&&(fx.match(/<circle /g)||[]).length===2&&
+       /M125 31L165\.8 209\.7L51\.5 66\.4L216\.6 145\.9L33\.4 145\.9L198\.5 66\.4L84\.2 209\.7Z/.test(fx), fx.slice(0,300));
+    ck('#101 ...with 24 runes drawn as paths, not a font', (fx.match(/<path transform="rotate\(/g)||[]).length===24&&!/<text/.test(fx));
+    ck('#101 ...the ring ticks 4 → 5 and the banner says LEVEL 5', /class="lu-old">4</.test(fx)&&/class="lu-new">5</.test(fx)&&/class="lu-banner">LEVEL 5</.test(fx));
+    ck('#101 ...with sparks and motes', (fx.match(/class="lu-spark"/g)||[]).length===7&&(fx.match(/class="lu-mote"/g)||[]).length===16);
+
+    hpSetup(CLS); X.addClass('Fighter',1); om=[]; X.doLevelUp();
+    ck('#101 a level-up plays the scene before the card', X.luBusy()&&om.length===0, om);
+    X.doLevelUp();
+    ck('#101 a second level-up while the scene plays does nothing', X.character.classes[0].level===2, X.character.classes[0].level);
+    X.luSkip();
+    ck('#101 skipping ends the scene and opens the card', !X.luBusy()&&om.length===1&&om[0]==='Level up', om);
+    X.luSkip();
+    ck('#101 ...and a second skip opens nothing more', om.length===1, om);
+    X.luSetHP(null); X.luFinish();
+
+    /* final review M1: the scene ends on another character: no card */
+    hpSetup(CLS); X.addClass('Fighter',1); om=[]; X.doLevelUp();
+    X.activeId='someone-else'; X.luSkip();
+    ck('#101 a scene that ends on another character opens no card', !X.luBusy()&&om.length===0&&X.luState()===null, om);
+    X.activeId=X.character.id;
+    /* ...and going Home (or loading, or importing) drops a playing scene */
+    hpSetup(CLS); X.addClass('Fighter',1); om=[]; X.doLevelUp();
+    X.showHome();
+    ck('#101 going Home ends the scene and drops the level-up', !X.luBusy()&&om.length===0&&X.luState()===null, [X.luBusy(),om]);
+
+    ctx.window.matchMedia=()=>({matches:true,addEventListener(){}});
+    ck('#101 reduced motion is read from the device', X.luReducedMotion()===true);
+    hpSetup(CLS); X.addClass('Fighter',1); om=[]; X.doLevelUp();
+    ck('#101 with reduced motion there is no scene: the card opens at once', !X.luBusy()&&om.length===1, om);
+    X.luSetHP(null); X.luFinish();
+  }finally{ctx.openModal=realOM;ctx.window.matchMedia=realMM;}
 }
 
 ck.done();

@@ -2952,6 +2952,25 @@ function block(html, needle, tag) {
   X.rules = saved;
 }
 
+// ---------- #101 the level-up scene's CSS: z-index, print, reduced motion, tokens
+{
+  const mc=fs.readFileSync(path.join(__dirname,'..','css','50-modal.css'),'utf8');
+  const tk=fs.readFileSync(path.join(__dirname,'..','css','00-tokens.css'),'utf8');
+  ck('#101 the scene sits above the page and under the modal (75 < 80)', /\.lu-fx\{[^}]*z-index:75/.test(mc));
+  ck('#101 ...is hidden in print', /@media print\{[^@]*\.lu-fx\{display:none!important\}/.test(mc));
+  ck('#101 ...and under reduced motion', /@media \(prefers-reduced-motion:reduce\)\{[^@]*\.lu-fx\{display:none\}/.test(mc));
+  /* #101: a generic `@media (prefers-reduced-motion:reduce){` already sits early
+     in this file (the blanket animation-off rule); indexOf would find THAT one,
+     not .lu-fx's own, so this uses lastIndexOf for both media queries, same as
+     the print check already does. */
+  ck('#101 ...both media queries come after the base rule', mc.indexOf('.lu-fx{position:fixed')>=0&&
+     mc.indexOf('.lu-fx{position:fixed')<mc.lastIndexOf('@media (prefers-reduced-motion:reduce){')&&mc.indexOf('.lu-fx{position:fixed')<mc.lastIndexOf('@media print{'));
+  const root=tk.slice(tk.indexOf(':root{'),tk.indexOf('}',tk.indexOf(':root{')));
+  const classic=tk.slice(tk.indexOf('html[data-skin="classic"]{'),tk.indexOf('}',tk.indexOf('html[data-skin="classic"]{')));
+  ['--lu-night','--lu-night-2','--lu-glow','--lu-spark'].forEach(t=>
+    ck('#101 '+t+' is defined for Humblewood (:root) and classic', root.indexOf(t+':')>=0&&classic.indexOf(t+':')>=0, t));
+}
+
 /* ================= Fetch all never loses what is loaded (issue #65) ===========
    fetchAllRules() used to call resetRules() BEFORE fetching, so every pack
    imported from a file was discarded, and when the fetch then failed (offline,

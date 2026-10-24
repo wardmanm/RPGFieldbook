@@ -6836,3 +6836,152 @@ Pages: [shell](../wiki/ui/shell.md), [sections & layout](../wiki/ui/sections-and
 [story & notes](../wiki/features/story-and-notes.md), [rules & tables](../wiki/features/rules-and-tables.md),
 [attacks & damage](../wiki/features/attacks-and-damage.md), [features & traits](../wiki/features/features-and-traits.md),
 [known issues](../wiki/roadmap/known-issues.md), [build & source split](../wiki/architecture/build-and-source-split.md)
+
+## Level-up fanfare (#101, 2026-10-24)
+
+Levelling up (and adding a second class) now plays a short animation and opens a card showing
+everything the level gave, with the hit-point roll on the card itself; a level with nothing to
+choose ends there, one with a choice continues into the existing choice window minus its old `hp`
+block. Two multiclassing rules were fixed along the way (Mike, in the brainstorm): half-casters
+round up for spell slots, and the add-class note states the 13+ primary-ability prerequisite.
+
+**The fixes (`00-constants.js`, `56-class.js`).** `casterLevel()` changes `Math.floor(L/2)` to
+`Math.ceil(L/2)` for half casters (Paladin, Ranger, Artificer), for every ruleset — SRD 5.2.1
+pp.25-26 say "half your levels, round up" — and a Paladin 1 now gets its two 1st-level slots.
+`multiclassNote()` gains one sentence, `MC_PREREQ`, appended to both its returns.
+
+**What a level gave (`57-levelup.js`, new fragment, 35 JS fragments now).** `levelSnapshot()`
+records feature ids, spell-slot totals 1-9 (pact included), each resource's max and die, and the
+proficiency bonus, taken before and after the level is applied. `levelGains(before,after,choices,
+notes)` is pure and DOM-free: new features (tagged with the subclass, and with a no-stacking
+warning when the name matches one from a different class), choices still to make, new or changed
+resources, new or bigger spell slots, a rising proficiency bonus, then the pack's own notes for
+that level — in that order. `luHPCheck()` is the HP step's range check, shared with `luSetHP()`.
+
+**The card and its flow.** `doLevelUp()` and `addClass()` (for a second class) take a snapshot
+before applying the level, then call `openLevelUp(info)` instead of `runChoices()`. The card
+(`levelUpCardHTML()`) lists the gains, then the HP step (`levelUpHPHTML()`) — Roll for me, "I
+rolled" + Apply (live-checked by `luHPCheck()`), or Take the average, the same controls and
+wording as the hit-dice spend box (#103). Done or Continue stays disabled until HP is set
+(`luSetHP()`); Done closes with nothing left to choose, Continue (`luFinish()`) commits the HP
+(`commitHPChoice()`) and calls `runChoices(cls, choices, [], pending)` — no `notes`, since the card
+already showed them, and no `hp` block, since the card already asked for it. Closing early
+(`luDismissed()`, wired through `armChoiceDismissGuard()`'s existing guard with the new
+`LU_HP_CLOSE` string) asks first when HP isn't set yet; either way the choices and any pending
+window still open, because a choice the player never saw must not vanish with the card. Creation
+(a first class starting above level 1) is unchanged: its `{type:"hp"}` block stays inside the
+choice window, because creation gets no fanfare.
+
+**The scene (`#luFx`, `playLevelUpFx()`).** A full-page layer under the modal: an SVG sigil (two
+circles, a seven-point star, 24 rune paths) draws itself, the level ring glows and ticks old → new,
+a flash, the LEVEL N banner unfurls with sparks and rising motes — CSS keyframes only, about 2.4s
+total with a timer backstop. A click, tap or Esc/Enter/Space (`luSkip()`) skips straight to the
+card; `prefers-reduced-motion:reduce` never builds the layer at all. New tokens `--lu-night`,
+`--lu-night-2`, `--lu-glow`, `--lu-spark` in `00-tokens.css` for both skins — classic is a violet
+night with pale arcane blue, Humblewood a deep forest green with a warm gold-green glow — light and
+dark share the night backdrop on purpose (it's a scene, not a surface).
+
+**Task 5 (browser QA, CSS tuning, docs).** Drove a quiet level-up and one with a choice (Done vs
+Continue, HP typed out of range then in range), a multiclass add (2d6, the 13+ note, no starting-
+equipment window), Paladin 1's two 1st-level slots, Esc mid-scene (skips to the card) and Esc on
+the card (Cancel keeps it, OK closes with no HP applied and Max still unlocked), and reduced
+motion. The project's Playwright MCP server (`@playwright/mcp@0.0.79`) has no
+`browser_emulate_media` tool, so reduced motion was driven by monkey-patching `window.matchMedia`
+in the live page and re-running `doLevelUp()` rather than true OS-level emulation; the unit suite's
+own mocked `matchMedia` already covers the branch. Console stayed clean throughout. Screenshots:
+`.claude/qa/101-before-*`, `101-after-*`, `101-scene-*`, `101-css-wrap-*`, `101-digit-test-*`. The
+Humblewood forest-night scene — missed by Task 4, whose two scene shots both turned out to be
+classic — is shot for the first time here (`101-scene-humblewood-light-1280.png`,
+`101-scene-humblewood-light-390.png`, `101-scene-humblewood-dark-1280.png`), the skin and the
+`--lu-night` token (`#0d1a12` Humblewood, `#1d1826` classic) confirmed before each shot.
+
+Two cosmetic fixes, CSS only (`50-modal.css`): at phone width the card's class line ("Fighter 1 →
+2 · character level 2") wrapped onto an orphan last line holding just the trailing number; the
+same digit was also the other half of the bug. `--head`/`--display` (Cinzel on the classic skin)
+draw a "1" with no serif, reading as a capital "I" in both the class line and the LEVEL N banner —
+confirmed by testing `font-variant-numeric:lining-nums` first, which changed nothing (Cinzel has no
+alternate numeral set for the property to select), then by switching `.lu-cls` and `.lu-bn` to
+`var(--body)` (EB Garamond), whose figures are unambiguous and which, as a side effect, fits every
+realistic class line on one line down to 320px wide, so no separate wrap fix was needed. Confirmed
+in both skins, before and after (`101-digit-test-banner-{classic,hw}-{default,after}.png`,
+`101-css-wrap-before*.png`, `101-css-wrap-after*.png`).
+
+Deferred (`progress.md`, left for the controller, not fixed here): Continue passes `[]` for notes
+rather than the level's own notes — matches the spec's "notes alone count as nothing to choose",
+but means the choice window never repeats them; a bad Apply after a good roll shows the error
+while Done still commits the earlier value; the card's own DOM wiring has no unit coverage;
+`LU_ICON` is a plain-object lookup; after a skip, focus lands on the HP step's first `<input>`
+(`#luTyped`) rather than the card's first element in DOM order (`#luRoll`) —
+`openModal()`'s existing first-focusable-input behaviour, not new to #101, noted here for the
+record rather than as a bug.
+
+Tests: `char-update.js` (#101 blocks across Tasks 1-4: the multiclass fixes, `levelGains()`, the
+HP step, the card's flow, the scene, reduced motion), `rules-data.js` (the scene's CSS: z-index
+under the modal, the reduced-motion and print rules after their base rules).
+
+Pages: [character building](../wiki/features/character-building.md),
+[spells](../wiki/features/spells.md), [vitals & rest](../wiki/features/vitals-and-rest.md),
+[theming & icons](../wiki/ui/theming-and-icons.md),
+[build & source split](../wiki/architecture/build-and-source-split.md),
+[1.9.0](../wiki/roadmap/1.9.0.md).
+
+## Level-up fanfare: final review fixes (#101, 2026-10-24)
+
+The whole-branch review of #101 found two Important issues and nine minor ones. This entry fixes
+I1, I2, M1 and M4, corrects the docs (M6, M7, M8) and records the rest. Everything is in
+`57-levelup.js` unless named.
+
+**I1: the no-stacking tag is an allowlist.** `levelGains()` tagged any new feature whose name
+matched one from another class, so a Wizard taking a Cleric level read "Spellcasting — they don't
+stack". That is false: Spellcasting combines by the multiclass slot table. Expertise and Epic Boon
+are separate picks, too. The tag now fires only for `LU_NO_STACK`, `["extra attack","unarmored
+defense"]`, the two features SRD 5.2.1 p.26 names: Extra Attack doesn't stack, and you use only one
+way to calculate AC. This refines spec decision 11 (controller ruling). Cost if wrong: another
+non-stacking feature goes untagged.
+
+**I2: a failed Apply takes the earlier value back.** A good roll followed by a bad "I rolled" +
+Apply showed the error, but left `_lu.set` true. Done, or ×, then committed a number the card no
+longer showed. `luSetHP()`'s failure path now clears `_lu.set`, `_lu.raw` and `_lu.note`, disables
+`#luGo` and shows the error itself. So Done does nothing, and closing asks `LU_HP_CLOSE` again.
+
+**M1: a level-up belongs to its character.** `_lu.id` is `activeId` at `openLevelUp()`.
+`showLevelUpCard()` (the scene's end), `luFinish()` and `luDismissed()` drop a level-up whose
+character has changed, through `luStale()`: no card, no HP, no choices. `loadCharById()`,
+`newCharacter()` (`75-home-theme.js`), `finishImport()` (`71-char-io.js`) and `showHome()` call
+`luAbandon()`. It clears `_lu`, ends a playing scene through `luSkip()` (whose `done()` then opens
+nothing) and closes an open card. None of this was reachable through the UI, because the layer
+covers every control. It is hardening.
+
+**M4: one spell note per class.** A second class added above level 1 listed every level's spell
+note ("Prepared Spells: 4", then "5"). `luLatestNotes()` keeps only the highest `_level`'s notes.
+A plain-string note, the multiclass note, has no level and always stays.
+
+**Comments.** `char-update.js`'s #58 header and `58-choices.js`'s `armChoiceDismissGuard()` comment
+now say the `{type:"hp"}` block is creation's.
+
+**A correction to the entry above (L6840).** Closing the card early is wired through
+`setDismissGuard()` directly in `showLevelUpCard()`, not through `armChoiceDismissGuard()`. That
+function only shares the `LU_HP_CLOSE` string. The 2.4s timer is the scene's only end, not a
+backstop.
+
+**Left, and recorded.** In [known issues](../wiki/roadmap/known-issues.md):
+- M3: a long card at 390 puts HP and Done below the fold, for Mike's phone pass.
+- M5: the page behind the scene isn't inert for its 2.4s.
+- M9: `luSummary()` cuts at abbreviations and strips `_*#>` and backticks.
+- Focus after a skip lands on `#luTyped`.
+
+M2 is a new rule in [character building](../wiki/features/character-building.md): nothing may
+`openModal()` over the level card.
+
+Tests: `char-update.js` covers each fix: Spellcasting, Expertise and Epic Boon untagged and
+Unarmored Defense tagged; a bad Apply after a good one; Done and closing on a changed character; a
+scene ending on another character; Home mid-scene; the Wizard-at-2 note and `luLatestNotes()`.
+Browser (project Playwright MCP, 390 wide, SRD pack): Wizard 3 + Cleric 1 showed no tag. A Roll
+of 2, then 99 + Apply, cleared it and disabled Done, and × asked. Then 5 + Enter and Done added 5.
+Monk 2 + Barbarian 1 was tagged. Home mid-scene left no layer and no card. The console was clean.
+Shot: `.claude/qa/101-fix-apply.png`.
+
+Pages: [character building](../wiki/features/character-building.md),
+[spells](../wiki/features/spells.md), [vitals & rest](../wiki/features/vitals-and-rest.md),
+[theming & icons](../wiki/ui/theming-and-icons.md),
+[known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).

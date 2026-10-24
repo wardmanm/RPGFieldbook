@@ -59,7 +59,8 @@ calls `syncSpellAttack()`.
 **Slots.** `recompute()` calls `autoSlots()`. When any class is a caster (`classCasterKind()`: full,
 half — Paladin, Ranger, Artificer — third for Eldritch Knight / Arcane Trickster, pact for Warlock, and
 any class whose rules entry has `spellcasting` counts as full), the totals come from `SLOTS_FULL` at
-`casterLevel()` (full levels + ⌊half/2⌋ + ⌊third/3⌋), then `PACT[warlockLevel()]` is **added** on top at
+`casterLevel()` (full levels + ⌈half/2⌉ + ⌊third/3⌋ — half casters round up, #101), then
+`PACT[warlockLevel()]` is **added** on top at
 the pact level; the total boxes go read-only (`slotsAuto`) and `used` is clamped. With no caster class
 and no spellcasting ability, slots are zeroed; with an ability but no caster class, the totals are
 typed by hand. Bubbles toggle spent; ↻ Restore all clears them. A long rest restores every slot; a
@@ -97,6 +98,11 @@ rounds, minutes, hours, days, seconds and "instant"; anything else (Until dispel
   every edited spell reads as unknowably edited, and a same-named spell in another pack makes it
   ambiguous.
 - **Pact slots are added on top.** `casterLevel()` deliberately excludes Warlock levels.
+- **Half casters round up, for every ruleset, Humblewood included** (#101). SRD 5.2.1 p.26's
+  multiclassing table reads "half your levels (round up)" for Paladin and Ranger, and a single-class
+  Paladin 1 or Ranger 1 reads the same way off its own table, so `casterLevel()` applies `Math.ceil`
+  with no per-system branch — Mike's call in the brainstorm was to follow the 2024 rule everywhere
+  even though Humblewood's own rules predate it, rather than keep Humblewood on the old rounding.
 - **A step that cannot move the round must not move the spells**, or ◀ at round 1 quietly takes 6 s
   off everything.
 - **Concentration is stored once**, on the active spell; the condition is a mirror. Every path that
@@ -133,12 +139,10 @@ rounds, minutes, hours, days, seconds and "instant"; anything else (Until dispel
 | Fixing the off-screen Add button | `width:auto` on `.br-origin`, shared by both finders | `overflow-x:hidden` on `.browse`: hides a recurrence instead of preventing one; `flex-wrap` alone: a full-width select on every screen |
 | Saying what the prepared tick means | A visible `Prep` caption, `aria-pressed` and a title | The `aria-label` alone: nobody on a phone ever sees it |
 | An item's bonus to one class's spells, such as a Moon Sickle's (#77) | Applied to the one spellcasting the sheet has; the class stays in the description | Prose: the item would do nothing for the caster it was made for. See [Computed stats & effects](../architecture/computed-stats-and-effects.md) |
+| Half-caster spell slots when multiclassing (#101) | Round up (SRD 5.2.1 p.26), for every ruleset, Humblewood included (Mike: follow the 2024 rules even though Humblewood was built for the old ones) | Per ruleset: Humblewood would keep the 2014 rounding down |
 
 ## Open
 
-- **Half casters round down.** `casterLevel()` adds ⌊Paladin/Ranger/Artificer level ÷ 2⌋, so a level-1
-  Paladin gets no slots; the 2024 Paladin and Ranger tables give 2 at level 1, which rounding up would
-  match **(unverified against the book)**.
 - **Multiclass pact slots share the pool** (Wizard 3 / Warlock 3 reads L1:4 L2:4); real 5e tracks them
   apart because they return on a short rest. A known simplification.
 - No suite test names `pickSlotLevel()`, `parseDurationSec()` or `autoSlots()`; the `castSpell()` tests
@@ -166,3 +170,6 @@ rounds, minutes, hours, days, seconds and "instant"; anything else (Until dispel
 - 2026-09-28 — Items' spell attack and spell save DC bonuses reach the card, rows, cast window and print; the card's numbers open a breakdown. → ledger L4568, #77
 - 2026-10-06 — Timed conditions: a duration in rounds, minutes or hours, counted down by the round
   tracker, clearing itself with an Undo. → ledger L5031, #55
+- 2026-10-24 — Half casters (Paladin, Ranger, Artificer) round up, matching SRD 5.2.1 p.26, for
+  every ruleset including Humblewood; a Paladin 1 now gets its two 1st-level slots. → ledger L6840, #101
+- 2026-10-24 — The half-caster rounding gains its Decisions row. → ledger L6928, #101

@@ -32,6 +32,7 @@
     "src/js/52-race.js",
     "src/js/54-background.js",
     "src/js/56-class.js",
+    "src/js/57-levelup.js",
     "src/js/58-choices.js",
     "src/js/60-attacks.js",
     "src/js/62-ammo.js",

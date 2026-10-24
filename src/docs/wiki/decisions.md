@@ -143,7 +143,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **What unlocks a disabled option** — `data-fixed`
 - **Options you already have** — Don't spend the budget, but cap it at what remains (`effectiveChoose()`)
 - **Where the dismiss guard is checked** — `dismissModal()`, for ✕, backdrop and Escape only
-- **Hit points on a level-up** — A synthesized `{type:"hp"}` block in the level's own modal
+- **Hit points on a level-up** — On the level card (#101); creation keeps the choice window's `{type:"hp"}` block
 - **CON for a level-up's hit points** — `abilFinal()`, via `conModNow()`
 - **A same-named subclass from another pack** — Offered alongside, keyed "Name (PACK)"
 - **Species from the other system** — Filtered out of the picker only
@@ -157,6 +157,10 @@ When a page gains a Decisions row, add its line here under that page.
 - **Removing the first class while another remains** — The class now first takes its own saving throws, with a toast
 - **Hit points for a first class that starts above level 1** — Seed level 1, then an HP step for levels 2..N in the same window
 - **What a choice window's title names (#69)** — The span of levels its choices and notes carry, an HP step's own span included; no level when nothing carries one
+- **Where a level-up's HP step lives (#101)** — On the level card; the choice window follows only when the level has something to choose
+- **An "animate level-ups" setting (#101)** — None: reduced motion skips the scene, and a tap, click or Esc skips it at any time
+- **What the level card lists (#101)** — What changed on the sheet, from `levelSnapshot()` before and after the level (`levelGains()`)
+- **Which features the card says "don't stack" (#101)** — An allowlist, `LU_NO_STACK`: Extra Attack and Unarmored Defense (SRD 5.2.1 p.26)
 
 ### [Abilities & skills](features/abilities-and-skills.md)
 
@@ -260,6 +264,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Fixing the off-screen Add button** — `width:auto` on `.br-origin`, shared by both finders
 - **Saying what the prepared tick means** — A visible `Prep` caption, `aria-pressed` and a title
 - **An item's bonus to one class's spells, such as a Moon Sickle's (#77)** — Applied to the one spellcasting the sheet has; the class stays in the description
+- **Half-caster spell slots when multiclassing (#101)** — Round up (SRD 5.2.1 p.26), for every ruleset, Humblewood included
 
 ### [Inventory](features/inventory.md)
 

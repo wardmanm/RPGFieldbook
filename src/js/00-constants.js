@@ -331,7 +331,7 @@ function classCasterKind(c){
   return null;
 }
 function hasCasterClass(){return (character.classes||[]).some(c=>classCasterKind(c));}
-function casterLevel(){let lvl=0;(character.classes||[]).forEach(c=>{const L=num(c.level),k=classCasterKind(c);if(k==="full")lvl+=L;else if(k==="half")lvl+=Math.floor(L/2);else if(k==="third")lvl+=Math.floor(L/3);});return lvl;}
+function casterLevel(){let lvl=0;(character.classes||[]).forEach(c=>{const L=num(c.level),k=classCasterKind(c);if(k==="full")lvl+=L;else if(k==="half")lvl+=Math.ceil(L/2);   /* 2024 / SRD 5.2.1: "half your levels (round up)", every ruleset (#101) */ else if(k==="third")lvl+=Math.floor(L/3);});return lvl;}
 function warlockLevel(){let wl=0;(character.classes||[]).forEach(c=>{if(String(c.name||"").toLowerCase()==="warlock")wl+=num(c.level);});return wl;}
 let slotsAuto=false;
 function autoSlots(){

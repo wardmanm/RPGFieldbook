@@ -179,6 +179,18 @@ Wanted, not yet done. Each needs work, not a source.
 - **Quivers and other ammunition containers have no capacity.** → [Ammunition](../features/ammunition.md)
 - **Rests do not move condition or spell clocks.** → [Conditions & concentration](../features/conditions-and-concentration.md)
 - **An item's Use cannot apply a timed condition.** → [Conditions & concentration](../features/conditions-and-concentration.md)
+- **What the level-up fanfare's final review left (#101).** None blocks a level-up:
+  - A long level card at phone width (a multiclass add with a long note) puts the HP step and Done
+    below the fold, so the player scrolls. Pinning them to the card's foot is Mike's call, after his
+    phone pass.
+  - The page behind the 2.4s scene isn't inert. Tab can move focus behind the layer, and arrow keys
+    still reach a focused combat grip. Enter, Space and Esc are swallowed, so nothing activates.
+  - `luSummary()` cuts a feature's first sentence at an abbreviation ("e.g.", "p. 3"). It also strips
+    every `_`, `*`, `#`, `>` and backtick, so "snake_case" loses its underscore.
+  - After a skip, focus lands on the HP step's "I rolled" box (`#luTyped`), not Roll for me. This is
+    `openModal()`'s app-wide first-field rule.
+
+  → ledger L6928, and [Character building](../features/character-building.md)
 
 ## Waiting on sources
 
@@ -489,3 +501,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-23 — Removed with #103: the By ability Skills-note gap and the Dice hit-dice style's spend limit (both layouts retired). Added: a cold-cache new character's default language, the unbuilt system-change swap of `system` chips, and Familiars no longer addable to the combat view from the Sheet. → ledger L6633, #103
 - 2026-10-23 — Removed with the #103 final review: Familiars not addable to the combat view (the paw's menu has the toggle). Added: lifted languages are the player's own. The system-chip swap's entry now records the plan-time ruling. → ledger L6729, #103
 - 2026-10-24 — Removed: the Features Favourites group not being in the ☰ menu, which is retired. → ledger L6804, #103
+- 2026-10-24 — Added: what the #101 final review left (a long card at 390, the scene's page not inert, `luSummary()`'s cut, focus after a skip). → ledger L6928, #101

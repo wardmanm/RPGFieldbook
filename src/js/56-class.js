@@ -174,20 +174,25 @@ function multiclassChoices(d,sid){
   const mc=d&&d.multiclass;
   return (mc&&Array.isArray(mc.choices)?mc.choices:[]).map(ch=>({...ch,_level:1,_sid:sid}));
 }
+/* SRD 5.2.1 p.25. Said, never checked: the packs don't carry each class's
+   primary ability, and blocking needs that data (#101, out of scope). */
+const MC_PREREQ="Multiclassing needs a score of 13 or more in the primary ability of your current class and the new one.";
 function multiclassNote(d){
   if(!d)return "";
   const head=`${d.name} as an extra class: no saving throws and no starting equipment — those come from your first class.`;
   const mc=d.multiclass;
-  if(!mc||typeof mc!=="object")return head+` This rules pack doesn't list what multiclassing into ${d.name} grants, so no class skills are offered; add any proficiencies you gain yourself.`;
+  if(!mc||typeof mc!=="object")return head+` This rules pack doesn't list what multiclassing into ${d.name} grants, so no class skills are offered; add any proficiencies you gain yourself.`+" "+MC_PREREQ;
   const bits=[];
   if(mc.proficiencies)bits.push(String(mc.proficiencies));
   const n=(Array.isArray(mc.choices)?mc.choices:[]).filter(c=>c&&c.type==="skill").reduce((a,c)=>a+(num(c.choose)||1),0);
   if(n)bits.push(n===1?"one skill (below)":n+" skills (below)");
-  return head+(bits.length?" You gain: "+bits.join(", ")+".":" It grants no other proficiencies.");
+  return head+(bits.length?" You gain: "+bits.join(", ")+".":" It grants no other proficiencies.")+" "+MC_PREREQ;
 }
 function addClass(name,lvl){
+  if(luBusy())return;   /* #101: the scene is playing; one level-up at a time */
   const d=findClassDef(name);
   const first=!character.classes.length,sid="class:"+name;
+  const before=first?null:levelSnapshot();   /* #101: a second class is a level up */
   const entry={name,level:0,subclass:null};
   character.classes.push(entry);
   if(d){
@@ -212,7 +217,8 @@ function addClass(name,lvl){
      level 1 then asks for levels 2..N the same way — but only on top of a seed,
      never on a Max the player already typed. hpChoice() before the unlock: it
      remembers the lock. */
-  if(!first){choices=[hpChoice(d,lvl,lvl,name)].concat(choices);character.hp.locked=false;renderHP();}
+  let hp=null;
+  if(!first){hp=hpChoice(d,lvl,lvl,name);character.hp.locked=false;renderHP();}
   else if(seedLevel1HP(d)&&lvl>1){
     choices=[hpChoice(d,lvl-1,lvl,name,`Level 1 is already in Max HP: the full ${d.hitDie} plus CON. This is levels 2–${lvl}.`)].concat(choices);
     character.hp.locked=false;renderHP();
@@ -220,6 +226,8 @@ function addClass(name,lvl){
   const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
+  if(!first){openLevelUp({cls:name,from:0,to:lvl,charLevel:character.level,before,after:levelSnapshot(),
+    hp,choices,notes,pending:_eq});return;}
   runChoices(name,choices,notes,_eq);   /* with nothing to show, it opens the equipment picker itself */
 }
 function removeClass(idx){
@@ -256,10 +264,12 @@ function removeClass(idx){
    Without one (Level up ready, older callers) a sheet with several classes
    asks which. An index that is not a class does nothing. */
 function doLevelUp(idx){
+  if(luBusy())return;   /* #101: the scene is playing; one level-up at a time */
   if(!character.classes.length){alert("Add a class first (Add class), then you can level it up.");return;}
   const proceed=idx=>{
     const entry=character.classes[idx],d=findClassDef(entry.name);
     const newL=num(entry.level)+1;if(newL>20){alert(entry.name+" is already level 20.");return;}
+    const before=levelSnapshot();   /* #101: what the card compares against */
     entry.level=newL;
     const res=applyClassLevel(entry,d,newL);
     const hp=hpChoice(d,1,newL,entry.name);   /* before the unlock below: it remembers the lock */
@@ -271,7 +281,8 @@ function doLevelUp(idx){
     character.hp.locked=false;renderHP();
     character.level=totalLevel();const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
     renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
-    runChoices(entry.name,[hp].concat(res.choices),res.notes);
+    openLevelUp({cls:entry.name,from:newL-1,to:newL,charLevel:character.level,before,after:levelSnapshot(),
+      hp,choices:res.choices,notes:res.notes,pending:null});
   };
   if(idx!==undefined){if(character.classes[idx])proceed(idx);return;}
   if(character.classes.length===1){proceed(0);return;}

@@ -4,6 +4,8 @@
   --head:"Cinzel", Georgia, serif;
   --body:"EB Garamond", Georgia, "Times New Roman", serif;
   --radius:7px;
+  /* #101: the level-up scene — a forest night, for Humblewood */
+  --lu-night:#0d1a12; --lu-night-2:#2a4433; --lu-glow:#e6d98a; --lu-spark:#e2b44c;
 }
 html[data-theme="light"]{
   --paper:#f4edda;      /* warm cream page */
@@ -54,7 +56,8 @@ html[data-theme="dark"]{
   --rail-accent:#d8a544; --rail-good:#5eb7a3; --rail-bad:#d5765f; --rail-warn:#e0b452;
 }
 /* ---- Classic D&D skin (parchment + red/gold, Roman-cap display) ---- */
-html[data-skin="classic"]{ --display:"Cinzel", Georgia, "Times New Roman", serif; }
+html[data-skin="classic"]{ --display:"Cinzel", Georgia, "Times New Roman", serif;
+  --lu-night:#1d1826; --lu-night-2:#3a2f4a; --lu-glow:#9fd4ff; --lu-spark:#e2b44c; }
 html[data-skin="classic"][data-theme="light"]{
   --paper:#efe7d3; --paper-2:#e4d9be; --panel:#f5efdf;
   --ink:#1c1710; --ink-soft:#6b6047; --line:#2a2018; --hair:rgba(42,32,24,.22);
