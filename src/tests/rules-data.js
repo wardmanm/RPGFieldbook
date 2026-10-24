@@ -28,6 +28,7 @@ const {X, ctx, store, state, bootError, fragments} = loadApp([
   'RB_CATS', 'RB_PAGE', 'RB_HITS', 'rbUI', 'rbCat', 'rbShown', 'rbFacets', 'rbState', 'rbFacetVal', 'rbPasses', 'rbSorted', 'rbSortBy', 'rbToggleFacet', 'rbClearFacets', 'rbFindRow', 'rbOpenRow', 'rulesCatOf', 'rbSideHTML', 'rbHeadHTML', 'rbBodyHTML', 'rbSearchHTML',
   'rbToList', 'rbOpenCat', 'rbNum', 'K_SET', 'saveSettings',
   'prunePackMeta',
+  'toTopShown', 'updateToTop', 'toTopBehavior', 'scrollToTop',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1464,6 +1465,93 @@ function block(html, needle, tag) {
   ck('#103 ...nor do the sources', gone.every(g => !src.includes(g)), gone.filter(g => src.includes(g)));
   ck('#103 the tab bar\'s tool group holds the swords alone',
      /<div class="tab-tools">\s*<button class="tab-combat" id="btnCombat"[^>]*><\/button>\s*<\/div>/.test(loadHTML()));
+}
+
+// ---------- back to top (#103)
+// A round button fixed in the bottom corner, on every tab and the combat view.
+// It shows once the page has scrolled past one screenful, and is unreachable
+// (visibility:hidden) when it doesn't.
+{
+  const t = loadHTML();
+  const at = t.indexOf('id="btnToTop"');
+  ck('#103 the back-to-top button is in the page, named for a screen reader',
+     /<button type="button" class="to-top" id="btnToTop" aria-label="Back to top" title="Back to top">/.test(t));
+  // outside the panels (it serves every tab and the combat view), a direct
+  // child of <body>, so the print rule's body>*:not(#printArea) hides it too
+  const pageEnd = t.indexOf('</div>', t.lastIndexOf('</section>'));
+  ck('#103 ...outside every tab panel, after the page and before the script',
+     at > pageEnd && pageEnd > t.indexOf('<div class="page">') && at < t.indexOf('<script>'), {at, pageEnd});
+  ck('#103 ...its arrow is a line icon, hidden from a screen reader',
+     /id="btnToTop"[^>]*><svg viewBox="0 0 24 24" aria-hidden="true"><path [^>]*\/><\/svg><\/button>/.test(t));
+
+  // the threshold: past one viewport height shows it; back above hides it
+  ck('#103 hidden at the top', X.toTopShown(0, 800) === false);
+  ck('#103 ...and at exactly one screenful', X.toTopShown(800, 800) === false);
+  ck('#103 shown past one screenful', X.toTopShown(801, 800) === true && X.toTopShown(5000, 800) === true);
+  ck('#103 a fractional scroll position counts', X.toTopShown(800.6, 800) === false && X.toTopShown(801.4, 800) === true);
+  const real = {gid: ctx.document.getElementById, qs: ctx.document.querySelector, win: ctx.window};
+  const cls = new Set();
+  const btn = {classList: {toggle: (c, on) => { if (on) cls.add(c); else cls.delete(c); return on; }, contains: c => cls.has(c)}};
+  ctx.document.getElementById = id => id === 'btnToTop' ? btn : null;
+  ctx.window = Object.assign({}, real.win, {innerHeight: 700, scrollY: 0});
+  X.updateToTop();
+  ck('#103 updateToTop(): at the top the button has no .show', !cls.has('show'));
+  ctx.window.scrollY = 701; X.updateToTop();
+  ck('#103 ...scrolled past innerHeight it gains .show', cls.has('show'));
+  ctx.window.scrollY = 300; X.updateToTop();
+  ck('#103 ...and scrolled back above it loses it', !cls.has('show'));
+  ctx.window.innerHeight = 200; X.updateToTop();
+  ck('#103 ...measured against the live innerHeight (a resize)', cls.has('show'));
+
+  // the reduced-motion branch, and where focus goes
+  let scrolled = null, focused = null;
+  const tab = {focus: o => { focused = o; }};
+  ctx.document.querySelector = q => q === '.tab.active' ? tab : null;
+  ctx.window.scrollTo = o => { scrolled = o; };
+  ctx.window.matchMedia = q => ({matches: false, media: q});
+  ck('#103 the scroll is smooth by default', X.toTopBehavior() === 'smooth');
+  X.scrollToTop();
+  ck('#103 the button scrolls to the very top, smoothly', scrolled && scrolled.top === 0 && scrolled.behavior === 'smooth', scrolled);
+  ck('#103 ...and puts focus on the active tab without a scroll of its own', focused && focused.preventScroll === true, focused);
+  let asked = '';
+  ctx.window.matchMedia = q => { asked = q; return {matches: true, media: q}; };
+  ck('#103 with reduced motion it jumps instead', X.toTopBehavior() === 'auto' && asked === '(prefers-reduced-motion: reduce)', asked);
+  X.scrollToTop();
+  ck('#103 ...and the button\'s scroll is that jump', scrolled.top === 0 && scrolled.behavior === 'auto', scrolled);
+  ctx.document.getElementById = real.gid; ctx.document.querySelector = real.qs; ctx.window = real.win;
+
+  const js = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8')).js.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  ck('#103 wire(): a passive scroll listener, checked at most once a frame',
+     /window\.addEventListener\("scroll",toTopTick,\{passive:true\}\)/.test(js) &&
+     /const toTopTick=\(\)=>\{if\(!toTopRaf\)toTopRaf=requestAnimationFrame\(\(\)=>\{toTopRaf=0;updateToTop\(\);\}\);\};/.test(js));
+  ck('#103 ...a resize re-checks it, and a click runs scrollToTop()',
+     /window\.addEventListener\("resize",toTopTick,\{passive:true\}\)/.test(js) && /on\("btnToTop","click",scrollToTop\)/.test(js));
+  ck('#103 in the combat view focus goes to the swords',
+     /function scrollToTop\(\)\{[\s\S]*?combatViewOpen\(\)\?document\.getElementById\("btnCombat"\):document\.querySelector\("\.tab\.active"\)/.test(js));
+
+  const raw = fs.readFileSync(path.join(ROOT, 'src/css/10-chrome.css'), 'utf8');
+  const css = raw.replace(/\/\*[\s\S]*?\*\//g, '');
+  const base = (/(^|\n)\.to-top\{([^}]*)\}/.exec(css) || [])[2] || '';
+  const z = +((/z-index:(\d+)/.exec(base) || [])[1]);
+  ck('#103 fixed in the bottom-right corner, clear of the notch and the home bar',
+     /position:fixed/.test(base) && /right:calc\(16px \+ env\(safe-area-inset-right\)\)/.test(base) && /bottom:calc\(16px \+ env\(safe-area-inset-bottom\)\)/.test(base), base);
+  ck('#103 a tap target of at least 44px', +((/width:(\d+)px/.exec(base) || [])[1]) >= 44 && +((/height:(\d+)px/.exec(base) || [])[1]) >= 44, base);
+  ck('#103 over the cards, under the note popover and combat header (30), the header popover (35/36) and the modal (80)',
+     z > 0 && z < 30, z);
+  ck('#103 hidden, it can be neither tapped nor tabbed to',
+     /visibility:hidden/.test(base) && /pointer-events:none/.test(base) && /opacity:0/.test(base) &&
+     /\.to-top\.show\{[^}]*visibility:visible[^}]*pointer-events:auto/.test(css));
+  const all = css.match(/[^{}]*\.to-top[^{}]*\{[^}]*\}/g) || [];
+  ck('#103 theme tokens only: no colour literal in any of its rules',
+     all.length >= 4 && all.every(r => !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(r.slice(r.indexOf('{')))), all.filter(r => /#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(r.slice(r.indexOf('{')))));
+  ck('#103 print hides it', /@media print\{\.to-top\{display:none!important\}\}/.test(css) &&
+     /@media print\{\s*body>\*:not\(#printArea\)\{display:none!important\}/.test(fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8')));
+  ck('#103 it rises above the refused-write strip, where the toast goes',
+     /body\.saving-failed \.to-top\{bottom:calc\(130px \+ env\(safe-area-inset-bottom\)\)\}/.test(css) && /body\.saving-failed \.toast\{bottom:130px\}/.test(css));
+  const mq = css.search(/@media\(max-width:640px\)\{\s*body:has\(#toast\.show\) \.to-top\{bottom:calc\(26px \+ var\(--toast-h,48px\) \+ 12px\)\}/);
+  ck('#103 ...and above a toast on a phone, after its base rule', mq > css.indexOf('.to-top{'), mq);
+  ck('#103 toast() records its height for that', /bs\.setProperty\("--toast-h",el\.offsetHeight\+"px"\)/.test(js));
+  ck('#103 the page leaves room under its last card', /\.page\{max-width:1160px;margin:0 auto;padding:clamp\(12px,2\.4vw,22px\) clamp\(12px,2\.4vw,22px\) calc\(80px \+ env\(safe-area-inset-bottom\)\)\}/.test(css));
 }
 
 // ---------- loadHTML() agrees with what the build actually shipped

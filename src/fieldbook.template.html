@@ -52,6 +52,11 @@
 <!--@@HTML@@-->
 </div>
 
+<!-- Back to top (#103): outside the panels, so it serves every tab and the
+     combat view. Hidden (and so unfocusable) until the page has scrolled a
+     screenful; updateToTop() in 40-sheet.js shows it, scrollToTop() runs it. -->
+<button type="button" class="to-top" id="btnToTop" aria-label="Back to top" title="Back to top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg></button>
+
 <!-- A write the browser refused (#81): says so, and stays until one lands
      (showSaveResult() in 70-persistence.js). Fixed to the foot of the window,
      so it shows on every tab without covering the sticky tab bar or the combat

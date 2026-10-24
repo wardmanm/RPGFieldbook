@@ -28,6 +28,30 @@ function scrollToCard(el){
   const y=el.getBoundingClientRect().top+window.scrollY-off;
   window.scrollTo({top:Math.max(0,y),behavior:"smooth"});
 }
+/* Back to top (#103): the round button in the bottom corner (#btnToTop). It
+   shows once the page has scrolled past one screenful and hides above it;
+   hidden, it is visibility:hidden, so neither a tap nor Tab can reach it.
+   wire() runs updateToTop() from a passive scroll listener, at most once a
+   frame. */
+function toTopShown(y,h){return num(y)>Math.max(1,num(h));}
+function updateToTop(){
+  const b=document.getElementById("btnToTop");if(!b)return;
+  b.classList.toggle("show",toTopShown(window.scrollY,window.innerHeight));
+}
+/* "auto" (an instant jump) for a player who asked the system for less motion. */
+function toTopBehavior(){
+  const mq=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)");
+  return mq&&mq.matches?"auto":"smooth";
+}
+/* The button hides as the page reaches the top, and a focused element that
+   hides drops focus to <body>; so focus goes to the tab showing (the swords in
+   the combat view), the first stop at the top of the page. preventScroll: the
+   tab bar is sticky, and a focus scroll would cut the smooth one short. */
+function scrollToTop(){
+  window.scrollTo({top:0,behavior:toTopBehavior()});
+  const t=combatViewOpen()?document.getElementById("btnCombat"):document.querySelector(".tab.active");
+  if(t&&t.focus)t.focus({preventScroll:true});
+}
 /* A player's category as the section it names (#98). One of INV_ORDER in any
    case files there ("consumables" is Consumables, so it is still read for its
    healing); anything else is their own section, tidied as a tag is. "" for

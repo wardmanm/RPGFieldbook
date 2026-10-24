@@ -260,6 +260,13 @@ function wire(){
   on("saveWarnFile","click",exportChar);
   on("saveWarnRetry","click",retrySave);
   on("jnlNew","click",jnlNewPage);
+  /* back to top (#103): shown past a screenful of scroll. A passive listener,
+     and the check runs at most once a frame however fast the page scrolls. */
+  on("btnToTop","click",scrollToTop);
+  let toTopRaf=0;
+  const toTopTick=()=>{if(!toTopRaf)toTopRaf=requestAnimationFrame(()=>{toTopRaf=0;updateToTop();});};
+  window.addEventListener("scroll",toTopTick,{passive:true});
+  window.addEventListener("resize",toTopTick,{passive:true});
   on("jnlSearch","input",()=>renderJournal());
   on("addTracker","click",()=>openTrackerForm());
   document.getElementById("addResource").addEventListener("click",()=>openResourceForm());
