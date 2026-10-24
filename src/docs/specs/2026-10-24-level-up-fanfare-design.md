@@ -186,7 +186,7 @@ Checked against SRD 5.2.1, "Multiclassing", pp. 25–26.
 - **New `src/js/57-levelup.js`**, between `56-class.js` and `58-choices.js` in `src/manifest.json`:
   `levelSnapshot`, `levelGains`, `levelUpCardHTML`, `levelUpHPHTML`, `openLevelUp`, and the
   animation's build, skip and remove. It is a new fragment, so the fragment counts in CLAUDE.md and
-  ADR-001 go from 33 to 34 JS fragments, and the docs suite checks them.
+  ADR-001 go from 34 to 35 JS fragments, and the docs suite checks them.
 - **`56-class.js`:** `doLevelUp()` and `addClass()` take the snapshot and call `openLevelUp` (the
   creation path is unchanged); `multiclassNote()` gains the prerequisite sentence.
 - **`00-constants.js`:** `casterLevel()`.
