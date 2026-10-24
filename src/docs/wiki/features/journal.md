@@ -298,3 +298,4 @@ entry in the list.
 - 2026-10-17 — Final review: a typed count moves the group total; the Σ is always "Total for <tag>"; a box is named by its item; Story fields tick too; a closed checklist keeps its real ticks; a junk date writes none. → ledger L6057, #95, #93
 - 2026-10-19 — The Journal card's pencil hides a page's Edit and Delete; a blank page's empty line drops "— tap Edit" while they're hidden. → ledger L6248, #97
 - 2026-10-23 — The Story tab is Bio; By ability's hidden Skills card is gone. → ledger L6633, #103
+- 2026-10-24 — The ☰ section flyout is retired; a hidden Trackers card is skipped by the combat view only. → ledger L6804, #103

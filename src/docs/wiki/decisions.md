@@ -398,6 +398,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Markup that moves, in `wire()`** — A local `on()` that skips a missing id
 - **The modal title's contract (#69)** — Plain text, set as `textContent`; callers never escape it
 - **An index of a tab's sections (#103)** — None: ☰ section flyout retired (Mike, 2026-10-24): the tabs are organised well enough to need no index
+- **Where focus goes after Back to top (#103)** — The active tab, or the swords in the combat view
+- **The back-to-top button over a toast on a phone (#103)** — It rises above the toast, by the toast's measured height
 
 ### [Sections & layout](ui/sections-and-layout.md)
 

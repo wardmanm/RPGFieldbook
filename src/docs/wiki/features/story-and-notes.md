@@ -154,3 +154,4 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - 2026-10-17 — A checkbox in a section note is tickable on the Section Notes card, and the note editor gains an Insert checkbox button (#95). → ledger L6047, #95
 - 2026-10-17 — A checkbox in a Story field (Proficiencies or a bio card) is tickable in its read view, refused while editing. → ledger L6057, #95
 - 2026-10-23 — The Story tab is Bio; its first card holds Alignment, Languages and Senses chips and the prose; 18 sections; the Class, Ancestry & Background and Rest notes merge into Character and Vitals; By ability's hidden Skills note is gone with it. → ledger L6633, #103
+- 2026-10-24 — The ☰ section flyout is retired: the Bio tab has no ☰ title, and the note preview's `<span>` rule rests on `renderNoteIcons()` alone. → ledger L6804, #103

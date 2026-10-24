@@ -228,3 +228,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-19 — The "After a fight" select's labels as built, and it follows the form's current weapon; the print sheet counts a ×0 item. → ledger L6147, #104
 - 2026-10-22 — The item finder's facets and preview become `itemFacets()` and `openItemInfo()`, shared with the Rules tab's Items category. → ledger L6327, #99
 - 2026-10-23 — Attacks & Weapons heads the tab, above Equipment & Inventory. → ledger L6633, #103
+- 2026-10-24 — The ☰ section flyout is retired, so a section is no longer listed anywhere. → ledger L6804, #103

@@ -50,7 +50,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 
 ## UI
 
-- [Shell](ui/shell.md) — top bar, tab bar, the modal, the browse picker, the toast, `selectTab()`
+- [Shell](ui/shell.md) — top bar, tab bar, the modal, the browse picker, the toast, back to top, `selectTab()`
 - [Sections & layout](ui/sections-and-layout.md) — the section registry, per-tab layout, collapse/favourite conventions
 - [Theming & icons](ui/theming-and-icons.md) — skins, light/dark, tokens, the emblem pipeline and its licence
 

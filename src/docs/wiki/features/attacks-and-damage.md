@@ -222,3 +222,4 @@ longer allows, leaving orphan rows alone.
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-13 — A to-hit, damage or save DC an effect lowers is red with ▼; the breakdown reddens that effect's line. → ledger L5700, #89
 - 2026-10-23 — The card moves, unchanged, from the Sheet to the top of the Inventory tab, its note, combat-view place and #97 pencil with it. → ledger L6633, #103
+- 2026-10-24 — The ☰ section flyout is retired; `.inv-sec-head` gives the card its heading style only. → ledger L6804, #103

@@ -166,3 +166,4 @@ Two are special:
 - 2026-09-24 — `87-combat.js` arrives, with `COMBAT_DEFAULTS` kept in `00-constants.js` for the TDZ. → ledger L3397
 - 2026-09-25 — `70-combat.html` makes seven html fragments. → ledger L3676
 - 2026-10-09 — `30-version.js`'s named callers: the Node bundler is replaced by `tools/data-kit/fbdata.py`. → ledger L5342, #85
+- 2026-10-24 — The template no longer holds a ToC flyout (the ☰ is retired). → ledger L6804, #103

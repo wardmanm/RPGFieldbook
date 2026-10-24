@@ -216,3 +216,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-09 — The private split: the pack table says where each pack lives; the layout gains `_private-data`, the kit zip and `tools/data-kit/`, and loses the Humblewood extractor; the glossary gains private data and the data kit. → ledger L5426, #85
 - 2026-10-17 — The `87-trackers.js` code-map row updated: counters only, tiles and totals, not checklists and tasks. → ledger L6047, #95, #93, #94
 - 2026-10-23 — The code map follows the Sheet makeover: the header in `40-sheet.js`, chips and their grants in `41-chips.js`, the Bio tab. → ledger L6633, #103
+- 2026-10-24 — The ☰ section flyout is retired: the template and `40-sheet.js` rows of the code map, and the glossary's "section", drop it. → ledger L6804, #103

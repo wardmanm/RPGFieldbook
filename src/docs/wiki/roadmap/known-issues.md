@@ -488,3 +488,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-19 — Added: a private data release has no approval step (plan limit). → ledger L6226, #109
 - 2026-10-23 — Removed with #103: the By ability Skills-note gap and the Dice hit-dice style's spend limit (both layouts retired). Added: a cold-cache new character's default language, the unbuilt system-change swap of `system` chips, and Familiars no longer addable to the combat view from the Sheet. → ledger L6633, #103
 - 2026-10-23 — Removed with the #103 final review: Familiars not addable to the combat view (the paw's menu has the toggle). Added: lifted languages are the player's own. The system-chip swap's entry now records the plan-time ruling. → ledger L6729, #103
+- 2026-10-24 — Removed: the Features Favourites group not being in the ☰ menu, which is retired. → ledger L6804, #103

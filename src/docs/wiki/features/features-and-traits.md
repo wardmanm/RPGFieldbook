@@ -165,3 +165,4 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
   → ledger L3123
 - 2026-10-16 — A feature files under its source, falling back to where it came from; the Source box offers the groups in use. → ledger L5823, #98
 - 2026-10-22 — The feat/trait picker's filters and preview become `featFacets()` and `openFeatInfo()`, shared with the Rules tab's Feats and Traits categories. → ledger L6327, #99
+- 2026-10-24 — The ☰ section flyout is retired, so the Favourites-in-the-menu decision is moot. → ledger L6804, #103

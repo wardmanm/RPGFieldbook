@@ -383,6 +383,10 @@ What differs from the sections above, and why:
   full width at desktop**: the middle and right columns are independent stacks (`.col-m`: Skills,
   Features; `.col-r`: Defences, Statuses, Resources), so Features follows Skills; two columns keep
   Features full width under the rail, one column keeps the phone order.
+- **The ☰ section flyout is retired; a back-to-top button** (L6804, Mike 2026-10-24): the tabs are
+  organised well enough to need no index, so `#btnToc`, `#tocFly` and `buildToc()` go (the rail's
+  and strip's `.label`s above stay, for the note button, the combat toggle and the registry), and a
+  round ↑ button (`#btnToTop`) in the bottom-right corner shows past one screenful of scroll.
 - `statStyle` and `hdStyle` stay in `blankChar()` and saved sheets, unread; `classChipHTML()`,
   `statStyle()` and the grouped builders are deleted.
 

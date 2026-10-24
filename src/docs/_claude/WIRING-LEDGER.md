@@ -6800,3 +6800,39 @@ stack and place). Shots `.claude/qa/103-mike-*`.
 
 Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
 [vitals & rest](../wiki/features/vitals-and-rest.md), [shell](../wiki/ui/shell.md)
+
+## The ☰ flyout retired; a back-to-top button (#103, 2026-10-24)
+
+Mike, 2026-10-24: the tabs are organised well enough to need no index, so the ☰ section flyout
+goes. `#btnToc`, `#tocBack`, `#tocFly`, `buildToc()`, `openToc()`, `closeToc()`, the `.tab-toc` /
+`.toc-fly` / `.toc-back` CSS, the boot handlers and the two `closeToc()` calls in the combat view
+are deleted; `selectTab()` now closes only the Sheet header's popover. The tab bar's `.tab-tools`
+holds the swords alone (still pinned below 400px). `scrollToCard()` stays for the note jump and
+the journal. Nothing reads a card `.label`'s text any more; the `.label` stays where the note
+button, the #97 pencil and the combat toggle go.
+
+In its place, a back-to-top button: `#btnToTop`, a round 48px ↑ fixed bottom-right (16px plus the
+safe areas), in the template outside the panels, so it serves every tab and the combat view.
+`updateToTop()` adds `.show` once `scrollY` passes `innerHeight` (`toTopShown()`), run from a
+passive scroll and resize listener at most once a frame; hidden it is `visibility:hidden`, so no
+tap or Tab reaches it. `scrollToTop()` scrolls to 0, smooth or (reduced motion, `toTopBehavior()`)
+instant, and focuses the active tab, or the swords in the combat view, with `preventScroll`.
+Theme tokens only; layer 25 (over cards, under the note popover and the combat header at 30, the
+header popover, the tab bar, home, finder and modal); hidden in print. Bottom collisions: the
+refused-write strip (`body.saving-failed`) lifts it to 130px like the toast; below 640px a showing
+toast lifts it above the toast (`body:has(#toast.show)`, with `toast()` writing `--toast-h`); the
+update pill is in the top bar and the combat view has no footer. `.page` gains 80px of bottom
+padding so the last card's controls can scroll clear of it.
+
+Tests: `rules-data.js` loses the flyout-only checks (the ☰ entry's strip list, the Rules-tab
+category entries, the backdrop close), the hidden-card check now guards `jumpToNote()`, the
+combat-button placement is checked inside the tool group, and a guard keeps every trace of the
+flyout out of the built page and the sources. New: the button's markup, threshold, reduced-motion
+branch, focus, wiring, CSS layer, hidden state, print, and its lifts. Shots `.claude/qa/103-totop-*`.
+
+Pages: [shell](../wiki/ui/shell.md), [sections & layout](../wiki/ui/sections-and-layout.md),
+[overview](../wiki/overview.md), [combat view](../wiki/features/combat-view.md),
+[inventory](../wiki/features/inventory.md), [journal](../wiki/features/journal.md),
+[story & notes](../wiki/features/story-and-notes.md), [rules & tables](../wiki/features/rules-and-tables.md),
+[attacks & damage](../wiki/features/attacks-and-damage.md), [features & traits](../wiki/features/features-and-traits.md),
+[known issues](../wiki/roadmap/known-issues.md), [build & source split](../wiki/architecture/build-and-source-split.md)

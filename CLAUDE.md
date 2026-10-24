@@ -41,7 +41,7 @@ and Humblewood packs live in the private repo (`RPGFieldbookPrivate`, linked int
 
 ```
 src/                     THE SOURCE OF TRUTH — edit here, never the built file
-  fieldbook.template.html  the page SHELL: top bar, tab bar, ToC, home, modal
+  fieldbook.template.html  the page SHELL: top bar, tab bar, home, modal, back-to-top
   manifest.json          the authoritative concatenation ORDER — add/remove a fragment here
   html/*.html            7 fragments, one tab panel each
   js/*.js                34 fragments, concatenated into the single <script>
@@ -128,8 +128,7 @@ Each links to the page that explains it and what broke when it was ignored.
 - **Armor drives AC**; magic armor still needs an `ac` effect. → [armor & AC](src/docs/wiki/features/armor-and-ac.md)
 - **Spells sync into Attacks** as attack or save; an explicit "Not an attack" sticks.
   → [attacks & damage](src/docs/wiki/features/attacks-and-damage.md)
-- **The tab bar is sticky; the title bar scrolls away.** The ☰ flyout lists the active tab's sections
-  and opens below the top bars. → [shell](src/docs/wiki/ui/shell.md)
+- **The tab bar is sticky; the title bar scrolls away.** → [shell](src/docs/wiki/ui/shell.md)
 - **Tables are data and `cols` is the key**; prose links them with `[Table: Exact Name]`;
   underscore keys never reach `data/`. → [rules & tables](src/docs/wiki/features/rules-and-tables.md)
 - **`character.notes` ≠ `character.secNotes`.** Notes render markdown on top of `highlight()` —

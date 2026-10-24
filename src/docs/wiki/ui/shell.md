@@ -3,17 +3,18 @@
 The shell is everything that is not a tab's own content: the title bar that scrolls away, the
 sticky tab bar (six word tabs and the combat swords), the one generic modal that every form and
 info screen reuses, the full-screen browse picker behind the rules-pack "Add" buttons, the toast,
-and the wiring in `90-boot.js` that binds all of it once at load. Most of it is
+the back-to-top button, and the wiring in `90-boot.js` that binds all of it once at load. Most of it is
 `src/fieldbook.template.html`; the tab panels are spliced in at its `<!--@@HTML@@-->` marker from
 `src/html/` (see [Sections & layout](sections-and-layout.md)).
 
-**Code:** `selectTab()`, `scrollToCard()` in `40-sheet.js` ·
+**Code:** `selectTab()`, `scrollToCard()`, `toTopShown()`, `updateToTop()`, `toTopBehavior()`,
+`scrollToTop()` in `40-sheet.js` ·
 `openModal()`, `closeModal()`, `dismissModal()`, `setDismissGuard()`, `modalTakeFocus()`,
 `modalGiveBackFocus()`, `openerSelector()` in `80-modal-forms.js` · `openBrowse()`, `closeBrowse()`
 in `85-browse.js` · `wire()`, `boot()` in `90-boot.js` · `toast()` in `60-attacks.js` ·
 `showUpdatePill()` in `30-version.js` · `10-chrome.css`, `50-modal.css` ·
-**Tests:** `rules-data.js` (tab bar, the retired ☰ stays gone, dismissals, combat tab, no
-escaped modal title), `sheet.js` (`MODAL_FOCUS_FIELDS`, `openerSelector()`, `finderQty()`), `char-update.js`
+**Tests:** `rules-data.js` (tab bar, the retired ☰ stays gone, back to top, dismissals,
+combat tab, no escaped modal title), `sheet.js` (`MODAL_FOCUS_FIELDS`, `openerSelector()`, `finderQty()`), `char-update.js`
 (what a dismissal hands on, what a choice window writes to `#mTitle`) ·
 **See also:** [Sections & layout](sections-and-layout.md), [Theming & icons](theming-and-icons.md),
 [Combat view](../features/combat-view.md), [Build & source split](../architecture/build-and-source-split.md),
@@ -30,7 +31,8 @@ Source order in the template matters (see Rules). Layers are `z-index`:
 | `#rough` SVG filter | the hand-drawn wobble, used as `filter:url(#rough)` | — |
 | `.topbar` | wordmark, version / update pill, save state, Home, theme, Settings, Print, Load, Save | 50, scrolls away |
 | `.tabbar` | six `.tab` buttons, then `.tab-tools` holding `#btnCombat` | 40, `position:sticky;top:0` |
-| `.page` | the seven tab panels | — |
+| `.page` | the seven tab panels; 80px of bottom padding (plus the safe area) so the last card scrolls clear of the back-to-top button | — |
+| `#btnToTop` | the back-to-top button, fixed bottom-right | 25 |
 | `#home` | character library and first-run setup ([Home & characters](../features/home-and-characters.md)) | 60 |
 | `#modal` | the generic dialog | 80 |
 | `#toast` | one status line, optionally with one button | 9999 |
@@ -163,6 +165,35 @@ forms (#87): `{err:true}` is a failure the player must read — the danger colou
 by "!" (Classic's danger and accent colours are the same red), `role="alert"`, a Dismiss button, a tap anywhere hides it, and no auto-hide at all; `{long:true}` is a
 notice of a sentence or two, given the 6 s an action gets. Every other caller passes neither.
 
+### Back to top
+
+`#btnToTop` (#103) is a round 48px button with a line-icon ↑, `aria-label="Back to top"`, in the
+template after `.page` and outside every panel, so it serves every tab and the combat view. It is
+fixed 16px from the bottom-right corner, plus the right and bottom safe-area insets, in theme tokens
+(`--panel`, `--line`, `--ink`, `--shadow`, `--accent` on hover), so it follows both skins and both
+themes.
+
+- **When it shows.** `wire()` listens for `scroll` and `resize` on `window`, passive, and runs
+  `updateToTop()` at most once a frame through `requestAnimationFrame`. `updateToTop()` toggles
+  `.show` by `toTopShown(scrollY, innerHeight)`: true only past one viewport height. Without
+  `.show` it is `opacity:0`, `pointer-events:none` and `visibility:hidden`, which flips only after
+  the 0.2s fade (the toast's pattern), so a hidden button can be neither tapped nor tabbed to.
+- **What it does.** `scrollToTop()` scrolls to 0 with `toTopBehavior()`: `"smooth"`, or `"auto"`
+  (an instant jump) when `prefers-reduced-motion: reduce` matches. The button hides as the page
+  reaches the top, which would drop focus to `<body>`, so it focuses the active `.tab` (the swords,
+  `#btnCombat`, in the combat view) with `preventScroll`.
+- **Its layer.** `z-index:25`: over the cards, which set none; under the note popover and the
+  combat header (30), the Sheet header's popover (`#shBack` 35, `#shFly` 36), the tab bar (40),
+  `#home` and `#saveWarn` (60), `#browse` (70) and the modal (80). An open modal also makes it
+  `inert`, like every body child. Print hides it (`@media print`, and the print rule that hides
+  every body child but `#printArea`).
+- **What else sits at the foot of the window.** The refused-write strip (`#saveWarn`, #81): with
+  `body.saving-failed` the button rises to 130px, where the toast goes. The toast: centred and at
+  most 80vw wide, it can reach the corner only below 640px, and there, while `#toast.show`, the
+  button rises above it (`body:has(#toast.show)`); `toast()` writes the toast's height to
+  `--toast-h` on `<body>` for that. Both at once stack: strip, toast, button. The update pill is in
+  the top bar and the combat view has no footer, so neither meets it.
+
 ### Wiring and boot
 
 `wire()` binds everything once:
@@ -233,6 +264,8 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - **`modalGiveBackFocus()` releases only what `modalTakeFocus()` made inert.**
 - **Never bind a listener to `#mBody` or `#browse` with `addEventListener`.** Both are reused, so
   the listeners would stack.
+- **The back-to-top button stays under every popover, the tab bar and the modal** (`z-index` 25,
+  asserted), unreachable when hidden (`visibility:hidden`, asserted), and outside the panels.
 - **The toast stays in the template**, outside `.page`, empty at load, and exempt from the modal's
   inert.
 
@@ -282,6 +315,8 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 | Markup that moves, in `wire()` | A local `on()` that skips a missing id | — (reason: one dead button is a far better failure than every later listener unbound) |
 | The modal title's contract (#69) | Plain text, set as `textContent`; callers never escape it | `innerHTML` with callers escaping: 51 of 52 calls already passed plain text and a header needs no markup, so every call would change and any one that forgot would be an injection point |
 | An index of a tab's sections (#103) | None: the ☰ section flyout is retired (Mike, 2026-10-24); the tabs are organised well enough to need no index | Keeping it: after the Sheet makeover each tab is short and plainly laid out, and the flyout was one more control in a crowded tab bar |
+| Where focus goes after Back to top (#103) | The active tab, or the swords in the combat view | Leaving it on the button: the button hides at the top, and a focused element that hides drops focus to `<body>`, stranding a keyboard user |
+| The button over a toast on a phone (#103) | It rises above the toast, by the toast's measured height | Hiding it while a toast shows: the button vanishes under the player's thumb. A fixed lift: a two-line toast with Undo is taller than a one-line one |
 
 ## Open
 
@@ -321,3 +356,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-22 — The Rules-tab flyout entries now also call `scrollToCard()` after `rbOpenCat()`, clearing the tab-bar offset like every other tab's entries. → ledger L6455, #99
 - 2026-10-23 — The Story tab's button reads Bio (id `story` kept); the Sheet header is a card whose ☰ entry is "Character"; the header's own popover (`openShFly()`). → ledger L6633, #103
 - 2026-10-23 — The ☰ strips the Sheet header's `.sh-level`, now inside its `.label`. → ledger L6776, #103
+- 2026-10-24 — The ☰ section flyout is retired (Mike): `buildToc()`, `openToc()`, `closeToc()` and their markup go; `scrollToCard()` stays. A back-to-top button (`#btnToTop`) arrives, with its collisions handled. → ledger L6804, #103

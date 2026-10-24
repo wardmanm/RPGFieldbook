@@ -196,3 +196,4 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-10-19 — End combat retires every outstanding ammunition count, quietly when nothing comes back. → ledger L6147, #104
 - 2026-10-23 — Vitals arrives as the rail, in two columns; the view gains its own Inspiration ✦; the Sheet's header is not combat-addable, and a saved `portrait` or `rest` becomes `vitals`; By ability's compact header is gone. → ledger L6633, #103
 - 2026-10-23 — Familiars is addable again, from the paw's menu (its card is hidden on the Sheet); the card shows in the view and goes home hidden. → ledger L6729, #103
+- 2026-10-24 — The tab bar's ☰ is retired, so nothing lists the view's cards; the swords stand alone in the tab bar's tool group, and `selectTab()` no longer calls `closeToc()`. → ledger L6804, #103
