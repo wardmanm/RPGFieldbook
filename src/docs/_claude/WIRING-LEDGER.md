@@ -6924,3 +6924,64 @@ Pages: [character building](../wiki/features/character-building.md),
 [theming & icons](../wiki/ui/theming-and-icons.md),
 [build & source split](../wiki/architecture/build-and-source-split.md),
 [1.9.0](../wiki/roadmap/1.9.0.md).
+
+## Level-up fanfare: final review fixes (#101, 2026-10-24)
+
+The whole-branch review of #101 found two Important issues and nine minor ones. This entry fixes
+I1, I2, M1 and M4, corrects the docs (M6, M7, M8) and records the rest. Everything is in
+`57-levelup.js` unless named.
+
+**I1: the no-stacking tag is an allowlist.** `levelGains()` tagged any new feature whose name
+matched one from another class, so a Wizard taking a Cleric level read "Spellcasting — they don't
+stack". That is false: Spellcasting combines by the multiclass slot table. Expertise and Epic Boon
+are separate picks, too. The tag now fires only for `LU_NO_STACK`, `["extra attack","unarmored
+defense"]`, the two features SRD 5.2.1 p.26 names: Extra Attack doesn't stack, and you use only one
+way to calculate AC. This refines spec decision 11 (controller ruling). Cost if wrong: another
+non-stacking feature goes untagged.
+
+**I2: a failed Apply takes the earlier value back.** A good roll followed by a bad "I rolled" +
+Apply showed the error, but left `_lu.set` true. Done, or ×, then committed a number the card no
+longer showed. `luSetHP()`'s failure path now clears `_lu.set`, `_lu.raw` and `_lu.note`, disables
+`#luGo` and shows the error itself. So Done does nothing, and closing asks `LU_HP_CLOSE` again.
+
+**M1: a level-up belongs to its character.** `_lu.id` is `activeId` at `openLevelUp()`.
+`showLevelUpCard()` (the scene's end), `luFinish()` and `luDismissed()` drop a level-up whose
+character has changed, through `luStale()`: no card, no HP, no choices. `loadCharById()`,
+`newCharacter()` (`75-home-theme.js`), `finishImport()` (`71-char-io.js`) and `showHome()` call
+`luAbandon()`. It clears `_lu`, ends a playing scene through `luSkip()` (whose `done()` then opens
+nothing) and closes an open card. None of this was reachable through the UI, because the layer
+covers every control. It is hardening.
+
+**M4: one spell note per class.** A second class added above level 1 listed every level's spell
+note ("Prepared Spells: 4", then "5"). `luLatestNotes()` keeps only the highest `_level`'s notes.
+A plain-string note, the multiclass note, has no level and always stays.
+
+**Comments.** `char-update.js`'s #58 header and `58-choices.js`'s `armChoiceDismissGuard()` comment
+now say the `{type:"hp"}` block is creation's.
+
+**A correction to the entry above (L6840).** Closing the card early is wired through
+`setDismissGuard()` directly in `showLevelUpCard()`, not through `armChoiceDismissGuard()`. That
+function only shares the `LU_HP_CLOSE` string. The 2.4s timer is the scene's only end, not a
+backstop.
+
+**Left, and recorded.** In [known issues](../wiki/roadmap/known-issues.md):
+- M3: a long card at 390 puts HP and Done below the fold, for Mike's phone pass.
+- M5: the page behind the scene isn't inert for its 2.4s.
+- M9: `luSummary()` cuts at abbreviations and strips `_*#>` and backticks.
+- Focus after a skip lands on `#luTyped`.
+
+M2 is a new rule in [character building](../wiki/features/character-building.md): nothing may
+`openModal()` over the level card.
+
+Tests: `char-update.js` covers each fix: Spellcasting, Expertise and Epic Boon untagged and
+Unarmored Defense tagged; a bad Apply after a good one; Done and closing on a changed character; a
+scene ending on another character; Home mid-scene; the Wizard-at-2 note and `luLatestNotes()`.
+Browser (project Playwright MCP, 390 wide, SRD pack): Wizard 3 + Cleric 1 showed no tag. A Roll
+of 2, then 99 + Apply, cleared it and disabled Done, and × asked. Then 5 + Enter and Done added 5.
+Monk 2 + Barbarian 1 was tagged. Home mid-scene left no layer and no card. The console was clean.
+Shot: `.claude/qa/101-fix-apply.png`.
+
+Pages: [character building](../wiki/features/character-building.md),
+[spells](../wiki/features/spells.md), [vitals & rest](../wiki/features/vitals-and-rest.md),
+[theming & icons](../wiki/ui/theming-and-icons.md),
+[known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).

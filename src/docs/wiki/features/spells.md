@@ -139,6 +139,7 @@ rounds, minutes, hours, days, seconds and "instant"; anything else (Until dispel
 | Fixing the off-screen Add button | `width:auto` on `.br-origin`, shared by both finders | `overflow-x:hidden` on `.browse`: hides a recurrence instead of preventing one; `flex-wrap` alone: a full-width select on every screen |
 | Saying what the prepared tick means | A visible `Prep` caption, `aria-pressed` and a title | The `aria-label` alone: nobody on a phone ever sees it |
 | An item's bonus to one class's spells, such as a Moon Sickle's (#77) | Applied to the one spellcasting the sheet has; the class stays in the description | Prose: the item would do nothing for the caster it was made for. See [Computed stats & effects](../architecture/computed-stats-and-effects.md) |
+| Half-caster spell slots when multiclassing (#101) | Round up (SRD 5.2.1 p.26), for every ruleset, Humblewood included (Mike: follow the 2024 rules even though Humblewood was built for the old ones) | Per ruleset: Humblewood would keep the 2014 rounding down |
 
 ## Open
 
@@ -171,3 +172,4 @@ rounds, minutes, hours, days, seconds and "instant"; anything else (Until dispel
   tracker, clearing itself with an Undo. → ledger L5031, #55
 - 2026-10-24 — Half casters (Paladin, Ranger, Artificer) round up, matching SRD 5.2.1 p.26, for
   every ruleset including Humblewood; a Paladin 1 now gets its two 1st-level slots. → ledger L6840, #101
+- 2026-10-24 — The half-caster rounding gains its Decisions row. → ledger L6928, #101

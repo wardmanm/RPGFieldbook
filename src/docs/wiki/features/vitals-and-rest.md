@@ -128,8 +128,8 @@ for me, "I rolled" plus Apply (live-checked, the same shape of range message), o
 (it is gaining hit points, not spending a die, so there is nothing to clamp against a pool), but the
 wording and the live-checked "I rolled" field are deliberately the same box a player already knows
 from here. Pressing its Done or Continue — not Apply — is what raises Max and Current
-(`commitHPChoice()`) and puts the Max HP lock back, the same as this box's own spends do not touch
-the lock at all. See [Character building](character-building.md) for the flow.
+(`commitHPChoice()`) and puts the Max HP lock back as it was. This box's own spends never touch the
+lock. See [Character building](character-building.md) for the flow.
 
 **Where the auto/manual pill and the manual-dice field live.** `[data-hdmode]` and
 `#hitdiceInput` come from one builder, `hdFootHTML()`, drawn in one of two places, never both: the
@@ -294,3 +294,4 @@ came back.
   → ledger L6729, #103
 - 2026-10-23 — The rest buttons read "Short rest" / "Long rest", icons with Icon tabs or on a narrow page. → ledger L6776, #103
 - 2026-10-24 — The level-up card's hit-points step copies this box's controls, order and wording. → ledger L6840, #101
+- 2026-10-24 — The sentence on what the card's Done does to the lock now parses. → ledger L6928, #101

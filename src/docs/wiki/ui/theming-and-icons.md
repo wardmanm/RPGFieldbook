@@ -71,8 +71,8 @@ and, since #101, `--lu-night`, `--lu-night-2`, `--lu-glow` and `--lu-spark` for 
 ([Character building](../features/character-building.md)). Unlike every other token, light and
 dark **share one value** per skin: the scene dims the whole page to a night backdrop regardless of
 theme (`--lu-night`/`--lu-night-2`, the gradient's edge and centre), so it is defined once per skin
-block rather than once per theme block — `html[data-theme]` and `html[data-skin="classic"]` both
-carry it, with the classic skin's declaration winning as usual. Classic is a violet night with pale
+block rather than once per theme block — Humblewood's values are on `:root` and the classic skin's
+on `html[data-skin="classic"]`, which wins as usual (`00-tokens.css`). Classic is a violet night with pale
 arcane blue (`--lu-glow`); Humblewood is a deep forest green (`#0d1a12`) with a warm gold-green glow.
 `--lu-spark` (the banner's gold sparks) is the same gold in both skins. The fonts are `--display`
 (Grenze Gotisch; Cinzel on the classic skin), `--head`
@@ -239,3 +239,4 @@ removed".
 - 2026-10-24 — `--lu-night`, `--lu-night-2`, `--lu-glow` and `--lu-spark` for the level-up scene, one
   violet-night value per skin shared by light and dark; the card's class line and banner number move
   to `--body` so a "1" doesn't read as "I". → ledger L6840, #101
+- 2026-10-24 — Corrected: Humblewood's scene tokens are on `:root`, not `html[data-theme]`. → ledger L6928, #101

@@ -105,21 +105,29 @@ unlock exactly as before, then calls `openLevelUp(info)` in place of `runChoices
 `addClass()` when the new class is a second class (not creation; see below). `openLevelUp` plays
 the scene (a rune circle draws itself, the level ring glows and ticks old → new, a flash, a LEVEL N
 banner with sparks — skipped under `prefers-reduced-motion`, or by a click, tap or Esc/Enter/Space,
-which focuses the card), then shows the card (`levelUpCardHTML()`): a header naming the class and
-levels, `levelGains()`'s rows (new features — tagged with the subclass, and warned when a feature's
-name matches one already held from a *different* class — choices still to make, new or changed
-resources, new or bigger spell slots, a rising proficiency bonus, then the pack's own notes for
-that level), and the hit-points step at the foot (`levelUpHPHTML()`): the same controls, wording
+which focuses the card; otherwise one 2.4s timer, the scene's only end, calls `luSkip()`), then
+shows the card (`levelUpCardHTML()`): a header naming the class and levels, `levelGains()`'s rows
+(new features — tagged with the subclass, and warned "they don't stack" only when the feature is on
+`LU_NO_STACK`, Extra Attack or Unarmored Defense, and is already held from a *different* class —
+choices still to make, new or changed resources, new or bigger spell slots, a rising proficiency
+bonus, then the pack's own notes, only the highest level's when a second class arrives above level 1,
+`luLatestNotes()`), and the hit-points step at the foot (`levelUpHPHTML()`): the same controls, wording
 and order as the hit-dice spend box ([Vitals & rest](vitals-and-rest.md)) — Roll for me, "I rolled"
 plus Apply (live-checked by `luHPCheck()`, n dice for a second class arriving above level 1), or
 Take the average. **Done** (nothing left to choose) or **Continue to your choice ▸** both stay
-disabled until HP is set (`luSetHP()`); either commits it (`commitHPChoice()`, which raises Max and
+disabled until HP is set (`luSetHP()`); a value that fails takes back any earlier one and disables
+them again, so the card never commits a number it no longer shows. Either commits it (`commitHPChoice()`, which raises Max and
 Current and puts the lock back only if it was locked) and Continue then opens the usual choice
 window, `runChoices(cls, choices, [], pending)` — no `notes`, since the card already showed them,
 and no `hp` block, since the card already asked for it. **Closing the card early** (`luDismissed()`,
-through the same guard as the choice windows, `LU_HP_CLOSE`) asks first when HP isn't set; either
+wired through `setDismissGuard()` directly in `showLevelUpCard()`, with `LU_HP_CLOSE`; the choice
+windows' `armChoiceDismissGuard()` only shares that string) asks first when HP isn't set; either
 way the choices and any pending window (a second class's starting equipment) still open, because a
-choice the player never saw must not vanish with the card. **Creation is unchanged**: a first class
+choice the player never saw must not vanish with the card. **A level-up belongs to its character**:
+`_lu.id` is the `activeId` it started on, and the scene's end, Done and closing drop one whose
+character has changed (`luStale()`): no card, no HP, no choices. Loading, importing or starting a
+character, or going Home, calls `luAbandon()` first, which ends a playing scene and closes an open
+card. **Creation is unchanged**: a first class
 added above level 1 still gets its `{type:"hp"}` block inside the choice window for levels 2..N
 (see the table below), because creation has no fanfare. **Level down** (`doLevelDown(idx)`) only lowers
 the number: traits, grants and choices stay. From a class's menu it lowers that class, and at level 1
@@ -207,6 +215,11 @@ they are built: [Converter](../data/converter.md).
   under the class sid.
 - **Arm the dismiss guard after `openModal()`**, which clears it. Never put the check in
   `closeModal()` — every Done handler calls that and would have to answer its own prompt.
+- **Nothing may `openModal()` over the level card.** `openModal()` clears the dismiss guard, so
+  `luDismissed()` would not run, and the level's HP and choices would be lost.
+- **Every way on from a level-up checks its character.** `showLevelUpCard()`, `luFinish()` and
+  `luDismissed()` go through `_lu.id`, and a new path that replaces `character` calls
+  `luAbandon()` first, as `loadCharById()`, `newCharacter()`, `finishImport()` and `showHome()` do.
 - **`hpChoice()` before the unlock.** `_wasLocked` is read when the choice is built; `doLevelUp()`
   then clears `hp.locked` as the fallback for a dismissed modal.
 - **`commitChoices()` passes `cost` into `addFeatureFromDef()`.** A picked maneuver's Use button
@@ -274,7 +287,11 @@ they are built: [Converter](../data/converter.md).
 | What unlocks a disabled option | `data-fixed` | `checked`: unticking your own pick would hand a granted proficiency back as an editable box |
 | Options you already have | Don't spend the budget, but cap it at what remains (`effectiveChoose()`) | Asking for the full count: nagging forever for a pick the player cannot make |
 | Where the dismiss guard is checked | `dismissModal()`, for ✕, backdrop and Escape only | Inside `closeModal()`: every Done handler calls it and would answer its own prompt |
-| Hit points on a level-up | A synthesized `{type:"hp"}` block in the level's own modal | Only unlocking Max: on a subclass level the choice modal was the only thing on screen and the hit points were forgotten |
+| Hit points on a level-up | On the level card (#101), Done or Continue waiting for it; creation (a first class above level 1) keeps the choice window's `{type:"hp"}` block | Only unlocking Max: on a subclass level the choice modal was the only thing on screen and the hit points were forgotten. The `hp` block in every level's window (#58): two screens a level once the card came |
+| Where a level-up's HP step lives (#101) | On the level card; the choice window follows only when the level has something to choose | In the choice window: two screens every level, even when nothing is chosen |
+| An "animate level-ups" setting (#101) | None: reduced motion skips the scene, and a tap, click or Esc skips it at any time | A Settings switch: more surface for a 2.4s moment that can always be skipped |
+| What the level card lists (#101) | What changed on the sheet, from `levelSnapshot()` before and after the level (`levelGains()`) | Reading each class's table: misses homebrew and resources, and can claim what the sheet didn't get |
+| Which features the card says "don't stack" (#101) | An allowlist, `LU_NO_STACK`: Extra Attack and Unarmored Defense (SRD 5.2.1 p.26) | Any same name from another class: told Spellcasting doesn't stack, a Wizard/Cleric would think the new slots were wrong; Expertise and Epic Boon are separate picks |
 | CON for a level-up's hit points | `abilFinal()`, via `conModNow()` | `modOf()` of the score: an ASI lives in an effect, and this number is spent once, never re-derived |
 | A same-named subclass from another pack | Offered alongside, keyed "Name (PACK)" | Taking the key: loading a supplement would silently rewrite what every character already chose |
 | Species from the other system | Filtered out of the picker only | Filtering `findRaceDef()`: an imported cross-system ancestry would lose its traits |
@@ -339,3 +356,7 @@ they are built: [Converter](../data/converter.md).
 - 2026-10-24 — Levelling up (and adding a second class) plays a short scene, then a card listing
   everything the level gave with the hit-point step on it; Done or Continue, closing early asks
   first, and creation keeps the old `hp` block in the choice window. → ledger L6840, #101
+- 2026-10-24 — The final review's fixes: only Extra Attack and Unarmored Defense say "they don't
+  stack"; a failed Apply takes the earlier HP back; a level-up whose character changed is dropped;
+  one spell note per class. Closing early is wired through `setDismissGuard()`, and the timer is
+  the scene's only end (correcting L6840). → ledger L6928, #101

@@ -323,9 +323,9 @@ Built as designed, §1–§11, with these notes:
    - a resource whose max and die both change in the same level emits two rows, "uses" then "die",
      as spec §4 intends (separate lines) — this case has no test (`levelGains()`);
    - a bad "I rolled" + Apply after a good one shows the error line but Done/Continue still commits
-     the earlier, now-unseen value (`57-levelup.js`, `luSetHP`/`luFinish`);
+     the earlier, now-unseen value (`57-levelup.js`, `luSetHP`/`luFinish`) — **fixed in note 7**;
    - stale comments at `char-update.js:977` and `58-choices.js:241`, left over from before this
-     branch's rewiring of the lines near them;
+     branch's rewiring of the lines near them — **fixed in note 7**;
    - the card's own DOM wiring (`showLevelUpCard`'s listeners) has no unit coverage, only the
      browser QA drive recorded in the ledger;
    - the #63 regression test (no two choice windows open at once) passes whether or not
@@ -351,6 +351,33 @@ Built as designed, §1–§11, with these notes:
      Paladin 1's slots page and the reduced-motion card were driven and shot only at 1280 — so
      whether a card with more rows or a longer note reads well at 390 is still Mike's phone pass to
      confirm.
+
+7. **The final review's fixes** (ledger "Level-up fanfare: final review fixes"):
+   - **Decision 11 is narrowed to an allowlist.** The card tags a new feature "you already have
+     this from X; they don't stack" only when its name is on `LU_NO_STACK`, Extra Attack or
+     Unarmored Defense, and it is already held from another class. Those are the two SRD 5.2.1
+     p.26 names: Extra Attack doesn't stack, and you use only one way to calculate AC. A
+     same-named Spellcasting is not tagged, because it combines by the multiclass slot table.
+     Nor are Expertise and Epic Boon, which are separate picks. The decisions table keeps the
+     original wording; this note governs.
+   - **§5's "nothing is set" now holds after a good value.** An Apply that fails clears `_lu.set`,
+     `_lu.raw` and `_lu.note`, disables Done/Continue and shows the error. So Done does nothing,
+     and closing asks `LU_HP_CLOSE` again.
+   - **A level-up belongs to its character.** `_lu.id` is the `activeId` at `openLevelUp()`. The
+     scene's end, Done and closing drop a level-up whose character has changed: no card, no HP,
+     no choices. Loading, importing or starting a character, and going Home, call `luAbandon()`.
+     It ends a playing scene and closes an open card.
+   - **One spell note per class.** A second class added above level 1 lists only the highest
+     level's spell note (`luLatestNotes()`), not every level's.
+   - **The two stale comments** above now describe creation.
+   - **Left, and in the wiki's known issues:**
+     - a long card at 390 puts the HP step and Done below the fold, for Mike's phone pass;
+     - the page behind the scene isn't inert for its 2.4s;
+     - `luSummary()` cuts at abbreviations;
+     - focus after a skip lands on `#luTyped`.
+
+     Nothing may `openModal()` over the card; this is now a rule in the wiki's character-building
+     page.
 
 **What Mike checks on his devices:** touch (the card's buttons and the HP step's Roll/Apply are
 sized the same as every other modal control, but the scene itself has never been tapped on a real
