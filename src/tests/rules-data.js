@@ -1372,7 +1372,8 @@ function block(html, needle, tag) {
     const all = ['00-tokens', '10-chrome', '20-cards', '30-sheet', '45-combat', '47-journal', '50-modal'].map(f => { try { return fs.readFileSync(path.join(ROOT, 'src/css/' + f + '.css'), 'utf8'); } catch (e) { return ''; } }).join('\n');
     ck('#103 the stacks\' cards are the only size containers', /\.sheet-grid>\.col-m>\.card,\.sheet-grid>\.col-r>\.card\{container-type:inline-size\}/.test(sc) &&
        (all.match(/container-type:/g) || []).length === 1);
-    ck('#103 a narrow resource row puts its controls under the name', /@container \(max-width:420px\)\{\.res\{flex-wrap:wrap;[^}]*\}\.res-main\{flex:1 0 100%\}\}/.test(sc));
+    ck('#103 a narrow resource row puts its controls under the name', /@container \(max-width:420px\)\{\.res\{flex-wrap:wrap;[^}]*\}\.res-main\{flex:1 0 100%\}/.test(sc));
+    ck('#103 a wrapped resource row keeps − count + at the left, restore/edit/delete at the right', /@container \(max-width:420px\)\{\.res\{[^}]*justify-content:flex-start[^}]*\}[^@]*\.res \[data-res-reset\]\{margin-left:auto\}/.test(sc));
     ck('#103 a resource name never breaks mid-word', /\.res-name\{[^}]*overflow-wrap:break-word/.test(cards) && !/\.res-name\{[^}]*overflow-wrap:anywhere/.test(cards));
     ck('#103 the Sheet\'s headings stay on one line; narrow ones tighten and drop the words beside them',
        /\.sheet-grid \.card>\.label\{white-space:nowrap\}/.test(sc) && /@container \(max-width:460px\)\{#featCollapseLbl\{display:none\}\}/.test(sc) &&
