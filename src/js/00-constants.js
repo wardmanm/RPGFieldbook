@@ -45,6 +45,11 @@ const GROUP_RESERVED=new Set(Object.getOwnPropertyNames(Object.prototype).map(s=
    level on the line below, before 30-version.js has run, so touching APP_VERSION
    from here would be a TDZ ReferenceError and the app would never boot.
    newCharacter() stamps the real version; "" means "never checked". */
+/* The SRD's character advancement (XP → level), the fallback when the
+   character's ruleset declares no `advancement` of its own (#103). A literal:
+   blankChar() and this run at load, before `rules` exists. */
+const SRD_ADVANCEMENT=[[0,1],[300,2],[900,3],[2700,4],[6500,5],[14000,6],[23000,7],[34000,8],[48000,9],[64000,10],
+  [85000,11],[100000,12],[120000,13],[140000,14],[165000,15],[195000,16],[225000,17],[265000,18],[305000,19],[355000,20]];
 function blankChar(){
   const c={id:uid(),appVersion:"",system:"humblewood",name:"",class:"",ancestry:"",background:"",alignment:"",xp:"",level:1,
     ac:"",init:"",speed:"",hitdice:"",hdManual:false,inspiration:false,
@@ -70,6 +75,10 @@ function blankChar(){
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
        above), and this is a different thing entirely. */
     secNotes:{}, noteCollapse:{},
+    /* #103: chips (41-chips.js), read only through chipList(); default
+       languages are added at runtime (ensureDefaultLanguages), never here. */
+    resists:[], immunes:[], senses:[], languages:[],
+    advancement:"xp", showFamiliars:false,
     /* Cards whose edit/delete buttons the player has hidden (87-notes.js, #97):
        card key -> true. Read only through editHidden(). */
     editHide:{},
@@ -232,59 +241,26 @@ function effSaveProf(key){return (character.saves[key]?1:0) || grantedProf("save
 
 /* ================= build static bits ================= */
 
-/* ---- statStyle: two layouts over ONE set of ids ----
-   "classic" is the two-card look; "grouped" stacks each ability with the saves
-   and skills it governs. BOTH emit the same #mod-x / #save-x / #skill-x ids and
-   the same .dot[data-save] / .dot[data-skill] / data-stat attributes, because
-   recompute() finds every number by id and every dot by attribute. Change an id
-   in one layout and that number silently stops updating — nothing throws, and
-   the harness has no DOM to catch it, which is why statGroupsHTML() is a pure
-   string the test suite asserts against directly.
-   Anything unrecognised resolves to classic, the same value blankChar defaults
-   to, so an older sheet lands on the look a new character gets and the setting
-   needs no migration of its own. */
-function statStyle(){return character.statStyle==="grouped"?"grouped":"classic";}
-
-/* One ability and the rows it governs. No values are filled in here: recompute()
-   paints every one of them afterwards, and the "Expert" marker is pure CSS off
-   the dot's data-lvl, which recompute already writes. That is what keeps this a
-   display change that touches no rules code. */
-function statGroupHTML(k,l){
-  const rows=SKILLS.filter(([,,ab])=>ab===k).map(([sk,sl])=>
-    `<div class="srow"><button class="dot" data-skill="${esc(sk)}" aria-label="${esc(sl)} proficiency"></button>`+
-    `<span class="val" data-stat="skill.${esc(sk)}" id="skill-${esc(sk)}">+0</span>`+
-    `<span class="lbl">${sl}</span><span class="exp">Expert</span></div>`).join("");
-  return `<div class="agroup"><div class="ability ahead"><div class="n">${l}</div>`+
-    `<div class="m" data-stat="ability.${esc(k)}" id="mod-${esc(k)}">+0</div>`+
-    `<input type="number" data-path="character.abilities.${esc(k)}" data-recompute aria-label="${esc(l)} score"></div>`+
-    `<div class="alist">`+
-      `<div class="srow svrow"><button class="dot" data-save="${esc(k)}" aria-label="${esc(l)} save proficiency"></button>`+
-      `<span class="val" data-stat="save.${esc(k)}" id="save-${esc(k)}">+0</span>`+
-      `<span class="lbl">Saving Throws</span></div>`+
-      (rows||`<div class="anone">No skills use ${l}</div>`)+
-    `</div></div>`;
-}
-function statGroupsHTML(){return `<div class="agroups">`+ABIL.map(([k,l])=>statGroupHTML(k,l)).join("")+`</div>`;}
-
+/* ---- the ability strip and the Skills card (#103, spec §6.4–6.5) ----
+   One layout: six ability boxes, each with its save beneath, and the skills in
+   their own card. (The "By ability" layout and its setting, statStyle, were
+   retired with #103 — decision 9; a saved value stays in an old sheet, unread.)
+   Markup only, no numbers: recompute() finds every number by id (#mod-x,
+   #save-x, #skill-x) and every dot by attribute, so change an id here and that
+   number silently stops updating. */
 function buildAbilities(){
   const el=document.getElementById("abilities");el.innerHTML="";
-  if(statStyle()==="grouped"){el.innerHTML=statGroupsHTML();return;}
   ABIL.forEach(([k,l])=>{
     const d=document.createElement("div");d.className="ability";
     d.innerHTML=`<div class="n">${l}</div>
       <div class="m" data-stat="ability.${esc(k)}" id="mod-${esc(k)}">+0</div>
       <input type="number" data-path="character.abilities.${esc(k)}" data-recompute aria-label="${esc(l)} score">
-      <div class="save"><button class="dot" data-save="${esc(k)}" aria-label="${esc(l)} save proficiency"></button><span class="sv" data-stat="save.${esc(k)}" id="save-${esc(k)}">+0</span><span style="font-family:var(--head);font-size:9px;color:var(--ink-soft)">SAVE</span></div>`;
+      <div class="save"><button class="dot" data-save="${esc(k)}" aria-label="${esc(l)} save proficiency"></button><span class="sv" data-stat="save.${esc(k)}" id="save-${esc(k)}">+0</span><span class="svl">Save</span></div>`;
     el.appendChild(d);
   });
 }
 function buildSkills(){
   const el=document.getElementById("skills");el.innerHTML="";
-  /* MUST clear and return, not merely hide the card: leaving the classic rows in
-     place puts a second #skill-perception in the document. getElementById takes
-     the first in document order, so the visible grouped copy would keep updating
-     while the hidden one rots — and print reads by id too. */
-  if(statStyle()==="grouped")return;
   SKILLS.forEach(([k,l,ab])=>{
     const r=document.createElement("div");r.className="srow";
     r.innerHTML=`<button class="dot" data-skill="${esc(k)}" aria-label="${esc(l)} proficiency"></button><span class="val" data-stat="skill.${esc(k)}" id="skill-${esc(k)}">+0</span><span class="lbl">${l} <span class="ab">${ab}</span></span>`;
@@ -293,25 +269,21 @@ function buildSkills(){
   /* The grid fills down each column; this many rows per column (see .skills). */
   if(el.style&&el.style.setProperty)el.style.setProperty("--skill-rows",Math.ceil(SKILLS.length/2));
 }
-/* One legend, MOVED between the two cards rather than duplicated in JS — a second
-   copy of the markup would drift from the template's. It is appended to the CARD,
-   never to #abilities, because buildAbilities() clears that container and would
-   delete the node outright, after which placeLegend() would find nothing forever. */
+/* The one legend lives in the Skills card's markup. It is appended to the CARD,
+   never to #skills, because buildSkills() clears that container and would
+   delete the node outright. Kept as a function so a legend left anywhere else
+   (an old DOM) comes home. */
 function placeLegend(){
   const lg=document.getElementById("statLegend");if(!lg)return;
-  const host=document.querySelector(`[data-note="${statStyle()==="grouped"?"abilities":"skills"}"]`);
+  const host=document.querySelector('[data-note="skills"]');
   if(host&&lg.parentNode!==host)host.appendChild(lg);
 }
 
-/* The single entry point for both layouts. Markup only — no numbers: renderAll()
-   calls this FIRST, then refills the score boxes from [data-path] and repaints
-   everything through recompute(). The Skills card is hidden, never removed: the
-   note registry, the 19-card template guard and the label guard all require it to
-   stay in the document (same reason #familiarCard is hidden, not dropped). */
+/* The single entry point. Markup only — no numbers: renderAll() calls this
+   FIRST, then refills the score boxes from [data-path] and repaints everything
+   through recompute(). */
 function buildStats(){
   buildAbilities();buildSkills();placeLegend();
-  const sc=document.getElementById("skillsCard");
-  if(sc)sc.style.display=statStyle()==="grouped"?"none":"";
   syncStatLock();   /* in the combat view the stat controls are read-only (#62) */
 }
 function buildDeath(){

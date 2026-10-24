@@ -753,7 +753,11 @@ function openFamiliarForm(existing){
   document.getElementById("faCancel").addEventListener("click",closeModal);
   document.getElementById("faSave").addEventListener("click",()=>{
     const rec={id:f.id,name:document.getElementById("faName").value.trim()||"Familiar",kind:document.getElementById("faKind").value.trim(),ac:document.getElementById("faAc").value,hp:{cur:document.getElementById("faHpCur").value,max:document.getElementById("faHpMax").value},speed:document.getElementById("faSpeed").value.trim(),description:document.getElementById("faDesc").value,effects:collectFx(fxWrap),active};
-    const i=character.familiars.findIndex(x=>x.id===f.id);if(i>=0)character.familiars[i]=rec;else character.familiars.push(rec);
+    const i=character.familiars.findIndex(x=>x.id===f.id);
+    /* the first familiar turns the header's paw on, as migrate() decides it
+       for a sheet that already has one (#103, spec decision 5) */
+    if(i<0&&!character.familiars.length)character.showFamiliars=true;
+    if(i>=0)character.familiars[i]=rec;else character.familiars.push(rec);
     closeModal();renderFamiliars();recompute();scheduleSave();
   });
 }

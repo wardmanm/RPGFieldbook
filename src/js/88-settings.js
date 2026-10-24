@@ -108,14 +108,15 @@ function openSettings(){
       setRowHTML("Tap outside to close dialogs","Leave off so a stray tap, or hiding your phone's keyboard, can't lose what you typed. ×, Cancel and Esc always close.",
         `<button type="button" class="switch ${settings.backdropClose===true?"on":""}" id="swBackdrop" role="switch" aria-checked="${settings.backdropClose===true?"true":"false"}" aria-label="Tap outside to close dialogs"></button>`,true));
   const secDisplay=hasChar?setGroupHTML("Cards",
-      setRowHTML("Skills display","Skills listed A to Z, or under each ability.",
-        `<div class="seg" id="segStatStyle">${[["classic","Classic"],["grouped","By ability"]].map(([v,l])=>`<button type="button" data-statstyle="${esc(v)}" class="${statStyle()===v?"on":""}" aria-pressed="${statStyle()===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
-      setRowHTML("Hit Dice display","Boxes, one line per size, or dice you tap.<br>Only Full and Condensed can mark a die spent without healing.",
-        `<div class="seg" id="segHdStyle">${[["full","Full"],["condensed","Condensed"],["dice","Dice"]].map(([v,l])=>`<button type="button" data-hdstyle="${esc(v)}" class="${hdStyle()===v?"on":""}" aria-pressed="${hdStyle()===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
       setRowHTML("Colour current HP","Amber at half your maximum, red at a quarter.",
         `<button type="button" class="switch ${character.hpColor!==false?"on":""}" id="swHpColor" role="switch" aria-checked="${character.hpColor!==false?"true":"false"}" aria-label="Colour current HP"></button>`,true)+
       setRowHTML("Trackers card","Show it on the Journal tab. Hiding it keeps what you've counted.",
         `<button type="button" class="switch ${showTrackers(character)?"on":""}" id="swTrackers" role="switch" aria-checked="${showTrackers(character)?"true":"false"}" aria-label="Trackers card"></button>`,true))+
+    setGroupHTML("Levels and companions",
+      setRowHTML("Advancement","XP shows your experience in the header, with a bar to the next level. Milestone hides it: your table grants levels, taken with Level up.",
+        `<div class="seg" id="segAdv">${[["xp","XP"],["milestone","Milestone"]].map(([v,l])=>`<button type="button" data-adv="${esc(v)}" class="${advancementOf(character)===v?"on":""}" aria-pressed="${advancementOf(character)===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
+      setRowHTML("Familiars &amp; companions icon","A paw in the sheet's header that lists your familiars and companions, and adds them.",
+        `<button type="button" class="switch ${character.showFamiliars===true?"on":""}" id="swFamiliars" role="switch" aria-checked="${character.showFamiliars===true?"true":"false"}" aria-label="Familiars and companions icon"></button>`,true))+
     setGroupHTML("Ammunition",
       setRowHTML("Ammo recovery","What comes back after a fight. Thrown weapons and items set to Always come back anyway; firearm bullets never do.",
         `<select id="setAmmoRec" aria-label="Ammo recovery">${AMMO_RECOVERY.map(([v,l])=>`<option value="${esc(v)}"${ammoRecoveryOf(character)===v?" selected":""}>${esc(l)}</option>`).join("")}</select>`)):"";
@@ -212,12 +213,10 @@ function openSettings(){
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
   {const b=document.getElementById("swHpColor");if(b)b.addEventListener("click",()=>{character.hpColor=(character.hpColor===false);b.classList.toggle("on",character.hpColor!==false);renderHP();scheduleSave();});}
   {const b=document.getElementById("swTrackers");if(b)b.addEventListener("click",()=>{character.showTrackers=!showTrackers(character);b.classList.toggle("on",character.showTrackers);renderTrackers();scheduleSave();});}
+  /* #103: both repaint the sheet header */
+  {const g=document.getElementById("segAdv");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-adv]");if(!b)return;character.advancement=advancementOf({advancement:b.dataset.adv});g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderSheetHead();scheduleSave();});}
+  {const b=document.getElementById("swFamiliars");if(b)b.addEventListener("click",()=>{character.showFamiliars=character.showFamiliars!==true;b.classList.toggle("on",character.showFamiliars);renderSheetHead();scheduleSave();});}
   {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
-  /* renderAll(), not buildStats(): the rebuild blanks the six score inputs, and
-     only renderAll refills them from [data-path] and then repaints through
-     recompute(). Calling the builder alone leaves blank boxes and a wall of +0. */
-  {const g=document.getElementById("segStatStyle");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-statstyle]");if(!b)return;character.statStyle=b.dataset.statstyle;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderAll();scheduleSave();});}
-  {const g=document.getElementById("segHdStyle");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-hdstyle]");if(!b)return;character.hdStyle=b.dataset.hdstyle;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderHitDice();scheduleSave();});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());
@@ -394,7 +393,7 @@ function removeRulesGroup(key){
 /* drop a source's `requires` and credits once none of its entries are left,
    so the persisted pool doesn't accumulate them for packs that are gone */
 function prunePackMeta(){
-  ["requires","credits"].forEach(k=>{
+  ["requires","credits","defaultLanguages","advancement"].forEach(k=>{
     const m=rules[k];if(!m||typeof m!=="object")return;
     Object.keys(m).forEach(src=>{if(!RULE_CATS.some(c=>(rules[c]||[]).some(e=>(e._source||"")===src)))delete m[src];});
   });

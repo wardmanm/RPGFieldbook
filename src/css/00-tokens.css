@@ -24,6 +24,12 @@ html[data-theme="light"]{
   --field-focus:#fffdf6;
   --shadow:0 10px 26px rgba(40,30,12,.20);
   --ground:#cdbf9c;
+  /* #103: the Sheet's dark rail. Its own palette, so a light page still has a
+     dark rail; .rail (30-sheet.css) maps the everyday tokens onto these, so
+     every control inside it (inputs, dots, the death saves) follows. */
+  --rail-bg:#2a241c; --rail-ink:#efe6d0; --rail-soft:#c4b48c; --rail-line:#a99467;
+  --rail-hair:rgba(231,220,194,.22); --rail-field:rgba(255,255,255,.06); --rail-field-focus:#352e24;
+  --rail-accent:#d8a544; --rail-good:#5eb7a3; --rail-bad:#d5765f; --rail-warn:#e0b452;
 }
 html[data-theme="dark"]{
   --paper:#211c16;      /* dark walnut */
@@ -41,6 +47,11 @@ html[data-theme="dark"]{
   --field-focus:#2c2720;
   --shadow:0 10px 30px rgba(0,0,0,.5);
   --ground:#0e0b08;
+  /* the rail is TINTED in dark mode, not darker: the page ground is already
+     near-black, so a darker rail read as one more card (#103 QA) */
+  --rail-bg:#1c2925; --rail-ink:#efe6d0; --rail-soft:#c4b48c; --rail-line:#d8a544;
+  --rail-hair:rgba(231,220,194,.2); --rail-field:rgba(255,255,255,.06); --rail-field-focus:#25352f;
+  --rail-accent:#d8a544; --rail-good:#5eb7a3; --rail-bad:#d5765f; --rail-warn:#e0b452;
 }
 /* ---- Classic D&D skin (parchment + red/gold, Roman-cap display) ---- */
 html[data-skin="classic"]{ --display:"Cinzel", Georgia, "Times New Roman", serif; }
@@ -53,6 +64,9 @@ html[data-skin="classic"][data-theme="light"]{
   --warn:#9a6a05;        /* dark gold — --accent is the red here, so it can't serve */
   --field:rgba(255,255,255,.5); --field-focus:#fffdf5;
   --shadow:0 10px 26px rgba(40,25,10,.2); --ground:#c7b795;
+  --rail-bg:#2b2b2b; --rail-ink:#eeeeee; --rail-soft:#bfae86; --rail-line:#bfae86;
+  --rail-hair:rgba(238,238,238,.2); --rail-field:rgba(255,255,255,.06); --rail-field-focus:#383838;
+  --rail-accent:#e2564a; --rail-good:#78acdd; --rail-bad:#e2564a; --rail-warn:#dcae4e;
 }
 html[data-skin="classic"][data-theme="dark"]{
   --paper:#1c1813; --paper-2:#15110d; --panel:#211c15;
@@ -63,6 +77,10 @@ html[data-skin="classic"][data-theme="dark"]{
   --warn:#dcae4e;        /* pale gold */
   --field:rgba(255,255,255,.05); --field-focus:#282218;
   --shadow:0 10px 30px rgba(0,0,0,.55); --ground:#0c0a07;
+  /* slate against the brown cards: tinted, as in the walnut palette above */
+  --rail-bg:#27303a; --rail-ink:#efe7d4; --rail-soft:#c9bb96; --rail-line:#bfae86;
+  --rail-hair:rgba(232,220,192,.2); --rail-field:rgba(255,255,255,.06); --rail-field-focus:#313b46;
+  --rail-accent:#e2564a; --rail-good:#78acdd; --rail-bad:#e2564a; --rail-warn:#dcae4e;
 }
 *{box-sizing:border-box}
 html,body{margin:0}

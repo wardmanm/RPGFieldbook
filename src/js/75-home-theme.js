@@ -22,9 +22,10 @@ function loadCharById(id){
 }
 function newCharacter(name,system){
   if(!leaveCharacterOk())return false;
-  const c=blankChar();c.system=(system==="dnd")?"dnd":"humblewood";c.name=name||"";c.glossary=seedGlossary();
+  const c=blankChar();c.system=(system==="dnd")?"dnd":"humblewood";c.name=name||"";c.glossary=seedGlossary();ensureDefaultLanguages(c);
   c.appVersion=APP_VERSION;   // safe here: runtime, long after 30-version.js has run
   c.ammoInit=AMMO_PASS;   // a new sheet has nothing for the one-time ammo pass to migrate (never in blankChar — see wpnEquipInit)
+  c.langLifted=true;   // a new sheet has no "Languages:" line in Proficiencies to lift (never in blankChar — see ammoInit above)
   character=c;activeId=c.id;
   /* as finishImport(): listed only once stored, and a refusal says so (#81) */
   let why="";try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){why=storageWhy(e);}
@@ -133,8 +134,8 @@ function applyTheme(){
   const wmM=document.getElementById("wmMain"),wmS=document.getElementById("wmSub");
   if(wmM)wmM.textContent=wm.main; if(wmS)wmS.textContent=wm.sub;
   document.title=wm.title;
-  const cw=document.getElementById("craceWord");if(cw)cw.textContent=raceTerm();
-  if(document.getElementById("classBox"))renderClassRace();
+  /* the header's "+ Species" / "+ Race" follows the skin (raceTerm()) */
+  if(document.getElementById("sheetHead"))renderClassRace();
   const on=t==="dark";
   document.getElementById("themeIcon").innerHTML=on
     ?'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'

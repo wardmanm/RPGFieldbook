@@ -179,6 +179,8 @@ function toast(msg,action,opts){let el=document.getElementById("toast");if(!el){
     if(action.back)b.addEventListener("keydown",e=>{if(e.key!=="Tab"&&e.key!=="Escape")return;const t=action.back();if(!t)return;e.preventDefault();hideToast(true);t.focus();});
     el.append(" ",b);}
   el.classList.add("show");clearTimeout(_toastT);
+  /* the back-to-top button rises above a showing toast on a phone (10-chrome.css) */
+  const bs=document.body.style;if(bs.setProperty)bs.setProperty("--toast-h",el.offsetHeight+"px");
   _toastT=err?null:setTimeout(hideToast,(action||(opts&&opts.long))?6000:1900);return b;}
 function hideToast(now){const el=document.getElementById("toast");if(!el)return;
   if(!now&&(el.matches(":hover")||el.contains(document.activeElement))){_toastT=setTimeout(hideToast,1000);return;}

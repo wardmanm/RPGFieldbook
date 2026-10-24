@@ -54,6 +54,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **A player's glossary entry with no term** — Kept, given an id if it lacks one, listed as "(no term)"
 - **A player's glossary entry written `{name, description}`** — Read as its term and text, originals kept
 - **Pre-equip-era weapons** — Equip them once, recorded by `wpnEquipInit`
+- **The chip lists (#103)** — Their own fields, read through one guard, `chipList()`
+- **How often the Languages lift runs (#103)** — Once, flagged by `langLifted` (never in `blankChar()`)
 
 ### [Rules packs](architecture/rules-packs.md)
 
@@ -94,6 +96,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Which class grants saves, equipment and gold** — The first class only; a multiclass gets the pack's `multiclass` subset
 - **Removing the first class while another remains** — The new first class takes its saving throws, under its own sid
 - **Stripping extra grants from multiclass characters saved earlier** — No: `migrate()` is untouched
+- **How a species or background grants languages (#103)** — Chips stamped with the grant's sid, removed with it; a choice is the player's to add
 
 ### [Computed stats & effects](architecture/computed-stats-and-effects.md)
 
@@ -157,15 +160,11 @@ When a page gains a Decisions row, add its line here under that page.
 
 ### [Abilities & skills](features/abilities-and-skills.md)
 
-- **How the grouped layout is laid out** — Three across, two down; each ability a header row over its save and skills
+- **The ability and skill layout (#103)** — One: the strip with saves beneath, Skills its own condensed card; no setting (By ability retired)
 - **Where the layout is rebuilt** — `renderAll()`, first statement
-- **What grouped mode does to the Skills card** — Hides it and empties `#skills`
-- **How the setting avoids a migration** — A resolver whose fallback equals the `blankChar()` default, as `hdStyle` does
-- **How expertise is marked in grouped mode** — CSS off the dot's `data-lvl`
-- **The Skills note button, hidden in grouped mode** — Shipped as a known gap
 - **Where a bonus to plain ability checks shows (#79)** — The ability's breakdown, apart from the score; the modifier box is unchanged
 - **How the quick view reaches the combat view (#62)** — The existing Abilities and Skills cards draw compact and read-only inside the view
-- **The quick view's layout (#62)** — Follows the character's Skills display (Classic or By ability)
+- **The quick view's layout (#62)** — The strip and Skills, compact (one layout since #103)
 
 ### [Vitals & rest](features/vitals-and-rest.md)
 
@@ -178,10 +177,15 @@ When a page gains a Decisions row, add its line here under that page.
 - **Tracking CON edits after the seed** — Stateless: recompute what the previous CON would have written and match it
 - **Temp HP in the colour bands** — Excluded
 - **The amber band's colour** — A new `--warn` token
-- **Default Hit Dice look** — Full (owner's call): it speaks the same language as the Vitals strip and the HP panel, at the cost of height
-- **Tapping a spent die in the dice look** — Puts back exactly one
-- **Where the Hit Dice sit** — Rest & Recovery, under the rest buttons
-- **Death saves filling outward** — CSS `row-reverse` off `data-kind="fail"`
+- **Where the Hit Dice sit (#103)** — In the rail, a bar under Hit Points
+- **Where the rests and the star sit (#103)** — Icons in the header
+- **XP thresholds (#103)** — The ruleset's `advancement` table, else the SRD's, hard-coded
+- **How the XP bar fills (#103)** — Within the level, `(xp − cur) / (next − cur)`, clamped 0..1 (Mike's ruling)
+- **XP or milestones (#103)** — A per-character `advancement` setting
+- **How many hit-dice looks (#103)** — One bar, tapping it opens a spend box
+- **Where the hit-dice pill and field sit with no pool (#103)** — Inline under the hint, one copy at a time with the spend box's
+- **How a hit die is spent (#103)** — Pick, then either auto-roll or type your own roll, live-validated
+- **Death saves filling outward** — CSS `row-reverse` off `data-kind="succ"` (successes left of the skull since #103)
 - **Size on tap** — A chooser
 - **A first class that starts above level 1** — Seed level 1, then the level-up HP step for levels 2..N (average by default)
 
@@ -242,7 +246,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How groups sort** — Favourites by name, like the inventory's; the other groups keep grant order, which for a class is level order
 - **What a feature groups by (#98)** — Its `source`, falling back to its origin
 - **The order of groups once sources move (#98)** — The groups features came from, in grant order; a group named only by a source right after the group its first feature came from
-- **Favourites in the ☰ menu** — Not listed (`buildToc()` collects `.inv-sec-head`, not `.fghead`)
+- **Favourites in the ☰ menu** — Moot since #103 retired the menu; they were not listed
 - **A starred granted feature on a grant rebuild** — Loses the star, left as-is: in most of those paths the feature genuinely changes
 - **Feats and traits in one picker** — Each wrapped as `{k, e, id}`
 - **The origin of a picked feature** — `null`, so it files under its own source, or "Other" without one
@@ -284,6 +288,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **What the new field is called** — `secNotes`
 - **How notes are keyed** — A stable id per section in `NOTE_SECTIONS`
 - **What the hover preview renders** — Phrasing markup only, block markers represented, chips unwrapped
+- **The Story tab's name (#103)** — **Bio**, with the id kept as `story`
+- **Notes on a retired card (#103)** — Merged once into the card that took its controls, under a heading
 
 ### [Journal](features/journal.md)
 
@@ -328,10 +334,11 @@ When a page gains a Decisions row, add its line here under that page.
 ### [Combat view](features/combat-view.md)
 
 - **How it opens** — **As built:** a tab (`#tab-combat`) reached from the swords, with no word tab (owner's call after play)
-- **Where the button lives** — The sticky tab bar, before ☰
+- **Where the button lives** — The sticky tab bar, alone in its pinned tool group
 - **What a round changes** — Active spells and timed conditions, through `advanceRound()`
 - **Start and End** — Start sets round 1; End is its own button and asks; leaving never ends combat
-- **Which sections** — Any of the 20, six by default, drag to reorder, saved per character
+- **Which sections** — Any but the Sheet's header, six by default, drag to reorder, saved per character
+- **Inspiration in the view (#103)** — Its own ✦ in the view's header, wired like `#starBtn`
 - **Mechanism** — Move the real cards
 - **"In combat"** — `combatActive`, its own flag
 - **Dragging** — Pointer events; neighbours hop, the dragged card stays
@@ -390,12 +397,17 @@ When a page gains a Decisions row, add its line here under that page.
 - **The off-screen Add button** — `width:auto` on the origin select, `flex-wrap` as a safety net
 - **Markup that moves, in `wire()`** — A local `on()` that skips a missing id
 - **The modal title's contract (#69)** — Plain text, set as `textContent`; callers never escape it
+- **An index of a tab's sections (#103)** — None: ☰ section flyout retired (Mike, 2026-10-24): the tabs are organised well enough to need no index
+- **Where focus goes after Back to top (#103)** — The active tab, or the swords in the combat view
+- **The back-to-top button over a toast on a phone (#103)** — It rises above the toast, by the toast's measured height
 
 ### [Sections & layout](ui/sections-and-layout.md)
 
 - **How is a section identified?** — A stable `k` in `NOTE_SECTIONS`
-- **The `origin` title on the Notes tab** — Ask `noteTitle()`, which asks `raceTerm()`
-- **Familiars on a phone** — Flatten `.stack` inside the ≤820px query and sink the pair with `order:1`
+- **The Sheet's layout (#103)** — One layout, no setting: header, rail, strip, then two independent stacks (Skills, Features · Defences, Statuses, Resources); three columns, two, one by width
+- **Familiars on the Sheet (#103)** — A paw in the header opening a popover and a modal; the card stays in the DOM, hidden, for the combat view
+- **The familiars' #97 pencil (#103)** — None: `familiars` leaves `EDIT_CARDS`
+- **May the header go in the combat view? (#103)** — No (`nocv`); a saved one becomes Vitals
 - **Where the familiar row may wrap** — Only in `#familiarList`
 - **How Settings is organised (#107)** — A sidebar of pages, one shown at a time; the shared `.fgroup` collapsible was the earlier answer
 - **How a grouping label is typed (#98)** — One group field, the journal's tag box, for tags, a feature's source and an item's category

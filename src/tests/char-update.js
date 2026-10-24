@@ -15,7 +15,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'addClass','removeClass','doLevelUp','hitDieMax','level1HP','resyncLevel1HP','modOf',
   'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
-  'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classChipHTML','subSourceTag','runChoices',
+  'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classFlyHTML','subSourceTag','runChoices',
   'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote',
   'attackNumbers','addLibraryItems','contributions','sumFx','armorAC','spellDC','spellAtkBonus',
   'uid',
@@ -1495,12 +1495,13 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
   }finally{ctx.runChoices=realRC;ctx.runExtraChoices=realRX;}
 }
 
-// #61: the subclass on the class chip is its own way into the subclass window
-ck('the class chip links its subclass',
-   /data-sub-info="Fighter\|Battle Master"/.test(X.classChipHTML({name:'Fighter',level:3,subclass:'Battle Master'},0)),
-   X.classChipHTML({name:'Fighter',level:3,subclass:'Battle Master'},0));
-ck('...and a chip with no subclass has no link',
-   !/data-sub-info/.test(X.classChipHTML({name:'Fighter',level:2,subclass:null},0)));
+// #61: the subclass is its own way into the subclass window. #103: the class
+// chip went with the Class card; the header's class flyout carries it now.
+ck('the class flyout links its subclass',
+   /data-sub-info="Fighter\|Battle Master"/.test(X.classFlyHTML({classes:[{name:'Fighter',level:3,subclass:'Battle Master'}]},0)),
+   X.classFlyHTML({classes:[{name:'Fighter',level:3,subclass:'Battle Master'}]},0));
+ck('...and with no subclass it offers the choice, not a link',
+   !/data-sub-info/.test(X.classFlyHTML({classes:[{name:'Fighter',level:2,subclass:null}]},0)));
 
 // ---------- item weight is rules-owned, like cost
 c=setup();
@@ -1701,6 +1702,37 @@ ck('itemMetaLine still ends with the weight',
   ck('#6 after the one-time pass the Longbow has no pending update', !rows.some(r=>r.name==='Longbow'), rows.map(r=>r.name+':'+r.fields));
   ck("#6 ...and the unpacked Arrow stack matches the pack's Arrow", !rows.some(r=>r.name==='Arrow'), rows.map(r=>r.name+':'+r.fields));
   X.resetRules();
+}
+
+// ---------- #103 I-2: a class's own menu levels that class
+// The header has one menu per class, so its Level up / down take the class's
+// index. With no index (Level up ready, older callers) they ask as before.
+{
+  const realAlert=ctx.alert, realOM=ctx.openModal; let said=null, asked=null;
+  ctx.alert=m=>{said=m;}; ctx.openModal=t=>{asked=t;};
+  const lv=()=>X.character.classes.map(c=>c.name+' '+c.level).join(',');
+  try{
+    hpSetup(CLS); X.character.classes=[{name:'Fighter',level:3},{name:'Wizard',level:2}]; X.character.level=5;
+    ctx.doLevelDown(1);
+    ck('#103 I-2 Level down from the Wizard menu lowers the Wizard, without asking', lv()==='Fighter 3,Wizard 1' && asked===null, [lv(),asked]);
+    X.character.classes=[{name:'Fighter',level:3},{name:'Wizard',level:1}]; said=null; asked=null;
+    ctx.doLevelDown(1);
+    ck('#103 I-2 ...at Wizard 1 it says so and leaves the Fighter alone', lv()==='Fighter 3,Wizard 1' && asked===null && /Remove in the class's menu/.test(said||''), [lv(),said]);
+    ck("#103 I-2 neither alert names the ✕ the Class card had", !/✕/.test(fs.readFileSync(path.join(__dirname,'..','js','56-class.js'),'utf8').match(/function doLevelDown[\s\S]*?\n}\n/)[0]));
+    asked=null;
+    ctx.doLevelUp(1);
+    ck('#103 I-2 Level up on index 1 levels the Wizard, without asking which class', lv()==='Fighter 3,Wizard 2' && asked!=='Level up — which class?', [lv(),asked]);
+    ctx.doLevelUp(0);
+    ck('#103 I-2 ...and on index 0 the Fighter', lv()==='Fighter 4,Wizard 2', lv());
+    asked=null;
+    ctx.doLevelUp();
+    ck('#103 I-2 with no index, several classes still ask which', asked==='Level up — which class?' && lv()==='Fighter 4,Wizard 2', [lv(),asked]);
+    X.character.classes=[{name:'Fighter',level:3},{name:'Wizard',level:1}]; asked=null;
+    ctx.doLevelDown();
+    ck('#103 I-2 ...and Level down with no index keeps its one-eligible shortcut', lv()==='Fighter 2,Wizard 1' && asked===null, lv());
+    ctx.doLevelDown(7);
+    ck('#103 I-2 an index that is not a class does nothing', lv()==='Fighter 2,Wizard 1');
+  }finally{ctx.alert=realAlert; ctx.openModal=realOM;}
 }
 
 ck.done();

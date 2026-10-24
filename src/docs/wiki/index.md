@@ -31,8 +31,8 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 
 - [Home & characters](features/home-and-characters.md) — the home screen, character cards, export/import, conflicts, backups
 - [Character building](features/character-building.md) — ancestry, background, class, subclass, feats; choices; level-up; option pickers
-- [Abilities & skills](features/abilities-and-skills.md) — abilities, saves, skills, expertise, the layout choice
-- [Vitals & rest](features/vitals-and-rest.md) — HP, temp HP, max-HP lock, Hit Dice, death saves, Rest & Recovery, size
+- [Abilities & skills](features/abilities-and-skills.md) — the ability strip and its saves, skills, expertise
+- [Vitals & rest](features/vitals-and-rest.md) — the Sheet's rail (HP, temp HP, max-HP lock, Hit Dice, death saves, size) and the header's rests, level and XP
 - [Conditions & concentration](features/conditions-and-concentration.md) — statuses, Concentrating, and its mirror on the Spells tab
 - [Attacks & damage](features/attacks-and-damage.md) — attacks and weapons, spell→attack sync, damage types and detection
 - [Ammunition](features/ammunition.md) — what a launcher fires, stacks and bundles, Fire, Undo and recovery
@@ -41,7 +41,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 - [Spells](features/spells.md) — list and browser, prepared, slots, casting and upcast, Active Spells and rounds
 - [Inventory](features/inventory.md) — items, sections, origin and cost, the finder, weight, item uses, coins
 - [Armor & AC](features/armor-and-ac.md) — `itemArmor()`, `armorAC()`, armor kinds, shields
-- [Story & notes](features/story-and-notes.md) — the Story tab's bio fields, section notes and the Section Notes card
+- [Story & notes](features/story-and-notes.md) — the Bio tab (once Story): bio fields, languages and senses; section notes and the Section Notes card
 - [Journal](features/journal.md) — the Journal tab: pages (tags, search, timestamps, tickable checklists) and trackers (counters, grouped by tag, with an optional total)
 - [Rules & tables](features/rules-and-tables.md) — the Rules tab, glossary browse, reference tables and `cols`
 - [Combat view](features/combat-view.md) — the combat tab: real cards moved in, the tracker, Undo
@@ -50,7 +50,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 
 ## UI
 
-- [Shell](ui/shell.md) — top bar, tab bar, ToC flyout, the modal, the browse picker, `selectTab()`
+- [Shell](ui/shell.md) — top bar, tab bar, the modal, the browse picker, the toast, back to top, `selectTab()`
 - [Sections & layout](ui/sections-and-layout.md) — the section registry, per-tab layout, collapse/favourite conventions
 - [Theming & icons](ui/theming-and-icons.md) — skins, light/dark, tokens, the emblem pipeline and its licence
 

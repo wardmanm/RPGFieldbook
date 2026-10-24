@@ -33,27 +33,29 @@
 
 <div class="tabbar">
   <!-- Each tab carries both a glyph and its word; CSS shows one or the other.
-       No <title> inside these SVGs — buildToc() reads the button's textContent
-       for the flyout heading and a title would concatenate into it. -->
+       No <title> inside these SVGs: each is aria-hidden and the button's
+       aria-label names it, so a title would add only a stray tooltip. -->
   <button class="tab active" data-tab="sheet" aria-label="Sheet"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="tlbl">Sheet</span></button>
   <button class="tab" data-tab="spells" aria-label="Spells"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3l1.7 4.3L17 9l-4.3 1.7L11 15l-1.7-4.3L5 9l4.3-1.7z"/><path d="M18 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg><span class="tlbl">Spells</span></button>
   <button class="tab" data-tab="inventory" aria-label="Inventory"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5l9-4.5 9 4.5v9l-9 4.5-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/></svg><span class="tlbl">Inventory</span></button>
-  <button class="tab" data-tab="story" aria-label="Story"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21z"/></svg><span class="tlbl">Story</span></button>
+  <button class="tab" data-tab="story" aria-label="Bio"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21z"/></svg><span class="tlbl">Bio</span></button>
   <button class="tab" data-tab="journal" aria-label="Journal"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="13" height="18" rx="1.5"/><path d="M4 7.5h4M4 12h4M4 16.5h4M10.5 8h5M10.5 12h5"/></svg><span class="tlbl">Journal</span></button>
   <button class="tab" data-tab="rules" aria-label="Rules"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/><path d="M9 8h6"/></svg><span class="tlbl">Rules</span></button>
   <!-- One pinned group: below 400px the bar scrolls sideways (10-chrome.css), and
-       both of these must stay on screen. #btnCombat is painted by
+       the swords must stay on screen. #btnCombat is painted by
        renderCombatButton() in 87-combat.js — empty until the first render. -->
   <div class="tab-tools">
     <button class="tab-combat" id="btnCombat" title="Combat view" aria-label="Combat view"></button>
-    <button class="tab-toc" id="btnToc" title="Jump to a section" aria-label="Table of contents">☰</button>
   </div>
 </div>
-<div class="toc-back" id="tocBack"></div>
-<nav class="toc-fly" id="tocFly" aria-label="Sections"></nav>
 <div class="page">
 <!--@@HTML@@-->
 </div>
+
+<!-- Back to top (#103): outside the panels, so it serves every tab and the
+     combat view. Hidden (and so unfocusable) until the page has scrolled a
+     screenful; updateToTop() in 40-sheet.js shows it, scrollToTop() runs it. -->
+<button type="button" class="to-top" id="btnToTop" aria-label="Back to top" title="Back to top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg></button>
 
 <!-- A write the browser refused (#81): says so, and stays until one lands
      (showSaveResult() in 70-persistence.js). Fixed to the foot of the window,

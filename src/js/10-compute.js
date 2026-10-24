@@ -42,10 +42,13 @@ function recompute(){
   document.getElementById("passDisp").textContent=10+pv;
   const hpFx=sumFx("hp.max",c);
   const mn=document.getElementById("maxNote");
-  if(mn)mn.textContent=hpFx?`Effective Max HP: ${num(character.hp.max)+hpFx} (base ${num(character.hp.max)} ${fmt(hpFx)})`:"Item / feature bonuses to Max HP appear here";
-  /* guarded: recompute() is the hottest function in the app, and an unguarded
-     lookup here turns a renamed id into a white screen rather than a dead star */
-  {const sb=document.getElementById("starBtn");if(sb){sb.classList.toggle("on",!!character.inspiration);sb.setAttribute("aria-pressed",character.inspiration?"true":"false");}}
+  /* #103: empty (and hidden, .hp-note:empty) unless an effect moves Max HP —
+     the rail has no room for a standing hint */
+  if(mn)mn.textContent=hpFx?`Effective Max HP: ${num(character.hp.max)+hpFx} (base ${num(character.hp.max)} ${fmt(hpFx)})`:"";
+  /* the header's star and the combat view's (#103); a query, not an unguarded
+     lookup: recompute() is the hottest function in the app, and a renamed id
+     must give a dead star, not a white screen */
+  document.querySelectorAll("#starBtn,[data-inspire]").forEach(sb=>{sb.classList.toggle("on",!!character.inspiration);sb.setAttribute("aria-pressed",character.inspiration?"true":"false");});
   /* spellDC()/spellAtkBonus() own the formula, effects included (#77), so the
      card cannot read differently from the cast dialog or a save row */
   const sa=character.spellAbility;
@@ -56,6 +59,9 @@ function recompute(){
   (character.attacks||[]).forEach(a=>{if(a.source==="spell"&&!a.save)a.ability=character.spellAbility||"none";});
   renderAttacks();renderActiveSpells();
 }
+/* Inspiration on or off: the sheet header's #starBtn and the combat header's
+   [data-inspire] are the same toggle (#103), painted together by recompute(). */
+function toggleInspiration(){character.inspiration=!character.inspiration;recompute();scheduleSave();}
 /* .fx-on: an effect or a grant changed this number. .fx-neg on top of it: an
    effect LOWERED it, even if a bonus outweighs or cancels that (#89), so it is
    marked even when the sum says nothing changed. Red, with ▼ in place of ●. */

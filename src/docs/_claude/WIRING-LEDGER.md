@@ -6576,3 +6576,263 @@ reports a false declaration; `rulesCreditsHTML()` lists the `__proto__` pack's (
 without throwing. Full suite: all ten green, data unchanged.
 
 Pages: [rules packs](../wiki/architecture/rules-packs.md)
+
+## The hit-dice bar and the spend box (#103, 2026-10-23)
+
+**What.** Spending a hit die used to be a per-style click: a pip in Full/Condensed, a token in
+Dice — each one a bare `rollHitDie(die)` that auto-rolled and healed with no chance to type a
+roll made at the table. Task 5 of the #103 sheet makeover replaces all three looks with one bar
+(`hdBarHTML()`, under the rest buttons, same place Hit Dice have always lived) that shows every
+die's `left / total` and the CON modifier; tapping it opens a "Spend a hit die" box
+(`hdSpendHTML()` in a modal via `openHdSpend()`) with one row per die size (pick it, nudge `used`
+±1 with no healing), and two ways to spend the pick: "🎲 Roll for me" (`rollHitDie()`, now a thin
+wrapper over the shared maths) or type a roll ("I rolled [ ] → Apply"), which live-validates
+through `hdSpendCheck()` and previews "5 + CON 5 = 10 HP → 98 / 153" before `spendHitDie()` applies
+it. `hdConMod()` and `hdHeal()` are the maths `rollHitDie()` always had, pulled out so both paths
+share one answer.
+
+**Retired:** the "Hit Dice display" Settings row and its three builders, `hdFullHTML()`,
+`hdCondensedHTML()`, `hdDiceHTML()`, plus `hdPips()` and the style resolver `hdStyle()`. The
+`character.hdStyle` field stays in `blankChar()`/`migrate()` as inert data — an old sheet carries a
+`full`/`condensed`/`dice` value nothing reads any more, which is cheaper than a migration step and
+never surfaces.
+
+**Where the auto/manual pill and the manual-dice field went.** They used to sit on the Rest &
+Recovery card's own heading (`[data-hdmode]`, `#hitdiceInput`). Both ids now live only inside the
+spend box's foot, rendered fresh by `hdSpendHTML()` every time it opens — `00-sheet.html`'s Rest
+card keeps just `<div class="hd-title">Hit Dice</div>` and `#hdWrap`. `#hitdiceInput` now carries
+`value="${esc(character.hitdice||"")}"` (a modal is never refilled by `renderAll()`'s `[data-path]`
+loop, since that loop runs once at character load, not on every modal open) and a literal
+`hidden` attribute computed at render time instead of the old `inp.style.display` toggle — the
+toggle alone would not have overridden the attribute's own `[hidden]{display:none}` rule.
+`renderHitDice()` keeps patching whichever copy of `#hitdiceInput`/`[data-hdmode]` is currently in
+the document (now via the `.hidden` IDL property, not `style.display`, for the reason above) so the
+existing `[data-hdmode]` click handler in `90-boot.js` needed no change at all — it still just calls
+`renderHitDice()` and pokes `#hitdiceInput` directly, and that now finds the modal's copy when the
+box is open across a mode toggle.
+
+**`hitDicePool()` grows a `cls` field** — the class name(s) contributing to each die size, joined
+with " / " for the (rare) case of two classes sharing one die. Previously nothing needed per-die
+provenance; the spend box's rows do (`<b>d8</b> Cleric · 12 / 15`).
+
+**Tests.** `sheet.js`: the brief's six `#103` checks for `hdSpendCheck()`, `hdHeal()`,
+`hdBarHTML()` and `hdSpendHTML()` (a typed roll's range, the heal floor, the bar's contents, the
+box's rows/disabled-die/both spend paths); the retired hit-dice-style block (9 checks on
+`hdStyle()`/`blankChar().hdStyle` as a resolved VALUE) is deleted — the field surviving a round
+trip is no longer interesting once nothing reads it back as a style. The hostile-character render
+pass drops its three-style loop for one `renderHitDice()` call plus a new `openHdSpend()` call,
+still exercising `esc(p.die)` against a hostile `hitDie` string. `rules-data.js`: the Rest-card
+template guard now asserts `#hitdiceInput`/`data-hdmode` are OUT of the static template and INTO
+`hdSpendHTML()`'s source instead of IN the Rest card; the Settings-row retirement check
+(`!/segHdStyle|data-hdstyle/`); the three-builder and dice-token-handler checks are replaced with
+checks that they're gone and that `renderHitDice()` calls `hdBarHTML()` only. Full suite green
+(`./build.sh --no-zip` then all ten suites).
+
+Pages: [vitals & rest](../wiki/features/vitals-and-rest.md)
+
+## The Sheet makeover (#103, 2026-10-23)
+
+**What.** The Sheet tab becomes one condensed page after Foundry VTT's sheet (spec
+`src/docs/specs/2026-10-23-sheet-makeover-design.md`, wave 2 of 1.9.0). Eight tasks on
+`issue/103-sheet-makeover`; the hit-dice bar and spend box (Task 5) have their own entry above.
+
+- **The header** (`<header class="card sheet-head" data-note="portrait">`, `00-sheet.html`): the
+  name, the class line (`classLineHTML()`: each class a button opening `classFlyHTML()` with About,
+  the subclass, ▲ Level up, ▼ Level down, + Add class and Remove; species and background open their
+  info windows, which gain Change and Remove through `raceInfoFoot()` / `bgInfoFoot()`), the rest
+  icons, the inspiration star, the paw (`sheetHeadHTML()`, `famFlyHTML()`, `openFamiliar()`), and
+  the level ring with XP and its bar (`levelBadgeHTML()`, `xpBarHTML()`, `xpProgress()`, the
+  ruleset's `advancement` table or `SRD_ADVANCEMENT`). `renderSheetHead()` draws the parts that
+  follow the character; `openShFly()` / `closeShFly()` hang the one popover `#shFly`.
+  Settings → Sheet display gains "Levels and companions": Advancement XP / Milestone
+  (`character.advancement`, read through `advancementOf()`) and the paw switch
+  (`character.showFamiliars`).
+- **The grid** (`.sheet-grid`, `10-chrome.css`): a dark rail (`card rail`, the `vitals` section:
+  portrait, AC shield, ✓○○○☠○○○✗, Init/Speed/Prof, the HP bar with `#hpFill`, `#hdWrap`, Size ·
+  Passive Perception), the ability strip (`card strip`, six boxes with their saves from
+  `buildAbilities()`), Skills, a right column (`.col-r`: the new Defences card, Statuses,
+  Resources), Features full width. Three columns above 1000px, two to 700px, one below in the
+  spec §6.7 order (`order`, `.col-r{display:contents}`). The rail re-points the everyday tokens to
+  `--rail-*` (all four palettes, `00-tokens.css`).
+- **Retired:** the Class, Ancestry & Background and Rest & Recovery cards (and `#classBox`,
+  `#raceBgBox`, `#craceWord`, `#btnLevelUp`, `#btnLevelDown`, `classChipHTML()`), the By ability
+  layout (`statStyle()`, `statGroupHTML()`, `statGroupsHTML()`, the Skills display row), the left and
+  right `.stack`s and their ≤820px flatten. `statStyle`, `hdStyle` stay in saved sheets, unread.
+- **Moved:** Attacks & Weapons to the top of Inventory (verbatim); alignment into Bio's
+  "Proficiencies, Senses & Languages" card; `#starBtn` from the Vitals label to the header (the
+  combat view gets its own `data-inspire` toggle, `toggleInspiration()`); the rests to the header.
+- **Chips** (`41-chips.js`): `resists`, `immunes`, `senses`, `languages` (`CHIP_KEYS`), read through
+  `chipList()` / `chipClean()`, drawn by `chipsHTML()`, added through `openChipChooser()`
+  (`chipChooserHTML()`: suggestions from `CHIP_SUGGEST`, or the languages the packs name, plus
+  free text and a sense range), removed by `removeChip()`. A granted or `system` language carries
+  its source ("· species", "· background", "· rules") and no ×. Species and backgrounds grant
+  languages through `grantLanguages()` / `dropLanguages()` (source `race:…` / `bg:…`) instead of
+  appending "Languages: …" to Proficiencies. A pack may declare `defaultLanguages` and `advancement`
+  (`docs/rules-schema.md`); `defaultLanguagesFor()` falls back to Common, `ensureDefaultLanguages()`
+  adds them as `system` chips. Print gains the four lists.
+- **The registry**: 21 → 18 sections. `portrait` is titled "Character"; `class`, `origin`, `rest`
+  are gone; `attacks` is on Inventory; `defences` is new. `EDIT_CARDS` drops `class`/`origin`, gains
+  `defences`/`proficiencies`. The Story tab reads **Bio** (its id stays `story`).
+- **An old sheet comes forward once** (`migrateSheet103()` in `migrate()`): the `class` and `origin`
+  notes merge into `portrait` under "**Class:**" / "**Ancestry & Background:**", `rest` into `vitals`
+  (`mergeNoteInto()`); a saved `rest` or `portrait` in `combatSections` becomes `vitals`, deduped;
+  "Languages: …" lines in Proficiencies become the player's chips once (`liftLanguages()`, flag
+  `langLifted`); `showFamiliars` defaults to whether it has a familiar.
+
+**Task 8 rulings (controller).**
+1. *The header is not combat-addable.* The registry marks `portrait` `nocv`; `combatAddable()`
+   gates `renderCombatToggles()`, `toggleCombatSection()` and `combatSectionsOf()`. The rest
+   buttons are not a fight action, and the portrait rides in with Vitals.
+2. *`jumpToNote('familiars')` with the paw hidden* hangs the flyout from `#sheetHead .sh-bar`;
+   only a menu button (one with `aria-haspopup`) is marked `aria-expanded`.
+3. *The no-packs hint is back*, in the Class card's words, in the Add class window
+   (`NO_RULES_HINT`, `openAddClass()`), the way into a sheet with no class.
+4. *Tighter tests:* the registry-title check slices each card to its own end (`block()` in
+   `rules-data.js`, hoisted and taught other tags, so the `<header>` slices too); the 30-sheet.css
+   strip ≤1000px and rail ≤700px queries are pinned after their base rules.
+5. *The `ed` on the header flyout's and info windows' Remove* is inert (no `[data-note]` card in
+   `EDIT_CARDS` holds them) and kept, commented, so every `data-del-*` carries `ed` (#97's guard).
+6. *Dark rail:* tinted, not darker (the ground is already near-black): Humblewood `#1c2925` with a
+   gold edge, Classic slate `#27303a`. Light unchanged.
+7. *Header at 390px:* ≤480px tightens the gaps and the XP box (96px), so the icons and the level
+   badge share one row under the name. "Level up ready" still wraps.
+8. *3-digit HP:* "88/153" measures 28px in a 35px box (Classic, Cinzel) at 390 and 1280; no change.
+9. *The phone shield* still overlaps the portrait's edge; Mike's device pass.
+10. *Sense casing:* the chip renders "TREMORSENSE · 60 FT" (the chip is uppercase), as spec §8.
+
+**Deviations from the spec** (recorded in its As built): spec §4's "a system change replaces the
+`system` chips" is not built (inert: every ruleset defaults to Common today); the empty header
+reads "+ Race" / "+ Ancestry" by skin, not "+ Species"; `#maxNote` shows only when an effect moves
+Max HP; the rail and strip keep a small `.label`; removing `.stack{display:contents}` restores the
+12px gap between cards on Spells, Journal and Inventory at ≤820px (they touched before).
+
+**Tests.** All ten suites, 6843 checks. `sheet.js`: the chips, advancement, default languages,
+migration (twice, idempotent), grants, the spend box, the header markup, and Task 8's combat,
+jump and hint checks. `rules-data.js`: the registry against the template (18), the grid and its
+queries, the rail, the removed ids.
+
+**QA.** Before and after shots of Sheet, Inventory, Bio and the combat view at 1280, 900 and 390,
+both skins, plus dark Sheet and Spells/Journal/Rules at 390 (`.claude/qa/103-*`). Driven: both
+spends and an out-of-range roll, un-spend, the paw (flyout, modal, Summon/Dismiss, + Add), Level up
+and down, species Change and Remove (a hand-injected species with `languages`, since SRD 5.2
+species carry none), every chip kind, Milestone and back, #97's pencil on Defences and Bio, the
+combat view (Start, End, Attacks home on Inventory), the paw-less note jump and the no-rules hint.
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
+[vitals & rest](../wiki/features/vitals-and-rest.md),
+[abilities & skills](../wiki/features/abilities-and-skills.md),
+[story & notes](../wiki/features/story-and-notes.md), [combat view](../wiki/features/combat-view.md),
+[character model](../wiki/architecture/character-model.md),
+[grants & provenance](../wiki/architecture/grants-and-provenance.md), [shell](../wiki/ui/shell.md),
+[rules packs](../wiki/architecture/rules-packs.md), [2.0](../wiki/roadmap/2.0.md)
+
+## The Sheet makeover: final review fixes (#103, 2026-10-23)
+
+The whole-branch review found three player-facing gaps and a set of minors. Fixed:
+
+1. *I-1, no hit-dice pool.* A custom class (or no pack) had no bar, so no spend box, so no
+   auto/manual pill and no `#hitdiceInput`: no hit dice at all. `renderHitDice()` now draws the pill
+   and field inline under the hint (`hdFootHTML()`, shared with the box's foot) whenever the pool is
+   empty and the box is closed. One copy at a time: `openHdSpend()` removes the inline foot first,
+   and the inline copy is left out while the box is open. Typing in the inline field redraws only
+   `.hd-main` above it, so the caret stays and dice that parse mid-word don't take the field away.
+2. *I-2, per-class levels.* The class menu's ▲/▼ carry `data-shidx`, and `doLevelUp(idx)` /
+   `doLevelDown(idx)` act on that class. With no index (Level up ready, older callers) they ask as
+   before. The alerts say "Remove in the class's menu", not the gone ✕.
+3. *I-3, the hidden Familiars card's heading.* The paw's menu (`famFlyHTML()`) now holds a
+   Combat view item (`data-combatbtn="familiars"`, `role="menuitemcheckbox"`, on/off) and a Note
+   item (`data-notebtn="familiars"`), both the existing delegated hooks. `familiars` leaves
+   `EDIT_CARDS` (eleven now): its pencil was unreachable, and dropping it was smaller and sounder
+   than teaching the modal the hide state, which only the combat view could then toggle. Driven:
+   the toggle adds Familiars, the view shows `#combatView #familiarCard`, End combat keeps it there,
+   leaving the view sends it home hidden.
+4. *M-1:* the short rest's note points at the hit-dice bar, and the summary offers "Spend a hit die"
+   (`restSummary(…, {hd})` → `openHdSpend()`) while any are left.
+5. *M-3:* `chipSrcLabel()` looks up own keys only (`chipSrcKey()`), and `chipClean()` turns an
+   unknown language `src` into `""`, the player's, so its × and `removeChip()` agree.
+6. *M-7:* the header's species button appends "· subrace", escaped.
+7. *M-8:* the pill (`toggleHdMode()`) and a dice edit (`hdDiceEdited()`) redraw an open spend box
+   from the new pool, keeping the picked die, then put the keyboard back (caret kept); with nothing
+   left to spend from, the box closes and the inline field takes over.
+8. *M-9 (Mike's ruling):* the XP bar fills within the level, `(xp − cur) / (next − cur)`, clamped
+   0..1; `xpProgress()` returns `cur`.
+9. *M-10:* `sheetHeadHTML()` is `pawHTML()`. *M-11:* the dead `.cr-k` rule is gone. *M-14:* Summon /
+   Dismiss is a `<button>` with `aria-pressed`, and the modal's repaint puts focus back on it.
+
+Docs: the release note names the paw menu and its switch, the XP bar and setting, language chips
+and the lifted "Languages:" lines, and the removed display settings (M-2); known issues says lifted
+languages are the player's (M-4); rules-schema says which pack's `defaultLanguages` /
+`advancement` is read (M-6); the spec's As built marks the system-chip swap "not needed".
+
+Tests: `sheet.js` (I-1, I-3, M-1, M-3, M-7, M-8, M-9, M-11, M-14, and the menu's `data-shidx`),
+`char-update.js` (I-2 on both indexes, the no-index paths, the reworded alert).
+
+Pages: [vitals & rest](../wiki/features/vitals-and-rest.md),
+[character building](../wiki/features/character-building.md),
+[combat view](../wiki/features/combat-view.md), [sections & layout](../wiki/ui/sections-and-layout.md),
+[grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[known issues](../wiki/roadmap/known-issues.md)
+
+## The Sheet makeover: Mike's header and column changes (#103, 2026-10-23)
+
+Mike's feedback on the Task 7 screenshots, four changes:
+
+1. *Rest chips.* `#btnShortRest` / `#btnLongRest` hold an icon (`.sh-rico`) and words
+   (`.sh-rlbl`). The words show by default; the icon shows instead with Icon tabs on
+   (`html[data-tabs="icons"]`, set by `applyTheme()`) or at ≤860px, the tab bar's own breakpoint.
+   Ids, titles and aria-labels unchanged.
+2. *The note button last.* `#shLevel` moved into the header's `.label.sh-bar` as its last child, so
+   the note button `renderNoteIcons()` appends lands after the XP bar. The ☰ strips `.sh-level`
+   with the buttons, so its entry still reads "Character". The header has no combat toggle
+   (`portrait` is `nocv`), so the note button is the only control that moved.
+3. *Order:* Short rest, Long rest, the paw, the star, the level badge and XP, the note button.
+4. *Independent stacks.* Under the strip, `.col-m` (Skills, Features) and `.col-r` (Defences,
+   Statuses, Resources) are two grids side by side, so Features follows Skills instead of waiting
+   for the right column's row (the gap Mike circled); Features is no longer full width at desktop.
+   At ≤1000px `.col-m` opens (`display:contents`) so the two-column layout stays widths.html's
+   (Features full width under the rail); at ≤700px both open and `order` gives the phone order.
+   Both flattenings are scoped to `.sheet-grid` and sit inside their queries.
+
+The ☰ now lists Skills and Features before Defences (DOM order). Tests: `rules-data.js` (the
+stacks and their CSS, the rest chips, the header's DOM order, the ☰ strip), `sheet.js` (the real
+Sheet markup parsed into a node tree: the combat view takes every card and returns each to its own
+stack and place). Shots `.claude/qa/103-mike-*`.
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
+[vitals & rest](../wiki/features/vitals-and-rest.md), [shell](../wiki/ui/shell.md)
+
+## The ☰ flyout retired; a back-to-top button (#103, 2026-10-24)
+
+Mike, 2026-10-24: the tabs are organised well enough to need no index, so the ☰ section flyout
+goes. `#btnToc`, `#tocBack`, `#tocFly`, `buildToc()`, `openToc()`, `closeToc()`, the `.tab-toc` /
+`.toc-fly` / `.toc-back` CSS, the boot handlers and the two `closeToc()` calls in the combat view
+are deleted; `selectTab()` now closes only the Sheet header's popover. The tab bar's `.tab-tools`
+holds the swords alone (still pinned below 400px). `scrollToCard()` stays for the note jump and
+the journal. Nothing reads a card `.label`'s text any more; the `.label` stays where the note
+button, the #97 pencil and the combat toggle go.
+
+In its place, a back-to-top button: `#btnToTop`, a round 48px ↑ fixed bottom-right (16px plus the
+safe areas), in the template outside the panels, so it serves every tab and the combat view.
+`updateToTop()` adds `.show` once `scrollY` passes `innerHeight` (`toTopShown()`), run from a
+passive scroll and resize listener at most once a frame; hidden it is `visibility:hidden`, so no
+tap or Tab reaches it. `scrollToTop()` scrolls to 0, smooth or (reduced motion, `toTopBehavior()`)
+instant, and focuses the active tab, or the swords in the combat view, with `preventScroll`.
+Theme tokens only; layer 25 (over cards, under the note popover and the combat header at 30, the
+header popover, the tab bar, home, finder and modal); hidden in print. Bottom collisions: the
+refused-write strip (`body.saving-failed`) lifts it to 130px like the toast; below 640px a showing
+toast lifts it above the toast (`body:has(#toast.show)`, with `toast()` writing `--toast-h`); the
+update pill is in the top bar and the combat view has no footer. `.page` gains 80px of bottom
+padding so the last card's controls can scroll clear of it.
+
+Tests: `rules-data.js` loses the flyout-only checks (the ☰ entry's strip list, the Rules-tab
+category entries, the backdrop close), the hidden-card check now guards `jumpToNote()`, the
+combat-button placement is checked inside the tool group, and a guard keeps every trace of the
+flyout out of the built page and the sources. New: the button's markup, threshold, reduced-motion
+branch, focus, wiring, CSS layer, hidden state, print, and its lifts. Shots `.claude/qa/103-totop-*`.
+
+Pages: [shell](../wiki/ui/shell.md), [sections & layout](../wiki/ui/sections-and-layout.md),
+[overview](../wiki/overview.md), [combat view](../wiki/features/combat-view.md),
+[inventory](../wiki/features/inventory.md), [journal](../wiki/features/journal.md),
+[story & notes](../wiki/features/story-and-notes.md), [rules & tables](../wiki/features/rules-and-tables.md),
+[attacks & damage](../wiki/features/attacks-and-damage.md), [features & traits](../wiki/features/features-and-traits.md),
+[known issues](../wiki/roadmap/known-issues.md), [build & source split](../wiki/architecture/build-and-source-split.md)

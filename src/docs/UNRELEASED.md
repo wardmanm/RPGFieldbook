@@ -30,7 +30,7 @@ Bullets below this line — leave the heading in place.
 
 - Journal pages can hold checklists: a line starting `[ ]` or `[x]` is a checkbox you can tick in
   the page itself, and the page list shows how many are done. Section notes and the text fields on
-  the Story tab tick the same way, and the journal and section-note editors have an Insert checkbox
+  the Bio tab tick the same way, and the journal and section-note editors have an Insert checkbox
   button. Checklist and task trackers you already had have moved
   into journal pages, ticks and dates included; Trackers now holds counters only.
 - A tracker group can show the total of its counters: tap the Σ on the group's heading.
@@ -43,3 +43,21 @@ Bullets below this line — leave the heading in place.
 - Every list card has a pencil in its header that hides its edit and delete buttons, so they stay
   out of the way in play.
 - The Rules tab is now a browser: every class, species, background, feat, spell, item, condition, glossary term and table from your rules packs, in sortable tables with filters and a search across all of them. Tap a row to read it.
+- The Sheet tab is redesigned: a header with your class, level and rest buttons, a portrait rail
+  with AC, HP and hit dice, abilities with their saves across the top, and a new Defences card for
+  resistances and immunities. Spend a hit die by rolling in the app or entering your own roll.
+  Attacks move to Inventory; the Story tab is now Bio, with alignment, languages and senses.
+- Familiars live in a paw menu in the sheet's header: summon, edit, add, put them in the combat view
+  and keep their note from there. A character without a familiar can show the paw with the
+  Familiars & companions icon switch in Settings.
+- The level in the header has an XP bar that fills toward your next level, and says when you are
+  ready to level up. Groups that level by milestone can hide it with the Advancement setting
+  (XP or Milestone) in Settings.
+- Languages are chips now. Your species and background add theirs, and take them back if you change
+  them. The "Languages:" lines on an existing sheet become chips that are yours to keep or remove.
+- The Hit Dice display and Skills display settings are gone: hit dice are one bar under your hit
+  points, and skills one list. A class with no hit die in your rules data can still switch the bar
+  to manual and type its dice.
+- On a phone, the cards on the Spells, Inventory and Journal tabs have a small gap between them
+  again instead of touching.
+- The ☰ section menu is gone; a ↑ button in the bottom corner takes you back to the top.

@@ -23,44 +23,209 @@ html[data-rough="on"] .ability::before{filter:url(#rough)}
 .ability input{text-align:center;font-weight:600;padding:6px;min-height:36px}
 .ability .save{margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--head);font-size:11px}
 .ability .save .sv{font-weight:700;min-width:22px}
+.ability .save .svl{font-family:var(--head);font-size:9px;color:var(--ink-soft);text-transform:uppercase}
+/* #103: the strip — six across over the middle and right columns, 3 × 2 when
+   the page has two columns or one (spec §6.4). After the base rule above. */
+.strip .abilities{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.strip .ability{padding:7px 5px 8px}
+.strip .ability .m{font-size:28px;margin:2px 0 4px}
+.strip .ability input{min-height:30px;padding:3px;font-size:15px}
+.strip .ability .save{margin-top:6px;gap:5px}
+.strip .ability .dot{width:17px;height:17px;border-width:2px}
+@media(max-width:1000px){.strip .abilities{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 /* dot toggles */
 .dot{width:20px;height:20px;border-radius:50%;border:2.5px solid var(--line);background:transparent;cursor:pointer;flex:none;padding:0}
 .dot[data-lvl="1"]{background:var(--accent-2)}
 .dot[data-lvl="2"]{background:var(--accent-2);box-shadow:0 0 0 2.5px var(--panel),0 0 0 4.5px var(--line)}
 
-/* Vitals strip: five boxes, three then two, both rows filling the width. Six
-   columns rather than three is what lets the second row split in halves. */
-.vitals{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+/* A boxed number: the Spells tab's save DC and attack bonus. (The Vitals strip
+   that used it went into the rail with #103.) */
 .vbox{position:relative;background:var(--field);border-radius:9px;padding:9px;text-align:center}
 .vbox::before{content:"";position:absolute;inset:1px;border:2px solid var(--line);border-radius:10px;pointer-events:none}
 html[data-rough="on"] .vbox::before{filter:url(#rough)}
 .vbox>*{position:relative}
-.vbox .n{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
 .vbox .big{font-family:var(--display);font-weight:900;font-size:26px;line-height:1.1;cursor:pointer}
-/* a word, not a number — "Gargantuan" at 26px does not fit a third of the row */
-.vbox .big.txt{font-size:15px;letter-spacing:.02em;overflow-wrap:anywhere;padding:5px 0 4px}
-/* Scoped to .vitals> because .vbox is reused outside the grid — Level,
-   Proficiency Bonus, Spell save DC — where a grid-column would mean nothing. */
-.vitals>.vbox{grid-column:span 2}
-.vitals>.vbox.wide{grid-column:span 3}
-/* Inspiration is a marker, not a stat: it lives in the Vitals card's heading
-   rather than taking a box of its own, so it sizes to a 12px label row. */
+/* Inspiration is a marker, not a stat: an icon in the sheet header's row
+   (#103; it sat in the Vitals heading before), not a box of its own. */
 .starbtn{background:none;border:0;cursor:pointer;font-size:26px;line-height:1;color:var(--hair);padding:0 2px;margin:-3px 0;flex:none}
 .starbtn.on{color:var(--accent)}
 
-.hpwrap{position:relative;background:var(--field);border-radius:9px;padding:10px}
-.hpwrap::before{content:"";position:absolute;inset:1px;border:2.5px solid var(--brick);border-radius:10px;pointer-events:none}
-html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
-.hpwrap>*{position:relative}
-/* One heading shape for the Hit Points and Hit Dice panels, so the two read as
-   the same kind of thing though they sit in different cards. Only the colour
-   differs — brick is the HP box's own frame colour. */
-.hp-title,.hd-title{font-family:var(--head);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11px;text-align:center;margin-bottom:9px}
-.hp-title{color:var(--brick)}
-/* the heading carries the auto/manual pill, so it is a centred flex row rather
-   than a plain text line; the pill keeps its own baseline */
-.hd-title{color:var(--accent-2);display:flex;align-items:center;justify-content:center;gap:7px}
+/* ---- the sheet header (#103, spec §6.1) ----
+   A band in the accent's family, mixed into the panel so ink stays readable in
+   all four skin/mode pairs. It wraps on a narrow page: name and class line,
+   then the icons and the level. Positioned so the class and familiar menus
+   (#shFly) hang under their buttons and scroll with it. */
+.sheet-head{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 clamp(12px,2vw,18px);
+  padding:10px 14px;background:color-mix(in srgb,var(--accent) 16%,var(--panel));border:2px solid var(--accent);
+  border-radius:12px;box-shadow:var(--shadow);color:var(--ink)}
+/* #103: the header is a .card (the `portrait` section) for the registry and
+   the note button; it keeps its own border, not the card's inset one */
+.sheet-head.card::before{display:none}
+.sh-id{flex:1 1 240px;min-width:0}
+.sh-name{font-family:var(--display);font-weight:900;font-size:28px;line-height:1.15;color:var(--ink);background:transparent;
+  border:0;border-bottom:1.5px dashed transparent;border-radius:0;padding:0 0 2px;min-height:0}
+.sh-name:hover{border-bottom-color:var(--hair)}
+.sh-name:focus{outline:none;background:transparent;border-bottom-color:var(--accent)}
+.sh-sub{font-family:var(--head);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);margin-top:3px;line-height:1.7}
+.sh-sub button{background:none;border:0;padding:1px 1px;font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ink);
+  font-weight:700;cursor:pointer;border-bottom:1.5px dotted color-mix(in srgb,var(--accent) 70%,transparent)}
+.sh-sub button:hover,.sh-sub button[aria-expanded="true"]{color:var(--accent)}
+.sh-sub .sh-add{color:var(--accent-2);font-weight:600}
+/* the icons row is a .label (the note button looks for one, as on every card);
+   here it is a plain row, its caption visually hidden */
+.sheet-head .sh-bar{margin:0;gap:6px;letter-spacing:0;flex:0 1 auto;flex-wrap:wrap}
+.sheet-head .sh-bar .grow{display:none}
+.sh-cap,.sh-vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.sh-ico{min-width:36px;height:36px;padding:0 6px;font-size:18px;line-height:1;color:var(--ink);cursor:pointer;
+  background:color-mix(in srgb,var(--panel) 60%,transparent);border:1.5px solid color-mix(in srgb,var(--accent) 55%,transparent);border-radius:8px}
+.sh-ico:hover{border-color:var(--accent);background:var(--panel)}
+/* Mike (#103): the rests say "Short rest" / "Long rest" on a wide page, and
+   show their icon instead where the tab bar does — Icon tabs on, or at its
+   860px breakpoint (10-chrome.css; the query is after these base rules). */
+.sh-rest{font-family:var(--head);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:0 10px}
+.sh-rest .sh-rico{display:none}
+.sh-rico{font-size:18px}
+html[data-tabs="icons"] .sh-rest .sh-rlbl{display:none}
+html[data-tabs="icons"] .sh-rest .sh-rico{display:inline}
+html[data-tabs="icons"] .sh-rest{padding:0 6px}
+@media(max-width:860px){.sh-rest .sh-rlbl{display:none}.sh-rest .sh-rico{display:inline}}
+@media(max-width:860px){.sh-rest{padding:0 6px}}
+.sh-paw.faint{opacity:.45}
+.sh-pawslot{display:contents}
+.sh-level{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:8px}
+.sh-ringslot{display:contents}
+.sh-ring{display:inline-grid;grid-auto-flow:column;align-items:center;justify-content:center;gap:6px;min-width:42px;height:42px;padding:0 6px;
+  border-radius:999px;border:2.5px solid var(--accent);background:var(--panel);color:var(--ink);font-family:var(--display);font-weight:900;font-size:20px}
+.sh-ring b{font-weight:900}
+.sh-ring.ready{cursor:pointer;background:var(--accent);color:var(--panel);padding:0 12px}
+.sh-ring small{font-family:var(--head);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.sh-xpwrap{display:flex;flex-direction:column;gap:4px;width:110px}
+.sh-xp{min-height:0;padding:3px 7px;font-family:var(--head);font-size:14px;text-align:right}
+.sh-barslot{display:contents}
+.sh-xpbar{display:block;height:6px;border-radius:3px;overflow:hidden;background:color-mix(in srgb,var(--ink) 16%,transparent)}
+.sh-xpbar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+/* a phone fits the icons and the level badge on one row under the name: at
+   390px wide that needs ~10px back from the gaps and the XP box (#103 QA). A
+   "Level up ready" badge is wider, and still wraps to its own row. */
+@media(max-width:480px){
+  .sheet-head{column-gap:10px}
+  .sheet-head .sh-bar{gap:4px}
+  .sh-xpwrap{width:96px}
+}
+/* the menus: under the tab bar (40), over the cards; #shBack is transparent */
+.sh-back{display:none;position:fixed;inset:0;z-index:35}
+.sh-back.open{display:block}
+.sh-fly{display:none;position:absolute;z-index:36;min-width:190px;max-width:min(280px,calc(100% - 12px));padding:6px;
+  background:var(--paper);border:2px solid var(--accent);border-radius:10px;box-shadow:var(--shadow)}
+.sh-fly.open{display:block}
+.sh-fly button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:7px;padding:9px 10px;
+  font-family:var(--head);font-size:13px;color:var(--ink);cursor:pointer}
+.sh-fly button:hover,.sh-fly button:focus-visible{background:var(--paper-2);color:var(--accent)}
+.sh-fly button.danger{color:var(--brick)}
+.sh-fly .sh-add{color:var(--accent-2)}
+.sh-fly .sh-st{color:var(--accent-2);margin-left:4px}
+/* the familiars menu's section controls, under its list: combat view and note */
+.sh-flysep{border-top:1px dotted var(--hair);margin:4px 6px}
+.sh-fly .sh-flyopt{color:var(--ink-soft)}
+.sh-fly .cvicon{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:4px;color:currentColor}
+.sh-fly .sh-flyopt[aria-checked="true"]{color:var(--accent-2)}
+.sh-flyhd{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+  padding:4px 10px 6px;margin-bottom:4px;border-bottom:1px dotted var(--hair)}
+/* Change / Remove at the foot of a species or background window */
+#mBody > .rowbtns:last-child{margin:14px 0 0}
+
+/* ---- narrow stacks (#103, Mike's second pass) ----
+   The two stacks' cards are size containers, so these rules follow the
+   card's own width, not the viewport's: the right stack is ~355px at 1280
+   but full width at 900. A heading stays on one line; when the card is
+   narrow its Add buttons keep only their + (the word stays the accessible
+   name) and the heading's tracking tightens, and Features' "Collapse all"
+   keeps only its icon (its title names it). A resource row puts its
+   controls on a second line under the name: the − count + group starts at
+   the left edge, as on a wide row, and restore/edit/delete sit at the
+   right. Only inside .sheet-grid's
+   stacks: no container is declared anywhere else, so no other card is
+   touched. */
+.sheet-grid>.col-m>.card,.sheet-grid>.col-r>.card{container-type:inline-size}
+.sheet-grid .card>.label{white-space:nowrap}
+@container (max-width:460px){#featCollapseLbl{display:none}}
+@container (max-width:420px){.res{flex-wrap:wrap;justify-content:flex-start;row-gap:6px}.res-main{flex:1 0 100%}.res [data-res-reset]{margin-left:auto}}
+@container (max-width:380px){.card>.label{letter-spacing:.08em;gap:6px}.card>.label .add{font-size:0;gap:0;padding:4px}}
+
+/* ---- the rail (#103, spec §6.2; card `vitals`) ----
+   Dark by its own tokens (00-tokens.css): the everyday tokens are re-pointed
+   here, so every control inside — inputs, the death-save circles, the padlock,
+   the hit-dice bar, the note and combat buttons — draws in the rail's palette
+   with no rules of its own. Top to bottom: portrait with the AC shield over
+   its bottom edge; death saves; Init · Speed · Prof; HP; hit dice; Size and
+   Passive Perception. */
+.rail{--panel:var(--rail-bg);--paper:var(--rail-bg);--paper-2:var(--rail-field-focus);--ink:var(--rail-ink);--ink-soft:var(--rail-soft);
+  --line:var(--rail-line);--hair:var(--rail-hair);--field:var(--rail-field);--field-focus:var(--rail-field-focus);
+  --accent:var(--rail-accent);--accent-2:var(--rail-good);--brick:var(--rail-bad);--warn:var(--rail-warn);
+  color:var(--ink);display:flex;flex-direction:column;gap:12px;padding:12px}
+.rail>.label{margin:0;font-size:11px;color:var(--ink-soft)}
+.rail-pic{position:relative;margin-bottom:26px}
+.rail-pic .portrait{margin:0}
+/* the placeholder words sit clear of the two buttons, even in the small portrait */
+.rail-pic .portrait .ph{padding:40px 6px 0;font-size:10px}
+.rail-picbtns{position:absolute;top:8px;right:8px;display:flex;gap:4px}
+.rail-picbtns .mini{flex:none;width:30px;height:30px;min-height:0;padding:0;border-width:1.5px;background:color-mix(in srgb,var(--rail-bg) 75%,transparent)}
+/* the shield: a gold outline is the shape itself, filled with the rail over it */
+.rail-ac{position:absolute;left:50%;bottom:-30px;transform:translateX(-50%);width:62px;height:68px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:6px;
+  background:var(--line);clip-path:polygon(50% 0,100% 14%,95% 68%,50% 100%,5% 68%,0 14%)}
+.rail-ac::before{content:"";position:absolute;inset:3px;background:var(--panel);clip-path:polygon(50% 0,100% 14%,95% 68%,50% 100%,5% 68%,0 14%)}
+.rail-ac>*{position:relative}
+.rail-ac .big{font-family:var(--display);font-weight:900;font-size:26px;line-height:1;cursor:pointer}
+.rail-ac .n,.rail-badge .n{font-family:var(--head);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.rail-badges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;text-align:center}
+.rail-badge{border:1.5px solid var(--line);border-radius:7px;background:var(--field);padding:4px 2px 3px;min-width:0}
+.rail-badge .big{font-family:var(--display);font-weight:900;font-size:20px;line-height:1.1;cursor:pointer}
+.rail-foot{font-family:var(--head);font-size:11px;letter-spacing:.03em;color:var(--ink-soft);text-align:center}
+.rail-foot b{color:var(--ink)}
+.rail-size{cursor:pointer;color:var(--ink);font-weight:700;text-decoration:underline dotted;text-underline-offset:3px}
+.rail-size:hover,.rail-size:focus-visible{color:var(--accent)}
+#addFamiliarLink[hidden]{display:none}
+/* One column (spec §6.7): a smaller portrait, its shield, and the rest beside
+   it. After the base .rail rules, which it overrides. (The combat view lays
+   the rail out the same way at any width, 45-combat.css.) */
+@media(max-width:700px){
+  .rail{display:grid;grid-template-columns:118px minmax(0,1fr);column-gap:12px;row-gap:10px;align-items:start}
+  .rail>.label{grid-column:1/-1}
+  .rail>.rail-pic{grid-column:1;grid-row:2/span 5}
+  .rail>:not(.label):not(.rail-pic){grid-column:2}
+  .rail-ac{width:52px;height:58px;bottom:-26px}
+  .rail-ac .big{font-size:21px}
+}
+/* ---- #103: the hit-dice bar and its spend box ----
+   One line (the die counts, CON) behind a single full-width button, matching
+   the shape of the HP bar — a fill <i> sibling whose width is the
+   one inline style renderHitDice() sets, with the text drawn over it. */
+/* One label rule for the HP bar and the hit-dice bar, so the two read as a
+   pair: the name at the left, CON (or the Max padlock) at the right. */
+.hp-lbl,.hd-lbl{font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;gap:7px}
+.hd-con{font-weight:700;color:var(--accent-2)}
+.hd-bar{position:relative;display:block;width:100%;overflow:hidden;border-radius:8px;border:1.5px solid var(--line);background:var(--field);cursor:pointer;padding:9px 10px;text-align:center}
+.hd-bar i{position:absolute;inset:0;width:0;background:color-mix(in srgb,var(--accent-2) 22%,transparent);border-radius:8px 0 0 8px;transition:width .15s}
+.hd-bar span{position:relative;font-family:var(--head);font-weight:700;font-size:12px;letter-spacing:.03em;color:var(--ink)}
+.hd-bar:hover{border-color:var(--accent-2)}
+/* The box: one row per die, stacked in a column — die + class on the left,
+   used −/+ on the right. The picked row is highlighted, not just implied by
+   which Apply would act on. */
+.hd-pick{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px dotted var(--hair)}
+.hd-pick:last-of-type{border-bottom:0}
+.hd-pickbtn{flex:1;text-align:left;background:transparent;border:0;cursor:pointer;color:var(--ink);font-family:var(--body);font-size:14px;padding:6px 8px;border-radius:7px}
+.hd-pickbtn:disabled{opacity:.4;cursor:default}
+.hd-pickbtn b{font-family:var(--head)}
+.hd-pick.on .hd-pickbtn{background:color-mix(in srgb,var(--accent-2) 14%,transparent);outline:1.5px solid var(--accent-2)}
+.hd-used{display:flex;align-items:center;gap:4px;font-family:var(--head);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);flex:none}
+.hd-how{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px 0 0}
+.hd-res{min-height:1.4em;text-align:center;font-family:var(--head);font-size:12px;font-weight:700;color:var(--accent-2);margin-top:6px}
+/* the mode pill and the manual text field, now the box's own foot rather than
+   the Rest card's heading */
+.hd-foot{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--hair)}
+.hd-foot input{width:110px;min-height:34px;padding:4px 8px;text-align:center;font-weight:700}
 .home{position:fixed;inset:0;z-index:60;background:var(--paper);overflow:auto;display:none;flex-direction:column;padding:22px 16px 60px}
 .home-inner{width:100%;max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 .home-head{display:flex;align-items:center;gap:12px}
@@ -83,15 +248,35 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .hcard-star.on{color:var(--accent)}
 /* .icon has a fixed height, so the row's align-items:stretch leaves it at the top; center it like the star */
 .hcard>.icon{align-self:center}
-.hprow{display:flex;align-items:flex-end;justify-content:center;gap:8px}
-.hpcol{text-align:center}
-.hpcol .n{font-family:var(--head);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;margin-bottom:2px}
-.hpcol input{width:66px;text-align:center;font-family:var(--display);font-weight:900;font-size:22px;padding:4px}
-/* Current HP colours by how much of your maximum is left — amber at half, brick
-   at a quarter. --warn is its own token rather than --accent because on the
-   classic skin --accent IS --brick, which would make the two bands identical. */
-.hpcol input.hp-warn{color:var(--warn)}
-.hpcol input.hp-danger{color:var(--brick)}
+/* ---- the HP bar (#103) ----
+   − · bar · +. The three data-hp boxes sit IN the bar, borderless, so tapping
+   the numbers edits them; #hpFill under them is renderHP()'s width and band.
+   Bands colour the fill, not the text (text over a band-coloured fill would
+   vanish): amber at half, brick at a quarter. --warn is its own token rather
+   than --accent because on the classic skin --accent IS --brick. */
+.hp-lbl .grow{flex:1}
+.hp-maxlbl{display:inline-flex;align-items:center}
+.hp-row{display:flex;align-items:center;gap:6px}
+.hp-btn{flex:none;width:30px;height:34px;border-radius:7px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);font-size:18px;font-weight:700;cursor:pointer;padding:0}
+.hp-btn:hover{border-color:var(--accent)}
+.hp-bar{position:relative;flex:1;min-width:0;height:38px;display:flex;align-items:center;gap:1px;padding:0 6px;overflow:hidden;
+  border:1.5px solid var(--line);border-radius:7px;background:var(--field)}
+.hp-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent-2);opacity:.5;transition:width .15s}
+.hp-fill.hp-warn{background:var(--warn)}
+.hp-fill.hp-danger{background:var(--brick)}
+.hp-bar>*:not(.hp-fill){position:relative}
+.hp-bar input{width:3.1ch;min-width:0;min-height:0;padding:2px 0;border:0;background:transparent;box-shadow:none;text-align:center;
+  font-family:var(--display);font-weight:900;font-size:19px;color:var(--ink);text-shadow:0 1px 2px rgba(0,0,0,.45)}
+.hp-bar input:focus{background:var(--field-focus);outline-offset:0}
+.hp-bar #hpCur{text-align:right}
+.hp-bar #hpMax{text-align:left}
+.hp-bar input[readonly]{cursor:default}
+.hp-sl{font-family:var(--display);font-weight:900;font-size:17px;color:var(--ink-soft)}
+.hp-tmp{margin-left:auto;display:inline-flex;align-items:center;font-family:var(--head);font-size:12px;color:var(--ink-soft)}
+.hp-tmp input{width:4.6ch;font-family:var(--head);font-size:13px;font-weight:700;text-align:left}
+.hp-tmp input::placeholder{color:var(--ink-soft);opacity:.8;font-weight:400}
+.hp-note{text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px}
+.hp-note:empty{display:none}
 /* The padlock rides inside the Max label. An icon, not a word, so the label
    stays narrower than the 66px input below it and the three HP columns keep the
    widths they have. Pill shape comes from .hd-mode in 20-cards.css — the sheet
@@ -104,22 +289,20 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .hp-lock .sh-open{display:none}
 .hp-lock.open .sh-shut{display:none}
 .hp-lock.open .sh-open{display:inline}
-.hp-step{display:flex;gap:6px;justify-content:center;margin-top:8px}
-.hp-step button{width:34px;height:34px;border-radius:7px;border:2px solid var(--brick);background:var(--field);color:var(--brick);font-size:18px;font-weight:700;cursor:pointer}
-/* successes – skull – failures, centred under the +/- buttons. No text
-   properties: there is no text left, and letter-spacing would hang a phantom
-   gap off the right of the skull. */
-.death{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px}
+/* ✓ ○○○ ☠ ○○○ ✗ (#103, decision 6), under the shield. */
+.death{display:flex;align-items:center;gap:7px;justify-content:center}
 .death .set{display:flex;gap:5px}
 /* Both groups fill OUTWARD from the skull, so the two rows of pips grow away
-   from the centre rather than both marching left-to-right. The failure set is
+   from the centre rather than both marching left-to-right. The success set is
    the left one, so its first mark is its rightmost circle — which is why it is
    laid out in reverse rather than having buildDeath() count backwards. */
-.death .set[data-kind="fail"]{flex-direction:row-reverse}
+.death .set[data-kind="succ"]{flex-direction:row-reverse}
+.death .dmark{font-size:14px;font-weight:700;line-height:1}
+.death .dmark.succ{color:var(--accent-2)}
+.death .dmark.fail{color:var(--brick)}
 /* sized against the 17px circles either side of it — it is the anchor of the
    row, so it should not read smaller than what it separates */
 .death .dskull{font-size:18px;line-height:1;color:var(--brick);opacity:.8}
-.death .dsep{color:var(--ink-soft);opacity:.5;font-size:14px;line-height:1}
 .death .c{width:17px;height:17px;border-radius:50%;border:2px solid var(--line);cursor:pointer;background:transparent}
 .death .c.on{background:var(--brick)}
 .death .c.fail.on{background:var(--brick)}
@@ -133,6 +316,12 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .skills{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(var(--skill-rows,9),auto);grid-auto-flow:column;gap:0 20px}
 @media(max-width:600px){.skills{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}}
 .srow{display:flex;align-items:center;gap:9px;padding:6px 2px;border-bottom:1px dotted var(--hair)}
+/* #103: condensed on the Sheet, where Skills shares the row with a column */
+#skillsCard .skills{gap:0 14px}
+#skillsCard .srow{padding:3px 2px;gap:7px}
+#skillsCard .srow .val{font-size:15px;width:28px}
+#skillsCard .srow .lbl{font-size:14px}
+#skillsCard .dot{width:17px;height:17px;border-width:2px}
 .srow .val{font-family:var(--display);font-weight:900;font-size:16px;width:32px;text-align:center}
 .srow .lbl{flex:1;font-size:15px}
 .srow .ab{font-family:var(--head);font-size:9px;letter-spacing:.05em;color:var(--ink-soft);text-transform:uppercase}
@@ -143,51 +332,6 @@ html[data-rough="on"] .hpwrap::before{filter:url(#rough)}
 .legend i.p{background:var(--accent-2)}
 .legend i.e{background:var(--accent-2);box-shadow:0 0 0 2px var(--panel),0 0 0 3px var(--line)}
 
-/* grouped layout (statStyle "grouped") — the six ability boxes stacked in one
-   column, each with its saving throw and the skills that ability governs beside
-   it. Placed AFTER .srow on purpose: these rules override it at equal
-   specificity, so source order is load-bearing. The rows reuse .srow rather than
-   restating the dot/value/label rhythm, so the two looks cannot drift apart. */
-/* #abilities is itself a 3-column grid (see .abilities above) and .agroups is
-   its child, so without this the whole grouped block is squeezed into one third
-   of the card and every skill label wraps. Span all three tracks instead of
-   fighting the parent's display. */
-.agroups{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px}
-/* Three across, two down — the same rhythm as the classic .abilities grid above.
-   A single vertical stack stretched every row the full width of the card, which
-   left each skill label marooned beside a wall of empty space. */
-.agroup{min-width:0}
-
-/* The ability is a compact HEADER over its rows, not a tall box beside them:
-   name, modifier and score on one line. As a left-hand column it was ~5 rows
-   tall next to a list that can be a single row (STR), which is what made the
-   block read as mostly air. It keeps the .ability skin so the panel, the rough
-   border and the fx-on marker all still apply. */
-.agroup .ahead{display:flex;align-items:center;gap:8px;padding:5px 9px;text-align:left}
-.agroup .ahead .n{font-size:11px;color:var(--ink-soft);flex:none}
-.agroup .ahead .m{font-size:22px;margin:0;flex:1}
-.agroup .ahead input{width:52px;flex:none;min-height:30px;padding:3px 4px;font-size:14px}
-
-.agroup .alist{min-width:0;margin-top:4px}
-/* Tighter than the classic card's rows, and the dotted rule only BETWEEN rows —
-   at this density a border on every row read as a list of separate things
-   rather than one stat block. */
-.agroup .srow{padding:2px 2px;gap:7px;border-bottom:none}
-.agroup .srow + .srow{border-top:1px dotted var(--hair)}
-.agroup .srow .val{font-size:15px;width:28px}
-.agroup .srow .lbl{flex:0 1 auto;font-size:14px}
-.agroup .svrow .lbl{font-family:var(--head);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--ink-soft)}
-.agroup .anone{font-size:12px;color:var(--ink-soft);padding:3px 2px;font-style:italic}
-.agroup .dot{width:17px;height:17px;border-width:2px}
-/* Expertise is marked straight off the dot's data-lvl, which recompute() already
-   writes — no JS runs for this, which is what keeps the feature display-only. */
-.agroup .exp{display:none;margin-left:6px;font-family:var(--head);font-size:9px;letter-spacing:.05em;
-  text-transform:uppercase;color:var(--accent-2)}
-.agroup .dot[data-lvl="2"]~.exp{display:inline}
-/* Three columns need real width; step down rather than truncate skill names. */
-@media(max-width:900px){.agroups{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.agroups{grid-template-columns:minmax(0,1fr)}}
 
 /* structured list items */
 .item{position:relative;background:var(--field);border-radius:8px;padding:10px 12px;margin-bottom:9px}
@@ -281,7 +425,6 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 #familiarList .fam-state{white-space:nowrap}  /* don't break "Summoned" inside its own pill */
 .cr-chip{display:flex;align-items:center;gap:9px;background:var(--field);border:2px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:8px;cursor:pointer;position:relative;min-width:0}
 .cr-chip:hover{border-color:var(--accent-2)}
-.cr-chip .cr-k{font-family:var(--head);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;flex:none}
 .cr-chip .cr-n{font-family:var(--head);font-weight:700;flex:1;letter-spacing:.02em;font-size:15px;min-width:0;overflow-wrap:anywhere;word-break:break-word}
 /* game-icons emblems (see src/icons/icons.json). These are FILLED silhouettes on
    a 512 viewBox — the opposite of every other icon in this file, which are 24x24

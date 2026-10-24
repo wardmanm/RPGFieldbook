@@ -1,6 +1,6 @@
 # The Sheet tab makeover — design
 
-**Status:** approved in conversation 2026-10-23 (advancement revised the same day), awaiting written-spec review · wave 2 of [1.9.0](../wiki/roadmap/1.9.0.md)
+**Status:** approved 2026-10-23 and built on branch `issue/103-sheet-makeover` (eight tasks), awaiting Mike's device pass — see [As built](#as-built) · wave 2 of [1.9.0](../wiki/roadmap/1.9.0.md)
 **Issue:** #103 (Sheet tab makeover). One branch, `issue/103-sheet-makeover`, after #88 merges.
 Mockups: `.superpowers/brainstorm/59468-1792760354/content/` (`layout-v2.html`, `rail-v2.html`,
 `widths.html`). Read [Sections & layout](../wiki/ui/sections-and-layout.md),
@@ -313,3 +313,94 @@ languages and senses."
 - Any change to the combat view's own layout beyond what the rail brings.
 - Calculation rules from packs in general, and a chooser for conflicting rulesets (decision 18, 2.0).
 - The converter extracting the advancement table (decision 16).
+
+## As built
+
+Built 2026-10-23 in eight tasks (base `603c4e7`): chips, advancement and default languages; the
+migration; language grants; the chip cards and Bio; the hit-dice bar and spend box; the header;
+the grid; QA, tuning and docs. Ledger: "The hit-dice bar and the spend box" (L6580) and "The Sheet
+makeover" (L6633); the final review's fixes are "The Sheet makeover: final review fixes" (L6729).
+What differs from the sections above, and why:
+
+**Deviations**
+
+- **§4, a system change replacing `system` chips: not needed** — a character's system never changes
+  (ruled at plan time). Settings → Skin does still rewrite the open character's `system`, which
+  leaves its `system` chips; inert today, because every ruleset falls back to Common, and recorded in
+  [Known issues](../wiki/roadmap/known-issues.md).
+- **§4, a new character before a cold rules cache** gets the fallback Common even where a pack would
+  declare other defaults (parked in Task 2; inert, no pack declares `defaultLanguages`; known issues).
+- **§5, the Languages lift runs once**, flagged by `langLifted` (set by `newCharacter()`, never in
+  `blankChar()`), so a "Languages:" line the player types later stays text. "Once" in §5 read as
+  "on every load, a no-op when there is no line", which would lift the player's later line.
+- **§6.1, the empty species reads "+ Race" / "+ Ancestry"** by skin (`raceTerm()`), as the rest of
+  the sheet words it, not "+ Species". "Level up ready" runs Level up directly (`doLevelUp()`, which
+  asks which class when there are several) rather than opening the class menu.
+- **§6.1, the header's Remove buttons carry `ed`** though no pencil reaches them (they sit outside
+  any `EDIT_CARDS` card); kept, commented, so every `data-del-*` button carries it (#97's guard).
+- **§6.1, adding the first familiar turns `showFamiliars` on** (decision 5's default, applied at the
+  moment it changes).
+- **§6.2, the rail and the strip keep a small `.label`** ("Vitals", "Ability Scores & Saves"): the
+  note button, the combat toggle, the ☰ entry and the registry-title test all need one.
+- **§6.2, `#maxNote` shows only when an effect moves Max HP**; its standing placeholder went (no room
+  in the rail, none in the mockup).
+- **§6.2, the death saves read ✓ ○○○ ☠ ○○○ ✗** with the success set reversed so both fill outward
+  (the old row was failures first).
+- **§6.6, `pawHTML()` builds the paw only** (it was `sheetHeadHTML()`, renamed in the final review);
+  the rest of the header is static markup, because boot wires its ids once.
+- **§6.6, the paw's menu also holds Combat view and Note** (final review I-3), the controls the
+  hidden Familiars card's heading carried; `familiars` leaves #97's `EDIT_CARDS`, since its pencil
+  was out of reach and Edit / Delete now live in the familiar's window.
+- **§6.7, the phone rail** puts the small portrait at the left with the rest beside it and the AC
+  shield over the portrait's bottom edge, not beside it (the mockup was schematic; Mike's device pass).
+- **§7, the header is not combat-addable** (Task 8 ruling): `portrait` is marked `nocv`, and a saved
+  `portrait` in the combat view becomes `vitals`, like `rest`. Its rests are not a fight action and
+  the portrait rides in with Vitals. The view gains its own Inspiration ✦ instead (Task 6 ruling).
+- **§7, Familiars** stays combat-capable: the view shows its card, and the paw's menu adds or
+  removes it (final review I-3).
+- **§8, print** puts the chips in their own box; the Proficiencies prose was never printed and still
+  is not.
+- **§10, removing `.stack{display:contents}`** (it only existed to sink the Sheet's Familiars on a
+  phone, and reached every tab) restores the 12px gap between cards on Spells, Journal and
+  Inventory at ≤820px; they touched before. A separate release-note bullet says so.
+- **The no-packs hint** the old Class card showed is back in the Add class window (`NO_RULES_HINT`),
+  the way into a sheet with no class (Task 8 ruling).
+- **Dark mode**: the rail is tinted rather than darker (forest green with a gold edge in Humblewood,
+  slate in Classic), because the dark page ground is already near-black and a darker rail read as one
+  more card. Light mode is the mockup's dark rail.
+- **The phone header** (≤480px) tightens its gaps and the XP box so the icons and the level badge
+  share one row under the name: two rows in all, not the three the first build had.
+- **Final review fixes** (L6729): with no hit-dice pool (a custom class, or no pack) the auto/manual
+  pill and the dice field sit inline under the hint, one copy at a time with the spend box's (I-1); a
+  class's menu levels that class, `doLevelUp(idx)` / `doLevelDown(idx)` (I-2); the short rest points
+  at the hit-dice bar and offers Spend a hit die (M-1); an unknown language `src` reads as the
+  player's (M-3); the species button names the subrace (M-7); an open spend box follows a dice edit
+  or the mode switch (M-8); **§6.1's XP bar fills within the level**, `(xp − cur) / (next − cur)`,
+  clamped (Mike's ruling, M-9); Summon / Dismiss is a button and keeps the keyboard (M-14).
+- **Mike's header and column changes** (L6776): the rests read "Short rest" / "Long rest" (icons
+  with Icon tabs on or at ≤860px); the header row runs Short rest, Long rest, paw, star, level and
+  XP, then the note button (`#shLevel` inside the `.label`); **§6.5/§6.7's Features is no longer
+  full width at desktop**: the middle and right columns are independent stacks (`.col-m`: Skills,
+  Features; `.col-r`: Defences, Statuses, Resources), so Features follows Skills; two columns keep
+  Features full width under the rail, one column keeps the phone order.
+- **The ☰ section flyout is retired; a back-to-top button** (L6804, Mike 2026-10-24): the tabs are
+  organised well enough to need no index, so `#btnToc`, `#tocFly` and `buildToc()` go (the rail's
+  and strip's `.label`s above stay, for the note button, the combat toggle and the registry), and a
+  round ↑ button (`#btnToTop`) in the bottom-right corner shows past one screenful of scroll.
+- `statStyle` and `hdStyle` stay in `blankChar()` and saved sheets, unread; `classChipHTML()`,
+  `statStyle()` and the grouped builders are deleted.
+
+**Checked in QA** (Playwright, 1280 / 900 / 390, both skins, light and dark): a level-15 "88/153"
+fits its boxes (28px of text in a 35px box in Classic's Cinzel) at 390 and 1280; the sense chip
+reads "TREMORSENSE · 60 FT" (the chip is uppercase) as §8 asks.
+
+**What Mike still has to check on his devices**
+
+- Touch: the header's class line, the paw and its menu, the hit-dice bar and the spend box, the HP
+  bar's boxes (tap to type) and ± buttons, the death-save circles, the chip × and + Add.
+- The phone rail: the shield over the small portrait, and whether two header rows read well.
+- The dark rail tints in both skins on a real screen.
+- Print: the new Resistances, Immunities, Senses and Languages box.
+- His own characters: an old sheet's Class / Ancestry / Rest notes merged into Character and
+  Vitals, its "Languages:" line become chips, and its combat view (a saved Portrait becomes Vitals).
+- The paw menu's Combat view and Note items, and the inline hit-dice field on a custom class.

@@ -1,20 +1,21 @@
 # Combat view
 
-A tab of just the sections a player needs mid-fight — any of the 20 noteable cards, the Journal
+A tab of just the sections a player needs mid-fight — any of the 17 noteable cards it may take
+(every section but the Sheet's header), the Journal
 tab's Trackers included, from any tab, in an order they choose — with a round tracker in its
 header. It is reached from the crossed swords in
 the tab bar and has no word tab of its own. The cards in it are the **real** cards, moved in while
 the tab shows and sent home when another tab is picked, so every control works exactly as it does on
 its own tab. Leaving the tab never ends combat.
 
-**Code:** `combatSectionsOf()`, `withCombatSection()`, `insertCombatSection()`, `stepCombatSection()`,
+**Code:** `combatSectionsOf()`, `combatAddable()`, `withCombatSection()`, `insertCombatSection()`, `stepCombatSection()`,
 `combatStart()`, `combatEnd()`, `combatElapsedSec()`, `fmtCombatTime()`, `renderCombatButton()`,
 `renderCombatToggles()`, `paintCombatToggle()`, `fillCombatView()`, `sendCardHome()`,
 `openCombatView()`, `closeCombatView()`, `enterCombatTab()`, `leaveCombatTab()`,
 `renderCombatHeader()`, `setCombatLive()`, `toggleCombatSection()`, `undoCombatRemove()`,
 `cvNeighbours()`, `syncCombatView()`, `startCombatNow()`, `endCombatAsk()`, `startCombatDrag()`,
-`moveCombatCard()`, `setCombatOrder()` in `87-combat.js` · `COMBAT_DEFAULTS` in `00-constants.js` ·
-`selectTab()`, `buildToc()`, `scrollToCard()` in `40-sheet.js` · `advanceRound()`, `toast()` in
+`moveCombatCard()`, `setCombatOrder()`, `combatHeaderHTML()` in `87-combat.js` · `toggleInspiration()` in `10-compute.js` · `COMBAT_DEFAULTS` in `00-constants.js` ·
+`selectTab()`, `scrollToCard()` in `40-sheet.js` · `advanceRound()`, `toast()` in
 `60-attacks.js` · `applyAmmoRecovery()`, `undoRecoveryTap()` in `62-ammo.js` · markup
 `src/html/70-combat.html`, styles `src/css/45-combat.css` · **Tests:**
 `sheet.js` (the pure half), `rules-data.js` (the tab wiring) · **See also:**
@@ -27,7 +28,7 @@ its own tab. Leaving the tab never ends combat.
 **State.** Three character fields: `combatSections` (`NOTE_SECTIONS` keys, in the player's order;
 defaults `vitals`, `statuses`, `attacks`, `resources`, `slots`, `activespells`), `combatActive` and the
 long-standing `combatRound`. `combatSectionsOf(c)` resolves them: not an array → the defaults; an
-array → known keys only, first of any repeat; an **empty** array stays empty — the player removed
+array → keys the view may take (`combatAddable()`) only, first of any repeat; an **empty** array stays empty — the player removed
 everything. Session-only, never saved: whether the tab is showing, its scroll, the scroll of the tab
 it came from (`cvPrevTab`), and whose cards are in it.
 
@@ -37,12 +38,15 @@ runs `fillCombatView()`: for each chosen key it finds `.card[data-note="<k>"]` *
 leaves a hidden `<span data-cvhome="<k>">` in its place, appends the card to `#cvList` and gives it a
 grip. `selectTab()` for any other tab calls `closeCombatView()` first, which sends every card back to
 its marker (`sendCardHome()`, grip removed). The swords again are `leaveCombatTab()`: back to the tab
-they were pressed from, at its scroll, with focus on that tab. The tab has no ✕ and no ☰ of its own
-(#80): like any tab, another tab leaves it, and the tab bar's ☰ lists its sections. `selectTab()`
+they were pressed from, at its scroll, with focus on that tab. The tab has no ✕ of its own
+(#80): like any tab, another tab leaves it. `selectTab()`
 itself never scrolls.
 
 **Choosing sections.** `renderCombatToggles()` puts a swords toggle (`.cvbtn`, `data-combatbtn`,
-`aria-pressed`) just before the note button in every `NOTE_SECTIONS` card's heading. Adding appends
+`aria-pressed`) just before the note button in every `NOTE_SECTIONS` card's heading but the
+header's: `portrait` is marked `nocv`, because its rest buttons are not a fight action and the
+portrait itself rides in with Vitals (#103). `toggleCombatSection()` refuses it too, and `migrate()`
+turns a saved `portrait` (or the retired `rest`) into `vitals`, deduped. Adding appends
 the section and toasts. Removing — from its tab or inside the view — sends the card home and toasts
 an **Undo** that `undoCombatRemove()` answers by reinserting at the old index
 (`insertCombatSection()`) and re-laying the view (`setCombatOrder()`); the Undo carries the character
@@ -50,8 +54,11 @@ id and does nothing after a switch. Removing by keyboard from inside the view fo
 Esc from it lands on the grip of the next *shown* card (`cvNeighbours()`, recorded before removal),
 else the previous one, else the swords (`#btnCombat`).
 
-**The tracker.** `combatHeaderHTML()` draws title · Start combat out of combat, and
-title · ◀ Round N · time ▶ · (gap) · End combat in it — End set well apart from ▶. On a phone the
+**The tracker.** `combatHeaderHTML()` draws title · ✦ · Start combat out of combat, and
+title · ✦ · ◀ Round N · time ▶ · (gap) · End combat in it — End set well apart from ▶. The ✦ is an
+Inspiration toggle (`data-inspire`, no id) wired to `toggleInspiration()`, the same as the Sheet
+header's `#starBtn`, and `recompute()` paints both: the star left Vitals for the header in #103, so
+the view carries its own. The rests stay out of the view. On a phone the
 header is one row out of combat and two in it (`.fighting`, set by `renderCombatHeader()`): the title,
 then the tracker with End at the far right.
 `startCombatNow()` → `combatStart()`: active, round 1, active spells untouched. ◀ and ▶ are
@@ -85,15 +92,18 @@ between.
 **Layout.** One centred column. The header is sticky at `--cv-top`, the tab bar's **measured**
 height (`cvStickyTop()`, on open and resize); ≤640px it wraps to two rows and ≤480px the time stacks
 under the round. Active Spells and Familiars, which hide on their own tab when empty, always show in
-the view with "None right now."; the Skills card in "By ability" mode stays hidden, and so does
-Trackers when Settings hides it. `cvCardShown()` tests computed style. `renderCombatEmpty()` shows the
+the view with "None right now." (Familiars is always hidden on the Sheet, so the view is the one
+place its card shows; its toggle on the Sheet is the **Combat view** item in the header paw's menu,
+the same `[data-combatbtn="familiars"]` hook); Trackers stays hidden when Settings hides it. `cvCardShown()` tests computed style. `renderCombatEmpty()` shows the
 "Add sections with the … button on any card." hint when no card in the view shows. `fillCombatView()`
 and a toggle call it, and so does `renderTrackers()` while the view is open, so hiding Trackers
-when it is the only card there brings the hint back instead of leaving the view blank. The tab bar's ☰ lists the view's cards, and `scrollToCard()` clears both the tab bar and
-the header. Ability Scores & Saves and Skills, added here like any other card, draw compact and
+when it is the only card there brings the hint back instead of leaving the view blank. A note jump into the view goes through
+`scrollToCard()`, which clears both the tab bar and the header. Ability Scores & Saves and Skills, added here like any other card, draw compact and
 read-only instead — `syncStatLock()` disables their score boxes and proficiency dots while they sit
-in `#cvList`, and in the By ability display each ability's name, modifier and score stay full size
-([Abilities & skills](abilities-and-skills.md)).
+in `#cvList` ([Abilities & skills](abilities-and-skills.md)). **Vitals is the rail** (#103): the
+same dark card, laid out in the view as two columns — the portrait and its AC shield at the left,
+the death saves, badges, HP and hit-dice bars beside it (`#cvList .rail`, 45-combat.css), 96px for
+the portrait at ≤480px.
 
 **Character switches.** `syncCombatView()` is the last thing `renderAll()` does: with the tab open it
 empties and refills from the new character (scroll to top if the character changed), then repaints
@@ -130,8 +140,9 @@ the toggles and the button.
 - **`aria-modal` did not stop Tab** reaching invisible controls behind the overlay, which needed
   `inert` on the page — and a hand-off with the modal's own inert. Also removed with the overlay.
   → L3397, L3470
-- **Familiars pinned last whatever the order**: 10-chrome.css's ≤820px `order:1` is not scoped to the
-  sheet; `#combatView #familiarCard{order:0}` undoes it. → L3397
+- **Familiars pinned last whatever the order**: an old ≤820px `order:1` in 10-chrome.css was not
+  scoped to the sheet; `#combatView #familiarCard{order:0}` undid it, and stays as a guard now the
+  Sheet's own `order`s are scoped to `.sheet-grid`. → L3397, L6633
 - **Arrows that did nothing**: swapping with a hidden Skills card looked like no move at all, hence
   "past the next shown section". → L3470
 - **The header breakpoint was measured, not guessed**: the one-row header needs about 610px in
@@ -146,15 +157,16 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 | Question | Decision | Rejected, and why |
 |---|---|---|
 | How it opens | **As built:** a tab (`#tab-combat`) reached from the swords, with no word tab (owner's call after play) | The spec's full-screen overlay: in play it covered the tabs a player wanted to glance at. A 7th word tab: crowds the tab bar on a phone. A side panel: the most complex, and a card pinned from the visible tab would vanish from it |
-| Where the button lives | The sticky tab bar, before ☰ | The title bar: it scrolls away, taking the "combat running" indicator with it |
+| Where the button lives | The sticky tab bar, alone in its pinned tool group | The title bar: it scrolls away, taking the "combat running" indicator with it |
 | What a round changes | Active spells and timed conditions, through `advanceRound()` | Active spells only — timed conditions came in #55 |
 | Start and End | Start sets round 1; End is its own button and asks; leaving never ends combat | Opening and closing as start and end: closing to look something up would end the fight |
-| Which sections | Any of the 20, six by default, drag to reorder, saved per character | Fixed sheet order; starting empty (no reason recorded) |
+| Which sections | Any but the Sheet's header, six by default, drag to reorder, saved per character | Fixed sheet order; starting empty (no reason recorded). The header (#103): its rests are not a fight action, and the portrait comes with Vitals |
+| Inspiration in the view (#103) | Its own ✦ in the view's header, wired like `#starBtn` | Nothing: the star left Vitals for the Sheet header, which the view does not take |
 | Mechanism | Move the real cards | Copies: every id duplicated. A purpose-built dashboard: re-implements every section's controls |
 | "In combat" | `combatActive`, its own flag | `combatRound > 0`: old sheets would start in a fight |
 | Dragging | Pointer events; neighbours hop, the dragged card stays | HTML5 drag-and-drop: unreliable on phones. Moving the dragged card: can drop its pointer capture |
 | Esc | Not handled | The overlay's capture-phase Esc: Esc is not how you leave a tab |
-| A ✕ and a ☰ in the header | **Removed** (#80): the tab acts like every tab — another tab or the swords leave it, the tab bar's ☰ lists it | Keeping them from the overlay: a close button no other tab has, and a second ☰ beside the tab bar's |
+| A ✕ and a ☰ in the header | **Removed** (#80): the tab acts like every tab — another tab or the swords leave it; the tab bar's own ☰ was retired in #103 | Keeping them from the overlay: a close button no other tab has, and a second ☰ beside the tab bar's |
 
 ## Open
 
@@ -182,3 +194,6 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-10-16 — The By ability header keeps a full-size name, modifier and score in the view. → ledger L5756, #92
 - 2026-10-19 — End combat recovers ammunition on its own in place of asking, with Undo recovery on the toast. → ledger L6081, #104
 - 2026-10-19 — End combat retires every outstanding ammunition count, quietly when nothing comes back. → ledger L6147, #104
+- 2026-10-23 — Vitals arrives as the rail, in two columns; the view gains its own Inspiration ✦; the Sheet's header is not combat-addable, and a saved `portrait` or `rest` becomes `vitals`; By ability's compact header is gone. → ledger L6633, #103
+- 2026-10-23 — Familiars is addable again, from the paw's menu (its card is hidden on the Sheet); the card shows in the view and goes home hidden. → ledger L6729, #103
+- 2026-10-24 — The tab bar's ☰ is retired, so nothing lists the view's cards; the swords stand alone in the tab bar's tool group, and `selectTab()` no longer calls `closeToc()`. → ledger L6804, #103

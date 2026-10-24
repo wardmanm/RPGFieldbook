@@ -77,7 +77,7 @@ over them. A tap on `[data-ck]` in the page's read view calls `jnlToggleCheckbox
 that line, stamps `editedAt`, saves, redraws and puts focus back on the same box. It is refused
 while the page is being edited — the text is in a textarea then, and no box is on screen — and
 when the page the tap belonged to is gone (another tab switched, an import). Section notes and
-the Story tab's rich-text fields tick the same way ([Story & notes](story-and-notes.md)); a box in
+the Bio tab's rich-text fields tick the same way ([Story & notes](story-and-notes.md)); a box in
 a pack's description is drawn and does nothing. Each box is named by its item in plain words
 (`noteCkLabel()`), its state left to `aria-checked`. The page list
 (`jnlEntryHTML()`) and the page's own meta line (`journalPageHTML()`) show `done/total` next to the
@@ -182,9 +182,9 @@ one hook both forms carry.
 
 **Hidden and in combat.** Settings → Sheet display → Trackers card sets `showTrackers`, and
 `renderTrackers()` hides the card with `display:none`, keeping it in the DOM, which the section
-registry requires. Trackers is the 20th entry in `NOTE_SECTIONS` (tab `journal`), so it takes a
+registry requires. Trackers is an entry in `NOTE_SECTIONS` (tab `journal`), so it takes a
 section note and can be added to the combat view like any registered card. Hidden, it is skipped
-by the ☰ flyout and the combat view, as the Skills card is in the By ability layout.
+by the combat view.
 
 **The card.** `#journalCard` is the first card on the Journal tab, with **+ Page** (`#jnlNew`) in
 its heading. `renderJournal()` draws `#jnlBody` in one of three views, held in the session-only
@@ -297,3 +297,5 @@ entry in the list.
 - 2026-10-17 — Checklists and tasks leave trackers for journal pages: a [ ]/[x] line is a tickable checkbox in a page and a section note, the list shows progress, existing checklist and task trackers migrate into pages; Trackers keeps counters only (#95). Groups show an optional total (#93) and lay out as tiles (#94). → ledger L6047, #95, #93, #94
 - 2026-10-17 — Final review: a typed count moves the group total; the Σ is always "Total for <tag>"; a box is named by its item; Story fields tick too; a closed checklist keeps its real ticks; a junk date writes none. → ledger L6057, #95, #93
 - 2026-10-19 — The Journal card's pencil hides a page's Edit and Delete; a blank page's empty line drops "— tap Edit" while they're hidden. → ledger L6248, #97
+- 2026-10-23 — The Story tab is Bio; By ability's hidden Skills card is gone. → ledger L6633, #103
+- 2026-10-24 — The ☰ section flyout is retired; a hidden Trackers card is skipped by the combat view only. → ledger L6804, #103

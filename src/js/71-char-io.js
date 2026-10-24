@@ -42,6 +42,62 @@ function repairIds(list,seen){
   });
   return list;
 }
+/* ---- #103: the Sheet makeover's one-time work. Every step is idempotent: a
+   sheet already migrated has nothing left for it to find. ---- */
+/* A removed section's note joins the one that took its place, under a heading
+   naming where it came from; the earlier start and the later edit are kept.
+   A note stored as a plain string (no at/editedAt) merges its text too; any
+   other junk under the key (an array, a number, ...) has no text to keep, so
+   it is just dropped — either way the removed key always goes. */
+function mergeNoteInto(c,from,into,heading){
+  const m=c.secNotes;if(!m||typeof m!=="object")return;
+  if(!(from in m))return;
+  const f=m[from];
+  let t="",at,ed;
+  if(f&&typeof f==="object"&&!Array.isArray(f)){t=String(f.text||"").trim();at=f.at;ed=f.editedAt;}
+  else if(typeof f==="string")t=f.trim();
+  if(t){
+    const to=(m[into]&&typeof m[into]==="object"&&!Array.isArray(m[into]))?m[into]:null;
+    const prev=to?String(to.text||"").trim():"";
+    const block="**"+heading+":**\n"+t;
+    const nums=[to&&to.at,at].filter(x=>typeof x==="number");
+    const eds=[to&&to.editedAt,ed].filter(x=>typeof x==="number");
+    m[into]=Object.assign({},to||{},{text:prev?prev+"\n\n"+block:block});
+    if(nums.length)m[into].at=Math.min(...nums);
+    if(eds.length)m[into].editedAt=Math.max(...eds);
+  }
+  delete m[from];
+}
+/* "Languages: …" lines in Proficiencies become the player's own chips. */
+function liftLanguages(c){
+  const p=typeof c.proficiencies==="string"?c.proficiencies:"";
+  if(!/^\s*languages\s*:/im.test(p))return;
+  const found=[],keep=[];
+  p.split("\n").forEach(line=>{const mm=/^\s*languages\s*:(.*)$/i.exec(line);if(mm)found.push(...langParse(mm[1]));else keep.push(line);});
+  c.proficiencies=keep.join("\n").replace(/\n{3,}/g,"\n\n").trim();
+  const have=chipClean(c.languages,"languages",true),names=new Set(have.map(x=>x.name.toLowerCase()));
+  found.forEach(n=>{if(!names.has(n.toLowerCase())){have.push({id:uid(),name:n,src:""});names.add(n.toLowerCase());}});
+  c.languages=have;
+}
+function migrateSheet103(c){
+  CHIP_KEYS.forEach(k=>{c[k]=chipClean(c[k],k,true);});
+  c.advancement=advancementOf(c);
+  mergeNoteInto(c,"class","portrait","Class");
+  mergeNoteInto(c,"origin","portrait","Ancestry & Background");
+  mergeNoteInto(c,"rest","vitals","Rest & Recovery");
+  if(Array.isArray(c.combatSections)){
+    /* rest's hit dice went to the rail; the header (portrait) is not
+       combat-addable, and its portrait now rides in with Vitals */
+    const out=[];c.combatSections.forEach(k=>{const v=k==="rest"||k==="portrait"?"vitals":k;if(!out.includes(v))out.push(v);});
+    c.combatSections=out;
+  }
+  /* liftLanguages runs once, same pattern as ammoInit: never defaulted in
+     blankChar(), so an old sheet's undefined flag lifts once on its first
+     migration, after which a player's own "Languages:" line in Proficiencies
+     stays theirs to type. */
+  if(c.langLifted!==true){liftLanguages(c);c.langLifted=true;}
+  ensureDefaultLanguages(c);
+}
 function migrate(s){
   s=s||{};
   const base=blankChar(), blank=blankChar();
@@ -90,6 +146,10 @@ function migrate(s){
   /* AFTER the list guards, for the same reason: bundles unpack, pieces and
      launchers learn their ammunition kind, once per character (#6). */
   migrateAmmo(base);
+  /* #103: showFamiliars is decided from the FILE, so a stored choice wins and a
+     sheet from before gets the icon only if it has a familiar. */
+  base.showFamiliars=typeof s.showFamiliars==="boolean"?s.showFamiliars:base.familiars.length>0;
+  migrateSheet103(base);
   return base;
 }
 function exportChar(){
@@ -129,6 +189,14 @@ function printSheet(){
   const inv=(character.inventory||[]).map(it=>`<div class="p-item"><b>${esc(it.name)}</b>${itemQty(it)!==1?` ×${itemQty(it)}`:""}${it.equipped?" (equipped)":""}${it.description?`<div>${esc(printStrip(it.description)).replace(/\n/g,"<br>")}</div>`:""}</div>`).join("");
   const coins=["pp","gp","ep","sp","cp"].map(k=>num(character.coins[k])?`${num(character.coins[k])} ${k.toUpperCase()}`:"").filter(Boolean).join(" · ");
   const bio=BIO.map(([k,lbl])=>character[k]?`<div class="p-item"><b>${lbl}</b><div>${esc(printStrip(character[k])).replace(/\n/g,"<br>")}</div></div>`:"").join("");
+  /* Defences, Senses and Languages (#103): one line per list, each only when
+     non-empty, escaped like the vitals/resources lines beside it. */
+  const chipLine=(label,key,withRange)=>{
+    const l=chipList(character,key);if(!l.length)return"";
+    const names=l.map(x=>esc(x.name.toUpperCase())+(withRange&&x.range!==""?` (${esc(String(x.range))} ft)`:"")).join(", ");
+    return `<span class="p-stat">${label}: <b>${names}</b></span>`;
+  };
+  const defLines=[chipLine("Resistances","resists"),chipLine("Immunities","immunes"),chipLine("Senses","senses",true),chipLine("Languages","languages")].filter(Boolean).join(" ");
   /* Section notes print as PLAIN TEXT — the markdown markers stay visible rather
      than being rendered. Print escapes everything (see the bio line above); it
      is not the place to start emitting markup from user input. */
@@ -139,6 +207,7 @@ function printSheet(){
     <div class="p-abils">${abils}</div>
     <div class="p-box" style="margin-top:6px">${vit}</div>
     ${(res||stat)?`<div class="p-box">${res}${stat?` <span class="p-stat">Statuses: <b>${stat}</b></span>`:""}</div>`:""}
+    ${defLines?`<div class="p-box">${defLines}</div>`:""}
     <div class="p-sec">Saving Throws</div><div class="p-grid">${saves}</div>
     <div class="p-sec">Skills</div><div class="p-grid">${skills}</div>
     ${attacks?`<div class="p-sec">Attacks &amp; Weapons</div>${attacks}`:""}

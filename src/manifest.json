@@ -27,6 +27,7 @@
     "src/js/25-origins-items.js",
     "src/js/30-version.js",
     "src/js/40-sheet.js",
+    "src/js/41-chips.js",
     "src/js/50-classrace.js",
     "src/js/52-race.js",
     "src/js/54-background.js",

@@ -7,7 +7,8 @@ const {loadApp, makeCheck} = require('./harness');
 const ck = makeCheck();
 const {X, ctx, state, bootError, fragments} = loadApp([
   'signedEntry', 'signedDelta', 'num', 'fnum', 'fmtWt', 'fmtGp', 'blankChar', 'migrate',
-  'clampHP', 'effMaxHP', 'adjustHP', 'applyHPInput', 'renderHP', 'hpBand', 'hdStyle',
+  'clampHP', 'effMaxHP', 'adjustHP', 'applyHPInput', 'renderHP', 'hpBand',
+  'hdSpendCheck', 'hdHeal', 'hdBarHTML', 'hdSpendHTML',
   'itemWeight', 'itemWeightTotal', 'coinsWeight', 'carriedWeight',
   'sizeName', 'sizeLabel', 'charSize', 'carryCapacity', 'encMode', 'encState',
   'encSpeed', 'encTierNote', 'contributions', 'inventoryTotal', 'SIZES', 'SIZE_CARRY',
@@ -15,8 +16,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'ORIGIN_KINDS', 'originDef', 'originLabel', 'originLetter', 'originFromSid',
   'itemOrigin', 'originOptionsHTML', 'grantedFromOrigin', 'originFromGranted',
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
-  'statStyle', 'statGroupHTML', 'statGroupsHTML', 'ABIL',
-  'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV', 'classChipHTML',
+  'ABIL',
+  'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
   'featOriginLabel', 'invSectionName', 'invGroups', 'INV_FAV', 'INV_ORDER', 'groupChoices', 'groupFieldHTML',
   'tagLabel', 'tagKey', 'journalEditorHTML', 'trackerFormHTML',
   'GROUP_RESERVED', 'tagTidy', 'groupNameProblem', 'syncGroupFieldMsg', 'groupFieldBlocked', 'groupByTag', 'invSection',
@@ -74,6 +75,12 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'fxNeg', 'mark', 'editing',
   'itemFacets', 'spellFacets', 'featFacets', 'itemCatOf', 'itemRarOf', 'spellClassesOf', 'spellSchoolOf', 'openItemInfo', 'openFeatInfo', 'ITEM_RARITIES',
   'settings', 'rbUI',
+  'CHIP_KEYS', 'chipClean', 'chipList', 'advancementOf', 'SRD_ADVANCEMENT', 'advancementFor', 'xpNumber', 'xpProgress', 'defaultLanguagesFor', 'ensureDefaultLanguages', 'langParse',
+  'grantLanguages', 'dropLanguages',
+  'CHIP_SUGGEST', 'chipSrcLabel', 'chipsHTML', 'chipChooserHTML', 'openChipChooser', 'addChip', 'removeChip', 'renderDefences', 'renderBioChips',
+  'mergeNoteInto', 'liftLanguages', 'migrateSheet103',
+  'pawHTML', 'classLineHTML', 'classFlyHTML', 'levelBadgeHTML', 'familiarCardHTML', 'famFlyHTML',
+  'combatAddable', 'renderCombatToggles', 'jumpToNote', 'openAddClass', 'NO_RULES_HINT', 'NOTE_SECTIONS',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -347,65 +354,108 @@ ck('colouring is on by default for a new character', X.blankChar().hpColor === t
 ck('...and for a sheet saved before the setting existed',
    X.migrate({id: 'old2'}).hpColor === true);
 
-/* ---- the hit-dice display style ----
-   Three looks, chosen per character. hdStyle() resolves anything it does not
-   recognise to full — the same value blankChar defaults to, so an older sheet
-   with no field at all lands on the same look a new character gets, and the
-   setting needs no migration of its own. */
-ck('a new character defaults to full', X.blankChar().hdStyle === 'full');
-X.character.hdStyle = 'full';      ck('full is honoured', X.hdStyle() === 'full');
-X.character.hdStyle = 'dice';      ck('dice is honoured', X.hdStyle() === 'dice');
-X.character.hdStyle = 'condensed'; ck('condensed is honoured', X.hdStyle() === 'condensed');
-X.character.hdStyle = 'nonsense';  ck('an unknown style falls back', X.hdStyle() === 'full');
-delete X.character.hdStyle;        ck('a missing style falls back too', X.hdStyle() === 'full');
-ck('a sheet saved before the styles existed reads as full',
-   X.migrate({id: 'old3'}).hdStyle === 'full');
-// the fallback and the blankChar default must not drift apart, or an old sheet
-// and a new character show different things
-ck('the fallback agrees with the default', (() => {
-  delete X.character.hdStyle; return X.hdStyle() === X.blankChar().hdStyle;
-})());
-ck('a chosen style survives a round-trip',
-   X.migrate(JSON.parse(JSON.stringify(X.migrate({id: 'k', hdStyle: 'dice'})))).hdStyle === 'dice');
+/* ---- #103: spending a hit die (spec §6.3) ----
+   The three hit-dice display styles (full/condensed/dice) and hdStyle() are
+   retired along with their Settings row: one bar now, tapping it opens the
+   spend box. */
+{
+  ck('#103 a typed roll must be a whole number from 1 to the die',
+     X.hdSpendCheck('d8', '8').ok && X.hdSpendCheck('d8', ' 5 ').roll === 5 &&
+     ['0', '9', '4.5', '', 'abc', '-1'].every(v => !X.hdSpendCheck('d8', v).ok && X.hdSpendCheck('d8', v).why));
+  ck('#103 the heal is roll + CON, never below 0', X.hdHeal(5, 5) === 10 && X.hdHeal(1, -3) === 0 && X.hdHeal(3, -1) === 2);
+  const pool = [{die: 'd8', total: 15, used: 3, cls: 'Cleric'}, {die: 'd10', total: 2, used: 2, cls: 'Fighter'}];
+  const bar = X.hdBarHTML(pool, 5);
+  ck('#103 the bar: die, left of total, CON', bar.includes('d8') && bar.includes('12 / 15') && bar.includes('CON +5') && bar.includes('data-hdspend'));
+  const box = X.hdSpendHTML(pool, 'd8', 5, 88, 153);
+  ck('#103 the box: a row per die, used −/+, both ways to spend', box.includes('data-hdpick="d8"') && box.includes('data-hdpick="d10"') &&
+     box.includes('data-hdused="d8"') && box.includes('id="hdRollMe"') && box.includes('id="hdTyped"') && box.includes('id="hdApply"'));
+  ck('#103 a die type with none left cannot be picked', /data-hdpick="d10"[^>]*disabled/.test(box));
+  ck('#103 the box keeps auto / manual', box.includes('data-hdmode'));
 
-/* ---- the ability/skill layout ----
-   Two looks over ONE set of ids, chosen per character. statStyle() resolves
-   anything it does not recognise to classic — the same value blankChar defaults
-   to — so an older sheet needs no migration and does not move under the player. */
-ck('a new character defaults to classic', X.blankChar().statStyle === 'classic');
-X.character.statStyle = 'grouped';  ck('grouped is honoured', X.statStyle() === 'grouped');
-X.character.statStyle = 'classic';  ck('classic is honoured', X.statStyle() === 'classic');
-X.character.statStyle = 'nonsense'; ck('an unknown layout falls back', X.statStyle() === 'classic');
-delete X.character.statStyle;       ck('a missing layout falls back too', X.statStyle() === 'classic');
-ck('a sheet saved before the layouts existed reads as classic',
-   X.migrate({id: 'old4'}).statStyle === 'classic');
-ck('the fallback agrees with the default', (() => {
-  delete X.character.statStyle; return X.statStyle() === X.blankChar().statStyle;
-})());
-ck('a chosen layout survives a round-trip',
+  /* ---- #103 fix round 1 (minor): a fully-spent pool can't roll or type ----
+     openHdSpend()'s fallback can leave `sel` pointing at an exhausted die
+     when nothing in the pool has any left; Roll for me and the typed box
+     must not sit there clickable and silently do nothing. */
+  const spentPool = [{die: 'd8', total: 2, used: 2, cls: 'Cleric'}];
+  const spentBox = X.hdSpendHTML(spentPool, 'd8', 5, 10, 20);
+  ck('#103 fix1 an all-spent pool disables Roll for me', /id="hdRollMe"[^>]*disabled/.test(spentBox), spentBox);
+  ck('#103 fix1 ...and the typed box', /id="hdTyped"[^>]*disabled/.test(spentBox));
+  ck('#103 fix1 ...Apply stays disabled too', /id="hdApply"[^>]*disabled/.test(spentBox));
+  ck('#103 fix1 ...with a reason shown up front', spentBox.includes('No hit dice left'));
+  // a die with some left stays fully usable — this is about the SELECTED die
+  // having none, not the pool being empty
+  const mixedBox = X.hdSpendHTML(pool, 'd8', 5, 10, 20);
+  ck('#103 fix1 a die with some left keeps Roll for me and the typed box enabled',
+     !/id="hdRollMe"[^>]*disabled/.test(mixedBox) && !/id="hdTyped"[^>]*disabled/.test(mixedBox) &&
+     !mixedBox.includes('No hit dice left'));
+}
+
+/* ---- #103 fix round 1 (important): the spend box does not close the
+   "Hit die spent" summary it just opened ----
+   bd9022c fixed a bug only a browser caught: Apply and Roll for me both end
+   in spendHitDie(), which ends in restSummary() — OPENING the summary modal
+   in the spend box's own place. The old code then called closeModal() right
+   after, closing that summary in the same tick, before it ever painted. This
+   drives openHdSpend()'s REAL wiring (not just the pure builders above) and
+   asserts the openModal/closeModal call order: every path must END on an
+   `open` of the summary, never a `close`. */
+{
+  X.rules = {classes: [{name: 'Fighter', hitDie: 'd8'}]};
+  X.character = X.migrate({
+    classes: [{name: 'Fighter', level: 1}],
+    abilities: Object.assign(X.blankChar().abilities, {con: 14}),
+    hp: {cur: 5, max: 20, temp: '', locked: false},
+  });
+
+  // a minimal per-id element: enough for openHdSpend()'s own wiring to find
+  // hdTyped/hdApply/hdRollMe/mBody and for a full render pass (renderHP(),
+  // renderHitDice(), recompute()) not to throw reaching for one
+  const byId = {};
+  const el = () => ({
+    value: '', dataset: {}, disabled: false, hidden: false, readOnly: false,
+    textContent: '', innerHTML: '', style: {}, children: [],
+    classList: {toggle() {}, add() {}, remove() {}, contains: () => false},
+    _on: {}, addEventListener(type, fn) { (this._on[type] = this._on[type] || []).push(fn); },
+    querySelector: () => null, querySelectorAll: () => [], closest: () => null,
+    setAttribute() {}, removeAttribute() {}, focus() {}, remove() {},
+  });
+  const realGetById = ctx.document.getElementById, realOpen = ctx.openModal, realClose = ctx.closeModal;
+  const log = [];
+  ctx.document.getElementById = id => byId[id] || (byId[id] = el());
+  ctx.openModal = t => log.push(['open', String(t)]);
+  ctx.closeModal = () => log.push(['close']);
+
+  const endsOnTheSummary = () =>
+    log.length >= 2 && log[log.length - 1][0] === 'open' && /^Hit die spent/.test(log[log.length - 1][1]) &&
+    !log.slice(1).some((e, i) => e[0] === 'close');   // no close AFTER the box's own open
+
+  try {
+    // (a) the Apply path, for a valid typed roll
+    Object.keys(byId).forEach(k => delete byId[k]); log.length = 0;
+    ctx.openHdSpend('d8');
+    byId.hdTyped.value = '5';
+    (byId.hdApply._on.click || []).forEach(fn => fn());
+    ck('#103 fix1 Apply ends on the "Hit die spent" summary, not closed', endsOnTheSummary(), log);
+
+    // (b) the Roll-for-me path — put the die back first
+    X.character.hdUsed = {};
+    Object.keys(byId).forEach(k => delete byId[k]); log.length = 0;
+    ctx.openHdSpend('d8');
+    (byId.hdRollMe._on.click || []).forEach(fn => fn());
+    ck('#103 fix1 Roll for me ends on the "Hit die spent" summary too, not closed', endsOnTheSummary(), log);
+  } finally {
+    ctx.document.getElementById = realGetById; ctx.openModal = realOpen; ctx.closeModal = realClose;
+  }
+  X.character = X.blankChar(); X.rules = {};
+}
+
+/* ---- #103: the ability/skill layout setting is retired (spec decision 9) ----
+   The strip and the Skills column replace "By ability". A saved statStyle
+   stays in an old sheet (migrate() keeps every field) and nothing reads it.
+   (Were the statStyle() fallback checks and the grouped markup's id contract,
+   for builders that no longer exist.) */
+ck('#103 a retired layout choice survives a round trip, unread',
    X.migrate(JSON.parse(JSON.stringify(X.migrate({id: 'k', statStyle: 'grouped'})))).statStyle === 'grouped');
-
-/* The grouped markup must emit every hook recompute() finds by id or attribute.
-   Get one wrong and that number just stops updating — nothing throws, and the
-   harness has no DOM, so these string assertions are the only guard there is. */
-const gHTML = X.statGroupsHTML();
-ck('every ability keeps its modifier id and its breakdown hook',
-   X.ABIL.every(([k]) => gHTML.includes(`id="mod-${k}"`) && gHTML.includes(`data-stat="ability.${k}"`)));
-ck('every score box keeps its data-path and its recompute trigger',
-   X.ABIL.every(([k]) => gHTML.includes(`data-path="character.abilities.${k}"`)) &&
-   (gHTML.match(/data-recompute/g) || []).length === 6);
-ck('every save keeps its id, its dot and its breakdown hook',
-   X.ABIL.every(([k]) => gHTML.includes(`id="save-${k}"`) && gHTML.includes(`data-save="${k}"`) &&
-                         gHTML.includes(`data-stat="save.${k}"`)));
-ck('every skill appears exactly once — a duplicate id updates one and strands the other',
-   X.SKILLS.every(([k]) => (gHTML.match(new RegExp(`id="skill-${k}"`, 'g')) || []).length === 1));
-ck('...under the ability that governs it',
-   X.SKILLS.every(([k, , ab]) => X.statGroupHTML(ab, ab.toUpperCase()).includes(`id="skill-${k}"`)));
-ck('Constitution gets a saving throw and no skills',
-   X.statGroupHTML('con', 'CON').includes('id="save-con"') &&
-   !/data-skill=/.test(X.statGroupHTML('con', 'CON')));
-ck('the breakdown modal is reachable from all thirty numbers',
-   (gHTML.match(/data-stat="/g) || []).length === X.ABIL.length * 2 + X.SKILLS.length);
 
 /* ================= inventory filing =================
    invSection() reads category/type. Nothing used to copy those onto an item, so
@@ -2288,8 +2338,11 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
 {
   ck('#97 a new character shows every card\'s edit buttons',
      JSON.stringify(X.blankChar().editHide) === '{}' && X.EDIT_CARDS.every(k => !X.editHidden(X.blankChar(), k)));
-  ck('#97 the twelve cards', JSON.stringify(X.EDIT_CARDS) ===
-     JSON.stringify(['class', 'origin', 'statuses', 'attacks', 'resources', 'features', 'familiars', 'spells', 'inventory', 'trackers', 'journal', 'secnotes']));
+  // #103: class and origin leave (their Remove sits behind the header's flyout
+  // and window, with a confirm); defences and proficiencies joined in Task 4
+  // #103 final review I-3: familiars leaves (its card is hidden on the Sheet)
+  ck('#97 the eleven cards', JSON.stringify(X.EDIT_CARDS) ===
+     JSON.stringify(['statuses', 'attacks', 'resources', 'features', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies']));
   ck('#97 a sheet from before, and junk, read as {}',
      JSON.stringify(X.migrate({abilities: {}}).editHide) === '{}' &&
      ['x', [], null, 7].every(v => JSON.stringify(X.migrate({abilities: {}, editHide: v}).editHide) === '{}'));
@@ -2331,7 +2384,8 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('#97 a feature row\'s edit and delete carry ed', ed(X.featItemHTML({id: 'f', name: 'Rage'}), 'data-edit-feature') && ed(X.featItemHTML({id: 'f', name: 'Rage'}), 'data-del-feature'));
   ck('#97 an item row\'s edit and delete carry ed', ed(X.invItemHTML({id: 'i', name: 'Rope'}), 'data-edit-item') && ed(X.invItemHTML({id: 'i', name: 'Rope'}), 'data-del-item'));
   ck('#97 a status row\'s edit and remove carry ed', ed(X.statusRowHTML({id: 's', name: 'poisoned'}), 'data-edit-status') && ed(X.statusRowHTML({id: 's', name: 'poisoned'}), 'data-del-status'));
-  ck('#97 a class chip\'s Remove carries ed', ed(X.classChipHTML({name: 'Fighter', level: 3, subclass: null}, 0), 'data-del-class'));
+  // #103: the class chip went with the Class card; its Remove is the flyout's
+  ck('#97 a class\'s Remove carries ed', ed(X.classFlyHTML({classes: [{name: 'Fighter', level: 3, subclass: null}]}, 0), 'data-del-class'));
   ck('#97 a tracker\'s pencil carries ed', ed(X.trkEditHTML({id: 't', name: 'Kills'}), 'data-trkedit'));
   ck('#97 a section note\'s pencil carries ed', ed(X.noteEntryHTML(X.noteDef('features')), 'data-noteedit'));
   const page = {id: 'p', title: 'x', text: ''};
@@ -2363,7 +2417,8 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
      on.includes('title="Remove from combat view"'));
   const h = X.combatHeaderHTML({combatActive: false, combatRound: 0});
   /* #80: the Combat tab acts like every tab — no ✕ (picking another tab, or the
-     swords again, leaves it) and no ☰ of its own (the tab bar's serves it) */
+     swords again, leaves it) and no ☰ of its own (the tab bar's one served it
+     until #103 retired it; none may come back here) */
   ck('#80 the header has no ✕ and no ☰ of its own',
      !h.includes('id="cvClose"') && !h.includes('id="cvToc"') && !/✕|☰/.test(h), h);
 }
@@ -4424,6 +4479,547 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ctx.openModal = savedOM; X.rules = savedRules; X.character = savedChar;
 }
 
+/* ---- #103: chips, advancement and default languages (spec §3, §4, §4a) ---- */
+{
+  const savedRules = X.rules;
+  const b = X.blankChar();
+  ck('#103 new lists start empty', ['resists', 'immunes', 'senses', 'languages'].every(k => Array.isArray(b[k]) && b[k].length === 0));
+  ck('#103 a new character advances by XP', b.advancement === 'xp' && X.advancementOf(b) === 'xp');
+  ck('#103 advancement junk reads as xp', ['milestone', 'Milestone', 'lots', null, 7].map(v => X.advancementOf({advancement: v})).join() === 'milestone,xp,xp,xp,xp');
+  const dirty = [{id: 'a', name: ' Fire '}, {name: 'fire'}, {name: ''}, 'Cold', null, [], {name: 5}, {id: 'c', name: 'Cold'}];
+  const clean = X.chipClean(dirty, 'resists', false);
+  ck('#103 chips: trimmed, deduped case-blind, junk dropped', JSON.stringify(clean.map(c => c.name)) === '["Fire","Cold"]', clean);
+  ck('#103 a read never invents an id', clean[0].id === 'a' && X.chipClean([{name: 'X'}], 'resists', false)[0].id === '');
+  ck('#103 migrate mints ids', typeof X.chipClean([{name: 'X'}], 'resists', true)[0].id === 'string' && X.chipClean([{name: 'X'}], 'resists', true)[0].id.length > 0);
+  const sen = X.chipClean([{name: 'Darkvision', range: 60}, {name: 'Tremorsense', range: '30'}, {name: 'Blindsight', range: -5}, {name: 'Truesight', range: 'far'}], 'senses', false);
+  ck('#103 a sense range is a whole number of feet or blank', JSON.stringify(sen.map(s => s.range)) === '[60,30,"",""]', sen);
+  ck('#103 only languages keep a source', X.chipClean([{name: 'Common', src: 'system'}], 'languages', false)[0].src === 'system' &&
+     !('src' in X.chipClean([{name: 'Fire', src: 'race:Elf'}], 'resists', false)[0]) && X.chipClean([{name: 'Elvish'}], 'languages', false)[0].src === '');
+  ck('#103 chipList reads through the guard', X.chipList({resists: 'nope'}, 'resists').length === 0 && X.chipList(null, 'senses').length === 0);
+
+  ck('#103 the SRD table: 20 levels from 0', X.SRD_ADVANCEMENT.length === 20 && X.SRD_ADVANCEMENT[0][0] === 0 && X.SRD_ADVANCEMENT[19][0] === 355000 && X.SRD_ADVANCEMENT[15][0] === 195000);
+  X.rules = {name: 'T', advancement: Object.create(null), defaultLanguages: Object.create(null)};
+  ck('#103 no declaration: the SRD table and Common', X.advancementFor({system: 'dnd'}) === X.SRD_ADVANCEMENT && JSON.stringify(X.defaultLanguagesFor({system: 'dnd'})) === '["Common"]');
+  X.rules.advancement.humblewood = [[0, 1], [100, 2], [400, 3]];
+  X.rules.defaultLanguages.humblewood = ['Common', 'Birdsong', '', 7];
+  ck('#103 a ruleset that declares its own', X.advancementFor({system: 'humblewood'})[1][0] === 100 &&
+     JSON.stringify(X.defaultLanguagesFor({system: 'humblewood'})) === '["Common","Birdsong"]');
+  ck('#103 ...used only by its own ruleset', X.advancementFor({system: 'dnd'}) === X.SRD_ADVANCEMENT);
+  X.rules.advancement.humblewood = [[0, 1], [500, 2], [400, 3]];
+  ck('#103 a malformed table falls back', X.advancementFor({system: 'humblewood'}) === X.SRD_ADVANCEMENT);
+  X.rules.advancement.humblewood = [[0, 2]];
+  ck('#103 a table must start at level 1, xp 0', X.advancementFor({system: 'humblewood'}) === X.SRD_ADVANCEMENT);
+  X.rules = savedRules;
+
+  ck('#103 XP reads numbers and digit strings', X.xpNumber(183000) === 183000 && X.xpNumber('183,000') === 183000 && X.xpNumber(' 42 ') === 42 &&
+     X.xpNumber('') === null && X.xpNumber('lots') === null && X.xpNumber(-5) === null && X.xpNumber('1.5') === null);
+  const lvl = (n, xp) => ({system: 'dnd', xp, classes: [{name: 'Cleric', level: n}]});
+  const p = X.xpProgress(lvl(15, '183,000'));
+  ck('#103 progress toward the next level', p && p.xp === 183000 && p.level === 15 && p.next === 195000 && p.ready === false, p);
+  ck('#103 past the threshold: ready', X.xpProgress(lvl(15, 200000)).ready === true);
+  ck('#103 level 20 has no next', X.xpProgress(lvl(20, 400000)).next === null && X.xpProgress(lvl(20, 400000)).ready === false);
+  ck('#103 XP not a number: no progress', X.xpProgress(lvl(3, 'a lot')) === null);
+
+  ck('#103 languages parse from a pack string', JSON.stringify(X.langParse('Common, Elvish and one other language of your choice')) === '["Common","Elvish"]' &&
+     JSON.stringify(X.langParse('Common and Dwarvish')) === '["Common","Dwarvish"]' && JSON.stringify(X.langParse('Any two languages')) === '[]' &&
+     JSON.stringify(X.langParse(7)) === '[]');
+  const c = X.blankChar(); c.system = 'dnd'; c.languages = [{id: 'x', name: 'common', src: ''}];
+  X.ensureDefaultLanguages(c);
+  ck('#103 a default already present is not doubled', c.languages.length === 1);
+  const c2 = X.blankChar(); c2.system = 'dnd';
+  X.ensureDefaultLanguages(c2); X.ensureDefaultLanguages(c2);
+  ck('#103 defaults are added once, stamped system', c2.languages.length === 1 && c2.languages[0].name === 'Common' && c2.languages[0].src === 'system');
+}
+
+/* ---- #103: an old sheet comes forward (spec §5, §7, §11) ---- */
+{
+  const old = () => ({abilities: {}, system: 'dnd',
+    proficiencies: 'Light armor.\nLanguages: Common, Elvish, Draconic\nTools: Thieves\' tools',
+    secNotes: {class: {text: 'Took Life domain.', at: 5, editedAt: 9}, origin: {text: 'From the north.', at: 3, editedAt: 4},
+               rest: {text: 'Short rests at noon.', at: 7, editedAt: 8}, portrait: {text: 'Scar on cheek.', at: 6, editedAt: 6}},
+    combatSections: ['vitals', 'rest', 'statuses'], familiars: [{id: 'f', name: 'Owl'}]});
+  const m = X.migrate(old());
+  ck('#103 class and origin notes merge into Character', m.secNotes.portrait.text ===
+     'Scar on cheek.\n\n**Class:**\nTook Life domain.\n\n**Ancestry & Background:**\nFrom the north.', m.secNotes.portrait.text);
+  ck('#103 ...keeping the earlier start and the later edit', m.secNotes.portrait.at === 3 && m.secNotes.portrait.editedAt === 9);
+  ck('#103 the merged notes are gone', !('class' in m.secNotes) && !('origin' in m.secNotes) && !('rest' in m.secNotes));
+  ck('#103 the rest note merges into Vitals, created when absent', m.secNotes.vitals.text === '**Rest & Recovery:**\nShort rests at noon.', m.secNotes.vitals);
+  ck('#103 the Languages line becomes chips', JSON.stringify(X.chipList(m, 'languages').map(l => l.name)) === '["Common","Elvish","Draconic"]' &&
+     X.chipList(m, 'languages').every(l => l.src === ''));
+  ck('#103 ...and leaves the rest of the text', m.proficiencies === 'Light armor.\nTools: Thieves\' tools', JSON.stringify(m.proficiencies));
+  ck('#103 a migrated Common is not doubled by the default', X.chipList(m, 'languages').filter(l => l.name.toLowerCase() === 'common').length === 1);
+  ck('#103 rest in the combat view becomes vitals, once', JSON.stringify(m.combatSections) === '["vitals","statuses"]', m.combatSections);
+  ck('#103 a character with a familiar shows the icon', m.showFamiliars === true && X.migrate({abilities: {}}).showFamiliars === false);
+  ck('#103 a stored choice is kept', X.migrate({abilities: {}, familiars: [{id: 'f', name: 'Owl'}], showFamiliars: false}).showFamiliars === false);
+  const twice = X.migrate(JSON.parse(JSON.stringify(m)));
+  ck('#103 migrating twice changes nothing', JSON.stringify(twice) === JSON.stringify(m));
+  ck('#103 a sheet from before gets Common', JSON.stringify(X.chipList(X.migrate({abilities: {}, system: 'dnd'}), 'languages').map(l => [l.name, l.src])) === '[["Common","system"]]');
+  ck('#103 junk lists are emptied, advancement guarded', (() => { const j = X.migrate({abilities: {}, resists: 'x', senses: [null, {name: 'Darkvision', range: '60'}], advancement: 'lots'});
+    return j.resists.length === 0 && j.senses[0].range === 60 && typeof j.senses[0].id === 'string' && j.senses[0].id && j.advancement === 'xp'; })());
+  const lift = {proficiencies: 'languages: Gnomish\nLanguages:   \nOther'};
+  X.liftLanguages(lift);
+  ck('#103 the lift is case-blind and drops an empty line', JSON.stringify(X.chipList(lift, 'languages').map(l => l.name)) === '["Gnomish"]' && lift.proficiencies === 'Other', lift);
+  const n = {secNotes: {}};
+  X.mergeNoteInto(n, 'class', 'portrait', 'Class');
+  ck('#103 nothing to merge: nothing changes', JSON.stringify(n.secNotes) === '{}');
+
+  const n2 = {secNotes: {class: 'Took Life.'}};
+  X.mergeNoteInto(n2, 'class', 'portrait', 'Class');
+  ck('#103 a note stored as a bare string still merges', n2.secNotes.portrait.text === '**Class:**\nTook Life.' && !('class' in n2.secNotes), n2);
+  const n3 = {secNotes: {class: [1]}};
+  X.mergeNoteInto(n3, 'class', 'portrait', 'Class');
+  ck('#103 junk under a removed key is dropped, not merged, never throws', !('portrait' in n3.secNotes) && !('class' in n3.secNotes), n3);
+
+  ck('#103 langLifted is set once migrate has run', m.langLifted === true);
+  const again = X.migrate(Object.assign(JSON.parse(JSON.stringify(m)), {proficiencies: m.proficiencies + '\nLanguages: Orcish'}));
+  ck('#103 the lift runs once: a later "Languages:" line stays text, not chips', again.proficiencies.includes('Languages: Orcish') &&
+     !X.chipList(again, 'languages').some(l => l.name === 'Orcish'), again.proficiencies);
+  const kept = X.migrate({abilities: {}, system: 'dnd', langLifted: true, proficiencies: 'Languages: Gnomish'});
+  ck('#103 a sheet already flagged keeps its Languages line too', kept.proficiencies === 'Languages: Gnomish' &&
+     !X.chipList(kept, 'languages').some(l => l.name === 'Gnomish'), kept);
+}
+
+/* ---- #103: the header is not combat-addable (Task 7 review M3) ----
+   The header is the `portrait` section. Its rest buttons stay out of the combat
+   view (not a fight action), and the portrait image now rides in with Vitals,
+   so a saved `portrait` in the view becomes `vitals`, as `rest` does. */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const m1 = X.migrate({abilities: {}, combatSections: ['portrait', 'statuses']});
+  ck('#103 a saved portrait in the combat view becomes vitals', same(m1.combatSections, ['vitals', 'statuses']), m1.combatSections);
+  const m2 = X.migrate({abilities: {}, combatSections: ['vitals', 'portrait', 'rest', 'statuses']});
+  ck('#103 ...once, beside a vitals (and a rest) already there', same(m2.combatSections, ['vitals', 'statuses']), m2.combatSections);
+  ck('#103 ...and migrating again changes nothing', same(X.migrate(JSON.parse(JSON.stringify(m2))).combatSections, ['vitals', 'statuses']));
+  ck('#103 the header is not combat-addable; every other section is',
+     !X.combatAddable('portrait') && X.combatAddable('vitals') && X.combatAddable('familiars') && !X.combatAddable('nope') &&
+     X.NOTE_SECTIONS.filter(s => !X.combatAddable(s.k)).map(s => s.k).join() === 'portrait');
+  ck('#103 a portrait that reaches the view unmigrated is dropped', same(X.combatSectionsOf({combatSections: ['portrait', 'vitals']}), ['vitals']));
+  const c = X.blankChar(); X.character = c;
+  X.toggleCombatSection('portrait');
+  ck('#103 the toggle cannot add the header', same(c.combatSections, X.COMBAT_DEFAULTS), c.combatSections);
+
+  // renderCombatToggles() against fake cards: one per registry key, each with a .label
+  const doc = ctx.document, q = doc.querySelector, got = [];
+  doc.querySelector = sel => {
+    const mm = /^\.card\[data-note="([a-z]+)"\]$/.exec(sel); if (!mm) return null;
+    const k = mm[1];
+    const label = {querySelector: () => null, insertAdjacentHTML: (pos, html) => got.push([k, html])};
+    return {querySelector: s => s === '.label' ? label : null};
+  };
+  try { X.renderCombatToggles(); } finally { doc.querySelector = q; }
+  ck('#103 the header carries no combat toggle', !got.some(([k]) => k === 'portrait') && got.some(([k]) => k === 'vitals') &&
+     got.length === X.NOTE_SECTIONS.length - 1, got.map(([k]) => k));
+}
+
+/* ---- #103: a jump to the familiars note with the paw hidden (Task 7 review M4) ----
+   With showFamiliars off there is no paw, so the flyout hangs from the header's
+   .sh-bar instead of opening with no position. */
+{
+  const doc = ctx.document, q = doc.querySelector;
+  const keep = {openShFly: ctx.openShFly, selectTab: ctx.selectTab, scrollToCard: ctx.scrollToCard};
+  const bar = {bar: true}, paw = {paw: true};
+  let anchor = 'unset';
+  ctx.openShFly = (kind, i, a) => { anchor = a; };
+  ctx.selectTab = () => {}; ctx.scrollToCard = () => {};
+  try {
+    doc.querySelector = sel => sel === '[data-shpaw]' ? null : sel === '#sheetHead .sh-bar' ? bar : null;
+    X.jumpToNote('familiars');
+    ck('#103 with the paw hidden, the flyout anchors on the header bar', anchor === bar, anchor);
+    doc.querySelector = sel => sel === '[data-shpaw]' ? paw : sel === '#sheetHead .sh-bar' ? bar : null;
+    X.jumpToNote('familiars');
+    ck('#103 ...and on the paw when it shows', anchor === paw, anchor);
+  } finally { doc.querySelector = q; Object.assign(ctx, keep); }
+}
+
+/* ---- #103: no rules pack, no classes: + Class says where to load one (Task 7 review M5) ----
+   The Class card's hint went with the card; it lives on in the Add class window. */
+{
+  const keep = ctx.openModal, keepRules = X.rules;
+  let body = '';
+  ctx.openModal = (t, h) => { body = h; };
+  try {
+    X.rules = Object.assign({}, keepRules, {classes: []});
+    X.character = X.blankChar();
+    X.openAddClass();
+    ck('#103 with no classes loaded, Add class points to Settings → Rules', body.includes(X.NO_RULES_HINT) &&
+       /Settings → Rules/.test(X.NO_RULES_HINT) && /<b>races<\/b> and <b>classes<\/b>/.test(X.NO_RULES_HINT), body);
+    X.rules = Object.assign({}, keepRules, {classes: [{name: 'Cleric', hitDie: 'd8'}]});
+    X.openAddClass();
+    ck('#103 ...and says nothing of it when a pack has classes', !body.includes('Settings → Rules') && body.includes('Cleric'), body);
+  } finally { ctx.openModal = keep; X.rules = keepRules; }
+}
+
+/* ---- #103: a species or background grants languages as chips (spec §5) ---- */
+{
+  const c = {languages: [{id: 'p', name: 'Elvish', src: ''}, {id: 's', name: 'Common', src: 'system'}]};
+  X.grantLanguages(c, 'race:Elf', 'Common, Elvish and Sylvan');
+  ck('#103 a grant adds what is missing, stamped with its source', JSON.stringify(c.languages.map(l => [l.name, l.src])) ===
+     '[["Elvish",""],["Common","system"],["Sylvan","race:Elf"]]', c.languages);
+  X.grantLanguages(c, 'bg:Sage', 'Sylvan, Draconic');
+  ck('#103 a second grant does not double one', c.languages.filter(l => l.name === 'Sylvan').length === 1 && c.languages.some(l => l.name === 'Draconic' && l.src === 'bg:Sage'));
+  X.dropLanguages(c, 'race:Elf');
+  ck('#103 removing the species takes only its own', JSON.stringify(c.languages.map(l => l.name)) === '["Elvish","Common","Draconic"]', c.languages);
+  X.grantLanguages(c, 'race:Odd', 42);
+  ck('#103 a pack field that is not text grants nothing', c.languages.length === 3);
+}
+/* the real paths: apply and remove a species with languages */
+{
+  const savedRules = X.rules, savedChar = X.character;
+  X.rules = Object.assign({}, X.rules, {races: [{name: 'Elf', languages: 'Common and Elvish', _source: 'SRD 5.2'}]});
+  ctx.recomputeDups();
+  X.character = X.migrate({abilities: {}, system: 'dnd'});
+  ck('#103 the species apply function exists', typeof ctx.applyRace === 'function');
+  ctx.applyRace('Elf');
+  ck('#103 picking a species grants its languages as chips', X.chipList(X.character, 'languages').some(l => l.name === 'Elvish' && l.src === 'race:Elf'));
+  ck('#103 ...and writes no Languages line', !/Languages:/i.test(X.character.proficiencies || ''));
+  ctx.removeRace(false);
+  ck('#103 removing it takes them back', !X.chipList(X.character, 'languages').some(l => l.name === 'Elvish'));
+  X.rules = savedRules; X.character = savedChar;
+}
+
+/* ---- #103: the chip component (spec §8) ---- */
+{
+  const c = {resists: [{id: 'r1', name: 'Fire'}], senses: [{id: 's1', name: 'Darkvision', range: 60}],
+             languages: [{id: 'l1', name: 'Common', src: 'system'}, {id: 'l2', name: 'Elvish', src: 'race:Elf'}, {id: 'l3', name: 'Draconic', src: ''}]};
+  const r = X.chipsHTML(c, 'resists');
+  ck('#103 a chip, in capitals, with an × the pencil hides', r.includes('>FIRE<button type="button" class="chip-x ed" data-chipdel="resists" data-chipid="r1"'), r);
+  ck('#103 + Add opens the chooser', r.includes('data-chipadd="resists"'));
+  ck('#103 a sense shows its range', X.chipsHTML(c, 'senses').includes('60 ft'));
+  const l = X.chipsHTML(c, 'languages');
+  ck('#103 a granted language shows its source and has no ×', l.includes('COMMON<span class="chip-src"> · rules</span>') && l.includes('ELVISH<span class="chip-src"> · species</span>') &&
+     !l.includes('data-chipid="l1"') && !l.includes('data-chipid="l2"') && l.includes('data-chipid="l3"'), l);
+  ck('#103 an empty list says None', X.chipsHTML({immunes: []}, 'immunes').includes('None'));
+  ck('#103 names are escaped', X.chipsHTML({resists: [{id: 'x', name: '<b>'}]}, 'resists').includes('>&lt;B&gt;<button') && !X.chipsHTML({resists: [{id: 'x', name: '<b>'}]}, 'resists').includes('<B>'));
+  const ch = X.chipChooserHTML({resists: [{id: 'r1', name: 'Fire'}]}, 'resists');
+  ck('#103 the chooser offers the damage types, Fire marked added', X.CHIP_SUGGEST.resists.length === 13 && /data-chippick="Fire"[^>]*disabled/.test(ch) && ch.includes('data-chippick="Cold"'));
+  ck('#103 immunities also offer conditions', X.CHIP_SUGGEST.immunes.includes('Poisoned') && X.CHIP_SUGGEST.immunes.includes('Poison'));
+  ck('#103 senses offer the four, with a range box', JSON.stringify(X.CHIP_SUGGEST.senses) === '["Blindsight","Darkvision","Tremorsense","Truesight"]' && X.chipChooserHTML({}, 'senses').includes('id="chipRange"'));
+  const a = {resists: []};
+  X.addChip(a, 'resists', ' fire '); X.addChip(a, 'resists', 'FIRE'); X.addChip(a, 'resists', '');
+  ck('#103 add trims, refuses blanks and duplicates', a.resists.length === 1 && a.resists[0].name === 'fire');
+  X.addChip(a, 'senses', 'Darkvision', '60');
+  ck('#103 a sense keeps its range', a.senses[0].range === 60);
+  X.removeChip(a, 'resists', a.resists[0].id);
+  ck('#103 remove by id', a.resists.length === 0);
+  const g = {languages: [{id: 'l2', name: 'Elvish', src: 'race:Elf'}]};
+  X.removeChip(g, 'languages', 'l2');
+  ck('#103 a granted chip cannot be removed by hand', g.languages.length === 1);
+}
+
+/* ---- #103: the header (spec §6.1, §6.6) ---- */
+{
+  const c = X.migrate({abilities: {}, system: 'dnd', name: 'Hobbs', xp: '183,000', classes: [{name: 'Cleric', level: 15}],
+    race: {name: 'Half-Elf'}, bg: {name: 'Acolyte'}, familiars: [{id: 'f1', name: 'A very long owl name', active: true}, {id: 'f2', name: 'Cat'}]});
+  const line = X.classLineHTML(c);
+  ck('#103 the class line: each class, species, background, tappable', line.includes('data-shcls="0"') && line.includes('Cleric 15') && line.includes('data-shrace') && line.includes('Half-Elf') && line.includes('Acolyte'));
+  ck('#103 no class: + Class', X.classLineHTML(X.migrate({abilities: {}})).includes('data-shaddcls'));
+  const lv = X.levelBadgeHTML(c);
+  ck('#103 XP mode: the XP field and a bar to the next level', lv.includes('data-path="character.xp"') && lv.includes('sh-xpbar') && lv.includes('195,000'));
+  ck('#103 ready: the badge offers Level up', X.levelBadgeHTML(Object.assign({}, c, {xp: '200000'})).includes('data-shlevelup'));
+  ck('#103 Milestone: the ring only', !X.levelBadgeHTML(Object.assign({}, c, {advancement: 'milestone'})).includes('character.xp'));
+  const fly = X.famFlyHTML(c);
+  ck('#103 the familiar flyout: name and abbreviated status per familiar, + Add', fly.includes('data-shfam="f1"') && fly.includes('●') && fly.includes('○') && fly.includes('data-add="familiar"'));
+  ck('#103 the familiar card markup is shared with the list', X.familiarCardHTML(c.familiars[0]).includes('data-toggle-familiar="f1"'));
+  const cf = X.classFlyHTML(c, 0);
+  ck('#103 the class flyout: info, level up/down, add, remove', ['data-shinfo="0"', 'data-shlevel="up"', 'data-shlevel="down"', 'data-shaddcls', 'data-del-class="0"'].every(s => cf.includes(s)), cf);
+  ck('#103 the XP shows with thousands separators', X.levelBadgeHTML(c).includes('183,000 / 195,000'));
+
+  /* beyond the brief's list: the edges spec §11 names */
+  ck('#103 the class line joins several classes, each with its own index',
+     X.classLineHTML(Object.assign({}, c, {classes: [{name: 'Cleric', level: 12}, {name: 'Fighter', level: 3}]})).includes('data-shcls="1"'));
+  const bare = X.classLineHTML(X.migrate({abilities: {}}));
+  ck('#103 no species or background: their add buttons', bare.includes('data-add-race') && bare.includes('data-add-bg') && !bare.includes('data-shrace') && !bare.includes('data-shbg'));
+  ck('#103 the flyout offers Choose when there is no subclass, the subclass when there is',
+     cf.includes('data-choose-sub="Cleric"') && X.classFlyHTML(Object.assign({}, c, {classes: [{name: 'Cleric', level: 15, subclass: 'Life'}]}), 0).includes('data-sub-info="Cleric|Life"'));
+  ck('#103 a flyout for a class that is not there is empty', X.classFlyHTML(c, 7) === '');
+  // I-2: the menu's level buttons carry the class they belong to
+  const cf1 = X.classFlyHTML(Object.assign({}, c, {classes: [{name: 'Fighter', level: 3}, {name: 'Wizard', level: 1}]}), 1);
+  ck('#103 I-2 a class menu\'s Level up / down name their class', cf1.includes('data-shlevel="up" data-shidx="1"') && cf1.includes('data-shlevel="down" data-shidx="1"'), cf1);
+  ck('#103 I-2 ...and the tap passes it on', /\[data-shlevel\]"\)\)\)\{const i=num\(m\.dataset\.shidx\);return m\.dataset\.shlevel==="down"\?doLevelDown\(i\):doLevelUp\(i\);\}/.test(require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '90-boot.js'), 'utf8')));
+  const typed = X.levelBadgeHTML(Object.assign({}, c, {xp: 'lots'}));
+  ck('#103 XP not a number: shown as typed, no bar', typed.includes('value="lots"') && !typed.includes('sh-xpbar'));
+  ck('#103 the ring holds #levelDisp, so recompute() still writes the level', lv.includes('id="levelDisp"') && lv.includes('>15<'));
+  // M-9 (ruled): within the level, 165,000 → 195,000, so 183,000 is 60%
+  ck('#103 the bar is as full as the XP is through the current level',
+     /style="width:60%"/.test(lv), lv);
+  ck('#103 Level up ready is said, not just coloured', /class="sh-ring ready"/.test(X.levelBadgeHTML(Object.assign({}, c, {xp: '200000'}))) &&
+     X.levelBadgeHTML(Object.assign({}, c, {xp: '200000'})).includes('Level up ready'));
+  ck('#103 the XP field is escaped', X.levelBadgeHTML(Object.assign({}, c, {xp: '"><b>'})).includes('value="&quot;&gt;&lt;b&gt;"'));
+  ck('#103 the paw shows with the setting on, faint with no familiar',
+     X.pawHTML(Object.assign({}, c, {showFamiliars: true})).includes('data-shpaw') && !X.pawHTML(Object.assign({}, c, {showFamiliars: true})).includes('faint') &&
+     X.pawHTML(Object.assign({}, c, {showFamiliars: true, familiars: []})).includes('sh-paw faint'));
+  ck('#103 the paw hides with the setting off', !X.pawHTML(Object.assign({}, c, {showFamiliars: false})).includes('data-shpaw'));
+  ck('#103 an empty familiar list still offers + Add', X.famFlyHTML({familiars: []}).includes('data-add="familiar"') && X.famFlyHTML({}).includes('data-add="familiar"'));
+  ck('#103 a familiar card with no stat block: its name and the Summon switch',
+     /Owl[\s\S]*data-toggle-familiar="o"/.test(X.familiarCardHTML({id: 'o', name: 'Owl', active: true})));
+
+  /* the info windows: Change / Remove from the sheet, never in reference mode */
+  const savedOM = ctx.openModal, savedChar = X.character;
+  let got = null; ctx.openModal = (t, b) => { got = String(b); };
+  X.character = X.migrate({abilities: {}, race: {name: 'Half-Elf'}, bg: {name: 'Acolyte'}});
+  ctx.openRaceInfo('Half-Elf');
+  ck('#103 the species window from the sheet: Change and Remove', got.includes('data-shchange="race"') && got.includes('data-del-race="1"'), got);
+  ctx.openRaceInfo('Half-Elf', {ref: true});
+  ck('#103 ...but not in reference mode', !got.includes('data-shchange') && !got.includes('data-del-race'));
+  ctx.openRaceInfo('Dwarf');
+  ck('#103 ...nor for a species the character does not have', !got.includes('data-shchange'));
+  ctx.openBackgroundInfo('Acolyte');
+  ck('#103 the background window from the sheet: Change and Remove', got.includes('data-shchange="bg"') && got.includes('data-del-bg="1"'), got);
+  ctx.openBackgroundInfo('Acolyte', {ref: true});
+  ck('#103 ...but not in reference mode', !got.includes('data-shchange') && !got.includes('data-del-bg'));
+  ctx.openModal = savedOM; X.character = savedChar;
+}
+
+/* ---- #103 (Mike's layout ruling): the combat view takes cards out of the
+   Sheet's two stacks and puts each back in its own stack, in its own place.
+   The REAL Sheet markup, parsed into a small node tree (just enough DOM for
+   fillCombatView / emptyCombatView: before, appendChild, replaceWith,
+   closest, querySelector by #id, .class and [attr]), with a #combatView >
+   #cvList beside it. */
+{
+  const html = require('./harness').loadHTML();
+  const at = html.indexOf('id="tab-sheet"'), from = html.lastIndexOf('<section', at), to = html.indexOf('<section class="tabpanel', at + 1);
+  const VOID = new Set(['input', 'img', 'br', 'hr', 'path', 'circle', 'line', 'rect', 'polyline', 'polygon']);
+  const match = (n, sel) => {
+    if (!n.tag) return false;
+    const parts = sel.match(/#[\w-]+|\.[\w-]+|\[[\w-]+(?:="[^"]*")?\]|^[a-z]+/g) || [];
+    return parts.length > 0 && parts.every(p => {
+      if (p[0] === '#') return n.attr('id') === p.slice(1);
+      if (p[0] === '.') return (n.attr('class') || '').split(/\s+/).includes(p.slice(1));
+      if (p[0] === '[') { const m = /^\[([\w-]+)(?:="([^"]*)")?\]$/.exec(p); const v = n.attr(m[1]); return m[2] === undefined ? v !== undefined : v === m[2]; }
+      return n.tag === p;
+    });
+  };
+  function mk(tag, attrs) {
+    const n = {tag, attrs: attrs || {}, parent: null, children: [], dataset: {}, hidden: false,
+      attr(k) { if (k in this.attrs) return this.attrs[k]; if (k.indexOf('data-') === 0) { const d = this.dataset[k.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())]; return d === undefined ? undefined : String(d); } return undefined; },
+      appendChild(c) { if (c.parent) c.remove(); c.parent = this; this.children.push(c); return c; },
+      remove() { if (this.parent) { const s = this.parent.children; s.splice(s.indexOf(this), 1); this.parent = null; } },
+      before(c) { if (c.parent) c.remove(); const s = this.parent.children; s.splice(s.indexOf(this), 0, c); c.parent = this.parent; },
+      replaceWith(c) { const p = this.parent; if (c.parent) c.remove(); const s = p.children; s.splice(s.indexOf(this), 1, c); c.parent = p; this.parent = null; },
+      closest(sel) { for (let x = this; x; x = x.parent) if (match(x, sel)) return x; return null; },
+      querySelectorAll(sel) { const out = []; const walk = x => x.children.forEach(c => { if (match(c, sel)) out.push(c); walk(c); }); walk(this); return out; },
+      querySelector(sel) { return this.querySelectorAll(sel)[0] || null; }};
+    return n;
+  }
+  const root = mk('root');
+  let cur = root;
+  const re = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][\w-]*)((?:[^>"]|"[^"]*")*?)(\/?)>/g;
+  let m;
+  const src = html.slice(from, to);
+  while ((m = re.exec(src))) {
+    if (!m[2]) continue;
+    const tag = m[2].toLowerCase();
+    if (m[1]) { if (cur.tag === tag) cur = cur.parent; continue; }
+    const attrs = {}; let a; const ar = /([\w-]+)(?:="([^"]*)")?/g;
+    while ((a = ar.exec(m[3]))) attrs[a[1]] = a[2] === undefined ? '' : a[2];
+    const n = cur.appendChild(mk(tag, attrs));
+    if (!VOID.has(tag) && !m[4]) cur = n;
+  }
+  const view = root.appendChild(mk('div', {id: 'combatView'})), list = view.appendChild(mk('div', {id: 'cvList'}));
+  const where = k => { const c = root.querySelector('.card[data-note="' + k + '"]'); const p = c.parent; return (p.attr('class') || p.attr('id') || p.tag) + '#' + p.children.indexOf(c); };
+  const KEYS = ['vitals', 'abilities', 'skills', 'features', 'defences', 'statuses', 'resources'];
+  const before = KEYS.map(where);
+  ck('#103 the parsed Sheet has the two stacks, in their places',
+     before.join() === 'sheet-grid#0,sheet-grid#1,col-m#0,col-m#1,col-r#0,col-r#1,col-r#2', before);
+  const doc = ctx.document, keep = {g: doc.getElementById, q: doc.querySelector, qa: doc.querySelectorAll, c: doc.createElement,
+    ag: ctx.addGrip, rg: ctx.removeGrip, sl: ctx.syncStatLock, re: ctx.renderCombatEmpty, ch: X.character};
+  doc.getElementById = id => root.querySelector('#' + id);
+  doc.querySelector = sel => root.querySelector(sel);
+  doc.querySelectorAll = sel => root.querySelectorAll(sel);
+  doc.createElement = tag => mk(tag);
+  ctx.addGrip = () => {}; ctx.removeGrip = () => {}; ctx.syncStatLock = () => {}; ctx.renderCombatEmpty = () => {};
+  try {
+    X.character = X.blankChar(); X.character.combatSections = KEYS.slice();
+    ctx.fillCombatView();
+    ck('#103 every card goes into the view, a marker left in its place',
+       KEYS.every(k => root.querySelector('.card[data-note="' + k + '"]').parent === list) &&
+       KEYS.every(k => root.querySelector('[data-cvhome="' + k + '"]')), KEYS.map(where));
+    ck('#103 ...the markers sit in the stacks the cards came from',
+       root.querySelector('[data-cvhome="features"]').parent.attr('class') === 'col-m' && root.querySelector('[data-cvhome="statuses"]').parent.attr('class') === 'col-r');
+    ctx.emptyCombatView();
+    const after = KEYS.map(where);
+    ck('#103 after End, every card is back in its own stack, in its own place', JSON.stringify(after) === JSON.stringify(before), after);
+    ck('#103 ...and no marker is left behind', root.querySelectorAll('[data-cvhome]').length === 0);
+  } finally {
+    doc.getElementById = keep.g; doc.querySelector = keep.q; doc.querySelectorAll = keep.qa; doc.createElement = keep.c;
+    ctx.addGrip = keep.ag; ctx.removeGrip = keep.rg; ctx.syncStatLock = keep.sl; ctx.renderCombatEmpty = keep.re; X.character = keep.ch;
+  }
+}
+
+/* ---- #103 final review fixes (I-1, I-3, M-1, M-3, M-7, M-8, M-9, M-11, M-14) ---- */
+const FS103 = require('fs'), P103 = require('path');
+const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
+/* I-1 and M-8: the hit-dice pill and field, with no pool and across the box.
+   A small fake document: #hdWrap and #mBody are what renderHitDice() and the
+   box read. */
+{
+  const doc = ctx.document;
+  const keep = {g: doc.getElementById, q: doc.querySelector, a: doc.activeElement, save: ctx.scheduleSave,
+    om: ctx.openModal, cm: ctx.closeModal, ch: X.character, conf: state.confirm};
+  let saves = 0, wrap, body = null, foot = null, picked = null, opened = null, closed = 0, inpEl = null;
+  const mk = () => ({innerHTML: '', querySelector: () => null});
+  const boxBody = () => ({querySelector: s => s === '#hdRollMe' ? {} : null, querySelectorAll: () => []});
+  doc.getElementById = id => id === 'hdWrap' ? wrap : id === 'mBody' ? body : id === 'hitdiceInput' ? inpEl : null;
+  doc.querySelector = s => s === '#hdWrap .hd-foot' ? foot : s === '#mBody .hd-pick.on [data-hdpick]' ? picked : null;
+  ctx.scheduleSave = () => { saves++; };
+  ctx.openModal = (t, h) => { opened = h; };
+  ctx.closeModal = () => { closed++; body = null; };
+  try {
+    ctx.resetRules(); ctx.mergeRules({classes: [{name: 'Fighter', hitDie: 'd10'}]}, 'test-103');
+    wrap = mk();
+    X.character = X.migrate({abilities: {}, classes: [{name: 'Homebrewer', level: 3}]});
+    ctx.renderHitDice();
+    ck('#103 I-1 no pool: the auto/manual pill is still on the sheet', wrap.innerHTML.includes('data-hdmode'), wrap.innerHTML);
+    ck('#103 I-1 ...and the dice field, once, bound like every field (the shared input handler writes and saves it)',
+       (wrap.innerHTML.match(/id="hitdiceInput"/g) || []).length === 1 && wrap.innerHTML.includes('data-path="character.hitdice"'), wrap.innerHTML);
+    ck('#103 I-1 ...and the hint says where the switch is', /Switch to manual below/.test(wrap.innerHTML) && /no hit die for your class/.test(wrap.innerHTML), wrap.innerHTML);
+    state.confirm = true; saves = 0;
+    ctx.toggleHdMode();
+    ck('#103 I-1 the pill switches to manual, saves, and opens the field',
+       X.character.hdManual === true && saves === 1 && /id="hitdiceInput"/.test(wrap.innerHTML) && !/id="hitdiceInput"[^>]*hidden/.test(wrap.innerHTML), wrap.innerHTML);
+    X.character.hitdice = '3d6';   /* what the shared [data-path] handler writes */
+    ctx.hdDiceEdited();
+    ck('#103 I-1 typed dice become the bar', wrap.innerHTML.includes('data-hdspend') && wrap.innerHTML.includes('d6 · 3 / 3'), wrap.innerHTML);
+    const boot = SRC103('js/90-boot.js');
+    ck('#103 I-1 an edit to the field is saved: the input handler calls hdDiceEdited, then scheduleSave',
+       /if\(inp\.dataset\.path==="character\.hitdice"\)hdDiceEdited\(\);[\s\S]{0,200}scheduleSave\(\);/.test(boot));
+    ck('#103 I-1 the pill runs toggleHdMode', /\[data-hdmode\]"\)\)\{toggleHdMode\(\);return;\}/.test(boot) || /\[data-hdmode\]"\)\)return toggleHdMode\(\);/.test(boot));
+
+    /* typing in the inline field keeps it: only the part above it is redrawn */
+    const main = {innerHTML: ''}, own = {id: 'hitdiceInput'};
+    wrap = {innerHTML: 'UNTOUCHED', querySelector: s => s === '#hitdiceInput' ? own : s === '.hd-main' ? main : null};
+    doc.activeElement = own;
+    X.character.hitdice = '2d8';
+    ctx.renderHitDice();
+    ck('#103 I-1 typing in the field redraws only the bar above it', wrap.innerHTML === 'UNTOUCHED' && main.innerHTML.includes('data-hdspend'), main.innerHTML);
+    doc.activeElement = keep.a;
+
+    /* the box open: its foot holds the ids, so the sheet leaves its copy out */
+    wrap = mk(); body = boxBody();
+    X.character.hitdice = '';
+    ctx.renderHitDice();
+    ck('#103 I-1 with the spend box open the sheet draws no second pill or field',
+       !wrap.innerHTML.includes('hitdiceInput') && !wrap.innerHTML.includes('data-hdmode'), wrap.innerHTML);
+    body = null;
+    let removed = 0; foot = {remove: () => { removed++; }};
+    X.character.hitdice = '2d8';
+    ctx.openHdSpend();
+    ck('#103 I-1 opening the box takes the inline copy away first', removed === 1);
+    foot = null;
+
+    /* M-8: an edit in the open box redraws its rows */
+    body = boxBody(); picked = {dataset: {hdpick: 'd8'}}; opened = null;
+    let focused = 0; inpEl = {hidden: false, focus: () => { focused++; }, setSelectionRange: () => {}};
+    X.character.hitdice = '2d10';
+    ctx.hdDiceEdited();
+    ck('#103 M-8 a dice edit redraws the open box with the new rows', !!opened && opened.includes('data-hdpick="d10"') && !opened.includes('data-hdpick="d8"'), opened);
+    ck('#103 M-8 ...and the field has the keyboard again', focused === 1);
+    /* the mode switch, in the box: back to the class's dice */
+    X.character = Object.assign(X.character, {classes: [{name: 'Fighter', level: 3}]});
+    opened = null;
+    ctx.toggleHdMode();
+    ck('#103 M-8 the auto/manual switch redraws the open box from the class', X.character.hdManual === false && !!opened && opened.includes('Fighter · 3 / 3'), opened);
+    /* nothing to spend from: the box gives way to the field under the hit points */
+    X.character.classes = [{name: 'Homebrewer', level: 3}];
+    X.character.hdManual = true; X.character.hitdice = 'd8';
+    body = boxBody(); wrap = mk(); closed = 0;
+    ctx.hdDiceEdited();
+    ck('#103 M-8 dice that no longer parse close the box and bring the field back under HP',
+       closed === 1 && (wrap.innerHTML.match(/id="hitdiceInput"/g) || []).length === 1, wrap.innerHTML);
+  } finally {
+    doc.getElementById = keep.g; doc.querySelector = keep.q; doc.activeElement = keep.a;
+    ctx.scheduleSave = keep.save; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
+    X.character = keep.ch; state.confirm = keep.conf; ctx.resetRules();
+  }
+}
+
+/* M-1: the short rest says where the hit dice are, and offers them */
+{
+  const keep = {rs: ctx.restSummary, ch: X.character};
+  let got = null;
+  ctx.restSummary = (t, lines, note, opts) => { got = {t, lines, note, opts}; };
+  try {
+    ctx.resetRules(); ctx.mergeRules({classes: [{name: 'Fighter', hitDie: 'd10'}]}, 'test-103');
+    X.character = X.migrate({abilities: {}, classes: [{name: 'Fighter', level: 3}]});
+    ctx.shortRest();
+    ck('#103 M-1 the short rest points at the hit-dice bar, not the old card',
+       got && /hit-dice bar under your hit points/.test(got.note) && !/Rest & Recovery card/.test(got.note), got && got.note);
+    ck('#103 M-1 ...and offers Spend a hit die while there are some left', got && got.opts && got.opts.hd === true);
+    X.character.hdUsed = {d10: 3};
+    ctx.shortRest();
+    ck('#103 M-1 ...but not when none are left', got && !(got.opts && got.opts.hd));
+  } finally { ctx.restSummary = keep.rs; X.character = keep.ch; ctx.resetRules(); }
+  ck('#103 M-1 the button opens the spend box', /id="restHd"/.test(SRC103('js/65-resources.js')) && /restHd[\s\S]{0,120}openHdSpend\(\)/.test(SRC103('js/65-resources.js')));
+}
+
+/* I-3: the paw's menu carries what the hidden Familiars card's heading did */
+{
+  const keep = {ch: X.character, toast: ctx.toast};
+  ctx.toast = () => null;
+  try {
+    X.character = X.migrate({abilities: {}, familiars: [{id: 'f1', name: 'Owl'}]});
+    let fly = X.famFlyHTML(X.character);
+    ck('#103 I-3 the paw menu has the familiars combat toggle, showing off', fly.includes('data-combatbtn="familiars"') && /data-combatbtn="familiars"[^>]*aria-checked="false"|aria-checked="false"[^>]*data-combatbtn="familiars"/.test(fly), fly);
+    ck('#103 I-3 ...and a Note item that starts the familiars note', fly.includes('data-notebtn="familiars"') && /Add a note/.test(fly), fly);
+    ck('#103 I-3 ...neither of them hidden by a pencil', !/data-combatbtn="familiars"[^>]*class="[^"]*\bed\b/.test(fly) && !/class="[^"]*\bed\b[^"]*"[^>]*data-notebtn/.test(fly));
+    ctx.toggleCombatSection('familiars');
+    ck('#103 I-3 toggling it adds familiars to the combat view', X.combatSectionsOf(X.character).includes('familiars'), X.character.combatSections);
+    fly = X.famFlyHTML(X.character);
+    ck('#103 I-3 ...and the menu then shows it on', /aria-checked="true"/.test(fly), fly);
+    X.character.secNotes = {familiars: {text: 'Owl hates rain', at: 1}};
+    ck('#103 I-3 with a note, the item edits it', /Edit note/.test(X.famFlyHTML(X.character)));
+    ctx.toggleCombatSection('familiars');
+    ck('#103 I-3 toggling again takes it out', !X.combatSectionsOf(X.character).includes('familiars'));
+    ck('#103 I-3 the view shows the card the Sheet hides', /#combatView #activeSpellCard,#combatView #familiarCard\{display:block!important\}/.test(SRC103('css/45-combat.css')));
+    ck('#103 I-3 the pencil goes: familiars is off #97\'s list, and a stored hide is ignored',
+       !X.EDIT_CARDS.includes('familiars') && !X.editHidden({editHide: {familiars: true}}, 'familiars'));
+  } finally { X.character = keep.ch; ctx.toast = keep.toast; }
+}
+
+/* M-3: a language chip's source is one the sheet knows, or the player's */
+{
+  ck('#103 M-3 an unknown source has no label', X.chipSrcLabel('weird') === '' && X.chipSrcLabel('constructor') === '' && X.chipSrcLabel('__proto__:x') === '' && X.chipSrcLabel('toString') === '');
+  ck('#103 M-3 ...and a known one keeps its', X.chipSrcLabel('race:Elf') === 'species' && X.chipSrcLabel('bg:Sage') === 'background' && X.chipSrcLabel('system') === 'rules');
+  const cl = X.chipClean([{id: 'a', name: 'Weird', src: 'weird'}, {id: 'b', name: 'Ctor', src: 'constructor'}, {id: 'c', name: 'Proto', src: '__proto__:x'}, {id: 'd', name: 'Elvish', src: 'race:Elf'}], 'languages', false);
+  ck('#103 M-3 an unknown source becomes the player\'s', JSON.stringify(cl.map(x => x.src)) === '["","","","race:Elf"]', cl);
+  const c = {languages: [{id: 'a', name: 'Weird', src: 'weird'}, {id: 'b', name: 'Ctor', src: 'constructor'}, {id: 'c', name: 'Proto', src: '__proto__:x'}]};
+  const h = X.chipsHTML(c, 'languages');
+  ck('#103 M-3 ...so it shows an × and no junk label', ['a', 'b', 'c'].every(i => h.includes('data-chipid="' + i + '"')) && !/function|object Object/.test(h), h);
+  ['a', 'b', 'c'].forEach(i => X.removeChip(c, 'languages', i));
+  ck('#103 M-3 ...and the × removes it', c.languages.length === 0, c.languages);
+}
+
+/* M-7: the header names the subrace */
+{
+  const line = X.classLineHTML(X.migrate({abilities: {}, race: {name: 'Elf', subrace: 'High Elf'}}));
+  ck('#103 M-7 the species button reads "Elf · High Elf"', line.includes('data-shrace="Elf">Elf · High Elf</button>'), line);
+  ck('#103 M-7 ...escaped', X.classLineHTML(X.migrate({abilities: {}, race: {name: 'Elf', subrace: '<b>'}})).includes('Elf · &lt;b&gt;</button>'));
+  ck('#103 M-7 ...and just the species when there is none', X.classLineHTML(X.migrate({abilities: {}, race: {name: 'Elf'}})).includes('data-shrace="Elf">Elf</button>'));
+}
+
+/* M-9: the XP bar fills within the current level */
+{
+  const at = (lvl, xp) => X.migrate({abilities: {}, system: 'dnd', xp, classes: [{name: 'Cleric', level: lvl}]});
+  const p = X.xpProgress(at(5, 6500));
+  ck('#103 M-9 progress knows the current level\'s threshold', p && p.cur === 6500 && p.next === 14000, p);
+  const w = c => (/style="width:(\d+)%"/.exec(X.levelBadgeHTML(c)) || [])[1];
+  ck('#103 M-9 just reached level 5: an empty bar', w(at(5, 6500)) === '0', w(at(5, 6500)));
+  ck('#103 M-9 halfway through level 5', w(at(5, 10250)) === '50', w(at(5, 10250)));
+  ck('#103 M-9 XP below the level\'s own threshold clamps to empty', w(at(5, 1000)) === '0', w(at(5, 1000)));
+  ck('#103 M-9 at the top of the table: full', w(at(20, 400000)) === '100', w(at(20, 400000)));
+}
+
+/* M-11, M-14 */
+{
+  const css = ['css/20-cards.css', 'css/30-sheet.css', 'css/45-combat.css'].map(SRC103).join('\n');
+  ck('#103 M-11 the dead .cr-k rule is gone', !/\.cr-k\b/.test(css));
+  const fam = X.familiarCardHTML({id: 'f1', name: 'Owl', active: true});
+  ck('#103 M-14 Summon / Dismiss is a button, so it can hold the keyboard', /<button type="button" class="fam-state on" data-toggle-familiar="f1" aria-pressed="true">/.test(fam), fam);
+  ck('#103 M-14 ...and after the modal repaints, focus goes back to it',
+     /openFamiliar\(f\.id\);[^\n]{0,160}attrSel\("data-toggle-familiar",f\.id\)[^\n]{0,60}\.focus\(\)/.test(SRC103('js/90-boot.js')));
+}
+
 /* ---- imported files and packs render inert ----
    A character file, a rules pack and a settings file (which carries a whole
    `rules` object) are all written by someone else, and all reach the page
@@ -4562,7 +5158,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   X.rules.keywords[0].id = P;
   const hostile = X.blankChar();
   Object.assign(hostile, {
-    id: 'hostile', name: P, portraitImg: 'data:image/png;base64,AA' + ON + ' x="' + P,
+    id: 'hostile', name: P, xp: P, portraitImg: 'data:image/png;base64,AA' + ON + ' x="' + P,
     classes: [{name: 'Hostile', level: 2, subclass: 'Sub' + P}, {name: P, level: 1, subclass: P}],
     race: {name: 'HRace', subrace: P}, bg: {name: 'HBg'},
     proficiencies: 'Pwnterm and Pwnkw, ' + P, appearance: P, notes: P,
@@ -4605,20 +5201,24 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const C = () => X.character;
   const run = (name, fn, reach) => inert(name, capture(fn), reach);
   run('the portrait', () => ctx.renderPortrait());
-  run('class, ancestry and background chips', () => ctx.renderClassRace());
+  run('renderClassRace (the header)', () => ctx.renderClassRace());
   run('Features & Traits', () => ctx.renderFeatures());
   run('Inventory', () => ctx.renderInventory());
   run('Statuses', () => ctx.renderStatuses());
   run('Familiars', () => ctx.renderFamiliars());
+  // #103: the header, its flyouts and the familiar's modal
+  run('the sheet header', () => ctx.renderSheetHead());
+  run('the class flyout', () => ctx.openShFly('class', 1));
+  run('the familiar flyout', () => ctx.openShFly('fam'));
+  run('the familiar modal', () => ctx.openFamiliar(P));
   run('Attacks & Weapons', () => ctx.renderAttacks());
   run('Active Spells', () => ctx.renderActiveSpells());
   run('the spell list', () => ctx.renderSpells());
   run('the Rules tab browser, on the Glossary', () => { X.settings.rulesCat = 'glossary'; X.rbUI.per = {}; ctx.renderRulesBrowser(); });
   run('Resources', () => ctx.renderResources());
-  ['full', 'condensed', 'dice'].forEach(s => {
-    C().hdStyle = s;
-    run('Hit Dice from a pack\'s hit die (' + s + ')', () => ctx.renderHitDice());
-  });
+  // #103: one bar now, not a three-way style choice
+  run('Hit Dice from a pack\'s hit die', () => ctx.renderHitDice());
+  run('the hit-dice spend box', () => ctx.openHdSpend());
   run('Story fields and Proficiencies (glossary chips)', () => ctx.renderAllRT());
   run('the Section Notes card', () => ctx.renderNotes());
   run('the Journal list', () => { el('jnlSearch').value = ''; ctx.renderJournal(); });
@@ -4833,7 +5433,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   renders('the item editor (its "applies" list comes from keywords)', () => ctx.openItemForm());
   renders('the print sheet', () => ctx.printSheet());
   renders('the Add class window', () => ctx.openAddClass());
-  renders('class, ancestry and background chips', () => ctx.renderClassRace());
+  renders('renderClassRace (the header)', () => ctx.renderClassRace());
 
   /* ---- the character's boundary: migrate() keeps the player's entries (#71)
      A glossary entry is the player's own data, so migrate() never drops one

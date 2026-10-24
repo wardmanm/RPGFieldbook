@@ -39,8 +39,8 @@ sidebar and pane — from `renderAll()` (a sheet loaded with cached rules) and f
 so the box keeps focus and every keystroke lands (the sidebar's box, over every category, repaints
 the sidebar the same way). 640px and under it shows one pane at a time, by `#rbCard[data-screen]`,
 with ← Categories to go back, which also returns keyboard focus to the category button just left.
-The ☰ flyout lists the categories; tapping one calls `rbOpenCat()`, which does not scroll the page —
-see Open, below. A long table (more than 300 rows after filtering) shows the first page and a
+A category button (`[data-rbcat]`) calls `rbOpenCat()`, which repaints the pane and does not scroll
+the page. A long table (more than 300 rows after filtering) shows the first page and a
 "Show *N* more" button (`rbState().shown`, capped at 300 more per tap); filters and search narrow
 *before* the cap applies. With no pack loaded the card opens on an Import rules files prompt, above
 where the (Glossary-only) browser would be.
@@ -218,3 +218,4 @@ a table opened from a spell preview replaces it.
 - 2026-09-28 — Tables carry optional `footnotes`, shown under the table; 17 Xanathar's downtime tables gain theirs. → ledger L4273, #73
 - 2026-10-22 — The Rules tab becomes a browser over every loaded category (Classes through Tables), replacing the Glossary and Reference Tables cards: a sidebar with counts and a search across everything, a sortable filterable table per category, a row opening the window the sheet already uses, in reference mode for class/subclass/species/background. `settings.rulesCat` replaces `rulesCollapse`. → ledger L6327, #99, #53
 - 2026-10-22 — Final-review fixes: re-entering the Rules tab always opens the category list; the ☰ flyout scrolls the chosen category into view and shows its count; same-named classes from two packs read distinctly in Subclasses' Class column; `rbNum()` reads the first number instead of joining every digit. The stale fold-state rows above are rewritten to the current truth. → ledger L6455, #99
+- 2026-10-24 — The ☰ section flyout is retired: categories are reached from the browser's own sidebar only. → ledger L6804, #103

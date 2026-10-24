@@ -168,37 +168,11 @@ function runExtraChoices(pending){
   });
 }
 
-/* The subclass is its own button (#61). The chip opens the CLASS, and the
-   subclass's description sat behind a small link inside that window, two taps
-   deep. [data-sub-info] is matched before [data-info-class] in the click
-   handler, so it wins inside the chip. */
-function classChipHTML(c,idx){
-  const sub=c.subclass?` · <button type="button" class="linkbtn link" data-sub-info="${esc(c.name)}|${esc(c.subclass)}" title="About ${esc(c.subclass)}">${esc(c.subclass)}</button>`:"";
-  return `<div class="cr-chip" data-info-class="${esc(c.name)}">${iconSVG("classes",c.name)}<span class="cr-k">Class</span><span class="cr-n">${esc(c.name)} ${num(c.level)}${sub}</span><button class="icon danger ed" data-del-class="${esc(idx)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`;
-}
+/* Every class, species and background change ends here. The Class and
+   Ancestry & Background cards it once drew are gone (#103): their controls
+   live in the sheet header — the class line, its flyout and the species and
+   background windows — so all this does now is repaint the header. */
 function renderClassRace(){
-  const rb=document.getElementById("raceBgBox"), cb=document.getElementById("classBox");
-  if(rb){
-    const parts=[];
-    if(character.race&&character.race.name){
-      const rn=character.race.name+(character.race.subrace?` · ${character.race.subrace}`:"");
-      parts.push(`<div class="cr-chip" data-info-race="${esc(character.race.name)}">${iconSVG("races",character.race.name)}<span class="cr-k">${raceTerm()}</span><span class="cr-n">${esc(rn)}</span><button class="icon danger ed" data-del-race="1" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
-    }else{
-      parts.push(`<button class="mini" data-add-race style="margin-bottom:8px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add ${raceTerm().toLowerCase()}</button>`);
-    }
-    if(character.bg&&character.bg.name){
-      parts.push(`<div class="cr-chip" data-info-bg="${esc(character.bg.name)}">${iconSVG("backgrounds",character.bg.name)}<span class="cr-k">Background</span><span class="cr-n">${esc(character.bg.name)}</span><button class="icon danger ed" data-del-bg="1" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`);
-    }else{
-      parts.push(`<button class="mini" data-add-bg><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add background</button>`);
-    }
-    rb.innerHTML=parts.join("");
-  }
-  if(cb){
-    const parts=[];
-    (character.classes||[]).forEach((c,idx)=>parts.push(classChipHTML(c,idx)));
-    parts.push(`<button class="mini" data-add-class><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add class</button>`);
-    if(!(rules.races||[]).length&&!(rules.classes||[]).length)parts.push(`<p class="hint" style="margin-top:8px">Load a rules pack with <b>races</b> and <b>classes</b> (Settings → Rules) to auto-apply traits and stats. Custom names work too, without auto data.</p>`);
-    cb.innerHTML=parts.join("");
-  }
+  renderSheetHead();
 }
 

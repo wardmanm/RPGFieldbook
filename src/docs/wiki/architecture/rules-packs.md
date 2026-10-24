@@ -126,7 +126,15 @@ in a `finally`.
   `rules.credits` (`creditOf()`: a licence over 64 characters is dropped, an attribution cut to
   2,000). Both only ever get set here; `importPack()` (through `dropOwnedPackMeta()`),
   `applyFetchedSource()` and `prunePackMeta()` remove a label's once nothing else carries it.
-- **Both maps are null-prototype** (`packMap()`), because the key is a pack's own label, written
+- A system pack's `defaultLanguages` (a list of names, blanks dropped) and `advancement` (XP
+  thresholds as `[[xp, level], …]`) are stored the same way, per source, in
+  `rules.defaultLanguages` and `rules.advancement` (#103, documented in `docs/rules-schema.md`), and
+  dropped with the label like `requires`. A character reads them through its ruleset:
+  `defaultLanguagesFor()` and `advancementFor()` in `41-chips.js` take the first label, by name, whose
+  `systemOf()` is the character's `system`, falling back to `["Common"]` and to `SRD_ADVANCEMENT`.
+  An `advancement` table that is not ascending whole numbers from `[0,1]`, one level per row, is
+  ignored for the fallback. No shipped pack declares either yet, so no digest moved.
+- **All four maps are null-prototype** (`packMap()`), because the key is a pack's own label, written
   freely by whoever authors the pack — a label of `__proto__` or `constructor` is as valid as any
   other. `resetRules()`, `mergeRules()`'s lazy-init and `tidyRules()` (so every path that ends in
   `reindexRules()`) all build or rebuild them through `packMap()`, so any label is an ordinary own
@@ -369,3 +377,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-16 — `tidyRule()` fills in the ammunition fields of an item from a pack older than ammunition. → ledger L5780, #96
 - 2026-10-23 — `rules.requires`/`rules.credits` become null-prototype maps (`packMap()`), so a pack
   labelled `__proto__` or `constructor` is handled like any other label. → ledger L6519, #88
+- 2026-10-23 — A system pack may declare `defaultLanguages` and `advancement`, kept per label in null-prototype maps beside `requires` and `credits` and read per character's ruleset, with Common and the SRD table as fallbacks. → ledger L6633, #103

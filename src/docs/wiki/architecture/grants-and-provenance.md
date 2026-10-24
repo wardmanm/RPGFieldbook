@@ -16,7 +16,8 @@ background or drop a class without hand-cleaning the sheet.
 `56-class.js`; `runChoices()`,
 `commitChoices()`, `sidToOrigin()` in `58-choices.js`; `originFromSid()`, `itemOrigin()`,
 `costToGp()` in `25-origins-items.js`; `syncResources()` in `65-resources.js`;
-`forgetGrantAmmo()` in `62-ammo.js` · **Tests:**
+`forgetGrantAmmo()` in `62-ammo.js`; `grantLanguages()`, `dropLanguages()`, `langParse()` in
+`41-chips.js` · **Tests:**
 `char-update.js` (grant and revert, `grantItemByName()` called for real, the pending equipment
 picker travelling with its window, the order the choice windows open in), `sheet.js` (`invSection()` filing) · **See also:** [Character building](../features/character-building.md),
 [Inventory](../features/inventory.md), [Ammunition](../features/ammunition.md),
@@ -46,6 +47,7 @@ picked option.
 | Starting equipment, and the attacks it made | `inventory[]` with `grant: sid`; attacks linked by `itemId` | `grant` | `revertEquipmentGrants()`, which also forgets each removed item's spent-ammunition count, and — by the snapshot's own `grant`, through `forgetGrantAmmo()` — a granted stack already fired down to nothing and so already gone before the source is removed |
 | Starting gold | added to `coins.gp` and recorded in `grantGold[sid]` | `sid` | `revertEquipmentGrants()`: subtracts exactly that amount, never below 0 |
 | Class resource pools | `resources[]` with `auto:true` and a `class:`/`subclass:` key | `key` | `syncResources()` on every `recompute()`: an auto pool whose class or subclass is gone is dropped |
+| Languages (#103) | `languages[]` chips `{id, name, src}` | `src`: `race:<Name>` or `bg:<Name>`, the grant's own sid | `dropLanguages()` on that src, in `removeRace()` / `removeBackground()` |
 | Level-1 max HP | `hp.max` / `hp.cur` | nothing: recognised by value | `removeClass()` blanks it only if the box still holds exactly `level1HP()` |
 
 **Proficiencies are layered, never merged.** The player's own dots live in `character.skills` and
@@ -71,6 +73,19 @@ so "Arrows (20)" grants 20 single arrows, each tagged with the grant's `sid` —
 [Ammunition](../features/ammunition.md). It stamps the copy, and a weapon gets its attack. An
 unmatched name becomes a plain named item. A second grant of the same name from the same sid adds to
 the quantity. The item's origin badge (C, B or A) comes from `originFromSid()`.
+
+**Languages** (#103). A species or background whose definition lists `languages` (a string,
+"Common, Elvish and one other language of your choice") grants them as chips: `langParse()` splits on
+commas, "and" and semicolons and skips an entry that names a choice ("one", "other", "any", "choice"),
+which the player adds by hand; `grantLanguages()` stamps each with the grant's sid. A language the
+sheet already has keeps its own source — the player's, an earlier grant's or the ruleset's — so a
+name the player also added stays theirs when the grant goes. A granted chip shows its source
+("· species", "· background") and has no ×: it is the grant's to take back. Nothing is appended to
+`proficiencies` for languages any more; a sheet's old "Languages: …" lines become the player's own
+chips once, in `migrate()` ([Character model](character-model.md)). Their grant cannot be recovered,
+so they stay after a species or background change (a known issue, not a bug). A `src` the sheet does
+not know (hand-edited) reads as the player's: `chipSrcLabel()` looks up own keys only, and
+`chipClean()` clears it, so the chip's × and `removeChip()` agree.
 
 **Choices.** Skill choices on a race, a race trait or a feat go into a `pending` list that
 `runExtraChoices()` presents after the add, and each pick is granted to the sid that queued it.
@@ -157,6 +172,7 @@ features and grants before applying the new one.
 | Which class grants saves, equipment and gold | The first class only; a multiclass gets the pack's `multiclass` subset | Every `addClass()`: the 2024 multiclass rules give neither (L3886, #66) |
 | Removing the first class while another remains | The new first class takes its saving throws, under its own sid | Leaving the sheet with no save proficiencies (L3886) |
 | Stripping extra grants from multiclass characters saved earlier | No: `migrate()` is untouched | Retroactive strip: it would silently change sheets players have been playing (L3886) |
+| How a species or background grants languages (#103) | Chips stamped with the grant's sid, removed with it; a choice ("one of your choice") is the player's to add | Appending "Languages: …" to Proficiencies: it never reverted. Player-entered only: grants would keep writing prose |
 
 ## Open
 
@@ -164,7 +180,7 @@ features and grants before applying the new one.
   grants, choices and HP stay. The grant model does not key by class level, so a class-level choice
   reverts when the class is removed but not per level. Race and background choices revert fully.
 - **Some grants are not tagged, so they do not revert:** text appended to `proficiencies` (race
-  proficiencies and languages, background tools and languages), `speed` and `size` (seeded only when
+  proficiencies, background tools), `speed` and `size` (seeded only when
   empty), `spellAbility` (set by a class or subclass), and the legacy `ancestry` and `background`
   strings.
 - **Multiclass characters saved before #66 keep the extra grants.** Their second class carries its
@@ -191,3 +207,5 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — Only the first class grants saves, starting equipment and gold; a multiclass gets the pack's `multiclass` subset, and removing the first class hands its saves on. → ledger L3886, #66
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6
+- 2026-10-23 — Species and backgrounds grant languages as chips stamped `race:`/`bg:`, taken back by `dropLanguages()`; nothing appends "Languages:" to Proficiencies any more. → ledger L6633, #103
+- 2026-10-23 — Lifted languages noted as the player's own; an unknown language `src` reads as the player's. → ledger L6729, #103

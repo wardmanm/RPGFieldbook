@@ -13,7 +13,9 @@ function wire(){
     const prevCon=inp.dataset.path==="character.abilities.con"?character.abilities.con:null;
     setP({character},inp.dataset.path,inp.value);
     if(prevCon!==null)resyncLevel1HP(prevCon);
-    if(inp.dataset.path==="character.hitdice")renderHitDice();
+    if(inp.dataset.path==="character.hitdice")hdDiceEdited();
+    /* the header's ring and XP bar follow the box as it is typed (#103) */
+    if(inp.dataset.path==="character.xp")renderLevelBadge();
     if(inp.hasAttribute("data-recompute"))recompute();
     scheduleSave();
   });
@@ -27,6 +29,21 @@ function wire(){
   document.addEventListener("click",e=>{
     const t=e.target;
     let m;
+    /* #103: the sheet header and its two menus (40-sheet.js). A tap outside a
+       menu lands on #shBack and only closes it; a button inside closes it and
+       then runs its own hook, here or further down (subclass, Remove, + Add). */
+    if(t.closest("#shBack"))return closeShFly();
+    if(_shFly&&t.closest("#shFly button"))closeShFly();
+    if((m=t.closest("[data-shcls]")))return openShFly("class",num(m.dataset.shcls),m);
+    if(t.closest("[data-shaddcls]"))return openAddClass();
+    if((m=t.closest("[data-shrace]")))return openRaceInfo(m.dataset.shrace);
+    if((m=t.closest("[data-shbg]")))return openBackgroundInfo(m.dataset.shbg);
+    if((m=t.closest("[data-shchange]")))return m.dataset.shchange==="bg"?openAddBackground():openAddRace();
+    if((m=t.closest("[data-shinfo]"))){const x=character.classes[num(m.dataset.shinfo)];if(x)openClassInfo(x.name);return;}
+    if((m=t.closest("[data-shlevel]"))){const i=num(m.dataset.shidx);return m.dataset.shlevel==="down"?doLevelDown(i):doLevelUp(i);}
+    if((m=t.closest("[data-shpaw]")))return openShFly("fam",0,m);
+    if((m=t.closest("[data-shfam]")))return openFamiliar(m.dataset.shfam);
+    if(t.closest("[data-shlevelup]"))return doLevelUp();
     if((m=t.closest(".dot[data-save]"))){const k=m.dataset.save;character.saves[k]=!character.saves[k];recompute();scheduleSave();return;}
     if((m=t.closest(".dot[data-skill]"))){const k=m.dataset.skill;character.skills[k]=((character.skills[k]||0)+1)%3;recompute();scheduleSave();return;}
     if((m=t.closest("[data-stat]"))){openStatBreakdown(m.dataset.stat);return;}
@@ -88,11 +105,13 @@ function wire(){
     // class & ancestry
     if((m=t.closest("[data-add-race]")))return openAddRace();
     if((m=t.closest("[data-add-class]")))return openAddClass();
-    if((m=t.closest("[data-del-race]"))){if(confirm("Remove ancestry and the traits it added?"))removeRace();return;}
+    /* Remove inside an info window (#103) closes it: it would go on showing
+       what was just removed */
+    if((m=t.closest("[data-del-race]"))){if(confirm("Remove ancestry and the traits it added?")){if(m.closest("#mBody"))closeModal();removeRace();}return;}
     if((m=t.closest("[data-del-class]"))){const i=num(m.dataset.delClass);const c=character.classes[i];if(c&&confirm(`Remove ${c.name} and the traits it added?`))removeClass(i);return;}
     if((m=t.closest("[data-info-race]")))return openRaceInfo(m.dataset.infoRace);
     if((m=t.closest("[data-add-bg]")))return openAddBackground();
-    if((m=t.closest("[data-del-bg]"))){if(confirm("Remove background “"+(character.bg&&character.bg.name)+"”?"))removeBackground();return;}
+    if((m=t.closest("[data-del-bg]"))){if(confirm("Remove background “"+(character.bg&&character.bg.name)+"”?")){if(m.closest("#mBody"))closeModal();removeBackground();}return;}
     if((m=t.closest("[data-info-bg]")))return openBackgroundInfo(m.dataset.infoBg);
     if((m=t.closest("[data-choose-sub]")))return chooseSubclass(m.dataset.chooseSub);
     if((m=t.closest("[data-change-sub]")))return chooseSubclass(m.dataset.changeSub);
@@ -108,36 +127,20 @@ function wire(){
     if((m=t.closest("[data-toggle-status]"))){const s=character.statuses.find(x=>x.id===m.dataset.toggleStatus);if(s){if(s.concId&&s.active!==false){if(!endConcFromStatus())return;}else{s.active=s.active===false;if(s.active)restartStatus(s);}renderStatuses();renderActiveSpells();recompute();scheduleSave();}return;}
     // familiars
     if((m=t.closest("[data-edit-familiar]")))return openFamiliarForm(character.familiars.find(x=>x.id===m.dataset.editFamiliar));
-    if((m=t.closest("[data-del-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.delFamiliar);if(f&&confirm(`Delete “${f.name}”?`)){character.familiars=character.familiars.filter(x=>x.id!==f.id);renderFamiliars();recompute();scheduleSave();}return;}
-    if((m=t.closest("[data-toggle-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.toggleFamiliar);if(f){f.active=!f.active;renderFamiliars();recompute();scheduleSave();}return;}
+    /* the same two buttons sit in the header's familiar modal (openFamiliar):
+       Delete there closes it, Summon / Dismiss re-opens it so it repaints */
+    if((m=t.closest("[data-del-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.delFamiliar);if(f&&confirm(`Delete “${f.name}”?`)){if(m.closest("#mBody"))closeModal();character.familiars=character.familiars.filter(x=>x.id!==f.id);renderFamiliars();recompute();scheduleSave();}return;}
+    /* ...and the keyboard goes back to the toggle the repaint replaced (M-14) */
+    if((m=t.closest("[data-toggle-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.toggleFamiliar);if(f){f.active=!f.active;renderFamiliars();recompute();scheduleSave();if(m.closest("#mBody")){openFamiliar(f.id);const b=document.querySelector("#mBody "+attrSel("data-toggle-familiar",f.id));if(b)b.focus();}}return;}
     if((m=t.closest("[data-res-dec]"))){const r=character.resources.find(x=>x.id===m.dataset.resDec);if(r){r.cur=Math.max(0,num(r.cur)-1);renderResources();scheduleSave();}return;}
     if((m=t.closest("[data-res-inc]"))){const r=character.resources.find(x=>x.id===m.dataset.resInc);if(r){r.cur=Math.min(num(r.max),num(r.cur)+1);renderResources();scheduleSave();}return;}
     if((m=t.closest("[data-res-reset]"))){const r=character.resources.find(x=>x.id===m.dataset.resReset);if(r){r.cur=num(r.max);renderResources();scheduleSave();}return;}
     if((m=t.closest("[data-res-edit]")))return openResourceForm(character.resources.find(x=>x.id===m.dataset.resEdit));
     if((m=t.closest("[data-res-del]"))){const r=character.resources.find(x=>x.id===m.dataset.resDel);if(r&&confirm(`Delete resource “${r.name}”?`)){character.resources=character.resources.filter(x=>x.id!==r.id);renderResources();scheduleSave();}return;}
-    if((m=t.closest("[data-hdmode]"))){
-      if(!character.hdManual){if(!confirm("Switch to manual Hit Dice? They will no longer follow your class rules when you level up."))return;character.hdManual=true;renderHitDice();const i=document.getElementById("hitdiceInput");if(i){i.readOnly=false;i.focus();}}
-      else{character.hdManual=false;renderHitDice();}
-      scheduleSave();return;
-    }
+    if(t.closest("[data-hdmode]")){toggleHdMode();return;}
     if(t.closest("[data-hdreset]")){character.hdManual=false;renderHitDice();scheduleSave();return;}
-    if((m=t.closest("[data-hdroll]")))return rollHitDie(m.dataset.hdroll);
-    /* Dice style: the token IS the control. An unspent die rolls and heals; a
-       spent one goes back — exactly ONE, not "everything from here on" the way
-       the pips work. Pips are positions on a track, so clicking pip 3 meaning
-       "three spent" is natural; tokens are interchangeable, and tapping one to
-       get three back would contradict its own tooltip. Putting a die back never
-       un-heals you, matching what the pips have always done. */
-    if((m=t.closest("[data-hddie]"))){
-      const die=m.dataset.hddie,i=num(m.dataset.i),p=hitDicePool().find(x=>x.die===die);
-      if(p&&i<=p.used){
-        if(!character.hdUsed)character.hdUsed={};
-        character.hdUsed[die]=Math.max(0,num(character.hdUsed[die])-1);
-        renderHitDice();recompute();scheduleSave();
-      }else rollHitDie(die);
-      return;
-    }
-    if((m=t.closest("[data-hd]"))){const die=m.dataset.hd,i=num(m.dataset.i);if(!character.hdUsed)character.hdUsed={};const u=num(character.hdUsed[die]);character.hdUsed[die]=(u===i)?i-1:i;renderHitDice();recompute();scheduleSave();return;}
+    // #103: one bar, tapping it opens the spend box (65-resources.js)
+    if(t.closest("[data-hdspend]"))return openHdSpend();
     if((m=t.closest("[data-fuse]"))){const f=character.features.find(x=>x.id===m.dataset.fuse);if(f&&f.uses){const i=num(m.dataset.i);f.uses.used=(num(f.uses.used)===i)?i-1:i;renderFeatures();scheduleSave();}return;}
     if((m=t.closest("[data-usefeat]")))return useFeature(m.dataset.usefeat);
     if((m=t.closest("[data-invitem]"))){const id=m.dataset.invitem,ic=invCol();ic.items[id]=!ic.items[id];renderInventory();scheduleSave();return;}
@@ -149,13 +152,17 @@ function wire(){
     if((m=t.closest(".search-clear"))){const i=m.parentNode.querySelector("input");if(i){i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.focus();}return;}
     if(t.closest("#btnCombat"))return combatViewOpen()?leaveCombatTab():enterCombatTab();
     if(t.closest("#cvStart"))return startCombatNow();
+    /* #103: the combat header's own star — the sheet's #starBtn is in the
+       header, which the view does not bring unless the player adds it */
+    if(t.closest("[data-inspire]"))return toggleInspiration();
     if(t.closest("#cvPrev"))return advanceRound(-1);
     if(t.closest("#cvNext"))return advanceRound(1);
     if(t.closest("#cvEnd"))return endCombatAsk();
     if((m=t.closest("[data-edtoggle]")))return toggleEditCard(m.dataset.edtoggle);
+    // chips: defences, senses, languages (#103)
+    if((m=t.closest("[data-chipadd]")))return openChipChooser(m.dataset.chipadd);
+    if((m=t.closest("[data-chipdel]"))){removeChip(character,m.dataset.chipdel,m.dataset.chipid);renderChipsAll();scheduleSave();return;}
     if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn,e.detail===0);
-    if(t.closest("#btnToc"))return openToc();
-    if(t.closest("#tocBack"))return closeToc();
     if((m=t.closest("[data-fitem]"))){const id=m.dataset.fitem,fc=featCol();fc.items[id]=!fc.items[id];renderFeatures();scheduleSave();return;}
     /* No recompute(): a star moves a feature between groups and changes nothing
        derived. Same as the inventory star above, and unlike the On/Off toggle
@@ -207,6 +214,11 @@ function wire(){
     if((m=t.closest("[data-rbhit]")))return rbOpenRow(m.dataset.rbhitcat,m.dataset.rbhit);
     if((m=t.closest("[data-rbrow]")))return rbOpenRow(rbCurKey(),m.dataset.rbrow);
   });
+  /* Esc closes a header menu and hands focus back to what opened it (#103) */
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape"||!_shFly)return;
+    const a=_shFly.anchor;closeShFly();if(a&&a.isConnected&&a.focus)a.focus();
+  });
   document.addEventListener("keydown",e=>{
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
     if(e.target.classList.contains("kw")){e.preventDefault();const g=allGlossary().find(x=>x.id===e.target.dataset.gid);if(g)openGlossView(g);return;}
@@ -239,7 +251,7 @@ function wire(){
      silently never binds. One dead button is a far better failure than that. */
   const on=(id,ev,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener(ev,fn);};
   // star + hp
-  on("starBtn","click",()=>{character.inspiration=!character.inspiration;recompute();scheduleSave();});
+  on("starBtn","click",toggleInspiration);
   on("hpPlus","click",()=>bumpHP(1));
   on("hpMinus","click",()=>bumpHP(-1));
   on("btnLongRest","click",longRest);
@@ -248,6 +260,13 @@ function wire(){
   on("saveWarnFile","click",exportChar);
   on("saveWarnRetry","click",retrySave);
   on("jnlNew","click",jnlNewPage);
+  /* back to top (#103): shown past a screenful of scroll. A passive listener,
+     and the check runs at most once a frame however fast the page scrolls. */
+  on("btnToTop","click",scrollToTop);
+  let toTopRaf=0;
+  const toTopTick=()=>{if(!toTopRaf)toTopRaf=requestAnimationFrame(()=>{toTopRaf=0;updateToTop();});};
+  window.addEventListener("scroll",toTopTick,{passive:true});
+  window.addEventListener("resize",toTopTick,{passive:true});
   on("jnlSearch","input",()=>renderJournal());
   on("addTracker","click",()=>openTrackerForm());
   document.getElementById("addResource").addEventListener("click",()=>openResourceForm());
@@ -266,8 +285,6 @@ function wire(){
   document.getElementById("rbSearch").addEventListener("input",e=>{rbUI.q=e.target.value;rbPaintSide(rbShown(),rbCurKey());});
   document.getElementById("rbMain").addEventListener("input",e=>{if(e.target.id!=="rbCatSearch")return;const st=rbState(rbCurKey());st.q=e.target.value;st.shown=RB_PAGE;rbRefreshBody();});
   document.getElementById("addFamiliarLink").addEventListener("click",()=>openFamiliarForm());
-  document.getElementById("btnLevelUp").addEventListener("click",doLevelUp);
-  document.getElementById("btnLevelDown").addEventListener("click",doLevelDown);
   // theme / settings / save / load
   document.getElementById("btnTheme").addEventListener("click",()=>{let t=settings.theme;if(t==="system")t=document.documentElement.dataset.theme;settings.theme=(t==="dark")?"light":"dark";applyTheme();saveSettings();});
   document.getElementById("btnSettings").addEventListener("click",openSettings);

@@ -17,7 +17,7 @@ harness splice agrees with `dist/`), `docs.js` (fragment counts, one panel per h
 ## How it works
 
 **The shell.** `src/fieldbook.template.html` holds everything in the page that is not a tab panel:
-the top bar, tab bar, ToC flyout, `<div class="page">`, the home screen, the generic modal and the
+the top bar, tab bar, `<div class="page">`, the home screen, the generic modal and the
 toast. It carries three markers, each a real comment in the context it sits in, so the template
 stays valid on its own:
 
@@ -166,3 +166,4 @@ Two are special:
 - 2026-09-24 — `87-combat.js` arrives, with `COMBAT_DEFAULTS` kept in `00-constants.js` for the TDZ. → ledger L3397
 - 2026-09-25 — `70-combat.html` makes seven html fragments. → ledger L3676
 - 2026-10-09 — `30-version.js`'s named callers: the Node bundler is replaced by `tools/data-kit/fbdata.py`. → ledger L5342, #85
+- 2026-10-24 — The template no longer holds a ToC flyout (the ☰ is retired). → ledger L6804, #103

@@ -10,17 +10,17 @@
 /* The registry is the single source of truth: it drives the icon injection, the
    Section Notes card's grouping and headings, and a test that checks it against
    the template both ways. `k` is a stable id — never derive one from a heading,
-   because headings get reworded and the notes would be orphaned. */
+   because headings get reworded and the notes would be orphaned.
+   #103: `portrait` is the sheet header now ("Character"); `class`, `origin`
+   and `rest` are gone with their cards (an old sheet's notes under them merge
+   into `portrait` / `vitals` once, in migrate()); `attacks` is on Inventory. */
 const NOTE_SECTIONS=[
-  {k:"portrait",     tab:"sheet",     title:"Portrait"},
-  {k:"origin",       tab:"sheet",     title:"Ancestry & Background"},
-  {k:"class",        tab:"sheet",     title:"Class"},
+  {k:"portrait",     tab:"sheet",     title:"Character", nocv:true},
+  {k:"vitals",       tab:"sheet",     title:"Vitals"},
   {k:"abilities",    tab:"sheet",     title:"Ability Scores & Saves"},
   {k:"skills",       tab:"sheet",     title:"Skills"},
-  {k:"vitals",       tab:"sheet",     title:"Vitals"},
-  {k:"rest",         tab:"sheet",     title:"Rest & Recovery"},
+  {k:"defences",     tab:"sheet",     title:"Defences"},
   {k:"statuses",     tab:"sheet",     title:"Statuses & Conditions"},
-  {k:"attacks",      tab:"sheet",     title:"Attacks & Weapons"},
   {k:"resources",    tab:"sheet",     title:"Resources"},
   {k:"features",     tab:"sheet",     title:"Features & Traits"},
   {k:"familiars",    tab:"sheet",     title:"Familiars & Companions"},
@@ -28,17 +28,20 @@ const NOTE_SECTIONS=[
   {k:"slots",        tab:"spells",    title:"Spell Slots"},
   {k:"activespells", tab:"spells",    title:"Active Spells"},
   {k:"spells",       tab:"spells",    title:"Spells & Cantrips"},
+  {k:"attacks",      tab:"inventory", title:"Attacks & Weapons"},
   {k:"inventory",    tab:"inventory", title:"Equipment & Inventory"},
   {k:"coins",        tab:"inventory", title:"Coins"},
-  {k:"proficiencies",tab:"story",     title:"Proficiencies & Languages"},
+  {k:"proficiencies",tab:"story",     title:"Proficiencies, Senses & Languages"},
   {k:"trackers",     tab:"journal",   title:"Trackers"}
 ];
-const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Story",journal:"Journal"};
+/* nocv: never offered to the combat view. The header (`portrait`) holds the
+   rest buttons, which are not a fight action, and the portrait itself rides in
+   with Vitals (#103); migrate() turns a saved `portrait` there into `vitals`. */
+const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Bio",journal:"Journal"};
 function noteDef(k){return NOTE_SECTIONS.find(s=>s.k===k)||null;}
-/* The ancestry heading is skin-dependent — "Race" on the classic skin — so the
-   Section Notes card has to ask rather than quote the registry, or it would
-   disagree with the card it links to. */
-function noteTitle(def){return (def&&def.k==="origin")?(raceTerm()+" & Background"):(def?def.title:"");}
+/* Kept as the one way to title a section (#103 removed the one heading that
+   varied by skin, Ancestry & Background). */
+function noteTitle(def){return def?def.title:"";}
 
 /* ---- storage, guarded ----
    migrate() shape-guards secNotes at the TOP level only; nothing coerces the
@@ -281,8 +284,12 @@ function renderNoteIcons(){
    buttons. CSS does the hiding: each such button carries the class `ed`, a
    hidden card carries `ed-off`, and `.ed-off .ed` is display:none. So the
    renderers never read the flag and a card that rebuilds its rows stays hidden.
-   Keys are NOTE_SECTIONS ids, plus the two cards outside that registry. */
-const EDIT_CARDS=["class","origin","statuses","attacks","resources","features","familiars","spells","inventory","trackers","journal","secnotes"];
+   Keys are NOTE_SECTIONS ids, plus the two cards outside that registry.
+   Not `familiars` (#103 final review I-3): its card is hidden on the Sheet, so
+   its pencil was out of reach, and the familiar's own window, where Edit and
+   Delete now live, is not a list in play. A stored editHide.familiars is left
+   and ignored, as class and origin's are. */
+const EDIT_CARDS=["statuses","attacks","resources","features","spells","inventory","trackers","journal","secnotes","defences","proficiencies"];
 function editHideMap(c){const m=c&&c.editHide;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
 /* `=== true`, so anything else a hand-edited file holds reads as shown. */
 function editHidden(c,k){return EDIT_CARDS.includes(k)&&editHideMap(c)[k]===true;}
@@ -401,6 +408,15 @@ function noteToggleCheckbox(k,n){
 function jumpToNote(k){
   const def=noteDef(k);if(!def)return;
   selectTab(def.tab);
+  /* #103: the Familiars card is hidden on the Sheet; familiars open from the
+     header's paw, so its note jumps to the paw's flyout (spec §6.6). */
+  if(k==="familiars"){
+    const head=document.getElementById("sheetHead");if(head)scrollToCard(head);
+    /* With the paw hidden (showFamiliars off) the flyout hangs from the
+       header's bar, not from nowhere. */
+    openShFly("fam",0,document.querySelector("[data-shpaw]")||document.querySelector("#sheetHead .sh-bar"));
+    return;
+  }
   const card=document.querySelector(`[data-note="${def.k}"]`);
   /* Familiars and Active Spells are display:none until they have content, and
      scrolling to a hidden element lands nowhere. */

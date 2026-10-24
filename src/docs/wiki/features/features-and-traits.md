@@ -142,7 +142,7 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 | How groups sort | Favourites by name, like the inventory's; the other groups keep grant order, which for a class is level order | — |
 | What a feature groups by (#98) | Its `source`, falling back to its origin | `origin` alone: editing the source changed the label and left the feature where it was. A separate group field: a second label beside the source, for the same idea |
 | The order of groups once sources move (#98) | The groups features came from, in grant order; a group named only by a source right after the group its first feature came from | Placing each group at its first member, or each feature placing its origin then its own group: one feature moving pulls a group up past others. A to Z: loses ancestry, background, class order |
-| Favourites in the ☰ menu | Not listed (`buildToc()` collects `.inv-sec-head`, not `.fghead`) | Adding them: every feature group would land in the menu |
+| Favourites in the ☰ menu | Moot since #103 retired the ☰ menu; it was not listed (the menu collected `.inv-sec-head`, not `.fghead`) | Adding them: every feature group would land in the menu |
 | A starred granted feature on a grant rebuild | Loses the star, left as-is: in most of those paths the feature genuinely changes | — |
 | Feats and traits in one picker | Each wrapped as `{k, e, id}` | Concatenating the lists: Humblewood ships `Glide` as both, added in different shapes, and `_id` alone does not say which list a row came from |
 | The origin of a picked feature | `null`, so it files under its own source, or "Other" without one | An origin select for the label: `origin` drives clean revert, and browse origins carry `detail`, not the `name` those predicates match |
@@ -165,3 +165,4 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
   → ledger L3123
 - 2026-10-16 — A feature files under its source, falling back to where it came from; the Source box offers the groups in use. → ledger L5823, #98
 - 2026-10-22 — The feat/trait picker's filters and preview become `featFacets()` and `openFeatInfo()`, shared with the Rules tab's Feats and Traits categories. → ledger L6327, #99
+- 2026-10-24 — The ☰ section flyout is retired, so the Favourites-in-the-menu decision is moot. → ledger L6804, #103
