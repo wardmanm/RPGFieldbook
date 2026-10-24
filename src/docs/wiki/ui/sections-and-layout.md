@@ -58,10 +58,9 @@ The Sheet is one condensed page after Foundry VTT's sheet (spec
   ring with the XP, and the note button last (Mike's order). The rests read "Short rest" /
   "Long rest" and show their icons instead with Icon tabs on or at ≤860px, the tab bar's own rule.
   It is the `portrait` section, titled "Character"; that row is a `.label sh-bar` whose caption
-  "Character" is visually hidden, so the note button and the ☰ entry find it like any card
-  heading. The level badge (`#shLevel`) is the `.label`'s last child, so the note button
-  `renderNoteIcons()` appends lands after the XP bar; the ☰ strips `.sh-level` with the buttons, so
-  its entry still reads "Character". The header has no combat toggle (`nocv`). What it does is on [Vitals & rest](../features/vitals-and-rest.md)
+  "Character" is visually hidden, so the note button finds it like any card heading. The level
+  badge (`#shLevel`) is the `.label`'s last child, so the note button `renderNoteIcons()` appends
+  lands after the XP bar. The header has no combat toggle (`nocv`). What it does is on [Vitals & rest](../features/vitals-and-rest.md)
   and [Character building](../features/character-building.md).
 - **`.sheet-grid`** (`10-chrome.css`) holds the rest: `minmax(220px,260px) minmax(0,1.3fr)
   minmax(0,1fr)`. The **rail** (`card rail`, the `vitals` section) spans the left column's four
@@ -98,8 +97,6 @@ as the attribute right after its class attribute (`class="card"`, or `card` plus
   button of each of those, and `combatCard()` looks the card up fresh on every call
   ([Combat view](../features/combat-view.md)).
 - **Print** lists section notes in registry order; `jumpToNote()` uses `tab` to pick the tab.
-
-The ☰ flyout does **not** use the registry. It walks the DOM (see [Shell](shell.md)).
 
 `noteTitle()` returns the registry title. (It once varied `origin`'s by skin; that card went with
 #103.)
@@ -327,8 +324,10 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - **Every group name goes through `tagLabel()`**, which refuses a reserved name. A grouping path
   that read the raw text would put an `Object.prototype` name back into a collapse map, and every
   save of a group field calls `groupFieldBlocked()` first.
-- **`.inv-sec-head` keeps its name.** `buildToc()` and the `[data-invsec]` handler depend on it.
-- **Headings in a `.label` stay ToC-clean.** See [Shell](shell.md).
+- **`.inv-sec-head` keeps its name.** The `[data-invsec]` handler and the shared heading rule
+  depend on it.
+- **Every section card keeps its own `.label`**, where the note button, the #97 pencil and the
+  combat toggle go. See [Shell](shell.md).
 - **Every search box has a placeholder**, or its × never hides.
 - **Collapse maps store "shut", and a missing key is the default.** Changing a default then only
   affects sections nobody has touched.
@@ -380,7 +379,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | Counts and badges in a heading | Counts in `.cnt`, badges keep the `.fgcount` pill | One style for both: a badge like "12 entries" reads absurdly in brackets |
 | Order of favourite attacks | The order they were added | Sorted: the list is short and hand-built, so a row stays where the player put it |
 | Headings on the Attacks card | Only when something is starred | Always: a lone "Favorites" or a bare "Attacks" over the whole list is noise |
-| The shared section-head rule | `.fghead,.inv-sec-head` share one rule; the inventory class keeps its name | Renaming `.inv-sec-head`: `buildToc()` and the `[data-invsec]` handler depend on it |
+| The shared section-head rule | `.fghead,.inv-sec-head` share one rule; the inventory class keeps its name | Renaming `.inv-sec-head`: the `[data-invsec]` handler depends on it (and the retired ☰ flyout did) |
 | Fragment prefixes after the Tables tab went | Left as they were (`50-` is a gap) | Renumbering: pure churn, since the manifest is the authoritative order |
 
 ## Open

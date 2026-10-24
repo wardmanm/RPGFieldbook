@@ -50,7 +50,7 @@ players; `docs/` is player-facing and ships in the zip.
 
 ```
 src/                      THE SOURCE OF TRUTH — edit here, never the built file
-  fieldbook.template.html   the page SHELL — top bar, tab bar, ToC, home, modal; three markers:
+  fieldbook.template.html   the page SHELL — top bar, tab bar, home, modal; three markers:
                             /*@@CSS@@*/, <!--@@HTML@@--> and //@@JS@@
   manifest.json           the authoritative concatenation ORDER for html/, js/ and css/
   html/*.html             one tab panel each, spliced into <div class="page">
@@ -126,7 +126,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `20-lists.js` | features list, `usesMax()`, `renderFeatures()` | [Features & traits](features/features-and-traits.md) |
 | `25-origins-items.js` | `ORIGIN_KINDS`, item origin and cost, weight and encumbrance, size, `itemArmor()`, `armorAC()` | [Inventory](features/inventory.md), [Armor & AC](features/armor-and-ac.md), [Vitals & rest](features/vitals-and-rest.md) |
 | `30-version.js` | `APP_VERSION`, `DATA_VERSIONS`, `CHANGELOG`, `UPDATE_REPO`; `checkForUpdate()`, the update pill; data versions (`cmpDataVer()`) and `checkForDataUpdate()` | [Settings & updates](features/settings-and-updates.md), [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
-| `40-sheet.js` | `selectTab()`, the ToC; `invSection()`, item uses, `renderInventory()`; statuses, concentration card, familiars; the Sheet header (class line, class and familiar menus, level badge) | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Conditions & concentration](features/conditions-and-concentration.md), [Sections & layout](ui/sections-and-layout.md) |
+| `40-sheet.js` | `selectTab()`, `scrollToCard()`; `invSection()`, item uses, `renderInventory()`; statuses, concentration card, familiars; the Sheet header (class line, class and familiar menus, level badge) | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Conditions & concentration](features/conditions-and-concentration.md), [Sections & layout](ui/sections-and-layout.md) |
 | `41-chips.js` | chips (defences, senses, languages), their grants, the advancement table, default languages | [Vitals & rest](features/vitals-and-rest.md), [Character model](architecture/character-model.md), [Grants](architecture/grants-and-provenance.md), [Story & notes](features/story-and-notes.md) |
 | `50-classrace.js` | rules lookups, emblems (`iconSVG()`), subclasses; the grant machinery (`applyEquipGrants()`, `revertEquipmentGrants()`, `grantFeatDef()`, `runExtraChoices()`); `renderClassRace()` | [Grants](architecture/grants-and-provenance.md), [Character building](features/character-building.md) |
 | `52-race.js` | ancestry/species pickers, `systemOf()` | [Character building](features/character-building.md) |
@@ -189,7 +189,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | **sid** | A grant's source id: `race:<name>`, `bg:<name>`, `class:<name>`, `subclass:<class>:<sub>` — from `originSid()` |
 | **grant** | Something a source added to the character (a proficiency, feature, item, gold), recorded with its sid so removing the source reverts it |
 | **origin** | Where an item came from — one of `ORIGIN_KINDS` (class, background, ancestry, feat, starting, purchased, found, …), shown as a letter badge |
-| **section** | Two meanings. An *inventory section* is the group an item files under (`invSection()`, `sectionOverride`). A *sheet section* is a card in `NOTE_SECTIONS`, the registry that section notes, the combat view and print share (the ☰ ToC is separate: it walks the DOM) |
+| **section** | Two meanings. An *inventory section* is the group an item files under (`invSection()`, `sectionOverride`). A *sheet section* is a card in `NOTE_SECTIONS`, the registry that section notes, the combat view and print share |
 | **library** | The character library: the index of saved characters in localStorage (`K_LIB`). Not the rules — those are "packs" or "the rules cache" |
 | **stamp / fingerprint** | What `stampSrc()` writes on a copied rules entry: its pack, category and per-field hashes, so the rules-update tool can tell drift from player edits |
 | **effect** | A numeric modifier `{target, value}` (AC +1, save +2, speed +5). Nothing non-numeric is an effect |

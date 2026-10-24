@@ -44,7 +44,7 @@ language are on [Character model](../architecture/character-model.md) and
 [Grants & provenance](../architecture/grants-and-provenance.md). #97's pencil on this card hides
 the chips' ×.
 
-**The name.** The tab's label, its ☰ title and the Section Notes card's group heading read **Bio**
+**The name.** The tab's label and the Section Notes card's group heading read **Bio**
 (`NOTE_TABS.story`); the id stays `story`, because saved Section Notes fold state (`noteCollapse`)
 keys on it.
 
@@ -96,8 +96,10 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
   one would be orphaned. `rules-data.js` checks the registry against the template both ways and
   counts exactly 18 note-bearing card openings.
 - **A retired section's notes are merged, never dropped**, and the merge is idempotent.
-- **The note button is a `<button>` and its preview a `<span>` inside it.** `buildToc()` clones each
-  `.label` and strips buttons before reading its text; a sibling preview would leak into the ☰ entry.
+- **The note button is a `<button>` and its preview a `<span>` inside it**, so the button carries its
+  own preview: `renderNoteIcons()` replaces one element, and a sibling preview would be left behind.
+  (The retired ☰ flyout also read a `.label`'s text with buttons stripped, which a sibling would
+  have leaked into.)
 - **`renderNoteIcons()` replaces only its own button** — never `label.innerHTML +=`, which re-parses
   the label and destroys `#starBtn`, `#encPill` and `#roundNum`. The combat view's toggle follows the
   same rule and sits just before it.

@@ -444,8 +444,6 @@ These look like missing features. Each was checked and is right as it stands.
   a wrong guess is worse than a blank box. → ledger L2818
 - **Note markdown deliberately omits** links (they point at a network, in an offline app),
   `_underscore_` emphasis (`snake_case`), nested lists and pipe tables. → ledger L1504
-- **The Features Favourites group is not in the ☰ menu.** Listing it would mean listing every feature
-  group. → ledger L2381
 - **Xanathar's encounter, trap and name tables and Tasha's sidekick classes are not converted.** They
   are DM content the sheet cannot act on, in shapes that would each need their own parser. → ledger L1816
 

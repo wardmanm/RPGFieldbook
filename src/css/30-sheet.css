@@ -59,8 +59,8 @@ html[data-rough="on"] .vbox::before{filter:url(#rough)}
 .sheet-head{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 clamp(12px,2vw,18px);
   padding:10px 14px;background:color-mix(in srgb,var(--accent) 16%,var(--panel));border:2px solid var(--accent);
   border-radius:12px;box-shadow:var(--shadow);color:var(--ink)}
-/* #103: the header is a .card (the `portrait` section) for the registry, the
-   note button and the ☰; it keeps its own border, not the card's inset one */
+/* #103: the header is a .card (the `portrait` section) for the registry and
+   the note button; it keeps its own border, not the card's inset one */
 .sheet-head.card::before{display:none}
 .sh-id{flex:1 1 240px;min-width:0}
 .sh-name{font-family:var(--display);font-weight:900;font-size:28px;line-height:1.15;color:var(--ink);background:transparent;
@@ -72,8 +72,8 @@ html[data-rough="on"] .vbox::before{filter:url(#rough)}
   font-weight:700;cursor:pointer;border-bottom:1.5px dotted color-mix(in srgb,var(--accent) 70%,transparent)}
 .sh-sub button:hover,.sh-sub button[aria-expanded="true"]{color:var(--accent)}
 .sh-sub .sh-add{color:var(--accent-2);font-weight:600}
-/* the icons row is a .label (the ☰ and the note button look for one); here it
-   is a plain row, its caption visually hidden */
+/* the icons row is a .label (the note button looks for one, as on every card);
+   here it is a plain row, its caption visually hidden */
 .sheet-head .sh-bar{margin:0;gap:6px;letter-spacing:0;flex:0 1 auto;flex-wrap:wrap}
 .sheet-head .sh-bar .grow{display:none}
 .sh-cap,.sh-vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}

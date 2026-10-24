@@ -13,13 +13,13 @@ function selectTab(name){
   else if(was!=="combat")cvPrevTab=was;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
   document.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+name));
-  /* its button is an icon beside ☰, not a .tab */
+  /* its button is the swords in .tab-tools, not a .tab */
   const cb=document.getElementById("btnCombat");if(cb)cb.classList.toggle("active",name==="combat");
   if(name==="combat")openCombatView();
-  closeToc();closeShFly();
+  closeShFly();
 }
 /* Scroll a card to just under the sticky tab bar, whose height is measured live
-   rather than assumed. Shared by the table of contents and the notes jump. */
+   rather than assumed. Used by the notes jump and the journal. */
 function scrollToCard(el){
   if(!el)return;
   /* In the combat tab its own header sticks under the tab bar, so clear both. */
@@ -28,42 +28,6 @@ function scrollToCard(el){
   const y=el.getBoundingClientRect().top+window.scrollY-off;
   window.scrollTo({top:Math.max(0,y),behavior:"smooth"});
 }
-function buildToc(){
-  const fly=document.getElementById("tocFly");if(!fly)return;
-  /* With the combat view open, ☰ lists the view's cards, not the tab behind it. */
-  const inView=combatViewOpen();
-  const panel=inView?document.getElementById("cvList"):document.querySelector(".tabpanel.active");
-  const tabBtn=document.querySelector(".tab.active");const tabName=inView?"Combat":(tabBtn?tabBtn.textContent.trim():"Sections");
-  /* The Rules tab is one card; its sections are its categories (#99). */
-  if(!inView&&panel&&panel.id==="tab-rules"){
-    /* the Glossary is always listed (its + Add is always reachable), so this
-       pane is never empty and needs no empty-list fallback */
-    const shown=rbShown();
-    fly.innerHTML=`<h4>${esc(tabName)}</h4>`;
-    shown.forEach(({cat,rows})=>{const a=document.createElement("a");a.textContent=cat.title+" ("+rows.length+")";
-      a.addEventListener("click",()=>{closeToc();rbOpenCat(cat.k);scrollToCard(document.getElementById("rbCard"));});fly.appendChild(a);});
-    return;
-  }
-  const items=[];
-  if(panel)panel.querySelectorAll(".card > .label, .inv-sec-head").forEach(node=>{
-    const target=node.classList.contains("inv-sec-head")?node:node.closest(".card");
-    /* Skip cards that aren't showing. #familiarCard and #activeSpellCard are
-       display:none until they have content, and listing one gives a menu entry
-       that scrolls to a zero-height box and lands nowhere. jumpToNote() has
-       always made this check; this is the same rule, in the other consumer. */
-    if(target&&target.offsetParent===null)return;
-    /* .sh-level: the sheet header's level badge sits inside its .label (#103,
-       so the note button lands after it) and must not read into "Character" */
-    const cl=node.cloneNode(true);cl.querySelectorAll("button,svg,input,select,.grow,.add,.cnt,.enc-pill,.sh-level").forEach(x=>x.remove());
-    const t=cl.textContent.trim();if(t&&target)items.push({t,target,sub:node.classList.contains("inv-sec-head")});
-  });
-  fly.innerHTML=`<h4>${esc(tabName)}</h4>`+(items.length?"":`<p class="hint" style="padding:6px">No sections here.</p>`);
-  items.forEach(it=>{const a=document.createElement("a");a.textContent=it.t;if(it.sub)a.style.paddingLeft="20px";a.addEventListener("click",()=>{closeToc();scrollToCard(it.target);});fly.appendChild(a);});
-}
-/* In the combat view the flyout hangs under the view's header, not the tab bar
-   the view covers. */
-function openToc(){buildToc();const tb=combatViewOpen()?document.getElementById("cvHead"):document.querySelector(".tabbar");const top=tb?Math.max(0,Math.round(tb.getBoundingClientRect().bottom)):0;const fly=document.getElementById("tocFly"),back=document.getElementById("tocBack");if(fly)fly.style.top=top+"px";if(back)back.style.top=top+"px";if(fly)fly.classList.add("open");if(back)back.classList.add("open");}
-function closeToc(){const f=document.getElementById("tocFly"),b=document.getElementById("tocBack");if(f)f.classList.remove("open");if(b)b.classList.remove("open");}
 /* A player's category as the section it names (#98). One of INV_ORDER in any
    case files there ("consumables" is Consumables, so it is still read for its
    healing); anything else is their own section, tidied as a tag is. "" for
@@ -561,9 +525,8 @@ function renderSheetHead(){
 }
 /* The class and familiar menus: one popover (#shFly) hung under the button
    that opened it, inside the header so it scrolls with the page, over a
-   transparent layer (#shBack) that a tap outside lands on and closes it —
-   the ☰ flyout's pattern. Any button in it closes it before its own action
-   runs (90-boot.js). */
+   transparent layer (#shBack) that a tap outside lands on and closes it. Any
+   button in it closes it before its own action runs (90-boot.js). */
 let _shFly=null;
 function openShFly(kind,i,anchor){
   const fly=document.getElementById("shFly"),back=document.getElementById("shBack");if(!fly)return;

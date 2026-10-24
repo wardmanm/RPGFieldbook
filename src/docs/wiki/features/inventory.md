@@ -51,7 +51,7 @@ the top, sorted by name, and appears **only** there; then the seven; then the pl
 A to Z, grouped by `tagKey()` and labelled by the first spelling met. Inside a section, equipped
 items sort first, then by name. Section heads collapse (`invCollapse.sections`, keyed by title, a
 player's section included); Collapse all folds item bodies (`invCollapse.items`). A player's section
-is an `.inv-sec-head` like any other, so it is listed in the ☰ flyout.
+is an `.inv-sec-head` like any other, so it folds and styles like the seven.
 
 **Custom category.** The item form's Category is the group field (`groupFieldHTML()`, see
 [Sections & layout](../ui/sections-and-layout.md)), the box the journal's tags use: it offers the

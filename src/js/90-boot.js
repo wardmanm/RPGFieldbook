@@ -163,8 +163,6 @@ function wire(){
     if((m=t.closest("[data-chipadd]")))return openChipChooser(m.dataset.chipadd);
     if((m=t.closest("[data-chipdel]"))){removeChip(character,m.dataset.chipdel,m.dataset.chipid);renderChipsAll();scheduleSave();return;}
     if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn,e.detail===0);
-    if(t.closest("#btnToc"))return openToc();
-    if(t.closest("#tocBack"))return closeToc();
     if((m=t.closest("[data-fitem]"))){const id=m.dataset.fitem,fc=featCol();fc.items[id]=!fc.items[id];renderFeatures();scheduleSave();return;}
     /* No recompute(): a star moves a feature between groups and changes nothing
        derived. Same as the inventory star above, and unlike the On/Off toggle

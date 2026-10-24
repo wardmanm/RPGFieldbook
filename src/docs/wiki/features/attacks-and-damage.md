@@ -50,7 +50,7 @@ Recover N — see [Ammunition](ammunition.md). `attackNumbers()` adds the loaded
 **The card.** Rows collapse individually (`atkCollapse.items`) with a Collapse all / Expand all
 button that hides on an empty list. A star moves a row under a `★ Favorites` heading (`ATK_FAV`, the
 same label as `FEAT_FAV`); favourites keep insertion order, and the two headings appear only when
-something is starred. The shared heading style and the ☰ entries come from `.inv-sec-head` — see
+something is starred. The shared heading style comes from `.inv-sec-head` — see
 [Sections & layout](../ui/sections-and-layout.md).
 
 **Weapons.** An inventory item with a `weapon` object gets a linked row from `addAttackForItem()`:

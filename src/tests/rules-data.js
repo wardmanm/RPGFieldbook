@@ -1402,8 +1402,6 @@ function block(html, needle, tag) {
        /<span class="sh-level" id="shLevel"><\/span>\s*<\/div>$/.test(lbl), lbl.slice(-120));
     const js = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8')).js.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
     ck('#103 renderNoteIcons() appends to the end of the .label', /label\.insertAdjacentHTML\("beforeend",noteBtnHTML\(def\)\)/.test(js));
-    ck('#103 the ☰ entry still reads "Character": the level is stripped with the buttons',
-       /cl\.querySelectorAll\("button,svg,input,select,\.grow,\.add,\.cnt,\.enc-pill,\.sh-level"\)/.test(js));
   }
   ck('#103 the Attacks card leads the Inventory tab, above Equipment',
      (() => { const i = t.indexOf('id="tab-inventory"'); return t.indexOf('data-note="attacks"', i) < t.indexOf('data-note="inventory"', i); })());
@@ -1439,16 +1437,33 @@ function block(html, needle, tag) {
     .map(s => /id="tab-([a-z]+)"/.exec(s)[1]);
   ck('there are six tabs', tabs.length === 6, tabs);
   ck('every tab has a panel', tabs.every(n => panels.indexOf(n) >= 0), tabs.filter(n => panels.indexOf(n) < 0));
-  // the combat panel's tab is the crossed swords beside ☰, not a word tab
+  // the combat panel's tab is the crossed swords in .tab-tools, not a word tab
   ck('every panel has a tab', panels.every(n => tabs.indexOf(n) >= 0 || (n === 'combat' && /id="btnCombat"/.test(t))),
      panels.filter(n => tabs.indexOf(n) < 0));
   ck('exactly one tab starts active', (t.match(/class="tab active"/g) || []).length === 1);
   ck('every tab carries a glyph and a word',
      (t.match(/class="tabicon"/g) || []).length === 6 && (t.match(/class="tlbl"/g) || []).length === 6);
-  // buildToc() reads the tab button's textContent for its heading, so a <title>
-  // inside the icon would end up in the flyout
+  // each icon is aria-hidden and its button carries an aria-label, so a <title>
+  // inside the icon would add only a stray tooltip over the word
   ck('no tab icon carries a title element', !/<svg class="tabicon"[^>]*>\s*<title/.test(t));
   ck('the icon-tab mode has a default on the root element', /<html[^>]*data-tabs="labels"/.test(t));
+}
+
+// ---------- the ☰ section flyout is retired (#103, Mike 2026-10-24)
+// The tabs are organised well enough to need no index. Nothing of it may come
+// back half-wired: a stray closeToc() call throws, and a stray #btnToc is a
+// button that does nothing. Checked in the built page, and in the sources in
+// case the build is stale.
+{
+  const gone = ['btnToc', 'tocBack', 'tocFly', 'buildToc', 'openToc', 'closeToc', 'tab-toc', 'toc-fly', 'toc-back'];
+  const built = fs.readFileSync(path.join(ROOT, 'dist/fieldbook.html'), 'utf8');
+  ck('#103 the built page has no ☰ flyout: no btnToc, tocFly, buildToc or their kin',
+     gone.every(g => !built.includes(g)), gone.filter(g => built.includes(g)));
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const src = loadHTML() + [...manifest.js, ...manifest.css].map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  ck('#103 ...nor do the sources', gone.every(g => !src.includes(g)), gone.filter(g => src.includes(g)));
+  ck('#103 the tab bar\'s tool group holds the swords alone',
+     /<div class="tab-tools">\s*<button class="tab-combat" id="btnCombat"[^>]*><\/button>\s*<\/div>/.test(loadHTML()));
 }
 
 // ---------- loadHTML() agrees with what the build actually shipped
@@ -1690,7 +1705,7 @@ function block(html, needle, tag) {
        need.filter(s => (t.split(s).length - 1) !== 1));
     ck('#103 the header sits in the Sheet tab, above the columns',
        at > t.indexOf('id="tab-sheet"') && at < t.indexOf('class="sheet-grid"', t.indexOf('id="tab-sheet"')));
-    ck('#103 its icons row is a .label with a hidden "Character" caption, for the ☰ and the note button',
+    ck('#103 its icons row is a .label with a hidden "Character" caption, for the note button',
        /<div class="label sh-bar"><span class="sh-cap">Character<\/span><span class="grow"><\/span>/.test(head));
     ck('#103 the star is not in the rail', !vitals.includes('id="starBtn"'));
     ck('#103 the portrait card keeps no name, Experience or Level field',
@@ -1887,11 +1902,11 @@ function block(html, needle, tag) {
      !/^\.item \.top\{[^}]*flex-wrap/m.test(sheetCss));
   ck('the summoned pill does not break inside its own border',
      /#familiarList \.fam-state\{white-space:nowrap\}/.test(sheetCss));
-  // buildToc listed every card label with no visibility filter, so a hidden
-  // card gave a menu entry that scrolled to a zero-height box. jumpToNote has
-  // always made this check; the two now agree.
-  ck('the section menu skips cards that are not showing',
-     /function buildToc\(\)\{[\s\S]*?offsetParent===null\)return;/.test(js));
+  // A hidden card (familiars, Active Spells) is a zero-height box: a jump to
+  // one lands nowhere. jumpToNote checks before it scrolls. (The retired ☰
+  // section menu made the same check; this one survives it, #103.)
+  ck('a note jump to a card that is not showing goes to the top instead',
+     /function jumpToNote\(k\)\{[\s\S]*?if\(!card\|\|card\.offsetParent===null\)\{window\.scrollTo\(\{top:0\}\);return;\}/.test(js));
 
   // ---------- "choose N" pickers actually enforce N
   // choiceFieldHTML is pure and covered properly in sheet.js. What lives here is
@@ -1933,7 +1948,6 @@ function block(html, needle, tag) {
      /class="switch \$\{settings\.backdropClose===true\?"on":""\}" id="swBackdrop" role="switch" aria-checked="\$\{settings\.backdropClose===true\?"true":"false"\}"/.test(js) &&
      /getElementById\("swBackdrop"\)\.addEventListener\("click",e=>\{settings\.backdropClose=settings\.backdropClose!==true;[^\n]*saveSettings\(\);\}\)/.test(js) &&
      /const SETTINGS_KEYS=\[[^\]]*"backdropClose"/.test(js));
-  ck('...and the flyout still closes on a tap outside', /if\(t\.closest\("#tocBack"\)\)return closeToc\(\);/.test(js));
   /* #107: Settings opens wide. The class is set or cleared on EVERY open, as the
      emblem slot is, so a dialog opened from Settings never inherits the width. */
   ck('openModal sets or clears the wide class on every open',
@@ -2290,18 +2304,10 @@ function block(html, needle, tag) {
   ck('#99 typing in a category\'s box repaints the body only',
      /rbCatSearch[\s\S]{0,200}rbRefreshBody\(\)/.test(boot) && !/rbCatSearch[\s\S]{0,200}renderRulesBrowser\(\)/.test(boot));
   const sheetJs = fs.readFileSync(path.join(ROOT, 'src/js/40-sheet.js'), 'utf8');
-  ck('#99 the ☰ flyout lists the categories on the Rules tab', /tab-rules[\s\S]{0,400}rbShown\(\)[\s\S]{0,300}rbOpenCat\(/.test(sheetJs));
   // final-review (a): the tab always opens on the category list, never the
   // last table a previous visit left on
   ck('#99 (a) entering the Rules tab from elsewhere resets to the category list',
      /function selectTab\(name\)\{[\s\S]{0,500}if\(name==="rules"&&was!=="rules"\)rbToList\(\)/.test(sheetJs));
-  // final-review (c): the flyout's Rules entries scroll to the card, show a
-  // count, and the dead "no sections" branch (the Glossary is always listed) is gone
-  const rulesCase = (sheetJs.match(/panel\.id==="tab-rules"\)\{[\s\S]*?\n\s*return;\n\s*\}/) || [''])[0];
-  ck('#99 (c) the flyout scrolls to the opened category, and the dead branch is gone',
-     /scrollToCard\(/.test(rulesCase) && /rbOpenCat\(/.test(rulesCase) && !/No sections here/.test(rulesCase));
-  ck('#99 (c) each flyout entry shows its category\'s row count',
-     /a\.textContent=cat\.title\+" \("\+rows\.length\+"\)"/.test(rulesCase));
 }
 
 // ---------- the combat view is a TAB: its icon in the tab bar, its panel in the page
@@ -2310,10 +2316,10 @@ function block(html, needle, tag) {
 {
   const t = loadHTML();
   const tools = t.indexOf('<div class="tab-tools">'), combat = t.indexOf('id="btnCombat"'),
-        toc = t.indexOf('id="btnToc"'), page = t.indexOf('<div class="page">'),
+        toolsEnd = t.indexOf('</div>', tools), page = t.indexOf('<div class="page">'),
         panel = t.indexOf('id="tab-combat"'), view = t.indexOf('id="combatView"');
-  ck('the combat button sits in the pinned tab-bar group, before ☰',
-     tools >= 0 && tools < combat && combat < toc);
+  ck('the combat button sits in the pinned tab-bar group',
+     tools >= 0 && tools < combat && combat < toolsEnd && toolsEnd < page);
   ck('the combat view is a tab panel inside the page', page >= 0 && page < panel && panel < view,
      {page, panel, view});
   ck('...and no longer a modal dialog over it',

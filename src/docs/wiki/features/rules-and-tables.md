@@ -39,8 +39,8 @@ sidebar and pane — from `renderAll()` (a sheet loaded with cached rules) and f
 so the box keeps focus and every keystroke lands (the sidebar's box, over every category, repaints
 the sidebar the same way). 640px and under it shows one pane at a time, by `#rbCard[data-screen]`,
 with ← Categories to go back, which also returns keyboard focus to the category button just left.
-The ☰ flyout lists the categories; tapping one calls `rbOpenCat()`, which does not scroll the page —
-see Open, below. A long table (more than 300 rows after filtering) shows the first page and a
+A category button (`[data-rbcat]`) calls `rbOpenCat()`, which repaints the pane and does not scroll
+the page. A long table (more than 300 rows after filtering) shows the first page and a
 "Show *N* more" button (`rbState().shown`, capped at 300 more per tap); filters and search narrow
 *before* the cap applies. With no pack loaded the card opens on an Import rules files prompt, above
 where the (Glossary-only) browser would be.

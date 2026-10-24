@@ -184,7 +184,7 @@ one hook both forms carry.
 `renderTrackers()` hides the card with `display:none`, keeping it in the DOM, which the section
 registry requires. Trackers is an entry in `NOTE_SECTIONS` (tab `journal`), so it takes a
 section note and can be added to the combat view like any registered card. Hidden, it is skipped
-by the ☰ flyout and the combat view.
+by the combat view.
 
 **The card.** `#journalCard` is the first card on the Journal tab, with **+ Page** (`#jnlNew`) in
 its heading. `renderJournal()` draws `#jnlBody` in one of three views, held in the session-only

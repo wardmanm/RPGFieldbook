@@ -246,7 +246,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How groups sort** — Favourites by name, like the inventory's; the other groups keep grant order, which for a class is level order
 - **What a feature groups by (#98)** — Its `source`, falling back to its origin
 - **The order of groups once sources move (#98)** — The groups features came from, in grant order; a group named only by a source right after the group its first feature came from
-- **Favourites in the ☰ menu** — Not listed (`buildToc()` collects `.inv-sec-head`, not `.fghead`)
+- **Favourites in the ☰ menu** — Moot since #103 retired the menu; they were not listed
 - **A starred granted feature on a grant rebuild** — Loses the star, left as-is: in most of those paths the feature genuinely changes
 - **Feats and traits in one picker** — Each wrapped as `{k, e, id}`
 - **The origin of a picked feature** — `null`, so it files under its own source, or "Other" without one
@@ -334,7 +334,7 @@ When a page gains a Decisions row, add its line here under that page.
 ### [Combat view](features/combat-view.md)
 
 - **How it opens** — **As built:** a tab (`#tab-combat`) reached from the swords, with no word tab (owner's call after play)
-- **Where the button lives** — The sticky tab bar, before ☰
+- **Where the button lives** — The sticky tab bar, alone in its pinned tool group
 - **What a round changes** — Active spells and timed conditions, through `advanceRound()`
 - **Start and End** — Start sets round 1; End is its own button and asks; leaving never ends combat
 - **Which sections** — Any but the Sheet's header, six by default, drag to reorder, saved per character
@@ -397,6 +397,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **The off-screen Add button** — `width:auto` on the origin select, `flex-wrap` as a safety net
 - **Markup that moves, in `wire()`** — A local `on()` that skips a missing id
 - **The modal title's contract (#69)** — Plain text, set as `textContent`; callers never escape it
+- **An index of a tab's sections (#103)** — None: ☰ section flyout retired (Mike, 2026-10-24): the tabs are organised well enough to need no index
 
 ### [Sections & layout](ui/sections-and-layout.md)
 

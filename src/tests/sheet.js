@@ -2417,7 +2417,8 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
      on.includes('title="Remove from combat view"'));
   const h = X.combatHeaderHTML({combatActive: false, combatRound: 0});
   /* #80: the Combat tab acts like every tab — no ✕ (picking another tab, or the
-     swords again, leaves it) and no ☰ of its own (the tab bar's serves it) */
+     swords again, leaves it) and no ☰ of its own (the tab bar's one served it
+     until #103 retired it; none may come back here) */
   ck('#80 the header has no ✕ and no ☰ of its own',
      !h.includes('id="cvClose"') && !h.includes('id="cvToc"') && !/✕|☰/.test(h), h);
 }

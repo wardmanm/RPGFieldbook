@@ -26,7 +26,7 @@
 /* A tab like the others: .tabpanel shows and hides it, and the page scrolls it.
    The header sticks just under the sticky tab bar (--cv-top is that bar's
    measured height, cvStickyTop()), so the round and its arrows stay in reach
-   down a long list of cards. Below the tab bar (40) and the ☰ flyout. */
+   down a long list of cards. Below the tab bar (40). */
 .cview{display:flex;flex-direction:column}
 .cv-head{position:sticky;top:var(--cv-top,48px);z-index:30;display:flex;align-items:center;flex-wrap:wrap;gap:8px;
   padding:8px clamp(10px,2vw,18px);background:var(--paper-2);border:2px solid var(--line);border-top:0;
@@ -36,7 +36,7 @@
    becomes a full-width row break; row 2 is the tracker with End pushed to the far
    right, well clear of ◀ ▶. Out of combat the header is one row, title and Start.
    640, not a phone width: the one-row header needs ~500px in combat, and between
-   the two it wrapped wherever it ran out of room. No ✕ or ☰ of its own (#80). */
+   the two it wrapped wherever it ran out of room. No ✕ of its own (#80). */
 @media(max-width:640px){
   .cv-head{row-gap:0}
   .cv-head.fighting .grow{order:2;flex:0 0 100%;height:0;margin-top:8px}

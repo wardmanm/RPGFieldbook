@@ -192,10 +192,10 @@ function syncStatLock(root){
 /* title · tracker · (space) · Start or End. End sits past the spacer, well away
    from the arrows, so a hurried tap on ▶ cannot hit it. On a phone CSS re-flows
    the same markup into two rows in combat. The time has its own spans so it can
-   stack under the round there. No ✕ and no ☰ of its own (#80): the Combat tab
-   acts like every tab — another tab, or the swords again, leaves it, and the tab
-   bar's ☰ lists its sections. No aria-live here: this is repainted, and a live
-   region that is replaced is never announced — #cvLive is. */
+   stack under the round there. No ✕ of its own (#80): the Combat tab acts like
+   every tab — another tab, or the swords again, leaves it. No aria-live here:
+   this is repainted, and a live region that is replaced is never announced —
+   #cvLive is. */
 function combatHeaderHTML(c){
   /* #103: inspiration moved off the Vitals card into the sheet header, which the
      view does not carry, so the view has its own star: class-based (no id — the
@@ -233,7 +233,6 @@ function setCombatLive(t){const l=document.getElementById("cvLive");if(l&&l.text
 function openCombatView(){
   if(cvOpen)return;
   if(!document.getElementById("combatView"))return;
-  closeToc();
   if(character.id!==cvCharId){cvCharId=character.id;cvScroll=0;}
   fillCombatView();
   cvOpen=true;
@@ -246,7 +245,6 @@ function openCombatView(){
 function closeCombatView(){
   if(!cvOpen)return;
   cvScroll=window.scrollY;
-  closeToc();
   emptyCombatView();
   cvOpen=false;
 }

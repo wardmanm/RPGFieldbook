@@ -17,7 +17,7 @@ harness splice agrees with `dist/`), `docs.js` (fragment counts, one panel per h
 ## How it works
 
 **The shell.** `src/fieldbook.template.html` holds everything in the page that is not a tab panel:
-the top bar, tab bar, ToC flyout, `<div class="page">`, the home screen, the generic modal and the
+the top bar, tab bar, `<div class="page">`, the home screen, the generic modal and the
 toast. It carries three markers, each a real comment in the context it sits in, so the template
 stays valid on its own:
 
