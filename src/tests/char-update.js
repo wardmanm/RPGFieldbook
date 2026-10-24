@@ -21,7 +21,11 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'uid',
   'levelSnapshot','levelGains','luSummary','luHPCheck',
   'openLevelUp','luState','luSetHP','luRoll','luFinish','levelUpCardHTML','levelUpHPHTML','LU_HP_CLOSE',
+  'luFxHTML','playLevelUpFx','luSkip','luBusy','luReducedMotion',
 ]);
+/* #101: level-ups in this suite skip the scene (reduced motion), as the
+   harness's setTimeout never fires; the scene's own block turns it back on. */
+ctx.window.matchMedia=()=>({matches:true,addEventListener(){}});
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
    defined APP_VERSION, so a reference to it there would white-screen the app. */
@@ -1916,6 +1920,37 @@ ck('itemMetaLine still ends with the weight',
     ck('#101 the HP step offers Roll, I rolled + Apply, and the average', /id="luRoll"/.test(hp8)&&/I rolled/.test(hp8)&&/id="luApply"/.test(hp8)&&/Take the average \(5\)/.test(hp8), hp8);
     ck('#101 ...with no die, one HP-gained box and nothing to roll', /HP gained/.test(hp0)&&!/luRoll/.test(hp0)&&!/average/.test(hp0), hp0);
   }finally{ctx.runChoices=realRC;ctx.openModal=realOM;state.confirm=true;}
+}
+
+// ---------- #101 the scene: plays first, skips, honours reduced motion
+{
+  const realOM=ctx.openModal, realMM=ctx.window.matchMedia; let om=[];
+  ctx.openModal=function(t,h){om.push(t);return realOM.apply(null,arguments);};
+  ctx.window.matchMedia=()=>({matches:false,addEventListener(){}});   /* motion allowed: the scene plays */
+  try{
+    const fx=X.luFxHTML(4,5);
+    ck('#101 the scene draws a sigil: two circles and a seven-point star', /<svg class="lu-sigil"/.test(fx)&&(fx.match(/<circle /g)||[]).length===2&&
+       /M125 31L165\.8 209\.7L51\.5 66\.4L216\.6 145\.9L33\.4 145\.9L198\.5 66\.4L84\.2 209\.7Z/.test(fx), fx.slice(0,300));
+    ck('#101 ...with 24 runes drawn as paths, not a font', (fx.match(/<path transform="rotate\(/g)||[]).length===24&&!/<text/.test(fx));
+    ck('#101 ...the ring ticks 4 → 5 and the banner says LEVEL 5', /class="lu-old">4</.test(fx)&&/class="lu-new">5</.test(fx)&&/class="lu-banner">LEVEL 5</.test(fx));
+    ck('#101 ...with sparks and motes', (fx.match(/class="lu-spark"/g)||[]).length===7&&(fx.match(/class="lu-mote"/g)||[]).length===16);
+
+    hpSetup(CLS); X.addClass('Fighter',1); om=[]; X.doLevelUp();
+    ck('#101 a level-up plays the scene before the card', X.luBusy()&&om.length===0, om);
+    X.doLevelUp();
+    ck('#101 a second level-up while the scene plays does nothing', X.character.classes[0].level===2, X.character.classes[0].level);
+    X.luSkip();
+    ck('#101 skipping ends the scene and opens the card', !X.luBusy()&&om.length===1&&om[0]==='Level up', om);
+    X.luSkip();
+    ck('#101 ...and a second skip opens nothing more', om.length===1, om);
+    X.luSetHP(null); X.luFinish();
+
+    ctx.window.matchMedia=()=>({matches:true,addEventListener(){}});
+    ck('#101 reduced motion is read from the device', X.luReducedMotion()===true);
+    hpSetup(CLS); X.addClass('Fighter',1); om=[]; X.doLevelUp();
+    ck('#101 with reduced motion there is no scene: the card opens at once', !X.luBusy()&&om.length===1, om);
+    X.luSetHP(null); X.luFinish();
+  }finally{ctx.openModal=realOM;ctx.window.matchMedia=realMM;}
 }
 
 ck.done();

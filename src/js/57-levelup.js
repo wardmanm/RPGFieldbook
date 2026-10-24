@@ -80,7 +80,7 @@ function openLevelUp(info){
   _lu={cls:info.cls,from:num(info.from),to:num(info.to),charLevel:num(info.charLevel),fromLevel:num(info.before&&info.before.level),
     hp:info.hp,choices:(info.choices||[]).filter(ch=>ch&&ch.type!=="hp"),pending:info.pending||null,
     gains:levelGains(info.before,info.after,info.choices||[],info.notes||[]),raw:null,set:false,note:""};
-  showLevelUpCard();
+  playLevelUpFx(_lu.fromLevel||(_lu.charLevel-(_lu.to-_lu.from)),_lu.charLevel,showLevelUpCard);
 }
 function luRowHTML(r){
   return `<li class="lu-row lu-${esc(r.kind)}"><i aria-hidden="true">${LU_ICON[r.kind]||"•"}</i><span>${esc(r.text)}`+
@@ -159,4 +159,49 @@ function luDismissed(){
   const lu=_lu;_lu=null;if(!lu)return;
   if(lu.set){commitHPChoice(lu.hp,lu.raw);scheduleSave();}
   runChoices(lu.cls,lu.choices,[],lu.pending);
+}
+/* ---- the scene (panel F of the mockup) ----
+   A layer over the page and under the modal (z-index 75 < 80): a rune circle
+   draws itself, the level ring glows and ticks old → new, a flash, the
+   banner and its sparks. CSS keyframes only; the runes are drawn paths, so
+   no font is needed. A click, a tap or Esc/Enter/Space skips to the card;
+   reduced motion never builds it. Nothing here is saved. */
+const LU_FX_MS=2400;
+const LU_STAR="M125 31L165.8 209.7L51.5 66.4L216.6 145.9L33.4 145.9L198.5 66.4L84.2 209.7Z";
+const LU_RUNES=["M2 0V16M2 4L8 1M2 9L8 6","M2 16V0L8 5V16","M2 0V16M2 4L7 8L2 12","M2 0V16M2 2L8 6M2 7L8 11",
+  "M2 16V0L7 4L2 8L8 16","M7 2L2 8L7 14","M1 1L9 15M9 1L1 15","M2 16V0L7 4L2 8","M2 0V16M8 0V16M2 5L8 11",
+  "M5 0V16M1 6L9 10","M5 0V16","M5 0V16M1 5L5 0L9 5"];
+const LU_SPARKS=[[18,0],[33,.15],[48,.05],[63,.2],[80,.1],[26,.3],[72,.35]];
+const LU_MOTES=[[6,.1],[14,.7],[22,.3],[30,1],[38,.2],[46,.8],[54,.4],[62,1.1],[70,.15],[78,.6],[86,.9],[94,.35],[10,1.2],[50,.55],[66,.05],[90,.75]];
+let _luFx=null;
+function luBusy(){return !!_luFx;}
+function luReducedMotion(){try{return !!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);}catch(e){return false;}}
+function luFxHTML(from,to){
+  let runes="";
+  for(let i=0;i<24;i++)runes+=`<path transform="rotate(${esc(String(i*15))} 125 125) translate(120 9)" d="${esc(LU_RUNES[i%LU_RUNES.length])}"/>`;
+  return `<svg class="lu-sigil" viewBox="0 0 250 250" aria-hidden="true"><circle class="lu-c1" cx="125" cy="125" r="118"/>`+
+    `<circle class="lu-c2" cx="125" cy="125" r="94"/><path class="lu-star" d="${esc(LU_STAR)}"/><g class="lu-runes">${runes}</g></svg>`+
+    `<div class="lu-ring"><b class="lu-old">${esc(String(from))}</b><b class="lu-new">${esc(String(to))}</b></div>`+
+    `<div class="lu-flash"></div><div class="lu-banner">LEVEL ${esc(String(to))}</div>`+
+    LU_SPARKS.map(([x,d])=>`<i class="lu-spark" style="left:${esc(String(x))}%;animation-delay:${esc(String(1.6+d))}s"></i>`).join("")+
+    LU_MOTES.map(([x,d])=>`<i class="lu-mote" style="left:${esc(String(x))}%;animation-delay:${esc(String(d))}s"></i>`).join("");
+}
+function playLevelUpFx(from,to,done){
+  if(luReducedMotion()){done();return;}
+  const el=document.createElement("div");
+  el.id="luFx";el.className="lu-fx";el.setAttribute("aria-hidden","true");
+  el.innerHTML=luFxHTML(from,to);
+  const fx={el,done,timer:null,key:null};_luFx=fx;
+  fx.key=e=>{if(e.key==="Escape"||e.key==="Enter"||e.key===" "){if(e.preventDefault)e.preventDefault();luSkip();}};
+  el.addEventListener("click",luSkip);
+  document.addEventListener("keydown",fx.key);
+  document.body.appendChild(el);
+  fx.timer=setTimeout(luSkip,LU_FX_MS);
+}
+function luSkip(){
+  const fx=_luFx;if(!fx)return;_luFx=null;
+  clearTimeout(fx.timer);
+  if(document.removeEventListener)document.removeEventListener("keydown",fx.key);
+  if(fx.el&&typeof fx.el.remove==="function")fx.el.remove();
+  fx.done();
 }

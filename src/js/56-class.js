@@ -189,6 +189,7 @@ function multiclassNote(d){
   return head+(bits.length?" You gain: "+bits.join(", ")+".":" It grants no other proficiencies.")+" "+MC_PREREQ;
 }
 function addClass(name,lvl){
+  if(luBusy())return;   /* #101: the scene is playing; one level-up at a time */
   const d=findClassDef(name);
   const first=!character.classes.length,sid="class:"+name;
   const before=first?null:levelSnapshot();   /* #101: a second class is a level up */
@@ -263,6 +264,7 @@ function removeClass(idx){
    Without one (Level up ready, older callers) a sheet with several classes
    asks which. An index that is not a class does nothing. */
 function doLevelUp(idx){
+  if(luBusy())return;   /* #101: the scene is playing; one level-up at a time */
   if(!character.classes.length){alert("Add a class first (Add class), then you can level it up.");return;}
   const proceed=idx=>{
     const entry=character.classes[idx],d=findClassDef(entry.name);
