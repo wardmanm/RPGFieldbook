@@ -320,13 +320,26 @@ Built as designed, §1–§11, with these notes:
    the real `luReducedMotion()` code path rather than the unit harness's own mock. This is not the
    same as a real OS or browser reduced-motion setting; see "What Mike checks," below.
 6. **Known minor items, left for the controller, not fixed in this branch:**
+   - a resource whose max and die both change in the same level emits two rows, "uses" then "die",
+     as spec §4 intends (separate lines) — this case has no test (`levelGains()`);
    - a bad "I rolled" + Apply after a good one shows the error line but Done/Continue still commits
      the earlier, now-unseen value (`57-levelup.js`, `luSetHP`/`luFinish`);
+   - stale comments at `char-update.js:977` and `58-choices.js:241`, left over from before this
+     branch's rewiring of the lines near them;
    - the card's own DOM wiring (`showLevelUpCard`'s listeners) has no unit coverage, only the
      browser QA drive recorded in the ledger;
+   - the #63 regression test (no two choice windows open at once) passes whether or not
+     `runExtraChoices` is actually called, so it would not catch that specific call being dropped;
    - `LU_ICON` is a plain-object lookup keyed by `kind`, so an internal kind named `constructor`
      would print a function instead of falling through to the default bullet — internal kinds only,
      never player text, so not reachable today;
+   - `rules-data.js`'s `#101` CSS-block check sits just before the file's trailing async IIFE,
+     rather than beside the file's other CSS checks — a pointer comment at the usual spot would
+     help the next person find it;
+   - two notes with no code effect, left as called: the commit trailer on Task 1's commit
+     (`86b585f`) names the model that actually wrote it rather than the brief's; and
+     `casterLevel()`'s SRD-citing comment sits mid-expression, which the plan asked for and which
+     is valid JS;
    - after a skip (click, tap or Esc/Enter/Space), keyboard focus lands on the HP step's first
      `<input>` (`#luTyped`), not the card's first element in DOM order (`#luRoll`) — `openModal()`'s
      existing first-focusable-input behaviour, not new here, rather than a dedicated focus target
