@@ -19,7 +19,8 @@ so removing the source takes it back out; that mechanism is
 `grantFeatDef()`, `runExtraChoices()` in `50-classrace.js`; `dismissModal()`,
 `setDismissGuard()` in `80-modal-forms.js`; `classLineHTML()`, `classFlyHTML()`, `openShFly()` in
 `40-sheet.js`; `raceInfoFoot()` in `52-race.js`, `bgInfoFoot()` in `54-background.js`;
-`grantLanguages()`, `dropLanguages()` in `41-chips.js` · **Data:** `choices` on class, subclass and race
+`grantLanguages()`, `dropLanguages()` in `41-chips.js` · `levelSnapshot()`,
+`levelGains()`, `luHPCheck()` in `57-levelup.js` · **Data:** `choices` on class, subclass and race
 levels, per [rules-schema](../../../../docs/rules-schema.md) §5; a class's `multiclass` block,
 §6.3; the `features.json` of the 2024 pack (private repo) and of `data/srd52/` ·
 **Tests:** `sheet.js`, `char-update.js`, `rules-data.js` · **See also:**

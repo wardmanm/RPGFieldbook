@@ -19,6 +19,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote','casterLevel','autoSlots',
   'attackNumbers','addLibraryItems','contributions','sumFx','armorAC','spellDC','spellAtkBonus',
   'uid',
+  'levelSnapshot','levelGains','luSummary','luHPCheck',
 ]);
 /* Evaluating the real concatenation in manifest order IS the guard against a
    top-level TDZ — 00-constants.js calls blankChar() before 30-version.js has
@@ -1755,6 +1756,78 @@ ck('itemMetaLine still ends with the weight',
   const note=X.multiclassNote({name:'Druid',multiclass:{}});
   ck('#101 the multiclass note states the 13+ prerequisite', /13 or more in the primary ability of your current class and the new one\./.test(note), note);
   ck('#101 ...and a custom class (no definition) still has no note', X.multiclassNote(null)==='');
+}
+
+// ---------- #101 what a level gave: levelGains() over two snapshots
+{
+  const S=o=>Object.assign({level:4,feats:[],slots:[0,0,0,0,0,0,0,0,0],res:{},pb:2},o);
+  const F=(id,name,o)=>Object.assign({id,name,desc:'',cls:'Cleric',sub:''},o);
+  const CD='class:Cleric:channel divinity';
+  const b=S({feats:[F('a','Spellcasting')],slots:[4,3,0,0,0,0,0,0,0],res:{[CD]:{name:'Channel Divinity',max:2,die:''}},pb:2});
+  const a=S({level:5,feats:[F('a','Spellcasting'),F('b','Sear Undead',{desc:'Whenever you use Turn Undead, you can roll d8s. Each Undead that fails takes damage.'})],
+    slots:[4,3,2,0,0,0,0,0,0],res:{[CD]:{name:'Channel Divinity',max:3,die:''}},pb:3});
+  const g=X.levelGains(b,a,[{type:'asi',label:'Ability Score Improvement'},{type:'hp',die:8,levels:1}],[{text:'You can now have Prepared Spells: 9.',_level:5}]);
+  ck('#101 gains come in the spec order', g.map(r=>r.kind).join(',')==='feature,choice,resource,slot,pb,note', g.map(r=>r.kind));
+  ck('#101 a new feature carries its first sentence', g[0].text==='Sear Undead'&&g[0].detail==='Whenever you use Turn Undead, you can roll d8s.'&&g[0].tag==='feature', g[0]);
+  ck('#101 the hp choice is never listed as a choice', g.filter(r=>r.kind==='choice').length===1&&g[1].text==='Ability Score Improvement'&&g[1].tag==='choose next', g);
+  ck('#101 a resource that grows reads old → new', g.some(r=>r.kind==='resource'&&r.text==='Channel Divinity 2 → 3'&&r.tag==='uses'), g);
+  ck('#101 a new slot level reads ×n, tagged new', g.some(r=>r.kind==='slot'&&r.text==='Spell slots · 3rd level ×2'&&r.tag==='new'), g);
+  ck('#101 the proficiency bonus shows when it rises', g.some(r=>r.kind==='pb'&&r.text==='Proficiency bonus +2 → +3'), g);
+  ck('#101 the pack note is listed', g.some(r=>r.kind==='note'&&r.text==='You can now have Prepared Spells: 9.'), g);
+
+  const g2=X.levelGains(S({slots:[2,0,0,0,0,0,0,0,0],res:{}}),
+    S({slots:[3,0,0,0,0,0,0,0,0],res:{'subclass:Fighter:Battle Master:superiority dice':{name:'Superiority Dice',max:4,die:'d8'}}}),[],[]);
+  ck('#101 a new resource reads ×n · die, tagged new', g2.some(r=>r.text==='Superiority Dice ×4 · d8'&&r.tag==='new'), g2);
+  ck('#101 a slot level that grows reads old → new', g2.some(r=>r.text==='Spell slots · 1st level 2 → 3'&&r.tag==='slots'), g2);
+  ck('#101 an unchanged proficiency bonus is not listed', !g2.some(r=>r.kind==='pb'), g2);
+  const SD='k:sd';
+  const g3=X.levelGains(S({res:{[SD]:{name:'Superiority Dice',max:5,die:'d8'}}}),S({res:{[SD]:{name:'Superiority Dice',max:5,die:'d10'}}}),[],[]);
+  ck('#101 a bigger die reads d8 → d10, tagged die', g3.length===1&&g3[0].text==='Superiority Dice d8 → d10'&&g3[0].tag==='die', g3);
+  ck('#101 a level that changed nothing lists nothing', X.levelGains(S({}),S({}),[],[]).length===0);
+
+  /* Review Focus 5: two classes' Channel Divinity stay apart */
+  const two={'class:Cleric:channel divinity':{name:'Channel Divinity',max:2,die:''},'class:Paladin:channel divinity':{name:'Channel Divinity',max:1,die:''}};
+  const g4=X.levelGains(S({res:two}),S({res:Object.assign({},two,{'class:Paladin:channel divinity':{name:'Channel Divinity',max:2,die:''}})}),[],[]);
+  ck('#101 two classes\' Channel Divinity stay apart: only the Paladin\'s grows', g4.length===1&&g4[0].text==='Channel Divinity 1 → 2', g4);
+
+  /* decision 11: a feature you already have from another class */
+  const g5=X.levelGains(S({feats:[F('x','Extra Attack',{cls:'Fighter'})]}),S({feats:[F('x','Extra Attack',{cls:'Fighter'}),F('y','Extra Attack',{cls:'Paladin'})]}),[],[]);
+  ck('#101 a feature you already have from another class says they don\'t stack',
+     g5.length===1&&g5[0].warn==="You already have this from Fighter; they don't stack.", g5);
+  const g6=X.levelGains(S({}),S({feats:[F('z','Combat Superiority',{cls:'Fighter',sub:'Battle Master'})]}),[],[]);
+  ck('#101 a subclass feature is tagged with its subclass', g6[0].tag==='Battle Master'&&g6[0].warn==='', g6);
+  ck('#101 a subclass choice is listed to choose next',
+     X.levelGains(S({}),S({}),[{type:'subclass',label:'Fighter Subclass'}],[])[0].text==='Fighter Subclass');
+  ck('#101 a choice with no label gets a plain one', X.levelGains(S({}),S({}),[{type:'feat'}],[])[0].text==='Choose a feat');
+
+  /* Review Focus 4: messy feature text */
+  ck('#101 luSummary drops markup, keeping the words', X.luSummary('<img src=x onerror=alert(1)>Roll **twice** on [Table: Wild Magic]. Then more.')==='Roll twice on Wild Magic.',
+     X.luSummary('<img src=x onerror=alert(1)>Roll **twice** on [Table: Wild Magic]. Then more.'));
+  ck('#101 ...a sentence with no full stop is kept whole', X.luSummary('You gain a fly speed')==='You gain a fly speed');
+  const long='A'.repeat(400)+'.';
+  ck('#101 ...and a long one is cut to 160 with an ellipsis', X.luSummary(long).length===158&&/…$/.test(X.luSummary(long)), X.luSummary(long).length);
+  ck('#101 ...and nothing reads as nothing', X.luSummary(null)===''&&X.luSummary('')==='');
+
+  /* a live snapshot reads the real sheet */
+  c=setup(); X.character.features=[{id:'f1',name:'Rage',description:'Fury.',effects:[],enabled:true,origin:{kind:'class',class:'Barbarian',level:1}}];
+  X.character.slots[1]={total:2,used:0}; X.character.resources=[{id:'r1',key:'class:Barbarian:rage',name:'Rage',max:2,cur:2,die:''}];
+  X.character.level=1;
+  const s=X.levelSnapshot();
+  ck('#101 levelSnapshot reads features, slots, resources and the proficiency bonus',
+     s.feats[0].id==='f1'&&s.feats[0].cls==='Barbarian'&&s.slots[0]===2&&s.res['class:Barbarian:rage'].max===2&&s.pb===2&&s.level===1, s);
+  X.character.resources=[{id:'r2',name:'Luck',max:3,cur:3}];
+  ck('#101 ...a resource of the player\'s own is keyed by its name', X.levelSnapshot().res['own:luck'].max===3, X.levelSnapshot().res);
+}
+
+// ---------- #101 the HP step's typed value (Review Focus 3)
+{
+  const d10={die:10,levels:1}, two={die:6,levels:2}, none={die:0,levels:1};
+  const ok=(ch,v)=>X.luHPCheck(ch,v).ok;
+  ck('#101 a d10 takes 1..10', ok(d10,'1')&&ok(d10,'10')&&ok(d10,' 7 ')&&ok(d10,'07'));
+  ck('#101 ...and refuses 0, 11, -3, 3.5, empty and words', !ok(d10,'0')&&!ok(d10,'11')&&!ok(d10,'-3')&&!ok(d10,'3.5')&&!ok(d10,'')&&!ok(d10,'seven'));
+  ck('#101 ...saying the range', X.luHPCheck(d10,'11').why==='A d10 rolls 1 to 10.'&&X.luHPCheck(d10,'').why==='Type the number you rolled.', [X.luHPCheck(d10,'11'),X.luHPCheck(d10,'')]);
+  ck('#101 two dice take their total, 2..12', ok(two,'2')&&ok(two,'12')&&!ok(two,'1')&&!ok(two,'13')&&X.luHPCheck(two,'13').why==='2d6 rolls 2 to 12.');
+  ck('#101 no die takes any whole number, 0 included', ok(none,'0')&&ok(none,'25')&&!ok(none,'-1')&&X.luHPCheck(none,'').why==='Type the hit points you gained.');
 }
 
 ck.done();

@@ -132,6 +132,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `52-race.js` | ancestry/species pickers, `systemOf()` | [Character building](features/character-building.md) |
 | `54-background.js` | background pickers | [Character building](features/character-building.md) |
 | `56-class.js` | add/remove class, level up/down, subclass, level-1 HP seed | [Character building](features/character-building.md), [Vitals & rest](features/vitals-and-rest.md) |
+| `57-levelup.js` | the level-up fanfare: what a level gave (`levelSnapshot()`, `levelGains()`), the level card and its HP step, the animation | [Character building](features/character-building.md) |
 | `58-choices.js` | "choose N" choices: `runChoices()`, `gatherChoices()`, `commitChoices()` | [Character building](features/character-building.md) |
 | `60-attacks.js` | `attackNumbers()`, damage; spell→attack sync; casting, Active Spells, `advanceRound()`; `renderAttacks()`, `renderSpells()` | [Attacks & damage](features/attacks-and-damage.md), [Spells](features/spells.md), [Conditions & concentration](features/conditions-and-concentration.md) |
 | `62-ammo.js` | ammunition: kinds, stacks, unpacking, the one-time pass, firing and recovery | [Ammunition](features/ammunition.md) |
