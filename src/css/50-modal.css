@@ -272,7 +272,9 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
    trade's .tr-sides does, with the filters above and the foot below staying put
    (final review C5: this was a :has() rule on the body, which a browser without
    :has() never applied, leaving a long log squashed and out of reach). */
-.il-filters,.il-foot{flex:none}
+/* the wide body keeps only 4px on the right (Settings' scroller): the scroller's
+   10px and the pinned pieces' margin make it 14px, the left's, as .tr-wrap does */
+.il-filters,.il-foot{flex:none;margin-right:10px}
 .il-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:10px}
 .il-foot{padding-bottom:12px}
 /* the Inventory card sits in the plain stack, not the Sheet's container-query
