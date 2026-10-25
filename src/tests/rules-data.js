@@ -2979,6 +2979,15 @@ function block(html, needle, tag) {
   ck('#52 a hidden tab button really leaves the bar', /\.tab\[hidden\]\{display:none!important\}/.test(chrome));
 }
 
+// ---------- #91 the strip's band colours are tokens, and chips are tall enough
+{
+  const cc = fs.readFileSync(path.join(__dirname, '..', 'css', '45-combat.css'), 'utf8');
+  const tk = fs.readFileSync(path.join(__dirname, '..', 'css', '00-tokens.css'), 'utf8');
+  const root = tk.slice(tk.indexOf(':root{'), tk.indexOf('}', tk.indexOf(':root{')));
+  ck('#91 the band colours are tokens', ['--hb-healthy', '--hb-injured', '--hb-bloodied', '--hb-near', '--hb-empty'].every(t => root.includes(t + ':')));
+  ck('#91 strip chips are at least 44px tall', /\.ini-chip\{[^}]*min-height:44px/.test(cc));
+}
+
 /* ================= Fetch all never loses what is loaded (issue #65) ===========
    fetchAllRules() used to call resetRules() BEFORE fetching, so every pack
    imported from a file was discarded, and when the fetch then failed (offline,

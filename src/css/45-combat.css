@@ -42,7 +42,38 @@
   .cv-head.fighting .grow{order:2;flex:0 0 100%;height:0;margin-top:8px}
   .cv-head.fighting .cv-track{order:3}
   .cv-head.fighting #cvEnd{order:4;margin-left:auto}
+  /* The strip is already last in the markup and full-width (flex:0 0 100%
+     below), but the reorder above gives .grow/.cv-track/#cvEnd an explicit
+     order while the strip keeps its default 0 — which would sort it ahead of
+     them, between the title and the tracker. Order it past #cvEnd instead. */
+  .cv-head.fighting .cv-init{order:5}
 }
+/* ---- the initiative strip and table (#91) ---- */
+.cv-init{flex:0 0 100%;display:flex;align-items:center;gap:6px;margin-top:6px;min-width:0}
+.ini-chips{flex:1;min-width:0;display:flex;gap:5px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.ini-chip{flex:0 0 auto;min-height:44px;min-width:64px;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:4px 8px;
+  border:1.5px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink);font-family:var(--head);font-size:12px;font-weight:700;cursor:pointer}
+.ini-chip.now{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+.ini-chip.dead{opacity:.5}.ini-chip.dead .ini-nm{text-decoration:line-through}
+.ini-top{display:flex;gap:5px;align-items:baseline;white-space:nowrap}
+.ini-n{font-size:11px;color:var(--ink-soft)}.ini-chip.now .ini-n{color:inherit;opacity:.8}
+.hb{display:flex;gap:2px;height:5px}
+.hb i{flex:1;border-radius:2px;background:var(--hb-empty)}
+.hb-0 i{background:var(--hb-healthy)}
+.hb-1 i:nth-child(-n+3){background:var(--hb-injured)}
+.hb-2 i:nth-child(-n+2){background:var(--hb-bloodied)}
+.hb-3 i:nth-child(1){background:var(--hb-near)}
+.hb-q{position:relative}
+.hb-share{display:block;height:5px;border-radius:2px;background:var(--hb-empty);overflow:hidden}
+.hb-share b{display:block;height:100%}
+.hb-share .hb-0{background:var(--hb-healthy)}.hb-share .hb-1{background:var(--hb-injured)}.hb-share .hb-2{background:var(--hb-bloodied)}.hb-share .hb-3{background:var(--hb-near)}
+.cv-init-table{background:var(--panel);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;margin:0 0 8px}
+.ini-table{display:flex;flex-direction:column}
+.ini-row{display:flex;align-items:center;gap:8px;min-height:44px;padding:4px 2px;border:0;border-bottom:1px dotted var(--hair);background:none;color:var(--ink);text-align:left;font:inherit;cursor:pointer}
+.ini-row .ini-nm{flex:1;min-width:0;font-weight:700}
+.ini-row.dead .ini-nm{text-decoration:line-through;color:var(--ink-soft)}
+.ini-kind,.ini-ac,.ini-hp{font-family:var(--head);font-size:11px;color:var(--ink-soft)}
+.ini-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:6px}
 /* The page scrolls the tab; the body only spaces the list from the header. */
 .cv-body{padding-top:clamp(12px,2.4vw,22px)}
 /* One column as wide as the sheet's main column: drag order IS reading order. */

@@ -162,6 +162,13 @@ function wire(){
     if(t.closest("#cvPrev"))return advanceRound(-1);
     if(t.closest("#cvNext"))return advanceRound(1);
     if(t.closest("#cvEnd"))return endCombatAsk();
+    // the initiative strip and table (#91)
+    if(t.closest("#cvTurn"))return initNext();
+    if(t.closest("#iniRollNow"))return openInitRoll();
+    if(t.closest("#cvInitMore")){const el=document.getElementById("cvInitTable"),b=t.closest("#cvInitMore");el.dataset.open=el.dataset.open==="1"?"0":"1";
+      b.setAttribute("aria-expanded",el.dataset.open==="1"?"true":"false");b.textContent=el.dataset.open==="1"?"▴":"▾";renderInitTable();return;}
+    if((m=t.closest("[data-inimode]")))return setInitMode(m.dataset.inimode);
+    if(t.closest("#iniRolls"))return toggleInitRolls();
     if((m=t.closest("[data-edtoggle]")))return toggleEditCard(m.dataset.edtoggle);
     // chips: defences, senses, languages (#103)
     if((m=t.closest("[data-chipadd]")))return openChipChooser(m.dataset.chipadd);

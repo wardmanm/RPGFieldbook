@@ -184,3 +184,61 @@ function openInitRoll(){
     closeModal();startInitFight(you,party2,foes);
   });
 }
+
+/* ---- the strip (in #cvHead, so it sticks with it) and the table ---- */
+function hbBarHTML(bar){
+  if(bar.share!==null)return `<span class="hb-share" aria-hidden="true"><b class="hb-${esc(String(bar.band===null?0:bar.band))}" style="width:${esc(String(Math.round(bar.share*100)))}%"></b></span>`;
+  if(bar.band===null)return `<span class="hb hb-q" aria-hidden="true"><i></i><i></i><i></i><i></i></span>`;
+  return `<span class="hb hb-${esc(String(bar.band))}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>`;
+}
+function combatantHealthText(r){
+  const bar=combatantBar(r);
+  if(combatantDead(r))return "Dead";
+  if(r.kind==="you")return `HP ${num(character.hp.cur)} / ${effMaxHP()}`;
+  if(r.kind==="party"&&r.track==="exact"&&num(r.maxHp)>0)return `HP ${num(r.hp)} / ${num(r.maxHp)}`;
+  return bar.band===null?"Health not set":HB_NAMES[bar.band];
+}
+function initStripHTML(ch){
+  const list=ch.combatants||[];
+  if(!list.length)return `<div class="cv-init"><span class="hint">No initiative yet.</span><span class="grow"></span><button type="button" class="tbtn primary" id="iniRollNow">Roll initiative</button></div>`;
+  const turns=ch.initMode==="turns",show=ch.initShowRolls!==false;
+  return `<div class="cv-init"><div class="ini-chips">`+list.map(r=>{
+    const now=turns&&r.id===ch.combatTurn,dead=combatantDead(r),name=r.kind==="you"?(ch.name||"You"):r.name;
+    const lbl=`${name}${r.init!==null?", initiative "+r.init:""}, ${combatantHealthText(r)}${now?", acting":""}`;
+    return `<button type="button" class="ini-chip${now?" now":""}${dead?" dead":""}" data-inichip="${esc(r.id)}" aria-label="${esc(lbl)}">`+
+      `<span class="ini-top">${show?`<span class="ini-n">${esc(r.init===null?"—":String(r.init))}</span>`:""}<span class="ini-nm">${esc(name)}</span></span>${hbBarHTML(dead?{band:null,share:null}:combatantBar(r))}</button>`;
+  }).join("")+`</div>`+(turns?`<button type="button" class="tbtn primary" id="cvTurn" aria-label="Next turn">Next ▸</button>`:"")+
+    `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="false" aria-controls="cvInitTable" aria-label="Show the initiative table">▾</button></div>`;
+}
+function initTableHTML(ch){
+  const list=ch.combatants||[],mode=ch.initMode==="rounds"?"rounds":"turns";
+  return `<div class="ini-table">`+list.map(r=>{
+    const name=r.kind==="you"?(ch.name||"You"):r.name,ac=r.kind==="you"?youAC():r.ac;
+    return `<button type="button" class="ini-row${combatantDead(r)?" dead":""}" data-inirow="${esc(r.id)}"><span class="ini-n">${esc(r.init===null?"—":String(r.init))}</span>`+
+      `<span class="ini-nm">${esc(name)} <span class="ini-kind">${r.kind==="you"?"you":r.kind==="party"?"party":""}</span></span>`+
+      `<span class="ini-hp">${esc(combatantHealthText(r))}</span>${ac!==""?`<span class="ini-ac">AC ${esc(String(ac))}</span>`:""}</button>`;
+  }).join("")+`</div><div class="ini-foot"><button type="button" class="add" id="iniAdd">+ Add combatant</button><span class="grow"></span>`+
+    `<span class="seg">${[["turns","Turns"],["rounds","Rounds"]].map(([v,l])=>`<button type="button" data-inimode="${esc(v)}" class="${mode===v?"on":""}" aria-pressed="${mode===v?"true":"false"}">${esc(l)}</button>`).join("")}</span>`+
+    `<button type="button" class="switch ${ch.initShowRolls!==false?"on":""}" id="iniRolls" role="switch" aria-checked="${ch.initShowRolls!==false?"true":"false"}" aria-label="Show rolls"></button><span class="ini-kind">Show rolls</span></div>`;
+}
+function renderInitTable(){
+  const el=document.getElementById("cvInitTable");if(!el)return;
+  const open=el.dataset.open==="1"&&inCombat(character)&&(character.combatants||[]).length>0;
+  el.hidden=!open;el.innerHTML=open?initTableHTML(character):"";
+}
+function initNext(){
+  const r=initNextTurn(character.combatants||[],character.combatTurn);
+  character.combatTurn=r.turnId;
+  if(r.wrapped)advanceRound(1);
+  renderCombatChrome();renderInitTable();scheduleSave();
+  /* AFTER the repaint: renderCombatHeader() writes "Round N" into the same
+     live region, and the turn is the news */
+  const a=(character.combatants||[]).find(x=>x.id===r.turnId);
+  if(a)setCombatLive(`${a.kind==="you"?(character.name||"You"):a.name}'s turn`);
+}
+function setInitMode(mode){
+  character.initMode=mode==="rounds"?"rounds":"turns";
+  character.combatTurn=character.initMode==="turns"?(((character.combatants||[]).some(r=>r.id===character.combatTurn)&&character.combatTurn)||initFirstAlive(character.combatants||[])):"";
+  renderCombatChrome();renderInitTable();scheduleSave();
+}
+function toggleInitRolls(){character.initShowRolls=character.initShowRolls===false;renderCombatChrome();renderInitTable();scheduleSave();}

@@ -88,6 +88,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'initRollLine', 'initModOf', 'youAC', 'buildCombatants',
   'partyRowsHTML', 'savePartyMember', 'removePartyMember',
   'initRollHTML', 'openInitRoll', 'irState', 'irSetTyped', 'irRoll', 'startInitFight',
+  'hbBarHTML', 'combatantHealthText', 'initStripHTML', 'initTableHTML', 'renderInitTable',
+  'initNext', 'setInitMode', 'toggleInitRolls',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -6128,6 +6130,41 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   } finally { X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderActiveSpells = keep.ra; ctx.closeModal = keep.cm; }
   const boot = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '90-boot.js'), 'utf8');
   ck('#91 Start combat opens Roll initiative', /closest\("#cvStart"\)\)return openInitRoll\(\)/.test(boot));
+}
+
+// ---------- #91 the strip, Next and the table
+{
+  const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, ar: ctx.advanceRound, live: ctx.setCombatLive, rt: ctx.renderInitTable};
+  let rounds = 0, live = '';
+  ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderInitTable = () => {};
+  ctx.advanceRound = d => { rounds += d; }; ctx.setCombatLive = t => { live = t; };
+  try {
+    X.character = X.blankChar(); X.character.name = 'Mira'; X.character.combatActive = true; X.character.combatRound = 1; X.character.hp.max = 30; X.character.hp.cur = 30;
+    X.character.combatants = X.buildCombatants({name: 'Mira', init: 17}, [], [{name: '<img onerror=1>', count: 1, ac: 15, init: 19}, {name: 'Wolf', count: 1, ac: '', init: 8}]);
+    X.character.combatants[2].band = 4;
+    X.character.combatTurn = X.character.combatants[0].id;
+    const s = X.initStripHTML(X.character);
+    ck('#91 the strip escapes names and marks the actor', s.includes('&lt;img onerror=1&gt;') && !s.includes('<img onerror') && /class="ini-chip now"/.test(s), s);
+    ck('#91 ...strikes the dead and shows rolls', /class="ini-chip dead"/.test(s) && />19</.test(s));
+    ck('#91 ...a not-set band is a "?" bar; yours is a share', /hb-q/.test(s) && /hb-share/.test(s));
+    ck('#91 ...Next and ▾ in Turns mode', /id="cvTurn"/.test(s) && /id="cvInitMore"/.test(s));
+    X.character.initShowRolls = false;
+    ck('#91 Show rolls off hides the numbers', !/class="ini-n"/.test(X.initStripHTML(X.character)));
+    X.character.initShowRolls = true;
+    X.initNext();
+    ck('#91 Next moves to Mira and announces it', X.character.combatTurn === X.character.combatants[1].id && live === "Mira's turn" && rounds === 0, live);
+    X.initNext();
+    ck('#91 Next past the end (the Wolf is dead) wraps and advances the round once', X.character.combatTurn === X.character.combatants[0].id && rounds === 1, rounds);
+    X.setInitMode('rounds');
+    ck('#91 Rounds mode: no marker, no Next', X.character.initMode === 'rounds' && X.character.combatTurn === '' && !/id="cvTurn"/.test(X.initStripHTML(X.character)));
+    X.setInitMode('turns');
+    ck('#91 back to Turns: the marker on the first living row', X.character.combatTurn === X.character.combatants[0].id);
+    const t = X.initTableHTML(X.character);
+    ck('#91 the table: a row per combatant, + Add, the mode switch, Show rolls', (t.match(/data-inirow=/g) || []).length === 3 && /id="iniAdd"/.test(t) && /data-inimode="rounds"/.test(t) && /id="iniRolls"/.test(t), t);
+    /* Review Focus 4: a fight with no list */
+    X.character.combatants = []; X.character.combatTurn = '';
+    ck('#91 a fight with no list offers Roll initiative', /id="iniRollNow"/.test(X.initStripHTML(X.character)));
+  } finally { X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.advanceRound = keep.ar; ctx.setCombatLive = keep.live; ctx.renderInitTable = keep.rt; }
 }
 
 ck.done();

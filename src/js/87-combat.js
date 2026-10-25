@@ -210,7 +210,7 @@ function combatHeaderHTML(c){
     `<span class="cv-track"><button class="tbtn" id="cvPrev" aria-label="Previous round"${r<=1?" disabled":""}>◀</button>`+
     `<span class="cv-round">Round <b>${r}</b><span class="cv-sep"> · </span><span class="cv-time">${fmtCombatTime(combatElapsedSec(c))}</span></span>`+
     `<button class="tbtn" id="cvNext" aria-label="Next round">▶</button></span>`+
-    `<span class="grow"></span><button class="tbtn danger" id="cvEnd">End combat</button>`;
+    `<span class="grow"></span><button class="tbtn danger" id="cvEnd">End combat</button>`+initStripHTML(c);
 }
 /* Repainting replaces every button, so focus is carried across by id. When that
    button is gone or disabled — ◀ at round 1, Start once combat starts, End once
@@ -221,7 +221,7 @@ function renderCombatHeader(){
   h.innerHTML=combatHeaderHTML(character);
   h.classList.toggle("fighting",inCombat(character));   // the two-row phone layout is for combat only
   if(inCombat(character))setCombatLive("Round "+num(character.combatRound));
-  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart"};
+  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart",cvTurn:"cvNext"};
   for(let id=had,i=0;id&&i<4;id=instead[id],i++){
     const b=document.getElementById(id);
     if(b&&!b.disabled){b.focus();break;}
@@ -319,7 +319,7 @@ function undoCombatRemove(k,at,who,viaKey){
 /* Everything that shows combat state repaints through here. The round moves from
    three places — the view's arrows, the Active Spells card's own buttons, and
    Start/End — so none of them can disagree. */
-function renderCombatChrome(){renderCombatButton();if(cvOpen)renderCombatHeader();}
+function renderCombatChrome(){renderCombatButton();if(cvOpen){renderCombatHeader();renderInitTable();}}
 /* The last thing renderAll() does — and every character switch ends in
    renderAll(). An open view re-lays itself from THIS character's list, keeping
    its scroll for the same character; another character's remembered scroll is

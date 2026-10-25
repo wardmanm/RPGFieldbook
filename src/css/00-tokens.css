@@ -6,6 +6,8 @@
   --radius:7px;
   /* #101: the level-up scene — a forest night, for Humblewood */
   --lu-night:#0d1a12; --lu-night-2:#2a4433; --lu-glow:#e6d98a; --lu-spark:#e2b44c;
+  /* #91: the initiative strip's health bands — one set for both skins and themes */
+  --hb-healthy:#2f8a3a; --hb-injured:#c99a15; --hb-bloodied:#d0651e; --hb-near:#b3261e; --hb-empty:rgba(128,120,100,.28);
 }
 html[data-theme="light"]{
   --paper:#f4edda;      /* warm cream page */
