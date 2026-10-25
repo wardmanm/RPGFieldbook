@@ -149,6 +149,7 @@ function migrate(s){
   /* #103: showFamiliars is decided from the FILE, so a stored choice wins and a
      sheet from before gets the icon only if it has a familiar. */
   base.showFamiliars=typeof s.showFamiliars==="boolean"?s.showFamiliars:base.familiars.length>0;
+  base.hiddenTabs=cleanHiddenTabs(s.hiddenTabs);   /* #52 */
   migrateSheet103(base);
   return base;
 }

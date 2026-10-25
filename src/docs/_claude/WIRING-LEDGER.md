@@ -6985,3 +6985,111 @@ Pages: [character building](../wiki/features/character-building.md),
 [spells](../wiki/features/spells.md), [vitals & rest](../wiki/features/vitals-and-rest.md),
 [theming & icons](../wiki/ui/theming-and-icons.md),
 [known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).
+
+## Hide tabs (#52, 2026-10-25)
+
+A player can hide the tabs a character doesn't use (Spells for a Fighter, Rules for a player who
+never opens it), per character, from Settings → Sheet display → Tabs. The Sheet and the combat
+swords can never be hidden.
+
+**Data.** `character.hiddenTabs` (`00-constants.js`, `blankChar()`): `[]` by default. `migrate()`
+(`71-char-io.js`) runs it through `cleanHiddenTabs()` right before `migrateSheet103()`: non-array
+becomes `[]`, only names in `HIDEABLE_TABS` survive, repeats collapse to one, order kept.
+
+**The tab bar** (`40-sheet.js`). `HIDEABLE_TABS=["spells","inventory","story","journal","rules"]`
+and `TAB_LABELS` (the player-facing name per key, `story`→"Bio") sit above `selectTab()`.
+`isTabHidden(name,c)` is false for `sheet`/`combat` and any name not in `HIDEABLE_TABS`.
+`applyHiddenTabs()` sets `.tab[data-tab]`'s `hidden` attribute from `isTabHidden()`, and sends the
+active tab to `sheet` if it is now hidden; it runs from `renderAll()` (`66-coins-hp.js`, right
+after `recompute()`), so load, a character switch and a Settings flip all repaint it.
+`selectTab(name)` opens `"sheet"` in place of a hidden name — a guard against a stale caller, not
+the only way in. `setTabHidden(name,hide)` refuses a name outside `HIDEABLE_TABS` (so Sheet and
+Combat are structurally unreachable, not just unlisted), rewrites `hiddenTabs` from the cleaned
+list, then calls `applyHiddenTabs()` and `scheduleSave()`. CSS: `.tab[hidden]{display:none!
+important}` in `10-chrome.css`, placed after `.tab:hover` — `.tab` sets its own `display`, so the
+`!important` is load-bearing, not decorative.
+
+**Settings** (`88-settings.js`). `tabsGroupHTML(c)` draws one `setRowHTML` switch per
+`HIDEABLE_TABS` entry — id `swTab-<name>`, `data-tabsw="<name>"`, `aria-checked` from "shown" (on
+means shown), `aria-label="Show the <Label> tab"` — under a new **Tabs** group, appended after
+Ammunition in the Sheet display page's `hasChar` branch. The first row's help text reads "Hide the
+tabs this character doesn't use. Sheet always shows." A delegated `[data-tabsw]` click handler
+calls `setTabHidden()` and flips the button's own `on` class and `aria-checked` (the dialog's
+generic `.switch` listener does the same sync a second time — redundant, harmless, matches the
+existing `swFamiliars` pattern).
+
+**Ways in.** `jumpToNote()` (`87-notes.js`): if the note's tab is hidden, it unhides it
+(`setTabHidden(tab,false)`) and toasts `"<Label> tab shown again; hide it in Settings → Sheet
+display."` before calling `selectTab()`, using the tab's own label (Bio, not story) — verified live:
+`setTabHidden('story',true)` then `jumpToNote('proficiencies')` landed on `tab-story` with
+`hiddenTabs` dropping `"story"` and the toast reading exactly that line.
+`leaveCombatTab()` (`87-combat.js`): `back` is `(cvPrevTab&&!isTabHidden(cvPrevTab))?cvPrevTab:
+"sheet"` — driven live from Spells: opened the combat view (`cvPrevTab="spells"`), hid Spells from
+Settings while the view stayed open (hiding never ends or interrupts combat), then pressed the
+swords and landed on the Sheet, not Spells. Combat cards from a hidden tab are untouched by design
+(decision 6): hiding a tab is a tab-bar fact, not a combat-layout one.
+
+**Deferred, from progress.md (code review, not fixed here):**
+- `rules-data.js:182`'s `#99` regex window was widened `{0,500}`→`{0,700}` with no comment
+  explaining why (Task 1): the new `selectTab()` guard line pushed the existing check past its old
+  budget.
+- `HIDEABLE_TABS.indexOf(name)>=0` is repeated three times in `40-sheet.js` (Task 1, plan verbatim).
+- `88-settings.js:140-144`'s `[data-tabsw]` handler repeats the dialog's generic `.switch` →
+  `aria-checked` sync by hand (Task 2); harmless (idempotent), a comment would help.
+- **Controller observation, confirmed in this task's screenshot
+  (`.claude/qa/52-after-settings-tabs-off.png`):** the Tabs group's help text sits under the first
+  row, **Spells**, so it reads as Spells' own help rather than the group's. `setGroupHTML()` takes
+  only a title, not a help line, so `tabsGroupHTML()` reused the row-help slot of its first switch
+  (the `i===0?...:""` in its map) instead. Left for a future fix wave: moving it would mean either
+  giving `setGroupHTML()` an optional help line (touching every other group that doesn't have one)
+  or a non-`setRowHTML()` help row above the switches.
+
+**Browser QA** (project Playwright MCP, worktree build vs. main's `dist/fieldbook.html`): turning
+off Spells and Rules together removed both from the bar in one repaint; turning Spells back on
+restored it; hiding the active tab (Journal) and closing Settings landed on the Sheet; two
+characters with different `hiddenTabs` each showed their own bar on switching, both directions;
+icon tabs on kept the same tabs hidden at 1280 and 390; a note jump into a hidden Bio tab unhid it
+with the toast (screenshot above, `clearTimeout(_toastT)` used only to freeze the toast for the
+capture, not to change its real 1.9s life); leaving the combat view after hiding its origin tab
+landed on the Sheet; both skins at 1280 showed the same gapless bar; the console stayed empty
+(`browser_console_messages`, `all:true`) across the whole session. Full suite
+(`./build.sh --no-zip && ./src/tests/run.sh`) green before commit.
+
+Pages: [Shell](../wiki/ui/shell.md), [Settings & updates](../wiki/features/settings-and-updates.md),
+[Character model](../wiki/architecture/character-model.md), [Combat view](../wiki/features/combat-view.md),
+[Story & notes](../wiki/features/story-and-notes.md), [decisions](../wiki/decisions.md),
+[1.9.0](../wiki/roadmap/1.9.0.md), the spec's As built
+(`src/docs/specs/2026-10-24-hide-tabs-design.md`).
+
+## Hide tabs: final review fixes (#52, 2026-10-25)
+
+Three fixes from the final whole-branch review of `issue/52-hide-tabs` (`final-review.md`), landed
+before #52 merged to main.
+
+**I1 — the Tabs group's help.** `tabsGroupHTML()` (`88-settings.js`) now opens the group's body
+with `<p class="hint">Hide the tabs this character doesn't use. Sheet always shows.</p>`, the same
+pattern the Sources and Loaded data groups use (`88-settings.js:144, :150`), instead of reusing the
+first switch's (Spells') own row help. The Spells row now carries no help of its own.
+
+**M7 — the Journal row.** The Section Notes card (`src/html/60-journal.html:20`) and the Trackers
+card both live on the Journal tab; hiding Journal takes both away. The Journal switch's row now
+says "Also holds the Section Notes card." so a player isn't surprised.
+
+**M1 — the scroll position after a redirect.** `applyHiddenTabs()` (`40-sheet.js`) follows its own
+`selectTab("sheet")` with `window.scrollTo({top:0})` when the active tab became hidden, so the
+player lands at the top of the Sheet rather than at the hidden tab's old scroll position.
+
+**Wording and citations (M2–M6).** [Shell](../wiki/ui/shell.md) and
+[Settings & updates](../wiki/features/settings-and-updates.md) corrected: a Settings flip calls
+`setTabHidden()` → `applyHiddenTabs()` directly, not through `renderAll()`; the `[data-tabsw]`
+click handler is a per-button listener (`88-settings.js:228-232`), not delegated; the shell's guard
+rationale names "a leftover `cvPrevTab`, or a future caller", not a deep link Fieldbook doesn't
+have. The spec's As built (`src/docs/specs/2026-10-24-hide-tabs-design.md`) now cites
+`rules-data.js:2398` and `88-settings.js:228-232` in place of the stale `rules-data.js:182` and
+`88-settings.js:140-144`, and its I1 bullet records the fix made instead of the deferral reason.
+
+Tests: `src/tests/sheet.js` (`#52` suites) — the group-help placement, the Spells row's missing
+help, the Journal row's help appearing once, and `window.scrollTo` firing only on the
+hidden-active-tab redirect.
+
+Pages: [Shell](../wiki/ui/shell.md), [Settings & updates](../wiki/features/settings-and-updates.md).

@@ -407,6 +407,11 @@ function noteToggleCheckbox(k,n){
 /* ---- jump to the section a note belongs to ---- */
 function jumpToNote(k){
   const def=noteDef(k);if(!def)return;
+  /* #52: a note into a hidden tab brings the tab back, and says where to hide it again */
+  if(isTabHidden(def.tab)){
+    setTabHidden(def.tab,false);
+    toast(`${TAB_LABELS[def.tab]} tab shown again; hide it in Settings → Sheet display.`);
+  }
   selectTab(def.tab);
   /* #103: the Familiars card is hidden on the Sheet; familiars open from the
      header's paw, so its note jumps to the paw's flyout (spec §6.6). */

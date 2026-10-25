@@ -34,7 +34,7 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 | chip lists (#103) | `resists` `[{id, name}]`, `immunes` `[{id, name}]`, `senses` `[{id, name, range}]` (`range` whole feet or `""`), `languages` `[{id, name, src}]` (`src` `""` the player's, `race:…` / `bg:…` a grant, `system` a ruleset default) — all `[]` in `blankChar()` |
 | maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
-| per-character settings | `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `ammoRecovery` (`"half"` default, #104), `advancement` (`"xp"` or `"milestone"`, `"xp"` default, read through `advancementOf()`, #103), `showFamiliars` (the header's paw, `false` in `blankChar()`, #103) |
+| per-character settings | `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `ammoRecovery` (`"half"` default, #104), `advancement` (`"xp"` or `"milestone"`, `"xp"` default, read through `advancementOf()`, #103), `showFamiliars` (the header's paw, `false` in `blankChar()`, #103), `hiddenTabs` (word tabs this character has switched off, `[]` default, cleaned by `migrate()`, #52) |
 | retired, kept for old sheets | `hdStyle` (the three hit-dice looks) and `statStyle` (the By ability layout), both gone with #103; `migrate()` still carries them so an old save round-trips, nothing reads them |
 | text | `alignment` (on Bio since #103), `xp` (a number or digits with commas; anything else shows as typed), `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
 
@@ -73,7 +73,10 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    `newCharacter()` sets `ammoInit` to `AMMO_PASS` directly on the character it creates, so the pass
    never runs on a brand-new sheet, which has nothing for it to migrate. An item's own `ammo` and `ammoStack` need no default — see
    [Ammunition](../features/ammunition.md).
-9. `migrateSheet103()` (#103) runs last. Each step is a no-op on a sheet that does not need it, so
+9. `hiddenTabs` is cleaned next, right before `migrateSheet103()`: `cleanHiddenTabs()` forces a
+   non-array to `[]`, drops any name not in `HIDEABLE_TABS`, and drops a repeat, keeping first-seen
+   order (#52, see [Shell](../ui/shell.md)).
+10. `migrateSheet103()` (#103) runs last. Each step is a no-op on a sheet that does not need it, so
    it is safe on every load:
    - the four chip lists go through `chipClean()` (a non-array reads `[]`, an entry that is not an
      object or has no string `name` is dropped, names trimmed, duplicates by name dropped case-blind,
@@ -181,6 +184,7 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 | A player's glossary entry with no term | Kept, given an id if it lacks one, listed as "(no term)" | Dropped: the player's own data, gone silently. Left without an id: Edit and Delete can't reach it (L4206) |
 | A player's glossary entry written `{name, description}` | Read as its term and text, originals kept | Leaving it termless: those are the names every other category uses, so the intent is plain (L4206) |
 | Pre-equip-era weapons | Equip them once, recorded by `wpnEquipInit` | Gating attacks on `equipped` with no migration: empties every existing Attacks card. Running it on every load: re-equips a weapon the player unequipped (L3213) |
+| Where hidden tabs are scoped (#52) | Per character, saved on `character.hiddenTabs`; a new character shows every tab | Per device: a Fighter and a Wizard on one device want different tabs hidden |
 
 ## Open
 
@@ -213,3 +217,4 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-10-19 — `ammoRecovery` joins the per-character settings, defaulted `"half"` in `blankChar()`; `ammoSpent` entries gain `hits`/`misses`. → ledger L6081, #104
 - 2026-10-19 — `editHide` joins the collapse-style maps, defaulted `{}` in `blankChar()` and guarded the same way: a card key → `true` for a hidden card's edit, delete and remove buttons. → ledger L6248, #97
 - 2026-10-23 — The Sheet makeover: `resists`, `immunes`, `senses`, `languages`, `advancement`, `showFamiliars`; `statStyle` and `hdStyle` retired, kept; `migrateSheet103()` merges the retired cards' notes, maps `rest`/`portrait` in the combat view to `vitals`, lifts "Languages:" lines once and adds the default languages. → ledger L6633, #103
+- 2026-10-25 — `hiddenTabs` joins the per-character settings, `[]` in `blankChar()`, cleaned by `cleanHiddenTabs()` in `migrate()` right before `migrateSheet103()`: per character, so a new character shows every tab. → ledger L6989, #52

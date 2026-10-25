@@ -2307,8 +2307,8 @@ function block(html, needle, tag) {
   ck('encumbrance is a segmented choice now, not a dropdown', !/id="setEnc"/.test(src) &&
      /character\.encumbrance=b\.dataset\.enc;/.test(src) && ['none', 'standard', 'variant'].every(v => sec('secCarrying').includes('["' + v + '",')));
   ck('every switch on the dialog says its state to a screen reader',
-     // 7 since #103 added the familiars-icon switch
-     (src.match(/class="switch /g) || []).length === 7 && (src.match(/role="switch" aria-checked=/g) || []).length === 7 &&
+     // 8 since #52 added the per-character tabs switch (one literal occurrence in tabsGroupHTML)
+     (src.match(/class="switch /g) || []).length === 8 && (src.match(/role="switch" aria-checked=/g) || []).length === 8 &&
      /const s=e\.target\.closest\("\.switch"\);if\(s\)s\.setAttribute\("aria-checked",s\.classList\.contains\("on"\)\?"true":"false"\);/.test(src));
   ck('Settings opens wide, on the remembered page; a dialog opened from it does not',
      /openModal\("Settings",[\s\S]*?\{wide:true\}\);/.test(src) && /setPageOf\(settings\.setPage,hasChar\)/.test(src) &&
@@ -2395,7 +2395,7 @@ function block(html, needle, tag) {
   // final-review (a): the tab always opens on the category list, never the
   // last table a previous visit left on
   ck('#99 (a) entering the Rules tab from elsewhere resets to the category list',
-     /function selectTab\(name\)\{[\s\S]{0,500}if\(name==="rules"&&was!=="rules"\)rbToList\(\)/.test(sheetJs));
+     /function selectTab\(name\)\{[\s\S]{0,700}if\(name==="rules"&&was!=="rules"\)rbToList\(\)/.test(sheetJs));
 }
 
 // ---------- the combat view is a TAB: its icon in the tab bar, its panel in the page
@@ -2969,6 +2969,12 @@ function block(html, needle, tag) {
   const classic=tk.slice(tk.indexOf('html[data-skin="classic"]{'),tk.indexOf('}',tk.indexOf('html[data-skin="classic"]{')));
   ['--lu-night','--lu-night-2','--lu-glow','--lu-spark'].forEach(t=>
     ck('#101 '+t+' is defined for Humblewood (:root) and classic', root.indexOf(t+':')>=0&&classic.indexOf(t+':')>=0, t));
+}
+
+{
+  /* #52: .tab sets display, which beats the browser's [hidden] rule */
+  const chrome = fs.readFileSync(path.join(__dirname, '..', 'css', '10-chrome.css'), 'utf8');
+  ck('#52 a hidden tab button really leaves the bar', /\.tab\[hidden\]\{display:none!important\}/.test(chrome));
 }
 
 /* ================= Fetch all never loses what is loaded (issue #65) ===========

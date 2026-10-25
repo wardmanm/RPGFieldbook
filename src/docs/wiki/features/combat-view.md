@@ -11,7 +11,7 @@ its own tab. Leaving the tab never ends combat.
 **Code:** `combatSectionsOf()`, `combatAddable()`, `withCombatSection()`, `insertCombatSection()`, `stepCombatSection()`,
 `combatStart()`, `combatEnd()`, `combatElapsedSec()`, `fmtCombatTime()`, `renderCombatButton()`,
 `renderCombatToggles()`, `paintCombatToggle()`, `fillCombatView()`, `sendCardHome()`,
-`openCombatView()`, `closeCombatView()`, `enterCombatTab()`, `leaveCombatTab()`,
+`openCombatView()`, `closeCombatView()`, `enterCombatTab()`, `leaveCombatTab()` (#52),
 `renderCombatHeader()`, `setCombatLive()`, `toggleCombatSection()`, `undoCombatRemove()`,
 `cvNeighbours()`, `syncCombatView()`, `startCombatNow()`, `endCombatAsk()`, `startCombatDrag()`,
 `moveCombatCard()`, `setCombatOrder()`, `combatHeaderHTML()` in `87-combat.js` · `toggleInspiration()` in `10-compute.js` · `COMBAT_DEFAULTS` in `00-constants.js` ·
@@ -38,7 +38,9 @@ runs `fillCombatView()`: for each chosen key it finds `.card[data-note="<k>"]` *
 leaves a hidden `<span data-cvhome="<k>">` in its place, appends the card to `#cvList` and gives it a
 grip. `selectTab()` for any other tab calls `closeCombatView()` first, which sends every card back to
 its marker (`sendCardHome()`, grip removed). The swords again are `leaveCombatTab()`: back to the tab
-they were pressed from, at its scroll, with focus on that tab. The tab has no ✕ of its own
+they were pressed from, at its scroll, with focus on that tab — unless that tab has since been
+hidden (#52: `cvPrevTab&&!isTabHidden(cvPrevTab)`), in which case it goes to the Sheet instead
+([Shell](../ui/shell.md)). The tab has no ✕ of its own
 (#80): like any tab, another tab leaves it. `selectTab()`
 itself never scrolls.
 
@@ -46,7 +48,10 @@ itself never scrolls.
 `aria-pressed`) just before the note button in every `NOTE_SECTIONS` card's heading but the
 header's: `portrait` is marked `nocv`, because its rest buttons are not a fight action and the
 portrait itself rides in with Vitals (#103). `toggleCombatSection()` refuses it too, and `migrate()`
-turns a saved `portrait` (or the retired `rest`) into `vitals`, deduped. Adding appends
+turns a saved `portrait` (or the retired `rest`) into `vitals`, deduped. **Hiding a word tab (#52)
+moves no card in the view**: a card from Spells stays in the combat view exactly as placed even
+after Spells is hidden in Settings, since hiding a tab is a tab-bar fact, the combat layout a
+separate one — its own per-card toggle inside the view still works. Adding appends
 the section and toasts. Removing — from its tab or inside the view — sends the card home and toasts
 an **Undo** that `undoCombatRemove()` answers by reinserting at the old index
 (`insertCombatSection()`) and re-laying the view (`setCombatOrder()`); the Undo carries the character
@@ -131,6 +136,9 @@ the toggles and the button.
   empty from load. A hidden toast is `visibility:hidden` after its fade, or its Undo stays clickable
   while invisible.
 - **`renderFamiliars()` clears its list before its early return**, or the view shows a stale familiar.
+- **Hiding a tab never moves or drops a combat card (#52).** The view's own per-card toggle is the
+  only thing that adds or removes a card from it; hiding a word tab in Settings only ever changes
+  whether that tab's own button shows in the bar.
 
 ## Traps
 
@@ -167,6 +175,7 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 | Dragging | Pointer events; neighbours hop, the dragged card stays | HTML5 drag-and-drop: unreliable on phones. Moving the dragged card: can drop its pointer capture |
 | Esc | Not handled | The overlay's capture-phase Esc: Esc is not how you leave a tab |
 | A ✕ and a ☰ in the header | **Removed** (#80): the tab acts like every tab — another tab or the swords leave it; the tab bar's own ☰ was retired in #103 | Keeping them from the overlay: a close button no other tab has, and a second ☰ beside the tab bar's |
+| Cards from a hidden tab (#52) | They stay in the view; the player put them there, and hiding a tab is a tab-bar fact, not a combat-layout one | Dropping them while their tab is hidden: hiding Spells would quietly strip the slots from a fight already running (Mike chose to keep them) |
 
 ## Open
 
@@ -197,3 +206,4 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 - 2026-10-23 — Vitals arrives as the rail, in two columns; the view gains its own Inspiration ✦; the Sheet's header is not combat-addable, and a saved `portrait` or `rest` becomes `vitals`; By ability's compact header is gone. → ledger L6633, #103
 - 2026-10-23 — Familiars is addable again, from the paw's menu (its card is hidden on the Sheet); the card shows in the view and goes home hidden. → ledger L6729, #103
 - 2026-10-24 — The tab bar's ☰ is retired, so nothing lists the view's cards; the swords stand alone in the tab bar's tool group, and `selectTab()` no longer calls `closeToc()`. → ledger L6804, #103
+- 2026-10-25 — `leaveCombatTab()` goes to the Sheet rather than a `cvPrevTab` that has since been hidden; combat cards from a hidden tab stay in the view untouched. → ledger L6989, #52
