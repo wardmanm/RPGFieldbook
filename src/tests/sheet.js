@@ -6713,6 +6713,15 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
        [X.character.inventory, X.character.coins]);
     ck('#47 K1 ...the arrows come back where the row stood', X.character.inventory.map(i => i.name).join() === 'Longbow,Arrow');
 
+    /* two records of one line that stacked onto one row are checked together */
+    fresh(); X.character.inventory = [{id: 'ar', name: 'Arrow', qty: 3}];
+    const twoAdds = X.logInv({kind: 'trade', title: 'Traded with Olvin', lines: [], undo: {parts: [{kind: 'add', u: {items: [{id: 'ar', qty: 2, created: true}, {id: 'ar', qty: 2, created: false}]}}]}});
+    ck('#47 re-review: 2+2 arrows received onto one row, one since used: the undo is refused, nothing taken',
+       X.invUndoCheck(twoAdds).ok === false && X.invUndo(twoAdds.id) !== '' && X.character.inventory[0].qty === 3 && !twoAdds.undone);
+    X.character.inventory[0].qty = 4;
+    ck('#47 re-review: ...with all 4 still held, it undoes and removes the row',
+       X.invUndo(twoAdds.id) === '' && X.character.inventory.length === 0, X.character.inventory);
+
     /* an old line, with no copy kept, whose row is gone: refused, never marked */
     fresh();
     const oldUse = X.logInv({kind: 'use', title: 'Used Potion', lines: [], undo: {id: 'gone', qty: 1, used: 0, snap: null}});

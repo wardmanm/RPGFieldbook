@@ -133,7 +133,8 @@ function invRestore(snap,atk,at,atkAt,qty){
 const INV_WHY={add:"It has since been used, sold or removed.",edit:"It has been changed again since.",gone:"It is no longer in your inventory.",broken:"This line can't be undone."};
 function invRow(id){return (character.inventory||[]).find(x=>x.id===id)||null;}
 function invCheckPart(kind,u,named){
-  if(kind==="add"){for(const p of u.items){const it=invRow(p.id);if(!it||itemQty(it)<num(p.qty)){const nm=String(p.name||(it&&it.name)||"");return named&&nm?`The ${nm} you got has since been used, sold or removed.`:INV_WHY.add;}}return "";}
+  /* records that stacked onto one row are summed: the row must still hold them all */
+  if(kind==="add"){const need={};for(const p of u.items)need[p.id]=(need[p.id]||0)+num(p.qty);for(const p of u.items){const it=invRow(p.id);if(!it||itemQty(it)<need[p.id]){const nm=String(p.name||(it&&it.name)||"");return named&&nm?`The ${nm} you got has since been used, sold or removed.`:INV_WHY.add;}}return "";}
   if(kind==="give"){for(const p of u.items){if(!invRow(p.id)&&!p.snap){const nm=String(p.name||"");return nm?`The ${nm} you gave can't come back: this line kept no copy of it.`:INV_WHY.gone;}}return "";}
   if(kind==="edit"){const it=invRow(u.after.id);return (it&&invSame(it,u.after))?"":INV_WHY.edit;}
   if(kind==="coins"){
