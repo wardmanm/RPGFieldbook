@@ -80,8 +80,10 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    Alongside it, `party` and `combatants` go through `cleanParty()`/`cleanCombatants()` (#91,
    `87-initiative.js`): `party` drops any entry with no name and forces `ac`/`maxHp` to a whole
    number or `""`; `combatants` reads `[]` outright when `combatActive!==true`, otherwise drops an
-   unknown `kind` and any second `kind:"you"` row and forces every other field's type. `combatTurn`
-   resets to the first living row if its id no longer exists in the cleaned list.
+   unknown `kind` and any second `kind:"you"` row and forces every other field's type, names a
+   blank foe "Unnamed" and a blank party row "Party member". Both give a missing or repeated id a
+   fresh one (`initFreshId()`). `combatTurn` is `""` in Rounds mode; in Turns mode it keeps its id
+   only if that row exists and is alive, else the first living row.
 10. `migrateSheet103()` (#103) runs last. Each step is a no-op on a sheet that does not need it, so
    it is safe on every load:
    - the four chip lists go through `chipClean()` (a non-array reads `[]`, an entry that is not an
@@ -225,3 +227,4 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-10-23 — The Sheet makeover: `resists`, `immunes`, `senses`, `languages`, `advancement`, `showFamiliars`; `statStyle` and `hdStyle` retired, kept; `migrateSheet103()` merges the retired cards' notes, maps `rest`/`portrait` in the combat view to `vitals`, lifts "Languages:" lines once and adds the default languages. → ledger L6633, #103
 - 2026-10-25 — `hiddenTabs` joins the per-character settings, `[]` in `blankChar()`, cleaned by `cleanHiddenTabs()` in `migrate()` right before `migrateSheet103()`: per character, so a new character shows every tab. → ledger L6989, #52
 - 2026-10-25 — `party`, `combatants`, `combatTurn`, `initMode` and `initShowRolls` join `blankChar()` for the initiative tracker; `migrate()` cleans the first two through `cleanParty()`/`cleanCombatants()` right before `migrateSheet103()`. → ledger L7097, #91
+- 2026-10-25 — Cleaning the fight dedupes ids, names blank rows, and sets `combatTurn` only in Turns mode and never to a dead row. → ledger L7212, #91

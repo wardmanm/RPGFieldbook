@@ -18,11 +18,14 @@ its own tab. Leaving the tab never ends combat.
 **the initiative tracker** (#91), in `87-initiative.js`: `cleanParty()`, `cleanCombatants()`,
 `combatantDead()`, `initSort()`, `initFirstAlive()`, `initNextTurn()`, `bandOfShare()`,
 `combatantBar()`, `initRollCheck()`, `initRollLine()`, `initModOf()`, `youAC()`,
-`buildCombatants()`; `irState()`, `irFoeRowHTML()`, `initRollHTML()`, `irPaint()`, `irSetTyped()`,
-`irRoll()`, `startInitFight()`, `openInitRoll()`; `hbBarHTML()`, `combatantHealthText()`,
-`initStripHTML()`, `initTableHTML()`, `renderInitTable()`, `toggleInitTable()`, `initNext()`,
+`buildCombatants()`, `initFreshId()`; `irState()`, `irFoeRowHTML()`, `initRollHTML()`, `irPaint()`, `irSetTyped()`,
+`irRoll()`, `startInitFight()`, `openInitRoll()`, `irStart()`; `hbBarHTML()`, `combatantHealthText()`,
+`initChipHTML()`, `initRowHTML()`, `initStripHTML()`, `initTableHTML()`, `initChipScroll()`,
+`initKeepActorInView()`, `renderInitStrip()`, `renderInitTable()`, `toggleInitTable()`, `initNext()`,
 `setInitMode()`, `toggleInitRolls()`; `initTie()`, `combatantDialogHTML()`, `setCombatant()`,
-`removeCombatant()`, `moveCombatant()`, `addCombatant()`, `openCombatant()`, `openAddCombatant()` ·
+`initTurnWrapped()`, `removeCombatant()`, `moveCombatant()`, `addCombatant()`, `openCombatant()`,
+`cdRefocus()`, `openAddCombatant()` · `renderHP()` in `66-coins-hp.js` (it ends in
+`renderInitStrip()`) ·
 `toggleInspiration()` in `10-compute.js` · `COMBAT_DEFAULTS` in `00-constants.js` ·
 `selectTab()`, `scrollToCard()` in `40-sheet.js` · `advanceRound()`, `toast()` in
 `60-attacks.js` · `applyAmmoRecovery()`, `undoRecoveryTap()` in `62-ammo.js` · markup
@@ -76,11 +79,14 @@ header's `#starBtn`, and `recompute()` paints both: the star left Vitals for the
 the view carries its own. The rests stay out of the view. On a phone the
 header is one row out of combat and two in it (`.fighting`, set by `renderCombatHeader()`): the title,
 then the tracker with End at the far right.
-`startCombatNow()` → `combatStart()`: active, round 1, active spells untouched. ◀ and ▶ are
+Start combat opens Roll initiative (below), whose Start ▸ ends in `combatStart()`: active, round 1,
+active spells untouched. (`startCombatNow()` is the same start with no roll and no list; no button
+calls it since #91, only the combat-view and ammunition tests.) ◀ and ▶ are
 `advanceRound(∓1)`, shared with the Active Spells card: every active spell and every active timed
 condition moves 6 s ([Conditions & concentration](conditions-and-concentration.md)), and in combat
 the round cannot drop below 1. End asks first (`endCombatAsk()`), then `combatEnd()` zeroes the
-round and returns the summary. `applyAmmoRecovery()` (#104) then recovers ammunition **on its
+round, clears the fight and returns `{rounds, sec, combatants}`: the summary plus the list it just
+cleared, which is where the end-of-fight dialog (#105) must read the fight from. `applyAmmoRecovery()` (#104) then recovers ammunition **on its
 own** — no question — and retires every outstanding count: each gives back what its rule allows and
 is cleared, the rest spent, so a count on None or Never never piles up for a later change of rule.
 When something came back its summary ("recovered 6 of 12 arrows, 2 of 2 daggers") joins the End
@@ -90,7 +96,9 @@ after a switch. When nothing came back the counts clear quietly and the toast sa
 ended — see [Ammunition](ammunition.md). The header shows time
 at the *start* of the round (`combatElapsedSec()`, round 7 → 36 sec); the summary counts the round
 being ended (round 7 → 7 rounds, 42 sec). Every round-mover repaints through `renderCombatChrome()`.
-The round is announced from `#cvLive`, outside the header that is repainted; a repaint keeps focus
+The round is announced from `#cvLive`, outside the header that is repainted, and only when it has
+moved since it was last said (`cvLiveRound`, reset on open, on a character switch and out of combat):
+a repaint that leaves the round alone (▾, a band, a mode switch) says nothing. A repaint keeps focus
 on the same button by id, falling back when it is gone or disabled (◀ at round 1 → ▶, Start → ▶, End
 → Start).
 
@@ -128,8 +136,8 @@ the toggles and the button.
 
 A strip of chips under the combat header shows the fight's order, each with a health bar and,
 optionally, a "now acting" marker; a ▾ table below it is the read-only, one-row-per-combatant view.
-**Start combat** (`#cvStart`) opens `openInitRoll()` — **Roll initiative** — instead of calling
-`startCombatNow()` directly; Cancel or × starts nothing. Full data model, decisions and code list
+**Start combat** (`#cvStart`) opens `openInitRoll()` — **Roll initiative**; Cancel or × starts
+nothing. Full data model, decisions and code list
 are in [the spec](../../specs/2026-10-25-initiative-tracker-design.md); this section is the
 as-built summary.
 
@@ -138,14 +146,20 @@ as-built summary.
 hp,maxHp,dead,partyId}]`, `kind` one of `you`/`party`/`foe`) are saved **with the character while a
 fight is on** (`combatActive`, same as `combatRound`); `combatEnd()` clears `combatants` and
 `combatTurn` the same moment it zeroes the round, so a mid-fight reload restores everything
-including the marker, and End leaves nothing behind. The combatants array order **is** the turn
+including the marker, and End leaves nothing behind. Cleaning (`migrate()`) gives a missing or
+repeated id a fresh one (`initFreshId()`: two rows sharing an id would open one dialog for both),
+names a blank foe "Unnamed" and a blank party row "Party member", and sets `combatTurn` only in
+Turns mode, never to a dead row. The combatants array order **is** the turn
 order; `initSort()` (stable, unrolled rows last) re-sorts it whenever a row's initiative changes.
 
 **Roll initiative** (`initRollHTML()`) lists you first (🎲 Roll for me — a d20 plus your initiative
 modifier, or a typed roll + Apply, with an Advantage switch that rolls two and keeps the higher,
 and a working line like "14 + 3 = 17"), then every `party` row (a typed total, blank allowed), then
 foe rows (name, a `× N` count that becomes "Name 1" … "Name N" sharing one roll, an optional AC, a
-typed total) with **+ Add a monster** to add more. **Start ▸** → `startInitFight()`: calls
+typed total) with **+ Add a monster** to add more; party and foe initiative boxes both carry an
+"Init" placeholder. **Start ▸** is `irStart()`, and it is the commit: a roll typed into "I rolled"
+but never Applied is applied there, and a bad one stops Start with its message (a blank box still
+means unrolled, last). Then `startInitFight()`: calls
 `combatStart()` if not already in combat, builds `combatants` via `buildCombatants()` (sorted,
 unrolled last), and in Turns mode sets `combatTurn` to the first living row.
 
@@ -154,14 +168,24 @@ unrolled last), and in Turns mode sets `combatTurn` to the first living row.
 the next living row, skipping dead foes (`band===4`) and dead party members (`dead===true`) but
 never you — passing the end calls `advanceRound(1)` exactly once (so active spells and timed
 conditions tick as they do for the header's own ▶) and wraps the marker to the first living row.
+Next announces "<name>'s turn"; a wrap announces "Round N — <name>'s turn" as one message, since a
+screen reader speaks only the last write of a task. The marker also moves off an actor who is
+marked Dead or removed; when that move wraps past the end onto a living row
+(`initTurnWrapped()`), the round advances once too, exactly as Next's does (ruling T5-M2).
 *Rounds* shows neither; the header's ◀ ▶ still move the round and never move the marker. Switching
-Rounds→Turns lands the marker on the first living row.
+Rounds→Turns keeps a stored actor only while alive, else lands on the first living row.
 
 **The strip** (`initStripHTML()`, drawn inside `combatHeaderHTML()`'s in-combat branch, so it
 sticks with `#cvHead` and repaints on every header redraw) is a row of chips, each showing the
 initiative (if `initShowRolls`), the name, and a bar: a four-segment band bar, a smooth share bar
-for you and for a party member on Exact, or a grey "?" when nothing is known. It scrolls sideways on
-a narrow screen. The right end holds Next ▸ (Turns) and **▾**, which toggles the read-only table
+for you and for a party member on Exact with a max HP, or a grey "?" when nothing is known (a party
+member on Exact with no max reads "HP n" with a "?" bar). It scrolls sideways on a narrow screen and
+keeps the actor in view: `renderCombatHeader()` carries `.ini-chips`' `scrollLeft` across its
+repaint and `initKeepActorInView()` scrolls only as far as the acting chip needs
+(`initChipScroll()`, setting `scrollLeft` directly rather than scrolling the chip into view, which can move the page).
+**Your chip and table row follow your HP**: `renderHP()` ends in `renderInitStrip()`, which patches
+those two nodes in place — never the whole strip (see Traps) — and returns at once with the view
+closed or no fight. The right end holds Next ▸ (Turns) and **▾**, which toggles the read-only table
 (`initTableHTML()`) below it. The ▾ open/closed state (`_iniTableOpen`) is a module-level flag, not
 a dataset attribute on the panel: the panel sits outside `#cvHead`, so a dataset flag on it could
 never agree with the header's own full repaint (see Traps). `toggleInitTable()` is the one place
@@ -172,7 +196,8 @@ so the table never runs wider than the column it sits under.
 **The combatant dialog** (`openCombatant()`, one per combatant, opened from a chip or a table row,
 every target ≥44px): a **foe** gets five full-width band buttons (Healthy…Dead, each with the DM's
 words) that set the band and close the dialog in one tap; a **party** member gets an Exact HP /
-Estimate switch (Exact: a stepper clamped `0..max`, a typed value accepted; Estimate: four band
+Estimate switch (Exact: a stepper clamped `0..max`, a typed value accepted — a negative reads 0, and
+the box is rewritten from the stored row, so it shows the clamp; Estimate: four band
 buttons, no Dead band since party death is its own switch) and a **Dead** switch; **you** gets
 initiative only, with HP and AC read live off the sheet (`effMaxHP()`, `character.hp.cur`,
 `youAC()`) and a note that HP changes on the Vitals card. Every kind but you gets **Remove**
@@ -181,9 +206,12 @@ successor first) and **Done**. A tied neighbour (`initTie()`) offers **Act earli
 later** (`moveCombatant()`), swapping places within the tie — the only way to resolve one; see the
 Ruling below. `openCombatant()` binds one delegated `click` listener on `#mBody`, guarded by a
 dataset flag so it survives every `innerHTML` swap rather than stacking a new listener on each
-reopen (the dialog reopens itself after most changes so the player sees the result).
+reopen (the dialog reopens itself after most changes so the player sees the result). After a reopen
+`cdRefocus()` puts the keyboard back on the control that was pressed (−, +, Dead, the track, Act
+earlier/later — at the end of a tie the other one, then Done), so three presses of + stay on +.
 
-**Adding mid-fight** (`+ Add combatant`, `openAddCombatant()` → `addCombatant()`): a name, an
+**Adding mid-fight** (`+ Add combatant`, `openAddCombatant()` → `addCombatant()`): a name (up to 60
+characters), an
 initiative and an optional AC, inserted in sorted place; if it lands before the current actor the
 actor doesn't change.
 
@@ -220,7 +248,10 @@ actor doesn't change.
   stay in step with `combatHeaderHTML()`'s full repaint of `#cvHead`, which is where the button
   lives (see Traps).
 - **`combatEnd()` clears `combatants` and `combatTurn` in the same step as `combatActive`/
-  `combatRound` (#91)**, so nothing downstream of End combat can read a stale fight.
+  `combatRound` (#91)**, so nothing can read a stale fight off the character after End; the fight
+  it cleared comes back in its return value, which is where #105 reads it.
+- **Your HP repaints your chip and row in place, never the strip (#91).** `renderInitStrip()`
+  patches two nodes; a swap of the strip there loses the next tap (see Traps).
 
 ## Traps
 
@@ -247,6 +278,10 @@ actor doesn't change.
 - **The ▾ table ran the full page width (#91).** `#cvInitTable` sits at the `.cview` level, a
   sibling of `#cvHead` rather than inside it, so it inherited no width constraint until it was given
   `.cv-head`/`#cvList`'s own `max-width:780px;margin:0 auto`. → L7097
+- **A tap on Next after typing an HP did nothing (#91).** The HP box commits on `change`, which its
+  blur fires on the *mousedown* of the next tap; a first `renderInitStrip()` that replaced the whole
+  strip there swapped Next ▸ out between mousedown and mouseup, so the click never landed. Driven,
+  reproduced, and fixed by patching only your chip and row in place. → L7212
 - **Roll initiative's inputs went full width (#91).** The app's general `input{width:100%}` rule
   won for every box with no flex override, so a party row's initiative box and a foe row's ×/AC/Init
   boxes each landed alone on their own line under `flex-wrap:wrap`; fixed with scoped widths. →
@@ -320,3 +355,4 @@ Settled in the [initiative tracker spec](../../specs/2026-10-25-initiative-track
 - 2026-10-24 — The tab bar's ☰ is retired, so nothing lists the view's cards; the swords stand alone in the tab bar's tool group, and `selectTab()` no longer calls `closeToc()`. → ledger L6804, #103
 - 2026-10-25 — `leaveCombatTab()` goes to the Sheet rather than a `cvPrevTab` that has since been hidden; combat cards from a hidden tab stay in the view untouched. → ledger L6989, #52
 - 2026-10-25 — The initiative tracker: Roll initiative on Start combat, a strip of chips with a ▾ table under the header, a dialog per combatant, Turns/Rounds, Show rolls, and `87-initiative.js` as a new fragment. → ledger L7097, #91
+- 2026-10-25 — The final review's fixes: your chip follows your HP, the actor stays in view, Start commits a typed roll, a wrap on Dead or Remove advances the round, the dialog keeps focus and shows the clamped HP, the round is said once, and `combatEnd()` hands back the fight. → ledger L7212, #91

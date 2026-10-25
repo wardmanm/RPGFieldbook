@@ -245,7 +245,7 @@ by `migrate()` after it preserves every field, and survives a save → load roun
 
 ## As built
 
-As specified, §1–§9, built in six tasks (the implementer and reviewer reports, every `Ruling:` and
+As specified, §1–§9, with the differences below, built in six tasks and a final fix wave (the implementer and reviewer reports, every `Ruling:` and
 `minor (deferred)` line, and the full browser-QA account are in
 `.superpowers/sdd/2026-10-25-initiative-tracker/progress.md` and the task reports beside it; see
 the ledger entry "Initiative tracker (#91, 2026-10-25)" for the condensed version with code and
@@ -275,13 +275,54 @@ turns out wrong: adding a drag gesture later, on top of what's built, not a rewo
   outside `#cvHead` as a sibling, so it inherited no width constraint. Fixed by giving it
   `.cv-head`/`#cvList`'s own `max-width:780px;margin:0 auto` (Task 4, same commit).
 
-**Deferred minors, from code review across Tasks 1–5 (all recorded in progress.md; none
-behavioural enough to block, none fixed in this task per its own instructions):**
+**Where the build differs from §1–§9:**
+- **The strip lives inside `#cvHead`** as `.cv-init`, drawn by `initStripHTML()` from
+  `combatHeaderHTML()`'s in-combat branch, not as a separate `#cvInit` "directly under" the header
+  (§5.1, §6). It sticks with the header for free and repaints with it. Only the ▾ table is its own
+  element, `#cvInitTable` in `70-combat.html`, a sibling below the header.
+- **The old-save strip** (§7) reads "No initiative yet." with a **Roll initiative** button
+  (`#iniRollNow`), not "Roll initiative to start the tracker".
+- **A tie reorders in the dialog** (Act earlier / Act later), not by a grip on the table (§5.2):
+  the plan-level Ruling above.
+- **No `initTotal(face, mod)`** (§6): `initRollLine(faces, mod)` writes the working, and the total
+  is computed where the fight is started (`irStart()`).
+- **A wrap off a dead or removed actor advances the round** (ruling T5-M2, final fix wave): §4
+  says only that passing the end on Next advances the round; marking the actor Dead, or removing
+  them, when the marker's move wraps past the end, does too, once.
+
+**Fixed in the final fix wave** (the final whole-branch review,
+`.superpowers/sdd/2026-10-25-initiative-tracker/final-review.md`; ledger "Initiative tracker:
+final review fixes (#91, 2026-10-25)"):
+- **I1.** Your chip and table row did not repaint when your HP changed (§4 says they do).
+  `renderHP()` now ends in `renderInitStrip()`, which patches just those two nodes in place. A
+  first version that swapped the whole strip lost a tap on Next made right after typing an HP (the
+  HP box's blur commits on that tap's mousedown); patching in place fixed it.
+- **I2.** The strip never kept the actor in view, and every repaint snapped it back to the start
+  (§5.1). The header's repaint now carries the scroll across and scrolls only as far as the acting
+  chip needs (`initKeepActorInView()`, `initChipScroll()`).
+- **I3.** A roll typed into "I rolled" was dropped if Start ▸ was pressed without Apply. Start
+  (`irStart()`) now applies it, and a bad one stops Start with its message.
+- **T5-M2.** As above: a wrap on Dead or Remove advances the round once.
+- **The `#cdHp` finding** below: the box is now rewritten from the stored row on every change.
+- **Deferred minors fixed:** the stale `sheet.js` test name; an "Init" placeholder on party rows in
+  Roll initiative; a typed negative HP clamps to 0; `#cdHp` is 44px tall; focus returns to the
+  pressed control after the dialog reopens.
+- **m1** no marker on a dead row, and none in Rounds mode after a reload; **m2** "Round N" is
+  announced only when the round moves, and a wrap says "Round N — <name>'s turn" in one message;
+  **m3** a party member on Exact with no max shows "HP n" (and no "/ ?"); **m4** a missing or
+  repeated id gets a fresh one, and a blank name becomes "Unnamed" or "Party member"; **m5**
+  `combatEnd()` returns `{rounds, sec, combatants}`, the fight it cleared, for #105; **m6**
+  `startCombatNow()` stays as the no-roll start the tests call, now commented; **m7** this As built
+  corrected; **m9** Add combatant keeps a 60-character name. **m8** (the double render per tracker
+  action) was left by ruling.
+
+**Deferred minors, from code review across Tasks 1–5 (all recorded in progress.md; those marked
+✔ were fixed in the final fix wave, the rest left by ruling):**
 - `initRollCheck` reports the generic "Type the number you rolled." for a negative input like
   `-3`, rather than the d20-range message — the plan's own code (Task 1).
-- A `sheet.js` test name read "every other section is combat-addable", now stale since `party` is
+- ✔ A `sheet.js` test name read "every other section is combat-addable", now stale since `party` is
   a second `nocv` section (Task 2); the assertion itself was fixed, only the name is stale.
-- The party-row initiative box in Roll initiative has no visible Init label beside it (Task 3).
+- ✔ The party-row initiative box in Roll initiative has no visible Init label beside it (Task 3).
 - `.cv-head.fighting .cv-init{order:5}` sits in the phone media query ahead of the base `.cv-init`
   rule, against the fragment's own media-after-base convention (Task 4).
 - 4 of 8 newly exported `87-initiative.js` functions have no direct unit test (Task 4).
@@ -289,9 +330,9 @@ behavioural enough to block, none fixed in this task per its own instructions):*
 - The combatant dialog's change listeners read the live `_cdId`, not the id captured at open
   (`87-initiative.js:341`) — harmless today since only one dialog is ever open, flagged for when
   that assumption might change (Task 5).
-- A typed negative HP becomes blank rather than clamping to 0 (Task 5).
-- `#cdHp` is 42px tall, under the 44px target convention the rest of the dialog follows (Task 5).
-- Every dialog reopen moves focus to the first field, so a keyboard user loses their place after
+- ✔ A typed negative HP becomes blank rather than clamping to 0 (Task 5).
+- ✔ `#cdHp` is 42px tall, under the 44px target convention the rest of the dialog follows (Task 5).
+- ✔ Every dialog reopen moves focus to the first field, so a keyboard user loses their place after
   −/+/Act earlier/Act later (Task 5).
 - The tie test (`initTie()`) is written as an OR of two conditions rather than one helper call
   (Task 5).
@@ -299,8 +340,8 @@ behavioural enough to block, none fixed in this task per its own instructions):*
   parameter — works today because the dialog is only ever opened for the character on screen, but
   not parameter-pure (Task 5).
 
-**New finding from this task's browser QA, left for the controller (not fixed here, per this
-task's own brief):** typing an HP above max into `#cdHp` and blurring clamps
+**New finding from Task 6's browser QA (✔ fixed in the final fix wave: the change listener now
+writes the stored value back into the box):** typing an HP above max into `#cdHp` and blurring clamps
 `character.combatants[].hp` correctly, but the `#cdHp` input itself keeps showing the typed
 over-max number until the dialog is closed and reopened — `openCombatant()`'s `ch()` helper
 (`87-initiative.js:341-342`) wires `#cdInit`/`#cdAC`/`#cdHp` with a plain `change` listener that
@@ -327,6 +368,11 @@ clean console (`browser_console_messages`, `all:true`) throughout. Full suite
 (`./build.sh --no-zip && ./src/tests/run.sh`) green before every commit.
 
 **Everything else** — the data model (§3), `startInitFight()`/`combatStart()`/`combatEnd()`
-wiring, re-sorting and tie order, `initNextTurn()`'s skip/wrap/never-skip-you rules, the Party
-card, the strip, the ▾ table, Roll initiative's modal, the combatant dialog per kind, and the
-section/`EDIT_CARDS` registry changes — landed exactly as specified.
+wiring, re-sorting, `initNextTurn()`'s skip/wrap/never-skip-you rules, the Party card, Roll
+initiative's modal, the combatant dialog per kind, and the section/`EDIT_CARDS` registry changes —
+landed as specified, with the differences and fixes listed above. The final fix wave was driven at
+390 with the project Playwright MCP (`.claude/qa/91-fix-strip-390.png`): a typed roll with no
+Apply, a refused 25, eight chips through two wraps with the actor in view each time, your HP typed
+on Vitals reaching the chip and the table row, a Dead band and a Remove on the last actor each
+advancing the round once, the dialog's focus after −, +, Dead, a track flip and Act earlier/later,
+and the HP box after an over-max and a negative entry; the console stayed clean.

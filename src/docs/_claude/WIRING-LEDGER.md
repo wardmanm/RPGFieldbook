@@ -7208,3 +7208,52 @@ Pages: [Combat view](../wiki/features/combat-view.md), [Story & notes](../wiki/f
 [Theming & icons](../wiki/ui/theming-and-icons.md), [Overview](../wiki/overview.md),
 [decisions](../wiki/decisions.md), [1.9.0](../wiki/roadmap/1.9.0.md), the spec's As built
 (`src/docs/specs/2026-10-25-initiative-tracker-design.md`).
+
+## Initiative tracker: final review fixes (#91, 2026-10-25)
+
+The final whole-branch review (`.superpowers/sdd/2026-10-25-initiative-tracker/final-review.md`)
+found three Important gaps and nine minors; the rulings at the end of `progress.md` took all but m8
+(the double render, left: a few ms per tap). Code in commit `3785417`; tests in `sheet.js`
+("#91 the final review's fixes"); driven at 390 with the project Playwright MCP
+(`.claude/qa/91-fix-strip-390.png`).
+
+- **I1, your chip follows your HP.** `renderHP()` (`66-coins-hp.js`) ends in `renderInitStrip()`
+  (`87-initiative.js`), which patches **only your chip and your table row in place** (the chip and
+  row markup are now `initChipHTML()`/`initRowHTML()`, shared with `initStripHTML()`/
+  `initTableHTML()`). It returns at once with the view closed or no fight, and leaves a node alone
+  that would come out the same (`isEqualNode`). Patching, not swapping the strip, is load-bearing:
+  the HP box commits on `change`, which its blur fires on the *mousedown* of the next tap, and a
+  first version that replaced the whole strip there swapped Next ▸ out between mousedown and
+  mouseup, so the tap on Next was lost (driven, reproduced, then fixed). It never goes through
+  `renderCombatHeader()`, which would re-announce the round and move focus.
+- **I2, the actor stays in view.** `renderCombatHeader()` reads `.ini-chips`' `scrollLeft` before
+  its repaint and hands it to `initKeepActorInView()`, which restores it and then scrolls only as
+  far as needed to show `.ini-chip.now` (`initChipScroll()`, pure, 8px of margin; sets
+  `scrollLeft` rather than `scrollIntoView()`, which can scroll the page). No actor → the old
+  scroll is kept. Driven: eight chips at 390, the actor in view after every Next, and back at 0
+  on the wrap.
+- **I3, Start ▸ commits a typed roll.** The Start handler is now `irStart(party)`: with no roll
+  set, a non-blank "I rolled" box goes through `irSetTyped()`, and a bad value stops Start with its
+  message in `#irRes`. A blank box still means unrolled.
+- **T5-M2 (ruled earlier).** `setCombatant()` (a foe's Dead band, a party member's Dead switch)
+  and `removeCombatant()` move the marker off the actor with `initNextTurn()`; when that wraps past
+  the end onto a living row (`initTurnWrapped()`), they call `advanceRound(1)` once, as Next does.
+- **The combatant dialog.** The `#cdInit`/`#cdAC`/`#cdHp` change listeners write the stored value
+  back into the box (an over-max HP shows the clamp; a negative HP is now 0, not blank).
+  `.cd-step input` is `min-height:44px`. After −, +, Dead, a track flip or Act earlier/later the
+  dialog reopens and `cdRefocus()` puts focus back on the pressed control (Act earlier/later fall
+  back to the other one, then Done, at the end of a tie).
+- **Minors.** m1: `migrate()` sets `combatTurn` only in Turns mode and never to a dead row;
+  `setInitMode("turns")` keeps a stored actor only if alive. m2: `cvLiveRound` (`87-combat.js`)
+  makes `renderCombatHeader()` say "Round N" only when the round moved (reset on open, on a
+  character switch and out of combat); a wrap in `initNext()` says "Round N — <name>'s turn" as
+  one message. m3: a party member on Exact with no max shows "HP n", a "?" bar, and no "/ ?" in
+  the dialog. m4: `initFreshId()` gives a missing or repeated id a fresh one in `cleanParty()` and
+  `cleanCombatants()`; a blank combatant name becomes "Unnamed" (foe) or "Party member". m5:
+  `combatEnd()` returns `{rounds, sec, combatants}`, the list it cleared, for #105. m6:
+  `startCombatNow()` stays, commented: no button calls it, the combat-view and #104 tests do. m9:
+  `addCombatant()` keeps 60 characters. T3c: party rows in Roll initiative show `placeholder="Init"`.
+  T2: the stale sheet.js test name is corrected.
+
+Pages: [Combat view](../wiki/features/combat-view.md), [Character model](../wiki/architecture/character-model.md),
+the spec's As built (`src/docs/specs/2026-10-25-initiative-tracker-design.md`).
