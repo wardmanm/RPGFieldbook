@@ -7267,3 +7267,16 @@ Every existing shot was moved into `complete/` (all of their branches had merged
 the issue's title. Still gitignored; still the project's Playwright MCP, absolute paths.
 
 Pages: [Screenshot QA](../wiki/process/screenshot-qa.md).
+
+## 1.9.0 scope: #118 in, #110 to 2.0, 1.9.1 items deferred (2026-10-25)
+
+Mike, on the fifteen issues filed 2026-10-25 (#110–#124):
+- The thirteen labelled `1.9.1` (#111–#117, #119–#124: layout width, centring and spacing polish,
+  the Vitals edit toggle and HP dialog, chip fixes) wait for 1.9.1.
+- **#118 (feat support)** joins 1.9.0, after #102 and before #105.
+- **#110 (shapeshifting)** moves to the v2.0.0 milestone: an alternate sheet reaches into every
+  computed number, which is what the 2.0 rewrite is for.
+
+Remaining 1.9.0 order (Mike, 2026-10-25): #47 → #102 → #118 → #105.
+
+Pages: [1.9.0](../wiki/roadmap/1.9.0.md), [2.0](../wiki/roadmap/2.0.md).
