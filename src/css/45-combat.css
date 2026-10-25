@@ -67,7 +67,7 @@
 .hb-share{display:block;height:5px;border-radius:2px;background:var(--hb-empty);overflow:hidden}
 .hb-share b{display:block;height:100%}
 .hb-share .hb-0{background:var(--hb-healthy)}.hb-share .hb-1{background:var(--hb-injured)}.hb-share .hb-2{background:var(--hb-bloodied)}.hb-share .hb-3{background:var(--hb-near)}
-.cv-init-table{background:var(--panel);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;margin:0 0 8px}
+.cv-init-table{max-width:780px;margin:0 auto 8px;background:var(--panel);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;box-sizing:border-box}
 .ini-table{display:flex;flex-direction:column}
 .ini-row{display:flex;align-items:center;gap:8px;min-height:44px;padding:4px 2px;border:0;border-bottom:1px dotted var(--hair);background:none;color:var(--ink);text-align:left;font:inherit;cursor:pointer}
 .ini-row .ini-nm{flex:1;min-width:0;font-weight:700}

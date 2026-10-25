@@ -185,7 +185,12 @@ function openInitRoll(){
   });
 }
 
-/* ---- the strip (in #cvHead, so it sticks with it) and the table ---- */
+/* ---- the strip (in #cvHead, so it sticks with it) and the table ----
+   Whether the ▾ table is open is session state, like cvOpen: never saved, one
+   source of truth here rather than a dataset flag on #cvInitTable, which
+   combatHeaderHTML()'s full repaint of #cvHead (the ▾/▴ button lives in the
+   strip, inside the header) cannot see or keep in step with. */
+let _iniTableOpen=false;
 function hbBarHTML(bar){
   if(bar.share!==null)return `<span class="hb-share" aria-hidden="true"><b class="hb-${esc(String(bar.band===null?0:bar.band))}" style="width:${esc(String(Math.round(bar.share*100)))}%"></b></span>`;
   if(bar.band===null)return `<span class="hb hb-q" aria-hidden="true"><i></i><i></i><i></i><i></i></span>`;
@@ -208,7 +213,7 @@ function initStripHTML(ch){
     return `<button type="button" class="ini-chip${now?" now":""}${dead?" dead":""}" data-inichip="${esc(r.id)}" aria-label="${esc(lbl)}">`+
       `<span class="ini-top">${show?`<span class="ini-n">${esc(r.init===null?"—":String(r.init))}</span>`:""}<span class="ini-nm">${esc(name)}</span></span>${hbBarHTML(dead?{band:null,share:null}:combatantBar(r))}</button>`;
   }).join("")+`</div>`+(turns?`<button type="button" class="tbtn primary" id="cvTurn" aria-label="Next turn">Next ▸</button>`:"")+
-    `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="false" aria-controls="cvInitTable" aria-label="Show the initiative table">▾</button></div>`;
+    `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="${_iniTableOpen?"true":"false"}" aria-controls="cvInitTable" aria-label="Show the initiative table">${_iniTableOpen?"▴":"▾"}</button></div>`;
 }
 function initTableHTML(ch){
   const list=ch.combatants||[],mode=ch.initMode==="rounds"?"rounds":"turns";
@@ -223,9 +228,16 @@ function initTableHTML(ch){
 }
 function renderInitTable(){
   const el=document.getElementById("cvInitTable");if(!el)return;
-  const open=el.dataset.open==="1"&&inCombat(character)&&(character.combatants||[]).length>0;
+  /* A fight with no rows, or no fight at all, closes it: the flag resets here
+     rather than only hiding the panel, so a later fight starts collapsed. */
+  if(!inCombat(character)||!(character.combatants||[]).length)_iniTableOpen=false;
+  const open=_iniTableOpen&&inCombat(character)&&(character.combatants||[]).length>0;
   el.hidden=!open;el.innerHTML=open?initTableHTML(character):"";
 }
+/* The one place the flag flips: the strip's ▾/▴ and the panel both repaint
+   from it, so they can never disagree the way a dataset flag on the panel
+   (invisible to the header's own repaint) did. */
+function toggleInitTable(){_iniTableOpen=!_iniTableOpen;renderCombatChrome();renderInitTable();}
 function initNext(){
   const r=initNextTurn(character.combatants||[],character.combatTurn);
   character.combatTurn=r.turnId;

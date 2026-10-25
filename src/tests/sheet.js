@@ -89,7 +89,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'partyRowsHTML', 'savePartyMember', 'removePartyMember',
   'initRollHTML', 'openInitRoll', 'irState', 'irSetTyped', 'irRoll', 'startInitFight',
   'hbBarHTML', 'combatantHealthText', 'initStripHTML', 'initTableHTML', 'renderInitTable',
-  'initNext', 'setInitMode', 'toggleInitRolls',
+  'initNext', 'setInitMode', 'toggleInitRolls', 'toggleInitTable',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -6161,6 +6161,13 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#91 back to Turns: the marker on the first living row', X.character.combatTurn === X.character.combatants[0].id);
     const t = X.initTableHTML(X.character);
     ck('#91 the table: a row per combatant, + Add, the mode switch, Show rolls', (t.match(/data-inirow=/g) || []).length === 3 && /id="iniAdd"/.test(t) && /data-inimode="rounds"/.test(t) && /id="iniRolls"/.test(t), t);
+    /* fix round 1: the ▾ button must not forget it is open across a repaint */
+    X.toggleInitTable();
+    ck('#91 ▾ opens: ▴ and aria-expanded="true"', /aria-expanded="true"/.test(X.initStripHTML(X.character)) && />▴</.test(X.initStripHTML(X.character)));
+    X.initNext();
+    ck('#91 ...a repaint (Next) still says so', /aria-expanded="true"/.test(X.initStripHTML(X.character)) && />▴</.test(X.initStripHTML(X.character)));
+    X.toggleInitTable();
+    ck('#91 a second toggle closes it', /aria-expanded="false"/.test(X.initStripHTML(X.character)) && />▾</.test(X.initStripHTML(X.character)));
     /* Review Focus 4: a fight with no list */
     X.character.combatants = []; X.character.combatTurn = '';
     ck('#91 a fight with no list offers Roll initiative', /id="iniRollNow"/.test(X.initStripHTML(X.character)));
