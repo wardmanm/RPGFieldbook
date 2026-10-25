@@ -223,6 +223,8 @@ function renderHP(){
     lk.setAttribute("aria-pressed",locked?"true":"false");
     lk.title=locked?"Max HP is locked — tap to edit it":"Max HP is unlocked — tap to lock it";
   }
+  /* #91: your chip and row in the initiative tracker read this HP live */
+  renderInitStrip();
 }
 /* Commit one HP box. Returns false if the entry was refused. */
 function applyHPInput(inp){

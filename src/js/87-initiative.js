@@ -8,18 +8,24 @@ const HB_NAMES=["Healthy","Injured","Bloodied","Near death","Dead"];
 const HB_SAYS=['"untouched", "fresh"','"barely hurt", "a few scratches"','"badly hurt", half or less','"almost dead", "barely standing"',"struck out; Next skips it"];
 function initInt(v){const s=String(v==null?"":v).trim();return /^-?\d+$/.test(s)?parseInt(s,10):null;}
 function initOpt(v){const n=initInt(v);return (n===null||n<0)?"":n;}
+/* A missing or repeated id gets a fresh one (final review m4): two rows
+   sharing an id would open one dialog for both, and Remove would take both. */
+function initFreshId(id,seen){let s=id==null?"":String(id);if(!s||seen.has(s))s=uid();seen.add(s);return s;}
 function cleanParty(v){
+  const seen=new Set();
   return (Array.isArray(v)?v:[]).filter(p=>p&&typeof p==="object"&&String(p.name||"").trim())
-    .map(p=>({id:String(p.id||uid()),name:String(p.name).trim().slice(0,60),ac:initOpt(p.ac),maxHp:initOpt(p.maxHp)}));
+    .map(p=>({id:initFreshId(p.id,seen),name:String(p.name).trim().slice(0,60),ac:initOpt(p.ac),maxHp:initOpt(p.maxHp)}));
 }
 function cleanCombatants(v,active){
   if(!active)return [];
-  let you=false;const out=[];
+  let you=false;const out=[],seen=new Set();
   (Array.isArray(v)?v:[]).forEach(r=>{
     if(!r||typeof r!=="object"||["you","party","foe"].indexOf(r.kind)<0)return;
     if(r.kind==="you"){if(you)return;you=true;}
     const party=r.kind==="party",band=(Number.isInteger(r.band)&&r.band>=0&&r.band<=4)?r.band:null,maxHp=party?initOpt(r.maxHp):"";
-    out.push({id:String(r.id||uid()),kind:r.kind,name:String(r.name==null?"":r.name).slice(0,60),init:initInt(r.init),
+    /* never a blank chip: your row reads your sheet's name, the rest a fallback */
+    const nm=String(r.name==null?"":r.name).trim().slice(0,60)||(r.kind==="foe"?"Unnamed":r.kind==="party"?"Party member":"");
+    out.push({id:initFreshId(r.id,seen),kind:r.kind,name:nm,init:initInt(r.init),
       ac:r.kind==="you"?"":initOpt(r.ac),
       track:party?((r.track==="exact"||r.track==="estimate")?r.track:(maxHp!==""?"exact":"estimate")):"",
       band:r.kind==="you"?null:band,hp:party?initOpt(r.hp):"",maxHp,dead:party&&r.dead===true,partyId:party?String(r.partyId||""):""});
@@ -52,7 +58,8 @@ function bandOfShare(hp,max){
    max) coloured by its band, or a band alone, or nothing known (band null). */
 function combatantBar(r){
   if(r.kind==="you"){const m=effMaxHP(),h=num(character.hp.cur);return {band:bandOfShare(h,m),share:m>0?Math.max(0,Math.min(1,h/m)):null};}
-  if(r.kind==="party"&&r.track==="exact"&&num(r.maxHp)>0)return {band:bandOfShare(r.hp,r.maxHp),share:Math.max(0,Math.min(1,num(r.hp)/num(r.maxHp)))};
+  if(r.kind==="party"&&r.track==="exact")return num(r.maxHp)>0?{band:bandOfShare(r.hp,r.maxHp),share:Math.max(0,Math.min(1,num(r.hp)/num(r.maxHp)))}
+    :{band:null,share:null};   /* Exact with no max: no share to draw, and an Estimate band left over would be stale */
   return {band:r.band===4?null:r.band,share:null};
 }
 /* Your typed d20: the face, 1..20, as the spend box takes 1..die. */
@@ -139,7 +146,7 @@ function initRollHTML(party,midFight){
     `<button type="button" class="switch" id="irAdv" role="switch" aria-checked="false" aria-label="Advantage"></button><span class="ir-k">Advantage</span></div>`+
     `<div class="hd-res" id="irRes" aria-live="polite"></div></div>`+
     (party.length?`<div class="ir-party">`+party.map(p=>`<label class="ir-row"><span>${esc(p.name)} <span class="ir-k">party</span></span>`+
-      `<input data-irparty="${esc(p.id)}" inputmode="numeric" size="3" aria-label="${esc(p.name+"'s initiative")}"></label>`).join("")+`</div>`:"")+
+      `<input data-irparty="${esc(p.id)}" inputmode="numeric" size="3" placeholder="Init" aria-label="${esc(p.name+"'s initiative")}"></label>`).join("")+`</div>`:"")+
     `<div id="irFoes">${irFoeRowHTML()}</div><button type="button" class="add" id="irAddFoe">+ Add a monster</button>`+
     `<p class="hint">A blank initiative goes last; you can fill it in later.</p>`+
     `<div class="m-actions"><button class="tbtn" id="irCancel">Cancel</button><button class="tbtn primary" id="irStart">Start ▸</button></div>`;
@@ -176,13 +183,22 @@ function openInitRoll(){
   on("irAdv","click",e=>{_ir.adv=!_ir.adv;e.currentTarget.classList.toggle("on",_ir.adv);e.currentTarget.setAttribute("aria-checked",_ir.adv?"true":"false");});
   on("irAddFoe","click",()=>{const f=document.getElementById("irFoes");if(f)f.insertAdjacentHTML("beforeend",irFoeRowHTML());});
   on("irCancel","click",closeModal);
-  on("irStart","click",()=>{
-    const you={name:character.name||"You",init:_ir.set?Math.max.apply(null,_ir.faces)+initModOf():null};
-    const party2=party.map(p=>{const i=document.querySelector(`[data-irparty="${CSS.escape(p.id)}"]`);return Object.assign({},p,{init:i?i.value:""});});
-    const foes=Array.from(document.querySelectorAll("[data-irfoe]")).map(row=>{const v=k=>{const i=row.querySelector(`[data-irf="${k}"]`);return i?i.value:"";};
-      return {name:v("name"),count:v("count"),ac:v("ac"),init:v("init")};});
-    closeModal();startInitFight(you,party2,foes);
-  });
+  on("irStart","click",()=>irStart(party));
+}
+/* Start ▸ is the commit (final review I3): a roll typed into "I rolled" but
+   never Applied is applied here, and a bad one stops Start with irSetTyped()'s
+   message in #irRes. A blank box still means unrolled, last. Returns that
+   message, or "" once the fight has started. */
+function irStart(party){
+  if(!_ir.set){
+    const b=document.getElementById("irTyped"),typed=b?String(b.value==null?"":b.value).trim():"";
+    if(typed){const why=irSetTyped(typed);if(why)return why;}
+  }
+  const you={name:character.name||"You",init:_ir.set?Math.max.apply(null,_ir.faces)+initModOf():null};
+  const party2=party.map(p=>{const i=document.querySelector(`[data-irparty="${CSS.escape(p.id)}"]`);return Object.assign({},p,{init:i?i.value:""});});
+  const foes=Array.from(document.querySelectorAll("[data-irfoe]")).map(row=>{const v=k=>{const i=row.querySelector(`[data-irf="${k}"]`);return i?i.value:"";};
+    return {name:v("name"),count:v("count"),ac:v("ac"),init:v("init")};});
+  closeModal();startInitFight(you,party2,foes);return "";
 }
 
 /* ---- the strip (in #cvHead, so it sticks with it) and the table ----
@@ -201,30 +217,80 @@ function combatantHealthText(r){
   if(combatantDead(r))return "Dead";
   if(r.kind==="you")return `HP ${num(character.hp.cur)} / ${effMaxHP()}`;
   if(r.kind==="party"&&r.track==="exact"&&num(r.maxHp)>0)return `HP ${num(r.hp)} / ${num(r.maxHp)}`;
+  if(r.kind==="party"&&r.track==="exact"&&r.hp!=="")return `HP ${num(r.hp)}`;   /* no max known: just the number */
   return bar.band===null?"Health not set":HB_NAMES[bar.band];
 }
 function initStripHTML(ch){
   const list=ch.combatants||[];
   if(!list.length)return `<div class="cv-init"><span class="hint">No initiative yet.</span><span class="grow"></span><button type="button" class="tbtn primary" id="iniRollNow">Roll initiative</button></div>`;
-  const turns=ch.initMode==="turns",show=ch.initShowRolls!==false;
-  return `<div class="cv-init"><div class="ini-chips">`+list.map(r=>{
-    const now=turns&&r.id===ch.combatTurn,dead=combatantDead(r),name=r.kind==="you"?(ch.name||"You"):r.name;
-    const lbl=`${name}${r.init!==null?", initiative "+r.init:""}, ${combatantHealthText(r)}${now?", acting":""}`;
-    return `<button type="button" class="ini-chip${now?" now":""}${dead?" dead":""}" data-inichip="${esc(r.id)}" aria-label="${esc(lbl)}">`+
-      `<span class="ini-top">${show?`<span class="ini-n">${esc(r.init===null?"—":String(r.init))}</span>`:""}<span class="ini-nm">${esc(name)}</span></span>${hbBarHTML(dead?{band:null,share:null}:combatantBar(r))}</button>`;
-  }).join("")+`</div>`+(turns?`<button type="button" class="tbtn primary" id="cvTurn" aria-label="Next turn">Next ▸</button>`:"")+
+  const turns=ch.initMode==="turns";
+  return `<div class="cv-init"><div class="ini-chips">`+list.map(r=>initChipHTML(r,ch)).join("")+`</div>`+(turns?`<button type="button" class="tbtn primary" id="cvTurn" aria-label="Next turn">Next ▸</button>`:"")+
     `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="${_iniTableOpen?"true":"false"}" aria-controls="cvInitTable" aria-label="Show the initiative table">${_iniTableOpen?"▴":"▾"}</button></div>`;
+}
+function initChipHTML(r,ch){
+  const turns=ch.initMode==="turns",show=ch.initShowRolls!==false;
+  const now=turns&&r.id===ch.combatTurn,dead=combatantDead(r),name=r.kind==="you"?(ch.name||"You"):r.name;
+  const lbl=`${name}${r.init!==null?", initiative "+r.init:""}, ${combatantHealthText(r)}${now?", acting":""}`;
+  return `<button type="button" class="ini-chip${now?" now":""}${dead?" dead":""}" data-inichip="${esc(r.id)}" aria-label="${esc(lbl)}">`+
+    `<span class="ini-top">${show?`<span class="ini-n">${esc(r.init===null?"—":String(r.init))}</span>`:""}<span class="ini-nm">${esc(name)}</span></span>${hbBarHTML(dead?{band:null,share:null}:combatantBar(r))}</button>`;
+}
+function initRowHTML(r,ch){
+  const name=r.kind==="you"?(ch.name||"You"):r.name,ac=r.kind==="you"?youAC():r.ac;
+  return `<button type="button" class="ini-row${combatantDead(r)?" dead":""}" data-inirow="${esc(r.id)}"><span class="ini-n">${esc(r.init===null?"—":String(r.init))}</span>`+
+    `<span class="ini-nm">${esc(name)} <span class="ini-kind">${r.kind==="you"?"you":r.kind==="party"?"party":""}</span></span>`+
+    `<span class="ini-hp">${esc(combatantHealthText(r))}</span>${ac!==""?`<span class="ini-ac">AC ${esc(String(ac))}</span>`:""}</button>`;
 }
 function initTableHTML(ch){
   const list=ch.combatants||[],mode=ch.initMode==="rounds"?"rounds":"turns";
-  return `<div class="ini-table">`+list.map(r=>{
-    const name=r.kind==="you"?(ch.name||"You"):r.name,ac=r.kind==="you"?youAC():r.ac;
-    return `<button type="button" class="ini-row${combatantDead(r)?" dead":""}" data-inirow="${esc(r.id)}"><span class="ini-n">${esc(r.init===null?"—":String(r.init))}</span>`+
-      `<span class="ini-nm">${esc(name)} <span class="ini-kind">${r.kind==="you"?"you":r.kind==="party"?"party":""}</span></span>`+
-      `<span class="ini-hp">${esc(combatantHealthText(r))}</span>${ac!==""?`<span class="ini-ac">AC ${esc(String(ac))}</span>`:""}</button>`;
-  }).join("")+`</div><div class="ini-foot"><button type="button" class="add" id="iniAdd">+ Add combatant</button><span class="grow"></span>`+
+  return `<div class="ini-table">`+list.map(r=>initRowHTML(r,ch)).join("")+`</div><div class="ini-foot"><button type="button" class="add" id="iniAdd">+ Add combatant</button><span class="grow"></span>`+
     `<span class="seg">${[["turns","Turns"],["rounds","Rounds"]].map(([v,l])=>`<button type="button" data-inimode="${esc(v)}" class="${mode===v?"on":""}" aria-pressed="${mode===v?"true":"false"}">${esc(l)}</button>`).join("")}</span>`+
     `<button type="button" class="switch ${ch.initShowRolls!==false?"on":""}" id="iniRolls" role="switch" aria-checked="${ch.initShowRolls!==false?"true":"false"}" aria-label="Show rolls"></button><span class="ini-kind">Show rolls</span></div>`;
+}
+/* Where the chip row should be scrolled so the acting chip shows (final
+   review I2): `sl` is its scrollLeft now, `box` and `chip` client rects
+   ({left,right}). A chip already in view, or no actor, keeps `sl` — the
+   player's own sideways scroll survives a repaint. Pure, for the tests. */
+function initChipScroll(sl,box,chip){
+  if(!chip||!box)return sl;
+  const pad=8;
+  if(chip.left<box.left)return Math.max(0,Math.round(sl-(box.left-chip.left)-pad));
+  if(chip.right>box.right)return Math.round(sl+Math.min(chip.right-box.right+pad,chip.left-box.left));
+  return sl;
+}
+/* After every repaint of the strip, which builds a fresh .ini-chips at
+   scrollLeft 0: put back where it was (`sl`), then bring the actor in. Sets
+   scrollLeft directly rather than scrollIntoView(), which may also scroll the
+   page. */
+function initKeepActorInView(sl){
+  const row=document.querySelector("#cvHead .ini-chips");if(!row)return;
+  row.scrollLeft=num(sl);
+  const n=row.querySelector(".ini-chip.now");if(!n)return;
+  const to=initChipScroll(row.scrollLeft,row.getBoundingClientRect(),n.getBoundingClientRect());
+  if(to!==row.scrollLeft)row.scrollLeft=to;
+}
+/* Your chip and table row read your HP live (spec §4), so renderHP() calls
+   this (final review I1). It patches YOUR chip and row in place, never the
+   whole strip and never through renderCombatHeader() (which would re-announce
+   the round and move focus): the HP box commits on `change`, which a blur
+   fires on the mousedown of the next tap, and a Next ▸ replaced between that
+   mousedown and its mouseup never gets the click — driven: a tap on Next
+   right after typing an HP did nothing. Patched in place, every other button
+   stays the same element, and the scroll and focus stay put. Cheap when
+   there is no fight or the view is closed; a node that would come out the
+   same is not touched. */
+function renderInitStrip(){
+  if(!combatViewOpen()||!inCombat(character))return;
+  const you=(character.combatants||[]).find(r=>r.kind==="you");if(!you)return;
+  const patch=(sel,key,html)=>{
+    const el=[...document.querySelectorAll(sel)].find(x=>x.dataset&&x.dataset[key]===you.id);if(!el)return;
+    const t=document.createElement("template");t.innerHTML=html;
+    const nu=t.content&&t.content.firstElementChild;if(!nu||(el.isEqualNode&&el.isEqualNode(nu)))return;
+    el.className=nu.className;el.setAttribute("aria-label",nu.getAttribute("aria-label")||"");
+    if(!nu.hasAttribute("aria-label"))el.removeAttribute("aria-label");
+    el.innerHTML=nu.innerHTML;
+  };
+  patch("#cvHead [data-inichip]","inichip",initChipHTML(you,character));
+  patch("#cvInitTable [data-inirow]","inirow",initRowHTML(you,character));
 }
 function renderInitTable(){
   const el=document.getElementById("cvInitTable");if(!el)return;
@@ -243,14 +309,19 @@ function initNext(){
   character.combatTurn=r.turnId;
   if(r.wrapped)advanceRound(1);
   renderCombatChrome();renderInitTable();scheduleSave();
-  /* AFTER the repaint: renderCombatHeader() writes "Round N" into the same
-     live region, and the turn is the news */
+  /* AFTER the repaint, which may have written "Round N" into the same live
+     region. A screen reader speaks only the last write of a task, so a wrap
+     says both in one message (final review m2). */
   const a=(character.combatants||[]).find(x=>x.id===r.turnId);
-  if(a)setCombatLive(`${a.kind==="you"?(character.name||"You"):a.name}'s turn`);
+  if(!a)return;
+  const who=`${a.kind==="you"?(character.name||"You"):a.name}'s turn`;
+  if(r.wrapped){cvLiveRound=num(character.combatRound);setCombatLive(`Round ${cvLiveRound} — ${who}`);}
+  else setCombatLive(who);
 }
 function setInitMode(mode){
   character.initMode=mode==="rounds"?"rounds":"turns";
-  character.combatTurn=character.initMode==="turns"?(((character.combatants||[]).some(r=>r.id===character.combatTurn)&&character.combatTurn)||initFirstAlive(character.combatants||[])):"";
+  /* a stored actor is kept only while alive (final review m1) */
+  character.combatTurn=character.initMode==="turns"?(((character.combatants||[]).some(r=>r.id===character.combatTurn&&!combatantDead(r))&&character.combatTurn)||initFirstAlive(character.combatants||[])):"";
   renderCombatChrome();renderInitTable();scheduleSave();
 }
 function toggleInitRolls(){character.initShowRolls=character.initShowRolls===false;renderCombatChrome();renderInitTable();scheduleSave();}
@@ -272,7 +343,7 @@ function combatantDialogHTML(r,ch){
     const ex=r.track==="exact";
     body=`<div class="seg cd-track">${[["exact","Exact HP"],["estimate","Estimate"]].map(([v,l])=>`<button type="button" data-ctrack="${esc(v)}" class="${r.track===v?"on":""}" aria-pressed="${r.track===v?"true":"false"}">${esc(l)}</button>`).join("")}</div>`+
       (ex?`<div class="cd-lbl">Hit points</div><div class="cd-step"><button type="button" class="cd-pm" data-chp="-1" aria-label="One less">−</button>`+
-        `<input id="cdHp" inputmode="numeric" value="${esc(String(r.hp))}" aria-label="Current HP"><span class="cd-k">/ ${esc(r.maxHp===""?"?":String(r.maxHp))}</span>`+
+        `<input id="cdHp" inputmode="numeric" value="${esc(String(r.hp))}" aria-label="Current HP">${r.maxHp===""?"":`<span class="cd-k">/ ${esc(String(r.maxHp))}</span>`}`+
         `<button type="button" class="cd-pm" data-chp="1" aria-label="One more">+</button></div>`:bands(4))+
       `<button type="button" class="cd-toggle" id="cdDead" role="switch" aria-checked="${r.dead?"true":"false"}"><span>Dead</span><span class="switch ${r.dead?"on":""}"></span></button>`;
   }
@@ -284,19 +355,34 @@ function setCombatant(id,patch){
   const list=character.combatants||[],r=list.find(x=>x.id===id);if(!r)return;
   if("band" in patch)r.band=(Number.isInteger(patch.band)&&patch.band>=0&&patch.band<=4)?patch.band:null;
   if("track" in patch&&r.kind==="party")r.track=patch.track==="estimate"?"estimate":"exact";
-  if("hp" in patch&&r.kind==="party"){const h=initOpt(patch.hp);r.hp=h===""?"":(num(r.maxHp)>0?Math.min(h,num(r.maxHp)):h);}
+  if("hp" in patch&&r.kind==="party"){const n=initInt(patch.hp),h=n===null?"":Math.max(0,n);r.hp=h===""?"":(num(r.maxHp)>0?Math.min(h,num(r.maxHp)):h);}
   if("dead" in patch&&r.kind==="party")r.dead=patch.dead===true;
   if("ac" in patch&&r.kind!=="you")r.ac=initOpt(patch.ac);
   if("init" in patch){r.init=initInt(patch.init);character.combatants=initSort(list);}
-  if(character.initMode==="turns"&&!(character.combatants||[]).some(x=>x.id===character.combatTurn&&!combatantDead(x)))
-    character.combatTurn=initNextTurn(character.combatants,character.combatTurn).turnId||initFirstAlive(character.combatants);
+  let wrapped=false;
+  if(character.initMode==="turns"&&!(character.combatants||[]).some(x=>x.id===character.combatTurn&&!combatantDead(x))){
+    const n=initNextTurn(character.combatants,character.combatTurn);
+    character.combatTurn=n.turnId||initFirstAlive(character.combatants);
+    wrapped=initTurnWrapped(n);
+  }
+  if(wrapped)advanceRound(1);
   renderCombatChrome();renderInitTable();scheduleSave();
+}
+/* Moving the marker off a dead or removed actor past the end of the order
+   is a wrap, exactly as Next's is (ruling T5-M2): the round advances once.
+   Not when the marker lands back on a dead row (nobody living at all). */
+function initTurnWrapped(n){
+  if(!n||!n.wrapped||!n.turnId)return false;
+  const r=(character.combatants||[]).find(x=>x.id===n.turnId);
+  return !!r&&!combatantDead(r);
 }
 function removeCombatant(id){
   const list=character.combatants||[],r=list.find(x=>x.id===id);if(!r||r.kind==="you")return;
-  if(character.combatTurn===id)character.combatTurn=initNextTurn(list,id).turnId;
+  let n=null;
+  if(character.combatTurn===id){n=initNextTurn(list,id);character.combatTurn=n.turnId;}
   character.combatants=list.filter(x=>x.id!==id);
   if(character.combatTurn===id)character.combatTurn=initFirstAlive(character.combatants);
+  if(initTurnWrapped(n))advanceRound(1);   /* T5-M2 */
   renderCombatChrome();renderInitTable();scheduleSave();
 }
 function moveCombatant(id,dir){
@@ -308,6 +394,7 @@ function moveCombatant(id,dir){
 function addCombatant(name,init,ac){
   const nm=String(name||"").trim().slice(0,60);if(!nm)return "Give it a name.";
   const row=buildCombatants({name:""},[],[{name:nm,count:1,ac,init}]).find(r=>r.kind==="foe");
+  row.name=nm;   /* the 60 a name may have: buildCombatants() keeps 56 for a "× N" number, and one row has none (m9) */
   character.combatants=initSort((character.combatants||[]).concat([row]));
   if(character.initMode==="turns"&&!character.combatTurn)character.combatTurn=initFirstAlive(character.combatants);
   renderCombatChrome();renderInitTable();scheduleSave();return "";
@@ -330,16 +417,30 @@ function openCombatant(id){
     body.addEventListener("click",e=>{
       const t=e.target,cid=_cdId;let m;
       if((m=t.closest("[data-cband]"))){setCombatant(cid,{band:num(m.dataset.cband)});closeModal();return;}
-      if((m=t.closest("[data-ctrack]"))){setCombatant(cid,{track:m.dataset.ctrack});openCombatant(cid);return;}
-      if((m=t.closest("[data-chp]"))){const x=(character.combatants||[]).find(z=>z.id===cid);setCombatant(cid,{hp:Math.max(0,num(x&&x.hp)+num(m.dataset.chp))});openCombatant(cid);return;}
-      if(t.closest("#cdDead")){const x=(character.combatants||[]).find(z=>z.id===cid);setCombatant(cid,{dead:!(x&&x.dead)});openCombatant(cid);return;}
-      if((m=t.closest("[data-cmove]"))){moveCombatant(cid,num(m.dataset.cmove));openCombatant(cid);return;}
+      if((m=t.closest("[data-ctrack]"))){const v=m.dataset.ctrack;setCombatant(cid,{track:v});openCombatant(cid);cdRefocus(`[data-ctrack="${v==="estimate"?"estimate":"exact"}"]`);return;}
+      if((m=t.closest("[data-chp]"))){const d=num(m.dataset.chp),x=(character.combatants||[]).find(z=>z.id===cid);setCombatant(cid,{hp:Math.max(0,num(x&&x.hp)+d)});openCombatant(cid);cdRefocus(`[data-chp="${d<0?-1:1}"]`);return;}
+      if(t.closest("#cdDead")){const x=(character.combatants||[]).find(z=>z.id===cid);setCombatant(cid,{dead:!(x&&x.dead)});openCombatant(cid);cdRefocus("#cdDead");return;}
+      if((m=t.closest("[data-cmove]"))){const d=num(m.dataset.cmove)<0?-1:1;moveCombatant(cid,d);openCombatant(cid);
+        /* past the end of the tie the pressed button is gone: the other one, else Done */
+        cdRefocus(`[data-cmove="${d}"]`,`[data-cmove="${-d}"]`,"#cdDone");return;}
       if(t.closest("#cdRemove")){if(confirm("Remove them from this fight?")){removeCombatant(cid);closeModal();}return;}
       if(t.closest("#cdDone")){closeModal();return;}
     });
   }
-  const ch=(elId,key)=>{const el=document.getElementById(elId);if(el)el.addEventListener("change",()=>setCombatant(_cdId,{[key]:el.value}));};
+  /* A typed value is stored cleaned (an over-max HP clamped, a negative 0), so
+     the box is rewritten from the row: it must never show what was not kept. */
+  const ch=(elId,key)=>{const el=document.getElementById(elId);if(el)el.addEventListener("change",()=>{
+    setCombatant(_cdId,{[key]:el.value});
+    const x=(character.combatants||[]).find(z=>z.id===_cdId);
+    if(x)el.value=key==="init"?(x.init===null?"":String(x.init)):String(x[key]);
+  });};
   ch("cdInit","init");ch("cdAC","ac");ch("cdHp","hp");
+}
+/* After a reopen, the keyboard goes back to the control that was pressed
+   (openModal() would leave it on the first field): the first of these
+   selectors that is in the dialog. */
+function cdRefocus(...sels){
+  for(const q of sels){const b=document.querySelector("#mBody "+q);if(b){b.focus();return;}}
 }
 function openAddCombatant(){
   openModal("Add combatant",`<div class="field"><label class="f" for="acName">Name</label><input id="acName" autocomplete="off"></div>`+
