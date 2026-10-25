@@ -74,6 +74,7 @@ function blankChar(){
        fight's rows (cleared by combatEnd()), whose turn it is, and the two
        display settings. */
     party:[], combatants:[], combatTurn:"", initMode:"turns", initShowRolls:true,
+    invLog:[], invLogSize:500,
     size:"", encumbrance:"none", coinWeight:true, hpColor:true, hdStyle:"full", statStyle:"classic",
     /* Notes pinned to a section of the sheet, keyed by NOTE_SECTIONS id.
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO

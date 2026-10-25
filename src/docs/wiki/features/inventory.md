@@ -16,6 +16,7 @@ can carry the player's own fields (quantity, origin, favourite, filing) alongsid
 `openItemUsePrompt()`, `addStatusByName()` in `80-modal-forms.js` · `resetItemUses()`,
 `parseDiceExpr()`, `rollDiceExpr()` in `65-resources.js` · `renderCoins()`, `applyCoinInput()`,
 `signedEntry()`, `coinKeys()`, `openCoinAdjust()`, `convertCoins()` in `66-coins-hp.js` ·
+`logInv()`, `invUndo()` in `67-trade.js` ·
 `grantItemByName()` in `50-classrace.js` · markup `src/html/10-inventory.html` · **Data:**
 [rules-schema §6.8](../../../../docs/rules-schema.md) · **Tests:** `sheet.js`, `char-update.js`,
 `rules-data.js` · **See also:** [Armor & AC](armor-and-ac.md), [Attacks & damage](attacks-and-damage.md),

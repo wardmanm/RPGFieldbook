@@ -93,6 +93,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'initTie', 'combatantDialogHTML', 'setCombatant', 'removeCombatant', 'moveCombatant',
   'addCombatant', 'openCombatant', 'openAddCombatant',
   'renderInitStrip', 'initChipScroll', 'irStart', 'renderCombatHeader',
+  'INV_LOG_SIZES', 'COIN_CP', 'coinsToCp', 'cpToGpText', 'itemWorthCp', 'invSame', 'invSnap',
+  'cleanInvLog', 'logInv', 'logGrant', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -6396,6 +6398,100 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ctx.advanceRound = keep.ar; ctx.setCombatLive = keep.live; ctx.combatViewOpen = keep.cvo; ctx.document.querySelector = keep.qs;
     ctx.document.getElementById = keep.gid; ctx.renderActiveSpells = keep.ra;
   }
+}
+
+// ---------- #47 the inventory log: fields, maths, undo
+{
+  const b = X.blankChar();
+  ck('#47 a new character: empty log, size 500', JSON.stringify(b.invLog) === '[]' && b.invLogSize === 500);
+  const m = X.migrate({abilities: {}, invLogSize: 7, invLog: [{kind: 'add', at: 5, title: 'A'}, {kind: 'bogus', at: 6}, 'x', {kind: 'coins', title: 'no at'}]});
+  ck('#47 migrate: a bad size falls back to 500; unknown kinds, junk and entries with no time are dropped',
+     m.invLogSize === 500 && m.invLog.length === 1 && m.invLog[0].kind === 'add' && Array.isArray(m.invLog[0].lines) && m.invLog[0].undone === false, m);
+  ck('#47 an old save gets an empty log', JSON.stringify(X.migrate({abilities: {}}).invLog) === '[]');
+
+  ck('#47 coins to copper: every denomination', X.coinsToCp({pp: 1, gp: 2, ep: 1, sp: 3, cp: 4}) === 1000 + 200 + 50 + 30 + 4);
+  ck('#47 copper as gp text: whole, fractional, zero', X.cpToGpText(5100) === '51 gp' && X.cpToGpText(50) === '0.5 gp' && X.cpToGpText(1234) === '12.34 gp' && X.cpToGpText(0) === '0 gp');
+  ck('#47 an item\'s worth is cost × quantity, no cost is 0', X.itemWorthCp({cost: 2}, 3) === 600 && X.itemWorthCp({}, 5) === 0 && X.itemWorthCp({cost: 0.5}, 1) === 50);
+  ck('#47 invSame ignores key order', X.invSame({a: 1, b: {c: 2, d: 3}}, {b: {d: 3, c: 2}, a: 1}) && !X.invSame({a: 1}, {a: 2}));
+
+  const keep = {ch: X.character, now: ctx.Date.now};
+  try {
+    X.character = X.blankChar(); X.character.invLogSize = 100;
+    for (let i = 0; i < 105; i++) X.logInv({kind: 'coins', title: 'c' + i, lines: [], undo: null});
+    ck('#47 logInv puts the newest first and trims to the size', X.character.invLog.length === 100 && X.character.invLog[0].title === 'c104' && X.character.invLog[99].title === 'c5');
+    ck('#47 ...and stamps id, time and undone', typeof X.character.invLog[0].id === 'string' && X.character.invLog[0].at > 0 && X.character.invLog[0].undone === false);
+
+    /* grant batching */
+    X.character.invLog = []; let t = 1000; ctx.Date.now = () => t;
+    X.logGrant('class:Fighter', {dir: '+', text: 'Chain Mail'}); t += 1000; X.logGrant('class:Fighter', {dir: '+', text: '10 gp'});
+    t += 1000; X.logGrant('bg:Acolyte', {dir: '+', text: 'Holy symbol'});
+    ck('#47 grants batch per source within 5 s; a new source starts a new line',
+       X.character.invLog.length === 2 && X.character.invLog[1].title === 'Granted by Fighter' && X.character.invLog[1].lines.length === 2 && X.character.invLog[0].title === 'Granted by Acolyte' && X.character.invLog[1].undo === null,
+       X.character.invLog.map(e => e.title));
+    t += 9000; X.logGrant('bg:Acolyte', {dir: '+', text: 'Prayer book'});
+    ck('#47 ...and the same source later starts a new line', X.character.invLog.length === 3);
+  } finally { X.character = keep.ch; ctx.Date.now = keep.now; }
+}
+
+// ---------- #47 undo, kind by kind (Review Focus 1)
+{
+  const keep = {ch: X.character, rs: ctx.scheduleSave, ri: ctx.renderInventory, ra: ctx.renderAttacks, rc: ctx.renderCoins, rq: ctx.recompute};
+  ctx.scheduleSave = () => {}; ctx.renderInventory = () => {}; ctx.renderAttacks = () => {}; ctx.renderCoins = () => {}; ctx.recompute = () => {};
+  const fresh = () => { X.character = X.blankChar(); X.character.inventory = []; X.character.attacks = []; X.character.coins = {gp: 10, sp: 0, cp: 0}; };
+  const top = () => X.character.invLog[0];
+  try {
+    /* add: created, then partly used → blocked */
+    fresh(); X.character.inventory.push({id: 'p', name: 'Potion', qty: 3});
+    X.logInv({kind: 'add', title: 'Added Potion', lines: [{dir: '+', text: 'Potion ×3'}], undo: {items: [{id: 'p', qty: 3, created: true}]}});
+    const addE = top();
+    X.character.inventory[0].qty = 2;
+    ck('#47 undo add refuses once the item was partly used', X.invUndoCheck(addE).ok === false && X.invUndoCheck(addE).why === 'It has since been used, sold or removed.', X.invUndoCheck(addE));
+    X.character.inventory[0].qty = 3;
+    ck('#47 undo add removes a created item entirely', X.invUndo(addE.id) === '' && X.character.inventory.length === 0 && addE.undone === true && top().title === 'Undid: Added Potion');
+    ck('#47 an undone line cannot be undone again', X.invUndoCheck(addE).ok === false);
+
+    /* add onto an existing stack: removes only the added quantity */
+    fresh(); X.character.inventory.push({id: 'a', name: 'Arrow', qty: 25});
+    X.logInv({kind: 'add', title: 'Added Arrow', lines: [], undo: {items: [{id: 'a', qty: 20, created: false}]}});
+    X.invUndo(top().id);
+    ck('#47 undo add onto a stack takes back only what was added', X.character.inventory[0].qty === 5);
+
+    /* edit */
+    fresh(); const before = {id: 'b', name: 'Backpack', qty: 1}, after = {id: 'b', name: 'Backpack', qty: 2};
+    X.character.inventory.push(JSON.parse(JSON.stringify(after)));
+    X.logInv({kind: 'edit', title: 'Edited Backpack', lines: [], undo: {before, after}});
+    const ed = top(); X.character.inventory[0].qty = 4;
+    ck('#47 undo edit refuses after a second edit', X.invUndoCheck(ed).why === 'It has been changed again since.');
+    X.character.inventory[0].qty = 2;
+    ck('#47 undo edit puts the item back as it was', X.invUndo(ed.id) === '' && X.character.inventory[0].qty === 1);
+
+    /* delete, with its linked attack */
+    fresh();
+    X.logInv({kind: 'delete', title: 'Deleted Dagger', lines: [], undo: {snap: {id: 'd', name: 'Dagger', qty: 1, weapon: {dice: '1d4'}}, at: 0, atk: {id: 'k', name: 'Dagger', itemId: 'd'}}});
+    ck('#47 undo delete always works and brings its attack back', X.invUndo(top().id) === '' && X.character.inventory[0].name === 'Dagger' && X.character.attacks.some(a => a.itemId === X.character.inventory[0].id));
+
+    /* use (plan-level choice: always clean, even for the last one) */
+    fresh();
+    X.logInv({kind: 'use', title: 'Used Healing Potion', lines: [], undo: {id: 'h', qty: 1, used: 0, snap: {id: 'h', name: 'Healing Potion', qty: 1}}});
+    ck('#47 undo use of the last one puts it back', X.invUndo(top().id) === '' && X.character.inventory.length === 1 && X.character.inventory[0].qty === 1);
+    fresh(); X.character.inventory.push({id: 'w', name: 'Wand', qty: 1, uses: {max: 3, used: 2}});
+    X.logInv({kind: 'use', title: 'Used Wand', lines: [], undo: {id: 'w', qty: 0, used: 1, snap: null}});
+    X.invUndo(top().id);
+    ck('#47 undo use gives a use back', X.character.inventory[0].uses.used === 1);
+
+    /* coins */
+    fresh();
+    X.logInv({kind: 'coins', title: 'Coins adjusted', lines: [], undo: {delta: {gp: 15}}});
+    const co = top(); X.character.coins.gp = 10;
+    ck('#47 undo coins refuses when the gold has been spent', X.invUndoCheck(co).ok === false && /Not enough GP left to take back\./.test(X.invUndoCheck(co).why), X.invUndoCheck(co));
+    X.character.coins.gp = 30;
+    ck('#47 undo coins applies the opposite change', X.invUndo(co.id) === '' && X.character.coins.gp === 15);
+
+    /* grant and ammo: never */
+    X.logInv({kind: 'grant', title: 'Granted by Fighter', lines: [], undo: null});
+    ck('#47 grants have no undo', X.invUndoCheck(top()).ok === false && X.invUndoCheck(top()).why === '');
+    ck('#47 an unknown id is refused', X.invUndo('nope') !== '');
+  } finally { X.character = keep.ch; ctx.scheduleSave = keep.rs; ctx.renderInventory = keep.ri; ctx.renderAttacks = keep.ra; ctx.renderCoins = keep.rc; ctx.recompute = keep.rq; }
 }
 
 ck.done();

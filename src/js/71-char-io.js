@@ -157,6 +157,9 @@ function migrate(s){
   /* a marker only in Turns mode, and never on a dead row (final review m1) */
   base.combatTurn=base.initMode!=="turns"?"":base.combatants.some(r=>r.id===s.combatTurn&&!combatantDead(r))?String(s.combatTurn):initFirstAlive(base.combatants);
   base.initShowRolls=s.initShowRolls!==false;
+  /* #47: the inventory log */
+  base.invLogSize=INV_LOG_SIZES.indexOf(num(s.invLogSize))>=0?num(s.invLogSize):500;
+  base.invLog=cleanInvLog(s.invLog,base.invLogSize);
   migrateSheet103(base);
   return base;
 }
