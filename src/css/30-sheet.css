@@ -473,3 +473,8 @@ button.ammo-load:hover{background:color-mix(in srgb,var(--accent-2) 14%,transpar
 .kw::after{content:"❧";font-size:.7em;vertical-align:super;margin-left:1px;opacity:.7}
 .kw:hover,.kw:focus{background:color-mix(in srgb,var(--accent-2) 16%,transparent);outline:none}
 
+/* ---- the Party card (#91) ---- */
+.party-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dotted var(--hair)}
+.party-nm{flex:1;min-width:0;font-weight:700;overflow-wrap:break-word}
+.party-k{font-family:var(--head);font-size:11px;color:var(--ink-soft)}
+

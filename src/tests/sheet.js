@@ -86,6 +86,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'HB_NAMES', 'HB_SAYS', 'initInt', 'initOpt', 'cleanParty', 'cleanCombatants', 'combatantDead',
   'initSort', 'initFirstAlive', 'initNextTurn', 'bandOfShare', 'combatantBar', 'initRollCheck',
   'initRollLine', 'initModOf', 'youAC', 'buildCombatants',
+  'partyRowsHTML', 'savePartyMember', 'removePartyMember',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2346,8 +2347,9 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   // #103: class and origin leave (their Remove sits behind the header's flyout
   // and window, with a confirm); defences and proficiencies joined in Task 4
   // #103 final review I-3: familiars leaves (its card is hidden on the Sheet)
-  ck('#97 the eleven cards', JSON.stringify(X.EDIT_CARDS) ===
-     JSON.stringify(['statuses', 'attacks', 'resources', 'features', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies']));
+  // #91: the Party card joins (eleven → twelve)
+  ck('#97 the twelve cards', JSON.stringify(X.EDIT_CARDS) ===
+     JSON.stringify(['statuses', 'attacks', 'resources', 'features', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies', 'party']));
   ck('#97 a sheet from before, and junk, read as {}',
      JSON.stringify(X.migrate({abilities: {}}).editHide) === '{}' &&
      ['x', [], null, 7].every(v => JSON.stringify(X.migrate({abilities: {}, editHide: v}).editHide) === '{}'));
@@ -4595,9 +4597,10 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const m2 = X.migrate({abilities: {}, combatSections: ['vitals', 'portrait', 'rest', 'statuses']});
   ck('#103 ...once, beside a vitals (and a rest) already there', same(m2.combatSections, ['vitals', 'statuses']), m2.combatSections);
   ck('#103 ...and migrating again changes nothing', same(X.migrate(JSON.parse(JSON.stringify(m2))).combatSections, ['vitals', 'statuses']));
+  // #91: the Party card joins the header as the only other nocv section
   ck('#103 the header is not combat-addable; every other section is',
      !X.combatAddable('portrait') && X.combatAddable('vitals') && X.combatAddable('familiars') && !X.combatAddable('nope') &&
-     X.NOTE_SECTIONS.filter(s => !X.combatAddable(s.k)).map(s => s.k).join() === 'portrait');
+     X.NOTE_SECTIONS.filter(s => !X.combatAddable(s.k)).map(s => s.k).join() === 'portrait,party');
   ck('#103 a portrait that reaches the view unmigrated is dropped', same(X.combatSectionsOf({combatSections: ['portrait', 'vitals']}), ['vitals']));
   const c = X.blankChar(); X.character = c;
   X.toggleCombatSection('portrait');
@@ -4612,8 +4615,9 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     return {querySelector: s => s === '.label' ? label : null};
   };
   try { X.renderCombatToggles(); } finally { doc.querySelector = q; }
+  // #91: the Party card is nocv too, so two registry sections carry no toggle
   ck('#103 the header carries no combat toggle', !got.some(([k]) => k === 'portrait') && got.some(([k]) => k === 'vitals') &&
-     got.length === X.NOTE_SECTIONS.length - 1, got.map(([k]) => k));
+     got.length === X.NOTE_SECTIONS.length - 2, got.map(([k]) => k));
 }
 
 /* ---- #103: a jump to the familiars note with the paw hidden (Task 7 review M4) ----
@@ -6072,6 +6076,31 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   const e = X.blankChar(); e.combatActive = true; e.combatRound = 3; e.combatants = B; e.combatTurn = B[0].id;
   X.combatEnd(e);
   ck('#91 End combat clears the fight', JSON.stringify(e.combatants) === '[]' && e.combatTurn === '');
+}
+
+// ---------- #91 the Party card
+{
+  const keep = {ch: X.character, sv: ctx.scheduleSave, rp: ctx.renderParty};
+  ctx.scheduleSave = () => {}; ctx.renderParty = () => {};
+  try {
+    X.character = X.blankChar();
+    ck('#91 saving a member needs a name', X.savePartyMember('', '  ', '', '') === 'Give them a name.' && X.character.party.length === 0);
+    ck('#91 ...and adds one with optional AC and max HP', X.savePartyMember('', 'Thorn', '14', '') === '' && X.character.party.length === 1 &&
+       X.character.party[0].ac === 14 && X.character.party[0].maxHp === '', X.character.party);
+    const id = X.character.party[0].id;
+    X.savePartyMember(id, 'Thorn the Bold', '', '22');
+    ck('#91 ...edits in place by id', X.character.party.length === 1 && X.character.party[0].name === 'Thorn the Bold' && X.character.party[0].ac === '' && X.character.party[0].maxHp === 22);
+    const h = X.partyRowsHTML([{id: 'q"1', name: '<b>Bree</b>', ac: '', maxHp: 9}]);
+    ck('#91 rows escape, show a blank AC as nothing, and carry #97-hideable edit and remove buttons',
+       h.includes('&lt;b&gt;Bree&lt;/b&gt;') && !h.includes('<b>Bree') && !/AC\s*—/.test(h) && /class="icon ed" data-partyedit="q&quot;1"/.test(h) && /class="icon danger ed" data-partydel="q&quot;1"/.test(h), h);
+    ck('#91 an empty party says how it works', /Add the friends who fight beside you/.test(X.partyRowsHTML([])));
+    X.removePartyMember(id);
+    ck('#91 removing takes them off the card', X.character.party.length === 0);
+  } finally { X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderParty = keep.rp; }
+  ck('#91 the Party card is a registered Bio section that never enters the combat view',
+     X.NOTE_SECTIONS.some(s => s.k === 'party' && s.tab === 'story' && s.nocv === true) && X.EDIT_CARDS.indexOf('party') >= 0);
+  const html = require('./harness').loadHTML();
+  ck('#91 the Bio tab carries the card with its list and add button', /<div class="card" data-note="party">[\s\S]*?id="partyAdd"[\s\S]*?id="partyList"/.test(html));
 }
 
 ck.done();

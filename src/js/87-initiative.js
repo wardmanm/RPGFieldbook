@@ -86,3 +86,33 @@ function buildCombatants(you,party,foes){
   });
   return initSort(rows);
 }
+
+/* ---- the Party card (Bio) ---- */
+function partyRowsHTML(list){
+  if(!list.length)return `<p class="empty">Add the friends who fight beside you. They join every fight you start.</p>`;
+  return `<div class="party-list">`+list.map(p=>`<div class="party-row"><span class="party-nm">${esc(p.name)}</span>`+
+    (p.ac!==""?`<span class="party-k">AC ${esc(String(p.ac))}</span>`:"")+(p.maxHp!==""?`<span class="party-k">HP ${esc(String(p.maxHp))}</span>`:"")+
+    `<button class="icon ed" data-partyedit="${esc(p.id)}" aria-label="${esc("Edit "+p.name)}"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`+
+    `<button class="icon danger ed" data-partydel="${esc(p.id)}" aria-label="${esc("Remove "+p.name)}"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button></div>`).join("")+`</div>`;
+}
+function renderParty(){const el=document.getElementById("partyList");if(el)el.innerHTML=partyRowsHTML(cleanParty(character.party));}
+function savePartyMember(id,name,ac,maxHp){
+  const nm=String(name||"").trim().slice(0,60);if(!nm)return "Give them a name.";
+  const list=cleanParty(character.party),row={id:id||uid(),name:nm,ac:initOpt(ac),maxHp:initOpt(maxHp)};
+  const i=list.findIndex(p=>p.id===id);if(i>=0)list[i]=row;else list.push(row);
+  character.party=list;renderParty();scheduleSave();return "";
+}
+function removePartyMember(id){character.party=cleanParty(character.party).filter(p=>p.id!==id);renderParty();scheduleSave();}
+function openPartyForm(id){
+  const p=cleanParty(character.party).find(x=>x.id===id)||{id:"",name:"",ac:"",maxHp:""};
+  openModal(id?"Edit party member":"Add party member",
+    `<div class="field"><label class="f" for="pmName">Name</label><input id="pmName" value="${esc(p.name)}" autocomplete="off"></div>`+
+    `<div class="g2"><div class="field"><label class="f" for="pmAC">AC (optional)</label><input id="pmAC" inputmode="numeric" value="${esc(String(p.ac))}"></div>`+
+    `<div class="field"><label class="f" for="pmHP">Max HP (optional)</label><input id="pmHP" inputmode="numeric" value="${esc(String(p.maxHp))}"></div></div>`+
+    `<p class="hint" id="pmWhy" aria-live="polite"></p><div class="m-actions"><button class="tbtn" id="pmCancel">Cancel</button><button class="tbtn primary" id="pmSave">${id?"Save":"Add"}</button></div>`);
+  document.getElementById("pmCancel").addEventListener("click",closeModal);
+  document.getElementById("pmSave").addEventListener("click",()=>{
+    const why=savePartyMember(id,document.getElementById("pmName").value,document.getElementById("pmAC").value,document.getElementById("pmHP").value);
+    if(why){document.getElementById("pmWhy").textContent=why;return;}closeModal();
+  });
+}

@@ -1242,7 +1242,8 @@ function block(html, needle, tag) {
   const inTemplate = (t.match(/data-note="([a-z]+)"/g) || []).map(s => s.slice(11, -1));
 
   // #103: 21 → 18 — the Class, Ancestry & Background and Rest cards are gone
-  ck('the registry has 18 sections', X.NOTE_SECTIONS.length === 18, X.NOTE_SECTIONS.length);
+  // #91: 18 → 19, the Party card
+  ck('the registry has 19 sections', X.NOTE_SECTIONS.length === 19, X.NOTE_SECTIONS.length);
   ck('every section id is unique',
      new Set(X.NOTE_SECTIONS.map(s => s.k)).size === X.NOTE_SECTIONS.length);
   ck('every section names a tab the Section Notes card can group under',
@@ -1261,10 +1262,11 @@ function block(html, needle, tag) {
   // rail, the strip and Features carry one layout class after "card" (the
   // brief's `card rail` / `card strip` / `card wide`) — data-note still
   // straight after the class attribute, which is what the count guards
+  // #91: 18 → 19, the Party card
   ck('every data-note is on a card element',
-     (t.match(/data-note="[a-z]+"/g) || []).length === 18 &&
+     (t.match(/data-note="[a-z]+"/g) || []).length === 19 &&
      (t.match(/<div class="card(?: [a-z-]+)?" data-note="[a-z]+"/g) || []).length +
-     (t.match(/<header class="card sheet-head" data-note="[a-z]+"/g) || []).length === 18,
+     (t.match(/<header class="card sheet-head" data-note="[a-z]+"/g) || []).length === 19,
      (t.match(/<div class="card"[^>]*data-note[^>]*>/g) || []).length);
   /* The Journal panel, sliced to the next panel so a card on a LATER tab can
      neither satisfy nor break these. The regex this replaced ran on to the end
