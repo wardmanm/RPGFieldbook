@@ -355,6 +355,11 @@ function startCombatNow(){combatStart(character);renderActiveSpells();renderComb
 function endCombatAsk(){
   const r=num(character.combatRound);
   if(!confirm(`End combat at round ${r}?`))return false;
+  /* one log line per ammunition kind fired this fight (#47) — read before
+     combatEnd/applyAmmoRecovery below ever touch ammoSpent; no undo, so it's
+     written and done */
+  ammoFightSummary(character).forEach(a=>{const nm=ammoPlural(a.kind);
+    logInv({kind:"ammo",title:`${nm.charAt(0).toUpperCase()+nm.slice(1)}: ${a.fired} fired, ${a.back} recovered`,lines:[],undo:null,meta:{rounds:r}});});
   const s=combatEnd(character);
   renderActiveSpells();renderCombatChrome();scheduleSave();
   /* then the ammunition (#104): recovered by the rule, with an Undo recovery on the toast */

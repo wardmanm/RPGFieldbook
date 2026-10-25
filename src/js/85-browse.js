@@ -115,12 +115,13 @@ function finderQty(v){const n=Math.floor(Number(v));return Number.isFinite(n)&&n
    one linked attack however many are added. No rendering, so the suite can call it. */
 function addLibraryItems(entries,og,costOverride,qty){
   const n=finderQty(qty);
+  const out=[];
   entries.forEach(x0=>{
     /* A bundle ("Arrows (20)") arrives as its single piece, so the quantity is
        the count of arrows (#6): ×2 of a twenty-arrow bundle adds 40. */
     const u=unpackAmmo(x0,rules.items), x=u.def, add=n*u.per;
     const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());
-    if(ex){ex.qty=num(ex.qty)+add;return;}
+    if(ex){ex.qty=num(ex.qty)+add;out.push({id:ex.id,qty:add,created:false});return;}
     const m=itemMetaLine(x);
     const it={id:uid(),name:x.name,qty:add,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:!!x.weapon};
     if(og)it.origin=og;
@@ -131,7 +132,9 @@ function addLibraryItems(entries,og,costOverride,qty){
     stampSrc(it,x,"item","items","browse");
     character.inventory.push(it);
     if(it.weapon)addAttackForItem(it);
+    out.push({id:it.id,qty:add,created:true});
   });
+  return out;
 }
 /* ---- the pickers' filters, shared with the Rules tab (#99) ----
    Each returns the facet list openBrowse() takes. The Rules tab's tables filter
@@ -181,7 +184,7 @@ function browseItems(){
     costInput:true,
     facets:itemFacets(lib),
     qtyInput:true,
-    onAdd:(entries,og,costOverride,qty)=>{addLibraryItems(entries,og,costOverride,qty);renderInventory();renderAttacks();recompute();scheduleSave();}
+    onAdd:(entries,og,costOverride,qty)=>{const did=addLibraryItems(entries,og,costOverride,qty);logFinderAdd(did);renderInventory();renderAttacks();recompute();scheduleSave();}
   });
 }
 /* create an Attacks & Weapons entry linked to a weapon inventory item */

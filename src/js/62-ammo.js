@@ -334,6 +334,16 @@ function ammoRecoverable(c){
   });
   return [...by.values()].filter(r=>r.back>0);
 }
+/* Every kind fired this fight, with what its rules give back, including 0 (#47's log line). */
+function ammoFightSummary(c){
+  const by=new Map();
+  Object.keys(ammoSpentMap(c)).forEach(id=>{
+    const e=ammoSpentEntry(c,id);if(!e.n||!e.kind)return;
+    const r=by.get(e.kind)||{kind:e.kind,fired:0,back:0};
+    r.fired+=e.n;r.back+=ammoBack(ammoRecoverRule(c,ammoEntryItem(c,id,e)),e);by.set(e.kind,r);
+  });
+  return [...by.values()];
+}
 /* Gives back what each entry's rule allows (#104), for the kinds asked
    (every kind when none are) — or, when `ids` is given, for those ammoSpent
    entries only (a thrown weapon's row recovers its own entry: final review,

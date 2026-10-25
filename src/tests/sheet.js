@@ -95,6 +95,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'renderInitStrip', 'initChipScroll', 'irStart', 'renderCombatHeader',
   'INV_LOG_SIZES', 'COIN_CP', 'coinsToCp', 'cpToGpText', 'itemWorthCp', 'invSame', 'invSnap',
   'cleanInvLog', 'logInv', 'logGrant', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
+  'applyCoinInput', 'convertCoins', 'ammoFightSummary',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -6492,6 +6493,51 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#47 grants have no undo', X.invUndoCheck(top()).ok === false && X.invUndoCheck(top()).why === '');
     ck('#47 an unknown id is refused', X.invUndo('nope') !== '');
   } finally { X.character = keep.ch; ctx.scheduleSave = keep.rs; ctx.renderInventory = keep.ri; ctx.renderAttacks = keep.ra; ctx.renderCoins = keep.rc; ctx.recompute = keep.rq; }
+}
+
+// ---------- #47 one change, one line
+{
+  const keep = {ch: X.character, rules: X.rules, rs: ctx.scheduleSave, ri: ctx.renderInventory, ra: ctx.renderAttacks, rc: ctx.renderCoins, rq: ctx.recompute, rsum: ctx.restSummary, rst: ctx.renderStatuses};
+  ['scheduleSave', 'renderInventory', 'renderAttacks', 'renderCoins', 'recompute', 'restSummary', 'renderStatuses'].forEach(n => ctx[n] = () => {});
+  try {
+    X.character = X.blankChar(); X.character.inventory = []; X.character.attacks = [];
+    X.rules = Object.assign({}, X.rules, {items: [{name: 'Rope', cost: '1 gp'}, {name: 'Healing Potion', cost: '50 gp'}]});
+    const did = X.addLibraryItems([{name: 'Rope', cost: '1 gp'}], null, null, 2);
+    ck('#47 addLibraryItems says what it did', did.length === 1 && did[0].qty === 2 && did[0].created === true, did);
+    const did2 = X.addLibraryItems([{name: 'Rope', cost: '1 gp'}], null, null, 1);
+    ck('#47 ...stacking reports created:false', did2[0].created === false && did2[0].id === did[0].id);
+    ck('#47 addLibraryItems itself writes no line (its caller does)', X.character.invLog.length === 0);
+
+    const src = n => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', n), 'utf8');
+    ck('#47 the finder\'s onAdd logs one add line', /onAdd:\(entries,og,costOverride,qty\)=>\{const did=addLibraryItems\([^)]*\);logFinderAdd\(did/.test(src('85-browse.js')));
+    ck('#47 the item form logs add or edit, and nothing for an unchanged save', /logItemSave\(/.test(src('80-modal-forms.js')));
+    ck('#47 the row delete logs one delete line', /data-del-item[\s\S]{0,1400}logInv\(\{kind:"delete"/.test(src('90-boot.js')));
+
+    /* Use */
+    X.character.inventory = [{id: 'h', name: 'Healing Potion', qty: 1, use: {consume: true}}];
+    X.applyItemUse(X.character.inventory[0], {consume: true}, 0, '');
+    ck('#47 Use writes one line, keeping a copy of the last one', X.character.invLog.length === 1 && X.character.invLog[0].kind === 'use' && X.character.invLog[0].undo.snap.name === 'Healing Potion');
+
+    /* coins */
+    X.character.invLog = []; X.character.coins = {gp: 5};
+    const inp = {dataset: {coin: 'gp'}, value: '+10'}; X.applyCoinInput(inp);
+    ck('#47 a coin field commit writes one coins line with the change', X.character.invLog.length === 1 && X.character.invLog[0].undo.delta.gp === 10);
+    inp.value = '15'; X.applyCoinInput(inp);
+    ck('#47 ...an unchanged commit writes nothing', X.character.invLog.length === 1);
+    X.character.coins = {gp: 0, sp: 25, cp: 0}; X.character.system = 'humblewood'; X.convertCoins();
+    ck('#47 Convert writes one re-denomination line', X.character.invLog[0].kind === 'coins' && /Converted/.test(X.character.invLog[0].title) && X.character.invLog[0].undo.delta.gp === 2 && X.character.invLog[0].undo.delta.sp === -20);
+
+    /* grants: one line per source */
+    X.character.invLog = [];
+    X.grantItemByName('Rope', 1, 'class:Fighter'); X.grantItemByName('Healing Potion', 1, 'class:Fighter');
+    ck('#47 a source\'s grants share one line', X.character.invLog.length === 1 && X.character.invLog[0].lines.length === 2 && X.character.invLog[0].title === 'Granted by Fighter');
+
+    /* ammo per fight */
+    X.character.ammoSpent = {s1: {n: 12, kind: 'arrow', snap: {id: 's1', name: 'Arrow'}}};
+    const sum = X.ammoFightSummary(X.character);
+    ck('#47 ammoFightSummary totals what was fired per kind', sum.length === 1 && sum[0].kind === 'arrow' && sum[0].fired === 12, sum);
+    ck('#47 End combat logs one ammo line per kind fired', /ammoFightSummary\(character\)[\s\S]{0,400}logInv\(\{kind:"ammo"/.test(src('87-combat.js')));
+  } finally { Object.assign(ctx, {scheduleSave: keep.rs, renderInventory: keep.ri, renderAttacks: keep.ra, renderCoins: keep.rc, recompute: keep.rq, restSummary: keep.rsum, renderStatuses: keep.rst}); X.character = keep.ch; X.rules = keep.rules; }
 }
 
 ck.done();

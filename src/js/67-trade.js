@@ -39,6 +39,30 @@ function logGrant(sid,line){
   if(top&&top.kind==="grant"&&top.meta&&top.meta.sid===sid&&Date.now()-num(top.at)<5000){top.lines.push(line);return top;}
   return logInv({kind:"grant",title:"Granted by "+grantSourceName(sid),lines:[line],undo:null,meta:{sid}});
 }
+/* ---- every writer logs exactly once (#47 Task 2) ---- */
+function invName(id){const it=(character.inventory||[]).find(x=>x.id===id);return it?String(it.name||"Item"):"Item";}
+function logFinderAdd(did){
+  if(!did||!did.length)return;
+  const lines=did.map(d=>({dir:"+",text:`${invName(d.id)} ×${d.qty}`}));
+  logInv({kind:"add",title:did.length===1?"Added "+invName(did[0].id):`Added ${did.length} items`,lines,undo:{items:did}});
+}
+/* The item form: a new item is an add; an edit is logged only if something changed. */
+function logItemSave(before,after){
+  if(!before){logInv({kind:"add",title:"Added "+(after.name||"Item"),lines:[{dir:"+",text:`${after.name||"Item"} ×${itemQty(after)}`}],undo:{items:[{id:after.id,qty:itemQty(after),created:true}]}});return;}
+  if(invSame(before,after))return;
+  const lines=[];
+  if(itemQty(before)!==itemQty(after))lines.push({dir:"",text:`Quantity ${itemQty(before)} → ${itemQty(after)}`});
+  if(before.name!==after.name)lines.push({dir:"",text:`Name ${before.name} → ${after.name}`});
+  if(!lines.length)lines.push({dir:"",text:"Details changed"});
+  logInv({kind:"edit",title:"Edited "+(after.name||"Item"),lines,undo:{before:invSnap(before),after:invSnap(after)}});
+}
+/* Coins: one line per commit, folding every denomination that actually moved. */
+function logCoins(title,delta){
+  const d={};Object.keys(delta||{}).forEach(k=>{const v=Math.round(num(delta[k]));if(v)d[k]=v;});
+  if(!Object.keys(d).length)return null;
+  const lines=Object.keys(d).map(k=>{const c=COIN_ALL.find(x=>x[0]===k);return {dir:d[k]>0?"+":"-",text:`${d[k]>0?"+":"−"}${Math.abs(d[k])} ${c?c[1]:k}`};});
+  return logInv({kind:"coins",title,lines,undo:{delta:d}});
+}
 /* ---- item helpers for undo (and the trade) ---- */
 function invRemoveQty(id,qty){
   const it=(character.inventory||[]).find(x=>x.id===id);if(!it)return {removed:false,snap:null,atk:null};

@@ -71,7 +71,7 @@ function grantItemByName(name,qty,sid){
   /* a granted bundle arrives as its single piece too (#6): "Arrows (20)" is 20 Arrows */
   if(def){const u=unpackAmmo(def,rules.items);if(u.per>1){def=u.def;qty*=u.per;name=def.name;}}
   const ex=character.inventory.find(i=>i.grant===sid&&String(i.name||"").toLowerCase()===String(name||"").toLowerCase());
-  if(ex){ex.qty=num(ex.qty)+qty;return;}
+  if(ex){ex.qty=num(ex.qty)+qty;logGrant(sid,{dir:"+",text:`${name} ×${qty}`});return;}
   const it={id:uid(),name:(def&&def.name)||name,qty,description:(def&&def.description)||"",effects:(def&&Array.isArray(def.effects))?def.effects:[],equipped:false,grant:sid,origin:originFromSid(sid)};
   if(def&&def.weapon)it.weapon=def.weapon;
   {const am=def&&itemAmmo(def);if(am)it.ammo=am.bonus?{kind:am.kind,bonus:am.bonus}:{kind:am.kind};}
@@ -90,6 +90,7 @@ function grantItemByName(name,qty,sid){
   if(def)stampSrc(it,def,"item","items");   /* no def = a named grant with no matching item entry */
   character.inventory.push(it);
   if(it.weapon)addAttackForItem(it);
+  logGrant(sid,{dir:"+",text:`${name} ×${qty}`});
 }
 function addGrantGold(amt,sid){
   amt=num(amt);if(amt<=0)return;
@@ -97,6 +98,7 @@ function addGrantGold(amt,sid){
   const k=goldKey();character.coins[k]=num(character.coins[k])+amt;
   if(!character.grantGold)character.grantGold={};
   character.grantGold[sid]=num(character.grantGold[sid])+amt;
+  logGrant(sid,{dir:"+",text:`${amt} ${goldKey().toUpperCase()}`});
 }
 function applyEquipOption(o,sid){
   if(!o)return;

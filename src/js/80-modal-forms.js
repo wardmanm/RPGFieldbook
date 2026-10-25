@@ -544,8 +544,10 @@ function openItemForm(existing){
          straight back and clearing it could never stick. */
       rec.use={off:true};
     }
+    const was=invSnap(character.inventory.find(x=>x.id===it.id)||null);
     const i=character.inventory.findIndex(x=>x.id===it.id);if(i>=0)character.inventory[i]=rec;else character.inventory.push(rec);
     syncItemAttack(rec);
+    logItemSave(was,invSnap(character.inventory.find(x=>x.id===rec.id)));
     closeModal();renderInventory();renderAttacks();recompute();scheduleSave();
   });
 }
@@ -601,6 +603,7 @@ function addStatusByName(name){
    the status lands on another tab, so a silent apply leaves the player hunting
    for the change. */
 function applyItemUse(it,u,heal,note){
+  const snap0=invSnap(it),atk0=invSnap((character.attacks||[]).find(a=>a.itemId===it.id)||null);
   const lines=[];
   if(heal>0){
     adjustHP(heal);renderHP();
@@ -625,6 +628,8 @@ function applyItemUse(it,u,heal,note){
       lines.push("That was the last one — removed from your inventory");
     }else{it.qty=left;lines.push(`${left} left`);}
   }
+  logInv({kind:"use",title:"Used "+(it.name||"item"),lines:[{dir:"-",text:u.consume?"−1":"1 use"}],
+    undo:{id:it.id,qty:u.consume?1:0,used:mx>0?1:0,snap:u.consume&&itemQty(snap0)<=1?snap0:null,atk:u.consume&&itemQty(snap0)<=1?atk0:null}});
   renderInventory();renderStatuses();renderAttacks();recompute();scheduleSave();
   restSummary("Used "+(it.name||"item"),lines.length?lines:["Nothing to apply — this item has no effect set."],"");
 }
