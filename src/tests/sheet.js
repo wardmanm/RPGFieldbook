@@ -5927,28 +5927,33 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#52 the template has the Sheet and the five hideable tabs', names.join() === 'sheet,spells,inventory,story,journal,rules', names);
   const btns = names.map(n => ({dataset: {tab: n}, hidden: false}));
   let active = 'spells';
-  const doc = ctx.document, keep = {qa: doc.querySelectorAll, q: doc.querySelector, st: ctx.selectTab, sv: ctx.scheduleSave, ch: X.character};
+  const scrolls = [];
+  const doc = ctx.document, keep = {qa: doc.querySelectorAll, q: doc.querySelector, st: ctx.selectTab, sv: ctx.scheduleSave, ch: X.character, scr: ctx.window.scrollTo};
   let selected = null, saved = 0;
   doc.querySelectorAll = sel => sel === '.tab[data-tab]' ? btns : [];
   doc.querySelector = sel => sel === '.tabpanel.active' ? {id: 'tab-' + active} : null;
   ctx.selectTab = n => { selected = n; active = n; };
   ctx.scheduleSave = () => { saved++; };
+  ctx.window.scrollTo = o => { scrolls.push(o); };
   try {
     X.character = X.blankChar(); X.character.hiddenTabs = ['rules'];
     X.applyHiddenTabs();
     ck('#52 applyHiddenTabs hides exactly the listed buttons', btns.filter(b => b.hidden).map(b => b.dataset.tab).join() === 'rules');
     ck('#52 ...and leaves the active tab alone when it is shown', selected === null);
+    ck('#52 ...and does not scroll when the active tab stays put', scrolls.length === 0, scrolls);
     X.character.hiddenTabs = ['spells'];
     X.applyHiddenTabs();
     ck('#52 applyHiddenTabs moves off a hidden active tab to the Sheet', selected === 'sheet' && btns.find(b => b.dataset.tab === 'rules').hidden === false, selected);
+    ck('#52 ...and scrolls to the top, only in that redirect branch', scrolls.length === 1 && scrolls[0].top === 0, scrolls);
     selected = null; X.setTabHidden('journal', true);
     ck('#52 setTabHidden adds, applies and saves', JSON.stringify(X.character.hiddenTabs) === '["spells","journal"]' && btns.find(b => b.dataset.tab === 'journal').hidden && saved === 1, X.character.hiddenTabs);
+    ck('#52 ...and does not scroll again when the active tab was already shown', scrolls.length === 1, scrolls);
     X.setTabHidden('spells', false);
     ck('#52 ...and removes', JSON.stringify(X.character.hiddenTabs) === '["journal"]' && !btns.find(b => b.dataset.tab === 'spells').hidden);
     X.setTabHidden('sheet', true); X.setTabHidden('combat', true);
     ck('#52 ...and refuses sheet and combat', JSON.stringify(X.character.hiddenTabs) === '["journal"]');
   } finally {
-    doc.querySelectorAll = keep.qa; doc.querySelector = keep.q; ctx.selectTab = keep.st; ctx.scheduleSave = keep.sv; X.character = keep.ch;
+    doc.querySelectorAll = keep.qa; doc.querySelector = keep.q; ctx.selectTab = keep.st; ctx.scheduleSave = keep.sv; X.character = keep.ch; ctx.window.scrollTo = keep.scr;
   }
   const sel = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '40-sheet.js'), 'utf8');
   ck('#52 selectTab treats a hidden tab as the Sheet (a guard for stale callers)',
@@ -5991,7 +5996,13 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
      ['Spells', 'Inventory', 'Bio', 'Journal', 'Rules'].every(l => g.includes('aria-label="Show the ' + l + ' tab"')) && !/Show the Sheet tab/.test(g), g);
   ck('#52 ...on means shown', /class="switch on" id="swTab-spells"[^>]*aria-checked="true"/.test(g), g);
   ck('#52 ...a hidden tab\'s switch is off', /class="switch " id="swTab-rules"[^>]*aria-checked="false"/.test(g), g);
-  ck('#52 ...with the group\'s help', /Hide the tabs this character doesn't use\. Sheet always shows\./.test(g));
+  ck('#52 ...with the group\'s help, as a <p class="hint"> the way Sources and Loaded data open',
+     /^<div class="set-grp"><div class="set-grp-h">Tabs<\/div><p class="hint">Hide the tabs this character doesn't use\. Sheet always shows\.<\/p>/.test(g), g);
+  ck('#52 ...before the first switch row', g.indexOf('Hide the tabs this character') < g.indexOf('id="swTab-spells"'), g);
+  ck('#52 ...so the Spells row carries no help of its own', /<div class="t-lbl">Spells<\/div><\/div>/.test(g), g);
+  ck('#52 ...and the Journal row says it also holds the Section Notes card',
+     /<div class="t-lbl">Journal<\/div><div class="t-sub">Also holds the Section Notes card\.<\/div>/.test(g), g);
+  ck('#52 ...that help appears on the Journal row only', (g.match(/Also holds the Section Notes card\./g) || []).length === 1, g);
   const set = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '88-settings.js'), 'utf8');
   ck('#52 the display page includes the Tabs group', /tabsGroupHTML\(character\)/.test(set));
   ck('#52 each switch writes through setTabHidden', /\[data-tabsw\][\s\S]{0,300}setTabHidden\(/.test(set));

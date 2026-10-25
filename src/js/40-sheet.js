@@ -16,7 +16,9 @@ function cleanHiddenTabs(v){
 function applyHiddenTabs(){
   document.querySelectorAll(".tab[data-tab]").forEach(b=>{b.hidden=isTabHidden(b.dataset.tab);});
   const act=(document.querySelector(".tabpanel.active")||{id:""}).id.replace(/^tab-/,"");
-  if(isTabHidden(act))selectTab("sheet");
+  /* #52 final review (M1): the redirect leaves the Sheet at the old tab's
+     scroll position unless it is sent back to the top itself. */
+  if(isTabHidden(act)){selectTab("sheet");window.scrollTo({top:0});}
 }
 function setTabHidden(name,hide){
   if(HIDEABLE_TABS.indexOf(name)<0)return;

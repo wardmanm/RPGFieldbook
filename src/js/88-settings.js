@@ -61,11 +61,16 @@ function setGroupHTML(title,body){return `<div class="set-grp"><div class="set-g
 function setRowHTML(name,help,control,inline){
   return `<div class="set-row${inline?" set-inline":""}"><div class="set-row-txt"><div class="t-lbl">${name}</div>${help?`<div class="t-sub">${help}</div>`:""}</div><div class="set-row-ctl">${control}</div></div>`;
 }
-/* #52: one switch per word tab; on means shown. Sheet is never listed. */
+/* #52: one switch per word tab; on means shown. Sheet is never listed. Final
+   review (I1): the group's own help opens the body as a <p class="hint">, the
+   way Sources and Loaded data do (:144, :150), so it isn't read as Spells'
+   own row help. The Journal row gets its own note (M7): that tab is also
+   where the Section Notes card lives (src/html/60-journal.html:20). */
 function tabsGroupHTML(c){
-  return setGroupHTML("Tabs",HIDEABLE_TABS.map((t,i)=>{
+  return setGroupHTML("Tabs",`<p class="hint">Hide the tabs this character doesn't use. Sheet always shows.</p>`+
+    HIDEABLE_TABS.map(t=>{
     const shown=!isTabHidden(t,c);
-    return setRowHTML(esc(TAB_LABELS[t]),i===0?"Hide the tabs this character doesn't use. Sheet always shows.":"",
+    return setRowHTML(esc(TAB_LABELS[t]),t==="journal"?"Also holds the Section Notes card.":"",
       `<button type="button" class="switch ${shown?"on":""}" id="swTab-${esc(t)}" data-tabsw="${esc(t)}" role="switch" aria-checked="${shown?"true":"false"}" aria-label="${esc("Show the "+TAB_LABELS[t]+" tab")}"></button>`,true);
   }).join(""));
 }
