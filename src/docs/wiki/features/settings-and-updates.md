@@ -59,16 +59,17 @@ Icon tabs is on (`html[data-tabs="icons"]`) or the screen is 640px wide or less,
 segmented control or dropdown drops below its name while a switch stays beside it. Every switch is
 `role="switch"` with `aria-checked`, kept true by one click listener on the wrapper.
 
-**The Tabs group (#52).** Sheet display's last group, only with a character open: one
-`setRowHTML` switch per `HIDEABLE_TABS` entry (`tabsGroupHTML()`), labelled with the tab's own
-word — Spells, Inventory, Bio, Journal, Rules — on meaning shown. The Sheet and the combat swords
-are not listed; they can't be hidden ([Shell](../ui/shell.md)). Its id is `swTab-<name>`,
-`data-tabsw="<name>"`, and a delegated click handler calls `setTabHidden()`, which updates
-`character.hiddenTabs`, repaints the bar (`applyHiddenTabs()`) and saves — the `swFamiliars`
-pattern. Known as-built rough edge: the group's own help text, "Hide the tabs this character
-doesn't use. Sheet always shows.", sits under the first switch (Spells) rather than above the
-group, because `setGroupHTML()` takes only a title; it reads as if it belonged to Spells. Left for
-a later fix wave (ledger L6989, #52).
+**The Tabs group (#52).** Sheet display's last group, only with a character open: a
+`<p class="hint">` ("Hide the tabs this character doesn't use. Sheet always shows.") opens the
+group's body, the way the Sources and Loaded data groups do (`88-settings.js:144, :150`), above
+one `setRowHTML` switch per `HIDEABLE_TABS` entry (`tabsGroupHTML()`), labelled with the tab's own
+word — Spells, Inventory, Bio, Journal, Rules — on meaning shown. The Journal row carries its own
+help, "Also holds the Section Notes card.", since hiding Journal also hides that card and Trackers
+([Journal](journal.md), [Story & notes](story-and-notes.md)) — the other four rows have no help of
+their own. The Sheet and the combat swords are not listed; they can't be hidden
+([Shell](../ui/shell.md)). Its id is `swTab-<name>`, `data-tabsw="<name>"`, and a per-button click
+handler (`88-settings.js:228-232`) calls `setTabHidden()`, which updates `character.hiddenTabs`,
+repaints the bar (`applyHiddenTabs()`) and saves — the `swFamiliars` pattern.
 
 **Which page opens.** Every shown page is built when the dialog opens and all but one are
 `hidden`, so every control keeps its id and its handler, and the lists keep refreshing behind any
@@ -307,3 +308,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-19 — Sheet display gains an Ammunition group: "Ammo recovery" (half/all/hits/none), writing `character.ammoRecovery`. → ledger L6081, #104
 - 2026-10-19 — "Ammo recovery"'s first choice reads Half (rules as written), as built. → ledger L6147, #104
 - 2026-10-25 — Sheet display gains a Tabs group: one switch per word tab, writing `character.hiddenTabs` via `setTabHidden()`. → ledger L6989, #52
+- 2026-10-25 — Final review fixes: the Tabs group's help moved to a `<p class="hint">` above the switches, the Journal row gained its own help, and the `[data-tabsw]` handler is described as per-button, not delegated. → ledger L7064, #52

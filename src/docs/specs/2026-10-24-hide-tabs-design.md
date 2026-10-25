@@ -116,22 +116,27 @@ The Sheet display page (`88-settings.js`, the `display` page) gets a new group, 
 
 ## As built
 
-As specified, §1–§9, with these notes from the three-task build (see the ledger entry, "Hide tabs
-(#52, 2026-10-25)", for the full QA account and screenshot paths):
+As specified, §1–§9, with these notes from the build and the final review's fix wave (see the
+ledger entries "Hide tabs (#52, 2026-10-25)" and "Hide tabs: final review fixes (#52, 2026-10-25)"
+for the full QA account and screenshot paths):
 
-- **The Tabs group's help text sits under the first switch (Spells), not above the group.**
-  `setGroupHTML()` takes only a title, not a help line, so `tabsGroupHTML()` (`88-settings.js`)
-  reused the row-help slot of its first switch instead of giving the group its own. It reads, on
-  screen, as if "Hide the tabs this character doesn't use. Sheet always shows." belonged to Spells
-  rather than to the group — confirmed in `.claude/qa/52-after-settings-tabs-off.png`. Left for a
-  future fix wave: the clean fix is giving `setGroupHTML()` an optional help line, which touches
-  every other group that has none.
+- **The Tabs group's help is a `<p class="hint">` above the switches, and the Journal row has its
+  own.** `tabsGroupHTML()` (`88-settings.js`) opens the group's body with the help text, the way
+  the Sources and Loaded data groups do (`88-settings.js:144, :150`), instead of reusing the first
+  switch's own row help — the final review caught it reading on screen as if "Hide the tabs this
+  character doesn't use. Sheet always shows." belonged to Spells rather than to the group
+  (`.claude/qa/52-after-settings-tabs-off.png`). The Journal row also says "Also holds the Section
+  Notes card." (`src/html/60-journal.html:20`), so hiding Journal doesn't quietly take that card
+  away unexplained.
+- **A redirect to the Sheet scrolls to the top.** `applyHiddenTabs()` (`40-sheet.js`) follows its
+  own `selectTab("sheet")` with `window.scrollTo({top:0})`, so a player moved off a hidden active
+  tab no longer lands mid-Sheet at the old tab's scroll position.
 - **Three deferred minors from code review, none of them behavioural:**
-  - `rules-data.js:182`'s `#99` regex window moved `{0,500}`→`{0,700}` with no comment saying why —
+  - `rules-data.js:2398`'s `#99` regex window moved `{0,500}`→`{0,700}` with no comment saying why —
     the new `selectTab()` guard line (§4) pushed an existing, unrelated check past its old budget.
   - `HIDEABLE_TABS.indexOf(name)>=0` is written out three times in `40-sheet.js` rather than
     through one shared test — the plan's own code, taken verbatim.
-  - `88-settings.js`'s `[data-tabsw]` click handler sets the button's `on` class and
+  - `88-settings.js:228-232`'s `[data-tabsw]` click handler sets the button's `on` class and
     `aria-checked` itself, which the dialog's generic `.switch` listener (`#setSections`) also does
     on the same click — redundant, idempotent, harmless; matches the existing `swFamiliars`
     handler's own pattern.

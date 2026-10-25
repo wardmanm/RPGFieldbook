@@ -7060,3 +7060,36 @@ Pages: [Shell](../wiki/ui/shell.md), [Settings & updates](../wiki/features/setti
 [Story & notes](../wiki/features/story-and-notes.md), [decisions](../wiki/decisions.md),
 [1.9.0](../wiki/roadmap/1.9.0.md), the spec's As built
 (`src/docs/specs/2026-10-24-hide-tabs-design.md`).
+
+## Hide tabs: final review fixes (#52, 2026-10-25)
+
+Three fixes from the final whole-branch review of `issue/52-hide-tabs` (`final-review.md`), landed
+before #52 merged to main.
+
+**I1 — the Tabs group's help.** `tabsGroupHTML()` (`88-settings.js`) now opens the group's body
+with `<p class="hint">Hide the tabs this character doesn't use. Sheet always shows.</p>`, the same
+pattern the Sources and Loaded data groups use (`88-settings.js:144, :150`), instead of reusing the
+first switch's (Spells') own row help. The Spells row now carries no help of its own.
+
+**M7 — the Journal row.** The Section Notes card (`src/html/60-journal.html:20`) and the Trackers
+card both live on the Journal tab; hiding Journal takes both away. The Journal switch's row now
+says "Also holds the Section Notes card." so a player isn't surprised.
+
+**M1 — the scroll position after a redirect.** `applyHiddenTabs()` (`40-sheet.js`) follows its own
+`selectTab("sheet")` with `window.scrollTo({top:0})` when the active tab became hidden, so the
+player lands at the top of the Sheet rather than at the hidden tab's old scroll position.
+
+**Wording and citations (M2–M6).** [Shell](../wiki/ui/shell.md) and
+[Settings & updates](../wiki/features/settings-and-updates.md) corrected: a Settings flip calls
+`setTabHidden()` → `applyHiddenTabs()` directly, not through `renderAll()`; the `[data-tabsw]`
+click handler is a per-button listener (`88-settings.js:228-232`), not delegated; the shell's guard
+rationale names "a leftover `cvPrevTab`, or a future caller", not a deep link Fieldbook doesn't
+have. The spec's As built (`src/docs/specs/2026-10-24-hide-tabs-design.md`) now cites
+`rules-data.js:2398` and `88-settings.js:228-232` in place of the stale `rules-data.js:182` and
+`88-settings.js:140-144`, and its I1 bullet records the fix made instead of the deferral reason.
+
+Tests: `src/tests/sheet.js` (`#52` suites) — the group-help placement, the Spells row's missing
+help, the Journal row's help appearing once, and `window.scrollTo` firing only on the
+hidden-active-tab redirect.
+
+Pages: [Shell](../wiki/ui/shell.md), [Settings & updates](../wiki/features/settings-and-updates.md).

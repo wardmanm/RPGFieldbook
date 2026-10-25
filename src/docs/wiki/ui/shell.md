@@ -76,12 +76,15 @@ from Settings → Sheet display → Tabs ([Settings & updates](../features/setti
 swords are structurally unreachable, not merely unlisted: `isTabHidden()` is always false for them
 and `setTabHidden()` refuses any other name. `applyHiddenTabs()` sets the `hidden` attribute on
 each `.tab[data-tab]` button `isTabHidden()` names and clears it on the rest; it runs from
-`renderAll()`, so load, a character switch and a Settings flip all repaint the bar the same way.
+`renderAll()` (load, a character switch) and from `setTabHidden()` (a Settings flip, a note jump),
+so every way a tab gets hidden or shown repaints the bar the same way.
 `.tab[hidden]{display:none!important}` (`10-chrome.css`) removes the button from the flow at every
 width, icon tabs included — the `!important` is load-bearing, since `.tab` sets its own `display`.
-If the active panel's tab is now hidden, `applyHiddenTabs()` selects `"sheet"`; `selectTab(name)`
-carries the same guard for a stale caller, treating a hidden name as `"sheet"` on every call, not
-only this one. Two ways back in: `jumpToNote()` unhides a hidden tab and toasts before jumping
+If the active panel's tab is now hidden, `applyHiddenTabs()` selects `"sheet"` and scrolls to the
+top (`window.scrollTo({top:0})`), so the player doesn't land mid-Sheet at the old tab's scroll
+position; `selectTab(name)` carries the same hidden-name guard for a stale caller, treating a
+hidden name as `"sheet"` on every call, not only this one — but it never scrolls itself, same as
+always. Two ways back in: `jumpToNote()` unhides a hidden tab and toasts before jumping
 ([Story & notes](../features/story-and-notes.md)); `leaveCombatTab()` goes to the Sheet rather than
 a now-hidden `cvPrevTab` ([Combat view](../features/combat-view.md)).
 
@@ -258,7 +261,7 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
   by construction (they are not in `HIDEABLE_TABS`) and `setTabHidden()` refuses any name outside
   it, so a hidden-tab bug can't reach them even by a bad write to `character.hiddenTabs`.
 - **`selectTab()` treats a hidden tab as `"sheet"` (#52).** This is a guard, independent of
-  `applyHiddenTabs()`'s own redirect, so a stale caller — a saved deep link, a leftover `cvPrevTab`
+  `applyHiddenTabs()`'s own redirect, so a stale caller — a leftover `cvPrevTab`, or a future caller
   — can never open a hidden panel.
 - **`selectTab()` never scrolls, and sends combat cards home before any other tab shows**, so a
   note jump never lands on a tab with its cards missing.
@@ -382,3 +385,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-23 — The ☰ strips the Sheet header's `.sh-level`, now inside its `.label`. → ledger L6776, #103
 - 2026-10-24 — The ☰ section flyout is retired (Mike): `buildToc()`, `openToc()`, `closeToc()` and their markup go; `scrollToCard()` stays. A back-to-top button (`#btnToTop`) arrives, with its collisions handled. → ledger L6804, #103
 - 2026-10-25 — A player can hide the word tabs a character doesn't use, per character: `HIDEABLE_TABS`, `applyHiddenTabs()`, `.tab[hidden]`, and a `selectTab()` guard; the Sheet and the combat swords can never be hidden. → ledger L6989, #52
+- 2026-10-25 — Final review fixes: `applyHiddenTabs()`'s redirect to the Sheet now scrolls to the top; corrected the Settings-flip repaint path and the hidden-tab guard's rationale. → ledger L7064, #52
