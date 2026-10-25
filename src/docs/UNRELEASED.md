@@ -71,6 +71,8 @@ Bullets below this line — leave the heading in place.
 - Trade from the Inventory tab: give items and coins, get items and coins, see whether it
   balances, and complete it in one step.
 - An inventory log records every change to your items and coins, and lets you undo any change
-  that can still be reversed.
+  that can still be reversed. It notes what leaves when you remove a class, background or
+  ancestry, and each fight's ammunition, counting arrows you recovered mid-fight. Making the log
+  smaller asks before it drops any lines.
 - The item finder's Cost box keeps fractions of a gold piece, such as 0.5 gp, instead of rounding
   them down to nothing.

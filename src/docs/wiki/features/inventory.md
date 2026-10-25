@@ -17,8 +17,8 @@ can carry the player's own fields (quantity, origin, favourite, filing) alongsid
 `parseDiceExpr()`, `rollDiceExpr()` in `65-resources.js` · `renderCoins()`, `applyCoinInput()`,
 `signedEntry()`, `coinKeys()`, `openCoinAdjust()`, `convertCoins()` in `66-coins-hp.js` ·
 `logInv()`, `cleanInvLog()`, `logGrant()`, `logFinderAdd()`, `logItemSave()`, `logCoins()`,
-`invSame()`, `invRemoveQty()`, `invRestore()`, `invUndoCheck()`, `invUndo()`, `invLogHTML()`,
-`openInvLog()`, `INV_FILTERS`, `coinsToCp()`, `cpToGpText()`, `itemWorthCp()`, `newTradeDraft()`,
+`invSame()`, `invUndoShape()`, `invRemoveQty()`, `invRestore()`, `invUndoCheck()`, `invUndo()`,
+`invLogHTML()`, `openInvLog()`, `setInvLogSize()`, `INV_FILTERS`, `coinsToCp()`, `cpToGpText()`, `itemWorthCp()`, `newTradeDraft()`,
 `tradeClamp()`, `tradeBalance()`, `tradeHTML()`, `completeTrade()`, `openTrade()` in `67-trade.js` ·
 `grantItemByName()` in `50-classrace.js` · markup `src/html/10-inventory.html` · **Data:**
 [rules-schema §6.8](../../../../docs/rules-schema.md) · **Tests:** `sheet.js`, `char-update.js`,
@@ -104,38 +104,71 @@ see [Grants & provenance](../architecture/grants-and-provenance.md).
 
 **The inventory log (#47).** Every change to items and coins writes one line to `character.invLog`
 through `logInv()`, which stamps `id` and `at`, puts the line first and trims the log to
-`invLogSize` (100 · 250 · 500 · 1,000 · 2,500, default 500; Settings → Sheet display → Inventory).
+`invLogSize` (100 · 250 · 500 · 1,000 · 2,500, default 500; Settings → Sheet display → Inventory,
+through `setInvLogSize()`: a smaller size trims at once, and asks first — "Keep the newest 100?
+This removes 2,400 older lines." — when it would drop any; declined, the size stays).
 A line is `{id, at, kind, title, lines, undo, undone, meta}`; `kind` is one of `trade`, `add`,
 `edit`, `delete`, `use`, `coins`, `grant`, `ammo`, and `lines` are `{dir:"+"|"-"|"", text}`. The
 writers, each exactly once per change:
-- the finder's Add (`logFinderAdd()`): one `add` line for the whole batch;
-- the item form (`logItemSave()`): `add` for a new item, `edit` with copies of the item before and
-  after only when `invSame()` finds a saved field changed (keys compared in any order);
-- the row's 🗑: `delete`, with a copy of the item, its linked attack and its index;
-- `applyItemUse()`: `use`, keeping a copy of the item when that Use spends the last one;
+- the finder's Add (`logFinderAdd()`): one `add` line for the whole batch, each item with its
+  quantity and cost ("Rope ×2 · 2 gp");
+- the item form (`logItemSave()`): `add` for a new item, with its cost; `edit` with copies of the
+  item before and after, only when something on the form changed. `openItemForm()` builds the
+  record in one function, `readRec()`, and takes a baseline from it as the form opens; Save writes
+  no line when the record equals that baseline (`invSame()`, keys in any order). The baseline,
+  not the stored item, is the comparison because the form fills in fields of its own — a potion's
+  healing read from its description, armour's AC, a missing `used` or `qty` — and saves them;
+- the row's 🗑: `delete`, with a copy of the item, its linked attack and both their indexes;
+- `applyItemUse()`: `use`, saying what is left ("−1 · 2 left", "1 use · 2 of 3 left"), with a copy
+  of the item, its attack and both indexes every time. A Use that only heals or applies a status
+  changes no item and writes no line;
 - Adjust, a coin box and Auto-convert (`logCoins()`): one `coins` line with the change per
   denomination, and none when nothing moved;
 - grants (`logGrant()`): one "Granted by *source*" line per source, which folds in every grant from
-  the same sid within 5 seconds, so a class's starting gear is one line;
-- End combat: one `ammo` line per kind fired ("Arrows: 5 fired, 2 recovered"), from
-  `ammoFightSummary()` — see [Ammunition](ammunition.md);
-- a completed trade: one `trade` line holding the whole receipt.
+  the same sid within 5 seconds, so a class's starting gear is one line; removing the source
+  (`revertEquipmentGrants()`) writes one "Removed with *source*" line listing the items and gold
+  that left, a `grant` line with `meta.revert` and no Undo — see
+  [Grants & provenance](../architecture/grants-and-provenance.md);
+- End combat: one `ammo` line per kind fired ("Arrows: 5 fired, 2 recovered", then "Fight of 3
+  rounds"), from `ammoFightTotals()`, which counts what a row's Recover gave back during the fight
+  too — see [Ammunition](ammunition.md);
+- a completed trade: one `trade` line holding the whole receipt: each item with its cost ("Dagger
+  ×1 (2 gp)"), each coin high to low (pp → cp), the totals, and the two switches.
+
+Tapping an item's use pips is not logged: it changes uses, not quantity, as equipping and the
+rests' resets don't.
 
 The **Log** button on the Equipment card opens `openInvLog()`, a wide dialog: filters All, Trades,
 Items (add, edit, delete, use, grant), Coins and Ammo (`INV_FILTERS`, remembered for the session),
 lines grouped by day newest first, each with its kind's icon, the ± details in green and red, the
-time, and Undo. A trade's details fold under Receipt. The foot says how many lines are kept and
-holds **Clear log**, which confirms. The dialog's body scrolls when the log is longer than it.
+time, and Undo. A trade's details fold under Receipt (an "Undid:" line has none, so it draws
+none). The filters and the foot stay put; the rows scroll between them in `.il-scroll`, as the
+trade's sides do. The foot says how many lines are kept and holds **Clear log**, which confirms.
 
 **Undo.** `invUndoCheck()` asks whether a line can still be reversed cleanly, and `invUndo()`
 applies it as one step, marks the line `undone` (struck through and faded) and writes its own
-"Undid: …" line with no undo. `add` needs the item still there with at least the quantity added
-("It has since been used, sold or removed."); `edit` needs the item to still match its after-copy
-("It has been changed again since."); `coins` needs every coin it would take back still in the
-purse ("Not enough GP left to take back."); `delete` and `use` are always clean, and put a removed
-row back at its old place (`invRestore()`, with a new id if the old one is taken). A `trade` undoes
-all its parts or none, refused with the first part's reason. `grant` and `ammo` lines have no Undo:
-removing the source reverts a grant, and End combat's recovery has its own Undo.
+"Undid: …" line with no undo. The check is exactly what the apply step can do, so an Undo that
+passes always puts something back, and one that is refused changes nothing and marks nothing.
+- `add` needs the item still there with at least the quantity added ("It has since been used, sold
+  or removed.").
+- `edit` needs the item to still match its after-copy ("It has been changed again since.").
+- `coins` needs every coin it would take back still in the purse ("Not enough GP left to take
+  back.").
+- `delete` puts its copy back.
+- `use` adds the quantity or the use back to the row; if the row has gone since (deleted, sold,
+  used up), it restores the copy with the quantity used. Only an old line, from before every Use
+  kept a copy, with its row gone is refused ("It is no longer in your inventory.").
+- `trade` checks every part before applying any. Its give part works as `use` does: back onto the
+  row, or the copy with the quantity given (a trade keeps a copy of every given row). Inside a
+  trade the reason names the item ("The Healing Potion you got has since been used, sold or
+  removed.").
+
+A copy comes back through `invRestore()`: at its old index, its attack at its own old index, with a
+new id if the old one is taken, and — when it was granted by a source that has since been removed
+(`grantSidLive()`) — as an ordinary item, its `grant` dropped and its origin kept. `cleanInvLog()`
+drops an `undo` whose shape doesn't fit its kind (`invUndoShape()`), keeping the line, and
+`invUndoCheck()` never throws. `grant` and `ammo` lines have no Undo: removing the source reverts a
+grant, and End combat's recovery has its own Undo.
 
 **The trade window (#47).** **⇄ Trade** on the Equipment card opens `openTrade(opts)`, a wide
 dialog over a draft (`newTradeDraft()`; `opts` may seed `{with, give, get}`, for #105's loot).
@@ -213,7 +246,11 @@ the inventory and recompute, because coins have weight.
 - **Deleting an ammunition stack forgets its spent count** (`forgetAmmo()`): there is nothing left
   to recover into, and the player chose to delete it — see [Ammunition](ammunition.md).
 - **One change, one log line.** Every item and coin writer calls its log helper exactly once, and
-  an unchanged form save or a coin entry that moves nothing writes none.
+  an unchanged form save, a coin entry that moves nothing, or a Use that only heals writes none.
+- **The item form compares against its own baseline,** never against the stored item: Save writes
+  a line only when `readRec()` returns something other than it did as the form opened.
+- **An Undo never succeeds while restoring nothing.** The check matches the apply step, and Use
+  and a trade's give always keep a copy to restore from.
 - **The log never writes itself** except through Undo and Clear log; the dialog only reads it.
 - **Cost is gp of one and may be fractional:** every cost read in the log and the trade goes
   through `fnum()` (an arrow is 0.05 gp), and money is worked in whole copper.
@@ -254,6 +291,16 @@ the inventory and recompute, because coins have weight.
   rest could not be reached; only a log longer than one screen showed it. → L7291, #47
 - **Undoing two whole rows in recorded order swapped them**: each `at` was read after the earlier
   removal, so they must go back newest first. → L7291, #47
+- **Use and a trade's give kept a copy only when they removed the row,** and the check called
+  both "always clean". Use 1 of 2 potions then delete the other, or give 2 of 5 arrows then fire
+  the other 3 to zero, and Undo reported success while restoring nothing — the trade took back its
+  coins and left the arrows lost. → L7339, #47
+- **The item form's Save rebuilt the record and compared it with the stored item,** so every field
+  the form fills in on its own (healing read from a description, armour's AC, `used:0`, `qty:1`)
+  read as an edit on the first unchanged Save. The suite only grepped for `logItemSave(`; the
+  fixed test drives the real form through a small DOM. → L7339, #47
+- **The log's scroll was a `:has()` rule on the dialog body**, which a browser without `:has()`
+  never applied. → L7339, #47
 
 ## Decisions
 
@@ -274,7 +321,11 @@ the inventory and recompute, because coins have weight.
 | Where the log lives (#47) | A Log button on the Equipment card, opening a dialog | A collapsible card at the bottom of Inventory: the tab is already long |
 | How long the log is (#47) | Per character, `invLogSize` 100 · 250 · 500 · 1,000 · 2,500, default 500 | A fixed 1,000: Mike wants it settable. Everything: grows forever |
 | What can be undone (#47) | Any line that can still be reversed cleanly; otherwise Undo is disabled with the reason. Not grants (removing the source reverts them) nor ammo (recovery has its own Undo) | Newest only: a trade three changes back couldn't be reached |
-| How far Use is undoable (#47) | Always, the last one too, from a copy of the item kept at Use time | Only while the item exists (the spec): a used-up potion couldn't come back |
+| How far Use is undoable (#47) | Always, from a copy of the item kept at every Use (and every trade's give); refused only for an old line with neither a row nor a copy | Only while the item exists (the spec): a used-up potion couldn't come back. A copy only when the Use removed the row: Undo then did nothing once the row went another way |
+| What removing a source logs (#47) | One "Removed with *source*" line listing the items and gold that left, no Undo | No line: a class's whole kit vanished without a trace. An Undo: granting again belongs to the source |
+| A row's Recover in the log (#47) | Counted in that fight's End combat line; no line of its own | A line per Recover: one more line per tap. Not counted: the fight's line under-reported |
+| Item-use pips in the log (#47) | Not logged: they change uses, not quantity, as equipping and rest resets do | A line per pip: Use already logs the deliberate spend |
+| Lowering the log size (#47) | Trims at once, asking first when lines would go | At the next write (the spec): a mis-tap still drops the lines, later and silently |
 | A trade's balance (#47) | Coins, plus item worth or cost on each side whose Apply item value switch is on; short is red and confirms, over is not | Coins only: bartering is common. Editable worth per item: more than asked for |
 | A shortfall (#47) | Shown and confirmed, never blocked | Blocking Complete: gifts and haggling couldn't be recorded |
 | The trade's layout (#47) | Side by side above 700px; tabs and a ✓ button at 700px and under | One list: mixes giving and getting |
@@ -294,11 +345,9 @@ the inventory and recompute, because coins have weight.
   give minus get with no exception for coins received. The brainstorm mockup said received coins
   never turn it red. Open for Mike: keep the spec's rule, or never show red when the shortfall is
   made of coins you receive.
-- **The Log button's 🕮 has no glyph** in the app's fonts on macOS and shows as a box (#47, found
-  in QA).
-- **An unchanged save of a potion whose healing is read from its description writes an "Edited"
-  line** (#47, found in QA): the form saves the detected `use` it showed, so the saved fields differ.
-- The add line from the finder names the item and quantity, not its cost (spec §4 lists the cost).
+- **The log can outgrow the browser's storage** (#47): an edit line holds two copies of the item,
+  so 2,500 edit lines take 3.7 to 5.3 million characters — see
+  [Known issues](../roadmap/known-issues.md).
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -326,3 +375,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-23 — Attacks & Weapons heads the tab, above Equipment & Inventory. → ledger L6633, #103
 - 2026-10-24 — The ☰ section flyout is retired, so a section is no longer listed anywhere. → ledger L6804, #103
 - 2026-10-25 — The trade window and the inventory log: one log line per item and coin change, Undo, the Log dialog and its size setting; the finder's Cost override keeps fractions. → ledger L7291, #47
+- 2026-10-25 — Final review: Undo never succeeds while restoring nothing; an unchanged form Save writes no line; removing a source and a row's Recover are logged; costs, pp → cp and "what is left" in the lines; the log scrolls in its own box; the size confirm. → ledger L7339, #47

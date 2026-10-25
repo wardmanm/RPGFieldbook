@@ -79,7 +79,13 @@ report what they added through `logGrant(sid, line)` in `67-trade.js`, which wri
 line per source to the [inventory log](../features/inventory.md) — "Granted by Fighter", the source
 read from the sid by `grantSourceName()` — and folds in every later grant from the same sid within
 5 seconds, so a class's starting gear and gold are one line. The line has no Undo: removing the
-source is what reverts a grant, and `revertEquipmentGrants()` writes no line of its own.
+source is what reverts a grant. `revertEquipmentGrants()` writes one line of its own, "Removed
+with Fighter", listing the items and the gold that actually left (a `grant` line with
+`meta.revert`, filed under Items as a grant is, and never folded into by a later grant), and none
+when the source had granted nothing. It has no Undo either: granting again belongs to the source.
+An Undo elsewhere in the log that brings back an item granted by a source now gone (a trade that
+gave the Rope away, undone after the class was removed) restores it as an ordinary item, its
+`grant` dropped and its origin kept, since nothing could ever revert that grant.
 
 **Languages** (#103). A species or background whose definition lists `languages` (a string,
 "Common, Elvish and one other language of your choice") grants them as chips: `langParse()` splits on
@@ -181,6 +187,7 @@ features and grants before applying the new one.
 | Stripping extra grants from multiclass characters saved earlier | No: `migrate()` is untouched | Retroactive strip: it would silently change sheets players have been playing (L3886) |
 | How a species or background grants languages (#103) | Chips stamped with the grant's sid, removed with it; a choice ("one of your choice") is the player's to add | Appending "Languages: …" to Proficiencies: it never reverted. Player-entered only: grants would keep writing prose |
 | What the inventory log records for a grant (#47) | One line per source, no Undo | One line per item: a class's starting gear floods the log. An Undo: it would take back part of a grant the source still claims; removing the source reverts it |
+| What the log records when a source is removed (#47) | One "Removed with *source*" line listing what left, no Undo | No line: the kit and its gold vanished without a trace. An Undo: granting again belongs to the source |
 
 ## Open
 
@@ -218,3 +225,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-23 — Species and backgrounds grant languages as chips stamped `race:`/`bg:`, taken back by `dropLanguages()`; nothing appends "Languages:" to Proficiencies any more. → ledger L6633, #103
 - 2026-10-23 — Lifted languages noted as the player's own; an unknown language `src` reads as the player's. → ledger L6729, #103
 - 2026-10-25 — Grants write one inventory-log line per source (`logGrant()`), with no Undo. → ledger L7291, #47
+- 2026-10-25 — Removing a source writes one "Removed with *source*" line; an undone item whose source is gone comes back ordinary. → ledger L7339, #47

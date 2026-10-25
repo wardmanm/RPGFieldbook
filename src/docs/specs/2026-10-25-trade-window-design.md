@@ -273,9 +273,12 @@ browser-QA account are in `.superpowers/sdd/2026-10-25-trade-window/`; the ledge
 window and inventory log (#47, 2026-10-25)" is the condensed version).
 
 **The plan-level `use` Ruling.** §5 makes `use` clean only while the item exists. The plan widened
-it and told Mike at handoff: **every Use is undoable**, the last one too. `applyItemUse()` keeps a
-copy of the item (and its linked attack and its index) whenever that Use spends the last one, and
-Undo puts it back where it was. Cost if this turns out wrong: one condition in `invCheckPart()`.
+it and told Mike at handoff: **every Use is undoable**, the last one too. Since the final review
+(K1, below) `applyItemUse()` keeps a copy of the item, its linked attack and both indexes at
+*every* Use, and a trade keeps one of every row it gives: Undo adds back to the row while it is
+there, or restores the copy with the quantity used or given, at its old place. Only an old line
+with neither a row nor a copy is refused. Cost if this turns out wrong: one condition in
+`invCheckPart()`.
 
 **Rulings made during the build:**
 - **A custom item received in a trade gets origin `custom`**, detail "traded from *who*" (or
@@ -310,8 +313,8 @@ Undo puts it back where it was. Cost if this turns out wrong: one condition in `
   - **The Log dialog could not scroll.** It sits straight in the wide dialog's body, which is a
     non-scrolling flex column built for Settings' own scrollers, so a log longer than one screen
     squashed its rows into each other and the rest could not be reached. Task 3's shots held four
-    lines and never showed it. `.modal.wide .m-body:has(> .il-filters)` now scrolls, and the
-    log's pieces keep their height. A browser without `:has()` keeps the old behaviour.
+    lines and never showed it. Task 5 made the body scroll with a `:has()` rule; the final review
+    (C5) replaced it with the log's own scroller, `.il-scroll`, so it no longer needs `:has()`.
   - **The Equipment heading pushed the page sideways at 390px.** + Add, ⇄ Trade and Log made it
     wider than a phone, so its edit, combat and note buttons ran 91px off the page and the page
     scrolled horizontally. At 480px and under the heading now wraps its buttons onto a second row.
@@ -327,11 +330,14 @@ Undo puts it back where it was. Cost if this turns out wrong: one condition in `
   row's 🗑 is the one delete path, and it logs `delete`.
 - **§4, grants** fold every grant from one sid within 5 seconds into one line, which is how a
   class's starting gear and gold become one "Granted by Fighter".
-- **§4, the finder's add line** names each item and its quantity, not its cost.
-- **§4, the ammo line** keeps the round count in `meta.rounds`; the line itself doesn't show it.
-- **§5, a blocked trade's reason** is the failing part's own reason ("It has since been used, sold
-  or removed."), not one naming the item.
-- **§6.1, the Log button** is 🕮 and the word "Log", the word hidden at 480px and under.
+- **§4, the finder's add line** names each item with its quantity and cost (since the final
+  review; Task 2 left out the cost).
+- **§4, the ammo line** reads "Fight of N rounds" under its title, as the mockup does (since the
+  final review; the round count was only in `meta.rounds`).
+- **§5, a blocked trade's reason** names the item ("The Healing Potion you got has since been
+  used, sold or removed."), since the final review.
+- **§6.1, the Log button** is an inline SVG book and the word "Log", the word hidden at 480px and
+  under (it was 🕮 until the final review: no glyph in the app's fonts on macOS).
 - **§6.2:**
   - at 700px and under, Cancel is hidden (mockup panel B): × and Escape close the window, through
     a "Discard this trade?" confirm when the draft isn't empty;
@@ -339,18 +345,13 @@ Undo puts it back where it was. Cost if this turns out wrong: one condition in `
   - the trade's finder hides the Origin select, since a trade always stamps Traded, and its
     "added" badge marks what is already in the trade;
   - the receipt adds two lines: the totals given and got, and the two switches in words.
-- **§6.3:** an "Undid:" line for a trade shows an empty Receipt; a receipt lists coins low to high
-  (CP before GP), not in the coin card's order.
+- **§6.3:** since the final review an "Undid:" line for a trade draws no Receipt (it has no lines),
+  and a receipt lists coins high to low (pp → cp), as the coin card does.
 
-**Found in Task 5's QA and reported, not fixed (JS or markup, outside a QA task):**
-- **The Log button's 🕮 (U+1F56E) has no glyph** in the app's fonts on macOS: in headless Chrome it
-  draws as an empty box, which on a phone, with the word hidden, is the whole button. An SVG like
-  the card's other buttons would fix it (`src/html/10-inventory.html`).
-- **An unchanged save of a potion whose healing is read from its description writes "Edited …
-  Details changed".** Open the Potion of Healing's editor and press Save: the form saves the
-  detected `use` (`{heal:"2d4+2", consume:true}`) that it displayed, so `invSame()` sees a field
-  that wasn't there before. A Longsword's unchanged save writes nothing, as §9 asks. Armour whose AC
-  the form reads from its description may do the same (not driven).
+**Found in Task 5's QA and reported, then fixed in the final review:** the Log button's 🕮 drew as
+an empty box on macOS (C1); an unchanged save of a potion whose healing is read from its description
+wrote "Edited … Details changed" — and so did Chain Mail, a wand with no `used`, an item with no
+`qty` and a trade's custom item (I1).
 
 **Deferred minors, from code review across Tasks 1–4 (all recorded in progress.md; those marked ✔
 were fixed in Task 4's fix round, the rest left by ruling):**
@@ -372,3 +373,45 @@ were fixed in Task 4's fix round, the rest left by ruling):**
   (Task 4).
 - The finder's `fnum()` fix needed a player note: it is the third `UNRELEASED.md` bullet (Task 4,
   Minor 7, taken in Task 5).
+
+**The final review (ledger "#47 final review fixes (2026-10-25)"; the brief, review and report are
+in `.superpowers/sdd/2026-10-25-trade-window/`).** Each finding was ruled by the controller:
+- **K1, blocking: Undo reported success while restoring nothing.** Use and a trade's give kept a
+  copy only when they removed the row, and `invCheckPart()` called both "always clean". Now both
+  always keep a copy (item, attack, both indexes); the check is exactly what the apply step can
+  do; a line with neither row nor copy is refused and never marked undone.
+- **I1: an unchanged item-form Save writes no line.** `openItemForm()` builds its record in one
+  function, `readRec()`, takes a baseline from it as the form opens, and writes no line when the
+  record at Save equals it. No field is special-cased. An origin with no date takes the form's
+  opening time, so the function is the same both times. A trade's custom items get `description`,
+  `effects` and `equipped` at creation.
+- **I2: the remaining unlogged changes.**
+  - Removing a class, background or ancestry writes one `grant` line, "Removed with *source*",
+    listing the items and gold that left (`meta.revert`, no Undo, filed under Items).
+  - A row's **Recover N** during a fight counts in that fight's End combat line. This needed a
+    character field §3 doesn't list: **`ammoFight`**, kind → `{fired, back}`, `{}` in
+    `blankChar()`, coerced by `migrate()`, emptied by `combatStart()` and End combat. Outside a
+    fight nothing is kept. The toast's Undo recovery takes End combat's own recovery back off the
+    line; there is no separate line.
+  - **Item-use pips are not logged**: they change uses, not quantity, as equipping and the rests'
+    resets don't.
+- **M1, a deliberate deviation from §2 decision 3** ("the oldest entries drop at the next write"):
+  lowering the log size trims at once, through `setInvLogSize()`, and first asks "Keep the newest
+  100? This removes 2,400 older lines." when it would drop any; declined, the size stays.
+- **M2:** `cleanInvLog()` drops an `undo` whose shape doesn't fit its kind (`invUndoShape()`),
+  keeping the line; `invUndoCheck()` never throws. **M3:** an undone item whose granting source is
+  gone (`grantSidLive()`) comes back ordinary. **M4:** a Use that only heals or applies a status
+  writes no line. **M5:** `itemWorthCp()` multiplies before rounding (20 sling bullets at 0.002 gp
+  are 4 cp); `tradeGetCp()` had the same bug and got the same fix. **M6:** a restored attack goes
+  back at its own index. **M7:** the first day header's rule now matches, and the active filter's
+  text is `var(--paper)`, not `#20160a`.
+- **Line text (C4, M9):** costs on the finder and form add lines and on receipt items ("Dagger ×1
+  (2 gp)"); receipt coins pp → cp; the Use line says what is left ("−1 · 2 left", "1 use · 2 of 3
+  left").
+- **Still open for Mike: C3**, selling above an item's worth reading red (above).
+- **Storage, measured** (Recommendation 5). An edit line holds two full copies of the item. On SRD
+  items, a 2,500-line log of edits is about 1,470 characters a line for mundane gear — 3.7 million
+  characters for the log alone — and 2,090 for a median magic item (5.3 million); the 20 longest
+  magic items reach 5,460 a line (13.7 million). The default 500 lines is 0.7 to 1 million.
+  Browsers commonly allow about 5 MB of localStorage a site, shared by every character, so the
+  largest size can fill it on its own; a save that doesn't land says so. Recorded in known issues.

@@ -7335,3 +7335,51 @@ Pages: [Inventory](../wiki/features/inventory.md), [Ammunition](../wiki/features
 [Settings & updates](../wiki/features/settings-and-updates.md), [Shell](../wiki/ui/shell.md),
 [Overview](../wiki/overview.md), [Known issues](../wiki/roadmap/known-issues.md),
 [1.9.0](../wiki/roadmap/1.9.0.md), the spec's As built.
+
+## #47 final review fixes (2026-10-25)
+
+The whole-branch review of `issue/47-trade-window` returned "With fixes"; the controller ruled on
+each finding (`.superpowers/sdd/2026-10-25-trade-window/final-fix-brief.md`, the review beside it,
+the report in `final-fix-report.md`).
+
+- **K1, undo never reports success while restoring nothing.** `applyItemUse()` and a trade's give
+  (`invRemoveQty()`) now keep a copy of the item, its attack and both indexes every time, not only
+  when the row went. Undo adds back to a row still there, or restores the copy with the quantity
+  used or given, at its index. `invCheckPart()` checks exactly what the apply step can do: an old
+  line with neither a row nor a copy is refused ("It is no longer in your inventory.") and never
+  marked undone. Before, Use 1 of 2 potions then delete the other, or give 2 of 5 arrows then fire
+  the rest to zero, undid "successfully" and gave nothing back (the trade even took its coins).
+- **I1, an unchanged item-form Save writes no line.** The form builds its record in one function,
+  `readRec()` inside `openItemForm()`; a baseline from it is taken as the form opens and compared
+  at Save. A potion's healing read from its description, armour's AC, a missing `used` or `qty`
+  no longer read as edits; no field is special-cased. A trade's custom items get `description`,
+  `effects` and `equipped` at creation.
+- **I2, the remaining unlogged changes.** `revertEquipmentGrants()` writes one `grant` line,
+  "Removed with *source*", listing what left, with `meta.revert` and no Undo; `logGrant()` never
+  folds into it. A row's Recover N during a fight is kept per kind in a new character field,
+  `ammoFight` (`{}` in `blankChar()`, coerced by `migrate()`, cleared by `combatStart()` and End
+  combat), and End combat's line adds it in (`ammoFightTotals()`); the toast's Undo recovery takes
+  End combat's own recovery back off the line. Item-use pips stay unlogged (uses, not quantity).
+- **Line text (C4, M9):** finder and form add lines carry the cost; receipt item lines carry their
+  cost and coins run pp → cp; a blocked trade undo names the item; an "Undid:" trade line has no
+  empty Receipt; the ammo line reads "Fight of N rounds"; the Use line says what is left.
+- **UI (C1, C5, M7):** the Log button is an inline SVG; the log's rows scroll in `.il-scroll`
+  (the `:has()` rule is gone); `.il-scroll>.il-day:first-child` replaces a selector that never
+  matched; the active filter's text is `var(--paper)`.
+- **Minors:** lowering the log size trims at once but asks first when lines would go
+  (`setInvLogSize()`), a deliberate deviation from the spec's "at the next write" (M1);
+  `cleanInvLog()` drops a malformed `undo` per kind (`invUndoShape()`) and `invUndoCheck()` never
+  throws (M2); a granted item whose source is gone comes back ordinary (M3); a heal- or status-only
+  Use writes no line (M4); `itemWorthCp()` and `tradeGetCp()` multiply before rounding (M5); a
+  restored attack goes back at its own index (M6).
+- **Measured:** a 2,500-line log of edits stores two item copies a line: about 1,470 characters a
+  line for mundane gear and 2,090 for a median magic item, so 3.7 to 5.3 million characters for
+  the log alone, at or past a browser's usual localStorage quota for the whole app. Recorded in
+  known issues.
+
+Pages: [Inventory](../wiki/features/inventory.md), [Ammunition](../wiki/features/ammunition.md),
+[Grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[Character model](../wiki/architecture/character-model.md),
+[Settings & updates](../wiki/features/settings-and-updates.md),
+[Known issues](../wiki/roadmap/known-issues.md), [Decisions](../wiki/decisions.md), the spec's As
+built.
